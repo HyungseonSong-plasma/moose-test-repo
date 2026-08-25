@@ -1,0 +1,7 @@
+{
+  "name": "reactor_o2plus_correction_on",
+  "type": "canonical",
+  "input": "correction_on.i",
+  "checker": "../check_reactor_o2plus.py",
+  "checker_args": ["correction_on_out.csv", "correction_on"]
+}
