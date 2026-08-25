@@ -2,17 +2,17 @@
 
 ## Team ownership
 
-This repository is reserved for **sol-adapter-moose** work.
+This repository is reserved for **moose-test-repo** work.
 
 The repository may contain:
 
-- MOOSE/QPX regression inputs used by the sol-adapter-moose team.
+- MOOSE/QPX regression inputs.
 - Minimal failure reproducer inputs.
 - Checkers and reference data.
 - Development logs and troubleshooting records.
 - Test executable notes or a compatible local executable under `bin/`.
 
-The repository must not be used to perform or modify work owned by a different team/workspace.
+The repository is not limited to sol-adapter-moose-only testing. It is the shared workspace for MOOSE/QPX implementation development, executable-based verification, regression testing, and troubleshooting.
 
 ## Development rule
 
