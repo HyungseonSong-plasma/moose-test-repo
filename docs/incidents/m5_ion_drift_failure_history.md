@@ -43,8 +43,9 @@ Solve Did NOT Converge!
 | 13 | conservation identity on first step | localized | transient inventory includes surface loss but misses migration contribution seen at timestep end |
 | 14 | migration-state diagnostic with exact initial `phi` | at least full exact-phi case PASS | migration formulation can conserve when valid field state is available at start |
 | 15 | split tests into canonical and diagnostic classes | implemented | permanent regressions are isolated from investigation cases |
-| 16 | add bulk-only/wall-only x exact/zero-phi diagnostic matrix | implemented, execution pending | isolates bulk solved-phi drift from wall migration active-state behavior |
-| 17 | execute canonical suite in GitHub Actions | BLOCKED before physics solve | repository `bin/qpx-opt` is a truncated/corrupted ELF artifact |
+| 16 | add bulk-only/wall-only x exact/zero-phi diagnostic matrix | implemented | isolates bulk solved-phi drift from wall migration active-state behavior |
+| 17 | repository executable integrity/runtime check | infrastructure issue isolated | binary transfer and runtime environment must be distinguished from physics failures |
+| 18 | execute canonical + diagnostic matrix in working Linux QPX environment | canonical PASS; bulk exact/zero PASS; wall exact PASS; wall zero FAIL | **bulk solved-phi drift path cleared; failure localized to wall migration solved-phi state / active-set behavior** |
 
 ## Closed sub-incident: pure algebraic FV potential residual floor
 
@@ -129,29 +130,82 @@ while migration is visible in the timestep-end wall diagnostic but is absent
 from that first-step mass update.
 ```
 
+## Solved-potential isolation matrix — executed result
+
+The matrix was executed in a Linux environment where the production QPX runtime is known to work:
+
+```text
+full_exact_phi_ic                PASS
+migration_only_exact_phi_ic      PASS
+migration_only_zero_phi_ic       FAIL
+bulk_only_exact_phi_ic           PASS
+bulk_only_zero_phi_ic            PASS
+wall_only_exact_phi_ic           PASS
+wall_only_zero_phi_ic            FAIL
+```
+
+This pattern is decisive for the next investigation stage:
+
+```text
+bulk exact PASS + bulk zero PASS
+    -> phi -> E -> QPXFVElectrostaticDrift bulk path is healthy
+
+wall exact PASS + wall zero FAIL
+    -> zero-initial-potential failure is localized to wall migration
+       solved-phi state / active-set behavior
+```
+
+The broad hypothesis that solved `phi` is generically unavailable to charged transport is therefore rejected. The problem is specific to the wall path.
+
 ## Current hypothesis
 
-The wall migration closure depends on solved `phi` and an active-set condition equivalent to:
+The remaining candidate mechanism is the wall migration closure that depends on solved `phi` and an active-set condition equivalent to:
 
 ```text
 z_i * E_n > 0
 ```
 
-The original coupled input starts from `phi = 0`; a timestep-end diagnostic sees the converged Laplace field. The current investigation is determining whether migration is activated in the actual FV residual at the same nonlinear state used by the inventory update.
+The exact-initial-potential wall-only case passes, while the zero-initial-potential wall-only case fails. This is consistent with one of two closely related mechanisms:
 
-The exact-initial-potential diagnostic demonstrates that the migration formulation itself can pass conservation when a valid field is available at the start of the solve.
+1. **wall field state/evaluation timing:** the FV wall-flux residual evaluates migration using a state that still sees the initial zero field, while timestep-end diagnostics see the converged Laplace field;
+2. **hard active-set/Jacobian behavior:** a branch such as `max(0, z_i E_n)` is inactive at the zero-field initial state and does not provide the coupling needed for the first nonlinear solve, even though the converged field later satisfies the active condition.
 
-The uploaded `QPXFVElectrostaticDrift` implementation evaluates the electric field with `determineState()` and does not by itself prove that the bulk drift uses an old/zero potential state. The current state/active-set hypothesis therefore applies most strongly to the wall-migration path until the diagnostic matrix is executed.
+The uploaded `QPXFVElectrostaticDrift` implementation evaluates the electric field with `determineState()` and both bulk exact/zero cases pass. Therefore `QPXFVElectrostaticDrift` is no longer the primary suspect.
+
+### Next discriminating diagnostics
+
+Do not modify mixture-averaged diffusion or bulk electrostatic drift. Add the smallest wall-only diagnostics that distinguish the two remaining mechanisms:
+
+```text
+A. zero-phi IC + wall migration with hard active-set removed/bypassed
+B. zero-phi IC + same hard active-set but wall electric-field evaluation forced to current nonlinear state
+```
+
+Interpretation:
+
+```text
+A PASS, B FAIL
+    -> active-set/non-smooth Jacobian mechanism dominates
+
+A FAIL, B PASS
+    -> wall state/evaluation timing dominates
+
+A PASS, B PASS
+    -> both mechanisms are entangled; production closure should be redesigned
+
+A FAIL, B FAIL
+    -> inspect wall FaceArg/gradient construction and BC functor evaluation contract
+```
 
 ## Test taxonomy
 
-Two test classes are now canonical for this workspace:
+Two test classes are canonical for this workspace:
 
 ### Canonical tests
 
 Permanent regressions. They encode invariants that must continue to PASS as the implementation evolves. A new feature must not weaken their acceptance gates.
 
-Current ion-migration canonical cases include:
+Current ion-migration canonical cases:
 
 ```text
 full_exact_phi_ic
@@ -162,50 +216,17 @@ migration_only_exact_phi_ic
 
 Incident-isolation cases. They may FAIL while the corresponding mechanism is under investigation. Once a failure mechanism is fixed and becomes a permanent invariant, the diagnostic can be promoted to canonical.
 
-The current solved-potential isolation matrix is:
+Current executed solved-potential diagnostics:
 
 ```text
-bulk_only_exact_phi_ic
-bulk_only_zero_phi_ic
-wall_only_exact_phi_ic
-wall_only_zero_phi_ic
+migration_only_zero_phi_ic       FAIL
+bulk_only_exact_phi_ic           PASS
+bulk_only_zero_phi_ic            PASS
+wall_only_exact_phi_ic           PASS
+wall_only_zero_phi_ic            FAIL
 ```
 
-Interpretation:
-
-```text
-bulk exact PASS + bulk zero PASS
-    -> bulk phi -> E -> QPXFVElectrostaticDrift path is healthy
-
-wall exact PASS + wall zero FAIL
-    -> strongly localizes failure to wall migration state/active-set behavior
-
-bulk zero FAIL
-    -> broader solved-phi nonlinear-state coupling remains in scope
-
-wall exact FAIL
-    -> wall-only formulation/test must be corrected before the zero-IC hypothesis is judged
-```
-
-## Current execution blocker — invalid qpx-opt artifact
-
-The new regression runner validates the executable before treating any run as a physics result.
-
-The repository copy of `bin/qpx-opt` is currently only 4434 bytes and is structurally invalid as an ELF executable. GitHub Actions reports:
-
-```text
-ELF 64-bit LSB pie executable, x86-64, ... too many program (7680)
-```
-
-and the preflight check reports:
-
-```text
-invalid/truncated ELF executable:
-program-header table extends to byte 125829184,
-file size is only 4434
-```
-
-Therefore the latest CI `FAIL` is **not a canonical physics regression**. The solver never started. A valid compiled `qpx-opt` must replace the corrupted artifact before the diagnostic matrix can produce physical evidence.
+When the zero-phi wall issue is fixed, `wall_only_zero_phi_ic` and the corresponding full zero-phi regression should be promoted to canonical tests.
 
 ## Current hold points
 
@@ -226,4 +247,5 @@ secondary electron emission
 - Preserve the known-good prescribed-field regression.
 - Isolate one suspected mechanism at a time.
 - Distinguish executable/infrastructure failures from physics regression failures.
+- Do not modify mixture-averaged diffusion or bulk electrostatic drift without new evidence.
 - Close the 1D regression before returning to reactor geometry.
