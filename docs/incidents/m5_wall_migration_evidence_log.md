@@ -1,6 +1,6 @@
 # M5 Wall Migration Diagnostic Evidence Log
 
-**Status:** investigation in progress  
+**Status:** root cause localized to nonlinear convergence behavior  
 **Scope:** solved-FV-potential-driven O2+ wall migration only  
 **Canonical parent incident:** `docs/incidents/m5_ion_drift_failure_history.md`
 
@@ -25,7 +25,7 @@ The canonical exact-potential regressions remain PASS:
 
 ### Localization conclusion
 
-The generic charged-transport path `phi -> E -> QPXFVElectrostaticDrift` is not the active failure mechanism. Mixture-averaged diffusion and bulk electrostatic drift are out of scope unless new evidence contradicts this matrix.
+The generic charged-transport path `phi -> E -> QPXFVElectrostaticDrift` is not the active failure mechanism. Mixture-averaged diffusion and bulk electrostatic drift remain out of scope unless new evidence contradicts this matrix.
 
 ## Hard active-set diagnostic
 
@@ -57,24 +57,15 @@ OVERALL: FAIL
 
 Interpretation:
 
-- smoothing the hard gate does **not** restore conservation;
+- smoothing the hard gate does **not** restore conservation by itself;
 - therefore hard active-set/Jacobian degeneracy is **not sufficient** to explain the incident;
-- the numerical value `-dm/dt = 1.0e-4` is consistent with the first linearization scale of the smoothed gate, but this observation alone does not establish the final mechanism.
+- zero initial field still creates a distinct branch, but later convergence-probe evidence shows that the dominant conservation defect is premature nonlinear convergence.
 
-## Forced nonlinear-iteration diagnostic
+## Earlier forced-iteration diagnostic — superseded interpretation
 
-Two zero-phi wall-only cases were run with `nl_forced_its = 3`:
+An earlier diagnostic reported only process PASS/FAIL for `nl_forced_its = 3` and was initially interpreted as evidence against insufficient nonlinear iterations. That interpretation is now superseded by the quantitative convergence probe below.
 
-| Case | Gate | Forced nonlinear iterations | Result |
-|---|---|---:|---:|
-| `hard_gate_forced3` | hard | 3 | FAIL |
-| `smooth_gate_forced3` | smooth | 3 | FAIL |
-
-Interpretation:
-
-- insufficient nonlinear iteration count is **not** the root cause;
-- simply forcing additional nonlinear residual/Jacobian rebuilds does not close the wall migration balance;
-- hard-gate smoothing plus extra nonlinear iterations still fails.
+The important lesson is that process return code alone is not sufficient for this incident; the wall mass-balance closure must be measured numerically.
 
 ## Framework checks completed
 
@@ -87,50 +78,119 @@ The following MOOSE contracts have been inspected:
 5. `SideFVFluxBCIntegral` evaluates the same `FVFluxBC::computeQpResidual()` when reporting the flux.
 6. `FunctorMaterial::addFunctorProperty` defaults to `EXEC_ALWAYS`, so the wall functor itself is not intentionally cached across nonlinear iterations.
 
-These checks weaken the simple explanations that the BC is explicitly old-state, that the boundary gradient is inherently old-state, or that the functor is intentionally cached.
+These checks reject or weaken simple old-state/caching explanations.
 
-## Current discriminating experiment: initial-phi amplitude sweep
+## Initial-potential amplitude sweep — executed
 
-All cases solve the same final Laplace problem:
+All cases solved the same final electrostatic problem:
 
 ```text
 phi(0) = 20000 V
 phi(1) = 0 V
 ```
 
-Only the initial potential field differs:
+Only the initial potential field changed:
 
 ```text
 phi_IC(x) = s * 20000 * (1-x)
 ```
 
-with:
+Executed result:
+
+| `s` | Solve | `-dm/dt` | Left migration | Right migration `G_end` | Closure `C=(-dm/dt)/G_end` | Balance error | `phi_min` | `phi_max` |
+|---:|:---:|---:|---:|---:|---:|---:|---:|---:|
+| 0.00 | PASS | `-0.000000e+00` | `0` | `2.000000e-04` | `-0.000000` | `1.000000e+00` | `1.000000e+02` | `1.990000e+04` |
+| 0.25 | PASS | `1.904762e-04` | `0` | `1.619048e-04` | `1.176471` | `1.500000e-01` | `1.000000e+02` | `1.990000e+04` |
+| 0.50 | PASS | `1.818182e-04` | `0` | `1.636364e-04` | `1.111111` | `1.000000e-01` | `1.000000e+02` | `1.990000e+04` |
+| 0.75 | PASS | `1.739130e-04` | `0` | `1.652174e-04` | `1.052632` | `5.000000e-02` | `1.000000e+02` | `1.990000e+04` |
+| 1.00 | PASS | `1.666667e-04` | `0` | `1.666667e-04` | `1.000000` | `1.918604e-12` | `1.000000e+02` | `1.990000e+04` |
+
+The final solved potential is identical across the sweep, so the conservation defect is not caused by different converged electrostatic states.
+
+### One-Newton signature
+
+For this 1D case:
 
 ```text
-s = 0.00, 0.25, 0.50, 0.75, 1.00
+mu_i   = 0.01 m^2/(V s)
+E_*    = 20000 V/m
+dt     = 1e-5 s
+dx     = 0.01 m
+lambda = mu_i * E_* * dt / dx = 0.2
 ```
 
-For every case record the first positive-time row:
+For every nonzero initial-field amplitude, the measured closure is exactly reproduced by a single Newton linearization of the bilinear wall term `w * E` around `E_0 = s E_*`:
 
-- `-dm/dt`
-- left migration rate
-- right migration rate
-- total final migration rate
-- closure ratio `C = (-dm/dt) / Gamma_migration,end`
-- `phi_min`, `phi_max`
-- solver status
-- nonlinear residual history if the case fails or behaves anomalously
+```text
+C(s) = 5 / (4 + s)
+```
 
-The sweep decision table is maintained in:
+which predicts:
 
-`docs/incidents/m5_phi_ic_sweep_decision_matrix.md`
+```text
+s=0.25 -> 1.1764706
+s=0.50 -> 1.1111111
+s=0.75 -> 1.0526316
+s=1.00 -> 1.0000000
+```
+
+matching the measured sweep values to output precision.
+
+At `s=0`, the hard outward gate is initially inactive, producing the separate zero-update branch.
+
+This establishes a strong one-Newton/truncated-nonlinear-closure signature.
+
+## Quantitative convergence probe — decisive result
+
+A follow-up first-timestep probe compared default convergence, minimum forced nonlinear iterations, and effectively disabled relative convergence.
+
+| Case | `s` | Mode | Solve | `-dm/dt` | `G_end` | Closure `C` | Balance error |
+|---|---:|---|:---:|---:|---:|---:|---:|
+| `s100_default` | 1.00 | default | PASS | `1.666667e-04` | `1.666667e-04` | `1.000000` | `1.918604e-12` |
+| `s050_default` | 0.50 | default | PASS | `1.818182e-04` | `1.636364e-04` | `1.111111` | `1.000000e-01` |
+| `s050_forced2` | 0.50 | `nl_forced_its=2` | PASS | `1.666667e-04` | `1.666667e-04` | `1.000000` | `1.918604e-12` |
+| `s050_forced3` | 0.50 | `nl_forced_its=3` | FAIL | n/a | n/a | n/a | n/a |
+| `s050_abs_only` | 0.50 | `nl_rel_tol=1e-16` | PASS | `1.666667e-04` | `1.666667e-04` | `1.000000` | `1.918604e-12` |
+| `s000_default` | 0.00 | default | PASS | `-0.000000e+00` | `2.000000e-04` | `-0.000000` | `1.000000e+00` |
+| `s000_forced2` | 0.00 | `nl_forced_its=2` | PASS | `1.666667e-04` | `1.666667e-04` | `1.000000` | `1.918604e-12` |
+| `s000_forced3` | 0.00 | `nl_forced_its=3` | PASS | `1.666667e-04` | `1.666667e-04` | `1.000000` | `1.918604e-12` |
+| `s000_abs_only` | 0.00 | `nl_rel_tol=1e-16` | PASS | `1.666667e-04` | `1.666667e-04` | `1.000000` | `1.918604e-12` |
+
+### Root-cause conclusion
+
+The conservation defect is restored in both the partial-field and zero-field cases by either:
+
+```text
+A. requiring at least two nonlinear iterations
+or
+B. tightening nl_rel_tol sufficiently that the second nonlinear correction is executed
+```
+
+Therefore the dominant root cause is:
+
+> **premature global nonlinear convergence after the first Newton correction.**
+
+The electrostatic residual dominates the initial global reference norm. After the first Newton update solves the Laplace field, the global residual can satisfy the default relative criterion even though the wall species equation still contains the second-order/bilinear correction associated with the updated `w * E` wall flux. The timestep is then accepted with a species-wall residual that has not reached conservation closure.
+
+The zero-field hard gate explains why `s=0` has a more extreme first-iteration signature, but it is not the dominant root cause because both `forced2` and tight relative convergence fully recover the same conservative solution.
+
+The isolated `s050_forced3` process failure is **not yet interpreted** without its nonlinear log. It is not evidence against the root-cause conclusion because `forced2` and tight-relative-tolerance independently recover the identical conservative state.
+
+## Corrective direction
+
+Do not modify mixture diffusion, bulk electrostatic drift, or wall migration physics to fix this incident.
+
+The corrective action belongs in nonlinear convergence control for coupled algebraic-potential/species solves. Candidate permanent approaches must ensure that the species residual cannot be hidden by the much larger initial electrostatic residual. Possible approaches to validate include:
+
+1. variable/reference residual convergence for `w_O2_plus` and `phi` separately;
+2. a convergence object with per-variable residual gates;
+3. a documented minimum of two nonlinear iterations only as a temporary regression safeguard, not as the preferred general solution;
+4. global tolerance/scaling changes only if they are shown robust across mesh, timestep, and physical parameter changes.
 
 ## Investigation hold points
 
-Do not change or advance the following while this incident is open:
+Do not advance these layers until a robust convergence-control fix is selected and the zero-IC regression is promoted to canonical:
 
-- mixture-averaged diffusion physics;
-- bulk `QPXFVElectrostaticDrift` implementation;
 - reactor-scale O2+ integration;
 - electron bulk drift;
 - ion/electron dielectric surface-current accumulation;
@@ -138,7 +198,7 @@ Do not change or advance the following while this incident is open:
 
 ## Evidence discipline
 
-- A diagnostic FAIL is evidence only for the mechanism isolated by that test.
-- Do not promote a diagnostic to canonical until the failure is fixed and the expected behavior becomes a permanent invariant.
-- Do not classify infrastructure/runtime failures as physics failures.
-- Preserve exact numeric outputs whenever they are used to reject a hypothesis.
+- Process-level PASS is not equivalent to physics/conservation PASS.
+- Preserve the wall mass-balance gate at `1e-8` or tighter.
+- Do not classify `s050_forced3` without its solver log.
+- Do not hide this incident by changing physical coefficients or arbitrary timestep reduction.
