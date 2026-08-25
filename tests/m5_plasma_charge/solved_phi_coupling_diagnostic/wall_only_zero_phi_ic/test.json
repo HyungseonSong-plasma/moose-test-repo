@@ -1,0 +1,7 @@
+{
+  "name": "wall_only_zero_phi_ic",
+  "type": "diagnostic",
+  "input": "wall_only_zero_phi_ic.i",
+  "checker": "../check_coupling_path.py",
+  "checker_args": ["wall_only_zero_phi_ic_out.csv", "wall_only"]
+}
