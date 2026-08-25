@@ -42,6 +42,9 @@ Solve Did NOT Converge!
 | 12 | reduce coupled `nl_abs_tol` from `1e-11` to `3e-12` | same FAIL | loose global tolerance is not the secondary root cause |
 | 13 | conservation identity on first step | localized | transient inventory includes surface loss but misses migration contribution seen at timestep end |
 | 14 | migration-state diagnostic with exact initial `phi` | at least full exact-phi case PASS | migration formulation can conserve when valid field state is available at start |
+| 15 | split tests into canonical and diagnostic classes | implemented | permanent regressions are isolated from investigation cases |
+| 16 | add bulk-only/wall-only x exact/zero-phi diagnostic matrix | implemented, execution pending | isolates bulk solved-phi drift from wall migration active-state behavior |
+| 17 | execute canonical suite in GitHub Actions | BLOCKED before physics solve | repository `bin/qpx-opt` is a truncated/corrupted ELF artifact |
 
 ## Closed sub-incident: pure algebraic FV potential residual floor
 
@@ -138,6 +141,72 @@ The original coupled input starts from `phi = 0`; a timestep-end diagnostic sees
 
 The exact-initial-potential diagnostic demonstrates that the migration formulation itself can pass conservation when a valid field is available at the start of the solve.
 
+The uploaded `QPXFVElectrostaticDrift` implementation evaluates the electric field with `determineState()` and does not by itself prove that the bulk drift uses an old/zero potential state. The current state/active-set hypothesis therefore applies most strongly to the wall-migration path until the diagnostic matrix is executed.
+
+## Test taxonomy
+
+Two test classes are now canonical for this workspace:
+
+### Canonical tests
+
+Permanent regressions. They encode invariants that must continue to PASS as the implementation evolves. A new feature must not weaken their acceptance gates.
+
+Current ion-migration canonical cases include:
+
+```text
+full_exact_phi_ic
+migration_only_exact_phi_ic
+```
+
+### Diagnostic tests
+
+Incident-isolation cases. They may FAIL while the corresponding mechanism is under investigation. Once a failure mechanism is fixed and becomes a permanent invariant, the diagnostic can be promoted to canonical.
+
+The current solved-potential isolation matrix is:
+
+```text
+bulk_only_exact_phi_ic
+bulk_only_zero_phi_ic
+wall_only_exact_phi_ic
+wall_only_zero_phi_ic
+```
+
+Interpretation:
+
+```text
+bulk exact PASS + bulk zero PASS
+    -> bulk phi -> E -> QPXFVElectrostaticDrift path is healthy
+
+wall exact PASS + wall zero FAIL
+    -> strongly localizes failure to wall migration state/active-set behavior
+
+bulk zero FAIL
+    -> broader solved-phi nonlinear-state coupling remains in scope
+
+wall exact FAIL
+    -> wall-only formulation/test must be corrected before the zero-IC hypothesis is judged
+```
+
+## Current execution blocker — invalid qpx-opt artifact
+
+The new regression runner validates the executable before treating any run as a physics result.
+
+The repository copy of `bin/qpx-opt` is currently only 4434 bytes and is structurally invalid as an ELF executable. GitHub Actions reports:
+
+```text
+ELF 64-bit LSB pie executable, x86-64, ... too many program (7680)
+```
+
+and the preflight check reports:
+
+```text
+invalid/truncated ELF executable:
+program-header table extends to byte 125829184,
+file size is only 4434
+```
+
+Therefore the latest CI `FAIL` is **not a canonical physics regression**. The solver never started. A valid compiled `qpx-opt` must replace the corrupted artifact before the diagnostic matrix can produce physical evidence.
+
 ## Current hold points
 
 Do not advance these layers until the isolated solved-potential ion-drift regression is closed:
@@ -156,4 +225,5 @@ secondary electron emission
 - Measure residual floors before changing nonlinear tolerances.
 - Preserve the known-good prescribed-field regression.
 - Isolate one suspected mechanism at a time.
+- Distinguish executable/infrastructure failures from physics regression failures.
 - Close the 1D regression before returning to reactor geometry.
