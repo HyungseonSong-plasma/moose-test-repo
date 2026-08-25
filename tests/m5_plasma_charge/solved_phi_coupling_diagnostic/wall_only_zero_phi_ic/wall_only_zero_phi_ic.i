@@ -7,6 +7,10 @@ z_i = 1
 phi_left = 20000
 phi_right = 0
 
+[Problem]
+  extra_tag_vectors = 'absolute_ref'
+[]
+
 [Mesh]
   [mesh]
     type = GeneratedMeshGenerator
@@ -72,6 +76,7 @@ phi_right = 0
     type = QPXFVMassFractionTimeDerivative
     variable = w_O2_plus
     rho = rho
+    absolute_value_vector_tags = 'absolute_ref'
   []
 []
 
@@ -94,6 +99,7 @@ phi_right = 0
     boundary = left
     functor = ion_migration_mass_flux
     factor = -1
+    absolute_value_vector_tags = 'absolute_ref'
   []
   [right_migration_loss]
     type = FVFunctorNeumannBC
@@ -101,6 +107,36 @@ phi_right = 0
     boundary = right
     functor = ion_migration_mass_flux
     factor = -1
+    absolute_value_vector_tags = 'absolute_ref'
+  []
+[]
+
+[Convergence]
+  [global_default]
+    type = DefaultNonlinearConvergence
+    nl_abs_tol = 3e-12
+    nl_rel_tol = 1e-10
+    nl_max_its = 30
+    nl_div_tol = -1
+  []
+  [species_reference]
+    type = ReferenceResidualConvergence
+    reference_vector = 'absolute_ref'
+    converge_on = 'w_O2_plus'
+    normalization_type = global_L2
+    unscale_the_residual = true
+    zero_reference_residual_treatment = relative_tolerance
+    nl_abs_tol = 3e-12
+    nl_rel_tol = 1e-6
+    nl_max_its = 30
+    nl_div_tol = -1
+  []
+  [combined]
+    type = ParsedConvergence
+    symbol_names = 'global_default species_reference'
+    symbol_values = 'global_default species_reference'
+    convergence_expression = 'global_default & species_reference'
+    divergence_expression = 'global_default | species_reference'
   []
 []
 
@@ -140,11 +176,9 @@ phi_right = 0
   type = Transient
   solve_type = NEWTON
   automatic_scaling = true
+  nonlinear_convergence = combined
   dt = 1e-5
   end_time = 2e-5
-  nl_abs_tol = 3e-12
-  nl_rel_tol = 1e-10
-  nl_max_its = 30
   l_tol = 1e-12
   l_max_its = 200
 []
