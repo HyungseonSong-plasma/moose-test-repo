@@ -1,0 +1,6 @@
+{
+  "name": "full_exact_phi_ic",
+  "input": "input.i",
+  "checker": "../check_migration_state.py",
+  "checker_args": ["full_exact_phi_ic_out.csv", "full"]
+}
