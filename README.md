@@ -1,10 +1,10 @@
-# sol-adapter-moose Test Workspace
+# moose-test-repo Test Workspace
 
-This repository is the dedicated **sol-adapter-moose** workspace for executable regression tests, isolated MOOSE/QPX input cases, development logs, and reusable troubleshooting records.
+This repository is the shared **moose-test-repo** workspace for executable regression tests, isolated MOOSE/QPX input cases, development logs, and reusable troubleshooting records.
 
 ## Boundary
 
-This repository belongs to the **sol-adapter-moose team only**. Work for other teams or repositories must not be mixed into this workspace.
+This repository belongs to the **moose-test-repo** workspace. It is not restricted to sol-adapter-moose-only testing; relevant MOOSE/QPX development, verification, and troubleshooting work may be organized here.
 
 ## Primary uses
 
