@@ -176,16 +176,49 @@ The zero-field hard gate explains why `s=0` has a more extreme first-iteration s
 
 The isolated `s050_forced3` process failure is **not yet interpreted** without its nonlinear log. It is not evidence against the root-cause conclusion because `forced2` and tight-relative-tolerance independently recover the identical conservative state.
 
+## Production convergence screening — executed
+
+A parallel batch compared global-tolerance, scaling, and species-aware reference-residual strategies for `s=0`, `0.5`, and `1.0`.
+
+| Strategy | All solved | Physics all | Max balance error | Mean nonlinear its | Max nonlinear its |
+|---|:---:|:---:|---:|---:|---:|
+| `default` | yes | **no** | `1.000000e+00` | `1.00` | `1` |
+| `forced2` | no | no | n/a | n/a | n/a |
+| `tight_global` | yes | **yes** | `1.918604e-12` | `1.67` | `2` |
+| `manual_scale_1e6` | yes | **yes** | `1.918604e-12` | `1.67` | `2` |
+| `manual_scale_1e8` | yes | **yes** | `1.918604e-12` | `1.67` | `2` |
+| `ref_species_1e4` | yes | **yes** | `1.918604e-12` | `1.67` | `2` |
+| `ref_species_1e6` | yes | **yes** | `1.918604e-12` | `1.67` | `2` |
+| `ref_species_1e8` | yes | **yes** | `1.918604e-12` | `1.67` | `2` |
+| `ref_species_1e10` | yes | **yes** | `1.918604e-12` | `1.67` | `2` |
+
+### Production-screening interpretation
+
+This result narrows the corrective mechanism further:
+
+1. `tight_global` confirms again that a second nonlinear correction restores conservation.
+2. `manual_scale_1e6` and `manual_scale_1e8` both conserve while the failing baseline uses the same explicit `w_O2_plus` scale with `automatic_scaling=true`. Therefore the critical distinction is not the exact manual scale magnitude over this tested range; disabling automatic scaling changes the convergence behavior enough to prevent the premature one-iteration exit.
+3. Species-aware `ReferenceResidualConvergence` conserves for every tested relative tolerance from `1e-4` through `1e-10`, with no extra nonlinear cost relative to the successful alternatives. This is a strong robustness signal and removes sensitivity to the dominant electrostatic residual from the species convergence decision.
+4. `forced2` remains only a diagnostic/correctness control. Its batch-level process failure prevents it from being considered as the production design.
+
+### Current production candidates
+
+The production choice is reduced to two candidates that require broader validation:
+
+```text
+A. automatic_scaling = false + explicit variable scaling
+B. species-aware ReferenceResidualConvergence combined with the global convergence gate
+```
+
+Candidate B is architecturally preferred because it directly encodes the required multiphysics invariant: a dominant electrostatic residual must not hide unconverged species equations. Candidate A is simpler but may be more regime-dependent because fixed variable scaling must remain appropriate as species densities, mobilities, timesteps, meshes, and additional plasma equations are introduced.
+
+Do **not** select a permanent production setting from the wall-only screening alone. Validate both finalists against the full coupled migration path and a small physical-regime matrix before promotion.
+
 ## Corrective direction
 
 Do not modify mixture diffusion, bulk electrostatic drift, or wall migration physics to fix this incident.
 
-The corrective action belongs in nonlinear convergence control for coupled algebraic-potential/species solves. Candidate permanent approaches must ensure that the species residual cannot be hidden by the much larger initial electrostatic residual. Possible approaches to validate include:
-
-1. variable/reference residual convergence for `w_O2_plus` and `phi` separately;
-2. a convergence object with per-variable residual gates;
-3. a documented minimum of two nonlinear iterations only as a temporary regression safeguard, not as the preferred general solution;
-4. global tolerance/scaling changes only if they are shown robust across mesh, timestep, and physical parameter changes.
+The corrective action belongs in nonlinear convergence control for coupled algebraic-potential/species solves. Candidate permanent approaches must ensure that the species residual cannot be hidden by the much larger initial electrostatic residual.
 
 ## Investigation hold points
 
@@ -200,5 +233,5 @@ Do not advance these layers until a robust convergence-control fix is selected a
 
 - Process-level PASS is not equivalent to physics/conservation PASS.
 - Preserve the wall mass-balance gate at `1e-8` or tighter.
-- Do not classify `s050_forced3` without its solver log.
+- Do not classify isolated forced-iteration process failures without their solver logs.
 - Do not hide this incident by changing physical coefficients or arbitrary timestep reduction.
