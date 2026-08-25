@@ -7,6 +7,7 @@ Metric definitions are canonical in `docs/guides/work_closure_validator.md`.
 | Work ID | Title | Complexity | WCC | T-WCC | EVR | DBR | RWR | CLR | FBR | Reopened | Root-cause class | Primary process lesson |
 |---|---|:---:|---:|---:|---:|---:|---:|---:|:---:|:---:|---|---|
 | M5-ion-wall | Solved-potential O2+ wall migration incident | C3 | `>=20*` | `>=15*` | 8 | 5 | 2 | 0 known | no | no | nonlinear convergence / scaling interaction | parallelize hypothesis triage; include convergence sensitivity + numeric invariants in first batch |
+| reactor-o2plus-integration | Reactor-scale O2+ charged-heavy integration | C3 | 9 | 7 | 5 | 1 | 3 | 0 | yes | no | charged-heavy integration / conservation closure | first valid broad batch resolved hypotheses; remaining cost came from preventable test-harness defects |
 
 `*` M5 predates Validator instrumentation. WCC and T-WCC are conservative lower bounds reconstructed from retained conversation/evidence and must not be treated as exact historical counts. EVR, DBR, and RWR were reconstructed from identifiable executed batches and rework events. See `docs/incidents/m5_closure.md` for the reconstruction basis.
 
@@ -17,6 +18,32 @@ Metric definitions are canonical in `docs/guides/work_closure_validator.md`.
 - If historical counting is reconstructed rather than directly observed, mark the value and explain the basis below the table.
 - If a CLOSED work is later reopened, set `Reopened=yes`; its low WCC must not be treated as a clean efficiency success.
 - Lower-bound historical records such as M5 should be used for process lessons and directional comparison, not precise median calculations once instrumented exact records are available.
+
+## C3 comparison
+
+The first instrumented C3 work shows a large diagnostic-efficiency improvement over the historical M5 baseline:
+
+```text
+                         M5 baseline     reactor-o2plus
+DBR                      5               1
+FBR                      no              yes
+EVR                      8               5
+RWR                      2               3
+```
+
+Interpretation:
+
+- parallel hypothesis triage achieved its intended effect: the first valid reactor-scale batch resolved the initial integration hypothesis set;
+- total external execution cost improved but remained above target because three avoidable harness defects created rework;
+- the next optimization priority is therefore delivery correctness, not further diagnostic parallelization.
+
+Required pre-delivery checks for future batches now include:
+
+```text
+FVBC/postprocessor boundary-restriction compatibility
+ParsedFunction/ParsedMaterial reserved-symbol collisions
+known algebraic-FV residual-floor constraints
+```
 
 ## M5 baseline interpretation
 
