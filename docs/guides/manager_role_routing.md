@@ -289,3 +289,5 @@ The goal is to move failures earlier in the pipeline, where they are cheaper and
 ## 10. Metric adoption note
 
 `RVR` was adopted on 2026-08-26. From this point forward the Manager must include it in active technical issue metrics. Historical values may be backfilled only from explicit evidence and must be marked reconstructed/estimated when not prospectively counted.
+
+The intent is not to reward research for its own sake. The measurable question is whether additional validated research reduces downstream EVR/DBR/RWR at comparable complexity and closure quality.
