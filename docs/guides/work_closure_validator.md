@@ -80,6 +80,8 @@ Examples that do not count:
 
 Do not assume causality from one work item. Compare `RVR` jointly with `EVR`, `DBR`, `RWR`, `WCC`, and complexity class across similar work items.
 
+For work items that started before RVR was introduced, reconstruct RVR only from explicit issue/conversation evidence. Mark the value `reconstructed` or `estimated` rather than inventing exact historical precision.
+
 ### EVR: External Validation Rounds
 
 Number of times the user must execute a test/bundle in the external QPX runtime and return results.
