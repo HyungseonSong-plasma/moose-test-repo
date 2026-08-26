@@ -282,3 +282,7 @@ A pattern of higher `RVR` with lower `EVR`/`DBR` can indicate that earlier resea
 Repeated avoidable construction errors should result in stronger preflight checks. Repeated research uncertainty should result in better source/provenance contracts. Repeated false-PASS risk should result in stronger Validator mutation tests. Representation failures should result in an earlier model-state dependency inventory before data extraction begins.
 
 The goal is to move failures earlier in the pipeline, where they are cheaper and do not consume external runtime rounds.
+
+## 10. Metric adoption note
+
+`RVR` was adopted on 2026-08-26. From this point forward the Manager must include it in active technical issue metrics. Historical values may be backfilled only from explicit evidence and must be marked reconstructed/estimated when not prospectively counted.
