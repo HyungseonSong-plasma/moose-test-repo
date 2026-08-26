@@ -81,6 +81,14 @@ EOS_rel_error < 1e-10
 
 plus the previously passed mass-fraction and mean-molar-mass checks.
 
+Prepared regression bundle:
+
+```text
+charged_heavy_step2_h1_eos_confirmation
+```
+
+If it passes, H1 becomes SUPPORTED and Step 2 is complete because H2 is already supported by the immediately preceding cold-cache batch.
+
 ## Prevention rule
 
 Do not replace a domain average with a midpoint of extrema. When validating an integral/average identity, all compared quantities must use compatible aggregation operators over the same domain and weighting.
