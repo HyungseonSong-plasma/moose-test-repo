@@ -1,7 +1,7 @@
 # Work Closure Validator
 
 **Status:** living guide  
-**Scope:** MOOSE-team work-item execution efficiency  
+**Scope:** MOOSE-team work-item execution efficiency and validation sufficiency  
 **Objective:** reach a validated CLOSED state with fewer user↔MOOSE interaction rounds without weakening technical acceptance criteria.
 
 ## 1. Primary metric — WCC
@@ -131,7 +131,61 @@ not:
 minimize WCC at any cost
 ```
 
-## 4. Engineering interpretation
+## 4. Validator sufficiency audit before execution
+
+The Validator is responsible not only for scoring work after execution, but for deciding whether the proposed test set is capable of supporting the intended conclusion.
+
+Before a batch is accepted for external execution, the Validator should answer:
+
+```text
+What claim will PASS establish?
+Which failure classes are covered?
+Which plausible failure classes remain uncovered?
+Can implementation and checker share the same bug and false-PASS?
+Does the production code path itself get exercised?
+Are negative controls/mutations present to prove checker sensitivity?
+Are harness/construction failures separated from physics failures?
+```
+
+A batch is insufficient if it validates only a test-side model while leaving the production parser/resolver/solver path unchecked.
+
+### Validator acceptance classes
+
+Use explicit decisions such as:
+
+```text
+TEST_SET_INSUFFICIENT
+STATIC_PIPELINE_PASS_ONLY
+PRODUCTION_PATH_UNVALIDATED
+VALIDATOR_SELFTEST_UNVALIDATED
+BATCH_ACCEPTED_FOR_EXECUTION
+```
+
+## 5. Mandatory construction-preflight expectation
+
+For MOOSE/QPX executable bundles, the Validator should require preflight coverage before full runtime:
+
+```text
+P0 checker self-test / mutation controls
+P1 static construction checks
+P2 qpx-opt --check-input
+P3 full physics runtime
+```
+
+Static construction checks should include, when applicable:
+
+- duplicate objects/blocks;
+- reserved parser symbols;
+- missing functor providers;
+- generated dot-functor naming;
+- missing files or required outputs;
+- alias/identifier integrity.
+
+Example: if `w_O_state` is provided with `define_dot_functors = true`, the generated time derivative is `dw_O_state_dt`; a request for `dO_state_dt` should be detected before a full solve.
+
+Construction failures are harness/configuration evidence, never physics FAIL.
+
+## 6. Engineering interpretation
 
 At closure, classify excess interaction cost.
 
@@ -144,7 +198,7 @@ At closure, classify excess interaction cost.
 | low WCC but failed/reopened work | premature closure | strengthen closure gates; do not count as successful efficiency |
 | repeated same symptom across incidents | knowledge not being reused | promote symptom→batch mapping into the problem-solving protocol |
 
-## 5. Work-close record
+## 7. Work-close record
 
 Every CLOSED technical work item should append one record to the efficiency ledger.
 
@@ -179,7 +233,7 @@ C4 = cross-layer architecture/integration incident
 
 Do not use complexity to hide poor efficiency. Report raw WCC first; complexity is only a comparison dimension.
 
-## 6. Optimization targets
+## 8. Optimization targets
 
 Initial targets for MOOSE technical incidents:
 
@@ -193,7 +247,7 @@ median WCC should decrease within each complexity class
 
 Do not set a hard WCC target until enough closed work items exist to establish a baseline distribution.
 
-## 7. Learning loop
+## 9. Learning loop
 
 At every work closure:
 
@@ -206,9 +260,9 @@ close work
   -> compare future similar work against the historical baseline
 ```
 
-The validator is therefore not only a scorekeeper. Its purpose is to make interaction efficiency an engineering variable.
+The validator is therefore not only a scorekeeper. Its purpose is to make interaction efficiency and test sufficiency engineering variables.
 
-## 8. M5 baseline policy
+## 10. M5 baseline policy
 
 The current M5 solved-potential ion-wall incident is the first designated baseline work item.
 
