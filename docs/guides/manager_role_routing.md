@@ -259,15 +259,18 @@ Do not build a denser `Q(T)` table until this gate passes. This sequence counts 
 
 ## 9. Continuous improvement
 
-At closure or after material rework, the Manager reviews Validator metrics:
+At closure or after material rework, the Manager reviews Validator metrics in the canonical issue order:
 
-- WCC / T-WCC;
-- RVR;
-- EVR;
-- DBR;
-- RWR;
-- CLR;
-- FBR.
+```text
+WCC
+T-WCC
+RVR
+EVR
+DBR
+RWR
+CLR
+FBR
+```
 
 Interpretation must include the relationship between research investment and validation burden. In particular, compare similar complexity/work types using pairs such as:
 
