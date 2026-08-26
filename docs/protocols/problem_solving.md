@@ -287,3 +287,88 @@ EVR #3 would only finish an intermediate stage rather than the issue claim
 Do not keep a large parent open merely to accumulate unrelated downstream execution metrics. A parent may be closed as `DECOMPOSED_PARENT` after its validated history and successor links are recorded. This is not a claim that unfinished downstream physics is technically complete.
 
 Successor issues start with their own issue-local metrics and their own prospective `0/3` EVR budget. Historical metrics remain on the original parent and are not copied into successors.
+
+## PS-16 — External batch identity and EVR naming
+
+A test case is not an EVR. An EVR is one user-local QPX execution-result return attributable to the bounded work item, as defined in `metrics_closure.md`.
+
+Use test IDs such as `T1`, `T2`, `A`, `B`, or descriptive case names inside one external batch. Do not name sequential subtests `EVR1-A`, `EVR1-B`, etc. when they require separate user executions; that obscures the true EVR count.
+
+Preferred first-round structure:
+
+```text
+EVR #1
+  -> one standalone suite
+     -> known-good control
+     -> candidate case(s)
+     -> independent oracle/reference
+     -> ON/OFF or mutation controls
+     -> cheap fail-branch discriminators
+     -> executable/environment identity
+```
+
+When several tests can be run together without destroying interpretability, package them into the same external execution round. Optimize information per EVR, not number of named test cases.
+
+## PS-17 — Live EVR/RWR accounting before the next execution
+
+After every user-local result return and before requesting another external execution:
+
+```text
+EVR += 1
+classify the result
+if avoidable assistant-side artifact/config/checker defect caused another round:
+  RWR += 1
+record the updated issue-local metric state
+```
+
+Do not defer EVR/RWR reconciliation until closure. If the prospective EVR budget is exhausted, do not request another execution under the unchanged scope; apply the EVR #3 branch in PS-07.
+
+Metric definitions and final accounting remain owned by `metrics_closure.md`; this rule governs when accounting must occur during problem solving.
+
+## PS-18 — Rework stop rule
+
+Repeated assistant-side validation-harness rework is itself a signal that the test architecture needs redesign.
+
+```text
+RWR = 0 -> normal execution
+RWR = 1 -> one targeted correction is allowed
+RWR >= 2 within the same bounded test path
+         -> STOP further external execution
+         -> mandatory Validator redesign
+```
+
+The redesign must re-audit at least:
+
+```text
+observation/dataflow graph
+execution-stage ordering
+checker mathematical semantics
+artifact dependencies and stale outputs
+mutation/self-test coverage
+batch independence and fail branches
+```
+
+Do not produce a third incremental harness revision merely by patching the last symptom. Resume external execution only after the Validator records why the redesigned test set covers the repeated failure class.
+
+## PS-19 — Promotion-ready planning
+
+Closure engineering starts in Phase 0, not after diagnostic PASS.
+
+For each planned validation case, declare one of:
+
+```text
+DIAGNOSTIC_ONLY
+PROMOTION_CANDIDATE
+```
+
+For every `PROMOTION_CANDIDATE`, predeclare:
+
+```text
+canonical regression destination
+promotion condition
+required invariant/reference
+negative-control requirement
+final regression-suite membership
+```
+
+When practical, design the diagnostic artifact so a successful case can be promoted without changing its physics, reference, or checker semantics. A late discovery that accepted feature evidence has no canonical regression path is a planning defect and should be recorded as closure rework.
