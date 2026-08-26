@@ -1,60 +1,55 @@
 # moose-test-repo Test Workspace
 
-This repository is the shared **moose-test-repo** workspace for executable regression tests, isolated MOOSE/QPX input cases, development logs, and reusable troubleshooting records.
+Shared MOOSE/QPX workspace for executable regression tests, isolated input cases, development logs, and reusable troubleshooting evidence.
 
-## Boundary
+## Start here
 
-This repository belongs to the **moose-test-repo** workspace. It is not restricted to sol-adapter-moose-only testing; relevant MOOSE/QPX development, verification, and troubleshooting work may be organized here.
+Operational behavior is defined in one canonical chain:
 
-## Primary uses
+```text
+OPERATING_CORE.md
+  -> PROTOCOL_INDEX.md
+       -> docs/protocols/problem_solving.md
+       -> docs/protocols/validation.md
+       -> docs/protocols/metrics_closure.md
+```
 
-- Store self-contained test inputs and checkers.
-- Reproduce numerical/solver failures with minimal cases.
-- Run tests against a local or repository-provided `qpx-opt` executable.
-- Preserve development and incident history.
-- Promote closed incidents into reusable troubleshooting knowledge.
+Load only the procedure selected by `PROTOCOL_INDEX.md`. Reusable incident knowledge lives in `docs/knowledge/TROUBLESHOOTING_INDEX.md`. Current work state lives in the active GitHub issue body.
 
 ## Repository layout
 
 ```text
-bin/                         optional local/test executable location
+OPERATING_CORE.md              always-active invariants
+PROTOCOL_INDEX.md              deterministic procedure router
+WORKSPACE.md                   repository boundary
+
 docs/
-  development/               development notes
-  incidents/                 chronological failure investigations
-  knowledge/                 reusable troubleshooting knowledge
-scripts/                     test runner utilities
-tests/
-  <area>/<case>/
-    test.json                test metadata
-    input.i                  executable input
-    check.py                 acceptance checker
-    <runtime dependencies>   mesh/data/reference files
-results/                     generated outputs; not committed
+  protocols/                   canonical conditional procedures
+  incidents/                   chronological failure investigations
+  knowledge/                   reusable troubleshooting knowledge
+  development/                 development notes
+  guides/                      deprecated compatibility entry points
+
+scripts/                       runner/checker utilities
+tests/                         canonical test inputs/checkers
+bin/                           optional local/test executable location
+results/                       generated outputs; not canonical
 ```
 
-## Executable resolution
+## Runtime evidence
 
-The runners resolve the executable in this order:
+Canonical QPX runtime evidence comes from the user's real local `qpx-opt`. Runners receiving an explicit executable path must resolve it before changing directories; see `CORE-06` and `CORE-14` in `OPERATING_CORE.md`.
 
-1. `QPX_EXECUTABLE` environment variable
-2. `bin/qpx-opt`
-3. `qpx-opt` from `PATH`
+## Canonical test shape
 
-Example:
+A persistent regression should remain self-contained, for example:
 
-```bash
-export QPX_EXECUTABLE=/path/to/qpx-opt
-python3 scripts/run_test.py tests/m5_plasma_charge/ion_wall_migration_state
+```text
+<case>/
+  test.json
+  input.i
+  check.py
+  <required mesh/data/reference files>
 ```
 
-or, if `bin/qpx-opt` exists:
-
-```bash
-python3 scripts/run_test.py tests/m5_plasma_charge/ion_wall_migration_state
-```
-
-## Test rule
-
-A regression is not considered closed until its checker passes the intended physical/numerical gates, such as conservation, positivity, directionality, stoichiometry, units, and reference agreement.
-
-Generated CSV/log/output files belong under `results/` and should not replace the canonical input/checker pair in `tests/`.
+Acceptance and checker requirements are defined only in `docs/protocols/validation.md`; this README intentionally does not duplicate them.
