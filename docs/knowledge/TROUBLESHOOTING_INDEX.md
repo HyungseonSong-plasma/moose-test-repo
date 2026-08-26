@@ -8,6 +8,7 @@ This index maps recurring symptoms to incident records and minimal regression ca
 | Solved-potential ion drift differs from prescribed-field reference | `docs/incidents/m5_ion_drift_failure_history.md` | investigation in progress |
 | Wall migration postprocessor is nonzero but transient inventory does not include the same loss | `tests/m5_plasma_charge/ion_wall_migration_state/` | isolated diagnostic cases |
 | EOS identity appears to fail when `rho_avg` is approximated by `(rho_min + rho_max)/2` | `docs/incidents/step2_eos_validation_aggregation_error.md` | CLOSED; use matching spatial-average operators |
+| Independent oracle shows the same small multiplicative error for every physics state while state sensitivity still passes | `docs/incidents/r3_thermal_diffusion_gas_constant_scale_mismatch.md` | CLOSED; check host constant/unit convention before modifying production physics |
 
 ## Reusable pattern: algebraic variable inside a transient solve
 
@@ -54,6 +55,21 @@ avg(rho) = avg(p) * Mn / (R*T)
 ```
 
 The corrected regression produced `EOS_rel_error = 2.198e-14`.
+
+## Reusable pattern: independent-oracle convention mismatch
+
+If an independent oracle differs from production by nearly the same multiplicative factor across unrelated states, while the intended state sensitivities and branch discriminators remain correct, treat a downstream constant/unit/convention mismatch as a primary hypothesis.
+
+Recommended discriminator:
+
+```text
+1. Compare a dimensionless/intermediate observable that does not contain the suspect conversion.
+2. Compare the final dimensional observable.
+3. Infer the effective scale/constant from production output.
+4. Mutation-test the oracle convention before changing production physics.
+```
+
+The R3 thermal-diffusion case preserved `kT`, `Te` sensitivity, `ne` sensitivity, and Coulomb-branch sensitivity, while only final `D_T` carried a uniform ~`1.17e-5` offset. The cause was the oracle using modern exact `k_B*N_A` while QPX used its established host EOS `R` convention.
 
 ## Incident promotion rule
 
