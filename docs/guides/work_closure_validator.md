@@ -317,3 +317,7 @@ The main known M5 process lessons already identified are:
 - early forced-iteration evidence lacked the numeric invariant outputs required for correct interpretation;
 - at least one bundle required a relative-path correction;
 - later parallel hypothesis batches substantially reduced additional rounds.
+
+## 11. Metric adoption note
+
+`RVR` was added on 2026-08-26 to make research-validation investment observable rather than folding it invisibly into T-WCC. Existing active/closed items may be backfilled only from explicit recorded evidence and must be marked reconstructed/estimated when not prospectively counted.
