@@ -1,63 +1,34 @@
 # R4/R5 A6 harness construction false fail
 
-**Status:** OPEN  
+**Status:** CLOSED  
 **Issue:** #13 `oxygen-heavy-transport-db`  
-**Class:** harness/construction  
+**Class:** harness/construction
 
 ## Symptom
 
-User-local R4/R5 v2 validation passed P0, the oracle constant-convention self-test, A0-A5, and A7, but all A6 cases failed at P2 `qpx-opt --check-input` before runtime physics evidence was produced.
+The user-local R4/R5 v2 run passed P0, the oracle constant-convention self-test, A0-A5, and A7, but all A6 cases failed at P2 `qpx-opt --check-input` before runtime physics evidence.
 
 Two independent harness defects were present.
 
-### H1 -> T1: unsupported output-format parameters
+## H1 -> T1: unsupported output-format parameters
 
-The v2 case generator added
-
-```text
-[Outputs]
-  csv = true
-  precision = 17
-  scientific_notation = true
-[]
-```
-
-The user's MOOSE/QPX build rejects `Outputs/precision` and `Outputs/scientific_notation` as unused parameters.
+The v2 generator added top-level `Outputs/precision` and `Outputs/scientific_notation`. The user's MOOSE/QPX build rejects these as unused parameters.
 
 **Decision:** H1 SUPPORTED.
 
-**Fix candidate:** remove those unsupported top-level output parameters. Do not use `--allow-unused`; the harness should itself be valid.
+**Fix:** remove the unsupported parameters. Do not use `--allow-unused` to hide an invalid harness.
 
-### H2 -> T2: wrong electron-state requirement in ion-neutral cases
+## H2 -> T2: wrong electron-state condition
 
-The v2 generator changed the electron-state condition from
-
-```text
-any active species charged
-```
-
-to
-
-```text
-both selected species charged
-```
-
-This is incompatible with `QPXThermalDiffusionMaterial` construction semantics. The material validates all active `i <= j` pairs. Therefore a two-species case such as `Op + O2` includes the charged self-pair `Op|Op`, and `Om + O2` includes `Om|Om`. Those dynamic Debye-Huckel self-pairs require `electron_temperature` and `electron_number_density` even though the selected cross pair is ion-neutral.
-
-User-local failures were:
-
-```text
-explicit_ionneutral: electron_temperature is required when the active species set contains a charged-charged transport pair
-langevin_negative:  electron_temperature is required when the active species set contains a charged-charged transport pair
-```
+The v2 generator supplied `Te/ne` only when both selected species were charged. `QPXThermalDiffusionMaterial` validates all active `i <= j` pairs, so `Op + O2` still includes `Op|Op` and `Om + O2` includes `Om|Om`. Those charged self-pairs require `electron_temperature` and `electron_number_density`.
 
 **Decision:** H2 SUPPORTED.
 
-**Fix candidate:** restore electron-state inputs whenever either active species is charged, matching the production constructor's self-pair validation.
+**Fix:** supply electron state whenever the active species set contains a charged species, matching production constructor semantics.
 
 ## Regression gate
 
-The corrected harness adds a pre-runtime self-test requiring:
+The v3 harness added a pre-runtime self-test:
 
 ```text
 neutral_has_no_Te_ne: PASS
@@ -67,8 +38,18 @@ unsupported_output_precision_removed: PASS
 R4_R5_HARNESS_SELFTEST: PASS
 ```
 
-Offline regression passes, along with the existing oracle constant-convention self-test and A0-A5/A7 static gates.
+## Closure evidence
 
-## Closure requirement
+The user-local v3 run then showed `check-input rc=0` and `runtime rc=0` for all seven A6 cases. A6 numeric parity also passed for every case with maximum relative error `2.526e-08`, followed by:
 
-Keep this incident OPEN until user-local QPX v3 evidence shows P2 construction PASS for all seven A6 cases and allows the A6 numeric production-path parity test to run.
+```text
+A6_QPX_PRODUCTION_PATH: PASS
+BATCH_A_PASS
+R4_R5_PASS
+```
+
+**Closure decision:** the v2 failures were construction-harness defects, not physics failures.
+
+## Reusable lesson
+
+For MOOSE/QPX production-path tests, the generated input must honor constructor-level validation over the full active species set, not only the cross-pair the test intends to observe. Also treat unused input parameters as harness defects rather than bypassing them with permissive command-line flags.
