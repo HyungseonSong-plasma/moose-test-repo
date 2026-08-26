@@ -15,13 +15,13 @@ Observed signature:
 ADFParser::JITCompile() failed. Evaluation not possible.
 ```
 
-The supplied failure report names:
+The first supplied failure report names:
 
 ```text
 T1_H1_channel_eos_coupling.i
 ```
 
-The user also reported the same error class in H2. The exact H2 object/file signature is not yet captured, so the two occurrences must not yet be assumed to have the same root cause.
+The same error class was also reported for the H2 path.
 
 ## What this error currently proves
 
@@ -41,54 +41,93 @@ For parsed functor materials:
 
 For AD parsed objects, MOOSE requires JIT compilation to be enabled and successful. A JIT compilation failure is therefore a construction error rather than a nonlinear convergence failure.
 
-## Current hypotheses
+## Evidence history
 
-### J1 — environment-wide AD JIT support is unavailable
+### Observation 1 — Step 1 known-good baseline
 
-**Prior:** low.
+The Step-1 mass-constraint test executed the following AD parsed chain successfully:
 
-Reason: the Step-1 mass-constraint baseline already executed AD parsed functor materials successfully in the same QPX environment. A global absence of JIT support is therefore unlikely unless the executable/environment changed.
+```text
+w_O -> w_O2 = 1-w_O
+    -> Mn = 1/(w_O2/M_O2 + w_O/M_O)
+    -> rho_eos
+```
 
-### J2 — a specific expression/symbol set causes JIT failure
+Therefore the expression `w_O2 = 1-w_O` is known to have worked previously in the QPX runtime used for Step 1.
 
-**Status:** SURVIVES.
+### Observation 2 — first construction-isolation ladder
 
-The Step-2 closure introduced new parsed expressions and/or symbol naming on top of the Step-1-proven closure.
+Result:
 
-### J3 — a chained AD parsed-functor dependency triggers the failure
+```text
+J1_wO2_only                    FAIL rc=1
+J2_add_Mn                      FAIL rc=1
+J3_add_rho_raw_symbols         FAIL rc=1
+J4_add_rho_safe_symbols        FAIL rc=1
+J5_add_transport_properties    FAIL rc=1
 
-**Status:** SURVIVES.
+DECISION
+J1_FAIL
+```
 
-Step 2 chains parsed properties such as `w_O -> w_O2 -> Mn -> rho`, and H2 extends that chain further to `x_O2 -> D_O_mix`.
+Interpretation:
 
-## Next discriminating tests
+- The first ladder does **not** demonstrate that the primitive expression itself is defective.
+- Every J2-J5 case inherited the J1 construction, so once J1 failed those downstream failures supplied no additional discrimination.
+- There is now a controlled contradiction: the primitive AD parsed expression passed in the Step-1 context but failed in the stripped J1 context.
+- The next task is therefore to identify the **context difference** between the exact Step-1 known-good input and J1, not to modify physics expressions or solver settings.
 
-Use construction-only tests. Do not run flow or species physics until all tests pass `--check-input`.
+## Current hypothesis set
 
-| Test | Construction | Purpose |
+### K0 — exact Step-1 control no longer passes `--check-input`
+
+If true, the executable/build/runtime environment has changed or the JIT behavior is non-reproducible relative to the earlier Step-1 run.
+
+### K1 — adding `[Problem] solve = false` changes AD parsed construction behavior
+
+Test by adding only this change to the exact Step-1 input.
+
+### K2 — changing the mesh from the Step-1 1D context to 2D triggers the failure
+
+Test by changing only the mesh dimensionality/topology while preserving the rest of the Step-1 object graph.
+
+### K3 — adding the pressure FV variable triggers the failure
+
+Test by adding only the `p` variable to the exact Step-1 input.
+
+### K4 — the heavily stripped J1 object graph is missing context required for successful construction
+
+This hypothesis is considered only if the exact control and K1-K3 variants all pass while the primitive-only case still fails.
+
+## Next discriminating batch
+
+All tests are construction-only and use `--check-input`.
+
+| Test | Change from exact Step-1 H1 | Decision value |
 |---|---|---|
-| `J1_wO2_only` | only `w_O2 = 1-w_O` | verify the Step-1-proven primitive expression |
-| `J2_add_Mn` | `w_O2 -> Mn` | test first parsed-property chain |
-| `J3_add_rho_raw_symbols` | add `rho(p,Mn)` using actual functor names | test the new Step-2 EOS parser form |
-| `J4_add_rho_safe_symbols` | same rho expression with explicit symbols such as `pres meanM` | test symbol-remapping hypothesis |
-| `J5_add_transport_properties` | add `x_O2 -> D_O_mix` only after J4 | isolate H2-only parsed chain |
+| `K0_exact_step1_control` | none | establishes whether the historical known-good is still reproducible |
+| `K1_add_solve_false` | add `[Problem] solve=false` only | isolates solve-disabled context |
+| `K2_change_to_2D` | change mesh to 2D only | isolates mesh-context effect |
+| `K3_add_pressure_variable` | add `p` FV variable only | isolates extra-variable effect |
+| `K4_primitive_only` | stripped primitive J1 context | reproduces the minimal failing context |
 
 ### Decision rule
 
-- First failing `J#` identifies the smallest construction that reproduces the incident.
-- If `J3` fails and `J4` passes, classify root cause as parser-symbol/JIT incompatibility for the raw names.
-- If `J2` already fails, investigate chained AD parsed properties before EOS/WCNSFV.
-- If all J1-J5 pass, the failure belongs to the full Step-2 object graph rather than these parsed expressions and a new hypothesis set is required.
+- If `K0` fails: stop. Treat executable/runtime identity as the primary branch; do not interpret K1-K4.
+- If `K0` passes and exactly one of K1-K3 fails: that change is the leading context cause.
+- If K0-K3 pass but K4 fails: the failure comes from context removed by the stripped harness; create a second removal ladder from exact Step 1.
+- If all K0-K4 pass: the earlier J1 failure is not reproducible; record binary/runtime identity and return to the full Step-2 input graph.
 
 ## Prevention rule while OPEN
 
 For test bundles containing AD parsed objects:
 
 1. execute `--check-input` before any solve;
-2. keep parsed expressions in a construction-isolation ladder;
-3. use explicit `functor_symbols` for new expressions until the incident is closed;
-4. do not classify JIT construction failures as physics or convergence failures;
-5. do not change transport coefficients, timestep, or solver tolerances in response to this error.
+2. preserve a previously passing control in every diagnostic batch;
+3. change one context element at a time relative to that control;
+4. record executable realpath, version, and SHA-256 with the batch result;
+5. do not classify JIT construction failures as physics or convergence failures;
+6. do not change transport coefficients, timestep, or solver tolerances in response to this error.
 
 ## Promotion criteria
 
