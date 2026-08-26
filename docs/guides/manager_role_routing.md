@@ -17,7 +17,8 @@ The Manager owns:
 - acceptance criteria;
 - pre-execution validation;
 - deciding when external QPX execution is justified;
-- integrating Researcher and Validator findings into the next technical action.
+- integrating Researcher and Validator findings into the next technical action;
+- recording attributable Researcher -> Validator rounds as `RVR` so their effect on later EVR/DBR/RWR can be measured.
 
 The Manager should not bypass a specialist role merely because an immediate answer appears plausible.
 
@@ -100,9 +101,11 @@ Manager
   -> implementation / batch construction
 ```
 
+When this sequence produces a material engineering/acceptance decision and is attributable to the work item, increment `RVR` by one.
+
 ### Parallel research and validation
 
-Use when the Validator can audit structural coverage while the Researcher independently checks external facts.
+Use when the Validator can audit structural coverage while the Researcher independently checks external facts. If their outputs converge into one recorded acceptance decision, count it as one `RVR`, not two.
 
 ### Runtime error with uncertain framework contract
 
@@ -112,6 +115,8 @@ Manager
   -> Researcher: inspect framework/source contract only if the error signature leaves ambiguity
   -> Validator: confirm the fix and regression are sufficient before promotion
 ```
+
+Do not increment `RVR` merely because a source file was consulted during debugging. `RVR` requires a material research question plus an explicit validation decision.
 
 ### Representation-adequacy uncertainty
 
@@ -124,6 +129,8 @@ Manager
        ├─ adequate -> proceed with data extraction/tabulation
        └─ inadequate -> architecture/model-interface change
 ```
+
+This is a canonical `RVR` case because the research result directly determines the representation/implementation path.
 
 Example:
 
@@ -206,6 +213,8 @@ This is the same principle as Batch-A validator mutation testing: validate the v
 - Static checks and source research may happen before external execution.
 - `--check-input` should be packaged in the same user execution round as the intended batch whenever practical so preflight does not create an avoidable EVR.
 
+The Manager should deliberately compare `RVR` and `EVR`: the working hypothesis is that stronger research validation before implementation can reduce downstream external validation repetitions, but this must be demonstrated empirically across comparable issues rather than assumed.
+
 ## 8. Manager decision examples
 
 ### User asks: "Is A0-A5 enough?"
@@ -222,6 +231,8 @@ because this is a test-sufficiency/false-PASS question.
 Manager -> Researcher
          -> Validator if the answer affects canonical transport acceptance
 ```
+
+If the Researcher result and Validator acceptance are both recorded and materially affect implementation, this counts as one `RVR`.
 
 ### User posts: "No functor ever provided with name ..."
 
@@ -242,18 +253,29 @@ Manager -> Researcher: confirm source dependency
          -> representation-adequacy decision
 ```
 
-Do not build a denser `Q(T)` table until this gate passes.
+Do not build a denser `Q(T)` table until this gate passes. This sequence counts as one `RVR` when recorded against the work item.
 
 ## 9. Continuous improvement
 
 At closure or after material rework, the Manager reviews Validator metrics:
 
 - WCC / T-WCC;
+- RVR;
 - EVR;
 - DBR;
 - RWR;
 - CLR;
 - FBR.
+
+Interpretation must include the relationship between research investment and validation burden. In particular, compare similar complexity/work types using pairs such as:
+
+```text
+(RVR, EVR)
+(RVR, DBR)
+(RVR, RWR)
+```
+
+A pattern of higher `RVR` with lower `EVR`/`DBR` can indicate that earlier research validation is reducing downstream iteration. A single work item is not sufficient to establish causality; retain raw counts and compare distributions over time.
 
 Repeated avoidable construction errors should result in stronger preflight checks. Repeated research uncertainty should result in better source/provenance contracts. Repeated false-PASS risk should result in stronger Validator mutation tests. Representation failures should result in an earlier model-state dependency inventory before data extraction begins.
 
