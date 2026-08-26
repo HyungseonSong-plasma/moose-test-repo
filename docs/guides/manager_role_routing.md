@@ -215,6 +215,8 @@ This is the same principle as Batch-A validator mutation testing: validate the v
 
 The Manager should deliberately compare `RVR` and `EVR`: the working hypothesis is that stronger research validation before implementation can reduce downstream external validation repetitions, but this must be demonstrated empirically across comparable issues rather than assumed.
 
+For work that predates the metric, reconstruct `RVR` only from explicit recorded Researcher/Validator evidence and label the result `reconstructed` or `estimated`.
+
 ## 8. Manager decision examples
 
 ### User asks: "Is A0-A5 enough?"
