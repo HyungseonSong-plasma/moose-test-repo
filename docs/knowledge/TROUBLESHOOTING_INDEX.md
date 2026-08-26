@@ -9,6 +9,8 @@ This index maps recurring symptoms to incident records and minimal regression ca
 | Wall migration postprocessor is nonzero but transient inventory does not include the same loss | `tests/m5_plasma_charge/ion_wall_migration_state/` | isolated diagnostic cases |
 | EOS identity appears to fail when `rho_avg` is approximated by `(rho_min + rho_max)/2` | `docs/incidents/step2_eos_validation_aggregation_error.md` | CLOSED; use matching spatial-average operators |
 | Independent oracle shows the same small multiplicative error for every physics state while state sensitivity still passes | `docs/incidents/r3_thermal_diffusion_gas_constant_scale_mismatch.md` | CLOSED; check host constant/unit convention before modifying production physics |
+| Production-parity oracle fails by a transport-class-dependent but reproducible vector while source/provenance gates pass | `docs/incidents/r4_a6_production_oracle_constant_convention_mismatch.md` | CLOSED; separate upstream source constants from production numerical conventions |
+| `--check-input` fails before runtime because generated test input omits state required by charged self-pairs or contains unsupported output knobs | `docs/incidents/r4_r5_a6_harness_construction_false_fail.md` | CLOSED; validate full active-set constructor contract |
 
 ## Reusable pattern: algebraic variable inside a transient solve
 
@@ -70,6 +72,18 @@ Recommended discriminator:
 ```
 
 The R3 thermal-diffusion case preserved `kT`, `Te` sensitivity, `ne` sensitivity, and Coulomb-branch sensitivity, while only final `D_T` carried a uniform ~`1.17e-5` offset. The cause was the oracle using modern exact `k_B*N_A` while QPX used its established host EOS `R` convention.
+
+## Reusable pattern: source provenance vs production numerical contract
+
+A source/provenance gate and a production-parity gate answer different questions. Keep source-data checks pinned to the upstream model, but let a production-parity oracle use the production implementation's declared numerical constants while remaining algorithmically independent.
+
+If replacing production constants with historical upstream constants reproduces the external failure vector, classify the defect as an oracle-contract mismatch rather than a production-physics failure.
+
+## Reusable pattern: active-set constructor validation
+
+A targeted pair test may still trigger constructor checks for self-pairs and other pairs in the active species set. Generate inputs from the full constructor contract, not only the cross-pair being observed.
+
+For charged-heavy transport, one charged species is enough to create a charged self-pair during `i <= j` validation, so `Te/ne` may be required even for an ion-neutral target cross-pair. Unsupported input parameters are harness failures; do not mask them with `--allow-unused`.
 
 ## Incident promotion rule
 
