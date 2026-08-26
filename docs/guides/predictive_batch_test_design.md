@@ -44,6 +44,7 @@ Before packaging a batch, list plausible ways each primary test can fail. At min
 5. **Interpolation / boundary failure** — exact grid is correct but off-grid interpolation or range clipping differs.
 6. **Implementation failure** — framework/QPX result disagrees with an independently computed reference.
 7. **Physics-model failure** — the implementation is internally correct but the chosen approximation fails independent experimental or analytic evidence.
+8. **Representation-adequacy failure** — the selected runtime/data schema omits state variables that the upstream physics model actually depends on, so no amount of one-dimensional tabulation can reproduce the source model generally.
 
 A batch should include cheap discriminators for the high-probability or high-cost failure classes above before runtime begins.
 
@@ -75,6 +76,8 @@ Recommended order:
 source data
   -> raw extraction parity
   -> metadata / provenance parity
+  -> model-state dependency inventory
+  -> representation-adequacy gate
   -> canonical key / alias resolution
   -> unit conversion
   -> interpolation / clipping
@@ -85,6 +88,21 @@ source data
 ```
 
 A downstream failure must not be interpreted as physics evidence until its prerequisite layers have passed.
+
+### Representation-adequacy gate
+
+Before converting an upstream model into a static table, enumerate every independent state variable used by the source model and compare that set with the variables represented by the target schema.
+
+Example:
+
+```text
+upstream model: Q = Q(T, Te, ne, interaction_type)
+target schema:  Q = table(T)
+```
+
+If holding `T` fixed while varying `Te` or `ne` changes the upstream result beyond the allowed model tolerance, a `table(T)` representation is rejected. The next action is an architecture/model-interface change, not a denser one-dimensional table.
+
+This gate should be tested by varying one omitted state variable at a time and by preserving discrete branches such as attractive vs repulsive interactions.
 
 ## 5. Branch-aware batching rule
 
@@ -323,6 +341,7 @@ UNIT_TRANSFORM_FAIL
 RESOLVER_FAIL
 INTERPOLATION_FAIL
 PRECEDENCE_FAIL
+REPRESENTATION_ADEQUACY_FAIL
 PRODUCTION_PATH_PARITY_FAIL
 VALIDATOR_SELFTEST_FAIL
 ```
