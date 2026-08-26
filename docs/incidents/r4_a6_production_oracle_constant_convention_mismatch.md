@@ -1,138 +1,61 @@
 # R4/R5 A6 production-oracle constant convention mismatch
 
-**Status:** OPEN  
+**Status:** CLOSED  
 **Issue:** #13 `oxygen-heavy-transport-db`  
 **Class:** validation-reference / production-parity constant convention
 
 ## Symptom
 
-User-local `qpx-opt` R4/R5 canonical validation passed all source/data/resolver and mutation gates, while A6 production-path construction/runtime succeeded for every case but strict numeric parity failed:
-
-```text
-P0: PASS
-A0_SCHEMA_STATIC: PASS
-A1_SOURCE_PROVENANCE: PASS
-A2_RAW_TO_SI: PASS
-A3_EXHAUSTIVE_RESOLVER: PASS
-A4_INTERPOLATION_RANGE: PASS
-A5_PROVENANCE_PRECEDENCE: PASS
-A7_VALIDATOR_MUTATION_SELFTEST: PASS
-
-explicit_neutral_node     1.449e-06
-explicit_neutral_offgrid  1.449e-06
-explicit_ionneutral       1.447e-06
-langevin_negative         1.447e-06
-dynamic_attractive        3.029e-06
-dynamic_repulsive         3.422e-06
-dynamic_state_ne          3.972e-05
-
-A6_QPX_PRODUCTION_PATH: FAIL
-BATCH_A_FAIL
-```
-
-Every A6 `--check-input` and runtime return code was zero. The accepted R3 dynamic Debye-Huckel implementation had already passed independent end-to-end parity at `2.42e-08` to `4.54e-08`.
+The first user-local R4/R5 canonical run passed P0, A0-A5, A7, and every A6 construction/runtime call, but A6 numeric parity failed with a transport-class-dependent error vector from about `1.45e-6` to `3.97e-5`.
 
 ## H1 -> T1: production QPX implementation defect
 
-**H1:** the R4/R5 production implementation or resolver is wrong.
+A0-A5 passed, all 49 ordered resolver queries had the intended provenance, A7 detected all injected defects, every A6 runtime call returned zero, and the previously accepted R3 dynamic implementation already matched an independent runtime oracle below `5e-8`.
 
-**T1 evidence:**
-- A0-A5 all pass;
-- all 49 ordered physical resolver queries produce the intended explicit/Langevin/dynamic provenance;
-- A7 detects all ten injected defects;
-- every A6 construction and runtime call succeeds;
-- the previously accepted R3 charged path passes an independent runtime oracle at < `5e-8`.
+**Decision:** H1 REJECTED.
 
-**Decision:** H1 REJECTED as the primary explanation for the observed A6 failure vector.
+## H2 -> T2: output formatting / CSV precision
 
-## H2 -> T2: CSV output precision
+The later v2 attempt to force top-level `Outputs/precision` and `Outputs/scientific_notation` was itself invalid for the user's MOOSE build and became a separate harness/construction incident. It was not the cause of the original v1 parity vector.
 
-**H2:** numeric values are being rounded strongly enough by CSV output to create the observed parity errors.
+**Decision:** H2 REJECTED as the v1 physics-parity mechanism.
 
-**T2:** the corrected harness explicitly writes CSV with precision 17 and scientific notation, and the previous failure magnitudes vary systematically with transport class/state rather than with printed magnitude alone.
+## H3 -> T3: historical source constants leaked into the production-parity oracle
 
-**Decision:** H2 REJECTED as the primary failure mechanism. The explicit precision setting remains as a regression hardening measure.
-
-## H3 -> T3: upstream historical constants leaked into the production-parity oracle
-
-The R4/R5 v1 independent oracle reused historical numerical constants from the pinned Mutation++ source model throughout the QPX production-parity calculation:
-
-```text
-k_B  = 1.3806503e-23
-N_A  = 6.0221415e23
-e    = 1.602176565e-19
-eps0 = 1/(mu0*c0^2)
-```
-
-The accepted QPX/R3 production path instead uses the QPX numerical convention represented by:
-
-```text
-k_B  = 1.380649e-23
-N_A  = 6.02214076e23
-e    = 1.602176634e-19
-eps0 = 8.8541878128e-12
-R    = 8.31456 J/(mol K) for the host EOS conversion
-```
-
-A behavioral mutation test was built by taking the corrected production oracle and replacing only those QPX-side constants with the historical Mutation++ values. It predicts the external v1 failure vector:
-
-```text
-case                      predicted       observed
-explicit_neutral_node     1.473817e-06    1.449e-06
-explicit_neutral_offgrid  1.473817e-06    1.449e-06
-explicit_ionneutral       1.472300e-06    1.447e-06
-langevin_negative         1.472590e-06    1.447e-06
-dynamic_attractive        3.054526e-06    3.029e-06
-dynamic_repulsive         3.447733e-06    3.422e-06
-dynamic_state_ne          3.972241e-05    3.972e-05
-```
-
-The residual predicted-vs-observed difference is ~`2.5e-8`, consistent with the already established independent-oracle residual scale from R3.
+The v1 A6 independent oracle reused historical numerical constants from pinned Mutation++ source code in the QPX production-parity calculation. The accepted QPX/R3 implementation uses the QPX production numerical convention. Reintroducing the historical constants into the corrected oracle reproduced the actual v1 failure vector within about `2.5e-8`.
 
 **Decision:** H3 SUPPORTED.
 
 ## Corrective action
 
-1. Keep A1/A2 pinned to the Mutation++ source tables and source provenance. Those gates answer whether the upstream model/data were extracted and transformed correctly.
-2. For A6, use an independent implementation of the equations but the numerical constants of the accepted QPX production convention. A6 answers whether QPX runtime reproduces its intended production model.
-3. Keep the strict `2e-7` A6 threshold; do not loosen tolerance.
-4. Add a behavioral oracle mutation self-test that reintroduces the historical constants and must reproduce/detect the v1 failure signature.
-5. Supply electron state inputs only when both active aliases are charged, matching the production conditional contract.
-6. Force CSV precision 17 and print per-observable `got/ref/rel` values for future diagnostics.
+- Keep A1/A2 pinned to Mutation++ source data/provenance.
+- Keep A6 algorithmically independent, but use the numerical constants of the accepted QPX production convention for production parity.
+- Keep the strict `2e-7` parity gate.
+- Mutation-test the historical-constant substitution before runtime.
+- Respect the production constructor semantics: if the active species set contains any charged species, its charged self-pair may require `electron_temperature` and `electron_number_density` even when the selected cross-pair is ion-neutral.
+- Do not use unsupported top-level output-format parameters merely to increase precision.
 
-Corrected standalone bundle:
+## Closure evidence
 
-```text
-oxygen_transport_R4_R5_canonical_validation_v2.tar.gz
-SHA-256 9dd3604ff519ba345c6a5893ece1277ae13238c2c6285a1f12df130bbd110d78
-```
-
-Offline preflight of v2:
-
-```text
-MOOSE_STATIC_PREFLIGHT_SELFTEST: PASS
-R4_R5_ORACLE_CONSTANT_SELFTEST: PASS
-A0-A5: PASS
-A7 M1-M10: all DETECTED
-```
-
-## Regression requirement
-
-Run the v2 bundle with the accepted R3 v3 `QPXThermalDiffusionMaterial.C` and the rebuilt user-local `qpx-opt`. No production-source change is required for this incident.
-
-Required closure signature:
+The corrected v3 user-local run produced:
 
 ```text
 R4_R5_ORACLE_CONSTANT_SELFTEST: PASS
+R4_R5_HARNESS_SELFTEST: PASS
 A0_SCHEMA_STATIC: PASS
 A1_SOURCE_PROVENANCE: PASS
 A2_RAW_TO_SI: PASS
 A3_EXHAUSTIVE_RESOLVER: PASS
 A4_INTERPOLATION_RANGE: PASS
 A5_PROVENANCE_PRECEDENCE: PASS
-A6_QPX_PRODUCTION_PATH: PASS
 A7_VALIDATOR_MUTATION_SELFTEST: PASS
+A6_QPX_PRODUCTION_PATH: PASS
 BATCH_A_PASS
+R4_R5_PASS
 ```
 
-Keep this incident OPEN until the corrected user-local A6 regression passes. Only then consider promoting the reusable lesson to the troubleshooting index.
+All seven A6 runtime cases had maximum relative error `2.526e-08`, comfortably below `2e-7`. Dimensionless `kT` parity was approximately `1e-14` or better.
+
+## Reusable lesson
+
+Source-data provenance and production-parity validation answer different questions. An independent production oracle should not silently inherit historical upstream numerical constants when the production implementation intentionally uses a different host convention. Preserve algorithmic independence while matching the production numerical contract, and use mutation tests to prove the distinction is observable.
