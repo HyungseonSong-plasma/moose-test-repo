@@ -25,11 +25,11 @@ The same error class was also reported for the H2 path.
 
 ## What this error currently proves
 
-- An AD parsed expression failed during JIT compilation.
-- The failure occurs during `--check-input` / object construction, before the nonlinear solve.
-- No conclusion about WCNSFV convergence, mixture diffusion, mass-fraction transport, or EOS physics is justified from this signature alone.
+- An AD parsed expression failed during JIT compilation in the failing runs.
+- Those failures occurred during `--check-input` / object construction, before the nonlinear solve.
+- No conclusion about WCNSFV convergence, mixture diffusion, mass-fraction transport, or EOS physics is justified from that signature alone.
 
-## MOOSE source facts
+## MOOSE / libMesh source facts
 
 `ADParsedFunctorMaterial` is implemented through `ParsedFunctorMaterialTempl<true>` and `FunctionParserUtils<true>`.
 
@@ -39,7 +39,14 @@ For parsed functor materials:
 - when omitted, MOOSE uses the entries in `functor_names` as parser symbols;
 - the expression is compiled before the functor material is used in the solve.
 
-For AD parsed objects, MOOSE requires JIT compilation to be enabled and successful. A JIT compilation failure is therefore a construction error rather than a nonlinear convergence failure.
+For AD parsed objects, MOOSE requires JIT compilation to be enabled and successful.
+
+libMesh FParser JIT also has two environment-relevant implementation details:
+
+1. the JIT compiler command is built from the libMesh build-time `$(CXX) $(CXXFLAGS)` configuration rather than necessarily from the current shell's generic `c++` command;
+2. compiled JIT objects are cached in a local `.jitcache` directory and may be loaded with `dlopen` on later runs.
+
+Therefore current-shell compiler discovery is only a supporting diagnostic and must not override the direct ADParsed construction result.
 
 ## Evidence history
 
@@ -53,7 +60,7 @@ w_O -> w_O2 = 1-w_O
     -> rho_eos
 ```
 
-Therefore the expression `w_O2 = 1-w_O` is known to have worked previously in the QPX runtime used for Step 1.
+Therefore the expression `w_O2 = 1-w_O` is known to have worked previously in QPX.
 
 ### Observation 2 — first construction-isolation ladder
 
@@ -74,66 +81,104 @@ Interpretation:
 
 - The first ladder does **not** demonstrate that the primitive expression itself is defective.
 - Every J2-J5 case inherited the J1 construction, so once J1 failed those downstream failures supplied no additional discrimination.
-- There is now a controlled contradiction: the primitive AD parsed expression passed in the Step-1 context but failed in the stripped J1 context.
-- The next task is therefore to identify the **context difference** between the exact Step-1 known-good input and J1, not to modify physics expressions or solver settings.
+- There was a controlled contradiction: the primitive AD parsed expression passed in the Step-1 context but failed in the stripped J1 context.
+
+### Observation 3 — branch-aware environment probe
+
+A later branch-aware run reported:
+
+```text
+K0_exact_step1_control           FAIL
+F1_exact_step1_normal_run        FAIL
+F2_ADParsed_constant_only        FAIL
+F3_ADParsed_from_ADGeneric       FAIL
+F4_ADParsed_from_FV_variable     FAIL
+F5_nonAD_Parsed_same_expression  PASS
+ENV_cpp_compile_execute          FAIL rc=127
+```
+
+This narrowed the failing run to the AD FParser/JIT path, but did not establish a permanent environment root cause.
+
+### Observation 4 — direct environment comparison
+
+The dedicated environment probe was then run in two shell states.
+
+With the conda environment deactivated:
+
+```text
+F2 constant-only ADParsed        PASS
+TMP executable                   PASS
+TMP copied-so dlopen             PASS
+Compiler compile/shared/dlopen   FAIL rc=127
+```
+
+With the `moose` conda environment activated:
+
+```text
+F2 constant-only ADParsed        PASS
+TMP executable                   PASS
+TMP copied-so dlopen             PASS
+Compiler compile/shared/dlopen   PASS
+```
+
+The probe analyzer labelled the deactivated case `COMPILER_OR_SHARED_BUILD_FAILURE`, but that classification was a harness logic defect: the direct target `F2 constant-only ADParsed` had already passed. The generic compiler smoke test must not override a passing FParser JIT construction test.
+
+This means:
+
+- ADParsed/FParser JIT was healthy in both of these latest runs;
+- activating conda clearly restores generic compiler commands in `PATH`, but it has **not** yet been demonstrated to be the cause of FParser JIT recovery;
+- the earlier JIT failure is currently non-reproduced and remains an open incident until a cold-cache regression proves the path stable;
+- the test harness analyzer defect is separate from the original runtime incident.
 
 ## Current hypothesis set
 
-### K0 — exact Step-1 control no longer passes `--check-input`
+### HJ1 — transient/environment-sensitive JIT failure
 
-If true, the executable/build/runtime environment has changed or the JIT behavior is non-reproducible relative to the earlier Step-1 run.
+**Status:** SURVIVES.
 
-### K1 — adding `[Problem] solve = false` changes AD parsed construction behavior
+The exact mechanism is not yet isolated. Candidate factors include shell/build environment differences and runtime state.
 
-Test by adding only this change to the exact Step-1 input.
+### HJ2 — local `.jitcache` state affected reproducibility
 
-### K2 — changing the mesh from the Step-1 1D context to 2D triggers the failure
+**Status:** SURVIVES.
 
-Test by changing only the mesh dimensionality/topology while preserving the rest of the Step-1 object graph.
+Because libMesh FParser uses a working-directory-local `.jitcache`, a passing warm-cache run is not sufficient to prove compiler/JIT construction health.
 
-### K3 — adding the pressure FV variable triggers the failure
+### HJ3 — the Step-2 physics/input expressions are the root cause
 
-Test by adding only the `p` variable to the exact Step-1 input.
+**Status:** REJECTED for the original JIT incident.
 
-### K4 — the heavily stripped J1 object graph is missing context required for successful construction
+Constant-only ADParsed construction failed in the earlier failing run, so WCNSFV, mixture diffusion, EOS, and the O/O2 expressions were not required to reproduce that incident.
 
-This hypothesis is considered only if the exact control and K1-K3 variants all pass while the primitive-only case still fails.
+## Next regression gate
 
-## Next discriminating batch
+Use a **cold-cache recovery batch**:
 
-All tests are construction-only and use `--check-input`.
+1. start in a fresh working directory with no `.jitcache`;
+2. run constant-only `ADParsedFunctorMaterial` construction;
+3. run the exact Step-1 known-good control with `--check-input` and normal solve;
+4. if both pass, run corrected Step-2 T1/T2 preflight;
+5. if Step-2 preflight passes, run the Step-2 solves and return to physics hypothesis evaluation.
 
-| Test | Change from exact Step-1 H1 | Decision value |
-|---|---|---|
-| `K0_exact_step1_control` | none | establishes whether the historical known-good is still reproducible |
-| `K1_add_solve_false` | add `[Problem] solve=false` only | isolates solve-disabled context |
-| `K2_change_to_2D` | change mesh to 2D only | isolates mesh-context effect |
-| `K3_add_pressure_variable` | add `p` FV variable only | isolates extra-variable effect |
-| `K4_primitive_only` | stripped primitive J1 context | reproduces the minimal failing context |
-
-### Decision rule
-
-- If `K0` fails: stop. Treat executable/runtime identity as the primary branch; do not interpret K1-K4.
-- If `K0` passes and exactly one of K1-K3 fails: that change is the leading context cause.
-- If K0-K3 pass but K4 fails: the failure comes from context removed by the stripped harness; create a second removal ladder from exact Step 1.
-- If all K0-K4 pass: the earlier J1 failure is not reproducible; record binary/runtime identity and return to the full Step-2 input graph.
+The batch should record `CONDA_PREFIX`, compiler visibility, QPX realpath/version/SHA, but these diagnostics must not override the direct ADParsed/Step-1 gates.
 
 ## Prevention rule while OPEN
 
 For test bundles containing AD parsed objects:
 
-1. execute `--check-input` before any solve;
-2. preserve a previously passing control in every diagnostic batch;
-3. change one context element at a time relative to that control;
-4. record executable realpath, version, and SHA-256 with the batch result;
-5. do not classify JIT construction failures as physics or convergence failures;
-6. do not change transport coefficients, timestep, or solver tolerances in response to this error.
+1. preserve a previously passing control;
+2. distinguish cold-cache and warm-cache runs when diagnosing JIT behavior;
+3. record executable identity and relevant environment identity;
+4. treat `ADParsedFunctorMaterial` construction itself as the primary JIT health signal;
+5. use compiler/TMPDIR/dlopen probes as supporting diagnostics only;
+6. do not classify JIT construction failures as physics or nonlinear convergence failures;
+7. do not change transport coefficients, timestep, or solver tolerances in response to this error.
 
 ## Promotion criteria
 
 This incident may be added to `docs/knowledge/TROUBLESHOOTING_INDEX.md` only after:
 
-1. the minimal reproducer is isolated;
-2. the root cause is demonstrated;
-3. the fix passes construction and runtime regression;
-4. the scope and limitations of the fix are documented.
+1. the root cause is isolated or the incident is reproducibly bounded as environment/cache-sensitive;
+2. the fix or operating condition is verified;
+3. a cold-cache regression gate passes;
+4. the scope and limitations are documented.
