@@ -1,45 +1,18 @@
 # Workspace Operating Boundary
 
-## Team ownership
+This repository is reserved for MOOSE/QPX development, regression, verification, and troubleshooting work.
 
-This repository is reserved for **moose-test-repo** work.
+Canonical operating rules are not duplicated here. Use:
 
-The repository may contain:
+- `OPERATING_CORE.md` — always-active invariants and authorization semantics;
+- `PROTOCOL_INDEX.md` — deterministic routing to the minimum required procedure set;
+- `docs/protocols/problem_solving.md` — bounded problem solving and 3-EVR workflow;
+- `docs/protocols/validation.md` — P0-P3, checker/analyzer, production-path and data validation;
+- `docs/protocols/metrics_closure.md` — WCC/RVR/EVR and closure accounting;
+- `docs/knowledge/TROUBLESHOOTING_INDEX.md` — reusable symptom-specific knowledge.
 
-- MOOSE/QPX regression inputs.
-- Minimal failure reproducer inputs.
-- Checkers and reference data.
-- Development logs and troubleshooting records.
-- Test executable notes or a compatible local executable under `bin/`.
+Repository content may include MOOSE/QPX regression inputs, minimal reproducers, checkers/reference data, incident/development logs, scripts, and compatible local test executables.
 
-The repository is not limited to sol-adapter-moose-only testing. It is the shared workspace for MOOSE/QPX implementation development, executable-based verification, regression testing, and troubleshooting.
+Production source changes belong in the appropriate source repository. This workspace primarily stores test/development evidence and small source deltas only when needed to reproduce or document an investigation.
 
-## Development rule
-
-When a new failure occurs:
-
-1. Identify the last known-good baseline.
-2. Record the first bad change.
-3. Build the smallest reproducer possible.
-4. Preserve failed diagnostic branches/results in the incident log.
-5. Change one suspected mechanism at a time.
-6. Close the incident only after a regression checker passes.
-7. Promote the reusable lesson into `docs/knowledge/`.
-
-## Test packaging rule
-
-Each canonical test directory should be self-contained:
-
-```text
-<case>/
-  test.json
-  input.i
-  check.py
-  <required mesh/data/reference files>
-```
-
-A checker is part of the test definition, not optional documentation.
-
-## Source-code rule
-
-This repository is primarily a test and development-log workspace. Production source changes belong in the appropriate source repository. Small source deltas may be attached to an incident only when they are needed to document/reproduce a failure investigation.
+For current work state, use the active GitHub issue body. Issue comments are chronological evidence, not canonical current state.
