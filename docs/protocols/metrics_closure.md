@@ -122,6 +122,8 @@ C4 = cross-layer architecture/integration incident
 
 Report raw metrics first; complexity is only a comparison dimension.
 
+C4 work should normally be decomposed before runtime under `PS-15`; use C4 primarily for planning/tracking when several serial closure claims are present.
+
 ## MET-13 — Closure quality guardrail
 
 Efficiency comparisons are valid only when closure quality is preserved:
@@ -227,3 +229,22 @@ close work
 ```
 
 The purpose of the metrics is to turn problem-solving efficiency and research quality into measurable engineering variables.
+
+## MET-19 — Decomposed-parent closure
+
+When a large parent is intentionally replaced by smaller bounded successor issues, close the parent with closure type `DECOMPOSED_PARENT` rather than pretending its unfinished downstream physics is complete.
+
+Accounting rules:
+
+```text
+preserve the parent's lifetime WCC/T-WCC/RVR/EVR/DBR/RWR/CLR/FBR
+record validated work already completed under the parent
+record every successor issue and dependency edge
+do not copy parent metrics into successors
+successors begin at WCC=0/EVR=0 while PLANNED
+governance-only decomposition does not increment parent technical metrics
+```
+
+GitHub `state_reason=not_planned` is appropriate when the original remaining scope will no longer be executed inside that issue. The issue body/final comment must state explicitly that closure is due to decomposition, not technical completion of the successor physics.
+
+This closure type is excluded from comparisons of technically completed bounded issues unless the analysis is specifically about scope-sizing/decomposition efficiency.
