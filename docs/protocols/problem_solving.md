@@ -257,3 +257,33 @@ closure quality unchanged
 ```
 
 RVR is not minimized. Its purpose is to move uncertainty earlier when doing so reduces downstream EVR/DBR/RWR or reopening risk.
+
+## PS-15 — Issue sizing and decomposition
+
+Execution issues should be small enough that one bounded closure claim can plausibly complete inside one prospective 3-EVR budget.
+
+Preferred execution boundary:
+
+```text
+1 closure claim
+1 bounded subsystem or coupling edge
+1 prospective EVR budget <= 3
+ideally 1 production decision
+complexity C1-C3 when practical
+```
+
+Treat C4 primarily as architecture/planning/tracking scope. Before technical runtime begins, decompose a C4 item into bounded C1-C3 successor issues when it contains multiple serial closure claims.
+
+Strong split signals include:
+
+```text
+"finish A, then implement B, then validate C"
+source/model uncertainty and runtime integration are separable
+multiple independent coupling edges require separate acceptance
+one stage can close while later stages remain blocked
+EVR #3 would only finish an intermediate stage rather than the issue claim
+```
+
+Do not keep a large parent open merely to accumulate unrelated downstream execution metrics. A parent may be closed as `DECOMPOSED_PARENT` after its validated history and successor links are recorded. This is not a claim that unfinished downstream physics is technically complete.
+
+Successor issues start with their own issue-local metrics and their own prospective `0/3` EVR budget. Historical metrics remain on the original parent and are not copied into successors.
