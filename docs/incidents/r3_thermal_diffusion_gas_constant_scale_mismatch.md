@@ -2,7 +2,7 @@
 
 **Status:** OPEN  
 **Issue:** #13 `oxygen-heavy-transport-db`  
-**Class:** implementation/host-constant consistency  
+**Class:** validation-reference / host-constant convention  
 
 ## Symptom
 
@@ -18,72 +18,93 @@ R3H: FAIL
 max_rel_error ~= 1.169e-05 for every state/branch case
 ```
 
-The six cases were `attr_base`, `attr_ne_low`, `attr_ne_high`, `attr_te_low`, `attr_te_high`, and `rep_base`.
-
 ## H1 -> T1: Debye-Huckel/state implementation error
 
-**H1:** The runtime Debye-Huckel `Te/ne` dependence or attractive/repulsive branch is wrong.
+**H1:** Runtime Debye-Huckel `Te/ne` dependence or attractive/repulsive branch is wrong.
 
 **T1 evidence:**
-- `kT` follows the independent reference closely;
-- `ne` sensitivity passes (`183.326269%` output change);
+- `kT` remains tightly aligned with the independent reference;
+- `ne` sensitivity passes (`183.326269%`);
 - `Te` sensitivity passes (`39.087466%`);
 - attractive/repulsive discriminator passes (`99.994829%`);
-- the `D_T` discrepancy is nearly identical in relative magnitude for all six states and both Coulomb branches.
+- `D_T` shows one nearly invariant multiplicative offset across all six cases.
 
 **Decision:** H1 REJECTED.
 
-A state/branch defect would not naturally produce one invariant multiplicative scale in only the final mass-flux coefficient while preserving `kT` and all state sensitivities.
+## H2 -> T2: source defect in the QPX EOS gas constant
 
-## H2 -> T2: host gas-constant scale mismatch
+The first diagnosis treated the invariant `D_T` scale as a production-source defect and replaced
 
-**H2:** The final density conversion uses a host `R` value inconsistent with the `k_B` and `N_A` constants already used in the same transport calculation.
+```cpp
+QPX_CONSTANTS::R
+```
 
-The original code used:
+with
+
+```cpp
+QPX_CONSTANTS::k_boltz * QPX_CONSTANTS::N_A
+```
+
+in the final density conversion.
+
+The user rebuilt and reran the full R3 batch. Construction and all dynamic-state gates still passed, but `R3H` again failed by the same ~`1.169e-05` magnitude, now on the opposite side of the reference. Comparing the pre-patch and post-patch runtime outputs shows the only moved quantity is the expected final `D_T` scale.
+
+This falsifies the source-fix hypothesis.
+
+**Decision:** H2 REJECTED.
+
+## H3 -> T3: oracle gas-constant convention mismatch
+
+The existing QPX production path uses
 
 ```cpp
 const ADReal rho = p * mean_molar_mass / (QPX_CONSTANTS::R * T);
 ```
 
-while particle masses and number-density terms already use `QPX_CONSTANTS::N_A` and `QPX_CONSTANTS::k_boltz`.
-
-From the runtime `D_T`/reference ratio,
+and other QPX heavy-species code uses the same host molar-gas-constant convention. The Python R3 oracle instead used modern exact
 
 ```text
-R_eff = R_reference * D_T_reference / D_T_QPX
+R = k_B * N_A = 8.314462618... J/(mol K)
 ```
 
-collapses across all six test cases to approximately `8.31456 J/(mol K)`. Re-evaluating the reference outputs with this single scale reproduces the observed runtime values, e.g.
+for the final EOS density.
+
+From the original user-local R3 runtime, the effective host constant inferred from every `D_T` case is approximately
 
 ```text
-attr_base: 2.355045666e-15 -> 2.355018083e-15
-attr_ne_low: 1.080825243e-15 -> 1.080812584e-15
-attr_ne_high: -2.066335981e-15 -> -2.066311780e-15
-attr_te_low: 2.960054397e-15 -> 2.960019729e-15
-attr_te_high: 1.803044149e-15 -> 1.803023032e-15
-rep_base: 4.554535482e-11 -> 4.554482138e-11
+8.31456 J/(mol K)
 ```
 
-These values match the user-local runtime signature to the printed precision.
+and substituting that value only in the oracle's final EOS density reproduces the original QPX outputs to the printed precision. Example:
 
-**Decision:** H2 SUPPORTED.
+```text
+attr_base reference with modern R:  2.355045666e-15
+attr_base reference with QPX R:     2.355018083e-15
+user-local original QPX:            2.355018e-15
+```
 
-## Fix candidate
+The wrong-oracle mutation produces a predicted relative error of `1.1712344e-05`, matching the observed false-fail scale.
 
-Keep this material internally consistent with its own microscopic constants:
+**Decision:** H3 SUPPORTED.
+
+## Corrective action
+
+1. Revert the local R3 production-source experiment and retain the established QPX host EOS expression:
 
 ```cpp
-const Real R_transport = QPX_CONSTANTS::k_boltz * QPX_CONSTANTS::N_A;
-const ADReal rho = p * mean_molar_mass / (R_transport * T);
+const ADReal rho = p * mean_molar_mass / (QPX_CONSTANTS::R * T);
 ```
 
-Do not change the global QPX constant definition in this incident; that would have a broader scope and requires separate impact analysis.
+2. Correct the independent R3 oracle so the final QPX-side `D_T` comparison uses the QPX host EOS convention (`8.31456 J/(mol K)`), while keeping the microscopic collision/state model independent.
+3. Keep the original strict numeric gate (`2e-7`); do **not** loosen tolerance to hide the convention mismatch.
+4. Add an oracle mutation self-test requiring the modern-exact-R substitution to be detected as a ~`1e-5` `D_T` error.
 
 ## Regression requirement
 
-Rebuild `qpx-opt` with the patched material and rerun the same R3 dynamic batch. Required closure signature:
+Rebuild `qpx-opt` with the reverted QPX EOS expression and rerun the corrected R3 v3 batch. Required closure signature:
 
 ```text
+R3_ORACLE_CONSTANT_SELFTEST: PASS
 R3E_SOURCE_CONTRACT: PASS
 R3F_NEUTRAL_BACKWARD_COMPAT: PASS
 R3F_CHARGED_DYNAMIC_CONSTRUCTION: PASS
@@ -93,4 +114,4 @@ R3I: PASS
 R3_DYNAMIC_IMPLEMENTATION_PASS
 ```
 
-The incident remains OPEN until the user-local rebuilt QPX run confirms the fix.
+The incident remains OPEN until user-local v3 evidence confirms the corrected oracle/source combination.
