@@ -1,7 +1,7 @@
 # Incident: ADFParser JIT compile failure
 
 **Incident ID:** `INC-ADF-JIT-001`  
-**Status:** OPEN  
+**Status:** MONITORING  
 **First associated work:** Issue #8 `Charged heavy-species mixture diffusion + Poisson coupling`  
 **First phase observed:** Step 2 input/JIT preflight  
 **Failure class:** input/material construction; solver and physics residual evaluation not reached
@@ -125,60 +125,66 @@ The probe analyzer labelled the deactivated case `COMPILER_OR_SHARED_BUILD_FAILU
 
 This means:
 
-- ADParsed/FParser JIT was healthy in both of these latest runs;
-- activating conda clearly restores generic compiler commands in `PATH`, but it has **not** yet been demonstrated to be the cause of FParser JIT recovery;
-- the earlier JIT failure is currently non-reproduced and remains an open incident until a cold-cache regression proves the path stable;
+- ADParsed/FParser JIT was healthy in both of these later environment-probe runs;
+- activating conda clearly restores generic compiler commands in `PATH`, but it has **not** been demonstrated to be the cause of FParser JIT recovery;
 - the test harness analyzer defect is separate from the original runtime incident.
+
+### Observation 5 — cold-cache recovery gate
+
+A fresh cold-cache batch then produced:
+
+```text
+F2 cold check           PASS
+Step1 cold check        PASS
+Step1 cold normal run   PASS
+
+T1 cold check           PASS
+T1 cold normal run      PASS
+T2 cold check           PASS
+T2 cold normal run      PASS
+```
+
+This is strong evidence that the AD FParser JIT path is currently healthy without relying on a pre-existing local `.jitcache`.
+
+The incident is therefore no longer blocking Issue #8 physics work. It remains in **MONITORING** rather than CLOSED because the original failure mechanism was not reproducibly isolated.
 
 ## Current hypothesis set
 
 ### HJ1 — transient/environment-sensitive JIT failure
 
-**Status:** SURVIVES.
+**Status:** SURVIVES as historical explanation only.
 
-The exact mechanism is not yet isolated. Candidate factors include shell/build environment differences and runtime state.
+The exact mechanism was not isolated, but the current cold-cache regression is healthy.
 
 ### HJ2 — local `.jitcache` state affected reproducibility
 
-**Status:** SURVIVES.
+**Status:** NOT PROVEN.
 
-Because libMesh FParser uses a working-directory-local `.jitcache`, a passing warm-cache run is not sufficient to prove compiler/JIT construction health.
+Cold-cache recovery passes, so warm-cache dependence is not required for the current healthy state.
 
 ### HJ3 — the Step-2 physics/input expressions are the root cause
 
 **Status:** REJECTED for the original JIT incident.
 
-Constant-only ADParsed construction failed in the earlier failing run, so WCNSFV, mixture diffusion, EOS, and the O/O2 expressions were not required to reproduce that incident.
+Constant-only ADParsed construction failed in the earlier failing run, while the same Step-2 inputs now pass cold-cache construction and runtime.
 
-## Next regression gate
-
-Use a **cold-cache recovery batch**:
-
-1. start in a fresh working directory with no `.jitcache`;
-2. run constant-only `ADParsedFunctorMaterial` construction;
-3. run the exact Step-1 known-good control with `--check-input` and normal solve;
-4. if both pass, run corrected Step-2 T1/T2 preflight;
-5. if Step-2 preflight passes, run the Step-2 solves and return to physics hypothesis evaluation.
-
-The batch should record `CONDA_PREFIX`, compiler visibility, QPX realpath/version/SHA, but these diagnostics must not override the direct ADParsed/Step-1 gates.
-
-## Prevention rule while OPEN
+## Operating rule while MONITORING
 
 For test bundles containing AD parsed objects:
 
-1. preserve a previously passing control;
-2. distinguish cold-cache and warm-cache runs when diagnosing JIT behavior;
-3. record executable identity and relevant environment identity;
+1. preserve a previously passing control when practical;
+2. distinguish cold-cache and warm-cache runs if JIT failure recurs;
+3. record executable/environment identity for recurrence analysis;
 4. treat `ADParsedFunctorMaterial` construction itself as the primary JIT health signal;
 5. use compiler/TMPDIR/dlopen probes as supporting diagnostics only;
 6. do not classify JIT construction failures as physics or nonlinear convergence failures;
 7. do not change transport coefficients, timestep, or solver tolerances in response to this error.
 
-## Promotion criteria
+## Closure / promotion criteria
 
-This incident may be added to `docs/knowledge/TROUBLESHOOTING_INDEX.md` only after:
+This incident may be CLOSED and promoted to `docs/knowledge/TROUBLESHOOTING_INDEX.md` only if either:
 
-1. the root cause is isolated or the incident is reproducibly bounded as environment/cache-sensitive;
-2. the fix or operating condition is verified;
-3. a cold-cache regression gate passes;
-4. the scope and limitations are documented.
+1. the original root cause is reproducibly isolated and fixed; or
+2. a clearly bounded environment/cache-sensitive recurrence pattern is demonstrated.
+
+Until then, the cold-cache recovery result is retained as a regression gate and the incident remains MONITORING.
