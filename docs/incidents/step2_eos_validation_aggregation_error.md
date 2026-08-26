@@ -1,48 +1,40 @@
 # Incident: Step-2 EOS validation aggregation error
 
 **Incident ID:** `INC-VALIDATION-AGG-001`  
-**Status:** OPEN  
+**Status:** CLOSED  
 **Associated work:** Issue #8 `Charged heavy-species mixture diffusion + Poisson coupling`  
 **Failure class:** validation/analyzer defect; physics solve passed
 
 ## Symptom
 
-The cold-cache Step-2 recovery batch produced:
+The cold-cache Step-2 recovery batch produced a false rejection:
 
 ```text
 T1_H1_channel_eos_coupling cold check        PASS
 T1_H1_channel_eos_coupling cold normal run   PASS
 
 H1: REJECTED
-wO=[1.000000e-01,1.000000e-01]
-wO2=[9.000000e-01,9.000000e-01]
 Mn_err=3.101e-15
 EOS_err~=3.877e-05
 ```
 
 while H2 passed.
 
-## Root cause in the analyzer
+## Root cause
 
-The analyzer did not use the spatial average of density. It approximated it as
+The analyzer approximated the spatial average of density as
 
 ```python
 rhoavg = 0.5 * (rho_min + rho_max)
 ```
 
-and then compared this quantity against
+and compared that quantity against
 
 ```python
 p_avg * Mn_avg / (R*T)
 ```
 
-This is not a valid EOS identity check. In a nonuniform pressure field,
-
-```text
-0.5 * (min(rho) + max(rho))
-```
-
-is generally not equal to the domain average of `rho`.
+This is not a valid EOS identity check in a nonuniform pressure field. A midpoint of extrema is not a domain average.
 
 Because `Mn` is spatially uniform in T1, the correct aggregate identity is
 
@@ -50,51 +42,49 @@ Because `Mn` is spatially uniform in T1, the correct aggregate identity is
 avg(rho) = avg(p) * Mn / (R*T)
 ```
 
-provided `avg(rho)` and `avg(p)` are computed by matching spatial-average postprocessors.
+with matching spatial-average operators.
 
-## Current interpretation
+## Corrected regression
 
-- T1 input construction passed.
-- T1 nonlinear solve passed.
-- `w_O`, constrained `w_O2`, and `Mn` satisfied their acceptance criteria.
-- The only rejecting H1 metric was computed by an invalid aggregation method.
-- Therefore the reported `H1: REJECTED` is invalid.
-- H1 is reclassified as **INCONCLUSIVE pending corrected EOS metric**, not rejected.
-- H2 remains **SUPPORTED**.
-
-No transport coefficient, EOS formula, WCNSFV kernel, or nonlinear tolerance should be changed in response to this result.
-
-## Corrected confirmation test
-
-Repeat only T1 with an `ElementAverageFunctorPostprocessor` for `rho_mat`, then evaluate
+The corrected T1 confirmation added an `ElementAverageFunctorPostprocessor` for `rho_mat` and evaluated
 
 ```text
 EOS_rel_error = |rho_avg - p_avg*Mn_avg/(R*T)| /
                 max(|rho_avg|, |p_avg*Mn_avg/(R*T)|)
 ```
 
-Acceptance:
+Observed result:
 
 ```text
-EOS_rel_error < 1e-10
+CHECK: PASS
+RUN: PASS
+
+wO=[1.000000000e-01,1.000000000e-01]
+wO2=[9.000000000e-01,9.000000000e-01]
+Mn_avg=2.909090909091e-02
+Mn_rel_error=3.101e-15
+p_avg=1.348284291773e+00
+rho_avg=1.572473474343e-05
+p_avg*Mn_avg/(R*T)=1.572473474343e-05
+EOS_rel_error=2.198e-14
+
+H1: SUPPORTED
+H2: SUPPORTED
+DECISION
+STEP2_PASS
 ```
 
-plus the previously passed mass-fraction and mean-molar-mass checks.
+Acceptance `EOS_rel_error < 1e-10` is satisfied by more than three orders of magnitude.
 
-Prepared regression bundle:
+## Final disposition
 
-```text
-charged_heavy_step2_h1_eos_confirmation
-```
+- H1 composition/EOS-to-WCNS coupling: **SUPPORTED**.
+- H2 QPX mass-fraction advection + mixture-averaged diffusion on the same closure: **SUPPORTED**.
+- Step 2 is complete.
+- No physics coefficient, EOS formula, WCNSFV kernel, or nonlinear tolerance change was required.
 
-If it passes, H1 becomes SUPPORTED and Step 2 is complete because H2 is already supported by the immediately preceding cold-cache batch.
-
-## Prevention rule
+## Reusable prevention rule
 
 Do not replace a domain average with a midpoint of extrema. When validating an integral/average identity, all compared quantities must use compatible aggregation operators over the same domain and weighting.
 
-## Closure criteria
-
-1. corrected T1 EOS-average confirmation passes;
-2. H1 is reclassified using the corrected metric;
-3. the corrected analyzer becomes the regression implementation.
+This incident is eligible for promotion to the troubleshooting index because the root cause was isolated, the analyzer was corrected, and the corrected regression passed.
