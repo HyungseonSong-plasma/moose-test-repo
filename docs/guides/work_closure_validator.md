@@ -48,6 +48,38 @@ Governance-only messages such as `approve`/`resume` are excluded from T-WCC but 
 T-WCC <= WCC
 ```
 
+### RVR: Research Validation Rounds
+
+Number of attributable rounds in which a material source/model/provenance question is researched and then subjected to an explicit validation decision before implementation or external runtime is treated as canonical evidence.
+
+```text
+RVR = count(Researcher -> Validator evidence rounds)
+```
+
+A round counts toward `RVR` when all of the following are present:
+
+- a research question that can materially change the implementation, model, data, or acceptance contract;
+- source/revision or independent reference evidence;
+- an explicit Validator decision on adequacy, applicability, representation, provenance, or acceptance;
+- the decision is recorded against the issue/work item.
+
+Examples that count:
+
+- Mutation++ source/provenance research followed by acceptance of explicit transport pairs;
+- literature/model research for an O- Langevin fallback followed by a benchmark-based Validator decision;
+- source-model state-variable research followed by a representation-adequacy decision.
+
+Examples that do not count:
+
+- an unvalidated web/source lookup;
+- a routine constant lookup that does not affect an acceptance decision;
+- a pure runtime-debug round with no research question;
+- governance-only discussion.
+
+`RVR` is intentionally tracked separately from `EVR`. The purpose is to measure whether investing in stronger research validation reduces downstream external validation repetition, diagnostic branching, and rework.
+
+Do not assume causality from one work item. Compare `RVR` jointly with `EVR`, `DBR`, `RWR`, `WCC`, and complexity class across similar work items.
+
 ### EVR: External Validation Rounds
 
 Number of times the user must execute a test/bundle in the external QPX runtime and return results.
@@ -191,6 +223,8 @@ At closure, classify excess interaction cost.
 
 | Pattern | Likely process defect | Engineering response |
 |---|---|---|
+| low RVR, high EVR/DBR on source/model-heavy work | insufficient research validation before runtime | move source/model/representation questions earlier and require Researcher -> Validator gate |
+| higher RVR with lower EVR/DBR across comparable work | research validation may be reducing runtime iteration | preserve the pattern and gather more comparable samples before claiming causality |
 | high EVR, low RWR | diagnostics too sequential | increase parallel hypothesis coverage and batch information gain |
 | high RWR | artifact/test delivery quality problem | strengthen pre-delivery static checks and path/runtime handling |
 | high CLR | weak work-start contract/context retrieval | define acceptance criteria and retrieve context earlier |
@@ -210,6 +244,7 @@ Work title
 Complexity class
 WCC
 T-WCC
+RVR
 EVR
 DBR
 RWR
@@ -245,6 +280,8 @@ FBR should increase over time
 median WCC should decrease within each complexity class
 ```
 
+There is no target to minimize `RVR` by itself. A higher `RVR` can be desirable if it materially lowers `EVR`, `DBR`, `RWR`, or reopening risk. Evaluate the tradeoff empirically within comparable complexity classes.
+
 Do not set a hard WCC target until enough closed work items exist to establish a baseline distribution.
 
 ## 9. Learning loop
@@ -253,14 +290,15 @@ At every work closure:
 
 ```text
 close work
-  -> record WCC metrics
+  -> record WCC metrics including RVR
   -> identify largest interaction-cost component
+  -> compare RVR against EVR/DBR/RWR for similar work
   -> extract one process improvement if material
   -> update diagnostic protocol / validator when reusable
   -> compare future similar work against the historical baseline
 ```
 
-The validator is therefore not only a scorekeeper. Its purpose is to make interaction efficiency and test sufficiency engineering variables.
+The validator is therefore not only a scorekeeper. Its purpose is to make interaction efficiency, research quality, and test sufficiency engineering variables.
 
 ## 10. M5 baseline policy
 
@@ -268,7 +306,7 @@ The current M5 solved-potential ion-wall incident is the first designated baseli
 
 Do not assign its final WCC until the canonical promotion validation passes and M5 is formally CLOSED.
 
-At closure, reconstruct and record the interaction metrics from the incident history/conversation evidence as accurately as possible. If an exact historical count cannot be established, record the count as `estimated` rather than inventing precision.
+At closure, reconstruct and record the interaction metrics from the incident history/conversation evidence as accurately as possible. If an exact historical count cannot be established, record the count as `estimated` rather than inventing precision. This applies to `RVR` as well as the existing metrics.
 
 The main known M5 process lessons already identified are:
 
