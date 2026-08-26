@@ -32,7 +32,8 @@ Route to the Researcher when the question depends materially on external or sour
 - collision/transport data provenance;
 - physical-model alternatives;
 - reference implementations;
-- determining whether an approximation is justified.
+- determining whether an approximation is justified;
+- determining which independent state variables an upstream model actually depends on.
 
 Researcher output contract:
 
@@ -54,6 +55,7 @@ Route to the Validator when the question asks whether work is sufficiently verif
 - whether a proposed result is sufficient to close a gate;
 - whether a regression can detect the intended defect;
 - whether a production path, fallback, or approximation is independently validated;
+- whether a target data/runtime representation can actually express the source model;
 - whether a bundle is safe to deliver for external execution.
 
 Validator output contract:
@@ -110,6 +112,27 @@ Manager
   -> Researcher: inspect framework/source contract only if the error signature leaves ambiguity
   -> Validator: confirm the fix and regression are sufficient before promotion
 ```
+
+### Representation-adequacy uncertainty
+
+Use when an upstream physics model is being collapsed into a simpler data/runtime representation.
+
+```text
+Manager
+  -> Researcher: inventory source-model state variables and discrete branches
+  -> Validator: test whether the proposed target schema can represent them within tolerance
+       ├─ adequate -> proceed with data extraction/tabulation
+       └─ inadequate -> architecture/model-interface change
+```
+
+Example:
+
+```text
+upstream: Q = Q(T, Te, ne, interaction_type)
+target:   Q = table(T)
+```
+
+If changing `Te`, `ne`, or the interaction branch at fixed `T` materially changes `Q`, do not respond by making the one-dimensional table denser. Classify the result as `REPRESENTATION_ADEQUACY_FAIL` and route to an architecture change.
 
 ## 4. Mandatory pre-execution gate for MOOSE/QPX bundles
 
@@ -211,6 +234,16 @@ Manager -> static construction preflight
 
 Do not start by changing transport physics.
 
+### Upstream model needs Te/ne but target database stores only T
+
+```text
+Manager -> Researcher: confirm source dependency
+         -> Validator: quantify fixed-T sensitivity to omitted variables
+         -> representation-adequacy decision
+```
+
+Do not build a denser `Q(T)` table until this gate passes.
+
 ## 9. Continuous improvement
 
 At closure or after material rework, the Manager reviews Validator metrics:
@@ -222,6 +255,6 @@ At closure or after material rework, the Manager reviews Validator metrics:
 - CLR;
 - FBR.
 
-Repeated avoidable construction errors should result in stronger preflight checks. Repeated research uncertainty should result in better source/provenance contracts. Repeated false-PASS risk should result in stronger Validator mutation tests.
+Repeated avoidable construction errors should result in stronger preflight checks. Repeated research uncertainty should result in better source/provenance contracts. Repeated false-PASS risk should result in stronger Validator mutation tests. Representation failures should result in an earlier model-state dependency inventory before data extraction begins.
 
 The goal is to move failures earlier in the pipeline, where they are cheaper and do not consume external runtime rounds.
