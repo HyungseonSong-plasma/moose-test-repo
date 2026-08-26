@@ -25,6 +25,7 @@ known-good invariant
   -> primary discriminators T
   -> failure pre-mortem
   -> cheap branch tests added to the same batch
+  -> construction preflight
   -> execution
   -> result signature
   -> immediate hypothesis decision
@@ -36,7 +37,7 @@ The optimization objective is not to maximize test count. It is to maximize info
 
 Before packaging a batch, list plausible ways each primary test can fail. At minimum separate:
 
-1. **Harness / construction failure** — malformed input, duplicate block, missing output, parser collision, wrong executable path.
+1. **Harness / construction failure** — malformed input, duplicate block, missing output, parser collision, wrong executable path, missing functor/provider.
 2. **Reference-data failure** — wrong source pair, wrong metadata, wrong provenance, stale source revision.
 3. **Transformation failure** — unit conversion, normalization, sign, indexing, canonical pair orientation.
 4. **Resolution / precedence failure** — aliasing selects the wrong pair, fallback shadows explicit data, charge state disappears.
@@ -78,211 +79,112 @@ source data
   -> unit conversion
   -> interpolation / clipping
   -> derived coefficient
-  -> QPX/MOOSE implementation parity
-  -> coupled physics integration
+  -> production-path parity
+  -> physics integration
 ```
 
-A downstream failure must not be interpreted as physics evidence until its prerequisite layers have passed.
+Do not jump from source data directly to a coupled physics run when intermediate transformations can be checked independently.
 
-## 5. Branch-aware batching rule
+## 5. Mandatory construction preflight
 
-If the likely next diagnostic is cheap, deterministic, and independent of the failed solver state, include it in the same bundle.
+Every MOOSE/QPX batch containing executable inputs should perform construction validation before a full solve.
+
+```text
+P0 checker self-test / negative controls
+P1 static input checks
+P2 qpx-opt --check-input
+P3 full runtime only after P0-P2 pass
+```
+
+Static checks should include, when relevant:
+
+- duplicate blocks;
+- reserved parsed-functor symbols;
+- missing files;
+- functor dependency graph;
+- generated dot-functor naming;
+- alias target validity;
+- expected outputs/postprocessors.
+
+A construction failure must be classified as harness/configuration evidence, not physics evidence.
+
+### Functor example
+
+If `ADGenericFunctorMaterial` provides property `w_O_state` with `define_dot_functors = true`, the generated derivative functor is:
+
+```text
+dw_O_state_dt
+```
+
+A consumer requesting `dO_state_dt` is a naming/dependency defect and should be caught in P1/P2 before the full solve.
+
+## 6. Validate the checker
+
+A validator/checker must prove that it can detect the defect class it claims to cover.
+
+Use mutation/negative-control tests, for example:
+
+```text
+valid configuration              -> PASS
+missing provider                 -> FAIL
+wrong generated-dot name         -> FAIL
+duplicate block                  -> FAIL
+reserved parser symbol           -> FAIL
+```
+
+A checker that has not demonstrated defect-detection capability is itself an unvalidated component.
+
+## 7. Branch-aware packaging
+
+If the next discriminator after a plausible failure is cheap and safe, include it in the same batch.
 
 Example:
 
 ```text
-T1 source parity
-  FAIL -> T1F1 raw-token diff
-          T1F2 pair-orientation check
-          T1F3 unit sentinel check
-
-T2 resolver
-  FAIL -> T2F1 identity-map static check
-          T2F2 precedence trace
-          T2F3 commutativity / charge-preservation check
+primary full case
+├─ PASS -> acceptance
+└─ FAIL
+   ├─ static/construction evidence -> HARNESS/CONSTRUCTION
+   ├─ smaller dt passes -> DT_SENSITIVE
+   └─ subsystem-only discriminator
+      ├─ passes -> coupling failure
+      └─ fails -> base subsystem failure
 ```
 
-Do not include expensive interaction tests before primitive hypotheses are tested. Primitive failure causes should be isolated first.
+Do not execute fail-branch physics cases after a construction preflight failure unless they provide independent construction information.
 
-## 6. Harness protection
+## 8. Failure-class output
 
-Every external-runtime bundle should, where practical, contain static preflight checks for failure modes that do not require the solver:
-
-- duplicate object/block names;
-- invalid or reserved parser symbols;
-- missing referenced files;
-- missing expected output columns;
-- duplicate or unknown species identifiers;
-- unresolved aliases;
-- inconsistent pair keys;
-- impossible charge-state collapse;
-- stale previous outputs.
-
-Harness failures are recorded as rework/incident evidence, not as physics FAIL.
-
-## 7. Data-validation specialization
-
-For transport, thermodynamic, chemistry, or other imported databases, separate **raw-source parity** from **derived-value parity**.
-
-### Raw-source parity
-
-Validate exactly what the upstream source declares:
-
-- pair/species identity;
-- temperature grid;
-- tabulated values;
-- units;
-- metadata such as `multpi`;
-- reference/provenance;
-- explicit-vs-default status.
-
-### Derived-value parity
-
-Then validate QPX-side representation independently:
-
-- SI conversion;
-- interpolation;
-- clipping/extrapolation policy;
-- alias/pair resolution;
-- derived binary coefficient;
-- mixture coefficient.
-
-A raw-value mismatch and a unit-conversion mismatch must produce different result signatures.
-
-## 8. Resolver invariants
-
-For pair databases with aliases/fallbacks, require the resolver itself to have canonical regressions.
-
-Typical invariants:
+A generic `FAIL` is insufficient. The batch should emit a class such as:
 
 ```text
-resolve(a,b) == resolve(b,a)
-resolve(identity(a), identity(b)) is deterministic
-explicit pair > fallback
-charged identity is never silently collapsed to neutral
-excited-state collapse affects only the declared excitation dimension
-all physical pairs resolve to either explicit data or an explicitly named fallback
-```
-
-The selected data source should be observable in diagnostics: for example `EXPLICIT`, `LANGEVIN_FALLBACK`, or `DEBYE_HUCKEL_DEFAULT`.
-
-## 9. Predictive Batch A template for imported transport data
-
-Use this template before coupled MOOSE/QPX runtime tests.
-
-### A0 — schema/static preflight
-
-Predicted failures:
-- duplicate species/aliases;
-- unknown target identities;
-- charged species mapped to neutral identities;
-- malformed pair keys.
-
-Tests:
-- unique identifier check;
-- alias target existence;
-- charge-preservation invariant;
-- canonical pair-key normalization.
-
-### A1 — source inventory and provenance parity
-
-Primary test:
-- compare every required explicit source pair with the upstream source.
-
-Predicted fail branches:
-- **A1F1 orientation:** `(a,b)` vs `(b,a)` canonicalization error;
-- **A1F2 metadata:** temperature grid, units, `multpi`, reference mismatch;
-- **A1F3 completeness:** expected explicit pair accidentally classified as missing/fallback.
-
-### A2 — raw-to-runtime unit parity
-
-Primary test:
-- compare known grid-point sentinels before and after conversion.
-
-Predicted fail branches:
-- missing `pi` factor;
-- Å²-to-m² conversion error;
-- conversion applied twice;
-- raw table already converted but treated as source units.
-
-Keep a raw-source value and its expected runtime-SI value in the same result signature.
-
-### A3 — resolver exhaustive test
-
-Primary test:
-- enumerate every unordered physical-species pair.
-
-Predicted fail branches:
-- **A3F1 identity map:** wrong physical-to-transport alias;
-- **A3F2 precedence:** generic fallback shadows explicit pair;
-- **A3F3 symmetry:** `resolve(a,b) != resolve(b,a)`;
-- **A3F4 charge preservation:** charged identity disappears;
-- **A3F5 excitation collapse:** excited neutral does not collapse only to its declared parent.
-
-### A4 — interpolation and range-policy parity
-
-Primary tests:
-- exact grid points;
-- one or more off-grid points;
-- lower/upper range boundary behavior.
-
-Predicted fail branches:
-- wrong interpolation method;
-- pair-specific temperature grid mixed with another pair;
-- clipping/extrapolation mismatch;
-- non-monotonic data incorrectly forced to be monotonic.
-
-Do not impose monotonicity unless the underlying physics/source requires it. Compare against the declared upstream behavior.
-
-### A5 — explicit-vs-default provenance trace
-
-Primary test:
-- required explicit pairs must report `EXPLICIT`;
-- genuinely missing pairs must report the declared fallback class.
-
-Predicted fail branches:
-- fallback used despite available explicit data;
-- fallback class selected from neutral identity after charge loss;
-- unresolved pair silently replaced by a generic neutral pair.
-
-## 10. Batch decision rule
-
-A batch result should distinguish at least these states:
-
-```text
-BATCH_PASS
-HARNESS_FAIL
-SOURCE_PARITY_FAIL
-METADATA_FAIL
+HARNESS_OR_SCHEMA_FAIL
+MISSING_FUNCTOR_FAIL
+SOURCE_VALUE_FAIL
+SOURCE_METADATA_FAIL
 UNIT_TRANSFORM_FAIL
 RESOLVER_FAIL
-INTERPOLATION_FAIL
-PRECEDENCE_FAIL
+INTERPOLATION_OR_RANGE_POLICY_FAIL
+PRODUCTION_PATH_PARITY_FAIL
+PHYSICS_MODEL_FAIL
 ```
 
-Do not collapse these into one generic FAIL.
+The output should also preserve the numeric/structural evidence needed to decide the next action without another exploratory round.
 
-If all primitive tests pass, proceed to derived-coefficient and coupled-runtime validation. If one primitive class fails, restrict the next action to that class.
+## 9. Role integration
 
-## 11. Measurement and workflow improvement
+The Manager should route source/model uncertainty to the Researcher and test sufficiency/closure questions to the Validator. See `docs/guides/manager_role_routing.md`.
 
-Continue the issue-local Work Closure Validator metrics. Predictive batching is successful when, for comparable complexity:
+The Researcher establishes external/source truth. The Validator checks coverage, false-PASS risk, and acceptance sufficiency. Predictive batch construction then turns those decisions into executable discriminators.
 
-- WCC and T-WCC trend downward;
-- DBR stays small because likely branches are predeclared;
-- RWR decreases because static/harness checks catch construction defects before user runtime;
-- FBR remains `yes` and increasingly represents real branch coverage rather than only a written fallback note;
-- EVR is reserved for actual external runtime/evidence rounds, not source-research-only work.
+## 10. Measurement
 
-Do not reduce validation quality merely to reduce WCC.
+Use the Work Closure Validator metrics to determine whether predictive batching improves the workflow:
 
-## 12. Promotion rule
+- WCC / T-WCC should decrease within comparable complexity;
+- EVR should decrease by packaging preflight and likely fail branches together;
+- DBR should remain <= 2 for normal bounded incidents where possible;
+- RWR should approach 0 as construction preflight improves;
+- FBR should increase without weakening technical acceptance.
 
-When a predictive branch catches a real defect:
-
-1. preserve incident-specific history in the issue/incident log;
-2. decide whether the failure mode is reusable;
-3. if reusable, promote the discriminator or static check into the default batch template;
-4. update this guide when the new test replaces a recurrent user-runtime round trip.
-
-The guide should therefore evolve from observed failure patterns rather than remain a fixed checklist.
+Do not reduce interaction counts by removing independent evidence or weakening canonical gates.
