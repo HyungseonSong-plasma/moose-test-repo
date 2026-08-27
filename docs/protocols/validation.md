@@ -51,6 +51,7 @@ unused top-level substitutions
 missing referenced files
 missing expected outputs/postprocessors
 missing functor providers
+duplicate functor/material-property producers by block
 generated dot-functor naming
 variable/material property naming consistency
 unknown/duplicate species and aliases
@@ -59,6 +60,14 @@ unsupported input parameters
 stale previous outputs
 unresolved template markers
 ```
+
+For generated overlay/integration inputs, P0 must build a block-qualified provider ownership map for referenced shared properties:
+
+```text
+(property_or_functor_name, block) -> intended producer set
+```
+
+A referenced property with no applicable producer is a hard construction failure. Multiple unintended producers for the same property on the same applicable block are also a hard construction failure and should be classified `DUPLICATE_PROVIDER_FAIL`. Prefer reusing the already-owned upstream provider for shared state such as gas temperature, pressure, density, or common mesh/material properties rather than recursively copying a second provider subgraph. When this failure class is in scope, include a negative mutation that deliberately duplicates one shared provider and prove P0 rejects it before P2.
 
 For `ParsedFunctorMaterial` / `ADParsedFunctorMaterial`, reserved-symbol validation is a **hard machine-enforced P0 gate**, not a manual-review item. Every generated or packaged input containing these objects must run `scripts/validate_parser_symbols.py` or an equivalent embedded guard before P2. See VAL-19.
 
@@ -188,6 +197,7 @@ Prefer specific classes over generic FAIL, including:
 ```text
 HARNESS_OR_CONSTRUCTION_FAIL
 MISSING_FUNCTOR_FAIL
+DUPLICATE_PROVIDER_FAIL
 SOURCE_PARITY_FAIL
 METADATA_FAIL
 UNIT_TRANSFORM_FAIL
