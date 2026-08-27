@@ -66,6 +66,10 @@ The post-review sample is still too small for comparative inference, but #20 is 
 
 #14 is a `DECOMPOSED_PARENT` and remains excluded from technically-completed efficiency comparison. Its downstream closure review reconstructed `EVR=10` and `RWR=4` from explicit historical execution/rework evidence; that high-cost history motivated the added batch, live-accounting, stop/re-audit, observation-path, discrete-identity, temporal-self-test, and environment-preflight rules.
 
+## #13 closure note
+
+#13 keeps its previously recorded issue-local metrics (`WCC=15`, `T-WCC=13`, `RVR=3 reconstructed`, `EVR=10`, `DBR=2`, `RWR=6`, `CLR=0`, `FBR=yes`). Its final R6 downstream gate is satisfied by #20's promoted 9/9 canonical regression; no #20 execution rounds are copied into #13 metrics under issue-local accounting.
+
 ## Monitoring hypotheses
 
 Track these prospectively as new issues acquire canonical final metrics:
