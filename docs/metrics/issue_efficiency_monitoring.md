@@ -10,13 +10,12 @@
 Include technical issues that have actual execution history and a usable metric block. Exclude:
 - governance/cancelled placeholders explicitly marked as excluded from engineering metrics;
 - PLANNED issues with `WCC=0`;
-- issues whose body explicitly states that current metrics are non-canonical pending reconciliation.
-
-Current baseline sample: **#1, #2, #8, #13**.
-
-#14 is excluded from the baseline because its closed body states that the prior synthetic `EVR=1 / RWR=0` block is not canonical final accounting and that #20 owns reconciliation.
+- issues whose body explicitly states that current metrics are non-canonical pending reconciliation;
+- `DECOMPOSED_PARENT` issues from technically-completed efficiency comparisons unless decomposition efficiency is the analysis target.
 
 ## Baseline snapshot — 2026-08-26
+
+Historical baseline sample: **#1, #2, #8, #13**.
 
 | Issue | Complexity | State | WCC | T-WCC | RVR | EVR | DBR | RWR | CLR | FBR |
 |---|---|---|---:|---:|---:|---:|---:|---:|---:|---|
@@ -25,7 +24,7 @@ Current baseline sample: **#1, #2, #8, #13**.
 | #8 Charged heavy-species mixture diffusion + Poisson coupling | C4 | CLOSED — DECOMPOSED_PARENT | 8 | 8 | 0 | 7 | 1 | 3 | 0 | yes |
 | #13 Oxygen heavy-species transport database | C3 | ACTIVE | 15 | 13 | 3 reconstructed | 10 | 2 | 6 | 0 | yes |
 
-### Aggregate statistics
+### Baseline aggregate statistics
 
 - Sample size: `n=4`
 - Total WCC: `39`
@@ -40,21 +39,32 @@ Current baseline sample: **#1, #2, #8, #13**.
 - CLR: `0` for all sampled issues
 - Every sampled issue exceeded the nominal `EVR <= 3` target.
 
-### Exploratory relationships
-
-Pearson correlations over the four-issue sample:
-
+Baseline Pearson correlations over the four-issue sample:
 - `corr(WCC, EVR) = 0.893`
 - `corr(EVR, RWR) = 0.907`
 - `corr(WCC, RWR) = 0.956`
 
 These are descriptive only. With `n=4`, they are not sufficient for causal or inferential claims.
 
-## Two-paragraph baseline report
+## Post-review snapshot — 2026-08-27
 
-Across the four technical issues with usable execution metrics (#1, #2, #8, #13), the average work item consumed 9.75 WCC, 8.75 T-WCC, 6.75 EVR, 1.50 DBR, and 3.25 RWR. About 89.7% of all recorded interaction rounds were technical rather than governance/clarification rounds, FBR was achieved in three of four issues, and CLR remained zero. The dominant efficiency problem is therefore not clarification overhead but repeated external execution: every sampled issue exceeded the nominal three-EVR target. #13 is currently the highest-cost observation at WCC=15, EVR=10, and RWR=6.
+#20 is the first bounded closure package executed after the #14 process review and protocol hardening.
 
-The strongest exploratory signal is that rework and external validation cost move together: WCC-EVR, EVR-RWR, and WCC-RWR correlations are approximately 0.89, 0.91, and 0.96 respectively. The sample is too small to establish causality, but the pattern is consistent with harness/checker/configuration defects amplifying both user-local reruns and total interaction cost. The operational hypothesis to monitor prospectively is therefore that stronger P0 mutation/self-tests, known-good controls, earlier decomposition of broad C4 work, and `RWR -> 0` will reduce downstream EVR and WCC without weakening closure quality. RVR effectiveness should not yet be inferred because the available RVR values are incomplete/reconstructed.
+| Issue | Complexity | State | WCC | T-WCC | RVR | EVR | DBR | RWR | CLR | FBR |
+|---|---|---|---:|---:|---:|---:|---:|---:|---:|---|
+| #20 Canonical regression promotion + closure accounting | C2 | CLOSED | 4 | 4 | 0 | 2 | 0 | 0 | 0 | yes |
+
+Execution history:
+- EVR #1 reached P2 and failed with `ADFParser::JITCompile() failed`; user later confirmed the required conda environment had not been activated.
+- The unchanged bundle was rerun after `conda activate` and returned `REGRESSION TOTAL: 9 PASS: 9 FAIL: 0`.
+- The first failure is classified `ENVIRONMENT_OR_BUILD_FAIL`, not assistant-side harness rework, so `RWR=0`.
+- #20 met the prospective target `EVR <= 3`, `DBR <= 2`, `RWR = 0`.
+
+The post-review sample is still too small for comparative inference, but #20 is directionally consistent with the intended improvement: a bounded C2 closure package completed in two external result returns with no assistant-caused rework. The remaining process lesson is to make environment activation/JIT readiness an explicit P1/P2 preflight so that environment-only failures do not consume EVR.
+
+## Historical #14 reconciliation note
+
+#14 is a `DECOMPOSED_PARENT` and remains excluded from technically-completed efficiency comparison. Its downstream closure review reconstructed `EVR=10` and `RWR=4` from explicit historical execution/rework evidence; that high-cost history motivated the added batch, live-accounting, stop/re-audit, observation-path, discrete-identity, temporal-self-test, and environment-preflight rules.
 
 ## Monitoring hypotheses
 
@@ -63,7 +73,7 @@ Track these prospectively as new issues acquire canonical final metrics:
 1. Does lower `RWR` predict lower `EVR` and `WCC`?
 2. Do bounded C1-C3 successor issues outperform broad/decomposed C4 issues on `EVR`, `DBR`, and `RWR`?
 3. Does targeted RVR investment associate with reduced downstream `EVR/DBR/RWR`?
-4. Does FBR improve after stronger pre-mortem, mutation, and known-good batching?
+4. Does FBR improve after stronger pre-mortem, mutation, known-good batching, and environment preflight?
 5. Do post-#20 issues approach the project targets `EVR <= 3`, `DBR <= 2`, `RWR = 0` while preserving closure-quality gates?
 
 ## Update policy
