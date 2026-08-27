@@ -127,6 +127,31 @@ intended bytes == fetched bytes -> STOP / NO_MUTATION_NEEDED
 
 When a fetched content/blob SHA and a returned content/blob SHA are available, equality after an intended semantic change is an incident signature, not a reason to retry the write.
 
+## RM-06C — Create-action exact-target attestation
+
+Every `create_*` mutation requires an exact pre-create target identity already present in the RM-08 plan before the mutator is selected.
+
+Use the resource's real pre-create identity:
+
+```text
+create issue   -> exact repository + intended title/purpose
+create file    -> exact repository path
+create branch  -> exact repository + branch name + source ref
+create comment -> exact repository + issue/PR number + intended comment purpose
+```
+
+Immediately before invocation verify:
+
+```text
+selected create mutator resource class == planned resource class
+selected target identity == planned target identity
+no placeholder, probe, stand-in, or invented surrogate target is present
+```
+
+For server-assigned resources such as issues, the absence of the future numeric ID does not permit a substitute target. The repository plus intended title/purpose is the target identity until creation returns the canonical ID.
+
+If the required create mutator is not currently loaded, discover/load that exact mutator and then call it. Never substitute another `create_*` action merely to test availability or preserve flow.
+
 ## RM-07 — State-transition fan-out synchronization
 
 When an issue changes lifecycle/dependency state (for example ACTIVE -> CLOSED/PASS, BLOCKED -> ACTIVE), treat downstream current-state synchronization as part of the same governance operation.
@@ -161,6 +186,8 @@ Target B: issue #16 blocker -> removed / ACTIVE
 Target C: issue #17 upstream text -> synchronized
 Target D: README current sequence -> synchronized
 ```
+
+For create operations, the plan must state the exact pre-create target identity defined by RM-06C before the first create call.
 
 Do not discover new mutation targets by repeatedly writing. Discovery is read/search work.
 
