@@ -8,6 +8,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from validate_parser_symbols import validate_file as validate_parser_symbol_file
+
 
 def resolve_executable(repo_root: Path) -> Path:
     env = os.environ.get("QPX_EXECUTABLE")
@@ -82,6 +84,20 @@ def load_test(case_dir: Path):
     return json.loads(manifest.read_text())
 
 
+def validate_input_preflight(input_path: Path) -> None:
+    if not input_path.is_file():
+        raise SystemExit(f"missing test input: {input_path}")
+
+    errors = validate_parser_symbol_file(input_path)
+    if errors:
+        print("PARSER_P0  : FAIL")
+        for error in errors:
+            print("  -", error)
+        raise SystemExit(2)
+
+    print("PARSER_P0  : PASS")
+
+
 def run_case(case_dir: Path) -> int:
     repo_root = Path(__file__).resolve().parents[1]
     case_dir = case_dir.resolve()
@@ -93,6 +109,9 @@ def run_case(case_dir: Path) -> int:
     checker = cfg.get("checker")
     checker_args = cfg.get("checker_args", [])
     test_type = cfg.get("type", "canonical")
+
+    input_path = case_dir / input_name
+    validate_input_preflight(input_path)
 
     result_dir = repo_root / "results" / str(case_dir.relative_to(repo_root / "tests"))
     result_dir.mkdir(parents=True, exist_ok=True)
