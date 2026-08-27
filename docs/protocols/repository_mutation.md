@@ -152,6 +152,38 @@ For server-assigned resources such as issues, the absence of the future numeric 
 
 If the required create mutator is not currently loaded, discover/load that exact mutator and then call it. Never substitute another `create_*` action merely to test availability or preserve flow.
 
+## RM-06D — Resource-class payload-shape lock
+
+The frozen `INTENT_RESOURCE` must constrain not only the mutator name but also the **argument schema** allowed to reach a write call.
+
+Before invocation, inspect the composed payload itself:
+
+```text
+INTENT_RESOURCE=issue
+  -> payload must contain issue identity fields
+  -> any repository file path/content/blob-SHA mutation fields are a HARD STOP
+
+INTENT_RESOURCE=file
+  -> payload must contain the exact planned repository path
+  -> any issue-number/title/body mutation fields are a HARD STOP
+```
+
+Equivalent checks apply to branch/ref and comment resources. A payload shape belonging to another resource class proves mutator-routing failure even if the prose intent is correct.
+
+Required pre-call decision:
+
+```text
+selected mutator == ALLOWED_MUTATOR
+AND
+payload resource class == INTENT_RESOURCE
+AND
+payload target == INTENT_TARGET
+```
+
+If any term is false, do not invoke any write tool. Do not replace the payload with a placeholder target, empty file, dummy path, or probe action.
+
+This check is mandatory after prior wrong-action incidents because a correct written intent alone has not prevented file mutators from being selected during issue updates.
+
 ## RM-07 — State-transition fan-out synchronization
 
 When an issue changes lifecycle/dependency state (for example ACTIVE -> CLOSED/PASS, BLOCKED -> ACTIVE), treat downstream current-state synchronization as part of the same governance operation.
