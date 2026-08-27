@@ -11,6 +11,7 @@ This index maps recurring symptoms to incident records and minimal regression ca
 | Independent oracle shows the same small multiplicative error for every physics state while state sensitivity still passes | `docs/incidents/r3_thermal_diffusion_gas_constant_scale_mismatch.md` | CLOSED; check host constant/unit convention before modifying production physics |
 | Production-parity oracle fails by a transport-class-dependent but reproducible vector while source/provenance gates pass | `docs/incidents/r4_a6_production_oracle_constant_convention_mismatch.md` | CLOSED; separate upstream source constants from production numerical conventions |
 | `--check-input` fails before runtime because generated test input omits state required by charged self-pairs or contains unsupported output knobs | `docs/incidents/r4_r5_a6_harness_construction_false_fail.md` | CLOSED; validate full active-set constructor contract |
+| `Invalid function ... Syntax error in parameter 'Vars' given to FunctionParser::Parse()` | `docs/incidents/functionparser_reserved_symbol_collision.md` | CLOSED; machine-enforced parser-symbol P0 added |
 
 ## Reusable pattern: algebraic variable inside a transient solve
 
@@ -84,6 +85,26 @@ If replacing production constants with historical upstream constants reproduces 
 A targeted pair test may still trigger constructor checks for self-pairs and other pairs in the active species set. Generate inputs from the full constructor contract, not only the cross-pair being observed.
 
 For charged-heavy transport, one charged species is enough to create a charged self-pair during `i <= j` validation, so `Te/ne` may be required even for an ion-neutral target cross-pair. Unsupported input parameters are harness failures; do not mask them with `--allow-unused`.
+
+## Reusable pattern: FunctionParser variable namespace
+
+For `ParsedFunctorMaterial` / `ADParsedFunctorMaterial`, a mathematically valid expression can still fail before evaluation if its parser-symbol namespace is invalid.
+
+MOOSE appends coordinate/time symbols `x,y,z,t` and provides parser constants `pi,e`. Do not reuse those names as custom `functor_symbols`; also reject duplicate aliases and implicit `functor_names` collisions when `functor_symbols` is omitted.
+
+Required first action for
+
+```text
+Syntax error in parameter 'Vars' given to FunctionParser::Parse()
+```
+
+is:
+
+```text
+python3 scripts/validate_parser_symbols.py <input.i>
+```
+
+Do not change physics or solver settings before this namespace check.
 
 ## Incident promotion rule
 
