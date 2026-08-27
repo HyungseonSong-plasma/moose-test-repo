@@ -212,6 +212,30 @@ resume only after the new guard is clear
 
 Shared-branch history is preserved by default; prevention is prospective unless the user explicitly authorizes history surgery.
 
+## RM-09A — Session circuit breaker after wrong-action mutation
+
+If a repository mutation acts on the wrong resource class or wrong target and reaches live repository state, trip a session-level circuit breaker.
+
+For the remainder of the same assistant response/session:
+
+```text
+PERMITTED:
+  read/verify repository state
+  minimal repair of the accidental live target
+  incident-record update
+  canonical mutation-safety rule update required by RM-09
+
+FORBIDDEN:
+  the originally intended business mutation
+  new issue/file/branch creation unrelated to repair
+  dependency synchronization
+  retries intended to prove the new guard works
+```
+
+After repair and governance recording, verify the accidental target is absent or restored, then end the repository write phase. Resume intended/business mutations only from a fresh mutation context that reloads the canonical mutation protocol and reconstructs the RM-08 plan from current state.
+
+A repeated wrong-action mutation after a guard update is evidence that the current mutation context is unsafe; it is not permission to test another mutator.
+
 ## RM-10 — Final mutation closure check
 
 Before declaring repository synchronization complete, verify:
