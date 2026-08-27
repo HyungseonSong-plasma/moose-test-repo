@@ -253,6 +253,16 @@ wrong sign -> FAIL
 wrong magnitude beyond tolerance -> FAIL
 ```
 
+When the output stream can contain an `INITIAL` / start-time row, the checker must also carry an explicit initialization-row mutation:
+
+```text
+initialization-only row deliberately inconsistent with the physical invariant
+-> checker excludes or explicitly classifies that row
+-> solved timestep rows remain fully enforced
+```
+
+A transient checker that silently applies a physical timestep invariant to an initialization-only observation row is `VALIDATOR_SELFTEST_FAIL`, not a physics failure. This initialization-row branch is mandatory after any prior incident involving `time=0`, initialization order, output-stage timing, or pre-solve postprocessor values.
+
 When a prior failure involved initialization order, Aux execution stage, old/current state, or derivative timing, include the corresponding semantic mutation in P0 before another external execution.
 
 ## VAL-18 — Runtime environment/JIT preflight
