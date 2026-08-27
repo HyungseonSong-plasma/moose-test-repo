@@ -4,8 +4,6 @@ from __future__ import annotations
 
 import argparse
 import re
-import sys
-import tempfile
 from pathlib import Path
 
 
@@ -17,7 +15,7 @@ PARSED_FUNCTOR_TYPES = {"ParsedFunctorMaterial", "ADParsedFunctorMaterial"}
 IDENTIFIER_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 BLOCK_OPEN_RE = re.compile(r"^\s*\[(?!\]|\.\./)(?:\./)?([^\]]+)\]\s*$")
 BLOCK_CLOSE_RE = re.compile(r"^\s*\[(?:\.\./)?\]\s*$")
-TYPE_RE = re.compile(r"^\s*type\s*=\s*([^\s#]+)")
+TYPE_RE = re.compile(r"^\s*type\s*=\s*([^\s#]+)", re.MULTILINE)
 PARAM_RE_TEMPLATE = r"^\s*{name}\s*=\s*(?:'([^']*)'|\"([^\"]*)\"|([^#\n]+))"
 
 
