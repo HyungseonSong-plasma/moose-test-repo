@@ -47,8 +47,6 @@ def validate_executable(exe: Path) -> None:
     with exe.open("rb") as f:
         header = f.read(64)
 
-    # Non-ELF executables are left to the operating system. This keeps the
-    # runner portable while still protecting the Linux qpx-opt path.
     if not header.startswith(b"\x7fELF"):
         return
 
@@ -112,14 +110,19 @@ def is_transient_input(input_path: Path) -> bool:
 
 
 def validate_temporal_manifest_preflight(input_path: Path, cfg: dict) -> None:
-    """Require explicit temporal-row semantics for transient cases with checkers.
+    """Require explicit temporal-row semantics for schema-v2 transient cases.
 
-    This prevents case-local checkers from repeatedly treating initialization-stage
-    CSV rows as solved physical timesteps.
+    Schema-v1 cases are grandfathered so historical regressions are not silently
+    reinterpreted. New or modified transient cases must use validation_schema=2.
     """
 
     checker = cfg.get("checker")
     if not checker or not is_transient_input(input_path):
+        return
+
+    schema = int(cfg.get("validation_schema", 1))
+    if schema < 2:
+        print("TEMPORAL_P0: LEGACY_SCHEMA_WARNING")
         return
 
     specs = cfg.get("temporal_csv", [])
@@ -128,9 +131,9 @@ def validate_temporal_manifest_preflight(input_path: Path, cfg: dict) -> None:
     if not specs and raw_policy not in TEMPORAL_RAW_POLICIES:
         print("TEMPORAL_P0: FAIL")
         raise SystemExit(
-            "transient test with checker must declare either test.json temporal_csv "
-            "normalization or an explicit temporal_csv_policy; silent initialization-row "
-            "semantics are forbidden"
+            "validation_schema=2 transient test with checker must declare either "
+            "test.json temporal_csv normalization or an explicit temporal_csv_policy; "
+            "silent initialization-row semantics are forbidden"
         )
 
     if raw_policy is not None and raw_policy not in TEMPORAL_RAW_POLICIES:
@@ -156,7 +159,6 @@ def validate_temporal_manifest_preflight(input_path: Path, cfg: dict) -> None:
                 "must be preserved"
             )
 
-        # If a checker names the raw CSV explicitly, reject the test before runtime.
         if source in checker_args and spec["initial_row_policy"] == "exclude_observation":
             print("TEMPORAL_P0: FAIL")
             raise SystemExit(
@@ -164,7 +166,6 @@ def validate_temporal_manifest_preflight(input_path: Path, cfg: dict) -> None:
                 f"physical CSV {physical!r} instead"
             )
 
-        # When checker_args contains CSV paths, at least one must be the normalized path.
         csv_args = [arg for arg in checker_args if arg.lower().endswith(".csv")]
         if csv_args and physical not in csv_args:
             print("TEMPORAL_P0: FAIL")
@@ -216,8 +217,6 @@ def run_case(case_dir: Path) -> int:
     result_dir = repo_root / "results" / str(case_dir.relative_to(repo_root / "tests"))
     result_dir.mkdir(parents=True, exist_ok=True)
 
-    # MOOSE inputs generally resolve local mesh/data dependencies relative to cwd,
-    # so execute in the canonical test directory and route console output to results/.
     log_path = result_dir / "run.log"
     print(f"CASE       : {case_dir.relative_to(repo_root)}")
     print(f"TYPE       : {test_type}")
@@ -239,8 +238,6 @@ def run_case(case_dir: Path) -> int:
 
     print("SOLVE      : PASS")
 
-    # Post-solve temporal normalization is runner-owned, not checker-owned.
-    # The raw CSV remains untouched and a physical-only CSV is written separately.
     prepare_temporal_outputs(case_dir, cfg)
 
     if not checker:
