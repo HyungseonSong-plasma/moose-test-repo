@@ -288,87 +288,74 @@ Do not keep a large parent open merely to accumulate unrelated downstream execut
 
 Successor issues start with their own issue-local metrics and their own prospective `0/3` EVR budget. Historical metrics remain on the original parent and are not copied into successors.
 
-## PS-16 — External batch identity and EVR naming
+## PS-16 — Test IDs are not EVRs
 
-A test case is not an EVR. An EVR is one user-local QPX execution-result return attributable to the bounded work item, as defined in `metrics_closure.md`.
+Name internal cases/tests independently from external validation rounds.
 
-Use test IDs such as `T1`, `T2`, `A`, `B`, or descriptive case names inside one external batch. Do not name sequential subtests `EVR1-A`, `EVR1-B`, etc. when they require separate user executions; that obscures the true EVR count.
-
-Preferred first-round structure:
+Preferred form:
 
 ```text
-EVR #1
-  -> one standalone suite
-     -> known-good control
-     -> candidate case(s)
-     -> independent oracle/reference
-     -> ON/OFF or mutation controls
-     -> cheap fail-branch discriminators
-     -> executable/environment identity
+T1 material exposure
+T2 independent oracle
+T3 coupling ON/OFF
+T4 transient integration
+
+EVR #1 = one user-local execution containing T1-T4 when practical
 ```
 
-When several tests can be run together without destroying interpretability, package them into the same external execution round. Optimize information per EVR, not number of named test cases.
+Do not create pseudo-EVR names such as `EVR1-A`, `EVR1-B`, etc. when each label is actually a test case. `EVR` increments only when a user-local QPX execution result is returned under `MET-05`.
 
-## PS-17 — Live EVR/RWR accounting before the next execution
+## PS-17 — Live EVR/RWR accounting
 
-After every user-local result return and before requesting another external execution:
+Update issue-local accounting immediately after each attributable user-local result return.
 
 ```text
-EVR += 1
-classify the result
-if avoidable assistant-side artifact/config/checker defect caused another round:
-  RWR += 1
-record the updated issue-local metric state
+user-local execution result returned -> EVR += 1
+avoidable assistant-side artifact/config/checker defect caused extra user round -> RWR += 1
 ```
 
-Do not defer EVR/RWR reconciliation until closure. If the prospective EVR budget is exhausted, do not request another execution under the unchanged scope; apply the EVR #3 branch in PS-07.
+Do not postpone reconciliation until closure. If the prospective `3-EVR` budget is exhausted, the next action is Validator redesign/decomposition/incident routing, not an automatic fourth execution.
 
-Metric definitions and final accounting remain owned by `metrics_closure.md`; this rule governs when accounting must occur during problem solving.
+## PS-18 — RWR stop-and-redesign rule
 
-## PS-18 — Rework stop rule
-
-Repeated assistant-side validation-harness rework is itself a signal that the test architecture needs redesign.
+For one bounded test/closure claim:
 
 ```text
 RWR = 0 -> normal execution
-RWR = 1 -> one targeted correction is allowed
-RWR >= 2 within the same bounded test path
-         -> STOP further external execution
-         -> mandatory Validator redesign
+RWR = 1 -> one targeted correction permitted
+RWR >= 2 -> STOP additional external execution
+            re-audit observation graph, checker semantics, construction, and batch design
 ```
 
-The redesign must re-audit at least:
-
-```text
-observation/dataflow graph
-execution-stage ordering
-checker mathematical semantics
-artifact dependencies and stale outputs
-mutation/self-test coverage
-batch independence and fail branches
-```
-
-Do not produce a third incremental harness revision merely by patching the last symptom. Resume external execution only after the Validator records why the redesigned test set covers the repeated failure class.
+The stop applies before generating another external artifact unless a Validator decision documents why the failures are truly independent and a further run is justified.
 
 ## PS-19 — Promotion-ready planning
 
-Closure engineering starts in Phase 0, not after diagnostic PASS.
+Phase 0 must classify intended tests as either diagnostic-only or promotion candidates.
 
-For each planned validation case, declare one of:
-
-```text
-DIAGNOSTIC_ONLY
-PROMOTION_CANDIDATE
-```
-
-For every `PROMOTION_CANDIDATE`, predeclare:
+For each promotion candidate predeclare:
 
 ```text
 canonical regression destination
+production mechanism exercised
 promotion condition
-required invariant/reference
-negative-control requirement
-final regression-suite membership
+representative invariant/control
+negative checker/mutation requirement
+final regression membership
 ```
 
-When practical, design the diagnostic artifact so a successful case can be promoted without changing its physics, reference, or checker semantics. A late discovery that accepted feature evidence has no canonical regression path is a planning defect and should be recorded as closure rework.
+A successful diagnostic should be promotable without redesigning its physical test semantics. If substantial checker, timestep, mesh, solver, or physical-model changes are required only at promotion time, return to Validator review before canonicalization.
+
+## PS-20 — Environment activation preflight
+
+Before spending an EVR on a user-local QPX batch that depends on a project runtime environment, verify the environment contract explicitly rather than assuming the interactive shell is already prepared.
+
+At minimum record or check the applicable activation state and executable identity before P2:
+
+```text
+required environment activated
+qpx-opt realpath matches the intended executable
+critical runtime/JIT dependencies resolve in that environment
+```
+
+If a previously accepted case fails at P2 with an environment-sensitive symptom such as JIT compilation failure, first compare the activation/runtime identity with the known-good environment before changing input physics or harness logic.
