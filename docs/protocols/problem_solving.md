@@ -359,3 +359,107 @@ critical runtime/JIT dependencies resolve in that environment
 ```
 
 If a previously accepted case fails at P2 with an environment-sensitive symptom such as JIT compilation failure, first compare the activation/runtime identity with the known-good environment before changing input physics or harness logic.
+
+## PS-21 — Performance-feasibility gate before closure-scale runtime
+
+Before a production-like coupled P3, and especially before EVR #3, estimate whether the proposed numerical architecture is practical enough to serve as a regression.
+
+Record the applicable cost drivers before external execution:
+
+```text
+nonlinear unknown blocks / approximate DOF count
+monolithic vs segregated coupling structure
+linear solver / preconditioner
+process/thread count
+time-step count and case-matrix size
+known-good subsystem wall times when available
+new global elliptic or strongly coupled blocks added since the known-good path
+```
+
+When a new architecture adds a global coupling block or materially enlarges the nonlinear system, include a bounded cost discriminator before the final regression, such as:
+
+```text
+standalone new subsystem runtime
+one physical timestep
+one representative coupling axis
+transport-only vs coupled wall-time comparison
+```
+
+If a representative first step is computationally impractical or the projected closure matrix is not regression-viable, classify the architecture before spending the closure EVR:
+
+```text
+PERFORMANCE_FEASIBILITY_UNRESOLVED
+PERFORMANCE_BOUND
+ARCHITECTURE_UNSUITABLE_FOR_REGRESSION
+```
+
+Do not compensate by arbitrary tolerance, timestep, source-amplitude, boundary-condition, or physics tuning. Redesign, segregate, precondition, or decompose from evidence.
+
+## PS-22 — Live observability is part of long-run batch design
+
+A runtime whose cost or convergence is uncertain must expose progress while it is running. Do not make process termination the first moment at which useful solver evidence becomes visible.
+
+Required when applicable:
+
+```text
+CASE START / CASE END markers
+stdout/stderr streamed live and written incrementally to a log
+elapsed wall time
+physical timestep / nonlinear iteration progress when the application exposes it
+return code and final result path
+```
+
+Using `subprocess.PIPE` is acceptable only if output is consumed and surfaced continuously. Capturing all solver output silently until process exit is not acceptable for a potentially long P3.
+
+If manual `/proc`, `ps`, CSV-row, I/O, or context-switch probes become necessary to determine whether a run is alive, the next artifact must promote the useful progress signals into runner-owned observability rather than repeating the same manual diagnosis.
+
+## PS-23 — Coupling-architecture gate: performance and stability are joint requirements
+
+A change between monolithic, segregated, staggered, explicit-lagged, fixed-point, or semi-implicit coupling is a numerical-model decision, not a pure performance refactor.
+
+Before freezing the new architecture, inventory the feedback edges and the stability/convergence mechanisms they lose or gain. Check the relevant physical/numerical timescales and contraction conditions, for example:
+
+```text
+dielectric / Maxwell relaxation
+advective CFL
+diffusive timescale
+reaction/chemistry timescale
+fixed-point/Gummel contraction
+lagged-field or lagged-source dependencies
+```
+
+Separate two claims:
+
+```text
+coupling closure: information reaches the intended downstream state
+numerical stability: the chosen split/iteration remains stable and convergent for the intended timestep/regime
+```
+
+A short causal-response test may prove closure without proving stability. If a one-pass staggered method violates a source-backed timescale or is noncontractive, prefer a justified block-iterative/fixed-point or semi-implicit architecture rather than reducing the physical timestep merely to make the regression pass.
+
+## PS-24 — Repetition-compression rule
+
+Repeated manual work is evidence of a missing reusable discriminator or missing automation.
+
+During a bounded work item, if the same diagnostic class is performed repeatedly, stop before adding another ad-hoc probe and ask:
+
+```text
+Can this evidence be emitted by the runner?
+Can it be checked in P0/P1/P2?
+Can a subsystem timing/control isolate it before full P3?
+Can a source/API audit settle it before another external run?
+```
+
+Promote the answer into the next artifact or canonical protocol when reusable. Typical examples include:
+
+```text
+live process/progress status
+wall-time accounting
+CSV physical-row detection
+provider/ownership inventory
+subsystem cost isolation
+coupling residual history
+stability-timescale diagnostics
+```
+
+The objective is not to eliminate all iteration; it is to prevent the same uncertainty from being rediscovered manually in successive rounds.
