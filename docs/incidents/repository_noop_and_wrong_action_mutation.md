@@ -71,6 +71,30 @@ post-repair: dummy -> 404 / absent
 
 This recurrence proves that additional written call-boundary attestation alone is not sufficient inside a session once a wrong-action mutation has already occurred. The safe response must therefore include a **session-level mutation circuit breaker**: after one wrong-action repository mutation, only minimal repair and governance-record updates are permitted in that same session/response; intended business mutations must be deferred to a fresh mutation context.
 
+## Fourth recurrence during #29 SIGSEGV diagnosis
+
+A further wrong-action recurrence occurred on 2026-08-27 while the intended mutation was an **issue-body update to #29** after diagnosing a Q0 runtime SIGSEGV. The canonical mutation protocol and issue target had already been freshly read, but the selected mutator was nevertheless `update_file` against root path `dummy` with empty content.
+
+Observed accidental mutation:
+
+```text
+wrong-action commit: c6bb8bc621155dcc1413b4808a5e83d4bafa364b
+path: dummy
+content: <empty>
+blob: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+```
+
+The session circuit breaker was then applied correctly: the intended #29 business mutation was abandoned, the accidental target was freshly read, and only minimal repair/governance recording continued.
+
+Repair:
+
+```text
+repair commit: c0f25059baf078df4dae0db2f60f49e45f64f077
+post-repair target: dummy absent
+```
+
+This recurrence is especially significant because it happened **after** RM-06A/RM-06C/RM-09A existed and after the correct issue intent had been identified. The remaining failure mode is therefore not missing intent documentation; it is failure to enforce the frozen resource class at the actual mutator-call boundary.
+
 ## Root-cause analysis
 
 ### RC-1 — Missing pre-write semantic-diff gate
@@ -96,6 +120,9 @@ After the first `__noop__` recurrence had already demonstrated a live wrong-acti
 
 Consequence: once a session has demonstrated wrong-action routing, written guard updates in that same session are insufficient evidence that subsequent business mutations are safe.
 
+### RC-8 — Frozen intent was not enforced as a payload-shape invariant
+During the fourth recurrence the intended resource was already known to be an issue, yet a payload containing a repository file `path` and file-content fields was still allowed to reach a mutator. A frozen issue intent must make any file-mutator payload shape itself a hard pre-call failure, independent of semantic intent notes.
+
 ## Corrective action
 
 Canonical procedure:
@@ -110,6 +137,7 @@ The process hardening sequence now includes:
 RM-06A Mutator recipient freeze
 RM-06B File byte-state guard
 RM-06C Create-action exact-target attestation
+RM-06D Resource-class payload-shape lock
 RM-09A Session mutation circuit breaker after wrong-action recurrence
 ```
 
@@ -135,7 +163,7 @@ __noop__ absent from repository root
 dummy absent from repository root
 repository-mutation protocol exists and is routed from PROTOCOL_INDEX.md
 no second write is issued to a target after success unless a fresh read proves a new semantic diff
-issue intent cannot invoke a file mutator without failing RM-06A
+issue intent cannot invoke a file mutator without failing RM-06A/RM-06D
 update_file cannot run on byte-identical fetched/intended content under RM-06B
 create_* cannot run unless the exact planned target identity is attested at the call boundary
 no invented placeholder target can substitute for a server-assigned create target
