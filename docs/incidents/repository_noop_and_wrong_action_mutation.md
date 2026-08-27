@@ -1,7 +1,7 @@
 # Incident: Repository no-op and wrong-action mutations
 
 **Incident ID:** `INC-REPO-MUTATION-001`  
-**Status:** CLOSED / PROCESS FIXED — recurrence hardened  
+**Status:** OPEN / ACTIVE PROCESS INCIDENT — session circuit breaker required  
 **Associated work:** Issue #25 `Repository mutation safety + stale-state synchronization protocol`  
 **Failure class:** assistant-side repository/governance mutation; no QPX physics impact
 
@@ -13,7 +13,7 @@ Two related repository-mutation defects were originally observed:
 2. During the cleanup/retrospective, a wrong mutator was invoked and created a placeholder root file `__noop__`; it was immediately removed in the next commit.
 3. After #2 closed and #16 became ACTIVE, #17 still contained stale current-state wording (`#2 ACTIVE`, `#16 BLOCKED`) until explicitly repaired.
 
-The no-op commit sequence does not change repository content, but it pollutes history and weakens trust in mutation discipline. The `__noop__` create/delete pair temporarily changed repository contents and required corrective cleanup.
+The no-op commit sequence does not change repository content, but it pollutes history and weakens trust in mutation discipline. The placeholder create/delete pairs temporarily changed repository contents and required corrective cleanup.
 
 ## Recurrence after first process fix
 
@@ -29,11 +29,9 @@ pre-write README content SHA: c650f61a19c27a7208adfd9bba78255cca183a4a
 
 This was another no-op history-polluting commit. No live repository content changed.
 
-The recurrence demonstrates that a written intent tuple alone was insufficient: the guard must bind the intent to the **actual selected mutator recipient and target immediately before invocation**.
-
 ## Second wrong-action recurrence during #16 decomposition
 
-A second structural wrong-action recurrence occurred on 2026-08-27 while decomposing #16 after its EVR/RWR stop condition.
+A structural wrong-action recurrence occurred on 2026-08-27 while decomposing #16 after its EVR/RWR stop condition.
 
 The intended next mutation was to create a **GitHub successor issue**, but the selected mutator was `create_file` and a placeholder root path `__noop__` was supplied. This created an unintended repository file:
 
@@ -51,53 +49,52 @@ repair commit: 9f7f01ce3984c8b74041ace322b850c1bd2817b9
 post-repair: __noop__ -> 404 / absent
 ```
 
-No intended issue/dependency mutation was performed during this faulty step. Repository content returned to the pre-error semantic state, but shared history contains the create/delete pair.
+No intended issue/dependency mutation was performed during this faulty step.
 
-This recurrence is materially stronger evidence than the earlier conceptual guard: even though RM-01/RM-06A already prohibited placeholder targets and wrong resource classes, a structural create mutator could still be invoked with an invented target when the exact intended create target had not been attested at the call boundary.
+## Immediate third recurrence after RM-06C hardening
+
+After recording the `__noop__` recurrence and adding RM-06C create-target attestation, the same session attempted to resume the exact planned successor-issue creation. Despite the strengthened written guard, a wrong `create_file` mutator was again selected and created another unintended root placeholder:
+
+```text
+create commit: 1a77c0441d93e1367072c6ca3f605e75573732b2
+path: dummy
+content: x
+```
+
+The file was immediately fetched and removed:
+
+```text
+file blob: c1b0730e0133447badcfd47fd144e254807b06e1
+repair commit: e7aee1519ec9cff77de9c6be96ace7f87cb95988
+post-repair: dummy -> 404 / absent
+```
+
+This recurrence proves that additional written call-boundary attestation alone is not sufficient inside a session once a wrong-action mutation has already occurred. The safe response must therefore include a **session-level mutation circuit breaker**: after one wrong-action repository mutation, only minimal repair and governance-record updates are permitted in that same session/response; intended business mutations must be deferred to a fresh mutation context.
 
 ## Root-cause analysis
 
 ### RC-1 — Missing pre-write semantic-diff gate
 The original write path checked neither “does the intended replacement differ from the fetched current content?” nor “is the returned content/blob SHA already the intended state?” before issuing another write.
 
-Consequence: an already-successful update was treated as if another write might still be useful.
-
 ### RC-2 — Missing single-write stop condition
 There was no hard rule that a successful mutation to a target ends that target's write phase until a fresh read proves another semantic change is required.
 
-Consequence: repeated same-path `update_file` calls were possible even after success.
-
 ### RC-3 — Mutation action was not bound to an explicit intent tuple
-Before the accidental `__noop__` creation, the operation was not guarded by an explicit tuple:
-
-```text
-(resource, target, action, expected semantic diff)
-```
-
-Consequence: a structural `create_file` action could be invoked even though the intended work was issue/protocol synchronization.
+A structural `create_file` action could be invoked even though the intended work was issue/protocol synchronization.
 
 ### RC-4 — Dependency fan-out was not treated as part of a state transition
-Closing #2 and activating #16 updated the directly handled issue bodies, but there was no mandatory search for downstream current-state surfaces that referenced those states.
-
-Consequence: #17 retained stale dependency wording even though its start condition remained correct.
+#17 retained stale dependency wording after an upstream lifecycle change until explicitly repaired.
 
 ### RC-5 — Intent was not frozen to the concrete tool recipient
-The first protocol version required tool/action matching conceptually, but did not force the mutation intent to be converted into one allowed mutator and exact target before arguments were composed.
-
-Consequence: during #16 resume, a nearby/previously loaded file mutator could still be selected even though the intended resource was an issue.
+A nearby/previously loaded file mutator could still be selected even though the intended resource was an issue.
 
 ### RC-6 — Structural create target was not attested against the pre-mutation plan
-During the second `__noop__` recurrence, the exact intended target was a successor issue that did not yet have a numeric issue ID. Instead of treating “create issue with this exact title/body” as the target identity, an unrelated file-create call was allowed to proceed with an invented placeholder path.
+For server-assigned resources such as issues, the exact pre-create identity was not treated as binding strongly enough, permitting invented surrogate targets.
 
-Consequence: the protocol's resource/mutator freeze was not mechanically strong enough at the call boundary for `create_*` operations whose target identifier is assigned only after creation.
+### RC-7 — No session-level circuit breaker after a structural wrong-action mutation
+After the first `__noop__` recurrence had already demonstrated a live wrong-action defect in the current session, the workflow resumed intended repository mutation after documenting a stronger rule. The same wrong resource-class mutation recurred immediately as `dummy`.
 
-## Contributing factors
-
-- Sparse/commit-oriented tool responses were treated as a reason to continue writing instead of a reason to verify with a read.
-- Repository content synchronization and dependency-status synchronization were not separated into an explicit target list before mutation.
-- There was no prohibition on placeholder/no-op writes as a connectivity or tool-selection test.
-- Tool availability/context made it possible to select a previously loaded mutator unless the resource-target binding was rechecked at the call boundary.
-- For create actions, target identity was treated too loosely when the final server-assigned ID did not yet exist.
+Consequence: once a session has demonstrated wrong-action routing, written guard updates in that same session are insufficient evidence that subsequent business mutations are safe.
 
 ## Corrective action
 
@@ -107,25 +104,27 @@ Canonical procedure:
 docs/protocols/repository_mutation.md
 ```
 
-The first process fix introduced:
-- read-before-write and semantic-diff gates;
-- one successful write per target before mandatory re-read;
-- explicit mutation-intent tuples;
-- structural-action guardrails for create/delete/ref operations;
-- dependency fan-out synchronization after issue state transitions;
-- post-write verification and stale-text search;
-- prohibition on placeholder/no-op commits.
-
-After the first recurrence, the protocol was strengthened with:
+The process hardening sequence now includes:
 
 ```text
 RM-06A Mutator recipient freeze
 RM-06B File byte-state guard
+RM-06C Create-action exact-target attestation
+RM-09A Session mutation circuit breaker after wrong-action recurrence
 ```
 
-After the second structural recurrence, the protocol is strengthened again with a create-action target attestation rule: a `create_*` call may only target the exact resource identity already written in the pre-mutation plan. For server-assigned resources such as issues, the pre-create identity is the exact repository plus intended title/body purpose; for files it is the exact repository path. Invented stand-ins such as `__noop__` are never valid target identities.
+The circuit breaker requires:
 
-`PROTOCOL_INDEX.md` continues to route all repository/issue/file mutation work through that single canonical procedure.
+```text
+wrong-action mutation occurs
+  -> stop intended/business mutations for the remainder of the session/response
+  -> perform only minimal live-state repair
+  -> record/update the incident and canonical prevention rule
+  -> verify accidental targets are absent
+  -> resume intended repository mutations only in a fresh mutation context
+```
+
+This rule deliberately prefers incomplete repository synchronization over another potentially destructive or history-polluting mutation.
 
 ## Verification
 
@@ -133,12 +132,14 @@ The process fix is considered active when all of the following hold:
 
 ```text
 __noop__ absent from repository root
+dummy absent from repository root
 repository-mutation protocol exists and is routed from PROTOCOL_INDEX.md
 no second write is issued to a target after success unless a fresh read proves a new semantic diff
 issue intent cannot invoke a file mutator without failing RM-06A
 update_file cannot run on byte-identical fetched/intended content under RM-06B
 create_* cannot run unless the exact planned target identity is attested at the call boundary
 no invented placeholder target can substitute for a server-assigned create target
+a wrong-action mutation trips the session circuit breaker before any further intended/business mutation
 ```
 
 ## History policy
