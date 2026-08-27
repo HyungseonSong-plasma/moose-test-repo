@@ -2,13 +2,21 @@
 
 import json
 import os
+import re
 import shutil
 import struct
 import subprocess
 import sys
 from pathlib import Path
 
+from temporal_csv import normalize_from_manifest
 from validate_parser_symbols import validate_file as validate_parser_symbol_file
+
+
+TEMPORAL_RAW_POLICIES = {
+    "include_initial_as_physics",
+    "not_applicable_no_temporal_csv",
+}
 
 
 def resolve_executable(repo_root: Path) -> Path:
@@ -98,6 +106,97 @@ def validate_input_preflight(input_path: Path) -> None:
     print("PARSER_P0  : PASS")
 
 
+def is_transient_input(input_path: Path) -> bool:
+    text = input_path.read_text()
+    return bool(re.search(r"^\s*type\s*=\s*Transient\b", text, re.MULTILINE))
+
+
+def validate_temporal_manifest_preflight(input_path: Path, cfg: dict) -> None:
+    """Require explicit temporal-row semantics for transient cases with checkers.
+
+    This prevents case-local checkers from repeatedly treating initialization-stage
+    CSV rows as solved physical timesteps.
+    """
+
+    checker = cfg.get("checker")
+    if not checker or not is_transient_input(input_path):
+        return
+
+    specs = cfg.get("temporal_csv", [])
+    raw_policy = cfg.get("temporal_csv_policy")
+
+    if not specs and raw_policy not in TEMPORAL_RAW_POLICIES:
+        print("TEMPORAL_P0: FAIL")
+        raise SystemExit(
+            "transient test with checker must declare either test.json temporal_csv "
+            "normalization or an explicit temporal_csv_policy; silent initialization-row "
+            "semantics are forbidden"
+        )
+
+    if raw_policy is not None and raw_policy not in TEMPORAL_RAW_POLICIES:
+        print("TEMPORAL_P0: FAIL")
+        raise SystemExit(
+            f"unsupported temporal_csv_policy={raw_policy!r}; "
+            f"expected one of {sorted(TEMPORAL_RAW_POLICIES)}"
+        )
+
+    checker_args = [str(x) for x in cfg.get("checker_args", [])]
+    for spec in specs:
+        for key in ("source", "physical", "initial_row_policy"):
+            if key not in spec:
+                print("TEMPORAL_P0: FAIL")
+                raise SystemExit(f"temporal_csv entry missing required key {key!r}")
+
+        source = str(spec["source"])
+        physical = str(spec["physical"])
+        if source == physical:
+            print("TEMPORAL_P0: FAIL")
+            raise SystemExit(
+                "temporal_csv source and physical paths must differ; raw runtime evidence "
+                "must be preserved"
+            )
+
+        # If a checker names the raw CSV explicitly, reject the test before runtime.
+        if source in checker_args and spec["initial_row_policy"] == "exclude_observation":
+            print("TEMPORAL_P0: FAIL")
+            raise SystemExit(
+                f"checker_args references raw temporal CSV {source!r}; use normalized "
+                f"physical CSV {physical!r} instead"
+            )
+
+        # When checker_args contains CSV paths, at least one must be the normalized path.
+        csv_args = [arg for arg in checker_args if arg.lower().endswith(".csv")]
+        if csv_args and physical not in csv_args:
+            print("TEMPORAL_P0: FAIL")
+            raise SystemExit(
+                f"checker_args contains CSV paths {csv_args} but not normalized temporal "
+                f"CSV {physical!r}"
+            )
+
+    print("TEMPORAL_P0: PASS")
+
+
+def prepare_temporal_outputs(case_dir: Path, cfg: dict) -> None:
+    specs = cfg.get("temporal_csv", [])
+    if not specs:
+        return
+
+    for spec in specs:
+        try:
+            summary = normalize_from_manifest(case_dir, spec)
+        except Exception as exc:
+            print("TEMPORAL_ROWS: FAIL")
+            raise SystemExit(f"temporal CSV normalization failed: {exc}") from exc
+
+        print("TEMPORAL_ROWS: PASS")
+        print(f"  SOURCE              : {spec['source']}")
+        print(f"  PHYSICAL            : {spec['physical']}")
+        print(f"  POLICY              : {summary['initial_row_policy']}")
+        print(f"  SOURCE_ROWS         : {summary['source_rows']}")
+        print(f"  INITIALIZATION_ROWS : {summary['initialization_rows']}")
+        print(f"  PHYSICAL_ROWS       : {summary['physical_rows']}")
+
+
 def run_case(case_dir: Path) -> int:
     repo_root = Path(__file__).resolve().parents[1]
     case_dir = case_dir.resolve()
@@ -112,6 +211,7 @@ def run_case(case_dir: Path) -> int:
 
     input_path = case_dir / input_name
     validate_input_preflight(input_path)
+    validate_temporal_manifest_preflight(input_path, cfg)
 
     result_dir = repo_root / "results" / str(case_dir.relative_to(repo_root / "tests"))
     result_dir.mkdir(parents=True, exist_ok=True)
@@ -138,6 +238,10 @@ def run_case(case_dir: Path) -> int:
         return proc.returncode or 1
 
     print("SOLVE      : PASS")
+
+    # Post-solve temporal normalization is runner-owned, not checker-owned.
+    # The raw CSV remains untouched and a physical-only CSV is written separately.
+    prepare_temporal_outputs(case_dir, cfg)
 
     if not checker:
         print("CHECK      : SKIP")
