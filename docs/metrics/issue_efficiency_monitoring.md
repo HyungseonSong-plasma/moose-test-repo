@@ -22,7 +22,7 @@ Historical baseline sample: **#1, #2, #8, #13**.
 | #1 Reactor-scale O2+ charged-heavy integration | C3 | CLOSED | 9 | 7 | n/a | 5 | 1 | 3 | 0 | yes |
 | #2 Electron bulk drift integration | C3 | PAUSED | 7 | 7 | 2 reconstructed | 5 | 2 | 1 | 0 | no |
 | #8 Charged heavy-species mixture diffusion + Poisson coupling | C4 | CLOSED — DECOMPOSED_PARENT | 8 | 8 | 0 | 7 | 1 | 3 | 0 | yes |
-| #13 Oxygen heavy-species transport database | C3 | ACTIVE | 15 | 13 | 3 reconstructed | 10 | 2 | 6 | 0 | yes |
+| #13 Oxygen heavy-species transport database | C3 | ACTIVE at baseline | 15 | 13 | 3 reconstructed | 10 | 2 | 6 | 0 | yes |
 
 ### Baseline aggregate statistics
 
