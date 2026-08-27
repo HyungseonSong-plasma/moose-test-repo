@@ -186,17 +186,22 @@ This check is mandatory after prior wrong-action incidents because a correct wri
 
 ## RM-07 — State-transition fan-out synchronization
 
-When an issue changes lifecycle/dependency state (for example ACTIVE -> CLOSED/PASS, BLOCKED -> ACTIVE), treat downstream current-state synchronization as part of the same governance operation.
+When an issue changes lifecycle/dependency state (for example ACTIVE -> CLOSED/PASS, BLOCKED -> ACTIVE, or one blocker is replaced by a successor), treat downstream current-state synchronization as part of the same governance operation.
+
+**Discover the fan-out before the first write.** A state transition must not begin by mutating the canonical issue and only afterward discovering downstream current-state surfaces one at a time.
 
 Procedure:
 
 ```text
-1. update the canonical issue that changed state
-2. identify direct downstream/dependent open issues
-3. search current-state surfaces for the old status phrase or dependency edge
-4. update only stale current-state surfaces
-5. do not rewrite historical issue comments/evidence
-6. verify the resulting dependency chain is internally consistent
+1. fetch the canonical issue that is expected to change
+2. search open/current-state surfaces for the old issue number, status phrase, blocker edge, and directly dependent work items
+3. distinguish historical evidence/comments from current-state text
+4. place every known stale current-state target into the RM-08 pre-mutation plan
+5. perform the canonical state change
+6. update only the predeclared stale current-state surfaces sequentially
+7. run a final stale-phrase/dependency search to catch genuinely missed surfaces
+8. do not rewrite historical issue comments/evidence
+9. verify the resulting dependency chain is internally consistent
 ```
 
 Typical current-state surfaces:
@@ -205,6 +210,8 @@ Typical current-state surfaces:
 - milestone/current-work summary documents.
 
 Historical comments and incident records must retain historical wording.
+
+If the final search reveals a target that could reasonably have been discovered by the pre-write search, treat that as a fan-out planning miss and improve the discovery query rather than normalizing repeated post-write cleanup.
 
 ## RM-08 — Pre-mutation target plan
 
@@ -218,6 +225,8 @@ Target B: issue #16 blocker -> removed / ACTIVE
 Target C: issue #17 upstream text -> synchronized
 Target D: README current sequence -> synchronized
 ```
+
+For lifecycle/dependency mutations, the target plan must be built from the RM-07 **pre-write fan-out search**, not only from conversation memory or direct dependents already known to the operator.
 
 For create operations, the plan must state the exact pre-create target identity defined by RM-06C before the first create call.
 
@@ -275,12 +284,12 @@ Before declaring repository synchronization complete, verify:
 ```text
 all intended targets have the expected semantic state
 no unintended created target remains
-no known stale current-state phrase remains in direct dependents
+no known stale current-state phrase remains in direct dependents or other open current-state surfaces discovered by RM-07
 no target received an unjustified second write
 all protocol/index references point to one canonical owner
 ```
 
-For dependency changes, perform a final search using the old status/dependency phrase. A hit in historical evidence is acceptable; a hit in a current open issue body is not.
+For dependency changes, perform a final search using the old status/dependency phrase and relevant old issue number. A hit in historical evidence is acceptable; a hit in a current open issue body is not.
 
 ## RM-11 — Incident promotion trigger
 
