@@ -58,6 +58,12 @@ Read:
 
 Knowledge is evidence, not current STATE.
 
+### ROUTE-09 — Repository / issue / file mutation and state synchronization
+Read:
+- `docs/protocols/repository_mutation.md`
+
+Apply this route before any GitHub issue/file/branch/ref mutation, including dependency-status synchronization after issue lifecycle changes. Read/search operations do not require the mutation procedure unless they are preparing a write.
+
 ## Canonical ownership map
 
 - Operating invariants and authorization semantics -> `OPERATING_CORE.md`
@@ -65,6 +71,7 @@ Knowledge is evidence, not current STATE.
 - Phase 0, hypothesis design, Researcher/Validator orchestration, 3-EVR state machine, convergence/coupling diagnostic strategy -> `docs/protocols/problem_solving.md`
 - P0-P3, static construction checks, predictive batch design, analyzer/checker self-validation, production parity, data A0-A7 -> `docs/protocols/validation.md`
 - WCC/T-WCC/RVR/EVR/DBR/RWR/CLR/FBR, work boundaries, closure and retrospectives -> `docs/protocols/metrics_closure.md`
+- Repository/issue/file mutation safety, no-op prevention, and dependency fan-out synchronization -> `docs/protocols/repository_mutation.md`
 - Reusable symptom/fix knowledge -> `docs/knowledge/TROUBLESHOOTING_INDEX.md`
 - Current work state -> active issue body
 - Chronological evidence -> issue comments / `docs/incidents/`
