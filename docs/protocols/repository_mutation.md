@@ -89,6 +89,44 @@ If the tool action does not exactly implement the intended action, do not call i
 
 Create/delete/ref movement are treated as high-impact structural operations and must never be used as tool probes.
 
+## RM-06A — Mutator recipient freeze
+
+The intent tuple must be converted into a single allowed mutator **before mutation arguments are composed**.
+
+Freeze internally:
+
+```text
+INTENT_RESOURCE = issue | file | branch/ref | comment | other
+INTENT_TARGET   = exact issue number or path/ref
+ALLOWED_MUTATOR = exact mutation function
+```
+
+Immediately before the call, verify all three again against the selected function and its target field. If the selected function operates on a different resource class or target, STOP before invocation.
+
+Examples:
+
+```text
+INTENT_RESOURCE=issue, INTENT_TARGET=#16
+  -> ALLOWED_MUTATOR=update_issue
+  -> update_file/create_file/delete_file are forbidden in this write phase
+
+INTENT_RESOURCE=file, INTENT_TARGET=README.md
+  -> ALLOWED_MUTATOR=update_file
+  -> issue mutators are forbidden in this write phase
+```
+
+Do not reuse a mutator recipient or payload shape from a previous repository operation merely because it is already loaded or nearby in context. A multi-target operation may switch mutators only after the previous target has been post-write verified and the next target appears explicitly in the RM-08 plan.
+
+## RM-06B — File byte-state guard
+
+For `update_file`, compare the complete intended replacement with the freshly fetched file content before invoking the mutator.
+
+```text
+intended bytes == fetched bytes -> STOP / NO_MUTATION_NEEDED
+```
+
+When a fetched content/blob SHA and a returned content/blob SHA are available, equality after an intended semantic change is an incident signature, not a reason to retry the write.
+
 ## RM-07 — State-transition fan-out synchronization
 
 When an issue changes lifecycle/dependency state (for example ACTIVE -> CLOSED/PASS, BLOCKED -> ACTIVE), treat downstream current-state synchronization as part of the same governance operation.
