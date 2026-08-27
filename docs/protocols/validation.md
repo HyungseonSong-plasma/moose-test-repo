@@ -313,3 +313,54 @@ Invalid function <expression>
 ```
 
 are first classified as `HARNESS_OR_CONSTRUCTION_FAIL`. Inspect parser-symbol declarations before changing physics, solver tolerances, transport data, or timestep.
+
+## VAL-20 — Runner-owned temporal CSV semantics
+
+Transient CSV row classification is a runner responsibility, not a repeated case-checker responsibility.
+
+All new or modified transient cases with a checker must declare `validation_schema = 2` in `test.json`. If the checker consumes transient CSV data, the manifest must declare either a `temporal_csv` normalization contract or an explicit raw-row policy.
+
+When the `INITIAL` / start-time row is observation-only, declare separate raw and physical CSVs:
+
+```json
+{
+  "validation_schema": 2,
+  "checker_args": ["--csv", "input_out.physical.csv"],
+  "temporal_csv": [
+    {
+      "source": "input_out.csv",
+      "physical": "input_out.physical.csv",
+      "time_column": "time",
+      "initial_row_policy": "exclude_observation",
+      "initial_time": 0.0,
+      "time_tol": 1e-15
+    }
+  ]
+}
+```
+
+Canonical implementation is `scripts/temporal_csv.py`. The runner normalizes the raw CSV after P3 and before the case checker. Raw runtime evidence is preserved unchanged.
+
+Hard schema-v2 rules:
+
+```text
+no silent first-row dropping inside case checkers
+no checker reference to raw CSV when initial_row_policy=exclude_observation
+source and physical CSV paths must differ
+non-monotone/non-finite time values fail normalization
+at least one physical row must remain unless explicitly waived
+```
+
+If the start-time row is physically part of the acceptance contract, declare:
+
+```text
+temporal_csv_policy = include_initial_as_physics
+```
+
+If the transient checker does not consume temporal CSV data, declare:
+
+```text
+temporal_csv_policy = not_applicable_no_temporal_csv
+```
+
+Legacy schema-v1 regressions are grandfathered until modified. Any new or touched transient case must migrate to schema v2. This prevents recurring false negatives where a pre-solve `t=0` observation row is treated as a solved physical timestep.
