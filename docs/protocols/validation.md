@@ -60,6 +60,8 @@ stale previous outputs
 unresolved template markers
 ```
 
+For `ParsedFunctorMaterial` / `ADParsedFunctorMaterial`, reserved-symbol validation is a **hard machine-enforced P0 gate**, not a manual-review item. Every generated or packaged input containing these objects must run `scripts/validate_parser_symbols.py` or an equivalent embedded guard before P2. See VAL-19.
+
 If property `X_state` is created with `define_dot_functors = true`, the generated derivative functor is `dX_state_dt`. Example: `w_O_state -> dw_O_state_dt`.
 
 ## VAL-04 — Analyzer/checker is part of the system under test
@@ -266,3 +268,38 @@ relevant JIT/runtime dependency availability
 ```
 
 A symptom such as `ADFParser::JITCompile() failed` at P2 is initially `ENVIRONMENT_OR_BUILD_FAIL` versus `HARNESS_OR_CONSTRUCTION_FAIL`; compare against the known-good activation state before editing the accepted input. A successful rerun under the correct environment without input changes supports environment attribution.
+
+## VAL-19 — Parsed-function namespace preflight
+
+Any test, diagnostic, standalone input, or canonical regression that contains `ParsedFunctorMaterial` or `ADParsedFunctorMaterial` must pass a parser-namespace static preflight before `qpx-opt --check-input`.
+
+MOOSE `ParsedFunctorMaterial` appends coordinate/time parser variables `x,y,z,t` and registers constants `pi,e`. Therefore user-provided parser aliases must not collide with those names.
+
+Hard P0 checks:
+
+```text
+custom functor_symbols do not contain x,y,z,t,pi,e
+implicit parser symbols from functor_names are checked when functor_symbols is omitted
+no duplicate parser symbols inside one parsed object
+parser symbols are valid identifiers
+```
+
+Canonical implementation:
+
+```text
+python3 scripts/validate_parser_symbols.py --self-test
+python3 scripts/validate_parser_symbols.py <generated-or-packaged-input.i>
+```
+
+For external overlay bundles that do not carry the repository `scripts/` tree, the case `prepare.py` must embed or invoke an equivalent guard. A bundle containing parsed functor objects is not `BATCH_ACCEPTED_FOR_EXECUTION` until this gate passes.
+
+Preferred generated aliases are semantic multi-character names such as `fp_rho`, `fp_w`, `meanM`, or `pres`; avoid single-letter aliases unless they are explicitly known not to collide with the parser namespace.
+
+The signatures
+
+```text
+Syntax error in parameter 'Vars' given to FunctionParser::Parse()
+Invalid function <expression>
+```
+
+are first classified as `HARNESS_OR_CONSTRUCTION_FAIL`. Inspect parser-symbol declarations before changing physics, solver tolerances, transport data, or timestep.
