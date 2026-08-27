@@ -206,70 +206,63 @@ A diagnostic workaround is not canonical merely because it recovers a result. Pr
 
 When a failure class recurs or proves broadly reusable, add the check to this protocol or `docs/knowledge/TROUBLESHOOTING_INDEX.md`; do not duplicate the rule in issue bodies.
 
-## VAL-15 — Observation-path audit for derived runtime quantities
+## VAL-15 — Observation-path audit for derived/transient quantities
 
-Before accepting a checker that consumes a derived transient quantity, document its observation path end to end:
+Before an external transient batch uses a derived observable as an acceptance gate, document its observation graph:
 
 ```text
-measured physical quantity
--> production owner / nonlinear variable or material functor
+production state owner
 -> current/old state semantics
--> producer execute stage
--> intermediate Aux/functor stages, if any
--> consumer execute stage
--> postprocessor/output aggregation
--> checker interpretation
+-> derivative/provider stage
+-> derived functor/material stage
+-> Aux/postprocessor consumer stage
+-> output/checker stage
 ```
 
-The Validator must answer:
+The Validator must confirm that the consumer observes the intended timestep/state and that no same-stage ordering dependency can silently produce stale values.
+
+Prefer direct production-state or postprocessor evaluation over multi-hop Aux copies when both are available.
+
+## VAL-16 — Continuous vs discrete identity classification
+
+Every temporal/numerical acceptance identity must be classified before use as one of:
 
 ```text
-Does every consumer see the intended timestep/state?
-Is any same-stage producer/consumer ordering assumed without a framework guarantee?
-Can an Aux copy become one timestep stale?
-Can a timestep-end output copy be mistaken for a variable with a framework-owned derivative?
-Does the checker observe production state directly when a simpler path exists?
+continuous analytic identity
+discrete exact identity
+time-integrator-specific exact identity
+diagnostic approximation / convergence check
 ```
 
-Prefer the shortest observation path that preserves the production quantity. Avoid same-stage Aux-to-derived-Aux dependencies unless execution ordering is explicitly guaranteed and covered by a semantic test.
+Only a relation that is exact for the actual discrete scheme may be used as a zero/tight-tolerance exact PASS gate.
 
-## VAL-16 — Continuous versus discrete identity classification
-
-Every temporal or nonlinear consistency gate must be classified before it is used for PASS/FAIL:
-
-```text
-CONTINUOUS_IDENTITY
-DISCRETE_EXACT_IDENTITY
-TIME_INTEGRATOR_SPECIFIC_IDENTITY
-DIAGNOSTIC_APPROXIMATION
-```
-
-Only an identity proven exact for the discrete state and chosen time integrator may be used as a strict finite-timestep equality gate.
-
-In particular, for a nonlinear transformation `G(S)`, do not assume
-
-```text
-(G(S_n)-G(S_{n-1}))/dt == G'(S_n) * (S_n-S_{n-1})/dt
-```
-
-at finite `dt` unless that equality is derived for the actual discretization. A continuous chain rule may remain a valid model identity while the corresponding nonlinear backward secant differs by `O(dt)`.
-
-When an exact linear state exists, validate temporal parity on that state and report nonlinear transformed-state secants as diagnostics unless an exact discrete formula is available.
+Do not require exact equality between a nonlinear continuous derivative and a finite-step secant unless the discrete algebra proves that equality. Use non-exact continuous/secant comparisons only as diagnostics or refinement studies.
 
 ## VAL-17 — Temporal semantic self-test
 
-Transient checkers must test timestep semantics, not only static formula mutations.
+Transient checkers and observation paths require synthetic temporal self-tests when timestep alignment matters.
 
-When applicable, P0 must include a small synthetic multi-step sequence that distinguishes at least:
+At minimum, test a short deterministic sequence that distinguishes:
 
 ```text
-correct same-step derivative/value        -> PASS
-one-step shifted/stale derivative/value   -> FAIL
-correct magnitude with wrong sign         -> FAIL
-correct sign with wrong magnitude         -> FAIL
-initialization-only/non-physical rows      -> excluded or explicitly classified
+correct same-step quantity -> PASS
+one-timestep shifted/stale quantity -> FAIL
+wrong sign -> FAIL
+wrong magnitude beyond tolerance -> FAIL
 ```
 
-If the checker combines direct time derivatives with derived functors, add a mutation or synthetic sequence that reproduces a one-timestep lag. A checker that cannot reject the shifted sequence is `VALIDATOR_SELFTEST_UNVALIDATED` and must not be sent for external P3 execution.
+When a prior failure involved initialization order, Aux execution stage, old/current state, or derivative timing, include the corresponding semantic mutation in P0 before another external execution.
 
-Temporal semantic self-tests complement source/static mutations; one does not substitute for the other.
+## VAL-18 — Runtime environment/JIT preflight
+
+When QPX/MOOSE input construction depends on runtime/JIT facilities, P1/P2 preparation must verify the required project environment before classifying parser/JIT failures as input defects.
+
+For environment-sensitive cases, record:
+
+```text
+activation environment / expected conda environment
+qpx-opt realpath
+relevant JIT/runtime dependency availability
+```
+
+A symptom such as `ADFParser::JITCompile() failed` at P2 is initially `ENVIRONMENT_OR_BUILD_FAIL` versus `HARNESS_OR_CONSTRUCTION_FAIL`; compare against the known-good activation state before editing the accepted input. A successful rerun under the correct environment without input changes supports environment attribution.
