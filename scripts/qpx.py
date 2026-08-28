@@ -17,7 +17,7 @@ from qpx_harness.bundle import main as bundle_main
 from qpx_harness.performance_core import main as performance_main, self_test as performance_self_test
 from qpx_harness.performance_investigation import main as performance_investigation_main, self_test as performance_investigation_self_test
 from qpx_harness.performance_smoke import main as performance_smoke_main, self_test as performance_smoke_self_test
-from qpx_harness.performance_transport_probe_resilient import main as performance_transport_probe_main, self_test as performance_transport_probe_self_test
+from qpx_harness.performance_transport_probe_direct import main as performance_transport_probe_main, self_test as performance_transport_probe_self_test
 from qpx_harness.preflight import parser_symbol_self_test, validate_input_preflight
 from qpx_harness.profiling import main as profile_main
 from qpx_harness.regression import cli_run_all, cli_run_test
