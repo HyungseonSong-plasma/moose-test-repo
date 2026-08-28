@@ -1,4 +1,4 @@
-"""Canonical QPX executable resolution and process execution helpers."""
+"""Canonical QPX executable resolution, process execution, and raw telemetry."""
 
 from __future__ import annotations
 
@@ -10,13 +10,28 @@ import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, Sequence
+from typing import Callable, Iterable, Sequence
 
 
 @dataclass(frozen=True)
 class RunResult:
     returncode: int
     wall_seconds: float
+
+
+@dataclass(frozen=True)
+class TelemetrySample:
+    """Raw process telemetry sampled by the runtime layer.
+
+    This model intentionally contains no semantic liveness state or display text.
+    """
+
+    elapsed_seconds: float
+    cpu_seconds: float | None
+    log_size: int
+
+
+TelemetryCallback = Callable[[TelemetrySample], None]
 
 
 def _resolve_candidate(raw: str | os.PathLike[str], *, source: str) -> Path:
@@ -97,60 +112,116 @@ def validate_executable(exe: Path) -> None:
         )
 
 
+def _linux_process_cpu_seconds(pid: int) -> float | None:
+    """Return process user+system CPU time from /proc, or None when unavailable."""
+
+    stat_path = Path(f"/proc/{pid}/stat")
+    try:
+        text = stat_path.read_text()
+        tail = text[text.rfind(")") + 2 :].split()
+        utime_ticks = int(tail[11])
+        stime_ticks = int(tail[12])
+        ticks_per_second = os.sysconf(os.sysconf_names["SC_CLK_TCK"])
+        return (utime_ticks + stime_ticks) / float(ticks_per_second)
+    except (OSError, ValueError, IndexError, KeyError):
+        return None
+
+
+def _log_size(path: Path) -> int:
+    try:
+        return path.stat().st_size
+    except OSError:
+        return 0
+
+
 def run_command(
     cmd: Sequence[str],
     *,
     cwd: Path,
     log_path: Path,
     stream: bool = False,
+    telemetry_callback: TelemetryCallback | None = None,
+    heartbeat_seconds: float = 10.0,
+    env: dict[str, str] | None = None,
 ) -> RunResult:
-    """Run a command while preserving a canonical wall-time/logging path.
+    """Run a command with canonical logging and optional raw telemetry sampling.
 
-    ``stream=False`` preserves the historical regression-runner behavior: child
-    stdout/stderr are written only to the log. ``stream=True`` additionally tees
-    lines to the current stdout for long-running diagnostic/profiling use.
+    ``stream=False`` keeps child stdout/stderr in ``log_path`` and can emit raw
+    ``TelemetrySample`` objects. Semantic liveness classification and terminal
+    presentation are deliberately outside this module.
     """
 
     log_path.parent.mkdir(parents=True, exist_ok=True)
     start = time.perf_counter()
 
-    if not stream:
-        with log_path.open("w") as log:
-            proc = subprocess.run(
+    if stream:
+        with log_path.open("w", buffering=1) as log:
+            proc = subprocess.Popen(
                 list(cmd),
                 cwd=cwd,
-                stdout=log,
+                stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1,
+                env=env,
             )
-        return RunResult(proc.returncode, time.perf_counter() - start)
+            assert proc.stdout is not None
+            try:
+                for line in proc.stdout:
+                    sys.stdout.write(line)
+                    sys.stdout.flush()
+                    log.write(line)
+                    log.flush()
+                rc = proc.wait()
+            except KeyboardInterrupt:
+                proc.terminate()
+                try:
+                    rc = proc.wait(timeout=10)
+                except subprocess.TimeoutExpired:
+                    proc.kill()
+                    rc = proc.wait()
+                raise
+
+        return RunResult(rc, time.perf_counter() - start)
 
     with log_path.open("w", buffering=1) as log:
         proc = subprocess.Popen(
             list(cmd),
             cwd=cwd,
-            stdout=subprocess.PIPE,
+            stdout=log,
             stderr=subprocess.STDOUT,
-            text=True,
-            bufsize=1,
+            env=env,
         )
-        assert proc.stdout is not None
+        next_heartbeat = time.perf_counter() + max(0.5, heartbeat_seconds)
+
         try:
-            for line in proc.stdout:
-                sys.stdout.write(line)
-                sys.stdout.flush()
-                log.write(line)
-                log.flush()
-            rc = proc.wait()
+            while True:
+                rc = proc.poll()
+                if rc is not None:
+                    break
+
+                now = time.perf_counter()
+                if telemetry_callback is not None and now >= next_heartbeat:
+                    telemetry_callback(
+                        TelemetrySample(
+                            elapsed_seconds=now - start,
+                            cpu_seconds=_linux_process_cpu_seconds(proc.pid),
+                            log_size=_log_size(log_path),
+                        )
+                    )
+                    next_heartbeat = now + max(0.5, heartbeat_seconds)
+
+                time.sleep(0.25)
         except KeyboardInterrupt:
             proc.terminate()
             try:
-                rc = proc.wait(timeout=10)
+                proc.wait(timeout=10)
             except subprocess.TimeoutExpired:
                 proc.kill()
-                rc = proc.wait()
+                proc.wait()
             raise
 
-    return RunResult(rc, time.perf_counter() - start)
+    return RunResult(proc.returncode, time.perf_counter() - start)
 
 
 def run_qpx(
@@ -161,10 +232,14 @@ def run_qpx(
     log_path: Path,
     extra_args: Iterable[str] = (),
     stream: bool = False,
+    telemetry_callback: TelemetryCallback | None = None,
+    heartbeat_seconds: float = 10.0,
 ) -> RunResult:
     return run_command(
         [str(exe), "-i", input_name, *[str(arg) for arg in extra_args]],
         cwd=cwd,
         log_path=log_path,
         stream=stream,
+        telemetry_callback=telemetry_callback,
+        heartbeat_seconds=heartbeat_seconds,
     )
