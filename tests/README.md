@@ -69,32 +69,60 @@ If `type` is omitted it defaults to `canonical` for backward compatibility.
 
 The checker path and arguments are evaluated relative to the case directory.
 
+## Unified CLI
+
+R3 introduces one preferred user-facing entry point:
+
+```bash
+python3 scripts/qpx.py <command> [args]
+```
+
+Available commands:
+
+```text
+test       run one test.json case
+test-all   discover and run a canonical/diagnostic suite
+profile    capture one-step P2/P3 performance evidence
+analyze    classify PETSc/PerfGraph profiling evidence
+bundle     build a declarative local profiling bundle
+preflight  run static parser-symbol preflight on one MOOSE input
+self-test  run parser/temporal harness self-tests
+```
+
+The older `run_test.py`, `run_all.py`, and `r32_*` scripts remain compatibility wrappers until R3 real-QPX equivalence is confirmed. New automation should prefer `qpx.py`.
+
 ## Running tests
 
 Repository-local default suite:
 
 ```bash
-python3 scripts/run_all.py --type canonical
+python3 scripts/qpx.py test-all --type canonical
 ```
 
 Local QPX issue workspace:
 
 ```bash
-python3 temp/scripts/run_all.py \
+python3 temp/scripts/qpx.py test-all \
   --type canonical \
   --tests-root temp/test_workspace
 ```
 
-The reusable harness also accepts multiple `--tests-root` arguments during migration:
+During migration, historical and issue-centric roots may be supplied together:
 
 ```bash
-python3 temp/scripts/run_all.py \
+python3 temp/scripts/qpx.py test-all \
   --type canonical \
   --tests-root temp/test_workspace \
   --tests-root temp/regression_workspace/tests
 ```
 
 Run diagnostics with `--type diagnostic`; use `--type all` only when both classes are intentionally required.
+
+Static harness self-tests:
+
+```bash
+python3 scripts/qpx.py self-test
+```
 
 ## Rules
 
