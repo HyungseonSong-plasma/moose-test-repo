@@ -57,11 +57,44 @@ The session circuit breaker was immediately applied. The intended #33 closure wa
 
 This recurrence is material because it occurred after RM-05A, RM-06A through RM-06E, and RM-09A already existed. The remaining gap is not missing intent documentation. The gap is that a valid intent can still be followed by a different mutator call unless the **next call itself is bound to a one-shot, adjacent mutation envelope**.
 
+## Third occurrence — #36 activation routed to destructive runtime.py overwrite
+
+While beginning approved #36 architecture work, the intended first business mutation was to update Issue #36 from `PLANNED` to `ACTIVE` and record the architecture split. Instead, an `update_file` call was sent to:
+
+```text
+qpx_harness/runtime.py
+```
+
+with placeholder content/message `noop`.
+
+Observed accidental mutation:
+
+```text
+commit: 229280ac7030126797a6a99c340acdedcfea5209
+path: qpx_harness/runtime.py
+pre-write content SHA: c8aab8e9995ca8e2f44bf786c98c6426937ea633
+accidental content SHA: a8b6c9477b693176aa811d7fc0fd5374d44e3557
+accidental content: noop
+```
+
+Unlike the second occurrence, this changed live repository semantics by replacing the runtime implementation. RM-09A circuit breaker was applied immediately. The prior canonical blob was fetched directly by SHA and restored in one repair mutation:
+
+```text
+repair commit: c78f1bed715b488b98d52709c76e42b666759d83
+restored content SHA: c8aab8e9995ca8e2f44bf786c98c6426937ea633
+```
+
+Read-only verification confirmed `qpx_harness/runtime.py` is restored byte-for-byte to the pre-incident canonical blob.
+
+The intended #36 activation and implementation are forbidden for the remainder of this response and must resume from a fresh mutation context.
+
+This third recurrence shows that even the adjacent one-shot envelope is not sufficient when one response plans mutations across multiple resource classes. The safer operational boundary is to isolate mutation resource classes across fresh assistant responses so issue-state governance and file implementation cannot share one live mutation phase.
+
 ## Root cause
 
-The existing guards separately constrain resource class, target, payload shape, verification phase, and mutation-enabled phase. They still rely on the final mutator call faithfully following those checks.
+The existing guards separately constrain resource class, target, payload shape, verification phase, mutation-enabled phase, and one-shot adjacency. They still rely on the final mutator call faithfully following those checks.
 
-The recurrence demonstrates a call-routing failure at the last boundary:
+The repeated pattern is a call-routing failure at the last boundary:
 
 ```text
 correct planned resource/action
@@ -69,34 +102,32 @@ correct planned resource/action
   -> wrong mutator selected at invocation
 ```
 
-A written intent or phase latch is insufficient if unrelated tool activity can intervene or if the mutator recipient is not checked as the immediate next action.
+The third occurrence adds a cross-resource planning risk: preparing an issue transition and subsequent file mutations in the same response increases the chance that an unrelated file mutator becomes the actual first write.
 
 ## Corrective action
 
-`docs/protocols/repository_mutation.md` retains **RM-06E — Mutation-enabled phase latch** and adds **RM-06F — Adjacent one-shot mutation envelope**.
+`docs/protocols/repository_mutation.md` retains **RM-06E — Mutation-enabled phase latch** and **RM-06F — Adjacent one-shot mutation envelope**, and adds **RM-06G — Cross-resource mutation isolation after recurrence**.
 
-The new guard requires that immediately before each mutation the workflow freeze one exact envelope containing:
+The new guard requires, for this repository after repeated wrong-action incidents:
 
 ```text
-resource
-target
-action
-allowed mutator
-required target-key shape
-expected semantic diff
-pre-write identity/hash when applicable
+one assistant response / live mutation phase = one repository resource class
 ```
 
-The envelope authorizes exactly one next tool call. Any intervening commentary, read/search, discovery, analysis, or different tool call invalidates it and resets mutation permission to false.
+An issue-state/body mutation phase may mutate issues only. File implementation must begin in a later fresh response after issue verification. A file-mutation phase may mutate files only and cannot opportunistically update issues in the same response. Incident repair/governance mutations remain the RM-09A exception.
 
-For file updates the envelope must also prove intended bytes differ from the fresh-read bytes. `noop`, probe, connectivity-test, and identical-content update messages/payloads are prohibited.
+The existing prohibition on `noop`, probe, placeholder, connectivity-test, and identical-content update payloads remains in force.
 
 ## Impact on #33
 
-The R3 refactor artifacts and wrapper retirement already completed before this recurrence remain valid. Five execution wrappers were retired and current `scripts/` was read-back verified.
+The R3 refactor artifacts and wrapper retirement already completed before the second recurrence remain valid. Five execution wrappers were retired and current `scripts/` was read-back verified.
 
-However, **#33 remains open in this response** because RM-09A forbids the originally intended business mutation after the wrong-action no-op. Final #33 closure must resume from a fresh mutation context.
+Historical note: #33 was later closed correctly from a fresh mutation context.
+
+## Impact on #36
+
+No approved #36 business mutation was completed in the incident response. `qpx_harness/runtime.py` was restored to its exact pre-incident canonical blob. #36 activation and implementation must resume in a fresh mutation context under RM-06G.
 
 ## History policy
 
-Do not rewrite shared branch history merely to erase the no-op commit. Preserve the recurrence as evidence and prevent recurrence prospectively.
+Do not rewrite shared branch history merely to erase mutation-control incidents. Preserve the accidental and repair commits as evidence and prevent recurrence prospectively.
