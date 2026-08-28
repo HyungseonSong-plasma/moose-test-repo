@@ -1,8 +1,9 @@
 """Resilient PF-3 transport probe adapter.
 
-Fine-grained source timers are capability-based instead of requiring one
-specific C++ loop shape. The evaluate/functor timers remain mandatory because
-they are sufficient for the primary Jacobian-vs-application discriminator.
+Source instrumentation is capability-based instead of requiring one specific
+C++ loop shape.  The evaluate timer is the mandatory runtime discriminator;
+functor and fine-grained timers are optional runtime evidence because a valid
+case may not request every declared functor.
 """
 
 from __future__ import annotations
@@ -110,11 +111,11 @@ def instrument_source(text: str) -> tuple[str, dict[str, Any]]:
     if instrumented == text:
         raise ProbeError("instrumentation produced no source change")
 
-    mandatory = ("evaluate", "functor_DT", "functor_kT", "functor_Dmix")
-    for key in mandatory:
+    source_required = ("evaluate", "functor_DT", "functor_kT", "functor_Dmix")
+    for key in source_required:
         name = TIMER_NAMES[key]
         if instrumented.count(name) != 1:
-            raise ProbeError(f"mandatory timer marker {name} count is not exactly one")
+            raise ProbeError(f"required source timer marker {name} count is not exactly one")
 
     for key in ("collision_pairs", "dmix"):
         count = instrumented.count(TIMER_NAMES[key])
@@ -131,7 +132,7 @@ def instrument_source(text: str) -> tuple[str, dict[str, Any]]:
         "timers": dict(TIMER_NAMES),
         "active_timers": active,
         "unavailable_timers": unavailable,
-        "primary_discriminator_ready": all(key in active for key in mandatory),
+        "primary_discriminator_ready": "evaluate" in active,
     }
 
 
@@ -153,9 +154,13 @@ def analyze_probe(profile_result: dict[str, Any], perfgraph_path: Path) -> dict[
         for key, name in TIMER_NAMES.items()
     }
 
-    for key in ("evaluate", "functor_DT", "functor_kT", "functor_Dmix"):
-        if int(timers[key]["node_count"]) == 0:
-            raise ProbeError(f"mandatory instrumented timer was not captured: {key}")
+    if int(timers["evaluate"]["node_count"]) == 0:
+        raise ProbeError("mandatory instrumented timer was not captured: evaluate")
+
+    runtime_capture = {
+        key: int(timers[key]["node_count"]) > 0
+        for key in TIMER_NAMES
+    }
 
     jacobian_seconds = 0.0
     petsc = profile_result.get("performance", {}).get("petsc")
@@ -227,9 +232,10 @@ def analyze_probe(profile_result: dict[str, Any], perfgraph_path: Path) -> dict[
         "dmix_seconds": _optional_seconds(timers["dmix"]),
         "timers": timers,
         "jacobian_context_timers": jac_timers,
+        "runtime_capture": runtime_capture,
         "fine_grained_coverage": {
-            key: int(timers[key]["node_count"]) > 0
-            for key in ("collision_pairs", "dmix")
+            key: runtime_capture[key]
+            for key in ("functor_DT", "functor_kT", "functor_Dmix", "collision_pairs", "dmix")
         },
         "functor_call_counts": {
             key: int(timers[key]["num_calls"])
@@ -270,6 +276,48 @@ QPXThermalDiffusionMaterial::evaluate(const int r, const int state) const
 '''
 
 
+def _synthetic_perfgraph(include_functors: bool) -> dict[str, Any]:
+    children: dict[str, Any] = {
+        "QPXThermalDiffusionMaterial::qpx_transport_evaluate": {
+            "level": 2,
+            "time": 6.0,
+            "num_calls": 10,
+            "children": {},
+        }
+    }
+    if include_functors:
+        for suffix in ("DT", "kT", "Dmix"):
+            children[f"QPXThermalDiffusionMaterial::qpx_transport_functor_{suffix}"] = {
+                "level": 2,
+                "time": 0.1,
+                "num_calls": 10,
+                "children": {},
+            }
+    return {
+        "reporters": {"pg": {"type": "PerfGraphReporter"}},
+        "time_steps": [{
+            "pg": {
+                "version": 1,
+                "graph": {
+                    "app": {
+                        "level": 0,
+                        "time": 1.0,
+                        "num_calls": 1,
+                        "children": {
+                            "NonlinearSystemBase::computeJacobianInternal": {
+                                "level": 1,
+                                "time": 4.0,
+                                "num_calls": 1,
+                                "children": children,
+                            }
+                        },
+                    }
+                },
+            }
+        }],
+    }
+
+
 def self_test() -> int:
     try:
         nested, nested_meta = instrument_source(legacy._synthetic_source())
@@ -277,7 +325,7 @@ def self_test() -> int:
             raise AssertionError("primary discriminator not ready")
         for key in ("evaluate", "functor_DT", "functor_kT", "functor_Dmix"):
             if nested.count(TIMER_NAMES[key]) != 1:
-                raise AssertionError(f"mandatory timer missing: {key}")
+                raise AssertionError(f"required source timer missing: {key}")
 
         flat, flat_meta = instrument_source(_single_loop_source())
         if "collision_pairs" in flat_meta["active_timers"]:
@@ -294,54 +342,6 @@ def self_test() -> int:
         else:
             raise AssertionError("reinstrumentation mutation was not rejected")
 
-        perfgraph = {
-            "reporters": {"pg": {"type": "PerfGraphReporter"}},
-            "time_steps": [{
-                "pg": {
-                    "version": 1,
-                    "graph": {
-                        "app": {
-                            "level": 0,
-                            "time": 1.0,
-                            "num_calls": 1,
-                            "children": {
-                                "NonlinearSystemBase::computeJacobianInternal": {
-                                    "level": 1,
-                                    "time": 4.0,
-                                    "num_calls": 1,
-                                    "children": {
-                                        "QPXThermalDiffusionMaterial::qpx_transport_evaluate": {
-                                            "level": 2,
-                                            "time": 6.0,
-                                            "num_calls": 10,
-                                            "children": {}
-                                        },
-                                        "QPXThermalDiffusionMaterial::qpx_transport_functor_DT": {
-                                            "level": 2,
-                                            "time": 0.1,
-                                            "num_calls": 10,
-                                            "children": {}
-                                        },
-                                        "QPXThermalDiffusionMaterial::qpx_transport_functor_kT": {
-                                            "level": 2,
-                                            "time": 0.1,
-                                            "num_calls": 10,
-                                            "children": {}
-                                        },
-                                        "QPXThermalDiffusionMaterial::qpx_transport_functor_Dmix": {
-                                            "level": 2,
-                                            "time": 0.1,
-                                            "num_calls": 10,
-                                            "children": {}
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }]
-        }
         profile = {
             "performance": {
                 "wall_seconds": 20.0,
@@ -350,14 +350,14 @@ def self_test() -> int:
                         "Event Name": "SNESJacobianEval",
                         "Rank": 0,
                         "Time": 10.0,
-                        "Count": 1
+                        "Count": 1,
                     }]
                 },
             }
         }
         with tempfile.TemporaryDirectory() as tmp:
             perf_path = Path(tmp) / "perf.json"
-            perf_path.write_text(json.dumps(perfgraph))
+            perf_path.write_text(json.dumps(_synthetic_perfgraph(include_functors=True)))
             result = analyze_probe(profile, perf_path)
             if result["outcome"] != "APPLICATION_EVALUATION_INSIDE_JACOBIAN":
                 raise AssertionError(result)
@@ -367,6 +367,16 @@ def self_test() -> int:
                 raise AssertionError("Jacobian fraction self-test")
             if result["collision_pair_seconds"] is not None:
                 raise AssertionError("optional missing timer should remain null")
+
+            perf_path.write_text(json.dumps(_synthetic_perfgraph(include_functors=False)))
+            sparse_result = analyze_probe(profile, perf_path)
+            if sparse_result["analysis_status"] != "PASS":
+                raise AssertionError("missing unused functors must not fail analysis")
+            for key in ("functor_DT", "functor_kT", "functor_Dmix"):
+                if sparse_result["runtime_capture"][key]:
+                    raise AssertionError(f"unused functor unexpectedly captured: {key}")
+                if sparse_result["functor_call_counts"][key] != 0:
+                    raise AssertionError(f"unused functor call count not zero: {key}")
 
         print("QPX_TRANSPORT_PROBE_RESILIENT_SELFTEST: PASS")
         return 0
