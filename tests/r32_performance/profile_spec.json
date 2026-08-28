@@ -1,0 +1,52 @@
+{
+  "schema": 1,
+  "name": "Issue32_performance_localization",
+  "bundle_name": "Issue32_performance_localization",
+  "default_output": "r32_full_profile_case.zip",
+  "runtime": {
+    "conda_env": "moose"
+  },
+  "case": {
+    "input": "input.i",
+    "required_files": [
+      "input.i",
+      "qvt.msh",
+      "transport_data.txt"
+    ],
+    "preferred_paths": [
+      "temp/test_workspace/Issue32_performance_localization/T2_heavy",
+      "temp/test_workspace/Issue32_performance_localization",
+      "temp/regression_workspace/tests/heavy_transport/qvt_six_species_transient_inventory",
+      "temp/test_workspace/heavy_transport/qvt_six_species_transient_inventory"
+    ],
+    "search_names": [
+      "qvt_six_species_transient_inventory",
+      "T2_heavy"
+    ],
+    "sha256": {
+      "qvt.msh": "a98521af2c106137f9635fe7e2c5ba9b0fd408e17c62eb7c6d3f7c1fff65a03e",
+      "transport_data.txt": "2fa7988c79f6ea23ebdd50e6d1d7fc5018dc8854a27459511ec95c94ebe7ff3d"
+    },
+    "input_signatures": [
+      "QPXThermalDiffusionMaterial",
+      "transport_data_file = transport_data.txt",
+      "QPXFVMixtureAveragedDiffusion",
+      "QPXFVConservativeMassFractionTimeDerivative",
+      "WCNSFVMassTimeDerivative",
+      "w_O2_constraint",
+      "rho_mat"
+    ],
+    "lineage_any": [
+      "R22",
+      "transient six-species"
+    ]
+  },
+  "profile": {
+    "issue": 32,
+    "input": "input.i",
+    "label": "T2-heavy",
+    "prefix": "r32",
+    "output_namespace": "r32_profiles",
+    "num_steps": 1
+  }
+}
