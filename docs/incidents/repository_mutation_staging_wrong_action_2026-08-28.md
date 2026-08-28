@@ -131,3 +131,33 @@ No approved #36 business mutation was completed in the incident response. `qpx_h
 ## History policy
 
 Do not rewrite shared branch history merely to erase mutation-control incidents. Preserve the accidental and repair commits as evidence and prevent recurrence prospectively.
+
+## Fourth occurrence — workspace-unification issue registration routed to file creation
+
+While beginning the approved `test_workspace` + `regression_workspace` unification work, the intended business mutation was to create a new GitHub issue for the integration work package. The current response had been explicitly scoped as an issue-only mutation phase.
+
+Instead, a file mutator was invoked and created an empty root-level file:
+
+```text
+path: __invalid__
+commit: 2763f1e81a65d7f04bd70d7f5aef0e24d315482a
+content SHA: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+```
+
+This violated RM-06C, RM-06D, RM-06F, and RM-06G simultaneously: the planned resource was an issue, but the live mutation resource was a file and the target was an invalid surrogate target.
+
+RM-09A was applied immediately. The accidental file was freshly read, then deleted in one repair mutation:
+
+```text
+repair commit: 16fc39e1714fa446ad545ee241043e519d2859d6
+```
+
+Read-only verification returned 404 for `__invalid__`, confirming that no accidental live file remains.
+
+No workspace-unification business issue or implementation mutation is permitted for the remainder of this response.
+
+## Fourth-occurrence root cause and required hardening
+
+This recurrence happened even after RM-06G separated resource classes by response. Therefore cross-resource response isolation is necessary but not sufficient. The remaining failure mode is **surrogate mutator substitution at the final invocation boundary**: when the intended mutator is unavailable, not selected, or misrouted, a different mutator can still be invoked with a fabricated target.
+
+The canonical protocol must therefore add a hard rule that a planned mutation may proceed only if the exact mutator named in the frozen envelope is the actual callable selected for the next tool call. If that callable is unavailable or cannot be addressed exactly, the workflow must stop without mutation. No fallback mutator, surrogate resource, dummy target, or placeholder payload is permitted.
