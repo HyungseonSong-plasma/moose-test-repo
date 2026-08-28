@@ -1,7 +1,0 @@
-{
-  "name": "bulk_only_exact_phi_ic",
-  "type": "diagnostic",
-  "input": "bulk_only_exact_phi_ic.i",
-  "checker": "../check_coupling_path.py",
-  "checker_args": ["bulk_only_exact_phi_ic_out.csv", "bulk_only"]
-}

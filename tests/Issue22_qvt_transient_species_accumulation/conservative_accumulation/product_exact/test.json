@@ -1,0 +1,13 @@
+{
+  "name": "r22_conservative_product_exact",
+  "type": "diagnostic",
+  "input": "input.i",
+  "prepare": "prepare.py",
+  "checker": "../check.py",
+  "checker_args": [
+    "--mode",
+    "candidate",
+    "--csv",
+    "input_out.csv"
+  ]
+}

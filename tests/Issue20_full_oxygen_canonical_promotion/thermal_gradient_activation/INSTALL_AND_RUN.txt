@@ -1,0 +1,34 @@
+R14 EVR1-C standalone case bundle v2
+
+This bundle is intended for wholesale folder replacement.
+
+Install from:
+  /home/songhyeongseon/projects/qvt3d/qpx/temp
+
+Optional clean replacement:
+  rm -rf test_workspace/heavy_transport/r14_thermal_flux_evr1c
+  tar -xzf R14_EVR1C_standalone_case_v2.tar.gz
+
+Run:
+  ./run_test.sh heavy_transport/r14_thermal_flux_evr1c
+
+Expected case files:
+  input.i
+  transport_data.txt
+  prepare.py
+  check.py
+  test.json
+  README.md
+  EVR1C_INITIALIZATION_FIX_V2.txt
+  INSTALL_AND_RUN.txt
+  MANIFEST_SHA256.txt
+
+Generated at runtime (not bundled):
+  input_out.csv
+  prepare_evidence.json
+  solver/check logs and result directory outputs
+
+Important:
+- T_grad and T_flat are initialized with FunctionIC, not FunctionAux.
+- No production QPX source is copied into this case.
+- Production source identity is checked by prepare.py against the real QPX tree.

@@ -1,0 +1,18 @@
+#21 canonical promotion provenance
+
+Accepted user-local EVR #2 terminal classification:
+CLASSIFICATION_HINT=BATCH_PASS
+
+Promotion claim:
+steady real-qvt six-solved + constrained-O2 species transport using
+density-weighted conservative QPXFVMassFractionAdvection,
+canonical QPXFVMixtureAveragedDiffusion, and SCCM-tied species inlet mass flow.
+
+Transient variable-density accumulation is intentionally excluded here and is owned by #22.
+
+EVR #1 construction failure:
+ADParsedFunctorMaterial alias y collided with MOOSE parser coordinate y.
+
+EVR #2 repair:
+alias-only repair r y -> rho_s wf_s; no mesh, flow, transport coefficient,
+solver, or species-physics change.

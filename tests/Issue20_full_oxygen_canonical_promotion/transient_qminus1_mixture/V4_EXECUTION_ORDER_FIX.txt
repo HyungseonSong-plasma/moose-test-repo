@@ -1,0 +1,35 @@
+R14 EVR1-D v4 execution-order correction
+
+Observed v3:
+  PREPARE PASS
+  CHECK-INPUT PASS
+  SOLVE PASS
+  CHECK FAIL
+
+The v3 values exposed an exact one-timestep lag:
+
+  FD Sdot at 0.0002  = -1.284108539962858
+  model Sdot at 0.0003 = -1.284108542196800
+
+  FD Sdot at 0.0003  = -1.241803919995732
+  model Sdot at 0.0004 = -1.241803914467700
+
+  FD Sdot at 0.0004  = -1.201261960019905
+  model Sdot at 0.0005 = -1.201261965757300
+
+Root cause:
+  TimeDerivativeAux(dw_k/dt) and FunctorAux(derived derivative) were both
+  scheduled at TIMESTEP_END. The derived FunctorAux could read the previous
+  dw_k/dt Aux state because same-stage execution order was not guaranteed.
+
+v4:
+  - keep direct TimeDerivativeAux(dw_k) unchanged;
+  - remove derived FunctorAux copies for invMn_dot, dMn_dt, drho_dt;
+  - evaluate invMn_dot_model, dMn_dt_model, drho_dt_model directly with
+    ElementAverageFunctorPostprocessor after the AuxKernel stage;
+  - independently reconstruct Sdot in the checker from current direct
+    dw_O/dt, dw_Om/dt, dw_Op/dt, dw_Os/dt averages;
+  - retain exact S=1/Mn BE finite-difference parity.
+
+No physics, transport coefficient, timestep, mesh, solver tolerance, or
+production source changed.

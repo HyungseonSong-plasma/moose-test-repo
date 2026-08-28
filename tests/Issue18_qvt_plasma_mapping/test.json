@@ -1,0 +1,23 @@
+{
+  "name": "geometry_qvt_plasma_mapping",
+  "type": "canonical",
+  "input": "input.i",
+  "prepare": "prepare.py",
+  "checker": "check.py",
+  "checker_args": [
+    "input_out.csv",
+    "prepare_evidence.json"
+  ],
+  "claim": "The fixed production qvt.msh/mesh.i contract loads through the real QPX path, all generated plasma-side side sets resolve, the accepted seven-species QPXThermalDiffusionMaterial path is active on block=plasma, and production D_mix agrees with the independent oracle while all qvt subdomains satisfy the MOOSE active-Kernel construction invariant.",
+  "fail_class": "fixed-mesh identity / generated-side-set / subdomain-kernel coverage / plasma-block production parity; P0-P2 failures are construction/harness, not physics failures",
+  "stage": "R18_EVR3_CANONICAL_QVT_PLASMA_MAPPING",
+  "promotion_issue": "#18",
+  "promoted_from": "R18 EVR #2 qvt_candidate",
+  "accepted_source_artifact": "R18_EVR2_qvt_plasma_transport_standalone_v2.tar.gz",
+  "accepted_source_artifact_sha256": "ff56a0bc16dafdaa3041f20087d7cf5180981d6a6f17e0753f9bd03af307c8fc",
+  "qvt_msh_sha256": "a98521af2c106137f9635fe7e2c5ba9b0fd408e17c62eb7c6d3f7c1fff65a03e",
+  "mesh_i_sha256": "b31a8cbc41fd8eea60b6bc036b6a5841342c065152a91416063ff5afbec9137d",
+  "physics_i_sha256": "0ca5ebc552add11713123509ec8c3f4a19428c25938850b84fad854fdc1dce84",
+  "generated_input_sha256": "ee529477e1c5c603432aa063270300853da4d3dadb6c5d156d2db5ceceef5292",
+  "transport_data_sha256": "2fa7988c79f6ea23ebdd50e6d1d7fc5018dc8854a27459511ec95c94ebe7ff3d"
+}

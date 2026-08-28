@@ -1,0 +1,47 @@
+{
+  "issue": 22,
+  "stage": "EVR2_REAL_QVT_TRANSIENT_INVENTORY",
+  "time_integrator": "implicit-euler",
+  "dt_s": 0.0001,
+  "end_time_s": 0.0005,
+  "Q_sccm": 100.0,
+  "Vm_std_m3_per_mol": 0.0224136,
+  "outlet_pressure_Pa": 1.33322,
+  "inlet_mass_fractions": {
+    "O2": 0.7,
+    "O2s": 0.05,
+    "O2p": 0.01,
+    "O": 0.1,
+    "Om": 0.01,
+    "Op": 0.01,
+    "Os": 0.12
+  },
+  "expected_total_mdot_kg_per_s": 1.9189578063395457e-06,
+  "expected_species_mdot_kg_per_s": {
+    "O2s": 9.594789031697728e-08,
+    "O2p": 1.9189578063395456e-08,
+    "O": 1.9189578063395457e-07,
+    "Om": 1.9189578063395456e-08,
+    "Op": 1.9189578063395456e-08,
+    "Os": 2.3027493676074546e-07,
+    "O2": 1.343270464437682e-06
+  },
+  "analytic_inlet_area_m2": 0.05954574715614091,
+  "inventory_balance_rel_tol_solved": 0.05,
+  "inventory_balance_rel_tol_total": 0.08,
+  "inventory_balance_rel_tol_constrained_O2": 0.12,
+  "sum_w_abs_tol": 1e-10,
+  "mass_partition_rel_tol": 2e-08,
+  "pressure_rel_tol": 0.005,
+  "min_Mn_spatial_range": 1e-05,
+  "min_transient_activity": 1e-10,
+  "qvt_sha256": "a98521af2c106137f9635fe7e2c5ba9b0fd408e17c62eb7c6d3f7c1fff65a03e",
+  "mesh_i_sha256": "b31a8cbc41fd8eea60b6bc036b6a5841342c065152a91416063ff5afbec9137d",
+  "transport_data_sha256": "2fa7988c79f6ea23ebdd50e6d1d7fc5018dc8854a27459511ec95c94ebe7ff3d",
+  "production_source_sha256": {
+    "include/fvkernels/QPXFVConservativeMassFractionTimeDerivative.h": "14dafe844a347dbb423fb437c43004dfe9e4077630e4bdfc1295f7f096692cba",
+    "src/fvkernels/QPXFVConservativeMassFractionTimeDerivative.C": "04f1753afdb0fb3a91929ba945d1ec740c2a22f7ab174ae3ce8d40ebae3a54cb"
+  },
+  "physics_sha256": "354c2701148a4c80860004ba7190f58cf6542dd6092f087dca83322339a0d442",
+  "input_sha256": "d2beeebcc36839e25a746846b0ad1909ad7c56b0bcb8927dfe6519335cd6ee58"
+}
