@@ -354,6 +354,36 @@ Never substitute a different mutator, different resource class, surrogate target
 
 For create operations, the server-assigned future identifier does not relax this rule. The pre-create target identity from RM-06C remains authoritative until the exact create mutator returns the canonical identifier.
 
+## RM-06I — Bulk snapshot mutator-family lock
+
+When the intended semantic change is a validated directory/tree replacement, declare the upload mode before any repository write:
+
+```text
+UPLOAD_MODE = git_tree_snapshot
+SNAPSHOT_TARGET = exact directory/tree path
+SNAPSHOT_MANIFEST = exact validated local file set
+```
+
+In that file-object phase, the business mutator family is locked to Git object construction:
+
+```text
+PERMITTED:
+  create_tree for the validated snapshot
+  create_commit for the immutable snapshot commit
+
+FORBIDDEN:
+  create_file
+  update_file
+  delete_file
+  any contents-API staging file
+  any placeholder/sentinel/probe path
+  branch/ref movement in the same response
+```
+
+Every tree entry must come from `SNAPSHOT_MANIFEST`; no extra path may be invented at invocation time. If the selected next mutator is a contents-API file action, or if its path is not in the validated manifest, this is a hard stop before the call.
+
+After the immutable snapshot commit is read-back verified, move the branch/ref only from a fresh branch/ref mutation response under RM-06G. Do not use a temporary file to prove that the branch or connector is writable.
+
 ## RM-07 — State-transition fan-out synchronization
 
 When an issue changes lifecycle/dependency state (for example ACTIVE -> CLOSED/PASS, BLOCKED -> ACTIVE, or one blocker is replaced by a successor), treat downstream current-state synchronization as part of the same governance operation.
