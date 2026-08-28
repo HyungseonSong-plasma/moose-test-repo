@@ -14,6 +14,7 @@ if str(ROOT) not in sys.path:
 
 from qpx_harness.analysis import analyze
 from qpx_harness.bundle import main as bundle_main
+from qpx_harness.performance_core import main as performance_main, self_test as performance_self_test
 from qpx_harness.preflight import parser_symbol_self_test, validate_input_preflight
 from qpx_harness.profiling import main as profile_main
 from qpx_harness.regression import cli_run_all, cli_run_test
@@ -24,12 +25,13 @@ from qpx_harness.workspace import inventory_cli, self_test as workspace_self_tes
 COMMANDS = {
     "test": "run one test.json case",
     "test-all": "discover and run a canonical/diagnostic suite",
-    "profile": "capture one-step P2/P3 performance evidence",
+    "measure": "run one schema-driven QPX performance measurement",
+    "profile": "capture one-step legacy P2/P3 performance evidence",
     "analyze": "classify PETSc/PerfGraph profiling evidence",
     "bundle": "build a declarative local profiling bundle",
     "inventory": "inspect or compare QPX workspace trees",
     "preflight": "run static parser-symbol preflight on one MOOSE input",
-    "self-test": "run harness parser/temporal/workspace self-tests",
+    "self-test": "run harness parser/temporal/workspace/performance self-tests",
 }
 
 
@@ -80,7 +82,13 @@ def self_test_cli(argv: list[str]) -> int:
     parser_rc = parser_symbol_self_test()
     temporal_rc = temporal_self_test()
     workspace_rc = workspace_self_test()
-    ok = parser_rc == 0 and temporal_rc == 0 and workspace_rc == 0
+    performance_rc = performance_self_test()
+    ok = (
+        parser_rc == 0
+        and temporal_rc == 0
+        and workspace_rc == 0
+        and performance_rc == 0
+    )
     print("QPX_HARNESS_SELFTEST:", "PASS" if ok else "FAIL")
     return 0 if ok else 1
 
@@ -96,6 +104,8 @@ def main(argv: list[str] | None = None) -> int:
         return cli_run_test(rest)
     if command == "test-all":
         return cli_run_all(rest)
+    if command == "measure":
+        return performance_main(rest)
     if command == "profile":
         return profile_main(rest)
     if command == "analyze":
