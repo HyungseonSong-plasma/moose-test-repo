@@ -71,7 +71,7 @@ The checker path and arguments are evaluated relative to the case directory.
 
 ## Unified CLI
 
-R3 introduces one preferred user-facing entry point:
+The canonical execution interface is:
 
 ```bash
 python3 scripts/qpx.py <command> [args]
@@ -89,7 +89,9 @@ preflight  run static parser-symbol preflight on one MOOSE input
 self-test  run parser/temporal harness self-tests
 ```
 
-The older `run_test.py`, `run_all.py`, and `r32_*` scripts remain compatibility wrappers until R3 real-QPX equivalence is confirmed. New automation should prefer `qpx.py`.
+R3 real-QPX equivalence reproduced the accepted canonical suite at `14/14 PASS`; the old `run_test.py`, `run_all.py`, and Issue-32 `r32_*` execution wrappers were retired afterward.
+
+`temporal_csv.py` and `validate_parser_symbols.py` remain standalone maintenance utilities because their full ad-hoc CLI surfaces are not duplicated by `qpx.py`. They are not issue-specific execution scripts and must not become templates for new per-issue executors.
 
 ## Running tests
 
