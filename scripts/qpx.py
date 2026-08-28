@@ -14,6 +14,7 @@ if str(ROOT) not in sys.path:
 
 from qpx_harness.analysis import analyze
 from qpx_harness.bundle import main as bundle_main
+from qpx_harness.performance_cache_audit import main as performance_cache_audit_main, self_test as performance_cache_audit_self_test
 from qpx_harness.performance_core import main as performance_main, self_test as performance_self_test
 from qpx_harness.performance_investigation import main as performance_investigation_main, self_test as performance_investigation_self_test
 from qpx_harness.performance_smoke import main as performance_smoke_main, self_test as performance_smoke_self_test
@@ -32,6 +33,7 @@ COMMANDS = {
     "measure-smoke": "auto-manage one PF-1 BENCHMARK/PROFILE smoke pair",
     "investigate": "analyze the latest passing PF-1 smoke evidence",
     "transport-probe": "run managed QPXThermalDiffusionMaterial timing probe",
+    "cache-audit": "audit D_mix consumer arguments and native cache feasibility",
     "profile": "capture one-step legacy P2/P3 performance evidence",
     "analyze": "classify PETSc/PerfGraph profiling evidence",
     "bundle": "build a declarative local profiling bundle",
@@ -92,6 +94,7 @@ def self_test_cli(argv: list[str]) -> int:
     performance_smoke_rc = performance_smoke_self_test()
     performance_investigation_rc = performance_investigation_self_test()
     performance_transport_probe_rc = performance_transport_probe_self_test()
+    performance_cache_audit_rc = performance_cache_audit_self_test()
     ok = (
         parser_rc == 0
         and temporal_rc == 0
@@ -100,6 +103,7 @@ def self_test_cli(argv: list[str]) -> int:
         and performance_smoke_rc == 0
         and performance_investigation_rc == 0
         and performance_transport_probe_rc == 0
+        and performance_cache_audit_rc == 0
     )
     print("QPX_HARNESS_SELFTEST:", "PASS" if ok else "FAIL")
     return 0 if ok else 1
@@ -124,6 +128,8 @@ def main(argv: list[str] | None = None) -> int:
         return performance_investigation_main(rest)
     if command == "transport-probe":
         return performance_transport_probe_main(rest)
+    if command == "cache-audit":
+        return performance_cache_audit_main(rest)
     if command == "profile":
         return profile_main(rest)
     if command == "analyze":
