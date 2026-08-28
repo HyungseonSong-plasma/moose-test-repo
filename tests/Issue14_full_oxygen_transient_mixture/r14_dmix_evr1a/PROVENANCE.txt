@@ -1,0 +1,27 @@
+R14 seven-species oxygen transport candidate v1
+
+Neutral-neutral:
+  Mutation++ collisions.xml explicit Wright2005 tables, multpi=yes.
+  Existing QPX oxygen_transport.txt retained numerically.
+
+Positive-ion-neutral:
+  Mutation++ collisions.xml explicit Levin2004 Q11/Q22 tables (accuracy=25).
+  B*=1.20, C*=0.85 from Mutation++ ion-neutral defaults.
+
+Negative-ion-neutral:
+  Mutation++ LangevinIntegrals.cpp:
+    sfac(Q11)=0.66467
+    lfac(l=1)=1.1046
+  Mutation++ dipole polarizabilities:
+    O=0.80 A^3
+    O2=1.58 A^3
+  Q22=1.1*Q11, B*=1.20, C*=0.85 from Mutation++ ion-neutral defaults.
+  Tabulation grid is chosen with adjacent T ratio <= 4/3, making the worst
+  midpoint linear-interpolation error for T^-1/2 equal to 0.7768898214%.
+
+Charged-charged:
+  No static tables. Production QPX dynamic Debye-Huckel path.
+
+Molar masses:
+  Existing QPX transport convention: O/O+/O-=0.016 kg/mol,
+  O2/O2+=0.032 kg/mol. This reproduces historical R2 O-/O2 K0 signature.
