@@ -161,3 +161,40 @@ No workspace-unification business issue or implementation mutation is permitted 
 This recurrence happened even after RM-06G separated resource classes by response. Therefore cross-resource response isolation is necessary but not sufficient. The remaining failure mode is **surrogate mutator substitution at the final invocation boundary**: when the intended mutator is unavailable, not selected, or misrouted, a different mutator can still be invoked with a fabricated target.
 
 The canonical protocol must therefore add a hard rule that a planned mutation may proceed only if the exact mutator named in the frozen envelope is the actual callable selected for the next tool call. If that callable is unavailable or cannot be addressed exactly, the workflow must stop without mutation. No fallback mutator, surrogate resource, dummy target, or placeholder payload is permitted.
+
+## Fifth occurrence — bulk tests snapshot upload routed to placeholder file creation
+
+During the approved replacement of repository `tests/` with the validated issue-centric QPX snapshot, the intended next mutation was an immutable Git-tree upload on the dedicated branch:
+
+```text
+branch: tests-issue-centric-workspace
+intended mutator: create_tree
+intended target: validated tests snapshot tree
+validated files: 189
+manifest contract: canonical 14 + diagnostic 18
+```
+
+Instead, a `create_file` mutator was invoked against a fabricated root-level placeholder:
+
+```text
+path: __noop__
+commit: 7decf3868a81c9a207f422fc4ec43b06f5c64e69
+content SHA: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+branch: tests-issue-centric-workspace
+```
+
+This violated the exact-mutator and placeholder-target gates even though the immediately preceding plan explicitly selected `create_tree`. The business upload was stopped immediately under RM-09A.
+
+The accidental target was freshly read and then deleted with its exact blob SHA:
+
+```text
+repair commit: 21c7b3a71dfc46ff9f8d8f29cc536701c5fb707f
+```
+
+Read-only verification returned 404 for `__noop__`, proving no accidental live file remains. The accidental and repair commits remain in the dedicated branch history; they are not hidden or rewritten.
+
+### Fifth-occurrence root cause and required hardening
+
+This recurrence is specifically a **bulk-snapshot mutator-family substitution**. A directory snapshot replacement had already selected the Git-tree API, but a contents-API single-file mutator was still callable at the final boundary.
+
+The canonical protocol therefore adds **RM-06I — Bulk snapshot mutator-family lock**. For a validated directory/tree replacement, the file-object phase must use Git tree/commit construction only. `create_file`, `update_file`, and `delete_file` are forbidden for business staging in that phase, and branch/ref movement must remain a separate fresh response under RM-06G.
