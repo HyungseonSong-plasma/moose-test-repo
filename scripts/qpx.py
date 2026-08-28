@@ -18,6 +18,7 @@ from qpx_harness.preflight import parser_symbol_self_test, validate_input_prefli
 from qpx_harness.profiling import main as profile_main
 from qpx_harness.regression import cli_run_all, cli_run_test
 from qpx_harness.temporal import self_test as temporal_self_test
+from qpx_harness.workspace import inventory_cli, self_test as workspace_self_test
 
 
 COMMANDS = {
@@ -26,8 +27,9 @@ COMMANDS = {
     "profile": "capture one-step P2/P3 performance evidence",
     "analyze": "classify PETSc/PerfGraph profiling evidence",
     "bundle": "build a declarative local profiling bundle",
+    "inventory": "inspect or compare QPX workspace trees",
     "preflight": "run static parser-symbol preflight on one MOOSE input",
-    "self-test": "run harness parser/temporal self-tests",
+    "self-test": "run harness parser/temporal/workspace self-tests",
 }
 
 
@@ -77,7 +79,8 @@ def self_test_cli(argv: list[str]) -> int:
     parser.parse_args(argv)
     parser_rc = parser_symbol_self_test()
     temporal_rc = temporal_self_test()
-    ok = parser_rc == 0 and temporal_rc == 0
+    workspace_rc = workspace_self_test()
+    ok = parser_rc == 0 and temporal_rc == 0 and workspace_rc == 0
     print("QPX_HARNESS_SELFTEST:", "PASS" if ok else "FAIL")
     return 0 if ok else 1
 
@@ -99,6 +102,8 @@ def main(argv: list[str] | None = None) -> int:
         return analyze_cli(rest)
     if command == "bundle":
         return bundle_main(rest)
+    if command == "inventory":
+        return inventory_cli(rest)
     if command == "preflight":
         return preflight_cli(rest)
     if command == "self-test":
