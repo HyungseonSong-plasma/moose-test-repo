@@ -217,6 +217,40 @@ If any term is false, do not invoke any write tool. Do not replace the payload w
 
 This check is mandatory after prior wrong-action incidents because a correct written intent alone has not prevented file mutators from being selected during issue updates.
 
+## RM-06E — Mutation-enabled phase latch
+
+Repository mutators are forbidden unless the **current workflow step itself is explicitly a planned mutation step**. Tool availability, a previously approved work package, or a valid earlier mutation intent does not keep mutation permission open across unrelated work.
+
+Maintain an internal phase latch:
+
+```text
+MUTATION_ALLOWED = false   # default
+```
+
+Set it to `true` only immediately before one predeclared RM-08 mutation target after RM-01/RM-03/RM-06 checks have passed. Reset it to `false` immediately after the mutator returns, before verification or any local/sandbox analysis begins.
+
+The following phases must always have `MUTATION_ALLOWED=false`:
+
+```text
+local staging
+code generation in sandbox/container
+syntax/self-test execution
+read/search/discovery
+post-write verification
+analysis/planning
+commentary/status updates
+tool-schema discovery
+```
+
+Hard pre-call gate:
+
+```text
+if MUTATION_ALLOWED != true:
+    every create_*/update_*/delete_*/ref/comment mutator is FORBIDDEN
+```
+
+A valid-looking target does not override this gate. An accidental mutator call while `MUTATION_ALLOWED=false` is a wrong-action mutation and must trip RM-09A immediately.
+
 ## RM-07 — State-transition fan-out synchronization
 
 When an issue changes lifecycle/dependency state (for example ACTIVE -> CLOSED/PASS, BLOCKED -> ACTIVE, or one blocker is replaced by a successor), treat downstream current-state synchronization as part of the same governance operation.
@@ -273,6 +307,7 @@ The following are operating errors:
 - create-then-delete probes;
 - repeated update attempts after a success without fresh-read evidence;
 - mutator invocation during RM-05A VERIFY mode;
+- mutator invocation while RM-06E `MUTATION_ALLOWED=false`;
 - unnecessary history rewrite used to conceal an assistant mutation error.
 
 When such an error occurs:
