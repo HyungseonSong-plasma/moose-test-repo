@@ -15,6 +15,7 @@ if str(ROOT) not in sys.path:
 from qpx_harness.analysis import analyze
 from qpx_harness.bundle import main as bundle_main
 from qpx_harness.performance_core import main as performance_main, self_test as performance_self_test
+from qpx_harness.performance_smoke import main as performance_smoke_main, self_test as performance_smoke_self_test
 from qpx_harness.preflight import parser_symbol_self_test, validate_input_preflight
 from qpx_harness.profiling import main as profile_main
 from qpx_harness.regression import cli_run_all, cli_run_test
@@ -26,12 +27,13 @@ COMMANDS = {
     "test": "run one test.json case",
     "test-all": "discover and run a canonical/diagnostic suite",
     "measure": "run one schema-driven QPX performance measurement",
+    "measure-smoke": "auto-manage one PF-1 BENCHMARK/PROFILE smoke pair",
     "profile": "capture one-step legacy P2/P3 performance evidence",
     "analyze": "classify PETSc/PerfGraph profiling evidence",
     "bundle": "build a declarative local profiling bundle",
     "inventory": "inspect or compare QPX workspace trees",
     "preflight": "run static parser-symbol preflight on one MOOSE input",
-    "self-test": "run harness parser/temporal/workspace/performance self-tests",
+    "self-test": "run all harness static/self-tests",
 }
 
 
@@ -57,7 +59,7 @@ def analyze_cli(argv: list[str]) -> int:
 
     result = analyze(
         Path(args.summary),
-        Path(args.petsc_log),
+        Path(args.petsc_log) if False else Path(args.petsc_log),
         Path(args.perf_log) if args.perf_log else None,
         metric_prefix=args.metric_prefix,
     )
@@ -83,11 +85,13 @@ def self_test_cli(argv: list[str]) -> int:
     temporal_rc = temporal_self_test()
     workspace_rc = workspace_self_test()
     performance_rc = performance_self_test()
+    performance_smoke_rc = performance_smoke_self_test()
     ok = (
         parser_rc == 0
         and temporal_rc == 0
         and workspace_rc == 0
         and performance_rc == 0
+        and performance_smoke_rc == 0
     )
     print("QPX_HARNESS_SELFTEST:", "PASS" if ok else "FAIL")
     return 0 if ok else 1
@@ -106,6 +110,8 @@ def main(argv: list[str] | None = None) -> int:
         return cli_run_all(rest)
     if command == "measure":
         return performance_main(rest)
+    if command == "measure-smoke":
+        return performance_smoke_main(rest)
     if command == "profile":
         return profile_main(rest)
     if command == "analyze":
