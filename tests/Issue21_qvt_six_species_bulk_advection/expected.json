@@ -1,0 +1,42 @@
+{
+  "issue": 21,
+  "stage": "CANONICAL_STEADY_QVT_SIX_SPECIES_BULK_ADVECTION",
+  "Q_sccm": 100.0,
+  "Vm_std_m3_per_mol": 0.0224136,
+  "outlet_pressure_Pa": 1.33322,
+  "T_g_K": 600.0,
+  "T_e_K": 20000.0,
+  "n_e_m3": 1e+16,
+  "inlet_mass_fractions": {
+    "O2": 0.7,
+    "O2s": 0.05,
+    "O2p": 0.01,
+    "O": 0.1,
+    "Om": 0.01,
+    "Op": 0.01,
+    "Os": 0.12
+  },
+  "mean_molar_mass_kg_per_mol": 0.025806451612903226,
+  "expected_total_mdot_kg_per_s": 1.9189578063395457e-06,
+  "expected_solved_species_mdot_kg_per_s": {
+    "O2s": 9.594789031697728e-08,
+    "O2p": 1.9189578063395456e-08,
+    "O": 1.9189578063395457e-07,
+    "Om": 1.9189578063395456e-08,
+    "Op": 1.9189578063395456e-08,
+    "Os": 2.3027493676074546e-07
+  },
+  "analytic_inlet_area_m2": 0.05954574715614091,
+  "rho_at_outlet_reference_kg_per_m3": 6.896755255172883e-06,
+  "qvt_sha256": "a98521af2c106137f9635fe7e2c5ba9b0fd408e17c62eb7c6d3f7c1fff65a03e",
+  "mesh_i_sha256": "b31a8cbc41fd8eea60b6bc036b6a5841342c065152a91416063ff5afbec9137d",
+  "transport_data_sha256": "2fa7988c79f6ea23ebdd50e6d1d7fc5018dc8854a27459511ec95c94ebe7ff3d",
+  "physics_sha256": "c6c571a998d59812b61fbc5f67ecbec91dbf6de63dc0a11c4a9ddfc7df51f20f",
+  "input_sha256": "a252872992b1db29e8709d99fe6e995ffd752dcb03dd848c45be235409b180d1",
+  "evr1_root_cause_repair": {
+    "cause": "ADParsedFunctorMaterial functor symbol 'y' collided with auto-appended coordinate symbol y",
+    "repair": "rename rho*w aliases from 'r y' to 'rho_s wf_s'"
+  },
+  "accepted_evr2_classification": "BATCH_PASS",
+  "promotion_issue": "#21"
+}

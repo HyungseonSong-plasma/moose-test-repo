@@ -1,0 +1,20 @@
+#22 canonical promotion provenance
+
+Accepted user-local EVR #2 terminal classification:
+CLASSIFICATION_HINT=BATCH_PASS
+
+Promoted claim:
+real-qvt transient six-solved + constrained-O2 heavy-species transport with
+direct Backward-Euler product accumulation,
+density-weighted conservative bulk advection,
+mixture-averaged diffusion,
+composition-dependent Mn/rho,
+transient mixture continuity,
+SCCM inlet and absolute-pressure outlet,
+and per-species / total-mixture inventory accounting.
+
+Temporal observation contract:
+raw MOOSE CSV is preserved; validation_schema=2 produces a physical-only CSV;
+the declared INITIAL observation row is excluded by the runner, not ad-hoc checker code.
+
+No new physics is introduced by EVR #3. This round is canonical promotion only.

@@ -1,0 +1,13 @@
+{
+  "name": "r22_legacy_rho_wdot_mutation",
+  "type": "diagnostic",
+  "input": "input.i",
+  "prepare": "prepare.py",
+  "checker": "../check.py",
+  "checker_args": [
+    "--mode",
+    "mutation",
+    "--csv",
+    "input_out.csv"
+  ]
+}
