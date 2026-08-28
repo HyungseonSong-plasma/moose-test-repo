@@ -1,0 +1,53 @@
+{
+  "validation_schema": 2,
+  "name": "qvt_six_species_charged_migration",
+  "type": "canonical",
+  "input": "input.i",
+  "prepare": "prepare.py",
+  "checker": "check.py",
+  "checker_args": [
+    "input_out.physical.csv",
+    "expected.json"
+  ],
+  "temporal_csv": [
+    {
+      "source": "input_out.csv",
+      "physical": "input_out.physical.csv",
+      "time_column": "time",
+      "initial_row_policy": "exclude_observation",
+      "initial_time": 0.0,
+      "time_tol": 1e-15,
+      "require_physical_rows": true
+    }
+  ],
+  "claim": "Real-qvt six-solved-plus-constrained-O2 transient heavy transport uses canonical charge-aware D_mix, mixture-averaged Einstein ion mobility (T_ion=T_g), Path-B charged-heavy electrostatic drift, and the common heavy-mass electromigration correction under the pinned face-flux identity; Poisson feedback is excluded and belongs to #16.",
+  "issue": "#15",
+  "promotion_issue": "#15",
+  "known_good_dependency": "regression_workspace/tests/heavy_transport/qvt_six_species_transient_inventory",
+  "accepted_evr1_classification": "BATCH_PASS",
+  "accepted_evr1_artifact_sha256": "d3033c3cbe96f142385c33d042a86eb42d4fe48a96fef7b85d0bd2ad6a0a6960",
+  "accepted_evr2_runtime": "4/4 PASS",
+  "accepted_evr2_artifact_sha256": "3bf47ff6c3892a3602d0f929dbc5d8ff40a65ea2c75e2622dfe4906513af5e7a",
+  "validator_redesign": "accepted existing evidence; no arbitrary centroid threshold",
+  "mobility_model": "mu_k = e*D_mix,k/(k_B*T_g), positive magnitude; charge sign owned by z_k",
+  "mobility_provenance": "COMSOL Heavy Species Transport mixture-averaged default Einstein relation; #13 canonical charge-aware D_mix",
+  "migration_path": "Path B only: bulk advection + QPXFVElectrostaticDrift + QPXFVHeavyMassElectromigrationCorrection",
+  "electric_field_contract": "prescribed phi=-E0*x with E0=0.01 V/m, preserving accepted EVR2 representative forcing; no Poisson feedback in #15",
+  "zero_net_flux_contract": "Pinned correction kernel reconstructs J_direct and applies J_corr=-J_direct; all six solved species receive the identical correction reconstruction; constrained O2 supplies the implied Q-1 residual flux, giving zero total heavy electromigration mass flux face-by-face.",
+  "initialization_row_contract": "runner-owned exclude_observation; raw CSV retained",
+  "next_dependency": "#16",
+  "promotion_file_sha256": {
+    "qvt.msh": "a98521af2c106137f9635fe7e2c5ba9b0fd408e17c62eb7c6d3f7c1fff65a03e",
+    "mesh.i": "b31a8cbc41fd8eea60b6bc036b6a5841342c065152a91416063ff5afbec9137d",
+    "transport_data.txt": "2fa7988c79f6ea23ebdd50e6d1d7fc5018dc8854a27459511ec95c94ebe7ff3d",
+    "physics.i": "9aba216163b71b62663fa65a6e9edc4636df66c09a93642abbffdee7b4c50839",
+    "input.i": "0fabff5092fe70066cc58b0e51a4ef25c6eda714d9cbd71f13cfcb57c553a4d0",
+    "expected.json": "ac6a7100642640d3af28350f1468b552b5c2e4937c439648f30d80bbcd4fdbb0",
+    "prepare.py": "a6cbea1d85091c035afebd074a66ead882301407a01cfc06e35bb2be08e1a096",
+    "check.py": "b0db033db36cc3ed123f4e762a27d80ba836d46078aa95a9670c82ae6794d1d1"
+  },
+  "incident_recovery_issue": "#23",
+  "recovery_class": "HARNESS_OR_CONSTRUCTION_FAIL",
+  "recovery_change": "E0_migration 500 -> 0.01 V/m only; no C++/mobility/timestep change",
+  "forcing_provenance": "accepted EVR2 real-qvt representative field E0_migration=0.01 V/m"
+}

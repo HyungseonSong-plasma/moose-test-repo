@@ -1,0 +1,20 @@
+{
+  "issue": 15,
+  "case_id": "migration_correction_on",
+  "direct_migration": true,
+  "correction": true,
+  "E0_V_per_m": 0.01,
+  "charges": {
+    "O2p": 1,
+    "Om": -1,
+    "Op": 1
+  },
+  "closure_tol": 2e-08,
+  "partition_tol": 5e-08,
+  "source_qvt_sha256": "a98521af2c106137f9635fe7e2c5ba9b0fd408e17c62eb7c6d3f7c1fff65a03e",
+  "source_transport_data_sha256": "2fa7988c79f6ea23ebdd50e6d1d7fc5018dc8854a27459511ec95c94ebe7ff3d",
+  "physics_sha256": "aaa766f2e2e0d94b267ae1cbd2d0916c1bc5376f5c3ff9593fc9a3ee0def07e3",
+  "input_sha256": "0ada64cc63371e90f0fb3de3d2c511e087b99f0824a3bd94dfe812393206c136",
+  "mobility_model": "COMSOL-default mixture-averaged Einstein relation: mu = q_e D_mix/(k_B T_ion), T_ion=T_g",
+  "mobility_provenance": "D_mix from accepted QPXThermalDiffusionMaterial; q_e and k_B exact SI constants"
+}
