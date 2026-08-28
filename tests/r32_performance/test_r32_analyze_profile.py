@@ -2,28 +2,22 @@
 from __future__ import annotations
 
 import csv
-import importlib.util
 import json
+import sys
 import tempfile
 from pathlib import Path
 
-
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
-SCRIPT = ROOT / "scripts" / "r32_analyze_profile.py"
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from qpx_harness.analysis import analyze
+
 FIXTURE = HERE / "evr1_t2_heavy.json"
 
 
-def load_module():
-    spec = importlib.util.spec_from_file_location("r32_analyze_profile", SCRIPT)
-    module = importlib.util.module_from_spec(spec)
-    assert spec.loader is not None
-    spec.loader.exec_module(module)
-    return module
-
-
 def main() -> int:
-    module = load_module()
     fixture = json.loads(FIXTURE.read_text())
 
     with tempfile.TemporaryDirectory() as tmp_name:
@@ -84,7 +78,7 @@ def main() -> int:
             f"{pj['percent_application']:.2f} | 51 |\n"
         )
 
-        result = module.analyze(summary, petsc, perf)
+        result = analyze(summary, petsc, perf, metric_prefix="r32")
 
     assert result["classification"] == fixture["classification"], result
     assert "DIRECT_FACTORIZATION_SIGNIFICANT" in result["secondary"], result
