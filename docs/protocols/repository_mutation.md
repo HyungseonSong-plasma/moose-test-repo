@@ -71,6 +71,39 @@ For issues verify:
 
 If a write returns success but the semantic state is unchanged unexpectedly, classify it as a no-op mutation incident and STOP. Do not repeat the same write.
 
+## RM-05A — Post-write verification read-only lock
+
+Once a successful write enters post-write verification, the workflow is in **VERIFY mode** and must be action-locked to read-only tools.
+
+Permitted actions in VERIFY mode:
+
+```text
+fetch/read/get/open/search of the just-written canonical target
+```
+
+Forbidden actions in VERIFY mode:
+
+```text
+update_*
+create_*
+delete_*
+move/ref mutation
+comment/reaction mutation
+any other mutator, even against the correct resource and correct target
+```
+
+Do not reuse the prior write payload, intended replacement content, blob SHA, or a nearby mutator call merely to “verify” propagation. Verification proves state by reading it.
+
+A new mutation to the same target may begin only after:
+
+```text
+1. VERIFY mode completed with a fresh canonical read;
+2. a new semantic difference is explicitly identified;
+3. a new RM-01 intent tuple and RM-03 semantic-diff gate are constructed.
+```
+
+If a mutator is invoked during VERIFY mode, treat it as a wrong-action mutation even when the bytes remain identical and the resource/target are correct. Apply RM-09/RM-09A.
+
 ## RM-06 — Tool/action binding guard
 
 Immediately before invocation, match the selected mutator against the mutation intent tuple.
@@ -239,6 +272,7 @@ The following are operating errors:
 - placeholder commits/files;
 - create-then-delete probes;
 - repeated update attempts after a success without fresh-read evidence;
+- mutator invocation during RM-05A VERIFY mode;
 - unnecessary history rewrite used to conceal an assistant mutation error.
 
 When such an error occurs:
@@ -255,7 +289,7 @@ Shared-branch history is preserved by default; prevention is prospective unless 
 
 ## RM-09A — Session circuit breaker after wrong-action mutation
 
-If a repository mutation acts on the wrong resource class or wrong target and reaches live repository state, trip a session-level circuit breaker.
+If a repository mutation acts on the wrong resource class, wrong target, or wrong action for the current phase and reaches live repository state/history, trip a session-level circuit breaker.
 
 For the remainder of the same assistant response/session:
 
@@ -273,7 +307,7 @@ FORBIDDEN:
   retries intended to prove the new guard works
 ```
 
-After repair and governance recording, verify the accidental target is absent or restored, then end the repository write phase. Resume intended/business mutations only from a fresh mutation context that reloads the canonical mutation protocol and reconstructs the RM-08 plan from current state.
+After repair and governance recording, verify the accidental target is absent, restored, or byte-identical when the failure was a no-op, then end the repository write phase. Resume intended/business mutations only from a fresh mutation context that reloads the canonical mutation protocol and reconstructs the RM-08 plan from current state.
 
 A repeated wrong-action mutation after a guard update is evidence that the current mutation context is unsafe; it is not permission to test another mutator.
 
