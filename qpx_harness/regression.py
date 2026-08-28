@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import json
 import os
 import subprocess
 import sys
@@ -17,8 +16,8 @@ from .reporting import ConsoleReporter, Reporter
 from .runtime import TelemetryCallback, TelemetrySample, resolve_executable, run_command, run_qpx, validate_executable
 from .status import ExecutionState, LivenessClassifier
 from .temporal import normalize_from_manifest
+from .workspace import discover_manifests, load_manifest, manifest_type
 
-VALID_TEST_TYPES = {"canonical", "diagnostic"}
 StateCallback = Callable[[ExecutionState, float], None]
 
 
@@ -46,41 +45,6 @@ class SuiteResult:
 
 def harness_root() -> Path:
     return Path(__file__).resolve().parents[1]
-
-
-def load_manifest(case_dir: Path) -> dict:
-    manifest = case_dir / "test.json"
-    if not manifest.is_file():
-        raise SystemExit(f"missing test manifest: {manifest}")
-    return json.loads(manifest.read_text())
-
-
-def manifest_type(manifest: Path) -> str:
-    cfg = json.loads(manifest.read_text())
-    test_type = cfg.get("type", "canonical")
-    if test_type not in VALID_TEST_TYPES:
-        raise SystemExit(f"invalid test type {test_type!r} in {manifest}")
-    return test_type
-
-
-def discover_manifests(
-    roots: Iterable[Path],
-    *,
-    reporter: Reporter,
-) -> list[Path]:
-    manifests: list[Path] = []
-    seen: set[str] = set()
-    for raw_root in roots:
-        root = Path(raw_root).expanduser().resolve()
-        if not root.exists():
-            reporter.root_skipped(root)
-            continue
-        for manifest in sorted(root.rglob("test.json")):
-            key = str(manifest.resolve())
-            if key not in seen:
-                seen.add(key)
-                manifests.append(manifest.resolve())
-    return manifests
 
 
 def _case_result_key(case_dir: Path, namespace_root: Path | None) -> Path:
@@ -301,7 +265,10 @@ def run_suite(
 
     active_reporter = reporter or ConsoleReporter(detailed=False)
     roots = [Path(root).expanduser().resolve() for root in roots]
-    manifests = discover_manifests(roots, reporter=active_reporter)
+    manifests = discover_manifests(
+        roots,
+        on_missing_root=active_reporter.root_skipped,
+    )
     selected: list[tuple[Path, str, Path]] = []
 
     for manifest in manifests:
@@ -325,7 +292,7 @@ def run_suite(
 
     for index, (manifest, _test_type, owner_root) in enumerate(selected, start=1):
         case_dir = manifest.parent
-        cfg = json.loads(manifest.read_text())
+        cfg = load_manifest(case_dir)
         case_name = cfg.get("name", case_dir.name)
 
         def emit(state: ExecutionState, elapsed: float, *, _index: int = index) -> None:
