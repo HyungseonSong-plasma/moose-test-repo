@@ -1,12 +1,12 @@
-name: QPX regression
+name: QPX static validation
 
 on:
   push:
     branches: [main]
     paths:
+      - 'qpx_harness/**'
       - 'tests/**'
       - 'scripts/**'
-      - 'bin/qpx-opt'
       - '.github/workflows/qpx-regression.yml'
   workflow_dispatch:
 
@@ -14,22 +14,22 @@ permissions:
   contents: read
 
 jobs:
-  regression:
+  static-validation:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Inspect executable
+      - name: Compile harness and scripts
+        run: python3 -m compileall -q qpx_harness scripts
+
+      - name: Parser-symbol preflight self-test
+        run: python3 scripts/validate_parser_symbols.py --self-test
+
+      - name: Temporal CSV self-test
+        run: python3 scripts/temporal_csv.py --self-test
+
+      - name: Runtime scope notice
         run: |
-          chmod +x bin/qpx-opt
-          file bin/qpx-opt
-          ldd bin/qpx-opt || true
-
-      - name: Canonical regressions
-        run: python3 scripts/run_all.py --type canonical
-
-      - name: Diagnostic investigations
-        if: always()
-        continue-on-error: true
-        run: python3 scripts/run_all.py --type diagnostic
+          echo 'Static validation only.'
+          echo 'Canonical P2/P3 regression requires the user-local qpx-opt runtime and is not claimed by GitHub Actions.'
