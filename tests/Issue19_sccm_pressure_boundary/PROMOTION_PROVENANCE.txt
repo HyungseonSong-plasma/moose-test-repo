@@ -1,0 +1,5 @@
+Issue: #19 sccm-inlet-pressure-outlet-bc
+Promoted from: R19 EVR #2 sccm_pressure_candidate
+Accepted result: R19 EVR2 TOTAL: 2  PASS: 2  FAIL: 0
+Canonical ID: flow/sccm_pressure_boundary
+Existing scripts/ infrastructure is intentionally not packaged or modified.

@@ -1,0 +1,7 @@
+EVR1-C initialization-ordering fix v2
+- P3 failure: QPXThermalDiffusionMaterial evaluated T_grad as 0 K.
+- Cause: T_grad/T_flat were populated by FunctionAux at INITIAL, too late for
+  an early FunctorMaterial evaluation.
+- Fix: initialize both FV AuxVariables with FunctionIC in [ICs].
+- DT output-copy AuxKernels remain unchanged.
+- No production source, transport data, checker, or acceptance changes.

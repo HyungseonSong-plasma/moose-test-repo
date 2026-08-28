@@ -1,0 +1,33 @@
+{
+  "name": "flow_sccm_pressure_boundary",
+  "type": "canonical",
+  "input": "input.i",
+  "prepare": "prepare.py",
+  "checker": "check.py",
+  "checker_args": [
+    "input_out.csv",
+    "expected.json"
+  ],
+  "claim": "User-facing SCCM is converted at the SEMI/COMSOL standard reference state to integrated inlet mass flow, applied through conservative WCNSFV mass/momentum flux BCs on the fixed #18 internal inlet with direction -X, while the outlet uses an absolute-pressure INSFVOutletPressureBC; fixed RZ area, outlet mass flow and outlet pressure satisfy independent acceptance checks.",
+  "fail_class": "SCCM conversion / fixed-mesh inlet-area / inlet-direction / conservative outlet mass-flow / outlet-pressure / QPX construction-runtime parity",
+  "stage": "R19_EVR3_CANONICAL_SCCM_PRESSURE_BOUNDARY",
+  "promotion_issue": "#19",
+  "promoted_from": "R19 EVR #2 sccm_pressure_candidate",
+  "accepted_evr2_result": "R19 EVR2 TOTAL: 2  PASS: 2  FAIL: 0",
+  "reference_molar_volume_m3_per_mol": 0.0224136,
+  "inlet_direction": [
+    -1.0,
+    0.0,
+    0.0
+  ],
+  "outlet_pressure_semantics": "absolute pressure [Pa]",
+  "file_sha256": {
+    "qvt.msh": "a98521af2c106137f9635fe7e2c5ba9b0fd408e17c62eb7c6d3f7c1fff65a03e",
+    "mesh.i": "b31a8cbc41fd8eea60b6bc036b6a5841342c065152a91416063ff5afbec9137d",
+    "physics.i": "ac5a94207eba695b1d809033d1052cab12fdf997ef9c68316c01032e48373e41",
+    "input.i": "3990feaad4464338b3e5f6a883947b97e37911e34553634018b39d47c0b8127b",
+    "prepare.py": "2c6b6617b7c6c1567b71891643d55287ab02b9262ef313a4fe0f168a7b0bcaaf",
+    "expected.json": "b8d9f2105e43bc172bae108ad8adda9737dfbb69a018bcd5ed7d10b2490c1d76",
+    "check.py": "d02ba85b4668ea795ca2889153224cff3d5a5dec51f69350f418b72312ed1601"
+  }
+}
