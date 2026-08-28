@@ -305,6 +305,32 @@ For issue mutations, any file-mutator recipient or payload containing file `path
 
 The envelope is consumed when its one mutator returns, whether the mutation succeeds or fails. Verification then occurs under RM-05A with `MUTATION_ALLOWED=false`.
 
+## RM-06G — Cross-resource mutation isolation after recurrence
+
+After repeated wrong-action incidents, this repository uses a stricter response-level interlock:
+
+```text
+one assistant response / live mutation phase = one repository resource class
+```
+
+If a response begins an **issue** mutation phase, only issue mutators are allowed for business work in that response. File implementation must wait for a later fresh response after the issue mutation is read-back verified.
+
+If a response begins a **file** mutation phase, only file mutators are allowed for business work in that response. Issue-body/status synchronization must occur in a separate fresh response.
+
+Equivalent isolation applies to branch/ref and comment mutation phases. Do not mix resource classes merely because all targets were listed in one RM-08 plan.
+
+The only exception is RM-09A incident handling, where minimal repair plus incident/protocol governance mutations are explicitly permitted.
+
+This rule is specifically intended to prevent a planned issue transition from being accidentally routed to a file mutator, or vice versa. If the intended work requires both governance and implementation:
+
+```text
+response A: issue-only mutation + read-only verification
+response B: fresh protocol read + file-only implementation mutations + verification
+response C: optional issue-only evidence/status synchronization
+```
+
+A fresh response boundary is therefore part of the mutation safety contract after recurrence, not optional workflow polish.
+
 ## RM-07 — State-transition fan-out synchronization
 
 When an issue changes lifecycle/dependency state (for example ACTIVE -> CLOSED/PASS, BLOCKED -> ACTIVE, or one blocker is replaced by a successor), treat downstream current-state synchronization as part of the same governance operation.
