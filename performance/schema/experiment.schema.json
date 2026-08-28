@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/qpx/performance/experiment.schema.json",
+  "title": "QPX Performance Experiment Manifest",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["schema_version", "experiment_id", "case_id", "mode", "case"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "experiment_id": {"type": "string", "minLength": 1},
+    "case_id": {"type": "string", "minLength": 1},
+    "mode": {"enum": ["BENCHMARK", "PROFILE"]},
+    "case": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["directory", "input"],
+      "properties": {
+        "directory": {"type": "string", "minLength": 1},
+        "input": {"type": "string", "minLength": 1}
+      }
+    },
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "num_steps": {"type": "integer", "minimum": 1}
+      }
+    },
+    "collectors": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "work_counters": {"type": "boolean"},
+        "perfgraph": {"type": "boolean"},
+        "petsc_log": {"type": "boolean"}
+      }
+    },
+    "physics": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "features": {
+          "type": "array",
+          "items": {"enum": ["F", "H", "M", "E", "P", "C"]},
+          "uniqueItems": true
+        },
+        "species": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1},
+          "uniqueItems": true
+        }
+      }
+    },
+    "overlay_prefix": {"type": "string", "minLength": 1},
+    "stream_output": {"type": "boolean"}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"mode": {"const": "BENCHMARK"}}, "required": ["mode"]},
+      "then": {
+        "properties": {
+          "collectors": {
+            "properties": {
+              "perfgraph": {"const": false},
+              "petsc_log": {"const": false}
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {"properties": {"mode": {"const": "PROFILE"}}, "required": ["mode"]},
+      "then": {
+        "not": {
+          "properties": {
+            "collectors": {
+              "type": "object",
+              "required": ["perfgraph", "petsc_log"],
+              "properties": {
+                "perfgraph": {"const": false},
+                "petsc_log": {"const": false}
+              }
+            }
+          },
+          "required": ["collectors"]
+        }
+      }
+    }
+  ]
+}
