@@ -1,3 +1,0 @@
-time,ion_mass_first_moment,ion_mass_inventory,ion_number_inventory,left_migration_mass_loss_rate,left_surface_mass_loss_rate,phi_avg,phi_max,phi_min,right_migration_mass_loss_rate,right_surface_mass_loss_rate,w_max,w_min
-0,5e-07,1e-06,1.8816797571308e+19,0,0.00011137565382337,0,0,0,0,0.00011137565382337,1e-06,1e-06
-1e-05,4.9913499743025e-07,9.9630139207635e-07,1.8747201614713e+19,0,8.4930396182548e-05,10000,19900,100,0.00018301392076349,0.00010191647541906,1e-06,7.6255800318121e-07
