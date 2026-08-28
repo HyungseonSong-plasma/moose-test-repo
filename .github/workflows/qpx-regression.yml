@@ -45,6 +45,9 @@ jobs:
       - name: Targeted transport probe self-test
         run: python3 -m qpx_harness.performance_transport_probe_direct --self-test
 
+      - name: D_mix cache feasibility self-test
+        run: python3 -m qpx_harness.performance_cache_audit --self-test
+
       - name: Runtime scope notice
         run: |
           echo 'Static validation only.'
