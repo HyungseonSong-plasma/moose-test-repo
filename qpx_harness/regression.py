@@ -1,20 +1,33 @@
-"""Reusable manifest-driven QPX regression execution."""
+"""Presentation-neutral manifest-driven QPX regression orchestration."""
 
 from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
+import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
+from typing import Callable, Iterable
 
 from .preflight import validate_input_preflight, validate_temporal_manifest_preflight
-from .runtime import resolve_executable, run_qpx, validate_executable
+from .reporting import ConsoleReporter, Reporter
+from .runtime import TelemetryCallback, TelemetrySample, resolve_executable, run_command, run_qpx, validate_executable
+from .status import ExecutionState, LivenessClassifier
 from .temporal import normalize_from_manifest
 
 VALID_TEST_TYPES = {"canonical", "diagnostic"}
+StateCallback = Callable[[ExecutionState, float], None]
+
+
+@dataclass(frozen=True)
+class CaseSummary:
+    name: str
+    path: str
+    status: ExecutionState
+    wall_seconds: float
 
 
 @dataclass(frozen=True)
@@ -23,6 +36,8 @@ class SuiteResult:
     total: int
     passed: int
     failed: tuple[str, ...]
+    wall_seconds: float = 0.0
+    cases: tuple[CaseSummary, ...] = ()
 
     @property
     def returncode(self) -> int:
@@ -48,13 +63,17 @@ def manifest_type(manifest: Path) -> str:
     return test_type
 
 
-def discover_manifests(roots: Iterable[Path]) -> list[Path]:
+def discover_manifests(
+    roots: Iterable[Path],
+    *,
+    reporter: Reporter,
+) -> list[Path]:
     manifests: list[Path] = []
     seen: set[str] = set()
     for raw_root in roots:
         root = Path(raw_root).expanduser().resolve()
         if not root.exists():
-            print(f"TEST_ROOT_SKIP: {root} (not found)")
+            reporter.root_skipped(root)
             continue
         for manifest in sorted(root.rglob("test.json")):
             key = str(manifest.resolve())
@@ -84,21 +103,104 @@ def _case_result_key(case_dir: Path, namespace_root: Path | None) -> Path:
         return Path("__".join(case_dir.parts[-6:]))
 
 
-def prepare_temporal_outputs(case_dir: Path, cfg: dict) -> None:
+def _telemetry_adapter(
+    state_callback: StateCallback | None,
+    *,
+    stall_after_seconds: float,
+) -> TelemetryCallback | None:
+    if state_callback is None:
+        return None
+
+    classifier = LivenessClassifier(stall_after_seconds=stall_after_seconds)
+
+    def emit(sample: TelemetrySample) -> None:
+        state_callback(classifier.classify(sample), sample.elapsed_seconds)
+
+    return emit
+
+
+def prepare_temporal_outputs(
+    case_dir: Path,
+    cfg: dict,
+    *,
+    reporter: Reporter,
+) -> None:
     for spec in cfg.get("temporal_csv", []):
         try:
             summary = normalize_from_manifest(case_dir, spec)
         except Exception as exc:
-            print("TEMPORAL_ROWS: FAIL")
             raise SystemExit(f"temporal CSV normalization failed: {exc}") from exc
+        reporter.temporal_finished(spec, summary)
 
-        print("TEMPORAL_ROWS: PASS")
-        print(f"  SOURCE              : {spec['source']}")
-        print(f"  PHYSICAL            : {spec['physical']}")
-        print(f"  POLICY              : {summary['initial_row_policy']}")
-        print(f"  SOURCE_ROWS         : {summary['source_rows']}")
-        print(f"  INITIALIZATION_ROWS : {summary['initialization_rows']}")
-        print(f"  PHYSICAL_ROWS       : {summary['physical_rows']}")
+
+def _run_prepare(
+    case_dir: Path,
+    cfg: dict,
+    *,
+    result_dir: Path,
+    executable_path: Path,
+    reporter: Reporter,
+    state_callback: StateCallback | None,
+    heartbeat_seconds: float,
+    stall_after_seconds: float,
+) -> int:
+    """Execute manifest-declared prepare before parser/preflight and solve."""
+
+    prepare = cfg.get("prepare")
+    if not prepare:
+        return 0
+
+    prepare_args = cfg.get("prepare_args", [])
+    prepare_path = (case_dir / prepare).resolve()
+    prepare_log = result_dir / "prepare.log"
+    if not prepare_path.is_file():
+        prepare_log.write_text(f"missing prepare script: {prepare_path}\n")
+        reporter.prepare_finished(1, prepare_log)
+        return 1
+
+    prepare_env = os.environ.copy()
+    prepare_env.setdefault("QPX_ROOT", str(executable_path.parent))
+
+    result = run_command(
+        [sys.executable, str(prepare_path), *[str(arg) for arg in prepare_args]],
+        cwd=case_dir,
+        log_path=prepare_log,
+        telemetry_callback=_telemetry_adapter(
+            state_callback,
+            stall_after_seconds=stall_after_seconds,
+        ),
+        heartbeat_seconds=heartbeat_seconds,
+        env=prepare_env,
+    )
+    reporter.prepare_finished(result.returncode, prepare_log)
+    return result.returncode
+
+
+def _run_checker(
+    case_dir: Path,
+    *,
+    checker: str,
+    checker_args: list,
+    result_dir: Path,
+    reporter: Reporter,
+) -> int:
+    checker_path = (case_dir / checker).resolve()
+    check_log = result_dir / "check.log"
+
+    if not checker_path.is_file():
+        check_log.write_text(f"missing checker: {checker_path}\n")
+        reporter.check_finished(1, check_log)
+        return 1
+
+    with check_log.open("w") as log:
+        check = subprocess.run(
+            [sys.executable, str(checker_path), *[str(arg) for arg in checker_args]],
+            cwd=case_dir,
+            stdout=log,
+            stderr=subprocess.STDOUT,
+        )
+    reporter.check_finished(check.returncode, check_log)
+    return check.returncode
 
 
 def run_case(
@@ -107,47 +209,81 @@ def run_case(
     results_root: Path | None = None,
     namespace_root: Path | None = None,
     executable: str | Path | None = None,
+    reporter: Reporter | None = None,
+    state_callback: StateCallback | None = None,
+    heartbeat_seconds: float = 10.0,
+    stall_after_seconds: float = 60.0,
 ) -> int:
     case_dir = Path(case_dir).expanduser().resolve()
     cfg = load_manifest(case_dir)
-    exe = resolve_executable(executable)
-    validate_executable(exe)
+    active_reporter = reporter or ConsoleReporter(detailed=True)
 
     input_name = cfg["input"]
     checker = cfg.get("checker")
     checker_args = cfg.get("checker_args", [])
     test_type = cfg.get("type", "canonical")
 
-    input_path = case_dir / input_name
-    validate_input_preflight(input_path)
-    validate_temporal_manifest_preflight(input_path, cfg)
-
     out_root = (results_root or (harness_root() / "results")).expanduser().resolve()
     result_dir = out_root / _case_result_key(case_dir, namespace_root)
     result_dir.mkdir(parents=True, exist_ok=True)
     log_path = result_dir / "run.log"
 
-    print(f"CASE       : {case_dir}")
-    print(f"TYPE       : {test_type}")
-    print(f"EXECUTABLE : {exe}")
-    print(f"INPUT      : {input_name}")
-    print(f"LOG        : {log_path}")
+    active_reporter.case_started(
+        case_dir=case_dir,
+        test_type=test_type,
+        input_name=input_name,
+        log_path=log_path,
+    )
 
-    solve = run_qpx(exe, cwd=case_dir, input_name=input_name, log_path=log_path)
+    exe = resolve_executable(executable)
+    validate_executable(exe)
+
+    prepare_rc = _run_prepare(
+        case_dir,
+        cfg,
+        result_dir=result_dir,
+        executable_path=exe,
+        reporter=active_reporter,
+        state_callback=state_callback,
+        heartbeat_seconds=heartbeat_seconds,
+        stall_after_seconds=stall_after_seconds,
+    )
+    if prepare_rc != 0:
+        return prepare_rc or 1
+
+    input_path = case_dir / input_name
+    validate_input_preflight(input_path)
+    validate_temporal_manifest_preflight(input_path, cfg)
+    active_reporter.executable_resolved(exe)
+
+    solve = run_qpx(
+        exe,
+        cwd=case_dir,
+        input_name=input_name,
+        log_path=log_path,
+        telemetry_callback=_telemetry_adapter(
+            state_callback,
+            stall_after_seconds=stall_after_seconds,
+        ),
+        heartbeat_seconds=heartbeat_seconds,
+    )
+    active_reporter.solve_finished(solve.returncode)
     if solve.returncode != 0:
-        print("SOLVE      : FAIL")
         return solve.returncode or 1
 
-    print("SOLVE      : PASS")
-    prepare_temporal_outputs(case_dir, cfg)
+    prepare_temporal_outputs(case_dir, cfg, reporter=active_reporter)
 
     if not checker:
-        print("CHECK      : SKIP")
+        active_reporter.check_finished(None, None, skipped=True)
         return 0
 
-    check = subprocess.run([sys.executable, checker, *checker_args], cwd=case_dir)
-    print("CHECK      :", "PASS" if check.returncode == 0 else "FAIL")
-    return check.returncode
+    return _run_checker(
+        case_dir,
+        checker=checker,
+        checker_args=checker_args,
+        result_dir=result_dir,
+        reporter=active_reporter,
+    )
 
 
 def run_suite(
@@ -156,12 +292,16 @@ def run_suite(
     requested_type: str = "canonical",
     results_root: Path | None = None,
     executable: str | Path | None = None,
+    heartbeat_seconds: float = 10.0,
+    stall_after_seconds: float = 60.0,
+    reporter: Reporter | None = None,
 ) -> SuiteResult:
     if requested_type not in {"canonical", "diagnostic", "all"}:
         raise SystemExit(f"unsupported requested type: {requested_type}")
 
+    active_reporter = reporter or ConsoleReporter(detailed=False)
     roots = [Path(root).expanduser().resolve() for root in roots]
-    manifests = discover_manifests(roots)
+    manifests = discover_manifests(roots, reporter=active_reporter)
     selected: list[tuple[Path, str, Path]] = []
 
     for manifest in manifests:
@@ -174,34 +314,62 @@ def run_suite(
             selected.append((manifest, test_type, owner_root))
 
     if not selected:
-        print(f"No {requested_type} tests found.")
+        active_reporter.suite_empty(requested_type)
         return SuiteResult(requested_type, 0, 0, ())
 
+    total = len(selected)
     failures: list[str] = []
-    for manifest, test_type, owner_root in selected:
+    cases: list[CaseSummary] = []
+    suite_start = time.perf_counter()
+    active_reporter.suite_started(requested_type, total)
+
+    for index, (manifest, _test_type, owner_root) in enumerate(selected, start=1):
         case_dir = manifest.parent
-        print("\n" + "=" * 80)
-        print(case_dir, f"[{test_type}]")
-        print("=" * 80)
+        cfg = json.loads(manifest.read_text())
+        case_name = cfg.get("name", case_dir.name)
+
+        def emit(state: ExecutionState, elapsed: float, *, _index: int = index) -> None:
+            active_reporter.case_progress(_index, total, state, elapsed)
+
+        emit(ExecutionState.CALCULATING, 0.0)
+        case_start = time.perf_counter()
         rc = run_case(
             case_dir,
             results_root=results_root,
             namespace_root=owner_root,
             executable=executable,
+            reporter=active_reporter,
+            state_callback=emit,
+            heartbeat_seconds=heartbeat_seconds,
+            stall_after_seconds=stall_after_seconds,
+        )
+        wall_seconds = time.perf_counter() - case_start
+        status = ExecutionState.PASS if rc == 0 else ExecutionState.FAIL
+        emit(status, wall_seconds)
+
+        cases.append(
+            CaseSummary(
+                name=case_name,
+                path=str(case_dir),
+                status=status,
+                wall_seconds=wall_seconds,
+            )
         )
         if rc != 0:
             failures.append(str(case_dir))
 
-    total = len(selected)
+    wall_seconds = time.perf_counter() - suite_start
     passed = total - len(failures)
-    print("\n" + "=" * 80)
-    print(f"TYPE: {requested_type}  TOTAL: {total}  PASS: {passed}  FAIL: {len(failures)}")
-    if failures:
-        print("Failed cases:")
-        for case in failures:
-            print(f"  - {case}")
-
-    return SuiteResult(requested_type, total, passed, tuple(failures))
+    result = SuiteResult(
+        requested_type=requested_type,
+        total=total,
+        passed=passed,
+        failed=tuple(failures),
+        wall_seconds=wall_seconds,
+        cases=tuple(cases),
+    )
+    active_reporter.suite_finished(result, results_root=results_root)
+    return result
 
 
 def cli_run_test(argv: list[str] | None = None) -> int:
@@ -210,21 +378,31 @@ def cli_run_test(argv: list[str] | None = None) -> int:
     parser.add_argument("--results-root")
     parser.add_argument("--namespace-root")
     parser.add_argument("--qpx")
+    parser.add_argument("--heartbeat-seconds", type=float, default=10.0)
+    parser.add_argument("--stall-seconds", type=float, default=60.0)
     args = parser.parse_args(argv)
     return run_case(
         Path(args.case_dir),
         results_root=Path(args.results_root) if args.results_root else None,
         namespace_root=Path(args.namespace_root) if args.namespace_root else None,
         executable=args.qpx,
+        heartbeat_seconds=args.heartbeat_seconds,
+        stall_after_seconds=args.stall_seconds,
     )
 
 
 def cli_run_all(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--type", choices=("canonical", "diagnostic", "all"), default="canonical")
+    parser.add_argument(
+        "--type",
+        choices=("canonical", "diagnostic", "all"),
+        default="canonical",
+    )
     parser.add_argument("--tests-root", action="append", default=[])
     parser.add_argument("--results-root")
     parser.add_argument("--qpx")
+    parser.add_argument("--heartbeat-seconds", type=float, default=10.0)
+    parser.add_argument("--stall-seconds", type=float, default=60.0)
     args = parser.parse_args(argv)
 
     roots = [Path(p) for p in args.tests_root]
@@ -241,5 +419,7 @@ def cli_run_all(argv: list[str] | None = None) -> int:
         requested_type=args.type,
         results_root=Path(args.results_root) if args.results_root else None,
         executable=args.qpx,
+        heartbeat_seconds=args.heartbeat_seconds,
+        stall_after_seconds=args.stall_seconds,
     )
     return result.returncode
