@@ -1,32 +1,52 @@
 # Issue #32 real-QVT performance diagnostics
 
-This directory preserves the deterministic test oracle for the profiling/analyzer path used by issue #32.
+This directory preserves the deterministic EVR1 oracle for Issue #32 while the executable logic is owned by the reusable `qpx_harness` package.
 
-## Canonical scripts
+## R2 ownership
 
-- `scripts/r32_profile_qpx_case.py` — one-timestep real-QPX profiler already used for EVR1. It runs P2 `--check-input`, streams P3, records MOOSE PerfGraph and PETSc CSV, and does not change dt, solver tolerances, or physics parameters.
-- `scripts/r32_build_full_profile_bundle.py` — builds a self-contained local bundle from the accepted `qvt_six_species_transient_inventory` case after verifying the canonical mesh and transport-data SHA256 values.
-- `scripts/r32_analyze_profile.py` — classifies a completed profiling result from `summary.json`, `petsc_log.csv`, and optionally `p3_run.log`.
+Generic implementation:
 
-The full QVT mesh and transport database are not duplicated in this repository. The builder locates the accepted local case and verifies byte identity before packaging.
+```text
+qpx_harness/profiling.py   # P2/P3 profiling + evidence capture
+qpx_harness/analysis.py    # PETSc/PerfGraph classification
+qpx_harness/bundle.py      # declarative local bundle construction
+```
+
+Issue-specific compatibility entry points remain available:
+
+```text
+scripts/r32_profile_qpx_case.py
+scripts/r32_analyze_profile.py
+scripts/r32_build_full_profile_bundle.py
+```
+
+These wrappers must not regain duplicated runtime/analyzer/bundle logic.
+
+Issue-specific case identity, hashes, signatures, accepted paths, environment, and profile defaults are declared in:
+
+```text
+tests/r32_performance/profile_spec.json
+```
+
+The preferred new local workspace is:
+
+```text
+<QPX_ROOT>/temp/test_workspace/Issue32_performance_localization/T2_heavy/
+```
+
+Historical `regression_workspace/.../qvt_six_species_transient_inventory` paths remain accepted during migration so prior validated case provenance is not invalidated by a path-only move.
 
 ## Runtime preflight
 
-The accepted QPX environment currently requires:
+The accepted QPX environment requires:
 
 ```bash
 conda activate moose
 ```
 
-The generated bundle `run.sh` refuses to execute unless `CONDA_DEFAULT_ENV=moose`.
+The generated bundle `run.sh` enforces `CONDA_DEFAULT_ENV=moose`.
 
-If P2 reports:
-
-```text
-ADFParser::JITCompile() failed. Evaluation not possible.
-```
-
-treat it as `ENVIRONMENT_OR_BUILD_FAIL`; no physics/performance conclusion is permitted. This recurrence was resolved by activating the accepted `moose` conda environment.
+If P2 reports `ADFParser::JITCompile() failed. Evaluation not possible.`, classify it as `ENVIRONMENT_OR_BUILD_FAIL`; no physics/performance conclusion is permitted.
 
 ## EVR1 reference
 
@@ -40,7 +60,7 @@ treat it as `ENVIRONMENT_OR_BUILD_FAIL`; no physics/performance conclusion is pe
 - PETSc `SNESJacobianEval = 12.1323 s`
 - `PCSetUp = 7.49414 s`
 - `KSPSolve = 0.233045 s`
-- MOOSE PerfGraph Jacobian self time = 15.722 s across four Jacobian evaluations, including automatic scaling
+- MOOSE PerfGraph Jacobian self time = 15.722 s across four Jacobian evaluations
 
 Reference classification:
 
@@ -50,11 +70,11 @@ secondary: DIRECT_FACTORIZATION_SIGNIFICANT
 secondary: RESIDUAL_EVALUATION_SIGNIFICANT
 ```
 
-This does **not** yet prove `QPXThermalDiffusionMaterial` is the causal hotspot. EVR2 must localize its `evaluate()`/functor fan-out, AD propagation, pair-collision work, and local dense transport solves before changing representation.
+This does not prove `QPXThermalDiffusionMaterial` is the causal hotspot. EVR2 must localize `evaluate()`/functor fan-out, AD propagation, pair-collision work, and local dense transport solves before representation changes.
 
-## Build a full local profiling bundle
+## Build a local profiling bundle
 
-From repository root:
+Compatibility command:
 
 ```bash
 conda activate moose
@@ -63,10 +83,13 @@ python3 scripts/r32_build_full_profile_bundle.py \
   --output r32_full_profile_case.zip
 ```
 
-Then unzip and run:
+Generic command for future issues:
 
 ```bash
-./r32_full_profile_case/run.sh /path/to/qpx-opt T2-heavy
+python3 -m qpx_harness.bundle \
+  --spec /path/to/profile_spec.json \
+  --qpx-root /path/to/qpx \
+  --output profile_bundle.zip
 ```
 
 ## Analyze a profile
@@ -79,8 +102,6 @@ python3 scripts/r32_analyze_profile.py \
 ```
 
 ## Self-test
-
-From repository root:
 
 ```bash
 python3 tests/r32_performance/test_r32_analyze_profile.py
