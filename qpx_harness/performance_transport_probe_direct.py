@@ -63,6 +63,10 @@ def _support_block() -> str:
   PerfGuard token##_perf_guard(getMooseApp().perfGraph(), token##_perf_id)\n#endif\n'''
 
 
+def _has_legacy_time_section(text: str) -> bool:
+    return re.search(r"\bTIME_SECTION\s*\(", text) is not None
+
+
 def instrument_source(text: str) -> tuple[str, dict[str, Any]]:
     """Add source-only PerfGuard instrumentation without PerfGraphInterface inheritance."""
 
@@ -149,8 +153,8 @@ def instrument_source(text: str) -> tuple[str, dict[str, Any]]:
 
     if instrumented == text:
         raise ProbeError("instrumentation produced no source change")
-    if "TIME_SECTION(" in instrumented:
-        raise ProbeError("direct probe unexpectedly emitted TIME_SECTION")
+    if _has_legacy_time_section(instrumented):
+        raise ProbeError("direct probe unexpectedly emitted legacy TIME_SECTION")
 
     mandatory = ("evaluate", "functor_DT", "functor_kT", "functor_Dmix")
     for key in mandatory:
@@ -198,7 +202,7 @@ def self_test() -> int:
         ):
             if required not in nested:
                 raise AssertionError(f"missing direct PerfGraph support: {required}")
-        if "TIME_SECTION(" in nested:
+        if _has_legacy_time_section(nested):
             raise AssertionError("legacy TIME_SECTION remained in direct probe")
 
         flat, flat_meta = instrument_source(resilient._single_loop_source())
