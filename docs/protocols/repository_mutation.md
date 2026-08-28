@@ -251,6 +251,60 @@ if MUTATION_ALLOWED != true:
 
 A valid-looking target does not override this gate. An accidental mutator call while `MUTATION_ALLOWED=false` is a wrong-action mutation and must trip RM-09A immediately.
 
+## RM-06F — Adjacent one-shot mutation envelope
+
+Immediately before every repository mutator, freeze a one-shot call envelope **after** the fresh read, semantic diff, resource-class check, and RM-08 target selection are complete.
+
+Required envelope:
+
+```text
+NEXT_MUTATION_RESOURCE = exact resource class
+NEXT_MUTATION_TARGET = exact issue number/path/ref
+NEXT_MUTATION_ACTION = exact action
+NEXT_MUTATION_MUTATOR = exact mutator function
+NEXT_MUTATION_TARGET_KEY = issue_number | path | branch/ref key | comment id
+NEXT_MUTATION_EXPECTED_DIFF = exact semantic change
+NEXT_MUTATION_PREWRITE_IDENTITY = issue state/body identity or file blob/content SHA
+```
+
+The envelope authorizes **exactly one immediate next tool call**. The next call must be the frozen mutator against the frozen target.
+
+Any intervening action invalidates the envelope and resets mutation permission:
+
+```text
+commentary/status update
+analysis/planning
+read/search/fetch
+local/sandbox execution
+tool discovery/schema lookup
+any different tool call
+```
+
+After invalidation, return to `MUTATION_ALLOWED=false` and rebuild the envelope from a fresh canonical read before any mutation.
+
+Hard call-boundary rule:
+
+```text
+selected mutator == NEXT_MUTATION_MUTATOR
+AND payload target key == NEXT_MUTATION_TARGET_KEY
+AND payload target == NEXT_MUTATION_TARGET
+AND target appears in the pending RM-08 plan
+```
+
+If any term is false, the call is forbidden.
+
+For `update_file`, the envelope must also carry the fresh pre-write blob/content identity and prove:
+
+```text
+intended replacement bytes != fresh-read bytes
+```
+
+Commit messages or payloads whose purpose is `noop`, `probe`, `connectivity test`, `ensure`, `make sure`, or equivalent are prohibited. An identical-content `update_file` is forbidden even if the target path is valid.
+
+For issue mutations, any file-mutator recipient or payload containing file `path`/blob-SHA/content replacement fields invalidates the envelope. For file mutations, issue-number/title/body/state payloads invalidate the envelope.
+
+The envelope is consumed when its one mutator returns, whether the mutation succeeds or fails. Verification then occurs under RM-05A with `MUTATION_ALLOWED=false`.
+
 ## RM-07 — State-transition fan-out synchronization
 
 When an issue changes lifecycle/dependency state (for example ACTIVE -> CLOSED/PASS, BLOCKED -> ACTIVE, or one blocker is replaced by a successor), treat downstream current-state synchronization as part of the same governance operation.
@@ -308,6 +362,7 @@ The following are operating errors:
 - repeated update attempts after a success without fresh-read evidence;
 - mutator invocation during RM-05A VERIFY mode;
 - mutator invocation while RM-06E `MUTATION_ALLOWED=false`;
+- mutator invocation that does not match the active RM-06F one-shot envelope;
 - unnecessary history rewrite used to conceal an assistant mutation error.
 
 When such an error occurs:
