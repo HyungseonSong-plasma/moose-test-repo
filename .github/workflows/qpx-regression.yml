@@ -40,7 +40,7 @@ jobs:
         run: python3 -m qpx_harness.performance_investigation --self-test
 
       - name: Targeted transport probe self-test
-        run: python3 -m qpx_harness.performance_transport_probe --self-test
+        run: python3 -m qpx_harness.performance_transport_probe_resilient --self-test
 
       - name: Runtime scope notice
         run: |
