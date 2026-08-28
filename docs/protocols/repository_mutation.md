@@ -331,6 +331,29 @@ response C: optional issue-only evidence/status synchronization
 
 A fresh response boundary is therefore part of the mutation safety contract after recurrence, not optional workflow polish.
 
+## RM-06H — Exact mutator availability is a hard precondition
+
+After a fourth wrong-action recurrence, a planned repository mutation may proceed only when the exact mutator frozen in the one-shot envelope is the actual callable selected for the immediate next tool call.
+
+Required gate:
+
+```text
+NEXT_MUTATION_MUTATOR is available
+AND selected callable == NEXT_MUTATION_MUTATOR
+AND selected callable's resource class == NEXT_MUTATION_RESOURCE
+AND selected payload target == NEXT_MUTATION_TARGET
+```
+
+If the exact mutator is unavailable, cannot be addressed unambiguously, or does not accept the planned target identity, the only valid action is:
+
+```text
+STOP / NO REPOSITORY MUTATION
+```
+
+Never substitute a different mutator, different resource class, surrogate target, dummy file, placeholder issue, probe payload, or connectivity-test action. Tool unavailability is a reason to defer the mutation, not to approximate it.
+
+For create operations, the server-assigned future identifier does not relax this rule. The pre-create target identity from RM-06C remains authoritative until the exact create mutator returns the canonical identifier.
+
 ## RM-07 — State-transition fan-out synchronization
 
 When an issue changes lifecycle/dependency state (for example ACTIVE -> CLOSED/PASS, BLOCKED -> ACTIVE, or one blocker is replaced by a successor), treat downstream current-state synchronization as part of the same governance operation.
