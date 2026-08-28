@@ -95,6 +95,26 @@ post-repair target: dummy absent
 
 This recurrence is especially significant because it happened **after** RM-06A/RM-06C/RM-09A existed and after the correct issue intent had been identified. The remaining failure mode is therefore not missing intent documentation; it is failure to enforce the frozen resource class at the actual mutator-call boundary.
 
+## Fifth recurrence during #32 artifact publication
+
+A new no-op/wrong-action recurrence occurred on 2026-08-28 while publishing the Issue #32 performance-diagnostic artifacts.
+
+The file `tests/r32_performance/test_r32_analyze_profile.py` had already been created successfully. The next intended operation was **post-write verification/read only**, but `update_file` was mistakenly invoked on the same path with byte-identical content.
+
+Observed result:
+
+```text
+no-op commit: 2940bf7bac5bbab858eeb595c2424c2ad6824cce
+path: tests/r32_performance/test_r32_analyze_profile.py
+pre-write blob SHA: 50844d7d77da25a4a049a1a29c33cd004efb2bd2
+returned content SHA: 50844d7d77da25a4a049a1a29c33cd004efb2bd2
+post-write blob SHA: 50844d7d77da25a4a049a1a29c33cd004efb2bd2
+```
+
+No live repository content changed, but shared history was polluted. The intended Issue #32 body update was abandoned for the remainder of the response and the session circuit breaker was applied.
+
+This recurrence identifies a distinct enforcement gap: resource-class and target guards are insufficient when the wrong action is a mutator against the **correct resource and correct target** during what should have been a read-only verification phase. Post-write verification itself must therefore be action-locked to read/fetch operations.
+
 ## Root-cause analysis
 
 ### RC-1 — Missing pre-write semantic-diff gate
@@ -123,6 +143,9 @@ Consequence: once a session has demonstrated wrong-action routing, written guard
 ### RC-8 — Frozen intent was not enforced as a payload-shape invariant
 During the fourth recurrence the intended resource was already known to be an issue, yet a payload containing a repository file `path` and file-content fields was still allowed to reach a mutator. A frozen issue intent must make any file-mutator payload shape itself a hard pre-call failure, independent of semantic intent notes.
 
+### RC-9 — Post-write verification was not action-locked to read-only tools
+During the fifth recurrence the resource class and target were both correct, so resource-class/target guards did not prevent an `update_file` call. The actual phase intent was verification, not mutation. Verification must therefore have its own read-only action lock that forbids every mutator regardless of target correctness.
+
 ## Corrective action
 
 Canonical procedure:
@@ -134,6 +157,7 @@ docs/protocols/repository_mutation.md
 The process hardening sequence now includes:
 
 ```text
+RM-05A Post-write verification read-only lock
 RM-06A Mutator recipient freeze
 RM-06B File byte-state guard
 RM-06C Create-action exact-target attestation
@@ -148,7 +172,7 @@ wrong-action mutation occurs
   -> stop intended/business mutations for the remainder of the session/response
   -> perform only minimal live-state repair
   -> record/update the incident and canonical prevention rule
-  -> verify accidental targets are absent
+  -> verify accidental targets are absent or content-identical/restored
   -> resume intended repository mutations only in a fresh mutation context
 ```
 
@@ -162,6 +186,7 @@ The process fix is considered active when all of the following hold:
 __noop__ absent from repository root
 dummy absent from repository root
 repository-mutation protocol exists and is routed from PROTOCOL_INDEX.md
+post-write verification uses read/fetch actions only; no mutator is permitted in VERIFY mode
 no second write is issued to a target after success unless a fresh read proves a new semantic diff
 issue intent cannot invoke a file mutator without failing RM-06A/RM-06D
 update_file cannot run on byte-identical fetched/intended content under RM-06B
