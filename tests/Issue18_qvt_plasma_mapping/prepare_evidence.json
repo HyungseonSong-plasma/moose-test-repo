@@ -1,8 +1,0 @@
-{
-  "status": "PASS",
-  "classification": "R18_QVT_PLASMA_TRANSPORT_PREFLIGHT",
-  "qvt_sha256": "a98521af2c106137f9635fe7e2c5ba9b0fd408e17c62eb7c6d3f7c1fff65a03e",
-  "mesh_i_sha256": "b31a8cbc41fd8eea60b6bc036b6a5841342c065152a91416063ff5afbec9137d",
-  "transport_data_sha256": "2fa7988c79f6ea23ebdd50e6d1d7fc5018dc8854a27459511ec95c94ebe7ff3d",
-  "failures": []
-}
