@@ -9,4 +9,5 @@ __all__ = [
     "regression",
     "runtime",
     "temporal",
+    "workspace",
 ]
