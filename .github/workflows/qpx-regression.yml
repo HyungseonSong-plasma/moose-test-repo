@@ -36,6 +36,9 @@ jobs:
       - name: Managed performance smoke self-test
         run: python3 -m qpx_harness.performance_smoke --self-test
 
+      - name: Performance investigation self-test
+        run: python3 -m qpx_harness.performance_investigation --self-test
+
       - name: Runtime scope notice
         run: |
           echo 'Static validation only.'
