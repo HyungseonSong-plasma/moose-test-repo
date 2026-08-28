@@ -1,8 +1,8 @@
 # Issue #32 real-QVT performance diagnostics
 
-This directory preserves the deterministic EVR1 oracle for Issue #32 while the executable logic is owned by the reusable `qpx_harness` package.
+This directory preserves the deterministic EVR1 oracle for Issue #32 while executable logic is owned by the reusable `qpx_harness` package and exposed through the unified `scripts/qpx.py` CLI.
 
-## R2 ownership
+## Ownership
 
 Generic implementation:
 
@@ -12,21 +12,13 @@ qpx_harness/analysis.py    # PETSc/PerfGraph classification
 qpx_harness/bundle.py      # declarative local bundle construction
 ```
 
-Issue-specific compatibility entry points remain available:
-
-```text
-scripts/r32_profile_qpx_case.py
-scripts/r32_analyze_profile.py
-scripts/r32_build_full_profile_bundle.py
-```
-
-These wrappers must not regain duplicated runtime/analyzer/bundle logic.
-
 Issue-specific case identity, hashes, signatures, accepted paths, environment, and profile defaults are declared in:
 
 ```text
 tests/r32_performance/profile_spec.json
 ```
+
+No Issue-32-specific Python executor is required after R3 closure.
 
 The preferred new local workspace is:
 
@@ -74,34 +66,41 @@ This does not prove `QPXThermalDiffusionMaterial` is the causal hotspot. EVR2 mu
 
 ## Build a local profiling bundle
 
-Compatibility command:
-
 ```bash
 conda activate moose
-python3 scripts/r32_build_full_profile_bundle.py \
+python3 scripts/qpx.py bundle \
+  --spec tests/r32_performance/profile_spec.json \
   --qpx-root /path/to/qpx \
   --output r32_full_profile_case.zip
 ```
 
-Generic command for future issues:
+## Capture a profile directly
 
 ```bash
-python3 -m qpx_harness.bundle \
-  --spec /path/to/profile_spec.json \
-  --qpx-root /path/to/qpx \
-  --output profile_bundle.zip
+python3 scripts/qpx.py profile \
+  --qpx /path/to/qpx-opt \
+  --case-dir /path/to/case \
+  --input input.i \
+  --label T2-heavy \
+  --issue 32 \
+  --prefix r32 \
+  --output-namespace r32_profiles \
+  --num-steps 1
 ```
 
 ## Analyze a profile
 
 ```bash
-python3 scripts/r32_analyze_profile.py \
+python3 scripts/qpx.py analyze \
   --summary /path/to/summary.json \
   --petsc-log /path/to/petsc_log.csv \
-  --perf-log /path/to/p3_run.log
+  --perf-log /path/to/p3_run.log \
+  --metric-prefix r32
 ```
 
 ## Self-test
+
+The oracle now imports `qpx_harness.analysis` directly:
 
 ```bash
 python3 tests/r32_performance/test_r32_analyze_profile.py
