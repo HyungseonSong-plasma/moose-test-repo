@@ -114,7 +114,7 @@ def _augment_execution_contract(case_id: str, input_text: str) -> dict[str, Any]
                     )
                 },
                 "op": "eq",
-                "right": {"value": true},
+                "right": {"value": True},
                 "on_fail": "OUTPUT_OBSERVATION_CONTRACT_FAIL",
             },
             {
