@@ -213,117 +213,194 @@ def _install_v5_repairs() -> None:
     v3._run_case_safe = _run_case_v5
 
 
-def _numeric_assignment_values(text: str, name: str) -> list[float]:
-    number = r"[+\-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+\-]?\d+)?"
-    matches = re.findall(
-        rf"(?m)^\s*{re.escape(name)}\s*=\s*['\"]?({number})",
+def _p2_check_input_args() -> tuple[str, ...]:
+    return ("--check-input", "--color", "off")
+
+
+def _p2_output_introspection_args() -> tuple[str, ...]:
+    # --show-outputs is emitted by constructed Console output during INITIAL.
+    # num_steps=0 preserves object construction while prohibiting a physical
+    # transient timestep. A positive Time Step in the log is a hard phase leak.
+    return (
+        "--show-outputs",
+        "--color",
+        "off",
+        "Executioner/num_steps=0",
+    )
+
+
+def _positive_timestep_numbers(text: str) -> list[int]:
+    return [
+        int(raw)
+        for raw in re.findall(r"(?m)^\s*Time Step\s+([1-9]\d*)\b", text)
+    ]
+
+
+def _output_execute_flags(text: str, output_name: str) -> list[str] | None:
+    match = re.search(
+        rf'(?mi)^\s*{re.escape(output_name)}\s+"([^"]*)"\s*$',
         text,
     )
-    values: list[float] = []
-    for raw in matches:
-        try:
-            values.append(float(raw))
-        except ValueError:
-            continue
-    return values
+    if not match:
+        return None
+    return [token.upper() for token in match.group(1).split() if token]
 
 
-def _representation_numeric_match(
-    text: str, name: str, required: float
-) -> tuple[bool, list[float]]:
-    values = _numeric_assignment_values(text, name)
-    tolerance = max(abs(required) * 1.0e-12, 1.0e-300)
-    return (
-        any(abs(value - required) <= tolerance for value in values),
-        values,
-    )
-
-
-def _output_preflight_log_evidence(
-    log_path: Path, report: dict[str, Any]
+def _framework_output_evidence(
+    log_path: Path,
+    report: dict[str, Any],
+    *,
+    check_input_returncode: int,
+    introspection_returncode: int | None,
 ) -> dict[str, Any]:
-    if not log_path.is_file():
-        return {
-            "status": "HOLD",
-            "checks": [{"id": "qpx-introspection-log", "status": "FAIL"}],
-        }
-
-    text = log_path.read_text(errors="replace")
-    csv = report["csv"]
     checks: list[dict[str, Any]] = []
 
-    def add(check_id: str, passed: bool, observed: Any, required: Any) -> None:
+    def add(
+        check_id: str,
+        passed: bool,
+        observed: Any,
+        required: Any,
+        *,
+        severity: str = "hard",
+    ) -> None:
         checks.append(
             {
                 "id": check_id,
                 "status": "PASS" if passed else "FAIL",
+                "severity": severity,
                 "observed": observed,
                 "required": required,
             }
         )
 
-    # --show-input is the executable-derived representation. These checks are
-    # capability/value checks. Decimal serialization is compared numerically,
-    # not by exact token spelling, per VAL-16.
-    required_names = (
-        "new_row_tolerance",
-        "time_tolerance",
-        "time_step_interval",
-        "min_simulation_time_interval",
-        "new_row_detection_columns",
-    )
-    for name in required_names:
-        add(
-            f"show-input-{name}",
-            name in text,
-            "present" if name in text else "missing",
-            "present",
-        )
-
-    row_required = float(csv["new_row_tolerance"])
-    row_match, row_values = _representation_numeric_match(
-        text, "new_row_tolerance", row_required
+    csv = report["csv"]
+    separation = float(report["required_time_separation"])
+    add(
+        "qpx-accepted-explicit-output-contract",
+        check_input_returncode == 0,
+        check_input_returncode,
+        0,
     )
     add(
-        "show-input-row-tolerance-value",
-        row_match,
-        row_values,
-        row_required,
-    )
-
-    time_required = float(csv["time_tolerance"])
-    time_match, time_values = _representation_numeric_match(
-        text, "time_tolerance", time_required
+        "accepted-csv-row-tolerance",
+        float(csv.get("new_row_tolerance", float("inf"))) < separation,
+        csv.get("new_row_tolerance"),
+        f"< {separation}",
     )
     add(
-        "show-input-time-tolerance-value",
-        time_match,
-        time_values,
-        time_required,
+        "accepted-csv-time-tolerance",
+        float(csv.get("time_tolerance", float("inf"))) < separation,
+        csv.get("time_tolerance"),
+        f"< {separation}",
     )
     add(
-        "show-output-timestep-end",
-        "TIMESTEP_END" in text,
-        "TIMESTEP_END" if "TIMESTEP_END" in text else "missing",
-        "TIMESTEP_END",
+        "accepted-csv-every-step",
+        csv.get("time_step_interval") == 1,
+        csv.get("time_step_interval"),
+        1,
+    )
+    add(
+        "accepted-csv-row-identity",
+        str(csv.get("new_row_detection_columns", "")).lower() == "time",
+        csv.get("new_row_detection_columns"),
+        "time",
     )
 
-    blockers = [item for item in checks if item["status"] == "FAIL"]
+    if not log_path.is_file():
+        add("output-introspection-log", False, "missing", "present")
+        blockers = [
+            item
+            for item in checks
+            if item["severity"] == "hard" and item["status"] == "FAIL"
+        ]
+        return {
+            "status": "HOLD",
+            "checks": checks,
+            "blockers": blockers,
+            "warnings": [],
+            "positive_time_steps": [],
+            "provenance": {
+                "parameter_values": (
+                    "hashed packaged input.i plus user-local qpx-opt --check-input acceptance"
+                ),
+                "output_schedule": (
+                    "user-local qpx-opt --show-outputs under Executioner/num_steps=0 guard"
+                ),
+            },
+        }
+
+    text = log_path.read_text(errors="replace")
+    positive_steps = _positive_timestep_numbers(text)
+    out_flags = _output_execute_flags(text, "out")
+    console_flags = _output_execute_flags(text, "console")
+
+    add(
+        "output-introspection-returncode",
+        introspection_returncode == 0,
+        introspection_returncode,
+        0,
+    )
+    add(
+        "output-introspection-no-physical-timestep",
+        not positive_steps,
+        positive_steps,
+        [],
+    )
+    add(
+        "show-outputs-section",
+        "Outputs:" in text,
+        "present" if "Outputs:" in text else "missing",
+        "present",
+    )
+    add(
+        "show-outputs-csv-object",
+        out_flags is not None,
+        out_flags,
+        "out output object present",
+    )
+    add(
+        "show-outputs-csv-timestep-end",
+        out_flags is not None and "TIMESTEP_END" in out_flags,
+        out_flags,
+        "contains TIMESTEP_END",
+    )
+    add(
+        "show-outputs-console-object",
+        console_flags is not None,
+        console_flags,
+        "console output object present",
+        severity="warn",
+    )
+
+    blockers = [
+        item
+        for item in checks
+        if item["severity"] == "hard" and item["status"] == "FAIL"
+    ]
+    warnings = [
+        item
+        for item in checks
+        if item["severity"] == "warn" and item["status"] == "FAIL"
+    ]
     return {
         "status": "PASS" if not blockers else "HOLD",
         "checks": checks,
         "blockers": blockers,
+        "warnings": warnings,
+        "positive_time_steps": positive_steps,
+        "effective_execute_on": {
+            "out": out_flags,
+            "console": console_flags,
+        },
+        "provenance": {
+            "parameter_values": (
+                "hashed packaged input.i plus user-local qpx-opt --check-input acceptance"
+            ),
+            "output_schedule": (
+                "user-local qpx-opt --show-outputs under Executioner/num_steps=0 guard"
+            ),
+        },
     }
-
-
-def _p2_introspection_args() -> tuple[str, ...]:
-    return (
-        "--check-input",
-        "--show-input",
-        "--show-outputs",
-        "--color",
-        "off",
-    )
 
 
 def _classify_p2_failure(log_path: Path, returncode: int) -> dict[str, Any]:
@@ -413,30 +490,57 @@ def _run_output_preflight(*, qpx: str | None, results_root: str | None) -> int:
     v2.v1._validate_assets(case_dir)
 
     input_path = case_dir / "input.i"
-    log_path = root / "p2_qpx_introspection.log"
+    check_log_path = root / "p2_check_input.log"
+    introspection_log_path = root / "p2_output_introspection.log"
     summary_path = root / "summary.json"
 
     p2 = run_qpx(
         exe,
         cwd=case_dir,
         input_name=input_path.name,
-        log_path=log_path,
-        extra_args=_p2_introspection_args(),
+        log_path=check_log_path,
+        extra_args=_p2_check_input_args(),
         stream=False,
     )
-    p2_failure = _classify_p2_failure(log_path, p2.returncode)
-    framework_evidence = _output_preflight_log_evidence(log_path, report)
+    p2_failure = _classify_p2_failure(check_log_path, p2.returncode)
+
+    introspection = None
+    if p2.returncode == 0:
+        introspection = run_qpx(
+            exe,
+            cwd=case_dir,
+            input_name=input_path.name,
+            log_path=introspection_log_path,
+            extra_args=_p2_output_introspection_args(),
+            stream=False,
+        )
+
+    framework_evidence = _framework_output_evidence(
+        introspection_log_path,
+        report,
+        check_input_returncode=p2.returncode,
+        introspection_returncode=(
+            introspection.returncode if introspection is not None else None
+        ),
+    )
+    p3_executed = bool(framework_evidence.get("positive_time_steps"))
 
     status = (
         "PASS"
-        if p2.returncode == 0 and framework_evidence["status"] == "PASS"
+        if (
+            p2.returncode == 0
+            and introspection is not None
+            and introspection.returncode == 0
+            and framework_evidence["status"] == "PASS"
+            and not p3_executed
+        )
         else "HOLD"
     )
     summary = {
         "issue": 44,
         "mode": "output-preflight",
         "status": status,
-        "p3_executed": False,
+        "p3_executed": p3_executed,
         "identity": {
             **evidence.identity_record(executable=exe, input_path=input_path),
             "qpx_sha256": evidence.sha256_file(exe),
@@ -446,10 +550,22 @@ def _run_output_preflight(*, qpx: str | None, results_root: str | None) -> int:
             "decision": static_decision,
         },
         "p2_qpx_introspection": {
-            "returncode": p2.returncode,
-            "wall_seconds": p2.wall_seconds,
-            "log": str(log_path),
-            "failure": p2_failure,
+            "check_input": {
+                "returncode": p2.returncode,
+                "wall_seconds": p2.wall_seconds,
+                "log": str(check_log_path),
+                "failure": p2_failure,
+            },
+            "output_introspection": {
+                "returncode": (
+                    introspection.returncode if introspection is not None else None
+                ),
+                "wall_seconds": (
+                    introspection.wall_seconds if introspection is not None else None
+                ),
+                "log": str(introspection_log_path),
+                "args": list(_p2_output_introspection_args()),
+            },
             "framework_evidence": framework_evidence,
         },
     }
@@ -466,11 +582,27 @@ def _run_output_preflight(*, qpx: str | None, results_root: str | None) -> int:
         if p2_failure["detail"]:
             print(f"ISSUE44_OUTPUT_PREFLIGHT_P2_DETAIL: {p2_failure['detail']}")
     print(
+        "ISSUE44_OUTPUT_PREFLIGHT_P2_OUTPUT_INTROSPECTION: "
+        + (
+            "PASS"
+            if introspection is not None and introspection.returncode == 0
+            else "HOLD"
+        )
+    )
+    print(
         "ISSUE44_OUTPUT_PREFLIGHT_FRAMEWORK_EVIDENCE: "
         f"{framework_evidence['status']}"
     )
+    if framework_evidence["status"] != "PASS":
+        for blocker in framework_evidence.get("blockers", []):
+            print(
+                "ISSUE44_OUTPUT_PREFLIGHT_FRAMEWORK_BLOCKER: "
+                f"{blocker['id']} observed={blocker.get('observed')!r} "
+                f"required={blocker.get('required')!r}"
+            )
     print(f"ISSUE44_OUTPUT_PREFLIGHT_PRECLASS: {status}")
-    print(f"ISSUE44_OUTPUT_PREFLIGHT_LOG: {log_path}")
+    print(f"ISSUE44_OUTPUT_PREFLIGHT_CHECK_LOG: {check_log_path}")
+    print(f"ISSUE44_OUTPUT_PREFLIGHT_LOG: {introspection_log_path}")
     print(f"ISSUE44_OUTPUT_PREFLIGHT_SUMMARY: {summary_path}")
     return 0 if status == "PASS" else 2
 
@@ -516,9 +648,19 @@ def self_test() -> int:
         if ec.evaluate_contract(bad_contract, phase="P1")["status"] != "HOLD":
             raise AssertionError("execution contract did not reject output-row suppression")
 
-        p2_args = _p2_introspection_args()
-        if "--no-color" in p2_args or p2_args[-2:] != ("--color", "off"):
-            raise AssertionError("P2 introspection did not use current color CLI contract")
+        check_args = _p2_check_input_args()
+        if "--check-input" not in check_args or "--show-outputs" in check_args:
+            raise AssertionError("P2 check-input arguments are not phase isolated")
+        if "--no-color" in check_args or check_args[-2:] != ("--color", "off"):
+            raise AssertionError("P2 check-input did not use current color CLI contract")
+
+        introspection_args = _p2_output_introspection_args()
+        if "--show-outputs" not in introspection_args:
+            raise AssertionError("output introspection did not request --show-outputs")
+        if "--check-input" in introspection_args:
+            raise AssertionError("output introspection leaked check-input early exit")
+        if "Executioner/num_steps=0" not in introspection_args:
+            raise AssertionError("output introspection lacks zero-step phase guard")
 
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
@@ -535,37 +677,62 @@ def self_test() -> int:
             if trajectory.get("solver_final_time") != 2.0e-14:
                 raise AssertionError("solver trajectory parser lost final time")
 
-            introspection = tmp_path / "introspection.log"
-            introspection.write_text(
-                "new_row_tolerance = 1e-17\n"
-                "time_tolerance = 1.0000000000000001e-17\n"
-                "time_step_interval = 1\n"
-                "min_simulation_time_interval = 0\n"
-                "new_row_detection_columns = time\n"
-                "execute_on = 'INITIAL TIMESTEP_END'\n"
+            introspection_log = tmp_path / "introspection.log"
+            introspection_log.write_text(
+                "Outputs:\n"
+                " out                      \"INITIAL TIMESTEP_END\"\n"
+                " console                  \"INITIAL TIMESTEP_BEGIN LINEAR NONLINEAR FAILED TIMESTEP_END\"\n"
+                "Time Step 0, time = 0\n"
             )
-            if _output_preflight_log_evidence(introspection, report)["status"] != "PASS":
-                raise AssertionError(
-                    "representation-equivalent executable-introspection evidence failed"
-                )
+            good_framework = _framework_output_evidence(
+                introspection_log,
+                report,
+                check_input_returncode=0,
+                introspection_returncode=0,
+            )
+            if good_framework["status"] != "PASS":
+                raise AssertionError("valid zero-step framework introspection failed")
+            if good_framework.get("positive_time_steps"):
+                raise AssertionError("zero-step introspection fabricated a physical timestep")
 
-            introspection.write_text(
-                "new_row_tolerance = 1e-12\n"
-                "time_tolerance = 1e-17\n"
-                "time_step_interval = 1\n"
-                "min_simulation_time_interval = 0\n"
-                "new_row_detection_columns = time\n"
-                "execute_on = 'INITIAL TIMESTEP_END'\n"
+            introspection_log.write_text(
+                "Outputs:\n"
+                " out                      \"INITIAL\"\n"
+                " console                  \"INITIAL TIMESTEP_END\"\n"
+                "Time Step 0, time = 0\n"
             )
-            bad_introspection = _output_preflight_log_evidence(introspection, report)
-            failed_ids = {item["id"] for item in bad_introspection["blockers"]}
+            missing_schedule = _framework_output_evidence(
+                introspection_log,
+                report,
+                check_input_returncode=0,
+                introspection_returncode=0,
+            )
+            failed_ids = {item["id"] for item in missing_schedule["blockers"]}
             if (
-                bad_introspection["status"] != "HOLD"
-                or "show-input-row-tolerance-value" not in failed_ids
+                missing_schedule["status"] != "HOLD"
+                or "show-outputs-csv-timestep-end" not in failed_ids
             ):
-                raise AssertionError(
-                    "materially different row-tolerance introspection was accepted"
-                )
+                raise AssertionError("missing CSV TIMESTEP_END schedule was accepted")
+
+            introspection_log.write_text(
+                "Outputs:\n"
+                " out                      \"INITIAL TIMESTEP_END\"\n"
+                " console                  \"INITIAL TIMESTEP_END\"\n"
+                "Time Step 1, time = 1e-14, dt = 1e-14\n"
+            )
+            phase_leak = _framework_output_evidence(
+                introspection_log,
+                report,
+                check_input_returncode=0,
+                introspection_returncode=0,
+            )
+            failed_ids = {item["id"] for item in phase_leak["blockers"]}
+            if (
+                phase_leak["status"] != "HOLD"
+                or "output-introspection-no-physical-timestep" not in failed_ids
+                or phase_leak.get("positive_time_steps") != [1]
+            ):
+                raise AssertionError("physical-timestep introspection leak was not rejected")
 
             p2_error = tmp_path / "p2_error.log"
             p2_error.write_text(
