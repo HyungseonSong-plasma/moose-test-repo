@@ -54,7 +54,7 @@ def write_json(path: Path, data: dict[str, Any]) -> None:
 
 
 def legacy_source(source: str) -> str:
-    """Change only the D_mix functor return from evaluateDmix to legacy evaluate."""
+    """Change only the production D_mix functor return to the legacy full evaluate path."""
     for token in (
         "QPXThermalDiffusionMaterial::evaluate",
         "QPXThermalDiffusionMaterial::evaluateDmix",
@@ -63,28 +63,41 @@ def legacy_source(source: str) -> str:
         if token not in source:
             raise EquivalenceError(f"source contract missing {token}")
 
-    # Restrict replacement to the addFunctorProperty call owning _D_mix_names.
-    calls = list(re.finditer(r"addFunctorProperty\s*<\s*ADReal\s*>\s*\(", source))
-    matches: list[tuple[int, int]] = []
-    for call in calls:
-        end = source.find(");", call.start())
-        if end < 0:
-            continue
-        chunk = source[call.start() : end + 2]
-        if "_D_mix_names" in chunk and "evaluateDmix" in chunk:
-            matches.append((call.start(), end + 2))
-    if len(matches) != 1:
-        raise EquivalenceError(f"expected one production D_mix functor, found {len(matches)}")
-
-    start, end = matches[0]
-    chunk = source[start:end]
+    # Do not assume a specific addFunctorProperty template/wrapper spelling.
+    # The production contract is the D_mix name anchor followed by the path-specific
+    # return. Select exactly one nearby `return evaluateDmix(...)` and replace only it.
+    anchors = [m.start() for m in re.finditer(r"_D_mix_names", source)]
     pattern = re.compile(r"return\s+evaluateDmix\s*\([^;]*\)\s*;", re.DOTALL)
-    if len(pattern.findall(chunk)) != 1:
-        raise EquivalenceError("D_mix functor does not contain one evaluateDmix return")
-    patched = pattern.sub("return evaluate(r, state).D_mix[i];", chunk, count=1)
-    result = source[:start] + patched + source[end:]
+    returns = list(pattern.finditer(source))
+    candidates: list[tuple[re.Match[str], int]] = []
+    for match in returns:
+        prior = [anchor for anchor in anchors if anchor < match.start()]
+        if not prior:
+            continue
+        distance = match.start() - max(prior)
+        if distance <= 8000:
+            candidates.append((match, distance))
+
+    if len(candidates) != 1:
+        distances = [distance for _, distance in candidates]
+        raise EquivalenceError(
+            "expected one D_mix-adjacent evaluateDmix return; "
+            f"D_mix_anchors={len(anchors)} evaluateDmix_returns={len(returns)} "
+            f"adjacent={len(candidates)} distances={distances}"
+        )
+
+    match, _ = candidates[0]
+    result = (
+        source[: match.start()]
+        + "return evaluate(r, state).D_mix[i];"
+        + source[match.end() :]
+    )
     if result == source:
         raise EquivalenceError("legacy source transform produced no change")
+    if len(pattern.findall(result)) != len(returns) - 1:
+        raise EquivalenceError(
+            "legacy source transform did not remove exactly one evaluateDmix return"
+        )
     return result
 
 
@@ -209,6 +222,26 @@ ADReal QPXThermalDiffusionMaterial::evaluateDmix(int i, int a, int b) const { re
 """
         if "evaluate(r, state).D_mix[i]" not in legacy_source(source):
             raise AssertionError("source transform positive control failed")
+
+        source_variant = """
+void f()
+{
+  addFunctorProperty(
+      _D_mix_names[i],
+      [this, i](const auto & r, const auto & state) -> ADReal
+      {
+        const auto T = foo(r, state);
+        return
+            evaluateDmix(
+                i, T, p, Te, ne, Y);
+      });
+}
+Result QPXThermalDiffusionMaterial::evaluate(int r, int state) const { return {}; }
+ADReal QPXThermalDiffusionMaterial::evaluateDmix(int i, int a) const { return {}; }
+"""
+        if "evaluate(r, state).D_mix[i]" not in legacy_source(source_variant):
+            raise AssertionError("source transform wrapper-variant control failed")
+
         text = """prop_names = 'T p Te neA neB w_O2 w_O2s w_O2p w_O w_Om w_Op w_Os'\nprop_values = '1 2 3 4 5 0.70 0.05 0.01 0.10 0.01 0.01 0.12'\n"""
         _, vals = quoted_values(trace_input(text), "prop_values")
         if not any(math.isclose(float(v), 0.99994, abs_tol=1e-14) for v in vals):
