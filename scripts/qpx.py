@@ -14,6 +14,7 @@ if str(ROOT) not in sys.path:
 
 from qpx_harness.analysis import analyze
 from qpx_harness.bundle import main as bundle_main
+from qpx_harness.coupling_evr1 import main as coupling_evr1_main, self_test as coupling_evr1_self_test
 from qpx_harness.dmix_equivalence_structured import main as dmix_equivalence_main, self_test as dmix_equivalence_self_test
 from qpx_harness.performance_cache_audit import main as performance_cache_audit_main, self_test as performance_cache_audit_self_test
 from qpx_harness.performance_core import main as performance_main, self_test as performance_self_test
@@ -30,6 +31,7 @@ from qpx_harness.workspace import inventory_cli, self_test as workspace_self_tes
 COMMANDS = {
     "test": "run one test.json case",
     "test-all": "discover and run a canonical/diagnostic suite",
+    "coupling-evr1": "run Issue31 optimized monolithic coupling discriminator",
     "dmix-equivalence": "compare optimized D_mix against legacy full evaluation",
     "measure": "run one schema-driven QPX performance measurement",
     "measure-smoke": "auto-manage one PF-1 BENCHMARK/PROFILE smoke pair",
@@ -92,6 +94,7 @@ def self_test_cli(argv: list[str]) -> int:
     parser_rc = parser_symbol_self_test()
     temporal_rc = temporal_self_test()
     workspace_rc = workspace_self_test()
+    coupling_evr1_rc = coupling_evr1_self_test()
     dmix_equivalence_rc = dmix_equivalence_self_test()
     performance_rc = performance_self_test()
     performance_smoke_rc = performance_smoke_self_test()
@@ -102,6 +105,7 @@ def self_test_cli(argv: list[str]) -> int:
         parser_rc == 0
         and temporal_rc == 0
         and workspace_rc == 0
+        and coupling_evr1_rc == 0
         and dmix_equivalence_rc == 0
         and performance_rc == 0
         and performance_smoke_rc == 0
@@ -124,6 +128,8 @@ def main(argv: list[str] | None = None) -> int:
         return cli_run_test(rest)
     if command == "test-all":
         return cli_run_all(rest)
+    if command == "coupling-evr1":
+        return coupling_evr1_main(rest)
     if command == "dmix-equivalence":
         return dmix_equivalence_main(rest)
     if command == "measure":
