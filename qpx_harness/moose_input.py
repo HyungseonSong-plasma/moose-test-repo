@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import re
-from typing import Iterable
+from typing import Iterable, Mapping
 
 
 class MooseInputError(RuntimeError):
@@ -84,6 +84,40 @@ class MooseInput:
             result = result[: span.start] + result[span.end :]
         return result, meta
 
+    def replace_parameters(
+        self, path: str, replacements: Mapping[str, str]
+    ) -> tuple[str, dict[str, dict[str, str]]]:
+        """Replace exactly one assignment per requested parameter inside one block.
+
+        Structural block selection is handled by ``MooseInput``. Regex is used only
+        inside the already-selected block for a single line-oriented HIT assignment.
+        """
+        span = self.unique(path)
+        block_text = self.text[span.start : span.end]
+        result = block_text
+        meta: dict[str, dict[str, str]] = {}
+
+        for name, new_value in replacements.items():
+            pattern = re.compile(
+                rf"(?m)^(?P<prefix>\s*{re.escape(name)}\s*=\s*)"
+                rf"(?P<value>[^#\r\n]*?)"
+                rf"(?P<suffix>\s*(?:#.*)?$)"
+            )
+            matches = list(pattern.finditer(result))
+            if len(matches) != 1:
+                raise MooseInputError(
+                    f"expected one parameter {name!r} in block {path!r}, "
+                    f"found {len(matches)}"
+                )
+            match = matches[0]
+            old_value = match.group("value").strip()
+            replacement = f"{match.group('prefix')}{new_value}{match.group('suffix')}"
+            result = result[: match.start()] + replacement + result[match.end() :]
+            meta[name] = {"old": old_value, "new": str(new_value)}
+
+        transformed = self.text[: span.start] + result + self.text[span.end :]
+        return transformed, meta
+
 
 def self_test() -> int:
     try:
@@ -104,6 +138,12 @@ def self_test() -> int:
     variable = phi
   []
 []
+[Executioner]
+  type = Transient
+  dt = 1.0e-4
+  end_time = 5.0e-4
+  compute_scaling_once = false # retained comment
+[]
 """
         doc = MooseInput(text)
         if doc.unique("Variables/phi").path != "Variables/phi":
@@ -118,14 +158,50 @@ def self_test() -> int:
         if set(meta) != {"Variables/phi", "FVKernels/poisson"}:
             raise AssertionError("removal metadata mismatch")
 
-        duplicate = text + """
+        tuned, params = MooseInput(text).replace_parameters(
+            "Executioner",
+            {
+                "dt": "1.0e-8",
+                "end_time": "1.0e-8",
+                "compute_scaling_once": "true",
+            },
+        )
+        if "dt = 1.0e-8" not in tuned or "end_time = 1.0e-8" not in tuned:
+            raise AssertionError("parameter replacement failed")
+        if "compute_scaling_once = true # retained comment" not in tuned:
+            raise AssertionError("parameter replacement did not preserve comment")
+        if params["dt"] != {"old": "1.0e-4", "new": "1.0e-8"}:
+            raise AssertionError("parameter replacement metadata mismatch")
+
+        duplicate = text.replace(
+            "  dt = 1.0e-4\n",
+            "  dt = 1.0e-4\n  dt = 2.0e-4\n",
+        )
+        try:
+            MooseInput(duplicate).replace_parameters("Executioner", {"dt": "1e-8"})
+        except MooseInputError:
+            pass
+        else:
+            raise AssertionError("duplicate parameter ambiguity was not rejected")
+
+        missing = text.replace("  end_time = 5.0e-4\n", "")
+        try:
+            MooseInput(missing).replace_parameters(
+                "Executioner", {"end_time": "1e-8"}
+            )
+        except MooseInputError:
+            pass
+        else:
+            raise AssertionError("missing parameter was not rejected")
+
+        duplicate_block = text + """
 [Variables]
   [phi]
   []
 []
 """
         try:
-            MooseInput(duplicate).unique("Variables/phi")
+            MooseInput(duplicate_block).unique("Variables/phi")
         except MooseInputError:
             pass
         else:
