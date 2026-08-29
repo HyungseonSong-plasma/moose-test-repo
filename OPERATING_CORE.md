@@ -47,7 +47,7 @@ Material source/model/provenance/representation uncertainty is routed to Researc
 Acceptance, closure, test sufficiency, false-PASS risk, negative controls, and promotion decisions require the Validator contract in `docs/protocols/validation.md`.
 
 ### CORE-11 — New failure creates reusable evidence
-A new material failure class must be recorded as an incident or equivalent issue evidence, reduced to a discriminating reproducer/root cause, fixed with regression coverage, and promoted to `docs/knowledge/` when reusable.
+A new material failure class must be recorded as an incident or equivalent issue evidence, reduced to a discriminating reproducer/root cause, fixed with regression coverage, and promoted to `docs/knowledge/` when reusable. Before promotion, map the incident to the first broken CORE-16 ontology/protocol link and decide whether it is a genuinely new semantic failure class or only a new symptom of an existing class; improve the existing owner rather than creating a duplicate rule when reuse applies.
 
 ### CORE-12 — Bounded work uses the 3-EVR protocol
 Each bounded technical work item uses the prospective external-validation budget defined in `docs/protocols/problem_solving.md`: discriminate, targeted confirmation/fix, canonical regression. Do not automatically proceed to EVR #4 under an unchanged work boundary.
