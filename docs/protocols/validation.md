@@ -235,20 +235,44 @@ The Validator must confirm that the consumer observes the intended timestep/stat
 
 Prefer direct production-state or postprocessor evaluation over multi-hop Aux copies when both are available.
 
-## VAL-16 — Continuous vs discrete identity classification
+## VAL-16 — Semantic identity and equivalence classification
 
-Every temporal/numerical acceptance identity must be classified before use as one of:
+Before any acceptance comparison, classify both the **semantic objects** being compared and the **equivalence relation** required by the claim. A validator must not assume that two representations are interchangeable merely because they are numerically close, textually similar, derived from the same source, or produced in the same run.
+
+Use the narrowest applicable class, for example:
 
 ```text
+syntax / byte exact
+identifier / enum exact
 continuous analytic identity
 discrete exact identity
 time-integrator-specific exact identity
-diagnostic approximation / convergence check
+representation-equivalent numeric
+numerical tolerance
+diagnostic approximation / convergence / refinement
+physical-model tolerance
 ```
 
-Only a relation that is exact for the actual discrete scheme may be used as a zero/tight-tolerance exact PASS gate.
+The comparison relation must satisfy both sides of the CORE-16 contract:
 
-Do not require exact equality between a nonlinear continuous derivative and a finite-step secant unless the discrete algebra proves that equality. Use non-exact continuous/secant comparisons only as diagnostics or refinement studies.
+```text
+not stronger than the producing representation guarantees
+not weaker than the scientific claim requires
+```
+
+Hard rules:
+
+1. Use exact equality only when exact identity is guaranteed by the representation and required by the claim.
+2. Decimal serialization, floating-point arithmetic, formatting, and reparsing normally require a narrowly justified representation-level numeric comparison rather than bit/exact equality. Mutation-test that a materially different value still fails.
+3. Static source classifiers must validate semantic capability rather than one exact token sequence unless the exact syntax itself is the invariant.
+4. Integral/average identities must compare compatible aggregation operators over the same domain and weighting; extrema or other summaries are not substitutes for a domain average unless the mathematics proves equivalence.
+5. Source/provenance validation and production-parity validation must keep their numerical convention/provenance contracts explicit; do not silently treat historical source constants and host-production constants as the same object.
+6. State/time identity is part of equivalence. An INITIAL observation, stale/old state, timestep-end state, and converged nonlinear state are distinct unless the observation contract proves otherwise; see VAL-15, VAL-17, and VAL-20.
+7. A supporting proxy diagnostic must not override a passing direct target merely because the proxy uses a different representation or environment; see VAL-04.
+
+For temporal/numerical identities in particular, only a relation exact for the actual discrete scheme may be used as a zero/tight-tolerance exact PASS gate. Do not require exact equality between a nonlinear continuous derivative and a finite-step secant unless the discrete algebra proves that equality. Use non-exact continuous/secant comparisons only as diagnostics or refinement studies.
+
+If a checker fails because it demanded an unjustified equivalence relation, classify the event as `VALIDATOR_SELFTEST_FAIL` or a narrower validation/contract failure, not a physics failure. Preserve a negative control that proves the corrected equivalence does not hide a material defect.
 
 ## VAL-17 — Temporal semantic self-test
 
