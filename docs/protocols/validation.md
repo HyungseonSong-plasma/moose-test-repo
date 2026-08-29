@@ -374,3 +374,121 @@ temporal_csv_policy = not_applicable_no_temporal_csv
 ```
 
 Legacy schema-v1 regressions are grandfathered until modified. Any new or touched transient case must migrate to schema v2. This prevents recurring false negatives where a pre-solve `t=0` observation row is treated as a solved physical timestep.
+
+## VAL-21 — Numerical contract preflight and runtime semantic gate
+
+Use this rule when a generated or bounded executable case depends on numerical scales or control semantics that can conflict with framework defaults, adaptive controls, coupling cadence, sync behavior, or the experiment's declared physical/numerical regime.
+
+Keep the canonical `P0 -> P1 -> P2 -> P3` order from VAL-01. This rule adds two sub-gates:
+
+```text
+P1 numerical-contract gate
+P3 runtime-semantic gate -> physics checker
+```
+
+### P1 numerical-contract gate
+
+Before P2, declare the experiment intent when numerical scale matters, for example:
+
+```text
+transient-resolution
+fixed-step discriminator
+adaptive transient
+subcycled fast solve
+quasi-steady relaxation
+periodic/frequency-domain reduction
+steady solve
+```
+
+Construct an **effective numerical contract**, not merely a list of parameters written in the input. Include the applicable requested and framework-effective controls, such as:
+
+```text
+start_time / end_time
+dt / dtmin / dtmax / num_steps
+timestep_tolerance
+TimeStepper/adaptivity controls
+abort/cutback behavior
+sync/output times
+MultiApp/subcycle dt ownership
+nonlinear/linear solve controls when they determine the experiment semantics
+```
+
+Prefer executable-derived framework truth from the actual user-local `qpx-opt` when practical. MOOSE applications expose registered input syntax and defaults through syntax dumps such as `--yaml` / `--json`, while `--show-input` exposes the parsed input after input processing/overrides. If executable introspection cannot provide the required effective value, use pinned framework/QPX source or versioned documentation and record that fallback identity. Do not silently hardcode a framework default into a reusable runner without an identity/provenance contract.
+
+Reject hard contradictions before P2. Applicable examples include:
+
+```text
+requested fixed dt below an effective dtmin
+final-time interval indistinguishable from framework timestep/sync tolerance
+requested physical step/output count impossible under start/end/dt controls
+fixed-step discriminator permitting silent timestep cutback or adaptivity
+sync/output cadence unable to emit the required physical observations
+MultiApp/subcycle ownership inconsistent with the declared coupling cadence
+```
+
+Do not invent universal numerical-accuracy thresholds in this validation rule. When the experiment depends on a physical/model scale such as `dt/tau`, `h/lambda`, Knudsen number, diffusive/drift ratio, RF period, or coupling timescale, obtain the scale definition and acceptance meaning from the owning source/model/coupling contract (for coupled architecture see PS-23). VAL-21 verifies that the requested numerical configuration is consistent with that declared intent; it does not redefine the physics criterion.
+
+A P1 contradiction is construction evidence, not physics evidence. Classify it as:
+
+```text
+HARNESS_OR_CONSTRUCTION_FAIL / NUMERICAL_CONTRACT_FAIL
+```
+
+and do not spend a P3 external round merely to discover the same contradiction at runtime.
+
+### P3 runtime-semantic gate
+
+A process return code of zero is not enough to begin physics validation. Before the physics checker consumes results, verify that the runtime actually executed the numerical experiment that was declared at P1.
+
+Check the applicable semantics, for example:
+
+```text
+minimum required physical timestep/output rows exist
+actual first/final physical time is compatible with the requested interval
+actual step count/cadence is compatible with the declared fixed/adaptive/subcycle mode
+fixed-step discriminators did not silently cut back or change dt
+required branch/coupling mode actually executed
+required outputs exist and represent solved physical states rather than only INITIAL state
+```
+
+Preserve raw logs/output even when this gate fails. A runner/analyzer must convert missing or inconsistent temporal/runtime semantics into a structured result; it must not erase the external batch with an uncaught checker/analyzer exception.
+
+A runtime-semantic failure precedes physics interpretation. Classify it as:
+
+```text
+HARNESS_OR_CONSTRUCTION_FAIL / RUNTIME_SEMANTIC_FAIL
+```
+
+unless a narrower infrastructure class is already established.
+
+### Validator self-tests
+
+When this rule is material to the batch, include cheap controlled mutations for the relevant contract edges. Examples:
+
+```text
+framework default conflicts with requested microstep
+end_time/timestep_tolerance suppresses all physical steps
+num_steps/end_time/dt are inconsistent
+fixed-step intent permits unintended cutback/adaptivity
+runtime contains INITIAL row only
+runtime final time or physical-row count misses the declared contract
+```
+
+The negative mutation must fail at P1 or the P3 runtime-semantic gate, not later as a physics failure.
+
+### Reusable implementation direction
+
+Prefer a shared machine-readable numerical-contract report over case-specific `if` statements. A reusable report should distinguish:
+
+```text
+requested controls
+framework-effective controls and provenance
+derived model/scale inputs supplied by the owning contract
+declared experiment intent
+hard contradictions
+expected runtime semantics
+observed runtime semantics
+terminal validation class
+```
+
+This layer is intended to generalize across electron/Poisson microsteps, chemistry stiffness, Maxwell period handling, heavy-transport scale audits, MultiApp subcycling, and other multiphysics cases without forcing all physics into one timestep or duplicating the scale definitions owned elsewhere.
