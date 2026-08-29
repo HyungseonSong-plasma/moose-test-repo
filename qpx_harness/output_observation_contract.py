@@ -149,6 +149,11 @@ def apply_microtime_output_contract(
     for name, value in csv_settings.items():
         text = _set_parameter(text, "Outputs/out", name, value)
 
+    # Console uses its own time-formatting parameter names. Remove legacy CSV-style
+    # names if a previously generated block is being repaired rather than masking
+    # them with --allow-unused at P2.
+    text = _remove_optional_parameter(text, "Outputs/console", "precision")
+    text = _remove_optional_parameter(text, "Outputs/console", "scientific_notation")
     console_settings = {
         "time_step_interval": "1",
         "min_simulation_time_interval": "0",
@@ -156,7 +161,8 @@ def apply_microtime_output_contract(
         "new_row_detection_columns": "time",
         "new_row_tolerance": _fmt(tolerance),
         "time_tolerance": _fmt(tolerance),
-        "precision": "17",
+        "time_precision": "17",
+        "scientific_time": "true",
     }
     for name, value in console_settings.items():
         text = _set_parameter(text, "Outputs/console", name, value)
@@ -182,6 +188,8 @@ def observation_report(text: str, *, required_time_separation: float) -> dict[st
             "time_tolerance",
             "precision",
             "scientific_notation",
+            "time_precision",
+            "scientific_time",
         ):
             raw = _block_parameter(text, path, name)
             if raw is not None:
@@ -253,6 +261,19 @@ def evaluate_observation_report(report: dict[str, Any]) -> dict[str, Any]:
     add("console-time-tolerance", console_time_tol < separation, severity="warn",
         meaning="Console time tolerance should preserve supporting micro-time observability",
         observed=console_time_tol, required=f"< {separation}")
+    add("console-legacy-precision-absent", "precision" not in console, severity="hard",
+        meaning="Console must not carry the CSV-only precision parameter",
+        observed=console.get("precision"), required="absent")
+    add("console-legacy-scientific-notation-absent",
+        "scientific_notation" not in console, severity="hard",
+        meaning="Console must not carry the CSV-only scientific_notation parameter",
+        observed=console.get("scientific_notation"), required="absent")
+    add("console-time-precision", console.get("time_precision") == 17, severity="warn",
+        meaning="Console should preserve micro-time display precision",
+        observed=console.get("time_precision"), required=17)
+    add("console-scientific-time", console.get("scientific_time") is True, severity="warn",
+        meaning="Console should display micro-time values in scientific notation",
+        observed=console.get("scientific_time"), required=True)
 
     blockers = [x for x in checks if x["severity"] == "hard" and x["status"] == "FAIL"]
     warnings = [x for x in checks if x["severity"] == "warn" and x["status"] == "FAIL"]
@@ -272,6 +293,12 @@ def self_test() -> int:
         report = observation_report(tuned, required_time_separation=1.0e-14)
         if evaluate_observation_report(report)["status"] != "PASS":
             raise AssertionError("valid output observation contract failed")
+        if report["csv"].get("precision") != 17 or report["csv"].get("scientific_notation") is not True:
+            raise AssertionError("CSV precision/scientific notation contract missing")
+        if report["console"].get("time_precision") != 17 or report["console"].get("scientific_time") is not True:
+            raise AssertionError("Console time formatting contract missing")
+        if "precision" in report["console"] or "scientific_notation" in report["console"]:
+            raise AssertionError("legacy CSV-style Console formatting parameter remained")
 
         mutated = _set_parameter(tuned, "Outputs/out", "new_row_tolerance", "1e-12")
         bad = evaluate_observation_report(
@@ -289,6 +316,23 @@ def self_test() -> int:
         )
         if console_decision["status"] != "PASS" or not console_decision["warnings"]:
             raise AssertionError("Console supporting tolerance should be warning-only")
+
+        legacy_console = _set_parameter(tuned, "Outputs/console", "precision", "17")
+        legacy_decision = evaluate_observation_report(
+            observation_report(legacy_console, required_time_separation=1.0e-14)
+        )
+        legacy_failed_ids = {item["id"] for item in legacy_decision["blockers"]}
+        if (
+            legacy_decision["status"] != "HOLD"
+            or "console-legacy-precision-absent" not in legacy_failed_ids
+        ):
+            raise AssertionError("legacy Console precision mutation was not rejected")
+        repaired_legacy = apply_microtime_output_contract(legacy_console, dt=1.0e-14)
+        repaired_report = observation_report(
+            repaired_legacy, required_time_separation=1.0e-14
+        )
+        if evaluate_observation_report(repaired_report)["status"] != "PASS":
+            raise AssertionError("legacy Console precision was not repaired")
 
         try:
             apply_microtime_output_contract(base, dt=1.0e-14, row_tolerance=1.0e-12)
