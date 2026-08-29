@@ -44,7 +44,7 @@ Load `docs/protocols/problem_solving.md` only when hypothesis branching or EVR b
 Read:
 - `docs/protocols/metrics_closure.md`
 
-Load `docs/protocols/problem_solving.md` only when converting lessons into a new solving rule.
+Load `docs/protocols/problem_solving.md` only when converting a genuinely missing lesson into a solving rule. Any lesson promotion must first pass the rule-reuse gate below.
 
 ### ROUTE-07 — Imported transport / thermo / chemistry data
 Read:
@@ -67,7 +67,7 @@ Apply this route before any GitHub issue/file/branch/ref mutation, including dep
 ## Canonical ownership map
 
 - Operating invariants and authorization semantics -> `OPERATING_CORE.md`
-- Request routing -> `PROTOCOL_INDEX.md`
+- Request routing and rule-reuse decisions -> `PROTOCOL_INDEX.md`
 - Phase 0, hypothesis design, Researcher/Validator orchestration, 3-EVR state machine, convergence/coupling diagnostic strategy -> `docs/protocols/problem_solving.md`
 - P0-P3, static construction checks, predictive batch design, analyzer/checker self-validation, production parity, data A0-A7 -> `docs/protocols/validation.md`
 - WCC/T-WCC/RVR/EVR/DBR/RWR/CLR/FBR, work boundaries, closure and retrospectives -> `docs/protocols/metrics_closure.md`
@@ -86,13 +86,15 @@ The following files are compatibility entry points only and must not contain ind
 - `docs/guides/three_evr_problem_solving_protocol.md` -> `docs/protocols/problem_solving.md`
 - `docs/guides/work_closure_validator.md` -> `docs/protocols/metrics_closure.md`
 
-## Rule creation rule
+## Rule-reuse gate
 
-Before adding a new guide or rule:
+Prefer a small number of broad rules with explicit triggers over case-specific rule accumulation.
 
-1. identify the canonical owner above;
-2. modify an existing canonical rule if possible;
-3. create a new Rule ID only if the behavior is materially distinct;
-4. create a new protocol document only if no existing module can own the responsibility without mixing concerns.
+Before adding or extending any rule, protocol, or reusable knowledge entry:
 
-This prevents rule proliferation and stale copies.
+1. compare the lesson against the nearest canonical owner and relevant existing knowledge;
+2. if it is already covered, add nothing and fix only the reusable reason it was missed (routing, trigger, enforcement, state/evidence identity, or execution);
+3. if it is only partly covered, minimally extend that existing owner;
+4. create a new Rule ID or document only when the behavior is materially distinct and no existing owner can cover it without mixing responsibilities.
+
+This is the canonical rule-creation and retrospective-novelty gate. Do not restate it in other protocols.
