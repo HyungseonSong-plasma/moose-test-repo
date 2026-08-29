@@ -61,6 +61,49 @@ A runner receiving a user-provided executable path must resolve it with `realpat
 ### CORE-15 — One canonical definition per rule
 Do not copy canonical procedure text into issue bodies, comments, README files, or another guide. Reference the Rule ID or canonical protocol path instead. When a rule changes, update its one canonical definition.
 
+### CORE-16 — Intent-preserving scientific execution ontology
+A scientific computation is valid only when the actual execution preserves the scientific intent and regime required by the closure claim. Parser acceptance, executable return code, solver convergence, or output-file existence alone are never sufficient evidence of scientific validity.
+
+Treat every executable claim as an ontology chain:
+
+```text
+CLAIM
+  -> MODEL
+  -> NUMERICAL REGIME
+  -> FRAMEWORK-EFFECTIVE CONFIGURATION
+  -> RUNTIME REGIME / TRAJECTORY
+  -> OBSERVATION / EVIDENCE
+  -> DECISION
+```
+
+The chain has the following semantics:
+
+```text
+CLAIM      = what the run is intended to establish
+MODEL      = retained physics, reduced/averaged physics, validity assumptions, and domain/interface contract
+NUMERICAL REGIME = discretization, timestep/cadence, coupling, solver, and scale-resolution intent
+FRAMEWORK-EFFECTIVE CONFIGURATION = what QPX/MOOSE actually executes after defaults, overrides, adaptivity, sync, and ownership rules
+RUNTIME REGIME = the regime actually traversed during execution, including material state-dependent scale changes
+OBSERVATION = whether recorded outputs observe the intended state, time, branch, and invariant
+DECISION    = the scientific claim accepted, rejected, held, or re-routed from that evidence
+```
+
+No downstream layer may silently contradict an upstream layer. A PASS is allowed only when the evidence needed for the claim demonstrates conformance along every material link. If a material link is unobserved, internally contradictory, leaves the declared regime, or changes into an unvalidated regime, fail closed as `HOLD`, a construction/runtime-semantic class, or a new incident rather than allowing a physics PASS.
+
+This ontology is intentionally future-facing: do not attempt to enumerate every possible framework or multiphysics failure in CORE. Define the claim/model/regime explicitly, derive or introspect effective execution controls, monitor the material runtime invariants that can change the regime, and require evidence that the intended contract actually ran.
+
+Responsibility is delegated, not duplicated:
+
+```text
+model/scale/coupling meaning and regime boundaries
+  -> docs/protocols/problem_solving.md (including PS-23 and Researcher/Validator flow)
+
+numerical/framework preflight, runtime-semantic conformance, and evidence sufficiency
+  -> docs/protocols/validation.md (including VAL-21)
+```
+
+Automatic recovery is permitted only when it is a predeclared semantics-preserving derived correction. A model/regime transition or unknown contract violation that can change the scientific meaning requires explicit validation/re-routing rather than silent automatic repair.
+
 ## Always-load sequence
 
 For every technical response:
