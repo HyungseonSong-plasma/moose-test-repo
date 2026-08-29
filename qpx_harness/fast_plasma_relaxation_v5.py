@@ -8,11 +8,13 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+from . import evidence
 from . import execution_contract as ec
 from . import fast_plasma_relaxation_v2 as v2
 from . import fast_plasma_relaxation_v3 as v3
 from . import fast_plasma_relaxation_v4 as v4
 from . import output_observation_contract as ooc
+from .runtime import run_qpx
 
 
 _RAW_BUILD_ELECTRON = v3._build_electron_fixed
@@ -211,6 +213,175 @@ def _install_v5_repairs() -> None:
     v3._run_case_safe = _run_case_v5
 
 
+def _output_preflight_log_evidence(
+    log_path: Path, report: dict[str, Any]
+) -> dict[str, Any]:
+    if not log_path.is_file():
+        return {
+            "status": "HOLD",
+            "checks": [{"id": "qpx-introspection-log", "status": "FAIL"}],
+        }
+
+    text = log_path.read_text(errors="replace")
+    csv = report["csv"]
+    checks: list[dict[str, Any]] = []
+
+    def add(check_id: str, passed: bool, observed: Any, required: Any) -> None:
+        checks.append(
+            {
+                "id": check_id,
+                "status": "PASS" if passed else "FAIL",
+                "observed": observed,
+                "required": required,
+            }
+        )
+
+    # --show-input is the executable-derived representation. These checks are
+    # deliberately capability/value checks, not exact formatting checks.
+    required_names = (
+        "new_row_tolerance",
+        "time_tolerance",
+        "time_step_interval",
+        "min_simulation_time_interval",
+        "new_row_detection_columns",
+    )
+    for name in required_names:
+        add(
+            f"show-input-{name}",
+            name in text,
+            "present" if name in text else "missing",
+            "present",
+        )
+
+    add(
+        "show-input-row-tolerance-value",
+        f"{float(csv['new_row_tolerance']):.17g}" in text,
+        float(csv["new_row_tolerance"]),
+        float(csv["new_row_tolerance"]),
+    )
+    add(
+        "show-input-time-tolerance-value",
+        f"{float(csv['time_tolerance']):.17g}" in text,
+        float(csv["time_tolerance"]),
+        float(csv["time_tolerance"]),
+    )
+    add(
+        "show-output-timestep-end",
+        "TIMESTEP_END" in text,
+        "TIMESTEP_END" if "TIMESTEP_END" in text else "missing",
+        "TIMESTEP_END",
+    )
+
+    blockers = [item for item in checks if item["status"] == "FAIL"]
+    return {
+        "status": "PASS" if not blockers else "HOLD",
+        "checks": checks,
+        "blockers": blockers,
+    }
+
+
+def _run_output_preflight(*, qpx: str | None, results_root: str | None) -> int:
+    exe = v2.resolve_executable(qpx)
+    v2.validate_executable(exe)
+
+    repo_root = Path(__file__).resolve().parents[1]
+    base_case = repo_root / v2.v1.BASE_CASE_RELATIVE
+    if not base_case.is_dir():
+        raise SystemExit(f"missing accepted qvt electron control: {base_case}")
+
+    mesh = v2.mesh_stats(base_case / "qvt.msh")
+    radial_span = float(mesh["bbox_span_m"]["x"])
+    base_text = (base_case / "input.i").read_text()
+    input_text = _build_feedback_v5(
+        base_text,
+        dt=v2.DT_FEEDBACK_SMALL,
+        steps=v2.N_STEPS,
+        radial_span=radial_span,
+    )
+    v2.validate_parser_symbols_text(input_text)
+
+    report = ooc.observation_report(
+        input_text, required_time_separation=v2.DT_FEEDBACK_SMALL
+    )
+    static_decision = ooc.evaluate_observation_report(report)
+    if static_decision["status"] != "PASS":
+        print("ISSUE44_OUTPUT_PREFLIGHT_P1: HOLD")
+        print("ISSUE44_OUTPUT_PREFLIGHT_REASON: static output contract failed")
+        return 2
+
+    evidence_root = (
+        Path(results_root).expanduser().resolve()
+        if results_root
+        else exe.parent / "temp" / "results"
+    )
+    root = evidence.ensure_fresh_directory(
+        evidence_root / f"issue44_output_preflight_{evidence.utc_timestamp()}"
+    )
+    case_dir = root / "case"
+    v2.v1._copy_case(base_case, case_dir, input_text)
+    v2.v1._validate_assets(case_dir)
+
+    input_path = case_dir / "input.i"
+    log_path = root / "p2_qpx_introspection.log"
+    summary_path = root / "summary.json"
+
+    p2 = run_qpx(
+        exe,
+        cwd=case_dir,
+        input_name=input_path.name,
+        log_path=log_path,
+        extra_args=(
+            "--check-input",
+            "--show-input",
+            "--show-outputs",
+            "--no-color",
+        ),
+        stream=False,
+    )
+    framework_evidence = _output_preflight_log_evidence(log_path, report)
+
+    status = (
+        "PASS"
+        if p2.returncode == 0 and framework_evidence["status"] == "PASS"
+        else "HOLD"
+    )
+    summary = {
+        "issue": 44,
+        "mode": "output-preflight",
+        "status": status,
+        "p3_executed": False,
+        "identity": {
+            **evidence.identity_record(executable=exe, input_path=input_path),
+            "qpx_sha256": evidence.sha256_file(exe),
+        },
+        "p1_output_contract": {
+            "report": report,
+            "decision": static_decision,
+        },
+        "p2_qpx_introspection": {
+            "returncode": p2.returncode,
+            "wall_seconds": p2.wall_seconds,
+            "log": str(log_path),
+            "framework_evidence": framework_evidence,
+        },
+    }
+    v2._write_json(summary_path, summary)
+
+    print(f"ISSUE44_OUTPUT_PREFLIGHT_P1: {static_decision['status']}")
+    print(
+        "ISSUE44_OUTPUT_PREFLIGHT_P2_CHECK_INPUT: "
+        + ("PASS" if p2.returncode == 0 else "FAIL")
+    )
+    print(
+        "ISSUE44_OUTPUT_PREFLIGHT_FRAMEWORK_EVIDENCE: "
+        f"{framework_evidence['status']}"
+    )
+    print(f"ISSUE44_OUTPUT_PREFLIGHT_PRECLASS: {status}")
+    print(f"ISSUE44_OUTPUT_PREFLIGHT_LOG: {log_path}")
+    print(f"ISSUE44_OUTPUT_PREFLIGHT_SUMMARY: {summary_path}")
+    return 0 if status == "PASS" else 2
+
+
 def self_test() -> int:
     try:
         if v4.self_test() != 0:
@@ -218,7 +389,20 @@ def self_test() -> int:
         if ooc.self_test() != 0:
             raise AssertionError("output-observation contract self-test failed")
 
-        base = """[Executioner]\n  type = Transient\n  dt = 1e-14\n  end_time = 5e-14\n  num_steps = 5\n  dtmin = 1e-15\n  timestep_tolerance = 1e-17\n  abort_on_solve_fail = true\n[]\n[Outputs]\n  csv = true\n  execute_on = 'INITIAL TIMESTEP_END'\n[]\n"""
+        base = """[Executioner]
+  type = Transient
+  dt = 1e-14
+  end_time = 5e-14
+  num_steps = 5
+  dtmin = 1e-15
+  timestep_tolerance = 1e-17
+  abort_on_solve_fail = true
+[]
+[Outputs]
+  csv = true
+  execute_on = 'INITIAL TIMESTEP_END'
+[]
+"""
         tuned = ooc.apply_microtime_output_contract(base, dt=1.0e-14)
         report = ooc.observation_report(tuned, required_time_separation=1.0e-14)
         if ooc.evaluate_observation_report(report)["status"] != "PASS":
@@ -240,7 +424,8 @@ def self_test() -> int:
             raise AssertionError("execution contract did not reject output-row suppression")
 
         with tempfile.TemporaryDirectory() as tmp:
-            log = Path(tmp) / "p3_runtime.log"
+            tmp_path = Path(tmp)
+            log = tmp_path / "p3_runtime.log"
             log.write_text(
                 "Time Step 1, time = 1e-14, dt = 1e-14\n"
                 " Solve Converged!\n"
@@ -252,6 +437,21 @@ def self_test() -> int:
                 raise AssertionError("solver trajectory parser lost converged steps")
             if trajectory.get("solver_final_time") != 2.0e-14:
                 raise AssertionError("solver trajectory parser lost final time")
+
+            introspection = tmp_path / "introspection.log"
+            introspection.write_text(
+                "new_row_tolerance = 1e-17\n"
+                "time_tolerance = 1e-17\n"
+                "time_step_interval = 1\n"
+                "min_simulation_time_interval = 0\n"
+                "new_row_detection_columns = time\n"
+                "execute_on = 'INITIAL TIMESTEP_END'\n"
+            )
+            if _output_preflight_log_evidence(introspection, report)["status"] != "PASS":
+                raise AssertionError("valid executable-introspection evidence failed")
+            introspection.write_text("new_row_tolerance = 1e-12\n")
+            if _output_preflight_log_evidence(introspection, report)["status"] != "HOLD":
+                raise AssertionError("incomplete introspection evidence was accepted")
     except Exception as exc:
         print(f"ISSUE44_OUTPUT_CONTRACT_SELFTEST: FAIL ({exc})")
         return 1
@@ -263,11 +463,19 @@ def main(argv: list[str] | None = None) -> int:
     args = list(argv or [])
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument("--self-test", action="store_true")
+    parser.add_argument("--output-preflight", action="store_true")
+    parser.add_argument("--qpx")
+    parser.add_argument("--results-root")
     known, _ = parser.parse_known_args(args)
     if known.self_test:
         return self_test()
     if self_test() != 0:
         return 1
+    if known.output_preflight:
+        return _run_output_preflight(
+            qpx=known.qpx,
+            results_root=known.results_root,
+        )
     _install_v5_repairs()
     return v4.main(args)
 
