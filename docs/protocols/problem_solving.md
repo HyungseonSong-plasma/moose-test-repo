@@ -395,6 +395,25 @@ ARCHITECTURE_UNSUITABLE_FOR_REGRESSION
 
 Do not compensate by arbitrary tolerance, timestep, source-amplitude, boundary-condition, or physics tuning. Redesign, segregate, precondition, or decompose from evidence.
 
+### Implementation granularity
+
+For performance-sensitive MOOSE/QPX implementation, separate **physics granularity** from **computational granularity**:
+
+```text
+physics decomposition      = split by mathematical/physical responsibility
+computational decomposition = split/share/fuse by measured execution cost
+```
+
+Logical modularity must not create computational duplication. In hot residual/Jacobian paths:
+
+1. a consumer should evaluate only the dependency cone required for its requested output;
+2. repeated expensive primitives may be shared when consumers use the same state, location, and execution frequency;
+3. do not fuse objects merely to reduce object count, and do not split expensive evaluation merely for interface symmetry;
+4. before changing granularity, measure or estimate call amplification, cost per call, duplicated work, and relevant AD dependency width;
+5. performance-specialized paths must preserve the production physics contract and receive direct equivalence/non-regression validation before promotion.
+
+The optimization target is not minimum object count. It is minimum repeated expensive work subject to physics clarity and validation parity.
+
 ## PS-22 — Live observability is part of long-run batch design
 
 A runtime whose cost or convergence is uncertain must expose progress while it is running. Do not make process termination the first moment at which useful solver evidence becomes visible.
