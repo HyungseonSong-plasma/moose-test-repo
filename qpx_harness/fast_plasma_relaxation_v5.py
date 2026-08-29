@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import re
 import tempfile
 from pathlib import Path
@@ -273,7 +274,7 @@ def _framework_output_evidence(
             }
         )
 
-    csv = report["csv"]
+    csv_report = report["csv"]
     separation = float(report["required_time_separation"])
     add(
         "qpx-accepted-explicit-output-contract",
@@ -283,26 +284,26 @@ def _framework_output_evidence(
     )
     add(
         "accepted-csv-row-tolerance",
-        float(csv.get("new_row_tolerance", float("inf"))) < separation,
-        csv.get("new_row_tolerance"),
+        float(csv_report.get("new_row_tolerance", float("inf"))) < separation,
+        csv_report.get("new_row_tolerance"),
         f"< {separation}",
     )
     add(
         "accepted-csv-time-tolerance",
-        float(csv.get("time_tolerance", float("inf"))) < separation,
-        csv.get("time_tolerance"),
+        float(csv_report.get("time_tolerance", float("inf"))) < separation,
+        csv_report.get("time_tolerance"),
         f"< {separation}",
     )
     add(
         "accepted-csv-every-step",
-        csv.get("time_step_interval") == 1,
-        csv.get("time_step_interval"),
+        csv_report.get("time_step_interval") == 1,
+        csv_report.get("time_step_interval"),
         1,
     )
     add(
         "accepted-csv-row-identity",
-        str(csv.get("new_row_detection_columns", "")).lower() == "time",
-        csv.get("new_row_detection_columns"),
+        str(csv_report.get("new_row_detection_columns", "")).lower() == "time",
+        csv_report.get("new_row_detection_columns"),
         "time",
     )
 
@@ -445,6 +446,171 @@ def _classify_p2_failure(log_path: Path, returncode: int) -> dict[str, Any]:
         "class": "HARNESS_OR_CONSTRUCTION_FAIL",
         "reason": "QPX_CHECK_INPUT_FAIL",
         "detail": error_detail,
+    }
+
+
+def _runtime_csv_times(case_dir: Path) -> tuple[Path | None, list[float], str | None]:
+    try:
+        csv_path = v2.v1._find_csv(case_dir)
+    except v2.v1.FastPlasmaRelaxationError as exc:
+        return None, [], str(exc)
+
+    times: list[float] = []
+    try:
+        with csv_path.open(newline="") as handle:
+            for row in csv.DictReader(handle):
+                times.append(float(row["time"]))
+    except (OSError, csv.Error, KeyError, ValueError) as exc:
+        return csv_path, [], f"invalid runtime CSV time column: {exc}"
+    return csv_path, times, None
+
+
+def _evaluate_output_runtime_confirmation(
+    *,
+    returncode: int,
+    trajectory: dict[str, Any],
+    csv_times: list[float],
+    dt: float,
+    steps: int,
+    row_tolerance: float,
+) -> dict[str, Any]:
+    expected_times = [dt * index for index in range(1, steps + 1)]
+    physical_times = [value for value in csv_times if value > row_tolerance]
+    compare_tol = max(abs(dt) * 1.0e-9, 1.0e-300)
+    final_expected = expected_times[-1]
+
+    solver_checks = [
+        {
+            "id": "runtime-returncode",
+            "status": "PASS" if returncode == 0 else "FAIL",
+            "observed": returncode,
+            "required": 0,
+        },
+        {
+            "id": "solver-time-step-count",
+            "status": (
+                "PASS" if trajectory.get("time_steps_seen") == steps else "FAIL"
+            ),
+            "observed": trajectory.get("time_steps_seen"),
+            "required": steps,
+        },
+        {
+            "id": "solver-converged-step-count",
+            "status": (
+                "PASS" if trajectory.get("converged_steps") >= steps else "FAIL"
+            ),
+            "observed": trajectory.get("converged_steps"),
+            "required": f">= {steps}",
+        },
+        {
+            "id": "solver-final-time",
+            "status": (
+                "PASS"
+                if (
+                    trajectory.get("solver_final_time") is not None
+                    and abs(float(trajectory["solver_final_time"]) - final_expected)
+                    <= compare_tol
+                )
+                else "FAIL"
+            ),
+            "observed": trajectory.get("solver_final_time"),
+            "required": final_expected,
+        },
+    ]
+    solver_complete = all(item["status"] == "PASS" for item in solver_checks)
+
+    observation_checks = [
+        {
+            "id": "csv-physical-row-count",
+            "status": "PASS" if len(physical_times) == steps else "FAIL",
+            "observed": len(physical_times),
+            "required": steps,
+        },
+        {
+            "id": "csv-physical-times-match",
+            "status": (
+                "PASS"
+                if (
+                    len(physical_times) == steps
+                    and all(
+                        abs(observed - expected) <= compare_tol
+                        for observed, expected in zip(physical_times, expected_times)
+                    )
+                )
+                else "FAIL"
+            ),
+            "observed": physical_times,
+            "required": expected_times,
+        },
+        {
+            "id": "csv-adjacent-times-distinct",
+            "status": (
+                "PASS"
+                if (
+                    len(physical_times) == steps
+                    and all(
+                        later - earlier > row_tolerance
+                        for earlier, later in zip(physical_times, physical_times[1:])
+                    )
+                )
+                else "FAIL"
+            ),
+            "observed": [
+                later - earlier
+                for earlier, later in zip(physical_times, physical_times[1:])
+            ],
+            "required": f"> {row_tolerance}",
+        },
+        {
+            "id": "csv-final-time",
+            "status": (
+                "PASS"
+                if (
+                    physical_times
+                    and abs(physical_times[-1] - final_expected) <= compare_tol
+                )
+                else "FAIL"
+            ),
+            "observed": physical_times[-1] if physical_times else None,
+            "required": final_expected,
+        },
+    ]
+
+    if not solver_complete:
+        return {
+            "status": "HOLD",
+            "class": "RUNTIME_CONFIRMATION_INCONCLUSIVE",
+            "reason": (
+                "solver did not complete the five-step observation discriminator; "
+                "do not classify output-row behavior from this run"
+            ),
+            "solver_complete": False,
+            "solver_checks": solver_checks,
+            "observation_checks": observation_checks,
+            "physical_times": physical_times,
+            "expected_times": expected_times,
+        }
+
+    observation_pass = all(
+        item["status"] == "PASS" for item in observation_checks
+    )
+    return {
+        "status": "PASS" if observation_pass else "HOLD",
+        "class": (
+            "OUTPUT_OBSERVATION_CONTRACT_PASS"
+            if observation_pass
+            else "OUTPUT_OBSERVATION_CONTRACT_FAIL"
+        ),
+        "reason": (
+            "solver completed five physical steps and CSV preserved all required time identities"
+            if observation_pass
+            else "solver completed five physical steps but CSV did not preserve the required time identities"
+        ),
+        "solver_complete": True,
+        "solver_checks": solver_checks,
+        "observation_checks": observation_checks,
+        "physical_times": physical_times,
+        "expected_times": expected_times,
     }
 
 
@@ -607,6 +773,127 @@ def _run_output_preflight(*, qpx: str | None, results_root: str | None) -> int:
     return 0 if status == "PASS" else 2
 
 
+def _run_output_runtime_confirmation(
+    *, qpx: str | None, results_root: str | None
+) -> int:
+    preflight_rc = _run_output_preflight(qpx=qpx, results_root=results_root)
+    if preflight_rc != 0:
+        print("ISSUE44_OUTPUT_RUNTIME_CONFIRMATION_PRECHECK: HOLD")
+        print("ISSUE44_OUTPUT_RUNTIME_CONFIRMATION_CLASS: PREFLIGHT_NOT_PASS")
+        return 2
+    print("ISSUE44_OUTPUT_RUNTIME_CONFIRMATION_PRECHECK: PASS")
+
+    exe = v2.resolve_executable(qpx)
+    v2.validate_executable(exe)
+    repo_root = Path(__file__).resolve().parents[1]
+    base_case = repo_root / v2.v1.BASE_CASE_RELATIVE
+    mesh = v2.mesh_stats(base_case / "qvt.msh")
+    radial_span = float(mesh["bbox_span_m"]["x"])
+    base_text = (base_case / "input.i").read_text()
+    input_text = _build_feedback_v5(
+        base_text,
+        dt=v2.DT_FEEDBACK_SMALL,
+        steps=v2.N_STEPS,
+        radial_span=radial_span,
+    )
+    v2.validate_parser_symbols_text(input_text)
+    report = ooc.observation_report(
+        input_text, required_time_separation=v2.DT_FEEDBACK_SMALL
+    )
+
+    evidence_root = (
+        Path(results_root).expanduser().resolve()
+        if results_root
+        else exe.parent / "temp" / "results"
+    )
+    root = evidence.ensure_fresh_directory(
+        evidence_root / f"issue44_output_runtime_{evidence.utc_timestamp()}"
+    )
+    case_dir = root / "case"
+    v2.v1._copy_case(base_case, case_dir, input_text)
+    v2.v1._validate_assets(case_dir)
+    input_path = case_dir / "input.i"
+    log_path = root / "p3_runtime.log"
+    summary_path = root / "summary.json"
+
+    runtime = run_qpx(
+        exe,
+        cwd=case_dir,
+        input_name=input_path.name,
+        log_path=log_path,
+        extra_args=("--color", "off"),
+        stream=False,
+    )
+    trajectory = _solver_trajectory(log_path)
+    csv_path, csv_times, csv_error = _runtime_csv_times(case_dir)
+    decision = _evaluate_output_runtime_confirmation(
+        returncode=runtime.returncode,
+        trajectory=trajectory,
+        csv_times=csv_times,
+        dt=v2.DT_FEEDBACK_SMALL,
+        steps=v2.N_STEPS,
+        row_tolerance=float(report["csv"]["new_row_tolerance"]),
+    )
+
+    summary = {
+        "issue": 44,
+        "mode": "output-runtime-confirmation",
+        "status": decision["status"],
+        "class": decision["class"],
+        "scope": (
+            "observation-contract confirmation only; no Issue43 relaxation, "
+            "quasi-steady, or production-timestep classification"
+        ),
+        "p3_executed": True,
+        "preflight_passed": True,
+        "identity": {
+            **evidence.identity_record(executable=exe, input_path=input_path),
+            "qpx_sha256": evidence.sha256_file(exe),
+        },
+        "output_contract": report,
+        "runtime": {
+            "returncode": runtime.returncode,
+            "wall_seconds": runtime.wall_seconds,
+            "log": str(log_path),
+            "solver_trajectory": trajectory,
+        },
+        "csv": {
+            "path": str(csv_path) if csv_path is not None else None,
+            "times": csv_times,
+            "error": csv_error,
+        },
+        "decision": decision,
+    }
+    v2._write_json(summary_path, summary)
+
+    print(
+        "ISSUE44_OUTPUT_RUNTIME_CONFIRMATION_SOLVER: "
+        + ("PASS" if decision["solver_complete"] else "HOLD")
+    )
+    observation_pass = all(
+        item["status"] == "PASS" for item in decision["observation_checks"]
+    )
+    print(
+        "ISSUE44_OUTPUT_RUNTIME_CONFIRMATION_CSV_ROWS: "
+        + ("PASS" if observation_pass else "HOLD")
+    )
+    if decision["status"] != "PASS":
+        for check in decision["solver_checks"] + decision["observation_checks"]:
+            if check["status"] != "PASS":
+                print(
+                    "ISSUE44_OUTPUT_RUNTIME_CONFIRMATION_BLOCKER: "
+                    f"{check['id']} observed={check.get('observed')!r} "
+                    f"required={check.get('required')!r}"
+                )
+        if csv_error:
+            print(f"ISSUE44_OUTPUT_RUNTIME_CONFIRMATION_CSV_ERROR: {csv_error}")
+    print(f"ISSUE44_OUTPUT_RUNTIME_CONFIRMATION_PRECLASS: {decision['status']}")
+    print(f"ISSUE44_OUTPUT_RUNTIME_CONFIRMATION_CLASS: {decision['class']}")
+    print(f"ISSUE44_OUTPUT_RUNTIME_CONFIRMATION_LOG: {log_path}")
+    print(f"ISSUE44_OUTPUT_RUNTIME_CONFIRMATION_SUMMARY: {summary_path}")
+    return 0 if decision["status"] == "PASS" else 2
+
+
 def self_test() -> int:
     try:
         if v4.self_test() != 0:
@@ -661,6 +948,70 @@ def self_test() -> int:
             raise AssertionError("output introspection leaked check-input early exit")
         if "Executioner/num_steps=0" not in introspection_args:
             raise AssertionError("output introspection lacks zero-step phase guard")
+
+        complete_trajectory = {
+            "status": "PASS",
+            "time_steps_seen": 5,
+            "converged_steps": 5,
+            "solver_final_time": 5.0e-14,
+        }
+        good_runtime = _evaluate_output_runtime_confirmation(
+            returncode=0,
+            trajectory=complete_trajectory,
+            csv_times=[0.0, 1e-14, 2e-14, 3e-14, 4e-14, 5e-14],
+            dt=1.0e-14,
+            steps=5,
+            row_tolerance=1.0e-17,
+        )
+        if (
+            good_runtime["status"] != "PASS"
+            or good_runtime["class"] != "OUTPUT_OBSERVATION_CONTRACT_PASS"
+        ):
+            raise AssertionError("valid runtime row-identity evidence failed")
+
+        suppressed_runtime = _evaluate_output_runtime_confirmation(
+            returncode=0,
+            trajectory=complete_trajectory,
+            csv_times=[0.0],
+            dt=1.0e-14,
+            steps=5,
+            row_tolerance=1.0e-17,
+        )
+        if (
+            suppressed_runtime["status"] != "HOLD"
+            or suppressed_runtime["class"] != "OUTPUT_OBSERVATION_CONTRACT_FAIL"
+        ):
+            raise AssertionError("suppressed runtime rows were accepted")
+
+        shifted_runtime = _evaluate_output_runtime_confirmation(
+            returncode=0,
+            trajectory=complete_trajectory,
+            csv_times=[0.0, 2e-14, 3e-14, 4e-14, 5e-14, 6e-14],
+            dt=1.0e-14,
+            steps=5,
+            row_tolerance=1.0e-17,
+        )
+        if shifted_runtime["status"] != "HOLD":
+            raise AssertionError("shifted runtime row identities were accepted")
+
+        incomplete_runtime = _evaluate_output_runtime_confirmation(
+            returncode=1,
+            trajectory={
+                "status": "PASS",
+                "time_steps_seen": 1,
+                "converged_steps": 0,
+                "solver_final_time": 1.0e-14,
+            },
+            csv_times=[0.0],
+            dt=1.0e-14,
+            steps=5,
+            row_tolerance=1.0e-17,
+        )
+        if (
+            incomplete_runtime["class"] != "RUNTIME_CONFIRMATION_INCONCLUSIVE"
+            or incomplete_runtime["status"] != "HOLD"
+        ):
+            raise AssertionError("incomplete solver run was mislabeled as output failure")
 
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
@@ -758,6 +1109,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument("--self-test", action="store_true")
     parser.add_argument("--output-preflight", action="store_true")
+    parser.add_argument("--output-runtime-confirmation", action="store_true")
     parser.add_argument("--qpx")
     parser.add_argument("--results-root")
     known, _ = parser.parse_known_args(args)
@@ -767,6 +1119,11 @@ def main(argv: list[str] | None = None) -> int:
         return 1
     if known.output_preflight:
         return _run_output_preflight(
+            qpx=known.qpx,
+            results_root=known.results_root,
+        )
+    if known.output_runtime_confirmation:
+        return _run_output_runtime_confirmation(
             qpx=known.qpx,
             results_root=known.results_root,
         )
