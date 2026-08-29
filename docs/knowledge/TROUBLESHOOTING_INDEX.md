@@ -118,7 +118,7 @@ Recommended discriminator:
 4. Mutation-test the oracle convention before changing production physics.
 ```
 
-The R3 thermal-diffusion case preserved `kT`, `Te` sensitivity`, `ne` sensitivity, and Coulomb-branch sensitivity, while only final `D_T` carried a uniform ~`1.17e-5` offset. The cause was the oracle using modern exact `k_B*N_A` while QPX used its established host EOS `R` convention.
+The R3 thermal-diffusion case preserved `kT`, `Te` sensitivity, `ne` sensitivity, and Coulomb-branch sensitivity, while only final `D_T` carried a uniform ~`1.17e-5` offset. The cause was the oracle using modern exact `k_B*N_A` while QPX used its established host EOS `R` convention.
 
 ## Reusable pattern: source provenance vs production numerical contract
 
