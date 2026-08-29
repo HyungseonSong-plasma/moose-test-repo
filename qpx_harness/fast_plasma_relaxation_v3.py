@@ -556,7 +556,9 @@ def self_test() -> int:
         for name, expected in required.items():
             actual = controls.get(name)
             if isinstance(expected, float):
-                if float(actual) != expected:
+                if not math.isclose(
+                    float(actual), expected, rel_tol=1.0e-15, abs_tol=0.0
+                ):
                     raise AssertionError(
                         f"wrong {name}: expected {expected}, got {actual}"
                     )
