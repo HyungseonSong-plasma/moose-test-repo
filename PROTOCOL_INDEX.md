@@ -75,15 +75,19 @@ output = decision plus zero or more unresolved obligations
 
 Do not preload an entire rule graph. Apply the minimum current contract, then route only the unresolved obligation(s).
 
+For executable scientific claims, CORE-16 is the top-level semantic contract. Its ontology links are routed to the existing owners rather than creating a parallel protocol tree.
+
 Standard obligations:
 
 ```text
-SOURCE_TRUTH        -> ROUTE-03
-DIAGNOSIS           -> ROUTE-02 or ROUTE-04
-VALIDATION          -> ROUTE-05 and CORE-08 P0->P3
-KNOWN_SYMPTOM       -> ROUTE-08
-MUTATION            -> ROUTE-09
-CLOSURE_OR_REVIEW   -> ROUTE-06
+SOURCE_TRUTH          -> ROUTE-03
+DIAGNOSIS             -> ROUTE-02 or ROUTE-04
+MODEL_REGIME          -> ROUTE-02/ROUTE-03; problem_solving.md / PS-23 owns the meaning
+EXECUTION_CONFORMANCE -> ROUTE-05; validation.md / VAL-21 owns preflight and runtime-semantic evidence
+VALIDATION            -> ROUTE-05 and CORE-08 P0->P3
+KNOWN_SYMPTOM         -> ROUTE-08
+MUTATION              -> ROUTE-09
+CLOSURE_OR_REVIEW     -> ROUTE-06
 ```
 
 Canonical flow:
@@ -106,6 +110,7 @@ Chain invariants:
 3. Resolve prerequisites before dependent obligations. Batch independent obligations when doing so preserves interpretability and reduces external rounds.
 4. Reference downstream routes/contracts instead of copying their procedure text into the current rule.
 5. If no existing route can satisfy a material obligation, apply the rule-reuse gate before creating any new rule.
+6. For executable claims, a downstream PASS must not bypass an unresolved material link in the CORE-16 scientific-execution ontology.
 
 Example:
 
@@ -114,6 +119,8 @@ solver/runtime problem
 -> ROUTE-04: diagnose the failure class
 -> SOURCE_TRUTH if framework/model behavior is uncertain
 -> ROUTE-03: establish the source contract
+-> MODEL_REGIME if the claim depends on scale/coupling/representation assumptions
+-> EXECUTION_CONFORMANCE to prove the intended regime can and did execute
 -> VALIDATION when a candidate fix or claim must be tested
 -> ROUTE-05: P0->P3 validation
 -> MUTATION only if an accepted repository change is required
@@ -124,10 +131,11 @@ solver/runtime problem
 
 ## Canonical ownership map
 
+- Scientific-execution ontology and intent-preservation invariant -> `OPERATING_CORE.md` / CORE-16
 - Operating invariants and authorization semantics -> `OPERATING_CORE.md`
 - Request routing, contract-chain resolution, and rule-reuse decisions -> `PROTOCOL_INDEX.md`
-- Phase 0, hypothesis design, Researcher/Validator orchestration, 3-EVR state machine, convergence/coupling diagnostic strategy -> `docs/protocols/problem_solving.md`
-- P0-P3, static construction checks, predictive batch design, analyzer/checker self-validation, production parity, data A0-A7 -> `docs/protocols/validation.md`
+- Phase 0, hypothesis design, Researcher/Validator orchestration, 3-EVR state machine, convergence/coupling diagnostic strategy, and model/scale/coupling regime meaning -> `docs/protocols/problem_solving.md` (including PS-23)
+- P0-P3, static construction checks, predictive batch design, analyzer/checker self-validation, production parity, data A0-A7, numerical/framework preflight, and runtime-semantic conformance -> `docs/protocols/validation.md` (including VAL-21)
 - WCC/T-WCC/RVR/EVR/DBR/RWR/CLR/FBR, work boundaries, closure and retrospectives -> `docs/protocols/metrics_closure.md`
 - Repository/issue/file mutation safety, no-op prevention, and dependency fan-out synchronization -> `docs/protocols/repository_mutation.md`
 - Reusable symptom/fix knowledge -> `docs/knowledge/TROUBLESHOOTING_INDEX.md`
