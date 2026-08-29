@@ -25,6 +25,7 @@ from qpx_harness.performance_transport_probe_direct import main as performance_t
 from qpx_harness.preflight import parser_symbol_self_test, validate_input_preflight
 from qpx_harness.profiling import main as profile_main
 from qpx_harness.regression import cli_run_all, cli_run_test
+from qpx_harness.scale_audit import main as scale_audit_main, self_test as scale_audit_self_test
 from qpx_harness.temporal import self_test as temporal_self_test
 from qpx_harness.workspace import inventory_cli, self_test as workspace_self_test
 
@@ -34,6 +35,7 @@ COMMANDS = {
     "test-all": "discover and run a canonical/diagnostic suite",
     "coupling-evr1": "run Issue31 optimized monolithic coupling discriminator",
     "coupling-evr2": "run Issue31 transport timestep/scaling discriminator",
+    "scale-audit": "build Issue43 QVT multiphysics space-time scale map",
     "dmix-equivalence": "compare optimized D_mix against legacy full evaluation",
     "measure": "run one schema-driven QPX performance measurement",
     "measure-smoke": "auto-manage one PF-1 BENCHMARK/PROFILE smoke pair",
@@ -98,6 +100,7 @@ def self_test_cli(argv: list[str]) -> int:
     workspace_rc = workspace_self_test()
     coupling_evr1_rc = coupling_evr1_self_test()
     coupling_evr2_rc = coupling_evr2_self_test()
+    scale_audit_rc = scale_audit_self_test()
     dmix_equivalence_rc = dmix_equivalence_self_test()
     performance_rc = performance_self_test()
     performance_smoke_rc = performance_smoke_self_test()
@@ -110,6 +113,7 @@ def self_test_cli(argv: list[str]) -> int:
         and workspace_rc == 0
         and coupling_evr1_rc == 0
         and coupling_evr2_rc == 0
+        and scale_audit_rc == 0
         and dmix_equivalence_rc == 0
         and performance_rc == 0
         and performance_smoke_rc == 0
@@ -136,6 +140,8 @@ def main(argv: list[str] | None = None) -> int:
         return coupling_evr1_main(rest)
     if command == "coupling-evr2":
         return coupling_evr2_main(rest)
+    if command == "scale-audit":
+        return scale_audit_main(rest)
     if command == "dmix-equivalence":
         return dmix_equivalence_main(rest)
     if command == "measure":
