@@ -183,7 +183,7 @@ new independent incident
 unavoidable external dependency
 ```
 
-Then convert reusable causes into `problem_solving.md`, `validation.md`, or `docs/knowledge/` rather than adding another overlapping guide.
+Then route reusable lessons through the canonical rule-reuse gate in `PROTOCOL_INDEX.md`; do not add another overlapping guide.
 
 ## MET-16 — RVR effectiveness analysis
 
@@ -224,12 +224,12 @@ close work
 -> identify largest interaction-cost component
 -> compare RVR against EVR/DBR/RWR for similar work
 -> extract one candidate process lesson
--> run the retrospective novelty gate in MET-20
--> update one canonical owner only when the gate requires a change
+-> apply the canonical rule-reuse gate in PROTOCOL_INDEX.md
+-> change one existing canonical owner only when needed
 -> compare future similar work against the baseline
 ```
 
-The purpose of the metrics is to turn problem-solving efficiency and research quality into measurable engineering variables.
+The purpose of the metrics is to turn problem-solving efficiency and research quality into measurable engineering variables without growing duplicate rules.
 
 ## MET-19 — Decomposed-parent closure
 
@@ -249,91 +249,3 @@ governance-only decomposition does not increment parent technical metrics
 GitHub `state_reason=not_planned` is appropriate when the original remaining scope will no longer be executed inside that issue. The issue body/final comment must state explicitly that closure is due to decomposition, not technical completion of the successor physics.
 
 This closure type is excluded from comparisons of technically completed bounded issues unless the analysis is specifically about scope-sizing/decomposition efficiency.
-
-## MET-20 — Retrospective novelty gate
-
-A retrospective lesson is not automatically a new rule. Before creating or extending any protocol, rule, or knowledge entry, compare the candidate lesson semantically against the already-canonical material that should have governed the work.
-
-Minimum comparison set:
-
-```text
-OPERATING_CORE.md
-applicable routed protocols from PROTOCOL_INDEX.md
-relevant docs/knowledge entries when the lesson is domain- or incident-specific
-current issue-local instructions only as state/evidence, not as competing canonical rules
-```
-
-Classify every candidate lesson as exactly one of:
-
-```text
-NEW
-  no existing canonical rule or knowledge entry materially covers the lesson
-
-EXTENSION
-  an existing canonical owner covers the principle, but its trigger, decision rule,
-  enforcement, or scope is insufficient for the observed failure
-
-ALREADY_CANONICAL
-  an existing rule already covers the lesson adequately; the failure was in retrieval,
-  routing, interpretation, enforcement, or execution rather than missing documentation
-```
-
-Decision rule:
-
-```text
-NEW
-  -> select one canonical owner and add the minimum non-overlapping rule
-
-EXTENSION
-  -> amend the existing canonical owner; do not create a parallel rule or guide
-
-ALREADY_CANONICAL
-  -> do not document the lesson again as a new rule
-  -> analyze why the existing rule was missed or ineffective
-```
-
-For `ALREADY_CANONICAL`, record at least one miss mechanism:
-
-```text
-NOT_LOADED
-  the applicable canonical owner was not loaded/routed when its trigger applied
-
-LOADED_BUT_OVERLOOKED
-  the rule was present in active context but not applied
-
-TRIGGER_AMBIGUOUS
-  the rule existed but its activation condition was too vague to route reliably
-
-INSUFFICIENTLY_ACTIONABLE
-  the principle existed but lacked a concrete decision/check needed to prevent recurrence
-
-ENFORCEMENT_MISSING
-  a repeated human-memory step should have been machine-enforced or automated
-
-STATE_OR_EVIDENCE_MISMATCH
-  stale state, incorrect provenance, or wrong environment/source identity prevented the rule from matching the actual case
-```
-
-The corrective action must target the miss mechanism rather than restating the lesson:
-
-```text
-NOT_LOADED             -> fix routing/load contract
-LOADED_BUT_OVERLOOKED  -> improve checklist/gate or, if isolated, record compliance miss without duplicating rules
-TRIGGER_AMBIGUOUS      -> sharpen the existing trigger
-INSUFFICIENTLY_ACTIONABLE -> extend the existing rule with the missing decision/check
-ENFORCEMENT_MISSING    -> promote the rule into P0/P1/analyzer/runner automation when practical
-STATE_OR_EVIDENCE_MISMATCH -> repair source/state identity and retrieval discipline
-```
-
-Every material retrospective should leave a compact review record:
-
-```text
-Candidate lesson
-Nearest existing Rule IDs / canonical entries
-Novelty class: NEW | EXTENSION | ALREADY_CANONICAL
-Miss mechanism when applicable
-Canonical owner
-Action: add | amend | automate | routing fix | no documentation change
-```
-
-A lesson that is already canonical but was missed is a process-compliance or retrieval failure, not evidence that more documentation is needed. The objective is to increase effective rule reuse while keeping the canonical rule set small and non-duplicative.
