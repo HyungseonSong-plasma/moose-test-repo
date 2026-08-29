@@ -195,7 +195,12 @@ def analyze_first_linear_text(text: str, *, returncode: int) -> dict[str, Any]:
 
     if jac.get("class") == "JACOBIAN_MISMATCH":
         return result("HOLD", "JACOBIAN_MISMATCH", "the augmented constrained Jacobian exceeds the declared assembled-vs-FD tolerance")
-    if core.get("pc_failure_reason") or core.get("factorization_hits") or core.get("pc_hits"):
+    pc_failure = (
+        core.get("pc_failure_reason")
+        or (linear is not None and linear.get("reason") in {"DIVERGED_PC_FAILED", "DIVERGED_PCSETUP_FAILED"})
+        or re.search(r"FACTOR_(?:NUMERIC|STRUCT)_ZEROPIVOT|PC failed due to|zero pivot", text, re.IGNORECASE)
+    )
+    if pc_failure:
         return result("HOLD", "PC_OR_FACTORIZATION_FAIL", "the first-linear diagnostic exposes a PETSc PC/factorization failure signature")
     if core.get("nonfinite_residuals") or core.get("nonlinear_reason") == "DIVERGED_FUNCTION_NANORINF":
         return result("HOLD", "NONFINITE_FAIL", "the first-linear diagnostic contains non-finite residual/function evidence")
