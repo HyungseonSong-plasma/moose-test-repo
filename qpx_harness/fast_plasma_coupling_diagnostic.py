@@ -1,14 +1,7 @@
 """Bounded Issue #43 electron-Poisson coupling failure localization harness.
 
-This harness does not tune the timestep or change the accepted electron/Poisson
-physics.  It instruments the already-established discriminator boundary:
-
-  T1: full feedback, dt=1e-14, one step (known-good advancement control)
-  T2: full feedback, dt=1e-13, one step (historical first-step failure)
-
-P0/P1/P2 may be run without entering physics P3.  Runtime mode reruns those
-preconditions and then executes only T1 and T2 with diagnostic-only MOOSE/PETSc
-observability enabled.
+The harness instruments, but does not retune, the established discriminator:
+T1 is one full-feedback step at dt=1e-14; T2 is one at dt=1e-13.
 """
 
 from __future__ import annotations
@@ -82,8 +75,7 @@ def _parameter_value(text: str, path: str, name: str) -> str | None:
 
 
 def _ensure_debug_block(text: str) -> str:
-    doc = MooseInput(text)
-    matches = doc.find("Debug")
+    matches = MooseInput(text).find("Debug")
     if len(matches) > 1:
         raise FastPlasmaCouplingDiagnosticError("multiple top-level [Debug] blocks")
     if not matches:
@@ -115,7 +107,7 @@ def _merge_petsc_options(text: str) -> str:
 
 
 def instrument_input(input_text: str) -> tuple[str, dict[str, Any]]:
-    """Add diagnostics without changing the physical residual or solver mathematics."""
+    """Add diagnostic-only MOOSE/PETSc observability."""
     text = _ensure_debug_block(input_text)
     text = _set_or_insert_parameter(text, "Executioner", "verbose", "true")
     text = _merge_petsc_options(text)
@@ -146,7 +138,7 @@ def _build_case(base_text: str, *, dt: float, radial_span: float) -> tuple[str, 
 
 def _contains_required_petsc_options(text: str) -> bool:
     raw = _parameter_value(text, "Executioner", "petsc_options") or ""
-    return all(option in raw.split() or option in raw for option in DIAGNOSTIC_PETSC_OPTIONS)
+    return all(option in raw for option in DIAGNOSTIC_PETSC_OPTIONS)
 
 
 def _p1_case(case_id: str, text: str, *, dt: float) -> dict[str, Any]:
@@ -244,7 +236,11 @@ def _parse_variable_residuals(text: str) -> list[dict[str, float]]:
             continue
         if current is None:
             continue
-        match = re.match(rf"^\s*([A-Za-z_][A-Za-z0-9_]*):\s*({_FLOAT})\s*$", line, re.IGNORECASE)
+        match = re.match(
+            rf"^\s*([A-Za-z_][A-Za-z0-9_]*):\s*({_FLOAT})\s*$",
+            line,
+            re.IGNORECASE,
+        )
         if match:
             try:
                 current[match.group(1)] = float(match.group(2))
@@ -265,7 +261,11 @@ def _parse_scaling_factors(text: str) -> list[dict[str, float]]:
             continue
         if current is None:
             continue
-        match = re.match(rf"^\s*([A-Za-z_][A-Za-z0-9_]*):\s*({_FLOAT})(?:\s+.*)?$", line, re.IGNORECASE)
+        match = re.match(
+            rf"^\s*([A-Za-z_][A-Za-z0-9_]*):\s*({_FLOAT})(?:\s+.*)?$",
+            line,
+            re.IGNORECASE,
+        )
         if match:
             try:
                 current[match.group(1)] = float(match.group(2))
@@ -279,11 +279,11 @@ def _parse_scaling_factors(text: str) -> list[dict[str, float]]:
 
 
 def _line_hits(text: str, patterns: tuple[str, ...]) -> list[str]:
-    hits: list[str] = []
-    for line in text.splitlines():
-        if any(re.search(pattern, line, re.IGNORECASE) for pattern in patterns):
-            hits.append(line.strip())
-    return hits
+    return [
+        line.strip()
+        for line in text.splitlines()
+        if any(re.search(pattern, line, re.IGNORECASE) for pattern in patterns)
+    ]
 
 
 def analyze_log_text(text: str, *, returncode: int) -> dict[str, Any]:
@@ -306,18 +306,13 @@ def analyze_log_text(text: str, *, returncode: int) -> dict[str, Any]:
             r"DIVERGED_PC_FAILED",
             r"DIVERGED_PCSETUP_FAILED",
             r"zero pivot",
-            r"factor(?:ization|ization failed| numeric)",
+            r"factorization",
             r"PCSetUp.*fail",
         ),
     )
     factorization_hits = _line_hits(
         text,
-        (
-            r"zero pivot",
-            r"factorization",
-            r"MatFactor",
-            r"PCSetUp.*fail",
-        ),
+        (r"zero pivot", r"factorization", r"MatFactor", r"PCSetUp.*fail"),
     )
 
     nonfinite_residuals: list[dict[str, Any]] = []
@@ -336,14 +331,16 @@ def analyze_log_text(text: str, *, returncode: int) -> dict[str, Any]:
         if not math.isfinite(value) or value == 0.0:
             scaling_invalid.append({"variable": name, "value": repr(value)})
 
-    scaling_ratio = None
     selected_scaling = [
         abs(scaling[name])
         for name in ("n_e", "potential_plasma")
         if name in scaling and math.isfinite(scaling[name]) and scaling[name] != 0.0
     ]
-    if len(selected_scaling) == 2:
-        scaling_ratio = max(selected_scaling) / min(selected_scaling)
+    scaling_ratio = (
+        max(selected_scaling) / min(selected_scaling)
+        if len(selected_scaling) == 2
+        else None
+    )
 
     finite_residual_blocks = bool(residual_blocks) and not nonfinite_residuals
     if pc_hits or linear_reason in {"DIVERGED_PC_FAILED", "DIVERGED_PCSETUP_FAILED"}:
@@ -410,7 +407,7 @@ def self_test() -> int:
 []
 """
         tuned, meta = instrument_input(base)
-        if not meta["physics_or_numerics_changed"] is False:
+        if meta["physics_or_numerics_changed"] is not False:
             raise AssertionError("diagnostic instrumentation changed physics/numerics metadata")
         if _parameter_value(tuned, "Debug", "show_var_residual_norms") != "true":
             raise AssertionError("Debug residual instrumentation missing")
@@ -426,8 +423,7 @@ def self_test() -> int:
             "  petsc_options = '-snes_view'\n  petsc_options_iname = '-pc_type'\n",
         )
         merged, _ = instrument_input(already)
-        raw = _parameter_value(merged, "Executioner", "petsc_options") or ""
-        if "-snes_view" not in raw:
+        if "-snes_view" not in (_parameter_value(merged, "Executioner", "petsc_options") or ""):
             raise AssertionError("existing PETSc option was not preserved")
 
         pc_log = """Automatic scaling factors:
@@ -441,8 +437,7 @@ def self_test() -> int:
 Linear solve did not converge due to DIVERGED_PC_FAILED iterations 0
 Nonlinear solve did not converge due to DIVERGED_FUNCTION_NANORINF iterations 0
 """
-        pc = analyze_log_text(pc_log, returncode=1)
-        if pc["class"] != "PC_OR_FACTORIZATION_FAIL":
+        if analyze_log_text(pc_log, returncode=1)["class"] != "PC_OR_FACTORIZATION_FAIL":
             raise AssertionError("PC failure was not given first-failure priority")
 
         nonfinite_log = """Automatic scaling factors:
@@ -486,7 +481,6 @@ Nonlinear solve did not converge due to DIVERGED_LINE_SEARCH iterations 1
     except Exception as exc:
         print(f"ISSUE43_COUPLING_DIAGNOSTIC_SELFTEST: FAIL ({exc})")
         return 1
-
     print("ISSUE43_COUPLING_DIAGNOSTIC_SELFTEST: PASS")
     return 0
 
@@ -572,25 +566,20 @@ def _run_p2(*, exe: Path, prepared: dict[str, Any]) -> dict[str, Any]:
 def _emit_preflight_markers(*, prepared: dict[str, Any], p2: dict[str, Any], status: str, summary_path: Path) -> None:
     print(f"ISSUE43_COUPLING_DIAGNOSTIC_P1: {prepared['p1_status']}")
     for label in ("T1_dt1e14", "T2_dt1e13"):
+        result = p2.get(label)
+        if result is None:
+            print(f"ISSUE43_COUPLING_DIAGNOSTIC_P2_{label}: HOLD")
+            continue
         print(
             f"ISSUE43_COUPLING_DIAGNOSTIC_P2_{label}: "
-            + ("PASS" if p2[label]["returncode"] == 0 else "FAIL")
+            + ("PASS" if result["returncode"] == 0 else "FAIL")
         )
-        if p2[label]["returncode"] != 0:
-            failure = p2[label]["failure"]
-            print(
-                f"ISSUE43_COUPLING_DIAGNOSTIC_P2_{label}_CLASS: "
-                f"{failure.get('class')}"
-            )
-            print(
-                f"ISSUE43_COUPLING_DIAGNOSTIC_P2_{label}_REASON: "
-                f"{failure.get('reason')}"
-            )
+        if result["returncode"] != 0:
+            failure = result["failure"]
+            print(f"ISSUE43_COUPLING_DIAGNOSTIC_P2_{label}_CLASS: {failure.get('class')}")
+            print(f"ISSUE43_COUPLING_DIAGNOSTIC_P2_{label}_REASON: {failure.get('reason')}")
             if failure.get("detail"):
-                print(
-                    f"ISSUE43_COUPLING_DIAGNOSTIC_P2_{label}_DETAIL: "
-                    f"{failure['detail']}"
-                )
+                print(f"ISSUE43_COUPLING_DIAGNOSTIC_P2_{label}_DETAIL: {failure['detail']}")
     print(f"ISSUE43_COUPLING_DIAGNOSTIC_PREFLIGHT: {status}")
     print(f"ISSUE43_COUPLING_DIAGNOSTIC_SUMMARY: {summary_path}")
 
@@ -719,10 +708,7 @@ def run_runtime(*, qpx: str | None, results_root: str | None) -> int:
         },
     )
 
-    print(
-        "ISSUE43_COUPLING_DIAGNOSTIC_T1_CONTROL: "
-        + ("PASS" if t1_pass else "HOLD")
-    )
+    print("ISSUE43_COUPLING_DIAGNOSTIC_T1_CONTROL: " + ("PASS" if t1_pass else "HOLD"))
     print(
         "ISSUE43_COUPLING_DIAGNOSTIC_T2_REPRODUCED: "
         + ("PASS" if t2["returncode"] != 0 else "HOLD")
@@ -742,21 +728,25 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--qpx", help="path to user-local qpx-opt")
     parser.add_argument("--results-root")
-    parser.add_argument("--self-test", action="store_true")
-    parser.add_argument("--preflight", action="store_true")
-    parser.add_argument("--run", action="store_true")
+    mode = parser.add_mutually_exclusive_group(required=True)
+    mode.add_argument("--self-test", action="store_true")
+    mode.add_argument("--preflight", action="store_true")
+    mode.add_argument("--run", action="store_true")
     args = parser.parse_args(argv)
 
     if args.self_test:
         return self_test()
     if self_test() != 0:
         return 1
-    if args.run:
-        return run_runtime(qpx=args.qpx, results_root=args.results_root)
-    if args.preflight:
+    try:
+        if args.run:
+            return run_runtime(qpx=args.qpx, results_root=args.results_root)
         return run_preflight(qpx=args.qpx, results_root=args.results_root)
-    parser.error("select --preflight or --run")
-    return 2
+    except (FastPlasmaCouplingDiagnosticError, MooseInputError) as exc:
+        print("ISSUE43_COUPLING_DIAGNOSTIC_PRECLASS: HOLD")
+        print("ISSUE43_COUPLING_DIAGNOSTIC_CLASS: HARNESS_OR_CONSTRUCTION_FAIL")
+        print(f"ISSUE43_COUPLING_DIAGNOSTIC_REASON: {exc}")
+        return 2
 
 
 if __name__ == "__main__":
