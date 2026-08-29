@@ -14,7 +14,7 @@ if str(ROOT) not in sys.path:
 
 from qpx_harness.analysis import analyze
 from qpx_harness.bundle import main as bundle_main
-from qpx_harness.coupling_evr1 import main as coupling_evr1_main, self_test as coupling_evr1_self_test
+from qpx_harness.coupling_evr1_safe import main as coupling_evr1_main, self_test as coupling_evr1_self_test
 from qpx_harness.dmix_equivalence_structured import main as dmix_equivalence_main, self_test as dmix_equivalence_self_test
 from qpx_harness.performance_cache_audit import main as performance_cache_audit_main, self_test as performance_cache_audit_self_test
 from qpx_harness.performance_core import main as performance_main, self_test as performance_self_test
