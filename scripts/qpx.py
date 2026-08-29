@@ -26,6 +26,7 @@ from qpx_harness.performance_core import main as performance_main, self_test as 
 from qpx_harness.performance_investigation import main as performance_investigation_main, self_test as performance_investigation_self_test
 from qpx_harness.performance_smoke import main as performance_smoke_main, self_test as performance_smoke_self_test
 from qpx_harness.performance_transport_probe_direct import main as performance_transport_probe_main, self_test as performance_transport_probe_self_test
+from qpx_harness.petsc_first_linear_diagnostic import main as first_linear_main, self_test as first_linear_self_test
 from qpx_harness.preflight import parser_symbol_self_test, validate_input_preflight
 from qpx_harness.profiling import main as profile_main
 from qpx_harness.regression import cli_run_all, cli_run_test
@@ -43,6 +44,7 @@ COMMANDS = {
     "fast-relaxation": "run Issue43 electron-Poisson discriminator with Issue44 output contract",
     "fast-coupling-diagnostic": "localize the Issue43 1e-13 electron-Poisson coupling failure",
     "inventory-nullspace": "run Issue45 electron-inventory nullspace structural/framework preflight",
+    "inventory-first-linear": "diagnose the Issue45 constrained C0 first-linear breakdown",
     "contract": "validate/evaluate a CORE-16 scientific execution contract",
     "dmix-equivalence": "compare optimized D_mix against legacy full evaluation",
     "measure": "run one schema-driven QPX performance measurement",
@@ -112,6 +114,7 @@ def self_test_cli(argv: list[str]) -> int:
     fast_relaxation_rc = fast_relaxation_self_test()
     fast_coupling_diagnostic_rc = fast_coupling_diagnostic_self_test()
     inventory_nullspace_rc = inventory_nullspace_self_test()
+    first_linear_rc = first_linear_self_test()
     execution_contract_rc = execution_contract_self_test()
     dmix_equivalence_rc = dmix_equivalence_self_test()
     performance_rc = performance_self_test()
@@ -129,6 +132,7 @@ def self_test_cli(argv: list[str]) -> int:
         and fast_relaxation_rc == 0
         and fast_coupling_diagnostic_rc == 0
         and inventory_nullspace_rc == 0
+        and first_linear_rc == 0
         and execution_contract_rc == 0
         and dmix_equivalence_rc == 0
         and performance_rc == 0
@@ -164,6 +168,8 @@ def main(argv: list[str] | None = None) -> int:
         return fast_coupling_diagnostic_main(rest)
     if command == "inventory-nullspace":
         return inventory_nullspace_main(rest)
+    if command == "inventory-first-linear":
+        return first_linear_main(rest)
     if command == "contract":
         return execution_contract_main(rest)
     if command == "dmix-equivalence":
