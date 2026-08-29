@@ -1,13 +1,15 @@
 """Issue #45 electron-inventory nullspace and quasi-steady closure preflight.
 
-This harness proves only the structural/framework prerequisites for the current
-closed, source-free reduced electron model. It deliberately exposes no P3 mode.
+This harness owns only P0/P1/P2 structural/framework evidence. It proves the
+closed/source-free inventory null identity and validates a constrained
+quasi-steady representation. It deliberately exposes no P3 execution mode.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import math
 import re
 from pathlib import Path
 from typing import Any
@@ -24,11 +26,16 @@ ISSUE = 45
 DT_REFERENCE = 1.0e-13
 STEPS = 1
 DRIFT_TYPE = "QPXFVElectrostaticDrift"
+CONSTRAINT_TYPE = "FVIntegralValueConstraint"
+LAMBDA_VARIABLE = "r45_inventory_lambda"
+MACRO_AVG_POSTPROCESSOR = "r45_ne_macro_avg"
+DEFAULT_MACRO_ELECTRON_AVG = 1.0e16
 REQUIRED_FVFLUX_SCHEMA_PARAMETERS = (
     "boundaries_to_avoid",
     "boundaries_to_force",
     "force_boundary_execution",
 )
+REQUIRED_CONSTRAINT_SCHEMA_PARAMETERS = ("variable", "lambda", "phi0")
 EXPECTED_DRIFT_BOUNDARIES = frozenset(
     {
         "inlet",
@@ -41,9 +48,14 @@ EXPECTED_DRIFT_BOUNDARIES = frozenset(
         "plasma_focus_ring",
     }
 )
-EXPECTED_ELECTRON_KERNEL_TYPES = (
+EXPECTED_TRANSIENT_ELECTRON_KERNEL_TYPES = (
     "FVDiffusion",
     "FVTimeKernel",
+    DRIFT_TYPE,
+)
+EXPECTED_CONSTRAINED_ELECTRON_KERNEL_TYPES = (
+    "FVDiffusion",
+    CONSTRAINT_TYPE,
     DRIFT_TYPE,
 )
 
@@ -96,45 +108,60 @@ def _truthy(value: str | None) -> bool:
     return raw in {"1", "true", "yes", "on"}
 
 
-def audit_closed_electron_structure(text: str) -> dict[str, Any]:
-    """Audit the exact reduced-model prerequisites for global electron conservation."""
-    checks: list[dict[str, Any]] = []
+def _remove_block(text: str, path: str) -> str:
+    span = MooseInput(text).unique(path)
+    return text[: span.start] + text[span.end :]
 
-    def add(check_id: str, passed: bool, observed: Any, required: Any) -> None:
-        checks.append(
-            {
-                "id": check_id,
-                "status": "PASS" if passed else "FAIL",
-                "observed": observed,
-                "required": required,
-            }
-        )
 
-    parser_errors = validate_parser_symbols_text(text, "<issue45-inventory-audit>")
-    add("parser-symbol-preflight", not parser_errors, parser_errors, [])
+def _replace_block(text: str, path: str, replacement: str) -> str:
+    span = MooseInput(text).unique(path)
+    payload = replacement.rstrip() + "\n"
+    return text[: span.start] + payload + text[span.end :]
 
-    electron_kernels: list[dict[str, Any]] = []
+
+def _electron_kernel_records(text: str) -> list[dict[str, Any]]:
+    records: list[dict[str, Any]] = []
     for path in _direct_children(text, "FVKernels"):
         if _unquote(_parameter_value(text, path, "variable")) != "n_e":
             continue
-        electron_kernels.append(
+        records.append(
             {
                 "path": path,
                 "type": _unquote(_parameter_value(text, path, "type")),
             }
         )
+    return records
 
-    observed_types = sorted(item["type"] for item in electron_kernels if item["type"])
-    expected_types = sorted(EXPECTED_ELECTRON_KERNEL_TYPES)
-    add(
-        "electron-kernel-set",
-        observed_types == expected_types and len(electron_kernels) == 3,
-        electron_kernels,
-        expected_types,
-    )
 
+def _electron_fvbcs(text: str) -> list[dict[str, Any]]:
+    records: list[dict[str, Any]] = []
+    if not MooseInput(text).find("FVBCs"):
+        return records
+    for path in _direct_children(text, "FVBCs"):
+        if _unquote(_parameter_value(text, path, "variable")) == "n_e":
+            records.append(
+                {"path": path, "type": _unquote(_parameter_value(text, path, "type"))}
+            )
+    return records
+
+
+def _poisson_fvbcs(text: str) -> list[str]:
+    if not MooseInput(text).find("FVBCs"):
+        return []
+    return [
+        path
+        for path in _direct_children(text, "FVBCs")
+        if _unquote(_parameter_value(text, path, "variable")) == "potential_plasma"
+    ]
+
+
+def _flux_boundary_audit(
+    text: str, electron_kernels: list[dict[str, Any]], add: Any
+) -> None:
     drift_paths = [item["path"] for item in electron_kernels if item["type"] == DRIFT_TYPE]
-    diffusion_paths = [item["path"] for item in electron_kernels if item["type"] == "FVDiffusion"]
+    diffusion_paths = [
+        item["path"] for item in electron_kernels if item["type"] == "FVDiffusion"
+    ]
     add("one-electrostatic-drift", len(drift_paths) == 1, drift_paths, 1)
     add("one-electron-diffusion", len(diffusion_paths) == 1, diffusion_paths, 1)
 
@@ -161,23 +188,52 @@ def audit_closed_electron_structure(text: str) -> dict[str, Any]:
         force_all = _truthy(_parameter_value(text, path, "force_boundary_execution"))
         if forced or force_all:
             diffusion_forced.append(
-                {"path": path, "boundaries_to_force": forced, "force_boundary_execution": force_all}
+                {
+                    "path": path,
+                    "boundaries_to_force": forced,
+                    "force_boundary_execution": force_all,
+                }
             )
     add("diffusion-natural-boundary-path", not diffusion_forced, diffusion_forced, [])
 
-    electron_bcs: list[dict[str, Any]] = []
-    for path in _direct_children(text, "FVBCs"):
-        if _unquote(_parameter_value(text, path, "variable")) == "n_e":
-            electron_bcs.append(
-                {"path": path, "type": _unquote(_parameter_value(text, path, "type"))}
-            )
-    add("no-electron-fvbc", not electron_bcs, electron_bcs, [])
 
-    poisson_bcs: list[str] = []
-    for path in _direct_children(text, "FVBCs"):
-        if _unquote(_parameter_value(text, path, "variable")) == "potential_plasma":
-            poisson_bcs.append(path)
-    add("poisson-bcs-remain-distinct", bool(poisson_bcs), poisson_bcs, "one or more potential_plasma FVBCs")
+def audit_closed_electron_structure(text: str) -> dict[str, Any]:
+    """Audit prerequisites for the exact transient-model inventory invariant."""
+    checks: list[dict[str, Any]] = []
+
+    def add(check_id: str, passed: bool, observed: Any, required: Any) -> None:
+        checks.append(
+            {
+                "id": check_id,
+                "status": "PASS" if passed else "FAIL",
+                "observed": observed,
+                "required": required,
+            }
+        )
+
+    parser_errors = validate_parser_symbols_text(text, "<issue45-inventory-audit>")
+    add("parser-symbol-preflight", not parser_errors, parser_errors, [])
+
+    electron_kernels = _electron_kernel_records(text)
+    observed_types = sorted(item["type"] for item in electron_kernels if item["type"])
+    expected_types = sorted(EXPECTED_TRANSIENT_ELECTRON_KERNEL_TYPES)
+    add(
+        "electron-kernel-set",
+        observed_types == expected_types and len(electron_kernels) == 3,
+        electron_kernels,
+        expected_types,
+    )
+    _flux_boundary_audit(text, electron_kernels, add)
+
+    electron_bcs = _electron_fvbcs(text)
+    add("no-electron-fvbc", not electron_bcs, electron_bcs, [])
+    poisson_bcs = _poisson_fvbcs(text)
+    add(
+        "poisson-bcs-remain-distinct",
+        bool(poisson_bcs),
+        poisson_bcs,
+        "one or more potential_plasma FVBCs",
+    )
 
     blockers = [check for check in checks if check["status"] != "PASS"]
     return {
@@ -191,8 +247,9 @@ def audit_closed_electron_structure(text: str) -> dict[str, Any]:
         "blockers": blockers,
         "electron_kernels": electron_kernels,
         "electron_fvbcs": electron_bcs,
-        "drift_boundaries_to_avoid": sorted(drift_boundaries),
-        "derivation_scope": "steady spatial n_e residual only; transient FVTimeKernel excluded from the nullspace identity",
+        "derivation_scope": (
+            "steady spatial n_e residual only; transient FVTimeKernel excluded from the nullspace identity"
+        ),
     }
 
 
@@ -210,7 +267,14 @@ def _extract_moose_json(text: str) -> Any:
         raise ElectronInventoryNullspaceError(f"invalid MOOSE JSON payload: {exc}") from exc
 
 
-def analyze_drift_schema_text(text: str, *, returncode: int = 0) -> dict[str, Any]:
+def _schema_presence_analysis(
+    text: str,
+    *,
+    returncode: int,
+    object_type: str,
+    required_parameters: tuple[str, ...],
+    semantic_terms: tuple[str, ...] = (),
+) -> dict[str, Any]:
     if returncode != 0:
         return {
             "status": "HOLD",
@@ -227,24 +291,68 @@ def analyze_drift_schema_text(text: str, *, returncode: int = 0) -> dict[str, An
         }
 
     serialized = json.dumps(payload, sort_keys=True)
-    object_present = DRIFT_TYPE in serialized
-    parameter_presence = {
-        name: name in serialized for name in REQUIRED_FVFLUX_SCHEMA_PARAMETERS
-    }
-    fvflux_semantic = "FVFluxKernel" in serialized
-    passed = object_present and all(parameter_presence.values()) and fvflux_semantic
+    lower = serialized.lower()
+    object_present = object_type in serialized
+    parameter_presence = {name: name in serialized for name in required_parameters}
+    semantic_presence = {term: term.lower() in lower for term in semantic_terms}
+    passed = object_present and all(parameter_presence.values()) and all(semantic_presence.values())
     return {
         "status": "PASS" if passed else "HOLD",
-        "class": "FVFLUX_SCHEMA_PASS" if passed else "FRAMEWORK_SCHEMA_EVIDENCE_INSUFFICIENT",
-        "reason": (
-            "QPX object schema exposes FVFluxKernel boundary-execution controls and FVFluxKernel semantics"
-            if passed
-            else "QPX object schema did not prove all required FVFluxKernel inheritance semantics"
-        ),
+        "class": "FRAMEWORK_SCHEMA_PASS" if passed else "FRAMEWORK_SCHEMA_EVIDENCE_INSUFFICIENT",
         "object_present": object_present,
         "required_parameters": parameter_presence,
-        "fvfluxkernel_semantic_present": fvflux_semantic,
+        "semantic_terms": semantic_presence,
     }
+
+
+def analyze_drift_schema_text(text: str, *, returncode: int = 0) -> dict[str, Any]:
+    result = _schema_presence_analysis(
+        text,
+        returncode=returncode,
+        object_type=DRIFT_TYPE,
+        required_parameters=REQUIRED_FVFLUX_SCHEMA_PARAMETERS,
+        semantic_terms=("FVFluxKernel",),
+    )
+    if result["status"] == "PASS":
+        result.update(
+            {
+                "class": "FVFLUX_SCHEMA_PASS",
+                "reason": (
+                    "QPX object schema exposes FVFluxKernel boundary-execution controls and FVFluxKernel semantics"
+                ),
+            }
+        )
+    else:
+        result.setdefault(
+            "reason",
+            "QPX object schema did not prove all required FVFluxKernel inheritance semantics",
+        )
+    return result
+
+
+def analyze_constraint_schema_text(text: str, *, returncode: int = 0) -> dict[str, Any]:
+    result = _schema_presence_analysis(
+        text,
+        returncode=returncode,
+        object_type=CONSTRAINT_TYPE,
+        required_parameters=REQUIRED_CONSTRAINT_SCHEMA_PARAMETERS,
+        semantic_terms=("Lagrange multiplier",),
+    )
+    if result["status"] == "PASS":
+        result.update(
+            {
+                "class": "FV_INVENTORY_CONSTRAINT_SCHEMA_PASS",
+                "reason": (
+                    "QPX schema exposes the FV integral-value constraint with variable/lambda/phi0 Lagrange-multiplier coupling"
+                ),
+            }
+        )
+    else:
+        result.setdefault(
+            "reason",
+            "QPX object schema did not prove the required FV integral-value Lagrange-multiplier contract",
+        )
+    return result
 
 
 def _synthetic_closed_input() -> str:
@@ -287,6 +395,290 @@ def _synthetic_closed_input() -> str:
 """
 
 
+def _synthetic_constrained_input(macro_avg: float = DEFAULT_MACRO_ELECTRON_AVG) -> str:
+    boundaries = " ".join(sorted(EXPECTED_DRIFT_BOUNDARIES))
+    return f"""[Variables]
+  [n_e]
+    type = MooseVariableFVReal
+  []
+  [potential_plasma]
+    type = MooseVariableFVReal
+  []
+  [{LAMBDA_VARIABLE}]
+    type = MooseVariableScalar
+  []
+[]
+[FVKernels]
+  [diffusion]
+    type = FVDiffusion
+    variable = n_e
+    block = plasma
+  []
+  [drift]
+    type = {DRIFT_TYPE}
+    variable = n_e
+    boundaries_to_avoid = '{boundaries}'
+    block = plasma
+  []
+  [inventory_constraint]
+    type = {CONSTRAINT_TYPE}
+    variable = n_e
+    lambda = {LAMBDA_VARIABLE}
+    phi0 = {MACRO_AVG_POSTPROCESSOR}
+    block = plasma
+  []
+  [phi]
+    type = FVDiffusion
+    variable = potential_plasma
+    block = plasma
+  []
+[]
+[FVBCs]
+  [phi_ground]
+    type = FVDirichletBC
+    variable = potential_plasma
+    boundary = plasma_metal
+    value = 0
+  []
+[]
+[Postprocessors]
+  [{MACRO_AVG_POSTPROCESSOR}]
+    type = ConstantPostprocessor
+    value = {macro_avg:.17g}
+  []
+[]
+[Executioner]
+  type = Steady
+  solve_type = NEWTON
+  automatic_scaling = true
+  off_diagonals_in_auto_scaling = true
+  petsc_options_iname = '-pc_type -pc_factor_shift_type'
+  petsc_options_value = 'lu NONZERO'
+[]
+"""
+
+
+def _build_constrained_quasisteady_input(
+    base_text: str, *, radial_span: float, macro_avg: float
+) -> str:
+    """Transform the accepted feedback model into the #45 constrained steady candidate."""
+    text = v5._build_feedback_v5(
+        base_text,
+        dt=DT_REFERENCE,
+        steps=STEPS,
+        radial_span=radial_span,
+    )
+    text = _remove_block(text, "FVKernels/time")
+    text, _ = MooseInput(text).insert_before_close(
+        "Variables",
+        f"""  [{LAMBDA_VARIABLE}]
+    type = MooseVariableScalar
+  []""",
+    )
+    text, _ = MooseInput(text).insert_before_close(
+        "Postprocessors",
+        f"""  [{MACRO_AVG_POSTPROCESSOR}]
+    type = ConstantPostprocessor
+    value = {macro_avg:.17g}
+    outputs = none
+  []""",
+    )
+    text, _ = MooseInput(text).insert_before_close(
+        "FVKernels",
+        f"""  [r45_inventory_constraint]
+    type = {CONSTRAINT_TYPE}
+    variable = n_e
+    lambda = {LAMBDA_VARIABLE}
+    phi0 = {MACRO_AVG_POSTPROCESSOR}
+    block = plasma
+  []""",
+    )
+    text = _replace_block(
+        text,
+        "Executioner",
+        """[Executioner]
+  type = Steady
+  solve_type = NEWTON
+  nl_rel_tol = 1e-8
+  nl_max_its = 30
+  automatic_scaling = true
+  off_diagonals_in_auto_scaling = true
+  compute_scaling_once = true
+  petsc_options_iname = '-pc_type -pc_factor_shift_type'
+  petsc_options_value = 'lu NONZERO'
+[]""",
+    )
+    MooseInput(text)
+    return text
+
+
+def _float_parameter(text: str, path: str, name: str) -> float | None:
+    raw = _unquote(_parameter_value(text, path, name))
+    if raw is None:
+        return None
+    try:
+        return float(raw)
+    except ValueError:
+        return None
+
+
+def audit_constrained_quasisteady_structure(
+    text: str, *, expected_macro_avg: float
+) -> dict[str, Any]:
+    checks: list[dict[str, Any]] = []
+
+    def add(check_id: str, passed: bool, observed: Any, required: Any) -> None:
+        checks.append(
+            {
+                "id": check_id,
+                "status": "PASS" if passed else "FAIL",
+                "observed": observed,
+                "required": required,
+            }
+        )
+
+    parser_errors = validate_parser_symbols_text(text, "<issue45-closure-audit>")
+    add("parser-symbol-preflight", not parser_errors, parser_errors, [])
+
+    electron_kernels = _electron_kernel_records(text)
+    observed_types = sorted(item["type"] for item in electron_kernels if item["type"])
+    expected_types = sorted(EXPECTED_CONSTRAINED_ELECTRON_KERNEL_TYPES)
+    add(
+        "quasisteady-electron-kernel-set",
+        observed_types == expected_types and len(electron_kernels) == 3,
+        electron_kernels,
+        expected_types,
+    )
+    add(
+        "fvtimekernel-removed",
+        "FVTimeKernel" not in observed_types,
+        observed_types,
+        "no FVTimeKernel",
+    )
+    _flux_boundary_audit(text, electron_kernels, add)
+
+    electron_bcs = _electron_fvbcs(text)
+    add("no-electron-fvbc", not electron_bcs, electron_bcs, [])
+    poisson_bcs = _poisson_fvbcs(text)
+    add(
+        "poisson-grounding-preserved",
+        bool(poisson_bcs),
+        poisson_bcs,
+        "one or more potential_plasma FVBCs",
+    )
+
+    lambda_paths = [
+        path
+        for path in _direct_children(text, "Variables")
+        if path.split("/")[-1] == LAMBDA_VARIABLE
+    ]
+    lambda_type = (
+        _unquote(_parameter_value(text, lambda_paths[0], "type"))
+        if len(lambda_paths) == 1
+        else None
+    )
+    add("one-scalar-lagrange-multiplier", len(lambda_paths) == 1, lambda_paths, 1)
+    add(
+        "scalar-lagrange-multiplier-type",
+        lambda_type == "MooseVariableScalar",
+        lambda_type,
+        "MooseVariableScalar",
+    )
+
+    constraint_paths = [
+        item["path"] for item in electron_kernels if item["type"] == CONSTRAINT_TYPE
+    ]
+    add("one-inventory-constraint", len(constraint_paths) == 1, constraint_paths, 1)
+    constraint_lambda = None
+    constraint_phi0 = None
+    constraint_block: list[str] = []
+    if len(constraint_paths) == 1:
+        path = constraint_paths[0]
+        constraint_lambda = _unquote(_parameter_value(text, path, "lambda"))
+        constraint_phi0 = _unquote(_parameter_value(text, path, "phi0"))
+        constraint_block = _words(_parameter_value(text, path, "block"))
+    add(
+        "constraint-couples-scalar-lambda",
+        constraint_lambda == LAMBDA_VARIABLE,
+        constraint_lambda,
+        LAMBDA_VARIABLE,
+    )
+    add(
+        "constraint-uses-macro-average-postprocessor",
+        constraint_phi0 == MACRO_AVG_POSTPROCESSOR,
+        constraint_phi0,
+        MACRO_AVG_POSTPROCESSOR,
+    )
+    add(
+        "constraint-block-is-plasma",
+        constraint_block == ["plasma"],
+        constraint_block,
+        ["plasma"],
+    )
+
+    pp_paths = [
+        path
+        for path in _direct_children(text, "Postprocessors")
+        if path.split("/")[-1] == MACRO_AVG_POSTPROCESSOR
+    ]
+    pp_type = (
+        _unquote(_parameter_value(text, pp_paths[0], "type"))
+        if len(pp_paths) == 1
+        else None
+    )
+    pp_value = _float_parameter(text, pp_paths[0], "value") if len(pp_paths) == 1 else None
+    target_tol = max(abs(expected_macro_avg) * 1e-12, 1e-300)
+    add("one-macro-average-provider", len(pp_paths) == 1, pp_paths, 1)
+    add(
+        "macro-average-provider-type",
+        pp_type == "ConstantPostprocessor",
+        pp_type,
+        "ConstantPostprocessor",
+    )
+    add(
+        "macro-average-target-preserved",
+        pp_value is not None
+        and math.isfinite(pp_value)
+        and abs(pp_value - expected_macro_avg) <= target_tol,
+        pp_value,
+        expected_macro_avg,
+    )
+
+    executioner_type = _unquote(_parameter_value(text, "Executioner", "type"))
+    add("steady-executioner", executioner_type == "Steady", executioner_type, "Steady")
+    inames = _words(_parameter_value(text, "Executioner", "petsc_options_iname"))
+    values = _words(_parameter_value(text, "Executioner", "petsc_options_value"))
+    add(
+        "lm-saddle-factorization-contract",
+        "-pc_factor_shift_type" in inames and "NONZERO" in values,
+        {"petsc_options_iname": inames, "petsc_options_value": values},
+        {"petsc_options_iname": "-pc_factor_shift_type", "petsc_options_value": "NONZERO"},
+    )
+
+    blockers = [check for check in checks if check["status"] != "PASS"]
+    return {
+        "status": "PASS" if not blockers else "HOLD",
+        "class": (
+            "CONSTRAINED_QUASISTEADY_STRUCTURE_PASS"
+            if not blockers
+            else "CLOSURE_STRUCTURE_FAIL"
+        ),
+        "checks": checks,
+        "blockers": blockers,
+        "electron_kernels": electron_kernels,
+        "electron_fvbcs": electron_bcs,
+        "constraint": {
+            "type": CONSTRAINT_TYPE,
+            "lambda": constraint_lambda,
+            "phi0": constraint_phi0,
+            "target_macro_average": expected_macro_avg,
+        },
+        "physics_interpretation": (
+            "phi0 fixes the inherited macrostate electron average; the scalar Lagrange multiplier closes the singular inventory direction without reintroducing physical time dependence"
+        ),
+    }
+
+
 def self_test() -> int:
     try:
         base = _synthetic_closed_input()
@@ -320,25 +712,81 @@ def self_test() -> int:
         if audit_closed_electron_structure(electron_source)["status"] == "PASS":
             raise AssertionError("n_e source/sink negative mutation was accepted")
 
-        good_schema = {
-            "QPXFVElectrostaticDrift": {
+        good_drift_schema = {
+            DRIFT_TYPE: {
                 "description": "derived FVFluxKernel object",
                 "parameters": {
                     "boundaries_to_avoid": {"description": "FVFluxKernel avoid"},
                     "boundaries_to_force": {"description": "FVFluxKernel force"},
-                    "force_boundary_execution": {"description": "FVFluxKernel boundary execution"},
+                    "force_boundary_execution": {
+                        "description": "FVFluxKernel boundary execution"
+                    },
                 },
             }
         }
-        wrapped = "**START JSON DATA**\n" + json.dumps(good_schema) + "\n**END JSON DATA**\n"
+        wrapped = "**START JSON DATA**\n" + json.dumps(good_drift_schema) + "\n**END JSON DATA**\n"
         if analyze_drift_schema_text(wrapped)["status"] != "PASS":
             raise AssertionError("valid FVFluxKernel schema evidence did not pass")
-
-        bad_schema = wrapped.replace("boundaries_to_force", "unrelated_parameter")
-        if analyze_drift_schema_text(bad_schema)["status"] == "PASS":
+        if analyze_drift_schema_text(
+            wrapped.replace("boundaries_to_force", "unrelated")
+        )["status"] == "PASS":
             raise AssertionError("missing FVFluxKernel schema control was accepted")
         if analyze_drift_schema_text("{}\n")["status"] == "PASS":
             raise AssertionError("missing MOOSE JSON evidence was accepted")
+
+        constrained = _synthetic_constrained_input()
+        if audit_constrained_quasisteady_structure(
+            constrained, expected_macro_avg=DEFAULT_MACRO_ELECTRON_AVG
+        )["status"] != "PASS":
+            raise AssertionError("positive constrained quasi-steady structure did not pass")
+
+        with_time = constrained.replace(
+            "[FVKernels]\n",
+            "[FVKernels]\n  [time]\n    type = FVTimeKernel\n    variable = n_e\n  []\n",
+            1,
+        )
+        if audit_constrained_quasisteady_structure(
+            with_time, expected_macro_avg=DEFAULT_MACRO_ELECTRON_AVG
+        )["status"] == "PASS":
+            raise AssertionError("closure candidate retaining FVTimeKernel was accepted")
+
+        wrong_target = constrained.replace(
+            f"value = {DEFAULT_MACRO_ELECTRON_AVG:.17g}", "value = 2e16", 1
+        )
+        if audit_constrained_quasisteady_structure(
+            wrong_target, expected_macro_avg=DEFAULT_MACRO_ELECTRON_AVG
+        )["status"] == "PASS":
+            raise AssertionError("wrong macro electron-average target was accepted")
+
+        missing_lambda = constrained.replace(
+            f"lambda = {LAMBDA_VARIABLE}", "lambda = missing_lambda", 1
+        )
+        if audit_constrained_quasisteady_structure(
+            missing_lambda, expected_macro_avg=DEFAULT_MACRO_ELECTRON_AVG
+        )["status"] == "PASS":
+            raise AssertionError("constraint with wrong lambda coupling was accepted")
+
+        good_constraint_schema = {
+            CONSTRAINT_TYPE: {
+                "description": "integral value constraint using a Lagrange multiplier",
+                "parameters": {
+                    "variable": {},
+                    "lambda": {"description": "Lagrange multiplier variable"},
+                    "phi0": {"description": "target average value"},
+                },
+            }
+        }
+        constraint_wrapped = (
+            "**START JSON DATA**\n"
+            + json.dumps(good_constraint_schema)
+            + "\n**END JSON DATA**\n"
+        )
+        if analyze_constraint_schema_text(constraint_wrapped)["status"] != "PASS":
+            raise AssertionError("valid inventory-constraint schema evidence did not pass")
+        if analyze_constraint_schema_text(
+            constraint_wrapped.replace('"phi0"', '"unrelated"', 1)
+        )["status"] == "PASS":
+            raise AssertionError("constraint schema missing phi0 was accepted")
     except Exception as exc:
         print(f"ISSUE45_INVENTORY_NULLSPACE_SELFTEST: FAIL ({exc})")
         return 1
@@ -346,15 +794,29 @@ def self_test() -> int:
     return 0
 
 
-def _prepare_case(*, exe: Path, results_root: str | None) -> dict[str, Any]:
+def _base_case_context() -> tuple[Path, str, float]:
     repo_root = Path(__file__).resolve().parents[1]
     base_case = repo_root / v2.v1.BASE_CASE_RELATIVE
     if not base_case.is_dir():
         raise ElectronInventoryNullspaceError(f"missing accepted electron control: {base_case}")
-
     mesh = v2.mesh_stats(base_case / "qvt.msh")
     radial_span = float(mesh["bbox_span_m"]["x"])
-    base_text = (base_case / "input.i").read_text()
+    return base_case, (base_case / "input.i").read_text(), radial_span
+
+
+def _evidence_root(*, exe: Path, results_root: str | None, stem: str) -> Path:
+    root_parent = (
+        Path(results_root).expanduser().resolve()
+        if results_root
+        else exe.parent / "temp" / "results"
+    )
+    return evidence.ensure_fresh_directory(
+        root_parent / f"{stem}_{evidence.utc_timestamp()}"
+    )
+
+
+def _prepare_case(*, exe: Path, results_root: str | None) -> dict[str, Any]:
+    base_case, base_text, radial_span = _base_case_context()
     text = v5._build_feedback_v5(
         base_text,
         dt=DT_REFERENCE,
@@ -362,14 +824,8 @@ def _prepare_case(*, exe: Path, results_root: str | None) -> dict[str, Any]:
         radial_span=radial_span,
     )
     p1 = audit_closed_electron_structure(text)
-
-    evidence_root = (
-        Path(results_root).expanduser().resolve()
-        if results_root
-        else exe.parent / "temp" / "results"
-    )
-    root = evidence.ensure_fresh_directory(
-        evidence_root / f"issue45_inventory_nullspace_{evidence.utc_timestamp()}"
+    root = _evidence_root(
+        exe=exe, results_root=results_root, stem="issue45_inventory_nullspace"
     )
     case_dir = root / "case"
     v2.v1._copy_case(base_case, case_dir, text)
@@ -379,6 +835,31 @@ def _prepare_case(*, exe: Path, results_root: str | None) -> dict[str, Any]:
         "case_dir": case_dir,
         "input_path": case_dir / "input.i",
         "p1": p1,
+    }
+
+
+def _prepare_closure_case(
+    *, exe: Path, results_root: str | None, macro_avg: float
+) -> dict[str, Any]:
+    base_case, base_text, radial_span = _base_case_context()
+    text = _build_constrained_quasisteady_input(
+        base_text,
+        radial_span=radial_span,
+        macro_avg=macro_avg,
+    )
+    p1 = audit_constrained_quasisteady_structure(text, expected_macro_avg=macro_avg)
+    root = _evidence_root(
+        exe=exe, results_root=results_root, stem="issue45_inventory_closure"
+    )
+    case_dir = root / "case"
+    v2.v1._copy_case(base_case, case_dir, text)
+    v2.v1._validate_assets(case_dir)
+    return {
+        "root": root,
+        "case_dir": case_dir,
+        "input_path": case_dir / "input.i",
+        "p1": p1,
+        "macro_electron_average": macro_avg,
     }
 
 
@@ -405,15 +886,22 @@ def _run_p2_check_input(*, exe: Path, prepared: dict[str, Any]) -> dict[str, Any
     }
 
 
-def _run_p2_schema(*, exe: Path, prepared: dict[str, Any]) -> dict[str, Any]:
-    log_path = prepared["root"] / "p2_drift_schema.log"
+def _run_schema_query(
+    *,
+    exe: Path,
+    prepared: dict[str, Any],
+    object_type: str,
+    analyzer: Any,
+    log_name: str,
+) -> dict[str, Any]:
+    log_path = prepared["root"] / log_name
     run = run_command(
-        [str(exe), "--json-search", DRIFT_TYPE],
+        [str(exe), "--json-search", object_type],
         cwd=prepared["case_dir"],
         log_path=log_path,
         stream=False,
     )
-    analysis = analyze_drift_schema_text(
+    analysis = analyzer(
         log_path.read_text(errors="replace") if log_path.is_file() else "",
         returncode=run.returncode,
     )
@@ -434,7 +922,17 @@ def run_preflight(*, qpx: str | None, results_root: str | None) -> int:
 
     p1_pass = prepared["p1"]["status"] == "PASS"
     check_input = _run_p2_check_input(exe=exe, prepared=prepared) if p1_pass else {}
-    schema = _run_p2_schema(exe=exe, prepared=prepared) if p1_pass else {}
+    schema = (
+        _run_schema_query(
+            exe=exe,
+            prepared=prepared,
+            object_type=DRIFT_TYPE,
+            analyzer=analyze_drift_schema_text,
+            log_name="p2_drift_schema.log",
+        )
+        if p1_pass
+        else {}
+    )
     p2_check_pass = check_input.get("status") == "PASS"
     p2_schema_pass = schema.get("status") == "PASS"
     status = "PASS" if p1_pass and p2_check_pass and p2_schema_pass else "HOLD"
@@ -448,7 +946,9 @@ def run_preflight(*, qpx: str | None, results_root: str | None) -> int:
                 "and user-local QPX schema confirms the custom drift exposes FVFluxKernel conservative boundary-execution semantics"
             ),
             "left_null_vector": "[1^T, 0]",
-            "identity": "[1^T,0] J_steady = 0 for the current reduced closed/source-free model",
+            "identity": (
+                "[1^T,0] J_steady = 0 for the current reduced closed/source-free model"
+            ),
             "p3_required_for_this_identity": False,
         }
     else:
@@ -473,7 +973,9 @@ def run_preflight(*, qpx: str | None, results_root: str | None) -> int:
             "mode": "inventory-nullspace-preflight",
             "status": status,
             "p3_executed": False,
-            "claim": "static/framework proof of the electron-inventory left-null identity for the current closed/source-free reduced model",
+            "claim": (
+                "static/framework proof of the electron-inventory left-null identity for the current closed/source-free reduced model"
+            ),
             "p1": prepared["p1"],
             "p2": {"check_input": check_input, "drift_schema": schema},
             "decision": decision,
@@ -481,8 +983,14 @@ def run_preflight(*, qpx: str | None, results_root: str | None) -> int:
     )
 
     print(f"ISSUE45_INVENTORY_NULLSPACE_P1: {'PASS' if p1_pass else 'HOLD'}")
-    print(f"ISSUE45_INVENTORY_NULLSPACE_P2_CHECK_INPUT: {'PASS' if p2_check_pass else 'HOLD'}")
-    print(f"ISSUE45_INVENTORY_NULLSPACE_P2_DRIFT_SCHEMA: {'PASS' if p2_schema_pass else 'HOLD'}")
+    print(
+        f"ISSUE45_INVENTORY_NULLSPACE_P2_CHECK_INPUT: "
+        f"{'PASS' if p2_check_pass else 'HOLD'}"
+    )
+    print(
+        f"ISSUE45_INVENTORY_NULLSPACE_P2_DRIFT_SCHEMA: "
+        f"{'PASS' if p2_schema_pass else 'HOLD'}"
+    )
     print(f"ISSUE45_INVENTORY_NULLSPACE_PREFLIGHT: {status}")
     print(f"ISSUE45_INVENTORY_NULLSPACE_CLASS: {decision['class']}")
     print(f"ISSUE45_INVENTORY_NULLSPACE_REASON: {decision['reason']}")
@@ -490,15 +998,118 @@ def run_preflight(*, qpx: str | None, results_root: str | None) -> int:
     return 0 if status == "PASS" else 2
 
 
+def run_closure_preflight(
+    *, qpx: str | None, results_root: str | None, macro_avg: float
+) -> int:
+    if not math.isfinite(macro_avg) or macro_avg <= 0.0:
+        raise ElectronInventoryNullspaceError("macro electron average must be finite and positive")
+    exe = v2.resolve_executable(qpx)
+    v2.validate_executable(exe)
+    prepared = _prepare_closure_case(
+        exe=exe,
+        results_root=results_root,
+        macro_avg=macro_avg,
+    )
+
+    p1_pass = prepared["p1"]["status"] == "PASS"
+    check_input = _run_p2_check_input(exe=exe, prepared=prepared) if p1_pass else {}
+    schema = (
+        _run_schema_query(
+            exe=exe,
+            prepared=prepared,
+            object_type=CONSTRAINT_TYPE,
+            analyzer=analyze_constraint_schema_text,
+            log_name="p2_constraint_schema.log",
+        )
+        if p1_pass
+        else {}
+    )
+    p2_check_pass = check_input.get("status") == "PASS"
+    p2_schema_pass = schema.get("status") == "PASS"
+    status = "PASS" if p1_pass and p2_check_pass and p2_schema_pass else "HOLD"
+
+    if status == "PASS":
+        decision = {
+            "status": "PASS",
+            "class": "CONSTRAINED_QUASISTEADY_CLOSURE_READY",
+            "reason": (
+                "the generated steady electron-Poisson candidate removes FVTimeKernel, adds one scalar Lagrange multiplier, "
+                "and uses FVIntegralValueConstraint to preserve the declared macrostate electron average while QPX accepts the input and exposes the required constraint schema"
+            ),
+            "physical_constraint": (
+                "integral_Omega n_e dV = V_plasma * n_e_macro_avg"
+            ),
+            "macro_electron_average": macro_avg,
+            "p3_executed": False,
+            "p3_authorized": False,
+        }
+    else:
+        decision = {
+            "status": "HOLD",
+            "class": (
+                "CLOSURE_STRUCTURE_FAIL"
+                if not p1_pass
+                else schema.get("class", "HARNESS_OR_CONSTRUCTION_FAIL")
+                if not p2_schema_pass
+                else "HARNESS_OR_CONSTRUCTION_FAIL"
+            ),
+            "reason": (
+                "P0/P1/P2 did not complete the constrained quasi-steady closure representation chain"
+            ),
+            "p3_executed": False,
+            "p3_authorized": False,
+        }
+
+    summary_path = prepared["root"] / "summary.json"
+    v2._write_json(
+        summary_path,
+        {
+            "issue": ISSUE,
+            "mode": "inventory-closure-preflight",
+            "status": status,
+            "p3_executed": False,
+            "claim": (
+                "construction/framework readiness of the physically derived constrained quasi-steady electron-Poisson closure"
+            ),
+            "macro_electron_average": macro_avg,
+            "p1": prepared["p1"],
+            "p2": {"check_input": check_input, "constraint_schema": schema},
+            "decision": decision,
+        },
+    )
+
+    print(f"ISSUE45_INVENTORY_CLOSURE_P1: {'PASS' if p1_pass else 'HOLD'}")
+    print(
+        f"ISSUE45_INVENTORY_CLOSURE_P2_CHECK_INPUT: "
+        f"{'PASS' if p2_check_pass else 'HOLD'}"
+    )
+    print(
+        f"ISSUE45_INVENTORY_CLOSURE_P2_CONSTRAINT_SCHEMA: "
+        f"{'PASS' if p2_schema_pass else 'HOLD'}"
+    )
+    print(f"ISSUE45_INVENTORY_CLOSURE_PREFLIGHT: {status}")
+    print(f"ISSUE45_INVENTORY_CLOSURE_CLASS: {decision['class']}")
+    print(f"ISSUE45_INVENTORY_CLOSURE_REASON: {decision['reason']}")
+    print(f"ISSUE45_INVENTORY_CLOSURE_SUMMARY: {summary_path}")
+    return 0 if status == "PASS" else 2
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Run Issue45 electron-inventory nullspace structural/framework preflight"
+        description="Run Issue45 electron-inventory nullspace/closure P0-P2 preflights"
     )
     parser.add_argument("--qpx", help="path to user-local qpx-opt")
     parser.add_argument("--results-root")
+    parser.add_argument(
+        "--macro-electron-average",
+        type=float,
+        default=DEFAULT_MACRO_ELECTRON_AVG,
+        help="macrostate electron average used by --closure-preflight",
+    )
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--self-test", action="store_true")
     mode.add_argument("--preflight", action="store_true")
+    mode.add_argument("--closure-preflight", action="store_true")
     args = parser.parse_args(argv)
 
     if args.self_test:
@@ -506,11 +1117,22 @@ def main(argv: list[str] | None = None) -> int:
     if self_test() != 0:
         return 1
     try:
+        if args.closure_preflight:
+            return run_closure_preflight(
+                qpx=args.qpx,
+                results_root=args.results_root,
+                macro_avg=args.macro_electron_average,
+            )
         return run_preflight(qpx=args.qpx, results_root=args.results_root)
     except (ElectronInventoryNullspaceError, MooseInputError) as exc:
-        print("ISSUE45_INVENTORY_NULLSPACE_PREFLIGHT: HOLD")
-        print("ISSUE45_INVENTORY_NULLSPACE_CLASS: HARNESS_OR_CONSTRUCTION_FAIL")
-        print(f"ISSUE45_INVENTORY_NULLSPACE_REASON: {exc}")
+        prefix = (
+            "ISSUE45_INVENTORY_CLOSURE"
+            if args.closure_preflight
+            else "ISSUE45_INVENTORY_NULLSPACE"
+        )
+        print(f"{prefix}_PREFLIGHT: HOLD")
+        print(f"{prefix}_CLASS: HARNESS_OR_CONSTRUCTION_FAIL")
+        print(f"{prefix}_REASON: {exc}")
         return 2
 
 
