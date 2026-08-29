@@ -9,6 +9,7 @@ not executed after an upstream ontology failure.
 from __future__ import annotations
 
 import argparse
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -17,6 +18,19 @@ from . import fast_plasma_relaxation_v3 as v3
 
 
 _RAW_CLASSIFY = v2.classify
+_RAW_WRITE_CONTRACT_ARTIFACTS = v3._write_contract_artifacts
+
+
+def _write_contract_artifacts_isolated(**kwargs: Any) -> dict[str, str]:
+    """Keep ontology artifacts out of the legacy runner-owned case result path."""
+    forwarded = dict(kwargs)
+    measurements_root = Path(forwarded["measurements_root"])
+    forwarded["measurements_root"] = measurements_root / "execution_contracts"
+    return _RAW_WRITE_CONTRACT_ARTIFACTS(**forwarded)
+
+
+def _install_artifact_namespace() -> None:
+    v3._write_contract_artifacts = _write_contract_artifacts_isolated
 
 
 def _harness_decision(label: str, case: dict[str, Any] | None) -> dict[str, Any] | None:
@@ -83,6 +97,28 @@ def self_test() -> int:
     try:
         if v3.self_test() != 0:
             raise AssertionError("v3 self-test failed")
+
+        with tempfile.TemporaryDirectory() as tmp:
+            measurements_root = Path(tmp) / "measurements"
+            case_id = "ownership_probe"
+            paths = _write_contract_artifacts_isolated(
+                measurements_root=measurements_root,
+                case_id=case_id,
+                contract={"schema_version": 1},
+                p1={"status": "PASS"},
+                p3=None,
+            )
+            legacy_owned = measurements_root / case_id
+            isolated = measurements_root / "execution_contracts" / case_id
+            if legacy_owned.exists():
+                raise AssertionError(
+                    "contract writer created legacy runner-owned measurement path"
+                )
+            if not isolated.is_dir():
+                raise AssertionError("isolated contract artifact directory was not created")
+            if Path(paths["contract"]).parent != isolated:
+                raise AssertionError("contract artifact path escaped isolated namespace")
+
         kge = {"class": "P3_PASS", "canonical_checker": {"status": "PASS"}}
         harness = {
             "class": "HARNESS_OR_CONSTRUCTION_FAIL",
@@ -121,7 +157,10 @@ def main(argv: list[str] | None = None) -> int:
     if self_test() != 0:
         return 1
 
-    # Install the explicit fixed-step builders and generic P1/P3 contract gate.
+    # Install the explicit fixed-step builders, generic P1/P3 contract gate, and
+    # a separate ontology-artifact namespace so legacy runtime result paths retain
+    # sole ownership of measurements/<case_id>.
+    _install_artifact_namespace()
     v3._install_v2_repairs()
 
     repo_root = Path(__file__).resolve().parents[1]
