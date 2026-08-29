@@ -193,7 +193,11 @@ class CppSource:
         return spans[0]
 
     def lambda_body(self, call: Span) -> Span:
-        """Return the first lambda body structurally contained in a call."""
+        """Return the first actual lambda body structurally contained in a call.
+
+        Array subscripts such as ``_D_mix_names[i]`` are rejected because the
+        first non-whitespace token after ``]`` is not a lambda declarator/body.
+        """
         search = call.start
         while True:
             capture = self.masked.find("[", search, call.end)
@@ -204,7 +208,28 @@ class CppSource:
             except CppSourceError:
                 search = capture + 1
                 continue
-            brace = self.masked.find("{", capture_end + 1, call.end)
+
+            pos = self._skip_ws(capture_end + 1, call.end)
+            if pos < call.end and self.masked[pos] == "<":
+                try:
+                    pos = self.match_forward(pos, "<", ">") + 1
+                except CppSourceError:
+                    search = capture_end + 1
+                    continue
+                pos = self._skip_ws(pos, call.end)
+
+            if pos < call.end and self.masked[pos] == "(":
+                try:
+                    pos = self.match_forward(pos, "(", ")") + 1
+                except CppSourceError:
+                    search = capture_end + 1
+                    continue
+                pos = self._skip_ws(pos, call.end)
+            elif pos < call.end and self.masked[pos] != "{":
+                search = capture_end + 1
+                continue
+
+            brace = self.masked.find("{", pos, call.end)
             if brace >= 0:
                 close = self.match_forward(brace, "{", "}")
                 if close < call.end:
@@ -253,6 +278,22 @@ def mask_cpp(text: str) -> str:
         c = text[i]
         n = text[i + 1] if i + 1 < len(text) else ""
         if state == "code":
+            if c == "R" and n == '"':
+                paren = text.find("(", i + 2, min(len(text), i + 20))
+                if paren >= 0:
+                    delim = text[i + 2 : paren]
+                    if (
+                        len(delim) <= 16
+                        and not any(ch.isspace() or ch in "\\()" for ch in delim)
+                    ):
+                        closer = ")" + delim + '"'
+                        close = text.find(closer, paren + 1)
+                        end = len(text) if close < 0 else close + len(closer)
+                        for k in range(i, end):
+                            if text[k] != "\n":
+                                out[k] = " "
+                        i = end
+                        continue
             if c == "/" and n == "/":
                 out[i] = out[i + 1] = " "
                 i += 2
@@ -310,12 +351,14 @@ def self_test() -> int:
     try:
         source = r'''// fake addFunctorProperty<ADReal>(_D_mix_names[i], [] { return evaluateDmix(bad); });
 const char * fake = "return evaluateDmix(fake); { [ (";
+const char * raw = R"tag(addFunctorProperty<ADReal>(_D_mix_names[i], []{ return evaluateDmix(raw); }); { [ ()tag";
 /* fake loop: for (;;) { nDij[i][j] = 0; } */
 
 void Owner::configure()
 {
   this->addFunctorProperty<ADReal>(
       _D_mix_names[i],
+      other_values[j],
       [this, i](const auto & r, const auto & state)
       {
         return evaluateDmix(
