@@ -17,7 +17,7 @@ from qpx_harness.bundle import main as bundle_main
 from qpx_harness.coupling_evr1_safe import main as coupling_evr1_main, self_test as coupling_evr1_self_test
 from qpx_harness.coupling_evr2_timestep import main as coupling_evr2_main, self_test as coupling_evr2_self_test
 from qpx_harness.dmix_equivalence_structured import main as dmix_equivalence_main, self_test as dmix_equivalence_self_test
-from qpx_harness.fast_plasma_relaxation import main as fast_relaxation_main, self_test as fast_relaxation_self_test
+from qpx_harness.fast_plasma_relaxation_v2 import main as fast_relaxation_main, self_test as fast_relaxation_self_test
 from qpx_harness.performance_cache_audit import main as performance_cache_audit_main, self_test as performance_cache_audit_self_test
 from qpx_harness.performance_core import main as performance_main, self_test as performance_self_test
 from qpx_harness.performance_investigation import main as performance_investigation_main, self_test as performance_investigation_self_test
@@ -37,7 +37,7 @@ COMMANDS = {
     "coupling-evr1": "run Issue31 optimized monolithic coupling discriminator",
     "coupling-evr2": "run Issue31 transport timestep/scaling discriminator",
     "scale-audit": "build Issue43 QVT multiphysics space-time scale map",
-    "fast-relaxation": "run Issue43 frozen-heavy electron-Poisson relaxation audit",
+    "fast-relaxation": "run Issue43 electron-Poisson coupling discriminator",
     "dmix-equivalence": "compare optimized D_mix against legacy full evaluation",
     "measure": "run one schema-driven QPX performance measurement",
     "measure-smoke": "auto-manage one PF-1 BENCHMARK/PROFILE smoke pair",
