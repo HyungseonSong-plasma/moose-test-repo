@@ -316,6 +316,61 @@ def _output_preflight_log_evidence(
     }
 
 
+def _p2_introspection_args() -> tuple[str, ...]:
+    return (
+        "--check-input",
+        "--show-input",
+        "--show-outputs",
+        "--color",
+        "off",
+    )
+
+
+def _classify_p2_failure(log_path: Path, returncode: int) -> dict[str, Any]:
+    if returncode == 0:
+        return {
+            "status": "PASS",
+            "class": None,
+            "reason": None,
+            "detail": None,
+        }
+    if not log_path.is_file():
+        return {
+            "status": "HOLD",
+            "class": "HARNESS_OR_CONSTRUCTION_FAIL",
+            "reason": "MISSING_P2_LOG",
+            "detail": None,
+        }
+
+    text = log_path.read_text(errors="replace")
+    unused = re.search(r"unused parameter ['\"]([^'\"]+)['\"]", text)
+    if unused:
+        return {
+            "status": "HOLD",
+            "class": "HARNESS_OR_CONSTRUCTION_FAIL",
+            "reason": "UNUSED_PARAMETER",
+            "detail": unused.group(1),
+        }
+    if "ADFParser::JITCompile() failed" in text:
+        return {
+            "status": "HOLD",
+            "class": "ENVIRONMENT_OR_BUILD_FAIL",
+            "reason": "JIT_COMPILE_FAIL",
+            "detail": None,
+        }
+
+    error_detail: str | None = None
+    error_match = re.search(r"\*\*\* ERROR \*\*\*\s*\n([^\n]+)", text)
+    if error_match:
+        error_detail = error_match.group(1).strip()
+    return {
+        "status": "HOLD",
+        "class": "HARNESS_OR_CONSTRUCTION_FAIL",
+        "reason": "QPX_CHECK_INPUT_FAIL",
+        "detail": error_detail,
+    }
+
+
 def _run_output_preflight(*, qpx: str | None, results_root: str | None) -> int:
     exe = v2.resolve_executable(qpx)
     v2.validate_executable(exe)
@@ -366,14 +421,10 @@ def _run_output_preflight(*, qpx: str | None, results_root: str | None) -> int:
         cwd=case_dir,
         input_name=input_path.name,
         log_path=log_path,
-        extra_args=(
-            "--check-input",
-            "--show-input",
-            "--show-outputs",
-            "--no-color",
-        ),
+        extra_args=_p2_introspection_args(),
         stream=False,
     )
+    p2_failure = _classify_p2_failure(log_path, p2.returncode)
     framework_evidence = _output_preflight_log_evidence(log_path, report)
 
     status = (
@@ -398,6 +449,7 @@ def _run_output_preflight(*, qpx: str | None, results_root: str | None) -> int:
             "returncode": p2.returncode,
             "wall_seconds": p2.wall_seconds,
             "log": str(log_path),
+            "failure": p2_failure,
             "framework_evidence": framework_evidence,
         },
     }
@@ -408,6 +460,11 @@ def _run_output_preflight(*, qpx: str | None, results_root: str | None) -> int:
         "ISSUE44_OUTPUT_PREFLIGHT_P2_CHECK_INPUT: "
         + ("PASS" if p2.returncode == 0 else "FAIL")
     )
+    if p2.returncode != 0:
+        print(f"ISSUE44_OUTPUT_PREFLIGHT_P2_CLASS: {p2_failure['class']}")
+        print(f"ISSUE44_OUTPUT_PREFLIGHT_P2_REASON: {p2_failure['reason']}")
+        if p2_failure["detail"]:
+            print(f"ISSUE44_OUTPUT_PREFLIGHT_P2_DETAIL: {p2_failure['detail']}")
     print(
         "ISSUE44_OUTPUT_PREFLIGHT_FRAMEWORK_EVIDENCE: "
         f"{framework_evidence['status']}"
@@ -459,6 +516,10 @@ def self_test() -> int:
         if ec.evaluate_contract(bad_contract, phase="P1")["status"] != "HOLD":
             raise AssertionError("execution contract did not reject output-row suppression")
 
+        p2_args = _p2_introspection_args()
+        if "--no-color" in p2_args or p2_args[-2:] != ("--color", "off"):
+            raise AssertionError("P2 introspection did not use current color CLI contract")
+
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
             log = tmp_path / "p3_runtime.log"
@@ -505,6 +566,19 @@ def self_test() -> int:
                 raise AssertionError(
                     "materially different row-tolerance introspection was accepted"
                 )
+
+            p2_error = tmp_path / "p2_error.log"
+            p2_error.write_text(
+                "*** ERROR ***\n"
+                "input.i:480.5: unused parameter 'Outputs/console/precision'\n"
+            )
+            p2_class = _classify_p2_failure(p2_error, 1)
+            if (
+                p2_class["class"] != "HARNESS_OR_CONSTRUCTION_FAIL"
+                or p2_class["reason"] != "UNUSED_PARAMETER"
+                or p2_class["detail"] != "Outputs/console/precision"
+            ):
+                raise AssertionError("P2 unused-parameter failure was not classified")
     except Exception as exc:
         print(f"ISSUE44_OUTPUT_CONTRACT_SELFTEST: FAIL ({exc})")
         return 1
