@@ -84,14 +84,20 @@ class MooseInput:
             result = result[: span.start] + result[span.end :]
         return result, meta
 
+    def _parameter_matches(self, path: str, name: str) -> tuple[BlockSpan, str, list[re.Match[str]]]:
+        span = self.unique(path)
+        block_text = self.text[span.start : span.end]
+        pattern = re.compile(
+            rf"(?m)^(?P<prefix>\s*{re.escape(name)}\s*=\s*)"
+            rf"(?P<value>[^#\r\n]*?)"
+            rf"(?P<suffix>\s*(?:#.*)?$)"
+        )
+        return span, block_text, list(pattern.finditer(block_text))
+
     def replace_parameters(
         self, path: str, replacements: Mapping[str, str]
     ) -> tuple[str, dict[str, dict[str, str]]]:
-        """Replace exactly one assignment per requested parameter inside one block.
-
-        Structural block selection is handled by ``MooseInput``. Regex is used only
-        inside the already-selected block for a single line-oriented HIT assignment.
-        """
+        """Replace exactly one assignment per requested parameter inside one block."""
         span = self.unique(path)
         block_text = self.text[span.start : span.end]
         result = block_text
@@ -117,6 +123,51 @@ class MooseInput:
 
         transformed = self.text[: span.start] + result + self.text[span.end :]
         return transformed, meta
+
+    def remove_parameters(
+        self, path: str, names: Iterable[str]
+    ) -> tuple[str, dict[str, str]]:
+        """Remove exactly one line-oriented assignment per name inside one block."""
+        span = self.unique(path)
+        block_text = self.text[span.start : span.end]
+        result = block_text
+        meta: dict[str, str] = {}
+
+        for name in names:
+            pattern = re.compile(
+                rf"(?m)^\s*{re.escape(name)}\s*=\s*(?P<value>[^#\r\n]*?)"
+                rf"\s*(?:#.*)?(?:\r?\n|$)"
+            )
+            matches = list(pattern.finditer(result))
+            if len(matches) != 1:
+                raise MooseInputError(
+                    f"expected one parameter {name!r} in block {path!r}, "
+                    f"found {len(matches)}"
+                )
+            match = matches[0]
+            meta[name] = match.group("value").strip()
+            result = result[: match.start()] + result[match.end() :]
+
+        transformed = self.text[: span.start] + result + self.text[span.end :]
+        return transformed, meta
+
+    def insert_before_close(self, path: str, fragment: str) -> tuple[str, int]:
+        """Insert HIT text immediately before the unique block's closing line."""
+        span = self.unique(path)
+        block_text = self.text[span.start : span.end]
+        stripped = block_text.rstrip("\r\n")
+        close_line_start = stripped.rfind("\n") + 1
+        close_line = stripped[close_line_start:].strip()
+        if close_line not in {"[]", "[../]"}:
+            raise MooseInputError(
+                f"could not identify closing line for block {path!r}: {close_line!r}"
+            )
+        insert_at = span.start + close_line_start
+        payload = fragment
+        if payload and not payload.endswith("\n"):
+            payload += "\n"
+        transformed = self.text[:insert_at] + payload + self.text[insert_at:]
+        return transformed, insert_at
 
 
 def self_test() -> int:
@@ -173,6 +224,23 @@ def self_test() -> int:
         if params["dt"] != {"old": "1.0e-4", "new": "1.0e-8"}:
             raise AssertionError("parameter replacement metadata mismatch")
 
+        removed, removed_params = MooseInput(text).remove_parameters(
+            "Executioner", ("dt", "end_time")
+        )
+        if "dt =" in MooseInput(removed).text[MooseInput(removed).unique("Executioner").start : MooseInput(removed).unique("Executioner").end]:
+            raise AssertionError("parameter removal failed")
+        if removed_params != {"dt": "1.0e-4", "end_time": "5.0e-4"}:
+            raise AssertionError("parameter removal metadata mismatch")
+
+        inserted, insert_at = MooseInput(text).insert_before_close(
+            "Variables", "  [n_e]\n    type = FVReal\n  []"
+        )
+        variables = MooseInput(inserted)
+        if variables.unique("Variables/n_e").start != insert_at:
+            raise AssertionError("block insertion failed")
+        if variables.unique("Variables/phi").path != "Variables/phi":
+            raise AssertionError("block insertion changed existing structure")
+
         duplicate = text.replace(
             "  dt = 1.0e-4\n",
             "  dt = 1.0e-4\n  dt = 2.0e-4\n",
@@ -183,6 +251,12 @@ def self_test() -> int:
             pass
         else:
             raise AssertionError("duplicate parameter ambiguity was not rejected")
+        try:
+            MooseInput(duplicate).remove_parameters("Executioner", ("dt",))
+        except MooseInputError:
+            pass
+        else:
+            raise AssertionError("duplicate parameter removal ambiguity was not rejected")
 
         missing = text.replace("  end_time = 5.0e-4\n", "")
         try:
