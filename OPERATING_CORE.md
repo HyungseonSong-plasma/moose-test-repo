@@ -88,9 +88,25 @@ OBSERVATION = whether recorded outputs observe the intended state, time, branch,
 DECISION    = the scientific claim accepted, rejected, held, or re-routed from that evidence
 ```
 
-No downstream layer may silently contradict an upstream layer. A PASS is allowed only when the evidence needed for the claim demonstrates conformance along every material link. If a material link is unobserved, internally contradictory, leaves the declared regime, or changes into an unvalidated regime, fail closed as `HOLD`, a construction/runtime-semantic class, or a new incident rather than allowing a physics PASS.
+Across every material link, distinguish the **semantic object** from its representation and declare identity/ownership/provenance when those affect meaning. Names, symbols, source-code spellings, serialized floating-point values, aggregate statistics, output rows, host constants, and proxy diagnostics are representations; they are not interchangeable merely because they look related.
 
-This ontology is intentionally future-facing: do not attempt to enumerate every possible framework or multiphysics failure in CORE. Define the claim/model/regime explicitly, derive or introspect effective execution controls, monitor the material runtime invariants that can change the regime, and require evidence that the intended contract actually ran.
+The validation equivalence relation must be **no stronger than the producing representation guarantees and no weaker than the scientific claim requires**. Before using exact equality or a tight acceptance gate, classify the required relation, for example:
+
+```text
+syntax / byte exact
+identifier / enum exact
+discrete mathematical exact
+representation-equivalent numeric
+numerical tolerance
+convergence / refinement equivalence
+physical-model tolerance
+```
+
+A representation-only mismatch, wrong aggregation operator, wrong state/time identity, source-vs-host convention mismatch, or proxy/direct-evidence substitution is a validation/contract problem until evidence proves a physics defect. Exact equality is valid only when exact identity is itself guaranteed and required.
+
+No downstream layer may silently contradict an upstream layer. A PASS is allowed only when the evidence needed for the claim demonstrates conformance along every material link. If a material link is unobserved, internally contradictory, leaves the declared regime, changes into an unvalidated regime, or is compared under an unjustified equivalence relation, fail closed as `HOLD`, a construction/runtime-semantic class, `VALIDATOR_SELFTEST_FAIL`, or a new incident rather than allowing a physics PASS.
+
+This ontology is intentionally future-facing: do not attempt to enumerate every possible framework or multiphysics failure in CORE. Define the claim/model/regime explicitly, derive or introspect effective execution controls, preserve semantic identity across representations, monitor the material runtime invariants that can change the regime, and require evidence that the intended contract actually ran.
 
 Responsibility is delegated, not duplicated:
 
@@ -98,8 +114,8 @@ Responsibility is delegated, not duplicated:
 model/scale/coupling meaning and regime boundaries
   -> docs/protocols/problem_solving.md (including PS-23 and Researcher/Validator flow)
 
-numerical/framework preflight, runtime-semantic conformance, and evidence sufficiency
-  -> docs/protocols/validation.md (including VAL-21)
+semantic equivalence, numerical/framework preflight, runtime-semantic conformance, and evidence sufficiency
+  -> docs/protocols/validation.md (including VAL-16 and VAL-21)
 ```
 
 Automatic recovery is permitted only when it is a predeclared semantics-preserving derived correction. A model/regime transition or unknown contract violation that can change the scientific meaning requires explicit validation/re-routing rather than silent automatic repair.
