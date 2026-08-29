@@ -213,6 +213,32 @@ def _install_v5_repairs() -> None:
     v3._run_case_safe = _run_case_v5
 
 
+def _numeric_assignment_values(text: str, name: str) -> list[float]:
+    number = r"[+\-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+\-]?\d+)?"
+    matches = re.findall(
+        rf"(?m)^\s*{re.escape(name)}\s*=\s*['\"]?({number})",
+        text,
+    )
+    values: list[float] = []
+    for raw in matches:
+        try:
+            values.append(float(raw))
+        except ValueError:
+            continue
+    return values
+
+
+def _representation_numeric_match(
+    text: str, name: str, required: float
+) -> tuple[bool, list[float]]:
+    values = _numeric_assignment_values(text, name)
+    tolerance = max(abs(required) * 1.0e-12, 1.0e-300)
+    return (
+        any(abs(value - required) <= tolerance for value in values),
+        values,
+    )
+
+
 def _output_preflight_log_evidence(
     log_path: Path, report: dict[str, Any]
 ) -> dict[str, Any]:
@@ -237,7 +263,8 @@ def _output_preflight_log_evidence(
         )
 
     # --show-input is the executable-derived representation. These checks are
-    # deliberately capability/value checks, not exact formatting checks.
+    # capability/value checks. Decimal serialization is compared numerically,
+    # not by exact token spelling, per VAL-16.
     required_names = (
         "new_row_tolerance",
         "time_tolerance",
@@ -253,17 +280,26 @@ def _output_preflight_log_evidence(
             "present",
         )
 
+    row_required = float(csv["new_row_tolerance"])
+    row_match, row_values = _representation_numeric_match(
+        text, "new_row_tolerance", row_required
+    )
     add(
         "show-input-row-tolerance-value",
-        f"{float(csv['new_row_tolerance']):.17g}" in text,
-        float(csv["new_row_tolerance"]),
-        float(csv["new_row_tolerance"]),
+        row_match,
+        row_values,
+        row_required,
+    )
+
+    time_required = float(csv["time_tolerance"])
+    time_match, time_values = _representation_numeric_match(
+        text, "time_tolerance", time_required
     )
     add(
         "show-input-time-tolerance-value",
-        f"{float(csv['time_tolerance']):.17g}" in text,
-        float(csv["time_tolerance"]),
-        float(csv["time_tolerance"]),
+        time_match,
+        time_values,
+        time_required,
     )
     add(
         "show-output-timestep-end",
@@ -441,17 +477,34 @@ def self_test() -> int:
             introspection = tmp_path / "introspection.log"
             introspection.write_text(
                 "new_row_tolerance = 1e-17\n"
-                "time_tolerance = 1e-17\n"
+                "time_tolerance = 1.0000000000000001e-17\n"
                 "time_step_interval = 1\n"
                 "min_simulation_time_interval = 0\n"
                 "new_row_detection_columns = time\n"
                 "execute_on = 'INITIAL TIMESTEP_END'\n"
             )
             if _output_preflight_log_evidence(introspection, report)["status"] != "PASS":
-                raise AssertionError("valid executable-introspection evidence failed")
-            introspection.write_text("new_row_tolerance = 1e-12\n")
-            if _output_preflight_log_evidence(introspection, report)["status"] != "HOLD":
-                raise AssertionError("incomplete introspection evidence was accepted")
+                raise AssertionError(
+                    "representation-equivalent executable-introspection evidence failed"
+                )
+
+            introspection.write_text(
+                "new_row_tolerance = 1e-12\n"
+                "time_tolerance = 1e-17\n"
+                "time_step_interval = 1\n"
+                "min_simulation_time_interval = 0\n"
+                "new_row_detection_columns = time\n"
+                "execute_on = 'INITIAL TIMESTEP_END'\n"
+            )
+            bad_introspection = _output_preflight_log_evidence(introspection, report)
+            failed_ids = {item["id"] for item in bad_introspection["blockers"]}
+            if (
+                bad_introspection["status"] != "HOLD"
+                or "show-input-row-tolerance-value" not in failed_ids
+            ):
+                raise AssertionError(
+                    "materially different row-tolerance introspection was accepted"
+                )
     except Exception as exc:
         print(f"ISSUE44_OUTPUT_CONTRACT_SELFTEST: FAIL ({exc})")
         return 1
