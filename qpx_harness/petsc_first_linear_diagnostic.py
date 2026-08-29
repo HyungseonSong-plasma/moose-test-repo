@@ -54,7 +54,7 @@ def instrument_first_linear(text: str) -> tuple[str, dict[str, Any]]:
     out = inv._set_or_insert_parameter(
         text, "Executioner", "nl_max_its", str(DIAGNOSTIC_NL_MAX_ITS)
     )
-    out = _merge_options(out, FIRST_LINEAR_PETSC_OPTIONS)
+    out = _merge_options(out, REQUIRED_EXISTING_OPTIONS + FIRST_LINEAR_PETSC_OPTIONS)
     MooseInput(out)
     return out, {
         "target": TARGET,
