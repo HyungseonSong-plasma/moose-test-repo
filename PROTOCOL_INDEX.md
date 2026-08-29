@@ -64,10 +64,68 @@ Read:
 
 Apply this route before any GitHub issue/file/branch/ref mutation, including dependency-status synchronization after issue lifecycle changes. Read/search operations do not require the mutation procedure unless they are preparing a write.
 
+## Contract-chain resolution
+
+Treat every loaded rule or procedure as a contract:
+
+```text
+input  = current problem, accepted state, and existing evidence
+output = decision plus zero or more unresolved obligations
+```
+
+Do not preload an entire rule graph. Apply the minimum current contract, then route only the unresolved obligation(s).
+
+Standard obligations:
+
+```text
+SOURCE_TRUTH        -> ROUTE-03
+DIAGNOSIS           -> ROUTE-02 or ROUTE-04
+VALIDATION          -> ROUTE-05 and CORE-08 P0->P3
+KNOWN_SYMPTOM       -> ROUTE-08
+MUTATION            -> ROUTE-09
+CLOSURE_OR_REVIEW   -> ROUTE-06
+```
+
+Canonical flow:
+
+```text
+problem observed
+-> apply CORE invariants and current issue STATE
+-> choose the initial ROUTE
+-> apply the minimum selected rule/procedure
+-> record its decision and unresolved obligation(s)
+-> route each material obligation through this index
+-> repeat until no obligation remains or an explicit HOLD/BLOCKED decision is reached
+-> present the solution, validation result, or closure decision
+```
+
+Chain invariants:
+
+1. A downstream contract may refine an upstream decision but may not weaken a CORE invariant or erase accepted evidence without contradictory evidence.
+2. Accepted outputs become inputs to the next contract; do not rediscover the same fact unless it is stale, contradicted, or identity-sensitive.
+3. Resolve prerequisites before dependent obligations. Batch independent obligations when doing so preserves interpretability and reduces external rounds.
+4. Reference downstream routes/contracts instead of copying their procedure text into the current rule.
+5. If no existing route can satisfy a material obligation, apply the rule-reuse gate before creating any new rule.
+
+Example:
+
+```text
+solver/runtime problem
+-> ROUTE-04: diagnose the failure class
+-> SOURCE_TRUTH if framework/model behavior is uncertain
+-> ROUTE-03: establish the source contract
+-> VALIDATION when a candidate fix or claim must be tested
+-> ROUTE-05: P0->P3 validation
+-> MUTATION only if an accepted repository change is required
+-> ROUTE-09: perform and verify the write
+-> CLOSURE_OR_REVIEW
+-> ROUTE-06: metrics, retrospective, and closure
+```
+
 ## Canonical ownership map
 
 - Operating invariants and authorization semantics -> `OPERATING_CORE.md`
-- Request routing and rule-reuse decisions -> `PROTOCOL_INDEX.md`
+- Request routing, contract-chain resolution, and rule-reuse decisions -> `PROTOCOL_INDEX.md`
 - Phase 0, hypothesis design, Researcher/Validator orchestration, 3-EVR state machine, convergence/coupling diagnostic strategy -> `docs/protocols/problem_solving.md`
 - P0-P3, static construction checks, predictive batch design, analyzer/checker self-validation, production parity, data A0-A7 -> `docs/protocols/validation.md`
 - WCC/T-WCC/RVR/EVR/DBR/RWR/CLR/FBR, work boundaries, closure and retrospectives -> `docs/protocols/metrics_closure.md`
