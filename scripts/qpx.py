@@ -14,6 +14,7 @@ if str(ROOT) not in sys.path:
 
 from qpx_harness.analysis import analyze
 from qpx_harness.bundle import main as bundle_main
+from qpx_harness.dmix_equivalence import main as dmix_equivalence_main, self_test as dmix_equivalence_self_test
 from qpx_harness.performance_cache_audit import main as performance_cache_audit_main, self_test as performance_cache_audit_self_test
 from qpx_harness.performance_core import main as performance_main, self_test as performance_self_test
 from qpx_harness.performance_investigation import main as performance_investigation_main, self_test as performance_investigation_self_test
@@ -29,6 +30,7 @@ from qpx_harness.workspace import inventory_cli, self_test as workspace_self_tes
 COMMANDS = {
     "test": "run one test.json case",
     "test-all": "discover and run a canonical/diagnostic suite",
+    "dmix-equivalence": "compare optimized D_mix against legacy full evaluation",
     "measure": "run one schema-driven QPX performance measurement",
     "measure-smoke": "auto-manage one PF-1 BENCHMARK/PROFILE smoke pair",
     "investigate": "analyze the latest passing PF-1 smoke evidence",
@@ -90,6 +92,7 @@ def self_test_cli(argv: list[str]) -> int:
     parser_rc = parser_symbol_self_test()
     temporal_rc = temporal_self_test()
     workspace_rc = workspace_self_test()
+    dmix_equivalence_rc = dmix_equivalence_self_test()
     performance_rc = performance_self_test()
     performance_smoke_rc = performance_smoke_self_test()
     performance_investigation_rc = performance_investigation_self_test()
@@ -99,6 +102,7 @@ def self_test_cli(argv: list[str]) -> int:
         parser_rc == 0
         and temporal_rc == 0
         and workspace_rc == 0
+        and dmix_equivalence_rc == 0
         and performance_rc == 0
         and performance_smoke_rc == 0
         and performance_investigation_rc == 0
@@ -120,6 +124,8 @@ def main(argv: list[str] | None = None) -> int:
         return cli_run_test(rest)
     if command == "test-all":
         return cli_run_all(rest)
+    if command == "dmix-equivalence":
+        return dmix_equivalence_main(rest)
     if command == "measure":
         return performance_main(rest)
     if command == "measure-smoke":
