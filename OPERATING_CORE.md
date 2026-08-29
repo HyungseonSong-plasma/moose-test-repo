@@ -132,4 +132,21 @@ For every technical response:
 5. search incidents/knowledge only when the symptom or decision requires it
 ```
 
-This sequence is itself canonical and is intended to keep the active rule context small.
+### `moose-test-init` bootstrap completeness
+
+`moose-test-init` is a context-restoration/bootstrap command, not merely a request for the current issue number. Before declaring initialization complete, load:
+
+```text
+1. OPERATING_CORE.md
+2. active issue body/status and restart checkpoint
+3. PROTOCOL_INDEX.md
+4. docs/protocols/coding.md
+5. every additional protocol selected for the active issue's immediate resume obligation
+6. matching incident/knowledge evidence only when the resume obligation requires it
+```
+
+The coding protocol is mandatory during `moose-test-init` even when the immediate next action is validation rather than code mutation. The purpose is to prime repository ownership, harness/script placement, reuse, CLI, and self-test constraints before a later turn transitions into implementation.
+
+Do not report `moose-test-init` complete after restoring STATE alone. If implementation begins and `docs/protocols/coding.md` is only discovered afterward, classify the bootstrap as incomplete and correct the routing before further code/harness/script work.
+
+This sequence is itself canonical and is intended to keep the active rule context small while making bootstrap state complete enough for safe implementation.
