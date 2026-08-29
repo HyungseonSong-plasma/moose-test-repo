@@ -17,6 +17,7 @@ from qpx_harness.bundle import main as bundle_main
 from qpx_harness.coupling_evr1_safe import main as coupling_evr1_main, self_test as coupling_evr1_self_test
 from qpx_harness.coupling_evr2_timestep import main as coupling_evr2_main, self_test as coupling_evr2_self_test
 from qpx_harness.dmix_equivalence_structured import main as dmix_equivalence_main, self_test as dmix_equivalence_self_test
+from qpx_harness.fast_plasma_relaxation import main as fast_relaxation_main, self_test as fast_relaxation_self_test
 from qpx_harness.performance_cache_audit import main as performance_cache_audit_main, self_test as performance_cache_audit_self_test
 from qpx_harness.performance_core import main as performance_main, self_test as performance_self_test
 from qpx_harness.performance_investigation import main as performance_investigation_main, self_test as performance_investigation_self_test
@@ -36,6 +37,7 @@ COMMANDS = {
     "coupling-evr1": "run Issue31 optimized monolithic coupling discriminator",
     "coupling-evr2": "run Issue31 transport timestep/scaling discriminator",
     "scale-audit": "build Issue43 QVT multiphysics space-time scale map",
+    "fast-relaxation": "run Issue43 frozen-heavy electron-Poisson relaxation audit",
     "dmix-equivalence": "compare optimized D_mix against legacy full evaluation",
     "measure": "run one schema-driven QPX performance measurement",
     "measure-smoke": "auto-manage one PF-1 BENCHMARK/PROFILE smoke pair",
@@ -101,6 +103,7 @@ def self_test_cli(argv: list[str]) -> int:
     coupling_evr1_rc = coupling_evr1_self_test()
     coupling_evr2_rc = coupling_evr2_self_test()
     scale_audit_rc = scale_audit_self_test()
+    fast_relaxation_rc = fast_relaxation_self_test()
     dmix_equivalence_rc = dmix_equivalence_self_test()
     performance_rc = performance_self_test()
     performance_smoke_rc = performance_smoke_self_test()
@@ -114,6 +117,7 @@ def self_test_cli(argv: list[str]) -> int:
         and coupling_evr1_rc == 0
         and coupling_evr2_rc == 0
         and scale_audit_rc == 0
+        and fast_relaxation_rc == 0
         and dmix_equivalence_rc == 0
         and performance_rc == 0
         and performance_smoke_rc == 0
@@ -142,6 +146,8 @@ def main(argv: list[str] | None = None) -> int:
         return coupling_evr2_main(rest)
     if command == "scale-audit":
         return scale_audit_main(rest)
+    if command == "fast-relaxation":
+        return fast_relaxation_main(rest)
     if command == "dmix-equivalence":
         return dmix_equivalence_main(rest)
     if command == "measure":
