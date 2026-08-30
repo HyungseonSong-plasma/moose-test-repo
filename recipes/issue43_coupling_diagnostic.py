@@ -3,9 +3,30 @@ from __future__ import annotations
 
 from typing import Any
 
+from qpx_harness.moose import blocks as mb
 from qpx_harness.moose import parameters as mp
 from qpx_harness.petsc import options as po
-from qpx_harness import fast_plasma_coupling_diagnostic as legacy
+
+DIAGNOSTIC_PETSC_OPTIONS = (
+    "-snes_converged_reason",
+    "-ksp_converged_reason",
+    "-snes_monitor",
+    "-ksp_monitor",
+)
+JACOBIAN_PETSC_OPTIONS = ("-snes_test_jacobian",)
+
+
+def _ensure_debug_block(text: str) -> str:
+    matches = mp.direct_children(text, "") if False else None  # keep no path-specific state
+    debug_matches = __import__("qpx_harness.moose_input", fromlist=["MooseInput"]).MooseInput(text).find("Debug")
+    if len(debug_matches) > 1:
+        raise mb.MooseBlockError("multiple top-level [Debug] blocks")
+    if not debug_matches:
+        return mb.append_top_level_block(
+            text,
+            "[Debug]\n  show_var_residual_norms = true\n[]",
+        )
+    return mp.upsert_parameter(text, "Debug", "show_var_residual_norms", "true")
 
 
 def instrument_input(
@@ -13,12 +34,10 @@ def instrument_input(
     *,
     jacobian_test: bool = False,
 ) -> tuple[str, dict[str, Any]]:
-    # Debug block creation is a later generic block/output seam. Reuse the accepted
-    # constructor for that single operation while parameter/PETSc mutation is shared.
-    text = legacy._ensure_debug_block(input_text)
+    text = _ensure_debug_block(input_text)
     text = mp.upsert_parameter(text, "Executioner", "verbose", "true")
-    required = legacy.DIAGNOSTIC_PETSC_OPTIONS + (
-        legacy.JACOBIAN_PETSC_OPTIONS if jacobian_test else ()
+    required = DIAGNOSTIC_PETSC_OPTIONS + (
+        JACOBIAN_PETSC_OPTIONS if jacobian_test else ()
     )
     text = po.add_flags(text, required)
     text = mp.upsert_parameter(text, "Outputs/console", "all_variable_norms", "true")
