@@ -55,6 +55,48 @@ def _check_fd_predictor() -> None:
             raise AssertionError("invalid FD state unexpectedly passed")
 
 
+def _generic_provenance_summary(
+    *,
+    root: Path,
+    case: Path,
+    input_path: Path,
+    source: Path,
+    input_before: str,
+    input_after: str,
+    log: Path,
+    log_preexisting: bool,
+    log_exists: bool,
+    dofmap: Path,
+    dofmap_preexisting: bool,
+    dofmap_exists: bool,
+    source_before: tuple[str, ...],
+    source_after: tuple[str, ...],
+) -> dict[str, object]:
+    return artifacts.summarize_checks(
+        {
+            "runner-owned-case": artifacts.is_direct_child(case, root),
+            "runner-owned-input": artifacts.is_direct_child(input_path, case),
+            "source-case-isolated": artifacts.paths_distinct(case, source),
+            "input-identity-stable": artifacts.identity_stable(input_before, input_after),
+            "current-run-log": artifacts.current_run_artifact(
+                log,
+                expected_parent=root,
+                existed_before=log_preexisting,
+                exists_after=log_exists,
+            ),
+            "current-run-dofmap": artifacts.current_run_artifact(
+                dofmap,
+                expected_parent=case,
+                existed_before=dofmap_preexisting,
+                exists_after=dofmap_exists,
+            ),
+            "canonical-source-output-unchanged": artifacts.snapshot_unchanged(
+                source_before, source_after
+            ),
+        }
+    )
+
+
 def _check_artifact_primitives() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp).resolve()
@@ -65,43 +107,129 @@ def _check_artifact_primitives() -> None:
         input_path = case / "input.i"
         input_path.write_text("[Mesh]\n[]\n")
         log = root / "run.log"
-        generated = case / "dofmap.json"
+        dofmap = case / "dofmap.json"
 
-        checks = {
-            "runner-owned-case": artifacts.is_direct_child(case, root),
-            "runner-owned-input": artifacts.is_direct_child(input_path, case),
-            "source-case-isolated": artifacts.paths_distinct(case, source),
-            "input-identity-stable": artifacts.identity_stable("abc", "abc"),
-            "current-run-log": artifacts.current_run_artifact(
-                log,
-                expected_parent=root,
-                existed_before=False,
-                exists_after=True,
-            ),
-            "current-run-generated": artifacts.current_run_artifact(
-                generated,
-                expected_parent=case,
-                existed_before=False,
-                exists_after=True,
-            ),
-            "source-output-unchanged": artifacts.snapshot_unchanged(
-                ("a", "b"), ("a", "b")
-            ),
-        }
-        result = artifacts.summarize_checks(checks)
-        if not result["ok"] or result["blockers"]:
-            raise AssertionError(f"positive artifact checks failed: {result}")
-
-        stale = dict(checks)
-        stale["current-run-log"] = artifacts.current_run_artifact(
-            log,
-            expected_parent=root,
-            existed_before=True,
-            exists_after=True,
+        positive = _generic_provenance_summary(
+            root=root,
+            case=case,
+            input_path=input_path,
+            source=source,
+            input_before="abc",
+            input_after="abc",
+            log=log,
+            log_preexisting=False,
+            log_exists=True,
+            dofmap=dofmap,
+            dofmap_preexisting=False,
+            dofmap_exists=True,
+            source_before=("a", "b"),
+            source_after=("a", "b"),
         )
-        stale_result = artifacts.summarize_checks(stale)
-        if stale_result["ok"] or stale_result["blockers"] != ["current-run-log"]:
-            raise AssertionError(f"stale artifact negative control failed: {stale_result}")
+        if not positive["ok"] or positive["blockers"]:
+            raise AssertionError(f"positive artifact checks failed: {positive}")
+
+        stale = _generic_provenance_summary(
+            root=root,
+            case=case,
+            input_path=input_path,
+            source=source,
+            input_before="abc",
+            input_after="abc",
+            log=log,
+            log_preexisting=True,
+            log_exists=True,
+            dofmap=dofmap,
+            dofmap_preexisting=False,
+            dofmap_exists=True,
+            source_before=("a", "b"),
+            source_after=("a", "b"),
+        )
+        if stale["ok"] or stale["blockers"] != ["current-run-log"]:
+            raise AssertionError(f"stale artifact negative control failed: {stale}")
+
+
+def _check_legacy_provenance_equivalence() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp).resolve()
+        case = root / "case"
+        source = root / "source"
+        case.mkdir()
+        source.mkdir()
+        input_path = case / "input.i"
+        log = root / "run.log"
+        dofmap = case / "dofmap.json"
+
+        scenarios = (
+            {
+                "input_before": "abc",
+                "input_after": "abc",
+                "log_preexisting": False,
+                "log_exists": True,
+                "dofmap_preexisting": False,
+                "dofmap_exists": True,
+                "source_before": ("a",),
+                "source_after": ("a",),
+            },
+            {
+                "input_before": "abc",
+                "input_after": "abc",
+                "log_preexisting": True,
+                "log_exists": True,
+                "dofmap_preexisting": False,
+                "dofmap_exists": True,
+                "source_before": ("a",),
+                "source_after": ("a",),
+            },
+            {
+                "input_before": "abc",
+                "input_after": "def",
+                "log_preexisting": False,
+                "log_exists": True,
+                "dofmap_preexisting": False,
+                "dofmap_exists": True,
+                "source_before": ("a",),
+                "source_after": ("a", "new"),
+            },
+        )
+        for scenario in scenarios:
+            old = legacy._evidence_provenance_status(
+                root=root,
+                case_dir=case,
+                input_path=input_path,
+                source_case=source,
+                input_sha_before=scenario["input_before"],
+                input_sha_after=scenario["input_after"],
+                log_path=log,
+                log_preexisting=scenario["log_preexisting"],
+                log_exists=scenario["log_exists"],
+                dofmap_path=dofmap,
+                dofmap_preexisting=scenario["dofmap_preexisting"],
+                dofmap_exists=scenario["dofmap_exists"],
+                source_dofmaps_before=scenario["source_before"],
+                source_dofmaps_after=scenario["source_after"],
+            )
+            new = _generic_provenance_summary(
+                root=root,
+                case=case,
+                input_path=input_path,
+                source=source,
+                input_before=scenario["input_before"],
+                input_after=scenario["input_after"],
+                log=log,
+                log_preexisting=scenario["log_preexisting"],
+                log_exists=scenario["log_exists"],
+                dofmap=dofmap,
+                dofmap_preexisting=scenario["dofmap_preexisting"],
+                dofmap_exists=scenario["dofmap_exists"],
+                source_before=scenario["source_before"],
+                source_after=scenario["source_after"],
+            )
+            if new["blockers"] != old["blockers"]:
+                raise AssertionError(
+                    f"provenance blocker drift: generic={new['blockers']} legacy={old['blockers']}"
+                )
+            if bool(new["ok"]) != (old["status"] == "PASS"):
+                raise AssertionError("provenance pass/fail drift")
 
 
 def _check_policy_boundary() -> None:
@@ -133,6 +261,8 @@ def main() -> int:
         print("ISSUE48_WP2_FD_EVIDENCE_CHECK: fd-representability=PASS")
         _check_artifact_primitives()
         print("ISSUE48_WP2_FD_EVIDENCE_CHECK: artifact-binding-primitives=PASS")
+        _check_legacy_provenance_equivalence()
+        print("ISSUE48_WP2_FD_EVIDENCE_CHECK: legacy-provenance-equivalence=PASS")
         _check_policy_boundary()
         print("ISSUE48_WP2_FD_EVIDENCE_CHECK: policy-boundary=PASS")
     except Exception as exc:
