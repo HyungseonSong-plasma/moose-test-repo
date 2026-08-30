@@ -12,7 +12,6 @@ import ast
 import importlib.util
 import json
 import re
-import sys
 from collections import defaultdict
 from pathlib import Path
 from typing import Iterable
@@ -214,7 +213,7 @@ def inventory(root: Path = ROOT) -> dict[str, object]:
 
 def self_test() -> int:
     try:
-        path = Path("qpx_harness/example.py")
+        path = ROOT / "qpx_harness" / "example.py"
         source = (
             "from . import sibling as s\n"
             "from qpx_harness.alpha import main\n"
