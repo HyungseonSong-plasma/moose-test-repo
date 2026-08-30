@@ -92,14 +92,23 @@ def _resolve_from_import(
         base = node.module or ""
 
     imports: list[str] = []
-    if node.module:
-        if base:
-            imports.append(base)
-    else:
-        for alias in node.names:
-            if alias.name == "*":
-                continue
-            imports.append(f"{base}.{alias.name}" if base else alias.name)
+    if base:
+        imports.append(base)
+
+    # ``from package import name`` can import a package attribute or a real
+    # submodule.  For deletion safety we must conservatively treat
+    # ``package.name`` as a module consumer as well.  This is what catches
+    # patterns such as:
+    #
+    #   from qpx_harness import jacobian_fd_reference_audit as legacy
+    #
+    # while the top-level candidate reduction below prevents attribute names
+    # imported from deeper modules from creating unrelated candidate edges.
+    for alias in node.names:
+        if alias.name == "*":
+            continue
+        imported = f"{base}.{alias.name}" if base else alias.name
+        imports.append(imported)
     return imports
 
 
@@ -216,6 +225,7 @@ def self_test() -> int:
         path = ROOT / "qpx_harness" / "example.py"
         source = (
             "from . import sibling as s\n"
+            "from qpx_harness import gamma as g\n"
             "from qpx_harness.alpha import main\n"
             "import qpx_harness.beta\n"
             "text = 'qpx_harness.not_an_import'\n"
@@ -227,6 +237,7 @@ def self_test() -> int:
         )
         required = {
             "qpx_harness.sibling",
+            "qpx_harness.gamma",
             "qpx_harness.alpha",
             "qpx_harness.beta",
         }
@@ -234,6 +245,19 @@ def self_test() -> int:
             raise AssertionError(f"missing imports: {required - imports}")
         if "qpx_harness.not_an_import" in imports:
             raise AssertionError("string literal was misclassified as import")
+
+        # Regression control for the exact false-ZERO_CONSUMER shape that the
+        # cleanup gate must not miss.
+        compat_source = (
+            "from qpx_harness import jacobian_fd_reference_audit as legacy\n"
+        )
+        compat_imports = imported_modules(
+            compat_source,
+            module_name="qpx_harness.compat.example",
+            path=ROOT / "qpx_harness" / "compat" / "example.py",
+        )
+        if "qpx_harness.jacobian_fd_reference_audit" not in compat_imports:
+            raise AssertionError("package submodule import consumer was not detected")
 
         bad_source = "from . import sibling\nthis is not python\n"
         try:
