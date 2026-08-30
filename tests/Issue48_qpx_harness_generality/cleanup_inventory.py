@@ -1,0 +1,300 @@
+#!/usr/bin/env python3
+"""Issue48 cleanup inventory for legacy qpx_harness owners.
+
+This checker answers one narrow question before deletion: which mixed/legacy
+modules still have executable consumers in repository Python or CI/test command
+surfaces?  It does not delete anything and does not classify scientific state.
+"""
+from __future__ import annotations
+
+import argparse
+import ast
+import importlib.util
+import json
+import re
+import sys
+from collections import defaultdict
+from pathlib import Path
+from typing import Iterable
+
+ROOT = Path(__file__).resolve().parents[2]
+
+CLEANUP_CANDIDATES = (
+    "augmented_jacobian_localization",
+    "coupling_evr1",
+    "coupling_evr1_safe",
+    "coupling_evr2_timestep",
+    "dmix_equivalence",
+    "dmix_equivalence_structured",
+    "electron_inventory_nullspace",
+    "fast_plasma_coupling_diagnostic",
+    "fast_plasma_relaxation",
+    "fast_plasma_relaxation_v2",
+    "fast_plasma_relaxation_v3",
+    "fast_plasma_relaxation_v4",
+    "fast_plasma_relaxation_v5",
+    "jacobian_fd_reference_audit",
+    "petsc_first_linear_diagnostic",
+    "performance_cache_audit",
+    "performance_core",
+    "performance_investigation",
+    "performance_smoke",
+    "performance_transport_probe",
+    "performance_transport_probe_direct",
+    "performance_transport_probe_resilient",
+    "scale_audit",
+)
+
+PYTHON_SCAN_ROOTS = (
+    "qpx_harness",
+    "recipes",
+    "scripts",
+    "tests",
+    "performance",
+)
+
+EXECUTION_SCAN_ROOTS = (
+    ".github",
+    "tests",
+    "performance",
+)
+
+
+def _module_name(path: Path, root: Path = ROOT) -> str | None:
+    try:
+        rel = path.resolve().relative_to(root.resolve())
+    except ValueError:
+        return None
+    if rel.suffix != ".py":
+        return None
+    parts = list(rel.with_suffix("").parts)
+    if parts[-1] == "__init__":
+        parts = parts[:-1]
+    return ".".join(parts) if parts else None
+
+
+def _package_for(module: str, path: Path) -> str:
+    if path.name == "__init__.py":
+        return module
+    return module.rpartition(".")[0]
+
+
+def _resolve_from_import(
+    *, module_name: str, path: Path, node: ast.ImportFrom
+) -> list[str]:
+    package = _package_for(module_name, path)
+    if node.level:
+        relative = "." * node.level + (node.module or "")
+        try:
+            base = importlib.util.resolve_name(relative, package)
+        except (ImportError, ValueError):
+            return []
+    else:
+        base = node.module or ""
+
+    imports: list[str] = []
+    if node.module:
+        if base:
+            imports.append(base)
+    else:
+        for alias in node.names:
+            if alias.name == "*":
+                continue
+            imports.append(f"{base}.{alias.name}" if base else alias.name)
+    return imports
+
+
+def imported_modules(source: str, *, module_name: str, path: Path) -> set[str]:
+    tree = ast.parse(source, filename=str(path))
+    result: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            result.update(alias.name for alias in node.names)
+        elif isinstance(node, ast.ImportFrom):
+            result.update(
+                _resolve_from_import(module_name=module_name, path=path, node=node)
+            )
+    return result
+
+
+def _iter_python_files(root: Path = ROOT) -> Iterable[Path]:
+    for rel in PYTHON_SCAN_ROOTS:
+        base = root / rel
+        if not base.exists():
+            continue
+        for path in base.rglob("*.py"):
+            if "__pycache__" in path.parts:
+                continue
+            yield path
+
+
+def _top_qpx_module(name: str) -> str | None:
+    prefix = "qpx_harness."
+    if not name.startswith(prefix):
+        return None
+    tail = name[len(prefix) :]
+    if not tail:
+        return None
+    return tail.split(".", 1)[0]
+
+
+def python_consumers(root: Path = ROOT) -> dict[str, set[str]]:
+    consumers: dict[str, set[str]] = defaultdict(set)
+    for path in _iter_python_files(root):
+        module = _module_name(path, root)
+        if not module:
+            continue
+        try:
+            source = path.read_text()
+            imports = imported_modules(source, module_name=module, path=path)
+        except (OSError, UnicodeDecodeError, SyntaxError) as exc:
+            raise RuntimeError(f"cannot inspect {path}: {exc}") from exc
+        for imported in imports:
+            top = _top_qpx_module(imported)
+            if top and top in CLEANUP_CANDIDATES:
+                consumers[top].add(str(path.relative_to(root)))
+    return consumers
+
+
+def execution_consumers(root: Path = ROOT) -> dict[str, set[str]]:
+    consumers: dict[str, set[str]] = defaultdict(set)
+    pattern = re.compile(
+        r"(?:python(?:3)?\s+-m\s+)(?:qpx_harness\.)([A-Za-z_][A-Za-z0-9_]*)"
+    )
+    suffixes = {".yml", ".yaml", ".sh", ".toml", ".json"}
+    for rel in EXECUTION_SCAN_ROOTS:
+        base = root / rel
+        if not base.exists():
+            continue
+        for path in base.rglob("*"):
+            if not path.is_file() or path.suffix.lower() not in suffixes:
+                continue
+            try:
+                text = path.read_text()
+            except (OSError, UnicodeDecodeError):
+                continue
+            for match in pattern.finditer(text):
+                module = match.group(1)
+                if module in CLEANUP_CANDIDATES:
+                    consumers[module].add(str(path.relative_to(root)))
+    return consumers
+
+
+def inventory(root: Path = ROOT) -> dict[str, object]:
+    scripts_dir = root / "scripts"
+    script_files = sorted(
+        str(path.relative_to(root)) for path in scripts_dir.iterdir() if path.is_file()
+    )
+    expected_scripts = ["scripts/qpx.py"]
+
+    py = python_consumers(root)
+    execution = execution_consumers(root)
+    candidates: dict[str, dict[str, object]] = {}
+    zero: list[str] = []
+    for module in CLEANUP_CANDIDATES:
+        all_consumers = sorted(py.get(module, set()) | execution.get(module, set()))
+        status = "ZERO_CONSUMER" if not all_consumers else "BLOCKED"
+        if not all_consumers:
+            zero.append(module)
+        candidates[module] = {
+            "status": status,
+            "consumers": all_consumers,
+            "python_consumers": sorted(py.get(module, set())),
+            "execution_consumers": sorted(execution.get(module, set())),
+        }
+
+    return {
+        "scripts_status": "PASS" if script_files == expected_scripts else "HOLD",
+        "scripts": script_files,
+        "expected_scripts": expected_scripts,
+        "candidates": candidates,
+        "zero_consumer_candidates": zero,
+    }
+
+
+def self_test() -> int:
+    try:
+        path = Path("qpx_harness/example.py")
+        source = (
+            "from . import sibling as s\n"
+            "from qpx_harness.alpha import main\n"
+            "import qpx_harness.beta\n"
+            "text = 'qpx_harness.not_an_import'\n"
+        )
+        imports = imported_modules(
+            source,
+            module_name="qpx_harness.example",
+            path=path,
+        )
+        required = {
+            "qpx_harness.sibling",
+            "qpx_harness.alpha",
+            "qpx_harness.beta",
+        }
+        if not required.issubset(imports):
+            raise AssertionError(f"missing imports: {required - imports}")
+        if "qpx_harness.not_an_import" in imports:
+            raise AssertionError("string literal was misclassified as import")
+
+        bad_source = "from . import sibling\nthis is not python\n"
+        try:
+            imported_modules(
+                bad_source,
+                module_name="qpx_harness.example",
+                path=path,
+            )
+        except SyntaxError:
+            pass
+        else:
+            raise AssertionError("syntax-error negative control was accepted")
+    except Exception as exc:
+        print(f"ISSUE48_CLEANUP_INVENTORY_SELFTEST: FAIL ({exc})")
+        return 1
+    print("ISSUE48_CLEANUP_INVENTORY_SELFTEST: PASS")
+    return 0
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--self-test", action="store_true")
+    parser.add_argument("--json", action="store_true")
+    args = parser.parse_args(argv)
+
+    if args.self_test:
+        return self_test()
+
+    result = inventory()
+    if args.json:
+        print(json.dumps(result, indent=2, sort_keys=True))
+    else:
+        print(
+            "ISSUE48_CLEANUP_SCRIPTS:",
+            result["scripts_status"],
+            "files=" + ",".join(result["scripts"]),
+        )
+        candidates = result["candidates"]
+        for module in CLEANUP_CANDIDATES:
+            item = candidates[module]
+            consumers = item["consumers"]
+            suffix = ",".join(consumers) if consumers else "NONE"
+            print(
+                f"ISSUE48_CLEANUP_CANDIDATE: {module} "
+                f"status={item['status']} consumers={suffix}"
+            )
+        print(
+            "ISSUE48_CLEANUP_ZERO_CONSUMER_COUNT:",
+            len(result["zero_consumer_candidates"]),
+        )
+        if result["zero_consumer_candidates"]:
+            print(
+                "ISSUE48_CLEANUP_ZERO_CONSUMERS:",
+                ",".join(result["zero_consumer_candidates"]),
+            )
+
+    ok = result["scripts_status"] == "PASS"
+    print("ISSUE48_CLEANUP_INVENTORY:", "PASS" if ok else "HOLD")
+    return 0 if ok else 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
