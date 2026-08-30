@@ -1,0 +1,47 @@
+"""Issue-agnostic PETSc/SNES/KSP termination parsing."""
+from __future__ import annotations
+
+import re
+from typing import Any
+
+
+def _parse_terminations(text: str, solve_kind: str) -> list[dict[str, Any]]:
+    pattern = re.compile(
+        rf"{re.escape(solve_kind)} solve\s+(converged|did not converge)\s+due to\s+([A-Z0-9_]+)(?:\s+iterations\s+(\d+))?",
+        re.IGNORECASE,
+    )
+    rows: list[dict[str, Any]] = []
+    for match in pattern.finditer(text):
+        rows.append(
+            {
+                "converged": match.group(1).lower() == "converged",
+                "reason": match.group(2).upper(),
+                "iterations": int(match.group(3)) if match.group(3) is not None else None,
+            }
+        )
+    return rows
+
+
+def parse_linear_solve_terminations(text: str) -> list[dict[str, Any]]:
+    """Return all parseable PETSc linear-solve termination records."""
+    return _parse_terminations(text, "Linear")
+
+
+def parse_nonlinear_solve_terminations(text: str) -> list[dict[str, Any]]:
+    """Return all parseable PETSc nonlinear-solve termination records."""
+    return _parse_terminations(text, "Nonlinear")
+
+
+def parse_pc_failure_reason(text: str) -> str | None:
+    """Return the first explicit ``PC failed due to`` reason, if present."""
+    match = re.search(r"PC failed due to\s+([A-Z0-9_]+)", text, re.IGNORECASE)
+    return match.group(1).upper() if match else None
+
+
+def line_hits(text: str, patterns: tuple[str, ...]) -> list[str]:
+    """Return stripped log lines matching any caller-supplied regex pattern."""
+    return [
+        line.strip()
+        for line in text.splitlines()
+        if any(re.search(pattern, line, re.IGNORECASE) for pattern in patterns)
+    ]
