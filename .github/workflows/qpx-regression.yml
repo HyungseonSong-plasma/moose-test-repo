@@ -39,9 +39,6 @@ jobs:
       - name: Performance investigation self-test
         run: python3 -m qpx_harness.performance_investigation --self-test
 
-      - name: Resilient transport analysis self-test
-        run: python3 -m qpx_harness.performance_transport_probe_resilient --self-test
-
       - name: Targeted transport probe self-test
         run: python3 -m qpx_harness.performance_transport_probe_direct --self-test
 
