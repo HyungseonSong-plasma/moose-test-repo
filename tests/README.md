@@ -77,21 +77,38 @@ The canonical execution interface is:
 python3 scripts/qpx.py <command> [args]
 ```
 
-Available commands:
+Representative generic commands:
 
 ```text
-test       run one test.json case
-test-all   discover and run a canonical/diagnostic suite
-profile    capture one-step P2/P3 performance evidence
-analyze    classify PETSc/PerfGraph profiling evidence
-bundle     build a declarative local profiling bundle
-preflight  run static parser-symbol preflight on one MOOSE input
-self-test  run parser/temporal harness self-tests
+test          run one test.json case
+test-all      discover and run a canonical/diagnostic suite
+profile       capture one-step P2/P3 performance evidence
+analyze       classify PETSc/PerfGraph profiling evidence
+bundle        build a declarative local profiling bundle
+preflight     run static parser-symbol preflight on one MOOSE input
+temporal-csv  normalize transient CSV rows under an explicit temporal policy
+self-test     run all harness static/self-tests
 ```
 
 R3 real-QPX equivalence reproduced the accepted canonical suite at `14/14 PASS`; the old `run_test.py`, `run_all.py`, and Issue-32 `r32_*` execution wrappers were retired afterward.
 
-`temporal_csv.py` and `validate_parser_symbols.py` remain standalone maintenance utilities because their full ad-hoc CLI surfaces are not duplicated by `qpx.py`. They are not issue-specific execution scripts and must not become templates for new per-issue executors.
+Maintenance utilities must also route through `scripts/qpx.py`; do not create standalone compatibility wrappers when the unified CLI can expose the capability.
+
+Parser preflight controls:
+
+```bash
+python3 scripts/qpx.py preflight --self-test
+python3 scripts/qpx.py preflight <generated-or-packaged-input.i>
+```
+
+Temporal CSV controls:
+
+```bash
+python3 scripts/qpx.py temporal-csv --self-test
+python3 scripts/qpx.py temporal-csv input_out.csv \
+  --output input_out.physical.csv \
+  --initial-row-policy exclude_observation
+```
 
 ## Running tests
 
