@@ -28,6 +28,7 @@ from qpx_harness.moose_input import MooseInput
 
 
 ACCEPTED_EVR1_ELECTRON_DOF_COUNT = 2348
+ACCEPTED_EVR1_OBSERVED_ATTENUATION = 0.96406286
 ACCEPTED_EVR2_REL_ERROR = 5.35565e-11
 ACCEPTED_FINAL_CLASS = "FD_REFERENCE_QUANTIZATION_CONFIRMED"
 ACCEPTED_WP_PREDICTED_ATTENUATION = 0.9640628864075022
@@ -127,6 +128,38 @@ def _historical_evr2_dofmap() -> str:
     return _dofmap_for_counts(ACCEPTED_EVR1_ELECTRON_DOF_COUNT)
 
 
+def _identity_pass() -> dict[str, str]:
+    return {
+        "status": "PASS",
+        "class": "ISSUE46_EXPERIMENT_IDENTITY_PASS",
+        "reason": "accepted-vector characterization explicitly supplies Issue46 identity",
+    }
+
+
+def _identity_drift() -> dict[str, str]:
+    return {
+        "status": "HOLD",
+        "class": "ISSUE46_EXPERIMENT_IDENTITY_DRIFT",
+        "reason": "synthetic topology is analyzer-valid but not the accepted experiment",
+    }
+
+
+def _applicability_pass() -> dict[str, str]:
+    return {
+        "status": "PASS",
+        "class": "PETSC_WP_MECHANISM_APPLICABILITY_PASS",
+        "reason": "accepted-vector characterization uses the accepted PETSc realization",
+    }
+
+
+def _applicability_hold() -> dict[str, str]:
+    return {
+        "status": "HOLD",
+        "class": "PETSC_WP_MECHANISM_APPLICABILITY_UNRESOLVED",
+        "reason": "runtime PETSc realization is intentionally unresolved",
+    }
+
+
 def _check_predictor() -> None:
     historical_vector_norm = (
         math.sqrt(float(ACCEPTED_EVR1_ELECTRON_DOF_COUNT)) * abs(base.TARGET)
@@ -142,6 +175,14 @@ def _check_predictor() -> None:
         )
         <= 1.0e-12,
         "accepted WP predictor value drifted",
+    )
+    _require(
+        abs(
+            prediction["wp_predicted_attenuation"]
+            - ACCEPTED_EVR1_OBSERVED_ATTENUATION
+        )
+        <= 1.0e-6,
+        "accepted WP mechanism no longer agrees with the historical observation",
     )
     _require(
         abs(prediction["ds_predicted_attenuation"] - 1.0)
@@ -300,11 +341,17 @@ def _check_runtime_topology_not_historical_literal() -> None:
         base._synthetic_log(ACCEPTED_EVR2_REL_ERROR, []),
         _dofmap_for_counts(nonhistorical_dofs),
         returncode=1,
+        experiment_identity=_identity_drift(),
+        mechanism_applicability=_applicability_pass(),
     )
-    reason = str(result.get("reason", ""))
     _require(
-        "accepted EVR1 C0 topology" not in reason,
-        "runtime analyzer still uses the historical 2348 topology as a current invariant",
+        result.get("ds_discriminator", {}).get("status") == "PASS",
+        "nonhistorical valid topology was not accepted by the structural DS analyzer",
+    )
+    _require(
+        result["status"] == "HOLD"
+        and result["class"] == "FD_REFERENCE_EXPERIMENT_DRIFT",
+        "analyzer applicability was incorrectly promoted to Issue46 experiment identity",
     )
     directional = result.get("directional", {})
     variables = directional.get("dof_map", {}).get("variables", {})
@@ -318,11 +365,112 @@ def _check_runtime_topology_not_historical_literal() -> None:
     )
 
 
+def _check_wp3_evidence_decomposition() -> None:
+    accepted_log = base._synthetic_log(ACCEPTED_EVR2_REL_ERROR, [])
+    accepted = base.analyze_ds_runtime(
+        accepted_log,
+        _historical_evr2_dofmap(),
+        returncode=1,
+        experiment_identity=_identity_pass(),
+        mechanism_applicability=_applicability_pass(),
+    )
+    _require(
+        accepted["status"] == "PASS" and accepted["class"] == ACCEPTED_FINAL_CLASS,
+        "accepted EVR2 vector no longer composes to the accepted final class",
+    )
+    _require(
+        accepted.get("mechanism_evidence", {}).get("class")
+        == "WP_QUANTIZATION_MECHANISM_CHARACTERIZED",
+        "historical WP mechanism is not represented as an explicit evidence channel",
+    )
+    _require(
+        accepted.get("ds_discriminator", {}).get("class")
+        == "DS_REFERENCE_JACOBIAN_PASS",
+        "DS Jacobian correctness is not represented as an independent evidence channel",
+    )
+    _require(
+        accepted.get("termination", {}).get("class")
+        == "EXPECTED_DIAGNOSTIC_NONCONVERGENCE",
+        "accepted rc=1 DIVERGED_BREAKDOWN was not recognized as admissible diagnostic termination",
+    )
+
+    unresolved = base.analyze_ds_runtime(
+        accepted_log,
+        _historical_evr2_dofmap(),
+        returncode=1,
+        experiment_identity=_identity_pass(),
+        mechanism_applicability=_applicability_hold(),
+    )
+    _require(
+        unresolved["status"] == "HOLD"
+        and unresolved["class"] == "FD_REFERENCE_MECHANISM_APPLICABILITY_HOLD",
+        "DS success alone over-claimed the WP quantization mechanism",
+    )
+    _require(
+        unresolved.get("ds_discriminator", {}).get("status") == "PASS",
+        "mechanism applicability HOLD incorrectly erased independent DS evidence",
+    )
+
+
+def _check_wp3_termination_false_pass_controls() -> None:
+    accepted_log = base._synthetic_log(ACCEPTED_EVR2_REL_ERROR, [])
+    fatal_log = accepted_log + "Segmentation fault (core dumped)\n"
+    fatal = base.analyze_ds_runtime(
+        fatal_log,
+        _historical_evr2_dofmap(),
+        returncode=139,
+        experiment_identity=_identity_pass(),
+        mechanism_applicability=_applicability_pass(),
+    )
+    _require(
+        fatal.get("termination", {}).get("class") == "FATAL_RUNTIME_FAILURE",
+        "fatal runtime signature was not classified as fatal",
+    )
+    _require(fatal["status"] == "HOLD", "fatal runtime incorrectly produced final PASS")
+
+    truncated_log = accepted_log.split("Linear solve did not converge", 1)[0]
+    truncated = base.analyze_ds_runtime(
+        truncated_log,
+        _historical_evr2_dofmap(),
+        returncode=0,
+        experiment_identity=_identity_pass(),
+        mechanism_applicability=_applicability_pass(),
+    )
+    _require(
+        truncated["status"] == "HOLD"
+        and truncated.get("ds_discriminator", {}).get("class")
+        == "FD_REFERENCE_DISCRIMINATOR_INSUFFICIENT",
+        "truncated threshold-matrix evidence was over-classified",
+    )
+
+
+def _check_wp3_provenance_separation() -> None:
+    _require(
+        not hasattr(base, "WP_OBSERVED_ATTENUATION"),
+        "historical observed attenuation still leaks into production decision constants",
+    )
+    report = loc.audit_framework_control_structure(loc.build_framework_control_input())
+    source = report.get("source_contract", {})
+    _require("moose_commit" not in source, "ambiguous moose_commit provenance key remains")
+    reference = source.get("reference_source", {})
+    _require(
+        reference.get("project") == "MOOSE"
+        and reference.get("revision") == "9f388366ccf",
+        "reference-source provenance is not explicitly identified",
+    )
+    _require(
+        source.get("runtime_identity") == "OBSERVED_SEPARATELY",
+        "reference-source provenance still masquerades as runtime identity",
+    )
+
+
 def _check_accepted_evr2_result_vector() -> None:
     result = base.analyze_ds_runtime(
         base._synthetic_log(ACCEPTED_EVR2_REL_ERROR, []),
         _historical_evr2_dofmap(),
         returncode=1,
+        experiment_identity=_identity_pass(),
+        mechanism_applicability=_applicability_pass(),
     )
     _require(result["status"] == "PASS", "accepted EVR2 vector no longer passes")
     _require(
@@ -352,6 +500,9 @@ def main() -> int:
         ("dofmap-negative-controls", _check_dofmap_negative_controls),
         ("ds-structure-controls", _check_ds_structure_controls),
         ("runtime-topology-not-historical-literal", _check_runtime_topology_not_historical_literal),
+        ("wp3-evidence-decomposition", _check_wp3_evidence_decomposition),
+        ("wp3-termination-false-pass-controls", _check_wp3_termination_false_pass_controls),
+        ("wp3-provenance-separation", _check_wp3_provenance_separation),
         ("accepted-evr2-result-vector", _check_accepted_evr2_result_vector),
     )
     try:
