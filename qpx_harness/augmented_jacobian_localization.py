@@ -490,7 +490,12 @@ def audit_framework_control_structure(text: str) -> dict[str, Any]:
         "checks": checks,
         "blockers": blockers,
         "source_contract": {
-            "moose_commit": "9f388366ccf",
+            "reference_source": {
+                "project": "MOOSE",
+                "revision": "9f388366ccf",
+                "purpose": "framework-control source contract",
+            },
+            "runtime_identity": "OBSERVED_SEPARATELY",
             "control_operator": "FVDiffusion",
             "control_operator_registration": "MooseApp",
             "rejected_test_only_operator": "FVElementalAdvection",
