@@ -219,7 +219,7 @@ def _check_generality_surface() -> None:
             raise AssertionError(f"recipe reverse-imports legacy module {rel}: {leaked}")
 
 
-def _check_script_surface() -> None:
+def _check_script_surface() -> dict[str, list[str]]:
     scripts = sorted(
         path.name for path in (ROOT / "scripts").iterdir() if path.is_file()
     )
@@ -231,17 +231,29 @@ def _check_script_surface() -> None:
         if command not in qpx_source:
             raise AssertionError(f"unified qpx CLI missing command {command}")
 
+    # User-local QPX mirrors intentionally carry executable harness/test
+    # surfaces without necessarily carrying repository governance files such as
+    # .github/ and docs/.  Those missing repository-only surfaces must not turn
+    # a portable P0 into a false failure.  When a canonical surface is present,
+    # however, still enforce that it no longer references the retired wrappers.
     canonical_refs = (
         ROOT / ".github/workflows/qpx-regression.yml",
         ROOT / "docs/protocols/validation.md",
         ROOT / "tests/README.md",
     )
     obsolete = ("scripts/validate_parser_symbols.py", "scripts/temporal_csv.py")
+    checked: list[str] = []
+    skipped: list[str] = []
     for path in canonical_refs:
+        if not path.is_file():
+            skipped.append(str(path.relative_to(ROOT)))
+            continue
         source = path.read_text()
         leaked = [item for item in obsolete if item in source]
         if leaked:
             raise AssertionError(f"obsolete compatibility command remains in {path}: {leaked}")
+        checked.append(str(path.relative_to(ROOT)))
+    return {"checked": checked, "skipped": skipped}
 
 
 def main() -> int:
@@ -257,8 +269,16 @@ def main() -> int:
         _check_generality_surface()
         print("ISSUE48_GENERALITY_CHECK: recipe-reverse-dependency=NONE")
         print("ISSUE48_GENERALITY_CHECK: primitive-boundary=PASS")
-        _check_script_surface()
+        script_surface = _check_script_surface()
         print("ISSUE48_GENERALITY_CHECK: scripts-entrypoint=PASS")
+        if script_surface["skipped"]:
+            print(
+                "ISSUE48_GENERALITY_CHECK: repository-only-surfaces=SKIP_LOCAL_MIRROR "
+                + "missing="
+                + ",".join(script_surface["skipped"])
+            )
+        else:
+            print("ISSUE48_GENERALITY_CHECK: repository-only-surfaces=PASS")
     except Exception as exc:
         print(f"ISSUE48_GENERALITY_SELFTEST: FAIL ({exc})")
         return 1
