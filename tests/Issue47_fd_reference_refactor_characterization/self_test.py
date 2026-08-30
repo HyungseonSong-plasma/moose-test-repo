@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
-"""Issue47 WP-1 characterization for the accepted Issue46 FD-reference harness.
+"""Issue47 characterization for the accepted Issue46 FD-reference harness.
 
-This is a test-only characterization surface.  It freezes the behavior that must
-remain stable while the canonical Issue46 module is repaired.  Production code
-must not import this module.
+This is a test-only characterization surface. It freezes accepted Issue46
+behavior and the false-PASS/structural controls required by the refactor.
+Production code must not import this module.
 """
 
 from __future__ import annotations
 
 import json
+import math
 import re
 import sys
 from pathlib import Path
@@ -26,6 +27,7 @@ from qpx_harness import petsc_first_linear_diagnostic as first_linear
 from qpx_harness.moose_input import MooseInput
 
 
+ACCEPTED_EVR1_ELECTRON_DOF_COUNT = 2348
 ACCEPTED_EVR2_REL_ERROR = 5.35565e-11
 ACCEPTED_FINAL_CLASS = "FD_REFERENCE_QUANTIZATION_CONFIRMED"
 ACCEPTED_WP_PREDICTED_ATTENUATION = 0.9640628864075022
@@ -55,8 +57,8 @@ def _expect_dofmap_rejection(text: str, expected_fragment: str) -> None:
 
 
 def _fixed_c0_fixture() -> str:
-    """Build the currently accepted Issue46 synthetic C0 fixture without mutation."""
-    return adapter._issue46_synthetic_constrained_input(base.TARGET)
+    """Build the accepted Issue46 synthetic C0 fixture from its canonical owner."""
+    return base._issue46_synthetic_constrained_input(base.TARGET)
 
 
 def _remove_parameter_line(text: str, path: str, name: str) -> str:
@@ -87,11 +89,15 @@ def _baseline_and_ds(fixture_text: str) -> tuple[str, str]:
     return baseline, ds_text
 
 
-def _historical_evr2_dofmap() -> str:
-    """Accepted-vector fixture: historical topology only, never runtime configuration."""
-    electron_dofs = base.ACCEPTED_EVR1_ELECTRON_DOF_COUNT
+def _dofmap_for_counts(electron_dofs: int, potential_dofs: int | None = None) -> str:
+    if electron_dofs <= 0:
+        raise CharacterizationFailure("electron_dofs must be positive")
+    if potential_dofs is None:
+        potential_dofs = electron_dofs
+    if potential_dofs <= 0:
+        raise CharacterizationFailure("potential_dofs must be positive")
     potential_start = electron_dofs
-    potential_stop = electron_dofs * 2
+    potential_stop = potential_start + potential_dofs
     scalar_dof = potential_stop
     return json.dumps(
         {
@@ -116,8 +122,19 @@ def _historical_evr2_dofmap() -> str:
     )
 
 
+def _historical_evr2_dofmap() -> str:
+    """Accepted-vector fixture: historical topology only, never runtime configuration."""
+    return _dofmap_for_counts(ACCEPTED_EVR1_ELECTRON_DOF_COUNT)
+
+
 def _check_predictor() -> None:
-    prediction = base.predict_fd_step_quantization()
+    historical_vector_norm = (
+        math.sqrt(float(ACCEPTED_EVR1_ELECTRON_DOF_COUNT)) * abs(base.TARGET)
+    )
+    prediction = base.predict_fd_step_quantization(
+        vector_norm=historical_vector_norm,
+        component_value=base.TARGET,
+    )
     _require(
         abs(
             prediction["wp_predicted_attenuation"]
@@ -130,6 +147,23 @@ def _check_predictor() -> None:
         abs(prediction["ds_predicted_attenuation"] - 1.0)
         <= base.DS_ATTENUATION_TO_UNITY_TOL,
         "accepted DS representability drifted",
+    )
+
+    vector_norm = 123.0
+    component_value = 7.0
+    explicit = base.predict_fd_step_quantization(
+        vector_norm=vector_norm,
+        component_value=component_value,
+    )
+    expected_wp = math.sqrt(1.0 + vector_norm) * base.SQRT_MACHINE_EPSILON
+    expected_ds = component_value * base.SQRT_MACHINE_EPSILON
+    _require(
+        explicit["wp_requested_dx"] == expected_wp,
+        "WP predictor did not use the explicit vector norm",
+    )
+    _require(
+        explicit["ds_requested_dx"] == expected_ds,
+        "DS predictor did not use the explicit component value",
     )
 
 
@@ -260,6 +294,30 @@ def _check_ds_structure_controls() -> None:
     )
 
 
+def _check_runtime_topology_not_historical_literal() -> None:
+    nonhistorical_dofs = 3
+    result = base.analyze_ds_runtime(
+        base._synthetic_log(ACCEPTED_EVR2_REL_ERROR, []),
+        _dofmap_for_counts(nonhistorical_dofs),
+        returncode=1,
+    )
+    reason = str(result.get("reason", ""))
+    _require(
+        "accepted EVR1 C0 topology" not in reason,
+        "runtime analyzer still uses the historical 2348 topology as a current invariant",
+    )
+    directional = result.get("directional", {})
+    variables = directional.get("dof_map", {}).get("variables", {})
+    _require(
+        len(variables.get("n_e", [])) == nonhistorical_dofs,
+        "nonhistorical valid electron topology was not analyzed structurally",
+    )
+    _require(
+        len(variables.get(inv.LAMBDA_VARIABLE, [])) == 1,
+        "scalar multiplier topology was not resolved structurally",
+    )
+
+
 def _check_accepted_evr2_result_vector() -> None:
     result = base.analyze_ds_runtime(
         base._synthetic_log(ACCEPTED_EVR2_REL_ERROR, []),
@@ -289,10 +347,11 @@ def main() -> int:
             adapter.self_test() == 0,
             "current stable _v2 wrapper self-test failed",
         )),
-        ("accepted-predictor", _check_predictor),
+        ("accepted-and-state-explicit-predictor", _check_predictor),
         ("structural-zero-and-directions", _check_structural_zero_and_directions),
         ("dofmap-negative-controls", _check_dofmap_negative_controls),
         ("ds-structure-controls", _check_ds_structure_controls),
+        ("runtime-topology-not-historical-literal", _check_runtime_topology_not_historical_literal),
         ("accepted-evr2-result-vector", _check_accepted_evr2_result_vector),
     )
     try:
