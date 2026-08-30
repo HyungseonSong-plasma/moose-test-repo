@@ -5,7 +5,15 @@ from typing import Any
 
 from qpx_harness.moose import parameters as mp
 from qpx_harness.petsc import options as po
-from qpx_harness import petsc_first_linear_diagnostic as legacy
+
+TARGET = 1.0e16
+DIAGNOSTIC_NL_MAX_ITS = 1
+FIRST_LINEAR_PETSC_OPTIONS = (
+    "-snes_test_jacobian",
+    "-ksp_view",
+    "-ksp_monitor_true_residual",
+)
+REQUIRED_EXISTING_OPTIONS = ("-snes_converged_reason", "-ksp_converged_reason")
 
 
 def instrument_first_linear(text: str) -> tuple[str, dict[str, Any]]:
@@ -13,14 +21,13 @@ def instrument_first_linear(text: str) -> tuple[str, dict[str, Any]]:
         text,
         "Executioner",
         "nl_max_its",
-        str(legacy.DIAGNOSTIC_NL_MAX_ITS),
+        str(DIAGNOSTIC_NL_MAX_ITS),
     )
-    required = legacy.REQUIRED_EXISTING_OPTIONS + legacy.FIRST_LINEAR_PETSC_OPTIONS
-    out = po.add_flags(out, required)
+    out = po.add_flags(out, REQUIRED_EXISTING_OPTIONS + FIRST_LINEAR_PETSC_OPTIONS)
     return out, {
-        "target": legacy.TARGET,
-        "diagnostic_nl_max_its": legacy.DIAGNOSTIC_NL_MAX_ITS,
-        "petsc_options_added": list(legacy.FIRST_LINEAR_PETSC_OPTIONS),
+        "target": TARGET,
+        "diagnostic_nl_max_its": DIAGNOSTIC_NL_MAX_ITS,
+        "petsc_options_added": list(FIRST_LINEAR_PETSC_OPTIONS),
         "physics_changed": False,
         "closure_changed": False,
         "solver_realization_changed": False,
