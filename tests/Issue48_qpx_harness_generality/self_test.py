@@ -8,6 +8,12 @@ from pathlib import Path
 
 from qpx_harness.moose import parameters as mp
 from qpx_harness.petsc import options as po
+from qpx_harness import augmented_jacobian_localization as issue46_legacy
+from qpx_harness import fast_plasma_coupling_diagnostic as issue43_legacy
+from qpx_harness import petsc_first_linear_diagnostic as issue45_legacy
+from recipes import issue43_coupling_diagnostic as issue43_recipe
+from recipes import issue45_first_linear as issue45_recipe
+from recipes import issue46_jacobian_localization as issue46_recipe
 
 
 def _fixture() -> str:
@@ -82,6 +88,32 @@ def _check_petsc_options() -> None:
     _expect_error(lambda: po.get_name_value_pairs(mismatch), "iname/value mismatch")
 
 
+def _check_recipe_equivalence() -> None:
+    text = _fixture()
+
+    for jacobian_test in (False, True):
+        old_text, old_meta = issue43_legacy.instrument_input(
+            text, jacobian_test=jacobian_test
+        )
+        new_text, new_meta = issue43_recipe.instrument_input(
+            text, jacobian_test=jacobian_test
+        )
+        if new_text != old_text or new_meta != old_meta:
+            raise AssertionError(
+                f"Issue43 recipe drift for jacobian_test={jacobian_test}"
+            )
+
+    old45_text, old45_meta = issue45_legacy.instrument_first_linear(text)
+    new45_text, new45_meta = issue45_recipe.instrument_first_linear(text)
+    if new45_text != old45_text or new45_meta != old45_meta:
+        raise AssertionError("Issue45 recipe drift")
+
+    old46_text, old46_meta = issue46_legacy.instrument_localization(old45_text)
+    new46_text, new46_meta = issue46_recipe.instrument_localization(old45_text)
+    if new46_text != old46_text or new46_meta != old46_meta:
+        raise AssertionError("Issue46 recipe drift")
+
+
 def _check_generality_surface() -> None:
     root = Path(__file__).resolve().parents[2]
     for rel in (
@@ -101,6 +133,15 @@ def _check_generality_surface() -> None:
         if "fast_plasma" in source or "electron_inventory" in source or "jacobian_fd_reference_audit" in source:
             raise AssertionError(f"reverse dependency leaked into {rel}")
 
+    for rel in (
+        "recipes/issue43_coupling_diagnostic.py",
+        "recipes/issue45_first_linear.py",
+        "recipes/issue46_jacobian_localization.py",
+    ):
+        source = (root / rel).read_text()
+        if "qpx_harness.moose" not in source and "qpx_harness.petsc" not in source:
+            raise AssertionError(f"recipe does not compose generic primitives: {rel}")
+
 
 def main() -> int:
     try:
@@ -108,6 +149,8 @@ def main() -> int:
         print("ISSUE48_GENERALITY_CHECK: moose-parameter-primitives=PASS")
         _check_petsc_options()
         print("ISSUE48_GENERALITY_CHECK: petsc-option-primitives=PASS")
+        _check_recipe_equivalence()
+        print("ISSUE48_GENERALITY_CHECK: issue43-45-46-recipe-equivalence=PASS")
         _check_generality_surface()
         print("ISSUE48_GENERALITY_CHECK: primitive-boundary=PASS")
     except Exception as exc:
