@@ -38,6 +38,18 @@ def parse_pc_failure_reason(text: str) -> str | None:
     return match.group(1).upper() if match else None
 
 
+def parse_petsc_version(text: str) -> str | None:
+    """Return the first explicit PETSc semantic version exposed by runtime text."""
+    for pattern in (
+        r"PETSc(?:\s+Release)?\s+Version\s*[:=]?\s*([0-9]+\.[0-9]+\.[0-9]+)",
+        r"PETSC_VERSION\s*[:=]\s*([0-9]+\.[0-9]+\.[0-9]+)",
+    ):
+        match = re.search(pattern, text, re.IGNORECASE)
+        if match:
+            return match.group(1)
+    return None
+
+
 def line_hits(text: str, patterns: tuple[str, ...]) -> list[str]:
     """Return stripped log lines matching any caller-supplied regex pattern."""
     return [
