@@ -20,8 +20,8 @@ def paths_distinct(left: Path, right: Path) -> bool:
 
 
 def identity_stable(before: str, after: str) -> bool:
-    """Return whether an externally computed identity digest stayed unchanged."""
-    return bool(before) and before == after
+    """Return whether two externally computed identity values are equal."""
+    return before == after
 
 
 def current_run_artifact(
