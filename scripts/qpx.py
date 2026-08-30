@@ -15,6 +15,7 @@ if str(ROOT) not in sys.path:
 from qpx_harness.analysis import analyze
 from qpx_harness.augmented_jacobian_localization import main as jac_localization_main, self_test as jac_localization_self_test
 from qpx_harness.bundle import main as bundle_main
+from qpx_harness.compat.issue46_fd_reference import main as fd_reference_main, self_test as fd_reference_self_test
 from qpx_harness.coupling_evr1_safe import main as coupling_evr1_main, self_test as coupling_evr1_self_test
 from qpx_harness.coupling_evr2_timestep import main as coupling_evr2_main, self_test as coupling_evr2_self_test
 from qpx_harness.dmix_equivalence_structured import main as dmix_equivalence_main, self_test as dmix_equivalence_self_test
@@ -22,7 +23,6 @@ from qpx_harness.electron_inventory_nullspace import main as inventory_nullspace
 from qpx_harness.execution_contract import main as execution_contract_main, self_test as execution_contract_self_test
 from qpx_harness.fast_plasma_coupling_diagnostic import main as fast_coupling_diagnostic_main, self_test as fast_coupling_diagnostic_self_test
 from qpx_harness.fast_plasma_relaxation_v5 import main as fast_relaxation_main, self_test as fast_relaxation_self_test
-from qpx_harness.jacobian_fd_reference_audit import main as fd_reference_main, self_test as fd_reference_self_test
 from qpx_harness.performance_cache_audit import main as performance_cache_audit_main, self_test as performance_cache_audit_self_test
 from qpx_harness.performance_core import main as performance_main, self_test as performance_self_test
 from qpx_harness.performance_investigation import main as performance_investigation_main, self_test as performance_investigation_self_test
