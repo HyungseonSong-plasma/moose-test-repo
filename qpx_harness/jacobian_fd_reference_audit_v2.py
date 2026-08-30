@@ -9,9 +9,11 @@ all runtime logic in jacobian_fd_reference_audit unchanged.
 """
 from __future__ import annotations
 
-from typing import Any
-
 from . import jacobian_fd_reference_audit as base
+
+
+_ORIGINAL_SYNTHETIC_CONSTRAINED_INPUT = base.inv._synthetic_constrained_input
+_ORIGINAL_BASE_SELF_TEST = base.self_test
 
 
 def _issue46_synthetic_constrained_input(macro_avg: float = base.TARGET) -> str:
@@ -24,17 +26,14 @@ def _issue46_synthetic_constrained_input(macro_avg: float = base.TARGET) -> str:
     )
 
 
-_ORIGINAL_SYNTHETIC_CONSTRAINED_INPUT = base.inv._synthetic_constrained_input
-
-
 def self_test() -> int:
     """Run the base self-test with the Issue46-specific C0 fixture only."""
-    original = base.inv._synthetic_constrained_input
+    original_fixture = base.inv._synthetic_constrained_input
     base.inv._synthetic_constrained_input = _issue46_synthetic_constrained_input
     try:
-        return base.self_test()
+        return _ORIGINAL_BASE_SELF_TEST()
     finally:
-        base.inv._synthetic_constrained_input = original
+        base.inv._synthetic_constrained_input = original_fixture
 
 
 def main(argv: list[str] | None = None) -> int:
