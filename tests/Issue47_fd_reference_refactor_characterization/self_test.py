@@ -22,7 +22,6 @@ if str(ROOT) not in sys.path:
 from qpx_harness import augmented_jacobian_localization as loc
 from qpx_harness import electron_inventory_nullspace as inv
 from qpx_harness import jacobian_fd_reference_audit as base
-from qpx_harness import jacobian_fd_reference_audit_v2 as adapter
 from qpx_harness import petsc_first_linear_diagnostic as first_linear
 from qpx_harness.moose_input import MooseInput
 
@@ -489,9 +488,9 @@ def _check_accepted_evr2_result_vector() -> None:
 
 def main() -> int:
     checks: tuple[tuple[str, Callable[[], None]], ...] = (
-        ("stable-wrapper-self-test", lambda: _require(
-            adapter.self_test() == 0,
-            "current stable _v2 wrapper self-test failed",
+        ("canonical-owner-self-test", lambda: _require(
+            base.self_test() == 0,
+            "canonical Issue46 FD-reference self-test failed",
         )),
         ("accepted-and-state-explicit-predictor", _check_predictor),
         ("structural-zero-and-directions", _check_structural_zero_and_directions),
