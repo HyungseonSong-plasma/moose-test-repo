@@ -219,6 +219,31 @@ def _check_generality_surface() -> None:
             raise AssertionError(f"recipe reverse-imports legacy module {rel}: {leaked}")
 
 
+def _check_script_surface() -> None:
+    scripts = sorted(
+        path.name for path in (ROOT / "scripts").iterdir() if path.is_file()
+    )
+    if scripts != ["qpx.py"]:
+        raise AssertionError(f"scripts must expose only qpx.py after cleanup: {scripts}")
+
+    qpx_source = (ROOT / "scripts/qpx.py").read_text()
+    for command in ('"preflight"', '"temporal-csv"', '"self-test"'):
+        if command not in qpx_source:
+            raise AssertionError(f"unified qpx CLI missing command {command}")
+
+    canonical_refs = (
+        ROOT / ".github/workflows/qpx-regression.yml",
+        ROOT / "docs/protocols/validation.md",
+        ROOT / "tests/README.md",
+    )
+    obsolete = ("scripts/validate_parser_symbols.py", "scripts/temporal_csv.py")
+    for path in canonical_refs:
+        source = path.read_text()
+        leaked = [item for item in obsolete if item in source]
+        if leaked:
+            raise AssertionError(f"obsolete compatibility command remains in {path}: {leaked}")
+
+
 def main() -> int:
     try:
         _check_moose_parameters()
@@ -232,6 +257,8 @@ def main() -> int:
         _check_generality_surface()
         print("ISSUE48_GENERALITY_CHECK: recipe-reverse-dependency=NONE")
         print("ISSUE48_GENERALITY_CHECK: primitive-boundary=PASS")
+        _check_script_surface()
+        print("ISSUE48_GENERALITY_CHECK: scripts-entrypoint=PASS")
     except Exception as exc:
         print(f"ISSUE48_GENERALITY_SELFTEST: FAIL ({exc})")
         return 1
