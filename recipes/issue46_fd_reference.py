@@ -341,10 +341,13 @@ def directional_localization(log_text: str, dofmap_text: str) -> dict[str, Any]:
 
 
 def instrument_ds_reference(baseline_text: str) -> tuple[str, dict[str, Any]]:
-    pairs = options.get_name_value_pairs(baseline_text)
-    if any(name == "-mat_fd_type" for name, _ in pairs):
-        raise Issue46FDReferenceError("baseline already specifies -mat_fd_type")
-    out = options.upsert_name_value(baseline_text, "-mat_fd_type", FD_REFERENCE_TYPE)
+    try:
+        pairs = options.get_name_value_pairs(baseline_text)
+        if any(name == "-mat_fd_type" for name, _ in pairs):
+            raise Issue46FDReferenceError("baseline already specifies -mat_fd_type")
+        out = options.upsert_name_value(baseline_text, "-mat_fd_type", FD_REFERENCE_TYPE)
+    except options.PetscOptionsError as exc:
+        raise Issue46FDReferenceError(str(exc)) from exc
     return out, {
         "mat_fd_type": FD_REFERENCE_TYPE,
         "physics_changed": False,
@@ -356,21 +359,27 @@ def instrument_ds_reference(baseline_text: str) -> tuple[str, dict[str, Any]]:
 
 
 def remove_fd_type_pair(text: str) -> str:
-    pairs = options.get_name_value_pairs(text)
-    fd_pairs = [(name, value) for name, value in pairs if name == "-mat_fd_type"]
-    if fd_pairs != [("-mat_fd_type", FD_REFERENCE_TYPE)]:
-        raise Issue46FDReferenceError(
-            f"expected exactly -mat_fd_type {FD_REFERENCE_TYPE}, got {fd_pairs}"
+    try:
+        pairs = options.get_name_value_pairs(text)
+        fd_pairs = [(name, value) for name, value in pairs if name == "-mat_fd_type"]
+        if fd_pairs != [("-mat_fd_type", FD_REFERENCE_TYPE)]:
+            raise Issue46FDReferenceError(
+                f"expected exactly -mat_fd_type {FD_REFERENCE_TYPE}, got {fd_pairs}"
+            )
+        return options.set_name_value_pairs(
+            text,
+            [(name, value) for name, value in pairs if name != "-mat_fd_type"],
         )
-    return options.set_name_value_pairs(
-        text,
-        [(name, value) for name, value in pairs if name != "-mat_fd_type"],
-    )
+    except options.PetscOptionsError as exc:
+        raise Issue46FDReferenceError(str(exc)) from exc
 
 
 def mask_petsc_pair_lines(text: str) -> str:
-    out = mp.upsert_parameter(text, "Executioner", "petsc_options_iname", "'<PETSC_INAMES>'")
-    return mp.upsert_parameter(out, "Executioner", "petsc_options_value", "'<PETSC_VALUES>'")
+    try:
+        out = mp.upsert_parameter(text, "Executioner", "petsc_options_iname", "'<PETSC_INAMES>'")
+        return mp.upsert_parameter(out, "Executioner", "petsc_options_value", "'<PETSC_VALUES>'")
+    except mp.MooseParameterError as exc:
+        raise Issue46FDReferenceError(str(exc)) from exc
 
 
 def analyze_ds_runtime(
