@@ -13,6 +13,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from qpx_harness.analysis import analyze
+from qpx_harness.augmented_jacobian_localization import main as jac_localization_main, self_test as jac_localization_self_test
 from qpx_harness.bundle import main as bundle_main
 from qpx_harness.coupling_evr1_safe import main as coupling_evr1_main, self_test as coupling_evr1_self_test
 from qpx_harness.coupling_evr2_timestep import main as coupling_evr2_main, self_test as coupling_evr2_self_test
@@ -45,6 +46,7 @@ COMMANDS = {
     "fast-coupling-diagnostic": "localize the Issue43 1e-13 electron-Poisson coupling failure",
     "inventory-nullspace": "run Issue45 electron-inventory nullspace structural/framework preflight",
     "inventory-first-linear": "diagnose the Issue45 constrained C0 first-linear breakdown",
+    "inventory-jacobian-localization": "prepare the Issue46 augmented Jacobian block-localization audit",
     "contract": "validate/evaluate a CORE-16 scientific execution contract",
     "dmix-equivalence": "compare optimized D_mix against legacy full evaluation",
     "measure": "run one schema-driven QPX performance measurement",
@@ -115,6 +117,7 @@ def self_test_cli(argv: list[str]) -> int:
     fast_coupling_diagnostic_rc = fast_coupling_diagnostic_self_test()
     inventory_nullspace_rc = inventory_nullspace_self_test()
     first_linear_rc = first_linear_self_test()
+    jac_localization_rc = jac_localization_self_test()
     execution_contract_rc = execution_contract_self_test()
     dmix_equivalence_rc = dmix_equivalence_self_test()
     performance_rc = performance_self_test()
@@ -133,6 +136,7 @@ def self_test_cli(argv: list[str]) -> int:
         and fast_coupling_diagnostic_rc == 0
         and inventory_nullspace_rc == 0
         and first_linear_rc == 0
+        and jac_localization_rc == 0
         and execution_contract_rc == 0
         and dmix_equivalence_rc == 0
         and performance_rc == 0
@@ -170,6 +174,8 @@ def main(argv: list[str] | None = None) -> int:
         return inventory_nullspace_main(rest)
     if command == "inventory-first-linear":
         return first_linear_main(rest)
+    if command == "inventory-jacobian-localization":
+        return jac_localization_main(rest)
     if command == "contract":
         return execution_contract_main(rest)
     if command == "dmix-equivalence":
