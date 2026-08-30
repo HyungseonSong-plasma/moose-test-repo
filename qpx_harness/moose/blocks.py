@@ -5,7 +5,6 @@ physics variable, Issue number, solver policy, or experiment identity.
 """
 from __future__ import annotations
 
-from .parameters import MooseParameterError
 from ..moose_input import MooseInput, MooseInputError
 
 
@@ -14,7 +13,7 @@ class MooseBlockError(ValueError):
 
 
 def has_block(text: str, path: str) -> bool:
-    """Return whether exactly one or more blocks match ``path``."""
+    """Return whether one or more blocks match ``path``."""
     return bool(MooseInput(text).find(path))
 
 
