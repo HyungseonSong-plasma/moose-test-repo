@@ -17,6 +17,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from .cpp_calls import CppCallError, self_test as cpp_calls_self_test, split_call_arguments
 from .cpp_source import CppSource, CppSourceError, self_test as cpp_source_self_test
 from .runtime import resolve_executable, validate_executable
 
@@ -55,15 +56,18 @@ def write_json(path: Path, data: dict[str, Any]) -> None:
 
 
 def legacy_source_transform(source: str) -> tuple[str, dict[str, Any]]:
-    """Replace only the production D_mix functor return with the legacy full path.
+    """Reconstruct the legacy full evaluate(...) call from evaluateDmix(...).
 
-    Structure is resolved by ``CppSource``:
-      addFunctorProperty(...) containing _D_mix_names
-        -> lambda body
-        -> return evaluateDmix(...);
+    Production optimized contract:
 
-    This intentionally avoids semicolon-distance heuristics and survives nested
-    function calls inside evaluateDmix arguments.
+        return evaluateDmix(species_i, T, p, Te, ne, Y);
+
+    Legacy contract:
+
+        return evaluate(T, p, Te, ne, Y).D_mix[species_i];
+
+    The six argument expressions are parsed structurally and preserved rather
+    than hardcoded so nested functor/state expressions remain valid.
     """
     try:
         cpp = CppSource(source)
@@ -74,26 +78,37 @@ def legacy_source_transform(source: str) -> tuple[str, dict[str, Any]]:
                 "_D_mix_names",
             )
         )
-        functor_call = cpp.unique_call(
-            "addFunctorProperty", containing="_D_mix_names"
-        )
+        functor_call = cpp.unique_call("addFunctorProperty", containing="_D_mix_names")
         lambda_body = cpp.lambda_body(functor_call)
-        return_stmt = cpp.unique_return_call(
-            "evaluateDmix", within=lambda_body
-        )
-        patched = cpp.replace(return_stmt, "return evaluate(r, state).D_mix[i];")
-    except CppSourceError as exc:
+        dmix_call = cpp.unique_call("evaluateDmix", within=lambda_body)
+        parsed = split_call_arguments(cpp, dmix_call)
+        return_stmt = cpp.unique_return_call("evaluateDmix", within=lambda_body)
+    except (CppSourceError, CppCallError) as exc:
         raise EquivalenceError(f"structural C++ source inspection failed: {exc}") from exc
 
+    args = parsed.arguments
+    if len(args) != 6:
+        raise EquivalenceError(
+            "evaluateDmix production contract expected 6 arguments "
+            f"(species_i,T,p,Te,ne,Y), found {len(args)}: {args}"
+        )
+
+    species_index = args[0].strip()
+    evaluate_args = ", ".join(arg.strip() for arg in args[1:])
+    replacement = f"return evaluate({evaluate_args}).D_mix[{species_index}];"
+    patched = cpp.replace(return_stmt, replacement)
     if patched == source:
         raise EquivalenceError("legacy source transform produced no change")
+
     metadata = {
-        "parser": "CppSource",
+        "parser": "CppSource+CppCallArguments",
         "functor_call_span": [functor_call.start, functor_call.end],
         "lambda_body_span": [lambda_body.start, lambda_body.end],
+        "dmix_call_span": [dmix_call.start, dmix_call.end],
         "return_statement_span": [return_stmt.start, return_stmt.end],
+        "dmix_arguments": list(args),
         "original_return": return_stmt.slice(source).strip(),
-        "replacement_return": "return evaluate(r, state).D_mix[i];",
+        "replacement_return": replacement,
     }
     return patched, metadata
 
@@ -127,9 +142,7 @@ def trace_input(text: str) -> str:
     total = sum(float(values[index[name]]) for name in TRACE)
     if not math.isclose(total, 1.0, rel_tol=0.0, abs_tol=1e-14):
         raise EquivalenceError(f"trace mass fractions sum to {total}")
-    replacement = (
-        values_match.group(1) + " ".join(values) + values_match.group(3)
-    )
+    replacement = values_match.group(1) + " ".join(values) + values_match.group(3)
     return text[: values_match.start()] + replacement + text[values_match.end() :]
 
 
@@ -156,9 +169,7 @@ def read_dmix(csv_path: Path) -> dict[str, float]:
 
 
 def compare(
-    candidate: dict[str, float],
-    legacy: dict[str, float],
-    tol: float,
+    candidate: dict[str, float], legacy: dict[str, float], tol: float
 ) -> dict[str, Any]:
     failures: list[str] = []
     maximum = 0.0
@@ -247,58 +258,55 @@ def run_case(exe: Path, case: Path, label: str, root: Path) -> dict[str, Any]:
 def self_test() -> int:
     try:
         if cpp_source_self_test():
-            raise AssertionError("shared C++ structural scanner self-test failed")
+            raise AssertionError("CppSource self-test failed")
+        if cpp_calls_self_test():
+            raise AssertionError("CppCallArguments self-test failed")
 
-        source = """
+        source = r'''
 void f()
 {
-  this->addFunctorProperty<ADReal>(
+  addFunctorProperty<ADReal>(
       _D_mix_names[i],
       [this, i](const auto & r, const auto & state)
       {
         return evaluateDmix(
             i,
             temperature(r, state),
-            helper(foo(1, 2), bar(3)));
+            pressure(foo(1, 2), state),
+            Te(r, state),
+            ne(r, state),
+            composition(bar(3, 4), state));
       });
 }
-Result QPXThermalDiffusionMaterial::evaluate(const int & r, const int & state) const
-{
-  return {};
-}
-ADReal QPXThermalDiffusionMaterial::evaluateDmix(int i, int a, int b) const
-{
-  return {};
-}
-"""
-        patched, metadata = legacy_source_transform(source)
-        if "evaluate(r, state).D_mix[i]" not in patched:
-            raise AssertionError("source transform positive control failed")
-        if metadata["parser"] != "CppSource":
-            raise AssertionError("shared scanner was not used")
-        if "helper(foo(1, 2), bar(3))" not in metadata["original_return"]:
-            raise AssertionError("nested return statement was truncated")
+Result QPXThermalDiffusionMaterial::evaluate(int, int, int, int, int) const { return {}; }
+ADReal QPXThermalDiffusionMaterial::evaluateDmix(int, int, int, int, int, int) const { return {}; }
+'''
+        patched, meta = legacy_source_transform(source)
+        expected = (
+            "return evaluate(temperature(r, state), pressure(foo(1, 2), state), "
+            "Te(r, state), ne(r, state), composition(bar(3, 4), state)).D_mix[i];"
+        )
+        if expected not in patched:
+            raise AssertionError(meta)
+        if meta["parser"] != "CppSource+CppCallArguments":
+            raise AssertionError("structured call parser was not used")
+        if meta["dmix_arguments"][0] != "i":
+            raise AssertionError("species index was not preserved")
 
-        source_variant = """
-void f()
-{
-  addFunctorProperty(
-      _D_mix_names[i],
-      [this, i](const auto & r, const auto & state) -> ADReal
-      {
-        const auto T = foo(r, state);
-        return evaluateDmix(i, T, p, Te, ne, Y);
-      });
-}
-Result QPXThermalDiffusionMaterial::evaluate(int r, int state) const { return {}; }
-ADReal QPXThermalDiffusionMaterial::evaluateDmix(int i, int a) const { return {}; }
-"""
-        if "evaluate(r, state).D_mix[i]" not in legacy_source(source_variant):
-            raise AssertionError("non-template wrapper variant failed")
+        wrong_arity = source.replace(
+            "composition(bar(3, 4), state)",
+            "extra(r, state), composition(bar(3, 4), state)",
+        )
+        try:
+            legacy_source_transform(wrong_arity)
+        except EquivalenceError:
+            pass
+        else:
+            raise AssertionError("evaluateDmix arity mutation was not rejected")
 
         ambiguous = source.replace(
             "void f()",
-            "void g(){ addFunctorProperty<ADReal>(_D_mix_names[i], []{ return evaluateDmix(i); }); }\nvoid f()",
+            "void g(){ addFunctorProperty<ADReal>(_D_mix_names[i], []{ return evaluateDmix(i,1,2,3,4,5); }); }\nvoid f()",
         )
         try:
             legacy_source(ambiguous)
@@ -316,9 +324,9 @@ ADReal QPXThermalDiffusionMaterial::evaluateDmix(int i, int a) const { return {}
             raise AssertionError("trace transform positive control failed")
 
         baseline = {
-            f"Dmix_{t}_{s}": float(i + 1)
-            for i, (t, s) in enumerate(
-                (t, s) for t in TAGS for s in SPECIES
+            f"Dmix_{tag}_{species}": float(i + 1)
+            for i, (tag, species) in enumerate(
+                (tag, species) for tag in TAGS for species in SPECIES
             )
         }
         if compare(baseline, dict(baseline), REL_TOL)["status"] != "PASS":
@@ -356,29 +364,17 @@ def validate(args: argparse.Namespace) -> int:
     qpx_root = exe.parent.resolve()
     repo_root = Path(__file__).resolve().parents[1]
     source = args.source.resolve() if args.source else qpx_root / SOURCE_RELATIVE
-    base = (
-        args.base_case.resolve()
-        if args.base_case
-        else repo_root / BASE_CASE_RELATIVE
-    )
+    base = args.base_case.resolve() if args.base_case else repo_root / BASE_CASE_RELATIVE
     if not source.is_file() or not base.is_dir():
-        raise EquivalenceError(
-            f"missing source/base case: source={source} base={base}"
-        )
+        raise EquivalenceError(f"missing source/base case: source={source} base={base}")
 
     source_original = source.read_bytes()
     source_sha = hashlib.sha256(source_original).hexdigest()
-    source_legacy_text, source_parse = legacy_source_transform(
-        source_original.decode()
-    )
+    source_legacy_text, source_parse = legacy_source_transform(source_original.decode())
     source_legacy = source_legacy_text.encode()
 
     jobs = args.jobs or max(1, min(8, os.cpu_count() or 1))
-    build = (
-        shlex.split(args.build_command)
-        if args.build_command
-        else ["make", f"-j{jobs}"]
-    )
+    build = shlex.split(args.build_command) if args.build_command else ["make", f"-j{jobs}"]
 
     results = qpx_root / "temp" / "results"
     results.mkdir(parents=True, exist_ok=True)
@@ -411,12 +407,7 @@ def validate(args: argparse.Namespace) -> int:
     source_ok = binary_ok = False
     try:
         candidate = {
-            name: run_case(
-                exe,
-                cases[f"candidate_{name}"],
-                f"candidate_{name}",
-                root,
-            )
+            name: run_case(exe, cases[f"candidate_{name}"], f"candidate_{name}", root)
             for name in ("ordinary", "trace")
         }
         summary["candidate"] = candidate
@@ -428,29 +419,17 @@ def validate(args: argparse.Namespace) -> int:
         summary["legacy_executable_sha256"] = sha256(exe)
 
         legacy = {
-            name: run_case(
-                exe,
-                cases[f"legacy_{name}"],
-                f"legacy_{name}",
-                root,
-            )
+            name: run_case(exe, cases[f"legacy_{name}"], f"legacy_{name}", root)
             for name in ("ordinary", "trace")
         }
         summary["legacy"] = legacy
         summary["comparisons"] = {
-            name: compare(
-                candidate[name]["values"],
-                legacy[name]["values"],
-                args.rel_tol,
-            )
+            name: compare(candidate[name]["values"], legacy[name]["values"], args.rel_tol)
             for name in ("ordinary", "trace")
         }
         summary["validation_status"] = (
             "PASS"
-            if all(
-                value["status"] == "PASS"
-                for value in summary["comparisons"].values()
-            )
+            if all(value["status"] == "PASS" for value in summary["comparisons"].values())
             else "FAIL"
         )
     except Exception as exc:
@@ -461,11 +440,7 @@ def validate(args: argparse.Namespace) -> int:
         source.write_bytes(source_original)
         os.utime(source, None)
         source_ok = sha256(source) == source_sha
-        restore_rc = (
-            stream(build, qpx_root, root / "build_restored.log")
-            if source_ok
-            else 1
-        )
+        restore_rc = stream(build, qpx_root, root / "build_restored.log") if source_ok else 1
         try:
             shutil.copy2(root / "qpx-opt.production", exe)
             binary_ok = sha256(exe) == exe_sha
@@ -475,32 +450,18 @@ def validate(args: argparse.Namespace) -> int:
         summary["source_restored"] = source_ok
         summary["binary_restored"] = binary_ok
         write_json(root / "summary.json", summary)
-        print(
-            "DMIX_EQ_RESTORE:",
-            "PASS" if source_ok and binary_ok else "FAIL",
-        )
+        print("DMIX_EQ_RESTORE:", "PASS" if source_ok and binary_ok else "FAIL")
 
     for name in ("ordinary", "trace"):
         result = summary.get("comparisons", {}).get(name, {})
-        print(
-            f"DMIX_EQ_{name.upper()}:",
-            result.get("status", "NOT_RUN"),
-        )
+        print(f"DMIX_EQ_{name.upper()}:", result.get("status", "NOT_RUN"))
         if "max_relative_error" in result:
-            print(
-                f"DMIX_EQ_{name.upper()}_MAX_REL: "
-                f"{result['max_relative_error']:.6e}"
-            )
-    print(
-        "DMIX_EQ_VALIDATION:",
-        summary.get("validation_status", "FAIL"),
-    )
+            print(f"DMIX_EQ_{name.upper()}_MAX_REL: {result['max_relative_error']:.6e}")
+    print("DMIX_EQ_VALIDATION:", summary.get("validation_status", "FAIL"))
     print("DMIX_EQ_SUMMARY:", root / "summary.json")
     return (
         0
-        if summary.get("validation_status") == "PASS"
-        and source_ok
-        and binary_ok
+        if summary.get("validation_status") == "PASS" and source_ok and binary_ok
         else 2
     )
 
