@@ -25,10 +25,10 @@ jobs:
         run: python3 -m compileall -q qpx_harness scripts
 
       - name: Parser-symbol preflight self-test
-        run: python3 scripts/validate_parser_symbols.py --self-test
+        run: python3 scripts/qpx.py preflight --self-test
 
       - name: Temporal CSV self-test
-        run: python3 scripts/temporal_csv.py --self-test
+        run: python3 scripts/qpx.py temporal-csv --self-test
 
       - name: Performance measurement core self-test
         run: python3 -m qpx_harness.performance_core --self-test
