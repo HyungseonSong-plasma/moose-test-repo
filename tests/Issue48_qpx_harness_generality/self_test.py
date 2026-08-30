@@ -15,10 +15,12 @@ from qpx_harness.moose import blocks as mb
 from qpx_harness.moose import parameters as mp
 from qpx_harness.petsc import options as po
 from qpx_harness import augmented_jacobian_localization as issue46_legacy
+from qpx_harness import electron_inventory_nullspace as issue45_inventory_legacy
 from qpx_harness import fast_plasma_coupling_diagnostic as issue43_legacy
 from qpx_harness import petsc_first_linear_diagnostic as issue45_legacy
 from recipes import issue43_coupling_diagnostic as issue43_recipe
 from recipes import issue45_first_linear as issue45_recipe
+from recipes import issue45_inventory_constraint as issue45_inventory_recipe
 from recipes import issue46_jacobian_localization as issue46_recipe
 
 
@@ -149,7 +151,19 @@ def _check_recipe_equivalence() -> None:
     old45_text, old45_meta = issue45_legacy.instrument_first_linear(text)
     new45_text, new45_meta = issue45_recipe.instrument_first_linear(text)
     if new45_text != old45_text or new45_meta != old45_meta:
-        raise AssertionError("Issue45 recipe drift")
+        raise AssertionError("Issue45 first-linear recipe drift")
+
+    constrained = issue45_inventory_legacy._synthetic_constrained_input()
+    old_inventory = issue45_inventory_legacy.audit_constrained_quasisteady_structure(
+        constrained,
+        expected_macro_avg=issue45_inventory_legacy.DEFAULT_MACRO_ELECTRON_AVG,
+    )
+    new_inventory = issue45_inventory_recipe.audit_constrained_quasisteady_structure(
+        constrained,
+        expected_macro_avg=issue45_inventory_legacy.DEFAULT_MACRO_ELECTRON_AVG,
+    )
+    if new_inventory != old_inventory:
+        raise AssertionError("Issue45 inventory-constraint recipe drift")
 
     old46_text, old46_meta = issue46_legacy.instrument_localization(old45_text)
     new46_text, new46_meta = issue46_recipe.instrument_localization(old45_text)
@@ -186,10 +200,12 @@ def _check_generality_surface() -> None:
     recipe_paths = (
         "recipes/issue43_coupling_diagnostic.py",
         "recipes/issue45_first_linear.py",
+        "recipes/issue45_inventory_constraint.py",
         "recipes/issue46_jacobian_localization.py",
     )
     legacy_names = (
         "fast_plasma_coupling_diagnostic",
+        "electron_inventory_nullspace",
         "petsc_first_linear_diagnostic",
         "augmented_jacobian_localization",
         "jacobian_fd_reference_audit",
