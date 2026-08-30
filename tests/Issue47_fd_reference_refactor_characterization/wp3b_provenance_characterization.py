@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""WP-3B test-only characterization of Issue46 framework-control provenance debt."""
+"""WP-3B post-refactor characterization of Issue46 framework-control provenance."""
 
 from __future__ import annotations
 
@@ -25,27 +25,27 @@ def main() -> int:
             raise AssertionError("framework-control structure is not PASS")
 
         source = report.get("source_contract", {})
-        if source.get("moose_commit") != REFERENCE_REVISION:
-            raise AssertionError(
-                "pre-refactor reference revision is not present under the expected ambiguous key"
-            )
-        if "reference_source" in source:
-            raise AssertionError(
-                "reference_source already exists; WP-3B baseline is no longer the pre-refactor state"
-            )
-        if "runtime_identity" in source:
-            raise AssertionError(
-                "runtime_identity already exists; WP-3B baseline is no longer the pre-refactor state"
-            )
+        if "moose_commit" in source:
+            raise AssertionError("ambiguous moose_commit provenance key still exists")
+
+        reference = source.get("reference_source", {})
+        if reference.get("project") != "MOOSE":
+            raise AssertionError("reference-source project is not MOOSE")
+        if reference.get("revision") != REFERENCE_REVISION:
+            raise AssertionError("reference-source revision drifted")
+        if reference.get("purpose") != "framework-control source contract":
+            raise AssertionError("reference-source purpose is not explicit")
+
+        if source.get("runtime_identity") != "OBSERVED_SEPARATELY":
+            raise AssertionError("runtime identity is not explicitly separated from reference source")
     except Exception as exc:
         print(f"ISSUE47_WP3B_PROVENANCE_CHARACTERIZATION: FAIL ({exc})")
         return 1
 
     print("ISSUE47_WP3B_PROVENANCE_CHECK: framework-control-structure=PASS")
-    print(
-        "ISSUE47_WP3B_PROVENANCE_CHECK: ambiguous-moose-commit-reference=CHARACTERIZED"
-    )
-    print("ISSUE47_WP3B_PROVENANCE_CHECK: runtime-identity-separate=MISSING_AS_EXPECTED")
+    print("ISSUE47_WP3B_PROVENANCE_CHECK: ambiguous-moose-commit-reference=REMOVED")
+    print("ISSUE47_WP3B_PROVENANCE_CHECK: reference-source-explicit=PASS")
+    print("ISSUE47_WP3B_PROVENANCE_CHECK: runtime-identity-separate=PASS")
     print("ISSUE47_WP3B_PROVENANCE_CHARACTERIZATION: PASS")
     return 0
 
