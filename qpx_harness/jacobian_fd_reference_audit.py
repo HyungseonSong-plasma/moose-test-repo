@@ -224,6 +224,69 @@ def _runtime_mechanism_applicability(log_text: str) -> dict[str, Any]:
     }
 
 
+def _evidence_provenance_status(
+    *,
+    root: Path,
+    case_dir: Path,
+    input_path: Path,
+    source_case: Path,
+    input_sha_before: str,
+    input_sha_after: str,
+    log_path: Path,
+    log_preexisting: bool,
+    log_exists: bool,
+    dofmap_path: Path,
+    dofmap_preexisting: bool,
+    dofmap_exists: bool,
+    source_dofmaps_before: tuple[str, ...],
+    source_dofmaps_after: tuple[str, ...],
+) -> dict[str, Any]:
+    """Fail closed unless runtime artifacts are bound to the prepared fresh case."""
+    checks = {
+        "runner-owned-case": case_dir.resolve().parent == root.resolve(),
+        "runner-owned-input": input_path.resolve().parent == case_dir.resolve(),
+        "source-case-isolated": case_dir.resolve() != source_case.resolve(),
+        "input-identity-stable": input_sha_before == input_sha_after,
+        "current-run-log": (
+            log_path.resolve().parent == root.resolve()
+            and not log_preexisting
+            and log_exists
+        ),
+        "current-run-dofmap": (
+            dofmap_path.resolve().parent == case_dir.resolve()
+            and not dofmap_preexisting
+            and dofmap_exists
+        ),
+        "canonical-source-output-unchanged": (
+            source_dofmaps_before == source_dofmaps_after
+        ),
+    }
+    blockers = [check_id for check_id, ok in checks.items() if not ok]
+    status = "PASS" if not blockers else "HOLD"
+    return {
+        "status": status,
+        "class": (
+            "EVIDENCE_PROVENANCE_PASS"
+            if status == "PASS"
+            else "EVIDENCE_PROVENANCE_HOLD"
+        ),
+        "reason": (
+            "runtime log, DOFMap, and input identity are bound to the fresh runner-owned copied case"
+            if status == "PASS"
+            else "runtime evidence is stale, unowned, identity-drifted, or touched the canonical source case"
+        ),
+        "checks": [
+            {"id": check_id, "status": "PASS" if ok else "FAIL"}
+            for check_id, ok in checks.items()
+        ],
+        "blockers": blockers,
+        "input_sha_before": input_sha_before,
+        "input_sha_after": input_sha_after,
+        "source_dofmaps_before": list(source_dofmaps_before),
+        "source_dofmaps_after": list(source_dofmaps_after),
+    }
+
+
 def nonzero_threshold_difference(difference: dict[str, Any]) -> dict[str, Any]:
     entries: list[dict[str, Any]] = []
     structural_count = 0
@@ -671,6 +734,48 @@ def self_test() -> int:
         )
         if fatal_termination["class"] != "FATAL_RUNTIME_FAILURE":
             raise AssertionError("fatal runtime signature was accepted")
+
+        provenance_root = Path("/tmp/issue46-evidence")
+        provenance_case = provenance_root / "c0_ds_reference"
+        provenance_input = provenance_case / "input.i"
+        provenance_log = provenance_root / "p3_c0_ds_reference.log"
+        provenance_dofmap = provenance_case / f"{loc.DOFMAP_FILE_BASE}.json"
+        provenance = _evidence_provenance_status(
+            root=provenance_root,
+            case_dir=provenance_case,
+            input_path=provenance_input,
+            source_case=Path("/tmp/issue46-source-case"),
+            input_sha_before="abc",
+            input_sha_after="abc",
+            log_path=provenance_log,
+            log_preexisting=False,
+            log_exists=True,
+            dofmap_path=provenance_dofmap,
+            dofmap_preexisting=False,
+            dofmap_exists=True,
+            source_dofmaps_before=(),
+            source_dofmaps_after=(),
+        )
+        if provenance["class"] != "EVIDENCE_PROVENANCE_PASS":
+            raise AssertionError("fresh runner-owned evidence provenance was rejected")
+        stale_provenance = _evidence_provenance_status(
+            root=provenance_root,
+            case_dir=provenance_case,
+            input_path=provenance_input,
+            source_case=Path("/tmp/issue46-source-case"),
+            input_sha_before="abc",
+            input_sha_after="abc",
+            log_path=provenance_log,
+            log_preexisting=True,
+            log_exists=True,
+            dofmap_path=provenance_dofmap,
+            dofmap_preexisting=False,
+            dofmap_exists=True,
+            source_dofmaps_before=(),
+            source_dofmaps_after=(),
+        )
+        if stale_provenance["class"] != "EVIDENCE_PROVENANCE_HOLD":
+            raise AssertionError("stale pre-existing runtime log was accepted")
     except Exception as exc:
         print(f"ISSUE46_FD_REFERENCE_SELFTEST: FAIL ({exc})")
         return 1
@@ -718,10 +823,13 @@ def _prepare_case(exe: Path, results_root: str | None) -> dict[str, Any]:
     case_dir = root / "c0_ds_reference"
     v2.v1._copy_case(base_case, case_dir, ds_text)
     v2.v1._validate_assets(case_dir)
+    input_path = case_dir / "input.i"
     return {
         "root": root,
         "case_dir": case_dir,
-        "input": case_dir / "input.i",
+        "input": input_path,
+        "source_case": base_case,
+        "input_sha256": evidence.sha256_file(input_path),
         "baseline_audit": baseline_audit,
         "ds_audit": ds_audit,
         "instrumentation": instrumentation,
@@ -824,6 +932,16 @@ def _purge_dofmap(case_dir: Path) -> None:
             path.unlink()
 
 
+def _source_dofmaps(source_case: Path) -> tuple[str, ...]:
+    return tuple(
+        sorted(
+            str(path.resolve())
+            for path in source_case.glob(f"{loc.DOFMAP_FILE_BASE}*.json")
+            if path.is_file()
+        )
+    )
+
+
 def run_runtime(qpx: str | None, results_root: str | None) -> int:
     exe = v2.resolve_executable(qpx)
     v2.validate_executable(exe)
@@ -839,6 +957,10 @@ def run_runtime(qpx: str | None, results_root: str | None) -> int:
 
     _purge_dofmap(prepared["case_dir"])
     log_path = prepared["root"] / "p3_c0_ds_reference.log"
+    dofmap = prepared["case_dir"] / f"{loc.DOFMAP_FILE_BASE}.json"
+    log_preexisting = log_path.exists()
+    dofmap_preexisting = dofmap.exists()
+    source_dofmaps_before = _source_dofmaps(prepared["source_case"])
     print("ISSUE46_FD_REFERENCE_CASE_START: C0_DS_REFERENCE")
     run = run_qpx(
         exe,
@@ -849,12 +971,41 @@ def run_runtime(qpx: str | None, results_root: str | None) -> int:
         stream=False,
     )
     print(f"ISSUE46_FD_REFERENCE_CASE_END: C0_DS_REFERENCE rc={run.returncode}")
-    dofmap = prepared["case_dir"] / f"{loc.DOFMAP_FILE_BASE}.json"
-    if not dofmap.is_file():
+    input_sha_after = (
+        evidence.sha256_file(prepared["input"])
+        if prepared["input"].is_file()
+        else "MISSING"
+    )
+    source_dofmaps_after = _source_dofmaps(prepared["source_case"])
+    provenance = _evidence_provenance_status(
+        root=prepared["root"],
+        case_dir=prepared["case_dir"],
+        input_path=prepared["input"],
+        source_case=prepared["source_case"],
+        input_sha_before=prepared["input_sha256"],
+        input_sha_after=input_sha_after,
+        log_path=log_path,
+        log_preexisting=log_preexisting,
+        log_exists=log_path.is_file(),
+        dofmap_path=dofmap,
+        dofmap_preexisting=dofmap_preexisting,
+        dofmap_exists=dofmap.is_file(),
+        source_dofmaps_before=source_dofmaps_before,
+        source_dofmaps_after=source_dofmaps_after,
+    )
+    if provenance["status"] != "PASS":
+        analysis = {
+            "status": "HOLD",
+            "class": "EVIDENCE_PROVENANCE_HOLD",
+            "reason": provenance["reason"],
+            "evidence_provenance": provenance,
+        }
+    elif not dofmap.is_file():
         analysis = {
             "status": "HOLD",
             "class": "FD_REFERENCE_DISCRIMINATOR_INSUFFICIENT",
             "reason": f"missing DOFMap output: {dofmap}",
+            "evidence_provenance": provenance,
         }
     else:
         log_text = log_path.read_text(errors="replace")
@@ -864,6 +1015,7 @@ def run_runtime(qpx: str | None, results_root: str | None) -> int:
             returncode=run.returncode,
             experiment_identity=prepared["experiment_identity"],
         )
+        analysis["evidence_provenance"] = provenance
 
     directional = analysis.get("directional", {})
     metrics = directional.get("metrics", {})
@@ -891,6 +1043,18 @@ def run_runtime(qpx: str | None, results_root: str | None) -> int:
                 f"{float(block.get('max_abs_difference', 0.0)):.12e}"
             )
 
+    if prepared["input"].is_file():
+        run_identity = {
+            **evidence.identity_record(executable=exe, input_path=prepared["input"]),
+            "qpx_sha256": evidence.sha256_file(exe),
+        }
+    else:
+        run_identity = {
+            "qpx_realpath": str(exe.resolve()),
+            "input_realpath": str(prepared["input"].resolve()),
+            "input_sha256": "MISSING",
+            "qpx_sha256": evidence.sha256_file(exe),
+        }
     summary = {
         "issue": ISSUE,
         "mode": "fd-reference-discriminator-runtime",
@@ -905,10 +1069,8 @@ def run_runtime(qpx: str | None, results_root: str | None) -> int:
             "wall_seconds": run.wall_seconds,
             "log": str(log_path),
             "dofmap": str(dofmap) if dofmap.is_file() else None,
-            "identity": {
-                **evidence.identity_record(executable=exe, input_path=prepared["input"]),
-                "qpx_sha256": evidence.sha256_file(exe),
-            },
+            "identity": run_identity,
+            "evidence_provenance": provenance,
         },
         "preflight": {
             "status": preflight_status,
