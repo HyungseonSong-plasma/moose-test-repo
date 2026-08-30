@@ -5,6 +5,7 @@ from typing import Any
 
 from qpx_harness.moose import blocks as mb
 from qpx_harness.moose import parameters as mp
+from qpx_harness.moose_input import MooseInput
 from qpx_harness.petsc import options as po
 
 DIAGNOSTIC_PETSC_OPTIONS = (
@@ -17,11 +18,10 @@ JACOBIAN_PETSC_OPTIONS = ("-snes_test_jacobian",)
 
 
 def _ensure_debug_block(text: str) -> str:
-    matches = mp.direct_children(text, "") if False else None  # keep no path-specific state
-    debug_matches = __import__("qpx_harness.moose_input", fromlist=["MooseInput"]).MooseInput(text).find("Debug")
-    if len(debug_matches) > 1:
+    matches = MooseInput(text).find("Debug")
+    if len(matches) > 1:
         raise mb.MooseBlockError("multiple top-level [Debug] blocks")
-    if not debug_matches:
+    if not matches:
         return mb.append_top_level_block(
             text,
             "[Debug]\n  show_var_residual_norms = true\n[]",
