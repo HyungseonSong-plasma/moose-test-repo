@@ -58,6 +58,46 @@ def parse_threshold_difference_matrix(text: str) -> dict[str, Any]:
     return {"threshold": threshold, "entries": entries, "section_observed": True}
 
 
+def has_closing_runtime_boundary(text: str) -> bool:
+    """Return whether a thresholded difference section is followed by runtime output."""
+    header = re.search(
+        r"Hand-coded minus finite-difference Jacobian with tolerance",
+        text,
+        re.IGNORECASE,
+    )
+    if not header:
+        return False
+    tail = text[header.end() :]
+    return re.search(
+        r"(?m)^\s*(?:KSP Object:|Linear solve |Nonlinear solve )",
+        tail,
+    ) is not None
+
+
+def finite_nonzero_entries(difference: Mapping[str, Any]) -> dict[str, Any]:
+    """Return only finite nonzero matrix entries while retaining structural counts."""
+    raw_entries = difference.get("entries", [])
+    if not isinstance(raw_entries, list):
+        raise MatrixParseError("difference.entries must be a list")
+    entries: list[dict[str, Any]] = []
+    for entry in raw_entries:
+        if not isinstance(entry, Mapping):
+            continue
+        try:
+            value = float(entry["value"])
+        except (KeyError, TypeError, ValueError):
+            continue
+        if math.isfinite(value) and value != 0.0:
+            entries.append({**dict(entry), "value": value})
+    return {
+        "threshold": difference.get("threshold"),
+        "entries": entries,
+        "section_observed": bool(difference.get("section_observed", False)),
+        "structural_entry_count": len(raw_entries),
+        "nonzero_thresholded_entry_count": len(entries),
+    }
+
+
 def summarize_by_owner(
     difference: Mapping[str, Any],
     owner_by_dof: Mapping[int, str],
