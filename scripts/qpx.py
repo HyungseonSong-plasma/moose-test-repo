@@ -22,6 +22,7 @@ from qpx_harness.electron_inventory_nullspace import main as inventory_nullspace
 from qpx_harness.execution_contract import main as execution_contract_main, self_test as execution_contract_self_test
 from qpx_harness.fast_plasma_coupling_diagnostic import main as fast_coupling_diagnostic_main, self_test as fast_coupling_diagnostic_self_test
 from qpx_harness.fast_plasma_relaxation_v5 import main as fast_relaxation_main, self_test as fast_relaxation_self_test
+from qpx_harness.jacobian_fd_reference_audit import main as fd_reference_main, self_test as fd_reference_self_test
 from qpx_harness.performance_cache_audit import main as performance_cache_audit_main, self_test as performance_cache_audit_self_test
 from qpx_harness.performance_core import main as performance_main, self_test as performance_self_test
 from qpx_harness.performance_investigation import main as performance_investigation_main, self_test as performance_investigation_self_test
@@ -47,6 +48,7 @@ COMMANDS = {
     "inventory-nullspace": "run Issue45 electron-inventory nullspace structural/framework preflight",
     "inventory-first-linear": "diagnose the Issue45 constrained C0 first-linear breakdown",
     "inventory-jacobian-localization": "prepare the Issue46 augmented Jacobian block-localization audit",
+    "inventory-fd-reference": "audit Issue46 PETSc finite-difference Jacobian reference quantization",
     "contract": "validate/evaluate a CORE-16 scientific execution contract",
     "dmix-equivalence": "compare optimized D_mix against legacy full evaluation",
     "measure": "run one schema-driven QPX performance measurement",
@@ -118,6 +120,7 @@ def self_test_cli(argv: list[str]) -> int:
     inventory_nullspace_rc = inventory_nullspace_self_test()
     first_linear_rc = first_linear_self_test()
     jac_localization_rc = jac_localization_self_test()
+    fd_reference_rc = fd_reference_self_test()
     execution_contract_rc = execution_contract_self_test()
     dmix_equivalence_rc = dmix_equivalence_self_test()
     performance_rc = performance_self_test()
@@ -137,6 +140,7 @@ def self_test_cli(argv: list[str]) -> int:
         and inventory_nullspace_rc == 0
         and first_linear_rc == 0
         and jac_localization_rc == 0
+        and fd_reference_rc == 0
         and execution_contract_rc == 0
         and dmix_equivalence_rc == 0
         and performance_rc == 0
@@ -176,6 +180,8 @@ def main(argv: list[str] | None = None) -> int:
         return first_linear_main(rest)
     if command == "inventory-jacobian-localization":
         return jac_localization_main(rest)
+    if command == "inventory-fd-reference":
+        return fd_reference_main(rest)
     if command == "contract":
         return execution_contract_main(rest)
     if command == "dmix-equivalence":
