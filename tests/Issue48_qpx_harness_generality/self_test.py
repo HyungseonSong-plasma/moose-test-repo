@@ -11,6 +11,7 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from qpx_harness.moose import blocks as mb
 from qpx_harness.moose import parameters as mp
 from qpx_harness.petsc import options as po
 from qpx_harness import augmented_jacobian_localization as issue46_legacy
@@ -28,7 +29,7 @@ def _fixture() -> str:
 def _expect_error(fn, label: str) -> None:
     try:
         fn()
-    except (mp.MooseParameterError, po.PetscOptionsError):
+    except (mb.MooseBlockError, mp.MooseParameterError, po.PetscOptionsError):
         return
     raise AssertionError(f"negative control unexpectedly passed: {label}")
 
@@ -56,6 +57,43 @@ def _check_moose_parameters() -> None:
         lambda: mp.upsert_parameter(ambiguous, "Executioner", "type", "Transient"),
         "ambiguous parameter",
     )
+
+
+def _check_moose_blocks() -> None:
+    text = _fixture()
+    with_debug = mb.append_top_level_block(
+        text,
+        "[Debug]\n  show_var_residual_norms = true\n[]",
+    )
+    if not mb.has_block(with_debug, "Debug"):
+        raise AssertionError("top-level block append did not create Debug")
+
+    child = (
+        "  [probe]\n"
+        "    type = DOFMap\n"
+        "    execute_on = INITIAL\n"
+        "    file_base = probe\n"
+        "  []"
+    )
+    with_child = mb.insert_child_block(text, "Outputs", child)
+    if not mb.has_block(with_child, "Outputs/probe"):
+        raise AssertionError("child block insertion did not create Outputs/probe")
+    _expect_error(
+        lambda: mb.require_absent(with_child, "Outputs/probe"),
+        "existing block accepted by require_absent",
+    )
+
+    removed = mb.remove_block(with_child, "Outputs/probe")
+    if mb.has_block(removed, "Outputs/probe"):
+        raise AssertionError("remove_block left Outputs/probe behind")
+
+    replaced = mb.replace_block(
+        with_debug,
+        "Debug",
+        "[Debug]\n  show_var_residual_norms = false\n[]",
+    )
+    if mp.get_parameter(replaced, "Debug", "show_var_residual_norms") != "false":
+        raise AssertionError("replace_block did not replace Debug")
 
 
 def _check_petsc_options() -> None:
@@ -120,12 +158,12 @@ def _check_recipe_equivalence() -> None:
 
 
 def _check_generality_surface() -> None:
-    root = ROOT
     for rel in (
         "qpx_harness/moose/parameters.py",
+        "qpx_harness/moose/blocks.py",
         "qpx_harness/petsc/options.py",
     ):
-        source = (root / rel).read_text()
+        source = (ROOT / rel).read_text()
         for forbidden in (
             "ISSUE =",
             "C0_TARGET",
@@ -135,28 +173,48 @@ def _check_generality_surface() -> None:
         ):
             if forbidden in source:
                 raise AssertionError(f"special-case semantic leaked into {rel}: {forbidden}")
-        if "fast_plasma" in source or "electron_inventory" in source or "jacobian_fd_reference_audit" in source:
-            raise AssertionError(f"reverse dependency leaked into {rel}")
+        for reverse in (
+            "fast_plasma",
+            "electron_inventory",
+            "jacobian_fd_reference_audit",
+            "petsc_first_linear_diagnostic",
+            "augmented_jacobian_localization",
+        ):
+            if reverse in source:
+                raise AssertionError(f"reverse dependency leaked into {rel}: {reverse}")
 
-    for rel in (
+    recipe_paths = (
         "recipes/issue43_coupling_diagnostic.py",
         "recipes/issue45_first_linear.py",
         "recipes/issue46_jacobian_localization.py",
-    ):
-        source = (root / rel).read_text()
+    )
+    legacy_names = (
+        "fast_plasma_coupling_diagnostic",
+        "petsc_first_linear_diagnostic",
+        "augmented_jacobian_localization",
+        "jacobian_fd_reference_audit",
+    )
+    for rel in recipe_paths:
+        source = (ROOT / rel).read_text()
         if "qpx_harness.moose" not in source and "qpx_harness.petsc" not in source:
             raise AssertionError(f"recipe does not compose generic primitives: {rel}")
+        leaked = [name for name in legacy_names if name in source]
+        if leaked:
+            raise AssertionError(f"recipe reverse-imports legacy module {rel}: {leaked}")
 
 
 def main() -> int:
     try:
         _check_moose_parameters()
         print("ISSUE48_GENERALITY_CHECK: moose-parameter-primitives=PASS")
+        _check_moose_blocks()
+        print("ISSUE48_GENERALITY_CHECK: moose-block-primitives=PASS")
         _check_petsc_options()
         print("ISSUE48_GENERALITY_CHECK: petsc-option-primitives=PASS")
         _check_recipe_equivalence()
         print("ISSUE48_GENERALITY_CHECK: issue43-45-46-recipe-equivalence=PASS")
         _check_generality_surface()
+        print("ISSUE48_GENERALITY_CHECK: recipe-reverse-dependency=NONE")
         print("ISSUE48_GENERALITY_CHECK: primitive-boundary=PASS")
     except Exception as exc:
         print(f"ISSUE48_GENERALITY_SELFTEST: FAIL ({exc})")
