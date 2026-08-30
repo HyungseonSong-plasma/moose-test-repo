@@ -33,7 +33,11 @@ from qpx_harness.preflight import parser_symbol_self_test, validate_input_prefli
 from qpx_harness.profiling import main as profile_main
 from qpx_harness.regression import cli_run_all, cli_run_test
 from qpx_harness.scale_audit import main as scale_audit_main, self_test as scale_audit_self_test
-from qpx_harness.temporal import self_test as temporal_self_test
+from qpx_harness.temporal import (
+    VALID_INITIAL_POLICIES,
+    normalize_temporal_csv,
+    self_test as temporal_self_test,
+)
 from qpx_harness.workspace import inventory_cli, self_test as workspace_self_test
 
 
@@ -61,6 +65,7 @@ COMMANDS = {
     "bundle": "build a declarative local profiling bundle",
     "inventory": "inspect or compare QPX workspace trees",
     "preflight": "run static parser-symbol preflight on one MOOSE input",
+    "temporal-csv": "normalize transient CSV rows under an explicit temporal policy",
     "self-test": "run all harness static/self-tests",
 }
 
@@ -100,9 +105,57 @@ def analyze_cli(argv: list[str]) -> int:
 
 def preflight_cli(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(prog="qpx preflight")
-    parser.add_argument("input", help="MOOSE input file to inspect")
+    parser.add_argument("input", nargs="?", help="MOOSE input file to inspect")
+    parser.add_argument("--self-test", action="store_true")
     args = parser.parse_args(argv)
+    if args.self_test:
+        return parser_symbol_self_test()
+    if not args.input:
+        parser.error("input is required unless --self-test")
     validate_input_preflight(Path(args.input).expanduser().resolve())
+    return 0
+
+
+def temporal_csv_cli(argv: list[str]) -> int:
+    parser = argparse.ArgumentParser(prog="qpx temporal-csv")
+    parser.add_argument("source", nargs="?")
+    parser.add_argument("--output")
+    parser.add_argument("--time-column", default="time")
+    parser.add_argument(
+        "--initial-row-policy",
+        choices=sorted(VALID_INITIAL_POLICIES),
+    )
+    parser.add_argument("--initial-time", type=float, default=0.0)
+    parser.add_argument("--time-tol", type=float, default=1.0e-15)
+    parser.add_argument("--allow-no-physical-rows", action="store_true")
+    parser.add_argument("--self-test", action="store_true")
+    args = parser.parse_args(argv)
+
+    if args.self_test:
+        return temporal_self_test()
+    if not args.source or not args.output or not args.initial_row_policy:
+        parser.error(
+            "source, --output, and --initial-row-policy are required unless --self-test"
+        )
+
+    summary = normalize_temporal_csv(
+        Path(args.source),
+        Path(args.output),
+        time_column=args.time_column,
+        initial_row_policy=args.initial_row_policy,
+        initial_time=args.initial_time,
+        time_tol=args.time_tol,
+        require_physical_rows=not args.allow_no_physical_rows,
+    )
+    print("TEMPORAL_CSV_NORMALIZE: PASS")
+    for key in (
+        "source_rows",
+        "initialization_rows",
+        "physical_rows",
+        "initial_row_policy",
+        "output",
+    ):
+        print(f"{key.upper()}={summary[key]}")
     return 0
 
 
@@ -206,6 +259,8 @@ def main(argv: list[str] | None = None) -> int:
         return inventory_cli(rest)
     if command == "preflight":
         return preflight_cli(rest)
+    if command == "temporal-csv":
+        return temporal_csv_cli(rest)
     if command == "self-test":
         return self_test_cli(rest)
 
