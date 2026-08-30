@@ -4,7 +4,12 @@ This test intentionally knows concrete examples; the production primitives must 
 """
 from __future__ import annotations
 
+import sys
 from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 from qpx_harness.moose import parameters as mp
 from qpx_harness.petsc import options as po
@@ -115,7 +120,7 @@ def _check_recipe_equivalence() -> None:
 
 
 def _check_generality_surface() -> None:
-    root = Path(__file__).resolve().parents[2]
+    root = ROOT
     for rel in (
         "qpx_harness/moose/parameters.py",
         "qpx_harness/petsc/options.py",
