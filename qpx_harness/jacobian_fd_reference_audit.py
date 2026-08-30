@@ -1,8 +1,8 @@
 """Issue46 PETSc finite-difference reference audit.
 
 This module repairs the EVR1 difference-count semantics and owns the bounded
-EVR2 *observation-only* discriminator.  The physical C0 problem, nonlinear
-system, scaling policy, and solver realization are preserved.  The only EVR2
+EVR2 observation-only discriminator. The physical C0 problem, nonlinear
+system, scaling policy, and solver realization are preserved. The only EVR2
 change is PETSc's Jacobian-test reference differencing algorithm: default WP is
 replaced by DS so the O(1e16) electron-density perturbation is representable in
 double precision.
@@ -42,7 +42,8 @@ class JacobianFDReferenceAuditError(RuntimeError):
 
 
 def predict_fd_step_quantization(
-    *, electron_dofs: int = ACCEPTED_EVR1_ELECTRON_DOF_COUNT,
+    *,
+    electron_dofs: int = ACCEPTED_EVR1_ELECTRON_DOF_COUNT,
     electron_value: float = TARGET,
 ) -> dict[str, float]:
     if electron_dofs <= 0 or not math.isfinite(electron_value) or electron_value == 0.0:
@@ -72,9 +73,7 @@ def predict_fd_step_quantization(
     }
 
 
-def nonzero_threshold_difference(
-    difference: dict[str, Any],
-) -> dict[str, Any]:
+def nonzero_threshold_difference(difference: dict[str, Any]) -> dict[str, Any]:
     entries: list[dict[str, Any]] = []
     structural_count = 0
     for entry in difference.get("entries", []):
@@ -83,9 +82,7 @@ def nonzero_threshold_difference(
             value = float(entry["value"])
         except (KeyError, TypeError, ValueError):
             value = math.nan
-        if not math.isfinite(value):
-            entries.append({**entry, "value": value})
-        elif value != 0.0:
+        if not math.isfinite(value) or value != 0.0:
             entries.append({**entry, "value": value})
     return {
         "threshold": difference.get("threshold"),
@@ -112,7 +109,6 @@ def directional_localization(log_text: str, dofmap_text: str) -> dict[str, Any]:
     lm = inv.LAMBDA_VARIABLE
     j_lambda_n = localized["blocks"].get(f"{lm}->n_e", {})
     j_n_lambda = localized["blocks"].get(f"n_e->{lm}", {})
-    all_nonzero = localized.get("mapped_entry_count", 0)
     return {
         "dof_map": {
             "ndof": dof_map["ndof"],
@@ -122,7 +118,7 @@ def directional_localization(log_text: str, dofmap_text: str) -> dict[str, Any]:
         "localization": localized,
         "metrics": {
             "structural_entry_count": nonzero["structural_entry_count"],
-            "nonzero_thresholded_entry_count": all_nonzero,
+            "nonzero_thresholded_entry_count": localized.get("mapped_entry_count", 0),
             "j_lambda_n": {
                 "count": int(j_lambda_n.get("count", 0)),
                 "l2_difference": float(j_lambda_n.get("l2_difference", 0.0)),
@@ -155,10 +151,23 @@ def instrument_ds_reference(baseline_text: str) -> tuple[str, dict[str, Any]]:
 
 def _remove_fd_type_pair(text: str) -> str:
     pairs = loc._petsc_name_value_pairs(text)
+    fd_pairs = [(name, value) for name, value in pairs if name == "-mat_fd_type"]
+    if fd_pairs != [("-mat_fd_type", FD_REFERENCE_TYPE)]:
+        raise JacobianFDReferenceAuditError(
+            f"expected exactly -mat_fd_type {FD_REFERENCE_TYPE}, got {fd_pairs}"
+        )
     filtered = [(name, value) for name, value in pairs if name != "-mat_fd_type"]
-    if len(filtered) != len(pairs) - 1:
-        raise JacobianFDReferenceAuditError("expected exactly one -mat_fd_type pair")
     return loc._set_petsc_name_value_pairs(text, filtered)
+
+
+def _mask_petsc_pair_lines(text: str) -> str:
+    """Mask only PETSc name/value pair serialization for byte-equivalence checks."""
+    out = inv._set_or_insert_parameter(
+        text, "Executioner", "petsc_options_iname", "'<PETSC_INAMES>'"
+    )
+    return inv._set_or_insert_parameter(
+        out, "Executioner", "petsc_options_value", "'<PETSC_VALUES>'"
+    )
 
 
 def audit_ds_reference_structure(
@@ -186,16 +195,44 @@ def audit_ds_reference_structure(
         first_linear._petsc_options(ds_text),
         first_linear._petsc_options(baseline_text),
     )
+
+    restored: str | None = None
     try:
         restored = _remove_fd_type_pair(ds_text)
-        pair_only = restored == baseline_text
-    except JacobianFDReferenceAuditError:
-        pair_only = False
-    add("observation-only-byte-guard", pair_only, pair_only, True)
+        restored_pairs = loc._petsc_name_value_pairs(restored)
+        semantic_pair_restore = restored_pairs == baseline_pairs
+        masked_byte_equal = _mask_petsc_pair_lines(restored) == _mask_petsc_pair_lines(
+            baseline_text
+        )
+    except (JacobianFDReferenceAuditError, inv.ElectronInventoryNullspaceError):
+        semantic_pair_restore = False
+        masked_byte_equal = False
+    add(
+        "observation-only-petsc-pair-restore",
+        semantic_pair_restore,
+        semantic_pair_restore,
+        True,
+    )
+    add(
+        "observation-only-masked-byte-guard",
+        masked_byte_equal,
+        masked_byte_equal,
+        True,
+    )
 
-    closure = inv.audit_constrained_quasisteady_structure(ds_text, expected_macro_avg=TARGET)
+    # The #45 closure audit owns the accepted physics/solver contract. Apply it
+    # to the canonical C0 restored after removing the observation-only FD option;
+    # applying it directly to the instrumented input would conflate the
+    # observation layer with the accepted numerical realization.
+    canonical_for_closure = restored if restored is not None else baseline_text
+    closure = inv.audit_constrained_quasisteady_structure(
+        canonical_for_closure, expected_macro_avg=TARGET
+    )
     add("c0-closure-preserved", closure["status"] == "PASS", closure["status"], "PASS")
-    initial = inv._unquote(inv._parameter_value(ds_text, "Variables/n_e", "initial_condition"))
+
+    initial = inv._unquote(
+        inv._parameter_value(canonical_for_closure, "Variables/n_e", "initial_condition")
+    )
     try:
         initial_value = float(initial)
     except (TypeError, ValueError):
@@ -221,7 +258,11 @@ def audit_ds_reference_structure(
     blockers = [check for check in checks if check["status"] != "PASS"]
     return {
         "status": "PASS" if not blockers else "HOLD",
-        "class": "FD_REFERENCE_DS_STRUCTURE_PASS" if not blockers else "FD_REFERENCE_DS_STRUCTURE_FAIL",
+        "class": (
+            "FD_REFERENCE_DS_STRUCTURE_PASS"
+            if not blockers
+            else "FD_REFERENCE_DS_STRUCTURE_FAIL"
+        ),
         "checks": checks,
         "blockers": blockers,
         "prediction": prediction,
@@ -229,7 +270,9 @@ def audit_ds_reference_structure(
     }
 
 
-def analyze_ds_runtime(log_text: str, dofmap_text: str, *, returncode: int) -> dict[str, Any]:
+def analyze_ds_runtime(
+    log_text: str, dofmap_text: str, *, returncode: int
+) -> dict[str, Any]:
     jacobian = coupling_diag.analyze_jacobian_text(
         log_text, relative_tolerance=GLOBAL_JACOBIAN_REL_TOL
     )
@@ -262,11 +305,15 @@ def analyze_ds_runtime(log_text: str, dofmap_text: str, *, returncode: int) -> d
             "status": "PASS",
             "class": "FD_REFERENCE_QUANTIZATION_CONFIRMED",
             "reason": (
-                "the exact C0 assembled Jacobian passes when only the PETSc FD reference "
-                "changes from WP to DS, with no nonzero thresholded difference entries"
+                "the exact C0 assembled Jacobian passes when only the PETSc FD "
+                "reference changes from WP to DS, with no nonzero thresholded "
+                "difference entries"
             ),
         }
-    elif jacobian.get("class") == "JACOBIAN_MISMATCH" and metrics["j_lambda_n"]["count"] > 0:
+    elif (
+        jacobian.get("class") == "JACOBIAN_MISMATCH"
+        and metrics["j_lambda_n"]["count"] > 0
+    ):
         decision = {
             "status": "HOLD",
             "class": "FD_REFERENCE_MISMATCH_PERSISTS",
@@ -294,7 +341,10 @@ def _synthetic_dofmap() -> str:
             "vars": [
                 {"name": "n_e", "subdomains": [{"id": 1, "dofs": [0, 1]}]},
                 {"name": "potential_plasma", "subdomains": [{"id": 1, "dofs": [2, 3]}]},
-                {"name": inv.LAMBDA_VARIABLE, "subdomains": [{"id": 1, "dofs": []}]},
+                {
+                    "name": inv.LAMBDA_VARIABLE,
+                    "subdomains": [{"id": 1, "dofs": []}],
+                },
             ],
         }
     )
@@ -303,8 +353,10 @@ def _synthetic_dofmap() -> str:
 def _synthetic_log(relative_error: float, rows: list[str]) -> str:
     return (
         "  ---------- Testing Jacobian -------------\n"
-        f"  ||J - Jfd||_F/||J||_F = {relative_error:.12e}, ||J - Jfd||_F = 1e-6\n"
-        f"  Hand-coded minus finite-difference Jacobian with tolerance {LOCALIZATION_THRESHOLD:.12e} ----------\n"
+        f"  ||J - Jfd||_F/||J||_F = {relative_error:.12e}, "
+        "||J - Jfd||_F = 1e-6\n"
+        f"  Hand-coded minus finite-difference Jacobian with tolerance "
+        f"{LOCALIZATION_THRESHOLD:.12e} ----------\n"
         "Mat Object: 1 MPI process\n  type: seqaij\n"
         + "\n".join(rows)
         + "\nLinear solve did not converge due to DIVERGED_BREAKDOWN iterations 30\n"
@@ -316,7 +368,10 @@ def self_test() -> int:
         prediction = predict_fd_step_quantization()
         if abs(prediction["wp_predicted_attenuation"] - 0.9640628864075022) > 1e-12:
             raise AssertionError("WP quantization predictor drifted")
-        if abs(prediction["ds_predicted_attenuation"] - 1.0) > DS_ATTENUATION_TO_UNITY_TOL:
+        if (
+            abs(prediction["ds_predicted_attenuation"] - 1.0)
+            > DS_ATTENUATION_TO_UNITY_TOL
+        ):
             raise AssertionError("DS electron perturbation is not representable enough")
 
         raw = {
@@ -328,12 +383,18 @@ def self_test() -> int:
             "section_observed": True,
         }
         filtered = nonzero_threshold_difference(raw)
-        if filtered["structural_entry_count"] != 2 or filtered["nonzero_thresholded_entry_count"] != 1:
+        if (
+            filtered["structural_entry_count"] != 2
+            or filtered["nonzero_thresholded_entry_count"] != 1
+        ):
             raise AssertionError("zero-valued structural entries were not excluded")
 
         dofmap = _synthetic_dofmap()
         directional = directional_localization(
-            _synthetic_log(4e-5, ["row 0: (4, 0.0)", "row 4: (0, 2.0e-4)"]),
+            _synthetic_log(
+                4e-5,
+                ["row 0: (4, 0.0)", "row 4: (0, 2.0e-4)"],
+            ),
             dofmap,
         )
         if directional["metrics"]["nonzero_thresholded_entry_count"] != 1:
@@ -349,7 +410,10 @@ def self_test() -> int:
         ds_text, _ = instrument_ds_reference(baseline)
         audit = audit_ds_reference_structure(baseline, ds_text)
         if audit["status"] != "PASS":
-            raise AssertionError("DS observation-only structure did not pass")
+            blocker_ids = [item["id"] for item in audit["blockers"]]
+            raise AssertionError(
+                "DS observation-only structure did not pass: " + ",".join(blocker_ids)
+            )
         bad = ds_text.replace("-mat_fd_type", "-mat_fd_type_bad", 1)
         if audit_ds_reference_structure(baseline, bad)["status"] == "PASS":
             raise AssertionError("FD-reference option mutation was accepted")
@@ -430,7 +494,11 @@ def run_preflight(qpx: str | None, results_root: str | None) -> int:
     prepared = _prepare_case(exe, results_root)
     p2, status = _preflight(exe, prepared)
     prediction = prepared["ds_audit"]["prediction"]
-    decision_class = "FD_REFERENCE_DISCRIMINATOR_READY" if status == "PASS" else "HARNESS_OR_CONSTRUCTION_FAIL"
+    decision_class = (
+        "FD_REFERENCE_DISCRIMINATOR_READY"
+        if status == "PASS"
+        else "HARNESS_OR_CONSTRUCTION_FAIL"
+    )
     summary = {
         "issue": ISSUE,
         "mode": "fd-reference-discriminator-preflight",
@@ -448,7 +516,8 @@ def run_preflight(qpx: str | None, results_root: str | None) -> int:
             "status": status,
             "class": decision_class,
             "reason": (
-                "exact C0 is preserved and only PETSc Jacobian-test reference differencing changes WP->DS"
+                "exact C0 is preserved and only PETSc Jacobian-test reference "
+                "differencing changes WP->DS"
                 if status == "PASS"
                 else "FD-reference discriminator failed a construction/check-input gate"
             ),
@@ -488,7 +557,9 @@ def run_runtime(qpx: str | None, results_root: str | None) -> int:
     if preflight_status != "PASS":
         print("ISSUE46_FD_REFERENCE_PRECLASS: HOLD")
         print("ISSUE46_FD_REFERENCE_CLASS: HARNESS_OR_CONSTRUCTION_FAIL")
-        print("ISSUE46_FD_REFERENCE_REASON: runtime refused because P0/P1/P2 is not PASS")
+        print(
+            "ISSUE46_FD_REFERENCE_REASON: runtime refused because P0/P1/P2 is not PASS"
+        )
         return 2
 
     _purge_dofmap(prepared["case_dir"])
@@ -528,11 +599,20 @@ def run_runtime(qpx: str | None, results_root: str | None) -> int:
             "ISSUE46_FD_REFERENCE_NONZERO_DIFFERENCE_ENTRIES: "
             f"{metrics.get('nonzero_thresholded_entry_count', 0)}"
         )
-        for key, label in (("j_lambda_n", "J_LAMBDA_N"), ("j_n_lambda", "J_N_LAMBDA")):
+        for key, label in (
+            ("j_lambda_n", "J_LAMBDA_N"),
+            ("j_n_lambda", "J_N_LAMBDA"),
+        ):
             block = metrics.get(key, {})
             print(f"ISSUE46_FD_REFERENCE_{label}_COUNT: {block.get('count', 0)}")
-            print(f"ISSUE46_FD_REFERENCE_{label}_L2: {float(block.get('l2_difference', 0.0)):.12e}")
-            print(f"ISSUE46_FD_REFERENCE_{label}_MAX_ABS: {float(block.get('max_abs_difference', 0.0)):.12e}")
+            print(
+                f"ISSUE46_FD_REFERENCE_{label}_L2: "
+                f"{float(block.get('l2_difference', 0.0)):.12e}"
+            )
+            print(
+                f"ISSUE46_FD_REFERENCE_{label}_MAX_ABS: "
+                f"{float(block.get('max_abs_difference', 0.0)):.12e}"
+            )
 
     summary = {
         "issue": ISSUE,
@@ -563,8 +643,14 @@ def run_runtime(qpx: str | None, results_root: str | None) -> int:
     }
     summary_path = prepared["root"] / "summary.json"
     v2._write_json(summary_path, summary)
-    print("ISSUE46_FD_REFERENCE_PRECLASS: " + ("PASS" if analysis.get("status") == "PASS" else "HOLD"))
-    print(f"ISSUE46_FD_REFERENCE_CLASS: {analysis.get('class', 'FD_REFERENCE_DISCRIMINATOR_INSUFFICIENT')}")
+    print(
+        "ISSUE46_FD_REFERENCE_PRECLASS: "
+        + ("PASS" if analysis.get("status") == "PASS" else "HOLD")
+    )
+    print(
+        f"ISSUE46_FD_REFERENCE_CLASS: "
+        f"{analysis.get('class', 'FD_REFERENCE_DISCRIMINATOR_INSUFFICIENT')}"
+    )
     print(f"ISSUE46_FD_REFERENCE_REASON: {analysis.get('reason', 'no reason')}")
     print(f"ISSUE46_FD_REFERENCE_LOG: {log_path}")
     if dofmap.is_file():
@@ -601,7 +687,11 @@ def main(argv: list[str] | None = None) -> int:
         MooseInputError,
         OSError,
     ) as exc:
-        marker = "ISSUE46_FD_REFERENCE_PREFLIGHT" if args.preflight else "ISSUE46_FD_REFERENCE_PRECLASS"
+        marker = (
+            "ISSUE46_FD_REFERENCE_PREFLIGHT"
+            if args.preflight
+            else "ISSUE46_FD_REFERENCE_PRECLASS"
+        )
         print(f"{marker}: HOLD")
         print("ISSUE46_FD_REFERENCE_CLASS: HARNESS_OR_CONSTRUCTION_FAIL")
         print(f"ISSUE46_FD_REFERENCE_REASON: {exc}")
