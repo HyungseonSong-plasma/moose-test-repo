@@ -449,17 +449,15 @@ def _check_wp3_provenance_separation() -> None:
         not hasattr(base, "WP_OBSERVED_ATTENUATION"),
         "historical observed attenuation still leaks into production decision constants",
     )
-    report = loc.audit_framework_control_structure(loc.build_framework_control_input())
-    source = report.get("source_contract", {})
-    _require("moose_commit" not in source, "ambiguous moose_commit provenance key remains")
-    reference = source.get("reference_source", {})
+    mechanism = base._historical_mechanism_evidence()
+    reference = mechanism.get("reference_source", {})
     _require(
-        reference.get("project") == "MOOSE"
-        and reference.get("revision") == "9f388366ccf",
-        "reference-source provenance is not explicitly identified",
+        reference.get("project") == "PETSc"
+        and reference.get("version") == "3.25.2",
+        "PETSc mechanism reference-source provenance is not explicit",
     )
     _require(
-        source.get("runtime_identity") == "OBSERVED_SEPARATELY",
+        mechanism.get("runtime_identity") == "OBSERVED_SEPARATELY",
         "reference-source provenance still masquerades as runtime identity",
     )
 
