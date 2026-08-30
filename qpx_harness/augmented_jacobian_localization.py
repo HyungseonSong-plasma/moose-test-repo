@@ -209,10 +209,10 @@ def build_framework_control_input() -> str:
 []
 
 [FVKernels]
-  [advection]
-    type = FVElementalAdvection
+  [diffusion]
+    type = FVDiffusion
     variable = v
-    velocity = '1 0 0'
+    coeff = 1
   []
   [lambda_constraint]
     type = FVIntegralValueConstraint
@@ -254,7 +254,20 @@ def audit_framework_control_structure(text: str) -> dict[str, Any]:
     add("fv-boundary-expansion", inv._unquote(inv._parameter_value(text, "Variables/v", "two_term_boundary_expansion")) == "false", inv._unquote(inv._parameter_value(text, "Variables/v", "two_term_boundary_expansion")), "false")
     add("scalar-family", inv._unquote(inv._parameter_value(text, "Variables/lambda", "family")) == "SCALAR", inv._unquote(inv._parameter_value(text, "Variables/lambda", "family")), "SCALAR")
     add("scalar-order", inv._unquote(inv._parameter_value(text, "Variables/lambda", "order")) == "FIRST", inv._unquote(inv._parameter_value(text, "Variables/lambda", "order")), "FIRST")
-    add("control-advection-type", inv._unquote(inv._parameter_value(text, "FVKernels/advection", "type")) == "FVElementalAdvection", inv._unquote(inv._parameter_value(text, "FVKernels/advection", "type")), "FVElementalAdvection")
+
+    kernel_paths = inv._direct_children(text, "FVKernels")
+    add("control-kernel-set", set(kernel_paths) == {"FVKernels/diffusion", "FVKernels/lambda_constraint"}, kernel_paths, ["FVKernels/diffusion", "FVKernels/lambda_constraint"])
+    diffusion_type = inv._unquote(inv._parameter_value(text, "FVKernels/diffusion", "type")) if "FVKernels/diffusion" in kernel_paths else None
+    diffusion_variable = inv._unquote(inv._parameter_value(text, "FVKernels/diffusion", "variable")) if "FVKernels/diffusion" in kernel_paths else None
+    diffusion_coeff = inv._unquote(inv._parameter_value(text, "FVKernels/diffusion", "coeff")) if "FVKernels/diffusion" in kernel_paths else None
+    add("control-diffusion-type", diffusion_type == "FVDiffusion", diffusion_type, "FVDiffusion")
+    add("control-diffusion-variable", diffusion_variable == "v", diffusion_variable, "v")
+    add("control-diffusion-coeff", diffusion_coeff == "1", diffusion_coeff, "1")
+    all_kernel_types = [
+        inv._unquote(inv._parameter_value(text, path, "type")) for path in kernel_paths
+    ]
+    add("no-moose-testapp-fvelementaladvection", "FVElementalAdvection" not in all_kernel_types, all_kernel_types, "FVElementalAdvection absent")
+
     add("control-constraint-type", inv._unquote(inv._parameter_value(text, "FVKernels/lambda_constraint", "type")) == "FVIntegralValueConstraint", inv._unquote(inv._parameter_value(text, "FVKernels/lambda_constraint", "type")), "FVIntegralValueConstraint")
     add("control-constraint-variable", inv._unquote(inv._parameter_value(text, "FVKernels/lambda_constraint", "variable")) == "v", inv._unquote(inv._parameter_value(text, "FVKernels/lambda_constraint", "variable")), "v")
     add("control-constraint-lambda", inv._unquote(inv._parameter_value(text, "FVKernels/lambda_constraint", "lambda")) == "lambda", inv._unquote(inv._parameter_value(text, "FVKernels/lambda_constraint", "lambda")), "lambda")
@@ -275,7 +288,10 @@ def audit_framework_control_structure(text: str) -> dict[str, Any]:
         "blockers": blockers,
         "source_contract": {
             "moose_commit": "9f388366ccf",
-            "official_ratio_tol": FRAMEWORK_CONTROL_REL_TOL,
+            "control_operator": "FVDiffusion",
+            "control_operator_registration": "MooseApp",
+            "rejected_test_only_operator": "FVElementalAdvection",
+            "official_constraint_regression_ratio_tol": FRAMEWORK_CONTROL_REL_TOL,
             "runtime_jacobian_execution_deferred_to_p3": True,
         },
     }
@@ -586,6 +602,12 @@ def self_test() -> int:
         bad_control = control.replace("off_diagonals_in_auto_scaling = true", "off_diagonals_in_auto_scaling = false", 1)
         if audit_framework_control_structure(bad_control)["status"] == "PASS":
             raise AssertionError("framework-control scaling mutation was accepted")
+        test_only_control = control.replace("type = FVDiffusion", "type = FVElementalAdvection", 1)
+        if audit_framework_control_structure(test_only_control)["status"] == "PASS":
+            raise AssertionError("MooseTestApp-only FVElementalAdvection mutation was accepted")
+        wrong_coeff = control.replace("coeff = 1", "coeff = 2", 1)
+        if audit_framework_control_structure(wrong_coeff)["status"] == "PASS":
+            raise AssertionError("framework-control diffusion coefficient mutation was accepted")
 
         dofmap = _synthetic_dof_map()
         parsed = parse_dof_map_text(dofmap)
@@ -672,10 +694,10 @@ def _write_summary(prepared: dict[str, Any], p2_main: dict[str, Any], p2_control
     path = prepared["root"] / "summary.json"
     if prepared["p1_control"]["status"] != "PASS" or p2_control.get("status") != "PASS":
         decision_class = "HARNESS_OR_CONSTRUCTION_FAIL"
-        reason = "the known-good framework control did not pass construction/check-input preflight"
+        reason = "the production-registered framework control did not pass construction/check-input preflight"
     elif status == "PASS":
         decision_class = "JACOBIAN_LOCALIZATION_READY"
-        reason = "the exact C0 localization case and same-runtime framework control both pass P0/P1/P2 construction; no Jacobian runtime has been executed"
+        reason = "the exact C0 localization case and production-registered same-runtime framework control both pass P0/P1/P2 construction; no Jacobian runtime has been executed"
     else:
         decision_class = "HARNESS_OR_CONSTRUCTION_FAIL"
         reason = "the Issue46 localization harness did not pass all P0/P1/P2 gates"
@@ -690,6 +712,8 @@ def _write_summary(prepared: dict[str, Any], p2_main: dict[str, Any], p2_control
         "localization_threshold": LOCALIZATION_THRESHOLD,
         "global_jacobian_rel_tol": GLOBAL_JACOBIAN_REL_TOL,
         "framework_control_rel_tol": FRAMEWORK_CONTROL_REL_TOL,
+        "framework_control_operator": "FVDiffusion",
+        "framework_control_operator_registration": "MooseApp",
         "instrumentation": prepared["instrumentation"],
         "p1": {"c0_localization": prepared["p1_main"], "framework_control": prepared["p1_control"]},
         "p2": {"c0_check_input": p2_main, "framework_control_check_input": p2_control},
