@@ -96,13 +96,12 @@ def _resolve_from_import(
         imports.append(base)
 
     # ``from package import name`` can import a package attribute or a real
-    # submodule.  For deletion safety we must conservatively treat
-    # ``package.name`` as a module consumer as well.  This is what catches
-    # patterns such as:
+    # submodule.  For deletion safety conservatively treat ``package.name`` as
+    # a module consumer as well.  This catches shapes such as:
     #
     #   from qpx_harness import jacobian_fd_reference_audit as legacy
     #
-    # while the top-level candidate reduction below prevents attribute names
+    # while the top-level candidate reduction below prevents attributes
     # imported from deeper modules from creating unrelated candidate edges.
     for alias in node.names:
         if alias.name == "*":
@@ -188,6 +187,18 @@ def execution_consumers(root: Path = ROOT) -> dict[str, set[str]]:
     return consumers
 
 
+def _partition_consumers(consumers: Iterable[str]) -> tuple[list[str], list[str]]:
+    """Separate live/runtime consumers from characterization/test consumers."""
+    runtime: list[str] = []
+    tests: list[str] = []
+    for consumer in sorted(set(consumers)):
+        if consumer.startswith("tests/"):
+            tests.append(consumer)
+        else:
+            runtime.append(consumer)
+    return runtime, tests
+
+
 def inventory(root: Path = ROOT) -> dict[str, object]:
     scripts_dir = root / "scripts"
     script_files = sorted(
@@ -199,14 +210,25 @@ def inventory(root: Path = ROOT) -> dict[str, object]:
     execution = execution_consumers(root)
     candidates: dict[str, dict[str, object]] = {}
     zero: list[str] = []
+    test_only: list[str] = []
+    runtime_blocked: list[str] = []
     for module in CLEANUP_CANDIDATES:
         all_consumers = sorted(py.get(module, set()) | execution.get(module, set()))
-        status = "ZERO_CONSUMER" if not all_consumers else "BLOCKED"
+        runtime_consumers, test_consumers = _partition_consumers(all_consumers)
         if not all_consumers:
+            status = "ZERO_CONSUMER"
             zero.append(module)
+        elif runtime_consumers:
+            status = "BLOCKED_RUNTIME"
+            runtime_blocked.append(module)
+        else:
+            status = "TEST_ONLY"
+            test_only.append(module)
         candidates[module] = {
             "status": status,
             "consumers": all_consumers,
+            "runtime_consumers": runtime_consumers,
+            "test_consumers": test_consumers,
             "python_consumers": sorted(py.get(module, set())),
             "execution_consumers": sorted(execution.get(module, set())),
         }
@@ -217,6 +239,8 @@ def inventory(root: Path = ROOT) -> dict[str, object]:
         "expected_scripts": expected_scripts,
         "candidates": candidates,
         "zero_consumer_candidates": zero,
+        "test_only_candidates": test_only,
+        "runtime_blocked_candidates": runtime_blocked,
     }
 
 
@@ -259,7 +283,21 @@ def self_test() -> int:
         if "qpx_harness.jacobian_fd_reference_audit" not in compat_imports:
             raise AssertionError("package submodule import consumer was not detected")
 
-        bad_source = "from . import sibling\nthis is not python\n"
+        runtime, tests = _partition_consumers(
+            {
+                "qpx_harness/legacy.py",
+                "scripts/qpx.py",
+                "tests/Issue48/example.py",
+            }
+        )
+        if runtime != ["qpx_harness/legacy.py", "scripts/qpx.py"]:
+            raise AssertionError(f"runtime consumer partition drift: {runtime}")
+        if tests != ["tests/Issue48/example.py"]:
+            raise AssertionError(f"test consumer partition drift: {tests}")
+
+        # This must be syntactically invalid Python.  The previous control
+        # ``this is not python`` was actually a valid ``is not`` expression.
+        bad_source = "def broken(:\n    pass\n"
         try:
             imported_modules(
                 bad_source,
@@ -298,11 +336,28 @@ def main(argv: list[str] | None = None) -> int:
         candidates = result["candidates"]
         for module in CLEANUP_CANDIDATES:
             item = candidates[module]
-            consumers = item["consumers"]
-            suffix = ",".join(consumers) if consumers else "NONE"
+            runtime = item["runtime_consumers"]
+            tests = item["test_consumers"]
+            runtime_suffix = ",".join(runtime) if runtime else "NONE"
+            test_suffix = ",".join(tests) if tests else "NONE"
             print(
                 f"ISSUE48_CLEANUP_CANDIDATE: {module} "
-                f"status={item['status']} consumers={suffix}"
+                f"status={item['status']} "
+                f"runtime_consumers={runtime_suffix} "
+                f"test_consumers={test_suffix}"
+            )
+        print(
+            "ISSUE48_CLEANUP_RUNTIME_BLOCKED_COUNT:",
+            len(result["runtime_blocked_candidates"]),
+        )
+        print(
+            "ISSUE48_CLEANUP_TEST_ONLY_COUNT:",
+            len(result["test_only_candidates"]),
+        )
+        if result["test_only_candidates"]:
+            print(
+                "ISSUE48_CLEANUP_TEST_ONLY:",
+                ",".join(result["test_only_candidates"]),
             )
         print(
             "ISSUE48_CLEANUP_ZERO_CONSUMER_COUNT:",
