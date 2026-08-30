@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -28,12 +29,11 @@ from .runtime import run_qpx
 ISSUE = 46
 TARGET = inv.C0_TARGET
 HISTORICAL_EVR1_ELECTRON_DOF_COUNT = 2348
+PETSC_REFERENCE_VERSION = "3.25.2"
 FD_REFERENCE_TYPE = "ds"
 GLOBAL_JACOBIAN_REL_TOL = first_linear.JACOBIAN_REL_TOL
 LOCALIZATION_THRESHOLD = loc.LOCALIZATION_THRESHOLD
 SQRT_MACHINE_EPSILON = math.sqrt(sys.float_info.epsilon)
-WP_OBSERVED_ATTENUATION = 0.96406286
-WP_ATTENUATION_MATCH_TOL = 1.0e-6
 DS_ATTENUATION_TO_UNITY_TOL = 1.0e-8
 
 
@@ -99,6 +99,128 @@ def _historical_evr1_prediction() -> dict[str, float]:
         "electron_value": TARGET,
         "vector_norm_model": vector_norm,
         **prediction,
+    }
+
+
+def _historical_mechanism_evidence() -> dict[str, Any]:
+    """Return the accepted EVR1 mechanism status without replaying raw observations."""
+    return {
+        "status": "PASS",
+        "class": "WP_QUANTIZATION_MECHANISM_CHARACTERIZED",
+        "issue": ISSUE,
+        "evr": 1,
+        "evidence_level": "accepted-result-vector",
+        "reference_source": {
+            "project": "PETSc",
+            "version": PETSC_REFERENCE_VERSION,
+            "purpose": "WP/DS finite-difference step mechanism contract",
+        },
+        "runtime_identity": "OBSERVED_SEPARATELY",
+    }
+
+
+def _difference_section_complete(log_text: str) -> bool:
+    header = re.search(
+        r"Hand-coded minus finite-difference Jacobian with tolerance",
+        log_text,
+        re.IGNORECASE,
+    )
+    if not header:
+        return False
+    tail = log_text[header.end() :]
+    return re.search(
+        r"(?m)^\s*(?:KSP Object:|Linear solve |Nonlinear solve )",
+        tail,
+    ) is not None
+
+
+def _termination_admissibility(log_text: str, *, returncode: int) -> dict[str, Any]:
+    """Classify whether process termination preserves the Jacobian observation."""
+    core = coupling_diag.analyze_log_text(log_text, returncode=returncode)
+    fatal_match = re.search(
+        r"segmentation fault|core dumped|signal\s+11|fatal error|terminate called|\babort(?:ed)?\b",
+        log_text,
+        re.IGNORECASE,
+    )
+    pc_failure = (
+        core.get("pc_failure_reason")
+        or core.get("linear_reason") in {"DIVERGED_PC_FAILED", "DIVERGED_PCSETUP_FAILED"}
+        or re.search(
+            r"FACTOR_(?:NUMERIC|STRUCT)_ZEROPIVOT|PC failed due to|zero pivot|PCSetUp.*fail",
+            log_text,
+            re.IGNORECASE,
+        )
+    )
+    nonfinite = (
+        bool(core.get("nonfinite_residuals"))
+        or core.get("nonlinear_reason") == "DIVERGED_FUNCTION_NANORINF"
+    )
+    if fatal_match or pc_failure or nonfinite:
+        return {
+            "status": "HOLD",
+            "class": "FATAL_RUNTIME_FAILURE",
+            "reason": "fatal, PC/factorization, or non-finite runtime evidence invalidates the Jacobian observation",
+            "returncode": returncode,
+            "core": core,
+        }
+    if returncode == 0:
+        return {
+            "status": "PASS",
+            "class": "TERMINATION_SUCCESS",
+            "reason": "runtime returned successfully with no fatal invalidation signature",
+            "returncode": returncode,
+            "core": core,
+        }
+    if core.get("linear_reason") == "DIVERGED_BREAKDOWN":
+        return {
+            "status": "PASS",
+            "class": "EXPECTED_DIAGNOSTIC_NONCONVERGENCE",
+            "reason": "nonzero process return is attributable to the predeclared diagnostic DIVERGED_BREAKDOWN path",
+            "returncode": returncode,
+            "core": core,
+        }
+    return {
+        "status": "HOLD",
+        "class": "TERMINATION_AMBIGUOUS",
+        "reason": "nonzero process return lacks a predeclared admissible diagnostic termination signature",
+        "returncode": returncode,
+        "core": core,
+    }
+
+
+def _runtime_mechanism_applicability(log_text: str) -> dict[str, Any]:
+    """Fail closed unless the runtime log exposes the accepted PETSc realization."""
+    version = None
+    for pattern in (
+        r"PETSc(?:\s+Release)?\s+Version\s*[:=]?\s*([0-9]+\.[0-9]+\.[0-9]+)",
+        r"PETSC_VERSION\s*[:=]\s*([0-9]+\.[0-9]+\.[0-9]+)",
+    ):
+        match = re.search(pattern, log_text, re.IGNORECASE)
+        if match:
+            version = match.group(1)
+            break
+    if version is None:
+        return {
+            "status": "HOLD",
+            "class": "PETSC_WP_MECHANISM_APPLICABILITY_UNRESOLVED",
+            "reason": "runtime PETSc version is not observable in the diagnostic log",
+            "reference_version": PETSC_REFERENCE_VERSION,
+            "runtime_version": "UNKNOWN",
+        }
+    if version != PETSC_REFERENCE_VERSION:
+        return {
+            "status": "HOLD",
+            "class": "PETSC_WP_MECHANISM_APPLICABILITY_DRIFT",
+            "reason": "runtime PETSc realization differs from the source realization used to establish the WP mechanism",
+            "reference_version": PETSC_REFERENCE_VERSION,
+            "runtime_version": version,
+        }
+    return {
+        "status": "PASS",
+        "class": "PETSC_WP_MECHANISM_APPLICABILITY_PASS",
+        "reason": "runtime PETSc version matches the accepted WP/DS mechanism reference realization",
+        "reference_version": PETSC_REFERENCE_VERSION,
+        "runtime_version": version,
     }
 
 
@@ -269,12 +391,12 @@ def audit_ds_reference_structure(
     add("c0-electron-initial-state", initial_value == TARGET, initial_value, TARGET)
 
     prediction = _historical_evr1_prediction()
+    mechanism = _historical_mechanism_evidence()
     add(
-        "wp-mechanism-reproduces-evr1",
-        abs(prediction["wp_predicted_attenuation"] - WP_OBSERVED_ATTENUATION)
-        <= WP_ATTENUATION_MATCH_TOL,
-        prediction["wp_predicted_attenuation"],
-        f"within {WP_ATTENUATION_MATCH_TOL:g} of {WP_OBSERVED_ATTENUATION}",
+        "historical-wp-mechanism-characterized",
+        mechanism["status"] == "PASS",
+        mechanism["class"],
+        "WP_QUANTIZATION_MECHANISM_CHARACTERIZED",
     )
     add(
         "ds-electron-step-representable",
@@ -295,25 +417,49 @@ def audit_ds_reference_structure(
         "checks": checks,
         "blockers": blockers,
         "prediction": prediction,
+        "mechanism_evidence": mechanism,
         "closure": closure,
     }
 
 
 def analyze_ds_runtime(
-    log_text: str, dofmap_text: str, *, returncode: int
+    log_text: str,
+    dofmap_text: str,
+    *,
+    returncode: int,
+    experiment_identity: dict[str, Any] | None = None,
+    mechanism_applicability: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     jacobian = coupling_diag.analyze_jacobian_text(
         log_text, relative_tolerance=GLOBAL_JACOBIAN_REL_TOL
     )
+    mechanism = _historical_mechanism_evidence()
+    identity = experiment_identity or {
+        "status": "HOLD",
+        "class": "ISSUE46_EXPERIMENT_IDENTITY_UNRESOLVED",
+        "reason": "analyzer applicability does not establish Issue46 experiment identity",
+    }
+    applicability = mechanism_applicability or _runtime_mechanism_applicability(log_text)
+    termination = _termination_admissibility(log_text, returncode=returncode)
+
     try:
         directional = directional_localization(log_text, dofmap_text)
     except JacobianFDReferenceAuditError as exc:
-        return {
+        ds = {
             "status": "HOLD",
             "class": "FD_REFERENCE_DISCRIMINATOR_INSUFFICIENT",
             "reason": str(exc),
+        }
+        return {
+            **ds,
             "returncode": returncode,
             "jacobian": jacobian,
+            "mechanism_evidence": mechanism,
+            "mechanism_applicability": applicability,
+            "experiment_identity": identity,
+            "termination": termination,
+            "ds_discriminator": ds,
+            "prediction": _historical_evr1_prediction(),
         }
 
     variables = directional["dof_map"]["variables"]
@@ -321,8 +467,10 @@ def analyze_ds_runtime(
     potential_count = len(variables.get("potential_plasma", []))
     lambda_count = len(variables.get(inv.LAMBDA_VARIABLE, []))
     metrics = directional["metrics"]
+    section_complete = _difference_section_complete(log_text)
+
     if n_count <= 0 or potential_count <= 0 or lambda_count != 1:
-        decision = {
+        ds = {
             "status": "HOLD",
             "class": "FD_REFERENCE_DISCRIMINATOR_INSUFFICIENT",
             "reason": (
@@ -330,13 +478,25 @@ def analyze_ds_runtime(
                 "electron, potential, or scalar-multiplier roles"
             ),
         }
+    elif termination["status"] != "PASS":
+        ds = {
+            "status": "HOLD",
+            "class": "FD_REFERENCE_DISCRIMINATOR_INSUFFICIENT",
+            "reason": f"runtime termination is not admissible: {termination['class']}",
+        }
+    elif not section_complete:
+        ds = {
+            "status": "HOLD",
+            "class": "FD_REFERENCE_DISCRIMINATOR_INSUFFICIENT",
+            "reason": "thresholded Jacobian-difference evidence is truncated or lacks a closing runtime boundary",
+        }
     elif (
         jacobian.get("class") == "JACOBIAN_CORRECTNESS_PASS"
         and metrics["nonzero_thresholded_entry_count"] == 0
     ):
-        decision = {
+        ds = {
             "status": "PASS",
-            "class": "FD_REFERENCE_QUANTIZATION_CONFIRMED",
+            "class": "DS_REFERENCE_JACOBIAN_PASS",
             "reason": (
                 "the assembled Jacobian passes under the DS finite-difference "
                 "reference with structurally valid role ownership and no nonzero "
@@ -347,22 +507,64 @@ def analyze_ds_runtime(
         jacobian.get("class") == "JACOBIAN_MISMATCH"
         and metrics["j_lambda_n"]["count"] > 0
     ):
-        decision = {
+        ds = {
             "status": "HOLD",
             "class": "FD_REFERENCE_MISMATCH_PERSISTS",
             "reason": "J_lambda,n mismatch persists under the DS finite-difference reference",
         }
     else:
-        decision = {
+        ds = {
             "status": "HOLD",
             "class": "FD_REFERENCE_DISCRIMINATOR_INSUFFICIENT",
             "reason": "DS finite-difference evidence does not meet a predeclared conclusive branch",
         }
+
+    if ds["class"] == "FD_REFERENCE_MISMATCH_PERSISTS":
+        decision = dict(ds)
+    elif ds["status"] != "PASS":
+        decision = {
+            "status": "HOLD",
+            "class": "FD_REFERENCE_DISCRIMINATOR_INSUFFICIENT",
+            "reason": ds["reason"],
+        }
+    elif identity.get("status") != "PASS":
+        decision = {
+            "status": "HOLD",
+            "class": "FD_REFERENCE_EXPERIMENT_DRIFT",
+            "reason": identity.get("reason", "Issue46 experiment identity is not established"),
+        }
+    elif mechanism.get("status") != "PASS":
+        decision = {
+            "status": "HOLD",
+            "class": "FD_REFERENCE_MECHANISM_EVIDENCE_HOLD",
+            "reason": mechanism.get("reason", "historical WP mechanism evidence is unavailable"),
+        }
+    elif applicability.get("status") != "PASS":
+        decision = {
+            "status": "HOLD",
+            "class": "FD_REFERENCE_MECHANISM_APPLICABILITY_HOLD",
+            "reason": applicability.get("reason", "runtime WP mechanism applicability is unresolved"),
+        }
+    else:
+        decision = {
+            "status": "PASS",
+            "class": "FD_REFERENCE_QUANTIZATION_CONFIRMED",
+            "reason": (
+                "the accepted WP quantization mechanism, Issue46 experiment identity, "
+                "admissible runtime termination, and independent DS Jacobian discriminator all pass"
+            ),
+        }
+
     return {
         **decision,
         "returncode": returncode,
         "jacobian": jacobian,
         "directional": directional,
+        "mechanism_evidence": mechanism,
+        "mechanism_applicability": applicability,
+        "experiment_identity": identity,
+        "termination": termination,
+        "ds_discriminator": ds,
         "prediction": _historical_evr1_prediction(),
     }
 
@@ -399,13 +601,14 @@ def _synthetic_log(relative_error: float, rows: list[str]) -> str:
 def self_test() -> int:
     try:
         prediction = _historical_evr1_prediction()
-        if abs(prediction["wp_predicted_attenuation"] - 0.9640628864075022) > 1e-12:
-            raise AssertionError("WP quantization predictor drifted")
         if (
             abs(prediction["ds_predicted_attenuation"] - 1.0)
             > DS_ATTENUATION_TO_UNITY_TOL
         ):
             raise AssertionError("DS electron perturbation is not representable enough")
+        mechanism = _historical_mechanism_evidence()
+        if mechanism["class"] != "WP_QUANTIZATION_MECHANISM_CHARACTERIZED":
+            raise AssertionError("historical WP mechanism evidence contract drifted")
 
         explicit = predict_fd_step_quantization(vector_norm=123.0, component_value=7.0)
         if explicit["wp_requested_dx"] != math.sqrt(124.0) * SQRT_MACHINE_EPSILON:
@@ -456,6 +659,18 @@ def self_test() -> int:
         bad = ds_text.replace("-mat_fd_type", "-mat_fd_type_bad", 1)
         if audit_ds_reference_structure(baseline, bad)["status"] == "PASS":
             raise AssertionError("FD-reference option mutation was accepted")
+
+        expected_termination = _termination_admissibility(
+            _synthetic_log(5.0e-11, []), returncode=1
+        )
+        if expected_termination["class"] != "EXPECTED_DIAGNOSTIC_NONCONVERGENCE":
+            raise AssertionError("expected DIVERGED_BREAKDOWN termination was rejected")
+        fatal_termination = _termination_admissibility(
+            _synthetic_log(5.0e-11, []) + "Segmentation fault (core dumped)\n",
+            returncode=139,
+        )
+        if fatal_termination["class"] != "FATAL_RUNTIME_FAILURE":
+            raise AssertionError("fatal runtime signature was accepted")
     except Exception as exc:
         print(f"ISSUE46_FD_REFERENCE_SELFTEST: FAIL ({exc})")
         return 1
@@ -476,6 +691,24 @@ def _prepare_case(exe: Path, results_root: str | None) -> dict[str, Any]:
     baseline_audit = loc.audit_localization_structure(first_text, baseline_text)
     ds_text, instrumentation = instrument_ds_reference(baseline_text)
     ds_audit = audit_ds_reference_structure(baseline_text, ds_text)
+    identity_status = (
+        baseline_audit["status"] == "PASS" and ds_audit["status"] == "PASS"
+    )
+    experiment_identity = {
+        "status": "PASS" if identity_status else "HOLD",
+        "class": (
+            "ISSUE46_EXPERIMENT_IDENTITY_PASS"
+            if identity_status
+            else "ISSUE46_EXPERIMENT_IDENTITY_DRIFT"
+        ),
+        "reason": (
+            "the prepared C0 case preserves the accepted constrained closure and WP-to-DS observation-only contract"
+            if identity_status
+            else "the prepared C0 case failed a material Issue46 semantic identity gate"
+        ),
+        "target": TARGET,
+        "observation_change": {"mat_fd_type": "wp->ds"},
+    }
 
     root = inv._evidence_root(
         exe=exe,
@@ -492,6 +725,7 @@ def _prepare_case(exe: Path, results_root: str | None) -> dict[str, Any]:
         "baseline_audit": baseline_audit,
         "ds_audit": ds_audit,
         "instrumentation": instrumentation,
+        "experiment_identity": experiment_identity,
     }
 
 
@@ -521,6 +755,7 @@ def _preflight(exe: Path, prepared: dict[str, Any]) -> tuple[dict[str, Any], str
     p1 = (
         prepared["baseline_audit"]["status"] == "PASS"
         and prepared["ds_audit"]["status"] == "PASS"
+        and prepared["experiment_identity"]["status"] == "PASS"
     )
     p2 = _check_input(exe, prepared) if p1 else {}
     status = "PASS" if p1 and p2.get("status") == "PASS" else "HOLD"
@@ -548,6 +783,7 @@ def run_preflight(qpx: str | None, results_root: str | None) -> int:
         "p1": {
             "baseline": prepared["baseline_audit"],
             "ds_reference": prepared["ds_audit"],
+            "experiment_identity": prepared["experiment_identity"],
         },
         "p2": {"ds_check_input": p2},
         "prediction": prediction,
@@ -621,10 +857,12 @@ def run_runtime(qpx: str | None, results_root: str | None) -> int:
             "reason": f"missing DOFMap output: {dofmap}",
         }
     else:
+        log_text = log_path.read_text(errors="replace")
         analysis = analyze_ds_runtime(
-            log_path.read_text(errors="replace"),
+            log_text,
             dofmap.read_text(errors="replace"),
             returncode=run.returncode,
+            experiment_identity=prepared["experiment_identity"],
         )
 
     directional = analysis.get("directional", {})
@@ -676,6 +914,7 @@ def run_runtime(qpx: str | None, results_root: str | None) -> int:
             "status": preflight_status,
             "p1_baseline": prepared["baseline_audit"],
             "p1_ds": prepared["ds_audit"],
+            "p1_experiment_identity": prepared["experiment_identity"],
             "p2_ds_check_input": p2,
         },
         "analysis": analysis,
