@@ -1,9 +1,10 @@
 """Issue46 augmented electron-inventory Jacobian block-localization harness.
 
-This module owns P0/P1/P2 construction for the #46 successor.  Preflight never
-executes the C0 localization solve or the known-good Jacobian runtime control;
-those belong to one later, explicitly authorized P3 batch so user-local runtime
-evidence is not spent during construction.
+This module owns P0/P1/P2 construction plus the bounded #46 EVR1 runtime
+discriminator.  ``--preflight`` never enters P3.  ``--run`` rechecks P0/P1/P2,
+then executes one fail-fast batch: the production-framework constraint Jacobian
+control first, followed by the exact C0 entry-wise localization only when the
+control is interpretable.
 """
 from __future__ import annotations
 
@@ -32,6 +33,11 @@ DOFMAP_OUTPUT = "r46_dofmap"
 DOFMAP_FILE_BASE = "r46_dofmap"
 MAIN_VARIABLES = ("n_e", "potential_plasma", inv.LAMBDA_VARIABLE)
 SCALAR_VARIABLES = (inv.LAMBDA_VARIABLE,)
+CONCLUSIVE_LOCALIZATION_CLASSES = {
+    "CONSTRAINT_LM_BLOCK_MISMATCH",
+    "ELECTRON_POTENTIAL_BLOCK_MISMATCH",
+    "OTHER_BLOCK_MISMATCH",
+}
 
 
 class AugmentedJacobianLocalizationError(RuntimeError):
@@ -51,8 +57,12 @@ def _petsc_name_value_pairs(text: str) -> list[tuple[str, str]]:
 def _set_petsc_name_value_pairs(text: str, pairs: list[tuple[str, str]]) -> str:
     names = " ".join(name for name, _ in pairs)
     values = " ".join(value for _, value in pairs)
-    out = inv._set_or_insert_parameter(text, "Executioner", "petsc_options_iname", f"'{names}'")
-    return inv._set_or_insert_parameter(out, "Executioner", "petsc_options_value", f"'{values}'")
+    out = inv._set_or_insert_parameter(
+        text, "Executioner", "petsc_options_iname", f"'{names}'"
+    )
+    return inv._set_or_insert_parameter(
+        out, "Executioner", "petsc_options_value", f"'{values}'"
+    )
 
 
 def _upsert_petsc_value(text: str, name: str, value: str) -> str:
@@ -95,7 +105,9 @@ def _add_dofmap_output(text: str) -> str:
         MooseInput(out)
         return out
     except MooseInputError as exc:
-        raise AugmentedJacobianLocalizationError(f"failed to add DOFMap output: {exc}") from exc
+        raise AugmentedJacobianLocalizationError(
+            f"failed to add DOFMap output: {exc}"
+        ) from exc
 
 
 def instrument_localization(first_linear_text: str) -> tuple[str, dict[str, Any]]:
@@ -104,7 +116,9 @@ def instrument_localization(first_linear_text: str) -> tuple[str, dict[str, Any]
     if "-snes_test_jacobian_view" not in flags:
         flags.append("-snes_test_jacobian_view")
     out = _set_petsc_flags(first_linear_text, flags)
-    out = _upsert_petsc_value(out, "-snes_test_jacobian", f"{LOCALIZATION_THRESHOLD:.12g}")
+    out = _upsert_petsc_value(
+        out, "-snes_test_jacobian", f"{LOCALIZATION_THRESHOLD:.12g}"
+    )
     out = _add_dofmap_output(out)
     MooseInput(out)
     return out, {
@@ -127,62 +141,111 @@ def _remove_optional_block(text: str, path: str) -> str:
 
 def _normalized_localization_text(text: str) -> str:
     out = _remove_optional_block(text, f"Outputs/{DOFMAP_OUTPUT}")
-    out = inv._set_or_insert_parameter(out, "Executioner", "petsc_options", "'<PETSC_FLAGS>'")
-    out = inv._set_or_insert_parameter(out, "Executioner", "petsc_options_iname", "'<PETSC_INAMES>'")
-    out = inv._set_or_insert_parameter(out, "Executioner", "petsc_options_value", "'<PETSC_VALUES>'")
+    out = inv._set_or_insert_parameter(
+        out, "Executioner", "petsc_options", "'<PETSC_FLAGS>'"
+    )
+    out = inv._set_or_insert_parameter(
+        out, "Executioner", "petsc_options_iname", "'<PETSC_INAMES>'"
+    )
+    out = inv._set_or_insert_parameter(
+        out, "Executioner", "petsc_options_value", "'<PETSC_VALUES>'"
+    )
     return out
 
 
-def audit_localization_structure(base_first_linear: str, localization_text: str) -> dict[str, Any]:
+def audit_localization_structure(
+    base_first_linear: str, localization_text: str
+) -> dict[str, Any]:
     checks: list[dict[str, Any]] = []
 
     def add(name: str, ok: bool, observed: Any, required: Any) -> None:
         checks.append(
-            {"id": name, "status": "PASS" if ok else "FAIL", "observed": observed, "required": required}
+            {
+                "id": name,
+                "status": "PASS" if ok else "FAIL",
+                "observed": observed,
+                "required": required,
+            }
         )
 
     closure = inv.audit_constrained_quasisteady_structure(
         localization_text, expected_macro_avg=TARGET
     )
-    add("canonical-c0-closure-structure", closure["status"] == "PASS", closure["status"], "PASS")
-
-    nl_max = inv._unquote(inv._parameter_value(localization_text, "Executioner", "nl_max_its"))
+    add(
+        "canonical-c0-closure-structure",
+        closure["status"] == "PASS",
+        closure["status"],
+        "PASS",
+    )
+    nl_max = inv._unquote(
+        inv._parameter_value(localization_text, "Executioner", "nl_max_its")
+    )
     add("first-linear-horizon-preserved", nl_max == "1", nl_max, "1")
 
     expected_flags = [
-        flag for flag in first_linear._petsc_options(base_first_linear)
+        flag
+        for flag in first_linear._petsc_options(base_first_linear)
         if flag != "-snes_test_jacobian"
     ]
     if "-snes_test_jacobian_view" not in expected_flags:
         expected_flags.append("-snes_test_jacobian_view")
     actual_flags = first_linear._petsc_options(localization_text)
-    add("localization-petsc-flags-exact", actual_flags == expected_flags, actual_flags, expected_flags)
+    add(
+        "localization-petsc-flags-exact",
+        actual_flags == expected_flags,
+        actual_flags,
+        expected_flags,
+    )
 
     base_pairs = _petsc_name_value_pairs(base_first_linear)
-    expected_pairs = list(base_pairs) + [("-snes_test_jacobian", f"{LOCALIZATION_THRESHOLD:.12g}")]
+    expected_pairs = list(base_pairs) + [
+        ("-snes_test_jacobian", f"{LOCALIZATION_THRESHOLD:.12g}")
+    ]
     actual_pairs = _petsc_name_value_pairs(localization_text)
-    add("localization-threshold-pair-exact", actual_pairs == expected_pairs, actual_pairs, expected_pairs)
+    add(
+        "localization-threshold-pair-exact",
+        actual_pairs == expected_pairs,
+        actual_pairs,
+        expected_pairs,
+    )
 
     output_path = f"Outputs/{DOFMAP_OUTPUT}"
     outputs = inv._direct_children(localization_text, "Outputs")
-    add("one-localization-dofmap-output", outputs.count(output_path) == 1, outputs, output_path)
+    add(
+        "one-localization-dofmap-output",
+        outputs.count(output_path) == 1,
+        outputs,
+        output_path,
+    )
     if output_path in outputs:
-        dof_type = inv._unquote(inv._parameter_value(localization_text, output_path, "type"))
-        dof_execute = inv._words(inv._parameter_value(localization_text, output_path, "execute_on"))
-        dof_base = inv._unquote(inv._parameter_value(localization_text, output_path, "file_base"))
+        dof_type = inv._unquote(
+            inv._parameter_value(localization_text, output_path, "type")
+        )
+        dof_execute = inv._words(
+            inv._parameter_value(localization_text, output_path, "execute_on")
+        )
+        dof_base = inv._unquote(
+            inv._parameter_value(localization_text, output_path, "file_base")
+        )
     else:
         dof_type, dof_execute, dof_base = None, [], None
     add("dofmap-type", dof_type == "DOFMap", dof_type, "DOFMap")
     add("dofmap-initial-only", dof_execute == ["INITIAL"], dof_execute, ["INITIAL"])
     add("dofmap-file-base", dof_base == DOFMAP_FILE_BASE, dof_base, DOFMAP_FILE_BASE)
 
-    same = _normalized_localization_text(base_first_linear) == _normalized_localization_text(localization_text)
+    same = _normalized_localization_text(base_first_linear) == _normalized_localization_text(
+        localization_text
+    )
     add("observability-only-input-difference", same, same, True)
 
     blockers = [check for check in checks if check["status"] != "PASS"]
     return {
         "status": "PASS" if not blockers else "HOLD",
-        "class": "JACOBIAN_LOCALIZATION_STRUCTURE_PASS" if not blockers else "JACOBIAN_LOCALIZATION_STRUCTURE_FAIL",
+        "class": (
+            "JACOBIAN_LOCALIZATION_STRUCTURE_PASS"
+            if not blockers
+            else "JACOBIAN_LOCALIZATION_STRUCTURE_FAIL"
+        ),
         "checks": checks,
         "blockers": blockers,
         "closure": closure,
@@ -244,46 +307,186 @@ def audit_framework_control_structure(text: str) -> dict[str, Any]:
 
     def add(name: str, ok: bool, observed: Any, required: Any) -> None:
         checks.append(
-            {"id": name, "status": "PASS" if ok else "FAIL", "observed": observed, "required": required}
+            {
+                "id": name,
+                "status": "PASS" if ok else "FAIL",
+                "observed": observed,
+                "required": required,
+            }
         )
 
     MooseInput(text)
-    add("mesh-type", inv._unquote(inv._parameter_value(text, "Mesh", "type")) == "GeneratedMesh", inv._unquote(inv._parameter_value(text, "Mesh", "type")), "GeneratedMesh")
-    add("mesh-dim", inv._unquote(inv._parameter_value(text, "Mesh", "dim")) == "1", inv._unquote(inv._parameter_value(text, "Mesh", "dim")), "1")
-    add("fv-variable", inv._unquote(inv._parameter_value(text, "Variables/v", "type")) == "MooseVariableFVReal", inv._unquote(inv._parameter_value(text, "Variables/v", "type")), "MooseVariableFVReal")
-    add("fv-boundary-expansion", inv._unquote(inv._parameter_value(text, "Variables/v", "two_term_boundary_expansion")) == "false", inv._unquote(inv._parameter_value(text, "Variables/v", "two_term_boundary_expansion")), "false")
-    add("scalar-family", inv._unquote(inv._parameter_value(text, "Variables/lambda", "family")) == "SCALAR", inv._unquote(inv._parameter_value(text, "Variables/lambda", "family")), "SCALAR")
-    add("scalar-order", inv._unquote(inv._parameter_value(text, "Variables/lambda", "order")) == "FIRST", inv._unquote(inv._parameter_value(text, "Variables/lambda", "order")), "FIRST")
+    add(
+        "mesh-type",
+        inv._unquote(inv._parameter_value(text, "Mesh", "type")) == "GeneratedMesh",
+        inv._unquote(inv._parameter_value(text, "Mesh", "type")),
+        "GeneratedMesh",
+    )
+    add(
+        "mesh-dim",
+        inv._unquote(inv._parameter_value(text, "Mesh", "dim")) == "1",
+        inv._unquote(inv._parameter_value(text, "Mesh", "dim")),
+        "1",
+    )
+    add(
+        "fv-variable",
+        inv._unquote(inv._parameter_value(text, "Variables/v", "type"))
+        == "MooseVariableFVReal",
+        inv._unquote(inv._parameter_value(text, "Variables/v", "type")),
+        "MooseVariableFVReal",
+    )
+    add(
+        "fv-boundary-expansion",
+        inv._unquote(
+            inv._parameter_value(text, "Variables/v", "two_term_boundary_expansion")
+        )
+        == "false",
+        inv._unquote(
+            inv._parameter_value(text, "Variables/v", "two_term_boundary_expansion")
+        ),
+        "false",
+    )
+    add(
+        "scalar-family",
+        inv._unquote(inv._parameter_value(text, "Variables/lambda", "family"))
+        == "SCALAR",
+        inv._unquote(inv._parameter_value(text, "Variables/lambda", "family")),
+        "SCALAR",
+    )
+    add(
+        "scalar-order",
+        inv._unquote(inv._parameter_value(text, "Variables/lambda", "order")) == "FIRST",
+        inv._unquote(inv._parameter_value(text, "Variables/lambda", "order")),
+        "FIRST",
+    )
 
     kernel_paths = inv._direct_children(text, "FVKernels")
-    add("control-kernel-set", set(kernel_paths) == {"FVKernels/diffusion", "FVKernels/lambda_constraint"}, kernel_paths, ["FVKernels/diffusion", "FVKernels/lambda_constraint"])
-    diffusion_type = inv._unquote(inv._parameter_value(text, "FVKernels/diffusion", "type")) if "FVKernels/diffusion" in kernel_paths else None
-    diffusion_variable = inv._unquote(inv._parameter_value(text, "FVKernels/diffusion", "variable")) if "FVKernels/diffusion" in kernel_paths else None
-    diffusion_coeff = inv._unquote(inv._parameter_value(text, "FVKernels/diffusion", "coeff")) if "FVKernels/diffusion" in kernel_paths else None
+    expected_kernels = {"FVKernels/diffusion", "FVKernels/lambda_constraint"}
+    add(
+        "control-kernel-set",
+        set(kernel_paths) == expected_kernels,
+        kernel_paths,
+        sorted(expected_kernels),
+    )
+    diffusion_type = (
+        inv._unquote(inv._parameter_value(text, "FVKernels/diffusion", "type"))
+        if "FVKernels/diffusion" in kernel_paths
+        else None
+    )
+    diffusion_variable = (
+        inv._unquote(inv._parameter_value(text, "FVKernels/diffusion", "variable"))
+        if "FVKernels/diffusion" in kernel_paths
+        else None
+    )
+    diffusion_coeff = (
+        inv._unquote(inv._parameter_value(text, "FVKernels/diffusion", "coeff"))
+        if "FVKernels/diffusion" in kernel_paths
+        else None
+    )
     add("control-diffusion-type", diffusion_type == "FVDiffusion", diffusion_type, "FVDiffusion")
     add("control-diffusion-variable", diffusion_variable == "v", diffusion_variable, "v")
     add("control-diffusion-coeff", diffusion_coeff == "1", diffusion_coeff, "1")
     all_kernel_types = [
         inv._unquote(inv._parameter_value(text, path, "type")) for path in kernel_paths
     ]
-    add("no-moose-testapp-fvelementaladvection", "FVElementalAdvection" not in all_kernel_types, all_kernel_types, "FVElementalAdvection absent")
+    add(
+        "no-moose-testapp-fvelementaladvection",
+        "FVElementalAdvection" not in all_kernel_types,
+        all_kernel_types,
+        "FVElementalAdvection absent",
+    )
 
-    add("control-constraint-type", inv._unquote(inv._parameter_value(text, "FVKernels/lambda_constraint", "type")) == "FVIntegralValueConstraint", inv._unquote(inv._parameter_value(text, "FVKernels/lambda_constraint", "type")), "FVIntegralValueConstraint")
-    add("control-constraint-variable", inv._unquote(inv._parameter_value(text, "FVKernels/lambda_constraint", "variable")) == "v", inv._unquote(inv._parameter_value(text, "FVKernels/lambda_constraint", "variable")), "v")
-    add("control-constraint-lambda", inv._unquote(inv._parameter_value(text, "FVKernels/lambda_constraint", "lambda")) == "lambda", inv._unquote(inv._parameter_value(text, "FVKernels/lambda_constraint", "lambda")), "lambda")
-    add("control-constraint-phi0", inv._unquote(inv._parameter_value(text, "FVKernels/lambda_constraint", "phi0")) == "1", inv._unquote(inv._parameter_value(text, "FVKernels/lambda_constraint", "phi0")), "1")
-    add("control-steady", inv._unquote(inv._parameter_value(text, "Executioner", "type")) == "Steady", inv._unquote(inv._parameter_value(text, "Executioner", "type")), "Steady")
-    add("control-newton", inv._unquote(inv._parameter_value(text, "Executioner", "solve_type")) == "NEWTON", inv._unquote(inv._parameter_value(text, "Executioner", "solve_type")), "NEWTON")
-    add("control-auto-scaling", inv._truthy(inv._parameter_value(text, "Executioner", "automatic_scaling")), inv._unquote(inv._parameter_value(text, "Executioner", "automatic_scaling")), "true")
-    add("control-offdiag-scaling", inv._truthy(inv._parameter_value(text, "Executioner", "off_diagonals_in_auto_scaling")), inv._unquote(inv._parameter_value(text, "Executioner", "off_diagonals_in_auto_scaling")), "true")
+    add(
+        "control-constraint-type",
+        inv._unquote(
+            inv._parameter_value(text, "FVKernels/lambda_constraint", "type")
+        )
+        == "FVIntegralValueConstraint",
+        inv._unquote(
+            inv._parameter_value(text, "FVKernels/lambda_constraint", "type")
+        ),
+        "FVIntegralValueConstraint",
+    )
+    add(
+        "control-constraint-variable",
+        inv._unquote(
+            inv._parameter_value(text, "FVKernels/lambda_constraint", "variable")
+        )
+        == "v",
+        inv._unquote(
+            inv._parameter_value(text, "FVKernels/lambda_constraint", "variable")
+        ),
+        "v",
+    )
+    add(
+        "control-constraint-lambda",
+        inv._unquote(
+            inv._parameter_value(text, "FVKernels/lambda_constraint", "lambda")
+        )
+        == "lambda",
+        inv._unquote(
+            inv._parameter_value(text, "FVKernels/lambda_constraint", "lambda")
+        ),
+        "lambda",
+    )
+    add(
+        "control-constraint-phi0",
+        inv._unquote(
+            inv._parameter_value(text, "FVKernels/lambda_constraint", "phi0")
+        )
+        == "1",
+        inv._unquote(
+            inv._parameter_value(text, "FVKernels/lambda_constraint", "phi0")
+        ),
+        "1",
+    )
+    add(
+        "control-steady",
+        inv._unquote(inv._parameter_value(text, "Executioner", "type")) == "Steady",
+        inv._unquote(inv._parameter_value(text, "Executioner", "type")),
+        "Steady",
+    )
+    add(
+        "control-newton",
+        inv._unquote(inv._parameter_value(text, "Executioner", "solve_type")) == "NEWTON",
+        inv._unquote(inv._parameter_value(text, "Executioner", "solve_type")),
+        "NEWTON",
+    )
+    add(
+        "control-auto-scaling",
+        inv._truthy(inv._parameter_value(text, "Executioner", "automatic_scaling")),
+        inv._unquote(inv._parameter_value(text, "Executioner", "automatic_scaling")),
+        "true",
+    )
+    add(
+        "control-offdiag-scaling",
+        inv._truthy(
+            inv._parameter_value(text, "Executioner", "off_diagonals_in_auto_scaling")
+        ),
+        inv._unquote(
+            inv._parameter_value(text, "Executioner", "off_diagonals_in_auto_scaling")
+        ),
+        "true",
+    )
     flags = first_linear._petsc_options(text)
-    add("control-jacobian-observability", "-snes_test_jacobian" in flags, flags, "-snes_test_jacobian")
+    add(
+        "control-jacobian-observability",
+        "-snes_test_jacobian" in flags,
+        flags,
+        "-snes_test_jacobian",
+    )
     pairs = _petsc_name_value_pairs(text)
-    add("control-lu-nonzero", pairs == [("-pc_type", "lu"), ("-pc_factor_shift_type", "NONZERO")], pairs, [("-pc_type", "lu"), ("-pc_factor_shift_type", "NONZERO")])
+    expected_pairs = [("-pc_type", "lu"), ("-pc_factor_shift_type", "NONZERO")]
+    add("control-lu-nonzero", pairs == expected_pairs, pairs, expected_pairs)
+
     blockers = [check for check in checks if check["status"] != "PASS"]
     return {
         "status": "PASS" if not blockers else "HOLD",
-        "class": "MOOSE_CONSTRAINT_CONTROL_STRUCTURE_PASS" if not blockers else "MOOSE_CONSTRAINT_CONTROL_STRUCTURE_FAIL",
+        "class": (
+            "MOOSE_CONSTRAINT_CONTROL_STRUCTURE_PASS"
+            if not blockers
+            else "MOOSE_CONSTRAINT_CONTROL_STRUCTURE_FAIL"
+        ),
         "checks": checks,
         "blockers": blockers,
         "source_contract": {
@@ -310,7 +513,9 @@ def parse_dof_map_text(
     ndof = payload.get("ndof")
     vars_payload = payload.get("vars")
     if not isinstance(ndof, int) or ndof <= 0 or not isinstance(vars_payload, list):
-        raise AugmentedJacobianLocalizationError("DOFMap JSON lacks positive ndof or vars list")
+        raise AugmentedJacobianLocalizationError(
+            "DOFMap JSON lacks positive ndof or vars list"
+        )
 
     by_name: dict[str, set[int]] = {name: set() for name in expected_variables}
     seen_names: set[str] = set()
@@ -329,12 +534,16 @@ def parse_dof_map_text(
                     by_name[name].add(dof)
     missing_names = [name for name in expected_variables if name not in seen_names]
     if missing_names:
-        raise AugmentedJacobianLocalizationError(f"DOFMap missing variables: {missing_names}")
+        raise AugmentedJacobianLocalizationError(
+            f"DOFMap missing variables: {missing_names}"
+        )
 
     for name, dofs in by_name.items():
         invalid = sorted(dof for dof in dofs if dof < 0 or dof >= ndof)
         if invalid:
-            raise AugmentedJacobianLocalizationError(f"DOFMap variable {name} has invalid DOFs: {invalid[:8]}")
+            raise AugmentedJacobianLocalizationError(
+                f"DOFMap variable {name} has invalid DOFs: {invalid[:8]}"
+            )
 
     owner: dict[int, str] = {}
     overlaps: list[tuple[int, str, str]] = []
@@ -345,7 +554,9 @@ def parse_dof_map_text(
                 overlaps.append((dof, prior, name))
             owner[dof] = name
     if overlaps:
-        raise AugmentedJacobianLocalizationError(f"DOFMap variable overlap: {overlaps[:8]}")
+        raise AugmentedJacobianLocalizationError(
+            f"DOFMap variable overlap: {overlaps[:8]}"
+        )
 
     unmapped = sorted(set(range(ndof)) - set(owner))
     empty_scalars = [name for name in scalar_variables if not by_name.get(name)]
@@ -357,10 +568,13 @@ def parse_dof_map_text(
             unmapped = []
         else:
             raise AugmentedJacobianLocalizationError(
-                f"cannot resolve scalar DOFs: scalars={empty_scalars}, unmapped={unmapped[:8]}"
+                f"cannot resolve scalar DOFs: scalars={empty_scalars}, "
+                f"unmapped={unmapped[:8]}"
             )
     if unmapped:
-        raise AugmentedJacobianLocalizationError(f"DOFMap has unmapped nonlinear DOFs: {unmapped[:8]}")
+        raise AugmentedJacobianLocalizationError(
+            f"DOFMap has unmapped nonlinear DOFs: {unmapped[:8]}"
+        )
 
     return {
         "ndof": ndof,
@@ -379,11 +593,15 @@ def parse_threshold_difference_matrix(text: str) -> dict[str, Any]:
         re.IGNORECASE,
     )
     if not header:
-        raise AugmentedJacobianLocalizationError("thresholded Jacobian-difference matrix header is missing")
+        raise AugmentedJacobianLocalizationError(
+            "thresholded Jacobian-difference matrix header is missing"
+        )
     try:
         threshold = float(header.group(1))
     except ValueError as exc:
-        raise AugmentedJacobianLocalizationError("invalid Jacobian-difference threshold") from exc
+        raise AugmentedJacobianLocalizationError(
+            "invalid Jacobian-difference threshold"
+        ) from exc
 
     tail = text[header.end() :]
     stop_patterns = (
@@ -411,7 +629,9 @@ def parse_threshold_difference_matrix(text: str) -> dict[str, Any]:
                 value = float(entry_match.group(2))
             except ValueError:
                 value = math.nan
-            entries.append({"row": row, "col": int(entry_match.group(1)), "value": value})
+            entries.append(
+                {"row": row, "col": int(entry_match.group(1)), "value": value}
+            )
     return {"threshold": threshold, "entries": entries, "section_observed": True}
 
 
@@ -429,7 +649,11 @@ def localize_difference_entries(
 ) -> dict[str, Any]:
     owner = dof_map["owner_by_dof"]
     blocks: dict[str, dict[str, Any]] = {}
-    category_energy = {"constraint_lm": 0.0, "electron_potential": 0.0, "other": 0.0}
+    category_energy = {
+        "constraint_lm": 0.0,
+        "electron_potential": 0.0,
+        "other": 0.0,
+    }
     unmapped: list[dict[str, Any]] = []
     total_energy = 0.0
 
@@ -438,7 +662,9 @@ def localize_difference_entries(
         col_var = owner.get(entry["col"])
         value = float(entry["value"])
         if row_var is None or col_var is None or not math.isfinite(value):
-            unmapped.append({**entry, "row_variable": row_var, "col_variable": col_var})
+            unmapped.append(
+                {**entry, "row_variable": row_var, "col_variable": col_var}
+            )
             continue
         energy = value * value
         total_energy += energy
@@ -485,7 +711,10 @@ def analyze_localization_text(
         return {
             "status": "HOLD",
             "class": "MOOSE_CONSTRAINT_CONTROL_FAIL",
-            "reason": "the same-runtime known-good FVIntegralValueConstraint control failed its Jacobian contract",
+            "reason": (
+                "the same-runtime known-good FVIntegralValueConstraint control "
+                "failed its Jacobian contract"
+            ),
         }
 
     jacobian = coupling_diag.analyze_jacobian_text(
@@ -495,7 +724,10 @@ def analyze_localization_text(
         return {
             "status": "HOLD",
             "class": "JACOBIAN_LOCALIZATION_INSUFFICIENT",
-            "reason": "the historical augmented Jacobian mismatch was not reproduced in the localization log",
+            "reason": (
+                "the historical augmented Jacobian mismatch was not reproduced "
+                "in the localization log"
+            ),
             "jacobian": jacobian,
         }
 
@@ -514,7 +746,10 @@ def analyze_localization_text(
     result: dict[str, Any] = {
         "status": "PASS",
         "jacobian": jacobian,
-        "dof_map": {"ndof": dof_map["ndof"], "variables": dof_map["variables"]},
+        "dof_map": {
+            "ndof": dof_map["ndof"],
+            "variables": dof_map["variables"],
+        },
         "difference": difference,
         "localization": localized,
         "dominant_energy_fraction_required": DOMINANT_ENERGY_FRACTION,
@@ -524,7 +759,10 @@ def analyze_localization_text(
             {
                 "status": "HOLD",
                 "class": "JACOBIAN_LOCALIZATION_INSUFFICIENT",
-                "reason": "one or more thresholded Jacobian-difference entries could not be mapped to nonlinear variables",
+                "reason": (
+                    "one or more thresholded Jacobian-difference entries could "
+                    "not be mapped to nonlinear variables"
+                ),
             }
         )
         return result
@@ -533,7 +771,11 @@ def analyze_localization_text(
             {
                 "status": "HOLD",
                 "class": "FD_SCALING_LIMIT_SUSPECTED",
-                "reason": "global Frobenius mismatch persists but no individual difference exceeds the predeclared localization threshold; a separate FD/scaling verification is required",
+                "reason": (
+                    "global Frobenius mismatch persists but no individual "
+                    "difference exceeds the predeclared localization threshold; "
+                    "a separate FD/scaling verification is required"
+                ),
             }
         )
         return result
@@ -541,15 +783,82 @@ def analyze_localization_text(
     fractions = localized["category_energy_fraction"]
     if fractions["constraint_lm"] >= DOMINANT_ENERGY_FRACTION:
         klass = "CONSTRAINT_LM_BLOCK_MISMATCH"
-        reason = "thresholded Jacobian-difference energy is dominated by blocks involving the inventory Lagrange multiplier"
+        reason = (
+            "thresholded Jacobian-difference energy is dominated by blocks "
+            "involving the inventory Lagrange multiplier"
+        )
     elif fractions["electron_potential"] >= DOMINANT_ENERGY_FRACTION:
         klass = "ELECTRON_POTENTIAL_BLOCK_MISMATCH"
-        reason = "thresholded Jacobian-difference energy is dominated by n_e <-> potential_plasma cross-coupling blocks"
+        reason = (
+            "thresholded Jacobian-difference energy is dominated by n_e <-> "
+            "potential_plasma cross-coupling blocks"
+        )
     else:
         klass = "OTHER_BLOCK_MISMATCH"
-        reason = "thresholded Jacobian-difference energy is not dominated by the declared LM or electron-potential cross-coupling classes"
+        reason = (
+            "thresholded Jacobian-difference energy is not dominated by the "
+            "declared LM or electron-potential cross-coupling classes"
+        )
     result.update({"class": klass, "reason": reason})
     return result
+
+
+def analyze_framework_control_runtime(
+    log_text: str, *, returncode: int
+) -> dict[str, Any]:
+    jacobian = coupling_diag.analyze_jacobian_text(
+        log_text, relative_tolerance=FRAMEWORK_CONTROL_REL_TOL
+    )
+    passed = jacobian.get("class") == "JACOBIAN_CORRECTNESS_PASS"
+    return {
+        "status": "PASS" if passed else "HOLD",
+        "class": (
+            "FRAMEWORK_CONTROL_JACOBIAN_PASS"
+            if passed
+            else "MOOSE_CONSTRAINT_CONTROL_FAIL"
+        ),
+        "reason": (
+            "same-runtime production-framework constraint control satisfies "
+            f"the predeclared Jacobian ratio tolerance {FRAMEWORK_CONTROL_REL_TOL:g}"
+            if passed
+            else "same-runtime production-framework constraint control does not "
+            f"satisfy the predeclared Jacobian ratio tolerance {FRAMEWORK_CONTROL_REL_TOL:g}"
+        ),
+        "returncode": returncode,
+        "jacobian": jacobian,
+    }
+
+
+def evaluate_runtime_batch(
+    control: dict[str, Any],
+    localization: dict[str, Any] | None,
+) -> dict[str, Any]:
+    if control.get("status") != "PASS":
+        return {
+            "status": "HOLD",
+            "class": "MOOSE_CONSTRAINT_CONTROL_FAIL",
+            "reason": control.get("reason", "framework-control Jacobian failed"),
+        }
+    if not localization:
+        return {
+            "status": "HOLD",
+            "class": "JACOBIAN_LOCALIZATION_INSUFFICIENT",
+            "reason": "framework control passed but the C0 localization member is missing",
+        }
+    klass = localization.get("class")
+    if localization.get("status") == "PASS" and klass in CONCLUSIVE_LOCALIZATION_CLASSES:
+        return {
+            "status": "PASS",
+            "class": klass,
+            "reason": localization.get("reason", "C0 mismatch localized"),
+        }
+    return {
+        "status": "HOLD",
+        "class": klass or "JACOBIAN_LOCALIZATION_INSUFFICIENT",
+        "reason": localization.get(
+            "reason", "C0 entry-wise localization is insufficient"
+        ),
+    }
 
 
 def _synthetic_dof_map() -> str:
@@ -558,26 +867,49 @@ def _synthetic_dof_map() -> str:
             "ndof": 5,
             "demangled": True,
             "vars": [
-                {"name": "n_e", "subdomains": [{"id": 1, "kernels": [], "dofs": [0, 1]}]},
-                {"name": "potential_plasma", "subdomains": [{"id": 1, "kernels": [], "dofs": [2, 3]}]},
-                {"name": inv.LAMBDA_VARIABLE, "subdomains": [{"id": 1, "kernels": [], "dofs": []}]},
+                {
+                    "name": "n_e",
+                    "subdomains": [{"id": 1, "kernels": [], "dofs": [0, 1]}],
+                },
+                {
+                    "name": "potential_plasma",
+                    "subdomains": [{"id": 1, "kernels": [], "dofs": [2, 3]}],
+                },
+                {
+                    "name": inv.LAMBDA_VARIABLE,
+                    "subdomains": [{"id": 1, "kernels": [], "dofs": []}],
+                },
             ],
         }
     )
 
 
-def _synthetic_localization_log(entries: list[tuple[int, int, float]], jac_rel: float = 4.0e-5) -> str:
+def _synthetic_jacobian_log(relative_error: float) -> str:
+    return (
+        "  ---------- Testing Jacobian -------------\n"
+        f"  ||J - Jfd||_F/||J||_F = {relative_error:.12e}, "
+        "||J - Jfd||_F = 1.0e-10\n"
+    )
+
+
+def _synthetic_localization_log(
+    entries: list[tuple[int, int, float]], jac_rel: float = 4.0e-5
+) -> str:
     rows: dict[int, list[tuple[int, float]]] = {}
     for row, col, value in entries:
         rows.setdefault(row, []).append((col, value))
     matrix_lines = []
     for row in sorted(rows):
-        payload = " ".join(f"({col}, {value:.12e})" for col, value in rows[row])
+        payload = " ".join(
+            f"({col}, {value:.12e})" for col, value in rows[row]
+        )
         matrix_lines.append(f"row {row}: {payload}")
     return (
         "  ---------- Testing Jacobian -------------\n"
-        f"  ||J - Jfd||_F/||J||_F = {jac_rel:.12e}, ||J - Jfd||_F = 8.0e-04\n"
-        f"  Hand-coded minus finite-difference Jacobian with tolerance {LOCALIZATION_THRESHOLD:.12e} ----------\n"
+        f"  ||J - Jfd||_F/||J||_F = {jac_rel:.12e}, "
+        "||J - Jfd||_F = 8.0e-04\n"
+        f"  Hand-coded minus finite-difference Jacobian with tolerance "
+        f"{LOCALIZATION_THRESHOLD:.12e} ----------\n"
         "Mat Object: 1 MPI process\n"
         "  type: seqaij\n"
         + "\n".join(matrix_lines)
@@ -592,20 +924,30 @@ def self_test() -> int:
         localized_text, _ = instrument_localization(first_text)
         if audit_localization_structure(first_text, localized_text)["status"] != "PASS":
             raise AssertionError("positive localization structure did not pass")
-        mutated = localized_text.replace("file_base = r46_dofmap", "file_base = wrong_dofmap", 1)
+        mutated = localized_text.replace(
+            "file_base = r46_dofmap", "file_base = wrong_dofmap", 1
+        )
         if audit_localization_structure(first_text, mutated)["status"] == "PASS":
             raise AssertionError("DOFMap output mutation was accepted")
 
-        control = build_framework_control_input()
-        if audit_framework_control_structure(control)["status"] != "PASS":
+        control_text = build_framework_control_input()
+        if audit_framework_control_structure(control_text)["status"] != "PASS":
             raise AssertionError("known-good framework control structure did not pass")
-        bad_control = control.replace("off_diagonals_in_auto_scaling = true", "off_diagonals_in_auto_scaling = false", 1)
+        bad_control = control_text.replace(
+            "off_diagonals_in_auto_scaling = true",
+            "off_diagonals_in_auto_scaling = false",
+            1,
+        )
         if audit_framework_control_structure(bad_control)["status"] == "PASS":
             raise AssertionError("framework-control scaling mutation was accepted")
-        test_only_control = control.replace("type = FVDiffusion", "type = FVElementalAdvection", 1)
+        test_only_control = control_text.replace(
+            "type = FVDiffusion", "type = FVElementalAdvection", 1
+        )
         if audit_framework_control_structure(test_only_control)["status"] == "PASS":
-            raise AssertionError("MooseTestApp-only FVElementalAdvection mutation was accepted")
-        wrong_coeff = control.replace("coeff = 1", "coeff = 2", 1)
+            raise AssertionError(
+                "MooseTestApp-only FVElementalAdvection mutation was accepted"
+            )
+        wrong_coeff = control_text.replace("coeff = 1", "coeff = 2", 1)
         if audit_framework_control_structure(wrong_coeff)["status"] == "PASS":
             raise AssertionError("framework-control diffusion coefficient mutation was accepted")
 
@@ -614,34 +956,74 @@ def self_test() -> int:
         if parsed["owner_by_dof"].get(4) != inv.LAMBDA_VARIABLE:
             raise AssertionError("scalar fallback DOF mapping failed")
 
-        lm_log = _synthetic_localization_log([(0, 4, 2.0e-4), (4, 1, -3.0e-4)])
-        if analyze_localization_text(lm_log, dofmap)["class"] != "CONSTRAINT_LM_BLOCK_MISMATCH":
+        lm_log = _synthetic_localization_log(
+            [(0, 4, 2.0e-4), (4, 1, -3.0e-4)]
+        )
+        lm_result = analyze_localization_text(lm_log, dofmap)
+        if lm_result["class"] != "CONSTRAINT_LM_BLOCK_MISMATCH":
             raise AssertionError("LM block mismatch did not classify")
-        ep_log = _synthetic_localization_log([(0, 2, 2.0e-4), (3, 1, -3.0e-4)])
-        if analyze_localization_text(ep_log, dofmap)["class"] != "ELECTRON_POTENTIAL_BLOCK_MISMATCH":
+        ep_log = _synthetic_localization_log(
+            [(0, 2, 2.0e-4), (3, 1, -3.0e-4)]
+        )
+        if (
+            analyze_localization_text(ep_log, dofmap)["class"]
+            != "ELECTRON_POTENTIAL_BLOCK_MISMATCH"
+        ):
             raise AssertionError("electron-potential block mismatch did not classify")
-        other_log = _synthetic_localization_log([(0, 1, 2.0e-4), (2, 3, -3.0e-4)])
+        other_log = _synthetic_localization_log(
+            [(0, 1, 2.0e-4), (2, 3, -3.0e-4)]
+        )
         if analyze_localization_text(other_log, dofmap)["class"] != "OTHER_BLOCK_MISMATCH":
             raise AssertionError("other block mismatch did not classify")
         empty_log = _synthetic_localization_log([])
-        if analyze_localization_text(empty_log, dofmap)["class"] != "FD_SCALING_LIMIT_SUSPECTED":
-            raise AssertionError("empty thresholded difference did not route to FD/scaling suspicion")
-        if analyze_localization_text(lm_log, dofmap, framework_control_pass=False)["class"] != "MOOSE_CONSTRAINT_CONTROL_FAIL":
-            raise AssertionError("framework control failure did not take precedence")
+        if (
+            analyze_localization_text(empty_log, dofmap)["class"]
+            != "FD_SCALING_LIMIT_SUSPECTED"
+        ):
+            raise AssertionError(
+                "empty thresholded difference did not route to FD/scaling suspicion"
+            )
+
+        control_pass = analyze_framework_control_runtime(
+            _synthetic_jacobian_log(1.0e-9), returncode=0
+        )
+        if control_pass["status"] != "PASS":
+            raise AssertionError("framework-control positive runtime did not pass")
+        control_fail = analyze_framework_control_runtime(
+            _synthetic_jacobian_log(1.0e-6), returncode=0
+        )
+        if control_fail["class"] != "MOOSE_CONSTRAINT_CONTROL_FAIL":
+            raise AssertionError("framework-control Jacobian mutation was accepted")
+        if (
+            evaluate_runtime_batch(control_fail, lm_result)["class"]
+            != "MOOSE_CONSTRAINT_CONTROL_FAIL"
+        ):
+            raise AssertionError("framework-control failure did not take precedence")
+        batch = evaluate_runtime_batch(control_pass, lm_result)
+        if batch["status"] != "PASS" or batch["class"] != "CONSTRAINT_LM_BLOCK_MISMATCH":
+            raise AssertionError("conclusive localization batch did not pass")
+
         missing_view = lm_log.split("Hand-coded minus finite-difference", 1)[0]
-        if analyze_localization_text(missing_view, dofmap)["class"] != "JACOBIAN_LOCALIZATION_INSUFFICIENT":
+        if (
+            analyze_localization_text(missing_view, dofmap)["class"]
+            != "JACOBIAN_LOCALIZATION_INSUFFICIENT"
+        ):
             raise AssertionError("missing matrix view was over-classified")
     except Exception as exc:
         print(f"ISSUE46_JAC_LOCALIZATION_SELFTEST: FAIL ({exc})")
         return 1
     print("ISSUE46_JAC_LOCALIZATION_SELFTEST: PASS")
+    print("ISSUE46_JAC_LOCALIZATION_RUNTIME_SELFTEST: PASS")
     return 0
 
 
 def _prepare_cases(exe: Path, results_root: str | None) -> dict[str, Any]:
     base_case, base_text, radial_span = inv._base_case_context()
     base_c0 = inv._build_constrained_quasisteady_input(
-        base_text, radial_span=radial_span, macro_avg=TARGET, runtime_observability=True
+        base_text,
+        radial_span=radial_span,
+        macro_avg=TARGET,
+        runtime_observability=True,
     )
     first_text, _ = first_linear.instrument_first_linear(base_c0)
     localization_text, instrumentation = instrument_localization(first_text)
@@ -650,7 +1032,11 @@ def _prepare_cases(exe: Path, results_root: str | None) -> dict[str, Any]:
     control_text = build_framework_control_input()
     p1_control = audit_framework_control_structure(control_text)
 
-    root = inv._evidence_root(exe=exe, results_root=results_root, stem="issue46_augmented_jacobian_localization")
+    root = inv._evidence_root(
+        exe=exe,
+        results_root=results_root,
+        stem="issue46_augmented_jacobian_localization",
+    )
     main_dir = root / "c0_localization"
     control_dir = root / "framework_control"
     v2.v1._copy_case(base_case, main_dir, localization_text)
@@ -690,18 +1076,63 @@ def _check_input(exe: Path, case_dir: Path, log_path: Path) -> dict[str, Any]:
     }
 
 
-def _write_summary(prepared: dict[str, Any], p2_main: dict[str, Any], p2_control: dict[str, Any], status: str) -> Path:
-    path = prepared["root"] / "summary.json"
+def _preflight_reports(
+    exe: Path, prepared: dict[str, Any]
+) -> tuple[dict[str, Any], dict[str, Any], str]:
+    p1_main = prepared["p1_main"]["status"] == "PASS"
+    p1_control = prepared["p1_control"]["status"] == "PASS"
+    p2_main = (
+        _check_input(
+            exe,
+            prepared["main_dir"],
+            prepared["root"] / "p2_c0_check_input.log",
+        )
+        if p1_main
+        else {}
+    )
+    p2_control = (
+        _check_input(
+            exe,
+            prepared["control_dir"],
+            prepared["root"] / "p2_control_check_input.log",
+        )
+        if p1_control
+        else {}
+    )
+    status = (
+        "PASS"
+        if p1_main
+        and p1_control
+        and p2_main.get("status") == "PASS"
+        and p2_control.get("status") == "PASS"
+        else "HOLD"
+    )
+    return p2_main, p2_control, status
+
+
+def _preflight_payload(
+    prepared: dict[str, Any],
+    p2_main: dict[str, Any],
+    p2_control: dict[str, Any],
+    status: str,
+) -> dict[str, Any]:
     if prepared["p1_control"]["status"] != "PASS" or p2_control.get("status") != "PASS":
         decision_class = "HARNESS_OR_CONSTRUCTION_FAIL"
-        reason = "the production-registered framework control did not pass construction/check-input preflight"
+        reason = (
+            "the production-registered framework control did not pass "
+            "construction/check-input preflight"
+        )
     elif status == "PASS":
-        decision_class = "JACOBIAN_LOCALIZATION_READY"
-        reason = "the exact C0 localization case and production-registered same-runtime framework control both pass P0/P1/P2 construction; no Jacobian runtime has been executed"
+        decision_class = "JACOBIAN_LOCALIZATION_RUNTIME_BATCH_READY"
+        reason = (
+            "the exact C0 localization case and production-registered same-runtime "
+            "framework control pass P0/P1/P2; the bounded runtime batch is "
+            "implemented but has not been executed"
+        )
     else:
         decision_class = "HARNESS_OR_CONSTRUCTION_FAIL"
         reason = "the Issue46 localization harness did not pass all P0/P1/P2 gates"
-    payload = {
+    return {
         "issue": ISSUE,
         "mode": "augmented-jacobian-localization-preflight",
         "status": status,
@@ -714,57 +1145,333 @@ def _write_summary(prepared: dict[str, Any], p2_main: dict[str, Any], p2_control
         "framework_control_rel_tol": FRAMEWORK_CONTROL_REL_TOL,
         "framework_control_operator": "FVDiffusion",
         "framework_control_operator_registration": "MooseApp",
+        "runtime_batch_implemented": True,
+        "runtime_batch_members": [
+            "framework-control Jacobian",
+            "exact C0 entry-wise localization",
+        ],
+        "runtime_batch_fail_fast_on_control_failure": True,
         "instrumentation": prepared["instrumentation"],
-        "p1": {"c0_localization": prepared["p1_main"], "framework_control": prepared["p1_control"]},
-        "p2": {"c0_check_input": p2_main, "framework_control_check_input": p2_control},
+        "p1": {
+            "c0_localization": prepared["p1_main"],
+            "framework_control": prepared["p1_control"],
+        },
+        "p2": {
+            "c0_check_input": p2_main,
+            "framework_control_check_input": p2_control,
+        },
         "framework_control_runtime": {
             "executed": False,
-            "reason": "runtime Jacobian control is reserved for the same authorized P3 batch as C0 localization",
+            "reason": (
+                "runtime Jacobian control is reserved for the same explicitly "
+                "authorized P3 batch as C0 localization"
+            ),
         },
-        "decision": {"status": status, "class": decision_class, "reason": reason},
+        "decision": {
+            "status": status,
+            "class": decision_class,
+            "reason": reason,
+        },
     }
-    v2._write_json(path, payload)
-    return path
 
 
 def run_preflight(qpx: str | None, results_root: str | None) -> int:
     exe = v2.resolve_executable(qpx)
     v2.validate_executable(exe)
     prepared = _prepare_cases(exe, results_root)
-    p1_main = prepared["p1_main"]["status"] == "PASS"
-    p1_control = prepared["p1_control"]["status"] == "PASS"
-    p2_main = _check_input(exe, prepared["main_dir"], prepared["root"] / "p2_c0_check_input.log") if p1_main else {}
-    p2_control = _check_input(exe, prepared["control_dir"], prepared["root"] / "p2_control_check_input.log") if p1_control else {}
-    status = "PASS" if p1_main and p1_control and p2_main.get("status") == "PASS" and p2_control.get("status") == "PASS" else "HOLD"
-    path = _write_summary(prepared, p2_main, p2_control, status)
+    p2_main, p2_control, status = _preflight_reports(exe, prepared)
+    path = prepared["root"] / "summary.json"
+    v2._write_json(
+        path, _preflight_payload(prepared, p2_main, p2_control, status)
+    )
 
     print(f"ISSUE46_JAC_LOCALIZATION_P1_C0: {prepared['p1_main']['status']}")
     print(f"ISSUE46_JAC_LOCALIZATION_P1_CONTROL: {prepared['p1_control']['status']}")
-    print(f"ISSUE46_JAC_LOCALIZATION_P2_C0_CHECK_INPUT: {p2_main.get('status', 'HOLD')}")
-    print(f"ISSUE46_JAC_LOCALIZATION_P2_CONTROL_CHECK_INPUT: {p2_control.get('status', 'HOLD')}")
+    print(
+        "ISSUE46_JAC_LOCALIZATION_P2_C0_CHECK_INPUT: "
+        f"{p2_main.get('status', 'HOLD')}"
+    )
+    print(
+        "ISSUE46_JAC_LOCALIZATION_P2_CONTROL_CHECK_INPUT: "
+        f"{p2_control.get('status', 'HOLD')}"
+    )
     print("ISSUE46_JAC_LOCALIZATION_P2_CONTROL_RUNTIME: DEFERRED_TO_AUTHORIZED_P3")
     print(f"ISSUE46_JAC_LOCALIZATION_PREFLIGHT: {status}")
-    print("ISSUE46_JAC_LOCALIZATION_CLASS: " + ("JACOBIAN_LOCALIZATION_READY" if status == "PASS" else "HARNESS_OR_CONSTRUCTION_FAIL"))
+    print(
+        "ISSUE46_JAC_LOCALIZATION_CLASS: "
+        + (
+            "JACOBIAN_LOCALIZATION_RUNTIME_BATCH_READY"
+            if status == "PASS"
+            else "HARNESS_OR_CONSTRUCTION_FAIL"
+        )
+    )
     print(f"ISSUE46_JAC_LOCALIZATION_SUMMARY: {path}")
     return 0 if status == "PASS" else 2
 
 
+def _purge_dofmap_outputs(case_dir: Path) -> None:
+    for path in case_dir.glob(f"{DOFMAP_FILE_BASE}*.json"):
+        if path.is_file():
+            path.unlink()
+
+
+def _run_runtime_case(
+    exe: Path,
+    *,
+    case_id: str,
+    case_dir: Path,
+    log_path: Path,
+) -> dict[str, Any]:
+    print(f"ISSUE46_JAC_LOCALIZATION_CASE_START: {case_id}")
+    run = run_qpx(
+        exe,
+        cwd=case_dir,
+        input_name="input.i",
+        log_path=log_path,
+        extra_args=("--color", "off"),
+        stream=False,
+    )
+    print(
+        f"ISSUE46_JAC_LOCALIZATION_CASE_END: {case_id} rc={run.returncode}"
+    )
+    return {
+        "case_id": case_id,
+        "returncode": run.returncode,
+        "wall_seconds": run.wall_seconds,
+        "log": str(log_path),
+        "identity": {
+            **evidence.identity_record(executable=exe, input_path=case_dir / "input.i"),
+            "qpx_sha256": evidence.sha256_file(exe),
+        },
+    }
+
+
+def _finite_or_none(value: Any) -> float | None:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return number if math.isfinite(number) else None
+
+
+def run_runtime(qpx: str | None, results_root: str | None) -> int:
+    exe = v2.resolve_executable(qpx)
+    v2.validate_executable(exe)
+    prepared = _prepare_cases(exe, results_root)
+    p2_main, p2_control, preflight_status = _preflight_reports(exe, prepared)
+
+    if preflight_status != "PASS":
+        payload = _preflight_payload(
+            prepared, p2_main, p2_control, preflight_status
+        )
+        payload["mode"] = "augmented-jacobian-localization-runtime-gated"
+        payload["decision"] = {
+            "status": "HOLD",
+            "class": "HARNESS_OR_CONSTRUCTION_FAIL",
+            "reason": "runtime entry refused because P0/P1/P2 preflight is not PASS",
+        }
+        path = prepared["root"] / "summary.json"
+        v2._write_json(path, payload)
+        print("ISSUE46_JAC_LOCALIZATION_PRECLASS: HOLD")
+        print("ISSUE46_JAC_LOCALIZATION_CLASS: HARNESS_OR_CONSTRUCTION_FAIL")
+        print(
+            "ISSUE46_JAC_LOCALIZATION_REASON: runtime entry refused because "
+            "P0/P1/P2 preflight is not PASS"
+        )
+        print(f"ISSUE46_JAC_LOCALIZATION_SUMMARY: {path}")
+        return 2
+
+    control_log = prepared["root"] / "p3_framework_control.log"
+    control_run = _run_runtime_case(
+        exe,
+        case_id="FRAMEWORK_CONTROL",
+        case_dir=prepared["control_dir"],
+        log_path=control_log,
+    )
+    control_text = control_log.read_text(errors="replace")
+    control_analysis = analyze_framework_control_runtime(
+        control_text, returncode=control_run["returncode"]
+    )
+
+    control_worst = _finite_or_none(
+        control_analysis.get("jacobian", {}).get(
+            "worst_relative_frobenius_error"
+        )
+    )
+    print(
+        "ISSUE46_JAC_LOCALIZATION_CONTROL_JACOBIAN: "
+        f"{control_analysis['status']}"
+    )
+    if control_worst is not None:
+        print(
+            "ISSUE46_JAC_LOCALIZATION_CONTROL_JACOBIAN_REL_ERROR: "
+            f"{control_worst:.12e}"
+        )
+
+    c0_run: dict[str, Any] | None = None
+    c0_analysis: dict[str, Any] | None = None
+    dofmap_path = prepared["main_dir"] / f"{DOFMAP_FILE_BASE}.json"
+    if control_analysis["status"] == "PASS":
+        _purge_dofmap_outputs(prepared["main_dir"])
+        c0_log = prepared["root"] / "p3_c0_localization.log"
+        c0_run = _run_runtime_case(
+            exe,
+            case_id="C0_LOCALIZATION",
+            case_dir=prepared["main_dir"],
+            log_path=c0_log,
+        )
+        if not dofmap_path.is_file():
+            c0_analysis = {
+                "status": "HOLD",
+                "class": "JACOBIAN_LOCALIZATION_INSUFFICIENT",
+                "reason": (
+                    f"expected DOFMap output is missing: {dofmap_path}"
+                ),
+            }
+        else:
+            c0_analysis = analyze_localization_text(
+                c0_log.read_text(errors="replace"),
+                dofmap_path.read_text(errors="replace"),
+                framework_control_pass=True,
+            )
+    else:
+        print("ISSUE46_JAC_LOCALIZATION_C0_RUNTIME: SKIPPED_CONTROL_FAIL")
+
+    decision = evaluate_runtime_batch(control_analysis, c0_analysis)
+    localization_payload = (
+        c0_analysis.get("localization", {}) if c0_analysis else {}
+    )
+    fractions = localization_payload.get("category_energy_fraction", {})
+    for key, marker in (
+        ("constraint_lm", "CONSTRAINT_LM_ENERGY_FRACTION"),
+        ("electron_potential", "ELECTRON_POTENTIAL_ENERGY_FRACTION"),
+        ("other", "OTHER_ENERGY_FRACTION"),
+    ):
+        value = _finite_or_none(fractions.get(key))
+        if value is not None:
+            print(f"ISSUE46_JAC_LOCALIZATION_{marker}: {value:.12e}")
+
+    if c0_analysis is not None:
+        c0_jacobian = c0_analysis.get("jacobian", {})
+        c0_worst = _finite_or_none(
+            c0_jacobian.get("worst_relative_frobenius_error")
+        )
+        print(
+            "ISSUE46_JAC_LOCALIZATION_C0_LOCALIZATION: "
+            f"{c0_analysis.get('status', 'HOLD')}"
+        )
+        if c0_worst is not None:
+            print(
+                "ISSUE46_JAC_LOCALIZATION_C0_JACOBIAN_REL_ERROR: "
+                f"{c0_worst:.12e}"
+            )
+        mapped = localization_payload.get("mapped_entry_count")
+        if mapped is not None:
+            print(
+                "ISSUE46_JAC_LOCALIZATION_C0_MAPPED_DIFFERENCE_ENTRIES: "
+                f"{mapped}"
+            )
+
+    summary = {
+        "issue": ISSUE,
+        "mode": "augmented-jacobian-localization-runtime",
+        "status": decision["status"],
+        "p3_executed": True,
+        "evr_count_for_this_batch": 1,
+        "evr_budget_owner": "#46",
+        "batch_members": {
+            "framework_control": {
+                "executed": True,
+                "run": control_run,
+                "analysis": control_analysis,
+            },
+            "c0_localization": {
+                "executed": c0_run is not None,
+                "run": c0_run,
+                "dofmap": str(dofmap_path) if dofmap_path.is_file() else None,
+                "analysis": c0_analysis,
+                "skip_reason": (
+                    None
+                    if c0_run is not None
+                    else "framework control did not pass its Jacobian contract"
+                ),
+            },
+        },
+        "preflight": {
+            "status": preflight_status,
+            "p1": {
+                "c0_localization": prepared["p1_main"],
+                "framework_control": prepared["p1_control"],
+            },
+            "p2": {
+                "c0_check_input": p2_main,
+                "framework_control_check_input": p2_control,
+            },
+        },
+        "contracts": {
+            "target": TARGET,
+            "localization_threshold": LOCALIZATION_THRESHOLD,
+            "global_jacobian_rel_tol": GLOBAL_JACOBIAN_REL_TOL,
+            "framework_control_rel_tol": FRAMEWORK_CONTROL_REL_TOL,
+            "dominant_energy_fraction": DOMINANT_ENERGY_FRACTION,
+            "control_fail_fast": True,
+        },
+        "decision": decision,
+    }
+    summary_path = prepared["root"] / "summary.json"
+    v2._write_json(summary_path, summary)
+
+    print(
+        "ISSUE46_JAC_LOCALIZATION_PRECLASS: "
+        + ("PASS" if decision["status"] == "PASS" else "HOLD")
+    )
+    print(f"ISSUE46_JAC_LOCALIZATION_CLASS: {decision['class']}")
+    print(f"ISSUE46_JAC_LOCALIZATION_REASON: {decision['reason']}")
+    print(f"ISSUE46_JAC_LOCALIZATION_CONTROL_LOG: {control_log}")
+    if c0_run is not None:
+        print(f"ISSUE46_JAC_LOCALIZATION_C0_LOG: {c0_run['log']}")
+    if dofmap_path.is_file():
+        print(f"ISSUE46_JAC_LOCALIZATION_DOFMAP: {dofmap_path}")
+    print(f"ISSUE46_JAC_LOCALIZATION_SUMMARY: {summary_path}")
+    return 0 if decision["status"] == "PASS" else 2
+
+
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Run Issue46 augmented Jacobian localization P0/P1/P2 preflight")
+    parser = argparse.ArgumentParser(
+        description="Run Issue46 augmented Jacobian localization audit"
+    )
     parser.add_argument("--qpx", help="path to user-local qpx-opt")
     parser.add_argument("--results-root")
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--self-test", action="store_true")
     mode.add_argument("--preflight", action="store_true")
+    mode.add_argument(
+        "--run",
+        action="store_true",
+        help="execute the explicitly authorized one-EVR framework-control + C0 batch",
+    )
     args = parser.parse_args(argv)
+
     if args.self_test:
         return self_test()
     if self_test() != 0:
         return 1
     try:
-        return run_preflight(args.qpx, args.results_root)
-    except (AugmentedJacobianLocalizationError, inv.ElectronInventoryNullspaceError, MooseInputError) as exc:
-        print("ISSUE46_JAC_LOCALIZATION_PREFLIGHT: HOLD")
+        if args.preflight:
+            return run_preflight(args.qpx, args.results_root)
+        return run_runtime(args.qpx, args.results_root)
+    except (
+        AugmentedJacobianLocalizationError,
+        inv.ElectronInventoryNullspaceError,
+        MooseInputError,
+        OSError,
+    ) as exc:
+        marker = (
+            "ISSUE46_JAC_LOCALIZATION_PREFLIGHT"
+            if args.preflight
+            else "ISSUE46_JAC_LOCALIZATION_PRECLASS"
+        )
+        print(f"{marker}: HOLD")
         print("ISSUE46_JAC_LOCALIZATION_CLASS: HARNESS_OR_CONSTRUCTION_FAIL")
         print(f"ISSUE46_JAC_LOCALIZATION_REASON: {exc}")
         return 2
@@ -772,4 +1479,5 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     import sys
+
     raise SystemExit(main(sys.argv[1:]))
