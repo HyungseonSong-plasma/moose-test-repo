@@ -27,7 +27,7 @@ from .runtime import run_qpx
 
 ISSUE = 46
 TARGET = inv.C0_TARGET
-ACCEPTED_EVR1_ELECTRON_DOF_COUNT = 2348
+HISTORICAL_EVR1_ELECTRON_DOF_COUNT = 2348
 FD_REFERENCE_TYPE = "ds"
 GLOBAL_JACOBIAN_REL_TOL = first_linear.JACOBIAN_REL_TOL
 LOCALIZATION_THRESHOLD = loc.LOCALIZATION_THRESHOLD
@@ -54,26 +54,27 @@ def _issue46_synthetic_constrained_input(macro_avg: float = TARGET) -> str:
 
 def predict_fd_step_quantization(
     *,
-    electron_dofs: int = ACCEPTED_EVR1_ELECTRON_DOF_COUNT,
-    electron_value: float = TARGET,
+    vector_norm: float,
+    component_value: float,
 ) -> dict[str, float]:
-    if electron_dofs <= 0 or not math.isfinite(electron_value) or electron_value == 0.0:
-        raise JacobianFDReferenceAuditError("invalid electron state for FD-step prediction")
-    # Accepted C0 initial state: all n_e DOFs are 1e16; potential and scalar LM
-    # initialize at zero, so the electron field dominates the global 2-norm.
-    unorm = math.sqrt(float(electron_dofs)) * abs(electron_value)
-    wp_requested = math.sqrt(1.0 + unorm) * SQRT_MACHINE_EPSILON
-    wp_representable = (electron_value + wp_requested) - electron_value
+    """Predict PETSc WP/DS perturbation representability for an explicit state."""
+    if (
+        not math.isfinite(vector_norm)
+        or vector_norm < 0.0
+        or not math.isfinite(component_value)
+        or component_value == 0.0
+    ):
+        raise JacobianFDReferenceAuditError("invalid explicit state for FD-step prediction")
+
+    wp_requested = math.sqrt(1.0 + vector_norm) * SQRT_MACHINE_EPSILON
+    wp_representable = (component_value + wp_requested) - component_value
     wp_attenuation = wp_representable / wp_requested
 
-    # PETSc DS: dx = x_i * epsilon for this positive nonzero electron DOF.
-    ds_requested = electron_value * SQRT_MACHINE_EPSILON
-    ds_representable = (electron_value + ds_requested) - electron_value
+    # PETSc DS: dx = x_i * epsilon for this nonzero component.
+    ds_requested = component_value * SQRT_MACHINE_EPSILON
+    ds_representable = (component_value + ds_requested) - component_value
     ds_attenuation = ds_representable / ds_requested
     return {
-        "electron_dofs": float(electron_dofs),
-        "electron_value": electron_value,
-        "vector_norm_model": unorm,
         "sqrt_machine_epsilon": SQRT_MACHINE_EPSILON,
         "wp_requested_dx": wp_requested,
         "wp_representable_dx": wp_representable,
@@ -81,6 +82,23 @@ def predict_fd_step_quantization(
         "ds_requested_dx": ds_requested,
         "ds_representable_dx": ds_representable,
         "ds_predicted_attenuation": ds_attenuation,
+    }
+
+
+def _historical_evr1_prediction() -> dict[str, float]:
+    """Reproduce the accepted EVR1 C0 predictor with explicit historical state."""
+    vector_norm = (
+        math.sqrt(float(HISTORICAL_EVR1_ELECTRON_DOF_COUNT)) * abs(TARGET)
+    )
+    prediction = predict_fd_step_quantization(
+        vector_norm=vector_norm,
+        component_value=TARGET,
+    )
+    return {
+        "electron_dofs": float(HISTORICAL_EVR1_ELECTRON_DOF_COUNT),
+        "electron_value": TARGET,
+        "vector_norm_model": vector_norm,
+        **prediction,
     }
 
 
@@ -250,7 +268,7 @@ def audit_ds_reference_structure(
         initial_value = math.nan
     add("c0-electron-initial-state", initial_value == TARGET, initial_value, TARGET)
 
-    prediction = predict_fd_step_quantization()
+    prediction = _historical_evr1_prediction()
     add(
         "wp-mechanism-reproduces-evr1",
         abs(prediction["wp_predicted_attenuation"] - WP_OBSERVED_ATTENUATION)
@@ -300,13 +318,17 @@ def analyze_ds_runtime(
 
     variables = directional["dof_map"]["variables"]
     n_count = len(variables.get("n_e", []))
+    potential_count = len(variables.get("potential_plasma", []))
     lambda_count = len(variables.get(inv.LAMBDA_VARIABLE, []))
     metrics = directional["metrics"]
-    if n_count != ACCEPTED_EVR1_ELECTRON_DOF_COUNT or lambda_count != 1:
+    if n_count <= 0 or potential_count <= 0 or lambda_count != 1:
         decision = {
             "status": "HOLD",
             "class": "FD_REFERENCE_DISCRIMINATOR_INSUFFICIENT",
-            "reason": "runtime DOF ownership no longer matches the accepted EVR1 C0 topology",
+            "reason": (
+                "runtime DOF ownership is structurally incomplete for the "
+                "electron, potential, or scalar-multiplier roles"
+            ),
         }
     elif (
         jacobian.get("class") == "JACOBIAN_CORRECTNESS_PASS"
@@ -316,9 +338,9 @@ def analyze_ds_runtime(
             "status": "PASS",
             "class": "FD_REFERENCE_QUANTIZATION_CONFIRMED",
             "reason": (
-                "the exact C0 assembled Jacobian passes when only the PETSc FD "
-                "reference changes from WP to DS, with no nonzero thresholded "
-                "difference entries"
+                "the assembled Jacobian passes under the DS finite-difference "
+                "reference with structurally valid role ownership and no nonzero "
+                "thresholded difference entries"
             ),
         }
     elif (
@@ -341,7 +363,7 @@ def analyze_ds_runtime(
         "returncode": returncode,
         "jacobian": jacobian,
         "directional": directional,
-        "prediction": predict_fd_step_quantization(),
+        "prediction": _historical_evr1_prediction(),
     }
 
 
@@ -376,7 +398,7 @@ def _synthetic_log(relative_error: float, rows: list[str]) -> str:
 
 def self_test() -> int:
     try:
-        prediction = predict_fd_step_quantization()
+        prediction = _historical_evr1_prediction()
         if abs(prediction["wp_predicted_attenuation"] - 0.9640628864075022) > 1e-12:
             raise AssertionError("WP quantization predictor drifted")
         if (
@@ -384,6 +406,12 @@ def self_test() -> int:
             > DS_ATTENUATION_TO_UNITY_TOL
         ):
             raise AssertionError("DS electron perturbation is not representable enough")
+
+        explicit = predict_fd_step_quantization(vector_norm=123.0, component_value=7.0)
+        if explicit["wp_requested_dx"] != math.sqrt(124.0) * SQRT_MACHINE_EPSILON:
+            raise AssertionError("WP predictor ignored the explicit vector norm")
+        if explicit["ds_requested_dx"] != 7.0 * SQRT_MACHINE_EPSILON:
+            raise AssertionError("DS predictor ignored the explicit component value")
 
         raw = {
             "threshold": LOCALIZATION_THRESHOLD,
