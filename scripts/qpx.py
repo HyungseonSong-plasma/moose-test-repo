@@ -22,7 +22,7 @@ from qpx_harness.electron_inventory_nullspace import main as inventory_nullspace
 from qpx_harness.execution_contract import main as execution_contract_main, self_test as execution_contract_self_test
 from qpx_harness.fast_plasma_coupling_diagnostic import main as fast_coupling_diagnostic_main, self_test as fast_coupling_diagnostic_self_test
 from qpx_harness.fast_plasma_relaxation_v5 import main as fast_relaxation_main, self_test as fast_relaxation_self_test
-from qpx_harness.jacobian_fd_reference_audit_v2 import main as fd_reference_main, self_test as fd_reference_self_test
+from qpx_harness.jacobian_fd_reference_audit import main as fd_reference_main, self_test as fd_reference_self_test
 from qpx_harness.performance_cache_audit import main as performance_cache_audit_main, self_test as performance_cache_audit_self_test
 from qpx_harness.performance_core import main as performance_main, self_test as performance_self_test
 from qpx_harness.performance_investigation import main as performance_investigation_main, self_test as performance_investigation_self_test
