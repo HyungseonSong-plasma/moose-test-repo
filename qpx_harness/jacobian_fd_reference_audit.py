@@ -41,6 +41,17 @@ class JacobianFDReferenceAuditError(RuntimeError):
     pass
 
 
+def _issue46_synthetic_constrained_input(macro_avg: float = TARGET) -> str:
+    """Build the Issue46 synthetic C0 fixture without mutating Issue45 ownership."""
+    text = inv._synthetic_constrained_input(macro_avg)
+    return inv._set_or_insert_parameter(
+        text,
+        "Variables/n_e",
+        "initial_condition",
+        f"{TARGET:.17g}",
+    )
+
+
 def predict_fd_step_quantization(
     *,
     electron_dofs: int = ACCEPTED_EVR1_ELECTRON_DOF_COUNT,
@@ -404,7 +415,7 @@ def self_test() -> int:
         if directional["metrics"]["j_n_lambda"]["count"] != 0:
             raise AssertionError("zero J_n,lambda structural entry was miscounted")
 
-        base = inv._synthetic_constrained_input(TARGET)
+        base = _issue46_synthetic_constrained_input(TARGET)
         first_text, _ = first_linear.instrument_first_linear(base)
         baseline, _ = loc.instrument_localization(first_text)
         ds_text, _ = instrument_ds_reference(baseline)
