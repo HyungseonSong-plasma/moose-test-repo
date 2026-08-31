@@ -21,7 +21,7 @@ from qpx_harness.coupling_evr2_runtime import main as coupling_evr2_main, self_t
 from qpx_harness.dmix_equivalence import main as dmix_equivalence_main, self_test as dmix_equivalence_self_test
 from qpx_harness.electron_inventory_nullspace import main as inventory_nullspace_main, self_test as inventory_nullspace_self_test
 from qpx_harness.execution_contract import main as execution_contract_main, self_test as execution_contract_self_test
-from qpx_harness.fast_plasma_coupling_diagnostic import main as fast_coupling_diagnostic_main, self_test as fast_coupling_diagnostic_self_test
+from qpx_harness.issue43_coupling_diagnostic import main as fast_coupling_diagnostic_main, self_test as fast_coupling_diagnostic_self_test
 from qpx_harness.issue43_fast_relaxation import main as fast_relaxation_main, self_test as fast_relaxation_self_test
 from qpx_harness.issue45_first_linear import main as first_linear_main, self_test as first_linear_self_test
 from qpx_harness.performance_cache_audit import main as performance_cache_audit_main, self_test as performance_cache_audit_self_test
