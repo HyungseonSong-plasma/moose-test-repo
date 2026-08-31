@@ -23,12 +23,12 @@ from qpx_harness.electron_inventory_nullspace import main as inventory_nullspace
 from qpx_harness.execution_contract import main as execution_contract_main, self_test as execution_contract_self_test
 from qpx_harness.fast_plasma_coupling_diagnostic import main as fast_coupling_diagnostic_main, self_test as fast_coupling_diagnostic_self_test
 from qpx_harness.issue43_fast_relaxation import main as fast_relaxation_main, self_test as fast_relaxation_self_test
+from qpx_harness.issue45_first_linear import main as first_linear_main, self_test as first_linear_self_test
 from qpx_harness.performance_cache_audit import main as performance_cache_audit_main, self_test as performance_cache_audit_self_test
 from qpx_harness.performance_core import main as performance_main, self_test as performance_self_test
 from qpx_harness.performance_investigation import main as performance_investigation_main, self_test as performance_investigation_self_test
 from qpx_harness.performance_smoke import main as performance_smoke_main, self_test as performance_smoke_self_test
 from qpx_harness.performance_transport_probe_direct import main as performance_transport_probe_main, self_test as performance_transport_probe_self_test
-from qpx_harness.petsc_first_linear_diagnostic import main as first_linear_main, self_test as first_linear_self_test
 from qpx_harness.preflight import parser_symbol_self_test, validate_input_preflight
 from qpx_harness.profiling import main as profile_main
 from qpx_harness.regression import cli_run_all, cli_run_test
