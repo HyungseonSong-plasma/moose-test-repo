@@ -1,8 +1,9 @@
 """Issue #31 transport/Poisson coupling recipe semantics.
 
-This module owns experiment-specific input construction and r29 runtime-physics
-interpretation shared by EVR1/EVR2. Runtime orchestration, filesystem staging,
-measurement execution, and executable policy remain in qpx_harness.
+This module owns experiment-specific input construction and runtime-physics /
+discriminator interpretation shared by EVR1/EVR2. Runtime orchestration,
+filesystem staging, measurement execution, checker subprocesses, and
+executable policy remain in qpx_harness.
 """
 from __future__ import annotations
 
@@ -40,6 +41,25 @@ BOUND_TOL = 1.0e-10
 CHARGE_REL_TOL = 1.0e-3
 PHI_NONTRIVIAL_TOL = 1.0e-14
 
+KG_E_PARENT_RELATIVE = Path("tests/Issue2_electron_bulk_drift")
+EVR1_BASELINE = {
+    "dt": 1.0e-4,
+    "status": "RUNTIME_FAIL_OR_NONCONVERGENCE",
+    "signature": "DIVERGED_MAX_IT",
+    "nonlinear_iterations": 80,
+    "physics": "NOT_RUN",
+    "source": "user-returned Issue31 EVR1 transport-only evidence",
+}
+DT_1E6 = 1.0e-6
+DT_1E8 = 1.0e-8
+EVR2_TERMINAL_CLASSES = {
+    "TIMESTEP_STIFFNESS_CONFIRMED_RECOVERY_BY_1E6",
+    "TIMESTEP_STIFFNESS_CONFIRMED_RECOVERY_ONLY_BY_1E8",
+    "NONLINEAR_SCALING_SENSITIVITY_CONFIRMED",
+    "T3_COUPLING_OR_JACOBIAN_FAIL_PERSISTS",
+    "NONMONOTONIC_TIMESTEP_RESPONSE",
+}
+
 
 class Issue31CouplingError(RuntimeError):
     pass
@@ -70,6 +90,42 @@ def transport_only_input(base_text: str) -> tuple[str, dict[str, Any]]:
         "removed_paths": list(TRANSPORT_REMOVE_PATHS),
         "removed_spans": removed,
         "retained_required_tokens": list(required),
+    }
+
+
+def configured_transport_input(
+    base_text: str,
+    *,
+    dt: float,
+    compute_scaling_once: bool,
+) -> tuple[str, dict[str, Any]]:
+    """Build the EVR2 transport control with only timestep/scaling changed."""
+    try:
+        transport_text, transport_meta = transport_only_input(base_text)
+        transformed, param_meta = MooseInput(transport_text).replace_parameters(
+            "Executioner",
+            {
+                "dt": f"{dt:.17g}",
+                "end_time": f"{dt:.17g}",
+                "compute_scaling_once": "true" if compute_scaling_once else "false",
+            },
+        )
+    except (Issue31CouplingError, MooseInputError) as exc:
+        raise Issue31CouplingError(f"transport configuration failed: {exc}") from exc
+
+    if "potential_plasma" in transformed:
+        raise Issue31CouplingError(
+            "configured transport case unexpectedly references potential_plasma"
+        )
+    if "r30_e_diffusion" not in transformed or "n_e_solved" not in transformed:
+        raise Issue31CouplingError(
+            "configured transport case lost solved electron diffusion state"
+        )
+    return transformed, {
+        "transport_transform": transport_meta,
+        "executioner_parameters": param_meta,
+        "dt": dt,
+        "compute_scaling_once": compute_scaling_once,
     }
 
 
@@ -193,4 +249,153 @@ def physics_check(case_dir: Path, *, monolithic: bool) -> dict[str, Any]:
             "relative_identity_error": charge_rel,
         },
         "potential": phi,
+    }
+
+
+def _result_status(case: dict[str, Any] | None) -> str | None:
+    if not case:
+        return None
+    result = case.get("result")
+    if not isinstance(result, dict):
+        return None
+    return result.get("validation", {}).get("status")
+
+
+def _runtime_nonconvergence(case: dict[str, Any] | None) -> bool:
+    return (
+        _result_status(case) == "RUNTIME_FAIL_OR_NONCONVERGENCE"
+        and (case or {}).get("failure", {}).get("signature")
+        in {
+            "DIVERGED_MAX_IT",
+            "DIVERGED_LINE_SEARCH",
+            "DIVERGED_FNORM_NAN",
+            "NONLINEAR_DID_NOT_CONVERGE",
+        }
+    )
+
+
+def _case_pass(case: dict[str, Any] | None) -> bool:
+    return (
+        _result_status(case) == "P2_PASS_P3_PASS"
+        and isinstance((case or {}).get("physics"), dict)
+        and (case or {})["physics"].get("status") == "PASS"
+    )
+
+
+def _kg_e_pass(case: dict[str, Any]) -> bool:
+    return (
+        _result_status(case) == "P2_PASS_P3_PASS"
+        and case.get("canonical_checker", {}).get("status") == "PASS"
+    )
+
+
+def classify_evr2(
+    kg_e: dict[str, Any],
+    dt1e6: dict[str, Any] | None,
+    dt1e8: dict[str, Any] | None,
+    scaling1e8: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """Classify the accepted EVR2 timestep/scaling discriminator branches."""
+    if not _kg_e_pass(kg_e):
+        status = _result_status(kg_e)
+        cls = (
+            "HARNESS_OR_CONSTRUCTION_FAIL"
+            if status == "HARNESS_OR_CONSTRUCTION_FAIL"
+            else "KNOWN_GOOD_ELECTRON_CONTROL_FAIL"
+        )
+        return {
+            "class": cls,
+            "reason": (
+                "accepted real-qvt electron control did not pass on the current "
+                "executable/environment"
+            ),
+        }
+
+    for label, case in (("dt1e6", dt1e6), ("dt1e8", dt1e8)):
+        if case is None:
+            return {
+                "class": "HARNESS_OR_CONSTRUCTION_FAIL",
+                "reason": f"{label} was not run",
+            }
+        if _result_status(case) == "HARNESS_OR_CONSTRUCTION_FAIL":
+            return {
+                "class": "HARNESS_OR_CONSTRUCTION_FAIL",
+                "reason": f"{label} failed before interpretable physics runtime",
+            }
+        if _result_status(case) == "P2_PASS_P3_PASS" and not _case_pass(case):
+            return {
+                "class": "PHYSICS_CHECK_FAIL",
+                "reason": f"{label} runtime completed but transport physics checks failed",
+            }
+
+    p6 = _case_pass(dt1e6)
+    p8 = _case_pass(dt1e8)
+
+    if p6 and p8:
+        return {
+            "class": "TIMESTEP_STIFFNESS_CONFIRMED_RECOVERY_BY_1E6",
+            "reason": (
+                "EVR1 dt=1e-4 failed; unchanged transport/scaling recovers at "
+                "both 1e-6 and 1e-8"
+            ),
+        }
+    if (not p6) and p8 and _runtime_nonconvergence(dt1e6):
+        return {
+            "class": "TIMESTEP_STIFFNESS_CONFIRMED_RECOVERY_ONLY_BY_1E8",
+            "reason": (
+                "dt=1e-6 still fails by nonlinear convergence while dt=1e-8 "
+                "recovers with unchanged scaling"
+            ),
+        }
+    if p6 and (not p8):
+        return {
+            "class": "NONMONOTONIC_TIMESTEP_RESPONSE",
+            "reason": (
+                "dt=1e-6 passes but smaller dt=1e-8 does not; simple "
+                "timestep-stiffness explanation is insufficient"
+            ),
+        }
+
+    if _runtime_nonconvergence(dt1e6) and _runtime_nonconvergence(dt1e8):
+        if scaling1e8 is None:
+            return {
+                "class": "SCALING_BRANCH_REQUIRED",
+                "reason": "both smaller timesteps remain nonlinear-convergence failures",
+            }
+        if _result_status(scaling1e8) == "HARNESS_OR_CONSTRUCTION_FAIL":
+            return {
+                "class": "HARNESS_OR_CONSTRUCTION_FAIL",
+                "reason": (
+                    "scaling discriminator failed before interpretable physics runtime"
+                ),
+            }
+        if _result_status(scaling1e8) == "P2_PASS_P3_PASS" and not _case_pass(
+            scaling1e8
+        ):
+            return {
+                "class": "PHYSICS_CHECK_FAIL",
+                "reason": "scaling discriminator converged but physics checks failed",
+            }
+        if _case_pass(scaling1e8):
+            return {
+                "class": "NONLINEAR_SCALING_SENSITIVITY_CONFIRMED",
+                "reason": (
+                    "dt=1e-8 fails with current scaling policy and recovers when "
+                    "only compute_scaling_once changes to true"
+                ),
+            }
+        if _runtime_nonconvergence(scaling1e8):
+            return {
+                "class": "T3_COUPLING_OR_JACOBIAN_FAIL_PERSISTS",
+                "reason": (
+                    "accepted electron control passes, but T3 fails at 1e-6 and "
+                    "1e-8 and does not recover with accepted scaling-once policy"
+                ),
+            }
+
+    return {
+        "class": "UNRESOLVED_RUNTIME_RESPONSE",
+        "reason": (
+            "observed result signature does not match a predeclared discriminator branch"
+        ),
     }
