@@ -21,6 +21,9 @@ INVENTORY_REL_TOL = 1.0e-6
 CHARGE_REL_TOL = 1.0e-6
 E_CHARGE = 1.602176634e-19
 EPS0 = 8.8541878128e-12
+DT_FEEDBACK_BASE = 1.0e-13
+DT_FEEDBACK_SMALL = 1.0e-14
+DT_FEEDBACK_LARGE = 1.0e-12
 
 REQUIRED_COLUMNS = (
     "time",
@@ -438,4 +441,86 @@ def analyze_relaxation(
             {"time": row["time"], "distance": distance}
             for row, distance in zip(rows, distances)
         ],
+    }
+
+
+def _physics_pass(result: dict[str, Any]) -> bool:
+    if result.get("class") != "P3_PASS":
+        return False
+    analysis = result.get("analysis")
+    return not isinstance(analysis, dict) or analysis.get("status") == "PASS"
+
+
+def classify(
+    known_good: dict[str, Any],
+    electron_300k: dict[str, Any] | None,
+    oneway: dict[str, Any] | None,
+    feedback_base: dict[str, Any] | None,
+    feedback_small: dict[str, Any] | None,
+    feedback_large: dict[str, Any] | None,
+    tau_dr: float,
+) -> dict[str, Any]:
+    """Classify the Issue43 discriminator from runtime evidence supplied by the runner."""
+    if (
+        known_good.get("class") != "P3_PASS"
+        or known_good.get("canonical_checker", {}).get("status") != "PASS"
+    ):
+        return {
+            "class": "KNOWN_GOOD_ELECTRON_CONTROL_FAIL",
+            "reason": "historical qvt pre-Poisson electron control did not reproduce",
+        }
+    if electron_300k is None or not _physics_pass(electron_300k):
+        return {
+            "class": "ELECTRON_300K_CONTROL_FAIL",
+            "reason": "electron-only path did not reproduce at the 300 K anchor",
+        }
+    if oneway is None or not _physics_pass(oneway):
+        return {
+            "class": "POISSON_OR_BLOCK_SCALING_FAIL",
+            "reason": "electron and Poisson did not converge as a one-way triangular system",
+        }
+    if feedback_base is None:
+        return {
+            "class": "FEEDBACK_CASE_MISSING",
+            "reason": "base feedback discriminator missing",
+        }
+
+    base_ratio = DT_FEEDBACK_BASE / tau_dr
+    small_ratio = DT_FEEDBACK_SMALL / tau_dr
+    large_ratio = DT_FEEDBACK_LARGE / tau_dr
+
+    if _physics_pass(feedback_base):
+        if feedback_large is not None and _physics_pass(feedback_large):
+            return {
+                "class": "FEEDBACK_IMPLICIT_COUPLING_RECOVERS_NEAR_TAU_DR",
+                "reason": "full feedback converged both below and near the dielectric relaxation time",
+                "dt_over_tau": {"base": base_ratio, "large": large_ratio},
+            }
+        if feedback_large is not None:
+            return {
+                "class": "DIELECTRIC_TIMESTEP_STIFFNESS_CONFIRMED",
+                "reason": "full feedback converged below tau_DR but failed near tau_DR",
+                "dt_over_tau": {"base": base_ratio, "large": large_ratio},
+            }
+        return {
+            "class": "FEEDBACK_RECOVERS_BELOW_TAU_DR",
+            "reason": "full feedback converged at the below-tau discriminator",
+            "dt_over_tau": {"base": base_ratio},
+        }
+
+    if feedback_small is not None and _physics_pass(feedback_small):
+        return {
+            "class": "DIELECTRIC_TIMESTEP_STIFFNESS_STRONG",
+            "reason": "feedback failed at ~0.09 tau_DR but recovered at ~0.009 tau_DR",
+            "dt_over_tau": {"base": base_ratio, "small": small_ratio},
+        }
+    if feedback_small is not None:
+        return {
+            "class": "FEEDBACK_JACOBIAN_SCALING_OR_INITIALIZATION_FAIL",
+            "reason": "electron-only and one-way systems pass, but two-way feedback fails even far below tau_DR",
+            "dt_over_tau": {"base": base_ratio, "small": small_ratio},
+        }
+    return {
+        "class": "FEEDBACK_DISCRIMINATOR_INCOMPLETE",
+        "reason": "base feedback failed before the smaller-dt branch was completed",
     }
