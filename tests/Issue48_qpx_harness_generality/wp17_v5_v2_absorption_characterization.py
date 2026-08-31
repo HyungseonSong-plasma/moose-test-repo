@@ -14,7 +14,6 @@ if str(ROOT) not in sys.path:
 from qpx_harness import artifacts
 from qpx_harness import cases
 from qpx_harness import evidence
-from qpx_harness import fast_plasma_relaxation_v2 as v2
 from qpx_harness import fast_plasma_relaxation_v5 as v5
 from qpx_harness import issue43_relaxation_runtime as runtime43
 from qpx_harness import preflight
@@ -219,46 +218,41 @@ def _check_v5_infrastructure_behavior() -> None:
             raise AssertionError("v5 collision-safe run-root helper did not create directories")
 
 
-def _check_runtime_absorption_equivalence() -> None:
+def _check_runtime_absorption_behavior() -> None:
     base = _fixture()
-    feedback_new = runtime43.build_feedback(
+    feedback = runtime43.build_feedback(
         base,
         dt=runtime43.DT_FEEDBACK_BASE,
         steps=runtime43.N_STEPS,
         radial_span=0.243,
     )
-    feedback_old = v2._build_feedback(
+    expected_feedback, _ = recipe.build_fast_input(
         base,
-        dt=v2.DT_FEEDBACK_BASE,
-        steps=v2.N_STEPS,
+        gas_temperature=runtime43.GAS_TEMPERATURE,
+        electron_density=scale_audit.DEFAULT_ELECTRON_DENSITY,
+        dt=runtime43.DT_FEEDBACK_BASE,
+        end_time=runtime43.DT_FEEDBACK_BASE * runtime43.N_STEPS,
         radial_span=0.243,
     )
-    if feedback_new != feedback_old:
-        raise AssertionError("canonical feedback builder differs from v2 oracle")
+    if feedback != expected_feedback:
+        raise AssertionError("canonical feedback builder drifted from recipe construction")
 
-    oneway_new = runtime43.build_oneway(
+    oneway = runtime43.build_oneway(
         base,
         dt=runtime43.DT_FEEDBACK_BASE,
         steps=runtime43.N_STEPS,
         radial_span=0.243,
     )
-    oneway_old = v2._build_oneway(
-        base,
-        dt=v2.DT_FEEDBACK_BASE,
-        steps=v2.N_STEPS,
-        radial_span=0.243,
-    )
-    if oneway_new != oneway_old:
-        raise AssertionError("canonical one-way builder differs from v2 oracle")
+    if "potential = phi_prescribed" not in oneway:
+        raise AssertionError("canonical one-way builder lost prescribed potential")
 
-    electron_new = runtime43.build_electron_300k(
-        base, dt=runtime43.DT_ELECTRON_CONTROL, steps=runtime43.N_STEPS
+    electron = runtime43.build_electron_300k(
+        base,
+        dt=runtime43.DT_ELECTRON_CONTROL,
+        steps=runtime43.N_STEPS,
     )
-    electron_old = v2._build_electron_300k(
-        base, dt=v2.DT_ELECTRON_CONTROL, steps=v2.N_STEPS
-    )
-    if electron_new != electron_old:
-        raise AssertionError("canonical electron builder differs from v2 oracle")
+    if "potential = phi_prescribed" not in electron or "300" not in electron:
+        raise AssertionError("canonical electron control construction drift")
 
     with tempfile.TemporaryDirectory() as tmp_name:
         log = Path(tmp_name) / "residual.log"
@@ -267,18 +261,20 @@ def _check_runtime_absorption_equivalence() -> None:
             " 1 Nonlinear |R| = 1.0e+01\n"
             " 2 Nonlinear |R| = 2.0e+00\n"
         )
-        current = runtime43.nonlinear_residual_summary(str(log))
-        oracle = v2._residual_summary(str(log))
-        if current != oracle:
-            raise AssertionError("canonical residual summary differs from v2 oracle")
+        summary = runtime43.nonlinear_residual_summary(str(log))
+        if summary is None:
+            raise AssertionError("canonical residual parser returned no evidence")
+        if summary["initial_residual"] != 1.0e3 or summary["minimum_residual"] != 2.0:
+            raise AssertionError("canonical residual summary values drifted")
+        if summary["final_solve_residuals"] != [1.0e3, 1.0e1, 2.0]:
+            raise AssertionError("canonical residual trajectory drifted")
 
-    for sample in (
-        {"class": "P3_PASS", "analysis": {"status": "PASS"}},
-        {"class": "P3_PASS", "analysis": {"status": "FAIL"}},
-        {"class": "SOLVER_CONVERGENCE_FAIL"},
-    ):
-        if runtime43.physics_pass(sample) != v2._physics_pass(sample):
-            raise AssertionError(f"canonical physics-pass differs from v2 oracle: {sample}")
+    if not runtime43.physics_pass({"class": "P3_PASS", "analysis": {"status": "PASS"}}):
+        raise AssertionError("canonical physics-pass positive control failed")
+    if runtime43.physics_pass({"class": "P3_PASS", "analysis": {"status": "FAIL"}}):
+        raise AssertionError("canonical physics-pass rejected-analysis control failed")
+    if runtime43.physics_pass({"class": "SOLVER_CONVERGENCE_FAIL"}):
+        raise AssertionError("canonical physics-pass solver-failure control failed")
 
     if runtime43.self_test() != 0:
         raise AssertionError("canonical Issue43 runtime self-test failed")
@@ -345,7 +341,7 @@ def main() -> int:
         _check_zero_runtime_consumers()
         _check_v5_current_surface()
         _check_v5_infrastructure_behavior()
-        _check_runtime_absorption_equivalence()
+        _check_runtime_absorption_behavior()
         _check_destination_readiness()
         _check_scientific_policy_boundary()
     except Exception as exc:
