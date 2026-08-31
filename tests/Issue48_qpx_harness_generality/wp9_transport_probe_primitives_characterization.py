@@ -2,6 +2,7 @@
 """P0 characterization for transport-probe C++ and PerfGraph primitives."""
 from __future__ import annotations
 
+import ast
 import json
 import sys
 import tempfile
@@ -249,6 +250,25 @@ def _check_perfgraph_contract() -> None:
         raise AssertionError("multiple-reporter negative control passed")
 
 
+def _imports_legacy_probe(path: Path) -> bool:
+    tree = ast.parse(path.read_text(), filename=str(path))
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom):
+            if node.module == "qpx_harness" and any(
+                alias.name == "performance_transport_probe" for alias in node.names
+            ):
+                return True
+            if node.module == "qpx_harness.performance_transport_probe":
+                return True
+        elif isinstance(node, ast.Import):
+            if any(
+                alias.name == "qpx_harness.performance_transport_probe"
+                for alias in node.names
+            ):
+                return True
+    return False
+
+
 def _check_boundary() -> None:
     source = Path(perfgraph.__file__).read_text()
     for forbidden in (
@@ -260,8 +280,7 @@ def _check_boundary() -> None:
         if forbidden in source:
             raise AssertionError(f"PerfGraph primitive leaked caller semantics: {forbidden}")
 
-    test_source = Path(__file__).read_text()
-    if "from qpx_harness import performance_transport_probe as" in test_source:
+    if _imports_legacy_probe(Path(__file__)):
         raise AssertionError("WP9 still imports the retired legacy oracle")
 
 
