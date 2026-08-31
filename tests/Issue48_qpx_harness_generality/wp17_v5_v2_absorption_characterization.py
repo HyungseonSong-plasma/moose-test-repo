@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sys
+import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -11,6 +12,7 @@ if str(ROOT) not in sys.path:
 
 from qpx_harness import artifacts
 from qpx_harness import cases
+from qpx_harness import evidence
 from qpx_harness import preflight
 from qpx_harness import runtime
 from qpx_harness import scale_audit
@@ -142,6 +144,7 @@ def _check_destination_readiness() -> None:
         (runtime, "resolve_executable"),
         (runtime, "validate_executable"),
         (artifacts, "write_json_bundle"),
+        (evidence, "create_collision_safe_directory"),
         (scale_audit, "mesh_stats"),
         (scale_audit, "anchor_scales"),
         (preflight, "validate_parser_symbols_text"),
@@ -150,6 +153,30 @@ def _check_destination_readiness() -> None:
     ):
         if not callable(getattr(owner, name, None)):
             raise AssertionError(f"canonical destination missing: {owner.__name__}.{name}")
+
+
+def _check_collision_safe_directory_primitive() -> None:
+    with tempfile.TemporaryDirectory() as tmp_name:
+        parent = Path(tmp_name) / "results"
+        stem = "issue43_probe_20260831T120000Z"
+        first = evidence.create_collision_safe_directory(parent, stem)
+        second = evidence.create_collision_safe_directory(parent, stem)
+        third = evidence.create_collision_safe_directory(parent, stem)
+        if [path.name for path in (first, second, third)] != [
+            stem,
+            f"{stem}_01",
+            f"{stem}_02",
+        ]:
+            raise AssertionError("collision-safe directory suffix contract drift")
+        if not all(path.is_dir() for path in (first, second, third)):
+            raise AssertionError("collision-safe directory primitive did not create directories")
+
+        try:
+            evidence.create_collision_safe_directory(parent, "../escape")
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("collision-safe directory primitive accepted path traversal")
 
 
 def _check_scientific_policy_boundary() -> None:
@@ -178,6 +205,7 @@ def main() -> int:
         _check_v5_current_surface()
         _check_v1_alias_is_already_retired()
         _check_destination_readiness()
+        _check_collision_safe_directory_primitive()
         _check_scientific_policy_boundary()
     except Exception as exc:
         print(f"ISSUE48_V5_V2_ABSORPTION_SELFTEST: FAIL ({exc})")
