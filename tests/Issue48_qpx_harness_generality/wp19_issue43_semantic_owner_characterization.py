@@ -23,7 +23,7 @@ EXPECTED_PRODUCTION_CONSUMERS = {
 EXPECTED_TEST_CONSUMERS = {
     "tests/Issue48_qpx_harness_generality/wp17_v5_v2_absorption_characterization.py",
 }
-REQUIRED_LEGACY_SURFACE = (
+REQUIRED_OWNER_SURFACE = (
     "def _build_feedback_v5(",
     "def _augment_execution_contract(",
     "def _classify_p2_failure(",
@@ -74,7 +74,7 @@ def _consumer_sets(module_name: str) -> tuple[set[str], set[str]]:
         if not base.exists():
             continue
         for path in base.rglob("*.py"):
-            if path == LEGACY:
+            if path in {LEGACY, SEMANTIC}:
                 continue
             try:
                 consumes = _imports_module(path, module_name)
@@ -87,31 +87,57 @@ def _consumer_sets(module_name: str) -> tuple[set[str], set[str]]:
     return production, tests
 
 
-def _check_pre_cutover_topology() -> None:
+def _check_dual_owner_topology() -> None:
     if not LEGACY.is_file():
-        raise AssertionError("legacy v5 owner missing before semantic-owner cutover")
-    if SEMANTIC.exists():
-        raise AssertionError("semantic Issue43 owner already exists before characterized cutover")
+        raise AssertionError("legacy v5 owner missing before consumer cutover")
+    if not SEMANTIC.is_file():
+        raise AssertionError("semantic Issue43 owner missing after dual-owner creation")
 
-    production, tests = _consumer_sets("qpx_harness.fast_plasma_relaxation_v5")
-    if production != EXPECTED_PRODUCTION_CONSUMERS:
+    legacy_production, legacy_tests = _consumer_sets(
+        "qpx_harness.fast_plasma_relaxation_v5"
+    )
+    if legacy_production != EXPECTED_PRODUCTION_CONSUMERS:
         raise AssertionError(
-            f"v5 production-consumer drift: observed={sorted(production)} expected={sorted(EXPECTED_PRODUCTION_CONSUMERS)}"
+            "v5 production-consumer drift: "
+            f"observed={sorted(legacy_production)} "
+            f"expected={sorted(EXPECTED_PRODUCTION_CONSUMERS)}"
         )
-    if tests != EXPECTED_TEST_CONSUMERS:
+    if legacy_tests != EXPECTED_TEST_CONSUMERS:
         raise AssertionError(
-            f"v5 test-consumer drift: observed={sorted(tests)} expected={sorted(EXPECTED_TEST_CONSUMERS)}"
+            "v5 test-consumer drift: "
+            f"observed={sorted(legacy_tests)} expected={sorted(EXPECTED_TEST_CONSUMERS)}"
+        )
+
+    semantic_production, semantic_tests = _consumer_sets(
+        "qpx_harness.issue43_fast_relaxation"
+    )
+    if semantic_production or semantic_tests:
+        raise AssertionError(
+            "semantic owner acquired consumers before characterized cutover: "
+            f"production={sorted(semantic_production)} tests={sorted(semantic_tests)}"
         )
 
 
-def _check_owner_surface() -> None:
-    source = LEGACY.read_text()
-    missing = [token for token in REQUIRED_LEGACY_SURFACE if token not in source]
-    if missing:
-        raise AssertionError(f"v5 required cutover surface drift: missing={missing}")
-    missing_arch = [token for token in REQUIRED_ARCHITECTURE_TOKENS if token not in source]
-    if missing_arch:
-        raise AssertionError(f"v5 architecture composition drift: missing={missing_arch}")
+def _check_owner_equivalence() -> None:
+    legacy_source = LEGACY.read_text()
+    semantic_source = SEMANTIC.read_text()
+    if semantic_source != legacy_source:
+        raise AssertionError("semantic owner is not byte-equivalent to legacy v5 owner")
+
+    for path, source in ((LEGACY, legacy_source), (SEMANTIC, semantic_source)):
+        missing = [token for token in REQUIRED_OWNER_SURFACE if token not in source]
+        if missing:
+            raise AssertionError(f"owner surface drift {path.name}: missing={missing}")
+        missing_arch = [
+            token for token in REQUIRED_ARCHITECTURE_TOKENS if token not in source
+        ]
+        if missing_arch:
+            raise AssertionError(
+                f"owner architecture composition drift {path.name}: missing={missing_arch}"
+            )
+
+    if _imports_module(SEMANTIC, "qpx_harness.fast_plasma_relaxation_v5"):
+        raise AssertionError("semantic owner reverse-imported legacy v5 owner")
 
 
 def _check_consumer_contracts() -> None:
@@ -135,16 +161,17 @@ def _check_consumer_contracts() -> None:
         if token not in diagnostic:
             raise AssertionError(f"coupling diagnostic v5 contract drift: {token}")
 
-    if "from qpx_harness.fast_plasma_relaxation_v5 import main as fast_relaxation_main, self_test as fast_relaxation_self_test" not in cli:
-        raise AssertionError("stable fast-relaxation CLI is not bound to the current v5 owner")
+    legacy_cli = (
+        "from qpx_harness.fast_plasma_relaxation_v5 import main as "
+        "fast_relaxation_main, self_test as fast_relaxation_self_test"
+    )
+    if legacy_cli not in cli:
+        raise AssertionError("stable fast-relaxation CLI moved before consumer cutover")
     if '"fast-relaxation":' not in cli:
         raise AssertionError("stable fast-relaxation command missing")
 
 
 def _negative_control() -> None:
-    # The future semantic owner must not be introduced as a wrapper that imports
-    # the versioned owner. That would preserve the migration chain instead of
-    # converging ownership.
     forbidden_wrapper = "from . import fast_plasma_relaxation_v5"
     synthetic = f'"""semantic owner"""\n{forbidden_wrapper}\n'
     if forbidden_wrapper not in synthetic:
@@ -153,8 +180,8 @@ def _negative_control() -> None:
 
 def main() -> int:
     try:
-        _check_pre_cutover_topology()
-        _check_owner_surface()
+        _check_dual_owner_topology()
+        _check_owner_equivalence()
         _check_consumer_contracts()
         _negative_control()
     except Exception as exc:
