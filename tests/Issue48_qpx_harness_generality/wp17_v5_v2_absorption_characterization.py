@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import inspect
+import json
 import sys
 import tempfile
 from pathlib import Path
@@ -18,6 +19,7 @@ from qpx_harness import preflight
 from qpx_harness import runtime
 from qpx_harness import scale_audit
 from qpx_harness import fast_plasma_relaxation_v2 as v2
+from qpx_harness import fast_plasma_relaxation_v5 as v5
 from recipes import issue43_fast_relaxation as recipe
 
 V5 = ROOT / "qpx_harness" / "fast_plasma_relaxation_v5.py"
@@ -43,18 +45,7 @@ V5_RETIRED_STALE_V1_TOKENS = (
     "v2.v1.FastPlasmaRelaxationError",
 )
 
-V5_STALE_V1_CUTOVER_TOKENS = (
-    "from recipes import issue43_fast_relaxation as relaxation_recipe",
-    "except v2.FastPlasmaRelaxationError as exc:",
-    "relaxation_recipe.find_relaxation_csv(case_dir)",
-    "base_case = repo_root / v2.BASE_CASE_RELATIVE",
-    "v2._stage_case(base_case, case_dir, input_text)",
-    "v2._validate_assets(case_dir)",
-    "root = v2._create_root(results_root)",
-    "known_good = v2._run_known_good(",
-)
-
-V5_GENERIC_INFRA_TOKENS = (
+V5_RETIRED_GENERIC_INFRA_TOKENS = (
     "v2.resolve_executable(",
     "v2.validate_executable(",
     "v2.mesh_stats(",
@@ -64,6 +55,33 @@ V5_GENERIC_INFRA_TOKENS = (
     "v2._stage_case(",
     "v2._validate_assets(",
     "v2._create_root(",
+)
+
+V5_DIRECT_INFRA_TOKENS = (
+    "from . import cases as case_ops",
+    "from . import preflight",
+    "from . import scale_audit",
+    "from .runtime import resolve_executable, run_qpx, validate_executable",
+    "artifacts.write_json_bundle(",
+    "evidence.create_collision_safe_directory(",
+    "case_ops.stage_case(",
+    "case_ops.validate_case_references(",
+    "scale_audit.mesh_stats(",
+    "scale_audit.anchor_scales(",
+    "preflight.validate_parser_symbols_text(",
+    "resolve_executable(",
+    "validate_executable(",
+)
+
+V5_STALE_V1_CUTOVER_TOKENS = (
+    "from recipes import issue43_fast_relaxation as relaxation_recipe",
+    "except v2.FastPlasmaRelaxationError as exc:",
+    "relaxation_recipe.find_relaxation_csv(case_dir)",
+    "base_case = repo_root / v2.BASE_CASE_RELATIVE",
+    "_stage_case(base_case, case_dir, input_text)",
+    "_validate_assets(case_dir)",
+    "root = _create_root(results_root)",
+    "known_good = v2._run_known_good(",
 )
 
 ISSUE43_POLICY_TOKENS = (
@@ -108,12 +126,15 @@ def _check_v5_current_surface() -> None:
     for token in V5_RETIRED_STALE_V1_TOKENS:
         if token in source:
             raise AssertionError(f"v5 stale-v1 surface returned: {token}")
+    for token in V5_RETIRED_GENERIC_INFRA_TOKENS:
+        if token in source:
+            raise AssertionError(f"v5 generic infrastructure reverted through v2: {token}")
+    for token in V5_DIRECT_INFRA_TOKENS:
+        if token not in source:
+            raise AssertionError(f"v5 direct generic infrastructure drift: {token}")
     for token in V5_STALE_V1_CUTOVER_TOKENS:
         if token not in source:
             raise AssertionError(f"v5 stale-v1 cutover drift: {token}")
-    for token in V5_GENERIC_INFRA_TOKENS:
-        if token not in source:
-            raise AssertionError(f"v5 generic-infra dependency drift: {token}")
     for token in (
         "def _install_v2_repairs(",
         "def _install_v5_repairs(",
@@ -122,6 +143,57 @@ def _check_v5_current_surface() -> None:
     ):
         if token not in source:
             raise AssertionError(f"v5 monkey-patch compatibility surface drift: {token}")
+
+
+def _check_v5_infrastructure_behavior() -> None:
+    with tempfile.TemporaryDirectory() as tmp_name:
+        root = Path(tmp_name)
+        source = root / "source"
+        source.mkdir()
+        (source / "asset.dat").write_text("asset\n")
+        (source / "input.i").write_text("table_file = asset.dat\n")
+        (source / "input_out.csv").write_text("stale\n")
+        (source / ".jitcache").mkdir()
+        (source / ".jitcache" / "jit.o").write_text("stale\n")
+
+        target = root / "target"
+        v5._stage_case(source, target, "table_file = asset.dat\n")
+        if (target / "input_out.csv").exists() or (target / ".jitcache").exists():
+            raise AssertionError("v5 canonical staging retained stale runtime artifacts")
+        expected_asset = str((target / "asset.dat").resolve())
+        if v5._validate_assets(target) != [expected_asset]:
+            raise AssertionError("v5 canonical asset validation changed path schema")
+
+        (target / "asset.dat").unlink()
+        try:
+            v5._validate_assets(target)
+        except recipe.Issue43FastRelaxationError:
+            pass
+        else:
+            raise AssertionError("v5 canonical asset validation accepted a missing asset")
+
+        summary_path = root / "summary.json"
+        payload = {"z": 1, "a": [2, 3]}
+        v5._write_json(summary_path, payload)
+        if json.loads(summary_path.read_text()) != payload:
+            raise AssertionError("v5 canonical JSON writer changed payload semantics")
+        if summary_path.read_text().find('"a"') > summary_path.read_text().find('"z"'):
+            raise AssertionError("v5 canonical JSON writer lost deterministic key ordering")
+
+        original_timestamp = evidence.utc_timestamp
+        evidence.utc_timestamp = lambda: "20260831T140000Z"
+        try:
+            results = root / "results"
+            first = v5._create_root(results)
+            second = v5._create_root(results)
+        finally:
+            evidence.utc_timestamp = original_timestamp
+
+        stem = "fast_plasma_discriminator_v2_Issue43_20260831T140000Z"
+        if [first.name, second.name] != [stem, f"{stem}_01"]:
+            raise AssertionError("v5 collision-safe run-root contract drift")
+        if not first.is_dir() or not second.is_dir():
+            raise AssertionError("v5 collision-safe run-root helper did not create directories")
 
 
 def _check_v1_alias_is_already_retired() -> None:
@@ -216,6 +288,7 @@ def main() -> int:
     try:
         _check_sole_runtime_consumer()
         _check_v5_current_surface()
+        _check_v5_infrastructure_behavior()
         _check_v1_alias_is_already_retired()
         _check_destination_readiness()
         _check_collision_safe_directory_primitive()
