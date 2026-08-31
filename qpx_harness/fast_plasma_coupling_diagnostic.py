@@ -13,19 +13,23 @@ from __future__ import annotations
 import argparse
 import math
 import re
+import tempfile
 from pathlib import Path
 from typing import Any
 
+from . import artifacts
+from . import cases as case_ops
 from . import evidence
 from . import execution_contract as ec
-from . import fast_plasma_relaxation_v2 as v2
 from . import fast_plasma_relaxation_v5 as v5
 from . import output_observation_contract as ooc
 from .moose_input import MooseInput, MooseInputError
 from .preflight import validate_parser_symbols_text
-from .runtime import run_qpx
+from .runtime import resolve_executable, run_qpx, validate_executable
+from .scale_audit import mesh_stats
 
 
+BASE_CASE_RELATIVE = Path("tests/Issue2_electron_bulk_drift/qvt_prepoisson")
 DT_CONTROL = 1.0e-14
 DT_FAIL = 1.0e-13
 STEPS = 1
@@ -37,10 +41,40 @@ DIAGNOSTIC_PETSC_OPTIONS = (
     "-ksp_monitor",
 )
 JACOBIAN_PETSC_OPTIONS = ("-snes_test_jacobian",)
+_RUNTIME_PURGE_DIRECTORY_NAMES = (".jitcache",)
+_RUNTIME_PURGE_PATTERNS = (
+    "input_out*",
+    "r43_csv*",
+    "perfgraph*",
+    "petsc_log*",
+    "metrics*",
+)
 
 
 class FastPlasmaCouplingDiagnosticError(RuntimeError):
     pass
+
+
+def _stage_case(source: Path, target: Path, input_text: str) -> list[str]:
+    try:
+        case_ops.stage_case(
+            source,
+            target,
+            input_text=input_text,
+            purge_directory_names=_RUNTIME_PURGE_DIRECTORY_NAMES,
+            purge_patterns=_RUNTIME_PURGE_PATTERNS,
+        )
+        refs = case_ops.validate_case_references(target)
+    except case_ops.CaseError as exc:
+        raise FastPlasmaCouplingDiagnosticError(f"case staging failed: {exc}") from exc
+    return [ref["resolved"] for ref in refs]
+
+
+def _write_summary(path: Path, payload: dict[str, Any]) -> None:
+    artifacts.write_json_bundle(
+        path.parent,
+        {"summary": (path.name, payload)},
+    )
 
 
 def _parameter_match(text: str, path: str, name: str) -> tuple[Any, str, list[re.Match[str]]]:
@@ -621,6 +655,29 @@ Nonlinear solve did not converge due to DIVERGED_LINE_SEARCH iterations 1
             raise AssertionError("Jacobian mismatch negative control did not fail")
         if analyze_jacobian_text("no jacobian report\n")["class"] != "JACOBIAN_EVIDENCE_INSUFFICIENT":
             raise AssertionError("missing Jacobian evidence was over-classified")
+
+        with tempfile.TemporaryDirectory() as tmp_name:
+            root = Path(tmp_name)
+            source = root / "source"
+            source.mkdir()
+            (source / "input.i").write_text("table_file = asset.dat\n")
+            (source / "asset.dat").write_text("asset\n")
+            (source / "input_out.csv").write_text("stale\n")
+            (source / ".jitcache").mkdir()
+            target = root / "target"
+            refs = _stage_case(source, target, "table_file = asset.dat\n")
+            expected_asset = str((target / "asset.dat").resolve())
+            if refs != [expected_asset]:
+                raise AssertionError("canonical case-reference path schema changed")
+            if (target / "input_out.csv").exists() or (target / ".jitcache").exists():
+                raise AssertionError("canonical case staging retained stale runtime artifacts")
+            (target / "asset.dat").unlink()
+            try:
+                case_ops.validate_case_references(target)
+            except case_ops.CaseError:
+                pass
+            else:
+                raise AssertionError("missing staged asset negative control was accepted")
     except Exception as exc:
         print(f"ISSUE43_COUPLING_DIAGNOSTIC_SELFTEST: FAIL ({exc})")
         return 1
@@ -632,13 +689,13 @@ def _prepare_cases(
     *, exe: Path, results_root: str | None, jacobian_test: bool = False
 ) -> dict[str, Any]:
     repo_root = Path(__file__).resolve().parents[1]
-    base_case = repo_root / v2.v1.BASE_CASE_RELATIVE
+    base_case = repo_root / BASE_CASE_RELATIVE
     if not base_case.is_dir():
         raise FastPlasmaCouplingDiagnosticError(
             f"missing accepted qvt electron control: {base_case}"
         )
 
-    mesh = v2.mesh_stats(base_case / "qvt.msh")
+    mesh = mesh_stats(base_case / "qvt.msh")
     radial_span = float(mesh["bbox_span_m"]["x"])
     base_text = (base_case / "input.i").read_text()
     variants = {
@@ -676,8 +733,7 @@ def _prepare_cases(
     cases: dict[str, Any] = {}
     for label, (text, meta) in variants.items():
         case_dir = cases_root / label
-        v2.v1._copy_case(base_case, case_dir, text)
-        v2.v1._validate_assets(case_dir)
+        _stage_case(base_case, case_dir, text)
         cases[label] = {
             "case_dir": case_dir,
             "input_path": case_dir / "input.i",
@@ -745,8 +801,8 @@ def _emit_preflight_markers(
 
 
 def _preflight_result(*, qpx: str | None, results_root: str | None, jacobian_test: bool) -> tuple[Path, dict[str, Any], dict[str, Any], str]:
-    exe = v2.resolve_executable(qpx)
-    v2.validate_executable(exe)
+    exe = resolve_executable(qpx)
+    validate_executable(exe)
     prepared = _prepare_cases(exe=exe, results_root=results_root, jacobian_test=jacobian_test)
     p2 = _run_p2(exe=exe, prepared=prepared) if prepared["p1_status"] == "PASS" else {}
     p2_pass = bool(p2) and all(item["returncode"] == 0 for item in p2.values())
@@ -767,7 +823,7 @@ def run_preflight(
         if jacobian_test
         else "construction and observability readiness for the dt=1e-14 control vs dt=1e-13 failing coupling discriminator"
     )
-    v2._write_json(
+    _write_summary(
         summary_path,
         {
             "issue": 43,
@@ -826,7 +882,7 @@ def run_runtime(*, qpx: str | None, results_root: str | None) -> int:
     )
     if status != "PASS":
         summary_path = prepared["root"] / "summary.json"
-        v2._write_json(
+        _write_summary(
             summary_path,
             {
                 "issue": 43,
@@ -877,7 +933,7 @@ def run_runtime(*, qpx: str | None, results_root: str | None) -> int:
         }
 
     summary_path = prepared["root"] / "summary.json"
-    v2._write_json(
+    _write_summary(
         summary_path,
         {
             "issue": 43,
@@ -916,7 +972,7 @@ def run_jacobian_runtime(*, qpx: str | None, results_root: str | None) -> int:
     prefix = "ISSUE43_JACOBIAN_DIAGNOSTIC"
     if status != "PASS":
         summary_path = prepared["root"] / "summary.json"
-        v2._write_json(
+        _write_summary(
             summary_path,
             {
                 "issue": 43,
@@ -989,7 +1045,7 @@ def run_jacobian_runtime(*, qpx: str | None, results_root: str | None) -> int:
         }
 
     summary_path = prepared["root"] / "summary.json"
-    v2._write_json(
+    _write_summary(
         summary_path,
         {
             "issue": 43,
