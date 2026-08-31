@@ -12,13 +12,14 @@ import csv
 import json
 import math
 import re
-import shutil
 import subprocess
 import sys
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from . import cases as case_ops
 from .moose_input import MooseInput, MooseInputError, self_test as moose_input_self_test
 from .preflight import validate_parser_symbols_text
 from .runtime import resolve_executable, run_qpx, validate_executable
@@ -48,6 +49,15 @@ FAST_SEPARATION = 100.0
 SUBCYCLE_SEPARATION = 10.0
 E_CHARGE = 1.602176634e-19
 EPS0 = 8.8541878128e-12
+
+_RUNTIME_PURGE_DIRECTORY_NAMES = (".jitcache",)
+_RUNTIME_PURGE_PATTERNS = (
+    "input_out*",
+    "r43_csv*",
+    "perfgraph*",
+    "petsc_log*",
+    "metrics*",
+)
 
 REQUIRED_COLUMNS = (
     "time",
@@ -98,15 +108,14 @@ def _create_root(results_root: Path) -> Path:
 
 
 def _purge_runtime_artifacts(root: Path) -> None:
-    for path in root.rglob(".jitcache"):
-        if path.is_dir():
-            shutil.rmtree(path)
-    for pattern in ("input_out*", "r43_csv*", "perfgraph*", "petsc_log*", "metrics*"):
-        for path in root.rglob(pattern):
-            if path.is_file():
-                path.unlink()
-            elif path.is_dir():
-                shutil.rmtree(path)
+    try:
+        case_ops.purge_generated_artifacts(
+            root,
+            directory_names=_RUNTIME_PURGE_DIRECTORY_NAMES,
+            patterns=_RUNTIME_PURGE_PATTERNS,
+        )
+    except case_ops.CaseError as exc:
+        raise FastPlasmaRelaxationError(f"runtime artifact purge failed: {exc}") from exc
 
 
 def _insert_top_level_before(text: str, marker: str, block: str) -> str:
@@ -351,10 +360,16 @@ def build_fast_input(
 
 
 def _copy_case(source: Path, target: Path, input_text: str | None = None) -> None:
-    shutil.copytree(source, target)
-    _purge_runtime_artifacts(target)
-    if input_text is not None:
-        (target / "input.i").write_text(input_text)
+    try:
+        case_ops.stage_case(
+            source,
+            target,
+            input_text=input_text,
+            purge_directory_names=_RUNTIME_PURGE_DIRECTORY_NAMES,
+            purge_patterns=_RUNTIME_PURGE_PATTERNS,
+        )
+    except case_ops.CaseError as exc:
+        raise FastPlasmaRelaxationError(f"case staging failed: {exc}") from exc
 
 
 def _find_csv(case_dir: Path) -> Path:
@@ -498,15 +513,11 @@ def _failure_signature(log: Path) -> str | None:
 
 
 def _validate_assets(case_dir: Path) -> list[str]:
-    text = (case_dir / "input.i").read_text()
-    refs: list[str] = []
-    for raw in re.findall(r"(?m)^\s*(?:file|[A-Za-z_][A-Za-z0-9_]*_file)\s*=\s*['\"]?([^\s'\"]+)", text):
-        path = Path(raw)
-        resolved = path if path.is_absolute() else case_dir / path
-        if not resolved.is_file():
-            raise FastPlasmaRelaxationError(f"missing referenced file: {resolved}")
-        refs.append(str(resolved.resolve()))
-    return refs
+    try:
+        refs = case_ops.validate_case_references(case_dir)
+    except case_ops.CaseError as exc:
+        raise FastPlasmaRelaxationError(f"asset validation failed: {exc}") from exc
+    return [ref["resolved"] for ref in refs]
 
 
 def _run_qpx_case(
@@ -818,6 +829,32 @@ def self_test() -> int:
         bad[-1]["inventory"] *= 1.01
         if analyze_relaxation(bad, electron_density=1.0e16)["status"] != "FAIL":
             raise AssertionError("inventory mutation was not rejected")
+
+        with tempfile.TemporaryDirectory() as tmp_name:
+            root = Path(tmp_name)
+            source = root / "source"
+            source.mkdir()
+            (source / "asset.dat").write_text("asset\n")
+            (source / "input.i").write_text("table_file = asset.dat\n")
+            (source / "input_out.csv").write_text("stale\n")
+            (source / ".jitcache").mkdir()
+            (source / ".jitcache" / "jit.o").write_text("stale\n")
+
+            target = root / "target"
+            _copy_case(source, target, "table_file = asset.dat\n")
+            if (target / "input_out.csv").exists() or (target / ".jitcache").exists():
+                raise AssertionError("v1 staging wrapper retained stale runtime artifacts")
+            expected_asset = str((target / "asset.dat").resolve())
+            if _validate_assets(target) != [expected_asset]:
+                raise AssertionError("v1 asset-validation wrapper changed resolved-path schema")
+
+            (target / "asset.dat").unlink()
+            try:
+                _validate_assets(target)
+            except FastPlasmaRelaxationError:
+                pass
+            else:
+                raise AssertionError("v1 asset-validation wrapper accepted a missing asset")
     except Exception as exc:
         print(f"ISSUE43_FAST_RELAXATION_SELFTEST: FAIL ({exc})")
         return 1
