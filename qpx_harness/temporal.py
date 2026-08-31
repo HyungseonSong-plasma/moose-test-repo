@@ -1,4 +1,4 @@
-"""Temporal CSV normalization for QPX/MOOSE validation."""
+"""Temporal CSV normalization and read-only trajectory observation for QPX/MOOSE validation."""
 
 from __future__ import annotations
 
@@ -26,6 +26,103 @@ def _as_float(value: str, *, field: str, row_number: int) -> float:
             f"row {row_number}: temporal field {field!r} is not finite: {value!r}"
         )
     return out
+
+
+def find_temporal_csv(
+    case_dir: Path,
+    *,
+    preferred_name: str = "input_out.csv",
+    time_column: str = "time",
+) -> Path | None:
+    """Find the first readable CSV containing ``time_column`` without mutating it."""
+    case_dir = Path(case_dir)
+    preferred = case_dir / preferred_name
+    candidates = [preferred] if preferred.is_file() else []
+    candidates.extend(
+        path for path in sorted(case_dir.glob("*.csv")) if path != preferred
+    )
+    for path in candidates:
+        try:
+            with path.open(newline="") as handle:
+                reader = csv.DictReader(handle)
+                if time_column in (reader.fieldnames or []):
+                    return path
+        except (OSError, csv.Error):
+            continue
+    return None
+
+
+def observe_temporal_csv(
+    source: Path,
+    *,
+    time_column: str = "time",
+    physical_time_floor: float = 0.0,
+) -> dict[str, object]:
+    """Observe positive-time trajectory facts from one temporal CSV.
+
+    Malformed individual time values are ignored so this function reports the
+    mechanically observable trajectory without assigning a validation decision.
+    The source file is never modified.
+    """
+    source = Path(source)
+    times: list[float] = []
+    try:
+        with source.open(newline="") as handle:
+            for row in csv.DictReader(handle):
+                try:
+                    value = float(row[time_column])
+                except (KeyError, TypeError, ValueError):
+                    continue
+                if math.isfinite(value) and value > physical_time_floor:
+                    times.append(value)
+    except (OSError, csv.Error):
+        return {"physical_rows": 0, "csv_status": "UNREADABLE_TIME_CSV"}
+
+    observation: dict[str, object] = {
+        "physical_rows": len(times),
+        "csv": str(source),
+        "csv_status": "PASS",
+    }
+    if not times:
+        return observation
+
+    times.sort()
+    dts = [times[0]] + [b - a for a, b in zip(times, times[1:])]
+    finite_positive_dts = [
+        value for value in dts if math.isfinite(value) and value > 0.0
+    ]
+    observation["first_time"] = times[0]
+    observation["final_time"] = times[-1]
+    if finite_positive_dts:
+        observation["actual_dt_min"] = min(finite_positive_dts)
+        observation["actual_dt_max"] = max(finite_positive_dts)
+    return observation
+
+
+def observe_case_trajectory(
+    case_dir: Path,
+    *,
+    preferred_name: str = "input_out.csv",
+    time_column: str = "time",
+    physical_time_floor: float = 0.0,
+) -> dict[str, object]:
+    """Find and observe one temporal CSV in ``case_dir``.
+
+    The returned status vocabulary is mechanical and intentionally contains no
+    experiment, issue, or physics classification.
+    """
+    source = find_temporal_csv(
+        case_dir,
+        preferred_name=preferred_name,
+        time_column=time_column,
+    )
+    if source is None:
+        return {"physical_rows": 0, "csv_status": "MISSING_TIME_CSV"}
+    return observe_temporal_csv(
+        source,
+        time_column=time_column,
+        physical_time_floor=physical_time_floor,
+    )
 
 
 def normalize_temporal_csv(
@@ -167,6 +264,51 @@ def self_test() -> int:
         except ValueError:
             c4 = True
 
-    ok = c1 and c2 and c3 and c4
+        case_dir = tmp / "case"
+        case_dir.mkdir()
+        alternate = case_dir / "alternate.csv"
+        alternate.write_text("time,value\n0,0\n0.1,1\n0.2,1\n")
+        preferred = case_dir / "input_out.csv"
+        preferred.write_text(
+            "time,value\n"
+            "0,0\n"
+            "0.1,1\n"
+            "bad,ignored\n"
+            "0.2,1\n"
+            "0.4,1\n"
+        )
+        found = find_temporal_csv(case_dir)
+        observed = observe_case_trajectory(case_dir)
+        c5 = found == preferred
+        c6 = (
+            observed.get("physical_rows") == 3
+            and observed.get("csv") == str(preferred)
+            and observed.get("csv_status") == "PASS"
+            and observed.get("first_time") == 0.1
+            and observed.get("final_time") == 0.4
+            and observed.get("actual_dt_min") == 0.1
+            and observed.get("actual_dt_max") == 0.2
+        )
+
+        missing_dir = tmp / "missing"
+        missing_dir.mkdir()
+        c7 = observe_case_trajectory(missing_dir) == {
+            "physical_rows": 0,
+            "csv_status": "MISSING_TIME_CSV",
+        }
+
+        no_time = missing_dir / "other.csv"
+        no_time.write_text("value\n1\n")
+        c8 = find_temporal_csv(missing_dir) is None
+
+        initial_only = missing_dir / "input_out.csv"
+        initial_only.write_text("time,value\n0,0\n")
+        c9 = observe_case_trajectory(missing_dir) == {
+            "physical_rows": 0,
+            "csv": str(initial_only),
+            "csv_status": "PASS",
+        }
+
+    ok = c1 and c2 and c3 and c4 and c5 and c6 and c7 and c8 and c9
     print("TEMPORAL_CSV_SELFTEST:", "PASS" if ok else "FAIL")
     return 0 if ok else 1
