@@ -29,7 +29,7 @@ from typing import Any, Iterable
 
 from . import coupling_evr1 as evr1
 from .coupling_evr1_safe import physics_csv as safe_physics_csv
-from .dmix_equivalence_structured import legacy_source_transform
+from .dmix_equivalence import legacy_source_transform
 from .moose_input import MooseInput, MooseInputError, self_test as moose_input_self_test
 from .performance_core import PerformanceContractError, run_measurement
 from .performance_smoke import build_smoke_manifest, default_results_root
