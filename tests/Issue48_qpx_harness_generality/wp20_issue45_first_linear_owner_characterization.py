@@ -15,6 +15,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from qpx_harness import electron_inventory_nullspace as inv
+from qpx_harness.petsc import options as po
 from recipes import issue45_first_linear as recipe
 
 LEGACY = ROOT / "qpx_harness" / "petsc_first_linear_diagnostic.py"
@@ -48,6 +49,18 @@ RUNTIME_ORCHESTRATION_SURFACE = (
 RECIPE_POLICY_SURFACE = (
     "def instrument_first_linear(",
     "def analyze_first_linear_text(",
+)
+ISSUE46_LEGACY_DEPENDENCIES = (
+    "first_linear.JACOBIAN_REL_TOL",
+    "first_linear.instrument_first_linear(",
+    "first_linear._petsc_options(",
+)
+ISSUE46_FORBIDDEN_RUNTIME_DEPENDENCIES = (
+    "first_linear.analyze_first_linear_text(",
+    "first_linear.run_preflight(",
+    "first_linear.run_diagnostic(",
+    "first_linear.main(",
+    "first_linear.self_test(",
 )
 
 
@@ -157,6 +170,13 @@ def _check_policy_equivalence() -> None:
     _assert_equivalent("construction-text", new_text, old_text)
     _assert_equivalent("construction-meta", new_meta, old_meta)
 
+    for label, text in (("base", base), ("instrumented", old_text)):
+        _assert_equivalent(
+            f"petsc-flags:{label}",
+            po.get_flags(text),
+            legacy._petsc_options(text),
+        )
+
     cases = {
         "positive": legacy._synthetic_log(),
         "jacobian-mismatch": legacy._synthetic_log(1.0e-3),
@@ -192,6 +212,7 @@ def _check_policy_equivalence() -> None:
 def _check_owner_boundary() -> None:
     source = LEGACY.read_text()
     recipe_source = Path(recipe.__file__).read_text()
+    options_source = Path(po.__file__).read_text()
 
     for token in RUNTIME_ORCHESTRATION_SURFACE:
         if token not in source:
@@ -199,9 +220,13 @@ def _check_owner_boundary() -> None:
     for token in RECIPE_POLICY_SURFACE:
         if token not in recipe_source:
             raise AssertionError(f"recipe policy surface missing: {token}")
+    if "def get_flags(" not in options_source:
+        raise AssertionError("generic PETSc flag reader missing from canonical primitive owner")
 
     if "petsc_first_linear_diagnostic" in recipe_source:
         raise AssertionError("Issue45 recipe reverse-depends on legacy first-linear owner")
+    if "petsc_first_linear_diagnostic" in options_source:
+        raise AssertionError("generic PETSc option primitive reverse-depends on legacy owner")
     for token in (
         "def _prepare_case(",
         "def _run_p2(",
@@ -221,21 +246,28 @@ def _check_production_contracts() -> None:
     for path, source in ((AUGMENTED, augmented), (FD_AUDIT, fd_audit)):
         if "from . import petsc_first_linear_diagnostic as first_linear" not in source:
             raise AssertionError(f"unexpected first-linear import shape: {path}")
-        if "first_linear.JACOBIAN_REL_TOL" not in source:
-            raise AssertionError(f"Issue46 consumer lost shared Jacobian tolerance: {path}")
-        forbidden = (
-            "first_linear.instrument_first_linear(",
-            "first_linear.analyze_first_linear_text(",
-            "first_linear.run_preflight(",
-            "first_linear.run_diagnostic(",
-            "first_linear.main(",
-            "first_linear.self_test(",
-        )
-        leaked = [token for token in forbidden if token in source]
-        if leaked:
+        missing = [token for token in ISSUE46_LEGACY_DEPENDENCIES if token not in source]
+        if missing:
             raise AssertionError(
-                f"Issue46 consumer unexpectedly depends on legacy runtime/policy: {path}: {leaked}"
+                f"Issue46 legacy dependency surface drift: {path}: missing={missing}"
             )
+        leaked_runtime = [
+            token for token in ISSUE46_FORBIDDEN_RUNTIME_DEPENDENCIES if token in source
+        ]
+        if leaked_runtime:
+            raise AssertionError(
+                f"Issue46 consumer depends on first-linear runtime orchestration: "
+                f"{path}: {leaked_runtime}"
+            )
+
+    # Every current Issue46 dependency has a pre-existing canonical destination.
+    legacy = _legacy()
+    if recipe.JACOBIAN_REL_TOL != legacy.JACOBIAN_REL_TOL:
+        raise AssertionError("canonical recipe Jacobian tolerance drifted from legacy owner")
+    if not callable(recipe.instrument_first_linear):
+        raise AssertionError("canonical recipe first-linear instrumentation is unavailable")
+    if not callable(po.get_flags):
+        raise AssertionError("canonical generic PETSc flag reader is unavailable")
 
     cli_import = (
         "from qpx_harness.petsc_first_linear_diagnostic import main as "
@@ -263,7 +295,7 @@ def main() -> int:
         _check_consumer_topology()
         print("ISSUE48_WP20_FIRST_LINEAR_OWNER_CHECK: consumer-topology=PASS")
         _check_policy_equivalence()
-        print("ISSUE48_WP20_FIRST_LINEAR_OWNER_CHECK: recipe-policy-equivalence=PASS")
+        print("ISSUE48_WP20_FIRST_LINEAR_OWNER_CHECK: canonical-destination-equivalence=PASS")
         _check_owner_boundary()
         print("ISSUE48_WP20_FIRST_LINEAR_OWNER_CHECK: runtime-policy-boundary=PASS")
         _check_production_contracts()
