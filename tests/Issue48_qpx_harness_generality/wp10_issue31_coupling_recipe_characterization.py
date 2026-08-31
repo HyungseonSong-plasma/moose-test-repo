@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""P0 characterization for the Issue31 coupling recipe extraction/cutover."""
+"""P0 characterization for canonical Issue31 coupling recipe semantics."""
 from __future__ import annotations
 
 import ast
@@ -13,7 +13,6 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from recipes import issue31_coupling as recipe
-from qpx_harness import coupling_evr1_safe as safe
 from qpx_harness import coupling_evr2_timestep as evr2
 
 
@@ -142,12 +141,27 @@ def _write_csv(path: Path, rows: list[dict[str, str]]) -> None:
         writer.writerows(rows)
 
 
+def _imports_module(path: Path, module: str) -> bool:
+    tree = ast.parse(path.read_text(), filename=str(path))
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            if any(alias.name == module for alias in node.names):
+                return True
+        elif isinstance(node, ast.ImportFrom):
+            base = node.module or ""
+            if base == module:
+                return True
+            if base == "qpx_harness" and module.startswith("qpx_harness."):
+                leaf = module.split(".", 1)[1]
+                if any(alias.name == leaf for alias in node.names):
+                    return True
+    return False
+
+
 def _check_constants() -> None:
     for name, expected in EXPECTED_CONSTANTS.items():
         if getattr(recipe, name) != expected:
-            raise AssertionError(
-                f"Issue31 recipe constant drift: {name}={getattr(recipe, name)!r}"
-            )
+            raise AssertionError(f"Issue31 recipe constant drift: {name}")
 
 
 def _check_transport_transform() -> None:
@@ -183,58 +197,39 @@ def _check_csv_selection() -> None:
         root = Path(tmp_name)
         _write_csv(root / "input_out_r29_csv.csv", [row0, row1])
         _write_csv(root / "input_out.csv", [row0, row1])
-        recipe_path, recipe_row = recipe.physics_csv(root, monolithic=True)
-        safe_path, safe_row = safe.physics_csv(root, monolithic=True)
-        if recipe_path.name != "input_out.csv" or recipe_row != row1:
+        path, row = recipe.physics_csv(root, monolithic=True)
+        if path.name != "input_out.csv" or row != row1:
             raise AssertionError("canonical solved-time CSV selection contract drift")
-        if safe_path != recipe_path or safe_row != recipe_row:
-            raise AssertionError("safe adapter CSV-selection contract drift")
 
     with tempfile.TemporaryDirectory() as tmp_name:
         root = Path(tmp_name)
         _write_csv(root / "named_only.csv", [row1])
-        recipe_path, recipe_row = recipe.physics_csv(root, monolithic=True)
-        safe_path, safe_row = safe.physics_csv(root, monolithic=True)
-        if recipe_path.name != "named_only.csv" or recipe_row != row1:
+        path, row = recipe.physics_csv(root, monolithic=True)
+        if path.name != "named_only.csv" or row != row1:
             raise AssertionError("named-only deterministic CSV fallback drift")
-        if safe_path != recipe_path or safe_row != recipe_row:
-            raise AssertionError("safe adapter named-only fallback drift")
 
     with tempfile.TemporaryDirectory() as tmp_name:
-        root = Path(tmp_name)
         try:
-            recipe.physics_csv(root, monolithic=False)
+            recipe.physics_csv(Path(tmp_name), monolithic=False)
         except recipe.Issue31CouplingError:
             pass
         else:
-            raise AssertionError("missing-CSV recipe negative control passed")
-
-        try:
-            safe.physics_csv(root, monolithic=False)
-        except safe.CouplingEVR1Error:
-            pass
-        else:
-            raise AssertionError("safe adapter error translation drift")
+            raise AssertionError("missing-CSV negative control passed")
 
 
 def _expected_physics(path: Path, *, monolithic: bool) -> dict:
-    checks = {
-        "electron_nonnegative": True,
-        "constrained_sum_unity": True,
-    }
+    checks = {"electron_nonnegative": True, "constrained_sum_unity": True}
     species = {}
     for name in EXPECTED_CONSTANTS["SPECIES"]:
         species[name] = {"min": 0.01, "max": 0.2}
         checks[f"{name}_bounds"] = True
     checks["charge_finite_ordered"] = True
     checks["charge_integral_identity"] = True
-
     potential = None
     if monolithic:
         potential = {"min": -2.0, "max": 3.0, "integral": 0.5}
         checks["potential_ordered"] = True
         checks["potential_nontrivial"] = True
-
     return {
         "status": "PASS",
         "csv": str(path),
@@ -262,12 +257,8 @@ def _check_physics_contract() -> None:
         _write_csv(path, [row])
         for monolithic in (False, True):
             actual = recipe.physics_check(root, monolithic=monolithic)
-            expected = _expected_physics(path, monolithic=monolithic)
-            if actual != expected:
-                raise AssertionError(
-                    f"Issue31 physics contract drift monolithic={monolithic}: {actual}"
-                )
-
+            if actual != _expected_physics(path, monolithic=monolithic):
+                raise AssertionError(f"Issue31 physics contract drift monolithic={monolithic}")
         broken = dict(row)
         broken["r29_sum_w_max"] = "1.1"
         _write_csv(path, [broken])
@@ -276,57 +267,23 @@ def _check_physics_contract() -> None:
             raise AssertionError("physics negative control passed")
 
 
-def _imports_module(path: Path, module: str) -> bool:
-    tree = ast.parse(path.read_text(), filename=str(path))
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Import):
-            if any(alias.name == module for alias in node.names):
-                return True
-        elif isinstance(node, ast.ImportFrom):
-            base = node.module or ""
-            if base == module:
-                return True
-            if base == "qpx_harness" and module.startswith("qpx_harness."):
-                leaf = module.split(".", 1)[1]
-                if any(alias.name == leaf for alias in node.names):
-                    return True
-    return False
-
-
-def _check_safe_scoped_patch() -> None:
-    base = safe.base
-    original_main = base.main
-    original_csv = base._physics_csv
-    observed: dict[str, bool] = {}
-
-    def fake_main(args) -> int:
-        observed["active"] = base._physics_csv is safe.physics_csv
-        return 7
-
-    base.main = fake_main
-    try:
-        rc = safe.main([])
-    finally:
-        base.main = original_main
-
-    if rc != 7 or not observed.get("active"):
-        raise AssertionError("safe adapter did not scope recipe-backed CSV selection")
-    if base._physics_csv is not original_csv:
-        raise AssertionError("safe adapter did not restore EVR1 CSV selector")
-
-
 def _check_production_cutover() -> None:
     this_path = Path(__file__)
-    if _imports_module(this_path, "qpx_harness.coupling_evr1"):
-        raise AssertionError("WP10 retained direct coupling_evr1 oracle import")
+    for historical in (
+        "qpx_harness.coupling_evr1",
+        "qpx_harness.coupling_evr1_safe",
+    ):
+        if _imports_module(this_path, historical):
+            raise AssertionError(f"WP10 retained historical oracle import: {historical}")
 
     evr2_path = Path(evr2.__file__)
-    if _imports_module(evr2_path, "qpx_harness.coupling_evr1"):
-        raise AssertionError("EVR2 still imports coupling_evr1")
-    if _imports_module(evr2_path, "qpx_harness.coupling_evr1_safe"):
-        raise AssertionError("EVR2 still imports coupling_evr1_safe")
-
-    evr2_source = evr2_path.read_text()
+    for historical in (
+        "qpx_harness.coupling_evr1",
+        "qpx_harness.coupling_evr1_safe",
+    ):
+        if _imports_module(evr2_path, historical):
+            raise AssertionError(f"EVR2 retained historical dependency: {historical}")
+    source = evr2_path.read_text()
     for required in (
         "from recipes import issue31_coupling as recipe",
         "validate_referenced_files",
@@ -334,23 +291,8 @@ def _check_production_cutover() -> None:
         "recipe.physics_check",
         "recipe.SPECIES",
     ):
-        if required not in evr2_source:
+        if required not in source:
             raise AssertionError(f"EVR2 recipe cutover missing: {required}")
-
-    safe_source = Path(safe.__file__).read_text()
-    for required in (
-        "from recipes import issue31_coupling as recipe",
-        "original_physics_csv = base._physics_csv",
-        "base._physics_csv = physics_csv",
-        "base._physics_csv = original_physics_csv",
-    ):
-        if required not in safe_source:
-            raise AssertionError(f"safe adapter scoped cutover missing: {required}")
-    for forbidden in ("def _activate", "base.self_test ="):
-        if forbidden in safe_source:
-            raise AssertionError(f"safe adapter retained legacy monkey-patch path: {forbidden}")
-
-    _check_safe_scoped_patch()
 
 
 def _check_boundary() -> None:
@@ -365,9 +307,7 @@ def _check_boundary() -> None:
         "run_measurement",
     ):
         if forbidden in source:
-            raise AssertionError(
-                f"Issue31 recipe leaked runtime owner semantics: {forbidden}"
-            )
+            raise AssertionError(f"Issue31 recipe leaked runtime owner semantics: {forbidden}")
 
 
 def main() -> int:
