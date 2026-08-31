@@ -25,13 +25,7 @@ SEMANTIC = ROOT / "qpx_harness" / "issue45_first_linear.py"
 CLI = ROOT / "scripts" / "qpx.py"
 
 EXPECTED_LEGACY_PRODUCTION_CONSUMERS: set[str] = set()
-EXPECTED_LEGACY_TEST_CONSUMERS = {
-    "tests/Issue47_fd_reference_refactor_characterization/self_test.py",
-    "tests/Issue48_qpx_harness_generality/self_test.py",
-    "tests/Issue48_qpx_harness_generality/wp2_analysis_characterization.py",
-    "tests/Issue48_qpx_harness_generality/wp4_issue45_first_linear_characterization.py",
-    "tests/Issue48_qpx_harness_generality/wp4_issue46_fd_recipe_characterization.py",
-}
+EXPECTED_LEGACY_TEST_CONSUMERS: set[str] = set()
 EXPECTED_SEMANTIC_PRODUCTION_CONSUMERS = {"scripts/qpx.py"}
 EXPECTED_SEMANTIC_TEST_CONSUMERS: set[str] = set()
 
