@@ -3,8 +3,13 @@
 from __future__ import annotations
 
 import ast
+import sys
 import tempfile
 from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 from recipes import issue31_coupling as recipe
 from qpx_harness import coupling_evr1 as legacy
