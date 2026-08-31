@@ -23,7 +23,6 @@ CLEANUP_CANDIDATES = (
     "electron_inventory_nullspace",
     "fast_plasma_coupling_diagnostic",
     "jacobian_fd_reference_audit",
-    "petsc_first_linear_diagnostic",
     "scale_audit",
 )
 
