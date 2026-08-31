@@ -106,11 +106,12 @@ def _check_canonical_destinations() -> None:
 
 def _check_owner_boundary() -> None:
     semantic_source = SEMANTIC.read_text()
-    recipe_source = Path(recipe.__file__).read_text()
-    if "petsc_first_linear_diagnostic" in semantic_source:
-        raise AssertionError("semantic owner references retired historical owner")
-    if "petsc_first_linear_diagnostic" in recipe_source:
-        raise AssertionError("recipe references retired historical owner")
+    recipe_path = Path(recipe.__file__)
+    recipe_source = recipe_path.read_text()
+    if _imports_module(SEMANTIC, LEGACY_MODULE):
+        raise AssertionError("semantic owner imports retired historical owner")
+    if _imports_module(recipe_path, LEGACY_MODULE):
+        raise AssertionError("recipe imports retired historical owner")
     for forbidden in (
         "def instrument_first_linear(",
         "def analyze_first_linear_text(",
@@ -139,8 +140,8 @@ def _check_production_contracts() -> None:
         missing = [token for token in ISSUE46_CANONICAL_DEPENDENCIES if token not in source]
         if missing:
             raise AssertionError(f"Issue46 canonical dependencies drift: {path}: {missing}")
-        if "petsc_first_linear_diagnostic" in source:
-            raise AssertionError(f"Issue46 references retired first-linear owner: {path}")
+        if _imports_module(path, LEGACY_MODULE):
+            raise AssertionError(f"Issue46 imports retired first-linear owner: {path}")
 
     cli = CLI.read_text()
     required = (
@@ -149,8 +150,8 @@ def _check_production_contracts() -> None:
     )
     if required not in cli:
         raise AssertionError("stable inventory-first-linear CLI is not semantic-owned")
-    if "petsc_first_linear_diagnostic" in cli:
-        raise AssertionError("stable CLI references retired first-linear owner")
+    if _imports_module(CLI, LEGACY_MODULE):
+        raise AssertionError("stable CLI imports retired first-linear owner")
     if '"inventory-first-linear":' not in cli:
         raise AssertionError("stable inventory-first-linear command missing")
 
