@@ -304,8 +304,7 @@ def _prepare_case(exe: Path, results_root: str | None) -> dict[str, Any]:
     p1 = audit_first_linear_structure(base_c0, text)
     root = inv._evidence_root(exe=exe, results_root=results_root, stem="issue45_first_linear_diagnostic")
     case_dir = root / "case"
-    v2.v1._copy_case(base_case, case_dir, text)
-    v2.v1._validate_assets(case_dir)
+    inv._stage_case(base_case, case_dir, text)
     return {"root": root, "case_dir": case_dir, "input_path": case_dir / "input.i", "p1": p1, "instrumentation": instrumentation}
 
 
