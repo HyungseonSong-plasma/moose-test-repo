@@ -33,7 +33,6 @@ CLEANUP_CANDIDATES = (
     "performance_core",
     "performance_investigation",
     "performance_smoke",
-    "performance_transport_probe",
     "performance_transport_probe_direct",
     "scale_audit",
 )
