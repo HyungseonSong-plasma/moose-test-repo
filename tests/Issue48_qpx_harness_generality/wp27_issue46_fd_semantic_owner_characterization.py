@@ -99,8 +99,8 @@ def _check_owner_topology() -> None:
         raise AssertionError("FD runtime shell unexpectedly absent before convergence")
     if not SEMANTIC_PATH.is_file():
         raise AssertionError("Issue46 FD semantic owner is missing")
-    if not COMPAT_PATH.is_file():
-        raise AssertionError("Issue46 FD compat import is missing")
+    if COMPAT_PATH.exists():
+        raise AssertionError("retired Issue46 FD compat adapter unexpectedly exists")
 
     legacy_consumers = _production_consumers(LEGACY_MODULE, LEGACY_PATH)
     if legacy_consumers != {"qpx_harness/issue46_fd_reference.py"}:
@@ -110,20 +110,16 @@ def _check_owner_topology() -> None:
         )
 
     semantic_consumers = _production_consumers(SEMANTIC_MODULE, SEMANTIC_PATH)
-    expected_semantic = {
-        "qpx_harness/compat/issue46_fd_reference.py",
-        "scripts/qpx.py",
-    }
-    if semantic_consumers != expected_semantic:
+    if semantic_consumers != {"scripts/qpx.py"}:
         raise AssertionError(
             "semantic FD owner production topology drift: "
-            f"expected={sorted(expected_semantic)} observed={sorted(semantic_consumers)}"
+            f"{sorted(semantic_consumers)}"
         )
 
     compat_consumers = _production_consumers(COMPAT_MODULE, COMPAT_PATH)
     if compat_consumers:
         raise AssertionError(
-            "FD compat still has production consumers: "
+            "retired FD compat still has production consumers: "
             f"{sorted(compat_consumers)}"
         )
 
@@ -134,33 +130,13 @@ def _check_dependency_boundary() -> None:
         raise AssertionError("semantic owner does not import the Issue46 FD recipe")
     if LEGACY_MODULE not in semantic_imports:
         raise AssertionError("semantic owner lost the bounded legacy runtime-shell dependency")
-
-    compat_imports = _resolved_imports(COMPAT_PATH)
-    if SEMANTIC_MODULE not in compat_imports:
-        raise AssertionError("compat does not re-export the semantic FD owner")
-    if LEGACY_MODULE in compat_imports:
-        raise AssertionError("compat still imports the legacy FD runtime shell")
-    if "recipes.issue46_fd_reference" in compat_imports:
-        raise AssertionError("compat still owns recipe composition")
+    if COMPAT_MODULE in semantic_imports:
+        raise AssertionError("semantic owner reverse-depends on the retired compat adapter")
 
 
-def _check_compat_surface() -> None:
-    source = COMPAT_PATH.read_text()
-    required = (
-        "from qpx_harness.issue46_fd_reference import main, recipe_backing_status, self_test",
-        '__all__ = ["main", "recipe_backing_status", "self_test"]',
-    )
-    for token in required:
-        if token not in source:
-            raise AssertionError(f"compat semantic re-export surface drift: {token}")
-    tree = ast.parse(source, filename=str(COMPAT_PATH))
-    public_defs = [
-        node.name
-        for node in tree.body
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
-    ]
-    if public_defs:
-        raise AssertionError(f"compat unexpectedly owns executable definitions: {public_defs}")
+def _check_compat_retired() -> None:
+    if COMPAT_PATH.exists():
+        raise AssertionError("FD compat adapter was not retired")
 
 
 def _check_recipe_backing() -> None:
@@ -189,7 +165,7 @@ def _check_stable_cli_route() -> None:
         if token not in source:
             raise AssertionError(f"stable FD CLI surface missing: {token}")
     if "from qpx_harness.compat.issue46_fd_reference import" in source:
-        raise AssertionError("stable CLI still imports the FD compat adapter")
+        raise AssertionError("stable CLI still imports the retired FD compat adapter")
 
 
 def _check_self_test_route() -> None:
@@ -212,7 +188,7 @@ def _negative_control() -> None:
     mutated = source.replace(semantic_import, compat_import, 1)
     imports = _resolved_imports_source(mutated, path=CLI_PATH)
     if COMPAT_MODULE not in imports:
-        raise AssertionError("compat CLI negative control was not detected")
+        raise AssertionError("retired compat CLI negative control was not detected")
     if SEMANTIC_MODULE in imports:
         raise AssertionError("semantic owner remained after compat CLI mutation")
 
@@ -223,8 +199,8 @@ def main() -> int:
         print("ISSUE48_WP27_ISSUE46_FD_SEMANTIC_CHECK: owner-topology=PASS")
         _check_dependency_boundary()
         print("ISSUE48_WP27_ISSUE46_FD_SEMANTIC_CHECK: dependency-boundary=PASS")
-        _check_compat_surface()
-        print("ISSUE48_WP27_ISSUE46_FD_SEMANTIC_CHECK: compat-surface=PASS")
+        _check_compat_retired()
+        print("ISSUE48_WP27_ISSUE46_FD_SEMANTIC_CHECK: compat-retired=PASS")
         _check_recipe_backing()
         print("ISSUE48_WP27_ISSUE46_FD_SEMANTIC_CHECK: recipe-backing=PASS")
         _check_stable_cli_route()
