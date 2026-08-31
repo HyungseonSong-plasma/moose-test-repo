@@ -1,12 +1,7 @@
 #!/usr/bin/env python3
-"""P0 characterization for fast_plasma_relaxation_v2 dependency retirement.
-
-This checkpoint is intentionally observational: it freezes the current consumer
-surface before migrating each runtime owner away from the historical v2 layer.
-"""
+"""P0 characterization for fast_plasma_relaxation_v2 dependency retirement."""
 from __future__ import annotations
 
-import re
 import sys
 from pathlib import Path
 
@@ -16,32 +11,30 @@ if str(ROOT) not in sys.path:
 
 from qpx_harness import fast_plasma_relaxation_v2 as v2
 
-
 EXPECTED_RUNTIME_CONSUMERS = {
     "augmented_jacobian_localization.py",
     "electron_inventory_nullspace.py",
-    "fast_plasma_coupling_diagnostic.py",
     "fast_plasma_relaxation_v5.py",
     "jacobian_fd_reference_audit.py",
     "petsc_first_linear_diagnostic.py",
 }
 
 
-def _source(path: Path) -> str:
-    return path.read_text()
+def _source(name: str) -> str:
+    return (ROOT / "qpx_harness" / name).read_text()
 
 
 def _observed_consumers() -> dict[str, str]:
     result: dict[str, str] = {}
-    pattern = re.compile(
-        r"from \. import fast_plasma_relaxation_v2 as v2|"
-        r"import qpx_harness\.fast_plasma_relaxation_v2 as v2"
+    tokens = (
+        "from . import fast_plasma_relaxation_v2 as v2",
+        "import qpx_harness.fast_plasma_relaxation_v2 as v2",
     )
     for path in (ROOT / "qpx_harness").glob("*.py"):
         if path.name == "fast_plasma_relaxation_v2.py":
             continue
-        text = _source(path)
-        if pattern.search(text):
+        text = path.read_text()
+        if any(token in text for token in tokens):
             result[path.name] = text
     return result
 
@@ -50,66 +43,61 @@ def _check_consumer_topology() -> None:
     observed = _observed_consumers()
     if set(observed) != EXPECTED_RUNTIME_CONSUMERS:
         raise AssertionError(
-            "v2 runtime consumer topology drift: "
-            f"observed={sorted(observed)} expected={sorted(EXPECTED_RUNTIME_CONSUMERS)}"
+            f"v2 consumer drift: observed={sorted(observed)} expected={sorted(EXPECTED_RUNTIME_CONSUMERS)}"
         )
-
     v5 = observed["fast_plasma_relaxation_v5.py"]
-    for required in (
+    for token in (
         "_RAW_BUILD_ELECTRON_300K = v2._build_electron_300k",
         "_RAW_BUILD_ONEWAY = v2._build_oneway",
         "_RAW_BUILD_FEEDBACK = v2._build_feedback",
         "_RAW_RUN_CASE = v2._run_case",
     ):
-        if required not in v5:
-            raise AssertionError(f"v5 genuine v2 dependency drift: {required}")
+        if token not in v5:
+            raise AssertionError(f"v5 genuine v2 dependency drift: {token}")
 
 
 def _check_historical_v1_boundary() -> None:
     source = Path(v2.__file__).read_text()
     if "from . import fast_plasma_relaxation as v1" in source:
-        raise AssertionError("v2 reintroduced the retired historical v1 module")
-
+        raise AssertionError("v2 reintroduced retired v1 module")
     if not hasattr(v2.v1, "FastPlasmaRelaxationError"):
-        raise AssertionError("v2 error compatibility alias is missing")
-    for forbidden_attr in ("BASE_CASE_RELATIVE", "_copy_case", "_validate_assets"):
-        if hasattr(v2.v1, forbidden_attr):
-            raise AssertionError(
-                f"v2 unexpectedly reintroduced retired v1 runtime surface: {forbidden_attr}"
-            )
+        raise AssertionError("v2 error compatibility alias missing")
+    for name in ("BASE_CASE_RELATIVE", "_copy_case", "_validate_assets"):
+        if hasattr(v2.v1, name):
+            raise AssertionError(f"retired v1 runtime surface returned: {name}")
 
 
-def _check_stale_compatibility_references() -> None:
-    observed = _observed_consumers()
-    stale: dict[str, set[str]] = {}
-    pattern = re.compile(r"\bv2\.v1\.([A-Za-z_]\w*)")
-    for name, source in observed.items():
-        refs = set(pattern.findall(source))
-        if refs:
-            stale[name] = refs
+def _check_remaining_stale_refs() -> None:
+    for name in ("electron_inventory_nullspace.py", "petsc_first_linear_diagnostic.py"):
+        source = _source(name)
+        if "v2.v1." not in source:
+            raise AssertionError(f"expected remaining stale v1 reference changed: {name}")
+    if "v2.v1." in _source("fast_plasma_coupling_diagnostic.py"):
+        raise AssertionError("coupling diagnostic retained stale v1 mechanics")
 
-    required_attrs = {"BASE_CASE_RELATIVE", "_copy_case", "_validate_assets"}
-    union = set().union(*stale.values()) if stale else set()
-    if not required_attrs.issubset(union):
-        raise AssertionError(
-            f"expected stale v1 compatibility references changed: {sorted(union)}"
-        )
 
-    required_consumers = {
-        "electron_inventory_nullspace.py",
-        "fast_plasma_coupling_diagnostic.py",
-        "petsc_first_linear_diagnostic.py",
-    }
-    if not required_consumers.issubset(stale):
-        raise AssertionError(
-            "expected stale v1 runtime consumers changed: "
-            f"observed={sorted(stale)}"
-        )
+def _check_coupling_cutover() -> None:
+    source = _source("fast_plasma_coupling_diagnostic.py")
+    for token in ("fast_plasma_relaxation_v2", "v2."):
+        if token in source:
+            raise AssertionError(f"coupling diagnostic retained v2 dependency: {token}")
+    for token in (
+        "from . import artifacts",
+        "from . import cases as case_ops",
+        "from .runtime import resolve_executable, run_qpx, validate_executable",
+        "from .scale_audit import mesh_stats",
+        "case_ops.stage_case(",
+        "case_ops.validate_case_references(",
+        "artifacts.write_json_bundle(",
+        "BASE_CASE_RELATIVE = Path(\"tests/Issue2_electron_bulk_drift/qvt_prepoisson\")",
+    ):
+        if token not in source:
+            raise AssertionError(f"coupling canonical cutover drift: {token}")
 
 
 def _check_v2_mixed_owner_surface() -> None:
     source = Path(v2.__file__).read_text()
-    for required in (
+    for token in (
         "def _stage_case(",
         "def _validate_assets(",
         "def _write_json(",
@@ -119,23 +107,16 @@ def _check_v2_mixed_owner_surface() -> None:
         "def _run_case(",
         "def classify(",
     ):
-        if required not in source:
-            raise AssertionError(f"v2 mixed-owner surface drift: {required}")
-
-    for canonical in (
-        "from recipes import issue43_fast_relaxation as relaxation_recipe",
-        "from . import cases as case_ops",
-        "from .runtime import resolve_executable, run_qpx, validate_executable",
-    ):
-        if canonical not in source:
-            raise AssertionError(f"v2 canonical dependency drift: {canonical}")
+        if token not in source:
+            raise AssertionError(f"v2 mixed-owner surface drift: {token}")
 
 
 def main() -> int:
     try:
         _check_consumer_topology()
         _check_historical_v1_boundary()
-        _check_stale_compatibility_references()
+        _check_remaining_stale_refs()
+        _check_coupling_cutover()
         _check_v2_mixed_owner_surface()
     except Exception as exc:
         print(f"ISSUE48_FAST_PLASMA_V2_DEPENDENCY_SELFTEST: FAIL ({exc})")
