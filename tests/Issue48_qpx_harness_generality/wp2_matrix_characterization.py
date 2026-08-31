@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from qpx_harness import augmented_jacobian_localization as legacy
+from qpx_harness import issue46_jacobian_localization as issue46
 from qpx_harness.moose import dofmap as dm
 from qpx_harness.petsc import matrix as pm
 
@@ -67,14 +67,14 @@ def _check_dofmap() -> None:
     assert generic["variables"]["lambda"] == [6]
     assert generic["owner_by_dof"][6] == "lambda"
 
-    issue_text = legacy._synthetic_dof_map()
-    old = legacy.parse_dof_map_text(issue_text)
-    new = dm.parse_dof_map_text(
+    issue_text = issue46._synthetic_dof_map()
+    semantic = issue46.parse_dof_map_text(issue_text)
+    generic_issue = dm.parse_dof_map_text(
         issue_text,
-        expected_variables=legacy.MAIN_VARIABLES,
-        scalar_variables=legacy.SCALAR_VARIABLES,
+        expected_variables=issue46.MAIN_VARIABLES,
+        scalar_variables=issue46.SCALAR_VARIABLES,
     )
-    assert new == old
+    assert generic_issue == semantic
 
     overlap = json.dumps(
         {
@@ -101,8 +101,8 @@ def _check_threshold_matrix() -> None:
     ]
     assert generic["section_observed"] is True
 
-    issue_log = legacy._synthetic_localization_log([(0, 4, 2.0e-4), (4, 1, -3.0e-4)])
-    assert pm.parse_threshold_difference_matrix(issue_log) == legacy.parse_threshold_difference_matrix(issue_log)
+    issue_log = issue46._synthetic_localization_log([(0, 4, 2.0e-4), (4, 1, -3.0e-4)])
+    assert pm.parse_threshold_difference_matrix(issue_log) == issue46.parse_threshold_difference_matrix(issue_log)
     _expect_error(lambda: pm.parse_threshold_difference_matrix("no matrix section\n"), "missing threshold section")
 
 
