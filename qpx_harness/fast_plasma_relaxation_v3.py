@@ -5,7 +5,7 @@ This layer wraps the v2 electron/Poisson discriminator with two reusable guards:
 1. an explicit fixed-step numerical contract for every diagnostic case; and
 2. the machine-readable CORE-16 ontology contract from execution_contract.py.
 
-A case must pass the P1 ontology gate before QPX is launched.  After runtime, the
+A case must pass the P1 ontology gate before QPX is launched. After runtime, the
 actual positive-time trajectory is reconstructed independently from CSV output and
 must pass the P3 runtime-semantic gate before a successful run is eligible for
 physics interpretation.
@@ -17,7 +17,6 @@ import argparse
 import csv
 import json
 import math
-import re
 import tempfile
 from pathlib import Path
 from typing import Any
@@ -25,11 +24,10 @@ from typing import Any
 from . import execution_contract as ec
 from . import fast_plasma_relaxation as v1
 from . import fast_plasma_relaxation_v2 as v2
-from .moose_input import MooseInput, MooseInputError
+from .moose import executioner as moose_executioner
 
 
-class FastPlasmaV3Error(RuntimeError):
-    pass
+FastPlasmaV3Error = moose_executioner.MooseExecutionerError
 
 
 _RAW_BUILD_ELECTRON_300K = v2._build_electron_300k
@@ -38,57 +36,14 @@ _RAW_BUILD_FEEDBACK = v2._build_feedback
 _RAW_RUN_CASE = v2._run_case
 
 
-def _fmt(value: float) -> str:
-    return f"{value:.17g}"
-
-
-def _executioner_parameter_count(text: str, name: str) -> int:
-    doc = MooseInput(text)
-    span = doc.unique("Executioner")
-    block = text[span.start : span.end]
-    pattern = re.compile(rf"(?m)^\s*{re.escape(name)}\s*=")
-    return len(pattern.findall(block))
-
-
 def _set_executioner_parameter(text: str, name: str, value: str) -> str:
-    count = _executioner_parameter_count(text, name)
-    if count > 1:
-        raise FastPlasmaV3Error(
-            f"ambiguous Executioner parameter {name!r}: found {count} assignments"
-        )
-    try:
-        if count == 1:
-            text, _ = MooseInput(text).replace_parameters(
-                "Executioner", {name: value}
-            )
-        else:
-            text, _ = MooseInput(text).insert_before_close(
-                "Executioner", f"  {name} = {value}"
-            )
-    except MooseInputError as exc:
-        raise FastPlasmaV3Error(
-            f"failed to set Executioner/{name}: {exc}"
-        ) from exc
-    return text
+    """Compatibility wrapper around the generic Executioner parameter primitive."""
+    return moose_executioner.set_executioner_parameter(text, name, value)
 
 
 def apply_micro_time_contract(text: str, *, dt: float, steps: int) -> str:
-    """Make the fixed-step discriminator semantics explicit in the input."""
-    if dt <= 0.0 or steps <= 0:
-        raise FastPlasmaV3Error("dt and steps must be positive")
-
-    settings = {
-        "dt": _fmt(dt),
-        "end_time": _fmt(dt * steps),
-        "num_steps": str(steps),
-        "dtmin": _fmt(dt * 0.1),
-        "timestep_tolerance": _fmt(dt * 1.0e-3),
-        "abort_on_solve_fail": "true",
-        "compute_scaling_once": "true",
-    }
-    for name, value in settings.items():
-        text = _set_executioner_parameter(text, name, value)
-    return text
+    """Apply the generic fixed-step contract used by the Issue43 discriminator."""
+    return moose_executioner.apply_fixed_step_contract(text, dt=dt, steps=steps)
 
 
 def _build_electron_fixed(base_text: str, *, dt: float, steps: int) -> str:
@@ -123,67 +78,18 @@ def _build_feedback_fixed(
     )
 
 
-def _executioner_block(text: str) -> str:
-    doc = MooseInput(text)
-    span = doc.unique("Executioner")
-    return text[span.start : span.end]
-
-
-def _parse_scalar(raw: str) -> Any:
-    value = raw.strip().strip("'\"")
-    lowered = value.lower()
-    if lowered == "true":
-        return True
-    if lowered == "false":
-        return False
-    try:
-        number = float(value)
-    except ValueError:
-        return value
-    if math.isfinite(number) and number.is_integer() and not any(
-        token in value.lower() for token in (".", "e")
-    ):
-        return int(number)
-    return number
-
-
 def _executioner_controls(text: str) -> dict[str, Any]:
-    block = _executioner_block(text)
-    controls: dict[str, Any] = {}
-    for name in (
-        "dt",
-        "end_time",
-        "num_steps",
-        "dtmin",
-        "dtmax",
-        "timestep_tolerance",
-        "abort_on_solve_fail",
-        "compute_scaling_once",
-    ):
-        matches = re.findall(
-            rf"(?m)^\s*{re.escape(name)}\s*=\s*([^#\r\n]+)", block
-        )
-        if len(matches) > 1:
-            raise FastPlasmaV3Error(
-                f"ambiguous effective Executioner control {name}: {len(matches)} assignments"
-            )
-        if matches:
-            controls[name] = _parse_scalar(matches[0])
-    required = (
-        "dt",
-        "end_time",
-        "num_steps",
-        "dtmin",
-        "timestep_tolerance",
-        "abort_on_solve_fail",
+    return moose_executioner.executioner_controls(
+        text,
+        required=(
+            "dt",
+            "end_time",
+            "num_steps",
+            "dtmin",
+            "timestep_tolerance",
+            "abort_on_solve_fail",
+        ),
     )
-    missing = [name for name in required if name not in controls]
-    if missing:
-        raise FastPlasmaV3Error(
-            "fixed-step execution contract missing explicit controls: "
-            + ", ".join(missing)
-        )
-    return controls
 
 
 def _case_semantics(case_id: str) -> tuple[str, list[str], list[str]]:
@@ -411,7 +317,9 @@ def _runtime_observation(case_dir: Path) -> dict[str, Any]:
 
     times.sort()
     dts = [times[0]] + [b - a for a, b in zip(times, times[1:])]
-    finite_positive_dts = [value for value in dts if math.isfinite(value) and value > 0.0]
+    finite_positive_dts = [
+        value for value in dts if math.isfinite(value) and value > 0.0
+    ]
     observation["first_time"] = times[0]
     observation["final_time"] = times[-1]
     if finite_positive_dts:
@@ -489,9 +397,13 @@ def _run_case_safe(**kwargs: Any) -> dict[str, Any]:
     runtime_observed = _runtime_observation(case_dir)
     contract["runtime_regime"]["observed"].update(runtime_observed)
     if result.get("p3_returncode") is not None:
-        contract["evidence"]["observed"]["p3_returncode"] = result.get("p3_returncode")
+        contract["evidence"]["observed"]["p3_returncode"] = result.get(
+            "p3_returncode"
+        )
     if result.get("analysis") is not None:
-        contract["evidence"]["observed"]["physics_analysis"] = result.get("analysis")
+        contract["evidence"]["observed"]["physics_analysis"] = result.get(
+            "analysis"
+        )
     if caught_error is not None:
         contract["evidence"]["observed"]["legacy_analyzer_error"] = caught_error
 
@@ -534,6 +446,8 @@ def self_test() -> int:
             raise AssertionError("v2 self-test failed")
         if ec.self_test() != 0:
             raise AssertionError("execution-contract self-test failed")
+        if moose_executioner.self_test() != 0:
+            raise AssertionError("generic Executioner self-test failed")
 
         base = """[Executioner]
   type = Transient
