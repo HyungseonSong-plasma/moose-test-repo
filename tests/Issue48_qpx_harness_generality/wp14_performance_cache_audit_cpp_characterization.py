@@ -1,16 +1,19 @@
 #!/usr/bin/env python3
-"""P0 characterization for cache-audit generic C++ primitive cutover."""
+"""P0 characterization for cache-audit generic primitive cutovers."""
 from __future__ import annotations
 
 import sys
+import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from qpx_harness import artifacts
 from qpx_harness import cpp_calls
 from qpx_harness import cpp_source
+from qpx_harness import evidence
 from qpx_harness import performance_cache_audit as cache
 
 
@@ -67,49 +70,79 @@ def _check_declaration_contract() -> None:
         raise AssertionError("duplicate-declaration negative control passed")
 
 
+def _check_run_root_contract() -> None:
+    original_timestamp = cache.utc_timestamp
+    cache.utc_timestamp = lambda: "20260831T103000Z"
+    try:
+        with tempfile.TemporaryDirectory() as tmp_name:
+            results = Path(tmp_name)
+            first = cache._new_run_root(results)
+            second = cache._new_run_root(results)
+            if first.name != "cache_audit_20260831T103000Z":
+                raise AssertionError(f"cache-audit first root naming drift: {first.name}")
+            if second.name != "cache_audit_20260831T103000Z_01":
+                raise AssertionError(f"cache-audit collision naming drift: {second.name}")
+            if not first.is_dir() or not second.is_dir():
+                raise AssertionError("cache-audit run roots were not created")
+    finally:
+        cache.utc_timestamp = original_timestamp
+
+
 def _check_production_cutover() -> None:
     source = Path(cache.__file__).read_text()
     for required in (
+        "from .artifacts import write_json_bundle",
         "from .cpp_calls import split_call_arguments",
         "from .cpp_source import CppSource",
+        "from .evidence import sha256_file, utc_timestamp",
         'cpp.calls("addFunctorProperty", containing="_D_mix_names")',
         "split_call_arguments(cpp, call)",
         "masked = CppSource(text).masked",
+        '"input_sha256": sha256_file(input_path)',
+        '"material_sha256": sha256_file(material)',
+        "stamp = utc_timestamp()",
+        "write_json_bundle(",
     ):
         if required not in source:
-            raise AssertionError(f"cache-audit generic C++ cutover missing: {required}")
+            raise AssertionError(f"cache-audit generic cutover missing: {required}")
 
     for forbidden in (
         "def _mask_cpp(",
         "def _matching_paren(",
         "def _split_top_level_args(",
+        "def _sha256_file(",
+        "import hashlib",
+        "from datetime import datetime, timezone",
+        "datetime.now(timezone.utc)",
+        "summary.write_text(json.dumps(result",
     ):
         if forbidden in source:
-            raise AssertionError(f"cache-audit retained duplicated lexical helper: {forbidden}")
+            raise AssertionError(f"cache-audit retained duplicated infrastructure: {forbidden}")
 
-    # This checkpoint is intentionally limited to C++ parsing ownership.
+    # Cache-feasibility interpretation remains caller-owned at this checkpoint.
     for retained in (
-        "def _sha256_file(",
-        "datetime.now(timezone.utc)",
-        "json.dumps(result, indent=2, sort_keys=True)",
         "NATIVE_FUNCTOR_CACHE_CANDIDATE",
         "MATERIAL_SHARED_RESULT_REQUIRED",
+        "NATIVE_CACHE_ALREADY_CONFIGURED",
+        '"runtime_executed": False',
+        '"production_source_mutated": False',
     ):
         if retained not in source:
-            raise AssertionError(f"cache-audit ownership moved prematurely: {retained}")
+            raise AssertionError(f"cache-audit policy moved prematurely: {retained}")
 
 
 def _check_primitive_boundary() -> None:
-    for module in (cpp_source, cpp_calls):
+    for module in (cpp_source, cpp_calls, evidence, artifacts):
         source = Path(module.__file__).read_text()
         for forbidden in (
             "performance_cache_audit",
             "QPXFVMixtureAveragedDiffusion",
             "NATIVE_FUNCTOR_CACHE_CANDIDATE",
+            "MATERIAL_SHARED_RESULT_REQUIRED",
         ):
             if forbidden in source:
                 raise AssertionError(
-                    f"generic C++ primitive leaked cache-audit policy: {forbidden}"
+                    f"generic primitive leaked cache-audit policy: {forbidden}"
                 )
 
 
@@ -120,6 +153,7 @@ def main() -> int:
         if cpp_calls.self_test() != 0:
             raise AssertionError("CppCall self-test failed")
         _check_declaration_contract()
+        _check_run_root_contract()
         _check_production_cutover()
         _check_primitive_boundary()
     except Exception as exc:
