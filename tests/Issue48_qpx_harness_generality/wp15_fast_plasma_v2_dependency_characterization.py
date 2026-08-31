@@ -68,12 +68,14 @@ def _check_historical_v1_boundary() -> None:
 
 
 def _check_remaining_stale_refs() -> None:
-    for name in ("electron_inventory_nullspace.py", "petsc_first_linear_diagnostic.py"):
-        source = _source(name)
-        if "v2.v1." not in source:
-            raise AssertionError(f"expected remaining stale v1 reference changed: {name}")
-    if "v2.v1." in _source("fast_plasma_coupling_diagnostic.py"):
-        raise AssertionError("coupling diagnostic retained stale v1 mechanics")
+    if "v2.v1." not in _source("petsc_first_linear_diagnostic.py"):
+        raise AssertionError("expected first-linear stale v1 reference changed")
+    for name in (
+        "electron_inventory_nullspace.py",
+        "fast_plasma_coupling_diagnostic.py",
+    ):
+        if "v2.v1." in _source(name):
+            raise AssertionError(f"retired v1 mechanics remain in {name}")
 
 
 def _check_coupling_cutover() -> None:
@@ -93,6 +95,30 @@ def _check_coupling_cutover() -> None:
     ):
         if token not in source:
             raise AssertionError(f"coupling canonical cutover drift: {token}")
+
+
+def _check_inventory_staging_cutover() -> None:
+    source = _source("electron_inventory_nullspace.py")
+    if "v2.v1." in source:
+        raise AssertionError("Issue45 inventory retained retired v1 staging mechanics")
+    for token in (
+        "from . import cases as case_ops",
+        "from .scale_audit import mesh_stats",
+        "BASE_CASE_RELATIVE = coupling_diag.BASE_CASE_RELATIVE",
+        "case_ops.stage_case(",
+        "case_ops.validate_case_references(",
+        "def _stage_case(",
+    ):
+        if token not in source:
+            raise AssertionError(f"Issue45 staging cutover drift: {token}")
+    for retained in (
+        "from . import fast_plasma_relaxation_v2 as v2",
+        "v2.resolve_executable(",
+        "v2.validate_executable(",
+        "v2._write_json(",
+    ):
+        if retained not in source:
+            raise AssertionError(f"Issue45 staged v2-retirement boundary drift: {retained}")
 
 
 def _check_v2_mixed_owner_surface() -> None:
@@ -117,6 +143,7 @@ def main() -> int:
         _check_historical_v1_boundary()
         _check_remaining_stale_refs()
         _check_coupling_cutover()
+        _check_inventory_staging_cutover()
         _check_v2_mixed_owner_surface()
     except Exception as exc:
         print(f"ISSUE48_FAST_PLASMA_V2_DEPENDENCY_SELFTEST: FAIL ({exc})")
