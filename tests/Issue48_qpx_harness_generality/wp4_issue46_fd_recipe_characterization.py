@@ -11,7 +11,7 @@ if str(ROOT) not in sys.path:
 
 from qpx_harness import augmented_jacobian_localization as legacy_loc
 from qpx_harness import jacobian_fd_reference_audit as legacy
-from qpx_harness import petsc_first_linear_diagnostic as legacy_first
+from recipes import issue45_first_linear as issue45_recipe
 from recipes import issue46_fd_reference as recipe
 
 
@@ -22,7 +22,7 @@ def _assert_same(left, right, label: str) -> None:
 
 def _baseline_text() -> str:
     base = legacy._issue46_synthetic_constrained_input(legacy.TARGET)
-    first_text, _ = legacy_first.instrument_first_linear(base)
+    first_text, _ = issue45_recipe.instrument_first_linear(base)
     baseline, _ = legacy_loc.instrument_localization(first_text)
     return baseline
 
