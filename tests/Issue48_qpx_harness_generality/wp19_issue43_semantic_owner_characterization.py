@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import importlib.util
 import sys
 from pathlib import Path
 
@@ -51,7 +52,7 @@ def _imports_module(path: Path, module_name: str) -> bool:
             else:
                 package = ".".join(path.relative_to(ROOT).with_suffix("").parts[:-1])
                 try:
-                    base = __import__("importlib").util.resolve_name(
+                    base = importlib.util.resolve_name(
                         "." * node.level + (node.module or ""), package
                     )
                 except (ImportError, ValueError):
