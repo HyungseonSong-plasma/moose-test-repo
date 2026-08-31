@@ -13,7 +13,6 @@ from qpx_harness import fast_plasma_relaxation_v2 as v2
 
 EXPECTED_RUNTIME_CONSUMERS = {
     "fast_plasma_relaxation_v5.py",
-    "jacobian_fd_reference_audit.py",
 }
 
 
@@ -69,6 +68,7 @@ def _check_remaining_stale_refs() -> None:
         "augmented_jacobian_localization.py",
         "electron_inventory_nullspace.py",
         "fast_plasma_coupling_diagnostic.py",
+        "jacobian_fd_reference_audit.py",
         "petsc_first_linear_diagnostic.py",
     ):
         if "v2.v1." in _source(name):
@@ -151,6 +151,23 @@ def _check_localization_cutover() -> None:
             raise AssertionError(f"Issue46 localization canonical cutover drift: {token}")
 
 
+def _check_fd_reference_cutover() -> None:
+    source = _source("jacobian_fd_reference_audit.py")
+    for token in ("fast_plasma_relaxation_v2", "v2.", "v2.v1."):
+        if token in source:
+            raise AssertionError(f"Issue46 FD-reference retained v2 dependency: {token}")
+    for token in (
+        "from . import artifacts",
+        "from .runtime import resolve_executable, run_qpx, validate_executable",
+        "inv._stage_case(base_case, case_dir, ds_text)",
+        "resolve_executable(",
+        "validate_executable(",
+        "artifacts.write_json_bundle(",
+    ):
+        if token not in source:
+            raise AssertionError(f"Issue46 FD-reference canonical cutover drift: {token}")
+
+
 def _check_v2_mixed_owner_surface() -> None:
     source = Path(v2.__file__).read_text()
     for token in (
@@ -176,6 +193,7 @@ def main() -> int:
         _check_inventory_cutover()
         _check_first_linear_cutover()
         _check_localization_cutover()
+        _check_fd_reference_cutover()
         _check_v2_mixed_owner_surface()
     except Exception as exc:
         print(f"ISSUE48_FAST_PLASMA_V2_DEPENDENCY_SELFTEST: FAIL ({exc})")
