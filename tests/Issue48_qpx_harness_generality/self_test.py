@@ -12,6 +12,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from qpx_harness.moose import blocks as mb
+from qpx_harness.moose import executioner as me
 from qpx_harness.moose import parameters as mp
 from qpx_harness.petsc import options as po
 from qpx_harness import augmented_jacobian_localization as issue46_legacy
@@ -31,7 +32,12 @@ def _fixture() -> str:
 def _expect_error(fn, label: str) -> None:
     try:
         fn()
-    except (mb.MooseBlockError, mp.MooseParameterError, po.PetscOptionsError):
+    except (
+        mb.MooseBlockError,
+        me.MooseExecutionerError,
+        mp.MooseParameterError,
+        po.PetscOptionsError,
+    ):
         return
     raise AssertionError(f"negative control unexpectedly passed: {label}")
 
@@ -54,10 +60,64 @@ def _check_moose_parameters() -> None:
     children = mp.direct_children(text, "Outputs")
     assert children == ["Outputs/console"]
 
-    ambiguous = text.replace("  type = Transient\n", "  type = Transient\n  type = Steady\n", 1)
+    ambiguous = text.replace(
+        "  type = Transient\n",
+        "  type = Transient\n  type = Steady\n",
+        1,
+    )
     _expect_error(
         lambda: mp.upsert_parameter(ambiguous, "Executioner", "type", "Transient"),
         "ambiguous parameter",
+    )
+
+
+def _check_moose_executioner() -> None:
+    text = _fixture()
+    tuned = me.apply_fixed_step_contract(text, dt=1.0e-13, steps=5)
+    controls = me.executioner_controls(
+        tuned,
+        required=(
+            "dt",
+            "end_time",
+            "num_steps",
+            "dtmin",
+            "timestep_tolerance",
+            "abort_on_solve_fail",
+        ),
+    )
+    expected = {
+        "dt": 1.0e-13,
+        "end_time": 5.0e-13,
+        "num_steps": 5,
+        "dtmin": 1.0e-14,
+        "timestep_tolerance": 1.0e-16,
+        "abort_on_solve_fail": True,
+        "compute_scaling_once": True,
+    }
+    for name, value in expected.items():
+        actual = controls.get(name)
+        if isinstance(value, float):
+            if abs(float(actual) - value) > abs(value) * 1.0e-15:
+                raise AssertionError(
+                    f"Executioner control drift for {name}: {actual} != {value}"
+                )
+        elif actual != value:
+            raise AssertionError(
+                f"Executioner control drift for {name}: {actual} != {value}"
+            )
+
+    duplicate = tuned.replace(
+        "  num_steps = 5\n",
+        "  num_steps = 5\n  num_steps = 6\n",
+        1,
+    )
+    _expect_error(
+        lambda: me.apply_fixed_step_contract(duplicate, dt=1.0e-13, steps=5),
+        "ambiguous fixed-step parameter",
+    )
+    _expect_error(
+        lambda: me.apply_fixed_step_contract(text, dt=0.0, steps=5),
+        "non-positive fixed-step dt",
     )
 
 
@@ -129,7 +189,10 @@ def _check_petsc_options() -> None:
         ("-mat_fd_type", "ds"),
     ]
 
-    mismatch = text.replace("petsc_options_value = 'lu NONZERO'", "petsc_options_value = 'lu'")
+    mismatch = text.replace(
+        "petsc_options_value = 'lu NONZERO'",
+        "petsc_options_value = 'lu'",
+    )
     _expect_error(lambda: po.get_name_value_pairs(mismatch), "iname/value mismatch")
 
 
@@ -175,6 +238,7 @@ def _check_generality_surface() -> None:
     for rel in (
         "qpx_harness/moose/parameters.py",
         "qpx_harness/moose/blocks.py",
+        "qpx_harness/moose/executioner.py",
         "qpx_harness/petsc/options.py",
     ):
         source = (ROOT / rel).read_text()
@@ -186,7 +250,9 @@ def _check_generality_surface() -> None:
             "FD_REFERENCE_QUANTIZATION_CONFIRMED",
         ):
             if forbidden in source:
-                raise AssertionError(f"special-case semantic leaked into {rel}: {forbidden}")
+                raise AssertionError(
+                    f"special-case semantic leaked into {rel}: {forbidden}"
+                )
         for reverse in (
             "fast_plasma",
             "electron_inventory",
@@ -195,7 +261,9 @@ def _check_generality_surface() -> None:
             "augmented_jacobian_localization",
         ):
             if reverse in source:
-                raise AssertionError(f"reverse dependency leaked into {rel}: {reverse}")
+                raise AssertionError(
+                    f"reverse dependency leaked into {rel}: {reverse}"
+                )
 
     recipe_paths = (
         "recipes/issue43_coupling_diagnostic.py",
@@ -216,7 +284,9 @@ def _check_generality_surface() -> None:
             raise AssertionError(f"recipe does not compose generic primitives: {rel}")
         leaked = [name for name in legacy_names if name in source]
         if leaked:
-            raise AssertionError(f"recipe reverse-imports legacy module {rel}: {leaked}")
+            raise AssertionError(
+                f"recipe reverse-imports legacy module {rel}: {leaked}"
+            )
 
 
 def _check_script_surface() -> dict[str, list[str]]:
@@ -233,8 +303,8 @@ def _check_script_surface() -> dict[str, list[str]]:
 
     # User-local QPX mirrors intentionally carry executable harness/test
     # surfaces without necessarily carrying repository governance files such as
-    # .github/ and docs/.  Those missing repository-only surfaces must not turn
-    # a portable P0 into a false failure.  When a canonical surface is present,
+    # .github/ and docs/. Those missing repository-only surfaces must not turn
+    # a portable P0 into a false failure. When a canonical surface is present,
     # however, still enforce that it no longer references the retired wrappers.
     canonical_refs = (
         ROOT / ".github/workflows/qpx-regression.yml",
@@ -251,7 +321,9 @@ def _check_script_surface() -> dict[str, list[str]]:
         source = path.read_text()
         leaked = [item for item in obsolete if item in source]
         if leaked:
-            raise AssertionError(f"obsolete compatibility command remains in {path}: {leaked}")
+            raise AssertionError(
+                f"obsolete compatibility command remains in {path}: {leaked}"
+            )
         checked.append(str(path.relative_to(ROOT)))
     return {"checked": checked, "skipped": skipped}
 
@@ -260,6 +332,8 @@ def main() -> int:
     try:
         _check_moose_parameters()
         print("ISSUE48_GENERALITY_CHECK: moose-parameter-primitives=PASS")
+        _check_moose_executioner()
+        print("ISSUE48_GENERALITY_CHECK: moose-executioner-primitives=PASS")
         _check_moose_blocks()
         print("ISSUE48_GENERALITY_CHECK: moose-block-primitives=PASS")
         _check_petsc_options()
