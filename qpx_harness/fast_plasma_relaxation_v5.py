@@ -4,24 +4,487 @@ from __future__ import annotations
 
 import argparse
 import csv
+import math
 import re
 import tempfile
 from pathlib import Path
 from typing import Any
 
+from . import artifacts
 from . import evidence
 from . import execution_contract as ec
 from . import fast_plasma_relaxation_v2 as v2
-from . import fast_plasma_relaxation_v3 as v3
 from . import output_observation_contract as ooc
+from . import temporal
+from .moose import executioner as moose_executioner
 from .runtime import run_qpx
 
 
-_RAW_BUILD_ELECTRON = v3._build_electron_fixed
-_RAW_BUILD_ONEWAY = v3._build_oneway_fixed
-_RAW_BUILD_FEEDBACK = v3._build_feedback_fixed
-_RAW_BUILD_EXECUTION_CONTRACT = v3._build_execution_contract
-_RAW_RUN_CASE_SAFE = v3._run_case_safe
+# Absorbed v3 CORE-16 ownership. Generic mechanics remain in their canonical
+# reusable owners; this module now composes them directly rather than depending
+# on a historical version layer.
+FastPlasmaV3Error = moose_executioner.MooseExecutionerError
+_RAW_BUILD_ELECTRON_300K = v2._build_electron_300k
+_RAW_BUILD_ONEWAY = v2._build_oneway
+_RAW_BUILD_FEEDBACK = v2._build_feedback
+_RAW_RUN_CASE = v2._run_case
+
+
+def _set_executioner_parameter(text: str, name: str, value: str) -> str:
+    return moose_executioner.set_executioner_parameter(text, name, value)
+
+
+def apply_micro_time_contract(text: str, *, dt: float, steps: int) -> str:
+    return moose_executioner.apply_fixed_step_contract(text, dt=dt, steps=steps)
+
+
+def _build_electron_fixed(base_text: str, *, dt: float, steps: int) -> str:
+    return apply_micro_time_contract(
+        _RAW_BUILD_ELECTRON_300K(base_text, dt=dt, steps=steps),
+        dt=dt,
+        steps=steps,
+    )
+
+
+def _build_oneway_fixed(
+    base_text: str, *, dt: float, steps: int, radial_span: float
+) -> str:
+    return apply_micro_time_contract(
+        _RAW_BUILD_ONEWAY(
+            base_text, dt=dt, steps=steps, radial_span=radial_span
+        ),
+        dt=dt,
+        steps=steps,
+    )
+
+
+def _build_feedback_fixed(
+    base_text: str, *, dt: float, steps: int, radial_span: float
+) -> str:
+    return apply_micro_time_contract(
+        _RAW_BUILD_FEEDBACK(
+            base_text, dt=dt, steps=steps, radial_span=radial_span
+        ),
+        dt=dt,
+        steps=steps,
+    )
+
+
+def _executioner_controls(text: str) -> dict[str, Any]:
+    return moose_executioner.executioner_controls(
+        text,
+        required=(
+            "dt",
+            "end_time",
+            "num_steps",
+            "dtmin",
+            "timestep_tolerance",
+            "abort_on_solve_fail",
+        ),
+    )
+
+
+def _case_semantics(case_id: str) -> tuple[str, list[str], list[str]]:
+    if "electron_300K" in case_id:
+        return (
+            "300 K electron-only transient control with prescribed electric field",
+            ["electron transport", "300 K lookup state"],
+            ["solved Poisson feedback", "chemistry", "Maxwell"],
+        )
+    if "oneway" in case_id:
+        return (
+            "one-way electron-to-bulk-Poisson triangular discriminator",
+            ["electron transport", "bulk Poisson response"],
+            ["Poisson-to-electron feedback", "chemistry", "Maxwell"],
+        )
+    return (
+        "two-way electron and bulk-Poisson fixed-step feedback discriminator",
+        ["electron transport", "bulk Poisson", "two-way electrostatic feedback"],
+        ["sheath-resolved physics", "chemistry", "Maxwell"],
+    )
+
+
+def _build_execution_contract(case_id: str, input_text: str) -> dict[str, Any]:
+    controls = _executioner_controls(input_text)
+    dt = float(controls["dt"])
+    steps = int(controls["num_steps"])
+    end_time = float(controls["end_time"])
+    tolerance = float(controls["timestep_tolerance"])
+    representation, retained, reduced = _case_semantics(case_id)
+
+    dt_rel_tol = 1.0e-6
+    contract: dict[str, Any] = {
+        "schema_version": 1,
+        "contract_id": f"{case_id}-core16",
+        "claim": {
+            "statement": (
+                "execute the declared Issue43 discriminator in its intended fixed-step "
+                "numerical regime before interpreting electron/Poisson physics"
+            ),
+            "acceptance": (
+                "P1 numerical/framework conformance plus P3 physical timestep trajectory "
+                "and requested final-time conformance"
+            ),
+        },
+        "model": {
+            "representation": representation,
+            "retained": retained,
+            "reduced": reduced,
+            "assumptions": [
+                "current QVT Poisson contract is bulk electrostatic, not sheath resolved",
+                "fixed-step semantics are part of this discriminator",
+                "model-scale thresholds remain owned by Issue43/PS-23 rather than this validator",
+            ],
+        },
+        "numerical_regime": {
+            "intent": "fixed-step discriminator",
+            "declared_controls": {
+                "dt": dt,
+                "num_steps": steps,
+                "end_time": end_time,
+                "required_end_time": dt * steps,
+                "minimum_acceptable_final_time": end_time - tolerance,
+                "minimum_acceptable_dt": dt * (1.0 - dt_rel_tol),
+                "maximum_acceptable_dt": dt * (1.0 + dt_rel_tol),
+            },
+            "declared_scales": {},
+        },
+        "framework_effective": {
+            "provenance": (
+                "explicit generated Executioner controls in the packaged input; "
+                "P2 checks parser acceptance and P3 verifies the actual time trajectory"
+            ),
+            "controls": controls,
+        },
+        "runtime_regime": {"observed": {}},
+        "evidence": {
+            "requirements": [
+                "P3 return code",
+                "positive physical timestep rows",
+                "actual final physical time",
+                "actual fixed-step cadence",
+            ],
+            "observed": {},
+        },
+        "decision": {"status": "PENDING"},
+        "checks": [
+            {
+                "id": "dt-above-dtmin",
+                "phase": "P1",
+                "meaning": "requested fixed dt must exceed the explicit effective dtmin",
+                "left": {"path": "numerical_regime.declared_controls.dt"},
+                "op": "gt",
+                "right": {"path": "framework_effective.controls.dtmin"},
+                "on_fail": "NUMERICAL_CONTRACT_FAIL",
+            },
+            {
+                "id": "time-tolerance-below-dt",
+                "phase": "P1",
+                "meaning": "framework timestep tolerance must be smaller than the intended step",
+                "left": {"path": "framework_effective.controls.timestep_tolerance"},
+                "op": "lt",
+                "right": {"path": "numerical_regime.declared_controls.dt"},
+                "on_fail": "NUMERICAL_CONTRACT_FAIL",
+            },
+            {
+                "id": "end-time-supports-step-count",
+                "phase": "P1",
+                "meaning": "end_time must permit the declared fixed-step count",
+                "left": {"path": "framework_effective.controls.end_time"},
+                "op": "ge",
+                "right": {"path": "numerical_regime.declared_controls.required_end_time"},
+                "on_fail": "NUMERICAL_CONTRACT_FAIL",
+            },
+            {
+                "id": "step-count-preserved",
+                "phase": "P1",
+                "meaning": "effective num_steps must match the declared discriminator count",
+                "left": {"path": "framework_effective.controls.num_steps"},
+                "op": "eq",
+                "right": {"path": "numerical_regime.declared_controls.num_steps"},
+                "on_fail": "NUMERICAL_CONTRACT_FAIL",
+            },
+            {
+                "id": "silent-cutback-disabled",
+                "phase": "P1",
+                "meaning": "solver failure must not silently change the fixed-step discriminator",
+                "left": {"path": "framework_effective.controls.abort_on_solve_fail"},
+                "op": "eq",
+                "right": {"value": True},
+                "on_fail": "NUMERICAL_CONTRACT_FAIL",
+            },
+            {
+                "id": "p3-process-completed",
+                "phase": "P3",
+                "meaning": "QPX P3 process must complete before physics acceptance",
+                "left": {"path": "evidence.observed.p3_returncode"},
+                "op": "eq",
+                "right": {"value": 0},
+                "on_fail": "RUNTIME_SEMANTIC_FAIL",
+            },
+            {
+                "id": "physical-row-count",
+                "phase": "P3",
+                "meaning": "runtime must emit at least the declared number of physical rows",
+                "left": {"path": "runtime_regime.observed.physical_rows"},
+                "op": "ge",
+                "right": {"path": "numerical_regime.declared_controls.num_steps"},
+                "on_fail": "RUNTIME_SEMANTIC_FAIL",
+            },
+            {
+                "id": "final-time-reached",
+                "phase": "P3",
+                "meaning": "runtime must reach the requested final physical time",
+                "left": {"path": "runtime_regime.observed.final_time"},
+                "op": "ge",
+                "right": {"path": "numerical_regime.declared_controls.minimum_acceptable_final_time"},
+                "on_fail": "RUNTIME_SEMANTIC_FAIL",
+            },
+            {
+                "id": "minimum-dt-preserved",
+                "phase": "P3",
+                "meaning": "actual timestep must not silently undershoot the fixed-step contract",
+                "left": {"path": "runtime_regime.observed.actual_dt_min"},
+                "op": "ge",
+                "right": {"path": "numerical_regime.declared_controls.minimum_acceptable_dt"},
+                "on_fail": "RUNTIME_SEMANTIC_FAIL",
+            },
+            {
+                "id": "maximum-dt-preserved",
+                "phase": "P3",
+                "meaning": "actual timestep must not silently overshoot the fixed-step contract",
+                "left": {"path": "runtime_regime.observed.actual_dt_max"},
+                "op": "le",
+                "right": {"path": "numerical_regime.declared_controls.maximum_acceptable_dt"},
+                "on_fail": "RUNTIME_SEMANTIC_FAIL",
+            },
+        ],
+    }
+    ec.validate_contract(contract)
+    return contract
+
+
+def _runtime_csv(case_dir: Path) -> Path | None:
+    return temporal.find_temporal_csv(case_dir)
+
+
+def _runtime_observation(case_dir: Path) -> dict[str, Any]:
+    return temporal.observe_case_trajectory(case_dir)
+
+
+def _write_contract_artifacts(
+    *,
+    measurements_root: Path,
+    case_id: str,
+    contract: dict[str, Any],
+    p1: dict[str, Any],
+    p3: dict[str, Any] | None,
+) -> dict[str, str]:
+    payloads: dict[str, tuple[str, object]] = {
+        "contract": ("execution_contract.json", contract),
+        "p1": ("execution_contract_p1.json", p1),
+    }
+    if p3 is not None:
+        payloads["p3"] = ("execution_contract_p3.json", p3)
+    return artifacts.write_json_bundle(measurements_root / case_id, payloads)
+
+
+_CONTRACT_ARTIFACT_WRITER = _write_contract_artifacts
+
+
+def _run_case_safe(**kwargs: Any) -> dict[str, Any]:
+    case_id = str(kwargs.get("case_id", "unknown"))
+    case_dir = Path(kwargs["case_dir"])
+    measurements_root = Path(kwargs["measurements_root"])
+    input_text = str(kwargs["input_text"])
+
+    contract = _build_execution_contract(case_id, input_text)
+    p1 = ec.evaluate_contract(contract, phase="P1")
+    artifact_paths = _CONTRACT_ARTIFACT_WRITER(
+        measurements_root=measurements_root,
+        case_id=case_id,
+        contract=contract,
+        p1=p1,
+        p3=None,
+    )
+    if p1["status"] != "PASS":
+        return {
+            "case_id": case_id,
+            "class": "HARNESS_OR_CONSTRUCTION_FAIL",
+            "reason": "CORE-16 P1 numerical execution contract did not pass",
+            "execution_contract": contract,
+            "execution_contract_p1": p1,
+            "execution_contract_artifacts": artifact_paths,
+        }
+
+    caught_error: str | None = None
+    try:
+        result = _RAW_RUN_CASE(**kwargs)
+    except v2.v1.FastPlasmaRelaxationError as exc:
+        caught_error = str(exc)
+        result = {
+            "case_id": case_id,
+            "class": "HARNESS_OR_CONSTRUCTION_FAIL",
+            "reason": "legacy analyzer could not interpret runtime temporal evidence",
+            "harness_error": caught_error,
+            "p3_returncode": 0,
+        }
+        result = v2._attach_residual(result)
+
+    runtime_observed = _runtime_observation(case_dir)
+    contract["runtime_regime"]["observed"].update(runtime_observed)
+    if result.get("p3_returncode") is not None:
+        contract["evidence"]["observed"]["p3_returncode"] = result.get(
+            "p3_returncode"
+        )
+    if result.get("analysis") is not None:
+        contract["evidence"]["observed"]["physics_analysis"] = result.get(
+            "analysis"
+        )
+    if caught_error is not None:
+        contract["evidence"]["observed"]["legacy_analyzer_error"] = caught_error
+
+    p3 = ec.evaluate_contract(contract, phase="P3")
+    artifact_paths = _CONTRACT_ARTIFACT_WRITER(
+        measurements_root=measurements_root,
+        case_id=case_id,
+        contract=contract,
+        p1=p1,
+        p3=p3,
+    )
+    result["execution_contract"] = contract
+    result["execution_contract_p1"] = p1
+    result["execution_contract_p3"] = p3
+    result["execution_contract_artifacts"] = artifact_paths
+
+    if result.get("class") == "P3_PASS" and p3["status"] != "PASS":
+        result["pre_contract_class"] = "P3_PASS"
+        result["class"] = "HARNESS_OR_CONSTRUCTION_FAIL"
+        result["reason"] = (
+            "QPX process completed but CORE-16 runtime-semantic contract did not pass"
+        )
+    elif caught_error is not None:
+        result["reason"] = (
+            "runtime evidence failed the ontology path before physics interpretation"
+        )
+    return result
+
+
+def _install_v2_repairs() -> None:
+    v2._build_electron_300k = _build_electron_fixed
+    v2._build_oneway = _build_oneway_fixed
+    v2._build_feedback = _build_feedback_fixed
+    v2._run_case = _run_case_safe
+
+
+def _v3_compat_self_test() -> int:
+    try:
+        if v2.self_test() != 0:
+            raise AssertionError("v2 self-test failed")
+        if ec.self_test() != 0:
+            raise AssertionError("execution-contract self-test failed")
+        if moose_executioner.self_test() != 0:
+            raise AssertionError("generic Executioner self-test failed")
+        if temporal.self_test() != 0:
+            raise AssertionError("generic temporal observation self-test failed")
+
+        base = """[Executioner]
+  type = Transient
+  scheme = implicit-euler
+  dt = 1e-8
+  end_time = 2e-8
+  compute_scaling_once = true
+[]
+"""
+        tuned = apply_micro_time_contract(base, dt=1.0e-13, steps=5)
+        controls = _executioner_controls(tuned)
+        required = {
+            "dt": 1.0e-13,
+            "end_time": 5.0e-13,
+            "num_steps": 5,
+            "dtmin": 1.0e-14,
+            "timestep_tolerance": 1.0e-16,
+            "abort_on_solve_fail": True,
+        }
+        for name, expected in required.items():
+            actual = controls.get(name)
+            if isinstance(expected, float):
+                if not math.isclose(
+                    float(actual), expected, rel_tol=1.0e-15, abs_tol=0.0
+                ):
+                    raise AssertionError(
+                        f"wrong {name}: expected {expected}, got {actual}"
+                    )
+            elif actual != expected:
+                raise AssertionError(
+                    f"wrong {name}: expected {expected}, got {actual}"
+                )
+
+        contract = _build_execution_contract(
+            "Issue43_FAST2_feedback_dt1e13", tuned
+        )
+        if ec.evaluate_contract(contract, phase="P1")["status"] != "PASS":
+            raise AssertionError("valid fixed-step ontology contract failed P1")
+
+        invalid = _set_executioner_parameter(tuned, "dtmin", "1e-12")
+        invalid_contract = _build_execution_contract(
+            "Issue43_FAST2_feedback_dt1e13_bad", invalid
+        )
+        if ec.evaluate_contract(invalid_contract, phase="P1")["status"] != "HOLD":
+            raise AssertionError("dt<dtmin mutation was not rejected by ontology P1")
+
+        duplicate = tuned.replace(
+            "  num_steps = 5\n", "  num_steps = 5\n  num_steps = 6\n"
+        )
+        try:
+            apply_micro_time_contract(duplicate, dt=1.0e-13, steps=5)
+        except FastPlasmaV3Error:
+            pass
+        else:
+            raise AssertionError("duplicate Executioner parameter was not rejected")
+
+        with tempfile.TemporaryDirectory() as tmp:
+            case_dir = Path(tmp)
+            csv_path = case_dir / "input_out.csv"
+            csv_path.write_text(
+                "time,value\n"
+                "0,0\n"
+                "1e-13,1\n"
+                "2e-13,1\n"
+                "3e-13,1\n"
+                "4e-13,1\n"
+                "5e-13,1\n"
+            )
+            observed = _runtime_observation(case_dir)
+            runtime_contract = _build_execution_contract(
+                "Issue43_FAST2_feedback_dt1e13", tuned
+            )
+            runtime_contract["runtime_regime"]["observed"].update(observed)
+            runtime_contract["evidence"]["observed"]["p3_returncode"] = 0
+            if ec.evaluate_contract(runtime_contract, phase="P3")["status"] != "PASS":
+                raise AssertionError("valid runtime trajectory failed ontology P3")
+
+            csv_path.write_text("time,value\n0,0\n")
+            zero_observed = _runtime_observation(case_dir)
+            zero_contract = _build_execution_contract(
+                "Issue43_FAST2_feedback_dt1e13_zero", tuned
+            )
+            zero_contract["runtime_regime"]["observed"].update(zero_observed)
+            zero_contract["evidence"]["observed"]["p3_returncode"] = 0
+            if ec.evaluate_contract(zero_contract, phase="P3")["status"] != "HOLD":
+                raise AssertionError("initial-only runtime was not held by ontology P3")
+    except Exception as exc:
+        print(f"ISSUE43_FAST_V3_SELFTEST: FAIL ({exc})")
+        return 1
+    print("ISSUE43_FAST_V3_SELFTEST: PASS")
+    return 0
+
+
+_RAW_BUILD_ELECTRON = _build_electron_fixed
+_RAW_BUILD_ONEWAY = _build_oneway_fixed
+_RAW_BUILD_FEEDBACK = _build_feedback_fixed
+_RAW_BUILD_EXECUTION_CONTRACT = _build_execution_contract
+_RAW_RUN_CASE_SAFE = _run_case_safe
 
 
 def _with_output_contract(text: str, *, dt: float) -> str:
@@ -60,7 +523,6 @@ def _augment_execution_contract(case_id: str, input_text: str) -> dict[str, Any]
             input_text, required_time_separation=separation
         )
     except Exception:
-        # Lower-layer v3 unit tests use a synthetic input without [Outputs].
         if "[Outputs]" not in input_text:
             return contract
         raise
@@ -206,11 +668,10 @@ def _run_case_v5(**kwargs: Any) -> dict[str, Any]:
 
 
 def _install_v5_repairs() -> None:
-    v3._build_electron_fixed = _build_electron_v5
-    v3._build_oneway_fixed = _build_oneway_v5
-    v3._build_feedback_fixed = _build_feedback_v5
-    v3._build_execution_contract = _augment_execution_contract
-    v3._run_case_safe = _run_case_v5
+    v2._build_electron_300k = _build_electron_v5
+    v2._build_oneway = _build_oneway_v5
+    v2._build_feedback = _build_feedback_v5
+    v2._run_case = _run_case_v5
 
 
 def _p2_check_input_args() -> tuple[str, ...]:
@@ -218,9 +679,6 @@ def _p2_check_input_args() -> tuple[str, ...]:
 
 
 def _p2_output_introspection_args() -> tuple[str, ...]:
-    # --show-outputs is emitted by constructed Console output during INITIAL.
-    # num_steps=0 preserves object construction while prohibiting a physical
-    # transient timestep. A positive Time Step in the log is a hard phase leak.
     return (
         "--show-outputs",
         "--color",
@@ -487,17 +945,13 @@ def _evaluate_output_runtime_confirmation(
         },
         {
             "id": "solver-time-step-count",
-            "status": (
-                "PASS" if trajectory.get("time_steps_seen") == steps else "FAIL"
-            ),
+            "status": "PASS" if trajectory.get("time_steps_seen") == steps else "FAIL",
             "observed": trajectory.get("time_steps_seen"),
             "required": steps,
         },
         {
             "id": "solver-converged-step-count",
-            "status": (
-                "PASS" if trajectory.get("converged_steps") >= steps else "FAIL"
-            ),
+            "status": "PASS" if trajectory.get("converged_steps") >= steps else "FAIL",
             "observed": trajectory.get("converged_steps"),
             "required": f">= {steps}",
         },
@@ -505,11 +959,9 @@ def _evaluate_output_runtime_confirmation(
             "id": "solver-final-time",
             "status": (
                 "PASS"
-                if (
-                    trajectory.get("solver_final_time") is not None
-                    and abs(float(trajectory["solver_final_time"]) - final_expected)
-                    <= compare_tol
-                )
+                if trajectory.get("solver_final_time") is not None
+                and abs(float(trajectory["solver_final_time"]) - final_expected)
+                <= compare_tol
                 else "FAIL"
             ),
             "observed": trajectory.get("solver_final_time"),
@@ -529,12 +981,10 @@ def _evaluate_output_runtime_confirmation(
             "id": "csv-physical-times-match",
             "status": (
                 "PASS"
-                if (
-                    len(physical_times) == steps
-                    and all(
-                        abs(observed - expected) <= compare_tol
-                        for observed, expected in zip(physical_times, expected_times)
-                    )
+                if len(physical_times) == steps
+                and all(
+                    abs(observed - expected) <= compare_tol
+                    for observed, expected in zip(physical_times, expected_times)
                 )
                 else "FAIL"
             ),
@@ -545,12 +995,10 @@ def _evaluate_output_runtime_confirmation(
             "id": "csv-adjacent-times-distinct",
             "status": (
                 "PASS"
-                if (
-                    len(physical_times) == steps
-                    and all(
-                        later - earlier > row_tolerance
-                        for earlier, later in zip(physical_times, physical_times[1:])
-                    )
+                if len(physical_times) == steps
+                and all(
+                    later - earlier > row_tolerance
+                    for earlier, later in zip(physical_times, physical_times[1:])
                 )
                 else "FAIL"
             ),
@@ -564,10 +1012,8 @@ def _evaluate_output_runtime_confirmation(
             "id": "csv-final-time",
             "status": (
                 "PASS"
-                if (
-                    physical_times
-                    and abs(physical_times[-1] - final_expected) <= compare_tol
-                )
+                if physical_times
+                and abs(physical_times[-1] - final_expected) <= compare_tol
                 else "FAIL"
             ),
             "observed": physical_times[-1] if physical_times else None,
@@ -590,9 +1036,7 @@ def _evaluate_output_runtime_confirmation(
             "expected_times": expected_times,
         }
 
-    observation_pass = all(
-        item["status"] == "PASS" for item in observation_checks
-    )
+    observation_pass = all(item["status"] == "PASS" for item in observation_checks)
     return {
         "status": "PASS" if observation_pass else "HOLD",
         "class": (
@@ -692,13 +1136,11 @@ def _run_output_preflight(*, qpx: str | None, results_root: str | None) -> int:
 
     status = (
         "PASS"
-        if (
-            p2.returncode == 0
-            and introspection is not None
-            and introspection.returncode == 0
-            and framework_evidence["status"] == "PASS"
-            and not p3_executed
-        )
+        if p2.returncode == 0
+        and introspection is not None
+        and introspection.returncode == 0
+        and framework_evidence["status"] == "PASS"
+        and not p3_executed
         else "HOLD"
     )
     summary = {
@@ -710,10 +1152,7 @@ def _run_output_preflight(*, qpx: str | None, results_root: str | None) -> int:
             **evidence.identity_record(executable=exe, input_path=input_path),
             "qpx_sha256": evidence.sha256_file(exe),
         },
-        "p1_output_contract": {
-            "report": report,
-            "decision": static_decision,
-        },
+        "p1_output_contract": {"report": report, "decision": static_decision},
         "p2_qpx_introspection": {
             "check_input": {
                 "returncode": p2.returncode,
@@ -722,12 +1161,8 @@ def _run_output_preflight(*, qpx: str | None, results_root: str | None) -> int:
                 "failure": p2_failure,
             },
             "output_introspection": {
-                "returncode": (
-                    introspection.returncode if introspection is not None else None
-                ),
-                "wall_seconds": (
-                    introspection.wall_seconds if introspection is not None else None
-                ),
+                "returncode": introspection.returncode if introspection is not None else None,
+                "wall_seconds": introspection.wall_seconds if introspection is not None else None,
                 "log": str(introspection_log_path),
                 "args": list(_p2_output_introspection_args()),
             },
@@ -893,10 +1328,8 @@ def _run_output_runtime_confirmation(
     return 0 if decision["status"] == "PASS" else 2
 
 
-# Absorbed Issue43 v4 orchestration.  Keep the historical markers and result
-# naming stable while removing the version-layer dependency.
 _RAW_CLASSIFY = v2.classify
-_RAW_WRITE_CONTRACT_ARTIFACTS = v3._write_contract_artifacts
+_RAW_WRITE_CONTRACT_ARTIFACTS = _write_contract_artifacts
 
 
 def _write_contract_artifacts_isolated(**kwargs: Any) -> dict[str, str]:
@@ -907,7 +1340,8 @@ def _write_contract_artifacts_isolated(**kwargs: Any) -> dict[str, str]:
 
 
 def _install_artifact_namespace() -> None:
-    v3._write_contract_artifacts = _write_contract_artifacts_isolated
+    global _CONTRACT_ARTIFACT_WRITER
+    _CONTRACT_ARTIFACT_WRITER = _write_contract_artifacts_isolated
 
 
 def _harness_decision(label: str, case: dict[str, Any] | None) -> dict[str, Any] | None:
@@ -972,8 +1406,8 @@ def _contract_signature(case: dict[str, Any] | None) -> str:
 
 def _v4_compat_self_test() -> int:
     try:
-        if v3.self_test() != 0:
-            raise AssertionError("v3 self-test failed")
+        if _v3_compat_self_test() != 0:
+            raise AssertionError("v3 compatibility self-test failed")
 
         with tempfile.TemporaryDirectory() as tmp:
             measurements_root = Path(tmp) / "measurements"
@@ -1035,7 +1469,6 @@ def _run_issue43_guarded(argv: list[str] | None = None) -> int:
         return 1
 
     _install_artifact_namespace()
-    v3._install_v2_repairs()
 
     repo_root = Path(__file__).resolve().parents[1]
     base_case = repo_root / v2.v1.BASE_CASE_RELATIVE
@@ -1499,10 +1932,7 @@ def main(argv: list[str] | None = None) -> int:
     if self_test() != 0:
         return 1
     if known.output_preflight:
-        return _run_output_preflight(
-            qpx=known.qpx,
-            results_root=known.results_root,
-        )
+        return _run_output_preflight(qpx=known.qpx, results_root=known.results_root)
     if known.output_runtime_confirmation:
         return _run_output_runtime_confirmation(
             qpx=known.qpx,
@@ -1514,4 +1944,5 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     import sys
+
     raise SystemExit(main(sys.argv[1:]))
