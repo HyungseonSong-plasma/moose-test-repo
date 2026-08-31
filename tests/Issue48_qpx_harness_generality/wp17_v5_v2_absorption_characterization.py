@@ -2,6 +2,7 @@
 """P0 characterization for the final fast_plasma_relaxation_v2 absorption into v5."""
 from __future__ import annotations
 
+import inspect
 import sys
 import tempfile
 from pathlib import Path
@@ -182,7 +183,6 @@ def _check_collision_safe_directory_primitive() -> None:
 
 
 def _check_scientific_policy_boundary() -> None:
-    v2_source = _text(Path(v2.__file__))
     recipe_source = _text(Path(recipe.__file__))
 
     if "def classify(" not in recipe_source:
@@ -191,13 +191,16 @@ def _check_scientific_policy_boundary() -> None:
         if token not in recipe_source:
             raise AssertionError(f"recipe Issue43 policy class drift: {token}")
 
-    # The v2 copy remains temporarily as the compatibility/equivalence oracle.
-    # It is removed only after v5 binds the recipe directly.
-    if "def classify(" not in v2_source:
-        raise AssertionError("v2 compatibility classification moved before v5 cutover")
-    for token in ISSUE43_POLICY_TOKENS:
-        if token not in v2_source:
-            raise AssertionError(f"v2 compatibility policy class drift: {token}")
+    v2_classify_source = inspect.getsource(v2.classify)
+    if "return relaxation_recipe.classify(" not in v2_classify_source:
+        raise AssertionError("v2 classification is not delegated to the canonical recipe")
+    for forbidden in (
+        "_physics_pass(",
+        "DT_FEEDBACK_BASE / tau_dr",
+        "KNOWN_GOOD_ELECTRON_CONTROL_FAIL",
+    ):
+        if forbidden in v2_classify_source:
+            raise AssertionError(f"duplicate scientific policy remains in v2 classify: {forbidden}")
 
     for forbidden in (
         "fast_plasma_relaxation_v2",
