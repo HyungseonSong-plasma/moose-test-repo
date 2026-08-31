@@ -18,7 +18,7 @@ from qpx_harness.bundle import main as bundle_main
 from qpx_harness.compat.issue46_fd_reference import main as fd_reference_main, self_test as fd_reference_self_test
 from qpx_harness.coupling_evr1_safe import main as coupling_evr1_main, self_test as coupling_evr1_self_test
 from qpx_harness.coupling_evr2_timestep import main as coupling_evr2_main, self_test as coupling_evr2_self_test
-from qpx_harness.dmix_equivalence_structured import main as dmix_equivalence_main, self_test as dmix_equivalence_self_test
+from qpx_harness.dmix_equivalence import main as dmix_equivalence_main, self_test as dmix_equivalence_self_test
 from qpx_harness.electron_inventory_nullspace import main as inventory_nullspace_main, self_test as inventory_nullspace_self_test
 from qpx_harness.execution_contract import main as execution_contract_main, self_test as execution_contract_self_test
 from qpx_harness.fast_plasma_coupling_diagnostic import main as fast_coupling_diagnostic_main, self_test as fast_coupling_diagnostic_self_test
