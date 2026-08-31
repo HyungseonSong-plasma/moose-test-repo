@@ -21,7 +21,6 @@ from qpx_harness.petsc import options as po
 from qpx_harness import augmented_jacobian_localization as issue46_legacy
 from qpx_harness import electron_inventory_nullspace as issue45_inventory_legacy
 from qpx_harness import fast_plasma_coupling_diagnostic as issue43_legacy
-from qpx_harness import petsc_first_linear_diagnostic as issue45_legacy
 from recipes import issue43_coupling_diagnostic as issue43_recipe
 from recipes import issue45_first_linear as issue45_recipe
 from recipes import issue45_inventory_constraint as issue45_inventory_recipe
@@ -295,10 +294,29 @@ def _check_recipe_equivalence() -> None:
                 f"Issue43 recipe drift for jacobian_test={jacobian_test}"
             )
 
-    old45_text, old45_meta = issue45_legacy.instrument_first_linear(text)
-    new45_text, new45_meta = issue45_recipe.instrument_first_linear(text)
-    if new45_text != old45_text or new45_meta != old45_meta:
-        raise AssertionError("Issue45 first-linear recipe drift")
+    first45_text, first45_meta = issue45_recipe.instrument_first_linear(text)
+    if mp.get_parameter(first45_text, "Executioner", "nl_max_its") != "1":
+        raise AssertionError("Issue45 first-linear nonlinear horizon drift")
+    expected45_flags = [
+        "-snes_converged_reason",
+        "-ksp_converged_reason",
+        "-snes_test_jacobian",
+        "-ksp_view",
+        "-ksp_monitor_true_residual",
+    ]
+    if po.get_flags(first45_text) != expected45_flags:
+        raise AssertionError("Issue45 first-linear PETSc option contract drift")
+    expected45_meta = {
+        "target": issue45_recipe.TARGET,
+        "diagnostic_nl_max_its": issue45_recipe.DIAGNOSTIC_NL_MAX_ITS,
+        "petsc_options_added": list(issue45_recipe.FIRST_LINEAR_PETSC_OPTIONS),
+        "physics_changed": False,
+        "closure_changed": False,
+        "solver_realization_changed": False,
+        "diagnostic_horizon_changed": True,
+    }
+    if first45_meta != expected45_meta:
+        raise AssertionError("Issue45 first-linear metadata contract drift")
 
     constrained = issue45_inventory_legacy._synthetic_constrained_input()
     old_inventory = issue45_inventory_legacy.audit_constrained_quasisteady_structure(
@@ -312,8 +330,8 @@ def _check_recipe_equivalence() -> None:
     if new_inventory != old_inventory:
         raise AssertionError("Issue45 inventory-constraint recipe drift")
 
-    old46_text, old46_meta = issue46_legacy.instrument_localization(old45_text)
-    new46_text, new46_meta = issue46_recipe.instrument_localization(old45_text)
+    old46_text, old46_meta = issue46_legacy.instrument_localization(first45_text)
+    new46_text, new46_meta = issue46_recipe.instrument_localization(first45_text)
     if new46_text != old46_text or new46_meta != old46_meta:
         raise AssertionError("Issue46 recipe drift")
 
