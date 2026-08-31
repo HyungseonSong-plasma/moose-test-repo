@@ -21,7 +21,6 @@ ROOT = Path(__file__).resolve().parents[2]
 CLEANUP_CANDIDATES = (
     "electron_inventory_nullspace",
     "fast_plasma_coupling_diagnostic",
-    "jacobian_fd_reference_audit",
     "scale_audit",
 )
 
