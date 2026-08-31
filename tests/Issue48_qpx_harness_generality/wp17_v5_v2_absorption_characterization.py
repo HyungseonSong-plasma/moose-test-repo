@@ -65,10 +65,11 @@ V5_GENERIC_INFRA_TOKENS = (
     "v2._create_root(",
 )
 
-V2_ISSUE43_POLICY_TOKENS = (
+ISSUE43_POLICY_TOKENS = (
     '"KNOWN_GOOD_ELECTRON_CONTROL_FAIL"',
     '"ELECTRON_300K_CONTROL_FAIL"',
     '"POISSON_OR_BLOCK_SCALING_FAIL"',
+    '"FEEDBACK_CASE_MISSING"',
     '"FEEDBACK_IMPLICIT_COUPLING_RECOVERS_NEAR_TAU_DR"',
     '"DIELECTRIC_TIMESTEP_STIFFNESS_CONFIRMED"',
     '"FEEDBACK_RECOVERS_BELOW_TAU_DR"',
@@ -150,6 +151,7 @@ def _check_destination_readiness() -> None:
         (preflight, "validate_parser_symbols_text"),
         (recipe, "find_relaxation_csv"),
         (recipe, "build_fast_input"),
+        (recipe, "classify"),
     ):
         if not callable(getattr(owner, name, None)):
             raise AssertionError(f"canonical destination missing: {owner.__name__}.{name}")
@@ -182,13 +184,21 @@ def _check_collision_safe_directory_primitive() -> None:
 def _check_scientific_policy_boundary() -> None:
     v2_source = _text(Path(v2.__file__))
     recipe_source = _text(Path(recipe.__file__))
+
+    if "def classify(" not in recipe_source:
+        raise AssertionError("recipe does not own Issue43 scientific classification")
+    for token in ISSUE43_POLICY_TOKENS:
+        if token not in recipe_source:
+            raise AssertionError(f"recipe Issue43 policy class drift: {token}")
+
+    # The v2 copy remains temporarily as the compatibility/equivalence oracle.
+    # It is removed only after v5 binds the recipe directly.
     if "def classify(" not in v2_source:
-        raise AssertionError("v2 scientific classification owner unexpectedly moved")
-    for token in V2_ISSUE43_POLICY_TOKENS:
+        raise AssertionError("v2 compatibility classification moved before v5 cutover")
+    for token in ISSUE43_POLICY_TOKENS:
         if token not in v2_source:
-            raise AssertionError(f"v2 Issue43 policy class drift: {token}")
-    if "def classify(" in recipe_source:
-        raise AssertionError("recipe classification already migrated without WP17 update")
+            raise AssertionError(f"v2 compatibility policy class drift: {token}")
+
     for forbidden in (
         "fast_plasma_relaxation_v2",
         "fast_plasma_relaxation_v5",
