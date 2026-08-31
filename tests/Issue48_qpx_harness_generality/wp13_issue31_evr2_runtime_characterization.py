@@ -202,12 +202,14 @@ def _check_runtime_boundary() -> None:
         raise AssertionError("EVR2 runtime owner reverse-imports legacy EVR2 owner")
 
 
-def _check_checkpoint_route() -> None:
+def _check_production_route() -> None:
     source = (ROOT / "scripts/qpx.py").read_text()
-    if "from qpx_harness.coupling_evr2_timestep import" not in source:
-        raise AssertionError("EVR2 extraction checkpoint unexpectedly changed CLI route")
-    if "from qpx_harness.coupling_evr2_runtime import" in source:
-        raise AssertionError("EVR2 runtime owner was routed before extraction P0")
+    if "from qpx_harness.coupling_evr2_runtime import" not in source:
+        raise AssertionError("EVR2 canonical runtime owner is not routed by CLI")
+    if "from qpx_harness.coupling_evr2_timestep import" in source:
+        raise AssertionError("EVR2 legacy timestep owner remains routed by CLI")
+    if "return coupling_evr2_main(rest)" not in source:
+        raise AssertionError("EVR2 command dispatch no longer uses canonical alias")
 
 
 def main() -> int:
@@ -217,7 +219,7 @@ def main() -> int:
         _check_failure_signature_equivalence()
         _check_generic_staging()
         _check_runtime_boundary()
-        _check_checkpoint_route()
+        _check_production_route()
     except Exception as exc:
         print(f"ISSUE48_ISSUE31_EVR2_RUNTIME_SELFTEST: FAIL ({exc})")
         return 1
