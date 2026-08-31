@@ -165,6 +165,38 @@ def _partition_consumers(consumers: Iterable[str]) -> tuple[list[str], list[str]
     return runtime, tests
 
 
+def _partition_runtime_consumers(
+    runtime_consumers: Iterable[str],
+) -> tuple[list[str], list[str]]:
+    internal: list[str] = []
+    entrypoints: list[str] = []
+    for consumer in sorted(set(runtime_consumers)):
+        (internal if consumer.startswith("qpx_harness/") else entrypoints).append(
+            consumer
+        )
+    return internal, entrypoints
+
+
+def _collapse_role(
+    *,
+    status: str,
+    internal_runtime: list[str],
+    entrypoint_runtime: list[str],
+    tests: list[str],
+) -> str:
+    if status == "ZERO_CONSUMER":
+        return "ZERO_CONSUMER"
+    if status == "TEST_ONLY":
+        return "TEST_ONLY"
+    if entrypoint_runtime:
+        return "ENTRYPOINT_BOUND"
+    if tests:
+        return "INTERNAL_PLUS_TESTS"
+    if len(internal_runtime) == 1:
+        return "SINGLE_INTERNAL_CONSUMER"
+    return "INTERNAL_ONLY"
+
+
 def inventory(root: Path = ROOT) -> dict[str, object]:
     scripts = sorted(
         str(path.relative_to(root))
@@ -177,6 +209,8 @@ def inventory(root: Path = ROOT) -> dict[str, object]:
     zero: list[str] = []
     test_only: list[str] = []
     runtime_blocked: list[str] = []
+    internal_only: list[str] = []
+    single_internal: list[str] = []
 
     for module in CLEANUP_CANDIDATES:
         path = root / "qpx_harness" / f"{module}.py"
@@ -186,6 +220,7 @@ def inventory(root: Path = ROOT) -> dict[str, object]:
             )
         all_consumers = sorted(py.get(module, set()) | execution.get(module, set()))
         runtime, tests = _partition_consumers(all_consumers)
+        internal_runtime, entrypoint_runtime = _partition_runtime_consumers(runtime)
         if not all_consumers:
             status = "ZERO_CONSUMER"
             zero.append(module)
@@ -195,9 +230,24 @@ def inventory(root: Path = ROOT) -> dict[str, object]:
         else:
             status = "TEST_ONLY"
             test_only.append(module)
+
+        collapse_role = _collapse_role(
+            status=status,
+            internal_runtime=internal_runtime,
+            entrypoint_runtime=entrypoint_runtime,
+            tests=tests,
+        )
+        if collapse_role in {"INTERNAL_ONLY", "SINGLE_INTERNAL_CONSUMER"}:
+            internal_only.append(module)
+        if collapse_role == "SINGLE_INTERNAL_CONSUMER":
+            single_internal.append(module)
+
         candidates[module] = {
             "status": status,
+            "collapse_role": collapse_role,
             "runtime_consumers": runtime,
+            "internal_runtime_consumers": internal_runtime,
+            "entrypoint_runtime_consumers": entrypoint_runtime,
             "test_consumers": tests,
         }
 
@@ -208,6 +258,8 @@ def inventory(root: Path = ROOT) -> dict[str, object]:
         "zero_consumer_candidates": zero,
         "test_only_candidates": test_only,
         "runtime_blocked_candidates": runtime_blocked,
+        "internal_only_candidates": internal_only,
+        "single_internal_consumer_candidates": single_internal,
     }
 
 
@@ -255,6 +307,32 @@ def self_test() -> int:
         if tests != ["tests/Issue48/example.py"]:
             raise AssertionError(f"test consumer partition drift: {tests}")
 
+        internal, entrypoints = _partition_runtime_consumers(runtime)
+        if internal != ["qpx_harness/legacy.py"]:
+            raise AssertionError(f"internal consumer partition drift: {internal}")
+        if entrypoints != ["scripts/qpx.py"]:
+            raise AssertionError(f"entrypoint consumer partition drift: {entrypoints}")
+        if (
+            _collapse_role(
+                status="BLOCKED_RUNTIME",
+                internal_runtime=["qpx_harness/next.py"],
+                entrypoint_runtime=[],
+                tests=[],
+            )
+            != "SINGLE_INTERNAL_CONSUMER"
+        ):
+            raise AssertionError("single-internal collapse role was not detected")
+        if (
+            _collapse_role(
+                status="BLOCKED_RUNTIME",
+                internal_runtime=["qpx_harness/next.py"],
+                entrypoint_runtime=["scripts/qpx.py"],
+                tests=[],
+            )
+            != "ENTRYPOINT_BOUND"
+        ):
+            raise AssertionError("entrypoint-bound collapse role was not detected")
+
         try:
             imported_modules(
                 "def broken(:\n    pass\n",
@@ -297,17 +375,40 @@ def main(argv: list[str] | None = None) -> int:
         for module in CLEANUP_CANDIDATES:
             item = result["candidates"][module]
             runtime = item["runtime_consumers"]
+            internal_runtime = item["internal_runtime_consumers"]
+            entrypoint_runtime = item["entrypoint_runtime_consumers"]
             tests = item["test_consumers"]
             print(
                 f"ISSUE48_CLEANUP_CANDIDATE: {module} "
                 f"status={item['status']} "
+                f"collapse_role={item['collapse_role']} "
                 f"runtime_consumers={','.join(runtime) if runtime else 'NONE'} "
+                f"internal_runtime_consumers={','.join(internal_runtime) if internal_runtime else 'NONE'} "
+                f"entrypoint_runtime_consumers={','.join(entrypoint_runtime) if entrypoint_runtime else 'NONE'} "
                 f"test_consumers={','.join(tests) if tests else 'NONE'}"
             )
         print(
             "ISSUE48_CLEANUP_RUNTIME_BLOCKED_COUNT:",
             len(result["runtime_blocked_candidates"]),
         )
+        print(
+            "ISSUE48_CLEANUP_INTERNAL_ONLY_COUNT:",
+            len(result["internal_only_candidates"]),
+        )
+        if result["internal_only_candidates"]:
+            print(
+                "ISSUE48_CLEANUP_INTERNAL_ONLY:",
+                ",".join(result["internal_only_candidates"]),
+            )
+        print(
+            "ISSUE48_CLEANUP_SINGLE_INTERNAL_CONSUMER_COUNT:",
+            len(result["single_internal_consumer_candidates"]),
+        )
+        if result["single_internal_consumer_candidates"]:
+            print(
+                "ISSUE48_CLEANUP_SINGLE_INTERNAL_CONSUMERS:",
+                ",".join(result["single_internal_consumer_candidates"]),
+            )
         print(
             "ISSUE48_CLEANUP_TEST_ONLY_COUNT:",
             len(result["test_only_candidates"]),
