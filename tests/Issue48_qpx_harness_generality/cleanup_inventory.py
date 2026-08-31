@@ -25,10 +25,6 @@ CLEANUP_CANDIDATES = (
     "fast_plasma_relaxation_v5",
     "jacobian_fd_reference_audit",
     "petsc_first_linear_diagnostic",
-    "performance_core",
-    "performance_investigation",
-    "performance_smoke",
-    "performance_transport_probe_direct",
     "scale_audit",
 )
 
