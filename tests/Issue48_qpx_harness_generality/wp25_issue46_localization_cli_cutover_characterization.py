@@ -88,8 +88,8 @@ def _load_cli_module() -> ModuleType:
 
 
 def _check_production_topology() -> None:
-    if not LEGACY_PATH.is_file():
-        raise AssertionError("legacy owner unexpectedly absent before retirement phase")
+    if LEGACY_PATH.is_file():
+        raise AssertionError("retired augmented owner unexpectedly exists")
     if not SEMANTIC_PATH.is_file():
         raise AssertionError("semantic Issue46 owner is missing")
 
