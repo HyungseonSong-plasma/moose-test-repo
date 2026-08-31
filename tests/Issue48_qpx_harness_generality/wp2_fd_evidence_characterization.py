@@ -11,7 +11,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from qpx_harness import artifacts
-from qpx_harness import jacobian_fd_reference_audit as legacy
+from qpx_harness import issue46_fd_reference as legacy
 from qpx_harness.petsc import fd_reference
 
 
