@@ -384,6 +384,33 @@ Every tree entry must come from `SNAPSHOT_MANIFEST`; no extra path may be invent
 
 After the immutable snapshot commit is read-back verified, move the branch/ref only from a fresh branch/ref mutation response under RM-06G. Do not use a temporary file to prove that the branch or connector is writable.
 
+## RM-06J — Structural-action opcode lock
+
+For high-impact structural mutations, freeze the exact action family independently from resource class and target. The selected callable name must literally match the frozen structural opcode.
+
+Canonical mapping:
+
+```text
+delete existing file -> delete_file(path=<exact path>, sha=<fresh blob SHA>)
+create new file       -> create_file(path=<exact path>)
+move branch/ref       -> update_ref(branch_name=<exact branch>, sha=<intended commit>)
+```
+
+Hard rule:
+
+```text
+NEXT_MUTATION_ACTION == delete existing file
+  -> selected callable MUST be delete_file
+  -> payload MUST contain exact file path + fresh blob SHA
+  -> update_ref/create_file/update_file/create_tree/create_commit are FORBIDDEN
+
+NEXT_MUTATION_ACTION == move branch/ref
+  -> selected callable MUST be update_ref
+  -> file-content mutators are FORBIDDEN
+```
+
+A branch name being correct, a branch already pointing at the supplied SHA, or a wrong structural call producing no semantic change does not make the action acceptable. Any mismatch between the frozen structural action and the selected callable trips RM-09A before the originally intended business mutation can continue.
+
 ## RM-07 — State-transition fan-out synchronization
 
 When an issue changes lifecycle/dependency state (for example ACTIVE -> CLOSED/PASS, BLOCKED -> ACTIVE, or one blocker is replaced by a successor), treat downstream current-state synchronization as part of the same governance operation.
