@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""P0 characterization for fast_plasma_relaxation_v2 zero-consumer retirement gate."""
+"""P0 characterization for completed fast_plasma_relaxation_v2 retirement."""
 from __future__ import annotations
 
 import sys
@@ -26,8 +26,6 @@ def _observed_consumers() -> dict[str, str]:
         "import qpx_harness.fast_plasma_relaxation_v2 as v2",
     )
     for path in (ROOT / "qpx_harness").glob("*.py"):
-        if path.name == "fast_plasma_relaxation_v2.py":
-            continue
         text = path.read_text()
         if any(token in text for token in tokens):
             result[path.name] = text
@@ -65,21 +63,9 @@ def _check_consumer_topology() -> None:
             raise AssertionError(f"v5 canonical Issue43 runtime cutover drift: {token}")
 
 
-def _check_historical_v1_boundary() -> None:
-    source = V2.read_text()
-    if "from . import fast_plasma_relaxation as v1" in source:
-        raise AssertionError("v2 reintroduced retired v1 module")
-    if "v1 = SimpleNamespace(FastPlasmaRelaxationError=FastPlasmaRelaxationError)" not in source:
-        raise AssertionError("v2 error compatibility alias source drift")
-    for token in (
-        "v1.BASE_CASE_RELATIVE",
-        "v1._copy_case(",
-        "v1._validate_assets(",
-        "v1._create_root(",
-        "v1._run_known_good(",
-    ):
-        if token in source:
-            raise AssertionError(f"retired v1 runtime surface returned: {token}")
+def _check_v2_retired() -> None:
+    if V2.exists():
+        raise AssertionError("retired fast_plasma_relaxation_v2.py still exists")
 
 
 def _check_remaining_stale_refs() -> None:
@@ -90,8 +76,10 @@ def _check_remaining_stale_refs() -> None:
         "jacobian_fd_reference_audit.py",
         "petsc_first_linear_diagnostic.py",
     ):
-        if "v2.v1." in _source(name):
-            raise AssertionError(f"retired v1 mechanics remain in {name}")
+        source = _source(name)
+        for token in ("fast_plasma_relaxation_v2", "v2.v1."):
+            if token in source:
+                raise AssertionError(f"retired v2/v1 mechanics remain in {name}: {token}")
 
 
 def _check_coupling_cutover() -> None:
@@ -211,28 +199,10 @@ def _check_canonical_runtime_owner() -> None:
             raise AssertionError(f"canonical Issue43 runtime surface drift: {token}")
 
 
-def _check_v2_zero_consumer_candidate_surface() -> None:
-    if not V2.is_file():
-        raise AssertionError("v2 retirement candidate disappeared before deletion gate")
-    source = V2.read_text()
-    for token in (
-        "def _build_electron_300k(",
-        "def _build_oneway(",
-        "def _build_feedback(",
-        "def _run_case(",
-        "def _run_known_good(",
-        "def _attach_residual(",
-        "def _physics_pass(",
-        "def classify(",
-    ):
-        if token not in source:
-            raise AssertionError(f"v2 retirement-candidate surface drift: {token}")
-
-
 def main() -> int:
     try:
         _check_consumer_topology()
-        _check_historical_v1_boundary()
+        _check_v2_retired()
         _check_remaining_stale_refs()
         _check_coupling_cutover()
         _check_inventory_cutover()
@@ -240,7 +210,6 @@ def main() -> int:
         _check_localization_cutover()
         _check_fd_reference_cutover()
         _check_canonical_runtime_owner()
-        _check_v2_zero_consumer_candidate_surface()
     except Exception as exc:
         print(f"ISSUE48_FAST_PLASMA_V2_DEPENDENCY_SELFTEST: FAIL ({exc})")
         return 1
