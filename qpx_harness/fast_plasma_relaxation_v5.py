@@ -25,8 +25,8 @@ from .runtime import run_qpx
 # on a historical version layer.
 FastPlasmaV3Error = moose_executioner.MooseExecutionerError
 _RAW_BUILD_ELECTRON_300K = v2._build_electron_300k
-_RAW_BUILD_ONEWAY = v2._build_oneway
-_RAW_BUILD_FEEDBACK = v2._build_feedback
+_V2_BUILD_ONEWAY = v2._build_oneway
+_V2_BUILD_FEEDBACK = v2._build_feedback
 _RAW_RUN_CASE = v2._run_case
 
 
@@ -50,7 +50,7 @@ def _build_oneway_fixed(
     base_text: str, *, dt: float, steps: int, radial_span: float
 ) -> str:
     return apply_micro_time_contract(
-        _RAW_BUILD_ONEWAY(
+        _V2_BUILD_ONEWAY(
             base_text, dt=dt, steps=steps, radial_span=radial_span
         ),
         dt=dt,
@@ -62,7 +62,7 @@ def _build_feedback_fixed(
     base_text: str, *, dt: float, steps: int, radial_span: float
 ) -> str:
     return apply_micro_time_contract(
-        _RAW_BUILD_FEEDBACK(
+        _V2_BUILD_FEEDBACK(
             base_text, dt=dt, steps=steps, radial_span=radial_span
         ),
         dt=dt,
