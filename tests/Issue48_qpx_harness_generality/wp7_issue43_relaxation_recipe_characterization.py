@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""P0 characterization for the Issue43 fast-relaxation recipe extraction."""
+"""P0 characterization for the Issue43 fast-relaxation recipe after v2 cutover."""
 from __future__ import annotations
 
 import sys
@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from qpx_harness import fast_plasma_relaxation as legacy
+from qpx_harness import fast_plasma_relaxation_v2 as v2
 from recipes import issue43_fast_relaxation as recipe
 
 
@@ -85,14 +85,14 @@ def _synthetic_rows() -> list[dict[str, float]]:
                 "r43_phi_integral": 0.0,
                 "r43_charge_integral": 0.0,
                 "r43_background_inventory": 1.0e16,
-                "r43_charge_min": -legacy.E_CHARGE * 1.0e10 * decay,
-                "r43_charge_max": legacy.E_CHARGE * 1.0e10 * decay,
+                "r43_charge_min": -recipe.E_CHARGE * 1.0e10 * decay,
+                "r43_charge_max": recipe.E_CHARGE * 1.0e10 * decay,
             }
         )
     return rows
 
 
-def _check_builder_equivalence() -> None:
+def _check_builder_contract() -> None:
     kwargs = {
         "gas_temperature": 300.0,
         "electron_density": 1.0e16,
@@ -100,48 +100,49 @@ def _check_builder_equivalence() -> None:
         "end_time": 2.0e-9,
         "radial_span": 0.243,
     }
-    old_text, old_meta = legacy.build_fast_input(_fixture(), **kwargs)
-    new_text, new_meta = recipe.build_fast_input(_fixture(), **kwargs)
-    if new_text != old_text:
-        raise AssertionError("Issue43 relaxation input text drift")
-    if new_meta != old_meta:
-        raise AssertionError("Issue43 relaxation construction metadata drift")
+    text, meta = recipe.build_fast_input(_fixture(), **kwargs)
+    for token in (
+        "potential = potential_plasma",
+        "r43_positive_background",
+        "r43_phi_diffusion",
+        "r43_phi_charge_source",
+        "r43_phi_plasma_metal",
+    ):
+        if token not in text:
+            raise AssertionError(f"recipe construction lost {token!r}")
+    if meta["dt_s"] != kwargs["dt"] or meta["end_time_s"] != kwargs["end_time"]:
+        raise AssertionError("recipe construction metadata drift")
 
     for bad_kwargs in (
         kwargs | {"dt": 0.0},
         kwargs | {"end_time": 0.0},
         kwargs | {"radial_span": 0.0},
     ):
-        old_failed = False
-        new_failed = False
-        try:
-            legacy.build_fast_input(_fixture(), **bad_kwargs)
-        except legacy.FastPlasmaRelaxationError:
-            old_failed = True
         try:
             recipe.build_fast_input(_fixture(), **bad_kwargs)
         except recipe.Issue43FastRelaxationError:
-            new_failed = True
-        if not old_failed or not new_failed:
-            raise AssertionError("invalid construction input was not rejected equivalently")
+            pass
+        else:
+            raise AssertionError("invalid construction input was not rejected")
 
 
-def _check_analysis_equivalence() -> None:
+def _check_analysis_contract() -> None:
     rows = _synthetic_rows()
-    old = legacy.analyze_relaxation(rows, electron_density=1.0e16, relax_tol=2.0e-4)
-    new = recipe.analyze_relaxation(rows, electron_density=1.0e16, relax_tol=2.0e-4)
-    if new != old:
-        raise AssertionError("Issue43 relaxation analysis result drift")
+    result = recipe.analyze_relaxation(
+        rows,
+        electron_density=1.0e16,
+        relax_tol=2.0e-4,
+    )
+    if result["status"] != "PASS":
+        raise AssertionError("positive relaxation analysis failed")
 
     bad = [dict(row) for row in rows]
     bad[-1]["inventory"] *= 1.01
-    old_bad = legacy.analyze_relaxation(bad, electron_density=1.0e16)
-    new_bad = recipe.analyze_relaxation(bad, electron_density=1.0e16)
-    if new_bad != old_bad or new_bad["status"] != "FAIL":
-        raise AssertionError("inventory-mutation analysis drift")
+    if recipe.analyze_relaxation(bad, electron_density=1.0e16)["status"] != "FAIL":
+        raise AssertionError("inventory mutation was not rejected")
 
 
-def _check_csv_equivalence() -> None:
+def _check_csv_contract() -> None:
     rows = _synthetic_rows()
     with tempfile.TemporaryDirectory() as tmp_name:
         root = Path(tmp_name)
@@ -156,27 +157,48 @@ def _check_csv_equivalence() -> None:
         alternate.write_text(payload)
         preferred.write_text(payload)
 
-        if recipe.find_relaxation_csv(root) != legacy._find_csv(root):
-            raise AssertionError("Issue43 relaxation CSV selection drift")
-        old_rows = legacy._rows(preferred)
-        new_rows = recipe.read_relaxation_rows(preferred)
-        if new_rows != old_rows:
-            raise AssertionError("Issue43 relaxation CSV parsing drift")
+        if recipe.find_relaxation_csv(root) != preferred:
+            raise AssertionError("preferred runtime CSV selection changed")
+        if recipe.read_relaxation_rows(preferred) != rows:
+            raise AssertionError("relaxation CSV parsing changed")
 
         preferred.unlink()
         alternate.unlink()
-        old_failed = False
-        new_failed = False
-        try:
-            legacy._find_csv(root)
-        except legacy.FastPlasmaRelaxationError:
-            old_failed = True
         try:
             recipe.find_relaxation_csv(root)
         except recipe.Issue43FastRelaxationError:
-            new_failed = True
-        if not old_failed or not new_failed:
-            raise AssertionError("missing relaxation CSV was not rejected equivalently")
+            pass
+        else:
+            raise AssertionError("missing relaxation CSV was not rejected")
+
+
+def _check_v2_cutover() -> None:
+    source = Path(v2.__file__).read_text()
+    if "from . import fast_plasma_relaxation as v1" in source:
+        raise AssertionError("v2 still imports historical fast_plasma_relaxation")
+    if "from recipes import issue43_fast_relaxation as relaxation_recipe" not in source:
+        raise AssertionError("v2 does not bind the canonical Issue43 recipe")
+    if v2.FastPlasmaRelaxationError is not recipe.Issue43FastRelaxationError:
+        raise AssertionError("v2 relaxation error compatibility changed")
+    if v2.v1.FastPlasmaRelaxationError is not v2.FastPlasmaRelaxationError:
+        raise AssertionError("v5 exception compatibility path changed")
+
+    feedback = v2._build_feedback(
+        _fixture(),
+        dt=1.0e-13,
+        steps=5,
+        radial_span=0.243,
+    )
+    expected, _ = recipe.build_fast_input(
+        _fixture(),
+        gas_temperature=v2.GAS_TEMPERATURE,
+        electron_density=v2.DEFAULT_ELECTRON_DENSITY,
+        dt=1.0e-13,
+        end_time=5.0e-13,
+        radial_span=0.243,
+    )
+    if feedback != expected:
+        raise AssertionError("v2 feedback builder drifted from canonical recipe")
 
 
 def _check_recipe_boundary() -> None:
@@ -195,9 +217,10 @@ def _check_recipe_boundary() -> None:
 
 def main() -> int:
     try:
-        _check_builder_equivalence()
-        _check_analysis_equivalence()
-        _check_csv_equivalence()
+        _check_builder_contract()
+        _check_analysis_contract()
+        _check_csv_contract()
+        _check_v2_cutover()
         _check_recipe_boundary()
     except Exception as exc:
         print(f"ISSUE48_ISSUE43_RELAXATION_RECIPE_SELFTEST: FAIL ({exc})")
