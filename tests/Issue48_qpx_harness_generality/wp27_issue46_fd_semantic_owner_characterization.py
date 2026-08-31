@@ -111,16 +111,20 @@ def _check_owner_topology() -> None:
         )
 
     semantic_consumers = _production_consumers(SEMANTIC_MODULE, SEMANTIC_PATH)
-    if semantic_consumers != {"qpx_harness/compat/issue46_fd_reference.py"}:
+    expected_semantic = {
+        "qpx_harness/compat/issue46_fd_reference.py",
+        "scripts/qpx.py",
+    }
+    if semantic_consumers != expected_semantic:
         raise AssertionError(
             "semantic FD owner production topology drift: "
-            f"{sorted(semantic_consumers)}"
+            f"expected={sorted(expected_semantic)} observed={sorted(semantic_consumers)}"
         )
 
     compat_consumers = _production_consumers(COMPAT_MODULE, COMPAT_PATH)
-    if compat_consumers != {"scripts/qpx.py"}:
+    if compat_consumers:
         raise AssertionError(
-            "FD compat production topology drift: "
+            "FD compat still has production consumers: "
             f"{sorted(compat_consumers)}"
         )
 
@@ -153,9 +157,7 @@ def _check_compat_identity() -> None:
 def _check_recipe_backing() -> None:
     status = semantic.recipe_backing_status()
     if set(status) != EXPECTED_RECIPE_BINDINGS:
-        raise AssertionError(
-            f"recipe backing surface drift: {sorted(status)}"
-        )
+        raise AssertionError(f"recipe backing surface drift: {sorted(status)}")
     failed = sorted(name for name, ok in status.items() if not ok)
     if failed:
         raise AssertionError(f"recipe backing identity failed: {failed}")
@@ -170,13 +172,15 @@ def _check_stable_cli_route() -> None:
 
     source = CLI_PATH.read_text()
     required = (
-        "from qpx_harness.compat.issue46_fd_reference import main as fd_reference_main, self_test as fd_reference_self_test",
+        "from qpx_harness.issue46_fd_reference import main as fd_reference_main, self_test as fd_reference_self_test",
         'if command == "inventory-fd-reference":',
         "return fd_reference_main(rest)",
     )
     for token in required:
         if token not in source:
             raise AssertionError(f"stable FD CLI surface missing: {token}")
+    if "from qpx_harness.compat.issue46_fd_reference import" in source:
+        raise AssertionError("stable CLI still imports the FD compat adapter")
 
 
 def _check_self_test_route() -> None:
@@ -185,21 +189,23 @@ def _check_self_test_route() -> None:
 
 
 def _negative_control() -> None:
-    source = COMPAT_PATH.read_text()
+    source = CLI_PATH.read_text()
     semantic_import = (
-        "from qpx_harness.issue46_fd_reference import main, recipe_backing_status, self_test"
+        "from qpx_harness.issue46_fd_reference import main as fd_reference_main, "
+        "self_test as fd_reference_self_test"
     )
-    legacy_import = (
-        "from qpx_harness.jacobian_fd_reference_audit import main, self_test"
+    compat_import = (
+        "from qpx_harness.compat.issue46_fd_reference import main as fd_reference_main, "
+        "self_test as fd_reference_self_test"
     )
     if semantic_import not in source:
-        raise AssertionError("compat semantic import baseline missing")
-    mutated = source.replace(semantic_import, legacy_import, 1)
-    imports = _resolved_imports_source(mutated, path=COMPAT_PATH)
-    if LEGACY_MODULE not in imports:
-        raise AssertionError("legacy compat negative control was not detected")
+        raise AssertionError("CLI semantic import baseline missing")
+    mutated = source.replace(semantic_import, compat_import, 1)
+    imports = _resolved_imports_source(mutated, path=CLI_PATH)
+    if COMPAT_MODULE not in imports:
+        raise AssertionError("compat CLI negative control was not detected")
     if SEMANTIC_MODULE in imports:
-        raise AssertionError("semantic owner remained after legacy compat mutation")
+        raise AssertionError("semantic owner remained after compat CLI mutation")
 
 
 def main() -> int:
