@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""P0 retirement-readiness gate for the historical Issue46 FD proxy."""
+"""P0 post-retirement gate for the historical Issue46 FD proxy."""
 from __future__ import annotations
 
 import ast
@@ -139,31 +139,19 @@ def _execution_consumers() -> list[str]:
     return sorted(consumers)
 
 
+def _check_owner_absent() -> None:
+    if LEGACY_PATH.exists():
+        raise AssertionError("retired historical FD proxy unexpectedly exists")
+
+
 def _check_canonical_boundary() -> None:
-    if not LEGACY_PATH.is_file():
-        raise AssertionError("historical FD proxy unexpectedly absent before retirement")
     if not SEMANTIC_PATH.is_file():
         raise AssertionError("canonical Issue46 FD semantic owner is missing")
-
-    legacy_source = LEGACY_PATH.read_text()
-    legacy_imports = _resolved_static_imports_source(legacy_source, path=LEGACY_PATH)
-    if SEMANTIC_MODULE not in legacy_imports:
-        raise AssertionError("historical FD proxy does not delegate to the semantic owner")
-    if "recipes.issue46_fd_reference" in legacy_imports:
-        raise AssertionError("historical FD proxy still owns recipe policy")
-    for forbidden in (
-        "def run_preflight(",
-        "def run_runtime(",
-        "def self_test(",
-        "def audit_ds_reference_structure(",
-    ):
-        if forbidden in legacy_source:
-            raise AssertionError(f"historical FD proxy still owns runtime behavior: {forbidden}")
 
     semantic_source = SEMANTIC_PATH.read_text()
     semantic_imports = _resolved_static_imports_source(semantic_source, path=SEMANTIC_PATH)
     if LEGACY_MODULE in semantic_imports:
-        raise AssertionError("semantic FD owner reverse-depends on the historical proxy")
+        raise AssertionError("semantic FD owner reverse-depends on the retired historical proxy")
     if "recipes.issue46_fd_reference" not in semantic_imports:
         raise AssertionError("semantic FD owner lost its recipe composition boundary")
 
@@ -199,6 +187,9 @@ def _negative_control() -> None:
 
 def main() -> int:
     try:
+        _check_owner_absent()
+        print("ISSUE48_WP29_ISSUE46_FD_LEGACY_RETIREMENT_CHECK: owner-absent=PASS")
+
         python_consumers = _python_consumers()
         if python_consumers:
             raise AssertionError(f"python consumers remain: {python_consumers}")
@@ -217,7 +208,7 @@ def main() -> int:
         print(f"ISSUE48_WP29_ISSUE46_FD_LEGACY_RETIREMENT_CHARACTERIZATION: FAIL ({exc})")
         return 1
 
-    print("ISSUE48_WP29_ISSUE46_FD_LEGACY_RETIREMENT_STATE: RETIREMENT_READY")
+    print("ISSUE48_WP29_ISSUE46_FD_LEGACY_RETIREMENT_STATE: RETIRED")
     print("ISSUE48_WP29_ISSUE46_FD_LEGACY_RETIREMENT_CHARACTERIZATION: PASS")
     return 0
 
