@@ -864,7 +864,7 @@ def _framework_output_evidence(
     add(
         "show-outputs-console-object",
         console_flags is not None,
-        out_flags,
+        console_flags,
         "console output object present",
         severity="warn",
     )
