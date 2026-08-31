@@ -12,6 +12,7 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from qpx_harness import artifacts as qa
 from qpx_harness import temporal as qt
 from qpx_harness.moose import blocks as mb
 from qpx_harness.moose import executioner as me
@@ -174,6 +175,36 @@ def _check_temporal_observation() -> None:
             raise AssertionError("CSV without requested time column was accepted")
 
 
+def _check_artifact_writes() -> None:
+    with tempfile.TemporaryDirectory() as tmp_name:
+        root = Path(tmp_name) / "bundle"
+        paths = qa.write_json_bundle(
+            root,
+            {
+                "p1": ("p1.json", {"status": "PASS"}),
+                "contract": ("contract.json", {"b": 2, "a": 1}),
+            },
+        )
+        if Path(paths["contract"]).parent != root:
+            raise AssertionError("JSON artifact escaped declared owner directory")
+        if Path(paths["p1"]).parent != root:
+            raise AssertionError("JSON artifact escaped declared owner directory")
+        if (root / "contract.json").read_text() != '{\n  "a": 1,\n  "b": 2\n}\n':
+            raise AssertionError("JSON artifact serialization is not deterministic")
+        if (root / "p1.json").read_text() != '{\n  "status": "PASS"\n}\n':
+            raise AssertionError("JSON artifact payload drift")
+
+        try:
+            qa.write_json_bundle(
+                root / "bad",
+                {"escape": ("../escape.json", {"status": "BAD"})},
+            )
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("artifact path escape was not rejected")
+
+
 def _check_moose_blocks() -> None:
     text = _fixture()
     with_debug = mb.append_top_level_block(
@@ -289,6 +320,7 @@ def _check_recipe_equivalence() -> None:
 
 def _check_generality_surface() -> None:
     for rel in (
+        "qpx_harness/artifacts.py",
         "qpx_harness/moose/parameters.py",
         "qpx_harness/moose/blocks.py",
         "qpx_harness/moose/executioner.py",
@@ -390,6 +422,8 @@ def main() -> int:
         print("ISSUE48_GENERALITY_CHECK: moose-executioner-primitives=PASS")
         _check_temporal_observation()
         print("ISSUE48_GENERALITY_CHECK: temporal-observation-primitives=PASS")
+        _check_artifact_writes()
+        print("ISSUE48_GENERALITY_CHECK: artifact-write-primitives=PASS")
         _check_moose_blocks()
         print("ISSUE48_GENERALITY_CHECK: moose-block-primitives=PASS")
         _check_petsc_options()
