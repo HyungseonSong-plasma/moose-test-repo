@@ -2,6 +2,7 @@
 """P0 characterization for PF-3 transport-probe runtime orchestration."""
 from __future__ import annotations
 
+import ast
 import json
 import sys
 import tempfile
@@ -199,6 +200,25 @@ def _check_direct_cutover() -> None:
         direct.probe_runtime.main = original_main
 
 
+def _imports_legacy_probe(path: Path) -> bool:
+    tree = ast.parse(path.read_text(), filename=str(path))
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom):
+            if node.module == "qpx_harness" and any(
+                alias.name == "performance_transport_probe" for alias in node.names
+            ):
+                return True
+            if node.module == "qpx_harness.performance_transport_probe":
+                return True
+        elif isinstance(node, ast.Import):
+            if any(
+                alias.name == "qpx_harness.performance_transport_probe"
+                for alias in node.names
+            ):
+                return True
+    return False
+
+
 def _check_boundary() -> None:
     source = Path(runtime.__file__).read_text()
     for forbidden in (
@@ -209,8 +229,7 @@ def _check_boundary() -> None:
         if forbidden in source:
             raise AssertionError(f"runtime reverse dependency leaked: {forbidden}")
 
-    test_source = Path(__file__).read_text()
-    if "from qpx_harness import performance_transport_probe as" in test_source:
+    if _imports_legacy_probe(Path(__file__)):
         raise AssertionError("WP8 still imports the retired legacy oracle")
 
 
