@@ -25,13 +25,7 @@ CLI = ROOT / "scripts" / "qpx.py"
 LEGACY_MODULE = "qpx_harness.petsc_first_linear_diagnostic"
 
 EXPECTED_PRODUCTION_CONSUMERS: set[str] = set()
-EXPECTED_TEST_CONSUMERS = {
-    "tests/Issue47_fd_reference_refactor_characterization/self_test.py",
-    "tests/Issue48_qpx_harness_generality/self_test.py",
-    "tests/Issue48_qpx_harness_generality/wp2_analysis_characterization.py",
-    "tests/Issue48_qpx_harness_generality/wp4_issue45_first_linear_characterization.py",
-    "tests/Issue48_qpx_harness_generality/wp4_issue46_fd_recipe_characterization.py",
-}
+EXPECTED_TEST_CONSUMERS: set[str] = set()
 RUNTIME_ORCHESTRATION_SURFACE = (
     "def _prepare_case(",
     "def _run_p2(",
