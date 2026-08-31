@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from qpx_harness import jacobian_fd_reference_audit as legacy
+from qpx_harness import issue46_fd_reference as legacy
 from recipes import issue45_first_linear as issue45_recipe
 from recipes import issue46_fd_reference as recipe
 from recipes import issue46_jacobian_localization as localization_recipe
