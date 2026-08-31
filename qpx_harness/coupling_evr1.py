@@ -23,7 +23,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
-from .dmix_equivalence_structured import legacy_source_transform
+from .dmix_equivalence import legacy_source_transform
 from .moose_input import MooseInput, MooseInputError, self_test as moose_input_self_test
 from .performance_core import PerformanceContractError, run_measurement
 from .performance_investigation import build_investigation_summary
