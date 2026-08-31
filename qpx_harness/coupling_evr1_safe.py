@@ -1,8 +1,8 @@
-"""Safety adapter for Issue #31 EVR1 runtime-output selection.
+"""Compatibility adapter for Issue #31 EVR1 deterministic physics CSV selection.
 
-MOOSE may emit both the default CSV and an explicitly named CSV output from the
-same input.  The base EVR1 checker needs one deterministic r29-observable CSV;
-it must not fail merely because both equivalent output files exist.
+Issue31 scientific CSV-selection semantics live in ``recipes.issue31_coupling``.
+This adapter preserves the historical ``coupling-evr1`` CLI route while the
+legacy EVR1 runtime orchestration remains in ``qpx_harness.coupling_evr1``.
 """
 
 from __future__ import annotations
@@ -11,7 +11,9 @@ import csv
 import sys
 import tempfile
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Iterable
+
+from recipes import issue31_coupling as recipe
 
 from . import coupling_evr1 as base
 
@@ -20,51 +22,11 @@ CouplingEVR1Error = base.CouplingEVR1Error
 
 
 def physics_csv(case_dir: Path, *, monolithic: bool) -> tuple[Path, dict[str, str]]:
-    required = {
-        "time",
-        "r29_ne_min",
-        "r29_ne_max",
-        "r29_charge_min",
-        "r29_charge_max",
-        "r29_charge_integral",
-        "r29_heavy_charge_number_integral",
-        "r29_electron_charge_number_integral",
-        "r29_sum_w_min",
-        "r29_sum_w_max",
-    }
-    for species in base.SPECIES:
-        required.add(f"r29_w_{species}_min")
-        required.add(f"r29_w_{species}_max")
-    if monolithic:
-        required.update({"r29_phi_min", "r29_phi_max", "r29_phi_integral"})
-
-    candidates: list[tuple[Path, list[dict[str, str]]]] = []
-    for path in sorted(case_dir.glob("*.csv")):
-        try:
-            with path.open(newline="") as handle:
-                rows = list(csv.DictReader(handle))
-        except (OSError, csv.Error):
-            continue
-        if not rows:
-            continue
-        if required.issubset(rows[0].keys()):
-            candidates.append((path, rows))
-
-    if not candidates:
-        raise CouplingEVR1Error(
-            "no runtime physics CSV contains the required r29 observables"
-        )
-
-    # Prefer the canonical default output when present.  If a MOOSE version or
-    # case naming policy uses only named CSV outputs, use lexical order so the
-    # choice remains deterministic and recorded in the evidence.
-    preferred = [item for item in candidates if item[0].name == "input_out.csv"]
-    path, rows = preferred[0] if preferred else candidates[0]
-
-    physical = [row for row in rows if base._float(row, "time") > 1e-15]
-    if not physical:
-        raise CouplingEVR1Error(f"no positive solved-time row in {path}")
-    return path, physical[-1]
+    """Use canonical recipe selection while preserving the legacy error contract."""
+    try:
+        return recipe.physics_csv(case_dir, monolithic=monolithic)
+    except recipe.Issue31CouplingError as exc:
+        raise CouplingEVR1Error(str(exc)) from exc
 
 
 def self_test() -> int:
@@ -84,7 +46,7 @@ def self_test() -> int:
             "r29_sum_w_min": "1",
             "r29_sum_w_max": "1",
         }
-        for species in base.SPECIES:
+        for species in recipe.SPECIES:
             common[f"r29_w_{species}_min"] = "0.01"
             common[f"r29_w_{species}_max"] = "0.12"
         common.update(
@@ -118,6 +80,14 @@ def self_test() -> int:
             path, _ = physics_csv(root, monolithic=True)
             if path.name != "named_only.csv":
                 raise AssertionError("named-only deterministic fallback failed")
+
+        with tempfile.TemporaryDirectory() as tmp:
+            try:
+                physics_csv(Path(tmp), monolithic=False)
+            except CouplingEVR1Error:
+                pass
+            else:
+                raise AssertionError("missing-CSV error translation was not preserved")
     except Exception as exc:
         print(f"ISSUE31_EVR1_SAFE_SELFTEST: FAIL ({exc})")
         return 1
@@ -125,17 +95,17 @@ def self_test() -> int:
     return 0
 
 
-def _activate() -> None:
-    base._physics_csv = physics_csv
-    base.self_test = self_test
-
-
 def main(argv: Iterable[str] | None = None) -> int:
     args = list(argv) if argv is not None else list(sys.argv[1:])
     if "--self-test" in args:
         return self_test()
+
+    original_physics_csv = base._physics_csv
     base._physics_csv = physics_csv
-    return base.main(args)
+    try:
+        return base.main(args)
+    finally:
+        base._physics_csv = original_physics_csv
 
 
 if __name__ == "__main__":
