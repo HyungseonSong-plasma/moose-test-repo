@@ -11,9 +11,21 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from qpx_harness import performance_transport_probe as legacy
 from qpx_harness import performance_transport_probe_direct as direct
 from qpx_harness import performance_transport_probe_runtime as runtime
+
+EXPECTED_SOURCE_SHA256 = "4533a3a2fe0d77f3d85ca171f9093907a76514dd024c5392c08dd8d17a2f4b7e"
+EXPECTED_HEADER_SHA256 = "8f97db663781c5788e18bb98cca284a9173597a2b7bfe44f148ca2beef9391c5"
+EXPECTED_SOURCE_RELATIVE = Path("src/materials/QPXThermalDiffusionMaterial.C")
+EXPECTED_HEADER_RELATIVE = Path("include/materials/QPXThermalDiffusionMaterial.h")
+EXPECTED_TIMER_NAMES = {
+    "evaluate": "qpx_transport_evaluate",
+    "collision_pairs": "qpx_transport_collision_pairs",
+    "dmix": "qpx_transport_dmix",
+    "functor_DT": "qpx_transport_functor_DT",
+    "functor_kT": "qpx_transport_functor_kT",
+    "functor_Dmix": "qpx_transport_functor_Dmix",
+}
 
 
 def _sample_result(*, linear_iterations: int = 3) -> dict:
@@ -29,28 +41,34 @@ def _sample_result(*, linear_iterations: int = 3) -> dict:
 
 
 def _check_constants() -> None:
-    for name in (
-        "ACCEPTED_SOURCE_SHA256",
-        "ACCEPTED_HEADER_SHA256",
-        "SOURCE_RELATIVE",
-        "HEADER_RELATIVE",
-    ):
-        if getattr(runtime, name) != getattr(legacy, name):
-            raise AssertionError(f"runtime constant drift: {name}")
+    expected = {
+        "ACCEPTED_SOURCE_SHA256": EXPECTED_SOURCE_SHA256,
+        "ACCEPTED_HEADER_SHA256": EXPECTED_HEADER_SHA256,
+        "SOURCE_RELATIVE": EXPECTED_SOURCE_RELATIVE,
+        "HEADER_RELATIVE": EXPECTED_HEADER_RELATIVE,
+    }
+    for name, value in expected.items():
+        if getattr(runtime, name) != value:
+            raise AssertionError(f"runtime frozen constant drift: {name}")
 
 
-def _check_parity_equivalence() -> None:
+def _check_parity_contract() -> None:
     baseline = _sample_result()
     same = json.loads(json.dumps(baseline))
     mutated = _sample_result(linear_iterations=5)
-    if runtime._parity_checks(baseline, same) != legacy._parity_checks(baseline, same):
-        raise AssertionError("equal parity-check behavior drift")
-    if runtime._parity_checks(baseline, mutated) != legacy._parity_checks(
-        baseline, mutated
-    ):
-        raise AssertionError("mutated parity-check behavior drift")
-    if runtime._parity_checks(baseline, mutated)["same_linear_iterations"]:
-        raise AssertionError("linear-iteration negative control passed")
+    expected_same = {
+        "same_input_sha": True,
+        "same_dofs": True,
+        "same_nonlinear_iterations": True,
+        "same_linear_iterations": True,
+        "same_residual_evaluations": True,
+    }
+    expected_mutated = dict(expected_same)
+    expected_mutated["same_linear_iterations"] = False
+    if runtime._parity_checks(baseline, same) != expected_same:
+        raise AssertionError("equal parity-check contract drift")
+    if runtime._parity_checks(baseline, mutated) != expected_mutated:
+        raise AssertionError("mutated parity-check contract drift")
 
 
 def _check_manifest_resolution() -> None:
@@ -68,8 +86,9 @@ def _check_manifest_resolution() -> None:
         baseline = _sample_result()
         (smoke / "profile_manifest.json").write_text(json.dumps(manifest))
         (smoke / "profile" / "result.json").write_text(json.dumps(baseline))
-        if runtime._resolve_case_manifest(smoke) != legacy._resolve_case_manifest(smoke):
-            raise AssertionError("manifest resolution drift")
+        resolved_manifest, resolved_baseline = runtime._resolve_case_manifest(smoke)
+        if resolved_manifest != manifest or resolved_baseline != baseline:
+            raise AssertionError("manifest resolution contract drift")
 
         (case_dir / "input.i").unlink()
         try:
@@ -80,34 +99,41 @@ def _check_manifest_resolution() -> None:
             raise AssertionError("missing-case negative control passed")
 
 
-def _check_restore_equivalence() -> None:
+def _check_restore_contract() -> None:
     with tempfile.TemporaryDirectory() as tmp_name:
         root = Path(tmp_name)
         source = root / "source.C"
         exe = root / "qpx-opt"
+        original_source = b"original-source"
+        original_exe = b"original-exe"
         source.write_bytes(b"mutated")
         exe.write_bytes(b"mutated-exe")
 
-        for label, restore in (("legacy", legacy.restore_probe), ("runtime", runtime.restore_probe)):
-            run_root = root / label
-            run_root.mkdir()
-            original_source = b"original-source"
-            original_exe = b"original-exe"
-            (run_root / "source_original.C").write_bytes(original_source)
-            (run_root / "qpx-opt.original").write_bytes(original_exe)
-            source.write_bytes(b"mutated")
-            exe.write_bytes(b"mutated-exe")
-            state = {
-                "source_path": str(source),
-                "source_sha_before": runtime.sha256_bytes(original_source),
-                "executable_path": str(exe),
-                "executable_sha_before": runtime.sha256_bytes(original_exe),
-            }
-            (run_root / "probe_state.json").write_text(json.dumps(state))
-            if restore(run_root, exe) != 0:
-                raise AssertionError(f"{label} restore failed")
-            if source.read_bytes() != original_source or exe.read_bytes() != original_exe:
-                raise AssertionError(f"{label} restore content drift")
+        run_root = root / "runtime"
+        run_root.mkdir()
+        (run_root / "source_original.C").write_bytes(original_source)
+        (run_root / "qpx-opt.original").write_bytes(original_exe)
+        state = {
+            "source_path": str(source),
+            "source_sha_before": runtime.sha256_bytes(original_source),
+            "executable_path": str(exe),
+            "executable_sha_before": runtime.sha256_bytes(original_exe),
+        }
+        (run_root / "probe_state.json").write_text(json.dumps(state))
+        if runtime.restore_probe(run_root, exe) != 0:
+            raise AssertionError("runtime restore failed")
+        if source.read_bytes() != original_source or exe.read_bytes() != original_exe:
+            raise AssertionError("runtime restore content drift")
+
+        missing_backup = root / "missing-backup"
+        missing_backup.mkdir()
+        (missing_backup / "probe_state.json").write_text(json.dumps(state))
+        try:
+            runtime.restore_probe(missing_backup, exe)
+        except runtime.ProbeRuntimeError:
+            pass
+        else:
+            raise AssertionError("missing-backup negative control passed")
 
 
 def _check_callback_routing() -> None:
@@ -142,18 +168,21 @@ def _check_direct_cutover() -> None:
     source = Path(direct.__file__).read_text()
     if "probe_runtime.main(" not in source:
         raise AssertionError("direct probe does not route through runtime owner")
-    if "legacy.main(" in source or "def _activate" in source:
-        raise AssertionError("legacy orchestration remains active in direct probe")
-    if (
-        "performance_transport_probe as legacy" in source
-        or "from . import performance_transport_probe\n" in source
-        or "legacy." in source
+    for forbidden in (
+        "legacy.main(",
+        "def _activate",
+        "performance_transport_probe as legacy",
+        "from . import performance_transport_probe\n",
+        "legacy.",
     ):
-        raise AssertionError("direct probe still imports the retired legacy owner")
+        if forbidden in source:
+            raise AssertionError(f"direct legacy dependency remains: {forbidden}")
     if "CppSource" not in source or "perfgraph." not in source:
         raise AssertionError("direct probe is not composed from generic C++/PerfGraph primitives")
-    if direct.TIMER_NAMES != legacy.TIMER_NAMES or direct.MARKER_PREFIX != legacy.MARKER_PREFIX:
-        raise AssertionError("direct probe instrumentation constants drifted from accepted legacy semantics")
+    if direct.TIMER_NAMES != EXPECTED_TIMER_NAMES:
+        raise AssertionError("direct timer-name contract drift")
+    if direct.MARKER_PREFIX != "qpx_transport_":
+        raise AssertionError("direct marker-prefix contract drift")
     if direct.main(["--self-test"]) != 0:
         raise AssertionError("direct runtime-routed self-test failed")
 
@@ -180,13 +209,17 @@ def _check_boundary() -> None:
         if forbidden in source:
             raise AssertionError(f"runtime reverse dependency leaked: {forbidden}")
 
+    test_source = Path(__file__).read_text()
+    if "from qpx_harness import performance_transport_probe as" in test_source:
+        raise AssertionError("WP8 still imports the retired legacy oracle")
+
 
 def main() -> int:
     try:
         _check_constants()
-        _check_parity_equivalence()
+        _check_parity_contract()
         _check_manifest_resolution()
-        _check_restore_equivalence()
+        _check_restore_contract()
         _check_callback_routing()
         _check_direct_cutover()
         _check_boundary()
