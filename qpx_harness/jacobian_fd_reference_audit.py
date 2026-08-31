@@ -18,13 +18,16 @@ from pathlib import Path
 from typing import Any
 
 from recipes import issue45_first_linear as first_linear_policy
+from recipes import issue46_jacobian_localization as localization_recipe
 
 from . import artifacts
-from . import augmented_jacobian_localization as loc
 from . import electron_inventory_nullspace as inv
 from . import evidence
 from . import fast_plasma_coupling_diagnostic as coupling_diag
+from . import issue46_jacobian_localization as localization_runtime
+from .moose import dofmap as dm
 from .moose_input import MooseInput, MooseInputError
+from .petsc import matrix as petsc_matrix
 from .petsc import options as petsc_options
 from .runtime import resolve_executable, run_qpx, validate_executable
 
@@ -34,7 +37,8 @@ HISTORICAL_EVR1_ELECTRON_DOF_COUNT = 2348
 PETSC_REFERENCE_VERSION = "3.25.2"
 FD_REFERENCE_TYPE = "ds"
 GLOBAL_JACOBIAN_REL_TOL = first_linear_policy.JACOBIAN_REL_TOL
-LOCALIZATION_THRESHOLD = loc.LOCALIZATION_THRESHOLD
+LOCALIZATION_THRESHOLD = localization_recipe.LOCALIZATION_THRESHOLD
+DOFMAP_FILE_BASE = localization_recipe.DOFMAP_FILE_BASE
 SQRT_MACHINE_EPSILON = math.sqrt(sys.float_info.epsilon)
 DS_ATTENUATION_TO_UNITY_TOL = 1.0e-8
 
@@ -317,14 +321,44 @@ def nonzero_threshold_difference(difference: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _category_energy_fraction(localized: dict[str, Any]) -> dict[str, float]:
+    energy = {"constraint_lm": 0.0, "electron_potential": 0.0, "other": 0.0}
+    total = 0.0
+    lm = inv.LAMBDA_VARIABLE
+    for block in localized.get("blocks", {}).values():
+        block_energy = float(block.get("sum_squared_difference", 0.0))
+        total += block_energy
+        row_var = block.get("row_variable")
+        col_var = block.get("col_variable")
+        if row_var == lm or col_var == lm:
+            category = "constraint_lm"
+        elif {row_var, col_var} == {"n_e", "potential_plasma"}:
+            category = "electron_potential"
+        else:
+            category = "other"
+        energy[category] += block_energy
+    return {
+        name: (value / total if total > 0.0 else 0.0)
+        for name, value in energy.items()
+    }
+
+
 def directional_localization(log_text: str, dofmap_text: str) -> dict[str, Any]:
     try:
-        dof_map = loc.parse_dof_map_text(dofmap_text)
-        difference = loc.parse_threshold_difference_matrix(log_text)
+        dof_map = dm.parse_dof_map_text(
+            dofmap_text,
+            expected_variables=localization_runtime.MAIN_VARIABLES,
+            scalar_variables=localization_runtime.SCALAR_VARIABLES,
+        )
+        difference = petsc_matrix.parse_threshold_difference_matrix(log_text)
         nonzero = nonzero_threshold_difference(difference)
-        localized = loc.localize_difference_entries(nonzero, dof_map)
-    except loc.AugmentedJacobianLocalizationError as exc:
+        localized = petsc_matrix.summarize_by_owner(nonzero, dof_map["owner_by_dof"])
+    except (dm.DofMapError, petsc_matrix.MatrixParseError) as exc:
         raise JacobianFDReferenceAuditError(str(exc)) from exc
+
+    # Preserve the accepted result vector while deriving ownership facts from
+    # the generic matrix primitive rather than the historical augmented owner.
+    localized["category_energy_fraction"] = _category_energy_fraction(localized)
 
     lm = inv.LAMBDA_VARIABLE
     j_lambda_n = localized["blocks"].get(f"{lm}->n_e", {})
@@ -354,10 +388,15 @@ def directional_localization(log_text: str, dofmap_text: str) -> dict[str, Any]:
 
 
 def instrument_ds_reference(baseline_text: str) -> tuple[str, dict[str, Any]]:
-    pairs = loc._petsc_name_value_pairs(baseline_text)
-    if any(name == "-mat_fd_type" for name, _ in pairs):
-        raise JacobianFDReferenceAuditError("baseline already specifies -mat_fd_type")
-    out = loc._upsert_petsc_value(baseline_text, "-mat_fd_type", FD_REFERENCE_TYPE)
+    try:
+        pairs = petsc_options.get_name_value_pairs(baseline_text)
+        if any(name == "-mat_fd_type" for name, _ in pairs):
+            raise JacobianFDReferenceAuditError("baseline already specifies -mat_fd_type")
+        out = petsc_options.upsert_name_value(
+            baseline_text, "-mat_fd_type", FD_REFERENCE_TYPE
+        )
+    except petsc_options.PetscOptionsError as exc:
+        raise JacobianFDReferenceAuditError(str(exc)) from exc
     MooseInput(out)
     return out, {
         "mat_fd_type": FD_REFERENCE_TYPE,
@@ -370,14 +409,17 @@ def instrument_ds_reference(baseline_text: str) -> tuple[str, dict[str, Any]]:
 
 
 def _remove_fd_type_pair(text: str) -> str:
-    pairs = loc._petsc_name_value_pairs(text)
-    fd_pairs = [(name, value) for name, value in pairs if name == "-mat_fd_type"]
-    if fd_pairs != [("-mat_fd_type", FD_REFERENCE_TYPE)]:
-        raise JacobianFDReferenceAuditError(
-            f"expected exactly -mat_fd_type {FD_REFERENCE_TYPE}, got {fd_pairs}"
-        )
-    filtered = [(name, value) for name, value in pairs if name != "-mat_fd_type"]
-    return loc._set_petsc_name_value_pairs(text, filtered)
+    try:
+        pairs = petsc_options.get_name_value_pairs(text)
+        fd_pairs = [(name, value) for name, value in pairs if name == "-mat_fd_type"]
+        if fd_pairs != [("-mat_fd_type", FD_REFERENCE_TYPE)]:
+            raise JacobianFDReferenceAuditError(
+                f"expected exactly -mat_fd_type {FD_REFERENCE_TYPE}, got {fd_pairs}"
+            )
+        filtered = [(name, value) for name, value in pairs if name != "-mat_fd_type"]
+        return petsc_options.set_name_value_pairs(text, filtered)
+    except petsc_options.PetscOptionsError as exc:
+        raise JacobianFDReferenceAuditError(str(exc)) from exc
 
 
 def _mask_petsc_pair_lines(text: str) -> str:
@@ -405,8 +447,19 @@ def audit_ds_reference_structure(
             }
         )
 
-    baseline_pairs = loc._petsc_name_value_pairs(baseline_text)
-    ds_pairs = loc._petsc_name_value_pairs(ds_text)
+    try:
+        baseline_pairs = petsc_options.get_name_value_pairs(baseline_text)
+        ds_pairs = petsc_options.get_name_value_pairs(ds_text)
+    except petsc_options.PetscOptionsError as exc:
+        return {
+            "status": "HOLD",
+            "class": "FD_REFERENCE_DS_STRUCTURE_FAIL",
+            "checks": [],
+            "blockers": [{"id": "petsc-name-value-structure", "status": "FAIL", "observed": str(exc), "required": "valid PETSc name/value pairs"}],
+            "prediction": _historical_evr1_prediction(),
+            "mechanism_evidence": _historical_mechanism_evidence(),
+            "closure": {},
+        }
     expected_pairs = baseline_pairs + [("-mat_fd_type", FD_REFERENCE_TYPE)]
     add("ds-petsc-pair-exact", ds_pairs == expected_pairs, ds_pairs, expected_pairs)
     add(
@@ -419,12 +472,16 @@ def audit_ds_reference_structure(
     restored: str | None = None
     try:
         restored = _remove_fd_type_pair(ds_text)
-        restored_pairs = loc._petsc_name_value_pairs(restored)
+        restored_pairs = petsc_options.get_name_value_pairs(restored)
         semantic_pair_restore = restored_pairs == baseline_pairs
         masked_byte_equal = _mask_petsc_pair_lines(restored) == _mask_petsc_pair_lines(
             baseline_text
         )
-    except (JacobianFDReferenceAuditError, inv.ElectronInventoryNullspaceError):
+    except (
+        JacobianFDReferenceAuditError,
+        inv.ElectronInventoryNullspaceError,
+        petsc_options.PetscOptionsError,
+    ):
         semantic_pair_restore = False
         masked_byte_equal = False
     add(
@@ -717,7 +774,7 @@ def self_test() -> int:
 
         base = _issue46_synthetic_constrained_input(TARGET)
         first_text, _ = first_linear_policy.instrument_first_linear(base)
-        baseline, _ = loc.instrument_localization(first_text)
+        baseline, _ = localization_recipe.instrument_localization(first_text)
         ds_text, _ = instrument_ds_reference(baseline)
         audit = audit_ds_reference_structure(baseline, ds_text)
         if audit["status"] != "PASS":
@@ -745,7 +802,7 @@ def self_test() -> int:
         provenance_case = provenance_root / "c0_ds_reference"
         provenance_input = provenance_case / "input.i"
         provenance_log = provenance_root / "p3_c0_ds_reference.log"
-        provenance_dofmap = provenance_case / f"{loc.DOFMAP_FILE_BASE}.json"
+        provenance_dofmap = provenance_case / f"{DOFMAP_FILE_BASE}.json"
         provenance = _evidence_provenance_status(
             root=provenance_root,
             case_dir=provenance_case,
@@ -798,8 +855,10 @@ def _prepare_case(exe: Path, results_root: str | None) -> dict[str, Any]:
         runtime_observability=True,
     )
     first_text, _ = first_linear_policy.instrument_first_linear(base_c0)
-    baseline_text, _ = loc.instrument_localization(first_text)
-    baseline_audit = loc.audit_localization_structure(first_text, baseline_text)
+    baseline_text, _ = localization_recipe.instrument_localization(first_text)
+    baseline_audit = localization_runtime.audit_localization_structure(
+        first_text, baseline_text
+    )
     ds_text, instrumentation = instrument_ds_reference(baseline_text)
     ds_audit = audit_ds_reference_structure(baseline_text, ds_text)
     identity_status = (
@@ -932,7 +991,7 @@ def run_preflight(qpx: str | None, results_root: str | None) -> int:
 
 
 def _purge_dofmap(case_dir: Path) -> None:
-    for path in case_dir.glob(f"{loc.DOFMAP_FILE_BASE}*.json"):
+    for path in case_dir.glob(f"{DOFMAP_FILE_BASE}*.json"):
         if path.is_file():
             path.unlink()
 
@@ -941,7 +1000,7 @@ def _source_dofmaps(source_case: Path) -> tuple[str, ...]:
     return tuple(
         sorted(
             str(path.resolve())
-            for path in source_case.glob(f"{loc.DOFMAP_FILE_BASE}*.json")
+            for path in source_case.glob(f"{DOFMAP_FILE_BASE}*.json")
             if path.is_file()
         )
     )
@@ -962,7 +1021,7 @@ def run_runtime(qpx: str | None, results_root: str | None) -> int:
 
     _purge_dofmap(prepared["case_dir"])
     log_path = prepared["root"] / "p3_c0_ds_reference.log"
-    dofmap = prepared["case_dir"] / f"{loc.DOFMAP_FILE_BASE}.json"
+    dofmap = prepared["case_dir"] / f"{DOFMAP_FILE_BASE}.json"
     log_preexisting = log_path.exists()
     dofmap_preexisting = dofmap.exists()
     source_dofmaps_before = _source_dofmaps(prepared["source_case"])
@@ -1127,7 +1186,10 @@ def main(argv: list[str] | None = None) -> int:
         return run_runtime(args.qpx, args.results_root)
     except (
         JacobianFDReferenceAuditError,
-        loc.AugmentedJacobianLocalizationError,
+        localization_runtime.Issue46JacobianLocalizationError,
+        dm.DofMapError,
+        petsc_matrix.MatrixParseError,
+        petsc_options.PetscOptionsError,
         inv.ElectronInventoryNullspaceError,
         MooseInputError,
         OSError,
