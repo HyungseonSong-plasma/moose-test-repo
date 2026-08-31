@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""P0 characterization for Issue31 EVR2 scientific recipe extraction."""
+"""P0 characterization for Issue31 EVR2 recipe-backed production cutover."""
 from __future__ import annotations
 
 import ast
@@ -11,7 +11,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from recipes import issue31_coupling as recipe
-from qpx_harness import coupling_evr2_timestep as legacy
+from qpx_harness import coupling_evr2_timestep as production
 
 
 EXPECTED_EVR1_BASELINE = {
@@ -101,40 +101,44 @@ def _case(
 
 
 def _check_constants() -> None:
-    pairs = (
-        (recipe.KG_E_PARENT_RELATIVE, legacy.KG_E_PARENT_RELATIVE, Path("tests/Issue2_electron_bulk_drift")),
-        (recipe.EVR1_BASELINE, legacy.EVR1_BASELINE, EXPECTED_EVR1_BASELINE),
-        (recipe.DT_1E6, legacy.DT_1E6, 1.0e-6),
-        (recipe.DT_1E8, legacy.DT_1E8, 1.0e-8),
+    expected = (
+        (recipe.KG_E_PARENT_RELATIVE, Path("tests/Issue2_electron_bulk_drift")),
+        (recipe.EVR1_BASELINE, EXPECTED_EVR1_BASELINE),
+        (recipe.DT_1E6, 1.0e-6),
+        (recipe.DT_1E8, 1.0e-8),
+        (recipe.EVR2_TERMINAL_CLASSES, EXPECTED_TERMINAL_CLASSES),
     )
-    for actual, old, expected in pairs:
-        if actual != old or actual != expected:
-            raise AssertionError(f"EVR2 recipe constant drift: {actual!r} != {old!r} != {expected!r}")
-    if recipe.EVR2_TERMINAL_CLASSES != EXPECTED_TERMINAL_CLASSES:
-        raise AssertionError("EVR2 terminal-class contract drift")
+    for actual, wanted in expected:
+        if actual != wanted:
+            raise AssertionError(f"EVR2 recipe constant drift: {actual!r} != {wanted!r}")
 
 
-def _check_transform_equivalence() -> None:
+def _check_transform_contract() -> None:
     base = _synthetic_input()
     for dt, scaling in (
         (recipe.DT_1E6, False),
         (recipe.DT_1E8, False),
         (recipe.DT_1E8, True),
     ):
-        expected_text, expected_meta = legacy.configured_transport_input(
+        text, meta = recipe.configured_transport_input(
             base,
             dt=dt,
             compute_scaling_once=scaling,
         )
-        actual_text, actual_meta = recipe.configured_transport_input(
-            base,
-            dt=dt,
-            compute_scaling_once=scaling,
-        )
-        if actual_text != expected_text or actual_meta != expected_meta:
-            raise AssertionError(
-                f"EVR2 configured transport equivalence drift dt={dt} scaling={scaling}"
-            )
+        if "potential_plasma" in text:
+            raise AssertionError("EVR2 recipe left Poisson state in transport control")
+        if "n_e_solved" not in text or "r30_e_diffusion" not in text:
+            raise AssertionError("EVR2 recipe lost solved-electron transport state")
+        if meta["dt"] != dt or meta["compute_scaling_once"] is not scaling:
+            raise AssertionError("EVR2 recipe timestep/scaling metadata drift")
+        params = meta["executioner_parameters"]
+        if params["dt"]["old"] != "1.0e-4":
+            raise AssertionError("EVR2 recipe dt old-value metadata drift")
+        if params["end_time"]["old"] != "5.0e-4":
+            raise AssertionError("EVR2 recipe end_time old-value metadata drift")
+        expected_scaling = "true" if scaling else "false"
+        if params["compute_scaling_once"]["new"] != expected_scaling:
+            raise AssertionError("EVR2 recipe scaling new-value metadata drift")
 
     bad = base.replace("[Executioner]\n", "[NotExecutioner]\n")
     try:
@@ -149,19 +153,13 @@ def _check_transform_equivalence() -> None:
         raise AssertionError("EVR2 missing-Executioner negative control passed")
 
 
-def _assert_classification_equivalent(
-    kg_e: dict,
-    dt1e6: dict | None,
-    dt1e8: dict | None,
-    scaling1e8: dict | None,
-) -> None:
-    expected = legacy.classify(kg_e, dt1e6, dt1e8, scaling1e8)
-    actual = recipe.classify_evr2(kg_e, dt1e6, dt1e8, scaling1e8)
+def _assert_decision(expected: dict, *scenario) -> None:
+    actual = recipe.classify_evr2(*scenario)
     if actual != expected:
-        raise AssertionError(f"EVR2 classification equivalence drift: {actual} != {expected}")
+        raise AssertionError(f"EVR2 classification contract drift: {actual} != {expected}")
 
 
-def _check_classification_equivalence() -> None:
+def _check_classification_contract() -> None:
     kg = _case("P2_PASS_P3_PASS", physics="PASS", checker="PASS")
     kg_runtime_fail = _case(
         "RUNTIME_FAIL_OR_NONCONVERGENCE",
@@ -177,24 +175,143 @@ def _check_classification_equivalence() -> None:
     )
     runtime_other = _case("RUNTIME_FAIL_OR_NONCONVERGENCE", signature=None)
 
-    scenarios = (
-        (kg_runtime_fail, None, None, None),
-        (kg_construction_fail, None, None, None),
-        (kg, None, passed, None),
-        (kg, construction_fail, passed, None),
-        (kg, physics_fail, passed, None),
-        (kg, passed, passed, None),
-        (kg, nonlinear_fail, passed, None),
-        (kg, passed, nonlinear_fail, None),
-        (kg, nonlinear_fail, nonlinear_fail, None),
-        (kg, nonlinear_fail, nonlinear_fail, construction_fail),
-        (kg, nonlinear_fail, nonlinear_fail, physics_fail),
-        (kg, nonlinear_fail, nonlinear_fail, passed),
-        (kg, nonlinear_fail, nonlinear_fail, nonlinear_fail),
-        (kg, runtime_other, runtime_other, None),
+    _assert_decision(
+        {
+            "class": "KNOWN_GOOD_ELECTRON_CONTROL_FAIL",
+            "reason": "accepted real-qvt electron control did not pass on the current executable/environment",
+        },
+        kg_runtime_fail,
+        None,
+        None,
+        None,
     )
-    for scenario in scenarios:
-        _assert_classification_equivalent(*scenario)
+    _assert_decision(
+        {
+            "class": "HARNESS_OR_CONSTRUCTION_FAIL",
+            "reason": "accepted real-qvt electron control did not pass on the current executable/environment",
+        },
+        kg_construction_fail,
+        None,
+        None,
+        None,
+    )
+    _assert_decision(
+        {"class": "HARNESS_OR_CONSTRUCTION_FAIL", "reason": "dt1e6 was not run"},
+        kg,
+        None,
+        passed,
+        None,
+    )
+    _assert_decision(
+        {
+            "class": "HARNESS_OR_CONSTRUCTION_FAIL",
+            "reason": "dt1e6 failed before interpretable physics runtime",
+        },
+        kg,
+        construction_fail,
+        passed,
+        None,
+    )
+    _assert_decision(
+        {
+            "class": "PHYSICS_CHECK_FAIL",
+            "reason": "dt1e6 runtime completed but transport physics checks failed",
+        },
+        kg,
+        physics_fail,
+        passed,
+        None,
+    )
+    _assert_decision(
+        {
+            "class": "TIMESTEP_STIFFNESS_CONFIRMED_RECOVERY_BY_1E6",
+            "reason": "EVR1 dt=1e-4 failed; unchanged transport/scaling recovers at both 1e-6 and 1e-8",
+        },
+        kg,
+        passed,
+        passed,
+        None,
+    )
+    _assert_decision(
+        {
+            "class": "TIMESTEP_STIFFNESS_CONFIRMED_RECOVERY_ONLY_BY_1E8",
+            "reason": "dt=1e-6 still fails by nonlinear convergence while dt=1e-8 recovers with unchanged scaling",
+        },
+        kg,
+        nonlinear_fail,
+        passed,
+        None,
+    )
+    _assert_decision(
+        {
+            "class": "NONMONOTONIC_TIMESTEP_RESPONSE",
+            "reason": "dt=1e-6 passes but smaller dt=1e-8 does not; simple timestep-stiffness explanation is insufficient",
+        },
+        kg,
+        passed,
+        nonlinear_fail,
+        None,
+    )
+    _assert_decision(
+        {
+            "class": "SCALING_BRANCH_REQUIRED",
+            "reason": "both smaller timesteps remain nonlinear-convergence failures",
+        },
+        kg,
+        nonlinear_fail,
+        nonlinear_fail,
+        None,
+    )
+    _assert_decision(
+        {
+            "class": "HARNESS_OR_CONSTRUCTION_FAIL",
+            "reason": "scaling discriminator failed before interpretable physics runtime",
+        },
+        kg,
+        nonlinear_fail,
+        nonlinear_fail,
+        construction_fail,
+    )
+    _assert_decision(
+        {
+            "class": "PHYSICS_CHECK_FAIL",
+            "reason": "scaling discriminator converged but physics checks failed",
+        },
+        kg,
+        nonlinear_fail,
+        nonlinear_fail,
+        physics_fail,
+    )
+    _assert_decision(
+        {
+            "class": "NONLINEAR_SCALING_SENSITIVITY_CONFIRMED",
+            "reason": "dt=1e-8 fails with current scaling policy and recovers when only compute_scaling_once changes to true",
+        },
+        kg,
+        nonlinear_fail,
+        nonlinear_fail,
+        passed,
+    )
+    _assert_decision(
+        {
+            "class": "T3_COUPLING_OR_JACOBIAN_FAIL_PERSISTS",
+            "reason": "accepted electron control passes, but T3 fails at 1e-6 and 1e-8 and does not recover with accepted scaling-once policy",
+        },
+        kg,
+        nonlinear_fail,
+        nonlinear_fail,
+        nonlinear_fail,
+    )
+    _assert_decision(
+        {
+            "class": "UNRESOLVED_RUNTIME_RESPONSE",
+            "reason": "observed result signature does not match a predeclared discriminator branch",
+        },
+        kg,
+        runtime_other,
+        runtime_other,
+        None,
+    )
 
 
 def _imports_module(path: Path, module: str) -> bool:
@@ -214,7 +331,7 @@ def _imports_module(path: Path, module: str) -> bool:
     return False
 
 
-def _check_boundary() -> None:
+def _check_recipe_boundary() -> None:
     path = Path(recipe.__file__)
     source = path.read_text()
     for forbidden in (
@@ -234,12 +351,50 @@ def _check_boundary() -> None:
         raise AssertionError("Issue31 recipe reverse-imports EVR2 runtime owner")
 
 
+def _check_production_cutover() -> None:
+    source = Path(production.__file__).read_text()
+    for required in (
+        "recipe.configured_transport_input(",
+        "recipe.classify_evr2(",
+        "recipe.KG_E_PARENT_RELATIVE",
+        "recipe.EVR1_BASELINE",
+        "recipe.DT_1E6",
+        "recipe.DT_1E8",
+        "recipe.EVR2_TERMINAL_CLASSES",
+    ):
+        if required not in source:
+            raise AssertionError(f"EVR2 production recipe cutover missing: {required}")
+    for forbidden in (
+        "def configured_transport_input(",
+        "def classify(",
+        "KG_E_PARENT_RELATIVE =",
+        "EVR1_BASELINE =",
+        "DT_1E6 =",
+        "DT_1E8 =",
+        "from .moose_input import",
+    ):
+        if forbidden in source:
+            raise AssertionError(f"EVR2 production retained scientific duplicate: {forbidden}")
+    for runtime_token in (
+        "run_measurement",
+        "subprocess.run",
+        "shutil.copytree",
+        "resolve_executable",
+        "validate_executable",
+    ):
+        if runtime_token not in source:
+            raise AssertionError(f"EVR2 runtime ownership moved prematurely: {runtime_token}")
+
+
 def main() -> int:
     try:
         _check_constants()
-        _check_transform_equivalence()
-        _check_classification_equivalence()
-        _check_boundary()
+        _check_transform_contract()
+        _check_classification_contract()
+        _check_recipe_boundary()
+        _check_production_cutover()
+        if production.self_test() != 0:
+            raise AssertionError("EVR2 production self-test failed after recipe cutover")
     except Exception as exc:
         print(f"ISSUE48_ISSUE31_EVR2_RECIPE_SELFTEST: FAIL ({exc})")
         return 1
