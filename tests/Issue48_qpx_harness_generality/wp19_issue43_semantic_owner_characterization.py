@@ -16,15 +16,15 @@ SEMANTIC = ROOT / "qpx_harness" / "issue43_fast_relaxation.py"
 CLI = ROOT / "scripts" / "qpx.py"
 
 EXPECTED_LEGACY_PRODUCTION_CONSUMERS: set[str] = set()
-EXPECTED_LEGACY_TEST_CONSUMERS = {
-    "tests/Issue48_qpx_harness_generality/wp17_v5_v2_absorption_characterization.py",
-}
+EXPECTED_LEGACY_TEST_CONSUMERS: set[str] = set()
 EXPECTED_SEMANTIC_PRODUCTION_CONSUMERS = {
     "qpx_harness/electron_inventory_nullspace.py",
     "qpx_harness/fast_plasma_coupling_diagnostic.py",
     "scripts/qpx.py",
 }
-EXPECTED_SEMANTIC_TEST_CONSUMERS: set[str] = set()
+EXPECTED_SEMANTIC_TEST_CONSUMERS = {
+    "tests/Issue48_qpx_harness_generality/wp17_v5_v2_absorption_characterization.py",
+}
 REQUIRED_OWNER_SURFACE = (
     "def _build_feedback_v5(",
     "def _augment_execution_contract(",
