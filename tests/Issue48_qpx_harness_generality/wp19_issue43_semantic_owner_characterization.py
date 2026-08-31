@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Issue48 characterization for converging the Issue43 fast-relaxation v5 owner."""
+"""Issue48 characterization for the retired Issue43 fast-relaxation v5 owner."""
 from __future__ import annotations
 
 import ast
@@ -89,24 +89,24 @@ def _consumer_sets(module_name: str) -> tuple[set[str], set[str]]:
     return production, tests
 
 
-def _check_dual_owner_topology() -> None:
-    if not LEGACY.is_file():
-        raise AssertionError("legacy v5 owner missing before remaining-consumer cutover")
+def _check_retired_owner_topology() -> None:
+    if LEGACY.exists():
+        raise AssertionError("legacy v5 owner still exists after retirement")
     if not SEMANTIC.is_file():
-        raise AssertionError("semantic Issue43 owner missing after dual-owner creation")
+        raise AssertionError("semantic Issue43 owner missing after legacy retirement")
 
     legacy_production, legacy_tests = _consumer_sets(
         "qpx_harness.fast_plasma_relaxation_v5"
     )
     if legacy_production != EXPECTED_LEGACY_PRODUCTION_CONSUMERS:
         raise AssertionError(
-            "v5 production-consumer drift: "
+            "v5 production-consumer drift after retirement: "
             f"observed={sorted(legacy_production)} "
             f"expected={sorted(EXPECTED_LEGACY_PRODUCTION_CONSUMERS)}"
         )
     if legacy_tests != EXPECTED_LEGACY_TEST_CONSUMERS:
         raise AssertionError(
-            "v5 test-consumer drift: "
+            "v5 test-consumer drift after retirement: "
             f"observed={sorted(legacy_tests)} "
             f"expected={sorted(EXPECTED_LEGACY_TEST_CONSUMERS)}"
         )
@@ -128,26 +128,21 @@ def _check_dual_owner_topology() -> None:
         )
 
 
-def _check_owner_equivalence() -> None:
-    legacy_source = LEGACY.read_text()
+def _check_semantic_owner_contract() -> None:
     semantic_source = SEMANTIC.read_text()
-    if semantic_source != legacy_source:
-        raise AssertionError("semantic owner is not byte-equivalent to legacy v5 owner")
-
-    for path, source in ((LEGACY, legacy_source), (SEMANTIC, semantic_source)):
-        missing = [token for token in REQUIRED_OWNER_SURFACE if token not in source]
-        if missing:
-            raise AssertionError(f"owner surface drift {path.name}: missing={missing}")
-        missing_arch = [
-            token for token in REQUIRED_ARCHITECTURE_TOKENS if token not in source
-        ]
-        if missing_arch:
-            raise AssertionError(
-                f"owner architecture composition drift {path.name}: missing={missing_arch}"
-            )
+    missing = [token for token in REQUIRED_OWNER_SURFACE if token not in semantic_source]
+    if missing:
+        raise AssertionError(f"semantic owner surface drift: missing={missing}")
+    missing_arch = [
+        token for token in REQUIRED_ARCHITECTURE_TOKENS if token not in semantic_source
+    ]
+    if missing_arch:
+        raise AssertionError(
+            f"semantic owner architecture composition drift: missing={missing_arch}"
+        )
 
     if _imports_module(SEMANTIC, "qpx_harness.fast_plasma_relaxation_v5"):
-        raise AssertionError("semantic owner reverse-imported legacy v5 owner")
+        raise AssertionError("semantic owner reverse-imported retired legacy v5 owner")
 
 
 def _check_consumer_contracts() -> None:
@@ -158,7 +153,7 @@ def _check_consumer_contracts() -> None:
     if "from . import issue43_fast_relaxation as v5" not in inventory:
         raise AssertionError("inventory is not bound to semantic Issue43 owner")
     if "from . import fast_plasma_relaxation_v5 as v5" in inventory:
-        raise AssertionError("inventory still imports legacy v5 owner")
+        raise AssertionError("inventory still imports retired legacy v5 owner")
     for token in (
         "v5._build_feedback_v5(",
         "v5._classify_p2_failure(",
@@ -169,7 +164,7 @@ def _check_consumer_contracts() -> None:
     if "from . import issue43_fast_relaxation as v5" not in diagnostic:
         raise AssertionError("coupling diagnostic is not bound to semantic Issue43 owner")
     if "from . import fast_plasma_relaxation_v5 as v5" in diagnostic:
-        raise AssertionError("coupling diagnostic still imports legacy v5 owner")
+        raise AssertionError("coupling diagnostic still imports retired legacy v5 owner")
     for token in (
         "v5._build_feedback_v5(",
         "v5._augment_execution_contract(",
@@ -190,7 +185,7 @@ def _check_consumer_contracts() -> None:
     if semantic_cli not in cli:
         raise AssertionError("stable fast-relaxation CLI is not bound to semantic owner")
     if legacy_cli in cli:
-        raise AssertionError("stable fast-relaxation CLI still imports legacy v5 owner")
+        raise AssertionError("stable fast-relaxation CLI still imports retired legacy v5 owner")
     if '"fast-relaxation":' not in cli:
         raise AssertionError("stable fast-relaxation command missing")
 
@@ -204,8 +199,8 @@ def _negative_control() -> None:
 
 def main() -> int:
     try:
-        _check_dual_owner_topology()
-        _check_owner_equivalence()
+        _check_retired_owner_topology()
+        _check_semantic_owner_contract()
         _check_consumer_contracts()
         _negative_control()
     except Exception as exc:
