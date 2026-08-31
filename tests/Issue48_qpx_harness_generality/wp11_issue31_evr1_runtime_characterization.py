@@ -233,6 +233,21 @@ def _check_boundary() -> None:
             raise AssertionError(f"canonical EVR1 runtime duplicated lower owner: {forbidden}")
 
 
+def _check_cli_route() -> None:
+    script = ROOT / "scripts" / "qpx.py"
+    source = script.read_text()
+    required = (
+        "from qpx_harness.coupling_evr1_runtime import main as coupling_evr1_main, self_test as coupling_evr1_self_test",
+        'if command == "coupling-evr1":',
+        "return coupling_evr1_main(rest)",
+    )
+    for token in required:
+        if token not in source:
+            raise AssertionError(f"EVR1 CLI route missing canonical runtime token: {token}")
+    if "from qpx_harness.coupling_evr1_safe import" in source:
+        raise AssertionError("EVR1 CLI still imports safe adapter")
+
+
 def main() -> int:
     try:
         _check_constants()
@@ -240,6 +255,7 @@ def main() -> int:
         _check_root_contract()
         _check_classification_equivalence()
         _check_boundary()
+        _check_cli_route()
         if runtime.self_test() != 0:
             raise AssertionError("canonical EVR1 runtime self-test failed")
     except Exception as exc:
