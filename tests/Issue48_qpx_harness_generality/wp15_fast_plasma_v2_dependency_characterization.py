@@ -15,7 +15,6 @@ EXPECTED_RUNTIME_CONSUMERS = {
     "augmented_jacobian_localization.py",
     "fast_plasma_relaxation_v5.py",
     "jacobian_fd_reference_audit.py",
-    "petsc_first_linear_diagnostic.py",
 }
 
 
@@ -118,20 +117,21 @@ def _check_inventory_cutover() -> None:
             raise AssertionError(f"Issue45 canonical cutover drift: {token}")
 
 
-def _check_first_linear_staging_cutover() -> None:
+def _check_first_linear_cutover() -> None:
     source = _source("petsc_first_linear_diagnostic.py")
-    if "v2.v1." in source:
-        raise AssertionError("first-linear retained retired v1 staging mechanics")
-    if "inv._stage_case(base_case, case_dir, text)" not in source:
-        raise AssertionError("first-linear no longer delegates staging to inventory construction owner")
-    for retained in (
-        "from . import fast_plasma_relaxation_v2 as v2",
-        "v2.resolve_executable(",
-        "v2.validate_executable(",
-        "v2._write_json(",
+    for token in ("fast_plasma_relaxation_v2", "v2.", "v2.v1."):
+        if token in source:
+            raise AssertionError(f"first-linear retained v2 dependency: {token}")
+    for token in (
+        "from . import artifacts",
+        "from .runtime import resolve_executable, run_qpx, validate_executable",
+        "inv._stage_case(base_case, case_dir, text)",
+        "resolve_executable(",
+        "validate_executable(",
+        "artifacts.write_json_bundle(",
     ):
-        if retained not in source:
-            raise AssertionError(f"first-linear staged v2-retirement boundary drift: {retained}")
+        if token not in source:
+            raise AssertionError(f"first-linear canonical cutover drift: {token}")
 
 
 def _check_v2_mixed_owner_surface() -> None:
@@ -157,7 +157,7 @@ def main() -> int:
         _check_remaining_stale_refs()
         _check_coupling_cutover()
         _check_inventory_cutover()
-        _check_first_linear_staging_cutover()
+        _check_first_linear_cutover()
         _check_v2_mixed_owner_surface()
     except Exception as exc:
         print(f"ISSUE48_FAST_PLASMA_V2_DEPENDENCY_SELFTEST: FAIL ({exc})")
