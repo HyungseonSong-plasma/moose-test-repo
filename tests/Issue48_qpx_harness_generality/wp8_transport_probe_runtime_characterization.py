@@ -144,6 +144,16 @@ def _check_direct_cutover() -> None:
         raise AssertionError("direct probe does not route through runtime owner")
     if "legacy.main(" in source or "def _activate" in source:
         raise AssertionError("legacy orchestration remains active in direct probe")
+    if (
+        "performance_transport_probe as legacy" in source
+        or "from . import performance_transport_probe\n" in source
+        or "legacy." in source
+    ):
+        raise AssertionError("direct probe still imports the retired legacy owner")
+    if "CppSource" not in source or "perfgraph." not in source:
+        raise AssertionError("direct probe is not composed from generic C++/PerfGraph primitives")
+    if direct.TIMER_NAMES != legacy.TIMER_NAMES or direct.MARKER_PREFIX != legacy.MARKER_PREFIX:
+        raise AssertionError("direct probe instrumentation constants drifted from accepted legacy semantics")
     if direct.main(["--self-test"]) != 0:
         raise AssertionError("direct runtime-routed self-test failed")
 
