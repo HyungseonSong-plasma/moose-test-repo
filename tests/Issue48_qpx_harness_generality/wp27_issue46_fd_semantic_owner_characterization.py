@@ -13,7 +13,6 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from qpx_harness import issue46_fd_reference as semantic
-from qpx_harness.compat import issue46_fd_reference as compat
 
 LEGACY_MODULE = "qpx_harness.jacobian_fd_reference_audit"
 SEMANTIC_MODULE = "qpx_harness.issue46_fd_reference"
@@ -145,13 +144,23 @@ def _check_dependency_boundary() -> None:
         raise AssertionError("compat still owns recipe composition")
 
 
-def _check_compat_identity() -> None:
-    if compat.main is not semantic.main:
-        raise AssertionError("compat main is not the semantic owner main")
-    if compat.self_test is not semantic.self_test:
-        raise AssertionError("compat self-test is not the semantic owner self-test")
-    if compat.recipe_backing_status is not semantic.recipe_backing_status:
-        raise AssertionError("compat recipe-backing status is not semantic-owned")
+def _check_compat_surface() -> None:
+    source = COMPAT_PATH.read_text()
+    required = (
+        "from qpx_harness.issue46_fd_reference import main, recipe_backing_status, self_test",
+        '__all__ = ["main", "recipe_backing_status", "self_test"]',
+    )
+    for token in required:
+        if token not in source:
+            raise AssertionError(f"compat semantic re-export surface drift: {token}")
+    tree = ast.parse(source, filename=str(COMPAT_PATH))
+    public_defs = [
+        node.name
+        for node in tree.body
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
+    ]
+    if public_defs:
+        raise AssertionError(f"compat unexpectedly owns executable definitions: {public_defs}")
 
 
 def _check_recipe_backing() -> None:
@@ -214,8 +223,8 @@ def main() -> int:
         print("ISSUE48_WP27_ISSUE46_FD_SEMANTIC_CHECK: owner-topology=PASS")
         _check_dependency_boundary()
         print("ISSUE48_WP27_ISSUE46_FD_SEMANTIC_CHECK: dependency-boundary=PASS")
-        _check_compat_identity()
-        print("ISSUE48_WP27_ISSUE46_FD_SEMANTIC_CHECK: compat-identity=PASS")
+        _check_compat_surface()
+        print("ISSUE48_WP27_ISSUE46_FD_SEMANTIC_CHECK: compat-surface=PASS")
         _check_recipe_backing()
         print("ISSUE48_WP27_ISSUE46_FD_SEMANTIC_CHECK: recipe-backing=PASS")
         _check_stable_cli_route()
