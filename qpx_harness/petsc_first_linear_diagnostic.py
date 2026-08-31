@@ -11,12 +11,12 @@ import re
 from pathlib import Path
 from typing import Any
 
+from . import artifacts
 from . import electron_inventory_nullspace as inv
 from . import evidence
 from . import fast_plasma_coupling_diagnostic as coupling_diag
-from . import fast_plasma_relaxation_v2 as v2
 from .moose_input import MooseInput, MooseInputError
-from .runtime import run_qpx
+from .runtime import resolve_executable, run_qpx, validate_executable
 
 ISSUE = 45
 TARGET = inv.C0_TARGET
@@ -321,8 +321,8 @@ def _run_p2(exe: Path, prepared: dict[str, Any]) -> dict[str, Any]:
 
 
 def _preflight(qpx: str | None, results_root: str | None) -> tuple[Path, dict[str, Any], dict[str, Any], str]:
-    exe = v2.resolve_executable(qpx)
-    v2.validate_executable(exe)
+    exe = resolve_executable(qpx)
+    validate_executable(exe)
     prepared = _prepare_case(exe, results_root)
     p1_pass = prepared["p1"]["status"] == "PASS"
     p2 = _run_p2(exe, prepared) if p1_pass else {}
@@ -351,7 +351,7 @@ def _write_summary(prepared: dict[str, Any], p2: dict[str, Any], status: str, *,
         }
     else:
         payload.update(p3)
-    v2._write_json(path, payload)
+    artifacts.write_json_bundle(path.parent, {"summary": (path.name, payload)})
     return path
 
 
