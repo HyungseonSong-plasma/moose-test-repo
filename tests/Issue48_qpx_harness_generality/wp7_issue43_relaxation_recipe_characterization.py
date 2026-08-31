@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
-"""P0 characterization for the Issue43 fast-relaxation recipe after v2 cutover."""
+"""P0 characterization for the canonical Issue43 fast-relaxation recipe/runtime split."""
 from __future__ import annotations
 
-import inspect
 import sys
 import tempfile
 from pathlib import Path
@@ -11,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from qpx_harness import fast_plasma_relaxation_v2 as v2
+from qpx_harness import issue43_relaxation_runtime as runtime43
 from recipes import issue43_fast_relaxation as recipe
 
 
@@ -194,43 +193,44 @@ def _check_classification_contract() -> None:
     )
     for expected_class, args in cases:
         current = recipe.classify(*args)
-        compatibility = v2.classify(*args)
-        if current != compatibility:
-            raise AssertionError(
-                f"v2 classification delegation drift for {expected_class}: recipe={current!r} v2={compatibility!r}"
-            )
         if current.get("class") != expected_class:
             raise AssertionError(
                 f"classification branch drift: expected {expected_class}, got {current.get('class')}"
             )
 
-    if recipe.DT_FEEDBACK_BASE != v2.DT_FEEDBACK_BASE:
-        raise AssertionError("recipe base feedback timestep drifted from v2 compatibility owner")
-    if recipe.DT_FEEDBACK_SMALL != v2.DT_FEEDBACK_SMALL:
-        raise AssertionError("recipe small feedback timestep drifted from v2 compatibility owner")
-    if recipe.DT_FEEDBACK_LARGE != v2.DT_FEEDBACK_LARGE:
-        raise AssertionError("recipe large feedback timestep drifted from v2 compatibility owner")
-
-    source = inspect.getsource(v2.classify)
-    if "return relaxation_recipe.classify(" not in source:
-        raise AssertionError("v2 classify is not a direct recipe compatibility delegate")
-    for forbidden in ("_physics_pass(", "DT_FEEDBACK_BASE / tau_dr", "KNOWN_GOOD_ELECTRON_CONTROL_FAIL"):
-        if forbidden in source:
-            raise AssertionError(f"duplicate scientific policy remains in v2 classify: {forbidden}")
+    if recipe.DT_FEEDBACK_BASE != runtime43.DT_FEEDBACK_BASE:
+        raise AssertionError("recipe base feedback timestep drifted from runtime owner")
+    if recipe.DT_FEEDBACK_SMALL != runtime43.DT_FEEDBACK_SMALL:
+        raise AssertionError("recipe small feedback timestep drifted from runtime owner")
+    if recipe.DT_FEEDBACK_LARGE != runtime43.DT_FEEDBACK_LARGE:
+        raise AssertionError("recipe large feedback timestep drifted from runtime owner")
 
 
-def _check_v2_cutover() -> None:
-    source = Path(v2.__file__).read_text()
-    if "from . import fast_plasma_relaxation as v1" in source:
-        raise AssertionError("v2 still imports historical fast_plasma_relaxation")
+def _check_runtime_composition_boundary() -> None:
+    source = Path(runtime43.__file__).read_text()
     if "from recipes import issue43_fast_relaxation as relaxation_recipe" not in source:
-        raise AssertionError("v2 does not bind the canonical Issue43 recipe")
-    if v2.FastPlasmaRelaxationError is not recipe.Issue43FastRelaxationError:
-        raise AssertionError("v2 relaxation error compatibility changed")
-    if v2.v1.FastPlasmaRelaxationError is not v2.FastPlasmaRelaxationError:
-        raise AssertionError("v5 exception compatibility path changed")
+        raise AssertionError("runtime does not bind the canonical Issue43 recipe")
+    for forbidden in (
+        "fast_plasma_relaxation_v2",
+        "fast_plasma_relaxation_v5",
+    ):
+        if forbidden in source:
+            raise AssertionError(f"runtime version dependency leaked: {forbidden}")
 
-    feedback = v2._build_feedback(
+    for name in (
+        "build_electron_300k",
+        "build_oneway",
+        "build_feedback",
+        "run_case",
+        "run_known_good",
+        "nonlinear_residual_summary",
+        "attach_nonlinear_residual",
+        "physics_pass",
+    ):
+        if not callable(getattr(runtime43, name, None)):
+            raise AssertionError(f"canonical Issue43 runtime surface missing: {name}")
+
+    feedback = runtime43.build_feedback(
         _fixture(),
         dt=1.0e-13,
         steps=5,
@@ -238,14 +238,17 @@ def _check_v2_cutover() -> None:
     )
     expected, _ = recipe.build_fast_input(
         _fixture(),
-        gas_temperature=v2.GAS_TEMPERATURE,
-        electron_density=v2.DEFAULT_ELECTRON_DENSITY,
+        gas_temperature=runtime43.GAS_TEMPERATURE,
+        electron_density=runtime43.DEFAULT_ELECTRON_DENSITY,
         dt=1.0e-13,
         end_time=5.0e-13,
         radial_span=0.243,
     )
     if feedback != expected:
-        raise AssertionError("v2 feedback builder drifted from canonical recipe")
+        raise AssertionError("runtime feedback builder drifted from canonical recipe")
+
+    if runtime43.self_test() != 0:
+        raise AssertionError("canonical Issue43 runtime self-test failed")
 
 
 def _check_recipe_boundary() -> None:
@@ -268,7 +271,7 @@ def main() -> int:
         _check_analysis_contract()
         _check_csv_contract()
         _check_classification_contract()
-        _check_v2_cutover()
+        _check_runtime_composition_boundary()
         _check_recipe_boundary()
     except Exception as exc:
         print(f"ISSUE48_ISSUE43_RELAXATION_RECIPE_SELFTEST: FAIL ({exc})")
