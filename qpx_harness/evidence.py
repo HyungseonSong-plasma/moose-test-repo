@@ -24,6 +24,33 @@ def ensure_fresh_directory(path: Path) -> Path:
     return path
 
 
+def create_collision_safe_directory(parent: Path, stem: str) -> Path:
+    """Create a uniquely suffixed direct-child directory under ``parent``.
+
+    The caller owns the semantic stem, including any timestamp. This primitive
+    owns only collision-safe filesystem allocation: ``stem``, then ``stem_01``,
+    ``stem_02``, and so on.
+    """
+
+    parent = Path(parent)
+    raw_stem = str(stem)
+    stem_path = Path(raw_stem)
+    if not raw_stem or raw_stem in {".", ".."} or stem_path.name != raw_stem:
+        raise ValueError(f"directory stem must be a direct-child name: {raw_stem!r}")
+
+    parent.mkdir(parents=True, exist_ok=True)
+    index = 0
+    while True:
+        name = raw_stem if index == 0 else f"{raw_stem}_{index:02d}"
+        candidate = parent / name
+        try:
+            candidate.mkdir()
+        except FileExistsError:
+            index += 1
+            continue
+        return candidate
+
+
 def utc_timestamp() -> str:
     return datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
 
