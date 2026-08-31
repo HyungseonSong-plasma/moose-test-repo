@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from . import performance_transport_probe as legacy
+from . import performance_transport_probe_runtime as probe_runtime
 
 TIMER_NAMES = legacy.TIMER_NAMES
 MARKER_PREFIX = legacy.MARKER_PREFIX
@@ -469,17 +470,17 @@ def self_test() -> int:
         return 1
 
 
-def _activate() -> None:
-    legacy.instrument_source = instrument_source
-    legacy.analyze_probe = analyze_probe
-
-
 def main(argv: Iterable[str] | None = None) -> int:
-    args = list(argv) if argv is not None else list(sys.argv[1:])
-    if "--self-test" in args:
-        return self_test()
-    _activate()
-    return legacy.main(args)
+    try:
+        return probe_runtime.main(
+            argv,
+            instrument_source=instrument_source,
+            analyze_probe=analyze_probe,
+            backend_self_test=self_test,
+        )
+    except ProbeError as exc:
+        print(f"PF3_TRANSPORT_PROBE_FAIL: {exc}", file=sys.stderr)
+        return 2
 
 
 if __name__ == "__main__":
