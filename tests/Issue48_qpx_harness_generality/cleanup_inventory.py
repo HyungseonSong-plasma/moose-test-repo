@@ -25,7 +25,6 @@ CLEANUP_CANDIDATES = (
     "coupling_evr2_timestep",
     "electron_inventory_nullspace",
     "fast_plasma_coupling_diagnostic",
-    "fast_plasma_relaxation",
     "fast_plasma_relaxation_v2",
     "fast_plasma_relaxation_v5",
     "jacobian_fd_reference_audit",
