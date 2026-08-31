@@ -95,8 +95,8 @@ def _load_cli() -> ModuleType:
 
 
 def _check_owner_topology() -> None:
-    if not LEGACY_PATH.is_file():
-        raise AssertionError("historical FD proxy unexpectedly absent before test cutover")
+    if LEGACY_PATH.exists():
+        raise AssertionError("retired historical FD proxy unexpectedly exists")
     if not SEMANTIC_PATH.is_file():
         raise AssertionError("Issue46 FD semantic owner is missing")
     if COMPAT_PATH.exists():
@@ -105,15 +105,12 @@ def _check_owner_topology() -> None:
     legacy_consumers = _production_consumers(LEGACY_MODULE, LEGACY_PATH)
     if legacy_consumers:
         raise AssertionError(
-            "historical FD proxy still has production consumers: "
+            "retired historical FD proxy still has production consumers: "
             f"{sorted(legacy_consumers)}"
         )
 
     semantic_consumers = _production_consumers(SEMANTIC_MODULE, SEMANTIC_PATH)
-    expected_semantic = {
-        "qpx_harness/jacobian_fd_reference_audit.py",
-        "scripts/qpx.py",
-    }
+    expected_semantic = {"scripts/qpx.py"}
     if semantic_consumers != expected_semantic:
         raise AssertionError(
             "semantic FD owner production topology drift: "
@@ -133,36 +130,14 @@ def _check_dependency_boundary() -> None:
     if "recipes.issue46_fd_reference" not in semantic_imports:
         raise AssertionError("semantic owner does not import the Issue46 FD recipe")
     if LEGACY_MODULE in semantic_imports:
-        raise AssertionError("semantic owner still imports the historical FD shell")
+        raise AssertionError("semantic owner still imports the retired historical FD proxy")
     if COMPAT_MODULE in semantic_imports:
         raise AssertionError("semantic owner reverse-depends on the retired compat adapter")
 
-    legacy_imports = _resolved_imports(LEGACY_PATH)
-    if SEMANTIC_MODULE not in legacy_imports:
-        raise AssertionError("historical FD proxy does not delegate to the semantic owner")
-    if "recipes.issue46_fd_reference" in legacy_imports:
-        raise AssertionError("historical FD proxy still owns recipe composition")
 
-
-def _check_legacy_proxy() -> None:
-    source = LEGACY_PATH.read_text()
-    required = (
-        "from . import issue46_fd_reference as _owner",
-        "def __getattr__(name: str):",
-        "return getattr(_owner, name)",
-    )
-    for token in required:
-        if token not in source:
-            raise AssertionError(f"historical FD proxy surface drift: {token}")
-    for forbidden in (
-        "def run_preflight(",
-        "def run_runtime(",
-        "def self_test(",
-        "def audit_ds_reference_structure(",
-        "from recipes import",
-    ):
-        if forbidden in source:
-            raise AssertionError(f"historical FD proxy still owns runtime behavior: {forbidden}")
+def _check_legacy_retired() -> None:
+    if LEGACY_PATH.exists():
+        raise AssertionError("historical FD proxy was not retired")
 
 
 def _check_compat_retired() -> None:
@@ -196,7 +171,7 @@ def _check_stable_cli_route() -> None:
         if token not in source:
             raise AssertionError(f"stable FD CLI surface missing: {token}")
     if "from qpx_harness.jacobian_fd_reference_audit import" in source:
-        raise AssertionError("stable CLI imports the historical FD proxy")
+        raise AssertionError("stable CLI imports the retired historical FD proxy")
 
 
 def _check_self_test_route() -> None:
@@ -222,8 +197,8 @@ def main() -> int:
         print("ISSUE48_WP27_ISSUE46_FD_SEMANTIC_CHECK: owner-topology=PASS")
         _check_dependency_boundary()
         print("ISSUE48_WP27_ISSUE46_FD_SEMANTIC_CHECK: dependency-boundary=PASS")
-        _check_legacy_proxy()
-        print("ISSUE48_WP27_ISSUE46_FD_SEMANTIC_CHECK: legacy-proxy=PASS")
+        _check_legacy_retired()
+        print("ISSUE48_WP27_ISSUE46_FD_SEMANTIC_CHECK: legacy-retired=PASS")
         _check_compat_retired()
         print("ISSUE48_WP27_ISSUE46_FD_SEMANTIC_CHECK: compat-retired=PASS")
         _check_recipe_backing()
