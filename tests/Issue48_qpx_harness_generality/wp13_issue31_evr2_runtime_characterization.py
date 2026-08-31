@@ -13,7 +13,7 @@ if str(ROOT) not in sys.path:
 
 from recipes import issue31_coupling as recipe
 from qpx_harness import coupling_evr2_runtime as runtime
-from qpx_harness import coupling_evr2_timestep as legacy
+from qpx_harness.performance_smoke import build_smoke_manifest
 
 
 def _case(
@@ -34,42 +34,55 @@ def _case(
     return value
 
 
-def _check_state_helper_equivalence() -> None:
-    cases = (
-        None,
-        {},
-        _case("HARNESS_OR_CONSTRUCTION_FAIL"),
-        _case("RUNTIME_FAIL_OR_NONCONVERGENCE", signature="DIVERGED_MAX_IT"),
-        _case("RUNTIME_FAIL_OR_NONCONVERGENCE", signature="OTHER"),
-        _case("P2_PASS_P3_PASS", physics="PASS"),
-        _case("P2_PASS_P3_PASS", physics="FAIL"),
+def _check_state_helper_contract() -> None:
+    scenarios = (
+        (None, None, False, False),
+        ({}, None, False, False),
+        (_case("HARNESS_OR_CONSTRUCTION_FAIL"), "HARNESS_OR_CONSTRUCTION_FAIL", False, False),
+        (
+            _case("RUNTIME_FAIL_OR_NONCONVERGENCE", signature="DIVERGED_MAX_IT"),
+            "RUNTIME_FAIL_OR_NONCONVERGENCE",
+            True,
+            False,
+        ),
+        (
+            _case("RUNTIME_FAIL_OR_NONCONVERGENCE", signature="OTHER"),
+            "RUNTIME_FAIL_OR_NONCONVERGENCE",
+            False,
+            False,
+        ),
+        (_case("P2_PASS_P3_PASS", physics="PASS"), "P2_PASS_P3_PASS", False, True),
+        (_case("P2_PASS_P3_PASS", physics="FAIL"), "P2_PASS_P3_PASS", False, False),
     )
-    for case in cases:
-        if runtime._result_status(case) != legacy._result_status(case):
-            raise AssertionError("EVR2 result-status helper drift")
-        if runtime._runtime_nonconvergence(case) != legacy._runtime_nonconvergence(case):
-            raise AssertionError("EVR2 runtime-nonconvergence helper drift")
-        if runtime._case_pass(case) != legacy._case_pass(case):
-            raise AssertionError("EVR2 case-pass helper drift")
+    for case, status, nonconvergence, case_pass in scenarios:
+        if runtime._result_status(case) != status:
+            raise AssertionError("EVR2 result-status helper contract drift")
+        if runtime._runtime_nonconvergence(case) is not nonconvergence:
+            raise AssertionError("EVR2 runtime-nonconvergence helper contract drift")
+        if runtime._case_pass(case) is not case_pass:
+            raise AssertionError("EVR2 case-pass helper contract drift")
 
-    kg_cases = (
-        _case("P2_PASS_P3_PASS", checker="PASS"),
-        _case("P2_PASS_P3_PASS", checker="FAIL"),
-        _case("RUNTIME_FAIL_OR_NONCONVERGENCE", checker="PASS"),
+    kg_scenarios = (
+        (_case("P2_PASS_P3_PASS", checker="PASS"), True),
+        (_case("P2_PASS_P3_PASS", checker="FAIL"), False),
+        (_case("RUNTIME_FAIL_OR_NONCONVERGENCE", checker="PASS"), False),
     )
-    for case in kg_cases:
-        if runtime._kg_e_pass(case) != legacy._kg_e_pass(case):
-            raise AssertionError("EVR2 KG-E pass helper drift")
+    for case, expected in kg_scenarios:
+        if runtime._kg_e_pass(case) is not expected:
+            raise AssertionError("EVR2 KG-E pass helper contract drift")
 
 
-def _check_manifest_equivalence() -> None:
+def _check_manifest_contract() -> None:
     with tempfile.TemporaryDirectory() as tmp_name:
         case_dir = Path(tmp_name)
         (case_dir / "input.i").write_text("[Mesh]\n[]\n")
-        expected = legacy._manifest(
+        expected = build_smoke_manifest(
+            mode="BENCHMARK",
             case_dir=case_dir,
-            case_id="Issue31_T3_dt1e8",
+            input_name="input.i",
             experiment_id=runtime.EXPERIMENT_ID,
+            case_id="Issue31_T3_dt1e8",
+            num_steps=1,
             species=list(recipe.SPECIES),
         )
         actual = runtime._manifest(
@@ -78,31 +91,35 @@ def _check_manifest_equivalence() -> None:
             species=list(recipe.SPECIES),
         )
         if actual != expected:
-            raise AssertionError("EVR2 BENCHMARK manifest equivalence drift")
+            raise AssertionError("EVR2 BENCHMARK manifest contract drift")
 
 
-def _check_failure_signature_equivalence() -> None:
-    if runtime._failure_signature(None) != legacy._failure_signature(None):
-        raise AssertionError("EVR2 no-result signature drift")
+def _check_failure_signature_contract() -> None:
+    if runtime._failure_signature(None) != {"signature": "NO_RESULT"}:
+        raise AssertionError("EVR2 no-result signature contract drift")
 
     samples = (
-        "DIVERGED_MAX_IT iterations 80",
-        "DIVERGED_LINE_SEARCH",
-        "DIVERGED_FNORM_NAN",
-        "Nonlinear solve did not converge",
-        "ordinary runtime output",
+        ("DIVERGED_MAX_IT iterations 80", "DIVERGED_MAX_IT", 80),
+        ("DIVERGED_LINE_SEARCH", "DIVERGED_LINE_SEARCH", None),
+        ("DIVERGED_FNORM_NAN", "DIVERGED_FNORM_NAN", None),
+        ("Nonlinear solve did not converge", "NONLINEAR_DID_NOT_CONVERGE", None),
+        ("ordinary runtime output", None, None),
     )
     with tempfile.TemporaryDirectory() as tmp_name:
         root = Path(tmp_name)
-        for index, text in enumerate(samples):
+        for index, (text, signature, iterations) in enumerate(samples):
             log = root / f"sample_{index}.log"
             log.write_text(text + "\n")
             result = {"evidence": {"p3_log": str(log)}}
             actual = runtime._failure_signature(result)
-            expected = legacy._failure_signature(result)
+            expected = {
+                "signature": signature,
+                "iterations": iterations,
+                "log": str(log),
+            }
             if actual != expected:
                 raise AssertionError(
-                    f"EVR2 failure-signature equivalence drift for {text!r}"
+                    f"EVR2 failure-signature contract drift for {text!r}: {actual} != {expected}"
                 )
 
 
@@ -212,14 +229,21 @@ def _check_production_route() -> None:
         raise AssertionError("EVR2 command dispatch no longer uses canonical alias")
 
 
+def _check_oracle_retirement() -> None:
+    this_path = Path(__file__)
+    if _imports_module(this_path, "qpx_harness.coupling_evr2_timestep"):
+        raise AssertionError("WP13 retained legacy EVR2 oracle import")
+
+
 def main() -> int:
     try:
-        _check_state_helper_equivalence()
-        _check_manifest_equivalence()
-        _check_failure_signature_equivalence()
+        _check_state_helper_contract()
+        _check_manifest_contract()
+        _check_failure_signature_contract()
         _check_generic_staging()
         _check_runtime_boundary()
         _check_production_route()
+        _check_oracle_retirement()
     except Exception as exc:
         print(f"ISSUE48_ISSUE31_EVR2_RUNTIME_SELFTEST: FAIL ({exc})")
         return 1
