@@ -48,8 +48,8 @@ def _check_consumer_topology() -> None:
     v5 = observed["fast_plasma_relaxation_v5.py"]
     for token in (
         "_RAW_BUILD_ELECTRON_300K = v2._build_electron_300k",
-        "_RAW_BUILD_ONEWAY = v2._build_oneway",
-        "_RAW_BUILD_FEEDBACK = v2._build_feedback",
+        "_V2_BUILD_ONEWAY = v2._build_oneway",
+        "_V2_BUILD_FEEDBACK = v2._build_feedback",
         "_RAW_RUN_CASE = v2._run_case",
     ):
         if token not in v5:
