@@ -111,9 +111,7 @@ def preflight_cli(argv: list[str]) -> int:
     if args.self_test:
         return parser_symbol_self_test()
     if not args.input:
-        parser.error(
-            "source, --output, and --initial-row-policy are required unless --self-test"
-        )
+        parser.error("input is required unless --self-test")
     validate_input_preflight(Path(args.input).expanduser().resolve())
     return 0
 
