@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""P0 characterization for the Issue31 coupling recipe extraction."""
+"""P0 characterization for the Issue31 coupling recipe extraction/cutover."""
 from __future__ import annotations
 
+import ast
 import csv
 import sys
 import tempfile
@@ -14,6 +15,7 @@ if str(ROOT) not in sys.path:
 from recipes import issue31_coupling as recipe
 from qpx_harness import coupling_evr1 as legacy
 from qpx_harness import coupling_evr1_safe as safe
+from qpx_harness import coupling_evr2_timestep as evr2
 
 
 def _base_input() -> str:
@@ -161,6 +163,13 @@ def _check_csv_selection() -> None:
         else:
             raise AssertionError("missing-CSV negative control passed")
 
+        try:
+            safe.physics_csv(Path(tmp_name), monolithic=False)
+        except legacy.CouplingEVR1Error:
+            pass
+        else:
+            raise AssertionError("safe adapter error translation drift")
+
 
 def _legacy_safe_physics_check(case_dir: Path, *, monolithic: bool) -> dict:
     original = legacy._physics_csv
@@ -192,6 +201,78 @@ def _check_physics_equivalence() -> None:
             raise AssertionError("physics negative control passed")
 
 
+def _imports_module(path: Path, module: str) -> bool:
+    tree = ast.parse(path.read_text(), filename=str(path))
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            if any(alias.name == module for alias in node.names):
+                return True
+        elif isinstance(node, ast.ImportFrom):
+            base = node.module or ""
+            if base == module:
+                return True
+            if base == "qpx_harness" and module.startswith("qpx_harness."):
+                leaf = module.split(".", 1)[1]
+                if any(alias.name == leaf for alias in node.names):
+                    return True
+    return False
+
+
+def _check_safe_scoped_patch() -> None:
+    original_main = legacy.main
+    original_csv = legacy._physics_csv
+    observed: dict[str, bool] = {}
+
+    def fake_main(args) -> int:
+        observed["active"] = legacy._physics_csv is safe.physics_csv
+        return 7
+
+    legacy.main = fake_main
+    try:
+        rc = safe.main([])
+    finally:
+        legacy.main = original_main
+
+    if rc != 7 or not observed.get("active"):
+        raise AssertionError("safe adapter did not scope recipe-backed CSV selection")
+    if legacy._physics_csv is not original_csv:
+        raise AssertionError("safe adapter did not restore EVR1 CSV selector")
+
+
+def _check_production_cutover() -> None:
+    evr2_path = Path(evr2.__file__)
+    if _imports_module(evr2_path, "qpx_harness.coupling_evr1"):
+        raise AssertionError("EVR2 still imports coupling_evr1")
+    if _imports_module(evr2_path, "qpx_harness.coupling_evr1_safe"):
+        raise AssertionError("EVR2 still imports coupling_evr1_safe")
+
+    evr2_source = evr2_path.read_text()
+    for required in (
+        "from recipes import issue31_coupling as recipe",
+        "validate_referenced_files",
+        "recipe.transport_only_input",
+        "recipe.physics_check",
+        "recipe.SPECIES",
+    ):
+        if required not in evr2_source:
+            raise AssertionError(f"EVR2 recipe cutover missing: {required}")
+
+    safe_source = Path(safe.__file__).read_text()
+    for required in (
+        "from recipes import issue31_coupling as recipe",
+        "original_physics_csv = base._physics_csv",
+        "base._physics_csv = physics_csv",
+        "base._physics_csv = original_physics_csv",
+    ):
+        if required not in safe_source:
+            raise AssertionError(f"safe adapter scoped cutover missing: {required}")
+    for forbidden in ("def _activate", "base.self_test ="):
+        if forbidden in safe_source:
+            raise AssertionError(f"safe adapter retained legacy monkey-patch path: {forbidden}")
+
+    _check_safe_scoped_patch()
+
+
 def _check_boundary() -> None:
     source = Path(recipe.__file__).read_text()
     for forbidden in (
@@ -204,7 +285,9 @@ def _check_boundary() -> None:
         "run_measurement",
     ):
         if forbidden in source:
-            raise AssertionError(f"Issue31 recipe leaked runtime owner semantics: {forbidden}")
+            raise AssertionError(
+                f"Issue31 recipe leaked runtime owner semantics: {forbidden}"
+            )
 
 
 def main() -> int:
@@ -213,6 +296,7 @@ def main() -> int:
         _check_transport_transform()
         _check_csv_selection()
         _check_physics_equivalence()
+        _check_production_cutover()
         _check_boundary()
     except Exception as exc:
         print(f"ISSUE48_ISSUE31_COUPLING_RECIPE_SELFTEST: FAIL ({exc})")
