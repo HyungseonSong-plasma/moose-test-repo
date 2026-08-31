@@ -17,13 +17,15 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from recipes import issue45_first_linear as first_linear_policy
+
 from . import artifacts
 from . import augmented_jacobian_localization as loc
 from . import electron_inventory_nullspace as inv
 from . import evidence
 from . import fast_plasma_coupling_diagnostic as coupling_diag
-from . import petsc_first_linear_diagnostic as first_linear
 from .moose_input import MooseInput, MooseInputError
+from .petsc import options as petsc_options
 from .runtime import resolve_executable, run_qpx, validate_executable
 
 ISSUE = 46
@@ -31,7 +33,7 @@ TARGET = inv.C0_TARGET
 HISTORICAL_EVR1_ELECTRON_DOF_COUNT = 2348
 PETSC_REFERENCE_VERSION = "3.25.2"
 FD_REFERENCE_TYPE = "ds"
-GLOBAL_JACOBIAN_REL_TOL = first_linear.JACOBIAN_REL_TOL
+GLOBAL_JACOBIAN_REL_TOL = first_linear_policy.JACOBIAN_REL_TOL
 LOCALIZATION_THRESHOLD = loc.LOCALIZATION_THRESHOLD
 SQRT_MACHINE_EPSILON = math.sqrt(sys.float_info.epsilon)
 DS_ATTENUATION_TO_UNITY_TOL = 1.0e-8
@@ -409,9 +411,9 @@ def audit_ds_reference_structure(
     add("ds-petsc-pair-exact", ds_pairs == expected_pairs, ds_pairs, expected_pairs)
     add(
         "petsc-flags-preserved",
-        first_linear._petsc_options(ds_text) == first_linear._petsc_options(baseline_text),
-        first_linear._petsc_options(ds_text),
-        first_linear._petsc_options(baseline_text),
+        petsc_options.get_flags(ds_text) == petsc_options.get_flags(baseline_text),
+        petsc_options.get_flags(ds_text),
+        petsc_options.get_flags(baseline_text),
     )
 
     restored: str | None = None
@@ -714,7 +716,7 @@ def self_test() -> int:
             raise AssertionError("zero J_n,lambda structural entry was miscounted")
 
         base = _issue46_synthetic_constrained_input(TARGET)
-        first_text, _ = first_linear.instrument_first_linear(base)
+        first_text, _ = first_linear_policy.instrument_first_linear(base)
         baseline, _ = loc.instrument_localization(first_text)
         ds_text, _ = instrument_ds_reference(baseline)
         audit = audit_ds_reference_structure(baseline, ds_text)
@@ -795,7 +797,7 @@ def _prepare_case(exe: Path, results_root: str | None) -> dict[str, Any]:
         macro_avg=TARGET,
         runtime_observability=True,
     )
-    first_text, _ = first_linear.instrument_first_linear(base_c0)
+    first_text, _ = first_linear_policy.instrument_first_linear(base_c0)
     baseline_text, _ = loc.instrument_localization(first_text)
     baseline_audit = loc.audit_localization_structure(first_text, baseline_text)
     ds_text, instrumentation = instrument_ds_reference(baseline_text)
