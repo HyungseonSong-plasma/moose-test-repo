@@ -6,6 +6,10 @@ within 80 Newton iterations. This runner does not retest Poisson. It tests
 whether the failure is explained by electron-containing transient stiffness or
 by nonlinear scaling.
 
+Scientific input construction and discriminator interpretation are owned by
+``recipes.issue31_coupling``. This module retains EVR2 runtime orchestration,
+filesystem staging, measurement execution, and checker subprocesses.
+
 Branch-aware order:
   KG-E  accepted real-qvt electron control at dt=1e-8
   T6    transport-only dt=1e-6, current scaling policy
@@ -31,25 +35,11 @@ from recipes import issue31_coupling as recipe
 
 from .cases import CaseError, validate_referenced_files
 from .dmix_equivalence import legacy_source_transform
-from .moose_input import MooseInput, MooseInputError, self_test as moose_input_self_test
 from .performance_core import PerformanceContractError, run_measurement
 from .performance_smoke import build_smoke_manifest, default_results_root
 from .preflight import validate_parser_symbols_text
 from .runtime import resolve_executable, validate_executable
 from .temporal import normalize_from_manifest
-
-
-KG_E_PARENT_RELATIVE = Path("tests/Issue2_electron_bulk_drift")
-EVR1_BASELINE = {
-    "dt": 1.0e-4,
-    "status": "RUNTIME_FAIL_OR_NONCONVERGENCE",
-    "signature": "DIVERGED_MAX_IT",
-    "nonlinear_iterations": 80,
-    "physics": "NOT_RUN",
-    "source": "user-returned Issue31 EVR1 transport-only evidence",
-}
-DT_1E6 = 1.0e-6
-DT_1E8 = 1.0e-8
 
 
 class CouplingEVR2Error(RuntimeError):
@@ -107,42 +97,6 @@ def _purge_runtime_artifacts(root: Path) -> None:
                 shutil.rmtree(path)
 
 
-def configured_transport_input(
-    base_text: str,
-    *,
-    dt: float,
-    compute_scaling_once: bool,
-) -> tuple[str, dict[str, Any]]:
-    """Build the exact EVR1 transport-only control with only time/scaling changed."""
-    try:
-        transport_text, transport_meta = recipe.transport_only_input(base_text)
-        transformed, param_meta = MooseInput(transport_text).replace_parameters(
-            "Executioner",
-            {
-                "dt": f"{dt:.17g}",
-                "end_time": f"{dt:.17g}",
-                "compute_scaling_once": "true" if compute_scaling_once else "false",
-            },
-        )
-    except (recipe.Issue31CouplingError, MooseInputError) as exc:
-        raise CouplingEVR2Error(f"transport configuration failed: {exc}") from exc
-
-    if "potential_plasma" in transformed:
-        raise CouplingEVR2Error(
-            "configured transport case unexpectedly references potential_plasma"
-        )
-    if "r30_e_diffusion" not in transformed or "n_e_solved" not in transformed:
-        raise CouplingEVR2Error(
-            "configured transport case lost solved electron diffusion state"
-        )
-    return transformed, {
-        "transport_transform": transport_meta,
-        "executioner_parameters": param_meta,
-        "dt": dt,
-        "compute_scaling_once": compute_scaling_once,
-    }
-
-
 def _copy_transport_case(asset_dir: Path, target: Path, input_text: str) -> None:
     shutil.copytree(asset_dir, target)
     _purge_runtime_artifacts(target)
@@ -150,7 +104,7 @@ def _copy_transport_case(asset_dir: Path, target: Path, input_text: str) -> None
 
 
 def _copy_kg_e(repo_root: Path, cases_root: Path) -> Path:
-    source_parent = repo_root / KG_E_PARENT_RELATIVE
+    source_parent = repo_root / recipe.KG_E_PARENT_RELATIVE
     if not source_parent.is_dir():
         raise CouplingEVR2Error(f"missing accepted electron control tree: {source_parent}")
     target_parent = cases_root / "kg_e_parent"
@@ -294,7 +248,7 @@ def _case_pass(case: dict[str, Any] | None) -> bool:
 
 
 def _canonical_checker_self_test(repo_root: Path) -> dict[str, Any]:
-    checker = repo_root / KG_E_PARENT_RELATIVE / "check_case.py"
+    checker = repo_root / recipe.KG_E_PARENT_RELATIVE / "check_case.py"
     if not checker.is_file():
         raise CouplingEVR2Error(f"missing accepted electron checker: {checker}")
     proc = subprocess.run(
@@ -357,122 +311,8 @@ def _kg_e_pass(case: dict[str, Any]) -> bool:
     )
 
 
-def classify(
-    kg_e: dict[str, Any],
-    dt1e6: dict[str, Any] | None,
-    dt1e8: dict[str, Any] | None,
-    scaling1e8: dict[str, Any] | None,
-) -> dict[str, Any]:
-    if not _kg_e_pass(kg_e):
-        status = _result_status(kg_e)
-        cls = (
-            "HARNESS_OR_CONSTRUCTION_FAIL"
-            if status == "HARNESS_OR_CONSTRUCTION_FAIL"
-            else "KNOWN_GOOD_ELECTRON_CONTROL_FAIL"
-        )
-        return {
-            "class": cls,
-            "reason": (
-                "accepted real-qvt electron control did not pass on the current "
-                "executable/environment"
-            ),
-        }
-
-    for label, case in (("dt1e6", dt1e6), ("dt1e8", dt1e8)):
-        if case is None:
-            return {
-                "class": "HARNESS_OR_CONSTRUCTION_FAIL",
-                "reason": f"{label} was not run",
-            }
-        if _result_status(case) == "HARNESS_OR_CONSTRUCTION_FAIL":
-            return {
-                "class": "HARNESS_OR_CONSTRUCTION_FAIL",
-                "reason": f"{label} failed before interpretable physics runtime",
-            }
-        if _result_status(case) == "P2_PASS_P3_PASS" and not _case_pass(case):
-            return {
-                "class": "PHYSICS_CHECK_FAIL",
-                "reason": f"{label} runtime completed but transport physics checks failed",
-            }
-
-    p6 = _case_pass(dt1e6)
-    p8 = _case_pass(dt1e8)
-
-    if p6 and p8:
-        return {
-            "class": "TIMESTEP_STIFFNESS_CONFIRMED_RECOVERY_BY_1E6",
-            "reason": (
-                "EVR1 dt=1e-4 failed; unchanged transport/scaling recovers at "
-                "both 1e-6 and 1e-8"
-            ),
-        }
-    if (not p6) and p8 and _runtime_nonconvergence(dt1e6):
-        return {
-            "class": "TIMESTEP_STIFFNESS_CONFIRMED_RECOVERY_ONLY_BY_1E8",
-            "reason": (
-                "dt=1e-6 still fails by nonlinear convergence while dt=1e-8 "
-                "recovers with unchanged scaling"
-            ),
-        }
-    if p6 and (not p8):
-        return {
-            "class": "NONMONOTONIC_TIMESTEP_RESPONSE",
-            "reason": (
-                "dt=1e-6 passes but smaller dt=1e-8 does not; simple "
-                "timestep-stiffness explanation is insufficient"
-            ),
-        }
-
-    if _runtime_nonconvergence(dt1e6) and _runtime_nonconvergence(dt1e8):
-        if scaling1e8 is None:
-            return {
-                "class": "SCALING_BRANCH_REQUIRED",
-                "reason": "both smaller timesteps remain nonlinear-convergence failures",
-            }
-        if _result_status(scaling1e8) == "HARNESS_OR_CONSTRUCTION_FAIL":
-            return {
-                "class": "HARNESS_OR_CONSTRUCTION_FAIL",
-                "reason": (
-                    "scaling discriminator failed before interpretable physics runtime"
-                ),
-            }
-        if _result_status(scaling1e8) == "P2_PASS_P3_PASS" and not _case_pass(
-            scaling1e8
-        ):
-            return {
-                "class": "PHYSICS_CHECK_FAIL",
-                "reason": "scaling discriminator converged but physics checks failed",
-            }
-        if _case_pass(scaling1e8):
-            return {
-                "class": "NONLINEAR_SCALING_SENSITIVITY_CONFIRMED",
-                "reason": (
-                    "dt=1e-8 fails with current scaling policy and recovers when "
-                    "only compute_scaling_once changes to true"
-                ),
-            }
-        if _runtime_nonconvergence(scaling1e8):
-            return {
-                "class": "T3_COUPLING_OR_JACOBIAN_FAIL_PERSISTS",
-                "reason": (
-                    "accepted electron control passes, but T3 fails at 1e-6 and "
-                    "1e-8 and does not recover with accepted scaling-once policy"
-                ),
-            }
-
-    return {
-        "class": "UNRESOLVED_RUNTIME_RESPONSE",
-        "reason": (
-            "observed result signature does not match a predeclared discriminator branch"
-        ),
-    }
-
-
 def self_test() -> int:
     try:
-        if moose_input_self_test():
-            raise AssertionError("MooseInput self-test failed")
-
         synthetic = """
 [Variables]
   [n_e_solved]
@@ -521,8 +361,10 @@ def self_test() -> int:
   compute_scaling_once = false
 []
 """
-        transformed, meta = configured_transport_input(
-            synthetic, dt=DT_1E8, compute_scaling_once=True
+        transformed, meta = recipe.configured_transport_input(
+            synthetic,
+            dt=recipe.DT_1E8,
+            compute_scaling_once=True,
         )
         if "potential_plasma" in transformed:
             raise AssertionError("Poisson reference survived EVR2 transform")
@@ -553,19 +395,19 @@ def self_test() -> int:
             "RUNTIME_FAIL_OR_NONCONVERGENCE", None, "DIVERGED_MAX_IT"
         )
 
-        if classify(kg, pass_case, pass_case, None)["class"] != (
+        if recipe.classify_evr2(kg, pass_case, pass_case, None)["class"] != (
             "TIMESTEP_STIFFNESS_CONFIRMED_RECOVERY_BY_1E6"
         ):
             raise AssertionError("timestep recovery classifier failed")
-        if classify(kg, fail_case, pass_case, None)["class"] != (
+        if recipe.classify_evr2(kg, fail_case, pass_case, None)["class"] != (
             "TIMESTEP_STIFFNESS_CONFIRMED_RECOVERY_ONLY_BY_1E8"
         ):
             raise AssertionError("tight timestep classifier failed")
-        if classify(kg, fail_case, fail_case, pass_case)["class"] != (
+        if recipe.classify_evr2(kg, fail_case, fail_case, pass_case)["class"] != (
             "NONLINEAR_SCALING_SENSITIVITY_CONFIRMED"
         ):
             raise AssertionError("scaling classifier failed")
-        if classify(kg, fail_case, fail_case, fail_case)["class"] != (
+        if recipe.classify_evr2(kg, fail_case, fail_case, fail_case)["class"] != (
             "T3_COUPLING_OR_JACOBIAN_FAIL_PERSISTS"
         ):
             raise AssertionError("persistent coupling classifier failed")
@@ -573,7 +415,7 @@ def self_test() -> int:
         bad_kg = result(
             "RUNTIME_FAIL_OR_NONCONVERGENCE", None, "DIVERGED_MAX_IT"
         )
-        if classify(bad_kg, None, None, None)["class"] != (
+        if recipe.classify_evr2(bad_kg, None, None, None)["class"] != (
             "KNOWN_GOOD_ELECTRON_CONTROL_FAIL"
         ):
             raise AssertionError("known-good control classifier failed")
@@ -630,14 +472,20 @@ def run(args: argparse.Namespace) -> int:
 
     base_text = base_input.read_text()
     transport_variants: dict[str, tuple[str, dict[str, Any]]] = {
-        "dt1e6": configured_transport_input(
-            base_text, dt=DT_1E6, compute_scaling_once=False
+        "dt1e6": recipe.configured_transport_input(
+            base_text,
+            dt=recipe.DT_1E6,
+            compute_scaling_once=False,
         ),
-        "dt1e8": configured_transport_input(
-            base_text, dt=DT_1E8, compute_scaling_once=False
+        "dt1e8": recipe.configured_transport_input(
+            base_text,
+            dt=recipe.DT_1E8,
+            compute_scaling_once=False,
         ),
-        "scaling1e8": configured_transport_input(
-            base_text, dt=DT_1E8, compute_scaling_once=True
+        "scaling1e8": recipe.configured_transport_input(
+            base_text,
+            dt=recipe.DT_1E8,
+            compute_scaling_once=True,
         ),
     }
 
@@ -687,9 +535,11 @@ def run(args: argparse.Namespace) -> int:
         "base_input": str(base_input),
         "base_input_sha256": _sha256(base_input),
         "asset_case": str(asset_dir),
-        "kg_e_control_source": str(repo_root / KG_E_PARENT_RELATIVE / "qvt_prepoisson"),
+        "kg_e_control_source": str(
+            repo_root / recipe.KG_E_PARENT_RELATIVE / "qvt_prepoisson"
+        ),
         "kg_e_checker_selftest": checker_selftest,
-        "evr1_baseline": EVR1_BASELINE,
+        "evr1_baseline": recipe.EVR1_BASELINE,
         "transport_variants": {
             label: meta for label, (_, meta) in transport_variants.items()
         },
@@ -745,7 +595,7 @@ def run(args: argparse.Namespace) -> int:
             )
             _attach_transport_physics(scaling1e8, case_dirs["scaling1e8"])
 
-    decision = classify(kg_e, dt1e6, dt1e8, scaling1e8)
+    decision = recipe.classify_evr2(kg_e, dt1e6, dt1e8, scaling1e8)
     summary = {
         "schema_version": 1,
         "issue": 31,
@@ -784,14 +634,7 @@ def run(args: argparse.Namespace) -> int:
     print("ISSUE31_EVR2_REASON:", decision["reason"])
     print("ISSUE31_EVR2_SUMMARY:", root / "summary.json")
 
-    terminal_ok = decision["class"] in {
-        "TIMESTEP_STIFFNESS_CONFIRMED_RECOVERY_BY_1E6",
-        "TIMESTEP_STIFFNESS_CONFIRMED_RECOVERY_ONLY_BY_1E8",
-        "NONLINEAR_SCALING_SENSITIVITY_CONFIRMED",
-        "T3_COUPLING_OR_JACOBIAN_FAIL_PERSISTS",
-        "NONMONOTONIC_TIMESTEP_RESPONSE",
-    }
-    return 0 if terminal_ok else 2
+    return 0 if decision["class"] in recipe.EVR2_TERMINAL_CLASSES else 2
 
 
 def main(argv: Iterable[str] | None = None) -> int:
@@ -807,7 +650,13 @@ def main(argv: Iterable[str] | None = None) -> int:
         return self_test()
     try:
         return run(args)
-    except (CouplingEVR2Error, PerformanceContractError, CaseError, SystemExit) as exc:
+    except (
+        CouplingEVR2Error,
+        recipe.Issue31CouplingError,
+        PerformanceContractError,
+        CaseError,
+        SystemExit,
+    ) as exc:
         print(f"ISSUE31_EVR2_FATAL: {exc}", file=sys.stderr)
         return 2
 
