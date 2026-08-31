@@ -10,27 +10,29 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from qpx_harness.compat import issue46_fd_reference as compat
+from qpx_harness import issue46_fd_reference as semantic
 
 
 def _check_recipe_backing() -> None:
-    status = compat.recipe_backing_status()
+    status = semantic.recipe_backing_status()
     failed = [name for name, ok in status.items() if not ok]
     if failed:
-        raise AssertionError(f"compatibility bindings are not recipe-backed: {failed}")
+        raise AssertionError(f"semantic bindings are not recipe-backed: {failed}")
 
 
 def _check_stable_cli_route() -> None:
     script = ROOT / "scripts" / "qpx.py"
     source = script.read_text()
     expected_import = (
-        "from qpx_harness.compat.issue46_fd_reference import main as fd_reference_main, "
+        "from qpx_harness.issue46_fd_reference import main as fd_reference_main, "
         "self_test as fd_reference_self_test"
     )
     if expected_import not in source:
-        raise AssertionError("stable CLI does not import the Issue46 compatibility adapter")
+        raise AssertionError("stable CLI does not import the Issue46 FD semantic owner")
+    if "from qpx_harness.compat.issue46_fd_reference import" in source:
+        raise AssertionError("stable CLI still imports the retired-boundary compatibility adapter")
     if "from qpx_harness.jacobian_fd_reference_audit import main as fd_reference_main" in source:
-        raise AssertionError("stable CLI still directly imports the mixed Issue46 owner")
+        raise AssertionError("stable CLI directly imports the historical mixed Issue46 owner")
 
     run = subprocess.run(
         [sys.executable, str(script), "inventory-fd-reference", "--self-test"],
@@ -50,10 +52,15 @@ def _check_stable_cli_route() -> None:
         )
 
 
-def _check_compatibility_boundary() -> None:
-    source = (ROOT / "qpx_harness" / "compat" / "issue46_fd_reference.py").read_text()
-    if "from recipes import issue46_fd_reference as recipe" not in source:
-        raise AssertionError("compatibility adapter does not import the thin recipe")
+def _check_semantic_boundary() -> None:
+    semantic_source = (ROOT / "qpx_harness" / "issue46_fd_reference.py").read_text()
+    if "from recipes import issue46_fd_reference as recipe" not in semantic_source:
+        raise AssertionError("semantic owner does not import the thin Issue46 FD recipe")
+    if "from qpx_harness import jacobian_fd_reference_audit as runtime_shell" not in semantic_source:
+        raise AssertionError("semantic owner lost the bounded historical runtime-shell dependency")
+    if "qpx_harness.compat.issue46_fd_reference" in semantic_source:
+        raise AssertionError("semantic owner reverse-depends on the compatibility adapter")
+
     recipe_source = (ROOT / "recipes" / "issue46_fd_reference.py").read_text()
     for forbidden in (
         "jacobian_fd_reference_audit",
@@ -61,9 +68,28 @@ def _check_compatibility_boundary() -> None:
         "electron_inventory_nullspace",
         "petsc_first_linear_diagnostic",
         "fast_plasma_coupling_diagnostic",
+        "qpx_harness.compat.issue46_fd_reference",
     ):
         if forbidden in recipe_source:
             raise AssertionError(f"reverse dependency leaked into recipe: {forbidden}")
+
+
+def _negative_control() -> None:
+    script = ROOT / "scripts" / "qpx.py"
+    source = script.read_text()
+    semantic_import = (
+        "from qpx_harness.issue46_fd_reference import main as fd_reference_main, "
+        "self_test as fd_reference_self_test"
+    )
+    compat_import = (
+        "from qpx_harness.compat.issue46_fd_reference import main as fd_reference_main, "
+        "self_test as fd_reference_self_test"
+    )
+    if semantic_import not in source:
+        raise AssertionError("stable semantic CLI import baseline missing")
+    mutated = source.replace(semantic_import, compat_import, 1)
+    if compat_import not in mutated or semantic_import in mutated:
+        raise AssertionError("compat-route negative control did not create the stale topology")
 
 
 def main() -> int:
@@ -72,8 +98,10 @@ def main() -> int:
         print("ISSUE48_WP4_ISSUE46_CLI_CHECK: recipe-backing=PASS")
         _check_stable_cli_route()
         print("ISSUE48_WP4_ISSUE46_CLI_CHECK: stable-route=PASS")
-        _check_compatibility_boundary()
-        print("ISSUE48_WP4_ISSUE46_CLI_CHECK: compatibility-boundary=PASS")
+        _check_semantic_boundary()
+        print("ISSUE48_WP4_ISSUE46_CLI_CHECK: semantic-boundary=PASS")
+        _negative_control()
+        print("ISSUE48_WP4_ISSUE46_CLI_CHECK: negative-control=PASS")
     except Exception as exc:
         print(f"ISSUE48_WP4_ISSUE46_CLI_CUTOVER: FAIL ({exc})")
         return 1
