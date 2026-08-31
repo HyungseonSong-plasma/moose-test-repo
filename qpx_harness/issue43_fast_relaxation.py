@@ -30,8 +30,8 @@ from .runtime import resolve_executable, run_qpx, validate_executable
 # on a historical version layer.
 FastPlasmaV3Error = moose_executioner.MooseExecutionerError
 _RAW_BUILD_ELECTRON_300K = issue43_runtime.build_electron_300k
-_RAW_BUILD_ONEWAY = issue43_runtime.build_oneway
-_RAW_BUILD_FEEDBACK = issue43_runtime.build_feedback
+_BASE_BUILD_ONEWAY = issue43_runtime.build_oneway
+_BASE_BUILD_FEEDBACK = issue43_runtime.build_feedback
 _RAW_RUN_CASE = issue43_runtime.run_case
 
 _RUNTIME_PURGE_DIRECTORY_NAMES = (".jitcache",)
@@ -103,7 +103,7 @@ def _build_oneway_fixed(
     base_text: str, *, dt: float, steps: int, radial_span: float
 ) -> str:
     return apply_micro_time_contract(
-        _RAW_BUILD_ONEWAY(
+        _BASE_BUILD_ONEWAY(
             base_text, dt=dt, steps=steps, radial_span=radial_span
         ),
         dt=dt,
@@ -115,7 +115,7 @@ def _build_feedback_fixed(
     base_text: str, *, dt: float, steps: int, radial_span: float
 ) -> str:
     return apply_micro_time_contract(
-        _RAW_BUILD_FEEDBACK(
+        _BASE_BUILD_FEEDBACK(
             base_text, dt=dt, steps=steps, radial_span=radial_span
         ),
         dt=dt,
@@ -433,6 +433,51 @@ def _v3_compat_self_test() -> int:
             raise AssertionError("generic Executioner self-test failed")
         if temporal.self_test() != 0:
             raise AssertionError("generic temporal observation self-test failed")
+
+        if _BASE_BUILD_ONEWAY is not issue43_runtime.build_oneway:
+            raise AssertionError("one-way base builder alias drifted")
+        if _BASE_BUILD_FEEDBACK is not issue43_runtime.build_feedback:
+            raise AssertionError("feedback base builder alias drifted")
+        if _RAW_BUILD_ONEWAY is not _build_oneway_fixed:
+            raise AssertionError("one-way fixed-layer alias drifted")
+        if _RAW_BUILD_FEEDBACK is not _build_feedback_fixed:
+            raise AssertionError("feedback fixed-layer alias drifted")
+        if "_RAW_BUILD_ONEWAY" in _build_oneway_fixed.__code__.co_names:
+            raise AssertionError("one-way fixed builder can recurse through downstream alias")
+        if "_RAW_BUILD_FEEDBACK" in _build_feedback_fixed.__code__.co_names:
+            raise AssertionError("feedback fixed builder can recurse through downstream alias")
+
+        fixture = issue43_runtime._fixture()
+        for label, constructed in (
+            (
+                "oneway",
+                _build_oneway_fixed(
+                    fixture,
+                    dt=issue43_runtime.DT_FEEDBACK_BASE,
+                    steps=issue43_runtime.N_STEPS,
+                    radial_span=0.243,
+                ),
+            ),
+            (
+                "feedback",
+                _build_feedback_fixed(
+                    fixture,
+                    dt=issue43_runtime.DT_FEEDBACK_BASE,
+                    steps=issue43_runtime.N_STEPS,
+                    radial_span=0.243,
+                ),
+            ),
+        ):
+            builder_controls = _executioner_controls(constructed)
+            if builder_controls.get("num_steps") != issue43_runtime.N_STEPS:
+                raise AssertionError(f"{label} fixed builder lost num_steps contract")
+            if not math.isclose(
+                float(builder_controls.get("dt")),
+                issue43_runtime.DT_FEEDBACK_BASE,
+                rel_tol=1.0e-15,
+                abs_tol=0.0,
+            ):
+                raise AssertionError(f"{label} fixed builder lost dt contract")
 
         base = """[Executioner]
   type = Transient
