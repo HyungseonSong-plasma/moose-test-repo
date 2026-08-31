@@ -22,8 +22,9 @@ LEGACY_MODULE = "qpx_harness.petsc_first_linear_diagnostic"
 SEMANTIC_MODULE = "qpx_harness.issue45_first_linear"
 LEGACY = ROOT / "qpx_harness" / "petsc_first_linear_diagnostic.py"
 SEMANTIC = ROOT / "qpx_harness" / "issue45_first_linear.py"
+CLI = ROOT / "scripts" / "qpx.py"
 
-EXPECTED_LEGACY_PRODUCTION_CONSUMERS = {"scripts/qpx.py"}
+EXPECTED_LEGACY_PRODUCTION_CONSUMERS: set[str] = set()
 EXPECTED_LEGACY_TEST_CONSUMERS = {
     "tests/Issue47_fd_reference_refactor_characterization/self_test.py",
     "tests/Issue48_qpx_harness_generality/self_test.py",
@@ -31,7 +32,7 @@ EXPECTED_LEGACY_TEST_CONSUMERS = {
     "tests/Issue48_qpx_harness_generality/wp4_issue45_first_linear_characterization.py",
     "tests/Issue48_qpx_harness_generality/wp4_issue46_fd_recipe_characterization.py",
 }
-EXPECTED_SEMANTIC_PRODUCTION_CONSUMERS: set[str] = set()
+EXPECTED_SEMANTIC_PRODUCTION_CONSUMERS = {"scripts/qpx.py"}
 EXPECTED_SEMANTIC_TEST_CONSUMERS: set[str] = set()
 
 RUNTIME_SURFACE = (
@@ -145,6 +146,18 @@ def _check_topology() -> None:
         )
     if semantic_tests != EXPECTED_SEMANTIC_TEST_CONSUMERS:
         raise AssertionError(f"semantic test consumers drift: {sorted(semantic_tests)}")
+
+    cli = CLI.read_text()
+    semantic_import = (
+        "from qpx_harness.issue45_first_linear import main as "
+        "first_linear_main, self_test as first_linear_self_test"
+    )
+    if semantic_import not in cli:
+        raise AssertionError("stable CLI is not bound to semantic first-linear owner")
+    if "from qpx_harness.petsc_first_linear_diagnostic import" in cli:
+        raise AssertionError("stable CLI still imports legacy first-linear owner")
+    if '"inventory-first-linear":' not in cli:
+        raise AssertionError("stable inventory-first-linear command missing")
 
 
 def _check_policy_identity() -> None:
