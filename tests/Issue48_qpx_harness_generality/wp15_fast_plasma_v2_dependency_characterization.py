@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""P0 characterization for fast_plasma_relaxation_v2 runtime retirement gate."""
+"""P0 characterization for fast_plasma_relaxation_v2 zero-consumer retirement gate."""
 from __future__ import annotations
 
 import sys
@@ -9,9 +9,9 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from qpx_harness import fast_plasma_relaxation_v2 as v2
 from qpx_harness import issue43_relaxation_runtime as runtime43
 
+V2 = ROOT / "qpx_harness" / "fast_plasma_relaxation_v2.py"
 EXPECTED_RUNTIME_CONSUMERS: set[str] = set()
 
 
@@ -66,14 +66,20 @@ def _check_consumer_topology() -> None:
 
 
 def _check_historical_v1_boundary() -> None:
-    source = Path(v2.__file__).read_text()
+    source = V2.read_text()
     if "from . import fast_plasma_relaxation as v1" in source:
         raise AssertionError("v2 reintroduced retired v1 module")
-    if not hasattr(v2.v1, "FastPlasmaRelaxationError"):
-        raise AssertionError("v2 error compatibility alias missing")
-    for name in ("BASE_CASE_RELATIVE", "_copy_case", "_validate_assets"):
-        if hasattr(v2.v1, name):
-            raise AssertionError(f"retired v1 runtime surface returned: {name}")
+    if "v1 = SimpleNamespace(FastPlasmaRelaxationError=FastPlasmaRelaxationError)" not in source:
+        raise AssertionError("v2 error compatibility alias source drift")
+    for token in (
+        "v1.BASE_CASE_RELATIVE",
+        "v1._copy_case(",
+        "v1._validate_assets(",
+        "v1._create_root(",
+        "v1._run_known_good(",
+    ):
+        if token in source:
+            raise AssertionError(f"retired v1 runtime surface returned: {token}")
 
 
 def _check_remaining_stale_refs() -> None:
@@ -205,8 +211,10 @@ def _check_canonical_runtime_owner() -> None:
             raise AssertionError(f"canonical Issue43 runtime surface drift: {token}")
 
 
-def _check_v2_test_only_oracle_surface() -> None:
-    source = Path(v2.__file__).read_text()
+def _check_v2_zero_consumer_candidate_surface() -> None:
+    if not V2.is_file():
+        raise AssertionError("v2 retirement candidate disappeared before deletion gate")
+    source = V2.read_text()
     for token in (
         "def _build_electron_300k(",
         "def _build_oneway(",
@@ -218,7 +226,7 @@ def _check_v2_test_only_oracle_surface() -> None:
         "def classify(",
     ):
         if token not in source:
-            raise AssertionError(f"v2 compatibility oracle surface drift: {token}")
+            raise AssertionError(f"v2 retirement-candidate surface drift: {token}")
 
 
 def main() -> int:
@@ -232,7 +240,7 @@ def main() -> int:
         _check_localization_cutover()
         _check_fd_reference_cutover()
         _check_canonical_runtime_owner()
-        _check_v2_test_only_oracle_surface()
+        _check_v2_zero_consumer_candidate_surface()
     except Exception as exc:
         print(f"ISSUE48_FAST_PLASMA_V2_DEPENDENCY_SELFTEST: FAIL ({exc})")
         return 1
