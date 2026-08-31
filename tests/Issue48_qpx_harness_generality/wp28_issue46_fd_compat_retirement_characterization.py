@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""P0 deletion gate for the Issue46 FD-reference compatibility adapter."""
+"""P0 post-retirement gate for the Issue46 FD-reference compatibility adapter."""
 from __future__ import annotations
 
 import ast
@@ -140,27 +140,26 @@ def _execution_consumers() -> list[str]:
     return sorted(consumers)
 
 
+def _check_owner_absent() -> None:
+    if COMPAT_PATH.exists():
+        raise AssertionError("retired Issue46 FD compat adapter unexpectedly exists")
+
+
 def _check_canonical_boundary() -> None:
-    if not COMPAT_PATH.is_file():
-        raise AssertionError("FD compat adapter unexpectedly absent before retirement")
     if not SEMANTIC_PATH.is_file():
         raise AssertionError("canonical Issue46 FD semantic owner is missing")
 
-    compat_source = COMPAT_PATH.read_text()
-    compat_imports = _resolved_static_imports_source(compat_source, path=COMPAT_PATH)
-    if SEMANTIC_MODULE not in compat_imports:
-        raise AssertionError("compat adapter does not re-export the semantic owner")
-    if "qpx_harness.jacobian_fd_reference_audit" in compat_imports:
-        raise AssertionError("compat adapter reverse-depends on the legacy FD shell")
-    if "recipes.issue46_fd_reference" in compat_imports:
-        raise AssertionError("compat adapter owns recipe policy")
+    semantic_source = SEMANTIC_PATH.read_text()
+    semantic_imports = _resolved_static_imports_source(semantic_source, path=SEMANTIC_PATH)
+    if COMPAT_MODULE in semantic_imports:
+        raise AssertionError("semantic owner reverse-depends on the retired compat adapter")
 
     cli_source = CLI_PATH.read_text()
     cli_imports = _resolved_static_imports_source(cli_source, path=CLI_PATH)
     if SEMANTIC_MODULE not in cli_imports:
         raise AssertionError("stable CLI is not directly bound to the semantic FD owner")
     if COMPAT_MODULE in cli_imports:
-        raise AssertionError("stable CLI still imports the FD compat adapter")
+        raise AssertionError("stable CLI still imports the retired FD compat adapter")
 
     required = (
         "from qpx_harness.issue46_fd_reference import main as fd_reference_main, self_test as fd_reference_self_test",
@@ -205,6 +204,9 @@ def _negative_control() -> None:
 
 def main() -> int:
     try:
+        _check_owner_absent()
+        print("ISSUE48_WP28_ISSUE46_FD_COMPAT_RETIREMENT_CHECK: owner-absent=PASS")
+
         python_consumers = _python_consumers()
         if python_consumers:
             raise AssertionError(f"python consumers remain: {python_consumers}")
@@ -223,7 +225,7 @@ def main() -> int:
         print(f"ISSUE48_WP28_ISSUE46_FD_COMPAT_RETIREMENT_CHARACTERIZATION: FAIL ({exc})")
         return 1
 
-    print("ISSUE48_WP28_ISSUE46_FD_COMPAT_RETIREMENT_STATE: RETIREMENT_READY")
+    print("ISSUE48_WP28_ISSUE46_FD_COMPAT_RETIREMENT_STATE: RETIRED")
     print("ISSUE48_WP28_ISSUE46_FD_COMPAT_RETIREMENT_CHARACTERIZATION: PASS")
     return 0
 
