@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from qpx_harness import augmented_jacobian_localization as loc
+from qpx_harness import issue46_jacobian_localization as loc
 
 
 REFERENCE_REVISION = "9f388366ccf"
