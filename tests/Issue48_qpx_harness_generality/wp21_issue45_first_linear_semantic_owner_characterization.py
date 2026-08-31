@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ast
 import importlib
+import importlib.util
 import inspect
 import sys
 from pathlib import Path
@@ -16,6 +17,7 @@ if str(ROOT) not in sys.path:
 from recipes import issue45_first_linear as recipe
 
 LEGACY = ROOT / "qpx_harness" / "petsc_first_linear_diagnostic.py"
+LEGACY_MODULE = "qpx_harness.petsc_first_linear_diagnostic"
 SEMANTIC_MODULE = "qpx_harness.issue45_first_linear"
 SEMANTIC = ROOT / "qpx_harness" / "issue45_first_linear.py"
 CLI = ROOT / "scripts" / "qpx.py"
@@ -44,6 +46,33 @@ def _semantic() -> Any:
     return importlib.import_module(SEMANTIC_MODULE)
 
 
+def _imports_module(path: Path, module_name: str) -> bool:
+    source = path.read_text()
+    tree = ast.parse(source, filename=str(path))
+    module = ".".join(path.relative_to(ROOT).with_suffix("").parts)
+    package = module if path.name == "__init__.py" else module.rpartition(".")[0]
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            if any(alias.name == module_name for alias in node.names):
+                return True
+        elif isinstance(node, ast.ImportFrom):
+            if node.level:
+                try:
+                    base = importlib.util.resolve_name(
+                        "." * node.level + (node.module or ""), package
+                    )
+                except (ImportError, ValueError):
+                    continue
+            else:
+                base = node.module or ""
+            if base == module_name:
+                return True
+            parent, _, child = module_name.rpartition(".")
+            if base == parent and any(alias.name == child for alias in node.names):
+                return True
+    return False
+
+
 def _check_topology() -> None:
     if LEGACY.exists():
         raise AssertionError("retired historical first-linear owner still exists")
@@ -56,8 +85,8 @@ def _check_topology() -> None:
     )
     if required not in cli:
         raise AssertionError("stable CLI is not bound to semantic first-linear owner")
-    if "petsc_first_linear_diagnostic" in cli:
-        raise AssertionError("stable CLI references retired historical owner")
+    if _imports_module(CLI, LEGACY_MODULE):
+        raise AssertionError("stable CLI imports retired historical owner")
 
 
 def _check_policy_identity() -> None:
@@ -82,8 +111,8 @@ def _check_runtime_surface() -> None:
     source = SEMANTIC.read_text()
     if "from recipes import issue45_first_linear as first_linear_recipe" not in source:
         raise AssertionError("semantic owner does not compose canonical Issue45 recipe")
-    if "petsc_first_linear_diagnostic" in source:
-        raise AssertionError("semantic owner references retired historical owner")
+    if _imports_module(SEMANTIC, LEGACY_MODULE):
+        raise AssertionError("semantic owner imports retired historical owner")
     for forbidden in (
         "def instrument_first_linear(",
         "def analyze_first_linear_text(",
