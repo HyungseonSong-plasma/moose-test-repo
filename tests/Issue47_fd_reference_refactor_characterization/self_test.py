@@ -22,8 +22,8 @@ if str(ROOT) not in sys.path:
 from qpx_harness import augmented_jacobian_localization as loc
 from qpx_harness import electron_inventory_nullspace as inv
 from qpx_harness import jacobian_fd_reference_audit as base
-from qpx_harness import petsc_first_linear_diagnostic as first_linear
 from qpx_harness.moose_input import MooseInput
+from recipes import issue45_first_linear as first_linear
 
 
 ACCEPTED_EVR1_ELECTRON_DOF_COUNT = 2348
