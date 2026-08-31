@@ -286,16 +286,15 @@ def _negative_control() -> None:
     fd_source = FD_AUDIT.read_text()
     mutated = fd_source + "\nfrom . import augmented_jacobian_localization as old_loc\n"
     tree = ast.parse(mutated, filename=str(FD_AUDIT))
-    if not any(
+    found = any(
         isinstance(node, ast.ImportFrom)
-        and node.module == ""
+        and node.level == 1
+        and node.module is None
         and any(alias.name == "augmented_jacobian_localization" for alias in node.names)
         for node in ast.walk(tree)
-    ):
-        # Relative import ASTs encode module without the leading dot differently
-        # across simple synthetic contexts; retain a text-level guard as well.
-        if "augmented_jacobian_localization" not in mutated:
-            raise AssertionError("legacy-import negative control failed")
+    )
+    if not found:
+        raise AssertionError("legacy-import negative control failed")
     if "petsc_matrix.summarize_by_owner" not in fd_source:
         raise AssertionError("generic owner-block negative control baseline missing")
 
