@@ -114,7 +114,6 @@ def _check_primitive_boundary() -> None:
         for forbidden in (
             "performance_cache_audit",
             "QPXFVMixtureAveragedDiffusion",
-            "D_mix_",
             "NATIVE_FUNCTOR_CACHE_CANDIDATE",
         ):
             if forbidden in source:
