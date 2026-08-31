@@ -7,7 +7,7 @@ from typing import Any
 
 def _parse_terminations(text: str, solve_kind: str) -> list[dict[str, Any]]:
     pattern = re.compile(
-        rf"{re.escape(solve_kind)} solve\s+(converged|did not converge)\s+due to\s+([A-Z0-9_]+)(?:\s+iterations\s+(\d+))?",
+        rf"(?m)^\s*{re.escape(solve_kind)} solve\s+(converged|did not converge)\s+due to\s+([A-Z0-9_]+)(?:\s+iterations\s+(\d+))?",
         re.IGNORECASE,
     )
     rows: list[dict[str, Any]] = []
