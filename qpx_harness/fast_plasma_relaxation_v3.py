@@ -14,7 +14,6 @@ physics interpretation.
 from __future__ import annotations
 
 import argparse
-import csv
 import json
 import math
 import tempfile
@@ -24,6 +23,7 @@ from typing import Any
 from . import execution_contract as ec
 from . import fast_plasma_relaxation as v1
 from . import fast_plasma_relaxation_v2 as v2
+from . import temporal
 from .moose import executioner as moose_executioner
 
 
@@ -273,59 +273,13 @@ def _build_execution_contract(case_id: str, input_text: str) -> dict[str, Any]:
 
 
 def _runtime_csv(case_dir: Path) -> Path | None:
-    preferred = case_dir / "input_out.csv"
-    candidates = [preferred] if preferred.is_file() else []
-    candidates.extend(
-        path for path in sorted(case_dir.glob("*.csv")) if path != preferred
-    )
-    for path in candidates:
-        try:
-            with path.open(newline="") as handle:
-                reader = csv.DictReader(handle)
-                if "time" in (reader.fieldnames or []):
-                    return path
-        except (OSError, csv.Error):
-            continue
-    return None
+    """Compatibility wrapper around the generic temporal CSV locator."""
+    return temporal.find_temporal_csv(case_dir)
 
 
 def _runtime_observation(case_dir: Path) -> dict[str, Any]:
-    path = _runtime_csv(case_dir)
-    if path is None:
-        return {"physical_rows": 0, "csv_status": "MISSING_TIME_CSV"}
-
-    times: list[float] = []
-    try:
-        with path.open(newline="") as handle:
-            for row in csv.DictReader(handle):
-                try:
-                    value = float(row["time"])
-                except (KeyError, TypeError, ValueError):
-                    continue
-                if math.isfinite(value) and value > 0.0:
-                    times.append(value)
-    except (OSError, csv.Error):
-        return {"physical_rows": 0, "csv_status": "UNREADABLE_TIME_CSV"}
-
-    observation: dict[str, Any] = {
-        "physical_rows": len(times),
-        "csv": str(path),
-        "csv_status": "PASS",
-    }
-    if not times:
-        return observation
-
-    times.sort()
-    dts = [times[0]] + [b - a for a, b in zip(times, times[1:])]
-    finite_positive_dts = [
-        value for value in dts if math.isfinite(value) and value > 0.0
-    ]
-    observation["first_time"] = times[0]
-    observation["final_time"] = times[-1]
-    if finite_positive_dts:
-        observation["actual_dt_min"] = min(finite_positive_dts)
-        observation["actual_dt_max"] = max(finite_positive_dts)
-    return observation
+    """Compatibility wrapper preserving the historical Issue43 result schema."""
+    return temporal.observe_case_trajectory(case_dir)
 
 
 def _write_contract_artifacts(
@@ -448,6 +402,8 @@ def self_test() -> int:
             raise AssertionError("execution-contract self-test failed")
         if moose_executioner.self_test() != 0:
             raise AssertionError("generic Executioner self-test failed")
+        if temporal.self_test() != 0:
+            raise AssertionError("generic temporal observation self-test failed")
 
         base = """[Executioner]
   type = Transient
