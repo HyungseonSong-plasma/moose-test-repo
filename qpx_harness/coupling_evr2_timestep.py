@@ -2,7 +2,7 @@
 
 EVR1 established that the optimized transport-only control (heavy + solved
 electron, Poisson OFF, electrostatic drift OFF) did not converge at dt=1e-4
-within 80 Newton iterations.  This runner does not retest Poisson.  It tests
+within 80 Newton iterations. This runner does not retest Poisson. It tests
 whether the failure is explained by electron-containing transient stiffness or
 by nonlinear scaling.
 
@@ -27,8 +27,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
-from . import coupling_evr1 as evr1
-from .coupling_evr1_safe import physics_csv as safe_physics_csv
+from recipes import issue31_coupling as recipe
+
+from .cases import CaseError, validate_referenced_files
 from .dmix_equivalence import legacy_source_transform
 from .moose_input import MooseInput, MooseInputError, self_test as moose_input_self_test
 from .performance_core import PerformanceContractError, run_measurement
@@ -114,7 +115,7 @@ def configured_transport_input(
 ) -> tuple[str, dict[str, Any]]:
     """Build the exact EVR1 transport-only control with only time/scaling changed."""
     try:
-        transport_text, transport_meta = evr1.transport_only_input(base_text)
+        transport_text, transport_meta = recipe.transport_only_input(base_text)
         transformed, param_meta = MooseInput(transport_text).replace_parameters(
             "Executioner",
             {
@@ -123,13 +124,17 @@ def configured_transport_input(
                 "compute_scaling_once": "true" if compute_scaling_once else "false",
             },
         )
-    except (evr1.CouplingEVR1Error, MooseInputError) as exc:
+    except (recipe.Issue31CouplingError, MooseInputError) as exc:
         raise CouplingEVR2Error(f"transport configuration failed: {exc}") from exc
 
     if "potential_plasma" in transformed:
-        raise CouplingEVR2Error("configured transport case unexpectedly references potential_plasma")
+        raise CouplingEVR2Error(
+            "configured transport case unexpectedly references potential_plasma"
+        )
     if "r30_e_diffusion" not in transformed or "n_e_solved" not in transformed:
-        raise CouplingEVR2Error("configured transport case lost solved electron diffusion state")
+        raise CouplingEVR2Error(
+            "configured transport case lost solved electron diffusion state"
+        )
     return transformed, {
         "transport_transform": transport_meta,
         "executioner_parameters": param_meta,
@@ -187,7 +192,10 @@ def _failure_signature(result: dict[str, Any] | None) -> dict[str, Any]:
         ("DIVERGED_MAX_IT", r"DIVERGED_MAX_IT(?:\s+iterations\s+(\d+))?"),
         ("DIVERGED_LINE_SEARCH", r"DIVERGED_LINE_SEARCH"),
         ("DIVERGED_FNORM_NAN", r"DIVERGED_FNORM_NAN|NaN"),
-        ("NONLINEAR_DID_NOT_CONVERGE", r"Nonlinear solve did not converge|Solve Did NOT Converge"),
+        (
+            "NONLINEAR_DID_NOT_CONVERGE",
+            r"Nonlinear solve did not converge|Solve Did NOT Converge",
+        ),
     )
     for name, pattern in patterns:
         match = re.search(pattern, text, re.IGNORECASE)
@@ -199,7 +207,11 @@ def _failure_signature(result: dict[str, Any] | None) -> dict[str, Any]:
                 except ValueError:
                     pass
             return {"signature": name, "iterations": iterations, "log": str(log)}
-    return {"signature": None, "iterations": None, "log": str(log) if log else None}
+    return {
+        "signature": None,
+        "iterations": None,
+        "log": str(log) if log else None,
+    }
 
 
 def _run_benchmark(
@@ -260,12 +272,7 @@ def _runtime_nonconvergence(case: dict[str, Any] | None) -> bool:
 
 
 def _transport_physics(case_dir: Path) -> dict[str, Any]:
-    original = evr1._physics_csv
-    evr1._physics_csv = safe_physics_csv
-    try:
-        return evr1.physics_check(case_dir, monolithic=False)
-    finally:
-        evr1._physics_csv = original
+    return recipe.physics_check(case_dir, monolithic=False)
 
 
 def _attach_transport_physics(case: dict[str, Any], case_dir: Path) -> None:
@@ -274,7 +281,7 @@ def _attach_transport_physics(case: dict[str, Any], case_dir: Path) -> None:
         return
     try:
         case["physics"] = _transport_physics(case_dir)
-    except evr1.CouplingEVR1Error as exc:
+    except recipe.Issue31CouplingError as exc:
         case["physics"] = {"status": "FAIL", "error": str(exc)}
 
 
@@ -365,12 +372,18 @@ def classify(
         )
         return {
             "class": cls,
-            "reason": "accepted real-qvt electron control did not pass on the current executable/environment",
+            "reason": (
+                "accepted real-qvt electron control did not pass on the current "
+                "executable/environment"
+            ),
         }
 
     for label, case in (("dt1e6", dt1e6), ("dt1e8", dt1e8)):
         if case is None:
-            return {"class": "HARNESS_OR_CONSTRUCTION_FAIL", "reason": f"{label} was not run"}
+            return {
+                "class": "HARNESS_OR_CONSTRUCTION_FAIL",
+                "reason": f"{label} was not run",
+            }
         if _result_status(case) == "HARNESS_OR_CONSTRUCTION_FAIL":
             return {
                 "class": "HARNESS_OR_CONSTRUCTION_FAIL",
@@ -388,17 +401,26 @@ def classify(
     if p6 and p8:
         return {
             "class": "TIMESTEP_STIFFNESS_CONFIRMED_RECOVERY_BY_1E6",
-            "reason": "EVR1 dt=1e-4 failed; unchanged transport/scaling recovers at both 1e-6 and 1e-8",
+            "reason": (
+                "EVR1 dt=1e-4 failed; unchanged transport/scaling recovers at "
+                "both 1e-6 and 1e-8"
+            ),
         }
     if (not p6) and p8 and _runtime_nonconvergence(dt1e6):
         return {
             "class": "TIMESTEP_STIFFNESS_CONFIRMED_RECOVERY_ONLY_BY_1E8",
-            "reason": "dt=1e-6 still fails by nonlinear convergence while dt=1e-8 recovers with unchanged scaling",
+            "reason": (
+                "dt=1e-6 still fails by nonlinear convergence while dt=1e-8 "
+                "recovers with unchanged scaling"
+            ),
         }
     if p6 and (not p8):
         return {
             "class": "NONMONOTONIC_TIMESTEP_RESPONSE",
-            "reason": "dt=1e-6 passes but smaller dt=1e-8 does not; simple timestep-stiffness explanation is insufficient",
+            "reason": (
+                "dt=1e-6 passes but smaller dt=1e-8 does not; simple "
+                "timestep-stiffness explanation is insufficient"
+            ),
         }
 
     if _runtime_nonconvergence(dt1e6) and _runtime_nonconvergence(dt1e8):
@@ -410,9 +432,13 @@ def classify(
         if _result_status(scaling1e8) == "HARNESS_OR_CONSTRUCTION_FAIL":
             return {
                 "class": "HARNESS_OR_CONSTRUCTION_FAIL",
-                "reason": "scaling discriminator failed before interpretable physics runtime",
+                "reason": (
+                    "scaling discriminator failed before interpretable physics runtime"
+                ),
             }
-        if _result_status(scaling1e8) == "P2_PASS_P3_PASS" and not _case_pass(scaling1e8):
+        if _result_status(scaling1e8) == "P2_PASS_P3_PASS" and not _case_pass(
+            scaling1e8
+        ):
             return {
                 "class": "PHYSICS_CHECK_FAIL",
                 "reason": "scaling discriminator converged but physics checks failed",
@@ -420,17 +446,25 @@ def classify(
         if _case_pass(scaling1e8):
             return {
                 "class": "NONLINEAR_SCALING_SENSITIVITY_CONFIRMED",
-                "reason": "dt=1e-8 fails with current scaling policy and recovers when only compute_scaling_once changes to true",
+                "reason": (
+                    "dt=1e-8 fails with current scaling policy and recovers when "
+                    "only compute_scaling_once changes to true"
+                ),
             }
         if _runtime_nonconvergence(scaling1e8):
             return {
                 "class": "T3_COUPLING_OR_JACOBIAN_FAIL_PERSISTS",
-                "reason": "accepted electron control passes, but T3 fails at 1e-6 and 1e-8 and does not recover with accepted scaling-once policy",
+                "reason": (
+                    "accepted electron control passes, but T3 fails at 1e-6 and "
+                    "1e-8 and does not recover with accepted scaling-once policy"
+                ),
             }
 
     return {
         "class": "UNRESOLVED_RUNTIME_RESPONSE",
-        "reason": "observed result signature does not match a predeclared discriminator branch",
+        "reason": (
+            "observed result signature does not match a predeclared discriminator branch"
+        ),
     }
 
 
@@ -499,8 +533,12 @@ def self_test() -> int:
         if meta["executioner_parameters"]["dt"]["old"] != "1.0e-4":
             raise AssertionError("dt mutation metadata incorrect")
 
-        def result(status: str, physics: str | None = None, signature: str | None = None):
-            case = {
+        def result(
+            status: str,
+            physics: str | None = None,
+            signature: str | None = None,
+        ) -> dict[str, Any]:
+            case: dict[str, Any] = {
                 "result": {"validation": {"status": status}},
                 "failure": {"signature": signature},
             }
@@ -560,14 +598,14 @@ def run(args: argparse.Namespace) -> int:
     base_input = (
         args.base_input.resolve()
         if args.base_input
-        else repo_root / evr1.BASE_INPUT_RELATIVE
+        else repo_root / recipe.BASE_INPUT_RELATIVE
     )
     asset_dir = (
         args.asset_case.resolve()
         if args.asset_case
-        else qpx_root / evr1.DEFAULT_ASSET_CASE_RELATIVE
+        else qpx_root / recipe.DEFAULT_ASSET_CASE_RELATIVE
     )
-    source = qpx_root / evr1.SOURCE_RELATIVE
+    source = qpx_root / recipe.SOURCE_RELATIVE
 
     if not base_input.is_file():
         raise CouplingEVR2Error(f"missing #29 Q0 reference: {base_input}")
@@ -633,7 +671,11 @@ def run(args: argparse.Namespace) -> int:
     for label, (text, _) in transport_variants.items():
         case_dir = cases_root / label
         _copy_transport_case(asset_dir, case_dir, text)
-        refs[label] = evr1._validate_referenced_files(text, case_dir)
+        refs[label] = validate_referenced_files(
+            text,
+            case_dir,
+            skip_dynamic=True,
+        )
         case_dirs[label] = case_dir
 
     identity = {
@@ -678,7 +720,7 @@ def run(args: argparse.Namespace) -> int:
             exe=exe,
             measurements_root=measurements,
             experiment_id="issue31-evr2-timestep-scaling",
-            species=list(evr1.SPECIES),
+            species=list(recipe.SPECIES),
         )
         _attach_transport_physics(dt1e6, case_dirs["dt1e6"])
 
@@ -688,7 +730,7 @@ def run(args: argparse.Namespace) -> int:
             exe=exe,
             measurements_root=measurements,
             experiment_id="issue31-evr2-timestep-scaling",
-            species=list(evr1.SPECIES),
+            species=list(recipe.SPECIES),
         )
         _attach_transport_physics(dt1e8, case_dirs["dt1e8"])
 
@@ -699,7 +741,7 @@ def run(args: argparse.Namespace) -> int:
                 exe=exe,
                 measurements_root=measurements,
                 experiment_id="issue31-evr2-timestep-scaling",
-                species=list(evr1.SPECIES),
+                species=list(recipe.SPECIES),
             )
             _attach_transport_physics(scaling1e8, case_dirs["scaling1e8"])
 
@@ -765,7 +807,7 @@ def main(argv: Iterable[str] | None = None) -> int:
         return self_test()
     try:
         return run(args)
-    except (CouplingEVR2Error, PerformanceContractError, SystemExit) as exc:
+    except (CouplingEVR2Error, PerformanceContractError, CaseError, SystemExit) as exc:
         print(f"ISSUE31_EVR2_FATAL: {exc}", file=sys.stderr)
         return 2
 
