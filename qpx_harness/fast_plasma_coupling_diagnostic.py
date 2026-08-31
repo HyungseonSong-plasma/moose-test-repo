@@ -18,7 +18,6 @@ from typing import Any
 
 from . import evidence
 from . import execution_contract as ec
-from . import fast_plasma_relaxation_v2 as v2
 from . import fast_plasma_relaxation_v5 as v5
 from . import output_observation_contract as ooc
 from .moose_input import MooseInput, MooseInputError
