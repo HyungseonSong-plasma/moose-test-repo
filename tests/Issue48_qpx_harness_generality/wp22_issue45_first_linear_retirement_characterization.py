@@ -94,10 +94,8 @@ def _check_canonical_owners() -> None:
         raise AssertionError("semantic instrumentation is not canonical recipe alias")
     if semantic.analyze_first_linear_text is not recipe.analyze_first_linear_text:
         raise AssertionError("semantic analysis is not canonical recipe alias")
-
-    semantic_source = SEMANTIC.read_text()
-    if "petsc_first_linear_diagnostic" in semantic_source:
-        raise AssertionError("semantic owner reverse-depends on retired historical owner")
+    if _imports_module(SEMANTIC, LEGACY_MODULE):
+        raise AssertionError("semantic owner imports retired historical owner")
 
 
 def _check_cli() -> None:
@@ -108,7 +106,7 @@ def _check_cli() -> None:
     )
     if required not in source:
         raise AssertionError("stable inventory-first-linear CLI is not semantic-owned")
-    if "from qpx_harness.petsc_first_linear_diagnostic import" in source:
+    if _imports_module(CLI, LEGACY_MODULE):
         raise AssertionError("stable CLI imports historical first-linear owner")
     if '"inventory-first-linear":' not in source:
         raise AssertionError("stable inventory-first-linear command missing")
