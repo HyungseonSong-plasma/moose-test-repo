@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""P0 characterization for fast_plasma_relaxation_v2 dependency retirement."""
+"""P0 characterization for fast_plasma_relaxation_v2 runtime retirement gate."""
 from __future__ import annotations
 
 import sys
@@ -10,10 +10,9 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from qpx_harness import fast_plasma_relaxation_v2 as v2
+from qpx_harness import issue43_relaxation_runtime as runtime43
 
-EXPECTED_RUNTIME_CONSUMERS = {
-    "fast_plasma_relaxation_v5.py",
-}
+EXPECTED_RUNTIME_CONSUMERS: set[str] = set()
 
 
 def _source(name: str) -> str:
@@ -41,15 +40,29 @@ def _check_consumer_topology() -> None:
         raise AssertionError(
             f"v2 consumer drift: observed={sorted(observed)} expected={sorted(EXPECTED_RUNTIME_CONSUMERS)}"
         )
-    v5 = observed["fast_plasma_relaxation_v5.py"]
+
+    v5 = _source("fast_plasma_relaxation_v5.py")
+    for forbidden in (
+        "fast_plasma_relaxation_v2",
+        "v2.",
+        "_install_v2_repairs(",
+        "_install_v5_repairs(",
+    ):
+        if forbidden in v5:
+            raise AssertionError(f"v5 retained retired v2 runtime dependency: {forbidden}")
     for token in (
-        "_RAW_BUILD_ELECTRON_300K = v2._build_electron_300k",
-        "_V2_BUILD_ONEWAY = v2._build_oneway",
-        "_V2_BUILD_FEEDBACK = v2._build_feedback",
-        "_RAW_RUN_CASE = v2._run_case",
+        "from . import issue43_relaxation_runtime as issue43_runtime",
+        "_RAW_BUILD_ELECTRON_300K = issue43_runtime.build_electron_300k",
+        "_RAW_BUILD_ONEWAY = issue43_runtime.build_oneway",
+        "_RAW_BUILD_FEEDBACK = issue43_runtime.build_feedback",
+        "_RAW_RUN_CASE = issue43_runtime.run_case",
+        "_RAW_CLASSIFY = relaxation_recipe.classify",
+        "issue43_runtime.run_known_good(",
+        "issue43_runtime.physics_pass(",
+        "issue43_runtime.attach_nonlinear_residual(",
     ):
         if token not in v5:
-            raise AssertionError(f"v5 genuine v2 dependency drift: {token}")
+            raise AssertionError(f"v5 canonical Issue43 runtime cutover drift: {token}")
 
 
 def _check_historical_v1_boundary() -> None:
@@ -168,20 +181,44 @@ def _check_fd_reference_cutover() -> None:
             raise AssertionError(f"Issue46 FD-reference canonical cutover drift: {token}")
 
 
-def _check_v2_mixed_owner_surface() -> None:
+def _check_canonical_runtime_owner() -> None:
+    source = Path(runtime43.__file__).read_text()
+    for forbidden in (
+        "fast_plasma_relaxation_v2",
+        "fast_plasma_relaxation_v5",
+    ):
+        if forbidden in source:
+            raise AssertionError(f"canonical runtime version dependency leaked: {forbidden}")
+    for token in (
+        "from recipes import issue43_fast_relaxation as relaxation_recipe",
+        "def build_electron_300k(",
+        "def build_oneway(",
+        "def build_feedback(",
+        "def run_qpx_case(",
+        "def run_known_good(",
+        "def run_case(",
+        "def nonlinear_residual_summary(",
+        "def attach_nonlinear_residual(",
+        "def physics_pass(",
+    ):
+        if token not in source:
+            raise AssertionError(f"canonical Issue43 runtime surface drift: {token}")
+
+
+def _check_v2_test_only_oracle_surface() -> None:
     source = Path(v2.__file__).read_text()
     for token in (
-        "def _stage_case(",
-        "def _validate_assets(",
-        "def _write_json(",
         "def _build_electron_300k(",
         "def _build_oneway(",
         "def _build_feedback(",
         "def _run_case(",
+        "def _run_known_good(",
+        "def _attach_residual(",
+        "def _physics_pass(",
         "def classify(",
     ):
         if token not in source:
-            raise AssertionError(f"v2 mixed-owner surface drift: {token}")
+            raise AssertionError(f"v2 compatibility oracle surface drift: {token}")
 
 
 def main() -> int:
@@ -194,7 +231,8 @@ def main() -> int:
         _check_first_linear_cutover()
         _check_localization_cutover()
         _check_fd_reference_cutover()
-        _check_v2_mixed_owner_surface()
+        _check_canonical_runtime_owner()
+        _check_v2_test_only_oracle_surface()
     except Exception as exc:
         print(f"ISSUE48_FAST_PLASMA_V2_DEPENDENCY_SELFTEST: FAIL ({exc})")
         return 1
