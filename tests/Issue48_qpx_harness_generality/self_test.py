@@ -5,12 +5,14 @@ This test intentionally knows concrete examples; the production primitives must 
 from __future__ import annotations
 
 import sys
+import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from qpx_harness import temporal as qt
 from qpx_harness.moose import blocks as mb
 from qpx_harness.moose import executioner as me
 from qpx_harness.moose import parameters as mp
@@ -119,6 +121,57 @@ def _check_moose_executioner() -> None:
         lambda: me.apply_fixed_step_contract(text, dt=0.0, steps=5),
         "non-positive fixed-step dt",
     )
+
+
+def _check_temporal_observation() -> None:
+    with tempfile.TemporaryDirectory() as tmp_name:
+        case_dir = Path(tmp_name)
+        alternate = case_dir / "alternate.csv"
+        alternate.write_text("time,value\n0,0\n1,1\n")
+        preferred = case_dir / "input_out.csv"
+        preferred.write_text(
+            "time,value\n"
+            "0,0\n"
+            "1e-13,1\n"
+            "bad,ignored\n"
+            "2e-13,1\n"
+            "5e-13,1\n"
+        )
+
+        if qt.find_temporal_csv(case_dir) != preferred:
+            raise AssertionError("temporal CSV locator did not preserve preferred ownership")
+        observed = qt.observe_case_trajectory(case_dir)
+        expected = {
+            "physical_rows": 3,
+            "csv": str(preferred),
+            "csv_status": "PASS",
+            "first_time": 1.0e-13,
+            "final_time": 5.0e-13,
+            "actual_dt_min": 1.0e-13,
+            "actual_dt_max": 3.0e-13,
+        }
+        for key, value in expected.items():
+            actual = observed.get(key)
+            if isinstance(value, float):
+                if abs(float(actual) - value) > max(abs(value) * 1.0e-15, 1.0e-300):
+                    raise AssertionError(
+                        f"temporal observation drift for {key}: {actual} != {value}"
+                    )
+            elif actual != value:
+                raise AssertionError(
+                    f"temporal observation drift for {key}: {actual} != {value}"
+                )
+
+        empty = case_dir / "empty"
+        empty.mkdir()
+        missing = qt.observe_case_trajectory(empty)
+        if missing != {"physical_rows": 0, "csv_status": "MISSING_TIME_CSV"}:
+            raise AssertionError(f"missing temporal evidence drift: {missing}")
+
+        no_time = empty / "not_temporal.csv"
+        no_time.write_text("value\n1\n")
+        if qt.find_temporal_csv(empty) is not None:
+            raise AssertionError("CSV without requested time column was accepted")
 
 
 def _check_moose_blocks() -> None:
@@ -240,6 +293,7 @@ def _check_generality_surface() -> None:
         "qpx_harness/moose/blocks.py",
         "qpx_harness/moose/executioner.py",
         "qpx_harness/petsc/options.py",
+        "qpx_harness/temporal.py",
     ):
         source = (ROOT / rel).read_text()
         for forbidden in (
@@ -334,6 +388,8 @@ def main() -> int:
         print("ISSUE48_GENERALITY_CHECK: moose-parameter-primitives=PASS")
         _check_moose_executioner()
         print("ISSUE48_GENERALITY_CHECK: moose-executioner-primitives=PASS")
+        _check_temporal_observation()
+        print("ISSUE48_GENERALITY_CHECK: temporal-observation-primitives=PASS")
         _check_moose_blocks()
         print("ISSUE48_GENERALITY_CHECK: moose-block-primitives=PASS")
         _check_petsc_options()
