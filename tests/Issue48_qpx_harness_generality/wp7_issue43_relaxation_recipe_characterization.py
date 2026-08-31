@@ -2,6 +2,7 @@
 """P0 characterization for the Issue43 fast-relaxation recipe after v2 cutover."""
 from __future__ import annotations
 
+import inspect
 import sys
 import tempfile
 from pathlib import Path
@@ -193,10 +194,10 @@ def _check_classification_contract() -> None:
     )
     for expected_class, args in cases:
         current = recipe.classify(*args)
-        legacy = v2.classify(*args)
-        if current != legacy:
+        compatibility = v2.classify(*args)
+        if current != compatibility:
             raise AssertionError(
-                f"classification payload drift for {expected_class}: recipe={current!r} v2={legacy!r}"
+                f"v2 classification delegation drift for {expected_class}: recipe={current!r} v2={compatibility!r}"
             )
         if current.get("class") != expected_class:
             raise AssertionError(
@@ -209,6 +210,13 @@ def _check_classification_contract() -> None:
         raise AssertionError("recipe small feedback timestep drifted from v2 compatibility owner")
     if recipe.DT_FEEDBACK_LARGE != v2.DT_FEEDBACK_LARGE:
         raise AssertionError("recipe large feedback timestep drifted from v2 compatibility owner")
+
+    source = inspect.getsource(v2.classify)
+    if "return relaxation_recipe.classify(" not in source:
+        raise AssertionError("v2 classify is not a direct recipe compatibility delegate")
+    for forbidden in ("_physics_pass(", "DT_FEEDBACK_BASE / tau_dr", "KNOWN_GOOD_ELECTRON_CONTROL_FAIL"):
+        if forbidden in source:
+            raise AssertionError(f"duplicate scientific policy remains in v2 classify: {forbidden}")
 
 
 def _check_v2_cutover() -> None:
