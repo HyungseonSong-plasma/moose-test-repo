@@ -13,7 +13,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from recipes import issue31_coupling as recipe
-from qpx_harness import coupling_evr2_timestep as evr2
+from qpx_harness import coupling_evr2_runtime as evr2
 
 
 EXPECTED_CONSTANTS = {
@@ -272,6 +272,7 @@ def _check_production_cutover() -> None:
     for historical in (
         "qpx_harness.coupling_evr1",
         "qpx_harness.coupling_evr1_safe",
+        "qpx_harness.coupling_evr2_timestep",
     ):
         if _imports_module(this_path, historical):
             raise AssertionError(f"WP10 retained historical oracle import: {historical}")
@@ -280,6 +281,7 @@ def _check_production_cutover() -> None:
     for historical in (
         "qpx_harness.coupling_evr1",
         "qpx_harness.coupling_evr1_safe",
+        "qpx_harness.coupling_evr2_timestep",
     ):
         if _imports_module(evr2_path, historical):
             raise AssertionError(f"EVR2 retained historical dependency: {historical}")
