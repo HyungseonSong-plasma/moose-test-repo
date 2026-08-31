@@ -19,10 +19,11 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from qpx_harness import augmented_jacobian_localization as loc
+from qpx_harness import issue46_jacobian_localization as loc
 from qpx_harness import electron_inventory_nullspace as inv
 from qpx_harness import jacobian_fd_reference_audit as base
 from qpx_harness.moose_input import MooseInput
+from qpx_harness.petsc import options as petsc_options
 from recipes import issue45_first_linear as first_linear
 
 
@@ -45,7 +46,7 @@ def _require(condition: bool, message: str) -> None:
 def _expect_dofmap_rejection(text: str, expected_fragment: str) -> None:
     try:
         loc.parse_dof_map_text(text)
-    except loc.AugmentedJacobianLocalizationError as exc:
+    except loc.Issue46JacobianLocalizationError as exc:
         _require(
             expected_fragment in str(exc),
             f"DOFMap rejection mismatch: expected {expected_fragment!r}, got {exc!s}",
@@ -324,7 +325,7 @@ def _check_ds_structure_controls() -> None:
         "missing C0 initial condition did not emit c0-electron-initial-state blocker",
     )
 
-    material_mutation = loc._upsert_petsc_value(ds_text, "-pc_type", "jacobi")
+    material_mutation = petsc_options.upsert_name_value(ds_text, "-pc_type", "jacobi")
     material_report = base.audit_ds_reference_structure(
         baseline, material_mutation
     )
