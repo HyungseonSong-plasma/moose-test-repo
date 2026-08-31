@@ -54,7 +54,7 @@ def _assert_equal(label: str, left: object, right: object) -> None:
 
 def _check_owner_topology() -> None:
     if not LEGACY_PATH.is_file():
-        raise AssertionError("legacy augmented owner unexpectedly absent before cutover")
+        raise AssertionError("legacy augmented owner unexpectedly absent before CLI cutover")
     if not SEMANTIC_PATH.is_file():
         raise AssertionError("semantic Issue46 localization owner is missing")
     source = SEMANTIC_PATH.read_text()
@@ -71,12 +71,24 @@ def _check_owner_topology() -> None:
                 alias.name == "augmented_jacobian_localization" for alias in node.names
             ):
                 raise AssertionError("semantic owner reverse-depends on legacy owner")
+
     cli = CLI_PATH.read_text()
     if "from qpx_harness.augmented_jacobian_localization import" not in cli:
-        raise AssertionError("CLI cut over before semantic-owner equivalence acceptance")
+        raise AssertionError("CLI cut over before FD-audit cutover acceptance")
+
     fd = FD_AUDIT_PATH.read_text()
-    if "from . import augmented_jacobian_localization as loc" not in fd:
-        raise AssertionError("FD audit cut over before semantic-owner equivalence acceptance")
+    if "from . import augmented_jacobian_localization" in fd:
+        raise AssertionError("FD audit still reverse-depends on legacy augmented owner")
+    required_fd = (
+        "from recipes import issue46_jacobian_localization as localization_recipe",
+        "from . import issue46_jacobian_localization as localization_runtime",
+        "from .moose import dofmap as dm",
+        "from .petsc import matrix as petsc_matrix",
+        "from .petsc import options as petsc_options",
+    )
+    for token in required_fd:
+        if token not in fd:
+            raise AssertionError(f"FD audit missing canonical cutover dependency: {token}")
 
 
 def _check_recipe_identity_and_construction() -> None:
@@ -137,7 +149,11 @@ def _check_fact_and_analysis_equivalence() -> None:
     legacy = _legacy()
     semantic = _semantic()
     dofmap = legacy._synthetic_dof_map()
-    _assert_equal("DOFMap parse", legacy.parse_dof_map_text(dofmap), semantic.parse_dof_map_text(dofmap))
+    _assert_equal(
+        "DOFMap parse",
+        legacy.parse_dof_map_text(dofmap),
+        semantic.parse_dof_map_text(dofmap),
+    )
 
     logs = (
         legacy._synthetic_localization_log([(0, 4, 2.0e-4), (4, 1, -3.0e-4)]),
@@ -258,7 +274,7 @@ def _negative_control() -> None:
     control = semantic.build_framework_control_input().replace("coeff = 1", "coeff = 2", 1)
     if semantic.audit_framework_control_structure(control)["status"] == "PASS":
         raise AssertionError("semantic owner accepted framework-control coefficient mutation")
-    bad_dofmap = dofmap = semantic._synthetic_dof_map().replace('"ndof": 5', '"ndof": 4', 1)
+    bad_dofmap = semantic._synthetic_dof_map().replace('"ndof": 5', '"ndof": 4', 1)
     try:
         semantic.parse_dof_map_text(bad_dofmap)
     except semantic.Issue46JacobianLocalizationError:
