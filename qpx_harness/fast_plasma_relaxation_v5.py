@@ -13,13 +13,16 @@ from typing import Any
 from recipes import issue43_fast_relaxation as relaxation_recipe
 
 from . import artifacts
+from . import cases as case_ops
 from . import evidence
 from . import execution_contract as ec
 from . import fast_plasma_relaxation_v2 as v2
 from . import output_observation_contract as ooc
+from . import preflight
+from . import scale_audit
 from . import temporal
 from .moose import executioner as moose_executioner
-from .runtime import run_qpx
+from .runtime import resolve_executable, run_qpx, validate_executable
 
 
 # Absorbed v3 CORE-16 ownership. Generic mechanics remain in their canonical
@@ -30,6 +33,54 @@ _RAW_BUILD_ELECTRON_300K = v2._build_electron_300k
 _V2_BUILD_ONEWAY = v2._build_oneway
 _V2_BUILD_FEEDBACK = v2._build_feedback
 _RAW_RUN_CASE = v2._run_case
+
+_RUNTIME_PURGE_DIRECTORY_NAMES = (".jitcache",)
+_RUNTIME_PURGE_PATTERNS = (
+    "input_out*",
+    "r43_csv*",
+    "perfgraph*",
+    "petsc_log*",
+    "metrics*",
+)
+
+
+def _write_json(path: Path, payload: dict[str, Any]) -> None:
+    artifacts.write_json_bundle(
+        path.parent,
+        {"payload": (path.name, payload)},
+    )
+
+
+def _create_root(results_root: Path) -> Path:
+    return evidence.create_collision_safe_directory(
+        results_root,
+        f"fast_plasma_discriminator_v2_Issue43_{evidence.utc_timestamp()}",
+    )
+
+
+def _stage_case(source: Path, target: Path, input_text: str | None = None) -> None:
+    try:
+        case_ops.stage_case(
+            source,
+            target,
+            input_text=input_text,
+            purge_directory_names=_RUNTIME_PURGE_DIRECTORY_NAMES,
+            purge_patterns=_RUNTIME_PURGE_PATTERNS,
+        )
+    except case_ops.CaseError as exc:
+        raise relaxation_recipe.Issue43FastRelaxationError(
+            f"case staging failed: {exc}"
+        ) from exc
+
+
+def _validate_assets(case_dir: Path) -> list[str]:
+    try:
+        refs = case_ops.validate_case_references(case_dir)
+    except case_ops.CaseError as exc:
+        raise relaxation_recipe.Issue43FastRelaxationError(
+            f"asset validation failed: {exc}"
+        ) from exc
+    return [ref["resolved"] for ref in refs]
 
 
 def _set_executioner_parameter(text: str, name: str, value: str) -> str:
@@ -1060,15 +1111,15 @@ def _evaluate_output_runtime_confirmation(
 
 
 def _run_output_preflight(*, qpx: str | None, results_root: str | None) -> int:
-    exe = v2.resolve_executable(qpx)
-    v2.validate_executable(exe)
+    exe = resolve_executable(qpx)
+    validate_executable(exe)
 
     repo_root = Path(__file__).resolve().parents[1]
     base_case = repo_root / v2.BASE_CASE_RELATIVE
     if not base_case.is_dir():
         raise SystemExit(f"missing accepted qvt electron control: {base_case}")
 
-    mesh = v2.mesh_stats(base_case / "qvt.msh")
+    mesh = scale_audit.mesh_stats(base_case / "qvt.msh")
     radial_span = float(mesh["bbox_span_m"]["x"])
     base_text = (base_case / "input.i").read_text()
     input_text = _build_feedback_v5(
@@ -1077,7 +1128,7 @@ def _run_output_preflight(*, qpx: str | None, results_root: str | None) -> int:
         steps=v2.N_STEPS,
         radial_span=radial_span,
     )
-    v2.validate_parser_symbols_text(input_text)
+    preflight.validate_parser_symbols_text(input_text)
 
     report = ooc.observation_report(
         input_text, required_time_separation=v2.DT_FEEDBACK_SMALL
@@ -1097,8 +1148,8 @@ def _run_output_preflight(*, qpx: str | None, results_root: str | None) -> int:
         evidence_root / f"issue44_output_preflight_{evidence.utc_timestamp()}"
     )
     case_dir = root / "case"
-    v2._stage_case(base_case, case_dir, input_text)
-    v2._validate_assets(case_dir)
+    _stage_case(base_case, case_dir, input_text)
+    _validate_assets(case_dir)
 
     input_path = case_dir / "input.i"
     check_log_path = root / "p2_check_input.log"
@@ -1171,7 +1222,7 @@ def _run_output_preflight(*, qpx: str | None, results_root: str | None) -> int:
             "framework_evidence": framework_evidence,
         },
     }
-    v2._write_json(summary_path, summary)
+    _write_json(summary_path, summary)
 
     print(f"ISSUE44_OUTPUT_PREFLIGHT_P1: {static_decision['status']}")
     print(
@@ -1219,11 +1270,11 @@ def _run_output_runtime_confirmation(
         return 2
     print("ISSUE44_OUTPUT_RUNTIME_CONFIRMATION_PRECHECK: PASS")
 
-    exe = v2.resolve_executable(qpx)
-    v2.validate_executable(exe)
+    exe = resolve_executable(qpx)
+    validate_executable(exe)
     repo_root = Path(__file__).resolve().parents[1]
     base_case = repo_root / v2.BASE_CASE_RELATIVE
-    mesh = v2.mesh_stats(base_case / "qvt.msh")
+    mesh = scale_audit.mesh_stats(base_case / "qvt.msh")
     radial_span = float(mesh["bbox_span_m"]["x"])
     base_text = (base_case / "input.i").read_text()
     input_text = _build_feedback_v5(
@@ -1232,7 +1283,7 @@ def _run_output_runtime_confirmation(
         steps=v2.N_STEPS,
         radial_span=radial_span,
     )
-    v2.validate_parser_symbols_text(input_text)
+    preflight.validate_parser_symbols_text(input_text)
     report = ooc.observation_report(
         input_text, required_time_separation=v2.DT_FEEDBACK_SMALL
     )
@@ -1246,8 +1297,8 @@ def _run_output_runtime_confirmation(
         evidence_root / f"issue44_output_runtime_{evidence.utc_timestamp()}"
     )
     case_dir = root / "case"
-    v2._stage_case(base_case, case_dir, input_text)
-    v2._validate_assets(case_dir)
+    _stage_case(base_case, case_dir, input_text)
+    _validate_assets(case_dir)
     input_path = case_dir / "input.i"
     log_path = root / "p3_runtime.log"
     summary_path = root / "summary.json"
@@ -1300,7 +1351,7 @@ def _run_output_runtime_confirmation(
         },
         "decision": decision,
     }
-    v2._write_json(summary_path, summary)
+    _write_json(summary_path, summary)
 
     print(
         "ISSUE44_OUTPUT_RUNTIME_CONFIRMATION_SOLVER: "
@@ -1477,14 +1528,14 @@ def _run_issue43_guarded(argv: list[str] | None = None) -> int:
     if not base_case.is_dir():
         raise SystemExit(f"missing accepted qvt electron control: {base_case}")
 
-    exe = v2.resolve_executable(args.qpx)
-    v2.validate_executable(exe)
+    exe = resolve_executable(args.qpx)
+    validate_executable(exe)
     results_root = (
         Path(args.results_root).expanduser().resolve()
         if args.results_root
         else exe.parent / "temp" / "results"
     )
-    root = v2._create_root(results_root)
+    root = _create_root(results_root)
     root = root.with_name(
         root.name.replace("fast_plasma_relaxation_", "fast_plasma_discriminator_v4_")
     )
@@ -1508,13 +1559,13 @@ def _run_issue43_guarded(argv: list[str] | None = None) -> int:
     cases_root.mkdir(exist_ok=True)
     measurements_root.mkdir(exist_ok=True)
 
-    mesh = v2.mesh_stats(base_case / "qvt.msh")
-    scales = v2.anchor_scales(
-        pressure=v2.DEFAULT_PRESSURE,
+    mesh = scale_audit.mesh_stats(base_case / "qvt.msh")
+    scales = scale_audit.anchor_scales(
+        pressure=scale_audit.DEFAULT_PRESSURE,
         gas_temperature=v2.GAS_TEMPERATURE,
-        electron_density=v2.DEFAULT_ELECTRON_DENSITY,
-        mu_n=v2.DEFAULT_MU_N,
-        d_n=v2.DEFAULT_D_N,
+        electron_density=scale_audit.DEFAULT_ELECTRON_DENSITY,
+        mu_n=scale_audit.DEFAULT_MU_N,
+        d_n=scale_audit.DEFAULT_D_N,
         dt=v2.HEAVY_MACRO_DT,
         mesh=mesh,
         rf_frequency=None,
@@ -1535,7 +1586,7 @@ def _run_issue43_guarded(argv: list[str] | None = None) -> int:
     ):
         decision = _guarded_classify(known_good, None, None, None, None, None, tau_dr)
         summary_path = root / "summary.json"
-        v2._write_json(
+        _write_json(
             summary_path,
             {"scale_map": scales, "known_good": known_good, "decision": decision},
         )
@@ -1656,7 +1707,7 @@ def _run_issue43_guarded(argv: list[str] | None = None) -> int:
         "decision": decision,
     }
     summary_path = root / "summary.json"
-    v2._write_json(summary_path, summary)
+    _write_json(summary_path, summary)
 
     print(f"ISSUE43_FAST2_KGE: {known_good.get('class')}")
     print(
