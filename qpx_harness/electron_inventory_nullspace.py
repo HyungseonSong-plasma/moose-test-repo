@@ -16,14 +16,14 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+from . import artifacts
 from . import cases as case_ops
 from . import evidence
 from . import fast_plasma_coupling_diagnostic as coupling_diag
-from . import fast_plasma_relaxation_v2 as v2
 from . import fast_plasma_relaxation_v5 as v5
 from .moose_input import MooseInput, MooseInputError
 from .preflight import validate_parser_symbols_text
-from .runtime import run_command, run_qpx
+from .runtime import resolve_executable, run_command, run_qpx, validate_executable
 from .scale_audit import mesh_stats
 
 
@@ -104,6 +104,10 @@ RUNTIME_COLUMNS = (
 
 class ElectronInventoryNullspaceError(RuntimeError):
     pass
+
+
+def _write_json(path: Path, payload: object) -> None:
+    artifacts.write_json_bundle(path.parent, {"summary": (path.name, payload)})
 
 
 def _stage_case(source: Path, target: Path, input_text: str) -> list[str]:
@@ -978,7 +982,7 @@ def _evaluate_runtime_case_data(
         "inventory_consistency_relative_tolerance": INVENTORY_CONSISTENCY_REL_TOL,
         "average_relative_error": avg_rel_error,
         "inventory_relative_error": inventory_rel_error,
-        "aggregate_consistency_relative_error": aggregate_consistency_rel_error,
+        "aggregate_consistency_rel_error": aggregate_consistency_rel_error,
         "observables": row,
         "final_variable_residuals": final_residuals,
         "diagnostic": diagnostic,
@@ -1236,6 +1240,12 @@ def self_test() -> int:
                 pass
             else:
                 raise AssertionError("missing staged asset negative control was accepted")
+
+        with tempfile.TemporaryDirectory() as tmp_name:
+            summary_path = Path(tmp_name) / "summary.json"
+            _write_json(summary_path, {"probe": 1})
+            if json.loads(summary_path.read_text()) != {"probe": 1}:
+                raise AssertionError("canonical artifact writer changed summary payload")
     except Exception as exc:
         print(f"ISSUE45_INVENTORY_NULLSPACE_SELFTEST: FAIL ({exc})")
         print(f"ISSUE45_INVENTORY_CLOSURE_RUNTIME_SELFTEST: FAIL ({exc})")
@@ -1400,8 +1410,8 @@ def _run_schema_query(
 
 
 def run_preflight(*, qpx: str | None, results_root: str | None) -> int:
-    exe = v2.resolve_executable(qpx)
-    v2.validate_executable(exe)
+    exe = resolve_executable(qpx)
+    validate_executable(exe)
     prepared = _prepare_case(exe=exe, results_root=results_root)
     p1_pass = prepared["p1"]["status"] == "PASS"
     check_input = _run_p2_check_input(exe=exe, prepared=prepared) if p1_pass else {}
@@ -1444,7 +1454,7 @@ def run_preflight(*, qpx: str | None, results_root: str | None) -> int:
         "p3_required_for_this_identity": False,
     }
     summary_path = prepared["root"] / "summary.json"
-    v2._write_json(
+    _write_json(
         summary_path,
         {
             "issue": ISSUE,
@@ -1480,8 +1490,8 @@ def run_closure_preflight(
 ) -> int:
     if not math.isfinite(macro_avg) or macro_avg <= 0.0:
         raise ElectronInventoryNullspaceError("macro electron average must be finite and positive")
-    exe = v2.resolve_executable(qpx)
-    v2.validate_executable(exe)
+    exe = resolve_executable(qpx)
+    validate_executable(exe)
     prepared = _prepare_closure_case(
         exe=exe, results_root=results_root, macro_avg=macro_avg
     )
@@ -1523,7 +1533,7 @@ def run_closure_preflight(
         "p3_authorized": False,
     }
     summary_path = prepared["root"] / "summary.json"
-    v2._write_json(
+    _write_json(
         summary_path,
         {
             "issue": ISSUE,
@@ -1558,8 +1568,8 @@ def run_closure_preflight(
 def _closure_runtime_preflight_result(
     *, qpx: str | None, results_root: str | None
 ) -> tuple[Path, dict[str, Any], dict[str, Any], dict[str, Any], str]:
-    exe = v2.resolve_executable(qpx)
-    v2.validate_executable(exe)
+    exe = resolve_executable(qpx)
+    validate_executable(exe)
     prepared = _prepare_closure_runtime_cases(exe=exe, results_root=results_root)
     p1_pass = all(
         case["p1"]["status"] == "PASS" for case in prepared["cases"].values()
@@ -1631,7 +1641,7 @@ def run_closure_runtime_preflight(*, qpx: str | None, results_root: str | None) 
         qpx=qpx, results_root=results_root
     )
     summary_path = prepared["root"] / "summary.json"
-    v2._write_json(
+    _write_json(
         summary_path,
         {
             "issue": ISSUE,
@@ -1778,7 +1788,7 @@ def run_closure_runtime(*, qpx: str | None, results_root: str | None) -> int:
     )
     summary_path = prepared["root"] / "summary.json"
     if preflight_status != "PASS":
-        v2._write_json(
+        _write_json(
             summary_path,
             {
                 "issue": ISSUE,
@@ -1815,7 +1825,7 @@ def run_closure_runtime(*, qpx: str | None, results_root: str | None) -> int:
     c0 = runtime["C0_reference"]["evaluation"]
     c1 = runtime["C1_shift"]["evaluation"]
     decision = _evaluate_runtime_pair(c0, c1, target0=C0_TARGET, target1=C1_TARGET)
-    v2._write_json(
+    _write_json(
         summary_path,
         {
             "issue": ISSUE,
