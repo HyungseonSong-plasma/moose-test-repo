@@ -172,6 +172,45 @@ def _check_csv_contract() -> None:
             raise AssertionError("missing relaxation CSV was not rejected")
 
 
+def _check_classification_contract() -> None:
+    known_good = {"class": "P3_PASS", "canonical_checker": {"status": "PASS"}}
+    known_bad = {"class": "RUNTIME_FAIL", "canonical_checker": {"status": "FAIL"}}
+    good = {"class": "P3_PASS", "analysis": {"status": "PASS"}}
+    bad = {"class": "SOLVER_CONVERGENCE_FAIL", "analysis": {"status": "FAIL"}}
+    tau_dr = 1.2e-12
+
+    cases = (
+        ("KNOWN_GOOD_ELECTRON_CONTROL_FAIL", (known_bad, good, good, good, None, None, tau_dr)),
+        ("ELECTRON_300K_CONTROL_FAIL", (known_good, None, good, good, None, None, tau_dr)),
+        ("POISSON_OR_BLOCK_SCALING_FAIL", (known_good, good, None, good, None, None, tau_dr)),
+        ("FEEDBACK_CASE_MISSING", (known_good, good, good, None, None, None, tau_dr)),
+        ("FEEDBACK_IMPLICIT_COUPLING_RECOVERS_NEAR_TAU_DR", (known_good, good, good, good, None, good, tau_dr)),
+        ("DIELECTRIC_TIMESTEP_STIFFNESS_CONFIRMED", (known_good, good, good, good, None, bad, tau_dr)),
+        ("FEEDBACK_RECOVERS_BELOW_TAU_DR", (known_good, good, good, good, None, None, tau_dr)),
+        ("DIELECTRIC_TIMESTEP_STIFFNESS_STRONG", (known_good, good, good, bad, good, None, tau_dr)),
+        ("FEEDBACK_JACOBIAN_SCALING_OR_INITIALIZATION_FAIL", (known_good, good, good, bad, bad, None, tau_dr)),
+        ("FEEDBACK_DISCRIMINATOR_INCOMPLETE", (known_good, good, good, bad, None, None, tau_dr)),
+    )
+    for expected_class, args in cases:
+        current = recipe.classify(*args)
+        legacy = v2.classify(*args)
+        if current != legacy:
+            raise AssertionError(
+                f"classification payload drift for {expected_class}: recipe={current!r} v2={legacy!r}"
+            )
+        if current.get("class") != expected_class:
+            raise AssertionError(
+                f"classification branch drift: expected {expected_class}, got {current.get('class')}"
+            )
+
+    if recipe.DT_FEEDBACK_BASE != v2.DT_FEEDBACK_BASE:
+        raise AssertionError("recipe base feedback timestep drifted from v2 compatibility owner")
+    if recipe.DT_FEEDBACK_SMALL != v2.DT_FEEDBACK_SMALL:
+        raise AssertionError("recipe small feedback timestep drifted from v2 compatibility owner")
+    if recipe.DT_FEEDBACK_LARGE != v2.DT_FEEDBACK_LARGE:
+        raise AssertionError("recipe large feedback timestep drifted from v2 compatibility owner")
+
+
 def _check_v2_cutover() -> None:
     source = Path(v2.__file__).read_text()
     if "from . import fast_plasma_relaxation as v1" in source:
@@ -220,6 +259,7 @@ def main() -> int:
         _check_builder_contract()
         _check_analysis_contract()
         _check_csv_contract()
+        _check_classification_contract()
         _check_v2_cutover()
         _check_recipe_boundary()
     except Exception as exc:
