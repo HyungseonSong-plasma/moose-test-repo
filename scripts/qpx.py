@@ -13,7 +13,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from qpx_harness.analysis import analyze
-from qpx_harness.augmented_jacobian_localization import main as jac_localization_main, self_test as jac_localization_self_test
+from qpx_harness.issue46_jacobian_localization import main as jac_localization_main, self_test as jac_localization_self_test
 from qpx_harness.bundle import main as bundle_main
 from qpx_harness.compat.issue46_fd_reference import main as fd_reference_main, self_test as fd_reference_self_test
 from qpx_harness.coupling_evr1_runtime import main as coupling_evr1_main, self_test as coupling_evr1_self_test
