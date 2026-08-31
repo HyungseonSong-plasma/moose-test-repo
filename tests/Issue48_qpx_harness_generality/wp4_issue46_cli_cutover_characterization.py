@@ -30,9 +30,9 @@ def _check_stable_cli_route() -> None:
     if expected_import not in source:
         raise AssertionError("stable CLI does not import the Issue46 FD semantic owner")
     if "from qpx_harness.compat.issue46_fd_reference import" in source:
-        raise AssertionError("stable CLI still imports the retired-boundary compatibility adapter")
-    if "from qpx_harness.jacobian_fd_reference_audit import main as fd_reference_main" in source:
-        raise AssertionError("stable CLI directly imports the historical mixed Issue46 owner")
+        raise AssertionError("stable CLI still imports the retired compatibility adapter")
+    if "from qpx_harness.jacobian_fd_reference_audit import" in source:
+        raise AssertionError("stable CLI imports the historical FD proxy")
 
     run = subprocess.run(
         [sys.executable, str(script), "inventory-fd-reference", "--self-test"],
@@ -56,10 +56,25 @@ def _check_semantic_boundary() -> None:
     semantic_source = (ROOT / "qpx_harness" / "issue46_fd_reference.py").read_text()
     if "from recipes import issue46_fd_reference as recipe" not in semantic_source:
         raise AssertionError("semantic owner does not import the thin Issue46 FD recipe")
-    if "from qpx_harness import jacobian_fd_reference_audit as runtime_shell" not in semantic_source:
-        raise AssertionError("semantic owner lost the bounded historical runtime-shell dependency")
+    if "jacobian_fd_reference_audit as runtime_shell" in semantic_source:
+        raise AssertionError("semantic owner still delegates runtime to the historical FD shell")
     if "qpx_harness.compat.issue46_fd_reference" in semantic_source:
-        raise AssertionError("semantic owner reverse-depends on the compatibility adapter")
+        raise AssertionError("semantic owner reverse-depends on the retired compatibility adapter")
+    for required in (
+        "def run_preflight(",
+        "def run_runtime(",
+        "def main(",
+        "def self_test(",
+    ):
+        if required not in semantic_source:
+            raise AssertionError(f"semantic owner does not own runtime surface: {required}")
+
+    legacy_source = (ROOT / "qpx_harness" / "jacobian_fd_reference_audit.py").read_text()
+    if "from . import issue46_fd_reference as _owner" not in legacy_source:
+        raise AssertionError("historical FD module is not a semantic-owner proxy")
+    for forbidden in ("def run_preflight(", "def run_runtime(", "from recipes import"):
+        if forbidden in legacy_source:
+            raise AssertionError(f"historical FD proxy still owns runtime/policy: {forbidden}")
 
     recipe_source = (ROOT / "recipes" / "issue46_fd_reference.py").read_text()
     for forbidden in (
@@ -81,15 +96,15 @@ def _negative_control() -> None:
         "from qpx_harness.issue46_fd_reference import main as fd_reference_main, "
         "self_test as fd_reference_self_test"
     )
-    compat_import = (
-        "from qpx_harness.compat.issue46_fd_reference import main as fd_reference_main, "
+    legacy_import = (
+        "from qpx_harness.jacobian_fd_reference_audit import main as fd_reference_main, "
         "self_test as fd_reference_self_test"
     )
     if semantic_import not in source:
         raise AssertionError("stable semantic CLI import baseline missing")
-    mutated = source.replace(semantic_import, compat_import, 1)
-    if compat_import not in mutated or semantic_import in mutated:
-        raise AssertionError("compat-route negative control did not create the stale topology")
+    mutated = source.replace(semantic_import, legacy_import, 1)
+    if legacy_import not in mutated or semantic_import in mutated:
+        raise AssertionError("legacy-route negative control did not create the stale topology")
 
 
 def main() -> int:
