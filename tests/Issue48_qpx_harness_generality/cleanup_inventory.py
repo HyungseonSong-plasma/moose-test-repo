@@ -23,8 +23,6 @@ CLEANUP_CANDIDATES = (
     "coupling_evr1",
     "coupling_evr1_safe",
     "coupling_evr2_timestep",
-    "dmix_equivalence",
-    "dmix_equivalence_structured",
     "electron_inventory_nullspace",
     "fast_plasma_coupling_diagnostic",
     "fast_plasma_relaxation",
