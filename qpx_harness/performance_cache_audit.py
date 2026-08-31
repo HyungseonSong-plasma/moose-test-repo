@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from .cpp_calls import split_call_arguments
-from .cpp_source import CppSource
+from .cpp_source import CppSource, CppSourceError
 
 MATERIAL_RELATIVE = Path("src/materials/QPXThermalDiffusionMaterial.C")
 DEFAULT_CASE_RELATIVE = Path("tests/Issue22_qvt_transient_species_accumulation/input.i")
@@ -251,7 +251,7 @@ def _consumer_calls_for_parameter(root: Path, class_name: str, parameter: str):
             for call in cpp.calls(variable):
                 try:
                     parsed = split_call_arguments(cpp, call)
-                except Exception:
+                except CppSourceError:
                     continue
                 if not parsed.arguments:
                     continue
