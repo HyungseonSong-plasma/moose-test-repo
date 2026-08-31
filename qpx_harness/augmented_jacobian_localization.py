@@ -15,18 +15,20 @@ import re
 from pathlib import Path
 from typing import Any
 
+from recipes import issue45_first_linear as first_linear_policy
+
 from . import artifacts
 from . import electron_inventory_nullspace as inv
 from . import evidence
 from . import fast_plasma_coupling_diagnostic as coupling_diag
-from . import petsc_first_linear_diagnostic as first_linear
 from .moose_input import MooseInput, MooseInputError
+from .petsc import options as petsc_options
 from .runtime import resolve_executable, run_qpx, validate_executable
 
 ISSUE = 46
 TARGET = inv.C0_TARGET
 LOCALIZATION_THRESHOLD = 1.0e-7
-GLOBAL_JACOBIAN_REL_TOL = first_linear.JACOBIAN_REL_TOL
+GLOBAL_JACOBIAN_REL_TOL = first_linear_policy.JACOBIAN_REL_TOL
 FRAMEWORK_CONTROL_REL_TOL = 5.0e-8
 DOMINANT_ENERGY_FRACTION = 0.80
 DOFMAP_OUTPUT = "r46_dofmap"
@@ -115,7 +117,7 @@ def _add_dofmap_output(text: str) -> str:
 
 
 def instrument_localization(first_linear_text: str) -> tuple[str, dict[str, Any]]:
-    flags = first_linear._petsc_options(first_linear_text)
+    flags = petsc_options.get_flags(first_linear_text)
     flags = [flag for flag in flags if flag != "-snes_test_jacobian"]
     if "-snes_test_jacobian_view" not in flags:
         flags.append("-snes_test_jacobian_view")
@@ -188,12 +190,12 @@ def audit_localization_structure(
 
     expected_flags = [
         flag
-        for flag in first_linear._petsc_options(base_first_linear)
+        for flag in petsc_options.get_flags(base_first_linear)
         if flag != "-snes_test_jacobian"
     ]
     if "-snes_test_jacobian_view" not in expected_flags:
         expected_flags.append("-snes_test_jacobian_view")
-    actual_flags = first_linear._petsc_options(localization_text)
+    actual_flags = petsc_options.get_flags(localization_text)
     add(
         "localization-petsc-flags-exact",
         actual_flags == expected_flags,
@@ -472,7 +474,7 @@ def audit_framework_control_structure(text: str) -> dict[str, Any]:
         ),
         "true",
     )
-    flags = first_linear._petsc_options(text)
+    flags = petsc_options.get_flags(text)
     add(
         "control-jacobian-observability",
         "-snes_test_jacobian" in flags,
@@ -929,7 +931,7 @@ def _synthetic_localization_log(
 def self_test() -> int:
     try:
         base = inv._synthetic_constrained_input(TARGET)
-        first_text, _ = first_linear.instrument_first_linear(base)
+        first_text, _ = first_linear_policy.instrument_first_linear(base)
         localized_text, _ = instrument_localization(first_text)
         if audit_localization_structure(first_text, localized_text)["status"] != "PASS":
             raise AssertionError("positive localization structure did not pass")
@@ -1034,7 +1036,7 @@ def _prepare_cases(exe: Path, results_root: str | None) -> dict[str, Any]:
         macro_avg=TARGET,
         runtime_observability=True,
     )
-    first_text, _ = first_linear.instrument_first_linear(base_c0)
+    first_text, _ = first_linear_policy.instrument_first_linear(base_c0)
     localization_text, instrumentation = instrument_localization(first_text)
     p1_main = audit_localization_structure(first_text, localization_text)
 
