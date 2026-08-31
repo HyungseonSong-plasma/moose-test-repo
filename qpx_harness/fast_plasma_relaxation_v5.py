@@ -16,7 +16,7 @@ from . import artifacts
 from . import cases as case_ops
 from . import evidence
 from . import execution_contract as ec
-from . import fast_plasma_relaxation_v2 as v2
+from . import issue43_relaxation_runtime as issue43_runtime
 from . import output_observation_contract as ooc
 from . import preflight
 from . import scale_audit
@@ -29,10 +29,10 @@ from .runtime import resolve_executable, run_qpx, validate_executable
 # reusable owners; this module now composes them directly rather than depending
 # on a historical version layer.
 FastPlasmaV3Error = moose_executioner.MooseExecutionerError
-_RAW_BUILD_ELECTRON_300K = v2._build_electron_300k
-_V2_BUILD_ONEWAY = v2._build_oneway
-_V2_BUILD_FEEDBACK = v2._build_feedback
-_RAW_RUN_CASE = v2._run_case
+_RAW_BUILD_ELECTRON_300K = issue43_runtime.build_electron_300k
+_RAW_BUILD_ONEWAY = issue43_runtime.build_oneway
+_RAW_BUILD_FEEDBACK = issue43_runtime.build_feedback
+_RAW_RUN_CASE = issue43_runtime.run_case
 
 _RUNTIME_PURGE_DIRECTORY_NAMES = (".jitcache",)
 _RUNTIME_PURGE_PATTERNS = (
@@ -103,7 +103,7 @@ def _build_oneway_fixed(
     base_text: str, *, dt: float, steps: int, radial_span: float
 ) -> str:
     return apply_micro_time_contract(
-        _V2_BUILD_ONEWAY(
+        _RAW_BUILD_ONEWAY(
             base_text, dt=dt, steps=steps, radial_span=radial_span
         ),
         dt=dt,
@@ -115,7 +115,7 @@ def _build_feedback_fixed(
     base_text: str, *, dt: float, steps: int, radial_span: float
 ) -> str:
     return apply_micro_time_contract(
-        _V2_BUILD_FEEDBACK(
+        _RAW_BUILD_FEEDBACK(
             base_text, dt=dt, steps=steps, radial_span=radial_span
         ),
         dt=dt,
@@ -373,7 +373,7 @@ def _run_case_safe(**kwargs: Any) -> dict[str, Any]:
     caught_error: str | None = None
     try:
         result = _RAW_RUN_CASE(**kwargs)
-    except v2.FastPlasmaRelaxationError as exc:
+    except relaxation_recipe.Issue43FastRelaxationError as exc:
         caught_error = str(exc)
         result = {
             "case_id": case_id,
@@ -382,7 +382,7 @@ def _run_case_safe(**kwargs: Any) -> dict[str, Any]:
             "harness_error": caught_error,
             "p3_returncode": 0,
         }
-        result = v2._attach_residual(result)
+        result = issue43_runtime.attach_nonlinear_residual(result)
 
     runtime_observed = _runtime_observation(case_dir)
     contract["runtime_regime"]["observed"].update(runtime_observed)
@@ -423,17 +423,10 @@ def _run_case_safe(**kwargs: Any) -> dict[str, Any]:
     return result
 
 
-def _install_v2_repairs() -> None:
-    v2._build_electron_300k = _build_electron_fixed
-    v2._build_oneway = _build_oneway_fixed
-    v2._build_feedback = _build_feedback_fixed
-    v2._run_case = _run_case_safe
-
-
 def _v3_compat_self_test() -> int:
     try:
-        if v2.self_test() != 0:
-            raise AssertionError("v2 self-test failed")
+        if issue43_runtime.self_test() != 0:
+            raise AssertionError("Issue43 runtime self-test failed")
         if ec.self_test() != 0:
             raise AssertionError("execution-contract self-test failed")
         if moose_executioner.self_test() != 0:
@@ -716,15 +709,8 @@ def _run_case_v5(**kwargs: Any) -> dict[str, Any]:
     if p3_log.is_file():
         result["p3_log"] = str(p3_log)
         result["solver_trajectory"] = _solver_trajectory(p3_log)
-        result = v2._attach_residual(result)
+        result = issue43_runtime.attach_nonlinear_residual(result)
     return result
-
-
-def _install_v5_repairs() -> None:
-    v2._build_electron_300k = _build_electron_v5
-    v2._build_oneway = _build_oneway_v5
-    v2._build_feedback = _build_feedback_v5
-    v2._run_case = _run_case_v5
 
 
 def _p2_check_input_args() -> tuple[str, ...]:
@@ -878,7 +864,7 @@ def _framework_output_evidence(
     add(
         "show-outputs-console-object",
         console_flags is not None,
-        console_flags,
+        out_flags,
         "console output object present",
         severity="warn",
     )
@@ -1115,7 +1101,7 @@ def _run_output_preflight(*, qpx: str | None, results_root: str | None) -> int:
     validate_executable(exe)
 
     repo_root = Path(__file__).resolve().parents[1]
-    base_case = repo_root / v2.BASE_CASE_RELATIVE
+    base_case = repo_root / issue43_runtime.BASE_CASE_RELATIVE
     if not base_case.is_dir():
         raise SystemExit(f"missing accepted qvt electron control: {base_case}")
 
@@ -1124,14 +1110,14 @@ def _run_output_preflight(*, qpx: str | None, results_root: str | None) -> int:
     base_text = (base_case / "input.i").read_text()
     input_text = _build_feedback_v5(
         base_text,
-        dt=v2.DT_FEEDBACK_SMALL,
-        steps=v2.N_STEPS,
+        dt=issue43_runtime.DT_FEEDBACK_SMALL,
+        steps=issue43_runtime.N_STEPS,
         radial_span=radial_span,
     )
     preflight.validate_parser_symbols_text(input_text)
 
     report = ooc.observation_report(
-        input_text, required_time_separation=v2.DT_FEEDBACK_SMALL
+        input_text, required_time_separation=issue43_runtime.DT_FEEDBACK_SMALL
     )
     static_decision = ooc.evaluate_observation_report(report)
     if static_decision["status"] != "PASS":
@@ -1273,19 +1259,19 @@ def _run_output_runtime_confirmation(
     exe = resolve_executable(qpx)
     validate_executable(exe)
     repo_root = Path(__file__).resolve().parents[1]
-    base_case = repo_root / v2.BASE_CASE_RELATIVE
+    base_case = repo_root / issue43_runtime.BASE_CASE_RELATIVE
     mesh = scale_audit.mesh_stats(base_case / "qvt.msh")
     radial_span = float(mesh["bbox_span_m"]["x"])
     base_text = (base_case / "input.i").read_text()
     input_text = _build_feedback_v5(
         base_text,
-        dt=v2.DT_FEEDBACK_SMALL,
-        steps=v2.N_STEPS,
+        dt=issue43_runtime.DT_FEEDBACK_SMALL,
+        steps=issue43_runtime.N_STEPS,
         radial_span=radial_span,
     )
     preflight.validate_parser_symbols_text(input_text)
     report = ooc.observation_report(
-        input_text, required_time_separation=v2.DT_FEEDBACK_SMALL
+        input_text, required_time_separation=issue43_runtime.DT_FEEDBACK_SMALL
     )
 
     evidence_root = (
@@ -1317,8 +1303,8 @@ def _run_output_runtime_confirmation(
         returncode=runtime.returncode,
         trajectory=trajectory,
         csv_times=csv_times,
-        dt=v2.DT_FEEDBACK_SMALL,
-        steps=v2.N_STEPS,
+        dt=issue43_runtime.DT_FEEDBACK_SMALL,
+        steps=issue43_runtime.N_STEPS,
         row_tolerance=float(report["csv"]["new_row_tolerance"]),
     )
 
@@ -1381,7 +1367,7 @@ def _run_output_runtime_confirmation(
     return 0 if decision["status"] == "PASS" else 2
 
 
-_RAW_CLASSIFY = v2.classify
+_RAW_CLASSIFY = relaxation_recipe.classify
 _RAW_WRITE_CONTRACT_ARTIFACTS = _write_contract_artifacts
 
 
@@ -1524,7 +1510,7 @@ def _run_issue43_guarded(argv: list[str] | None = None) -> int:
     _install_artifact_namespace()
 
     repo_root = Path(__file__).resolve().parents[1]
-    base_case = repo_root / v2.BASE_CASE_RELATIVE
+    base_case = repo_root / issue43_runtime.BASE_CASE_RELATIVE
     if not base_case.is_dir():
         raise SystemExit(f"missing accepted qvt electron control: {base_case}")
 
@@ -1562,11 +1548,11 @@ def _run_issue43_guarded(argv: list[str] | None = None) -> int:
     mesh = scale_audit.mesh_stats(base_case / "qvt.msh")
     scales = scale_audit.anchor_scales(
         pressure=scale_audit.DEFAULT_PRESSURE,
-        gas_temperature=v2.GAS_TEMPERATURE,
+        gas_temperature=issue43_runtime.GAS_TEMPERATURE,
         electron_density=scale_audit.DEFAULT_ELECTRON_DENSITY,
         mu_n=scale_audit.DEFAULT_MU_N,
         d_n=scale_audit.DEFAULT_D_N,
-        dt=v2.HEAVY_MACRO_DT,
+        dt=issue43_runtime.HEAVY_MACRO_DT,
         mesh=mesh,
         rf_frequency=None,
     )
@@ -1574,7 +1560,7 @@ def _run_issue43_guarded(argv: list[str] | None = None) -> int:
     radial_span = float(mesh["bbox_span_m"]["x"])
     base_text = (base_case / "input.i").read_text()
 
-    known_good = v2._run_known_good(
+    known_good = issue43_runtime.run_known_good(
         repo_root=repo_root,
         exe=exe,
         cases_root=cases_root,
@@ -1595,10 +1581,12 @@ def _run_issue43_guarded(argv: list[str] | None = None) -> int:
         print(f"ISSUE43_FAST2_SUMMARY: {summary_path}")
         return 2
 
-    e300_text = v2._build_electron_300k(
-        base_text, dt=v2.DT_ELECTRON_CONTROL, steps=v2.N_STEPS
+    e300_text = _build_electron_v5(
+        base_text,
+        dt=issue43_runtime.DT_ELECTRON_CONTROL,
+        steps=issue43_runtime.N_STEPS,
     )
-    electron_300k = v2._run_case(
+    electron_300k = _run_case_v5(
         base_case=base_case,
         case_dir=cases_root / "electron_300K",
         input_text=e300_text,
@@ -1613,14 +1601,14 @@ def _run_issue43_guarded(argv: list[str] | None = None) -> int:
     feedback_small = None
     feedback_large = None
 
-    if not _ontology_blocked(electron_300k) and v2._physics_pass(electron_300k):
-        oneway_text = v2._build_oneway(
+    if not _ontology_blocked(electron_300k) and issue43_runtime.physics_pass(electron_300k):
+        oneway_text = _build_oneway_v5(
             base_text,
-            dt=v2.DT_ELECTRON_CONTROL,
-            steps=v2.N_STEPS,
+            dt=issue43_runtime.DT_ELECTRON_CONTROL,
+            steps=issue43_runtime.N_STEPS,
             radial_span=radial_span,
         )
-        oneway = v2._run_case(
+        oneway = _run_case_v5(
             base_case=base_case,
             case_dir=cases_root / "oneway_e_to_phi",
             input_text=oneway_text,
@@ -1630,14 +1618,18 @@ def _run_issue43_guarded(argv: list[str] | None = None) -> int:
             analyze=True,
         )
 
-    if oneway is not None and not _ontology_blocked(oneway) and v2._physics_pass(oneway):
-        feedback_text = v2._build_feedback(
+    if (
+        oneway is not None
+        and not _ontology_blocked(oneway)
+        and issue43_runtime.physics_pass(oneway)
+    ):
+        feedback_text = _build_feedback_v5(
             base_text,
-            dt=v2.DT_FEEDBACK_BASE,
-            steps=v2.N_STEPS,
+            dt=issue43_runtime.DT_FEEDBACK_BASE,
+            steps=issue43_runtime.N_STEPS,
             radial_span=radial_span,
         )
-        feedback_base = v2._run_case(
+        feedback_base = _run_case_v5(
             base_case=base_case,
             case_dir=cases_root / "feedback_dt1e13",
             input_text=feedback_text,
@@ -1648,14 +1640,14 @@ def _run_issue43_guarded(argv: list[str] | None = None) -> int:
         )
 
         if not _ontology_blocked(feedback_base):
-            if v2._physics_pass(feedback_base):
-                large_text = v2._build_feedback(
+            if issue43_runtime.physics_pass(feedback_base):
+                large_text = _build_feedback_v5(
                     base_text,
-                    dt=v2.DT_FEEDBACK_LARGE,
-                    steps=v2.N_STEPS,
+                    dt=issue43_runtime.DT_FEEDBACK_LARGE,
+                    steps=issue43_runtime.N_STEPS,
                     radial_span=radial_span,
                 )
-                feedback_large = v2._run_case(
+                feedback_large = _run_case_v5(
                     base_case=base_case,
                     case_dir=cases_root / "feedback_dt1e12",
                     input_text=large_text,
@@ -1665,13 +1657,13 @@ def _run_issue43_guarded(argv: list[str] | None = None) -> int:
                     analyze=True,
                 )
             else:
-                small_text = v2._build_feedback(
+                small_text = _build_feedback_v5(
                     base_text,
-                    dt=v2.DT_FEEDBACK_SMALL,
-                    steps=v2.N_STEPS,
+                    dt=issue43_runtime.DT_FEEDBACK_SMALL,
+                    steps=issue43_runtime.N_STEPS,
                     radial_span=radial_span,
                 )
-                feedback_small = v2._run_case(
+                feedback_small = _run_case_v5(
                     base_case=base_case,
                     case_dir=cases_root / "feedback_dt1e14",
                     input_text=small_text,
@@ -1693,10 +1685,10 @@ def _run_issue43_guarded(argv: list[str] | None = None) -> int:
     summary = {
         "scale_map": scales,
         "dt_over_tau_dr": {
-            "electron_control": v2.DT_ELECTRON_CONTROL / tau_dr,
-            "feedback_base": v2.DT_FEEDBACK_BASE / tau_dr,
-            "feedback_small": v2.DT_FEEDBACK_SMALL / tau_dr,
-            "feedback_large": v2.DT_FEEDBACK_LARGE / tau_dr,
+            "electron_control": issue43_runtime.DT_ELECTRON_CONTROL / tau_dr,
+            "feedback_base": issue43_runtime.DT_FEEDBACK_BASE / tau_dr,
+            "feedback_small": issue43_runtime.DT_FEEDBACK_SMALL / tau_dr,
+            "feedback_large": issue43_runtime.DT_FEEDBACK_LARGE / tau_dr,
         },
         "known_good": known_good,
         "electron_300k": electron_300k,
@@ -1991,7 +1983,6 @@ def main(argv: list[str] | None = None) -> int:
             qpx=known.qpx,
             results_root=known.results_root,
         )
-    _install_v5_repairs()
     return _run_issue43_guarded(args)
 
 
