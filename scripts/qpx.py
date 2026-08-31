@@ -17,7 +17,7 @@ from qpx_harness.augmented_jacobian_localization import main as jac_localization
 from qpx_harness.bundle import main as bundle_main
 from qpx_harness.compat.issue46_fd_reference import main as fd_reference_main, self_test as fd_reference_self_test
 from qpx_harness.coupling_evr1_runtime import main as coupling_evr1_main, self_test as coupling_evr1_self_test
-from qpx_harness.coupling_evr2_timestep import main as coupling_evr2_main, self_test as coupling_evr2_self_test
+from qpx_harness.coupling_evr2_runtime import main as coupling_evr2_main, self_test as coupling_evr2_self_test
 from qpx_harness.dmix_equivalence import main as dmix_equivalence_main, self_test as dmix_equivalence_self_test
 from qpx_harness.electron_inventory_nullspace import main as inventory_nullspace_main, self_test as inventory_nullspace_self_test
 from qpx_harness.execution_contract import main as execution_contract_main, self_test as execution_contract_self_test
