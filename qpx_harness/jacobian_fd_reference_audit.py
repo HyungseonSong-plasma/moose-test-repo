@@ -17,14 +17,14 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from . import artifacts
 from . import augmented_jacobian_localization as loc
 from . import electron_inventory_nullspace as inv
 from . import evidence
 from . import fast_plasma_coupling_diagnostic as coupling_diag
-from . import fast_plasma_relaxation_v2 as v2
 from . import petsc_first_linear_diagnostic as first_linear
 from .moose_input import MooseInput, MooseInputError
-from .runtime import run_qpx
+from .runtime import resolve_executable, run_qpx, validate_executable
 
 ISSUE = 46
 TARGET = inv.C0_TARGET
@@ -39,6 +39,10 @@ DS_ATTENUATION_TO_UNITY_TOL = 1.0e-8
 
 class JacobianFDReferenceAuditError(RuntimeError):
     pass
+
+
+def _write_json(path: Path, payload: dict[str, Any]) -> None:
+    artifacts.write_json_bundle(path.parent, {"summary": (path.name, payload)})
 
 
 def _issue46_synthetic_constrained_input(macro_avg: float = TARGET) -> str:
@@ -821,8 +825,7 @@ def _prepare_case(exe: Path, results_root: str | None) -> dict[str, Any]:
         stem="issue46_fd_reference_discriminator",
     )
     case_dir = root / "c0_ds_reference"
-    v2.v1._copy_case(base_case, case_dir, ds_text)
-    v2.v1._validate_assets(case_dir)
+    inv._stage_case(base_case, case_dir, ds_text)
     input_path = case_dir / "input.i"
     return {
         "root": root,
@@ -871,8 +874,8 @@ def _preflight(exe: Path, prepared: dict[str, Any]) -> tuple[dict[str, Any], str
 
 
 def run_preflight(qpx: str | None, results_root: str | None) -> int:
-    exe = v2.resolve_executable(qpx)
-    v2.validate_executable(exe)
+    exe = resolve_executable(qpx)
+    validate_executable(exe)
     prepared = _prepare_case(exe, results_root)
     p2, status = _preflight(exe, prepared)
     prediction = prepared["ds_audit"]["prediction"]
@@ -907,7 +910,7 @@ def run_preflight(qpx: str | None, results_root: str | None) -> int:
         },
     }
     path = prepared["root"] / "summary.json"
-    v2._write_json(path, summary)
+    _write_json(path, summary)
     print(f"ISSUE46_FD_REFERENCE_P1_BASELINE: {prepared['baseline_audit']['status']}")
     print(f"ISSUE46_FD_REFERENCE_P1_DS: {prepared['ds_audit']['status']}")
     print(f"ISSUE46_FD_REFERENCE_P2_DS_CHECK_INPUT: {p2.get('status', 'HOLD')}")
@@ -943,8 +946,8 @@ def _source_dofmaps(source_case: Path) -> tuple[str, ...]:
 
 
 def run_runtime(qpx: str | None, results_root: str | None) -> int:
-    exe = v2.resolve_executable(qpx)
-    v2.validate_executable(exe)
+    exe = resolve_executable(qpx)
+    validate_executable(exe)
     prepared = _prepare_case(exe, results_root)
     p2, preflight_status = _preflight(exe, prepared)
     if preflight_status != "PASS":
@@ -1082,7 +1085,7 @@ def run_runtime(qpx: str | None, results_root: str | None) -> int:
         "analysis": analysis,
     }
     summary_path = prepared["root"] / "summary.json"
-    v2._write_json(summary_path, summary)
+    _write_json(summary_path, summary)
     print(
         "ISSUE46_FD_REFERENCE_PRECLASS: "
         + ("PASS" if analysis.get("status") == "PASS" else "HOLD")
