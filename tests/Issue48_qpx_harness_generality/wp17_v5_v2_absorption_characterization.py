@@ -30,13 +30,25 @@ V5_GENUINE_V2_RUNTIME_TOKENS = (
     "v2.self_test()",
 )
 
-V5_STALE_V1_TOKENS = (
+V5_RETIRED_STALE_V1_TOKENS = (
     "v2.v1._find_csv(",
     "v2.v1.BASE_CASE_RELATIVE",
     "v2.v1._copy_case(",
     "v2.v1._validate_assets(",
     "v2.v1._create_root(",
     "v2.v1._run_known_good(",
+    "v2.v1.FastPlasmaRelaxationError",
+)
+
+V5_STALE_V1_CUTOVER_TOKENS = (
+    "from recipes import issue43_fast_relaxation as relaxation_recipe",
+    "except v2.FastPlasmaRelaxationError as exc:",
+    "relaxation_recipe.find_relaxation_csv(case_dir)",
+    "base_case = repo_root / v2.BASE_CASE_RELATIVE",
+    "v2._stage_case(base_case, case_dir, input_text)",
+    "v2._validate_assets(case_dir)",
+    "root = v2._create_root(results_root)",
+    "known_good = v2._run_known_good(",
 )
 
 V5_GENERIC_INFRA_TOKENS = (
@@ -46,6 +58,9 @@ V5_GENERIC_INFRA_TOKENS = (
     "v2.anchor_scales(",
     "v2.validate_parser_symbols_text(",
     "v2._write_json(",
+    "v2._stage_case(",
+    "v2._validate_assets(",
+    "v2._create_root(",
 )
 
 V2_ISSUE43_POLICY_TOKENS = (
@@ -86,9 +101,12 @@ def _check_v5_current_surface() -> None:
     for token in V5_GENUINE_V2_RUNTIME_TOKENS:
         if token not in source:
             raise AssertionError(f"v5 genuine v2 runtime surface drift: {token}")
-    for token in V5_STALE_V1_TOKENS:
+    for token in V5_RETIRED_STALE_V1_TOKENS:
+        if token in source:
+            raise AssertionError(f"v5 stale-v1 surface returned: {token}")
+    for token in V5_STALE_V1_CUTOVER_TOKENS:
         if token not in source:
-            raise AssertionError(f"v5 stale-v1 surface drift: {token}")
+            raise AssertionError(f"v5 stale-v1 cutover drift: {token}")
     for token in V5_GENERIC_INFRA_TOKENS:
         if token not in source:
             raise AssertionError(f"v5 generic-infra dependency drift: {token}")
