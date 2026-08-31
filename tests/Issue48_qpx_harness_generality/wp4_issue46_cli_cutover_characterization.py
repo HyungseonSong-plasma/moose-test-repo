@@ -32,7 +32,7 @@ def _check_stable_cli_route() -> None:
     if "from qpx_harness.compat.issue46_fd_reference import" in source:
         raise AssertionError("stable CLI still imports the retired compatibility adapter")
     if "from qpx_harness.jacobian_fd_reference_audit import" in source:
-        raise AssertionError("stable CLI imports the historical FD proxy")
+        raise AssertionError("stable CLI imports the retired historical FD proxy")
 
     run = subprocess.run(
         [sys.executable, str(script), "inventory-fd-reference", "--self-test"],
@@ -57,7 +57,7 @@ def _check_semantic_boundary() -> None:
     if "from recipes import issue46_fd_reference as recipe" not in semantic_source:
         raise AssertionError("semantic owner does not import the thin Issue46 FD recipe")
     if "jacobian_fd_reference_audit as runtime_shell" in semantic_source:
-        raise AssertionError("semantic owner still delegates runtime to the historical FD shell")
+        raise AssertionError("semantic owner still delegates runtime to the retired FD shell")
     if "qpx_harness.compat.issue46_fd_reference" in semantic_source:
         raise AssertionError("semantic owner reverse-depends on the retired compatibility adapter")
     for required in (
@@ -69,12 +69,9 @@ def _check_semantic_boundary() -> None:
         if required not in semantic_source:
             raise AssertionError(f"semantic owner does not own runtime surface: {required}")
 
-    legacy_source = (ROOT / "qpx_harness" / "jacobian_fd_reference_audit.py").read_text()
-    if "from . import issue46_fd_reference as _owner" not in legacy_source:
-        raise AssertionError("historical FD module is not a semantic-owner proxy")
-    for forbidden in ("def run_preflight(", "def run_runtime(", "from recipes import"):
-        if forbidden in legacy_source:
-            raise AssertionError(f"historical FD proxy still owns runtime/policy: {forbidden}")
+    legacy_path = ROOT / "qpx_harness" / "jacobian_fd_reference_audit.py"
+    if legacy_path.exists():
+        raise AssertionError("retired historical FD proxy unexpectedly exists")
 
     recipe_source = (ROOT / "recipes" / "issue46_fd_reference.py").read_text()
     for forbidden in (
