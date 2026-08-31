@@ -11,7 +11,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from recipes import issue31_coupling as recipe
-from qpx_harness import coupling_evr2_timestep as production
+from qpx_harness import coupling_evr2_runtime as production
 
 
 EXPECTED_EVR1_BASELINE = {
@@ -352,6 +352,10 @@ def _check_recipe_boundary() -> None:
 
 
 def _check_production_cutover() -> None:
+    this_path = Path(__file__)
+    if _imports_module(this_path, "qpx_harness.coupling_evr2_timestep"):
+        raise AssertionError("WP12 retained legacy EVR2 oracle import")
+
     source = Path(production.__file__).read_text()
     for required in (
         "recipe.configured_transport_input(",
@@ -372,18 +376,21 @@ def _check_production_cutover() -> None:
         "DT_1E6 =",
         "DT_1E8 =",
         "from .moose_input import",
+        "coupling_evr2_timestep",
     ):
         if forbidden in source:
-            raise AssertionError(f"EVR2 production retained scientific duplicate: {forbidden}")
+            raise AssertionError(f"EVR2 production retained scientific/legacy duplicate: {forbidden}")
     for runtime_token in (
         "run_measurement",
         "subprocess.run",
-        "shutil.copytree",
+        "stage_case",
+        "write_json_bundle",
+        "sha256_file",
         "resolve_executable",
         "validate_executable",
     ):
         if runtime_token not in source:
-            raise AssertionError(f"EVR2 runtime ownership moved prematurely: {runtime_token}")
+            raise AssertionError(f"EVR2 canonical runtime ownership missing: {runtime_token}")
 
 
 def main() -> int:
@@ -394,7 +401,7 @@ def main() -> int:
         _check_recipe_boundary()
         _check_production_cutover()
         if production.self_test() != 0:
-            raise AssertionError("EVR2 production self-test failed after recipe cutover")
+            raise AssertionError("EVR2 canonical runtime self-test failed after recipe cutover")
     except Exception as exc:
         print(f"ISSUE48_ISSUE31_EVR2_RECIPE_SELFTEST: FAIL ({exc})")
         return 1
