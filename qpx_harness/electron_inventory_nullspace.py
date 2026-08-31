@@ -20,7 +20,7 @@ from . import artifacts
 from . import cases as case_ops
 from . import evidence
 from . import fast_plasma_coupling_diagnostic as coupling_diag
-from . import fast_plasma_relaxation_v5 as v5
+from . import issue43_fast_relaxation as v5
 from .moose_input import MooseInput, MooseInputError
 from .preflight import validate_parser_symbols_text
 from .runtime import resolve_executable, run_command, run_qpx, validate_executable
@@ -982,7 +982,7 @@ def _evaluate_runtime_case_data(
         "inventory_consistency_relative_tolerance": INVENTORY_CONSISTENCY_REL_TOL,
         "average_relative_error": avg_rel_error,
         "inventory_relative_error": inventory_rel_error,
-        "aggregate_consistency_relative_error": aggregate_consistency_rel_error,
+        "aggregate_consistency_rel_error": aggregate_consistency_rel_error,
         "observables": row,
         "final_variable_residuals": final_residuals,
         "diagnostic": diagnostic,
