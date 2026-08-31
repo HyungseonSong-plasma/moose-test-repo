@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
-"""P0 characterization for cache-audit migration to generic C++ primitives."""
+"""P0 characterization for cache-audit generic C++ primitive cutover."""
 from __future__ import annotations
 
-import re
 import sys
 from pathlib import Path
 
@@ -32,64 +31,32 @@ QPXThermalDiffusionMaterial::QPXThermalDiffusionMaterial()
 '''
 
 
-def _generic_declaration(text: str) -> dict:
-    cpp = cpp_source.CppSource(text)
-    call = cpp.unique_call("addFunctorProperty", containing="_D_mix_names")
-    args = cpp_calls.split_call_arguments(cpp, call).arguments
-    raw = call.slice(text)
-    flags = sorted(set(re.findall(r"\bEXEC_[A-Z0-9_]+\b", raw)))
-    kind = "DEFAULT_ALWAYS_EVALUATE"
-    if flags:
-        if "EXEC_ALWAYS" in flags:
-            kind = "EXPLICIT_ALWAYS_EVALUATE"
-        elif {"EXEC_LINEAR", "EXEC_NONLINEAR"}.issubset(flags):
-            kind = "EXPLICIT_LINEAR_NONLINEAR_CLEARANCE"
-        else:
-            kind = "EXPLICIT_OTHER_CLEARANCE"
+def _expected_declaration(text: str) -> dict:
+    snippet = " ".join(
+        """addFunctorProperty<ADReal>(
+      _D_mix_names[i],
+      [this, i](const auto & r, const auto & state)
+      {
+        return evaluate(r, state).D_mix[i];
+      },
+      {EXEC_LINEAR, EXEC_NONLINEAR})""".split()
+    )
     return {
-        "line": text.count("\n", 0, call.start) + 1,
-        "argument_count": len(args),
-        "schedule_kind": kind,
-        "schedule_tokens": flags,
-        "calls_full_evaluate": "evaluate" in raw and ".D_mix" in raw,
-        "snippet": " ".join(raw.split())[:700],
+        "line": 6,
+        "argument_count": 3,
+        "schedule_kind": "EXPLICIT_LINEAR_NONLINEAR_CLEARANCE",
+        "schedule_tokens": ["EXEC_LINEAR", "EXEC_NONLINEAR"],
+        "calls_full_evaluate": True,
+        "snippet": snippet[:700],
     }
 
 
-def _check_mask_equivalence() -> None:
+def _check_declaration_contract() -> None:
     text = _fixture()
-    if cache._mask_cpp(text) != cpp_source.mask_cpp(text):
-        raise AssertionError("cache-audit mask differs from generic C++ mask on accepted syntax")
-
-
-def _check_balanced_call_equivalence() -> None:
-    text = _fixture()
-    legacy_masked = cache._mask_cpp(text)
-    match = re.search(r"addFunctorProperty\s*<\s*ADReal\s*>\s*\(", legacy_masked)
-    if match is None:
-        raise AssertionError("fixture addFunctorProperty call not found")
-    legacy_open = legacy_masked.find("(", match.start())
-    legacy_close = cache._matching_paren(legacy_masked, legacy_open)
-
-    cpp = cpp_source.CppSource(text)
-    call = cpp.unique_call("addFunctorProperty", containing="_D_mix_names")
-    generic_args = cpp_calls.split_call_arguments(cpp, call)
-    if generic_args.open_paren != legacy_open or generic_args.close_paren != legacy_close:
-        raise AssertionError("balanced call boundary drift")
-
-    legacy_args = tuple(cache._split_top_level_args(text[legacy_open + 1 : legacy_close]))
-    if generic_args.arguments != legacy_args:
-        raise AssertionError(
-            f"top-level argument split drift: {generic_args.arguments!r} != {legacy_args!r}"
-        )
-
-
-def _check_declaration_equivalence() -> None:
-    text = _fixture()
-    legacy = cache._extract_dmix_declaration(text)
-    generic = _generic_declaration(text)
-    if legacy != generic:
-        raise AssertionError(f"D_mix declaration contract drift: {legacy!r} != {generic!r}")
+    actual = cache._extract_dmix_declaration(text)
+    expected = _expected_declaration(text)
+    if actual != expected:
+        raise AssertionError(f"D_mix declaration contract drift: {actual!r} != {expected!r}")
 
     duplicate = text + "\n" + text
     try:
@@ -97,15 +64,39 @@ def _check_declaration_equivalence() -> None:
     except cache.CacheAuditError:
         pass
     else:
-        raise AssertionError("legacy duplicate-declaration negative control passed")
-    try:
-        cpp_source.CppSource(duplicate).unique_call(
-            "addFunctorProperty", containing="_D_mix_names"
-        )
-    except cpp_source.CppSourceError:
-        pass
-    else:
-        raise AssertionError("generic duplicate-declaration negative control passed")
+        raise AssertionError("duplicate-declaration negative control passed")
+
+
+def _check_production_cutover() -> None:
+    source = Path(cache.__file__).read_text()
+    for required in (
+        "from .cpp_calls import split_call_arguments",
+        "from .cpp_source import CppSource",
+        'cpp.calls("addFunctorProperty", containing="_D_mix_names")',
+        "split_call_arguments(cpp, call)",
+        "masked = CppSource(text).masked",
+    ):
+        if required not in source:
+            raise AssertionError(f"cache-audit generic C++ cutover missing: {required}")
+
+    for forbidden in (
+        "def _mask_cpp(",
+        "def _matching_paren(",
+        "def _split_top_level_args(",
+    ):
+        if forbidden in source:
+            raise AssertionError(f"cache-audit retained duplicated lexical helper: {forbidden}")
+
+    # This checkpoint is intentionally limited to C++ parsing ownership.
+    for retained in (
+        "def _sha256_file(",
+        "datetime.now(timezone.utc)",
+        "json.dumps(result, indent=2, sort_keys=True)",
+        "NATIVE_FUNCTOR_CACHE_CANDIDATE",
+        "MATERIAL_SHARED_RESULT_REQUIRED",
+    ):
+        if retained not in source:
+            raise AssertionError(f"cache-audit ownership moved prematurely: {retained}")
 
 
 def _check_primitive_boundary() -> None:
@@ -128,9 +119,8 @@ def main() -> int:
             raise AssertionError("CppSource self-test failed")
         if cpp_calls.self_test() != 0:
             raise AssertionError("CppCall self-test failed")
-        _check_mask_equivalence()
-        _check_balanced_call_equivalence()
-        _check_declaration_equivalence()
+        _check_declaration_contract()
+        _check_production_cutover()
         _check_primitive_boundary()
     except Exception as exc:
         print(f"ISSUE48_CACHE_AUDIT_CPP_SELFTEST: FAIL ({exc})")
