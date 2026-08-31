@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""P0 deletion gate for the historical Issue46 augmented-localization owner."""
+"""P0 post-retirement gate for the historical Issue46 augmented-localization owner."""
 from __future__ import annotations
 
 import ast
@@ -62,7 +62,13 @@ def _dynamic_imports(path: Path) -> set[str]:
         value = getattr(node, "value", None)
         if not isinstance(value, ast.Constant) or not isinstance(value.value, str):
             continue
-        targets = node.targets if isinstance(node, ast.Assign) else [node.target] if isinstance(node, ast.AnnAssign) else []
+        targets = (
+            node.targets
+            if isinstance(node, ast.Assign)
+            else [node.target]
+            if isinstance(node, ast.AnnAssign)
+            else []
+        )
         for target in targets:
             if isinstance(target, ast.Name):
                 constants[target.id] = value.value
@@ -97,7 +103,7 @@ def _python_consumers() -> list[str]:
         if not base.exists():
             continue
         for path in base.rglob("*.py"):
-            if path == LEGACY_PATH or "__pycache__" in path.parts:
+            if "__pycache__" in path.parts:
                 continue
             try:
                 imports = _static_imports(path) | _dynamic_imports(path)
@@ -131,8 +137,8 @@ def _execution_consumers() -> list[str]:
 
 
 def _check_owner_boundary() -> None:
-    if not LEGACY_PATH.is_file():
-        raise AssertionError("legacy owner is already absent; use the post-retirement gate")
+    if LEGACY_PATH.exists():
+        raise AssertionError("retired augmented owner unexpectedly exists")
     if not SEMANTIC_PATH.is_file():
         raise AssertionError("canonical Issue46 semantic owner is missing")
 
@@ -143,11 +149,7 @@ def _check_owner_boundary() -> None:
     ):
         imports = _static_imports(path) | _dynamic_imports(path)
         if LEGACY_MODULE in imports:
-            raise AssertionError(f"{label} still imports legacy owner")
-
-    semantic_imports = _static_imports(SEMANTIC_PATH) | _dynamic_imports(SEMANTIC_PATH)
-    if LEGACY_MODULE in semantic_imports:
-        raise AssertionError("semantic Issue46 owner reverse-depends on legacy owner")
+            raise AssertionError(f"{label} still imports retired legacy owner")
 
     fd_imports = _static_imports(FD_AUDIT_PATH) | _dynamic_imports(FD_AUDIT_PATH)
     if SEMANTIC_MODULE not in fd_imports:
@@ -190,6 +192,10 @@ def _negative_control() -> None:
 
 def main() -> int:
     try:
+        if LEGACY_PATH.exists():
+            raise AssertionError(f"retired owner still exists: {LEGACY_PATH}")
+        print("ISSUE48_WP26_AUGMENTED_RETIREMENT_CHECK: owner-absent=PASS")
+
         python_consumers = _python_consumers()
         if python_consumers:
             raise AssertionError(f"python consumers remain: {python_consumers}")
@@ -208,7 +214,7 @@ def main() -> int:
         print(f"ISSUE48_WP26_AUGMENTED_RETIREMENT_CHARACTERIZATION: FAIL ({exc})")
         return 1
 
-    print("ISSUE48_WP26_AUGMENTED_RETIREMENT_STATE: RETIREMENT_READY")
+    print("ISSUE48_WP26_AUGMENTED_RETIREMENT_STATE: RETIRED")
     print("ISSUE48_WP26_AUGMENTED_RETIREMENT_CHARACTERIZATION: PASS")
     return 0
 
