@@ -13,10 +13,8 @@ from qpx_harness import artifacts
 from qpx_harness import electron_inventory_nullspace as inv
 from qpx_harness import runtime
 
-ISSUE46_OWNERS = (
-    "augmented_jacobian_localization.py",
-    "jacobian_fd_reference_audit.py",
-)
+CUT_OWNER = "augmented_jacobian_localization.py"
+REMAINING_OWNER = "jacobian_fd_reference_audit.py"
 
 EXPECTED_V2_INFRASTRUCTURE_TOKENS = (
     "from . import fast_plasma_relaxation_v2 as v2",
@@ -38,17 +36,33 @@ def _source(name: str) -> str:
     return (ROOT / "qpx_harness" / name).read_text()
 
 
-def _check_current_issue46_v2_surface() -> None:
-    for name in ISSUE46_OWNERS:
-        source = _source(name)
-        for token in EXPECTED_V2_INFRASTRUCTURE_TOKENS:
-            if token not in source:
-                raise AssertionError(f"Issue46 v2 infrastructure surface drift in {name}: {token}")
-        if "v2.v1._copy_case(" not in source or "v2.v1._validate_assets(" not in source:
-            raise AssertionError(f"Issue46 staging compatibility surface drift in {name}")
-        for token in FORBIDDEN_V2_MODEL_RUNTIME_TOKENS:
-            if token in source:
-                raise AssertionError(f"Issue46 unexpectedly depends on v2 model/runtime core in {name}: {token}")
+def _check_localization_cutover() -> None:
+    source = _source(CUT_OWNER)
+    for token in ("fast_plasma_relaxation_v2", "v2.", "v2.v1."):
+        if token in source:
+            raise AssertionError(f"Issue46 localization retained v2 dependency: {token}")
+    for token in (
+        "from . import artifacts",
+        "from .runtime import resolve_executable, run_qpx, validate_executable",
+        "inv._stage_case(base_case, main_dir, localization_text)",
+        "artifacts.write_json_bundle(",
+        "resolve_executable(",
+        "validate_executable(",
+    ):
+        if token not in source:
+            raise AssertionError(f"Issue46 localization canonical cutover drift: {token}")
+
+
+def _check_remaining_fd_reference_surface() -> None:
+    source = _source(REMAINING_OWNER)
+    for token in EXPECTED_V2_INFRASTRUCTURE_TOKENS:
+        if token not in source:
+            raise AssertionError(f"Issue46 FD-reference v2 infrastructure surface drift: {token}")
+    if "v2.v1._copy_case(" not in source or "v2.v1._validate_assets(" not in source:
+        raise AssertionError("Issue46 FD-reference staging compatibility surface drift")
+    for token in FORBIDDEN_V2_MODEL_RUNTIME_TOKENS:
+        if token in source:
+            raise AssertionError(f"Issue46 FD-reference unexpectedly depends on v2 model/runtime core: {token}")
 
 
 def _check_canonical_destination_readiness() -> None:
@@ -75,7 +89,8 @@ def _check_already_cut_consumers() -> None:
 
 def main() -> int:
     try:
-        _check_current_issue46_v2_surface()
+        _check_localization_cutover()
+        _check_remaining_fd_reference_surface()
         _check_canonical_destination_readiness()
         _check_already_cut_consumers()
     except Exception as exc:
