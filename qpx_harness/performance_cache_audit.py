@@ -2,17 +2,17 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import re
 import sys
 import tempfile
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
+from .artifacts import write_json_bundle
 from .cpp_calls import split_call_arguments
 from .cpp_source import CppSource, CppSourceError
+from .evidence import sha256_file, utc_timestamp
 
 MATERIAL_RELATIVE = Path("src/materials/QPXThermalDiffusionMaterial.C")
 DEFAULT_CASE_RELATIVE = Path("tests/Issue22_qvt_transient_species_accumulation/input.i")
@@ -25,14 +25,6 @@ TARGET_PARAMETER = "diffusivity"
 
 class CacheAuditError(RuntimeError):
     pass
-
-
-def _sha256_file(path: Path) -> str:
-    h = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1 << 20), b""):
-            h.update(chunk)
-    return h.hexdigest()
 
 
 def _line_number(text: str, offset: int) -> int:
@@ -351,9 +343,9 @@ def audit_qpx_tree(qpx_root: Path, input_path: Path) -> dict[str, Any]:
         "analysis_status": status,
         "qpx_root": str(root),
         "input_path": str(input_path),
-        "input_sha256": _sha256_file(input_path),
+        "input_sha256": sha256_file(input_path),
         "material_source": str(material),
-        "material_sha256": _sha256_file(material),
+        "material_sha256": sha256_file(material),
         "dmix_declaration": declaration,
         "input_consumers": input_consumers,
         "consumer_class_files": class_files,
@@ -441,7 +433,7 @@ def self_test():
 
 
 def _new_run_root(results: Path):
-    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    stamp = utc_timestamp()
     base = results / f"cache_audit_{stamp}"
     candidate = base
     index = 1
@@ -482,8 +474,12 @@ def main(argv: Iterable[str] | None = None):
         )
         root = _new_run_root(results)
         result["qpx_executable"] = str(qpx)
-        summary = root / "cache_audit.json"
-        summary.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n")
+        summary = Path(
+            write_json_bundle(
+                root,
+                {"summary": ("cache_audit.json", result)},
+            )["summary"]
+        )
     except Exception as exc:
         print(f"QPX_CACHE_AUDIT_ERROR: {exc}", file=sys.stderr)
         return 2
