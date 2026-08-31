@@ -12,6 +12,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from qpx_harness import performance_transport_probe as legacy
+from qpx_harness import performance_transport_probe_direct as direct
 from qpx_harness import performance_transport_probe_runtime as runtime
 
 
@@ -137,6 +138,28 @@ def _check_callback_routing() -> None:
         raise AssertionError("backend negative self-test callback was not propagated")
 
 
+def _check_direct_cutover() -> None:
+    source = Path(direct.__file__).read_text()
+    if "probe_runtime.main(" not in source:
+        raise AssertionError("direct probe does not route through runtime owner")
+    if "legacy.main(" in source or "def _activate" in source:
+        raise AssertionError("legacy orchestration remains active in direct probe")
+    if direct.main(["--self-test"]) != 0:
+        raise AssertionError("direct runtime-routed self-test failed")
+
+    original_main = direct.probe_runtime.main
+
+    def raise_backend_error(*args, **kwargs):
+        raise direct.ProbeError("negative-control")
+
+    direct.probe_runtime.main = raise_backend_error
+    try:
+        if direct.main([]) != 2:
+            raise AssertionError("direct ProbeError compatibility guard drift")
+    finally:
+        direct.probe_runtime.main = original_main
+
+
 def _check_boundary() -> None:
     source = Path(runtime.__file__).read_text()
     for forbidden in (
@@ -155,6 +178,7 @@ def main() -> int:
         _check_manifest_resolution()
         _check_restore_equivalence()
         _check_callback_routing()
+        _check_direct_cutover()
         _check_boundary()
     except Exception as exc:
         print(f"ISSUE48_TRANSPORT_PROBE_RUNTIME_SELFTEST: FAIL ({exc})")
