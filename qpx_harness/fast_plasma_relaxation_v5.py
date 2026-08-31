@@ -10,6 +10,8 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+from recipes import issue43_fast_relaxation as relaxation_recipe
+
 from . import artifacts
 from . import evidence
 from . import execution_contract as ec
@@ -320,7 +322,7 @@ def _run_case_safe(**kwargs: Any) -> dict[str, Any]:
     caught_error: str | None = None
     try:
         result = _RAW_RUN_CASE(**kwargs)
-    except v2.v1.FastPlasmaRelaxationError as exc:
+    except v2.FastPlasmaRelaxationError as exc:
         caught_error = str(exc)
         result = {
             "case_id": case_id,
@@ -908,8 +910,8 @@ def _classify_p2_failure(log_path: Path, returncode: int) -> dict[str, Any]:
 
 def _runtime_csv_times(case_dir: Path) -> tuple[Path | None, list[float], str | None]:
     try:
-        csv_path = v2.v1._find_csv(case_dir)
-    except v2.v1.FastPlasmaRelaxationError as exc:
+        csv_path = relaxation_recipe.find_relaxation_csv(case_dir)
+    except relaxation_recipe.Issue43FastRelaxationError as exc:
         return None, [], str(exc)
 
     times: list[float] = []
@@ -1062,7 +1064,7 @@ def _run_output_preflight(*, qpx: str | None, results_root: str | None) -> int:
     v2.validate_executable(exe)
 
     repo_root = Path(__file__).resolve().parents[1]
-    base_case = repo_root / v2.v1.BASE_CASE_RELATIVE
+    base_case = repo_root / v2.BASE_CASE_RELATIVE
     if not base_case.is_dir():
         raise SystemExit(f"missing accepted qvt electron control: {base_case}")
 
@@ -1095,8 +1097,8 @@ def _run_output_preflight(*, qpx: str | None, results_root: str | None) -> int:
         evidence_root / f"issue44_output_preflight_{evidence.utc_timestamp()}"
     )
     case_dir = root / "case"
-    v2.v1._copy_case(base_case, case_dir, input_text)
-    v2.v1._validate_assets(case_dir)
+    v2._stage_case(base_case, case_dir, input_text)
+    v2._validate_assets(case_dir)
 
     input_path = case_dir / "input.i"
     check_log_path = root / "p2_check_input.log"
@@ -1220,7 +1222,7 @@ def _run_output_runtime_confirmation(
     exe = v2.resolve_executable(qpx)
     v2.validate_executable(exe)
     repo_root = Path(__file__).resolve().parents[1]
-    base_case = repo_root / v2.v1.BASE_CASE_RELATIVE
+    base_case = repo_root / v2.BASE_CASE_RELATIVE
     mesh = v2.mesh_stats(base_case / "qvt.msh")
     radial_span = float(mesh["bbox_span_m"]["x"])
     base_text = (base_case / "input.i").read_text()
@@ -1244,8 +1246,8 @@ def _run_output_runtime_confirmation(
         evidence_root / f"issue44_output_runtime_{evidence.utc_timestamp()}"
     )
     case_dir = root / "case"
-    v2.v1._copy_case(base_case, case_dir, input_text)
-    v2.v1._validate_assets(case_dir)
+    v2._stage_case(base_case, case_dir, input_text)
+    v2._validate_assets(case_dir)
     input_path = case_dir / "input.i"
     log_path = root / "p3_runtime.log"
     summary_path = root / "summary.json"
@@ -1471,7 +1473,7 @@ def _run_issue43_guarded(argv: list[str] | None = None) -> int:
     _install_artifact_namespace()
 
     repo_root = Path(__file__).resolve().parents[1]
-    base_case = repo_root / v2.v1.BASE_CASE_RELATIVE
+    base_case = repo_root / v2.BASE_CASE_RELATIVE
     if not base_case.is_dir():
         raise SystemExit(f"missing accepted qvt electron control: {base_case}")
 
@@ -1482,7 +1484,7 @@ def _run_issue43_guarded(argv: list[str] | None = None) -> int:
         if args.results_root
         else exe.parent / "temp" / "results"
     )
-    root = v2.v1._create_root(results_root)
+    root = v2._create_root(results_root)
     root = root.with_name(
         root.name.replace("fast_plasma_relaxation_", "fast_plasma_discriminator_v4_")
     )
@@ -1521,7 +1523,7 @@ def _run_issue43_guarded(argv: list[str] | None = None) -> int:
     radial_span = float(mesh["bbox_span_m"]["x"])
     base_text = (base_case / "input.i").read_text()
 
-    known_good = v2.v1._run_known_good(
+    known_good = v2._run_known_good(
         repo_root=repo_root,
         exe=exe,
         cases_root=cases_root,
