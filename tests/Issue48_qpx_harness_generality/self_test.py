@@ -18,7 +18,7 @@ from qpx_harness.moose import blocks as mb
 from qpx_harness.moose import executioner as me
 from qpx_harness.moose import parameters as mp
 from qpx_harness.petsc import options as po
-from qpx_harness import augmented_jacobian_localization as issue46_legacy
+from qpx_harness import issue46_jacobian_localization as issue46_semantic
 from qpx_harness import electron_inventory_nullspace as issue45_inventory_legacy
 from qpx_harness import fast_plasma_coupling_diagnostic as issue43_legacy
 from recipes import issue43_coupling_diagnostic as issue43_recipe
@@ -330,10 +330,10 @@ def _check_recipe_equivalence() -> None:
     if new_inventory != old_inventory:
         raise AssertionError("Issue45 inventory-constraint recipe drift")
 
-    old46_text, old46_meta = issue46_legacy.instrument_localization(first45_text)
-    new46_text, new46_meta = issue46_recipe.instrument_localization(first45_text)
-    if new46_text != old46_text or new46_meta != old46_meta:
-        raise AssertionError("Issue46 recipe drift")
+    semantic46_text, semantic46_meta = issue46_semantic.instrument_localization(first45_text)
+    recipe46_text, recipe46_meta = issue46_recipe.instrument_localization(first45_text)
+    if recipe46_text != semantic46_text or recipe46_meta != semantic46_meta:
+        raise AssertionError("Issue46 semantic/recipe construction drift")
 
 
 def _check_generality_surface() -> None:
