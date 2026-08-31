@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
-"""P0 characterization for the final fast_plasma_relaxation_v2 absorption into v5."""
+"""P0 characterization for final fast_plasma_relaxation_v2 runtime absorption."""
 from __future__ import annotations
 
-import inspect
 import json
 import sys
 import tempfile
@@ -15,16 +14,18 @@ if str(ROOT) not in sys.path:
 from qpx_harness import artifacts
 from qpx_harness import cases
 from qpx_harness import evidence
+from qpx_harness import fast_plasma_relaxation_v2 as v2
+from qpx_harness import fast_plasma_relaxation_v5 as v5
+from qpx_harness import issue43_relaxation_runtime as runtime43
 from qpx_harness import preflight
 from qpx_harness import runtime
 from qpx_harness import scale_audit
-from qpx_harness import fast_plasma_relaxation_v2 as v2
-from qpx_harness import fast_plasma_relaxation_v5 as v5
 from recipes import issue43_fast_relaxation as recipe
 
 V5 = ROOT / "qpx_harness" / "fast_plasma_relaxation_v5.py"
 
-V5_GENUINE_V2_RUNTIME_TOKENS = (
+V5_RETIRED_V2_RUNTIME_TOKENS = (
+    "from . import fast_plasma_relaxation_v2 as v2",
     "_RAW_BUILD_ELECTRON_300K = v2._build_electron_300k",
     "_V2_BUILD_ONEWAY = v2._build_oneway",
     "_V2_BUILD_FEEDBACK = v2._build_feedback",
@@ -32,29 +33,23 @@ V5_GENUINE_V2_RUNTIME_TOKENS = (
     "_RAW_CLASSIFY = v2.classify",
     "v2._attach_residual(",
     "v2._physics_pass(",
+    "v2._run_known_good(",
     "v2.self_test()",
+    "def _install_v2_repairs(",
+    "def _install_v5_repairs(",
 )
 
-V5_RETIRED_STALE_V1_TOKENS = (
-    "v2.v1._find_csv(",
-    "v2.v1.BASE_CASE_RELATIVE",
-    "v2.v1._copy_case(",
-    "v2.v1._validate_assets(",
-    "v2.v1._create_root(",
-    "v2.v1._run_known_good(",
-    "v2.v1.FastPlasmaRelaxationError",
-)
-
-V5_RETIRED_GENERIC_INFRA_TOKENS = (
-    "v2.resolve_executable(",
-    "v2.validate_executable(",
-    "v2.mesh_stats(",
-    "v2.anchor_scales(",
-    "v2.validate_parser_symbols_text(",
-    "v2._write_json(",
-    "v2._stage_case(",
-    "v2._validate_assets(",
-    "v2._create_root(",
+V5_CANONICAL_RUNTIME_TOKENS = (
+    "from . import issue43_relaxation_runtime as issue43_runtime",
+    "_RAW_BUILD_ELECTRON_300K = issue43_runtime.build_electron_300k",
+    "_RAW_BUILD_ONEWAY = issue43_runtime.build_oneway",
+    "_RAW_BUILD_FEEDBACK = issue43_runtime.build_feedback",
+    "_RAW_RUN_CASE = issue43_runtime.run_case",
+    "_RAW_CLASSIFY = relaxation_recipe.classify",
+    "issue43_runtime.run_known_good(",
+    "issue43_runtime.physics_pass(",
+    "issue43_runtime.attach_nonlinear_residual(",
+    "issue43_runtime.self_test()",
 )
 
 V5_DIRECT_INFRA_TOKENS = (
@@ -71,17 +66,6 @@ V5_DIRECT_INFRA_TOKENS = (
     "preflight.validate_parser_symbols_text(",
     "resolve_executable(",
     "validate_executable(",
-)
-
-V5_STALE_V1_CUTOVER_TOKENS = (
-    "from recipes import issue43_fast_relaxation as relaxation_recipe",
-    "except v2.FastPlasmaRelaxationError as exc:",
-    "relaxation_recipe.find_relaxation_csv(case_dir)",
-    "base_case = repo_root / v2.BASE_CASE_RELATIVE",
-    "_stage_case(base_case, case_dir, input_text)",
-    "_validate_assets(case_dir)",
-    "root = _create_root(results_root)",
-    "known_good = v2._run_known_good(",
 )
 
 ISSUE43_POLICY_TOKENS = (
@@ -102,7 +86,60 @@ def _text(path: Path) -> str:
     return path.read_text()
 
 
-def _check_sole_runtime_consumer() -> None:
+def _fixture() -> str:
+    return """[Variables]
+  [n_e]
+    type = MooseVariableFVReal
+    initial_condition = 1e16
+    block = plasma
+  []
+[]
+[Functions]
+  [phi_prescribed]
+    type = ParsedFunction
+    expression = '-0.01*x'
+  []
+[]
+[FunctorMaterials]
+  [electron_constants]
+    type = ADGenericFunctorMaterial
+    prop_names = 'mean_en p_abs T_g carrier_one'
+    prop_values = '5.73276 1.33322 600.0 1.0'
+    block = plasma
+  []
+[]
+[FVKernels]
+  [drift]
+    type = QPXFVElectrostaticDrift
+    variable = n_e
+    potential = phi_prescribed
+    mobility = electron_mobility
+    carrier = carrier_one
+    charge_number = -1
+    block = plasma
+  []
+[]
+[Postprocessors]
+  [n_min]
+    type = ADElementExtremeFunctorValue
+    functor = n_e
+    value_type = min
+    block = plasma
+  []
+[]
+[Executioner]
+  type = Transient
+  dt = 1e-8
+  end_time = 2e-8
+  compute_scaling_once = true
+[]
+[Outputs]
+  csv = true
+[]
+"""
+
+
+def _check_zero_runtime_consumers() -> None:
     tokens = (
         "from . import fast_plasma_relaxation_v2 as v2",
         "import qpx_harness.fast_plasma_relaxation_v2 as v2",
@@ -114,35 +151,21 @@ def _check_sole_runtime_consumer() -> None:
         source = _text(path)
         if any(token in source for token in tokens):
             observed.add(path.name)
-    if observed != {"fast_plasma_relaxation_v5.py"}:
-        raise AssertionError(f"v2 sole-consumer topology drift: {sorted(observed)}")
+    if observed:
+        raise AssertionError(f"v2 runtime consumers remain: {sorted(observed)}")
 
 
 def _check_v5_current_surface() -> None:
     source = _text(V5)
-    for token in V5_GENUINE_V2_RUNTIME_TOKENS:
+    for token in V5_RETIRED_V2_RUNTIME_TOKENS:
+        if token in source:
+            raise AssertionError(f"v5 retained v2 runtime surface: {token}")
+    for token in V5_CANONICAL_RUNTIME_TOKENS:
         if token not in source:
-            raise AssertionError(f"v5 genuine v2 runtime surface drift: {token}")
-    for token in V5_RETIRED_STALE_V1_TOKENS:
-        if token in source:
-            raise AssertionError(f"v5 stale-v1 surface returned: {token}")
-    for token in V5_RETIRED_GENERIC_INFRA_TOKENS:
-        if token in source:
-            raise AssertionError(f"v5 generic infrastructure reverted through v2: {token}")
+            raise AssertionError(f"v5 canonical runtime absorption drift: {token}")
     for token in V5_DIRECT_INFRA_TOKENS:
         if token not in source:
             raise AssertionError(f"v5 direct generic infrastructure drift: {token}")
-    for token in V5_STALE_V1_CUTOVER_TOKENS:
-        if token not in source:
-            raise AssertionError(f"v5 stale-v1 cutover drift: {token}")
-    for token in (
-        "def _install_v2_repairs(",
-        "def _install_v5_repairs(",
-        "v2._build_electron_300k =",
-        "v2._run_case =",
-    ):
-        if token not in source:
-            raise AssertionError(f"v5 monkey-patch compatibility surface drift: {token}")
 
 
 def _check_v5_infrastructure_behavior() -> None:
@@ -196,19 +219,69 @@ def _check_v5_infrastructure_behavior() -> None:
             raise AssertionError("v5 collision-safe run-root helper did not create directories")
 
 
-def _check_v1_alias_is_already_retired() -> None:
-    if not hasattr(v2.v1, "FastPlasmaRelaxationError"):
-        raise AssertionError("v2 error compatibility alias missing")
-    for name in (
-        "BASE_CASE_RELATIVE",
-        "_find_csv",
-        "_copy_case",
-        "_validate_assets",
-        "_create_root",
-        "_run_known_good",
+def _check_runtime_absorption_equivalence() -> None:
+    base = _fixture()
+    feedback_new = runtime43.build_feedback(
+        base,
+        dt=runtime43.DT_FEEDBACK_BASE,
+        steps=runtime43.N_STEPS,
+        radial_span=0.243,
+    )
+    feedback_old = v2._build_feedback(
+        base,
+        dt=v2.DT_FEEDBACK_BASE,
+        steps=v2.N_STEPS,
+        radial_span=0.243,
+    )
+    if feedback_new != feedback_old:
+        raise AssertionError("canonical feedback builder differs from v2 oracle")
+
+    oneway_new = runtime43.build_oneway(
+        base,
+        dt=runtime43.DT_FEEDBACK_BASE,
+        steps=runtime43.N_STEPS,
+        radial_span=0.243,
+    )
+    oneway_old = v2._build_oneway(
+        base,
+        dt=v2.DT_FEEDBACK_BASE,
+        steps=v2.N_STEPS,
+        radial_span=0.243,
+    )
+    if oneway_new != oneway_old:
+        raise AssertionError("canonical one-way builder differs from v2 oracle")
+
+    electron_new = runtime43.build_electron_300k(
+        base, dt=runtime43.DT_ELECTRON_CONTROL, steps=runtime43.N_STEPS
+    )
+    electron_old = v2._build_electron_300k(
+        base, dt=v2.DT_ELECTRON_CONTROL, steps=v2.N_STEPS
+    )
+    if electron_new != electron_old:
+        raise AssertionError("canonical electron builder differs from v2 oracle")
+
+    with tempfile.TemporaryDirectory() as tmp_name:
+        log = Path(tmp_name) / "residual.log"
+        log.write_text(
+            " 0 Nonlinear |R| = 1.0e+03\n"
+            " 1 Nonlinear |R| = 1.0e+01\n"
+            " 2 Nonlinear |R| = 2.0e+00\n"
+        )
+        current = runtime43.nonlinear_residual_summary(str(log))
+        oracle = v2._residual_summary(str(log))
+        if current != oracle:
+            raise AssertionError("canonical residual summary differs from v2 oracle")
+
+    for sample in (
+        {"class": "P3_PASS", "analysis": {"status": "PASS"}},
+        {"class": "P3_PASS", "analysis": {"status": "FAIL"}},
+        {"class": "SOLVER_CONVERGENCE_FAIL"},
     ):
-        if hasattr(v2.v1, name):
-            raise AssertionError(f"historical v1 runtime surface unexpectedly returned: {name}")
+        if runtime43.physics_pass(sample) != v2._physics_pass(sample):
+            raise AssertionError(f"canonical physics-pass differs from v2 oracle: {sample}")
+
+    if runtime43.self_test() != 0:
+        raise AssertionError("canonical Issue43 runtime self-test failed")
 
 
 def _check_destination_readiness() -> None:
@@ -222,6 +295,13 @@ def _check_destination_readiness() -> None:
         (scale_audit, "mesh_stats"),
         (scale_audit, "anchor_scales"),
         (preflight, "validate_parser_symbols_text"),
+        (runtime43, "build_electron_300k"),
+        (runtime43, "build_oneway"),
+        (runtime43, "build_feedback"),
+        (runtime43, "run_case"),
+        (runtime43, "run_known_good"),
+        (runtime43, "attach_nonlinear_residual"),
+        (runtime43, "physics_pass"),
         (recipe, "find_relaxation_csv"),
         (recipe, "build_fast_input"),
         (recipe, "classify"),
@@ -230,49 +310,19 @@ def _check_destination_readiness() -> None:
             raise AssertionError(f"canonical destination missing: {owner.__name__}.{name}")
 
 
-def _check_collision_safe_directory_primitive() -> None:
-    with tempfile.TemporaryDirectory() as tmp_name:
-        parent = Path(tmp_name) / "results"
-        stem = "issue43_probe_20260831T120000Z"
-        first = evidence.create_collision_safe_directory(parent, stem)
-        second = evidence.create_collision_safe_directory(parent, stem)
-        third = evidence.create_collision_safe_directory(parent, stem)
-        if [path.name for path in (first, second, third)] != [
-            stem,
-            f"{stem}_01",
-            f"{stem}_02",
-        ]:
-            raise AssertionError("collision-safe directory suffix contract drift")
-        if not all(path.is_dir() for path in (first, second, third)):
-            raise AssertionError("collision-safe directory primitive did not create directories")
-
-        try:
-            evidence.create_collision_safe_directory(parent, "../escape")
-        except ValueError:
-            pass
-        else:
-            raise AssertionError("collision-safe directory primitive accepted path traversal")
-
-
 def _check_scientific_policy_boundary() -> None:
     recipe_source = _text(Path(recipe.__file__))
+    runtime_source = _text(Path(runtime43.__file__))
 
     if "def classify(" not in recipe_source:
         raise AssertionError("recipe does not own Issue43 scientific classification")
     for token in ISSUE43_POLICY_TOKENS:
         if token not in recipe_source:
             raise AssertionError(f"recipe Issue43 policy class drift: {token}")
-
-    v2_classify_source = inspect.getsource(v2.classify)
-    if "return relaxation_recipe.classify(" not in v2_classify_source:
-        raise AssertionError("v2 classification is not delegated to the canonical recipe")
-    for forbidden in (
-        "_physics_pass(",
-        "DT_FEEDBACK_BASE / tau_dr",
-        "KNOWN_GOOD_ELECTRON_CONTROL_FAIL",
-    ):
-        if forbidden in v2_classify_source:
-            raise AssertionError(f"duplicate scientific policy remains in v2 classify: {forbidden}")
+    if "def classify(" in runtime_source:
+        raise AssertionError("runtime duplicated scientific classification policy")
+    if v5._RAW_CLASSIFY is not recipe.classify:
+        raise AssertionError("v5 classification is not directly bound to canonical recipe")
 
     for forbidden in (
         "fast_plasma_relaxation_v2",
@@ -282,16 +332,21 @@ def _check_scientific_policy_boundary() -> None:
     ):
         if forbidden in recipe_source:
             raise AssertionError(f"recipe reverse dependency leaked: {forbidden}")
+    for forbidden in (
+        "fast_plasma_relaxation_v2",
+        "fast_plasma_relaxation_v5",
+    ):
+        if forbidden in runtime_source:
+            raise AssertionError(f"runtime version dependency leaked: {forbidden}")
 
 
 def main() -> int:
     try:
-        _check_sole_runtime_consumer()
+        _check_zero_runtime_consumers()
         _check_v5_current_surface()
         _check_v5_infrastructure_behavior()
-        _check_v1_alias_is_already_retired()
+        _check_runtime_absorption_equivalence()
         _check_destination_readiness()
-        _check_collision_safe_directory_primitive()
         _check_scientific_policy_boundary()
     except Exception as exc:
         print(f"ISSUE48_V5_V2_ABSORPTION_SELFTEST: FAIL ({exc})")
