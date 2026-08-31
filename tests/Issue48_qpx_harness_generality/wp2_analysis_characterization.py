@@ -10,7 +10,6 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from qpx_harness import fast_plasma_coupling_diagnostic as issue43
-from qpx_harness import petsc_first_linear_diagnostic as issue45
 from qpx_harness.moose import log as moose_log
 from qpx_harness.petsc import jacobian as petsc_jacobian
 from qpx_harness.petsc import ksp as petsc_ksp
@@ -72,21 +71,34 @@ def _check_petsc_log_parsers() -> None:
 
 def _check_ksp_parsers() -> None:
     text = _diagnostic_log()
-    if petsc_ksp.parse_true_residuals(text) != issue45._parse_true_residuals(text):
+    expected_true = [
+        {
+            "iteration": 0,
+            "reported_residual": 8.0e-3,
+            "true_residual": 8.0e-3,
+            "relative_true_residual": 1.0,
+        },
+        {
+            "iteration": 30,
+            "reported_residual": 1.0e-12,
+            "true_residual": 2.0e-3,
+            "relative_true_residual": 2.5e-1,
+        },
+    ]
+    if petsc_ksp.parse_true_residuals(text) != expected_true:
         raise AssertionError("true-residual parser drift")
-    if petsc_ksp.parse_ksp_view(text) != issue45._parse_first_ksp_view(text):
+
+    expected_identity = {"ksp_type": "gmres", "restart": 30, "pc_type": "lu"}
+    if petsc_ksp.parse_ksp_view(text) != expected_identity:
         raise AssertionError("KSP-view parser drift")
-    legacy = issue45._parse_first_linear(text)
+
     parsed = petsc_log.parse_linear_solve_terminations(text)
-    if legacy is None or not parsed:
-        raise AssertionError("linear solve termination evidence missing")
-    first = parsed[0]
-    projected = {
-        "converged": first["converged"],
-        "reason": first["reason"],
-        "iterations": first["iterations"],
+    expected_first = {
+        "converged": False,
+        "reason": "DIVERGED_BREAKDOWN",
+        "iterations": 30,
     }
-    if projected != legacy:
+    if not parsed or parsed[0] != expected_first:
         raise AssertionError("first-linear termination parser drift")
 
 
