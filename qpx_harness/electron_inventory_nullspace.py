@@ -982,7 +982,7 @@ def _evaluate_runtime_case_data(
         "inventory_consistency_relative_tolerance": INVENTORY_CONSISTENCY_REL_TOL,
         "average_relative_error": avg_rel_error,
         "inventory_relative_error": inventory_rel_error,
-        "aggregate_consistency_rel_error": aggregate_consistency_rel_error,
+        "aggregate_consistency_relative_error": aggregate_consistency_rel_error,
         "observables": row,
         "final_variable_residuals": final_residuals,
         "diagnostic": diagnostic,
