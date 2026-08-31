@@ -14,12 +14,12 @@ physics interpretation.
 from __future__ import annotations
 
 import argparse
-import json
 import math
 import tempfile
 from pathlib import Path
 from typing import Any
 
+from . import artifacts
 from . import execution_contract as ec
 from . import fast_plasma_relaxation as v1
 from . import fast_plasma_relaxation_v2 as v2
@@ -290,21 +290,14 @@ def _write_contract_artifacts(
     p1: dict[str, Any],
     p3: dict[str, Any] | None,
 ) -> dict[str, str]:
-    root = measurements_root / case_id
-    root.mkdir(parents=True, exist_ok=True)
-    contract_path = root / "execution_contract.json"
-    p1_path = root / "execution_contract_p1.json"
-    contract_path.write_text(json.dumps(contract, indent=2, sort_keys=True) + "\n")
-    p1_path.write_text(json.dumps(p1, indent=2, sort_keys=True) + "\n")
-    paths = {
-        "contract": str(contract_path),
-        "p1": str(p1_path),
+    """Compatibility wrapper over the generic JSON artifact writer."""
+    payloads: dict[str, tuple[str, object]] = {
+        "contract": ("execution_contract.json", contract),
+        "p1": ("execution_contract_p1.json", p1),
     }
     if p3 is not None:
-        p3_path = root / "execution_contract_p3.json"
-        p3_path.write_text(json.dumps(p3, indent=2, sort_keys=True) + "\n")
-        paths["p3"] = str(p3_path)
-    return paths
+        payloads["p3"] = ("execution_contract_p3.json", p3)
+    return artifacts.write_json_bundle(measurements_root / case_id, payloads)
 
 
 def _run_case_safe(**kwargs: Any) -> dict[str, Any]:
