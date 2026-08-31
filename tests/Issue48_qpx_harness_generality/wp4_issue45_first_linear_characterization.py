@@ -2,6 +2,7 @@
 """P0 characterization for Issue45 first-linear recipe migration."""
 from __future__ import annotations
 
+import math
 import sys
 from pathlib import Path
 
@@ -14,8 +15,24 @@ from qpx_harness import petsc_first_linear_diagnostic as legacy
 from recipes import issue45_first_linear as recipe
 
 
+def _equivalent(new: object, old: object) -> bool:
+    if isinstance(new, float) and isinstance(old, float):
+        if math.isnan(new) and math.isnan(old):
+            return True
+        return new == old
+    if isinstance(new, dict) and isinstance(old, dict):
+        return new.keys() == old.keys() and all(
+            _equivalent(new[key], old[key]) for key in new
+        )
+    if isinstance(new, (list, tuple)) and isinstance(old, (list, tuple)):
+        return len(new) == len(old) and all(
+            _equivalent(left, right) for left, right in zip(new, old)
+        )
+    return new == old
+
+
 def _assert_equal(label: str, new: object, old: object) -> None:
-    if new != old:
+    if not _equivalent(new, old):
         raise AssertionError(f"{label} drift:\nnew={new!r}\nold={old!r}")
 
 
