@@ -17,12 +17,12 @@ CLI = ROOT / "scripts" / "qpx.py"
 
 EXPECTED_LEGACY_PRODUCTION_CONSUMERS = {
     "qpx_harness/electron_inventory_nullspace.py",
-    "qpx_harness/fast_plasma_coupling_diagnostic.py",
 }
 EXPECTED_LEGACY_TEST_CONSUMERS = {
     "tests/Issue48_qpx_harness_generality/wp17_v5_v2_absorption_characterization.py",
 }
 EXPECTED_SEMANTIC_PRODUCTION_CONSUMERS = {
+    "qpx_harness/fast_plasma_coupling_diagnostic.py",
     "scripts/qpx.py",
 }
 EXPECTED_SEMANTIC_TEST_CONSUMERS: set[str] = set()
@@ -92,7 +92,7 @@ def _consumer_sets(module_name: str) -> tuple[set[str], set[str]]:
 
 def _check_dual_owner_topology() -> None:
     if not LEGACY.is_file():
-        raise AssertionError("legacy v5 owner missing before internal-consumer cutover")
+        raise AssertionError("legacy v5 owner missing before remaining-consumer cutover")
     if not SEMANTIC.is_file():
         raise AssertionError("semantic Issue43 owner missing after dual-owner creation")
 
@@ -156,6 +156,8 @@ def _check_consumer_contracts() -> None:
     diagnostic = (ROOT / "qpx_harness" / "fast_plasma_coupling_diagnostic.py").read_text()
     cli = CLI.read_text()
 
+    if "from . import fast_plasma_relaxation_v5 as v5" not in inventory:
+        raise AssertionError("inventory moved off legacy v5 before its bounded cutover")
     for token in (
         "v5._build_feedback_v5(",
         "v5._classify_p2_failure(",
@@ -163,6 +165,10 @@ def _check_consumer_contracts() -> None:
         if token not in inventory:
             raise AssertionError(f"inventory v5 contract drift: {token}")
 
+    if "from . import issue43_fast_relaxation as v5" not in diagnostic:
+        raise AssertionError("coupling diagnostic is not bound to semantic Issue43 owner")
+    if "from . import fast_plasma_relaxation_v5 as v5" in diagnostic:
+        raise AssertionError("coupling diagnostic still imports legacy v5 owner")
     for token in (
         "v5._build_feedback_v5(",
         "v5._augment_execution_contract(",
@@ -170,7 +176,7 @@ def _check_consumer_contracts() -> None:
         "v5._solver_trajectory(",
     ):
         if token not in diagnostic:
-            raise AssertionError(f"coupling diagnostic v5 contract drift: {token}")
+            raise AssertionError(f"coupling diagnostic semantic-owner contract drift: {token}")
 
     semantic_cli = (
         "from qpx_harness.issue43_fast_relaxation import main as "
