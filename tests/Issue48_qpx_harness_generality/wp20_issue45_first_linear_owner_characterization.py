@@ -25,8 +25,6 @@ CLI = ROOT / "scripts" / "qpx.py"
 LEGACY_MODULE = "qpx_harness.petsc_first_linear_diagnostic"
 
 EXPECTED_PRODUCTION_CONSUMERS = {
-    "qpx_harness/augmented_jacobian_localization.py",
-    "qpx_harness/jacobian_fd_reference_audit.py",
     "scripts/qpx.py",
 }
 EXPECTED_TEST_CONSUMERS = {
@@ -50,12 +48,20 @@ RECIPE_POLICY_SURFACE = (
     "def instrument_first_linear(",
     "def analyze_first_linear_text(",
 )
-ISSUE46_LEGACY_DEPENDENCIES = (
+ISSUE46_CANONICAL_DEPENDENCIES = (
+    "first_linear_policy.JACOBIAN_REL_TOL",
+    "first_linear_policy.instrument_first_linear(",
+    "petsc_options.get_flags(",
+)
+ISSUE46_CANONICAL_IMPORTS = (
+    "from recipes import issue45_first_linear as first_linear_policy",
+    "from .petsc import options as petsc_options",
+)
+ISSUE46_FORBIDDEN_LEGACY_DEPENDENCIES = (
+    "from . import petsc_first_linear_diagnostic as first_linear",
     "first_linear.JACOBIAN_REL_TOL",
     "first_linear.instrument_first_linear(",
     "first_linear._petsc_options(",
-)
-ISSUE46_FORBIDDEN_RUNTIME_DEPENDENCIES = (
     "first_linear.analyze_first_linear_text(",
     "first_linear.run_preflight(",
     "first_linear.run_diagnostic(",
@@ -244,23 +250,26 @@ def _check_production_contracts() -> None:
     cli = CLI.read_text()
 
     for path, source in ((AUGMENTED, augmented), (FD_AUDIT, fd_audit)):
-        if "from . import petsc_first_linear_diagnostic as first_linear" not in source:
-            raise AssertionError(f"unexpected first-linear import shape: {path}")
-        missing = [token for token in ISSUE46_LEGACY_DEPENDENCIES if token not in source]
+        missing_imports = [token for token in ISSUE46_CANONICAL_IMPORTS if token not in source]
+        if missing_imports:
+            raise AssertionError(
+                f"Issue46 canonical import surface drift: {path}: missing={missing_imports}"
+            )
+        missing = [token for token in ISSUE46_CANONICAL_DEPENDENCIES if token not in source]
         if missing:
             raise AssertionError(
-                f"Issue46 legacy dependency surface drift: {path}: missing={missing}"
+                f"Issue46 canonical dependency surface drift: {path}: missing={missing}"
             )
-        leaked_runtime = [
-            token for token in ISSUE46_FORBIDDEN_RUNTIME_DEPENDENCIES if token in source
+        leaked_legacy = [
+            token for token in ISSUE46_FORBIDDEN_LEGACY_DEPENDENCIES if token in source
         ]
-        if leaked_runtime:
+        if leaked_legacy:
             raise AssertionError(
-                f"Issue46 consumer depends on first-linear runtime orchestration: "
-                f"{path}: {leaked_runtime}"
+                f"Issue46 consumer still depends on legacy first-linear owner: "
+                f"{path}: {leaked_legacy}"
             )
 
-    # Every current Issue46 dependency has a pre-existing canonical destination.
+    # Every migrated Issue46 dependency remains equivalent to the historical owner.
     legacy = _legacy()
     if recipe.JACOBIAN_REL_TOL != legacy.JACOBIAN_REL_TOL:
         raise AssertionError("canonical recipe Jacobian tolerance drifted from legacy owner")
