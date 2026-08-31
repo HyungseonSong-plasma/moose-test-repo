@@ -287,7 +287,7 @@ def _check_production_cutover() -> None:
     for required in (
         "from recipes import issue31_coupling as recipe",
         "validate_referenced_files",
-        "recipe.transport_only_input",
+        "recipe.configured_transport_input",
         "recipe.physics_check",
         "recipe.SPECIES",
     ):
