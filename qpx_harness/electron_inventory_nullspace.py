@@ -12,9 +12,11 @@ import csv
 import json
 import math
 import re
+import tempfile
 from pathlib import Path
 from typing import Any
 
+from . import cases as case_ops
 from . import evidence
 from . import fast_plasma_coupling_diagnostic as coupling_diag
 from . import fast_plasma_relaxation_v2 as v2
@@ -22,6 +24,7 @@ from . import fast_plasma_relaxation_v5 as v5
 from .moose_input import MooseInput, MooseInputError
 from .preflight import validate_parser_symbols_text
 from .runtime import run_command, run_qpx
+from .scale_audit import mesh_stats
 
 
 ISSUE = 45
@@ -37,6 +40,15 @@ C1_TARGET = 1.01e16
 CLOSURE_TARGET_REL_TOL = 1.0e-6
 CLOSURE_DELTA_REL_TOL = 5.0e-4
 INVENTORY_CONSISTENCY_REL_TOL = 1.0e-8
+BASE_CASE_RELATIVE = coupling_diag.BASE_CASE_RELATIVE
+_RUNTIME_PURGE_DIRECTORY_NAMES = (".jitcache",)
+_RUNTIME_PURGE_PATTERNS = (
+    "input_out*",
+    "r43_csv*",
+    "perfgraph*",
+    "petsc_log*",
+    "metrics*",
+)
 
 REQUIRED_FVFLUX_SCHEMA_PARAMETERS = (
     "boundaries_to_avoid",
@@ -92,6 +104,21 @@ RUNTIME_COLUMNS = (
 
 class ElectronInventoryNullspaceError(RuntimeError):
     pass
+
+
+def _stage_case(source: Path, target: Path, input_text: str) -> list[str]:
+    try:
+        case_ops.stage_case(
+            source,
+            target,
+            input_text=input_text,
+            purge_directory_names=_RUNTIME_PURGE_DIRECTORY_NAMES,
+            purge_patterns=_RUNTIME_PURGE_PATTERNS,
+        )
+        refs = case_ops.validate_case_references(target)
+    except case_ops.CaseError as exc:
+        raise ElectronInventoryNullspaceError(f"case staging failed: {exc}") from exc
+    return [ref["resolved"] for ref in refs]
 
 
 def _unquote(value: str | None) -> str | None:
@@ -1186,6 +1213,29 @@ def self_test() -> int:
             row=_synthetic_runtime_row(C0_TARGET),
         )["class"] != "CLOSURE_EVIDENCE_INSUFFICIENT":
             raise AssertionError("missing residual evidence was over-classified")
+
+        with tempfile.TemporaryDirectory() as tmp_name:
+            root = Path(tmp_name)
+            source = root / "source"
+            source.mkdir()
+            (source / "input.i").write_text("table_file = asset.dat\n")
+            (source / "asset.dat").write_text("asset\n")
+            (source / "input_out.csv").write_text("stale\n")
+            (source / ".jitcache").mkdir()
+            target = root / "target"
+            refs = _stage_case(source, target, "table_file = asset.dat\n")
+            expected_asset = str((target / "asset.dat").resolve())
+            if refs != [expected_asset]:
+                raise AssertionError("canonical case-reference path schema changed")
+            if (target / "input_out.csv").exists() or (target / ".jitcache").exists():
+                raise AssertionError("canonical case staging retained stale runtime artifacts")
+            (target / "asset.dat").unlink()
+            try:
+                case_ops.validate_case_references(target)
+            except case_ops.CaseError:
+                pass
+            else:
+                raise AssertionError("missing staged asset negative control was accepted")
     except Exception as exc:
         print(f"ISSUE45_INVENTORY_NULLSPACE_SELFTEST: FAIL ({exc})")
         print(f"ISSUE45_INVENTORY_CLOSURE_RUNTIME_SELFTEST: FAIL ({exc})")
@@ -1197,10 +1247,10 @@ def self_test() -> int:
 
 def _base_case_context() -> tuple[Path, str, float]:
     repo_root = Path(__file__).resolve().parents[1]
-    base_case = repo_root / v2.v1.BASE_CASE_RELATIVE
+    base_case = repo_root / BASE_CASE_RELATIVE
     if not base_case.is_dir():
         raise ElectronInventoryNullspaceError(f"missing accepted electron control: {base_case}")
-    mesh = v2.mesh_stats(base_case / "qvt.msh")
+    mesh = mesh_stats(base_case / "qvt.msh")
     radial_span = float(mesh["bbox_span_m"]["x"])
     return base_case, (base_case / "input.i").read_text(), radial_span
 
@@ -1229,8 +1279,7 @@ def _prepare_case(*, exe: Path, results_root: str | None) -> dict[str, Any]:
         exe=exe, results_root=results_root, stem="issue45_inventory_nullspace"
     )
     case_dir = root / "case"
-    v2.v1._copy_case(base_case, case_dir, text)
-    v2.v1._validate_assets(case_dir)
+    _stage_case(base_case, case_dir, text)
     return {
         "root": root,
         "case_dir": case_dir,
@@ -1253,8 +1302,7 @@ def _prepare_closure_case(
         exe=exe, results_root=results_root, stem="issue45_inventory_closure"
     )
     case_dir = root / "case"
-    v2.v1._copy_case(base_case, case_dir, text)
-    v2.v1._validate_assets(case_dir)
+    _stage_case(base_case, case_dir, text)
     return {
         "root": root,
         "case_dir": case_dir,
@@ -1283,8 +1331,7 @@ def _prepare_closure_runtime_cases(
         )
         p1 = audit_constrained_quasisteady_structure(text, expected_macro_avg=target)
         case_dir = root / "cases" / label
-        v2.v1._copy_case(base_case, case_dir, text)
-        v2.v1._validate_assets(case_dir)
+        _stage_case(base_case, case_dir, text)
         cases[label] = {
             "target": target,
             "text": text,
