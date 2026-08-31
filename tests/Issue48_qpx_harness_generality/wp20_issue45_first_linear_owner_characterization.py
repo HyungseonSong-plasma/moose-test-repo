@@ -24,9 +24,7 @@ FD_AUDIT = ROOT / "qpx_harness" / "jacobian_fd_reference_audit.py"
 CLI = ROOT / "scripts" / "qpx.py"
 LEGACY_MODULE = "qpx_harness.petsc_first_linear_diagnostic"
 
-EXPECTED_PRODUCTION_CONSUMERS = {
-    "scripts/qpx.py",
-}
+EXPECTED_PRODUCTION_CONSUMERS: set[str] = set()
 EXPECTED_TEST_CONSUMERS = {
     "tests/Issue47_fd_reference_refactor_characterization/self_test.py",
     "tests/Issue48_qpx_harness_generality/self_test.py",
@@ -269,7 +267,6 @@ def _check_production_contracts() -> None:
                 f"{path}: {leaked_legacy}"
             )
 
-    # Every migrated Issue46 dependency remains equivalent to the historical owner.
     legacy = _legacy()
     if recipe.JACOBIAN_REL_TOL != legacy.JACOBIAN_REL_TOL:
         raise AssertionError("canonical recipe Jacobian tolerance drifted from legacy owner")
@@ -279,11 +276,13 @@ def _check_production_contracts() -> None:
         raise AssertionError("canonical generic PETSc flag reader is unavailable")
 
     cli_import = (
-        "from qpx_harness.petsc_first_linear_diagnostic import main as "
+        "from qpx_harness.issue45_first_linear import main as "
         "first_linear_main, self_test as first_linear_self_test"
     )
     if cli_import not in cli:
-        raise AssertionError("stable inventory-first-linear CLI import shape drifted")
+        raise AssertionError("stable inventory-first-linear CLI is not bound to semantic owner")
+    if "from qpx_harness.petsc_first_linear_diagnostic import" in cli:
+        raise AssertionError("stable inventory-first-linear CLI still imports legacy owner")
     if '"inventory-first-linear":' not in cli:
         raise AssertionError("stable inventory-first-linear command missing")
 
