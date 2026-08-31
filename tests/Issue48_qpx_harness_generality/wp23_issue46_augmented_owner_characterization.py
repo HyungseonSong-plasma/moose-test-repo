@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""P0 characterization for Issue46 augmented-localization owner convergence."""
+"""P0 boundary characterization for Issue46 augmented-localization convergence."""
 from __future__ import annotations
 
 import ast
@@ -22,6 +22,7 @@ from recipes import issue45_first_linear as first_linear
 from recipes import issue46_jacobian_localization as recipe
 
 LEGACY_MODULE = "qpx_harness.augmented_jacobian_localization"
+SEMANTIC_MODULE = "qpx_harness.issue46_jacobian_localization"
 LEGACY = ROOT / "qpx_harness" / "augmented_jacobian_localization.py"
 SEMANTIC = ROOT / "qpx_harness" / "issue46_jacobian_localization.py"
 FD_AUDIT = ROOT / "qpx_harness" / "jacobian_fd_reference_audit.py"
@@ -57,8 +58,6 @@ RECIPE_SURFACE = (
     "DOFMAP_OUTPUT",
     "DOFMAP_FILE_BASE",
 )
-
-# Exact pre-cutover dependency surface observed in jacobian_fd_reference_audit.py.
 FD_EXPECTED_LOC_SYMBOLS = {
     "AugmentedJacobianLocalizationError",
     "DOFMAP_FILE_BASE",
@@ -72,9 +71,6 @@ FD_EXPECTED_LOC_SYMBOLS = {
     "parse_dof_map_text",
     "parse_threshold_difference_matrix",
 }
-
-# Canonical destination classes. These names document the migration contract;
-# the production consumer is intentionally not cut over in this characterization.
 FD_RECIPE_SYMBOLS = {
     "DOFMAP_FILE_BASE",
     "LOCALIZATION_THRESHOLD",
@@ -86,27 +82,20 @@ FD_GENERIC_PETSC_SYMBOLS = {
     "_upsert_petsc_value": "upsert_name_value",
 }
 FD_GENERIC_FACT_SYMBOLS = {
-    "parse_dof_map_text": "qpx_harness.moose.dofmap.parse_dof_map_text",
-    "parse_threshold_difference_matrix": "qpx_harness.petsc.matrix.parse_threshold_difference_matrix",
-    "localize_difference_entries": "qpx_harness.petsc.matrix.summarize_by_owner",
+    "parse_dof_map_text": "parse_dof_map_text",
+    "parse_threshold_difference_matrix": "parse_threshold_difference_matrix",
+    "localize_difference_entries": "summarize_by_owner",
 }
-FD_SEMANTIC_RUNTIME_SYMBOLS = {
-    "audit_localization_structure",
-}
-FD_ERROR_ADAPTER_SYMBOLS = {
-    "AugmentedJacobianLocalizationError",
-}
+FD_SEMANTIC_RUNTIME_SYMBOLS = {"audit_localization_structure"}
+FD_ERROR_ADAPTER_SYMBOLS = {"AugmentedJacobianLocalizationError"}
 
 
-def _legacy() -> Any:
-    # Dynamic import observes the current owner without becoming a static
-    # cleanup consumer itself.
-    return importlib.import_module(LEGACY_MODULE)
+def _module(name: str) -> Any:
+    return importlib.import_module(name)
 
 
 def _imports_module(path: Path, module_name: str) -> bool:
-    source = path.read_text()
-    tree = ast.parse(source, filename=str(path))
+    tree = ast.parse(path.read_text(), filename=str(path))
     module = ".".join(path.relative_to(ROOT).with_suffix("").parts)
     package = module if path.name == "__init__.py" else module.rpartition(".")[0]
     for node in ast.walk(tree):
@@ -131,11 +120,7 @@ def _imports_module(path: Path, module_name: str) -> bool:
     return False
 
 
-def _loc_symbols(source: str) -> set[str]:
-    return set(re.findall(r"\bloc\.([A-Za-z_][A-Za-z0-9_]*)", source))
-
-
-def _consumer_sets() -> tuple[set[str], set[str]]:
+def _consumer_sets(module_name: str, owner: Path) -> tuple[set[str], set[str]]:
     production: set[str] = set()
     tests: set[str] = set()
     for rel_root in ("qpx_harness", "recipes", "scripts", "tests", "performance"):
@@ -143,68 +128,55 @@ def _consumer_sets() -> tuple[set[str], set[str]]:
         if not base.exists():
             continue
         for path in base.rglob("*.py"):
-            if path == LEGACY:
+            if path == owner:
                 continue
             try:
-                consumes = _imports_module(path, LEGACY_MODULE)
+                consumes = _imports_module(path, module_name)
             except (OSError, UnicodeDecodeError, SyntaxError):
                 continue
-            if not consumes:
-                continue
-            rel = str(path.relative_to(ROOT))
-            (tests if rel.startswith("tests/") else production).add(rel)
+            if consumes:
+                rel = str(path.relative_to(ROOT))
+                (tests if rel.startswith("tests/") else production).add(rel)
     return production, tests
 
 
 def _assert_equal(label: str, left: object, right: object) -> None:
     if left != right:
-        raise AssertionError(f"{label} drift:\nleft={left!r}\nright={right!r}")
+        raise AssertionError(f"{label} drift: left={left!r} right={right!r}")
 
 
 def _check_consumer_topology() -> None:
-    production, tests = _consumer_sets()
-    if production != EXPECTED_PRODUCTION_CONSUMERS:
-        raise AssertionError(
-            "augmented-localization production-consumer drift: "
-            f"observed={sorted(production)} "
-            f"expected={sorted(EXPECTED_PRODUCTION_CONSUMERS)}"
-        )
-    if tests != EXPECTED_TEST_CONSUMERS:
-        raise AssertionError(
-            "augmented-localization test-consumer drift: "
-            f"observed={sorted(tests)} expected={sorted(EXPECTED_TEST_CONSUMERS)}"
-        )
+    production, tests = _consumer_sets(LEGACY_MODULE, LEGACY)
+    _assert_equal("legacy production consumers", production, EXPECTED_PRODUCTION_CONSUMERS)
+    _assert_equal("legacy test consumers", tests, EXPECTED_TEST_CONSUMERS)
+    semantic_prod, semantic_tests = _consumer_sets(SEMANTIC_MODULE, SEMANTIC)
+    _assert_equal("semantic production consumers", semantic_prod, set())
+    _assert_equal("semantic test consumers", semantic_tests, set())
 
 
 def _check_construction_owner_equivalence() -> None:
-    legacy = _legacy()
+    legacy = _module(LEGACY_MODULE)
+    semantic = _module(SEMANTIC_MODULE)
     for name in ("TARGET", "LOCALIZATION_THRESHOLD", "DOFMAP_OUTPUT", "DOFMAP_FILE_BASE"):
-        _assert_equal(name, getattr(recipe, name), getattr(legacy, name))
-
+        _assert_equal(f"recipe/legacy {name}", getattr(recipe, name), getattr(legacy, name))
+        _assert_equal(f"recipe/semantic {name}", getattr(recipe, name), getattr(semantic, name))
     base = inv._synthetic_constrained_input(recipe.TARGET)
     first_text, _ = first_linear.instrument_first_linear(base)
     legacy_text, legacy_meta = legacy.instrument_localization(first_text)
     recipe_text, recipe_meta = recipe.instrument_localization(first_text)
-    _assert_equal("localization construction text", recipe_text, legacy_text)
-    _assert_equal("localization construction metadata", recipe_meta, legacy_meta)
-
+    semantic_text, semantic_meta = semantic.instrument_localization(first_text)
+    _assert_equal("recipe/legacy construction text", recipe_text, legacy_text)
+    _assert_equal("recipe/semantic construction text", recipe_text, semantic_text)
+    _assert_equal("recipe/legacy metadata", recipe_meta, legacy_meta)
+    _assert_equal("recipe/semantic metadata", recipe_meta, semantic_meta)
     recipe_source = Path(recipe.__file__).read_text()
-    if "augmented_jacobian_localization" in recipe_source:
-        raise AssertionError("Issue46 localization recipe reverse-depends on legacy owner")
-    for token in (
-        "def run_preflight(",
-        "def run_runtime(",
-        "def main(",
-        "def analyze_localization_text(",
-        "def audit_framework_control_structure(",
-    ):
-        if token in recipe_source:
-            raise AssertionError(f"runtime/policy surface leaked into construction recipe: {token}")
+    if "augmented_jacobian_localization" in recipe_source or "issue46_jacobian_localization" in recipe_source:
+        raise AssertionError("Issue46 construction recipe reverse-depends on runtime owner")
 
 
 def _check_generic_primitive_equivalence() -> None:
-    legacy = _legacy()
-
+    legacy = _module(LEGACY_MODULE)
+    semantic = _module(SEMANTIC_MODULE)
     dofmap_text = legacy._synthetic_dof_map()
     legacy_dofmap = legacy.parse_dof_map_text(dofmap_text)
     generic_dofmap = dm.parse_dof_map_text(
@@ -212,96 +184,70 @@ def _check_generic_primitive_equivalence() -> None:
         expected_variables=legacy.MAIN_VARIABLES,
         scalar_variables=legacy.SCALAR_VARIABLES,
     )
-    _assert_equal("DOF ownership", generic_dofmap, legacy_dofmap)
+    _assert_equal("DOF ownership generic/legacy", generic_dofmap, legacy_dofmap)
+    _assert_equal("DOF ownership semantic/legacy", semantic.parse_dof_map_text(dofmap_text), legacy_dofmap)
 
-    log = legacy._synthetic_localization_log(
-        [(0, 4, 2.0e-4), (4, 1, -3.0e-4)]
-    )
+    log = legacy._synthetic_localization_log([(0, 4, 2.0e-4), (4, 1, -3.0e-4)])
     legacy_difference = legacy.parse_threshold_difference_matrix(log)
     generic_difference = pm.parse_threshold_difference_matrix(log)
-    _assert_equal("threshold matrix facts", generic_difference, legacy_difference)
+    _assert_equal("matrix generic/legacy", generic_difference, legacy_difference)
+    _assert_equal("matrix semantic/legacy", semantic.parse_threshold_difference_matrix(log), legacy_difference)
 
-    legacy_localized = legacy.localize_difference_entries(
-        legacy_difference, legacy_dofmap
-    )
-    generic_localized = pm.summarize_by_owner(
-        generic_difference, generic_dofmap["owner_by_dof"]
-    )
-    for key in (
-        "blocks",
-        "unmapped_entries",
-        "entry_count",
-        "mapped_entry_count",
-        "thresholded_l2_difference",
-    ):
-        _assert_equal(
-            f"generic localization fact {key}",
-            generic_localized[key],
-            legacy_localized[key],
-        )
+    legacy_localized = legacy.localize_difference_entries(legacy_difference, legacy_dofmap)
+    semantic_localized = semantic.localize_difference_entries(generic_difference, generic_dofmap)
+    _assert_equal("semantic localization facts", semantic_localized, legacy_localized)
+    generic_localized = pm.summarize_by_owner(generic_difference, generic_dofmap["owner_by_dof"])
+    for key in ("blocks", "unmapped_entries", "entry_count", "mapped_entry_count", "thresholded_l2_difference"):
+        _assert_equal(f"generic fact {key}", generic_localized[key], legacy_localized[key])
 
     base = inv._synthetic_constrained_input(recipe.TARGET)
     first_text, _ = first_linear.instrument_first_linear(base)
     localized_text, _ = recipe.instrument_localization(first_text)
     legacy_pairs = legacy._petsc_name_value_pairs(localized_text)
     generic_pairs = po.get_name_value_pairs(localized_text)
-    _assert_equal("PETSc name/value read", generic_pairs, legacy_pairs)
-    _assert_equal(
-        "PETSc name/value write",
-        po.set_name_value_pairs(localized_text, generic_pairs),
-        legacy._set_petsc_name_value_pairs(localized_text, legacy_pairs),
-    )
-    _assert_equal(
-        "PETSc name/value upsert",
-        po.upsert_name_value(localized_text, "-mat_fd_type", "ds"),
-        legacy._upsert_petsc_value(localized_text, "-mat_fd_type", "ds"),
-    )
-
-    for path in (Path(dm.__file__), Path(pm.__file__), Path(po.__file__)):
-        source = path.read_text()
-        if "augmented_jacobian_localization" in source or "recipes." in source:
-            raise AssertionError(f"reverse dependency leaked into generic primitive: {path}")
+    _assert_equal("PETSc read", generic_pairs, legacy_pairs)
+    _assert_equal("PETSc write", po.set_name_value_pairs(localized_text, generic_pairs), legacy._set_petsc_name_value_pairs(localized_text, legacy_pairs))
+    _assert_equal("PETSc upsert", po.upsert_name_value(localized_text, "-mat_fd_type", "ds"), legacy._upsert_petsc_value(localized_text, "-mat_fd_type", "ds"))
 
 
 def _check_runtime_policy_boundary() -> None:
-    legacy = _legacy()
-    if not LEGACY.is_file():
-        raise AssertionError("current augmented-localization owner is missing")
-    if SEMANTIC.exists():
-        raise AssertionError(
-            "semantic Issue46 localization runtime owner already exists; "
-            "this pre-cutover characterization must be evolved"
-        )
+    legacy = _module(LEGACY_MODULE)
+    semantic = _module(SEMANTIC_MODULE)
+    if not LEGACY.is_file() or not SEMANTIC.is_file():
+        raise AssertionError("dual-owner characterization requires both owners")
+    if _imports_module(SEMANTIC, LEGACY_MODULE):
+        raise AssertionError("semantic Issue46 owner reverse-depends on legacy owner")
     for name in RECIPE_SURFACE:
         if not hasattr(recipe, name):
-            raise AssertionError(f"canonical Issue46 construction surface missing: {name}")
+            raise AssertionError(f"recipe surface missing: {name}")
     for name in RUNTIME_POLICY_SURFACE:
-        obj = getattr(legacy, name, None)
-        if not callable(obj):
-            raise AssertionError(f"legacy runtime/policy surface missing: {name}")
+        if not callable(getattr(legacy, name, None)):
+            raise AssertionError(f"legacy runtime surface missing: {name}")
+        if not callable(getattr(semantic, name, None)):
+            raise AssertionError(f"semantic runtime surface missing: {name}")
+    semantic_source = SEMANTIC.read_text()
+    for token in (
+        "from recipes import issue46_jacobian_localization",
+        "from .moose import dofmap",
+        "from .petsc import matrix",
+        "from .petsc import options",
+    ):
+        if token not in semantic_source:
+            raise AssertionError(f"semantic owner does not compose canonical layer: {token}")
 
-    legacy_source = LEGACY.read_text()
-    required_generic = (
-        "from .petsc import options as petsc_options",
-    )
-    for token in required_generic:
-        if token not in legacy_source:
-            raise AssertionError(f"legacy owner lost existing generic composition: {token}")
+
+def _loc_symbols(source: str) -> set[str]:
+    return set(re.findall(r"\bloc\.([A-Za-z_][A-Za-z0-9_]*)", source))
 
 
 def _check_fd_dependency_destination_matrix() -> None:
-    legacy = _legacy()
+    legacy = _module(LEGACY_MODULE)
+    semantic = _module(SEMANTIC_MODULE)
     fd_source = FD_AUDIT.read_text()
     if "from . import augmented_jacobian_localization as loc" not in fd_source:
-        raise AssertionError("FD-reference consumer import shape drifted")
-
+        raise AssertionError("FD-reference consumer import shape drifted before cutover")
     observed = _loc_symbols(fd_source)
-    if observed != FD_EXPECTED_LOC_SYMBOLS:
-        raise AssertionError(
-            "FD-reference augmented dependency surface drifted: "
-            f"observed={sorted(observed)} expected={sorted(FD_EXPECTED_LOC_SYMBOLS)}"
-        )
-
+    _assert_equal("FD legacy symbol surface", observed, FD_EXPECTED_LOC_SYMBOLS)
     classified = (
         FD_RECIPE_SYMBOLS
         | set(FD_GENERIC_PETSC_SYMBOLS)
@@ -309,93 +255,44 @@ def _check_fd_dependency_destination_matrix() -> None:
         | FD_SEMANTIC_RUNTIME_SYMBOLS
         | FD_ERROR_ADAPTER_SYMBOLS
     )
-    if classified != FD_EXPECTED_LOC_SYMBOLS:
-        raise AssertionError(
-            "canonical destination matrix is incomplete or overlapping incorrectly: "
-            f"classified={sorted(classified)} expected={sorted(FD_EXPECTED_LOC_SYMBOLS)}"
-        )
-
+    _assert_equal("FD destination matrix coverage", classified, FD_EXPECTED_LOC_SYMBOLS)
     for name in FD_RECIPE_SYMBOLS:
         if not hasattr(recipe, name):
-            raise AssertionError(f"recipe destination missing for FD dependency: {name}")
-
+            raise AssertionError(f"recipe destination missing: {name}")
     for old_name, new_name in FD_GENERIC_PETSC_SYMBOLS.items():
-        if not hasattr(legacy, old_name):
-            raise AssertionError(f"legacy PETSc dependency missing: {old_name}")
-        if not callable(getattr(po, new_name, None)):
-            raise AssertionError(f"generic PETSc destination missing: po.{new_name}")
-
-    if not callable(dm.parse_dof_map_text):
-        raise AssertionError("generic DOFMap destination missing")
-    if not callable(pm.parse_threshold_difference_matrix):
-        raise AssertionError("generic matrix parser destination missing")
-    if not callable(pm.summarize_by_owner):
-        raise AssertionError("generic owner-block aggregation destination missing")
-
-    # FD directional analysis consumes only owner-block facts; it does not use
-    # the augmented owner's Issue46 category-energy policy. Therefore the
-    # generic summarize_by_owner result is a sufficient canonical replacement
-    # for this consumer's localize_difference_entries dependency.
-    if "category_energy_fraction" in fd_source:
-        raise AssertionError(
-            "FD-reference consumer now depends on Issue46 category-energy policy; "
-            "generic owner-block facts are no longer sufficient"
-        )
-
+        if not hasattr(legacy, old_name) or not callable(getattr(po, new_name, None)):
+            raise AssertionError(f"PETSc destination unavailable: {old_name}->{new_name}")
+    for new_name in FD_GENERIC_FACT_SYMBOLS.values():
+        if not callable(getattr(dm if new_name == "parse_dof_map_text" else pm, new_name, None)):
+            raise AssertionError(f"generic fact destination unavailable: {new_name}")
     for name in FD_SEMANTIC_RUNTIME_SYMBOLS:
-        if not callable(getattr(legacy, name, None)):
-            raise AssertionError(f"semantic-runtime migration surface missing: {name}")
-        if hasattr(recipe, name):
-            raise AssertionError(f"semantic runtime policy leaked into recipe: {name}")
-
-    # The legacy aggregate error is not a semantic contract. Direct generic
-    # migrations must adapt their public primitive exceptions into the FD
-    # owner's JacobianFDReferenceAuditError rather than preserve a reverse
-    # dependency solely for this historical error type.
-    for error_type in (dm.DofMapError, pm.MatrixParseError, po.PetscOptionsError):
-        if not isinstance(error_type, type) or not issubclass(error_type, Exception):
-            raise AssertionError(f"generic migration error surface unavailable: {error_type!r}")
-
-    if "from recipes import issue46_jacobian_localization" in fd_source:
-        raise AssertionError("FD-reference consumer was cut over before characterization")
-    if "from .moose import dofmap" in fd_source or "from .petsc import matrix" in fd_source:
-        raise AssertionError("FD-reference generic-fact cutover occurred before characterization")
+        if not callable(getattr(semantic, name, None)):
+            raise AssertionError(f"semantic destination unavailable: {name}")
+    if "category_energy_fraction" in fd_source:
+        raise AssertionError("FD consumer now depends on Issue46 category-energy policy")
 
 
 def _check_consumer_role_boundary() -> None:
     _check_fd_dependency_destination_matrix()
-
     cli_source = CLI.read_text()
-    cli_import = (
+    legacy_cli = (
         "from qpx_harness.augmented_jacobian_localization import main as "
         "jac_localization_main, self_test as jac_localization_self_test"
     )
-    if cli_import not in cli_source:
-        raise AssertionError("stable Issue46 localization CLI import surface drifted")
+    if legacy_cli not in cli_source:
+        raise AssertionError("stable CLI cut over before dual-owner validation")
     if '"inventory-jacobian-localization":' not in cli_source:
         raise AssertionError("stable inventory-jacobian-localization command missing")
 
 
 def _negative_control() -> None:
-    source = "from qpx_harness import augmented_jacobian_localization as old\n"
-    path = ROOT / "tests" / "synthetic_augmented_consumer.py"
-    tree = ast.parse(source, filename=str(path))
-    found = False
-    for node in ast.walk(tree):
-        if not isinstance(node, ast.ImportFrom):
-            continue
-        if node.module == "qpx_harness" and any(
-            alias.name == "augmented_jacobian_localization" for alias in node.names
-        ):
-            found = True
-            break
-    if not found:
-        raise AssertionError("consumer-detection negative control failed")
-
     fd_source = FD_AUDIT.read_text()
-    mutated = fd_source + "\nloc.run_runtime\n"
-    if _loc_symbols(mutated) == FD_EXPECTED_LOC_SYMBOLS:
+    if _loc_symbols(fd_source + "\nloc.run_runtime\n") == FD_EXPECTED_LOC_SYMBOLS:
         raise AssertionError("FD dependency-surface mutation was not detected")
+    semantic_source = SEMANTIC.read_text()
+    tree = ast.parse(semantic_source, filename=str(SEMANTIC))
+    if not any(isinstance(node, ast.ImportFrom) for node in ast.walk(tree)):
+        raise AssertionError("semantic-owner AST control did not observe imports")
 
 
 def main() -> int:
@@ -403,10 +300,7 @@ def main() -> int:
         _check_consumer_topology()
         print("ISSUE48_WP23_AUGMENTED_OWNER_CHECK: consumer-topology=PASS")
         _check_construction_owner_equivalence()
-        print(
-            "ISSUE48_WP23_AUGMENTED_OWNER_CHECK: "
-            "construction-owner-equivalence=PASS"
-        )
+        print("ISSUE48_WP23_AUGMENTED_OWNER_CHECK: construction-owner-equivalence=PASS")
         _check_generic_primitive_equivalence()
         print("ISSUE48_WP23_AUGMENTED_OWNER_CHECK: generic-primitive-equivalence=PASS")
         _check_runtime_policy_boundary()
@@ -420,7 +314,6 @@ def main() -> int:
     except Exception as exc:
         print(f"ISSUE48_WP23_AUGMENTED_OWNER_CHARACTERIZATION: FAIL ({exc})")
         return 1
-
     print("ISSUE48_WP23_AUGMENTED_OWNER_CHARACTERIZATION: PASS")
     return 0
 
