@@ -19,7 +19,6 @@ from typing import Iterable
 ROOT = Path(__file__).resolve().parents[2]
 
 CLEANUP_CANDIDATES = (
-    "augmented_jacobian_localization",
     "electron_inventory_nullspace",
     "fast_plasma_coupling_diagnostic",
     "jacobian_fd_reference_audit",
