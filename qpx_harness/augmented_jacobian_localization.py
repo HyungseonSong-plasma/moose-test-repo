@@ -15,13 +15,13 @@ import re
 from pathlib import Path
 from typing import Any
 
+from . import artifacts
 from . import electron_inventory_nullspace as inv
 from . import evidence
 from . import fast_plasma_coupling_diagnostic as coupling_diag
-from . import fast_plasma_relaxation_v2 as v2
 from . import petsc_first_linear_diagnostic as first_linear
 from .moose_input import MooseInput, MooseInputError
-from .runtime import run_qpx
+from .runtime import resolve_executable, run_qpx, validate_executable
 
 ISSUE = 46
 TARGET = inv.C0_TARGET
@@ -42,6 +42,10 @@ CONCLUSIVE_LOCALIZATION_CLASSES = {
 
 class AugmentedJacobianLocalizationError(RuntimeError):
     pass
+
+
+def _write_json(path: Path, payload: dict[str, Any]) -> None:
+    artifacts.write_json_bundle(path.parent, {"summary": (path.name, payload)})
 
 
 def _petsc_name_value_pairs(text: str) -> list[tuple[str, str]]:
@@ -1044,8 +1048,7 @@ def _prepare_cases(exe: Path, results_root: str | None) -> dict[str, Any]:
     )
     main_dir = root / "c0_localization"
     control_dir = root / "framework_control"
-    v2.v1._copy_case(base_case, main_dir, localization_text)
-    v2.v1._validate_assets(main_dir)
+    inv._stage_case(base_case, main_dir, localization_text)
     control_dir.mkdir(parents=True, exist_ok=True)
     (control_dir / "input.i").write_text(control_text)
     return {
@@ -1181,12 +1184,12 @@ def _preflight_payload(
 
 
 def run_preflight(qpx: str | None, results_root: str | None) -> int:
-    exe = v2.resolve_executable(qpx)
-    v2.validate_executable(exe)
+    exe = resolve_executable(qpx)
+    validate_executable(exe)
     prepared = _prepare_cases(exe, results_root)
     p2_main, p2_control, status = _preflight_reports(exe, prepared)
     path = prepared["root"] / "summary.json"
-    v2._write_json(
+    _write_json(
         path, _preflight_payload(prepared, p2_main, p2_control, status)
     )
 
@@ -1260,8 +1263,8 @@ def _finite_or_none(value: Any) -> float | None:
 
 
 def run_runtime(qpx: str | None, results_root: str | None) -> int:
-    exe = v2.resolve_executable(qpx)
-    v2.validate_executable(exe)
+    exe = resolve_executable(qpx)
+    validate_executable(exe)
     prepared = _prepare_cases(exe, results_root)
     p2_main, p2_control, preflight_status = _preflight_reports(exe, prepared)
 
@@ -1276,7 +1279,7 @@ def run_runtime(qpx: str | None, results_root: str | None) -> int:
             "reason": "runtime entry refused because P0/P1/P2 preflight is not PASS",
         }
         path = prepared["root"] / "summary.json"
-        v2._write_json(path, payload)
+        _write_json(path, payload)
         print("ISSUE46_JAC_LOCALIZATION_PRECLASS: HOLD")
         print("ISSUE46_JAC_LOCALIZATION_CLASS: HARNESS_OR_CONSTRUCTION_FAIL")
         print(
@@ -1424,7 +1427,7 @@ def run_runtime(qpx: str | None, results_root: str | None) -> int:
         "decision": decision,
     }
     summary_path = prepared["root"] / "summary.json"
-    v2._write_json(summary_path, summary)
+    _write_json(summary_path, summary)
 
     print(
         "ISSUE46_JAC_LOCALIZATION_PRECLASS: "
