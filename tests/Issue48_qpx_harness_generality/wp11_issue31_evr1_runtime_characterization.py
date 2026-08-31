@@ -12,7 +12,6 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from recipes import issue31_coupling as recipe
-from qpx_harness import coupling_evr1 as legacy
 from qpx_harness import coupling_evr1_runtime as runtime
 from qpx_harness.performance_smoke import build_smoke_manifest
 
@@ -47,10 +46,7 @@ def _imports_module(path: Path, module: str) -> bool:
 
 def _result(status: str, *, wall: float | None = None) -> dict:
     performance = {} if wall is None else {"wall_seconds": wall}
-    return {
-        "validation": {"status": status},
-        "performance": performance,
-    }
+    return {"validation": {"status": status}, "performance": performance}
 
 
 def _pair(
@@ -113,18 +109,13 @@ def _check_root_contract() -> None:
             raise AssertionError("EVR1 result-root collision policy drift")
 
 
-def _assert_classification_equivalent(
+def _assert_decision(
+    expected: dict,
     transport: dict,
     monolithic: dict,
     transport_physics: dict | None,
     monolithic_physics: dict | None,
 ) -> None:
-    expected = legacy.preliminary_classification(
-        transport,
-        monolithic,
-        transport_physics,
-        monolithic_physics,
-    )
     actual = runtime.preliminary_classification(
         transport,
         monolithic,
@@ -132,82 +123,130 @@ def _assert_classification_equivalent(
         monolithic_physics,
     )
     if actual != expected:
-        raise AssertionError(
-            f"EVR1 preliminary classification equivalence drift: {actual} != {expected}"
+        raise AssertionError(f"EVR1 classification contract drift: {actual} != {expected}")
+
+
+def _check_classification_contract() -> None:
+    ok = {"status": "PASS"}
+    bad = {"status": "FAIL"}
+    transport = _pair("P2_PASS_P3_PASS", wall=10.0)
+
+    _assert_decision(
+        {
+            "class": "HARNESS_OR_CONSTRUCTION_FAIL",
+            "reason": "transport-only known-good control did not complete",
+        },
+        _pair("HARNESS_OR_CONSTRUCTION_FAIL"),
+        _pair("P2_PASS_P3_PASS", wall=15.0),
+        None,
+        ok,
+    )
+    _assert_decision(
+        {
+            "class": "PHYSICS_CHECK_FAIL",
+            "reason": "transport-only runtime completed but physics checker failed",
+        },
+        transport,
+        _pair("P2_PASS_P3_PASS", wall=15.0),
+        bad,
+        ok,
+    )
+    _assert_decision(
+        {
+            "class": "HARNESS_OR_CONSTRUCTION_FAIL",
+            "reason": "monolithic Q0 failed P2/construction",
+        },
+        transport,
+        _pair("HARNESS_OR_CONSTRUCTION_FAIL"),
+        ok,
+        None,
+    )
+    _assert_decision(
+        {
+            "class": "PHYSICS_CHECK_FAIL",
+            "reason": "monolithic Q0 runtime completed but physics checker failed",
+        },
+        transport,
+        _pair("P2_PASS_P3_PASS", wall=15.0),
+        ok,
+        bad,
+    )
+
+    candidates = (
+        (
+            "PC_FACTORIZATION",
+            15.0,
+            "MONOLITHIC_LINEAR_ALGEBRA_BOUND_CANDIDATE",
+        ),
+        (
+            "JACOBIAN_AD",
+            14.0,
+            "MONOLITHIC_APPLICATION_OR_JACOBIAN_BOUND_CANDIDATE",
+        ),
+        (None, 12.0, "MONOLITHIC_VIABILITY_REVIEW"),
+    )
+    for bottleneck, wall, label in candidates:
+        mono = _pair("P2_PASS_P3_PASS", wall=wall, bottleneck=bottleneck)
+        classification = (
+            {"bottleneck_class": bottleneck} if bottleneck is not None else {}
         )
-
-
-def _check_classification_equivalence() -> None:
-    ok_physics = {"status": "PASS"}
-    bad_physics = {"status": "FAIL"}
-
-    transport_pass = _pair("P2_PASS_P3_PASS", wall=10.0)
-    mono_linear = _pair(
-        "P2_PASS_P3_PASS",
-        wall=15.0,
-        bottleneck="PC_FACTORIZATION",
-    )
-    mono_app = _pair(
-        "P2_PASS_P3_PASS",
-        wall=14.0,
-        bottleneck="JACOBIAN_AD",
-    )
-    mono_review = _pair("P2_PASS_P3_PASS", wall=12.0)
-
-    for mono in (mono_linear, mono_app, mono_review):
-        _assert_classification_equivalent(
-            transport_pass,
+        _assert_decision(
+            {
+                "class": label,
+                "reason": "monolithic one-step completed; final viability requires evidence review",
+                "transport_benchmark_wall_seconds": 10.0,
+                "monolithic_benchmark_wall_seconds": wall,
+                "monolithic_to_transport_wall_ratio": wall / 10.0,
+                "bottleneck": classification,
+            },
+            transport,
             mono,
-            ok_physics,
-            ok_physics,
+            ok,
+            ok,
         )
-
-    _assert_classification_equivalent(
-        _pair("HARNESS_OR_CONSTRUCTION_FAIL"),
-        mono_linear,
-        None,
-        ok_physics,
-    )
-    _assert_classification_equivalent(
-        transport_pass,
-        mono_linear,
-        bad_physics,
-        ok_physics,
-    )
-    _assert_classification_equivalent(
-        transport_pass,
-        _pair("HARNESS_OR_CONSTRUCTION_FAIL"),
-        ok_physics,
-        None,
-    )
-    _assert_classification_equivalent(
-        transport_pass,
-        _pair("P2_PASS_P3_PASS"),
-        ok_physics,
-        bad_physics,
-    )
 
     with tempfile.TemporaryDirectory() as tmp_name:
         root = Path(tmp_name)
         log_dir = root / "benchmark"
         log_dir.mkdir()
         (log_dir / "p3_run.log").write_text("DIVERGED_MAX_IT\n")
-        _assert_classification_equivalent(
-            transport_pass,
+        _assert_decision(
+            {
+                "class": "MONOLITHIC_NONLINEAR_CONVERGENCE_FAIL",
+                "reason": "monolithic Q0 reached runtime but nonlinear solve did not converge",
+            },
+            transport,
             _pair("RUNTIME_FAIL_OR_NONCONVERGENCE", root=str(root)),
-            ok_physics,
+            ok,
+            None,
+        )
+
+    with tempfile.TemporaryDirectory() as tmp_name:
+        _assert_decision(
+            {
+                "class": "MONOLITHIC_RUNTIME_FAIL",
+                "reason": "monolithic Q0 failed at runtime without a proven convergence signature",
+            },
+            transport,
+            _pair("RUNTIME_FAIL_OR_NONCONVERGENCE", root=tmp_name),
+            ok,
             None,
         )
 
 
 def _check_boundary() -> None:
-    path = Path(runtime.__file__)
-    if _imports_module(path, "qpx_harness.coupling_evr1"):
-        raise AssertionError("canonical EVR1 runtime imports legacy base")
-    if _imports_module(path, "qpx_harness.coupling_evr1_safe"):
-        raise AssertionError("canonical EVR1 runtime imports safe adapter")
+    this_path = Path(__file__)
+    runtime_path = Path(runtime.__file__)
+    for historical in (
+        "qpx_harness.coupling_evr1",
+        "qpx_harness.coupling_evr1_safe",
+    ):
+        if _imports_module(this_path, historical):
+            raise AssertionError(f"WP11 retained historical oracle import: {historical}")
+        if _imports_module(runtime_path, historical):
+            raise AssertionError(f"canonical EVR1 runtime imports historical owner: {historical}")
 
-    source = path.read_text()
+    source = runtime_path.read_text()
     for required in (
         "from recipes import issue31_coupling as recipe",
         "stage_case",
@@ -220,7 +259,6 @@ def _check_boundary() -> None:
     ):
         if required not in source:
             raise AssertionError(f"canonical EVR1 runtime missing owner composition: {required}")
-
     for forbidden in (
         "shutil.copytree",
         "hashlib.sha256",
@@ -234,8 +272,7 @@ def _check_boundary() -> None:
 
 
 def _check_cli_route() -> None:
-    script = ROOT / "scripts" / "qpx.py"
-    source = script.read_text()
+    source = (ROOT / "scripts" / "qpx.py").read_text()
     required = (
         "from qpx_harness.coupling_evr1_runtime import main as coupling_evr1_main, self_test as coupling_evr1_self_test",
         'if command == "coupling-evr1":',
@@ -244,8 +281,12 @@ def _check_cli_route() -> None:
     for token in required:
         if token not in source:
             raise AssertionError(f"EVR1 CLI route missing canonical runtime token: {token}")
-    if "from qpx_harness.coupling_evr1_safe import" in source:
-        raise AssertionError("EVR1 CLI still imports safe adapter")
+    for historical in (
+        "from qpx_harness.coupling_evr1 import",
+        "from qpx_harness.coupling_evr1_safe import",
+    ):
+        if historical in source:
+            raise AssertionError(f"EVR1 CLI retained historical route: {historical}")
 
 
 def main() -> int:
@@ -253,7 +294,7 @@ def main() -> int:
         _check_constants()
         _check_manifest_contract()
         _check_root_contract()
-        _check_classification_equivalence()
+        _check_classification_contract()
         _check_boundary()
         _check_cli_route()
         if runtime.self_test() != 0:
