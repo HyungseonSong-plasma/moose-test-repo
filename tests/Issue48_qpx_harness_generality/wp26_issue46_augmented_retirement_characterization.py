@@ -13,6 +13,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 LEGACY_MODULE = "qpx_harness.augmented_jacobian_localization"
+SEMANTIC_MODULE = "qpx_harness.issue46_jacobian_localization"
 LEGACY_PATH = ROOT / "qpx_harness" / "augmented_jacobian_localization.py"
 SEMANTIC_PATH = ROOT / "qpx_harness" / "issue46_jacobian_localization.py"
 FD_AUDIT_PATH = ROOT / "qpx_harness" / "jacobian_fd_reference_audit.py"
@@ -135,21 +136,26 @@ def _check_owner_boundary() -> None:
     if not SEMANTIC_PATH.is_file():
         raise AssertionError("canonical Issue46 semantic owner is missing")
 
-    semantic_source = SEMANTIC_PATH.read_text()
-    fd_source = FD_AUDIT_PATH.read_text()
-    cli_source = CLI_PATH.read_text()
-    for label, source in (
-        ("semantic owner", semantic_source),
-        ("FD audit", fd_source),
-        ("CLI", cli_source),
+    for label, path in (
+        ("semantic owner", SEMANTIC_PATH),
+        ("FD audit", FD_AUDIT_PATH),
+        ("CLI", CLI_PATH),
     ):
-        if "augmented_jacobian_localization" in source:
-            raise AssertionError(f"{label} still contains legacy owner dependency")
+        imports = _static_imports(path) | _dynamic_imports(path)
+        if LEGACY_MODULE in imports:
+            raise AssertionError(f"{label} still imports legacy owner")
 
+    semantic_imports = _static_imports(SEMANTIC_PATH) | _dynamic_imports(SEMANTIC_PATH)
+    if LEGACY_MODULE in semantic_imports:
+        raise AssertionError("semantic Issue46 owner reverse-depends on legacy owner")
+
+    fd_imports = _static_imports(FD_AUDIT_PATH) | _dynamic_imports(FD_AUDIT_PATH)
+    if SEMANTIC_MODULE not in fd_imports:
+        raise AssertionError("FD audit is not bound to the semantic Issue46 owner")
+
+    cli_source = CLI_PATH.read_text()
     if "from qpx_harness.issue46_jacobian_localization import" not in cli_source:
         raise AssertionError("stable CLI is not bound to the semantic Issue46 owner")
-    if "from . import issue46_jacobian_localization as localization_runtime" not in fd_source:
-        raise AssertionError("FD audit is not bound to the semantic Issue46 owner")
 
 
 def _negative_control() -> None:
