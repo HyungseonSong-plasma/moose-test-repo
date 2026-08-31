@@ -21,7 +21,6 @@ ROOT = Path(__file__).resolve().parents[2]
 CLEANUP_CANDIDATES = (
     "augmented_jacobian_localization",
     "coupling_evr1",
-    "coupling_evr1_safe",
     "coupling_evr2_timestep",
     "electron_inventory_nullspace",
     "fast_plasma_coupling_diagnostic",
