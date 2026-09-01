@@ -3,7 +3,7 @@
 **Work ID:** `qpx-stats-builder-decomposition`  
 **Issue:** #53  
 **Protocol:** `docs/protocols/coding.md` / CODE-13  
-**Status:** ACTIVE / D1 PASS / D2 PASS / D3 ACCURACY OWNER STAGED / LOCAL DIAGNOSTIC GATE READY
+**Status:** ACTIVE / D1 PASS / D2 PASS / D3 CANONICAL APPLIED / LOCAL DIAGNOSTIC GATE READY
 
 ## Local execution contract
 
@@ -88,52 +88,65 @@ ISSUE53_D2_CODES: 0 0 0 0 0 0 0 0 0
 ISSUE53_D2_LOCAL_GATE: PASS
 ```
 
-GitHub canonical was synchronized to the same validated structural fingerprint:
-
-```text
-stats_builder.py LOC:                 653
-_error_from_mapping line:             196
-build_simulation_stats line:          419
-self_test line:                       452
-```
-
 D2 status: `PASS`.
 
-## D3 — Accuracy ownership inversion
+## D3 — Accuracy extraction
 
-Current staged owner commit:
+Accuracy owner preparation commit:
 
 ```text
 52de815e070dcb28e773cf415ed2dd26f718b6e9
 refactor(issue53): make AccuracyStats mapping locally owned
 ```
 
-`qpx_harness/analysis/metrics/accuracy.py` now owns:
+The owner diagnostic gate passed locally:
 
 ```text
-_error_from_mapping
-_matrix_blocks
-_matrix_entries
-build_accuracy_stats
-build_jacobian_accuracy_stats
+QPX_ACCURACY_STATS_MAPPING_SELFTEST: PASS
+ISSUE45_FIRST_LINEAR_STATS_MAPPING_SELFTEST: PASS
+ISSUE45_FIRST_LINEAR_SELFTEST: PASS
+ISSUE46_JAC_LOCALIZATION_STATS_MAPPING_SELFTEST: PASS
+ISSUE46_JAC_LOCALIZATION_SELFTEST: PASS
+ISSUE46_JAC_LOCALIZATION_RUNTIME_SELFTEST: PASS
+QPX_STATS_BUILDER_SELFTEST: PASS
+QPX_HARNESS_SELFTEST: PASS
+ISSUE53_DECOMPOSITION_INVENTORY: PASS
+ISSUE53_STATS_BUILDER_LOC: 653
+ISSUE53_DECOMPOSITION_STAGE: D2_CONVERGENCE_EXTRACTED
 ```
 
-The previous reverse dependency:
+Canonical D3 extraction commit:
 
 ```text
-metrics/accuracy.py -> stats_builder.build_accuracy_stats
+aba07b9d01b2d7887a085fd7c7268d00e10ca118
+refactor(issue53): extract AccuracyStats owner
 ```
 
-has been removed.
+D3 semantic cut:
 
-`stats_builder.py` still retains its existing Accuracy implementation at this stage.
-D3 destructive removal is blocked until the staged owner passes local diagnostics.
+```text
+stats_builder.py local Accuracy helpers/build_accuracy_stats
+        ↓ removed
+analysis/metrics/accuracy.py
+        ↓ canonical owner
+stats_builder.py
+        ↓ re-exports build_accuracy_stats for compatibility/composition
+```
 
-### VD3A — Accuracy owner diagnostic gate
+D3 structural guard support:
+
+```text
+25c19e194037a4f250d9bbab0f1f20906079d63d
+test(issue53): add D3 Accuracy structural guard
+```
+
+### VD3 — post-extraction local diagnostic gate
 
 Run on a freshly downloaded GitHub ZIP snapshot:
 
 ```bash
+python3 -m py_compile qpx_harness/analysis/stats_builder.py
+python3 tests/Issue53_stats_builder_decomposition/structural_guard.py --stage d3
 python3 -m qpx_harness.analysis.metrics.accuracy
 python3 -m qpx_harness.issue45_first_linear --self-test
 python3 -m qpx_harness.issue46_jacobian_localization --self-test
@@ -145,31 +158,23 @@ python3 tests/Issue53_stats_builder_decomposition/inventory.py
 Required evidence:
 
 ```text
+ISSUE53_STRUCTURAL_GUARD_D3: PASS
 QPX_ACCURACY_STATS_MAPPING_SELFTEST: PASS
-ISSUE45_FIRST_LINEAR_STATS_MAPPING_SELFTEST: PASS
 ISSUE45_FIRST_LINEAR_SELFTEST: PASS
-ISSUE46_JAC_LOCALIZATION_STATS_MAPPING_SELFTEST: PASS
 ISSUE46_JAC_LOCALIZATION_SELFTEST: PASS
 QPX_STATS_BUILDER_SELFTEST: PASS
 QPX_HARNESS_SELFTEST: PASS
 ISSUE53_DECOMPOSITION_INVENTORY: PASS
-ISSUE53_STATS_BUILDER_LOC: 653
-ISSUE53_DECOMPOSITION_STAGE: D2_CONVERGENCE_EXTRACTED
+ISSUE53_DECOMPOSITION_STAGE: D3_ACCURACY_EXTRACTED
 ```
 
-If VD3A passes, the next GitHub canonical cut is:
+Expected `stats_builder.py` size after D3: approximately `430-435 LOC`.
 
-```text
-D3 Accuracy local implementation removed from stats_builder.py
--> build_accuracy_stats re-exported from metrics/accuracy.py
--> expected stats_builder.py reduction by roughly 220 LOC
--> immediate read-back structural verification
--> fresh local diagnostics only
-```
+D3 status: `CANONICAL APPLIED / LOCAL VALIDATION PENDING`.
 
 ## Remaining target
 
-After D3:
+After D3 validation:
 
 ```text
 Common/Environment owner extraction
