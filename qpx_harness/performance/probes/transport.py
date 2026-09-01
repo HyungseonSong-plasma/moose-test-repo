@@ -16,7 +16,7 @@ from typing import Any, Iterable
 
 from ... import perfgraph
 from . import runtime as probe_runtime
-from ...cpp_source import CppSource, CppSourceError, Span
+from ...cpp.source import CppSource, CppSourceError, Span
 
 TIMER_NAMES = {
     "evaluate": "qpx_transport_evaluate",
