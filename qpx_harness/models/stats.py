@@ -38,6 +38,7 @@ class EnvironmentStats:
     libmesh_version: str | None = None
     petsc_version: str | None = None
     slepc_version: str | None = None
+    logical_cpu_count: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -66,6 +67,20 @@ class TimingStats:
     call_count: int | None = None
     path: tuple[str, ...] = ()
     rank: int | None = None
+    total_seconds: float | None = None
+    parent: str | None = None
+    level: int | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class MemoryStats:
+    """One normalized memory observation preserving the producer unit."""
+
+    kind: str
+    value: float
+    unit: str
+    source: str | None = None
+    rank: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -76,6 +91,7 @@ class EfficiencyStats:
     residual_evaluations: int | None = None
     jacobian_evaluations: int | None = None
     timings: tuple[TimingStats, ...] = ()
+    memories: tuple[MemoryStats, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -86,6 +102,7 @@ class SolverTerminationStats:
     reason: str
     solve_index: int | None = None
     iteration_count: int | None = None
+    converged: bool | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -118,6 +135,16 @@ class SolverConfigStats:
 
 
 @dataclass(frozen=True, slots=True)
+class ScalingFactorStats:
+    """One observed MOOSE automatic-scaling factor."""
+
+    variable: str
+    value: float
+    block_index: int | None = None
+    step_index: int | None = None
+
+
+@dataclass(frozen=True, slots=True)
 class ConvergenceStats:
     """Solver-trajectory facts without hypothesis or scientific PASS/FAIL policy."""
 
@@ -131,6 +158,7 @@ class ConvergenceStats:
     solver: SolverConfigStats | None = None
     terminations: tuple[SolverTerminationStats, ...] = ()
     residuals: tuple[ResidualSample, ...] = ()
+    scaling_factors: tuple[ScalingFactorStats, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -162,6 +190,27 @@ class InvariantErrorStats:
 
 
 @dataclass(frozen=True, slots=True)
+class ReferenceErrorStats:
+    """Scalar candidate/reference comparison not tied to one simulation field."""
+
+    name: str
+    error: ErrorStats
+    observed_value: float | None = None
+    reference_value: float | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class MatrixEntryErrorStats:
+    """One matrix/Jacobian difference entry with optional variable ownership."""
+
+    row: int
+    col: int
+    difference: float
+    row_variable: str | None = None
+    col_variable: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
 class MatrixBlockErrorStats:
     """Localized matrix-difference facts for one row/column owner block."""
 
@@ -171,6 +220,7 @@ class MatrixBlockErrorStats:
     l2_difference: float | None = None
     max_abs_difference: float | None = None
     energy_fraction: float | None = None
+    sum_squared_difference: float | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -184,6 +234,10 @@ class MatrixErrorStats:
     nonzero_thresholded_entry_count: int | None = None
     thresholded_l2_difference: float | None = None
     blocks: tuple[MatrixBlockErrorStats, ...] = ()
+    comparison_index: int | None = None
+    entries: tuple[MatrixEntryErrorStats, ...] = ()
+    section_observed: bool | None = None
+    mapped_entry_count: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -193,6 +247,7 @@ class AccuracyStats:
     field_errors: tuple[FieldErrorStats, ...] = ()
     invariant_errors: tuple[InvariantErrorStats, ...] = ()
     matrix_errors: tuple[MatrixErrorStats, ...] = ()
+    reference_errors: tuple[ReferenceErrorStats, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
