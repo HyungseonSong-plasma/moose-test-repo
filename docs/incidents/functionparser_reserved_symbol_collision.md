@@ -67,12 +67,11 @@ This incident is distinct from `INC-ADF-JIT-001`. A `Vars` parse error is a pars
 
 ## Permanent prevention
 
-Canonical enforcement is now owned by `docs/protocols/validation.md` VAL-03 / VAL-19.
-
-Machine-enforced checker:
+Canonical enforcement is owned by `docs/protocols/validation.md` VAL-03 / VAL-19 and the unified CLI:
 
 ```text
-scripts/validate_parser_symbols.py
+python3 scripts/qpx.py preflight --self-test
+python3 scripts/qpx.py preflight <generated-or-packaged-input.i>
 ```
 
 Hard checks before P2:
@@ -84,7 +83,7 @@ reject duplicate parser symbols
 reject invalid identifiers
 ```
 
-Repository `scripts/run_test.py` invokes the parser-symbol preflight automatically before QPX execution.
+The reusable regression harness invokes the same parser-symbol preflight before QPX execution. Do not create a separate compatibility script for this check.
 
 External overlay bundles that do not carry the repository `scripts/` tree must embed or invoke an equivalent guard in the case `prepare.py` before `qpx-opt --check-input`.
 
@@ -106,4 +105,4 @@ Then inspect parser-symbol declarations before changing physics, data, timestep,
 
 ## Closure evidence
 
-Root cause is source-consistent, the #21 candidate was repaired without physics changes, the local overlay now includes a reserved-symbol guard, and canonical repository validation has been upgraded from a checklist item to machine-enforced P0 prevention.
+Root cause is source-consistent, the #21 candidate was repaired without physics changes, the local overlay includes a reserved-symbol guard, and canonical repository validation is machine-enforced P0 prevention through the unified QPX harness.

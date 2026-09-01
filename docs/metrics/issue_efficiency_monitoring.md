@@ -70,6 +70,75 @@ The post-review sample is still too small for comparative inference, but #20 is 
 
 #13 keeps its previously recorded issue-local metrics (`WCC=15`, `T-WCC=13`, `RVR=3 reconstructed`, `EVR=10`, `DBR=2`, `RWR=6`, `CLR=0`, `FBR=yes`). Its final R6 downstream gate is satisfied by #20's promoted 9/9 canonical regression; no #20 execution rounds are copied into #13 metrics under issue-local accounting.
 
+## Architecture/refactor closure snapshot — 2026-09-01
+
+Issues #66-#76 closed as one capability-oriented architecture queue. Their issue-local counters are reconstructed using the attribution rule frozen in `docs/metrics/efficiency/snapshots/2026-09-01_capability_architecture_batch_closure.md`.
+
+| Issue | Complexity | State | WCC | T-WCC | RVR | EVR | DBR | RWR | CLR | FBR |
+|---|---|---|---:|---:|---:|---:|---:|---:|---:|---|
+| #66 bounded transform vocabulary | C2 | CLOSED | 5 reconstructed | 4 reconstructed | 0 reconstructed | 3 reconstructed | 0 reconstructed | 0 reconstructed | 0 reconstructed | yes reconstructed |
+| #67 hybrid spec + diagnostics extraction | C2 | CLOSED | 5 reconstructed | 4 reconstructed | 0 reconstructed | 3 reconstructed | 0 reconstructed | 0 reconstructed | 0 reconstructed | yes reconstructed |
+| #68 Issue46 localization spec migration | C2 | CLOSED | 5 reconstructed | 4 reconstructed | 0 reconstructed | 3 reconstructed | 0 reconstructed | 0 reconstructed | 0 reconstructed | yes reconstructed |
+| #70 architecture census | C2 | CLOSED | 6 reconstructed | 4 reconstructed | 0 reconstructed | 3 reconstructed | 0 reconstructed | 2 reconstructed | 0 reconstructed | yes reconstructed |
+| #71 diagnostics consolidation | C2 | CLOSED | 5 reconstructed | 4 reconstructed | 0 reconstructed | 3 reconstructed | 0 reconstructed | 0 reconstructed | 0 reconstructed | yes reconstructed |
+| #72 execution/evidence consolidation | C3 | CLOSED | 6 reconstructed | 5 reconstructed | 0 reconstructed | 4 reconstructed | 0 reconstructed | 1 reconstructed | 0 reconstructed | yes reconstructed |
+| #73 remaining recipe convergence | C3 | CLOSED | 4 reconstructed | 3 reconstructed | 0 reconstructed | 2 reconstructed | 0 reconstructed | 0 reconstructed | 0 reconstructed | yes reconstructed |
+| #74 CLI capability boundary | C2 | CLOSED | 7 reconstructed | 5 reconstructed | 0 reconstructed | 4 reconstructed | 0 reconstructed | 2 reconstructed | 0 reconstructed | yes reconstructed |
+| #75 facade + scripts retirement | C3 | CLOSED | 6 reconstructed | 4 reconstructed | 0 reconstructed | 3 reconstructed | 0 reconstructed | 2 reconstructed | 0 reconstructed | yes reconstructed |
+| #76 architecture integration | C4 | CLOSED | 7 reconstructed | 5 reconstructed | 0 reconstructed | 4 reconstructed | 0 reconstructed | 3 reconstructed | 0 reconstructed | no reconstructed |
+
+Do not sum these sibling metrics to estimate total user interaction. The unique batch-level observations are:
+
+```text
+Issues closed:                  11
+Unique user rounds:              7 reconstructed
+Derived rounds / Issue:          0.64
+Derived Issues / round:          1.57
+External validation returns:     4
+Scientific runtime/P3 returns:   0
+```
+
+### Comparison with recent refactor batching
+
+| Batch | Issues closed | Unique user rounds | Derived rounds / Issue | External validation returns |
+|---|---:|---:|---:|---:|
+| #59 | 1 | 4 | 4.00 | 1 |
+| #60-#61 | 2 | 4 | 2.00 | 1 |
+| #62-#64 | 3 | 3 | 1.00 | 2 |
+| #66-#76 | 11 | 7 | **0.64** | **4** |
+
+The batching strategy continues to reduce **interaction density**: #66-#76 improved from `1.00` to about `0.64` unique rounds/Issue relative to #62-#64. However, validation returns rose to four and #72/#74/#76 exceeded the nominal three-EVR budget under the reconstructed issue-local attribution.
+
+This is the key current process signal:
+
+```text
+larger batch
+  -> better user-round amortization
+  -> larger heterogeneous validation surface
+  -> more sequential exposure of control-plane defects
+```
+
+The failed prospective hypothesis was not “batching helps”; batching still helped interaction density. The failed component was “one final-tree-ready consolidated validation + RWR=0”. The next optimization variable should therefore be **validation-surface coupling**, not Issue count alone.
+
+### Closure-quality guardrail
+
+The final current-head guard established together:
+
+```text
+bounded transform vocabulary PASS (11 operations)
+legacy/spec byte equivalence PASS
+architecture ownership PASS
+generic -> issue dependency edges = 0
+module/package collisions = 0
+25 CLI commands preserved
+scripts/ references = 0
+full architecture integration PASS
+QPX harness self-test PASS
+scientific runtime/P3 NOT_RUN
+```
+
+The interaction-density improvement therefore remains compatible with MET-13 closure-quality constraints.
+
 ## Monitoring hypotheses
 
 Track these prospectively as new issues acquire canonical final metrics:
@@ -78,8 +147,13 @@ Track these prospectively as new issues acquire canonical final metrics:
 2. Do bounded C1-C3 successor issues outperform broad/decomposed C4 issues on `EVR`, `DBR`, and `RWR`?
 3. Does targeted RVR investment associate with reduced downstream `EVR/DBR/RWR`?
 4. Does FBR improve after stronger pre-mortem, mutation, known-good batching, and environment preflight?
-5. Do post-#20 issues approach the project targets `EVR <= 3`, `DBR <= 2`, `RWR = 0` while preserving closure-quality gates?
+5. Do future issues approach the project targets `EVR <= 3`, `DBR <= 2`, `RWR = 0` while preserving closure-quality gates?
+6. For architecture/refactor work, does **validation surfaces / batch** predict EVR and RWR better than raw **Issues / batch**?
+7. Can a consolidated command retain low unique rounds/Issue while internally isolating acceptance surfaces so one early failure does not hide unrelated downstream checks?
+8. Does explicit current-head/workspace identity eliminate no-code-change external reruns?
 
 ## Update policy
 
 Append a dated snapshot only when a technical issue obtains new usable/canonical metrics or when an existing metric is materially reconciled. Do not count PLANNED `WCC=0` issues as zero-cost observations. Preserve prior snapshots so trend analysis can distinguish historical process behavior from later improvements.
+
+Reconstructed architecture/refactor metrics must remain visibly marked until a future prospective queue records exact per-Issue counters from WORK_START.

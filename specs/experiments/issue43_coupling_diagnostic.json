@@ -1,0 +1,82 @@
+{
+  "schema_version": 1,
+  "experiment_id": "issue43-coupling-diagnostic",
+  "description": "Declarative instrumentation policy for the Issue43 coupling diagnostic pilot.",
+  "cases": [
+    {
+      "case_id": "default",
+      "operations": [
+        {
+          "op": "ensure_block",
+          "path": "Debug",
+          "block": "[Debug]\n  show_var_residual_norms = true\n[]"
+        },
+        {
+          "op": "set_parameter",
+          "path": "Debug",
+          "name": "show_var_residual_norms",
+          "value": "true"
+        },
+        {
+          "op": "set_parameter",
+          "path": "Executioner",
+          "name": "verbose",
+          "value": "true"
+        },
+        {
+          "op": "add_petsc_flags",
+          "flags": [
+            "-snes_converged_reason",
+            "-ksp_converged_reason",
+            "-snes_monitor",
+            "-ksp_monitor"
+          ]
+        },
+        {
+          "op": "set_parameter",
+          "path": "Outputs/console",
+          "name": "all_variable_norms",
+          "value": "true"
+        }
+      ]
+    },
+    {
+      "case_id": "jacobian",
+      "operations": [
+        {
+          "op": "ensure_block",
+          "path": "Debug",
+          "block": "[Debug]\n  show_var_residual_norms = true\n[]"
+        },
+        {
+          "op": "set_parameter",
+          "path": "Debug",
+          "name": "show_var_residual_norms",
+          "value": "true"
+        },
+        {
+          "op": "set_parameter",
+          "path": "Executioner",
+          "name": "verbose",
+          "value": "true"
+        },
+        {
+          "op": "add_petsc_flags",
+          "flags": [
+            "-snes_converged_reason",
+            "-ksp_converged_reason",
+            "-snes_monitor",
+            "-ksp_monitor",
+            "-snes_test_jacobian"
+          ]
+        },
+        {
+          "op": "set_parameter",
+          "path": "Outputs/console",
+          "name": "all_variable_norms",
+          "value": "true"
+        }
+      ]
+    }
+  ]
+}

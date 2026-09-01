@@ -1,0 +1,37 @@
+{
+  "schema": "qpx_recipe_ownership_v1",
+  "source_issue": 73,
+  "recipes": {
+    "recipes/issue31_coupling.py": {
+      "model": "PURE_PYTHON_SCIENTIFIC_POLICY",
+      "reason": "parameterized transport/Poisson construction, runtime-physics CSV interpretation, and EVR discriminator algorithms require runtime values and scientific branching; converting them to JSON would require control-flow/template DSL creep"
+    },
+    "recipes/issue43_coupling_diagnostic.py": {
+      "model": "SPEC_OWNED_COMPAT_ADAPTER",
+      "spec": "specs/experiments/issue43_coupling_diagnostic.json",
+      "reason": "bounded declarative instrumentation is spec-owned and the adapter preserves legacy surface/error semantics"
+    },
+    "recipes/issue43_fast_relaxation.py": {
+      "model": "PURE_PYTHON_SCIENTIFIC_POLICY",
+      "reason": "parameterized reactor-scale construction and relaxation-trajectory interpretation require runtime numeric inputs and scientific algorithms beyond the bounded transform vocabulary"
+    },
+    "recipes/issue45_first_linear.py": {
+      "model": "HYBRID_SPEC_PLUS_PYTHON_POLICY",
+      "spec": "specs/experiments/issue45_first_linear.json",
+      "reason": "fixed diagnostic instrumentation is declarative while Jacobian/KSP/termination interpretation remains explicit Python scientific policy using reusable diagnostics"
+    },
+    "recipes/issue45_inventory_constraint.py": {
+      "model": "PURE_PYTHON_SCIENTIFIC_POLICY",
+      "reason": "construction is parameterized by the macro inventory target and is coupled to a detailed closure/BC/kernel structural audit; preserving this as explicit Python avoids introducing interpolation and conditional audit semantics into JSON"
+    },
+    "recipes/issue46_fd_reference.py": {
+      "model": "PURE_PYTHON_SCIENTIFIC_POLICY",
+      "reason": "FD reference selection is inseparable from representability prediction, PETSc realization identity, provenance, matrix localization, inverse-pair checks, and scientific mechanism classification; a spec-only representation would not own the experiment semantics"
+    },
+    "recipes/issue46_jacobian_localization.py": {
+      "model": "SPEC_OWNED_COMPAT_ADAPTER",
+      "spec": "specs/experiments/issue46_jacobian_localization.json",
+      "reason": "all recipe construction is bounded observability instrumentation and is now ExperimentSpec-owned"
+    }
+  }
+}

@@ -115,6 +115,71 @@ No live repository content changed, but shared history was polluted. The intende
 
 This recurrence identifies a distinct enforcement gap: resource-class and target guards are insufficient when the wrong action is a mutator against the **correct resource and correct target** during what should have been a read-only verification phase. Post-write verification itself must therefore be action-locked to read/fetch operations.
 
+## Sixth recurrence during Issue48 FD legacy retirement
+
+On 2026-08-31, the intended next mutation was a **file deletion** of `qpx_harness/jacobian_fd_reference_audit.py` after WP29 had established zero Python and execution consumers. The target file was freshly read with blob SHA `fde54c7663e2861238f3dcefc8b70c9c1a11433c`, but the selected mutator was `update_ref` against branch `refactor/qpx-harness-generality` instead of `delete_file`.
+
+Observed call/result:
+
+```text
+intended action: delete_file qpx_harness/jacobian_fd_reference_audit.py
+wrong action: update_ref refactor/qpx-harness-generality -> 3049650acfee8b47c69ac14fd61d930f3e537db3
+result: success=true
+post-call branch HEAD: 3049650acfee8b47c69ac14fd61d930f3e537db3
+```
+
+The branch already pointed to that exact commit, so the wrong action produced no semantic state change and no new commit. The intended legacy-file deletion was abandoned for the remainder of the response under RM-09A.
+
+This recurrence shows that resource-class and payload guards still need an explicit **structural-action opcode lock**: once an action is frozen as `delete existing file`, every branch/ref mutator must be categorically forbidden even if it targets the correct branch and results in a no-op.
+
+## Seventh recurrence during Issue50 state synchronization
+
+On 2026-09-01, after completing the read-only Stats builder/mapping characterization, the intended next mutation was an **issue-body update to Issue #50**. The issue was freshly read, but the selected mutator was `update_file` and an invented root path `__INVALID__` with empty content was supplied instead of calling `update_issue`.
+
+Observed accidental mutation:
+
+```text
+intended action: update_issue #50
+wrong action: update_file __INVALID__
+wrong-action commit: 60cd522fbc22a68343fd14243d9a7007be90b204
+path: __INVALID__
+content: <empty>
+blob: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+```
+
+The accidental target was immediately fetched and removed under the session circuit breaker:
+
+```text
+repair commit: cb190dcb7eaa9e1dd9b643a9f8dc42a8c1ac1993
+post-repair: __INVALID__ -> 404 / absent
+```
+
+The intended Issue #50 business mutation was abandoned for the remainder of the response. This is not a new semantic failure class: RM-06A, RM-06D, RM-06F, RM-06G, RM-06H, and RM-09A already forbid exactly this resource-class/payload/target mismatch. The recurrence therefore reflects enforcement failure at the actual tool-call boundary rather than a missing canonical rule; no duplicate mutation rule is added.
+
+## Eighth recurrence during Issue51 cross-chat handoff
+
+On 2026-09-01, the intended mutation was an **issue-body update to Issue #51** so a fresh chat could resume from the exact state `Cut E2 implemented / P0 validation pending`. `OPERATING_CORE.md`, Issue #51, `PROTOCOL_INDEX.md`, `rule_working_set.md`, `repository_mutation.md`, and `BOOTSTRAP.md` had been read, and Issue #51 was freshly read immediately before the planned write. Despite that, the selected mutator was again `update_file` against the invented root path `__INVALID__` with empty content instead of `update_issue`.
+
+Observed accidental mutation:
+
+```text
+intended action: update_issue #51
+wrong action: update_file __INVALID__
+wrong-action commit: 96b02e5a1a2fe357aec63c123cac877555089348
+path: __INVALID__
+content: <empty>
+blob: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+```
+
+The accidental file was freshly read and removed immediately under RM-09A:
+
+```text
+repair commit: a2cf97bbf87d40d4cc2678637973433fea968451
+post-repair: __INVALID__ -> 404 / absent
+```
+
+The intended Issue #51 business mutation was abandoned for the remainder of the response/session. This is the same already-covered resource-class/payload/target mismatch as the seventh recurrence; RM-06A, RM-06D, RM-06F, RM-06G, RM-06H, and RM-09A already forbid it. Therefore no duplicate semantic mutation rule is added. The recurrence remains enforcement failure at the actual tool-call boundary, not a new QPX technical or physics failure class.
+
 ## Root-cause analysis
 
 ### RC-1 — Missing pre-write semantic-diff gate
@@ -146,6 +211,9 @@ During the fourth recurrence the intended resource was already known to be an is
 ### RC-9 — Post-write verification was not action-locked to read-only tools
 During the fifth recurrence the resource class and target were both correct, so resource-class/target guards did not prevent an `update_file` call. The actual phase intent was verification, not mutation. Verification must therefore have its own read-only action lock that forbids every mutator regardless of target correctness.
 
+### RC-10 — Structural mutation action was not locked independently from resource/target
+During the sixth recurrence the intended resource and target were known and freshly read, but a branch/ref action was selected instead of the frozen file-delete opcode. Structural mutation safety must therefore bind the **exact action family** (`delete_file`, `update_ref`, etc.) in addition to resource class and target identity.
+
 ## Corrective action
 
 Canonical procedure:
@@ -162,6 +230,7 @@ RM-06A Mutator recipient freeze
 RM-06B File byte-state guard
 RM-06C Create-action exact-target attestation
 RM-06D Resource-class payload-shape lock
+RM-06J Structural-action opcode lock
 RM-09A Session mutation circuit breaker after wrong-action recurrence
 ```
 
@@ -192,6 +261,7 @@ issue intent cannot invoke a file mutator without failing RM-06A/RM-06D
 update_file cannot run on byte-identical fetched/intended content under RM-06B
 create_* cannot run unless the exact planned target identity is attested at the call boundary
 no invented placeholder target can substitute for a server-assigned create target
+file-delete intent can invoke only delete_file with the freshly fetched path/blob SHA; branch/ref mutation is forbidden
 a wrong-action mutation trips the session circuit breaker before any further intended/business mutation
 ```
 

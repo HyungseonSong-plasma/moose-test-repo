@@ -4,17 +4,9 @@
 **Scope:** always-active operating invariants for this repository  
 **Purpose:** keep the always-loaded rule set small, stable, and unambiguous.
 
-This file contains only rules that apply across essentially every MOOSE/QPX work item. Conditional procedures live under `docs/protocols/` and are loaded through `PROTOCOL_INDEX.md`.
+This file contains only invariants that apply across essentially every MOOSE/QPX work item. Conditional behavior is loaded through `PROTOCOL_INDEX.md` and `docs/protocols/rule_working_set.md`.
 
-## Rule classes
-
-- **MUST** — invariant; violation is an operating error.
-- **PROCEDURE** — algorithm loaded only when its trigger applies.
-- **HEURISTIC** — optimization target; may be overridden by evidence.
-- **STATE** — current issue/work status; belongs in the issue body, not here.
-- **KNOWLEDGE** — reusable prior evidence; belongs in `docs/knowledge/`.
-
-## Canonical MUST rules
+## Canonical always-active invariants
 
 ### CORE-01 — Team boundary
 This repository is for MOOSE/QPX work. Do not perform SOL-team or `sol-adapter-moose` work here unless the user explicitly changes scope.
@@ -23,130 +15,74 @@ This repository is for MOOSE/QPX work. Do not perform SOL-team or `sol-adapter-m
 When the user says `meeting`, discuss and plan only. Do not mutate GitHub, files, issues, or production artifacts.
 
 ### CORE-03 — Approval authorizes execution
-`승인` / `approve` authorizes the agreed plan. `resume` authorizes continuation of the currently agreed work package. Do not treat discussion alone as execution authorization.
+`승인` / `approve` authorizes the agreed plan. `resume` authorizes continuation of the currently agreed work package. Discussion alone does not authorize execution.
 
-### CORE-04 — Issue-first execution
-Technical execution must be attributable to a concrete issue or bounded child work item with a closure claim.
+### CORE-04 — Work identity and current state
+Technical execution must be attributable to a concrete issue or bounded work item with a closure claim. For active/open work, the issue body/current status block is the canonical STATE record; comments are historical evidence unless the body is explicitly stale and being repaired.
 
-### CORE-05 — Current state comes from the issue body
-For active/open work, the issue body is the canonical current STATE record. Issue comments are historical evidence and must not override the current status block unless the body is explicitly stale and is being repaired.
+### CORE-05 — Runtime evidence authority
+Canonical QPX runtime evidence comes from the user's real local `qpx-opt`. Static/CI evidence may support construction checks but must not be promoted to QPX physics PASS/FAIL evidence when the real executable path was not exercised.
 
-### CORE-06 — Real runtime evidence is user-local QPX
-Canonical QPX runtime evidence comes from the user's real local `qpx-opt`. GitHub Actions may support static checks but must not be treated as QPX physics PASS/FAIL evidence when the real executable is absent.
+### CORE-06 — One canonical owner per rule
+Do not duplicate canonical procedure text across issue bodies, comments, READMEs, guides, or protocols. Reference the Rule ID or canonical owner. When a rule changes, update its one owner and route to it.
 
-### CORE-07 — Construction is not physics
-Any failure before physics execution, including P0/P1/P2 failure, is `HARNESS_OR_CONSTRUCTION_FAIL` (or a narrower infrastructure class), not a physics FAIL.
-
-### CORE-08 — Mandatory validation order
-Executable MOOSE/QPX work follows `P0 -> P1 -> P2 -> P3` as defined in `docs/protocols/validation.md`.
-
-### CORE-09 — Research before guessing
-Material source/model/provenance/representation uncertainty is routed to Researcher evidence before implementation when it can change the engineering path. Do not guess constants, transport data, source behavior, or model dependencies that can be retrieved.
-
-### CORE-10 — Validator owns sufficiency
-Acceptance, closure, test sufficiency, false-PASS risk, negative controls, and promotion decisions require the Validator contract in `docs/protocols/validation.md`.
-
-### CORE-11 — New failure creates reusable evidence
-A new material failure class must be recorded as an incident or equivalent issue evidence, reduced to a discriminating reproducer/root cause, fixed with regression coverage, and promoted to `docs/knowledge/` when reusable. Before promotion, map the incident to the first broken CORE-16 ontology/protocol link and decide whether it is a genuinely new semantic failure class or only a new symptom of an existing class; improve the existing owner rather than creating a duplicate rule when reuse applies.
-
-### CORE-12 — Bounded work uses the 3-EVR protocol
-Each bounded technical work item uses the prospective external-validation budget defined in `docs/protocols/problem_solving.md`: discriminate, targeted confirmation/fix, canonical regression. Do not automatically proceed to EVR #4 under an unchanged work boundary.
-
-### CORE-13 — Do not weaken closure quality to reduce rounds
-Efficiency targets never override canonical regressions, physical invariants, independent evidence requirements, or production-path validation.
-
-### CORE-14 — External bundle path safety
-A runner receiving a user-provided executable path must resolve it with `realpath` before changing directories. Delivered runtime bundles should contain execution/analyzer artifacts only unless documentation is explicitly requested.
-
-### CORE-15 — One canonical definition per rule
-Do not copy canonical procedure text into issue bodies, comments, README files, or another guide. Reference the Rule ID or canonical protocol path instead. When a rule changes, update its one canonical definition.
-
-### CORE-16 — Intent-preserving scientific execution ontology
-A scientific computation is valid only when the actual execution preserves the scientific intent and regime required by the closure claim. Parser acceptance, executable return code, solver convergence, or output-file existence alone are never sufficient evidence of scientific validity.
-
-Treat every executable claim as an ontology chain:
+### CORE-15 — Adaptive rule working set
+Do not preload the repository's complete rule graph. Maintain the smallest relevant working set:
 
 ```text
-CLAIM
-  -> MODEL
-  -> NUMERICAL REGIME
-  -> FRAMEWORK-EFFECTIVE CONFIGURATION
-  -> RUNTIME REGIME / TRAJECTORY
-  -> OBSERVATION / EVIDENCE
-  -> DECISION
+CORE
++ current PHASE PACK
++ only triggered TEMPORARY DIAGNOSTIC material
 ```
 
-The chain has the following semantics:
+Load, unload, sizing heuristics, phase transitions, and inventory lookup are defined in `docs/protocols/rule_working_set.md`. Rule accumulation is not a substitute for correct routing.
+
+### CORE-16 — Intent-preserving scientific validity
+A scientific computation is valid only when the actual execution preserves the scientific intent and regime required by the closure claim. Parser acceptance, return code, solver convergence, or output existence alone are never sufficient proof of scientific validity.
+
+When this cross-layer contract is material, load `docs/protocols/scientific_execution.md`. Model/regime meaning is delegated to `docs/protocols/problem_solving.md`; execution/evidence sufficiency is delegated to `docs/protocols/validation.md`.
+
+### CORE-17 — Hierarchical delivery boundaries
+For non-trivial development, preserve distinct delivery boundaries:
 
 ```text
-CLAIM      = what the run is intended to establish
-MODEL      = retained physics, reduced/averaged physics, validity assumptions, and domain/interface contract
-NUMERICAL REGIME = discretization, timestep/cadence, coupling, solver, and scale-resolution intent
-FRAMEWORK-EFFECTIVE CONFIGURATION = what QPX/MOOSE actually executes after defaults, overrides, adaptivity, sync, and ownership rules
-RUNTIME REGIME = the regime actually traversed during execution, including material state-dependent scale changes
-OBSERVATION = whether recorded outputs observe the intended state, time, branch, and invariant
-DECISION    = the scientific claim accepted, rejected, held, or re-routed from that evidence
+Project -> Milestone -> Issue -> Work Batch -> Mutation/Validation Unit
 ```
 
-Across every material link, distinguish the **semantic object** from its representation and declare identity/ownership/provenance when those affect meaning. Names, symbols, source-code spellings, serialized floating-point values, aggregate statistics, output rows, host constants, and proxy diagnostics are representations; they are not interchangeable merely because they look related.
+A milestone delivers one usable capability; an issue remains the semantic implementation/rollback boundary; a work batch is the execution-efficiency boundary; repository mutation safety remains independent. Detailed milestone planning, DAG, integration, and closure semantics are owned by `docs/protocols/milestone_delivery.md`.
 
-The validation equivalence relation must be **no stronger than the producing representation guarantees and no weaker than the scientific claim requires**. Before using exact equality or a tight acceptance gate, classify the required relation, for example:
+## Conditional-rule ownership map
 
-```text
-syntax / byte exact
-identifier / enum exact
-discrete mathematical exact
-representation-equivalent numeric
-numerical tolerance
-convergence / refinement equivalence
-physical-model tolerance
-```
+The following former always-active concerns remain canonical but are no longer permanently loaded. Their legacy CORE IDs are retained here only for compatibility and routing.
 
-A representation-only mismatch, wrong aggregation operator, wrong state/time identity, source-vs-host convention mismatch, or proxy/direct-evidence substitution is a validation/contract problem until evidence proves a physics defect. Exact equality is valid only when exact identity is itself guaranteed and required.
+| Legacy ID | Concern | Canonical phase owner |
+|---|---|---|
+| CORE-07 | Construction failure is not physics failure | `docs/protocols/validation.md` |
+| CORE-08 | P0 -> P1 -> P2 -> P3 validation order | `docs/protocols/validation.md` |
+| CORE-09 | Research before guessing material source/model facts | `docs/protocols/problem_solving.md` |
+| CORE-10 | Validator owns sufficiency / false-PASS decisions | `docs/protocols/validation.md` |
+| CORE-11 | New failure -> reusable evidence / recurrence learning | `docs/protocols/metrics_closure.md` + incident/knowledge owners |
+| CORE-12 | 3-EVR bounded-work protocol | `docs/protocols/problem_solving.md` |
+| CORE-13 | Closure-quality guardrail | `docs/protocols/metrics_closure.md` |
+| CORE-14 | External bundle/path safety | `docs/protocols/validation.md` / `docs/protocols/coding.md` as triggered |
 
-No downstream layer may silently contradict an upstream layer. A PASS is allowed only when the evidence needed for the claim demonstrates conformance along every material link. If a material link is unobserved, internally contradictory, leaves the declared regime, changes into an unvalidated regime, or is compared under an unjustified equivalence relation, fail closed as `HOLD`, a construction/runtime-semantic class, `VALIDATOR_SELFTEST_FAIL`, or a new incident rather than allowing a physics PASS.
-
-This ontology is intentionally future-facing: do not attempt to enumerate every possible framework or multiphysics failure in CORE. Define the claim/model/regime explicitly, derive or introspect effective execution controls, preserve semantic identity across representations, monitor the material runtime invariants that can change the regime, and require evidence that the intended contract actually ran.
-
-Responsibility is delegated, not duplicated:
-
-```text
-model/scale/coupling meaning and regime boundaries
-  -> docs/protocols/problem_solving.md (including PS-23 and Researcher/Validator flow)
-
-semantic equivalence, numerical/framework preflight, runtime-semantic conformance, and evidence sufficiency
-  -> docs/protocols/validation.md (including VAL-16 and VAL-21)
-```
-
-Automatic recovery is permitted only when it is a predeclared semantics-preserving derived correction. A model/regime transition or unknown contract violation that can change the scientific meaning requires explicit validation/re-routing rather than silent automatic repair.
+A legacy reference to CORE-07 through CORE-14 means "route to the canonical owner above"; it does not mean the full owner must remain in every active context.
 
 ## Always-load sequence
 
-For every technical response:
+For technical work:
 
 ```text
 1. read OPERATING_CORE.md
-2. read current issue body/status block
-3. route through PROTOCOL_INDEX.md
-4. load only the procedure(s) selected by the router
-5. search incidents/knowledge only when the symptom or decision requires it
+2. read current issue/body/status when work state is material
+3. read PROTOCOL_INDEX.md
+4. apply docs/protocols/rule_working_set.md
+5. load only the current phase owner(s)
+6. load incident/knowledge material only when triggered
 ```
 
-### `moose-test-init` bootstrap completeness
+## `moose-test-init` bootstrap
 
-`moose-test-init` is a context-restoration/bootstrap command, not merely a request for the current issue number. Before declaring initialization complete, load:
+`moose-test-init` is the official cross-chat initialization command. Its one canonical procedure is `BOOTSTRAP.md`.
 
-```text
-1. OPERATING_CORE.md
-2. active issue body/status and restart checkpoint
-3. PROTOCOL_INDEX.md
-4. docs/protocols/coding.md
-5. every additional protocol selected for the active issue's immediate resume obligation
-6. matching incident/knowledge evidence only when the resume obligation requires it
-```
-
-The coding protocol is mandatory during `moose-test-init` even when the immediate next action is validation rather than code mutation. The purpose is to prime repository ownership, harness/script placement, reuse, CLI, and self-test constraints before a later turn transitions into implementation.
-
-Do not report `moose-test-init` complete after restoring STATE alone. If implementation begins and `docs/protocols/coding.md` is only discovered afterward, classify the bootstrap as incomplete and correct the routing before further code/harness/script work.
-
-This sequence is itself canonical and is intended to keep the active rule context small while making bootstrap state complete enough for safe implementation.
+Do not duplicate the bootstrap algorithm here. On `moose-test-init`, route to `BOOTSTRAP.md`, restore the minimum safe resume context, and then use the adaptive working-set rules for subsequent user turns.

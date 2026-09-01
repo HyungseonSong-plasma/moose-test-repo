@@ -147,7 +147,7 @@ Syntax error in parameter 'Vars' given to FunctionParser::Parse()
 is:
 
 ```text
-python3 scripts/validate_parser_symbols.py <input.i>
+python3 scripts/qpx.py preflight <input.i>
 ```
 
 Do not change physics or solver settings before this namespace check.
