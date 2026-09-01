@@ -11,6 +11,8 @@ This ledger records one row per incident only after incident-level evidence is s
 
 | Date | Incident / issue | Root-cause class | Learning status | Pre-existing rule / knowledge owner | Applicable phase pack | Rule/pack active at incident? | Machine gate before incident? | Gate invoked? | Detection stage | EPR required? | Enforcement decision | Prevention maturity | Evidence |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 2026-09-01 | #50 sync wrong mutator — sixth repository wrong-action recurrence | Repository mutation call-routing failure: issue-only intent routed to file mutator | KNOWN_AND_GATE_BYPASSED | `docs/protocols/repository_mutation.md` RM-06D/RM-06F/RM-06G/RM-06H | MUTATE | yes | no | no | repository write / connector rejected with 409 | yes | STRENGTHEN_TRIGGER_OR_ROUTING | TRIGGERED | `docs/incidents/repository_mutation_staging_wrong_action_2026-08-28.md` — Sixth occurrence |
+| 2026-09-01 | Incident-learning activation miss after the #50 wrong-action recurrence | Working-set trigger/routing failure: existing incident-recording owners were not autonomously loaded until user prompt | KNOWN_AND_GATE_BYPASSED | `docs/protocols/rule_working_set.md` RWS-05/RWS-09; `docs/protocols/metrics_closure.md` MET-20/MET-22; `docs/metrics/incidents/README.md` | TEMPORARY INCIDENT-LEARNING / CLOSE | no | no | not-applicable | user-observed | no | STRENGTHEN_TRIGGER_OR_ROUTING | TRIGGERED | `docs/incidents/repository_mutation_staging_wrong_action_2026-08-28.md`; `docs/protocols/rule_working_set.md` RWS-05A |
 
 ## Recording constraints
 
