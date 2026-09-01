@@ -3,7 +3,7 @@
 **Work ID:** `qpx-stats-builder-decomposition`  
 **Issue:** #53  
 **Protocol:** `docs/protocols/coding.md` / CODE-13  
-**Status:** ACTIVE / V0+V0.5+V1+V2 PASS / D1 NET REPAIRED / D1 LOCAL GATE READY
+**Status:** ACTIVE / V0+V0.5+V1+V2 PASS / D1 CORE PASS / INVENTORY GATE DEFECT REPAIRED / VALIDATOR RECHECK READY
 
 ## Dependency graph
 
@@ -23,10 +23,14 @@ D1 Efficiency facade re-export + monolith removal
                 ↓
 post-write drift detected + repaired
                 ↓
-AST structural guard + D1 local validation  ← CURRENT
+AST structural guard + D1 core validation PASS
                 ↓
-PASS -> D2 Convergence extraction
-FAIL -> repair/rollback D1 only; M0-M2 remain accepted
+stage-blind inventory false FAIL detected + repaired
+                ↓
+fixed inventory recheck  ← CURRENT
+                ↓
+PASS -> VD1 COMPLETE -> D2 Convergence extraction
+FAIL -> repair inventory validator only unless new production evidence appears
 ```
 
 ## Accepted first gate
@@ -99,7 +103,7 @@ Repository commits:
   minimal repair restoring the missing ')' and final newline
 ```
 
-Post-write verification contained the defect before user-local D1 validation. Incident evidence:
+Post-write verification contained the transcription defect before user-local D1 validation. Incident evidence:
 
 `docs/incidents/issue53_efficiency_extraction_transcription_drift_2026-09-01.md`
 
@@ -112,58 +116,67 @@ Structural acceptance guard added:
 tests/Issue53_stats_builder_decomposition/structural_guard.py
 ```
 
-The guard parses `stats_builder.py`, requires the declared Efficiency owner transfer, rejects unexpected Convergence/core symbol removal at D1, and requires material LOC reduction.
-
 ### VD1 — repaired Efficiency extraction validation
 
-- dependency: V0/V0.5/V1/V2 PASS
-- net production commits: `959487a...` + repair `64d1ab4...`
-- claim:
-  - `stats_builder.py` remains syntactically valid;
-  - Efficiency implementation is no longer locally owned by `stats_builder.py`;
-  - `stats_builder.build_efficiency_stats` remains available through re-export;
-  - Convergence/Accuracy/Common/composition ownership is unchanged;
-  - PF1 Stats mapping remains green;
-  - full QPX P0 remains green;
-  - LOC materially decreases from the 942 baseline.
-- status: `PENDING`
-
-Required local batch:
-
-```bash
-python3 -m py_compile qpx_harness/analysis/stats_builder.py
-python3 tests/Issue53_stats_builder_decomposition/structural_guard.py --stage d1
-python3 -m qpx_harness.analysis.metrics.efficiency
-python3 - <<'PY'
-from qpx_harness.analysis import stats_builder
-from qpx_harness.analysis.metrics.efficiency import build_efficiency_stats
-assert stats_builder.build_efficiency_stats is build_efficiency_stats
-print("ISSUE53_D1_REEXPORT: PASS")
-PY
-python3 -m qpx_harness.analysis.stats_builder
-python3 -m qpx_harness.performance.runner --self-test
-python3 scripts/qpx.py self-test
-python3 tests/Issue53_stats_builder_decomposition/inventory.py
-```
-
-Core required markers:
+User-local D1 core evidence:
 
 ```text
 ISSUE53_STRUCTURAL_GUARD_D1: PASS
-ISSUE53_STRUCTURAL_GUARD_LOC: <900
+ISSUE53_STRUCTURAL_GUARD_LOC: 836
 QPX_EFFICIENCY_STATS_MAPPING_SELFTEST: PASS
 ISSUE53_D1_REEXPORT: PASS
 QPX_STATS_BUILDER_SELFTEST: PASS
 PF1_STATS_MAPPING_SELFTEST: PASS
+QPX_PERFORMANCE_CORE_SELFTEST: PASS
 QPX_HARNESS_SELFTEST: PASS
+```
+
+This proves the production D1 path and full P0 integration are green at `836 LOC`, a reduction of `106 LOC` from the `942` baseline.
+
+The final inventory command then returned a false FAIL because its baseline-only invariants still required `build_efficiency_stats` to be a local function. Under interactive `set -e`, that non-zero exit terminated the user's shell session.
+
+Validator incident:
+
+`docs/incidents/issue53_inventory_stage_blind_false_fail_2026-09-01.md`
+
+Validator repair commit:
+
+```text
+a678a275c61fddad5ca7e7d05e259919cee4c5c4
+  fix(issue53): make decomposition inventory stage-aware
+```
+
+The repaired inventory now evaluates stable facade symbols as local definitions or re-exported imports and auto-detects decomposition stage.
+
+- D1 production/core status: `PASS`
+- final validator status: `RECHECK PENDING`
+- D2 status: `BLOCKED UNTIL FIXED INVENTORY PASS`
+
+## Current local recheck
+
+Run without interactive `set -e` so a validator failure prints rather than terminating the shell:
+
+```bash
+git pull --ff-only
+python3 tests/Issue53_stats_builder_decomposition/inventory.py
+RC=$?
+echo "ISSUE53_FIXED_INVENTORY_RC: $RC"
+```
+
+Required markers for VD1 completion:
+
+```text
 ISSUE53_DECOMPOSITION_INVENTORY: PASS
+ISSUE53_STATS_BUILDER_LOC: 836
+ISSUE53_DECOMPOSITION_STAGE: D1_EFFICIENCY_EXTRACTED
+ISSUE53_FIXED_INVENTORY_RC: 0
 ```
 
 ## D2 gate
 
-Do not remove Convergence implementation from `stats_builder.py` until VD1 is PASS.
+Do not remove Convergence implementation from `stats_builder.py` until the repaired inventory recheck passes.
 
-If VD1 passes:
+After PASS:
 
 ```text
 D2 Convergence facade re-export + monolith removal
@@ -174,7 +187,8 @@ D2 Convergence facade re-export + monolith removal
 
 ## Rollback policy
 
-- V0/V0.5/V1/V2 are accepted and survive a D1 failure.
-- VD1 FAIL: repair or rollback only D1 net production change; do not discard the validated shadow owners.
-- D2 is blocked until VD1 PASS.
+- V0/V0.5/V1/V2 remain accepted.
+- D1 production/core validation is accepted.
+- A repaired-inventory recheck failure is treated as a validator defect unless it exposes new production evidence.
+- D2 remains blocked until the fixed inventory passes.
 - Every subsequent destructive owner extraction receives an immediate structural/local validation boundary.
