@@ -156,6 +156,30 @@ post-repair: __INVALID__ -> 404 / absent
 
 The intended Issue #50 business mutation was abandoned for the remainder of the response. This is not a new semantic failure class: RM-06A, RM-06D, RM-06F, RM-06G, RM-06H, and RM-09A already forbid exactly this resource-class/payload/target mismatch. The recurrence therefore reflects enforcement failure at the actual tool-call boundary rather than a missing canonical rule; no duplicate mutation rule is added.
 
+## Eighth recurrence during Issue51 cross-chat handoff
+
+On 2026-09-01, the intended mutation was an **issue-body update to Issue #51** so a fresh chat could resume from the exact state `Cut E2 implemented / P0 validation pending`. `OPERATING_CORE.md`, Issue #51, `PROTOCOL_INDEX.md`, `rule_working_set.md`, `repository_mutation.md`, and `BOOTSTRAP.md` had been read, and Issue #51 was freshly read immediately before the planned write. Despite that, the selected mutator was again `update_file` against the invented root path `__INVALID__` with empty content instead of `update_issue`.
+
+Observed accidental mutation:
+
+```text
+intended action: update_issue #51
+wrong action: update_file __INVALID__
+wrong-action commit: 96b02e5a1a2fe357aec63c123cac877555089348
+path: __INVALID__
+content: <empty>
+blob: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+```
+
+The accidental file was freshly read and removed immediately under RM-09A:
+
+```text
+repair commit: a2cf97bbf87d40d4cc2678637973433fea968451
+post-repair: __INVALID__ -> 404 / absent
+```
+
+The intended Issue #51 business mutation was abandoned for the remainder of the response/session. This is the same already-covered resource-class/payload/target mismatch as the seventh recurrence; RM-06A, RM-06D, RM-06F, RM-06G, RM-06H, and RM-09A already forbid it. Therefore no duplicate semantic mutation rule is added. The recurrence remains enforcement failure at the actual tool-call boundary, not a new QPX technical or physics failure class.
+
 ## Root-cause analysis
 
 ### RC-1 — Missing pre-write semantic-diff gate
