@@ -19,6 +19,8 @@ This ledger records one row per incident only after incident-level evidence is s
 | 2026-09-01 | #53 D2 local Git precondition mismatch | Execution-environment contract mismatch: Git branch/dirty-tree assumptions blocked a non-Git local execution environment | ENVIRONMENT_ESCAPE | `tests/Issue53_stats_builder_decomposition/apply_d2.py`; user-local execution contract | IMPLEMENT / VALIDATE | yes | yes | yes | user-local dry-run preflight | no | HARDEN_ENVIRONMENT_IDENTITY | DOCUMENTED | `docs/incidents/issue53_d2_git_precondition_mismatch_2026-09-01.md` |
 | 2026-09-01 | #54 final guard import-path false FAIL | Final validator import-bootstrap/path defect: file-invoked guard did not establish repository root before import-identity checks | GATE_DEFECT | `tests/Issue54_electron_inventory_decomposition/final_guard.py`; Issue54 disposable-ZIP local execution contract | VALIDATE / TEMPORARY INCIDENT-LEARNING | yes | yes | yes | consolidated user-local final validation | no | REPAIR_GATE_AND_SELFTEST | DOCUMENTED | `docs/incidents/issue54_final_guard_import_path_false_fail_2026-09-01.md` |
 | 2026-09-01 | #57 M0 A3 LOC baseline false FAIL | Validator baseline-data defect: frozen A3 blob was unchanged but inventory encoded physical LOC 698 instead of 729 | GATE_DEFECT | `tests/Issue57_stage_ab_large_owner/inventory.py`; Issue57 exact blob/LOC freeze contract | VALIDATE / TEMPORARY INCIDENT-LEARNING | yes | yes | yes | consolidated user-local final validation | no | REPAIR_GATE_AND_SELFTEST | DOCUMENTED | `docs/incidents/issue57_m0_a3_loc_baseline_false_fail_2026-09-01.md` |
+| 2026-09-01 | #72/#76 evidence ownership migration namespace collision | Python import ownership collision: `qpx_harness/evidence.py` and `qpx_harness/evidence/` coexisted, so package resolution hid the legacy `sha256_file` surface and aborted the integration guard at import | NOVEL | #69 capability-ownership contract existed, but no explicit module/package namespace-collision invariant or machine gate existed before this incident | IMPLEMENT / VALIDATE | yes | no | not-applicable | consolidated user-local final validation import | yes | PROMOTE_TO_MACHINE_GATE | MACHINE_CHECKED | GitHub #70 `External validation evidence` records round-1 collision and repair; `docs/metrics/efficiency/snapshots/2026-09-01_capability_architecture_batch_closure.md` |
+| 2026-09-01 | #70 `recipes/__init__.py` architecture census false FAIL | Architecture census taxonomy defect: a valid recipe namespace marker was treated as an unclassified production recipe owner | GATE_DEFECT | `tools/qpx_architecture_census.py`; #70 ownership/census contract | VALIDATE | yes | yes | yes | consolidated user-local final validation | no | REPAIR_GATE_AND_SELFTEST | MACHINE_CHECKED | GitHub #70 `External validation evidence` records round-2 taxonomy defect and repair; `docs/metrics/efficiency/snapshots/2026-09-01_capability_architecture_batch_closure.md` |
 
 ## Recording constraints
 
@@ -33,6 +35,7 @@ This ledger records one row per incident only after incident-level evidence is s
 - When `MET-22` triggers an Enforcement Promotion Review, record `EPR required? = yes` and one primary enforcement decision.
 - Record prevention maturity as the strongest evidence-backed state: `DOCUMENTED`, `TRIGGERED`, `MACHINE_CHECKED`, `MUTATION_TESTED`, or `IMPOSSIBLE_BY_CONSTRUCTION`.
 - Do not claim `MACHINE_CHECKED` or higher without executable applicable-path evidence.
+- An invalid state correctly blocked by an intended gate is prevention evidence, not automatically a new incident recurrence. The stale `scripts/qpx.py` documentation reference found during #74/#75 closure is therefore not added as a MET-20 recurrence row.
 
 ## Working-set miss interpretation
 
@@ -42,13 +45,13 @@ Use the active-pack evidence to distinguish:
 relevant owner did not exist
   -> possible NOVEL / RULE_ABSENT
 
-relevant owner existed but was not active
+relevant owner existed but pack inactive
   -> working-set selection or phase-routing failure
 
 owner was active but applicability trigger was missed
   -> trigger/routing failure
 
-mandatory gate existed but was not invoked
+mandatory gate existed but not invoked
   -> KNOWN_AND_GATE_BYPASSED
 
 mandatory gate invoked but produced the wrong decision
