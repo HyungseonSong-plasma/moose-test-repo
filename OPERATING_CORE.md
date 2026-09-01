@@ -42,6 +42,15 @@ A scientific computation is valid only when the actual execution preserves the s
 
 When this cross-layer contract is material, load `docs/protocols/scientific_execution.md`. Model/regime meaning is delegated to `docs/protocols/problem_solving.md`; execution/evidence sufficiency is delegated to `docs/protocols/validation.md`.
 
+### CORE-17 — Hierarchical delivery boundaries
+For non-trivial development, preserve distinct delivery boundaries:
+
+```text
+Project -> Milestone -> Issue -> Work Batch -> Mutation/Validation Unit
+```
+
+A milestone delivers one usable capability; an issue remains the semantic implementation/rollback boundary; a work batch is the execution-efficiency boundary; repository mutation safety remains independent. Detailed milestone planning, DAG, integration, and closure semantics are owned by `docs/protocols/milestone_delivery.md`.
+
 ## Conditional-rule ownership map
 
 The following former always-active concerns remain canonical but are no longer permanently loaded. Their legacy CORE IDs are retained here only for compatibility and routing.
