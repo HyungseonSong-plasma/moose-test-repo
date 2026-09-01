@@ -17,8 +17,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from .cpp_calls import CppCallError, self_test as cpp_calls_self_test, split_call_arguments
-from .cpp_source import CppSource, CppSourceError, self_test as cpp_source_self_test
+from .cpp.calls import CppCallError, self_test as cpp_calls_self_test, split_call_arguments
+from .cpp.source import CppSource, CppSourceError, self_test as cpp_source_self_test
 from .runtime import resolve_executable, validate_executable
 
 SOURCE_RELATIVE = Path("src/materials/QPXThermalDiffusionMaterial.C")
