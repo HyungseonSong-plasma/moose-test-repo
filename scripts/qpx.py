@@ -13,6 +13,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from qpx_harness.analysis import analyze
+from qpx_harness.analysis.stats_builder import self_test as stats_builder_self_test
 from qpx_harness.issue46_jacobian_localization import main as jac_localization_main, self_test as jac_localization_self_test
 from qpx_harness.bundle import main as bundle_main
 from qpx_harness.issue46_fd_reference import main as fd_reference_main, self_test as fd_reference_self_test
@@ -162,6 +163,7 @@ def temporal_csv_cli(argv: list[str]) -> int:
 def self_test_cli(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(prog="qpx self-test")
     parser.parse_args(argv)
+    stats_builder_rc = stats_builder_self_test()
     parser_rc = parser_symbol_self_test()
     temporal_rc = temporal_self_test()
     workspace_rc = workspace_self_test()
@@ -182,7 +184,8 @@ def self_test_cli(argv: list[str]) -> int:
     performance_transport_probe_rc = performance_transport_probe_self_test()
     performance_cache_audit_rc = performance_cache_audit_self_test()
     ok = (
-        parser_rc == 0
+        stats_builder_rc == 0
+        and parser_rc == 0
         and temporal_rc == 0
         and workspace_rc == 0
         and coupling_evr1_rc == 0
