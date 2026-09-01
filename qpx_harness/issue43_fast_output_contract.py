@@ -7,6 +7,7 @@ for _module in (_contract, _v3):
     for _name in dir(_module):
         if not _name.startswith("__"):
             globals()[_name] = getattr(_module, _name)
+del _module, _name, _contract, _v3
 
 _RAW_BUILD_ELECTRON = _build_electron_fixed
 _RAW_BUILD_ONEWAY = _build_oneway_fixed
