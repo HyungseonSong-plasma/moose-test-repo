@@ -210,7 +210,7 @@ def audit_framework_control_structure(text: str) -> dict[str, Any]:
     blockers = [check for check in checks if check["status"] != "PASS"]
     return {
         "status": "PASS" if not blockers else "HOLD",
-        "class": "MOOSE_CONSTRAINT_CONTROL_STRUCTURE_PASS" if not blockers else "MOOSE_CONSTRAINT_CONTROL_FAIL",
+        "class": "MOOSE_CONSTRAINT_CONTROL_STRUCTURE_PASS" if not blockers else "MOOSE_CONSTRAINT_CONTROL_STRUCTURE_FAIL",
         "checks": checks,
         "blockers": blockers,
         "source_contract": {
