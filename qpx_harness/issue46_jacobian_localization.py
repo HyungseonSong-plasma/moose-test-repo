@@ -330,6 +330,52 @@ def evaluate_runtime_batch(control: dict[str, Any], localization: dict[str, Any]
     return {"status": "HOLD", "class": klass or "JACOBIAN_LOCALIZATION_INSUFFICIENT", "reason": localization.get("reason", "C0 entry-wise localization is insufficient")}
 
 
+def build_jacobian_localization_stats(
+    *,
+    runtime: dict[str, Any],
+    analysis: dict[str, Any],
+) -> Any:
+    """Map existing Issue46 runtime/localization facts into canonical Stats."""
+
+    from .analysis.stats_builder import build_accuracy_stats, build_simulation_stats
+
+    jacobian = analysis.get("jacobian")
+    difference = analysis.get("difference")
+    localization = analysis.get("localization")
+
+    matrix_comparisons: tuple[dict[str, Any], ...] = ()
+    if isinstance(difference, dict):
+        finite = pm.finite_nonzero_entries(difference)
+        matrix_comparison: dict[str, Any] = {
+            "name": "thresholded_jacobian_difference",
+            **finite,
+        }
+        if isinstance(localization, dict):
+            matrix_comparison.update(
+                {
+                    "mapped_entry_count": localization.get("mapped_entry_count"),
+                    "thresholded_l2_difference": localization.get(
+                        "thresholded_l2_difference"
+                    ),
+                    "blocks": localization.get("blocks"),
+                }
+            )
+        matrix_comparisons = (matrix_comparison,)
+
+    accuracy = build_accuracy_stats(
+        jacobian_comparisons=(
+            jacobian.get("tests", ()) if isinstance(jacobian, dict) else ()
+        ),
+        matrix_comparisons=matrix_comparisons,
+    )
+    record = {
+        "case_id": runtime.get("case_id"),
+        "return_code": runtime.get("returncode"),
+        "performance": {"wall_seconds": runtime.get("wall_seconds")},
+    }
+    return build_simulation_stats(record, accuracy=accuracy)
+
+
 def _synthetic_dof_map() -> str:
     return json.dumps({"ndof": 5, "demangled": True, "vars": [{"name": "n_e", "subdomains": [{"id": 1, "kernels": [], "dofs": [0, 1]}]}, {"name": "potential_plasma", "subdomains": [{"id": 1, "kernels": [], "dofs": [2, 3]}]}, {"name": inv.LAMBDA_VARIABLE, "subdomains": [{"id": 1, "kernels": [], "dofs": []}]}]})
 
@@ -389,6 +435,48 @@ def self_test() -> int:
         lm_result = analyze_localization_text(lm_log, dofmap)
         if lm_result["class"] != "CONSTRAINT_LM_BLOCK_MISMATCH":
             raise AssertionError("LM block mismatch did not classify")
+
+        stats = build_jacobian_localization_stats(
+            runtime={"case_id": "C0_LOCALIZATION", "returncode": 1, "wall_seconds": 0.5},
+            analysis=lm_result,
+        )
+        if (
+            stats.common.case_id != "C0_LOCALIZATION"
+            or stats.common.return_code != 1
+            or stats.common.wall_time_seconds != 0.5
+            or stats.accuracy is None
+        ):
+            raise AssertionError("Issue46 Stats common/accuracy mapping drifted")
+        jacobian_error = next(
+            item for item in stats.accuracy.matrix_errors if item.name == "jacobian_fd"
+        )
+        localized_error = next(
+            item
+            for item in stats.accuracy.matrix_errors
+            if item.name == "thresholded_jacobian_difference"
+        )
+        if (
+            jacobian_error.error.relative_error != 4.0e-5
+            or jacobian_error.error.absolute_error != 8.0e-4
+            or localized_error.threshold != LOCALIZATION_THRESHOLD
+            or localized_error.structural_entry_count != 2
+            or localized_error.nonzero_thresholded_entry_count != 2
+            or localized_error.mapped_entry_count != 2
+            or not math.isclose(
+                float(localized_error.thresholded_l2_difference),
+                math.sqrt((2.0e-4) ** 2 + (3.0e-4) ** 2),
+                rel_tol=1.0e-12,
+            )
+            or len(localized_error.blocks) != 2
+            or len(localized_error.entries) != 2
+        ):
+            raise AssertionError("Issue46 matrix/Jacobian Stats mapping drifted")
+        if stats.convergence is not None:
+            raise AssertionError("unproduced convergence facts were invented")
+        if hasattr(stats, "decision") or hasattr(stats, "evidence"):
+            raise AssertionError("policy/evidence leaked into Stats")
+        print("ISSUE46_JAC_LOCALIZATION_STATS_MAPPING_SELFTEST: PASS")
+
         ep_log = _synthetic_localization_log([(0, 2, 2.0e-4), (3, 1, -3.0e-4)])
         if analyze_localization_text(ep_log, dofmap)["class"] != "ELECTRON_POTENTIAL_BLOCK_MISMATCH":
             raise AssertionError("electron-potential block mismatch did not classify")
