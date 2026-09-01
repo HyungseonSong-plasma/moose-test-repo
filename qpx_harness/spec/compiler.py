@@ -7,7 +7,15 @@ from .models import (
     CaseSpec,
     EnsureBlockOperation,
     ExperimentSpec,
+    InsertChildBlockOperation,
+    InsertTopLevelBeforeOperation,
+    RemoveBlockOperation,
+    RemovePathsOperation,
+    RemovePetscFlagsOperation,
+    RemovePetscOptionOperation,
+    ReplaceBlockOperation,
     SetParameterOperation,
+    SetPetscOptionOperation,
 )
 from .plan import CasePlan, ExecutionPlan, OperationPlan
 
@@ -34,6 +42,62 @@ def _compile_operation(operation: object) -> OperationPlan:
                 ("flags", tuple(operation.flags)),
                 ("path", operation.path),
                 ("parameter", operation.parameter),
+            ),
+        )
+    if isinstance(operation, RemoveBlockOperation):
+        return OperationPlan(op="remove_block", arguments=(("path", operation.path),))
+    if isinstance(operation, ReplaceBlockOperation):
+        return OperationPlan(
+            op="replace_block",
+            arguments=(("path", operation.path), ("block", operation.block)),
+        )
+    if isinstance(operation, InsertChildBlockOperation):
+        return OperationPlan(
+            op="insert_child_block",
+            arguments=(
+                ("parent", operation.parent),
+                ("path", operation.path),
+                ("block", operation.block),
+            ),
+        )
+    if isinstance(operation, InsertTopLevelBeforeOperation):
+        return OperationPlan(
+            op="insert_top_level_before",
+            arguments=(("marker", operation.marker), ("block", operation.block)),
+        )
+    if isinstance(operation, RemovePathsOperation):
+        return OperationPlan(
+            op="remove_paths",
+            arguments=(("paths", tuple(operation.paths)),),
+        )
+    if isinstance(operation, RemovePetscFlagsOperation):
+        return OperationPlan(
+            op="remove_petsc_flags",
+            arguments=(
+                ("flags", tuple(operation.flags)),
+                ("path", operation.path),
+                ("parameter", operation.parameter),
+            ),
+        )
+    if isinstance(operation, SetPetscOptionOperation):
+        return OperationPlan(
+            op="set_petsc_option",
+            arguments=(
+                ("name", operation.name),
+                ("value", operation.value),
+                ("path", operation.path),
+                ("names_parameter", operation.names_parameter),
+                ("values_parameter", operation.values_parameter),
+            ),
+        )
+    if isinstance(operation, RemovePetscOptionOperation):
+        return OperationPlan(
+            op="remove_petsc_option",
+            arguments=(
+                ("name", operation.name),
+                ("path", operation.path),
+                ("names_parameter", operation.names_parameter),
+                ("values_parameter", operation.values_parameter),
             ),
         )
     raise ExperimentSpecError(
