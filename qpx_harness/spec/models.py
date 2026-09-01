@@ -48,10 +48,71 @@ class AddPetscFlagsOperation(StrictModel):
     parameter: str = "petsc_options"
 
 
+class RemoveBlockOperation(StrictModel):
+    op: Literal["remove_block"]
+    path: str = Field(min_length=1)
+
+
+class ReplaceBlockOperation(StrictModel):
+    op: Literal["replace_block"]
+    path: str = Field(min_length=1)
+    block: str = Field(min_length=1)
+
+
+class InsertChildBlockOperation(StrictModel):
+    op: Literal["insert_child_block"]
+    parent: str = Field(min_length=1)
+    path: str = Field(min_length=1)
+    block: str = Field(min_length=1)
+
+
+class InsertTopLevelBeforeOperation(StrictModel):
+    op: Literal["insert_top_level_before"]
+    marker: str = Field(min_length=1)
+    block: str = Field(min_length=1)
+
+
+class RemovePathsOperation(StrictModel):
+    op: Literal["remove_paths"]
+    paths: tuple[str, ...] = Field(min_length=1)
+
+
+class RemovePetscFlagsOperation(StrictModel):
+    op: Literal["remove_petsc_flags"]
+    flags: tuple[str, ...] = Field(min_length=1)
+    path: str = "Executioner"
+    parameter: str = "petsc_options"
+
+
+class SetPetscOptionOperation(StrictModel):
+    op: Literal["set_petsc_option"]
+    name: str = Field(min_length=1)
+    value: str = Field(min_length=1)
+    path: str = "Executioner"
+    names_parameter: str = "petsc_options_iname"
+    values_parameter: str = "petsc_options_value"
+
+
+class RemovePetscOptionOperation(StrictModel):
+    op: Literal["remove_petsc_option"]
+    name: str = Field(min_length=1)
+    path: str = "Executioner"
+    names_parameter: str = "petsc_options_iname"
+    values_parameter: str = "petsc_options_value"
+
+
 OperationSpec = Union[
     EnsureBlockOperation,
     SetParameterOperation,
     AddPetscFlagsOperation,
+    RemoveBlockOperation,
+    ReplaceBlockOperation,
+    InsertChildBlockOperation,
+    InsertTopLevelBeforeOperation,
+    RemovePathsOperation,
+    RemovePetscFlagsOperation,
+    SetPetscOptionOperation,
+    RemovePetscOptionOperation,
 ]
 
 
