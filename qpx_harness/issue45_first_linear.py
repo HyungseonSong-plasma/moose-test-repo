@@ -152,6 +152,56 @@ Nonlinear solve did not converge due to DIVERGED_MAX_IT iterations 1
 """
 
 
+def build_first_linear_stats(
+    case_id: str,
+    *,
+    runtime: dict[str, Any],
+    decision: dict[str, Any],
+) -> Any:
+    """Map existing first-linear facts into Stats without changing producer contracts."""
+
+    from .analysis.stats_builder import (
+        build_accuracy_stats,
+        build_convergence_stats,
+        build_simulation_stats,
+    )
+
+    first_linear = decision.get("first_linear")
+    core = decision.get("core")
+    jacobian = decision.get("jacobian")
+    ksp_identity = decision.get("ksp_identity")
+    true_residuals = decision.get("true_residuals")
+
+    convergence = build_convergence_stats(
+        linear_terminations=(first_linear,) if isinstance(first_linear, dict) else (),
+        ksp_view=ksp_identity if isinstance(ksp_identity, dict) else None,
+        true_residuals=true_residuals if isinstance(true_residuals, list) else (),
+        variable_residual_blocks=(
+            core.get("variable_residuals", ()) if isinstance(core, dict) else ()
+        ),
+        scaling_factor_blocks=(
+            core.get("automatic_scaling_factors", ())
+            if isinstance(core, dict)
+            else ()
+        ),
+    )
+    accuracy = build_accuracy_stats(
+        jacobian_comparisons=(
+            jacobian.get("tests", ()) if isinstance(jacobian, dict) else ()
+        )
+    )
+    record = {
+        "case_id": case_id,
+        "return_code": runtime.get("returncode"),
+        "performance": {"wall_seconds": runtime.get("wall_seconds")},
+    }
+    return build_simulation_stats(
+        record,
+        convergence=convergence,
+        accuracy=accuracy,
+    )
+
+
 def self_test() -> int:
     try:
         base = inv._synthetic_constrained_input(TARGET)
@@ -162,11 +212,47 @@ def self_test() -> int:
         mutated = diagnostic.replace("boundary = outlet", "boundary = plasma_cover", 1)
         if audit_first_linear_structure(base, mutated)["status"] == "PASS":
             raise AssertionError("non-diagnostic physics mutation was accepted")
-        if (
-            analyze_first_linear_text(_synthetic_log(), returncode=1)["class"]
-            != "GMRES_RESTART_BREAKDOWN"
-        ):
+        decision = analyze_first_linear_text(_synthetic_log(), returncode=1)
+        if decision["class"] != "GMRES_RESTART_BREAKDOWN":
             raise AssertionError("GMRES restart breakdown did not classify")
+
+        stats = build_first_linear_stats(
+            "issue45-first-linear-selftest",
+            runtime={"returncode": 1, "wall_seconds": 0.25},
+            decision=decision,
+        )
+        if (
+            stats.common.case_id != "issue45-first-linear-selftest"
+            or stats.common.return_code != 1
+            or stats.common.wall_time_seconds != 0.25
+            or stats.convergence is None
+            or stats.convergence.solver is None
+            or stats.convergence.solver.linear_solver != "gmres"
+            or stats.convergence.solver.linear_restart != 30
+            or stats.convergence.solver.preconditioner != "lu"
+            or not stats.convergence.terminations
+            or stats.convergence.terminations[0].reason != "DIVERGED_BREAKDOWN"
+            or stats.convergence.terminations[0].iteration_count != 30
+            or stats.accuracy is None
+            or not stats.accuracy.matrix_errors
+            or stats.accuracy.matrix_errors[0].error.relative_error != 2.0e-9
+            or stats.accuracy.matrix_errors[0].error.absolute_error != 2.0e-8
+        ):
+            raise AssertionError("first-linear Stats mapping contract drifted")
+        if not any(
+            sample.kind == "petsc_true" and sample.iteration == 30
+            for sample in stats.convergence.residuals
+        ):
+            raise AssertionError("true-residual facts were not preserved in Stats")
+        if not any(
+            sample.kind == "moose_variable_l2" and sample.variable == "n_e"
+            for sample in stats.convergence.residuals
+        ):
+            raise AssertionError("variable-residual facts were not preserved in Stats")
+        if hasattr(stats, "decision") or hasattr(stats, "evidence"):
+            raise AssertionError("policy/evidence leaked into Stats")
+        print("ISSUE45_FIRST_LINEAR_STATS_MAPPING_SELFTEST: PASS")
+
         if (
             analyze_first_linear_text(_synthetic_log(1.0e-3), returncode=1)["class"]
             != "JACOBIAN_MISMATCH"
