@@ -337,10 +337,8 @@ def build_jacobian_localization_stats(
 ) -> Any:
     """Map existing Issue46 runtime/localization facts into canonical Stats."""
 
-    from .analysis.stats_builder import (
-        build_accuracy_stats,
-        build_runtime_simulation_stats,
-    )
+    from .analysis.metrics.accuracy import build_jacobian_accuracy_stats
+    from .analysis.stats_builder import build_runtime_simulation_stats
 
     jacobian = analysis.get("jacobian")
     difference = analysis.get("difference")
@@ -365,10 +363,8 @@ def build_jacobian_localization_stats(
             )
         matrix_comparisons = (matrix_comparison,)
 
-    accuracy = build_accuracy_stats(
-        jacobian_comparisons=(
-            jacobian.get("tests", ()) if isinstance(jacobian, dict) else ()
-        ),
+    accuracy = build_jacobian_accuracy_stats(
+        jacobian if isinstance(jacobian, dict) else None,
         matrix_comparisons=matrix_comparisons,
     )
     return build_runtime_simulation_stats(runtime, accuracy=accuracy)
