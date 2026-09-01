@@ -178,6 +178,37 @@ def _build_intended(
     return intended
 
 
+def _apply_atomically(original: str, intended: str) -> None:
+    temp = TARGET.with_name(TARGET.name + ".issue53_d2.tmp")
+    if temp.exists():
+        raise AssertionError(f"stale migration temp file exists: {temp.name}")
+
+    try:
+        temp.write_text(intended)
+        candidate = temp.read_text()
+        parsed = ast.parse(candidate, filename=TARGET.relative_to(ROOT).as_posix())
+        if CONVERGENCE_LOCAL & set(_top_functions(parsed)):
+            raise AssertionError("temporary D2 candidate still contains Convergence locals")
+
+        temp.replace(TARGET)
+        reparsed = ast.parse(TARGET.read_text(), filename=TARGET.relative_to(ROOT).as_posix())
+        if CONVERGENCE_LOCAL & set(_top_functions(reparsed)):
+            raise AssertionError("post-replace Convergence locals remain")
+        if "build_convergence_stats" not in _imported_from(
+            reparsed, "metrics.convergence"
+        ):
+            raise AssertionError("post-replace Convergence facade re-export missing")
+    except Exception:
+        if temp.exists():
+            temp.unlink()
+        if TARGET.read_text() != original:
+            TARGET.write_text(original)
+        raise
+    finally:
+        if temp.exists():
+            temp.unlink()
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--apply", action="store_true")
@@ -197,10 +228,7 @@ def main() -> int:
             print("ISSUE53_D2_MIGRATOR_MODE: CHECK_ONLY")
             return 0
 
-        TARGET.write_text(intended)
-        reparsed = ast.parse(TARGET.read_text(), filename=TARGET.relative_to(ROOT).as_posix())
-        if CONVERGENCE_LOCAL & set(_top_functions(reparsed)):
-            raise AssertionError("post-write Convergence locals remain")
+        _apply_atomically(text, intended)
         print("ISSUE53_D2_MIGRATOR_APPLY: PASS")
         return 0
     except Exception as exc:
