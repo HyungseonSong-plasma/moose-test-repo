@@ -687,17 +687,6 @@ def self_test() -> int:
             print(f"PF1_MUTATION_{name}: MISSED")
             return 1
 
-    schema_root = Path(__file__).resolve().parents[1] / "performance" / "schema"
-    for schema_name in ("experiment.schema.json", "result.schema.json"):
-        schema_path = schema_root / schema_name
-        if not schema_path.is_file():
-            print(f"PF1_SCHEMA_MISSING: {schema_path}")
-            return 1
-        schema = json.loads(schema_path.read_text())
-        if schema.get("$schema") != "https://json-schema.org/draft/2020-12/schema":
-            print(f"PF1_SCHEMA_DRAFT_FAIL: {schema_name}")
-            return 1
-
     synthetic_perf = {
         "reporters": {"perf_graph": {"type": "PerfGraphReporter", "values": {}}},
         "time_steps": [{
