@@ -150,9 +150,9 @@ def main() -> int:
     cli_ok = all(
         token in qpx_text
         for token in (
-            '"coupling-diagnostic"',
+            '"fast-coupling-diagnostic"',
             '"coupling-evr1"',
-            "issue43_coupling_diagnostic import main as coupling_diagnostic_main",
+            "issue43_coupling_diagnostic import main as fast_coupling_diagnostic_main",
             "coupling_evr1_runtime import main as coupling_evr1_main",
         )
     )
