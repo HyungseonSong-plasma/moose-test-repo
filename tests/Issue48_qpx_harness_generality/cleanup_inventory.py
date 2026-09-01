@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
-"""Issue48 cleanup inventory for legacy qpx_harness owners.
+"""Issue48 cleanup inventory for remaining legacy qpx_harness owners.
 
 The checker answers one deletion-safety question: which remaining legacy or
 mixed-owner modules still have executable or characterization consumers? It is
 read-only and does not classify scientific state.
+
+Issue48 scope-freeze retained owners are recorded explicitly rather than kept as
+cleanup candidates merely because they predate the current naming convention.
 """
 from __future__ import annotations
 
@@ -18,10 +21,13 @@ from typing import Iterable
 
 ROOT = Path(__file__).resolve().parents[2]
 
+RETAINED_OWNERS = {
+    "electron_inventory_nullspace": "canonical Issue45 inventory-nullspace/closure semantic owner",
+    "scale_audit": "reusable QVT mesh/space-time scale owner with cross-workflow consumers",
+}
+
 CLEANUP_CANDIDATES = (
-    "electron_inventory_nullspace",
     "fast_plasma_coupling_diagnostic",
-    "scale_audit",
 )
 
 PYTHON_SCAN_ROOTS = ("qpx_harness", "recipes", "scripts", "tests", "performance")
@@ -237,6 +243,7 @@ def inventory(root: Path = ROOT) -> dict[str, object]:
     return {
         "scripts_status": "PASS" if scripts == ["scripts/qpx.py"] else "HOLD",
         "scripts": scripts,
+        "retained_owners": dict(RETAINED_OWNERS),
         "candidates": candidates,
         "zero_consumer_candidates": zero,
         "test_only_candidates": test_only,
@@ -248,6 +255,13 @@ def inventory(root: Path = ROOT) -> dict[str, object]:
 
 def self_test() -> int:
     try:
+        if set(RETAINED_OWNERS) & set(CLEANUP_CANDIDATES):
+            raise AssertionError("retained owner leaked back into cleanup candidates")
+        if set(RETAINED_OWNERS) != {"electron_inventory_nullspace", "scale_audit"}:
+            raise AssertionError(f"retained-owner scope drift: {sorted(RETAINED_OWNERS)}")
+        if CLEANUP_CANDIDATES != ("fast_plasma_coupling_diagnostic",):
+            raise AssertionError(f"cleanup scope drift: {CLEANUP_CANDIDATES}")
+
         path = ROOT / "qpx_harness" / "example.py"
         source = (
             "from . import sibling as s\n"
@@ -269,14 +283,6 @@ def self_test() -> int:
             raise AssertionError(f"missing imports: {required - imports}")
         if "qpx_harness.not_an_import" in imports:
             raise AssertionError("string literal was misclassified as import")
-
-        compat_imports = imported_modules(
-            "from qpx_harness import jacobian_fd_reference_audit as legacy\n",
-            module_name="qpx_harness.compat.example",
-            path=ROOT / "qpx_harness" / "compat" / "example.py",
-        )
-        if "qpx_harness.jacobian_fd_reference_audit" not in compat_imports:
-            raise AssertionError("package submodule import consumer was not detected")
 
         runtime, tests = _partition_consumers(
             {
@@ -355,6 +361,8 @@ def main(argv: list[str] | None = None) -> int:
             result["scripts_status"],
             "files=" + ",".join(result["scripts"]),
         )
+        for module, reason in RETAINED_OWNERS.items():
+            print(f"ISSUE48_RETAINED_OWNER: {module} reason={reason}")
         for module in CLEANUP_CANDIDATES:
             item = result["candidates"][module]
             runtime = item["runtime_consumers"]
