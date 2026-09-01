@@ -132,6 +132,30 @@ The branch already pointed to that exact commit, so the wrong action produced no
 
 This recurrence shows that resource-class and payload guards still need an explicit **structural-action opcode lock**: once an action is frozen as `delete existing file`, every branch/ref mutator must be categorically forbidden even if it targets the correct branch and results in a no-op.
 
+## Seventh recurrence during Issue50 state synchronization
+
+On 2026-09-01, after completing the read-only Stats builder/mapping characterization, the intended next mutation was an **issue-body update to Issue #50**. The issue was freshly read, but the selected mutator was `update_file` and an invented root path `__INVALID__` with empty content was supplied instead of calling `update_issue`.
+
+Observed accidental mutation:
+
+```text
+intended action: update_issue #50
+wrong action: update_file __INVALID__
+wrong-action commit: 60cd522fbc22a68343fd14243d9a7007be90b204
+path: __INVALID__
+content: <empty>
+blob: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+```
+
+The accidental target was immediately fetched and removed under the session circuit breaker:
+
+```text
+repair commit: cb190dcb7eaa9e1dd9b643a9f8dc42a8c1ac1993
+post-repair: __INVALID__ -> 404 / absent
+```
+
+The intended Issue #50 business mutation was abandoned for the remainder of the response. This is not a new semantic failure class: RM-06A, RM-06D, RM-06F, RM-06G, RM-06H, and RM-09A already forbid exactly this resource-class/payload/target mismatch. The recurrence therefore reflects enforcement failure at the actual tool-call boundary rather than a missing canonical rule; no duplicate mutation rule is added.
+
 ## Root-cause analysis
 
 ### RC-1 — Missing pre-write semantic-diff gate
