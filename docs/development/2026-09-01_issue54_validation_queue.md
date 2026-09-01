@@ -2,15 +2,21 @@
 
 ## State
 
-`M0/M1 DIAGNOSTICS STAGED / PRODUCTION UNCHANGED / DESTRUCTIVE CUT BLOCKED`
+`CLOSE-LEVEL DECOMPOSITION APPLIED / SINGLE FINAL LOCAL VALIDATION READY / ISSUE NOT YET CLOSED`
 
 Work ID: `qpx-issue45-electron-inventory-decomposition`
 
 Parent scientific issue: #45.
 
+## Assumed accepted baseline
+
+Per current execution plan, V54-M0, V54-M1, and the pre-cut P0 baseline are treated as PASS for purposes of completing all rollback-local refactor work units before one consolidated local validation.
+
+This does not authorize new scientific evidence. #45 remains scientifically frozen.
+
 ## Scientific freeze
 
-This refactor must not consume or authorize #45 EVR3. The following remain frozen:
+The refactor must not consume or authorize #45 EVR3. Frozen contracts remain:
 
 - #45 EVR accounting: 2/3 consumed, EVR3 preserved/not authorized;
 - constrained steady physical closure;
@@ -23,11 +29,99 @@ This refactor must not consume or authorize #45 EVR3. The following remain froze
 
 No new scientific discriminator is part of Issue54 validation.
 
+## Applied work units
+
+The former monolith `qpx_harness/electron_inventory_nullspace.py` has been decomposed into focused Issue45 owners:
+
+```text
+qpx_harness/issue45/
+  constants.py
+  errors.py
+  inventory_structure.py
+  closure_schema.py
+  closure_model.py
+  closure_runtime.py
+  orchestration.py
+  characterization.py
+```
+
+`qpx_harness/electron_inventory_nullspace.py` now acts as the stable compatibility/composition facade and retains CLI routing plus the historical imports required by downstream callers.
+
+The extraction units were applied in semantic order:
+
+```text
+Structure
+-> Schema
+-> Closure Model
+-> Runtime Evaluation
+-> Orchestration
+-> Characterization
+-> Thin Facade
+```
+
+`qpx_harness/issue45_first_linear.py` and `scripts/qpx.py` were intentionally left unchanged.
+
+## Canonical structural result before local validation
+
+The close-level decomposition commit removes 1873 lines from the historical monolith and redistributes ownership into focused modules. The exact final facade LOC is reported by the final guard rather than used as a precondition.
+
+A final machine gate is available at:
+
+```text
+tests/Issue54_electron_inventory_decomposition/final_guard.py
+```
+
+It checks:
+
+- thin-facade local implementation state;
+- focused owner presence and ownership functions;
+- `issue45_first_linear.py` consumer surface;
+- facade re-export identity;
+- canonical CLI routing;
+- import/circular-dependency integrity;
+- zero EVR consumption by this refactor.
+
+## Single final local validation
+
+Use a fresh disposable GitHub ZIP snapshot and run diagnostics only:
+
+```text
+python3 -m py_compile qpx_harness/electron_inventory_nullspace.py
+python3 -m py_compile qpx_harness/issue45/constants.py
+python3 -m py_compile qpx_harness/issue45/errors.py
+python3 -m py_compile qpx_harness/issue45/inventory_structure.py
+python3 -m py_compile qpx_harness/issue45/closure_schema.py
+python3 -m py_compile qpx_harness/issue45/closure_model.py
+python3 -m py_compile qpx_harness/issue45/closure_runtime.py
+python3 -m py_compile qpx_harness/issue45/orchestration.py
+python3 -m py_compile qpx_harness/issue45/characterization.py
+python3 tests/Issue54_electron_inventory_decomposition/final_guard.py
+python3 -m qpx_harness.electron_inventory_nullspace --self-test
+python3 -m qpx_harness.issue45_first_linear --self-test
+python3 scripts/qpx.py self-test
+```
+
+Do **not** run `--closure-run` as Issue54 validation.
+
+## Required final acceptance markers
+
+```text
+ISSUE54_FINAL_THIN_FACADE: PASS
+ISSUE54_FINAL_FIRST_LINEAR_REEXPORTS: PASS
+ISSUE54_FINAL_FIRST_LINEAR_CONSUMERS: PASS
+ISSUE54_FINAL_IMPORT_IDENTITY: PASS
+ISSUE54_FINAL_CLI_SURFACE: PASS
+ISSUE54_FINAL_EVRS_CONSUMED_BY_REFACTOR: 0
+ISSUE54_FINAL_GUARD: PASS
+ISSUE45_INVENTORY_NULLSPACE_SELFTEST: PASS
+ISSUE45_INVENTORY_CLOSURE_RUNTIME_SELFTEST: PASS
+ISSUE45_FIRST_LINEAR_SELFTEST: PASS
+QPX_HARNESS_SELFTEST: PASS
+```
+
 ## Local execution contract
 
-Local workspace is a disposable GitHub ZIP snapshot.
-
-Local commands are diagnostics only.
+Local workspace is a disposable GitHub ZIP snapshot. Local commands are diagnostics only.
 
 Do not require or instruct:
 
@@ -39,104 +133,13 @@ mv
 source mutation
 ```
 
-Canonical repository mutation occurs in GitHub only after the preceding diagnostic gate is accepted.
+## Closure rule
 
-## Queue
-
-### V54-M0 — decomposition inventory
-
-Status: `STAGED / LOCAL EVIDENCE REQUIRED`
-
-Command:
+Issue54 may be closed PASS only after the single final local validation is green. Until then:
 
 ```text
-python3 tests/Issue54_electron_inventory_decomposition/inventory.py
-```
-
-Acceptance markers:
-
-```text
-ISSUE54_M0_FIRST_LINEAR_CONTRACT: PASS
-ISSUE54_M0_CLI_CONTRACT: PASS
-ISSUE54_M0_REQUIRED_TOP_LEVEL: PASS
-ISSUE54_M0_INVENTORY: PASS
-```
-
-Evidence obligations:
-
-- exact source LOC;
-- exact embedded self-test LOC;
-- every top-level function classified;
-- per-function LOC and internal call graph;
-- semantic constant use by owner category;
-- branch-local consumers;
-- exact downstream surface used by `issue45_first_linear.py`;
-- canonical CLI dependency.
-
-Rollback boundary: diagnostic file only. Production owner is unchanged.
-
-### V54-M1 — compatibility baseline
-
-Status: `STAGED / LOCAL EVIDENCE REQUIRED`
-
-Command:
-
-```text
-python3 tests/Issue54_electron_inventory_decomposition/compatibility_guard.py
-```
-
-Acceptance markers:
-
-```text
-ISSUE54_M1_SCIENTIFIC_CONSTANTS: PASS
-ISSUE54_M1_CLI_SURFACE: PASS
-ISSUE54_M1_FIRST_LINEAR_SURFACE: PASS
-ISSUE54_M1_COMPATIBILITY_GUARD: PASS
-```
-
-The guard freezes the current module/CLI/downstream surface without running QPX.
-
-Rollback boundary: diagnostic file only. Production owner is unchanged.
-
-### V54-P0 — existing behavior baseline
-
-Status: `PENDING V54-M0/M1`
-
-After M0/M1 PASS, validate the existing production owner before any extraction:
-
-```text
-python3 -m qpx_harness.electron_inventory_nullspace --self-test
-python3 -m qpx_harness.issue45_first_linear --self-test
-python3 scripts/qpx.py self-test
-```
-
-No closure runtime or new EVR is authorized.
-
-### First extraction boundary
-
-Status: `BLOCKED`
-
-No function may be removed from `qpx_harness/electron_inventory_nullspace.py` until V54-M0, V54-M1, and V54-P0 are PASS.
-
-After those gates, use the M0 call graph to select the first rollback-local semantic owner. Current architectural hypothesis is Structure-first, but M0 evidence is authoritative.
-
-The first extraction must follow:
-
-```text
-additive owner staging
--> owner-local characterization
--> compatibility identity proof
--> only then destructive removal/re-export from the monolith
-```
-
-## Production mutation status
-
-As of this queue creation:
-
-```text
-qpx_harness/electron_inventory_nullspace.py: UNCHANGED
-qpx_harness/issue45_first_linear.py: UNCHANGED
-scripts/qpx.py: UNCHANGED
-new scientific runtime: NONE
-#45 EVR consumed by Issue54: 0
+production decomposition: APPLIED
+scientific state: FROZEN
+new #45 EVR consumed: 0
+Issue54: OPEN / FINAL VALIDATION PENDING
 ```
