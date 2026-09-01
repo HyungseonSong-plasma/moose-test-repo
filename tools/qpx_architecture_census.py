@@ -58,6 +58,8 @@ def classify(path: Path, recipe_map: dict[str, dict]) -> str:
     rel = _rel(path)
     parts = Path(rel).parts
     if parts[0] == "recipes":
+        if rel == "recipes/__init__.py":
+            return "ISSUE_SPECIFIC_POLICY"
         return "ISSUE_SPECIFIC_POLICY" if rel in recipe_map else "UNCLASSIFIED"
     if parts[0] == "bin":
         return "CLI_PRESENTATION"
