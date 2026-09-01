@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[2]
 TARGETS = {
     "A1": (Path("qpx_harness/issue43_coupling_diagnostic.py"), "dedda10e8db74e81c32d86d2ccf17f3dd996595b", 1025, "SPLIT_APPLIED"),
     "A2": (Path("qpx_harness/issue46_fd_reference.py"), "16194cc4d696f883e41fb0d7ab302b5e203f634c", 773, "KEEP_COHESIVE"),
-    "A3": (Path("qpx_harness/issue46_jacobian_localization.py"), "a39d914330ec43da3612910b83c53e167f921b7c", 698, "KEEP_COHESIVE"),
+    "A3": (Path("qpx_harness/issue46_jacobian_localization.py"), "a39d914330ec43da3612910b83c53e167f921b7c", 729, "KEEP_COHESIVE"),
     "A4": (Path("qpx_harness/coupling_evr2_runtime.py"), "ab74a0180ae2b512109e006de46c3708508832e2", 624, "KEEP_COHESIVE"),
     "A5": (Path("qpx_harness/scale_audit.py"), "1d197b66e48f519539079d327e854e96e6dc6147", 570, "KEEP_COHESIVE"),
     "B1": (Path("qpx_harness/issue45/orchestration.py"), "26234925916de99fdb268b0fa6bf6f11490d032f", 565, "KEEP_COHESIVE"),
