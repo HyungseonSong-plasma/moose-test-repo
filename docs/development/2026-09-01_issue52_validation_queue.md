@@ -3,7 +3,7 @@
 **Work ID:** `qpx-stats-mapping-consolidation-retirement`  
 **Issue:** #52  
 **Protocol:** `docs/protocols/coding.md` / CODE-13  
-**Status:** ACTIVE / V0-V4 PASS / THIN-BRIDGE + RETIREMENT PROOF GATE ACTIVE
+**Status:** READY FOR ISSUE CLOSE / V0-V5 PASS / NO RETIREMENT CANDIDATES
 
 ## Dependency graph
 
@@ -20,12 +20,12 @@ migration         migration
        V4 integration PASS
                ↓
 M5 ownership-aware inventory refinement
-               ↓ V5
+               ↓ V5 PASS
        thin-bridge checkpoint
                ↓
-       zero-caller proof
+   retirement candidates = 0
                ↓
-      retirement/deletion cuts
+       READY FOR ISSUE CLOSE
 ```
 
 M2 and M4 are siblings. Both depend on M1, but neither depends on the other.
@@ -81,8 +81,8 @@ M2 and M4 are siblings. Both depend on M1, but neither depends on the other.
   - `ISSUE52_STATS_INVENTORY: PASS`
   - `ISSUE52_VALIDATION_QUEUE: PASS`
 - post-migration raw helper total reported by the first inventory version: `99`
-- interpretation: the `99` total is not a valid bridge-only comparison because it includes the new canonical `build_jacobian_accuracy_stats` helper. The bridge metric therefore requires ownership-aware reclassification before any deletion decision.
-- status: `PASS / METRIC REFINEMENT REQUIRED`
+- interpretation: the `99` total included the new canonical `build_jacobian_accuracy_stats` helper and therefore was not a valid bridge-only comparison. M5 corrected the metric by separating canonical and producer ownership.
+- status: `PASS`
 
 ## M2 common Convergence candidate classification
 
@@ -112,48 +112,74 @@ authorized merely to reduce textual size.
 - modification: `M5`
 - commit: `7651570fceca4f491d8d3a47cb39dbdec1c6d363`
 - path: `tests/Issue52_stats_mapping_consolidation/inventory.py`
-- purpose:
-  - separate canonical helper LOC from producer bridge LOC;
-  - prove direct producer calls to `build_accuracy_stats` are zero;
-  - inventory bridge call/import sites;
-  - require explicit semantic-ownership classification for every producer bridge;
-  - emit retirement candidates only when semantic ownership is empty and caller/import proof permits retirement.
-- command:
-
-```bash
-python3 tests/Issue52_stats_mapping_consolidation/inventory.py
-```
-
-- required markers:
+- accepted evidence:
   - `ISSUE52_STATS_INVENTORY: PASS`
-  - `ISSUE52_STATS_PRODUCER_BRIDGE_LOC: ...`
-  - `ISSUE52_STATS_CANONICAL_HELPER_LOC: ...`
-  - `ISSUE52_STATS_RETIREMENT_CANDIDATE_COUNT: ...`
-- expected producer-bridge comparison if source shape is preserved:
-  - before: `93`
-  - after shared Jacobian migration: `87` (`42 + 38 + 7`)
-- status: `PENDING`
+  - `ISSUE52_STATS_PRODUCER_BRIDGE_LOC: 87`
+  - `ISSUE52_STATS_CANONICAL_HELPER_LOC: 12`
+  - `ISSUE52_STATS_RETIREMENT_CANDIDATE_COUNT: 0`
+  - `producer_accuracy_callers: []`
+  - `parse_failures: []`
+  - Issue45 bridge LOC: `42`
+  - Issue46 bridge LOC: `38`
+  - PF1 bridge LOC: `7`
+- semantic ownership proof:
+  - Issue45 retains KSP/termination/true-residual/variable-residual/scaling fact selection;
+  - Issue46 retains thresholded/localized matrix-comparison construction;
+  - PF1 retains work-counter-to-Convergence selection.
+- caller/import proof:
+  - each bridge has an in-module caller;
+  - no bridge is compatibility-only;
+  - no producer directly calls `build_accuracy_stats` after migration.
+- status: `PASS`
 
-## Retirement boundary
+## Thin-bridge / retirement decision
 
-No bridge/helper deletion is authorized until V5 returns concrete branch-local
-evidence. A bridge may be deleted only when all of these are true:
+No deletion cut is authorized or required.
+
+All three producer bridges retain non-zero semantic ownership:
 
 ```text
-semantic ownership == zero
-compatibility responsibility == zero
-canonical replacement exists
-AST/direct caller proof permits retirement
-import compatibility proof permits retirement
+build_first_linear_stats
+  -> Issue45 convergence fact-selection owner
+
+build_jacobian_localization_stats
+  -> Issue46 localized matrix-comparison owner
+
+build_measurement_stats
+  -> PF1 work-counter convergence-selection owner
 ```
 
-Current explicit semantic-ownership expectations:
+The retirement proof therefore correctly returns zero candidates. Removing any
+of these helpers solely to reduce LOC would collapse producer-specific semantics
+back into a generic layer and violate the Issue52 acceptance boundary.
 
-- Issue45 bridge: non-zero — detailed Convergence fact selection remains.
-- Issue46 bridge: non-zero — localized matrix-comparison construction remains.
-- PF1 bridge: non-zero — PF1 work-counter-to-Convergence selection remains.
+## Measured result
 
-If V5 confirms these expectations and returns zero retirement candidates, the
-correct result is to retain the bridges and report ownership reduction without a
-forced deletion. If V5 exposes a genuine zero-ownership candidate, retire only
-that target in a separate small cut with immediate validation.
+```text
+producer bridge LOC:        93 -> 87   (-6)
+canonical Jacobian helper:   0 -> 12   (+12)
+producer direct Accuracy mapping owners: 2 -> 0
+canonical shared Jacobian Accuracy owner: 0 -> 1
+retirement candidates:      0
+```
+
+The relevant success criterion is ownership reduction rather than forced net
+repository LOC reduction. Shared Jacobian mapping is now canonical while all
+remaining producer bridges have explicit non-zero semantic ownership.
+
+## Closure readiness
+
+All applicable Issue52 validation obligations are discharged:
+
+- semantic-identity-selected Jacobian consolidation: PASS;
+- Issue45 migration: PASS;
+- Issue46 migration: PASS;
+- Stats builder integration: PASS;
+- full QPX harness: PASS;
+- branch-local AST inventory: PASS;
+- ownership-aware retirement proof: PASS;
+- convergence over-consolidation rejected as `NOT_COMMON`;
+- deletion candidates: none.
+
+No additional local validation or deletion work is required before the issue
+state is synchronized to `CLOSED / PASS` in a separate issue-only mutation phase.
