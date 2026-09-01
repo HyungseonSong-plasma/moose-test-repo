@@ -74,7 +74,7 @@ The checker path and arguments are evaluated relative to the case directory.
 The canonical execution interface is:
 
 ```bash
-python3 scripts/qpx.py <command> [args]
+python3 bin/qpx.py <command> [args]
 ```
 
 Representative generic commands:
@@ -92,20 +92,20 @@ self-test     run all harness static/self-tests
 
 R3 real-QPX equivalence reproduced the accepted canonical suite at `14/14 PASS`; the old `run_test.py`, `run_all.py`, and Issue-32 `r32_*` execution wrappers were retired afterward.
 
-Maintenance utilities must also route through `scripts/qpx.py`; do not create standalone compatibility wrappers when the unified CLI can expose the capability.
+User-facing and maintenance commands that belong to the QPX CLI should route through `bin/qpx.py`; developer-only repository utilities belong under `tools/` when they need a standalone interface.
 
 Parser preflight controls:
 
 ```bash
-python3 scripts/qpx.py preflight --self-test
-python3 scripts/qpx.py preflight <generated-or-packaged-input.i>
+python3 bin/qpx.py preflight --self-test
+python3 bin/qpx.py preflight <generated-or-packaged-input.i>
 ```
 
 Temporal CSV controls:
 
 ```bash
-python3 scripts/qpx.py temporal-csv --self-test
-python3 scripts/qpx.py temporal-csv input_out.csv \
+python3 bin/qpx.py temporal-csv --self-test
+python3 bin/qpx.py temporal-csv input_out.csv \
   --output input_out.physical.csv \
   --initial-row-policy exclude_observation
 ```
@@ -115,13 +115,13 @@ python3 scripts/qpx.py temporal-csv input_out.csv \
 Repository-local default suite:
 
 ```bash
-python3 scripts/qpx.py test-all --type canonical
+python3 bin/qpx.py test-all --type canonical
 ```
 
 Local QPX issue workspace:
 
 ```bash
-python3 temp/scripts/qpx.py test-all \
+python3 temp/bin/qpx.py test-all \
   --type canonical \
   --tests-root temp/test_workspace
 ```
@@ -129,7 +129,7 @@ python3 temp/scripts/qpx.py test-all \
 During migration, historical and issue-centric roots may be supplied together:
 
 ```bash
-python3 temp/scripts/qpx.py test-all \
+python3 temp/bin/qpx.py test-all \
   --type canonical \
   --tests-root temp/test_workspace \
   --tests-root temp/regression_workspace/tests
@@ -140,7 +140,7 @@ Run diagnostics with `--type diagnostic`; use `--type all` only when both classe
 Static harness self-tests:
 
 ```bash
-python3 scripts/qpx.py self-test
+python3 bin/qpx.py self-test
 ```
 
 ## Rules
