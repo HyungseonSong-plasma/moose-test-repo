@@ -198,3 +198,40 @@ Read-only verification returned 404 for `__noop__`, proving no accidental live f
 This recurrence is specifically a **bulk-snapshot mutator-family substitution**. A directory snapshot replacement had already selected the Git-tree API, but a contents-API single-file mutator was still callable at the final boundary.
 
 The canonical protocol therefore adds **RM-06I — Bulk snapshot mutator-family lock**. For a validated directory/tree replacement, the file-object phase must use Git tree/commit construction only. `create_file`, `update_file`, and `delete_file` are forbidden for business staging in that phase, and branch/ref movement must remain a separate fresh response under RM-06G.
+
+## Sixth occurrence — #50 issue synchronization routed to rejected README file update
+
+After the third Stats Builder producer bridge had passed P0, the intended next mutation was issue-only synchronization of Issue #50:
+
+```text
+resource = issue
+exact target = #50
+mutation action = update body
+allowed mutator = update_issue
+```
+
+Instead, an `update_file` call was sent to root `README.md` using a fabricated pre-write SHA:
+
+```text
+path: README.md
+supplied SHA: deadbeef
+branch: refactor/qpx-harness-generality
+GitHub result: 409
+message: README.md does not match deadbeef
+```
+
+GitHub rejected the write before any repository content changed. Read-only verification confirmed:
+
+```text
+README.md live SHA: c650f61a19c27a7208adfd9bba78255cca183a4a
+README semantic state: unchanged
+Issue #50 body: unchanged / stale
+```
+
+The session circuit breaker was applied immediately. No #50 business synchronization was performed in the incident response, and the accepted PF1, Issue45, and Issue46 Stats bridges remained unchanged.
+
+### Sixth-occurrence root cause and required handling
+
+This is another recurrence of **cross-resource mutator substitution at the final invocation boundary**. Unlike earlier live mutations, GitHub's optimistic-concurrency guard rejected the fabricated SHA before repository state changed. That backend rejection prevented damage, but the attempted wrong-resource mutation still violates RM-06D, RM-06F, RM-06G, and RM-06H.
+
+The existing rules already prohibit this action, so this incident does not by itself justify inventing another overlapping repository-mutation rule. The corrective handling is procedural: preserve the incident as evidence, keep the intended business mutation blocked for the incident response, and resume #50 issue synchronization only from a fresh issue-only mutation context.
