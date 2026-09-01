@@ -1,41 +1,92 @@
-"""Issue45 first-linear policy composed from reusable MOOSE/PETSc primitives."""
+"""Issue45 first-linear policy with spec-backed instrumentation and reusable diagnostics."""
 from __future__ import annotations
 
 import math
+from functools import lru_cache
+from pathlib import Path
 from typing import Any
 
-from qpx_harness.moose import log as moose_log
+from qpx_harness.diagnostics import jacobian as jacobian_diagnostic
+from qpx_harness.diagnostics import nonlinear_solver as nonlinear_diagnostic
+from qpx_harness.diagnostics import termination as termination_diagnostic
 from qpx_harness.moose import parameters as mp
-from qpx_harness.petsc import jacobian as jac
 from qpx_harness.petsc import ksp
 from qpx_harness.petsc import log as petsc_log
 from qpx_harness.petsc import options as po
+from qpx_harness.spec import compile_spec, load_json_file
+from qpx_harness.spec.plan import CasePlan, ExecutionPlan
+from qpx_harness.transforms import TransformError, apply_case_plan
 
 ISSUE = 45
 TARGET = 1.0e16
-DIAGNOSTIC_NL_MAX_ITS = 1
 JACOBIAN_REL_TOL = 1.0e-6
-FIRST_LINEAR_PETSC_OPTIONS = (
-    "-snes_test_jacobian",
-    "-ksp_view",
-    "-ksp_monitor_true_residual",
-)
-REQUIRED_EXISTING_OPTIONS = ("-snes_converged_reason", "-ksp_converged_reason")
 COUPLED_SCALING_VARIABLES = ("n_e", "potential_plasma")
+
+SPEC_PATH = (
+    Path(__file__).resolve().parents[1]
+    / "specs"
+    / "experiments"
+    / "issue45_first_linear.json"
+)
 
 
 class Issue45FirstLinearError(RuntimeError):
     pass
 
 
+@lru_cache(maxsize=1)
+def _execution_plan() -> ExecutionPlan:
+    return compile_spec(load_json_file(SPEC_PATH))
+
+
+def _case() -> CasePlan:
+    return _execution_plan().case("first_linear")
+
+
+def _parameter_value(name: str) -> str:
+    values = [
+        operation.argument_dict().get("value")
+        for operation in _case().operations
+        if operation.op == "set_parameter"
+        and operation.argument_dict().get("path") == "Executioner"
+        and operation.argument_dict().get("name") == name
+    ]
+    if len(values) != 1 or not isinstance(values[0], str):
+        raise RuntimeError(f"invalid Issue45 first-linear parameter plan for {name!r}")
+    return values[0]
+
+
+def _flag_groups() -> tuple[tuple[str, ...], ...]:
+    groups: list[tuple[str, ...]] = []
+    for operation in _case().operations:
+        if operation.op != "add_petsc_flags":
+            continue
+        flags = operation.argument_dict().get("flags")
+        if not isinstance(flags, tuple) or not all(isinstance(flag, str) for flag in flags):
+            raise RuntimeError("invalid Issue45 first-linear PETSc flag plan")
+        groups.append(flags)
+    if len(groups) != 2:
+        raise RuntimeError(f"expected two Issue45 PETSc flag groups, found {len(groups)}")
+    return tuple(groups)
+
+
+DIAGNOSTIC_NL_MAX_ITS = int(_parameter_value("nl_max_its"))
+REQUIRED_EXISTING_OPTIONS, FIRST_LINEAR_PETSC_OPTIONS = _flag_groups()
+
+
+def _raise_legacy_compatible(exc: TransformError) -> None:
+    cause = exc.__cause__
+    if isinstance(cause, (mp.MooseParameterError, po.PetscOptionsError)):
+        raise cause
+    raise Issue45FirstLinearError(str(exc)) from exc
+
+
 def instrument_first_linear(text: str) -> tuple[str, dict[str, Any]]:
-    out = mp.upsert_parameter(
-        text,
-        "Executioner",
-        "nl_max_its",
-        str(DIAGNOSTIC_NL_MAX_ITS),
-    )
-    out = po.add_flags(out, REQUIRED_EXISTING_OPTIONS + FIRST_LINEAR_PETSC_OPTIONS)
+    try:
+        out = apply_case_plan(text, _case())
+    except TransformError as exc:
+        _raise_legacy_compatible(exc)
+        raise AssertionError("unreachable")
     return out, {
         "target": TARGET,
         "diagnostic_nl_max_its": DIAGNOSTIC_NL_MAX_ITS,
@@ -48,116 +99,32 @@ def instrument_first_linear(text: str) -> tuple[str, dict[str, Any]]:
 
 
 def _jacobian_analysis(text: str) -> dict[str, Any]:
-    tests = jac.parse_comparisons(text)
-    if not tests:
-        return {
-            "status": "HOLD",
-            "class": "JACOBIAN_EVIDENCE_INSUFFICIENT",
-            "reason": "PETSc -snes_test_jacobian produced no parseable Jacobian comparison",
-            "relative_tolerance": JACOBIAN_REL_TOL,
-            "tests": [],
-        }
-    nonfinite = [
-        item
-        for item in tests
-        if not math.isfinite(item["relative_frobenius_error"])
-        or not math.isfinite(item["absolute_frobenius_error"])
-    ]
-    finite_rel = [
-        item["relative_frobenius_error"]
-        for item in tests
-        if math.isfinite(item["relative_frobenius_error"])
-    ]
-    worst = max(finite_rel) if finite_rel else math.inf
-    if nonfinite or worst > JACOBIAN_REL_TOL:
-        return {
-            "status": "HOLD",
-            "class": "JACOBIAN_MISMATCH",
-            "reason": (
-                "assembled-vs-finite-difference Jacobian relative Frobenius error exceeds "
-                f"the declared tolerance {JACOBIAN_REL_TOL:g} or is non-finite"
-            ),
-            "relative_tolerance": JACOBIAN_REL_TOL,
-            "worst_relative_frobenius_error": worst,
-            "nonfinite": nonfinite,
-            "tests": tests,
-        }
-    return {
-        "status": "PASS",
-        "class": "JACOBIAN_CORRECTNESS_PASS",
-        "reason": "all observed PETSc Jacobian comparisons satisfy the declared relative tolerance",
-        "relative_tolerance": JACOBIAN_REL_TOL,
-        "worst_relative_frobenius_error": worst,
-        "nonfinite": [],
-        "tests": tests,
-    }
+    return jacobian_diagnostic.analyze_comparisons(
+        text,
+        relative_tolerance=JACOBIAN_REL_TOL,
+    )
 
 
 def _first_failed_reason(rows: list[dict[str, Any]]) -> str | None:
-    return next((str(row["reason"]) for row in rows if not row.get("converged")), None)
+    return termination_diagnostic.first_failed_reason(rows)
 
 
 def _runtime_core(text: str, *, returncode: int) -> dict[str, Any]:
-    residual_blocks = moose_log.parse_variable_residual_norms(text)
-    scaling_blocks = moose_log.parse_automatic_scaling_factors(text)
-    scaling = scaling_blocks[0] if scaling_blocks else {}
-    linear_reason = _first_failed_reason(petsc_log.parse_linear_solve_terminations(text))
-    nonlinear_reason = _first_failed_reason(petsc_log.parse_nonlinear_solve_terminations(text))
-    pc_failure_reason = petsc_log.parse_pc_failure_reason(text)
-
-    pc_hits = petsc_log.line_hits(
+    facts = nonlinear_diagnostic.runtime_core_facts(
         text,
-        (
-            r"DIVERGED_PC_FAILED",
-            r"DIVERGED_PCSETUP_FAILED",
-            r"PC failed due to",
-            r"zero pivot",
-            r"factorization",
-            r"PCSetUp.*fail",
-        ),
+        returncode=returncode,
+        coupled_scaling_variables=COUPLED_SCALING_VARIABLES,
     )
-    factorization_hits = petsc_log.line_hits(
-        text,
-        (
-            r"FACTOR_(?:NUMERIC|STRUCT)_ZEROPIVOT",
-            r"zero pivot",
-            r"factorization",
-            r"MatFactor",
-            r"PCSetUp.*fail",
-        ),
-    )
-
-    nonfinite_residuals: list[dict[str, Any]] = []
-    for index, block in enumerate(residual_blocks):
-        for name, value in block.items():
-            if not math.isfinite(value):
-                nonfinite_residuals.append(
-                    {"block": index, "variable": name, "value": repr(value)}
-                )
-
-    scaling_invalid: list[dict[str, Any]] = []
-    for name in COUPLED_SCALING_VARIABLES:
-        if name not in scaling:
-            continue
-        value = scaling[name]
-        if not math.isfinite(value) or value == 0.0:
-            scaling_invalid.append({"variable": name, "value": repr(value)})
-
-    selected_scaling = [
-        abs(scaling[name])
-        for name in COUPLED_SCALING_VARIABLES
-        if name in scaling and math.isfinite(scaling[name]) and scaling[name] != 0.0
-    ]
-    scaling_ratio = (
-        max(selected_scaling) / min(selected_scaling)
-        if len(selected_scaling) == 2
-        else None
-    )
-
+    residual_blocks = facts["variable_residuals"]
+    nonfinite_residuals = facts["nonfinite_residuals"]
+    scaling_invalid = facts["scaling_invalid"]
+    linear_reason = facts["linear_reason"]
+    pc_hits = facts["pc_hits"]
     finite_residual_blocks = bool(residual_blocks) and not nonfinite_residuals
+
     if pc_hits or linear_reason in {"DIVERGED_PC_FAILED", "DIVERGED_PCSETUP_FAILED"}:
         decision_class = "PC_OR_FACTORIZATION_FAIL"
-        if pc_failure_reason == "FACTOR_NUMERIC_ZEROPIVOT":
+        if facts["pc_failure_reason"] == "FACTOR_NUMERIC_ZEROPIVOT":
             reason = (
                 "PETSc LU/preconditioner setup failed with FACTOR_NUMERIC_ZEROPIVOT; "
                 "later nonlinear NAN/INF is downstream of the factorization failure"
@@ -188,21 +155,20 @@ def _runtime_core(text: str, *, returncode: int) -> dict[str, Any]:
         "reason": reason,
         "returncode": returncode,
         "linear_reason": linear_reason,
-        "nonlinear_reason": nonlinear_reason,
-        "pc_failure_reason": pc_failure_reason,
-        "pc_hits": pc_hits,
-        "factorization_hits": factorization_hits,
+        "nonlinear_reason": facts["nonlinear_reason"],
+        "pc_failure_reason": facts["pc_failure_reason"],
+        "pc_hits": facts["pc_hits"],
+        "factorization_hits": facts["factorization_hits"],
         "variable_residuals": residual_blocks,
         "nonfinite_residuals": nonfinite_residuals,
-        "automatic_scaling_factors": scaling_blocks,
+        "automatic_scaling_factors": facts["automatic_scaling_factors"],
         "scaling_invalid": scaling_invalid,
-        "scaling_factor_ratio_n_e_to_potential": scaling_ratio,
+        "scaling_factor_ratio_n_e_to_potential": facts["scaling_factor_ratio"],
     }
 
 
 def _first_linear_termination(text: str) -> dict[str, Any] | None:
-    rows = petsc_log.parse_linear_solve_terminations(text)
-    return dict(rows[0]) if rows else None
+    return termination_diagnostic.first_linear_termination(text)
 
 
 def analyze_first_linear_text(text: str, *, returncode: int) -> dict[str, Any]:
