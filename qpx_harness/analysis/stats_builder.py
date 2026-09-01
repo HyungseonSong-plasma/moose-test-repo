@@ -260,6 +260,7 @@ def _variable_residual_samples(
                     variable=variable,
                     norm_type="L2",
                 )
+            )
     return out
 
 
