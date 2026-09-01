@@ -15,22 +15,26 @@ The bootstrap must reconstruct operating state from canonical repository sources
 ```text
 1. resolve the current repository ref / working branch from explicit user or current-work evidence;
    do not silently substitute the default branch when an active working ref is known
-2. read OPERATING_CORE.md
-3. recover the active issue / bounded-work STATE and immediate resume obligation when one exists
-4. read PROTOCOL_INDEX.md
-5. read docs/protocols/rule_working_set.md
-6. classify the immediate primary phase: PLAN / RESEARCH / IMPLEMENT / VALIDATE / CLOSE
-7. activate only the selected phase owner(s)
-8. add MUTATE, SCIENTIFIC_EXECUTION, or temporary diagnostic material only when triggered
-9. consult docs/rules/INVENTORY.md only when the required dormant owner is unclear or expansion is triggered
-10. report the reconstructed operating state
+2. read docs/operating_system/README.md to identify the current named operating-system baseline
+3. read OPERATING_CORE.md
+4. recover the active issue / bounded-work STATE and immediate resume obligation when one exists
+5. read PROTOCOL_INDEX.md
+6. read docs/protocols/rule_working_set.md
+7. classify the immediate primary phase: PLAN / RESEARCH / IMPLEMENT / VALIDATE / CLOSE
+8. activate only the selected phase owner(s)
+9. add MUTATE, SCIENTIFIC_EXECUTION, or temporary diagnostic material only when triggered
+10. consult docs/rules/INVENTORY.md only when the required dormant owner is unclear or expansion is triggered
+11. report the reconstructed operating state
 ```
+
+The named operating-system baseline is descriptive/versioning state. Its historical log must not replace or override the live canonical operating documents.
 
 ## Minimum initialization report
 
 A successful bootstrap should report, when the information is available:
 
 ```text
+Operating system version
 Repository / ref
 Active work item or issue
 Immediate resume obligation
@@ -62,6 +66,7 @@ Fresh chats should not depend on another chat's private reasoning or historical 
 
 ```text
 BOOTSTRAP.md                       -> cross-chat entry point
+docs/operating_system/README.md    -> current named OS baseline / version-log index
 OPERATING_CORE.md                  -> always-active invariants
 PROTOCOL_INDEX.md                  -> routing / phase selection
 docs/protocols/rule_working_set.md -> load / unload policy
@@ -70,7 +75,7 @@ active issue/body                   -> current STATE
 phase protocol                      -> current technical procedure
 ```
 
-Conversation history may help locate the current work item, but it does not override these canonical sources.
+Version snapshots under `docs/operating_system/versions/` are historical comparison evidence. Conversation history may help locate the current work item, but neither history nor a version snapshot overrides the live canonical sources.
 
 ## Failure handling
 
