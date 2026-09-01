@@ -124,6 +124,16 @@ model
 
 Do not load this ontology merely because the repository is scientific; load it when one of those links is material to the current claim or failure.
 
+### ROUTE-12 — Milestone / multi-issue capability delivery
+Primary phase: `PLAN` when defining or restructuring the milestone; later transition through each issue's normal phase and return to `VALIDATE` / `CLOSE` for milestone integration and closure.
+
+Read:
+- `docs/protocols/milestone_delivery.md`
+
+Trigger when multiple issues are intentionally composed to deliver one usable capability. Use milestone M0 to define the capability statement, dependency DAG, issue queue, integration risks, and milestone Definition of Done before large implementation fan-out.
+
+Milestone batching does not replace issue-local acceptance or repository mutation safety. Each issue remains an independent semantic/rollback boundary; the milestone adds only capability-level planning and cross-issue integration acceptance.
+
 ## Standard obligation routing
 
 ```text
@@ -136,6 +146,7 @@ VALIDATION            -> ROUTE-05 / VALIDATE
 KNOWN_SYMPTOM         -> ROUTE-08 + selected phase pack
 MUTATION              -> ROUTE-09 / MUTATE
 CLOSURE_OR_REVIEW     -> ROUTE-06 / CLOSE
+MILESTONE_DELIVERY    -> ROUTE-12 / PLAN -> issue phases -> VALIDATE/CLOSE
 ```
 
 ## Contract-chain resolution
@@ -194,6 +205,7 @@ Map incident learning to MET-20/MET-22; do not create a duplicate incident taxon
 - Adaptive loading/unloading and working-set size -> `docs/protocols/rule_working_set.md`
 - Dormant rule/pack discovery metadata -> `docs/rules/INVENTORY.md`
 - Request routing and rule-reuse decisions -> `PROTOCOL_INDEX.md`
+- Milestone capability delivery, issue DAG, integration, and milestone closure -> `docs/protocols/milestone_delivery.md`
 - Scientific-execution integrity ontology -> `docs/protocols/scientific_execution.md`
 - Planning, diagnosis, Researcher/Validator flow, EVR strategy, model/regime meaning -> `docs/protocols/problem_solving.md`
 - Code/harness/script/checker implementation ownership -> `docs/protocols/coding.md`
