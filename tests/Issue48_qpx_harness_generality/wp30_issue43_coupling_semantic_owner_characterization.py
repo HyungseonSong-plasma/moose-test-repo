@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""P0 characterization for the Issue43 coupling semantic-owner cutover."""
+"""P0 characterization for the post-retirement Issue43 coupling semantic owner."""
 from __future__ import annotations
 
 import importlib.util
@@ -20,6 +20,7 @@ from recipes import issue43_coupling_diagnostic as recipe
 SEMANTIC_PATH = ROOT / "qpx_harness" / "issue43_coupling_diagnostic.py"
 LEGACY_PATH = ROOT / "qpx_harness" / "fast_plasma_coupling_diagnostic.py"
 CLI_PATH = ROOT / "scripts" / "qpx.py"
+LEGACY_IMPORT_TOKEN = "fast_plasma_coupling_diagnostic"
 
 
 def _load_cli() -> ModuleType:
@@ -31,21 +32,31 @@ def _load_cli() -> ModuleType:
     return module
 
 
+def _assert_no_legacy_dependency(source: str) -> None:
+    if LEGACY_IMPORT_TOKEN in source:
+        raise AssertionError("semantic owner still references retired coupling shell")
+
+
 def _check_owner_topology() -> None:
     if not SEMANTIC_PATH.is_file():
         raise AssertionError("Issue43 coupling semantic owner is missing")
-    if not LEGACY_PATH.is_file():
-        raise AssertionError("bounded historical coupling shell disappeared before convergence")
+    if LEGACY_PATH.exists():
+        raise AssertionError("retired historical coupling shell still exists")
     source = SEMANTIC_PATH.read_text()
     for required in (
         "from recipes import issue43_coupling_diagnostic as recipe",
-        "from . import fast_plasma_coupling_diagnostic as runtime_shell",
         "from .moose import log as moose_log",
         "from .petsc import jacobian as petsc_jacobian",
         "from .petsc import log as petsc_log",
+        "def run_preflight(",
+        "def run_runtime(",
+        "def run_jacobian_runtime(",
+        "def main(",
+        "def self_test(",
     ):
         if required not in source:
             raise AssertionError(f"semantic owner boundary missing: {required}")
+    _assert_no_legacy_dependency(source)
 
 
 def _check_recipe_and_primitive_backing() -> None:
@@ -83,8 +94,12 @@ def _check_stable_cli_route() -> None:
     for token in required:
         if token not in source:
             raise AssertionError(f"stable coupling CLI surface missing: {token}")
-    if "from qpx_harness.fast_plasma_coupling_diagnostic import main as fast_coupling_diagnostic_main" in source:
-        raise AssertionError("stable CLI still imports the historical coupling shell")
+    legacy_import = (
+        "from qpx_harness.fast_plasma_coupling_diagnostic import main as "
+        "fast_coupling_diagnostic_main"
+    )
+    if legacy_import in source:
+        raise AssertionError("stable CLI still imports the retired coupling shell")
 
 
 def _check_self_test_route() -> None:
@@ -93,26 +108,27 @@ def _check_self_test_route() -> None:
 
 
 def _negative_control() -> None:
-    source = CLI_PATH.read_text()
-    semantic_import = (
-        "from qpx_harness.issue43_coupling_diagnostic import main as "
-        "fast_coupling_diagnostic_main, self_test as fast_coupling_diagnostic_self_test"
+    source = SEMANTIC_PATH.read_text()
+    marker = "from recipes import issue43_coupling_diagnostic as recipe"
+    if marker not in source:
+        raise AssertionError("semantic recipe import baseline missing")
+    mutated = source.replace(
+        marker,
+        marker + "\nfrom . import fast_plasma_coupling_diagnostic as runtime_shell",
+        1,
     )
-    legacy_import = (
-        "from qpx_harness.fast_plasma_coupling_diagnostic import main as "
-        "fast_coupling_diagnostic_main, self_test as fast_coupling_diagnostic_self_test"
-    )
-    if semantic_import not in source:
-        raise AssertionError("semantic CLI import baseline missing")
-    mutated = source.replace(semantic_import, legacy_import, 1)
-    if legacy_import not in mutated or semantic_import in mutated:
-        raise AssertionError("legacy-route negative control failed")
+    try:
+        _assert_no_legacy_dependency(mutated)
+    except AssertionError:
+        return
+    raise AssertionError("legacy dependency negative control was accepted")
 
 
 def main() -> int:
     try:
         _check_owner_topology()
         print("ISSUE48_WP30_ISSUE43_COUPLING_CHECK: owner-topology=PASS")
+        print("ISSUE48_WP30_ISSUE43_COUPLING_CHECK: legacy-retired=PASS")
         _check_recipe_and_primitive_backing()
         print("ISSUE48_WP30_ISSUE43_COUPLING_CHECK: recipe-and-primitives=PASS")
         _check_stable_cli_route()
