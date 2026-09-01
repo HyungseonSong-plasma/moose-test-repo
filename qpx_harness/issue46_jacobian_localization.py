@@ -210,7 +210,7 @@ def audit_framework_control_structure(text: str) -> dict[str, Any]:
     blockers = [check for check in checks if check["status"] != "PASS"]
     return {
         "status": "PASS" if not blockers else "HOLD",
-        "class": "MOOSE_CONSTRAINT_CONTROL_STRUCTURE_PASS" if not blockers else "MOOSE_CONSTRAINT_CONTROL_STRUCTURE_FAIL",
+        "class": "MOOSE_CONSTRAINT_CONTROL_STRUCTURE_PASS" if not blockers else "MOOSE_CONSTRAINT_CONTROL_FAIL",
         "checks": checks,
         "blockers": blockers,
         "source_contract": {
@@ -337,7 +337,10 @@ def build_jacobian_localization_stats(
 ) -> Any:
     """Map existing Issue46 runtime/localization facts into canonical Stats."""
 
-    from .analysis.stats_builder import build_accuracy_stats, build_simulation_stats
+    from .analysis.stats_builder import (
+        build_accuracy_stats,
+        build_runtime_simulation_stats,
+    )
 
     jacobian = analysis.get("jacobian")
     difference = analysis.get("difference")
@@ -368,12 +371,7 @@ def build_jacobian_localization_stats(
         ),
         matrix_comparisons=matrix_comparisons,
     )
-    record = {
-        "case_id": runtime.get("case_id"),
-        "return_code": runtime.get("returncode"),
-        "performance": {"wall_seconds": runtime.get("wall_seconds")},
-    }
-    return build_simulation_stats(record, accuracy=accuracy)
+    return build_runtime_simulation_stats(runtime, accuracy=accuracy)
 
 
 def _synthetic_dof_map() -> str:
