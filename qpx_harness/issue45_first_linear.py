@@ -163,7 +163,7 @@ def build_first_linear_stats(
     from .analysis.stats_builder import (
         build_accuracy_stats,
         build_convergence_stats,
-        build_simulation_stats,
+        build_runtime_simulation_stats,
     )
 
     first_linear = decision.get("first_linear")
@@ -190,13 +190,9 @@ def build_first_linear_stats(
             jacobian.get("tests", ()) if isinstance(jacobian, dict) else ()
         )
     )
-    record = {
-        "case_id": case_id,
-        "return_code": runtime.get("returncode"),
-        "performance": {"wall_seconds": runtime.get("wall_seconds")},
-    }
-    return build_simulation_stats(
-        record,
+    return build_runtime_simulation_stats(
+        runtime,
+        case_id=case_id,
         convergence=convergence,
         accuracy=accuracy,
     )
