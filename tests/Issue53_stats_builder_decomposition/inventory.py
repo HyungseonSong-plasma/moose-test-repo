@@ -61,6 +61,18 @@ def _python_files() -> list[Path]:
     return sorted(out)
 
 
+def _decomposition_stage(local_functions: set[str]) -> str:
+    if "build_efficiency_stats" in local_functions:
+        return "BASELINE_OR_SHADOW"
+    if "build_convergence_stats" in local_functions:
+        return "D1_EFFICIENCY_EXTRACTED"
+    if "build_accuracy_stats" in local_functions:
+        return "D2_CONVERGENCE_EXTRACTED"
+    if "build_common_stats" in local_functions:
+        return "D3_ACCURACY_EXTRACTED"
+    return "FACADE_OR_COMMON_EXTRACTED"
+
+
 def inventory() -> dict[str, Any]:
     text = BUILDER.read_text()
     tree = ast.parse(text, filename=_rel(BUILDER))
@@ -85,9 +97,29 @@ def inventory() -> dict[str, Any]:
                     "loc": _loc(node),
                     "visibility": "public" if not node.name.startswith("_") else "private",
                     "destination": DESTINATIONS.get(node.name, "private-with-semantic-owner"),
-                    "internal_calls": [name for name in calls if name in top_level_names or name in PUBLIC_BUILDERS],
+                    "internal_calls": [
+                        name
+                        for name in calls
+                        if name in top_level_names or name in PUBLIC_BUILDERS
+                    ],
                 }
             )
+
+    facade_imports: list[dict[str, Any]] = []
+    imported_names: set[str] = set()
+    for node in tree.body:
+        if not isinstance(node, ast.ImportFrom):
+            continue
+        module = "." * node.level + (node.module or "")
+        names = [alias.asname or alias.name for alias in node.names]
+        imported_names.update(names)
+        facade_imports.append(
+            {
+                "line": node.lineno,
+                "module": module,
+                "names": names,
+            }
+        )
 
     external_importers: dict[str, list[dict[str, Any]]] = {
         name: [] for name in sorted(PUBLIC_BUILDERS)
@@ -154,11 +186,17 @@ def inventory() -> dict[str, Any]:
             }
         )
 
-    self_test = next((row for row in builder_functions if row["name"] == "self_test"), None)
+    self_test = next(
+        (row for row in builder_functions if row["name"] == "self_test"), None
+    )
+    facade_symbols = sorted(top_level_names | imported_names)
     return {
         "stats_builder_path": _rel(BUILDER),
         "stats_builder_loc": len(text.splitlines()),
+        "decomposition_stage": _decomposition_stage(top_level_names),
         "functions": builder_functions,
+        "facade_imports": facade_imports,
+        "facade_symbols": facade_symbols,
         "self_test_loc": self_test["loc"] if self_test else 0,
         "external_importers": external_importers,
         "external_callers": external_callers,
@@ -172,14 +210,31 @@ def self_test() -> int:
         report = inventory()
         if report["parse_failures"]:
             raise AssertionError("repository Python parse failures detected")
-        if report["stats_builder_loc"] < 700:
-            raise AssertionError("stats_builder baseline unexpectedly small")
-        if not any(row["name"] == "build_efficiency_stats" for row in report["functions"]):
-            raise AssertionError("build_efficiency_stats missing from baseline")
-        if not any(row["name"] == "build_convergence_stats" for row in report["functions"]):
-            raise AssertionError("build_convergence_stats missing from baseline")
-        if not any(row["name"] == "build_accuracy_stats" for row in report["functions"]):
-            raise AssertionError("build_accuracy_stats missing from baseline")
+        if report["stats_builder_loc"] <= 0:
+            raise AssertionError("stats_builder is unexpectedly empty")
+        missing_facade = PUBLIC_BUILDERS - set(report["facade_symbols"])
+        if missing_facade:
+            raise AssertionError(
+                f"stable stats_builder facade symbols missing: {sorted(missing_facade)}"
+            )
+        if not any(
+            row["path"] == "qpx_harness/analysis/metrics/efficiency.py"
+            and row["exists"]
+            for row in report["metrics_owner_state"]
+        ):
+            raise AssertionError("Efficiency owner missing")
+        if not any(
+            row["path"] == "qpx_harness/analysis/metrics/convergence.py"
+            and row["exists"]
+            for row in report["metrics_owner_state"]
+        ):
+            raise AssertionError("Convergence owner missing")
+        if not any(
+            row["path"] == "qpx_harness/analysis/metrics/accuracy.py"
+            and row["exists"]
+            for row in report["metrics_owner_state"]
+        ):
+            raise AssertionError("Accuracy owner missing")
     except Exception as exc:
         print(f"ISSUE53_DECOMPOSITION_INVENTORY: FAIL ({exc})")
         return 1
@@ -187,6 +242,7 @@ def self_test() -> int:
     print("ISSUE53_DECOMPOSITION_INVENTORY: PASS")
     print(f"ISSUE53_STATS_BUILDER_LOC: {report['stats_builder_loc']}")
     print(f"ISSUE53_STATS_BUILDER_SELFTEST_LOC: {report['self_test_loc']}")
+    print(f"ISSUE53_DECOMPOSITION_STAGE: {report['decomposition_stage']}")
     print("ISSUE53_DECOMPOSITION_JSON_BEGIN")
     print(json.dumps(report, indent=2, sort_keys=True))
     print("ISSUE53_DECOMPOSITION_JSON_END")
