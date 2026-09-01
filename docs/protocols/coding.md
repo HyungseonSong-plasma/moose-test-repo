@@ -165,3 +165,84 @@ validation protocol requirements are satisfied
 ```
 
 If any material item is unresolved, do not present the command as ready for external execution.
+
+## CODE-13 — Staged validation queue stack
+
+When one issue requires several small, causally ordered implementation cuts, do not require a separate user-local validation round after every low-risk cut. Preserve the validation obligation for each cut in an ordered **validation queue stack**, continue implementation while the dependency chain remains interpretable and reversible, then discharge the queued validations in causal order.
+
+Canonical shape:
+
+```text
+M1 -> enqueue V1
+M2 -> enqueue V2
+M3 -> enqueue V3
+...
+Mn -> enqueue Vn
+
+issue-level implementation target reached
+        ↓
+run V1 -> V2 -> V3 -> ... -> Vn
+        ↓
+final required P0/P1/P2/P3 gates
+```
+
+The queue is FIFO for validation and stack-like for rollback. Older validation claims are checked first; if an older claim fails, all later dependent modifications become untrusted descendants.
+
+Each queued validation item must preserve enough state to identify its rollback boundary:
+
+```text
+validation id
+modification/cut id or commit SHA
+changed semantic scope
+claim that the validation establishes
+validation command / expected marker or invariant
+known dependent later cuts
+rollback boundary
+status = PENDING | PASS | FAIL | DROPPED
+```
+
+Failure handling is causal:
+
+```text
+V1 FAIL after M1,M2,M3
+  -> M2 and M3 are untrusted descendants
+  -> discard/rollback M2 and M3 before repairing M1
+  -> do not interpret V2 or V3
+
+V2 FAIL after M1,M2,M3 and V1 PASS
+  -> M1 remains accepted
+  -> discard/rollback M3 before repairing M2
+  -> do not interpret V3
+
+Vi PASS
+  -> preserve Mi and all previously accepted ancestors
+  -> continue with Vi+1
+```
+
+"Discard/rollback" means remove the descendant semantic changes before continuing, using the repository mutation protocol appropriate to the already-published Git state. Do not keep later code merely because it happens to compile when an earlier prerequisite validation failed.
+
+Queue depth is bounded by **causal recoverability**, not by an arbitrary number of cuts. Continue stacking modifications until the issue-level implementation target is reached when all of the following remain true:
+
+```text
+each cut has a clear validation claim
+later cuts have identifiable dependencies on earlier cuts
+later cuts can be discarded without losing unrelated accepted work
+no later cut masks the failure signal of an earlier validation
+no destructive or irreversible boundary has been crossed
+```
+
+Run validation immediately instead of deferring it when any of these is true:
+
+```text
+a cut deletes or retires a canonical owner
+an external/public interface or persisted schema changes
+physics/numerical semantics change materially
+later work would make the earlier failure non-localizable
+rollback would require ambiguous reconstruction
+repository structural/ref mutation makes descendant discard unsafe
+the validation itself is a required gate before the next cut
+```
+
+Lightweight additive helpers, reversible caller rewiring, duplicated plumbing removal, and other causally isolated refactors are normal candidates for queued validation.
+
+The queue reduces the **number of user-local validation rounds**, not the required evidence. Before issue closure or canonical retirement, every non-dropped queued validation must be discharged successfully, and the final validation gates required by `validation.md` still apply.
