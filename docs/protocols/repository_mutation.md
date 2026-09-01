@@ -530,3 +530,37 @@ Current originating incident:
 ```text
 docs/incidents/repository_noop_and_wrong_action_mutation.md
 ```
+
+## RM-12 — Resource-class schema-surface isolation
+
+Once a response declares a live mutation resource class, tool-schema discovery must preserve that same resource-class boundary **before** any business mutator is called.
+
+Canonical rule:
+
+```text
+ACTIVE_MUTATION_RESOURCE = file
+  -> discover/load file mutators only
+  -> issue/comment/branch mutator schema loading is a HARD STOP for business mutation
+
+ACTIVE_MUTATION_RESOURCE = issue
+  -> discover/load issue mutators only
+  -> file/comment/branch mutator schema loading is a HARD STOP for business mutation
+```
+
+Read-only tools from other resource classes may still be used when required for discovery or verification, but mutator-schema discovery is resource-class scoped.
+
+If a mutator schema from the wrong resource class is loaded after the mutation phase has been frozen, treat the current tool surface as contaminated:
+
+```text
+MUTATION_ALLOWED = false
+business mutation for this response = FORBIDDEN
+resume only in a fresh response with the intended resource class reloaded
+```
+
+Do not test whether the wrong-resource mutator is harmless. Do not invoke it with a placeholder target. Do not rely on the later RM-06D payload check to recover safety. The purpose of this rule is to remove unrelated mutators from the callable surface before target/action binding occurs.
+
+Originating recurrence:
+
+```text
+docs/incidents/issue60_wrong_action_placeholder_issue65_2026-09-01.md
+```
