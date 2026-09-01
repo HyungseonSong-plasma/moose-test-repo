@@ -168,6 +168,49 @@ technical acceptance, retrospective, metrics, or incident-learning decision
 
 Add temporary diagnostic material when a symptom, incident signature, or hypothesis requires it. Search `docs/knowledge/TROUBLESHOOTING_INDEX.md`, `docs/incidents/`, or `docs/metrics/incidents/` only when triggered by the current signal.
 
+## RWS-05A — Incident auto-activation and recording trigger
+
+A material incident is itself a working-set trigger. The model must detect and route this trigger autonomously; activation must not depend on the user asking whether the incident was recorded.
+
+Treat an event as a material incident when current evidence establishes an operational or technical failure that requires recovery, classification, or reusable prevention learning, including examples such as:
+
+```text
+wrong-resource / wrong-action repository mutation
+false PASS / false FAIL
+assistant-caused rework or artifact corruption
+known gate bypass or gate defect
+unexpected runtime/environment escape that changes classification
+recurrent failure covered by an existing canonical rule
+```
+
+Routine warnings, harmless wording corrections, or exploratory dead ends with no material operational consequence do not automatically become incident records.
+
+When a material incident is detected, activate a temporary incident-learning pack even if the primary phase remains PLAN, IMPLEMENT, or VALIDATE:
+
+```text
+TEMPORARY INCIDENT-LEARNING PACK
+  docs/incidents/                         -> individual evidence narrative
+  docs/protocols/metrics_closure.md       -> MET-20 / MET-21 / MET-22 classification and prevention decision
+  docs/metrics/incidents/learning_ledger.md -> prospective incident-level record
+  relevant semantic/gate owner            -> root-cause and recurrence evidence
+```
+
+Required autonomous routing:
+
+```text
+1. detect the material incident from current evidence;
+2. activate the incident-learning pack without waiting for a user prompt;
+3. preserve or link the individual incident evidence under docs/incidents/ or the attributable issue;
+4. once incident-level evidence is sufficient, append the prospective MET-20 row to learning_ledger.md;
+5. when MET-22 triggers, record the EPR decision and prevention maturity;
+6. record whether the relevant rule/pack was active at the incident so routing misses remain measurable;
+7. unload the temporary incident-learning pack only after the recording/classification obligations are resolved or explicitly marked UNRESOLVED.
+```
+
+If the event is clearly an incident but the learning status is not yet distinguishable, activate the pack immediately and preserve the evidence; use `UNRESOLVED` only when the canonical MET-20 discriminator cannot yet be established. Do not postpone activation merely because classification is incomplete.
+
+This is a routing rule, not a new root-cause taxonomy. Reuse the existing incident and MET-20/MET-22 semantic owners rather than creating a duplicate incident protocol.
+
 ## RWS-06 — Unload rule
 
 Rule activation is not monotonic accumulation.
