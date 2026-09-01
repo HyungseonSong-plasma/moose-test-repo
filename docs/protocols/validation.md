@@ -69,7 +69,7 @@ For generated overlay/integration inputs, P0 must build a block-qualified provid
 
 A referenced property with no applicable producer is a hard construction failure. Multiple unintended producers for the same property on the same applicable block are also a hard construction failure and should be classified `DUPLICATE_PROVIDER_FAIL`. Prefer reusing the already-owned upstream provider for shared state such as gas temperature, pressure, density, or common mesh/material properties rather than recursively copying a second provider subgraph. When this failure class is in scope, include a negative mutation that deliberately duplicates one shared provider and prove P0 rejects it before P2.
 
-For `ParsedFunctorMaterial` / `ADParsedFunctorMaterial`, reserved-symbol validation is a **hard machine-enforced P0 gate**, not a manual-review item. Every generated or packaged input containing these objects must run `python3 scripts/qpx.py preflight <input.i>` or an equivalent embedded guard before P2. See VAL-19.
+For `ParsedFunctorMaterial` / `ADParsedFunctorMaterial`, reserved-symbol validation is a **hard machine-enforced P0 gate**, not a manual-review item. Every generated or packaged input containing these objects must run `python3 bin/qpx.py preflight <input.i>` or an equivalent embedded guard before P2. See VAL-19.
 
 If property `X_state` is created with `define_dot_functors = true`, the generated derivative functor is `dX_state_dt`. Example: `w_O_state -> dw_O_state_dt`.
 
@@ -331,11 +331,11 @@ parser symbols are valid identifiers
 Canonical implementation:
 
 ```text
-python3 scripts/qpx.py preflight --self-test
-python3 scripts/qpx.py preflight <generated-or-packaged-input.i>
+python3 bin/qpx.py preflight --self-test
+python3 bin/qpx.py preflight <generated-or-packaged-input.i>
 ```
 
-For external overlay bundles that do not carry the repository `scripts/` tree, the case `prepare.py` must embed or invoke an equivalent guard. A bundle containing parsed functor objects is not `BATCH_ACCEPTED_FOR_EXECUTION` until this gate passes.
+For external overlay bundles that do not carry the repository `bin/` entrypoint, the case `prepare.py` must embed or invoke an equivalent guard. A bundle containing parsed functor objects is not `BATCH_ACCEPTED_FOR_EXECUTION` until this gate passes.
 
 Preferred generated aliases are semantic multi-character names such as `fp_rho`, `fp_w`, `meanM`, or `pres`; avoid single-letter aliases unless they are explicitly known not to collide with the parser namespace.
 
@@ -373,7 +373,7 @@ When the `INITIAL` / start-time row is observation-only, declare separate raw an
 }
 ```
 
-Canonical command-line implementation is `python3 scripts/qpx.py temporal-csv ...`; the reusable implementation is `qpx_harness.temporal`. The runner normalizes the raw CSV after P3 and before the case checker. Raw runtime evidence is preserved unchanged.
+Canonical command-line implementation is `python3 bin/qpx.py temporal-csv ...`; the reusable implementation is `qpx_harness.temporal`. The runner normalizes the raw CSV after P3 and before the case checker. Raw runtime evidence is preserved unchanged.
 
 Hard schema-v2 rules:
 
