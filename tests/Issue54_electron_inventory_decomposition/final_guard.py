@@ -4,9 +4,17 @@ from __future__ import annotations
 
 import ast
 import importlib
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+# This guard is intentionally invoked as a file from a disposable GitHub ZIP.
+# In that execution mode Python places the script directory, not the repository
+# root, on sys.path. Make the declared local workflow import-safe explicitly.
+root_text = str(ROOT)
+if root_text not in sys.path:
+    sys.path.insert(0, root_text)
+
 FACADE = ROOT / "qpx_harness" / "electron_inventory_nullspace.py"
 OWNER_ROOT = ROOT / "qpx_harness" / "issue45"
 FIRST_LINEAR = ROOT / "qpx_harness" / "issue45_first_linear.py"
