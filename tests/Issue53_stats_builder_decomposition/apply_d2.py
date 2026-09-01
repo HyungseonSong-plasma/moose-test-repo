@@ -90,28 +90,32 @@ def _preflight() -> tuple[str, ast.Module, dict[str, ast.FunctionDef | ast.Async
     text = TARGET.read_text()
     tree = ast.parse(text, filename=TARGET.relative_to(ROOT).as_posix())
     functions = _top_functions(tree)
+    local_names = set(functions)
+    convergence_imported = "build_convergence_stats" in _imported_from(
+        tree, "metrics.convergence"
+    )
 
-    missing_convergence = CONVERGENCE_LOCAL - set(functions)
+    present_convergence = CONVERGENCE_LOCAL & local_names
+    if not present_convergence and convergence_imported:
+        raise AssertionError("D2 already appears applied")
+
+    missing_convergence = CONVERGENCE_LOCAL - local_names
     if missing_convergence:
-        if not missing_convergence and "build_convergence_stats" in _imported_from(
-            tree, "metrics.convergence"
-        ):
-            raise AssertionError("D2 already appears applied")
         raise AssertionError(
             f"D1 topology mismatch; Convergence locals missing: {sorted(missing_convergence)}"
         )
 
-    leaked_efficiency = EFFICIENCY_LOCAL & set(functions)
+    leaked_efficiency = EFFICIENCY_LOCAL & local_names
     if leaked_efficiency:
         raise AssertionError(
             f"D1 not complete; Efficiency implementation still local: {sorted(leaked_efficiency)}"
         )
     if "build_efficiency_stats" not in _imported_from(tree, "metrics.efficiency"):
         raise AssertionError("D1 Efficiency facade re-export missing")
-    if "build_convergence_stats" in _imported_from(tree, "metrics.convergence"):
+    if convergence_imported:
         raise AssertionError("Convergence facade import already present before D2")
 
-    missing_core = CORE_REQUIRED - set(functions)
+    missing_core = CORE_REQUIRED - local_names
     if missing_core:
         raise AssertionError(f"required core functions missing before D2: {sorted(missing_core)}")
 
