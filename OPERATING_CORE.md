@@ -74,19 +74,6 @@ For technical work:
 
 ## `moose-test-init` bootstrap
 
-`moose-test-init` restores the minimum safe resume context rather than preloading all likely future rules.
+`moose-test-init` is the official cross-chat initialization command. Its one canonical procedure is `BOOTSTRAP.md`.
 
-Before declaring bootstrap complete, load:
-
-```text
-1. OPERATING_CORE.md
-2. active issue/current-state checkpoint
-3. PROTOCOL_INDEX.md
-4. docs/protocols/rule_working_set.md
-5. the phase pack selected for the immediate resume obligation
-6. only matching temporary diagnostic evidence required by that obligation
-```
-
-Do **not** load `coding.md`, `validation.md`, `metrics_closure.md`, or other technical protocols merely because they may become useful later. Load them when the phase or an unresolved obligation triggers them.
-
-If the phase changes after bootstrap, reconstruct the working set at that transition: unload the prior phase pack unless still required by an unresolved material obligation, then load the new pack.
+Do not duplicate the bootstrap algorithm here. On `moose-test-init`, route to `BOOTSTRAP.md`, restore the minimum safe resume context, and then use the adaptive working-set rules for subsequent user turns.
