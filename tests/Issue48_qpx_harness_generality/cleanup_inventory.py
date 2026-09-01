@@ -26,9 +26,7 @@ RETAINED_OWNERS = {
     "scale_audit": "reusable QVT mesh/space-time scale owner with cross-workflow consumers",
 }
 
-CLEANUP_CANDIDATES = (
-    "fast_plasma_coupling_diagnostic",
-)
+CLEANUP_CANDIDATES = ()
 
 PYTHON_SCAN_ROOTS = ("qpx_harness", "recipes", "scripts", "tests", "performance")
 EXECUTION_SCAN_ROOTS = (".github", "tests", "performance")
@@ -259,7 +257,7 @@ def self_test() -> int:
             raise AssertionError("retained owner leaked back into cleanup candidates")
         if set(RETAINED_OWNERS) != {"electron_inventory_nullspace", "scale_audit"}:
             raise AssertionError(f"retained-owner scope drift: {sorted(RETAINED_OWNERS)}")
-        if CLEANUP_CANDIDATES != ("fast_plasma_coupling_diagnostic",):
+        if CLEANUP_CANDIDATES != ():
             raise AssertionError(f"cleanup scope drift: {CLEANUP_CANDIDATES}")
 
         path = ROOT / "qpx_harness" / "example.py"
