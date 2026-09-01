@@ -91,7 +91,7 @@ def _check_scale_owner() -> None:
 
     consumer_tokens = {
         "qpx_harness/electron_inventory_nullspace.py": "from .scale_audit import mesh_stats",
-        "qpx_harness/fast_plasma_coupling_diagnostic.py": "from .scale_audit import mesh_stats",
+        "qpx_harness/issue43_coupling_diagnostic.py": "from .scale_audit import mesh_stats",
         "qpx_harness/issue43_fast_relaxation.py": "scale_audit",
         "qpx_harness/issue43_relaxation_runtime.py": "scale_audit",
         "recipes/issue43_fast_relaxation.py": "scale_audit",
@@ -112,15 +112,15 @@ def _check_cleanup_scope() -> None:
     expected_retained = {"electron_inventory_nullspace", "scale_audit"}
     if retained != expected_retained:
         raise AssertionError(f"retained-owner set drift: {sorted(retained)}")
-    if candidates != {"fast_plasma_coupling_diagnostic"}:
-        raise AssertionError(f"cleanup-candidate scope drift: {sorted(candidates)}")
+    if candidates:
+        raise AssertionError(f"cleanup-candidate scope is not empty after retirement: {sorted(candidates)}")
     if retained & candidates:
         raise AssertionError("retained owner also appears as cleanup candidate")
 
 
 def _negative_control() -> None:
     retained = {"electron_inventory_nullspace", "scale_audit"}
-    mutated_candidates = {"fast_plasma_coupling_diagnostic", "scale_audit"}
+    mutated_candidates = {"scale_audit"}
     if not retained & mutated_candidates:
         raise AssertionError("retained-owner negative control did not create an overlap")
 
