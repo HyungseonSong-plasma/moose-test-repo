@@ -4,6 +4,7 @@
 - **Metric type:** Accumulated root-cause distribution
 - **Scope:** Operational incident/error analysis
 - **Status:** Historical snapshot; do not overwrite when later distributions change
+- **MET-20 learning-status coverage:** unavailable for this aggregate baseline
 
 ## 1. Reported accumulated distribution
 
@@ -52,6 +53,24 @@ pie title Incident Root-Cause Breakdown — 2026-09-01
     "Resource Namespace Collision (Rule 10)" : 3
 ```
 
-## 4. Snapshot discipline
+## 4. Prevention-learning baseline limitation
 
-Future measurements should be stored as new date-stamped files under `docs/metrics/incidents/snapshots/`. Historical percentages in this file should remain unchanged so distribution shifts can be compared over time.
+This snapshot predates prospective incident-level `MET-20` classification. The aggregate percentages do not contain enough evidence to determine whether each underlying incident was `NOVEL`, `KNOWN_BUT_NOT_ENFORCED`, `KNOWN_AND_GATE_BYPASSED`, `GATE_DEFECT`, or `ENVIRONMENT_ESCAPE`.
+
+Therefore:
+
+```text
+classification coverage      = unavailable
+known recurrence rate        = unavailable
+pre-execution catch rate     = unavailable
+gate-bypass rate             = unavailable
+gate-defect rate             = unavailable
+enforcement coverage         = unavailable
+novel-class share            = unavailable
+```
+
+Do not reconstruct these values from category percentages alone. This snapshot is the root-cause-distribution baseline against which later, prospectively classified snapshots may be compared.
+
+## 5. Snapshot discipline
+
+Future measurements should be stored as new date-stamped files under `docs/metrics/incidents/snapshots/`. Historical root-cause percentages in this file should remain unchanged so distribution shifts can be compared over time. Learning-status annotations may be added only when incident-level evidence supports them.
