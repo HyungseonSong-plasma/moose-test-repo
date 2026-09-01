@@ -32,6 +32,8 @@ from qpx_harness.models.stats import (
     TimingStats,
 )
 
+from .metrics.efficiency import build_efficiency_stats
+
 
 def _mapping(value: Any) -> Mapping[str, Any]:
     return value if isinstance(value, Mapping) else {}
@@ -188,114 +190,6 @@ def build_runtime_common_stats(
     )
 
 
-def _perfgraph_timings(perfgraph: Mapping[str, Any]) -> list[TimingStats]:
-    rows: list[TimingStats] = []
-    nodes = perfgraph.get("nodes")
-    if not isinstance(nodes, list):
-        return rows
-    for node in nodes:
-        if not isinstance(node, Mapping) or not isinstance(node.get("name"), str):
-            continue
-        rows.append(
-            TimingStats(
-                name=node["name"],
-                source="moose_perfgraph",
-                self_seconds=_optional_float(node.get("self_seconds")),
-                call_count=_optional_int(
-                    node.get("num_calls")
-                    if node.get("num_calls") is not None
-                    else node.get("call_count")
-                ),
-                parent=node.get("parent")
-                if isinstance(node.get("parent"), str)
-                else None,
-                level=_optional_int(node.get("level")),
-            )
-        )
-    return rows
-
-
-def _petsc_timings(petsc: Mapping[str, Any]) -> list[TimingStats]:
-    rows: list[TimingStats] = []
-    events = petsc.get("rows")
-    if not isinstance(events, list):
-        return rows
-    for event in events:
-        if not isinstance(event, Mapping):
-            continue
-        name = event.get("Event Name")
-        if not isinstance(name, str) or not name or name == "summary":
-            continue
-        rows.append(
-            TimingStats(
-                name=name,
-                source="petsc_log",
-                call_count=_optional_int(event.get("Count")),
-                rank=_optional_int(event.get("Rank")),
-                total_seconds=_optional_float(event.get("Time")),
-            )
-        )
-    return rows
-
-
-def _memory_stats(perfgraph: Mapping[str, Any]) -> list[MemoryStats]:
-    rows: list[MemoryStats] = []
-    this_rank = _optional_float(perfgraph.get("max_memory_this_rank_mb"))
-    if this_rank is not None:
-        rows.append(
-            MemoryStats(
-                kind="max_memory_this_rank",
-                value=this_rank,
-                unit="MB",
-                source="moose_perfgraph",
-            )
-        )
-    per_rank = perfgraph.get("max_memory_per_rank_mb")
-    if isinstance(per_rank, list):
-        for rank, value in enumerate(per_rank):
-            number = _optional_float(value)
-            if number is not None:
-                rows.append(
-                    MemoryStats(
-                        kind="max_memory_per_rank",
-                        value=number,
-                        unit="MB",
-                        source="moose_perfgraph",
-                        rank=rank,
-                    )
-                )
-    return rows
-
-
-def build_efficiency_stats(record: Mapping[str, Any]) -> EfficiencyStats | None:
-    """Build work/timing/resource facts from a performance-style result record."""
-
-    work = _mapping(record.get("work"))
-    performance = _mapping(record.get("performance"))
-    perfgraph = _mapping(performance.get("perfgraph"))
-    petsc = _mapping(performance.get("petsc"))
-    timings = (*_perfgraph_timings(perfgraph), *_petsc_timings(petsc))
-    memories = tuple(_memory_stats(perfgraph))
-    peak_rss_bytes = _optional_int(performance.get("peak_rss_bytes"))
-    residual_evaluations = _optional_int(work.get("residual_evaluations"))
-    jacobian_evaluations = _optional_int(work.get("jacobian_evaluations"))
-    if (
-        peak_rss_bytes is None
-        and residual_evaluations is None
-        and jacobian_evaluations is None
-        and not timings
-        and not memories
-    ):
-        return None
-    return EfficiencyStats(
-        peak_rss_bytes=peak_rss_bytes,
-        residual_evaluations=residual_evaluations,
-        jacobian_evaluations=jacobian_evaluations,
-        timings=tuple(timings),
-        memories=memories,
-    )
-
-
 def _termination_rows(
     rows: Iterable[Mapping[str, Any]],
     *,
@@ -366,7 +260,6 @@ def _variable_residual_samples(
                     variable=variable,
                     norm_type="L2",
                 )
-            )
     return out
 
 
