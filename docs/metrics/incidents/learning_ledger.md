@@ -2,25 +2,52 @@
 
 **Status:** prospective operational metric ledger  
 **Prospective start:** 2026-09-01  
-**Canonical semantics:** `docs/protocols/metrics_closure.md` / `MET-20`, `MET-21`, `MET-22`
+**Canonical semantics:** `docs/protocols/metrics_closure.md` / `MET-20`, `MET-21`, `MET-22`  
+**Working-set semantics:** `docs/protocols/rule_working_set.md`
 
 This ledger records one row per incident only after incident-level evidence is sufficient to classify both the technical root cause and the prevention-learning status. Individual incident evidence remains under `docs/incidents/` or the attributable GitHub issue.
 
 ## Records
 
-| Date | Incident / issue | Root-cause class | Learning status | Pre-existing rule / knowledge owner | Machine gate before incident? | Gate invoked? | Detection stage | EPR required? | Enforcement decision | Prevention maturity | Evidence |
-|---|---|---|---|---|---|---|---|---|---|---|---|
+| Date | Incident / issue | Root-cause class | Learning status | Pre-existing rule / knowledge owner | Applicable phase pack | Rule/pack active at incident? | Machine gate before incident? | Gate invoked? | Detection stage | EPR required? | Enforcement decision | Prevention maturity | Evidence |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 
 ## Recording constraints
 
 - Use exactly one primary `MET-20` learning status: `NOVEL`, `KNOWN_BUT_NOT_ENFORCED`, `KNOWN_AND_GATE_BYPASSED`, `GATE_DEFECT`, `ENVIRONMENT_ESCAPE`, or `UNRESOLVED`.
 - Do not classify from symptom similarity alone; establish the pre-incident control state.
+- Record the phase pack that should have owned the failure when evidence supports it: `PLAN`, `RESEARCH`, `IMPLEMENT`, `VALIDATE`, `CLOSE`, or an auxiliary/temporary pack reference.
+- Record `Rule/pack active at incident?` as `yes`, `no`, or `unknown`. A known relevant owner with `no` is evidence for a working-set/routing miss and should be analyzed before adding another semantic rule.
+- Distinguish `rule not active` from `machine gate not present`: a semantic rule may exist in inventory without an executable gate.
 - `UNRESOLVED` rows remain visible but are excluded from classified-incident denominators.
 - Do not reconstruct historical rows from aggregate percentages alone.
 - Link to the incident/issue evidence rather than copying RCA narratives into this ledger.
 - When `MET-22` triggers an Enforcement Promotion Review, record `EPR required? = yes` and one primary enforcement decision.
 - Record prevention maturity as the strongest evidence-backed state: `DOCUMENTED`, `TRIGGERED`, `MACHINE_CHECKED`, `MUTATION_TESTED`, or `IMPOSSIBLE_BY_CONSTRUCTION`.
 - Do not claim `MACHINE_CHECKED` or higher without executable applicable-path evidence.
+
+## Working-set miss interpretation
+
+Use the active-pack evidence to distinguish:
+
+```text
+relevant owner did not exist
+  -> possible NOVEL / RULE_ABSENT
+
+relevant owner existed but was not active
+  -> working-set selection or phase-routing failure
+
+owner was active but applicability trigger was missed
+  -> trigger/routing failure
+
+mandatory gate existed but was not invoked
+  -> KNOWN_AND_GATE_BYPASSED
+
+mandatory gate invoked but produced the wrong decision
+  -> GATE_DEFECT
+```
+
+Do not create a new MET-20 status solely for working-set misses. Preserve the primary learning status and use these fields to identify the remediation surface.
 
 ## Enforcement decision values
 
