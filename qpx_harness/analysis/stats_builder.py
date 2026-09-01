@@ -721,6 +721,23 @@ def build_simulation_stats(
     )
 
 
+def build_runtime_simulation_stats(
+    runtime: Mapping[str, Any],
+    *,
+    case_id: str | None = None,
+    convergence: ConvergenceStats | None = None,
+    accuracy: AccuracyStats | None = None,
+) -> SimulationStats:
+    """Construct SimulationStats from the shared issue-runtime fact shape."""
+
+    return SimulationStats(
+        common=build_runtime_common_stats(runtime, case_id=case_id),
+        efficiency=None,
+        convergence=convergence,
+        accuracy=accuracy,
+    )
+
+
 def self_test() -> int:
     """P0 characterization of representative existing producer fact shapes."""
 
