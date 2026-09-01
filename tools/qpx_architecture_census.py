@@ -109,6 +109,21 @@ def generic_issue_edges(files: list[Path]) -> list[dict[str, str]]:
     return edges
 
 
+def module_package_collisions() -> list[str]:
+    """Return direct qpx_harness names that exist as both module and package."""
+    modules = {
+        path.stem
+        for path in HARNESS.glob("*.py")
+        if path.name != "__init__.py"
+    }
+    packages = {
+        path.name
+        for path in HARNESS.iterdir()
+        if path.is_dir() and (path / "__init__.py").is_file()
+    }
+    return sorted(modules & packages)
+
+
 def build_census() -> dict:
     recipe_map = _recipe_ownership()
     harness_files = _python_files(HARNESS)
@@ -125,9 +140,14 @@ def build_census() -> dict:
     expected_recipes = sorted(recipe_map)
     recipe_set_ok = recipe_paths == expected_recipes
     edges = generic_issue_edges(harness_files)
+    collisions = module_package_collisions()
     class_counts = dict(Counter(record["class"] for record in records))
     return {
-        "status": "PASS" if not unclassified and recipe_set_ok and not edges else "FAIL",
+        "status": (
+            "PASS"
+            if not unclassified and recipe_set_ok and not edges and not collisions
+            else "FAIL"
+        ),
         "production_owner_count": len(records),
         "class_counts": class_counts,
         "owners": records,
@@ -136,6 +156,7 @@ def build_census() -> dict:
         "recipe_set_expected": expected_recipes,
         "recipe_set_ok": recipe_set_ok,
         "generic_to_issue_edges": edges,
+        "module_package_collisions": collisions,
         "scripts_python_files": [_rel(path) for path in script_files],
     }
 
@@ -152,6 +173,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"ISSUE70_PRODUCTION_OWNERS: {result['production_owner_count']}")
     print(f"ISSUE70_UNCLASSIFIED: {len(result['unclassified'])}")
     print(f"ISSUE70_GENERIC_TO_ISSUE_EDGES: {len(result['generic_to_issue_edges'])}")
+    print(f"ISSUE70_MODULE_PACKAGE_COLLISIONS: {len(result['module_package_collisions'])}")
     print(f"ISSUE70_RECIPE_SET: {'PASS' if result['recipe_set_ok'] else 'FAIL'}")
     print(f"ISSUE70_ARCHITECTURE_CENSUS: {result['status']}")
     return 0 if result["status"] == "PASS" else 1
