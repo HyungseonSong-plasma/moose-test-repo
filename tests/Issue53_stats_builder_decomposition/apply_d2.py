@@ -1,9 +1,11 @@
 """Apply Issue53 D2 Convergence extraction with fail-closed structural checks.
 
-This migrator is intentionally branch-local and one-shot. It avoids reconstructing
-stats_builder.py through a full-file transcription payload: the current local file
-is parsed, the exact contiguous Convergence owner functions are removed by AST
-line ranges, and one compatibility re-export import is inserted.
+This migrator is intentionally local-state driven and one-shot. It avoids
+reconstructing stats_builder.py through a full-file transcription payload: the
+current file is parsed, the exact contiguous Convergence owner functions are
+removed by AST line ranges, and one compatibility re-export import is inserted.
+No local Git state is required; the accepted D1 structural fingerprint is the
+precondition.
 """
 
 from __future__ import annotations
@@ -11,11 +13,10 @@ from __future__ import annotations
 import argparse
 import ast
 from pathlib import Path
-import subprocess
 
 ROOT = Path(__file__).resolve().parents[2]
 TARGET = ROOT / "qpx_harness" / "analysis" / "stats_builder.py"
-EXPECTED_BRANCH = "refactor/qpx-harness-generality"
+EXPECTED_D1_LOC = 836
 
 CONVERGENCE_LOCAL = {
     "_termination_rows",
@@ -45,17 +46,6 @@ CORE_REQUIRED = {
 }
 
 
-def _run(*args: str) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
-        args,
-        cwd=ROOT,
-        text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        check=False,
-    )
-
-
 def _top_functions(tree: ast.Module) -> dict[str, ast.FunctionDef | ast.AsyncFunctionDef]:
     return {
         node.name: node
@@ -75,18 +65,6 @@ def _imported_from(tree: ast.Module, module: str, *, level: int = 1) -> set[str]
 
 
 def _preflight() -> tuple[str, ast.Module, dict[str, ast.FunctionDef | ast.AsyncFunctionDef]]:
-    branch = _run("git", "rev-parse", "--abbrev-ref", "HEAD")
-    if branch.returncode != 0 or branch.stdout.strip() != EXPECTED_BRANCH:
-        raise AssertionError(
-            f"wrong branch: expected {EXPECTED_BRANCH!r}, got {branch.stdout.strip()!r}"
-        )
-
-    dirty = _run("git", "status", "--porcelain", "--", str(TARGET.relative_to(ROOT)))
-    if dirty.returncode != 0:
-        raise AssertionError(dirty.stderr.strip() or "git status failed")
-    if dirty.stdout.strip():
-        raise AssertionError("stats_builder.py has local changes; refusing destructive migration")
-
     text = TARGET.read_text()
     tree = ast.parse(text, filename=TARGET.relative_to(ROOT).as_posix())
     functions = _top_functions(tree)
@@ -98,6 +76,12 @@ def _preflight() -> tuple[str, ast.Module, dict[str, ast.FunctionDef | ast.Async
     present_convergence = CONVERGENCE_LOCAL & local_names
     if not present_convergence and convergence_imported:
         raise AssertionError("D2 already appears applied")
+
+    if len(text.splitlines()) != EXPECTED_D1_LOC:
+        raise AssertionError(
+            f"unexpected D1 file size: expected {EXPECTED_D1_LOC} LOC, "
+            f"got {len(text.splitlines())}"
+        )
 
     missing_convergence = CONVERGENCE_LOCAL - local_names
     if missing_convergence:
@@ -220,6 +204,7 @@ def main() -> int:
         before = len(text.splitlines())
         after = len(intended.splitlines())
         print("ISSUE53_D2_MIGRATOR_PREFLIGHT: PASS")
+        print("ISSUE53_D2_MIGRATOR_GIT_DEPENDENCY: NONE")
         print(f"ISSUE53_D2_MIGRATOR_BEFORE_LOC: {before}")
         print(f"ISSUE53_D2_MIGRATOR_AFTER_LOC: {after}")
         print(f"ISSUE53_D2_MIGRATOR_REMOVED_LOC: {before - after}")
