@@ -160,8 +160,8 @@ def build_first_linear_stats(
 ) -> Any:
     """Map existing first-linear facts into Stats without changing producer contracts."""
 
+    from .analysis.metrics.accuracy import build_jacobian_accuracy_stats
     from .analysis.stats_builder import (
-        build_accuracy_stats,
         build_convergence_stats,
         build_runtime_simulation_stats,
     )
@@ -185,10 +185,8 @@ def build_first_linear_stats(
             else ()
         ),
     )
-    accuracy = build_accuracy_stats(
-        jacobian_comparisons=(
-            jacobian.get("tests", ()) if isinstance(jacobian, dict) else ()
-        )
+    accuracy = build_jacobian_accuracy_stats(
+        jacobian if isinstance(jacobian, dict) else None
     )
     return build_runtime_simulation_stats(
         runtime,
