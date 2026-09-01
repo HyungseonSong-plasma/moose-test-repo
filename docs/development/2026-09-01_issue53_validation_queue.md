@@ -3,7 +3,7 @@
 **Work ID:** `qpx-stats-builder-decomposition`  
 **Issue:** #53  
 **Protocol:** `docs/protocols/coding.md` / CODE-13  
-**Status:** ACTIVE / D1 PASS / D2 PASS / D3 CANONICAL APPLIED / LOCAL DIAGNOSTIC GATE READY
+**Status:** ACTIVE / D1 PASS / D2 PASS / D3 PASS / D4+D5 OWNERS STAGED / LOCAL OWNER DIAGNOSTIC READY
 
 ## Local execution contract
 
@@ -19,89 +19,22 @@ NO local source mutation commands
 Repository mutations are performed against GitHub canonical state separately.
 Local evidence is used only to validate the current downloaded snapshot.
 
-## Accepted baseline and D1
+## Accepted decomposition progression
 
 ```text
 baseline stats_builder.py: 942 LOC
 embedded self_test:         198 LOC
 
-V0 inventory:               PASS
-V0.5 coercion helper:       PASS
-V1 Efficiency shadow:       PASS
-V2 Convergence shadow:      PASS
-
-D1 Efficiency extraction:  PASS
-stats_builder.py after D1:  836 LOC
+D1 Efficiency extraction:  836 LOC / PASS
+D2 Convergence extraction: 653 LOC / PASS
+D3 Accuracy extraction:    432 LOC / PASS
 ```
 
-D1 user-local evidence included:
+D3 user-local evidence:
 
 ```text
-ISSUE53_STRUCTURAL_GUARD_D1: PASS
-ISSUE53_STRUCTURAL_GUARD_LOC: 836
-QPX_EFFICIENCY_STATS_MAPPING_SELFTEST: PASS
-ISSUE53_D1_REEXPORT: PASS
-QPX_STATS_BUILDER_SELFTEST: PASS
-PF1_STATS_MAPPING_SELFTEST: PASS
-QPX_HARNESS_SELFTEST: PASS
-ISSUE53_DECOMPOSITION_STAGE: D1_EFFICIENCY_EXTRACTED
-```
-
-Historical D1 incidents remain recorded under:
-
-```text
-docs/incidents/issue53_efficiency_extraction_transcription_drift_2026-09-01.md
-docs/incidents/issue53_inventory_stage_blind_false_fail_2026-09-01.md
-```
-
-## D2 — Convergence extraction
-
-D2 moved the Convergence mapping implementation from `stats_builder.py` to:
-
-```text
-qpx_harness/analysis/metrics/convergence.py
-```
-
-`stats_builder.build_convergence_stats` remains available through a compatibility re-export.
-
-User-local D2 evidence:
-
-```text
-ISSUE53_D2_MIGRATOR_PREFLIGHT: PASS
-ISSUE53_D2_MIGRATOR_GIT_DEPENDENCY: NONE
-ISSUE53_D2_MIGRATOR_BEFORE_LOC: 836
-ISSUE53_D2_MIGRATOR_AFTER_LOC: 653
-ISSUE53_D2_MIGRATOR_REMOVED_LOC: 183
-ISSUE53_STRUCTURAL_GUARD_D2: PASS
-ISSUE53_STRUCTURAL_GUARD_LOC: 653
-QPX_CONVERGENCE_STATS_MAPPING_SELFTEST: PASS
-ISSUE53_D2_REEXPORT: PASS
-ISSUE45_FIRST_LINEAR_STATS_MAPPING_SELFTEST: PASS
-ISSUE45_FIRST_LINEAR_SELFTEST: PASS
-PF1_STATS_MAPPING_SELFTEST: PASS
-QPX_STATS_BUILDER_SELFTEST: PASS
-QPX_HARNESS_SELFTEST: PASS
-ISSUE53_DECOMPOSITION_INVENTORY: PASS
-ISSUE53_STATS_BUILDER_LOC: 653
-ISSUE53_DECOMPOSITION_STAGE: D2_CONVERGENCE_EXTRACTED
-ISSUE53_D2_CODES: 0 0 0 0 0 0 0 0 0
-ISSUE53_D2_LOCAL_GATE: PASS
-```
-
-D2 status: `PASS`.
-
-## D3 — Accuracy extraction
-
-Accuracy owner preparation commit:
-
-```text
-52de815e070dcb28e773cf415ed2dd26f718b6e9
-refactor(issue53): make AccuracyStats mapping locally owned
-```
-
-The owner diagnostic gate passed locally:
-
-```text
+ISSUE53_STRUCTURAL_GUARD_D3: PASS
+ISSUE53_STRUCTURAL_GUARD_LOC: 432
 QPX_ACCURACY_STATS_MAPPING_SELFTEST: PASS
 ISSUE45_FIRST_LINEAR_STATS_MAPPING_SELFTEST: PASS
 ISSUE45_FIRST_LINEAR_SELFTEST: PASS
@@ -111,45 +44,99 @@ ISSUE46_JAC_LOCALIZATION_RUNTIME_SELFTEST: PASS
 QPX_STATS_BUILDER_SELFTEST: PASS
 QPX_HARNESS_SELFTEST: PASS
 ISSUE53_DECOMPOSITION_INVENTORY: PASS
-ISSUE53_STATS_BUILDER_LOC: 653
-ISSUE53_DECOMPOSITION_STAGE: D2_CONVERGENCE_EXTRACTED
+ISSUE53_STATS_BUILDER_LOC: 432
+ISSUE53_STATS_BUILDER_SELFTEST_LOC: 198
+ISSUE53_DECOMPOSITION_STAGE: D3_ACCURACY_EXTRACTED
 ```
 
-Canonical D3 extraction commit:
+Canonical D3 commit:
 
 ```text
 aba07b9d01b2d7887a085fd7c7268d00e10ca118
 refactor(issue53): extract AccuracyStats owner
 ```
 
-D3 semantic cut:
+## D4 — Common/Environment owner staging
+
+Additive owner:
 
 ```text
-stats_builder.py local Accuracy helpers/build_accuracy_stats
-        ↓ removed
-analysis/metrics/accuracy.py
-        ↓ canonical owner
-stats_builder.py
-        ↓ re-exports build_accuracy_stats for compatibility/composition
+qpx_harness/analysis/common.py
 ```
 
-D3 structural guard support:
+Commit:
 
 ```text
-25c19e194037a4f250d9bbab0f1f20906079d63d
-test(issue53): add D3 Accuracy structural guard
+ba7a0e09364f20c4fa5af37e7295b4d89a84f4d8
+refactor(issue53): stage CommonStats analysis owner
 ```
 
-### VD3 — post-extraction local diagnostic gate
+The staged owner owns:
 
-Run on a freshly downloaded GitHub ZIP snapshot:
+```text
+build_problem_stats
+build_environment_stats
+_runtime_return_code
+build_common_stats
+build_runtime_common_stats
+```
+
+Shared coercion remains owned by `qpx_harness/analysis/_coerce.py`.
+`stats_builder.py` still contains the current Common implementation until the staged owner passes local diagnostics.
+
+## D5 — embedded self-test owner staging
+
+Additive characterization owner:
+
+```text
+qpx_harness/analysis/stats_builder_characterization.py
+```
+
+Commit:
+
+```text
+cc8f50422285bc672bd99e417b26ebd1882769d0
+test(issue53): stage stats_builder characterization owner
+```
+
+The characterization owner preserves the existing marker:
+
+```text
+QPX_STATS_BUILDER_SELFTEST
+```
+
+It imports `stats_builder` public facade symbols lazily inside `self_test()` so a later facade re-export does not create a module-import cycle.
+
+## D4/D5 structural guards
+
+Commit:
+
+```text
+34d8271c20aba87cedca4fee23f878fff44925b4
+test(issue53): extend structural guard through Common and self-test cuts
+```
+
+The gates are intentionally sequential:
+
+```text
+D4 -> Common implementation absent locally + Common public symbols re-exported
+      composition builders and embedded self_test must still remain
+
+D5 -> Common remains external + embedded self_test absent
+      self_test re-exported from stats_builder_characterization
+      composition builders remain local
+```
+
+Do not combine D4 and D5 into one destructive cut.
+
+## Current local owner diagnostic gate
+
+Run on a freshly downloaded GitHub ZIP snapshot. Diagnostics only:
 
 ```bash
-python3 -m py_compile qpx_harness/analysis/stats_builder.py
-python3 tests/Issue53_stats_builder_decomposition/structural_guard.py --stage d3
-python3 -m qpx_harness.analysis.metrics.accuracy
-python3 -m qpx_harness.issue45_first_linear --self-test
-python3 -m qpx_harness.issue46_jacobian_localization --self-test
+python3 -m py_compile qpx_harness/analysis/common.py
+python3 -m qpx_harness.analysis.common
+python3 -m qpx_harness.analysis.stats_builder_characterization
 python3 -m qpx_harness.analysis.stats_builder
 python3 scripts/qpx.py self-test
 python3 tests/Issue53_stats_builder_decomposition/inventory.py
@@ -158,35 +145,36 @@ python3 tests/Issue53_stats_builder_decomposition/inventory.py
 Required evidence:
 
 ```text
-ISSUE53_STRUCTURAL_GUARD_D3: PASS
-QPX_ACCURACY_STATS_MAPPING_SELFTEST: PASS
-ISSUE45_FIRST_LINEAR_SELFTEST: PASS
-ISSUE46_JAC_LOCALIZATION_SELFTEST: PASS
+QPX_COMMON_STATS_MAPPING_SELFTEST: PASS
 QPX_STATS_BUILDER_SELFTEST: PASS
 QPX_HARNESS_SELFTEST: PASS
 ISSUE53_DECOMPOSITION_INVENTORY: PASS
+ISSUE53_STATS_BUILDER_LOC: 432
 ISSUE53_DECOMPOSITION_STAGE: D3_ACCURACY_EXTRACTED
 ```
 
-Expected `stats_builder.py` size after D3: approximately `430-435 LOC`.
+If the staged owners pass, proceed autonomously:
 
-D3 status: `CANONICAL APPLIED / LOCAL VALIDATION PENDING`.
+```text
+D4 Common extraction on GitHub canonical
+ -> D4 structural read-back
+ -> local diagnostics only
+
+then, only after D4 PASS:
+
+D5 embedded self_test extraction on GitHub canonical
+ -> D5 structural read-back
+ -> local diagnostics only
+```
 
 ## Remaining target
 
-After D3 validation:
+After D4 and D5:
 
 ```text
-Common/Environment owner extraction
-embedded self_test extraction
-thin composition facade
+stats_builder.py = thin public composition facade
+focused Common/Efficiency/Convergence/Accuracy owners
+stable public builder and self-test symbols
 ```
 
-Final Issue53 acceptance target remains:
-
-```text
-stats_builder.py approximately 120-200 LOC
-focused semantic owners
-stable public facade behavior
-full QPX P0 green
-```
+Final Issue53 acceptance remains architecture-driven rather than an arbitrary line target. The original visible goal is approximately `120-200 LOC`; a smaller facade is acceptable when caused by clean ownership extraction rather than semantic compression.
