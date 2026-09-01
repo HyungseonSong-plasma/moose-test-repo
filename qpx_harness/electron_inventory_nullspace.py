@@ -19,7 +19,7 @@ from typing import Any
 from . import artifacts
 from . import cases as case_ops
 from . import evidence
-from . import fast_plasma_coupling_diagnostic as coupling_diag
+from . import issue43_coupling_diagnostic as coupling_diag
 from . import issue43_fast_relaxation as v5
 from .moose_input import MooseInput, MooseInputError
 from .preflight import validate_parser_symbols_text
