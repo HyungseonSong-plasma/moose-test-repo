@@ -160,6 +160,15 @@ def validate_result_record(data: dict[str, Any]) -> dict[str, Any]:
     return root
 
 
+def build_measurement_stats(result: dict[str, Any]) -> Any:
+    """Map one validated PF-1 result into canonical Stats through the builder boundary."""
+
+    from ..analysis.stats_builder import build_convergence_stats, build_simulation_stats
+
+    convergence = build_convergence_stats(work=_mapping(result.get("work"), "result.work"))
+    return build_simulation_stats(result, convergence=convergence)
+
+
 def _safe_token(value: str) -> str:
     return re.sub(r"[^A-Za-z0-9_.-]+", "_", value).strip("_") or "case"
 
@@ -731,6 +740,26 @@ def self_test() -> int:
         "evidence": {},
     }
     validate_result_record(result)
+    stats = build_measurement_stats(result)
+    if (
+        stats.common.case_id != "case"
+        or stats.common.return_code != 0
+        or stats.common.wall_time_seconds != 1.0
+        or stats.efficiency is None
+        or stats.efficiency.residual_evaluations != 2
+        or stats.efficiency.jacobian_evaluations != 1
+        or stats.convergence is None
+        or stats.convergence.linear_iterations != 1
+        or stats.convergence.nonlinear_iterations != 1
+        or stats.accuracy is not None
+    ):
+        print("PF1_STATS_MAPPING_SELFTEST: FAIL")
+        return 1
+    if hasattr(stats, "evidence") or hasattr(stats, "validation"):
+        print("PF1_STATS_BOUNDARY_SELFTEST: FAIL")
+        return 1
+    print("PF1_STATS_MAPPING_SELFTEST: PASS")
+
     del result["identity"]
     try:
         validate_result_record(result)
