@@ -192,6 +192,7 @@ def build_runtime_common_stats(
 
 
 
+
 def _error_from_mapping(
     row: Mapping[str, Any],
     *,
@@ -413,6 +414,7 @@ def build_accuracy_stats(
         matrix_errors=tuple(matrix_errors),
         reference_errors=tuple(reference_errors),
     )
+
 
 def build_simulation_stats(
     performance_record: Mapping[str, Any],
