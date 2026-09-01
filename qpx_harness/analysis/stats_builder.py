@@ -171,6 +171,23 @@ def build_common_stats(record: Mapping[str, Any]) -> CommonStats:
     )
 
 
+def build_runtime_common_stats(
+    runtime: Mapping[str, Any],
+    *,
+    case_id: str | None = None,
+) -> CommonStats:
+    """Map the shared issue-runtime shape into CommonStats through one boundary."""
+
+    resolved_case_id = case_id if case_id is not None else runtime.get("case_id")
+    return build_common_stats(
+        {
+            "case_id": resolved_case_id,
+            "return_code": runtime.get("returncode"),
+            "performance": {"wall_seconds": runtime.get("wall_seconds")},
+        }
+    )
+
+
 def _perfgraph_timings(perfgraph: Mapping[str, Any]) -> list[TimingStats]:
     rows: list[TimingStats] = []
     nodes = perfgraph.get("nodes")
