@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import ast
 from pathlib import Path
 import sys
 
@@ -11,7 +12,6 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from qpx_harness import execution_contract as facade  # noqa: E402
 from qpx_harness.execution import contract as canonical  # noqa: E402
 
 
@@ -20,28 +20,39 @@ def _require(condition: bool, message: str) -> None:
         raise AssertionError(message)
 
 
+def _legacy_imports(path: Path) -> list[str]:
+    tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    hits: list[str] = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.name == "qpx_harness.execution_contract":
+                    hits.append(alias.name)
+        elif isinstance(node, ast.ImportFrom):
+            if node.module == "qpx_harness.execution_contract":
+                hits.append(node.module)
+            elif node.module == "qpx_harness":
+                for alias in node.names:
+                    if alias.name == "execution_contract":
+                        hits.append("qpx_harness.execution_contract")
+    return hits
+
+
 def main() -> int:
     _require(canonical.self_test() == 0, "canonical execution-contract self-test failed")
-
     _require(
-        facade.validate_contract is canonical.validate_contract,
-        "compatibility facade owns a second validate_contract implementation",
-    )
-    _require(
-        facade.evaluate_contract is canonical.evaluate_contract,
-        "compatibility facade owns a second evaluate_contract implementation",
-    )
-    _require(
-        facade.self_test is canonical.self_test,
-        "compatibility facade does not delegate self-test to canonical owner",
-    )
-    _require(
-        facade.SCHEMA_VERSION == canonical.SCHEMA_VERSION == 1,
+        canonical.SCHEMA_VERSION == 1,
         "schema version changed during behavior-preserving refactor",
     )
     _require(
-        facade.OPS == canonical.OPS == set(canonical.OPERATORS),
+        canonical.OPS == set(canonical.OPERATORS),
         "operator registry and declared operator set diverged",
+    )
+
+    facade_path = ROOT / "qpx_harness/execution_contract.py"
+    _require(
+        not facade_path.exists(),
+        "retired execution_contract compatibility facade still exists",
     )
 
     recipe_source = (ROOT / "recipes/issue43_execution_contract.py").read_text()
@@ -51,8 +62,26 @@ def main() -> int:
     )
     _require(
         "from qpx_harness import execution_contract as ec" not in recipe_source,
-        "Issue43 execution policy still depends on the compatibility facade",
+        "Issue43 execution policy still depends on the retired facade",
     )
+
+    cli_source = (ROOT / "qpx_harness/cli/app.py").read_text()
+    _require(
+        "from qpx_harness.execution.contract import main as execution_contract_main" in cli_source,
+        "CLI contract command is not attached to the canonical execution capability",
+    )
+    _require(
+        "qpx_harness.execution_contract" not in cli_source,
+        "CLI still imports the retired execution_contract facade",
+    )
+
+    stale: dict[str, list[str]] = {}
+    for base in (ROOT / "qpx_harness", ROOT / "recipes"):
+        for path in base.rglob("*.py"):
+            hits = _legacy_imports(path)
+            if hits:
+                stale[str(path.relative_to(ROOT))] = hits
+    _require(stale == {}, f"retired execution_contract imports remain: {stale}")
 
     canonical_source = (ROOT / "qpx_harness/execution/contract.py").read_text()
     for forbidden in ("from recipes", "import recipes", "qpx_harness.issue"):
@@ -61,18 +90,8 @@ def main() -> int:
             f"generic execution contract acquired experiment dependency: {forbidden}",
         )
 
-    facade_source = (ROOT / "qpx_harness/execution_contract.py").read_text()
-    _require(
-        "qpx_harness.execution.contract" in facade_source,
-        "historical execution_contract path is not a canonical compatibility facade",
-    )
-    _require(
-        "def validate_contract" not in facade_source
-        and "def evaluate_contract" not in facade_source,
-        "compatibility facade contains duplicate evaluator ownership",
-    )
-
     print("EXECUTION_CONTRACT_REFACTOR_GUARD: PASS")
+    print("EXECUTION_CONTRACT_FACADE_RETIRED: PASS")
     print("SCIENTIFIC_EVR_CONSUMED: 0")
     return 0
 
