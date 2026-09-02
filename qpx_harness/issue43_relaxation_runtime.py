@@ -16,9 +16,9 @@ from typing import Any
 
 from recipes import issue43_fast_relaxation as relaxation_recipe
 
+from .diagnostics import failure_signature as diagnostic_failure_signature
 from .execution import cases as case_ops
 from .moose_input import MooseInput, MooseInputError
-from .petsc import log as petsc_log
 from .preflight import validate_parser_symbols_text
 from .execution.runtime import run_qpx
 from .scale_audit import DEFAULT_ELECTRON_DENSITY, DEFAULT_PRESSURE
@@ -74,19 +74,9 @@ def validate_assets(case_dir: Path) -> list[str]:
 def failure_signature(log: Path) -> str | None:
     if not log.is_file():
         return None
-    text = log.read_text(errors="replace")
-    for name, pattern in (
-        ("DIVERGED_MAX_IT", r"DIVERGED_MAX_IT"),
-        ("DIVERGED_LINE_SEARCH", r"DIVERGED_LINE_SEARCH"),
-        ("DIVERGED_FNORM_NAN", r"DIVERGED_FNORM_NAN|NaN"),
-        (
-            "NONLINEAR_DID_NOT_CONVERGE",
-            r"Nonlinear solve did not converge|Solve Did NOT Converge",
-        ),
-    ):
-        if petsc_log.line_hits(text, (pattern,)):
-            return name
-    return None
+    return diagnostic_failure_signature(
+        log.read_text(errors="replace")
+    )["signature"]
 
 
 def run_qpx_case(

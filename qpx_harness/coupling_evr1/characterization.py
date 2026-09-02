@@ -6,8 +6,8 @@ from pathlib import Path
 
 from recipes import issue31_coupling as recipe
 
+from ..evidence import create_collision_safe_directory
 from .classification import preliminary_classification
-from .orchestration import _create_root
 
 
 def self_test() -> int:
@@ -84,8 +84,9 @@ def self_test() -> int:
 
         with tempfile.TemporaryDirectory() as tmp_name:
             root = Path(tmp_name)
-            first = _create_root(root, timestamp="20000101T000000Z")
-            second = _create_root(root, timestamp="20000101T000000Z")
+            stem = "coupling_evr1_Issue31_20000101T000000Z"
+            first = create_collision_safe_directory(root, stem)
+            second = create_collision_safe_directory(root, stem)
             if first.name != "coupling_evr1_Issue31_20000101T000000Z":
                 raise AssertionError("EVR1 root naming drift")
             if second.name != "coupling_evr1_Issue31_20000101T000000Z_01":

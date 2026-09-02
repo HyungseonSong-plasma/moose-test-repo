@@ -2,11 +2,57 @@
 from __future__ import annotations
 
 import math
+import re
+from pathlib import Path
 from typing import Any, Iterable
 
 from ..moose import log as moose_log
 from ..petsc import log as petsc_log
 from .termination import first_failed_reason
+
+
+FAILURE_PATTERNS = (
+    ("DIVERGED_MAX_IT", r"DIVERGED_MAX_IT(?:\s+iterations\s+(\d+))?"),
+    ("DIVERGED_LINE_SEARCH", r"DIVERGED_LINE_SEARCH"),
+    ("DIVERGED_FNORM_NAN", r"DIVERGED_FNORM_NAN|NaN"),
+    (
+        "NONLINEAR_DID_NOT_CONVERGE",
+        r"Nonlinear solve did not converge|Solve Did NOT Converge",
+    ),
+)
+
+
+def failure_signature(text: str) -> dict[str, Any]:
+    """Extract the first stable nonlinear-failure signature from runtime text."""
+
+    for name, pattern in FAILURE_PATTERNS:
+        match = re.search(pattern, text, re.IGNORECASE)
+        if not match:
+            continue
+        iterations = None
+        if match.lastindex and match.group(1):
+            try:
+                iterations = int(match.group(1))
+            except ValueError:
+                pass
+        return {"signature": name, "iterations": iterations}
+    return {"signature": None, "iterations": None}
+
+
+def measurement_failure_signature(
+    result: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """Read a PF result's preferred runtime log and return diagnostic facts."""
+
+    if not result:
+        return {"signature": "NO_RESULT"}
+    evidence = result.get("evidence", {})
+    log_raw = evidence.get("p3_log") or evidence.get("p2_log")
+    log = Path(log_raw) if isinstance(log_raw, str) else None
+    text = log.read_text(errors="replace") if log and log.is_file() else ""
+    facts = failure_signature(text)
+    facts["log"] = str(log) if log else None
+    return facts
 
 
 def runtime_core_facts(

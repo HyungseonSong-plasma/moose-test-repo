@@ -7,7 +7,25 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Mapping, Sequence
+from typing import Any, Mapping, Sequence
+
+
+def load_json_object(
+    path: Path,
+    *,
+    missing_ok: bool = False,
+) -> dict[str, Any] | None:
+    """Load a JSON object without assigning domain meaning to its fields."""
+
+    path = Path(path)
+    if not path.is_file():
+        if missing_ok:
+            return None
+        raise FileNotFoundError(path)
+    payload = json.loads(path.read_text())
+    if not isinstance(payload, dict):
+        raise ValueError(f"expected JSON object: {path}")
+    return payload
 
 
 def is_direct_child(path: Path, parent: Path) -> bool:

@@ -22,6 +22,7 @@ from .runner import (
     run_measurement,
     validate_experiment_manifest,
 )
+from ..evidence import create_collision_safe_directory, load_json_object, write_json_bundle
 from ..execution.runtime import resolve_executable, validate_executable
 
 
@@ -75,24 +76,49 @@ def create_run_root(results_root: Path, case_id: str) -> Path:
     results_root.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     stem = f"pf1_smoke_{_safe_token(case_id)}_{stamp}"
-    candidate = results_root / stem
-    index = 1
-    while candidate.exists():
-        candidate = results_root / f"{stem}_{index:02d}"
-        index += 1
-    candidate.mkdir()
-    return candidate
+    return create_collision_safe_directory(results_root, stem)
 
 
 def _write_json(path: Path, payload: dict[str, Any]) -> None:
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
 
 
-def _load_result(path: Path) -> dict[str, Any] | None:
-    if not path.is_file():
-        return None
-    payload = json.loads(path.read_text())
-    return payload if isinstance(payload, dict) else None
+def load_result(path: Path) -> dict[str, Any] | None:
+    """Load an optional PF result object."""
+
+    return load_json_object(path, missing_ok=True)
+
+
+def run_managed_measurement(
+    manifest: dict[str, Any],
+    *,
+    executable: Path,
+    root: Path,
+    manifest_label: str,
+    out_label: str,
+) -> dict[str, Any]:
+    """Persist one manifest, execute it, and return its mechanical result facts."""
+
+    root = Path(root)
+    root.mkdir(parents=True, exist_ok=True)
+    manifest_path = root / f"{manifest_label}_manifest.json"
+    write_json_bundle(
+        root,
+        {f"{manifest_label}_manifest": (manifest_path.name, manifest)},
+    )
+    out = root / out_label
+    returncode = run_measurement(
+        manifest_path,
+        executable=executable,
+        out_dir=out,
+    )
+    return {
+        "returncode": returncode,
+        "result": load_result(out / "result.json"),
+        "root": str(root),
+        "manifest": str(manifest_path),
+        "out": str(out),
+    }
 
 
 def compare_smoke_results(
@@ -241,8 +267,8 @@ def run_smoke_pair(
         out_dir=root / "profile",
     )
 
-    benchmark_result = _load_result(root / "benchmark" / "result.json")
-    profile_result = _load_result(root / "profile" / "result.json")
+    benchmark_result = load_result(root / "benchmark" / "result.json")
+    profile_result = load_result(root / "profile" / "result.json")
     summary = compare_smoke_results(benchmark_result, profile_result)
     summary.update(
         {

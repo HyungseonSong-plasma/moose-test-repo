@@ -20,14 +20,12 @@ from .coupling_evr1.orchestration import (
     PURGE_DIRECTORY_NAMES,
     PURGE_PATTERNS,
     CouplingEVR1RuntimeError,
-    _create_root,
-    _load_json,
     _manifest,
     _run_pair,
     run,
 )
 from .dmix_equivalence import legacy_source_transform
-from .performance_core import PerformanceContractError
+from .performance.runner import PerformanceContractError
 
 
 def main(argv: Iterable[str] | None = None) -> int:

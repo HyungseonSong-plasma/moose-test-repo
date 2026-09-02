@@ -12,8 +12,11 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from recipes import issue31_coupling as recipe
-from qpx_harness import coupling_evr2_runtime as runtime
-from qpx_harness.performance_smoke import build_smoke_manifest
+from qpx_harness.coupling_evr2 import orchestration as runtime
+from qpx_harness.diagnostics import measurement_failure_signature
+from qpx_harness.execution.cases import stage_case
+from qpx_harness.performance.runner import result_status
+from qpx_harness.performance.smoke import build_smoke_manifest
 
 
 def _case(
@@ -55,7 +58,7 @@ def _check_state_helper_contract() -> None:
         (_case("P2_PASS_P3_PASS", physics="FAIL"), "P2_PASS_P3_PASS", False, False),
     )
     for case, status, nonconvergence, case_pass in scenarios:
-        if runtime._result_status(case) != status:
+        if result_status((case or {}).get("result")) != status:
             raise AssertionError("EVR2 result-status helper contract drift")
         if runtime._runtime_nonconvergence(case) is not nonconvergence:
             raise AssertionError("EVR2 runtime-nonconvergence helper contract drift")
@@ -95,7 +98,7 @@ def _check_manifest_contract() -> None:
 
 
 def _check_failure_signature_contract() -> None:
-    if runtime._failure_signature(None) != {"signature": "NO_RESULT"}:
+    if measurement_failure_signature(None) != {"signature": "NO_RESULT"}:
         raise AssertionError("EVR2 no-result signature contract drift")
 
     samples = (
@@ -111,7 +114,7 @@ def _check_failure_signature_contract() -> None:
             log = root / f"sample_{index}.log"
             log.write_text(text + "\n")
             result = {"evidence": {"p3_log": str(log)}}
-            actual = runtime._failure_signature(result)
+            actual = measurement_failure_signature(result)
             expected = {
                 "signature": signature,
                 "iterations": iterations,
@@ -138,7 +141,13 @@ def _check_generic_staging() -> None:
         (nested / "qpxperf_old").write_text("stale\n")
 
         target = root / "transport"
-        runtime._stage_transport_case(asset, target, "new input\n")
+        stage_case(
+            asset,
+            target,
+            input_text="new input\n",
+            purge_directory_names=runtime.PURGE_DIRECTORY_NAMES,
+            purge_patterns=runtime.PURGE_PATTERNS,
+        )
         if (target / "input.i").read_text() != "new input\n":
             raise AssertionError("EVR2 transport staging did not replace input")
         if not (target / "qvt.msh").is_file():
@@ -190,12 +199,13 @@ def _check_runtime_boundary() -> None:
     source = path.read_text()
     for required in (
         "from recipes import issue31_coupling as recipe",
-        "from .evidence.artifacts import write_json_bundle",
+        "from ..evidence.artifacts import write_json_bundle",
         "stage_case",
         "validate_referenced_files",
-        "from .evidence import sha256_file, utc_timestamp",
-        "run_measurement",
-        "subprocess.run",
+        "create_collision_safe_directory",
+        "run_managed_measurement",
+        "measurement_failure_signature",
+        "run_command",
         "recipe.configured_transport_input",
         "recipe.classify_evr2",
     ):
@@ -211,6 +221,12 @@ def _check_runtime_boundary() -> None:
         "shutil.copytree",
         "datetime.now",
         "def _write_json",
+        "def _load_json",
+        "def _create_root",
+        "def _stage_transport_case",
+        "def _failure_signature",
+        "subprocess.run",
+        "run_measurement(",
         "def _purge_runtime_artifacts",
     ):
         if forbidden in source:
@@ -220,12 +236,12 @@ def _check_runtime_boundary() -> None:
 
 
 def _check_production_route() -> None:
-    source = (ROOT / "scripts/qpx.py").read_text()
+    source = (ROOT / "qpx_harness/cli/app.py").read_text()
     if "from qpx_harness.coupling_evr2_runtime import" not in source:
         raise AssertionError("EVR2 canonical runtime owner is not routed by CLI")
     if "from qpx_harness.coupling_evr2_timestep import" in source:
         raise AssertionError("EVR2 legacy timestep owner remains routed by CLI")
-    if "return coupling_evr2_main(rest)" not in source:
+    if '"coupling-evr2": coupling_evr2_main' not in source:
         raise AssertionError("EVR2 command dispatch no longer uses canonical alias")
 
 

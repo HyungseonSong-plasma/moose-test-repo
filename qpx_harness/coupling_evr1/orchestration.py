@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import argparse
-import json
 from pathlib import Path
 from typing import Any
 
@@ -11,13 +10,13 @@ from recipes import issue31_coupling as recipe
 from ..evidence.artifacts import write_json_bundle
 from ..execution.cases import stage_case, validate_referenced_files
 from ..dmix_equivalence import legacy_source_transform
-from ..evidence import sha256_file, utc_timestamp
-from ..performance_core import run_measurement
+from ..evidence import create_collision_safe_directory, sha256_file, utc_timestamp
 from ..performance_investigation import build_investigation_summary
-from ..performance_smoke import (
+from ..performance.smoke import (
     build_smoke_manifest,
     compare_smoke_results,
     default_results_root,
+    run_managed_measurement,
 )
 from ..preflight import validate_parser_symbols_text
 from ..execution.runtime import resolve_executable, validate_executable
@@ -36,26 +35,6 @@ PURGE_PATTERNS = (
 
 class CouplingEVR1RuntimeError(RuntimeError):
     pass
-
-
-def _load_json(path: Path) -> dict[str, Any]:
-    payload = json.loads(path.read_text())
-    if not isinstance(payload, dict):
-        raise CouplingEVR1RuntimeError(f"expected JSON object: {path}")
-    return payload
-
-
-def _create_root(results_root: Path, *, timestamp: str | None = None) -> Path:
-    results_root.mkdir(parents=True, exist_ok=True)
-    stamp = timestamp or utc_timestamp()
-    stem = f"coupling_evr1_Issue31_{stamp}"
-    root = results_root / stem
-    index = 1
-    while root.exists():
-        root = results_root / f"{stem}_{index:02d}"
-        index += 1
-    root.mkdir()
-    return root
 
 
 def _manifest(*, mode: str, case_dir: Path, case_id: str) -> dict[str, Any]:
@@ -86,19 +65,19 @@ def _run_pair(
         if mode == "PROFILE" and returncodes["BENCHMARK"] not in (0,):
             break
         manifest = _manifest(mode=mode, case_dir=case_dir, case_id=case_id)
-        manifest_path = pair_root / f"{mode.lower()}_manifest.json"
-        write_json_bundle(
-            pair_root,
-            {f"{mode.lower()}_manifest": (manifest_path.name, manifest)},
-        )
-        out = pair_root / mode.lower()
         print(f"ISSUE31_EVR1_CASE_START: {case_id} {mode}")
-        rc = run_measurement(manifest_path, executable=exe, out_dir=out)
+        managed = run_managed_measurement(
+            manifest,
+            executable=exe,
+            root=pair_root,
+            manifest_label=mode.lower(),
+            out_label=mode.lower(),
+        )
+        rc = managed["returncode"]
         print(f"ISSUE31_EVR1_CASE_END: {case_id} {mode} rc={rc}")
         returncodes[mode] = rc
-        result_path = out / "result.json"
-        if result_path.is_file():
-            results[mode.lower()] = _load_json(result_path)
+        if managed["result"] is not None:
+            results[mode.lower()] = managed["result"]
 
     benchmark = results.get("benchmark")
     profile = results.get("profile")
@@ -182,7 +161,10 @@ def run(args: argparse.Namespace) -> int:
         if args.results_root
         else default_results_root(exe)
     )
-    root = _create_root(results_root)
+    root = create_collision_safe_directory(
+        results_root,
+        f"coupling_evr1_Issue31_{utc_timestamp()}",
+    )
     print(f"ISSUE31_EVR1_ROOT: {root}")
 
     cases_root = root / "cases"

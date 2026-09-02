@@ -32,6 +32,18 @@ RESULT_STATUSES = {
 }
 
 
+def result_status(result: dict[str, Any] | None) -> str | None:
+    """Return a PF result validation status without assigning domain meaning."""
+
+    if not isinstance(result, dict):
+        return None
+    validation = result.get("validation")
+    if not isinstance(validation, dict):
+        return None
+    status = validation.get("status")
+    return status if isinstance(status, str) else None
+
+
 class PerformanceContractError(ValueError):
     """Raised when a PF-1 manifest/result violates the measurement contract."""
 

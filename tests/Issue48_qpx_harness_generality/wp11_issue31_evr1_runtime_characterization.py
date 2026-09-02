@@ -13,6 +13,7 @@ if str(ROOT) not in sys.path:
 
 from recipes import issue31_coupling as recipe
 from qpx_harness import coupling_evr1_runtime as runtime
+from qpx_harness.evidence import create_collision_safe_directory
 from qpx_harness.performance_smoke import build_smoke_manifest
 
 
@@ -101,8 +102,9 @@ def _check_manifest_contract() -> None:
 def _check_root_contract() -> None:
     with tempfile.TemporaryDirectory() as tmp_name:
         root = Path(tmp_name)
-        first = runtime._create_root(root, timestamp="20000101T000000Z")
-        second = runtime._create_root(root, timestamp="20000101T000000Z")
+        stem = "coupling_evr1_Issue31_20000101T000000Z"
+        first = create_collision_safe_directory(root, stem)
+        second = create_collision_safe_directory(root, stem)
         if first.name != "coupling_evr1_Issue31_20000101T000000Z":
             raise AssertionError("EVR1 result-root naming drift")
         if second.name != "coupling_evr1_Issue31_20000101T000000Z_01":
