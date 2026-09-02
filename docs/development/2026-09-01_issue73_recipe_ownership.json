@@ -15,6 +15,10 @@
       "model": "PURE_PYTHON_SCIENTIFIC_POLICY",
       "reason": "parameterized reactor-scale construction and relaxation-trajectory interpretation require runtime numeric inputs and scientific algorithms beyond the bounded transform vocabulary"
     },
+    "recipes/issue43_feedback_basis.py": {
+      "model": "PURE_PYTHON_SCIENTIFIC_POLICY",
+      "reason": "the accepted closed electron/bulk-Poisson feedback basis is scientific composition: Issue43 fast-model construction plus fixed-step and microtime observation contracts; the recipe keeps that accepted model identity explicit without depending on versioned qpx_harness facades"
+    },
     "recipes/issue45_closure_basis.py": {
       "model": "PURE_PYTHON_SCIENTIFIC_POLICY",
       "reason": "the accepted Issue45 steady candidate is a scientific composition of the accepted Issue43 closed feedback basis and the inventory-constraint policy; keeping that dependency in recipes removes versioned qpx_harness facade coupling without pretending the composition is generic infrastructure"
