@@ -10,6 +10,21 @@ from .artifacts import (
     summarize_checks,
     write_json_bundle,
 )
+from .error_log import (
+    Attribution,
+    AttributionConfidence,
+    AttributionSignals,
+    ErrorCategory,
+    ErrorEvent,
+    ErrorLedger,
+    append_error_event,
+    build_error_event,
+    classify_attribution,
+    default_ledger_path,
+    error_fingerprint,
+    read_error_events,
+    summarize_error_events,
+)
 from .identity import (
     create_collision_safe_directory,
     ensure_fresh_directory,
@@ -19,17 +34,30 @@ from .identity import (
 )
 
 __all__ = [
+    "Attribution",
+    "AttributionConfidence",
+    "AttributionSignals",
+    "ErrorCategory",
+    "ErrorEvent",
+    "ErrorLedger",
+    "append_error_event",
+    "build_error_event",
+    "classify_attribution",
     "create_collision_safe_directory",
     "current_run_artifact",
+    "default_ledger_path",
     "ensure_fresh_directory",
+    "error_fingerprint",
     "identity_record",
     "identity_stable",
     "is_direct_child",
     "load_json_object",
     "paths_distinct",
+    "read_error_events",
     "sha256_file",
     "snapshot_unchanged",
     "summarize_checks",
+    "summarize_error_events",
     "utc_timestamp",
     "write_json_bundle",
 ]
