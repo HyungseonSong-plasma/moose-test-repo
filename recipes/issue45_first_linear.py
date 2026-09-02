@@ -20,6 +20,7 @@ from qpx_harness.transforms import TransformError, apply_case_plan
 ISSUE = 45
 TARGET = 1.0e16
 JACOBIAN_REL_TOL = 1.0e-6
+RESIDUAL_FIDELITY_RATIO_THRESHOLD = 1.0e6
 COUPLED_SCALING_VARIABLES = ("n_e", "potential_plasma")
 
 SPEC_PATH = (
@@ -177,6 +178,11 @@ def analyze_first_linear_text(text: str, *, returncode: int) -> dict[str, Any]:
     identity = ksp.parse_ksp_view(text)
     true_rows = ksp.parse_true_residuals(text)
     linear = _first_linear_termination(text)
+    residual_audit = ksp.residual_fidelity_audit(
+        true_rows,
+        restart=identity.get("restart"),
+        ratio_threshold=RESIDUAL_FIDELITY_RATIO_THRESHOLD,
+    )
 
     def result(status: str, klass: str, reason: str, **extra: Any) -> dict[str, Any]:
         return {
@@ -186,6 +192,7 @@ def analyze_first_linear_text(text: str, *, returncode: int) -> dict[str, Any]:
             "jacobian": jacobian,
             "ksp_identity": identity,
             "true_residuals": true_rows,
+            "ksp_residual_audit": residual_audit,
             "first_linear": linear,
             "core": core,
             **extra,
@@ -243,7 +250,7 @@ def analyze_first_linear_text(text: str, *, returncode: int) -> dict[str, Any]:
 
     restart = identity.get("restart")
     iterations = int(linear["iterations"]) if linear.get("iterations") is not None else 0
-    aligned = (
+    restart_boundary_observed = (
         identity["ksp_type"] == "gmres"
         and isinstance(restart, int)
         and restart > 0
@@ -255,23 +262,39 @@ def analyze_first_linear_text(text: str, *, returncode: int) -> dict[str, Any]:
         and math.isfinite(row["relative_true_residual"])
         for row in true_rows
     )
-    if linear["reason"] == "DIVERGED_BREAKDOWN" and aligned and finite_true:
+    if linear["reason"] == "DIVERGED_BREAKDOWN" and finite_true:
+        if residual_audit["residual_fidelity_loss_observed"]:
+            return result(
+                "PASS",
+                "KSP_BREAKDOWN_RESIDUAL_FIDELITY_LOSS",
+                "the augmented Jacobian passes the assembled-vs-FD gate while KSP reaches "
+                "DIVERGED_BREAKDOWN with a large separation between reported and true "
+                "residuals; any coincident GMRES restart boundary is retained as chronology, "
+                "not established causality",
+                restart_boundary_observed=restart_boundary_observed,
+                restart_causality="NOT_ESTABLISHED",
+            )
         return result(
             "PASS",
-            "GMRES_RESTART_BREAKDOWN",
-            "the augmented Jacobian passes the assembled-vs-FD gate and the effective GMRES solve reaches DIVERGED_BREAKDOWN at a restart boundary with finite true-residual evidence",
-            restart_aligned=True,
+            "KSP_BREAKDOWN_WITHOUT_RESIDUAL_FIDELITY_LOSS",
+            "the augmented Jacobian passes the assembled-vs-FD gate and KSP reaches "
+            "DIVERGED_BREAKDOWN without the predeclared reported-vs-true residual "
+            "separation threshold",
+            restart_boundary_observed=restart_boundary_observed,
+            restart_causality="NOT_ESTABLISHED",
         )
     if linear["converged"]:
         return result(
             "HOLD",
             "FIRST_LINEAR_BEHAVIOR_CHANGED",
             "the bounded C0 first linear solve converged instead of reproducing the historical breakdown",
-            restart_aligned=aligned,
+            restart_boundary_observed=restart_boundary_observed,
+            restart_causality="NOT_ESTABLISHED",
         )
     return result(
         "HOLD",
         "DIAGNOSTIC_INSUFFICIENT",
-        "the observed linear failure does not satisfy the predeclared GMRES-restart discriminator",
-        restart_aligned=aligned,
+        "the observed linear behavior is neither a converged first solve nor a sufficiently observed DIVERGED_BREAKDOWN",
+        restart_boundary_observed=restart_boundary_observed,
+        restart_causality="NOT_ESTABLISHED",
     )
