@@ -20,35 +20,47 @@ def _quote_hit_path(path: Path) -> str:
     return f"'{text}'"
 
 
-def build_bounded_runtime_overrides(
+def build_bounded_executioner_overlay(
     *, nl_max_its: int | None = None, abort_on_solve_fail: bool = False
-) -> list[str]:
-    """Build diagnostic-only MOOSE execution overrides for bounded profiling."""
+) -> str:
+    """Build a rightmost-input Executioner override for bounded profiling.
+
+    MOOSE owns nonlinear-iteration limits through the Executioner/default
+    convergence path. A second input file is therefore used instead of PETSc
+    command-line SNES limits, which can be superseded when MOOSE/libMesh sets
+    nonlinear solver parameters.
+    """
 
     if nl_max_its is not None and nl_max_its <= 0:
         raise ValueError("nl_max_its must be a positive integer")
-    overrides: list[str] = []
+    if nl_max_its is None and not abort_on_solve_fail:
+        return ""
+
+    lines = ["[Executioner]"]
     if nl_max_its is not None:
-        overrides.append(f"Executioner/nl_max_its={nl_max_its}")
+        lines.append(f"  nl_max_its = {nl_max_its}")
     if abort_on_solve_fail:
-        overrides.append("Executioner/abort_on_solve_fail=true")
-    return overrides
+        lines.append("  abort_on_solve_fail = true")
+    lines.append("[]")
+    return "\n".join(lines) + "\n"
 
 
-def build_bounded_petsc_overrides(*, nl_max_its: int | None = None) -> list[str]:
-    """Enforce the nonlinear cap directly on PETSc SNES for diagnostic capture."""
-
-    if nl_max_its is not None and nl_max_its <= 0:
-        raise ValueError("nl_max_its must be a positive integer")
-    if nl_max_its is None:
-        return []
-    return ["-snes_max_it", str(nl_max_its)]
-
-
-def write_overlay(path: Path, metrics_base: Path, *, prefix: str = "qpxh") -> None:
+def write_overlay(
+    path: Path,
+    metrics_base: Path,
+    *,
+    prefix: str = "qpxh",
+    nl_max_its: int | None = None,
+    abort_on_solve_fail: bool = False,
+) -> str:
+    bounded_executioner = build_bounded_executioner_overlay(
+        nl_max_its=nl_max_its,
+        abort_on_solve_fail=abort_on_solve_fail,
+    )
     path.write_text(
         f"""# Generated QPX profiling overlay.
 # Diagnostics only: no physics, dt, tolerance, or solver-type changes.
+# Optional bounded Executioner settings only limit diagnostic work.
 
 [Postprocessors]
   [{prefix}_num_dofs]
@@ -85,8 +97,10 @@ def write_overlay(path: Path, metrics_base: Path, *, prefix: str = "qpxh") -> No
     execute_on = 'initial timestep_end'
   []
 []
-"""
+
+{bounded_executioner}"""
     )
+    return bounded_executioner
 
 
 def find_metrics_csv(metrics_base: Path) -> Path | None:
@@ -151,11 +165,6 @@ def profile_case(
     if not input_path.is_file():
         raise SystemExit(f"input does not exist: {input_path}")
 
-    diagnostic_overrides = build_bounded_runtime_overrides(
-        nl_max_its=nl_max_its, abort_on_solve_fail=abort_on_solve_fail
-    )
-    petsc_diagnostic_overrides = build_bounded_petsc_overrides(nl_max_its=nl_max_its)
-
     exe = resolve_executable(executable)
     validate_executable(exe)
 
@@ -171,13 +180,15 @@ def profile_case(
     petsc_csv = out_dir / "petsc_log.csv"
     p2_log = out_dir / "p2_check_input.log"
     p3_log = out_dir / "p3_run.log"
-    write_overlay(overlay, metrics_base, prefix=prefix)
+    bounded_executioner_overlay = write_overlay(
+        overlay,
+        metrics_base,
+        prefix=prefix,
+        nl_max_its=nl_max_its,
+        abort_on_solve_fail=abort_on_solve_fail,
+    )
 
-    common_extra = [
-        str(overlay),
-        f"Executioner/num_steps={num_steps}",
-        *diagnostic_overrides,
-    ]
+    common_extra = [str(overlay), f"Executioner/num_steps={num_steps}"]
     print("P2 START   : qpx-opt --check-input with diagnostic overlay")
     p2 = run_qpx(
         exe,
@@ -198,8 +209,7 @@ def profile_case(
             "input": input_name,
             "input_sha256": sha256_file(input_path),
             "overlay_sha256": sha256_file(overlay),
-            "diagnostic_overrides": diagnostic_overrides,
-            "petsc_diagnostic_overrides": petsc_diagnostic_overrides,
+            "bounded_executioner_overlay": bounded_executioner_overlay,
             "p2_returncode": p2.returncode,
             "p2_log": str(p2_log),
         }
@@ -208,7 +218,6 @@ def profile_case(
 
     p3_extra = [
         *common_extra,
-        *petsc_diagnostic_overrides,
         "-log_view",
         f":{petsc_csv}:ascii_csv",
         "-log_view_memory",
@@ -233,7 +242,7 @@ def profile_case(
 
     metrics_csv = find_metrics_csv(metrics_base)
     last_metrics = read_last_metrics_row(metrics_csv)
-    bounded_diagnostic = bool(diagnostic_overrides or petsc_diagnostic_overrides)
+    bounded_diagnostic = bool(bounded_executioner_overlay.strip())
     bounded_capture = (
         bounded_diagnostic
         and abort_on_solve_fail
@@ -259,8 +268,7 @@ def profile_case(
         "overlay_sha256": sha256_file(overlay),
         "one_step_override": f"Executioner/num_steps={num_steps}",
         "bounded_diagnostic": bounded_diagnostic,
-        "diagnostic_overrides": diagnostic_overrides,
-        "petsc_diagnostic_overrides": petsc_diagnostic_overrides,
+        "bounded_executioner_overlay": bounded_executioner_overlay,
         "nl_max_its_override": nl_max_its,
         "abort_on_solve_fail_override": abort_on_solve_fail,
         "physics_parameters_changed": False,
