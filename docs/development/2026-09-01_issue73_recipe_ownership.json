@@ -28,6 +28,10 @@
       "model": "PURE_PYTHON_SCIENTIFIC_POLICY",
       "reason": "construction is parameterized by the macro inventory target and is coupled to a detailed closure/BC/kernel structural audit; preserving this as explicit Python avoids introducing interpolation and conditional audit semantics into JSON"
     },
+    "recipes/issue45_inventory_nullspace.py": {
+      "model": "PURE_PYTHON_SCIENTIFIC_POLICY",
+      "reason": "the closed/source-free electron residual structure and its aggregate [1^T,0] left-null identity are scientific assumptions and acceptance semantics, while parsing mechanics remain in canonical MOOSE helpers"
+    },
     "recipes/issue46_fd_reference.py": {
       "model": "PURE_PYTHON_SCIENTIFIC_POLICY",
       "reason": "FD reference selection is inseparable from representability prediction, PETSc realization identity, provenance, matrix localization, inverse-pair checks, and scientific mechanism classification; a spec-only representation would not own the experiment semantics"
