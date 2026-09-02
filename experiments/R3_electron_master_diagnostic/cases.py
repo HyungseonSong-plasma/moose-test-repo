@@ -1,6 +1,7 @@
 """R3 master-diagnostic case construction on top of accepted #94/#93 scientific inputs."""
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Iterable
 
@@ -9,7 +10,13 @@ from experiments.Issue93_r3_electron_isolation.operator_decomposition import bui
 from experiments.Issue93_r3_electron_isolation.prepare import ELECTRON_REFERENCE_CASE
 from qpx_harness.execution.cases import stage_case, validate_case_references
 
-from .spec import CaseSpec, FROZEN_DIFFUSION, FROZEN_MOBILITY, PLASMA_BOUNDARIES
+from .spec import (
+    CaseSpec,
+    FROZEN_DIFFUSION,
+    FROZEN_MOBILITY,
+    FROZEN_NEUTRAL_DENSITY,
+    PLASMA_BOUNDARIES,
+)
 
 
 class MasterCaseError(RuntimeError):
@@ -93,19 +100,24 @@ def _replace_electron_transport_type(text: str, new_type: str) -> str:
     return _edit_block(text, "  [electron_transport]\n", edit)
 
 
-def _use_literal_diffusion(text: str) -> str:
-    return _set_diffusion_parameter(text, "coeff", repr(FROZEN_DIFFUSION))
+def _use_literal_diffusion(text: str, value: str | None = None) -> str:
+    coefficient = repr(FROZEN_DIFFUSION) if value is None else value
+    return _set_diffusion_parameter(text, "coeff", coefficient)
 
 
 def _use_generic_ad_transport(text: str) -> str:
     def edit(_block: str) -> str:
         return """  [electron_transport]
     type = ADGenericFunctorMaterial
-    prop_names = 'electron_mobility electron_diffusion'
-    prop_values = '{mobility} {diffusion}'
+    prop_names = 'electron_mobility electron_diffusion neutral_number_density'
+    prop_values = '{mobility} {diffusion} {neutral_density}'
     block = plasma
   []
-""".format(mobility=repr(FROZEN_MOBILITY), diffusion=repr(FROZEN_DIFFUSION))
+""".format(
+            mobility=repr(FROZEN_MOBILITY),
+            diffusion=repr(FROZEN_DIFFUSION),
+            neutral_density=repr(FROZEN_NEUTRAL_DENSITY),
+        )
     return _edit_block(text, "  [electron_transport]\n", edit)
 
 
@@ -124,8 +136,12 @@ def apply_transform(text: str, name: str, value: str) -> str:
         return _set_variable_parameter(text, name, value)
     if name == "variable_type":
         return _set_variable_parameter(text, "type", value)
+    if name == "initial_n_e":
+        return _set_variable_parameter(text, "initial_condition", value)
     if name in {"coeff_interp_method", "variable_interp_method"}:
         return _set_diffusion_parameter(text, name, value)
+    if name == "literal_diffusion":
+        return _use_literal_diffusion(text, value)
     if name == "boundaries_to_avoid":
         joined = " ".join(PLASMA_BOUNDARIES) if value == "all" else value
         return _set_diffusion_parameter(text, name, f"'{joined}'")
@@ -144,8 +160,29 @@ def apply_transform(text: str, name: str, value: str) -> str:
     raise MasterCaseError(f"unknown transform: {name}")
 
 
+def _initial_n_e(spec: CaseSpec) -> float | None:
+    for name, value in spec.transforms:
+        if name == "initial_n_e":
+            return float(value)
+    return None
+
+
+def _update_expected_n0(target: Path, spec: CaseSpec) -> None:
+    n0 = _initial_n_e(spec)
+    if n0 is None:
+        return
+    expected_path = target / "expected.json"
+    expected = json.loads(expected_path.read_text())
+    expected["n0"] = n0
+    expected_path.write_text(json.dumps(expected, indent=2, sort_keys=True) + "\n")
+
+
 def build_case_text(spec: CaseSpec) -> str:
     text = build_localization_input(spec.base)
+    if spec.base == "L2":
+        # #94 L2 replaces the QPX material. Keep all accepted diagnostic
+        # observables valid by explicitly providing neutral_number_density too.
+        text = _use_generic_ad_transport(text)
     for name, value in spec.transforms:
         text = apply_transform(text, name, value)
     text = _add_observables(text)
@@ -189,6 +226,7 @@ def stage_master_case(
         purge_directory_names=(".jitcache", "checkpoint", "checkpoints"),
         purge_patterns=purge_patterns,
     )
+    _update_expected_n0(target, spec)
     refs = validate_case_references(target)
     staged["case_id"] = spec.case_id
     staged["family"] = spec.family
@@ -213,6 +251,7 @@ def stage_r3_proxy_case(
         purge_directory_names=(".jitcache", "checkpoint", "checkpoints"),
         purge_patterns=("input_out*", "*.log", "*.csv", "*.e", "*.exo"),
     )
+    _update_expected_n0(target, spec)
     staged["referenced_files"] = validate_case_references(target)
     staged["case_id"] = spec.case_id
     staged["field"] = field
