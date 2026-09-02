@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from qpx_harness import execution_contract as ec
+from qpx_harness.execution import contract as ec
 from qpx_harness.moose import executioner as moose_executioner
 from qpx_harness.moose import output_observation as ooc
 
