@@ -11,6 +11,10 @@
       "spec": "specs/experiments/issue43_coupling_diagnostic.json",
       "reason": "bounded declarative instrumentation is spec-owned and the adapter preserves legacy surface/error semantics"
     },
+    "recipes/issue43_execution_contract.py": {
+      "model": "PURE_PYTHON_SCIENTIFIC_POLICY",
+      "reason": "model representation, fixed-step scientific acceptance, and output-observation requirements are Issue43 experiment semantics; reusable contract evaluation and MOOSE parsing remain canonical qpx_harness capabilities"
+    },
     "recipes/issue43_fast_relaxation.py": {
       "model": "PURE_PYTHON_SCIENTIFIC_POLICY",
       "reason": "parameterized reactor-scale construction and relaxation-trajectory interpretation require runtime numeric inputs and scientific algorithms beyond the bounded transform vocabulary"
