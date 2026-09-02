@@ -9,7 +9,14 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from qpx_harness import electron_inventory_nullspace as legacy
+from qpx_harness.inventory import closure_model, closure_runtime, orchestration, structure
+from qpx_harness.inventory.constants import (
+    C0_TARGET,
+    C1_TARGET,
+    DEFAULT_MACRO_ELECTRON_AVG,
+    LAMBDA_VARIABLE,
+)
+from recipes import issue45_closure_basis as closure_basis
 from recipes import issue45_inventory_constraint as recipe
 
 
@@ -19,11 +26,11 @@ def _assert_equal(label: str, new: object, old: object) -> None:
 
 
 def _accepted_feedback() -> tuple[str, str, float]:
-    _, base_text, radial_span = legacy._base_case_context()
-    feedback = legacy.v5._build_feedback_v5(
+    _, base_text, radial_span = orchestration._base_case_context()
+    feedback, _ = closure_basis.build_closed_feedback_input(
         base_text,
-        dt=legacy.DT_REFERENCE,
-        steps=legacy.STEPS,
+        dt=1.0e-13,
+        steps=1,
         radial_span=radial_span,
     )
     return base_text, feedback, radial_span
@@ -31,56 +38,71 @@ def _accepted_feedback() -> tuple[str, str, float]:
 
 def _check_construction() -> None:
     base_text, feedback, radial_span = _accepted_feedback()
-    for target in (legacy.C0_TARGET, legacy.C1_TARGET):
-        old_text = legacy._build_constrained_quasisteady_input(
+    for target in (C0_TARGET, C1_TARGET):
+        canonical_text = closure_model._build_constrained_quasisteady_input(
             base_text,
             radial_span=radial_span,
             macro_avg=target,
             runtime_observability=True,
         )
-        new_text = recipe.build_constrained_quasisteady_input(
+        recipe_text = recipe.build_constrained_quasisteady_input(
             feedback,
             macro_avg=target,
             runtime_observability=True,
         )
-        _assert_equal(f"constrained-input:{target:.17g}", new_text, old_text)
+        _assert_equal(f"constrained-input:{target:.17g}", recipe_text, canonical_text)
 
 
 def _check_structure_policy() -> None:
-    constrained = legacy._synthetic_constrained_input()
+    constrained = closure_model._synthetic_constrained_input()
     cases = {
-        "positive": constrained,
-        "retained-time-kernel": constrained.replace(
-            "[FVKernels]\n",
-            "[FVKernels]\n  [time]\n    type = FVTimeKernel\n    variable = n_e\n  []\n",
-            1,
+        "positive": (constrained, "PASS"),
+        "retained-time-kernel": (
+            constrained.replace(
+                "[FVKernels]\n",
+                "[FVKernels]\n  [time]\n    type = FVTimeKernel\n    variable = n_e\n  []\n",
+                1,
+            ),
+            "HOLD",
         ),
-        "wrong-target": constrained.replace(
-            f"value = {legacy.DEFAULT_MACRO_ELECTRON_AVG:.17g}",
-            "value = 2e16",
-            1,
+        "wrong-target": (
+            constrained.replace(
+                f"value = {DEFAULT_MACRO_ELECTRON_AVG:.17g}",
+                "value = 2e16",
+                1,
+            ),
+            "HOLD",
         ),
-        "wrong-lambda": constrained.replace(
-            f"lambda = {legacy.LAMBDA_VARIABLE}",
-            "lambda = missing_lambda",
-            1,
+        "wrong-lambda": (
+            constrained.replace(
+                f"lambda = {LAMBDA_VARIABLE}",
+                "lambda = missing_lambda",
+                1,
+            ),
+            "HOLD",
         ),
     }
-    for name, text in cases.items():
+    for name, (text, expected_status) in cases.items():
+        recipe_result = recipe.audit_constrained_quasisteady_structure(
+            text, expected_macro_avg=DEFAULT_MACRO_ELECTRON_AVG
+        )
+        canonical_result = structure.audit_constrained_quasisteady_structure(
+            text, expected_macro_avg=DEFAULT_MACRO_ELECTRON_AVG
+        )
+        if recipe_result["status"] != expected_status or canonical_result["status"] != expected_status:
+            raise AssertionError(
+                f"structure:{name} status drift: recipe={recipe_result['status']} canonical={canonical_result['status']}"
+            )
         _assert_equal(
-            f"structure:{name}",
-            recipe.audit_constrained_quasisteady_structure(
-                text, expected_macro_avg=legacy.DEFAULT_MACRO_ELECTRON_AVG
-            ),
-            legacy.audit_constrained_quasisteady_structure(
-                text, expected_macro_avg=legacy.DEFAULT_MACRO_ELECTRON_AVG
-            ),
+            f"structure:{name}:checks",
+            recipe_result.get("checks"),
+            canonical_result.get("checks"),
         )
 
 
 def _check_pair_policy() -> None:
-    c0 = legacy._synthetic_constrained_input(legacy.C0_TARGET)
-    c1 = legacy._synthetic_constrained_input(legacy.C1_TARGET)
+    c0 = closure_model._synthetic_constrained_input(C0_TARGET)
+    c1 = closure_model._synthetic_constrained_input(C1_TARGET)
     for name, right in (
         ("positive", c1),
         ("non-target-mutation", c1.replace("boundary = outlet", "boundary = plasma_cover", 1)),
@@ -88,7 +110,7 @@ def _check_pair_policy() -> None:
         _assert_equal(
             f"pair:{name}",
             recipe.target_only_pair_audit(c0, right),
-            legacy._target_only_pair_audit(c0, right),
+            closure_model._target_only_pair_audit(c0, right),
         )
 
 
@@ -101,7 +123,7 @@ def _good_diag() -> dict[str, object]:
             {
                 "n_e": 1.0e-10,
                 "potential_plasma": 1.0e-12,
-                legacy.LAMBDA_VARIABLE: 1.0e-11,
+                LAMBDA_VARIABLE: 1.0e-11,
             }
         ],
     }
@@ -110,26 +132,26 @@ def _good_diag() -> dict[str, object]:
 def _check_runtime_policy() -> None:
     good_diag = _good_diag()
     positive = {
-        "target": legacy.C0_TARGET,
+        "target": C0_TARGET,
         "returncode": 0,
         "converged_marker": True,
         "diagnostic": good_diag,
-        "row": legacy._synthetic_runtime_row(legacy.C0_TARGET),
+        "row": closure_runtime._synthetic_runtime_row(C0_TARGET),
     }
-    bad_row = legacy._synthetic_runtime_row(legacy.C1_TARGET)
-    bad_row["n_avg"] = legacy.C1_TARGET * 1.001
+    bad_row = closure_runtime._synthetic_runtime_row(C1_TARGET)
+    bad_row["n_avg"] = C1_TARGET * 1.001
     bad_row["inventory"] = bad_row["n_avg"] * bad_row["domain_volume"]
     cases = {
         "positive": positive,
         "target-tracking": {
-            "target": legacy.C1_TARGET,
+            "target": C1_TARGET,
             "returncode": 0,
             "converged_marker": True,
             "diagnostic": good_diag,
             "row": bad_row,
         },
         "zero-pivot": {
-            "target": legacy.C0_TARGET,
+            "target": C0_TARGET,
             "returncode": 1,
             "converged_marker": False,
             "diagnostic": {
@@ -139,42 +161,40 @@ def _check_runtime_policy() -> None:
             "row": None,
         },
         "missing-residuals": {
-            "target": legacy.C0_TARGET,
+            "target": C0_TARGET,
             "returncode": 0,
             "converged_marker": True,
             "diagnostic": {**good_diag, "variable_residuals": []},
-            "row": legacy._synthetic_runtime_row(legacy.C0_TARGET),
+            "row": closure_runtime._synthetic_runtime_row(C0_TARGET),
         },
     }
     for name, kwargs in cases.items():
-        _assert_equal(
-            f"runtime-case:{name}",
-            recipe.evaluate_runtime_case_data(**kwargs),
-            legacy._evaluate_runtime_case_data(**kwargs),
-        )
+        recipe_result = recipe.evaluate_runtime_case_data(**kwargs)
+        canonical_result = closure_runtime._evaluate_runtime_case_data(**kwargs)
+        for key in recipe_result:
+            if canonical_result.get(key) != recipe_result[key]:
+                raise AssertionError(
+                    f"runtime-case:{name}:{key} drift: {canonical_result.get(key)!r} != {recipe_result[key]!r}"
+                )
 
     c0 = recipe.evaluate_runtime_case_data(
-        target=legacy.C0_TARGET,
+        target=C0_TARGET,
         returncode=0,
         converged_marker=True,
         diagnostic=good_diag,
-        row=legacy._synthetic_runtime_row(legacy.C0_TARGET),
+        row=closure_runtime._synthetic_runtime_row(C0_TARGET),
     )
     c1 = recipe.evaluate_runtime_case_data(
-        target=legacy.C1_TARGET,
+        target=C1_TARGET,
         returncode=0,
         converged_marker=True,
         diagnostic=good_diag,
-        row=legacy._synthetic_runtime_row(legacy.C1_TARGET),
+        row=closure_runtime._synthetic_runtime_row(C1_TARGET),
     )
     _assert_equal(
         "runtime-pair:positive",
-        recipe.evaluate_runtime_pair(
-            c0, c1, target0=legacy.C0_TARGET, target1=legacy.C1_TARGET
-        ),
-        legacy._evaluate_runtime_pair(
-            c0, c1, target0=legacy.C0_TARGET, target1=legacy.C1_TARGET
-        ),
+        recipe.evaluate_runtime_pair(c0, c1, target0=C0_TARGET, target1=C1_TARGET),
+        closure_runtime._evaluate_runtime_pair(c0, c1, target0=C0_TARGET, target1=C1_TARGET),
     )
 
 
