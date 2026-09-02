@@ -7,7 +7,6 @@ import a particular probe implementation.
 """
 from __future__ import annotations
 
-import argparse
 import hashlib
 import json
 import os
@@ -18,7 +17,7 @@ import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Callable, Iterable
+from typing import Any, Callable
 
 ACCEPTED_SOURCE_SHA256 = "4533a3a2fe0d77f3d85ca171f9093907a76514dd024c5392c08dd8d17a2f4b7e"
 ACCEPTED_HEADER_SHA256 = "8f97db663781c5788e18bb98cca284a9173597a2b7bfe44f148ca2beef9391c5"
@@ -467,42 +466,3 @@ def self_test() -> int:
     print("QPX_TRANSPORT_PROBE_RUNTIME_SELFTEST: PASS")
     return 0
 
-
-def main(
-    argv: Iterable[str] | None = None,
-    *,
-    instrument_source: InstrumentSource,
-    analyze_probe: AnalyzeProbe,
-    backend_self_test: SelfTest,
-) -> int:
-    parser = argparse.ArgumentParser(prog="qpx transport-probe")
-    parser.add_argument("--qpx")
-    parser.add_argument("--smoke-root")
-    parser.add_argument("--source")
-    parser.add_argument("--build-command")
-    parser.add_argument("--jobs", type=int)
-    parser.add_argument("--allow-source-sha-mismatch", action="store_true")
-    parser.add_argument("--restore-run")
-    parser.add_argument("--self-test", action="store_true")
-    args = parser.parse_args(list(argv) if argv is not None else None)
-    if args.self_test:
-        if self_test() != 0:
-            return 1
-        return backend_self_test()
-    try:
-        if args.restore_run:
-            executable = Path(args.qpx).expanduser().resolve() if args.qpx else None
-            return restore_probe(Path(args.restore_run), executable)
-        return run_managed_probe(
-            executable_arg=args.qpx,
-            instrument_source=instrument_source,
-            analyze_probe=analyze_probe,
-            smoke_root_arg=Path(args.smoke_root) if args.smoke_root else None,
-            source_arg=Path(args.source) if args.source else None,
-            build_command_arg=args.build_command,
-            jobs=args.jobs,
-            allow_source_sha_mismatch=args.allow_source_sha_mismatch,
-        )
-    except (ProbeRuntimeError, OSError, json.JSONDecodeError) as exc:
-        print(f"PF3_TRANSPORT_PROBE_FAIL: {exc}", file=sys.stderr)
-        return 2

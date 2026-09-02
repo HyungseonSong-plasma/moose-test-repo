@@ -7,18 +7,16 @@ in successor work packages.
 
 from __future__ import annotations
 
-import argparse
 import csv
 import json
 import os
 import platform
 import re
 import socket
-import sys
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 from ..evidence import ensure_fresh_directory, sha256_file
 from ..execution.runtime import resolve_executable, run_qpx, validate_executable
@@ -783,28 +781,3 @@ def self_test() -> int:
     print("QPX_PERFORMANCE_CORE_SELFTEST: PASS")
     return 0
 
-
-def main(argv: Iterable[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="qpx measure")
-    parser.add_argument("manifest", nargs="?")
-    parser.add_argument("--qpx")
-    parser.add_argument("--out-dir")
-    parser.add_argument("--self-test", action="store_true")
-    args = parser.parse_args(list(argv) if argv is not None else None)
-    if args.self_test:
-        return self_test()
-    if not args.manifest:
-        parser.error("manifest is required unless --self-test is used")
-    try:
-        return run_measurement(
-            Path(args.manifest),
-            executable=args.qpx,
-            out_dir=Path(args.out_dir) if args.out_dir else None,
-        )
-    except PerformanceContractError as exc:
-        print(f"PERFORMANCE_CONTRACT_FAIL: {exc}", file=sys.stderr)
-        return 2
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())

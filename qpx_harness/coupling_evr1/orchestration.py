@@ -11,7 +11,7 @@ from ..evidence.artifacts import write_json_bundle
 from ..execution.cases import stage_case, validate_referenced_files
 from ..dmix_equivalence import legacy_source_transform
 from ..evidence import create_collision_safe_directory, sha256_file, utc_timestamp
-from ..performance_investigation import build_investigation_summary
+from ..analysis.performance.investigation import build_investigation_summary
 from ..performance.smoke import (
     build_smoke_manifest,
     compare_smoke_results,

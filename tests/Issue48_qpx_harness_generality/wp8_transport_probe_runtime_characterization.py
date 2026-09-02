@@ -12,8 +12,9 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from qpx_harness import performance_transport_probe_direct as direct
-from qpx_harness import performance_transport_probe_runtime as runtime
+from qpx_harness.performance.probes import runtime
+from qpx_harness.performance.probes import transport as direct
+from qpx_harness.cli.commands import performance as performance_cli
 
 EXPECTED_SOURCE_SHA256 = "4533a3a2fe0d77f3d85ca171f9093907a76514dd024c5392c08dd8d17a2f4b7e"
 EXPECTED_HEADER_SHA256 = "8f97db663781c5788e18bb98cca284a9173597a2b7bfe44f148ca2beef9391c5"
@@ -141,34 +142,30 @@ def _check_callback_routing() -> None:
     if runtime.self_test() != 0:
         raise AssertionError("runtime self-test failed")
 
-    def backend_pass() -> int:
-        return 0
-
-    def backend_fail() -> int:
-        return 1
-
-    unused_instrument = lambda text: (text, {})
-    unused_analyze = lambda result, path: {}
-    if runtime.main(
-        ["--self-test"],
-        instrument_source=unused_instrument,
-        analyze_probe=unused_analyze,
-        backend_self_test=backend_pass,
-    ) != 0:
-        raise AssertionError("backend positive self-test callback was not propagated")
-    if runtime.main(
-        ["--self-test"],
-        instrument_source=unused_instrument,
-        analyze_probe=unused_analyze,
-        backend_self_test=backend_fail,
-    ) != 1:
-        raise AssertionError("backend negative self-test callback was not propagated")
+    original_runtime_self_test = runtime.self_test
+    original_backend_self_test = direct.self_test
+    try:
+        runtime.self_test = lambda: 0
+        direct.self_test = lambda: 0
+        if performance_cli.transport_probe_main(["--self-test"]) != 0:
+            raise AssertionError("backend positive self-test callback was not propagated")
+        direct.self_test = lambda: 1
+        if performance_cli.transport_probe_main(["--self-test"]) != 1:
+            raise AssertionError("backend negative self-test callback was not propagated")
+    finally:
+        runtime.self_test = original_runtime_self_test
+        direct.self_test = original_backend_self_test
 
 
 def _check_direct_cutover() -> None:
     source = Path(direct.__file__).read_text()
-    if "probe_runtime.main(" not in source:
-        raise AssertionError("direct probe does not route through runtime owner")
+    cli_source = Path(performance_cli.__file__).read_text()
+    if "probe_runtime.run_managed_probe(" not in cli_source:
+        raise AssertionError("transport command does not route through runtime owner")
+    if "transport.instrument_source" not in cli_source or "transport.analyze_probe" not in cli_source:
+        raise AssertionError("transport command callback binding drift")
+    if "argparse" in source or "def main(" in source:
+        raise AssertionError("direct capability retained CLI presentation")
     for forbidden in (
         "legacy.main(",
         "def _activate",
@@ -184,20 +181,20 @@ def _check_direct_cutover() -> None:
         raise AssertionError("direct timer-name contract drift")
     if direct.MARKER_PREFIX != "qpx_transport_":
         raise AssertionError("direct marker-prefix contract drift")
-    if direct.main(["--self-test"]) != 0:
+    if performance_cli.transport_probe_main(["--self-test"]) != 0:
         raise AssertionError("direct runtime-routed self-test failed")
 
-    original_main = direct.probe_runtime.main
+    original_run = runtime.run_managed_probe
 
     def raise_backend_error(*args, **kwargs):
         raise direct.ProbeError("negative-control")
 
-    direct.probe_runtime.main = raise_backend_error
+    runtime.run_managed_probe = raise_backend_error
     try:
-        if direct.main([]) != 2:
+        if performance_cli.transport_probe_main([]) != 2:
             raise AssertionError("direct ProbeError compatibility guard drift")
     finally:
-        direct.probe_runtime.main = original_main
+        runtime.run_managed_probe = original_run
 
 
 def _imports_legacy_probe(path: Path) -> bool:
@@ -222,9 +219,8 @@ def _imports_legacy_probe(path: Path) -> bool:
 def _check_boundary() -> None:
     source = Path(runtime.__file__).read_text()
     for forbidden in (
-        "performance_transport_probe_direct",
-        "performance_transport_probe as",
-        "performance_transport_probe import",
+        "from .transport",
+        "from qpx_harness.performance.probes.transport",
     ):
         if forbidden in source:
             raise AssertionError(f"runtime reverse dependency leaked: {forbidden}")

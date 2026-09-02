@@ -1,10 +1,11 @@
-"""Deterministic PETSc/MOOSE performance-evidence analysis."""
+"""Deterministic analysis of legacy-format PETSc/MOOSE profile evidence."""
 
 from __future__ import annotations
 
 import csv
 import json
 import re
+import tempfile
 from pathlib import Path
 
 
@@ -151,3 +152,73 @@ def analyze(
         "ratios": ratios,
         "perfgraph_jacobian_self": perf_jacobian,
     }
+
+
+def self_test() -> int:
+    """Characterize the promoted legacy-format profile analysis contract."""
+
+    try:
+        with tempfile.TemporaryDirectory() as tmp_name:
+            root = Path(tmp_name)
+            summary = root / "summary.json"
+            petsc = root / "petsc.csv"
+            perfgraph = root / "perfgraph.log"
+            summary.write_text(
+                json.dumps(
+                    {
+                        "p2_returncode": 0,
+                        "p3_returncode": 0,
+                        "label": "synthetic",
+                        "wall_seconds": 10.0,
+                        "last_metrics_row": {
+                            "qpxh_num_dofs": "42",
+                            "qpxh_nonlinear_iterations": "2",
+                            "qpxh_linear_iterations": "3",
+                            "qpxh_residual_evaluations": "4",
+                        },
+                    }
+                )
+            )
+            petsc.write_text(
+                "Event Name,Rank,Count,Time\n"
+                "SNESSolve,0,1,10\n"
+                "SNESJacobianEval,0,2,6\n"
+                "SNESFunctionEval,0,4,1\n"
+                "PCSetUp,0,2,1\n"
+                "KSPSolve,0,3,1\n"
+            )
+            perfgraph.write_text(
+                "| NonlinearSystemBase::computeJacobianInternal | 2 | 5.5 | 2.75 | 55 |\n"
+            )
+            result = analyze(summary, petsc, perfgraph)
+            if result.get("classification") != "JACOBIAN_EVALUATION_DOMINANT":
+                raise AssertionError(result)
+            if result.get("dofs") != 42 or event_time(load_petsc_events(petsc), "SNESSolve") != 10:
+                raise AssertionError("promoted profile metric contract drift")
+            if perfgraph_jacobian_self(perfgraph) != {
+                "calls": 2.0,
+                "self_seconds": 5.5,
+                "avg_seconds": 2.75,
+                "percent_application": 55.0,
+            }:
+                raise AssertionError("promoted PerfGraph contract drift")
+
+            failed = json.loads(summary.read_text())
+            failed["p2_returncode"] = 1
+            summary.write_text(json.dumps(failed))
+            if analyze(summary, petsc).get("interpretable_performance") is not False:
+                raise AssertionError("P2 failure mutation was accepted")
+    except Exception as exc:
+        print(f"QPX_PROFILE_ANALYSIS_SELFTEST: FAIL: {exc}")
+        return 1
+    print("QPX_PROFILE_ANALYSIS_SELFTEST: PASS")
+    return 0
+
+
+__all__ = [
+    "analyze",
+    "event_time",
+    "load_petsc_events",
+    "perfgraph_jacobian_self",
+    "self_test",
+]

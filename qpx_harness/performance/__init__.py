@@ -1,5 +1,5 @@
-"""QPX performance execution package.
+"""QPX performance execution capabilities."""
 
-Structural ownership lives in focused submodules. Stable user-facing commands
-continue to route through ``scripts/qpx.py`` during compatibility-first migration.
-"""
+from . import runner, smoke
+
+__all__ = ["runner", "smoke"]

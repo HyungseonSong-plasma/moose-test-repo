@@ -16,13 +16,13 @@ from .performance.probes.runtime import (
     InstrumentSource,
     ProbeRuntimeError,
     SelfTest,
-    main,
     restore_probe,
     run_managed_probe,
     self_test,
     sha256_bytes,
     sha256_file,
 )
+from .cli.commands.performance import transport_probe_main as main
 
 __all__ = [
     "ACCEPTED_HEADER_SHA256",

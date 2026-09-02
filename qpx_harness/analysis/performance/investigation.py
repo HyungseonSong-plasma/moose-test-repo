@@ -8,13 +8,11 @@ work, memory, and profiler-overhead evidence.
 
 from __future__ import annotations
 
-import argparse
 import json
 import math
-import sys
 import tempfile
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 from ...performance.runner import PerformanceContractError
 from ...performance.smoke import default_results_root
@@ -528,29 +526,3 @@ def self_test() -> int:
     print("QPX_PERFORMANCE_INVESTIGATION_SELFTEST: PASS")
     return 0
 
-
-def main(argv: Iterable[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="qpx investigate")
-    parser.add_argument("--run-root")
-    parser.add_argument("--qpx")
-    parser.add_argument("--results-root")
-    parser.add_argument("--self-test", action="store_true")
-    args = parser.parse_args(list(argv) if argv is not None else None)
-
-    if args.self_test:
-        return self_test()
-    if not args.run_root and not args.qpx:
-        parser.error("provide --qpx for automatic discovery or --run-root for an explicit smoke run")
-    try:
-        return run_investigation(
-            run_root=Path(args.run_root) if args.run_root else None,
-            executable=args.qpx,
-            results_root=Path(args.results_root) if args.results_root else None,
-        )
-    except (PerformanceContractError, json.JSONDecodeError) as exc:
-        print(f"PF3_INVESTIGATION_FAIL: {exc}", file=sys.stderr)
-        return 2
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())

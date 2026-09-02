@@ -1,22 +1,18 @@
-"""Input-aware static cache-feasibility audit for QPXThermalDiffusionMaterial D_mix functors."""
+"""Performance-specific cache-feasibility interpretation for QPX functors."""
 from __future__ import annotations
 
-import argparse
-import json
-import re
-import sys
 import tempfile
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
-from .evidence.artifacts import write_json_bundle
-from .cpp.calls import split_call_arguments
-from .cpp.source import CppSource, CppSourceError
-from .evidence import sha256_file, utc_timestamp
+from ...cpp.functor_usage import (
+    FunctorInspectionError,
+    extract_functor_property_declaration,
+    parameter_functor_calls,
+)
+from ...evidence import sha256_file
 
 MATERIAL_RELATIVE = Path("src/materials/QPXThermalDiffusionMaterial.C")
-DEFAULT_CASE_RELATIVE = Path("tests/Issue22_qvt_transient_species_accumulation/input.i")
-TEXT_SUFFIXES = {".C", ".cc", ".cpp", ".cxx", ".h", ".hh", ".hpp"}
 CACHE_ELIGIBLE_SPACE_ARGS = {"ElemQpArg", "ElemSideQpArg"}
 CACHE_INELIGIBLE_SPACE_ARGS = {"ElemArg", "FaceArg"}
 TARGET_CONSUMER_TYPE = "QPXFVMixtureAveragedDiffusion"
@@ -27,26 +23,12 @@ class CacheAuditError(RuntimeError):
     pass
 
 
-def _line_number(text: str, offset: int) -> int:
-    return text.count("\n", 0, offset) + 1
-
-
 def _extract_dmix_declaration(text: str) -> dict[str, Any]:
-    cpp = CppSource(text)
-    calls = [
-        call
-        for call in cpp.calls("addFunctorProperty", containing="_D_mix_names")
-        if re.search(r"addFunctorProperty\s*<\s*ADReal\s*>", call.slice(text))
-    ]
-    if len(calls) != 1:
-        raise CacheAuditError(
-            f"expected exactly one D_mix addFunctorProperty declaration, found {len(calls)}"
-        )
-
-    call = calls[0]
-    raw = call.slice(text)
-    args = split_call_arguments(cpp, call).arguments
-    flags = sorted(set(re.findall(r"\bEXEC_[A-Z0-9_]+\b", raw)))
+    try:
+        declaration = extract_functor_property_declaration(text, "_D_mix_names")
+    except FunctorInspectionError as exc:
+        raise CacheAuditError(str(exc)) from exc
+    flags = declaration.pop("execution_tokens")
     kind = "DEFAULT_ALWAYS_EVALUATE"
     if flags:
         if "EXEC_ALWAYS" in flags:
@@ -55,14 +37,12 @@ def _extract_dmix_declaration(text: str) -> dict[str, Any]:
             kind = "EXPLICIT_LINEAR_NONLINEAR_CLEARANCE"
         else:
             kind = "EXPLICIT_OTHER_CLEARANCE"
-    return {
-        "line": _line_number(text, call.start),
-        "argument_count": len(args),
-        "schedule_kind": kind,
-        "schedule_tokens": flags,
-        "calls_full_evaluate": "evaluate" in raw and ".D_mix" in raw,
-        "snippet": " ".join(raw.split())[:700],
-    }
+    declaration["schedule_kind"] = kind
+    declaration["schedule_tokens"] = flags
+    declaration["calls_full_evaluate"] = bool(
+        declaration["calls_full_evaluate"] and ".D_mix" in declaration["snippet"]
+    )
+    return declaration
 
 
 def _parse_input_consumers(input_path: Path) -> list[dict[str, Any]]:
@@ -139,147 +119,6 @@ def _parse_input_consumers(input_path: Path) -> list[dict[str, Any]]:
     return rows
 
 
-def _source_files(root: Path) -> list[Path]:
-    out = []
-    for base_name in ("src", "include"):
-        base = root / base_name
-        if base.is_dir():
-            out += [
-                path
-                for path in base.rglob("*")
-                if path.is_file() and path.suffix in TEXT_SUFFIXES
-            ]
-    return sorted(out)
-
-
-def _class_files(root: Path, class_name: str) -> list[Path]:
-    files = []
-    for path in _source_files(root):
-        try:
-            text = path.read_text(errors="replace")
-        except OSError:
-            continue
-        if class_name in text:
-            files.append(path)
-    return files
-
-
-def _space_arg_bindings(text: str) -> dict[str, str]:
-    masked = CppSource(text).masked
-    out = {}
-    patterns = {
-        "ElemQpArg": [
-            r"\b(?:const\s+)?auto(?:\s*&)?\s+([A-Za-z_]\w*)\s*=\s*makeElemQpArg\s*\(",
-            r"\b(?:Moose::)?ElemQpArg\s+([A-Za-z_]\w*)",
-        ],
-        "ElemSideQpArg": [
-            r"\b(?:const\s+)?auto(?:\s*&)?\s+([A-Za-z_]\w*)\s*=\s*makeElemSideQpArg\s*\(",
-            r"\b(?:Moose::)?ElemSideQpArg\s+([A-Za-z_]\w*)",
-        ],
-        "ElemArg": [
-            r"\b(?:const\s+)?auto(?:\s*&)?\s+([A-Za-z_]\w*)\s*=\s*makeElemArg\s*\(",
-            r"\b(?:Moose::)?ElemArg\s+([A-Za-z_]\w*)",
-        ],
-        "FaceArg": [
-            r"\b(?:const\s+)?auto(?:\s*&)?\s+([A-Za-z_]\w*)\s*=\s*(?:makeFace|makeFaceArg)\s*\(",
-            r"\b(?:Moose::)?FaceArg\s+([A-Za-z_]\w*)",
-        ],
-    }
-    for kind, expressions in patterns.items():
-        for expression in expressions:
-            for match in re.finditer(expression, masked):
-                out[match.group(1)] = kind
-    return out
-
-
-def _infer_space_arg(expr: str, bindings: dict[str, str]) -> str:
-    stripped = expr.strip()
-    for kind, tokens in [
-        ("ElemSideQpArg", ("makeElemSideQpArg", "ElemSideQpArg")),
-        ("ElemQpArg", ("makeElemQpArg", "ElemQpArg")),
-        ("FaceArg", ("makeFaceArg", "makeFace", "FaceArg")),
-        ("ElemArg", ("makeElemArg", "ElemArg")),
-    ]:
-        if any(token in stripped for token in tokens):
-            return kind
-    if re.fullmatch(r"[A-Za-z_]\w*", stripped) and stripped in bindings:
-        return bindings[stripped]
-    return "UNKNOWN"
-
-
-def _parameter_functor_variables(text: str, parameter: str) -> set[str]:
-    out = set()
-    patterns = [
-        rf"\b([A-Za-z_]\w*)\s*\(\s*getFunctor\s*<\s*ADReal\s*>\s*\([^)]*[\"']{re.escape(parameter)}[\"'][^)]*\)\s*\)",
-        rf"\b([A-Za-z_]\w*)\s*=\s*getFunctor\s*<\s*ADReal\s*>\s*\([^;]*[\"']{re.escape(parameter)}[\"'][^;]*\)",
-        rf"\b([A-Za-z_]\w*)\s*\(\s*getFunctor\s*<\s*ADReal\s*>\s*\([^)]*getParam[^)]*[\"']{re.escape(parameter)}[\"']",
-    ]
-    for pattern in patterns:
-        for match in re.finditer(pattern, text, re.S):
-            out.add(match.group(1))
-    if re.search(rf"[\"']{re.escape(parameter)}[\"']", text):
-        for name in (f"_{parameter}", parameter):
-            if re.search(rf"\b{re.escape(name)}\b", text):
-                out.add(name)
-    return out
-
-
-def _consumer_calls_for_parameter(root: Path, class_name: str, parameter: str):
-    files = _class_files(root, class_name)
-    if not files:
-        return [], []
-    texts = {}
-    combined = ""
-    for path in files:
-        text = path.read_text(errors="replace")
-        texts[path] = text
-        combined += "\n" + text
-    variables = _parameter_functor_variables(combined, parameter)
-    rows = []
-    for path, text in texts.items():
-        cpp = CppSource(text)
-        bindings = _space_arg_bindings(text)
-        for variable in sorted(variables, key=len, reverse=True):
-            for call in cpp.calls(variable):
-                try:
-                    parsed = split_call_arguments(cpp, call)
-                except CppSourceError:
-                    continue
-                if not parsed.arguments:
-                    continue
-                first = parsed.arguments[0]
-                if "getFunctor" in first:
-                    continue
-                kind = _infer_space_arg(first, bindings)
-                line_start = text.rfind("\n", 0, call.start) + 1
-                line_end = text.find("\n", parsed.close_paren)
-                line_end = len(text) if line_end < 0 else line_end
-                rows.append(
-                    {
-                        "path": str(path.relative_to(root)),
-                        "line": _line_number(text, call.start),
-                        "consumer_type": class_name,
-                        "parameter": parameter,
-                        "functor_variable": variable,
-                        "first_argument": first.strip()[:240],
-                        "space_arg": kind,
-                        "cache_eligible": kind in CACHE_ELIGIBLE_SPACE_ARGS,
-                        "snippet": " ".join(text[line_start:line_end].split())[:700],
-                    }
-                )
-    unique = {}
-    for row in rows:
-        unique[
-            (
-                row["path"],
-                row["line"],
-                row["functor_variable"],
-                row["first_argument"],
-            )
-        ] = row
-    return list(unique.values()), [str(path.relative_to(root)) for path in files]
-
-
 def audit_qpx_tree(qpx_root: Path, input_path: Path) -> dict[str, Any]:
     root = qpx_root.resolve()
     material = root / MATERIAL_RELATIVE
@@ -291,7 +130,9 @@ def audit_qpx_tree(qpx_root: Path, input_path: Path) -> dict[str, Any]:
     consumers = []
     class_files = {}
     for class_name in consumer_types:
-        rows, files = _consumer_calls_for_parameter(root, class_name, TARGET_PARAMETER)
+        rows, files = parameter_functor_calls(root, class_name, TARGET_PARAMETER)
+        for row in rows:
+            row["cache_eligible"] = row["space_arg"] in CACHE_ELIGIBLE_SPACE_ARGS
         consumers.extend(rows)
         class_files[class_name] = files
     counts = {}
@@ -432,75 +273,13 @@ def self_test():
         return 1
 
 
-def _new_run_root(results: Path):
-    stamp = utc_timestamp()
-    base = results / f"cache_audit_{stamp}"
-    candidate = base
-    index = 1
-    while candidate.exists():
-        candidate = Path(f"{base}_{index:02d}")
-        index += 1
-    candidate.mkdir(parents=True)
-    return candidate
-
-
-def main(argv: Iterable[str] | None = None):
-    parser = argparse.ArgumentParser(prog="qpx cache-audit")
-    parser.add_argument("--qpx")
-    parser.add_argument("--input")
-    parser.add_argument("--results-root")
-    parser.add_argument("--self-test", action="store_true")
-    args = parser.parse_args(list(argv) if argv is not None else None)
-    if args.self_test:
-        return self_test()
-    if not args.qpx:
-        parser.error("--qpx is required unless --self-test is used")
-    qpx = Path(args.qpx).expanduser().resolve()
-    if not qpx.is_file():
-        print(f"QPX_CACHE_AUDIT_ERROR: qpx executable not found: {qpx}", file=sys.stderr)
-        return 2
-    repo_root = Path(__file__).resolve().parents[1]
-    input_path = (
-        Path(args.input).expanduser().resolve()
-        if args.input
-        else repo_root / DEFAULT_CASE_RELATIVE
-    )
-    try:
-        result = audit_qpx_tree(qpx.parent, input_path)
-        results = (
-            Path(args.results_root).expanduser().resolve()
-            if args.results_root
-            else qpx.parent / "temp" / "results"
-        )
-        root = _new_run_root(results)
-        result["qpx_executable"] = str(qpx)
-        summary = Path(
-            write_json_bundle(
-                root,
-                {"summary": ("cache_audit.json", result)},
-            )["summary"]
-        )
-    except Exception as exc:
-        print(f"QPX_CACHE_AUDIT_ERROR: {exc}", file=sys.stderr)
-        return 2
-
-    type_counts = {}
-    for row in result["input_consumers"]:
-        type_counts[row["type"]] = type_counts.get(row["type"], 0) + 1
-    print(f"QPX_CACHE_AUDIT_ROOT: {root}")
-    print(f"QPX_CACHE_AUDIT_STATUS: {result['analysis_status']}")
-    print(f"QPX_CACHE_INPUT: {result['input_path']}")
-    print("QPX_CACHE_INPUT_CONSUMERS:", json.dumps(type_counts, sort_keys=True))
-    print(f"QPX_CACHE_MATERIAL_SHA256: {result['material_sha256']}")
-    print(f"QPX_CACHE_DMIX_DECLARATION: {result['dmix_declaration']['schedule_kind']}")
-    print("QPX_CACHE_DMIX_CALLS_FULL_EVALUATE:", result["dmix_declaration"]["calls_full_evaluate"])
-    print("QPX_CACHE_SPACE_ARGS:", json.dumps(result["space_arg_counts"], sort_keys=True))
-    print(f"QPX_CACHE_NATIVE_ELIGIBLE: {result['native_cache_eligible']}")
-    print(f"QPX_CACHE_RECOMMENDATION: {result['recommendation']}")
-    print(f"QPX_CACHE_REASON: {result['reason']}")
-    print(f"QPX_CACHE_SUMMARY: {summary}")
-    return 0 if result["analysis_status"] == "PASS" else 2
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())
+__all__ = [
+    "CACHE_ELIGIBLE_SPACE_ARGS",
+    "CACHE_INELIGIBLE_SPACE_ARGS",
+    "MATERIAL_RELATIVE",
+    "TARGET_CONSUMER_TYPE",
+    "TARGET_PARAMETER",
+    "CacheAuditError",
+    "audit_qpx_tree",
+    "self_test",
+]

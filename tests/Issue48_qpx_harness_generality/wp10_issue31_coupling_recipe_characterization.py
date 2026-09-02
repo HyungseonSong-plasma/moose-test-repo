@@ -302,9 +302,9 @@ def _check_boundary() -> None:
     for forbidden in (
         "coupling_evr1",
         "coupling_evr1_safe",
-        "performance_core",
-        "performance_smoke",
-        "performance_investigation",
+        "performance.runner",
+        "performance.smoke",
+        "analysis.performance.investigation",
         "qpx_harness.runtime",
         "run_measurement",
     ):

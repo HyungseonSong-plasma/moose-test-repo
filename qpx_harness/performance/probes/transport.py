@@ -9,13 +9,11 @@ from __future__ import annotations
 import json
 import math
 import re
-import sys
 import tempfile
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 from ... import perfgraph
-from . import runtime as probe_runtime
 from ...cpp.source import CppSource, CppSourceError, Span
 
 TIMER_NAMES = {
@@ -352,15 +350,3 @@ def self_test() -> int:
     except Exception as exc:
         print(f"QPX_TRANSPORT_PROBE_DIRECT_SELFTEST: FAIL: {exc}")
         return 1
-
-
-def main(argv: Iterable[str] | None = None) -> int:
-    try:
-        return probe_runtime.main(argv, instrument_source=instrument_source, analyze_probe=analyze_probe, backend_self_test=self_test)
-    except ProbeError as exc:
-        print(f"PF3_TRANSPORT_PROBE_FAIL: {exc}", file=sys.stderr)
-        return 2
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())

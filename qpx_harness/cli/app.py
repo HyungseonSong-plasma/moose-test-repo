@@ -2,13 +2,22 @@
 from __future__ import annotations
 
 import argparse
-import json
 import sys
 from pathlib import Path
 
-from qpx_harness.analysis import analyze
 from qpx_harness.analysis.stats_builder import self_test as stats_builder_self_test
+from qpx_harness.analysis.performance.investigation import self_test as performance_investigation_self_test
+from qpx_harness.analysis.performance.profile import self_test as performance_profile_self_test
 from qpx_harness.bundle import main as bundle_main
+from qpx_harness.cli.commands.performance import (
+    analyze_main,
+    cache_audit_main,
+    cache_audit_self_test,
+    investigate_main,
+    measure_main,
+    measure_smoke_main,
+    transport_probe_main,
+)
 from qpx_harness.coupling_evr1_runtime import main as coupling_evr1_main, self_test as coupling_evr1_self_test
 from qpx_harness.coupling_evr2_runtime import main as coupling_evr2_main, self_test as coupling_evr2_self_test
 from qpx_harness.dmix_equivalence import main as dmix_equivalence_main, self_test as dmix_equivalence_self_test
@@ -20,11 +29,9 @@ from qpx_harness.issue43_fast_relaxation import main as fast_relaxation_main, se
 from qpx_harness.issue45_first_linear import main as first_linear_main, self_test as first_linear_self_test
 from qpx_harness.issue46_fd_reference import main as fd_reference_main, self_test as fd_reference_self_test
 from qpx_harness.issue46_jacobian_localization import main as jac_localization_main, self_test as jac_localization_self_test
-from qpx_harness.performance_cache_audit import main as performance_cache_audit_main, self_test as performance_cache_audit_self_test
-from qpx_harness.performance_core import main as performance_main, self_test as performance_self_test
-from qpx_harness.performance_investigation import main as performance_investigation_main, self_test as performance_investigation_self_test
-from qpx_harness.performance_smoke import main as performance_smoke_main, self_test as performance_smoke_self_test
-from qpx_harness.performance_transport_probe_direct import main as performance_transport_probe_main, self_test as performance_transport_probe_self_test
+from qpx_harness.performance.runner import self_test as performance_self_test
+from qpx_harness.performance.smoke import self_test as performance_smoke_self_test
+from qpx_harness.performance.probes.transport import self_test as performance_transport_probe_self_test
 from qpx_harness.preflight import parser_symbol_self_test, validate_input_preflight
 from qpx_harness.profiling import main as profile_main
 from qpx_harness.regression import cli_run_all, cli_run_test
@@ -73,27 +80,6 @@ def print_help() -> None:
         print(f"  {name:<{width}}  {description}")
     print()
     print("Use '<command> --help' for command-specific arguments.")
-
-
-def analyze_cli(argv: list[str]) -> int:
-    parser = argparse.ArgumentParser(prog="qpx analyze")
-    parser.add_argument("--summary", required=True)
-    parser.add_argument("--petsc-log", required=True)
-    parser.add_argument("--perf-log")
-    parser.add_argument("--json-out")
-    parser.add_argument("--metric-prefix")
-    args = parser.parse_args(argv)
-    result = analyze(
-        Path(args.summary),
-        Path(args.petsc_log),
-        Path(args.perf_log) if args.perf_log else None,
-        metric_prefix=args.metric_prefix,
-    )
-    text = json.dumps(result, indent=2, sort_keys=True) + "\n"
-    print(text, end="")
-    if args.json_out:
-        Path(args.json_out).write_text(text)
-    return 0 if result.get("interpretable_performance") else 2
 
 
 def preflight_cli(argv: list[str]) -> int:
@@ -164,8 +150,9 @@ def self_test_cli(argv: list[str]) -> int:
         performance_self_test(),
         performance_smoke_self_test(),
         performance_investigation_self_test(),
+        performance_profile_self_test(),
         performance_transport_probe_self_test(),
-        performance_cache_audit_self_test(),
+        cache_audit_self_test(),
     )
     ok = all(result == 0 for result in results)
     print("QPX_HARNESS_SELFTEST:", "PASS" if ok else "FAIL")
@@ -192,13 +179,13 @@ def main(argv: list[str] | None = None) -> int:
         "inventory-fd-reference": fd_reference_main,
         "contract": execution_contract_main,
         "dmix-equivalence": dmix_equivalence_main,
-        "measure": performance_main,
-        "measure-smoke": performance_smoke_main,
-        "investigate": performance_investigation_main,
-        "transport-probe": performance_transport_probe_main,
-        "cache-audit": performance_cache_audit_main,
+        "measure": measure_main,
+        "measure-smoke": measure_smoke_main,
+        "investigate": investigate_main,
+        "transport-probe": transport_probe_main,
+        "cache-audit": cache_audit_main,
         "profile": profile_main,
-        "analyze": analyze_cli,
+        "analyze": analyze_main,
         "bundle": bundle_main,
         "inventory": inventory_cli,
         "preflight": preflight_cli,

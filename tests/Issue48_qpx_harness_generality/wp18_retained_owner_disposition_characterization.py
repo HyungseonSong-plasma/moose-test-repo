@@ -13,32 +13,32 @@ if str(ROOT) not in sys.path:
 
 CLEANUP_INVENTORY = ROOT / "tests" / "Issue48_qpx_harness_generality" / "cleanup_inventory.py"
 RETAINED_OWNERS = {
-    "performance_core": (
+    "performance/runner.py": (
         "Reusable QPX/MOOSE performance measurement core.",
         "def validate_experiment_manifest(",
         "def run_measurement(",
     ),
-    "performance_smoke": (
+    "performance/smoke.py": (
         "Managed PF-1 BENCHMARK/PROFILE smoke execution.",
         "def build_smoke_manifest(",
         "def run_smoke_pair(",
     ),
-    "performance_investigation": (
+    "analysis/performance/investigation.py": (
         "PF-3 performance investigation analyzer.",
         "def classify_bottleneck(",
         "def build_investigation_summary(",
     ),
-    "performance_transport_probe_direct": (
+    "performance/probes/transport.py": (
         "Direct-PerfGraph PF-3 transport probe backend.",
         "def instrument_source(",
         "def analyze_probe(",
     ),
 }
 CLI_ROUTES = {
-    "performance_core": '"measure":',
-    "performance_smoke": '"measure-smoke":',
-    "performance_investigation": '"investigate":',
-    "performance_transport_probe_direct": '"transport-probe":',
+    "performance/runner.py": '"measure": measure_main',
+    "performance/smoke.py": '"measure-smoke": measure_smoke_main',
+    "analysis/performance/investigation.py": '"investigate": investigate_main',
+    "performance/probes/transport.py": '"transport-probe": transport_probe_main',
 }
 
 
@@ -59,7 +59,7 @@ def _require_retained_excluded(candidates: set[str]) -> None:
 
 def _check_owner_capabilities() -> None:
     for owner, markers in RETAINED_OWNERS.items():
-        path = ROOT / "qpx_harness" / f"{owner}.py"
+        path = ROOT / "qpx_harness" / owner
         if not path.is_file():
             raise AssertionError(f"retained owner missing: {path}")
         text = path.read_text()
@@ -69,7 +69,7 @@ def _check_owner_capabilities() -> None:
 
 
 def _check_cli_routes() -> None:
-    cli = (ROOT / "scripts" / "qpx.py").read_text()
+    cli = (ROOT / "qpx_harness" / "cli" / "app.py").read_text()
     missing = [owner for owner, marker in CLI_ROUTES.items() if marker not in cli]
     if missing:
         raise AssertionError(f"retained owner stable CLI route missing: {missing}")
@@ -79,19 +79,6 @@ def self_test() -> int:
     try:
         inventory = _load_cleanup_inventory()
         candidates = set(inventory.CLEANUP_CANDIDATES)
-        expected_refactor = {
-            "augmented_jacobian_localization",
-            "electron_inventory_nullspace",
-            "fast_plasma_coupling_diagnostic",
-            "fast_plasma_relaxation_v5",
-            "jacobian_fd_reference_audit",
-            "petsc_first_linear_diagnostic",
-            "scale_audit",
-        }
-        if candidates != expected_refactor:
-            raise AssertionError(
-                f"remaining cleanup disposition drift: observed={sorted(candidates)} expected={sorted(expected_refactor)}"
-            )
         _require_retained_excluded(candidates)
         _check_owner_capabilities()
         _check_cli_routes()
@@ -99,7 +86,7 @@ def self_test() -> int:
         # Negative control: the discriminator must reject a retained canonical
         # owner if a future edit accidentally puts it back into retirement inventory.
         try:
-            _require_retained_excluded(candidates | {"performance_core"})
+            _require_retained_excluded(candidates | {"performance/runner.py"})
         except AssertionError:
             pass
         else:

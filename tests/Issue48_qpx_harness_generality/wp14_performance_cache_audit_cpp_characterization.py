@@ -11,10 +11,12 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from qpx_harness.evidence import artifacts
-from qpx_harness import cpp_calls
-from qpx_harness import cpp_source
 from qpx_harness import evidence
-from qpx_harness import performance_cache_audit as cache
+from qpx_harness.analysis.performance import cache
+from qpx_harness.cli.commands import performance as performance_cli
+from qpx_harness.cpp import calls as cpp_calls
+from qpx_harness.cpp import functor_usage
+from qpx_harness.cpp import source as cpp_source
 
 
 def _fixture() -> str:
@@ -71,40 +73,52 @@ def _check_declaration_contract() -> None:
 
 
 def _check_run_root_contract() -> None:
-    original_timestamp = cache.utc_timestamp
-    cache.utc_timestamp = lambda: "20260831T103000Z"
-    try:
-        with tempfile.TemporaryDirectory() as tmp_name:
-            results = Path(tmp_name)
-            first = cache._new_run_root(results)
-            second = cache._new_run_root(results)
-            if first.name != "cache_audit_20260831T103000Z":
-                raise AssertionError(f"cache-audit first root naming drift: {first.name}")
-            if second.name != "cache_audit_20260831T103000Z_01":
-                raise AssertionError(f"cache-audit collision naming drift: {second.name}")
-            if not first.is_dir() or not second.is_dir():
-                raise AssertionError("cache-audit run roots were not created")
-    finally:
-        cache.utc_timestamp = original_timestamp
+    with tempfile.TemporaryDirectory() as tmp_name:
+        results = Path(tmp_name)
+        first = performance_cli._cache_run_root(
+            results, timestamp="20260831T103000Z"
+        )
+        second = performance_cli._cache_run_root(
+            results, timestamp="20260831T103000Z"
+        )
+        if first.name != "cache_audit_20260831T103000Z":
+            raise AssertionError(f"cache-audit first root naming drift: {first.name}")
+        if second.name != "cache_audit_20260831T103000Z_01":
+            raise AssertionError(f"cache-audit collision naming drift: {second.name}")
+        if not first.is_dir() or not second.is_dir():
+            raise AssertionError("cache-audit run roots were not created")
 
 
 def _check_production_cutover() -> None:
-    source = Path(cache.__file__).read_text()
+    analysis_source = Path(cache.__file__).read_text()
+    cpp_source_text = Path(functor_usage.__file__).read_text()
+    cli_source = Path(performance_cli.__file__).read_text()
     for required in (
-        "from .evidence.artifacts import write_json_bundle",
-        "from .cpp_calls import split_call_arguments",
-        "from .cpp_source import CppSource",
-        "from .evidence import sha256_file, utc_timestamp",
-        'cpp.calls("addFunctorProperty", containing="_D_mix_names")',
-        "split_call_arguments(cpp, call)",
-        "masked = CppSource(text).masked",
+        "extract_functor_property_declaration",
+        "parameter_functor_calls",
         '"input_sha256": sha256_file(input_path)',
         '"material_sha256": sha256_file(material)',
-        "stamp = utc_timestamp()",
-        "write_json_bundle(",
     ):
-        if required not in source:
-            raise AssertionError(f"cache-audit generic cutover missing: {required}")
+        if required not in analysis_source:
+            raise AssertionError(f"cache analysis cutover missing: {required}")
+
+    for required in (
+        'cpp.calls("addFunctorProperty", containing=property_marker)',
+        "split_call_arguments(cpp, call)",
+        "masked = CppSource(text).masked",
+        "def parameter_functor_calls(",
+    ):
+        if required not in cpp_source_text:
+            raise AssertionError(f"C++ functor inspection cutover missing: {required}")
+
+    for required in (
+        'argparse.ArgumentParser(prog="qpx cache-audit")',
+        "create_collision_safe_directory",
+        "write_json_bundle(",
+        "cache.audit_qpx_tree(",
+    ):
+        if required not in cli_source:
+            raise AssertionError(f"cache CLI cutover missing: {required}")
 
     for forbidden in (
         "def _mask_cpp(",
@@ -116,7 +130,7 @@ def _check_production_cutover() -> None:
         "datetime.now(timezone.utc)",
         "summary.write_text(json.dumps(result",
     ):
-        if forbidden in source:
+        if forbidden in analysis_source or forbidden in cpp_source_text:
             raise AssertionError(f"cache-audit retained duplicated infrastructure: {forbidden}")
 
     # Cache-feasibility interpretation remains caller-owned at this checkpoint.
@@ -127,15 +141,18 @@ def _check_production_cutover() -> None:
         '"runtime_executed": False',
         '"production_source_mutated": False',
     ):
-        if retained not in source:
+        if retained not in analysis_source:
             raise AssertionError(f"cache-audit policy moved prematurely: {retained}")
+
+    for forbidden in ("argparse", "write_json_bundle", "utc_timestamp"):
+        if forbidden in analysis_source:
+            raise AssertionError(f"cache analysis retained CLI presentation: {forbidden}")
 
 
 def _check_primitive_boundary() -> None:
-    for module in (cpp_source, cpp_calls, evidence, artifacts):
+    for module in (cpp_source, cpp_calls, functor_usage, evidence, artifacts):
         source = Path(module.__file__).read_text()
         for forbidden in (
-            "performance_cache_audit",
             "QPXFVMixtureAveragedDiffusion",
             "NATIVE_FUNCTOR_CACHE_CANDIDATE",
             "MATERIAL_SHARED_RESULT_REQUIRED",

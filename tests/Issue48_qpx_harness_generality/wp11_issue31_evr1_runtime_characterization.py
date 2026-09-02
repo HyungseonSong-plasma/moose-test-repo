@@ -13,8 +13,9 @@ if str(ROOT) not in sys.path:
 
 from recipes import issue31_coupling as recipe
 from qpx_harness import coupling_evr1_runtime as runtime
+from qpx_harness.coupling_evr1 import orchestration as runtime_owner
 from qpx_harness.evidence import create_collision_safe_directory
-from qpx_harness.performance_smoke import build_smoke_manifest
+from qpx_harness.performance.smoke import build_smoke_manifest
 
 
 EXPECTED_EXPERIMENT_ID = "issue31-evr1-optimized-monolithic"
@@ -238,9 +239,8 @@ def _check_classification_contract() -> None:
 
 def _check_boundary() -> None:
     this_path = Path(__file__)
-    runtime_path = Path(runtime.__file__)
+    runtime_path = Path(runtime_owner.__file__)
     for historical in (
-        "qpx_harness.coupling_evr1",
         "qpx_harness.coupling_evr1_safe",
     ):
         if _imports_module(this_path, historical):
@@ -274,11 +274,10 @@ def _check_boundary() -> None:
 
 
 def _check_cli_route() -> None:
-    source = (ROOT / "scripts" / "qpx.py").read_text()
+    source = (ROOT / "qpx_harness" / "cli" / "app.py").read_text()
     required = (
         "from qpx_harness.coupling_evr1_runtime import main as coupling_evr1_main, self_test as coupling_evr1_self_test",
-        'if command == "coupling-evr1":',
-        "return coupling_evr1_main(rest)",
+        '"coupling-evr1": coupling_evr1_main',
     )
     for token in required:
         if token not in source:

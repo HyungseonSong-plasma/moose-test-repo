@@ -8,14 +8,12 @@ scripts to manage run directories or JSON manifests.
 
 from __future__ import annotations
 
-import argparse
 import json
 import re
-import sys
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 from .runner import (
     PerformanceContractError,
@@ -356,39 +354,3 @@ def self_test() -> int:
     print("QPX_PERFORMANCE_SMOKE_SELFTEST: PASS")
     return 0
 
-
-def main(argv: Iterable[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="qpx measure-smoke")
-    parser.add_argument("case_dir", nargs="?")
-    parser.add_argument("--input", default="input.i")
-    parser.add_argument("--qpx")
-    parser.add_argument("--results-root")
-    parser.add_argument("--case-id")
-    parser.add_argument("--experiment-id", default="pf1-runtime-smoke")
-    parser.add_argument("--num-steps", type=int, default=1)
-    parser.add_argument("--species", nargs="*")
-    parser.add_argument("--self-test", action="store_true")
-    args = parser.parse_args(list(argv) if argv is not None else None)
-
-    if args.self_test:
-        return self_test()
-    if not args.case_dir:
-        parser.error("case_dir is required unless --self-test is used")
-    try:
-        return run_smoke_pair(
-            case_dir=Path(args.case_dir),
-            input_name=args.input,
-            executable=args.qpx,
-            results_root=Path(args.results_root) if args.results_root else None,
-            case_id=args.case_id,
-            experiment_id=args.experiment_id,
-            num_steps=args.num_steps,
-            species=args.species or None,
-        )
-    except PerformanceContractError as exc:
-        print(f"PERFORMANCE_CONTRACT_FAIL: {exc}", file=sys.stderr)
-        return 2
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())
