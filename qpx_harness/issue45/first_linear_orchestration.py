@@ -6,10 +6,10 @@ from typing import Any
 
 from recipes import issue45_first_linear as first_linear_recipe
 
-from .. import artifacts
+from ..evidence import artifacts
 from .. import electron_inventory_nullspace as inv
 from .. import evidence
-from ..runtime import resolve_executable, run_qpx, validate_executable
+from ..execution.runtime import resolve_executable, run_qpx, validate_executable
 from .first_linear_structure import audit_first_linear_structure
 
 ISSUE = first_linear_recipe.ISSUE

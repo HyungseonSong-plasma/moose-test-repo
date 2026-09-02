@@ -13,10 +13,10 @@ from typing import Callable, Iterable
 
 from .preflight import validate_input_preflight, validate_temporal_manifest_preflight
 from .reporting import ConsoleReporter, Reporter
-from .runtime import TelemetryCallback, TelemetrySample, resolve_executable, run_command, run_qpx, validate_executable
+from .execution.runtime import TelemetryCallback, TelemetrySample, resolve_executable, run_command, run_qpx, validate_executable
 from .status import ExecutionState, LivenessClassifier
 from .temporal import normalize_from_manifest
-from .workspace import discover_manifests, load_manifest, manifest_type
+from .execution.workspace import discover_manifests, load_manifest, manifest_type
 
 StateCallback = Callable[[ExecutionState, float], None]
 

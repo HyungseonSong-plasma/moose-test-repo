@@ -190,7 +190,7 @@ def _check_runtime_boundary() -> None:
     source = path.read_text()
     for required in (
         "from recipes import issue31_coupling as recipe",
-        "from .artifacts import write_json_bundle",
+        "from .evidence.artifacts import write_json_bundle",
         "stage_case",
         "validate_referenced_files",
         "from .evidence import sha256_file, utc_timestamp",

@@ -18,10 +18,6 @@ if str(ROOT) not in sys.path:
 from recipes import issue43_coupling_diagnostic as issue43_recipe
 from recipes import issue45_first_linear as issue45_recipe
 from recipes import issue46_jacobian_localization as issue46_loc_recipe
-from qpx_harness import artifacts as legacy_artifacts
-from qpx_harness import cases as legacy_cases
-from qpx_harness import runtime as legacy_runtime
-from qpx_harness import workspace as legacy_workspace
 from qpx_harness.cli.app import COMMANDS, main as cli_main
 from qpx_harness.evidence import artifacts as evidence_artifacts
 from qpx_harness.execution import cases as execution_cases
@@ -340,7 +336,7 @@ def main() -> int:
     else:
         print("ISSUE67_68_SPEC_DIAGNOSTICS: PASS legacy/spec byte-identical")
 
-    # #70/#72/#73: machine census, capability owners, facade identity, recipe terminal ownership.
+    # #70/#72/#73/#77: machine census, capability owners, facade retirement, recipe terminal ownership.
     try:
         census_module = _load_module(CENSUS_PATH, "issue70_census")
         census = census_module.build_census()
@@ -348,14 +344,16 @@ def main() -> int:
         assert census["generic_to_issue_edges"] == []
         assert census["unclassified"] == []
 
-        assert legacy_runtime.run_qpx is execution_runtime.run_qpx
-        assert legacy_runtime.resolve_executable is execution_runtime.resolve_executable
-        assert legacy_cases.stage_case is execution_cases.stage_case
-        assert legacy_cases.validate_case_references is execution_cases.validate_case_references
-        assert legacy_workspace.discover_manifests is execution_workspace.discover_manifests
-        assert legacy_workspace.inventory_workspace is execution_workspace.inventory_workspace
-        assert legacy_artifacts.write_json_bundle is evidence_artifacts.write_json_bundle
-        assert legacy_artifacts.current_run_artifact is evidence_artifacts.current_run_artifact
+        for retired in ("artifacts.py", "cases.py", "runtime.py", "workspace.py"):
+            assert not (HERE / retired).exists(), retired
+        assert execution_runtime.run_qpx
+        assert execution_runtime.resolve_executable
+        assert execution_cases.stage_case
+        assert execution_cases.validate_case_references
+        assert execution_workspace.discover_manifests
+        assert execution_workspace.inventory_workspace
+        assert evidence_artifacts.write_json_bundle
+        assert evidence_artifacts.current_run_artifact
 
         ownership = json.loads(OWNERSHIP_PATH.read_text())
         recipes = ownership["recipes"]

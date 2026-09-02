@@ -18,14 +18,14 @@ from typing import Any, Iterable
 
 from recipes import issue31_coupling as recipe
 
-from .artifacts import write_json_bundle
-from .cases import CaseError, stage_case, validate_referenced_files
+from .evidence.artifacts import write_json_bundle
+from .execution.cases import CaseError, stage_case, validate_referenced_files
 from .dmix_equivalence import legacy_source_transform
 from .evidence import sha256_file, utc_timestamp
 from .performance_core import PerformanceContractError, run_measurement
 from .performance_smoke import build_smoke_manifest, default_results_root
 from .preflight import validate_parser_symbols_text
-from .runtime import resolve_executable, validate_executable
+from .execution.runtime import resolve_executable, validate_executable
 from .temporal import normalize_from_manifest
 
 

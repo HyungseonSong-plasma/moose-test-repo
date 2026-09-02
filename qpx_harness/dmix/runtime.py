@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from ..runtime import resolve_executable, validate_executable
+from ..execution.runtime import resolve_executable, validate_executable
 from .analysis import REL_TOL, compare, read_dmix, trace_input
 from .source_transform import EquivalenceError, legacy_source_transform
 

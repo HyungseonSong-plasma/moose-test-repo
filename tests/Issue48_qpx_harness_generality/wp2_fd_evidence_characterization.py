@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from qpx_harness import artifacts
+from qpx_harness.evidence import artifacts
 from qpx_harness import issue46_fd_reference as legacy
 from qpx_harness.petsc import fd_reference
 
@@ -235,7 +235,7 @@ def _check_legacy_provenance_equivalence() -> None:
 def _check_policy_boundary() -> None:
     for rel in (
         "qpx_harness/petsc/fd_reference.py",
-        "qpx_harness/artifacts.py",
+        "qpx_harness/evidence/artifacts.py",
     ):
         source = (ROOT / rel).read_text()
         forbidden = (

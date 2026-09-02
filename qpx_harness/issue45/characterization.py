@@ -5,7 +5,7 @@ import json
 import tempfile
 from pathlib import Path
 
-from .. import cases as case_ops
+from ..execution import cases as case_ops
 from ..moose_input import MooseInput
 from .closure_model import (
     _synthetic_closed_input,

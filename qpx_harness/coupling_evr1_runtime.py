@@ -8,7 +8,7 @@ from typing import Iterable
 
 from recipes import issue31_coupling as recipe
 
-from .cases import CaseError
+from .execution.cases import CaseError
 from .coupling_evr1.characterization import self_test
 from .coupling_evr1.classification import (
     _status,

@@ -22,7 +22,7 @@ from .runner import (
     run_measurement,
     validate_experiment_manifest,
 )
-from ..runtime import resolve_executable, validate_executable
+from ..execution.runtime import resolve_executable, validate_executable
 
 
 def _safe_token(value: str) -> str:

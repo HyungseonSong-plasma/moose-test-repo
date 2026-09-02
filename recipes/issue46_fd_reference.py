@@ -11,7 +11,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from qpx_harness import artifacts
+from qpx_harness.evidence import artifacts
 from qpx_harness.moose import dofmap as dm
 from qpx_harness.moose import log as moose_log
 from qpx_harness.moose import parameters as mp

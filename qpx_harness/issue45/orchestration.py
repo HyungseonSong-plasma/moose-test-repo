@@ -5,12 +5,12 @@ import math
 from pathlib import Path
 from typing import Any
 
-from .. import artifacts
-from .. import cases as case_ops
+from ..evidence import artifacts
+from ..execution import cases as case_ops
 from .. import evidence
 from .. import issue43_coupling_diagnostic as coupling_diag
 from .. import issue43_fast_relaxation as v5
-from ..runtime import resolve_executable, run_command, run_qpx, validate_executable
+from ..execution.runtime import resolve_executable, run_command, run_qpx, validate_executable
 from ..scale_audit import mesh_stats
 from .closure_model import (
     _build_constrained_quasisteady_input,

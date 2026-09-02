@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from qpx_harness import artifacts as qa
+from qpx_harness.evidence import artifacts as qa
 from qpx_harness import temporal as qt
 from qpx_harness.moose import blocks as mb
 from qpx_harness.moose import executioner as me
@@ -338,7 +338,7 @@ def _check_recipe_equivalence() -> None:
 
 def _check_generality_surface() -> None:
     for rel in (
-        "qpx_harness/artifacts.py",
+        "qpx_harness/evidence/artifacts.py",
         "qpx_harness/moose/parameters.py",
         "qpx_harness/moose/blocks.py",
         "qpx_harness/moose/executioner.py",
@@ -394,16 +394,13 @@ def _check_generality_surface() -> None:
 
 
 def _check_script_surface() -> dict[str, list[str]]:
-    scripts = sorted(
-        path.name for path in (ROOT / "scripts").iterdir() if path.is_file()
-    )
-    if scripts != ["qpx.py"]:
-        raise AssertionError(f"scripts must expose only qpx.py after cleanup: {scripts}")
+    scripts = ROOT / "scripts"
+    if scripts.exists() and any(scripts.iterdir()):
+        raise AssertionError("retired scripts entrypoint surface reappeared")
 
-    qpx_source = (ROOT / "scripts/qpx.py").read_text()
-    for command in ('"preflight"', '"temporal-csv"', '"self-test"'):
-        if command not in qpx_source:
-            raise AssertionError(f"unified qpx CLI missing command {command}")
+    qpx_source = (ROOT / "bin/qpx.py").read_text()
+    if "from qpx_harness.cli import main" not in qpx_source:
+        raise AssertionError("canonical bin/qpx.py launcher drifted")
 
     # User-local QPX mirrors intentionally carry executable harness/test
     # surfaces without necessarily carrying repository governance files such as

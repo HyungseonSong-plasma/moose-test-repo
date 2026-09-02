@@ -9,7 +9,7 @@ import tempfile
 from pathlib import Path
 from typing import Any, Iterable
 
-from .artifacts import write_json_bundle
+from .evidence.artifacts import write_json_bundle
 from .cpp.calls import split_call_arguments
 from .cpp.source import CppSource, CppSourceError
 from .evidence import sha256_file, utc_timestamp

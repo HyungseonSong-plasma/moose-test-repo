@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from ..evidence import ensure_fresh_directory, sha256_file
-from ..runtime import resolve_executable, run_qpx, validate_executable
+from ..execution.runtime import resolve_executable, run_qpx, validate_executable
 
 SCHEMA_VERSION = 1
 VALID_MODES = {"BENCHMARK", "PROFILE"}

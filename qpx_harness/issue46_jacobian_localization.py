@@ -18,7 +18,7 @@ from typing import Any
 from recipes import issue45_first_linear as first_linear_policy
 from recipes import issue46_jacobian_localization as localization_recipe
 
-from . import artifacts
+from .evidence import artifacts
 from . import electron_inventory_nullspace as inv
 from . import evidence
 from . import issue43_coupling_diagnostic as coupling_diag
@@ -28,7 +28,7 @@ from .moose import parameters as mp
 from .moose_input import MooseInput, MooseInputError
 from .petsc import matrix as pm
 from .petsc import options as po
-from .runtime import resolve_executable, run_qpx, validate_executable
+from .execution.runtime import resolve_executable, run_qpx, validate_executable
 
 ISSUE = 46
 TARGET = localization_recipe.TARGET

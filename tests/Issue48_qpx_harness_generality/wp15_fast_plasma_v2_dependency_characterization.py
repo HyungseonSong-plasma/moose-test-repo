@@ -88,9 +88,9 @@ def _check_coupling_cutover() -> None:
         if token in source:
             raise AssertionError(f"coupling diagnostic retained v2 dependency: {token}")
     for token in (
-        "from . import artifacts",
-        "from . import cases as case_ops",
-        "from .runtime import resolve_executable, run_qpx, validate_executable",
+        "from .evidence import artifacts",
+        "from .execution import cases as case_ops",
+        "from .execution.runtime import resolve_executable, run_qpx, validate_executable",
         "from .scale_audit import mesh_stats",
         "case_ops.stage_case(",
         "case_ops.validate_case_references(",
@@ -107,9 +107,9 @@ def _check_inventory_cutover() -> None:
         if token in source:
             raise AssertionError(f"Issue45 inventory retained v2 dependency: {token}")
     for token in (
-        "from . import artifacts",
-        "from . import cases as case_ops",
-        "from .runtime import resolve_executable, run_command, run_qpx, validate_executable",
+        "from .evidence import artifacts",
+        "from .execution import cases as case_ops",
+        "from .execution.runtime import resolve_executable, run_command, run_qpx, validate_executable",
         "from .scale_audit import mesh_stats",
         "BASE_CASE_RELATIVE = coupling_diag.BASE_CASE_RELATIVE",
         "case_ops.stage_case(",
@@ -130,8 +130,8 @@ def _check_first_linear_cutover() -> None:
         if token in source:
             raise AssertionError(f"first-linear retained v2 dependency: {token}")
     for token in (
-        "from . import artifacts",
-        "from .runtime import resolve_executable, run_qpx, validate_executable",
+        "from .evidence import artifacts",
+        "from .execution.runtime import resolve_executable, run_qpx, validate_executable",
         "inv._stage_case(base_case, case_dir, text)",
         "resolve_executable(",
         "validate_executable(",
@@ -147,8 +147,8 @@ def _check_localization_cutover() -> None:
         if token in source:
             raise AssertionError(f"Issue46 localization retained v2 dependency: {token}")
     for token in (
-        "from . import artifacts",
-        "from .runtime import resolve_executable, run_qpx, validate_executable",
+        "from .evidence import artifacts",
+        "from .execution.runtime import resolve_executable, run_qpx, validate_executable",
         "inv._stage_case(base_case, main_dir, localization_text)",
         "resolve_executable(",
         "validate_executable(",
@@ -164,8 +164,8 @@ def _check_fd_reference_cutover() -> None:
         if token in source:
             raise AssertionError(f"Issue46 FD-reference retained v2 dependency: {token}")
     for token in (
-        "from . import artifacts",
-        "from .runtime import resolve_executable, run_qpx, validate_executable",
+        "from .evidence import artifacts",
+        "from .execution.runtime import resolve_executable, run_qpx, validate_executable",
         "inv._stage_case(base_case, case_dir, ds_text)",
         "resolve_executable(",
         "validate_executable(",

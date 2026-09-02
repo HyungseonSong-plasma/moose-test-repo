@@ -186,7 +186,7 @@ def run_managed_probe(
     from ..runner import run_measurement
     from ...analysis.performance.investigation import discover_latest_smoke
     from ..smoke import default_results_root
-    from ...runtime import resolve_executable, validate_executable
+    from ...execution.runtime import resolve_executable, validate_executable
 
     exe = resolve_executable(executable_arg)
     validate_executable(exe)

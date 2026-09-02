@@ -12,8 +12,8 @@ from typing import Any
 
 from recipes import issue43_fast_relaxation as relaxation_recipe
 
-from . import artifacts
-from . import cases as case_ops
+from .evidence import artifacts
+from .execution import cases as case_ops
 from . import evidence
 from . import execution_contract as ec
 from . import issue43_relaxation_runtime as issue43_runtime
@@ -22,7 +22,7 @@ from . import preflight
 from . import scale_audit
 from . import temporal
 from .moose import executioner as moose_executioner
-from .runtime import resolve_executable, run_qpx, validate_executable
+from .execution.runtime import resolve_executable, run_qpx, validate_executable
 
 
 # Absorbed v3 CORE-16 ownership. Generic mechanics remain in their canonical

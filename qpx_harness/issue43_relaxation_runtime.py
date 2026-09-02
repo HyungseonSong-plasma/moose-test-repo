@@ -16,11 +16,11 @@ from typing import Any
 
 from recipes import issue43_fast_relaxation as relaxation_recipe
 
-from . import cases as case_ops
+from .execution import cases as case_ops
 from .moose_input import MooseInput, MooseInputError
 from .petsc import log as petsc_log
 from .preflight import validate_parser_symbols_text
-from .runtime import run_qpx
+from .execution.runtime import run_qpx
 from .scale_audit import DEFAULT_ELECTRON_DENSITY, DEFAULT_PRESSURE
 
 BASE_CASE_RELATIVE = Path("tests/Issue2_electron_bulk_drift/qvt_prepoisson")

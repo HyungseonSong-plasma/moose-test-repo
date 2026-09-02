@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from .evidence import ensure_fresh_directory, sha256_file
-from .runtime import resolve_executable, run_qpx, validate_executable
+from .execution.runtime import resolve_executable, run_qpx, validate_executable
 
 
 def _quote_hit_path(path: Path) -> str:

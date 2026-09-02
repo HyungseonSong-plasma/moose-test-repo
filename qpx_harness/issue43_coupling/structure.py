@@ -6,7 +6,7 @@ from typing import Any
 
 from recipes import issue43_coupling_diagnostic as recipe
 
-from .. import cases as case_ops
+from ..execution import cases as case_ops
 from .. import execution_contract as ec
 from .. import issue43_fast_relaxation as v5
 from .. import output_observation_contract as ooc

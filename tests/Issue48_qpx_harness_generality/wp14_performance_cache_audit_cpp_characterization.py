@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from qpx_harness import artifacts
+from qpx_harness.evidence import artifacts
 from qpx_harness import cpp_calls
 from qpx_harness import cpp_source
 from qpx_harness import evidence
@@ -91,7 +91,7 @@ def _check_run_root_contract() -> None:
 def _check_production_cutover() -> None:
     source = Path(cache.__file__).read_text()
     for required in (
-        "from .artifacts import write_json_bundle",
+        "from .evidence.artifacts import write_json_bundle",
         "from .cpp_calls import split_call_arguments",
         "from .cpp_source import CppSource",
         "from .evidence import sha256_file, utc_timestamp",

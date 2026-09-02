@@ -4,10 +4,10 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from .. import artifacts
+from ..evidence import artifacts
 from .. import evidence
 from .. import issue43_fast_relaxation as v5
-from ..runtime import resolve_executable, run_qpx, validate_executable
+from ..execution.runtime import resolve_executable, run_qpx, validate_executable
 from ..scale_audit import mesh_stats
 from .analysis import analyze_jacobian_log, analyze_log
 from .constants import (

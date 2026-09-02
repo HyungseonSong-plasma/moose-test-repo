@@ -11,13 +11,12 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from qpx_harness import artifacts
-from qpx_harness import cases
 from qpx_harness import evidence
 from qpx_harness import issue43_fast_relaxation as v5
 from qpx_harness import issue43_relaxation_runtime as runtime43
 from qpx_harness import preflight
-from qpx_harness import runtime
+from qpx_harness.evidence import artifacts
+from qpx_harness.execution import cases, runtime
 from qpx_harness import scale_audit
 from recipes import issue43_fast_relaxation as recipe
 
@@ -52,10 +51,10 @@ V5_CANONICAL_RUNTIME_TOKENS = (
 )
 
 V5_DIRECT_INFRA_TOKENS = (
-    "from . import cases as case_ops",
+    "from .execution import cases as case_ops",
     "from . import preflight",
     "from . import scale_audit",
-    "from .runtime import resolve_executable, run_qpx, validate_executable",
+    "from .execution.runtime import resolve_executable, run_qpx, validate_executable",
     "artifacts.write_json_bundle(",
     "evidence.create_collision_safe_directory(",
     "case_ops.stage_case(",

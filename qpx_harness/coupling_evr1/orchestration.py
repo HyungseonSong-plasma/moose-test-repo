@@ -8,8 +8,8 @@ from typing import Any
 
 from recipes import issue31_coupling as recipe
 
-from ..artifacts import write_json_bundle
-from ..cases import stage_case, validate_referenced_files
+from ..evidence.artifacts import write_json_bundle
+from ..execution.cases import stage_case, validate_referenced_files
 from ..dmix_equivalence import legacy_source_transform
 from ..evidence import sha256_file, utc_timestamp
 from ..performance_core import run_measurement
@@ -20,7 +20,7 @@ from ..performance_smoke import (
     default_results_root,
 )
 from ..preflight import validate_parser_symbols_text
-from ..runtime import resolve_executable, validate_executable
+from ..execution.runtime import resolve_executable, validate_executable
 from .classification import _status, preliminary_classification
 
 EXPERIMENT_ID = "issue31-evr1-optimized-monolithic"

@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 
-from .runtime import TelemetrySample
+from .execution.runtime import TelemetrySample
 
 
 class ExecutionState(str, Enum):

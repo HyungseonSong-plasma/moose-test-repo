@@ -18,7 +18,7 @@ from typing import Any, Iterable
 
 from ...performance.runner import PerformanceContractError
 from ...performance.smoke import default_results_root
-from ...runtime import resolve_executable, validate_executable
+from ...execution.runtime import resolve_executable, validate_executable
 
 CANONICAL_CLASSES = {
     "APPLICATION_EVALUATION",

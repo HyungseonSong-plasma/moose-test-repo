@@ -9,9 +9,9 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from qpx_harness import artifacts
+from qpx_harness.evidence import artifacts
 from qpx_harness import electron_inventory_nullspace as inv
-from qpx_harness import runtime
+from qpx_harness.execution import runtime
 
 ISSUE46_CUTOVERS = {
     "augmented_jacobian_localization.py": "inv._stage_case(base_case, main_dir, localization_text)",
@@ -38,8 +38,8 @@ def _check_issue46_cutovers() -> None:
             if token in source:
                 raise AssertionError(f"Issue46 owner retained v2 dependency in {name}: {token}")
         for token in (
-            "from . import artifacts",
-            "from .runtime import resolve_executable, run_qpx, validate_executable",
+            "from .evidence import artifacts",
+            "from .execution.runtime import resolve_executable, run_qpx, validate_executable",
             stage_token,
             "artifacts.write_json_bundle(",
             "resolve_executable(",

@@ -4,7 +4,7 @@ from __future__ import annotations
 import tempfile
 from pathlib import Path
 
-from .. import cases as case_ops
+from ..execution import cases as case_ops
 from ..petsc import options as po
 from .analysis import analyze_jacobian_text, analyze_log_text
 from .constants import DIAGNOSTIC_PETSC_OPTIONS, JACOBIAN_PETSC_OPTIONS
