@@ -5,7 +5,7 @@
   "dependency_chain":[77,78,82,79,84,80,83],
   "scientific_semantic_impact":"NONE",
   "scientific_p3":"NOT_RUN",
-  "canonical_capability_prefixes":["qpx_harness/analysis/","qpx_harness/cli/","qpx_harness/cpp/","qpx_harness/diagnostics/","qpx_harness/evidence/","qpx_harness/execution/","qpx_harness/moose/","qpx_harness/performance/","qpx_harness/petsc/","qpx_harness/spec/","qpx_harness/transforms/"],
+  "canonical_capability_prefixes":["qpx_harness/analysis/","qpx_harness/cli/","qpx_harness/cpp/","qpx_harness/diagnostics/","qpx_harness/evidence/","qpx_harness/execution/","qpx_harness/inventory/","qpx_harness/moose/","qpx_harness/performance/","qpx_harness/petsc/","qpx_harness/spec/","qpx_harness/transforms/"],
   "canonical_package_surface":["qpx_harness/__init__.py"],
   "cli_presentation_prefixes":["bin/"],
   "scientific_recipe_prefixes":["recipes/"],
