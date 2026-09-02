@@ -1,5 +1,9 @@
 from experiments.R3_electron_master_diagnostic.cases import build_r3_proxy_text
-from experiments.R3_electron_master_diagnostic.spec import CHEAP_CASES, FROZEN_DIFFUSION
+from experiments.R3_electron_master_diagnostic.spec import (
+    CHEAP_CASES,
+    FROZEN_DIFFUSION,
+    FROZEN_NEUTRAL_DENSITY,
+)
 
 
 CASES = {spec.case_id: spec for spec in CHEAP_CASES}
@@ -25,8 +29,9 @@ def test_literal_proxy_routes_only_diffusion_coefficient_away_from_qpx_lookup():
     assert "mobility = electron_mobility" in text
 
 
-def test_generic_ad_proxy_supplies_both_transport_coefficients_for_econst():
+def test_generic_ad_proxy_supplies_transport_and_neutral_observables_for_econst():
     text = build_r3_proxy_text(CASES["A3_GENERIC_AD_BASE"], "Econst")
     assert "type = ADGenericFunctorMaterial" in text
-    assert "prop_names = 'electron_mobility electron_diffusion'" in text
+    assert "prop_names = 'electron_mobility electron_diffusion neutral_number_density'" in text
+    assert repr(FROZEN_NEUTRAL_DENSITY) in text
     assert "mobility = electron_mobility" in text
