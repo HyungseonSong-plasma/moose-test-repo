@@ -8,6 +8,7 @@ from typing import Iterable
 from experiments.Issue93_r3_electron_isolation.prepare import ELECTRON_REFERENCE_CASE
 from experiments.Issue94_r3_electron_diffusion_localization.localization import build_localization_input
 from experiments.R3_electron_master_diagnostic.cases import (
+    _block_bounds,
     _edit_block,
     _set_diffusion_parameter,
     _set_or_insert,
@@ -45,6 +46,23 @@ def _replace_diffusion_block(text: str, replacement: str) -> str:
 
 
 def _set_n0(text: str, n0: float) -> str:
+    """Set n_e only when the numerical value changes.
+
+    The shared master-case editor intentionally rejects semantic no-ops. Completion
+    controls reuse n_e=1e16, so recognize that existing value before invoking it.
+    """
+    start, end = _block_bounds(text, "  [n_e]\n")
+    block = text[start:end]
+    current: float | None = None
+    for line in block.splitlines():
+        if line.strip().startswith("initial_condition ="):
+            try:
+                current = float(line.split("=", 1)[1].strip())
+            except ValueError:
+                current = None
+            break
+    if current == float(n0):
+        return text
     return _set_variable_parameter(text, "initial_condition", repr(float(n0)))
 
 
