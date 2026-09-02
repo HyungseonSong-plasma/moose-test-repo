@@ -48,6 +48,10 @@
       "model": "SPEC_OWNED_COMPAT_ADAPTER",
       "spec": "specs/experiments/issue46_jacobian_localization.json",
       "reason": "all recipe construction is bounded observability instrumentation and is now ExperimentSpec-owned"
+    },
+    "recipes/issue91_r3.py": {
+      "model": "PURE_PYTHON_SCIENTIFIC_POLICY",
+      "reason": "R3 composes accepted heavy and electron transport contracts, binds live p/T_g, freezes prescribed-field/Poisson-off semantics, and owns the bounded common-timestep construction while generic MOOSE mutations remain in qpx_harness"
     }
   }
 }

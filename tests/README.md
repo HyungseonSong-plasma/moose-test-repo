@@ -1,156 +1,19 @@
-# Test layout
+# Pytest validation namespace
 
-`test.json` is the canonical discovery unit used by the reusable regression harness.
+`tests/` is reserved for qpx-free pytest validation.
 
-## Local QPX workspace convention
+Allowed content:
 
-New local runtime work must use one issue-centric workspace under the QPX root:
+- unit tests for reusable Python capabilities;
+- scientific characterization based on synthetic fixtures or persisted evidence;
+- architecture/import/ownership invariants.
 
-```text
-<QPX_ROOT>/temp/test_workspace/
-  Issue{number}_{short_goal}/
-    test.json
-    <input>.i
-    <runtime dependencies>
-```
+Forbidden from the default pytest suite:
 
-Examples:
+- `qpx-opt` execution;
+- framework-effective `--check-input` / P2 execution;
+- P3 scientific runtime;
+- EVR consumption;
+- repository-local `test.json` experiment workspaces.
 
-```text
-temp/test_workspace/Issue15_heavy_mixture_transport/
-temp/test_workspace/Issue16_charge_poisson/
-temp/test_workspace/Issue32_performance_localization/
-temp/test_workspace/Issue33_reusable_qpx_harness/
-```
-
-Naming rule:
-
-```text
-Issue{number}_{short_goal}
-```
-
-Use a short `snake_case` goal. Do not introduce physics/category directory layers such as `flow/...`, `geometry/...`, or `heavy_transport/...` for new local work.
-
-If one issue requires multiple independent execution units, one optional subcase level is allowed:
-
-```text
-Issue32_performance_localization/
-  T2_heavy/
-  T3_heavy_drift/
-  T4_heavy_electron/
-```
-
-Do not create deeper taxonomies unless the issue itself is decomposed.
-
-Canonical versus diagnostic status belongs in `test.json`, not in the directory name. Therefore `regression_workspace` and `diagnostic_workspace` are not separate long-term namespaces.
-
-Existing historical workspaces remain readable during migration so accepted runtime evidence is not invalidated by a path-only change. New work should use `temp/test_workspace/Issue{#}_{goal}`.
-
-## Manifest
-
-Minimal manifest:
-
-```json
-{
-  "name": "case_name",
-  "type": "canonical",
-  "input": "case_name.i",
-  "checker": "check.py",
-  "checker_args": ["case_name_out.csv"]
-}
-```
-
-`type` is one of:
-
-- `canonical`: a permanent regression that must remain PASS as the code evolves.
-- `diagnostic`: an investigation case used to isolate a failure mechanism. It may intentionally FAIL while an incident is open and may later be promoted to canonical.
-
-If `type` is omitted it defaults to `canonical` for backward compatibility.
-
-The checker path and arguments are evaluated relative to the case directory.
-
-## Unified CLI
-
-The canonical execution interface is:
-
-```bash
-python3 bin/qpx.py <command> [args]
-```
-
-Representative generic commands:
-
-```text
-test          run one test.json case
-test-all      discover and run a canonical/diagnostic suite
-profile       capture one-step P2/P3 performance evidence
-analyze       classify PETSc/PerfGraph profiling evidence
-bundle        build a declarative local profiling bundle
-preflight     run static parser-symbol preflight on one MOOSE input
-temporal-csv  normalize transient CSV rows under an explicit temporal policy
-self-test     run all harness static/self-tests
-```
-
-R3 real-QPX equivalence reproduced the accepted canonical suite at `14/14 PASS`; the old `run_test.py`, `run_all.py`, and Issue-32 `r32_*` execution wrappers were retired afterward.
-
-User-facing and maintenance commands that belong to the QPX CLI should route through `bin/qpx.py`; developer-only repository utilities belong under `tools/` when they need a standalone interface.
-
-Parser preflight controls:
-
-```bash
-python3 bin/qpx.py preflight --self-test
-python3 bin/qpx.py preflight <generated-or-packaged-input.i>
-```
-
-Temporal CSV controls:
-
-```bash
-python3 bin/qpx.py temporal-csv --self-test
-python3 bin/qpx.py temporal-csv input_out.csv \
-  --output input_out.physical.csv \
-  --initial-row-policy exclude_observation
-```
-
-## Running tests
-
-Repository-local default suite:
-
-```bash
-python3 bin/qpx.py test-all --type canonical
-```
-
-Local QPX issue workspace:
-
-```bash
-python3 temp/bin/qpx.py test-all \
-  --type canonical \
-  --tests-root temp/test_workspace
-```
-
-During migration, historical and issue-centric roots may be supplied together:
-
-```bash
-python3 temp/bin/qpx.py test-all \
-  --type canonical \
-  --tests-root temp/test_workspace \
-  --tests-root temp/regression_workspace/tests
-```
-
-Run diagnostics with `--type diagnostic`; use `--type all` only when both classes are intentionally required.
-
-Static harness self-tests:
-
-```bash
-python3 bin/qpx.py self-test
-```
-
-## Rules
-
-- Keep each test reproducible from its case assets plus the selected user-local `qpx-opt` executable.
-- Canonical tests encode invariants and must not be weakened to make new code pass.
-- Diagnostic tests isolate one hypothesis at a time and should state what PASS and FAIL mean.
-- Promote a diagnostic to canonical when a fixed mechanism becomes a permanent regression requirement.
-- Include required meshes, data tables, and reference CSVs near the case or verify external assets by hash/provenance.
-- Do not commit generated `*_out.csv`, Exodus output, or run logs.
-- Record important PASS/FAIL interpretation in the owning issue and relevant incident/development documentation.
-- A passing solver exit code is not sufficient; the checker defines the physical/numerical acceptance gates.
-- GitHub static checks do not substitute for user-local P2/P3 physics runtime evidence.
+QPX/MOOSE runtime assets belong under `experiments/`. Exploratory scientific analysis belongs under `studies/`.

@@ -1,4 +1,4 @@
-name: QPX cleanup validation
+name: QPX CI validation
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  validate-cleanup:
+  validate:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -15,16 +15,16 @@ jobs:
         with:
           python-version: '3.11'
       - name: Install validation dependencies
-        run: python -m pip install 'pydantic>=2,<3'
-      - name: Validate Issue 80
-        run: python tests/Issue80_migration_test_retirement/final_guard.py
-      - name: Validate Issue 83
-        run: python tests/Issue83_dependency_released_retirement/final_guard.py
-      - name: Validate Issue 81
-        run: python tests/Issue81_minimal_surface_acceptance/final_guard.py
+        run: python -m pip install 'pydantic>=2,<3' 'pytest>=8,<9'
+      - name: Run qpx-free pytest suite
+        run: python -m pytest -q
+      - name: Run transitional harness self-test
+        run: python bin/qpx.py self-test
+      - name: Validate capability architecture census
+        run: python tools/qpx_architecture_census.py
       - name: Validate Issue 43/45 science refactor
-        run: python tests/Issue43_45_science_refactor/final_guard.py
+        run: python experiments/Issue43_45_science_refactor/final_guard.py
       - name: Validate Issue 89 post-science canonicalization
-        run: python tests/Issue89_post_science_canonicalization/final_guard.py
+        run: python experiments/Issue89_post_science_canonicalization/final_guard.py
       - name: Validate execution contract refactor
-        run: python tests/execution_contract_refactor/guard.py
+        run: python experiments/execution_contract_refactor/guard.py

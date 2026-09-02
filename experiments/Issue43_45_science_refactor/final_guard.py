@@ -35,7 +35,7 @@ def _imports(path: Path) -> set[str]:
 
 
 def main() -> int:
-    expected_case = Path("tests/Issue2_electron_bulk_drift/qvt_prepoisson")
+    expected_case = Path("experiments/Issue2_electron_bulk_drift/qvt_prepoisson")
     assert QVT_PREPOISSON_CASE == expected_case
     issue43_constants = (ROOT / "qpx_harness/issue43_coupling/constants.py").read_text()
     inventory_constants = (ROOT / "qpx_harness/inventory/constants.py").read_text()
@@ -98,9 +98,6 @@ def main() -> int:
     assert "electron_inventory_nullspace" not in first_characterization_source
     assert "_synthetic_constrained_input" in first_characterization_source
 
-    # During the final retirement window the old Issue45 package may still be
-    # present, but it may contain compatibility adapters only; it is no longer a
-    # scientific or runtime implementation owner.
     legacy_issue45_root = ROOT / "qpx_harness/issue45"
     if legacy_issue45_root.exists():
         for path in legacy_issue45_root.glob("*.py"):
