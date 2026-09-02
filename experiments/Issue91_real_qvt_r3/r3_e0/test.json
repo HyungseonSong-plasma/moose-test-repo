@@ -12,7 +12,7 @@
       "source": "input_out.csv",
       "physical": "input_out.physical.csv",
       "time_column": "time",
-      "initial_row_policy": "include_as_physics",
+      "initial_row_policy": "exclude_observation",
       "initial_time": 0.0,
       "time_tol": 1e-15,
       "require_physical_rows": true
