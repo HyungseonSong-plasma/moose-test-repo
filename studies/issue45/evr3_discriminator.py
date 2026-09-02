@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """Issue45 final EVR3 science discriminator.
 
-This is intentionally study code, not framework code.  It performs one
+This is intentionally study code, not framework code. It performs one
 observability-only C0 first-linear run after P1/P2 gates and freezes the raw
 facts needed to distinguish Issue45 H1 conditioning/scaling from H2
 Krylov residual-fidelity loss.
 
-No solver tuning is performed here.  Any reusable mechanics discovered by this
+No solver tuning is performed here. Any reusable mechanics discovered by this
 study are reviewed later by Issue89 before entering qpx_harness.
 """
 from __future__ import annotations
@@ -26,11 +26,7 @@ if str(ROOT) not in sys.path:
 from recipes import issue45_closure_basis as closure_basis
 from recipes import issue45_inventory_constraint as inventory_policy
 from qpx_harness import evidence
-from qpx_harness.execution.runtime import (
-    resolve_executable,
-    run_qpx,
-    validate_executable,
-)
+from qpx_harness.execution.runtime import resolve_executable, run_qpx, validate_executable
 from qpx_harness.inventory import first_linear_orchestration as orch
 from qpx_harness.moose import log as moose_log
 from qpx_harness.moose import parameters as mp
@@ -156,8 +152,18 @@ def _p1_audit(baseline: str, text: str) -> dict[str, Any]:
         text,
         expected_macro_avg=TARGET,
     )
-    add("baseline-closure", closure_before["status"] == "PASS", closure_before["status"], "PASS")
-    add("diagnostic-closure", closure_after["status"] == "PASS", closure_after["status"], "PASS")
+    add(
+        "baseline-closure",
+        closure_before["status"] == "PASS",
+        closure_before["status"],
+        "PASS",
+    )
+    add(
+        "diagnostic-closure",
+        closure_after["status"] == "PASS",
+        closure_after["status"],
+        "PASS",
+    )
 
     nl_max = mp.unquote(mp.get_parameter(text, "Executioner", "nl_max_its"))
     add("bounded-first-linear-horizon", nl_max == "1", nl_max, "1")
@@ -180,15 +186,20 @@ def _p1_audit(baseline: str, text: str) -> dict[str, Any]:
     after_pairs = tuple(po.get_name_value_pairs(text))
     add(
         "pc-realization-preserved",
-        before_pairs == EXPECTED_NAME_VALUE_PAIRS and after_pairs == EXPECTED_NAME_VALUE_PAIRS,
+        before_pairs == EXPECTED_NAME_VALUE_PAIRS
+        and after_pairs == EXPECTED_NAME_VALUE_PAIRS,
         {"before": before_pairs, "after": after_pairs},
         EXPECTED_NAME_VALUE_PAIRS,
     )
 
+    normalized_same = (
+        _normalized_observability_text(baseline)
+        == _normalized_observability_text(text)
+    )
     add(
         "observability-only-input-difference",
-        _normalized_observability_text(baseline) == _normalized_observability_text(text),
-        _normalized_observability_text(baseline) == _normalized_observability_text(text),
+        normalized_same,
+        normalized_same,
         True,
     )
 
@@ -330,11 +341,7 @@ def _parse_singular_monitor(text: str) -> list[dict[str, float | int]]:
 def _scaling_summary(blocks: list[dict[str, float]]) -> dict[str, Any]:
     selected_blocks: list[dict[str, Any]] = []
     for index, block in enumerate(blocks):
-        selected = {
-            name: block[name]
-            for name in SCALING_VARIABLES
-            if name in block
-        }
+        selected = {name: block[name] for name in SCALING_VARIABLES if name in block}
         finite_nonzero = [
             abs(value)
             for value in selected.values()
@@ -372,6 +379,11 @@ def _runtime_facts(text: str, returncode: int) -> dict[str, Any]:
     nonlinear = petsc_log.parse_nonlinear_solve_terminations(text)
     pc_failure = petsc_log.parse_pc_failure_reason(text)
 
+    finite_proxies = [
+        abs(float(row["sigma_max_over_min"]))
+        for row in singular_rows
+        if math.isfinite(float(row["sigma_max_over_min"]))
+    ]
     return {
         "returncode": returncode,
         "ksp_identity": identity,
@@ -380,16 +392,7 @@ def _runtime_facts(text: str, returncode: int) -> dict[str, Any]:
         "singular_value_monitor": {
             "sample_count": len(singular_rows),
             "rows": singular_rows,
-            "max_proxy": (
-                max(
-                    (
-                        abs(float(row["sigma_max_over_min"]))
-                        for row in singular_rows
-                        if math.isfinite(float(row["sigma_max_over_min"]))
-                    ),
-                    default=None,
-                )
-            ),
+            "max_proxy": max(finite_proxies) if finite_proxies else None,
             "interpretation": (
                 "preconditioned-operator conditioning proxy only; not an exact global condition number"
             ),
@@ -478,16 +481,13 @@ def run_evr3(qpx: str | None, results_root: str | None) -> int:
         "p2": preflight["p2"],
         "facts": facts,
         "scientific_interpretation": "PENDING_ISSUE88_PROTOCOL_INTERPRETATION",
-        "followup_runtime_authorized": false,
+        "followup_runtime_authorized": False,
     }
     summary_path = prepared["root"] / "evr3_summary.json"
     _write_json(summary_path, summary)
 
     print(f"ISSUE45_EVR3_CASE_END: rc={run.returncode}")
-    print(
-        "ISSUE45_EVR3_TRUE_RESIDUAL_ROWS: "
-        f"{len(facts['true_residual_rows'])}"
-    )
+    print(f"ISSUE45_EVR3_TRUE_RESIDUAL_ROWS: {len(facts['true_residual_rows'])}")
     print(
         "ISSUE45_EVR3_RESIDUAL_FIDELITY_LOSS: "
         f"{facts['residual_fidelity']['residual_fidelity_loss_observed']}"
@@ -504,10 +504,7 @@ def run_evr3(qpx: str | None, results_root: str | None) -> int:
         "ISSUE45_EVR3_MAX_CONDITIONING_PROXY: "
         f"{facts['singular_value_monitor']['max_proxy']}"
     )
-    print(
-        "ISSUE45_EVR3_SCALING_BLOCKS: "
-        f"{facts['automatic_scaling']['block_count']}"
-    )
+    print(f"ISSUE45_EVR3_SCALING_BLOCKS: {facts['automatic_scaling']['block_count']}")
     print(f"ISSUE45_EVR3_PC_FAILURE_REASON: {facts['pc_failure_reason']}")
     print(f"ISSUE45_EVR3_DIAGNOSTIC_COMPLETE: {facts['diagnostic_complete']}")
     print("ISSUE45_EVR3_RESTART_CAUSALITY: NOT_ESTABLISHED")
@@ -532,9 +529,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.run:
             return run_evr3(args.qpx, args.results_root)
         return run_preflight(args.qpx, args.results_root)
-    except (Issue45EVR3Error, Exception) as exc:
-        # Keep study failures explicit.  This script intentionally does not hide
-        # construction/parser failures behind a framework-specific exception tree.
+    except Exception as exc:
         print(f"ISSUE45_EVR3: HOLD ({type(exc).__name__}: {exc})")
         return 2
 
