@@ -4,12 +4,16 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from recipes import issue45_closure_basis as closure_basis
 from recipes import issue45_first_linear as first_linear_recipe
 
 from ..evidence import artifacts
-from .. import electron_inventory_nullspace as inv
+from ..execution import cases as case_ops
 from .. import evidence
 from ..execution.runtime import resolve_executable, run_qpx, validate_executable
+from ..scale_audit import mesh_stats
+from ..spec.cases import QVT_PREPOISSON_CASE
+from .constants import RUNTIME_PURGE_DIRECTORY_NAMES, RUNTIME_PURGE_PATTERNS
 from .first_linear_structure import audit_first_linear_structure
 
 ISSUE = first_linear_recipe.ISSUE
@@ -18,9 +22,48 @@ instrument_first_linear = first_linear_recipe.instrument_first_linear
 analyze_first_linear_text = first_linear_recipe.analyze_first_linear_text
 
 
+def _base_case_context() -> tuple[Path, str, float]:
+    repo_root = Path(__file__).resolve().parents[2]
+    base_case = repo_root / QVT_PREPOISSON_CASE
+    if not base_case.is_dir():
+        raise first_linear_recipe.Issue45FirstLinearError(
+            f"missing accepted electron control: {base_case}"
+        )
+    mesh = mesh_stats(base_case / "qvt.msh")
+    radial_span = float(mesh["bbox_span_m"]["x"])
+    return base_case, (base_case / "input.i").read_text(), radial_span
+
+
+def _evidence_root(*, exe: Path, results_root: str | None, stem: str) -> Path:
+    root_parent = (
+        Path(results_root).expanduser().resolve()
+        if results_root
+        else exe.parent / "temp" / "results"
+    )
+    return evidence.ensure_fresh_directory(
+        root_parent / f"{stem}_{evidence.utc_timestamp()}"
+    )
+
+
+def _stage_case(source: Path, target: Path, input_text: str) -> None:
+    try:
+        case_ops.stage_case(
+            source,
+            target,
+            input_text=input_text,
+            purge_directory_names=RUNTIME_PURGE_DIRECTORY_NAMES,
+            purge_patterns=RUNTIME_PURGE_PATTERNS,
+        )
+        case_ops.validate_case_references(target)
+    except case_ops.CaseError as exc:
+        raise first_linear_recipe.Issue45FirstLinearError(
+            f"case staging failed: {exc}"
+        ) from exc
+
+
 def _prepare_case(exe: Path, results_root: str | None) -> dict[str, Any]:
-    base_case, base_text, radial_span = inv._base_case_context()
-    base_c0 = inv._build_constrained_quasisteady_input(
+    base_case, base_text, radial_span = _base_case_context()
+    base_c0, closure_meta = closure_basis.build_constrained_quasisteady_input(
         base_text,
         radial_span=radial_span,
         macro_avg=TARGET,
@@ -28,18 +71,19 @@ def _prepare_case(exe: Path, results_root: str | None) -> dict[str, Any]:
     )
     text, instrumentation = instrument_first_linear(base_c0)
     p1 = audit_first_linear_structure(base_c0, text)
-    root = inv._evidence_root(
+    root = _evidence_root(
         exe=exe,
         results_root=results_root,
         stem="issue45_first_linear_diagnostic",
     )
     case_dir = root / "case"
-    inv._stage_case(base_case, case_dir, text)
+    _stage_case(base_case, case_dir, text)
     return {
         "root": root,
         "case_dir": case_dir,
         "input_path": case_dir / "input.i",
         "p1": p1,
+        "closure_basis": closure_meta,
         "instrumentation": instrumentation,
     }
 
@@ -97,6 +141,7 @@ def _write_summary(
         "p3_executed": p3 is not None,
         "p3_authorized_by_harness": False,
         "target": TARGET,
+        "closure_basis": prepared.get("closure_basis"),
         "instrumentation": prepared["instrumentation"],
         "p1": prepared["p1"],
         "p2": p2,
