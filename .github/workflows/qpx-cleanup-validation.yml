@@ -24,3 +24,5 @@ jobs:
         run: python tests/Issue81_minimal_surface_acceptance/final_guard.py
       - name: Validate Issue 43/45 science refactor
         run: python tests/Issue43_45_science_refactor/final_guard.py
+      - name: Validate Issue 89 post-science canonicalization
+        run: python tests/Issue89_post_science_canonicalization/final_guard.py
