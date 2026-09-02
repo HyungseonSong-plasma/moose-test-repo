@@ -11,7 +11,6 @@
   "scientific_recipe_prefixes":["recipes/"],
   "retention_register":[
     {"path":"qpx_harness/bundle.py","owner_class":"ACTIVE_FEATURE_OWNER","current_consumer_or_invariant":"standalone profiling bundle builder and qpx bundle command","why_retained":"#84 KEEP_REPOSITORY_TOOL_WITH_JUSTIFICATION; owns current bundle behavior","future_retirement_trigger":"command/import consumers reach zero and behavior has a canonical replacement","blocking_open_issue":null},
-    {"path":"qpx_harness/execution_contract.py","owner_class":"ACTIVE_FEATURE_OWNER","current_consumer_or_invariant":"CORE-16 JSON schema/evaluation import and CLI contract","why_retained":"#84 KEEP_EXTERNAL_CONTRACT_WITH_JUSTIFICATION; owns a live external contract","future_retirement_trigger":"CORE-16 import/CLI contract is superseded and all consumers migrate","blocking_open_issue":null},
     {"path":"qpx_harness/electron_inventory_nullspace.py","owner_class":"SCIENTIFIC_POLICY","current_consumer_or_invariant":"active Issue45 inventory-nullspace command/import surface","why_retained":"irreducible scientific diagnostic policy protected by #84","future_retirement_trigger":"Issue45 no longer requires inventory-nullspace evidence","blocking_open_issue":45},
     {"path":"qpx_harness/scale_audit.py","owner_class":"SCIENTIFIC_POLICY","current_consumer_or_invariant":"active QVT/Issue43 scale policy with recipe consumers","why_retained":"irreducible scientific scale/audit policy protected by #84","future_retirement_trigger":"Issue43/QVT consumers and scientific evidence contract retire","blocking_open_issue":43},
     {"path":"qpx_harness/issue43_coupling_diagnostic.py","owner_class":"SCIENTIFIC_POLICY","current_consumer_or_invariant":"active Issue43 coupling diagnostic policy","why_retained":"explicit Issue43 experiment semantics; generic mechanics are capability-owned","future_retirement_trigger":"Issue43 scientific program no longer requires this policy surface","blocking_open_issue":43},
@@ -39,6 +38,6 @@
   ],
   "test_classification_policy":{"issue_1_to_46":"SCIENTIFIC_CHARACTERIZATION","issue_47_to_84":"ARCHITECTURE_INVARIANT_GUARD except Issue48 current-science filenames","Issue48_active_science":"SCIENTIFIC_CHARACTERIZATION","Issue48_other_retained":"CURRENT_REGRESSION","other_tests":"CURRENT_REGRESSION"},
   "anti_bloat_gates":{"issue84_unresolved_noncanonical_live_owners":0,"issue83_eligible_retirement_residual_count":0,"retirement_defects":0,"zero_consumer_facade_count":0,"migration_only_executable_tests_from_issue80":0,"generic_to_issue_leakage":0,"namespace_collisions":0},
-  "supplemental_metrics":{"production_owners_by_retention_class":"computed by final guard","test_owners_by_retention_class":"computed by final guard","explicit_nonobvious_retention_entries":24},
+  "supplemental_metrics":{"production_owners_by_retention_class":"computed by final guard","test_owners_by_retention_class":"computed by final guard","explicit_nonobvious_retention_entries":23},
   "metrics":{"Complexity":"C2","WCC":1,"T-WCC":1,"RVR":0,"EVR":0,"DBR":0,"RWR":0,"CLR":0,"FBR":true}
 }
