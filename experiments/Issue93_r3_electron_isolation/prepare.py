@@ -17,7 +17,7 @@ DEFAULT_DT = 1.0e-8
 P_FROZEN = 1.33322
 TG_FROZEN = 600.0
 NE_INITIAL = 1.0e16
-EXPECTED_MESH_SHA256 = "28ff31220904ff81f426d0c2ed8dd18a7fd40b9e"
+EXPECTED_MESH_SHA256 = "a98521af2c106137f9635fe7e2c5ba9b0fd408e17c62eb7c6d3f7c1fff65a03e"
 
 
 class PrepareError(RuntimeError):
@@ -39,10 +39,10 @@ def _replace_exact_once(text: str, old: str, new: str, claim: str) -> str:
     return text.replace(old, new, 1)
 
 
-def _top_level_assignment(text: str, name: str) -> float:
-    match = re.search(rf"(?m)^{re.escape(name)}\s*=\s*([^#\s]+)", text)
+def _assignment(text: str, name: str) -> float:
+    match = re.search(rf"(?m)^\s*{re.escape(name)}\s*=\s*([^#\s]+)", text)
     if not match:
-        raise PrepareError(f"missing top-level assignment {name}")
+        raise PrepareError(f"missing assignment {name}")
     return float(match.group(1))
 
 
@@ -50,17 +50,11 @@ def build_input(
     electron_reference_case: Path = ELECTRON_REFERENCE_CASE,
     dt: float = DEFAULT_DT,
 ) -> str:
-    """Return the accepted #2 qvt input with only the prescribed field changed to zero.
-
-    J1 deliberately does not reconstruct the electron framework contract.  It
-    inherits the already accepted real-qvt #2 input verbatim except for the
-    discriminating scientific change E=0.  The accepted timestep/solver/output
-    settings remain untouched.
-    """
+    """Return the accepted #2 qvt input with only the prescribed field changed to zero."""
     if not dt > 0:
         raise PrepareError("dt must be positive")
     reference = (electron_reference_case / "input.i").read_text()
-    accepted_dt = _top_level_assignment(reference, "dt")
+    accepted_dt = _assignment(reference, "dt")
     if abs(accepted_dt - dt) > 1.0e-30:
         raise PrepareError(
             f"J1 dt must remain the accepted #2 value {accepted_dt:.17g}; requested {dt:.17g}"
@@ -128,7 +122,7 @@ def prepare_case(
         "reference_input_sha256": hashlib.sha256(reference_text.encode()).hexdigest(),
         "candidate_input_sha256": hashlib.sha256(input_text.encode()).hexdigest(),
         "dt_s": dt,
-        "accepted_reference_end_time_s": _top_level_assignment(reference_text, "end_time"),
+        "accepted_reference_end_time_s": _assignment(reference_text, "end_time"),
         "p_frozen_Pa": P_FROZEN,
         "T_g_frozen_K": TG_FROZEN,
         "n_e_initial_m3": NE_INITIAL,
