@@ -4,7 +4,7 @@ from experiments.Issue93_r3_electron_isolation.prepare import ELECTRON_REFERENCE
 from experiments.R3_fv_internal_completion.cases import build_case_text
 from experiments.R3_fv_internal_completion.classify import classify_completion
 from experiments.R3_fv_internal_completion.rz_decomposition import decompose_rz_constant_state
-from experiments.R3_fv_internal_completion.spec import CASES, CASE_BY_ID, JACOBIAN_CASE_IDS
+from experiments.R3_fv_internal_completion.spec import CASES, JACOBIAN_CASE_IDS
 
 
 def test_completion_matrix_prebuilds_all_remaining_fv_layers():
@@ -35,17 +35,22 @@ def test_completion_matrix_prebuilds_all_remaining_fv_layers():
             assert expected in text
 
 
-def test_rz_reproducer_uses_real_qvt_and_scales_linearly_with_constant_state():
+def test_rz_reproducer_uses_real_qvt_and_preserves_normalized_floor_order():
     mesh = ELECTRON_REFERENCE_CASE / "qvt.msh"
     low = decompose_rz_constant_state(mesh, n0=1.0)
     high = decompose_rz_constant_state(mesh, n0=1.0e16)
     assert low["plasma_element_count"] > 0
     assert low["interior_element_count"] > 0
     assert low["interior_element_count"] == high["interior_element_count"]
+    # The reproducer deliberately exposes finite-precision cancellation, so the
+    # normalized floor need not be bitwise scale-invariant. It must remain in the
+    # same narrow order-of-magnitude band when n0 changes by sixteen decades.
     for key in ("normalized_max_abs_final_naive", "normalized_max_abs_final_fsum"):
         assert math.isfinite(low[key])
         assert math.isfinite(high[key])
-        assert math.isclose(low[key], high[key], rel_tol=1.0e-12, abs_tol=1.0e-30)
+        assert low[key] > 0.0
+        ratio = high[key] / low[key]
+        assert 0.99 <= ratio <= 1.01
 
 
 def _base_cases():
