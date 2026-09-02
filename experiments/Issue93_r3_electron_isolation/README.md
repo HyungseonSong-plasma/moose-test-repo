@@ -29,8 +29,15 @@ R_e <- phi_prescribed             prescribed function, not a Newton variable
 R_e <- electron boundary contract no explicit electron FVBC objects inserted
 ```
 
-`T_g` is an AuxVariable in the combined R3 input, so it is a coefficient/runtime
-dependency but not an assembled nonlinear cross block. `p` is nonlinear.
+`p` is a nonlinear pressure variable. `T_g` is not a nonlinear unknown in current
+R3: it is retained in `FunctorMaterials/state_constants` as a constant AD functor.
+Therefore `R_e` has a coefficient dependency on `T_g`, but there is no assembled
+Newton cross block `dR_e/dT_g` in the current formulation.
+
+The accepted electron drift parameterization uses `carrier = carrier_one`; the
+electron number density is the solved `variable = n_e`. The lookup contract uses
+`property_table_file = electron_moments.txt`, `mean_energy = mean_en`, and
+`bounds_policy = error`.
 
 The reciprocal heavy path is through `QPXThermalDiffusionMaterial`, which consumes
 `electron_number_density = n_e`; its `D_mix_*` properties feed the six solved
@@ -44,7 +51,7 @@ and accepted electron table, then solves only:
 ```text
 FVTimeKernel(n_e)
 + FVDiffusion(n_e, electron_diffusion)
-+ QPXFVElectrostaticDrift(n_e, E=0)
++ QPXFVElectrostaticDrift(n_e, carrier_one, E=0)
 ```
 
 with:
