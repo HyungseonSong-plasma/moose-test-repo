@@ -24,7 +24,7 @@ from qpx_harness.evidence import (
 )
 from qpx_harness.execution.runtime import resolve_executable, run_qpx, validate_executable
 
-from .cases import stage_master_case
+from .cases import stage_master_case, stage_r3_proxy_case
 from .classify import classify_matrix
 from .spec import CHEAP_CASES, FROZEN_DIFFUSION, FROZEN_MOBILITY, CaseSpec
 
@@ -192,6 +192,134 @@ def _jacobian_case(
     }
 
 
+def _verify_remedy_proxy(
+    *,
+    spec: CaseSpec,
+    root: Path,
+    exe: Path,
+    timeout: float | None,
+    ledger: ErrorLedger,
+    run_id: str,
+) -> dict[str, Any]:
+    proxy_root = root / spec.case_id
+    proxy_root.mkdir(parents=True)
+    fields: dict[str, dict[str, Any]] = {}
+
+    for field in ("E0", "Econst"):
+        case_dir = proxy_root / field
+        try:
+            staged = stage_r3_proxy_case(spec, field, case_dir)
+            fields[field] = {
+                "case_dir": str(case_dir),
+                "stage": staged,
+                "status": "STAGED",
+                "passed": False,
+            }
+        except Exception as exc:
+            fields[field] = {
+                "case_dir": str(case_dir),
+                "status": "CONSTRUCTION_FAIL",
+                "passed": False,
+                "error": str(exc),
+            }
+            _record_event(
+                ledger,
+                run_id=run_id,
+                stage="VERIFY_P1",
+                case_id=f"{spec.case_id}:{field}",
+                code="REMEDY_PROXY_CONSTRUCTION_FAIL",
+                message=str(exc),
+                source_layer="master_diagnostic_proxy_builder",
+                signals=AttributionSignals(assistant_generated_contract_violation=True),
+            )
+
+    if not all(item["status"] == "STAGED" for item in fields.values()):
+        return {
+            "proxy_case": spec.case_id,
+            "status": "HOLD_CONSTRUCTION",
+            "passed": False,
+            "secondary_owner_exposed": False,
+            "fields": fields,
+        }
+
+    p2_pass = True
+    for field, item in fields.items():
+        case_dir = Path(item["case_dir"])
+        p2 = _p2_case(
+            exe=exe,
+            case_dir=case_dir,
+            log=proxy_root / f"{field}_p2.log",
+            timeout=timeout,
+        )
+        item["p2"] = p2
+        if p2["returncode"] == 0 and not p2["timed_out"]:
+            item["status"] = "P2_PASS"
+        else:
+            item["status"] = "P2_FAIL"
+            p2_pass = False
+            _record_event(
+                ledger,
+                run_id=run_id,
+                stage="VERIFY_P2",
+                case_id=f"{spec.case_id}:{field}",
+                code="REMEDY_PROXY_P2_FAIL",
+                message="full-R3 remedy proxy failed --check-input",
+                source_layer="framework_or_generated_input",
+                signals=AttributionSignals(),
+                evidence=p2,
+            )
+
+    if not p2_pass:
+        return {
+            "proxy_case": spec.case_id,
+            "status": "HOLD_P2",
+            "passed": False,
+            "secondary_owner_exposed": False,
+            "fields": fields,
+        }
+
+    for field, item in fields.items():
+        case_dir = Path(item["case_dir"])
+        p3 = _p3_case(
+            exe=exe,
+            case_dir=case_dir,
+            log=proxy_root / f"{field}_p3.log",
+            timeout=timeout,
+        )
+        item.update(p3)
+        item["status"] = "PASS" if p3["passed"] else "FAIL"
+
+    passed = all(item.get("passed") is True for item in fields.values())
+    secondary = not passed
+    if secondary:
+        _record_event(
+            ledger,
+            run_id=run_id,
+            stage="VERIFY_P3",
+            case_id=spec.case_id,
+            code="REMEDY_PROXY_R3_VERIFICATION_FAIL",
+            message="atomic-owner remedy proxy did not recover both full R3-E0 and R3-Econst",
+            source_layer="secondary_fault_detection",
+            signals=AttributionSignals(contract_conformant=True),
+            evidence={
+                field: {
+                    "returncode": item.get("returncode"),
+                    "timed_out": item.get("timed_out"),
+                    "failure_signature": item.get("failure_signature"),
+                    "electron_residuals": item.get("electron_residuals"),
+                }
+                for field, item in fields.items()
+            },
+        )
+    return {
+        "proxy_case": spec.case_id,
+        "status": "PASS" if passed else "SECONDARY_FAILURE_EXPOSED",
+        "passed": passed,
+        "secondary_owner_exposed": secondary,
+        "fields": fields,
+    }
+
+
 def run(args: argparse.Namespace) -> int:
     exe = resolve_executable(args.qpx)
     validate_executable(exe)
@@ -203,7 +331,8 @@ def run(args: argparse.Namespace) -> int:
     cases_root = root / "cases"
     logs_root = root / "logs"
     jac_root = root / "jacobian"
-    cases_root.mkdir(); logs_root.mkdir(); jac_root.mkdir()
+    verification_root = root / "verification"
+    cases_root.mkdir(); logs_root.mkdir(); jac_root.mkdir(); verification_root.mkdir()
 
     identity = {
         "schema_version": 1,
@@ -338,6 +467,39 @@ def run(args: argparse.Namespace) -> int:
 
     decision = classify_matrix(cases)
 
+    verification: dict[str, Any] = {}
+    proxy_ids = list(dict.fromkeys(
+        owner.get("remedy_proxy_case")
+        for owner in decision.get("owners", [])
+        if owner.get("remedy_proxy_case")
+    ))
+    for proxy_id in proxy_ids:
+        spec = CASE_BY_ID.get(proxy_id)
+        if spec is None:
+            verification[proxy_id] = {
+                "status": "HOLD_UNKNOWN_PROXY",
+                "passed": False,
+                "secondary_owner_exposed": False,
+            }
+            continue
+        verification[proxy_id] = _verify_remedy_proxy(
+            spec=spec,
+            root=verification_root,
+            exe=exe,
+            timeout=args.timeout,
+            ledger=ledger,
+            run_id=run_id,
+        )
+
+    secondary_owner_exposed = any(
+        item.get("secondary_owner_exposed") is True for item in verification.values()
+    )
+    for owner in decision.get("owners", []):
+        proxy_id = owner.get("remedy_proxy_case")
+        owner["remedy_proxy_verification"] = verification.get(proxy_id) if proxy_id else None
+    decision["verification"] = verification
+    decision["secondary_owner_exposed"] = secondary_owner_exposed
+
     for owner in decision.get("owners", []):
         remedy = owner.get("remedy") or {}
         _record_event(
@@ -350,7 +512,11 @@ def run(args: argparse.Namespace) -> int:
                 reproducible_runtime_failure=True,
                 isolated_code_owner=owner["owner"],
             ),
-            evidence={"evidence": owner.get("evidence", []), "geometry": decision.get("geometry")},
+            evidence={
+                "evidence": owner.get("evidence", []),
+                "geometry": decision.get("geometry"),
+                "proxy_verification_status": (owner.get("remedy_proxy_verification") or {}).get("status"),
+            },
             remedy=remedy.get("remedy"),
         )
 
@@ -359,6 +525,7 @@ def run(args: argparse.Namespace) -> int:
         {
             "case_matrix": ("case_matrix.json", cases),
             "jacobian_matrix": ("jacobian_matrix.json", jacobians),
+            "verification_matrix": ("verification_matrix.json", verification),
             "final_diagnosis": ("final_diagnosis.json", decision),
         },
     )
@@ -369,6 +536,7 @@ def run(args: argparse.Namespace) -> int:
         "root": str(root),
         "owners": decision.get("owners", []),
         "unresolved_active_owner": decision.get("unresolved_active_owner", []),
+        "secondary_owner_exposed": secondary_owner_exposed,
         "geometry": decision.get("geometry"),
         "artifacts": artifact_paths,
         "error_stats": error_paths,
@@ -379,6 +547,7 @@ def run(args: argparse.Namespace) -> int:
     print("R3_MASTER_P2: PASS ALL REQUIRED")
     print(f"R3_MASTER_DECISION: {decision.get('status')}")
     print("R3_MASTER_OWNERS: " + json.dumps([item["owner"] for item in decision.get("owners", [])]))
+    print(f"R3_MASTER_SECONDARY_OWNER_EXPOSED: {str(secondary_owner_exposed).lower()}")
     print(f"R3_MASTER_SUMMARY: {root / 'summary.json'}")
     return 0 if decision.get("status") in {"ISOLATED", "RESIDUAL_MATRIX_PASS"} else 1
 
