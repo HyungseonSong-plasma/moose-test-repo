@@ -22,3 +22,5 @@ jobs:
         run: python tests/Issue83_dependency_released_retirement/final_guard.py
       - name: Validate Issue 81
         run: python tests/Issue81_minimal_surface_acceptance/final_guard.py
+      - name: Validate Issue 43/45 science refactor
+        run: python tests/Issue43_45_science_refactor/final_guard.py
