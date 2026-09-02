@@ -1,4 +1,4 @@
-"""User-facing terminal and machine-readable reporting for the QPX harness."""
+"""Execution reporting protocol and default console reporter."""
 
 from __future__ import annotations
 

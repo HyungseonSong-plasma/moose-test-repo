@@ -27,7 +27,7 @@ from . import electron_inventory_nullspace as inv
 from . import evidence
 from . import issue46_jacobian_localization as localization_runtime
 from .moose import dofmap as dm
-from .moose_input import MooseInputError
+from .moose.input import MooseInputError
 from .petsc import matrix as petsc_matrix
 from .petsc import options as petsc_options
 from .execution.runtime import resolve_executable, run_qpx, validate_executable

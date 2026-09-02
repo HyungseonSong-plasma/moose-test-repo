@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from qpx_harness import perfgraph
+from qpx_harness.analysis.performance import perfgraph
 from qpx_harness.cpp import source as cpp_source
 from qpx_harness.performance.probes import transport as direct
 

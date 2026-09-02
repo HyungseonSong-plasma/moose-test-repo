@@ -375,7 +375,7 @@ def _check_production_cutover() -> None:
         "EVR1_BASELINE =",
         "DT_1E6 =",
         "DT_1E8 =",
-        "from .moose_input import",
+        "from .moose.input import",
         "coupling_evr2_timestep",
     ):
         if forbidden in source:

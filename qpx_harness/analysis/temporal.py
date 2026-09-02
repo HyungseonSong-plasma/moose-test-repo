@@ -1,4 +1,4 @@
-"""Temporal CSV normalization and read-only trajectory observation for QPX/MOOSE validation."""
+"""Canonical temporal CSV normalization and trajectory observation."""
 
 from __future__ import annotations
 

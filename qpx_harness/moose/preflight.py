@@ -1,4 +1,4 @@
-"""Reusable QPX/MOOSE static preflight checks."""
+"""Canonical QPX/MOOSE static preflight checks."""
 
 from __future__ import annotations
 

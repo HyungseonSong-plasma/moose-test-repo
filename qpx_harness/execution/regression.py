@@ -1,4 +1,4 @@
-"""Presentation-neutral manifest-driven QPX regression orchestration."""
+"""Canonical manifest-driven QPX regression orchestration."""
 
 from __future__ import annotations
 
@@ -11,12 +11,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Iterable
 
-from .preflight import validate_input_preflight, validate_temporal_manifest_preflight
+from ..moose.preflight import validate_input_preflight, validate_temporal_manifest_preflight
 from .reporting import ConsoleReporter, Reporter
-from .execution.runtime import TelemetryCallback, TelemetrySample, resolve_executable, run_command, run_qpx, validate_executable
+from .runtime import TelemetryCallback, TelemetrySample, resolve_executable, run_command, run_qpx, validate_executable
 from .status import ExecutionState, LivenessClassifier
-from .temporal import normalize_from_manifest
-from .execution.workspace import discover_manifests, load_manifest, manifest_type
+from ..analysis.temporal import normalize_from_manifest
+from .workspace import discover_manifests, load_manifest, manifest_type
 
 StateCallback = Callable[[ExecutionState, float], None]
 

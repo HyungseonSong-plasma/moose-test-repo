@@ -51,7 +51,7 @@ from .issue43_coupling.structure import (
 )
 from .moose import blocks as mb
 from .moose import parameters as mp
-from .moose_input import MooseInputError
+from .moose.input import MooseInputError
 from .petsc import options as po
 
 _RUNTIME_PURGE_DIRECTORY_NAMES = RUNTIME_PURGE_DIRECTORY_NAMES

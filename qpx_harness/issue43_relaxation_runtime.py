@@ -18,8 +18,8 @@ from recipes import issue43_fast_relaxation as relaxation_recipe
 
 from .diagnostics import failure_signature as diagnostic_failure_signature
 from .execution import cases as case_ops
-from .moose_input import MooseInput, MooseInputError
-from .preflight import validate_parser_symbols_text
+from .moose.input import MooseInput, MooseInputError
+from .moose.preflight import validate_parser_symbols_text
 from .execution.runtime import run_qpx
 from .scale_audit import DEFAULT_ELECTRON_DENSITY, DEFAULT_PRESSURE
 

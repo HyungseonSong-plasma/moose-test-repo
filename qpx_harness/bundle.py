@@ -110,7 +110,7 @@ def _write_run_script(path: Path, spec: dict) -> None:
             'HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"',
             'export PYTHONPATH="${HERE}${PYTHONPATH:+:${PYTHONPATH}}"',
             "",
-            'exec python3 -m qpx_harness.profiling \\',
+            'exec python3 -m qpx_harness.performance.profiling \\',
             '  --qpx "${QPX}" \\',
             '  --case-dir "${HERE}/case" \\',
             f'  --input "{profile.get("input", "input.i")}" \\',

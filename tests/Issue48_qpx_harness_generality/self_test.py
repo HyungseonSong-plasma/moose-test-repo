@@ -13,7 +13,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from qpx_harness.evidence import artifacts as qa
-from qpx_harness import temporal as qt
+from qpx_harness.analysis import temporal as qt
 from qpx_harness.moose import blocks as mb
 from qpx_harness.moose import executioner as me
 from qpx_harness.moose import parameters as mp
@@ -343,7 +343,7 @@ def _check_generality_surface() -> None:
         "qpx_harness/moose/blocks.py",
         "qpx_harness/moose/executioner.py",
         "qpx_harness/petsc/options.py",
-        "qpx_harness/temporal.py",
+        "qpx_harness/analysis/temporal.py",
     ):
         source = (ROOT / rel).read_text()
         for forbidden in (

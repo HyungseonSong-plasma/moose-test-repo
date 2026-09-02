@@ -14,7 +14,7 @@ if str(ROOT) not in sys.path:
 from qpx_harness import evidence
 from qpx_harness import issue43_fast_relaxation as v5
 from qpx_harness import issue43_relaxation_runtime as runtime43
-from qpx_harness import preflight
+from qpx_harness.moose import preflight
 from qpx_harness.evidence import artifacts
 from qpx_harness.execution import cases, runtime
 from qpx_harness import scale_audit
@@ -52,7 +52,7 @@ V5_CANONICAL_RUNTIME_TOKENS = (
 
 V5_DIRECT_INFRA_TOKENS = (
     "from .execution import cases as case_ops",
-    "from . import preflight",
+    "from .moose import preflight",
     "from . import scale_audit",
     "from .execution.runtime import resolve_executable, run_qpx, validate_executable",
     "artifacts.write_json_bundle(",

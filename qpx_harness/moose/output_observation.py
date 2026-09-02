@@ -1,4 +1,4 @@
-"""Reusable micro-time output observation contract for MOOSE/QPX."""
+"""Canonical micro-time output observation contract for MOOSE/QPX."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import math
 import re
 from typing import Any
 
-from .moose_input import MooseInput, MooseInputError
+from .input import MooseInput, MooseInputError
 
 
 class OutputObservationContractError(RuntimeError):

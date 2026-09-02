@@ -34,11 +34,11 @@ from qpx_harness.issue46_jacobian_localization import main as jac_localization_m
 from qpx_harness.performance.runner import self_test as performance_self_test
 from qpx_harness.performance.smoke import self_test as performance_smoke_self_test
 from qpx_harness.performance.probes.transport import self_test as performance_transport_probe_self_test
-from qpx_harness.preflight import parser_symbol_self_test, validate_input_preflight
-from qpx_harness.profiling import main as profile_main
-from qpx_harness.regression import cli_run_all, cli_run_test
+from qpx_harness.moose.preflight import parser_symbol_self_test, validate_input_preflight
+from qpx_harness.performance.profiling import main as profile_main
+from qpx_harness.execution.regression import cli_run_all, cli_run_test
 from qpx_harness.scale_audit import main as scale_audit_main, self_test as scale_audit_self_test
-from qpx_harness.temporal import (
+from qpx_harness.analysis.temporal import (
     VALID_INITIAL_POLICIES,
     normalize_temporal_csv,
     self_test as temporal_self_test,

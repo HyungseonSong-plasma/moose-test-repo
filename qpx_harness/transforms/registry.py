@@ -5,7 +5,7 @@ from collections.abc import Callable
 
 from ..moose import blocks as moose_blocks
 from ..moose import parameters as moose_parameters
-from ..moose_input import MooseInput, MooseInputError
+from ..moose.input import MooseInput, MooseInputError
 from ..petsc import options as petsc_options
 from ..spec.plan import CasePlan, OperationPlan
 

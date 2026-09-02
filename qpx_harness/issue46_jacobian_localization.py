@@ -25,7 +25,7 @@ from . import issue43_coupling_diagnostic as coupling_diag
 from .moose import blocks as mb
 from .moose import dofmap as dm
 from .moose import parameters as mp
-from .moose_input import MooseInput, MooseInputError
+from .moose.input import MooseInput, MooseInputError
 from .petsc import matrix as pm
 from .petsc import options as po
 from .execution.runtime import resolve_executable, run_qpx, validate_executable

@@ -18,7 +18,7 @@ from ..performance.smoke import (
     default_results_root,
     run_managed_measurement,
 )
-from ..preflight import validate_parser_symbols_text
+from ..moose.preflight import validate_parser_symbols_text
 from ..execution.runtime import resolve_executable, validate_executable
 from .classification import _status, preliminary_classification
 

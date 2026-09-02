@@ -1,4 +1,4 @@
-"""Reusable MOOSE PerfGraph hierarchy traversal and aggregation primitives.
+"""Canonical MOOSE PerfGraph hierarchy traversal and aggregation primitives.
 
 This module parses raw PerfGraphReporter JSON into path-aware timing rows.
 It owns hierarchy mechanics only; bottleneck policy and experiment-specific

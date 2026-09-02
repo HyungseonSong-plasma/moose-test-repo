@@ -9,12 +9,12 @@ from recipes import issue43_coupling_diagnostic as recipe
 from ..execution import cases as case_ops
 from .. import execution_contract as ec
 from .. import issue43_fast_relaxation as v5
-from .. import output_observation_contract as ooc
+from ..moose import output_observation as ooc
 from ..moose import blocks as mb
 from ..moose import parameters as mp
-from ..moose_input import MooseInputError
+from ..moose.input import MooseInputError
 from ..petsc import options as po
-from ..preflight import validate_parser_symbols_text
+from ..moose.preflight import validate_parser_symbols_text
 from .constants import (
     DIAGNOSTIC_PETSC_OPTIONS,
     JACOBIAN_PETSC_OPTIONS,

@@ -22,7 +22,7 @@ if str(ROOT) not in sys.path:
 from qpx_harness import issue46_jacobian_localization as loc
 from qpx_harness import electron_inventory_nullspace as inv
 from qpx_harness import issue46_fd_reference as base
-from qpx_harness.moose_input import MooseInput
+from qpx_harness.moose.input import MooseInput
 from qpx_harness.petsc import options as petsc_options
 from recipes import issue45_first_linear as first_linear
 

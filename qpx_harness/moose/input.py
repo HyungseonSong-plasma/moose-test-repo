@@ -1,4 +1,4 @@
-"""Reusable structure-aware MOOSE/HIT input block editing."""
+"""Canonical structure-aware MOOSE/HIT input block editing."""
 
 from __future__ import annotations
 

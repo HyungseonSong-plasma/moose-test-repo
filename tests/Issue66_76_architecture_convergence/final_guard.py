@@ -25,7 +25,7 @@ from qpx_harness.execution import runtime as execution_runtime
 from qpx_harness.execution import workspace as execution_workspace
 from qpx_harness.moose import blocks as mb
 from qpx_harness.moose import parameters as mp
-from qpx_harness.moose_input import MooseInput
+from qpx_harness.moose.input import MooseInput
 from qpx_harness.petsc import options as po
 from qpx_harness.spec import ExperimentSpecError, compile_spec, load_json_file, load_payload
 from qpx_harness.spec.plan import OperationPlan

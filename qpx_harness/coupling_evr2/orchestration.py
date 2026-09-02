@@ -27,13 +27,13 @@ from ..performance.smoke import (
     default_results_root,
     run_managed_measurement,
 )
-from ..preflight import validate_parser_symbols_text
+from ..moose.preflight import validate_parser_symbols_text
 from ..execution.runtime import (
     resolve_executable,
     run_command,
     validate_executable,
 )
-from ..temporal import normalize_from_manifest
+from ..analysis.temporal import normalize_from_manifest
 
 
 EXPERIMENT_ID = "issue31-evr2-timestep-scaling"

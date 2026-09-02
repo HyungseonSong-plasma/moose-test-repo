@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import argparse
 
-from .moose_input import MooseInputError
+from .moose.input import MooseInputError
 from .issue45.characterization import self_test
 from .issue45.closure_model import (
     _build_constrained_quasisteady_input,

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import re
 
-from ..moose_input import MooseInput, MooseInputError
+from .input import MooseInput, MooseInputError
 
 
 class MooseParameterError(RuntimeError):

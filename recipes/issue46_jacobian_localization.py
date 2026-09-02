@@ -8,7 +8,7 @@ from typing import Any
 
 from qpx_harness.moose import blocks as mb
 from qpx_harness.moose import parameters as mp
-from qpx_harness.moose_input import MooseInputError
+from qpx_harness.moose.input import MooseInputError
 from qpx_harness.petsc import options as po
 from qpx_harness.spec import compile_spec, load_json_file
 from qpx_harness.spec.plan import CasePlan, ExecutionPlan, OperationPlan

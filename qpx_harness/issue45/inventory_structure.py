@@ -5,8 +5,8 @@ import math
 import re
 from typing import Any
 
-from ..moose_input import MooseInput, MooseInputError
-from ..preflight import validate_parser_symbols_text
+from ..moose.input import MooseInput, MooseInputError
+from ..moose.preflight import validate_parser_symbols_text
 from .constants import (
     CONSTRAINT_TYPE,
     DRIFT_TYPE,

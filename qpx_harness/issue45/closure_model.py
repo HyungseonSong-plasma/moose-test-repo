@@ -4,7 +4,7 @@ from __future__ import annotations
 import re
 
 from .. import issue43_fast_relaxation as v5
-from ..moose_input import MooseInput
+from ..moose.input import MooseInput
 from .constants import (
     C0_TARGET,
     C1_TARGET,

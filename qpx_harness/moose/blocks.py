@@ -5,7 +5,7 @@ physics variable, Issue number, solver policy, or experiment identity.
 """
 from __future__ import annotations
 
-from ..moose_input import MooseInput, MooseInputError
+from .input import MooseInput, MooseInputError
 
 
 class MooseBlockError(ValueError):

@@ -6,7 +6,7 @@ import tempfile
 from pathlib import Path
 
 from ..execution import cases as case_ops
-from ..moose_input import MooseInput
+from ..moose.input import MooseInput
 from .closure_model import (
     _synthetic_closed_input,
     _synthetic_constrained_input,

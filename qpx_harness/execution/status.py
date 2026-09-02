@@ -1,11 +1,11 @@
-"""Presentation-neutral semantic state classification for QPX execution."""
+"""Canonical presentation-neutral state classification for QPX execution."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
 
-from .execution.runtime import TelemetrySample
+from .runtime import TelemetrySample
 
 
 class ExecutionState(str, Enum):

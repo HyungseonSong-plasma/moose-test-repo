@@ -18,7 +18,7 @@ if str(ROOT) not in sys.path:
 from recipes import issue43_coupling_diagnostic as recipe
 from qpx_harness.moose import blocks as mb
 from qpx_harness.moose import parameters as mp
-from qpx_harness.moose_input import MooseInput
+from qpx_harness.moose.input import MooseInput
 from qpx_harness.petsc import options as po
 from qpx_harness.spec import compile_spec, load_json_file, load_payload
 from qpx_harness.transforms import SUPPORTED_OPERATIONS, apply_case_plan

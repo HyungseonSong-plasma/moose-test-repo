@@ -20,7 +20,7 @@ from .issue45.first_linear_structure import (
     _normalized_diagnostic_text,
     audit_first_linear_structure,
 )
-from .moose_input import MooseInputError
+from .moose.input import MooseInputError
 
 ISSUE = first_linear_recipe.ISSUE
 TARGET = first_linear_recipe.TARGET

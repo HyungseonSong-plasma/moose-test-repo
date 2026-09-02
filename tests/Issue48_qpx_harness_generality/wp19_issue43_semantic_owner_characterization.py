@@ -36,7 +36,7 @@ REQUIRED_OWNER_SURFACE = (
 REQUIRED_ARCHITECTURE_TOKENS = (
     "from recipes import issue43_fast_relaxation as relaxation_recipe",
     "from . import issue43_relaxation_runtime as issue43_runtime",
-    "from . import output_observation_contract as ooc",
+    "from .moose import output_observation as ooc",
     "from . import execution_contract as ec",
 )
 
