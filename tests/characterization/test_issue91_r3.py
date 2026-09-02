@@ -29,6 +29,16 @@ def test_issue91_assets_are_self_contained() -> None:
             assert (case / required).is_file(), (name, required)
 
 
+def test_issue91_prepare_scripts_are_cwd_independent() -> None:
+    for name in ("r3_e0", "r3_econst"):
+        source = (CASE_ROOT / name / "prepare.py").read_text()
+        assert "CASE_DIR = Path(__file__).resolve().parent" in source
+        assert '(CASE_DIR / "heavy_base.i").read_text()' in source
+        assert '(CASE_DIR / "input.i").write_text(text)' in source
+        assert '(CASE_DIR / "prepare_evidence.json").write_text(' in source
+        assert 'Path("heavy_base.i")' not in source
+
+
 def test_issue91_temporal_checker_uses_positive_time_normalized_rows() -> None:
     for name in ("r3_e0", "r3_econst"):
         cfg = json.loads((CASE_ROOT / name / "test.json").read_text())
