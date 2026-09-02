@@ -16,7 +16,6 @@ from qpx_harness.inventory import characterization as inventory_characterization
 from qpx_harness.inventory import first_linear_characterization as inventory_first_linear_characterization
 from qpx_harness.issue43_coupling import analysis as issue43_analysis
 from qpx_harness.issue43_coupling import characterization as issue43_characterization
-from qpx_harness.issue45 import first_linear_characterization as legacy_issue45_characterization
 from qpx_harness.moose import check_input as check_input_diagnostic
 from qpx_harness.petsc import ksp
 from qpx_harness.spec.cases import QVT_PREPOISSON_CASE
@@ -36,7 +35,6 @@ def _imports(path: Path) -> set[str]:
 
 
 def main() -> int:
-    # Shared case identity belongs to canonical spec infrastructure, not one issue.
     expected_case = Path("tests/Issue2_electron_bulk_drift/qvt_prepoisson")
     assert QVT_PREPOISSON_CASE == expected_case
     issue43_constants = (ROOT / "qpx_harness/issue43_coupling/constants.py").read_text()
@@ -45,7 +43,6 @@ def main() -> int:
     assert "QVT_PREPOISSON_CASE" in inventory_constants
     assert "issue43_coupling_diagnostic" not in inventory_constants
 
-    # Generic coupling facts are capability-owned and may not depend on recipes/issues.
     coupling_path = ROOT / "qpx_harness/diagnostics/coupling.py"
     imports = _imports(coupling_path)
     assert not any(module.startswith("recipes") for module in imports), imports
@@ -54,8 +51,6 @@ def main() -> int:
     assert "coupling_diagnostic.analyze_runtime_failure" in source43
     assert issue43_analysis._line_hits is not None
 
-    # The accepted Issue43 feedback basis is recipe-owned. Prove byte
-    # equivalence to the historical v5 composition before retiring that facade.
     fixture = issue43_runtime._fixture()
     canonical_feedback, basis_meta = issue45_closure_basis.build_closed_feedback_input(
         fixture,
@@ -72,9 +67,6 @@ def main() -> int:
     assert canonical_feedback == legacy_feedback
     assert basis_meta["versioned_qpx_facade_dependency"] is False
 
-    # Issue45 production ownership has moved to the capability-named inventory
-    # package. It may consume recipes and generic capabilities, but not Issue43
-    # production modules or the former Issue45 top-level facades.
     canonical_inventory_files = {
         "__init__.py",
         "characterization.py",
@@ -106,13 +98,27 @@ def main() -> int:
     assert "electron_inventory_nullspace" not in first_characterization_source
     assert "_synthetic_constrained_input" in first_characterization_source
 
-    # Unified CLI must route Issue45 behavior through the capability-named owner.
+    # During the final retirement window the old Issue45 package may still be
+    # present, but it may contain compatibility adapters only; it is no longer a
+    # scientific or runtime implementation owner.
+    legacy_issue45_root = ROOT / "qpx_harness/issue45"
+    if legacy_issue45_root.exists():
+        for path in legacy_issue45_root.glob("*.py"):
+            if path.name == "__init__.py":
+                continue
+            source = path.read_text()
+            assert "Compatibility adapter" in source, path
+            tree = ast.parse(source, filename=str(path))
+            assert not any(
+                isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
+                for node in tree.body
+            ), path
+
     cli_source = (ROOT / "qpx_harness/cli/app.py").read_text()
     assert "from qpx_harness.inventory.cli import" in cli_source
     assert "qpx_harness.electron_inventory_nullspace" not in cli_source
     assert "qpx_harness.issue45_first_linear" not in cli_source
 
-    # KSP residual fidelity is a reusable fact and restart coincidence is non-causal.
     rows = [
         {
             "iteration": 0,
@@ -133,25 +139,21 @@ def main() -> int:
     assert audit["worst_at_restart_boundary"] is True, audit
     assert audit["causal_attribution"] == "NOT_ESTABLISHED", audit
 
-    # Issue45 policy must preserve this epistemic boundary.
     recipe_source = (ROOT / "recipes/issue45_first_linear.py").read_text()
     assert "GMRES_RESTART_BREAKDOWN" not in recipe_source
     assert "KSP_BREAKDOWN_RESIDUAL_FIDELITY_LOSS" in recipe_source
     assert "restart_causality=\"NOT_ESTABLISHED\"" in recipe_source
 
-    # P0/self-test only: no scientific runtime or EVR is consumed by this guard.
     assert check_input_diagnostic.self_test() == 0
     assert issue43_characterization.self_test() == 0
     assert inventory_characterization.self_test() == 0
     assert inventory_first_linear_characterization.self_test() == 0
-    # Legacy characterization remains as a temporary compatibility proof until
-    # downstream tests migrate to qpx_harness.inventory.
-    assert legacy_issue45_characterization.self_test() == 0
 
     print("ISSUE43_45_SHARED_CASE_IDENTITY: PASS")
     print("ISSUE43_45_CANONICAL_COUPLING_DIAGNOSTICS: PASS")
     print("ISSUE43_45_FEEDBACK_BASIS_EQUIVALENCE: PASS")
     print("ISSUE45_CANONICAL_INVENTORY_PACKAGE: PASS")
+    print("ISSUE45_LEGACY_PACKAGE_IMPLEMENTATION_OWNERS: 0")
     print("ISSUE45_CLI_CANONICAL_CUTOVER: PASS")
     print("ISSUE45_RECIPE_POLICY_CONVERGENCE: PASS")
     print("ISSUE45_KSP_RESIDUAL_FIDELITY_AUDIT: PASS")
