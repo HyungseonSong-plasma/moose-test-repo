@@ -154,8 +154,8 @@ def classify_matrix(cases: Mapping[str, Mapping[str, Any]]) -> dict[str, Any]:
             owners.append(_owner(
                 "STATE_MAGNITUDE_CONDITIONING",
                 evidence=evidence,
-                proxy=magnitude_pass,
-                mechanism="the zero-gradient literal-D operator changes from FAIL to PASS when only the absolute electron unknown scale is reduced; this favors floating-point/conditioning rather than a coefficient-provider defect",
+                proxy=None,
+                mechanism="the zero-gradient literal-D operator changes from FAIL to PASS when only the absolute electron unknown scale is reduced; this favors floating-point/conditioning rather than a coefficient-provider defect. Low-density cases are diagnostic counterfactuals, not physical full-R3 remedy proxies.",
             ))
 
         if not owners:
