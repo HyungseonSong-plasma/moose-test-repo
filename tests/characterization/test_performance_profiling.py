@@ -2,33 +2,33 @@ from __future__ import annotations
 
 import pytest
 
-from qpx_harness.performance.profiling import (
-    build_bounded_petsc_overrides,
-    build_bounded_runtime_overrides,
-)
+from qpx_harness.performance.profiling import build_bounded_executioner_overlay
 
 
-def test_bounded_profile_overrides_default_to_no_numerical_change() -> None:
-    assert build_bounded_runtime_overrides() == []
-    assert build_bounded_petsc_overrides() == []
+def test_bounded_profile_overlay_defaults_to_no_numerical_change() -> None:
+    assert build_bounded_executioner_overlay() == ""
 
 
-def test_bounded_profile_overrides_are_explicit_and_minimal() -> None:
-    assert build_bounded_runtime_overrides(
+def test_bounded_profile_overlay_is_explicit_and_minimal() -> None:
+    assert build_bounded_executioner_overlay(
         nl_max_its=3,
         abort_on_solve_fail=True,
-    ) == [
-        "Executioner/nl_max_its=3",
-        "Executioner/abort_on_solve_fail=true",
-    ]
-    assert build_bounded_petsc_overrides(nl_max_its=3) == [
-        "-snes_max_it",
-        "3",
-    ]
+    ) == (
+        "[Executioner]\n"
+        "  nl_max_its = 3\n"
+        "  abort_on_solve_fail = true\n"
+        "[]\n"
+    )
+
+
+def test_bounded_profile_overlay_can_limit_iterations_without_abort() -> None:
+    assert build_bounded_executioner_overlay(nl_max_its=2) == (
+        "[Executioner]\n"
+        "  nl_max_its = 2\n"
+        "[]\n"
+    )
 
 
 def test_bounded_profile_rejects_nonpositive_iteration_cap() -> None:
     with pytest.raises(ValueError, match="positive integer"):
-        build_bounded_runtime_overrides(nl_max_its=0)
-    with pytest.raises(ValueError, match="positive integer"):
-        build_bounded_petsc_overrides(nl_max_its=0)
+        build_bounded_executioner_overlay(nl_max_its=0)
