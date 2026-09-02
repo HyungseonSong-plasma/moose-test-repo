@@ -1,0 +1,66 @@
+{
+  "work_id": "issue43-45-science-refactor",
+  "date": "2026-09-02",
+  "baseline_commit": "5f0e5993f51d90f4e58748c086b3e7f8c743f235",
+  "issues": [43, 45],
+  "scientific_runtime_policy": {
+    "issue43_evr_consumed_by_refactor": 0,
+    "issue43_evr_state": "EXHAUSTED_BEFORE_REFACTOR",
+    "issue45_evr_consumed_by_refactor": 0,
+    "issue45_evr_state": "2_OF_3_CONSUMED_EVR3_PRESERVED_NOT_AUTHORIZED"
+  },
+  "scientific_state": {
+    "augmented_jacobian": "TRUSTWORTHY_ON_ACCEPTED_DS_REFERENCE_EVIDENCE",
+    "steady_blocker": "KSP_DIVERGED_BREAKDOWN",
+    "gmres_restart_boundary": "OBSERVED_CHRONOLOGY_NOT_ESTABLISHED_CAUSE",
+    "residual_fidelity": "REPORTED_VS_TRUE_RESIDUAL_SEPARATION_IS_A_FIRST_CLASS_AUDIT_FACT",
+    "next_hypotheses": [
+      "conditioning_or_scaling",
+      "krylov_orthogonality_or_residual_fidelity",
+      "formulation_failure_only_if_existing_artifacts_support_it"
+    ]
+  },
+  "canonicalization": {
+    "added": [
+      "qpx_harness/diagnostics/coupling.py",
+      "qpx_harness/spec/cases.py"
+    ],
+    "modified": [
+      "qpx_harness/issue43_coupling/analysis.py",
+      "qpx_harness/issue43_coupling/constants.py",
+      "qpx_harness/issue45/constants.py",
+      "qpx_harness/petsc/ksp.py",
+      "recipes/issue45_first_linear.py",
+      "qpx_harness/issue45/first_linear_characterization.py"
+    ],
+    "cross_issue_edges_removed": [
+      "qpx_harness/issue45/constants.py -> qpx_harness/issue43_coupling_diagnostic.py"
+    ],
+    "canonical_rules": [
+      "generic diagnostic facts live under qpx_harness capability packages",
+      "experiment causality and thresholds live in recipes/specs",
+      "shared repository case identity is not owned by an issue",
+      "restart-boundary coincidence must not be promoted to causal attribution"
+    ]
+  },
+  "next_refactor_wave": {
+    "issue43": [
+      "migrate qpx_harness/issue43_coupling package into canonical coupling capability",
+      "decompose issue43_fast_* runtime composition into execution/diagnostics plus recipe policy",
+      "retire issue43_coupling_diagnostic.py and issue43_fast_relaxation.py facades after consumer migration"
+    ],
+    "issue45": [
+      "migrate qpx_harness/issue45 package into canonical inventory capability",
+      "remove closure_model dependency on issue43_fast_relaxation facade",
+      "retire electron_inventory_nullspace.py and issue45_first_linear.py facades after consumer migration",
+      "apply residual-fidelity audit to retained EVR1 artifacts before any EVR3 design"
+    ]
+  },
+  "acceptance_target": {
+    "issue_numbered_qpx_harness_production_owners": 0,
+    "cli_to_issue_module_imports": 0,
+    "generic_to_issue_edges": 0,
+    "scientific_characterization_preserved": true,
+    "new_scientific_runtime_required_for_refactor": false
+  }
+}
