@@ -4,8 +4,8 @@
 Order:
   T0 qpx-free characteristic-time audit
   -> D2A residual-scaling discriminator
-  -> D2B bounded Jacobian consistency if needed
-  -> D2C one T0-informed temporal discriminator only when justified
+  -> D2C T0-informed temporal discriminator first when T0-B is established
+  -> D2B bounded Jacobian consistency only after the temporal branch, if needed
 
 D1 is not rerun. This file is Issue-specific diagnostic orchestration, not a
 qpx_harness production capability and not a scientific-acceptance runner.
@@ -239,6 +239,12 @@ def _plasma_cell_count_v41(mesh_text: str) -> int | None:
         return None
 
 
+def _diagnostic_order(t0_decision: str) -> tuple[str, ...]:
+    if t0_decision == "T0-B":
+        return ("D2A", "D2C", "D2B_OPTIONAL")
+    return ("D2A", "D2B")
+
+
 def _finish(root: Path, manifest: dict[str, Any], summary: dict[str, Any], rc: int) -> int:
     manifest.update(
         finished_at=_now(),
@@ -260,6 +266,63 @@ def _finish(root: Path, manifest: dict[str, Any], summary: dict[str, Any], rc: i
     print(decision, end="")
     print(f"ARTIFACT_ROOT: {root}")
     return rc
+
+
+def _run_jacobian_branch(
+    *,
+    qpx: str,
+    case: Path,
+    canonical: str,
+    logs: Path,
+    manifest: dict[str, Any],
+    summary: dict[str, Any],
+    hyp: dict[str, str],
+    max_jacobian_dofs: int,
+    timeout: int,
+) -> tuple[bool, int | None]:
+    mesh_text = (case / "qvt.msh").read_text()
+    cells = _plasma_cell_count_v41(mesh_text)
+    dofs = cells * len(ALL_VARS) if cells is not None else None
+    guard = dofs is None or dofs > max_jacobian_dofs
+    summary["d2b"] = {
+        "mesh_2d_cells": cells,
+        "estimated_solution_dofs": dofs,
+        "max_jacobian_dofs": max_jacobian_dofs,
+        "cost_guard": guard,
+    }
+    if guard:
+        summary["d2b"]["jacobian_status"] = "JACOBIAN_CHECK_SKIPPED_COST_GUARD"
+        hyp["H3"] = "HOLD"
+        return False, None
+
+    p = _overlay(case, "d2b_jacobian", build_overlay(canonical, nl_max_its=1))
+    check, runtime = _check_run(
+        qpx,
+        case,
+        p,
+        logs,
+        "d2b_jacobian",
+        timeout,
+        ["-snes_test_jacobian"],
+    )
+    _subrun(manifest, "D2B", p, ["-snes_test_jacobian", "nl_max_its=1"], check, runtime)
+    if runtime is None:
+        summary["d2b"]["jacobian_status"] = "CHECK_INPUT_FAIL"
+        hyp["H6"] = "FAVORED"
+        summary["terminal_reason"] = "D2B_CHECK_INPUT_FAIL"
+        return True, 2
+    status, rows = classify_jacobian(Path(runtime.log).read_text())
+    summary["d2b"].update(jacobian_status=status, rows=rows)
+    if status == "MATERIAL_MISMATCH":
+        hyp["H3"] = "FAVORED"
+        summary["terminal_reason"] = "MATERIAL_JACOBIAN_MISMATCH"
+        return True, 0
+    if status != "ACCEPTABLE":
+        hyp["H3"] = "HOLD"
+        summary["terminal_reason"] = f"JACOBIAN_{status}"
+        return True, 1
+    hyp["H3"] = "DISFAVORED"
+    return False, None
 
 
 def run(args: argparse.Namespace) -> int:
@@ -297,13 +360,14 @@ def run(args: argparse.Namespace) -> int:
         "canonical_input_sha256": _sha(canonical),
         "evr2_reference_sha256": _sha(REFERENCE.read_text()),
         "t0": t0,
+        "diagnostic_order": _diagnostic_order(t0["decision"]),
         "subruns": [],
     }
     hyp = {
         "H1": "DISFAVORED",
         "H2": "OPEN",
         "H3": "OPEN",
-        "H4": "OPEN",
+        "H4": "FAVORED_AS_INVESTIGATION_BRANCH" if t0["decision"] == "T0-B" else "OPEN",
         "H5": "DISFAVORED",
         "H6": "DISFAVORED",
     }
@@ -315,6 +379,7 @@ def run(args: argparse.Namespace) -> int:
         "hypotheses": hyp,
         "scientific_acceptance_eligible": False,
         "t0": t0,
+        "diagnostic_order": _diagnostic_order(t0["decision"]),
         "d1_reference": asdict(reference),
         "d2a": None,
         "d2b": None,
@@ -338,89 +403,85 @@ def run(args: argparse.Namespace) -> int:
         return _finish(root, manifest, summary, 0)
     hyp["H2"] = "DISFAVORED"
 
-    # D2B: fail closed if the real-QVT FD Jacobian test exceeds the declared guard.
-    mesh_text = (case / "qvt.msh").read_text()
-    cells = _plasma_cell_count_v41(mesh_text)
-    dofs = cells * len(ALL_VARS) if cells is not None else None
-    guard = dofs is None or dofs > args.max_jacobian_dofs
-    summary["d2b"] = {
-        "mesh_2d_cells": cells,
-        "estimated_solution_dofs": dofs,
-        "max_jacobian_dofs": args.max_jacobian_dofs,
-        "cost_guard": guard,
-    }
-    if guard:
-        summary["d2b"]["jacobian_status"] = "JACOBIAN_CHECK_SKIPPED_COST_GUARD"
-        hyp["H3"] = "HOLD"
-        hyp["H4"] = "FAVORED_AS_INVESTIGATION_BRANCH" if t0["decision"] == "T0-B" else "HOLD"
+    # T0-B has priority over the expensive Jacobian branch. This preserves the
+    # final EVR for the strongest qpx-free discriminator instead of allowing a
+    # Jacobian cost guard to terminate the package first.
+    candidate_dt = t0.get("candidate_temporal_dt_s")
+    if t0["decision"] == "T0-B" and candidate_dt is not None:
+        candidate_dt = float(candidate_dt)
+        p = _overlay(case, "d2c_t0_informed_dt", build_overlay(canonical, dt=candidate_dt))
+        axis = [
+            f"dt={candidate_dt:.17g}",
+            f"end_time={candidate_dt:.17g}",
+            "source=T0_local_electron_diffusion_time/10",
+        ]
+        check, runtime = _check_run(qpx, case, p, logs, "d2c_t0_informed_dt", args.timeout)
+        _subrun(manifest, "D2C", p, axis, check, runtime)
+        if runtime is None:
+            summary["d2c"] = {"status": "CHECK_INPUT_FAIL", "candidate_dt_s": candidate_dt}
+            hyp["H6"] = "FAVORED"
+            summary["terminal_reason"] = "D2C_CHECK_INPUT_FAIL"
+            return _finish(root, manifest, summary, 2)
+        a3 = _with_electron_fallback(Path(runtime.log).read_text())
+        temporal_favored = trajectory_improved(reference, a3)
+        summary["d2c"] = {
+            **asdict(a3),
+            "candidate_dt_s": candidate_dt,
+            "candidate_source": "T0_local_electron_diffusion_time/10",
+            "h4_temporal_favored": temporal_favored,
+        }
+        if temporal_favored:
+            hyp["H4"] = "FAVORED"
+            summary["terminal_reason"] = "T0_INFORMED_DT_BREAKS_CYCLE_OR_GIVES_CLEAR_DESCENT"
+            return _finish(root, manifest, summary, 0)
+
+        hyp["H4"] = "DISFAVORED"
+        completed, rc = _run_jacobian_branch(
+            qpx=qpx,
+            case=case,
+            canonical=canonical,
+            logs=logs,
+            manifest=manifest,
+            summary=summary,
+            hyp=hyp,
+            max_jacobian_dofs=args.max_jacobian_dofs,
+            timeout=args.timeout,
+        )
+        if completed:
+            return _finish(root, manifest, summary, rc if rc is not None else 1)
+        if summary["d2b"] and summary["d2b"].get("cost_guard"):
+            summary["terminal_reason"] = "SAME_ELECTRON_BLOCKER_AT_T0_INFORMED_DT; JACOBIAN_CHECK_SKIPPED_COST_GUARD"
+        else:
+            summary["terminal_reason"] = "SAME_ELECTRON_BLOCKER_AT_T0_INFORMED_DT; JACOBIAN_ACCEPTABLE"
+        return _finish(root, manifest, summary, 1)
+
+    # T0-A/C do not justify a temporal discriminator. Preserve the previous
+    # bounded Jacobian-first route for those cases.
+    completed, rc = _run_jacobian_branch(
+        qpx=qpx,
+        case=case,
+        canonical=canonical,
+        logs=logs,
+        manifest=manifest,
+        summary=summary,
+        hyp=hyp,
+        max_jacobian_dofs=args.max_jacobian_dofs,
+        timeout=args.timeout,
+    )
+    if completed:
+        return _finish(root, manifest, summary, rc if rc is not None else 1)
+    if summary["d2b"] and summary["d2b"].get("cost_guard"):
+        hyp["H4"] = "DISFAVORED" if t0["decision"] == "T0-A" else "HOLD"
         summary["terminal_reason"] = "SCALING_NOT_CAUSAL; JACOBIAN_CHECK_SKIPPED_COST_GUARD"
         return _finish(root, manifest, summary, 1)
 
-    p = _overlay(case, "d2b_jacobian", build_overlay(canonical, nl_max_its=1))
-    check, runtime = _check_run(
-        qpx,
-        case,
-        p,
-        logs,
-        "d2b_jacobian",
-        args.timeout,
-        ["-snes_test_jacobian"],
-    )
-    _subrun(manifest, "D2B", p, ["-snes_test_jacobian", "nl_max_its=1"], check, runtime)
-    if runtime is None:
-        summary["d2b"]["jacobian_status"] = "CHECK_INPUT_FAIL"
-        hyp["H6"] = "FAVORED"
-        summary["terminal_reason"] = "D2B_CHECK_INPUT_FAIL"
-        return _finish(root, manifest, summary, 2)
-    status, rows = classify_jacobian(Path(runtime.log).read_text())
-    summary["d2b"].update(jacobian_status=status, rows=rows)
-    if status == "MATERIAL_MISMATCH":
-        hyp["H3"] = "FAVORED"
-        summary["terminal_reason"] = "MATERIAL_JACOBIAN_MISMATCH"
-        return _finish(root, manifest, summary, 0)
-    if status != "ACCEPTABLE":
-        hyp["H3"] = "HOLD"
-        summary["terminal_reason"] = f"JACOBIAN_{status}"
-        return _finish(root, manifest, summary, 1)
-    hyp["H3"] = "DISFAVORED"
-
-    # D2C is allowed only when T0 has established a temporal concern and a
-    # deterministic single diagnostic dt derived from the local electron time.
-    candidate_dt = t0.get("candidate_temporal_dt_s")
-    if t0["decision"] != "T0-B" or candidate_dt is None:
-        hyp["H4"] = "DISFAVORED" if t0["decision"] == "T0-A" else "HOLD"
-        summary["terminal_reason"] = (
-            "JACOBIAN_ACCEPTABLE; T0_TEMPORAL_DISPARITY_WEAKENED"
-            if t0["decision"] == "T0-A"
-            else "JACOBIAN_ACCEPTABLE; T0_TEMPORAL_CONCLUSION_HOLD"
-        )
-        return _finish(root, manifest, summary, 1)
-
-    candidate_dt = float(candidate_dt)
-    p = _overlay(case, "d2c_t0_informed_dt", build_overlay(canonical, dt=candidate_dt))
-    axis = [f"dt={candidate_dt:.17g}", f"end_time={candidate_dt:.17g}", "source=T0_local_electron_diffusion_time/10"]
-    check, runtime = _check_run(qpx, case, p, logs, "d2c_t0_informed_dt", args.timeout)
-    _subrun(manifest, "D2C", p, axis, check, runtime)
-    if runtime is None:
-        summary["d2c"] = {"status": "CHECK_INPUT_FAIL", "candidate_dt_s": candidate_dt}
-        hyp["H6"] = "FAVORED"
-        summary["terminal_reason"] = "D2C_CHECK_INPUT_FAIL"
-        return _finish(root, manifest, summary, 2)
-    a3 = _with_electron_fallback(Path(runtime.log).read_text())
-    favored = trajectory_improved(reference, a3)
-    summary["d2c"] = {
-        **asdict(a3),
-        "candidate_dt_s": candidate_dt,
-        "candidate_source": "T0_local_electron_diffusion_time/10",
-        "h4_temporal_favored": favored,
-    }
-    hyp["H4"] = "FAVORED" if favored else "DISFAVORED"
+    hyp["H4"] = "DISFAVORED" if t0["decision"] == "T0-A" else "HOLD"
     summary["terminal_reason"] = (
-        "T0_INFORMED_DT_BREAKS_CYCLE_OR_GIVES_CLEAR_DESCENT"
-        if favored
-        else "SAME_ELECTRON_BLOCKER_AT_T0_INFORMED_DT"
+        "JACOBIAN_ACCEPTABLE; T0_TEMPORAL_DISPARITY_WEAKENED"
+        if t0["decision"] == "T0-A"
+        else "JACOBIAN_ACCEPTABLE; T0_TEMPORAL_CONCLUSION_HOLD"
     )
-    return _finish(root, manifest, summary, 0 if favored else 1)
+    return _finish(root, manifest, summary, 1)
 
 
 def main() -> int:
