@@ -131,6 +131,98 @@ def _add_observables(text: str) -> str:
     return _replace_once(text, marker, marker + addition, "diagnostic observables")
 
 
+def _transform_value(spec: CaseSpec, name: str, default: str | None = None) -> str | None:
+    values = [value for key, value in spec.transforms if key == name]
+    if len(values) > 1:
+        raise MasterCaseError(f"duplicate transform {name} for {spec.case_id}")
+    return values[0] if values else default
+
+
+def _build_linear_reference_input(spec: CaseSpec) -> str:
+    """Build a same-qvt/RZ LinearFVDiffusion reference pair.
+
+    The nonlinear FVDiffusion in the pinned MOOSE build does not expose a
+    non-orthogonal-correction switch. LinearFVDiffusion does, so this pair is
+    intentionally an independent framework reference, not a production-path
+    substitute or remedy proxy.
+    """
+    reference = (ELECTRON_REFERENCE_CASE / "input.i").read_text()
+    mesh_start, mesh_end = _block_bounds(reference, "[Mesh]\n")
+    mesh = reference[mesh_start:mesh_end]
+    correction = _transform_value(spec, "use_nonorthogonal_correction")
+    if correction not in {"true", "false"}:
+        raise MasterCaseError(f"{spec.case_id}: invalid non-orthogonal setting {correction!r}")
+    return f"""# R3 master diagnostic: {spec.case_id} / {spec.family}
+# Independent pinned-MOOSE LinearFVDiffusion reference on the same qvt/RZ/plasma mesh.
+{mesh}
+
+[Problem]
+  linear_sys_names = 'electron_diag_sys'
+[]
+
+[Variables]
+  [n_e]
+    type = MooseLinearVariableFVReal
+    solver_sys = 'electron_diag_sys'
+    initial_condition = 1e16
+    block = plasma
+  []
+[]
+
+[LinearFVKernels]
+  [time]
+    type = LinearFVTimeDerivative
+    variable = n_e
+    block = plasma
+  []
+  [diffusion]
+    type = LinearFVDiffusion
+    variable = n_e
+    diffusion_coeff = {FROZEN_DIFFUSION!r}
+    use_nonorthogonal_correction = {correction}
+    block = plasma
+  []
+[]
+
+[Postprocessors]
+  [n_avg]
+    type = ElementAverageValue
+    variable = n_e
+    block = plasma
+  []
+  [n_min]
+    type = ElementExtremeValue
+    variable = n_e
+    value_type = min
+    block = plasma
+  []
+  [n_max]
+    type = ElementExtremeValue
+    variable = n_e
+    value_type = max
+    block = plasma
+  []
+[]
+
+[Executioner]
+  type = Transient
+  system_names = electron_diag_sys
+  scheme = implicit-euler
+  start_time = 0
+  dt = 1e-8
+  num_steps = 1
+  l_tol = 1e-12
+  petsc_options_iname = '-pc_type'
+  petsc_options_value = 'lu'
+[]
+
+[Outputs]
+  csv = true
+  execute_on = 'INITIAL TIMESTEP_END'
+[]
+"""
+
+
 def apply_transform(text: str, name: str, value: str) -> str:
     if name in {"two_term_boundary_expansion", "face_interp_method", "cache_cell_gradients"}:
         return _set_variable_parameter(text, name, value)
@@ -155,8 +247,10 @@ def apply_transform(text: str, name: str, value: str) -> str:
         return _set_electron_transport_parameter(text, "pressure", value)
     if name == "qpx_gas_temperature":
         return _set_electron_transport_parameter(text, "gas_temperature", value)
-    if name in {"automatic_scaling", "off_diagonals_in_auto_scaling"}:
+    if name in {"automatic_scaling", "off_diagonals_in_auto_scaling", "nl_abs_tol"}:
         return _edit_block(text, "[Executioner]\n", lambda block: _set_or_insert(block, name, value))
+    if name == "use_nonorthogonal_correction":
+        raise MasterCaseError("use_nonorthogonal_correction is only valid for LINEAR_REF cases")
     raise MasterCaseError(f"unknown transform: {name}")
 
 
@@ -178,6 +272,8 @@ def _update_expected_n0(target: Path, spec: CaseSpec) -> None:
 
 
 def build_case_text(spec: CaseSpec) -> str:
+    if spec.base == "LINEAR_REF":
+        return _build_linear_reference_input(spec)
     text = build_localization_input(spec.base)
     if spec.base == "L2":
         # #94 L2 replaces the QPX material. Keep all accepted diagnostic
@@ -202,6 +298,8 @@ def build_r3_proxy_text(spec: CaseSpec, field: str) -> str:
         text = _use_literal_diffusion(text)
     elif spec.base == "L2":
         text = _use_generic_ad_transport(text)
+    elif spec.base == "LINEAR_REF":
+        raise MasterCaseError("LINEAR_REF is a diagnostic reference and cannot be a full-R3 remedy proxy")
     elif spec.base != "L3":
         raise MasterCaseError(f"unsupported R3 remedy proxy base: {spec.base}")
 
