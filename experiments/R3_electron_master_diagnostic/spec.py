@@ -6,6 +6,7 @@ from typing import Literal
 
 FROZEN_DIFFUSION = 41257.29899041419
 FROZEN_MOBILITY = 9755.114369721427
+FROZEN_NEUTRAL_DENSITY = 1.6094219840118698e20
 PLASMA_BOUNDARIES = (
     "inlet", "outlet", "plasma_electrode", "plasma_metal",
     "plasma_right", "plasma_cover", "plasma_wafer", "plasma_focus_ring",
@@ -56,6 +57,22 @@ CHEAP_CASES: tuple[CaseSpec, ...] = (
     CaseSpec("Q2_QPX_LITERAL_T", "lookup", "L3", (t("qpx_gas_temperature", "600.0"),), kind="optional"),
     CaseSpec("Q3_QPX_ALL_LITERAL", "lookup", "L3", (t("qpx_mean_energy", "5.73276"), t("qpx_pressure", "1.33322"), t("qpx_gas_temperature", "600.0")), kind="optional"),
     CaseSpec("S0_QPX_SCALING_OFF", "solver", "L3", (t("automatic_scaling", "false"), t("off_diagonals_in_auto_scaling", "false")), kind="optional"),
+
+    # Constant-state magnitude discriminators. These preserve the zero-gradient
+    # mathematical solution while changing only the absolute unknown scale.
+    CaseSpec("M0_LITERAL_N1_RAW", "conditioning", "L1", (t("initial_n_e", "1.0"), t("automatic_scaling", "false"), t("off_diagonals_in_auto_scaling", "false")), kind="optional"),
+    CaseSpec("M1_LITERAL_N1E4_RAW", "conditioning", "L1", (t("initial_n_e", "1e4"), t("automatic_scaling", "false"), t("off_diagonals_in_auto_scaling", "false")), kind="optional"),
+    CaseSpec("M2_LITERAL_N1E8_RAW", "conditioning", "L1", (t("initial_n_e", "1e8"), t("automatic_scaling", "false"), t("off_diagonals_in_auto_scaling", "false")), kind="optional"),
+    CaseSpec("M3_LITERAL_N1E12_RAW", "conditioning", "L1", (t("initial_n_e", "1e12"), t("automatic_scaling", "false"), t("off_diagonals_in_auto_scaling", "false")), kind="optional"),
+    CaseSpec("M4_LITERAL_N1E14_RAW", "conditioning", "L1", (t("initial_n_e", "1e14"), t("automatic_scaling", "false"), t("off_diagonals_in_auto_scaling", "false")), kind="optional"),
+
+    # Diffusion-strength discriminators use the physical n_e=1e16 but disable
+    # automatic residual scaling so the raw residual trend can be compared.
+    CaseSpec("K0_LITERAL_D0_RAW", "conditioning", "L1", (t("literal_diffusion", "0.0"), t("automatic_scaling", "false"), t("off_diagonals_in_auto_scaling", "false")), kind="optional"),
+    CaseSpec("K1_LITERAL_D1_RAW", "conditioning", "L1", (t("literal_diffusion", "1.0"), t("automatic_scaling", "false"), t("off_diagonals_in_auto_scaling", "false")), kind="optional"),
+    CaseSpec("K2_LITERAL_D1E2_RAW", "conditioning", "L1", (t("literal_diffusion", "1e2"), t("automatic_scaling", "false"), t("off_diagonals_in_auto_scaling", "false")), kind="optional"),
+    CaseSpec("K3_LITERAL_D1E4_RAW", "conditioning", "L1", (t("literal_diffusion", "1e4"), t("automatic_scaling", "false"), t("off_diagonals_in_auto_scaling", "false")), kind="optional"),
+    CaseSpec("K4_LITERAL_DFROZEN_RAW", "conditioning", "L1", (t("literal_diffusion", repr(FROZEN_DIFFUSION)), t("automatic_scaling", "false"), t("off_diagonals_in_auto_scaling", "false")), kind="optional"),
 )
 
 
@@ -90,10 +107,15 @@ REMEDY_MAP: dict[str, dict[str, str]] = {
         "remedy": "Repair QPX lookup evaluation on single-sided boundary FaceArg.",
         "verification": "boundary context -> full constant-state diffusion -> R3-E0 -> R3-Econst",
     },
+    "STATE_MAGNITUDE_CONDITIONING": {
+        "class": "NONDIMENSIONALIZATION_FIX",
+        "remedy": "Use a normalized electron unknown (for example n_hat=n_e/n_ref) so physical density remains unchanged while the solved variable is O(1).",
+        "verification": "constant-state magnitude sweep -> normalized R3-E0 -> normalized R3-Econst -> production coupling audit",
+    },
     "FVDIFFUSION_INTERNAL_ASSEMBLY": {
         "class": "UPSTREAM_OR_INTEGRATION_FIX",
-        "remedy": "Localize and repair constant-state FVDiffusion internal assembly; geometry remains held fixed/out of scope.",
-        "verification": "literal constant-state diffusion -> real-QVT R3-E0 -> R3-Econst",
+        "remedy": "Localize and repair constant-state FVDiffusion internal assembly after state-magnitude conditioning is explicitly disfavored; geometry remains held fixed/out of scope.",
+        "verification": "O(1) literal constant-state diffusion -> real-QVT R3-E0 -> R3-Econst",
     },
     "SOLVER_SCALING": {
         "class": "CONFIGURATION_OR_NONDIMENSIONALIZATION_FIX",
