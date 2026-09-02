@@ -5,10 +5,11 @@ from pathlib import Path
 from typing import Iterable
 
 from experiments.Issue94_r3_electron_diffusion_localization.localization import build_localization_input
+from experiments.Issue93_r3_electron_isolation.operator_decomposition import build_case_input as build_issue93_case
 from experiments.Issue93_r3_electron_isolation.prepare import ELECTRON_REFERENCE_CASE
 from qpx_harness.execution.cases import stage_case, validate_case_references
 
-from .spec import CaseSpec, PLASMA_BOUNDARIES
+from .spec import CaseSpec, FROZEN_DIFFUSION, FROZEN_MOBILITY, PLASMA_BOUNDARIES
 
 
 class MasterCaseError(RuntimeError):
@@ -92,6 +93,22 @@ def _replace_electron_transport_type(text: str, new_type: str) -> str:
     return _edit_block(text, "  [electron_transport]\n", edit)
 
 
+def _use_literal_diffusion(text: str) -> str:
+    return _set_diffusion_parameter(text, "coeff", repr(FROZEN_DIFFUSION))
+
+
+def _use_generic_ad_transport(text: str) -> str:
+    def edit(_block: str) -> str:
+        return """  [electron_transport]
+    type = ADGenericFunctorMaterial
+    prop_names = 'electron_mobility electron_diffusion'
+    prop_values = '{mobility} {diffusion}'
+    block = plasma
+  []
+""".format(mobility=repr(FROZEN_MOBILITY), diffusion=repr(FROZEN_DIFFUSION))
+    return _edit_block(text, "  [electron_transport]\n", edit)
+
+
 def _add_observables(text: str) -> str:
     marker = "[Postprocessors]\n"
     if marker not in text:
@@ -135,6 +152,28 @@ def build_case_text(spec: CaseSpec) -> str:
     return f"# R3 master diagnostic: {spec.case_id} / {spec.family}\n" + text
 
 
+def build_r3_proxy_text(spec: CaseSpec, field: str) -> str:
+    """Build full-electron R3 E0/Econst counterfactual using an isolated remedy proxy."""
+    if field == "E0":
+        text = build_issue93_case("C4")
+    elif field == "Econst":
+        text = build_issue93_case("C0")
+    else:
+        raise MasterCaseError(f"unknown R3 proxy field: {field}")
+
+    if spec.base == "L1":
+        text = _use_literal_diffusion(text)
+    elif spec.base == "L2":
+        text = _use_generic_ad_transport(text)
+    elif spec.base != "L3":
+        raise MasterCaseError(f"unsupported R3 remedy proxy base: {spec.base}")
+
+    for name, value in spec.transforms:
+        text = apply_transform(text, name, value)
+    text = _add_observables(text)
+    return f"# R3 remedy proxy: {spec.case_id} / {field}\n" + text
+
+
 def stage_master_case(
     spec: CaseSpec,
     target: Path,
@@ -156,4 +195,25 @@ def stage_master_case(
     staged["kind"] = spec.kind
     staged["meaning"] = spec.meaning
     staged["referenced_files"] = refs
+    return staged
+
+
+def stage_r3_proxy_case(
+    spec: CaseSpec,
+    field: str,
+    target: Path,
+    *,
+    source_case: Path = ELECTRON_REFERENCE_CASE,
+) -> dict[str, object]:
+    text = build_r3_proxy_text(spec, field)
+    staged = stage_case(
+        source_case,
+        target,
+        input_text=text,
+        purge_directory_names=(".jitcache", "checkpoint", "checkpoints"),
+        purge_patterns=("input_out*", "*.log", "*.csv", "*.e", "*.exo"),
+    )
+    staged["referenced_files"] = validate_case_references(target)
+    staged["case_id"] = spec.case_id
+    staged["field"] = field
     return staged
