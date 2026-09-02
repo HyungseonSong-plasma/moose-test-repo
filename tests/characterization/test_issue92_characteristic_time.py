@@ -100,3 +100,16 @@ def test_t0_candidate_dt_is_derived_from_electron_time_not_fixed_decade(tmp_path
         assert math.isclose(out["candidate_temporal_dt_s"], tau / 10.0, rel_tol=1e-12)
     else:
         assert out["decision"] in {"T0-A", "T0-C"}
+
+
+def test_t0_parses_real_issue91_qvt_assets_without_qpx() -> None:
+    case = Path("experiments/Issue91_real_qvt_r3/r3_e0")
+    out = audit_case(case)
+    assert out["qpx_executed"] is False
+    assert out["scientific_evr_consumed"] == 0
+    assert out["decision"] in {"T0-A", "T0-B", "T0-C"}
+    assert out["mesh"]["plasma_entity"] == 2
+    assert out["mesh"]["mesh_edge_min"] > 0
+    assert out["mesh"]["mesh_edge_median"] >= out["mesh"]["mesh_edge_min"]
+    assert out["electron_state"]["electron_diffusion_m2_s"] > 0
+    assert out["heavy_advection"]["status"] in {"ESTABLISHED", "NOT_ESTABLISHED"}
