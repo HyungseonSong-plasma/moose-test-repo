@@ -16,6 +16,7 @@ from experiments.Issue93_r3_electron_isolation.check import CheckError, check_cs
 from experiments.Issue93_r3_electron_isolation.dependency_audit import AuditError, audit
 from experiments.Issue93_r3_electron_isolation.prepare import (
     DEFAULT_DT,
+    ELECTRON_REFERENCE_CASE,
     PrepareError,
     SOURCE_CASE,
     prepare_case,
@@ -23,6 +24,9 @@ from experiments.Issue93_r3_electron_isolation.prepare import (
 
 DEFAULT_TIMEOUT = 300
 N_E_RESIDUAL_RE = re.compile(r"\bn_e\s*[:=]\s*([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)")
+SNES_NORM_RE = re.compile(
+    r"SNES Function norm\s+([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)"
+)
 
 
 class RunError(RuntimeError):
@@ -73,8 +77,17 @@ def _run(cmd: list[str], cwd: Path, log: Path, timeout: int) -> dict[str, Any]:
     }
 
 
+def _tail(text: str, lines: int = 60) -> str:
+    return "\n".join(text.splitlines()[-lines:])
+
+
 def _electron_residuals(text: str) -> list[float]:
-    return [float(m.group(1)) for m in N_E_RESIDUAL_RE.finditer(text)]
+    explicit = [float(m.group(1)) for m in N_E_RESIDUAL_RE.finditer(text)]
+    if explicit:
+        return explicit
+    # J1 contains exactly one nonlinear variable (n_e), so the global SNES
+    # function norm is the electron residual norm for this discriminator.
+    return [float(m.group(1)) for m in SNES_NORM_RE.finditer(text)]
 
 
 def _write_json(path: Path, obj: Any) -> None:
@@ -83,7 +96,7 @@ def _write_json(path: Path, obj: Any) -> None:
 
 def run(args: argparse.Namespace) -> int:
     source = args.source_case.resolve()
-    # J0 is qpx-free and completed before resolving/launching QPX.
+    electron_reference = args.electron_reference_case.resolve()
     j0 = audit(source)
     qpx = _resolve_qpx(args.qpx)
 
@@ -92,17 +105,19 @@ def run(args: argparse.Namespace) -> int:
     logs = root / "logs"
     logs.mkdir(parents=True, exist_ok=True)
     _write_json(root / "j0_dependency_audit.json", j0)
-    prepare = prepare_case(case, source, args.dt)
+    prepare = prepare_case(case, source, args.dt, electron_reference)
 
     summary: dict[str, Any] = {
         "issue": 93,
         "stage": "J1_FROZEN_HEAVY_ELECTRON_DISCRIMINATOR",
         "artifact_root": str(root),
         "source_case": str(source),
+        "electron_reference_case": str(electron_reference),
         "qpx": qpx,
         "j0": j0,
         "prepare": prepare,
         "p2": None,
+        "p2_log_tail": None,
         "p3": None,
         "checker": None,
         "electron_residuals": [],
@@ -113,12 +128,17 @@ def run(args: argparse.Namespace) -> int:
 
     p2 = _run([qpx, "-i", "input.i", "--check-input"], case, logs / "p2_check_input.log", args.timeout)
     summary["p2"] = p2
+    p2_text = Path(p2["log"]).read_text()
+    summary["p2_log_tail"] = _tail(p2_text)
     if p2["returncode"] != 0:
         summary["decision"] = "J1_CONSTRUCTION_OR_FRAMEWORK_CONTRACT_FAIL"
         _write_json(root / "summary.json", summary)
         print("ISSUE93_J1_P2: FAIL")
         print("ISSUE93_J1_DECISION: J1_CONSTRUCTION_OR_FRAMEWORK_CONTRACT_FAIL")
         print("ISSUE93_EVR: 0")
+        print("ISSUE93_J1_P2_LOG_TAIL_BEGIN")
+        print(summary["p2_log_tail"])
+        print("ISSUE93_J1_P2_LOG_TAIL_END")
         print(f"ARTIFACT_ROOT: {root}")
         return 2
 
@@ -141,7 +161,6 @@ def run(args: argparse.Namespace) -> int:
     runtime_text = Path(p3["log"]).read_text()
     summary["electron_residuals"] = _electron_residuals(runtime_text)
 
-    checker = None
     csv_path = case / "input_out.csv"
     if csv_path.is_file():
         try:
@@ -167,6 +186,11 @@ def run(args: argparse.Namespace) -> int:
     print(f"ISSUE93_J1_ELECTRON_RESIDUALS: {summary['electron_residuals']}")
     print("ISSUE93_EVR: 1")
     print("SCIENTIFIC_ACCEPTANCE_ELIGIBLE: false")
+    if checker.get("pass") is not True:
+        print(f"ISSUE93_J1_CHECKER: {checker}")
+        print("ISSUE93_J1_RUNTIME_LOG_TAIL_BEGIN")
+        print(_tail(runtime_text))
+        print("ISSUE93_J1_RUNTIME_LOG_TAIL_END")
     print(f"ARTIFACT_ROOT: {root}")
     return rc
 
@@ -175,6 +199,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--qpx", required=True)
     parser.add_argument("--source-case", type=Path, default=SOURCE_CASE)
+    parser.add_argument("--electron-reference-case", type=Path, default=ELECTRON_REFERENCE_CASE)
     parser.add_argument("--work-dir", type=Path)
     parser.add_argument("--dt", type=float, default=DEFAULT_DT)
     parser.add_argument("--timeout", type=int, default=DEFAULT_TIMEOUT)
