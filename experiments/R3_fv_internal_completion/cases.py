@@ -1,0 +1,262 @@
+"""Case builders for the one-queue FV internal completion campaign."""
+from __future__ import annotations
+
+import json
+from pathlib import Path
+from typing import Iterable
+
+from experiments.Issue93_r3_electron_isolation.prepare import ELECTRON_REFERENCE_CASE
+from experiments.Issue94_r3_electron_diffusion_localization.localization import build_localization_input
+from experiments.R3_electron_master_diagnostic.cases import (
+    _edit_block,
+    _set_diffusion_parameter,
+    _set_or_insert,
+    _set_variable_parameter,
+)
+from qpx_harness.execution.cases import stage_case, validate_case_references
+
+from .spec import CompletionCaseSpec, FROZEN_D
+
+
+class CompletionCaseError(RuntimeError):
+    pass
+
+
+def _set_executioner_parameter(text: str, name: str, value: str) -> str:
+    return _edit_block(text, "[Executioner]\n", lambda block: _set_or_insert(block, name, value))
+
+
+def _set_problem_parameter(text: str, name: str, value: str) -> str:
+    return _edit_block(text, "[Problem]\n", lambda block: _set_or_insert(block, name, value))
+
+
+def _insert_material_child(text: str, child: str) -> str:
+    def edit(block: str) -> str:
+        marker = "\n[]"
+        pos = block.rfind(marker)
+        if pos < 0:
+            raise CompletionCaseError("Materials block has no closing token")
+        return block[:pos] + "\n" + child.rstrip() + "\n" + block[pos:]
+    return _edit_block(text, "[Materials]\n", edit)
+
+
+def _replace_diffusion_block(text: str, replacement: str) -> str:
+    return _edit_block(text, "  [diffusion]\n", lambda _block: replacement)
+
+
+def _set_n0(text: str, n0: float) -> str:
+    return _set_variable_parameter(text, "initial_condition", repr(float(n0)))
+
+
+def _configure_raw_solver(text: str, nl_abs_tol: float | None) -> str:
+    text = _set_executioner_parameter(text, "automatic_scaling", "false")
+    text = _set_executioner_parameter(text, "off_diagonals_in_auto_scaling", "false")
+    if nl_abs_tol is not None:
+        text = _set_executioner_parameter(text, "nl_abs_tol", repr(float(nl_abs_tol)))
+    return text
+
+
+def _build_time_only(spec: CompletionCaseSpec) -> str:
+    text = build_localization_input("L0")
+    text = _set_n0(text, spec.n0)
+    text = _configure_raw_solver(text, spec.nl_abs_tol)
+    return text
+
+
+def _build_full_internal(spec: CompletionCaseSpec) -> str:
+    text = build_localization_input("L1")
+    text = _set_n0(text, spec.n0)
+    text = _set_diffusion_parameter(
+        text,
+        "boundaries_to_avoid",
+        "'inlet outlet plasma_electrode plasma_metal plasma_right plasma_cover plasma_wafer plasma_focus_ring'",
+    )
+    text = _configure_raw_solver(text, spec.nl_abs_tol)
+    return text
+
+
+def _build_orthogonal(spec: CompletionCaseSpec) -> str:
+    text = build_localization_input("L1")
+    text = _set_n0(text, spec.n0)
+    text = _configure_raw_solver(text, spec.nl_abs_tol)
+    text = _insert_material_child(
+        text,
+        f"""  [diag_orthogonal_diffusivity]
+    type = ADGenericConstantMaterial
+    prop_names = 'diag_orthogonal_D'
+    prop_values = '{FROZEN_D!r}'
+    block = plasma
+  []""",
+    )
+    text = _replace_diffusion_block(
+        text,
+        """  [diffusion]
+    type = FVOrthogonalDiffusion
+    variable = n_e
+    coeff = diag_orthogonal_D
+    block = plasma
+  []
+""",
+    )
+    return text
+
+
+def _gradient_aux_sections() -> str:
+    return r"""
+[AuxVariables]
+  [grad_ad]
+    order = CONSTANT
+    family = MONOMIAL_VEC
+    block = plasma
+  []
+  [grad_real]
+    order = CONSTANT
+    family = MONOMIAL_VEC
+    block = plasma
+  []
+  [grad_ad_x]
+    order = CONSTANT
+    family = MONOMIAL
+    block = plasma
+  []
+  [grad_ad_y]
+    order = CONSTANT
+    family = MONOMIAL
+    block = plasma
+  []
+  [grad_real_x]
+    order = CONSTANT
+    family = MONOMIAL
+    block = plasma
+  []
+  [grad_real_y]
+    order = CONSTANT
+    family = MONOMIAL
+    block = plasma
+  []
+[]
+
+[AuxKernels]
+  [measure_grad_ad]
+    type = ADFunctorElementalGradientAux
+    variable = grad_ad
+    functor = n_e
+    block = plasma
+    execute_on = INITIAL
+  []
+  [measure_grad_real]
+    type = FunctorElementalGradientAux
+    variable = grad_real
+    functor = n_e
+    block = plasma
+    execute_on = INITIAL
+  []
+  [grad_ad_x]
+    type = VectorVariableComponentAux
+    variable = grad_ad_x
+    vector_variable = grad_ad
+    component = x
+    block = plasma
+    execute_on = INITIAL
+  []
+  [grad_ad_y]
+    type = VectorVariableComponentAux
+    variable = grad_ad_y
+    vector_variable = grad_ad
+    component = y
+    block = plasma
+    execute_on = INITIAL
+  []
+  [grad_real_x]
+    type = VectorVariableComponentAux
+    variable = grad_real_x
+    vector_variable = grad_real
+    component = x
+    block = plasma
+    execute_on = INITIAL
+  []
+  [grad_real_y]
+    type = VectorVariableComponentAux
+    variable = grad_real_y
+    vector_variable = grad_real
+    component = y
+    block = plasma
+    execute_on = INITIAL
+  []
+[]
+
+[VectorPostprocessors]
+  [gradient_samples]
+    type = ElementValueSampler
+    variable = 'grad_ad_x grad_ad_y grad_real_x grad_real_y'
+    block = plasma
+    sort_by = id
+    execute_on = INITIAL
+  []
+[]
+"""
+
+
+def _build_gradient(spec: CompletionCaseSpec) -> str:
+    text = build_localization_input("L1")
+    text = _set_n0(text, spec.n0)
+    text = _set_variable_parameter(
+        text,
+        "two_term_boundary_expansion",
+        "true" if spec.two_term_boundary_expansion else "false",
+    )
+    text = _set_problem_parameter(text, "solve", "false")
+    text = _edit_block(text, "[Executioner]\n", lambda _block: "[Executioner]\n  type = Steady\n[]\n")
+    text = _edit_block(
+        text,
+        "[Outputs]\n",
+        lambda _block: "[Outputs]\n  csv = true\n  execute_on = INITIAL\n[]\n",
+    )
+    marker = "[Executioner]\n"
+    if marker not in text:
+        raise CompletionCaseError("gradient case missing Executioner block")
+    return text.replace(marker, _gradient_aux_sections() + "\n" + marker, 1)
+
+
+def build_case_text(spec: CompletionCaseSpec) -> str:
+    if spec.operator == "time_only":
+        text = _build_time_only(spec)
+    elif spec.operator == "full_internal":
+        text = _build_full_internal(spec)
+    elif spec.operator == "orthogonal":
+        text = _build_orthogonal(spec)
+    elif spec.operator == "gradient":
+        text = _build_gradient(spec)
+    else:
+        raise CompletionCaseError(f"unknown operator: {spec.operator}")
+    return f"# R3 FV internal completion: {spec.case_id}\n" + text
+
+
+def _update_expected_n0(target: Path, n0: float) -> None:
+    expected_path = target / "expected.json"
+    expected = json.loads(expected_path.read_text())
+    expected["n0"] = float(n0)
+    expected_path.write_text(json.dumps(expected, indent=2, sort_keys=True) + "\n")
+
+
+def stage_completion_case(
+    spec: CompletionCaseSpec,
+    target: Path,
+    *,
+    source_case: Path = ELECTRON_REFERENCE_CASE,
+    purge_patterns: Iterable[str] = ("input_out*", "*.log", "*.csv", "*.e", "*.exo"),
+) -> dict[str, object]:
+    staged = stage_case(
+        source_case,
+        target,
+        input_text=build_case_text(spec),
+        purge_directory_names=(".jitcache", "checkpoint", "checkpoints"),
+        purge_patterns=purge_patterns,
+    )
+    _update_expected_n0(target, spec.n0)
+    staged["case_id"] = spec.case_id
+    staged["mode"] = spec.mode
+    staged["operator"] = spec.operator
+    staged["meaning"] = spec.meaning
+    staged["referenced_files"] = validate_case_references(target)
+    return staged
