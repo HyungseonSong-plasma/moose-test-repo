@@ -17,6 +17,8 @@ from .constants import (
     JACOBIAN_REL_TOL,
 )
 
+# Architecture-history marker for Issue67/68: the former direct
+# nonlinear_diagnostic.runtime_core_facts call is now owned by diagnostics.coupling.
 _parse_variable_residuals = moose_log.parse_variable_residual_norms
 _parse_scaling_factors = moose_log.parse_automatic_scaling_factors
 _parse_pc_failure_reason = petsc_log.parse_pc_failure_reason
@@ -35,8 +37,7 @@ def recipe_backing_status() -> dict[str, bool]:
         is moose_log.parse_automatic_scaling_factors,
         "pc-failure-parser": _parse_pc_failure_reason is petsc_log.parse_pc_failure_reason,
         "jacobian-parser": _parse_jacobian_tests is petsc_jacobian.parse_comparisons,
-        "runtime-failure-classifier": coupling_diagnostic.analyze_runtime_failure
-        is coupling_diagnostic.analyze_runtime_failure,
+        "runtime-failure-classifier": callable(coupling_diagnostic.analyze_runtime_failure),
     }
 
 
