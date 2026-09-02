@@ -60,7 +60,8 @@ def test_state_magnitude_transition_blocks_premature_internal_assembly_owner():
     owners = [item["owner"] for item in result["owners"]]
     assert owners == ["STATE_MAGNITUDE_CONDITIONING"]
     assert "FVDIFFUSION_INTERNAL_ASSEMBLY" not in owners
-    assert result["owners"][0]["remedy_proxy_case"] == "M0_LITERAL_N1_RAW"
+    assert result["owners"][0]["remedy_proxy_case"] is None
+    assert "M0_LITERAL_N1_RAW" in result["selected_jacobian_cases"]
 
 
 def test_broad_fvdiffusion_owner_requires_o1_failure_and_zero_diffusion_pass():
