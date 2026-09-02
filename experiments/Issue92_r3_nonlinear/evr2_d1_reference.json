@@ -1,0 +1,68 @@
+{
+  "issue": 92,
+  "evr": 2,
+  "source": "salvaged_d1_residual_anatomy",
+  "selected_branch": "B2",
+  "terminal_reason": "ELECTRON_RESIDUAL_DOMINANCE",
+  "scientific_acceptance_eligible": false,
+  "global_residual_marker_available": false,
+  "two_cycle_supported_by_electron_residual": true,
+  "variable_norms": [
+    {
+      "n_e": 0.983996,
+      "p": 3.8321e-06,
+      "u": 6.06239e-05,
+      "v": 2.93042e-15,
+      "w_O": 7.71358e-06,
+      "w_O2p": 1.46553e-07,
+      "w_O2s": 6.69417e-07,
+      "w_Om": 1.48861e-07,
+      "w_Op": 1.48861e-07,
+      "w_Os": 1.60484e-06
+    },
+    {
+      "n_e": 1.03367,
+      "p": 2.56101e-11,
+      "u": 5.61775e-08,
+      "v": 5.64523e-10,
+      "w_O": 9.19018e-11,
+      "w_O2p": 9.79453e-13,
+      "w_O2s": 4.19741e-12,
+      "w_Om": 9.9488e-13,
+      "w_Op": 9.94879e-13,
+      "w_Os": 9.35384e-12
+    },
+    {
+      "n_e": 0.947657,
+      "p": 2.01506e-16,
+      "u": 4.70231e-15,
+      "v": 2.18605e-15,
+      "w_O": 2.49677e-16,
+      "w_O2p": 3.00563e-17,
+      "w_O2s": 1.27316e-16,
+      "w_Om": 3.23438e-17,
+      "w_Op": 3.14044e-17,
+      "w_Os": 2.75195e-16
+    },
+    {
+      "n_e": 1.03367,
+      "p": 2.0058e-16,
+      "u": 6.31746e-16,
+      "v": 1.07055e-15,
+      "w_O": 1.63219e-16,
+      "w_O2p": 1.97407e-17,
+      "w_O2s": 8.2156e-17,
+      "w_Om": 1.965e-17,
+      "w_Op": 1.91856e-17,
+      "w_Os": 1.73956e-16
+    }
+  ],
+  "electron_residuals": [0.983996, 1.03367, 0.947657, 1.03367],
+  "dominant_groups": ["ELECTRON", "ELECTRON", "ELECTRON", "ELECTRON"],
+  "dominance_ratios": [
+    16198.826314411743,
+    18399140.33530777,
+    182609689231615.62,
+    820938744463724.5
+  ]
+}
