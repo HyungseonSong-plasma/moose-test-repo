@@ -9,7 +9,8 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from qpx_harness import electron_inventory_nullspace as inv
+from qpx_harness.inventory.closure_model import _synthetic_constrained_input
+from qpx_harness.inventory.structure import audit_constrained_quasisteady_structure
 from qpx_harness.moose import parameters as mp
 from qpx_harness.petsc import options as po
 from recipes import issue45_first_linear as recipe
@@ -39,10 +40,10 @@ Nonlinear solve did not converge due to DIVERGED_MAX_IT iterations 1
 
 
 def _check_construction() -> None:
-    base = inv._synthetic_constrained_input(recipe.TARGET)
+    base = _synthetic_constrained_input(recipe.TARGET)
     text, meta = recipe.instrument_first_linear(base)
 
-    closure = inv.audit_constrained_quasisteady_structure(
+    closure = audit_constrained_quasisteady_structure(
         text,
         expected_macro_avg=recipe.TARGET,
     )
@@ -75,12 +76,20 @@ def _check_construction() -> None:
 
 def _check_analysis_positive() -> None:
     result = recipe.analyze_first_linear_text(_synthetic_log(), returncode=1)
-    if result.get("status") != "PASS" or result.get("class") != "GMRES_RESTART_BREAKDOWN":
+    if (
+        result.get("status") != "PASS"
+        or result.get("class") != "KSP_BREAKDOWN_RESIDUAL_FIDELITY_LOSS"
+    ):
         raise AssertionError(f"positive first-linear class drifted: {result!r}")
     if result.get("ksp_identity") != {"ksp_type": "gmres", "restart": 30, "pc_type": "lu"}:
         raise AssertionError("positive KSP identity drifted")
     if len(result.get("true_residuals") or []) != 2:
         raise AssertionError("positive true-residual evidence drifted")
+    audit = result.get("ksp_residual_audit") or {}
+    if not audit.get("residual_fidelity_loss_observed"):
+        raise AssertionError("reported-vs-true residual fidelity loss was not retained")
+    if result.get("restart_causality") != "NOT_ESTABLISHED":
+        raise AssertionError("restart chronology was promoted to causal evidence")
 
 
 def _check_analysis_negative_controls() -> None:
@@ -107,14 +116,6 @@ def _check_analysis_negative_controls() -> None:
             base.split("KSP Object:", 1)[0],
             "DIAGNOSTIC_INSUFFICIENT",
         ),
-        "restart-misaligned": (
-            base.replace(
-                "DIVERGED_BREAKDOWN iterations 30",
-                "DIVERGED_BREAKDOWN iterations 29",
-                1,
-            ),
-            "DIAGNOSTIC_INSUFFICIENT",
-        ),
         "linear-converged": (
             base.replace(
                 "Linear solve did not converge due to DIVERGED_BREAKDOWN iterations 30",
@@ -133,6 +134,15 @@ def _check_analysis_negative_controls() -> None:
             )
         if result.get("status") == "PASS":
             raise AssertionError(f"negative control unexpectedly passed: {name}")
+
+    low_separation = base.replace(
+        "1.0e-12 true resid norm 2.0e-03",
+        "1.0e-03 true resid norm 2.0e-03",
+        1,
+    )
+    low = recipe.analyze_first_linear_text(low_separation, returncode=1)
+    if low.get("class") != "KSP_BREAKDOWN_WITHOUT_RESIDUAL_FIDELITY_LOSS":
+        raise AssertionError("low residual separation was over-classified")
 
 
 def _check_primitive_usage() -> None:
