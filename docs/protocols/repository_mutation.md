@@ -564,3 +564,39 @@ Originating recurrence:
 ```text
 docs/incidents/issue60_wrong_action_placeholder_issue65_2026-09-01.md
 ```
+
+## RM-13 — Literal recipient and forbidden-placeholder call gate
+
+The final tool-call recipient is a first-class safety field and must be checked literally at the invocation boundary, independently of prose intent or payload validation.
+
+Required gate immediately before every mutator:
+
+```text
+selected callable name == ALLOWED_MUTATOR
+selected callable resource class == ACTIVE_MUTATION_RESOURCE
+payload target == NEXT_MUTATION_TARGET
+```
+
+In an issue-only phase, the recipient must literally be an issue mutator such as `GitHub.update_issue`; any `*_file`, ref, branch, or comment mutator recipient is an unconditional hard stop. Equivalent literal recipient constraints apply to every other resource class.
+
+The following placeholder/probe signatures are forbidden in every live repository mutator payload unless they are the actual canonical business data being intentionally edited, which must itself be independently read-back verified:
+
+```text
+__noop__
+deadbeef
+noop
+probe
+connectivity test
+dummy
+placeholder
+```
+
+If any such token appears as a target, SHA, commit message, branch/ref, or surrogate identity during mutation routing, set `MUTATION_ALLOWED=false` and do not invoke any mutator. Never use a placeholder to recover from uncertainty about the intended tool or target.
+
+A recipient/payload mismatch at this final gate trips RM-09A before invocation. The presence of a valid intended issue number elsewhere in context does not authorize a different resource-class mutator.
+
+Originating recurrence:
+
+```text
+docs/protocols/repository_mutation_incidents.md#2026-09-02--wrong-resourcetarget-mutation-during-issue-93-synchronization
+```
