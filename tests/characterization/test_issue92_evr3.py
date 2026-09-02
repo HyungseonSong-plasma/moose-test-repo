@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from experiments.Issue92_r3_nonlinear.evr3 import (
+    _diagnostic_order,
     _load_reference,
     _plasma_cell_count_v41,
     _with_electron_fallback,
@@ -54,3 +55,12 @@ $Elements
 $EndElements
 """
     assert _plasma_cell_count_v41(mesh) == 2
+
+
+def test_evr3_t0b_temporal_branch_precedes_jacobian_cost_guard() -> None:
+    assert _diagnostic_order("T0-B") == ("D2A", "D2C", "D2B_OPTIONAL")
+
+
+def test_evr3_non_t0b_keeps_jacobian_route_without_temporal_guess() -> None:
+    assert _diagnostic_order("T0-A") == ("D2A", "D2B")
+    assert _diagnostic_order("T0-C") == ("D2A", "D2B")
