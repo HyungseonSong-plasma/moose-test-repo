@@ -14,8 +14,8 @@ from recipes import issue43_fast_relaxation as relaxation_recipe
 
 from .evidence import artifacts
 from .execution import cases as case_ops
+from .execution import contract as ec
 from . import evidence
-from . import execution_contract as ec
 from . import issue43_relaxation_runtime as issue43_runtime
 from .moose import output_observation as ooc
 from .moose import preflight
