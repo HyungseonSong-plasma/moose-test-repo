@@ -4,8 +4,8 @@ from __future__ import annotations
 from typing import Any
 
 from recipes import issue45_first_linear as first_linear_recipe
+from recipes import issue45_inventory_constraint as inventory_policy
 
-from .. import electron_inventory_nullspace as inv
 from ..moose import parameters as mp
 from ..petsc import options as petsc_options
 
@@ -44,7 +44,7 @@ def audit_first_linear_structure(
             }
         )
 
-    closure = inv.audit_constrained_quasisteady_structure(
+    closure = inventory_policy.audit_constrained_quasisteady_structure(
         diagnostic_text,
         expected_macro_avg=TARGET,
     )
