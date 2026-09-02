@@ -5,11 +5,11 @@ from pathlib import Path
 from typing import Any
 
 from recipes import issue43_coupling_diagnostic as recipe
+from recipes import issue43_execution_contract as execution_policy
 from recipes import issue43_feedback_basis as feedback_basis
 
 from ..execution import cases as case_ops
 from .. import execution_contract as ec
-from .. import issue43_fast_output_contract as output_contract
 from ..moose import output_observation as ooc
 from ..moose import blocks as mb
 from ..moose import parameters as mp
@@ -110,7 +110,7 @@ def _p1_case(
     parser_errors = validate_parser_symbols_text(text, f"<{case_id}>")
     add("parser-symbol-preflight", not parser_errors, parser_errors, [])
 
-    contract = output_contract._augment_execution_contract(case_id, text)
+    contract = execution_policy.augment_output_observation_contract(case_id, text)
     contract_decision = ec.evaluate_contract(contract, phase="P1")
     add(
         "execution-contract-p1",
