@@ -20,15 +20,16 @@ from qpx_harness.cli.commands.performance import (
 )
 from qpx_harness.cli.commands.coupling import coupling_evr1_main, coupling_evr2_main
 from qpx_harness.cli.commands.dmix import dmix_equivalence_main
-from qpx_harness.coupling_evr1.characterization import self_test as coupling_evr1_self_test
-from qpx_harness.coupling_evr2.orchestration import self_test as coupling_evr2_self_test
-from qpx_harness.dmix.characterization import self_test as dmix_equivalence_self_test
-from qpx_harness.electron_inventory_nullspace import main as inventory_nullspace_main, self_test as inventory_nullspace_self_test
 from qpx_harness.execution.workspace import inventory_cli, self_test as workspace_self_test
 from qpx_harness.execution_contract import main as execution_contract_main, self_test as execution_contract_self_test
+from qpx_harness.inventory.cli import (
+    first_linear_main,
+    first_linear_self_test,
+    inventory_main as inventory_nullspace_main,
+    inventory_self_test as inventory_nullspace_self_test,
+)
 from qpx_harness.issue43_coupling_diagnostic import main as fast_coupling_diagnostic_main, self_test as fast_coupling_diagnostic_self_test
 from qpx_harness.issue43_fast_relaxation import main as fast_relaxation_main, self_test as fast_relaxation_self_test
-from qpx_harness.issue45_first_linear import main as first_linear_main, self_test as first_linear_self_test
 from qpx_harness.issue46_fd_reference import main as fd_reference_main, self_test as fd_reference_self_test
 from qpx_harness.issue46_jacobian_localization import main as jac_localization_main, self_test as jac_localization_self_test
 from qpx_harness.performance.runner import self_test as performance_self_test
