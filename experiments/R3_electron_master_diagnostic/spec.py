@@ -72,7 +72,7 @@ CHEAP_CASES: tuple[CaseSpec, ...] = (
     CaseSpec("K1_LITERAL_D1_RAW", "conditioning", "L1", (t("literal_diffusion", "1.0"), t("automatic_scaling", "false"), t("off_diagonals_in_auto_scaling", "false")), kind="optional"),
     CaseSpec("K2_LITERAL_D1E2_RAW", "conditioning", "L1", (t("literal_diffusion", "1e2"), t("automatic_scaling", "false"), t("off_diagonals_in_auto_scaling", "false")), kind="optional"),
     CaseSpec("K3_LITERAL_D1E4_RAW", "conditioning", "L1", (t("literal_diffusion", "1e4"), t("automatic_scaling", "false"), t("off_diagonals_in_auto_scaling", "false")), kind="optional"),
-    CaseSpec("K4_LITERAL_DFROZEN_RAW", "conditioning", "L1", (t("literal_diffusion", repr(FROZEN_DIFFUSION)), t("automatic_scaling", "false"), t("off_diagonals_in_auto_scaling", "false")), kind="optional"),
+    CaseSpec("K4_LITERAL_DFROZEN_RAW", "conditioning", "L1", (t("automatic_scaling", "false"), t("off_diagonals_in_auto_scaling", "false")), kind="optional"),
 )
 
 
