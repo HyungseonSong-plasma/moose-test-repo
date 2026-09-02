@@ -5,6 +5,21 @@ from typing import Any, Mapping
 
 from .spec import REMEDY_MAP
 
+MAGNITUDE_CASES = (
+    "M0_LITERAL_N1_RAW",
+    "M1_LITERAL_N1E4_RAW",
+    "M2_LITERAL_N1E8_RAW",
+    "M3_LITERAL_N1E12_RAW",
+    "M4_LITERAL_N1E14_RAW",
+)
+DIFFUSION_STRENGTH_CASES = (
+    "K0_LITERAL_D0_RAW",
+    "K1_LITERAL_D1_RAW",
+    "K2_LITERAL_D1E2_RAW",
+    "K3_LITERAL_D1E4_RAW",
+    "K4_LITERAL_DFROZEN_RAW",
+)
+
 
 def _passed(cases: Mapping[str, Mapping[str, Any]], case_id: str) -> bool:
     return bool(cases.get(case_id, {}).get("passed"))
@@ -15,6 +30,7 @@ def _supported(cases: Mapping[str, Mapping[str, Any]], case_id: str) -> bool:
         None,
         "CONSTRUCTION_FAIL",
         "P2_FAIL",
+        "P3_SETUP_FAIL",
         "SKIPPED_UNSUPPORTED",
         "NOT_RUN",
     }
@@ -34,11 +50,30 @@ def _owner(owner: str, *, evidence: list[str], proxy: str | None, mechanism: str
     }
 
 
+def _first_residual(cases: Mapping[str, Mapping[str, Any]], case_id: str) -> float | None:
+    values = cases.get(case_id, {}).get("electron_residuals")
+    if not isinstance(values, list) or not values:
+        return None
+    try:
+        return float(values[0])
+    except (TypeError, ValueError):
+        return None
+
+
+def _first_passing(cases: Mapping[str, Mapping[str, Any]], case_ids: tuple[str, ...]) -> str | None:
+    return next((case_id for case_id in case_ids if _passed(cases, case_id)), None)
+
+
 def select_jacobian_cases(cases: Mapping[str, Mapping[str, Any]], owners: list[dict[str, Any]]) -> list[str]:
     selected: list[str] = []
     names = {item["owner"] for item in owners}
     if "FVDIFFUSION_INTERNAL_ASSEMBLY" in names:
         selected.append("A2_LITERAL_BASE")
+    if "STATE_MAGNITUDE_CONDITIONING" in names:
+        selected.append("A2_LITERAL_BASE")
+        low_scale = _first_passing(cases, MAGNITUDE_CASES)
+        if low_scale:
+            selected.append(low_scale)
     if names & {"BOUNDARY_RECONSTRUCTION", "VARIABLE_INTERPOLATION", "VARIABLE_CLASS"}:
         selected.append("A2_LITERAL_BASE")
         for candidate in ("B1_TWO_TERM_TRUE", "B2_VAR_FACE_SKEW", "B3_DIFF_VAR_SKEW", "B6_INSFV"):
@@ -100,20 +135,57 @@ def classify_matrix(cases: Mapping[str, Mapping[str, Any]]) -> dict[str, Any]:
                     proxy="B6_INSFV",
                     mechanism="INSFV subclass semantics change the outcome after matched two-term reconstruction",
                 ))
+
+        magnitude_pass = _first_passing(cases, MAGNITUDE_CASES)
+        if magnitude_pass:
+            evidence = [
+                "A2_LITERAL_BASE(n_e=1e16)=FAIL",
+                f"{magnitude_pass}=PASS",
+                "constant-state mathematical solution is unchanged by absolute density scale",
+            ]
+            if _passed(cases, "K0_LITERAL_D0_RAW"):
+                evidence.append("K0_LITERAL_D0_RAW=PASS")
+            raw_high = _first_residual(cases, "K4_LITERAL_DFROZEN_RAW")
+            raw_low = _first_residual(cases, magnitude_pass)
+            if raw_high is not None:
+                evidence.append(f"raw frozen-D/high-density residual={raw_high:.12g}")
+            if raw_low is not None:
+                evidence.append(f"raw low-density residual={raw_low:.12g}")
+            owners.append(_owner(
+                "STATE_MAGNITUDE_CONDITIONING",
+                evidence=evidence,
+                proxy=magnitude_pass,
+                mechanism="the zero-gradient literal-D operator changes from FAIL to PASS when only the absolute electron unknown scale is reduced; this favors floating-point/conditioning rather than a coefficient-provider defect",
+            ))
+
+        if not owners:
+            b_cases = [
+                "B0_TWO_TERM_FALSE", "B1_TWO_TERM_TRUE", "B2_VAR_FACE_SKEW",
+                "B3_DIFF_VAR_SKEW", "B4_BOTH_SKEW", "B5_CACHE_FALSE", "B6_INSFV",
+            ]
+            magnitude_floor_closed = _supported(cases, "M0_LITERAL_N1_RAW") and not _passed(cases, "M0_LITERAL_N1_RAW")
+            zero_d_ok = _passed(cases, "K0_LITERAL_D0_RAW")
+            if (
+                all(_supported(cases, cid) and not _passed(cases, cid) for cid in b_cases)
+                and _supported(cases, "E0_LITERAL_NO_BOUNDARY")
+                and not _passed(cases, "E0_LITERAL_NO_BOUNDARY")
+                and magnitude_floor_closed
+                and zero_d_ok
+            ):
+                owners.append(_owner(
+                    "FVDIFFUSION_INTERNAL_ASSEMBLY",
+                    evidence=[
+                        "literal D fails",
+                        "all variable/reconstruction discriminators fail",
+                        "boundary-excluded literal case fails",
+                        "O(1) constant-state literal-D case also fails",
+                        "zero-coefficient FVDiffusion case passes",
+                    ],
+                    proxy=None,
+                    mechanism="constant-state diffusion failure survives coefficient-provider, variable/reconstruction, named-boundary, and absolute-state-scale substitutions while disappearing at zero diffusion coefficient",
+                ))
             else:
-                b_cases = [
-                    "B0_TWO_TERM_FALSE", "B1_TWO_TERM_TRUE", "B2_VAR_FACE_SKEW",
-                    "B3_DIFF_VAR_SKEW", "B4_BOTH_SKEW", "B5_CACHE_FALSE", "B6_INSFV",
-                ]
-                if all(_supported(cases, cid) and not _passed(cases, cid) for cid in b_cases) and not _passed(cases, "E0_LITERAL_NO_BOUNDARY"):
-                    owners.append(_owner(
-                        "FVDIFFUSION_INTERNAL_ASSEMBLY",
-                        evidence=["literal D fails", "all variable/reconstruction discriminators fail", "boundary-excluded literal case fails"],
-                        proxy=None,
-                        mechanism="constant-state diffusion failure survives coefficient-provider, variable/reconstruction, and named-boundary substitutions",
-                    ))
-                else:
-                    unresolved.append("literal FVDiffusion/variable/reconstruction branch")
+                unresolved.append("literal FVDiffusion/variable/reconstruction/conditioning branch")
 
     elif not generic_ad:
         evidence = ["A2_LITERAL_BASE=PASS", "A3_GENERIC_AD_BASE=FAIL"]
