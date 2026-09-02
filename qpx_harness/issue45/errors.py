@@ -1,5 +1,4 @@
-"""Issue45 closure-domain exceptions."""
+"""Compatibility adapter; canonical owner is qpx_harness.inventory.errors."""
+from __future__ import annotations
 
-
-class ElectronInventoryNullspaceError(RuntimeError):
-    pass
+from ..inventory.errors import *
