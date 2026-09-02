@@ -20,6 +20,21 @@ def _quote_hit_path(path: Path) -> str:
     return f"'{text}'"
 
 
+def build_bounded_runtime_overrides(
+    *, nl_max_its: int | None = None, abort_on_solve_fail: bool = False
+) -> list[str]:
+    """Build diagnostic-only execution overrides for a bounded profile capture."""
+
+    if nl_max_its is not None and nl_max_its <= 0:
+        raise ValueError("nl_max_its must be a positive integer")
+    overrides: list[str] = []
+    if nl_max_its is not None:
+        overrides.append(f"Executioner/nl_max_its={nl_max_its}")
+    if abort_on_solve_fail:
+        overrides.append("Executioner/abort_on_solve_fail=true")
+    return overrides
+
+
 def write_overlay(path: Path, metrics_base: Path, *, prefix: str = "qpxh") -> None:
     path.write_text(
         f"""# Generated QPX profiling overlay.
@@ -113,6 +128,8 @@ def profile_case(
     prefix: str = "qpxh",
     output_namespace: str = "profiles",
     num_steps: int = 1,
+    nl_max_its: int | None = None,
+    abort_on_solve_fail: bool = False,
 ) -> int:
     case_dir = Path(case_dir).expanduser().resolve()
     if not case_dir.is_dir():
@@ -123,6 +140,10 @@ def profile_case(
         raise SystemExit("input must resolve inside case_dir")
     if not input_path.is_file():
         raise SystemExit(f"input does not exist: {input_path}")
+
+    diagnostic_overrides = build_bounded_runtime_overrides(
+        nl_max_its=nl_max_its, abort_on_solve_fail=abort_on_solve_fail
+    )
 
     exe = resolve_executable(executable)
     validate_executable(exe)
@@ -141,7 +162,11 @@ def profile_case(
     p3_log = out_dir / "p3_run.log"
     write_overlay(overlay, metrics_base, prefix=prefix)
 
-    common_extra = [str(overlay), f"Executioner/num_steps={num_steps}"]
+    common_extra = [
+        str(overlay),
+        f"Executioner/num_steps={num_steps}",
+        *diagnostic_overrides,
+    ]
     print("P2 START   : qpx-opt --check-input with diagnostic overlay")
     p2 = run_qpx(
         exe,
@@ -162,6 +187,7 @@ def profile_case(
             "input": input_name,
             "input_sha256": sha256_file(input_path),
             "overlay_sha256": sha256_file(overlay),
+            "diagnostic_overrides": diagnostic_overrides,
             "p2_returncode": p2.returncode,
             "p2_log": str(p2_log),
         }
@@ -173,6 +199,7 @@ def profile_case(
         "-log_view",
         f":{petsc_csv}:ascii_csv",
         "-log_view_memory",
+        "-snes_monitor",
         "-snes_converged_reason",
         "-ksp_converged_reason",
     ]
@@ -193,21 +220,38 @@ def profile_case(
 
     metrics_csv = find_metrics_csv(metrics_base)
     last_metrics = read_last_metrics_row(metrics_csv)
+    bounded_diagnostic = bool(diagnostic_overrides)
+    bounded_capture = (
+        bounded_diagnostic
+        and abort_on_solve_fail
+        and nl_max_its is not None
+        and petsc_csv.is_file()
+    )
+    if p3.returncode == 0:
+        classification = "PROFILE_CAPTURED"
+    elif bounded_capture:
+        classification = "BOUNDED_PROFILE_CAPTURED"
+    else:
+        classification = "RUNTIME_FAIL_OR_NONCONVERGENCE"
+
     summary = {
         "issue": issue,
         "label": label,
         "metric_prefix": prefix,
-        "classification": "PROFILE_CAPTURED"
-        if p3.returncode == 0
-        else "RUNTIME_FAIL_OR_NONCONVERGENCE",
+        "classification": classification,
         "qpx_realpath": str(exe),
         "case_dir": str(case_dir),
         "input": input_name,
         "input_sha256": sha256_file(input_path),
         "overlay_sha256": sha256_file(overlay),
         "one_step_override": f"Executioner/num_steps={num_steps}",
+        "bounded_diagnostic": bounded_diagnostic,
+        "diagnostic_overrides": diagnostic_overrides,
+        "nl_max_its_override": nl_max_its,
+        "abort_on_solve_fail_override": abort_on_solve_fail,
         "physics_parameters_changed": False,
         "solver_tolerances_changed": False,
+        "scientific_acceptance_eligible": not bounded_diagnostic,
         "p2_returncode": p2.returncode,
         "p3_returncode": p3.returncode,
         "wall_seconds": p3.wall_seconds,
@@ -222,12 +266,13 @@ def profile_case(
 
     print("QPX PROFILE SUMMARY:")
     print(f"  OUTPUT_DIR : {out_dir}")
+    print(f"  CLASS      : {classification}")
     print(f"  WALL_S     : {p3.wall_seconds:.6f}")
     print(f"  P3_RC      : {p3.returncode}")
     print(f"  SUMMARY    : {summary_path}")
     print(f"  PERFGRAPH  : {p3_log}")
     print(f"  PETSC_CSV  : {petsc_csv}")
-    return p3.returncode
+    return 0 if p3.returncode == 0 or bounded_capture else p3.returncode
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -241,6 +286,16 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--prefix", default="qpxh")
     parser.add_argument("--output-namespace", default="profiles")
     parser.add_argument("--num-steps", type=int, default=1)
+    parser.add_argument(
+        "--nl-max-its",
+        type=int,
+        help="diagnostic-only nonlinear-iteration cap for bounded profile capture",
+    )
+    parser.add_argument(
+        "--abort-on-solve-fail",
+        action="store_true",
+        help="abort after bounded nonlinear nonconvergence instead of timestep cutback",
+    )
     args = parser.parse_args(argv)
     return profile_case(
         case_dir=Path(args.case_dir),
@@ -252,6 +307,8 @@ def main(argv: list[str] | None = None) -> int:
         prefix=args.prefix,
         output_namespace=args.output_namespace,
         num_steps=args.num_steps,
+        nl_max_its=args.nl_max_its,
+        abort_on_solve_fail=args.abort_on_solve_fail,
     )
 
 
