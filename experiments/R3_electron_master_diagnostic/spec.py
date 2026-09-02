@@ -28,28 +28,34 @@ def t(name: str, value: str) -> tuple[str, str]:
 
 
 CHEAP_CASES: tuple[CaseSpec, ...] = (
+    # Required anchors reuse the already-established #94 L0-L3 construction paths.
     CaseSpec("A0_TIME_ONLY", "control", "L0", meaning="time-only accepted control"),
     CaseSpec("A1_QPX_BASELINE", "control", "L3", meaning="current QPX diffusion failure anchor"),
-    CaseSpec("C0_LITERAL_HARMONIC", "coefficient", "L1", (t("coeff_interp_method", "harmonic"),)),
-    CaseSpec("C1_LITERAL_AVERAGE", "coefficient", "L1", (t("coeff_interp_method", "average"),)),
+    CaseSpec("A2_LITERAL_BASE", "coefficient", "L1", meaning="literal-D #94 anchor"),
+    CaseSpec("A3_GENERIC_AD_BASE", "coefficient", "L2", meaning="generic-AD #94 anchor"),
+
+    # Exploratory discriminators are optional so pinned-version incompatibility does not
+    # consume the one-shot opportunity or block the required scientific anchors.
+    CaseSpec("C0_LITERAL_HARMONIC", "coefficient", "L1", (t("coeff_interp_method", "harmonic"),), kind="optional"),
+    CaseSpec("C1_LITERAL_AVERAGE", "coefficient", "L1", (t("coeff_interp_method", "average"),), kind="optional"),
     CaseSpec("C2_GENERIC_NONAD", "coefficient", "L2", (t("material_ad", "false"), t("coeff_interp_method", "harmonic")), kind="optional"),
-    CaseSpec("C3_GENERIC_AD_HARMONIC", "coefficient", "L2", (t("coeff_interp_method", "harmonic"),)),
-    CaseSpec("C4_GENERIC_AD_AVERAGE", "coefficient", "L2", (t("coeff_interp_method", "average"),)),
-    CaseSpec("B0_TWO_TERM_FALSE", "variable", "L1", (t("two_term_boundary_expansion", "false"),)),
-    CaseSpec("B1_TWO_TERM_TRUE", "variable", "L1", (t("two_term_boundary_expansion", "true"),)),
-    CaseSpec("B2_VAR_FACE_SKEW", "variable", "L1", (t("two_term_boundary_expansion", "true"), t("face_interp_method", "skewness-corrected"))),
-    CaseSpec("B3_DIFF_VAR_SKEW", "variable", "L1", (t("two_term_boundary_expansion", "true"), t("variable_interp_method", "skewness-corrected"))),
-    CaseSpec("B4_BOTH_SKEW", "variable", "L1", (t("two_term_boundary_expansion", "true"), t("face_interp_method", "skewness-corrected"), t("variable_interp_method", "skewness-corrected"))),
-    CaseSpec("B5_CACHE_FALSE", "variable", "L1", (t("two_term_boundary_expansion", "true"), t("cache_cell_gradients", "false"))),
-    CaseSpec("B6_INSFV", "variable", "L1", (t("two_term_boundary_expansion", "true"), t("variable_type", "INSFVScalarFieldVariable"))),
-    CaseSpec("E0_LITERAL_NO_BOUNDARY", "face_context", "L1", (t("boundaries_to_avoid", "all"),)),
-    CaseSpec("E1_GENERIC_AD_NO_BOUNDARY", "face_context", "L2", (t("boundaries_to_avoid", "all"),)),
-    CaseSpec("E2_QPX_NO_BOUNDARY", "face_context", "L3", (t("boundaries_to_avoid", "all"),)),
+    CaseSpec("C3_GENERIC_AD_HARMONIC", "coefficient", "L2", (t("coeff_interp_method", "harmonic"),), kind="optional"),
+    CaseSpec("C4_GENERIC_AD_AVERAGE", "coefficient", "L2", (t("coeff_interp_method", "average"),), kind="optional"),
+    CaseSpec("B0_TWO_TERM_FALSE", "variable", "L1", (t("two_term_boundary_expansion", "false"),), kind="optional"),
+    CaseSpec("B1_TWO_TERM_TRUE", "variable", "L1", (t("two_term_boundary_expansion", "true"),), kind="optional"),
+    CaseSpec("B2_VAR_FACE_SKEW", "variable", "L1", (t("two_term_boundary_expansion", "true"), t("face_interp_method", "skewness-corrected")), kind="optional"),
+    CaseSpec("B3_DIFF_VAR_SKEW", "variable", "L1", (t("two_term_boundary_expansion", "true"), t("variable_interp_method", "skewness-corrected")), kind="optional"),
+    CaseSpec("B4_BOTH_SKEW", "variable", "L1", (t("two_term_boundary_expansion", "true"), t("face_interp_method", "skewness-corrected"), t("variable_interp_method", "skewness-corrected")), kind="optional"),
+    CaseSpec("B5_CACHE_FALSE", "variable", "L1", (t("two_term_boundary_expansion", "true"), t("cache_cell_gradients", "false")), kind="optional"),
+    CaseSpec("B6_INSFV", "variable", "L1", (t("two_term_boundary_expansion", "true"), t("variable_type", "INSFVScalarFieldVariable")), kind="optional"),
+    CaseSpec("E0_LITERAL_NO_BOUNDARY", "face_context", "L1", (t("boundaries_to_avoid", "all"),), kind="optional"),
+    CaseSpec("E1_GENERIC_AD_NO_BOUNDARY", "face_context", "L2", (t("boundaries_to_avoid", "all"),), kind="optional"),
+    CaseSpec("E2_QPX_NO_BOUNDARY", "face_context", "L3", (t("boundaries_to_avoid", "all"),), kind="optional"),
     CaseSpec("Q0_QPX_LITERAL_MEAN_EN", "lookup", "L3", (t("qpx_mean_energy", "5.73276"),), kind="optional"),
     CaseSpec("Q1_QPX_LITERAL_P", "lookup", "L3", (t("qpx_pressure", "1.33322"),), kind="optional"),
     CaseSpec("Q2_QPX_LITERAL_T", "lookup", "L3", (t("qpx_gas_temperature", "600.0"),), kind="optional"),
     CaseSpec("Q3_QPX_ALL_LITERAL", "lookup", "L3", (t("qpx_mean_energy", "5.73276"), t("qpx_pressure", "1.33322"), t("qpx_gas_temperature", "600.0")), kind="optional"),
-    CaseSpec("S0_QPX_SCALING_OFF", "solver", "L3", (t("automatic_scaling", "false"), t("off_diagonals_in_auto_scaling", "false"))),
+    CaseSpec("S0_QPX_SCALING_OFF", "solver", "L3", (t("automatic_scaling", "false"), t("off_diagonals_in_auto_scaling", "false")), kind="optional"),
 )
 
 
