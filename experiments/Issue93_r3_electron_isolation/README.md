@@ -1,98 +1,153 @@
 # Issue #93 — R3 electron residual isolation
 
-This experiment workspace owns the diagnostic continuation after Issue #92 closed
-with the combined R3 electron residual blocker unresolved.
+This workspace owns the diagnostic continuation after Issue #92 closed with the
+combined R3 electron residual blocker unresolved.
 
 ## Scope
 
 The scientific scope remains pre-Poisson R3:
 
 - real `qvt.msh` geometry/mesh identity;
-- accepted Issue #2 electron drift-diffusion semantics;
+- accepted Issue #2 electron lookup/drift-diffusion semantics;
 - prescribed electric field ownership retained;
 - Poisson and charge-to-potential feedback OFF.
 
-The first discriminator deliberately removes the heavy nonlinear equations while
-freezing the electron lookup state to the same entering R3-E0 values. This is a
-diagnostic reduction only and cannot establish Issue #91 PASS.
+Reduced cases are diagnostic-only and cannot establish Issue #91 PASS.
 
 ## J0 — qpx-free dependency audit
 
-`dependency_audit.py` reconstructs the canonical Issue #91 R3-E0 input and checks
-the residual ownership contract. The expected structural result is:
+`dependency_audit.py` reconstructs canonical Issue #91 R3-E0 and checks residual
+ownership.
 
 ```text
 R_e <- n_e                         nonlinear self block
 R_e <- electron_diffusion(p,T_g)  p nonlinear cross dependency
 R_e <- electron_mobility(p,T_g)   inactive in R3-E0 because E=0
-R_e <- phi_prescribed             prescribed function, not a Newton variable
-R_e <- electron boundary contract no explicit electron FVBC objects inserted
+R_e <- phi_prescribed             prescribed function, not Newton variable
 ```
 
-`p` is a nonlinear pressure variable. `T_g` is not a nonlinear unknown in current
-R3: it is retained in `FunctorMaterials/state_constants` as a constant AD functor.
-Therefore `R_e` has a coefficient dependency on `T_g`, but there is no assembled
-Newton cross block `dR_e/dT_g` in the current formulation.
-
-The accepted electron drift parameterization uses `carrier = carrier_one`; the
-electron number density is the solved `variable = n_e`. The lookup contract uses
-`property_table_file = electron_moments.txt`, `mean_energy = mean_en`, and
-`bounds_policy = error`.
-
-The reciprocal heavy path is through `QPXThermalDiffusionMaterial`, which consumes
-`electron_number_density = n_e`; its `D_mix_*` properties feed the six solved
-heavy-species mixture-averaged diffusion residuals.
-
-## J1 — real-QVT frozen-heavy electron discriminator
-
-`run.py` creates a temporary case using the exact Issue #91 mesh-generation block
-and accepted electron table, then solves only:
+Current ownership:
 
 ```text
-FVTimeKernel(n_e)
-+ FVDiffusion(n_e, electron_diffusion)
-+ QPXFVElectrostaticDrift(n_e, carrier_one, E=0)
+p    = nonlinear INSFV pressure variable
+T_g  = constant AD functor in state_constants
+phi  = prescribed function
 ```
 
-with:
+Therefore `dR_e/dT_g` is not an assembled Newton cross block in current R3.
+The reciprocal heavy path remains structurally present through:
 
 ```text
-p = 1.33322 Pa       frozen functor
-T_g = 600 K          frozen functor
-n_e(t=0) = 1e16 m^-3 uniform
-E = 0
-Poisson OFF
+n_e -> QPXThermalDiffusionMaterial -> D_mix_* -> heavy diffusion residuals
 ```
 
-No heavy transport equation participates in the nonlinear solve. Under this
-reduction the electron coefficients are frozen and the residual is linear in
-`n_e`. The uniform, source-free, zero-field state is also a null-flux invariant.
+## J1 — real-QVT electron-only zero-field discriminator — EVR1 complete
 
-Decision:
+The corrected J1 does not reconstruct a new framework contract. It derives
+straight from the historically accepted Issue #2 `qvt_prepoisson/input.i`, with
+identical `qvt.msh` and `electron_moments.txt`, and changes only:
 
 ```text
-J1 converges + invariant checker PASS
-  -> local real-QVT electron equation path supported
-  -> combined-R3 cross-coupling/Jacobian branch becomes the next discriminator
-
-J1 reproduces electron stagnation/nonconvergence
-  -> electron equation/BC/material/runtime representation branch is favored
+phi_prescribed: -0.01*x -> 0.0*x
 ```
+
+Heavy nonlinear equations are absent in the accepted Issue #2 reference. J1
+therefore tests the real-QVT electron path with frozen lookup state and Poisson
+OFF.
+
+Returned EVR1:
+
+```text
+P2 PASS
+P3 rc = 1
+SNES norm = 1.197516979581 repeated without descent
+linear solve = CONVERGED_RTOL / 1 iteration
+nonlinear solve = DIVERGED_LINE_SEARCH / iteration 0
+timestep cut back to dtmin = 1e-12
+```
+
+Scientific consequence:
+
+```text
+heavy <-> electron cross-coupling is not required to reproduce the blocker
+```
+
+This does not by itself prove a C++ defect because zero prescribed field is the
+scientific discriminator relative to the historical Issue #2 accepted case.
+
+## J2 — one-shot real-QVT electron operator decomposition — EVR2 next
+
+`operator_decomposition.py` derives every case from the same accepted Issue #2
+real-QVT input and uses the accepted Issue #2 `expected.json` observable contract.
+
+```text
+C0 accepted #2 current-executable control
+   time + diffusion + drift, E=0.01
+
+C1 zero-field time-only
+
+C2 zero-field time + diffusion
+
+C3 zero-field time + drift
+
+C4 zero-field time + diffusion + drift
+   repeatability case, only reached if C0-C3 pass
+```
+
+Decision tree:
+
+```text
+C0 fails -> E4 current-executable/historical-control regression favored
+C1 fails -> E3 transient/convergence/runtime representation favored
+C2 fails -> E2 diffusion / framework-effective FV boundary path favored
+C3 fails -> E1 zero-field electrostatic-drift path favored
+C4 fails -> electron-operator interaction favored
+all pass -> J1 repeatability/configuration HOLD
+```
+
+### EVR protection
+
+All five case inputs are prepared and all five P2 `--check-input` calls are run
+**before any P3 launch**. Therefore a J2 construction/framework-contract failure
+does not consume EVR2.
+
+Once P3 begins, the adaptive C0→C4 batch is one governed Issue #93 scientific
+result return and consumes EVR2. It stops at the first failing scientific owner.
+
+The accepted Issue #2 checker semantics are reused for runtime classification:
+positive physical row, transport lookup values, positivity, inventory/mean
+closure, and qvt finite-state requirement.
+
+## J3 — final focused confirmation — reserved EVR3
+
+EVR3 is reserved for exactly one owner selected by J2. Because the electron-only
+real-QVT system contains only `n_e` as nonlinear variable, a bounded finite-
+difference Jacobian check may be admissible for the isolated failing case even
+though the full combined-R3 system exceeded the earlier Jacobian cost guard.
+
+No combined-R3 all-DOF Jacobian sweep is authorized here.
 
 ## Execution
 
-J0 is qpx-free and consumes no scientific EVR:
+J0, qpx-free / EVR 0:
 
 ```bash
 python -m experiments.Issue93_r3_electron_isolation.dependency_audit
 ```
 
-J1 performs one governed local QPX scientific run and is Issue #93 EVR1:
+Historical J1 runner, already consumed EVR1:
 
 ```bash
 python -m experiments.Issue93_r3_electron_isolation.run --qpx "$QPX_OPT"
 ```
 
-The runner performs P2 `--check-input` first. P2 failure does not launch P3.
-Generated runtime artifacts are written to a temporary directory unless
-`--work-dir` is supplied.
+J2 one-shot operator decomposition, next local scientific run:
+
+```bash
+python -m experiments.Issue93_r3_electron_isolation.operator_decomposition \
+  --qpx "$QPX_OPT"
+```
+
+Generated artifacts are written to a temporary directory unless `--work-dir` is
+supplied. `summary.json` records P2/P3 results, accepted-control checker results,
+residual trajectories, first failing case, hypothesis status, and EVR accounting.
