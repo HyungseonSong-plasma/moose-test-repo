@@ -5,10 +5,11 @@ from pathlib import Path
 from typing import Any
 
 from recipes import issue43_coupling_diagnostic as recipe
+from recipes import issue43_feedback_basis as feedback_basis
 
 from ..execution import cases as case_ops
 from .. import execution_contract as ec
-from .. import issue43_fast_relaxation as v5
+from .. import issue43_fast_output_contract as output_contract
 from ..moose import output_observation as ooc
 from ..moose import blocks as mb
 from ..moose import parameters as mp
@@ -73,7 +74,7 @@ def _contains_petsc_options(text: str, required: tuple[str, ...]) -> bool:
 def _build_case(
     base_text: str, *, dt: float, radial_span: float, jacobian_test: bool = False
 ) -> tuple[str, dict[str, Any]]:
-    uninstrumented = v5._build_feedback_v5(
+    uninstrumented, feedback_meta = feedback_basis.build_closed_feedback_input(
         base_text,
         dt=dt,
         steps=STEPS,
@@ -86,6 +87,7 @@ def _build_case(
         "dt": dt,
         "steps": STEPS,
         "jacobian_test": jacobian_test,
+        "feedback_basis": feedback_meta,
         "instrumentation": instrumentation,
     }
 
@@ -108,7 +110,7 @@ def _p1_case(
     parser_errors = validate_parser_symbols_text(text, f"<{case_id}>")
     add("parser-symbol-preflight", not parser_errors, parser_errors, [])
 
-    contract = v5._augment_execution_contract(case_id, text)
+    contract = output_contract._augment_execution_contract(case_id, text)
     contract_decision = ec.evaluate_contract(contract, phase="P1")
     add(
         "execution-contract-p1",
