@@ -26,13 +26,15 @@ def number(row: dict[str, str], key: str) -> float:
 
 
 def main(argv: list[str]) -> int:
-    if len(argv) != 3:
-        raise SystemExit("usage: check.py <raw.csv> <physical.csv> <expected.json>")
-    raw = read_rows(Path(argv[0]))
-    physical = read_rows(Path(argv[1]))
-    expected = json.loads(Path(argv[2]).read_text())
-    initial = raw[0]
-    final = physical[-1]
+    if len(argv) != 2:
+        raise SystemExit("usage: check.py <trajectory.csv> <expected.json>")
+    trajectory = read_rows(Path(argv[0]))
+    expected = json.loads(Path(argv[1]).read_text())
+    initial = trajectory[0]
+    final = trajectory[-1]
+
+    assert abs(number(initial, "time")) <= 1.0e-15
+    assert number(final, "time") > 1.0e-15
 
     inv0 = number(initial, "n_e_inventory")
     inv1 = number(final, "n_e_inventory")
