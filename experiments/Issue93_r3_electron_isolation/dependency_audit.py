@@ -37,7 +37,6 @@ def audit(source_case: Path = SOURCE_CASE) -> dict[str, Any]:
     heavy = heavy_path.read_text()
     canonical, _meta = build_r3_input(heavy, field_strength=0.0)
 
-    # Exact accepted Issue91 electron objects/parameters.
     electron_checks = {
         "n_e_time": ("[n_e_time]", "type = FVTimeKernel", "variable = n_e"),
         "n_e_diffusion": (
@@ -75,14 +74,15 @@ def audit(source_case: Path = SOURCE_CASE) -> dict[str, Any]:
         for snippet in snippets:
             _require(canonical, snippet, f"{owner}:{snippet}")
 
-    # Ownership/classification facts that determine assembled Newton cross blocks.
+    # p is nonlinear; T_g remains a constant functor in state_constants after
+    # Issue91 removes only n_e from the old heavy constant bundle.
     _require(canonical, "[p]\n    type = INSFVPressureVariable", "p nonlinear ownership")
-    aux = _top_level_block(canonical, "AuxVariables")
-    _require(aux, "[T_g]", "T_g auxiliary ownership")
+    functors = _top_level_block(canonical, "FunctorMaterials")
+    _require(functors, "[state_constants]", "state_constants ownership")
+    _require(functors, "prop_names = 'T_g T_e mu_flow'", "T_g constant-functor ownership")
     if abs(_top_level_number(canonical, "E0_migration")) > 1.0e-18:
         raise AuditError("R3-E0 canonical field is not zero")
 
-    # Reciprocal heavy dependency on n_e and its six solved diffusion residuals.
     _require(heavy, "type = QPXThermalDiffusionMaterial", "heavy transport material")
     _require(heavy, "electron_number_density = n_e", "heavy material electron dependency")
     reciprocal: list[dict[str, str]] = []
@@ -106,7 +106,6 @@ def audit(source_case: Path = SOURCE_CASE) -> dict[str, Any]:
             }
         )
 
-    # Issue91 inserts no electron FVBC object. Avoid asserting more than the input owns.
     explicit_electron_fvbc = "variable = n_e" in _top_level_block(canonical, "FVBCs")
 
     return {
@@ -140,13 +139,21 @@ def audit(source_case: Path = SOURCE_CASE) -> dict[str, Any]:
             "gas_temperature": "T_g",
             "bounds_policy": "error",
         },
+        "coefficient_ownership": {
+            "p": "NONLINEAR_INSFV_PRESSURE_VARIABLE",
+            "T_g": "CONSTANT_AD_FUNCTOR_MATERIAL_PROPERTY",
+            "phi_prescribed": "PRESCRIBED_FUNCTION",
+        },
         "newton_dependency_classification": {
             "dR_e_dn_e": "NONZERO_SELF_BLOCK",
             "dR_e_dp": (
                 "STRUCTURAL_NONLINEAR_CROSS_BLOCK_VIA_LOOKUP; may evaluate to zero at the "
                 "uniform E=0 null-flux state"
             ),
-            "dR_e_dT_g": "NO_NEWTON_BLOCK_T_g_IS_AUXILIARY; coefficient/runtime dependency only",
+            "dR_e_dT_g": (
+                "NO_NEWTON_BLOCK_T_g_IS_CONSTANT_FUNCTOR; coefficient dependency exists but "
+                "T_g is not a nonlinear unknown in current R3"
+            ),
             "dR_e_dphi": "NO_NEWTON_BLOCK_PHI_IS_PRESCRIBED_FUNCTION",
             "dR_e_du_v_species": "NO_DIRECT_DEPENDENCY",
         },
@@ -174,7 +181,6 @@ def audit(source_case: Path = SOURCE_CASE) -> dict[str, Any]:
 
 
 def _top_level_block(text: str, name: str) -> str:
-    """Return one modern-MOOSE top-level block, or an empty string if absent."""
     lines = text.splitlines()
     collecting = False
     depth = 0
