@@ -10,12 +10,12 @@ from pathlib import Path
 SPECIES = ("O2s", "O2p", "O", "Om", "Op", "Os")
 
 
-def read_rows(path: Path) -> list[dict[str, str]]:
+def read_last(path: Path) -> dict[str, str]:
     with path.open(newline="") as handle:
         rows = list(csv.DictReader(handle))
     if not rows:
-        raise AssertionError(f"empty CSV: {path}")
-    return rows
+        raise AssertionError(f"empty physical CSV: {path}")
+    return rows[-1]
 
 
 def number(row: dict[str, str], key: str) -> float:
@@ -25,25 +25,29 @@ def number(row: dict[str, str], key: str) -> float:
     return value
 
 
+def relerr(value: float, reference: float) -> float:
+    return abs(value - reference) / max(abs(reference), 1.0e-300)
+
+
 def main(argv: list[str]) -> int:
     if len(argv) != 2:
-        raise SystemExit("usage: check.py <trajectory.csv> <expected.json>")
-    trajectory = read_rows(Path(argv[0]))
+        raise SystemExit("usage: check.py <physical.csv> <expected.json>")
+    final = read_last(Path(argv[0]))
     expected = json.loads(Path(argv[1]).read_text())
-    initial = trajectory[0]
-    final = trajectory[-1]
 
-    assert abs(number(initial, "time")) <= 1.0e-15
     assert number(final, "time") > 1.0e-15
 
-    inv0 = number(initial, "n_e_inventory")
-    inv1 = number(final, "n_e_inventory")
-    inv_rel = abs(inv1 - inv0) / max(abs(inv0), 1.0)
+    n0 = float(expected["n0"])
+    inv = number(final, "n_e_inventory")
+    volume = number(final, "domain_volume")
+    inv_rel = relerr(inv, n0 * volume)
     assert inv_rel <= float(expected["inventory_rel_tol"]), inv_rel
 
     ne_min = number(final, "n_e_min")
     ne_max = number(final, "n_e_max")
+    ne_avg = number(final, "n_e_avg")
     assert ne_min >= 0.0 and ne_max >= ne_min
+    assert relerr(ne_avg, n0) <= max(float(expected["inventory_rel_tol"]) * 5.0, 2.0e-8)
     assert number(final, "electron_mobility_avg") > 0.0
     assert number(final, "electron_diffusion_avg") > 0.0
     assert number(final, "electron_pressure_avg") > 0.0
