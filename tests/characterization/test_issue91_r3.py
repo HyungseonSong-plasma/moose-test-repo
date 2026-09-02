@@ -29,16 +29,18 @@ def test_issue91_assets_are_self_contained() -> None:
             assert (case / required).is_file(), (name, required)
 
 
-def test_issue91_temporal_checker_uses_normalized_trajectory_only() -> None:
+def test_issue91_temporal_checker_uses_positive_time_normalized_rows() -> None:
     for name in ("r3_e0", "r3_econst"):
         cfg = json.loads((CASE_ROOT / name / "test.json").read_text())
+        expected = json.loads((CASE_ROOT / name / "expected.json").read_text())
         assert cfg["checker_args"] == ["input_out.physical.csv", "expected.json"]
         assert "input_out.csv" not in cfg["checker_args"]
         assert len(cfg["temporal_csv"]) == 1
         spec = cfg["temporal_csv"][0]
         assert spec["source"] == "input_out.csv"
         assert spec["physical"] == "input_out.physical.csv"
-        assert spec["initial_row_policy"] == "include_as_physics"
+        assert spec["initial_row_policy"] == "exclude_observation"
+        assert expected["n0"] == 1.0e16
 
 
 def test_r3_econst_composition_is_structurally_valid() -> None:
@@ -46,9 +48,13 @@ def test_r3_econst_composition_is_structurally_valid() -> None:
     audit = audit_r3_input(text, expected_field=0.01)
     assert audit["status"] == "PASS"
     assert meta["poisson_enabled"] is False
+    assert meta["electron_initial_condition"] == "uniform_n_e_value"
     assert meta["electron_pressure"] == "p"
     assert meta["electron_gas_temperature"] == "T_g"
     assert meta["common_timestep"] == 1.0e-8
+    assert "initial_condition = ${n_e_value}" in text
+    assert "n_e_ic_profile" not in text
+    assert "[domain_volume]" in text
 
 
 def test_r3_zero_field_changes_only_declared_field_axis() -> None:
