@@ -1,0 +1,82 @@
+{
+  "schema_version": 1,
+  "issue": 89,
+  "parent_science_issue": 45,
+  "science_state": "FROZEN_OUTCOME_B",
+  "scientific_evr_consumed_by_issue89": 0,
+  "framework_absorption": "NONE_JUSTIFIED_AT_CURRENT_REUSE_LEVEL",
+  "artifacts": [
+    {
+      "path": "studies/issue45/evidence_inventory.json",
+      "class": "C",
+      "disposition": "RETAIN_FROZEN_EVIDENCE",
+      "reason": "One-off provenance reconstruction manifest. It is evidence, not a runtime capability."
+    },
+    {
+      "path": "studies/issue45/hypothesis_audit.json",
+      "class": "B_C",
+      "disposition": "RETAIN_FROZEN_SCIENCE_RESULT",
+      "reason": "Issue45-specific hypothesis state and evidence-gap analysis."
+    },
+    {
+      "path": "studies/issue45/evr3_protocol.json",
+      "class": "B",
+      "disposition": "RETAIN_EXPERIMENT_POLICY",
+      "reason": "Issue45-specific predeclared science protocol and thresholds."
+    },
+    {
+      "path": "studies/issue45/evr3_discriminator.py",
+      "class": "B_C_D_MIXED",
+      "disposition": "RETAIN_HISTORICAL_REPRODUCTION_OUTSIDE_PRODUCTION",
+      "reason": "The script is an Issue45 one-shot reproduction harness. Runtime, residual, scaling, and KSP mechanics mostly delegate to or duplicate existing canonical owners. Its singular-value monitor parser has no demonstrated second consumer, so it is not promoted merely because it looks generic."
+    },
+    {
+      "path": "studies/issue45/evr3_interpretation.json",
+      "class": "B_C",
+      "disposition": "RETAIN_FROZEN_SCIENTIFIC_INTERPRETATION",
+      "reason": "Final machine-readable scientific decision for Outcome B."
+    }
+  ],
+  "evr3_discriminator_mechanics": [
+    {
+      "mechanic": "KSP true-residual parsing and fidelity metric",
+      "class": "D",
+      "canonical_owner": "qpx_harness/petsc/ksp.py",
+      "disposition": "NO_NEW_OWNER"
+    },
+    {
+      "mechanic": "MOOSE automatic-scaling block parsing",
+      "class": "D",
+      "canonical_owner": "qpx_harness/moose/log.py",
+      "disposition": "NO_NEW_OWNER"
+    },
+    {
+      "mechanic": "QPX execution and case staging",
+      "class": "D",
+      "canonical_owner": "qpx_harness/execution/ and qpx_harness/inventory/",
+      "disposition": "NO_NEW_OWNER"
+    },
+    {
+      "mechanic": "PETSc singular-value monitor parsing",
+      "class": "C_DEFERRED_GENERICIZATION",
+      "canonical_owner": null,
+      "disposition": "KEEP_LOCAL_UNTIL_REAL_REUSE_EXISTS",
+      "reason": "Only the Issue45 EVR3 study currently consumes it. One successful use is insufficient evidence for a permanent generic framework contract."
+    },
+    {
+      "mechanic": "H1/H2 thresholds and causal interpretation",
+      "class": "B",
+      "canonical_owner": "studies/issue45/evr3_protocol.json",
+      "disposition": "KEEP_OUTSIDE_GENERIC_FRAMEWORK"
+    }
+  ],
+  "architecture_decision": {
+    "new_qpx_harness_modules": 0,
+    "new_generic_to_issue_dependencies": 0,
+    "study_to_production_promotion": 0,
+    "study_artifacts_retained": 5,
+    "scientific_runtime_required": false,
+    "scientific_state_changed": false
+  },
+  "future_trigger_for_singular_parser_absorption": "A second independent experiment or production diagnostic requires the same PETSc singular-value monitor contract with compatible semantics."
+}
