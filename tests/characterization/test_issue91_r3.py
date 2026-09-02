@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from recipes.issue91_r3 import audit_r3_input, build_r3_input
@@ -26,6 +27,18 @@ def test_issue91_assets_are_self_contained() -> None:
             "test.json",
         ):
             assert (case / required).is_file(), (name, required)
+
+
+def test_issue91_temporal_checker_uses_normalized_trajectory_only() -> None:
+    for name in ("r3_e0", "r3_econst"):
+        cfg = json.loads((CASE_ROOT / name / "test.json").read_text())
+        assert cfg["checker_args"] == ["input_out.physical.csv", "expected.json"]
+        assert "input_out.csv" not in cfg["checker_args"]
+        assert len(cfg["temporal_csv"]) == 1
+        spec = cfg["temporal_csv"][0]
+        assert spec["source"] == "input_out.csv"
+        assert spec["physical"] == "input_out.physical.csv"
+        assert spec["initial_row_policy"] == "include_as_physics"
 
 
 def test_r3_econst_composition_is_structurally_valid() -> None:
