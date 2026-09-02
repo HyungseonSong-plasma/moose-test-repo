@@ -1,0 +1,39 @@
+from experiments.R3_electron_master_diagnostic.classify import classify_matrix
+from experiments.R3_electron_master_diagnostic.spec import CHEAP_CASES
+
+
+def _matrix(**values):
+    return {
+        spec.case_id: {
+            "status": "PASS" if values.get(spec.case_id, True) else "FAIL",
+            "passed": values.get(spec.case_id, True),
+        }
+        for spec in CHEAP_CASES
+    }
+
+
+def test_qpx_lookup_transition_maps_owner_and_proxy():
+    cases = _matrix(A1_QPX_BASELINE=False, E2_QPX_NO_BOUNDARY=False, Q3_QPX_ALL_LITERAL=False)
+    result = classify_matrix(cases)
+    assert [item["owner"] for item in result["owners"]] == ["QPX_LOOKUP"]
+    assert result["owners"][0]["remedy_proxy_case"] == "C3_GENERIC_AD_HARMONIC"
+    assert result["geometry"] == "HELD_FIXED_OUT_OF_SCOPE"
+    assert "A1_QPX_BASELINE" in result["selected_jacobian_cases"]
+
+
+def test_boundary_reconstruction_transition_precedes_broad_fvdiffusion_owner():
+    cases = _matrix(
+        C0_LITERAL_HARMONIC=False,
+        B0_TWO_TERM_FALSE=False,
+        B1_TWO_TERM_TRUE=True,
+    )
+    result = classify_matrix(cases)
+    assert result["owners"][0]["owner"] == "BOUNDARY_RECONSTRUCTION"
+    assert result["owners"][0]["remedy_proxy_case"] == "B1_TWO_TERM_TRUE"
+
+
+def test_control_failure_holds_scientific_attribution():
+    result = classify_matrix(_matrix(A0_TIME_ONLY=False))
+    assert result["status"] == "HOLD"
+    assert result["class"] == "CONTROL_REGRESSION"
+    assert result["owners"] == []
