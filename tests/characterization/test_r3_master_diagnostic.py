@@ -12,18 +12,28 @@ def _matrix(**values):
     }
 
 
+def test_required_anchors_are_only_established_issue94_paths():
+    required = {spec.case_id for spec in CHEAP_CASES if spec.kind == "required"}
+    assert required == {
+        "A0_TIME_ONLY",
+        "A1_QPX_BASELINE",
+        "A2_LITERAL_BASE",
+        "A3_GENERIC_AD_BASE",
+    }
+
+
 def test_qpx_lookup_transition_maps_owner_and_proxy():
     cases = _matrix(A1_QPX_BASELINE=False, E2_QPX_NO_BOUNDARY=False, Q3_QPX_ALL_LITERAL=False)
     result = classify_matrix(cases)
     assert [item["owner"] for item in result["owners"]] == ["QPX_LOOKUP"]
-    assert result["owners"][0]["remedy_proxy_case"] == "C3_GENERIC_AD_HARMONIC"
+    assert result["owners"][0]["remedy_proxy_case"] == "A3_GENERIC_AD_BASE"
     assert result["geometry"] == "HELD_FIXED_OUT_OF_SCOPE"
     assert "A1_QPX_BASELINE" in result["selected_jacobian_cases"]
 
 
 def test_boundary_reconstruction_transition_precedes_broad_fvdiffusion_owner():
     cases = _matrix(
-        C0_LITERAL_HARMONIC=False,
+        A2_LITERAL_BASE=False,
         B0_TWO_TERM_FALSE=False,
         B1_TWO_TERM_TRUE=True,
     )
