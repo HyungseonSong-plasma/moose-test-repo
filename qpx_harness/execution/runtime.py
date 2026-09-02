@@ -17,6 +17,7 @@ from typing import Callable, Iterable, Sequence
 class RunResult:
     returncode: int
     wall_seconds: float
+    timed_out: bool = False
 
 
 @dataclass(frozen=True)
@@ -108,6 +109,15 @@ def _log_size(path: Path) -> int:
         return 0
 
 
+def _stop_process(proc: subprocess.Popen, *, grace_seconds: float = 10.0) -> None:
+    proc.terminate()
+    try:
+        proc.wait(timeout=grace_seconds)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+        proc.wait()
+
+
 def run_command(
     cmd: Sequence[str],
     *,
@@ -117,7 +127,13 @@ def run_command(
     telemetry_callback: TelemetryCallback | None = None,
     heartbeat_seconds: float = 10.0,
     env: dict[str, str] | None = None,
+    timeout_seconds: float | None = None,
 ) -> RunResult:
+    if timeout_seconds is not None and timeout_seconds <= 0:
+        raise ValueError("timeout_seconds must be positive when provided")
+    if stream and timeout_seconds is not None:
+        raise ValueError("timeout_seconds is not supported with stream=True")
+
     log_path.parent.mkdir(parents=True, exist_ok=True)
     start = time.perf_counter()
     if stream:
@@ -135,26 +151,28 @@ def run_command(
                     log.flush()
                 rc = proc.wait()
             except KeyboardInterrupt:
-                proc.terminate()
-                try:
-                    rc = proc.wait(timeout=10)
-                except subprocess.TimeoutExpired:
-                    proc.kill()
-                    rc = proc.wait()
+                _stop_process(proc)
                 raise
-        return RunResult(rc, time.perf_counter() - start)
+        return RunResult(rc, time.perf_counter() - start, False)
 
     with log_path.open("w", buffering=1) as log:
         proc = subprocess.Popen(
             list(cmd), cwd=cwd, stdout=log, stderr=subprocess.STDOUT, env=env,
         )
         next_heartbeat = time.perf_counter() + max(0.5, heartbeat_seconds)
+        deadline = start + timeout_seconds if timeout_seconds is not None else None
+        timed_out = False
         try:
             while True:
                 rc = proc.poll()
                 if rc is not None:
                     break
                 now = time.perf_counter()
+                if deadline is not None and now >= deadline:
+                    timed_out = True
+                    _stop_process(proc)
+                    rc = 124
+                    break
                 if telemetry_callback is not None and now >= next_heartbeat:
                     telemetry_callback(
                         TelemetrySample(
@@ -166,14 +184,9 @@ def run_command(
                     next_heartbeat = now + max(0.5, heartbeat_seconds)
                 time.sleep(0.25)
         except KeyboardInterrupt:
-            proc.terminate()
-            try:
-                proc.wait(timeout=10)
-            except subprocess.TimeoutExpired:
-                proc.kill()
-                proc.wait()
+            _stop_process(proc)
             raise
-    return RunResult(proc.returncode, time.perf_counter() - start)
+    return RunResult(int(rc), time.perf_counter() - start, timed_out)
 
 
 def run_qpx(
@@ -186,6 +199,7 @@ def run_qpx(
     stream: bool = False,
     telemetry_callback: TelemetryCallback | None = None,
     heartbeat_seconds: float = 10.0,
+    timeout_seconds: float | None = None,
 ) -> RunResult:
     return run_command(
         [str(exe), "-i", input_name, *[str(arg) for arg in extra_args]],
@@ -194,4 +208,5 @@ def run_qpx(
         stream=stream,
         telemetry_callback=telemetry_callback,
         heartbeat_seconds=heartbeat_seconds,
+        timeout_seconds=timeout_seconds,
     )
