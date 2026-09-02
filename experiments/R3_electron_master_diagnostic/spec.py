@@ -65,6 +65,14 @@ CHEAP_CASES: tuple[CaseSpec, ...] = (
     CaseSpec("M2_LITERAL_N1E8_RAW", "conditioning", "L1", (t("initial_n_e", "1e8"), t("automatic_scaling", "false"), t("off_diagonals_in_auto_scaling", "false")), kind="optional"),
     CaseSpec("M3_LITERAL_N1E12_RAW", "conditioning", "L1", (t("initial_n_e", "1e12"), t("automatic_scaling", "false"), t("off_diagonals_in_auto_scaling", "false")), kind="optional"),
     CaseSpec("M4_LITERAL_N1E14_RAW", "conditioning", "L1", (t("initial_n_e", "1e14"), t("automatic_scaling", "false"), t("off_diagonals_in_auto_scaling", "false")), kind="optional"),
+    CaseSpec(
+        "M5_LITERAL_N1_ABS1E9",
+        "solver_floor",
+        "L1",
+        (t("initial_n_e", "1.0"), t("automatic_scaling", "false"), t("off_diagonals_in_auto_scaling", "false"), t("nl_abs_tol", "1e-9")),
+        kind="optional",
+        meaning="diagnostic absolute-tolerance acceptance probe for the O(1) residual floor",
+    ),
 
     # Diffusion-strength discriminators use the physical n_e=1e16 but disable
     # automatic residual scaling so the raw residual trend can be compared.
@@ -73,6 +81,26 @@ CHEAP_CASES: tuple[CaseSpec, ...] = (
     CaseSpec("K2_LITERAL_D1E2_RAW", "conditioning", "L1", (t("literal_diffusion", "1e2"), t("automatic_scaling", "false"), t("off_diagonals_in_auto_scaling", "false")), kind="optional"),
     CaseSpec("K3_LITERAL_D1E4_RAW", "conditioning", "L1", (t("literal_diffusion", "1e4"), t("automatic_scaling", "false"), t("off_diagonals_in_auto_scaling", "false")), kind="optional"),
     CaseSpec("K4_LITERAL_DFROZEN_RAW", "conditioning", "L1", (t("automatic_scaling", "false"), t("off_diagonals_in_auto_scaling", "false")), kind="optional"),
+
+    # Pinned MOOSE FVDiffusion has no direct switch for the non-orthogonal correction.
+    # Use the built-in LinearFVDiffusion on the same qvt/RZ/plasma mesh as an independent
+    # framework reference pair. These cases are mechanism probes, not production proxies.
+    CaseSpec(
+        "O0_LINEAR_ORTHOGONAL_REF",
+        "nonorthogonal_reference",
+        "LINEAR_REF",
+        (t("use_nonorthogonal_correction", "false"),),
+        kind="optional",
+        meaning="same-mesh LinearFVDiffusion reference with non-orthogonal correction disabled",
+    ),
+    CaseSpec(
+        "O1_LINEAR_NONORTHOGONAL_REF",
+        "nonorthogonal_reference",
+        "LINEAR_REF",
+        (t("use_nonorthogonal_correction", "true"),),
+        kind="optional",
+        meaning="same-mesh LinearFVDiffusion reference with non-orthogonal correction enabled",
+    ),
 )
 
 
@@ -112,9 +140,19 @@ REMEDY_MAP: dict[str, dict[str, str]] = {
         "remedy": "Use a normalized electron unknown (for example n_hat=n_e/n_ref) so physical density remains unchanged while the solved variable is O(1).",
         "verification": "constant-state magnitude sweep -> normalized R3-E0 -> normalized R3-Econst -> production coupling audit",
     },
+    "FV_CONSTANT_PRESERVATION_FLOOR": {
+        "class": "NONDIMENSIONALIZATION_OR_UPSTREAM_FIX",
+        "remedy": "Treat the dimensional n_e variable as a conditioning amplifier first; validate an O(1) normalized electron unknown before considering an upstream FV gradient correction.",
+        "verification": "n_e and D slope checks -> O(1) Jacobian -> diagnostic absolute tolerance -> normalized R3-E0/R3-Econst",
+    },
+    "FV_NONORTHOGONAL_CONSTANT_PRESERVATION": {
+        "class": "NONDIMENSIONALIZATION_OR_UPSTREAM_FIX",
+        "remedy": "Localize the constant-preservation floor to the FV non-orthogonal/gradient-reconstruction path; retain nondimensionalization as the first production-safe mitigation candidate.",
+        "verification": "same-mesh orthogonal/non-orthogonal reference -> O(1) Jacobian -> normalized R3 regression",
+    },
     "FVDIFFUSION_INTERNAL_ASSEMBLY": {
         "class": "UPSTREAM_OR_INTEGRATION_FIX",
-        "remedy": "Localize and repair constant-state FVDiffusion internal assembly after state-magnitude conditioning is explicitly disfavored; geometry remains held fixed/out of scope.",
+        "remedy": "Localize and repair constant-state FVDiffusion internal assembly only after state-magnitude and constant-preservation-floor mechanisms are explicitly disfavored; geometry remains held fixed/out of scope.",
         "verification": "O(1) literal constant-state diffusion -> real-QVT R3-E0 -> R3-Econst",
     },
     "SOLVER_SCALING": {
