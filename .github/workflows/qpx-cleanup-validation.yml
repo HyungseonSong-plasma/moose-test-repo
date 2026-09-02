@@ -1,0 +1,22 @@
+name: QPX cleanup validation
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  validate-cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Validate Issue 80
+        run: python tests/Issue80_migration_test_retirement/final_guard.py
+      - name: Validate Issue 83
+        run: python tests/Issue83_dependency_released_retirement/final_guard.py
+      - name: Validate Issue 81
+        run: python tests/Issue81_minimal_surface_acceptance/final_guard.py
