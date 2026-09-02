@@ -11,7 +11,13 @@ def _passed(cases: Mapping[str, Mapping[str, Any]], case_id: str) -> bool:
 
 
 def _supported(cases: Mapping[str, Mapping[str, Any]], case_id: str) -> bool:
-    return cases.get(case_id, {}).get("status") not in {None, "SKIPPED_UNSUPPORTED", "NOT_RUN"}
+    return cases.get(case_id, {}).get("status") not in {
+        None,
+        "CONSTRUCTION_FAIL",
+        "P2_FAIL",
+        "SKIPPED_UNSUPPORTED",
+        "NOT_RUN",
+    }
 
 
 def _transition(cases: Mapping[str, Mapping[str, Any]], fail_id: str, pass_id: str) -> bool:
