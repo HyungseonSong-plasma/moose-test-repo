@@ -12,7 +12,8 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from recipes import issue31_coupling as recipe
-from qpx_harness import coupling_evr1_runtime as runtime
+from qpx_harness.coupling_evr1 import characterization as runtime_characterization
+from qpx_harness.coupling_evr1 import classification as runtime_classification
 from qpx_harness.coupling_evr1 import orchestration as runtime_owner
 from qpx_harness.evidence import create_collision_safe_directory
 from qpx_harness.performance.smoke import build_smoke_manifest
@@ -72,17 +73,17 @@ def _pair(
 
 
 def _check_constants() -> None:
-    if runtime.EXPERIMENT_ID != EXPECTED_EXPERIMENT_ID:
+    if runtime_owner.EXPERIMENT_ID != EXPECTED_EXPERIMENT_ID:
         raise AssertionError("EVR1 experiment id drift")
-    if runtime.PURGE_DIRECTORY_NAMES != EXPECTED_PURGE_DIRECTORIES:
+    if runtime_owner.PURGE_DIRECTORY_NAMES != EXPECTED_PURGE_DIRECTORIES:
         raise AssertionError("EVR1 purge directory policy drift")
-    if runtime.PURGE_PATTERNS != EXPECTED_PURGE_PATTERNS:
+    if runtime_owner.PURGE_PATTERNS != EXPECTED_PURGE_PATTERNS:
         raise AssertionError("EVR1 purge pattern policy drift")
 
 
 def _check_manifest_contract() -> None:
     case = Path("/tmp/issue31-case")
-    actual = runtime._manifest(
+    actual = runtime_owner._manifest(
         mode="BENCHMARK",
         case_dir=case,
         case_id="Issue31_transport_only",
@@ -119,7 +120,7 @@ def _assert_decision(
     transport_physics: dict | None,
     monolithic_physics: dict | None,
 ) -> None:
-    actual = runtime.preliminary_classification(
+    actual = runtime_classification.preliminary_classification(
         transport,
         monolithic,
         transport_physics,
@@ -276,7 +277,7 @@ def _check_boundary() -> None:
 def _check_cli_route() -> None:
     source = (ROOT / "qpx_harness" / "cli" / "app.py").read_text()
     required = (
-        "from qpx_harness.coupling_evr1_runtime import main as coupling_evr1_main, self_test as coupling_evr1_self_test",
+        "from qpx_harness.cli.commands.coupling import coupling_evr1_main, coupling_evr2_main",
         '"coupling-evr1": coupling_evr1_main',
     )
     for token in required:
@@ -298,7 +299,7 @@ def main() -> int:
         _check_classification_contract()
         _check_boundary()
         _check_cli_route()
-        if runtime.self_test() != 0:
+        if runtime_characterization.self_test() != 0:
             raise AssertionError("canonical EVR1 runtime self-test failed")
     except Exception as exc:
         print(f"ISSUE48_ISSUE31_EVR1_RUNTIME_SELFTEST: FAIL ({exc})")

@@ -13,7 +13,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from recipes import issue31_coupling as recipe
-from qpx_harness import coupling_evr2_runtime as evr2
+from qpx_harness.coupling_evr2 import orchestration as evr2
 
 
 EXPECTED_CONSTANTS = {

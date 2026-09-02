@@ -124,18 +124,17 @@ def main() -> int:
     failed = failed or not a1_identity or not a3_consumer
 
     try:
-        b4 = importlib.import_module("qpx_harness.coupling_evr1_runtime")
         b4_class = importlib.import_module("qpx_harness.coupling_evr1.classification")
         b4_orch = importlib.import_module("qpx_harness.coupling_evr1.orchestration")
         b4_char = importlib.import_module("qpx_harness.coupling_evr1.characterization")
-        dmix = importlib.import_module("qpx_harness.dmix_equivalence")
         b4_identity = (
-            b4.preliminary_classification is b4_class.preliminary_classification
-            and b4.run is b4_orch.run
-            and b4._create_root is b4_orch._create_root
-            and b4.self_test is b4_char.self_test
+            callable(b4_class.preliminary_classification)
+            and callable(b4_orch.run)
+            and callable(b4_orch._create_root)
+            and callable(b4_char.self_test)
         )
-        dmix_identity = b4_orch.legacy_source_transform is dmix.legacy_source_transform
+        dmix_source = importlib.import_module("qpx_harness.dmix.source_transform")
+        dmix_identity = b4_orch.legacy_source_transform is dmix_source.legacy_source_transform
     except Exception as exc:
         print(f"ISSUE57_FINAL_B4_IMPORT_IDENTITY: FAIL ({exc})")
         print(f"ISSUE57_FINAL_B4_DMIX_IDENTITY: FAIL ({exc})")
@@ -153,7 +152,7 @@ def main() -> int:
             '"fast-coupling-diagnostic"',
             '"coupling-evr1"',
             "issue43_coupling_diagnostic import main as fast_coupling_diagnostic_main",
-            "coupling_evr1_runtime import main as coupling_evr1_main",
+            "cli.commands.coupling import coupling_evr1_main",
         )
     )
     print(f"ISSUE57_FINAL_CLI_SURFACE: {'PASS' if cli_ok else 'FAIL'}")

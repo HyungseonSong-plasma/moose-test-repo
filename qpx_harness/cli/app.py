@@ -18,9 +18,11 @@ from qpx_harness.cli.commands.performance import (
     measure_smoke_main,
     transport_probe_main,
 )
-from qpx_harness.coupling_evr1_runtime import main as coupling_evr1_main, self_test as coupling_evr1_self_test
-from qpx_harness.coupling_evr2_runtime import main as coupling_evr2_main, self_test as coupling_evr2_self_test
-from qpx_harness.dmix_equivalence import main as dmix_equivalence_main, self_test as dmix_equivalence_self_test
+from qpx_harness.cli.commands.coupling import coupling_evr1_main, coupling_evr2_main
+from qpx_harness.cli.commands.dmix import dmix_equivalence_main
+from qpx_harness.coupling_evr1.characterization import self_test as coupling_evr1_self_test
+from qpx_harness.coupling_evr2.orchestration import self_test as coupling_evr2_self_test
+from qpx_harness.dmix.characterization import self_test as dmix_equivalence_self_test
 from qpx_harness.electron_inventory_nullspace import main as inventory_nullspace_main, self_test as inventory_nullspace_self_test
 from qpx_harness.execution.workspace import inventory_cli, self_test as workspace_self_test
 from qpx_harness.execution_contract import main as execution_contract_main, self_test as execution_contract_self_test

@@ -19,7 +19,7 @@ from recipes import issue31_coupling as recipe
 from ..diagnostics import measurement_failure_signature
 from ..evidence.artifacts import write_json_bundle
 from ..execution.cases import CaseError, stage_case, validate_referenced_files
-from ..dmix_equivalence import legacy_source_transform
+from ..dmix.source_transform import legacy_source_transform
 from ..evidence import create_collision_safe_directory, sha256_file, utc_timestamp
 from ..performance.runner import PerformanceContractError, result_status
 from ..performance.smoke import (
@@ -536,4 +536,3 @@ def run(args: argparse.Namespace) -> int:
     print("ISSUE31_EVR2_SUMMARY:", root / "summary.json")
 
     return 0 if decision["class"] in recipe.EVR2_TERMINAL_CLASSES else 2
-

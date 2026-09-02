@@ -237,8 +237,8 @@ def _check_runtime_boundary() -> None:
 
 def _check_production_route() -> None:
     source = (ROOT / "qpx_harness/cli/app.py").read_text()
-    if "from qpx_harness.coupling_evr2_runtime import" not in source:
-        raise AssertionError("EVR2 canonical runtime owner is not routed by CLI")
+    if "from qpx_harness.cli.commands.coupling import" not in source:
+        raise AssertionError("EVR2 canonical CLI adapter is not routed by CLI")
     if "from qpx_harness.coupling_evr2_timestep import" in source:
         raise AssertionError("EVR2 legacy timestep owner remains routed by CLI")
     if '"coupling-evr2": coupling_evr2_main' not in source:

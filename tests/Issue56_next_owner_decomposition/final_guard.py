@@ -124,21 +124,20 @@ def main() -> int:
     failed = failed or not w4_identity
 
     try:
-        w5 = importlib.import_module("qpx_harness.dmix_equivalence")
         w5_source = importlib.import_module("qpx_harness.dmix.source_transform")
         w5_analysis = importlib.import_module("qpx_harness.dmix.analysis")
         w5_runtime = importlib.import_module("qpx_harness.dmix.runtime")
         w5_char = importlib.import_module("qpx_harness.dmix.characterization")
-        evr2 = importlib.import_module("qpx_harness.coupling_evr2_runtime")
+        evr2 = importlib.import_module("qpx_harness.coupling_evr2.orchestration")
         w5_identity = (
-            w5.legacy_source_transform is w5_source.legacy_source_transform
-            and w5.legacy_source is w5_source.legacy_source
-            and w5.compare is w5_analysis.compare
-            and w5.trace_input is w5_analysis.trace_input
-            and w5.validate is w5_runtime.validate
-            and w5.self_test is w5_char.self_test
+            callable(w5_source.legacy_source_transform)
+            and callable(w5_source.legacy_source)
+            and callable(w5_analysis.compare)
+            and callable(w5_analysis.trace_input)
+            and callable(w5_runtime.validate)
+            and callable(w5_char.self_test)
         )
-        consumer_identity = evr2.legacy_source_transform is w5.legacy_source_transform
+        consumer_identity = evr2.legacy_source_transform is w5_source.legacy_source_transform
     except Exception as exc:
         print(f"ISSUE56_FINAL_W5_IMPORT_IDENTITY: FAIL ({exc})")
         print(f"ISSUE56_FINAL_W3_W5_CONSUMER_IDENTITY: FAIL ({exc})")
@@ -160,7 +159,7 @@ def main() -> int:
             '"inventory-first-linear"',
             '"dmix-equivalence"',
             "issue45_first_linear import main as first_linear_main",
-            "dmix_equivalence import main as dmix_equivalence_main",
+            "cli.commands.dmix import dmix_equivalence_main",
         )
     )
     print(f"ISSUE56_FINAL_CLI_SURFACE: {'PASS' if cli_ok else 'FAIL'}")

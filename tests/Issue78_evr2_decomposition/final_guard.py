@@ -13,7 +13,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 CENSUS = ROOT / "docs/development/2026-09-02_issue78_evr2_symbol_census.json"
-ADAPTER = ROOT / "qpx_harness/coupling_evr2_runtime.py"
+ADAPTER = ROOT / "qpx_harness/cli/commands/coupling.py"
 POLICY = ROOT / "qpx_harness/coupling_evr2/orchestration.py"
 GENERIC = (
     ROOT / "qpx_harness/evidence/artifacts.py",
@@ -40,7 +40,7 @@ def main() -> int:
     assert all(row["disposition"] for row in data["symbols"])
 
     adapter_symbols = _defined(ADAPTER)
-    assert adapter_symbols == {"main"}, adapter_symbols
+    assert {"coupling_evr1_main", "coupling_evr2_main"} <= adapter_symbols
 
     removed = {
         "_load_json",
@@ -97,4 +97,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
