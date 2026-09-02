@@ -60,17 +60,14 @@ def build_input(source_case: Path = SOURCE_CASE, dt: float = DEFAULT_DT) -> str:
         raise PrepareError("dt must be positive")
     heavy = (source_case / "heavy_base.i").read_text()
     mesh = extract_top_level_block(heavy, "Mesh")
-    boundaries = BOUNDARIES_TO_AVOID
 
     return f"""# Issue #93 J1 diagnostic-only frozen-heavy electron discriminator
-# Same real-QVT mesh and accepted electron transport semantics as Issue #91.
+# Same real-QVT mesh and accepted Issue91/Issue2 electron transport semantics.
 # Heavy nonlinear equations are intentionally absent. Poisson is OFF.
 
 p_frozen_value = {P_FROZEN:.17g}
 T_g_frozen_value = {TG_FROZEN:.17g}
 n_e_value = {NE_INITIAL:.17g}
-electron_mean_energy = {MEAN_ELECTRON_ENERGY_EV:.17g}
-electron_table = 'electron_moments.txt'
 
 {mesh}
 [Problem]
@@ -85,25 +82,29 @@ electron_table = 'electron_moments.txt'
   []
 []
 
-[Materials]
-  [frozen_electron_state]
+[FunctorMaterials]
+  [frozen_state]
     type = ADGenericFunctorMaterial
-    prop_names = 'p_frozen T_g_frozen carrier_one'
-    prop_values = '${{p_frozen_value}} ${{T_g_frozen_value}} 1'
+    prop_names = 'p_frozen T_g_frozen'
+    prop_values = '${{p_frozen_value}} ${{T_g_frozen_value}}'
+    block = plasma
+  []
+
+  [electron_constants]
+    type = ADGenericFunctorMaterial
+    prop_names = 'mean_en carrier_one'
+    prop_values = '{MEAN_ELECTRON_ENERGY_EV:.17g} 1.0'
     block = plasma
   []
 
   [electron_transport]
     type = QPXElectronTransportLookupMaterial
-    block = plasma
-    table = ${{electron_table}}
-    interpolation = makima
-    interpolation_fallback = linear
+    property_table_file = electron_moments.txt
+    mean_energy = mean_en
     pressure = p_frozen
     gas_temperature = T_g_frozen
-    mean_energy = ${{electron_mean_energy}}
-    mobility_name = electron_mobility
-    diffusion_name = electron_diffusion
+    bounds_policy = error
+    block = plasma
   []
 []
 
@@ -115,25 +116,26 @@ electron_table = 'electron_moments.txt'
 []
 
 [FVKernels]
-  [electron_time]
+  [n_e_time]
     type = FVTimeKernel
     variable = n_e
     block = plasma
   []
-  [electron_diffusion]
+  [n_e_diffusion]
     type = FVDiffusion
     variable = n_e
     coeff = electron_diffusion
     block = plasma
   []
-  [electron_drift]
+  [n_e_drift]
     type = QPXFVElectrostaticDrift
     variable = n_e
-    carrier_number_density = n_e
-    charge_number = -1
-    mobility = electron_mobility
     potential = phi_prescribed
-    boundaries_to_avoid = '{boundaries}'
+    mobility = electron_mobility
+    carrier = carrier_one
+    charge_number = -1
+    advected_interp_method = upwind
+    boundaries_to_avoid = '{BOUNDARIES_TO_AVOID}'
     block = plasma
   []
 []
@@ -232,6 +234,7 @@ def prepare_case(dest: Path, source_case: Path = SOURCE_CASE, dt: float = DEFAUL
         "field_V_m": 0.0,
         "heavy_nonlinear_equations": "REMOVED_FOR_DIAGNOSTIC",
         "poisson": "OFF",
+        "electron_contract": "Issue91 exact lookup/drift parameterization with p,T_g frozen",
         "mesh_sha256": _sha256(dest / "qvt.msh"),
         "electron_table_sha256": _sha256(dest / "electron_moments.txt"),
         "input_sha256": hashlib.sha256(input_text.encode()).hexdigest(),
