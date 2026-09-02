@@ -2,11 +2,15 @@ from __future__ import annotations
 
 import pytest
 
-from qpx_harness.performance.profiling import build_bounded_runtime_overrides
+from qpx_harness.performance.profiling import (
+    build_bounded_petsc_overrides,
+    build_bounded_runtime_overrides,
+)
 
 
 def test_bounded_profile_overrides_default_to_no_numerical_change() -> None:
     assert build_bounded_runtime_overrides() == []
+    assert build_bounded_petsc_overrides() == []
 
 
 def test_bounded_profile_overrides_are_explicit_and_minimal() -> None:
@@ -17,8 +21,14 @@ def test_bounded_profile_overrides_are_explicit_and_minimal() -> None:
         "Executioner/nl_max_its=3",
         "Executioner/abort_on_solve_fail=true",
     ]
+    assert build_bounded_petsc_overrides(nl_max_its=3) == [
+        "-snes_max_it",
+        "3",
+    ]
 
 
 def test_bounded_profile_rejects_nonpositive_iteration_cap() -> None:
     with pytest.raises(ValueError, match="positive integer"):
         build_bounded_runtime_overrides(nl_max_its=0)
+    with pytest.raises(ValueError, match="positive integer"):
+        build_bounded_petsc_overrides(nl_max_its=0)
