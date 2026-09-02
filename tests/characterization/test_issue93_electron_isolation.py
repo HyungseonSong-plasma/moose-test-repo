@@ -23,7 +23,8 @@ def test_issue93_j0_real_r3_dependency_contract() -> None:
     deps = report["newton_dependency_classification"]
     assert deps["dR_e_dn_e"] == "NONZERO_SELF_BLOCK"
     assert "STRUCTURAL_NONLINEAR_CROSS_BLOCK" in deps["dR_e_dp"]
-    assert "T_g_IS_AUXILIARY" in deps["dR_e_dT_g"]
+    assert "T_g_IS_CONSTANT_FUNCTOR" in deps["dR_e_dT_g"]
+    assert report["coefficient_ownership"]["T_g"] == "CONSTANT_AD_FUNCTOR_MATERIAL_PROPERTY"
     assert "PRESCRIBED_FUNCTION" in deps["dR_e_dphi"]
     owners = {item["object"]: item for item in report["electron_residual_owners"]}
     assert owners["n_e_drift"]["carrier"] == "carrier_one"
