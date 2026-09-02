@@ -46,8 +46,17 @@ def self_test() -> int:
         if audit_first_linear_structure(base, mutated)["status"] == "PASS":
             raise AssertionError("non-diagnostic physics mutation was accepted")
         decision = analyze_first_linear_text(_synthetic_log(), returncode=1)
-        if decision["class"] != "GMRES_RESTART_BREAKDOWN":
-            raise AssertionError("GMRES restart breakdown did not classify")
+        if decision["class"] != "KSP_BREAKDOWN_RESIDUAL_FIDELITY_LOSS":
+            raise AssertionError("KSP residual-fidelity breakdown did not classify")
+        residual_audit = decision.get("ksp_residual_audit", {})
+        if not residual_audit.get("residual_fidelity_loss_observed"):
+            raise AssertionError("reported-vs-true residual separation was not detected")
+        if residual_audit.get("max_residual_separation_ratio", 0.0) < 1.0e6:
+            raise AssertionError("residual separation magnitude was not preserved")
+        if not decision.get("restart_boundary_observed"):
+            raise AssertionError("restart-boundary chronology was not preserved")
+        if decision.get("restart_causality") != "NOT_ESTABLISHED":
+            raise AssertionError("restart boundary was promoted to causal evidence")
 
         stats = build_first_linear_stats(
             "issue45-first-linear-selftest",
@@ -121,6 +130,15 @@ def self_test() -> int:
             != "DIAGNOSTIC_INSUFFICIENT"
         ):
             raise AssertionError("missing KSP identity was over-classified")
+
+        low_separation = _synthetic_log().replace(
+            "1.0e-12 true resid norm 2.0e-03",
+            "1.0e-03 true resid norm 2.0e-03",
+            1,
+        )
+        low_decision = analyze_first_linear_text(low_separation, returncode=1)
+        if low_decision["class"] != "KSP_BREAKDOWN_WITHOUT_RESIDUAL_FIDELITY_LOSS":
+            raise AssertionError("low residual separation was over-classified")
     except Exception as exc:
         print(f"ISSUE45_FIRST_LINEAR_SELFTEST: FAIL ({exc})")
         return 1
