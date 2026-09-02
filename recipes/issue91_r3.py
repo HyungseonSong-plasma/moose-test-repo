@@ -64,24 +64,8 @@ def _insert_r3_blocks(text: str) -> str:
         "Variables",
         """  [n_e]
     type = MooseVariableFVReal
+    initial_condition = ${n_e_value}
     block = plasma
-  []""",
-    )
-    text = mb.insert_child_block(
-        text,
-        "Functions",
-        """  [n_e_ic_profile]
-    type = ParsedFunction
-    expression = '${n_e_value}*(1.0 + 0.2*cos(6.283185307179586*x))'
-  []""",
-    )
-    text = mb.insert_child_block(
-        text,
-        "ICs",
-        """  [n_e_ic]
-    type = FunctionIC
-    variable = n_e
-    function = n_e_ic_profile
   []""",
     )
     text = mb.insert_child_block(
@@ -147,6 +131,7 @@ def _insert_r3_blocks(text: str) -> str:
         ("n_e_min", "ADElementExtremeFunctorValue", "    functor = n_e\n    value_type = min\n    block = plasma"),
         ("n_e_max", "ADElementExtremeFunctorValue", "    functor = n_e\n    value_type = max\n    block = plasma"),
         ("n_e_inventory", "ADElementIntegralFunctorPostprocessor", "    functor = n_e\n    block = plasma"),
+        ("domain_volume", "ADElementIntegralFunctorPostprocessor", "    functor = carrier_one\n    block = plasma"),
         ("electron_mobility_avg", "ElementAverageFunctorPostprocessor", "    functor = electron_mobility\n    block = plasma"),
         ("electron_diffusion_avg", "ElementAverageFunctorPostprocessor", "    functor = electron_diffusion\n    block = plasma"),
         ("electron_pressure_avg", "ElementAverageFunctorPostprocessor", "    functor = p\n    block = plasma"),
@@ -194,6 +179,7 @@ def build_r3_input(base_text: str, *, field_strength: float) -> tuple[str, dict[
         "model": "R3_HEAVY_PLUS_ELECTRON_PRESCRIBED_FIELD",
         "field_strength": field_strength,
         "common_timestep": ELECTRON_DT,
+        "electron_initial_condition": "uniform_n_e_value",
         "electron_pressure": "p",
         "electron_gas_temperature": "T_g",
         "electron_mean_energy_eV": MEAN_ELECTRON_ENERGY_EV,
@@ -215,6 +201,7 @@ def audit_r3_input(text: str, *, expected_field: float) -> dict[str, Any]:
         "FVKernels/O2p_electrostatic_drift",
         "FVKernels/O2p_heavy_mass_em_correction",
         "Postprocessors/n_e_inventory",
+        "Postprocessors/domain_volume",
     )
     for path in required_blocks:
         checks[f"block:{path}"] = mb.has_block(text, path)
@@ -223,6 +210,9 @@ def audit_r3_input(text: str, *, expected_field: float) -> dict[str, Any]:
         mp.get_parameter(text, "FunctorMaterials/state_constants", "prop_names")
     )
     checks["no_constant_n_e_provider"] = "n_e" not in state_names
+    checks["uniform_accepted_qvt_electron_ic"] = (
+        mp.get_parameter(text, "Variables/n_e", "initial_condition") == "${n_e_value}"
+    )
     checks["heavy_uses_live_n_e"] = (
         mp.get_parameter(
             text, "FunctorMaterials/heavy_transport", "electron_number_density"
