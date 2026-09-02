@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from . import issue43_fast_output_contract as _contract
+from .moose import check_input as check_input_diagnostic
 for _name in dir(_contract):
     if not _name.startswith("__"):
         globals()[_name] = getattr(_contract, _name)
@@ -243,48 +244,7 @@ def _framework_output_evidence(
 
 
 def _classify_p2_failure(log_path: Path, returncode: int) -> dict[str, Any]:
-    if returncode == 0:
-        return {
-            "status": "PASS",
-            "class": None,
-            "reason": None,
-            "detail": None,
-        }
-    if not log_path.is_file():
-        return {
-            "status": "HOLD",
-            "class": "HARNESS_OR_CONSTRUCTION_FAIL",
-            "reason": "MISSING_P2_LOG",
-            "detail": None,
-        }
-
-    text = log_path.read_text(errors="replace")
-    unused = re.search(r"unused parameter ['\"]([^'\"]+)['\"]", text)
-    if unused:
-        return {
-            "status": "HOLD",
-            "class": "HARNESS_OR_CONSTRUCTION_FAIL",
-            "reason": "UNUSED_PARAMETER",
-            "detail": unused.group(1),
-        }
-    if "ADFParser::JITCompile() failed" in text:
-        return {
-            "status": "HOLD",
-            "class": "ENVIRONMENT_OR_BUILD_FAIL",
-            "reason": "JIT_COMPILE_FAIL",
-            "detail": None,
-        }
-
-    error_detail: str | None = None
-    error_match = re.search(r"\*\*\* ERROR \*\*\*\s*\n([^\n]+)", text)
-    if error_match:
-        error_detail = error_match.group(1).strip()
-    return {
-        "status": "HOLD",
-        "class": "HARNESS_OR_CONSTRUCTION_FAIL",
-        "reason": "QPX_CHECK_INPUT_FAIL",
-        "detail": error_detail,
-    }
+    return check_input_diagnostic.classify_failure(log_path, returncode)
 
 
 def _runtime_csv_times(case_dir: Path) -> tuple[Path | None, list[float], str | None]:
