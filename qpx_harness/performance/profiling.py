@@ -23,7 +23,7 @@ def _quote_hit_path(path: Path) -> str:
 def build_bounded_runtime_overrides(
     *, nl_max_its: int | None = None, abort_on_solve_fail: bool = False
 ) -> list[str]:
-    """Build diagnostic-only execution overrides for a bounded profile capture."""
+    """Build diagnostic-only MOOSE execution overrides for bounded profiling."""
 
     if nl_max_its is not None and nl_max_its <= 0:
         raise ValueError("nl_max_its must be a positive integer")
@@ -33,6 +33,16 @@ def build_bounded_runtime_overrides(
     if abort_on_solve_fail:
         overrides.append("Executioner/abort_on_solve_fail=true")
     return overrides
+
+
+def build_bounded_petsc_overrides(*, nl_max_its: int | None = None) -> list[str]:
+    """Enforce the nonlinear cap directly on PETSc SNES for diagnostic capture."""
+
+    if nl_max_its is not None and nl_max_its <= 0:
+        raise ValueError("nl_max_its must be a positive integer")
+    if nl_max_its is None:
+        return []
+    return ["-snes_max_it", str(nl_max_its)]
 
 
 def write_overlay(path: Path, metrics_base: Path, *, prefix: str = "qpxh") -> None:
@@ -144,6 +154,7 @@ def profile_case(
     diagnostic_overrides = build_bounded_runtime_overrides(
         nl_max_its=nl_max_its, abort_on_solve_fail=abort_on_solve_fail
     )
+    petsc_diagnostic_overrides = build_bounded_petsc_overrides(nl_max_its=nl_max_its)
 
     exe = resolve_executable(executable)
     validate_executable(exe)
@@ -188,6 +199,7 @@ def profile_case(
             "input_sha256": sha256_file(input_path),
             "overlay_sha256": sha256_file(overlay),
             "diagnostic_overrides": diagnostic_overrides,
+            "petsc_diagnostic_overrides": petsc_diagnostic_overrides,
             "p2_returncode": p2.returncode,
             "p2_log": str(p2_log),
         }
@@ -196,6 +208,7 @@ def profile_case(
 
     p3_extra = [
         *common_extra,
+        *petsc_diagnostic_overrides,
         "-log_view",
         f":{petsc_csv}:ascii_csv",
         "-log_view_memory",
@@ -220,7 +233,7 @@ def profile_case(
 
     metrics_csv = find_metrics_csv(metrics_base)
     last_metrics = read_last_metrics_row(metrics_csv)
-    bounded_diagnostic = bool(diagnostic_overrides)
+    bounded_diagnostic = bool(diagnostic_overrides or petsc_diagnostic_overrides)
     bounded_capture = (
         bounded_diagnostic
         and abort_on_solve_fail
@@ -247,6 +260,7 @@ def profile_case(
         "one_step_override": f"Executioner/num_steps={num_steps}",
         "bounded_diagnostic": bounded_diagnostic,
         "diagnostic_overrides": diagnostic_overrides,
+        "petsc_diagnostic_overrides": petsc_diagnostic_overrides,
         "nl_max_its_override": nl_max_its,
         "abort_on_solve_fail_override": abort_on_solve_fail,
         "physics_parameters_changed": False,
