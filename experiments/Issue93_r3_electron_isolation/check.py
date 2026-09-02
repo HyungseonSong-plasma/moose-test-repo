@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Checker for the Issue #93 J1 uniform frozen-heavy electron invariant."""
+"""Checker for Issue #93 J1 using the accepted Issue #2 qvt observables."""
 from __future__ import annotations
 
 import argparse
@@ -39,24 +39,31 @@ def check_csv(path: Path, n0: float = N0, rel_tol: float = REL_TOL) -> dict[str,
     if not physical:
         raise CheckError("CSV has no positive-time physical row")
     row = physical[-1]
+
+    # These names are deliberately inherited from the accepted Issue2
+    # qvt_prepoisson case rather than re-authored for Issue93.
     t = _f(row, "time")
-    avg = _f(row, "n_e_avg")
-    nmin = _f(row, "n_e_min")
-    nmax = _f(row, "n_e_max")
-    inventory = _f(row, "n_e_inventory")
-    volume = _f(row, "carrier_one_integral")
+    avg = _f(row, "n_avg")
+    nmin = _f(row, "n_min")
+    nmax = _f(row, "n_max")
+    inventory = _f(row, "inventory")
+    volume = _f(row, "domain_volume")
     mobility = _f(row, "electron_mobility_avg")
     diffusion = _f(row, "electron_diffusion_avg")
-    if volume <= 0 or mobility <= 0 or diffusion <= 0:
-        raise CheckError("volume and electron transport coefficients must be positive")
+    neutral_density = _f(row, "neutral_number_density_avg")
+
+    if volume <= 0 or mobility <= 0 or diffusion <= 0 or neutral_density <= 0:
+        raise CheckError("volume and electron transport state/coefficients must be positive")
     expected_inventory = n0 * volume
     inv_rel = abs(inventory - expected_inventory) / expected_inventory
     state_rel = max(abs(avg - n0), abs(nmin - n0), abs(nmax - n0)) / n0
     spread_rel = abs(nmax - nmin) / n0
     passed = inv_rel <= rel_tol and state_rel <= rel_tol and spread_rel <= rel_tol and nmin > 0
+
     return {
         "issue": 93,
         "check": "J1_FROZEN_HEAVY_ELECTRON_INVARIANT",
+        "observable_contract": "ACCEPTED_ISSUE2_QVT_PREPOISSON",
         "source_rows": len(rows),
         "physical_rows": len(physical),
         "time_s": t,
@@ -70,6 +77,7 @@ def check_csv(path: Path, n0: float = N0, rel_tol: float = REL_TOL) -> dict[str,
         "inventory_rel_error": inv_rel,
         "state_rel_error": state_rel,
         "spread_rel": spread_rel,
+        "neutral_number_density_m3": neutral_density,
         "electron_mobility_m2_Vs": mobility,
         "electron_diffusion_m2_s": diffusion,
         "rel_tol": rel_tol,
