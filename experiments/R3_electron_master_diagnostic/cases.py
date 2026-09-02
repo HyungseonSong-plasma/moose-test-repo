@@ -144,7 +144,8 @@ def _build_linear_reference_input(spec: CaseSpec) -> str:
     The nonlinear FVDiffusion in the pinned MOOSE build does not expose a
     non-orthogonal-correction switch. LinearFVDiffusion does, so this pair is
     intentionally an independent framework reference, not a production-path
-    substitute or remedy proxy.
+    substitute or remedy proxy. The postprocessors mirror the accepted #2
+    checker contract so a constant-preserving reference can register PASS.
     """
     reference = (ELECTRON_REFERENCE_CASE / "input.i").read_text()
     mesh_start, mesh_end = _block_bounds(reference, "[Mesh]\n")
@@ -165,6 +166,15 @@ def _build_linear_reference_input(spec: CaseSpec) -> str:
     type = MooseLinearVariableFVReal
     solver_sys = 'electron_diag_sys'
     initial_condition = 1e16
+    block = plasma
+  []
+[]
+
+[FunctorMaterials]
+  [diagnostic_constants]
+    type = ADGenericFunctorMaterial
+    prop_names = 'carrier_one neutral_number_density electron_mobility electron_diffusion'
+    prop_values = '1.0 {FROZEN_NEUTRAL_DENSITY!r} {FROZEN_MOBILITY!r} {FROZEN_DIFFUSION!r}'
     block = plasma
   []
 []
@@ -200,6 +210,31 @@ def _build_linear_reference_input(spec: CaseSpec) -> str:
     type = ElementExtremeValue
     variable = n_e
     value_type = max
+    block = plasma
+  []
+  [inventory]
+    type = ElementIntegralVariablePostprocessor
+    variable = n_e
+    block = plasma
+  []
+  [domain_volume]
+    type = ADElementIntegralFunctorPostprocessor
+    functor = carrier_one
+    block = plasma
+  []
+  [neutral_number_density_avg]
+    type = ElementAverageFunctorPostprocessor
+    functor = neutral_number_density
+    block = plasma
+  []
+  [electron_mobility_avg]
+    type = ElementAverageFunctorPostprocessor
+    functor = electron_mobility
+    block = plasma
+  []
+  [electron_diffusion_avg]
+    type = ElementAverageFunctorPostprocessor
+    functor = electron_diffusion
     block = plasma
   []
 []
