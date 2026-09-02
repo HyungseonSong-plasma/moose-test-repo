@@ -26,6 +26,8 @@ def test_completion_matrix_prebuilds_all_remaining_fv_layers():
             assert "type = FVOrthogonalDiffusion" in text
             assert "type = ADGenericConstantMaterial" in text
             assert "diag_orthogonal_D" in text
+            material_block = text.split("[diag_orthogonal_diffusivity]", 1)[1].split("[]", 1)[0]
+            assert "block = plasma" not in material_block
         elif spec.operator == "gradient":
             assert "type = ADFunctorElementalGradientAux" in text
             assert "type = FunctorElementalGradientAux" in text
