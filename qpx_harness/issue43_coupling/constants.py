@@ -1,9 +1,9 @@
 """Stable constants and error contract for Issue43 coupling diagnostics."""
-from pathlib import Path
-
 from recipes import issue43_coupling_diagnostic as recipe
 
-BASE_CASE_RELATIVE = Path("tests/Issue2_electron_bulk_drift/qvt_prepoisson")
+from ..spec.cases import QVT_PREPOISSON_CASE
+
+BASE_CASE_RELATIVE = QVT_PREPOISSON_CASE
 DT_CONTROL = 1.0e-14
 DT_FAIL = 1.0e-13
 STEPS = 1
