@@ -25,6 +25,10 @@ def test_issue93_j0_real_r3_dependency_contract() -> None:
     assert "STRUCTURAL_NONLINEAR_CROSS_BLOCK" in deps["dR_e_dp"]
     assert "T_g_IS_AUXILIARY" in deps["dR_e_dT_g"]
     assert "PRESCRIBED_FUNCTION" in deps["dR_e_dphi"]
+    owners = {item["object"]: item for item in report["electron_residual_owners"]}
+    assert owners["n_e_drift"]["carrier"] == "carrier_one"
+    assert report["electron_lookup"]["table"] == "electron_moments.txt"
+    assert report["electron_lookup"]["bounds_policy"] == "error"
     reciprocal = report["reciprocal_heavy_dependencies"]
     assert [d["residual_variable"] for d in reciprocal] == [
         "w_O2s",
@@ -43,12 +47,17 @@ def test_issue93_j1_generated_case_is_frozen_heavy_real_qvt_reduction() -> None:
     assert "file = 'qvt.msh'" in text
     assert "[n_e]" in text
     assert "type = MooseVariableFVReal" in text
-    assert "type = FVTimeKernel" in text
-    assert "type = FVDiffusion" in text
-    assert "type = QPXFVElectrostaticDrift" in text
+    assert "[n_e_time]" in text and "type = FVTimeKernel" in text
+    assert "[n_e_diffusion]" in text and "type = FVDiffusion" in text
+    assert "[n_e_drift]" in text and "type = QPXFVElectrostaticDrift" in text
+    assert "carrier = carrier_one" in text
+    assert "advected_interp_method = upwind" in text
     assert "type = QPXElectronTransportLookupMaterial" in text
+    assert "property_table_file = electron_moments.txt" in text
+    assert "mean_energy = mean_en" in text
     assert "pressure = p_frozen" in text
     assert "gas_temperature = T_g_frozen" in text
+    assert "bounds_policy = error" in text
     assert "expression = '0'" in text
     assert "type = QPXThermalDiffusionMaterial" not in text
     assert "type = INSFVPressureVariable" not in text
@@ -86,30 +95,19 @@ def test_issue93_checker_accepts_positive_time_uniform_invariant(tmp_path: Path)
     with path.open("w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=fields)
         w.writeheader()
-        w.writerow(
-            {
-                "time": 0,
-                "n_e_avg": NE_INITIAL,
-                "n_e_min": NE_INITIAL,
-                "n_e_max": NE_INITIAL,
-                "n_e_inventory": NE_INITIAL * volume,
-                "carrier_one_integral": volume,
-                "electron_mobility_avg": 9755.0,
-                "electron_diffusion_avg": 41257.0,
-            }
-        )
-        w.writerow(
-            {
-                "time": DEFAULT_DT,
-                "n_e_avg": NE_INITIAL,
-                "n_e_min": NE_INITIAL,
-                "n_e_max": NE_INITIAL,
-                "n_e_inventory": NE_INITIAL * volume,
-                "carrier_one_integral": volume,
-                "electron_mobility_avg": 9755.0,
-                "electron_diffusion_avg": 41257.0,
-            }
-        )
+        for time_value in (0.0, DEFAULT_DT):
+            w.writerow(
+                {
+                    "time": time_value,
+                    "n_e_avg": NE_INITIAL,
+                    "n_e_min": NE_INITIAL,
+                    "n_e_max": NE_INITIAL,
+                    "n_e_inventory": NE_INITIAL * volume,
+                    "carrier_one_integral": volume,
+                    "electron_mobility_avg": 9755.0,
+                    "electron_diffusion_avg": 41257.0,
+                }
+            )
     report = check_csv(path)
     assert report["pass"] is True
     assert report["physical_rows"] == 1
