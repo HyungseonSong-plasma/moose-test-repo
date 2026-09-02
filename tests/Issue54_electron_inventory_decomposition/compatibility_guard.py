@@ -1,46 +1,25 @@
 #!/usr/bin/env python3
-"""Read-only M1 compatibility guard for Issue54.
+"""Read-only compatibility guard for the canonical inventory capability.
 
-The guard freezes the pre-refactor public/CLI/downstream surface and the
-scientific constants that must not drift while electron_inventory_nullspace.py
-is decomposed. It never invokes a QPX scientific runtime.
+Historical facades may exist during migration, but the scientific constants,
+CLI behavior, and callable surface are owned by qpx_harness.inventory.
+No QPX scientific runtime is invoked.
 """
 from __future__ import annotations
 
-import ast
+import importlib
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-TARGET = ROOT / "qpx_harness" / "electron_inventory_nullspace.py"
-FIRST_LINEAR = ROOT / "qpx_harness" / "issue45_first_linear.py"
-QPX_CLI = ROOT / "scripts" / "qpx.py"
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
-EXPECTED_FUNCTIONS = {
-    "audit_closed_electron_structure",
-    "audit_constrained_quasisteady_structure",
-    "analyze_drift_schema_text",
-    "analyze_constraint_schema_text",
-    "_synthetic_constrained_input",
-    "_build_constrained_quasisteady_input",
-    "_base_case_context",
-    "_evidence_root",
-    "_stage_case",
-    "run_preflight",
-    "run_closure_preflight",
-    "run_closure_runtime_preflight",
-    "run_closure_runtime",
-    "self_test",
-    "main",
-}
-EXPECTED_FIRST_LINEAR_ATTRS = {
-    "ElectronInventoryNullspaceError",
-    "_base_case_context",
-    "_build_constrained_quasisteady_input",
-    "_evidence_root",
-    "_stage_case",
-    "_synthetic_constrained_input",
-    "audit_constrained_quasisteady_structure",
-}
+OWNER_ROOT = ROOT / "qpx_harness" / "inventory"
+FACADE = ROOT / "qpx_harness" / "electron_inventory_nullspace.py"
+FIRST_LINEAR = ROOT / "qpx_harness" / "issue45_first_linear.py"
+QPX_CLI = ROOT / "qpx_harness" / "cli" / "app.py"
+
 EXPECTED_LITERALS = {
     "ISSUE": 45,
     "DT_REFERENCE": 1.0e-13,
@@ -56,138 +35,64 @@ EXPECTED_LITERALS = {
     "CLOSURE_DELTA_REL_TOL": 5.0e-4,
     "INVENTORY_CONSISTENCY_REL_TOL": 1.0e-8,
 }
-EXPECTED_CLI_FLAGS = {
-    "--self-test",
-    "--preflight",
-    "--closure-preflight",
-    "--closure-runtime-preflight",
-    "--closure-run",
+EXPECTED_COMPAT_ATTRS = {
+    "ElectronInventoryNullspaceError",
+    "_base_case_context",
+    "_build_constrained_quasisteady_input",
+    "_evidence_root",
+    "_stage_case",
+    "_synthetic_constrained_input",
+    "audit_constrained_quasisteady_structure",
 }
-EXPECTED_SELFTEST_MARKERS = {
-    "ISSUE45_INVENTORY_NULLSPACE_SELFTEST: PASS",
-    "ISSUE45_INVENTORY_CLOSURE_RUNTIME_SELFTEST: PASS",
-}
-
-
-def _literal_assignments(tree: ast.Module) -> dict[str, object]:
-    result: dict[str, object] = {}
-    for node in tree.body:
-        if not isinstance(node, (ast.Assign, ast.AnnAssign)):
-            continue
-        targets = node.targets if isinstance(node, ast.Assign) else [node.target]
-        value = node.value
-        for target in targets:
-            if not isinstance(target, ast.Name):
-                continue
-            try:
-                result[target.id] = ast.literal_eval(value)
-            except (ValueError, TypeError):
-                pass
-    return result
-
-
-def _function_loc(tree: ast.Module, name: str) -> int:
-    for node in tree.body:
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == name:
-            return int(node.end_lineno or node.lineno) - node.lineno + 1
-    return 0
-
-
-def _first_linear_attrs() -> set[str]:
-    tree = ast.parse(FIRST_LINEAR.read_text(), filename=str(FIRST_LINEAR))
-    aliases: set[str] = set()
-    for node in ast.walk(tree):
-        if isinstance(node, ast.ImportFrom) and node.level > 0 and node.module is None:
-            for alias in node.names:
-                if alias.name == "electron_inventory_nullspace":
-                    aliases.add(alias.asname or alias.name)
-    attrs: set[str] = set()
-    for node in ast.walk(tree):
-        if (
-            isinstance(node, ast.Attribute)
-            and isinstance(node.value, ast.Name)
-            and node.value.id in aliases
-        ):
-            attrs.add(node.attr)
-    return attrs
-
-
-def _qpx_cli_contract() -> tuple[set[str], bool]:
-    source = QPX_CLI.read_text()
-    tree = ast.parse(source, filename=str(QPX_CLI))
-    symbols: set[str] = set()
-    for node in ast.walk(tree):
-        if (
-            isinstance(node, ast.ImportFrom)
-            and node.level == 0
-            and node.module == "qpx_harness.electron_inventory_nullspace"
-        ):
-            symbols.update(alias.name for alias in node.names)
-    routed = (
-        '"inventory-nullspace"' in source
-        and "inventory_nullspace_main" in source
-        and "inventory_nullspace_self_test" in source
-    )
-    return symbols, routed
 
 
 def main() -> int:
     try:
-        source = TARGET.read_text()
-        tree = ast.parse(source, filename=str(TARGET))
-        functions = {
-            node.name
-            for node in tree.body
-            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
-        }
-        classes = {
-            node.name for node in tree.body if isinstance(node, ast.ClassDef)
-        }
-        missing_functions = EXPECTED_FUNCTIONS - functions
-        if missing_functions:
-            raise AssertionError(f"missing canonical functions: {sorted(missing_functions)}")
-        if "ElectronInventoryNullspaceError" not in classes:
-            raise AssertionError("ElectronInventoryNullspaceError surface disappeared")
+        constants = importlib.import_module("qpx_harness.inventory.constants")
+        for name, expected in EXPECTED_LITERALS.items():
+            observed = getattr(constants, name)
+            if observed != expected:
+                raise AssertionError(
+                    f"scientific constant drift: {name} expected={expected!r} observed={observed!r}"
+                )
 
-        literals = _literal_assignments(tree)
-        drift = {
-            name: {"expected": expected, "observed": literals.get(name)}
-            for name, expected in EXPECTED_LITERALS.items()
-            if literals.get(name) != expected
+        cli = importlib.import_module("qpx_harness.inventory.cli")
+        if not callable(cli.inventory_main) or not callable(cli.first_linear_main):
+            raise AssertionError("canonical inventory CLI entrypoints missing")
+        cli_source = QPX_CLI.read_text()
+        if (
+            "from qpx_harness.inventory.cli import" not in cli_source
+            or "qpx_harness.electron_inventory_nullspace" in cli_source
+            or "qpx_harness.issue45_first_linear" in cli_source
+        ):
+            raise AssertionError("unified CLI is not cut over to canonical inventory")
+
+        if FACADE.is_file():
+            legacy = importlib.import_module("qpx_harness.electron_inventory_nullspace")
+            missing = {name for name in EXPECTED_COMPAT_ATTRS if not hasattr(legacy, name)}
+            if missing:
+                raise AssertionError(f"legacy inventory facade drift: {sorted(missing)}")
+        if FIRST_LINEAR.is_file():
+            legacy_first = importlib.import_module("qpx_harness.issue45_first_linear")
+            missing = {name for name in EXPECTED_COMPAT_ATTRS if not hasattr(legacy_first, name)}
+            if missing:
+                raise AssertionError(f"legacy first-linear facade drift: {sorted(missing)}")
+
+        required_files = {
+            "closure_model.py",
+            "closure_runtime.py",
+            "closure_schema.py",
+            "constants.py",
+            "first_linear_orchestration.py",
+            "first_linear_structure.py",
+            "orchestration.py",
+            "structure.py",
         }
-        if drift:
-            raise AssertionError(f"scientific constant drift: {drift}")
+        observed = {path.name for path in OWNER_ROOT.glob("*.py")}
+        missing_files = required_files - observed
+        if missing_files:
+            raise AssertionError(f"canonical inventory owners missing: {sorted(missing_files)}")
 
-        missing_flags = EXPECTED_CLI_FLAGS - {
-            flag for flag in EXPECTED_CLI_FLAGS if flag in source
-        }
-        if missing_flags:
-            raise AssertionError(f"CLI flags disappeared: {sorted(missing_flags)}")
-        missing_markers = EXPECTED_SELFTEST_MARKERS - {
-            marker for marker in EXPECTED_SELFTEST_MARKERS if marker in source
-        }
-        if missing_markers:
-            raise AssertionError(f"self-test markers disappeared: {sorted(missing_markers)}")
-
-        first_linear_attrs = _first_linear_attrs()
-        missing_downstream = EXPECTED_FIRST_LINEAR_ATTRS - first_linear_attrs
-        if missing_downstream:
-            raise AssertionError(
-                f"Issue45 first-linear dependency surface drift: {sorted(missing_downstream)}"
-            )
-
-        cli_symbols, routed = _qpx_cli_contract()
-        if not {"main", "self_test"}.issubset(cli_symbols) or not routed:
-            raise AssertionError(
-                f"scripts/qpx.py inventory-nullspace routing drift: symbols={sorted(cli_symbols)} routed={routed}"
-            )
-
-        print("ISSUE54_M1_TARGET_LOC:", len(source.splitlines()))
-        print("ISSUE54_M1_SELFTEST_LOC:", _function_loc(tree, "self_test"))
-        print(
-            "ISSUE54_M1_FIRST_LINEAR_ATTRS:",
-            ",".join(sorted(first_linear_attrs)),
-        )
         print("ISSUE54_M1_SCIENTIFIC_CONSTANTS: PASS")
         print("ISSUE54_M1_CLI_SURFACE: PASS")
         print("ISSUE54_M1_FIRST_LINEAR_SURFACE: PASS")
