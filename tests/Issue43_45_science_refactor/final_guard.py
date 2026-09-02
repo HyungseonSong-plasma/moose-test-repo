@@ -51,7 +51,7 @@ def main() -> int:
     assert "coupling_diagnostic.analyze_runtime_failure" in source43
     assert issue43_analysis._line_hits is not None
 
-    # The accepted Issue43 feedback basis is now recipe-owned.  Prove byte
+    # The accepted Issue43 feedback basis is now recipe-owned. Prove byte
     # equivalence to the historical v5 composition before retiring that facade.
     fixture = issue43_runtime._fixture()
     canonical_feedback, basis_meta = issue45_closure_basis.build_closed_feedback_input(
@@ -68,9 +68,31 @@ def main() -> int:
     )
     assert canonical_feedback == legacy_feedback
     assert basis_meta["versioned_qpx_facade_dependency"] is False
+
+    # Issue45 scientific policy has converged into recipes.  The remaining
+    # qpx_harness/issue45 files are compatibility/orchestration surfaces and may
+    # not reintroduce the former top-level Issue43/45 facade dependencies.
     closure_model_source = (ROOT / "qpx_harness/issue45/closure_model.py").read_text()
+    inventory_structure_source = (
+        ROOT / "qpx_harness/issue45/inventory_structure.py"
+    ).read_text()
+    closure_runtime_source = (
+        ROOT / "qpx_harness/issue45/closure_runtime.py"
+    ).read_text()
+    first_structure_source = (
+        ROOT / "qpx_harness/issue45/first_linear_structure.py"
+    ).read_text()
+    first_orchestration_source = (
+        ROOT / "qpx_harness/issue45/first_linear_orchestration.py"
+    ).read_text()
     assert "issue43_fast_relaxation" not in closure_model_source
     assert "issue45_closure_basis" in closure_model_source
+    assert "issue45_inventory_nullspace" in inventory_structure_source
+    assert "issue45_inventory_constraint" in inventory_structure_source
+    assert "constraint_policy.evaluate_runtime_case_data" in closure_runtime_source
+    assert "electron_inventory_nullspace" not in first_structure_source
+    assert "electron_inventory_nullspace" not in first_orchestration_source
+    assert "issue45_closure_basis" in first_orchestration_source
 
     # KSP residual fidelity is a reusable fact and restart coincidence is non-causal.
     rows = [
@@ -106,6 +128,8 @@ def main() -> int:
     print("ISSUE43_45_SHARED_CASE_IDENTITY: PASS")
     print("ISSUE43_45_CANONICAL_COUPLING_DIAGNOSTICS: PASS")
     print("ISSUE43_45_FEEDBACK_BASIS_EQUIVALENCE: PASS")
+    print("ISSUE45_RECIPE_POLICY_CONVERGENCE: PASS")
+    print("ISSUE45_FACADE_DEPENDENCY_REDUCTION: PASS")
     print("ISSUE45_KSP_RESIDUAL_FIDELITY_AUDIT: PASS")
     print("ISSUE45_RESTART_CAUSALITY: NOT_ESTABLISHED")
     print("ISSUE43_EVRS_CONSUMED_BY_REFACTOR: 0")
