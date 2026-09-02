@@ -1,7 +1,7 @@
 """Frozen Issue45 electron-inventory closure constants."""
 from __future__ import annotations
 
-from .. import issue43_coupling_diagnostic as coupling_diag
+from ..spec.cases import QVT_PREPOISSON_CASE
 
 ISSUE = 45
 DT_REFERENCE = 1.0e-13
@@ -16,7 +16,7 @@ C1_TARGET = 1.01e16
 CLOSURE_TARGET_REL_TOL = 1.0e-6
 CLOSURE_DELTA_REL_TOL = 5.0e-4
 INVENTORY_CONSISTENCY_REL_TOL = 1.0e-8
-BASE_CASE_RELATIVE = coupling_diag.BASE_CASE_RELATIVE
+BASE_CASE_RELATIVE = QVT_PREPOISSON_CASE
 
 RUNTIME_PURGE_DIRECTORY_NAMES = (".jitcache",)
 RUNTIME_PURGE_PATTERNS = (
