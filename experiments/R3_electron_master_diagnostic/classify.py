@@ -32,17 +32,17 @@ def select_jacobian_cases(cases: Mapping[str, Mapping[str, Any]], owners: list[d
     selected: list[str] = []
     names = {item["owner"] for item in owners}
     if "FVDIFFUSION_INTERNAL_ASSEMBLY" in names:
-        selected.append("C0_LITERAL_HARMONIC")
+        selected.append("A2_LITERAL_BASE")
     if names & {"BOUNDARY_RECONSTRUCTION", "VARIABLE_INTERPOLATION", "VARIABLE_CLASS"}:
-        selected.append("C0_LITERAL_HARMONIC")
+        selected.append("A2_LITERAL_BASE")
         for candidate in ("B1_TWO_TERM_TRUE", "B2_VAR_FACE_SKEW", "B3_DIFF_VAR_SKEW", "B6_INSFV"):
             if _passed(cases, candidate):
                 selected.append(candidate)
                 break
     if "GENERIC_FUNCTOR_AD" in names:
-        selected.extend(["C0_LITERAL_HARMONIC", "C3_GENERIC_AD_HARMONIC"])
+        selected.extend(["A2_LITERAL_BASE", "A3_GENERIC_AD_BASE"])
     if names & {"QPX_LOOKUP", "QPX_BOUNDARY_FACEARG"}:
-        selected.extend(["C3_GENERIC_AD_HARMONIC", "A1_QPX_BASELINE"])
+        selected.extend(["A3_GENERIC_AD_BASE", "A1_QPX_BASELINE"])
     if not selected and _passed(cases, "A1_QPX_BASELINE"):
         selected.append("A1_QPX_BASELINE")
     return list(dict.fromkeys(selected))
@@ -64,8 +64,8 @@ def classify_matrix(cases: Mapping[str, Mapping[str, Any]]) -> dict[str, Any]:
             "unresolved_active_owner": ["execution/control"],
         }
 
-    literal = _passed(cases, "C0_LITERAL_HARMONIC")
-    generic_ad = _passed(cases, "C3_GENERIC_AD_HARMONIC")
+    literal = _passed(cases, "A2_LITERAL_BASE")
+    generic_ad = _passed(cases, "A3_GENERIC_AD_BASE")
     qpx = _passed(cases, "A1_QPX_BASELINE")
 
     if not literal:
@@ -110,24 +110,24 @@ def classify_matrix(cases: Mapping[str, Mapping[str, Any]]) -> dict[str, Any]:
                     unresolved.append("literal FVDiffusion/variable/reconstruction branch")
 
     elif not generic_ad:
-        evidence = ["C0_LITERAL_HARMONIC=PASS", "C3_GENERIC_AD_HARMONIC=FAIL"]
+        evidence = ["A2_LITERAL_BASE=PASS", "A3_GENERIC_AD_BASE=FAIL"]
         if _passed(cases, "C2_GENERIC_NONAD"):
             evidence.append("C2_GENERIC_NONAD=PASS")
             mechanism = "failure first appears when the generic coefficient path becomes AD"
         else:
             mechanism = "failure first appears on the generic functor/material coefficient path"
-        owners.append(_owner("GENERIC_FUNCTOR_AD", evidence=evidence, proxy="C0_LITERAL_HARMONIC", mechanism=mechanism))
+        owners.append(_owner("GENERIC_FUNCTOR_AD", evidence=evidence, proxy="A2_LITERAL_BASE", mechanism=mechanism))
 
     elif not qpx:
         if _passed(cases, "E2_QPX_NO_BOUNDARY"):
             owners.append(_owner(
                 "QPX_BOUNDARY_FACEARG",
-                evidence=["C3_GENERIC_AD_HARMONIC=PASS", "A1_QPX_BASELINE=FAIL", "E2_QPX_NO_BOUNDARY=PASS"],
+                evidence=["A3_GENERIC_AD_BASE=PASS", "A1_QPX_BASELINE=FAIL", "E2_QPX_NO_BOUNDARY=PASS"],
                 proxy="E2_QPX_NO_BOUNDARY",
                 mechanism="QPX-owned coefficient fails only when named boundary FaceArg evaluation is active",
             ))
         else:
-            q_evidence = ["C3_GENERIC_AD_HARMONIC=PASS", "A1_QPX_BASELINE=FAIL"]
+            q_evidence = ["A3_GENERIC_AD_BASE=PASS", "A1_QPX_BASELINE=FAIL"]
             if _passed(cases, "Q3_QPX_ALL_LITERAL"):
                 q_evidence.append("Q3_QPX_ALL_LITERAL=PASS")
                 mechanism = "freezing all QPX lookup inputs removes the failure; input Functor delivery is favored"
@@ -136,7 +136,7 @@ def classify_matrix(cases: Mapping[str, Mapping[str, Any]]) -> dict[str, Any]:
                 mechanism = "failure survives literal lookup inputs; QPX material value/context/derivative path remains"
             else:
                 mechanism = "QPX lookup path is the first provider-specific failing transition"
-            owners.append(_owner("QPX_LOOKUP", evidence=q_evidence, proxy="C3_GENERIC_AD_HARMONIC", mechanism=mechanism))
+            owners.append(_owner("QPX_LOOKUP", evidence=q_evidence, proxy="A3_GENERIC_AD_BASE", mechanism=mechanism))
 
     else:
         notes.append("literal, generic AD, and QPX residual paths all pass in this runtime")
