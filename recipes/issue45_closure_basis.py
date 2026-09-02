@@ -1,25 +1,20 @@
 """Issue45 closure basis composed from accepted Issue43 feedback semantics.
 
-This recipe boundary makes the scientific dependency explicit: Issue45 starts
-from the accepted Issue43 closed electron/bulk-Poisson feedback construction,
-then applies the Issue45 inventory constraint.  Versioned qpx_harness facades
-are intentionally not part of this dependency.
+Issue43 owns the accepted closed electron/bulk-Poisson feedback basis. Issue45
+adds only its inventory constraint on top of that scientific dependency.
 """
 from __future__ import annotations
 
 from typing import Any
 
-from recipes import issue43_fast_relaxation as issue43_feedback
+from recipes import issue43_feedback_basis as feedback_basis
 from recipes import issue45_inventory_constraint as inventory_constraint
-from qpx_harness.moose.executioner import apply_fixed_step_contract
-from qpx_harness.moose.output_observation import apply_microtime_output_contract
-from qpx_harness.scale_audit import DEFAULT_ELECTRON_DENSITY, DEFAULT_GAS_TEMPERATURE
 
 ISSUE = 45
-DT_REFERENCE = 1.0e-13
-STEPS = 1
-ACCEPTED_GAS_TEMPERATURE = DEFAULT_GAS_TEMPERATURE
-ACCEPTED_ELECTRON_DENSITY = DEFAULT_ELECTRON_DENSITY
+DT_REFERENCE = feedback_basis.DT_REFERENCE
+STEPS = feedback_basis.STEPS
+ACCEPTED_GAS_TEMPERATURE = feedback_basis.ACCEPTED_GAS_TEMPERATURE
+ACCEPTED_ELECTRON_DENSITY = feedback_basis.ACCEPTED_ELECTRON_DENSITY
 
 
 def build_closed_feedback_input(
@@ -29,24 +24,12 @@ def build_closed_feedback_input(
     dt: float = DT_REFERENCE,
     steps: int = STEPS,
 ) -> tuple[str, dict[str, Any]]:
-    """Build the accepted closed feedback basis without a versioned runtime facade."""
-    text, metadata = issue43_feedback.build_fast_input(
+    return feedback_basis.build_closed_feedback_input(
         base_text,
-        gas_temperature=ACCEPTED_GAS_TEMPERATURE,
-        electron_density=ACCEPTED_ELECTRON_DENSITY,
-        dt=dt,
-        end_time=dt * steps,
         radial_span=radial_span,
+        dt=dt,
+        steps=steps,
     )
-    text = apply_fixed_step_contract(text, dt=dt, steps=steps)
-    text = apply_microtime_output_contract(text, dt=dt)
-    return text, {
-        "issue43_feedback": metadata,
-        "fixed_step": {"dt": dt, "steps": steps},
-        "output_observation_contract": "microtime",
-        "scientific_dependency": "accepted Issue43 closed electron/bulk-Poisson feedback basis",
-        "versioned_qpx_facade_dependency": False,
-    }
 
 
 def build_constrained_quasisteady_input(
@@ -56,7 +39,6 @@ def build_constrained_quasisteady_input(
     macro_avg: float,
     runtime_observability: bool = True,
 ) -> tuple[str, dict[str, Any]]:
-    """Compose the accepted feedback basis with the Issue45 inventory closure."""
     feedback, feedback_meta = build_closed_feedback_input(
         base_text,
         radial_span=radial_span,
