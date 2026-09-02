@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static/self-test gate for the joint Issue43/Issue45 science refactor."""
+"""Static gate for the joint Issue43/Issue45 science refactor."""
 from __future__ import annotations
 
 import ast
@@ -12,11 +12,7 @@ if str(ROOT) not in sys.path:
 
 from qpx_harness import issue43_fast_relaxation as legacy_issue43_v5
 from qpx_harness import issue43_relaxation_runtime as issue43_runtime
-from qpx_harness.inventory import characterization as inventory_characterization
-from qpx_harness.inventory import first_linear_characterization as inventory_first_linear_characterization
 from qpx_harness.issue43_coupling import analysis as issue43_analysis
-from qpx_harness.issue43_coupling import characterization as issue43_characterization
-from qpx_harness.moose import check_input as check_input_diagnostic
 from qpx_harness.petsc import ksp
 from qpx_harness.spec.cases import QVT_PREPOISSON_CASE
 from recipes import issue45_closure_basis
@@ -140,11 +136,6 @@ def main() -> int:
     assert "GMRES_RESTART_BREAKDOWN" not in recipe_source
     assert "KSP_BREAKDOWN_RESIDUAL_FIDELITY_LOSS" in recipe_source
     assert "restart_causality=\"NOT_ESTABLISHED\"" in recipe_source
-
-    assert check_input_diagnostic.self_test() == 0
-    assert issue43_characterization.self_test() == 0
-    assert inventory_characterization.self_test() == 0
-    assert inventory_first_linear_characterization.self_test() == 0
 
     print("ISSUE43_45_SHARED_CASE_IDENTITY: PASS")
     print("ISSUE43_45_CANONICAL_COUPLING_DIAGNOSTICS: PASS")

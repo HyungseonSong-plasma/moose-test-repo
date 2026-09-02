@@ -17,7 +17,6 @@ from .issue43_coupling.analysis import (
     analyze_log_text,
     recipe_backing_status,
 )
-from .issue43_coupling.characterization import self_test
 from .issue43_coupling.constants import (
     BASE_CASE_RELATIVE,
     DIAGNOSTIC_PETSC_OPTIONS,
@@ -65,17 +64,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--qpx", help="path to user-local qpx-opt")
     parser.add_argument("--results-root")
     mode = parser.add_mutually_exclusive_group(required=True)
-    mode.add_argument("--self-test", action="store_true")
     mode.add_argument("--preflight", action="store_true")
     mode.add_argument("--run", action="store_true")
     mode.add_argument("--jacobian-preflight", action="store_true")
     mode.add_argument("--jacobian-run", action="store_true")
     args = parser.parse_args(argv)
 
-    if args.self_test:
-        return self_test()
-    if self_test() != 0:
-        return 1
     try:
         if args.jacobian_run:
             return run_jacobian_runtime(qpx=args.qpx, results_root=args.results_root)

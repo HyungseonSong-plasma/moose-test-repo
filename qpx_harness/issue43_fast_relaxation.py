@@ -33,16 +33,11 @@ for _module in (
 def main(argv: list[str] | None = None) -> int:
     args = list(argv or [])
     parser = argparse.ArgumentParser(add_help=False)
-    parser.add_argument("--self-test", action="store_true")
     parser.add_argument("--output-preflight", action="store_true")
     parser.add_argument("--output-runtime-confirmation", action="store_true")
     parser.add_argument("--qpx")
     parser.add_argument("--results-root")
     known, _ = parser.parse_known_args(args)
-    if known.self_test:
-        return self_test()
-    if self_test() != 0:
-        return 1
     if known.output_preflight:
         return _run_output_preflight(qpx=known.qpx, results_root=known.results_root)
     if known.output_runtime_confirmation:

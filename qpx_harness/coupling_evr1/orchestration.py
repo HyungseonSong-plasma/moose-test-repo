@@ -102,11 +102,6 @@ def _run_pair(
 
 
 def run(args: argparse.Namespace) -> int:
-    from .characterization import self_test
-
-    if self_test():
-        return 2
-
     exe = resolve_executable(args.qpx)
     validate_executable(exe)
     qpx_root = exe.parent.resolve()

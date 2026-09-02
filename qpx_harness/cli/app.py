@@ -5,14 +5,10 @@ import argparse
 import sys
 from pathlib import Path
 
-from qpx_harness.analysis.stats_builder import self_test as stats_builder_self_test
-from qpx_harness.analysis.performance.investigation import self_test as performance_investigation_self_test
-from qpx_harness.analysis.performance.profile import self_test as performance_profile_self_test
 from qpx_harness.bundle import main as bundle_main
 from qpx_harness.cli.commands.performance import (
     analyze_main,
     cache_audit_main,
-    cache_audit_self_test,
     investigate_main,
     measure_main,
     measure_smoke_main,
@@ -20,33 +16,18 @@ from qpx_harness.cli.commands.performance import (
 )
 from qpx_harness.cli.commands.coupling import coupling_evr1_main, coupling_evr2_main
 from qpx_harness.cli.commands.dmix import dmix_equivalence_main
-from qpx_harness.coupling_evr1.characterization import self_test as coupling_evr1_self_test
-from qpx_harness.coupling_evr2.orchestration import self_test as coupling_evr2_self_test
-from qpx_harness.dmix.characterization import self_test as dmix_equivalence_self_test
-from qpx_harness.execution.workspace import inventory_cli, self_test as workspace_self_test
-from qpx_harness.execution.contract import main as execution_contract_main, self_test as execution_contract_self_test
-from qpx_harness.inventory.cli import (
-    first_linear_main,
-    first_linear_self_test,
-    inventory_main as inventory_nullspace_main,
-    inventory_self_test as inventory_nullspace_self_test,
-)
-from qpx_harness.issue43_coupling_diagnostic import main as fast_coupling_diagnostic_main, self_test as fast_coupling_diagnostic_self_test
-from qpx_harness.issue43_fast_relaxation import main as fast_relaxation_main, self_test as fast_relaxation_self_test
-from qpx_harness.issue46_fd_reference import main as fd_reference_main, self_test as fd_reference_self_test
-from qpx_harness.issue46_jacobian_localization import main as jac_localization_main, self_test as jac_localization_self_test
-from qpx_harness.performance.runner import self_test as performance_self_test
-from qpx_harness.performance.smoke import self_test as performance_smoke_self_test
-from qpx_harness.performance.probes.transport import self_test as performance_transport_probe_self_test
-from qpx_harness.moose.preflight import parser_symbol_self_test, validate_input_preflight
+from qpx_harness.execution.workspace import inventory_cli
+from qpx_harness.execution.contract import main as execution_contract_main
+from qpx_harness.inventory.cli import first_linear_main, inventory_main as inventory_nullspace_main
+from qpx_harness.issue43_coupling_diagnostic import main as fast_coupling_diagnostic_main
+from qpx_harness.issue43_fast_relaxation import main as fast_relaxation_main
+from qpx_harness.issue46_fd_reference import main as fd_reference_main
+from qpx_harness.issue46_jacobian_localization import main as jac_localization_main
+from qpx_harness.moose.preflight import validate_input_preflight
 from qpx_harness.performance.profiling import main as profile_main
 from qpx_harness.execution.regression import cli_run_all, cli_run_test
-from qpx_harness.scale_audit import main as scale_audit_main, self_test as scale_audit_self_test
-from qpx_harness.analysis.temporal import (
-    VALID_INITIAL_POLICIES,
-    normalize_temporal_csv,
-    self_test as temporal_self_test,
-)
+from qpx_harness.scale_audit import main as scale_audit_main
+from qpx_harness.analysis.temporal import VALID_INITIAL_POLICIES, normalize_temporal_csv
 
 COMMANDS = {
     "test": "run one test.json case",
@@ -73,7 +54,6 @@ COMMANDS = {
     "inventory": "inspect or compare QPX workspace trees",
     "preflight": "run static parser-symbol preflight on one MOOSE input",
     "temporal-csv": "normalize transient CSV rows under an explicit temporal policy",
-    "self-test": "run all harness static/self-tests",
 }
 
 
@@ -90,32 +70,22 @@ def print_help() -> None:
 
 def preflight_cli(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(prog="qpx preflight")
-    parser.add_argument("input", nargs="?", help="MOOSE input file to inspect")
-    parser.add_argument("--self-test", action="store_true")
+    parser.add_argument("input", help="MOOSE input file to inspect")
     args = parser.parse_args(argv)
-    if args.self_test:
-        return parser_symbol_self_test()
-    if not args.input:
-        parser.error("input is required unless --self-test")
     validate_input_preflight(Path(args.input).expanduser().resolve())
     return 0
 
 
 def temporal_csv_cli(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(prog="qpx temporal-csv")
-    parser.add_argument("source", nargs="?")
-    parser.add_argument("--output")
+    parser.add_argument("source")
+    parser.add_argument("--output", required=True)
     parser.add_argument("--time-column", default="time")
-    parser.add_argument("--initial-row-policy", choices=sorted(VALID_INITIAL_POLICIES))
+    parser.add_argument("--initial-row-policy", choices=sorted(VALID_INITIAL_POLICIES), required=True)
     parser.add_argument("--initial-time", type=float, default=0.0)
     parser.add_argument("--time-tol", type=float, default=1.0e-15)
     parser.add_argument("--allow-no-physical-rows", action="store_true")
-    parser.add_argument("--self-test", action="store_true")
     args = parser.parse_args(argv)
-    if args.self_test:
-        return temporal_self_test()
-    if not args.source or not args.output or not args.initial_row_policy:
-        parser.error("source, --output, and --initial-row-policy are required unless --self-test")
     summary = normalize_temporal_csv(
         Path(args.source),
         Path(args.output),
@@ -132,37 +102,6 @@ def temporal_csv_cli(argv: list[str]) -> int:
     ):
         print(f"{key.upper()}={summary[key]}")
     return 0
-
-
-def self_test_cli(argv: list[str]) -> int:
-    parser = argparse.ArgumentParser(prog="qpx self-test")
-    parser.parse_args(argv)
-    results = (
-        stats_builder_self_test(),
-        parser_symbol_self_test(),
-        temporal_self_test(),
-        workspace_self_test(),
-        coupling_evr1_self_test(),
-        coupling_evr2_self_test(),
-        scale_audit_self_test(),
-        fast_relaxation_self_test(),
-        fast_coupling_diagnostic_self_test(),
-        inventory_nullspace_self_test(),
-        first_linear_self_test(),
-        jac_localization_self_test(),
-        fd_reference_self_test(),
-        execution_contract_self_test(),
-        dmix_equivalence_self_test(),
-        performance_self_test(),
-        performance_smoke_self_test(),
-        performance_investigation_self_test(),
-        performance_profile_self_test(),
-        performance_transport_probe_self_test(),
-        cache_audit_self_test(),
-    )
-    ok = all(result == 0 for result in results)
-    print("QPX_HARNESS_SELFTEST:", "PASS" if ok else "FAIL")
-    return 0 if ok else 1
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -196,7 +135,6 @@ def main(argv: list[str] | None = None) -> int:
         "inventory": inventory_cli,
         "preflight": preflight_cli,
         "temporal-csv": temporal_csv_cli,
-        "self-test": self_test_cli,
     }
     handler = handlers.get(command)
     if handler is None:

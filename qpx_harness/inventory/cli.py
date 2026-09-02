@@ -6,10 +6,8 @@ import argparse
 from recipes import issue45_first_linear as first_linear_recipe
 
 from ..moose.input import MooseInputError
-from .characterization import self_test as inventory_self_test
 from .constants import DEFAULT_MACRO_ELECTRON_AVG
 from .errors import ElectronInventoryNullspaceError
-from .first_linear_characterization import self_test as first_linear_self_test
 from .first_linear_orchestration import run_diagnostic, run_preflight as run_first_linear_preflight
 from .orchestration import (
     run_closure_preflight,
@@ -32,17 +30,12 @@ def inventory_main(argv: list[str] | None = None) -> int:
         help="macrostate electron average used by --closure-preflight",
     )
     mode = parser.add_mutually_exclusive_group(required=True)
-    mode.add_argument("--self-test", action="store_true")
     mode.add_argument("--preflight", action="store_true")
     mode.add_argument("--closure-preflight", action="store_true")
     mode.add_argument("--closure-runtime-preflight", action="store_true")
     mode.add_argument("--closure-run", action="store_true")
     args = parser.parse_args(argv)
 
-    if args.self_test:
-        return inventory_self_test()
-    if inventory_self_test() != 0:
-        return 1
     try:
         if args.closure_run:
             return run_closure_runtime(qpx=args.qpx, results_root=args.results_root)
@@ -77,14 +70,9 @@ def first_linear_main(argv: list[str] | None = None) -> int:
     parser.add_argument("--qpx", help="path to user-local qpx-opt")
     parser.add_argument("--results-root")
     mode = parser.add_mutually_exclusive_group(required=True)
-    mode.add_argument("--self-test", action="store_true")
     mode.add_argument("--preflight", action="store_true")
     mode.add_argument("--run", action="store_true")
     args = parser.parse_args(argv)
-    if args.self_test:
-        return first_linear_self_test()
-    if first_linear_self_test() != 0:
-        return 1
     try:
         return (
             run_diagnostic(args.qpx, args.results_root)

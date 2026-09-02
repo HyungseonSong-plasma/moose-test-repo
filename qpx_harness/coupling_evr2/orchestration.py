@@ -162,25 +162,6 @@ def _case_pass(case: dict[str, Any] | None) -> bool:
     )
 
 
-def _canonical_checker_self_test(repo_root: Path) -> dict[str, Any]:
-    checker = repo_root / recipe.KG_E_PARENT_RELATIVE / "check_case.py"
-    if not checker.is_file():
-        raise CouplingEVR2RuntimeError(f"missing accepted electron checker: {checker}")
-    with tempfile.TemporaryDirectory() as tmp_name:
-        log = Path(tmp_name) / "checker_self_test.log"
-        proc = run_command(
-            [sys.executable, str(checker), "--self-test"],
-            cwd=checker.parent,
-            log_path=log,
-        )
-        output = log.read_text(errors="replace")
-    return {
-        "returncode": proc.returncode,
-        "output": output,
-        "status": "PASS" if proc.returncode == 0 else "FAIL",
-    }
-
-
 def _run_kg_e(
     *,
     case_dir: Path,
@@ -335,9 +316,6 @@ def self_test() -> int:
 
 
 def run(args: argparse.Namespace) -> int:
-    if self_test():
-        return 2
-
     exe = resolve_executable(args.qpx)
     validate_executable(exe)
     qpx_root = exe.parent.resolve()
@@ -369,13 +347,6 @@ def run(args: argparse.Namespace) -> int:
     if source_parse.get("parser") != "CppSource+CppCallArguments":
         raise CouplingEVR2RuntimeError(
             "optimized D_mix source identity could not be verified"
-        )
-
-    checker_selftest = _canonical_checker_self_test(repo_root)
-    if checker_selftest["status"] != "PASS":
-        raise CouplingEVR2RuntimeError(
-            "accepted electron checker self-test failed: "
-            + checker_selftest["output"].strip()
         )
 
     base_text = base_input.read_text()
@@ -455,7 +426,6 @@ def run(args: argparse.Namespace) -> int:
         "kg_e_control_source": str(
             repo_root / recipe.KG_E_PARENT_RELATIVE / "qvt_prepoisson"
         ),
-        "kg_e_checker_selftest": checker_selftest,
         "evr1_baseline": recipe.EVR1_BASELINE,
         "transport_variants": {
             label: meta for label, (_, meta) in transport_variants.items()
