@@ -43,17 +43,13 @@ n_e -> QPXThermalDiffusionMaterial -> D_mix_* -> heavy diffusion residuals
 
 ## J1 — real-QVT electron-only zero-field discriminator — EVR1 complete
 
-The corrected J1 does not reconstruct a new framework contract. It derives
-straight from the historically accepted Issue #2 `qvt_prepoisson/input.i`, with
-identical `qvt.msh` and `electron_moments.txt`, and changes only:
+The corrected J1 derives straight from the historically accepted Issue #2
+`qvt_prepoisson/input.i`, with identical `qvt.msh` and `electron_moments.txt`,
+and changes only:
 
 ```text
 phi_prescribed: -0.01*x -> 0.0*x
 ```
-
-Heavy nonlinear equations are absent in the accepted Issue #2 reference. J1
-therefore tests the real-QVT electron path with frozen lookup state and Poisson
-OFF.
 
 Returned EVR1:
 
@@ -72,60 +68,107 @@ Scientific consequence:
 heavy <-> electron cross-coupling is not required to reproduce the blocker
 ```
 
-This does not by itself prove a C++ defect because zero prescribed field is the
-scientific discriminator relative to the historical Issue #2 accepted case.
-
-## J2 — one-shot real-QVT electron operator decomposition — EVR2 next
+## J2 — real-QVT electron operator decomposition — EVR2 complete
 
 `operator_decomposition.py` derives every case from the same accepted Issue #2
-real-QVT input and uses the accepted Issue #2 `expected.json` observable contract.
+real-QVT input and uses the accepted Issue #2 observable contract.
+
+Returned governed batch:
 
 ```text
-C0 accepted #2 current-executable control
+C0 accepted #2 control
    time + diffusion + drift, E=0.01
+   PASS
 
 C1 zero-field time-only
+   PASS
+   residuals = [0.0, 0.0]
 
 C2 zero-field time + diffusion
-
-C3 zero-field time + drift
-
-C4 zero-field time + diffusion + drift
-   repeatability case, only reached if C0-C3 pass
+   FAIL
+   residual = 1.197516979581 repeated without descent
 ```
 
-Decision tree:
+The adaptive batch stopped at C2. C3/C4 were not launched.
+
+Decision:
 
 ```text
-C0 fails -> E4 current-executable/historical-control regression favored
-C1 fails -> E3 transient/convergence/runtime representation favored
-C2 fails -> E2 diffusion / framework-effective FV boundary path favored
-C3 fails -> E1 zero-field electrostatic-drift path favored
-C4 fails -> electron-operator interaction favored
-all pass -> J1 repeatability/configuration HOLD
+E2_DIFFUSION_OR_FV_BOUNDARY_PATH_FAVORED
+Issue #93 EVR = 2/3
 ```
+
+The ordering matters:
+
+```text
+C0 PASS -> accepted #2 current-executable control reproduced
+C1 PASS -> time/init/runtime representation disfavored
+C2 FAIL -> diffusion / framework-effective FV boundary path favored
+```
+
+C2 does not by itself prove an `FVDiffusion` implementation defect.
+
+## J3 — diffusion boundary-flux ownership confirmation — reserved EVR3
+
+`boundary_flux_ownership.py` is a bounded confirmation for the C2 owner selected
+by J2. It does not add wall or surface-reaction physics.
+
+The real-QVT plasma interfaces are:
+
+```text
+inlet
+outlet
+plasma_electrode
+plasma_metal
+plasma_right
+plasma_cover
+plasma_wafer
+plasma_focus_ring
+```
+
+MOOSE `FVDiffusion` is an FV flux kernel and executes on internal boundaries by
+default. J3 first derives D0 from exact J2 C2 and changes only the diffusion
+execution contract:
+
+```text
+FVDiffusion(n_e)
++ boundaries_to_avoid = '<all plasma interface sidesets above>'
+```
+
+No coefficient, initial condition, timestep, solver tolerance, drift term, wall
+loss, or surface reaction is added.
+
+### J3 decision order
+
+All predeclared J3 inputs are P2 checked before any P3 launch.
+
+```text
+D0: C2 + plasma-interface FVDiffusion execution excluded
+
+D0 converges, accepted checker PASS, electron residual trace -> 0
+  -> FRAMEWORK_EFFECTIVE_DIFFUSION_BOUNDARY_FLUX_OWNERSHIP_CONFIRMED
+  -> stop J3; do not launch Jacobian fallback
+
+otherwise
+  -> run exact original C2 once with PETSc -snes_test_jacobian
+  -> return bounded AD-vs-FD Jacobian evidence
+```
+
+The D0 discriminator is intentionally diagnostic. If ownership is confirmed,
+the subsequent implementation work is to give plasma-wall physics an explicit
+owner, using a surface-reaction/wall-flux model rather than relying on implicit
+bulk-diffusion interface execution.
+
+The Jacobian fallback remains restricted to the electron-only C2 system. No
+combined-R3 all-DOF Jacobian sweep is authorized.
 
 ### EVR protection
 
-All five case inputs are prepared and all five P2 `--check-input` calls are run
-**before any P3 launch**. Therefore a J2 construction/framework-contract failure
-does not consume EVR2.
+D0 and JAC are both constructed and P2 checked before P3. A P2 construction or
+framework-contract failure therefore consumes no EVR3.
 
-Once P3 begins, the adaptive C0→C4 batch is one governed Issue #93 scientific
-result return and consumes EVR2. It stops at the first failing scientific owner.
-
-The accepted Issue #2 checker semantics are reused for runtime classification:
-positive physical row, transport lookup values, positivity, inventory/mean
-closure, and qvt finite-state requirement.
-
-## J3 — final focused confirmation — reserved EVR3
-
-EVR3 is reserved for exactly one owner selected by J2. Because the electron-only
-real-QVT system contains only `n_e` as nonlinear variable, a bounded finite-
-difference Jacobian check may be admissible for the isolated failing case even
-though the full combined-R3 system exceeded the earlier Jacobian cost guard.
-
-No combined-R3 all-DOF Jacobian sweep is authorized here.
+Once D0 P3 launches, the bounded J3 batch consumes EVR3 exactly once, whether it
+stops after D0 or continues to the predeclared C2 Jacobian fallback.
 
 ## Execution
 
@@ -141,13 +184,21 @@ Historical J1 runner, already consumed EVR1:
 python -m experiments.Issue93_r3_electron_isolation.run --qpx "$QPX_OPT"
 ```
 
-J2 one-shot operator decomposition, next local scientific run:
+Historical J2 operator decomposition, already consumed EVR2:
 
 ```bash
 python -m experiments.Issue93_r3_electron_isolation.operator_decomposition \
   --qpx "$QPX_OPT"
 ```
 
+J3 focused boundary-flux ownership confirmation, next scientific run:
+
+```bash
+python -m experiments.Issue93_r3_electron_isolation.boundary_flux_ownership \
+  --qpx "$QPX_OPT"
+```
+
 Generated artifacts are written to a temporary directory unless `--work-dir` is
-supplied. `summary.json` records P2/P3 results, accepted-control checker results,
-residual trajectories, first failing case, hypothesis status, and EVR accounting.
+supplied. `summary.json` records P2/P3 results, residual trajectories, checker
+results, the J3 decision, EVR accounting, and Jacobian evidence if the fallback
+was required.
