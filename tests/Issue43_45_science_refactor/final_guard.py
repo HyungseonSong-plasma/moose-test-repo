@@ -10,11 +10,14 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from qpx_harness import issue43_fast_relaxation as legacy_issue43_v5
+from qpx_harness import issue43_relaxation_runtime as issue43_runtime
 from qpx_harness.issue43_coupling import analysis as issue43_analysis
 from qpx_harness.issue43_coupling import characterization as issue43_characterization
 from qpx_harness.issue45 import first_linear_characterization as issue45_characterization
 from qpx_harness.petsc import ksp
 from qpx_harness.spec.cases import QVT_PREPOISSON_CASE
+from recipes import issue45_closure_basis
 from recipes import issue45_first_linear as issue45_recipe
 
 
@@ -47,6 +50,27 @@ def main() -> int:
     source43 = (ROOT / "qpx_harness/issue43_coupling/analysis.py").read_text()
     assert "coupling_diagnostic.analyze_runtime_failure" in source43
     assert issue43_analysis._line_hits is not None
+
+    # The accepted Issue43 feedback basis is now recipe-owned.  Prove byte
+    # equivalence to the historical v5 composition before retiring that facade.
+    fixture = issue43_runtime._fixture()
+    canonical_feedback, basis_meta = issue45_closure_basis.build_closed_feedback_input(
+        fixture,
+        radial_span=0.243,
+        dt=issue43_runtime.DT_FEEDBACK_BASE,
+        steps=issue43_runtime.N_STEPS,
+    )
+    legacy_feedback = legacy_issue43_v5._build_feedback_v5(
+        fixture,
+        dt=issue43_runtime.DT_FEEDBACK_BASE,
+        steps=issue43_runtime.N_STEPS,
+        radial_span=0.243,
+    )
+    assert canonical_feedback == legacy_feedback
+    assert basis_meta["versioned_qpx_facade_dependency"] is False
+    closure_model_source = (ROOT / "qpx_harness/issue45/closure_model.py").read_text()
+    assert "issue43_fast_relaxation" not in closure_model_source
+    assert "issue45_closure_basis" in closure_model_source
 
     # KSP residual fidelity is a reusable fact and restart coincidence is non-causal.
     rows = [
@@ -81,6 +105,7 @@ def main() -> int:
 
     print("ISSUE43_45_SHARED_CASE_IDENTITY: PASS")
     print("ISSUE43_45_CANONICAL_COUPLING_DIAGNOSTICS: PASS")
+    print("ISSUE43_45_FEEDBACK_BASIS_EQUIVALENCE: PASS")
     print("ISSUE45_KSP_RESIDUAL_FIDELITY_AUDIT: PASS")
     print("ISSUE45_RESTART_CAUSALITY: NOT_ESTABLISHED")
     print("ISSUE43_EVRS_CONSUMED_BY_REFACTOR: 0")
