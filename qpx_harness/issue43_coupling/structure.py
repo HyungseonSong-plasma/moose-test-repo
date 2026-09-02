@@ -9,7 +9,7 @@ from recipes import issue43_execution_contract as execution_policy
 from recipes import issue43_feedback_basis as feedback_basis
 
 from ..execution import cases as case_ops
-from .. import execution_contract as ec
+from ..execution import contract as ec
 from ..moose import output_observation as ooc
 from ..moose import blocks as mb
 from ..moose import parameters as mp
