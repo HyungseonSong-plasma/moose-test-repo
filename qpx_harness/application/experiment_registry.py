@@ -13,6 +13,7 @@ from .experiment_spec import ExperimentSpec
 ExperimentRunner = Callable[[ExperimentSpec], int]
 
 _PROTOCOLS: dict[str, str] = {
+    "issue27-surface-reaction-controlled-wall": "qpx_harness.application.protocols.issue27_surface_reaction_controlled_wall:run_protocol",
     "r3-electron-master-diagnostic": "qpx_harness.application.protocols.r3_electron_master_diagnostic:run_protocol",
     "r3-electron-scaling-counterfactual": "qpx_harness.application.protocols.r3_electron_scaling_counterfactual:run_protocol",
     "r3-fv-internal-completion": "qpx_harness.application.protocols.r3_fv_internal_completion:run_protocol",
