@@ -15,7 +15,7 @@ jobs:
         with:
           python-version: '3.11'
       - name: Install validation dependencies
-        run: python -m pip install 'pydantic>=2,<3' 'pytest>=8,<9'
+        run: python -m pip install 'pydantic>=2,<3' 'pytest>=8,<9' -r requirements-evidence-engine.txt
       - name: Run qpx-free pytest suite
         run: python -m pytest -q
       - name: Validate capability architecture census
