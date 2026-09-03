@@ -788,8 +788,8 @@ def _differential_evidence(
             "n_e_min",
         )
         composition_error = max(
-            abs(float(state["sum_w_min"]) - 1.0,
-            abs(float(state["sum_w_max"]) - 1.0,
+            abs(float(state["sum_w_min"]) - 1.0),
+            abs(float(state["sum_w_max"]) - 1.0),
         )
         positive_migration = (
             float(charged["O2p"]["migration_mass_rate_kg_s"])
