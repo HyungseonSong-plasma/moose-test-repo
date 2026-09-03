@@ -1,4 +1,4 @@
-"""Reusable Polars + DuckDB numerical evidence engine for QPX diagnostics."""
+"""Unified numerical evidence collection, persistence, and diagnosis engine."""
 
 from .diagnosis import (
     DiagnosticMetricSpec,
@@ -18,6 +18,22 @@ from .diagnosis import (
     ruleset_from_registry,
     summarize_constant_state,
     summarize_constant_state_report,
+)
+from .errors import (
+    ERROR_LEDGER_SCHEMA_VERSION,
+    ErrorLedger,
+    error_record,
+    merge_error_records,
+)
+from .provenance import (
+    artifact_created_utc,
+    canonical_identity_annotations,
+    canonical_identity_fields,
+    infer_attempt_id,
+    load_attempt_identity,
+    normalize_git_commit,
+    normalize_image_reference,
+    write_attempt_identity,
 )
 from .schema import (
     CELL_KEY_COLUMNS,
@@ -40,6 +56,7 @@ __all__ = [
     "CELL_KEY_COLUMNS",
     "CORE_FACE_CONTRACT",
     "DEFAULT_FACE_CONTRACT",
+    "ERROR_LEDGER_SCHEMA_VERSION",
     "FACE_REQUIRED_COLUMNS",
     "GREEN_GAUSS_FACE_CONTRACT",
     "ColumnRole",
@@ -50,6 +67,7 @@ __all__ = [
     "DiagnosisRule",
     "DiagnosisRuleRegistry",
     "DynamicSchemaContract",
+    "ErrorLedger",
     "EvidenceStore",
     "EvidenceTolerances",
     "FailureLocation",
@@ -59,15 +77,25 @@ __all__ = [
     "Z3DiagnosisEngine",
     "Z3OwnerRule",
     "Z3RuleSet",
+    "artifact_created_utc",
     "build_cell_evidence",
     "build_constant_state_registry",
     "build_constant_state_ruleset",
+    "canonical_identity_annotations",
+    "canonical_identity_fields",
+    "error_record",
     "evaluate_diagnosis_registry",
+    "infer_attempt_id",
+    "load_attempt_identity",
+    "merge_error_records",
     "normalize_and_project",
+    "normalize_git_commit",
+    "normalize_image_reference",
     "prepare_face_evidence",
     "require_columns",
     "ruleset_from_registry",
     "summarize_constant_state",
     "summarize_constant_state_report",
+    "write_attempt_identity",
     "write_evidence_bundle",
 ]
