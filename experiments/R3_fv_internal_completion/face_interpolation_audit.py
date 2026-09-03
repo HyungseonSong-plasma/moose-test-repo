@@ -9,14 +9,16 @@ Pinned source contract (MOOSE 9f388366ccf):
 
 * ``ElemInfo::centroid()`` is ``elem->vertex_average()``;
 * ``FaceInfo::faceCentroid()`` is the side vertex average;
-* ``FaceInfo::gC`` is built from the cell-centre line / face-plane intersection;
+* same-level internal ``FaceInfo`` ownership goes to the lower element id;
+* ``FaceInfo::gC`` is built from the owner-cell line / face-plane intersection;
 * central face value is ``gC * elem + (1 - gC) * neighbor``;
 * RZ face surface vector is ``normal * faceArea * 2*pi*r_face``;
 * RZ cell volume is ``elemVolume * 2*pi*r_cell``;
 * the radial Green-Gauss component finally subtracts ``field_cell / r_cell``.
 
-Only linear TRI3/QUAD4 plasma cells are admitted.  This prevents a silently
-approximate audit if a future qvt mesh introduces curved/high-order sides.
+The accepted qvt audit is restricted to linear TRI3/QUAD4 plasma element
+blocks.  A future higher-order/curved plasma mesh fails closed instead of being
+silently reduced to corner geometry.
 """
 from __future__ import annotations
 
@@ -28,9 +30,14 @@ from .rz_decomposition import (
     Element2D,
     ParsedMesh2D,
     _edge_key,
+    _parse_physical_names,
+    _parse_surface_entities,
     _polygon_geometry,
+    _section,
     parse_gmsh41_plasma,
 )
+
+_LINEAR_2D_GMSH_TYPES = {2, 3}  # TRI3, QUAD4
 
 
 def moose_constant_linear_interpolation(value: float, gc: float) -> float:
@@ -38,15 +45,47 @@ def moose_constant_linear_interpolation(value: float, gc: float) -> float:
     return gc * value + (1.0 - gc) * value
 
 
+def _assert_linear_plasma_blocks(path: Path, physical_name: str) -> tuple[int, ...]:
+    lines = [line.strip() for line in path.read_text().splitlines()]
+    physical = _parse_physical_names(lines)
+    surfaces = _parse_surface_entities(lines)
+    physical_tags = {
+        tag for (dim, tag), name in physical.items() if dim == 2 and name == physical_name
+    }
+    plasma_entities = {
+        entity_tag
+        for entity_tag, tags in surfaces.items()
+        if any(tag in physical_tags for tag in tags)
+    }
+    if not plasma_entities:
+        raise ValueError(f"physical group {physical_name!r} has no surface entities")
+
+    section = _section(lines, "Elements")
+    num_blocks = int(section[0].split()[0])
+    cursor = 1
+    element_types: set[int] = set()
+    for _ in range(num_blocks):
+        entity_dim, entity_tag, element_type, block_count = map(int, section[cursor].split())
+        cursor += 1
+        if entity_dim == 2 and entity_tag in plasma_entities:
+            element_types.add(element_type)
+        cursor += block_count
+
+    if not element_types:
+        raise ValueError(f"no element blocks found for physical group {physical_name!r}")
+    unsupported = element_types - _LINEAR_2D_GMSH_TYPES
+    if unsupported:
+        raise ValueError(
+            "face interpolation audit only supports linear TRI3/QUAD4 plasma blocks; "
+            f"found Gmsh element types {sorted(unsupported)}"
+        )
+    return tuple(sorted(element_types))
+
+
 def _cell_geometry(mesh: ParsedMesh2D) -> dict[int, dict[str, Any]]:
     result: dict[int, dict[str, Any]] = {}
     for elem in mesh.elements:
         xy, signed_area, centroid = _polygon_geometry(elem.node_tags, mesh.nodes)
-        if len(elem.node_tags) not in (3, 4):
-            raise ValueError(
-                f"face interpolation audit requires linear TRI3/QUAD4 cells; "
-                f"element {elem.tag} has {len(elem.node_tags)} retained corners"
-            )
         result[elem.tag] = {
             "element": elem,
             "xy": xy,
@@ -90,23 +129,14 @@ def _dot(a: tuple[float, float], b: tuple[float, float]) -> float:
     return a[0] * b[0] + a[1] * b[1]
 
 
-def _face_row(
-    *,
+def _side_geometry(
     elem: Element2D,
     local_side: int,
-    neighbor_tag: int,
     geometry: dict[int, dict[str, Any]],
     nodes: dict[int, tuple[float, float, float]],
-    n0: float,
-    radial_axis: int,
 ) -> dict[str, Any]:
     cell = geometry[elem.tag]
-    neighbor = geometry[neighbor_tag]
-    centroid = cell["centroid"]
-    neighbor_centroid = neighbor["centroid"]
-    signed_area = float(cell["signed_area"])
-    orientation = 1.0 if signed_area > 0.0 else -1.0
-
+    orientation = 1.0 if float(cell["signed_area"]) > 0.0 else -1.0
     node_a = elem.node_tags[local_side]
     node_b = elem.node_tags[(local_side + 1) % len(elem.node_tags)]
     x0, y0 = nodes[node_a][0], nodes[node_a][1]
@@ -115,9 +145,28 @@ def _face_row(
     face_area = math.hypot(dx, dy)
     if face_area == 0.0:
         raise ValueError(f"element {elem.tag} side {local_side} has zero face area")
+    return {
+        "node_a": node_a,
+        "node_b": node_b,
+        "face_area": face_area,
+        "face_centroid": ((x0 + x1) * 0.5, (y0 + y1) * 0.5),
+        "normal": (orientation * dy / face_area, orientation * -dx / face_area),
+    }
 
-    normal = (orientation * dy / face_area, orientation * -dx / face_area)
-    face_centroid = ((x0 + x1) * 0.5, (y0 + y1) * 0.5)
+
+def _face_info_gc(
+    *,
+    face_info_elem: Element2D,
+    face_info_side: int,
+    face_info_neighbor_tag: int,
+    geometry: dict[int, dict[str, Any]],
+    nodes: dict[int, tuple[float, float, float]],
+) -> tuple[float, dict[str, Any]]:
+    side = _side_geometry(face_info_elem, face_info_side, geometry, nodes)
+    centroid = geometry[face_info_elem.tag]["centroid"]
+    neighbor_centroid = geometry[face_info_neighbor_tag]["centroid"]
+    normal = side["normal"]
+    face_centroid = side["face_centroid"]
 
     d_cn = (
         neighbor_centroid[0] - centroid[0],
@@ -125,12 +174,14 @@ def _face_row(
     )
     d_cn_mag = math.hypot(*d_cn)
     if d_cn_mag == 0.0:
-        raise ValueError(f"elements {elem.tag}/{neighbor_tag} have coincident centroids")
+        raise ValueError(
+            f"elements {face_info_elem.tag}/{face_info_neighbor_tag} have coincident centroids"
+        )
     e_cn = (d_cn[0] / d_cn_mag, d_cn[1] / d_cn_mag)
     denominator = _dot(e_cn, normal)
     if denominator == 0.0:
         raise ValueError(
-            f"element {elem.tag} side {local_side} has eCN dot normal == 0"
+            f"FaceInfo owner {face_info_elem.tag} side {face_info_side} has eCN dot normal == 0"
         )
 
     centroid_to_face = (
@@ -143,9 +194,40 @@ def _face_row(
         centroid[1] + intersection_distance * e_cn[1],
     )
     gc = _distance(neighbor_centroid, r_intersection) / d_cn_mag
+    return gc, side
 
+
+def _face_row(
+    *,
+    elem: Element2D,
+    local_side: int,
+    neighbor_tag: int,
+    shared: list[tuple[int, int]],
+    element_by_tag: dict[int, Element2D],
+    geometry: dict[int, dict[str, Any]],
+    nodes: dict[int, tuple[float, float, float]],
+    n0: float,
+    radial_axis: int,
+) -> dict[str, Any]:
+    # On the accepted, unrefined qvt mesh the pinned elemHasFaceInfo rule chooses
+    # the lower same-level element id. Gmsh element tags preserve that ordering.
+    face_info_elem_tag, face_info_side = min(shared, key=lambda pair: pair[0])
+    face_info_neighbor_tag = next(tag for tag, _side in shared if tag != face_info_elem_tag)
+    gc, canonical_side = _face_info_gc(
+        face_info_elem=element_by_tag[face_info_elem_tag],
+        face_info_side=face_info_side,
+        face_info_neighbor_tag=face_info_neighbor_tag,
+        geometry=geometry,
+        nodes=nodes,
+    )
+
+    current_side = _side_geometry(elem, local_side, geometry, nodes)
+    face_centroid = current_side["face_centroid"]
+    normal = current_side["normal"]
+    face_area = float(current_side["face_area"])
     face_value = moose_constant_linear_interpolation(n0, gc)
     face_delta = face_value - n0
+
     face_radius = face_centroid[radial_axis]
     if face_radius < 0.0:
         raise ValueError(
@@ -154,13 +236,18 @@ def _face_row(
     coord_factor = 2.0 * math.pi * face_radius
     surface_x = normal[0] * face_area * coord_factor
     surface_y = normal[1] * face_area * coord_factor
+    centroid = geometry[elem.tag]["centroid"]
+    neighbor_centroid = geometry[neighbor_tag]["centroid"]
 
     return {
         "element_tag": elem.tag,
         "neighbor_tag": neighbor_tag,
         "local_side": local_side,
-        "node_a": node_a,
-        "node_b": node_b,
+        "face_info_elem_tag": face_info_elem_tag,
+        "face_info_neighbor_tag": face_info_neighbor_tag,
+        "face_info_side": face_info_side,
+        "node_a": current_side["node_a"],
+        "node_b": current_side["node_b"],
         "cell_x": centroid[0],
         "cell_y": centroid[1],
         "neighbor_x": neighbor_centroid[0],
@@ -170,6 +257,7 @@ def _face_row(
         "normal_x": normal[0],
         "normal_y": normal[1],
         "face_area": face_area,
+        "canonical_face_area": canonical_side["face_area"],
         "gc": gc,
         "gc_below_zero": gc < 0.0,
         "gc_above_one": gc > 1.0,
@@ -193,17 +281,19 @@ def audit_constant_face_interpolation(
 ) -> dict[str, Any]:
     """Replay constant-face interpolation and RZ Green-Gauss arithmetic on qvt.
 
-    The audit intentionally restricts final-gradient reconstruction to cells whose
-    every side is internal to the selected physical block.  Boundary expansion is
-    therefore excluded from the mechanism under test.
+    Final-gradient reconstruction is restricted to cells whose every side is
+    internal to the selected physical block, excluding boundary expansion from
+    the mechanism under test.
     """
     if radial_axis not in (0, 1):
         raise ValueError("radial_axis must be 0 or 1")
     if not math.isfinite(n0):
         raise ValueError("n0 must be finite")
 
+    element_types = _assert_linear_plasma_blocks(path, physical_name)
     mesh = parse_gmsh41_plasma(path, physical_name=physical_name)
     geometry = _cell_geometry(mesh)
+    element_by_tag = {elem.tag: elem for elem in mesh.elements}
     owners = _edge_owners(mesh)
     interior = _internal_cell_tags(mesh, owners)
     if not interior:
@@ -230,6 +320,8 @@ def audit_constant_face_interpolation(
                 elem=elem,
                 local_side=local_side,
                 neighbor_tag=neighbor_tag,
+                shared=shared,
+                element_by_tag=element_by_tag,
                 geometry=geometry,
                 nodes=mesh.nodes,
                 n0=float(n0),
@@ -292,6 +384,7 @@ def audit_constant_face_interpolation(
         "radial_axis": radial_axis,
         "symmetry_axis": 1 if radial_axis == 0 else 0,
         "n0": float(n0),
+        "plasma_gmsh_element_types": list(element_types),
         "plasma_element_count": len(mesh.elements),
         "interior_element_count": len(interior),
         "face_evaluation_count": len(face_rows),
