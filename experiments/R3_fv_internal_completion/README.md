@@ -1,6 +1,6 @@
 # R3 FV internal completion
 
-Purpose: finish the remaining finite-volume ownership split for the R3 electron constant-state diffusion blocker without another probe-design cycle.
+Purpose: finish the remaining finite-volume ownership split for the R3 electron constant-state diffusion blocker without another probe-design cycle or avoidable harness-rerun cycle.
 
 This campaign is self-contained and keeps the real `qvt.msh`, `RZ`, and `plasma` domain fixed. Geometry is `HELD_FIXED_OUT_OF_SCOPE`; it is not declared correct or exonerated.
 
@@ -11,12 +11,66 @@ The runner prebuilds and executes the remaining independent discriminators befor
 - `C0_TIME_ONLY`: execution/control reference.
 - `F0/F1/F2`: nonlinear `FVDiffusion` internal path at `n_e=1e16`, `n_e=1`, and the O(1) diagnostic absolute-tolerance probe.
 - `O0/O1`: nonlinear `FVOrthogonalDiffusion`, which bypasses Green-Gauss/non-orthogonal reconstruction and uses only the cell-value difference over `dCN`.
-- `G0/G1`: direct AD and Real `n_e` cell-gradient measurements with two-term boundary reconstruction.
-- `G2/G3`: the same direct gradient measurements with one-term boundary reconstruction.
+- `P0_GRADIENT_PINNED_STYLE`: operational gate for the direct gradient measurement path. It mirrors the pinned-MOOSE functor-gradient regression pattern: `solve=false`, `Steady`, no solve-time FV kernels, and default Aux scheduling.
+- `P1_GRADIENT_INITIAL_VARIANT`: independent `INITIAL`-scheduled counterfactual. Its failure is recorded operationally but does not invalidate the `P0`/G scientific path.
+- `G0/G1`: direct AD and Real `n_e` cell-gradient measurements with two-term boundary reconstruction, using the same pinned-style execution contract as `P0`.
+- `G2/G3`: the same direct gradient measurements with one-term boundary reconstruction, also using the pinned-style execution contract.
 - Offline same-mesh RZ decomposition: reproduces the pinned-MOOSE interior Green-Gauss face sum, RZ coordinate weighting, and `n_e/r` subtraction using the unchanged `qvt.msh`.
 - Jacobian probes are predeclared for `F0`, `F1`, and `O0`; they are not selected after the cheap matrix.
 
-The canonical diagnosis contains exactly one `primary_owner` or `null`. Jacobian-only findings are recorded under `secondary_candidates` so multiple simultaneous primary owners cannot be emitted.
+## Gradient harness hardening
+
+Gradient cases deliberately retain the accepted `qvt.msh`, RZ coordinate system, `[Materials]` coverage, and the FV `n_e` variable while removing objects that are irrelevant to direct gradient sampling:
+
+```text
+removed from P0/P1/G0-G3
+  [FVKernels]
+  FVTimeKernel
+  FVDiffusion
+  [FunctorMaterials]
+  QPXElectronTransportLookupMaterial
+  legacy [Postprocessors]
+```
+
+The safe scientific gradient path is:
+
+```text
+[Problem]
+  solve = false
+[]
+
+MooseVariableFVReal n_e
+  -> ADFunctorElementalGradientAux / FunctorElementalGradientAux
+  -> MONOMIAL_VEC AuxVariables
+  -> VectorVariableComponentAux
+  -> ElementValueSampler
+
+[Executioner]
+  type = Steady
+[]
+```
+
+`P0` and all `G` cases use the pinned-style/default Aux schedule. `P1` alone forces `execute_on = INITIAL` as a counterfactual. The case builder performs a static contract check before staging and rejects any gradient input that accidentally retains a time kernel, nonlinear diffusion kernel, QPX transport material, or legacy postprocessor.
+
+Scientific Green-Gauss ownership is gated by `P0`:
+
+```text
+P0 PASS
+  -> G0-G3 scientific evidence may be classified
+
+P0 FAIL
+  -> primary_owner = null
+  -> status = HOLD_GRADIENT_PROBE
+  -> G0-G3 excluded from scientific ownership
+
+P1 FAIL with P0 PASS
+  -> record INITIAL-schedule operational finding
+  -> continue G0-G3 scientific classification
+```
+
+This keeps operational construction/runtime failures out of scientific ownership.
+
+The canonical diagnosis contains exactly one `primary_owner` or `null`. Jacobian-only findings are recorded under `secondary_candidates`, and probe-execution findings are recorded under `operational_findings`, so multiple simultaneous primary scientific owners cannot be emitted.
 
 ## Execute
 
