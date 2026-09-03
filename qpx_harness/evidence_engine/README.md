@@ -16,8 +16,8 @@ python -m pip install -U pip
 python -m pip install 'pytest>=8,<9' -r requirements-evidence-engine.txt
 ```
 
-The repository CI also installs these dependencies and runs the same Python test
-suite.
+The evidence requirements include Polars, DuckDB, Pydantic v2, and `z3-solver`.
+The repository CI installs the same dependencies and runs the same Python tests.
 
 ## One-command local smoke test
 
@@ -42,7 +42,8 @@ synthetic exact RZ face telemetry
   -> Polars cell Green-Gauss reconstruction
   -> Parquet evidence
   -> DuckDB materialization/query
-  -> registry-driven diagnosis
+  -> metric registry
+  -> Z3 logical owner selection
 
 synthetic surface-vector perturbation
   -> same pipeline
@@ -65,14 +66,29 @@ The extensibility boundary is split into independent contracts:
 external telemetry
   -> Core schema                # stable identity/topology/spatial roles only
   -> Diagnostic schema plugin   # Green-Gauss, flux, Jacobian, transport, ...
-  -> Polars transforms          # derived evidence columns
-  -> DiagnosisRuleRegistry      # metric aggregation + ordered owner rules
+  -> Polars transforms          # derived numerical evidence columns
+  -> DiagnosticMetricSpec       # evidence aggregation contract
+  -> externally supplied Z3RuleSet
+  -> Z3DiagnosisEngine          # symbolic logical selection
   -> DiagnosisReport
 ```
 
-Schema normalization and diagnosis policy are deliberately independent. A new
-telemetry quantity does not automatically become a diagnosis rule, and a new
-rule does not require hard-coding a new `if/elif` branch in `diagnose.py`.
+Schema normalization, numerical transformation, metric aggregation, and logical
+owner policy are deliberately independent.
+
+The diagnosis implementation is modular:
+
+```text
+qpx_harness/evidence_engine/diagnosis/
+  __init__.py       # stable public facade and summarize_* compatibility API
+  models.py         # Pydantic ontology and injectable Z3 rule-set models
+  evaluator.py      # Polars metric aggregation + failure localization
+  presets.py        # Green-Gauss metric/rule factories only
+  z3_engine.py      # generic SMT rule interpreter
+```
+
+`qpx_harness/evidence_engine/diagnose.py` is now only a backward-compatible shim.
+New implementation must not accumulate there.
 
 ## Core schema versus diagnostic plugins
 
@@ -177,62 +193,52 @@ contract = GREEN_GAUSS_FACE_CONTRACT.extend({
 })
 ```
 
-Then pass the contract directly to the transform path:
+Extra columns are preserved by default so future diagnosis layers can consume
+new quantities without changing the existing Green-Gauss reconstruction code.
+
+## Metric registry and Z3 logical policy
+
+`DiagnosticMetricSpec` defines where a scalar diagnostic metric comes from and
+how it is reported/localized. `DiagnosisRuleRegistry` remains supported for
+simple one-metric threshold callers, but the evaluator converts those rules into
+Z3 rules and uses `Z3DiagnosisEngine` for canonical owner selection.
+
+The Z3 policy is independently injectable through:
+
+- `MetricPredicate`: one scalar comparison (`gt`, `ge`, `lt`, `le`, `eq`, `ne`);
+- `Z3OwnerRule`: `all_of`, `any_of`, and `none_of` logical clauses, owner/status,
+  priority, and optional localization metric;
+- `Z3RuleSet`: ordered externally supplied policy set.
+
+Missing metric values are a contract error. The Z3 engine never uses
+`metric_values.get(name, 0.0)`, because missing telemetry must not turn into a
+false PASS.
+
+The built-in Green-Gauss factories are:
 
 ```python
-from qpx_harness.evidence_engine import prepare_face_evidence, build_cell_evidence
-
-face = prepare_face_evidence(raw, schema_contract=contract)
-cell = build_cell_evidence(raw, radial_component=0, schema_contract=contract)
-```
-
-Extra columns are preserved by default. This is intentional: future diagnosis
-layers can consume newly added parameters without changing the existing
-Green-Gauss reconstruction code. `normalize_and_project(...,
-preserve_extra_columns=False)` is available when a canonical-only projection is
-required.
-
-The built-in aliases are intentionally conservative. Very generic source names
-such as `density`, `area`, or `volume` should be added only in a probe-specific
-contract where their physical meaning is unambiguous.
-
-## Dynamic diagnosis registry
-
-`diagnose.py` does not own a hard-coded `if/elif` cascade. Diagnosis is driven by
-two declarative objects:
-
-- `DiagnosticMetricSpec`: which source frame/column supplies a scalar evidence
-  metric, its report key, and optional face/cell localization metadata;
-- `DiagnosisRule`: threshold, owner class, status, decision label, and priority.
-
-`DiagnosisRuleRegistry` validates that metric ids, report keys, rule ids, and
-priorities are deterministic. `evaluate_diagnosis_registry()` computes all
-registered absolute-max metrics and applies the first triggered rule in priority
-order.
-
-The canonical Green-Gauss behavior is a factory:
-
-```python
-from qpx_harness.evidence_engine import build_constant_state_registry
+from qpx_harness.evidence_engine import (
+    build_constant_state_registry,
+    build_constant_state_ruleset,
+)
 
 registry = build_constant_state_registry()
+ruleset = build_constant_state_ruleset()
 ```
 
-The built-in registry consumes solver-agnostic evidence columns such as
-`field_face_delta` and `runtime_grad_norm`. The existing
-`summarize_constant_state()` API uses this registry internally, so campaign
-callers keep the same dictionary interface.
+### Inject a composite physics rule
 
-### Add a new spatial diagnostic
-
-Suppose a transform or telemetry importer provides a cell column named
-`electron_diffusivity_error`. No change to `diagnose.py` is required:
+Suppose the evidence frame contains `electron_diffusivity_error`. Add its metric
+to the registry, then supply an external Z3 rule that requires both a diffusivity
+error and clean surface-vector construction:
 
 ```python
 from qpx_harness.evidence_engine import (
     DiagnosticMetricSpec,
-    DiagnosisRule,
+    MetricPredicate,
+    Z3OwnerRule,
     build_constant_state_registry,
+    build_constant_state_ruleset,
     evaluate_diagnosis_registry,
 )
 
@@ -247,52 +253,52 @@ registry = build_constant_state_registry().extend(
             x_col="cell_x",
             y_col="cell_y",
         )
-    },
-    rules=(
-        DiagnosisRule(
-            rule_id="electron_diffusivity_consistency",
-            metric_id="electron_diffusivity_error",
-            threshold=1.0e-4,
-            owner_class="ELECTRON_DIFFUSIVITY_CONSISTENCY",
-            status="ISOLATED_OWNER_CLASS",
-            decision_label="electron diffusivity consistency",
-            priority=5,
-        ),
-    ),
+    }
 )
+
+ruleset = build_constant_state_ruleset().extend((
+    Z3OwnerRule(
+        rule_id="diffusivity_with_clean_geometry",
+        owner_class="ELECTRON_DIFFUSIVITY_CONSISTENCY",
+        status="ISOLATED_OWNER_CLASS",
+        decision_label="electron diffusivity with clean geometry",
+        priority=5,
+        all_of=(
+            MetricPredicate(
+                metric_id="electron_diffusivity_error",
+                operator="gt",
+                threshold=1.0e-4,
+            ),
+            MetricPredicate(
+                metric_id="surface_vector_delta",
+                operator="le",
+                threshold=1.0e-14,
+            ),
+        ),
+        location_metric_id="electron_diffusivity_error",
+    ),
+))
 
 report = evaluate_diagnosis_registry(
     {"face": face, "cell": cell},
     registry,
+    z3_ruleset=ruleset,
 )
 ```
 
-Lower numeric priority executes earlier. This allows a probe-specific owner rule
-to be inserted before or after the built-in Green-Gauss decision layers without
-editing the evaluator.
+Lower numeric priority wins when multiple candidate rules are simultaneously
+true. The SMT model explicitly represents candidate rules, selected rules, and
+the PASS state, enforcing exactly one selected owner or PASS.
 
-### Add a non-spatial diagnostic source
+### Non-spatial diagnostics
 
-The source key is not restricted to `face` or `cell`. For example, a Jacobian
-campaign can supply a separate frame:
+Metric sources are not restricted to `face` or `cell`. A Jacobian campaign can
+register a separate `jacobian` frame. With `entity_kind=None`, the logical owner
+is still selected but no artificial spatial location is fabricated.
 
-```python
-metric = DiagnosticMetricSpec(
-    metric_id="jacobian_relative_error",
-    source="jacobian",
-    column="relative_error",
-    report_key="max_jacobian_relative_error",
-)
-```
-
-With `entity_kind=None`, the owner decision is still produced but no artificial
-cell location is fabricated. This is useful for run-level, matrix-level, or
-campaign-level diagnostics.
-
-At present registered metrics use absolute maximum aggregation. More complex
-statistics should be derived upstream into an evidence column, then registered.
-This keeps the decision engine deterministic and prevents hidden numerical logic
-inside owner classification.
+Registered metrics currently use absolute-maximum aggregation. More complex
+statistics should be derived upstream into explicit evidence columns so the
+logical policy remains declarative and inspectable.
 
 ## Preserve artifacts for inspection
 
@@ -328,23 +334,11 @@ python -m qpx_harness.evidence_engine.local_smoke --json
 python -m pytest -q tests/characterization/test_evidence_engine.py
 ```
 
-The focused tests verify:
-
-- exact constant-state RZ cancellation;
-- core-role confinement to identity/topology/spatial coordinates;
-- Green-Gauss plugin separation from the core contract;
-- solver-specific aliases normalized into generic canonical quantities;
-- extension with a new schema quantity without transform changes;
-- rejection of duplicate canonical/alias sources;
-- registry extension with a new electron-diffusivity owner rule;
-- arbitrary non-spatial source frames such as Jacobian evidence;
-- deterministic rule validation and priority ordering;
-- separation of runtime-truth surface vectors from independently reconstructed
-  `normal * face_area * coord_factor` values;
-- surface-vector fault routing before any RZ-specific attribution;
-- Parquet persistence;
-- DuckDB queries;
-- the full local smoke runner and preserved artifacts.
+The focused tests verify exact RZ cancellation, schema/plugin separation, alias
+normalization, dynamic metric extension, Z3 priority, composite logical rules,
+missing-evidence fail-closed behavior, spatial failure localization, non-spatial
+Jacobian evidence, Parquet persistence, DuckDB queries, and the complete local
+smoke path.
 
 ## Inspect the local DuckDB database from Python
 
