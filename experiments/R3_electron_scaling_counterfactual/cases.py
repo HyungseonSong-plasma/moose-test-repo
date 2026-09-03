@@ -35,6 +35,10 @@ def build_normalized_electron_input(
     """
     text = build_case_input("C2", electron_reference_case)
     text = mp.upsert_parameter(text, "Variables/n_e", "initial_condition", "1.0")
+    # At O(1) state the constant-state residual is expected at floating-point
+    # floor. Relative convergence alone can demand an impossible further 1e-8
+    # reduction from an O(1e-16) initial residual and trigger line-search failure.
+    text = mp.upsert_parameter(text, "Executioner", "nl_abs_tol", "1.0e-14")
     return (
         "# R3 scaling counterfactual N0: n_e is the normalized unknown n_hat.\n"
         "# Physical mapping for this homogeneous E=0 discriminator: n_e_phys=1e16*n_hat.\n"
