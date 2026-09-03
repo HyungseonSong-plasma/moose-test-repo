@@ -1,13 +1,13 @@
 # Issue #27 — Oxygen surface reactions
 
-Status: **A1 + A1b + A1c scientifically accepted; A2 O- -> O charged-heavy control ready for user-local QPX; A3e charged-wall ledger remains staged**
+Status: **A1 + A1b + A1c + A2 scientifically accepted; A3 O2+/O+ neutralization controls ready for user-local QPX; A3e charged-wall ledger remains staged**
 
 Canonical internal validation and scientific execution:
 
 ```bash
 python qpx -i all
 
-python qpx -e experiments/Issue27_surface_reactions/A2_om_neutralization/experiment.json
+python qpx -e experiments/Issue27_surface_reactions/A3_positive_ion_neutralization/experiment.json
 python qpx -e experiments/Issue27_surface_reactions/A3e_charged_wall_ledger/experiment.json
 ```
 
@@ -189,6 +189,44 @@ Acceptance evidence for A2 is limited to:
 
 Electron absorption and restoration of the combined charged-wall current ledger remain A3e-owned.
 
+User-local A2 evidence is accepted as scientific PASS. The measured `Om` loss and `O` return matched the prescribed transfer to about `7e-9` relative defect, total heavy mass change was zero, and the measured plasma-volume charge shift was positive with about `1.1e-4` relative defect from `+F*R_Om*A_wall*dt`.
+
+## A3 — O2+ -> O2 and O+ -> O prescribed positive-ion controls
+
+A3 isolates the two positive-ion neutralization reactions with `SEE = 0` and no electron-wall compensation:
+
+```text
+O2+ -> constrained O2
+O+  -> O
+```
+
+The bounded discriminator uses three cases:
+
+```text
+control
+  all A3 wall fluxes = 0
+
+o2p_only
+  O2p outward loss ON
+  constrained O2 return follows N-1 bookkeeping
+  SEE OFF
+  electron wall compensation OFF
+
+op_only
+  Op outward loss ON
+  equal-mass O return ON
+  SEE OFF
+  electron wall compensation OFF
+```
+
+For either singly positive ion, one wall-neutralization event removes one positive elementary charge from the plasma volume:
+
+```text
+Delta Q_plasma = -F * R_i * A_wall * dt
+```
+
+Therefore both `o2p_only` and `op_only` must show a negative control-relative volume-charge shift. `O2p -> O2` must conserve mass through the constrained-O2 state, while `Op -> O` must show equal-mass explicit O return. Exact global wall-current closure is not claimed here; electron absorption remains A3e-owned and finite SEE remains deferred to Phase C.
+
 ## Charged-wall charge conservation contract
 
 Positive-ion neutralization must **not** be implemented as a stoichiometric bulk-electron sink. An ion can neutralize by receiving charge from the wall/electrode; blindly writing `ion + plasma electron -> neutral` would double-count the electrical current.
@@ -280,13 +318,13 @@ A0    source/species/boundary/capability audit                COMPLETE
 A1    wafer prescribed O-flux sign/bookkeeping                PASS
 A1b   wafer state-dependent O sticking, s_O=0.2               PASS
 A1c   O sticking on all six plasma-facing walls               PASS
-A2    O- -> O prescribed six-wall charge-shift control        READY
+A2    O- -> O prescribed six-wall charge-shift control        PASS
+A3    O2+/O+ prescribed positive-ion controls, SEE=0          READY
 A3e   prescribed charged-heavy + matched electron ledger      STAGED
 
 next:
-       run A2 user-local scientific evidence
-       then proceed to O2+/O+ neutralization controls, SEE=0
-       then combined electron-absorption/global charge-ledger evidence
+       run A3 user-local scientific evidence
+       then run combined electron-absorption/global charge-ledger evidence
        O2s -> O2 and Os -> 0.5 O2
        bounded combined six-wall surface chemistry
 
