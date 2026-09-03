@@ -4,6 +4,10 @@ import math
 from experiments.Issue93_r3_electron_isolation.prepare import ELECTRON_REFERENCE_CASE
 from experiments.R3_fv_internal_completion.cases import build_case_text
 from experiments.R3_fv_internal_completion.classify import classify_completion
+from experiments.R3_fv_internal_completion.face_interpolation_audit import (
+    audit_constant_face_interpolation,
+    moose_constant_linear_interpolation,
+)
 from experiments.R3_fv_internal_completion.run import _jacobian_case
 from experiments.R3_fv_internal_completion.rz_decomposition import decompose_rz_constant_state
 from experiments.R3_fv_internal_completion.spec import CASES, JACOBIAN_CASE_IDS
@@ -82,6 +86,35 @@ def test_rz_reproducer_uses_real_qvt_and_preserves_normalized_floor_order():
         assert low[key] > 0.0
         ratio = high[key] / low[key]
         assert 0.95 <= ratio <= 1.05
+
+
+def test_constant_face_interpolation_audit_runs_on_real_qvt_without_owner_assumption():
+    mesh = ELECTRON_REFERENCE_CASE / "qvt.msh"
+    low = audit_constant_face_interpolation(mesh, n0=1.0)
+    high = audit_constant_face_interpolation(mesh, n0=1.0e16)
+
+    assert set(low["plasma_gmsh_element_types"]) <= {2, 3}
+    assert low["plasma_gmsh_element_types"]
+    assert low["radial_axis"] == high["radial_axis"] == 0
+    assert low["symmetry_axis"] == high["symmetry_axis"] == 1
+    assert low["interior_element_count"] == high["interior_element_count"] > 0
+    assert low["face_evaluation_count"] == high["face_evaluation_count"] > 0
+    for result in (low, high):
+        assert result["interpretation"] == "EVIDENCE_ONLY_NO_OWNER_ASSIGNMENT"
+        assert result["gc_outside_unit_count"] >= 0
+        assert result["nonzero_face_delta_count"] >= 0
+        assert math.isfinite(result["max_gc_overshoot"])
+        assert math.isfinite(result["max_abs_face_delta"])
+        assert math.isfinite(result["max_abs_final_gradient"])
+        assert math.isfinite(result["normalized_max_abs_final_gradient"])
+
+
+def test_equal_value_weighted_interpolation_can_have_roundoff_when_gc_extrapolates():
+    n0 = 1.0e16
+    gc = -0.6441943115068004
+    face = moose_constant_linear_interpolation(n0, gc)
+    assert face != n0
+    assert math.isfinite(face - n0)
 
 
 def test_jacobian_probe_is_one_shot_and_does_not_dump_full_matrix():
