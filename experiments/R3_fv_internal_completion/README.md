@@ -18,6 +18,33 @@ The runner prebuilds and executes the remaining independent discriminators befor
 - Offline same-mesh RZ decomposition: reproduces the pinned-MOOSE interior Green-Gauss face sum, RZ coordinate weighting, and `n_e/r` subtraction using the unchanged `qvt.msh`.
 - Jacobian probes are predeclared for `F0`, `F1`, and `O0`; they are not selected after the cheap matrix.
 
+## RZ coordinate contract
+
+The accepted input uses:
+
+```text
+coord_type = RZ
+rz_coord_axis = Y
+```
+
+In MOOSE, `rz_coord_axis` identifies the symmetry/axial axis. Therefore this configuration means:
+
+```text
+symmetry / axial axis = Y
+radial coordinate     = X
+radial component      = 0
+```
+
+The offline RZ reproducer therefore defaults to `radial_axis = 0`. Magnitude agreement between the offline RZ arithmetic and the direct QPX gradient is treated only as supporting evidence. It is not sufficient by itself to emit the RZ-specific atomic owner; spatial/component agreement would also be required.
+
+When the direct interior Green-Gauss gradient is nonzero in both AD and Real paths while `FVOrthogonalDiffusion` remains exactly zero, the conservative primary owner is:
+
+```text
+FV_GREEN_GAUSS_CELL_GRADIENT_CONSTANT_PRESERVATION
+```
+
+RZ-specific versus more general Green-Gauss arithmetic remains a lower-level unresolved mechanism until stronger evidence is available.
+
 ## Gradient harness hardening
 
 Gradient cases deliberately retain the accepted `qvt.msh`, RZ coordinate system, `[Materials]` coverage, and the FV `n_e` variable while removing objects that are irrelevant to direct gradient sampling:
@@ -69,6 +96,18 @@ P1 FAIL with P0 PASS
 ```
 
 This keeps operational construction/runtime failures out of scientific ownership.
+
+## Jacobian one-shot contract
+
+Jacobian diagnostics are evidence probes, not transient integrations. They therefore use:
+
+```text
+Executioner/num_steps=1
+Executioner/abort_on_solve_fail=true
+-snes_test_jacobian
+```
+
+`-snes_test_jacobian_view` is deliberately not used. A nonlinear failure after the Jacobian comparison aborts immediately instead of triggering `ConstantDT` timestep halving and repeated Jacobian evaluations. This prevents a failed Jacobian probe from blocking the remaining completion queue or producing multi-megabyte matrix dumps.
 
 The canonical diagnosis contains exactly one `primary_owner` or `null`. Jacobian-only findings are recorded under `secondary_candidates`, and probe-execution findings are recorded under `operational_findings`, so multiple simultaneous primary scientific owners cannot be emitted.
 
