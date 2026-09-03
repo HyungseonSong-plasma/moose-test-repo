@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 from recipes.issue91_r3 import audit_r3_input, build_r3_input
+from qpx_harness.moose import parameters as mp
 
 ROOT = Path(__file__).resolve().parents[2]
 CASE_ROOT = ROOT / "experiments/Issue91_real_qvt_r3"
@@ -50,6 +51,8 @@ def test_issue91_temporal_checker_uses_positive_time_normalized_rows() -> None:
         assert spec["source"] == "input_out.csv"
         assert spec["physical"] == "input_out.physical.csv"
         assert spec["initial_row_policy"] == "exclude_observation"
+        # The acceptance contract remains dimensional even though the solver
+        # unknown is now the O(1) normalized electron density.
         assert expected["n0"] == 1.0e16
 
 
@@ -58,11 +61,22 @@ def test_r3_econst_composition_is_structurally_valid() -> None:
     audit = audit_r3_input(text, expected_field=0.01)
     assert audit["status"] == "PASS"
     assert meta["poisson_enabled"] is False
-    assert meta["electron_initial_condition"] == "uniform_n_e_value"
+    assert meta["electron_initial_condition"] == "normalized_1.0"
+    assert meta["electron_solver_unknown"] == "n_e == n_hat"
+    assert meta["electron_reference_density_m3"] == 1.0e16
+    assert meta["electron_physical_density"] == "n_e_physical == n_e_value*n_e"
     assert meta["electron_pressure"] == "p"
     assert meta["electron_gas_temperature"] == "T_g"
     assert meta["common_timestep"] == 1.0e-8
-    assert "initial_condition = ${n_e_value}" in text
+    assert mp.get_parameter(text, "Variables/n_e", "initial_condition") == "1.0"
+    assert (
+        mp.get_parameter(
+            text,
+            "FunctorMaterials/electron_density_physical",
+            "expression",
+        )
+        == "'${n_e_value}*ne_hat'"
+    )
     assert "n_e_ic_profile" not in text
     assert "[domain_volume]" in text
 
@@ -78,17 +92,21 @@ def test_r3_zero_field_changes_only_declared_field_axis() -> None:
     assert field_meta["field_strength"] == 0.01
 
 
-def test_r3_preserves_heavy_transport_and_adds_live_electron_state() -> None:
+def test_r3_preserves_heavy_transport_and_uses_physical_electron_bridge() -> None:
     text, _ = build_r3_input(_base(), field_strength=0.01)
     for token in (
         "QPXFVMixtureAveragedDiffusion",
         "QPXFVHeavyMassElectromigrationCorrection",
         "QPXElectronTransportLookupMaterial",
-        "electron_number_density = n_e",
+        "property_name = n_e_physical",
+        "expression = '${n_e_value}*ne_hat'",
+        "electron_number_density = n_e_physical",
         "pressure = p",
         "gas_temperature = T_g",
         "variable = n_e",
     ):
         assert token in text
+    for postprocessor in ("n_e_avg", "n_e_min", "n_e_max", "n_e_inventory"):
+        assert mp.get_parameter(text, f"Postprocessors/{postprocessor}", "functor") == "n_e_physical"
     for forbidden in ("potential_plasma", "r30_phi_diffusion", "r30_phi_charge_source"):
         assert forbidden not in text
