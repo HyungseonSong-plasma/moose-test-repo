@@ -1,3 +1,7 @@
+from pathlib import Path
+from types import SimpleNamespace
+
+from experiments.R3_electron_scaling_counterfactual import run as scaling_run
 from experiments.R3_electron_scaling_counterfactual.cases import (
     N_E_REF,
     R3_E0_DIR,
@@ -54,3 +58,33 @@ def test_normalized_r3_audit_accepts_econst_variant() -> None:
     audit = audit_normalized_r3_input(text, expected_field=0.01)
     assert audit["status"] == "PASS"
     assert not audit["failed_checks"]
+
+
+def test_r3_checker_resolves_paths_before_changing_cwd(tmp_path, monkeypatch) -> None:
+    case_dir = tmp_path / "relative" / "case"
+    case_dir.mkdir(parents=True)
+    (case_dir / "input_out.csv").write_text("time\n1e-8\n")
+    (case_dir / "expected.json").write_text("{}\n")
+    captured: dict[str, object] = {}
+
+    def fake_run(command, *, cwd, text, capture_output, check):
+        captured["command"] = command
+        captured["cwd"] = cwd
+        return SimpleNamespace(returncode=0, stdout="PASS\n", stderr="")
+
+    monkeypatch.setattr(scaling_run.subprocess, "run", fake_run)
+    result = scaling_run._check_r3(Path(case_dir))
+
+    assert result["pass"] is True
+    command = captured["command"]
+    assert isinstance(command, list)
+    assert Path(command[1]).is_absolute()
+    assert Path(command[2]).is_absolute()
+    assert Path(command[3]).is_absolute()
+    assert Path(captured["cwd"]).is_absolute()
+
+
+def test_jacobian_probe_forces_evaluation_below_runtime_absolute_floor() -> None:
+    args = scaling_run._jacobian_extra_args()
+    assert "Executioner/nl_abs_tol=1.0e-30" in args
+    assert "-snes_test_jacobian" in args
