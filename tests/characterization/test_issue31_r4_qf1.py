@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import re
 from pathlib import Path
 
 from experiments.Issue31_r4_qf1_closed_feedback import run as qf1_run
@@ -60,7 +61,7 @@ def test_qf1_closes_exact_charged_particle_feedback_set() -> None:
 
 
 def test_qf1_uses_pure_o2_20_sccm_feed_without_replacing_initial_plasma() -> None:
-    _, meta = build_r4_qf1_input(_base())
+    text, meta = build_r4_qf1_input(_base())
     inlet = meta["inlet"]
 
     assert inlet["feed"] == "pure O2"
@@ -71,13 +72,19 @@ def test_qf1_uses_pure_o2_20_sccm_feed_without_replacing_initial_plasma() -> Non
         species: 0.0 for species in SOLVED_NON_O2_INLET_SPECIES
     }
     assert inlet["initial_plasma_composition_is_feed_composition"] is False
+    assert inlet["removed_unused_initial_aliases"] == ["Yin_O2", "Yin_O"]
 
+    # Their values remain captured as initial-state provenance, but the final
+    # QF1 MOOSE input must not retain aliases that no longer own runtime data.
     initial = inlet["initial_plasma_mass_fractions_preserved"]
     assert initial["O2"] == 0.7
+    assert initial["O"] == 0.1
     assert initial["O2p"] == 0.01
     assert initial["Om"] == 0.01
     assert initial["Op"] == 0.01
     assert sum(initial.values()) == 1.0
+    assert re.search(r"(?m)^\s*Yin_O2\s*=", text) is None
+    assert re.search(r"(?m)^\s*Yin_O\s*=", text) is None
 
 
 def test_qf1_preserves_qn_normalized_electron_reference() -> None:
@@ -103,6 +110,10 @@ def test_qf1_preserves_qn_normalized_electron_reference() -> None:
         )
         == "n_e_physical"
     )
+    assert audit_r4_qf1_input(
+        text,
+        expected_reference_m3=reference,
+    )["status"] == "PASS"
 
 
 def test_c2_implicit_euler_sign_convention(tmp_path: Path) -> None:
