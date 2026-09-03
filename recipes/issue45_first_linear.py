@@ -6,9 +6,13 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
-from qpx_harness.diagnostics import jacobian as jacobian_diagnostic
-from qpx_harness.diagnostics import nonlinear_solver as nonlinear_diagnostic
-from qpx_harness.diagnostics import termination as termination_diagnostic
+from qpx_harness.diagnose import diagnose_coupled_runtime_evidence, diagnose_jacobian_evidence
+from qpx_harness.evidence import (
+    extract_jacobian_evidence,
+    first_failed_reason,
+    first_linear_termination,
+    runtime_core_facts,
+)
 from qpx_harness.moose import parameters as mp
 from qpx_harness.petsc import ksp
 from qpx_harness.petsc import log as petsc_log
@@ -100,31 +104,26 @@ def instrument_first_linear(text: str) -> tuple[str, dict[str, Any]]:
 
 
 def _jacobian_analysis(text: str) -> dict[str, Any]:
-    return jacobian_diagnostic.analyze_comparisons(
-        text,
+    return diagnose_jacobian_evidence(
+        extract_jacobian_evidence(text),
         relative_tolerance=JACOBIAN_REL_TOL,
     )
 
 
 def _first_failed_reason(rows: list[dict[str, Any]]) -> str | None:
-    return termination_diagnostic.first_failed_reason(rows)
+    return first_failed_reason(rows)
 
 
 def _runtime_core(text: str, *, returncode: int) -> dict[str, Any]:
-    facts = nonlinear_diagnostic.runtime_core_facts(
+    facts = runtime_core_facts(
         text,
         returncode=returncode,
         coupled_scaling_variables=COUPLED_SCALING_VARIABLES,
     )
-    residual_blocks = facts["variable_residuals"]
-    nonfinite_residuals = facts["nonfinite_residuals"]
-    scaling_invalid = facts["scaling_invalid"]
-    linear_reason = facts["linear_reason"]
-    pc_hits = facts["pc_hits"]
-    finite_residual_blocks = bool(residual_blocks) and not nonfinite_residuals
+    diagnosis = diagnose_coupled_runtime_evidence(facts)
+    decision_class = diagnosis["class"]
 
-    if pc_hits or linear_reason in {"DIVERGED_PC_FAILED", "DIVERGED_PCSETUP_FAILED"}:
-        decision_class = "PC_OR_FACTORIZATION_FAIL"
+    if decision_class == "PC_OR_FACTORIZATION_FAIL":
         if facts["pc_failure_reason"] == "FACTOR_NUMERIC_ZEROPIVOT":
             reason = (
                 "PETSc LU/preconditioner setup failed with FACTOR_NUMERIC_ZEROPIVOT; "
@@ -135,41 +134,37 @@ def _runtime_core(text: str, *, returncode: int) -> dict[str, Any]:
                 "the first direct linear-solver signature is PETSc preconditioner/setup failure; "
                 "later nonlinear NAN/INF is not promoted above that earlier failure"
             )
-    elif nonfinite_residuals:
-        decision_class = "INITIAL_NONFINITE_FAIL"
+    elif decision_class == "INITIAL_NONFINITE_FAIL":
         reason = "variable-residual diagnostics contain NaN/Inf without an earlier PC failure"
-    elif scaling_invalid:
-        decision_class = "SCALING_DOMINATED_FAIL"
+    elif decision_class == "SCALING_DOMINATED_FAIL":
         reason = "automatic scaling produced a zero or non-finite factor for a coupled variable"
-    elif returncode != 0 and finite_residual_blocks:
-        decision_class = "COUPLED_JACOBIAN_OR_RESIDUAL_FAIL"
+    elif decision_class == "COUPLED_JACOBIAN_OR_RESIDUAL_FAIL":
         reason = (
             "runtime failed with finite per-variable residual evidence and without a direct "
             "PC/non-finite/scaling-invalid signature"
         )
     else:
-        decision_class = "DIAGNOSTIC_INSUFFICIENT"
         reason = "available diagnostic signatures do not uniquely identify H1-H4"
 
     return {
         "class": decision_class,
         "reason": reason,
         "returncode": returncode,
-        "linear_reason": linear_reason,
+        "linear_reason": facts["linear_reason"],
         "nonlinear_reason": facts["nonlinear_reason"],
         "pc_failure_reason": facts["pc_failure_reason"],
         "pc_hits": facts["pc_hits"],
         "factorization_hits": facts["factorization_hits"],
-        "variable_residuals": residual_blocks,
-        "nonfinite_residuals": nonfinite_residuals,
+        "variable_residuals": facts["variable_residuals"],
+        "nonfinite_residuals": facts["nonfinite_residuals"],
         "automatic_scaling_factors": facts["automatic_scaling_factors"],
-        "scaling_invalid": scaling_invalid,
+        "scaling_invalid": facts["scaling_invalid"],
         "scaling_factor_ratio_n_e_to_potential": facts["scaling_factor_ratio"],
     }
 
 
 def _first_linear_termination(text: str) -> dict[str, Any] | None:
-    return termination_diagnostic.first_linear_termination(text)
+    return first_linear_termination(text)
 
 
 def analyze_first_linear_text(text: str, *, returncode: int) -> dict[str, Any]:
