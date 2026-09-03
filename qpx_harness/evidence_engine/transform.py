@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
 
 import polars as pl
 
@@ -57,7 +56,7 @@ def prepare_face_evidence(frame: FrameLike) -> pl.DataFrame:
             ),
         )
         .with_columns(
-            pl.sqrt(pl.col("surface_delta_x") ** 2 + pl.col("surface_delta_y") ** 2).alias(
+            ((pl.col("surface_delta_x") ** 2 + pl.col("surface_delta_y") ** 2).sqrt()).alias(
                 "surface_delta_norm"
             )
         )
@@ -78,7 +77,7 @@ def build_cell_evidence(face_frame: FrameLike, *, radial_component: int = 0) -> 
     face = prepare_face_evidence(face_frame)
     require_columns(face.columns, CELL_KEY_COLUMNS, context="prepared face evidence")
 
-    cell = (
+    return (
         face.lazy()
         .group_by(list(CELL_KEY_COLUMNS))
         .agg(
@@ -150,24 +149,23 @@ def build_cell_evidence(face_frame: FrameLike, *, radial_component: int = 0) -> 
         .with_columns(
             (pl.col("qpx_grad_x") - pl.col("reconstructed_grad_x")).alias("gradient_delta_x"),
             (pl.col("qpx_grad_y") - pl.col("reconstructed_grad_y")).alias("gradient_delta_y"),
-            pl.sqrt(
-                pl.col("reconstructed_grad_x") ** 2 + pl.col("reconstructed_grad_y") ** 2
-            ).alias("reconstructed_grad_norm"),
-            pl.sqrt(pl.col("qpx_grad_x") ** 2 + pl.col("qpx_grad_y") ** 2).alias(
+            ((pl.col("reconstructed_grad_x") ** 2 + pl.col("reconstructed_grad_y") ** 2).sqrt()).alias(
+                "reconstructed_grad_norm"
+            ),
+            ((pl.col("qpx_grad_x") ** 2 + pl.col("qpx_grad_y") ** 2).sqrt()).alias(
                 "qpx_grad_norm"
             ),
-            pl.sqrt(pl.col("surface_closure_x") ** 2 + pl.col("surface_closure_y") ** 2).alias(
+            ((pl.col("surface_closure_x") ** 2 + pl.col("surface_closure_y") ** 2).sqrt()).alias(
                 "surface_closure_norm"
             ),
         )
         .with_columns(
-            pl.sqrt(pl.col("gradient_delta_x") ** 2 + pl.col("gradient_delta_y") ** 2).alias(
+            ((pl.col("gradient_delta_x") ** 2 + pl.col("gradient_delta_y") ** 2).sqrt()).alias(
                 "gradient_delta_norm"
             )
         )
         .collect()
     )
-    return cell
 
 
 def write_evidence_bundle(
