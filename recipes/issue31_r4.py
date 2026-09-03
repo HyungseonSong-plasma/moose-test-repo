@@ -155,7 +155,7 @@ def _insert_r4_q0_blocks(text: str) -> str:
     type = SideDiffusiveFluxIntegral
     variable = potential_plasma
     boundary = {PLASMA_ALL_BOUNDARY}
-    diffusivity = r31_relative_permittivity
+    functor_diffusivity = r31_relative_permittivity
   []""",
         ),
         (
@@ -353,11 +353,11 @@ def audit_r4_q0_input(text: str) -> dict[str, Any]:
             "boundary",
         )
     ) == [PLASMA_ALL_BOUNDARY]
-    checks["gauss_flux_diffusivity"] = (
+    checks["gauss_flux_functor_diffusivity"] = (
         mp.get_parameter(
             text,
             "Postprocessors/r31_gauss_flux_reduced",
-            "diffusivity",
+            "functor_diffusivity",
         )
         == "r31_relative_permittivity"
     )
