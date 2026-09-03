@@ -4,6 +4,7 @@ import csv
 from pathlib import Path
 
 from experiments.Issue31_r4_q0_all_ground import run as issue31_run
+from qpx_harness.moose import blocks as mb
 from qpx_harness.moose import parameters as mp
 from recipes.issue31_r4 import (
     EPSILON_0,
@@ -34,6 +35,9 @@ def test_r4_q0_build_preserves_accepted_r3_and_adds_poisson() -> None:
     assert meta["relative_permittivity_provider"] == (
         "block-scoped functor relative_permittivity"
     )
+    assert meta["legacy_base_material_policy"] == (
+        "removed; conductivity/material_name not preserved"
+    )
 
     assert mp.get_parameter(text, "Variables/n_e", "initial_condition") == "1.0"
     assert (
@@ -59,7 +63,7 @@ def test_r4_q0_build_preserves_accepted_r3_and_adds_poisson() -> None:
     ) == "poisson_charge_source"
 
 
-def test_r4_q0_migrates_legacy_permittivity_to_block_functors() -> None:
+def test_r4_q0_replaces_base_materials_with_permittivity_functors() -> None:
     base = _base()
     text, meta = build_r4_q0_input(base)
 
@@ -70,10 +74,13 @@ def test_r4_q0_migrates_legacy_permittivity_to_block_functors() -> None:
         material_path = f"Materials/{material}"
         functor_path = f"FunctorMaterials/permittivity_{material}"
 
-        # The frozen accepted R3 source retains its historical metadata, while
-        # every generated R4 candidate removes it before the electrostatic solve.
+        # The frozen accepted R3 source retains the historical BaseMaterial.
+        assert mb.has_block(base, material_path)
+        assert mp.get_parameter(base, material_path, "type") == "BaseMaterial"
         assert mp.get_parameter(base, material_path, "relative_permittivity") is not None
-        assert mp.get_parameter(text, material_path, "relative_permittivity") is None
+
+        # Every generated R4 candidate removes the complete legacy provider.
+        assert not mb.has_block(text, material_path)
 
         assert mp.get_parameter(text, functor_path, "type") == "ADGenericFunctorMaterial"
         assert mp.words(mp.get_parameter(text, functor_path, "prop_names")) == [
@@ -86,6 +93,13 @@ def test_r4_q0_migrates_legacy_permittivity_to_block_functors() -> None:
             expected_blocks
         )
 
+        migration = meta["relative_permittivity_migration"][material]
+        assert migration["legacy_provider"] == "BaseMaterial"
+        assert migration["legacy_provider_removed"] is True
+        assert migration["discarded_metadata"] == ["conductivity", "material_name"]
+
+    # Conductivity has no current R4 consumer and is not promoted into a functor.
+    assert "prop_names = 'conductivity'" not in text
     assert mp.get_parameter(
         text,
         "FVKernels/r31_phi_diffusion",
@@ -170,6 +184,9 @@ def test_r4_q0_stage_reuses_accepted_r3_assets(tmp_path: Path) -> None:
     assert staged["construction"]["relative_permittivity_provider"] == (
         "block-scoped functor relative_permittivity"
     )
+    assert staged["construction"]["legacy_base_material_policy"] == (
+        "removed; conductivity/material_name not preserved"
+    )
     for name in (
         "qvt.msh",
         "transport_data.txt",
@@ -186,11 +203,8 @@ def test_r4_q0_stage_reuses_accepted_r3_assets(tmp_path: Path) -> None:
         "electron_density",
     ) == "n_e_physical"
     for material in PERMITTIVITY_MATERIALS:
-        assert mp.get_parameter(
-            text,
-            f"Materials/{material}",
-            "relative_permittivity",
-        ) is None
+        assert not mb.has_block(text, f"Materials/{material}")
+        assert mb.has_block(text, f"FunctorMaterials/permittivity_{material}")
 
 
 def test_gauss_evidence_reports_measurement_without_predeclared_tolerance(tmp_path: Path) -> None:
