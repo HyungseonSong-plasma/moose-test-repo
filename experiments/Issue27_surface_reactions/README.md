@@ -1,13 +1,13 @@
 # Issue #27 — Oxygen surface reactions
 
-Status: **A1 + A1b scientifically accepted; A1c all-wall neutral and A3e charged-wall ledger ready for user-local QPX**
+Status: **A1 + A1b + A1c scientifically accepted; A2 O- -> O charged-heavy control ready for user-local QPX; A3e charged-wall ledger remains staged**
 
 Canonical internal validation and scientific execution:
 
 ```bash
 python qpx -i all
 
-python qpx -e experiments/Issue27_surface_reactions/A1c_o_sticking_all_walls/experiment.json
+python qpx -e experiments/Issue27_surface_reactions/A2_om_neutralization/experiment.json
 python qpx -e experiments/Issue27_surface_reactions/A3e_charged_wall_ledger/experiment.json
 ```
 
@@ -118,14 +118,16 @@ FVFunctorNeumannBC.factor = -1
 
 on the target wall. User-local A1b evidence confirmed state-dependent nonlinear assembly, O inventory loss, constrained-O2 return, total-mass closure, and preserved Poisson/Gauss behavior.
 
-## A1c — all six plasma-facing walls
+## A1c — accepted all-six-wall O sticking
 
-A1c applies the already accepted A1b O-sticking law simultaneously to all six plasma-facing wall sidesets and nowhere else.
+A1c applies the accepted A1b O-sticking law simultaneously to all six plasma-facing wall sidesets and nowhere else.
 
 ```text
 control  : same flux functor, BC factor = 0
 sticking : same flux functor, BC factor = -1
 ```
+
+User-local evidence extended the accepted state-dependent wall law from `plasma_wafer` to the complete six-wall plasma-facing set while keeping `inlet` and `outlet` excluded.
 
 The discriminator measures the combined six-wall surface rate and compares control-relative O loss with the implicit-Euler transfer
 
@@ -134,6 +136,58 @@ The discriminator measures the combined six-wall surface rate and compares contr
 ```
 
 while checking constrained O2, total mass, neutral charge response, and nonnegative mass fractions.
+
+## A2 — O- -> O prescribed charged-heavy control
+
+A2 isolates the COMSOL Phase-A negative-ion wall reaction
+
+```text
+O- -> O
+```
+
+on all six plasma-facing walls. It intentionally uses a prescribed event flux before introducing a physical charged-particle/sheath wall law.
+
+For outward-positive event flux `R_Om [mol/m2/s]`:
+
+```text
+J_Om,out = +M_O * R_Om
+J_O,out  = -M_O * R_Om
+```
+
+so mass and oxygen-atom inventory are transferred from `Om` to `O` without changing total heavy mass.
+
+The charged-wall discriminator is the plasma-volume charge change. Removing one `O-` from the plasma removes one negative elementary charge, therefore
+
+```text
+Delta Q_plasma = +F * R_Om * A_wall * dt
+```
+
+relative to the zero-new-wall-flux control.
+
+A2 must **not** create a plasma electron and must not enforce algebraic quasi-neutrality at the wall. The bounded batch is therefore:
+
+```text
+control
+  Om wall loss = 0
+  O wall return = 0
+
+om_only
+  Om wall loss ON
+  stoichiometric O return ON
+  electron wall compensation OFF
+  SEE OFF
+```
+
+Acceptance evidence for A2 is limited to:
+
+- `Om` inventory loss with the accepted outward-flux sign;
+- equal-mass `O` return;
+- total heavy-mass / oxygen-atom closure;
+- positive volume-charge shift with magnitude consistent with `+F*R_Om*A_wall*dt`;
+- Poisson/Gauss consistency and nonnegative state;
+- no claim of global wall-current closure yet.
+
+Electron absorption and restoration of the combined charged-wall current ledger remain A3e-owned.
 
 ## Charged-wall charge conservation contract
 
@@ -225,11 +279,14 @@ This is **not** yet a production sheath/ion-wall kinetic model. Passing A3e auth
 A0    source/species/boundary/capability audit                COMPLETE
 A1    wafer prescribed O-flux sign/bookkeeping                PASS
 A1b   wafer state-dependent O sticking, s_O=0.2               PASS
-A1c   O sticking on all six plasma-facing walls               READY
-A3e   prescribed charged-heavy + matched electron ledger      READY
+A1c   O sticking on all six plasma-facing walls               PASS
+A2    O- -> O prescribed six-wall charge-shift control        READY
+A3e   prescribed charged-heavy + matched electron ledger      STAGED
 
-next after A3e evidence:
-       physical charged-particle/sheath wall-flux model
+next:
+       run A2 user-local scientific evidence
+       then proceed to O2+/O+ neutralization controls, SEE=0
+       then combined electron-absorption/global charge-ledger evidence
        O2s -> O2 and Os -> 0.5 O2
        bounded combined six-wall surface chemistry
 
