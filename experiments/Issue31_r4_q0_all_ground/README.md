@@ -29,6 +29,33 @@ n_ref:                1e16 m^-3 in the accepted control
 
 The Poisson charge material therefore consumes `n_e_physical`, never the normalized solver state directly.
 
+## Material permittivity representation
+
+R4 uses `relative_permittivity` as a canonical block-scoped functor, not as a `BaseMaterial` metadata parameter.
+
+The accepted R3 source fixture still contains the historical metadata needed to identify the accepted control. During every R4 construction the recipe consumes that metadata once, verifies the expected value and block ownership, removes the legacy `relative_permittivity` assignments from the generated candidate, and creates these functor providers:
+
+```text
+permittivity_vacuum      relative_permittivity = 1.0   block = vacuum
+permittivity_outer       relative_permittivity = 1.0   block = 'top right bottom'
+permittivity_cover       relative_permittivity = 3.6   block = cover
+permittivity_electrode   relative_permittivity = 1.0   block = electrode
+permittivity_wafer       relative_permittivity = 12.5  block = wafer
+permittivity_focus_ring  relative_permittivity = 8.0   block = focus_ring
+permittivity_plasma      relative_permittivity = 1.0   block = plasma
+```
+
+All providers expose the same functor name, `relative_permittivity`, on disjoint material blocks. There is no separate R4-only `r31_relative_permittivity` value.
+
+The Poisson and Gauss-law paths therefore consume the same canonical property:
+
+```text
+FVDiffusion.coeff = relative_permittivity
+SideDiffusiveFluxIntegral.functor_diffusivity = relative_permittivity
+```
+
+This keeps material topology in the mesh/material definitions and the physics property in the functor graph. When the electrostatic solve is later extended beyond the plasma block, the same property name can be used without introducing a second permittivity source of truth.
+
 ## Charge construction — C0
 
 For the current oxygen charged-heavy set:
@@ -57,7 +84,7 @@ The plasma solve is
 E = -grad(phi)
 ```
 
-with `eps_r = 1` in the plasma block for this control.
+For Q0 the active plasma block sees `relative_permittivity = 1` through the canonical plasma functor. The other material providers are staged now so the property contract is already coherent before the electrostatic domain is expanded.
 
 The qvt input does not have a single pre-existing sideset that represents every side of the plasma subdomain. The recipe creates `r31_plasma_all_boundary` around the complete plasma subdomain and applies
 
@@ -77,7 +104,7 @@ Canonical terminology is:
 accumulated charge == surface accumulated charge == surface charge state sigma_s
 ```
 
-` sigma_s ` is OFF in this package. No current leaving the volume is silently converted into surface storage. Dynamic `sigma_s` is owned by the later dielectric surface-charge work.
+`sigma_s` is OFF in this package. No current leaving the volume is silently converted into surface storage. Dynamic `sigma_s` is owned by the later dielectric surface-charge work.
 
 ## Gauss-law evidence — C1
 
