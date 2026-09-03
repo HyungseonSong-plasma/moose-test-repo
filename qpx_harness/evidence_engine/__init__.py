@@ -14,10 +14,13 @@ from .diagnose import (
 )
 from .schema import (
     CELL_KEY_COLUMNS,
+    CORE_FACE_CONTRACT,
     DEFAULT_FACE_CONTRACT,
     FACE_REQUIRED_COLUMNS,
+    GREEN_GAUSS_FACE_CONTRACT,
     ColumnRole,
     ColumnSpec,
+    CoreColumnRole,
     DynamicSchemaContract,
     SchemaResolution,
     normalize_and_project,
@@ -28,10 +31,13 @@ from .transform import build_cell_evidence, prepare_face_evidence, write_evidenc
 
 __all__ = [
     "CELL_KEY_COLUMNS",
+    "CORE_FACE_CONTRACT",
     "DEFAULT_FACE_CONTRACT",
     "FACE_REQUIRED_COLUMNS",
+    "GREEN_GAUSS_FACE_CONTRACT",
     "ColumnRole",
     "ColumnSpec",
+    "CoreColumnRole",
     "DiagnosticMetricSpec",
     "DiagnosisReport",
     "DiagnosisRule",
