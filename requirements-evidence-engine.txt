@@ -1,2 +1,4 @@
 duckdb>=1.0,<2
 polars[pyarrow]>=1.0,<2
+pydantic>=2,<3
+z3-solver>=4.15,<6
