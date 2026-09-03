@@ -13,6 +13,10 @@ def test_completion_matrix_prebuilds_all_remaining_fv_layers():
         "F1_FULL_INTERNAL_N1",
         "O0_ORTHOGONAL_N1E16",
     }
+    case_ids = {spec.case_id for spec in CASES}
+    assert "P0_GRADIENT_PINNED_STYLE" in case_ids
+    assert "P1_GRADIENT_INITIAL_VARIANT" in case_ids
+
     for spec in CASES:
         text = build_case_text(spec)
         assert f"R3 FV internal completion: {spec.case_id}" in text
@@ -28,21 +32,33 @@ def test_completion_matrix_prebuilds_all_remaining_fv_layers():
             assert "diag_orthogonal_D" in text
             material_block = text.split("[diag_orthogonal_diffusivity]", 1)[1].split("[]", 1)[0]
             assert "block = plasma" in material_block
-            # The accepted reference [Materials] contract is retained; the
-            # diagnostic diffusivity does not need to cover unrelated mesh blocks.
             assert "[vacuum]" in text
             assert "[cover]" in text
             assert "[electrode]" in text
             assert "[wafer]" in text
             assert "[focus_ring]" in text
             assert "[plasma]" in text
-        elif spec.operator == "gradient":
+        elif spec.mode == "gradient":
             assert "type = ADFunctorElementalGradientAux" in text
             assert "type = FunctorElementalGradientAux" in text
+            assert "type = VectorVariableComponentAux" in text
             assert "type = ElementValueSampler" in text
             assert "solve = false" in text
+            assert "[Executioner]\n  type = Steady\n[]" in text
+            assert "[FVKernels]\n" not in text
+            assert "type = FVTimeKernel" not in text
+            assert "type = FVDiffusion" not in text
+            assert "[FunctorMaterials]\n" not in text
+            assert "type = QPXElectronTransportLookupMaterial" not in text
+            assert "[Postprocessors]\n" not in text
             expected = "two_term_boundary_expansion = true" if spec.two_term_boundary_expansion else "two_term_boundary_expansion = false"
             assert expected in text
+            assert "[vacuum]" in text
+            assert "[plasma]" in text
+            if spec.operator == "gradient_initial":
+                assert "execute_on = INITIAL" in text
+            else:
+                assert "execute_on = INITIAL" not in text
 
 
 def test_rz_reproducer_uses_real_qvt_and_preserves_normalized_floor_order():
@@ -52,9 +68,6 @@ def test_rz_reproducer_uses_real_qvt_and_preserves_normalized_floor_order():
     assert low["plasma_element_count"] > 0
     assert low["interior_element_count"] > 0
     assert low["interior_element_count"] == high["interior_element_count"]
-    # The reproducer deliberately exposes finite-precision cancellation, so the
-    # normalized floor need not be bitwise scale-invariant. It must remain in the
-    # same narrow order-of-magnitude band when n0 changes by sixteen decades.
     for key in ("normalized_max_abs_final_naive", "normalized_max_abs_final_fsum"):
         assert math.isfinite(low[key])
         assert math.isfinite(high[key])
@@ -75,6 +88,27 @@ def _base_cases():
     }
 
 
+def _probe_gradients(*, initial_pass: bool = True):
+    result = {
+        "P0_GRADIENT_PINNED_STYLE": {
+            "status": "PASS",
+            "ad_max": 0.0,
+            "real_max": 0.0,
+            "ad_interior_max": 0.0,
+            "real_interior_max": 0.0,
+        }
+    }
+    if initial_pass:
+        result["P1_GRADIENT_INITIAL_VARIANT"] = {
+            "status": "PASS",
+            "ad_max": 0.0,
+            "real_max": 0.0,
+            "ad_interior_max": 0.0,
+            "real_interior_max": 0.0,
+        }
+    return result
+
+
 def test_classifier_isolates_rz_green_gauss_and_keeps_jacobian_secondary():
     cases = _base_cases()
     cases["F0_FULL_INTERNAL_N1E16"].update(
@@ -86,20 +120,23 @@ def test_classifier_isolates_rz_green_gauss_and_keeps_jacobian_secondary():
     cases["F2_FULL_INTERNAL_N1_ABS1E9"].update(
         status="PASS", passed=True, solver_status="CONVERGED", electron_residuals=[8.0e-11]
     )
-    gradients = {
-        "G0_GRAD_N1E16_TT": {
-            "ad_max": 4.0,
-            "real_max": 3.0,
-            "ad_interior_max": 2.0,
-            "real_interior_max": 1.5,
-        },
-        "G2_GRAD_N1E16_ONE_TERM": {
-            "ad_max": 4.0,
-            "real_max": 3.0,
-            "ad_interior_max": 2.0,
-            "real_interior_max": 1.5,
-        },
-    }
+    gradients = _probe_gradients()
+    gradients.update(
+        {
+            "G0_GRAD_N1E16_TT": {
+                "ad_max": 4.0,
+                "real_max": 3.0,
+                "ad_interior_max": 2.0,
+                "real_interior_max": 1.5,
+            },
+            "G2_GRAD_N1E16_ONE_TERM": {
+                "ad_max": 4.0,
+                "real_max": 3.0,
+                "ad_interior_max": 2.0,
+                "real_interior_max": 1.5,
+            },
+        }
+    )
     rz = {"N1E16": {"normalized_max_abs_final_naive": 2.0e-16}}
     jacobians = {
         "F0_FULL_INTERNAL_N1E16": {"status": "HOLD"},
@@ -113,6 +150,7 @@ def test_classifier_isolates_rz_green_gauss_and_keeps_jacobian_secondary():
     assert len(result["secondary_candidates"]) == 1
     assert result["secondary_candidates"][0]["owner"] == "HIGH_STATE_JACOBIAN_DIAGNOSTIC_CONDITIONING"
     assert result["secondary_candidates"][0]["status"] == "DISFAVORED_AS_INDEPENDENT_OWNER"
+    assert result["operational_findings"][0]["scientific_gate"] == "OPEN"
 
 
 def test_classifier_routes_zero_cell_gradient_to_face_nonorthogonal_path():
@@ -120,24 +158,71 @@ def test_classifier_routes_zero_cell_gradient_to_face_nonorthogonal_path():
     cases["F0_FULL_INTERNAL_N1E16"].update(
         status="FAIL", passed=False, solver_status="DIVERGED_LINE_SEARCH", electron_residuals=[9.5e5]
     )
-    gradients = {
-        "G0_GRAD_N1E16_TT": {
-            "ad_max": 0.0,
-            "real_max": 0.0,
-            "ad_interior_max": 0.0,
-            "real_interior_max": 0.0,
-        },
-        "G2_GRAD_N1E16_ONE_TERM": {
-            "ad_max": 0.0,
-            "real_max": 0.0,
-            "ad_interior_max": 0.0,
-            "real_interior_max": 0.0,
-        },
-    }
+    gradients = _probe_gradients()
+    gradients.update(
+        {
+            "G0_GRAD_N1E16_TT": {
+                "ad_max": 0.0,
+                "real_max": 0.0,
+                "ad_interior_max": 0.0,
+                "real_interior_max": 0.0,
+            },
+            "G2_GRAD_N1E16_ONE_TERM": {
+                "ad_max": 0.0,
+                "real_max": 0.0,
+                "ad_interior_max": 0.0,
+                "real_interior_max": 0.0,
+            },
+        }
+    )
     result = classify_completion(cases, gradients, {}, {})
     assert result["status"] == "FAVORED"
     assert result["primary_owner"]["owner"] == "FV_FACE_NONORTHOGONAL_STATE_OR_ASSEMBLY"
     assert result["unresolved"] == []
+
+
+def test_pinned_gradient_probe_failure_closes_scientific_gradient_gate():
+    cases = _base_cases()
+    cases["F0_FULL_INTERNAL_N1E16"].update(
+        status="FAIL", passed=False, solver_status="DIVERGED_LINE_SEARCH", electron_residuals=[9.5e5]
+    )
+    cases["P0_GRADIENT_PINNED_STYLE"].update(status="P2_FAIL", passed=False)
+    result = classify_completion(cases, {}, {}, {})
+    assert result["status"] == "HOLD_GRADIENT_PROBE"
+    assert result["primary_owner"] is None
+    assert result["unresolved"] == ["gradient_probe_execution_contract"]
+    assert result["operational_findings"][0]["scientific_gate"] == "CLOSED"
+
+
+def test_initial_schedule_failure_does_not_block_pinned_style_science():
+    cases = _base_cases()
+    cases["F0_FULL_INTERNAL_N1E16"].update(
+        status="FAIL", passed=False, solver_status="DIVERGED_LINE_SEARCH", electron_residuals=[9.5e5]
+    )
+    cases["P1_GRADIENT_INITIAL_VARIANT"].update(status="P2_FAIL", passed=False)
+    gradients = _probe_gradients(initial_pass=False)
+    gradients.update(
+        {
+            "G0_GRAD_N1E16_TT": {
+                "ad_max": 0.0,
+                "real_max": 0.0,
+                "ad_interior_max": 0.0,
+                "real_interior_max": 0.0,
+            },
+            "G2_GRAD_N1E16_ONE_TERM": {
+                "ad_max": 0.0,
+                "real_max": 0.0,
+                "ad_interior_max": 0.0,
+                "real_interior_max": 0.0,
+            },
+        }
+    )
+    result = classify_completion(cases, gradients, {}, {})
+    assert result["status"] == "FAVORED"
+    assert result["primary_owner"]["owner"] == "FV_FACE_NONORTHOGONAL_STATE_OR_ASSEMBLY"
+    initial = next(item for item in result["operational_findings"] if item["case_id"] == "P1_GRADIENT_INITIAL_VARIANT")
+    assert initial["status"] == "UNSUPPORTED_OR_FAILED_COUNTERFACTUAL"
+    assert initial["scientific_gate"] == "NOT_USED_FOR_G_CASES"
 
 
 def test_orthogonal_nonzero_preempts_green_gauss_owner():
