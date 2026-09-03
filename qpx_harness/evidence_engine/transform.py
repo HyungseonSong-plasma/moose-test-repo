@@ -1,4 +1,4 @@
-"""Polars transformations for MOOSE face telemetry and cell reconstruction."""
+"""Polars transformations for generic Green-Gauss face evidence."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -34,10 +34,11 @@ def prepare_face_evidence(
 ) -> pl.DataFrame:
     """Normalize telemetry and add reconstructed surface/weighted-face evidence.
 
-    ``moose_surface_*`` columns are never overwritten: they remain runtime truth.
-    ``reconstructed_surface_*`` uses normal * face_area * coord_factor so the
-    surface-vector construction path can be compared explicitly. External probe
-    column names are first resolved through ``schema_contract``.
+    ``runtime_surface_*`` columns are immutable runtime truth after schema
+    normalization. ``reconstructed_surface_*`` uses
+    ``normal * face_area * coord_factor`` so construction-path disagreement is
+    explicit. ``field_cell``/``field_face`` represent the diagnosed scalar field
+    generically; electron density is only one possible source field.
     """
     normalized = normalize_and_project(
         frame,
@@ -58,21 +59,25 @@ def prepare_face_evidence(
             (pl.col("normal_y") * pl.col("face_area") * pl.col("coord_factor")).alias(
                 "reconstructed_surface_y"
             ),
-            (pl.col("n_face") - pl.col("n_cell")).alias("n_face_delta"),
+            (pl.col("field_face") - pl.col("field_cell")).alias("field_face_delta"),
         )
         .with_columns(
-            (pl.col("moose_surface_x") - pl.col("reconstructed_surface_x")).alias(
+            (pl.col("runtime_surface_x") - pl.col("reconstructed_surface_x")).alias(
                 "surface_delta_x"
             ),
-            (pl.col("moose_surface_y") - pl.col("reconstructed_surface_y")).alias(
+            (pl.col("runtime_surface_y") - pl.col("reconstructed_surface_y")).alias(
                 "surface_delta_y"
             ),
-            (pl.col("n_face") * pl.col("moose_surface_x")).alias("weighted_moose_x"),
-            (pl.col("n_face") * pl.col("moose_surface_y")).alias("weighted_moose_y"),
-            (pl.col("n_face") * pl.col("reconstructed_surface_x")).alias(
+            (pl.col("field_face") * pl.col("runtime_surface_x")).alias(
+                "weighted_runtime_x"
+            ),
+            (pl.col("field_face") * pl.col("runtime_surface_y")).alias(
+                "weighted_runtime_y"
+            ),
+            (pl.col("field_face") * pl.col("reconstructed_surface_x")).alias(
                 "weighted_reconstructed_x"
             ),
-            (pl.col("n_face") * pl.col("reconstructed_surface_y")).alias(
+            (pl.col("field_face") * pl.col("reconstructed_surface_y")).alias(
                 "weighted_reconstructed_y"
             ),
         )
@@ -91,11 +96,12 @@ def build_cell_evidence(
     radial_component: int = 0,
     schema_contract: DynamicSchemaContract = DEFAULT_FACE_CONTRACT,
 ) -> pl.DataFrame:
-    """Aggregate face evidence and reconstruct the Green-Gauss cell gradient.
+    """Aggregate face evidence and reconstruct a Green-Gauss cell gradient.
 
-    ``radial_component=0`` corresponds to the accepted R3 convention where the
-    symmetry axis is Y and the radial coordinate is X. Component 1 supports the
-    opposite 2-D orientation for reuse in other cases.
+    ``radial_component=0`` corresponds to symmetry axis Y and radial coordinate X.
+    Component 1 supports the opposite 2-D orientation for reuse in other cases.
+    The scalar being differentiated is represented by ``field_cell`` and
+    ``field_face`` rather than an application-specific density variable.
     """
     if radial_component not in (0, 1):
         raise ValueError("radial_component must be 0 (X) or 1 (Y)")
@@ -111,40 +117,44 @@ def build_cell_evidence(
             pl.first("cell_y").alias("cell_y"),
             pl.first("cell_volume").alias("cell_volume"),
             pl.first("radial_coordinate").alias("radial_coordinate"),
-            pl.first("n_cell").alias("n_cell"),
-            pl.first("qpx_grad_x").alias("qpx_grad_x"),
-            pl.first("qpx_grad_y").alias("qpx_grad_y"),
+            pl.first("field_cell").alias("field_cell"),
+            pl.first("runtime_grad_x").alias("runtime_grad_x"),
+            pl.first("runtime_grad_y").alias("runtime_grad_y"),
             pl.len().alias("face_count"),
-            pl.col("moose_surface_x").sum().alias("sum_moose_surface_x"),
-            pl.col("moose_surface_y").sum().alias("sum_moose_surface_y"),
+            pl.col("runtime_surface_x").sum().alias("sum_runtime_surface_x"),
+            pl.col("runtime_surface_y").sum().alias("sum_runtime_surface_y"),
             pl.col("reconstructed_surface_x").sum().alias("sum_reconstructed_surface_x"),
             pl.col("reconstructed_surface_y").sum().alias("sum_reconstructed_surface_y"),
-            pl.col("weighted_moose_x").sum().alias("sum_weighted_moose_x"),
-            pl.col("weighted_moose_y").sum().alias("sum_weighted_moose_y"),
+            pl.col("weighted_runtime_x").sum().alias("sum_weighted_runtime_x"),
+            pl.col("weighted_runtime_y").sum().alias("sum_weighted_runtime_y"),
             pl.col("weighted_reconstructed_x").sum().alias("sum_weighted_reconstructed_x"),
             pl.col("weighted_reconstructed_y").sum().alias("sum_weighted_reconstructed_y"),
             pl.col("surface_delta_norm").max().alias("max_surface_delta_norm"),
-            pl.col("n_face_delta").abs().max().alias("max_abs_n_face_delta"),
+            pl.col("field_face_delta").abs().max().alias("max_abs_field_face_delta"),
         )
         .with_columns(
-            (pl.col("sum_weighted_moose_x") / pl.col("cell_volume")).alias("pre_rz_grad_x"),
-            (pl.col("sum_weighted_moose_y") / pl.col("cell_volume")).alias("pre_rz_grad_y"),
-            (pl.col("sum_moose_surface_x") / pl.col("cell_volume")).alias(
+            (pl.col("sum_weighted_runtime_x") / pl.col("cell_volume")).alias(
+                "pre_rz_grad_x"
+            ),
+            (pl.col("sum_weighted_runtime_y") / pl.col("cell_volume")).alias(
+                "pre_rz_grad_y"
+            ),
+            (pl.col("sum_runtime_surface_x") / pl.col("cell_volume")).alias(
                 "surface_balance_x"
             ),
-            (pl.col("sum_moose_surface_y") / pl.col("cell_volume")).alias(
+            (pl.col("sum_runtime_surface_y") / pl.col("cell_volume")).alias(
                 "surface_balance_y"
             ),
         )
         .with_columns(
             (
                 pl.when(pl.lit(radial_component) == 0)
-                .then(pl.col("n_cell") / pl.col("radial_coordinate"))
+                .then(pl.col("field_cell") / pl.col("radial_coordinate"))
                 .otherwise(0.0)
             ).alias("rz_correction_x"),
             (
                 pl.when(pl.lit(radial_component) == 1)
-                .then(pl.col("n_cell") / pl.col("radial_coordinate"))
+                .then(pl.col("field_cell") / pl.col("radial_coordinate"))
                 .otherwise(0.0)
             ).alias("rz_correction_y"),
             (
@@ -173,13 +183,17 @@ def build_cell_evidence(
             ),
         )
         .with_columns(
-            (pl.col("qpx_grad_x") - pl.col("reconstructed_grad_x")).alias("gradient_delta_x"),
-            (pl.col("qpx_grad_y") - pl.col("reconstructed_grad_y")).alias("gradient_delta_y"),
+            (pl.col("runtime_grad_x") - pl.col("reconstructed_grad_x")).alias(
+                "gradient_delta_x"
+            ),
+            (pl.col("runtime_grad_y") - pl.col("reconstructed_grad_y")).alias(
+                "gradient_delta_y"
+            ),
             ((pl.col("reconstructed_grad_x") ** 2 + pl.col("reconstructed_grad_y") ** 2).sqrt()).alias(
                 "reconstructed_grad_norm"
             ),
-            ((pl.col("qpx_grad_x") ** 2 + pl.col("qpx_grad_y") ** 2).sqrt()).alias(
-                "qpx_grad_norm"
+            ((pl.col("runtime_grad_x") ** 2 + pl.col("runtime_grad_y") ** 2).sqrt()).alias(
+                "runtime_grad_norm"
             ),
             ((pl.col("surface_closure_x") ** 2 + pl.col("surface_closure_y") ** 2).sqrt()).alias(
                 "surface_closure_norm"
