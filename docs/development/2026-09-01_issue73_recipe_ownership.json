@@ -10,6 +10,10 @@
       "model": "PURE_PYTHON_SCIENTIFIC_POLICY",
       "reason": "R4-Q0 composes the accepted normalized R3 control with physical volume-charge construction, complete-plasma all-ground Poisson semantics, feedback-off attribution, and Gauss-law observability while generic MOOSE mutation mechanics remain in qpx_harness"
     },
+    "recipes/issue31_r4_qn0.py": {
+      "model": "PURE_PYTHON_SCIENTIFIC_POLICY",
+      "reason": "R4-QN0 derives a reproducible quasi-neutral electron reference from the frozen initial heavy-species charge ledger while preserving the normalized R3 electron representation and the feedback-off R4-Q0 Poisson/Gauss-law contract"
+    },
     "recipes/issue43_coupling_diagnostic.py": {
       "model": "SPEC_OWNED_COMPAT_ADAPTER",
       "spec": "specs/experiments/issue43_coupling_diagnostic.json",
