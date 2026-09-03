@@ -103,6 +103,7 @@ def _build_orthogonal(spec: CompletionCaseSpec) -> str:
     type = ADGenericConstantMaterial
     prop_names = 'diag_orthogonal_D'
     prop_values = '{FROZEN_D!r}'
+    block = plasma
   []""",
     )
     text = _replace_diffusion_block(
