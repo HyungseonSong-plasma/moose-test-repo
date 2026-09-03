@@ -113,7 +113,11 @@ def test_r4_q0_gauss_observables_match_declared_c1_ledger() -> None:
     assert mp.get_parameter(text, reduced, "type") == "SideDiffusiveFluxIntegral"
     assert mp.get_parameter(text, reduced, "variable") == "potential_plasma"
     assert mp.get_parameter(text, reduced, "boundary") == PLASMA_ALL_BOUNDARY
-    assert mp.get_parameter(text, reduced, "diffusivity") == "r31_relative_permittivity"
+    assert (
+        mp.get_parameter(text, reduced, "functor_diffusivity")
+        == "r31_relative_permittivity"
+    )
+    assert mp.get_parameter(text, reduced, "diffusivity") is None
     assert mp.get_parameter(text, scaled, "type") == "ScalePostprocessor"
     assert mp.get_parameter(text, scaled, "value") == "r31_gauss_flux_reduced"
     assert float(mp.get_parameter(text, scaled, "scaling_factor") or "nan") == EPSILON_0
