@@ -25,6 +25,7 @@ from recipes.issue31_r4_qf1 import (
     FEEDBACK_POTENTIAL,
     build_r4_qf1_input,
 )
+from recipes.issue31_r4_qn0 import _top_level_float
 
 QF2_NE_PERTURBATION_AMPLITUDE = 1.0e-4
 QVT_RZ_VOLUME_WEIGHTED_Y_MEAN_M = 0.1789375023987653
@@ -200,11 +201,13 @@ def audit_r4_qf2_input(
     checks["uniform_initial_O_preserved"] = (
         mp.get_parameter(text, "Functions/ic_w_O_transient", "expression") == "'0.10'"
     )
-    checks["pure_o2_20_sccm_preserved"] = (
-        math.isclose(float(mp.unquote(mp.get_parameter(text, "", "Q_sccm")) or "nan"), 20.0)
-        if False
-        else True
-    )
+    checks["pure_o2_20_sccm_preserved"] = _top_level_float(text, "Q_sccm") == 20.0
+    checks["pure_o2_molar_mass_preserved"] = _top_level_float(text, "M_inlet") == 0.032
+    for species in ("O2s", "O2p", "O", "Om", "Op", "Os"):
+        checks[f"zero_non_O2_inlet_flux:{species}"] = (
+            _top_level_float(text, f"inlet_mdot_{species}_value") == 0.0
+        )
+
     checks["physical_density_bridge_preserved"] = (
         mp.get_parameter(
             text,
@@ -213,17 +216,8 @@ def audit_r4_qf2_input(
         )
         == "'${n_e_value}*ne_hat'"
     )
-    actual_reference_raw = None
-    for line in text.splitlines():
-        stripped = line.strip()
-        if stripped.startswith("n_e_value") and "=" in stripped:
-            actual_reference_raw = stripped.split("=", 1)[1].split("#", 1)[0].strip()
-            break
-    try:
-        actual_reference = float(actual_reference_raw or "nan")
-    except ValueError:
-        actual_reference = float("nan")
-    checks["reference_density_positive"] = math.isfinite(actual_reference) and actual_reference > 0.0
+    actual_reference = _top_level_float(text, "n_e_value")
+    checks["reference_density_positive"] = actual_reference > 0.0
     if expected_reference_m3 is not None:
         checks["qn_reference_preserved"] = math.isclose(
             actual_reference,
