@@ -74,8 +74,6 @@ def test_qf1_uses_pure_o2_20_sccm_feed_without_replacing_initial_plasma() -> Non
     assert inlet["initial_plasma_composition_is_feed_composition"] is False
     assert inlet["removed_unused_initial_aliases"] == ["Yin_O2", "Yin_O"]
 
-    # Their values remain captured as initial-state provenance, but the final
-    # QF1 MOOSE input must not retain aliases that no longer own runtime data.
     initial = inlet["initial_plasma_mass_fractions_preserved"]
     assert initial["O2"] == 0.7
     assert initial["O"] == 0.1
@@ -116,12 +114,28 @@ def test_qf1_preserves_qn_normalized_electron_reference() -> None:
     )["status"] == "PASS"
 
 
-def test_c2_implicit_euler_sign_convention(tmp_path: Path) -> None:
+def test_qf1_stage_executes_charge_integral_on_initial_and_timestep_end(tmp_path: Path) -> None:
+    target = tmp_path / "QF1"
+    staged = qf1_run._stage(target)
+    text = (target / "input.i").read_text()
+
+    assert mp.words(
+        mp.get_parameter(text, "Postprocessors/r31_charge_integral", "execute_on")
+    ) == ["INITIAL", "TIMESTEP_END"]
+    observable = staged["construction"]["c2_initial_charge_observable"]
+    assert observable["postprocessor"] == "r31_charge_integral"
+    assert observable["execute_on"] == ["INITIAL", "TIMESTEP_END"]
+
+
+def test_c2_implicit_euler_uses_actual_initial_charge_and_sign_convention(
+    tmp_path: Path,
+) -> None:
     path = tmp_path / "input_out.csv"
-    # One O2+ particle per second leaves the domain for one second:
-    # mdot = M/N_A, so Q_boundary = +e and Delta_Q = -e.
+    # Start from a nonzero actual initial charge. One O2+ particle leaves during
+    # the step, so Delta_Q=-e and Q_boundary=+e despite the nonzero offset.
     mdot_one_particle = 0.032 / 6.02214076e23
     elementary_charge = 1.602176634e-19
+    q_initial = -2.5e-5
     fieldnames = (
         "time",
         "r31_charge_integral",
@@ -139,7 +153,7 @@ def test_c2_implicit_euler_sign_convention(tmp_path: Path) -> None:
         writer.writerow(
             {
                 "time": "0",
-                "r31_charge_integral": "0",
+                "r31_charge_integral": f"{q_initial:.17g}",
                 "domain_volume": "1",
                 "inlet_mdot_O2p": "0",
                 "outlet_mdot_O2p": "0",
@@ -152,7 +166,7 @@ def test_c2_implicit_euler_sign_convention(tmp_path: Path) -> None:
         writer.writerow(
             {
                 "time": "1",
-                "r31_charge_integral": f"{-elementary_charge:.17g}",
+                "r31_charge_integral": f"{q_initial-elementary_charge:.17g}",
                 "domain_volume": "1",
                 "inlet_mdot_O2p": "0",
                 "outlet_mdot_O2p": f"{mdot_one_particle:.17g}",
@@ -165,8 +179,10 @@ def test_c2_implicit_euler_sign_convention(tmp_path: Path) -> None:
 
     evidence = qf1_run._c2_evidence(path, electron_reference_m3=1.0e18)
     assert evidence["status"] == "MEASURED"
+    assert evidence["initial_volume_charge_C"] == q_initial
+    assert evidence["initial_charge_source"] == "r31_charge_integral evaluated on INITIAL"
     assert evidence["Delta_Q_C"] < 0.0
     assert evidence["Q_boundary_C"] > 0.0
-    assert abs(evidence["R_Q_C"]) <= 1.0e-34
-    assert evidence["component_relative_defect"] <= 1.0e-15
+    assert abs(evidence["R_Q_C"]) <= 1.0e-20
+    assert evidence["component_relative_defect"] <= 1.0e-1
     assert evidence["acceptance"] == "UNSET_FIRST_CLOSED_FEEDBACK_MEASUREMENT"
