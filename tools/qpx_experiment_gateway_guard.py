@@ -15,8 +15,8 @@ from qpx_harness.application.experiment_registry import protocol_registered
 # Each tuple freezes one current operator-facing experiment surface as
 # (implementation runner, declarative spec, protocol id). Runner and spec are
 # deliberately separate: one protocol may own several bounded experiment
-# instances, and Issue27 dispatches prescribed/sticking wall models through the
-# same application protocol.
+# instances, and Issue27 dispatches prescribed/sticking/charged wall models
+# through the same application protocol.
 CURRENT_OPERATOR_SURFACES = (
     (
         Path("Issue27_surface_reactions/controlled_wall/run.py"),
@@ -26,6 +26,16 @@ CURRENT_OPERATOR_SURFACES = (
     (
         Path("Issue27_surface_reactions/controlled_wall/sticking.py"),
         Path("Issue27_surface_reactions/A1b_o_sticking/experiment.json"),
+        "issue27-surface-reaction-controlled-wall",
+    ),
+    (
+        Path("Issue27_surface_reactions/controlled_wall/multiwall.py"),
+        Path("Issue27_surface_reactions/A1c_o_sticking_all_walls/experiment.json"),
+        "issue27-surface-reaction-controlled-wall",
+    ),
+    (
+        Path("Issue27_surface_reactions/controlled_wall/charged.py"),
+        Path("Issue27_surface_reactions/A3e_charged_wall_ledger/experiment.json"),
         "issue27-surface-reaction-controlled-wall",
     ),
     (
