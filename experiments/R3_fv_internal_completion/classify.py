@@ -248,29 +248,23 @@ def classify_completion(
                 candidate = rz.get("N1E16", {}).get("normalized_max_abs_final_fsum")
                 if candidate is not None:
                     rz_norm = float(candidate)
-            if _within_factor(qpx_norm, rz_norm):
-                primary = _owner(
-                    "FV_RZ_GREEN_GAUSS_CONSTANT_CANCELLATION",
-                    "ISOLATED",
-                    "direct QPX cell-gradient evidence and an independent reconstruction of the pinned RZ Green-Gauss face-sum minus n/r arithmetic exhibit comparable normalized constant-state floors on the same qvt mesh",
-                    [
-                        f"QPX normalized interior gradient={qpx_norm:.12g}",
-                        f"offline pinned-RZ normalized floor={rz_norm:.12g}",
-                        "O0 orthogonal-only residual=0",
-                        "F0 full FVDiffusion residual!=0",
-                    ],
-                )
-            else:
-                primary = _owner(
-                    "FV_GREEN_GAUSS_CELL_RECONSTRUCTION",
-                    "FAVORED",
-                    "the constant-state cell gradient is already nonzero on interior cells in both AD and Real paths, but the offline RZ arithmetic magnitude does not yet uniquely account for it",
-                    [
-                        f"G0 AD interior={g0_ad_int:.12g}",
-                        f"G0 Real interior={g0_real_int:.12g}",
-                        f"offline normalized RZ floor={rz_norm!r}",
-                    ],
-                )
+            rz_magnitude_comparable = _within_factor(qpx_norm, rz_norm)
+            primary = _owner(
+                "FV_GREEN_GAUSS_CELL_GRADIENT_CONSTANT_PRESERVATION",
+                "ISOLATED",
+                "the constant state develops a nonzero interior Green-Gauss cell gradient in both AD and Real paths while the orthogonal-only diffusion path remains exactly zero; normalized offline RZ magnitude agreement alone is not sufficient to attribute the atomic mechanism specifically to the RZ subtraction",
+                [
+                    f"G0 AD interior={g0_ad_int:.12g}",
+                    f"G0 Real interior={g0_real_int:.12g}",
+                    f"QPX normalized interior gradient={qpx_norm:.12g}",
+                    f"offline corrected-RZ normalized floor={rz_norm!r}",
+                    f"RZ magnitude comparable={rz_magnitude_comparable}",
+                    "O0 orthogonal-only residual=0",
+                    "F0 full FVDiffusion residual!=0",
+                    "RZ-specific attribution requires spatial/component agreement, not magnitude-only agreement",
+                ],
+            )
+            unresolved.append("RZ-specific versus general Green-Gauss arithmetic remains unresolved below the isolated cell-gradient owner")
         elif (_material_nonzero(g0_ad) or _material_nonzero(g0_real)) and _near_zero(g0_ad_int) and _near_zero(g0_real_int):
             if _near_zero(g2_ad) and _near_zero(g2_real):
                 primary = _owner(
