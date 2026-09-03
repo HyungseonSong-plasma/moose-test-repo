@@ -5,8 +5,6 @@ from pathlib import Path
 
 import qpx_harness.diagnose as diagnose
 import qpx_harness.evidence as evidence
-import qpx_harness.evidence_engine as legacy_engine
-from qpx_harness.diagnostics.jacobian import analyze_comparisons
 
 
 def _absolute_imports(root: Path) -> set[str]:
@@ -19,14 +17,6 @@ def _absolute_imports(root: Path) -> set[str]:
             elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
                 names.add(node.module)
     return names
-
-
-def test_transitional_engine_public_api_routes_to_canonical_packages() -> None:
-    assert legacy_engine.ErrorLedger is evidence.ErrorLedger
-    assert legacy_engine.EvidenceStore is evidence.EvidenceStore
-    assert legacy_engine.prepare_face_evidence is evidence.prepare_face_evidence
-    assert legacy_engine.Z3DiagnosisEngine is diagnose.Z3DiagnosisEngine
-    assert legacy_engine.summarize_constant_state is diagnose.summarize_constant_state
 
 
 def test_evidence_runtime_ingest_emits_facts_not_diagnosis() -> None:
@@ -52,8 +42,6 @@ def test_jacobian_is_split_into_evidence_then_diagnose() -> None:
     )
     assert canonical_pass["class"] == "JACOBIAN_CORRECTNESS_PASS"
     assert canonical_fail["class"] == "JACOBIAN_MISMATCH"
-    assert analyze_comparisons(text, relative_tolerance=1.0e-3) == canonical_pass
-    assert analyze_comparisons(text, relative_tolerance=1.0e-5) == canonical_fail
 
 
 def test_coupled_solver_priority_is_owned_by_diagnose() -> None:
