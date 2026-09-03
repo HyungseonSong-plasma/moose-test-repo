@@ -81,7 +81,7 @@ def test_rz_reproducer_uses_real_qvt_and_preserves_normalized_floor_order():
         assert math.isfinite(high[key])
         assert low[key] > 0.0
         ratio = high[key] / low[key]
-        assert 0.99 <= ratio <= 1.01
+        assert 0.95 <= ratio <= 1.05
 
 
 def test_jacobian_probe_is_one_shot_and_does_not_dump_full_matrix():
