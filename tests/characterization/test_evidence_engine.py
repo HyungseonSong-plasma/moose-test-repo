@@ -14,8 +14,13 @@ from qpx_harness.evidence_engine import (
     DiagnosisRuleRegistry,
     EvidenceStore,
     EvidenceTolerances,
+    MetricPredicate,
+    Z3DiagnosisEngine,
+    Z3OwnerRule,
+    Z3RuleSet,
     build_cell_evidence,
     build_constant_state_registry,
+    build_constant_state_ruleset,
     evaluate_diagnosis_registry,
     normalize_and_project,
     prepare_face_evidence,
@@ -45,6 +50,7 @@ def test_polars_reconstructs_exact_rz_constant_state_contract():
     assert diagnosis["status"] == "CONSTANT_STATE_PASS"
     assert diagnosis["primary_owner_class"] is None
     assert diagnosis["selected_rule_id"] is None
+    assert diagnosis["solver_status"] == "SATISFIED"
     assert diagnosis["failing_locations"] == []
 
 
@@ -114,8 +120,6 @@ def test_core_contract_does_not_own_green_gauss_quantities():
     raw = rz_constant_square_face_rows()
     normalized = normalize_and_project(raw, CORE_FACE_CONTRACT)
 
-    # Core normalization owns identity/spatial semantics only. Probe-specific
-    # quantities are preserved as extras but not renamed by the core contract.
     assert "run_id" in normalized.columns
     assert "elem_id" in normalized.columns
     assert "moose_surface_x" in normalized.columns
@@ -166,6 +170,7 @@ def test_surface_vector_perturbation_isolated_before_rz_attribution():
     assert diagnosis["primary_owner_class"] == "SURFACE_VECTOR_CONSTRUCTION"
     assert diagnosis["selected_rule_id"] == "surface_vector_construction"
     assert diagnosis["status"] == "ISOLATED_OWNER_CLASS"
+    assert diagnosis["solver_status"] == "SATISFIED"
     assert diagnosis["rz_specific_status"] == "REQUIRES_SPATIAL_COMPONENT_AGREEMENT"
 
     failure = diagnosis["failing_locations"][0]
@@ -217,10 +222,90 @@ def test_registry_extension_adds_new_owner_without_diagnose_code_changes():
 
     assert report.selected_rule_id == "electron_diffusivity_consistency"
     assert report.primary_owner_class == "ELECTRON_DIFFUSIVITY_CONSISTENCY"
+    assert report.solver_status == "SATISFIED"
     assert report.metrics["max_electron_diffusivity_error"] == pytest.approx(2.5e-3)
     assert report.failing_locations[0].elem_id == 10
     assert report.failing_locations[0].metric == "electron_diffusivity_error"
     assert report.decision_order[0] == "electron diffusivity consistency"
+
+
+def test_external_z3_ruleset_supports_composite_physics_logic():
+    raw = rz_constant_square_face_rows()
+    face = prepare_face_evidence(raw)
+    cell = build_cell_evidence(face, radial_component=0).with_columns(
+        pl.lit(2.5e-3).alias("electron_diffusivity_error")
+    )
+    registry = build_constant_state_registry().extend(
+        metrics={
+            "electron_diffusivity_error": DiagnosticMetricSpec(
+                metric_id="electron_diffusivity_error",
+                source="cell",
+                column="electron_diffusivity_error",
+                report_key="max_electron_diffusivity_error",
+                entity_kind="cell",
+                x_col="cell_x",
+                y_col="cell_y",
+            )
+        }
+    )
+    ruleset = build_constant_state_ruleset().extend(
+        (
+            Z3OwnerRule(
+                rule_id="diffusivity_with_clean_geometry",
+                owner_class="ELECTRON_DIFFUSIVITY_CONSISTENCY",
+                status="ISOLATED_OWNER_CLASS",
+                decision_label="electron diffusivity with clean geometry",
+                priority=5,
+                all_of=(
+                    MetricPredicate(
+                        metric_id="electron_diffusivity_error",
+                        operator="gt",
+                        threshold=1.0e-4,
+                    ),
+                    MetricPredicate(
+                        metric_id="surface_vector_delta",
+                        operator="le",
+                        threshold=1.0e-14,
+                    ),
+                ),
+                location_metric_id="electron_diffusivity_error",
+            ),
+        )
+    )
+
+    report = evaluate_diagnosis_registry(
+        {"face": face, "cell": cell},
+        registry,
+        z3_ruleset=ruleset,
+    )
+
+    assert report.selected_rule_id == "diffusivity_with_clean_geometry"
+    assert report.primary_owner_class == "ELECTRON_DIFFUSIVITY_CONSISTENCY"
+    assert report.solver_status == "SATISFIED"
+    assert report.failing_locations[0].elem_id == 10
+
+
+def test_z3_engine_missing_metric_is_contract_error_not_false_pass():
+    ruleset = Z3RuleSet(
+        rules=(
+            Z3OwnerRule(
+                rule_id="needs_two_metrics",
+                owner_class="COMPOSITE_OWNER",
+                status="UNRESOLVED",
+                decision_label="composite owner",
+                priority=10,
+                all_of=(
+                    MetricPredicate(metric_id="a", operator="gt", threshold=0.0),
+                    MetricPredicate(metric_id="b", operator="gt", threshold=0.0),
+                ),
+            ),
+        ),
+        pass_status="PASS",
+        rz_specific_status="NOT_APPLICABLE",
+    )
+
+    with pytest.raises(ValueError, match="missing required metric values: b"):
+        Z3DiagnosisEngine(ruleset).diagnose({"a": 1.0})
 
 
 def test_registry_supports_non_spatial_run_level_metric():
@@ -255,6 +340,7 @@ def test_registry_supports_non_spatial_run_level_metric():
 
     assert report.status == "UNRESOLVED"
     assert report.primary_owner_class == "JACOBIAN_CONSISTENCY"
+    assert report.solver_status == "SATISFIED"
     assert report.failing_locations == []
     assert report.rz_specific_status == "NOT_APPLICABLE"
 
@@ -320,6 +406,7 @@ def test_typed_report_and_tolerance_validation():
     )
     assert isinstance(report, DiagnosisReport)
     assert report.primary_owner_class == "SURFACE_VECTOR_CONSTRUCTION"
+    assert report.solver_status == "SATISFIED"
     assert report.failing_locations[0].face_id == 1
 
     with pytest.raises(ValidationError):
@@ -360,6 +447,7 @@ def test_local_smoke_preserves_artifacts_and_exercises_full_stack(tmp_path):
         "radial_component": 0,
     }
     assert summary["baseline_diagnosis"]["status"] == "CONSTANT_STATE_PASS"
+    assert summary["baseline_diagnosis"]["solver_status"] == "SATISFIED"
     assert (
         summary["perturbed_diagnosis"]["primary_owner_class"]
         == "SURFACE_VECTOR_CONSTRUCTION"
