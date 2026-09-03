@@ -16,8 +16,16 @@ jobs:
           python-version: '3.11'
       - name: Install validation dependencies
         run: python -m pip install 'pydantic>=2,<3' 'pytest>=8,<9' -r requirements-evidence-engine.txt
-      - name: Validate QPX dependency direction
-        run: python tools/qpx_dependency_guard.py
+      - name: Validate Evidence dependency direction
+        run: python tools/qpx_dependency_guard.py --check evidence
+      - name: Validate Analysis dependency direction
+        run: python tools/qpx_dependency_guard.py --check analysis
+      - name: Validate Execution dependency direction
+        run: python tools/qpx_dependency_guard.py --check execution
+      - name: Validate presentation dependency direction
+        run: python tools/qpx_dependency_guard.py --check presentation
+      - name: Validate canonical package cycles
+        run: python tools/qpx_dependency_guard.py --check cycle
       - name: Validate declarative experiment gateway
         run: python tools/qpx_experiment_gateway_guard.py
       - name: Validate capability architecture census
