@@ -110,7 +110,10 @@ def main() -> int:
             ), path
 
     cli_source = (ROOT / "qpx_harness/cli/app.py").read_text()
-    assert "from qpx_harness.inventory.cli import" in cli_source
+    # Issue120 keeps the same canonical inventory owners but resolves legacy
+    # commands lazily so unrelated scientific modules cannot break -i/-e startup.
+    assert '"inventory-nullspace": "qpx_harness.inventory.cli:inventory_main"' in cli_source
+    assert '"inventory-first-linear": "qpx_harness.inventory.cli:first_linear_main"' in cli_source
     assert "qpx_harness.electron_inventory_nullspace" not in cli_source
     assert "qpx_harness.issue45_first_linear" not in cli_source
 
