@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import csv
 import json
 from pathlib import Path
 
+from experiments.Issue91_real_qvt_r3 import run as issue91_run
 from recipes.issue91_r3 import audit_r3_input, build_r3_input
 from qpx_harness.moose import parameters as mp
 
@@ -110,3 +112,48 @@ def test_r3_preserves_heavy_transport_and_uses_physical_electron_bridge() -> Non
         assert mp.get_parameter(text, f"Postprocessors/{postprocessor}", "functor") == "n_e_physical"
     for forbidden in ("potential_plasma", "r30_phi_diffusion", "r30_phi_charge_source"):
         assert forbidden not in text
+
+
+def test_issue91_governed_acceptance_queue_is_bounded_and_ordered() -> None:
+    assert issue91_run.CASES == (
+        ("R3_E0", "r3_e0", 0.0),
+        ("R3_ECONST", "r3_econst", 0.01),
+    )
+
+
+def test_issue91_acceptance_stages_canonical_normalized_recipe(tmp_path) -> None:
+    target = tmp_path / "R3_E0"
+    staged = issue91_run._stage("R3_E0", "r3_e0", 0.0, target)
+    text = (target / "input.i").read_text()
+
+    assert staged["construction"]["audit"]["status"] == "PASS"
+    assert staged["construction"]["electron_solver_unknown"] == "n_e == n_hat"
+    assert mp.get_parameter(text, "Variables/n_e", "initial_condition") == "1.0"
+    assert (
+        mp.get_parameter(
+            text,
+            "FunctorMaterials/heavy_transport",
+            "electron_number_density",
+        )
+        == "n_e_physical"
+    )
+
+
+def test_issue91_acceptance_physical_csv_excludes_initial_observation(tmp_path) -> None:
+    case = tmp_path / "case"
+    case.mkdir()
+    raw = case / "input_out.csv"
+    with raw.open("w", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=("time", "n_e_avg"))
+        writer.writeheader()
+        writer.writerow({"time": "0", "n_e_avg": "1e16"})
+        writer.writerow({"time": "1e-8", "n_e_avg": "1e16"})
+
+    result = issue91_run._write_physical_csv(case)
+    assert result["pass"] is True
+    assert result["source_rows"] == 2
+    assert result["physical_rows"] == 1
+
+    with (case / "input_out.physical.csv").open(newline="") as handle:
+        rows = list(csv.DictReader(handle))
+    assert [row["time"] for row in rows] == ["1e-8"]
