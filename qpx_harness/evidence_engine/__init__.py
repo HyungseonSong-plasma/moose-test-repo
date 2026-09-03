@@ -1,9 +1,14 @@
 """Reusable Polars + DuckDB numerical evidence engine for QPX diagnostics."""
 
 from .diagnose import (
+    DiagnosticMetricSpec,
     DiagnosisReport,
+    DiagnosisRule,
+    DiagnosisRuleRegistry,
     EvidenceTolerances,
     FailureLocation,
+    build_constant_state_registry,
+    evaluate_diagnosis_registry,
     summarize_constant_state,
     summarize_constant_state_report,
 )
@@ -27,13 +32,18 @@ __all__ = [
     "FACE_REQUIRED_COLUMNS",
     "ColumnRole",
     "ColumnSpec",
+    "DiagnosticMetricSpec",
     "DiagnosisReport",
+    "DiagnosisRule",
+    "DiagnosisRuleRegistry",
     "DynamicSchemaContract",
     "EvidenceStore",
     "EvidenceTolerances",
     "FailureLocation",
     "SchemaResolution",
     "build_cell_evidence",
+    "build_constant_state_registry",
+    "evaluate_diagnosis_registry",
     "normalize_and_project",
     "prepare_face_evidence",
     "require_columns",
