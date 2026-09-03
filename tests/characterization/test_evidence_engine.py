@@ -5,10 +5,15 @@ from pydantic import ValidationError
 from qpx_harness.evidence_engine import (
     DEFAULT_FACE_CONTRACT,
     ColumnSpec,
+    DiagnosticMetricSpec,
     DiagnosisReport,
+    DiagnosisRule,
+    DiagnosisRuleRegistry,
     EvidenceStore,
     EvidenceTolerances,
     build_cell_evidence,
+    build_constant_state_registry,
+    evaluate_diagnosis_registry,
     normalize_and_project,
     prepare_face_evidence,
     summarize_constant_state,
@@ -36,6 +41,7 @@ def test_polars_reconstructs_exact_rz_constant_state_contract():
     diagnosis = summarize_constant_state(face, cell)
     assert diagnosis["status"] == "CONSTANT_STATE_PASS"
     assert diagnosis["primary_owner_class"] is None
+    assert diagnosis["selected_rule_id"] is None
     assert diagnosis["failing_locations"] == []
 
 
@@ -107,6 +113,7 @@ def test_surface_vector_perturbation_isolated_before_rz_attribution():
         tolerances=EvidenceTolerances(surface_vector_abs=1.0e-12),
     )
     assert diagnosis["primary_owner_class"] == "SURFACE_VECTOR_CONSTRUCTION"
+    assert diagnosis["selected_rule_id"] == "surface_vector_construction"
     assert diagnosis["status"] == "ISOLATED_OWNER_CLASS"
     assert diagnosis["rz_specific_status"] == "REQUIRES_SPATIAL_COMPONENT_AGREEMENT"
 
@@ -117,6 +124,137 @@ def test_surface_vector_perturbation_isolated_before_rz_attribution():
     assert failure["face_id"] == 1
     assert failure["centroid"] == (2.0, 0.5)
     assert failure["error_value"] == pytest.approx(1.0e-9)
+
+
+def test_registry_extension_adds_new_owner_without_diagnose_code_changes():
+    raw = rz_constant_square_face_rows()
+    face = prepare_face_evidence(raw)
+    cell = build_cell_evidence(face, radial_component=0).with_columns(
+        pl.lit(2.5e-3).alias("electron_diffusivity_error")
+    )
+
+    registry = build_constant_state_registry().extend(
+        metrics={
+            "electron_diffusivity_error": DiagnosticMetricSpec(
+                metric_id="electron_diffusivity_error",
+                source="cell",
+                column="electron_diffusivity_error",
+                report_key="max_electron_diffusivity_error",
+                entity_kind="cell",
+                x_col="cell_x",
+                y_col="cell_y",
+            )
+        },
+        rules=(
+            DiagnosisRule(
+                rule_id="electron_diffusivity_consistency",
+                metric_id="electron_diffusivity_error",
+                threshold=1.0e-4,
+                owner_class="ELECTRON_DIFFUSIVITY_CONSISTENCY",
+                status="ISOLATED_OWNER_CLASS",
+                decision_label="electron diffusivity consistency",
+                priority=5,
+            ),
+        ),
+    )
+
+    report = evaluate_diagnosis_registry(
+        {"face": face, "cell": cell},
+        registry,
+        top_k_failures=3,
+    )
+
+    assert report.selected_rule_id == "electron_diffusivity_consistency"
+    assert report.primary_owner_class == "ELECTRON_DIFFUSIVITY_CONSISTENCY"
+    assert report.metrics["max_electron_diffusivity_error"] == pytest.approx(2.5e-3)
+    assert report.failing_locations[0].elem_id == 10
+    assert report.failing_locations[0].metric == "electron_diffusivity_error"
+    assert report.decision_order[0] == "electron diffusivity consistency"
+
+
+def test_registry_supports_non_spatial_run_level_metric():
+    registry = DiagnosisRuleRegistry(
+        metrics={
+            "jacobian_relative_error": DiagnosticMetricSpec(
+                metric_id="jacobian_relative_error",
+                source="jacobian",
+                column="relative_error",
+                report_key="max_jacobian_relative_error",
+            )
+        },
+        rules=(
+            DiagnosisRule(
+                rule_id="jacobian_consistency",
+                metric_id="jacobian_relative_error",
+                threshold=1.0e-3,
+                owner_class="JACOBIAN_CONSISTENCY",
+                status="UNRESOLVED",
+                decision_label="Jacobian consistency",
+                priority=10,
+            ),
+        ),
+        pass_status="JACOBIAN_PASS",
+        rz_specific_status="NOT_APPLICABLE",
+    )
+
+    report = evaluate_diagnosis_registry(
+        {"jacobian": pl.DataFrame({"relative_error": [0.0369]})},
+        registry,
+    )
+
+    assert report.status == "UNRESOLVED"
+    assert report.primary_owner_class == "JACOBIAN_CONSISTENCY"
+    assert report.failing_locations == []
+    assert report.rz_specific_status == "NOT_APPLICABLE"
+
+
+def test_registry_rejects_unknown_metric_and_duplicate_priority():
+    metric = DiagnosticMetricSpec(
+        metric_id="a",
+        source="cell",
+        column="a",
+        report_key="max_a",
+    )
+    with pytest.raises(ValidationError, match="unknown metric"):
+        DiagnosisRuleRegistry(
+            metrics={"a": metric},
+            rules=(
+                DiagnosisRule(
+                    rule_id="bad",
+                    metric_id="missing",
+                    threshold=0.0,
+                    owner_class="BAD",
+                    status="UNRESOLVED",
+                    decision_label="bad",
+                    priority=1,
+                ),
+            ),
+        )
+
+    with pytest.raises(ValidationError, match="priority"):
+        DiagnosisRuleRegistry(
+            metrics={"a": metric},
+            rules=(
+                DiagnosisRule(
+                    rule_id="r1",
+                    metric_id="a",
+                    threshold=0.0,
+                    owner_class="A",
+                    status="UNRESOLVED",
+                    decision_label="a1",
+                    priority=1,
+                ),
+                DiagnosisRule(
+                    rule_id="r2",
+                    metric_id="a",
+                    threshold=1.0,
+                    owner_class="B",
+                    status="UNRESOLVED",
+                    decision_label="a2",
+                    priority=1,
+                ),
+            ),
+        )
 
 
 def test_typed_report_and_tolerance_validation():
