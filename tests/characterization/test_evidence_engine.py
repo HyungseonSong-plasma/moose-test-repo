@@ -2,34 +2,36 @@ import polars as pl
 import pytest
 from pydantic import ValidationError
 
-from qpx_harness.evidence_engine import (
-    CORE_FACE_CONTRACT,
-    DEFAULT_FACE_CONTRACT,
-    GREEN_GAUSS_FACE_CONTRACT,
-    ColumnSpec,
-    CoreColumnRole,
+from qpx_harness.diagnose import (
     DiagnosticMetricSpec,
     DiagnosisReport,
     DiagnosisRule,
     DiagnosisRuleRegistry,
-    EvidenceStore,
     EvidenceTolerances,
     MetricPredicate,
     Z3DiagnosisEngine,
     Z3OwnerRule,
     Z3RuleSet,
-    build_cell_evidence,
     build_constant_state_registry,
     build_constant_state_ruleset,
     evaluate_diagnosis_registry,
-    normalize_and_project,
-    prepare_face_evidence,
     summarize_constant_state,
     summarize_constant_state_report,
+)
+from qpx_harness.evidence import (
+    CORE_FACE_CONTRACT,
+    DEFAULT_FACE_CONTRACT,
+    GREEN_GAUSS_FACE_CONTRACT,
+    ColumnSpec,
+    CoreColumnRole,
+    EvidenceStore,
+    build_cell_evidence,
+    normalize_and_project,
+    prepare_face_evidence,
+    rz_constant_square_face_rows,
     write_evidence_bundle,
 )
-from qpx_harness.evidence_engine.local_smoke import run_smoke
-from qpx_harness.evidence_engine.synthetic import rz_constant_square_face_rows
+from qpx_harness.evidence_diagnose_smoke import run_smoke
 
 
 def test_polars_reconstructs_exact_rz_constant_state_contract():
