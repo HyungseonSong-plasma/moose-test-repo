@@ -1,4 +1,4 @@
-"""Issue43 coupling policy adapters over canonical diagnostic capabilities."""
+"""Issue43 adapters over canonical Evidence -> Diagnose capabilities."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -6,8 +6,8 @@ from typing import Any
 
 from recipes import issue43_coupling_diagnostic as recipe
 
-from ..diagnostics import coupling as coupling_diagnostic
-from ..diagnostics import jacobian as jacobian_diagnostic
+from ..diagnose import diagnose_coupled_runtime_evidence, diagnose_jacobian_evidence
+from ..evidence import extract_jacobian_evidence, runtime_core_facts
 from ..moose import log as moose_log
 from ..petsc import jacobian as petsc_jacobian
 from ..petsc import log as petsc_log
@@ -17,13 +17,11 @@ from .constants import (
     JACOBIAN_REL_TOL,
 )
 
-# Architecture-history marker for Issue67/68: the former direct
-# nonlinear_diagnostic.runtime_core_facts call is now owned by diagnostics.coupling.
 _parse_variable_residuals = moose_log.parse_variable_residual_norms
 _parse_scaling_factors = moose_log.parse_automatic_scaling_factors
 _parse_pc_failure_reason = petsc_log.parse_pc_failure_reason
 _parse_jacobian_tests = petsc_jacobian.parse_comparisons
-_line_hits = coupling_diagnostic.line_hits
+_line_hits = petsc_log.line_hits
 
 
 def recipe_backing_status() -> dict[str, bool]:
@@ -37,27 +35,29 @@ def recipe_backing_status() -> dict[str, bool]:
         is moose_log.parse_automatic_scaling_factors,
         "pc-failure-parser": _parse_pc_failure_reason is petsc_log.parse_pc_failure_reason,
         "jacobian-parser": _parse_jacobian_tests is petsc_jacobian.parse_comparisons,
-        "runtime-failure-classifier": callable(coupling_diagnostic.analyze_runtime_failure),
+        "runtime-failure-classifier": callable(diagnose_coupled_runtime_evidence),
     }
 
 
 def analyze_jacobian_text(
     text: str, *, relative_tolerance: float = JACOBIAN_REL_TOL
 ) -> dict[str, Any]:
-    """Issue43 tolerance adapter over the reusable Jacobian diagnostic owner."""
-    return jacobian_diagnostic.analyze_comparisons(
-        text,
+    """Bind Issue43 tolerance to canonical Jacobian evidence and diagnosis."""
+    facts = extract_jacobian_evidence(text)
+    return diagnose_jacobian_evidence(
+        facts,
         relative_tolerance=relative_tolerance,
     )
 
 
 def analyze_log_text(text: str, *, returncode: int) -> dict[str, Any]:
-    """Bind Issue43 coupled-variable identity to canonical runtime diagnostics."""
-    return coupling_diagnostic.analyze_runtime_failure(
+    """Bind Issue43 coupled-variable identity to Evidence -> Diagnose."""
+    facts = runtime_core_facts(
         text,
         returncode=returncode,
         coupled_scaling_variables=("n_e", "potential_plasma"),
     )
+    return diagnose_coupled_runtime_evidence(facts)
 
 
 def analyze_log(log_path: Path, *, returncode: int) -> dict[str, Any]:
