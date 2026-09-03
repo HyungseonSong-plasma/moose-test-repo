@@ -11,13 +11,15 @@ from typing import Any
 from experiments.Issue93_r3_electron_isolation.operator_decomposition import _check_accepted_qvt_csv
 from experiments.Issue93_r3_electron_isolation.prepare import ELECTRON_REFERENCE_CASE
 from experiments.Issue93_r3_electron_isolation.run import _electron_residuals
-from qpx_harness.diagnostics.jacobian import analyze_comparisons
-from qpx_harness.diagnostics.nonlinear_solver import failure_signature, runtime_core_facts
+from qpx_harness.diagnose import diagnose_jacobian_evidence
 from qpx_harness.evidence import (
     AttributionSignals,
     ErrorLedger,
     classify_attribution,
     create_collision_safe_directory,
+    extract_jacobian_evidence,
+    failure_signature,
+    runtime_core_facts,
     sha256_file,
     utc_timestamp,
     write_json_bundle,
@@ -181,7 +183,10 @@ def _jacobian_case(
         timeout_seconds=timeout,
     )
     text = log.read_text(errors="replace")
-    comparison = analyze_comparisons(text, relative_tolerance=relative_tolerance)
+    comparison = diagnose_jacobian_evidence(
+        extract_jacobian_evidence(text),
+        relative_tolerance=relative_tolerance,
+    )
     return {
         "returncode": result.returncode,
         "wall_seconds": result.wall_seconds,
