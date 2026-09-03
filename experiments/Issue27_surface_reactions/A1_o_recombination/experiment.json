@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "experiment_id": "issue27-a1-o-recombination",
+  "protocol": "issue27-surface-reaction-controlled-wall",
+  "execution": {
+    "timeout_seconds": 120.0
+  },
+  "parameters": {
+    "reaction_id": "O_to_half_O2",
+    "event_flux_mol_m2_s": 0.1,
+    "dt_seconds": 0.1,
+    "rho_kg_m3": 1.0,
+    "initial_w_O": 0.1
+  },
+  "outputs": {
+    "provenance": true,
+    "wall_flux_closure": true,
+    "oxygen_mass_conservation": true,
+    "oxygen_atom_conservation": true,
+    "constrained_O2_bookkeeping": true
+  }
+}
