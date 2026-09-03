@@ -5,7 +5,14 @@ from pathlib import Path
 
 import polars as pl
 
-from .schema import CELL_KEY_COLUMNS, FACE_REQUIRED_COLUMNS, require_columns
+from .schema import (
+    CELL_KEY_COLUMNS,
+    DEFAULT_FACE_CONTRACT,
+    FACE_REQUIRED_COLUMNS,
+    DynamicSchemaContract,
+    normalize_and_project,
+    require_columns,
+)
 
 FrameLike = pl.DataFrame | pl.LazyFrame
 
@@ -20,16 +27,30 @@ def _columns(frame: FrameLike) -> list[str]:
     return frame.collect_schema().names()
 
 
-def prepare_face_evidence(frame: FrameLike) -> pl.DataFrame:
-    """Add independently reconstructed surface/weighted-face evidence.
+def prepare_face_evidence(
+    frame: FrameLike,
+    *,
+    schema_contract: DynamicSchemaContract = DEFAULT_FACE_CONTRACT,
+) -> pl.DataFrame:
+    """Normalize telemetry and add reconstructed surface/weighted-face evidence.
 
     ``moose_surface_*`` columns are never overwritten: they remain runtime truth.
     ``reconstructed_surface_*`` uses normal * face_area * coord_factor so the
-    surface-vector construction path can be compared explicitly.
+    surface-vector construction path can be compared explicitly. External probe
+    column names are first resolved through ``schema_contract``.
     """
-    require_columns(_columns(frame), FACE_REQUIRED_COLUMNS, context="face telemetry")
+    normalized = normalize_and_project(
+        frame,
+        schema_contract,
+        context="face telemetry",
+    )
+    require_columns(
+        _columns(normalized),
+        FACE_REQUIRED_COLUMNS,
+        context="normalized face telemetry",
+    )
     return (
-        _lazy(frame)
+        _lazy(normalized)
         .with_columns(
             (pl.col("normal_x") * pl.col("face_area") * pl.col("coord_factor")).alias(
                 "reconstructed_surface_x"
@@ -64,7 +85,12 @@ def prepare_face_evidence(frame: FrameLike) -> pl.DataFrame:
     )
 
 
-def build_cell_evidence(face_frame: FrameLike, *, radial_component: int = 0) -> pl.DataFrame:
+def build_cell_evidence(
+    face_frame: FrameLike,
+    *,
+    radial_component: int = 0,
+    schema_contract: DynamicSchemaContract = DEFAULT_FACE_CONTRACT,
+) -> pl.DataFrame:
     """Aggregate face evidence and reconstruct the Green-Gauss cell gradient.
 
     ``radial_component=0`` corresponds to the accepted R3 convention where the
@@ -74,7 +100,7 @@ def build_cell_evidence(face_frame: FrameLike, *, radial_component: int = 0) -> 
     if radial_component not in (0, 1):
         raise ValueError("radial_component must be 0 (X) or 1 (Y)")
 
-    face = prepare_face_evidence(face_frame)
+    face = prepare_face_evidence(face_frame, schema_contract=schema_contract)
     require_columns(face.columns, CELL_KEY_COLUMNS, context="prepared face evidence")
 
     return (
@@ -173,11 +199,16 @@ def write_evidence_bundle(
     root: Path,
     *,
     radial_component: int = 0,
+    schema_contract: DynamicSchemaContract = DEFAULT_FACE_CONTRACT,
 ) -> dict[str, str]:
     """Write canonical face/cell Parquet evidence and return artifact paths."""
     root.mkdir(parents=True, exist_ok=True)
-    face = prepare_face_evidence(face_frame)
-    cell = build_cell_evidence(face, radial_component=radial_component)
+    face = prepare_face_evidence(face_frame, schema_contract=schema_contract)
+    cell = build_cell_evidence(
+        face,
+        radial_component=radial_component,
+        schema_contract=schema_contract,
+    )
     face_path = root / "face_evidence.parquet"
     cell_path = root / "cell_evidence.parquet"
     face.write_parquet(face_path)
