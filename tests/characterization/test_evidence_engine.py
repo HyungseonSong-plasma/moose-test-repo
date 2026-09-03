@@ -3,10 +3,13 @@ import pytest
 from pydantic import ValidationError
 
 from qpx_harness.evidence_engine import (
+    DEFAULT_FACE_CONTRACT,
+    ColumnSpec,
     DiagnosisReport,
     EvidenceStore,
     EvidenceTolerances,
     build_cell_evidence,
+    normalize_and_project,
     prepare_face_evidence,
     summarize_constant_state,
     summarize_constant_state_report,
@@ -34,6 +37,64 @@ def test_polars_reconstructs_exact_rz_constant_state_contract():
     assert diagnosis["status"] == "CONSTANT_STATE_PASS"
     assert diagnosis["primary_owner_class"] is None
     assert diagnosis["failing_locations"] == []
+
+
+def test_default_schema_normalizes_safe_aliases_before_transform():
+    raw = rz_constant_square_face_rows().rename(
+        {
+            "elem_id": "cell_id",
+            "face_id": "side_id",
+            "cell_x": "x_C",
+            "cell_y": "y_C",
+            "face_x": "x_f",
+            "face_y": "y_f",
+            "normal_x": "nx",
+            "normal_y": "ny",
+            "moose_surface_x": "S_x",
+            "moose_surface_y": "S_y",
+            "cell_volume": "V_rz",
+            "radial_coordinate": "radius",
+            "qpx_grad_x": "grad_x",
+            "qpx_grad_y": "grad_y",
+        }
+    )
+
+    face = prepare_face_evidence(raw)
+    cell = build_cell_evidence(raw, radial_component=0)
+
+    assert "elem_id" in face.columns and "cell_id" not in face.columns
+    assert "face_id" in face.columns and "side_id" not in face.columns
+    assert "cell_x" in face.columns and "x_C" not in face.columns
+    assert cell["elem_id"][0] == 10
+    assert abs(cell["reconstructed_grad_norm"][0]) < 1.0e-14
+
+
+def test_schema_extension_adds_new_quantity_without_transform_changes():
+    raw = rz_constant_square_face_rows().with_columns(pl.lit(7.25).alias("Te_eV"))
+    contract = DEFAULT_FACE_CONTRACT.extend(
+        {
+            "electron_temperature": ColumnSpec(
+                canonical="electron_temperature",
+                aliases=("Te_eV", "mean_energy_eV"),
+                required=False,
+            )
+        }
+    )
+
+    normalized = normalize_and_project(raw, contract)
+    face = prepare_face_evidence(raw, schema_contract=contract)
+
+    assert "electron_temperature" in normalized.columns
+    assert "Te_eV" not in normalized.columns
+    assert normalized["electron_temperature"][0] == pytest.approx(7.25)
+    assert "electron_temperature" in face.columns
+
+
+def test_schema_rejects_duplicate_canonical_and_alias_sources():
+    raw = rz_constant_square_face_rows().with_columns(pl.col("elem_id").alias("cell_id"))
+
+    with pytest.raises(ValueError, match="multiple matching columns"):
+        prepare_face_evidence(raw)
 
 
 def test_surface_vector_perturbation_isolated_before_rz_attribution():
