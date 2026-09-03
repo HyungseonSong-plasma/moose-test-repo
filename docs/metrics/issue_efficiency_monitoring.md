@@ -139,6 +139,126 @@ scientific runtime/P3 NOT_RUN
 
 The interaction-density improvement therefore remains compatible with MET-13 closure-quality constraints.
 
+## Post-2026-09-01 reconstruction snapshot — 2026-09-03
+
+A reconciliation audit was performed because issue closure continued faster than canonical metric recording.
+
+### Exact recovered cohort — #77-#84
+
+All eight post-convergence cleanup Issues retained complete MET-14 values in durable issue bodies/comments and are now appended to `work_closure_efficiency_ledger.md`.
+
+| Issue | Complexity | State | WCC | T-WCC | RVR | EVR | DBR | RWR | CLR | FBR |
+|---|:---:|---|---:|---:|---:|---:|---:|---:|---:|---|
+| #77 | C2 | CLOSED | 1 | 1 | 0 | 0 | 0 | 0 | 0 | yes |
+| #78 | C2 | CLOSED | 1 | 1 | 0 | 0 | 0 | 0 | 0 | yes |
+| #79 | C2 | CLOSED | 1 | 1 | 0 | 0 | 0 | 0 | 0 | n/a |
+| #80 | C2 | CLOSED | 1 | 1 | 0 | 0 | 0 | 0 | 0 | yes |
+| #81 | C2 | CLOSED | 1 | 1 | 0 | 0 | 0 | 0 | 0 | yes |
+| #82 | C3 | CLOSED | 1 | 1 | 0 | 0 | 0 | 0 | 0 | n/a |
+| #83 | C2 | CLOSED | 1 | 1 | 0 | 0 | 0 | 0 | 0 | yes |
+| #84 | C3 | CLOSED | 1 | 1 | 0 | 0 | 0 | 0 | 0 | n/a |
+
+Exact aggregate:
+
+```text
+n                 = 8
+mean WCC          = 1.0
+mean T-WCC        = 1.0
+mean EVR          = 0.0
+mean RWR          = 0.0
+EVR > 3 rate      = 0/8
+RWR > 0 rate      = 0/8
+reopened rate     = 0/8
+```
+
+For the comparable #66-#76 technical-child rows (`n=10`, excluding parent driver #69), reconstructed means were:
+
+```text
+mean WCC          = 5.6
+mean T-WCC        = 4.2
+mean EVR          = 3.2
+mean RWR          = 1.0
+EVR > 3 rate      = 3/10
+RWR > 0 rate      = 5/10
+```
+
+Directional change:
+
+```text
+mean WCC          5.6 -> 1.0   (-82.1%)
+mean T-WCC        4.2 -> 1.0   (-76.2%)
+mean EVR          3.2 -> 0.0   (-100%)
+mean RWR          1.0 -> 0.0   (-100%)
+```
+
+This is a real improvement for the homogeneous post-convergence cleanup class. It is not directly transferable to scientific runtime work.
+
+### Metric-completeness audit
+
+The audit window is defined as technical work completed after the prior 2026-09-01 efficiency snapshots and not already covered there. It includes:
+
+```text
+#77-#84                         8 closed technical Issues
+#86-#94 + #98                 10 closed technical Issues
+#99-#111 + #114               14 closed technical Issues
+#31 R4 carry-in                1 closed technical Issue
+-----------------------------------------------
+reconstruction population      33
+```
+
+Excluded from this denominator:
+
+- #95/#96 `CLOSED / NOT_PLANNED` optional branches;
+- #97 and later open/planned work;
+- #112/#113 discarded connector checks;
+- PR #85;
+- architecture/governance parent #43 from issue-local technical efficiency aggregation.
+
+Complete durable MET-14 record coverage is:
+
+```text
+#77-#84          8/8   = 100%
+#86-#94,#98      0/10  =   0%
+#99-#111,#114    0/14  =   0%
+#31 carry-in     0/1   =   0%
+--------------------------------
+overall          8/33  = 24.2%
+```
+
+The dominant current metrics problem is therefore **measurement completeness**, not an observed collapse of technical closure quality.
+
+### Partial science reconstruction
+
+The science Issues often preserved scientific-runtime facts while omitting full canonical counters:
+
+- #86 and #87 explicitly consumed no new scientific EVR before #88;
+- #88 executed exactly one final EVR3 discriminator and reached Outcome B;
+- #89 and #90 explicitly consumed scientific EVR 0;
+- #92 and #93 each consumed exactly 3/3 scientific EVRs;
+- #91 retained a governed final acceptance bundle, but parent/child attribution prevents copying #92/#93/#98 rounds into #91;
+- #94 delegated runtime ownership to #98;
+- #98 preserved the completion/remedy-verification chain but no MET-14 block.
+
+These partial values are not pooled into WCC/RWR statistics because the user-round and rework boundaries were not prospectively recorded.
+
+### R4 #31 lower-bound reconstruction
+
+Retained interaction history establishes at least six distinct user-local R4 result-return rounds across Q0/QN0/QF1 corrections/final QF2, so `EVR>=6` and `WCC>=6` are defensible lower bounds. At least two additional user reruns were caused by avoidable experiment/instrumentation design corrections: the first QF1 C2 ledger incorrectly substituted nominal `Q(t0)=0`, and the spatial O perturbation made the supposedly quasi-neutral discretized IC non-neutral. These imply `RWR>=2` as a lower bound. The exact counters remain unavailable and are not inserted into the canonical ledger.
+
+The final R4 solver itself converged robustly; the extra interaction cost was dominated by initial-state/measurement-contract refinement rather than failure of the accepted monolithic numerical architecture.
+
+### Measurement-process diagnosis
+
+The recording regression has five main causes:
+
+1. MET-14 is a documentation rule but not a machine-enforced closure gate.
+2. `scientific EVR=0` / `scientific P3=0` was often recorded in place of the full canonical metric block.
+3. WCC/T-WCC/RWR depend on user-round boundaries that GitHub issue state cannot reconstruct reliably after straight-through automated work.
+4. parent/child execution campaigns make issue-local attribution easy to lose unless ownership is declared at result-return time.
+5. technical closure bodies were frequently rewritten for scientific/architecture conclusions without preserving or finalizing the metric state; #31 is a clear example.
+
+The detailed reconstruction and process recommendations are frozen in `docs/metrics/efficiency/snapshots/2026-09-03_post_2026-09-01_efficiency_reconstruction.md`.
+
 ## Monitoring hypotheses
 
 Track these prospectively as new issues acquire canonical final metrics:
@@ -151,9 +271,11 @@ Track these prospectively as new issues acquire canonical final metrics:
 6. For architecture/refactor work, does **validation surfaces / batch** predict EVR and RWR better than raw **Issues / batch**?
 7. Can a consolidated command retain low unique rounds/Issue while internally isolating acceptance surfaces so one early failure does not hide unrelated downstream checks?
 8. Does explicit current-head/workspace identity eliminate no-code-change external reruns?
+9. Does complete MET-14 coverage remain at 100% for newly CLOSED technical work after prospective recording is restored?
+10. For scientific work, does a qpx-free/RVR evidence-reconstruction phase reduce later scientific EVR without simply shifting user interaction into uncounted rounds?
 
 ## Update policy
 
 Append a dated snapshot only when a technical issue obtains new usable/canonical metrics or when an existing metric is materially reconciled. Do not count PLANNED `WCC=0` issues as zero-cost observations. Preserve prior snapshots so trend analysis can distinguish historical process behavior from later improvements.
 
-Reconstructed architecture/refactor metrics must remain visibly marked until a future prospective queue records exact per-Issue counters from WORK_START.
+Reconstructed or lower-bound values must remain visibly marked and must not be pooled with exact prospective counters. Complete MET-14 coverage should itself be monitored as a process-quality KPI; a technically green closure with missing WCC/T-WCC/EVR/RWR accounting is not a complete efficiency observation.
