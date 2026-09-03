@@ -32,7 +32,7 @@ feed O2s/O2+/O/O-/O+/Os          0
 feed molar mass                  0.032 kg/mol
 ```
 
-The accepted R3/QN0 `Yin_*` values are retained only as the initial plasma state and therefore still define the quasi-neutral initial electron reference. They are not reused as the QF1 inlet composition.
+The accepted R3/QN0 initial values are retained as initial-plasma provenance and still define the nominal quasi-neutral electron reference before feed separation. They are not reused as the QF1 inlet composition.
 
 O2 is the constrained heavy species in the current formulation, so it has no independent scalar inlet BC. Pure-O2 feed is represented by the full total inlet mass flux together with exactly zero inlet scalar mass flux for all six solved non-O2 species:
 
@@ -98,6 +98,21 @@ Delta_Q + Q_boundary = 0
 
 with outward boundary current positive.
 
+C2 uses the **actual discretized initial charge**, not `Q(0)=0` by assumption. The accepted initial `w_O` state is a spatial `FunctionIC`; through `Mn_mix` and `rho` this changes the integrated heavy charge even when the nominal top-level QN ledger is algebraically neutral. QF1 therefore executes
+
+```text
+r31_charge_integral
+  execute_on = 'INITIAL TIMESTEP_END'
+```
+
+and measures
+
+```text
+Delta_Q = Q_volume(t1) - Q_volume(t0)
+```
+
+from the same postprocessor at both states.
+
 The electrostatic drift and heavy EM-correction kernels explicitly avoid every physical plasma boundary. The current electron model has no bulk-advection boundary operator and its diffusion path retains natural zero external flux in this scope. Therefore the explicit QF1 external charge-current ledger is owned by the charged-heavy inlet/outlet advective mass fluxes:
 
 ```text
@@ -135,7 +150,7 @@ canonical QF1 construction/audit
 -> preserved physical state/inventory checker
 -> C1 Gauss-law measurement
 -> potential/charge state measurement
--> C2 global charge ledger
+-> C2 global charge ledger using measured Q(t0), Q(t1)
 ```
 
 A complete measurement terminates as
