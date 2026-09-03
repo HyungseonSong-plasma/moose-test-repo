@@ -1,6 +1,7 @@
 """QPX-free guard for canonical package dependency direction."""
 from __future__ import annotations
 
+import argparse
 import ast
 from pathlib import Path
 
@@ -13,6 +14,7 @@ CANONICAL_PACKAGES = {
 TRANSITIONAL_EXCEPTIONS = {
     ("qpx_harness.evidence.transform", "qpx_harness.analysis.green_gauss"),
 }
+CHECKS = {"all", "evidence", "analysis", "execution", "presentation", "cycle"}
 
 
 def module_name(path: Path) -> str:
@@ -41,25 +43,25 @@ def top_package(module: str) -> str | None:
     return parts[1] if parts[1] in CANONICAL_PACKAGES else None
 
 
-def violation(src: str, dst: str) -> str | None:
+def violation(src: str, dst: str) -> tuple[str, str] | None:
     if (src, dst) in TRANSITIONAL_EXCEPTIONS:
         return None
     if src.startswith("qpx_harness.evidence") and dst.startswith("qpx_harness.diagnose"):
-        return "Evidence must not depend on Diagnose"
+        return "evidence", "Evidence must not depend on Diagnose"
     if src.startswith("qpx_harness.evidence") and dst.startswith("qpx_harness.analysis"):
-        return "Evidence must not depend on Analysis except documented compatibility facade"
+        return "evidence", "Evidence must not depend on Analysis except documented compatibility facade"
     if src.startswith("qpx_harness.analysis") and (
         dst.startswith("qpx_harness.cli") or dst.startswith("qpx_harness.validation")
     ):
-        return "Analysis must not depend on CLI/Validation"
+        return "analysis", "Analysis must not depend on CLI/Validation"
     if src.startswith("qpx_harness.execution") and (
         dst.startswith("qpx_harness.inventory") or dst.startswith("qpx_harness.dmix")
     ):
-        return "Execution must not depend on domain science"
+        return "execution", "Execution must not depend on domain science"
     if not src.startswith("qpx_harness.cli") and dst.startswith("qpx_harness.cli"):
-        return "Production subsystems must not depend on CLI"
+        return "presentation", "Production subsystems must not depend on CLI"
     if not src.startswith("qpx_harness.validation") and dst.startswith("qpx_harness.validation"):
-        return "Production subsystems must not depend on Validation"
+        return "presentation", "Production subsystems must not depend on Validation"
     return None
 
 
@@ -92,28 +94,43 @@ def find_cycle(graph: dict[str, set[str]]) -> list[str] | None:
     return None
 
 
-def main() -> int:
-    violations: list[str] = []
+def audit() -> tuple[list[tuple[str, str]], list[str] | None]:
+    violations: list[tuple[str, str]] = []
     graph: dict[str, set[str]] = {name: set() for name in CANONICAL_PACKAGES}
     for path in sorted(PKG.rglob("*.py")):
         src = module_name(path)
         src_pkg = top_package(src)
         for dst in sorted(imported_modules(path)):
-            why = violation(src, dst)
-            if why:
-                violations.append(f"{src} -> {dst}: {why}")
+            item = violation(src, dst)
+            if item:
+                category, why = item
+                violations.append((category, f"{src} -> {dst}: {why}"))
             if (src, dst) not in TRANSITIONAL_EXCEPTIONS:
                 dst_pkg = top_package(dst)
                 if src_pkg and dst_pkg and src_pkg != dst_pkg:
                     graph[src_pkg].add(dst_pkg)
-    cycle = find_cycle(graph)
-    if cycle:
-        violations.append("canonical package cycle: " + " -> ".join(cycle))
-    if violations:
-        print("ARCHITECTURE_DEPENDENCY_FAIL")
-        print("\n".join(violations))
+    return violations, find_cycle(graph)
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(prog="qpx-dependency-guard")
+    parser.add_argument("--check", choices=sorted(CHECKS), default="all")
+    args = parser.parse_args(argv)
+    violations, cycle = audit()
+    failures: list[str] = []
+    if args.check in {"all", "evidence", "analysis", "execution", "presentation"}:
+        failures.extend(
+            message for category, message in violations
+            if args.check == "all" or category == args.check
+        )
+    if args.check in {"all", "cycle"} and cycle:
+        failures.append("canonical package cycle: " + " -> ".join(cycle))
+    marker = args.check.upper()
+    if failures:
+        print(f"ARCHITECTURE_DEPENDENCY_{marker}_FAIL")
+        print("\n".join(failures))
         return 1
-    print("ARCHITECTURE_DEPENDENCY_PASS")
+    print(f"ARCHITECTURE_DEPENDENCY_{marker}_PASS")
     return 0
 
 
