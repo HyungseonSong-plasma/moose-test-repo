@@ -11,6 +11,9 @@ from recipes.issue31_r4_qf1 import (
     EXPECTED_DRIFT_KERNELS,
     EXPECTED_HEAVY_EM_CORRECTION_KERNELS,
     FEEDBACK_POTENTIAL,
+    PURE_O2_FEED_SCCM,
+    PURE_O2_MOLAR_MASS_KG_PER_MOL,
+    SOLVED_NON_O2_INLET_SPECIES,
     audit_r4_qf1_input,
     build_r4_qf1_input,
 )
@@ -54,6 +57,27 @@ def test_qf1_closes_exact_charged_particle_feedback_set() -> None:
         assert tuple(
             mp.words(mp.get_parameter(text, path, "boundaries_to_avoid"))
         ) == ELECTROSTATIC_BOUNDARIES_TO_AVOID
+
+
+def test_qf1_uses_pure_o2_20_sccm_feed_without_replacing_initial_plasma() -> None:
+    _, meta = build_r4_qf1_input(_base())
+    inlet = meta["inlet"]
+
+    assert inlet["feed"] == "pure O2"
+    assert inlet["flow_sccm"] == PURE_O2_FEED_SCCM == 20.0
+    assert inlet["molar_mass_kg_per_mol"] == PURE_O2_MOLAR_MASS_KG_PER_MOL == 0.032
+    assert inlet["O2_feed_mass_fraction"] == 1.0
+    assert inlet["non_O2_feed_mass_fractions"] == {
+        species: 0.0 for species in SOLVED_NON_O2_INLET_SPECIES
+    }
+    assert inlet["initial_plasma_composition_is_feed_composition"] is False
+
+    initial = inlet["initial_plasma_mass_fractions_preserved"]
+    assert initial["O2"] == 0.7
+    assert initial["O2p"] == 0.01
+    assert initial["Om"] == 0.01
+    assert initial["Op"] == 0.01
+    assert sum(initial.values()) == 1.0
 
 
 def test_qf1_preserves_qn_normalized_electron_reference() -> None:
