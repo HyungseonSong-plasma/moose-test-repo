@@ -1,0 +1,2 @@
+duckdb>=1.0,<2
+polars[pyarrow]>=1.0,<2
