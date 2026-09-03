@@ -24,6 +24,7 @@ from qpx_harness.execution.runtime import resolve_executable, run_qpx, validate_
 from .cases import R3_E0_DIR, N_E_REF, stage_n0, stage_r3_case
 
 EXPERIMENT_ID = "r3-electron-scaling-counterfactual"
+JACOBIAN_FORCE_NL_ABS_TOL = "1.0e-30"
 
 
 def _last_csv(case_dir: Path) -> Path | None:
@@ -66,9 +67,15 @@ def _check_r3(case_dir: Path) -> dict[str, Any]:
     csv_path = _last_csv(case_dir)
     if csv_path is None:
         return {"pass": False, "error": "missing scalar CSV"}
-    checker = R3_E0_DIR / "check.py"
+    # The campaign may be launched with a relative --results-root. Once cwd is
+    # changed to the staged case, passing that relative path again points at a
+    # nonexistent nested results/... path. Resolve all checker inputs first.
+    case_dir = case_dir.resolve()
+    csv_path = csv_path.resolve()
+    checker = (R3_E0_DIR / "check.py").resolve()
+    expected = (case_dir / "expected.json").resolve()
     proc = subprocess.run(
-        [sys.executable, str(checker), str(csv_path), str(case_dir / "expected.json")],
+        [sys.executable, str(checker), str(csv_path), str(expected)],
         cwd=case_dir,
         text=True,
         capture_output=True,
@@ -82,17 +89,26 @@ def _check_r3(case_dir: Path) -> dict[str, Any]:
     }
 
 
+def _jacobian_extra_args() -> tuple[str, ...]:
+    # N0 normally terminates at iteration zero because the normalized constant
+    # residual is already ~1e-16 and nl_abs_tol=1e-14. Tighten only this
+    # diagnostic invocation so PETSc actually forms/tests the Jacobian. The
+    # runtime acceptance path keeps the physically appropriate absolute floor.
+    return (
+        "Executioner/num_steps=1",
+        "Executioner/abort_on_solve_fail=true",
+        f"Executioner/nl_abs_tol={JACOBIAN_FORCE_NL_ABS_TOL}",
+        "-snes_test_jacobian",
+    )
+
+
 def _run_jacobian(exe: Path, case_dir: Path, log: Path, timeout: float) -> dict[str, Any]:
     result = run_qpx(
         exe,
         cwd=case_dir,
         input_name="input.i",
         log_path=log,
-        extra_args=(
-            "Executioner/num_steps=1",
-            "Executioner/abort_on_solve_fail=true",
-            "-snes_test_jacobian",
-        ),
+        extra_args=_jacobian_extra_args(),
         timeout_seconds=timeout,
     )
     text = log.read_text(errors="replace")
