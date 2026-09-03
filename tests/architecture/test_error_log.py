@@ -1,12 +1,30 @@
 from pathlib import Path
 
-from qpx_harness.evidence.error_log import (
+from qpx_harness.evidence_engine import (
     AttributionConfidence,
     AttributionSignals,
     ErrorCategory,
     ErrorLedger,
     classify_attribution,
+    create_collision_safe_directory,
+    current_run_artifact,
 )
+from qpx_harness.evidence import error_log as legacy_error_log
+from qpx_harness.evidence import artifacts as legacy_artifacts
+from qpx_harness.evidence import identity as legacy_identity
+from qpx_harness.evidence_engine import artifacts as engine_artifacts
+from qpx_harness.evidence_engine import errors as engine_errors
+from qpx_harness.evidence_engine import identity as engine_identity
+
+
+def test_legacy_evidence_modules_are_facades_over_unified_engine():
+    assert legacy_error_log.ErrorLedger is engine_errors.ErrorLedger
+    assert legacy_error_log.classify_attribution is engine_errors.classify_attribution
+    assert legacy_artifacts.current_run_artifact is engine_artifacts.current_run_artifact
+    assert legacy_identity.create_collision_safe_directory is engine_identity.create_collision_safe_directory
+    assert ErrorLedger is engine_errors.ErrorLedger
+    assert current_run_artifact is engine_artifacts.current_run_artifact
+    assert create_collision_safe_directory is engine_identity.create_collision_safe_directory
 
 
 def test_attribution_requires_provenance_and_keeps_conflicts_unclassified():
