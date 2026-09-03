@@ -5,7 +5,8 @@ R4-QF1 is the first bounded R4 case in which solved `potential_plasma` actually 
 ## Frozen scope
 
 ```text
-R4-QN0 quasi-neutral initialization       PRESERVED
+R4-QN0 quasi-neutral reference            PRESERVED
+neutral-O spatial perturbation             REMOVED
 Poisson potential_plasma                  ON
 all electrostatic boundaries              phi = 0
 
@@ -20,6 +21,47 @@ timestep                                   unchanged (1e-8 s)
 mobility / diffusion                       unchanged
 ```
 
+## Quasi-neutral initial plasma
+
+QF1 removes the historical neutral-O perturbation because it is no longer needed as an R4 discriminator. The initial heavy composition is spatially uniform:
+
+```text
+O2    = 0.70   (constrained)
+O2s   = 0.05
+O2+   = 0.01
+O     = 0.10
+O-    = 0.01
+O+    = 0.01
+Os    = 0.12
+```
+
+The former
+
+```text
+w_O = 0.10 + 0.02*exp(...)
+```
+
+is replaced by
+
+```text
+w_O = 0.10
+```
+
+through the existing `FunctionIC`. With uniform initial composition, uniform initial pressure/temperature, and
+
+```text
+n_e == n_hat = 1
+n_e_physical = n_e_value*n_e
+```
+
+where `n_e_value` is derived from the same heavy charge ledger, the intended initial condition is cell-wise quasi-neutral:
+
+```text
+sum_k(z_k*n_k) - n_e_physical ~ 0
+```
+
+The runtime does not assume exact zero. `r31_charge_integral` is still evaluated on `INITIAL` so the actual discretized initial charge is measured and reported.
+
 ## Physical inlet feed
 
 QF1 separates the external feed composition from the already-ionized initial plasma composition.
@@ -32,7 +74,7 @@ feed O2s/O2+/O/O-/O+/Os          0
 feed molar mass                  0.032 kg/mol
 ```
 
-The accepted R3/QN0 initial values are retained as initial-plasma provenance and still define the nominal quasi-neutral electron reference before feed separation. They are not reused as the QF1 inlet composition.
+The accepted R3/QN0 initial values are retained as initial-plasma provenance and define the quasi-neutral electron reference before feed separation. They are not reused as the QF1 inlet composition.
 
 O2 is the constrained heavy species in the current formulation, so it has no independent scalar inlet BC. Pure-O2 feed is represented by the full total inlet mass flux together with exactly zero inlet scalar mass flux for all six solved non-O2 species:
 
@@ -98,7 +140,7 @@ Delta_Q + Q_boundary = 0
 
 with outward boundary current positive.
 
-C2 uses the **actual discretized initial charge**, not `Q(0)=0` by assumption. The accepted initial `w_O` state is a spatial `FunctionIC`; through `Mn_mix` and `rho` this changes the integrated heavy charge even when the nominal top-level QN ledger is algebraically neutral. QF1 therefore executes
+C2 uses the **actual discretized initial charge**, not `Q(0)=0` by assumption. Even though QF1 now constructs a spatially uniform quasi-neutral initial state, the actual integrated initial charge is measured to catch discretization/material-constant differences rather than assuming machine-zero closure. QF1 executes
 
 ```text
 r31_charge_integral
@@ -159,4 +201,4 @@ A complete measurement terminates as
 ISSUE31_R4_QF1_STATUS: R4_QF1_EVIDENCE_READY
 ```
 
-`R4_QF1_EVIDENCE_READY` is not automatic scientific PASS. Interpret nonlinear convergence, field magnitude, electron/heavy state bounds, C1, and C2 together. If the monolithic feedback run is unsuitable, only then use the already-declared dielectric-relaxation / multirate evidence to decide whether an inner electron-Poisson iteration or another bounded coupling architecture is needed.
+`R4_QF1_EVIDENCE_READY` is not automatic scientific PASS. Interpret nonlinear convergence, field magnitude, electron/heavy state bounds, measured initial charge, C1, and C2 together. If the monolithic feedback run is unsuitable, only then use the already-declared dielectric-relaxation / multirate evidence to decide whether an inner electron-Poisson iteration or another bounded coupling architecture is needed.
