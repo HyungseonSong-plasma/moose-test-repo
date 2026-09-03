@@ -17,8 +17,38 @@ surface accumulated charge sigma_s         OFF
 volumetric reactions                       OFF
 secondary emission                         OFF
 timestep                                   unchanged (1e-8 s)
-mobility / diffusion / particle BCs        unchanged
+mobility / diffusion                       unchanged
 ```
+
+## Physical inlet feed
+
+QF1 separates the external feed composition from the already-ionized initial plasma composition.
+
+```text
+feed gas                         pure O2
+feed flow                        20 sccm
+feed O2 mass fraction            1.0
+feed O2s/O2+/O/O-/O+/Os          0
+feed molar mass                  0.032 kg/mol
+```
+
+The accepted R3/QN0 `Yin_*` values are retained only as the initial plasma state and therefore still define the quasi-neutral initial electron reference. They are not reused as the QF1 inlet composition.
+
+O2 is the constrained heavy species in the current formulation, so it has no independent scalar inlet BC. Pure-O2 feed is represented by the full total inlet mass flux together with exactly zero inlet scalar mass flux for all six solved non-O2 species:
+
+```text
+Q_sccm = 20
+M_inlet = 0.032
+
+inlet_mdot_O2s = 0
+inlet_mdot_O2p = 0
+inlet_mdot_O   = 0
+inlet_mdot_Om  = 0
+inlet_mdot_Op  = 0
+inlet_mdot_Os  = 0
+```
+
+Thus the complete 20 sccm mass feed is O2 without replacing the ionized initial plasma state by neutral feed gas.
 
 The electron solver representation remains
 
@@ -68,12 +98,14 @@ Delta_Q + Q_boundary = 0
 
 with outward boundary current positive.
 
-The electrostatic drift and heavy EM-correction kernels explicitly avoid every physical plasma boundary. The current electron model has no bulk-advection boundary operator and its diffusion path retains natural zero external flux in this scope. Therefore the explicit QF1 external charge-current ledger is owned by the accepted charged-heavy inlet/outlet advective mass fluxes:
+The electrostatic drift and heavy EM-correction kernels explicitly avoid every physical plasma boundary. The current electron model has no bulk-advection boundary operator and its diffusion path retains natural zero external flux in this scope. Therefore the explicit QF1 external charge-current ledger is owned by the charged-heavy inlet/outlet advective mass fluxes:
 
 ```text
 I_boundary = e*N_A * sum_k z_k * (mdot_out,k - mdot_in,k) / M_k
 k = O2p, Om, Op
 ```
+
+Under the pure-O2 feed all charged-heavy inlet terms are exactly zero. Any C2 boundary charge current therefore comes from charged species leaving through the outlet in this QF1 scope.
 
 The accepted time scheme is implicit Euler, so for the one-step discriminator:
 
