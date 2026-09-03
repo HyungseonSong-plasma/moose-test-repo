@@ -27,7 +27,15 @@ def test_completion_matrix_prebuilds_all_remaining_fv_layers():
             assert "type = ADGenericConstantMaterial" in text
             assert "diag_orthogonal_D" in text
             material_block = text.split("[diag_orthogonal_diffusivity]", 1)[1].split("[]", 1)[0]
-            assert "block = plasma" not in material_block
+            assert "block = plasma" in material_block
+            # The accepted reference [Materials] contract is retained; the
+            # diagnostic diffusivity does not need to cover unrelated mesh blocks.
+            assert "[vacuum]" in text
+            assert "[cover]" in text
+            assert "[electrode]" in text
+            assert "[wafer]" in text
+            assert "[focus_ring]" in text
+            assert "[plasma]" in text
         elif spec.operator == "gradient":
             assert "type = ADFunctorElementalGradientAux" in text
             assert "type = FunctorElementalGradientAux" in text
