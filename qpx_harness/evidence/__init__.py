@@ -1,16 +1,10 @@
-"""Generic evidence identity, freshness, provenance, and serialization mechanics."""
+"""Legacy compatibility facade for :mod:`qpx_harness.evidence_engine`.
 
-from .artifacts import (
-    current_run_artifact,
-    identity_stable,
-    is_direct_child,
-    load_json_object,
-    paths_distinct,
-    snapshot_unchanged,
-    summarize_checks,
-    write_json_bundle,
-)
-from .error_log import (
+All evidence implementation now lives in ``evidence_engine``. This package
+exports only its historical public surface so existing campaign code can migrate
+without carrying a second implementation.
+"""
+from qpx_harness.evidence_engine import (
     Attribution,
     AttributionConfidence,
     AttributionSignals,
@@ -20,17 +14,23 @@ from .error_log import (
     append_error_event,
     build_error_event,
     classify_attribution,
-    default_ledger_path,
-    error_fingerprint,
-    read_error_events,
-    summarize_error_events,
-)
-from .identity import (
     create_collision_safe_directory,
+    current_run_artifact,
+    default_ledger_path,
     ensure_fresh_directory,
+    error_fingerprint,
     identity_record,
+    identity_stable,
+    is_direct_child,
+    load_json_object,
+    paths_distinct,
+    read_error_events,
     sha256_file,
+    snapshot_unchanged,
+    summarize_checks,
+    summarize_error_events,
     utc_timestamp,
+    write_json_bundle,
 )
 
 __all__ = [
