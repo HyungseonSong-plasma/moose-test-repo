@@ -7,7 +7,7 @@ from typing import Any
 
 from recipes import issue45_closure_basis as closure_basis
 
-from ..diagnostics import coupling as coupling_diag
+from ..diagnose import diagnose_coupled_runtime_evidence
 from ..evidence import artifacts
 from ..execution import cases as case_ops
 from .. import evidence
@@ -463,11 +463,12 @@ def _runtime_case(*, exe: Path, case: dict[str, Any], root: Path, label: str) ->
     )
     print(f"ISSUE45_INVENTORY_CLOSURE_RUNTIME_CASE_END: {label} rc={run.returncode}")
     log_text = log_path.read_text(errors="replace") if log_path.is_file() else ""
-    diagnostic = coupling_diag.analyze_runtime_failure(
+    runtime_facts = evidence.runtime_core_facts(
         log_text,
         returncode=run.returncode,
         coupled_scaling_variables=("n_e", "potential_plasma"),
     )
+    diagnostic = diagnose_coupled_runtime_evidence(runtime_facts)
     converged_marker = "Solve Converged!" in log_text or "Nonlinear solve converged due to" in log_text
     row = None
     csv_path = None
