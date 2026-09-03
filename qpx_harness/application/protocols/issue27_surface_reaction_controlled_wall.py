@@ -58,6 +58,12 @@ def run_protocol(spec: ExperimentSpec) -> int:
         )
 
         runner = run_positive_ion_wall_control
+    elif wall_model == "excited_neutral_sticking_control":
+        from experiments.Issue27_surface_reactions.controlled_wall.excited import (
+            run_excited_neutral_wall_control,
+        )
+
+        runner = run_excited_neutral_wall_control
     elif wall_model == "charged_prescribed_ledger":
         from experiments.Issue27_surface_reactions.controlled_wall.charged import (
             run_charged_wall_ledger,
@@ -69,7 +75,7 @@ def run_protocol(spec: ExperimentSpec) -> int:
             "issue27-surface-reaction-controlled-wall supports wall_model in "
             "{'prescribed', 'sticking', 'sticking_all_walls', "
             "'om_prescribed_control', 'positive_ion_prescribed_control', "
-            "'charged_prescribed_ledger'}"
+            "'excited_neutral_sticking_control', 'charged_prescribed_ledger'}"
         )
 
     return int(
