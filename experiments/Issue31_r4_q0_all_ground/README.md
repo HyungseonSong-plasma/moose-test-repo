@@ -33,7 +33,7 @@ The Poisson charge material therefore consumes `n_e_physical`, never the normali
 
 R4 uses `relative_permittivity` as a canonical block-scoped functor. The legacy `BaseMaterial` objects are not retained in the generated R4 candidate.
 
-The accepted R3 source fixture still contains the historical `BaseMaterial` blocks needed to identify the accepted control. During every R4 construction the recipe reads each legacy block once, verifies its expected `relative_permittivity` value and block ownership, then removes the complete `BaseMaterial` block and creates the corresponding functor provider:
+The accepted R3 source fixture still contains the historical `BaseMaterial` blocks needed to identify the accepted control. During every R4 construction the recipe reads each legacy block once, verifies its expected `relative_permittivity` value, then removes the complete `BaseMaterial` block and creates the corresponding functor provider:
 
 ```text
 permittivity_vacuum      relative_permittivity = 1.0   block = vacuum
@@ -45,7 +45,34 @@ permittivity_focus_ring  relative_permittivity = 8.0   block = focus_ring
 permittivity_plasma      relative_permittivity = 1.0   block = plasma
 ```
 
-All providers expose the same functor name, `relative_permittivity`, on disjoint material blocks. There is no separate R4-only `r31_relative_permittivity` value.
+All providers expose the same functor name, `relative_permittivity`, on disjoint physics blocks. There is no separate R4-only `r31_relative_permittivity` value.
+
+### Historical global BaseMaterial scope and material coverage
+
+The accepted R3 fixture has an important historical detail: `Materials/plasma` has no explicit `block` parameter. In MOOSE that made the `BaseMaterial` globally active, so it incidentally supplied a Material object on mesh blocks that otherwise had none:
+
+```text
+coil1
+coil2
+coil3
+metal
+port
+```
+
+After complete BaseMaterial removal, MOOSE correctly reports these five blocks as lacking an active Material whenever any other mesh block contains a Material object.
+
+R4 does **not** preserve the historical global `plasma` physics scope and does **not** invent a dielectric constant for those electrostatically inactive Q0 blocks. Instead it adds one coverage-only FunctorMaterial:
+
+```text
+[r31_material_coverage_only]
+  type = ADGenericFunctorMaterial
+  prop_names = 'r31_material_coverage_only'
+  prop_values = '0'
+  block = 'coil1 coil2 coil3 metal port'
+[]
+```
+
+This object exists only to satisfy MOOSE material-integrity coverage. It is not consumed by Poisson, transport, or the C1 Gauss-law diagnostic and it does not assign `relative_permittivity` to those blocks.
 
 The legacy `conductivity` and `material_name` entries are intentionally discarded during R4 migration. They are not promoted into functors because the current R4 electrostatic construction has no consumer for them. If a later physics model introduces a real conductivity dependency, that property must be added through an explicit new contract rather than preserved speculatively.
 
@@ -56,7 +83,7 @@ FVDiffusion.coeff = relative_permittivity
 SideDiffusiveFluxIntegral.functor_diffusivity = relative_permittivity
 ```
 
-This leaves geometric/block topology in the mesh and puts the electrostatic material property in the functor graph. When the electrostatic solve is later extended beyond the plasma block, the same property name can be used without introducing a second permittivity source of truth.
+This leaves geometric/block topology in the mesh and puts the electrostatic material property in the functor graph. When the electrostatic solve is later extended beyond the plasma block, every newly active electrostatic region must receive an explicit physical `relative_permittivity` contract before the coverage-only placeholder is removed from that region.
 
 ## Charge construction — C0
 
@@ -86,7 +113,7 @@ The plasma solve is
 E = -grad(phi)
 ```
 
-For Q0 the active plasma block sees `relative_permittivity = 1` through the canonical plasma functor. The other material providers are staged now so the property contract is already coherent before the electrostatic domain is expanded.
+For Q0 the active plasma block sees `relative_permittivity = 1` through the canonical plasma functor. The other physical permittivity providers are staged now so the property contract is coherent before the electrostatic domain is expanded.
 
 The qvt input does not have a single pre-existing sideset that represents every side of the plasma subdomain. The recipe creates `r31_plasma_all_boundary` around the complete plasma subdomain and applies
 
