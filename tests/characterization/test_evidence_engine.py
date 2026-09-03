@@ -1,5 +1,3 @@
-import math
-
 import polars as pl
 
 from qpx_harness.evidence_engine import (
@@ -10,52 +8,12 @@ from qpx_harness.evidence_engine import (
     summarize_constant_state,
     write_evidence_bundle,
 )
-
-
-def _rz_square_face_rows(*, perturb_surface_x: float = 0.0) -> pl.DataFrame:
-    """One unit-area RZ cell with symmetry axis Y and radial coordinate X."""
-    n0 = 3.0
-    cell_x = 1.5
-    cell_y = 0.5
-    volume = 2.0 * math.pi * cell_x
-    rows = [
-        # face_id, face_x, face_y, nx, ny, coord, Sx, Sy
-        (0, 1.0, 0.5, -1.0, 0.0, 2.0 * math.pi * 1.0, -2.0 * math.pi, 0.0),
-        (1, 2.0, 0.5, 1.0, 0.0, 2.0 * math.pi * 2.0, 4.0 * math.pi, 0.0),
-        (2, 1.5, 0.0, 0.0, -1.0, 2.0 * math.pi * 1.5, 0.0, -3.0 * math.pi),
-        (3, 1.5, 1.0, 0.0, 1.0, 2.0 * math.pi * 1.5, 0.0, 3.0 * math.pi),
-    ]
-    data = []
-    for face_id, face_x, face_y, nx, ny, coord, sx, sy in rows:
-        data.append(
-            {
-                "run_id": "run-1",
-                "case_id": "constant-rz",
-                "elem_id": 10,
-                "face_id": face_id,
-                "cell_x": cell_x,
-                "cell_y": cell_y,
-                "face_x": face_x,
-                "face_y": face_y,
-                "normal_x": nx,
-                "normal_y": ny,
-                "face_area": 1.0,
-                "coord_factor": coord,
-                "moose_surface_x": sx + (perturb_surface_x if face_id == 1 else 0.0),
-                "moose_surface_y": sy,
-                "n_cell": n0,
-                "n_face": n0,
-                "cell_volume": volume,
-                "radial_coordinate": cell_x,
-                "qpx_grad_x": 0.0,
-                "qpx_grad_y": 0.0,
-            }
-        )
-    return pl.DataFrame(data)
+from qpx_harness.evidence_engine.local_smoke import run_smoke
+from qpx_harness.evidence_engine.synthetic import rz_constant_square_face_rows
 
 
 def test_polars_reconstructs_exact_rz_constant_state_contract():
-    raw = _rz_square_face_rows()
+    raw = rz_constant_square_face_rows()
     face = prepare_face_evidence(raw)
     cell = build_cell_evidence(face, radial_component=0)
 
@@ -74,7 +32,7 @@ def test_polars_reconstructs_exact_rz_constant_state_contract():
 
 
 def test_surface_vector_perturbation_isolated_before_rz_attribution():
-    raw = _rz_square_face_rows(perturb_surface_x=1.0e-9)
+    raw = rz_constant_square_face_rows(perturb_surface_x=1.0e-9)
     face = prepare_face_evidence(raw)
     cell = build_cell_evidence(face, radial_component=0)
     diagnosis = summarize_constant_state(
@@ -88,7 +46,7 @@ def test_surface_vector_perturbation_isolated_before_rz_attribution():
 
 
 def test_parquet_bundle_and_duckdb_queries(tmp_path):
-    raw = _rz_square_face_rows(perturb_surface_x=1.0e-9)
+    raw = rz_constant_square_face_rows(perturb_surface_x=1.0e-9)
     paths = write_evidence_bundle(raw, tmp_path / "bundle", radial_component=0)
 
     with EvidenceStore(tmp_path / "evidence.duckdb") as store:
@@ -99,3 +57,26 @@ def test_parquet_bundle_and_duckdb_queries(tmp_path):
         assert worst["elem_id"][0] == 10
         count = store.query("SELECT count(*) AS n FROM face_evidence")
         assert count["n"][0] == 4
+
+
+def test_local_smoke_preserves_artifacts_and_exercises_full_stack(tmp_path):
+    output = tmp_path / "local-smoke"
+    summary = run_smoke(output)
+
+    assert summary["status"] == "PASS"
+    assert summary["contract"] == {
+        "symmetry_axis": "Y",
+        "radial_coordinate": "X",
+        "radial_component": 0,
+    }
+    assert summary["baseline_diagnosis"]["status"] == "CONSTANT_STATE_PASS"
+    assert (
+        summary["perturbed_diagnosis"]["primary_owner_class"]
+        == "SURFACE_VECTOR_CONSTRUCTION"
+    )
+    assert (output / "baseline" / "face_evidence.parquet").is_file()
+    assert (output / "baseline" / "cell_evidence.parquet").is_file()
+    assert (output / "perturbed" / "face_evidence.parquet").is_file()
+    assert (output / "perturbed" / "cell_evidence.parquet").is_file()
+    assert (output / "evidence.duckdb").is_file()
+    assert (output / "summary.json").is_file()
