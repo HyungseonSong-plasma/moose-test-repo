@@ -1,4 +1,8 @@
-"""Canonical presentation-neutral state classification for QPX execution."""
+"""Canonical presentation-neutral mechanical state classification for QPX execution.
+
+Execution state describes process/liveness mechanics only. Scientific acceptance,
+validation policy, and diagnosis outcomes belong to their owning layers.
+"""
 
 from __future__ import annotations
 
@@ -9,11 +13,13 @@ from .runtime import TelemetrySample
 
 
 class ExecutionState(str, Enum):
+    """Mechanical execution/liveness states; never scientific PASS/FAIL."""
+
     CALCULATING = "CALCULATING"
     WAITING = "WAITING"
     STALL_SUSPECTED = "STALL_SUSPECTED"
-    PASS = "PASS"
-    FAIL = "FAIL"
+    SUCCEEDED = "SUCCEEDED"
+    FAILED = "FAILED"
 
 
 @dataclass
@@ -43,12 +49,8 @@ class LivenessClassifier:
             self._last_activity_elapsed = sample.elapsed_seconds
             state = ExecutionState.CALCULATING
         elif not cpu_observable:
-            # Without CPU telemetry, silence alone is insufficient evidence of a stall.
             state = ExecutionState.CALCULATING
-        elif (
-            sample.elapsed_seconds - self._last_activity_elapsed
-            >= self.stall_after_seconds
-        ):
+        elif sample.elapsed_seconds - self._last_activity_elapsed >= self.stall_after_seconds:
             state = ExecutionState.STALL_SUSPECTED
         else:
             state = ExecutionState.WAITING
