@@ -1,4 +1,4 @@
-"""Canonical evidence API: observe, normalize, transform, and persist facts."""
+"""Canonical evidence API: observe, normalize, canonicalize, and persist facts."""
 
 from .artifacts import (
     current_run_artifact,
@@ -58,7 +58,12 @@ from .schema import (
 )
 from .store import EvidenceStore
 from .synthetic import rz_constant_square_face_rows
-from .transform import build_cell_evidence, prepare_face_evidence, write_evidence_bundle
+from .transform import (
+    build_cell_evidence,
+    normalize_face_evidence,
+    prepare_face_evidence,
+    write_evidence_bundle,
+)
 
 __all__ = [
     "Attribution",
@@ -99,6 +104,7 @@ __all__ = [
     "load_json_object",
     "measurement_failure_signature",
     "normalize_and_project",
+    "normalize_face_evidence",
     "paths_distinct",
     "prepare_face_evidence",
     "read_error_events",
