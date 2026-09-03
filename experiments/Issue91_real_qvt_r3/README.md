@@ -24,11 +24,47 @@ n_e_value = physical reference density (1e16 m^-3 in the accepted R3 cases)
 
 Electron time, diffusion, and drift kernels operate on `n_hat`. Heavy transport and the physical acceptance postprocessors (`n_e_avg`, `n_e_min`, `n_e_max`, `n_e_inventory`) consume `n_e_physical`. This preserves the dimensional physics/checker contract while keeping the FV solver variable at O(1).
 
-The two bounded discriminator cases are:
+The two bounded acceptance cases are:
 
 - `r3_e0`: combined heavy + electron with `E0=0`;
 - `r3_econst`: same construction with accepted representative `E0=0.01 V/m`.
 
 Each case starts from the same accepted heavy input bytes (`heavy_base.i`). `prepare.py` performs only the declared R3 composition and writes `input.i` plus `prepare_evidence.json`.
 
-Local QPX integration and scientific runtime are intentionally not part of GitHub pytest. After preparation, run the user-local `qpx-opt --check-input` gate before full runtime. The owning Issue controls EVR accounting.
+## Governed acceptance queue
+
+`run.py` stages fresh copies of both cases from the canonical recipe and executes exactly this bounded sequence:
+
+```text
+construct canonical R3-E0 + R3-Econst
+-> --check-input for both cases
+-> R3-E0 runtime
+-> exclude time=0 observation row
+-> existing check.py / existing expected.json
+-> R3-Econst runtime
+-> exclude time=0 observation row
+-> existing check.py / existing expected.json
+-> R3_ACCEPTED only if both pass
+```
+
+No N0 scaling probe, Jacobian diagnostic, altered physics checker, or new scientific acceptance threshold is introduced by this queue.
+
+Run on the QPX machine from repository root:
+
+```bash
+python -m experiments.Issue91_real_qvt_r3.run \
+  --qpx "$QPX_OPT" \
+  --results-root "$PWD/r3_results"
+```
+
+Preserve the directory printed as `ISSUE91_R3_ACCEPTANCE_ROOT`. The terminal status is one of:
+
+```text
+P2_FAIL_R3_E0
+P2_FAIL_R3_ECONST
+R3_E0_FAIL
+R3_ECONST_FAIL
+R3_ACCEPTED
+```
+
+Local QPX scientific runtime remains outside GitHub pytest. CI validates construction and acceptance-queue mechanics only; `R3_ACCEPTED` requires the real local QPX execution above. The owning Issue controls the subsequent lifecycle transition and EVR accounting.
