@@ -40,10 +40,22 @@ def run_protocol(spec: ExperimentSpec) -> int:
         )
 
         runner = run_sticking_wall
+    elif wall_model == "sticking_all_walls":
+        from experiments.Issue27_surface_reactions.controlled_wall.multiwall import (
+            run_multiwall_sticking,
+        )
+
+        runner = run_multiwall_sticking
+    elif wall_model == "charged_prescribed_ledger":
+        from experiments.Issue27_surface_reactions.controlled_wall.charged import (
+            run_charged_wall_ledger,
+        )
+
+        runner = run_charged_wall_ledger
     else:
         raise ValueError(
-            "issue27-surface-reaction-controlled-wall supports "
-            "wall_model='prescribed' or 'sticking'"
+            "issue27-surface-reaction-controlled-wall supports wall_model in "
+            "{'prescribed', 'sticking', 'sticking_all_walls', 'charged_prescribed_ledger'}"
         )
 
     return int(
