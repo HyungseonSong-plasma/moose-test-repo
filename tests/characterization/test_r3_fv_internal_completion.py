@@ -1,8 +1,10 @@
+import inspect
 import math
 
 from experiments.Issue93_r3_electron_isolation.prepare import ELECTRON_REFERENCE_CASE
 from experiments.R3_fv_internal_completion.cases import build_case_text
 from experiments.R3_fv_internal_completion.classify import classify_completion
+from experiments.R3_fv_internal_completion.run import _jacobian_case
 from experiments.R3_fv_internal_completion.rz_decomposition import decompose_rz_constant_state
 from experiments.R3_fv_internal_completion.spec import CASES, JACOBIAN_CASE_IDS
 
@@ -65,6 +67,12 @@ def test_rz_reproducer_uses_real_qvt_and_preserves_normalized_floor_order():
     mesh = ELECTRON_REFERENCE_CASE / "qvt.msh"
     low = decompose_rz_constant_state(mesh, n0=1.0)
     high = decompose_rz_constant_state(mesh, n0=1.0e16)
+    # Accepted qvt input has rz_coord_axis=Y, which is the symmetry axis.
+    # MOOSE therefore uses X/component 0 as the radial coordinate.
+    assert low["radial_axis"] == 0
+    assert high["radial_axis"] == 0
+    assert low["symmetry_axis"] == 1
+    assert high["symmetry_axis"] == 1
     assert low["plasma_element_count"] > 0
     assert low["interior_element_count"] > 0
     assert low["interior_element_count"] == high["interior_element_count"]
@@ -74,6 +82,13 @@ def test_rz_reproducer_uses_real_qvt_and_preserves_normalized_floor_order():
         assert low[key] > 0.0
         ratio = high[key] / low[key]
         assert 0.99 <= ratio <= 1.01
+
+
+def test_jacobian_probe_is_one_shot_and_does_not_dump_full_matrix():
+    source = inspect.getsource(_jacobian_case)
+    assert 'Executioner/abort_on_solve_fail=true' in source
+    assert '-snes_test_jacobian' in source
+    assert '-snes_test_jacobian_view' not in source
 
 
 def _base_cases():
