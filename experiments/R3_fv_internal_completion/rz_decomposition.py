@@ -4,6 +4,10 @@ This is a read-only numerical reproducer for the interior-cell branch of
 GreenGaussGradient.h at MOOSE commit 9f388366ccf. It does not alter geometry.
 Boundary cells are excluded so two-term extrapolated-boundary equations do not
 enter the comparison.
+
+For the accepted qvt input, ``rz_coord_axis = Y`` names the symmetry/axial
+axis. MOOSE therefore uses X (component 0) as the radial coordinate. The
+reproducer defaults to that same radial axis.
 """
 from __future__ import annotations
 
@@ -234,7 +238,7 @@ def _decompose_element(elem: Element2D, nodes: dict[int, tuple[float, float, flo
     }
 
 
-def decompose_rz_constant_state(path: Path, *, n0: float, physical_name: str = "plasma", radial_axis: int = 1) -> dict[str, object]:
+def decompose_rz_constant_state(path: Path, *, n0: float, physical_name: str = "plasma", radial_axis: int = 0) -> dict[str, object]:
     mesh = parse_gmsh41_plasma(path, physical_name=physical_name)
     interior = _interior_element_tags(mesh)
     rows = [
@@ -251,6 +255,7 @@ def decompose_rz_constant_state(path: Path, *, n0: float, physical_name: str = "
     return {
         "physical_name": physical_name,
         "radial_axis": radial_axis,
+        "symmetry_axis": 1 if radial_axis == 0 else 0,
         "n0": float(n0),
         "plasma_element_count": len(mesh.elements),
         "interior_element_count": len(rows),
