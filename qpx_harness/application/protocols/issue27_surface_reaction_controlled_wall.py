@@ -27,10 +27,27 @@ def run_protocol(spec: ExperimentSpec) -> int:
     if timeout <= 0.0:
         raise ValueError("execution.timeout_seconds must be positive")
 
-    from experiments.Issue27_surface_reactions.controlled_wall.run import run_controlled_wall
+    wall_model = str(spec.parameters.get("wall_model", "prescribed"))
+    if wall_model == "prescribed":
+        from experiments.Issue27_surface_reactions.controlled_wall.run import (
+            run_controlled_wall,
+        )
+
+        runner = run_controlled_wall
+    elif wall_model == "sticking":
+        from experiments.Issue27_surface_reactions.controlled_wall.sticking import (
+            run_sticking_wall,
+        )
+
+        runner = run_sticking_wall
+    else:
+        raise ValueError(
+            "issue27-surface-reaction-controlled-wall supports "
+            "wall_model='prescribed' or 'sticking'"
+        )
 
     return int(
-        run_controlled_wall(
+        runner(
             qpx=qpx if isinstance(qpx, (str, Path)) else None,
             results_root=_results_root(spec, qpx),
             timeout=timeout,
