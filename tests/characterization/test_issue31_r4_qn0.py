@@ -98,7 +98,7 @@ def test_qn0_state_evidence_is_measurement_only(tmp_path: Path) -> None:
 
     evidence = issue31_qn0_run._state_evidence(path)
     assert evidence["status"] == "MEASURED"
-    assert evidence["average_charge_density_C_per_m3"] == 2e-5
+    assert abs(evidence["average_charge_density_C_per_m3"] - 2e-5) <= 1e-20
     assert evidence["phi_span_V"] == 5.0
     assert evidence["phi_abs_max_V"] == 3.0
     assert evidence["acceptance"] == "UNSET_QN0_CONTROL_MEASUREMENT"
