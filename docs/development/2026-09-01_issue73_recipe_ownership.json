@@ -6,6 +6,10 @@
       "model": "PURE_PYTHON_SCIENTIFIC_POLICY",
       "reason": "parameterized transport/Poisson construction, runtime-physics CSV interpretation, and EVR discriminator algorithms require runtime values and scientific branching; converting them to JSON would require control-flow/template DSL creep"
     },
+    "recipes/issue31_r4.py": {
+      "model": "PURE_PYTHON_SCIENTIFIC_POLICY",
+      "reason": "R4-Q0 composes the accepted normalized R3 control with physical volume-charge construction, complete-plasma all-ground Poisson semantics, feedback-off attribution, and Gauss-law observability while generic MOOSE mutation mechanics remain in qpx_harness"
+    },
     "recipes/issue43_coupling_diagnostic.py": {
       "model": "SPEC_OWNED_COMPAT_ADAPTER",
       "spec": "specs/experiments/issue43_coupling_diagnostic.json",
