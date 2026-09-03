@@ -1,6 +1,7 @@
 """Diagnosis policy for canonical Jacobian evidence."""
 from __future__ import annotations
 
+import math
 from typing import Any, Mapping
 
 from ..models import MetricPredicate, Z3OwnerRule, Z3RuleSet
@@ -42,7 +43,7 @@ def diagnose_jacobian_evidence(
         return {
             "status": "HOLD",
             "class": "JACOBIAN_EVIDENCE_INSUFFICIENT",
-            "reason": "no parseable Jacobian comparison",
+            "reason": "PETSc -snes_test_jacobian produced no parseable Jacobian comparison",
             "relative_tolerance": relative_tolerance,
             "tests": tests,
         }
@@ -50,11 +51,12 @@ def diagnose_jacobian_evidence(
     nonfinite = list(evidence.get("nonfinite", []))
     nonfinite_count = int(evidence.get("nonfinite_count", len(nonfinite)))
     worst_raw = evidence.get("worst_relative_frobenius_error")
-    worst = float(worst_raw) if worst_raw is not None else 0.0
+    worst = float(worst_raw) if worst_raw is not None else math.inf
+    z3_worst = worst if math.isfinite(worst) else 0.0
     decision = Z3DiagnosisEngine(build_jacobian_ruleset(relative_tolerance)).diagnose(
         {
             "nonfinite_count": float(nonfinite_count),
-            "worst_relative_frobenius_error": worst,
+            "worst_relative_frobenius_error": z3_worst,
         }
     )
 
@@ -62,7 +64,10 @@ def diagnose_jacobian_evidence(
         return {
             "status": "HOLD",
             "class": "JACOBIAN_MISMATCH",
-            "reason": "Jacobian relative error exceeds tolerance or is non-finite",
+            "reason": (
+                "assembled-vs-finite-difference Jacobian relative Frobenius error exceeds "
+                f"the declared tolerance {relative_tolerance:g} or is non-finite"
+            ),
             "relative_tolerance": relative_tolerance,
             "worst_relative_frobenius_error": worst,
             "nonfinite": nonfinite,
@@ -71,7 +76,7 @@ def diagnose_jacobian_evidence(
     return {
         "status": "PASS",
         "class": "JACOBIAN_CORRECTNESS_PASS",
-        "reason": "all observed Jacobian comparisons satisfy the declared tolerance",
+        "reason": "all observed PETSc Jacobian comparisons satisfy the declared relative tolerance",
         "relative_tolerance": relative_tolerance,
         "worst_relative_frobenius_error": worst,
         "nonfinite": [],
