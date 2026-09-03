@@ -11,6 +11,7 @@ from qpx_harness.moose import parameters as mp
 def test_normalized_electron_case_is_o1_zero_field_diffusion() -> None:
     text = build_normalized_electron_input()
     assert mp.get_parameter(text, "Variables/n_e", "initial_condition") == "1.0"
+    assert mp.get_parameter(text, "Executioner", "nl_abs_tol") == "1.0e-14"
     assert "type = FVTimeKernel" in text
     assert "type = FVDiffusion" in text
     assert "type = QPXFVElectrostaticDrift" not in text
