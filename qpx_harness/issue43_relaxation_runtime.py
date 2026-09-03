@@ -16,7 +16,7 @@ from typing import Any
 
 from recipes import issue43_fast_relaxation as relaxation_recipe
 
-from .diagnostics import failure_signature as diagnostic_failure_signature
+from .evidence import failure_signature as diagnostic_failure_signature
 from .execution import cases as case_ops
 from .moose.input import MooseInput, MooseInputError
 from .moose.preflight import validate_parser_symbols_text
