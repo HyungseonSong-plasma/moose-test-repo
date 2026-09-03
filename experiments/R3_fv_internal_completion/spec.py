@@ -7,13 +7,14 @@ from typing import Literal
 from experiments.R3_electron_master_diagnostic.spec import FROZEN_DIFFUSION
 
 CaseMode = Literal["solve", "gradient"]
+CaseOperator = Literal["time_only", "full_internal", "orthogonal", "gradient", "gradient_initial"]
 
 
 @dataclass(frozen=True)
 class CompletionCaseSpec:
     case_id: str
     mode: CaseMode
-    operator: Literal["time_only", "full_internal", "orthogonal", "gradient"]
+    operator: CaseOperator
     n0: float = 1.0e16
     two_term_boundary_expansion: bool = True
     nl_abs_tol: float | None = None
@@ -64,12 +65,28 @@ CASES: tuple[CompletionCaseSpec, ...] = (
         meaning="nonlinear FVOrthogonalDiffusion at O(1) state scale",
     ),
     CompletionCaseSpec(
+        "P0_GRADIENT_PINNED_STYLE",
+        "gradient",
+        "gradient",
+        n0=1.0e16,
+        two_term_boundary_expansion=True,
+        meaning="pinned-MOOSE-style solve=false + Steady gradient execution-contract control with default Aux scheduling",
+    ),
+    CompletionCaseSpec(
+        "P1_GRADIENT_INITIAL_VARIANT",
+        "gradient",
+        "gradient_initial",
+        n0=1.0e16,
+        two_term_boundary_expansion=True,
+        meaning="INITIAL-scheduled counterfactual for the gradient execution contract; never used as the scientific production path",
+    ),
+    CompletionCaseSpec(
         "G0_GRAD_N1E16_TT",
         "gradient",
         "gradient",
         n0=1.0e16,
         two_term_boundary_expansion=True,
-        meaning="direct AD/Real cell-gradient measurement at physical scale with two-term boundary expansion",
+        meaning="direct AD/Real cell-gradient measurement at physical scale with two-term boundary expansion using the pinned-style execution contract",
     ),
     CompletionCaseSpec(
         "G1_GRAD_N1_TT",
@@ -77,7 +94,7 @@ CASES: tuple[CompletionCaseSpec, ...] = (
         "gradient",
         n0=1.0,
         two_term_boundary_expansion=True,
-        meaning="direct AD/Real cell-gradient measurement at O(1) scale with two-term boundary expansion",
+        meaning="direct AD/Real cell-gradient measurement at O(1) scale with two-term boundary expansion using the pinned-style execution contract",
     ),
     CompletionCaseSpec(
         "G2_GRAD_N1E16_ONE_TERM",
@@ -85,7 +102,7 @@ CASES: tuple[CompletionCaseSpec, ...] = (
         "gradient",
         n0=1.0e16,
         two_term_boundary_expansion=False,
-        meaning="direct cell-gradient measurement with one-term extrapolated-boundary reconstruction",
+        meaning="direct cell-gradient measurement with one-term extrapolated-boundary reconstruction using the pinned-style execution contract",
     ),
     CompletionCaseSpec(
         "G3_GRAD_N1_ONE_TERM",
@@ -93,7 +110,7 @@ CASES: tuple[CompletionCaseSpec, ...] = (
         "gradient",
         n0=1.0,
         two_term_boundary_expansion=False,
-        meaning="O(1) direct cell-gradient measurement with one-term boundary reconstruction",
+        meaning="O(1) direct cell-gradient measurement with one-term boundary reconstruction using the pinned-style execution contract",
     ),
 )
 
