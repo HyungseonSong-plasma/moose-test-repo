@@ -23,6 +23,8 @@ class EvidenceTolerances(BaseModel):
     surface_vector_abs: float = Field(default=1.0e-14, ge=0.0)
     surface_closure_abs: float = Field(default=1.0e-14, ge=0.0)
     gradient_match_abs: float = Field(default=1.0e-12, ge=0.0)
+    # Historical public name retained for compatibility. The registered metric
+    # itself is solver-agnostic ``runtime_gradient``.
     qpx_gradient_abs: float = Field(default=1.0e-12, ge=0.0)
 
 
@@ -301,8 +303,8 @@ def build_constant_state_registry(
         "face_value_delta": DiagnosticMetricSpec(
             metric_id="face_value_delta",
             source="face",
-            column="n_face_delta",
-            report_key="max_abs_n_face_delta",
+            column="field_face_delta",
+            report_key="max_abs_field_face_delta",
             entity_kind="face",
             x_col="face_x",
             y_col="face_y",
@@ -334,11 +336,11 @@ def build_constant_state_registry(
             x_col="cell_x",
             y_col="cell_y",
         ),
-        "qpx_gradient": DiagnosticMetricSpec(
-            metric_id="qpx_gradient",
+        "runtime_gradient": DiagnosticMetricSpec(
+            metric_id="runtime_gradient",
             source="cell",
-            column="qpx_grad_norm",
-            report_key="max_qpx_grad_norm",
+            column="runtime_grad_norm",
+            report_key="max_runtime_grad_norm",
             entity_kind="cell",
             x_col="cell_x",
             y_col="cell_y",
@@ -379,7 +381,7 @@ def build_constant_state_registry(
             priority=30,
         ),
         DiagnosisRule(
-            rule_id="missing_moose_arithmetic_path",
+            rule_id="missing_runtime_arithmetic_path",
             metric_id="gradient_reconstruction_delta",
             threshold=tol.gradient_match_abs,
             owner_class="MISSING_MOOSE_ARITHMETIC_PATH",
@@ -389,7 +391,7 @@ def build_constant_state_registry(
         ),
         DiagnosisRule(
             rule_id="green_gauss_constant_preservation",
-            metric_id="qpx_gradient",
+            metric_id="runtime_gradient",
             threshold=tol.qpx_gradient_abs,
             owner_class="FV_GREEN_GAUSS_CELL_GRADIENT_CONSTANT_PRESERVATION",
             status="ISOLATED_OWNER_CLASS",
