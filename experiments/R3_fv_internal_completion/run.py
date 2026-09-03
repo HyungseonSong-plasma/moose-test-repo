@@ -29,6 +29,7 @@ from qpx_harness.execution.runtime import resolve_executable, run_qpx, validate_
 
 from .cases import stage_completion_case
 from .classify import classify_completion
+from .face_interpolation_audit import audit_constant_face_interpolation
 from .rz_decomposition import decompose_rz_constant_state
 from .spec import CASES, CASE_BY_ID, JACOBIAN_CASE_IDS, CompletionCaseSpec
 
@@ -315,6 +316,23 @@ def run(args: argparse.Namespace) -> int:
             signals=AttributionSignals(assistant_generated_contract_violation=True),
         )
 
+    face_interpolation: dict[str, Any] = {}
+    try:
+        face_interpolation["N1"] = audit_constant_face_interpolation(mesh_path, n0=1.0)
+        face_interpolation["N1E16"] = audit_constant_face_interpolation(mesh_path, n0=1.0e16)
+    except Exception as exc:
+        face_interpolation["error"] = str(exc)
+        _record_event(
+            ledger,
+            run_id=run_id,
+            stage="OFFLINE_FACE_INTERPOLATION",
+            case_id=None,
+            code="FACE_INTERPOLATION_AUDIT_FAIL",
+            message=str(exc),
+            source_layer="completion_offline_face_interpolation_audit",
+            signals=AttributionSignals(assistant_generated_contract_violation=True),
+        )
+
     interior_centroids: set[tuple[float, float]] = set()
     for row in rz.get("N1E16", {}).get("rows", []):
         centroid = row.get("centroid")
@@ -334,7 +352,14 @@ def run(args: argparse.Namespace) -> int:
         "jacobian_case_ids": list(JACOBIAN_CASE_IDS),
         "one_queue_contract": "all remaining FV internal discriminators and Jacobian probes are predeclared before QPX execution",
     }
-    write_json_bundle(root, {"identity": ("identity.json", identity), "rz": ("rz_decomposition.json", rz)})
+    write_json_bundle(
+        root,
+        {
+            "identity": ("identity.json", identity),
+            "rz": ("rz_decomposition.json", rz),
+            "face_interpolation": ("face_interpolation_audit.json", face_interpolation),
+        },
+    )
 
     cases: dict[str, dict[str, Any]] = {}
     for spec in CASES:
