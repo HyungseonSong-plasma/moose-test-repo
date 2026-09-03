@@ -39,12 +39,13 @@ def main() -> int:
     assert "QVT_PREPOISSON_CASE" in inventory_constants
     assert "issue43_coupling_diagnostic" not in inventory_constants
 
-    coupling_path = ROOT / "qpx_harness/diagnostics/coupling.py"
-    imports = _imports(coupling_path)
+    coupled_policy_path = ROOT / "qpx_harness/diagnose/presets/coupled_solver.py"
+    imports = _imports(coupled_policy_path)
     assert not any(module.startswith("recipes") for module in imports), imports
     assert not any(module.startswith("qpx_harness.issue") for module in imports), imports
     source43 = (ROOT / "qpx_harness/issue43_coupling/analysis.py").read_text()
-    assert "coupling_diagnostic.analyze_runtime_failure" in source43
+    assert "runtime_core_facts" in source43
+    assert "diagnose_coupled_runtime_evidence" in source43
     assert issue43_analysis._line_hits is not None
 
     fixture = issue43_runtime._fixture()
@@ -86,7 +87,8 @@ def main() -> int:
     inventory_orchestration_source = (inventory_root / "orchestration.py").read_text()
     assert "issue43_coupling_diagnostic" not in inventory_orchestration_source
     assert "issue43_fast_relaxation" not in inventory_orchestration_source
-    assert "coupling_diag.analyze_runtime_failure" in inventory_orchestration_source
+    assert "runtime_core_facts" in inventory_orchestration_source
+    assert "diagnose_coupled_runtime_evidence" in inventory_orchestration_source
     assert "check_input_diagnostic.classify_failure" in inventory_orchestration_source
     first_characterization_source = (
         inventory_root / "first_linear_characterization.py"
@@ -138,7 +140,7 @@ def main() -> int:
     assert "restart_causality=\"NOT_ESTABLISHED\"" in recipe_source
 
     print("ISSUE43_45_SHARED_CASE_IDENTITY: PASS")
-    print("ISSUE43_45_CANONICAL_COUPLING_DIAGNOSTICS: PASS")
+    print("ISSUE43_45_CANONICAL_EVIDENCE_DIAGNOSE_PIPELINE: PASS")
     print("ISSUE43_45_FEEDBACK_BASIS_EQUIVALENCE: PASS")
     print("ISSUE45_CANONICAL_INVENTORY_PACKAGE: PASS")
     print("ISSUE45_LEGACY_PACKAGE_IMPLEMENTATION_OWNERS: 0")
