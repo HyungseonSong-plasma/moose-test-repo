@@ -31,6 +31,14 @@ def _solver_converged(cases: Mapping[str, Mapping[str, Any]], case_id: str) -> b
     return cases.get(case_id, {}).get("solver_status") == "CONVERGED"
 
 
+def _gradient_valid(
+    cases: Mapping[str, Mapping[str, Any]],
+    gradients: Mapping[str, Mapping[str, Any]],
+    case_id: str,
+) -> bool:
+    return cases.get(case_id, {}).get("passed") is True and gradients.get(case_id, {}).get("status") == "PASS"
+
+
 def _gradient_metric(gradients: Mapping[str, Mapping[str, Any]], case_id: str, key: str) -> float | None:
     value = gradients.get(case_id, {}).get(key)
     try:
@@ -100,9 +108,10 @@ def classify_completion(
     rz: Mapping[str, Mapping[str, Any]],
     jacobians: Mapping[str, Mapping[str, Any]],
 ) -> dict[str, Any]:
-    """Return exactly one primary owner, or null with explicit unresolved state."""
+    """Return exactly one primary scientific owner, or null with explicit unresolved state."""
     evidence: list[str] = []
     unresolved: list[str] = []
+    operational_findings: list[dict[str, Any]] = []
     primary: dict[str, Any] | None = None
 
     if not _solver_converged(cases, "C0_TIME_ONLY"):
@@ -110,6 +119,7 @@ def classify_completion(
             "status": "HOLD_CONTROL",
             "primary_owner": None,
             "secondary_candidates": [],
+            "operational_findings": [],
             "unresolved": ["execution/control"],
             "evidence": ["C0_TIME_ONLY did not converge"],
             "geometry": "HELD_FIXED_OUT_OF_SCOPE",
@@ -145,9 +155,57 @@ def classify_completion(
             ],
         )
 
-    # Main expected branch: orthogonal-only is exact while the full nonlinear
-    # FVDiffusion path is nonzero. Then directly inspect cell Green-Gauss gradients.
+    # Main expected branch: orthogonal-only is exact while full nonlinear
+    # FVDiffusion is nonzero. Scientific gradient inference is forbidden until the
+    # pinned-style solve=false + Steady + default-Aux execution contract passes.
     elif _exact_zero(cases, "O0_ORTHOGONAL_N1E16") and _nonzero(cases, "F0_FULL_INTERNAL_N1E16"):
+        p0_valid = _gradient_valid(cases, gradients, "P0_GRADIENT_PINNED_STYLE")
+        p1_valid = _gradient_valid(cases, gradients, "P1_GRADIENT_INITIAL_VARIANT")
+        operational_findings.append(
+            {
+                "owner": "GRADIENT_PROBE_PINNED_STYLE_EXECUTION_CONTRACT",
+                "status": "PASS" if p0_valid else "FAIL",
+                "scientific_gate": "OPEN" if p0_valid else "CLOSED",
+                "case_id": "P0_GRADIENT_PINNED_STYLE",
+            }
+        )
+        if p1_valid:
+            operational_findings.append(
+                {
+                    "owner": "GRADIENT_PROBE_INITIAL_SCHEDULE",
+                    "status": "SUPPORTED_COUNTERFACTUAL",
+                    "scientific_gate": "NOT_USED_FOR_G_CASES",
+                    "case_id": "P1_GRADIENT_INITIAL_VARIANT",
+                }
+            )
+        else:
+            operational_findings.append(
+                {
+                    "owner": "GRADIENT_PROBE_INITIAL_SCHEDULE",
+                    "status": "UNSUPPORTED_OR_FAILED_COUNTERFACTUAL",
+                    "scientific_gate": "NOT_USED_FOR_G_CASES",
+                    "case_id": "P1_GRADIENT_INITIAL_VARIANT",
+                }
+            )
+
+        if not p0_valid:
+            return {
+                "status": "HOLD_GRADIENT_PROBE",
+                "primary_owner": None,
+                "secondary_candidates": _jacobian_secondary(jacobians),
+                "operational_findings": operational_findings,
+                "unresolved": ["gradient_probe_execution_contract"],
+                "evidence": evidence
+                + [
+                    f"P0 case status={cases.get('P0_GRADIENT_PINNED_STYLE', {}).get('status')!r}",
+                    f"P0 gradient status={gradients.get('P0_GRADIENT_PINNED_STYLE', {}).get('status')!r}",
+                    "scientific G0-G3 evidence excluded because the pinned-style gradient probe did not validate",
+                ],
+                "geometry": "HELD_FIXED_OUT_OF_SCOPE",
+                "single_primary_owner_invariant": True,
+                "termination_contract": "Evidence -> Atomic Owner -> Remedy -> Verification",
+            }
+
         g0_ad = _gradient_metric(gradients, "G0_GRAD_N1E16_TT", "ad_max")
         g0_real = _gradient_metric(gradients, "G0_GRAD_N1E16_TT", "real_max")
         g0_ad_int = _gradient_metric(gradients, "G0_GRAD_N1E16_TT", "ad_interior_max")
@@ -156,6 +214,7 @@ def classify_completion(
         g2_real = _gradient_metric(gradients, "G2_GRAD_N1E16_ONE_TERM", "real_max")
         evidence.extend(
             [
+                "P0 pinned-style gradient execution contract=PASS",
                 f"G0 two-term AD max={g0_ad!r}",
                 f"G0 two-term Real max={g0_real!r}",
                 f"G0 two-term AD interior max={g0_ad_int!r}",
@@ -271,6 +330,7 @@ def classify_completion(
         "status": status,
         "primary_owner": primary,
         "secondary_candidates": secondary,
+        "operational_findings": operational_findings,
         "unresolved": unresolved,
         "evidence": evidence,
         "geometry": "HELD_FIXED_OUT_OF_SCOPE",
