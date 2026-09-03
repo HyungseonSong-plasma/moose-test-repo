@@ -46,21 +46,19 @@ def top_package(module: str) -> str | None:
 def violation(src: str, dst: str) -> tuple[str, str] | None:
     if (src, dst) in TRANSITIONAL_EXCEPTIONS:
         return None
-    if src.startswith("qpx_harness.evidence") and dst.startswith("qpx_harness.diagnose"):
+    src_pkg = top_package(src)
+    dst_pkg = top_package(dst)
+    if src_pkg == "evidence" and dst_pkg == "diagnose":
         return "evidence", "Evidence must not depend on Diagnose"
-    if src.startswith("qpx_harness.evidence") and dst.startswith("qpx_harness.analysis"):
+    if src_pkg == "evidence" and dst_pkg == "analysis":
         return "evidence", "Evidence must not depend on Analysis except documented compatibility facade"
-    if src.startswith("qpx_harness.analysis") and (
-        dst.startswith("qpx_harness.cli") or dst.startswith("qpx_harness.validation")
-    ):
+    if src_pkg == "analysis" and dst_pkg in {"cli", "validation"}:
         return "analysis", "Analysis must not depend on CLI/Validation"
-    if src.startswith("qpx_harness.execution") and (
-        dst.startswith("qpx_harness.inventory") or dst.startswith("qpx_harness.dmix")
-    ):
+    if src_pkg == "execution" and dst_pkg in {"inventory", "dmix"}:
         return "execution", "Execution must not depend on domain science"
-    if not src.startswith("qpx_harness.cli") and dst.startswith("qpx_harness.cli"):
+    if src_pkg != "cli" and dst_pkg == "cli":
         return "presentation", "Production subsystems must not depend on CLI"
-    if not src.startswith("qpx_harness.validation") and dst.startswith("qpx_harness.validation"):
+    if src_pkg != "validation" and dst_pkg == "validation":
         return "presentation", "Production subsystems must not depend on Validation"
     return None
 
