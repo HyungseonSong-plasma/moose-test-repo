@@ -13,14 +13,19 @@ if str(ROOT) not in sys.path:
 from qpx_harness.application.experiment_registry import protocol_registered
 
 # Each tuple freezes one current operator-facing experiment surface as
-# (implementation runner, declarative spec, protocol id).  Runner and spec are
-# deliberately separate: one protocol implementation may own several bounded
-# experiment instances (Issue27 A1/A2/A3...), so sibling-file layout is not a
-# semantic requirement.
+# (implementation runner, declarative spec, protocol id). Runner and spec are
+# deliberately separate: one protocol may own several bounded experiment
+# instances, and Issue27 dispatches prescribed/sticking wall models through the
+# same application protocol.
 CURRENT_OPERATOR_SURFACES = (
     (
         Path("Issue27_surface_reactions/controlled_wall/run.py"),
         Path("Issue27_surface_reactions/A1_o_recombination/experiment.json"),
+        "issue27-surface-reaction-controlled-wall",
+    ),
+    (
+        Path("Issue27_surface_reactions/controlled_wall/sticking.py"),
+        Path("Issue27_surface_reactions/A1b_o_sticking/experiment.json"),
         "issue27-surface-reaction-controlled-wall",
     ),
     (
