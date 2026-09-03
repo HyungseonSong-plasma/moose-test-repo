@@ -16,7 +16,7 @@ from typing import Any, Iterable
 
 from recipes import issue31_coupling as recipe
 
-from ..diagnostics import measurement_failure_signature
+from ..evidence import measurement_failure_signature
 from ..evidence.artifacts import write_json_bundle
 from ..execution.cases import CaseError, stage_case, validate_referenced_files
 from ..dmix.source_transform import legacy_source_transform
