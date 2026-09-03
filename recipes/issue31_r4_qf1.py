@@ -7,21 +7,33 @@ particle electrostatic drift operator and every heavy-species
 mass-electromigration correction operator already present in the accepted R3
 transport composition.
 
+The QF1 feed is also made physically explicit: 20 sccm of pure O2 enters the
+plasma.  This inlet composition is deliberately separated from the ionized
+initial plasma composition used to construct the QN0 quasi-neutral reference.
+
 The experiment deliberately changes no timestep, mobility, diffusion,
-boundary, reaction, SEE, or surface-charge policy.  C2 dynamic charge
-conservation is measured by the governed runner from the same boundary mass
-flux postprocessors already used by the accepted heavy transport input.
+reaction, SEE, or surface-charge policy.  C2 dynamic charge conservation is
+measured by the governed runner from the same boundary mass-flux postprocessors
+already used by the accepted heavy transport input.
 """
 from __future__ import annotations
 
 from typing import Any
 
 from qpx_harness.moose import parameters as mp
-from recipes.issue31_r4_qn0 import audit_r4_qn0_input, build_r4_qn0_input
+from recipes.issue31_r4_qn0 import (
+    _replace_top_level_assignment,
+    _top_level_float,
+    audit_r4_qn0_input,
+    build_r4_qn0_input,
+)
 
 FEEDBACK_POTENTIAL = "potential_plasma"
 ELECTROSTATIC_DRIFT_TYPE = "QPXFVElectrostaticDrift"
 HEAVY_EM_CORRECTION_TYPE = "QPXFVHeavyMassElectromigrationCorrection"
+PURE_O2_FEED_SCCM = 20.0
+PURE_O2_MOLAR_MASS_KG_PER_MOL = 0.032
+SOLVED_NON_O2_INLET_SPECIES = ("O2s", "O2p", "O", "Om", "Op", "Os")
 EXPECTED_DRIFT_KERNELS = (
     "FVKernels/O2p_electrostatic_drift",
     "FVKernels/Om_electrostatic_drift",
@@ -75,6 +87,48 @@ def _feedback_kernel_paths(text: str) -> tuple[tuple[str, ...], tuple[str, ...]]
     return tuple(sorted(drift)), tuple(sorted(correction))
 
 
+def _apply_pure_o2_inlet(text: str) -> tuple[str, dict[str, Any]]:
+    """Separate the physical feed from the ionized initial plasma state.
+
+    O2 is the constrained heavy species, so there is no independent O2 scalar
+    inlet BC.  Pure O2 feed is represented by the full total mass flux entering
+    through `inlet_mass` while every solved non-O2 scalar inlet mass flux is
+    exactly zero.
+    """
+    old_q_sccm = _top_level_float(text, "Q_sccm")
+    initial_mass_fractions = {
+        species: _top_level_float(text, f"Yin_{species}")
+        for species in ("O2", "O2s", "O2p", "O", "Om", "Op", "Os")
+    }
+
+    text = _replace_top_level_assignment(text, "Q_sccm", "20")
+    text = _replace_top_level_assignment(text, "M_inlet", "0.032")
+    for species in SOLVED_NON_O2_INLET_SPECIES:
+        text = _replace_top_level_assignment(
+            text,
+            f"inlet_mdot_{species}_value",
+            "0",
+        )
+
+    return text, {
+        "feed": "pure O2",
+        "flow_sccm": PURE_O2_FEED_SCCM,
+        "molar_mass_kg_per_mol": PURE_O2_MOLAR_MASS_KG_PER_MOL,
+        "O2_feed_mass_fraction": 1.0,
+        "non_O2_feed_mass_fractions": {
+            species: 0.0 for species in SOLVED_NON_O2_INLET_SPECIES
+        },
+        "total_mass_flux_owner": "Postprocessors/inlet_mdot -> FVBCs/inlet_mass",
+        "non_O2_scalar_flux_owners": {
+            species: f"Postprocessors/inlet_mdot_{species} -> FVBCs/inlet_{species}"
+            for species in SOLVED_NON_O2_INLET_SPECIES
+        },
+        "previous_flow_sccm": old_q_sccm,
+        "initial_plasma_mass_fractions_preserved": initial_mass_fractions,
+        "initial_plasma_composition_is_feed_composition": False,
+    }
+
+
 def _enable_closed_feedback(text: str) -> tuple[str, dict[str, Any]]:
     drift, correction = _feedback_kernel_paths(text)
     if drift != tuple(sorted(EXPECTED_DRIFT_KERNELS)):
@@ -125,6 +179,7 @@ def _enable_closed_feedback(text: str) -> tuple[str, dict[str, Any]]:
 def build_r4_qf1_input(base_text: str) -> tuple[str, dict[str, Any]]:
     """Build full charged-particle electrostatic feedback from accepted QN0."""
     text, qn0_meta = build_r4_qn0_input(base_text)
+    text, inlet = _apply_pure_o2_inlet(text)
     text, feedback = _enable_closed_feedback(text)
     audit = audit_r4_qf1_input(text)
     if audit["status"] != "PASS":
@@ -143,6 +198,7 @@ def build_r4_qf1_input(base_text: str) -> tuple[str, dict[str, Any]]:
         "secondary_emission_enabled": False,
         "electron_solver_unknown": "n_e == n_hat",
         "electron_physical_density": "n_e_physical == n_e_value*n_e",
+        "inlet": inlet,
         "feedback_potential": FEEDBACK_POTENTIAL,
         "feedback": feedback,
         "c2_boundary_species": CHARGED_HEAVY_C2,
@@ -182,6 +238,19 @@ def audit_r4_qf1_input(text: str) -> dict[str, Any]:
         "reference_density_positive",
     ):
         checks[f"qn0:{name}"] = bool(qn_checks.get(name, False))
+
+    checks["pure_o2_feed_flow_sccm"] = _top_level_float(text, "Q_sccm") == 20.0
+    checks["pure_o2_feed_molar_mass"] = (
+        _top_level_float(text, "M_inlet") == PURE_O2_MOLAR_MASS_KG_PER_MOL
+    )
+    for species in SOLVED_NON_O2_INLET_SPECIES:
+        checks[f"zero_non_O2_inlet_flux:{species}"] = (
+            _top_level_float(text, f"inlet_mdot_{species}_value") == 0.0
+        )
+    checks["initial_plasma_remains_ionized"] = any(
+        _top_level_float(text, f"Yin_{species}") > 0.0
+        for species in ("O2p", "Om", "Op")
+    )
 
     drift, correction = _feedback_kernel_paths(text)
     checks["exact_drift_kernel_set"] = drift == tuple(sorted(EXPECTED_DRIFT_KERNELS))
