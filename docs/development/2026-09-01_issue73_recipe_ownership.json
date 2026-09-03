@@ -14,6 +14,10 @@
       "model": "PURE_PYTHON_SCIENTIFIC_POLICY",
       "reason": "R4-QF1 closes the solved-Poisson electrostatic feedback loop over the accepted charged-heavy/electron transport operators and owns the one-step C2 global charge-conservation interpretation while preserving QN0 normalization and boundary semantics"
     },
+    "recipes/issue31_r4_qf2.py": {
+      "model": "PURE_PYTHON_SCIENTIFIC_POLICY",
+      "reason": "R4-QF2 owns the final mesh-specific mean-preserving local electron-charge perturbation and the bounded local-relaxation/C1/C2 acceptance policy used to decide whether the solved-Poisson R4 architecture is ready to close"
+    },
     "recipes/issue31_r4_qn0.py": {
       "model": "PURE_PYTHON_SCIENTIFIC_POLICY",
       "reason": "R4-QN0 derives a reproducible quasi-neutral electron reference from the frozen initial heavy-species charge ledger while preserving the normalized R3 electron representation and the feedback-off R4-Q0 Poisson/Gauss-law contract"
