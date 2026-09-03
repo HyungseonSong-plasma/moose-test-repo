@@ -57,7 +57,7 @@ RWR                      2               3
 
 Interpretation:
 
-- parallel hypothesis triage achieved its intended effect: the first valid reactor-scale batch resolved the initial integration hypothesis set;
+- parallel hypothesis triage achieved its intended effect: the first valid broad batch resolved the initial integration hypothesis set;
 - total external execution cost improved but remained above target because three avoidable harness defects created rework;
 - later architecture/refactor work should be compared separately by work type and complexity because it intentionally avoids scientific P3.
 
