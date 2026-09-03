@@ -124,7 +124,7 @@ def _probe_gradients(*, initial_pass: bool = True):
     return result
 
 
-def test_classifier_isolates_rz_green_gauss_and_keeps_jacobian_secondary():
+def test_classifier_isolates_green_gauss_cell_gradient_without_rz_over_attribution():
     cases = _base_cases()
     cases["F0_FULL_INTERNAL_N1E16"].update(
         status="FAIL", passed=False, solver_status="DIVERGED_LINE_SEARCH", electron_residuals=[9.5e5]
@@ -161,7 +161,8 @@ def test_classifier_isolates_rz_green_gauss_and_keeps_jacobian_secondary():
     result = classify_completion(cases, gradients, rz, jacobians)
     assert result["status"] == "ISOLATED"
     assert result["single_primary_owner_invariant"] is True
-    assert result["primary_owner"]["owner"] == "FV_RZ_GREEN_GAUSS_CONSTANT_CANCELLATION"
+    assert result["primary_owner"]["owner"] == "FV_GREEN_GAUSS_CELL_GRADIENT_CONSTANT_PRESERVATION"
+    assert "RZ-specific versus general Green-Gauss arithmetic" in result["unresolved"][0]
     assert len(result["secondary_candidates"]) == 1
     assert result["secondary_candidates"][0]["owner"] == "HIGH_STATE_JACOBIAN_DIAGNOSTIC_CONDITIONING"
     assert result["secondary_candidates"][0]["status"] == "DISFAVORED_AS_INDEPENDENT_OWNER"
