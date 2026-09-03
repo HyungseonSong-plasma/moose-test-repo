@@ -31,9 +31,9 @@ The Poisson charge material therefore consumes `n_e_physical`, never the normali
 
 ## Material permittivity representation
 
-R4 uses `relative_permittivity` as a canonical block-scoped functor, not as a `BaseMaterial` metadata parameter.
+R4 uses `relative_permittivity` as a canonical block-scoped functor. The legacy `BaseMaterial` objects are not retained in the generated R4 candidate.
 
-The accepted R3 source fixture still contains the historical metadata needed to identify the accepted control. During every R4 construction the recipe consumes that metadata once, verifies the expected value and block ownership, removes the legacy `relative_permittivity` assignments from the generated candidate, and creates these functor providers:
+The accepted R3 source fixture still contains the historical `BaseMaterial` blocks needed to identify the accepted control. During every R4 construction the recipe reads each legacy block once, verifies its expected `relative_permittivity` value and block ownership, then removes the complete `BaseMaterial` block and creates the corresponding functor provider:
 
 ```text
 permittivity_vacuum      relative_permittivity = 1.0   block = vacuum
@@ -47,6 +47,8 @@ permittivity_plasma      relative_permittivity = 1.0   block = plasma
 
 All providers expose the same functor name, `relative_permittivity`, on disjoint material blocks. There is no separate R4-only `r31_relative_permittivity` value.
 
+The legacy `conductivity` and `material_name` entries are intentionally discarded during R4 migration. They are not promoted into functors because the current R4 electrostatic construction has no consumer for them. If a later physics model introduces a real conductivity dependency, that property must be added through an explicit new contract rather than preserved speculatively.
+
 The Poisson and Gauss-law paths therefore consume the same canonical property:
 
 ```text
@@ -54,7 +56,7 @@ FVDiffusion.coeff = relative_permittivity
 SideDiffusiveFluxIntegral.functor_diffusivity = relative_permittivity
 ```
 
-This keeps material topology in the mesh/material definitions and the physics property in the functor graph. When the electrostatic solve is later extended beyond the plasma block, the same property name can be used without introducing a second permittivity source of truth.
+This leaves geometric/block topology in the mesh and puts the electrostatic material property in the functor graph. When the electrostatic solve is later extended beyond the plasma block, the same property name can be used without introducing a second permittivity source of truth.
 
 ## Charge construction — C0
 
