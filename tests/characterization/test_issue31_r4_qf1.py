@@ -15,6 +15,7 @@ from recipes.issue31_r4_qf1 import (
     PURE_O2_FEED_SCCM,
     PURE_O2_MOLAR_MASS_KG_PER_MOL,
     SOLVED_NON_O2_INLET_SPECIES,
+    UNIFORM_INITIAL_O_MASS_FRACTION,
     audit_r4_qf1_input,
     build_r4_qf1_input,
 )
@@ -58,6 +59,21 @@ def test_qf1_closes_exact_charged_particle_feedback_set() -> None:
         assert tuple(
             mp.words(mp.get_parameter(text, path, "boundaries_to_avoid"))
         ) == ELECTROSTATIC_BOUNDARIES_TO_AVOID
+
+
+def test_qf1_removes_neutral_O_spatial_perturbation_for_qn_initial_state() -> None:
+    text, meta = build_r4_qf1_input(_base())
+    initial = meta["initial_plasma"]
+
+    assert initial["neutral_O_spatial_perturbation"] is False
+    assert (
+        initial["w_O_initial_mass_fraction"]
+        == UNIFORM_INITIAL_O_MASS_FRACTION
+        == 0.10
+    )
+    assert initial["w_O_initial_condition"] == "uniform FunctionIC"
+    assert "exp(" in initial["previous_w_O_expression"]
+    assert mp.get_parameter(text, "Functions/ic_w_O_transient", "expression") == "'0.10'"
 
 
 def test_qf1_uses_pure_o2_20_sccm_feed_without_replacing_initial_plasma() -> None:
