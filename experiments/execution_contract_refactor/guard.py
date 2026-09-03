@@ -67,8 +67,8 @@ def main() -> int:
 
     cli_source = (ROOT / "qpx_harness/cli/app.py").read_text()
     _require(
-        "from qpx_harness.execution.contract import main as execution_contract_main" in cli_source,
-        "CLI contract command is not attached to the canonical execution capability",
+        '"contract": "qpx_harness.execution.contract:main"' in cli_source,
+        "CLI contract command is not lazily attached to the canonical execution capability",
     )
     _require(
         "qpx_harness.execution_contract" not in cli_source,
