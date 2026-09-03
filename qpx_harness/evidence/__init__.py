@@ -1,10 +1,17 @@
-"""Legacy compatibility facade for :mod:`qpx_harness.evidence_engine`.
+"""Canonical evidence API: observe, normalize, transform, and persist facts."""
 
-All evidence implementation now lives in ``evidence_engine``. This package
-exports only its historical public surface so existing campaign code can migrate
-without carrying a second implementation.
-"""
-from qpx_harness.evidence_engine import (
+from .artifacts import (
+    current_run_artifact,
+    identity_stable,
+    is_direct_child,
+    load_json_object,
+    paths_distinct,
+    snapshot_unchanged,
+    summarize_checks,
+    write_json_bundle,
+)
+from .errors import (
+    ERROR_LEDGER_SCHEMA_VERSION,
     Attribution,
     AttributionConfidence,
     AttributionSignals,
@@ -14,33 +21,67 @@ from qpx_harness.evidence_engine import (
     append_error_event,
     build_error_event,
     classify_attribution,
-    create_collision_safe_directory,
-    current_run_artifact,
     default_ledger_path,
-    ensure_fresh_directory,
     error_fingerprint,
-    identity_record,
-    identity_stable,
-    is_direct_child,
-    load_json_object,
-    paths_distinct,
     read_error_events,
-    sha256_file,
-    snapshot_unchanged,
-    summarize_checks,
     summarize_error_events,
-    utc_timestamp,
-    write_json_bundle,
 )
+from .identity import (
+    create_collision_safe_directory,
+    ensure_fresh_directory,
+    identity_record,
+    sha256_file,
+    utc_timestamp,
+)
+from .ingest import (
+    FAILURE_PATTERNS,
+    extract_jacobian_evidence,
+    failure_signature,
+    first_failed_reason,
+    first_linear_termination,
+    measurement_failure_signature,
+    runtime_core_facts,
+)
+from .schema import (
+    CELL_KEY_COLUMNS,
+    CORE_FACE_CONTRACT,
+    DEFAULT_FACE_CONTRACT,
+    FACE_REQUIRED_COLUMNS,
+    GREEN_GAUSS_FACE_CONTRACT,
+    ColumnRole,
+    ColumnSpec,
+    CoreColumnRole,
+    DynamicSchemaContract,
+    SchemaResolution,
+    normalize_and_project,
+    require_columns,
+)
+from .store import EvidenceStore
+from .synthetic import rz_constant_square_face_rows
+from .transform import build_cell_evidence, prepare_face_evidence, write_evidence_bundle
 
 __all__ = [
     "Attribution",
     "AttributionConfidence",
     "AttributionSignals",
+    "CELL_KEY_COLUMNS",
+    "CORE_FACE_CONTRACT",
+    "DEFAULT_FACE_CONTRACT",
+    "ERROR_LEDGER_SCHEMA_VERSION",
     "ErrorCategory",
     "ErrorEvent",
     "ErrorLedger",
+    "EvidenceStore",
+    "FACE_REQUIRED_COLUMNS",
+    "FAILURE_PATTERNS",
+    "GREEN_GAUSS_FACE_CONTRACT",
+    "ColumnRole",
+    "ColumnSpec",
+    "CoreColumnRole",
+    "DynamicSchemaContract",
+    "SchemaResolution",
     "append_error_event",
+    "build_cell_evidence",
     "build_error_event",
     "classify_attribution",
     "create_collision_safe_directory",
@@ -48,16 +89,27 @@ __all__ = [
     "default_ledger_path",
     "ensure_fresh_directory",
     "error_fingerprint",
+    "extract_jacobian_evidence",
+    "failure_signature",
+    "first_failed_reason",
+    "first_linear_termination",
     "identity_record",
     "identity_stable",
     "is_direct_child",
     "load_json_object",
+    "measurement_failure_signature",
+    "normalize_and_project",
     "paths_distinct",
+    "prepare_face_evidence",
     "read_error_events",
+    "require_columns",
+    "runtime_core_facts",
+    "rz_constant_square_face_rows",
     "sha256_file",
     "snapshot_unchanged",
     "summarize_checks",
     "summarize_error_events",
     "utc_timestamp",
+    "write_evidence_bundle",
     "write_json_bundle",
 ]
