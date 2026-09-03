@@ -13,7 +13,7 @@ From the repository root:
 python -m venv .venv
 source .venv/bin/activate
 python -m pip install -U pip
-python -m pip install -r requirements-evidence-engine.txt
+python -m pip install 'pytest>=8,<9' -r requirements-evidence-engine.txt
 ```
 
 The repository CI also installs these dependencies and runs the same Python test
