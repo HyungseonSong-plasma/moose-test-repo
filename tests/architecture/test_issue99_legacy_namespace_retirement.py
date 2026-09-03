@@ -36,10 +36,26 @@ def _legacy_imports(path: Path) -> list[str]:
             elif (
                 path.is_relative_to(REPO_ROOT / "qpx_harness")
                 and node.level > 0
-                and (module == "diagnostics" or module.startswith("diagnostics.") or module == "evidence_engine" or module.startswith("evidence_engine."))
+                and (
+                    module == "diagnostics"
+                    or module.startswith("diagnostics.")
+                    or module == "evidence_engine"
+                    or module.startswith("evidence_engine.")
+                )
             ):
                 hits.append(f"relative legacy import level={node.level} module={module}")
     return hits
+
+
+def test_transitional_namespaces_are_physically_retired() -> None:
+    remaining = [
+        str(path.relative_to(REPO_ROOT))
+        for path in LEGACY_DIRS
+        if path.exists()
+    ]
+    assert not remaining, "transitional namespace directories remain:\n" + "\n".join(
+        remaining
+    )
 
 
 def test_no_active_code_imports_transitional_evidence_engine_or_diagnostics() -> None:
