@@ -16,6 +16,12 @@ jobs:
           python-version: '3.11'
       - name: Install validation dependencies
         run: python -m pip install 'pydantic>=2,<3' 'pytest>=8,<9' -r requirements-evidence-engine.txt
+      - name: Validate QPX dependency direction
+        run: python tools/qpx_dependency_guard.py
+      - name: Validate declarative experiment gateway
+        run: python tools/qpx_experiment_gateway_guard.py
+      - name: Validate capability architecture census
+        run: python tools/qpx_architecture_census.py
       - name: Run canonical QPX internal validation
         run: python qpx -i all
       - name: Validate Issue 43/45 science refactor
