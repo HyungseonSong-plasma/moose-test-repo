@@ -16,10 +16,8 @@ jobs:
           python-version: '3.11'
       - name: Install validation dependencies
         run: python -m pip install 'pydantic>=2,<3' 'pytest>=8,<9' -r requirements-evidence-engine.txt
-      - name: Run qpx-free pytest suite
-        run: python -m pytest -q
-      - name: Validate capability architecture census
-        run: python tools/qpx_architecture_census.py
+      - name: Run canonical QPX internal validation
+        run: python qpx -i all
       - name: Validate Issue 43/45 science refactor
         run: python experiments/Issue43_45_science_refactor/final_guard.py
       - name: Validate Issue 89 post-science canonicalization
