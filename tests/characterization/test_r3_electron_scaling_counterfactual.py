@@ -9,6 +9,7 @@ from experiments.R3_electron_scaling_counterfactual.cases import (
     build_normalized_electron_input,
     build_normalized_r3_input,
 )
+from recipes.issue91_r3 import build_r3_input
 from qpx_harness.moose import parameters as mp
 
 
@@ -50,6 +51,17 @@ def test_normalized_r3_preserves_physical_coupling_and_outputs() -> None:
     assert meta["reference_density_m3"] == N_E_REF
     assert meta["canonical_physics_checker_preserved"] is True
     assert meta["audit"]["status"] == "PASS"
+
+
+def test_scaling_wrapper_is_identical_to_canonical_r3_after_promotion() -> None:
+    base = (R3_E0_DIR / "heavy_base.i").read_text()
+    canonical_text, canonical_meta = build_r3_input(base, field_strength=0.01)
+    verified_text, verified_meta = build_normalized_r3_input(base, field_strength=0.01)
+
+    assert verified_text == canonical_text
+    assert canonical_text.count("[electron_density_physical]") == 1
+    assert canonical_meta["electron_solver_unknown"] == "n_e == n_hat"
+    assert verified_meta["counterfactual"] == "CANONICAL_ELECTRON_DENSITY_O1_REPRESENTATION_VERIFICATION"
 
 
 def test_normalized_r3_audit_accepts_econst_variant() -> None:
