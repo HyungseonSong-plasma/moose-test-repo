@@ -16,55 +16,27 @@ DISPLAY_STATE = {
     ExecutionState.CALCULATING: "CALCULATING",
     ExecutionState.WAITING: "WAITING",
     ExecutionState.STALL_SUSPECTED: "STOP?",
-    ExecutionState.PASS: "PASS",
-    ExecutionState.FAIL: "FAIL",
+    ExecutionState.SUCCEEDED: "PASS",
+    ExecutionState.FAILED: "FAIL",
 }
 
 
 class Reporter(Protocol):
     def root_skipped(self, root: Path) -> None: ...
-    def case_started(
-        self,
-        *,
-        case_dir: Path,
-        test_type: str,
-        input_name: str,
-        log_path: Path,
-    ) -> None: ...
+    def case_started(self, *, case_dir: Path, test_type: str, input_name: str, log_path: Path) -> None: ...
     def executable_resolved(self, executable: Path) -> None: ...
     def prepare_finished(self, returncode: int, log_path: Path) -> None: ...
     def solve_finished(self, returncode: int) -> None: ...
     def temporal_finished(self, spec: dict, summary: dict) -> None: ...
-    def check_finished(
-        self,
-        returncode: int | None,
-        log_path: Path | None,
-        *,
-        skipped: bool = False,
-    ) -> None: ...
+    def check_finished(self, returncode: int | None, log_path: Path | None, *, skipped: bool = False) -> None: ...
     def suite_empty(self, requested_type: str) -> None: ...
     def suite_started(self, requested_type: str, total: int) -> None: ...
-    def case_progress(
-        self,
-        index: int,
-        total: int,
-        state: ExecutionState,
-        elapsed_seconds: float,
-    ) -> None: ...
-    def suite_finished(
-        self,
-        result: "SuiteResult",
-        *,
-        results_root: Path | None,
-    ) -> None: ...
+    def case_progress(self, index: int, total: int, state: ExecutionState, elapsed_seconds: float) -> None: ...
+    def suite_finished(self, result: "SuiteResult", *, results_root: Path | None) -> None: ...
 
 
 class ConsoleReporter:
-    """Default console presentation.
-
-    ``detailed=True`` is used by single-case execution; suites use compact mode.
-    Runtime and regression semantics do not depend on this formatting choice.
-    """
+    """Default console presentation independent from execution-state semantics."""
 
     def __init__(self, *, detailed: bool) -> None:
         self.detailed = detailed
@@ -72,14 +44,7 @@ class ConsoleReporter:
     def root_skipped(self, root: Path) -> None:
         print(f"TEST_ROOT_SKIP: {root} (not found)")
 
-    def case_started(
-        self,
-        *,
-        case_dir: Path,
-        test_type: str,
-        input_name: str,
-        log_path: Path,
-    ) -> None:
+    def case_started(self, *, case_dir: Path, test_type: str, input_name: str, log_path: Path) -> None:
         if not self.detailed:
             return
         print(f"CASE       : {case_dir}")
@@ -112,13 +77,7 @@ class ConsoleReporter:
         print(f"  INITIALIZATION_ROWS : {summary['initialization_rows']}")
         print(f"  PHYSICAL_ROWS       : {summary['physical_rows']}")
 
-    def check_finished(
-        self,
-        returncode: int | None,
-        log_path: Path | None,
-        *,
-        skipped: bool = False,
-    ) -> None:
+    def check_finished(self, returncode: int | None, log_path: Path | None, *, skipped: bool = False) -> None:
         if not self.detailed:
             return
         if skipped:
@@ -139,26 +98,14 @@ class ConsoleReporter:
         print(f"CASES: {total}")
         print()
 
-    def case_progress(
-        self,
-        index: int,
-        total: int,
-        state: ExecutionState,
-        elapsed_seconds: float,
-    ) -> None:
+    def case_progress(self, index: int, total: int, state: ExecutionState, elapsed_seconds: float) -> None:
         del elapsed_seconds
         percent = round(index * 100 / total)
         label = DISPLAY_STATE[state]
         print(f"[{index:>2}/{total:<2} | {percent:>3}%] {label}", flush=True)
 
-    def suite_finished(
-        self,
-        result: "SuiteResult",
-        *,
-        results_root: Path | None,
-    ) -> None:
+    def suite_finished(self, result: "SuiteResult", *, results_root: Path | None) -> None:
         self._write_suite_summary(result, results_root=results_root)
-
         print("\n" + "=" * 48)
         print("QPX SUITE SUMMARY")
         print()
@@ -169,26 +116,16 @@ class ConsoleReporter:
         print(f"RESULT  {'PASS' if not result.failed else 'FAIL'}")
         print(f"TIME    {result.wall_seconds:.1f} s")
         print("=" * 48)
-
         if result.failed:
             print("\nFailed cases:")
             for case in result.failed:
                 print(f"  - {case}")
-
-        print(
-            f"\nTYPE: {result.requested_type}  TOTAL: {result.total}  "
-            f"PASS: {result.passed}  FAIL: {len(result.failed)}"
-        )
+        print(f"\nTYPE: {result.requested_type}  TOTAL: {result.total}  PASS: {result.passed}  FAIL: {len(result.failed)}")
 
     @staticmethod
-    def _write_suite_summary(
-        result: "SuiteResult",
-        *,
-        results_root: Path | None,
-    ) -> None:
+    def _write_suite_summary(result: "SuiteResult", *, results_root: Path | None) -> None:
         if results_root is None:
             return
-
         root = Path(results_root).expanduser().resolve()
         root.mkdir(parents=True, exist_ok=True)
         payload = {
@@ -196,7 +133,7 @@ class ConsoleReporter:
             "total": result.total,
             "passed": result.passed,
             "failed": len(result.failed),
-            "result": ExecutionState.PASS.value if not result.failed else ExecutionState.FAIL.value,
+            "result": "PASS" if not result.failed else "FAIL",
             "wall_seconds": result.wall_seconds,
             "cases": [
                 {
@@ -208,6 +145,4 @@ class ConsoleReporter:
                 for case in result.cases
             ],
         }
-        (root / "suite_summary.json").write_text(
-            json.dumps(payload, indent=2, sort_keys=True) + "\n"
-        )
+        (root / "suite_summary.json").write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
