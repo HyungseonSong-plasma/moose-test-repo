@@ -1,10 +1,10 @@
-"""Dynamic column contracts for numerical face/cell evidence.
+"""Dynamic column contracts for numerical evidence.
 
-The evidence engine separates stable canonical column names from the external
-telemetry names used by individual probes. A contract resolves aliases into the
-canonical namespace before numerical transforms run. New diagnostic quantities
-can be added as string-keyed roles without modifying an enum or the transform
-core.
+The evidence engine keeps a very small stable core namespace for identity and
+spatial topology. Diagnostic quantities live in plugin contracts and are
+normalized into solver-agnostic canonical names before numerical transforms run.
+Probe/application-specific names such as MOOSE/QPX variables remain aliases, not
+core roles.
 """
 from __future__ import annotations
 
@@ -15,8 +15,8 @@ import polars as pl
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
-class ColumnRole(str, Enum):
-    """Stable roles used by the built-in face/Green-Gauss evidence pipeline."""
+class CoreColumnRole(str, Enum):
+    """Stable identity/topology roles shared by numerical diagnostics."""
 
     RUN_ID = "run_id"
     CASE_ID = "case_id"
@@ -26,18 +26,11 @@ class ColumnRole(str, Enum):
     CELL_Y = "cell_y"
     FACE_X = "face_x"
     FACE_Y = "face_y"
-    NORMAL_X = "normal_x"
-    NORMAL_Y = "normal_y"
-    FACE_AREA = "face_area"
-    COORD_FACTOR = "coord_factor"
-    MOOSE_SURFACE_X = "moose_surface_x"
-    MOOSE_SURFACE_Y = "moose_surface_y"
-    N_CELL = "n_cell"
-    N_FACE = "n_face"
-    CELL_VOLUME = "cell_volume"
-    RADIAL_COORDINATE = "radial_coordinate"
-    QPX_GRAD_X = "qpx_grad_x"
-    QPX_GRAD_Y = "qpx_grad_y"
+
+
+# Backward-compatible import name. The enum itself is now intentionally limited
+# to stable core roles; diagnostic quantities belong in plugin contracts.
+ColumnRole = CoreColumnRole
 
 
 class ColumnSpec(BaseModel):
@@ -69,10 +62,9 @@ class SchemaResolution(BaseModel):
 class DynamicSchemaContract(BaseModel):
     """Alias-aware, extensible schema contract.
 
-    ``roles`` is keyed by arbitrary logical role names. Built-in roles use
-    ``ColumnRole.value``, but future diagnostics may inject additional roles
-    without changing this module. Candidate names must be globally unambiguous;
-    one source column may not silently satisfy multiple physical roles.
+    ``roles`` is keyed by arbitrary logical role names. Core roles use
+    ``CoreColumnRole.value``. Diagnostic plugins use string roles so new physics
+    quantities can be added without modifying this module or an enum.
     """
 
     model_config = ConfigDict(frozen=True)
@@ -160,50 +152,72 @@ class DynamicSchemaContract(BaseModel):
         )
 
 
-_DEFAULT_FACE_SPECS: dict[str, ColumnSpec] = {
-    ColumnRole.RUN_ID.value: ColumnSpec(canonical="run_id", aliases=("run",)),
-    ColumnRole.CASE_ID.value: ColumnSpec(canonical="case_id", aliases=("sim_id",)),
-    ColumnRole.ELEM_ID.value: ColumnSpec(
+_CORE_FACE_SPECS: dict[str, ColumnSpec] = {
+    CoreColumnRole.RUN_ID.value: ColumnSpec(canonical="run_id", aliases=("run",)),
+    CoreColumnRole.CASE_ID.value: ColumnSpec(canonical="case_id", aliases=("sim_id",)),
+    CoreColumnRole.ELEM_ID.value: ColumnSpec(
         canonical="elem_id", aliases=("cell_id", "element_id")
     ),
-    ColumnRole.FACE_ID.value: ColumnSpec(canonical="face_id", aliases=("side_id",)),
-    ColumnRole.CELL_X.value: ColumnSpec(
+    CoreColumnRole.FACE_ID.value: ColumnSpec(canonical="face_id", aliases=("side_id",)),
+    CoreColumnRole.CELL_X.value: ColumnSpec(
         canonical="cell_x", aliases=("cell_r", "x_C", "centroid_x")
     ),
-    ColumnRole.CELL_Y.value: ColumnSpec(
+    CoreColumnRole.CELL_Y.value: ColumnSpec(
         canonical="cell_y", aliases=("cell_z", "y_C", "centroid_y")
     ),
-    ColumnRole.FACE_X.value: ColumnSpec(canonical="face_x", aliases=("face_r", "x_f")),
-    ColumnRole.FACE_Y.value: ColumnSpec(canonical="face_y", aliases=("face_z", "y_f")),
-    ColumnRole.NORMAL_X.value: ColumnSpec(canonical="normal_x", aliases=("nx",)),
-    ColumnRole.NORMAL_Y.value: ColumnSpec(canonical="normal_y", aliases=("ny",)),
-    ColumnRole.FACE_AREA.value: ColumnSpec(canonical="face_area", aliases=("A_f",)),
-    ColumnRole.COORD_FACTOR.value: ColumnSpec(
-        canonical="coord_factor", aliases=("rz_factor", "2pi_r")
-    ),
-    ColumnRole.MOOSE_SURFACE_X.value: ColumnSpec(
-        canonical="moose_surface_x", aliases=("S_x", "surface_vector_x")
-    ),
-    ColumnRole.MOOSE_SURFACE_Y.value: ColumnSpec(
-        canonical="moose_surface_y", aliases=("S_y", "surface_vector_y")
-    ),
-    ColumnRole.N_CELL.value: ColumnSpec(canonical="n_cell", aliases=("rho_cell", "u_cell")),
-    ColumnRole.N_FACE.value: ColumnSpec(canonical="n_face", aliases=("rho_face", "u_face")),
-    ColumnRole.CELL_VOLUME.value: ColumnSpec(canonical="cell_volume", aliases=("V_rz",)),
-    ColumnRole.RADIAL_COORDINATE.value: ColumnSpec(
-        canonical="radial_coordinate", aliases=("r_coord", "radius")
-    ),
-    ColumnRole.QPX_GRAD_X.value: ColumnSpec(canonical="qpx_grad_x", aliases=("grad_x",)),
-    ColumnRole.QPX_GRAD_Y.value: ColumnSpec(canonical="qpx_grad_y", aliases=("grad_y",)),
+    CoreColumnRole.FACE_X.value: ColumnSpec(canonical="face_x", aliases=("face_r", "x_f")),
+    CoreColumnRole.FACE_Y.value: ColumnSpec(canonical="face_y", aliases=("face_z", "y_f")),
 }
 
-DEFAULT_FACE_CONTRACT = DynamicSchemaContract(roles=_DEFAULT_FACE_SPECS)
+CORE_FACE_CONTRACT = DynamicSchemaContract(roles=_CORE_FACE_SPECS)
 
-FACE_REQUIRED_COLUMNS = DEFAULT_FACE_CONTRACT.required_columns
+# Green-Gauss/RZ is a diagnostic plugin. Canonical names describe numerical
+# roles rather than the application that emitted them. MOOSE/QPX-specific names
+# are retained as aliases for existing telemetry.
+_GREEN_GAUSS_SPECS: dict[str, ColumnSpec] = {
+    "normal_x": ColumnSpec(canonical="normal_x", aliases=("nx",)),
+    "normal_y": ColumnSpec(canonical="normal_y", aliases=("ny",)),
+    "face_area": ColumnSpec(canonical="face_area", aliases=("A_f",)),
+    "coord_factor": ColumnSpec(
+        canonical="coord_factor", aliases=("rz_factor", "2pi_r")
+    ),
+    "runtime_surface_x": ColumnSpec(
+        canonical="runtime_surface_x",
+        aliases=("moose_surface_x", "S_x", "surface_vector_x"),
+    ),
+    "runtime_surface_y": ColumnSpec(
+        canonical="runtime_surface_y",
+        aliases=("moose_surface_y", "S_y", "surface_vector_y"),
+    ),
+    "field_cell": ColumnSpec(
+        canonical="field_cell", aliases=("n_cell", "rho_cell", "u_cell")
+    ),
+    "field_face": ColumnSpec(
+        canonical="field_face", aliases=("n_face", "rho_face", "u_face")
+    ),
+    "cell_volume": ColumnSpec(canonical="cell_volume", aliases=("V_rz",)),
+    "radial_coordinate": ColumnSpec(
+        canonical="radial_coordinate", aliases=("r_coord", "radius")
+    ),
+    "runtime_grad_x": ColumnSpec(
+        canonical="runtime_grad_x", aliases=("qpx_grad_x", "grad_x")
+    ),
+    "runtime_grad_y": ColumnSpec(
+        canonical="runtime_grad_y", aliases=("qpx_grad_y", "grad_y")
+    ),
+}
+
+GREEN_GAUSS_FACE_CONTRACT = CORE_FACE_CONTRACT.extend(_GREEN_GAUSS_SPECS)
+
+# Existing callers may continue to use DEFAULT_FACE_CONTRACT; semantically it is
+# the built-in Green-Gauss plugin contract, not the global core schema.
+DEFAULT_FACE_CONTRACT = GREEN_GAUSS_FACE_CONTRACT
+
+FACE_REQUIRED_COLUMNS = GREEN_GAUSS_FACE_CONTRACT.required_columns
 CELL_KEY_COLUMNS = (
-    ColumnRole.RUN_ID.value,
-    ColumnRole.CASE_ID.value,
-    ColumnRole.ELEM_ID.value,
+    CoreColumnRole.RUN_ID.value,
+    CoreColumnRole.CASE_ID.value,
+    CoreColumnRole.ELEM_ID.value,
 )
 
 
