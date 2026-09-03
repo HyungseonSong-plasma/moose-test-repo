@@ -54,6 +54,7 @@ def _failure_locations(
     metric: DiagnosticMetricSpec,
     threshold: float,
     *,
+    inclusive: bool,
     top_k: int,
 ) -> list[FailureLocation]:
     if metric.entity_kind is None:
@@ -71,9 +72,11 @@ def _failure_locations(
             f"{metric.metric_id}: {', '.join(missing)}"
         )
 
+    absolute_error = pl.col(metric.column).abs()
+    predicate = absolute_error >= threshold if inclusive else absolute_error > threshold
     failed = (
-        frame.with_columns(pl.col(metric.column).abs().alias("__abs_error"))
-        .filter(pl.col("__abs_error") > threshold)
+        frame.with_columns(absolute_error.alias("__abs_error"))
+        .filter(predicate)
         .sort("__abs_error", descending=True)
         .head(top_k)
     )
@@ -142,9 +145,6 @@ def evaluate_diagnosis_registry(
         location_metric_id = selected_rule.location_metric_id
         if location_metric_id is not None:
             metric = registry.metrics[location_metric_id]
-            # Location extraction remains numerical rather than symbolic. The
-            # localization threshold comes from the selected rule's predicate
-            # for the chosen metric, and must be unambiguous.
             predicates = [
                 predicate
                 for predicate in (
@@ -168,6 +168,7 @@ def evaluate_diagnosis_registry(
                 frames_by_metric[location_metric_id],
                 metric,
                 predicate.threshold,
+                inclusive=predicate.operator == "ge",
                 top_k=top_k_failures,
             )
 
