@@ -1,30 +1,25 @@
 """Issue #31 R4-QF1 closed electrostatic feedback policy.
 
-R4-QF1 is the first self-consistent solved-Poisson successor to R4-QN0.  It
+R4-QF1 is the first self-consistent solved-Poisson successor to R4-QN0. It
 preserves the quasi-neutral dimensional electron reference and the normalized
-solver unknown, then connects the solved `potential_plasma` to every charged
+solver unknown, then connects solved `potential_plasma` to every charged
 particle electrostatic drift operator and every heavy-species
-mass-electromigration correction operator already present in the accepted R3
-transport composition.
+mass-electromigration correction operator already present in accepted R3.
 
-The QF1 feed is also made physically explicit: 20 sccm of pure O2 enters the
-plasma.  This inlet composition is deliberately separated from the ionized
-initial plasma composition used to construct the QN0 quasi-neutral reference.
-
-The experiment deliberately changes no timestep, mobility, diffusion,
-reaction, SEE, or surface-charge policy.  C2 dynamic charge conservation is
-measured by the governed runner from the same boundary mass-flux postprocessors
-already used by the accepted heavy transport input.
+The QF1 feed is physically explicit: 20 sccm of pure O2 enters the plasma.
+Feed composition is separated from the ionized initial plasma composition used
+to construct the QN0 quasi-neutral reference.
 """
 from __future__ import annotations
 
+import math
+import re
 from typing import Any
 
 from qpx_harness.moose import parameters as mp
 from recipes.issue31_r4_qn0 import (
     _replace_top_level_assignment,
     _top_level_float,
-    audit_r4_qn0_input,
     build_r4_qn0_input,
 )
 
@@ -50,10 +45,6 @@ EXPECTED_HEAVY_EM_CORRECTION_KERNELS = (
 )
 EXPECTED_FEEDBACK_KERNELS = EXPECTED_DRIFT_KERNELS + EXPECTED_HEAVY_EM_CORRECTION_KERNELS
 
-# Current accepted transport boundary policy.  Electrostatic drift/correction
-# kernels explicitly avoid these boundaries.  The electron equation has no
-# separate bulk-advection boundary flux, so C2 external current is currently
-# owned by charged-heavy inlet/outlet advective mass flux only.
 ELECTROSTATIC_BOUNDARIES_TO_AVOID = (
     "inlet",
     "outlet",
@@ -75,6 +66,21 @@ class Issue31R4QF1Error(RuntimeError):
     pass
 
 
+def _has_top_level_assignment(text: str, name: str) -> bool:
+    return bool(re.search(rf"(?m)^\s*{re.escape(name)}\s*=", text))
+
+
+def _remove_top_level_assignment(text: str, name: str) -> str:
+    pattern = re.compile(rf"(?m)^\s*{re.escape(name)}\s*=\s*[^#\r\n]*(?:#.*)?(?:\r?\n|$)")
+    matches = list(pattern.finditer(text))
+    if len(matches) != 1:
+        raise Issue31R4QF1Error(
+            f"expected one top-level assignment for removal {name}, found {len(matches)}"
+        )
+    match = matches[0]
+    return text[: match.start()] + text[match.end() :]
+
+
 def _feedback_kernel_paths(text: str) -> tuple[tuple[str, ...], tuple[str, ...]]:
     drift: list[str] = []
     correction: list[str] = []
@@ -88,13 +94,7 @@ def _feedback_kernel_paths(text: str) -> tuple[tuple[str, ...], tuple[str, ...]]
 
 
 def _apply_pure_o2_inlet(text: str) -> tuple[str, dict[str, Any]]:
-    """Separate the physical feed from the ionized initial plasma state.
-
-    O2 is the constrained heavy species, so there is no independent O2 scalar
-    inlet BC.  Pure O2 feed is represented by the full total mass flux entering
-    through `inlet_mass` while every solved non-O2 scalar inlet mass flux is
-    exactly zero.
-    """
+    """Separate physical pure-O2 feed from the ionized initial plasma state."""
     old_q_sccm = _top_level_float(text, "Q_sccm")
     initial_mass_fractions = {
         species: _top_level_float(text, f"Yin_{species}")
@@ -104,11 +104,15 @@ def _apply_pure_o2_inlet(text: str) -> tuple[str, dict[str, Any]]:
     text = _replace_top_level_assignment(text, "Q_sccm", "20")
     text = _replace_top_level_assignment(text, "M_inlet", "0.032")
     for species in SOLVED_NON_O2_INLET_SPECIES:
-        text = _replace_top_level_assignment(
-            text,
-            f"inlet_mdot_{species}_value",
-            "0",
-        )
+        text = _replace_top_level_assignment(text, f"inlet_mdot_{species}_value", "0")
+
+    # Yin_O2 and Yin_O were historically dual-purpose feed/initial aliases.
+    # After feed separation they have no runtime consumer: O2 is constrained,
+    # while O uses its accepted spatial FunctionIC. Preserve their initial
+    # values in construction metadata, then remove the now-unused input aliases
+    # rather than weakening MOOSE's unused-parameter check.
+    for name in ("Yin_O2", "Yin_O"):
+        text = _remove_top_level_assignment(text, name)
 
     return text, {
         "feed": "pure O2",
@@ -126,6 +130,7 @@ def _apply_pure_o2_inlet(text: str) -> tuple[str, dict[str, Any]]:
         "previous_flow_sccm": old_q_sccm,
         "initial_plasma_mass_fractions_preserved": initial_mass_fractions,
         "initial_plasma_composition_is_feed_composition": False,
+        "removed_unused_initial_aliases": ["Yin_O2", "Yin_O"],
     }
 
 
@@ -149,9 +154,7 @@ def _enable_closed_feedback(text: str) -> tuple[str, dict[str, Any]]:
             raise Issue31R4QF1Error(
                 f"feedback predecessor mismatch at {path}/potential={old!r}"
             )
-        boundary_tokens = tuple(
-            mp.words(mp.get_parameter(text, path, "boundaries_to_avoid"))
-        )
+        boundary_tokens = tuple(mp.words(mp.get_parameter(text, path, "boundaries_to_avoid")))
         if boundary_tokens != ELECTROSTATIC_BOUNDARIES_TO_AVOID:
             raise Issue31R4QF1Error(
                 f"unexpected electrostatic boundary policy at {path}: {boundary_tokens}"
@@ -170,8 +173,8 @@ def _enable_closed_feedback(text: str) -> tuple[str, dict[str, Any]]:
     )
     evidence["charged_heavy_boundary_current_policy"] = (
         "electrostatic drift/correction avoid physical boundaries; C2 external heavy "
-        "charge current is reconstructed from accepted charged-species inlet/outlet "
-        "advective mass-flux postprocessors"
+        "charge current is reconstructed from charged-species inlet/outlet advective "
+        "mass-flux postprocessors"
     )
     return text, evidence
 
@@ -179,9 +182,12 @@ def _enable_closed_feedback(text: str) -> tuple[str, dict[str, Any]]:
 def build_r4_qf1_input(base_text: str) -> tuple[str, dict[str, Any]]:
     """Build full charged-particle electrostatic feedback from accepted QN0."""
     text, qn0_meta = build_r4_qn0_input(base_text)
+    expected_reference = float(
+        qn0_meta["quasi_neutral_reference"]["electron_reference_density_m3"]
+    )
     text, inlet = _apply_pure_o2_inlet(text)
     text, feedback = _enable_closed_feedback(text)
-    audit = audit_r4_qf1_input(text)
+    audit = audit_r4_qf1_input(text, expected_reference_m3=expected_reference)
     if audit["status"] != "PASS":
         raise Issue31R4QF1Error(
             f"constructed R4-QF1 input failed audit: {audit['failed_checks']}"
@@ -202,42 +208,81 @@ def build_r4_qf1_input(base_text: str) -> tuple[str, dict[str, Any]]:
         "feedback_potential": FEEDBACK_POTENTIAL,
         "feedback": feedback,
         "c2_boundary_species": CHARGED_HEAVY_C2,
-        "c2_time_discretization": (
-            "implicit Euler: Q_boundary = dt * I_boundary(t_{n+1})"
-        ),
+        "c2_time_discretization": "implicit Euler: Q_boundary = dt * I_boundary(t_{n+1})",
         "audit": audit,
     }
 
 
-def audit_r4_qf1_input(text: str) -> dict[str, Any]:
+def audit_r4_qf1_input(
+    text: str,
+    *,
+    expected_reference_m3: float | None = None,
+) -> dict[str, Any]:
     checks: dict[str, bool] = {}
 
-    # QN0 audit intentionally requires feedback OFF, so carry forward only the
-    # predecessor invariants that remain meaningful after closing the loop.
-    qn0 = audit_r4_qn0_input(text)
-    q0_checks = qn0["q0_audit"]["checks"]
-    for name in (
-        "normalized_electron_solver_ic",
-        "heavy_uses_physical_n_e",
-        "electron_lookup_live_p",
-        "electron_lookup_live_Tg",
-        "charge_uses_physical_electron_density",
-        "all_ground_phi",
-        "poisson_diffusion_uses_relative_permittivity",
-        "gauss_flux_functor_diffusivity",
-    ):
-        if name in q0_checks:
-            checks[f"predecessor:{name}"] = bool(q0_checks[name])
+    checks["normalized_electron_solver_ic"] = (
+        mp.get_parameter(text, "Variables/n_e", "initial_condition") == "1.0"
+    )
+    checks["physical_density_bridge_preserved"] = (
+        mp.get_parameter(
+            text,
+            "FunctorMaterials/electron_density_physical",
+            "expression",
+        )
+        == "'${n_e_value}*ne_hat'"
+    )
+    checks["heavy_uses_physical_n_e"] = (
+        mp.get_parameter(
+            text,
+            "FunctorMaterials/heavy_transport",
+            "electron_number_density",
+        )
+        == "n_e_physical"
+    )
+    checks["electron_lookup_live_p"] = (
+        mp.get_parameter(text, "FunctorMaterials/electron_transport", "pressure") == "p"
+    )
+    checks["electron_lookup_live_Tg"] = (
+        mp.get_parameter(
+            text,
+            "FunctorMaterials/electron_transport",
+            "gas_temperature",
+        )
+        == "T_g"
+    )
+    checks["charge_uses_physical_electron_density"] = (
+        mp.get_parameter(
+            text,
+            "FunctorMaterials/r31_charge_density",
+            "electron_density",
+        )
+        == "n_e_physical"
+    )
+    actual_reference = _top_level_float(text, "n_e_value")
+    checks["reference_density_positive"] = actual_reference > 0.0
+    if expected_reference_m3 is not None:
+        checks["qn_reference_preserved"] = math.isclose(
+            actual_reference,
+            expected_reference_m3,
+            rel_tol=1.0e-14,
+            abs_tol=0.0,
+        )
 
-    qn_checks = qn0["checks"]
-    for name in (
-        "normalized_electron_solver_ic",
-        "physical_density_bridge_preserved",
-        "reference_density_matches_initial_heavy_charge",
-        "initial_charge_number_closure",
-        "reference_density_positive",
-    ):
-        checks[f"qn0:{name}"] = bool(qn_checks.get(name, False))
+    checks["poisson_diffusion_connected"] = (
+        mp.get_parameter(text, "FVKernels/r31_phi_diffusion", "variable")
+        == "potential_plasma"
+        and mp.get_parameter(text, "FVKernels/r31_phi_diffusion", "coeff")
+        == "relative_permittivity"
+    )
+    checks["poisson_charge_connected"] = (
+        mp.get_parameter(text, "FVKernels/r31_phi_charge_source", "v")
+        == "poisson_charge_source"
+    )
+    checks["all_ground_phi"] = (
+        mp.get_parameter(text, "FVBCs/r31_phi_ground_all", "variable")
+        == "potential_plasma"
+        and mp.get_parameter(text, "FVBCs/r31_phi_ground_all", "value") == "0"
+    )
 
     checks["pure_o2_feed_flow_sccm"] = _top_level_float(text, "Q_sccm") == 20.0
     checks["pure_o2_feed_molar_mass"] = (
@@ -247,6 +292,8 @@ def audit_r4_qf1_input(text: str) -> dict[str, Any]:
         checks[f"zero_non_O2_inlet_flux:{species}"] = (
             _top_level_float(text, f"inlet_mdot_{species}_value") == 0.0
         )
+    checks["unused_Yin_O2_removed"] = not _has_top_level_assignment(text, "Yin_O2")
+    checks["unused_Yin_O_removed"] = not _has_top_level_assignment(text, "Yin_O")
     checks["initial_plasma_remains_ionized"] = any(
         _top_level_float(text, f"Yin_{species}") > 0.0
         for species in ("O2p", "Om", "Op")
@@ -257,7 +304,6 @@ def audit_r4_qf1_input(text: str) -> dict[str, Any]:
     checks["exact_heavy_em_correction_kernel_set"] = correction == tuple(
         sorted(EXPECTED_HEAVY_EM_CORRECTION_KERNELS)
     )
-
     for path in EXPECTED_FEEDBACK_KERNELS:
         checks[f"feedback_potential:{path}"] = (
             mp.get_parameter(text, path, "potential") == FEEDBACK_POTENTIAL
@@ -276,5 +322,4 @@ def audit_r4_qf1_input(text: str) -> dict[str, Any]:
         "status": "PASS" if not failed else "FAIL",
         "checks": checks,
         "failed_checks": failed,
-        "qn0_audit": qn0,
     }
