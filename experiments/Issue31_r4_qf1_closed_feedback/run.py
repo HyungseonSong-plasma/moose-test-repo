@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import math
 from pathlib import Path
 from typing import Any
 
@@ -14,6 +15,7 @@ from experiments.Issue91_real_qvt_r3 import run as issue91_run
 from qpx_harness.evidence import create_collision_safe_directory, utc_timestamp, write_json_bundle
 from qpx_harness.execution.cases import stage_case
 from qpx_harness.execution.runtime import resolve_executable, validate_executable
+from qpx_harness.moose import parameters as mp
 from recipes.issue31_r4_qf1 import CHARGED_HEAVY_C2, build_r4_qf1_input
 from recipes.issue31_r4_qn0 import AVOGADRO
 
@@ -25,6 +27,26 @@ ELEMENTARY_CHARGE = 1.602176634e-19
 def _stage(target: Path) -> dict[str, Any]:
     base = (SOURCE / "heavy_base.i").read_text()
     input_text, meta = build_r4_qf1_input(base)
+
+    # C2 must use the actual discretized initial volume charge, not the nominal
+    # algebraic QN ledger. The accepted initial O FunctionIC is spatially
+    # varying, which changes Mn_mix/rho and therefore the integrated heavy
+    # charge even when the top-level reference ledger is quasi-neutral.
+    input_text = mp.upsert_parameter(
+        input_text,
+        "Postprocessors/r31_charge_integral",
+        "execute_on",
+        "'INITIAL TIMESTEP_END'",
+    )
+    meta["c2_initial_charge_observable"] = {
+        "postprocessor": "r31_charge_integral",
+        "execute_on": ["INITIAL", "TIMESTEP_END"],
+        "reason": (
+            "measure the actual discretized t=0 volume charge after spatial ICs "
+            "and material evaluation; do not substitute the nominal QN ledger"
+        ),
+    }
+
     staging = stage_case(
         SOURCE,
         target,
@@ -62,17 +84,19 @@ def _stage(target: Path) -> dict[str, Any]:
 def _c2_evidence(csv_path: Path, electron_reference_m3: float) -> dict[str, Any]:
     """Measure one-step implicit-Euler global charge conservation.
 
-    The QF1 initial state is construction-audited quasi-neutral, so the physical
-    initial volume charge is exactly the QN reference ledger (zero apart from
-    roundoff) rather than the placeholder value that some MOOSE postprocessors
-    emit on the raw INITIAL output row.
+    QF1 explicitly executes `r31_charge_integral` on INITIAL and TIMESTEP_END so
+    C2 uses the actual discretized initial and final volume charges. This is
+    required because the spatial neutral-species FunctionIC changes local
+    mixture molar mass and density; the nominal top-level QN ledger is not a
+    substitute for the integrated initial charge of the actual discretized
+    state.
 
     Electrostatic drift/correction operators avoid every physical plasma
     boundary and the electron equation has no external boundary-current
-    operator in this scope.  Therefore the explicit external charge current is
-    reconstructed from the accepted charged-heavy inlet/outlet advective mass
-    flux postprocessors.  For implicit Euler the discrete one-step boundary
-    contribution is dt*I_boundary(t_{n+1}).
+    operator in this scope. Therefore the explicit external charge current is
+    reconstructed from the charged-heavy inlet/outlet advective mass-flux
+    postprocessors. For implicit Euler the one-step boundary contribution is
+    dt*I_boundary(t_{n+1}).
     """
     if not csv_path.is_file():
         return {"status": "MISSING", "error": f"missing {csv_path.name}"}
@@ -86,18 +110,26 @@ def _c2_evidence(csv_path: Path, electron_reference_m3: float) -> dict[str, Any]
     required = ["time", "r31_charge_integral", "domain_volume"]
     for species in CHARGED_HEAVY_C2:
         required.extend((f"inlet_mdot_{species}", f"outlet_mdot_{species}"))
-    missing = [name for name in required if name not in final]
-    if missing:
-        return {"status": "MISSING", "error": f"missing C2 columns: {missing}"}
+    missing_final = [name for name in required if name not in final]
+    missing_initial = [name for name in ("time", "r31_charge_integral") if name not in first]
+    if missing_final or missing_initial:
+        return {
+            "status": "MISSING",
+            "error": (
+                f"missing C2 columns: final={missing_final}, initial={missing_initial}"
+            ),
+        }
 
     try:
         time_initial = float(first["time"])
         time_final = float(final["time"])
+        q_initial = float(first["r31_charge_integral"])
         q_final = float(final["r31_charge_integral"])
         volume = float(final["domain_volume"])
-        raw_initial_charge = float(first.get("r31_charge_integral", "nan"))
     except (TypeError, ValueError) as exc:
         return {"status": "INVALID", "error": str(exc)}
+    if not all(math.isfinite(value) for value in (time_initial, time_final, q_initial, q_final, volume)):
+        return {"status": "INVALID", "error": "non-finite C2 scalar"}
     dt = time_final - time_initial
     if dt <= 0.0 or volume <= 0.0:
         return {
@@ -129,8 +161,7 @@ def _c2_evidence(csv_path: Path, electron_reference_m3: float) -> dict[str, Any]
             "outward_charge_current_C_per_s": outward_charge_current,
         }
 
-    initial_volume_charge = 0.0
-    delta_q = q_final - initial_volume_charge
+    delta_q = q_final - q_initial
     q_boundary = dt * total_boundary_current
     residual = delta_q + q_boundary
     component_scale = max(abs(delta_q), abs(q_boundary), 1.0e-300)
@@ -143,9 +174,8 @@ def _c2_evidence(csv_path: Path, electron_reference_m3: float) -> dict[str, Any]
         "time_initial": time_initial,
         "time_final": time_final,
         "dt_s": dt,
-        "initial_volume_charge_C": initial_volume_charge,
-        "initial_charge_source": "construction-audited QN0 ledger",
-        "raw_initial_postprocessor_charge_C_diagnostic_only": raw_initial_charge,
+        "initial_volume_charge_C": q_initial,
+        "initial_charge_source": "r31_charge_integral evaluated on INITIAL",
         "final_volume_charge_C": q_final,
         "Delta_Q_C": delta_q,
         "species_boundary_current": species_current,
@@ -268,7 +298,7 @@ def run(args: argparse.Namespace) -> int:
         return 1
 
     # First closed-feedback runtime is evidence collection, not automatic
-    # scientific acceptance.  Interpret nonlinear behavior, field magnitude,
+    # scientific acceptance. Interpret nonlinear behavior, field magnitude,
     # C1 and C2 together before freezing any threshold or architecture choice.
     summary["status"] = "R4_QF1_EVIDENCE_READY"
     write_json_bundle(root, {"summary": ("summary.json", summary)})
