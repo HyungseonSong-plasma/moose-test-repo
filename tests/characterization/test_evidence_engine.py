@@ -3,8 +3,11 @@ import pytest
 from pydantic import ValidationError
 
 from qpx_harness.evidence_engine import (
+    CORE_FACE_CONTRACT,
     DEFAULT_FACE_CONTRACT,
+    GREEN_GAUSS_FACE_CONTRACT,
     ColumnSpec,
+    CoreColumnRole,
     DiagnosticMetricSpec,
     DiagnosisReport,
     DiagnosisRule,
@@ -30,7 +33,7 @@ def test_polars_reconstructs_exact_rz_constant_state_contract():
     cell = build_cell_evidence(face, radial_component=0)
 
     assert face.select(pl.col("surface_delta_norm").max()).item() == 0.0
-    assert face.select(pl.col("n_face_delta").abs().max()).item() == 0.0
+    assert face.select(pl.col("field_face_delta").abs().max()).item() == 0.0
     assert cell["face_count"][0] == 4
     assert abs(cell["pre_rz_grad_x"][0] - 2.0) < 1.0e-14
     assert abs(cell["rz_correction_x"][0] - 2.0) < 1.0e-14
@@ -43,6 +46,33 @@ def test_polars_reconstructs_exact_rz_constant_state_contract():
     assert diagnosis["primary_owner_class"] is None
     assert diagnosis["selected_rule_id"] is None
     assert diagnosis["failing_locations"] == []
+
+
+def test_core_column_role_is_limited_to_identity_topology_and_spatial_coordinates():
+    assert {role.value for role in CoreColumnRole} == {
+        "run_id",
+        "case_id",
+        "elem_id",
+        "face_id",
+        "cell_x",
+        "cell_y",
+        "face_x",
+        "face_y",
+    }
+    assert set(CORE_FACE_CONTRACT.required_columns) == {
+        "run_id",
+        "case_id",
+        "elem_id",
+        "face_id",
+        "cell_x",
+        "cell_y",
+        "face_x",
+        "face_y",
+    }
+    assert DEFAULT_FACE_CONTRACT == GREEN_GAUSS_FACE_CONTRACT
+    assert "runtime_surface_x" in GREEN_GAUSS_FACE_CONTRACT.required_columns
+    assert "field_cell" in GREEN_GAUSS_FACE_CONTRACT.required_columns
+    assert "runtime_grad_x" in GREEN_GAUSS_FACE_CONTRACT.required_columns
 
 
 def test_default_schema_normalizes_safe_aliases_before_transform():
@@ -71,8 +101,29 @@ def test_default_schema_normalizes_safe_aliases_before_transform():
     assert "elem_id" in face.columns and "cell_id" not in face.columns
     assert "face_id" in face.columns and "side_id" not in face.columns
     assert "cell_x" in face.columns and "x_C" not in face.columns
+    assert "runtime_surface_x" in face.columns and "S_x" not in face.columns
+    assert "field_cell" in face.columns and "n_cell" not in face.columns
+    assert "field_face" in face.columns and "n_face" not in face.columns
+    assert "runtime_grad_x" in face.columns and "grad_x" not in face.columns
     assert cell["elem_id"][0] == 10
     assert abs(cell["reconstructed_grad_norm"][0]) < 1.0e-14
+    assert abs(cell["runtime_grad_norm"][0]) < 1.0e-14
+
+
+def test_core_contract_does_not_own_green_gauss_quantities():
+    raw = rz_constant_square_face_rows()
+    normalized = normalize_and_project(raw, CORE_FACE_CONTRACT)
+
+    # Core normalization owns identity/spatial semantics only. Probe-specific
+    # quantities are preserved as extras but not renamed by the core contract.
+    assert "run_id" in normalized.columns
+    assert "elem_id" in normalized.columns
+    assert "moose_surface_x" in normalized.columns
+    assert "n_cell" in normalized.columns
+    assert "qpx_grad_x" in normalized.columns
+    assert "runtime_surface_x" not in normalized.columns
+    assert "field_cell" not in normalized.columns
+    assert "runtime_grad_x" not in normalized.columns
 
 
 def test_schema_extension_adds_new_quantity_without_transform_changes():
