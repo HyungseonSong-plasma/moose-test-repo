@@ -40,6 +40,7 @@ def test_validation_taxonomy_distinguishes_internal_from_scientific() -> None:
 
 def test_current_operator_protocols_are_declarative_and_registered() -> None:
     expected = {
+        "issue27-surface-reaction-controlled-wall": ROOT / "experiments/Issue27_surface_reactions/A1_o_recombination/experiment.json",
         "r3-electron-master-diagnostic": ROOT / "experiments/R3_electron_master_diagnostic/experiment.json",
         "r3-electron-scaling-counterfactual": ROOT / "experiments/R3_electron_scaling_counterfactual/experiment.json",
         "r3-fv-internal-completion": ROOT / "experiments/R3_fv_internal_completion/experiment.json",
