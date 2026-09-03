@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import math
 from pathlib import Path
 
 from experiments.Issue31_r4_qf2_local_charge_relaxation import run as qf2_run
@@ -126,7 +127,12 @@ def test_qf2_relaxation_evidence_accepts_global_neutral_local_relaxation(
     assert evidence["initial_global_carrier_scaled_charge"] == 0.0
     assert evidence["initial_local_charge_density_amplitude_C_per_m3"] == 1.0e-5
     assert evidence["final_local_charge_density_amplitude_C_per_m3"] == 1.0e-6
-    assert evidence["local_charge_relaxation_ratio"] == 0.1
+    assert math.isclose(
+        evidence["local_charge_relaxation_ratio"],
+        0.1,
+        rel_tol=1.0e-15,
+        abs_tol=0.0,
+    )
     assert evidence["initial_n_e_mean_relative_offset"] == 0.0
     assert evidence["pass"] is True
     assert all(evidence["gates"].values())
