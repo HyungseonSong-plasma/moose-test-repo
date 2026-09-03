@@ -12,28 +12,55 @@ if str(ROOT) not in sys.path:
 
 from qpx_harness.application.experiment_registry import protocol_registered
 
-CURRENT_OPERATOR_RUNNERS = {
-    Path("R3_electron_master_diagnostic/run.py"): "r3-electron-master-diagnostic",
-    Path("R3_electron_scaling_counterfactual/run.py"): "r3-electron-scaling-counterfactual",
-    Path("R3_fv_internal_completion/run.py"): "r3-fv-internal-completion",
-    Path("Issue31_r4_qf2_local_charge_relaxation/run.py"): "r4-qf2-local-charge-relaxation",
-}
-
-
-def _spec_path(relative_runner: Path) -> Path:
-    return EXPERIMENTS / relative_runner.parent / "experiment.json"
+# Each tuple freezes one current operator-facing experiment surface as
+# (implementation runner, declarative spec, protocol id).  Runner and spec are
+# deliberately separate: one protocol implementation may own several bounded
+# experiment instances (Issue27 A1/A2/A3...), so sibling-file layout is not a
+# semantic requirement.
+CURRENT_OPERATOR_SURFACES = (
+    (
+        Path("Issue27_surface_reactions/controlled_wall/run.py"),
+        Path("Issue27_surface_reactions/A1_o_recombination/experiment.json"),
+        "issue27-surface-reaction-controlled-wall",
+    ),
+    (
+        Path("R3_electron_master_diagnostic/run.py"),
+        Path("R3_electron_master_diagnostic/experiment.json"),
+        "r3-electron-master-diagnostic",
+    ),
+    (
+        Path("R3_electron_scaling_counterfactual/run.py"),
+        Path("R3_electron_scaling_counterfactual/experiment.json"),
+        "r3-electron-scaling-counterfactual",
+    ),
+    (
+        Path("R3_fv_internal_completion/run.py"),
+        Path("R3_fv_internal_completion/experiment.json"),
+        "r3-fv-internal-completion",
+    ),
+    (
+        Path("Issue31_r4_qf2_local_charge_relaxation/run.py"),
+        Path("Issue31_r4_qf2_local_charge_relaxation/experiment.json"),
+        "r4-qf2-local-charge-relaxation",
+    ),
+)
 
 
 def main() -> int:
     errors: list[str] = []
-    for relative_runner, expected_protocol in sorted(CURRENT_OPERATOR_RUNNERS.items(), key=lambda item: str(item[0])):
+    declared_specs: set[Path] = set()
+    for relative_runner, relative_spec, expected_protocol in sorted(
+        CURRENT_OPERATOR_SURFACES,
+        key=lambda item: str(item[1]),
+    ):
         runner = EXPERIMENTS / relative_runner
-        spec = _spec_path(relative_runner)
+        spec = EXPERIMENTS / relative_spec
+        declared_specs.add(spec.resolve())
         if not runner.is_file():
             errors.append(f"experiments/{relative_runner}: registered operator runner missing")
             continue
         if not spec.is_file():
-            errors.append(f"experiments/{relative_runner}: active operator runner has no sibling experiment.json")
+            errors.append(f"experiments/{relative_spec}: registered operator spec missing")
             continue
         try:
             raw = json.loads(spec.read_text(encoding="utf-8"))
@@ -50,7 +77,17 @@ def main() -> int:
         if isinstance(protocol, str) and not protocol_registered(protocol):
             errors.append(f"{spec.relative_to(ROOT)}: protocol {protocol!r} is not registered")
 
-    for spec in sorted(EXPERIMENTS.glob("**/experiment.json")):
+    discovered_specs = {spec.resolve() for spec in EXPERIMENTS.glob("**/experiment.json")}
+    undeclared = sorted(discovered_specs - declared_specs)
+    for spec_resolved in undeclared:
+        spec = Path(spec_resolved)
+        errors.append(
+            f"{spec.relative_to(ROOT)}: declarative experiment exists but is not classified "
+            "in CURRENT_OPERATOR_SURFACES"
+        )
+
+    for spec_resolved in sorted(discovered_specs):
+        spec = Path(spec_resolved)
         try:
             raw = json.loads(spec.read_text(encoding="utf-8"))
         except Exception as exc:
@@ -64,7 +101,7 @@ def main() -> int:
         print("EXPERIMENT_GATEWAY_FAIL")
         print("\n".join(errors))
         return 1
-    print(f"EXPERIMENT_GATEWAY_PASS active_specs={len(CURRENT_OPERATOR_RUNNERS)}")
+    print(f"EXPERIMENT_GATEWAY_PASS active_specs={len(CURRENT_OPERATOR_SURFACES)}")
     return 0
 
 
