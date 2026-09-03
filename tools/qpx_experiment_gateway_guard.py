@@ -34,8 +34,28 @@ CURRENT_OPERATOR_SURFACES = (
         "issue27-surface-reaction-controlled-wall",
     ),
     (
+        Path("Issue27_surface_reactions/controlled_wall/om.py"),
+        Path("Issue27_surface_reactions/A2_om_neutralization/experiment.json"),
+        "issue27-surface-reaction-controlled-wall",
+    ),
+    (
+        Path("Issue27_surface_reactions/controlled_wall/positive.py"),
+        Path("Issue27_surface_reactions/A3_positive_ion_neutralization/experiment.json"),
+        "issue27-surface-reaction-controlled-wall",
+    ),
+    (
         Path("Issue27_surface_reactions/controlled_wall/charged.py"),
         Path("Issue27_surface_reactions/A3e_charged_wall_ledger/experiment.json"),
+        "issue27-surface-reaction-controlled-wall",
+    ),
+    (
+        Path("Issue27_surface_reactions/controlled_wall/excited.py"),
+        Path("Issue27_surface_reactions/A4_excited_neutral_quenching/experiment.json"),
+        "issue27-surface-reaction-controlled-wall",
+    ),
+    (
+        Path("Issue27_surface_reactions/controlled_wall/combined.py"),
+        Path("Issue27_surface_reactions/A6_combined_wall_integration/experiment.json"),
         "issue27-surface-reaction-controlled-wall",
     ),
     (
