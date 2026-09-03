@@ -1,8 +1,10 @@
 """Issue #91 R3 heavy + electron prescribed-field composition policy.
 
 This module is deliberately qpx-free. It composes already accepted heavy and
-electron transport semantics into one real-QVT pre-Poisson input. Framework
-execution remains local and outside pytest.
+electron transport semantics into one real-QVT pre-Poisson input. The electron
+solver unknown is normalized to O(1); dimensional density is reconstructed for
+physical couplings and acceptance outputs. Framework execution remains local
+and outside pytest.
 """
 from __future__ import annotations
 
@@ -54,6 +56,7 @@ def _top_level_float(text: str, name: str) -> float:
 def _insert_r3_blocks(text: str) -> str:
     mb.require_absent(text, "Variables/n_e")
     mb.require_absent(text, "FunctorMaterials/electron_constants")
+    mb.require_absent(text, "FunctorMaterials/electron_density_physical")
     mb.require_absent(text, "FunctorMaterials/electron_transport")
     mb.require_absent(text, "FVKernels/n_e_time")
     mb.require_absent(text, "FVKernels/n_e_diffusion")
@@ -64,7 +67,7 @@ def _insert_r3_blocks(text: str) -> str:
         "Variables",
         """  [n_e]
     type = MooseVariableFVReal
-    initial_condition = ${n_e_value}
+    initial_condition = 1.0
     block = plasma
   []""",
     )
@@ -75,6 +78,18 @@ def _insert_r3_blocks(text: str) -> str:
     type = ADGenericFunctorMaterial
     prop_names = 'mean_en carrier_one'
     prop_values = '{MEAN_ELECTRON_ENERGY_EV} 1.0'
+    block = plasma
+  []""",
+    )
+    text = mb.insert_child_block(
+        text,
+        "FunctorMaterials",
+        """  [electron_density_physical]
+    type = ADParsedFunctorMaterial
+    property_name = n_e_physical
+    functor_names = 'n_e'
+    functor_symbols = 'ne_hat'
+    expression = '${n_e_value}*ne_hat'
     block = plasma
   []""",
     )
@@ -127,10 +142,10 @@ def _insert_r3_blocks(text: str) -> str:
     )
 
     postprocessors = (
-        ("n_e_avg", "ElementAverageFunctorPostprocessor", "    functor = n_e\n    block = plasma"),
-        ("n_e_min", "ADElementExtremeFunctorValue", "    functor = n_e\n    value_type = min\n    block = plasma"),
-        ("n_e_max", "ADElementExtremeFunctorValue", "    functor = n_e\n    value_type = max\n    block = plasma"),
-        ("n_e_inventory", "ADElementIntegralFunctorPostprocessor", "    functor = n_e\n    block = plasma"),
+        ("n_e_avg", "ElementAverageFunctorPostprocessor", "    functor = n_e_physical\n    block = plasma"),
+        ("n_e_min", "ADElementExtremeFunctorValue", "    functor = n_e_physical\n    value_type = min\n    block = plasma"),
+        ("n_e_max", "ADElementExtremeFunctorValue", "    functor = n_e_physical\n    value_type = max\n    block = plasma"),
+        ("n_e_inventory", "ADElementIntegralFunctorPostprocessor", "    functor = n_e_physical\n    block = plasma"),
         ("domain_volume", "ADElementIntegralFunctorPostprocessor", "    functor = carrier_one\n    block = plasma"),
         ("electron_mobility_avg", "ElementAverageFunctorPostprocessor", "    functor = electron_mobility\n    block = plasma"),
         ("electron_diffusion_avg", "ElementAverageFunctorPostprocessor", "    functor = electron_diffusion\n    block = plasma"),
@@ -168,6 +183,12 @@ def build_r3_input(base_text: str, *, field_strength: float) -> tuple[str, dict[
         "'${T_g_value} ${T_e_value} ${mu_const}'",
     )
     text = _insert_r3_blocks(text)
+    text = mp.upsert_parameter(
+        text,
+        "FunctorMaterials/heavy_transport",
+        "electron_number_density",
+        "n_e_physical",
+    )
     text = mp.upsert_parameter(text, "Executioner", "dt", "1.0e-8")
     text = mp.upsert_parameter(text, "Executioner", "end_time", "1.0e-8")
 
@@ -176,10 +197,13 @@ def build_r3_input(base_text: str, *, field_strength: float) -> tuple[str, dict[
         raise Issue91R3Error(f"constructed R3 input failed audit: {audit['failed_checks']}")
     return text, {
         "issue": 91,
-        "model": "R3_HEAVY_PLUS_ELECTRON_PRESCRIBED_FIELD",
+        "model": "R3_HEAVY_PLUS_ELECTRON_NORMALIZED_PRESCRIBED_FIELD",
         "field_strength": field_strength,
         "common_timestep": ELECTRON_DT,
-        "electron_initial_condition": "uniform_n_e_value",
+        "electron_initial_condition": "normalized_1.0",
+        "electron_solver_unknown": "n_e == n_hat",
+        "electron_reference_density_m3": _top_level_float(text, "n_e_value"),
+        "electron_physical_density": "n_e_physical == n_e_value*n_e",
         "electron_pressure": "p",
         "electron_gas_temperature": "T_g",
         "electron_mean_energy_eV": MEAN_ELECTRON_ENERGY_EV,
@@ -194,6 +218,7 @@ def audit_r3_input(text: str, *, expected_field: float) -> dict[str, Any]:
     required_blocks = (
         "Variables/n_e",
         "FunctorMaterials/heavy_transport",
+        "FunctorMaterials/electron_density_physical",
         "FunctorMaterials/electron_transport",
         "FVKernels/n_e_time",
         "FVKernels/n_e_diffusion",
@@ -210,15 +235,31 @@ def audit_r3_input(text: str, *, expected_field: float) -> dict[str, Any]:
         mp.get_parameter(text, "FunctorMaterials/state_constants", "prop_names")
     )
     checks["no_constant_n_e_provider"] = "n_e" not in state_names
-    checks["uniform_accepted_qvt_electron_ic"] = (
-        mp.get_parameter(text, "Variables/n_e", "initial_condition") == "${n_e_value}"
+    checks["normalized_electron_solver_ic"] = (
+        mp.get_parameter(text, "Variables/n_e", "initial_condition") == "1.0"
     )
-    checks["heavy_uses_live_n_e"] = (
+    checks["physical_density_bridge"] = (
+        mp.get_parameter(
+            text, "FunctorMaterials/electron_density_physical", "expression"
+        )
+        == "'${n_e_value}*ne_hat'"
+    )
+    checks["heavy_uses_physical_n_e"] = (
         mp.get_parameter(
             text, "FunctorMaterials/heavy_transport", "electron_number_density"
         )
-        == "n_e"
+        == "n_e_physical"
     )
+    for kernel in ("n_e_time", "n_e_diffusion", "n_e_drift"):
+        checks[f"normalized_solver_kernel:{kernel}"] = (
+            mp.get_parameter(text, f"FVKernels/{kernel}", "variable") == "n_e"
+        )
+    for postprocessor in ("n_e_avg", "n_e_min", "n_e_max", "n_e_inventory"):
+        checks[f"physical_output:{postprocessor}"] = (
+            mp.get_parameter(text, f"Postprocessors/{postprocessor}", "functor")
+            == "n_e_physical"
+        )
+    checks["physical_reference_density_positive"] = _top_level_float(text, "n_e_value") > 0.0
     checks["electron_pressure_is_live_p"] = (
         mp.get_parameter(text, "FunctorMaterials/electron_transport", "pressure") == "p"
     )
