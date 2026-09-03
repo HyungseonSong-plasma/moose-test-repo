@@ -68,6 +68,37 @@ def upsert_parameter(text: str, path: str, name: str, value: str) -> str:
         raise MooseParameterError(f"failed to set {path}/{name}: {exc}") from exc
 
 
+def remove_parameter(text: str, path: str, name: str) -> str:
+    """Remove exactly one parameter assignment from a uniquely selected block.
+
+    Missing parameters are a no-op. Multiple assignments are rejected because
+    silently deleting one occurrence would make an ambiguous MOOSE input look
+    structurally valid.
+    """
+    span, block, matches = _matches(text, path, name)
+    if len(matches) > 1:
+        raise MooseParameterError(
+            f"ambiguous parameter {path}/{name}: {len(matches)} assignments"
+        )
+    if not matches:
+        return text
+
+    match = matches[0]
+    start = match.start()
+    end = match.end()
+    if block[end : end + 2] == "\r\n":
+        end += 2
+    elif block[end : end + 1] == "\n":
+        end += 1
+    replacement = block[:start] + block[end:]
+    out = text[: span.start] + replacement + text[span.end :]
+    try:
+        MooseInput(out)
+        return out
+    except MooseInputError as exc:
+        raise MooseParameterError(f"failed to remove {path}/{name}: {exc}") from exc
+
+
 def direct_children(text: str, parent: str) -> list[str]:
     depth = parent.count("/") + 1
     prefix = parent + "/"
