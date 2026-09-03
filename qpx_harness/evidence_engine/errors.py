@@ -352,58 +352,6 @@ class ErrorLedger:
         return {name: str(path) for name, path in paths.items()}
 
 
-# Compatibility helpers introduced during early evidence-engine consolidation.
-# They remain intentionally thin and should not be used for attribution-aware
-# campaign errors; use ErrorLedger/build_error_event for new code.
-def error_record(
-    *,
-    stage: str,
-    scope: str,
-    message: str,
-    error_type: str = "runtime_error",
-    campaign_id: str | None = None,
-    attempt_id: str | None = None,
-    probe_id: str | None = None,
-    phase_id: str | None = None,
-    case_id: str | None = None,
-    fatal: bool = False,
-    exception: Exception | None = None,
-    details: Mapping[str, Any] | None = None,
-) -> dict[str, Any]:
-    record: dict[str, Any] = {
-        "error_type": str(error_type),
-        "stage": str(stage),
-        "scope": str(scope),
-        "fatal": bool(fatal),
-        "message": str(message),
-        "created_utc": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
-    }
-    for key, value in (
-        ("campaign_id", campaign_id),
-        ("attempt_id", attempt_id),
-        ("probe_id", probe_id),
-        ("phase_id", phase_id),
-        ("case_id", case_id),
-    ):
-        if value is not None:
-            record[key] = str(value)
-    if exception is not None:
-        record["exception_type"] = type(exception).__name__
-        record["exception_message"] = str(exception)
-    if details:
-        record["details"] = dict(details)
-    return record
-
-
-def merge_error_records(
-    *record_groups: Iterable[Mapping[str, Any]],
-) -> list[dict[str, Any]]:
-    merged: list[dict[str, Any]] = []
-    for group in record_groups:
-        merged.extend(dict(record) for record in group)
-    return merged
-
-
 __all__ = [
     "Attribution",
     "AttributionConfidence",
@@ -418,8 +366,6 @@ __all__ = [
     "classify_attribution",
     "default_ledger_path",
     "error_fingerprint",
-    "error_record",
-    "merge_error_records",
     "read_error_events",
     "summarize_error_events",
 ]
