@@ -1,7 +1,8 @@
 """Issue #31 R4-Q0 all-ground solved-Poisson composition policy.
 
 This module is qpx-free. It starts from the accepted Issue #91 R3-E0
-transport state, promotes legacy material permittivity metadata to canonical
+transport state, removes the legacy BaseMaterial property providers from the
+generated R4 candidate, promotes only relative permittivity to canonical
 block-scoped functors, adds physical volume charge and a solved plasma
 potential, and deliberately leaves electrostatic transport feedback disabled
 so the first Poisson/Gauss-law discriminator is attributable.
@@ -21,9 +22,11 @@ PLASMA_ALL_BOUNDARY = "r31_plasma_all_boundary"
 MESH_INPUT_BEFORE_R4 = "bottom_electrode"
 
 # Canonical electrostatic material contract for the current qvt topology.
-# The values originate in the accepted R3 BaseMaterial metadata, but R4 removes
-# those legacy parameters from the generated candidate and exposes one common
-# functor name, relative_permittivity, over disjoint material blocks.
+# Values and block ownership originate in the accepted R3 BaseMaterial fixture.
+# R4 consumes them once as migration evidence, removes the BaseMaterial blocks
+# entirely, and exposes one common functor name, relative_permittivity, over
+# disjoint material blocks. Legacy conductivity/material_name metadata is not
+# preserved because it has no current R4 consumer.
 PERMITTIVITY_MATERIALS: dict[str, tuple[float, tuple[str, ...]]] = {
     "vacuum": (1.0, ("vacuum",)),
     "outer": (1.0, ("top", "right", "bottom")),
@@ -44,15 +47,19 @@ def _block_value(blocks: tuple[str, ...]) -> str:
     return value if len(blocks) == 1 else f"'{value}'"
 
 
-def _migrate_relative_permittivity_to_functors(
+def _replace_base_materials_with_permittivity_functors(
     text: str,
 ) -> tuple[str, dict[str, dict[str, Any]]]:
-    """Replace legacy BaseMaterial permittivity metadata with block functors."""
+    """Remove legacy BaseMaterial blocks and retain only eps_r as functors."""
     evidence: dict[str, dict[str, Any]] = {}
     for material, (expected_value, expected_blocks) in PERMITTIVITY_MATERIALS.items():
         material_path = f"Materials/{material}"
         if not mb.has_block(text, material_path):
             raise Issue31R4Error(f"missing accepted material block {material_path}")
+        if mp.get_parameter(text, material_path, "type") != "BaseMaterial":
+            raise Issue31R4Error(
+                f"unexpected material provider at {material_path}; expected BaseMaterial"
+            )
 
         raw_value = mp.get_parameter(text, material_path, "relative_permittivity")
         if raw_value is None:
@@ -76,9 +83,7 @@ def _migrate_relative_permittivity_to_functors(
         if explicit_blocks:
             blocks = explicit_blocks
         else:
-            material_name = mp.unquote(
-                mp.get_parameter(text, material_path, "material_name")
-            )
+            material_name = mp.unquote(mp.get_parameter(text, material_path, "material_name"))
             blocks = (material_name or material,)
         if blocks != expected_blocks:
             raise Issue31R4Error(
@@ -89,7 +94,10 @@ def _migrate_relative_permittivity_to_functors(
         functor_name = f"permittivity_{material}"
         functor_path = f"FunctorMaterials/{functor_name}"
         mb.require_absent(text, functor_path)
-        text = mp.remove_parameter(text, material_path, "relative_permittivity")
+
+        # BaseMaterial is removed as a provider. conductivity and material_name
+        # are intentionally discarded; only eps_r is retained for R4 physics.
+        text = mb.remove_block(text, material_path)
         text = mb.insert_child_block(
             text,
             "FunctorMaterials",
@@ -102,6 +110,9 @@ def _migrate_relative_permittivity_to_functors(
         )
         evidence[material] = {
             "legacy_material_path": material_path,
+            "legacy_provider": "BaseMaterial",
+            "legacy_provider_removed": True,
+            "discarded_metadata": ["conductivity", "material_name"],
             "functor_path": functor_path,
             "property": "relative_permittivity",
             "value": value,
@@ -236,7 +247,7 @@ def _insert_r4_q0_blocks(text: str) -> str:
 def build_r4_q0_input(base_text: str) -> tuple[str, dict[str, Any]]:
     """Build the first R4 solved-Poisson discriminator from accepted R3-E0."""
     text, r3_meta = build_r3_input(base_text, field_strength=0.0)
-    text, permittivity = _migrate_relative_permittivity_to_functors(text)
+    text, permittivity = _replace_base_materials_with_permittivity_functors(text)
     text = _insert_r4_q0_blocks(text)
     audit = audit_r4_q0_input(text)
     if audit["status"] != "PASS":
@@ -254,6 +265,7 @@ def build_r4_q0_input(base_text: str) -> tuple[str, dict[str, Any]]:
         "ground_boundary": PLASMA_ALL_BOUNDARY,
         "charge_electron_density": "n_e_physical",
         "relative_permittivity_provider": "block-scoped functor relative_permittivity",
+        "legacy_base_material_policy": "removed; conductivity/material_name not preserved",
         "relative_permittivity_migration": permittivity,
         "gauss_law_observables": {
             "volume_charge_C": "r31_charge_integral",
@@ -308,8 +320,8 @@ def audit_r4_q0_input(text: str) -> dict[str, Any]:
     for material, (expected_value, expected_blocks) in PERMITTIVITY_MATERIALS.items():
         material_path = f"Materials/{material}"
         functor_path = f"FunctorMaterials/permittivity_{material}"
-        checks[f"permittivity_legacy_removed:{material}"] = (
-            mp.get_parameter(text, material_path, "relative_permittivity") is None
+        checks[f"legacy_base_material_removed:{material}"] = not mb.has_block(
+            text, material_path
         )
         checks[f"permittivity_functor_exists:{material}"] = mb.has_block(
             text, functor_path
@@ -320,7 +332,9 @@ def audit_r4_q0_input(text: str) -> dict[str, Any]:
             ) == ["relative_permittivity"]
             value_tokens = mp.words(mp.get_parameter(text, functor_path, "prop_values"))
             try:
-                functor_value = float(value_tokens[0]) if len(value_tokens) == 1 else float("nan")
+                functor_value = (
+                    float(value_tokens[0]) if len(value_tokens) == 1 else float("nan")
+                )
             except ValueError:
                 functor_value = float("nan")
             checks[f"permittivity_value:{material}"] = (
@@ -334,6 +348,7 @@ def audit_r4_q0_input(text: str) -> dict[str, Any]:
         "r31_relative_permittivity" not in text
         and not mb.has_block(text, "FunctorMaterials/r31_poisson_relative_permittivity")
     )
+    checks["legacy_conductivity_not_promoted"] = "prop_names = 'conductivity'" not in text
     checks["charge_uses_physical_electron_density"] = (
         mp.get_parameter(
             text,
