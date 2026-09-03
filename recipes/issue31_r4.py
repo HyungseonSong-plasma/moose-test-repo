@@ -20,13 +20,21 @@ from recipes.issue91_r3 import audit_r3_input, build_r3_input
 EPSILON_0 = 8.8541878128e-12
 PLASMA_ALL_BOUNDARY = "r31_plasma_all_boundary"
 MESH_INPUT_BEFORE_R4 = "bottom_electrode"
+MATERIAL_COVERAGE_ONLY_BLOCKS = ("coil1", "coil2", "coil3", "metal", "port")
+MATERIAL_COVERAGE_FUNCTOR = "r31_material_coverage_only"
 
 # Canonical electrostatic material contract for the current qvt topology.
-# Values and block ownership originate in the accepted R3 BaseMaterial fixture.
-# R4 consumes them once as migration evidence, removes the BaseMaterial blocks
-# entirely, and exposes one common functor name, relative_permittivity, over
-# disjoint material blocks. Legacy conductivity/material_name metadata is not
-# preserved because it has no current R4 consumer.
+# Values originate in the accepted R3 BaseMaterial fixture. R4 consumes them
+# once as migration evidence, removes the BaseMaterial blocks entirely, and
+# exposes one common functor name, relative_permittivity, over disjoint physics
+# blocks. Legacy conductivity/material_name metadata is not preserved because
+# it has no current R4 consumer.
+#
+# Historical nuance: Materials/plasma had no explicit block parameter, so the
+# BaseMaterial object was globally active and incidentally satisfied MOOSE's
+# material-coverage integrity check on coil1/coil2/coil3/metal/port. R4 does
+# not preserve that accidental global physics scope. Those currently inactive
+# blocks receive a separate coverage-only FunctorMaterial with no eps_r claim.
 PERMITTIVITY_MATERIALS: dict[str, tuple[float, tuple[str, ...]]] = {
     "vacuum": (1.0, ("vacuum",)),
     "outer": (1.0, ("top", "right", "bottom")),
@@ -82,12 +90,23 @@ def _replace_base_materials_with_permittivity_functors(
         explicit_blocks = tuple(mp.words(mp.get_parameter(text, material_path, "block")))
         if explicit_blocks:
             blocks = explicit_blocks
+            legacy_scope = "explicit"
         else:
-            material_name = mp.unquote(mp.get_parameter(text, material_path, "material_name"))
-            blocks = (material_name or material,)
+            material_name = mp.unquote(
+                mp.get_parameter(text, material_path, "material_name")
+            )
+            if material != "plasma" or material_name != "plasma":
+                raise Issue31R4Error(
+                    f"unexpected unrestricted BaseMaterial scope at {material_path}"
+                )
+            # The historical plasma BaseMaterial was globally active because it
+            # had no block parameter. Its eps_r value is promoted only to the
+            # plasma physics block; global coverage is restored separately.
+            blocks = expected_blocks
+            legacy_scope = "global_unrestricted"
         if blocks != expected_blocks:
             raise Issue31R4Error(
-                f"unexpected block scope for {material_path}: {blocks}; "
+                f"unexpected physics block scope for {material_path}: {blocks}; "
                 f"expected {expected_blocks}"
             )
 
@@ -111,6 +130,7 @@ def _replace_base_materials_with_permittivity_functors(
         evidence[material] = {
             "legacy_material_path": material_path,
             "legacy_provider": "BaseMaterial",
+            "legacy_scope": legacy_scope,
             "legacy_provider_removed": True,
             "discarded_metadata": ["conductivity", "material_name"],
             "functor_path": functor_path,
@@ -118,6 +138,18 @@ def _replace_base_materials_with_permittivity_functors(
             "value": value,
             "blocks": list(blocks),
         }
+
+    mb.require_absent(text, f"FunctorMaterials/{MATERIAL_COVERAGE_FUNCTOR}")
+    text = mb.insert_child_block(
+        text,
+        "FunctorMaterials",
+        f"""  [{MATERIAL_COVERAGE_FUNCTOR}]
+    type = ADGenericFunctorMaterial
+    prop_names = '{MATERIAL_COVERAGE_FUNCTOR}'
+    prop_values = '0'
+    block = {_block_value(MATERIAL_COVERAGE_ONLY_BLOCKS)}
+  []""",
+    )
     return text, evidence
 
 
@@ -266,6 +298,8 @@ def build_r4_q0_input(base_text: str) -> tuple[str, dict[str, Any]]:
         "charge_electron_density": "n_e_physical",
         "relative_permittivity_provider": "block-scoped functor relative_permittivity",
         "legacy_base_material_policy": "removed; conductivity/material_name not preserved",
+        "material_coverage_policy": "coverage-only functor on electrostatically inactive mesh blocks",
+        "material_coverage_only_blocks": list(MATERIAL_COVERAGE_ONLY_BLOCKS),
         "relative_permittivity_migration": permittivity,
         "gauss_law_observables": {
             "volume_charge_C": "r31_charge_integral",
@@ -308,6 +342,7 @@ def audit_r4_q0_input(text: str) -> dict[str, Any]:
     required_blocks = (
         "Variables/potential_plasma",
         "FunctorMaterials/r31_charge_density",
+        f"FunctorMaterials/{MATERIAL_COVERAGE_FUNCTOR}",
         "FVKernels/r31_phi_diffusion",
         "FVKernels/r31_phi_charge_source",
         "Postprocessors/r31_charge_integral",
@@ -343,6 +378,18 @@ def audit_r4_q0_input(text: str) -> dict[str, Any]:
             checks[f"permittivity_blocks:{material}"] = tuple(
                 mp.words(mp.get_parameter(text, functor_path, "block"))
             ) == expected_blocks
+
+    coverage_path = f"FunctorMaterials/{MATERIAL_COVERAGE_FUNCTOR}"
+    if mb.has_block(text, coverage_path):
+        checks["material_coverage_property"] = mp.words(
+            mp.get_parameter(text, coverage_path, "prop_names")
+        ) == [MATERIAL_COVERAGE_FUNCTOR]
+        checks["material_coverage_value"] = mp.words(
+            mp.get_parameter(text, coverage_path, "prop_values")
+        ) == ["0"]
+        checks["material_coverage_blocks"] = tuple(
+            mp.words(mp.get_parameter(text, coverage_path, "block"))
+        ) == MATERIAL_COVERAGE_ONLY_BLOCKS
 
     checks["legacy_r31_permittivity_absent"] = (
         "r31_relative_permittivity" not in text
