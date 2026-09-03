@@ -1,33 +1,16 @@
-"""Unified command routing for the reusable QPX test/diagnostic harness."""
+"""Unified thin command routing for the reusable QPX harness."""
 from __future__ import annotations
 
 import argparse
-import sys
+from importlib import import_module
 from pathlib import Path
+import subprocess
+import sys
 
-from qpx_harness.bundle import main as bundle_main
-from qpx_harness.cli.commands.performance import (
-    analyze_main,
-    cache_audit_main,
-    investigate_main,
-    measure_main,
-    measure_smoke_main,
-    transport_probe_main,
-)
-from qpx_harness.cli.commands.coupling import coupling_evr1_main, coupling_evr2_main
-from qpx_harness.cli.commands.dmix import dmix_equivalence_main
-from qpx_harness.execution.workspace import inventory_cli
-from qpx_harness.execution.contract import main as execution_contract_main
-from qpx_harness.inventory.cli import first_linear_main, inventory_main as inventory_nullspace_main
-from qpx_harness.issue43_coupling_diagnostic import main as fast_coupling_diagnostic_main
-from qpx_harness.issue43_fast_relaxation import main as fast_relaxation_main
-from qpx_harness.issue46_fd_reference import main as fd_reference_main
-from qpx_harness.issue46_jacobian_localization import main as jac_localization_main
-from qpx_harness.moose.preflight import validate_input_preflight
-from qpx_harness.performance.profiling import main as profile_main
-from qpx_harness.execution.regression import cli_run_all, cli_run_test
-from qpx_harness.scale_audit import main as scale_audit_main
-from qpx_harness.analysis.temporal import VALID_INITIAL_POLICIES, normalize_temporal_csv
+from qpx_harness.application import normalize_temporal_run_csv, preflight_input, run_experiment
+from qpx_harness.analysis.temporal import VALID_INITIAL_POLICIES
+
+ROOT = Path(__file__).resolve().parents[2]
 
 COMMANDS = {
     "test": "run one test.json case",
@@ -56,23 +39,73 @@ COMMANDS = {
     "temporal-csv": "normalize transient CSV rows under an explicit temporal policy",
 }
 
+INTERNAL_TARGETS = {
+    "architecture": "run dependency, experiment-gateway, and architecture guards",
+    "regression": "run the qpx-free Python regression/unit suite",
+    "all": "run architecture guards then regression/unit suite",
+}
+
+_LEGACY_TARGETS = {
+    "test": "qpx_harness.execution.regression:cli_run_test",
+    "test-all": "qpx_harness.execution.regression:cli_run_all",
+    "coupling-evr1": "qpx_harness.cli.commands.coupling:coupling_evr1_main",
+    "coupling-evr2": "qpx_harness.cli.commands.coupling:coupling_evr2_main",
+    "scale-audit": "qpx_harness.scale_audit:main",
+    "fast-relaxation": "qpx_harness.issue43_fast_relaxation:main",
+    "fast-coupling-diagnostic": "qpx_harness.issue43_coupling_diagnostic:main",
+    "inventory-nullspace": "qpx_harness.inventory.cli:inventory_main",
+    "inventory-first-linear": "qpx_harness.inventory.cli:first_linear_main",
+    "inventory-jacobian-localization": "qpx_harness.issue46_jacobian_localization:main",
+    "inventory-fd-reference": "qpx_harness.issue46_fd_reference:main",
+    "contract": "qpx_harness.execution.contract:main",
+    "dmix-equivalence": "qpx_harness.cli.commands.dmix:dmix_equivalence_main",
+    "measure": "qpx_harness.cli.commands.performance:measure_main",
+    "measure-smoke": "qpx_harness.cli.commands.performance:measure_smoke_main",
+    "investigate": "qpx_harness.cli.commands.performance:investigate_main",
+    "transport-probe": "qpx_harness.cli.commands.performance:transport_probe_main",
+    "cache-audit": "qpx_harness.cli.commands.performance:cache_audit_main",
+    "profile": "qpx_harness.performance.profiling:main",
+    "analyze": "qpx_harness.cli.commands.performance:analyze_main",
+    "bundle": "qpx_harness.bundle:main",
+    "inventory": "qpx_harness.execution.workspace:inventory_cli",
+}
+
+
+def _resolve_legacy_handler(command: str):
+    target = _LEGACY_TARGETS.get(command)
+    if target is None:
+        return None
+    module_name, function_name = target.split(":", 1)
+    module = import_module(module_name)
+    handler = getattr(module, function_name)
+    if not callable(handler):
+        raise TypeError(f"legacy command target is not callable: {target}")
+    return handler
+
 
 def print_help() -> None:
-    print("usage: python3 bin/qpx.py <command> [args]")
-    print()
-    print("commands:")
+    print("usage:")
+    print("  python3 bin/qpx.py -e <experiment.json>")
+    print("  python3 bin/qpx.py -i <internal-target>")
+    print("  python3 bin/qpx.py <legacy-command> [args]")
+    print("  python qpx -i <internal-target>")
+    print("\ncanonical gateways:")
+    print("  -e, --experiment   execute one declarative scientific experiment")
+    print("  -i, --internal     run internal architecture/validation tooling")
+    print("\ninternal targets:")
+    for name, description in INTERNAL_TARGETS.items():
+        print(f"  {name:<12} {description}")
+    print("\nlegacy commands (migration compatibility):")
     width = max(len(name) for name in COMMANDS)
     for name, description in COMMANDS.items():
         print(f"  {name:<{width}}  {description}")
-    print()
-    print("Use '<command> --help' for command-specific arguments.")
 
 
 def preflight_cli(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(prog="qpx preflight")
     parser.add_argument("input", help="MOOSE input file to inspect")
     args = parser.parse_args(argv)
-    validate_input_preflight(Path(args.input).expanduser().resolve())
+    preflight_input(args.input)
     return 0
 
 
@@ -86,9 +119,9 @@ def temporal_csv_cli(argv: list[str]) -> int:
     parser.add_argument("--time-tol", type=float, default=1.0e-15)
     parser.add_argument("--allow-no-physical-rows", action="store_true")
     args = parser.parse_args(argv)
-    summary = normalize_temporal_csv(
-        Path(args.source),
-        Path(args.output),
+    summary = normalize_temporal_run_csv(
+        args.source,
+        args.output,
         time_column=args.time_column,
         initial_row_policy=args.initial_row_policy,
         initial_time=args.initial_time,
@@ -96,12 +129,34 @@ def temporal_csv_cli(argv: list[str]) -> int:
         require_physical_rows=not args.allow_no_physical_rows,
     )
     print("TEMPORAL_CSV_NORMALIZE: PASS")
-    for key in (
-        "source_rows", "initialization_rows", "physical_rows",
-        "initial_row_policy", "output",
-    ):
+    for key in ("source_rows", "initialization_rows", "physical_rows", "initial_row_policy", "output"):
         print(f"{key.upper()}={summary[key]}")
     return 0
+
+
+def _run_commands(commands: list[list[str]]) -> int:
+    for command in commands:
+        result = subprocess.run(command, cwd=ROOT, check=False)
+        if result.returncode != 0:
+            return int(result.returncode)
+    return 0
+
+
+def internal_cli(target: str) -> int:
+    if target not in INTERNAL_TARGETS:
+        known = ", ".join(INTERNAL_TARGETS)
+        print(f"unknown internal target: {target}; choose from {known}", file=sys.stderr)
+        return 2
+    commands: list[list[str]] = []
+    if target in {"architecture", "all"}:
+        commands.extend([
+            [sys.executable, str(ROOT / "tools" / "qpx_dependency_guard.py")],
+            [sys.executable, str(ROOT / "tools" / "qpx_experiment_gateway_guard.py")],
+            [sys.executable, str(ROOT / "tools" / "qpx_architecture_census.py")],
+        ])
+    if target in {"regression", "all"}:
+        commands.append([sys.executable, "-m", "pytest", "-q"])
+    return _run_commands(commands)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -109,34 +164,30 @@ def main(argv: list[str] | None = None) -> int:
     if not args or args[0] in {"-h", "--help", "help"}:
         print_help()
         return 0
+
+    if args[0] in {"-e", "--experiment"}:
+        if len(args) != 2:
+            print("usage: python3 bin/qpx.py -e <experiment.json>", file=sys.stderr)
+            return 2
+        try:
+            return run_experiment(args[1])
+        except (OSError, ValueError, TypeError) as exc:
+            print(f"experiment configuration error: {exc}", file=sys.stderr)
+            return 2
+
+    if args[0] in {"-i", "--internal"}:
+        if len(args) != 2:
+            print("usage: python3 bin/qpx.py -i <internal-target>", file=sys.stderr)
+            return 2
+        return internal_cli(args[1])
+
     command, rest = args[0], args[1:]
-    handlers = {
-        "test": cli_run_test,
-        "test-all": cli_run_all,
-        "coupling-evr1": coupling_evr1_main,
-        "coupling-evr2": coupling_evr2_main,
-        "scale-audit": scale_audit_main,
-        "fast-relaxation": fast_relaxation_main,
-        "fast-coupling-diagnostic": fast_coupling_diagnostic_main,
-        "inventory-nullspace": inventory_nullspace_main,
-        "inventory-first-linear": first_linear_main,
-        "inventory-jacobian-localization": jac_localization_main,
-        "inventory-fd-reference": fd_reference_main,
-        "contract": execution_contract_main,
-        "dmix-equivalence": dmix_equivalence_main,
-        "measure": measure_main,
-        "measure-smoke": measure_smoke_main,
-        "investigate": investigate_main,
-        "transport-probe": transport_probe_main,
-        "cache-audit": cache_audit_main,
-        "profile": profile_main,
-        "analyze": analyze_main,
-        "bundle": bundle_main,
-        "inventory": inventory_cli,
-        "preflight": preflight_cli,
-        "temporal-csv": temporal_csv_cli,
-    }
-    handler = handlers.get(command)
+    if command == "preflight":
+        return preflight_cli(rest)
+    if command == "temporal-csv":
+        return temporal_csv_cli(rest)
+
+    handler = _resolve_legacy_handler(command)
     if handler is None:
         print(f"unknown command: {command}", file=sys.stderr)
         print_help()
