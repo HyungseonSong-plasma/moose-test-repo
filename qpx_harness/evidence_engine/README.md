@@ -41,7 +41,7 @@ synthetic exact RZ face telemetry
   -> Polars cell Green-Gauss reconstruction
   -> Parquet evidence
   -> DuckDB materialization/query
-  -> conservative diagnosis
+  -> registry-driven diagnosis
 
 synthetic surface-vector perturbation
   -> same pipeline
@@ -55,6 +55,22 @@ symmetry / axial axis = Y
 radial coordinate     = X
 radial component      = 0
 ```
+
+## Architecture
+
+The extensibility boundary is split into three contracts:
+
+```text
+external telemetry
+  -> DynamicSchemaContract      # names / aliases / physical roles
+  -> Polars transforms          # derived evidence columns
+  -> DiagnosisRuleRegistry      # metric aggregation + ordered owner rules
+  -> DiagnosisReport
+```
+
+Schema normalization and diagnosis policy are deliberately independent. A new
+telemetry quantity does not automatically become a diagnosis rule, and a new
+rule does not require hard-coding a new `if/elif` branch in `diagnose.py`.
 
 ## Dynamic schema contracts
 
@@ -109,6 +125,102 @@ The built-in aliases are intentionally conservative. Very generic names such as
 `density`, `area`, or `volume` should be added only in a probe-specific contract,
 where their physical meaning is unambiguous.
 
+## Dynamic diagnosis registry
+
+`diagnose.py` no longer owns a hard-coded `if/elif` cascade. Diagnosis is driven
+by two declarative objects:
+
+- `DiagnosticMetricSpec`: which source frame/column supplies a scalar evidence
+  metric, its report key, and optional face/cell localization metadata;
+- `DiagnosisRule`: threshold, owner class, status, decision label, and priority.
+
+`DiagnosisRuleRegistry` validates that metric ids, report keys, rule ids, and
+priorities are deterministic. `evaluate_diagnosis_registry()` computes all
+registered absolute-max metrics and applies the first triggered rule in priority
+order.
+
+The canonical Green-Gauss behavior is now only a factory:
+
+```python
+from qpx_harness.evidence_engine import build_constant_state_registry
+
+registry = build_constant_state_registry()
+```
+
+The existing `summarize_constant_state()` API uses this registry internally, so
+existing campaign callers keep the same dictionary interface.
+
+### Add a new spatial diagnostic
+
+Suppose a transform or telemetry importer provides a cell column named
+`electron_diffusivity_error`. No change to `diagnose.py` is required:
+
+```python
+from qpx_harness.evidence_engine import (
+    DiagnosticMetricSpec,
+    DiagnosisRule,
+    build_constant_state_registry,
+    evaluate_diagnosis_registry,
+)
+
+registry = build_constant_state_registry().extend(
+    metrics={
+        "electron_diffusivity_error": DiagnosticMetricSpec(
+            metric_id="electron_diffusivity_error",
+            source="cell",
+            column="electron_diffusivity_error",
+            report_key="max_electron_diffusivity_error",
+            entity_kind="cell",
+            x_col="cell_x",
+            y_col="cell_y",
+        )
+    },
+    rules=(
+        DiagnosisRule(
+            rule_id="electron_diffusivity_consistency",
+            metric_id="electron_diffusivity_error",
+            threshold=1.0e-4,
+            owner_class="ELECTRON_DIFFUSIVITY_CONSISTENCY",
+            status="ISOLATED_OWNER_CLASS",
+            decision_label="electron diffusivity consistency",
+            priority=5,
+        ),
+    ),
+)
+
+report = evaluate_diagnosis_registry(
+    {"face": face, "cell": cell},
+    registry,
+)
+```
+
+Lower numeric priority executes earlier. This allows a probe-specific owner rule
+to be inserted before or after the built-in Green-Gauss decision layers without
+editing the evaluator.
+
+### Add a non-spatial diagnostic source
+
+The source key is not restricted to `face` or `cell`. For example, a Jacobian
+campaign can supply a separate frame:
+
+```python
+metric = DiagnosticMetricSpec(
+    metric_id="jacobian_relative_error",
+    source="jacobian",
+    column="relative_error",
+    report_key="max_jacobian_relative_error",
+)
+```
+
+With `entity_kind=None`, the owner decision is still produced but no artificial
+cell location is fabricated. This is useful for run-level, matrix-level, or
+campaign-level diagnostics.
+
+At present registered metrics use absolute maximum aggregation. More complex
+statistics should be derived upstream into an evidence column, then registered.
+This keeps the decision engine deterministic and prevents hidden numerical logic
+inside owner classification.
+
 ## Preserve artifacts for inspection
 
 ```bash
@@ -147,8 +259,11 @@ The focused tests verify:
 
 - exact constant-state RZ cancellation;
 - safe alias normalization before numerical transforms;
-- extension with a new diagnostic quantity without transform changes;
+- extension with a new schema quantity without transform changes;
 - rejection of duplicate canonical/alias sources;
+- registry extension with a new electron-diffusivity owner rule;
+- arbitrary non-spatial source frames such as Jacobian evidence;
+- deterministic rule validation and priority ordering;
 - separation of MOOSE-truth surface vectors from independently reconstructed
   `normal * face_area * coord_factor` values;
 - surface-vector fault routing before any RZ-specific attribution;
