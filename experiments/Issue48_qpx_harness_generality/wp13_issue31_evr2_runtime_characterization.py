@@ -13,7 +13,7 @@ if str(ROOT) not in sys.path:
 
 from recipes import issue31_coupling as recipe
 from qpx_harness.coupling_evr2 import orchestration as runtime
-from qpx_harness.diagnostics import measurement_failure_signature
+from qpx_harness.evidence import measurement_failure_signature
 from qpx_harness.execution.cases import stage_case
 from qpx_harness.performance.runner import result_status
 from qpx_harness.performance.smoke import build_smoke_manifest
