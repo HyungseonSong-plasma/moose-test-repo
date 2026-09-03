@@ -262,8 +262,8 @@ def _jacobian_case(
         log_path=log,
         extra_args=(
             "Executioner/num_steps=1",
+            "Executioner/abort_on_solve_fail=true",
             "-snes_test_jacobian",
-            "-snes_test_jacobian_view",
         ),
         timeout_seconds=timeout,
     )
