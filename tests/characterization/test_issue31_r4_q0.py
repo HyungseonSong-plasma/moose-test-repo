@@ -8,6 +8,8 @@ from qpx_harness.moose import blocks as mb
 from qpx_harness.moose import parameters as mp
 from recipes.issue31_r4 import (
     EPSILON_0,
+    MATERIAL_COVERAGE_FUNCTOR,
+    MATERIAL_COVERAGE_ONLY_BLOCKS,
     PERMITTIVITY_MATERIALS,
     PLASMA_ALL_BOUNDARY,
     audit_r4_q0_input,
@@ -38,6 +40,10 @@ def test_r4_q0_build_preserves_accepted_r3_and_adds_poisson() -> None:
     assert meta["legacy_base_material_policy"] == (
         "removed; conductivity/material_name not preserved"
     )
+    assert meta["material_coverage_policy"] == (
+        "coverage-only functor on electrostatically inactive mesh blocks"
+    )
+    assert tuple(meta["material_coverage_only_blocks"]) == MATERIAL_COVERAGE_ONLY_BLOCKS
 
     assert mp.get_parameter(text, "Variables/n_e", "initial_condition") == "1.0"
     assert (
@@ -97,6 +103,10 @@ def test_r4_q0_replaces_base_materials_with_permittivity_functors() -> None:
         assert migration["legacy_provider"] == "BaseMaterial"
         assert migration["legacy_provider_removed"] is True
         assert migration["discarded_metadata"] == ["conductivity", "material_name"]
+        if material == "plasma":
+            assert migration["legacy_scope"] == "global_unrestricted"
+        else:
+            assert migration["legacy_scope"] == "explicit"
 
     # Conductivity has no current R4 consumer and is not promoted into a functor.
     assert "prop_names = 'conductivity'" not in text
@@ -105,6 +115,28 @@ def test_r4_q0_replaces_base_materials_with_permittivity_functors() -> None:
         "FVKernels/r31_phi_diffusion",
         "coeff",
     ) == "relative_permittivity"
+
+
+def test_r4_q0_restores_material_integrity_without_inventing_inactive_eps_r() -> None:
+    text, _ = build_r4_q0_input(_base())
+    path = f"FunctorMaterials/{MATERIAL_COVERAGE_FUNCTOR}"
+
+    assert mp.get_parameter(text, path, "type") == "ADGenericFunctorMaterial"
+    assert mp.words(mp.get_parameter(text, path, "prop_names")) == [
+        MATERIAL_COVERAGE_FUNCTOR
+    ]
+    assert mp.words(mp.get_parameter(text, path, "prop_values")) == ["0"]
+    assert tuple(mp.words(mp.get_parameter(text, path, "block"))) == (
+        MATERIAL_COVERAGE_ONLY_BLOCKS
+    )
+
+    # The five coverage-only blocks do not receive a speculative eps_r provider.
+    physics_blocks = {
+        block
+        for _, (_, blocks) in PERMITTIVITY_MATERIALS.items()
+        for block in blocks
+    }
+    assert physics_blocks.isdisjoint(MATERIAL_COVERAGE_ONLY_BLOCKS)
 
 
 def test_r4_q0_charge_mapping_is_explicit_and_signed() -> None:
@@ -187,6 +219,9 @@ def test_r4_q0_stage_reuses_accepted_r3_assets(tmp_path: Path) -> None:
     assert staged["construction"]["legacy_base_material_policy"] == (
         "removed; conductivity/material_name not preserved"
     )
+    assert tuple(staged["construction"]["material_coverage_only_blocks"]) == (
+        MATERIAL_COVERAGE_ONLY_BLOCKS
+    )
     for name in (
         "qvt.msh",
         "transport_data.txt",
@@ -205,6 +240,7 @@ def test_r4_q0_stage_reuses_accepted_r3_assets(tmp_path: Path) -> None:
     for material in PERMITTIVITY_MATERIALS:
         assert not mb.has_block(text, f"Materials/{material}")
         assert mb.has_block(text, f"FunctorMaterials/permittivity_{material}")
+    assert mb.has_block(text, f"FunctorMaterials/{MATERIAL_COVERAGE_FUNCTOR}")
 
 
 def test_gauss_evidence_reports_measurement_without_predeclared_tolerance(tmp_path: Path) -> None:
