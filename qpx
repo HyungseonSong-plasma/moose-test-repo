@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Repository-root launcher supporting `python qpx ...`."""
+"""Compatibility launcher for the canonical ``bin/qpx.py`` entrypoint."""
 from __future__ import annotations
 
-from qpx_harness.cli import main
+from pathlib import Path
+import runpy
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    runpy.run_path(str(Path(__file__).resolve().parent / "bin" / "qpx.py"), run_name="__main__")
