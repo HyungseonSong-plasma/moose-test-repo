@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from dataclasses import asdict, is_dataclass
 import re
+import types
 from typing import Any, Iterable
 
 from .model import ONTOLOGY_SCHEMA_VERSION, SEMANTIC_CONTRACT_ID
@@ -118,9 +119,8 @@ class Owlready2Projection:
         existing = self._classes.get(type_name)
         if existing is not None:
             return existing
-        owl = self.owl
         with self.onto:
-            cls = owl.types.new_class(type_name, (self.SemanticEntity,))
+            cls = types.new_class(type_name, (self.SemanticEntity,))
         self._classes[type_name] = cls
         return cls
 
