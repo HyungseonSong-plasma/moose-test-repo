@@ -1,0 +1,60 @@
+name: Issue129 root import sweep
+
+on:
+  push:
+    branches:
+      - issue-129-root-surface-cleanup
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: issue-129-root-surface-cleanup
+      - name: Replace retired root imports only
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          roots = [Path('qpx_harness'), Path('recipes'), Path('tests')]
+          replacements = (
+              ('from qpx_harness.scale_audit import ', 'from qpx_harness.analysis.scale_audit import '),
+              ('from qpx_harness.evidence_diagnose_smoke import ', 'from qpx_harness.validation.evidence_diagnose_smoke import '),
+              ('from ..scale_audit import ', 'from ..analysis.scale_audit import '),
+          )
+          changed = []
+          remaining = []
+          for root in roots:
+              for path in sorted(root.rglob('*.py')):
+                  text = path.read_text()
+                  new = text
+                  for old, replacement in replacements:
+                      new = new.replace(old, replacement)
+                  if new != text:
+                      path.write_text(new)
+                      changed.append(str(path))
+                  if 'qpx_harness.scale_audit' in new or 'qpx_harness.evidence_diagnose_smoke' in new:
+                      remaining.append(str(path))
+                  if path.parts[:1] == ('qpx_harness',) and 'from ..scale_audit import ' in new:
+                      remaining.append(str(path))
+          print('CHANGED')
+          print('\n'.join(changed) if changed else 'none')
+          if remaining:
+              raise SystemExit('remaining retired imports: ' + ', '.join(sorted(set(remaining))))
+          PY
+      - name: Commit migration
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          if git diff --quiet; then
+            echo 'No remaining root imports.'
+            exit 0
+          fi
+          git add qpx_harness recipes tests
+          git commit -m "refactor: migrate remaining retired root imports"
+          git push origin HEAD:issue-129-root-surface-cleanup
