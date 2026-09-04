@@ -19,6 +19,11 @@ from qpx_harness.application.experiment_registry import protocol_registered
 # through the same application protocol.
 CURRENT_OPERATOR_SURFACES = (
     (
+        Path("Issue26_electron_energy/E1_zero_source/run.py"),
+        Path("Issue26_electron_energy/E1_zero_source/experiment.json"),
+        "issue26-electron-energy-e1",
+    ),
+    (
         Path("Issue27_surface_reactions/controlled_wall/run.py"),
         Path("Issue27_surface_reactions/A1_o_recombination/experiment.json"),
         "issue27-surface-reaction-controlled-wall",
