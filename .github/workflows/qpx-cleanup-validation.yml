@@ -30,6 +30,8 @@ jobs:
         run: python tools/qpx_experiment_gateway_guard.py
       - name: Validate capability architecture census
         run: python tools/qpx_architecture_census.py
+      - name: Run QPX-free pytest
+        run: python -m pytest -q
       - name: Run canonical QPX internal validation
         run: python qpx -i all
       - name: Validate Issue 43/45 science refactor
