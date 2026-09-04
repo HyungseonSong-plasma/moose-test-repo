@@ -10,10 +10,16 @@ from typing import Any, Iterable, Union, get_args, get_origin, get_type_hints
 
 from . import model as semantic_model
 from .model import (
+    ActionSpec,
+    CapabilityDescriptor,
     ClaimAssessment,
     DevelopmentState,
+    ExperimentIntent,
     HypothesisAssessment,
     ProvenanceRecord,
+    ScientificPolicy,
+    SearchDecision,
+    StateDelta,
     StateTransition,
     SEMANTIC_CONTRACT_ID,
     ONTOLOGY_SCHEMA_VERSION,
@@ -72,6 +78,92 @@ class OntologyService:
 
     def maybe_get(self, identity: str) -> Any | None:
         return self._objects.get(identity)
+
+    def objects(self, semantic_type: type[Any] | None = None) -> tuple[Any, ...]:
+        """Return a deterministic read-only snapshot of registered semantic objects."""
+        values = self._objects.values()
+        if semantic_type is not None:
+            values = (obj for obj in values if isinstance(obj, semantic_type))
+        return tuple(sorted(values, key=self._identity))
+
+    def intent(self, intent_id: str) -> ExperimentIntent:
+        value = self.get(intent_id)
+        if not isinstance(value, ExperimentIntent):
+            raise KeyError(f"{intent_id!r} is not an ExperimentIntent")
+        return value
+
+    def capability(self, capability_id: str) -> CapabilityDescriptor:
+        value = self.get(capability_id)
+        if not isinstance(value, CapabilityDescriptor):
+            raise KeyError(f"{capability_id!r} is not a CapabilityDescriptor")
+        return value
+
+    def policies(
+        self,
+        *,
+        state_id: str | None = None,
+        intent_id: str | None = None,
+    ) -> tuple[ScientificPolicy, ...]:
+        values = [
+            obj
+            for obj in self._objects.values()
+            if isinstance(obj, ScientificPolicy)
+            and (state_id is None or obj.source_state_id == state_id)
+            and (intent_id is None or obj.source_intent_id == intent_id)
+        ]
+        return tuple(sorted(values, key=lambda item: item.policy_id))
+
+    def policy(self, policy_id: str) -> ScientificPolicy:
+        value = self.get(policy_id)
+        if not isinstance(value, ScientificPolicy):
+            raise KeyError(f"{policy_id!r} is not a ScientificPolicy")
+        return value
+
+    def action(self, action_id: str) -> ActionSpec:
+        value = self.get(action_id)
+        if not isinstance(value, ActionSpec):
+            raise KeyError(f"{action_id!r} is not an ActionSpec")
+        return value
+
+    def search_decisions(self, state_id: str) -> tuple[SearchDecision, ...]:
+        values = [
+            obj
+            for obj in self._objects.values()
+            if isinstance(obj, SearchDecision) and obj.state_id == state_id
+        ]
+        return tuple(sorted(values, key=lambda item: item.decision_id))
+
+    def claim_assessments(self, state_id: str) -> tuple[ClaimAssessment, ...]:
+        values = [
+            obj
+            for obj in self._objects.values()
+            if isinstance(obj, ClaimAssessment) and obj.state_id == state_id
+        ]
+        return tuple(sorted(values, key=lambda item: item.assessment_id))
+
+    def transition(self, transition_id: str) -> StateTransition:
+        try:
+            return self._transitions[transition_id]
+        except KeyError as exc:
+            raise KeyError(f"unknown StateTransition {transition_id!r}") from exc
+
+    def state_delta(self, transition_id: str) -> StateDelta:
+        return self.transition(transition_id).delta
+
+    def repository_only_transitions(self, case_id: str) -> tuple[StateTransition, ...]:
+        values = []
+        for transition in self.state_transitions(case_id):
+            delta = transition.delta
+            if (
+                delta.repository_delta
+                and not delta.world_delta
+                and not delta.observation_delta
+                and not delta.epistemic_delta
+                and not delta.search_delta
+                and not delta.claim_delta
+            ):
+                values.append(transition)
+        return tuple(values)
 
     def commit_state(self, state: DevelopmentState) -> DevelopmentState:
         if state.semantic_contract != SEMANTIC_CONTRACT_ID:
