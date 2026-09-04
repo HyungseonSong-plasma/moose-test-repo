@@ -58,12 +58,7 @@ from .schema import (
 )
 from .store import EvidenceStore
 from .synthetic import rz_constant_square_face_rows
-from .transform import (
-    build_cell_evidence,
-    normalize_face_evidence,
-    prepare_face_evidence,
-    write_evidence_bundle,
-)
+from .transform import normalize_face_evidence
 
 __all__ = [
     "Attribution",
@@ -86,7 +81,6 @@ __all__ = [
     "DynamicSchemaContract",
     "SchemaResolution",
     "append_error_event",
-    "build_cell_evidence",
     "build_error_event",
     "classify_attribution",
     "create_collision_safe_directory",
@@ -106,7 +100,6 @@ __all__ = [
     "normalize_and_project",
     "normalize_face_evidence",
     "paths_distinct",
-    "prepare_face_evidence",
     "read_error_events",
     "require_columns",
     "runtime_core_facts",
@@ -116,6 +109,5 @@ __all__ = [
     "summarize_checks",
     "summarize_error_events",
     "utc_timestamp",
-    "write_evidence_bundle",
     "write_json_bundle",
 ]
