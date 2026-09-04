@@ -158,20 +158,23 @@ def test_execution_plan_is_solver_independent_and_lowering_is_concrete(tmp_path)
     assert target1 == target2
     emitted = [emit_moose_input(case) for case in target1.cases]
     assert emitted == [emit_moose_input(case) for case in target2.cases]
+    assert all("[FVKernels]" in item for item in emitted)
+    assert all("  [n_epsilon_time]" in item for item in emitted)
+    assert all("  [qpx_n_epsilon_diffusion]" in item for item in emitted)
     assert all("type = FVDiffusion" in item for item in emitted)
-    assert all("FVKernels/n_epsilon_time" in item for item in emitted)
     assert all("type = FVTimeKernel" in item for item in emitted)
-    assert all("FunctorMaterials/electron_energy_density_J_m3" in item for item in emitted)
-    assert all("FunctorMaterials/mean_en_solved" in item for item in emitted)
-    assert all("Postprocessors/electron_energy_inventory_J" in item for item in emitted)
+    assert all("  [electron_energy_density_J_m3]" in item for item in emitted)
+    assert all("  [mean_en_solved]" in item for item in emitted)
+    assert all("  [electron_energy_inventory_J]" in item for item in emitted)
     assert all("functor = electron_energy_density_J_m3" in item for item in emitted)
-    assert all("Postprocessors/n_epsilon_min" in item for item in emitted)
-    assert all("Postprocessors/n_epsilon_max" in item for item in emitted)
-    assert all("Postprocessors/mean_en_solved_avg" in item for item in emitted)
+    assert all("  [n_epsilon_min]" in item for item in emitted)
+    assert all("  [n_epsilon_max]" in item for item in emitted)
+    assert all("  [mean_en_solved_avg]" in item for item in emitted)
     assert all("num_steps = 5" in item for item in emitted)
     assert all("[QPX]" not in item for item in emitted)
     assert all("n_epsilon_drift" not in item for item in emitted)
     assert all("joule_source" not in item.lower() for item in emitted)
+    assert all("[Variables/n_epsilon]" not in item for item in emitted)
 
 
 def test_accepted_semantic_e2a_fixture_matches_frozen_control_values():
@@ -199,6 +202,8 @@ def test_accepted_semantic_e2a_fixture_matches_frozen_control_values():
     assert all("dt = 1e-08" in item for item in emitted)
     assert all("end_time = 1e-08" in item for item in emitted)
     assert all("num_steps = 1" in item for item in emitted)
+    assert all("${n_e_value}*5.7327599999999999" in item for item in emitted)
+    assert all("1.6021766339999999e-19" in item for item in emitted)
 
 
 def test_unknown_semantic_action_does_not_emit_placeholder_target():
