@@ -13,9 +13,10 @@ from experiments.Issue31_r4_q0_all_ground import run as q0_run
 from experiments.Issue31_r4_qf1_closed_feedback import run as qf1_run
 from experiments.Issue31_r4_qn0_all_ground import run as qn0_run
 from experiments.Issue91_real_qvt_r3 import run as issue91_run
-from qpx_harness.evidence import create_collision_safe_directory, utc_timestamp, write_json_bundle
+from qpx_harness.evidence import create_collision_safe_directory, sha256_file, utc_timestamp, write_json_bundle
 from qpx_harness.execution.cases import stage_case
 from qpx_harness.execution.runtime import resolve_executable, validate_executable
+from qpx_harness.provenance import ArtifactRef, FileIdentity, RunEnvelope, write_run_envelope
 from recipes.issue31_r4_qf2 import (
     QF2_CHARGE_MAX_PP,
     QF2_CHARGE_MIN_PP,
@@ -25,6 +26,7 @@ from recipes.issue31_r4_qf2 import (
 ROOT = Path(__file__).resolve().parents[2]
 SOURCE = ROOT / "experiments" / "Issue91_real_qvt_r3" / "r3_e0"
 ELEMENTARY_CHARGE = 1.602176634e-19
+PROTOCOL_ID = "r4-qf2-local-charge-relaxation"
 
 # Predeclared bounded scientific gates for the final R4 discriminator.
 MAX_INITIAL_GLOBAL_CARRIER_SCALED_CHARGE = 1.0e-6
@@ -186,6 +188,35 @@ def _local_relaxation_evidence(
     }
 
 
+def _persist_run_artifacts(root: Path, summary: dict[str, Any], exe: Path, case_dir: Path) -> None:
+    write_json_bundle(root, {"summary": ("summary.json", summary)})
+
+    artifacts: list[ArtifactRef] = [ArtifactRef(kind="protocol", path="summary.json")]
+    logs_dir = root / "logs"
+    for log in sorted(logs_dir.glob("*.log")):
+        artifacts.append(ArtifactRef(kind="execution", path=str(log.relative_to(root))))
+    for evidence_path in (case_dir / "input_out.csv", case_dir / "input_out.physical.csv"):
+        if evidence_path.is_file():
+            artifacts.append(ArtifactRef(kind="evidence", path=str(evidence_path.relative_to(root))))
+
+    input_path = case_dir / "input.i"
+    input_identity = (
+        FileIdentity(path=str(input_path.relative_to(root)), sha256=sha256_file(input_path))
+        if input_path.is_file()
+        else None
+    )
+    envelope = RunEnvelope(
+        run_id=root.name,
+        experiment_id=PROTOCOL_ID,
+        protocol=PROTOCOL_ID,
+        source_revision=str(summary.get("repository_head")) if summary.get("repository_head") else None,
+        executable=FileIdentity(path=str(exe.resolve()), sha256=str(summary.get("qpx_sha256"))),
+        input=input_identity,
+        artifacts=tuple(artifacts),
+    )
+    write_run_envelope(root / "run_envelope.json", envelope)
+
+
 def _print_terminal(root: Path, summary: dict[str, Any]) -> None:
     print(f"ISSUE31_R4_QF2_ROOT: {root}")
     print(f"ISSUE31_R4_QF2_STATUS: {summary['status']}")
@@ -215,6 +246,7 @@ def _print_terminal(root: Path, summary: dict[str, Any]) -> None:
             f"{c2['carrier_scaled_defect']:.17g}"
         )
     print(f"ISSUE31_R4_QF2_SUMMARY: {root / 'summary.json'}")
+    print(f"ISSUE31_R4_QF2_RUN_ENVELOPE: {root / 'run_envelope.json'}")
 
 
 def run(args: argparse.Namespace) -> int:
@@ -233,7 +265,7 @@ def run(args: argparse.Namespace) -> int:
     reference = float(staged["construction"]["electron_reference_density_m3"])
     summary: dict[str, Any] = {
         "issue": 31,
-        "experiment": "r4-qf2-local-charge-relaxation",
+        "experiment": PROTOCOL_ID,
         "repository_head": issue91_run._repo_head(),
         "qpx_realpath": str(exe.resolve()),
         "qpx_sha256": issue91_run._sha256(exe),
@@ -274,7 +306,7 @@ def run(args: argparse.Namespace) -> int:
     summary["p2"] = p2
     if p2["returncode"] != 0:
         summary["status"] = "P2_FAIL_R4_QF2"
-        write_json_bundle(root, {"summary": ("summary.json", summary)})
+        _persist_run_artifacts(root, summary, exe, case_dir)
         _print_terminal(root, summary)
         return 2
 
@@ -282,7 +314,7 @@ def run(args: argparse.Namespace) -> int:
     summary["runtime"] = runtime
     if runtime["returncode"] != 0:
         summary["status"] = "R4_QF2_RUNTIME_FAIL"
-        write_json_bundle(root, {"summary": ("summary.json", summary)})
+        _persist_run_artifacts(root, summary, exe, case_dir)
         _print_terminal(root, summary)
         return 1
 
@@ -290,7 +322,7 @@ def run(args: argparse.Namespace) -> int:
     summary["r3_invariants"] = invariants
     if invariants.get("pass") is not True:
         summary["status"] = "R4_QF2_R3_INVARIANT_FAIL"
-        write_json_bundle(root, {"summary": ("summary.json", summary)})
+        _persist_run_artifacts(root, summary, exe, case_dir)
         _print_terminal(root, summary)
         return 1
 
@@ -304,7 +336,7 @@ def run(args: argparse.Namespace) -> int:
 
     if any(item.get("status") != "MEASURED" for item in (gauss, state, c2)):
         summary["status"] = "R4_QF2_CORE_EVIDENCE_MISSING"
-        write_json_bundle(root, {"summary": ("summary.json", summary)})
+        _persist_run_artifacts(root, summary, exe, case_dir)
         _print_terminal(root, summary)
         return 1
 
@@ -316,7 +348,7 @@ def run(args: argparse.Namespace) -> int:
     summary["local_charge_relaxation"] = relaxation
     if relaxation.get("status") != "MEASURED":
         summary["status"] = "R4_QF2_RELAXATION_EVIDENCE_MISSING"
-        write_json_bundle(root, {"summary": ("summary.json", summary)})
+        _persist_run_artifacts(root, summary, exe, case_dir)
         _print_terminal(root, summary)
         return 1
 
@@ -338,7 +370,7 @@ def run(args: argparse.Namespace) -> int:
         if all(acceptance.values())
         else "R4_QF2_EVIDENCE_READY_NOT_ACCEPTED"
     )
-    write_json_bundle(root, {"summary": ("summary.json", summary)})
+    _persist_run_artifacts(root, summary, exe, case_dir)
     _print_terminal(root, summary)
     return 0
 
