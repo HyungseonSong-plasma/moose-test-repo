@@ -5,7 +5,7 @@ EXPECTED_LEGACY_COMMANDS = frozenset({
     "test", "test-all", "scale-audit", "inventory-nullspace",
     "inventory-first-linear", "contract", "dmix-equivalence", "measure",
     "measure-smoke", "investigate", "transport-probe", "cache-audit",
-    "profile", "analyze", "bundle", "inventory", "preflight", "temporal-csv",
+    "profile", "analyze", "inventory", "preflight", "temporal-csv",
 })
 EXPECTED_INTERNAL_TARGETS = frozenset({"architecture", "regression", "all"})
 
