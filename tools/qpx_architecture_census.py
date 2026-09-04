@@ -13,22 +13,33 @@ ROOT = Path(__file__).resolve().parents[1]
 HARNESS = ROOT / "qpx_harness"
 OWNERSHIP_PATH = ROOT / "docs" / "development" / "2026-09-01_issue73_recipe_ownership.json"
 
+# Transitional census vocabulary: retained legacy capability packages and the
+# canonical responsibility-oriented packages introduced by #130/#133 are both
+# classified. Presence here means the package has an explicit responsibility;
+# it does not make legacy and canonical owners semantically equivalent.
 CAPABILITY_DIRS = {
+    "adapters",
     "analysis",
     "application",
     "cpp",
     "diagnose",
     "diagnostics",
     "dmix",
+    "domains",
     "evidence",
     "execution",
     "inventory",
     "models",
     "moose",
+    "observation",
+    "ontology",
     "performance",
     "petsc",
+    "planning",
     "provenance",
+    "reasoning",
     "spec",
+    "specification",
     "transforms",
     "validation",
 }
@@ -85,8 +96,8 @@ def classify(path: Path, recipe_map: dict[str, dict]) -> str:
     parts = Path(rel).parts
     if parts[0] == "recipes":
         if rel == "recipes/__init__.py":
-            return "ISSUE_SPECIFIC_POLICY"
-        return "ISSUE_SPECIFIC_POLICY" if rel in recipe_map else "UNCLASSIFIED"
+            return "LEGACY_COMPATIBILITY_ONLY"
+        return "LEGACY_COMPATIBILITY_ONLY" if rel in recipe_map else "UNCLASSIFIED"
     if parts[0] == "bin":
         return "CLI_PRESENTATION"
     if parts[0] == "scripts":
@@ -208,6 +219,7 @@ def build_census() -> dict:
         "recipe_set": recipe_paths,
         "recipe_set_expected": expected_recipes,
         "recipe_set_ok": recipe_set_ok,
+        "root_recipes_class": "LEGACY_COMPATIBILITY_ONLY",
         "generic_to_issue_edges": edges,
         "forbidden_production_namespaces": forbidden_namespaces,
         "module_package_collisions": collisions,
@@ -235,6 +247,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"ISSUE129_ROOT_MODULE: {path}")
     print(f"ISSUE129_ROOT_SURFACE: {'PASS' if not result['root_modules'] else 'FAIL'}")
     print(f"ISSUE70_RECIPE_SET: {'PASS' if result['recipe_set_ok'] else 'FAIL'}")
+    print(f"ISSUE138_ROOT_RECIPES_CLASS: {result['root_recipes_class']}")
     print(f"ISSUE70_ARCHITECTURE_CENSUS: {result['status']}")
     return 0 if result["status"] == "PASS" else 1
 
