@@ -1,9 +1,7 @@
-"""Compatibility facade for canonical Jacobian correctness validation."""
+"""Compatibility facade for canonical Jacobian reasoning."""
 from __future__ import annotations
 
-from typing import Any, Mapping
-
-from qpx_harness.validation.jacobian import (
+from qpx_harness.reasoning.jacobian import (
     build_jacobian_ruleset as _build_canonical_ruleset,
     diagnose_jacobian_evidence,
 )
@@ -12,7 +10,7 @@ from ..models import MetricPredicate, Z3OwnerRule, Z3RuleSet
 
 
 def build_jacobian_ruleset(relative_tolerance: float) -> Z3RuleSet:
-    """Project canonical validation rules into the historical Z3 DTO shape."""
+    """Project canonical reasoning rules into the historical Z3 DTO shape."""
     canonical = _build_canonical_ruleset(relative_tolerance)
     return Z3RuleSet(
         rules=tuple(
