@@ -6,6 +6,7 @@ on:
       - main
       - issue-126-qpx-harness-refactor
       - issue-128-retire-issue-namespaces
+      - issue-129-root-surface-cleanup
   workflow_dispatch:
 
 jobs:
