@@ -4,11 +4,21 @@ import json
 
 import pytest
 
-from qpx_harness.adapters.moose import emit_moose_input, lower_execution_plan
+from qpx_harness.adapters.moose import (
+    MooseLoweringError,
+    emit_moose_input,
+    lower_execution_plan,
+)
 from qpx_harness.execution import compile_execution_plan
-from qpx_harness.ontology import OntologyService, SemanticInvariantError
+from qpx_harness.execution.plan import ExecutionCase, ExecutionPlan
+from qpx_harness.ontology import (
+    OntologyService,
+    SemanticInvariantError,
+    SemanticVersionError,
+)
 from qpx_harness.ontology.model import (
     DevelopmentState,
+    ExperimentIntent,
     Hypothesis,
     HypothesisAssessment,
     HypothesisSupport,
@@ -29,7 +39,9 @@ def _semantic_spec(tmp_path):
         "schema_version": 2,
         "experiment_id": "controlled-electron-energy-diffusion",
         "objective": "validate controlled electron-energy diffusion",
+        "model": "oxygen_icp_electron_energy",
         "target_claims": ["electron-energy diffusion smooths the profile"],
+        "target_questions": ["does the closed-boundary inventory remain conserved?"],
         "requested_capabilities": [
             "electron_energy_diffusion",
             "electron_energy_inventory_observation",
@@ -42,8 +54,16 @@ def _semantic_spec(tmp_path):
         ],
         "observations": ["energy_inventory", "energy_profile"],
         "execution_bounds": {"max_steps": 5},
+        "cases": [
+            {
+                "case_id": "requested-diffusion",
+                "parameters": {"diffusivity": 0.25},
+                "constraints": ["same mesh and time-step as control"],
+            }
+        ],
+        "provenance": {"historical_source": "Issue26 E2a semantic migration"},
     }
-    source.write_text(json.dumps(payload), encoding="utf-8")
+    source.write_text(json.dumps(payload, sort_keys=True), encoding="utf-8")
     return source, payload
 
 
@@ -54,25 +74,67 @@ def test_canonical_spec_rejects_target_mutation_syntax(tmp_path):
         validate_payload(payload, source_path=source)
 
 
+def test_semantic_compilation_preserves_spec_meaning(tmp_path):
+    source, payload = _semantic_spec(tmp_path)
+    spec = validate_payload(payload, source_path=source)
+    service = OntologyService()
+    compilation = compile_experiment_intent(
+        spec,
+        capabilities=default_capabilities(),
+        ontology=service,
+    )
+
+    assert compilation.intent.model == "oxygen_icp_electron_energy"
+    assert tuple(goal.statement for goal in compilation.goals) == (payload["objective"],)
+    assert tuple(claim.statement for claim in compilation.target_claims) == tuple(
+        payload["target_claims"]
+    )
+    assert tuple(question.statement for question in compilation.target_questions) == tuple(
+        payload["target_questions"]
+    )
+    assert len(compilation.cases) == 1
+    assert compilation.cases[0].parameters == (("diffusivity", 0.25),)
+    assert compilation.intent.case_ids == (compilation.cases[0].case_id,)
+    assert set(compilation.intent.target_ids) == {
+        compilation.target_claims[0].proposition_id,
+        compilation.target_questions[0].question_id,
+    }
+    assert compilation.intent.goal_ids != compilation.intent.target_ids
+    assert dict(compilation.provenance.metadata)["historical_source"] == (
+        "Issue26 E2a semantic migration"
+    )
+    assert service.get(compilation.target_claims[0].proposition_id) == compilation.target_claims[0]
+    assert service.get(compilation.target_questions[0].question_id) == compilation.target_questions[0]
+
+
 def test_semantic_compilation_and_policy_are_deterministic(tmp_path):
     source, payload = _semantic_spec(tmp_path)
     spec = validate_payload(payload, source_path=source)
     capabilities = default_capabilities()
     first = compile_experiment_intent(spec, capabilities=capabilities)
     second = compile_experiment_intent(spec, capabilities=capabilities)
-    assert first.intent == second.intent
+    assert first == second
 
     state = DevelopmentState(state_id="S0", case_id="case")
     policy1 = synthesize_policy(state, first.intent, capabilities)
     policy2 = synthesize_policy(state, first.intent, capabilities)
     assert policy1 == policy2
+    assert len(policy1.selected_actions) == 2
+    assert {action.intervention_type for action in policy1.selected_actions} == {
+        "PARAMETER_CONTROL",
+        "PARAMETER_TREATMENT",
+    }
+    assert all(action.preserves == first.intent.constraint_ids for action in policy1.selected_actions)
+    assert policy1.model == first.intent.model
+    assert policy1.target_ids == first.intent.target_ids
+    assert "controlled-electron-energy-diffusion:v1" in policy1.policy_rule_ids
     rendered = repr(policy1)
     assert "FVKernels" not in rendered
     assert "FunctorMaterials" not in rendered
     assert "petsc_options" not in rendered
 
 
-def test_execution_plan_is_solver_independent_and_lowering_is_deterministic(tmp_path):
+def test_execution_plan_is_solver_independent_and_lowering_is_concrete(tmp_path):
     source, payload = _semantic_spec(tmp_path)
     spec = validate_payload(payload, source_path=source)
     capabilities = default_capabilities()
@@ -84,13 +146,67 @@ def test_execution_plan_is_solver_independent_and_lowering_is_deterministic(tmp_
     assert "FVKernels" not in text
     assert "Executioner" not in text
     assert "petsc_options" not in text
+    assert plan.model == "oxygen_icp_electron_energy"
+    assert {case.target for case in plan.cases} == {"electron_energy_transport"}
 
     target1 = lower_execution_plan(plan)
     target2 = lower_execution_plan(plan)
     assert target1 == target2
-    assert [emit_moose_input(case) for case in target1.cases] == [
-        emit_moose_input(case) for case in target2.cases
-    ]
+    emitted = [emit_moose_input(case) for case in target1.cases]
+    assert emitted == [emit_moose_input(case) for case in target2.cases]
+    assert all("type = FVDiffusion" in item for item in emitted)
+    assert all("type = ADGenericFunctorMaterial" in item for item in emitted)
+    assert all("Postprocessors/qpx_energy_inventory" in item for item in emitted)
+    assert all("Postprocessors/qpx_energy_minimum" in item for item in emitted)
+    assert all("Postprocessors/qpx_energy_maximum" in item for item in emitted)
+    assert all("num_steps = 5" in item for item in emitted)
+    assert all("[QPX]" not in item for item in emitted)
+    assert all("n_epsilon_drift" not in item for item in emitted)
+    assert all("joule" not in item.lower() for item in emitted)
+
+
+def test_unknown_semantic_action_does_not_emit_placeholder_target():
+    plan = ExecutionPlan(
+        plan_id="P",
+        source_policy_id="POL",
+        cases=(
+            ExecutionCase(
+                case_id="C",
+                action_id="A",
+                target="unsupported_semantic_target",
+                intervention_type="SEMANTIC_CAPABILITY",
+            ),
+        ),
+    )
+    with pytest.raises(MooseLoweringError, match="no approved MOOSE realization"):
+        lower_execution_plan(plan)
+
+
+def test_quasi_neutral_policy_derivation_is_state_based_and_solver_independent():
+    state = DevelopmentState(
+        state_id="S0",
+        case_id="case",
+        system=(("signed_heavy_charge_number_density_m3", 2.5e15),),
+    )
+    intent = ExperimentIntent(
+        intent_id="I",
+        experiment_id="qn",
+        objective="derive quasi-neutral electron reference",
+        model="oxygen_icp",
+        requested_capabilities=("quasi_neutral_initialization",),
+    )
+    policy = synthesize_policy(state, intent, default_capabilities())
+    assert policy.unresolved_requirements == ()
+    assert policy.derived_values == (("electron_reference_density_m3", 2.5e15),)
+    assert len(policy.selected_actions) == 1
+    assert policy.selected_actions[0].intervention_type == "DERIVED_INITIALIZATION"
+    assert "MOOSE" not in repr(policy)
+
+    plan = compile_execution_plan(policy)
+    target = lower_execution_plan(plan)
+    emitted = emit_moose_input(target.cases[0])
+    assert "n_e_value = 2500000000000000" in emitted
+    assert "[QPX]" not in emitted
 
 
 def test_committed_state_is_immutable():
@@ -98,7 +214,13 @@ def test_committed_state_is_immutable():
     state = DevelopmentState(state_id="S0", case_id="case")
     service.commit_state(state)
     with pytest.raises(SemanticInvariantError):
-        service.commit_state(DevelopmentState(state_id="S0", case_id="case", repository=(("owner", "new"),)))
+        service.commit_state(
+            DevelopmentState(
+                state_id="S0",
+                case_id="case",
+                repository=(("owner", "new"),),
+            )
+        )
 
 
 def test_one_current_hypothesis_assessment_per_state():
@@ -130,7 +252,11 @@ def test_one_current_hypothesis_assessment_per_state():
 def test_repository_only_state_delta_is_first_class():
     service = OntologyService()
     s0 = DevelopmentState(state_id="S0", case_id="case")
-    s1 = DevelopmentState(state_id="S1", case_id="case", repository=(("canonical_owner", "ontology"),))
+    s1 = DevelopmentState(
+        state_id="S1",
+        case_id="case",
+        repository=(("canonical_owner", "ontology"),),
+    )
     service.commit_state(s0)
     service.commit_state(s1)
     transition = StateTransition(
@@ -143,6 +269,56 @@ def test_repository_only_state_delta_is_first_class():
     assert transition.delta.repository_delta
     assert transition.delta.world_delta == ()
     assert transition.delta.epistemic_delta == ()
+
+
+def test_ontology_json_round_trip_reconstructs_typed_semantics(tmp_path):
+    source, payload = _semantic_spec(tmp_path)
+    spec = validate_payload(payload, source_path=source)
+    service = OntologyService()
+    compilation = compile_experiment_intent(
+        spec,
+        capabilities=default_capabilities(),
+        ontology=service,
+    )
+    s0 = DevelopmentState(state_id="S0", case_id="case")
+    s1 = DevelopmentState(
+        state_id="S1",
+        case_id="case",
+        repository=(("canonical_owner", "ontology"),),
+    )
+    service.commit_state(s0)
+    policy = synthesize_policy(s0, compilation.intent, default_capabilities())
+    service.register(policy)
+    service.register_many(policy.selected_actions)
+    service.register_many(policy.decisions)
+    service.commit_state(s1)
+    transition = StateTransition(
+        transition_id="T0",
+        predecessor_id="S0",
+        successor_id="S1",
+        delta=StateDelta(repository_delta=(("canonical_owner", "ontology"),)),
+    )
+    service.commit_transition(transition)
+
+    persisted = service.save_json(tmp_path / "ontology.json")
+    reloaded = OntologyService.load_json(persisted)
+    assert reloaded.get(compilation.intent.intent_id) == compilation.intent
+    assert reloaded.get(compilation.target_claims[0].proposition_id) == compilation.target_claims[0]
+    assert reloaded.get(compilation.target_questions[0].question_id) == compilation.target_questions[0]
+    assert reloaded.get(policy.policy_id) == policy
+    assert reloaded.current_state("case") == s1
+    assert reloaded.state_transitions("case") == (transition,)
+
+
+def test_ontology_json_round_trip_rejects_incompatible_version(tmp_path):
+    service = OntologyService()
+    service.commit_state(DevelopmentState(state_id="S0", case_id="case"))
+    persisted = service.save_json(tmp_path / "ontology.json")
+    payload = json.loads(persisted.read_text(encoding="utf-8"))
+    payload["semantic_contract"] = "QPX_STATE_SEMANTICS_V0"
+    persisted.write_text(json.dumps(payload), encoding="utf-8")
+    with pytest.raises(SemanticVersionError):
+        OntologyService.load_json(persisted)
 
 
 def test_owlready_worlds_are_isolated_when_available():
