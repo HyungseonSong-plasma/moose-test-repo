@@ -42,24 +42,59 @@ class OntologyService:
     semantics cannot safely enforce.
     """
 
+    _IDENTITY_FIELD_BY_TYPE = {
+        "ProvenanceRecord": "provenance_id",
+        "Artifact": "artifact_id",
+        "Observation": "observation_id",
+        "Evidence": "evidence_id",
+        "DerivedFact": "fact_id",
+        "Constraint": "constraint_id",
+        "DevelopmentGoal": "goal_id",
+        "Proposition": "proposition_id",
+        "Hypothesis": "proposition_id",
+        "MechanismClaim": "proposition_id",
+        "ValidationClaim": "proposition_id",
+        "OpenQuestion": "question_id",
+        "HypothesisAssessment": "assessment_id",
+        "ClaimAssessment": "assessment_id",
+        "DiagnosticConclusion": "conclusion_id",
+        "CapabilityDescriptor": "capability_id",
+        "ExperimentCaseIntent": "case_id",
+        "ExperimentIntent": "intent_id",
+        "ActionSpec": "action_id",
+        "SearchDecision": "decision_id",
+        "ScientificPolicy": "policy_id",
+        "DevelopmentState": "state_id",
+        "StateTransition": "transition_id",
+        "ActionExecution": "execution_id",
+        "ExecutionOutcome": "outcome_id",
+    }
+
     def __init__(self) -> None:
         self._objects: dict[str, Any] = {}
         self._states: dict[str, DevelopmentState] = {}
         self._transitions: dict[str, StateTransition] = {}
 
-    @staticmethod
-    def _identity(obj: Any) -> str:
-        for name in (
-            "state_id", "intent_id", "goal_id", "capability_id", "artifact_id",
-            "observation_id", "evidence_id", "fact_id", "proposition_id",
-            "question_id", "case_id", "assessment_id", "conclusion_id",
-            "action_id", "decision_id", "policy_id", "execution_id", "outcome_id",
-            "transition_id", "provenance_id", "constraint_id",
-        ):
-            value = getattr(obj, name, None)
-            if value:
-                return str(value)
-        raise SemanticInvariantError(f"object has no stable semantic identity: {type(obj).__name__}")
+    @classmethod
+    def _identity(cls, obj: Any) -> str:
+        """Return the object's owned identity, never an identity it references.
+
+        Semantic records contain many ``*_id`` references. Selecting the first
+        non-empty field is unsafe because, for example, an Observation may
+        reference an Artifact and a SearchDecision references a State. Identity
+        ownership is therefore explicit per semantic record type.
+        """
+        field_name = cls._IDENTITY_FIELD_BY_TYPE.get(type(obj).__name__)
+        if field_name is None:
+            raise SemanticInvariantError(
+                f"object type has no registered stable semantic identity: {type(obj).__name__}"
+            )
+        value = getattr(obj, field_name, None)
+        if value is None or str(value) == "":
+            raise SemanticInvariantError(
+                f"object has empty stable semantic identity: {type(obj).__name__}.{field_name}"
+            )
+        return str(value)
 
     def register(self, obj: Any) -> Any:
         identity = self._identity(obj)
@@ -81,7 +116,7 @@ class OntologyService:
 
     def objects(self, semantic_type: type[Any] | None = None) -> tuple[Any, ...]:
         """Return a deterministic read-only snapshot of registered semantic objects."""
-        values = self._objects.values()
+        values: Iterable[Any] = self._objects.values()
         if semantic_type is not None:
             values = (obj for obj in values if isinstance(obj, semantic_type))
         return tuple(sorted(values, key=self._identity))
@@ -243,7 +278,8 @@ class OntologyService:
 
     def proposition_assessment_history(self, proposition_id: str) -> tuple[Any, ...]:
         values = [
-            obj for obj in self._objects.values()
+            obj
+            for obj in self._objects.values()
             if isinstance(obj, (HypothesisAssessment, ClaimAssessment))
             and getattr(obj, "hypothesis_id", getattr(obj, "claim_id", None)) == proposition_id
         ]
@@ -266,7 +302,8 @@ class OntologyService:
 
     def state_transitions(self, case_id: str) -> tuple[StateTransition, ...]:
         values = [
-            transition for transition in self._transitions.values()
+            transition
+            for transition in self._transitions.values()
             if self._states[transition.predecessor_id].case_id == case_id
         ]
         return tuple(sorted(values, key=lambda item: item.transition_id))
