@@ -1,25 +1,19 @@
 """Bounded semantic-state service for QPX_STATE_SEMANTICS_V1."""
 from __future__ import annotations
 
-from dataclasses import asdict, is_dataclass
+from dataclasses import asdict, fields, is_dataclass
+from enum import Enum
 import json
 from pathlib import Path
-from typing import Any, Iterable
+import types
+from typing import Any, Iterable, Union, get_args, get_origin, get_type_hints
 
+from . import model as semantic_model
 from .model import (
-    ActionExecution,
-    ActionSpec,
-    Artifact,
     ClaimAssessment,
     DevelopmentState,
-    DiagnosticConclusion,
-    Evidence,
-    ExperimentIntent,
-    Hypothesis,
     HypothesisAssessment,
-    Observation,
     ProvenanceRecord,
-    StateDelta,
     StateTransition,
     SEMANTIC_CONTRACT_ID,
     ONTOLOGY_SCHEMA_VERSION,
@@ -52,9 +46,9 @@ class OntologyService:
         for name in (
             "state_id", "intent_id", "goal_id", "capability_id", "artifact_id",
             "observation_id", "evidence_id", "fact_id", "proposition_id",
-            "assessment_id", "conclusion_id", "action_id", "decision_id",
-            "policy_id", "execution_id", "outcome_id", "transition_id",
-            "provenance_id", "constraint_id",
+            "question_id", "case_id", "assessment_id", "conclusion_id",
+            "action_id", "decision_id", "policy_id", "execution_id", "outcome_id",
+            "transition_id", "provenance_id", "constraint_id",
         ):
             value = getattr(obj, name, None)
             if value:
@@ -143,8 +137,12 @@ class OntologyService:
         states = [state for state in self._states.values() if state.case_id == case_id]
         if not states:
             return None
-        successors = {t.predecessor_id for t in self._transitions.values() if self._states[t.predecessor_id].case_id == case_id}
-        leaves = [state for state in states if state.state_id not in successors]
+        non_leaves = {
+            transition.predecessor_id
+            for transition in self._transitions.values()
+            if self._states[transition.predecessor_id].case_id == case_id
+        }
+        leaves = [state for state in states if state.state_id not in non_leaves]
         if len(leaves) == 1:
             return leaves[0]
         if len(states) == 1:
@@ -189,6 +187,79 @@ class OntologyService:
             return payload
         raise TypeError(type(obj).__name__)
 
+    @staticmethod
+    def _type_registry() -> dict[str, type[Any]]:
+        return {
+            name: value
+            for name, value in vars(semantic_model).items()
+            if isinstance(value, type) and is_dataclass(value)
+        }
+
+    @classmethod
+    def _coerce_value(cls, annotation: Any, value: Any) -> Any:
+        if annotation is Any or annotation is None:
+            return value
+        origin = get_origin(annotation)
+        args = get_args(annotation)
+        if origin in (Union, types.UnionType):
+            if value is None and type(None) in args:
+                return None
+            for candidate in args:
+                if candidate is type(None):
+                    continue
+                try:
+                    return cls._coerce_value(candidate, value)
+                except (TypeError, ValueError, KeyError):
+                    continue
+            return value
+        if origin is tuple:
+            if not args:
+                return tuple(value)
+            item_type = args[0]
+            if len(args) == 2 and args[1] is Ellipsis:
+                return tuple(cls._coerce_value(item_type, item) for item in value)
+            return tuple(
+                cls._coerce_value(item_annotation, item)
+                for item_annotation, item in zip(args, value, strict=True)
+            )
+        if origin is list:
+            item_type = args[0] if args else Any
+            return [cls._coerce_value(item_type, item) for item in value]
+        if origin is dict:
+            key_type, item_type = args or (Any, Any)
+            return {
+                cls._coerce_value(key_type, key): cls._coerce_value(item_type, item)
+                for key, item in value.items()
+            }
+        if isinstance(annotation, type) and issubclass(annotation, Enum):
+            return annotation(value)
+        if isinstance(annotation, type) and is_dataclass(annotation):
+            return cls._deserialize_dataclass(annotation, value)
+        return value
+
+    @classmethod
+    def _deserialize_dataclass(cls, target_type: type[Any], payload: dict[str, Any]) -> Any:
+        hints = get_type_hints(target_type)
+        kwargs: dict[str, Any] = {}
+        for field in fields(target_type):
+            if field.name not in payload:
+                continue
+            kwargs[field.name] = cls._coerce_value(
+                hints.get(field.name, field.type), payload[field.name]
+            )
+        return target_type(**kwargs)
+
+    @classmethod
+    def _deserialize(cls, payload: dict[str, Any]) -> Any:
+        type_name = payload.get("__type__")
+        if not isinstance(type_name, str):
+            raise SemanticInvariantError("persisted semantic object has no __type__")
+        target_type = cls._type_registry().get(type_name)
+        if target_type is None:
+            raise SemanticVersionError(f"unsupported persisted semantic type: {type_name}")
+        values = {key: value for key, value in payload.items() if key != "__type__"}
+        return cls._deserialize_dataclass(target_type, values)
+
     def save_json(self, path: str | Path) -> Path:
         target = Path(path)
         payload = {
@@ -196,8 +267,42 @@ class OntologyService:
             "ontology_schema_version": ONTOLOGY_SCHEMA_VERSION,
             "objects": [self._serialize(obj) for _, obj in sorted(self._objects.items())],
         }
-        target.write_text(json.dumps(payload, indent=2, sort_keys=True, default=str), encoding="utf-8")
+        target.write_text(
+            json.dumps(payload, indent=2, sort_keys=True, default=str) + "\n",
+            encoding="utf-8",
+        )
         return target
+
+    @classmethod
+    def load_json(cls, path: str | Path) -> "OntologyService":
+        source = Path(path)
+        payload = json.loads(source.read_text(encoding="utf-8"))
+        if payload.get("semantic_contract") != SEMANTIC_CONTRACT_ID:
+            raise SemanticVersionError(
+                f"persisted semantic contract {payload.get('semantic_contract')!r} "
+                f"!= {SEMANTIC_CONTRACT_ID!r}"
+            )
+        if str(payload.get("ontology_schema_version")) != ONTOLOGY_SCHEMA_VERSION:
+            raise SemanticVersionError(
+                f"persisted ontology schema version {payload.get('ontology_schema_version')!r} "
+                f"!= {ONTOLOGY_SCHEMA_VERSION!r}"
+            )
+        objects = payload.get("objects")
+        if not isinstance(objects, list):
+            raise SemanticInvariantError("persisted ontology objects must be an array")
+        decoded = [cls._deserialize(item) for item in objects]
+        service = cls()
+        for obj in decoded:
+            if isinstance(obj, (DevelopmentState, StateTransition)):
+                continue
+            service.register(obj)
+        for obj in decoded:
+            if isinstance(obj, DevelopmentState):
+                service.commit_state(obj)
+        for obj in decoded:
+            if isinstance(obj, StateTransition):
+                service.commit_transition(obj)
+        return service
 
     def project_to_owlready(self, *, world: Any | None = None) -> Any:
         """Project registered objects into an explicit Owlready2 World lazily."""
