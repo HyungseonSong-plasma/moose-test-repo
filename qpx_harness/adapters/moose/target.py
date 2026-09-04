@@ -52,11 +52,24 @@ BuiltinCaseLowerer = Callable[
     [ExecutionCase, str | None, tuple[tuple[str, Any], ...]], MooseCaseIR
 ]
 
+_ELEMENTARY_CHARGE_C = 1.602176634e-19
+_ENERGY_REFERENCE_EV = 5.73276
 _ENERGY_VARIABLE = "n_epsilon"
+_ENERGY_TIME_KERNEL = "n_epsilon_time"
+_ENERGY_DENSITY_EV_FUNCTOR = "n_epsilon_physical_eV_m3"
+_ENERGY_DENSITY_J_FUNCTOR = "electron_energy_density_J_m3"
+_MEAN_EN_SOLVED_FUNCTOR = "mean_en_solved"
 _ENERGY_PROFILE_FUNCTION = "qpx_energy_initial_profile"
 _ENERGY_PROFILE_IC = "qpx_n_epsilon_ic"
 _ENERGY_DIFFUSIVITY_MATERIAL = "qpx_energy_diffusivity"
 _ENERGY_DIFFUSION_KERNEL = "qpx_n_epsilon_diffusion"
+_ENERGY_INVENTORY_PP = "electron_energy_inventory_J"
+_ENERGY_NORM_AVG_PP = "n_epsilon_avg"
+_ENERGY_NORM_MIN_PP = "n_epsilon_min"
+_ENERGY_NORM_MAX_PP = "n_epsilon_max"
+_MEAN_EN_AVG_PP = "mean_en_solved_avg"
+_MEAN_EN_MIN_PP = "mean_en_solved_min"
+_MEAN_EN_MAX_PP = "mean_en_solved_max"
 _LOCALIZED_BUMP_EXPRESSION = (
     "1.0 + 0.5*exp(-800.0*(x-0.12)^2 - 80.0*(y-0.22)^2)"
 )
@@ -94,16 +107,58 @@ def _execution_assignments(
     return tuple(result)
 
 
+def _energy_bridge_blocks() -> tuple[MooseBlock, ...]:
+    energy_scale_ev = f"${{n_e_value}}*{_ENERGY_REFERENCE_EV:.17g}"
+    energy_scale_j = (
+        f"${{n_e_value}}*{_ENERGY_REFERENCE_EV:.17g}*{_ELEMENTARY_CHARGE_C:.17g}"
+    )
+    return (
+        MooseBlock(
+            path=f"FunctorMaterials/{_ENERGY_DENSITY_EV_FUNCTOR}",
+            type_name="ADParsedFunctorMaterial",
+            parameters=(
+                ("property_name", _ENERGY_DENSITY_EV_FUNCTOR),
+                ("functor_names", f"'{_ENERGY_VARIABLE}'"),
+                ("functor_symbols", "'eps_hat'"),
+                ("expression", f"'{energy_scale_ev}*eps_hat'"),
+                ("block", "plasma"),
+            ),
+        ),
+        MooseBlock(
+            path=f"FunctorMaterials/{_ENERGY_DENSITY_J_FUNCTOR}",
+            type_name="ADParsedFunctorMaterial",
+            parameters=(
+                ("property_name", _ENERGY_DENSITY_J_FUNCTOR),
+                ("functor_names", f"'{_ENERGY_VARIABLE}'"),
+                ("functor_symbols", "'eps_hat'"),
+                ("expression", f"'{energy_scale_j}*eps_hat'"),
+                ("block", "plasma"),
+            ),
+        ),
+        MooseBlock(
+            path=f"FunctorMaterials/{_MEAN_EN_SOLVED_FUNCTOR}",
+            type_name="ADParsedFunctorMaterial",
+            parameters=(
+                ("property_name", _MEAN_EN_SOLVED_FUNCTOR),
+                ("functor_names", f"'{_ENERGY_VARIABLE} n_e'"),
+                ("functor_symbols", "'eps_hat ne_hat'"),
+                ("expression", f"'{_ENERGY_REFERENCE_EV:.17g}*eps_hat/ne_hat'"),
+                ("block", "plasma"),
+            ),
+        ),
+    )
+
+
 def _observation_blocks(observations: tuple[str, ...]) -> tuple[MooseBlock, ...]:
     blocks: list[MooseBlock] = []
     for observation in observations:
         if observation == "energy_inventory":
             blocks.append(
                 MooseBlock(
-                    path="Postprocessors/qpx_energy_inventory",
+                    path=f"Postprocessors/{_ENERGY_INVENTORY_PP}",
                     type_name="ADElementIntegralFunctorPostprocessor",
                     parameters=(
-                        ("functor", _ENERGY_VARIABLE),
+                        ("functor", _ENERGY_DENSITY_J_FUNCTOR),
                         ("block", "plasma"),
                         ("execute_on", "'INITIAL TIMESTEP_END'"),
                     ),
@@ -113,7 +168,7 @@ def _observation_blocks(observations: tuple[str, ...]) -> tuple[MooseBlock, ...]
             blocks.extend(
                 (
                     MooseBlock(
-                        path="Postprocessors/qpx_energy_average",
+                        path=f"Postprocessors/{_ENERGY_NORM_AVG_PP}",
                         type_name="ElementAverageFunctorPostprocessor",
                         parameters=(
                             ("functor", _ENERGY_VARIABLE),
@@ -122,7 +177,7 @@ def _observation_blocks(observations: tuple[str, ...]) -> tuple[MooseBlock, ...]
                         ),
                     ),
                     MooseBlock(
-                        path="Postprocessors/qpx_energy_minimum",
+                        path=f"Postprocessors/{_ENERGY_NORM_MIN_PP}",
                         type_name="ADElementExtremeFunctorValue",
                         parameters=(
                             ("functor", _ENERGY_VARIABLE),
@@ -132,10 +187,39 @@ def _observation_blocks(observations: tuple[str, ...]) -> tuple[MooseBlock, ...]
                         ),
                     ),
                     MooseBlock(
-                        path="Postprocessors/qpx_energy_maximum",
+                        path=f"Postprocessors/{_ENERGY_NORM_MAX_PP}",
                         type_name="ADElementExtremeFunctorValue",
                         parameters=(
                             ("functor", _ENERGY_VARIABLE),
+                            ("value_type", "max"),
+                            ("block", "plasma"),
+                            ("execute_on", "'INITIAL TIMESTEP_END'"),
+                        ),
+                    ),
+                    MooseBlock(
+                        path=f"Postprocessors/{_MEAN_EN_AVG_PP}",
+                        type_name="ElementAverageFunctorPostprocessor",
+                        parameters=(
+                            ("functor", _MEAN_EN_SOLVED_FUNCTOR),
+                            ("block", "plasma"),
+                            ("execute_on", "'INITIAL TIMESTEP_END'"),
+                        ),
+                    ),
+                    MooseBlock(
+                        path=f"Postprocessors/{_MEAN_EN_MIN_PP}",
+                        type_name="ADElementExtremeFunctorValue",
+                        parameters=(
+                            ("functor", _MEAN_EN_SOLVED_FUNCTOR),
+                            ("value_type", "min"),
+                            ("block", "plasma"),
+                            ("execute_on", "'INITIAL TIMESTEP_END'"),
+                        ),
+                    ),
+                    MooseBlock(
+                        path=f"Postprocessors/{_MEAN_EN_MAX_PP}",
+                        type_name="ADElementExtremeFunctorValue",
+                        parameters=(
+                            ("functor", _MEAN_EN_SOLVED_FUNCTOR),
                             ("value_type", "max"),
                             ("block", "plasma"),
                             ("execute_on", "'INITIAL TIMESTEP_END'"),
@@ -183,12 +267,21 @@ def _lower_electron_energy_diffusion(
                 ("function", _ENERGY_PROFILE_FUNCTION),
             ),
         ),
+        *_energy_bridge_blocks(),
         MooseBlock(
             path=f"FunctorMaterials/{_ENERGY_DIFFUSIVITY_MATERIAL}",
             type_name="ADGenericFunctorMaterial",
             parameters=(
                 ("prop_names", "'electron_energy_diffusivity_control'"),
                 ("prop_values", f"'{diffusivity:.17g}'"),
+                ("block", "plasma"),
+            ),
+        ),
+        MooseBlock(
+            path=f"FVKernels/{_ENERGY_TIME_KERNEL}",
+            type_name="FVTimeKernel",
+            parameters=(
+                ("variable", _ENERGY_VARIABLE),
                 ("block", "plasma"),
             ),
         ),
