@@ -24,6 +24,11 @@ CURRENT_OPERATOR_SURFACES = (
         "issue26-electron-energy-e1",
     ),
     (
+        Path("Issue26_electron_energy/E2a_controlled_diffusion/run.py"),
+        Path("Issue26_electron_energy/E2a_controlled_diffusion/experiment.json"),
+        "issue26-electron-energy-e2a",
+    ),
+    (
         Path("Issue27_surface_reactions/controlled_wall/run.py"),
         Path("Issue27_surface_reactions/A1_o_recombination/experiment.json"),
         "issue27-surface-reaction-controlled-wall",
