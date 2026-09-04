@@ -371,8 +371,7 @@ def lower_execution_plan(
     )
 
 
-def _block_rank(path: str) -> tuple[int, str]:
-    root = path.split("/", 1)[0]
+def _root_rank(name: str) -> tuple[int, str]:
     order = {
         "Variables": 10,
         "Functions": 20,
@@ -382,11 +381,36 @@ def _block_rank(path: str) -> tuple[int, str]:
         "Postprocessors": 60,
         "Executioner": 70,
     }
-    return order.get(root, 100), path
+    return order.get(name, 100), name
+
+
+def _render_tree_node(
+    lines: list[str],
+    *,
+    name: str,
+    node: dict[str, Any],
+    indent: int,
+) -> None:
+    prefix = " " * indent
+    lines.append(f"{prefix}[{name}]")
+    type_name = node.get("type_name")
+    if type_name is not None:
+        lines.append(f"{prefix}  type = {type_name}")
+    for key, value in sorted(node.get("parameters", {}).items()):
+        lines.append(f"{prefix}  {key} = {value}")
+    children = node.get("children", {})
+    for child_name in sorted(children):
+        _render_tree_node(
+            lines,
+            name=child_name,
+            node=children[child_name],
+            indent=indent + 2,
+        )
+    lines.append(f"{prefix}[]")
 
 
 def emit_moose_input(case: MooseCaseIR) -> str:
-    """Emit deterministic MOOSE target text from structured IR."""
+    """Emit deterministic, hierarchical MOOSE input text from structured IR."""
     lines: list[str] = [
         f"# QPX case_id: {case.case_id}",
         f"# QPX action_id: {case.action_id}",
@@ -401,29 +425,54 @@ def emit_moose_input(case: MooseCaseIR) -> str:
     for assignment in top_level:
         lines.append(f"{assignment.name} = {assignment.value}")
 
-    assignments_by_path: dict[str, list[MooseAssignment]] = {}
-    for assignment in case.assignments:
-        if assignment.path:
-            assignments_by_path.setdefault(assignment.path, []).append(assignment)
+    tree: dict[str, Any] = {}
 
-    block_map = {block.path: block for block in case.blocks}
-    all_paths = sorted(
-        set(block_map) | set(assignments_by_path),
-        key=_block_rank,
-    )
-    for path in all_paths:
-        block = block_map.get(path)
-        lines.append(f"[{path}]")
-        if block is not None and block.type_name is not None:
-            lines.append(f"  type = {block.type_name}")
-        parameters = list(block.parameters if block is not None else ())
-        parameters.extend(
-            (assignment.name, assignment.value)
-            for assignment in assignments_by_path.get(path, ())
+    def ensure_node(path: str) -> dict[str, Any]:
+        parts = tuple(part for part in path.split("/") if part)
+        if not parts:
+            raise MooseLoweringError("MOOSE target path may not be empty")
+        current = tree
+        node: dict[str, Any] | None = None
+        for part in parts:
+            node = current.setdefault(
+                part,
+                {"type_name": None, "parameters": {}, "children": {}},
+            )
+            current = node["children"]
+        assert node is not None
+        return node
+
+    for block in case.blocks:
+        node = ensure_node(block.path)
+        if node["type_name"] not in (None, block.type_name):
+            raise MooseLoweringError(f"conflicting block type for {block.path!r}")
+        node["type_name"] = block.type_name
+        for name, value in block.parameters:
+            prior = node["parameters"].get(name)
+            if prior is not None and prior != value:
+                raise MooseLoweringError(
+                    f"conflicting parameter {block.path}/{name}: {prior!r} != {value!r}"
+                )
+            node["parameters"][name] = value
+
+    for assignment in case.assignments:
+        if not assignment.path:
+            continue
+        node = ensure_node(assignment.path)
+        prior = node["parameters"].get(assignment.name)
+        if prior is not None and prior != assignment.value:
+            raise MooseLoweringError(
+                f"conflicting assignment {assignment.path}/{assignment.name}"
+            )
+        node["parameters"][assignment.name] = assignment.value
+
+    for root_name in sorted(tree, key=_root_rank):
+        _render_tree_node(
+            lines,
+            name=root_name,
+            node=tree[root_name],
+            indent=0,
         )
-        for name, value in sorted(parameters):
-            lines.append(f"  {name} = {value}")
-        lines.append("[]")
 
     for observation in sorted(case.required_observations):
         lines.append(f"# QPX observation: {observation}")
