@@ -2,6 +2,11 @@ import polars as pl
 import pytest
 from pydantic import ValidationError
 
+from qpx_harness.application.green_gauss_workflow import (
+    build_cell_evidence,
+    prepare_face_evidence,
+    write_evidence_bundle,
+)
 from qpx_harness.diagnose import (
     DiagnosticMetricSpec,
     DiagnosisReport,
@@ -25,11 +30,8 @@ from qpx_harness.evidence import (
     ColumnSpec,
     CoreColumnRole,
     EvidenceStore,
-    build_cell_evidence,
     normalize_and_project,
-    prepare_face_evidence,
     rz_constant_square_face_rows,
-    write_evidence_bundle,
 )
 from qpx_harness.evidence_diagnose_smoke import run_smoke
 
