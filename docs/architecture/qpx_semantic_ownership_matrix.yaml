@@ -1,0 +1,245 @@
+semantic_contract: QPX_STATE_SEMANTICS_V1
+status: FROZEN
+
+concepts:
+  DevelopmentState:
+    semantic_owner: ontology
+    proposed_package: qpx_harness.ontology
+    public_apis: [DevelopmentState]
+    primary_role: CANONICAL_SEMANTIC_OWNER
+    migration_disposition: ADD
+  ExperimentIntent:
+    semantic_owner: ontology
+    proposed_package: qpx_harness.ontology
+    public_apis: [ExperimentIntent]
+    primary_role: CANONICAL_SEMANTIC_OWNER
+    projection_owners: [qpx_harness.specification]
+    migration_disposition: ADD
+  DevelopmentGoal:
+    semantic_owner: ontology
+    proposed_package: qpx_harness.ontology
+    public_apis: [DevelopmentGoal]
+    primary_role: CANONICAL_SEMANTIC_OWNER
+    migration_disposition: ADD
+  CapabilityDescriptor:
+    semantic_owner: planning
+    proposed_package: qpx_harness.planning
+    public_apis: [CapabilityDescriptor]
+    primary_role: CANONICAL_SEMANTIC_OWNER
+    migration_disposition: ADD
+  ScientificPolicy:
+    semantic_owner: planning
+    proposed_package: qpx_harness.planning
+    public_apis: [ScientificPolicy]
+    primary_role: CANONICAL_SEMANTIC_OWNER
+    migration_disposition: ADD
+  ExecutionPlan:
+    semantic_owner: execution
+    proposed_package: qpx_harness.execution
+    public_apis: [ExecutionPlan]
+    primary_role: CANONICAL_SEMANTIC_OWNER
+    current_packages: [qpx_harness.spec]
+    migration_disposition: MOVE
+  Artifact:
+    semantic_owner: provenance
+    proposed_package: qpx_harness.ontology
+    public_apis: [Artifact]
+    primary_role: CANONICAL_SEMANTIC_OWNER
+    persistence_owners: [qpx_harness.evidence]
+    migration_disposition: ADD
+  Observation:
+    semantic_owner: observation
+    proposed_package: qpx_harness.observation
+    public_apis: [Observation]
+    primary_role: CANONICAL_SEMANTIC_OWNER
+    current_packages: [qpx_harness.evidence]
+    migration_disposition: SPLIT
+  Evidence:
+    semantic_owner: ontology
+    proposed_package: qpx_harness.ontology
+    public_apis: [Evidence]
+    primary_role: CANONICAL_SEMANTIC_OWNER
+    current_packages: [qpx_harness.evidence]
+    persistence_owners: [qpx_harness.evidence]
+    migration_disposition: SPLIT
+  DerivedFact:
+    semantic_owner: analysis
+    proposed_package: qpx_harness.analysis
+    public_apis: [DerivedFact]
+    primary_role: CANONICAL_SEMANTIC_OWNER
+    computation_owners: [qpx_harness.analysis]
+    migration_disposition: ADD
+  Proposition:
+    semantic_owner: reasoning
+    proposed_package: qpx_harness.reasoning
+    public_apis: [Proposition, Hypothesis, MechanismClaim, ValidationClaim]
+    primary_role: CANONICAL_SEMANTIC_OWNER
+    current_packages: [qpx_harness.diagnose]
+    migration_disposition: SPLIT
+  HypothesisAssessment:
+    semantic_owner: reasoning
+    proposed_package: qpx_harness.reasoning
+    public_apis: [HypothesisAssessment]
+    primary_role: CANONICAL_SEMANTIC_OWNER
+    migration_disposition: ADD
+  ClaimAssessment:
+    semantic_owner: validation
+    proposed_package: qpx_harness.validation
+    public_apis: [ClaimAssessment]
+    primary_role: CANONICAL_SEMANTIC_OWNER
+    migration_disposition: ADD
+  DiagnosticConclusion:
+    semantic_owner: reasoning
+    proposed_package: qpx_harness.reasoning
+    public_apis: [DiagnosticConclusion]
+    primary_role: CANONICAL_SEMANTIC_OWNER
+    current_packages: [qpx_harness.diagnose]
+    migration_disposition: MOVE
+  ActionSpec:
+    semantic_owner: planning
+    proposed_package: qpx_harness.planning
+    public_apis: [ActionSpec]
+    primary_role: CANONICAL_SEMANTIC_OWNER
+    migration_disposition: ADD
+  SearchDecision:
+    semantic_owner: planning
+    proposed_package: qpx_harness.planning
+    public_apis: [SearchDecision]
+    primary_role: CANONICAL_SEMANTIC_OWNER
+    migration_disposition: ADD
+  ActionExecution:
+    semantic_owner: execution
+    proposed_package: qpx_harness.execution
+    public_apis: [ActionExecution]
+    primary_role: CANONICAL_SEMANTIC_OWNER
+    migration_disposition: ADD
+  ExecutionStatus:
+    semantic_owner: execution
+    proposed_package: qpx_harness.execution
+    public_apis: [ExecutionStatus]
+    primary_role: CANONICAL_SEMANTIC_OWNER
+    migration_disposition: ADD
+  ExecutionOutcome:
+    semantic_owner: execution
+    proposed_package: qpx_harness.execution
+    public_apis: [ExecutionOutcome]
+    primary_role: CANONICAL_SEMANTIC_OWNER
+    migration_disposition: ADD
+  StateTransition:
+    semantic_owner: ontology
+    proposed_package: qpx_harness.ontology
+    public_apis: [StateTransition]
+    primary_role: CANONICAL_SEMANTIC_OWNER
+    migration_disposition: ADD
+  StateDelta:
+    semantic_owner: ontology
+    proposed_package: qpx_harness.ontology
+    public_apis: [StateDelta]
+    primary_role: CANONICAL_SEMANTIC_OWNER
+    migration_disposition: ADD
+  ProvenanceRecord:
+    semantic_owner: provenance
+    proposed_package: qpx_harness.provenance
+    public_apis: [ProvenanceRecord]
+    primary_role: CANONICAL_SEMANTIC_OWNER
+    migration_disposition: KEEP
+
+pipeline_responsibilities:
+  experiment_specification:
+    owner: qpx_harness.specification
+    may_define_meaning: false
+  semantic_compiler:
+    owner: qpx_harness.specification
+    materializes: [ExperimentIntent]
+    may_define_meaning: false
+  ontology_service:
+    owner: qpx_harness.ontology
+    may_define_meaning: false
+  policy_synthesizer:
+    owner: qpx_harness.planning
+    materializes: [ScientificPolicy]
+    may_define_meaning: false
+  execution_compiler:
+    owner: qpx_harness.execution
+    materializes: [ExecutionPlan]
+    may_define_meaning: false
+  target_lowering_moose:
+    owner: qpx_harness.adapters.moose
+    may_define_meaning: false
+  process_execution:
+    owner: qpx_harness.execution
+    may_define_meaning: false
+  observation_acquisition:
+    owner: qpx_harness.observation
+    may_define_meaning: false
+  derived_fact_computation:
+    owner: qpx_harness.analysis
+    may_define_meaning: false
+  reasoning_representation:
+    owner: qpx_harness.reasoning
+    may_define_meaning: false
+  z3_backend:
+    owner: qpx_harness.reasoning.engines
+    may_define_meaning: false
+  claim_validation:
+    owner: qpx_harness.validation
+    may_define_meaning: false
+  application_coordination:
+    owner: qpx_harness.application
+    may_define_meaning: false
+  cli_routing:
+    owner: qpx_harness.cli
+    may_define_meaning: false
+
+migration_surfaces:
+  qpx_harness.application.experiment_spec.ExperimentSpec:
+    collision: SAME_TERM_DIFFERENT_MEANING
+    disposition: RETIRE
+    replacement: qpx_harness.specification.ExperimentSpec
+  qpx_harness.spec.models.ExperimentSpec:
+    collision: SAME_TERM_DIFFERENT_MEANING
+    disposition: RETIRE_AS_USER_FACING
+    replacement: qpx_harness.specification.ExperimentSpec
+    notes: low-level operation IR remains internal to lowering/compatibility only
+  qpx_harness.cpp:
+    collision: TECHNOLOGY_AS_SEMANTIC_OWNER
+    disposition: RETIRE
+    replacement: qpx_harness.observation.source_code
+    migration_issue: 139
+  qpx_harness.diagnose:
+    collision: AXIS_COLLISION
+    disposition: RETIRE
+    replacement: qpx_harness.reasoning
+    migration_issue: 140
+  qpx_harness.inventory:
+    collision: AXIS_COLLISION
+    disposition: SPLIT
+    migration_issue: 141
+  qpx_harness.dmix:
+    collision: AXIS_COLLISION
+    disposition: SPLIT
+    migration_issue: 141
+  qpx_harness.performance:
+    collision: AXIS_COLLISION
+    disposition: SPLIT
+    migration_issue: 141
+  recipes:
+    collision: ISSUE_IDENTITY_AS_REUSABLE_API
+    disposition: RETIRE
+    replacement: [experiments, qpx_harness.planning, qpx_harness.execution, qpx_harness.adapters.moose]
+    migration_issue: 138
+  root_qpx:
+    disposition: COMPATIBILITY_WRAPPER
+    replacement: bin/qpx.py
+    migration_issue: 142
+
+forbidden_authority_edges:
+  - semantic_compiler -> adapters.moose
+  - ontology -> adapters.moose
+  - planning -> adapters.moose
+  - execution_compiler -> MOOSE_implementation_detail
+  - domain_rule -> z3
+  - persistence -> redefine_ontology_meaning
+  - query -> mutate_semantic_state
+  - execution_mechanic -> scientific_acceptance
+  - cli -> domain_reasoning_backend
