@@ -1,0 +1,46 @@
+name: Issue129 import migration
+
+on:
+  push:
+    branches:
+      - issue-129-root-surface-cleanup
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: issue-129-root-surface-cleanup
+      - name: Migrate canonical imports only
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          replacements = {
+              Path('tests/characterization/test_evidence_engine.py'): (
+                  'from qpx_harness.evidence_diagnose_smoke import run_smoke',
+                  'from qpx_harness.validation.evidence_diagnose_smoke import run_smoke',
+              ),
+              Path('recipes/issue43_fast_relaxation.py'): (
+                  'from qpx_harness.scale_audit import DEFAULT_PRESSURE',
+                  'from qpx_harness.analysis.scale_audit import DEFAULT_PRESSURE',
+              ),
+          }
+          for path, (old, new) in replacements.items():
+              text = path.read_text()
+              if text.count(old) != 1:
+                  raise SystemExit(f'{path}: expected exactly one old import')
+              path.write_text(text.replace(old, new, 1))
+          PY
+      - name: Commit migration
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add tests/characterization/test_evidence_engine.py recipes/issue43_fast_relaxation.py
+          git commit -m "refactor: migrate remaining root-module imports"
+          git push origin HEAD:issue-129-root-surface-cleanup
