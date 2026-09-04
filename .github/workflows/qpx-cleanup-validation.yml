@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - issue-126-qpx-harness-refactor
+      - issue-128-retire-issue-namespaces
   workflow_dispatch:
 
 jobs:
