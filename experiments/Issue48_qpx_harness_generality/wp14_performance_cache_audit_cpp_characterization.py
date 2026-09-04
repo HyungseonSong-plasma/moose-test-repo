@@ -14,9 +14,8 @@ from qpx_harness.evidence import artifacts
 from qpx_harness import evidence
 from qpx_harness.analysis.performance import cache
 from qpx_harness.cli.commands import performance as performance_cli
-from qpx_harness.cpp import calls as cpp_calls
-from qpx_harness.cpp import functor_usage
-from qpx_harness.cpp import source as cpp_source
+from qpx_harness.observation.source_code import cpp as cpp_observation
+from qpx_harness.observation.source_code import moose as moose_observation
 
 
 def _fixture() -> str:
@@ -91,7 +90,7 @@ def _check_run_root_contract() -> None:
 
 def _check_production_cutover() -> None:
     analysis_source = Path(cache.__file__).read_text()
-    cpp_source_text = Path(functor_usage.__file__).read_text()
+    cpp_source_text = Path(moose_observation.__file__).read_text()
     cli_source = Path(performance_cli.__file__).read_text()
     for required in (
         "extract_functor_property_declaration",
@@ -150,7 +149,7 @@ def _check_production_cutover() -> None:
 
 
 def _check_primitive_boundary() -> None:
-    for module in (cpp_source, cpp_calls, functor_usage, evidence, artifacts):
+    for module in (cpp_observation, moose_observation, evidence, artifacts):
         source = Path(module.__file__).read_text()
         for forbidden in (
             "QPXFVMixtureAveragedDiffusion",
@@ -165,10 +164,6 @@ def _check_primitive_boundary() -> None:
 
 def main() -> int:
     try:
-        if cpp_source.self_test() != 0:
-            raise AssertionError("CppSource self-test failed")
-        if cpp_calls.self_test() != 0:
-            raise AssertionError("CppCall self-test failed")
         _check_declaration_contract()
         _check_run_root_contract()
         _check_production_cutover()
