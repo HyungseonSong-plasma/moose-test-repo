@@ -173,6 +173,48 @@ class CppSource:
             raise CppSourceError("unbalanced opening brace")
         return spans
 
+    def _block_is_control_body(self, span: Span, keyword: str) -> bool:
+        """Return whether ``span`` is the braced body of ``keyword (...)``."""
+        pos = span.start - 1
+        while pos >= 0 and self.masked[pos].isspace():
+            pos -= 1
+        if pos < 0 or self.masked[pos] != ")":
+            return False
+        try:
+            open_paren = self.match_backward(pos, "(", ")")
+        except CppSourceError:
+            return False
+        pos = open_paren - 1
+        while pos >= 0 and self.masked[pos].isspace():
+            pos -= 1
+        end = pos + 1
+        while pos >= 0 and (self.masked[pos].isalnum() or self.masked[pos] == "_"):
+            pos -= 1
+        return self.masked[pos + 1:end] == keyword
+
+    def enclosing_blocks(self, pattern: str, *, keyword: str | None = None) -> list[Span]:
+        """Return blocks enclosing source matches, from innermost to outermost.
+
+        ``pattern`` is matched against masked source so comments and literals do
+        not create false anchors. When ``keyword`` is supplied, only braced
+        control bodies whose header has that keyword are returned; this is used
+        by instrumentation code to identify nested ``for`` loop bodies without
+        assigning any domain semantics to the source observer.
+        """
+        matches = list(re.finditer(pattern, self.masked))
+        if not matches:
+            raise CppSourceError(f"source pattern not found: {pattern!r}")
+        candidates: set[Span] = set()
+        blocks = self.block_spans()
+        for match in matches:
+            for span in blocks:
+                if not span.contains(match.start()):
+                    continue
+                if keyword is not None and not self._block_is_control_body(span, keyword):
+                    continue
+                candidates.add(span)
+        return sorted(candidates, key=lambda span: (span.end - span.start, span.start))
+
     def function_body(self, signature: str) -> Span:
         hits = [m.start() for m in re.finditer(re.escape(signature), self.masked)]
         bodies: list[Span] = []
@@ -296,14 +338,22 @@ def split_call_arguments(cpp: CppSource, call: Span) -> CallArguments:
     i = start
     while i < close_idx:
         c = cpp.masked[i]
-        if c == "(": paren += 1
-        elif c == ")": paren -= 1
-        elif c == "[": bracket += 1
-        elif c == "]": bracket -= 1
-        elif c == "{": brace += 1
-        elif c == "}": brace -= 1
-        elif c == "<": angle += 1
-        elif c == ">" and angle > 0: angle -= 1
+        if c == "(":
+            paren += 1
+        elif c == ")":
+            paren -= 1
+        elif c == "[":
+            bracket += 1
+        elif c == "]":
+            bracket -= 1
+        elif c == "{":
+            brace += 1
+        elif c == "}":
+            brace -= 1
+        elif c == "<":
+            angle += 1
+        elif c == ">" and angle > 0:
+            angle -= 1
         elif c == "," and paren == bracket == brace == angle == 0:
             args.append(cpp.text[start:i].strip())
             start = i + 1
