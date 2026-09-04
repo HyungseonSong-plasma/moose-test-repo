@@ -23,10 +23,12 @@ COMPATIBILITY_FACADES = {
     "qpx_harness/runtime.py",
     "qpx_harness/workspace.py",
     "qpx_harness/dmix_equivalence.py",
-    "qpx_harness/coupling_evr1_runtime.py",
-    "qpx_harness/electron_inventory_nullspace.py",
 }
 ISSUE_NAME_RE = re.compile(r"(?:^|/)(?:issue\d+|coupling_evr\d+)(?:_|/|\.py)", re.IGNORECASE)
+FORBIDDEN_PRODUCTION_NAMESPACE_RE = re.compile(
+    r"^qpx_harness/(?:issue\d+(?:_|/|\.py)|coupling_evr\d+(?:_|/|\.py))",
+    re.IGNORECASE,
+)
 FORBIDDEN_GENERIC_PREFIXES = (
     "recipes",
     "qpx_harness.issue",
@@ -111,6 +113,19 @@ def generic_issue_edges(files: list[Path]) -> list[dict[str, str]]:
     return edges
 
 
+def forbidden_production_namespaces(files: list[Path]) -> list[str]:
+    """Return issue/campaign-numbered Python ownership under qpx_harness/.
+
+    Issue identity is allowed in recipes, experiments, tests, docs, and archive.
+    General-purpose production code under qpx_harness must use capability names.
+    """
+    return sorted(
+        _rel(path)
+        for path in files
+        if FORBIDDEN_PRODUCTION_NAMESPACE_RE.match(_rel(path))
+    )
+
+
 def module_package_collisions() -> list[str]:
     """Return direct qpx_harness names that exist as both module and package."""
     modules = {
@@ -142,12 +157,17 @@ def build_census() -> dict:
     expected_recipes = sorted(recipe_map)
     recipe_set_ok = recipe_paths == expected_recipes
     edges = generic_issue_edges(harness_files)
+    forbidden_namespaces = forbidden_production_namespaces(harness_files)
     collisions = module_package_collisions()
     class_counts = dict(Counter(record["class"] for record in records))
     return {
         "status": (
             "PASS"
-            if not unclassified and recipe_set_ok and not edges and not collisions
+            if not unclassified
+            and recipe_set_ok
+            and not edges
+            and not forbidden_namespaces
+            and not collisions
             else "FAIL"
         ),
         "production_owner_count": len(records),
@@ -158,6 +178,7 @@ def build_census() -> dict:
         "recipe_set_expected": expected_recipes,
         "recipe_set_ok": recipe_set_ok,
         "generic_to_issue_edges": edges,
+        "forbidden_production_namespaces": forbidden_namespaces,
         "module_package_collisions": collisions,
         "scripts_python_files": [_rel(path) for path in script_files],
     }
@@ -175,6 +196,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"ISSUE70_PRODUCTION_OWNERS: {result['production_owner_count']}")
     print(f"ISSUE70_UNCLASSIFIED: {len(result['unclassified'])}")
     print(f"ISSUE70_GENERIC_TO_ISSUE_EDGES: {len(result['generic_to_issue_edges'])}")
+    print(f"ISSUE128_FORBIDDEN_PRODUCTION_NAMESPACES: {len(result['forbidden_production_namespaces'])}")
     print(f"ISSUE70_MODULE_PACKAGE_COLLISIONS: {len(result['module_package_collisions'])}")
     print(f"ISSUE70_RECIPE_SET: {'PASS' if result['recipe_set_ok'] else 'FAIL'}")
     print(f"ISSUE70_ARCHITECTURE_CENSUS: {result['status']}")
