@@ -15,7 +15,7 @@ def test_run_envelope_is_reference_only_and_round_trips(tmp_path: Path):
         experiment_id="r4-qf2-local-charge-relaxation",
         protocol="r4-qf2-local-charge-relaxation",
         source_revision="abc123",
-        executable=FileIdentity(path="/opt/qpx-opt", sha256="exe-sha"),
+        executable=FileIdentity(path="/opt/solver-bin", sha256="exe-sha"),
         input=FileIdentity(path="case/input.i", sha256="input-sha"),
         artifacts=(
             ArtifactRef(kind="execution", path="logs/runtime.log"),
