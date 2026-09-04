@@ -26,6 +26,12 @@ jobs:
               ('from qpx_harness.scale_audit import ', 'from qpx_harness.analysis.scale_audit import '),
               ('from qpx_harness.evidence_diagnose_smoke import ', 'from qpx_harness.validation.evidence_diagnose_smoke import '),
               ('from ..scale_audit import ', 'from ..analysis.scale_audit import '),
+              ('python -m qpx_harness.evidence_diagnose_smoke', 'python -m qpx_harness.validation.evidence_diagnose_smoke'),
+          )
+          forbidden_imports = (
+              'from qpx_harness.scale_audit import ',
+              'from qpx_harness.evidence_diagnose_smoke import ',
+              'from ..scale_audit import ',
           )
           changed = []
           remaining = []
@@ -38,9 +44,7 @@ jobs:
                   if new != text:
                       path.write_text(new)
                       changed.append(str(path))
-                  if 'qpx_harness.scale_audit' in new or 'qpx_harness.evidence_diagnose_smoke' in new:
-                      remaining.append(str(path))
-                  if path.parts[:1] == ('qpx_harness',) and 'from ..scale_audit import ' in new:
+                  if any(old in new for old in forbidden_imports):
                       remaining.append(str(path))
           print('CHANGED')
           print('\n'.join(changed) if changed else 'none')
