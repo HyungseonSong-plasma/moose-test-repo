@@ -5,7 +5,7 @@ from pathlib import Path
 
 import qpx_harness.evidence as evidence
 import qpx_harness.reasoning as reasoning
-from qpx_harness.validation.jacobian import diagnose_jacobian_evidence
+from qpx_harness.reasoning.jacobian import diagnose_jacobian_evidence
 
 
 def _absolute_imports(root: Path) -> set[str]:
