@@ -11,7 +11,7 @@ from ..evidence import artifacts
 from ..execution import cases as case_ops
 from .. import evidence
 from ..execution.runtime import resolve_executable, run_qpx, validate_executable
-from ..scale_audit import mesh_stats
+from ..analysis.scale_audit import mesh_stats
 from ..spec.cases import QVT_PREPOISSON_CASE
 from .constants import RUNTIME_PURGE_DIRECTORY_NAMES, RUNTIME_PURGE_PATTERNS
 from .first_linear_structure import audit_first_linear_structure

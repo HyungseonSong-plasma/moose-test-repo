@@ -1,8 +1,8 @@
 """Local integration smoke for the canonical Evidence -> Analysis -> Diagnose pipeline.
 
 Usage:
-    python -m qpx_harness.evidence_diagnose_smoke
-    python -m qpx_harness.evidence_diagnose_smoke --output local_evidence_smoke
+    python -m qpx_harness.validation.evidence_diagnose_smoke
+    python -m qpx_harness.validation.evidence_diagnose_smoke --output local_evidence_smoke
 """
 from __future__ import annotations
 

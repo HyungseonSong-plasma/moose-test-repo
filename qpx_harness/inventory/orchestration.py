@@ -13,7 +13,7 @@ from ..execution import cases as case_ops
 from .. import evidence
 from ..execution.runtime import resolve_executable, run_command, run_qpx, validate_executable
 from ..moose import check_input as check_input_diagnostic
-from ..scale_audit import mesh_stats
+from ..analysis.scale_audit import mesh_stats
 from .closure_model import (
     _build_constrained_quasisteady_input,
     _target_only_pair_audit,
