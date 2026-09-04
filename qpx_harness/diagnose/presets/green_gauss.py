@@ -1,7 +1,7 @@
-"""Compatibility facade for canonical Green-Gauss validation policy."""
+"""Compatibility facade for canonical Green-Gauss reasoning policy."""
 from __future__ import annotations
 
-from qpx_harness.validation.green_gauss import (
+from qpx_harness.reasoning.green_gauss import (
     EvidenceTolerances as CanonicalEvidenceTolerances,
     build_constant_state_metrics as _build_canonical_metrics,
     build_constant_state_ruleset as _build_canonical_ruleset,
@@ -29,7 +29,7 @@ def _canonical_tolerances(
 def build_constant_state_registry(
     tolerances: EvidenceTolerances | None = None,
 ) -> DiagnosisRuleRegistry:
-    """Project canonical validation policy into the historical registry DTOs."""
+    """Project canonical reasoning policy into the historical registry DTOs."""
     canonical_metrics = _build_canonical_metrics()
     canonical_ruleset = _build_canonical_ruleset(_canonical_tolerances(tolerances))
     metrics = {
