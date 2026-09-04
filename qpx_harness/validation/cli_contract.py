@@ -2,10 +2,8 @@
 from __future__ import annotations
 
 EXPECTED_LEGACY_COMMANDS = frozenset({
-    "test", "test-all", "coupling-evr1", "coupling-evr2", "scale-audit",
-    "fast-relaxation", "fast-coupling-diagnostic", "inventory-nullspace",
-    "inventory-first-linear", "inventory-jacobian-localization",
-    "inventory-fd-reference", "contract", "dmix-equivalence", "measure",
+    "test", "test-all", "scale-audit", "inventory-nullspace",
+    "inventory-first-linear", "contract", "dmix-equivalence", "measure",
     "measure-smoke", "investigate", "transport-probe", "cache-audit",
     "profile", "analyze", "bundle", "inventory", "preflight", "temporal-csv",
 })
