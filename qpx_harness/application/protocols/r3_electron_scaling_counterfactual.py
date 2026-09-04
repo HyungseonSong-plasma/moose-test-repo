@@ -1,19 +1,10 @@
 """Declarative adapter for the R3 electron-density scaling counterfactual."""
 from __future__ import annotations
 
-from pathlib import Path
+from argparse import Namespace
 
+from qpx_harness.application.execution_options import experiment_results_root, positive_timeout
 from qpx_harness.application.experiment_spec import ExperimentSpec
-from qpx_harness.execution.runtime import resolve_results_root
-
-
-def _configured_results_root(spec: ExperimentSpec) -> Path | None:
-    configured = spec.execution.get("results_root")
-    if configured in (None, ""):
-        return None
-    if not isinstance(configured, (str, Path)):
-        raise ValueError("execution.results_root must be path-like")
-    return spec.resolve_path(configured)
 
 
 def run_protocol(spec: ExperimentSpec) -> int:
@@ -22,18 +13,11 @@ def run_protocol(spec: ExperimentSpec) -> int:
     qpx = spec.execution.get("qpx")
     args = Namespace(
         qpx=qpx,
-        results_root=resolve_results_root(
-            qpx if isinstance(qpx, (str, Path)) else None,
-            _configured_results_root(spec),
-        ),
-        timeout=float(spec.execution.get("timeout_seconds", 120.0)),
+        results_root=experiment_results_root(spec, qpx),
+        timeout=positive_timeout(spec, default=120.0),
     )
-    if args.timeout <= 0:
-        raise ValueError("timeout must be positive")
     from experiments.R3_electron_scaling_counterfactual.run import run
     return int(run(args))
 
-
-from argparse import Namespace
 
 __all__ = ["run_protocol"]
