@@ -7,7 +7,7 @@ from qpx_harness.analysis.stats_builder import self_test as stats_builder_self_t
 from qpx_harness.moose.preflight import parser_symbol_self_test
 from qpx_harness.analysis.temporal import self_test as temporal_self_test
 from qpx_harness.execution.workspace import self_test as workspace_self_test
-from qpx_harness.scale_audit import self_test as scale_audit_self_test
+from qpx_harness.analysis.scale_audit import self_test as scale_audit_self_test
 from qpx_harness.inventory.characterization import self_test as inventory_nullspace_self_test
 from qpx_harness.inventory.first_linear_characterization import self_test as first_linear_self_test
 from qpx_harness.execution.contract import self_test as execution_contract_self_test
@@ -24,7 +24,7 @@ ENTRYPOINTS = (
     ("moose.preflight.parser_symbols", parser_symbol_self_test),
     ("analysis.temporal", temporal_self_test),
     ("execution.workspace", workspace_self_test),
-    ("scale_audit", scale_audit_self_test),
+    ("analysis.scale_audit", scale_audit_self_test),
     ("inventory.characterization", inventory_nullspace_self_test),
     ("inventory.first_linear_characterization", first_linear_self_test),
     ("execution.contract", execution_contract_self_test),
