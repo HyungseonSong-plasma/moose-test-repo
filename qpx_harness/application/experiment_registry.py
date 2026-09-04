@@ -14,6 +14,7 @@ ExperimentRunner = Callable[[ExperimentSpec], int]
 
 _PROTOCOLS: dict[str, str] = {
     "issue26-electron-energy-e1": "qpx_harness.application.protocols.issue26_electron_energy_e1:run_protocol",
+    "issue26-electron-energy-e2a": "qpx_harness.application.protocols.issue26_electron_energy_e2a:run_protocol",
     "issue27-surface-reaction-controlled-wall": "qpx_harness.application.protocols.issue27_surface_reaction_controlled_wall:run_protocol",
     "r3-electron-master-diagnostic": "qpx_harness.application.protocols.r3_electron_master_diagnostic:run_protocol",
     "r3-electron-scaling-counterfactual": "qpx_harness.application.protocols.r3_electron_scaling_counterfactual:run_protocol",
