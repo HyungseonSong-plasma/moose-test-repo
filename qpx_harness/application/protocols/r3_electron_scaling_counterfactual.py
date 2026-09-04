@@ -1,21 +1,19 @@
 """Declarative adapter for the R3 electron-density scaling counterfactual."""
 from __future__ import annotations
 
-from argparse import Namespace
 from pathlib import Path
 
 from qpx_harness.application.experiment_spec import ExperimentSpec
-from qpx_harness.execution.runtime import resolve_executable
+from qpx_harness.execution.runtime import resolve_results_root
 
 
-def _results_root(spec: ExperimentSpec, qpx: object) -> Path:
+def _configured_results_root(spec: ExperimentSpec) -> Path | None:
     configured = spec.execution.get("results_root")
-    if configured not in (None, ""):
-        if not isinstance(configured, (str, Path)):
-            raise ValueError("execution.results_root must be path-like")
-        return spec.resolve_path(configured)
-    executable = resolve_executable(qpx if isinstance(qpx, (str, Path)) else None)
-    return executable.parent / "temp" / "results"
+    if configured in (None, ""):
+        return None
+    if not isinstance(configured, (str, Path)):
+        raise ValueError("execution.results_root must be path-like")
+    return spec.resolve_path(configured)
 
 
 def run_protocol(spec: ExperimentSpec) -> int:
@@ -24,7 +22,10 @@ def run_protocol(spec: ExperimentSpec) -> int:
     qpx = spec.execution.get("qpx")
     args = Namespace(
         qpx=qpx,
-        results_root=_results_root(spec, qpx),
+        results_root=resolve_results_root(
+            qpx if isinstance(qpx, (str, Path)) else None,
+            _configured_results_root(spec),
+        ),
         timeout=float(spec.execution.get("timeout_seconds", 120.0)),
     )
     if args.timeout <= 0:
@@ -32,5 +33,7 @@ def run_protocol(spec: ExperimentSpec) -> int:
     from experiments.R3_electron_scaling_counterfactual.run import run
     return int(run(args))
 
+
+from argparse import Namespace
 
 __all__ = ["run_protocol"]
