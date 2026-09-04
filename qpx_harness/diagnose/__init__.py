@@ -1,4 +1,11 @@
-"""Canonical diagnosis API over structured evidence."""
+"""Deprecated compatibility diagnosis API.
+
+Canonical semantic owner: :mod:`qpx_harness.reasoning`.
+Canonical backend owner: :mod:`qpx_harness.reasoning.engines`.
+
+This namespace preserves characterized historical callers while they migrate. It
+must not acquire new proposition, rule, domain-threshold, or backend authority.
+"""
 from __future__ import annotations
 
 from typing import Any
@@ -28,6 +35,10 @@ from .presets import (
     diagnose_jacobian_evidence,
 )
 from .z3_engine import Z3DiagnosisEngine, ruleset_from_registry
+
+COMPATIBILITY_ONLY = True
+CANONICAL_REASONING_OWNER = "qpx_harness.reasoning"
+CANONICAL_Z3_OWNER = "qpx_harness.reasoning.engines.z3"
 
 
 def summarize_constant_state_report(
@@ -71,6 +82,9 @@ def summarize_constant_state(
 
 
 __all__ = [
+    "COMPATIBILITY_ONLY",
+    "CANONICAL_REASONING_OWNER",
+    "CANONICAL_Z3_OWNER",
     "DiagnosticMetricSpec",
     "DiagnosisReport",
     "DiagnosisRule",
