@@ -1,7 +1,7 @@
 """Optional Owlready2 projection for the QPX semantic model.
 
 The module deliberately imports Owlready2 lazily so QPX-free architecture tests do
-not require a JVM or reasoner.  When used, every projection owns an explicit World;
+not require a JVM or reasoner. When used, every projection owns an explicit World;
 `default_world` is never semantic authority.
 """
 from __future__ import annotations
@@ -106,9 +106,9 @@ class Owlready2Projection:
         for name in (
             "state_id", "intent_id", "goal_id", "capability_id", "artifact_id",
             "observation_id", "evidence_id", "fact_id", "proposition_id",
-            "assessment_id", "conclusion_id", "action_id", "decision_id",
-            "policy_id", "execution_id", "outcome_id", "transition_id",
-            "provenance_id", "constraint_id",
+            "question_id", "case_id", "assessment_id", "conclusion_id",
+            "action_id", "decision_id", "policy_id", "execution_id", "outcome_id",
+            "transition_id", "provenance_id", "constraint_id",
         ):
             value = getattr(obj, name, None)
             if value:
@@ -119,6 +119,10 @@ class Owlready2Projection:
         existing = self._classes.get(type_name)
         if existing is not None:
             return existing
+        existing = getattr(self.onto, type_name, None)
+        if existing is not None:
+            self._classes[type_name] = existing
+            return existing
         with self.onto:
             cls = types.new_class(type_name, (self.SemanticEntity,))
         self._classes[type_name] = cls
@@ -127,13 +131,19 @@ class Owlready2Projection:
     def _individual(self, identity: str) -> Any:
         return self.world[f"{ONTOLOGY_IRI}{_safe_name(identity)}"]
 
+    def individual(self, identity: str) -> Any:
+        """Return a projected semantic individual by stable identity, read only."""
+        return self._individual(identity)
+
     def materialize(self, objects: Iterable[Any]) -> None:
         objects = tuple(objects)
         by_id = {self._identity(obj): obj for obj in objects}
 
         for identity, obj in by_id.items():
             cls = self._semantic_class(type(obj).__name__)
-            individual = cls(_safe_name(identity), namespace=self.onto)
+            individual = self._individual(identity)
+            if individual is None:
+                individual = cls(_safe_name(identity), namespace=self.onto)
             individual.semantic_id = identity
             individual.semantic_type = type(obj).__name__
             individual.semantic_contract = SEMANTIC_CONTRACT_ID
@@ -148,19 +158,19 @@ class Owlready2Projection:
             for field_name, value in payload.items():
                 if field_name.endswith("_id") and isinstance(value, str) and value in by_id:
                     target = self._individual(value)
-                    if target is not None:
+                    if target is not None and target not in individual.references:
                         individual.references.append(target)
                 elif field_name.endswith("_ids") and isinstance(value, (list, tuple)):
                     for item in value:
                         if isinstance(item, str) and item in by_id:
                             target = self._individual(item)
-                            if target is not None:
+                            if target is not None and target not in individual.references:
                                 individual.references.append(target)
 
             provenance_id = getattr(obj, "provenance_id", None)
             if provenance_id in by_id:
                 target = self._individual(provenance_id)
-                if target is not None:
+                if target is not None and target not in individual.has_provenance:
                     individual.has_provenance.append(target)
 
             state_id = getattr(obj, "state_id", None)
@@ -177,7 +187,9 @@ class Owlready2Projection:
             if successor_id in by_id:
                 individual.successor = self._individual(successor_id)
             if execution_id in by_id:
-                individual.caused_by.append(self._individual(execution_id))
+                target = self._individual(execution_id)
+                if target not in individual.caused_by:
+                    individual.caused_by.append(target)
 
     def save(self, path: str) -> None:
         self.onto.save(file=path, format="rdfxml")
