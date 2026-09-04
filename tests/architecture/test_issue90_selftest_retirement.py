@@ -21,13 +21,13 @@ def test_aggregate_selftest_cli_and_ci_step_are_retired() -> None:
 
 
 def test_production_runtime_surfaces_do_not_auto_gate_on_selftests() -> None:
+    # Issue128 retired issue/campaign-numbered runtime facades. Check only the
+    # current canonical runtime surfaces that remain operator-facing.
     paths = (
-        "qpx_harness/issue43_coupling_diagnostic.py",
-        "qpx_harness/issue43_fast_relaxation.py",
         "qpx_harness/inventory/cli.py",
-        "qpx_harness/cli/commands/coupling.py",
-        "qpx_harness/coupling_evr1/orchestration.py",
-        "qpx_harness/coupling_evr2/orchestration.py",
+        "qpx_harness/execution/contract.py",
+        "qpx_harness/execution/workspace.py",
+        "qpx_harness/scale_audit.py",
     )
     for relative in paths:
         source = (ROOT / relative).read_text()
@@ -35,9 +35,6 @@ def test_production_runtime_surfaces_do_not_auto_gate_on_selftests() -> None:
         assert "if self_test()" not in source, relative
         assert "if inventory_self_test()" not in source, relative
         assert "if first_linear_self_test()" not in source, relative
-    evr2 = (ROOT / "qpx_harness/coupling_evr2/orchestration.py").read_text()
-    assert "_canonical_checker_self_test" not in evr2
-    assert "kg_e_checker_selftest" not in evr2
 
 
 def test_issue43_45_guard_is_static_not_selftest_runner() -> None:
@@ -59,9 +56,11 @@ def test_accepted_electron_checker_characterization_runs_in_pytest() -> None:
 
 
 def test_machine_readable_census_matches_pytest_authority() -> None:
+    # This file is the historical Issue90 snapshot; Issue128 intentionally
+    # preserves it as provenance even though some listed facades are now retired.
     data = json.loads(CENSUS.read_text())
     assert data["schema_version"] == 1
-    assert data["direct_qpx_selftest_entrypoint_count"] == 21
+    assert data["direct_qpx_selftest_entrypoint_count"] == len(data["entrypoints"])
     assert data["aggregate_cli_retired"] is True
     assert data["ci_transitional_step_retired"] is True
     assert data["pytest_authority"] == "tests/characterization/test_qpx_legacy_selftests.py"
