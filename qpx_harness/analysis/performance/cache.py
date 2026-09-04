@@ -5,7 +5,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-from ...cpp.functor_usage import (
+from ...observation.source_code.moose import (
     FunctorInspectionError,
     extract_functor_property_declaration,
     parameter_functor_calls,
