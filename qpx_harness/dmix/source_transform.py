@@ -3,8 +3,12 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..cpp.calls import CppCallError, split_call_arguments
-from ..cpp.source import CppSource, CppSourceError
+from ..observation.source_code.cpp import (
+    CppCallError,
+    CppSource,
+    CppSourceError,
+    split_call_arguments,
+)
 
 
 class EquivalenceError(RuntimeError):
