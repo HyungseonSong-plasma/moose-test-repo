@@ -1,4 +1,4 @@
-"""Local integration smoke for the canonical Evidence -> Diagnose pipeline.
+"""Local integration smoke for the canonical Evidence -> Analysis -> Diagnose pipeline.
 
 Usage:
     python -m qpx_harness.evidence_diagnose_smoke
@@ -12,14 +12,13 @@ from pathlib import Path
 import tempfile
 from typing import Any
 
-from qpx_harness.diagnose import EvidenceTolerances, summarize_constant_state
-from qpx_harness.evidence import (
-    EvidenceStore,
+from qpx_harness.application.green_gauss_workflow import (
     build_cell_evidence,
     prepare_face_evidence,
-    rz_constant_square_face_rows,
     write_evidence_bundle,
 )
+from qpx_harness.diagnose import EvidenceTolerances, summarize_constant_state
+from qpx_harness.evidence import EvidenceStore, rz_constant_square_face_rows
 
 
 def _run_at(root: Path) -> dict[str, Any]:
