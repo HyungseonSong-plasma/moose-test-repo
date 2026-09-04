@@ -3,18 +3,29 @@ from __future__ import annotations
 
 import math
 
-from ..cpp.calls import self_test as cpp_calls_self_test
-from ..cpp.source import self_test as cpp_source_self_test
+from ..observation.source_code.cpp import CppSource, split_call_arguments
 from .analysis import REL_TOL, TAGS, SPECIES, compare, quoted_values, trace_input
 from .source_transform import EquivalenceError, legacy_source, legacy_source_transform
 
 
+def _cpp_observation_self_test() -> None:
+    """Exercise the canonical C++ observation owner without legacy facades."""
+    text = "void f(){ target(a, nested(1, 2), value); }"
+    source = CppSource(text)
+    body = source.function_body("void f()")
+    call = source.unique_call("target", within=body)
+    arguments = split_call_arguments(source, call)
+    if arguments.arguments != ("a", "nested(1, 2)", "value"):
+        raise AssertionError(
+            f"canonical C++ call observation changed: {arguments.arguments!r}"
+        )
+    if source.text[body.start] != "{" or source.text[body.end - 1] != "}":
+        raise AssertionError("canonical C++ function-body observation changed")
+
+
 def self_test() -> int:
     try:
-        if cpp_source_self_test():
-            raise AssertionError("CppSource self-test failed")
-        if cpp_calls_self_test():
-            raise AssertionError("CppCallArguments self-test failed")
+        _cpp_observation_self_test()
 
         source = r'''
 void f()
