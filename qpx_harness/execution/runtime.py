@@ -54,6 +54,21 @@ def resolve_executable(explicit: str | os.PathLike[str] | None = None) -> Path:
     )
 
 
+def resolve_results_root(
+    executable: str | os.PathLike[str] | None,
+    configured: str | os.PathLike[str] | None = None,
+) -> Path:
+    """Resolve the reusable mechanical results root for a QPX workflow.
+
+    Experiment-relative configured paths should be resolved by the application
+    layer before they are passed here. Without an explicit root, preserve the
+    established QPX sibling ``temp/results`` convention.
+    """
+    if configured not in (None, ""):
+        return Path(configured).expanduser().resolve()
+    return resolve_executable(executable).parent / "temp" / "results"
+
+
 def validate_executable(exe: Path) -> None:
     size = exe.stat().st_size
     with exe.open("rb") as handle:
