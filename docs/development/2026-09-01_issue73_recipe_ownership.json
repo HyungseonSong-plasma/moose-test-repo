@@ -2,6 +2,10 @@
   "schema": "qpx_recipe_ownership_v1",
   "source_issue": 73,
   "recipes": {
+    "recipes/issue26_e1.py": {
+      "model": "PURE_PYTHON_SCIENTIFIC_POLICY",
+      "reason": "Issue26 E1 owns the normalized solved electron-energy state, zero-source conservation discriminator, solved mean-energy bridge, and bounded R4 composition while reusable MOOSE mutation and experiment execution mechanics remain in qpx_harness"
+    },
     "recipes/issue31_coupling.py": {
       "model": "PURE_PYTHON_SCIENTIFIC_POLICY",
       "reason": "parameterized transport/Poisson construction, runtime-physics CSV interpretation, and EVR discriminator algorithms require runtime values and scientific branching; converting them to JSON would require control-flow/template DSL creep"
