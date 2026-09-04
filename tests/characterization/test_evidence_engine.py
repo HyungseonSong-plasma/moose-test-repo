@@ -26,14 +26,14 @@ from qpx_harness.reasoning import (
     evaluate_diagnostic_rules,
 )
 from qpx_harness.reasoning.engines.z3 import evaluate_rules
-from qpx_harness.validation.evidence_diagnose_smoke import run_smoke
-from qpx_harness.validation.green_gauss import (
+from qpx_harness.reasoning.green_gauss import (
     EvidenceTolerances,
     build_constant_state_metrics,
     build_constant_state_ruleset,
     summarize_constant_state,
     summarize_constant_state_report,
 )
+from qpx_harness.validation.evidence_diagnose_smoke import run_smoke
 
 
 def test_polars_reconstructs_exact_rz_constant_state_contract():
