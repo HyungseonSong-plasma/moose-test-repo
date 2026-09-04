@@ -32,6 +32,22 @@ CAPABILITY_DIRS = {
     "transforms",
     "validation",
 }
+
+# Preserve the pre-#129 dependency-edge scope. Expanding canonical ownership
+# classification must not silently activate unrelated legacy dependency debt.
+GENERIC_ISSUE_EDGE_DIRS = {
+    "analysis",
+    "cpp",
+    "diagnostics",
+    "evidence",
+    "execution",
+    "moose",
+    "performance",
+    "petsc",
+    "spec",
+    "transforms",
+}
+
 ISSUE_NAME_RE = re.compile(r"(?:^|/)(?:issue\d+|coupling_evr\d+)(?:_|/|\.py)", re.IGNORECASE)
 FORBIDDEN_PRODUCTION_NAMESPACE_RE = re.compile(
     r"^qpx_harness/(?:issue\d+(?:_|/|\.py)|coupling_evr\d+(?:_|/|\.py))",
@@ -113,7 +129,7 @@ def generic_issue_edges(files: list[Path]) -> list[dict[str, str]]:
     for path in files:
         rel = _rel(path)
         parts = Path(rel).parts
-        if len(parts) < 3 or parts[0] != "qpx_harness" or parts[1] not in CAPABILITY_DIRS:
+        if len(parts) < 3 or parts[0] != "qpx_harness" or parts[1] not in GENERIC_ISSUE_EDGE_DIRS:
             continue
         for module in imported_modules(path):
             if module.startswith(FORBIDDEN_GENERIC_PREFIXES):
