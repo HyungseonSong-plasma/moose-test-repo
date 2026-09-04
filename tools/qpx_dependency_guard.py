@@ -11,9 +11,7 @@ CANONICAL_PACKAGES = {
     "evidence", "analysis", "diagnose", "execution", "application", "cli",
     "validation", "inventory", "dmix",
 }
-TRANSITIONAL_EXCEPTIONS = {
-    ("qpx_harness.evidence.transform", "qpx_harness.analysis.green_gauss"),
-}
+TRANSITIONAL_EXCEPTIONS: set[tuple[str, str]] = set()
 CHECKS = {"all", "evidence", "analysis", "execution", "presentation", "cycle"}
 
 
@@ -51,7 +49,7 @@ def violation(src: str, dst: str) -> tuple[str, str] | None:
     if src_pkg == "evidence" and dst_pkg == "diagnose":
         return "evidence", "Evidence must not depend on Diagnose"
     if src_pkg == "evidence" and dst_pkg == "analysis":
-        return "evidence", "Evidence must not depend on Analysis except documented compatibility facade"
+        return "evidence", "Evidence must not depend on Analysis"
     if src_pkg == "analysis" and dst_pkg in {"cli", "validation"}:
         return "analysis", "Analysis must not depend on CLI/Validation"
     if src_pkg == "execution" and dst_pkg in {"inventory", "dmix"}:
