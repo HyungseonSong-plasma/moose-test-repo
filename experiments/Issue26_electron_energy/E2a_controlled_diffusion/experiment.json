@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "experiment_id": "issue26-e2a-controlled-electron-energy-diffusion",
+  "protocol": "issue26-electron-energy-e2a",
+  "execution": {
+    "timeout_seconds": 240.0
+  },
+  "parameters": {
+    "energy_model": "controlled_diffusion"
+  },
+  "outputs": {
+    "solved_normalized_energy_state": true,
+    "nonuniform_energy_initial_condition": true,
+    "zero_diffusion_control": true,
+    "positive_diffusion_case": true,
+    "energy_inventory_conservation": true,
+    "profile_smoothing_discriminator": true,
+    "production_energy_transport_coefficients_validated": false,
+    "energy_drift_enabled": false,
+    "joule_source_enabled": false,
+    "wall_energy_flux_enabled": false,
+    "see_energy_source_enabled": false,
+    "transport_lookup_coupled_to_solved_energy": false,
+    "volumetric_reaction_energy_sources_enabled": false
+  }
+}
