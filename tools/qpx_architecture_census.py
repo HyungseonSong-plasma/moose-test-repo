@@ -82,6 +82,9 @@ LEGACY_NAMESPACE_PATHS = {
     "qpx_harness.spec": ROOT / "qpx_harness" / "spec",
     "recipes": ROOT / "recipes",
 }
+# Once a namespace has completed zero-caller retirement, recreating it is a
+# normal-CI architecture regression rather than merely unfinished #143 debt.
+RETIRED_LEGACY_NAMESPACES = {"qpx_harness.cpp"}
 SCAN_ROOTS = (
     ROOT / "qpx_harness",
     ROOT / "tests",
@@ -316,6 +319,9 @@ def build_census() -> dict:
     legacy_edges = legacy_namespace_import_edges(_repository_python_files())
     external_legacy_edges = [record for record in legacy_edges if record["external"]]
     present_legacy_namespaces = legacy_namespace_presence()
+    retired_reintroduced = sorted(
+        RETIRED_LEGACY_NAMESPACES.intersection(present_legacy_namespaces)
+    )
     zero_legacy = not present_legacy_namespaces and not external_legacy_edges
     return {
         "status": (
@@ -326,6 +332,7 @@ def build_census() -> dict:
             and not forbidden_namespaces
             and not collisions
             and not direct_root_modules
+            and not retired_reintroduced
             else "FAIL"
         ),
         "production_owner_count": len(records),
@@ -344,6 +351,7 @@ def build_census() -> dict:
         "legacy_namespaces_present": present_legacy_namespaces,
         "legacy_namespace_import_edges": legacy_edges,
         "external_legacy_import_edges": external_legacy_edges,
+        "retired_namespace_reintroductions": retired_reintroduced,
         "zero_legacy": zero_legacy,
     }
 
@@ -376,6 +384,12 @@ def main(argv: list[str] | None = None) -> int:
     print(f"ISSUE143_LEGACY_NAMESPACES_PRESENT: {len(result['legacy_namespaces_present'])}")
     for namespace in result["legacy_namespaces_present"]:
         print(f"ISSUE143_LEGACY_NAMESPACE: {namespace}")
+    print(
+        "ISSUE143_RETIRED_NAMESPACE_REINTRODUCTIONS: "
+        f"{len(result['retired_namespace_reintroductions'])}"
+    )
+    for namespace in result["retired_namespace_reintroductions"]:
+        print(f"ISSUE143_RETIRED_NAMESPACE_REINTRODUCED: {namespace}")
     print(f"ISSUE143_EXTERNAL_LEGACY_IMPORTS: {len(result['external_legacy_import_edges'])}")
     for edge in result["external_legacy_import_edges"]:
         print(
