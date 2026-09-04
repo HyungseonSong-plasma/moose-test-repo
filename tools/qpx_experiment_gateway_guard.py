@@ -64,6 +64,11 @@ CURRENT_OPERATOR_SURFACES = (
         "issue27-surface-reaction-controlled-wall",
     ),
     (
+        Path("Issue27_surface_reactions/controlled_wall/see.py"),
+        Path("Issue27_surface_reactions/A8_finite_see/experiment.json"),
+        "issue27-surface-reaction-controlled-wall",
+    ),
+    (
         Path("R3_electron_master_diagnostic/run.py"),
         Path("R3_electron_master_diagnostic/experiment.json"),
         "r3-electron-master-diagnostic",
