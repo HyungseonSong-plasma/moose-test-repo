@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from qpx_harness.moose.input import MooseInput, MooseInputError
-from qpx_harness.scale_audit import DEFAULT_PRESSURE
+from qpx_harness.analysis.scale_audit import DEFAULT_PRESSURE
 
 MEAN_ENERGY_EV = 5.73276
 PERTURBATION_FRACTION = 1.0e-6

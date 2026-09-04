@@ -33,7 +33,7 @@ from qpx_harness.evidence import (
     normalize_and_project,
     rz_constant_square_face_rows,
 )
-from qpx_harness.evidence_diagnose_smoke import run_smoke
+from qpx_harness.validation.evidence_diagnose_smoke import run_smoke
 
 
 def test_polars_reconstructs_exact_rz_constant_state_contract():
