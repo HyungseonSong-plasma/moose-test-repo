@@ -24,8 +24,8 @@ def diagnose_constant_green_gauss(
     radial_component: int = 0,
     tolerances: Any | None = None,
 ) -> dict[str, Any]:
-    """Compose Evidence -> Analysis -> Diagnose for constant-state diagnostics."""
-    from qpx_harness.diagnose import summarize_constant_state
+    """Compose Evidence -> Analysis -> Reasoning/Validation for constant-state diagnostics."""
+    from qpx_harness.validation.green_gauss import summarize_constant_state
 
     face, cell = analyze_green_gauss(face_frame, radial_component=radial_component)
     kwargs = {} if tolerances is None else {"tolerances": tolerances}
