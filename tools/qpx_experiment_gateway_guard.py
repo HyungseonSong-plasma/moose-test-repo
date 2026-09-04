@@ -1,4 +1,4 @@
-"""QPX-free guard for current operator-facing declarative experiments."""
+"""QPX-free guard for legacy protocol specs and canonical semantic experiments."""
 from __future__ import annotations
 
 import json
@@ -11,12 +11,13 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from qpx_harness.application.experiment_registry import protocol_registered
+from qpx_harness.specification import SCHEMA_VERSION as SEMANTIC_SCHEMA_VERSION
+from qpx_harness.specification import load_experiment_spec
 
-# Each tuple freezes one current operator-facing experiment surface as
-# (implementation runner, declarative spec, protocol id). Runner and spec are
-# deliberately separate: one protocol may own several bounded experiment
-# instances, and Issue27 dispatches prescribed/sticking/charged wall models
-# through the same application protocol.
+# Historical schema-v1 operator surfaces remain explicit compatibility routes.
+# Canonical schema-v2 experiments are deliberately NOT added here: a supported
+# semantic experiment must require only JSON plus existing capabilities, never a
+# new Issue-specific runner or protocol-registry entry.
 CURRENT_OPERATOR_SURFACES = (
     (
         Path("Issue26_electron_energy/E1_zero_source/run.py"),
@@ -106,29 +107,40 @@ CURRENT_OPERATOR_SURFACES = (
 )
 
 
+def _load_raw(spec: Path, errors: list[str]) -> dict[str, object] | None:
+    try:
+        raw = json.loads(spec.read_text(encoding="utf-8"))
+    except Exception as exc:
+        errors.append(f"{spec.relative_to(ROOT)}: invalid JSON: {exc}")
+        return None
+    if not isinstance(raw, dict):
+        errors.append(f"{spec.relative_to(ROOT)}: experiment JSON must be an object")
+        return None
+    return raw
+
+
 def main() -> int:
     errors: list[str] = []
-    declared_specs: set[Path] = set()
+    legacy_specs: set[Path] = set()
+
     for relative_runner, relative_spec, expected_protocol in sorted(
         CURRENT_OPERATOR_SURFACES,
         key=lambda item: str(item[1]),
     ):
         runner = EXPERIMENTS / relative_runner
         spec = EXPERIMENTS / relative_spec
-        declared_specs.add(spec.resolve())
+        legacy_specs.add(spec.resolve())
         if not runner.is_file():
             errors.append(f"experiments/{relative_runner}: registered operator runner missing")
             continue
         if not spec.is_file():
             errors.append(f"experiments/{relative_spec}: registered operator spec missing")
             continue
-        try:
-            raw = json.loads(spec.read_text(encoding="utf-8"))
-        except Exception as exc:
-            errors.append(f"{spec.relative_to(ROOT)}: invalid JSON: {exc}")
+        raw = _load_raw(spec, errors)
+        if raw is None:
             continue
         if raw.get("schema_version") != 1:
-            errors.append(f"{spec.relative_to(ROOT)}: schema_version must be 1")
+            errors.append(f"{spec.relative_to(ROOT)}: legacy protocol schema_version must be 1")
         protocol = raw.get("protocol")
         if protocol != expected_protocol:
             errors.append(
@@ -138,30 +150,49 @@ def main() -> int:
             errors.append(f"{spec.relative_to(ROOT)}: protocol {protocol!r} is not registered")
 
     discovered_specs = {spec.resolve() for spec in EXPERIMENTS.glob("**/experiment.json")}
-    undeclared = sorted(discovered_specs - declared_specs)
-    for spec_resolved in undeclared:
-        spec = Path(spec_resolved)
-        errors.append(
-            f"{spec.relative_to(ROOT)}: declarative experiment exists but is not classified "
-            "in CURRENT_OPERATOR_SURFACES"
-        )
+    semantic_specs: set[Path] = set()
 
-    for spec_resolved in sorted(discovered_specs):
+    for spec_resolved in sorted(discovered_specs - legacy_specs):
         spec = Path(spec_resolved)
-        try:
-            raw = json.loads(spec.read_text(encoding="utf-8"))
-        except Exception as exc:
-            errors.append(f"{spec.relative_to(ROOT)}: invalid JSON: {exc}")
+        raw = _load_raw(spec, errors)
+        if raw is None:
             continue
-        protocol = raw.get("protocol") if isinstance(raw, dict) else None
-        if not isinstance(protocol, str) or not protocol_registered(protocol):
-            errors.append(f"{spec.relative_to(ROOT)}: unregistered protocol {protocol!r}")
+        if raw.get("schema_version") != SEMANTIC_SCHEMA_VERSION:
+            errors.append(
+                f"{spec.relative_to(ROOT)}: unclassified declarative experiment; "
+                f"expected canonical semantic schema_version={SEMANTIC_SCHEMA_VERSION}"
+            )
+            continue
+        if "protocol" in raw:
+            errors.append(
+                f"{spec.relative_to(ROOT)}: canonical semantic experiment must not own a protocol route"
+            )
+            continue
+        try:
+            load_experiment_spec(spec)
+        except Exception as exc:
+            errors.append(f"{spec.relative_to(ROOT)}: invalid canonical semantic spec: {exc}")
+            continue
+        semantic_specs.add(spec_resolved)
+
+    classified = legacy_specs | semantic_specs
+    for spec_resolved in sorted(discovered_specs - classified):
+        spec = Path(spec_resolved)
+        if not any(str(spec.relative_to(ROOT)) in error for error in errors):
+            errors.append(
+                f"{spec.relative_to(ROOT)}: declarative experiment exists but is neither "
+                "a registered schema-v1 compatibility route nor a valid schema-v2 semantic spec"
+            )
 
     if errors:
         print("EXPERIMENT_GATEWAY_FAIL")
         print("\n".join(errors))
         return 1
-    print(f"EXPERIMENT_GATEWAY_PASS active_specs={len(CURRENT_OPERATOR_SURFACES)}")
+    print(
+        "EXPERIMENT_GATEWAY_PASS "
+        f"legacy_specs={len(legacy_specs)} semantic_specs={len(semantic_specs)} "
+        "semantic_protocol_entries=0"
+    )
     return 0
 
 
