@@ -10,6 +10,10 @@
       "model": "PURE_PYTHON_SCIENTIFIC_POLICY",
       "reason": "Issue26 E2a owns the controlled nonuniform electron-energy diffusion discriminator, zero-diffusion control, and scientific interpretation of profile smoothing versus conserved energy inventory while generic FV mutation and execution mechanics remain in qpx_harness"
     },
+    "recipes/issue26_energy_chain.py": {
+      "model": "PURE_PYTHON_SCIENTIFIC_POLICY",
+      "reason": "Issue26 E2b-E5 owns the controlled energy-drift sign test, drift-only Joule source interpretation, COMSOL thermal electron-energy wall flux, A8 4 eV SEE energy coupling, and one-shot scientific evidence composition while generic MOOSE mutation and execution mechanics remain in qpx_harness"
+    },
     "recipes/issue31_coupling.py": {
       "model": "PURE_PYTHON_SCIENTIFIC_POLICY",
       "reason": "parameterized transport/Poisson construction, runtime-physics CSV interpretation, and EVR discriminator algorithms require runtime values and scientific branching; converting them to JSON would require control-flow/template DSL creep"
