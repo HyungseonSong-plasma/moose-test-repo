@@ -76,6 +76,12 @@ def run_protocol(spec: ExperimentSpec) -> int:
         )
 
         runner = run_comsol_electron_thermal_wall_control
+    elif wall_model == "finite_see_control":
+        from experiments.Issue27_surface_reactions.controlled_wall.see import (
+            run_finite_see_control,
+        )
+
+        runner = run_finite_see_control
     elif wall_model == "charged_prescribed_ledger":
         from experiments.Issue27_surface_reactions.controlled_wall.charged import (
             run_charged_wall_ledger,
@@ -88,7 +94,8 @@ def run_protocol(spec: ExperimentSpec) -> int:
             "{'prescribed', 'sticking', 'sticking_all_walls', "
             "'om_prescribed_control', 'positive_ion_prescribed_control', "
             "'excited_neutral_sticking_control', 'combined_comsol_wall_control', "
-            "'comsol_electron_thermal_wall_control', 'charged_prescribed_ledger'}"
+            "'comsol_electron_thermal_wall_control', 'finite_see_control', "
+            "'charged_prescribed_ledger'}"
         )
 
     return int(
