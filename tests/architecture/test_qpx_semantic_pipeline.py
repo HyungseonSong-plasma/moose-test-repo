@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 import pytest
 
@@ -29,8 +30,11 @@ from qpx_harness.planning import default_capabilities, synthesize_policy
 from qpx_harness.specification import (
     SpecSemanticError,
     compile_experiment_intent,
+    load_experiment_spec,
     validate_payload,
 )
+
+ROOT = Path(__file__).resolve().parents[2]
 
 
 def _semantic_spec(tmp_path):
@@ -155,14 +159,46 @@ def test_execution_plan_is_solver_independent_and_lowering_is_concrete(tmp_path)
     emitted = [emit_moose_input(case) for case in target1.cases]
     assert emitted == [emit_moose_input(case) for case in target2.cases]
     assert all("type = FVDiffusion" in item for item in emitted)
-    assert all("type = ADGenericFunctorMaterial" in item for item in emitted)
-    assert all("Postprocessors/qpx_energy_inventory" in item for item in emitted)
-    assert all("Postprocessors/qpx_energy_minimum" in item for item in emitted)
-    assert all("Postprocessors/qpx_energy_maximum" in item for item in emitted)
+    assert all("FVKernels/n_epsilon_time" in item for item in emitted)
+    assert all("type = FVTimeKernel" in item for item in emitted)
+    assert all("FunctorMaterials/electron_energy_density_J_m3" in item for item in emitted)
+    assert all("FunctorMaterials/mean_en_solved" in item for item in emitted)
+    assert all("Postprocessors/electron_energy_inventory_J" in item for item in emitted)
+    assert all("functor = electron_energy_density_J_m3" in item for item in emitted)
+    assert all("Postprocessors/n_epsilon_min" in item for item in emitted)
+    assert all("Postprocessors/n_epsilon_max" in item for item in emitted)
+    assert all("Postprocessors/mean_en_solved_avg" in item for item in emitted)
     assert all("num_steps = 5" in item for item in emitted)
     assert all("[QPX]" not in item for item in emitted)
     assert all("n_epsilon_drift" not in item for item in emitted)
-    assert all("joule" not in item.lower() for item in emitted)
+    assert all("joule_source" not in item.lower() for item in emitted)
+
+
+def test_accepted_semantic_e2a_fixture_matches_frozen_control_values():
+    spec = load_experiment_spec(
+        ROOT / "experiments" / "semantic" / "electron_energy_diffusion" / "experiment.json"
+    )
+    assert dict(spec.parameters)["diffusivity"] == 100.0
+    assert dict(spec.execution_bounds) == {
+        "dt": 1e-8,
+        "end_time": 1e-8,
+        "max_steps": 1,
+    }
+    compilation = compile_experiment_intent(spec, capabilities=default_capabilities())
+    policy = synthesize_policy(
+        DevelopmentState(state_id="S0", case_id="accepted-e2a"),
+        compilation.intent,
+        default_capabilities(),
+    )
+    plan = compile_execution_plan(policy)
+    target = lower_execution_plan(plan)
+    emitted = [emit_moose_input(case) for case in target.cases]
+    assert len(emitted) == 2
+    assert any("prop_values = '0'" in item for item in emitted)
+    assert any("prop_values = '100'" in item for item in emitted)
+    assert all("dt = 1e-08" in item for item in emitted)
+    assert all("end_time = 1e-08" in item for item in emitted)
+    assert all("num_steps = 1" in item for item in emitted)
 
 
 def test_unknown_semantic_action_does_not_emit_placeholder_target():
