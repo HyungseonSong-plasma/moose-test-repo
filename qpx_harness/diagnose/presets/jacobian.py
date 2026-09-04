@@ -1,87 +1,58 @@
-"""Diagnosis policy for canonical Jacobian evidence."""
+"""Compatibility facade for canonical Jacobian correctness validation."""
 from __future__ import annotations
 
-import math
 from typing import Any, Mapping
 
+from qpx_harness.validation.jacobian import (
+    build_jacobian_ruleset as _build_canonical_ruleset,
+    diagnose_jacobian_evidence,
+)
+
 from ..models import MetricPredicate, Z3OwnerRule, Z3RuleSet
-from ..z3_engine import Z3DiagnosisEngine
 
 
 def build_jacobian_ruleset(relative_tolerance: float) -> Z3RuleSet:
-    if relative_tolerance < 0:
-        raise ValueError("relative_tolerance must be non-negative")
+    """Project canonical validation rules into the historical Z3 DTO shape."""
+    canonical = _build_canonical_ruleset(relative_tolerance)
     return Z3RuleSet(
-        rules=(
+        rules=tuple(
             Z3OwnerRule(
-                rule_id="jacobian_mismatch",
-                owner_class="JACOBIAN_MISMATCH",
-                status="HOLD",
-                decision_label="Jacobian mismatch",
-                priority=10,
-                any_of=(
-                    MetricPredicate(metric_id="nonfinite_count", operator="gt", threshold=0.0),
+                rule_id=rule.rule_id,
+                owner_class=rule.owner_class,
+                status=rule.status,
+                decision_label=rule.decision_label,
+                priority=rule.priority,
+                all_of=tuple(
                     MetricPredicate(
-                        metric_id="worst_relative_frobenius_error",
-                        operator="gt",
-                        threshold=float(relative_tolerance),
-                    ),
+                        metric_id=predicate.metric_id,
+                        operator=predicate.operator,
+                        threshold=predicate.threshold,
+                    )
+                    for predicate in rule.all_of
                 ),
-            ),
+                any_of=tuple(
+                    MetricPredicate(
+                        metric_id=predicate.metric_id,
+                        operator=predicate.operator,
+                        threshold=predicate.threshold,
+                    )
+                    for predicate in rule.any_of
+                ),
+                none_of=tuple(
+                    MetricPredicate(
+                        metric_id=predicate.metric_id,
+                        operator=predicate.operator,
+                        threshold=predicate.threshold,
+                    )
+                    for predicate in rule.none_of
+                ),
+                location_metric_id=rule.location_metric_id,
+            )
+            for rule in canonical.rules
         ),
-        pass_status="PASS",
+        pass_status=canonical.pass_status,
         rz_specific_status="NOT_APPLICABLE",
     )
-
-
-def diagnose_jacobian_evidence(
-    evidence: Mapping[str, Any], *, relative_tolerance: float
-) -> dict[str, Any]:
-    count = int(evidence.get("comparison_count", 0))
-    tests = list(evidence.get("tests", []))
-    if count == 0:
-        return {
-            "status": "HOLD",
-            "class": "JACOBIAN_EVIDENCE_INSUFFICIENT",
-            "reason": "PETSc -snes_test_jacobian produced no parseable Jacobian comparison",
-            "relative_tolerance": relative_tolerance,
-            "tests": tests,
-        }
-
-    nonfinite = list(evidence.get("nonfinite", []))
-    nonfinite_count = int(evidence.get("nonfinite_count", len(nonfinite)))
-    worst_raw = evidence.get("worst_relative_frobenius_error")
-    worst = float(worst_raw) if worst_raw is not None else math.inf
-    z3_worst = worst if math.isfinite(worst) else 0.0
-    decision = Z3DiagnosisEngine(build_jacobian_ruleset(relative_tolerance)).diagnose(
-        {
-            "nonfinite_count": float(nonfinite_count),
-            "worst_relative_frobenius_error": z3_worst,
-        }
-    )
-
-    if decision.primary_owner_class == "JACOBIAN_MISMATCH":
-        return {
-            "status": "HOLD",
-            "class": "JACOBIAN_MISMATCH",
-            "reason": (
-                "assembled-vs-finite-difference Jacobian relative Frobenius error exceeds "
-                f"the declared tolerance {relative_tolerance:g} or is non-finite"
-            ),
-            "relative_tolerance": relative_tolerance,
-            "worst_relative_frobenius_error": worst,
-            "nonfinite": nonfinite,
-            "tests": tests,
-        }
-    return {
-        "status": "PASS",
-        "class": "JACOBIAN_CORRECTNESS_PASS",
-        "reason": "all observed PETSc Jacobian comparisons satisfy the declared relative tolerance",
-        "relative_tolerance": relative_tolerance,
-        "worst_relative_frobenius_error": worst,
-        "nonfinite": [],
-        "tests": tests,
-    }
 
 
 __all__ = ["build_jacobian_ruleset", "diagnose_jacobian_evidence"]
