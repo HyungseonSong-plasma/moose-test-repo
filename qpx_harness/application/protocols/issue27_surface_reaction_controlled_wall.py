@@ -71,7 +71,7 @@ def run_protocol(spec: ExperimentSpec) -> int:
 
         runner = run_combined_comsol_wall_control
     elif wall_model == "comsol_electron_thermal_wall_control":
-        from experiments.Issue27_surface_reactions.controlled_wall.electron_wall import (
+        from experiments.Issue27_surface_reactions.controlled_wall.electron_wall_stable import (
             run_comsol_electron_thermal_wall_control,
         )
 
