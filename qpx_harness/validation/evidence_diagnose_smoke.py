@@ -18,7 +18,7 @@ from qpx_harness.application.green_gauss_workflow import (
     write_evidence_bundle,
 )
 from qpx_harness.evidence import EvidenceStore, rz_constant_square_face_rows
-from qpx_harness.validation.green_gauss import EvidenceTolerances, summarize_constant_state
+from qpx_harness.reasoning.green_gauss import EvidenceTolerances, summarize_constant_state
 
 
 def _run_at(root: Path) -> dict[str, Any]:
