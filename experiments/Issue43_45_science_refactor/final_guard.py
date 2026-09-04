@@ -10,9 +10,10 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from qpx_harness.diagnose import diagnose_coupled_runtime_evidence, diagnose_jacobian_evidence
 from qpx_harness.evidence import extract_jacobian_evidence, runtime_core_facts
 from qpx_harness.petsc import ksp
+from qpx_harness.reasoning import diagnose_coupled_runtime_evidence
+from qpx_harness.reasoning.jacobian import diagnose_jacobian_evidence
 from qpx_harness.spec.cases import QVT_PREPOISSON_CASE
 from recipes import issue43_feedback_basis
 from recipes import issue45_closure_basis
@@ -44,7 +45,7 @@ def main() -> int:
     assert issue45_closure_basis.DT_REFERENCE == issue43_feedback_basis.DT_REFERENCE
     assert issue45_closure_basis.STEPS == issue43_feedback_basis.STEPS
 
-    coupled_policy_path = ROOT / "qpx_harness/diagnose/presets/coupled_solver.py"
+    coupled_policy_path = ROOT / "qpx_harness/reasoning/coupled_solver.py"
     imports = _imports(coupled_policy_path)
     assert not any(module.startswith("recipes") for module in imports), imports
     assert not any(module.startswith("qpx_harness.issue") for module in imports), imports
@@ -125,7 +126,7 @@ def main() -> int:
 
     print("ISSUE43_45_SHARED_CASE_IDENTITY: PASS")
     print("ISSUE43_CANONICAL_RECIPE_OWNERSHIP: PASS")
-    print("ISSUE43_CANONICAL_EVIDENCE_DIAGNOSE_PIPELINE: PASS")
+    print("ISSUE43_CANONICAL_EVIDENCE_REASONING_PIPELINE: PASS")
     print("ISSUE45_CANONICAL_INVENTORY_PACKAGE: PASS")
     print("ISSUE45_CLI_CANONICAL_CUTOVER: PASS")
     print("ISSUE45_RECIPE_POLICY_CONVERGENCE: PASS")
