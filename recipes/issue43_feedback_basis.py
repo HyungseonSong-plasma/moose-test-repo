@@ -11,7 +11,7 @@ from typing import Any
 from recipes import issue43_fast_relaxation as fast_relaxation
 from qpx_harness.moose.executioner import apply_fixed_step_contract
 from qpx_harness.moose.output_observation import apply_microtime_output_contract
-from qpx_harness.scale_audit import DEFAULT_ELECTRON_DENSITY, DEFAULT_GAS_TEMPERATURE
+from qpx_harness.analysis.scale_audit import DEFAULT_ELECTRON_DENSITY, DEFAULT_GAS_TEMPERATURE
 
 DT_REFERENCE = 1.0e-13
 STEPS = 1
