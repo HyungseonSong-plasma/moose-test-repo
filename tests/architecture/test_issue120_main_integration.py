@@ -59,11 +59,13 @@ def test_current_operator_protocols_are_declarative_and_registered() -> None:
 def test_green_gauss_quantitative_formula_owner_is_analysis() -> None:
     evidence_text = (ROOT / "qpx_harness/evidence/transform.py").read_text()
     analysis_text = (ROOT / "qpx_harness/analysis/green_gauss.py").read_text()
+    application_text = (ROOT / "qpx_harness/application/green_gauss_workflow.py").read_text()
     assert "def normalize_face_evidence" in evidence_text
-    assert "from qpx_harness.analysis.green_gauss import derive_face_quantities" in evidence_text
+    assert "qpx_harness.analysis.green_gauss" not in evidence_text
     assert "reconstructed_surface_x" not in evidence_text
     assert "reconstructed_surface_x" in analysis_text
     assert "def derive_cell_quantities" in analysis_text
+    assert "from qpx_harness.analysis.green_gauss import" in application_text
 
 
 def test_repository_root_launcher_exists_for_python_qpx_form() -> None:
