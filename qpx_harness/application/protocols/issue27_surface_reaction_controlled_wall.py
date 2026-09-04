@@ -70,6 +70,12 @@ def run_protocol(spec: ExperimentSpec) -> int:
         )
 
         runner = run_combined_comsol_wall_control
+    elif wall_model == "comsol_electron_thermal_wall_control":
+        from experiments.Issue27_surface_reactions.controlled_wall.electron_wall import (
+            run_comsol_electron_thermal_wall_control,
+        )
+
+        runner = run_comsol_electron_thermal_wall_control
     elif wall_model == "charged_prescribed_ledger":
         from experiments.Issue27_surface_reactions.controlled_wall.charged import (
             run_charged_wall_ledger,
@@ -82,7 +88,7 @@ def run_protocol(spec: ExperimentSpec) -> int:
             "{'prescribed', 'sticking', 'sticking_all_walls', "
             "'om_prescribed_control', 'positive_ion_prescribed_control', "
             "'excited_neutral_sticking_control', 'combined_comsol_wall_control', "
-            "'charged_prescribed_ledger'}"
+            "'comsol_electron_thermal_wall_control', 'charged_prescribed_ledger'}"
         )
 
     return int(
