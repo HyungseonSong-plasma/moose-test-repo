@@ -2,9 +2,9 @@ name: QPX CI validation
 
 on:
   push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+    branches:
+      - main
+      - issue-126-qpx-harness-refactor
   workflow_dispatch:
 
 jobs:
