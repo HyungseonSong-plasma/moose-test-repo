@@ -10,7 +10,7 @@ from typing import Any
 
 from experiments.Issue93_r3_electron_isolation.operator_decomposition import _check_accepted_qvt_csv
 from experiments.Issue93_r3_electron_isolation.run import _electron_residuals
-from qpx_harness.diagnose import diagnose_jacobian_evidence
+from qpx_harness.reasoning.jacobian import diagnose_jacobian_evidence
 from qpx_harness.evidence import (
     create_collision_safe_directory,
     extract_jacobian_evidence,
