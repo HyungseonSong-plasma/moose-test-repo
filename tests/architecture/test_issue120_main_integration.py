@@ -41,6 +41,7 @@ def test_validation_taxonomy_distinguishes_internal_from_scientific() -> None:
 def test_current_operator_protocols_are_declarative_and_registered() -> None:
     expected = {
         "issue26-electron-energy-e1": ROOT / "experiments/Issue26_electron_energy/E1_zero_source/experiment.json",
+        "issue26-electron-energy-e2a": ROOT / "experiments/Issue26_electron_energy/E2a_controlled_diffusion/experiment.json",
         "issue27-surface-reaction-controlled-wall": ROOT / "experiments/Issue27_surface_reactions/A1_o_recombination/experiment.json",
         "r3-electron-master-diagnostic": ROOT / "experiments/R3_electron_master_diagnostic/experiment.json",
         "r3-electron-scaling-counterfactual": ROOT / "experiments/R3_electron_scaling_counterfactual/experiment.json",
