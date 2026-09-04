@@ -141,6 +141,15 @@ def module_package_collisions() -> list[str]:
     return sorted(modules & packages)
 
 
+def root_modules() -> list[str]:
+    """Return direct Python modules owned at the qpx_harness package root."""
+    return sorted(
+        _rel(path)
+        for path in HARNESS.glob("*.py")
+        if path.name != "__init__.py"
+    )
+
+
 def build_census() -> dict:
     recipe_map = _recipe_ownership()
     harness_files = _python_files(HARNESS)
@@ -159,6 +168,7 @@ def build_census() -> dict:
     edges = generic_issue_edges(harness_files)
     forbidden_namespaces = forbidden_production_namespaces(harness_files)
     collisions = module_package_collisions()
+    direct_root_modules = root_modules()
     class_counts = dict(Counter(record["class"] for record in records))
     return {
         "status": (
@@ -180,6 +190,7 @@ def build_census() -> dict:
         "generic_to_issue_edges": edges,
         "forbidden_production_namespaces": forbidden_namespaces,
         "module_package_collisions": collisions,
+        "root_modules": direct_root_modules,
         "scripts_python_files": [_rel(path) for path in script_files],
     }
 
@@ -198,6 +209,9 @@ def main(argv: list[str] | None = None) -> int:
     print(f"ISSUE70_GENERIC_TO_ISSUE_EDGES: {len(result['generic_to_issue_edges'])}")
     print(f"ISSUE128_FORBIDDEN_PRODUCTION_NAMESPACES: {len(result['forbidden_production_namespaces'])}")
     print(f"ISSUE70_MODULE_PACKAGE_COLLISIONS: {len(result['module_package_collisions'])}")
+    print(f"ISSUE129_ROOT_MODULES: {len(result['root_modules'])}")
+    for path in result["root_modules"]:
+        print(f"ISSUE129_ROOT_MODULE: {path}")
     print(f"ISSUE70_RECIPE_SET: {'PASS' if result['recipe_set_ok'] else 'FAIL'}")
     print(f"ISSUE70_ARCHITECTURE_CENSUS: {result['status']}")
     return 0 if result["status"] == "PASS" else 1
