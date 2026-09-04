@@ -59,7 +59,7 @@ CURRENT_OPERATOR_SURFACES = (
         "issue27-surface-reaction-controlled-wall",
     ),
     (
-        Path("Issue27_surface_reactions/controlled_wall/electron_wall.py"),
+        Path("Issue27_surface_reactions/controlled_wall/electron_wall_stable.py"),
         Path("Issue27_surface_reactions/A7_comsol_electron_wall/experiment.json"),
         "issue27-surface-reaction-controlled-wall",
     ),
