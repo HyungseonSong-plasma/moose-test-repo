@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from ...analysis.performance import perfgraph
-from ...cpp.source import CppSource, CppSourceError, Span
+from ...observation.source_code.cpp import CppSource, CppSourceError, Span
 
 TIMER_NAMES = {
     "evaluate": "qpx_transport_evaluate",
