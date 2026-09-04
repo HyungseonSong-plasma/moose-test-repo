@@ -21,8 +21,9 @@ def test_aggregate_selftest_cli_and_ci_step_are_retired() -> None:
 
 
 def test_production_runtime_surfaces_do_not_auto_gate_on_selftests() -> None:
-    # Issue128 retired issue/campaign-numbered runtime facades. Check only the
-    # current canonical runtime surfaces that remain operator-facing.
+    # Issue128 retired issue/campaign-numbered runtime facades. A capability may
+    # still expose an explicit --self-test option; the architectural prohibition
+    # is an unconditional/automatic self-test gate on normal runtime execution.
     paths = (
         "qpx_harness/inventory/cli.py",
         "qpx_harness/execution/contract.py",
@@ -31,10 +32,10 @@ def test_production_runtime_surfaces_do_not_auto_gate_on_selftests() -> None:
     )
     for relative in paths:
         source = (ROOT / relative).read_text()
-        assert '"--self-test"' not in source, relative
         assert "if self_test()" not in source, relative
         assert "if inventory_self_test()" not in source, relative
         assert "if first_linear_self_test()" not in source, relative
+        assert "_canonical_checker_self_test" not in source, relative
 
 
 def test_issue43_45_guard_is_static_not_selftest_runner() -> None:
