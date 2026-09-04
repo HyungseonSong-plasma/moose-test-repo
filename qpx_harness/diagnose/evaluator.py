@@ -1,103 +1,22 @@
-"""Polars metric aggregation and Z3-backed diagnosis evaluation."""
+"""Compatibility diagnosis orchestration over canonical analysis and reasoning owners."""
 from __future__ import annotations
 
 from collections.abc import Mapping
 
 import polars as pl
 
+from qpx_harness.analysis.diagnostic_metrics import (
+    aggregate_metric_values,
+    failure_location_rows,
+)
+
 from .models import (
-    DiagnosticMetricSpec,
     DiagnosisReport,
     DiagnosisRuleRegistry,
     FailureLocation,
     Z3RuleSet,
 )
 from .z3_engine import Z3DiagnosisEngine, ruleset_from_registry
-
-
-def _frame_for_metric(
-    frames: Mapping[str, pl.DataFrame], metric: DiagnosticMetricSpec
-) -> pl.DataFrame:
-    frame = frames.get(metric.source)
-    if frame is None:
-        raise ValueError(
-            f"diagnosis metric {metric.metric_id!r} requires missing source frame "
-            f"{metric.source!r}"
-        )
-    if frame.height == 0:
-        raise ValueError(
-            f"diagnosis metric {metric.metric_id!r} received no rows from "
-            f"source {metric.source!r}"
-        )
-    if metric.column not in frame.columns:
-        raise ValueError(
-            f"diagnosis metric {metric.metric_id!r} missing required column: {metric.column}"
-        )
-    return frame
-
-
-def _metric_max_abs(frame: pl.DataFrame, metric: DiagnosticMetricSpec) -> float:
-    invalid_count = frame.select(
-        pl.col(metric.column).is_finite().fill_null(False).not_().sum()
-    ).item()
-    if int(invalid_count or 0) != 0:
-        raise ValueError(
-            f"diagnosis metric {metric.metric_id!r} column {metric.column!r} "
-            "contains non-finite values"
-        )
-    value = frame.select(pl.col(metric.column).abs().max()).item()
-    return float(value if value is not None else 0.0)
-
-
-def _failure_locations(
-    frame: pl.DataFrame,
-    metric: DiagnosticMetricSpec,
-    threshold: float,
-    *,
-    inclusive: bool,
-    top_k: int,
-) -> list[FailureLocation]:
-    if metric.entity_kind is None:
-        return []
-    if top_k <= 0:
-        raise ValueError("top_k_failures must be positive")
-
-    required = {"elem_id", metric.x_col, metric.y_col}
-    if metric.entity_kind == "face":
-        required.add("face_id")
-    missing = sorted(str(name) for name in required if name not in frame.columns)
-    if missing:
-        raise ValueError(
-            f"{metric.entity_kind} diagnosis missing location columns for "
-            f"{metric.metric_id}: {', '.join(missing)}"
-        )
-
-    absolute_error = pl.col(metric.column).abs()
-    predicate = absolute_error >= threshold if inclusive else absolute_error > threshold
-    failed = (
-        frame.with_columns(absolute_error.alias("__abs_error"))
-        .filter(predicate)
-        .sort("__abs_error", descending=True)
-        .head(top_k)
-    )
-
-    locations: list[FailureLocation] = []
-    for row in failed.iter_rows(named=True):
-        locations.append(
-            FailureLocation(
-                entity_kind=metric.entity_kind,
-                metric=metric.column,
-                elem_id=int(row["elem_id"]),
-                face_id=(
-                    int(row["face_id"]) if metric.entity_kind == "face" else None
-                ),
-                centroid=(float(row[metric.x_col]), float(row[metric.y_col])),
-                error_value=float(row["__abs_error"]),
-                run_id=(str(row["run_id"]) if row.get("run_id") is not None else None),
-                case_id=(str(row["case_id"]) if row.get("case_id") is not None else None),
-            )
-        )
-    return locations
 
 
 def evaluate_diagnosis_registry(
@@ -107,19 +26,14 @@ def evaluate_diagnosis_registry(
     top_k_failures: int = 5,
     z3_ruleset: Z3RuleSet | None = None,
 ) -> DiagnosisReport:
-    """Aggregate numerical metrics, then delegate owner selection to Z3."""
+    """Aggregate canonical analysis metrics, then delegate owner selection to Z3."""
     if top_k_failures <= 0:
         raise ValueError("top_k_failures must be positive")
 
-    report_metrics: dict[str, float] = {}
-    metric_values: dict[str, float] = {}
-    frames_by_metric: dict[str, pl.DataFrame] = {}
-    for metric_id, metric in registry.metrics.items():
-        frame = _frame_for_metric(frames, metric)
-        frames_by_metric[metric_id] = frame
-        value = _metric_max_abs(frame, metric)
-        metric_values[metric_id] = value
-        report_metrics[metric.report_key] = value
+    report_metrics, metric_values, frames_by_metric = aggregate_metric_values(
+        frames,
+        registry.metrics,
+    )
 
     active_ruleset = z3_ruleset or ruleset_from_registry(registry)
     unknown_metrics = sorted(active_ruleset.required_metric_ids.difference(registry.metrics))
@@ -159,13 +73,16 @@ def evaluate_diagnosis_registry(
                 raise ValueError(
                     "failure localization currently requires a gt/ge threshold predicate"
                 )
-            failures = _failure_locations(
-                frames_by_metric[location_metric_id],
-                metric,
-                predicate.threshold,
-                inclusive=predicate.operator == "ge",
-                top_k=top_k_failures,
-            )
+            failures = [
+                FailureLocation(**row)
+                for row in failure_location_rows(
+                    frames_by_metric[location_metric_id],
+                    metric,
+                    predicate.threshold,
+                    inclusive=predicate.operator == "ge",
+                    top_k=top_k_failures,
+                )
+            ]
 
     return DiagnosisReport(
         status=decision.status,
