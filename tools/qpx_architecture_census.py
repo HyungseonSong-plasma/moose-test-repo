@@ -14,15 +14,23 @@ HARNESS = ROOT / "qpx_harness"
 OWNERSHIP_PATH = ROOT / "docs" / "development" / "2026-09-01_issue73_recipe_ownership.json"
 
 CAPABILITY_DIRS = {
-    "analysis", "cpp", "diagnostics", "evidence", "execution", "moose",
-    "performance", "petsc", "spec", "transforms",
-}
-COMPATIBILITY_FACADES = {
-    "qpx_harness/artifacts.py",
-    "qpx_harness/cases.py",
-    "qpx_harness/runtime.py",
-    "qpx_harness/workspace.py",
-    "qpx_harness/dmix_equivalence.py",
+    "analysis",
+    "application",
+    "cpp",
+    "diagnose",
+    "diagnostics",
+    "dmix",
+    "evidence",
+    "execution",
+    "inventory",
+    "models",
+    "moose",
+    "performance",
+    "petsc",
+    "provenance",
+    "spec",
+    "transforms",
+    "validation",
 }
 ISSUE_NAME_RE = re.compile(r"(?:^|/)(?:issue\d+|coupling_evr\d+)(?:_|/|\.py)", re.IGNORECASE)
 FORBIDDEN_PRODUCTION_NAMESPACE_RE = re.compile(
@@ -73,11 +81,11 @@ def classify(path: Path, recipe_map: dict[str, dict]) -> str:
         return "CAPABILITY_OWNER"
     if len(parts) >= 3 and parts[1] == "cli":
         return "CLI_PRESENTATION"
-    if rel in COMPATIBILITY_FACADES:
-        return "COMPATIBILITY_FACADE"
     if ISSUE_NAME_RE.search(rel):
         return "ISSUE_SPECIFIC_POLICY"
-    return "CAPABILITY_OWNER"
+    if rel == "qpx_harness/__init__.py":
+        return "PACKAGE_ENTRYPOINT"
+    return "UNCLASSIFIED"
 
 
 def imported_modules(path: Path) -> tuple[str, ...]:
@@ -114,11 +122,7 @@ def generic_issue_edges(files: list[Path]) -> list[dict[str, str]]:
 
 
 def forbidden_production_namespaces(files: list[Path]) -> list[str]:
-    """Return issue/campaign-numbered Python ownership under qpx_harness/.
-
-    Issue identity is allowed in recipes, experiments, tests, docs, and archive.
-    General-purpose production code under qpx_harness must use capability names.
-    """
+    """Return issue/campaign-numbered Python ownership under qpx_harness/."""
     return sorted(
         _rel(path)
         for path in files
@@ -142,7 +146,7 @@ def module_package_collisions() -> list[str]:
 
 
 def root_modules() -> list[str]:
-    """Return direct Python modules owned at the qpx_harness package root."""
+    """Return unowned direct Python modules at the qpx_harness package root."""
     return sorted(
         _rel(path)
         for path in HARNESS.glob("*.py")
@@ -178,6 +182,7 @@ def build_census() -> dict:
             and not edges
             and not forbidden_namespaces
             and not collisions
+            and not direct_root_modules
             else "FAIL"
         ),
         "production_owner_count": len(records),
@@ -212,6 +217,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"ISSUE129_ROOT_MODULES: {len(result['root_modules'])}")
     for path in result["root_modules"]:
         print(f"ISSUE129_ROOT_MODULE: {path}")
+    print(f"ISSUE129_ROOT_SURFACE: {'PASS' if not result['root_modules'] else 'FAIL'}")
     print(f"ISSUE70_RECIPE_SET: {'PASS' if result['recipe_set_ok'] else 'FAIL'}")
     print(f"ISSUE70_ARCHITECTURE_CENSUS: {result['status']}")
     return 0 if result["status"] == "PASS" else 1
