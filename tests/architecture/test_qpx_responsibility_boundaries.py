@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import importlib
 from pathlib import Path
 
 
@@ -65,6 +66,45 @@ def test_new_canonical_code_does_not_import_legacy_cpp_or_diagnose():
             imports = _imports(path)
             assert not any(item.startswith("qpx_harness.cpp") for item in imports), path
             assert not any(item.startswith("qpx_harness.diagnose") for item in imports), path
+
+
+def test_root_recipes_is_bounded_compatibility_namespace():
+    recipes = importlib.import_module("recipes")
+    assert recipes.COMPATIBILITY_ONLY is True
+    assert recipes.SEMANTIC_AUTHORITY_RETIRED is True
+    assert recipes.NEW_CALLERS_FORBIDDEN is True
+    assert isinstance(recipes.REMOVAL_CONDITION, str)
+    assert recipes.REMOVAL_CONDITION.strip()
+
+
+def test_canonical_capabilities_do_not_import_root_recipes():
+    canonical_packages = (
+        "specification",
+        "ontology",
+        "planning",
+        "execution",
+        "adapters",
+        "observation",
+        "reasoning",
+        "domains",
+    )
+    for package in canonical_packages:
+        for path in _python_files(QPX / package):
+            imports = _imports(path)
+            assert not any(
+                item == "recipes" or item.startswith("recipes.")
+                for item in imports
+            ), f"{path} imports retired recipe authority: {sorted(imports)}"
+
+    gateway_imports = _imports(QPX / "application" / "gateway.py")
+    assert not any(
+        item == "recipes" or item.startswith("recipes.")
+        for item in gateway_imports
+    )
+    assert not any(
+        item.startswith("qpx_harness.application.protocols")
+        for item in gateway_imports
+    )
 
 
 def test_no_separate_qpx_run_executable():
