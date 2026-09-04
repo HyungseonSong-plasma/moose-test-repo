@@ -4,7 +4,7 @@ from pathlib import Path
 
 from qpx_harness.application import load_experiment_spec
 from qpx_harness.application.experiment_registry import protocol_registered, registered_protocols
-from qpx_harness.cli.app import COMMANDS, INTERNAL_TARGETS, main
+from qpx_harness.cli.app import CANONICAL_COMMANDS, COMMANDS, INTERNAL_TARGETS, main
 from qpx_harness.execution.status import ExecutionState
 from qpx_harness.validation import ValidationKind, ValidationSurface, validate_command_surface
 
@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 def test_cli_contract_and_internal_gateway_surface() -> None:
-    assert validate_command_surface(COMMANDS, INTERNAL_TARGETS) == []
+    assert validate_command_surface(COMMANDS, INTERNAL_TARGETS, CANONICAL_COMMANDS) == []
     assert main(["-i", "not-a-target"]) == 2
     assert main(["--help"]) == 0
 
@@ -68,7 +68,12 @@ def test_green_gauss_quantitative_formula_owner_is_analysis() -> None:
     assert "from qpx_harness.analysis.green_gauss import" in application_text
 
 
-def test_repository_root_launcher_exists_for_python_qpx_form() -> None:
+def test_repository_root_launcher_delegates_to_single_canonical_qpx_entrypoint() -> None:
     launcher = ROOT / "qpx"
+    canonical = ROOT / "bin/qpx.py"
     assert launcher.is_file()
-    assert "qpx_harness.cli" in launcher.read_text()
+    assert canonical.is_file()
+    launcher_text = launcher.read_text()
+    canonical_text = canonical.read_text()
+    assert '"bin" / "qpx.py"' in launcher_text
+    assert "qpx_harness.cli" in canonical_text
