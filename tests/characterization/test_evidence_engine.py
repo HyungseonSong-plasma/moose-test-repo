@@ -2,26 +2,11 @@ import polars as pl
 import pytest
 from pydantic import ValidationError
 
+from qpx_harness.analysis.diagnostic_metrics import DiagnosticMetricSpec
 from qpx_harness.application.green_gauss_workflow import (
     build_cell_evidence,
     prepare_face_evidence,
     write_evidence_bundle,
-)
-from qpx_harness.diagnose import (
-    DiagnosticMetricSpec,
-    DiagnosisReport,
-    DiagnosisRule,
-    DiagnosisRuleRegistry,
-    EvidenceTolerances,
-    MetricPredicate,
-    Z3DiagnosisEngine,
-    Z3OwnerRule,
-    Z3RuleSet,
-    build_constant_state_registry,
-    build_constant_state_ruleset,
-    evaluate_diagnosis_registry,
-    summarize_constant_state,
-    summarize_constant_state_report,
 )
 from qpx_harness.evidence import (
     CORE_FACE_CONTRACT,
@@ -33,7 +18,22 @@ from qpx_harness.evidence import (
     normalize_and_project,
     rz_constant_square_face_rows,
 )
+from qpx_harness.reasoning import (
+    DiagnosisReport,
+    MetricPredicate,
+    ReasoningRule,
+    RuleSet,
+    evaluate_diagnostic_rules,
+)
+from qpx_harness.reasoning.engines.z3 import evaluate_rules
 from qpx_harness.validation.evidence_diagnose_smoke import run_smoke
+from qpx_harness.validation.green_gauss import (
+    EvidenceTolerances,
+    build_constant_state_metrics,
+    build_constant_state_ruleset,
+    summarize_constant_state,
+    summarize_constant_state_report,
+)
 
 
 def test_polars_reconstructs_exact_rz_constant_state_contract():
@@ -186,75 +186,82 @@ def test_surface_vector_perturbation_isolated_before_rz_attribution():
     assert failure["error_value"] == pytest.approx(1.0e-9)
 
 
-def test_registry_extension_adds_new_owner_without_diagnose_code_changes():
+def test_rule_extension_adds_new_owner_without_reasoning_code_changes():
     raw = rz_constant_square_face_rows()
     face = prepare_face_evidence(raw)
     cell = build_cell_evidence(face, radial_component=0).with_columns(
         pl.lit(2.5e-3).alias("electron_diffusivity_error")
     )
 
-    registry = build_constant_state_registry().extend(
-        metrics={
-            "electron_diffusivity_error": DiagnosticMetricSpec(
-                metric_id="electron_diffusivity_error",
-                source="cell",
-                column="electron_diffusivity_error",
-                report_key="max_electron_diffusivity_error",
-                entity_kind="cell",
-                x_col="cell_x",
-                y_col="cell_y",
-            )
-        },
+    metrics = build_constant_state_metrics()
+    metrics["electron_diffusivity_error"] = DiagnosticMetricSpec(
+        metric_id="electron_diffusivity_error",
+        source="cell",
+        column="electron_diffusivity_error",
+        report_key="max_electron_diffusivity_error",
+        entity_kind="cell",
+        x_col="cell_x",
+        y_col="cell_y",
+    )
+    base_rules = build_constant_state_ruleset()
+    ruleset = RuleSet(
         rules=(
-            DiagnosisRule(
+            ReasoningRule(
                 rule_id="electron_diffusivity_consistency",
-                metric_id="electron_diffusivity_error",
-                threshold=1.0e-4,
                 owner_class="ELECTRON_DIFFUSIVITY_CONSISTENCY",
                 status="ISOLATED_OWNER_CLASS",
                 decision_label="electron diffusivity consistency",
                 priority=5,
+                all_of=(
+                    MetricPredicate(
+                        metric_id="electron_diffusivity_error",
+                        operator="gt",
+                        threshold=1.0e-4,
+                    ),
+                ),
+                location_metric_id="electron_diffusivity_error",
             ),
+            *base_rules.rules,
         ),
+        pass_status=base_rules.pass_status,
     )
 
-    report = evaluate_diagnosis_registry(
+    report = evaluate_diagnostic_rules(
         {"face": face, "cell": cell},
-        registry,
+        metrics,
+        ruleset,
         top_k_failures=3,
     )
 
     assert report.selected_rule_id == "electron_diffusivity_consistency"
     assert report.primary_owner_class == "ELECTRON_DIFFUSIVITY_CONSISTENCY"
     assert report.solver_status == "SATISFIED"
-    assert report.metrics["max_electron_diffusivity_error"] == pytest.approx(2.5e-3)
+    assert dict(report.metrics)["max_electron_diffusivity_error"] == pytest.approx(2.5e-3)
     assert report.failing_locations[0].elem_id == 10
     assert report.failing_locations[0].metric == "electron_diffusivity_error"
     assert report.decision_order[0] == "electron diffusivity consistency"
 
 
-def test_external_z3_ruleset_supports_composite_physics_logic():
+def test_external_ruleset_supports_composite_physics_logic():
     raw = rz_constant_square_face_rows()
     face = prepare_face_evidence(raw)
     cell = build_cell_evidence(face, radial_component=0).with_columns(
         pl.lit(2.5e-3).alias("electron_diffusivity_error")
     )
-    registry = build_constant_state_registry().extend(
-        metrics={
-            "electron_diffusivity_error": DiagnosticMetricSpec(
-                metric_id="electron_diffusivity_error",
-                source="cell",
-                column="electron_diffusivity_error",
-                report_key="max_electron_diffusivity_error",
-                entity_kind="cell",
-                x_col="cell_x",
-                y_col="cell_y",
-            )
-        }
+    metrics = build_constant_state_metrics()
+    metrics["electron_diffusivity_error"] = DiagnosticMetricSpec(
+        metric_id="electron_diffusivity_error",
+        source="cell",
+        column="electron_diffusivity_error",
+        report_key="max_electron_diffusivity_error",
+        entity_kind="cell",
+        x_col="cell_x",
+        y_col="cell_y",
     )
-    ruleset = build_constant_state_ruleset().extend(
-        (
-            Z3OwnerRule(
+    base_rules = build_constant_state_ruleset()
+    ruleset = RuleSet(
+        rules=(
+            ReasoningRule(
                 rule_id="diffusivity_with_clean_geometry",
                 owner_class="ELECTRON_DIFFUSIVITY_CONSISTENCY",
                 status="ISOLATED_OWNER_CLASS",
@@ -274,13 +281,15 @@ def test_external_z3_ruleset_supports_composite_physics_logic():
                 ),
                 location_metric_id="electron_diffusivity_error",
             ),
-        )
+            *base_rules.rules,
+        ),
+        pass_status=base_rules.pass_status,
     )
 
-    report = evaluate_diagnosis_registry(
+    report = evaluate_diagnostic_rules(
         {"face": face, "cell": cell},
-        registry,
-        z3_ruleset=ruleset,
+        metrics,
+        ruleset,
     )
 
     assert report.selected_rule_id == "diffusivity_with_clean_geometry"
@@ -289,10 +298,10 @@ def test_external_z3_ruleset_supports_composite_physics_logic():
     assert report.failing_locations[0].elem_id == 10
 
 
-def test_z3_engine_missing_metric_is_contract_error_not_false_pass():
-    ruleset = Z3RuleSet(
+def test_z3_backend_missing_metric_is_contract_error_not_false_pass():
+    ruleset = RuleSet(
         rules=(
-            Z3OwnerRule(
+            ReasoningRule(
                 rule_id="needs_two_metrics",
                 owner_class="COMPOSITE_OWNER",
                 status="UNRESOLVED",
@@ -305,96 +314,80 @@ def test_z3_engine_missing_metric_is_contract_error_not_false_pass():
             ),
         ),
         pass_status="PASS",
-        rz_specific_status="NOT_APPLICABLE",
     )
 
-    with pytest.raises(ValueError, match="missing required metric values: b"):
-        Z3DiagnosisEngine(ruleset).diagnose({"a": 1.0})
+    with pytest.raises(ValueError, match=r"missing metric\(s\) required by rule set: b"):
+        evaluate_rules({"a": 1.0}, ruleset)
 
 
-def test_registry_supports_non_spatial_run_level_metric():
-    registry = DiagnosisRuleRegistry(
-        metrics={
-            "jacobian_relative_error": DiagnosticMetricSpec(
-                metric_id="jacobian_relative_error",
-                source="jacobian",
-                column="relative_error",
-                report_key="max_jacobian_relative_error",
-            )
-        },
+def test_reasoning_supports_non_spatial_run_level_metric():
+    metrics = {
+        "jacobian_relative_error": DiagnosticMetricSpec(
+            metric_id="jacobian_relative_error",
+            source="jacobian",
+            column="relative_error",
+            report_key="max_jacobian_relative_error",
+        )
+    }
+    ruleset = RuleSet(
         rules=(
-            DiagnosisRule(
+            ReasoningRule(
                 rule_id="jacobian_consistency",
-                metric_id="jacobian_relative_error",
-                threshold=1.0e-3,
                 owner_class="JACOBIAN_CONSISTENCY",
                 status="UNRESOLVED",
                 decision_label="Jacobian consistency",
                 priority=10,
+                all_of=(
+                    MetricPredicate(
+                        metric_id="jacobian_relative_error",
+                        operator="gt",
+                        threshold=1.0e-3,
+                    ),
+                ),
             ),
         ),
         pass_status="JACOBIAN_PASS",
-        rz_specific_status="NOT_APPLICABLE",
     )
 
-    report = evaluate_diagnosis_registry(
+    report = evaluate_diagnostic_rules(
         {"jacobian": pl.DataFrame({"relative_error": [0.0369]})},
-        registry,
+        metrics,
+        ruleset,
     )
 
     assert report.status == "UNRESOLVED"
     assert report.primary_owner_class == "JACOBIAN_CONSISTENCY"
     assert report.solver_status == "SATISFIED"
-    assert report.failing_locations == []
-    assert report.rz_specific_status == "NOT_APPLICABLE"
+    assert report.failing_locations == ()
 
 
-def test_registry_rejects_unknown_metric_and_duplicate_priority():
-    metric = DiagnosticMetricSpec(
-        metric_id="a",
-        source="cell",
-        column="a",
-        report_key="max_a",
-    )
-    with pytest.raises(ValidationError, match="unknown metric"):
-        DiagnosisRuleRegistry(
-            metrics={"a": metric},
-            rules=(
-                DiagnosisRule(
-                    rule_id="bad",
-                    metric_id="missing",
-                    threshold=0.0,
-                    owner_class="BAD",
-                    status="UNRESOLVED",
-                    decision_label="bad",
-                    priority=1,
-                ),
+def test_reasoning_rejects_unregistered_metric():
+    metrics = {
+        "a": DiagnosticMetricSpec(
+            metric_id="a",
+            source="cell",
+            column="a",
+            report_key="max_a",
+        )
+    }
+    ruleset = RuleSet(
+        rules=(
+            ReasoningRule(
+                rule_id="bad",
+                owner_class="BAD",
+                status="UNRESOLVED",
+                decision_label="bad",
+                priority=1,
+                all_of=(MetricPredicate("missing", "gt", 0.0),),
             ),
         )
+    )
 
-    with pytest.raises(ValidationError, match="priority"):
-        DiagnosisRuleRegistry(
-            metrics={"a": metric},
-            rules=(
-                DiagnosisRule(
-                    rule_id="r1",
-                    metric_id="a",
-                    threshold=0.0,
-                    owner_class="A",
-                    status="UNRESOLVED",
-                    decision_label="a1",
-                    priority=1,
-                ),
-                DiagnosisRule(
-                    rule_id="r2",
-                    metric_id="a",
-                    threshold=1.0,
-                    owner_class="B",
-                    status="UNRESOLVED",
-                    decision_label="a2",
-                    priority=1,
-                ),
-            ),
+    with pytest.raises(ValueError, match="not registered for aggregation: missing"):
+        evaluate_diagnostic_rules(
+            {"cell": pl.DataFrame({"a": [1.0]})},
+            metrics,
+            ruleset,
         )
 
 
