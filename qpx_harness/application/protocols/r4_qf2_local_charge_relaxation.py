@@ -2,20 +2,9 @@
 from __future__ import annotations
 
 from argparse import Namespace
-from pathlib import Path
 
+from qpx_harness.application.execution_options import experiment_results_root, positive_timeout
 from qpx_harness.application.experiment_spec import ExperimentSpec
-from qpx_harness.execution.runtime import resolve_executable
-
-
-def _results_root(spec: ExperimentSpec, qpx: object) -> Path:
-    configured = spec.execution.get("results_root")
-    if configured not in (None, ""):
-        if not isinstance(configured, (str, Path)):
-            raise ValueError("execution.results_root must be path-like")
-        return spec.resolve_path(configured)
-    executable = resolve_executable(qpx if isinstance(qpx, (str, Path)) else None)
-    return executable.parent / "temp" / "results"
 
 
 def run_protocol(spec: ExperimentSpec) -> int:
@@ -24,11 +13,9 @@ def run_protocol(spec: ExperimentSpec) -> int:
     qpx = spec.execution.get("qpx")
     args = Namespace(
         qpx=qpx,
-        results_root=_results_root(spec, qpx),
-        timeout=float(spec.execution.get("timeout_seconds", 180.0)),
+        results_root=experiment_results_root(spec, qpx),
+        timeout=positive_timeout(spec, default=180.0),
     )
-    if args.timeout <= 0:
-        raise ValueError("timeout must be positive")
     from experiments.Issue31_r4_qf2_local_charge_relaxation.run import run
     return int(run(args))
 
