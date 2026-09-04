@@ -1,11 +1,11 @@
 """Canonical QPX_STATE_SEMANTICS_V1 runtime semantic records.
 
-These immutable records are the Python projection of the semantic contract.  They
+These immutable records are the Python projection of the semantic contract. They
 are intentionally solver independent and contain no MOOSE/PETSc syntax.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Mapping
 
@@ -167,6 +167,12 @@ class ValidationClaim(Proposition):
 
 
 @dataclass(frozen=True)
+class OpenQuestion:
+    question_id: str
+    statement: str
+
+
+@dataclass(frozen=True)
 class HypothesisAssessment:
     assessment_id: str
     hypothesis_id: str
@@ -218,10 +224,18 @@ class CapabilityDescriptor:
 
 
 @dataclass(frozen=True)
+class ExperimentCaseIntent:
+    case_id: str
+    parameters: tuple[tuple[str, Any], ...] = ()
+    constraint_ids: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
 class ExperimentIntent:
     intent_id: str
     experiment_id: str
     objective: str
+    model: str | None = None
     goal_ids: tuple[str, ...] = ()
     target_ids: tuple[str, ...] = ()
     requested_capabilities: tuple[str, ...] = ()
@@ -229,6 +243,7 @@ class ExperimentIntent:
     constraint_ids: tuple[str, ...] = ()
     requested_observations: tuple[str, ...] = ()
     execution_bounds: tuple[tuple[str, Any], ...] = ()
+    case_ids: tuple[str, ...] = ()
     provenance_id: str | None = None
 
 
@@ -265,6 +280,7 @@ class ScientificPolicy:
     source_intent_id: str
     objective: str
     selected_actions: tuple[ActionSpec, ...]
+    target_ids: tuple[str, ...] = ()
     considered_actions: tuple[ActionSpec, ...] = ()
     decisions: tuple[SearchDecision, ...] = ()
     held_fixed: tuple[str, ...] = ()
@@ -272,7 +288,10 @@ class ScientificPolicy:
     acceptance_requirements: tuple[str, ...] = ()
     required_capabilities: tuple[str, ...] = ()
     unresolved_requirements: tuple[str, ...] = ()
+    derived_values: tuple[tuple[str, Any], ...] = ()
+    policy_rule_ids: tuple[str, ...] = ()
     execution_bounds: tuple[tuple[str, Any], ...] = ()
+    model: str | None = None
     rationale: str = ""
     provenance_id: str | None = None
     semantic_contract: str = SEMANTIC_CONTRACT_ID
