@@ -7,6 +7,7 @@ on:
       - issue-126-qpx-harness-refactor
       - issue-128-retire-issue-namespaces
       - issue-129-root-surface-cleanup
+      - review/development-semantic-architecture
   workflow_dispatch:
 
 jobs:
