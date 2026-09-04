@@ -27,7 +27,6 @@ COMMANDS = {
     "cache-audit": "audit D_mix consumer arguments and native cache feasibility",
     "profile": "capture one-step legacy P2/P3 performance evidence",
     "analyze": "classify PETSc/PerfGraph profiling evidence",
-    "bundle": "build a declarative local profiling bundle",
     "inventory": "inspect or compare QPX workspace trees",
     "preflight": "run static parser-symbol preflight on one MOOSE input",
     "temporal-csv": "normalize transient CSV rows under an explicit temporal policy",
@@ -42,7 +41,7 @@ INTERNAL_TARGETS = {
 _LEGACY_TARGETS = {
     "test": "qpx_harness.execution.regression:cli_run_test",
     "test-all": "qpx_harness.execution.regression:cli_run_all",
-    "scale-audit": "qpx_harness.scale_audit:main",
+    "scale-audit": "qpx_harness.analysis.scale_audit:main",
     "inventory-nullspace": "qpx_harness.inventory.cli:inventory_main",
     "inventory-first-linear": "qpx_harness.inventory.cli:first_linear_main",
     "contract": "qpx_harness.execution.contract:main",
@@ -54,7 +53,6 @@ _LEGACY_TARGETS = {
     "cache-audit": "qpx_harness.cli.commands.performance:cache_audit_main",
     "profile": "qpx_harness.performance.profiling:main",
     "analyze": "qpx_harness.cli.commands.performance:analyze_main",
-    "bundle": "qpx_harness.bundle:main",
     "inventory": "qpx_harness.execution.workspace:inventory_cli",
 }
 
