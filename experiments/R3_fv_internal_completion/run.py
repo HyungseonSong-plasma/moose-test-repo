@@ -12,7 +12,7 @@ from experiments.Issue93_r3_electron_isolation.operator_decomposition import _ch
 from experiments.Issue93_r3_electron_isolation.prepare import ELECTRON_REFERENCE_CASE
 from experiments.Issue93_r3_electron_isolation.run import _electron_residuals
 from experiments.R3_electron_master_diagnostic.execution_status import solver_status
-from qpx_harness.diagnose import diagnose_jacobian_evidence
+from qpx_harness.reasoning.jacobian import diagnose_jacobian_evidence
 from qpx_harness.evidence import (
     AttributionSignals,
     ErrorLedger,
