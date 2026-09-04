@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 PKG = ROOT / "qpx_harness"
 CANONICAL_PACKAGES = {
     "evidence", "analysis", "diagnose", "execution", "application", "cli",
-    "validation", "inventory", "dmix",
+    "validation", "inventory", "dmix", "provenance",
 }
 TRANSITIONAL_EXCEPTIONS: set[tuple[str, str]] = set()
 CHECKS = {"all", "evidence", "analysis", "execution", "presentation", "cycle"}
