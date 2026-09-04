@@ -7,7 +7,7 @@ from typing import Any
 
 from recipes import issue45_closure_basis as closure_basis
 
-from ..diagnose import diagnose_coupled_runtime_evidence
+from ..reasoning import diagnose_coupled_runtime_evidence
 from ..evidence import artifacts
 from ..execution import cases as case_ops
 from .. import evidence
