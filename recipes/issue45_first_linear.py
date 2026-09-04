@@ -6,7 +6,8 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
-from qpx_harness.diagnose import diagnose_coupled_runtime_evidence, diagnose_jacobian_evidence
+from qpx_harness.reasoning import diagnose_coupled_runtime_evidence
+from qpx_harness.reasoning.jacobian import diagnose_jacobian_evidence
 from qpx_harness.evidence import (
     extract_jacobian_evidence,
     first_failed_reason,
