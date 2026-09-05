@@ -1,6 +1,6 @@
 name: QPX CI validation
 
-# Issue #144 final zero-legacy acceptance gate (final post-path-repair verification).
+# Issue #144 final zero-legacy acceptance gate (canonical-path migration complete).
 on:
   push:
     branches:
