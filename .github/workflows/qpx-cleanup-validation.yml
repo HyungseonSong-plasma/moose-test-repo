@@ -1,5 +1,6 @@
 name: QPX CI validation
 
+# Issue #144 final zero-legacy acceptance gate.
 on:
   push:
     branches:
