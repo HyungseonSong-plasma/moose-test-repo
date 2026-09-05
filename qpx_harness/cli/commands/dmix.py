@@ -5,10 +5,16 @@ import argparse
 import sys
 from pathlib import Path
 
-from qpx_harness.analysis.dmix_equivalence import REL_TOL
-from qpx_harness.validation.dmix_equivalence import self_test
+from qpx_harness.analysis.dmix_equivalence import REL_TOL, self_test as analysis_self_test
 from qpx_harness.execution.dmix_equivalence import validate
-from qpx_harness.adapters.moose.dmix_equivalence import EquivalenceError
+from qpx_harness.adapters.moose.dmix_equivalence import (
+    EquivalenceError,
+    self_test as adapter_self_test,
+)
+
+
+def self_test() -> int:
+    return 1 if adapter_self_test() or analysis_self_test() else 0
 
 
 def dmix_equivalence_main(argv: list[str] | None = None) -> int:
