@@ -44,4 +44,25 @@ def compare(candidate: dict[str, float], legacy: dict[str, float], tol: float) -
     }
 
 
-__all__ = ["REL_TOL", "SPECIES", "TAGS", "compare"]
+def self_test() -> int:
+    try:
+        baseline = {
+            f"Dmix_{tag}_{species}": float(i + 1)
+            for i, (tag, species) in enumerate(
+                (tag, species) for tag in TAGS for species in SPECIES
+            )
+        }
+        if compare(baseline, dict(baseline), REL_TOL)["status"] != "PASS":
+            raise AssertionError("checker positive control failed")
+        mutated = dict(baseline)
+        mutated["Dmix_B_Op"] *= 1.1
+        if compare(baseline, mutated, REL_TOL)["status"] != "FAIL":
+            raise AssertionError("checker mutation was not rejected")
+    except Exception as exc:
+        print(f"DMIX_EQ_ANALYSIS_SELFTEST: FAIL ({exc})")
+        return 1
+    print("DMIX_EQ_ANALYSIS_SELFTEST: PASS")
+    return 0
+
+
+__all__ = ["REL_TOL", "SPECIES", "TAGS", "compare", "self_test"]
