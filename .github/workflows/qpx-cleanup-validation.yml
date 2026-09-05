@@ -48,6 +48,22 @@ jobs:
         with:
           name: qpx-architecture-census
           path: qpx-architecture-census.json
+      - name: Upload development source snapshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: qpx-development-source
+          path: |
+            qpx_harness
+            experiments
+            tests
+            tools
+            recipes
+            bin
+            docs
+            .github/workflows
+            requirements*.txt
+            pyproject.toml
+            qpx
       - name: Run QPX-free pytest
         run: python -m pytest -q
       - name: Run canonical QPX internal validation
