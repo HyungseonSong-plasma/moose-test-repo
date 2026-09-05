@@ -1,0 +1,32 @@
+name: QPX staging source snapshot
+
+on:
+  push:
+    branches:
+      - issue-144-r4-r8
+
+permissions:
+  contents: read
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Upload staging source
+        uses: actions/upload-artifact@v4
+        with:
+          name: qpx-issue144-staging-source
+          path: |
+            qpx_harness
+            tests
+            experiments
+            recipes
+            bin
+            tools
+            docs
+            .github
+            qpx
+            requirements*.txt
+          if-no-files-found: ignore
