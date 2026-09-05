@@ -94,4 +94,71 @@ def trace_input(text: str) -> str:
     return text[: values_match.start()] + replacement + text[values_match.end() :]
 
 
-__all__ = ["EquivalenceError", "legacy_source_transform", "legacy_source", "quoted_values", "trace_input"]
+def self_test() -> int:
+    try:
+        source = r'''
+void f()
+{
+  addFunctorProperty<ADReal>(
+      _D_mix_names[i],
+      [this, i](const auto & r, const auto & state)
+      {
+        return evaluateDmix(
+            i,
+            temperature(r, state),
+            pressure(foo(1, 2), state),
+            Te(r, state),
+            ne(r, state),
+            composition(bar(3, 4), state));
+      });
+}
+Result QPXThermalDiffusionMaterial::evaluate(int, int, int, int, int) const { return {}; }
+ADReal QPXThermalDiffusionMaterial::evaluateDmix(int, int, int, int, int, int) const { return {}; }
+'''
+        patched, meta = legacy_source_transform(source)
+        expected = (
+            "return evaluate(temperature(r, state), pressure(foo(1, 2), state), "
+            "Te(r, state), ne(r, state), composition(bar(3, 4), state)).D_mix[i];"
+        )
+        if expected not in patched:
+            raise AssertionError(meta)
+        if meta["parser"] != "CppSource+CppCallArguments" or meta["dmix_arguments"][0] != "i":
+            raise AssertionError("structured D_mix call observation changed")
+
+        wrong_arity = source.replace(
+            "composition(bar(3, 4), state)",
+            "extra(r, state), composition(bar(3, 4), state)",
+        )
+        try:
+            legacy_source_transform(wrong_arity)
+        except EquivalenceError:
+            pass
+        else:
+            raise AssertionError("evaluateDmix arity mutation was not rejected")
+
+        ambiguous = source.replace(
+            "void f()",
+            "void g(){ addFunctorProperty<ADReal>(_D_mix_names[i], []{ return evaluateDmix(i,1,2,3,4,5); }); }\nvoid f()",
+        )
+        try:
+            legacy_source(ambiguous)
+        except EquivalenceError:
+            pass
+        else:
+            raise AssertionError("ambiguous D_mix producer mutation was not rejected")
+
+        text = (
+            "prop_names = 'T p Te neA neB w_O2 w_O2s w_O2p w_O w_Om w_Op w_Os'\n"
+            "prop_values = '1 2 3 4 5 0.70 0.05 0.01 0.10 0.01 0.01 0.12'\n"
+        )
+        _, vals = quoted_values(trace_input(text), "prop_values")
+        if not any(abs(float(v) - 0.99994) <= 1e-14 for v in vals):
+            raise AssertionError("trace transform positive control failed")
+    except Exception as exc:
+        print(f"DMIX_EQ_ADAPTER_SELFTEST: FAIL ({exc})")
+        return 1
+    print("DMIX_EQ_ADAPTER_SELFTEST: PASS")
+    return 0
+
+
+__all__ = ["EquivalenceError", "legacy_source_transform", "legacy_source", "quoted_values", "trace_input", "self_test"]
