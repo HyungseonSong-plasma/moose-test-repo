@@ -39,31 +39,15 @@ jobs:
         run: python tools/qpx_dependency_guard.py --check cycle
       - name: Validate declarative experiment gateway
         run: python tools/qpx_experiment_gateway_guard.py
-      - name: Validate capability architecture census
+      - name: Validate strict zero-legacy architecture census
         run: |
-          python tools/qpx_architecture_census.py
-          python tools/qpx_architecture_census.py --json-out qpx-architecture-census.json
+          python tools/qpx_architecture_census.py --require-no-legacy
+          python tools/qpx_architecture_census.py --json-out qpx-architecture-census.json --require-no-legacy
       - name: Upload architecture census
         uses: actions/upload-artifact@v4
         with:
           name: qpx-architecture-census
           path: qpx-architecture-census.json
-      - name: Upload development source snapshot
-        uses: actions/upload-artifact@v4
-        with:
-          name: qpx-development-source
-          path: |
-            qpx_harness
-            experiments
-            tests
-            tools
-            recipes
-            bin
-            docs
-            .github/workflows
-            requirements*.txt
-            pyproject.toml
-            qpx
       - name: Run QPX-free pytest
         run: python -m pytest -q
       - name: Run canonical QPX internal validation
