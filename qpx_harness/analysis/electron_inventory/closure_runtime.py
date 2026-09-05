@@ -1,11 +1,31 @@
 """Runtime evidence analysis for constrained electron-inventory closure."""
 from __future__ import annotations
+
+import csv
 import math
+from pathlib import Path
 from typing import Any
 from qpx_harness.adapters.moose.electron_inventory.constants import (
-    CLOSURE_DELTA_REL_TOL, CLOSURE_TARGET_REL_TOL, INVENTORY_CONSISTENCY_REL_TOL, RUNTIME_COLUMNS
+    CLOSURE_DELTA_REL_TOL, CLOSURE_TARGET_REL_TOL, INVENTORY_CONSISTENCY_REL_TOL, LAMBDA_VARIABLE, RUNTIME_COLUMNS
 )
 from qpx_harness.domains.plasma.electron_inventory import ElectronInventoryNullspaceError
+
+
+def _synthetic_runtime_row(target: float) -> dict[str, float]:
+    volume = 0.05
+    return {
+        "n_avg": target,
+        "inventory": target * volume,
+        "domain_volume": volume,
+        "n_min": target * 0.99,
+        "n_max": target * 1.01,
+        "r43_phi_l2": 0.08,
+        "r43_phi_min": -0.7,
+        "r43_phi_max": 0.05,
+        "r43_charge_integral": 0.0,
+        "r43_charge_min": -1.0e-8,
+        "r43_charge_max": 2.0e-9,
+    }
 def _evaluate_runtime_case_data(
     *,
     target: float,

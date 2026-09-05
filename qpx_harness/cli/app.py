@@ -18,8 +18,8 @@ ROOT = Path(__file__).resolve().parents[2]
 
 CANONICAL_COMMANDS = {
     "compile": "compile semantic experiment JSON into ExperimentIntent",
-    "plan": "compile semantic intent and synthesize ScientificPolicy/MutationPlan",
-    "lower": "lower a solver-independent MutationPlan into MOOSE target IR",
+    "plan": "compile semantic intent and synthesize ScientificPolicy/ExecutionPlan",
+    "lower": "lower a solver-independent ExecutionPlan into MOOSE target IR",
     "run": "execute legacy v1 experiments or reject v2 when target execution is not yet realizable",
     "preflight": "run static parser-symbol preflight on one MOOSE input",
     "temporal-csv": "normalize transient CSV rows under an explicit temporal policy",
