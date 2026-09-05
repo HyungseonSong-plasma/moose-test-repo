@@ -1,0 +1,107 @@
+from __future__ import annotations
+from pathlib import Path
+import shutil, re, ast
+
+ROOT = Path(__file__).resolve().parents[1]
+
+def read(p): return (ROOT/p).read_text()
+def write(p,s):
+    path=ROOT/p; path.parent.mkdir(parents=True, exist_ok=True); path.write_text(s)
+def rm(p):
+    path=ROOT/p
+    if path.is_dir(): shutil.rmtree(path)
+    elif path.exists(): path.unlink()
+def move(src,dst):
+    a,b=ROOT/src,ROOT/dst; b.parent.mkdir(parents=True,exist_ok=True); shutil.move(str(a),str(b))
+
+# --- R4 performance: canonical execution/analysis ownership ---
+perf = ROOT/'qpx_harness/performance'
+execp = ROOT/'qpx_harness/execution/performance'
+(execp/'probes').mkdir(parents=True,exist_ok=True)
+for name in ['profiling.py','runner.py','smoke.py']:
+    src=perf/name
+    if src.exists():
+        text=src.read_text()
+        text=text.replace('from ..evidence', 'from ...evidence')
+        text=text.replace('from ..execution.runtime', 'from ..runtime')
+        (execp/name).write_text(text)
+for name in ['runtime.py','transport.py']:
+    src=perf/'probes'/name
+    if src.exists():
+        text=src.read_text()
+        if name=='runtime.py':
+            text=text.replace('from ...analysis.performance.investigation', 'from ....analysis.performance.investigation')
+            text=text.replace('from ...execution.runtime', 'from ...runtime')
+        else:
+            text=text.replace('from ...analysis.performance', 'from ....analysis.performance')
+            text=text.replace('from ...observation', 'from ....observation')
+        (execp/'probes'/name).write_text(text)
+# exports
+write('qpx_harness/execution/performance/__init__.py', '"""Performance measurement, profiling, and probe execution mechanics."""\nfrom . import profiling, runner, smoke\n__all__ = ["profiling", "runner", "smoke"]\n')
+write('qpx_harness/execution/performance/probes/__init__.py', '"""Managed performance-probe execution mechanics."""\nfrom . import runtime, transport\n__all__ = ["runtime", "transport"]\n')
+# caller redirects
+for p in list((ROOT/'qpx_harness').rglob('*.py'))+list((ROOT/'tests').rglob('*.py'))+list((ROOT/'experiments').rglob('*.py'))+list((ROOT/'recipes').rglob('*.py')):
+    text=p.read_text()
+    old=text
+    text=text.replace('qpx_harness.performance.profiling','qpx_harness.execution.performance.profiling')
+    text=text.replace('qpx_harness.performance.runner','qpx_harness.execution.performance.runner')
+    text=text.replace('qpx_harness.performance.smoke','qpx_harness.execution.performance.smoke')
+    text=text.replace('qpx_harness.performance.probes.runtime','qpx_harness.execution.performance.probes.runtime')
+    text=text.replace('qpx_harness.performance.probes.transport','qpx_harness.execution.performance.probes.transport')
+    text=text.replace('from ...performance import runner, smoke','from ...execution.performance import runner, smoke')
+    text=text.replace('from ...performance.probes import runtime as probe_runtime','from ...execution.performance.probes import runtime as probe_runtime')
+    text=text.replace('from ...performance.probes import transport','from ...execution.performance.probes import transport')
+    text=text.replace('from ..performance import profiling','from ..execution.performance import profiling')
+    # production analysis import exact
+    text=text.replace('from qpx_harness.performance import runner, smoke','from qpx_harness.execution.performance import runner, smoke')
+    text=text.replace('from qpx_harness.performance.probes import runtime','from qpx_harness.execution.performance.probes import runtime')
+    text=text.replace('from qpx_harness.performance.probes import transport','from qpx_harness.execution.performance.probes import transport')
+    if text!=old: p.write_text(text)
+rm('qpx_harness/performance')
+# cli target strings
+p=ROOT/'qpx_harness/cli/app.py'; t=p.read_text(); t=t.replace('qpx_harness.performance.profiling:main','qpx_harness.execution.performance.profiling:main'); p.write_text(t)
+
+# --- R5 old mutation-spec DSL -> MOOSE adapter-owned mutation_spec ---
+oldspec=ROOT/'qpx_harness/spec'
+newbase='qpx_harness/adapters/moose/mutation_spec'
+# errors
+s=read('qpx_harness/spec/errors.py')
+s=s.replace('ExperimentSpec validation/compilation','MOOSE mutation-spec validation/compilation')
+s=s.replace('ExperimentSpecDependencyError','MutationSpecDependencyError').replace('ExperimentSpecError','MutationSpecError')
+s=s.replace('experiment specifications','MOOSE mutation specifications').replace('ExperimentSpecError requires','MutationSpecError requires').replace('"ExperimentSpecError"','"MutationSpecError"')
+write(f'{newbase}/errors.py',s)
+# models
+s=read('qpx_harness/spec/models.py')
+s=s.replace('ExperimentSpec v1','MOOSE MutationSpec v1')
+s=s.replace('ExperimentSpecDependencyError','MutationSpecDependencyError')
+s=s.replace("ExperimentSpec v1 requires", "MOOSE MutationSpec v1 requires")
+s=s.replace('class CaseSpec(', 'class MutationCaseSpec(')
+s=s.replace('class ExperimentSpec(', 'class MutationSpec(')
+s=s.replace('tuple[CaseSpec, ...]', 'tuple[MutationCaseSpec, ...]')
+s=s.replace('-> ExperimentSpec:', '-> MutationSpec:')
+s=s.replace('return ExperimentSpec.model_validate(payload)', 'return MutationSpec.model_validate(payload)')
+s=s.replace('return ExperimentSpec.parse_obj(payload)', 'return MutationSpec.parse_obj(payload)')
+s=s.replace('from .errors import ExperimentSpecDependencyError','from .errors import MutationSpecDependencyError')
+write(f'{newbase}/models.py',s)
+# plan
+s=read('qpx_harness/spec/plan.py')
+s=s.replace('compiled ExperimentSpec data','compiled MOOSE mutation data')
+s=s.replace('class CasePlan:', 'class MutationCasePlan:')
+s=s.replace('class ExecutionPlan:', 'class MutationPlan:')
+s=s.replace('tuple[CasePlan, ...]', 'tuple[MutationCasePlan, ...]')
+s=s.replace('def case(self, case_id: str) -> CasePlan:', 'def case(self, case_id: str) -> MutationCasePlan:')
+write(f'{newbase}/plan.py',s)
+# compiler
+s=read('qpx_harness/spec/compiler.py')
+s=s.replace('ExperimentSpec v1 -> ExecutionPlan','MOOSE MutationSpec v1 -> MutationPlan')
+s=s.replace('ExperimentSpecError','MutationSpecError').replace('CaseSpec','MutationCaseSpec').replace('ExperimentSpec','MutationSpec').replace('CasePlan','MutationCasePlan').replace('ExecutionPlan','MutationPlan')
+s=s.replace('def compile_spec(', 'def compile_mutation_spec(')
+write(f'{newbase}/compiler.py',s)
+# loader
+s=read('qpx_harness/spec/loader.py')
+s=s.replace('ExperimentSpec v1','MOOSE MutationSpec v1').replace('ExperimentSpecError','MutationSpecError').replace('ExperimentSpec','MutationSpec')
+s=s.replace('def load_payload(', 'def load_mutation_payload(').replace('def load_json_text(', 'def load_mutation_json_text(').replace('def load_json_file(', 'def load_mutation_json_file(')
+s=s.replace('return load_payload(payload)', 'return load_mutation_payload(payload)').replace('return load_json_text(text)', 'return load_mutation_json_text(text)')
+write(f'{newbase}/loader.py',s)
+# init
+write(f'{newbase}/__init__.py', '''"""Stric
