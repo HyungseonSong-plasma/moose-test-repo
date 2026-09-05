@@ -9,8 +9,10 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from qpx_harness.inventory import closure_model, closure_runtime, orchestration, structure
-from qpx_harness.inventory.constants import (
+from qpx_harness.adapters.moose.electron_inventory import closure_model
+from qpx_harness.analysis.electron_inventory import closure_runtime, structure
+from qpx_harness.execution.electron_inventory import orchestration
+from qpx_harness.adapters.moose.electron_inventory.constants import (
     C0_TARGET,
     C1_TARGET,
     DEFAULT_MACRO_ELECTRON_AVG,
