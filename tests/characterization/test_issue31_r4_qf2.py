@@ -7,7 +7,7 @@ from pathlib import Path
 from experiments.Issue31_r4_qf2_local_charge_relaxation import run as qf2_run
 from qpx_harness.moose import blocks as mb
 from qpx_harness.moose import parameters as mp
-from recipes.issue31_r4_qf2 import (
+from experiments.historical_recipe_support.issue31_r4_qf2 import (
     QF2_CHARGE_MAX_PP,
     QF2_CHARGE_MIN_PP,
     QF2_NE_FUNCTION,

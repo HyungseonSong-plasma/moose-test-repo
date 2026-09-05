@@ -5,8 +5,8 @@ from pathlib import Path
 from qpx_harness.application.experiment_spec import load_experiment_spec
 from qpx_harness.moose import blocks as mb
 from qpx_harness.moose import parameters as mp
-from recipes.issue26_e1 import ENERGY_VARIABLE
-from recipes.issue26_energy_chain import (
+from experiments.historical_recipe_support.issue26_e1 import ENERGY_VARIABLE
+from experiments.historical_recipe_support.issue26_energy_chain import (
     E2B_DRIFT_KERNEL,
     E2B_FIELD_V_M,
     E2B_LEFT_PP,

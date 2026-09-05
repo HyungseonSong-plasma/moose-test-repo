@@ -6,7 +6,7 @@ from pathlib import Path
 from experiments.Issue31_r4_q0_all_ground import run as issue31_run
 from qpx_harness.moose import blocks as mb
 from qpx_harness.moose import parameters as mp
-from recipes.issue31_r4 import (
+from experiments.historical_recipe_support.issue31_r4 import (
     EPSILON_0,
     MATERIAL_COVERAGE_FUNCTOR,
     MATERIAL_COVERAGE_ONLY_BLOCKS,

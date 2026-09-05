@@ -27,7 +27,7 @@ if str(ROOT) not in sys.path:
 
 from qpx_harness.moose import blocks as mb
 from qpx_harness.moose import parameters as mp
-from recipes.issue91_r3 import build_r3_input
+from experiments.historical_recipe_support.issue91_r3 import build_r3_input
 
 ISSUE = 92
 EVR = 2

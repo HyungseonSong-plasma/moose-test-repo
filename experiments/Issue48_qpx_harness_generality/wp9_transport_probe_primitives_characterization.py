@@ -14,7 +14,7 @@ if str(ROOT) not in sys.path:
 
 from qpx_harness.analysis.performance import perfgraph
 from qpx_harness.observation.source_code import cpp as cpp_source
-from qpx_harness.performance.probes import transport as direct
+from qpx_harness.execution.performance.probes import transport as direct
 
 
 def _transport_source_fixture() -> str:

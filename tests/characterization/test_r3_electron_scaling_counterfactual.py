@@ -9,7 +9,7 @@ from experiments.R3_electron_scaling_counterfactual.cases import (
     build_normalized_electron_input,
     build_normalized_r3_input,
 )
-from recipes.issue91_r3 import build_r3_input
+from experiments.historical_recipe_support.issue91_r3 import build_r3_input
 from qpx_harness.moose import parameters as mp
 
 

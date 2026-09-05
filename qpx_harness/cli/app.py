@@ -12,14 +12,14 @@ import sys
 from qpx_harness.application import normalize_temporal_run_csv, preflight_input, run_experiment
 from qpx_harness.application.gateway import compile_experiment, lower_experiment, plan_experiment
 from qpx_harness.analysis.temporal import VALID_INITIAL_POLICIES
-from qpx_harness.specification import ExperimentSpecError
+from qpx_harness.specification import MutationSpecError
 
 ROOT = Path(__file__).resolve().parents[2]
 
 CANONICAL_COMMANDS = {
     "compile": "compile semantic experiment JSON into ExperimentIntent",
-    "plan": "compile semantic intent and synthesize ScientificPolicy/ExecutionPlan",
-    "lower": "lower a solver-independent ExecutionPlan into MOOSE target IR",
+    "plan": "compile semantic intent and synthesize ScientificPolicy/MutationPlan",
+    "lower": "lower a solver-independent MutationPlan into MOOSE target IR",
     "run": "execute legacy v1 experiments or reject v2 when target execution is not yet realizable",
     "preflight": "run static parser-symbol preflight on one MOOSE input",
     "temporal-csv": "normalize transient CSV rows under an explicit temporal policy",
@@ -53,8 +53,8 @@ _LEGACY_TARGETS = {
     "test": "qpx_harness.execution.regression:cli_run_test",
     "test-all": "qpx_harness.execution.regression:cli_run_all",
     "scale-audit": "qpx_harness.analysis.scale_audit:main",
-    "inventory-nullspace": "qpx_harness.inventory.cli:inventory_main",
-    "inventory-first-linear": "qpx_harness.inventory.cli:first_linear_main",
+    "inventory-nullspace": "qpx_harness.cli.commands.inventory:inventory_main",
+    "inventory-first-linear": "qpx_harness.cli.commands.inventory:first_linear_main",
     "contract": "qpx_harness.execution.contract:main",
     "dmix-equivalence": "qpx_harness.cli.commands.dmix:dmix_equivalence_main",
     "measure": "qpx_harness.cli.commands.performance:measure_main",
@@ -62,7 +62,7 @@ _LEGACY_TARGETS = {
     "investigate": "qpx_harness.cli.commands.performance:investigate_main",
     "transport-probe": "qpx_harness.cli.commands.performance:transport_probe_main",
     "cache-audit": "qpx_harness.cli.commands.performance:cache_audit_main",
-    "profile": "qpx_harness.performance.profiling:main",
+    "profile": "qpx_harness.execution.performance.profiling:main",
     "analyze": "qpx_harness.cli.commands.performance:analyze_main",
     "inventory": "qpx_harness.execution.workspace:inventory_cli",
 }
@@ -111,7 +111,7 @@ def semantic_compile_cli(argv: list[str]) -> int:
     args = parser.parse_args(argv)
     try:
         result = compile_experiment(args.experiment)
-    except (OSError, ExperimentSpecError, ValueError, TypeError) as exc:
+    except (OSError, MutationSpecError, ValueError, TypeError) as exc:
         print(f"semantic compilation error: {exc}", file=sys.stderr)
         return 2
     _json_print(result)
@@ -124,7 +124,7 @@ def semantic_plan_cli(argv: list[str]) -> int:
     args = parser.parse_args(argv)
     try:
         result = plan_experiment(args.experiment)
-    except (OSError, ExperimentSpecError, ValueError, TypeError) as exc:
+    except (OSError, MutationSpecError, ValueError, TypeError) as exc:
         print(f"planning error: {exc}", file=sys.stderr)
         return 2
     _json_print(result)
@@ -137,7 +137,7 @@ def semantic_lower_cli(argv: list[str]) -> int:
     args = parser.parse_args(argv)
     try:
         planned, target = lower_experiment(args.experiment)
-    except (OSError, ExperimentSpecError, ValueError, TypeError) as exc:
+    except (OSError, MutationSpecError, ValueError, TypeError) as exc:
         print(f"lowering error: {exc}", file=sys.stderr)
         return 2
     _json_print({"planned": asdict(planned), "target": asdict(target)})
@@ -167,7 +167,7 @@ def semantic_run_cli(argv: list[str]) -> int:
     # semantic layers and require a concrete target execution capability later.
     try:
         planned, target = lower_experiment(args.experiment)
-    except (OSError, ExperimentSpecError, ValueError, TypeError) as exc:
+    except (OSError, MutationSpecError, ValueError, TypeError) as exc:
         print(f"semantic run preparation error: {exc}", file=sys.stderr)
         return 2
     print("QPX_RUN_PREPARED: PASS")

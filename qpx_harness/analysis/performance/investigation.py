@@ -14,8 +14,8 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-from ...performance.runner import PerformanceContractError
-from ...performance.smoke import default_results_root
+from ...execution.performance.runner import PerformanceContractError
+from ...execution.performance.smoke import default_results_root
 from ...execution.runtime import resolve_executable, validate_executable
 
 CANONICAL_CLASSES = {

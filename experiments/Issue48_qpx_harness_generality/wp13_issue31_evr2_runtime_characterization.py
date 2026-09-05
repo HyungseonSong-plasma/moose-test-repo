@@ -11,12 +11,12 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from recipes import issue31_coupling as recipe
+from experiments.historical_recipe_support import issue31_coupling as recipe
 from qpx_harness.coupling_evr2 import orchestration as runtime
 from qpx_harness.evidence import measurement_failure_signature
 from qpx_harness.execution.cases import stage_case
-from qpx_harness.performance.runner import result_status
-from qpx_harness.performance.smoke import build_smoke_manifest
+from qpx_harness.execution.performance.runner import result_status
+from qpx_harness.execution.performance.smoke import build_smoke_manifest
 
 
 def _case(
@@ -198,7 +198,7 @@ def _check_runtime_boundary() -> None:
     path = Path(runtime.__file__)
     source = path.read_text()
     for required in (
-        "from recipes import issue31_coupling as recipe",
+        "from experiments.historical_recipe_support import issue31_coupling as recipe",
         "from ..evidence.artifacts import write_json_bundle",
         "stage_case",
         "validate_referenced_files",

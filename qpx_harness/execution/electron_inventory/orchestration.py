@@ -5,7 +5,7 @@ import math
 from pathlib import Path
 from typing import Any
 
-from recipes import issue45_closure_basis as closure_basis
+from qpx_harness.adapters.moose.electron_inventory import closure_basis
 
 from qpx_harness.reasoning import diagnose_coupled_runtime_evidence
 from qpx_harness.evidence import artifacts

@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from qpx_harness.adapters.moose import MooseTargetIR, lower_execution_plan
-from qpx_harness.execution import ExecutionPlan, compile_execution_plan
+from qpx_harness.execution import MutationPlan, compile_execution_plan
 from qpx_harness.ontology import OntologyService
 from qpx_harness.ontology.model import DevelopmentState, ScientificPolicy
 from qpx_harness.planning import default_capabilities, synthesize_policy
@@ -17,7 +17,7 @@ class PlannedExperiment:
     semantic: SemanticCompilation
     state: DevelopmentState
     policy: ScientificPolicy
-    execution_plan: ExecutionPlan
+    execution_plan: MutationPlan
 
 
 def compile_experiment(path: str | Path, *, ontology: OntologyService | None = None) -> SemanticCompilation:

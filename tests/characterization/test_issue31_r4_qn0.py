@@ -6,7 +6,7 @@ from pathlib import Path
 
 from experiments.Issue31_r4_qn0_all_ground import run as issue31_qn0_run
 from qpx_harness.moose import parameters as mp
-from recipes.issue31_r4_qn0 import (
+from experiments.historical_recipe_support.issue31_r4_qn0 import (
     audit_r4_qn0_input,
     build_r4_qn0_input,
     initial_quasi_neutral_reference,

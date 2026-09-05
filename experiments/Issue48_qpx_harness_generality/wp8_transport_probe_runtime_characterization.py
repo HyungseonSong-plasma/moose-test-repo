@@ -12,8 +12,8 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from qpx_harness.performance.probes import runtime
-from qpx_harness.performance.probes import transport as direct
+from qpx_harness.execution.performance.probes import runtime
+from qpx_harness.execution.performance.probes import transport as direct
 from qpx_harness.cli.commands import performance as performance_cli
 
 EXPECTED_SOURCE_SHA256 = "4533a3a2fe0d77f3d85ca171f9093907a76514dd024c5392c08dd8d17a2f4b7e"
@@ -220,7 +220,7 @@ def _check_boundary() -> None:
     source = Path(runtime.__file__).read_text()
     for forbidden in (
         "from .transport",
-        "from qpx_harness.performance.probes.transport",
+        "from qpx_harness.execution.performance.probes.transport",
     ):
         if forbidden in source:
             raise AssertionError(f"runtime reverse dependency leaked: {forbidden}")

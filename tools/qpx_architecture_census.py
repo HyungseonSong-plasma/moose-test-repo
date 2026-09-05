@@ -84,7 +84,7 @@ LEGACY_NAMESPACE_PATHS = {
 }
 # Once a namespace has completed zero-caller retirement, recreating it is a
 # normal-CI architecture regression rather than merely unfinished #143 debt.
-RETIRED_LEGACY_NAMESPACES = {"qpx_harness.cpp"}
+RETIRED_LEGACY_NAMESPACES = set(LEGACY_NAMESPACE_PATHS)
 SCAN_ROOTS = (
     ROOT / "qpx_harness",
     ROOT / "tests",
@@ -296,6 +296,15 @@ def root_modules() -> list[str]:
     )
 
 
+def experiment_spec_owner_paths() -> list[str]:
+    owners: list[str] = []
+    for path in _python_files(HARNESS):
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        if any(isinstance(node, ast.ClassDef) and node.name == "ExperimentSpec" for node in tree.body):
+            owners.append(_rel(path))
+    return sorted(owners)
+
+
 def build_census() -> dict:
     recipe_map = _recipe_ownership()
     harness_files = _python_files(HARNESS)
@@ -310,7 +319,8 @@ def build_census() -> dict:
     unclassified = [record["path"] for record in records if record["class"] == "UNCLASSIFIED"]
     recipe_paths = sorted(_rel(path) for path in recipe_files if path.name != "__init__.py")
     expected_recipes = sorted(recipe_map)
-    recipe_set_ok = recipe_paths == expected_recipes
+    root_recipes_present = (ROOT / "recipes").is_dir()
+    recipe_set_ok = recipe_paths == expected_recipes if root_recipes_present else True
     edges = generic_issue_edges(harness_files)
     forbidden_namespaces = forbidden_production_namespaces(harness_files)
     collisions = module_package_collisions()
@@ -323,6 +333,8 @@ def build_census() -> dict:
         RETIRED_LEGACY_NAMESPACES.intersection(present_legacy_namespaces)
     )
     zero_legacy = not present_legacy_namespaces and not external_legacy_edges
+    experiment_spec_owners = experiment_spec_owner_paths()
+    canonical_experimentspec_owner_count = len(experiment_spec_owners)
     return {
         "status": (
             "PASS"
@@ -333,6 +345,7 @@ def build_census() -> dict:
             and not collisions
             and not direct_root_modules
             and not retired_reintroduced
+            and canonical_experimentspec_owner_count == 1
             else "FAIL"
         ),
         "production_owner_count": len(records),
@@ -342,7 +355,8 @@ def build_census() -> dict:
         "recipe_set": recipe_paths,
         "recipe_set_expected": expected_recipes,
         "recipe_set_ok": recipe_set_ok,
-        "root_recipes_class": "LEGACY_COMPATIBILITY_ONLY",
+        "root_recipes_class": "LEGACY_COMPATIBILITY_ONLY" if root_recipes_present else "PHYSICALLY_RETIRED",
+        "root_recipes_physically_removed": not root_recipes_present,
         "generic_to_issue_edges": edges,
         "forbidden_production_namespaces": forbidden_namespaces,
         "module_package_collisions": collisions,
@@ -353,6 +367,8 @@ def build_census() -> dict:
         "external_legacy_import_edges": external_legacy_edges,
         "retired_namespace_reintroductions": retired_reintroduced,
         "zero_legacy": zero_legacy,
+        "experiment_spec_owner_paths": experiment_spec_owners,
+        "canonical_experimentspec_owner_count": canonical_experimentspec_owner_count,
     }
 
 
@@ -398,10 +414,12 @@ def main(argv: list[str] | None = None) -> int:
             f"[{edge['caller_class']}]"
         )
     print(f"ISSUE143_ZERO_LEGACY: {'PASS' if result['zero_legacy'] else 'FAIL'}")
+    print(f"ISSUE144_ROOT_RECIPES_PHYSICALLY_REMOVED: {'PASS' if result['root_recipes_physically_removed'] else 'FAIL'}")
+    print(f"ISSUE144_CANONICAL_EXPERIMENTSPEC_OWNER_COUNT: {result['canonical_experimentspec_owner_count']}")
     print(f"ISSUE70_ARCHITECTURE_CENSUS: {result['status']}")
     passed = result["status"] == "PASS"
     if args.require_no_legacy:
-        passed = passed and bool(result["zero_legacy"])
+        passed = (passed and bool(result["zero_legacy"]) and bool(result["root_recipes_physically_removed"]) and result["canonical_experimentspec_owner_count"] == 1)
     return 0 if passed else 1
 
 

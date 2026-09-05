@@ -4,10 +4,10 @@ from __future__ import annotations
 from pathlib import Path
 
 from qpx_harness.application.execution_options import experiment_results_root, positive_timeout
-from qpx_harness.application.experiment_spec import ExperimentSpec
+from qpx_harness.application.experiment_spec import ExperimentControl
 
 
-def run_protocol(spec: ExperimentSpec) -> int:
+def run_protocol(spec: ExperimentControl) -> int:
     if spec.case_source is not None:
         raise ValueError("issue26-electron-energy-chain owns its canonical R4/A8 cases")
     qpx = spec.execution.get("qpx")

@@ -20,7 +20,7 @@ from experiments.Issue27_surface_reactions.controlled_wall.electron_wall import 
 from qpx_harness.application.experiment_spec import load_experiment_spec
 from qpx_harness.moose import blocks as mb
 from qpx_harness.moose import parameters as mp
-from recipes.issue91_r3 import MEAN_ELECTRON_ENERGY_EV
+from experiments.historical_recipe_support.issue91_r3 import MEAN_ELECTRON_ENERGY_EV
 
 ROOT = Path(__file__).resolve().parents[2]
 R4_SOURCE = ROOT / "experiments/Issue91_real_qvt_r3/r3_e0/heavy_base.i"

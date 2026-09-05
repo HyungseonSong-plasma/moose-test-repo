@@ -3,8 +3,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from recipes import issue45_first_linear as first_linear_recipe
-from recipes import issue45_inventory_constraint as inventory_policy
+from qpx_harness.adapters.moose.electron_inventory import first_linear as first_linear_recipe
+from qpx_harness.analysis.electron_inventory.structure import audit_constrained_quasisteady_structure
 
 from qpx_harness.moose import parameters as mp
 from qpx_harness.petsc import options as petsc_options
@@ -44,7 +44,7 @@ def audit_first_linear_structure(
             }
         )
 
-    closure = inventory_policy.audit_constrained_quasisteady_structure(
+    closure = audit_constrained_quasisteady_structure(
         diagnostic_text,
         expected_macro_avg=TARGET,
     )

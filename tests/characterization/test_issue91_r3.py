@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 
 from experiments.Issue91_real_qvt_r3 import run as issue91_run
-from recipes.issue91_r3 import audit_r3_input, build_r3_input
+from experiments.historical_recipe_support.issue91_r3 import audit_r3_input, build_r3_input
 from qpx_harness.moose import parameters as mp
 
 ROOT = Path(__file__).resolve().parents[2]

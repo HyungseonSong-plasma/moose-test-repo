@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from recipes import issue31_coupling as recipe
+from experiments.historical_recipe_support import issue31_coupling as recipe
 from qpx_harness.coupling_evr2 import orchestration as evr2
 
 
@@ -287,7 +287,7 @@ def _check_production_cutover() -> None:
             raise AssertionError(f"EVR2 retained historical dependency: {historical}")
     source = evr2_path.read_text()
     for required in (
-        "from recipes import issue31_coupling as recipe",
+        "from experiments.historical_recipe_support import issue31_coupling as recipe",
         "validate_referenced_files",
         "recipe.configured_transport_input",
         "recipe.physics_check",

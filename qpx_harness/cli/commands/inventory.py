@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import argparse
 
-from recipes import issue45_first_linear as first_linear_recipe
+from qpx_harness.adapters.moose.electron_inventory import first_linear as first_linear_recipe
 
 from qpx_harness.moose.input import MooseInputError
 from qpx_harness.domains.plasma.electron_inventory import DEFAULT_MACRO_ELECTRON_AVG

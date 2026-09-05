@@ -11,7 +11,7 @@ from qpx_harness.adapters.moose import (
     lower_execution_plan,
 )
 from qpx_harness.execution import compile_execution_plan
-from qpx_harness.execution.plan import ExecutionCase, ExecutionPlan
+from qpx_harness.execution.plan import ExecutionCase, MutationPlan
 from qpx_harness.ontology import (
     OntologyService,
     SemanticInvariantError,
@@ -207,7 +207,7 @@ def test_accepted_semantic_e2a_fixture_matches_frozen_control_values():
 
 
 def test_unknown_semantic_action_does_not_emit_placeholder_target():
-    plan = ExecutionPlan(
+    plan = MutationPlan(
         plan_id="P",
         source_policy_id="POL",
         cases=(

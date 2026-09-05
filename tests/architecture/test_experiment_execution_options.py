@@ -3,14 +3,14 @@ from pathlib import Path
 import pytest
 
 from qpx_harness.application.execution_options import optional_path, positive_timeout
-from qpx_harness.application.experiment_spec import ExperimentSpec
+from qpx_harness.application.experiment_spec import ExperimentControl
 from qpx_harness.execution.runtime import resolve_results_root
 
 
-def _spec(tmp_path: Path, *, execution: dict[str, object]) -> ExperimentSpec:
+def _spec(tmp_path: Path, *, execution: dict[str, object]) -> ExperimentControl:
     source = tmp_path / "experiment.json"
     source.write_text("{}\n")
-    return ExperimentSpec(
+    return ExperimentControl(
         schema_version=1,
         experiment_id="test",
         protocol="test-protocol",

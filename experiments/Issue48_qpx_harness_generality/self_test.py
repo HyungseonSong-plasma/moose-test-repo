@@ -21,10 +21,10 @@ from qpx_harness.petsc import options as po
 from qpx_harness import issue46_jacobian_localization as issue46_semantic
 from qpx_harness import electron_inventory_nullspace as issue45_inventory_legacy
 from qpx_harness import issue43_coupling_diagnostic as issue43_legacy
-from recipes import issue43_coupling_diagnostic as issue43_recipe
-from recipes import issue45_first_linear as issue45_recipe
-from recipes import issue45_inventory_constraint as issue45_inventory_recipe
-from recipes import issue46_jacobian_localization as issue46_recipe
+from experiments.historical_recipe_support import issue43_coupling_diagnostic as issue43_recipe
+from experiments.historical_recipe_support import issue45_first_linear as issue45_recipe
+from experiments.historical_recipe_support import issue45_inventory_constraint as issue45_inventory_recipe
+from experiments.historical_recipe_support import issue46_jacobian_localization as issue46_recipe
 
 
 def _fixture() -> str:

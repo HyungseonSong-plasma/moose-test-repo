@@ -11,12 +11,12 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from recipes import issue31_coupling as recipe
+from experiments.historical_recipe_support import issue31_coupling as recipe
 from qpx_harness.coupling_evr1 import characterization as runtime_characterization
 from qpx_harness.coupling_evr1 import classification as runtime_classification
 from qpx_harness.coupling_evr1 import orchestration as runtime_owner
 from qpx_harness.evidence import create_collision_safe_directory
-from qpx_harness.performance.smoke import build_smoke_manifest
+from qpx_harness.execution.performance.smoke import build_smoke_manifest
 
 
 EXPECTED_EXPERIMENT_ID = "issue31-evr1-optimized-monolithic"
@@ -251,7 +251,7 @@ def _check_boundary() -> None:
 
     source = runtime_path.read_text()
     for required in (
-        "from recipes import issue31_coupling as recipe",
+        "from experiments.historical_recipe_support import issue31_coupling as recipe",
         "stage_case",
         "validate_referenced_files",
         "sha256_file",

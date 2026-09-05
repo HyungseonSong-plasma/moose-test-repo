@@ -6,7 +6,7 @@ from pathlib import Path
 from qpx_harness.application.experiment_spec import load_experiment_spec
 from qpx_harness.moose import blocks as mb
 from qpx_harness.moose import parameters as mp
-from recipes.issue26_e1 import (
+from experiments.historical_recipe_support.issue26_e1 import (
     E1_DT_S,
     ENERGY_REFERENCE_EV,
     ENERGY_TIME_KERNEL,

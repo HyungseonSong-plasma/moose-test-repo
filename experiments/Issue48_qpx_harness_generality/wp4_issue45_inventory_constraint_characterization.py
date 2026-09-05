@@ -18,8 +18,8 @@ from qpx_harness.adapters.moose.electron_inventory.constants import (
     DEFAULT_MACRO_ELECTRON_AVG,
     LAMBDA_VARIABLE,
 )
-from recipes import issue45_closure_basis as closure_basis
-from recipes import issue45_inventory_constraint as recipe
+from experiments.historical_recipe_support import issue45_closure_basis as closure_basis
+from experiments.historical_recipe_support import issue45_inventory_constraint as recipe
 
 
 def _assert_equal(label: str, new: object, old: object) -> None:

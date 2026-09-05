@@ -7,7 +7,7 @@ from ..moose import blocks as moose_blocks
 from ..moose import parameters as moose_parameters
 from ..moose.input import MooseInput, MooseInputError
 from ..petsc import options as petsc_options
-from ..spec.plan import CasePlan, OperationPlan
+from ..adapters.moose.mutation_spec.plan import MutationCasePlan, OperationPlan
 
 
 class TransformError(RuntimeError):
@@ -209,7 +209,7 @@ def apply_operation(text: str, operation: OperationPlan) -> str:
     return transform(text, operation)
 
 
-def apply_case_plan(text: str, case: CasePlan) -> str:
+def apply_case_plan(text: str, case: MutationCasePlan) -> str:
     out = text
     for operation in case.operations:
         out = apply_operation(out, operation)

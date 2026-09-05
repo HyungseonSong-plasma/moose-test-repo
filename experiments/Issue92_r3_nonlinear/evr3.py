@@ -39,7 +39,7 @@ from experiments.Issue92_r3_nonlinear.diagnose import (
     scaling_discriminator,
     trajectory_improved,
 )
-from recipes.issue91_r3 import build_r3_input
+from experiments.historical_recipe_support.issue91_r3 import build_r3_input
 from qpx_harness.moose import parameters as mp
 
 ISSUE = 92

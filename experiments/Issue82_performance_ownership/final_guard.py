@@ -17,9 +17,9 @@ from qpx_harness import analysis
 from qpx_harness.analysis.performance import cache, investigation, profile
 from qpx_harness.cli.app import COMMANDS
 from qpx_harness.cli.commands import performance as performance_cli
-from qpx_harness.performance import runner, smoke
-from qpx_harness.performance.probes import runtime as probe_runtime
-from qpx_harness.performance.probes import transport
+from qpx_harness.execution.performance import runner, smoke
+from qpx_harness.execution.performance.probes import runtime as probe_runtime
+from qpx_harness.execution.performance.probes import transport
 
 CENSUS = ROOT / "docs/development/2026-09-02_issue82_performance_ownership_census.json"
 RETIRED_PATHS = (

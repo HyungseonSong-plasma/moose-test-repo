@@ -6,7 +6,7 @@ from pathlib import Path
 
 from experiments.Issue31_r4_qf1_closed_feedback import run as qf1_run
 from qpx_harness.moose import parameters as mp
-from recipes.issue31_r4_qf1 import (
+from experiments.historical_recipe_support.issue31_r4_qf1 import (
     ELECTROSTATIC_BOUNDARIES_TO_AVOID,
     EXPECTED_FEEDBACK_KERNELS,
     EXPECTED_DRIFT_KERNELS,

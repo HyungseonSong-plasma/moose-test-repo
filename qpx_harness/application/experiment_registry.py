@@ -8,9 +8,9 @@ from __future__ import annotations
 from collections.abc import Callable
 from importlib import import_module
 
-from .experiment_spec import ExperimentSpec
+from .experiment_spec import ExperimentControl
 
-ExperimentRunner = Callable[[ExperimentSpec], int]
+ExperimentRunner = Callable[[ExperimentControl], int]
 
 _PROTOCOLS: dict[str, str] = {
     "issue26-electron-energy-e1": "qpx_harness.application.protocols.issue26_electron_energy_e1:run_protocol",

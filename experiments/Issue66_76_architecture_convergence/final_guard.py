@@ -15,9 +15,9 @@ ROOT = HERE.parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from recipes import issue43_coupling_diagnostic as issue43_recipe
-from recipes import issue45_first_linear as issue45_recipe
-from recipes import issue46_jacobian_localization as issue46_loc_recipe
+from experiments.historical_recipe_support import issue43_coupling_diagnostic as issue43_recipe
+from experiments.historical_recipe_support import issue45_first_linear as issue45_recipe
+from experiments.historical_recipe_support import issue46_jacobian_localization as issue46_loc_recipe
 from qpx_harness.cli.app import COMMANDS, main as cli_main
 from qpx_harness.evidence import artifacts as evidence_artifacts
 from qpx_harness.execution import cases as execution_cases
@@ -27,8 +27,8 @@ from qpx_harness.moose import blocks as mb
 from qpx_harness.moose import parameters as mp
 from qpx_harness.moose.input import MooseInput
 from qpx_harness.petsc import options as po
-from qpx_harness.spec import ExperimentSpecError, compile_spec, load_json_file, load_payload
-from qpx_harness.spec.plan import OperationPlan
+from qpx_harness.adapters.moose.mutation_spec import MutationSpecError, compile_mutation_spec, load_mutation_json_file, load_mutation_payload
+from qpx_harness.adapters.moose.mutation_spec.plan import OperationPlan
 from qpx_harness.transforms import SUPPORTED_OPERATIONS, TransformError, apply_operation
 
 EXPECTED_OPERATIONS = {
@@ -244,8 +244,8 @@ def main() -> int:
             "cases": [{"case_id": "bad", "operations": [{"op": "arbitrary_python"}]}],
         }
         try:
-            load_payload(invalid)
-        except ExperimentSpecError:
+            load_mutation_payload(invalid)
+        except MutationSpecError:
             pass
         else:
             raise AssertionError("unknown operation accepted")
@@ -311,7 +311,7 @@ def main() -> int:
     # #67/#68: specs validate, legacy rendering remains byte-identical, reusable diagnostics own mechanics.
     try:
         for path in SPEC_PATHS:
-            plan = compile_spec(load_json_file(path))
+            plan = compile_mutation_spec(load_mutation_json_file(path))
             assert plan.schema_version == 1
         for jacobian in (False, True):
             rendered, _ = issue43_recipe.instrument_input(COUPLING_BASE, jacobian_test=jacobian)
@@ -366,7 +366,7 @@ def main() -> int:
             assert record["model"] in OWNERSHIP_MODELS, (path, record)
             spec_path = record.get("spec")
             if spec_path:
-                compile_spec(load_json_file(ROOT / spec_path))
+                compile_mutation_spec(load_mutation_json_file(ROOT / spec_path))
     except Exception as exc:
         failures.append(f"Issue70/72/73 ownership convergence: {exc}")
         print(f"ISSUE70_72_73_OWNERSHIP: FAIL ({exc})")

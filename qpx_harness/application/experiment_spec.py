@@ -16,7 +16,7 @@ class CaseSource:
 
 
 @dataclass(frozen=True)
-class ExperimentSpec:
+class ExperimentControl:
     schema_version: int
     experiment_id: str
     protocol: str
@@ -60,7 +60,7 @@ def _case_source(raw: Any, *, base: Path) -> CaseSource | None:
     return CaseSource(path=path, format=fmt)
 
 
-def load_experiment_spec(path: str | Path) -> ExperimentSpec:
+def load_experiment_spec(path: str | Path) -> ExperimentControl:
     source = Path(path).expanduser().resolve()
     if source.suffix.lower() != ".json":
         raise ValueError("experiment control specification must be JSON")
@@ -76,7 +76,7 @@ def load_experiment_spec(path: str | Path) -> ExperimentSpec:
         raise ValueError("experiment_id must be a non-empty string")
     if not isinstance(protocol, str) or not protocol.strip():
         raise ValueError("protocol must be a non-empty string")
-    return ExperimentSpec(
+    return ExperimentControl(
         schema_version=1,
         experiment_id=experiment_id,
         protocol=protocol,
@@ -88,4 +88,4 @@ def load_experiment_spec(path: str | Path) -> ExperimentSpec:
     )
 
 
-__all__ = ["CaseSource", "ExperimentSpec", "SUPPORTED_CASE_FORMATS", "load_experiment_spec"]
+__all__ = ["CaseSource", "ExperimentControl", "SUPPORTED_CASE_FORMATS", "load_experiment_spec"]

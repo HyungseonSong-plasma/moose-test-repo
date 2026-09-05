@@ -1,14 +1,13 @@
 """Electron-inventory constrained quasi-steady construction adapters.
 
-Scientific construction remains recipe-owned; this canonical capability binds
-those recipe semantics to reusable MOOSE input mechanics.
+Construction is owned by canonical MOOSE adapters; structural/runtime interpretation lives in Analysis.
 """
 from __future__ import annotations
 
 import re
 
-from recipes import issue45_closure_basis as closure_basis
-from recipes import issue45_inventory_constraint as inventory_recipe
+from . import closure_basis
+from qpx_harness.analysis.electron_inventory.structure import target_only_pair_audit
 
 from qpx_harness.moose.input import MooseInput
 from qpx_harness.adapters.moose.electron_inventory.constants import (
@@ -184,7 +183,7 @@ def _normalized_target_text(text: str) -> str:
 
 
 def _target_only_pair_audit(c0_text: str, c1_text: str) -> dict[str, object]:
-    return inventory_recipe.target_only_pair_audit(c0_text, c1_text)
+    return target_only_pair_audit(c0_text, c1_text)
 
 
 def build_synthetic_target_pair() -> tuple[str, str]:

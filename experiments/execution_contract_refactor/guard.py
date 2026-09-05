@@ -55,7 +55,7 @@ def main() -> int:
         "retired execution_contract compatibility facade still exists",
     )
 
-    recipe_source = (ROOT / "recipes/issue43_execution_contract.py").read_text()
+    recipe_source = (ROOT / "experiments/historical_recipe_support/issue43_execution_contract.py").read_text()
     _require(
         "from qpx_harness.execution import contract as ec" in recipe_source,
         "Issue43 execution policy is not attached to the canonical capability",
@@ -76,7 +76,7 @@ def main() -> int:
     )
 
     stale: dict[str, list[str]] = {}
-    for base in (ROOT / "qpx_harness", ROOT / "recipes"):
+    for base in (ROOT / "qpx_harness", ROOT / "experiments/historical_recipe_support"):
         for path in base.rglob("*.py"):
             hits = _legacy_imports(path)
             if hits:

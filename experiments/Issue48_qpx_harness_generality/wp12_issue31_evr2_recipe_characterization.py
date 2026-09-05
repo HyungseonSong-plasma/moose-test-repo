@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from recipes import issue31_coupling as recipe
+from experiments.historical_recipe_support import issue31_coupling as recipe
 from qpx_harness.coupling_evr2 import orchestration as production
 
 

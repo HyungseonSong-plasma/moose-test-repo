@@ -13,7 +13,7 @@ from qpx_harness.adapters.moose.electron_inventory.closure_model import _synthet
 from qpx_harness.analysis.electron_inventory.structure import audit_constrained_quasisteady_structure
 from qpx_harness.moose import parameters as mp
 from qpx_harness.petsc import options as po
-from recipes import issue45_first_linear as recipe
+from experiments.historical_recipe_support import issue45_first_linear as recipe
 
 
 def _synthetic_log(jac_rel: float = 2.0e-9) -> str:

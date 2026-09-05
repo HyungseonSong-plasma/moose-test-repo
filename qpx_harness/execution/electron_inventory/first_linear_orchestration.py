@@ -4,8 +4,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from recipes import issue45_closure_basis as closure_basis
-from recipes import issue45_first_linear as first_linear_recipe
+from qpx_harness.adapters.moose.electron_inventory import closure_basis
+from qpx_harness.adapters.moose.electron_inventory import first_linear as first_linear_recipe
 
 from qpx_harness.evidence import artifacts
 from qpx_harness.execution import cases as case_ops
@@ -19,7 +19,7 @@ from qpx_harness.analysis.electron_inventory.first_linear_structure import audit
 ISSUE = first_linear_recipe.ISSUE
 TARGET = first_linear_recipe.TARGET
 instrument_first_linear = first_linear_recipe.instrument_first_linear
-analyze_first_linear_text = first_linear_recipe.analyze_first_linear_text
+from qpx_harness.analysis.electron_inventory.first_linear_runtime import analyze_first_linear_text
 
 
 def _base_case_context() -> tuple[Path, str, float]:

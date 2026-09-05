@@ -1,7 +1,8 @@
 """Synthetic characterization for the canonical inventory first-linear diagnostic."""
 from __future__ import annotations
 
-from recipes import issue45_first_linear as first_linear_recipe
+from qpx_harness.adapters.moose.electron_inventory import first_linear as first_linear_recipe
+from qpx_harness.analysis.electron_inventory.first_linear_runtime import analyze_first_linear_text
 
 from qpx_harness.adapters.moose.electron_inventory.closure_model import _synthetic_constrained_input
 from qpx_harness.analysis.electron_inventory.first_linear_stats import build_first_linear_stats
@@ -9,7 +10,7 @@ from qpx_harness.analysis.electron_inventory.first_linear_structure import audit
 
 TARGET = first_linear_recipe.TARGET
 instrument_first_linear = first_linear_recipe.instrument_first_linear
-analyze_first_linear_text = first_linear_recipe.analyze_first_linear_text
+analyze_first_linear_text = analyze_first_linear_text
 
 
 def _synthetic_log(jac_rel: float = 2.0e-9) -> str:

@@ -16,7 +16,7 @@ from pathlib import Path
 from statistics import median
 from typing import Any
 
-from recipes.issue91_r3 import ELECTRON_DT, MEAN_ELECTRON_ENERGY_EV
+from experiments.historical_recipe_support.issue91_r3 import ELECTRON_DT, MEAN_ELECTRON_ENERGY_EV
 
 KB = 1.380649e-23
 R = 8.31446261815324

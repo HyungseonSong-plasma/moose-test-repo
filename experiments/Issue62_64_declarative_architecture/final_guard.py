@@ -15,12 +15,12 @@ ROOT = HERE.parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from recipes import issue43_coupling_diagnostic as recipe
+from experiments.historical_recipe_support import issue43_coupling_diagnostic as recipe
 from qpx_harness.moose import blocks as mb
 from qpx_harness.moose import parameters as mp
 from qpx_harness.moose.input import MooseInput
 from qpx_harness.petsc import options as po
-from qpx_harness.spec import compile_spec, load_json_file, load_payload
+from qpx_harness.adapters.moose.mutation_spec import compile_mutation_spec, load_mutation_json_file, load_mutation_payload
 from qpx_harness.transforms import SUPPORTED_OPERATIONS, apply_case_plan
 
 SPEC_PATH = ROOT / "specs" / "experiments" / "issue43_coupling_diagnostic.json"
@@ -182,8 +182,8 @@ def main() -> int:
 
     # Issue62: validate JSON ownership and prove legacy-equivalent rendering.
     try:
-        spec = load_json_file(SPEC_PATH)
-        plan = compile_spec(spec)
+        spec = load_mutation_json_file(SPEC_PATH)
+        plan = compile_mutation_spec(spec)
         assert spec.schema_version == 1
         assert spec.experiment_id == "issue43-coupling-diagnostic"
         assert {case.case_id for case in plan.cases} == {"default", "jacobian"}
@@ -256,7 +256,7 @@ def main() -> int:
                 raise AssertionError("adapter duplicates PETSc policy literals")
             if "show_var_residual_norms = true" in adapter_source:
                 raise AssertionError("adapter duplicates MOOSE Debug policy")
-            required_delegation = ("load_json_file", "compile_spec", "apply_case_plan")
+            required_delegation = ("load_mutation_json_file", "compile_mutation_spec", "apply_case_plan")
             if not all(token in adapter_source for token in required_delegation):
                 raise AssertionError("adapter does not delegate through generic spec engine")
         except Exception as exc:
@@ -359,7 +359,7 @@ def main() -> int:
                 }
             ],
         }
-        generic_plan = compile_spec(load_payload(generic_payload))
+        generic_plan = compile_mutation_spec(load_mutation_payload(generic_payload))
         rendered = apply_case_plan(base_inputs()["base"], generic_plan.case("only"))
         if mp.get_parameter(rendered, "Executioner", "verbose") != "true":
             raise AssertionError("new experiment did not render through generic engine")
@@ -379,7 +379,7 @@ def main() -> int:
         }:
             raise AssertionError(f"unexpected v1 vocabulary: {sorted(SUPPORTED_OPERATIONS)}")
         generic_sources = []
-        for directory in (ROOT / "qpx_harness" / "spec", ROOT / "qpx_harness" / "transforms"):
+        for directory in (ROOT / "qpx_harness" / "adapters" / "moose" / "mutation_spec", ROOT / "qpx_harness" / "transforms"):
             generic_sources.extend(path for path in directory.glob("*.py") if path.is_file())
         combined = "\n".join(path.read_text(encoding="utf-8").lower() for path in generic_sources)
         forbidden_issue_tokens = ("issue31", "issue43", "issue45", "issue46")

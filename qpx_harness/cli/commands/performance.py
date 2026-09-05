@@ -15,9 +15,9 @@ from ...evidence import (
     utc_timestamp,
     write_json_bundle,
 )
-from ...performance import runner, smoke
-from ...performance.probes import runtime as probe_runtime
-from ...performance.probes import transport
+from ...execution.performance import runner, smoke
+from ...execution.performance.probes import runtime as probe_runtime
+from ...execution.performance.probes import transport
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_CACHE_CASE = Path("tests/Issue22_qvt_transient_species_accumulation/input.i")
