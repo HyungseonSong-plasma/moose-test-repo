@@ -40,7 +40,14 @@ jobs:
       - name: Validate declarative experiment gateway
         run: python tools/qpx_experiment_gateway_guard.py
       - name: Validate capability architecture census
-        run: python tools/qpx_architecture_census.py
+        run: |
+          python tools/qpx_architecture_census.py
+          python tools/qpx_architecture_census.py --json-out qpx-architecture-census.json
+      - name: Upload architecture census
+        uses: actions/upload-artifact@v4
+        with:
+          name: qpx-architecture-census
+          path: qpx-architecture-census.json
       - name: Run QPX-free pytest
         run: python -m pytest -q
       - name: Run canonical QPX internal validation
