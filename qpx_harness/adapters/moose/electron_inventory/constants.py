@@ -1,11 +1,16 @@
-"""Frozen electron-inventory closure constants."""
+"""MOOSE realization constants for electron-inventory closure."""
 from __future__ import annotations
 
-from qpx_harness.spec.cases import QVT_PREPOISSON_CASE
+from qpx_harness.provenance.cases import QVT_PREPOISSON_CASE
 from qpx_harness.domains.plasma.electron_inventory import (
-    DEFAULT_MACRO_ELECTRON_AVG, C0_TARGET, C1_TARGET,
-    CLOSURE_TARGET_REL_TOL, CLOSURE_DELTA_REL_TOL, INVENTORY_CONSISTENCY_REL_TOL,
-    EXPECTED_DRIFT_BOUNDARIES, EXPECTED_POISSON_GROUNDS,
+    DEFAULT_MACRO_ELECTRON_AVG,
+    C0_TARGET,
+    C1_TARGET,
+    CLOSURE_TARGET_REL_TOL,
+    CLOSURE_DELTA_REL_TOL,
+    INVENTORY_CONSISTENCY_REL_TOL,
+    EXPECTED_DRIFT_BOUNDARIES,
+    EXPECTED_POISSON_GROUNDS,
 )
 
 ISSUE = 45

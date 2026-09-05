@@ -1,0 +1,1 @@
+"""Electron-inventory characterization checks."""
