@@ -25,7 +25,7 @@ def test_production_runtime_surfaces_do_not_auto_gate_on_selftests() -> None:
     # still expose an explicit --self-test option; the architectural prohibition
     # is an unconditional/automatic self-test gate on normal runtime execution.
     paths = (
-        "qpx_harness/inventory/cli.py",
+        "qpx_harness/cli/commands/inventory.py",
         "qpx_harness/execution/contract.py",
         "qpx_harness/execution/workspace.py",
         "qpx_harness/analysis/scale_audit.py",

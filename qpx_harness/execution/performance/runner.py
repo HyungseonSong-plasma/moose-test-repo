@@ -173,7 +173,7 @@ def validate_result_record(data: dict[str, Any]) -> dict[str, Any]:
 def build_measurement_stats(result: dict[str, Any]) -> Any:
     """Map one validated PF-1 result into canonical Stats through the builder boundary."""
 
-    from ..analysis.stats_builder import build_convergence_stats, build_simulation_stats
+    from qpx_harness.analysis.stats_builder import build_convergence_stats, build_simulation_stats
 
     convergence = build_convergence_stats(work=_mapping(result.get("work"), "result.work"))
     return build_simulation_stats(result, convergence=convergence)
