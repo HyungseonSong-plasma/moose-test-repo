@@ -10,7 +10,7 @@ from qpx_harness.adapters.moose.mutation_spec.plan import MutationCasePlan, Muta
 from qpx_harness.transforms import TransformError, apply_case_plan
 ISSUE = 45
 TARGET = 1.0e16
-SPEC_PATH = Path(__file__).resolve().parents[3] / "specs" / "experiments" / "issue45_first_linear.json"
+SPEC_PATH = Path(__file__).resolve().parents[4] / "specs" / "experiments" / "issue45_first_linear.json"
 class Issue45FirstLinearError(RuntimeError):
     pass
 @lru_cache(maxsize=1)

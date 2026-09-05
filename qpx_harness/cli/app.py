@@ -12,7 +12,7 @@ import sys
 from qpx_harness.application import normalize_temporal_run_csv, preflight_input, run_experiment
 from qpx_harness.application.gateway import compile_experiment, lower_experiment, plan_experiment
 from qpx_harness.analysis.temporal import VALID_INITIAL_POLICIES
-from qpx_harness.specification import MutationSpecError
+from qpx_harness.specification import ExperimentSpecError
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -111,7 +111,7 @@ def semantic_compile_cli(argv: list[str]) -> int:
     args = parser.parse_args(argv)
     try:
         result = compile_experiment(args.experiment)
-    except (OSError, MutationSpecError, ValueError, TypeError) as exc:
+    except (OSError, ExperimentSpecError, ValueError, TypeError) as exc:
         print(f"semantic compilation error: {exc}", file=sys.stderr)
         return 2
     _json_print(result)
@@ -124,7 +124,7 @@ def semantic_plan_cli(argv: list[str]) -> int:
     args = parser.parse_args(argv)
     try:
         result = plan_experiment(args.experiment)
-    except (OSError, MutationSpecError, ValueError, TypeError) as exc:
+    except (OSError, ExperimentSpecError, ValueError, TypeError) as exc:
         print(f"planning error: {exc}", file=sys.stderr)
         return 2
     _json_print(result)
@@ -137,7 +137,7 @@ def semantic_lower_cli(argv: list[str]) -> int:
     args = parser.parse_args(argv)
     try:
         planned, target = lower_experiment(args.experiment)
-    except (OSError, MutationSpecError, ValueError, TypeError) as exc:
+    except (OSError, ExperimentSpecError, ValueError, TypeError) as exc:
         print(f"lowering error: {exc}", file=sys.stderr)
         return 2
     _json_print({"planned": asdict(planned), "target": asdict(target)})
@@ -167,7 +167,7 @@ def semantic_run_cli(argv: list[str]) -> int:
     # semantic layers and require a concrete target execution capability later.
     try:
         planned, target = lower_experiment(args.experiment)
-    except (OSError, MutationSpecError, ValueError, TypeError) as exc:
+    except (OSError, ExperimentSpecError, ValueError, TypeError) as exc:
         print(f"semantic run preparation error: {exc}", file=sys.stderr)
         return 2
     print("QPX_RUN_PREPARED: PASS")
