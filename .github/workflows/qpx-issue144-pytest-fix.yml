@@ -1,0 +1,73 @@
+name: QPX Issue 144 pytest migration fix
+
+on:
+  push:
+    branches:
+      - development
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Repair migration fidelity
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def patch(path: str, replacements: list[tuple[str, str]]) -> None:
+              p = Path(path)
+              text = p.read_text()
+              for old, new in replacements:
+                  if old not in text:
+                      raise SystemExit(f"missing expected text in {path}: {old!r}")
+                  text = text.replace(old, new)
+              p.write_text(text)
+
+          patch("qpx_harness/application/gateway.py", [
+              ("from qpx_harness.execution import MutationPlan, compile_execution_plan", "from qpx_harness.execution import ExecutionPlan, compile_execution_plan"),
+              ("execution_plan: MutationPlan", "execution_plan: ExecutionPlan"),
+          ])
+          patch("tests/architecture/test_qpx_semantic_pipeline.py", [
+              ("from qpx_harness.execution.plan import ExecutionCase, MutationPlan", "from qpx_harness.execution.plan import ExecutionCase, ExecutionPlan"),
+              ("plan = MutationPlan(", "plan = ExecutionPlan("),
+          ])
+          patch("qpx_harness/cli/app.py", [
+              ("synthesize ScientificPolicy/MutationPlan", "synthesize ScientificPolicy/ExecutionPlan"),
+              ("lower a solver-independent MutationPlan", "lower a solver-independent ExecutionPlan"),
+          ])
+
+          p = Path("qpx_harness/analysis/electron_inventory/closure_runtime.py")
+          text = p.read_text()
+          text = text.replace(
+              "from __future__ import annotations\nimport math\nfrom typing import Any\n",
+              "from __future__ import annotations\n\nimport csv\nimport math\nfrom pathlib import Path\nfrom typing import Any\n",
+          )
+          text = text.replace(
+              "CLOSURE_DELTA_REL_TOL, CLOSURE_TARGET_REL_TOL, INVENTORY_CONSISTENCY_REL_TOL, RUNTIME_COLUMNS\n)",
+              "CLOSURE_DELTA_REL_TOL, CLOSURE_TARGET_REL_TOL, INVENTORY_CONSISTENCY_REL_TOL, LAMBDA_VARIABLE, RUNTIME_COLUMNS\n)",
+          )
+          marker = "from qpx_harness.domains.plasma.electron_inventory import ElectronInventoryNullspaceError\n"
+          helper = '''\n\ndef _synthetic_runtime_row(target: float) -> dict[str, float]:\n    volume = 0.05\n    return {\n        "n_avg": target,\n        "inventory": target * volume,\n        "domain_volume": volume,\n        "n_min": target * 0.99,\n        "n_max": target * 1.01,\n        "r43_phi_l2": 0.08,\n        "r43_phi_min": -0.7,\n        "r43_phi_max": 0.05,\n        "r43_charge_integral": 0.0,\n        "r43_charge_min": -1.0e-8,\n        "r43_charge_max": 2.0e-9,\n    }\n'''
+          if marker not in text:
+              raise SystemExit("closure runtime import marker missing")
+          if "def _synthetic_runtime_row" not in text:
+              text = text.replace(marker, marker + helper)
+          p.write_text(text)
+          PY
+          python -m compileall -q qpx_harness tests
+          python tools/qpx_architecture_census.py --require-no-legacy
+          python tools/qpx_dependency_guard.py --check all
+      - name: Commit repair
+        run: |
+          git config user.name "HyungseonSong-plasma"
+          git config user.email "hssongplasma@gmail.com"
+          git add -A
+          git rm -f .github/workflows/qpx-issue144-pytest-fix.yml
+          git commit -m "fix: restore semantic plan and inventory characterization contracts"
+          git push origin HEAD:development
