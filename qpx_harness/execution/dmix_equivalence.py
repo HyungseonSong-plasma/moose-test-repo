@@ -15,10 +15,14 @@ from pathlib import Path
 from typing import Any
 
 from qpx_harness.execution.runtime import resolve_executable, validate_executable
-from qpx_harness.analysis.dmix_equivalence import REL_TOL, compare
+from qpx_harness.analysis.dmix_equivalence import REL_TOL, compare, self_test as analysis_self_test
 from qpx_harness.observation.dmix import read_dmix
 from qpx_harness.adapters.moose.dmix_equivalence import trace_input
-from qpx_harness.adapters.moose.dmix_equivalence import EquivalenceError, legacy_source_transform
+from qpx_harness.adapters.moose.dmix_equivalence import (
+    EquivalenceError,
+    legacy_source_transform,
+    self_test as adapter_self_test,
+)
 
 SOURCE_RELATIVE = Path("src/materials/QPXThermalDiffusionMaterial.C")
 BASE_CASE_RELATIVE = Path(
@@ -102,9 +106,7 @@ def _create_result_root(results: Path) -> Path:
 
 
 def validate(args: argparse.Namespace) -> int:
-    from qpx_harness.validation.dmix_equivalence import self_test
-
-    if self_test():
+    if adapter_self_test() or analysis_self_test():
         return 2
     if not math.isfinite(args.rel_tol) or args.rel_tol <= 0:
         raise EquivalenceError("--rel-tol must be finite and positive")
