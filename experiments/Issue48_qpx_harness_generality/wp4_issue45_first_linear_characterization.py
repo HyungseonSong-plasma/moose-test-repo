@@ -9,8 +9,8 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from qpx_harness.inventory.closure_model import _synthetic_constrained_input
-from qpx_harness.inventory.structure import audit_constrained_quasisteady_structure
+from qpx_harness.adapters.moose.electron_inventory.closure_model import _synthetic_constrained_input
+from qpx_harness.analysis.electron_inventory.structure import audit_constrained_quasisteady_structure
 from qpx_harness.moose import parameters as mp
 from qpx_harness.petsc import options as po
 from recipes import issue45_first_linear as recipe
