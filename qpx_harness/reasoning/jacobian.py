@@ -1,4 +1,4 @@
-"""Jacobian correctness reasoning over parsed comparison evidence."""
+"""Jacobian verification reasoning over canonical comparison evidence."""
 from __future__ import annotations
 
 import math
@@ -38,12 +38,14 @@ def diagnose_jacobian_evidence(
 ) -> dict[str, Any]:
     count = int(evidence.get("comparison_count", 0))
     tests = list(evidence.get("tests", []))
+    provenance = evidence.get("provenance")
     if count == 0:
         return {
             "status": "HOLD",
             "class": "JACOBIAN_EVIDENCE_INSUFFICIENT",
-            "reason": "PETSc -snes_test_jacobian produced no parseable Jacobian comparison",
+            "reason": "no decoded Jacobian-comparison observations were provided",
             "relative_tolerance": relative_tolerance,
+            "provenance": provenance,
             "tests": tests,
         }
 
@@ -65,21 +67,23 @@ def diagnose_jacobian_evidence(
             "status": "HOLD",
             "class": "JACOBIAN_MISMATCH",
             "reason": (
-                "assembled-vs-finite-difference Jacobian relative Frobenius error exceeds "
+                "assembled-vs-reference Jacobian relative Frobenius error exceeds "
                 f"the declared tolerance {relative_tolerance:g} or is non-finite"
             ),
             "relative_tolerance": relative_tolerance,
             "worst_relative_frobenius_error": worst,
             "nonfinite": nonfinite,
+            "provenance": provenance,
             "tests": tests,
         }
     return {
         "status": "PASS",
         "class": "JACOBIAN_CORRECTNESS_PASS",
-        "reason": "all observed PETSc Jacobian comparisons satisfy the declared relative tolerance",
+        "reason": "all observed Jacobian comparisons satisfy the declared relative tolerance",
         "relative_tolerance": relative_tolerance,
         "worst_relative_frobenius_error": worst,
         "nonfinite": [],
+        "provenance": provenance,
         "tests": tests,
     }
 
