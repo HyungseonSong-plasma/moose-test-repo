@@ -6,7 +6,7 @@ from pathlib import Path
 import qpx_harness.evidence as evidence
 import qpx_harness.reasoning as reasoning
 from qpx_harness.adapters.moose.nonlinear_solver import runtime_core_facts
-from qpx_harness.petsc.jacobian import parse_comparisons
+from qpx_harness.adapters.petsc.jacobian import parse_comparisons
 from qpx_harness.reasoning.jacobian import diagnose_jacobian_evidence
 
 
@@ -83,6 +83,8 @@ def test_canonical_dependency_direction_is_enforced() -> None:
     assert not any(name.startswith("qpx_harness.reasoning") for name in evidence_imports)
     assert not any(name.startswith("qpx_harness.petsc") for name in evidence_imports)
     assert not any(name.startswith("qpx_harness.adapters.moose") for name in evidence_imports)
+    assert not any(name.startswith("qpx_harness.adapters.petsc") for name in evidence_imports)
     assert not any(name.startswith("qpx_harness.adapters.moose") for name in reasoning_imports)
     assert not any(name.startswith("qpx_harness.petsc") for name in reasoning_imports)
+    assert not any(name.startswith("qpx_harness.adapters.petsc") for name in reasoning_imports)
     assert not any(name.startswith("qpx_harness.diagnose") for name in reasoning_imports)
