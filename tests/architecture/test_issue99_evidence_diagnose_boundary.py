@@ -5,6 +5,7 @@ from pathlib import Path
 
 import qpx_harness.evidence as evidence
 import qpx_harness.reasoning as reasoning
+from qpx_harness.petsc.jacobian import parse_comparisons
 from qpx_harness.reasoning.jacobian import diagnose_jacobian_evidence
 
 
@@ -28,10 +29,14 @@ def test_evidence_runtime_ingest_emits_facts_not_diagnosis() -> None:
     assert "primary_owner_class" not in facts
 
 
-def test_jacobian_is_split_into_evidence_then_validation() -> None:
+def test_jacobian_is_split_into_backend_decode_evidence_then_validation() -> None:
     text = "||J - Jfd||_F/||J||_F = 1.0e-4, ||J - Jfd||_F = 2.0e-4"
-    facts = evidence.extract_jacobian_evidence(text)
+    decoded = parse_comparisons(text)
+    facts = evidence.extract_jacobian_evidence(
+        decoded, provenance="petsc:snes_test_jacobian"
+    )
     assert facts["comparison_count"] == 1
+    assert facts["provenance"] == "petsc:snes_test_jacobian"
     assert "class" not in facts
     assert "status" not in facts
 
@@ -75,6 +80,7 @@ def test_canonical_dependency_direction_is_enforced() -> None:
     reasoning_imports = _absolute_imports(package_root / "reasoning")
 
     assert not any(name.startswith("qpx_harness.reasoning") for name in evidence_imports)
+    assert not any(name.startswith("qpx_harness.petsc") for name in evidence_imports)
     assert not any(name.startswith("qpx_harness.moose") for name in reasoning_imports)
     assert not any(name.startswith("qpx_harness.petsc") for name in reasoning_imports)
     assert not any(name.startswith("qpx_harness.diagnose") for name in reasoning_imports)
