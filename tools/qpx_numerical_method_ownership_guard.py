@@ -20,47 +20,35 @@ def main() -> int:
     if "FACE_REQUIRED_COLUMNS = CORE_FACE_CONTRACT.required_columns" not in schema:
         failures.append("generic required face columns are method-specific")
 
-    for old in (
-        "qpx_harness/application/green_gauss_workflow.py",
-        "qpx_harness/reasoning/green_gauss.py",
-    ):
-        if (ROOT / old).exists():
-            failures.append(f"historical/method-specific generic owner remains: {old}")
+    for old in ("qpx_harness/application/green_gauss_workflow.py", "qpx_harness/reasoning/green_gauss.py"):
+        if (ROOT / old).exists(): failures.append(f"historical/method-specific generic owner remains: {old}")
 
-    app_surface = text("qpx_harness/application/__init__.py") + text(
-        "qpx_harness/application/operations.py"
-    )
+    app_surface = text("qpx_harness/application/__init__.py") + text("qpx_harness/application/operations.py")
     if "analyze_green_gauss" in app_surface or "diagnose_constant_green_gauss" in app_surface:
         failures.append("canonical application still exports Green-Gauss-named generic operations")
     if "analyze_gradient_reconstruction" not in app_surface:
         failures.append("canonical gradient-reconstruction application owner missing")
 
     jacobian_evidence = text("qpx_harness/evidence/ingest/jacobian.py")
-    if "petsc" in jacobian_evidence.lower():
-        failures.append("generic Jacobian evidence depends on or names concrete PETSc decoding")
-    if "qpx_harness.diagnose" in jacobian_evidence:
-        failures.append("stale diagnose namespace remains in Jacobian evidence")
+    if "petsc" in jacobian_evidence.lower(): failures.append("generic Jacobian evidence depends on or names concrete PETSc decoding")
+    if "qpx_harness.diagnose" in jacobian_evidence: failures.append("stale diagnose namespace remains in Jacobian evidence")
 
     jacobian_reasoning = text("qpx_harness/reasoning/jacobian.py")
     if "PETSc" in jacobian_reasoning or "-snes_test_jacobian" in jacobian_reasoning:
         failures.append("Jacobian verification reasoning contains backend-specific wording")
-    if "relative_tolerance" not in jacobian_reasoning:
-        failures.append("Jacobian correctness tolerance is not explicit policy")
+    if "relative_tolerance" not in jacobian_reasoning: failures.append("Jacobian correctness tolerance is not explicit policy")
 
-    petsc_parser = text("qpx_harness/petsc/jacobian.py")
+    petsc_parser = text("qpx_harness/adapters/petsc/jacobian.py")
     if "parse_comparisons" not in petsc_parser or "-snes_test_jacobian" not in petsc_parser:
         failures.append("PETSc Jacobian diagnostic parser owner missing")
 
     coupled = text("qpx_harness/reasoning/coupled_solver.py")
-    if "COUPLED_JACOBIAN_OR_RESIDUAL_FAIL" not in coupled:
-        failures.append("broad coupled Jacobian-or-residual runtime suspect classification missing")
-    if "JACOBIAN_MISMATCH" in coupled:
-        failures.append("coupled runtime reasoning duplicates verified Jacobian mismatch policy")
+    if "COUPLED_JACOBIAN_OR_RESIDUAL_FAIL" not in coupled: failures.append("broad coupled Jacobian-or-residual runtime suspect classification missing")
+    if "JACOBIAN_MISMATCH" in coupled: failures.append("coupled runtime reasoning duplicates verified Jacobian mismatch policy")
 
     if failures:
         print("NUMERICAL_METHOD_OWNERSHIP_GUARD: FAIL")
-        for failure in failures:
-            print(f"- {failure}")
+        for failure in failures: print(f"- {failure}")
         return 1
 
     print("CANONICAL_GRADIENT_RECONSTRUCTION_CAPABILITY_OWNER_COUNT = 1")

@@ -1,7 +1,8 @@
-"""MOOSE-specific C++ source observation.
+"""MOOSE-specific C++ source inspection.
 
 This module interprets source structures that are specifically meaningful in
-MOOSE.  Generic C++ parsing lives in :mod:`qpx_harness.observation.source_code.cpp`.
+MOOSE. Generic C++ parsing remains in
+:mod:`qpx_harness.observation.source_code.cpp`.
 """
 from __future__ import annotations
 
@@ -9,7 +10,11 @@ import re
 from pathlib import Path
 from typing import Any
 
-from .cpp import CppSource, CppSourceError, split_call_arguments
+from qpx_harness.observation.source_code.cpp import (
+    CppSource,
+    CppSourceError,
+    split_call_arguments,
+)
 
 CPP_TEXT_SUFFIXES = {".C", ".cc", ".cpp", ".cxx", ".h", ".hh", ".hpp"}
 
@@ -59,7 +64,8 @@ def _source_files(root: Path) -> list[Path]:
         base = Path(root) / base_name
         if base.is_dir():
             paths.extend(
-                path for path in base.rglob("*")
+                path
+                for path in base.rglob("*")
                 if path.is_file() and path.suffix in CPP_TEXT_SUFFIXES
             )
     return sorted(paths)
@@ -165,16 +171,18 @@ def parameter_functor_calls(
                 line_start = text.rfind("\n", 0, call.start) + 1
                 line_end = text.find("\n", parsed.close_paren)
                 line_end = len(text) if line_end < 0 else line_end
-                rows.append({
-                    "path": str(path.relative_to(root)),
-                    "line": _line_number(text, call.start),
-                    "consumer_type": class_name,
-                    "parameter": parameter,
-                    "functor_variable": variable,
-                    "first_argument": first.strip()[:240],
-                    "space_arg": _infer_space_argument(first, bindings),
-                    "snippet": " ".join(text[line_start:line_end].split())[:700],
-                })
+                rows.append(
+                    {
+                        "path": str(path.relative_to(root)),
+                        "line": _line_number(text, call.start),
+                        "consumer_type": class_name,
+                        "parameter": parameter,
+                        "functor_variable": variable,
+                        "first_argument": first.strip()[:240],
+                        "space_arg": _infer_space_argument(first, bindings),
+                        "snippet": " ".join(text[line_start:line_end].split())[:700],
+                    }
+                )
     unique = {
         (row["path"], row["line"], row["functor_variable"], row["first_argument"]): row
         for row in rows
@@ -183,6 +191,8 @@ def parameter_functor_calls(
 
 
 __all__ = [
-    "CPP_TEXT_SUFFIXES", "FunctorInspectionError",
-    "extract_functor_property_declaration", "parameter_functor_calls",
+    "CPP_TEXT_SUFFIXES",
+    "FunctorInspectionError",
+    "extract_functor_property_declaration",
+    "parameter_functor_calls",
 ]

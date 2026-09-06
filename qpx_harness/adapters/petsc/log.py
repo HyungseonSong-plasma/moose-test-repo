@@ -23,23 +23,30 @@ def _parse_terminations(text: str, solve_kind: str) -> list[dict[str, Any]]:
 
 
 def parse_linear_solve_terminations(text: str) -> list[dict[str, Any]]:
-    """Return all parseable PETSc linear-solve termination records."""
     return _parse_terminations(text, "Linear")
 
 
 def parse_nonlinear_solve_terminations(text: str) -> list[dict[str, Any]]:
-    """Return all parseable PETSc nonlinear-solve termination records."""
     return _parse_terminations(text, "Nonlinear")
 
 
+def first_failed_reason(rows: list[dict[str, Any]]) -> str | None:
+    """Return the first explicitly non-converged reason from decoded PETSc rows."""
+    return next((str(row["reason"]) for row in rows if not row.get("converged")), None)
+
+
+def first_linear_termination(text: str) -> dict[str, Any] | None:
+    """Return the first decoded PETSc linear termination row, if observable."""
+    rows = parse_linear_solve_terminations(text)
+    return dict(rows[0]) if rows else None
+
+
 def parse_pc_failure_reason(text: str) -> str | None:
-    """Return the first explicit ``PC failed due to`` reason, if present."""
     match = re.search(r"PC failed due to\s+([A-Z0-9_]+)", text, re.IGNORECASE)
     return match.group(1).upper() if match else None
 
 
 def parse_petsc_version(text: str) -> str | None:
-    """Return the first explicit PETSc semantic version exposed by runtime text."""
     for pattern in (
         r"PETSc(?:\s+Release)?\s+Version\s*[:=]?\s*([0-9]+\.[0-9]+\.[0-9]+)",
         r"PETSC_VERSION\s*[:=]\s*([0-9]+\.[0-9]+\.[0-9]+)",
@@ -51,9 +58,19 @@ def parse_petsc_version(text: str) -> str | None:
 
 
 def line_hits(text: str, patterns: tuple[str, ...]) -> list[str]:
-    """Return stripped log lines matching any caller-supplied regex pattern."""
     return [
         line.strip()
         for line in text.splitlines()
         if any(re.search(pattern, line, re.IGNORECASE) for pattern in patterns)
     ]
+
+
+__all__ = [
+    "first_failed_reason",
+    "first_linear_termination",
+    "line_hits",
+    "parse_linear_solve_terminations",
+    "parse_nonlinear_solve_terminations",
+    "parse_pc_failure_reason",
+    "parse_petsc_version",
+]

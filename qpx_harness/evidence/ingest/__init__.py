@@ -5,12 +5,11 @@ from .nonlinear_solver import (
     FAILURE_PATTERNS,
     failure_signature,
 )
-from .termination import first_failed_reason, first_linear_termination
+from .termination import first_failed_reason
 
 __all__ = [
     "FAILURE_PATTERNS",
     "extract_jacobian_evidence",
     "failure_signature",
     "first_failed_reason",
-    "first_linear_termination",
 ]

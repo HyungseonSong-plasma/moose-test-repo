@@ -15,8 +15,8 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from qpx_harness.adapters.moose.nonlinear_solver import runtime_core_facts
+from qpx_harness.adapters.petsc import ksp
 from qpx_harness.evidence import extract_jacobian_evidence
-from qpx_harness.petsc import ksp
 from qpx_harness.reasoning import diagnose_coupled_runtime_evidence
 from qpx_harness.reasoning.jacobian import diagnose_jacobian_evidence
 from qpx_harness.provenance.cases import QVT_PREPOISSON_CASE
