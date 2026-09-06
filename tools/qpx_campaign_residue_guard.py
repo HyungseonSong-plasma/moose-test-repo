@@ -26,10 +26,22 @@ def main() -> int:
         "qpx_harness/analysis/performance/investigation.py",
         "qpx_harness/execution/performance/smoke.py",
         "qpx_harness/execution/performance/investigation.py",
+        "qpx_harness/adapters/moose/performance/probe_runtime.py",
+        "qpx_harness/adapters/moose/performance/transport_probe.py",
     )
     present = [path for path in forbidden_campaign_modules if (ROOT / path).exists()]
     if present:
         fail("campaign modules remain in production: " + ", ".join(present))
+
+    execution_performance = ROOT / "qpx_harness/execution/performance"
+    if execution_performance.exists():
+        remaining = [
+            str(path.relative_to(ROOT))
+            for path in execution_performance.rglob("*")
+            if path.is_file()
+        ]
+        if remaining:
+            fail("redundant execution/performance surface remains: " + ", ".join(remaining))
 
     app = text("qpx_harness/cli/app.py")
     retired_commands = (
@@ -44,6 +56,9 @@ def main() -> int:
     for token in ("PF-1", "PF-3", "Issue22", "Issue 22", "qvt", "QVT", "D_mix"):
         if token in perf_cli:
             fail(f"generic performance CLI contains campaign/default residue: {token}")
+    for token in ("adapters.moose", "adapters.petsc", "execution.performance"):
+        if token in perf_cli:
+            fail(f"performance CLI bypasses application boundary: {token}")
 
     scale = text("qpx_harness/analysis/scale_audit.py")
     for token in (
@@ -54,28 +69,41 @@ def main() -> int:
         if token in scale:
             fail(f"generic scale analysis contains policy anchor/residue: {token}")
 
-    generic_perf_roots = (
-        ROOT / "qpx_harness/analysis/performance",
-        ROOT / "qpx_harness/execution/performance",
+    generic_perf_root = ROOT / "qpx_harness/analysis/performance"
+    concrete_tokens = (
+        "QPXThermalDiffusionMaterial",
+        "QPX_TRANSPORT_TIME_SECTION",
+        "PerfGraphReporter",
+        "SNESJacobianEval",
+        "SNESSolve",
+        "PCSetUp",
     )
-    concrete_tokens = ("QPXThermalDiffusionMaterial", "QPX_TRANSPORT_TIME_SECTION")
     concrete_hits: list[str] = []
-    for root in generic_perf_roots:
-        for path in root.rglob("*.py"):
-            source = path.read_text(encoding="utf-8")
-            if any(token in source for token in concrete_tokens):
-                concrete_hits.append(str(path.relative_to(ROOT)))
+    adapter_edges: list[str] = []
+    for path in generic_perf_root.rglob("*.py"):
+        source = path.read_text(encoding="utf-8")
+        if any(token in source for token in concrete_tokens):
+            concrete_hits.append(str(path.relative_to(ROOT)))
+        if "qpx_harness.adapters." in source or "...adapters" in source:
+            adapter_edges.append(str(path.relative_to(ROOT)))
     if concrete_hits:
-        fail("generic performance owns concrete solver instrumentation: " + ", ".join(concrete_hits))
+        fail("generic performance owns concrete solver decoding: " + ", ".join(concrete_hits))
+    if adapter_edges:
+        fail("generic performance analysis imports external adapters: " + ", ".join(adapter_edges))
 
-    relocated = ROOT / "qpx_harness/adapters/moose/performance/transport_probe.py"
-    if not relocated.is_file():
-        fail("concrete transport probe was not preserved behind MOOSE boundary")
+    application_perf = text("qpx_harness/application/performance.py")
+    if "def run_measurement(" not in application_perf or "def analyze_profile(" not in application_perf:
+        fail("canonical application performance entry surface is incomplete")
 
     print("PRODUCTION_PF_CAMPAIGN_API_IDENTITIES = 0")
     print("PRODUCTION_ISSUE_COUPLED_DEFAULT_CASES = 0")
     print("PRODUCTION_QVT_POLICY_ANCHORS_IN_GENERIC_ANALYSIS = 0")
     print("GENERIC_PERFORMANCE_TO_CONCRETE_SOLVER_INTROSPECTION_EDGES = 0")
+    print("PERFORMANCE_ANALYSIS_TO_EXTERNAL_ADAPTER_EDGES = 0")
+    print("PERFORMANCE_CLI_TO_CONCRETE_ADAPTER_EDGES = 0")
+    print("BROKEN_PERFORMANCE_NAMESPACE_IMPORTS = 0")
+    print("CAMPAIGN_SPECIFIC_PERFORMANCE_PROBES_IN_GENERIC_PRODUCTION = 0")
+    print("CANONICAL_PERFORMANCE_APPLICATION_ENTRY_COUNT = 1")
     print("CAMPAIGN_BRANDING_IN_GENERIC_MODULE_IDENTITY = 0")
     print("CAMPAIGN_RESIDUE_GUARD = PASS")
     return 0
