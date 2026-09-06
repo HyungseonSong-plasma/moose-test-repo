@@ -3,6 +3,7 @@
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+SKIP = {"qpx_batch6_fix.py", "qpx_boundary_terminology_guard.py"}
 replacements = [
     ("qpx_harness.models.stats", "qpx_harness.evaluation.statistics"),
     ("qpx_harness.ontology.model", "qpx_harness.ontology.records"),
@@ -13,6 +14,7 @@ replacements = [
     ("qpx_harness.moose.", "qpx_harness.adapters.moose."),
     ("from . import model as semantic_model", "from . import records as semantic_model"),
     ("from .model import", "from .records import"),
+    ("from ...models.stats import", "from ...evaluation.statistics import"),
     ("from ..models.stats import", "from ..evaluation.statistics import"),
     ("from .models import", "from .schema import"),
 ]
@@ -21,7 +23,7 @@ for base in (ROOT / "qpx_harness", ROOT / "tests", ROOT / "experiments", ROOT / 
     if not base.exists():
         continue
     for path in base.rglob("*.py"):
-        if path.name == Path(__file__).name:
+        if path.name in SKIP:
             continue
         text = path.read_text(encoding="utf-8")
         new = text
