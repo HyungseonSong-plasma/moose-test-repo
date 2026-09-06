@@ -6,7 +6,7 @@ from pathlib import Path
 import qpx_harness.evidence as evidence
 import qpx_harness.reasoning as reasoning
 from qpx_harness.adapters.moose.nonlinear_solver import runtime_core_facts
-from qpx_harness.petsc.jacobian import parse_comparisons
+from qpx_harness.adapters.petsc.jacobian import parse_comparisons
 from qpx_harness.reasoning.jacobian import diagnose_jacobian_evidence
 
 
