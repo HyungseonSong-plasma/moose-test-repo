@@ -133,7 +133,7 @@ def test_q12_execution_lineage_preserves_policy_plan_and_target_identity():
 
     assert plan.source_policy_id == policy.policy_id
     assert target.source_plan_id == plan.plan_id
-    assert plan.model == policy.model == target.model
+    assert plan.model_ref == policy.model_ref == target.model_ref
     assert tuple(case.action_id for case in plan.cases) == tuple(
         action.action_id for action in policy.selected_actions
     )
