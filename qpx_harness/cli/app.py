@@ -41,7 +41,7 @@ COMMANDS = {
 }
 
 INTERNAL_TARGETS = {
-    "architecture": "run dependency, experiment-control-plane, and architecture guards",
+    "architecture": "run dependency, semantic-control, and architecture guards",
     "regression": "run the qpx-free Python regression/unit suite",
     "all": "run architecture guards then regression/unit suite",
 }
@@ -211,6 +211,7 @@ def internal_cli(target: str) -> int:
         commands.extend([
             [sys.executable, str(ROOT / "tools" / "qpx_dependency_guard.py")],
             [sys.executable, str(ROOT / "tools" / "qpx_experiment_gateway_guard.py")],
+            [sys.executable, str(ROOT / "tools" / "qpx_plasma_semantic_residue_guard.py")],
             [sys.executable, str(ROOT / "tools" / "qpx_architecture_census.py")],
         ])
     if target in {"regression", "all"}:
