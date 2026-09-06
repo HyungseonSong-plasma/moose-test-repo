@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ...petsc import log as petsc_log
+from qpx_harness.adapters.petsc import log as petsc_log
 
 
 def first_failed_reason(rows: list[dict[str, Any]]) -> str | None:
