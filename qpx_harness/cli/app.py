@@ -28,16 +28,11 @@ CANONICAL_COMMANDS = {
 COMMANDS = {
     "test": "run one test.json case",
     "test-all": "discover and run a canonical/diagnostic suite",
-    "scale-audit": "build QVT multiphysics space-time scale map",
-    "contract": "validate/evaluate a CORE-16 scientific execution contract",
-    "measure": "run one schema-driven QPX performance measurement",
-    "measure-smoke": "auto-manage one PF-1 BENCHMARK/PROFILE smoke pair",
-    "investigate": "analyze the latest passing PF-1 smoke evidence",
-    "transport-probe": "run managed QPXThermalDiffusionMaterial timing probe",
-    "cache-audit": "audit D_mix consumer arguments and native cache feasibility",
-    "profile": "capture one-step legacy P2/P3 performance evidence",
+    "contract": "validate/evaluate a scientific execution contract",
+    "measure": "run one schema-driven performance measurement",
+    "profile": "capture generic one-step profiling evidence",
     "analyze": "classify PETSc/PerfGraph profiling evidence",
-    "inventory": "inspect or compare QPX workspace trees",
+    "inventory": "inspect or compare workspace trees",
 }
 
 INTERNAL_TARGETS = {
@@ -49,13 +44,8 @@ INTERNAL_TARGETS = {
 _LEGACY_TARGETS = {
     "test": "qpx_harness.execution.regression:cli_run_test",
     "test-all": "qpx_harness.execution.regression:cli_run_all",
-    "scale-audit": "qpx_harness.analysis.scale_audit:main",
     "contract": "qpx_harness.execution.contract:main",
     "measure": "qpx_harness.cli.commands.performance:measure_main",
-    "measure-smoke": "qpx_harness.cli.commands.performance:measure_smoke_main",
-    "investigate": "qpx_harness.cli.commands.performance:investigate_main",
-    "transport-probe": "qpx_harness.cli.commands.performance:transport_probe_main",
-    "cache-audit": "qpx_harness.cli.commands.performance:cache_audit_main",
     "profile": "qpx_harness.execution.performance.profiling:main",
     "analyze": "qpx_harness.cli.commands.performance:analyze_main",
     "inventory": "qpx_harness.execution.workspace:inventory_cli",
