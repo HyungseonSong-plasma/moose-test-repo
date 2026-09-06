@@ -6,7 +6,7 @@ from collections.abc import Iterable, Mapping
 from typing import Any
 
 from .._coerce import as_mapping, optional_float, optional_int
-from ...models.stats import (
+from ...evaluation.statistics import (
     ConvergenceStats,
     ResidualSample,
     ScalingFactorStats,

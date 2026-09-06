@@ -6,7 +6,7 @@ from collections.abc import Mapping
 from typing import Any
 
 from .._coerce import as_mapping, optional_float, optional_int
-from ...models.stats import EfficiencyStats, MemoryStats, TimingStats
+from ...evaluation.statistics import EfficiencyStats, MemoryStats, TimingStats
 
 
 def _perfgraph_timings(perfgraph: Mapping[str, Any]) -> list[TimingStats]:
