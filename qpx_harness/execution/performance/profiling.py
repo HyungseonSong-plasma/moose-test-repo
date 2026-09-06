@@ -13,6 +13,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from qpx_harness.adapters.moose.performance.profile import (
+    build_bounded_executioner_overlay,
     find_metrics_csv,
     read_last_metrics_row,
     write_overlay,
@@ -199,6 +200,8 @@ def main(argv: list[str] | None = None) -> int:
         abort_on_solve_fail=args.abort_on_solve_fail,
     )
 
+
+__all__ = ["build_bounded_executioner_overlay", "main", "profile_case"]
 
 if __name__ == "__main__":
     raise SystemExit(main())
