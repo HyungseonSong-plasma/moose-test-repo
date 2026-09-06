@@ -1,3 +1,3 @@
-"""Performance measurement, profiling, and probe execution mechanics."""
-from . import profiling, runner, smoke
-__all__ = ["profiling", "runner", "smoke"]
+"""Performance measurement, profiling, and generic probe execution mechanics."""
+from . import profiling, runner
+__all__ = ["profiling", "runner"]
