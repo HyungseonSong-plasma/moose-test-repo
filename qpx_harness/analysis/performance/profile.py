@@ -1,13 +1,6 @@
 """Backend-neutral bottleneck analysis of decoded performance facts."""
 from __future__ import annotations
 
-import json
-import tempfile
-from pathlib import Path
-
-from qpx_harness.adapters.moose.performance.profile import jacobian_self_time
-from qpx_harness.adapters.petsc.performance import decode_timing_facts
-
 
 def _metric(metrics: dict, stem: str, prefix: str | None) -> str | None:
     candidates = [f"{prefix}_{stem}"] if prefix else []
@@ -27,9 +20,17 @@ def analyze_facts(
 ) -> dict:
     """Classify already-decoded performance facts without external-format knowledge."""
     if summary.get("p2_returncode") != 0:
-        return {"classification": summary.get("classification", "HARNESS_OR_CONSTRUCTION_FAIL"), "interpretable_performance": False, "reason": "P2 did not pass."}
+        return {
+            "classification": summary.get("classification", "HARNESS_OR_CONSTRUCTION_FAIL"),
+            "interpretable_performance": False,
+            "reason": "P2 did not pass.",
+        }
     if summary.get("p3_returncode") != 0:
-        return {"classification": "RUNTIME_FAIL_OR_NONCONVERGENCE", "interpretable_performance": False, "reason": "P3 did not complete successfully."}
+        return {
+            "classification": "RUNTIME_FAIL_OR_NONCONVERGENCE",
+            "interpretable_performance": False,
+            "reason": "P3 did not complete successfully.",
+        }
 
     snes = timings.get("snes_solve", 0.0)
     jacobian = timings.get("jacobian_eval", 0.0)
@@ -56,12 +57,16 @@ def analyze_facts(
         dominant = "MIXED_PERFORMANCE_COST"
     secondary: list[str] = []
     if denominator:
-        if pc_setup / denominator >= 0.20 and dominant != "DIRECT_FACTORIZATION_DOMINANT": secondary.append("DIRECT_FACTORIZATION_SIGNIFICANT")
-        if residual / denominator >= 0.15 and dominant != "RESIDUAL_EVALUATION_DOMINANT": secondary.append("RESIDUAL_EVALUATION_SIGNIFICANT")
+        if pc_setup / denominator >= 0.20 and dominant != "DIRECT_FACTORIZATION_DOMINANT":
+            secondary.append("DIRECT_FACTORIZATION_SIGNIFICANT")
+        if residual / denominator >= 0.15 and dominant != "RESIDUAL_EVALUATION_DOMINANT":
+            secondary.append("RESIDUAL_EVALUATION_SIGNIFICANT")
     metrics = summary.get("last_metrics_row") or {}
+
     def as_int(stem: str):
         value = _metric(metrics, stem, metric_prefix)
         return int(float(value)) if value is not None else None
+
     return {
         "classification": dominant,
         "secondary": secondary,
@@ -78,31 +83,46 @@ def analyze_facts(
     }
 
 
-def analyze(summary_path: Path, petsc_path: Path, perf_path: Path | None = None, *, metric_prefix: str | None = None) -> dict:
-    """Compatibility use-case wrapper; raw decoding is delegated to adapter owners."""
-    return analyze_facts(
-        json.loads(summary_path.read_text()),
-        decode_timing_facts(petsc_path),
-        jacobian_self_time(perf_path),
-        metric_prefix=metric_prefix,
-    )
-
-
 def self_test() -> int:
     try:
-        with tempfile.TemporaryDirectory() as tmp_name:
-            root = Path(tmp_name); summary = root / "summary.json"; petsc = root / "petsc.csv"; perf = root / "perfgraph.log"
-            summary.write_text(json.dumps({"p2_returncode": 0, "p3_returncode": 0, "label": "synthetic", "wall_seconds": 10.0, "last_metrics_row": {"qpxh_num_dofs": "42", "qpxh_nonlinear_iterations": "2", "qpxh_linear_iterations": "3", "qpxh_residual_evaluations": "4"}}))
-            petsc.write_text("Event Name,Rank,Count,Time\nSNESSolve,0,1,10\nSNESJacobianEval,0,2,6\nSNESFunctionEval,0,4,1\nPCSetUp,0,2,1\nKSPSolve,0,3,1\n")
-            perf.write_text("| NonlinearSystemBase::computeJacobianInternal | 2 | 5.5 | 2.75 | 55 |\n")
-            result = analyze(summary, petsc, perf)
-            if result.get("classification") != "JACOBIAN_EVALUATION_DOMINANT" or result.get("dofs") != 42: raise AssertionError(result)
-            if result.get("perfgraph_jacobian_self", {}).get("self_seconds") != 5.5: raise AssertionError("MOOSE decoder contract drift")
-            failed = json.loads(summary.read_text()); failed["p2_returncode"] = 1; summary.write_text(json.dumps(failed))
-            if analyze(summary, petsc).get("interpretable_performance") is not False: raise AssertionError("P2 failure mutation was accepted")
+        summary = {
+            "p2_returncode": 0,
+            "p3_returncode": 0,
+            "label": "synthetic",
+            "wall_seconds": 10.0,
+            "last_metrics_row": {
+                "qpxh_num_dofs": "42",
+                "qpxh_nonlinear_iterations": "2",
+                "qpxh_linear_iterations": "3",
+                "qpxh_residual_evaluations": "4",
+            },
+        }
+        timings = {
+            "snes_solve": 10.0,
+            "jacobian_eval": 6.0,
+            "residual_eval": 1.0,
+            "pc_setup": 1.0,
+            "linear_solve": 1.0,
+            "matrix_assembly_end": 0.0,
+        }
+        result = analyze_facts(
+            summary,
+            timings,
+            {"self_seconds": 5.5},
+        )
+        if result.get("classification") != "JACOBIAN_EVALUATION_DOMINANT":
+            raise AssertionError(result)
+        if result.get("dofs") != 42:
+            raise AssertionError(result)
+        failed = dict(summary)
+        failed["p2_returncode"] = 1
+        if analyze_facts(failed, timings).get("interpretable_performance") is not False:
+            raise AssertionError("P2 failure mutation was accepted")
     except Exception as exc:
-        print(f"QPX_PROFILE_ANALYSIS_SELFTEST: FAIL: {exc}"); return 1
-    print("QPX_PROFILE_ANALYSIS_SELFTEST: PASS"); return 0
+        print(f"QPX_PROFILE_ANALYSIS_SELFTEST: FAIL: {exc}")
+        return 1
+    print("QPX_PROFILE_ANALYSIS_SELFTEST: PASS")
+    return 0
 
 
-__all__ = ["analyze", "analyze_facts", "self_test"]
+__all__ = ["analyze_facts", "self_test"]

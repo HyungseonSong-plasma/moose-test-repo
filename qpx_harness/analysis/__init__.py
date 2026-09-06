@@ -1,5 +1,3 @@
 """Framework-independent QPX analysis layer."""
 
-from .performance import analyze
-
-__all__ = ["analyze"]
+__all__: list[str] = []
