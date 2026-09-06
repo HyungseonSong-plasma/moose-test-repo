@@ -1,6 +1,6 @@
-"""Performance analysis capabilities."""
+"""Reusable performance analysis capabilities."""
 
-from . import cache, investigation, profile
+from . import profile
 from .profile import analyze
 
-__all__ = ["analyze", "cache", "investigation", "profile"]
+__all__ = ["analyze", "profile"]
