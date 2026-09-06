@@ -1,23 +1,15 @@
 from pathlib import Path
 
-from qpx_harness.application.experiment_registry import registered_protocols
 from qpx_harness.evidence import normalize_face_evidence
 
 ROOT = Path(__file__).resolve().parents[2]
 
 
-def test_current_registry_census_covers_all_declarative_protocols():
-    protocols = set(registered_protocols())
-    assert {
-        "issue26-electron-energy-e1",
-        "issue26-electron-energy-e2a",
-        "issue26-electron-energy-chain",
-        "issue27-surface-reaction-controlled-wall",
-        "r3-electron-master-diagnostic",
-        "r3-electron-scaling-counterfactual",
-        "r3-fv-internal-completion",
-        "r4-qf2-local-charge-relaxation",
-    } <= protocols
+def test_protocol_registry_is_physically_retired_from_canonical_application():
+    application = ROOT / "qpx_harness" / "application"
+    assert not (application / "experiment_registry.py").exists()
+    assert not (application / "experiment_service.py").exists()
+    assert not (application / "protocols").exists()
 
 
 def test_evidence_public_api_no_longer_exports_analysis_facades():
