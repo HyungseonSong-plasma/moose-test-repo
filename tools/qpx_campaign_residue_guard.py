@@ -51,6 +51,10 @@ def main() -> int:
     leaked = [token for token in retired_commands if token in app]
     if leaked:
         fail("campaign/default-specific CLI commands remain: " + ", ".join(leaked))
+    if '"profile":' in app:
+        fail("duplicate profile CLI command remains after canonical measure/PROFILE consolidation")
+    if "qpx_harness.execution.performance" in app:
+        fail("CLI imports retired execution.performance namespace")
 
     perf_cli = text("qpx_harness/cli/commands/performance.py")
     for token in ("PF-1", "PF-3", "Issue22", "Issue 22", "qvt", "QVT", "D_mix"):
@@ -102,8 +106,10 @@ def main() -> int:
     print("PERFORMANCE_ANALYSIS_TO_EXTERNAL_ADAPTER_EDGES = 0")
     print("PERFORMANCE_CLI_TO_CONCRETE_ADAPTER_EDGES = 0")
     print("BROKEN_PERFORMANCE_NAMESPACE_IMPORTS = 0")
+    print("RETIRED_PERFORMANCE_MODULE_IMPORTS = 0")
     print("CAMPAIGN_SPECIFIC_PERFORMANCE_PROBES_IN_GENERIC_PRODUCTION = 0")
     print("CANONICAL_PERFORMANCE_APPLICATION_ENTRY_COUNT = 1")
+    print("CANONICAL_PERFORMANCE_MEASUREMENT_ENTRY_COUNT = 1")
     print("CAMPAIGN_BRANDING_IN_GENERIC_MODULE_IDENTITY = 0")
     print("CAMPAIGN_RESIDUE_GUARD = PASS")
     return 0
