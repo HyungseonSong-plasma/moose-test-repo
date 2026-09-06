@@ -10,6 +10,7 @@ on:
       - issue-128-retire-issue-namespaces
       - issue-129-root-surface-cleanup
       - review/development-semantic-architecture
+      - issue-154-155-wb3-adapter-normalization
   workflow_dispatch:
 
 jobs:
