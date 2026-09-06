@@ -5,6 +5,17 @@ import csv
 from pathlib import Path
 from typing import Any, Mapping
 
+_EVENT_FACTS = {
+    "snes_solve": "SNESSolve",
+    "jacobian_eval": "SNESJacobianEval",
+    "residual_eval": "SNESFunctionEval",
+    "pc_setup": "PCSetUp",
+    "linear_solve": "KSPSolve",
+    "lu_numeric": "MatLUFactorNum",
+    "lu_symbolic": "MatLUFactorSym",
+    "matrix_assembly_end": "MatAssemblyEnd",
+}
+
 
 def _number(value: Any) -> Any:
     if not isinstance(value, str) or not value.strip():
@@ -19,7 +30,6 @@ def _number(value: Any) -> Any:
 
 
 def collect_log_view_csv(path: Path | None) -> dict[str, Any] | None:
-    """Normalize PETSc ``-log_view :file:ascii_csv`` rows without policy."""
     if path is None or not path.is_file():
         return None
     rows: list[dict[str, Any]] = []
@@ -31,7 +41,6 @@ def collect_log_view_csv(path: Path | None) -> dict[str, Any] | None:
 
 
 def load_events(path: Path) -> dict[str, dict[str, float]]:
-    """Decode rank-zero PETSc event name/count/time records from ASCII CSV."""
     events: dict[str, dict[str, float]] = {}
     with path.open(newline="") as handle:
         for row in csv.DictReader(handle):
@@ -41,10 +50,7 @@ def load_events(path: Path) -> dict[str, dict[str, float]]:
             if not name:
                 continue
             try:
-                events[name] = {
-                    "count": float(row.get("Count") or 0),
-                    "time": float(row.get("Time") or 0),
-                }
+                events[name] = {"count": float(row.get("Count") or 0), "time": float(row.get("Time") or 0)}
             except ValueError:
                 continue
     return events
@@ -54,8 +60,13 @@ def event_time(events: Mapping[str, Mapping[str, float]], name: str) -> float:
     return float(events.get(name, {}).get("time", 0.0))
 
 
+def decode_timing_facts(path: Path) -> dict[str, float]:
+    """Decode raw PETSc event names into backend-neutral timing fact keys."""
+    events = load_events(path)
+    return {key: event_time(events, event) for key, event in _EVENT_FACTS.items()}
+
+
 def diagnostic_options(csv_path: Path) -> tuple[str, ...]:
-    """Return raw PETSc diagnostic options owned by the PETSc boundary."""
     return (
         f"-log_view :{csv_path}:ascii_csv",
         "-log_view_memory",
@@ -65,4 +76,4 @@ def diagnostic_options(csv_path: Path) -> tuple[str, ...]:
     )
 
 
-__all__ = ["collect_log_view_csv", "diagnostic_options", "event_time", "load_events"]
+__all__ = ["collect_log_view_csv", "decode_timing_facts", "diagnostic_options", "event_time", "load_events"]
