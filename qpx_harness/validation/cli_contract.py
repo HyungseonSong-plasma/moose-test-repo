@@ -5,8 +5,7 @@ EXPECTED_CANONICAL_COMMANDS = frozenset({
     "compile", "plan", "lower", "run", "preflight", "temporal-csv",
 })
 EXPECTED_LEGACY_COMMANDS = frozenset({
-    "test", "test-all", "scale-audit", "inventory-nullspace",
-    "inventory-first-linear", "contract", "dmix-equivalence", "measure",
+    "test", "test-all", "scale-audit", "contract", "measure",
     "measure-smoke", "investigate", "transport-probe", "cache-audit",
     "profile", "analyze", "inventory",
 })
