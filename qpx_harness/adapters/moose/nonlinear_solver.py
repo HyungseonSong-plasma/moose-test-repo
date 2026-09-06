@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any, Iterable, Mapping
 
 from . import log as moose_log
-from qpx_harness.petsc import log as petsc_log
+from qpx_harness.adapters.petsc import log as petsc_log
 from qpx_harness.evidence.ingest.nonlinear_solver import failure_signature
 from qpx_harness.evidence.ingest.termination import first_failed_reason
 
