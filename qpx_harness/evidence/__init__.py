@@ -38,7 +38,6 @@ from .ingest import (
     extract_jacobian_evidence,
     failure_signature,
     first_failed_reason,
-    first_linear_termination,
 )
 from .schema import (
     CELL_KEY_COLUMNS,
@@ -89,7 +88,6 @@ __all__ = [
     "extract_jacobian_evidence",
     "failure_signature",
     "first_failed_reason",
-    "first_linear_termination",
     "identity_record",
     "identity_stable",
     "is_direct_child",
