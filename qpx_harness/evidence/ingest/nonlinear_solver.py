@@ -1,12 +1,8 @@
-"""Reusable MOOSE/PETSc runtime evidence extraction with no diagnosis policy."""
+"""Backend-neutral nonlinear runtime signature extraction."""
 from __future__ import annotations
 
 import re
 from typing import Any
-
-from ...moose import log as moose_log
-from ...petsc import log as petsc_log
-from .termination import first_failed_reason
 
 
 FAILURE_PATTERNS = (
@@ -34,7 +30,6 @@ def failure_signature(text: str) -> dict[str, Any]:
                 pass
         return {"signature": name, "iterations": iterations}
     return {"signature": None, "iterations": None}
-
 
 
 __all__ = ["FAILURE_PATTERNS", "failure_signature"]
