@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 
-from ..moose.parameters import get_parameter, unquote, upsert_parameter, words
+from .parameters import get_parameter, unquote, upsert_parameter, words
 
 
 class PetscOptionsError(RuntimeError):

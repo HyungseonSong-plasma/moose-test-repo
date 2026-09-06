@@ -39,8 +39,6 @@ from .ingest import (
     failure_signature,
     first_failed_reason,
     first_linear_termination,
-    measurement_failure_signature,
-    runtime_core_facts,
 )
 from .schema import (
     CELL_KEY_COLUMNS,
@@ -96,13 +94,11 @@ __all__ = [
     "identity_stable",
     "is_direct_child",
     "load_json_object",
-    "measurement_failure_signature",
     "normalize_and_project",
     "normalize_face_evidence",
     "paths_distinct",
     "read_error_events",
     "require_columns",
-    "runtime_core_facts",
     "rz_constant_square_face_rows",
     "sha256_file",
     "snapshot_unchanged",

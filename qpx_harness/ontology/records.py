@@ -235,7 +235,7 @@ class ExperimentIntent:
     intent_id: str
     experiment_id: str
     objective: str
-    model: str | None = None
+    model_ref: str | None = None
     goal_ids: tuple[str, ...] = ()
     target_ids: tuple[str, ...] = ()
     requested_capabilities: tuple[str, ...] = ()
@@ -291,7 +291,7 @@ class ScientificPolicy:
     derived_values: tuple[tuple[str, Any], ...] = ()
     policy_rule_ids: tuple[str, ...] = ()
     execution_bounds: tuple[tuple[str, Any], ...] = ()
-    model: str | None = None
+    model_ref: str | None = None
     rationale: str = ""
     provenance_id: str | None = None
     semantic_contract: str = SEMANTIC_CONTRACT_ID

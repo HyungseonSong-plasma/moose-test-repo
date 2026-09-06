@@ -12,8 +12,8 @@ import math
 import re
 from typing import Any
 
-from qpx_harness.moose import blocks as mb
-from qpx_harness.moose import parameters as mp
+from qpx_harness.adapters.moose import blocks as mb
+from qpx_harness.adapters.moose import parameters as mp
 
 ELECTRON_DT = 1.0e-8
 MEAN_ELECTRON_ENERGY_EV = 5.73276

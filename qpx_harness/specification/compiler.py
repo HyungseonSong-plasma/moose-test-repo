@@ -6,7 +6,7 @@ import hashlib
 from pathlib import Path
 from typing import Iterable
 
-from qpx_harness.ontology.model import (
+from qpx_harness.ontology.records import (
     CapabilityDescriptor,
     Constraint,
     DevelopmentGoal,
@@ -161,7 +161,7 @@ def compile_experiment_intent(
         intent_id=f"intent:{spec.experiment_id}:{source_hash[:16]}",
         experiment_id=spec.experiment_id,
         objective=spec.objective,
-        model=spec.model,
+        model_ref=spec.model_ref,
         goal_ids=tuple(item.goal_id for item in goals),
         target_ids=tuple(target_ids),
         requested_capabilities=spec.requested_capabilities,

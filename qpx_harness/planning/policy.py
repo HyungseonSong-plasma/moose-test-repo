@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Callable, Iterable
 
-from qpx_harness.ontology.model import (
+from qpx_harness.ontology.records import (
     ActionSpec,
     CapabilityDescriptor,
     ScientificPolicy,

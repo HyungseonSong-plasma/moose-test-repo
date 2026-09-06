@@ -15,10 +15,10 @@ FORBIDDEN_OWNER_PATHS = (
     HARNESS / "adapters" / "moose" / "mutation_spec" / "models.py",
 )
 FORBIDDEN_IMPORT_PREFIXES = (
-    "qpx_harness.moose",
+    "qpx_harness.adapters.moose",
     "qpx_harness.models",
-    "qpx_harness.ontology.model",
-    "qpx_harness.adapters.moose.mutation_spec.models",
+    "qpx_harness.ontology.records",
+    "qpx_harness.adapters.moose.mutation_spec.schema",
 )
 CANONICAL_MODEL_FIELD_FILES = {
     "qpx_harness/specification/schema.py",

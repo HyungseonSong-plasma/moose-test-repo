@@ -23,13 +23,13 @@ from qpx_harness.evidence import artifacts as evidence_artifacts
 from qpx_harness.execution import cases as execution_cases
 from qpx_harness.execution import runtime as execution_runtime
 from qpx_harness.execution import workspace as execution_workspace
-from qpx_harness.moose import blocks as mb
-from qpx_harness.moose import parameters as mp
-from qpx_harness.moose.input import MooseInput
+from qpx_harness.adapters.moose import blocks as mb
+from qpx_harness.adapters.moose import parameters as mp
+from qpx_harness.adapters.moose.input import MooseInput
 from qpx_harness.petsc import options as po
 from qpx_harness.adapters.moose.mutation_spec import MutationSpecError, compile_mutation_spec, load_mutation_json_file, load_mutation_payload
 from qpx_harness.adapters.moose.mutation_spec.plan import OperationPlan
-from qpx_harness.transforms import SUPPORTED_OPERATIONS, TransformError, apply_operation
+from qpx_harness.adapters.moose.transforms import SUPPORTED_OPERATIONS, TransformError, apply_operation
 
 EXPECTED_OPERATIONS = {
     "ensure_block",

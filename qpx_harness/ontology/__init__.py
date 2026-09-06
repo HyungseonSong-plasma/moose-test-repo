@@ -1,5 +1,5 @@
 """QPX Development State semantic authority and Owlready2 projection."""
-from .model import *  # noqa: F401,F403
+from .records import *  # noqa: F401,F403
 from .replay import (
     QUERY_IDS,
     HistoricalReplayFixture,

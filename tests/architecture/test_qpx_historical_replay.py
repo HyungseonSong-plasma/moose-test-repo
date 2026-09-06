@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from qpx_harness.ontology import OntologyService
-from qpx_harness.ontology.model import (
+from qpx_harness.ontology.records import (
     AcceptanceStatus,
     ActionExecution,
     ActionSpec,

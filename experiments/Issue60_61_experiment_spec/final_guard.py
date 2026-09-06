@@ -18,7 +18,7 @@ from qpx_harness.adapters.moose.mutation_spec import (
     load_mutation_payload,
     pydantic_major_api,
 )
-from qpx_harness.transforms import (
+from qpx_harness.adapters.moose.transforms import (
     SUPPORTED_OPERATIONS,
     TransformError,
     apply_case_plan,

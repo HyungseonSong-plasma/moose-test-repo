@@ -16,12 +16,12 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from experiments.historical_recipe_support import issue43_coupling_diagnostic as recipe
-from qpx_harness.moose import blocks as mb
-from qpx_harness.moose import parameters as mp
-from qpx_harness.moose.input import MooseInput
+from qpx_harness.adapters.moose import blocks as mb
+from qpx_harness.adapters.moose import parameters as mp
+from qpx_harness.adapters.moose.input import MooseInput
 from qpx_harness.petsc import options as po
 from qpx_harness.adapters.moose.mutation_spec import compile_mutation_spec, load_mutation_json_file, load_mutation_payload
-from qpx_harness.transforms import SUPPORTED_OPERATIONS, apply_case_plan
+from qpx_harness.adapters.moose.transforms import SUPPORTED_OPERATIONS, apply_case_plan
 
 SPEC_PATH = ROOT / "specs" / "experiments" / "issue43_coupling_diagnostic.json"
 READINESS_PATH = ROOT / "docs" / "development" / "2026-09-01_issue63_recipe_readiness.json"

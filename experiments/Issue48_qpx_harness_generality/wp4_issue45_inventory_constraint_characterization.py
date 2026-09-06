@@ -203,8 +203,8 @@ def _check_runtime_policy() -> None:
 def _check_primitive_boundary() -> None:
     source = (ROOT / "recipes" / "issue45_inventory_constraint.py").read_text()
     for required in (
-        "from qpx_harness.moose import blocks as mb",
-        "from qpx_harness.moose import parameters as mp",
+        "from qpx_harness.adapters.moose import blocks as mb",
+        "from qpx_harness.adapters.moose import parameters as mp",
     ):
         if required not in source:
             raise AssertionError(f"missing generic primitive import: {required}")

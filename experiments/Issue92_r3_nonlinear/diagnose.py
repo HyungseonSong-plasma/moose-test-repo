@@ -25,8 +25,8 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from qpx_harness.moose import blocks as mb
-from qpx_harness.moose import parameters as mp
+from qpx_harness.adapters.moose import blocks as mb
+from qpx_harness.adapters.moose import parameters as mp
 from experiments.historical_recipe_support.issue91_r3 import build_r3_input
 
 ISSUE = 92

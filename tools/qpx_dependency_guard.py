@@ -8,7 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 PKG = ROOT / "qpx_harness"
 CANONICAL_PACKAGES = {
-    "evidence", "analysis", "execution", "application", "cli",
+    "evidence", "evaluation", "analysis", "execution", "application", "cli",
     "validation", "provenance",
 }
 TRANSITIONAL_EXCEPTIONS: set[tuple[str, str]] = set()

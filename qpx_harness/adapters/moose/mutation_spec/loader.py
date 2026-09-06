@@ -8,7 +8,7 @@ from typing import Any
 from pydantic import ValidationError
 
 from .errors import MutationSpecError, SpecProblem
-from .models import MutationSpec, model_validate
+from .schema import MutationSpec, model_validate
 
 
 def _validation_problems(exc: ValidationError) -> tuple[SpecProblem, ...]:

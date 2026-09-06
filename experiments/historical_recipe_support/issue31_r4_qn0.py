@@ -14,7 +14,7 @@ import math
 import re
 from typing import Any
 
-from qpx_harness.moose import parameters as mp
+from qpx_harness.adapters.moose import parameters as mp
 from experiments.historical_recipe_support.issue31_r4 import audit_r4_q0_input, build_r4_q0_input
 
 AVOGADRO = 6.02214076e23

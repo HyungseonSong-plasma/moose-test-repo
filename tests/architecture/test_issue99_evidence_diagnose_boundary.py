@@ -81,6 +81,6 @@ def test_canonical_dependency_direction_is_enforced() -> None:
 
     assert not any(name.startswith("qpx_harness.reasoning") for name in evidence_imports)
     assert not any(name.startswith("qpx_harness.petsc") for name in evidence_imports)
-    assert not any(name.startswith("qpx_harness.moose") for name in reasoning_imports)
+    assert not any(name.startswith("qpx_harness.adapters.moose") for name in reasoning_imports)
     assert not any(name.startswith("qpx_harness.petsc") for name in reasoning_imports)
     assert not any(name.startswith("qpx_harness.diagnose") for name in reasoning_imports)

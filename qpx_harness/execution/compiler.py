@@ -4,7 +4,7 @@ from __future__ import annotations
 import hashlib
 import json
 
-from qpx_harness.ontology.model import ScientificPolicy
+from qpx_harness.ontology.records import ScientificPolicy
 
 from .plan import ExecutionCase, ExecutionPlan
 
@@ -33,7 +33,7 @@ def compile_execution_plan(policy: ScientificPolicy) -> ExecutionPlan:
     )
     payload = {
         "policy": policy.policy_id,
-        "model": policy.model,
+        "model_ref": policy.model_ref,
         "cases": [
             {
                 "id": item.case_id,
@@ -56,7 +56,7 @@ def compile_execution_plan(policy: ScientificPolicy) -> ExecutionPlan:
         plan_id=f"plan:{digest}",
         source_policy_id=policy.policy_id,
         cases=cases,
-        model=policy.model,
+        model_ref=policy.model_ref,
         execution_bounds=policy.execution_bounds,
         required_observations=policy.required_observations,
         artifact_contracts=("run_log", "observation_artifacts"),

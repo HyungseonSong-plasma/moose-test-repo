@@ -40,12 +40,6 @@ def diagnose_constant_reconstruction(
     return summarize_constant_state(face, cell, method=method, **kwargs)
 
 
-def preflight_input(path: str | Path) -> None:
-    from qpx_harness.moose.preflight import validate_input_preflight
-
-    validate_input_preflight(Path(path).expanduser().resolve())
-
-
 def normalize_temporal_run_csv(
     source: str | Path,
     output: str | Path,
@@ -73,5 +67,4 @@ __all__ = [
     "analyze_gradient_reconstruction",
     "diagnose_constant_reconstruction",
     "normalize_temporal_run_csv",
-    "preflight_input",
 ]

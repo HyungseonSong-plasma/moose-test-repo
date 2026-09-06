@@ -1,5 +1,5 @@
 """Generic reasoning semantics, independent of solver backends."""
-from qpx_harness.ontology.model import (
+from qpx_harness.ontology.records import (
     Hypothesis,
     HypothesisAssessment,
     MechanismClaim,

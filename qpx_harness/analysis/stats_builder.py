@@ -10,7 +10,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping
 from typing import Any
 
-from qpx_harness.models.stats import (
+from qpx_harness.evaluation.statistics import (
     AccuracyStats,
     CommonStats,
     ConvergenceStats,

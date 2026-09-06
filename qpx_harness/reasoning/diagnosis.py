@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from qpx_harness.ontology.model import DiagnosticConclusion
+from qpx_harness.ontology.records import DiagnosticConclusion
 
 
 @dataclass(frozen=True)

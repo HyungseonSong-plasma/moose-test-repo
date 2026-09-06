@@ -7,7 +7,7 @@ import owlready2
 from qpx_harness.adapters.moose import emit_moose_input, lower_execution_plan
 from qpx_harness.execution import compile_execution_plan
 from qpx_harness.ontology import OntologyService
-from qpx_harness.ontology.model import (
+from qpx_harness.ontology.records import (
     DevelopmentState,
     ONTOLOGY_SCHEMA_VERSION,
     SEMANTIC_CONTRACT_ID,

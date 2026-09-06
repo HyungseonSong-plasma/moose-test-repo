@@ -6,7 +6,7 @@ from pathlib import Path
 
 from experiments.Issue91_real_qvt_r3 import run as issue91_run
 from experiments.historical_recipe_support.issue91_r3 import audit_r3_input, build_r3_input
-from qpx_harness.moose import parameters as mp
+from qpx_harness.adapters.moose import parameters as mp
 
 ROOT = Path(__file__).resolve().parents[2]
 CASE_ROOT = ROOT / "experiments/Issue91_real_qvt_r3"

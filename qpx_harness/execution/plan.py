@@ -21,7 +21,7 @@ class ExecutionPlan:
     plan_id: str
     source_policy_id: str
     cases: tuple[ExecutionCase, ...]
-    model: str | None = None
+    model_ref: str | None = None
     execution_bounds: tuple[tuple[str, Any], ...] = ()
     required_observations: tuple[str, ...] = ()
     artifact_contracts: tuple[str, ...] = ()

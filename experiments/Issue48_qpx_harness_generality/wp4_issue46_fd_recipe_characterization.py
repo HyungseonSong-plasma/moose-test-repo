@@ -188,7 +188,7 @@ def _check_dependency_boundary() -> None:
             raise AssertionError(f"legacy reverse dependency leaked into Issue46 recipe: {token}")
     required = (
         "qpx_harness.petsc",
-        "qpx_harness.moose",
+        "qpx_harness.adapters.moose",
         "qpx_harness import artifacts",
     )
     for token in required:

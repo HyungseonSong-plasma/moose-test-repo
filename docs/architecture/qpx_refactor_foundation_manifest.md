@@ -73,7 +73,7 @@ The later #146 migration may introduce internal subpackages (`syntax`, `mutation
 
 ### Known boundary bypasses
 
-`qpx_harness/transforms/registry.py` directly consumes concrete `qpx_harness.moose` parser/mutation mechanics while also consuming adapter mutation specifications. This is a forbidden generic-to-concrete solver dependency and must be removed in #146 M4.
+`qpx_harness/transforms/registry.py` directly consumes concrete `qpx_harness.adapters.moose` parser/mutation mechanics while also consuming adapter mutation specifications. This is a forbidden generic-to-concrete solver dependency and must be removed in #146 M4.
 
 Generic evidence that directly parses concrete MOOSE/PETSc logs is likewise a boundary violation; decoding belongs behind the solver/external-diagnostic boundary and normalized evidence belongs above it.
 

@@ -13,7 +13,7 @@ if str(ROOT) not in sys.path:
 
 from experiments.historical_recipe_support import issue31_coupling as recipe
 from qpx_harness.coupling_evr2 import orchestration as runtime
-from qpx_harness.evidence import measurement_failure_signature
+from qpx_harness.adapters.moose.nonlinear_solver import artifact_failure_signature
 from qpx_harness.execution.cases import stage_case
 from qpx_harness.execution.performance.runner import result_status
 from qpx_harness.execution.performance.smoke import build_smoke_manifest
@@ -98,7 +98,7 @@ def _check_manifest_contract() -> None:
 
 
 def _check_failure_signature_contract() -> None:
-    if measurement_failure_signature(None) != {"signature": "NO_RESULT"}:
+    if artifact_failure_signature(None) != {"signature": "NO_RESULT"}:
         raise AssertionError("EVR2 no-result signature contract drift")
 
     samples = (
@@ -114,7 +114,7 @@ def _check_failure_signature_contract() -> None:
             log = root / f"sample_{index}.log"
             log.write_text(text + "\n")
             result = {"evidence": {"p3_log": str(log)}}
-            actual = measurement_failure_signature(result)
+            actual = artifact_failure_signature(result)
             expected = {
                 "signature": signature,
                 "iterations": iterations,
@@ -204,7 +204,7 @@ def _check_runtime_boundary() -> None:
         "validate_referenced_files",
         "create_collision_safe_directory",
         "run_managed_measurement",
-        "measurement_failure_signature",
+        "artifact_failure_signature",
         "run_command",
         "recipe.configured_transport_input",
         "recipe.classify_evr2",

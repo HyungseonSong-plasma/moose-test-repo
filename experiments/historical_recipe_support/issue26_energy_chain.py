@@ -24,8 +24,8 @@ from experiments.Issue27_surface_reactions.controlled_wall.see import (
     SEE_FUNCTOR as A8_SEE_PARTICLE_FLUX_FUNCTOR,
     _build_a8_case_input,
 )
-from qpx_harness.moose import blocks as mb
-from qpx_harness.moose import parameters as mp
+from qpx_harness.adapters.moose import blocks as mb
+from qpx_harness.adapters.moose import parameters as mp
 from experiments.historical_recipe_support.issue26_e1 import (
     E1_DT_S,
     ELEMENTARY_CHARGE_C,

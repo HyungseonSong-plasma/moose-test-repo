@@ -3,11 +3,11 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from ..moose import blocks as moose_blocks
-from ..moose import parameters as moose_parameters
-from ..moose.input import MooseInput, MooseInputError
-from ..petsc import options as petsc_options
-from ..adapters.moose.mutation_spec.plan import MutationCasePlan, OperationPlan
+from . import blocks as moose_blocks
+from . import parameters as moose_parameters
+from .input import MooseInput, MooseInputError
+from . import petsc_options
+from .mutation_spec.plan import MutationCasePlan, OperationPlan
 
 
 class TransformError(RuntimeError):

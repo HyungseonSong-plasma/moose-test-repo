@@ -113,7 +113,7 @@ def main() -> int:
     script = (STUDY / "evr3_discriminator.py").read_text()
     required_delegations = (
         "from qpx_harness.execution.runtime import",
-        "from qpx_harness.moose import log as moose_log",
+        "from qpx_harness.adapters.moose import log as moose_log",
         "from qpx_harness.petsc import ksp",
         "from qpx_harness.petsc import log as petsc_log",
         "from qpx_harness.petsc import options as po",

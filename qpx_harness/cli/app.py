@@ -9,7 +9,8 @@ from pathlib import Path
 import subprocess
 import sys
 
-from qpx_harness.application import normalize_temporal_run_csv, preflight_input
+from qpx_harness.application import normalize_temporal_run_csv
+from qpx_harness.adapters.moose.preflight import validate_input_preflight
 from qpx_harness.application.gateway import compile_experiment, lower_experiment, plan_experiment
 from qpx_harness.analysis.temporal import VALID_INITIAL_POLICIES
 from qpx_harness.specification import ExperimentSpecError
@@ -42,8 +43,8 @@ INTERNAL_TARGETS = {
 }
 
 _LEGACY_TARGETS = {
-    "test": "qpx_harness.execution.regression:cli_run_test",
-    "test-all": "qpx_harness.execution.regression:cli_run_all",
+    "test": "qpx_harness.adapters.moose.regression:cli_run_test",
+    "test-all": "qpx_harness.adapters.moose.regression:cli_run_all",
     "contract": "qpx_harness.execution.contract:main",
     "measure": "qpx_harness.cli.commands.performance:measure_main",
     "profile": "qpx_harness.execution.performance.profiling:main",
@@ -154,7 +155,7 @@ def preflight_cli(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(prog="qpx preflight")
     parser.add_argument("input", help="MOOSE input file to inspect")
     args = parser.parse_args(argv)
-    preflight_input(args.input)
+    validate_input_preflight(Path(args.input).expanduser().resolve())
     return 0
 
 
@@ -204,6 +205,7 @@ def internal_cli(target: str) -> int:
             [sys.executable, str(ROOT / "tools" / "qpx_plasma_semantic_residue_guard.py")],
             [sys.executable, str(ROOT / "tools" / "qpx_campaign_residue_guard.py")],
             [sys.executable, str(ROOT / "tools" / "qpx_numerical_method_ownership_guard.py")],
+            [sys.executable, str(ROOT / "tools" / "qpx_boundary_terminology_guard.py")],
             [sys.executable, str(ROOT / "tools" / "qpx_architecture_census.py")],
         ])
     if target in {"regression", "all"}:

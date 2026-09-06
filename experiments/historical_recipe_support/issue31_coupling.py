@@ -12,7 +12,7 @@ import math
 from pathlib import Path
 from typing import Any
 
-from qpx_harness.moose.input import MooseInput, MooseInputError
+from qpx_harness.adapters.moose.input import MooseInput, MooseInputError
 
 BASE_INPUT_RELATIVE = Path(
     "archive/Issue29_monolithic_performance_bound/monolithic_q0_reference.i"

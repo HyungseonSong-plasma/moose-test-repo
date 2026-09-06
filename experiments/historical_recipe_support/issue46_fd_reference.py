@@ -12,9 +12,9 @@ from pathlib import Path
 from typing import Any
 
 from qpx_harness.evidence import artifacts
-from qpx_harness.moose import dofmap as dm
-from qpx_harness.moose import log as moose_log
-from qpx_harness.moose import parameters as mp
+from qpx_harness.adapters.moose import dofmap as dm
+from qpx_harness.adapters.moose import log as moose_log
+from qpx_harness.adapters.moose import parameters as mp
 from qpx_harness.petsc import fd_reference as fd
 from qpx_harness.petsc import jacobian as jac
 from qpx_harness.petsc import log as petsc_log

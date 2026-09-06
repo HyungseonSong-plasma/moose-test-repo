@@ -2,7 +2,7 @@
 from .compiler import compile_mutation_spec
 from .errors import MutationSpecDependencyError, MutationSpecError, SpecProblem
 from .loader import load_mutation_json_file, load_mutation_json_text, load_mutation_payload
-from .models import (
+from .schema import (
     AddPetscFlagsOperation, EnsureBlockOperation, InsertChildBlockOperation,
     InsertTopLevelBeforeOperation, MutationCaseSpec, MutationSpec, RemoveBlockOperation,
     RemovePathsOperation, RemovePetscFlagsOperation, RemovePetscOptionOperation,

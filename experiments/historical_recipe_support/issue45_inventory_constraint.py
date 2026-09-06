@@ -8,9 +8,9 @@ from __future__ import annotations
 import math
 from typing import Any
 
-from qpx_harness.moose import blocks as mb
-from qpx_harness.moose import parameters as mp
-from qpx_harness.moose.preflight import validate_parser_symbols_text
+from qpx_harness.adapters.moose import blocks as mb
+from qpx_harness.adapters.moose import parameters as mp
+from qpx_harness.adapters.moose.preflight import validate_parser_symbols_text
 
 ISSUE = 45
 DRIFT_TYPE = "QPXFVElectrostaticDrift"

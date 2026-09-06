@@ -9,8 +9,8 @@ from __future__ import annotations
 from typing import Any
 
 from qpx_harness.execution import contract as ec
-from qpx_harness.moose import executioner as moose_executioner
-from qpx_harness.moose import output_observation as ooc
+from qpx_harness.adapters.moose import executioner as moose_executioner
+from qpx_harness.adapters.moose import output_observation as ooc
 
 
 def case_semantics(case_id: str) -> tuple[str, list[str], list[str]]:

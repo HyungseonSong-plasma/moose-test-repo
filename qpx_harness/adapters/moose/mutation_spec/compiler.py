@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from .errors import MutationSpecError, SpecProblem
-from .models import (
+from .schema import (
     AddPetscFlagsOperation,
     MutationCaseSpec,
     EnsureBlockOperation,

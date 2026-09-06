@@ -17,7 +17,7 @@ from qpx_harness.ontology import (
     SemanticInvariantError,
     SemanticVersionError,
 )
-from qpx_harness.ontology.model import (
+from qpx_harness.ontology.records import (
     DevelopmentState,
     ExperimentIntent,
     Hypothesis,

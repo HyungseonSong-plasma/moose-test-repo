@@ -11,7 +11,7 @@ import re
 import types
 from typing import Any, Iterable
 
-from .model import ONTOLOGY_SCHEMA_VERSION, SEMANTIC_CONTRACT_ID
+from .records import ONTOLOGY_SCHEMA_VERSION, SEMANTIC_CONTRACT_ID
 
 ONTOLOGY_IRI = "https://qpx.local/ontology/development-state/v1#"
 

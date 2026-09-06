@@ -12,7 +12,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from qpx_harness import issue46_jacobian_localization as issue46
-from qpx_harness.moose import dofmap as dm
+from qpx_harness.adapters.moose import dofmap as dm
 from qpx_harness.petsc import matrix as pm
 
 

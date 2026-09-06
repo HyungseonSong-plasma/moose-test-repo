@@ -12,7 +12,7 @@ from typing import Any, Mapping
 
 SCHEMA_VERSION = 2
 _ALLOWED_ROOT_FIELDS = {
-    "schema_version", "experiment_id", "description", "objective", "model",
+    "schema_version", "experiment_id", "description", "objective", "model_ref",
     "target_claims", "target_questions", "requested_capabilities", "parameters",
     "constraints", "observations", "execution_bounds", "cases", "provenance",
 }
@@ -49,7 +49,7 @@ class ExperimentSpec:
     objective: str
     source_path: Path
     description: str | None = None
-    model: str | None = None
+    model_ref: str | None = None
     target_claims: tuple[str, ...] = ()
     target_questions: tuple[str, ...] = ()
     requested_capabilities: tuple[str, ...] = ()
@@ -139,9 +139,9 @@ def validate_payload(payload: Any, *, source_path: Path) -> ExperimentSpec:
     objective = payload.get("objective") or payload.get("description")
     if not isinstance(objective, str) or not objective.strip():
         raise ExperimentSpecError("objective must be a non-empty string")
-    model = payload.get("model")
-    if model is not None and (not isinstance(model, str) or not model.strip()):
-        raise ExperimentSpecError("model must be a non-empty string when provided")
+    model_ref = payload.get("model_ref")
+    if model_ref is not None and (not isinstance(model_ref, str) or not model_ref.strip()):
+        raise ExperimentSpecError("model_ref must be a non-empty string when provided")
     provenance_raw = payload.get("provenance")
     if provenance_raw is not None:
         if not isinstance(provenance_raw, dict) or any(not isinstance(k, str) or not isinstance(v, str) for k, v in provenance_raw.items()):
@@ -152,7 +152,7 @@ def validate_payload(payload: Any, *, source_path: Path) -> ExperimentSpec:
         objective=objective.strip(),
         source_path=source_path,
         description=payload.get("description") if isinstance(payload.get("description"), str) else None,
-        model=model.strip() if isinstance(model, str) else None,
+        model_ref=model_ref.strip() if isinstance(model_ref, str) else None,
         target_claims=_strings(payload.get("target_claims"), "target_claims"),
         target_questions=_strings(payload.get("target_questions"), "target_questions"),
         requested_capabilities=_strings(payload.get("requested_capabilities"), "requested_capabilities"),

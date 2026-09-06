@@ -27,10 +27,9 @@ CAPABILITY_DIRS = {
     "dmix",
     "domains",
     "evidence",
+    "evaluation",
     "execution",
     "inventory",
-    "models",
-    "moose",
     "observation",
     "ontology",
     "performance",
@@ -40,7 +39,6 @@ CAPABILITY_DIRS = {
     "reasoning",
     "spec",
     "specification",
-    "transforms",
     "validation",
 }
 
@@ -51,12 +49,11 @@ GENERIC_ISSUE_EDGE_DIRS = {
     "cpp",
     "diagnostics",
     "evidence",
+    "evaluation",
     "execution",
-    "moose",
     "performance",
     "petsc",
     "spec",
-    "transforms",
 }
 
 ISSUE_NAME_RE = re.compile(r"(?:^|/)(?:issue\d+|coupling_evr\d+)(?:_|/|\.py)", re.IGNORECASE)

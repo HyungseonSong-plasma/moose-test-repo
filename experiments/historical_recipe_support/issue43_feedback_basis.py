@@ -9,8 +9,8 @@ from __future__ import annotations
 from typing import Any
 
 from experiments.historical_recipe_support import issue43_fast_relaxation as fast_relaxation
-from qpx_harness.moose.executioner import apply_fixed_step_contract
-from qpx_harness.moose.output_observation import apply_microtime_output_contract
+from qpx_harness.adapters.moose.executioner import apply_fixed_step_contract
+from qpx_harness.adapters.moose.output_observation import apply_microtime_output_contract
 from qpx_harness.analysis.scale_audit import DEFAULT_ELECTRON_DENSITY, DEFAULT_GAS_TEMPERATURE
 
 DT_REFERENCE = 1.0e-13
