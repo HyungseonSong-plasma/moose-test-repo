@@ -12,13 +12,17 @@ from pathlib import Path
 import tempfile
 from typing import Any
 
-from qpx_harness.application.green_gauss_workflow import (
-    build_cell_evidence,
-    prepare_face_evidence,
-    write_evidence_bundle,
+from qpx_harness.application.gradient_reconstruction import (
+    analyze_gradient_reconstruction,
+    write_reconstruction_evidence_bundle,
 )
 from qpx_harness.evidence import EvidenceStore, rz_constant_square_face_rows
-from qpx_harness.reasoning.green_gauss import EvidenceTolerances, summarize_constant_state
+from qpx_harness.reasoning.gradient_reconstruction import (
+    ReconstructionTolerances,
+    summarize_constant_state,
+)
+
+METHOD = "green_gauss"
 
 
 def _run_at(root: Path) -> dict[str, Any]:
@@ -28,13 +32,14 @@ def _run_at(root: Path) -> dict[str, Any]:
         run_id="local-smoke-baseline",
         case_id="exact-constant-rz",
     )
-    baseline_face = prepare_face_evidence(baseline_raw)
-    baseline_cell = build_cell_evidence(baseline_face, radial_component=0)
-    baseline_diagnosis = summarize_constant_state(baseline_face, baseline_cell)
-    baseline_paths = write_evidence_bundle(
-        baseline_raw,
-        root / "baseline",
-        radial_component=0,
+    baseline_face, baseline_cell = analyze_gradient_reconstruction(
+        baseline_raw, method=METHOD, radial_component=0
+    )
+    baseline_diagnosis = summarize_constant_state(
+        baseline_face, baseline_cell, method=METHOD
+    )
+    baseline_paths = write_reconstruction_evidence_bundle(
+        baseline_raw, root / "baseline", method=METHOD, radial_component=0
     )
 
     perturbed_raw = rz_constant_square_face_rows(
@@ -42,17 +47,17 @@ def _run_at(root: Path) -> dict[str, Any]:
         case_id="surface-vector-perturbation",
         perturb_surface_x=1.0e-9,
     )
-    perturbed_face = prepare_face_evidence(perturbed_raw)
-    perturbed_cell = build_cell_evidence(perturbed_face, radial_component=0)
+    perturbed_face, perturbed_cell = analyze_gradient_reconstruction(
+        perturbed_raw, method=METHOD, radial_component=0
+    )
     perturbed_diagnosis = summarize_constant_state(
         perturbed_face,
         perturbed_cell,
-        tolerances=EvidenceTolerances(surface_vector_abs=1.0e-12),
+        method=METHOD,
+        tolerances=ReconstructionTolerances(surface_vector_abs=1.0e-12),
     )
-    perturbed_paths = write_evidence_bundle(
-        perturbed_raw,
-        root / "perturbed",
-        radial_component=0,
+    perturbed_paths = write_reconstruction_evidence_bundle(
+        perturbed_raw, root / "perturbed", method=METHOD, radial_component=0
     )
 
     database_path = root / "evidence.duckdb"
@@ -84,6 +89,10 @@ def _run_at(root: Path) -> dict[str, Any]:
         "perturbation_is_surface_vector": (
             perturbed_diagnosis["primary_owner_class"] == "SURFACE_VECTOR_CONSTRUCTION"
         ),
+        "explicit_reconstruction_method": (
+            baseline_diagnosis["reconstruction_method"] == METHOD
+            and perturbed_diagnosis["reconstruction_method"] == METHOD
+        ),
         "duckdb_face_counts": (
             row_counts["baseline_faces"] == 4 and row_counts["perturbed_faces"] == 4
         ),
@@ -100,6 +109,7 @@ def _run_at(root: Path) -> dict[str, Any]:
             "symmetry_axis": "Y",
             "radial_coordinate": "X",
             "radial_component": 0,
+            "reconstruction_method": METHOD,
         },
         "checks": checks,
         "baseline_diagnosis": baseline_diagnosis,
