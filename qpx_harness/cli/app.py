@@ -9,7 +9,7 @@ from pathlib import Path
 import subprocess
 import sys
 
-from qpx_harness.application import normalize_temporal_run_csv, preflight_input, run_experiment
+from qpx_harness.application import normalize_temporal_run_csv, preflight_input
 from qpx_harness.application.gateway import compile_experiment, lower_experiment, plan_experiment
 from qpx_harness.analysis.temporal import VALID_INITIAL_POLICIES
 from qpx_harness.specification import ExperimentSpecError
@@ -20,7 +20,7 @@ CANONICAL_COMMANDS = {
     "compile": "compile semantic experiment JSON into ExperimentIntent",
     "plan": "compile semantic intent and synthesize ScientificPolicy/ExecutionPlan",
     "lower": "lower a solver-independent ExecutionPlan into MOOSE target IR",
-    "run": "execute legacy v1 experiments or reject v2 when target execution is not yet realizable",
+    "run": "prepare one canonical semantic experiment for target execution",
     "preflight": "run static parser-symbol preflight on one MOOSE input",
     "temporal-csv": "normalize transient CSV rows under an explicit temporal policy",
 }
@@ -44,7 +44,7 @@ COMMANDS = {
 }
 
 INTERNAL_TARGETS = {
-    "architecture": "run dependency, experiment-gateway, and architecture guards",
+    "architecture": "run dependency, experiment-control-plane, and architecture guards",
     "regression": "run the qpx-free Python regression/unit suite",
     "all": "run architecture guards then regression/unit suite",
 }
@@ -87,7 +87,6 @@ def print_help() -> None:
     print("  qpx lower <experiment.json>")
     print("  qpx run <experiment.json>")
     print("  qpx -i <internal-target>              # compatibility/internal")
-    print("  qpx -e <legacy-experiment.json>       # compatibility")
     print("\ncanonical commands:")
     width = max(len(name) for name in CANONICAL_COMMANDS)
     for name, description in CANONICAL_COMMANDS.items():
@@ -145,26 +144,10 @@ def semantic_lower_cli(argv: list[str]) -> int:
 
 
 def semantic_run_cli(argv: list[str]) -> int:
+    """Prepare only the canonical semantic pipeline; never dispatch a protocol runner."""
     parser = argparse.ArgumentParser(prog="qpx run")
     parser.add_argument("experiment")
     args = parser.parse_args(argv)
-    source = Path(args.experiment)
-    try:
-        payload = json.loads(source.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
-        print(f"experiment configuration error: {exc}", file=sys.stderr)
-        return 2
-
-    # v1 remains bounded compatibility through the existing application runner.
-    if isinstance(payload, dict) and payload.get("schema_version") == 1:
-        try:
-            return run_experiment(args.experiment)
-        except (OSError, ValueError, TypeError) as exc:
-            print(f"legacy experiment configuration error: {exc}", file=sys.stderr)
-            return 2
-
-    # v2 must not silently fall back to an Issue-specific runner.  Compile all
-    # semantic layers and require a concrete target execution capability later.
     try:
         planned, target = lower_experiment(args.experiment)
     except (OSError, ExperimentSpecError, ValueError, TypeError) as exc:
@@ -177,7 +160,7 @@ def semantic_run_cli(argv: list[str]) -> int:
     print(f"TARGET_CASES={len(target.cases)}")
     print(
         "TARGET_EXECUTION: BLOCKED (generic semantic target IR has no approved "
-        "experiment-specific MOOSE realization; no Issue-specific fallback used)",
+        "target executor; protocol/campaign fallback is forbidden)",
         file=sys.stderr,
     )
     return 3
@@ -256,24 +239,14 @@ def main(argv: list[str] | None = None) -> int:
         return semantic_lower_cli(rest)
     if command == "run":
         return semantic_run_cli(rest)
-
-    # Historical gateways remain explicit compatibility aliases.
     if command in {"-e", "--experiment"}:
-        if len(rest) != 1:
-            print("usage: qpx -e <legacy-experiment.json>", file=sys.stderr)
-            return 2
-        try:
-            return run_experiment(rest[0])
-        except (OSError, ValueError, TypeError) as exc:
-            print(f"experiment configuration error: {exc}", file=sys.stderr)
-            return 2
-
+        print("legacy experiment gateway retired; use qpx compile/plan/lower/run with schema-v2 ExperimentSpec", file=sys.stderr)
+        return 2
     if command in {"-i", "--internal"}:
         if len(rest) != 1:
             print("usage: qpx -i <internal-target>", file=sys.stderr)
             return 2
         return internal_cli(rest[0])
-
     if command == "preflight":
         return preflight_cli(rest)
     if command == "temporal-csv":
