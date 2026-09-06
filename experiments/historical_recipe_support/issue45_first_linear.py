@@ -8,11 +8,11 @@ from typing import Any
 
 from qpx_harness.reasoning import diagnose_coupled_runtime_evidence
 from qpx_harness.reasoning.jacobian import diagnose_jacobian_evidence
+from qpx_harness.adapters.moose.nonlinear_solver import runtime_core_facts
 from qpx_harness.evidence import (
     extract_jacobian_evidence,
     first_failed_reason,
     first_linear_termination,
-    runtime_core_facts,
 )
 from qpx_harness.adapters.moose import parameters as mp
 from qpx_harness.petsc import ksp
