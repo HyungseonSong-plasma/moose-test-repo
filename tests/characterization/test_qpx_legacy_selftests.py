@@ -10,11 +10,8 @@ from qpx_harness.execution.workspace import self_test as workspace_self_test
 from qpx_harness.analysis.scale_audit import self_test as scale_audit_self_test
 from qpx_harness.execution.contract import self_test as execution_contract_self_test
 from qpx_harness.execution.performance.runner import self_test as performance_self_test
-from qpx_harness.execution.performance.smoke import self_test as performance_smoke_self_test
-from qpx_harness.analysis.performance.investigation import self_test as performance_investigation_self_test
 from qpx_harness.analysis.performance.profile import self_test as performance_profile_self_test
-from qpx_harness.execution.performance.probes.transport import self_test as performance_transport_probe_self_test
-from qpx_harness.cli.commands.performance import cache_audit_self_test
+from qpx_harness.adapters.moose.performance.transport_probe import self_test as performance_transport_probe_self_test
 
 ENTRYPOINTS = (
     ("analysis.stats_builder", stats_builder_self_test),
@@ -24,11 +21,8 @@ ENTRYPOINTS = (
     ("analysis.scale_audit", scale_audit_self_test),
     ("execution.contract", execution_contract_self_test),
     ("execution.performance.runner", performance_self_test),
-    ("execution.performance.smoke", performance_smoke_self_test),
-    ("analysis.performance.investigation", performance_investigation_self_test),
     ("analysis.performance.profile", performance_profile_self_test),
-    ("execution.performance.probes.transport", performance_transport_probe_self_test),
-    ("cli.performance.cache_audit", cache_audit_self_test),
+    ("adapters.moose.performance.transport_probe", performance_transport_probe_self_test),
 )
 
 
