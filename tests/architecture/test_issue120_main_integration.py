@@ -50,16 +50,22 @@ def test_canonical_experiment_gateway_has_no_protocol_registry() -> None:
     assert main(["-e", "historical.json"]) == 2
 
 
-def test_green_gauss_quantitative_formula_owner_is_analysis() -> None:
+def test_green_gauss_formula_owner_is_analysis_but_application_owner_is_generic() -> None:
     evidence_text = (ROOT / "qpx_harness/evidence/transform.py").read_text()
     analysis_text = (ROOT / "qpx_harness/analysis/green_gauss.py").read_text()
-    application_text = (ROOT / "qpx_harness/application/green_gauss_workflow.py").read_text()
+    application_text = (ROOT / "qpx_harness/application/gradient_reconstruction.py").read_text()
+    operations_text = (ROOT / "qpx_harness/application/operations.py").read_text()
+
     assert "def normalize_face_evidence" in evidence_text
     assert "qpx_harness.analysis.green_gauss" not in evidence_text
     assert "reconstructed_surface_x" not in evidence_text
     assert "reconstructed_surface_x" in analysis_text
     assert "def derive_cell_quantities" in analysis_text
     assert "from qpx_harness.analysis.green_gauss import" in application_text
+    assert "method: str" in application_text
+    assert "analyze_gradient_reconstruction" in operations_text
+    assert "analyze_green_gauss" not in operations_text
+    assert not (ROOT / "qpx_harness/application/green_gauss_workflow.py").exists()
 
 
 def test_repository_root_launcher_delegates_to_single_canonical_qpx_entrypoint() -> None:
