@@ -1,0 +1,115 @@
+name: QPX Runtime Consumer
+
+on:
+  push:
+    branches:
+      - main
+      - development
+    paths:
+      - 'qpx_harness/**'
+      - 'legacy_shims/**'
+      - 'tests/**'
+      - 'pyproject.toml'
+      - '.github/workflows/qpx-runtime-consumer.yml'
+  pull_request:
+    branches:
+      - main
+      - development
+    paths:
+      - 'qpx_harness/**'
+      - 'legacy_shims/**'
+      - 'tests/**'
+      - 'pyproject.toml'
+      - '.github/workflows/qpx-runtime-consumer.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: qpx-runtime-consumer-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: read
+
+env:
+  QPX_RUNTIME_REF: ghcr.io/hyungseonsong-plasma/qpx-runtime@sha256:3b815121ace89a5431e037aa37b96d9b1fd198185ae63e5fa9d4818b4b79acad
+  EXPECTED_BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/qpx-build-base@sha256:910d406eb3574a918290dc3621df1133569907d6e7af7884f68abe257a9a1999
+  EXPECTED_MOOSE_SHA: 9f388366ccf38b9c34542ec5561198249fde0ac9
+  EXPECTED_QPX_SOURCE_SHA256: 4f9973c9e8e2dc07be5b485338cc0e921578e0dc754bca90c499d0071f199e03
+
+jobs:
+  runtime-contract:
+    name: immutable-runtime-contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Log in to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull immutable QPX runtime
+        id: pull
+        run: |
+          set -euxo pipefail
+          start="$(date +%s)"
+          docker pull "${QPX_RUNTIME_REF}"
+          end="$(date +%s)"
+          pull_seconds="$((end - start))"
+          size_bytes="$(docker image inspect "${QPX_RUNTIME_REF}" --format '{{.Size}}')"
+          echo "pull_seconds=${pull_seconds}" >> "$GITHUB_OUTPUT"
+          echo "size_bytes=${size_bytes}" >> "$GITHUB_OUTPUT"
+          echo "QPX runtime pull seconds: ${pull_seconds}"
+          echo "QPX runtime local image bytes: ${size_bytes}"
+
+      - name: Verify immutable runtime provenance
+        run: |
+          set -euxo pipefail
+          build_base="$(docker image inspect "${QPX_RUNTIME_REF}" --format '{{ index .Config.Labels "io.qpx.build-base.ref" }}')"
+          moose_sha="$(docker image inspect "${QPX_RUNTIME_REF}" --format '{{ index .Config.Labels "io.qpx.moose.sha" }}')"
+          qpx_source_sha="$(docker image inspect "${QPX_RUNTIME_REF}" --format '{{ index .Config.Labels "io.qpx.source.sha256" }}')"
+          test "$build_base" = "$EXPECTED_BUILD_BASE_REF"
+          test "$moose_sha" = "$EXPECTED_MOOSE_SHA"
+          test "$qpx_source_sha" = "$EXPECTED_QPX_SOURCE_SHA256"
+
+      - name: Run QPX check-input smoke
+        run: |
+          set -euxo pipefail
+          docker run --rm \
+            "${QPX_RUNTIME_REF}" \
+            --check-input -i /opt/qpx/ci/smoke.i
+
+      - name: Run bounded real QPX smoke
+        run: |
+          set -euxo pipefail
+          docker run --rm \
+            "${QPX_RUNTIME_REF}" \
+            -i /opt/qpx/ci/smoke.i
+
+      - name: Record runtime consumer evidence
+        if: always()
+        run: |
+          {
+            echo "QPX_RUNTIME_REF=${QPX_RUNTIME_REF}"
+            echo "RUNTIME_PULL_SECONDS=${{ steps.pull.outputs.pull_seconds }}"
+            echo "RUNTIME_LOCAL_SIZE_BYTES=${{ steps.pull.outputs.size_bytes }}"
+            echo "EXPECTED_BUILD_BASE_REF=${EXPECTED_BUILD_BASE_REF}"
+            echo "EXPECTED_MOOSE_SHA=${EXPECTED_MOOSE_SHA}"
+            echo "EXPECTED_QPX_SOURCE_SHA256=${EXPECTED_QPX_SOURCE_SHA256}"
+            echo "QPX_CHECK_INPUT_SMOKE=${{ job.status == 'success' && 'PASS' || 'FAIL' }}"
+            echo "BOUNDED_REAL_QPX_RUN=${{ job.status == 'success' && 'PASS' || 'FAIL' }}"
+            echo "ORDINARY_CI_PULLS_MOOSE_DEV=false"
+            echo "ORDINARY_CI_PULLS_QPX_BUILD_BASE=false"
+            echo "ORDINARY_CI_REBUILDS_MOOSE_STACK=false"
+            echo "ORDINARY_CI_COMPILES_QPX=false"
+          } > qpx-runtime-consumer-evidence.txt
+
+      - name: Upload runtime consumer evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: qpx-runtime-consumer-evidence
+          path: qpx-runtime-consumer-evidence.txt
