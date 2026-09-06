@@ -8,7 +8,6 @@ from typing import Any, Iterable, Mapping
 from . import log as moose_log
 from qpx_harness.adapters.petsc import log as petsc_log
 from qpx_harness.evidence.ingest.nonlinear_solver import failure_signature
-from qpx_harness.evidence.ingest.termination import first_failed_reason
 
 
 def artifact_failure_signature(result: Mapping[str, Any] | None) -> dict[str, Any]:
@@ -36,8 +35,8 @@ def runtime_core_facts(text: str, *, returncode: int, coupled_scaling_variables:
     residual_blocks = moose_log.parse_variable_residual_norms(text)
     scaling_blocks = moose_log.parse_automatic_scaling_factors(text)
     scaling = scaling_blocks[0] if scaling_blocks else {}
-    linear_reason = first_failed_reason(petsc_log.parse_linear_solve_terminations(text))
-    nonlinear_reason = first_failed_reason(petsc_log.parse_nonlinear_solve_terminations(text))
+    linear_reason = petsc_log.first_failed_reason(petsc_log.parse_linear_solve_terminations(text))
+    nonlinear_reason = petsc_log.first_failed_reason(petsc_log.parse_nonlinear_solve_terminations(text))
     pc_failure_reason = petsc_log.parse_pc_failure_reason(text)
     pc_hits = petsc_log.line_hits(text, (r"DIVERGED_PC_FAILED", r"DIVERGED_PCSETUP_FAILED", r"PC failed due to", r"zero pivot", r"factorization", r"PCSetUp.*fail"))
     factorization_hits = petsc_log.line_hits(text, (r"FACTOR_(?:NUMERIC|STRUCT)_ZEROPIVOT", r"zero pivot", r"factorization", r"MatFactor", r"PCSetUp.*fail"))
