@@ -12,28 +12,12 @@ on:
       - review/development-semantic-architecture
   workflow_dispatch:
 
-permissions:
-  contents: write
-
 jobs:
   validate:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-      # BATCH6_APPLY_START
-      - name: Apply one-shot Batch 6 migration
-        run: |
-          python tools/qpx_batch6_apply.py
-          git checkout HEAD -- .github/workflows/qpx-cleanup-validation.yml tools/qpx_batch6_apply.py
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          if ! git diff --cached --quiet; then
-            git commit -m "refactor: consolidate model terminology and MOOSE boundary"
-            git push origin HEAD:development
-          fi
-      # BATCH6_APPLY_END
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -60,6 +44,8 @@ jobs:
         run: python tools/qpx_plasma_semantic_residue_guard.py
       - name: Validate campaign/performance/scale ownership
         run: python tools/qpx_campaign_residue_guard.py
+      - name: Validate numerical-method ownership
+        run: python tools/qpx_numerical_method_ownership_guard.py
       - name: Validate model terminology and MOOSE boundary ownership
         run: python tools/qpx_boundary_terminology_guard.py
       - name: Validate strict zero-legacy architecture census
