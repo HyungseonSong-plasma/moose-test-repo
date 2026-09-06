@@ -16,9 +16,9 @@ from qpx_harness.specification import SCHEMA_VERSION, load_experiment_spec
 FORBIDDEN_PRODUCTION_PATHS = (
     APPLICATION / "experiment_registry.py",
     APPLICATION / "experiment_service.py",
-    APPLICATION / "experiment_spec.py",
     APPLICATION / "protocols",
 )
+HISTORICAL_DECODER = APPLICATION / "experiment_spec.py"
 
 
 def _raw(path: Path, errors: list[str]) -> dict[str, object] | None:
@@ -42,6 +42,14 @@ def main() -> int:
                 f"{path.relative_to(ROOT)}: retired schema-v1 protocol ownership remains in production"
             )
 
+    if HISTORICAL_DECODER.is_file():
+        decoder = HISTORICAL_DECODER.read_text(encoding="utf-8")
+        for token in ("ExperimentControl", "resolve_protocol", "protocol_registered", "run_experiment"):
+            if token in decoder:
+                errors.append(
+                    f"{HISTORICAL_DECODER.relative_to(ROOT)}: historical decoder contains control-plane token {token!r}"
+                )
+
     semantic_specs = 0
     historical_specs = 0
     for spec in sorted(EXPERIMENTS.glob("**/experiment.json")):
@@ -62,8 +70,6 @@ def main() -> int:
                 continue
             semantic_specs += 1
         elif version == 1:
-            # Historical experiment fixtures may remain immutable provenance, but
-            # they are not executable through the canonical application/CLI path.
             historical_specs += 1
         else:
             errors.append(
@@ -73,13 +79,16 @@ def main() -> int:
     cli = (ROOT / "qpx_harness" / "cli" / "app.py").read_text(encoding="utf-8")
     forbidden_cli_tokens = (
         "run_experiment(",
-        "from qpx_harness.application import normalize_temporal_run_csv, preflight_input, run_experiment",
         "resolve_protocol",
         "protocol_registered",
     )
     for token in forbidden_cli_tokens:
         if token in cli:
             errors.append(f"qpx_harness/cli/app.py: forbidden legacy experiment dispatch token {token!r}")
+
+    application_init = (APPLICATION / "__init__.py").read_text(encoding="utf-8")
+    if "load_experiment_spec" in application_init or "HistoricalExperimentFixture" in application_init:
+        errors.append("qpx_harness/application/__init__.py: historical fixture decoder must not be canonical application API")
 
     if errors:
         print("EXPERIMENT_CONTROL_PLANE_GUARD: FAIL")
