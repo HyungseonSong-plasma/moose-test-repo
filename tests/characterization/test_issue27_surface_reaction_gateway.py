@@ -22,10 +22,6 @@ from experiments.Issue27_surface_reactions.controlled_wall.sticking import (
     _build_sticking_case_input,
     _validated_sticking_parameters,
 )
-from qpx_harness.application.experiment_registry import (
-    protocol_registered,
-    resolve_protocol,
-)
 from qpx_harness.application.experiment_spec import load_experiment_spec
 from qpx_harness.moose import blocks as mb
 from qpx_harness.moose import parameters as mp
@@ -37,12 +33,12 @@ R4_SOURCE = ROOT / "experiments/Issue91_real_qvt_r3/r3_e0/heavy_base.i"
 RETIRED_STANDALONE_INPUT = ROOT / "experiments/Issue27_surface_reactions/controlled_wall/input.i"
 
 
-def test_issue27_a1_spec_uses_canonical_qpx_gateway() -> None:
+def test_issue27_a1_spec_is_historical_provenance_not_canonical_dispatch() -> None:
     spec = load_experiment_spec(A1_SPEC)
     assert spec.experiment_id == "issue27-a1-o-recombination"
     assert spec.protocol == "issue27-surface-reaction-controlled-wall"
-    assert protocol_registered(spec.protocol)
-    assert callable(resolve_protocol(spec.protocol))
+    assert not (ROOT / "qpx_harness/application/experiment_registry.py").exists()
+    assert not (ROOT / "qpx_harness/application/protocols").exists()
 
 
 def test_issue27_a1_prescribed_flux_contract_is_frozen() -> None:
@@ -115,13 +111,12 @@ def test_issue27_a1_is_r4_qf1_plus_one_wafer_wall_flux(
     assert mb.has_block(text, "FVKernels/O_diffusion")
 
 
-def test_issue27_a1b_spec_uses_same_protocol_with_sticking_model() -> None:
+def test_issue27_a1b_spec_uses_same_historical_protocol_provenance() -> None:
     spec = load_experiment_spec(A1B_SPEC)
     assert spec.experiment_id == "issue27-a1b-o-sticking"
     assert spec.protocol == "issue27-surface-reaction-controlled-wall"
     assert spec.parameters["wall_model"] == "sticking"
-    assert protocol_registered(spec.protocol)
-    assert callable(resolve_protocol(spec.protocol))
+    assert not (ROOT / "qpx_harness/application/experiment_registry.py").exists()
 
 
 def test_issue27_a1b_sticking_contract_is_frozen() -> None:
