@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from qpx_harness.application import load_experiment_spec
-from qpx_harness.application.experiment_registry import protocol_registered, registered_protocols
 from qpx_harness.cli.app import CANONICAL_COMMANDS, COMMANDS, INTERNAL_TARGETS, main
 from qpx_harness.execution.status import ExecutionState
 from qpx_harness.validation import ValidationKind, ValidationSurface, validate_command_surface
@@ -38,22 +36,18 @@ def test_validation_taxonomy_distinguishes_internal_from_scientific() -> None:
     assert science.is_infrastructure_validation is False
 
 
-def test_current_operator_protocols_are_declarative_and_registered() -> None:
-    expected = {
-        "issue26-electron-energy-e1": ROOT / "experiments/Issue26_electron_energy/E1_zero_source/experiment.json",
-        "issue26-electron-energy-e2a": ROOT / "experiments/Issue26_electron_energy/E2a_controlled_diffusion/experiment.json",
-        "issue26-electron-energy-chain": ROOT / "experiments/Issue26_electron_energy/E2b_E5_chain/experiment.json",
-        "issue27-surface-reaction-controlled-wall": ROOT / "experiments/Issue27_surface_reactions/A1_o_recombination/experiment.json",
-        "r3-electron-master-diagnostic": ROOT / "experiments/R3_electron_master_diagnostic/experiment.json",
-        "r3-electron-scaling-counterfactual": ROOT / "experiments/R3_electron_scaling_counterfactual/experiment.json",
-        "r3-fv-internal-completion": ROOT / "experiments/R3_fv_internal_completion/experiment.json",
-        "r4-qf2-local-charge-relaxation": ROOT / "experiments/Issue31_r4_qf2_local_charge_relaxation/experiment.json",
-    }
-    assert set(registered_protocols()) == set(expected)
-    for protocol, path in expected.items():
-        spec = load_experiment_spec(path)
-        assert spec.protocol == protocol
-        assert protocol_registered(spec.protocol)
+def test_canonical_experiment_gateway_has_no_protocol_registry() -> None:
+    application = ROOT / "qpx_harness" / "application"
+    cli = (ROOT / "qpx_harness/cli/app.py").read_text()
+    assert not (application / "experiment_registry.py").exists()
+    assert not (application / "experiment_service.py").exists()
+    assert not (application / "protocols").exists()
+    assert "compile" in CANONICAL_COMMANDS
+    assert "plan" in CANONICAL_COMMANDS
+    assert "lower" in CANONICAL_COMMANDS
+    assert "run" in CANONICAL_COMMANDS
+    assert "run_experiment(" not in cli
+    assert main(["-e", "historical.json"]) == 2
 
 
 def test_green_gauss_quantitative_formula_owner_is_analysis() -> None:
