@@ -9,6 +9,7 @@ on:
       - issue-126-qpx-harness-refactor
       - issue-128-retire-issue-namespaces
       - issue-129-root-surface-cleanup
+      - 'issue-154-*'
       - review/development-semantic-architecture
   workflow_dispatch:
 
