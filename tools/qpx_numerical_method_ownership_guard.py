@@ -47,7 +47,9 @@ def main() -> int:
     if "relative_tolerance" not in jacobian_reasoning:
         failures.append("Jacobian correctness tolerance is not explicit policy")
 
-    petsc_parser = text("qpx_harness/petsc/jacobian.py")
+    if (ROOT / "qpx_harness/petsc").exists():
+        failures.append("retired top-level PETSc package remains")
+    petsc_parser = text("qpx_harness/adapters/petsc/jacobian.py")
     if "parse_comparisons" not in petsc_parser or "-snes_test_jacobian" not in petsc_parser:
         failures.append("PETSc Jacobian diagnostic parser owner missing")
 
@@ -76,6 +78,7 @@ def main() -> int:
     print("GREEN_GAUSS_TERMINOLOGY_GUARD = PASS")
     print("CANONICAL_JACOBIAN_VERIFICATION_OWNER_COUNT = 1")
     print("PETSC_JACOBIAN_DIAGNOSTIC_PARSER_OWNER_COUNT = 1")
+    print("TOP_LEVEL_PETSC_PACKAGE = 0")
     print("GENERIC_EVIDENCE_TO_PETSC_CONCRETE_DEPENDENCY_EDGES = 0")
     print("JACOBIAN_COMPARISON_EVIDENCE_CONTRACT_COUNT = 1")
     print("JACOBIAN_CORRECTNESS_POLICY_OWNER_COUNT = 1")
