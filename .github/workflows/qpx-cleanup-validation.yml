@@ -1,6 +1,6 @@
 name: QPX CI validation
 
-# Issue #144 final zero-legacy acceptance gate (canonical-path migration complete).
+# Canonical architecture and regression acceptance gate.
 on:
   push:
     branches:
@@ -42,6 +42,8 @@ jobs:
         run: python tools/qpx_experiment_gateway_guard.py
       - name: Validate plasma semantic ownership
         run: python tools/qpx_plasma_semantic_residue_guard.py
+      - name: Validate campaign/performance/scale ownership
+        run: python tools/qpx_campaign_residue_guard.py
       - name: Validate strict zero-legacy architecture census
         run: |
           python tools/qpx_architecture_census.py --require-no-legacy
