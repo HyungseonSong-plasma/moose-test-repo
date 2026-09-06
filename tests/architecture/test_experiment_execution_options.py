@@ -1,22 +1,29 @@
+from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any, Mapping
 
 import pytest
 
 from qpx_harness.application.execution_options import optional_path, positive_timeout
-from qpx_harness.application.experiment_spec import ExperimentControl
 from qpx_harness.execution.runtime import resolve_results_root
 
 
-def _spec(tmp_path: Path, *, execution: dict[str, object]) -> ExperimentControl:
+@dataclass(frozen=True)
+class _ExecutionOptionFixture:
+    source_path: Path
+    execution: Mapping[str, Any] = field(default_factory=dict)
+
+    def resolve_path(self, value: str | Path) -> Path:
+        path = Path(value).expanduser()
+        if path.is_absolute():
+            return path
+        return (self.source_path.parent / path).resolve()
+
+
+def _spec(tmp_path: Path, *, execution: dict[str, object]) -> _ExecutionOptionFixture:
     source = tmp_path / "experiment.json"
     source.write_text("{}\n")
-    return ExperimentControl(
-        schema_version=1,
-        experiment_id="test",
-        protocol="test-protocol",
-        source_path=source,
-        execution=execution,
-    )
+    return _ExecutionOptionFixture(source_path=source, execution=execution)
 
 
 def test_optional_path_is_resolved_relative_to_experiment(tmp_path: Path):
