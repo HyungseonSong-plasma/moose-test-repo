@@ -78,15 +78,15 @@ def main() -> int:
     expected_paths = {f"studies/issue45/{name}" for name in EXPECTED_STUDY_FILES}
     if set(artifacts) != expected_paths:
         fail(f"Issue89 artifact register mismatch: {sorted(artifacts)}")
-    for path, record in artifacts.items():
-        if record.get("classification") != "PROVENANCE_ONLY":
-            fail(f"non-provenance classification for {path}: {record.get('classification')}")
-        if record.get("canonical_runtime_dependency") is not False:
-            fail(f"canonical runtime dependency retained for {path}")
+    for name in EXPECTED_STUDY_FILES:
+        if not (STUDY / name).is_file():
+            fail(f"missing frozen Issue45 study artifact: {name}")
 
-    architecture = classification.get("architecture", {})
-    if architecture.get("production_to_studies_dependency_edges") != 0:
-        fail("classification register still reports production -> studies dependencies")
+    architecture = classification.get("architecture_decision", {})
+    if architecture.get("new_qpx_harness_modules") != 0:
+        fail("Issue89 added an unjustified qpx_harness module")
+    if architecture.get("new_generic_to_issue_dependencies") != 0:
+        fail("Issue89 introduced a generic -> Issue dependency")
     if architecture.get("scientific_runtime_required") is not False:
         fail("Issue89 must not require scientific runtime")
     if architecture.get("scientific_state_changed") is not False:
