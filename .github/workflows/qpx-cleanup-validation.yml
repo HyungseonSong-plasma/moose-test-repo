@@ -40,6 +40,8 @@ jobs:
         run: python tools/qpx_dependency_guard.py --check cycle
       - name: Validate declarative experiment gateway
         run: python tools/qpx_experiment_gateway_guard.py
+      - name: Validate plasma semantic ownership
+        run: python tools/qpx_plasma_semantic_residue_guard.py
       - name: Validate strict zero-legacy architecture census
         run: |
           python tools/qpx_architecture_census.py --require-no-legacy
