@@ -30,9 +30,8 @@ COMMANDS = {
     "test": "run one test.json case",
     "test-all": "discover and run a canonical/diagnostic suite",
     "contract": "validate/evaluate a scientific execution contract",
-    "measure": "run one schema-driven performance measurement",
-    "profile": "capture generic one-step profiling evidence",
-    "analyze": "classify PETSc/PerfGraph profiling evidence",
+    "measure": "run one schema-driven performance measurement (including PROFILE mode)",
+    "analyze": "classify decoded performance profiling evidence",
     "inventory": "inspect or compare workspace trees",
 }
 
@@ -47,7 +46,6 @@ _LEGACY_TARGETS = {
     "test-all": "qpx_harness.adapters.moose.regression:cli_run_all",
     "contract": "qpx_harness.execution.contract:main",
     "measure": "qpx_harness.cli.commands.performance:measure_main",
-    "profile": "qpx_harness.execution.performance.profiling:main",
     "analyze": "qpx_harness.cli.commands.performance:analyze_main",
     "inventory": "qpx_harness.execution.workspace:inventory_cli",
 }
@@ -218,32 +216,29 @@ def main(argv: list[str] | None = None) -> int:
     if not args or args[0] in {"-h", "--help", "help"}:
         print_help()
         return 0
-
-    command, rest = args[0], args[1:]
-    if command == "compile":
-        return semantic_compile_cli(rest)
-    if command == "plan":
-        return semantic_plan_cli(rest)
-    if command == "lower":
-        return semantic_lower_cli(rest)
-    if command == "run":
-        return semantic_run_cli(rest)
-    if command in {"-e", "--experiment"}:
-        print("legacy experiment gateway retired; use qpx compile/plan/lower/run with schema-v2 ExperimentSpec", file=sys.stderr)
-        return 2
-    if command in {"-i", "--internal"}:
-        if len(rest) != 1:
-            print("usage: qpx -i <internal-target>", file=sys.stderr)
+    if args[0] == "-i":
+        if len(args) != 2:
+            print("usage: qpx -i <architecture|regression|all>", file=sys.stderr)
             return 2
-        return internal_cli(rest[0])
-    if command == "preflight":
-        return preflight_cli(rest)
-    if command == "temporal-csv":
-        return temporal_csv_cli(rest)
+        return internal_cli(args[1])
+    canonical_handlers = {
+        "compile": semantic_compile_cli,
+        "plan": semantic_plan_cli,
+        "lower": semantic_lower_cli,
+        "run": semantic_run_cli,
+        "preflight": preflight_cli,
+        "temporal-csv": temporal_csv_cli,
+    }
+    canonical = canonical_handlers.get(args[0])
+    if canonical is not None:
+        return canonical(args[1:])
+    handler = _resolve_legacy_handler(args[0])
+    if handler is not None:
+        return handler(args[1:])
+    print(f"unknown command: {args[0]}", file=sys.stderr)
+    print_help()
+    return 2
 
-    handler = _resolve_legacy_handler(command)
-    if handler is None:
-        print(f"unknown command: {command}", file=sys.stderr)
-        print_help()
-        return 2
-    return handler(rest)
+
+if __name__ == "__main__":
+    raise SystemExit(main())
