@@ -1,57 +1,28 @@
-"""Deterministic analysis of legacy-format PETSc/MOOSE profile evidence."""
+"""Backend-neutral performance bottleneck analysis over adapter-decoded facts.
 
+The public ``analyze`` compatibility entry still accepts evidence paths during
+WB3, but all raw PETSc/MOOSE decoding is delegated to the external adapters.
+Bottleneck policy and ratios remain owned here.
+"""
 from __future__ import annotations
 
-import csv
 import json
-import re
 import tempfile
 from pathlib import Path
 
-
-def load_petsc_events(path: Path) -> dict[str, dict[str, float]]:
-    events: dict[str, dict[str, float]] = {}
-    with path.open(newline="") as handle:
-        for row in csv.DictReader(handle):
-            if row.get("Rank") not in (None, "", "0"):
-                continue
-            name = row.get("Event Name", "")
-            if not name:
-                continue
-            try:
-                events[name] = {
-                    "count": float(row.get("Count") or 0),
-                    "time": float(row.get("Time") or 0),
-                }
-            except ValueError:
-                continue
-    return events
-
-
-def perfgraph_jacobian_self(path: Path | None) -> dict[str, float] | None:
-    if path is None or not path.is_file():
-        return None
-    text = path.read_text(errors="replace")
-    pattern = re.compile(
-        r"^\|\s*NonlinearSystemBase::computeJacobianInternal\s*"
-        r"\|\s*(\d+)\s*\|\s*([0-9.eE+-]+)\s*\|\s*([0-9.eE+-]+)\s*"
-        r"\|\s*([0-9.eE+-]+)\s*\|",
-        re.MULTILINE,
-    )
-    matches = pattern.findall(text)
-    if not matches:
-        return None
-    calls, self_s, avg_s, percent = max(matches, key=lambda match: float(match[1]))
-    return {
-        "calls": float(calls),
-        "self_seconds": float(self_s),
-        "avg_seconds": float(avg_s),
-        "percent_application": float(percent),
-    }
-
-
-def event_time(events: dict[str, dict[str, float]], name: str) -> float:
-    return events.get(name, {}).get("time", 0.0)
+from qpx_harness.adapters.moose.performance.profile import perfgraph_jacobian_self
+from qpx_harness.adapters.petsc.performance import (
+    EVENT_FUNCTION_EVAL,
+    EVENT_JACOBIAN_EVAL,
+    EVENT_KSP_SOLVE,
+    EVENT_LU_NUMERIC,
+    EVENT_LU_SYMBOLIC,
+    EVENT_MATRIX_ASSEMBLY_END,
+    EVENT_PC_SETUP,
+    EVENT_SNES_SOLVE,
+    event_time,
+    load_events,
+)
 
 
 def _metric(metrics: dict, stem: str, prefix: str | None) -> str | None:
@@ -65,14 +36,14 @@ def _metric(metrics: dict, stem: str, prefix: str | None) -> str | None:
     return None
 
 
-def analyze(
-    summary_path: Path,
-    petsc_path: Path,
-    perf_path: Path | None = None,
+def analyze_decoded(
+    summary: dict,
+    events: dict[str, dict[str, float]],
+    perf_jacobian: dict[str, float] | None = None,
     *,
     metric_prefix: str | None = None,
 ) -> dict:
-    summary = json.loads(summary_path.read_text())
+    """Classify performance using already-decoded timing facts."""
     if summary.get("p2_returncode") != 0:
         return {
             "classification": summary.get("classification", "HARNESS_OR_CONSTRUCTION_FAIL"),
@@ -86,16 +57,14 @@ def analyze(
             "reason": "P3 did not complete successfully.",
         }
 
-    events = load_petsc_events(petsc_path)
-    snes = event_time(events, "SNESSolve")
-    jacobian = event_time(events, "SNESJacobianEval")
-    residual = event_time(events, "SNESFunctionEval")
-    pc_setup = event_time(events, "PCSetUp")
-    linear_solve = event_time(events, "KSPSolve")
-    lu_numeric = event_time(events, "MatLUFactorNum")
-    lu_symbolic = event_time(events, "MatLUFactorSym")
-    matrix_assembly = event_time(events, "MatAssemblyEnd")
-    perf_jacobian = perfgraph_jacobian_self(perf_path)
+    snes = event_time(events, EVENT_SNES_SOLVE)
+    jacobian = event_time(events, EVENT_JACOBIAN_EVAL)
+    residual = event_time(events, EVENT_FUNCTION_EVAL)
+    pc_setup = event_time(events, EVENT_PC_SETUP)
+    linear_solve = event_time(events, EVENT_KSP_SOLVE)
+    lu_numeric = event_time(events, EVENT_LU_NUMERIC)
+    lu_symbolic = event_time(events, EVENT_LU_SYMBOLIC)
+    matrix_assembly = event_time(events, EVENT_MATRIX_ASSEMBLY_END)
 
     denominator = snes if snes > 0 else float(summary.get("wall_seconds") or 0)
     ratios = {
@@ -154,59 +123,53 @@ def analyze(
     }
 
 
-def self_test() -> int:
-    """Characterize the promoted legacy-format profile analysis contract."""
+def analyze(
+    summary_path: Path,
+    petsc_path: Path,
+    perf_path: Path | None = None,
+    *,
+    metric_prefix: str | None = None,
+) -> dict:
+    """Compatibility entry: adapters decode raw files, analysis owns policy only."""
+    summary = json.loads(summary_path.read_text())
+    return analyze_decoded(
+        summary,
+        load_events(petsc_path),
+        perfgraph_jacobian_self(perf_path),
+        metric_prefix=metric_prefix,
+    )
 
+
+def self_test() -> int:
     try:
         with tempfile.TemporaryDirectory() as tmp_name:
             root = Path(tmp_name)
-            summary = root / "summary.json"
-            petsc = root / "petsc.csv"
-            perfgraph = root / "perfgraph.log"
-            summary.write_text(
-                json.dumps(
-                    {
-                        "p2_returncode": 0,
-                        "p3_returncode": 0,
-                        "label": "synthetic",
-                        "wall_seconds": 10.0,
-                        "last_metrics_row": {
-                            "qpxh_num_dofs": "42",
-                            "qpxh_nonlinear_iterations": "2",
-                            "qpxh_linear_iterations": "3",
-                            "qpxh_residual_evaluations": "4",
-                        },
-                    }
-                )
-            )
-            petsc.write_text(
-                "Event Name,Rank,Count,Time\n"
-                "SNESSolve,0,1,10\n"
-                "SNESJacobianEval,0,2,6\n"
-                "SNESFunctionEval,0,4,1\n"
-                "PCSetUp,0,2,1\n"
-                "KSPSolve,0,3,1\n"
-            )
-            perfgraph.write_text(
-                "| NonlinearSystemBase::computeJacobianInternal | 2 | 5.5 | 2.75 | 55 |\n"
-            )
-            result = analyze(summary, petsc, perfgraph)
-            if result.get("classification") != "JACOBIAN_EVALUATION_DOMINANT":
+            summary = {
+                "p2_returncode": 0,
+                "p3_returncode": 0,
+                "label": "synthetic",
+                "wall_seconds": 10.0,
+                "last_metrics_row": {
+                    "qpxh_num_dofs": "42",
+                    "qpxh_nonlinear_iterations": "2",
+                    "qpxh_linear_iterations": "3",
+                    "qpxh_residual_evaluations": "4",
+                },
+            }
+            events = {
+                EVENT_SNES_SOLVE: {"count": 1.0, "time": 10.0},
+                EVENT_JACOBIAN_EVAL: {"count": 2.0, "time": 6.0},
+                EVENT_FUNCTION_EVAL: {"count": 4.0, "time": 1.0},
+                EVENT_PC_SETUP: {"count": 2.0, "time": 1.0},
+                EVENT_KSP_SOLVE: {"count": 3.0, "time": 1.0},
+            }
+            perf = {"calls": 2.0, "self_seconds": 5.5, "avg_seconds": 2.75, "percent_application": 55.0}
+            result = analyze_decoded(summary, events, perf)
+            if result.get("classification") != "JACOBIAN_EVALUATION_DOMINANT" or result.get("dofs") != 42:
                 raise AssertionError(result)
-            if result.get("dofs") != 42 or event_time(load_petsc_events(petsc), "SNESSolve") != 10:
-                raise AssertionError("promoted profile metric contract drift")
-            if perfgraph_jacobian_self(perfgraph) != {
-                "calls": 2.0,
-                "self_seconds": 5.5,
-                "avg_seconds": 2.75,
-                "percent_application": 55.0,
-            }:
-                raise AssertionError("promoted PerfGraph contract drift")
-
-            failed = json.loads(summary.read_text())
+            failed = dict(summary)
             failed["p2_returncode"] = 1
-            summary.write_text(json.dumps(failed))
-            if analyze(summary, petsc).get("interpretable_performance") is not False:
+            if analyze_decoded(failed, events).get("interpretable_performance") is not False:
                 raise AssertionError("P2 failure mutation was accepted")
     except Exception as exc:
         print(f"QPX_PROFILE_ANALYSIS_SELFTEST: FAIL: {exc}")
@@ -215,10 +178,4 @@ def self_test() -> int:
     return 0
 
 
-__all__ = [
-    "analyze",
-    "event_time",
-    "load_petsc_events",
-    "perfgraph_jacobian_self",
-    "self_test",
-]
+__all__ = ["analyze", "analyze_decoded", "self_test"]
