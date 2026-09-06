@@ -29,6 +29,21 @@ for base in (ROOT / "qpx_harness", ROOT / "tests", ROOT / "experiments", ROOT / 
         new = text
         for old, repl in replacements:
             new = new.replace(old, repl)
+
+        # runtime_core_facts is concrete MOOSE/PETSc decoding. Historical
+        # experiment/characterization callers may consume it, but they must
+        # import it explicitly from the canonical solver boundary rather than
+        # through the generic evidence API.
+        if "runtime_core_facts" in new and "from qpx_harness.evidence import (" in new:
+            marker = "    runtime_core_facts,\n"
+            if marker in new:
+                new = new.replace(marker, "")
+                adapter_import = (
+                    "from qpx_harness.adapters.moose.nonlinear_solver import runtime_core_facts\n"
+                )
+                evidence_import = "from qpx_harness.evidence import ("
+                new = new.replace(evidence_import, adapter_import + evidence_import, 1)
+
         if new != text:
             path.write_text(new, encoding="utf-8")
             changed.append(path.relative_to(ROOT).as_posix())
