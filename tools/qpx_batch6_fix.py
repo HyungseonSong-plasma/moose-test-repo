@@ -4,15 +4,17 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 replacements = [
+    ("qpx_harness.models.stats", "qpx_harness.evaluation.statistics"),
+    ("qpx_harness.ontology.model", "qpx_harness.ontology.records"),
+    ("qpx_harness.adapters.moose.mutation_spec.models", "qpx_harness.adapters.moose.mutation_spec.schema"),
+    ("qpx_harness.execution.regression", "qpx_harness.adapters.moose.regression"),
+    ("qpx_harness.petsc.options", "qpx_harness.adapters.moose.petsc_options"),
+    ("qpx_harness.transforms", "qpx_harness.adapters.moose.transforms"),
+    ("qpx_harness.moose.", "qpx_harness.adapters.moose."),
     ("from . import model as semantic_model", "from . import records as semantic_model"),
     ("from .model import", "from .records import"),
-    ("from ..ontology.model import", "from ..ontology.records import"),
     ("from ..models.stats import", "from ..evaluation.statistics import"),
     ("from .models import", "from .schema import"),
-    ("from ..transforms import", "from qpx_harness.adapters.moose.transforms import"),
-    ("from ..execution.regression import", "from qpx_harness.adapters.moose.regression import"),
-    ("from ..petsc.options import", "from qpx_harness.adapters.moose.petsc_options import"),
-    ("from ..moose.", "from qpx_harness.adapters.moose."),
 ]
 changed = []
 for base in (ROOT / "qpx_harness", ROOT / "tests", ROOT / "experiments", ROOT / "tools"):
