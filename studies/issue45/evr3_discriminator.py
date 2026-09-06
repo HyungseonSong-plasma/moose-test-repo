@@ -14,7 +14,6 @@ from __future__ import annotations
 import argparse
 import json
 import math
-import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -23,16 +22,13 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from recipes import issue45_closure_basis as closure_basis
-from recipes import issue45_inventory_constraint as inventory_policy
-from qpx_harness import evidence
 from qpx_harness.execution.runtime import resolve_executable, run_qpx, validate_executable
-from qpx_harness.inventory import first_linear_orchestration as orch
 from qpx_harness.adapters.moose import log as moose_log
 from qpx_harness.adapters.moose import parameters as mp
 from qpx_harness.adapters.moose import petsc_options as po
 from qpx_harness.petsc import ksp
 from qpx_harness.petsc import log as petsc_log
+from qpx_harness.provenance.cases import QVT_PREPOISSON_CASE
 
 ISSUE = 45
 WORK_ISSUE = 88
@@ -238,7 +234,7 @@ def _self_test() -> int:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--qpx")
-    parser.add_argument("--input", default=str(orch.DEFAULT_CASE / "input.i"))
+    parser.add_argument("--input", default=str(ROOT / QVT_PREPOISSON_CASE / "input.i"))
     parser.add_argument("--results-root", default=str(ROOT / "temp/results/issue45_evr3"))
     parser.add_argument("--self-test", action="store_true")
     args = parser.parse_args(argv)
