@@ -30,6 +30,17 @@ def parse_nonlinear_solve_terminations(text: str) -> list[dict[str, Any]]:
     return _parse_terminations(text, "Nonlinear")
 
 
+def first_failed_reason(rows: list[dict[str, Any]]) -> str | None:
+    """Return the first explicitly non-converged reason from decoded PETSc rows."""
+    return next((str(row["reason"]) for row in rows if not row.get("converged")), None)
+
+
+def first_linear_termination(text: str) -> dict[str, Any] | None:
+    """Return the first decoded PETSc linear termination row, if observable."""
+    rows = parse_linear_solve_terminations(text)
+    return dict(rows[0]) if rows else None
+
+
 def parse_pc_failure_reason(text: str) -> str | None:
     match = re.search(r"PC failed due to\s+([A-Z0-9_]+)", text, re.IGNORECASE)
     return match.group(1).upper() if match else None
@@ -52,3 +63,14 @@ def line_hits(text: str, patterns: tuple[str, ...]) -> list[str]:
         for line in text.splitlines()
         if any(re.search(pattern, line, re.IGNORECASE) for pattern in patterns)
     ]
+
+
+__all__ = [
+    "first_failed_reason",
+    "first_linear_termination",
+    "line_hits",
+    "parse_linear_solve_terminations",
+    "parse_nonlinear_solve_terminations",
+    "parse_pc_failure_reason",
+    "parse_petsc_version",
+]
