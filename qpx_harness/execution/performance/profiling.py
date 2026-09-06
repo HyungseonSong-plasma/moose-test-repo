@@ -1,144 +1,26 @@
-"""Canonical one-step QPX performance profiling."""
+"""Canonical one-step QPX performance profiling orchestration.
+
+External-format configuration is adapter-owned. This module retains run
+orchestration and result composition only.
+"""
 
 from __future__ import annotations
 
 import argparse
-import csv
 import json
 import re
 from datetime import datetime, timezone
 from pathlib import Path
 
+from qpx_harness.adapters.moose.performance.profile import (
+    find_metrics_csv,
+    read_last_metrics_row,
+    write_overlay,
+)
+from qpx_harness.adapters.petsc.performance import event_hints, profile_arguments
+
 from ...evidence import ensure_fresh_directory, sha256_file
 from ..runtime import resolve_executable, run_qpx, validate_executable
-
-
-def _quote_hit_path(path: Path) -> str:
-    text = str(path)
-    if "'" in text:
-        raise SystemExit(f"output path contains unsupported single quote: {path}")
-    return f"'{text}'"
-
-
-def build_bounded_executioner_overlay(
-    *, nl_max_its: int | None = None, abort_on_solve_fail: bool = False
-) -> str:
-    """Build a rightmost-input Executioner override for bounded profiling.
-
-    MOOSE owns nonlinear-iteration limits through the Executioner/default
-    convergence path. A second input file is therefore used instead of PETSc
-    command-line SNES limits, which can be superseded when MOOSE/libMesh sets
-    nonlinear solver parameters.
-    """
-
-    if nl_max_its is not None and nl_max_its <= 0:
-        raise ValueError("nl_max_its must be a positive integer")
-    if nl_max_its is None and not abort_on_solve_fail:
-        return ""
-
-    lines = ["[Executioner]"]
-    if nl_max_its is not None:
-        lines.append(f"  nl_max_its = {nl_max_its}")
-    if abort_on_solve_fail:
-        lines.append("  abort_on_solve_fail = true")
-    lines.append("[]")
-    return "\n".join(lines) + "\n"
-
-
-def write_overlay(
-    path: Path,
-    metrics_base: Path,
-    *,
-    prefix: str = "qpxh",
-    nl_max_its: int | None = None,
-    abort_on_solve_fail: bool = False,
-) -> str:
-    bounded_executioner = build_bounded_executioner_overlay(
-        nl_max_its=nl_max_its,
-        abort_on_solve_fail=abort_on_solve_fail,
-    )
-    path.write_text(
-        f"""# Generated QPX profiling overlay.
-# Diagnostics only: no physics, dt, tolerance, or solver-type changes.
-# Optional bounded Executioner settings only limit diagnostic work.
-
-[Postprocessors]
-  [{prefix}_num_dofs]
-    type = NumDOFs
-    system = NL
-    execute_on = 'initial timestep_end'
-  []
-  [{prefix}_nonlinear_iterations]
-    type = NumNonlinearIterations
-    execute_on = timestep_end
-  []
-  [{prefix}_linear_iterations]
-    type = NumLinearIterations
-    execute_on = timestep_end
-  []
-  [{prefix}_residual_evaluations]
-    type = NumResidualEvaluations
-    execute_on = timestep_end
-  []
-[]
-
-[Outputs]
-  [{prefix}_perfgraph]
-    type = PerfGraphOutput
-    execute_on = final
-    level = 3
-    heaviest_branch = true
-    heaviest_sections = 40
-  []
-  [{prefix}_metrics]
-    type = CSV
-    file_base = {_quote_hit_path(metrics_base)}
-    show = '{prefix}_num_dofs {prefix}_nonlinear_iterations {prefix}_linear_iterations {prefix}_residual_evaluations'
-    execute_on = 'initial timestep_end'
-  []
-[]
-
-{bounded_executioner}"""
-    )
-    return bounded_executioner
-
-
-def find_metrics_csv(metrics_base: Path) -> Path | None:
-    direct = Path(str(metrics_base) + ".csv")
-    if direct.is_file():
-        return direct
-    matches = sorted(metrics_base.parent.glob(metrics_base.name + "*.csv"))
-    return matches[0] if matches else None
-
-
-def read_last_metrics_row(csv_path: Path | None) -> dict[str, str] | None:
-    if csv_path is None or not csv_path.is_file():
-        return None
-    try:
-        with csv_path.open(newline="") as handle:
-            rows = list(csv.DictReader(handle))
-    except Exception:
-        return None
-    return rows[-1] if rows else None
-
-
-def petsc_event_hint(csv_path: Path) -> list[dict[str, str]]:
-    if not csv_path.is_file():
-        return []
-    wanted = re.compile(
-        r"KSPSolve|SNES|PCSetUp|MatLUFactor|MatCholeskyFactor|MatAssembly|MatSolve|Factor",
-        re.IGNORECASE,
-    )
-    hits: list[dict[str, str]] = []
-    try:
-        with csv_path.open(newline="") as handle:
-            for row in csv.DictReader(handle):
-                joined = " ".join(str(value) for value in row.values())
-                if wanted.search(joined):
-                    hits.append({k: v for k, v in row.items() if v not in (None, "")})
-    except Exception:
-        return []
-    return hits[:80]
 
 
 def profile_case(
@@ -216,15 +98,7 @@ def profile_case(
         (out_dir / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")
         return p2.returncode or 2
 
-    p3_extra = [
-        *common_extra,
-        "-log_view",
-        f":{petsc_csv}:ascii_csv",
-        "-log_view_memory",
-        "-snes_monitor",
-        "-snes_converged_reason",
-        "-ksp_converged_reason",
-    ]
+    p3_extra = [*common_extra, *profile_arguments(petsc_csv)]
     print("CASE START :", datetime.now(timezone.utc).isoformat())
     p3 = run_qpx(
         exe,
@@ -281,7 +155,7 @@ def profile_case(
         "last_metrics_row": last_metrics,
         "perfgraph_log": str(p3_log),
         "petsc_log_csv": str(petsc_csv),
-        "petsc_event_hints": petsc_event_hint(petsc_csv),
+        "petsc_event_hints": event_hints(petsc_csv),
     }
     summary_path = out_dir / "summary.json"
     summary_path.write_text(json.dumps(summary, indent=2) + "\n")
@@ -308,16 +182,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--prefix", default="qpxh")
     parser.add_argument("--output-namespace", default="profiles")
     parser.add_argument("--num-steps", type=int, default=1)
-    parser.add_argument(
-        "--nl-max-its",
-        type=int,
-        help="diagnostic-only nonlinear-iteration cap for bounded profile capture",
-    )
-    parser.add_argument(
-        "--abort-on-solve-fail",
-        action="store_true",
-        help="abort after bounded nonlinear nonconvergence instead of timestep cutback",
-    )
+    parser.add_argument("--nl-max-its", type=int, help="diagnostic-only nonlinear-iteration cap for bounded profile capture")
+    parser.add_argument("--abort-on-solve-fail", action="store_true", help="abort after bounded nonlinear nonconvergence instead of timestep cutback")
     args = parser.parse_args(argv)
     return profile_case(
         case_dir=Path(args.case_dir),
