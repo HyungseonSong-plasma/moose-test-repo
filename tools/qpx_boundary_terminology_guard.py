@@ -17,8 +17,8 @@ RETIRED_OWNER_PATHS = (
 RETIRED_IMPORT_PREFIXES = (
     "qpx_harness.moose",
     "qpx_harness.models",
-    "qpx_harness.ontology.model",
-    "qpx_harness.adapters.moose.mutation_spec.models",
+    "qpx_harness.ontology.records",
+    "qpx_harness.adapters.moose.mutation_spec.schema",
 )
 CONCRETE_MOOSE_PREFIXES = (
     "qpx_harness.adapters.moose.input",
