@@ -1,25 +1,8 @@
-"""Reusable PETSc option and diagnostic operations."""
+"""Reusable PETSc diagnostic primitives.
 
-from .options import (
-    PetscOptionsError,
-    add_flags,
-    get_flags,
-    get_name_value_pairs,
-    remove_flags,
-    remove_name_value,
-    set_flags,
-    set_name_value_pairs,
-    upsert_name_value,
-)
+MOOSE input mutation of PETSc option strings is owned by
+``qpx_harness.adapters.moose.petsc_options``. This package retains only
+backend-level PETSc diagnostics and parsers.
+"""
 
-__all__ = [
-    "PetscOptionsError",
-    "add_flags",
-    "get_flags",
-    "get_name_value_pairs",
-    "remove_flags",
-    "remove_name_value",
-    "set_flags",
-    "set_name_value_pairs",
-    "upsert_name_value",
-]
+__all__: list[str] = []
