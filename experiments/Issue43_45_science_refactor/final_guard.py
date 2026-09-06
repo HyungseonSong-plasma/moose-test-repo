@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Static gate for canonicalized Issue43/Issue45 science ownership after #144."""
+"""Static gate for Issue43/Issue45 historical science characterization.
+
+Historical reproduction may exercise the remaining Issue45 realization while
+canonical plasma semantics live in generic species-constraint capabilities.
+Dedicated Issue45/D_mix CLI ownership is intentionally retired.
+"""
 from __future__ import annotations
 import ast, sys
 from pathlib import Path
@@ -10,6 +15,7 @@ from qpx_harness.petsc import ksp
 from qpx_harness.reasoning import diagnose_coupled_runtime_evidence
 from qpx_harness.reasoning.jacobian import diagnose_jacobian_evidence
 from qpx_harness.provenance.cases import QVT_PREPOISSON_CASE
+from qpx_harness.domains.plasma.species_constraints import SpeciesLinearConstraint, evaluate_species_constraint
 from qpx_harness.adapters.moose.electron_inventory import feedback_basis, closure_basis, first_linear
 from qpx_harness.analysis.electron_inventory.first_linear_runtime import analyze_first_linear_text
 
@@ -37,8 +43,11 @@ def main() -> int:
     assert callable(runtime_core_facts) and callable(extract_jacobian_evidence)
     assert callable(diagnose_coupled_runtime_evidence) and callable(diagnose_jacobian_evidence)
     cli_source=(ROOT/"qpx_harness/cli/app.py").read_text()
-    assert '"inventory-nullspace": "qpx_harness.cli.commands.inventory:inventory_main"' in cli_source
-    assert '"inventory-first-linear": "qpx_harness.cli.commands.inventory:first_linear_main"' in cli_source
+    assert "inventory-nullspace" not in cli_source
+    assert "inventory-first-linear" not in cli_source
+    assert "dmix-equivalence" not in cli_source
+    constraint=SpeciesLinearConstraint({"e": 1.0, "ion": -1.0}, target=0.0, absolute_tolerance=1e-12)
+    assert evaluate_species_constraint({"e": 2.0, "ion": 2.0}, constraint).satisfied
     rows=[{"iteration":0,"reported_residual":8e-3,"true_residual":8e-3,"relative_true_residual":1.0},{"iteration":30,"reported_residual":1e-12,"true_residual":2e-3,"relative_true_residual":2.5e-1}]
     audit=ksp.residual_fidelity_audit(rows,restart=30,ratio_threshold=1e6)
     assert audit["residual_fidelity_loss_observed"] is True
@@ -50,7 +59,8 @@ def main() -> int:
     assert 'restart_causality="NOT_ESTABLISHED"' in source
     print("ISSUE43_45_SHARED_CASE_IDENTITY: PASS")
     print("ISSUE43_CANONICAL_FEEDBACK_OWNERSHIP: PASS")
-    print("ISSUE45_CANONICAL_INVENTORY_OWNERSHIP: PASS")
+    print("ISSUE45_HISTORICAL_REALIZATION: PASS")
+    print("PARAMETERIZED_SPECIES_CONSTRAINT_SEMANTICS: PASS")
     print("ISSUE45_KSP_RESIDUAL_FIDELITY_AUDIT: PASS")
     print("ISSUE43_45_SCIENCE_REFACTOR_GUARD: PASS")
     return 0
