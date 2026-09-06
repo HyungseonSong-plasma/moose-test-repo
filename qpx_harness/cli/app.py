@@ -203,6 +203,7 @@ def internal_cli(target: str) -> int:
             [sys.executable, str(ROOT / "tools" / "qpx_experiment_gateway_guard.py")],
             [sys.executable, str(ROOT / "tools" / "qpx_plasma_semantic_residue_guard.py")],
             [sys.executable, str(ROOT / "tools" / "qpx_campaign_residue_guard.py")],
+            [sys.executable, str(ROOT / "tools" / "qpx_numerical_method_ownership_guard.py")],
             [sys.executable, str(ROOT / "tools" / "qpx_architecture_census.py")],
         ])
     if target in {"regression", "all"}:
