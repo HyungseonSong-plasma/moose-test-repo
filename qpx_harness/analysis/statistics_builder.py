@@ -7,30 +7,10 @@ diagnostics, ExecutionContract evaluation, and recipe policy remain outside.
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Mapping
+from collections.abc import Mapping
 from typing import Any
 
-from qpx_harness.evaluation.statistics import (
-    AccuracyStats,
-    CommonStats,
-    ConvergenceStats,
-    EfficiencyStats,
-    EnvironmentStats,
-    ErrorStats,
-    InvariantErrorStats,
-    MatrixBlockErrorStats,
-    MatrixEntryErrorStats,
-    MatrixErrorStats,
-    MemoryStats,
-    ProblemStats,
-    ReferenceErrorStats,
-    ResidualSample,
-    ScalingFactorStats,
-    SimulationStats,
-    SolverConfigStats,
-    SolverTerminationStats,
-    TimingStats,
-)
+from qpx_harness.evaluation.statistics import AccuracyStats, ConvergenceStats, SimulationStats
 
 from .metrics.efficiency import build_efficiency_stats
 from .metrics.convergence import build_convergence_stats
@@ -41,7 +21,6 @@ from .common import (
     build_common_stats,
     build_runtime_common_stats,
 )
-from .stats_builder_characterization import self_test
 
 
 def build_simulation_stats(
@@ -51,7 +30,6 @@ def build_simulation_stats(
     accuracy: AccuracyStats | None = None,
 ) -> SimulationStats:
     """Construct one SimulationStats while keeping policy and evidence separate."""
-
     return SimulationStats(
         common=build_common_stats(performance_record),
         efficiency=build_efficiency_stats(performance_record),
@@ -68,7 +46,6 @@ def build_runtime_simulation_stats(
     accuracy: AccuracyStats | None = None,
 ) -> SimulationStats:
     """Construct SimulationStats from the shared issue-runtime fact shape."""
-
     return SimulationStats(
         common=build_runtime_common_stats(runtime, case_id=case_id),
         efficiency=None,
@@ -77,5 +54,14 @@ def build_runtime_simulation_stats(
     )
 
 
-if __name__ == "__main__":
-    raise SystemExit(self_test())
+__all__ = [
+    "build_accuracy_stats",
+    "build_common_stats",
+    "build_convergence_stats",
+    "build_efficiency_stats",
+    "build_environment_stats",
+    "build_problem_stats",
+    "build_runtime_common_stats",
+    "build_runtime_simulation_stats",
+    "build_simulation_stats",
+]

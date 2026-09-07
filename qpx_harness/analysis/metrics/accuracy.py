@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping
 from typing import Any
 
-from .._coerce import optional_float, optional_int
+from ..coercion import optional_float, optional_int
 from ...evaluation.statistics import (
     AccuracyStats,
     ErrorStats,

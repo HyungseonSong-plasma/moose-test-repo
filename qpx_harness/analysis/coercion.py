@@ -45,10 +45,10 @@ def self_test() -> int:
         assert string_tuple(["u", 1, "v"]) == ("u", "v")
         assert string_tuple("uv") == ()
     except Exception as exc:
-        print(f"QPX_ANALYSIS_COERCE_SELFTEST: FAIL ({exc})")
+        print(f"QPX_ANALYSIS_COERCION_SELFTEST: FAIL ({exc})")
         return 1
 
-    print("QPX_ANALYSIS_COERCE_SELFTEST: PASS")
+    print("QPX_ANALYSIS_COERCION_SELFTEST: PASS")
     return 0
 
 
