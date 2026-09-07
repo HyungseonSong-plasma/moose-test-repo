@@ -7,7 +7,11 @@
 []
 
 [Variables]
-  [energy]
+  [n_e]
+    type = MooseVariableFVReal
+    initial_condition = 1.0
+  []
+  [n_epsilon]
     type = MooseVariableFVReal
     initial_condition = 1.0
   []
@@ -23,13 +27,19 @@
 [FunctorMaterials]
   [constants]
     type = ADGenericFunctorMaterial
-    prop_names = 'mean_en p T_g carrier_one'
-    prop_values = '5.0 101325.0 300.0 1.0'
+    prop_names = 'p T_g carrier_one'
+    prop_values = '101325.0 300.0 1.0'
+  []
+  [mean_energy_bridge]
+    type = QPXElectronMeanEnergyMaterial
+    electron_energy_density = n_epsilon
+    electron_density = n_e
+    energy_reference_eV = 5.73276
   []
   [electron_transport]
     type = QPXElectronTransportLookupMaterial
     property_table_file = electron_energy_transport_smoke_table.txt
-    mean_energy = mean_en
+    mean_energy = mean_en_solved
     pressure = p
     gas_temperature = T_g
     bounds_policy = error
@@ -37,18 +47,22 @@
 []
 
 [FVKernels]
+  [n_e_time]
+    type = FVTimeKernel
+    variable = n_e
+  []
   [energy_time]
     type = FVTimeKernel
-    variable = energy
+    variable = n_epsilon
   []
   [energy_diffusion]
     type = FVDiffusion
-    variable = energy
+    variable = n_epsilon
     coeff = electron_energy_diffusion
   []
   [energy_drift]
     type = QPXFVElectrostaticDrift
-    variable = energy
+    variable = n_epsilon
     potential = phi_zero
     mobility = electron_energy_mobility
     carrier = carrier_one
@@ -58,6 +72,11 @@
 []
 
 [Postprocessors]
+  [mean_en_solved_avg]
+    type = ElementAverageFunctorPostprocessor
+    functor = mean_en_solved
+    execute_on = 'INITIAL TIMESTEP_END'
+  []
   [electron_mobility_avg]
     type = ElementAverageFunctorPostprocessor
     functor = electron_mobility
