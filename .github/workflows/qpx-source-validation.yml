@@ -51,10 +51,20 @@ jobs:
           test -f qpx_app/ci/electron_energy_transport_smoke_table.txt
           test -f qpx_app/ci/electron_energy_joule_smoke.i
           test -f qpx_app/ci/electron_energy_wall_smoke.i
+          test -f qpx_app/include/materials/QPXElectronMeanEnergyMaterial.h
+          test -f qpx_app/src/materials/QPXElectronMeanEnergyMaterial.C
           test -f qpx_app/include/fvbcs/QPXFVElectronEnergyWallFluxBC.h
           test -f qpx_app/src/fvbcs/QPXFVElectronEnergyWallFluxBC.C
           test -f qpx_app/dependencies.lock
           test -f qpx_app/SOURCE_PROVENANCE.md
+
+          grep -Fq 'return _energy_reference_eV * n_epsilon_hat / n_e_hat;' qpx_app/src/materials/QPXElectronMeanEnergyMaterial.C
+          grep -Fq 'No denominator floor is applied.' qpx_app/src/materials/QPXElectronMeanEnergyMaterial.C
+          grep -Fq 'energy_reference_eV = 5.73276' qpx_app/ci/electron_energy_transport_smoke.i
+          grep -Fq 'mean_energy = mean_en_solved' qpx_app/ci/electron_energy_transport_smoke.i
+          grep -Fq 'bounds_policy = error' qpx_app/ci/electron_energy_transport_smoke.i
+          test "$(grep -Fc 'type = QPXElectronTransportLookupMaterial' qpx_app/ci/electron_energy_transport_smoke.i)" -eq 1
+          ! grep -Eq 'mean_energy[[:space:]]*=[[:space:]]*mean_en([[:space:]]|$)' qpx_app/ci/electron_energy_transport_smoke.i
 
           grep -Fq '(5.0 / 6.0)' qpx_app/src/fvbcs/QPXFVElectronEnergyWallFluxBC.C
           grep -Fq 'see_energy_eV = 4.0' qpx_app/src/fvbcs/QPXFVElectronEnergyWallFluxBC.C
@@ -177,6 +187,10 @@ jobs:
           echo "IMPLEMENTATION_AND_TEST_REVISION_SHARED=true"
           echo "QPX_SOURCE_CHANGE_USES_PRECOMPILED_BUILD_BASE=true"
           echo "QPX_CHECK_INPUT_SMOKE=PASS"
+          echo "ELECTRON_MEAN_ENERGY_BRIDGE_SOURCE=PASS"
+          echo "ELECTRON_TRANSPORT_LOOKUP_MEAN_ENERGY=mean_en_solved"
+          echo "ELECTRON_TRANSPORT_BOUNDS_POLICY=error"
+          echo "ELECTRON_TRANSPORT_LOOKUP_OWNER_COUNT=1"
           echo "ELECTRON_ENERGY_TRANSPORT_5_OVER_3=PASS"
           echo "ELECTRON_ENERGY_FULL_FLUX_JOULE=PASS"
           echo "ELECTRON_ENERGY_WALL_E4_E5=PASS"
