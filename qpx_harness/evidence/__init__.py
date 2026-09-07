@@ -10,7 +10,7 @@ from .artifacts import (
     summarize_checks,
     write_json_bundle,
 )
-from .errors import (
+from .error_ledger import (
     ERROR_LEDGER_SCHEMA_VERSION,
     Attribution,
     AttributionConfidence,

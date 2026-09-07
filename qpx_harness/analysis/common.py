@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from ._coerce import as_mapping, optional_float, optional_int, string_tuple
+from .coercion import as_mapping, optional_float, optional_int, string_tuple
 from ..evaluation.statistics import CommonStats, EnvironmentStats, ProblemStats
 
 

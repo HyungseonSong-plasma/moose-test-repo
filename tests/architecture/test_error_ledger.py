@@ -9,12 +9,12 @@ from qpx_harness.evidence import (
     create_collision_safe_directory,
     current_run_artifact,
 )
-from qpx_harness.evidence import artifacts, errors, identity
+from qpx_harness.evidence import artifacts, error_ledger, identity
 
 
 def test_canonical_evidence_modules_share_public_implementation():
-    assert ErrorLedger is errors.ErrorLedger
-    assert classify_attribution is errors.classify_attribution
+    assert ErrorLedger is error_ledger.ErrorLedger
+    assert classify_attribution is error_ledger.classify_attribution
     assert current_run_artifact is artifacts.current_run_artifact
     assert create_collision_safe_directory is identity.create_collision_safe_directory
 
