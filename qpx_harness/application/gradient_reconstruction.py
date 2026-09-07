@@ -28,7 +28,7 @@ def _method_contract(method: str) -> DynamicSchemaContract:
 
 def _derive(method: str, normalized: pl.DataFrame, *, radial_component: int) -> tuple[pl.DataFrame, pl.DataFrame]:
     if method == "green_gauss":
-        from qpx_harness.analysis.green_gauss import derive_cell_quantities, derive_face_quantities
+        from qpx_harness.analysis.gradient_reconstruction.green_gauss import derive_cell_quantities, derive_face_quantities
 
         face = derive_face_quantities(normalized)
         cell = derive_cell_quantities(normalized, radial_component=radial_component)
