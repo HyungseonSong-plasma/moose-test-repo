@@ -17,6 +17,16 @@
  *   mu_e = (mu_e N_n) / N_n
  *   D_e  = (D_e N_n) / N_n
  *
+ * Under the local-mean-energy Maxwellian approximation used by the accepted
+ * QPX/Hagelaar path, this same material also exposes
+ *
+ *   mu_epsilon = (5/3) mu_e
+ *   D_epsilon  = (5/3) D_e
+ *
+ * as `electron_energy_mobility` and `electron_energy_diffusion`.  Particle
+ * and energy transport therefore share one lookup coordinate, table owner,
+ * bounds policy, and neutral-density conversion.
+ *
  * N_n is neutral-gas number density, not the Avogadro constant.
  */
 class QPXElectronTransportLookupMaterial : public FunctorMaterial
