@@ -127,6 +127,11 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add qpx_app
-          git diff --cached --check
+          # Preserve historical source formatting byte-for-byte except for the two explicit
+          # initializer-order fixes. Check only newly authored canonical metadata here.
+          git diff --cached --check -- \
+            qpx_app/.gitignore \
+            qpx_app/dependencies.lock \
+            qpx_app/SOURCE_PROVENANCE.md
           git commit -m "source: import canonical QPX app tree for #165"
           git push origin HEAD:issue-165-canonical-qpx-source
