@@ -81,6 +81,15 @@ do
   copy_tree_to "$app_data" "$app_data"
 done
 
+# qpx-opt is linked against the application and test shared libraries produced
+# beside the canonical qpx_app source tree. They are not installed into a
+# system loader path during the source-build lane, so make their build layout
+# explicit for dependency discovery. ldd will then report those QPX-local
+# libraries together with their complete transitive MOOSE/PETSc dependencies.
+test -e /opt/qpx/lib/libqpx-opt.so.0
+test -e /opt/qpx/test/lib/libqpx_test-opt.so.0
+export LD_LIBRARY_PATH="/opt/qpx/test/lib:/opt/qpx/lib:${LD_LIBRARY_PATH:-}"
+
 # One ldd invocation on the final executable is sufficient for the ELF loader's
 # complete transitive NEEDED closure. The previous implementation ran ldd over
 # every vendor shared object and spent ~95 seconds collecting a much larger,
