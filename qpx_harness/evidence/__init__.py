@@ -33,10 +33,8 @@ from .identity import (
     sha256_file,
     utc_timestamp,
 )
-from .ingest import (
-    FAILURE_PATTERNS,
+from .normalization import (
     extract_jacobian_evidence,
-    failure_signature,
     first_failed_reason,
 )
 from .schema import (
@@ -70,7 +68,6 @@ __all__ = [
     "ErrorLedger",
     "EvidenceStore",
     "FACE_REQUIRED_COLUMNS",
-    "FAILURE_PATTERNS",
     "GREEN_GAUSS_FACE_CONTRACT",
     "ColumnRole",
     "ColumnSpec",
@@ -86,7 +83,6 @@ __all__ = [
     "ensure_fresh_directory",
     "error_fingerprint",
     "extract_jacobian_evidence",
-    "failure_signature",
     "first_failed_reason",
     "identity_record",
     "identity_stable",

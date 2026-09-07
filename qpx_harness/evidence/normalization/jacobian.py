@@ -13,7 +13,7 @@ def extract_jacobian_evidence(
 ) -> dict[str, Any]:
     """Summarize already-decoded Jacobian-comparison observations.
 
-    External solver parsers own raw text decoding.  This evidence owner accepts
+    External solver parsers own raw text decoding. This evidence owner accepts
     canonical comparison records only and deliberately contains no tolerance or
     PASS/HOLD policy.
     """
