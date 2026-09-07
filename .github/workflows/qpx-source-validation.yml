@@ -1,0 +1,158 @@
+name: QPX source TDD validation
+
+on:
+  push:
+    branches:
+      - development
+      - issue-165-canonical-qpx-source
+    paths:
+      - 'qpx_app/**'
+      - '.github/workflows/qpx-source-validation.yml'
+  pull_request:
+    branches:
+      - development
+    paths:
+      - 'qpx_app/**'
+      - '.github/workflows/qpx-source-validation.yml'
+
+concurrency:
+  group: qpx-source-validation-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: read
+
+env:
+  BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/qpx-build-base@sha256:910d406eb3574a918290dc3621df1133569907d6e7af7884f68abe257a9a1999
+  EXPECTED_MOOSE_SHA: 9f388366ccf38b9c34542ec5561198249fde0ac9
+  EXPECTED_CRANE_SHA: ba26970cf419dcac563a20ed7079d445bc6341c3
+  EXPECTED_SQUIRREL_SHA: 16a26d504f3ee11161a86d4e3ebf3c0e5f2afbb1
+  EXPECTED_ZAPDOS_SHA: 9eceffbc46048c3760bbfa9a7f1ca681ae35af1d
+
+jobs:
+  build-and-smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - name: Checkout implementation and tests at one revision
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 1
+
+      - name: Validate canonical QPX source contract
+        shell: bash
+        run: |
+          set -euxo pipefail
+          test -f qpx_app/Makefile
+          test -f qpx_app/src/main.C
+          test -f qpx_app/ci/smoke.i
+          test -f qpx_app/dependencies.lock
+          test -f qpx_app/SOURCE_PROVENANCE.md
+
+          source qpx_app/dependencies.lock
+          test "$MOOSE" = "$EXPECTED_MOOSE_SHA"
+          test "$CRANE" = "$EXPECTED_CRANE_SHA"
+          test "$SQUIRREL" = "$EXPECTED_SQUIRREL_SHA"
+          test "$ZAPDOS" = "$EXPECTED_ZAPDOS_SHA"
+          test "$QPX_BUILD_BASE" = "$BUILD_BASE_REF"
+
+          test ! -e qpx_app/qpx-opt
+          test ! -d qpx_app/build
+          test ! -d qpx_app/lib
+          test ! -d qpx_app/.libs
+          test ! -d qpx_app/.jitcache
+          test ! -d qpx_app/.pytest_cache
+
+          FORBIDDEN_TRACKED="$(git ls-files qpx_app | grep -E '(^|/)(qpx-opt|build/|lib/|\.libs/|\.jitcache/|\.pytest_cache/)|\.(o|lo|la|a|so)(\.|$)' || true)"
+          test -z "$FORBIDDEN_TRACKED"
+          echo QPX_CANONICAL_SOURCE_CONTRACT_PASS
+
+      - name: Log in to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Prepare runner disk for accepted build-base
+        shell: bash
+        run: |
+          set -euxo pipefail
+          target_kb=$((14 * 1024 * 1024))
+          free_kb() { df -Pk / | awk 'NR == 2 {print $4}'; }
+          df -h /
+          sudo apt-get clean || true
+          docker system prune -af --volumes || true
+          for path in \
+            /usr/local/lib/android \
+            /opt/ghc \
+            /usr/share/dotnet \
+            /usr/share/swift \
+            /usr/local/.ghcup
+          do
+            if (( $(free_kb) >= target_kb )); then
+              break
+            fi
+            sudo rm -rf "$path" || true
+          done
+          df -h /
+          test "$(free_kb)" -ge "$target_kb"
+
+      - name: Pull immutable precompiled QPX build base
+        shell: bash
+        run: |
+          set -euxo pipefail
+          docker pull "$BUILD_BASE_REF"
+          test "$(docker image inspect "$BUILD_BASE_REF" --format '{{index .RepoDigests 0}}' | sed 's/.*@//')" = "sha256:910d406eb3574a918290dc3621df1133569907d6e7af7884f68abe257a9a1999"
+
+      - name: Build canonical qpx_app and run real smoke
+        shell: bash
+        run: |
+          set -euxo pipefail
+          docker run --rm \
+            --entrypoint /bin/bash \
+            --user 0:0 \
+            --workdir /workspace/qpx_app \
+            -v "$PWD:/workspace" \
+            "$BUILD_BASE_REF" \
+            -lc '
+              set -euxo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              git config --global --add safe.directory /opt/qpx_vendor/moose
+              git config --global --add safe.directory /opt/qpx_vendor/crane
+              git config --global --add safe.directory /opt/qpx_vendor/squirrel
+              git config --global --add safe.directory /opt/qpx_vendor/zapdos
+
+              test "$(git rev-parse --show-toplevel)" = "/workspace"
+              test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
+
+              export MOOSE_DIR=/opt/qpx_vendor/moose
+              export CRANE_DIR=/opt/qpx_vendor/crane
+              export SQUIRREL_DIR=/opt/qpx_vendor/squirrel
+              export ZAPDOS_DIR=/opt/qpx_vendor/zapdos
+              export METHOD=opt
+
+              test ! -e ./qpx-opt
+              echo QPX_SOURCE_BUILD_COMMAND_STARTED
+              make -j2
+              test -x ./qpx-opt
+              ./qpx-opt --check-input -i ci/smoke.i
+              ./qpx-opt -i ci/smoke.i
+              echo QPX_SOURCE_BUILD_AND_REAL_SMOKE_PASS
+            '
+
+      - name: Assert source validation evidence
+        if: ${{ success() }}
+        shell: bash
+        run: |
+          set -euxo pipefail
+          test -x qpx_app/qpx-opt
+          echo "REPOSITORY_SHA=${GITHUB_SHA}"
+          echo "CANONICAL_QPX_SOURCE_OWNER=moose-test-repo/qpx_app"
+          echo "IMPLEMENTATION_AND_TEST_REVISION_SHARED=true"
+          echo "QPX_SOURCE_CHANGE_USES_PRECOMPILED_BUILD_BASE=true"
+          echo "QPX_CHECK_INPUT_SMOKE=PASS"
+          echo "BOUNDED_REAL_QPX_RUN=PASS"
+          echo "SCIENTIFIC_SEMANTICS_CHANGED=false"
