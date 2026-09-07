@@ -51,6 +51,7 @@ jobs:
           test -f qpx_app/ci/electron_energy_transport_smoke_table.txt
           test -f qpx_app/ci/electron_energy_lookup_response_smoke.i
           test -f qpx_app/ci/electron_energy_lookup_response_smoke_table.txt
+          test -f qpx_app/ci/check_electron_energy_lookup_response.py
           test -f qpx_app/ci/electron_energy_joule_smoke.i
           test -f qpx_app/ci/electron_energy_wall_smoke.i
           test -f qpx_app/include/materials/QPXElectronMeanEnergyMaterial.h
@@ -182,30 +183,7 @@ jobs:
                 ../qpx-opt -i electron_energy_wall_smoke.i
               )
               python3 -c "import csv, math; r=list(csv.DictReader(open(\"ci/electron_energy_transport_smoke_out.csv\")))[-1]; mu=float(r[\"electron_energy_mobility_avg\"])/float(r[\"electron_mobility_avg\"]); diff=float(r[\"electron_energy_diffusion_avg\"])/float(r[\"electron_diffusion_avg\"]); assert math.isclose(mu, 5.0/3.0, rel_tol=1.0e-12, abs_tol=0.0); assert math.isclose(diff, 5.0/3.0, rel_tol=1.0e-12, abs_tol=0.0); N=101325.0/(1.380649e-23*300.0); assert math.isclose(float(r[\"mean_en_solved_avg\"]),5.73276,rel_tol=1e-12); assert math.isclose(float(r[\"electron_mobility_avg\"]),1.0e24/N,rel_tol=1e-10); assert math.isclose(float(r[\"electron_diffusion_avg\"]),2.0e24/N,rel_tol=1e-10); print(\"QPX_ELECTRON_ENERGY_TRANSPORT_5_OVER_3_PASS\"); print(\"QPX_ELECTRON_TRANSPORT_CONSTANT_STATE_REGRESSION_PASS\")"
-              python3 - <<"PY"
-import csv, math
-files=[("low",0.5,"ci/electron_energy_lookup_response_low.csv"),("base",1.0,"ci/electron_energy_lookup_response_base.csv"),("high",1.5,"ci/electron_energy_lookup_response_high.csv")]
-N=101325.0/(1.380649e-23*300.0)
-eps=5.73276
-vals=[]
-for name,n_eps,path in files:
-    r=list(csv.DictReader(open(path)))[-1]
-    mean=float(r["mean_en_solved_avg"])
-    mu=float(r["electron_mobility_avg"])
-    diff=float(r["electron_diffusion_avg"])
-    expected_mean=eps*n_eps
-    red_mu=1.0e24+(expected_mean-1.0)*(3.0e24/9.0)
-    red_diff=2.0e24+(expected_mean-1.0)*(6.0e24/9.0)
-    assert math.isclose(mean,expected_mean,rel_tol=1e-11,abs_tol=1e-12),(name,mean,expected_mean)
-    assert math.isclose(mu,red_mu/N,rel_tol=1e-9,abs_tol=0.0),(name,mu,red_mu/N)
-    assert math.isclose(diff,red_diff/N,rel_tol=1e-9,abs_tol=0.0),(name,diff,red_diff/N)
-    vals.append((mean,mu,diff))
-assert vals[0][0] < vals[1][0] < vals[2][0]
-assert vals[0][1] < vals[1][1] < vals[2][1]
-assert vals[0][2] < vals[1][2] < vals[2][2]
-print("QPX_ELECTRON_SOLVED_MEAN_ENERGY_REACHES_LOOKUP_PASS")
-print("QPX_ELECTRON_TRANSPORT_RESPONSE_DISCRIMINATOR_PASS")
-PY
+              python3 ci/check_electron_energy_lookup_response.py
               python3 -c "import csv, math; rows=list(csv.DictReader(open(\"ci/electron_energy_joule_smoke_out.csv\"))); i=rows[0]; f=rows[-1]; dt=1.0e-6; E=100.0; grad_n=0.5; n_avg=1.25; eps=5.0; mu=float(f[\"electron_mobility_avg\"]); D=float(f[\"electron_diffusion_avg\"]); drift=mu*n_avg*E*E/eps*dt; diff=D*E*grad_n/eps*dt; md=float(f[\"energy_drift_avg\"])-float(i[\"energy_drift_avg\"]); mp=float(f[\"energy_plus_avg\"])-float(i[\"energy_plus_avg\"]); mm=float(f[\"energy_minus_avg\"])-float(i[\"energy_minus_avg\"]); close=lambda a,b: math.isclose(a,b,rel_tol=1.0e-9,abs_tol=1.0e-12); assert close(md,drift), (md,drift); assert close(mp,drift+diff), (mp,drift+diff); assert close(mm,drift-diff), (mm,drift-diff); assert close((mp+mm)/2.0,drift), ((mp+mm)/2.0,drift); assert close(mp-mm,2.0*diff), (mp-mm,2.0*diff); print(\"QPX_ELECTRON_ENERGY_FULL_FLUX_JOULE_PASS\")"
               python3 -c "import csv, math; rows=list(csv.DictReader(open(\"ci/electron_energy_wall_smoke_out.csv\"))); f=rows[-1]; dt=1.0e-8; mean_en=5.0; eps=5.0; see=100000.0; e=1.602176634e-19; me=9.1093837139e-31; v=math.sqrt(8.0*e*mean_en/(3.0*math.pi*me)); a=(5.0/6.0)*v; b=(4.0/eps)*see; expected_thermal=1.0/(1.0+dt*a); expected_see=(1.0+dt*b)/(1.0+dt*a); actual_thermal=float(f[\"energy_thermal_avg\"]); actual_see=float(f[\"energy_see_avg\"]); close=lambda x,y: math.isclose(x,y,rel_tol=2.0e-8,abs_tol=1.0e-11); assert close(actual_thermal,expected_thermal),(actual_thermal,expected_thermal); assert close(actual_see,expected_see),(actual_see,expected_see); assert actual_thermal < 1.0; assert actual_see > actual_thermal; print(\"QPX_ELECTRON_ENERGY_WALL_E4_E5_PASS\")"
               echo QPX_SOURCE_BUILD_AND_REAL_SMOKE_PASS
