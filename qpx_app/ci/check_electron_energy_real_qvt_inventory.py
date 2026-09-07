@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Validate the #26 P5/E7 bounded real-QVT chemistry-OFF integration oracle."""
 
+# Stage 5 exact-head validation marker only; no scientific or numerical semantics change.
+
 from __future__ import annotations
 
 import csv
