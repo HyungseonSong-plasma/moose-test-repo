@@ -38,7 +38,7 @@
   []
   [electron_transport]
     type = QPXElectronTransportLookupMaterial
-    property_table_file = electron_energy_transport_smoke_table.txt
+    property_table_file = electron_energy_lookup_response_smoke_table.txt
     mean_energy = mean_en_solved
     pressure = p
     gas_temperature = T_g
@@ -82,19 +82,9 @@
     functor = electron_mobility
     execute_on = 'INITIAL TIMESTEP_END'
   []
-  [electron_energy_mobility_avg]
-    type = ElementAverageFunctorPostprocessor
-    functor = electron_energy_mobility
-    execute_on = 'INITIAL TIMESTEP_END'
-  []
   [electron_diffusion_avg]
     type = ElementAverageFunctorPostprocessor
     functor = electron_diffusion
-    execute_on = 'INITIAL TIMESTEP_END'
-  []
-  [electron_energy_diffusion_avg]
-    type = ElementAverageFunctorPostprocessor
-    functor = electron_energy_diffusion
     execute_on = 'INITIAL TIMESTEP_END'
   []
 []
