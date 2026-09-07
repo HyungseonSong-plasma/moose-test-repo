@@ -97,6 +97,7 @@ jobs:
             --entrypoint /bin/bash \
             --user 0:0 \
             --workdir /workspace/qpx_app \
+            -e GITHUB_SHA="$GITHUB_SHA" \
             -v "$PWD:/workspace" \
             "$BUILD_BASE_REF" \
             -lc '
