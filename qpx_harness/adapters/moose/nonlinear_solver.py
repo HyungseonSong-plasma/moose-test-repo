@@ -3,11 +3,38 @@ from __future__ import annotations
 
 import math
 from pathlib import Path
+import re
 from typing import Any, Iterable, Mapping
 
 from . import log as moose_log
 from qpx_harness.adapters.petsc import log as petsc_log
-from qpx_harness.evidence.ingest.nonlinear_solver import failure_signature
+
+
+FAILURE_PATTERNS = (
+    ("DIVERGED_MAX_IT", r"DIVERGED_MAX_IT(?:\s+iterations\s+(\d+))?"),
+    ("DIVERGED_LINE_SEARCH", r"DIVERGED_LINE_SEARCH"),
+    ("DIVERGED_FNORM_NAN", r"DIVERGED_FNORM_NAN|NaN"),
+    (
+        "NONLINEAR_DID_NOT_CONVERGE",
+        r"Nonlinear solve did not converge|Solve Did NOT Converge",
+    ),
+)
+
+
+def failure_signature(text: str) -> dict[str, Any]:
+    """Extract the first stable MOOSE/PETSc nonlinear-failure signature."""
+    for name, pattern in FAILURE_PATTERNS:
+        match = re.search(pattern, text, re.IGNORECASE)
+        if not match:
+            continue
+        iterations = None
+        if match.lastindex and match.group(1):
+            try:
+                iterations = int(match.group(1))
+            except ValueError:
+                pass
+        return {"signature": name, "iterations": iterations}
+    return {"signature": None, "iterations": None}
 
 
 def artifact_failure_signature(result: Mapping[str, Any] | None) -> dict[str, Any]:
@@ -60,4 +87,10 @@ def runtime_core_facts(text: str, *, returncode: int, coupled_scaling_variables:
         "scaling_factor_ratio": ratio,
     }
 
-__all__ = ["artifact_failure_signature", "runtime_core_facts"]
+
+__all__ = [
+    "FAILURE_PATTERNS",
+    "artifact_failure_signature",
+    "failure_signature",
+    "runtime_core_facts",
+]

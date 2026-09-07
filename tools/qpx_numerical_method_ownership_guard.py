@@ -29,7 +29,7 @@ def main() -> int:
     if "analyze_gradient_reconstruction" not in app_surface:
         failures.append("canonical gradient-reconstruction application owner missing")
 
-    jacobian_evidence = text("qpx_harness/evidence/ingest/jacobian.py")
+    jacobian_evidence = text("qpx_harness/evidence/normalization/jacobian.py")
     if "petsc" in jacobian_evidence.lower(): failures.append("generic Jacobian evidence depends on or names concrete PETSc decoding")
     if "qpx_harness.diagnose" in jacobian_evidence: failures.append("stale diagnose namespace remains in Jacobian evidence")
 

@@ -9,10 +9,9 @@ from pathlib import Path
 from typing import Any
 
 from experiments.Issue91_real_qvt_r3 import run as issue91_run
-from qpx_harness.adapters.moose.nonlinear_solver import runtime_core_facts
+from qpx_harness.adapters.moose.nonlinear_solver import failure_signature, runtime_core_facts
 from qpx_harness.evidence import (
     create_collision_safe_directory,
-    failure_signature,
     utc_timestamp,
     write_json_bundle,
 )

@@ -12,10 +12,9 @@ from pathlib import Path
 from typing import Any
 
 from experiments.Issue93_r3_electron_isolation.run import _electron_residuals
-from qpx_harness.adapters.moose.nonlinear_solver import runtime_core_facts
+from qpx_harness.adapters.moose.nonlinear_solver import failure_signature, runtime_core_facts
 from qpx_harness.evidence import (
     create_collision_safe_directory,
-    failure_signature,
     utc_timestamp,
     write_json_bundle,
 )
