@@ -50,8 +50,15 @@ jobs:
           test -f qpx_app/ci/electron_energy_transport_smoke.i
           test -f qpx_app/ci/electron_energy_transport_smoke_table.txt
           test -f qpx_app/ci/electron_energy_joule_smoke.i
+          test -f qpx_app/ci/electron_energy_wall_smoke.i
+          test -f qpx_app/include/fvbcs/QPXFVElectronEnergyWallFluxBC.h
+          test -f qpx_app/src/fvbcs/QPXFVElectronEnergyWallFluxBC.C
           test -f qpx_app/dependencies.lock
           test -f qpx_app/SOURCE_PROVENANCE.md
+
+          grep -Fq '(5.0 / 6.0)' qpx_app/src/fvbcs/QPXFVElectronEnergyWallFluxBC.C
+          grep -Fq 'see_energy_eV = 4.0' qpx_app/src/fvbcs/QPXFVElectronEnergyWallFluxBC.C
+          ! grep -Fq 'absorbingNumberFlux' qpx_app/src/fvbcs/QPXFVElectronEnergyWallFluxBC.C
 
           source qpx_app/dependencies.lock
           test "$MOOSE" = "$EXPECTED_MOOSE_SHA"
@@ -150,9 +157,12 @@ jobs:
                 ../qpx-opt -i electron_energy_transport_smoke.i
                 ../qpx-opt --check-input -i electron_energy_joule_smoke.i
                 ../qpx-opt -i electron_energy_joule_smoke.i
+                ../qpx-opt --check-input -i electron_energy_wall_smoke.i
+                ../qpx-opt -i electron_energy_wall_smoke.i
               )
               python3 -c "import csv, math; r=list(csv.DictReader(open(\"ci/electron_energy_transport_smoke_out.csv\")))[-1]; mu=float(r[\"electron_energy_mobility_avg\"])/float(r[\"electron_mobility_avg\"]); diff=float(r[\"electron_energy_diffusion_avg\"])/float(r[\"electron_diffusion_avg\"]); assert math.isclose(mu, 5.0/3.0, rel_tol=1.0e-12, abs_tol=0.0); assert math.isclose(diff, 5.0/3.0, rel_tol=1.0e-12, abs_tol=0.0); print(\"QPX_ELECTRON_ENERGY_TRANSPORT_5_OVER_3_PASS\")"
               python3 -c "import csv, math; rows=list(csv.DictReader(open(\"ci/electron_energy_joule_smoke_out.csv\"))); i=rows[0]; f=rows[-1]; dt=1.0e-6; E=100.0; grad_n=0.5; n_avg=1.25; eps=5.0; mu=float(f[\"electron_mobility_avg\"]); D=float(f[\"electron_diffusion_avg\"]); drift=mu*n_avg*E*E/eps*dt; diff=D*E*grad_n/eps*dt; md=float(f[\"energy_drift_avg\"])-float(i[\"energy_drift_avg\"]); mp=float(f[\"energy_plus_avg\"])-float(i[\"energy_plus_avg\"]); mm=float(f[\"energy_minus_avg\"])-float(i[\"energy_minus_avg\"]); close=lambda a,b: math.isclose(a,b,rel_tol=1.0e-9,abs_tol=1.0e-12); assert close(md,drift), (md,drift); assert close(mp,drift+diff), (mp,drift+diff); assert close(mm,drift-diff), (mm,drift-diff); assert close((mp+mm)/2.0,drift), ((mp+mm)/2.0,drift); assert close(mp-mm,2.0*diff), (mp-mm,2.0*diff); print(\"QPX_ELECTRON_ENERGY_FULL_FLUX_JOULE_PASS\")"
+              python3 -c "import csv, math; rows=list(csv.DictReader(open(\"ci/electron_energy_wall_smoke_out.csv\"))); f=rows[-1]; dt=1.0e-8; mean_en=5.0; eps=5.0; see=100000.0; e=1.602176634e-19; me=9.1093837139e-31; v=math.sqrt(8.0*e*mean_en/(3.0*math.pi*me)); a=(5.0/6.0)*v; b=(4.0/eps)*see; expected_thermal=1.0/(1.0+dt*a); expected_see=(1.0+dt*b)/(1.0+dt*a); actual_thermal=float(f[\"energy_thermal_avg\"]); actual_see=float(f[\"energy_see_avg\"]); close=lambda x,y: math.isclose(x,y,rel_tol=2.0e-8,abs_tol=1.0e-11); assert close(actual_thermal,expected_thermal),(actual_thermal,expected_thermal); assert close(actual_see,expected_see),(actual_see,expected_see); assert actual_thermal < 1.0; assert actual_see > actual_thermal; print(\"QPX_ELECTRON_ENERGY_WALL_E4_E5_PASS\")"
               echo QPX_SOURCE_BUILD_AND_REAL_SMOKE_PASS
             '
 
@@ -169,5 +179,7 @@ jobs:
           echo "QPX_CHECK_INPUT_SMOKE=PASS"
           echo "ELECTRON_ENERGY_TRANSPORT_5_OVER_3=PASS"
           echo "ELECTRON_ENERGY_FULL_FLUX_JOULE=PASS"
+          echo "ELECTRON_ENERGY_WALL_E4_E5=PASS"
+          echo "ELECTRON_ENERGY_WALL_ABSORBING_HELPER_REUSED=false"
           echo "BOUNDED_REAL_QPX_RUN=PASS"
           echo "SCIENTIFIC_SEMANTICS_CHANGED=false"
