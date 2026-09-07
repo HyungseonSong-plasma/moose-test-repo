@@ -1,5 +1,7 @@
 #include "QPXElectronMeanEnergyMaterial.h"
 
+#include <cmath>
+
 registerMooseObject("qpxApp", QPXElectronMeanEnergyMaterial);
 
 InputParameters
@@ -33,8 +35,8 @@ QPXElectronMeanEnergyMaterial::QPXElectronMeanEnergyMaterial(
     _electron_density(getFunctor<ADReal>("electron_density")),
     _energy_reference_eV(getParam<Real>("energy_reference_eV"))
 {
-  if (_energy_reference_eV <= 0.0)
-    paramError("energy_reference_eV", "Electron-energy normalization scale must be positive.");
+  if (!std::isfinite(_energy_reference_eV) || _energy_reference_eV <= 0.0)
+    paramError("energy_reference_eV", "Electron-energy normalization scale must be finite and positive.");
 
   addFunctorProperty<ADReal>(
       "mean_en_solved",
@@ -43,11 +45,23 @@ QPXElectronMeanEnergyMaterial::QPXElectronMeanEnergyMaterial(
         const ADReal n_epsilon_hat = _electron_energy_density(r, state);
         const ADReal n_e_hat = _electron_density(r, state);
 
+        if (!std::isfinite(n_e_hat.value()))
+          mooseError(
+              "QPXElectronMeanEnergyMaterial requires finite n_e_hat; got ",
+              n_e_hat.value(),
+              ".");
+
         if (n_e_hat.value() <= 0.0)
           mooseError(
               "QPXElectronMeanEnergyMaterial requires n_e_hat > 0; got ",
               n_e_hat.value(),
               ". No denominator floor is applied.");
+
+        if (!std::isfinite(n_epsilon_hat.value()))
+          mooseError(
+              "QPXElectronMeanEnergyMaterial requires finite n_epsilon_hat; got ",
+              n_epsilon_hat.value(),
+              ".");
 
         if (n_epsilon_hat.value() < 0.0)
           mooseError(
@@ -55,6 +69,15 @@ QPXElectronMeanEnergyMaterial::QPXElectronMeanEnergyMaterial(
               n_epsilon_hat.value(),
               ".");
 
-        return _energy_reference_eV * n_epsilon_hat / n_e_hat;
+        const ADReal mean_en_solved =
+            _energy_reference_eV * n_epsilon_hat / n_e_hat;
+
+        if (!std::isfinite(mean_en_solved.value()))
+          mooseError(
+              "QPXElectronMeanEnergyMaterial requires finite mean_en_solved; got ",
+              mean_en_solved.value(),
+              " eV. No clamp is applied.");
+
+        return mean_en_solved;
       });
 }
