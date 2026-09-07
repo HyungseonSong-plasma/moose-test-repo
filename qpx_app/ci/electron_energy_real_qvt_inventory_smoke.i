@@ -10,6 +10,12 @@
     type = FileMeshGenerator
     file = '../../experiments/Issue91_real_qvt_r3/r3_e0/qvt.msh'
   []
+  [plasma_only]
+    type = BlockDeletionGenerator
+    input = main
+    operation = keep
+    block = plasma
+  []
 []
 
 [Variables]
