@@ -60,9 +60,15 @@ jobs:
           test -f qpx_app/src/fvbcs/QPXFVElectronEnergyWallFluxBC.C
           test -f qpx_app/dependencies.lock
           test -f qpx_app/SOURCE_PROVENANCE.md
+          test -f experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt
 
-          grep -Fq 'return _energy_reference_eV * n_epsilon_hat / n_e_hat;' qpx_app/src/materials/QPXElectronMeanEnergyMaterial.C
+          grep -Fq 'const ADReal mean_en_solved =' qpx_app/src/materials/QPXElectronMeanEnergyMaterial.C
+          grep -Fq '_energy_reference_eV * n_epsilon_hat / n_e_hat;' qpx_app/src/materials/QPXElectronMeanEnergyMaterial.C
+          grep -Fq 'std::isfinite(n_e_hat.value())' qpx_app/src/materials/QPXElectronMeanEnergyMaterial.C
+          grep -Fq 'std::isfinite(n_epsilon_hat.value())' qpx_app/src/materials/QPXElectronMeanEnergyMaterial.C
+          grep -Fq 'std::isfinite(mean_en_solved.value())' qpx_app/src/materials/QPXElectronMeanEnergyMaterial.C
           grep -Fq 'No denominator floor is applied.' qpx_app/src/materials/QPXElectronMeanEnergyMaterial.C
+          grep -Fq 'No clamp is applied.' qpx_app/src/materials/QPXElectronMeanEnergyMaterial.C
           grep -Fq 'energy_reference_eV = 5.73276' qpx_app/ci/electron_energy_transport_smoke.i
           grep -Fq 'mean_energy = mean_en_solved' qpx_app/ci/electron_energy_transport_smoke.i
           grep -Fq 'bounds_policy = error' qpx_app/ci/electron_energy_transport_smoke.i
@@ -70,6 +76,9 @@ jobs:
           ! grep -Eq 'mean_energy[[:space:]]*=[[:space:]]*mean_en([[:space:]]|$)' qpx_app/ci/electron_energy_transport_smoke.i
           grep -Fq 'mean_energy = mean_en_solved' qpx_app/ci/electron_energy_lookup_response_smoke.i
           grep -Fq 'bounds_policy = error' qpx_app/ci/electron_energy_lookup_response_smoke.i
+
+          test "$(awk 'NR == 1 {print $1}' experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt)" = "1.40991"
+          test "$(awk 'END {print $1}' experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt)" = "22.1378"
 
           grep -Fq '(5.0 / 6.0)' qpx_app/src/fvbcs/QPXFVElectronEnergyWallFluxBC.C
           grep -Fq 'see_energy_eV = 4.0' qpx_app/src/fvbcs/QPXFVElectronEnergyWallFluxBC.C
@@ -177,6 +186,45 @@ jobs:
                 mv electron_energy_lookup_response_smoke_out.csv electron_energy_lookup_response_base.csv
                 ../qpx-opt -i electron_energy_lookup_response_smoke.i Variables/n_epsilon/initial_condition=1.5
                 mv electron_energy_lookup_response_smoke_out.csv electron_energy_lookup_response_high.csv
+
+                REAL_QVT_TABLE=../../experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt
+                LOWER_HAT=0.2459391287966006
+                UPPER_HAT=3.8616303490814197
+                BELOW_HAT=0.245937384436118
+                ABOVE_HAT=3.861632093441902
+
+                ../qpx-opt -i electron_energy_lookup_response_smoke.i FunctorMaterials/electron_transport/property_table_file="$REAL_QVT_TABLE" Variables/n_epsilon/initial_condition="$LOWER_HAT"
+                python3 -c "import csv, math; r=list(csv.DictReader(open(\"electron_energy_lookup_response_smoke_out.csv\")))[-1]; assert math.isclose(float(r[\"mean_en_solved_avg\"]),1.40991,rel_tol=1e-12,abs_tol=1e-12); print(\"QPX_ELECTRON_MEAN_ENERGY_LOWER_BOUND_PASS\")"
+
+                ../qpx-opt -i electron_energy_lookup_response_smoke.i FunctorMaterials/electron_transport/property_table_file="$REAL_QVT_TABLE" Variables/n_epsilon/initial_condition="$UPPER_HAT"
+                python3 -c "import csv, math; r=list(csv.DictReader(open(\"electron_energy_lookup_response_smoke_out.csv\")))[-1]; assert math.isclose(float(r[\"mean_en_solved_avg\"]),22.1378,rel_tol=1e-12,abs_tol=1e-12); print(\"QPX_ELECTRON_MEAN_ENERGY_UPPER_BOUND_PASS\")"
+
+                if ../qpx-opt -i electron_energy_lookup_response_smoke.i FunctorMaterials/electron_transport/property_table_file="$REAL_QVT_TABLE" Variables/n_epsilon/initial_condition="$BELOW_HAT" > electron_energy_below_bound.log 2>&1; then
+                  echo "Expected below-table mean-energy failure did not occur" >&2
+                  exit 1
+                fi
+                grep -Fq "below the lookup-table minimum 1.40991 eV" electron_energy_below_bound.log
+
+                if ../qpx-opt -i electron_energy_lookup_response_smoke.i FunctorMaterials/electron_transport/property_table_file="$REAL_QVT_TABLE" Variables/n_epsilon/initial_condition="$ABOVE_HAT" > electron_energy_above_bound.log 2>&1; then
+                  echo "Expected above-table mean-energy failure did not occur" >&2
+                  exit 1
+                fi
+                grep -Fq "above the lookup-table maximum 22.1378 eV" electron_energy_above_bound.log
+
+                if ../qpx-opt -i electron_energy_lookup_response_smoke.i Variables/n_e/initial_condition=0.0 > electron_energy_zero_density.log 2>&1; then
+                  echo "Expected n_e_hat <= 0 failure did not occur" >&2
+                  exit 1
+                fi
+                grep -Fq "requires n_e_hat > 0" electron_energy_zero_density.log
+
+                if ../qpx-opt -i electron_energy_lookup_response_smoke.i Variables/n_epsilon/initial_condition=-0.1 > electron_energy_negative_energy.log 2>&1; then
+                  echo "Expected n_epsilon_hat < 0 failure did not occur" >&2
+                  exit 1
+                fi
+                grep -Fq "requires n_epsilon_hat >= 0" electron_energy_negative_energy.log
+
+                echo QPX_ELECTRON_MEAN_ENERGY_REAL_TABLE_INVARIANTS_PASS
+
                 ../qpx-opt --check-input -i electron_energy_joule_smoke.i
                 ../qpx-opt -i electron_energy_joule_smoke.i
                 ../qpx-opt --check-input -i electron_energy_wall_smoke.i
@@ -201,12 +249,17 @@ jobs:
           echo "QPX_SOURCE_CHANGE_USES_PRECOMPILED_BUILD_BASE=true"
           echo "QPX_CHECK_INPUT_SMOKE=PASS"
           echo "ELECTRON_MEAN_ENERGY_BRIDGE_SOURCE=PASS"
+          echo "ELECTRON_MEAN_ENERGY_FINITE_GUARDS=PASS"
           echo "ELECTRON_TRANSPORT_LOOKUP_MEAN_ENERGY=mean_en_solved"
           echo "ELECTRON_TRANSPORT_BOUNDS_POLICY=error"
           echo "ELECTRON_TRANSPORT_LOOKUP_OWNER_COUNT=1"
           echo "ELECTRON_TRANSPORT_CONSTANT_STATE_REGRESSION=PASS"
           echo "ELECTRON_SOLVED_MEAN_ENERGY_REACHES_LOOKUP=PASS"
           echo "ELECTRON_TRANSPORT_RESPONSE_DISCRIMINATOR=PASS"
+          echo "ELECTRON_MEAN_ENERGY_REAL_TABLE_RANGE=1.40991..22.1378_eV"
+          echo "ELECTRON_MEAN_ENERGY_REAL_TABLE_BOUNDARIES=PASS"
+          echo "ELECTRON_MEAN_ENERGY_POSITIVITY_REJECTION=PASS"
+          echo "ELECTRON_MEAN_ENERGY_OUT_OF_RANGE_REJECTION=PASS"
           echo "ELECTRON_ENERGY_TRANSPORT_5_OVER_3=PASS"
           echo "ELECTRON_ENERGY_FULL_FLUX_JOULE=PASS"
           echo "ELECTRON_ENERGY_WALL_E4_E5=PASS"
