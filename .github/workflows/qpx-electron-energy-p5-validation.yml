@@ -63,6 +63,10 @@ jobs:
 
           grep -Fq 'coord_type = RZ' "$INPUT"
           grep -Fq "qvt.msh'" "$INPUT"
+          grep -Fq 'type = BlockDeletionGenerator' "$INPUT"
+          grep -Fq 'input = main' "$INPUT"
+          grep -Fq 'operation = keep' "$INPUT"
+          grep -Fq 'block = plasma' "$INPUT"
           grep -Fq "electron_moments.txt'" "$INPUT"
           grep -Fq 'type = QPXElectronMeanEnergyMaterial' "$INPUT"
           grep -Fq 'energy_reference_eV = 5.73276' "$INPUT"
