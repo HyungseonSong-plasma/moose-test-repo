@@ -11,8 +11,6 @@ from .diagnosis import DiagnosisReport
 from .evaluator import evaluate_diagnostic_rules
 from .rules import MetricPredicate, ReasoningRule, RuleSet
 
-SUPPORTED_RECONSTRUCTION_METHODS = frozenset({"green_gauss"})
-
 
 class ReconstructionTolerances(BaseModel):
     """Validated absolute tolerances for constant-state reconstruction checks."""
@@ -24,14 +22,6 @@ class ReconstructionTolerances(BaseModel):
     surface_closure_abs: float = Field(default=1.0e-14, ge=0.0)
     gradient_match_abs: float = Field(default=1.0e-12, ge=0.0)
     runtime_gradient_abs: float = Field(default=1.0e-12, ge=0.0)
-
-
-def _validate_method(method: str) -> None:
-    if method not in SUPPORTED_RECONSTRUCTION_METHODS:
-        raise ValueError(
-            f"unsupported gradient-reconstruction method {method!r}; "
-            f"expected one of {sorted(SUPPORTED_RECONSTRUCTION_METHODS)}"
-        )
 
 
 def build_constant_state_metrics() -> dict[str, DiagnosticMetricSpec]:
@@ -68,7 +58,6 @@ def build_constant_state_ruleset(
     method: str,
     tolerances: ReconstructionTolerances | None = None,
 ) -> RuleSet:
-    _validate_method(method)
     tol = tolerances or ReconstructionTolerances()
     rules = [
         ReasoningRule(
@@ -159,7 +148,7 @@ def summarize_constant_state(
 
 
 __all__ = [
-    "ReconstructionTolerances", "SUPPORTED_RECONSTRUCTION_METHODS",
+    "ReconstructionTolerances",
     "build_constant_state_metrics", "build_constant_state_ruleset",
     "summarize_constant_state", "summarize_constant_state_report",
 ]
