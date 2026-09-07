@@ -10,6 +10,7 @@ on:
       - issue-128-retire-issue-namespaces
       - issue-129-root-surface-cleanup
       - 'issue-154-*'
+      - 'issue-156-*'
       - review/development-semantic-architecture
   workflow_dispatch:
 
