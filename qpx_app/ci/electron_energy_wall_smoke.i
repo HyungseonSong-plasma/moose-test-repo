@@ -20,7 +20,7 @@
 [FunctorMaterials]
   [wall_contract]
     type = ADGenericFunctorMaterial
-    prop_names = 'mean_en zero_see finite_see'
+    prop_names = 'mean_en zero_flux finite_see'
     prop_values = '5.0 0.0 100000.0'
   []
 []
@@ -30,9 +30,19 @@
     type = FVTimeKernel
     variable = energy_thermal
   []
+  [thermal_face_driver]
+    type = FVDiffusion
+    variable = energy_thermal
+    coeff = zero_flux
+  []
   [see_time]
     type = FVTimeKernel
     variable = energy_see
+  []
+  [see_face_driver]
+    type = FVDiffusion
+    variable = energy_see
+    coeff = zero_flux
   []
 []
 
@@ -43,7 +53,7 @@
     boundary = right
     electron_energy_density = energy_thermal
     mean_electron_energy = mean_en
-    see_number_flux = zero_see
+    see_number_flux = zero_flux
     energy_reference_eV = 5.0
   []
   [see_wall]
