@@ -1,0 +1,198 @@
+{
+  "schema_version": 1,
+  "work": {
+    "parent_issue": 17,
+    "execution_issue": 176,
+    "stage": "Stage 1 / R0",
+    "baseline_sha": "a16c53f318017cb169dd07a3ecef1888b69342a2",
+    "working_branch": "development",
+    "status": "AUDIT_IN_PROGRESS"
+  },
+  "canonical_contract": {
+    "internal_reaction_progress_unit": "mol/(m^3 s)",
+    "heavy_mass_source_unit": "kg/(m^3 s)",
+    "species_number_source_unit": "1/(m^3 s)",
+    "rate_is_computed_once_per_reaction": true,
+    "constrained_species": "O2",
+    "constraint": "w_O2 = 1 - (w_O2s + w_O2p + w_O + w_Om + w_Op + w_Os)",
+    "electron_mean_energy": "mean_en_solved = epsilon_ref * n_epsilon_hat / n_e_hat",
+    "epsilon_ref_eV": 5.73276,
+    "lookup_bounds_eV": [1.40991, 22.1378]
+  },
+  "species": [
+    {"id": "e", "solver_id": "n_e_hat", "kind": "electron", "molar_mass_kg_per_mol": 0.0, "charge": -1, "oxygen_atoms": 0},
+    {"id": "O2", "solver_id": "O2", "kind": "heavy_constrained", "molar_mass_kg_per_mol": 0.032, "charge": 0, "oxygen_atoms": 2},
+    {"id": "O2s", "solver_id": "O2s", "kind": "heavy", "physical_identity": "O2(a1Delta_g)", "molar_mass_kg_per_mol": 0.032, "charge": 0, "oxygen_atoms": 2},
+    {"id": "O2p", "solver_id": "O2p", "kind": "heavy", "physical_identity": "O2+", "molar_mass_kg_per_mol": 0.032, "charge": 1, "oxygen_atoms": 2},
+    {"id": "O", "solver_id": "O", "kind": "heavy", "molar_mass_kg_per_mol": 0.016, "charge": 0, "oxygen_atoms": 1},
+    {"id": "Om", "solver_id": "Om", "kind": "heavy", "physical_identity": "O-", "molar_mass_kg_per_mol": 0.016, "charge": -1, "oxygen_atoms": 1},
+    {"id": "Op", "solver_id": "Op", "kind": "heavy", "physical_identity": "O+", "molar_mass_kg_per_mol": 0.016, "charge": 1, "oxygen_atoms": 1},
+    {"id": "Os", "solver_id": "Os", "kind": "heavy", "physical_identity": "O(1D)", "molar_mass_kg_per_mol": 0.016, "charge": 0, "oxygen_atoms": 1}
+  ],
+  "electron_impact_reactions": [
+    {
+      "id": "EI01_O2_ATTACHMENT",
+      "formula": "e + O2 -> O + Om",
+      "reactants": {"e": 1.0, "O2": 1.0},
+      "products": {"O": 1.0, "Om": 1.0},
+      "rate_model": "mean_energy_lookup",
+      "data_source": "user_supplied:o2_attachment",
+      "table_coordinate": "mean_en_solved_eV",
+      "table_value_unit": "R0_UNRESOLVED",
+      "production_basis": "R0_UNRESOLVED",
+      "energy_model": "attachment_COMSOL_zero_loss_convention",
+      "energy_loss_eV": 0.0,
+      "source_paths": ["heavy", "electron_particle", "electron_energy"],
+      "enabled": false,
+      "blocker": "uploaded table coefficient unit/basis must be frozen before activation"
+    },
+    {
+      "id": "EI02_O2_ELASTIC",
+      "formula": "e + O2 -> e + O2",
+      "reactants": {"e": 1.0, "O2": 1.0},
+      "products": {"e": 1.0, "O2": 1.0},
+      "rate_model": "mean_energy_lookup",
+      "data_source": "user_supplied:o2_elastic",
+      "table_coordinate": "mean_en_solved_eV",
+      "table_value_unit": "R0_UNRESOLVED",
+      "production_basis": "R0_UNRESOLVED",
+      "energy_model": "elastic_electron_heavy_exchange",
+      "energy_loss_eV": null,
+      "source_paths": ["electron_energy"],
+      "enabled": false,
+      "blocker": "lookup unit/basis and elastic energy-transfer law must be frozen"
+    },
+    {
+      "id": "EI10_O2_TO_O2S",
+      "formula": "e + O2 -> e + O2s",
+      "reactants": {"e": 1.0, "O2": 1.0},
+      "products": {"e": 1.0, "O2s": 1.0},
+      "rate_model": "constant_coefficient_surrogate",
+      "threshold_identity_eV": 0.977,
+      "data_source": "existing_QPX_chemistry_value_if_recoverable",
+      "constant_value": null,
+      "constant_unit": "R0_UNRESOLVED",
+      "energy_model": "inelastic_threshold",
+      "energy_loss_eV": 0.977,
+      "source_paths": ["heavy", "electron_energy"],
+      "enabled": false,
+      "blocker": "constant coefficient has not yet been recovered/frozen; 9.97 eV table is explicitly forbidden for this reaction"
+    },
+    {
+      "id": "EI16_O2_IONIZATION",
+      "formula": "e + O2 -> 2e + O2p",
+      "reactants": {"e": 1.0, "O2": 1.0},
+      "products": {"e": 2.0, "O2p": 1.0},
+      "rate_model": "mean_energy_lookup",
+      "data_source": "user_supplied:o2_ionization",
+      "table_coordinate": "mean_en_solved_eV",
+      "table_value_unit": "R0_UNRESOLVED",
+      "production_basis": "R0_UNRESOLVED",
+      "energy_model": "inelastic_threshold",
+      "energy_loss_eV": 12.06,
+      "source_paths": ["heavy", "electron_particle", "electron_energy"],
+      "enabled": false,
+      "blocker": "uploaded table coefficient unit/basis must be frozen before activation"
+    },
+    {
+      "id": "EI17_O_ELASTIC",
+      "formula": "e + O -> e + O",
+      "reactants": {"e": 1.0, "O": 1.0},
+      "products": {"e": 1.0, "O": 1.0},
+      "rate_model": "mean_energy_lookup",
+      "data_source": "user_supplied:o_elastic",
+      "table_coordinate": "mean_en_solved_eV",
+      "table_value_unit": "R0_UNRESOLVED",
+      "production_basis": "R0_UNRESOLVED",
+      "energy_model": "elastic_electron_heavy_exchange",
+      "energy_loss_eV": null,
+      "source_paths": ["electron_energy"],
+      "enabled": false,
+      "blocker": "lookup unit/basis and elastic energy-transfer law must be frozen"
+    },
+    {
+      "id": "EI18_O_TO_OS",
+      "formula": "e + O -> e + Os",
+      "reactants": {"e": 1.0, "O": 1.0},
+      "products": {"e": 1.0, "Os": 1.0},
+      "rate_model": "mean_energy_lookup",
+      "data_source": "user_supplied:o_excitation_1d",
+      "table_coordinate": "mean_en_solved_eV",
+      "table_value_unit": "R0_UNRESOLVED",
+      "production_basis": "R0_UNRESOLVED",
+      "energy_model": "inelastic_threshold",
+      "energy_loss_eV": 1.968,
+      "source_paths": ["heavy", "electron_energy"],
+      "enabled": false,
+      "blocker": "uploaded table coefficient unit/basis must be frozen before activation"
+    },
+    {
+      "id": "EI19_O_EXCITATION_4P192",
+      "formula": "e + O -> e + O",
+      "reactants": {"e": 1.0, "O": 1.0},
+      "products": {"e": 1.0, "O": 1.0},
+      "rate_model": "mean_energy_lookup",
+      "data_source": "user_supplied:o_excitation_1s",
+      "table_coordinate": "mean_en_solved_eV",
+      "table_value_unit": "R0_UNRESOLVED",
+      "production_basis": "R0_UNRESOLVED",
+      "energy_model": "inelastic_threshold_energy_only",
+      "energy_loss_eV": 4.192,
+      "source_paths": ["electron_energy"],
+      "enabled": false,
+      "blocker": "uploaded table coefficient unit/basis must be frozen before activation"
+    },
+    {
+      "id": "EI20_O_IONIZATION",
+      "formula": "e + O -> 2e + Op",
+      "reactants": {"e": 1.0, "O": 1.0},
+      "products": {"e": 2.0, "Op": 1.0},
+      "rate_model": "mean_energy_lookup",
+      "data_source": "user_supplied:o_ionization",
+      "table_coordinate": "mean_en_solved_eV",
+      "table_value_unit": "R0_UNRESOLVED",
+      "production_basis": "R0_UNRESOLVED",
+      "energy_model": "inelastic_threshold",
+      "energy_loss_eV": 13.618,
+      "source_paths": ["heavy", "electron_particle", "electron_energy"],
+      "enabled": false,
+      "blocker": "uploaded table coefficient unit/basis must be frozen before activation"
+    }
+  ],
+  "explicitly_not_used": [
+    {
+      "data_source": "user_supplied:o2_excitation_9p97",
+      "reason": "user decision: this table does not represent the 0.977 eV O2(a1Delta_g) production channel and shall not be used for QPX O2s chemistry"
+    }
+  ],
+  "missing_species_changing_electron_impact_rates": [
+    "e + O2 -> e + O + O",
+    "e + O2 -> e + O + Os",
+    "e + Om -> O + 2e"
+  ],
+  "heavy_ion_reactions_pending_rate_data": [
+    "Op + O2 -> O + O2p",
+    "Op + Om -> O + O",
+    "Om + O2p -> 3O",
+    "Om + O2p -> O + O2",
+    "Om + O2 -> O2 + e"
+  ],
+  "production_capability_audit": {
+    "QPXReactionDatabase_volume_rate_models": ["constant", "power_law"],
+    "QPXReactionDatabase_lookup_rate_model": false,
+    "QPXReactionDatabase_energy_metadata": false,
+    "QPXReactionDatabase_heavy_mass_invariant": true,
+    "QPXReactionDatabase_charge_invariant_for_volume": true,
+    "QPXReactionDatabase_oxygen_atom_invariant": false,
+    "QPXReactionRateMaterial_internal_progress_is_molar": true,
+    "QPXReactionRateMaterial_electron_reactants_supported": false,
+    "QPXFVSpeciesReactionSource_consumes_signed_mass_source": true
+  },
+  "R0_blockers": [
+    "freeze uploaded electron-impact table coefficient units/basis before any production activation",
+    "recover or explicitly freeze the constant coefficient for e + O2 -> e + O2s",
+    "freeze elastic electron-heavy energy-transfer formulation",
+    "decide which missing species-changing and heavy-ion reactions are in the first restored production network",
+    "extend machine-checkable oxygen-atom conservation metadata/checking"
+  ]
+}
