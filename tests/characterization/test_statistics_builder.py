@@ -17,7 +17,7 @@ def test_statistics_builder_preserves_characterized_mapping_contract() -> None:
         "run_id": "run-1",
         "experiment_id": "exp-1",
         "case_id": "case-1",
-        "environment": {"hostname": "host", "platform": "linux", "python": "3.12", "mpi_ranks": 2, "threads": 4, "logical_cpu_count": 16, "qpx_realpath": "/opt/qpx-opt", "moose": "moose-v", "petsc": "petsc-v"},
+        "environment": {"hostname": "host", "platform": "linux", "python": "3.12", "mpi_ranks": 2, "threads": 4, "logical_cpu_count": 16, "qpx_realpath": "/opt/solver-executable", "moose": "moose-v", "petsc": "petsc-v"},
         "problem": {"nodes": 10, "elements": 8, "dofs": 12, "variables": ["u", "v"], "species": ["O2", "O"]},
         "work": {"nonlinear_iterations": 3, "linear_iterations": 9, "residual_evaluations": 5, "jacobian_evaluations": 2},
         "performance": {"wall_seconds": 1.25, "max_memory_mb": 128.0, "perfgraph": {"max_memory_this_rank_mb": 128.0, "max_memory_per_rank_mb": [128.0, 96.0], "nodes": [{"name": "app", "parent": None, "level": 0, "self_seconds": 0.25, "num_calls": 1}]}, "petsc": {"rows": [{"Event Name": "SNESJacobianEval", "Rank": 0, "Count": 2, "Time": 0.4}]}},
