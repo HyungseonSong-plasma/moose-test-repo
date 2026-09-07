@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import pytest
 
-from qpx_harness.analysis.stats_builder import self_test as stats_builder_self_test
 from qpx_harness.adapters.moose.preflight import parser_symbol_self_test
 from qpx_harness.analysis.temporal import self_test as temporal_self_test
 from qpx_harness.execution.workspace import self_test as workspace_self_test
@@ -13,7 +12,6 @@ from qpx_harness.application.performance import self_test as performance_self_te
 from qpx_harness.analysis.performance.profile import self_test as performance_profile_self_test
 
 ENTRYPOINTS = (
-    ("analysis.stats_builder", stats_builder_self_test),
     ("moose.preflight.parser_symbols", parser_symbol_self_test),
     ("analysis.temporal", temporal_self_test),
     ("execution.workspace", workspace_self_test),
