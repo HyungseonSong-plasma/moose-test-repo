@@ -1,0 +1,132 @@
+name: QPX canonical source import (one-shot)
+
+on:
+  push:
+    branches:
+      - issue-165-canonical-qpx-source
+    paths:
+      - .github/workflows/qpx-source-import-once.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: qpx-source-import-once
+  cancel-in-progress: false
+
+jobs:
+  import-source:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout canonical source branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 1
+
+      - name: Reconstruct verified prototype source and commit canonical qpx_app
+        shell: bash
+        env:
+          EXPECTED_SOURCE_TAR_SHA256: 4f9973c9e8e2dc07be5b485338cc0e921578e0dc754bca90c499d0071f199e03
+          PROTOTYPE_BRANCH: issue-163-ghcr-qpx-runtime
+        run: |
+          set -euxo pipefail
+
+          test ! -e qpx_app
+          git fetch --no-tags origin "refs/heads/${PROTOTYPE_BRANCH}:refs/remotes/origin/${PROTOTYPE_BRANCH}"
+
+          : > /tmp/qpx-source.tar.xz.b64
+          for part in 000 001 002 003 004 005; do
+            git show "origin/${PROTOTYPE_BRANCH}:ci/qpx-runtime/source.parts/${part}.b64" >> /tmp/qpx-source.tar.xz.b64
+          done
+          base64 --decode /tmp/qpx-source.tar.xz.b64 > /tmp/qpx-source.tar.xz
+          echo "${EXPECTED_SOURCE_TAR_SHA256}  /tmp/qpx-source.tar.xz" | sha256sum --check --strict
+
+          tar -xJf /tmp/qpx-source.tar.xz -C .
+          test -f qpx_app/Makefile
+          test -f qpx_app/src/main.C
+          test -f qpx_app/test/include/base/qpxTestApp.h
+          test -f qpx_app/test/src/base/qpxTestApp.C
+
+          git show "origin/${PROTOTYPE_BRANCH}:ci/qpx-runtime/patches/0001-fix-interpolation-member-init-order.patch" > /tmp/0001.patch
+          git show "origin/${PROTOTYPE_BRANCH}:ci/qpx-runtime/patches/0002-fix-electron-transport-member-init-order.patch" > /tmp/0002.patch
+          patch -d qpx_app -p1 < /tmp/0001.patch
+          patch -d qpx_app -p1 < /tmp/0002.patch
+
+          cat > qpx_app/dependencies.lock <<'EOF'
+          # Canonical QPX dependency revisions for Issue #165.
+          # Fetch these peers directly; do not recursively initialize peer-app duplicates.
+          MOOSE=9f388366ccf38b9c34542ec5561198249fde0ac9
+          CRANE=ba26970cf419dcac563a20ed7079d445bc6341c3
+          SQUIRREL=16a26d504f3ee11161a86d4e3ebf3c0e5f2afbb1
+          ZAPDOS=9eceffbc46048c3760bbfa9a7f1ca681ae35af1d
+          QPX_BUILD_BASE=ghcr.io/hyungseonsong-plasma/qpx-build-base@sha256:910d406eb3574a918290dc3621df1133569907d6e7af7884f68abe257a9a1999
+          EOF
+
+          cat > qpx_app/.gitignore <<'EOF'
+          # QPX build products: source-only canonical ownership.
+          qpx-opt
+          qpx-dbg
+          qpx-devel
+          build/
+          lib/
+          .libs/
+          .jitcache/
+          .pytest_cache/
+          *.o
+          *.lo
+          *.la
+          *.d
+          *.so
+          *.so.*
+          *.a
+
+          # Generated test/runtime outputs.
+          *_out.csv
+          *_out.e
+          out/
+          EOF
+
+          find qpx_app -type f ! -name SOURCE_PROVENANCE.md -print0 \
+            | sort -z \
+            | xargs -0 sha256sum > /tmp/qpx-source-file-hashes.txt
+          CANONICAL_MANIFEST_SHA256="$(sha256sum /tmp/qpx-source-file-hashes.txt | awk '{print $1}')"
+
+          cat > qpx_app/SOURCE_PROVENANCE.md <<EOF
+          # QPX source provenance
+
+          Canonical source owner: \`moose-test-repo/qpx_app\`.
+
+          Imported for Issue #165 from the QPX clean-build prototype source artifact:
+
+          \`sha256:${EXPECTED_SOURCE_TAR_SHA256}\`
+
+          The two compiler-compatibility initializer-order fixes used by the clean-build prototype are incorporated directly into canonical source. They are semantics-preserving because C++ member initialization order is determined by declaration order, not initializer-list order.
+
+          Canonical imported file-manifest SHA256 (sorted \`sha256sum\` lines, excluding this provenance file):
+
+          \`${CANONICAL_MANIFEST_SHA256}\`
+
+          Dependency revisions are pinned in \`dependencies.lock\`.
+
+          No plasma physics, numerical algorithm, solver tolerance, or scientific state is changed by this import.
+          EOF
+
+          FORBIDDEN="$({ find qpx_app -type f \( \
+              -name qpx-opt -o -name '*.o' -o -name '*.lo' -o -name '*.la' -o \
+              -name '*.d' -o -name '*.so' -o -name '*.so.*' -o -name '*.a' \
+            \) -print; } || true)"
+          test -z "${FORBIDDEN}"
+          test ! -d qpx_app/build
+          test ! -d qpx_app/lib
+          test ! -d qpx_app/.libs
+          test ! -d qpx_app/.jitcache
+          test ! -d qpx_app/.pytest_cache
+
+          test "$(find qpx_app -type f | wc -l)" -eq 80
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add qpx_app
+          git diff --cached --check
+          git commit -m "source: import canonical QPX app tree for #165"
+          git push origin HEAD:issue-165-canonical-qpx-source
