@@ -47,6 +47,8 @@ jobs:
           test -f qpx_app/Makefile
           test -f qpx_app/src/main.C
           test -f qpx_app/ci/smoke.i
+          test -f qpx_app/ci/electron_energy_transport_smoke.i
+          test -f qpx_app/ci/electron_energy_transport_smoke_table.txt
           test -f qpx_app/dependencies.lock
           test -f qpx_app/SOURCE_PROVENANCE.md
 
@@ -141,6 +143,12 @@ jobs:
               test -x ./qpx-opt
               ./qpx-opt --check-input -i ci/smoke.i
               ./qpx-opt -i ci/smoke.i
+              (
+                cd ci
+                ../qpx-opt --check-input -i electron_energy_transport_smoke.i
+                ../qpx-opt -i electron_energy_transport_smoke.i
+              )
+              python3 -c "import csv, math; r=list(csv.DictReader(open(\"ci/electron_energy_transport_smoke_out.csv\")))[-1]; mu=float(r[\"electron_energy_mobility_avg\"])/float(r[\"electron_mobility_avg\"]); diff=float(r[\"electron_energy_diffusion_avg\"])/float(r[\"electron_diffusion_avg\"]); assert math.isclose(mu, 5.0/3.0, rel_tol=1.0e-12, abs_tol=0.0); assert math.isclose(diff, 5.0/3.0, rel_tol=1.0e-12, abs_tol=0.0); print(\"QPX_ELECTRON_ENERGY_TRANSPORT_5_OVER_3_PASS\")"
               echo QPX_SOURCE_BUILD_AND_REAL_SMOKE_PASS
             '
 
@@ -155,5 +163,6 @@ jobs:
           echo "IMPLEMENTATION_AND_TEST_REVISION_SHARED=true"
           echo "QPX_SOURCE_CHANGE_USES_PRECOMPILED_BUILD_BASE=true"
           echo "QPX_CHECK_INPUT_SMOKE=PASS"
+          echo "ELECTRON_ENERGY_TRANSPORT_5_OVER_3=PASS"
           echo "BOUNDED_REAL_QPX_RUN=PASS"
           echo "SCIENTIFIC_SEMANTICS_CHANGED=false"
