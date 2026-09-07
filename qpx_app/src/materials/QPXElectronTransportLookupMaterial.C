@@ -13,7 +13,8 @@ QPXElectronTransportLookupMaterial::validParams()
 
   params.addClassDescription(
       "Interpolates reduced electron mobility and diffusion coefficient from a "
-      "mean-energy table and converts them using the local neutral number density.");
+      "mean-energy table, converts them using the local neutral number density, "
+      "and exposes the Maxwellian 5/3 electron-energy transport projection.");
 
   params.addRequiredParam<FileName>(
       "property_table_file",
@@ -49,6 +50,8 @@ QPXElectronTransportLookupMaterial::QPXElectronTransportLookupMaterial(
     _table(_property_table_file, 1, {2, 3}),
     _bounds_policy(parseBoundsPolicy(getParam<std::string>("bounds_policy")))
 {
+  constexpr Real energy_transport_factor = 5.0 / 3.0;
+
   addFunctorProperty<ADReal>(
       "neutral_number_density",
       [this](const auto & r, const auto & state) -> ADReal
@@ -90,6 +93,32 @@ QPXElectronTransportLookupMaterial::QPXElectronTransportLookupMaterial(
             _pressure(r, state) / (QPX_CONSTANTS::k_boltz * T_g);
 
         return interpolate(_mean_energy(r, state), 1) / N_n;
+      });
+
+  // Local-mean-energy closure used by the accepted QPX/Hagelaar path and COMSOL's
+  // Maxwellian transport approximation. Keep particle and energy coefficients under
+  // one lookup owner so a solved mean-energy coordinate cannot silently select a
+  // different transport table or neutral-density conversion.
+  addFunctorProperty<ADReal>(
+      "electron_energy_mobility",
+      [this, energy_transport_factor](const auto & r, const auto & state) -> ADReal
+      {
+        const ADReal T_g = _gas_temperature(r, state);
+        const ADReal N_n =
+            _pressure(r, state) / (QPX_CONSTANTS::k_boltz * T_g);
+
+        return energy_transport_factor * interpolate(_mean_energy(r, state), 0) / N_n;
+      });
+
+  addFunctorProperty<ADReal>(
+      "electron_energy_diffusion",
+      [this, energy_transport_factor](const auto & r, const auto & state) -> ADReal
+      {
+        const ADReal T_g = _gas_temperature(r, state);
+        const ADReal N_n =
+            _pressure(r, state) / (QPX_CONSTANTS::k_boltz * T_g);
+
+        return energy_transport_factor * interpolate(_mean_energy(r, state), 1) / N_n;
       });
 }
 
