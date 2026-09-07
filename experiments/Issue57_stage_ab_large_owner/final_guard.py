@@ -133,7 +133,7 @@ def main() -> int:
             and callable(b4_orch._create_root)
             and callable(b4_char.self_test)
         )
-        dmix_source = importlib.import_module("qpx_harness.dmix.source_transform")
+        dmix_source = importlib.import_module("qpx_harness.adapters.moose.dmix_equivalence")
         dmix_identity = b4_orch.legacy_source_transform is dmix_source.legacy_source_transform
     except Exception as exc:
         print(f"ISSUE57_FINAL_B4_IMPORT_IDENTITY: FAIL ({exc})")

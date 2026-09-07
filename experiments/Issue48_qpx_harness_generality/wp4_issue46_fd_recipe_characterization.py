@@ -10,9 +10,9 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from qpx_harness import issue46_fd_reference as legacy
-from recipes import issue45_first_linear as issue45_recipe
-from recipes import issue46_fd_reference as recipe
-from recipes import issue46_jacobian_localization as localization_recipe
+from experiments.historical_recipe_support import issue45_first_linear as issue45_recipe
+from experiments.historical_recipe_support import issue46_fd_reference as recipe
+from experiments.historical_recipe_support import issue46_jacobian_localization as localization_recipe
 
 
 def _assert_same(left, right, label: str) -> None:
@@ -188,7 +188,7 @@ def _check_dependency_boundary() -> None:
             raise AssertionError(f"legacy reverse dependency leaked into Issue46 recipe: {token}")
     required = (
         "qpx_harness.petsc",
-        "qpx_harness.moose",
+        "qpx_harness.adapters.moose",
         "qpx_harness import artifacts",
     )
     for token in required:

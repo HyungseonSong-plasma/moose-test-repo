@@ -27,10 +27,9 @@ CAPABILITY_DIRS = {
     "dmix",
     "domains",
     "evidence",
+    "evaluation",
     "execution",
     "inventory",
-    "models",
-    "moose",
     "observation",
     "ontology",
     "performance",
@@ -40,7 +39,6 @@ CAPABILITY_DIRS = {
     "reasoning",
     "spec",
     "specification",
-    "transforms",
     "validation",
 }
 
@@ -51,12 +49,11 @@ GENERIC_ISSUE_EDGE_DIRS = {
     "cpp",
     "diagnostics",
     "evidence",
+    "evaluation",
     "execution",
-    "moose",
     "performance",
     "petsc",
     "spec",
-    "transforms",
 }
 
 ISSUE_NAME_RE = re.compile(r"(?:^|/)(?:issue\d+|coupling_evr\d+)(?:_|/|\.py)", re.IGNORECASE)
@@ -71,12 +68,42 @@ FORBIDDEN_GENERIC_PREFIXES = (
     "qpx_harness.coupling_evr",
 )
 
+# #143 compatibility-retirement scope. These are not canonical responsibility
+# owners even while their physical namespaces remain during bounded migration.
+LEGACY_NAMESPACE_PATHS = {
+    "qpx_harness.cpp": ROOT / "qpx_harness" / "cpp",
+    "qpx_harness.diagnose": ROOT / "qpx_harness" / "diagnose",
+    "qpx_harness.dmix": ROOT / "qpx_harness" / "dmix",
+    "qpx_harness.inventory": ROOT / "qpx_harness" / "inventory",
+    "qpx_harness.performance": ROOT / "qpx_harness" / "performance",
+    "qpx_harness.spec": ROOT / "qpx_harness" / "spec",
+    "recipes": ROOT / "recipes",
+}
+# Once a namespace has completed zero-caller retirement, recreating it is a
+# normal-CI architecture regression rather than merely unfinished #143 debt.
+RETIRED_LEGACY_NAMESPACES = set(LEGACY_NAMESPACE_PATHS)
+SCAN_ROOTS = (
+    ROOT / "qpx_harness",
+    ROOT / "tests",
+    ROOT / "experiments",
+    ROOT / "recipes",
+    ROOT / "bin",
+    ROOT / "tools",
+)
+
 
 def _python_files(root: Path) -> list[Path]:
+    if not root.is_dir():
+        return []
     return [
         path for path in sorted(root.rglob("*.py"))
         if "__pycache__" not in path.parts
     ]
+
+
+def _repository_python_files() -> list[Path]:
+    files = {path for root in SCAN_ROOTS for path in _python_files(root)}
+    return sorted(files)
 
 
 def _rel(path: Path) -> str:
@@ -115,24 +142,53 @@ def classify(path: Path, recipe_map: dict[str, dict]) -> str:
     return "UNCLASSIFIED"
 
 
-def imported_modules(path: Path) -> tuple[str, ...]:
+def _relative_import_base(path: Path, level: int, module: str | None) -> str:
+    package = path.relative_to(ROOT).with_suffix("").parts[:-1]
+    keep = max(0, len(package) - level + 1)
+    base = ".".join(package[:keep])
+    return ".".join(part for part in (base, module or "") if part)
+
+
+def import_references(path: Path) -> tuple[str, ...]:
+    """Return static and literal dynamic import references used by ``path``."""
     tree = ast.parse(path.read_text(), filename=str(path))
-    modules: set[str] = set()
+    references: set[str] = set()
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
-            modules.update(alias.name for alias in node.names)
+            references.update(alias.name for alias in node.names)
         elif isinstance(node, ast.ImportFrom):
-            if node.module is None:
+            base = (
+                _relative_import_base(path, node.level, node.module)
+                if node.level
+                else (node.module or "")
+            )
+            if base:
+                references.add(base)
+            for alias in node.names:
+                if alias.name == "*":
+                    continue
+                candidate = ".".join(part for part in (base, alias.name) if part)
+                if candidate:
+                    references.add(candidate)
+        elif isinstance(node, ast.Call) and node.args:
+            first = node.args[0]
+            if not isinstance(first, ast.Constant) or not isinstance(first.value, str):
                 continue
-            if node.level:
-                package = path.relative_to(ROOT).with_suffix("").parts[:-1]
-                keep = max(0, len(package) - node.level + 1)
-                base = ".".join(package[:keep])
-                module = ".".join(part for part in (base, node.module) if part)
-            else:
-                module = node.module
-            modules.add(module)
-    return tuple(sorted(modules))
+            is_builtin_import = isinstance(node.func, ast.Name) and node.func.id == "__import__"
+            is_importlib = (
+                isinstance(node.func, ast.Attribute)
+                and node.func.attr == "import_module"
+                and isinstance(node.func.value, ast.Name)
+                and node.func.value.id == "importlib"
+            )
+            if is_builtin_import or is_importlib:
+                references.add(first.value)
+    return tuple(sorted(references))
+
+
+def imported_modules(path: Path) -> tuple[str, ...]:
+    """Compatibility wrapper for dependency-edge callers."""
+    return import_references(path)
 
 
 def generic_issue_edges(files: list[Path]) -> list[dict[str, str]]:
@@ -146,6 +202,62 @@ def generic_issue_edges(files: list[Path]) -> list[dict[str, str]]:
             if module.startswith(FORBIDDEN_GENERIC_PREFIXES):
                 edges.append({"source": rel, "target": module})
     return edges
+
+
+def _caller_class(rel: str) -> str:
+    if rel.startswith("qpx_harness/"):
+        return "production"
+    if rel.startswith("tests/"):
+        return "test"
+    if rel.startswith("experiments/") or rel.startswith("recipes/"):
+        return "historical"
+    if rel.startswith("bin/"):
+        return "operator"
+    if rel.startswith("tools/"):
+        return "developer"
+    return "other"
+
+
+def _inside_legacy_namespace(rel: str, namespace: str) -> bool:
+    root = LEGACY_NAMESPACE_PATHS[namespace]
+    if not root.is_relative_to(ROOT):
+        return False
+    legacy_rel = root.relative_to(ROOT).as_posix()
+    return rel == legacy_rel or rel.startswith(legacy_rel + "/")
+
+
+def legacy_namespace_import_edges(files: list[Path]) -> list[dict[str, object]]:
+    """Return one record per source/legacy-namespace import dependency."""
+    records: list[dict[str, object]] = []
+    for path in files:
+        rel = _rel(path)
+        references = import_references(path)
+        for namespace in LEGACY_NAMESPACE_PATHS:
+            matched = sorted(
+                reference
+                for reference in references
+                if reference == namespace or reference.startswith(namespace + ".")
+            )
+            if not matched:
+                continue
+            records.append(
+                {
+                    "source": rel,
+                    "legacy_namespace": namespace,
+                    "references": matched,
+                    "caller_class": _caller_class(rel),
+                    "external": not _inside_legacy_namespace(rel, namespace),
+                }
+            )
+    return records
+
+
+def legacy_namespace_presence() -> list[str]:
+    return sorted(
+        namespace
+        for namespace, path in LEGACY_NAMESPACE_PATHS.items()
+        if path.is_dir()
+    )
 
 
 def forbidden_production_namespaces(files: list[Path]) -> list[str]:
@@ -181,12 +293,21 @@ def root_modules() -> list[str]:
     )
 
 
+def experiment_spec_owner_paths() -> list[str]:
+    owners: list[str] = []
+    for path in _python_files(HARNESS):
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        if any(isinstance(node, ast.ClassDef) and node.name == "ExperimentSpec" for node in tree.body):
+            owners.append(_rel(path))
+    return sorted(owners)
+
+
 def build_census() -> dict:
     recipe_map = _recipe_ownership()
     harness_files = _python_files(HARNESS)
     recipe_files = _python_files(ROOT / "recipes")
-    bin_files = _python_files(ROOT / "bin") if (ROOT / "bin").is_dir() else []
-    script_files = _python_files(ROOT / "scripts") if (ROOT / "scripts").is_dir() else []
+    bin_files = _python_files(ROOT / "bin")
+    script_files = _python_files(ROOT / "scripts")
     files = harness_files + recipe_files + bin_files + script_files
     records = [
         {"path": _rel(path), "class": classify(path, recipe_map)}
@@ -195,12 +316,22 @@ def build_census() -> dict:
     unclassified = [record["path"] for record in records if record["class"] == "UNCLASSIFIED"]
     recipe_paths = sorted(_rel(path) for path in recipe_files if path.name != "__init__.py")
     expected_recipes = sorted(recipe_map)
-    recipe_set_ok = recipe_paths == expected_recipes
+    root_recipes_present = (ROOT / "recipes").is_dir()
+    recipe_set_ok = recipe_paths == expected_recipes if root_recipes_present else True
     edges = generic_issue_edges(harness_files)
     forbidden_namespaces = forbidden_production_namespaces(harness_files)
     collisions = module_package_collisions()
     direct_root_modules = root_modules()
     class_counts = dict(Counter(record["class"] for record in records))
+    legacy_edges = legacy_namespace_import_edges(_repository_python_files())
+    external_legacy_edges = [record for record in legacy_edges if record["external"]]
+    present_legacy_namespaces = legacy_namespace_presence()
+    retired_reintroduced = sorted(
+        RETIRED_LEGACY_NAMESPACES.intersection(present_legacy_namespaces)
+    )
+    zero_legacy = not present_legacy_namespaces and not external_legacy_edges
+    experiment_spec_owners = experiment_spec_owner_paths()
+    canonical_experimentspec_owner_count = len(experiment_spec_owners)
     return {
         "status": (
             "PASS"
@@ -210,6 +341,8 @@ def build_census() -> dict:
             and not forbidden_namespaces
             and not collisions
             and not direct_root_modules
+            and not retired_reintroduced
+            and canonical_experimentspec_owner_count == 1
             else "FAIL"
         ),
         "production_owner_count": len(records),
@@ -219,18 +352,31 @@ def build_census() -> dict:
         "recipe_set": recipe_paths,
         "recipe_set_expected": expected_recipes,
         "recipe_set_ok": recipe_set_ok,
-        "root_recipes_class": "LEGACY_COMPATIBILITY_ONLY",
+        "root_recipes_class": "LEGACY_COMPATIBILITY_ONLY" if root_recipes_present else "PHYSICALLY_RETIRED",
+        "root_recipes_physically_removed": not root_recipes_present,
         "generic_to_issue_edges": edges,
         "forbidden_production_namespaces": forbidden_namespaces,
         "module_package_collisions": collisions,
         "root_modules": direct_root_modules,
         "scripts_python_files": [_rel(path) for path in script_files],
+        "legacy_namespaces_present": present_legacy_namespaces,
+        "legacy_namespace_import_edges": legacy_edges,
+        "external_legacy_import_edges": external_legacy_edges,
+        "retired_namespace_reintroductions": retired_reintroduced,
+        "zero_legacy": zero_legacy,
+        "experiment_spec_owner_paths": experiment_spec_owners,
+        "canonical_experimentspec_owner_count": canonical_experimentspec_owner_count,
     }
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="qpx-architecture-census")
     parser.add_argument("--json-out")
+    parser.add_argument(
+        "--require-no-legacy",
+        action="store_true",
+        help="fail if a #143 legacy namespace or external caller still exists",
+    )
     args = parser.parse_args(argv)
     result = build_census()
     if args.json_out:
@@ -248,8 +394,30 @@ def main(argv: list[str] | None = None) -> int:
     print(f"ISSUE129_ROOT_SURFACE: {'PASS' if not result['root_modules'] else 'FAIL'}")
     print(f"ISSUE70_RECIPE_SET: {'PASS' if result['recipe_set_ok'] else 'FAIL'}")
     print(f"ISSUE138_ROOT_RECIPES_CLASS: {result['root_recipes_class']}")
+    print(f"ISSUE143_LEGACY_NAMESPACES_PRESENT: {len(result['legacy_namespaces_present'])}")
+    for namespace in result["legacy_namespaces_present"]:
+        print(f"ISSUE143_LEGACY_NAMESPACE: {namespace}")
+    print(
+        "ISSUE143_RETIRED_NAMESPACE_REINTRODUCTIONS: "
+        f"{len(result['retired_namespace_reintroductions'])}"
+    )
+    for namespace in result["retired_namespace_reintroductions"]:
+        print(f"ISSUE143_RETIRED_NAMESPACE_REINTRODUCED: {namespace}")
+    print(f"ISSUE143_EXTERNAL_LEGACY_IMPORTS: {len(result['external_legacy_import_edges'])}")
+    for edge in result["external_legacy_import_edges"]:
+        print(
+            "ISSUE143_LEGACY_IMPORT: "
+            f"{edge['source']} -> {edge['legacy_namespace']} "
+            f"[{edge['caller_class']}]"
+        )
+    print(f"ISSUE143_ZERO_LEGACY: {'PASS' if result['zero_legacy'] else 'FAIL'}")
+    print(f"ISSUE144_ROOT_RECIPES_PHYSICALLY_REMOVED: {'PASS' if result['root_recipes_physically_removed'] else 'FAIL'}")
+    print(f"ISSUE144_CANONICAL_EXPERIMENTSPEC_OWNER_COUNT: {result['canonical_experimentspec_owner_count']}")
     print(f"ISSUE70_ARCHITECTURE_CENSUS: {result['status']}")
-    return 0 if result["status"] == "PASS" else 1
+    passed = result["status"] == "PASS"
+    if args.require_no_legacy:
+        passed = (passed and bool(result["zero_legacy"]) and bool(result["root_recipes_physically_removed"]) and result["canonical_experimentspec_owner_count"] == 1)
+    return 0 if passed else 1
 
 
 if __name__ == "__main__":

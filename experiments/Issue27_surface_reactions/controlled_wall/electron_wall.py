@@ -36,9 +36,9 @@ from experiments.Issue27_surface_reactions.controlled_wall.combined import (
 from qpx_harness.evidence import create_collision_safe_directory, utc_timestamp, write_json_bundle
 from qpx_harness.execution.cases import stage_case
 from qpx_harness.execution.runtime import resolve_executable, validate_executable
-from qpx_harness.moose import blocks as mb
-from qpx_harness.moose import parameters as mp
-from recipes.issue91_r3 import MEAN_ELECTRON_ENERGY_EV
+from qpx_harness.adapters.moose import blocks as mb
+from qpx_harness.adapters.moose import parameters as mp
+from experiments.historical_recipe_support.issue91_r3 import MEAN_ELECTRON_ENERGY_EV
 
 ROOT = Path(__file__).resolve().parents[3]
 SOURCE = ROOT / "experiments" / "Issue91_real_qvt_r3" / "r3_e0"

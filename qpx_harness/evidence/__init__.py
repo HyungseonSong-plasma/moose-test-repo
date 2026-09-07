@@ -10,7 +10,7 @@ from .artifacts import (
     summarize_checks,
     write_json_bundle,
 )
-from .errors import (
+from .error_ledger import (
     ERROR_LEDGER_SCHEMA_VERSION,
     Attribution,
     AttributionConfidence,
@@ -33,14 +33,9 @@ from .identity import (
     sha256_file,
     utc_timestamp,
 )
-from .ingest import (
-    FAILURE_PATTERNS,
+from .normalization import (
     extract_jacobian_evidence,
-    failure_signature,
     first_failed_reason,
-    first_linear_termination,
-    measurement_failure_signature,
-    runtime_core_facts,
 )
 from .schema import (
     CELL_KEY_COLUMNS,
@@ -73,7 +68,6 @@ __all__ = [
     "ErrorLedger",
     "EvidenceStore",
     "FACE_REQUIRED_COLUMNS",
-    "FAILURE_PATTERNS",
     "GREEN_GAUSS_FACE_CONTRACT",
     "ColumnRole",
     "ColumnSpec",
@@ -89,20 +83,16 @@ __all__ = [
     "ensure_fresh_directory",
     "error_fingerprint",
     "extract_jacobian_evidence",
-    "failure_signature",
     "first_failed_reason",
-    "first_linear_termination",
     "identity_record",
     "identity_stable",
     "is_direct_child",
     "load_json_object",
-    "measurement_failure_signature",
     "normalize_and_project",
     "normalize_face_evidence",
     "paths_distinct",
     "read_error_events",
     "require_columns",
-    "runtime_core_facts",
     "rz_constant_square_face_rows",
     "sha256_file",
     "snapshot_unchanged",

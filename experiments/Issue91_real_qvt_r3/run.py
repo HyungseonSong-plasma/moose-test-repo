@@ -12,16 +12,15 @@ from pathlib import Path
 from typing import Any
 
 from experiments.Issue93_r3_electron_isolation.run import _electron_residuals
+from qpx_harness.adapters.moose.nonlinear_solver import failure_signature, runtime_core_facts
 from qpx_harness.evidence import (
     create_collision_safe_directory,
-    failure_signature,
-    runtime_core_facts,
     utc_timestamp,
     write_json_bundle,
 )
 from qpx_harness.execution.cases import stage_case
 from qpx_harness.execution.runtime import resolve_executable, run_qpx, validate_executable
-from recipes.issue91_r3 import build_r3_input
+from experiments.historical_recipe_support.issue91_r3 import build_r3_input
 
 ROOT = Path(__file__).resolve().parents[2]
 CASE_ROOT = ROOT / "experiments" / "Issue91_real_qvt_r3"

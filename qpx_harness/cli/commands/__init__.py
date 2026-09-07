@@ -1,5 +1,5 @@
 """Bounded command adapters for the QPX CLI."""
 
-from . import dmix, performance
+from . import performance
 
-__all__ = ["dmix", "performance"]
+__all__ = ["performance"]

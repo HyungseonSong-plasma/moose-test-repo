@@ -17,7 +17,7 @@ from qpx_harness.ontology import (
     SemanticInvariantError,
     SemanticVersionError,
 )
-from qpx_harness.ontology.model import (
+from qpx_harness.ontology.records import (
     DevelopmentState,
     ExperimentIntent,
     Hypothesis,
@@ -43,7 +43,7 @@ def _semantic_spec(tmp_path):
         "schema_version": 2,
         "experiment_id": "controlled-electron-energy-diffusion",
         "objective": "validate controlled electron-energy diffusion",
-        "model": "oxygen_icp_electron_energy",
+        "model_ref": "oxygen_icp_electron_energy",
         "target_claims": ["electron-energy diffusion smooths the profile"],
         "target_questions": ["does the closed-boundary inventory remain conserved?"],
         "requested_capabilities": [
@@ -88,7 +88,7 @@ def test_semantic_compilation_preserves_spec_meaning(tmp_path):
         ontology=service,
     )
 
-    assert compilation.intent.model == "oxygen_icp_electron_energy"
+    assert compilation.intent.model_ref == "oxygen_icp_electron_energy"
     assert tuple(goal.statement for goal in compilation.goals) == (payload["objective"],)
     assert tuple(claim.statement for claim in compilation.target_claims) == tuple(
         payload["target_claims"]
@@ -129,7 +129,7 @@ def test_semantic_compilation_and_policy_are_deterministic(tmp_path):
         "PARAMETER_TREATMENT",
     }
     assert all(action.preserves == first.intent.constraint_ids for action in policy1.selected_actions)
-    assert policy1.model == first.intent.model
+    assert policy1.model_ref == first.intent.model_ref
     assert policy1.target_ids == first.intent.target_ids
     assert "controlled-electron-energy-diffusion:v1" in policy1.policy_rule_ids
     rendered = repr(policy1)
@@ -150,7 +150,7 @@ def test_execution_plan_is_solver_independent_and_lowering_is_concrete(tmp_path)
     assert "FVKernels" not in text
     assert "Executioner" not in text
     assert "petsc_options" not in text
-    assert plan.model == "oxygen_icp_electron_energy"
+    assert plan.model_ref == "oxygen_icp_electron_energy"
     assert {case.target for case in plan.cases} == {"electron_energy_transport"}
 
     target1 = lower_execution_plan(plan)
@@ -233,7 +233,7 @@ def test_quasi_neutral_policy_derivation_is_state_based_and_solver_independent()
         intent_id="I",
         experiment_id="qn",
         objective="derive quasi-neutral electron reference",
-        model="oxygen_icp",
+        model_ref="oxygen_icp",
         requested_capabilities=("quasi_neutral_initialization",),
     )
     policy = synthesize_policy(state, intent, default_capabilities())

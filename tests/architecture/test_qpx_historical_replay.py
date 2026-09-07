@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from qpx_harness.ontology import OntologyService
-from qpx_harness.ontology.model import (
+from qpx_harness.ontology.records import (
     AcceptanceStatus,
     ActionExecution,
     ActionSpec,
@@ -864,5 +864,6 @@ def test_canonical_semantic_path_has_no_recipe_or_issue_runner_dependency():
         assert "recipes." not in text, path
         assert "application.protocols" not in text, path
         assert "Issue26_" not in text, path
-    compatibility = __import__("recipes")
-    assert compatibility.COMPATIBILITY_ONLY is True
+    assert not (ROOT / "recipes").exists()
+    historical = __import__("experiments.historical_recipe_support", fromlist=["*"])
+    assert historical is not None

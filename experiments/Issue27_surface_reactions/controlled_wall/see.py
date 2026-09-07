@@ -42,8 +42,8 @@ from experiments.Issue27_surface_reactions.controlled_wall.electron_wall_stable 
 from qpx_harness.evidence import create_collision_safe_directory, utc_timestamp, write_json_bundle
 from qpx_harness.execution.cases import stage_case
 from qpx_harness.execution.runtime import resolve_executable, validate_executable
-from qpx_harness.moose import blocks as mb
-from qpx_harness.moose import parameters as mp
+from qpx_harness.adapters.moose import blocks as mb
+from qpx_harness.adapters.moose import parameters as mp
 
 ROOT = Path(__file__).resolve().parents[3]
 SOURCE = ROOT / "experiments" / "Issue91_real_qvt_r3" / "r3_e0"

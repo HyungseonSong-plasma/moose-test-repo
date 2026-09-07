@@ -14,17 +14,17 @@ if str(ROOT) not in sys.path:
 
 from qpx_harness.evidence import artifacts as qa
 from qpx_harness.analysis import temporal as qt
-from qpx_harness.moose import blocks as mb
-from qpx_harness.moose import executioner as me
-from qpx_harness.moose import parameters as mp
+from qpx_harness.adapters.moose import blocks as mb
+from qpx_harness.adapters.moose import executioner as me
+from qpx_harness.adapters.moose import parameters as mp
 from qpx_harness.petsc import options as po
 from qpx_harness import issue46_jacobian_localization as issue46_semantic
 from qpx_harness import electron_inventory_nullspace as issue45_inventory_legacy
 from qpx_harness import issue43_coupling_diagnostic as issue43_legacy
-from recipes import issue43_coupling_diagnostic as issue43_recipe
-from recipes import issue45_first_linear as issue45_recipe
-from recipes import issue45_inventory_constraint as issue45_inventory_recipe
-from recipes import issue46_jacobian_localization as issue46_recipe
+from experiments.historical_recipe_support import issue43_coupling_diagnostic as issue43_recipe
+from experiments.historical_recipe_support import issue45_first_linear as issue45_recipe
+from experiments.historical_recipe_support import issue45_inventory_constraint as issue45_inventory_recipe
+from experiments.historical_recipe_support import issue46_jacobian_localization as issue46_recipe
 
 
 def _fixture() -> str:
@@ -384,7 +384,7 @@ def _check_generality_surface() -> None:
     )
     for rel in recipe_paths:
         source = (ROOT / rel).read_text()
-        if "qpx_harness.moose" not in source and "qpx_harness.petsc" not in source:
+        if "qpx_harness.adapters.moose" not in source and "qpx_harness.petsc" not in source:
             raise AssertionError(f"recipe does not compose generic primitives: {rel}")
         leaked = [name for name in legacy_names if name in source]
         if leaked:

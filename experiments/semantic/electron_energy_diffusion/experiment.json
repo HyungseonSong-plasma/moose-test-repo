@@ -3,7 +3,6 @@
   "experiment_id": "controlled-electron-energy-diffusion",
   "description": "Controlled semantic experiment reproducing the accepted Issue26 E2a discriminator without Issue-specific execution policy.",
   "objective": "Validate controlled electron-energy diffusion while preserving accepted held-fixed physics.",
-  "model": "oxygen_icp_electron_energy",
   "target_claims": [
     "electron-energy diffusion produces the expected controlled profile response",
     "closed-boundary electron-energy inventory remains acceptable"
@@ -28,8 +27,8 @@
     "energy_profile"
   ],
   "execution_bounds": {
-    "dt": 1e-8,
-    "end_time": 1e-8,
+    "dt": 1e-08,
+    "end_time": 1e-08,
     "max_steps": 1
   },
   "cases": [
@@ -47,5 +46,6 @@
     "historical_source": "Issue26 E2a accepted controlled-diffusion discriminator",
     "semantic_contract": "QPX_STATE_SEMANTICS_V1",
     "behavioral_equivalence_target": "recipes/issue26_e2a.py"
-  }
+  },
+  "model_ref": "oxygen_icp_electron_energy"
 }

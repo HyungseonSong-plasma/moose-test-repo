@@ -1,13 +1,13 @@
 """Source-faithful normalization for face evidence.
 
-Quantitative Green-Gauss reconstruction belongs to ``qpx_harness.analysis``.
-Cross-layer composition belongs downstream in ``qpx_harness.application``.
+Evidence owns generic source normalization. Reconstruction methods request their
+telemetry contracts explicitly from the application layer.
 """
 from __future__ import annotations
 
 import polars as pl
 
-from .schema import DEFAULT_FACE_CONTRACT, FACE_REQUIRED_COLUMNS, DynamicSchemaContract, normalize_and_project, require_columns
+from .schema import DEFAULT_FACE_CONTRACT, DynamicSchemaContract, normalize_and_project, require_columns
 
 FrameLike = pl.DataFrame | pl.LazyFrame
 
@@ -25,7 +25,11 @@ def normalize_face_evidence(
 ) -> pl.DataFrame:
     """Return canonical source-faithful face telemetry without derived science."""
     normalized = normalize_and_project(frame, schema_contract, context="face telemetry")
-    require_columns(_columns(normalized), FACE_REQUIRED_COLUMNS, context="normalized face telemetry")
+    require_columns(
+        _columns(normalized),
+        schema_contract.required_columns,
+        context="normalized face telemetry",
+    )
     return normalized.collect() if isinstance(normalized, pl.LazyFrame) else normalized
 
 

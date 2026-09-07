@@ -9,16 +9,15 @@ from pathlib import Path
 from typing import Any
 
 from experiments.Issue91_real_qvt_r3 import run as issue91_run
+from qpx_harness.adapters.moose.nonlinear_solver import failure_signature, runtime_core_facts
 from qpx_harness.evidence import (
     create_collision_safe_directory,
-    failure_signature,
-    runtime_core_facts,
     utc_timestamp,
     write_json_bundle,
 )
 from qpx_harness.execution.cases import stage_case
 from qpx_harness.execution.runtime import resolve_executable, run_qpx, validate_executable
-from recipes.issue31_r4 import build_r4_q0_input
+from experiments.historical_recipe_support.issue31_r4 import build_r4_q0_input
 
 ROOT = Path(__file__).resolve().parents[2]
 SOURCE = ROOT / "experiments" / "Issue91_real_qvt_r3" / "r3_e0"

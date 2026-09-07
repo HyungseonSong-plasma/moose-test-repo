@@ -9,15 +9,17 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from qpx_harness.inventory import closure_model, closure_runtime, orchestration, structure
-from qpx_harness.inventory.constants import (
+from qpx_harness.adapters.moose.electron_inventory import closure_model
+from qpx_harness.analysis.electron_inventory import closure_runtime, structure
+from qpx_harness.execution.electron_inventory import orchestration
+from qpx_harness.adapters.moose.electron_inventory.constants import (
     C0_TARGET,
     C1_TARGET,
     DEFAULT_MACRO_ELECTRON_AVG,
     LAMBDA_VARIABLE,
 )
-from recipes import issue45_closure_basis as closure_basis
-from recipes import issue45_inventory_constraint as recipe
+from experiments.historical_recipe_support import issue45_closure_basis as closure_basis
+from experiments.historical_recipe_support import issue45_inventory_constraint as recipe
 
 
 def _assert_equal(label: str, new: object, old: object) -> None:
@@ -201,8 +203,8 @@ def _check_runtime_policy() -> None:
 def _check_primitive_boundary() -> None:
     source = (ROOT / "recipes" / "issue45_inventory_constraint.py").read_text()
     for required in (
-        "from qpx_harness.moose import blocks as mb",
-        "from qpx_harness.moose import parameters as mp",
+        "from qpx_harness.adapters.moose import blocks as mb",
+        "from qpx_harness.adapters.moose import parameters as mp",
     ):
         if required not in source:
             raise AssertionError(f"missing generic primitive import: {required}")

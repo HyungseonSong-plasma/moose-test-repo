@@ -6,7 +6,7 @@ import json
 import math
 from typing import Any, Iterable
 
-from qpx_harness.ontology.model import (
+from qpx_harness.ontology.records import (
     ActionSpec,
     CapabilityDescriptor,
     DevelopmentState,
@@ -223,7 +223,7 @@ def synthesize_policy(
         derived_values=tuple(derived_values),
         policy_rule_ids=tuple(policy_rule_ids),
         execution_bounds=intent.execution_bounds,
-        model=intent.model,
+        model_ref=intent.model_ref,
         rationale=rationale,
         provenance_id=intent.provenance_id,
     )

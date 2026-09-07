@@ -7,7 +7,7 @@ import owlready2
 from qpx_harness.adapters.moose import emit_moose_input, lower_execution_plan
 from qpx_harness.execution import compile_execution_plan
 from qpx_harness.ontology import OntologyService
-from qpx_harness.ontology.model import (
+from qpx_harness.ontology.records import (
     DevelopmentState,
     ONTOLOGY_SCHEMA_VERSION,
     SEMANTIC_CONTRACT_ID,
@@ -133,7 +133,7 @@ def test_q12_execution_lineage_preserves_policy_plan_and_target_identity():
 
     assert plan.source_policy_id == policy.policy_id
     assert target.source_plan_id == plan.plan_id
-    assert plan.model == policy.model == target.model
+    assert plan.model_ref == policy.model_ref == target.model_ref
     assert tuple(case.action_id for case in plan.cases) == tuple(
         action.action_id for action in policy.selected_actions
     )

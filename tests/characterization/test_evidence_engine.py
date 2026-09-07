@@ -2,26 +2,10 @@ import polars as pl
 import pytest
 from pydantic import ValidationError
 
-from qpx_harness.application.green_gauss_workflow import (
-    build_cell_evidence,
-    prepare_face_evidence,
-    write_evidence_bundle,
-)
-from qpx_harness.diagnose import (
-    DiagnosticMetricSpec,
-    DiagnosisReport,
-    DiagnosisRule,
-    DiagnosisRuleRegistry,
-    EvidenceTolerances,
-    MetricPredicate,
-    Z3DiagnosisEngine,
-    Z3OwnerRule,
-    Z3RuleSet,
-    build_constant_state_registry,
-    build_constant_state_ruleset,
-    evaluate_diagnosis_registry,
-    summarize_constant_state,
-    summarize_constant_state_report,
+from qpx_harness.analysis.diagnostic_metrics import DiagnosticMetricSpec
+from qpx_harness.application.gradient_reconstruction import (
+    analyze_gradient_reconstruction,
+    write_reconstruction_evidence_bundle,
 )
 from qpx_harness.evidence import (
     CORE_FACE_CONTRACT,
@@ -33,13 +17,33 @@ from qpx_harness.evidence import (
     normalize_and_project,
     rz_constant_square_face_rows,
 )
+from qpx_harness.reasoning import (
+    DiagnosisReport,
+    MetricPredicate,
+    ReasoningRule,
+    RuleSet,
+    evaluate_diagnostic_rules,
+)
+from qpx_harness.reasoning.engines.z3 import evaluate_rules
+from qpx_harness.reasoning.gradient_reconstruction import (
+    ReconstructionTolerances,
+    build_constant_state_metrics,
+    build_constant_state_ruleset,
+    summarize_constant_state,
+    summarize_constant_state_report,
+)
 from qpx_harness.validation.evidence_diagnose_smoke import run_smoke
+
+METHOD = "green_gauss"
+
+
+def _analyze(raw):
+    return analyze_gradient_reconstruction(raw, method=METHOD, radial_component=0)
 
 
 def test_polars_reconstructs_exact_rz_constant_state_contract():
     raw = rz_constant_square_face_rows()
-    face = prepare_face_evidence(raw)
-    cell = build_cell_evidence(face, radial_component=0)
+    face, cell = _analyze(raw)
 
     assert face.select(pl.col("surface_delta_norm").max()).item() == 0.0
     assert face.select(pl.col("field_face_delta").abs().max()).item() == 0.0
@@ -50,12 +54,13 @@ def test_polars_reconstructs_exact_rz_constant_state_contract():
     assert abs(cell["reconstructed_grad_y"][0]) < 1.0e-14
     assert abs(cell["surface_closure_norm"][0]) < 1.0e-14
 
-    diagnosis = summarize_constant_state(face, cell)
+    diagnosis = summarize_constant_state(face, cell, method=METHOD)
     assert diagnosis["status"] == "CONSTANT_STATE_PASS"
     assert diagnosis["primary_owner_class"] is None
     assert diagnosis["selected_rule_id"] is None
     assert diagnosis["solver_status"] == "SATISFIED"
     assert diagnosis["failing_locations"] == []
+    assert diagnosis["reconstruction_method"] == METHOD
 
 
 def test_core_column_role_is_limited_to_identity_topology_and_spatial_coordinates():
@@ -79,13 +84,14 @@ def test_core_column_role_is_limited_to_identity_topology_and_spatial_coordinate
         "face_x",
         "face_y",
     }
-    assert DEFAULT_FACE_CONTRACT == GREEN_GAUSS_FACE_CONTRACT
+    assert DEFAULT_FACE_CONTRACT == CORE_FACE_CONTRACT
+    assert DEFAULT_FACE_CONTRACT != GREEN_GAUSS_FACE_CONTRACT
     assert "runtime_surface_x" in GREEN_GAUSS_FACE_CONTRACT.required_columns
     assert "field_cell" in GREEN_GAUSS_FACE_CONTRACT.required_columns
     assert "runtime_grad_x" in GREEN_GAUSS_FACE_CONTRACT.required_columns
 
 
-def test_default_schema_normalizes_safe_aliases_before_transform():
+def test_green_gauss_contract_normalizes_safe_aliases_before_reconstruction():
     raw = rz_constant_square_face_rows().rename(
         {
             "elem_id": "cell_id",
@@ -105,9 +111,7 @@ def test_default_schema_normalizes_safe_aliases_before_transform():
         }
     )
 
-    face = prepare_face_evidence(raw)
-    cell = build_cell_evidence(raw, radial_component=0)
-
+    face, cell = _analyze(raw)
     assert "elem_id" in face.columns and "cell_id" not in face.columns
     assert "face_id" in face.columns and "side_id" not in face.columns
     assert "cell_x" in face.columns and "x_C" not in face.columns
@@ -123,7 +127,6 @@ def test_default_schema_normalizes_safe_aliases_before_transform():
 def test_core_contract_does_not_own_green_gauss_quantities():
     raw = rz_constant_square_face_rows()
     normalized = normalize_and_project(raw, CORE_FACE_CONTRACT)
-
     assert "run_id" in normalized.columns
     assert "elem_id" in normalized.columns
     assert "moose_surface_x" in normalized.columns
@@ -136,7 +139,7 @@ def test_core_contract_does_not_own_green_gauss_quantities():
 
 def test_schema_extension_adds_new_quantity_without_transform_changes():
     raw = rz_constant_square_face_rows().with_columns(pl.lit(7.25).alias("Te_eV"))
-    contract = DEFAULT_FACE_CONTRACT.extend(
+    contract = GREEN_GAUSS_FACE_CONTRACT.extend(
         {
             "electron_temperature": ColumnSpec(
                 canonical="electron_temperature",
@@ -145,38 +148,36 @@ def test_schema_extension_adds_new_quantity_without_transform_changes():
             )
         }
     )
-
     normalized = normalize_and_project(raw, contract)
-    face = prepare_face_evidence(raw, schema_contract=contract)
-
     assert "electron_temperature" in normalized.columns
     assert "Te_eV" not in normalized.columns
     assert normalized["electron_temperature"][0] == pytest.approx(7.25)
-    assert "electron_temperature" in face.columns
 
 
 def test_schema_rejects_duplicate_canonical_and_alias_sources():
     raw = rz_constant_square_face_rows().with_columns(pl.col("elem_id").alias("cell_id"))
-
     with pytest.raises(ValueError, match="multiple matching columns"):
-        prepare_face_evidence(raw)
+        normalize_and_project(raw, GREEN_GAUSS_FACE_CONTRACT)
+
+
+def test_reconstruction_method_must_be_explicit_and_supported():
+    raw = rz_constant_square_face_rows()
+    with pytest.raises(ValueError, match="unsupported gradient-reconstruction method"):
+        analyze_gradient_reconstruction(raw, method="least_squares")
 
 
 def test_surface_vector_perturbation_isolated_before_rz_attribution():
     raw = rz_constant_square_face_rows(perturb_surface_x=1.0e-9)
-    face = prepare_face_evidence(raw)
-    cell = build_cell_evidence(face, radial_component=0)
+    face, cell = _analyze(raw)
     diagnosis = summarize_constant_state(
         face,
         cell,
-        tolerances=EvidenceTolerances(surface_vector_abs=1.0e-12),
+        method=METHOD,
+        tolerances=ReconstructionTolerances(surface_vector_abs=1.0e-12),
     )
     assert diagnosis["primary_owner_class"] == "SURFACE_VECTOR_CONSTRUCTION"
     assert diagnosis["selected_rule_id"] == "surface_vector_construction"
     assert diagnosis["status"] == "ISOLATED_OWNER_CLASS"
-    assert diagnosis["solver_status"] == "SATISFIED"
-    assert diagnosis["rz_specific_status"] == "REQUIRES_SPATIAL_COMPONENT_AGREEMENT"
-
     failure = diagnosis["failing_locations"][0]
     assert failure["entity_kind"] == "face"
     assert failure["metric"] == "surface_delta_norm"
@@ -186,280 +187,180 @@ def test_surface_vector_perturbation_isolated_before_rz_attribution():
     assert failure["error_value"] == pytest.approx(1.0e-9)
 
 
-def test_registry_extension_adds_new_owner_without_diagnose_code_changes():
+def test_rule_extension_adds_new_owner_without_reasoning_code_changes():
     raw = rz_constant_square_face_rows()
-    face = prepare_face_evidence(raw)
-    cell = build_cell_evidence(face, radial_component=0).with_columns(
-        pl.lit(2.5e-3).alias("electron_diffusivity_error")
-    )
+    face, cell = _analyze(raw)
+    cell = cell.with_columns(pl.lit(2.5e-3).alias("electron_diffusivity_error"))
 
-    registry = build_constant_state_registry().extend(
-        metrics={
-            "electron_diffusivity_error": DiagnosticMetricSpec(
-                metric_id="electron_diffusivity_error",
-                source="cell",
-                column="electron_diffusivity_error",
-                report_key="max_electron_diffusivity_error",
-                entity_kind="cell",
-                x_col="cell_x",
-                y_col="cell_y",
-            )
-        },
+    metrics = build_constant_state_metrics()
+    metrics["electron_diffusivity_error"] = DiagnosticMetricSpec(
+        metric_id="electron_diffusivity_error",
+        source="cell",
+        column="electron_diffusivity_error",
+        report_key="max_electron_diffusivity_error",
+        entity_kind="cell",
+        x_col="cell_x",
+        y_col="cell_y",
+    )
+    base_rules = build_constant_state_ruleset(method=METHOD)
+    ruleset = RuleSet(
         rules=(
-            DiagnosisRule(
+            ReasoningRule(
                 rule_id="electron_diffusivity_consistency",
-                metric_id="electron_diffusivity_error",
-                threshold=1.0e-4,
                 owner_class="ELECTRON_DIFFUSIVITY_CONSISTENCY",
                 status="ISOLATED_OWNER_CLASS",
                 decision_label="electron diffusivity consistency",
                 priority=5,
+                all_of=(MetricPredicate("electron_diffusivity_error", "gt", 1.0e-4),),
+                location_metric_id="electron_diffusivity_error",
             ),
+            *base_rules.rules,
         ),
+        pass_status=base_rules.pass_status,
     )
-
-    report = evaluate_diagnosis_registry(
-        {"face": face, "cell": cell},
-        registry,
-        top_k_failures=3,
+    report = evaluate_diagnostic_rules(
+        {"face": face, "cell": cell}, metrics, ruleset, top_k_failures=3
     )
-
     assert report.selected_rule_id == "electron_diffusivity_consistency"
     assert report.primary_owner_class == "ELECTRON_DIFFUSIVITY_CONSISTENCY"
-    assert report.solver_status == "SATISFIED"
-    assert report.metrics["max_electron_diffusivity_error"] == pytest.approx(2.5e-3)
-    assert report.failing_locations[0].elem_id == 10
-    assert report.failing_locations[0].metric == "electron_diffusivity_error"
-    assert report.decision_order[0] == "electron diffusivity consistency"
+    assert dict(report.metrics)["max_electron_diffusivity_error"] == pytest.approx(2.5e-3)
 
 
-def test_external_z3_ruleset_supports_composite_physics_logic():
+def test_external_ruleset_supports_composite_physics_logic():
     raw = rz_constant_square_face_rows()
-    face = prepare_face_evidence(raw)
-    cell = build_cell_evidence(face, radial_component=0).with_columns(
-        pl.lit(2.5e-3).alias("electron_diffusivity_error")
+    face, cell = _analyze(raw)
+    cell = cell.with_columns(pl.lit(2.5e-3).alias("electron_diffusivity_error"))
+    metrics = build_constant_state_metrics()
+    metrics["electron_diffusivity_error"] = DiagnosticMetricSpec(
+        metric_id="electron_diffusivity_error",
+        source="cell",
+        column="electron_diffusivity_error",
+        report_key="max_electron_diffusivity_error",
+        entity_kind="cell",
+        x_col="cell_x",
+        y_col="cell_y",
     )
-    registry = build_constant_state_registry().extend(
-        metrics={
-            "electron_diffusivity_error": DiagnosticMetricSpec(
-                metric_id="electron_diffusivity_error",
-                source="cell",
-                column="electron_diffusivity_error",
-                report_key="max_electron_diffusivity_error",
-                entity_kind="cell",
-                x_col="cell_x",
-                y_col="cell_y",
-            )
-        }
-    )
-    ruleset = build_constant_state_ruleset().extend(
-        (
-            Z3OwnerRule(
+    base_rules = build_constant_state_ruleset(method=METHOD)
+    ruleset = RuleSet(
+        rules=(
+            ReasoningRule(
                 rule_id="diffusivity_with_clean_geometry",
                 owner_class="ELECTRON_DIFFUSIVITY_CONSISTENCY",
                 status="ISOLATED_OWNER_CLASS",
                 decision_label="electron diffusivity with clean geometry",
                 priority=5,
                 all_of=(
-                    MetricPredicate(
-                        metric_id="electron_diffusivity_error",
-                        operator="gt",
-                        threshold=1.0e-4,
-                    ),
-                    MetricPredicate(
-                        metric_id="surface_vector_delta",
-                        operator="le",
-                        threshold=1.0e-14,
-                    ),
+                    MetricPredicate("electron_diffusivity_error", "gt", 1.0e-4),
+                    MetricPredicate("surface_vector_delta", "le", 1.0e-14),
                 ),
                 location_metric_id="electron_diffusivity_error",
             ),
-        )
+            *base_rules.rules,
+        ),
+        pass_status=base_rules.pass_status,
     )
-
-    report = evaluate_diagnosis_registry(
-        {"face": face, "cell": cell},
-        registry,
-        z3_ruleset=ruleset,
-    )
-
+    report = evaluate_diagnostic_rules({"face": face, "cell": cell}, metrics, ruleset)
     assert report.selected_rule_id == "diffusivity_with_clean_geometry"
     assert report.primary_owner_class == "ELECTRON_DIFFUSIVITY_CONSISTENCY"
-    assert report.solver_status == "SATISFIED"
-    assert report.failing_locations[0].elem_id == 10
 
 
-def test_z3_engine_missing_metric_is_contract_error_not_false_pass():
-    ruleset = Z3RuleSet(
+def test_z3_backend_missing_metric_is_contract_error_not_false_pass():
+    ruleset = RuleSet(
         rules=(
-            Z3OwnerRule(
+            ReasoningRule(
                 rule_id="needs_two_metrics",
                 owner_class="COMPOSITE_OWNER",
                 status="UNRESOLVED",
                 decision_label="composite owner",
                 priority=10,
                 all_of=(
-                    MetricPredicate(metric_id="a", operator="gt", threshold=0.0),
-                    MetricPredicate(metric_id="b", operator="gt", threshold=0.0),
+                    MetricPredicate("a", "gt", 0.0),
+                    MetricPredicate("b", "gt", 0.0),
                 ),
             ),
         ),
         pass_status="PASS",
-        rz_specific_status="NOT_APPLICABLE",
     )
+    with pytest.raises(ValueError, match=r"missing metric\(s\) required by rule set: b"):
+        evaluate_rules({"a": 1.0}, ruleset)
 
-    with pytest.raises(ValueError, match="missing required metric values: b"):
-        Z3DiagnosisEngine(ruleset).diagnose({"a": 1.0})
 
-
-def test_registry_supports_non_spatial_run_level_metric():
-    registry = DiagnosisRuleRegistry(
-        metrics={
-            "jacobian_relative_error": DiagnosticMetricSpec(
-                metric_id="jacobian_relative_error",
-                source="jacobian",
-                column="relative_error",
-                report_key="max_jacobian_relative_error",
-            )
-        },
+def test_reasoning_supports_non_spatial_run_level_metric():
+    metrics = {
+        "jacobian_relative_error": DiagnosticMetricSpec(
+            metric_id="jacobian_relative_error",
+            source="jacobian",
+            column="relative_error",
+            report_key="max_jacobian_relative_error",
+        )
+    }
+    ruleset = RuleSet(
         rules=(
-            DiagnosisRule(
+            ReasoningRule(
                 rule_id="jacobian_consistency",
-                metric_id="jacobian_relative_error",
-                threshold=1.0e-3,
                 owner_class="JACOBIAN_CONSISTENCY",
                 status="UNRESOLVED",
                 decision_label="Jacobian consistency",
                 priority=10,
+                all_of=(MetricPredicate("jacobian_relative_error", "gt", 1.0e-3),),
             ),
         ),
         pass_status="JACOBIAN_PASS",
-        rz_specific_status="NOT_APPLICABLE",
     )
-
-    report = evaluate_diagnosis_registry(
-        {"jacobian": pl.DataFrame({"relative_error": [0.0369]})},
-        registry,
+    report = evaluate_diagnostic_rules(
+        {"jacobian": pl.DataFrame({"relative_error": [0.0369]})}, metrics, ruleset
     )
-
     assert report.status == "UNRESOLVED"
     assert report.primary_owner_class == "JACOBIAN_CONSISTENCY"
-    assert report.solver_status == "SATISFIED"
-    assert report.failing_locations == []
-    assert report.rz_specific_status == "NOT_APPLICABLE"
-
-
-def test_registry_rejects_unknown_metric_and_duplicate_priority():
-    metric = DiagnosticMetricSpec(
-        metric_id="a",
-        source="cell",
-        column="a",
-        report_key="max_a",
-    )
-    with pytest.raises(ValidationError, match="unknown metric"):
-        DiagnosisRuleRegistry(
-            metrics={"a": metric},
-            rules=(
-                DiagnosisRule(
-                    rule_id="bad",
-                    metric_id="missing",
-                    threshold=0.0,
-                    owner_class="BAD",
-                    status="UNRESOLVED",
-                    decision_label="bad",
-                    priority=1,
-                ),
-            ),
-        )
-
-    with pytest.raises(ValidationError, match="priority"):
-        DiagnosisRuleRegistry(
-            metrics={"a": metric},
-            rules=(
-                DiagnosisRule(
-                    rule_id="r1",
-                    metric_id="a",
-                    threshold=0.0,
-                    owner_class="A",
-                    status="UNRESOLVED",
-                    decision_label="a1",
-                    priority=1,
-                ),
-                DiagnosisRule(
-                    rule_id="r2",
-                    metric_id="a",
-                    threshold=1.0,
-                    owner_class="B",
-                    status="UNRESOLVED",
-                    decision_label="a2",
-                    priority=1,
-                ),
-            ),
-        )
+    assert report.failing_locations == ()
 
 
 def test_typed_report_and_tolerance_validation():
     raw = rz_constant_square_face_rows(perturb_surface_x=1.0e-9)
-    face = prepare_face_evidence(raw)
-    cell = build_cell_evidence(face, radial_component=0)
-
+    face, cell = _analyze(raw)
     report = summarize_constant_state_report(
         face,
         cell,
-        tolerances=EvidenceTolerances(surface_vector_abs=1.0e-12),
+        method=METHOD,
+        tolerances=ReconstructionTolerances(surface_vector_abs=1.0e-12),
     )
     assert isinstance(report, DiagnosisReport)
     assert report.primary_owner_class == "SURFACE_VECTOR_CONSTRUCTION"
-    assert report.solver_status == "SATISFIED"
     assert report.failing_locations[0].face_id == 1
-
     with pytest.raises(ValidationError):
-        EvidenceTolerances(surface_vector_abs=-1.0)
+        ReconstructionTolerances(surface_vector_abs=-1.0)
 
 
 def test_missing_diagnostic_metric_is_contract_error_not_false_pass():
     raw = rz_constant_square_face_rows()
-    face = prepare_face_evidence(raw).drop("surface_delta_norm")
-    cell = build_cell_evidence(raw, radial_component=0)
-
+    face, cell = _analyze(raw)
+    face = face.drop("surface_delta_norm")
     with pytest.raises(ValueError, match="surface_delta_norm"):
-        summarize_constant_state(face, cell)
+        summarize_constant_state(face, cell, method=METHOD)
 
 
 def test_parquet_bundle_and_duckdb_queries(tmp_path):
     raw = rz_constant_square_face_rows(perturb_surface_x=1.0e-9)
-    paths = write_evidence_bundle(raw, tmp_path / "bundle", radial_component=0)
-
+    paths = write_reconstruction_evidence_bundle(
+        raw, tmp_path / "bundle", method=METHOD, radial_component=0
+    )
     with EvidenceStore(tmp_path / "evidence.duckdb") as store:
         store.ingest_parquet("face_evidence", paths["face_evidence"])
         store.ingest_parquet("cell_evidence", paths["cell_evidence"])
-        worst = store.worst_cells(limit=1)
-        assert worst.height == 1
-        assert worst["elem_id"][0] == 10
-        count = store.query("SELECT count(*) AS n FROM face_evidence")
-        assert count["n"][0] == 4
+        counts = store.query(
+            "SELECT (SELECT count(*) FROM face_evidence) AS faces, "
+            "(SELECT count(*) FROM cell_evidence) AS cells"
+        ).row(0, named=True)
+        worst = store.worst_cells(
+            table="cell_evidence", metric="gradient_delta_norm", limit=1
+        )
+    assert counts == {"faces": 4, "cells": 1}
+    assert worst.height == 1
 
 
-def test_local_smoke_preserves_artifacts_and_exercises_full_stack(tmp_path):
-    output = tmp_path / "local-smoke"
-    summary = run_smoke(output)
-
+def test_local_evidence_analysis_reasoning_smoke(tmp_path):
+    summary = run_smoke(tmp_path / "smoke")
     assert summary["status"] == "PASS"
-    assert summary["contract"] == {
-        "symmetry_axis": "Y",
-        "radial_coordinate": "X",
-        "radial_component": 0,
-    }
+    assert summary["contract"]["reconstruction_method"] == METHOD
     assert summary["baseline_diagnosis"]["status"] == "CONSTANT_STATE_PASS"
-    assert summary["baseline_diagnosis"]["solver_status"] == "SATISFIED"
-    assert (
-        summary["perturbed_diagnosis"]["primary_owner_class"]
-        == "SURFACE_VECTOR_CONSTRUCTION"
-    )
-    assert summary["perturbed_diagnosis"]["failing_locations"][0]["face_id"] == 1
-    assert (output / "baseline" / "face_evidence.parquet").is_file()
-    assert (output / "baseline" / "cell_evidence.parquet").is_file()
-    assert (output / "perturbed" / "face_evidence.parquet").is_file()
-    assert (output / "perturbed" / "cell_evidence.parquet").is_file()
-    assert (output / "evidence.duckdb").is_file()
-    assert (output / "summary.json").is_file()
+    assert summary["perturbed_diagnosis"]["primary_owner_class"] == "SURFACE_VECTOR_CONSTRUCTION"

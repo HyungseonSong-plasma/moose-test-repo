@@ -17,7 +17,7 @@ from qpx_harness.evidence import create_collision_safe_directory, sha256_file, u
 from qpx_harness.execution.cases import stage_case
 from qpx_harness.execution.runtime import resolve_executable, validate_executable
 from qpx_harness.provenance import ArtifactRef, FileIdentity, RunEnvelope, write_run_envelope
-from recipes.issue31_r4_qf2 import (
+from experiments.historical_recipe_support.issue31_r4_qf2 import (
     QF2_CHARGE_MAX_PP,
     QF2_CHARGE_MIN_PP,
     build_r4_qf2_input,

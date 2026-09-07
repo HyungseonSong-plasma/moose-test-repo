@@ -11,7 +11,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from qpx_harness import issue43_relaxation_runtime as runtime43
-from recipes import issue43_fast_relaxation as recipe
+from experiments.historical_recipe_support import issue43_fast_relaxation as recipe
 
 
 def _fixture() -> str:
@@ -208,7 +208,7 @@ def _check_classification_contract() -> None:
 
 def _check_runtime_composition_boundary() -> None:
     source = Path(runtime43.__file__).read_text()
-    if "from recipes import issue43_fast_relaxation as relaxation_recipe" not in source:
+    if "from experiments.historical_recipe_support import issue43_fast_relaxation as relaxation_recipe" not in source:
         raise AssertionError("runtime does not bind the canonical Issue43 recipe")
     for forbidden in (
         "fast_plasma_relaxation_v2",

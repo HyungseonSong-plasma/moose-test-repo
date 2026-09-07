@@ -29,7 +29,7 @@
     {
       "path": "qpx_harness/moose/log.py",
       "classification": "SOURCE_PARSER",
-      "canonical_owner": "qpx_harness.moose",
+      "canonical_owner": "qpx_harness.adapters.moose",
       "reason": "MOOSE log syntax parser used by runtime evidence extraction"
     }
   ],

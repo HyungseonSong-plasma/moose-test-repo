@@ -1,0 +1,137 @@
+name: QPX Runtime Consumer
+
+on:
+  push:
+    branches:
+      - main
+      - development
+    paths:
+      - 'qpx_harness/**'
+      - 'legacy_shims/**'
+      - 'tests/**'
+      - 'pyproject.toml'
+      - '.github/workflows/qpx-runtime-consumer.yml'
+  pull_request:
+    branches:
+      - main
+      - development
+    paths:
+      - 'qpx_harness/**'
+      - 'legacy_shims/**'
+      - 'tests/**'
+      - 'pyproject.toml'
+      - '.github/workflows/qpx-runtime-consumer.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: qpx-runtime-consumer-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: read
+
+env:
+  QPX_RUNTIME_REF: ghcr.io/hyungseonsong-plasma/qpx-runtime@sha256:140d7b3d1bf9b20575f624de66af3f17dc47b8f926dbbeaadfe19e1efa516691
+  EXPECTED_QPX_SOURCE_OWNER: moose-test-repo/qpx_app
+  EXPECTED_QPX_SOURCE_REPOSITORY_SHA: c07a72d62dadb25e9ff1b7be5458ec3abef204fb
+  EXPECTED_QPX_SOURCE_MANIFEST_SHA256: 5acc95407813971b5816395242a05111bcfa09e333e897825751e7eed4f60ecb
+  EXPECTED_BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/qpx-build-base@sha256:910d406eb3574a918290dc3621df1133569907d6e7af7884f68abe257a9a1999
+  EXPECTED_MOOSE_SHA: 9f388366ccf38b9c34542ec5561198249fde0ac9
+  EXPECTED_CRANE_SHA: ba26970cf419dcac563a20ed7079d445bc6341c3
+  EXPECTED_SQUIRREL_SHA: 16a26d504f3ee11161a86d4e3ebf3c0e5f2afbb1
+  EXPECTED_ZAPDOS_SHA: 9eceffbc46048c3760bbfa9a7f1ca681ae35af1d
+
+jobs:
+  runtime-contract:
+    name: immutable-runtime-contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Log in to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull immutable QPX runtime
+        id: pull
+        run: |
+          set -euxo pipefail
+          start="$(date +%s)"
+          docker pull "${QPX_RUNTIME_REF}"
+          end="$(date +%s)"
+          pull_seconds="$((end - start))"
+          size_bytes="$(docker image inspect "${QPX_RUNTIME_REF}" --format '{{.Size}}')"
+          echo "pull_seconds=${pull_seconds}" >> "$GITHUB_OUTPUT"
+          echo "size_bytes=${size_bytes}" >> "$GITHUB_OUTPUT"
+          echo "QPX runtime pull seconds: ${pull_seconds}"
+          echo "QPX runtime local image bytes: ${size_bytes}"
+
+      - name: Verify immutable runtime provenance
+        run: |
+          set -euxo pipefail
+          repository_sha="$(docker image inspect "${QPX_RUNTIME_REF}" --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}')"
+          source_owner="$(docker image inspect "${QPX_RUNTIME_REF}" --format '{{ index .Config.Labels "io.qpx.source.owner" }}')"
+          source_manifest="$(docker image inspect "${QPX_RUNTIME_REF}" --format '{{ index .Config.Labels "io.qpx.source.manifest-sha256" }}')"
+          build_base="$(docker image inspect "${QPX_RUNTIME_REF}" --format '{{ index .Config.Labels "io.qpx.build-base.ref" }}')"
+          moose_sha="$(docker image inspect "${QPX_RUNTIME_REF}" --format '{{ index .Config.Labels "io.qpx.moose.sha" }}')"
+          crane_sha="$(docker image inspect "${QPX_RUNTIME_REF}" --format '{{ index .Config.Labels "io.qpx.crane.sha" }}')"
+          squirrel_sha="$(docker image inspect "${QPX_RUNTIME_REF}" --format '{{ index .Config.Labels "io.qpx.squirrel.sha" }}')"
+          zapdos_sha="$(docker image inspect "${QPX_RUNTIME_REF}" --format '{{ index .Config.Labels "io.qpx.zapdos.sha" }}')"
+
+          test "$repository_sha" = "$EXPECTED_QPX_SOURCE_REPOSITORY_SHA"
+          test "$source_owner" = "$EXPECTED_QPX_SOURCE_OWNER"
+          test "$source_manifest" = "$EXPECTED_QPX_SOURCE_MANIFEST_SHA256"
+          test "$build_base" = "$EXPECTED_BUILD_BASE_REF"
+          test "$moose_sha" = "$EXPECTED_MOOSE_SHA"
+          test "$crane_sha" = "$EXPECTED_CRANE_SHA"
+          test "$squirrel_sha" = "$EXPECTED_SQUIRREL_SHA"
+          test "$zapdos_sha" = "$EXPECTED_ZAPDOS_SHA"
+          echo QPX_RUNTIME_PROVENANCE_PASS
+
+      - name: Run QPX check-input smoke
+        run: |
+          set -euxo pipefail
+          docker run --rm \
+            "${QPX_RUNTIME_REF}" \
+            --check-input -i /opt/qpx/ci/smoke.i
+
+      - name: Run bounded real QPX smoke
+        run: |
+          set -euxo pipefail
+          docker run --rm \
+            "${QPX_RUNTIME_REF}" \
+            -i /opt/qpx/ci/smoke.i
+
+      - name: Record runtime consumer evidence
+        if: always()
+        run: |
+          {
+            echo "QPX_RUNTIME_REF=${QPX_RUNTIME_REF}"
+            echo "RUNTIME_PULL_SECONDS=${{ steps.pull.outputs.pull_seconds }}"
+            echo "RUNTIME_LOCAL_SIZE_BYTES=${{ steps.pull.outputs.size_bytes }}"
+            echo "EXPECTED_QPX_SOURCE_OWNER=${EXPECTED_QPX_SOURCE_OWNER}"
+            echo "EXPECTED_QPX_SOURCE_REPOSITORY_SHA=${EXPECTED_QPX_SOURCE_REPOSITORY_SHA}"
+            echo "EXPECTED_QPX_SOURCE_MANIFEST_SHA256=${EXPECTED_QPX_SOURCE_MANIFEST_SHA256}"
+            echo "EXPECTED_BUILD_BASE_REF=${EXPECTED_BUILD_BASE_REF}"
+            echo "EXPECTED_MOOSE_SHA=${EXPECTED_MOOSE_SHA}"
+            echo "EXPECTED_CRANE_SHA=${EXPECTED_CRANE_SHA}"
+            echo "EXPECTED_SQUIRREL_SHA=${EXPECTED_SQUIRREL_SHA}"
+            echo "EXPECTED_ZAPDOS_SHA=${EXPECTED_ZAPDOS_SHA}"
+            echo "QPX_CHECK_INPUT_SMOKE=${{ job.status == 'success' && 'PASS' || 'FAIL' }}"
+            echo "BOUNDED_REAL_QPX_RUN=${{ job.status == 'success' && 'PASS' || 'FAIL' }}"
+            echo "ORDINARY_CI_PULLS_MOOSE_DEV=false"
+            echo "ORDINARY_CI_PULLS_QPX_BUILD_BASE=false"
+            echo "ORDINARY_CI_REBUILDS_MOOSE_STACK=false"
+            echo "ORDINARY_CI_COMPILES_QPX=false"
+          } > qpx-runtime-consumer-evidence.txt
+
+      - name: Upload runtime consumer evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: qpx-runtime-consumer-evidence
+          path: qpx-runtime-consumer-evidence.txt

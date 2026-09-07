@@ -10,7 +10,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from qpx_harness import issue43_coupling_diagnostic as issue43
-from qpx_harness.moose import log as moose_log
+from qpx_harness.adapters.moose import log as moose_log
 from qpx_harness.petsc import jacobian as petsc_jacobian
 from qpx_harness.petsc import ksp as petsc_ksp
 from qpx_harness.petsc import log as petsc_log

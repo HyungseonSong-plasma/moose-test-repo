@@ -12,15 +12,15 @@ from experiments.Issue93_r3_electron_isolation.operator_decomposition import _ch
 from experiments.Issue93_r3_electron_isolation.prepare import ELECTRON_REFERENCE_CASE
 from experiments.Issue93_r3_electron_isolation.run import _electron_residuals
 from experiments.R3_electron_master_diagnostic.execution_status import solver_status
-from qpx_harness.diagnose import diagnose_jacobian_evidence
+from qpx_harness.reasoning.jacobian import diagnose_jacobian_evidence
+from qpx_harness.adapters.moose.nonlinear_solver import failure_signature, runtime_core_facts
+from qpx_harness.adapters.petsc.jacobian import parse_comparisons
 from qpx_harness.evidence import (
     AttributionSignals,
     ErrorLedger,
     classify_attribution,
     create_collision_safe_directory,
     extract_jacobian_evidence,
-    failure_signature,
-    runtime_core_facts,
     sha256_file,
     utc_timestamp,
     write_json_bundle,
@@ -272,7 +272,7 @@ def _jacobian_case(
     )
     text = log.read_text(errors="replace")
     comparison = diagnose_jacobian_evidence(
-        extract_jacobian_evidence(text),
+        extract_jacobian_evidence(parse_comparisons(text)),
         relative_tolerance=tolerance,
     )
     return {

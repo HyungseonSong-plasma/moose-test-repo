@@ -8,8 +8,8 @@ from pathlib import Path
 import types
 from typing import Any, Iterable, Union, get_args, get_origin, get_type_hints
 
-from . import model as semantic_model
-from .model import (
+from . import records as semantic_model
+from .records import (
     ActionSpec,
     CapabilityDescriptor,
     ClaimAssessment,

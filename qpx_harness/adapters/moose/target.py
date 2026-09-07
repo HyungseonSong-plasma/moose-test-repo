@@ -33,7 +33,7 @@ class MooseBlock:
 class MooseCaseIR:
     case_id: str
     action_id: str
-    model: str | None = None
+    model_ref: str | None = None
     blocks: tuple[MooseBlock, ...] = ()
     assignments: tuple[MooseAssignment, ...] = ()
     required_observations: tuple[str, ...] = ()
@@ -43,7 +43,7 @@ class MooseCaseIR:
 class MooseTargetIR:
     source_plan_id: str
     cases: tuple[MooseCaseIR, ...]
-    model: str | None = None
+    model_ref: str | None = None
     execution_bounds: tuple[tuple[str, Any], ...] = ()
 
 
@@ -237,7 +237,7 @@ def _observation_blocks(observations: tuple[str, ...]) -> tuple[MooseBlock, ...]
 
 def _lower_electron_energy_diffusion(
     case: ExecutionCase,
-    model: str | None,
+    model_ref: str | None,
     execution_bounds: tuple[tuple[str, Any], ...],
 ) -> MooseCaseIR:
     raw_diffusivity = _parameter(case, "diffusivity")
@@ -299,7 +299,7 @@ def _lower_electron_energy_diffusion(
     return MooseCaseIR(
         case_id=case.case_id,
         action_id=case.action_id,
-        model=model,
+        model_ref=model_ref,
         blocks=tuple(blocks),
         assignments=_execution_assignments(execution_bounds),
         required_observations=case.required_observations,
@@ -308,7 +308,7 @@ def _lower_electron_energy_diffusion(
 
 def _lower_quasi_neutral_initialization(
     case: ExecutionCase,
-    model: str | None,
+    model_ref: str | None,
     execution_bounds: tuple[tuple[str, Any], ...],
 ) -> MooseCaseIR:
     value = float(_parameter(case, "electron_reference_density_m3"))
@@ -317,7 +317,7 @@ def _lower_quasi_neutral_initialization(
     return MooseCaseIR(
         case_id=case.case_id,
         action_id=case.action_id,
-        model=model,
+        model_ref=model_ref,
         assignments=(
             MooseAssignment("", "n_e_value", f"{value:.17g}"),
             *_execution_assignments(execution_bounds),
@@ -359,14 +359,14 @@ def lower_execution_plan(
         if explicit_lowerer is not None:
             lowered = explicit_lowerer(case)
         else:
-            lowered = _builtin_lowerer(case)(case, plan.model, plan.execution_bounds)
+            lowered = _builtin_lowerer(case)(case, plan.model_ref, plan.execution_bounds)
         if lowered.case_id != case.case_id or lowered.action_id != case.action_id:
             raise MooseLoweringError("target lowerer changed case/action identity")
         cases.append(lowered)
     return MooseTargetIR(
         source_plan_id=plan.plan_id,
         cases=tuple(cases),
-        model=plan.model,
+        model_ref=plan.model_ref,
         execution_bounds=plan.execution_bounds,
     )
 
@@ -415,8 +415,8 @@ def emit_moose_input(case: MooseCaseIR) -> str:
         f"# QPX case_id: {case.case_id}",
         f"# QPX action_id: {case.action_id}",
     ]
-    if case.model is not None:
-        lines.append(f"# QPX model: {case.model}")
+    if case.model_ref is not None:
+        lines.append(f"# QPX model_ref: {case.model_ref}")
 
     top_level = sorted(
         (item for item in case.assignments if not item.path),

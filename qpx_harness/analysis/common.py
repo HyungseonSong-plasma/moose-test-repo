@@ -5,8 +5,8 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from ._coerce import as_mapping, optional_float, optional_int, string_tuple
-from ..models.stats import CommonStats, EnvironmentStats, ProblemStats
+from .coercion import as_mapping, optional_float, optional_int, string_tuple
+from ..evaluation.statistics import CommonStats, EnvironmentStats, ProblemStats
 
 
 def build_problem_stats(facts: Mapping[str, Any] | None) -> ProblemStats | None:

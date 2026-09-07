@@ -13,7 +13,7 @@ from experiments.Issue91_real_qvt_r3 import run as issue91_run
 from qpx_harness.evidence import create_collision_safe_directory, utc_timestamp, write_json_bundle
 from qpx_harness.execution.cases import stage_case
 from qpx_harness.execution.runtime import resolve_executable, validate_executable
-from recipes.issue31_r4_qn0 import build_r4_qn0_input
+from experiments.historical_recipe_support.issue31_r4_qn0 import build_r4_qn0_input
 
 ROOT = Path(__file__).resolve().parents[2]
 SOURCE = ROOT / "experiments" / "Issue91_real_qvt_r3" / "r3_e0"

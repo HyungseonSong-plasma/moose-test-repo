@@ -11,7 +11,7 @@ ROOT = CASE_DIR.parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from recipes.issue91_r3 import build_r3_input
+from experiments.historical_recipe_support.issue91_r3 import build_r3_input
 
 
 def main() -> int:

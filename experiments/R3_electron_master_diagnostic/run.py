@@ -11,7 +11,8 @@ from typing import Any
 from experiments.Issue93_r3_electron_isolation.operator_decomposition import _check_accepted_qvt_csv
 from experiments.Issue93_r3_electron_isolation.prepare import ELECTRON_REFERENCE_CASE
 from experiments.Issue93_r3_electron_isolation.run import _electron_residuals
-from qpx_harness.diagnose import diagnose_jacobian_evidence
+from qpx_harness.reasoning.jacobian import diagnose_jacobian_evidence
+from qpx_harness.adapters.moose.nonlinear_solver import runtime_core_facts
 from qpx_harness.evidence import (
     AttributionSignals,
     ErrorLedger,
@@ -19,7 +20,6 @@ from qpx_harness.evidence import (
     create_collision_safe_directory,
     extract_jacobian_evidence,
     failure_signature,
-    runtime_core_facts,
     sha256_file,
     utc_timestamp,
     write_json_bundle,

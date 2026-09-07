@@ -22,9 +22,9 @@ if str(ROOT) not in sys.path:
 from qpx_harness import issue46_jacobian_localization as loc
 from qpx_harness import electron_inventory_nullspace as inv
 from qpx_harness import issue46_fd_reference as base
-from qpx_harness.moose.input import MooseInput
+from qpx_harness.adapters.moose.input import MooseInput
 from qpx_harness.petsc import options as petsc_options
-from recipes import issue45_first_linear as first_linear
+from experiments.historical_recipe_support import issue45_first_linear as first_linear
 
 
 ACCEPTED_EVR1_ELECTRON_DOF_COUNT = 2348

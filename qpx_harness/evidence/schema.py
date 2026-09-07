@@ -193,8 +193,11 @@ _GREEN_GAUSS_SPECS: dict[str, ColumnSpec] = {
 }
 
 GREEN_GAUSS_FACE_CONTRACT = CORE_FACE_CONTRACT.extend(_GREEN_GAUSS_SPECS)
-DEFAULT_FACE_CONTRACT = GREEN_GAUSS_FACE_CONTRACT
-FACE_REQUIRED_COLUMNS = GREEN_GAUSS_FACE_CONTRACT.required_columns
+
+# Generic face normalization owns only stable identity/topology.  Method-specific
+# telemetry must be requested explicitly by the reconstruction application.
+DEFAULT_FACE_CONTRACT = CORE_FACE_CONTRACT
+FACE_REQUIRED_COLUMNS = CORE_FACE_CONTRACT.required_columns
 CELL_KEY_COLUMNS = (
     CoreColumnRole.RUN_ID.value,
     CoreColumnRole.CASE_ID.value,

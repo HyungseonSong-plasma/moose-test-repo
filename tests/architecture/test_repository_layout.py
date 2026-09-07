@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from qpx_harness.spec.cases import QVT_PREPOISSON_CASE
+from qpx_harness.provenance.cases import QVT_PREPOISSON_CASE
 
 ROOT = Path(__file__).resolve().parents[2]
 

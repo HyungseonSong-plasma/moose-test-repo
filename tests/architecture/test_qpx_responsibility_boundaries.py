@@ -68,13 +68,8 @@ def test_new_canonical_code_does_not_import_legacy_cpp_or_diagnose():
             assert not any(item.startswith("qpx_harness.diagnose") for item in imports), path
 
 
-def test_root_recipes_is_bounded_compatibility_namespace():
-    recipes = importlib.import_module("recipes")
-    assert recipes.COMPATIBILITY_ONLY is True
-    assert recipes.SEMANTIC_AUTHORITY_RETIRED is True
-    assert recipes.NEW_CALLERS_FORBIDDEN is True
-    assert isinstance(recipes.REMOVAL_CONDITION, str)
-    assert recipes.REMOVAL_CONDITION.strip()
+def test_root_recipes_are_physically_retired() -> None:
+    assert not (ROOT / "recipes").exists()
 
 
 def test_canonical_capabilities_do_not_import_root_recipes():

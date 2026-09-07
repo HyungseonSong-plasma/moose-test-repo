@@ -8,7 +8,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from recipes.issue91_r3 import build_r3_input
+from experiments.historical_recipe_support.issue91_r3 import build_r3_input
 
 ROOT = Path(__file__).resolve().parents[2]
 SOURCE_CASE = ROOT / "experiments" / "Issue91_real_qvt_r3" / "r3_e0"

@@ -5,10 +5,7 @@ EXPECTED_CANONICAL_COMMANDS = frozenset({
     "compile", "plan", "lower", "run", "preflight", "temporal-csv",
 })
 EXPECTED_LEGACY_COMMANDS = frozenset({
-    "test", "test-all", "scale-audit", "inventory-nullspace",
-    "inventory-first-linear", "contract", "dmix-equivalence", "measure",
-    "measure-smoke", "investigate", "transport-probe", "cache-audit",
-    "profile", "analyze", "inventory",
+    "test", "test-all", "contract", "measure", "analyze", "inventory",
 })
 EXPECTED_INTERNAL_TARGETS = frozenset({"architecture", "regression", "all"})
 
@@ -20,9 +17,10 @@ def validate_command_surface(
 ) -> list[str]:
     """Validate the separated canonical, compatibility, and internal surfaces.
 
-    ``commands`` is the bounded legacy/compatibility command table. Canonical
-    commands are validated separately so a promoted command cannot be forced
-    to remain in the legacy namespace merely to satisfy an old regression.
+    ``commands`` is the bounded compatibility command table. Campaign-specific
+    commands are intentionally absent; historical experiments must not define
+    the reusable CLI surface. Performance profiling is represented by
+    ``measure`` with a PROFILE manifest rather than a second ``profile`` entry.
     """
     errors: list[str] = []
 

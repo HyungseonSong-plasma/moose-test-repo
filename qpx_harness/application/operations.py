@@ -8,34 +8,36 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from qpx_harness.analysis.green_gauss import derive_cell_quantities, derive_face_quantities
-from qpx_harness.evidence import normalize_face_evidence
+from qpx_harness.application.gradient_reconstruction import analyze_gradient_reconstruction as _analyze_gradient_reconstruction
 
 
-def analyze_green_gauss(face_frame: Any, *, radial_component: int = 0) -> tuple[Any, Any]:
-    """Normalize source face evidence and derive face/cell quantitative facts."""
-    normalized = normalize_face_evidence(face_frame)
-    return derive_face_quantities(normalized), derive_cell_quantities(normalized, radial_component=radial_component)
-
-
-def diagnose_constant_green_gauss(
+def analyze_gradient_reconstruction(
     face_frame: Any,
     *,
+    method: str,
+    radial_component: int = 0,
+) -> tuple[Any, Any]:
+    """Analyze one explicitly selected gradient-reconstruction method."""
+    return _analyze_gradient_reconstruction(
+        face_frame, method=method, radial_component=radial_component
+    )
+
+
+def diagnose_constant_reconstruction(
+    face_frame: Any,
+    *,
+    method: str,
     radial_component: int = 0,
     tolerances: Any | None = None,
 ) -> dict[str, Any]:
-    """Compose Evidence -> Analysis -> Diagnose for constant-state diagnostics."""
-    from qpx_harness.diagnose import summarize_constant_state
+    """Compose Evidence -> Analysis -> Reasoning for a constant-state check."""
+    from qpx_harness.reasoning.gradient_reconstruction import summarize_constant_state
 
-    face, cell = analyze_green_gauss(face_frame, radial_component=radial_component)
+    face, cell = analyze_gradient_reconstruction(
+        face_frame, method=method, radial_component=radial_component
+    )
     kwargs = {} if tolerances is None else {"tolerances": tolerances}
-    return summarize_constant_state(face, cell, **kwargs)
-
-
-def preflight_input(path: str | Path) -> None:
-    from qpx_harness.moose.preflight import validate_input_preflight
-
-    validate_input_preflight(Path(path).expanduser().resolve())
+    return summarize_constant_state(face, cell, method=method, **kwargs)
 
 
 def normalize_temporal_run_csv(
@@ -62,8 +64,7 @@ def normalize_temporal_run_csv(
 
 
 __all__ = [
-    "analyze_green_gauss",
-    "diagnose_constant_green_gauss",
+    "analyze_gradient_reconstruction",
+    "diagnose_constant_reconstruction",
     "normalize_temporal_run_csv",
-    "preflight_input",
 ]

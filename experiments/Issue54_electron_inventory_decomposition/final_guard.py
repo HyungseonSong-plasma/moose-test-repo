@@ -12,24 +12,21 @@ if str(ROOT) not in sys.path:
 
 FACADE = ROOT / "qpx_harness" / "electron_inventory_nullspace.py"
 FIRST_LINEAR_FACADE = ROOT / "qpx_harness" / "issue45_first_linear.py"
-OWNER_ROOT = ROOT / "qpx_harness" / "inventory"
 QPX_CLI = ROOT / "qpx_harness" / "cli" / "app.py"
-
-EXPECTED_OWNER_FILES = {
-    "characterization.py",
-    "cli.py",
-    "closure_model.py",
-    "closure_runtime.py",
-    "closure_schema.py",
-    "constants.py",
-    "errors.py",
-    "first_linear_characterization.py",
-    "first_linear_orchestration.py",
-    "first_linear_stats.py",
-    "first_linear_structure.py",
-    "orchestration.py",
-    "structure.py",
-}
+OWNER_FILES = (
+    ROOT / "qpx_harness/adapters/moose/electron_inventory/closure_model.py",
+    ROOT / "qpx_harness/adapters/moose/electron_inventory/constants.py",
+    ROOT / "qpx_harness/analysis/electron_inventory/closure_runtime.py",
+    ROOT / "qpx_harness/analysis/electron_inventory/closure_schema.py",
+    ROOT / "qpx_harness/analysis/electron_inventory/first_linear_stats.py",
+    ROOT / "qpx_harness/analysis/electron_inventory/first_linear_structure.py",
+    ROOT / "qpx_harness/analysis/electron_inventory/structure.py",
+    ROOT / "qpx_harness/execution/electron_inventory/first_linear_orchestration.py",
+    ROOT / "qpx_harness/execution/electron_inventory/orchestration.py",
+    ROOT / "qpx_harness/validation/electron_inventory/characterization.py",
+    ROOT / "qpx_harness/validation/electron_inventory/first_linear_characterization.py",
+    ROOT / "qpx_harness/cli/commands/inventory.py",
+)
 EXPECTED_COMPAT_ATTRS = {
     "ElectronInventoryNullspaceError",
     "_base_case_context",
@@ -43,19 +40,17 @@ EXPECTED_COMPAT_ATTRS = {
 
 def main() -> int:
     ok = True
-    observed = {path.name for path in OWNER_ROOT.glob("*.py")}
-    missing = EXPECTED_OWNER_FILES - observed
+    missing = [str(path.relative_to(ROOT)) for path in OWNER_FILES if not path.is_file()]
     print(
         "ISSUE54_FINAL_CANONICAL_INVENTORY_OWNER:",
-        "PASS" if not missing else "FAIL missing=" + ",".join(sorted(missing)),
+        "PASS" if not missing else "FAIL missing=" + ",".join(missing),
     )
     ok = ok and not missing
 
     cli_text = QPX_CLI.read_text()
     cli_ok = (
-        "from qpx_harness.inventory.cli import" in cli_text
-        and '"inventory-nullspace"' in cli_text
-        and '"inventory-first-linear"' in cli_text
+        '"inventory-nullspace": "qpx_harness.cli.commands.inventory:inventory_main"' in cli_text
+        and '"inventory-first-linear": "qpx_harness.cli.commands.inventory:first_linear_main"' in cli_text
         and "qpx_harness.electron_inventory_nullspace" not in cli_text
         and "qpx_harness.issue45_first_linear" not in cli_text
     )
@@ -63,10 +58,10 @@ def main() -> int:
     ok = ok and cli_ok
 
     try:
-        inventory_structure = importlib.import_module("qpx_harness.inventory.structure")
-        inventory_model = importlib.import_module("qpx_harness.inventory.closure_model")
-        inventory_orchestration = importlib.import_module("qpx_harness.inventory.orchestration")
-        first_linear = importlib.import_module("qpx_harness.inventory.first_linear_orchestration")
+        inventory_structure = importlib.import_module("qpx_harness.analysis.electron_inventory.structure")
+        inventory_model = importlib.import_module("qpx_harness.adapters.moose.electron_inventory.closure_model")
+        inventory_orchestration = importlib.import_module("qpx_harness.execution.electron_inventory.orchestration")
+        first_linear = importlib.import_module("qpx_harness.execution.electron_inventory.first_linear_orchestration")
         if FACADE.is_file():
             facade = importlib.import_module("qpx_harness.electron_inventory_nullspace")
             compat = (

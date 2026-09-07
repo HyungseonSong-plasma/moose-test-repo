@@ -56,7 +56,7 @@ def main() -> int:
     policy_source = POLICY.read_text(encoding="utf-8")
     for required in (
         "create_collision_safe_directory",
-        "measurement_failure_signature",
+        "artifact_failure_signature",
         "run_managed_measurement",
         "result_status",
         "run_command",

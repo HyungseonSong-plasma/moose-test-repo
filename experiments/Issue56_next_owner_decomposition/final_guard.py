@@ -40,10 +40,10 @@ W4_OWNERS = (
 )
 W5_FACADE = Path("qpx_harness/dmix_equivalence.py")
 W5_OWNERS = (
-    Path("qpx_harness/dmix/source_transform.py"),
-    Path("qpx_harness/dmix/analysis.py"),
-    Path("qpx_harness/dmix/runtime.py"),
-    Path("qpx_harness/dmix/characterization.py"),
+    Path("qpx_harness/adapters/moose/dmix_equivalence.py"),
+    Path("qpx_harness/analysis/dmix_equivalence.py"),
+    Path("qpx_harness/execution/dmix_equivalence.py"),
+    Path("qpx_harness/validation/dmix_equivalence.py"),
 )
 
 
@@ -124,16 +124,16 @@ def main() -> int:
     failed = failed or not w4_identity
 
     try:
-        w5_source = importlib.import_module("qpx_harness.dmix.source_transform")
-        w5_analysis = importlib.import_module("qpx_harness.dmix.analysis")
-        w5_runtime = importlib.import_module("qpx_harness.dmix.runtime")
-        w5_char = importlib.import_module("qpx_harness.dmix.characterization")
+        w5_source = importlib.import_module("qpx_harness.adapters.moose.dmix_equivalence")
+        w5_analysis = importlib.import_module("qpx_harness.analysis.dmix_equivalence")
+        w5_runtime = importlib.import_module("qpx_harness.execution.dmix_equivalence")
+        w5_char = importlib.import_module("qpx_harness.validation.dmix_equivalence")
         evr2 = importlib.import_module("qpx_harness.coupling_evr2.orchestration")
         w5_identity = (
             callable(w5_source.legacy_source_transform)
             and callable(w5_source.legacy_source)
             and callable(w5_analysis.compare)
-            and callable(w5_analysis.trace_input)
+            and callable(w5_source.trace_input)
             and callable(w5_runtime.validate)
             and callable(w5_char.self_test)
         )

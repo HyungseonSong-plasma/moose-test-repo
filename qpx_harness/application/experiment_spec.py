@@ -1,4 +1,10 @@
-"""Declarative experiment specification loaded by the canonical qpx gateway."""
+"""Historical schema-v1 experiment fixture decoding.
+
+This module is not an experiment control plane and performs no protocol lookup or
+execution dispatch. It exists only so characterization/provenance code can read
+immutable schema-v1 experiment fixtures while canonical execution uses
+``qpx_harness.specification.ExperimentSpec`` schema v2.
+"""
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -16,7 +22,7 @@ class CaseSource:
 
 
 @dataclass(frozen=True)
-class ExperimentSpec:
+class HistoricalExperimentFixture:
     schema_version: int
     experiment_id: str
     protocol: str
@@ -60,23 +66,24 @@ def _case_source(raw: Any, *, base: Path) -> CaseSource | None:
     return CaseSource(path=path, format=fmt)
 
 
-def load_experiment_spec(path: str | Path) -> ExperimentSpec:
+def load_experiment_spec(path: str | Path) -> HistoricalExperimentFixture:
+    """Decode one immutable schema-v1 fixture without making it executable."""
     source = Path(path).expanduser().resolve()
     if source.suffix.lower() != ".json":
-        raise ValueError("experiment control specification must be JSON")
+        raise ValueError("historical experiment fixture must be JSON")
     raw = json.loads(source.read_text(encoding="utf-8"))
     if not isinstance(raw, dict):
-        raise ValueError("experiment specification root must be a JSON object")
+        raise ValueError("historical experiment fixture root must be a JSON object")
     schema_version = raw.get("schema_version")
     if schema_version != 1:
-        raise ValueError(f"unsupported experiment schema_version: {schema_version!r}")
+        raise ValueError(f"historical fixture decoder supports only schema_version=1, got {schema_version!r}")
     experiment_id = raw.get("experiment_id")
     protocol = raw.get("protocol")
     if not isinstance(experiment_id, str) or not experiment_id.strip():
         raise ValueError("experiment_id must be a non-empty string")
     if not isinstance(protocol, str) or not protocol.strip():
-        raise ValueError("protocol must be a non-empty string")
-    return ExperimentSpec(
+        raise ValueError("protocol provenance must be a non-empty string")
+    return HistoricalExperimentFixture(
         schema_version=1,
         experiment_id=experiment_id,
         protocol=protocol,
@@ -88,4 +95,4 @@ def load_experiment_spec(path: str | Path) -> ExperimentSpec:
     )
 
 
-__all__ = ["CaseSource", "ExperimentSpec", "SUPPORTED_CASE_FORMATS", "load_experiment_spec"]
+__all__ = ["CaseSource", "HistoricalExperimentFixture", "SUPPORTED_CASE_FORMATS", "load_experiment_spec"]

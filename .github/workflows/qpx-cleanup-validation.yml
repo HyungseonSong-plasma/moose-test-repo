@@ -1,5 +1,6 @@
 name: QPX CI validation
 
+# Canonical architecture and regression acceptance gate.
 on:
   push:
     branches:
@@ -8,6 +9,8 @@ on:
       - issue-126-qpx-harness-refactor
       - issue-128-retire-issue-namespaces
       - issue-129-root-surface-cleanup
+      - 'issue-154-*'
+      - 'issue-156-*'
       - review/development-semantic-architecture
   workflow_dispatch:
 
@@ -39,8 +42,23 @@ jobs:
         run: python tools/qpx_dependency_guard.py --check cycle
       - name: Validate declarative experiment gateway
         run: python tools/qpx_experiment_gateway_guard.py
-      - name: Validate capability architecture census
-        run: python tools/qpx_architecture_census.py
+      - name: Validate plasma semantic ownership
+        run: python tools/qpx_plasma_semantic_residue_guard.py
+      - name: Validate campaign/performance/scale ownership
+        run: python tools/qpx_campaign_residue_guard.py
+      - name: Validate numerical-method ownership
+        run: python tools/qpx_numerical_method_ownership_guard.py
+      - name: Validate model terminology and MOOSE boundary ownership
+        run: python tools/qpx_boundary_terminology_guard.py
+      - name: Validate strict zero-legacy architecture census
+        run: |
+          python tools/qpx_architecture_census.py --require-no-legacy
+          python tools/qpx_architecture_census.py --json-out qpx-architecture-census.json --require-no-legacy
+      - name: Upload architecture census
+        uses: actions/upload-artifact@v4
+        with:
+          name: qpx-architecture-census
+          path: qpx-architecture-census.json
       - name: Run QPX-free pytest
         run: python -m pytest -q
       - name: Run canonical QPX internal validation

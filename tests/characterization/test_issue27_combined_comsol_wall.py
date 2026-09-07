@@ -14,8 +14,8 @@ from experiments.Issue27_surface_reactions.controlled_wall.combined import (
     _validated_parameters,
 )
 from qpx_harness.application.experiment_spec import load_experiment_spec
-from qpx_harness.moose import blocks as mb
-from qpx_harness.moose import parameters as mp
+from qpx_harness.adapters.moose import blocks as mb
+from qpx_harness.adapters.moose import parameters as mp
 
 ROOT = Path(__file__).resolve().parents[2]
 R4_SOURCE = ROOT / "experiments/Issue91_real_qvt_r3/r3_e0/heavy_base.i"

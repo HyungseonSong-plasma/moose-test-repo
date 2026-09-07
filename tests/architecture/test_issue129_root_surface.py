@@ -15,10 +15,15 @@ def test_qpx_harness_root_has_only_package_entrypoint() -> None:
     assert direct_modules == []
 
 
-def test_scale_audit_is_owned_by_analysis_and_cli_behavior_is_preserved() -> None:
-    assert (HARNESS / "analysis" / "scale_audit.py").is_file()
-    assert "scale-audit" in COMMANDS
-    assert _LEGACY_TARGETS["scale-audit"] == "qpx_harness.analysis.scale_audit:main"
+def test_scale_analysis_remains_reusable_but_dedicated_campaign_cli_is_retired() -> None:
+    analysis = HARNESS / "analysis" / "scale_audit.py"
+    assert analysis.is_file()
+    assert "scale-audit" not in COMMANDS
+    assert "scale-audit" not in _LEGACY_TARGETS
+    text = analysis.read_text()
+    assert "Issue #43" not in text
+    assert "QVT_SCALE" not in text
+    assert "DEFAULT_PRESSURE" not in text
 
 
 def test_evidence_diagnose_smoke_is_validation_owned() -> None:

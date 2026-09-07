@@ -10,15 +10,15 @@ ROOT = HERE.parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from qpx_harness.spec import (
-    ExperimentSpecError,
+from qpx_harness.adapters.moose.mutation_spec import (
+    MutationSpecError,
     OperationPlan,
-    compile_spec,
-    load_json_text,
-    load_payload,
+    compile_mutation_spec,
+    load_mutation_json_text,
+    load_mutation_payload,
     pydantic_major_api,
 )
-from qpx_harness.transforms import (
+from qpx_harness.adapters.moose.transforms import (
     SUPPORTED_OPERATIONS,
     TransformError,
     apply_case_plan,
@@ -97,8 +97,8 @@ VALID_PAYLOAD = {
 
 def expect_error(payload: object) -> None:
     try:
-        load_payload(payload)
-    except ExperimentSpecError:
+        load_mutation_payload(payload)
+    except MutationSpecError:
         return
     raise AssertionError("invalid ExperimentSpec payload was accepted")
 
@@ -107,9 +107,9 @@ def main() -> int:
     failures: list[str] = []
 
     try:
-        spec = load_payload(VALID_PAYLOAD)
+        spec = load_mutation_payload(VALID_PAYLOAD)
         text = json.dumps(VALID_PAYLOAD)
-        roundtrip = load_json_text(text)
+        roundtrip = load_mutation_json_text(text)
         assert spec == roundtrip
     except Exception as exc:
         failures.append(f"positive schema: {exc}")
@@ -120,8 +120,8 @@ def main() -> int:
 
     if spec is not None:
         try:
-            first = compile_spec(spec)
-            second = compile_spec(load_payload(json.loads(json.dumps(VALID_PAYLOAD))))
+            first = compile_mutation_spec(spec)
+            second = compile_mutation_spec(load_mutation_payload(json.loads(json.dumps(VALID_PAYLOAD))))
             assert first == second
         except Exception as exc:
             failures.append(f"deterministic plan: {exc}")
@@ -132,7 +132,7 @@ def main() -> int:
             print("ISSUE60_DETERMINISTIC_PLAN: PASS")
 
         try:
-            source_root = ROOT / "qpx_harness" / "spec"
+            source_root = ROOT / "qpx_harness" / "adapters" / "moose" / "mutation_spec"
             combined = "\n".join(
                 path.read_text(encoding="utf-8")
                 for path in sorted(source_root.glob("*.py"))
@@ -180,7 +180,7 @@ def main() -> int:
                 except FrozenInstanceError:
                     pass
                 else:
-                    raise AssertionError("ExecutionPlan is mutable")
+                    raise AssertionError("MutationPlan is mutable")
             except Exception as exc:
                 failures.append(f"plan immutability: {exc}")
                 print(f"ISSUE60_PLAN_IMMUTABILITY: FAIL ({exc})")
@@ -249,7 +249,7 @@ def main() -> int:
                         }
                     ],
                 }
-                ordered = compile_spec(load_payload(ordered_payload))
+                ordered = compile_mutation_spec(load_mutation_payload(ordered_payload))
                 output = apply_case_plan(BASE_INPUT, ordered.case("ordered"))
                 assert "verbose = true" in output
                 assert "verbose = false" not in output

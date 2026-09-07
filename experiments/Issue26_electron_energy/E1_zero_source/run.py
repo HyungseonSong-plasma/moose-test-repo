@@ -13,7 +13,7 @@ from experiments.Issue91_real_qvt_r3 import run as issue91_run
 from qpx_harness.evidence import create_collision_safe_directory, utc_timestamp, write_json_bundle
 from qpx_harness.execution.cases import stage_case
 from qpx_harness.execution.runtime import resolve_executable, validate_executable
-from recipes.issue26_e1 import (
+from experiments.historical_recipe_support.issue26_e1 import (
     ENERGY_INVENTORY_PP,
     ENERGY_NORM_AVG_PP,
     ENERGY_NORM_MAX_PP,

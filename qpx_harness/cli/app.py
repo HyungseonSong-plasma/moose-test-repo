@@ -9,7 +9,8 @@ from pathlib import Path
 import subprocess
 import sys
 
-from qpx_harness.application import normalize_temporal_run_csv, preflight_input, run_experiment
+from qpx_harness.application import normalize_temporal_run_csv
+from qpx_harness.adapters.moose.preflight import validate_input_preflight
 from qpx_harness.application.gateway import compile_experiment, lower_experiment, plan_experiment
 from qpx_harness.analysis.temporal import VALID_INITIAL_POLICIES
 from qpx_harness.specification import ExperimentSpecError
@@ -20,7 +21,7 @@ CANONICAL_COMMANDS = {
     "compile": "compile semantic experiment JSON into ExperimentIntent",
     "plan": "compile semantic intent and synthesize ScientificPolicy/ExecutionPlan",
     "lower": "lower a solver-independent ExecutionPlan into MOOSE target IR",
-    "run": "execute legacy v1 experiments or reject v2 when target execution is not yet realizable",
+    "run": "prepare one canonical semantic experiment for target execution",
     "preflight": "run static parser-symbol preflight on one MOOSE input",
     "temporal-csv": "normalize transient CSV rows under an explicit temporal policy",
 }
@@ -28,41 +29,23 @@ CANONICAL_COMMANDS = {
 COMMANDS = {
     "test": "run one test.json case",
     "test-all": "discover and run a canonical/diagnostic suite",
-    "scale-audit": "build QVT multiphysics space-time scale map",
-    "inventory-nullspace": "run electron-inventory nullspace structural/framework preflight",
-    "inventory-first-linear": "diagnose the constrained C0 first-linear breakdown",
-    "contract": "validate/evaluate a CORE-16 scientific execution contract",
-    "dmix-equivalence": "compare optimized D_mix against legacy full evaluation",
-    "measure": "run one schema-driven QPX performance measurement",
-    "measure-smoke": "auto-manage one PF-1 BENCHMARK/PROFILE smoke pair",
-    "investigate": "analyze the latest passing PF-1 smoke evidence",
-    "transport-probe": "run managed QPXThermalDiffusionMaterial timing probe",
-    "cache-audit": "audit D_mix consumer arguments and native cache feasibility",
-    "profile": "capture one-step legacy P2/P3 performance evidence",
-    "analyze": "classify PETSc/PerfGraph profiling evidence",
-    "inventory": "inspect or compare QPX workspace trees",
+    "contract": "validate/evaluate a scientific execution contract",
+    "measure": "run one schema-driven performance measurement (including PROFILE mode)",
+    "analyze": "classify decoded performance profiling evidence",
+    "inventory": "inspect or compare workspace trees",
 }
 
 INTERNAL_TARGETS = {
-    "architecture": "run dependency, experiment-gateway, and architecture guards",
+    "architecture": "run dependency, semantic-control, and architecture guards",
     "regression": "run the qpx-free Python regression/unit suite",
     "all": "run architecture guards then regression/unit suite",
 }
 
 _LEGACY_TARGETS = {
-    "test": "qpx_harness.execution.regression:cli_run_test",
-    "test-all": "qpx_harness.execution.regression:cli_run_all",
-    "scale-audit": "qpx_harness.analysis.scale_audit:main",
-    "inventory-nullspace": "qpx_harness.inventory.cli:inventory_main",
-    "inventory-first-linear": "qpx_harness.inventory.cli:first_linear_main",
+    "test": "qpx_harness.adapters.moose.regression:cli_run_test",
+    "test-all": "qpx_harness.adapters.moose.regression:cli_run_all",
     "contract": "qpx_harness.execution.contract:main",
-    "dmix-equivalence": "qpx_harness.cli.commands.dmix:dmix_equivalence_main",
     "measure": "qpx_harness.cli.commands.performance:measure_main",
-    "measure-smoke": "qpx_harness.cli.commands.performance:measure_smoke_main",
-    "investigate": "qpx_harness.cli.commands.performance:investigate_main",
-    "transport-probe": "qpx_harness.cli.commands.performance:transport_probe_main",
-    "cache-audit": "qpx_harness.cli.commands.performance:cache_audit_main",
-    "profile": "qpx_harness.performance.profiling:main",
     "analyze": "qpx_harness.cli.commands.performance:analyze_main",
     "inventory": "qpx_harness.execution.workspace:inventory_cli",
 }
@@ -87,7 +70,6 @@ def print_help() -> None:
     print("  qpx lower <experiment.json>")
     print("  qpx run <experiment.json>")
     print("  qpx -i <internal-target>              # compatibility/internal")
-    print("  qpx -e <legacy-experiment.json>       # compatibility")
     print("\ncanonical commands:")
     width = max(len(name) for name in CANONICAL_COMMANDS)
     for name, description in CANONICAL_COMMANDS.items():
@@ -145,26 +127,10 @@ def semantic_lower_cli(argv: list[str]) -> int:
 
 
 def semantic_run_cli(argv: list[str]) -> int:
+    """Prepare only the canonical semantic pipeline; never dispatch a protocol runner."""
     parser = argparse.ArgumentParser(prog="qpx run")
     parser.add_argument("experiment")
     args = parser.parse_args(argv)
-    source = Path(args.experiment)
-    try:
-        payload = json.loads(source.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
-        print(f"experiment configuration error: {exc}", file=sys.stderr)
-        return 2
-
-    # v1 remains bounded compatibility through the existing application runner.
-    if isinstance(payload, dict) and payload.get("schema_version") == 1:
-        try:
-            return run_experiment(args.experiment)
-        except (OSError, ValueError, TypeError) as exc:
-            print(f"legacy experiment configuration error: {exc}", file=sys.stderr)
-            return 2
-
-    # v2 must not silently fall back to an Issue-specific runner.  Compile all
-    # semantic layers and require a concrete target execution capability later.
     try:
         planned, target = lower_experiment(args.experiment)
     except (OSError, ExperimentSpecError, ValueError, TypeError) as exc:
@@ -177,7 +143,7 @@ def semantic_run_cli(argv: list[str]) -> int:
     print(f"TARGET_CASES={len(target.cases)}")
     print(
         "TARGET_EXECUTION: BLOCKED (generic semantic target IR has no approved "
-        "experiment-specific MOOSE realization; no Issue-specific fallback used)",
+        "target executor; protocol/campaign fallback is forbidden)",
         file=sys.stderr,
     )
     return 3
@@ -187,7 +153,7 @@ def preflight_cli(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(prog="qpx preflight")
     parser.add_argument("input", help="MOOSE input file to inspect")
     args = parser.parse_args(argv)
-    preflight_input(args.input)
+    validate_input_preflight(Path(args.input).expanduser().resolve())
     return 0
 
 
@@ -234,6 +200,10 @@ def internal_cli(target: str) -> int:
         commands.extend([
             [sys.executable, str(ROOT / "tools" / "qpx_dependency_guard.py")],
             [sys.executable, str(ROOT / "tools" / "qpx_experiment_gateway_guard.py")],
+            [sys.executable, str(ROOT / "tools" / "qpx_plasma_semantic_residue_guard.py")],
+            [sys.executable, str(ROOT / "tools" / "qpx_campaign_residue_guard.py")],
+            [sys.executable, str(ROOT / "tools" / "qpx_numerical_method_ownership_guard.py")],
+            [sys.executable, str(ROOT / "tools" / "qpx_boundary_terminology_guard.py")],
             [sys.executable, str(ROOT / "tools" / "qpx_architecture_census.py")],
         ])
     if target in {"regression", "all"}:
@@ -246,42 +216,29 @@ def main(argv: list[str] | None = None) -> int:
     if not args or args[0] in {"-h", "--help", "help"}:
         print_help()
         return 0
-
-    command, rest = args[0], args[1:]
-    if command == "compile":
-        return semantic_compile_cli(rest)
-    if command == "plan":
-        return semantic_plan_cli(rest)
-    if command == "lower":
-        return semantic_lower_cli(rest)
-    if command == "run":
-        return semantic_run_cli(rest)
-
-    # Historical gateways remain explicit compatibility aliases.
-    if command in {"-e", "--experiment"}:
-        if len(rest) != 1:
-            print("usage: qpx -e <legacy-experiment.json>", file=sys.stderr)
+    if args[0] == "-i":
+        if len(args) != 2:
+            print("usage: qpx -i <architecture|regression|all>", file=sys.stderr)
             return 2
-        try:
-            return run_experiment(rest[0])
-        except (OSError, ValueError, TypeError) as exc:
-            print(f"experiment configuration error: {exc}", file=sys.stderr)
-            return 2
+        return internal_cli(args[1])
+    canonical_handlers = {
+        "compile": semantic_compile_cli,
+        "plan": semantic_plan_cli,
+        "lower": semantic_lower_cli,
+        "run": semantic_run_cli,
+        "preflight": preflight_cli,
+        "temporal-csv": temporal_csv_cli,
+    }
+    canonical = canonical_handlers.get(args[0])
+    if canonical is not None:
+        return canonical(args[1:])
+    handler = _resolve_legacy_handler(args[0])
+    if handler is not None:
+        return handler(args[1:])
+    print(f"unknown command: {args[0]}", file=sys.stderr)
+    print_help()
+    return 2
 
-    if command in {"-i", "--internal"}:
-        if len(rest) != 1:
-            print("usage: qpx -i <internal-target>", file=sys.stderr)
-            return 2
-        return internal_cli(rest[0])
 
-    if command == "preflight":
-        return preflight_cli(rest)
-    if command == "temporal-csv":
-        return temporal_csv_cli(rest)
-
-    handler = _resolve_legacy_handler(command)
-    if handler is None:
-        print(f"unknown command: {command}", file=sys.stderr)
-        print_help()
-        return 2
-    return handler(rest)
+if __name__ == "__main__":
+    raise SystemExit(main())
