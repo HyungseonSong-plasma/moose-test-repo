@@ -1,15 +1,15 @@
-"""Thin application gateway across canonical QPX semantic capabilities."""
+"""Thin application gateway across canonical Physics semantic capabilities."""
 from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
 
-from qpx_harness.adapters.moose import MooseTargetIR, lower_execution_plan
-from qpx_harness.execution import ExecutionPlan, compile_execution_plan
-from qpx_harness.ontology import OntologyService
-from qpx_harness.ontology.records import DevelopmentState, ScientificPolicy
-from qpx_harness.planning import default_capabilities, synthesize_policy
-from qpx_harness.specification import SemanticCompilation, compile_experiment_intent, load_experiment_spec
+from physics_harness.adapters.moose import MooseTargetIR, lower_execution_plan
+from physics_harness.execution import ExecutionPlan, compile_execution_plan
+from physics_harness.ontology import OntologyService
+from physics_harness.ontology.records import DevelopmentState, ScientificPolicy
+from physics_harness.planning import default_capabilities, synthesize_policy
+from physics_harness.specification import SemanticCompilation, compile_experiment_intent, load_experiment_spec
 
 
 @dataclass(frozen=True)
