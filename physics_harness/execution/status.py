@@ -1,4 +1,4 @@
-"""Canonical presentation-neutral mechanical state classification for QPX execution.
+"""Canonical presentation-neutral mechanical state classification for Physics execution.
 
 Execution state describes process/liveness mechanics only. Scientific acceptance,
 validation policy, and diagnosis outcomes belong to their owning layers.
