@@ -1,4 +1,4 @@
-"""QPX Development State semantic authority and Owlready2 projection."""
+"""Physics Development State semantic authority and Owlready2 projection."""
 from .records import *  # noqa: F401,F403
 from .replay import (
     QUERY_IDS,
