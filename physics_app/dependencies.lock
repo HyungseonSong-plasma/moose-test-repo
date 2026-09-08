@@ -1,0 +1,7 @@
+# Canonical Physics dependency revisions for Issue #165.
+# Fetch these peers directly; do not recursively initialize peer-app duplicates.
+MOOSE=9f388366ccf38b9c34542ec5561198249fde0ac9
+CRANE=ba26970cf419dcac563a20ed7079d445bc6341c3
+SQUIRREL=16a26d504f3ee11161a86d4e3ebf3c0e5f2afbb1
+ZAPDOS=9eceffbc46048c3760bbfa9a7f1ca681ae35af1d
+PHYSICS_BUILD_BASE=ghcr.io/hyungseonsong-plasma/qpx-build-base@sha256:910d406eb3574a918290dc3621df1133569907d6e7af7884f68abe257a9a1999
