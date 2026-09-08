@@ -45,3 +45,9 @@ This workspace stores regression inputs, minimal reproducers, checkers/reference
 ## Legacy compatibility surfaces
 
 Repository-local project naming uses `Physics` / `physics`. Legacy `QPX` / `qpx` identifiers may remain only where they identify an external dependency, an already-published immutable artifact, or another compatibility surface that cannot be renamed without changing the referenced object. Such compatibility identifiers are not the canonical repository namespace.
+
+## License
+
+Unless otherwise noted, repository-authored content is licensed under the Apache License 2.0. Commercial use, modification, redistribution, private use, and use within proprietary products are permitted subject to the license terms.
+
+Components that carry their own license remain governed by that license. In particular, `physics_app/LICENSE` currently contains GNU LGPL 2.1 terms and is not overridden by the repository-level Apache-2.0 license. External dependencies including MOOSE, PETSc, Crane, Squirrel, Zapdos, and their transitive dependencies retain their respective upstream licenses.
