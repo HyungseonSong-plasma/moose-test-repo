@@ -29,11 +29,11 @@
  * transport_data_file. Charged-charged collision integrals are evaluated at
  * runtime with a Mutation++-equivalent Debye-Huckel model using T, Te, and ne.
  */
-class QPXThermalDiffusionMaterial : public FunctorMaterial
+class PhysicsThermalDiffusionMaterial : public FunctorMaterial
 {
 public:
   static InputParameters validParams();
-  QPXThermalDiffusionMaterial(const InputParameters & parameters);
+  PhysicsThermalDiffusionMaterial(const InputParameters & parameters);
 
 protected:
   using Vec = std::vector<ADReal>;

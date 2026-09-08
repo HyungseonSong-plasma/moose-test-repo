@@ -1,4 +1,4 @@
-#include "QPXThermalDiffusionMaterial.h"
+#include "PhysicsThermalDiffusionMaterial.h"
 
 #include <algorithm>
 #include <array>
@@ -7,7 +7,7 @@
 #include <sstream>
 #include <utility>
 
-registerMooseObject("qpxApp", QPXThermalDiffusionMaterial);
+registerMooseObject("PhysicsApp", PhysicsThermalDiffusionMaterial);
 
 namespace
 {
@@ -57,7 +57,7 @@ constexpr std::array<std::array<Real, 8>, 26> DEBYE_TABLE = {{
 }
 
 InputParameters
-QPXThermalDiffusionMaterial::validParams()
+PhysicsThermalDiffusionMaterial::validParams()
 {
   auto params = FunctorMaterial::validParams();
 
@@ -107,7 +107,7 @@ QPXThermalDiffusionMaterial::validParams()
   return params;
 }
 
-QPXThermalDiffusionMaterial::QPXThermalDiffusionMaterial(
+PhysicsThermalDiffusionMaterial::PhysicsThermalDiffusionMaterial(
     const InputParameters & parameters)
   : FunctorMaterial(parameters),
     _temperature(getFunctor<ADReal>("temperature")),
@@ -150,9 +150,6 @@ QPXThermalDiffusionMaterial::QPXThermalDiffusionMaterial(
     _mass_fractions.push_back(&getFunctorByName<ADReal>(_mass_fraction_names[i]));
   }
 
-  // Validate static pairs before any nonlinear solve starts.  Charged-charged
-  // pairs are evaluated dynamically from local T, Te, and ne and therefore do
-  // not require a static collision table.
   for (std::size_t i = 0; i < n; ++i)
     for (std::size_t j = i; j < n; ++j)
     {
@@ -246,12 +243,12 @@ QPXThermalDiffusionMaterial::QPXThermalDiffusionMaterial(
         Vec Y(_mass_fractions.size());
         for (std::size_t j = 0; j < _mass_fractions.size(); ++j)
           Y[j] = (*_mass_fractions[j])(r, state);
-  
+
         const ADReal Te =
             _has_charged_charged_pairs ? (*_electron_temperature)(r, state) : ADReal(0.0);
         const ADReal ne =
             _has_charged_charged_pairs ? (*_electron_number_density)(r, state) : ADReal(0.0);
-  
+
         return evaluateDmix(
             i,
             _temperature(r, state),
@@ -264,7 +261,7 @@ QPXThermalDiffusionMaterial::QPXThermalDiffusionMaterial(
 }
 
 std::string
-QPXThermalDiffusionMaterial::trim(const std::string & s)
+PhysicsThermalDiffusionMaterial::trim(const std::string & s)
 {
   const auto first = s.find_first_not_of(" \t\r\n");
   if (first == std::string::npos)
@@ -275,7 +272,7 @@ QPXThermalDiffusionMaterial::trim(const std::string & s)
 }
 
 std::string
-QPXThermalDiffusionMaterial::pairKey(std::string a, std::string b)
+PhysicsThermalDiffusionMaterial::pairKey(std::string a, std::string b)
 {
   if (b < a)
     std::swap(a, b);
@@ -284,11 +281,11 @@ QPXThermalDiffusionMaterial::pairKey(std::string a, std::string b)
 }
 
 void
-QPXThermalDiffusionMaterial::loadTransportDatabase(const FileName & filename)
+PhysicsThermalDiffusionMaterial::loadTransportDatabase(const FileName & filename)
 {
   std::ifstream in(filename.c_str());
   if (!in.good())
-    mooseError("QPXThermalDiffusionMaterial could not open transport database '",
+    mooseError("PhysicsThermalDiffusionMaterial could not open transport database '",
                filename,
                "'.");
 
@@ -437,9 +434,9 @@ QPXThermalDiffusionMaterial::loadTransportDatabase(const FileName & filename)
     mooseError("Transport database '", filename, "' defines no collision pairs.");
 }
 
-const QPXThermalDiffusionMaterial::CollisionTable &
-QPXThermalDiffusionMaterial::collisionTable(const std::string & alias_a,
-                                             const std::string & alias_b) const
+const PhysicsThermalDiffusionMaterial::CollisionTable &
+PhysicsThermalDiffusionMaterial::collisionTable(const std::string & alias_a,
+                                                 const std::string & alias_b) const
 {
   const auto key = pairKey(alias_a, alias_b);
   const auto it = _collision_database.find(key);
@@ -456,9 +453,8 @@ QPXThermalDiffusionMaterial::collisionTable(const std::string & alias_a,
   return it->second;
 }
 
-
 int
-QPXThermalDiffusionMaterial::aliasCharge(const std::string & alias)
+PhysicsThermalDiffusionMaterial::aliasCharge(const std::string & alias)
 {
   if (alias.empty())
     return 0;
@@ -473,17 +469,17 @@ QPXThermalDiffusionMaterial::aliasCharge(const std::string & alias)
 }
 
 bool
-QPXThermalDiffusionMaterial::isChargedChargedPair(const std::string & alias_a,
-                                                   const std::string & alias_b)
+PhysicsThermalDiffusionMaterial::isChargedChargedPair(const std::string & alias_a,
+                                                       const std::string & alias_b)
 {
   return aliasCharge(alias_a) != 0 && aliasCharge(alias_b) != 0;
 }
 
-QPXThermalDiffusionMaterial::CollisionData
-QPXThermalDiffusionMaterial::debyeHuckelCollisionData(const ADReal & T,
-                                                       const ADReal & Te,
-                                                       const ADReal & ne,
-                                                       const CoulombBranch branch) const
+PhysicsThermalDiffusionMaterial::CollisionData
+PhysicsThermalDiffusionMaterial::debyeHuckelCollisionData(const ADReal & T,
+                                                           const ADReal & Te,
+                                                           const ADReal & ne,
+                                                           const CoulombBranch branch) const
 {
   if (T.value() <= 0.0)
     mooseError("Debye-Huckel collision evaluation requires T > 0 K.");
@@ -498,16 +494,12 @@ QPXThermalDiffusionMaterial::debyeHuckelCollisionData(const ADReal & T,
 
   using std::sqrt;
 
-  // Mutation++ DebyeHuckleEvaluator:
-  //   b        = e^2 / (8 pi eps0 kB T)
-  //   lambda_D = sqrt(0.5 eps0 kB Te / (ne e^2))
-  //   T*       = 0.5 lambda_D / b
   const ADReal b =
-      QE * QE / (8.0 * QPX_CONSTANTS::pi * EPS0 * QPX_CONSTANTS::k_boltz * T);
+      QE * QE / (8.0 * PHYSICS_CONSTANTS::pi * EPS0 * PHYSICS_CONSTANTS::k_boltz * T);
 
   const ADReal ne_eff = positiveFloor(ne, DEBYE_NE_FLOOR);
   const ADReal lambda_raw =
-      sqrt(0.5 * EPS0 * QPX_CONSTANTS::k_boltz * Te / (ne_eff * QE * QE));
+      sqrt(0.5 * EPS0 * PHYSICS_CONSTANTS::k_boltz * Te / (ne_eff * QE * QE));
 
   const ADReal lambda_max = 2.0 * DEBYE_TSTAR.back() * b;
   ADReal lambda_D = lambda_raw.value() < lambda_max.value() ? lambda_raw : lambda_max;
@@ -549,7 +541,7 @@ QPXThermalDiffusionMaterial::debyeHuckelCollisionData(const ADReal & T,
 
   const std::size_t branch_offset = branch == CoulombBranch::ATTRACTIVE ? 0 : 1;
   const ADReal scale =
-      QPX_CONSTANTS::pi * lambda_D * lambda_D / (Tstar * Tstar);
+      PHYSICS_CONSTANTS::pi * lambda_D * lambda_D / (Tstar * Tstar);
 
   CollisionData data;
   data.Q11 = reducedValue(branch_offset) * scale;
@@ -559,12 +551,12 @@ QPXThermalDiffusionMaterial::debyeHuckelCollisionData(const ADReal & T,
   return data;
 }
 
-QPXThermalDiffusionMaterial::CollisionData
-QPXThermalDiffusionMaterial::collisionData(const ADReal & T,
-                                            const ADReal & Te,
-                                            const ADReal & ne,
-                                            const std::string & alias_a,
-                                            const std::string & alias_b) const
+PhysicsThermalDiffusionMaterial::CollisionData
+PhysicsThermalDiffusionMaterial::collisionData(const ADReal & T,
+                                                const ADReal & Te,
+                                                const ADReal & ne,
+                                                const std::string & alias_a,
+                                                const std::string & alias_b) const
 {
   const int charge_a = aliasCharge(alias_a);
   const int charge_b = aliasCharge(alias_b);
@@ -587,13 +579,13 @@ QPXThermalDiffusionMaterial::collisionData(const ADReal & T,
 }
 
 ADReal
-QPXThermalDiffusionMaterial::positiveFloor(const ADReal & value, const Real floor)
+PhysicsThermalDiffusionMaterial::positiveFloor(const ADReal & value, const Real floor)
 {
   return value.value() < floor ? ADReal(floor) : value;
 }
 
 ADReal
-QPXThermalDiffusionMaterial::interpolateCollisionIntegral(
+PhysicsThermalDiffusionMaterial::interpolateCollisionIntegral(
     const ADReal & T,
     const std::vector<Real> & grid,
     const std::vector<Real> & values) const
@@ -604,10 +596,10 @@ QPXThermalDiffusionMaterial::interpolateCollisionIntegral(
   const Real T_raw = T.value();
 
   if (T_raw <= grid.front())
-    return values.front() * QPX_CONSTANTS::pi * ANGSTROM2_TO_M2;
+    return values.front() * PHYSICS_CONSTANTS::pi * ANGSTROM2_TO_M2;
 
   if (T_raw >= grid.back())
-    return values.back() * QPX_CONSTANTS::pi * ANGSTROM2_TO_M2;
+    return values.back() * PHYSICS_CONSTANTS::pi * ANGSTROM2_TO_M2;
 
   const auto upper = std::upper_bound(grid.begin(), grid.end(), T_raw);
   const std::size_t i = static_cast<std::size_t>(upper - grid.begin() - 1);
@@ -616,20 +608,20 @@ QPXThermalDiffusionMaterial::interpolateCollisionIntegral(
       values[i] +
       (T - grid[i]) * (values[i + 1] - values[i]) / (grid[i + 1] - grid[i]);
 
-  return q * QPX_CONSTANTS::pi * ANGSTROM2_TO_M2;
+  return q * PHYSICS_CONSTANTS::pi * ANGSTROM2_TO_M2;
 }
 
-QPXThermalDiffusionMaterial::Vec
-QPXThermalDiffusionMaterial::solveSystem(Mat A, Vec b) const
+PhysicsThermalDiffusionMaterial::Vec
+PhysicsThermalDiffusionMaterial::solveSystem(Mat A, Vec b) const
 {
   const std::size_t n = A.size();
 
   if (n == 0 || b.size() != n)
-    mooseError("QPXThermalDiffusionMaterial received an invalid linear system.");
+    mooseError("PhysicsThermalDiffusionMaterial received an invalid linear system.");
 
   for (const auto & row : A)
     if (row.size() != n)
-      mooseError("QPXThermalDiffusionMaterial requires a square linear system.");
+      mooseError("PhysicsThermalDiffusionMaterial requires a square linear system.");
 
   Real scale = 0.0;
   for (const auto & row : A)
@@ -637,7 +629,7 @@ QPXThermalDiffusionMaterial::solveSystem(Mat A, Vec b) const
       scale = std::max(scale, std::abs(a.value()));
 
   if (scale == 0.0)
-    mooseError("QPXThermalDiffusionMaterial encountered a zero transport matrix.");
+    mooseError("PhysicsThermalDiffusionMaterial encountered a zero transport matrix.");
 
   for (std::size_t k = 0; k < n; ++k)
   {
@@ -655,7 +647,7 @@ QPXThermalDiffusionMaterial::solveSystem(Mat A, Vec b) const
     }
 
     if (pivot_abs <= 1.0e-14 * scale)
-      mooseError("QPXThermalDiffusionMaterial encountered a singular/ill-conditioned ",
+      mooseError("PhysicsThermalDiffusionMaterial encountered a singular/ill-conditioned ",
                  n,
                  "x",
                  n,
@@ -699,20 +691,20 @@ QPXThermalDiffusionMaterial::solveSystem(Mat A, Vec b) const
   return x;
 }
 
-QPXThermalDiffusionMaterial::Result
-QPXThermalDiffusionMaterial::evaluate(const ADReal & T,
-                                      const ADReal & p,
-                                      const ADReal & Te,
-                                      const ADReal & ne,
-                                      const Vec & Y) const
+PhysicsThermalDiffusionMaterial::Result
+PhysicsThermalDiffusionMaterial::evaluate(const ADReal & T,
+                                          const ADReal & p,
+                                          const ADReal & Te,
+                                          const ADReal & ne,
+                                          const Vec & Y) const
 {
   const std::size_t n = _species_names.size();
 
   if (T.value() <= 0.0)
-    mooseError("QPXThermalDiffusionMaterial requires T > 0 K. Got ", T.value());
+    mooseError("PhysicsThermalDiffusionMaterial requires T > 0 K. Got ", T.value());
 
   if (p.value() <= 0.0)
-    mooseError("QPXThermalDiffusionMaterial requires absolute p > 0 Pa. Got ", p.value());
+    mooseError("PhysicsThermalDiffusionMaterial requires absolute p > 0 Pa. Got ", p.value());
 
   if (Y.size() != n)
     mooseError("Internal species/mass-fraction size mismatch.");
@@ -720,11 +712,11 @@ QPXThermalDiffusionMaterial::evaluate(const ADReal & T,
   if (_has_charged_charged_pairs)
   {
     if (Te.value() <= 0.0)
-      mooseError("QPXThermalDiffusionMaterial requires electron_temperature > 0 K when charged-charged pairs are active. Got ",
+      mooseError("PhysicsThermalDiffusionMaterial requires electron_temperature > 0 K when charged-charged pairs are active. Got ",
                  Te.value());
 
     if (ne.value() < 0.0)
-      mooseError("QPXThermalDiffusionMaterial requires electron_number_density >= 0 when charged-charged pairs are active. Got ",
+      mooseError("PhysicsThermalDiffusionMaterial requires electron_number_density >= 0 when charged-charged pairs are active. Got ",
                  ne.value());
   }
 
@@ -732,7 +724,7 @@ QPXThermalDiffusionMaterial::evaluate(const ADReal & T,
   for (std::size_t i = 0; i < n; ++i)
   {
     if (Y[i].value() < 0.0)
-      mooseError("QPXThermalDiffusionMaterial requires non-negative mass fractions. "
+      mooseError("PhysicsThermalDiffusionMaterial requires non-negative mass fractions. "
                  "Species '",
                  _species_names[i],
                  "' has Y=",
@@ -742,11 +734,8 @@ QPXThermalDiffusionMaterial::evaluate(const ADReal & T,
   }
 
   if (std::abs(Y_sum.value() - 1.0) > 1.0e-10)
-    mooseError("QPXThermalDiffusionMaterial requires sum(Y)=1. Got ", Y_sum.value());
+    mooseError("PhysicsThermalDiffusionMaterial requires sum(Y)=1. Got ", Y_sum.value());
 
-  // --------------------------------------------------------------------------
-  // Mass -> mole fractions
-  // --------------------------------------------------------------------------
   ADReal mole_denominator = 0.0;
   for (std::size_t i = 0; i < n; ++i)
     mole_denominator += Y[i] / _molar_masses[i];
@@ -769,9 +758,6 @@ QPXThermalDiffusionMaterial::evaluate(const ADReal & T,
   for (std::size_t i = 0; i < n; ++i)
     X_sm[i] /= X_sm_sum;
 
-  // --------------------------------------------------------------------------
-  // Collision integrals and CollisionDB::nDij()
-  // --------------------------------------------------------------------------
   Mat q11(n, Vec(n, 0.0));
   Mat q22(n, Vec(n, 0.0));
   Mat Ast(n, Vec(n, 0.0));
@@ -781,7 +767,7 @@ QPXThermalDiffusionMaterial::evaluate(const ADReal & T,
 
   std::vector<Real> particle_mass(n);
   for (std::size_t i = 0; i < n; ++i)
-    particle_mass[i] = _molar_masses[i] / QPX_CONSTANTS::N_A;
+    particle_mass[i] = _molar_masses[i] / PHYSICS_CONSTANTS::N_A;
 
   using std::sqrt;
 
@@ -799,27 +785,20 @@ QPXThermalDiffusionMaterial::evaluate(const ADReal & T,
 
       const Real fac =
           (3.0 / 16.0) *
-          std::sqrt(2.0 * QPX_CONSTANTS::pi * QPX_CONSTANTS::k_boltz * (particle_mass[i] + particle_mass[j]) /
+          std::sqrt(2.0 * PHYSICS_CONSTANTS::pi * PHYSICS_CONSTANTS::k_boltz * (particle_mass[i] + particle_mass[j]) /
                     (particle_mass[i] * particle_mass[j]));
 
       const ADReal nd = sqrt(T) * fac / data.Q11;
       nDij[i][j] = nDij[j][i] = nd;
     }
 
-  // --------------------------------------------------------------------------
-  // COMSOL-style mixture-averaged diffusion coefficients
-  //   D_k,m = (1 - Y_k) / sum_{j != k}(X_j / D_kj)
-  // with D_kj = (n D_kj) / n and n = p/(k_B T).
-  // --------------------------------------------------------------------------
-  const ADReal number_density = p / (QPX_CONSTANTS::k_boltz * T);
+  const ADReal number_density = p / (PHYSICS_CONSTANTS::k_boltz * T);
 
   Vec D_mix(n, 0.0);
   for (std::size_t i = 0; i < n; ++i)
   {
     const ADReal one_minus_Y = 1.0 - Y[i];
 
-    // In the pure-species limit D_k,m is immaterial because grad(Y_k)=0;
-    // return zero instead of evaluating the indeterminate 0/0 form.
     if (one_minus_Y.value() <= 1.0e-16)
     {
       D_mix[i] = 0.0;
@@ -834,7 +813,7 @@ QPXThermalDiffusionMaterial::evaluate(const ADReal & T,
 
       const ADReal Dij = nDij[i][j] / number_density;
       if (Dij.value() <= 0.0)
-        mooseError("QPXThermalDiffusionMaterial obtained non-positive binary diffusion coefficient for species '",
+        mooseError("PhysicsThermalDiffusionMaterial obtained non-positive binary diffusion coefficient for species '",
                    _species_names[i],
                    "' and '",
                    _species_names[j],
@@ -845,7 +824,7 @@ QPXThermalDiffusionMaterial::evaluate(const ADReal & T,
     }
 
     if (denominator.value() <= 0.0)
-      mooseError("QPXThermalDiffusionMaterial could not construct positive D_k,m for species '",
+      mooseError("PhysicsThermalDiffusionMaterial could not construct positive D_k,m for species '",
                  _species_names[i],
                  "'. denominator=",
                  denominator.value());
@@ -857,19 +836,16 @@ QPXThermalDiffusionMaterial::evaluate(const ADReal & T,
   for (std::size_t i = 0; i < n; ++i)
   {
     const Real eta_fac =
-        (5.0 / 16.0) * std::sqrt(QPX_CONSTANTS::pi * QPX_CONSTANTS::k_boltz) * std::sqrt(particle_mass[i]);
+        (5.0 / 16.0) * std::sqrt(PHYSICS_CONSTANTS::pi * PHYSICS_CONSTANTS::k_boltz) * std::sqrt(particle_mass[i]);
 
     eta[i] = sqrt(T) * eta_fac / q22[i][i];
   }
 
-  // --------------------------------------------------------------------------
-  // Chapman-Enskog alpha system
-  // --------------------------------------------------------------------------
   Mat ce(n, Vec(n, 0.0));
 
   for (std::size_t i = 0; i < n; ++i)
     ce[i][i] =
-        (4.0 / (15.0 * QPX_CONSTANTS::k_boltz)) * X_alpha[i] * X_alpha[i] * particle_mass[i] / eta[i];
+        (4.0 / (15.0 * PHYSICS_CONSTANTS::k_boltz)) * X_alpha[i] * X_alpha[i] * particle_mass[i] / eta[i];
 
   for (std::size_t i = 1; i < n; ++i)
     for (std::size_t j = 0; j < i; ++j)
@@ -879,7 +855,7 @@ QPXThermalDiffusionMaterial::evaluate(const ADReal & T,
       const Real miij = mi / (mi + mj);
       const Real mjij = mj / (mi + mj);
 
-      const ADReal fac = X_alpha[i] * X_alpha[j] / (nDij[i][j] * 25.0 * QPX_CONSTANTS::k_boltz);
+      const ADReal fac = X_alpha[i] * X_alpha[j] / (nDij[i][j] * 25.0 * PHYSICS_CONSTANTS::k_boltz);
 
       const ADReal lower =
           fac * miij * mjij * (16.0 * Ast[i][j] + 12.0 * Bst[i][j] - 55.0);
@@ -898,9 +874,6 @@ QPXThermalDiffusionMaterial::evaluate(const ADReal & T,
 
   const Vec alpha = solveSystem(ce, X_alpha);
 
-  // --------------------------------------------------------------------------
-  // Heavy thermal-diffusion ratios kT
-  // --------------------------------------------------------------------------
   Mat ratio(n, Vec(n, 0.0));
 
   for (std::size_t i = 1; i < n; ++i)
@@ -925,12 +898,9 @@ QPXThermalDiffusionMaterial::evaluate(const ADReal & T,
     for (std::size_t j = 0; j < n; ++j)
       kT[i] += ratio[i][j] * alpha[j];
 
-    kT[i] /= QPX_CONSTANTS::k_boltz;
+    kT[i] /= PHYSICS_CONSTANTS::k_boltz;
   }
 
-  // --------------------------------------------------------------------------
-  // Stefan-Maxwell thermal-drive solve
-  // --------------------------------------------------------------------------
   Mat G(n, Vec(n, 0.0));
 
   for (std::size_t i = 0; i < n; ++i)
@@ -969,7 +939,6 @@ QPXThermalDiffusionMaterial::evaluate(const ADReal & T,
 
   Vec V = solveSystem(G, driving);
 
-  // Mass-average roundoff correction.
   ADReal mass_average_velocity = 0.0;
   for (std::size_t i = 0; i < n; ++i)
     mass_average_velocity += V[i] * Y[i];
@@ -977,12 +946,10 @@ QPXThermalDiffusionMaterial::evaluate(const ADReal & T,
   for (std::size_t i = 0; i < n; ++i)
     V[i] -= mass_average_velocity;
 
-  // --------------------------------------------------------------------------
-  // QPX mass-flux coefficient:
+  // Physics mass-flux coefficient:
   //   rho Y_i V_i = -D_T,i grad(T)/T
-  // --------------------------------------------------------------------------
   const ADReal mean_molar_mass = 1.0 / mole_denominator;
-  const ADReal rho = p * mean_molar_mass / (QPX_CONSTANTS::R * T);
+  const ADReal rho = p * mean_molar_mass / (PHYSICS_CONSTANTS::R * T);
 
   Vec D_T(n);
   for (std::size_t i = 0; i < n; ++i)
@@ -992,25 +959,25 @@ QPXThermalDiffusionMaterial::evaluate(const ADReal & T,
 }
 
 ADReal
-QPXThermalDiffusionMaterial::evaluateDmix(const std::size_t species_i,
-                                          const ADReal & T,
-                                          const ADReal & p,
-                                          const ADReal & Te,
-                                          const ADReal & ne,
-                                          const Vec & Y) const
+PhysicsThermalDiffusionMaterial::evaluateDmix(const std::size_t species_i,
+                                              const ADReal & T,
+                                              const ADReal & p,
+                                              const ADReal & Te,
+                                              const ADReal & ne,
+                                              const Vec & Y) const
 {
   const std::size_t n = _species_names.size();
 
   if (species_i >= n)
-    mooseError("QPXThermalDiffusionMaterial received invalid species index ",
+    mooseError("PhysicsThermalDiffusionMaterial received invalid species index ",
                species_i,
                " for D_mix evaluation.");
 
   if (T.value() <= 0.0)
-    mooseError("QPXThermalDiffusionMaterial requires T > 0 K. Got ", T.value());
+    mooseError("PhysicsThermalDiffusionMaterial requires T > 0 K. Got ", T.value());
 
   if (p.value() <= 0.0)
-    mooseError("QPXThermalDiffusionMaterial requires absolute p > 0 Pa. Got ", p.value());
+    mooseError("PhysicsThermalDiffusionMaterial requires absolute p > 0 Pa. Got ", p.value());
 
   if (Y.size() != n)
     mooseError("Internal species/mass-fraction size mismatch.");
@@ -1019,27 +986,24 @@ QPXThermalDiffusionMaterial::evaluateDmix(const std::size_t species_i,
   {
     if (Te.value() <= 0.0)
       mooseError(
-          "QPXThermalDiffusionMaterial requires electron_temperature > 0 K "
+          "PhysicsThermalDiffusionMaterial requires electron_temperature > 0 K "
           "when charged-charged pairs are active. Got ",
           Te.value());
 
     if (ne.value() < 0.0)
       mooseError(
-          "QPXThermalDiffusionMaterial requires electron_number_density >= 0 "
+          "PhysicsThermalDiffusionMaterial requires electron_number_density >= 0 "
           "when charged-charged pairs are active. Got ",
           ne.value());
   }
 
-  // --------------------------------------------------------------------------
-  // Validate mass fractions and construct mole-fraction denominator.
-  // --------------------------------------------------------------------------
   ADReal Y_sum = 0.0;
   ADReal mole_denominator = 0.0;
 
   for (std::size_t j = 0; j < n; ++j)
   {
     if (Y[j].value() < 0.0)
-      mooseError("QPXThermalDiffusionMaterial requires non-negative mass fractions. "
+      mooseError("PhysicsThermalDiffusionMaterial requires non-negative mass fractions. "
                  "Species '",
                  _species_names[j],
                  "' has Y=",
@@ -1050,26 +1014,18 @@ QPXThermalDiffusionMaterial::evaluateDmix(const std::size_t species_i,
   }
 
   if (std::abs(Y_sum.value() - 1.0) > 1.0e-10)
-    mooseError("QPXThermalDiffusionMaterial requires sum(Y)=1. Got ", Y_sum.value());
+    mooseError("PhysicsThermalDiffusionMaterial requires sum(Y)=1. Got ", Y_sum.value());
 
-  // --------------------------------------------------------------------------
-  // COMSOL-style mixture-averaged diffusion coefficient
-  //
-  //   D_i,m = (1 - Y_i) / sum_{j != i}(X_j / D_ij)
-  //
-  // Only collision pairs involving species_i are required.
-  // --------------------------------------------------------------------------
   const ADReal one_minus_Y = 1.0 - Y[species_i];
 
-  // Pure-species limit.
   if (one_minus_Y.value() <= 1.0e-16)
     return 0.0;
 
   const ADReal number_density =
-      p / (QPX_CONSTANTS::k_boltz * T);
+      p / (PHYSICS_CONSTANTS::k_boltz * T);
 
   const Real particle_mass_i =
-      _molar_masses[species_i] / QPX_CONSTANTS::N_A;
+      _molar_masses[species_i] / PHYSICS_CONSTANTS::N_A;
 
   ADReal denominator = 0.0;
 
@@ -1080,14 +1036,6 @@ QPXThermalDiffusionMaterial::evaluateDmix(const std::size_t species_i,
     if (j == species_i)
       continue;
 
-    /*
-     * Preserve the same pair ordering used by the full evaluate() path:
-     *
-     *   for (i = 0; i < n; ++i)
-     *     for (j = i; j < n; ++j)
-     *
-     * This avoids assuming that collisionData() is insensitive to alias order.
-     */
     const std::size_t pair_i =
         species_i < j ? species_i : j;
 
@@ -1102,14 +1050,14 @@ QPXThermalDiffusionMaterial::evaluateDmix(const std::size_t species_i,
                       _transport_aliases[pair_j]);
 
     const Real particle_mass_j =
-        _molar_masses[j] / QPX_CONSTANTS::N_A;
+        _molar_masses[j] / PHYSICS_CONSTANTS::N_A;
 
     const Real fac =
         (3.0 / 16.0) *
         std::sqrt(
             2.0 *
-            QPX_CONSTANTS::pi *
-            QPX_CONSTANTS::k_boltz *
+            PHYSICS_CONSTANTS::pi *
+            PHYSICS_CONSTANTS::k_boltz *
             (particle_mass_i + particle_mass_j) /
             (particle_mass_i * particle_mass_j));
 
@@ -1121,7 +1069,7 @@ QPXThermalDiffusionMaterial::evaluateDmix(const std::size_t species_i,
 
     if (Dij.value() <= 0.0)
       mooseError(
-          "QPXThermalDiffusionMaterial obtained non-positive binary diffusion "
+          "PhysicsThermalDiffusionMaterial obtained non-positive binary diffusion "
           "coefficient for species '",
           _species_names[species_i],
           "' and '",
@@ -1137,7 +1085,7 @@ QPXThermalDiffusionMaterial::evaluateDmix(const std::size_t species_i,
 
   if (denominator.value() <= 0.0)
     mooseError(
-        "QPXThermalDiffusionMaterial could not construct positive D_k,m for species '",
+        "PhysicsThermalDiffusionMaterial could not construct positive D_k,m for species '",
         _species_names[species_i],
         "'. denominator=",
         denominator.value());
