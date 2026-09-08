@@ -3,10 +3,10 @@
 #include "AuxKernel.h"
 
 
-class QPXKelvinToeV : public AuxKernel
+class PhysicsBackgroundDensity : public AuxKernel
 {
 public:
-  QPXKelvinToeV(const InputParameters & parameters);
+  PhysicsBackgroundDensity(const InputParameters & parameters);
 
   static InputParameters validParams();
 
@@ -15,5 +15,6 @@ public:
 protected:
 
   /// Coupled background gas temperature variable
-  const Real _T_gas;
+  const VariableValue & _T_gas;
+  const VariableValue & _p_gas;
 };

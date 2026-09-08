@@ -1,9 +1,9 @@
 #pragma once
 
 /**
- *  QPX_CONSTANTS contains various constants useful in plasma modeling
+ *  PHYSICS_CONSTANTS contains various constants useful in plasma modeling
  */
-namespace QPX_CONSTANTS
+namespace PHYSICS_CONSTANTS
 {
 /// Pi.
 inline constexpr Real pi =
@@ -36,4 +36,4 @@ inline constexpr Real eps_0 = 8.85e-12;
 /// Permeability of free space [H/m].
 inline constexpr Real mu_0 = 4.0 * pi * 1e-7;
 
-} // namespace QPX_CONSTANTS
+} // namespace PHYSICS_CONSTANTS

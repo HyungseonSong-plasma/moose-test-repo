@@ -1,4 +1,4 @@
-#include "qpxApp.h"
+#include "PhysicsApp.h"
 #include "Moose.h"
 #include "AppFactory.h"
 #include "ModulesApp.h"
@@ -10,7 +10,7 @@
 #include "NavierStokesApp.h"
 
 InputParameters
-qpxApp::validParams()
+PhysicsApp::validParams()
 {
   InputParameters params = MooseApp::validParams();
   params.set<bool>("use_legacy_material_output") = false;
@@ -18,23 +18,23 @@ qpxApp::validParams()
   return params;
 }
 
-registerKnownLabel("qpxApp");
+registerKnownLabel("PhysicsApp");
 
-qpxApp::qpxApp(const InputParameters & parameters) : MooseApp(parameters)
+PhysicsApp::PhysicsApp(const InputParameters & parameters) : MooseApp(parameters)
 {
-  qpxApp::registerAll(_factory, _action_factory, _syntax);
+  PhysicsApp::registerAll(_factory, _action_factory, _syntax);
   StochasticToolsApp::registerApps();
   NavierStokesApp::registerApps();
 }
 
-qpxApp::~qpxApp() {}
+PhysicsApp::~PhysicsApp() {}
 
 void
-qpxApp::registerAll(Factory & f, ActionFactory & af, Syntax & syntax)
+PhysicsApp::registerAll(Factory & f, ActionFactory & af, Syntax & syntax)
 {
-  ModulesApp::registerAllObjects<qpxApp>(f, af, syntax);
-  Registry::registerObjectsTo(f, {"qpxApp"});
-  Registry::registerActionsTo(af, {"qpxApp"});
+  ModulesApp::registerAllObjects<PhysicsApp>(f, af, syntax);
+  Registry::registerObjectsTo(f, {"PhysicsApp"});
+  Registry::registerActionsTo(af, {"PhysicsApp"});
 
   /* register custom execute flags, action syntax, etc. here */
   SquirrelApp::registerAll(f, af, syntax);
@@ -49,9 +49,9 @@ qpxApp::registerAll(Factory & f, ActionFactory & af, Syntax & syntax)
 }
 
 void
-qpxApp::registerApps()
+PhysicsApp::registerApps()
 {
-  registerApp(qpxApp);
+  registerApp(PhysicsApp);
   ModulesApp::registerApps();
 }
 
@@ -59,12 +59,12 @@ qpxApp::registerApps()
  *********************** Dynamic Library Entry Points - DO NOT MODIFY ******************************
  **************************************************************************************************/
 extern "C" void
-qpxApp__registerAll(Factory & f, ActionFactory & af, Syntax & s)
+PhysicsApp__registerAll(Factory & f, ActionFactory & af, Syntax & s)
 {
-  qpxApp::registerAll(f, af, s);
+  PhysicsApp::registerAll(f, af, s);
 }
 extern "C" void
-qpxApp__registerApps()
+PhysicsApp__registerApps()
 {
-  qpxApp::registerApps();
+  PhysicsApp::registerApps();
 }

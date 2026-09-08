@@ -1,10 +1,10 @@
-#include "QPXKelvinToeV.h"
-#include "QPX.h"
+#include "PhysicsKelvinToeV.h"
+#include "Physics.h"
 
-registerMooseObject("qpxApp", QPXKelvinToeV);
+registerMooseObject("PhysicsApp", PhysicsKelvinToeV);
 
 InputParameters
-QPXKelvinToeV::validParams()
+PhysicsKelvinToeV::validParams()
 {
   InputParameters params = AuxKernel::validParams();
   params.addParam<Real>("T_gas", 300, "The background gas temperature in Kelvin.");
@@ -12,14 +12,14 @@ QPXKelvinToeV::validParams()
   return params;
 }
 
-QPXKelvinToeV::QPXKelvinToeV(const InputParameters & parameters)
+PhysicsKelvinToeV::PhysicsKelvinToeV(const InputParameters & parameters)
   : AuxKernel(parameters),
   _T_gas(getParam<Real>("T_gas"))
 {
 }
 
 Real
-QPXKelvinToeV::computeValue()
+PhysicsKelvinToeV::computeValue()
 {
   return _T_gas / 11604.5;
 }

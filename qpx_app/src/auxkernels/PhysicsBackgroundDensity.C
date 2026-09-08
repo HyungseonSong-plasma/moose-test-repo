@@ -1,10 +1,10 @@
-#include "QPXBackgroundDensity.h"
-#include "QPX.h"
+#include "PhysicsBackgroundDensity.h"
+#include "Physics.h"
 
-registerMooseObject("qpxApp", QPXBackgroundDensity);
+registerMooseObject("PhysicsApp", PhysicsBackgroundDensity);
 
 InputParameters
-QPXBackgroundDensity::validParams()
+PhysicsBackgroundDensity::validParams()
 {
   InputParameters params = AuxKernel::validParams();
   params.addCoupledVar("T_gas", 300, "The background gas temperature in Kelvin.");
@@ -14,7 +14,7 @@ QPXBackgroundDensity::validParams()
   return params;
 }
 
-QPXBackgroundDensity::QPXBackgroundDensity(const InputParameters & parameters)
+PhysicsBackgroundDensity::PhysicsBackgroundDensity(const InputParameters & parameters)
   : AuxKernel(parameters),
   _T_gas(coupledValue("T_gas")),
   _p_gas(coupledValue("p_gas"))
@@ -22,8 +22,8 @@ QPXBackgroundDensity::QPXBackgroundDensity(const InputParameters & parameters)
 }
 
 Real
-QPXBackgroundDensity::computeValue()
+PhysicsBackgroundDensity::computeValue()
 {
-  return std::log(_p_gas[_qp] / (QPX_CONSTANTS::k_boltz * _T_gas[_qp]) 
-                  / QPX_CONSTANTS::N_A);
+  return std::log(_p_gas[_qp] / (PHYSICS_CONSTANTS::k_boltz * _T_gas[_qp]) 
+                  / PHYSICS_CONSTANTS::N_A);
 }
