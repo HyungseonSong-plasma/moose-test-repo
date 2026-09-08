@@ -1,4 +1,4 @@
-"""Canonical QPX executable resolution, process execution, and raw telemetry."""
+"""Canonical Physics executable resolution, process execution, and raw telemetry."""
 
 from __future__ import annotations
 
@@ -41,16 +41,16 @@ def _resolve_candidate(raw: str | os.PathLike[str], *, source: str) -> Path:
 
 def resolve_executable(explicit: str | os.PathLike[str] | None = None) -> Path:
     if explicit is not None:
-        return _resolve_candidate(explicit, source="explicit qpx-opt")
-    env = os.environ.get("QPX_EXECUTABLE")
+        return _resolve_candidate(explicit, source="explicit physics-opt")
+    env = os.environ.get("PHYSICS_EXECUTABLE")
     if env:
-        return _resolve_candidate(env, source="QPX_EXECUTABLE")
-    found = shutil.which("qpx-opt")
+        return _resolve_candidate(env, source="PHYSICS_EXECUTABLE")
+    found = shutil.which("physics-opt")
     if found:
         return Path(found).resolve()
     raise SystemExit(
-        "qpx-opt not found. Set QPX_EXECUTABLE or add the canonical user-local "
-        "qpx-opt to PATH."
+        "physics-opt not found. Set PHYSICS_EXECUTABLE or add the canonical user-local "
+        "physics-opt to PATH."
     )
 
 
@@ -58,11 +58,11 @@ def resolve_results_root(
     executable: str | os.PathLike[str] | None,
     configured: str | os.PathLike[str] | None = None,
 ) -> Path:
-    """Resolve the reusable mechanical results root for a QPX workflow.
+    """Resolve the reusable mechanical results root for a Physics workflow.
 
     Experiment-relative configured paths should be resolved by the application
     layer before they are passed here. Without an explicit root, preserve the
-    established QPX sibling ``temp/results`` convention.
+    established Physics sibling ``temp/results`` convention.
     """
     if configured not in (None, ""):
         return Path(configured).expanduser().resolve()
@@ -80,7 +80,7 @@ def validate_executable(exe: Path) -> None:
     elf_class = header[4]
     data_encoding = header[5]
     if elf_class != 2:
-        raise SystemExit(f"unsupported/non-ELF64 qpx executable: {exe}")
+        raise SystemExit(f"unsupported/non-ELF64 Physics executable: {exe}")
     if data_encoding not in (1, 2):
         raise SystemExit(f"invalid ELF data encoding in {exe}")
     endian = "<" if data_encoding == 1 else ">"
@@ -204,7 +204,7 @@ def run_command(
     return RunResult(int(rc), time.perf_counter() - start, timed_out)
 
 
-def run_qpx(
+def run_physics(
     exe: Path,
     *,
     cwd: Path,
