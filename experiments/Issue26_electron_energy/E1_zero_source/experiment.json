@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "experiment_id": "issue26-e1-zero-source-electron-energy",
+  "protocol": "issue26-electron-energy-e1",
+  "execution": {
+    "timeout_seconds": 240.0
+  },
+  "parameters": {
+    "energy_model": "normalized_zero_source"
+  },
+  "outputs": {
+    "solved_normalized_energy_state": true,
+    "zero_source_energy_conservation": true,
+    "solved_mean_energy_bridge": true,
+    "cross_case_passive_energy_discriminator": true,
+    "energy_transport_enabled": false,
+    "joule_source_enabled": false,
+    "wall_energy_flux_enabled": false,
+    "see_energy_source_enabled": false,
+    "transport_lookup_coupled_to_solved_energy": false,
+    "volumetric_reaction_energy_sources_enabled": false
+  }
+}

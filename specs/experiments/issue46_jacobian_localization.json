@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "experiment_id": "issue46_jacobian_localization",
+  "description": "Declarative observability instrumentation for Issue46 Jacobian localization.",
+  "cases": [
+    {
+      "case_id": "localization",
+      "operations": [
+        {
+          "op": "remove_petsc_flags",
+          "flags": ["-snes_test_jacobian"]
+        },
+        {
+          "op": "add_petsc_flags",
+          "flags": ["-snes_test_jacobian_view"]
+        },
+        {
+          "op": "set_petsc_option",
+          "name": "-snes_test_jacobian",
+          "value": "1e-07"
+        },
+        {
+          "op": "insert_child_block",
+          "parent": "Outputs",
+          "path": "Outputs/r46_dofmap",
+          "block": "  [r46_dofmap]\n    type = DOFMap\n    execute_on = INITIAL\n    file_base = r46_dofmap\n  []"
+        }
+      ]
+    }
+  ]
+}

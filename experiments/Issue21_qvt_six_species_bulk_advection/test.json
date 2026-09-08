@@ -1,0 +1,36 @@
+{
+  "name": "qvt_six_species_bulk_advection",
+  "type": "canonical",
+  "input": "input.i",
+  "prepare": "prepare.py",
+  "checker": "check.py",
+  "checker_args": [
+    "input_out.csv",
+    "expected.json"
+  ],
+  "claim": "Steady real-qvt WCNSFV flow transports six solved heavy-species mass fractions with QPX density-weighted conservative advection and data-driven mixture-averaged diffusion while constrained O2 closes the seven-species mixture; inlet solved-species mass fluxes are tied directly to SCCM total mdot.",
+  "fail_class": "qvt species-flow construction / density-weighted advection / scalar inlet mass-flux / Q-1 closure / mixture diffusion / outlet species inventory",
+  "stage": "R21_CANONICAL_STEADY_QVT_SIX_SPECIES_BULK_ADVECTION",
+  "issue": "#21",
+  "known_good_dependency": "regression_workspace/tests/flow/sccm_pressure_boundary",
+  "source_audit": {
+    "QPXFVMassFractionAdvection": "rho_face * (u.n) * w_face",
+    "QPXFVMixtureAveragedDiffusion": "-rho D [grad(w)+(w/Mn)grad(Mn)].n",
+    "transient_time_kernel": "excluded in EVR1 by design"
+  },
+  "resource_sha256": {
+    "qvt.msh": "a98521af2c106137f9635fe7e2c5ba9b0fd408e17c62eb7c6d3f7c1fff65a03e",
+    "mesh.i": "b31a8cbc41fd8eea60b6bc036b6a5841342c065152a91416063ff5afbec9137d",
+    "transport_data.txt": "2fa7988c79f6ea23ebdd50e6d1d7fc5018dc8854a27459511ec95c94ebe7ff3d",
+    "physics.i": "b54f6abcbb8c4d88569d7317aa69ebeceb38215c8dccb1ac4e9aca0bfce38db6",
+    "input.i": "a252872992b1db29e8709d99fe6e995ffd752dcb03dd848c45be235409b180d1",
+    "prepare.py": "cf96462543b76879933fec70f079bdcf0ed852e98ce9990ec986c46feac8fcd2",
+    "expected.json": "35d88472d55a7879289dbe651ad5436e54fe8b7cfd0b1bd76b18365bd8431c80",
+    "check.py": "c16968699aa5a10e10bab911dbe7295ab7bf7184197e5cc3cf85796788cff846"
+  },
+  "promotion_issue": "#21",
+  "accepted_evr2_classification": "BATCH_PASS",
+  "accepted_repair_artifact_sha256": "ee354f5941ddb8ee54473e474ec6206a82e418f38154807545591b159b2ee889",
+  "parser_collision_evr1_artifact_sha256": "b33bd9392e249575dd249a143688d46a7d6102cc4efed6207b7b79d48f60b9a8",
+  "transient_accumulation_successor": "#22"
+}

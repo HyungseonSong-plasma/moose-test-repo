@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "experiment_id": "issue27-a7-comsol-electron-thermal-wall",
+  "protocol": "issue27-surface-reaction-controlled-wall",
+  "execution": {
+    "timeout_seconds": 240.0
+  },
+  "parameters": {
+    "wall_model": "comsol_electron_thermal_wall_control",
+    "wall_scope": "all_plasma_walls",
+    "electron_reflection_coefficient": 0.0,
+    "electron_wall_migration": false,
+    "secondary_emission_coefficient": 0.0,
+    "electron_energy_wall_coupling": false,
+    "O_sticking_coefficient": 0.2,
+    "O2s_sticking_coefficient": 1.0,
+    "Os_sticking_coefficient": 0.2,
+    "O2p_sticking_coefficient": 1.0,
+    "Om_sticking_coefficient": 1.0,
+    "Op_sticking_coefficient": 1.0
+  },
+  "outputs": {
+    "a5_n_minus_1_preflight": true,
+    "accepted_a6_heavy_wall_reuse": true,
+    "electron_random_thermal_wall_loss": true,
+    "electron_wall_migration": false,
+    "matched_charge_ledger_removed": true,
+    "electron_inventory_closure": true,
+    "independent_net_charge_prediction": true,
+    "gauss_law": true,
+    "nonnegative_electron_density": true,
+    "electron_energy_wall_coupling_deferred": true,
+    "secondary_emission_deferred": true
+  }
+}

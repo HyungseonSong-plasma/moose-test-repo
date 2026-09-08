@@ -1,0 +1,24 @@
+{
+  "validation_schema": 2,
+  "name": "r2_combined",
+  "type": "diagnostic",
+  "input": "input.i",
+  "checker": "../check_case.py",
+  "checker_args": [
+    "input_out.physical.csv",
+    "expected.json"
+  ],
+  "temporal_csv": [
+    {
+      "source": "input_out.csv",
+      "physical": "input_out.physical.csv",
+      "time_column": "time",
+      "initial_row_policy": "exclude_observation",
+      "initial_time": 0.0,
+      "time_tol": 1e-15,
+      "require_physical_rows": true
+    }
+  ],
+  "issue": "#2",
+  "claim": "Verified oxygen electron-moment lookup + prescribed-field linear electron number-density drift-diffusion"
+}

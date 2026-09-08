@@ -1,9 +1,0 @@
-{
-  "name": "qpx-opt",
-  "platform": "linux-x86_64",
-  "source_repository": "<source repo>",
-  "source_commit": "<commit sha>",
-  "build_type": "opt",
-  "moose_commit": "<MOOSE commit sha>",
-  "notes": "Record runtime-library or compiler requirements here."
-}

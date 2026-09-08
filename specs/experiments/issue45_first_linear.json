@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "experiment_id": "issue45_first_linear",
+  "description": "Declarative instrumentation for the bounded Issue45 first-linear diagnostic; scientific interpretation remains Python-owned.",
+  "cases": [
+    {
+      "case_id": "first_linear",
+      "operations": [
+        {
+          "op": "set_parameter",
+          "path": "Executioner",
+          "name": "nl_max_its",
+          "value": "1"
+        },
+        {
+          "op": "add_petsc_flags",
+          "flags": [
+            "-snes_converged_reason",
+            "-ksp_converged_reason"
+          ]
+        },
+        {
+          "op": "add_petsc_flags",
+          "flags": [
+            "-snes_test_jacobian",
+            "-ksp_view",
+            "-ksp_monitor_true_residual"
+          ]
+        }
+      ]
+    }
+  ]
+}

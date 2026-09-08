@@ -1,0 +1,18 @@
+{
+  "Q_sccm": 100.0,
+  "M_inlet_kg_per_mol": 0.032,
+  "Vm_std_m3_per_mol": 0.0224136,
+  "outlet_pressure_Pa": 1.33322,
+  "rho_const_kg_per_m3": 1.71e-05,
+  "inlet_area_m2": 0.05954574715614091,
+  "inlet_mdot_kg_per_s": 2.3795076798610368e-06,
+  "inlet_mass_flux_kg_per_m2_s": 3.9961001305794176e-05,
+  "nominal_speed_m_per_s": 2.3369006611575545,
+  "direction": [
+    -1.0,
+    0.0,
+    0.0
+  ],
+  "qvt_sha256": "a98521af2c106137f9635fe7e2c5ba9b0fd408e17c62eb7c6d3f7c1fff65a03e",
+  "mesh_i_sha256": "b31a8cbc41fd8eea60b6bc036b6a5841342c065152a91416063ff5afbec9137d"
+}

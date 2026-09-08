@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "experiment_id": "issue26-e2b-e5-integrated-electron-energy-chain",
+  "protocol": "issue26-electron-energy-chain",
+  "execution": {
+    "timeout_seconds": 300.0
+  },
+  "parameters": {
+    "energy_chain": "e2b_to_e5_controlled",
+    "e2b_field_V_m": 100000.0,
+    "e2b_mobility_m2_V_s": 1.0,
+    "e3_field_V_m": 1000.0,
+    "e3_mobility_m2_V_s": 0.1,
+    "secondary_electron_mean_energy_eV": 4.0
+  },
+  "outputs": {
+    "E2b_energy_drift_sign": true,
+    "E2b_closed_boundary_energy_conservation": true,
+    "E3_controlled_joule_heating": true,
+    "E4_comsol_thermal_energy_wall_flux": true,
+    "E5_A8_see_4eV_energy_coupling": true,
+    "single_command_evidence_bundle": true,
+    "production_mu_epsilon_D_epsilon_validated": false,
+    "production_solved_field_joule_coupling_validated": false,
+    "solved_energy_transport_lookup_feedback": false,
+    "volumetric_reaction_energy_losses": false,
+    "physical_icp_plasma_potential_acceptance": false
+  }
+}

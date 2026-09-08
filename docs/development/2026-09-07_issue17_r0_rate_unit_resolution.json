@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "work": {
+    "parent_issue": 17,
+    "execution_issue": 176,
+    "stage": "Stage 1 / R0",
+    "status": "UNIT_CONVERSION_FROZEN"
+  },
+  "avogadro_per_mol": 6.02214076e23,
+  "source_conventions": {
+    "COMSOL_electron_impact_lookup_native": {
+      "coefficient_unit": "m^3/s",
+      "basis": "particle number density",
+      "note": "COMSOL 6.4 Electron Impact Reaction lookup-table Rate coefficients use mean electron energy versus m^3/s."
+    },
+    "COMSOL_molar_reaction_expression": {
+      "second_order_coefficient_unit": "m^3/(mol s)",
+      "basis": "molar concentration",
+      "note": "COMSOL examples convert particle electron-impact coefficients to the molar reaction-expression basis with N_A_const."
+    },
+    "QPX_internal_reaction_progress": {
+      "unit": "mol/(m^3 s)",
+      "basis": "molar reaction progress"
+    }
+  },
+  "project_resolution_for_user_supplied_tables": {
+    "raw_table_coefficient_unit": "m^3/(mol s)",
+    "raw_table_basis": "molar-equivalent electron-impact coefficient",
+    "particle_coefficient_conversion": "k_particle[m^3/s] = k_raw[m^3/(mol s)] / N_A",
+    "molar_coefficient_conversion": "k_molar = k_particle * N_A = k_raw",
+    "event_progress_equivalence": "k_molar*c_e*c_target = (k_particle*n_e*n_target)/N_A, with c=n/N_A",
+    "provenance_class": "project unit resolution inferred from coefficient magnitude plus COMSOL/QPX dimensional conventions; uploaded files themselves contain no explicit unit metadata",
+    "activation_policy": "production may use k_raw directly only in a molar-concentration expression; a particle-number-density expression must divide k_raw by N_A first"
+  },
+  "sanity_ranges": {
+    "expected_particle_electron_neutral_rate_order_m3_per_s": "roughly 1e-16 to 1e-12 over the supplied mean-energy range depending on channel",
+    "raw_1e10_to_1e11_converts_to_particle_order_m3_per_s": "roughly 1.66e-14 to 1.66e-13"
+  },
+  "forbidden_interpretation": "Do not interpret the supplied 1e7-1e11 raw coefficients directly as m^3/s."
+}

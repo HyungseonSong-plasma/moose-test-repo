@@ -1,0 +1,10 @@
+{
+  "name": "reactor_o2plus_poisson_analytic",
+  "type": "canonical",
+  "input": "poisson_analytic.i",
+  "checker": "../check_reactor_o2plus.py",
+  "checker_args": [
+    "poisson_analytic_out.csv",
+    "poisson_analytic"
+  ]
+}

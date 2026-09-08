@@ -1,0 +1,256 @@
+name: Physics runtime producer
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_base_ref:
+        description: 'Immutable physics-build-base ref (image@sha256:digest)'
+        required: true
+        type: string
+
+concurrency:
+  group: physics-runtime-producer-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  IMAGE: ghcr.io/hyungseonsong-plasma/physics-runtime
+  BUILD_BASE_REF: ${{ inputs.build_base_ref }}
+  MOOSE_SHA: 9f388366ccf38b9c34542ec5561198249fde0ac9
+  CRANE_SHA: ba26970cf419dcac563a20ed7079d445bc6341c3
+  SQUIRREL_SHA: 16a26d504f3ee11161a86d4e3ebf3c0e5f2afbb1
+  ZAPDOS_SHA: 9eceffbc46048c3760bbfa9a7f1ca681ae35af1d
+
+jobs:
+  build-publish-consume:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Checkout canonical implementation and tests
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 1
+
+      - name: Resolve and validate canonical source identity
+        id: source
+        shell: bash
+        run: |
+          set -euxo pipefail
+          source physics_app/dependencies.lock
+          test "$MOOSE" = "$MOOSE_SHA"
+          test "$CRANE" = "$CRANE_SHA"
+          test "$SQUIRREL" = "$SQUIRREL_SHA"
+          test "$ZAPDOS" = "$ZAPDOS_SHA"
+          test "$PHYSICS_BUILD_BASE_IMAGE" = "ghcr.io/hyungseonsong-plasma/physics-build-base"
+          case "$BUILD_BASE_REF" in
+            "$PHYSICS_BUILD_BASE_IMAGE"@sha256:*) ;;
+            *) echo "Unexpected Physics build-base ref: $BUILD_BASE_REF" >&2; exit 1 ;;
+          esac
+          digest="${BUILD_BASE_REF##*@sha256:}"
+          [[ "$digest" =~ ^[0-9a-f]{64}$ ]]
+
+          git ls-files -z physics_app \
+            | sort -z \
+            | xargs -0 sha256sum > /tmp/physics-source-file-hashes.txt
+          manifest="$(sha256sum /tmp/physics-source-file-hashes.txt | awk '{print $1}')"
+          echo "manifest=$manifest" >> "$GITHUB_OUTPUT"
+          echo "PHYSICS_SOURCE_MANIFEST_SHA256=$manifest" >> "$GITHUB_ENV"
+          echo "PHYSICS_SOURCE_REPOSITORY_SHA=$GITHUB_SHA" >> "$GITHUB_ENV"
+
+          forbidden="$(git ls-files physics_app | grep -E '(^|/)(physics-opt|build/|lib/|\.libs/|\.jitcache/|\.pytest_cache/)|\.(o|lo|la|a|so)(\.|$)' || true)"
+          test -z "$forbidden"
+          echo PHYSICS_CANONICAL_SOURCE_IDENTITY_PASS
+
+      - name: Log in to GHCR for publishing
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Prepare runner disk
+        shell: bash
+        run: |
+          set -euxo pipefail
+          target_kb=$((14 * 1024 * 1024))
+          free_kb() { df -Pk / | awk 'NR == 2 {print $4}'; }
+          sudo apt-get clean || true
+          docker system prune -af --volumes || true
+          for path in /usr/local/lib/android /opt/ghc /usr/share/dotnet /usr/share/swift /usr/local/.ghcup; do
+            if (( $(free_kb) >= target_kb )); then break; fi
+            sudo rm -rf "$path" || true
+          done
+          df -h /
+          test "$(free_kb)" -ge "$target_kb"
+
+      - name: Pull immutable Physics build base
+        shell: bash
+        run: |
+          set -euxo pipefail
+          docker pull "$BUILD_BASE_REF"
+          test "$(docker image inspect "$BUILD_BASE_REF" --format '{{ index .Config.Labels "io.physics.moose.sha" }}')" = "$MOOSE_SHA"
+          test "$(docker image inspect "$BUILD_BASE_REF" --format '{{ index .Config.Labels "io.physics.crane.sha" }}')" = "$CRANE_SHA"
+          test "$(docker image inspect "$BUILD_BASE_REF" --format '{{ index .Config.Labels "io.physics.squirrel.sha" }}')" = "$SQUIRREL_SHA"
+          test "$(docker image inspect "$BUILD_BASE_REF" --format '{{ index .Config.Labels "io.physics.zapdos.sha" }}')" = "$ZAPDOS_SHA"
+
+      - name: Build canonical Physics source and check input
+        shell: bash
+        run: |
+          set -euxo pipefail
+          docker run --rm \
+            --entrypoint /bin/bash \
+            --user 0:0 \
+            --workdir /workspace/physics_app \
+            -e GITHUB_SHA="$GITHUB_SHA" \
+            -v "$PWD:/workspace" \
+            "$BUILD_BASE_REF" \
+            -lc '
+              set -euxo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              git config --global --add safe.directory /opt/physics_vendor/moose
+              git config --global --add safe.directory /opt/physics_vendor/crane
+              git config --global --add safe.directory /opt/physics_vendor/squirrel
+              git config --global --add safe.directory /opt/physics_vendor/zapdos
+              test "$(git rev-parse --show-toplevel)" = "/workspace"
+              test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+              test ! -e physics-opt
+              echo PHYSICS_RUNTIME_PRODUCER_BUILD_STARTED
+              make -j2
+              test -x physics-opt
+              ./physics-opt --check-input -i ci/smoke.i
+              echo PHYSICS_RUNTIME_PRODUCER_BUILD_PASS
+            '
+
+      - name: Export dependency-driven runtime closure
+        shell: bash
+        run: |
+          set -euxo pipefail
+          rm -rf ci/physics-runtime-image/runtime-root
+          mkdir -p ci/physics-runtime-image/runtime-root
+          docker run --rm \
+            --entrypoint /bin/bash \
+            --user 0:0 \
+            --workdir /opt/physics \
+            -v "$PWD/physics_app:/opt/physics:ro" \
+            -v "$PWD/ci/physics-runtime-image/collect-runtime.sh:/usr/local/bin/collect-physics-runtime:ro" \
+            -v "$PWD/ci/physics-runtime-image/runtime-root:/runtime-root" \
+            "$BUILD_BASE_REF" \
+            -lc '
+              set -euxo pipefail
+              source /environment
+              bash /usr/local/bin/collect-physics-runtime /runtime-root
+              echo PHYSICS_RUNTIME_CLOSURE_PASS
+            '
+
+          test -x ci/physics-runtime-image/runtime-root/opt/physics/physics-opt
+          test -f ci/physics-runtime-image/runtime-root/opt/physics/ci/smoke.i
+          test -r ci/physics-runtime-image/runtime-root/opt/share/moose/data/README.md
+
+          sudo tee ci/physics-runtime-image/runtime-root/opt/physics/RUNTIME_PROVENANCE.txt >/dev/null <<EOF
+          REPOSITORY_SHA=${GITHUB_SHA}
+          PHYSICS_SOURCE_OWNER=moose-test-repo/physics_app
+          PHYSICS_SOURCE_MANIFEST_SHA256=${PHYSICS_SOURCE_MANIFEST_SHA256}
+          BUILD_BASE=${BUILD_BASE_REF}
+          MOOSE_SHA=${MOOSE_SHA}
+          CRANE_SHA=${CRANE_SHA}
+          SQUIRREL_SHA=${SQUIRREL_SHA}
+          ZAPDOS_SHA=${ZAPDOS_SHA}
+          SCIENTIFIC_SEMANTICS_CHANGED=false
+          EOF
+          cat ci/physics-runtime-image/runtime-root/opt/physics/RUNTIME_PROVENANCE.txt
+          cat ci/physics-runtime-image/runtime-root/opt/physics/RUNTIME_CLOSURE.txt
+
+      - name: Release heavy build base before final image build
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          docker image rm "$BUILD_BASE_REF" || true
+          docker system prune -af --volumes || true
+          df -h /
+
+      - name: Set up Docker Buildx
+        if: ${{ success() }}
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f
+
+      - name: Build and publish immutable runtime candidate
+        if: ${{ success() }}
+        id: build
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8
+        with:
+          context: ci/physics-runtime-image
+          file: ci/physics-runtime-image/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: ${{ env.IMAGE }}:git-${{ github.sha }}
+          provenance: true
+          build-args: |
+            BUILD_BASE_REF=${{ env.BUILD_BASE_REF }}
+            REPOSITORY_SHA=${{ github.sha }}
+            PHYSICS_SOURCE_MANIFEST_SHA256=${{ env.PHYSICS_SOURCE_MANIFEST_SHA256 }}
+            MOOSE_SHA=${{ env.MOOSE_SHA }}
+            CRANE_SHA=${{ env.CRANE_SHA }}
+            SQUIRREL_SHA=${{ env.SQUIRREL_SHA }}
+            ZAPDOS_SHA=${{ env.ZAPDOS_SHA }}
+          cache-from: type=gha,scope=physics-runtime-final
+          cache-to: type=gha,mode=max,scope=physics-runtime-final
+
+      - name: Pull published image by immutable digest and verify provenance
+        if: ${{ success() }}
+        id: image
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ref="${IMAGE}@${{ steps.build.outputs.digest }}"
+          docker pull "$ref"
+          test "$(docker image inspect "$ref" --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}')" = "$GITHUB_SHA"
+          test "$(docker image inspect "$ref" --format '{{ index .Config.Labels "io.physics.source.owner" }}')" = "moose-test-repo/physics_app"
+          test "$(docker image inspect "$ref" --format '{{ index .Config.Labels "io.physics.source.manifest-sha256" }}')" = "$PHYSICS_SOURCE_MANIFEST_SHA256"
+          test "$(docker image inspect "$ref" --format '{{ index .Config.Labels "io.physics.build-base.ref" }}')" = "$BUILD_BASE_REF"
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+
+      - name: Run published runtime check-input smoke
+        if: ${{ success() }}
+        shell: bash
+        run: docker run --rm "${{ steps.image.outputs.ref }}" --check-input -i /opt/physics/ci/smoke.i
+
+      - name: Run published bounded real Physics smoke
+        if: ${{ success() }}
+        shell: bash
+        run: docker run --rm "${{ steps.image.outputs.ref }}" -i /opt/physics/ci/smoke.i
+
+      - name: Record runtime producer evidence
+        if: ${{ success() }}
+        shell: bash
+        run: |
+          mkdir -p /tmp/physics-runtime-evidence
+          cat > /tmp/physics-runtime-evidence/runtime-producer.txt <<EOF
+          CANONICAL_PHYSICS_SOURCE_OWNER=moose-test-repo/physics_app
+          IMPLEMENTATION_AND_TEST_REVISION_SHARED=true
+          REPOSITORY_SHA=${GITHUB_SHA}
+          PHYSICS_SOURCE_MANIFEST_SHA256=${PHYSICS_SOURCE_MANIFEST_SHA256}
+          BUILD_BASE=${BUILD_BASE_REF}
+          RUNTIME_IMAGE=${{ steps.image.outputs.ref }}
+          PHYSICS_RUNTIME_IMAGE_PUBLISHED_BY_DIGEST=PASS
+          PHYSICS_RUNTIME_PROVENANCE_INCLUDES_REPOSITORY_SHA=PASS
+          PHYSICS_CHECK_INPUT_SMOKE=PASS
+          BOUNDED_REAL_PHYSICS_RUN=PASS
+          EXTERNAL_COMPAT_PATCH_TRANSPORT_REQUIRED=false
+          SCIENTIFIC_SEMANTICS_CHANGED=false
+          EOF
+          cat /tmp/physics-runtime-evidence/runtime-producer.txt
+
+      - name: Upload runtime producer evidence
+        if: ${{ success() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: physics-runtime-producer-evidence
+          path: /tmp/physics-runtime-evidence/runtime-producer.txt

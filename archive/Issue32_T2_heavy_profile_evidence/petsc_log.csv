@@ -1,0 +1,494 @@
+Stage Name,Event Name,Rank,Count,Time,Num Messages,Message Length,Num Reductions,FLOP,dof0,dof1,dof2,dof3,dof4,dof5,dof6,dof7,e0,e1,e2,e3,e4,e5,e6,e7,1
+Main Stage,summary,0,1,31.2434,0.,0.,0.,2.12064e+10
+Main Stage,PetscBarrier,0,0,0.,0.,0.,0.,0.
+Main Stage,BuildTwoSided,0,0,0.,0.,0.,0.,0.
+Main Stage,BuildTwoSidedF,0,0,0.,0.,0.,0.,0.
+Main Stage,MatMult MF,0,0,0.,0.,0.,0.,0.
+Main Stage,MatMult,0,3,0.00815005,0.,0.,0.,9.57377e+06
+Main Stage,MatMultAdd,0,0,0.,0.,0.,0.,0.
+Main Stage,MatMultTranspose,0,0,0.,0.,0.,0.,0.
+Main Stage,MatMultHermitian,0,0,0.,0.,0.,0.,0.
+Main Stage,MatMultTrAdd,0,0,0.,0.,0.,0.,0.
+Main Stage,MatMultHTAdd,0,0,0.,0.,0.,0.,0.
+Main Stage,MatADot,0,0,0.,0.,0.,0.,0.
+Main Stage,MatANorm,0,0,0.,0.,0.,0.,0.
+Main Stage,MatSolve,0,6,0.22324,0.,0.,0.,1.7127e+08
+Main Stage,MatSolves,0,0,0.,0.,0.,0.,0.
+Main Stage,MatSolveAdd,0,0,0.,0.,0.,0.,0.
+Main Stage,MatSolveTranspos,0,0,0.,0.,0.,0.,0.
+Main Stage,MatSolveTrAdd,0,0,0.,0.,0.,0.,0.
+Main Stage,MatSOR,0,0,0.,0.,0.,0.,0.
+Main Stage,MatForwardSolve,0,0,0.,0.,0.,0.,0.
+Main Stage,MatBackwardSolve,0,0,0.,0.,0.,0.,0.
+Main Stage,MatLUFactor,0,0,0.,0.,0.,0.,0.
+Main Stage,MatLUFactorSym,0,1,1.49174,0.,0.,0.,0.
+Main Stage,MatLUFactorNum,0,3,5.99387,0.,0.,0.,2.10142e+10
+Main Stage,MatQRFactor,0,0,0.,0.,0.,0.,0.
+Main Stage,MatQRFactorSym,0,0,0.,0.,0.,0.,0.
+Main Stage,MatQRFactorNum,0,0,0.,0.,0.,0.,0.
+Main Stage,MatCholeskyFctr,0,0,0.,0.,0.,0.,0.
+Main Stage,MatCholFctrSym,0,0,0.,0.,0.,0.,0.
+Main Stage,MatCholFctrNum,0,0,0.,0.,0.,0.,0.
+Main Stage,MatFctrFactSchur,0,0,0.,0.,0.,0.,0.
+Main Stage,MatFctrInvSchur,0,0,0.,0.,0.,0.,0.
+Main Stage,MatILUFactor,0,0,0.,0.,0.,0.,0.
+Main Stage,MatILUFactorSym,0,0,0.,0.,0.,0.,0.
+Main Stage,MatICCFactorSym,0,0,0.,0.,0.,0.,0.
+Main Stage,MatCopy,0,0,0.,0.,0.,0.,0.
+Main Stage,MatConvert,0,0,0.,0.,0.,0.,0.
+Main Stage,MatScale,0,0,0.,0.,0.,0.,0.
+Main Stage,MatResidual,0,0,0.,0.,0.,0.,0.
+Main Stage,MatAssemblyBegin,0,9,9.132e-05,0.,0.,0.,0.
+Main Stage,MatAssemblyEnd,0,9,0.00363834,0.,0.,0.,0.
+Main Stage,MatSetValues,0,0,0.,0.,0.,0.,0.
+Main Stage,MatGetValues,0,0,0.,0.,0.,0.,0.
+Main Stage,MatGetRow,0,0,0.,0.,0.,0.,0.
+Main Stage,MatGetRowIJ,0,1,0.00197717,0.,0.,0.,0.
+Main Stage,MatCreateSubMats,0,0,0.,0.,0.,0.,0.
+Main Stage,MatCreateSubMat,0,0,0.,0.,0.,0.,0.
+Main Stage,MatGetOrdering,0,1,0.00812649,0.,0.,0.,0.
+Main Stage,MatIncreaseOvrlp,0,0,0.,0.,0.,0.,0.
+Main Stage,MatPartitioning,0,0,0.,0.,0.,0.,0.
+Main Stage,MatPartitioningND,0,0,0.,0.,0.,0.,0.
+Main Stage,MatCoarsen,0,0,0.,0.,0.,0.,0.
+Main Stage,MatZeroEntries,0,4,0.00503806,0.,0.,0.,0.
+Main Stage,MatLoad,0,0,0.,0.,0.,0.,0.
+Main Stage,MatView,0,0,0.,0.,0.,0.,0.
+Main Stage,MatAXPY,0,0,0.,0.,0.,0.,0.
+Main Stage,MatFDColorCreate,0,0,0.,0.,0.,0.,0.
+Main Stage,MatFDColorSetUp,0,0,0.,0.,0.,0.,0.
+Main Stage,MatFDColorApply,0,0,0.,0.,0.,0.,0.
+Main Stage,MatFDColorFunc,0,0,0.,0.,0.,0.,0.
+Main Stage,MatTranspose,0,0,0.,0.,0.,0.,0.
+Main Stage,MatMatSolve,0,0,0.,0.,0.,0.,0.
+Main Stage,MatMatTrSolve,0,0,0.,0.,0.,0.,0.
+Main Stage,MatMatMultSym,0,0,0.,0.,0.,0.,0.
+Main Stage,MatMatMultNum,0,0,0.,0.,0.,0.,0.
+Main Stage,MatMatMatMultSym,0,0,0.,0.,0.,0.,0.
+Main Stage,MatMatMatMultNum,0,0,0.,0.,0.,0.,0.
+Main Stage,MatPtAPSymbolic,0,0,0.,0.,0.,0.,0.
+Main Stage,MatPtAPNumeric,0,0,0.,0.,0.,0.,0.
+Main Stage,MatRARtSym,0,0,0.,0.,0.,0.,0.
+Main Stage,MatRARtNum,0,0,0.,0.,0.,0.,0.
+Main Stage,MatMatTrnMultSym,0,0,0.,0.,0.,0.,0.
+Main Stage,MatMatTrnMultNum,0,0,0.,0.,0.,0.,0.
+Main Stage,MatTrnMatMultSym,0,0,0.,0.,0.,0.,0.
+Main Stage,MatTrnMatMultNum,0,0,0.,0.,0.,0.,0.
+Main Stage,MatTrnColorCreate,0,0,0.,0.,0.,0.,0.
+Main Stage,MatRedundantMat,0,0,0.,0.,0.,0.,0.
+Main Stage,MatGetSeqNZStrct,0,0,0.,0.,0.,0.,0.
+Main Stage,MatGetMultiProcB,0,0,0.,0.,0.,0.,0.
+Main Stage,MatSetRandom,0,0,0.,0.,0.,0.,0.
+Main Stage,MatMPISumSeqNumeric,0,0,0.,0.,0.,0.,0.
+Main Stage,MatMPISumSeqSymbolic,0,0,0.,0.,0.,0.,0.
+Main Stage,MatMPISumSeq,0,0,0.,0.,0.,0.,0.
+Main Stage,MatMPIConcateSeq,0,0,0.,0.,0.,0.,0.
+Main Stage,MatGetLocalMat,0,0,0.,0.,0.,0.,0.
+Main Stage,MatGetLocalMatCondensed,0,0,0.,0.,0.,0.,0.
+Main Stage,MatGetBrowsOfAcols,0,0,0.,0.,0.,0.,0.
+Main Stage,MatGetBrAoCol,0,0,0.,0.,0.,0.,0.
+Main Stage,MatGetSymTransR,0,0,0.,0.,0.,0.,0.
+Main Stage,MatCUSPARSCopyTo,0,0,0.,0.,0.,0.,0.
+Main Stage,MatCUSPARSCopyFr,0,0,0.,0.,0.,0.,0.
+Main Stage,MatCUSPARSSolAnl,0,0,0.,0.,0.,0.,0.
+Main Stage,MatCUSPARSGenT,0,0,0.,0.,0.,0.,0.
+Main Stage,MatHIPSPARSCopyTo,0,0,0.,0.,0.,0.,0.
+Main Stage,MatHIPSPARSCopyFr,0,0,0.,0.,0.,0.,0.
+Main Stage,MatHIPSPARSSolAnl,0,0,0.,0.,0.,0.,0.
+Main Stage,MatHIPSPARSGenT,0,0,0.,0.,0.,0.,0.
+Main Stage,MatVCLCopyTo,0,0,0.,0.,0.,0.,0.
+Main Stage,MatDenseCopyTo,0,0,0.,0.,0.,0.,0.
+Main Stage,MatDenseCopyFrom,0,0,0.,0.,0.,0.,0.
+Main Stage,MatSetValBatch,0,0,0.,0.,0.,0.,0.
+Main Stage,MatCreateGraph,0,0,0.,0.,0.,0.,0.
+Main Stage,MatColoringApply,0,0,0.,0.,0.,0.,0.
+Main Stage,MatColoringComm,0,0,0.,0.,0.,0.,0.
+Main Stage,MatColoringLocal,0,0,0.,0.,0.,0.,0.
+Main Stage,MatColoringIS,0,0,0.,0.,0.,0.,0.
+Main Stage,MatColoringSetUp,0,0,0.,0.,0.,0.,0.
+Main Stage,MatColoringWeights,0,0,0.,0.,0.,0.,0.
+Main Stage,MatSetPreallCOO,0,0,0.,0.,0.,0.,0.
+Main Stage,MatSetValuesCOO,0,0,0.,0.,0.,0.,0.
+Main Stage,MatH2OpusBuild,0,0,0.,0.,0.,0.,0.
+Main Stage,MatH2OpusComp,0,0,0.,0.,0.,0.,0.
+Main Stage,MatH2OpusOrth,0,0,0.,0.,0.,0.,0.
+Main Stage,MatH2OpusLR,0,0,0.,0.,0.,0.,0.
+Main Stage,ISView,0,0,0.,0.,0.,0.,0.
+Main Stage,ISLoad,0,0,0.,0.,0.,0.,0.
+Main Stage,DMConvert,0,0,0.,0.,0.,0.,0.
+Main Stage,DMGlobalToLocal,0,0,0.,0.,0.,0.,0.
+Main Stage,DMLocalToGlobal,0,0,0.,0.,0.,0.,0.
+Main Stage,DMLocatePoints,0,0,0.,0.,0.,0.,0.
+Main Stage,DMCoarsen,0,0,0.,0.,0.,0.,0.
+Main Stage,DMRefine,0,0,0.,0.,0.,0.,0.
+Main Stage,DMCreateInterp,0,0,0.,0.,0.,0.,0.
+Main Stage,DMCreateRestrict,0,0,0.,0.,0.,0.,0.
+Main Stage,DMCreateInject,0,0,0.,0.,0.,0.,0.
+Main Stage,DMCreateMat,0,0,0.,0.,0.,0.,0.
+Main Stage,DMCreateMassMat,0,0,0.,0.,0.,0.,0.
+Main Stage,DMLoad,0,0,0.,0.,0.,0.,0.
+Main Stage,DMView,0,0,0.,0.,0.,0.,0.
+Main Stage,DMAdaptInterp,0,0,0.,0.,0.,0.,0.
+Main Stage,DMProjectFunc,0,0,0.,0.,0.,0.,0.
+Main Stage,DMPlexBuFrCeLi,0,0,0.,0.,0.,0.,0.
+Main Stage,DMPlexBuCoFrCeLi,0,0,0.,0.,0.,0.,0.
+Main Stage,DMPlexCreateGmsh,0,0,0.,0.,0.,0.,0.
+Main Stage,DMPlexCrBoxSFC,0,0,0.,0.,0.,0.,0.
+Main Stage,DMPlexCrFromFile,0,0,0.,0.,0.,0.,0.
+Main Stage,DMPlexCrFromOpts,0,0,0.,0.,0.,0.,0.
+Main Stage,Mesh Partition,0,0,0.,0.,0.,0.,0.
+Main Stage,Mesh Migration,0,0,0.,0.,0.,0.,0.
+Main Stage,DMPlexPartSelf,0,0,0.,0.,0.,0.,0.
+Main Stage,DMPlexPartLblInv,0,0,0.,0.,0.,0.,0.
+Main Stage,DMPlexPartLblSF,0,0,0.,0.,0.,0.,0.
+Main Stage,DMPlexPartStrtSF,0,0,0.,0.,0.,0.,0.
+Main Stage,DMPlexPointSF,0,0,0.,0.,0.,0.,0.
+Main Stage,DMPlexInterp,0,0,0.,0.,0.,0.,0.
+Main Stage,DMPlexDistribute,0,0,0.,0.,0.,0.,0.
+Main Stage,DMPlexDistMS,0,0,0.,0.,0.,0.,0.
+Main Stage,DMPlexDistCones,0,0,0.,0.,0.,0.,0.
+Main Stage,DMPlexDistLabels,0,0,0.,0.,0.,0.,0.
+Main Stage,DMPlexDistSF,0,0,0.,0.,0.,0.,0.
+Main Stage,DMPlexDistOvrlp,0,0,0.,0.,0.,0.,0.
+Main Stage,DMPlexDistField,0,0,0.,0.,0.,0.,0.
+Main Stage,DMPlexDistData,0,0,0.,0.,0.,0.,0.
+Main Stage,DMPlexInterpSF,0,0,0.,0.,0.,0.,0.
+Main Stage,DMPlexGToNBegin,0,0,0.,0.,0.,0.,0.
+Main Stage,DMPlexGToNEnd,0,0,0.,0.,0.,0.,0.
+Main Stage,DMPlexNToGBegin,0,0,0.,0.,0.,0.,0.
+Main Stage,DMPlexNToGEnd,0,0,0.,0.,0.,0.,0.
+Main Stage,DMPlexStratify,0,0,0.,0.,0.,0.,0.
+Main Stage,DMPlexSymmetrize,0,0,0.,0.,0.,0.,0.
+Main Stage,DMPlexPrealloc,0,0,0.,0.,0.,0.,0.
+Main Stage,DMPlexResidualFE,0,0,0.,0.,0.,0.,0.
+Main Stage,DMPlexJacobianFE,0,0,0.,0.,0.,0.,0.
+Main Stage,DMPlexInterpFE,0,0,0.,0.,0.,0.,0.
+Main Stage,DMPlexInjectorFE,0,0,0.,0.,0.,0.,0.
+Main Stage,DMPlexIntegralFE,0,0,0.,0.,0.,0.,0.
+Main Stage,DMPlexRebalance,0,0,0.,0.,0.,0.,0.
+Main Stage,DMPlexLocatePoints,0,0,0.,0.,0.,0.,0.
+Main Stage,DMPlexTopologyView,0,0,0.,0.,0.,0.,0.
+Main Stage,DMPlexLabelsView,0,0,0.,0.,0.,0.,0.
+Main Stage,DMPlexCoordinatesView,0,0,0.,0.,0.,0.,0.
+Main Stage,DMPlexSectionView,0,0,0.,0.,0.,0.,0.
+Main Stage,DMPlexGlobalVectorView,0,0,0.,0.,0.,0.,0.
+Main Stage,DMPlexLocalVectorView,0,0,0.,0.,0.,0.,0.
+Main Stage,DMPlexTopologyLoad,0,0,0.,0.,0.,0.,0.
+Main Stage,DMPlexDistributionView,0,0,0.,0.,0.,0.,0.
+Main Stage,DMPlexDistributionLoad,0,0,0.,0.,0.,0.,0.
+Main Stage,DMPlexLabelsLoad,0,0,0.,0.,0.,0.,0.
+Main Stage,DMPlexCoordinatesLoad,0,0,0.,0.,0.,0.,0.
+Main Stage,DMPlexSectionLoad,0,0,0.,0.,0.,0.,0.
+Main Stage,DMPlexGlobalVectorLoad,0,0,0.,0.,0.,0.,0.
+Main Stage,DMPlexLocalVectorLoad,0,0,0.,0.,0.,0.,0.
+Main Stage,DMPlexMetricEnforceSPD,0,0,0.,0.,0.,0.,0.
+Main Stage,DMPlexMetricNormalize,0,0,0.,0.,0.,0.,0.
+Main Stage,DMPlexMetricAverage,0,0,0.,0.,0.,0.,0.
+Main Stage,DMPlexMetricIntersect,0,0,0.,0.,0.,0.,0.
+Main Stage,DMPlexGenerate,0,0,0.,0.,0.,0.,0.
+Main Stage,DMPlexGetLocOff,0,0,0.,0.,0.,0.,0.
+Main Stage,RebalBuildGraph,0,0,0.,0.,0.,0.,0.
+Main Stage,RebalGatherGraph,0,0,0.,0.,0.,0.,0.
+Main Stage,RebalPartition,0,0,0.,0.,0.,0.,0.
+Main Stage,RebalScatterPart,0,0,0.,0.,0.,0.,0.
+Main Stage,RebalRewriteSF,0,0,0.,0.,0.,0.,0.
+Main Stage,DMPlexUninterp,0,0,0.,0.,0.,0.,0.
+Main Stage,DMPlexTrSetUp,0,0,0.,0.,0.,0.,0.
+Main Stage,DMPlexTrApply,0,0,0.,0.,0.,0.,0.
+Main Stage,DMPlexTrSizes,0,0,0.,0.,0.,0.,0.
+Main Stage,DMPlexTrCones,0,0,0.,0.,0.,0.,0.
+Main Stage,DMPlexTrSF,0,0,0.,0.,0.,0.,0.
+Main Stage,DMPlexTrLabels,0,0,0.,0.,0.,0.,0.
+Main Stage,DMPlexTrCoords,0,0,0.,0.,0.,0.,0.
+Main Stage,DMSwarmMigrate,0,0,0.,0.,0.,0.,0.
+Main Stage,DMSwarmDETSetup,0,0,0.,0.,0.,0.,0.
+Main Stage,DMSwarmDExBegin,0,0,0.,0.,0.,0.,0.
+Main Stage,DMSwarmDExEnd,0,0,0.,0.,0.,0.,0.
+Main Stage,DMSwarmDESendCnt,0,0,0.,0.,0.,0.,0.
+Main Stage,DMSwarmDEPack,0,0,0.,0.,0.,0.,0.
+Main Stage,DMSwarmAddPnts,0,0,0.,0.,0.,0.,0.
+Main Stage,DMSwarmRmvPnts,0,0,0.,0.,0.,0.,0.
+Main Stage,DMSwarmSort,0,0,0.,0.,0.,0.,0.
+Main Stage,DMSwarmSetSizes,0,0,0.,0.,0.,0.,0.
+Main Stage,DMNtLayoutSetUp,0,0,0.,0.,0.,0.,0.
+Main Stage,DMNtSetUp,0,0,0.,0.,0.,0.,0.
+Main Stage,DMNtDistribute,0,0,0.,0.,0.,0.,0.
+Main Stage,VecView,0,0,0.,0.,0.,0.,0.
+Main Stage,VecMax,0,0,0.,0.,0.,0.,0.
+Main Stage,VecMin,0,0,0.,0.,0.,0.,0.
+Main Stage,VecDot,0,0,0.,0.,0.,0.,0.
+Main Stage,VecDotNorm2,0,0,0.,0.,0.,0.,0.
+Main Stage,VecMDot,0,3,7.258e-05,0.,0.,0.,126789.
+Main Stage,VecTDot,0,0,0.,0.,0.,0.,0.
+Main Stage,VecMTDot,0,0,0.,0.,0.,0.,0.
+Main Stage,VecNorm,0,10,9.9332e-05,0.,0.,0.,422630.
+Main Stage,VecScale,0,11,9.483e-05,0.,0.,0.,232452.
+Main Stage,VecShift,0,0,0.,0.,0.,0.,0.
+Main Stage,VecCopy,0,53,0.00102353,0.,0.,0.,0.
+Main Stage,VecSet,0,16,0.00032848,0.,0.,0.,0.
+Main Stage,VecAXPY,0,16,0.00035721,0.,0.,0.,676224.
+Main Stage,VecAYPX,0,0,0.,0.,0.,0.,0.
+Main Stage,VecAXPBYCZ,0,0,0.,0.,0.,0.,0.
+Main Stage,VecWAXPY,0,3,0.000112167,0.,0.,0.,63396.
+Main Stage,VecMAXPY,0,6,5.5056e-05,0.,0.,0.,253584.
+Main Stage,VecSwap,0,0,0.,0.,0.,0.,0.
+Main Stage,VecOps,0,0,0.,0.,0.,0.,0.
+Main Stage,VecAssemblyBegin,0,50,0.000362793,0.,0.,0.,0.
+Main Stage,VecAssemblyEnd,0,50,0.00019665,0.,0.,0.,0.
+Main Stage,VecPointwiseMult,0,0,0.,0.,0.,0.,0.
+Main Stage,VecPointwiseDiv,0,0,0.,0.,0.,0.,0.
+Main Stage,VecReciprocal,0,0,0.,0.,0.,0.,0.
+Main Stage,VecSetValues,0,0,0.,0.,0.,0.,0.
+Main Stage,VecSetPreallCOO,0,0,0.,0.,0.,0.,0.
+Main Stage,VecSetValuesCOO,0,0,0.,0.,0.,0.,0.
+Main Stage,VecLoad,0,0,0.,0.,0.,0.,0.
+Main Stage,VecScatterBegin,0,0,0.,0.,0.,0.,0.
+Main Stage,VecScatterEnd,0,0,0.,0.,0.,0.,0.
+Main Stage,VecSetRandom,0,0,0.,0.,0.,0.,0.
+Main Stage,VecReduceArith,0,6,7.9915e-05,0.,0.,0.,253578.
+Main Stage,VecReduceComm,0,3,1.3733e-05,0.,0.,0.,0.
+Main Stage,VecReduceBegin,0,0,0.,0.,0.,0.,0.
+Main Stage,VecReduceEnd,0,0,0.,0.,0.,0.,0.
+Main Stage,VecNormalize,0,6,0.0001855,0.,0.,0.,380370.
+Main Stage,KSPSetUp,0,3,0.00082688,0.,0.,0.,0.
+Main Stage,KSPSolve,0,3,0.233045,0.,0.,0.,1.81731e+08
+Main Stage,KSPGMRESOrthog,0,3,0.00015131,0.,0.,0.,253581.
+Main Stage,KSPSolveTranspos,0,0,0.,0.,0.,0.,0.
+Main Stage,KSPMatSolve,0,0,0.,0.,0.,0.,0.
+Main Stage,KSPMatSolveTrans,0,0,0.,0.,0.,0.,0.
+Main Stage,SNESSolve,0,1,25.4727,0.,0.,0.,2.12063e+10
+Main Stage,SNESSetUp,0,1,1.2393e-05,0.,0.,0.,0.
+Main Stage,SNESFunctionEval,0,4,5.61118,0.,0.,0.,591696.
+Main Stage,SNESObjectiveEval,0,0,0.,0.,0.,0.,0.
+Main Stage,SNESNGSEval,0,0,0.,0.,0.,0.,0.
+Main Stage,SNESNGSFuncEval,0,0,0.,0.,0.,0.,0.
+Main Stage,SNESNewtonALEval,0,0,0.,0.,0.,0.,0.
+Main Stage,SNESJacobianEval,0,3,12.1323,0.,0.,0.,9.36486e+06
+Main Stage,SNESNPCSolve,0,0,0.,0.,0.,0.,0.
+Main Stage,SNESLineSearch,0,3,4.21985,0.,0.,0.,887535.
+Main Stage,SFSetGraph,0,0,0.,0.,0.,0.,0.
+Main Stage,SFSetUp,0,0,0.,0.,0.,0.,0.
+Main Stage,SFBcastBegin,0,0,0.,0.,0.,0.,0.
+Main Stage,SFBcastEnd,0,0,0.,0.,0.,0.,0.
+Main Stage,SFReduceBegin,0,0,0.,0.,0.,0.,0.
+Main Stage,SFReduceEnd,0,0,0.,0.,0.,0.,0.
+Main Stage,SFFetchOpBegin,0,0,0.,0.,0.,0.,0.
+Main Stage,SFFetchOpEnd,0,0,0.,0.,0.,0.,0.
+Main Stage,SFCreateEmbed,0,0,0.,0.,0.,0.,0.
+Main Stage,SFDistSection,0,0,0.,0.,0.,0.,0.
+Main Stage,SFSectionSF,0,0,0.,0.,0.,0.,0.
+Main Stage,SFRemoteOff,0,0,0.,0.,0.,0.,0.
+Main Stage,SFPack,0,0,0.,0.,0.,0.,0.
+Main Stage,SFUnpack,0,0,0.,0.,0.,0.,0.
+Main Stage,PCSetUp_GAMG+,0,0,0.,0.,0.,0.,0.
+Main Stage, PCGAMGCreateG,0,0,0.,0.,0.,0.,0.
+Main Stage, GAMG Coarsen,0,0,0.,0.,0.,0.,0.
+Main Stage,  GAMG MIS/Agg,0,0,0.,0.,0.,0.,0.
+Main Stage, PCGAMGProl,0,0,0.,0.,0.,0.,0.
+Main Stage,  GAMG Prol-col,0,0,0.,0.,0.,0.,0.
+Main Stage,  GAMG Prol-lift,0,0,0.,0.,0.,0.,0.
+Main Stage, PCGAMGOptProl,0,0,0.,0.,0.,0.,0.
+Main Stage,  GAMG smooth,0,0,0.,0.,0.,0.,0.
+Main Stage, PCGAMGCreateL,0,0,0.,0.,0.,0.,0.
+Main Stage,  GAMG PtAP,0,0,0.,0.,0.,0.,0.
+Main Stage,  GAMG Reduce,0,0,0.,0.,0.,0.,0.
+Main Stage,   GAMG Repart,0,0,0.,0.,0.,0.,0.
+Main Stage,PCGAMG Squ l00,0,0,0.,0.,0.,0.,0.
+Main Stage,PCGAMG Gal l00,0,0,0.,0.,0.,0.,0.
+Main Stage,PCGAMG Opt l00,0,0,0.,0.,0.,0.,0.
+Main Stage,PCGAMG Squ l01,0,0,0.,0.,0.,0.,0.
+Main Stage,PCGAMG Gal l01,0,0,0.,0.,0.,0.,0.
+Main Stage,PCGAMG Opt l01,0,0,0.,0.,0.,0.,0.
+Main Stage,PCGAMG Squ l02,0,0,0.,0.,0.,0.,0.
+Main Stage,PCGAMG Gal l02,0,0,0.,0.,0.,0.,0.
+Main Stage,PCGAMG Opt l02,0,0,0.,0.,0.,0.,0.
+Main Stage,PCGAMG Squ l03,0,0,0.,0.,0.,0.,0.
+Main Stage,PCGAMG Gal l03,0,0,0.,0.,0.,0.,0.
+Main Stage,PCGAMG Opt l03,0,0,0.,0.,0.,0.,0.
+Main Stage,PCGAMG Squ l04,0,0,0.,0.,0.,0.,0.
+Main Stage,PCGAMG Gal l04,0,0,0.,0.,0.,0.,0.
+Main Stage,PCGAMG Opt l04,0,0,0.,0.,0.,0.,0.
+Main Stage,PCGAMG Squ l05,0,0,0.,0.,0.,0.,0.
+Main Stage,PCGAMG Gal l05,0,0,0.,0.,0.,0.,0.
+Main Stage,PCGAMG Opt l05,0,0,0.,0.,0.,0.,0.
+Main Stage,PCGAMG Squ l06,0,0,0.,0.,0.,0.,0.
+Main Stage,PCGAMG Gal l06,0,0,0.,0.,0.,0.,0.
+Main Stage,PCGAMG Opt l06,0,0,0.,0.,0.,0.,0.
+Main Stage,PCGAMG Squ l07,0,0,0.,0.,0.,0.,0.
+Main Stage,PCGAMG Gal l07,0,0,0.,0.,0.,0.,0.
+Main Stage,PCGAMG Opt l07,0,0,0.,0.,0.,0.,0.
+Main Stage,PCGAMG Squ l08,0,0,0.,0.,0.,0.,0.
+Main Stage,PCGAMG Gal l08,0,0,0.,0.,0.,0.,0.
+Main Stage,PCGAMG Opt l08,0,0,0.,0.,0.,0.,0.
+Main Stage,PCGAMG Squ l09,0,0,0.,0.,0.,0.,0.
+Main Stage,PCGAMG Gal l09,0,0,0.,0.,0.,0.,0.
+Main Stage,PCGAMG Opt l09,0,0,0.,0.,0.,0.,0.
+Main Stage,PCGAMG Squ l10,0,0,0.,0.,0.,0.,0.
+Main Stage,PCGAMG Gal l10,0,0,0.,0.,0.,0.,0.
+Main Stage,PCGAMG Opt l10,0,0,0.,0.,0.,0.,0.
+Main Stage,PCGAMG Squ l11,0,0,0.,0.,0.,0.,0.
+Main Stage,PCGAMG Gal l11,0,0,0.,0.,0.,0.,0.
+Main Stage,PCGAMG Opt l11,0,0,0.,0.,0.,0.,0.
+Main Stage,PCGAMG Squ l12,0,0,0.,0.,0.,0.,0.
+Main Stage,PCGAMG Gal l12,0,0,0.,0.,0.,0.,0.
+Main Stage,PCGAMG Opt l12,0,0,0.,0.,0.,0.,0.
+Main Stage,PCGAMG Squ l13,0,0,0.,0.,0.,0.,0.
+Main Stage,PCGAMG Gal l13,0,0,0.,0.,0.,0.,0.
+Main Stage,PCGAMG Opt l13,0,0,0.,0.,0.,0.,0.
+Main Stage,PCGAMG Squ l14,0,0,0.,0.,0.,0.,0.
+Main Stage,PCGAMG Gal l14,0,0,0.,0.,0.,0.,0.
+Main Stage,PCGAMG Opt l14,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCTopo,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCLKSP,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCLWor,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCCorr,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCASet,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCAApp,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCCSet,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCCKSP,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCAdap,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCScal,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCSchr,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCDirS,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCNeuS,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCCoaS,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCTopo l01,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCLKSP l01,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCLWor l01,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCCorr l01,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCASet l01,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCAApp l01,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCCSet l01,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCCKSP l01,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCAdap l01,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCScal l01,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCSchr l01,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCDirS l01,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCNeuS l01,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCCoaS l01,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCTopo l02,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCLKSP l02,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCLWor l02,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCCorr l02,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCASet l02,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCAApp l02,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCCSet l02,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCCKSP l02,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCAdap l02,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCScal l02,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCSchr l02,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCDirS l02,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCNeuS l02,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCCoaS l02,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCTopo l03,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCLKSP l03,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCLWor l03,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCCorr l03,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCASet l03,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCAApp l03,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCCSet l03,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCCKSP l03,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCAdap l03,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCScal l03,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCSchr l03,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCDirS l03,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCNeuS l03,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCCoaS l03,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCTopo l04,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCLKSP l04,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCLWor l04,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCCorr l04,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCASet l04,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCAApp l04,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCCSet l04,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCCKSP l04,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCAdap l04,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCScal l04,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCSchr l04,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCDirS l04,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCNeuS l04,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCCoaS l04,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCTopo l05,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCLKSP l05,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCLWor l05,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCCorr l05,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCASet l05,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCAApp l05,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCCSet l05,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCCKSP l05,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCAdap l05,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCScal l05,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCSchr l05,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCDirS l05,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCNeuS l05,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCCoaS l05,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCTopo l06,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCLKSP l06,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCLWor l06,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCCorr l06,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCASet l06,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCAApp l06,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCCSet l06,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCCKSP l06,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCAdap l06,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCScal l06,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCSchr l06,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCDirS l06,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCNeuS l06,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCCoaS l06,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCTopo l07,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCLKSP l07,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCLWor l07,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCCorr l07,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCASet l07,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCAApp l07,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCCSet l07,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCCKSP l07,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCAdap l07,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCScal l07,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCSchr l07,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCDirS l07,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCNeuS l07,0,0,0.,0.,0.,0.,0.
+Main Stage,PCBDDCCoaS l07,0,0,0.,0.,0.,0.,0.
+Main Stage,PCHPDDMStrc,0,0,0.,0.,0.,0.,0.
+Main Stage,PCHPDDMPtAP,0,0,0.,0.,0.,0.,0.
+Main Stage,PCHPDDMPtBP,0,0,0.,0.,0.,0.,0.
+Main Stage,PCHPDDMNext,0,0,0.,0.,0.,0.,0.
+Main Stage,PCHPDDMSetUp L1,0,0,0.,0.,0.,0.,0.
+Main Stage,PCHPDDMSolve L1,0,0,0.,0.,0.,0.,0.
+Main Stage,PCHPDDMSetUp L2,0,0,0.,0.,0.,0.,0.
+Main Stage,PCHPDDMSolve L2,0,0,0.,0.,0.,0.,0.
+Main Stage,PCHPDDMSetUp L3,0,0,0.,0.,0.,0.,0.
+Main Stage,PCHPDDMSolve L3,0,0,0.,0.,0.,0.,0.
+Main Stage,PCHPDDMSetUp L4,0,0,0.,0.,0.,0.,0.
+Main Stage,PCHPDDMSolve L4,0,0,0.,0.,0.,0.,0.
+Main Stage,PCHPDDMSetUp L5,0,0,0.,0.,0.,0.,0.
+Main Stage,PCHPDDMSolve L5,0,0,0.,0.,0.,0.,0.
+Main Stage,PCHPDDMSetUp L6,0,0,0.,0.,0.,0.,0.
+Main Stage,PCHPDDMSolve L6,0,0,0.,0.,0.,0.,0.
+Main Stage,PCHPDDMSetUp L7,0,0,0.,0.,0.,0.,0.
+Main Stage,PCHPDDMSolve L7,0,0,0.,0.,0.,0.,0.
+Main Stage,PCHPDDMSetUp L8,0,0,0.,0.,0.,0.,0.
+Main Stage,PCHPDDMSolve L8,0,0,0.,0.,0.,0.,0.
+Main Stage,PCSetUp,0,3,7.49414,0.,0.,0.,2.10142e+10
+Main Stage,PCSetUpOnBlocks,0,0,0.,0.,0.,0.,0.
+Main Stage,PCApply,0,6,0.223576,0.,0.,0.,1.7127e+08
+Main Stage,PCMatApply,0,0,0.,0.,0.,0.,0.
+Main Stage,PCApplyOnBlocks,0,0,0.,0.,0.,0.,0.
+Main Stage,PCApplyCoarse,0,0,0.,0.,0.,0.,0.
+Main Stage,PCApplySymmLeft,0,0,0.,0.,0.,0.,0.
+Main Stage,PCApplySymmRight,0,0,0.,0.,0.,0.,0.
+Main Stage,PCModifySubMatri,0,0,0.,0.,0.,0.,0.
+Main Stage,PCPATCHCreate,0,0,0.,0.,0.,0.,0.
+Main Stage,PCPATCHComputeOp,0,0,0.,0.,0.,0.,0.
+Main Stage,PCPATCHSolve,0,0,0.,0.,0.,0.,0.
+Main Stage,PCPATCHApply,0,0,0.,0.,0.,0.,0.
+Main Stage,PCPATCHPrealloc,0,0,0.,0.,0.,0.,0.
+Main Stage,KSPSolve_FS_0,0,0,0.,0.,0.,0.,0.
+Main Stage,KSPSolve_FS_1,0,0,0.,0.,0.,0.,0.
+Main Stage,KSPSolve_FS_2,0,0,0.,0.,0.,0.,0.
+Main Stage,KSPSolve_FS_3,0,0,0.,0.,0.,0.,0.
+Main Stage,KSPSolve_FS_4,0,0,0.,0.,0.,0.,0.
+Main Stage,KSPSolve_FS_Schu,0,0,0.,0.,0.,0.,0.
+Main Stage,KSPSolve_FS_Up,0,0,0.,0.,0.,0.,0.
+Main Stage,KSPSolve_FS_Low,0,0,0.,0.,0.,0.,0.

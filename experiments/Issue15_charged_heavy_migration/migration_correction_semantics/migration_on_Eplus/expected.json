@@ -1,0 +1,15 @@
+{
+  "case_id": "migration_on_Eplus",
+  "expect_closure": true,
+  "closure_tol": 2e-09,
+  "phi_left": 1,
+  "phi_right": 0,
+  "mobility": 0.1,
+  "charge": 1,
+  "direct": true,
+  "correction": true,
+  "initial_left_ion": 0.275,
+  "initial_right_ion": 0.325,
+  "initial_left_neutral": 0.725,
+  "initial_right_neutral": 0.675
+}

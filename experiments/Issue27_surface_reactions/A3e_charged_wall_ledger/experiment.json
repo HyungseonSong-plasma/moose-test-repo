@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "experiment_id": "issue27-a3e-charged-wall-ledger",
+  "protocol": "issue27-surface-reaction-controlled-wall",
+  "execution": {
+    "timeout_seconds": 180.0
+  },
+  "parameters": {
+    "wall_model": "charged_prescribed_ledger",
+    "wall_scope": "all_plasma_walls",
+    "secondary_emission_coefficient": 0.0,
+    "O2p_event_flux_mol_m2_s": 0.0001,
+    "Op_event_flux_mol_m2_s": 0.0001,
+    "Om_event_flux_mol_m2_s": 0.00005
+  },
+  "outputs": {
+    "provenance": true,
+    "r4_qf1_predecessor": true,
+    "all_plasma_wall_scope": true,
+    "heavy_only_positive_control": true,
+    "electron_charge_balance": true,
+    "species_mass_bookkeeping": true,
+    "global_charge_ledger": true,
+    "gauss_law": true
+  }
+}

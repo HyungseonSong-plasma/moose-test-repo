@@ -1,0 +1,21 @@
+{
+  "name": "heavy_transport_transient_qminus1_mixture",
+  "type": "canonical",
+  "input": "input.i",
+  "prepare": "prepare.py",
+  "checker": "check.py",
+  "checker_args": [
+    "input_out.csv",
+    "prepare_evidence.json"
+  ],
+  "stage": "R14_EVR1_D_TRANSIENT_Q_MINUS_1_MIXTURE_STATE",
+  "claim": "Six solved oxygen heavy-species mass fractions plus constrained O2 evolve transiently through production density-weighted mixture-averaged diffusion with exact mass closure, bounded composition, composition-dependent Mn and EOS rho. MOOSE direct variable time derivatives are consumed only after their AuxKernel stage; postprocessor-stage chain-rule functors close the exact BE temporal identity for S=1/Mn and the fixed-p/T drho/dt identity.",
+  "fail_class": "construction/harness/source-data for P0-P2; transient closure/EOS/derivative/solver/transport-runtime only after P3 is reached",
+  "evr_credit": "NONE_UNTIL_PARENT_EVR1_VALIDATOR_ACCEPTANCE",
+  "transport_data_sha256": "2fa7988c79f6ea23ebdd50e6d1d7fc5018dc8854a27459511ec95c94ebe7ff3d",
+  "version": "v4",
+  "promoted_from": "test_workspace/heavy_transport/r14_transient_mixture_evr1d",
+  "promotion_issue": "#20",
+  "accepted_source_artifact": "R14_EVR1D_transient_mixture_standalone_v4.tar.gz",
+  "accepted_source_artifact_sha256": "20fd59d6bb64a71380c24aa44816e00c8d26a1be11214bddbb32ee00d33db1f4"
+}

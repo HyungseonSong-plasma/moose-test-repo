@@ -1,0 +1,98 @@
+{
+  "schema_version": 1,
+  "issue": 77,
+  "baseline_commit": "85e1edbbd638ef230b4a6273bfe42969a47cd74c",
+  "scientific_state": "FROZEN",
+  "facades": [
+    {
+      "path": "qpx_harness/artifacts.py",
+      "canonical_owner": "qpx_harness/evidence/artifacts.py",
+      "classification": "MIGRATE_INTERNAL_CONSUMERS_THEN_RETIRE",
+      "unique_behavior_removed": 0,
+      "consumers_before": [
+        "qpx_harness/coupling_evr2_runtime.py",
+        "qpx_harness/performance_cache_audit.py",
+        "qpx_harness/coupling_evr1/orchestration.py",
+        "qpx_harness/issue43_coupling/orchestration.py",
+        "qpx_harness/issue43_fast_base.py",
+        "qpx_harness/issue45/first_linear_orchestration.py",
+        "qpx_harness/issue45/orchestration.py",
+        "qpx_harness/issue46_fd_reference.py",
+        "qpx_harness/issue46_jacobian_localization.py",
+        "recipes/issue46_fd_reference.py",
+        "tests/Issue48_qpx_harness_generality/self_test.py",
+        "tests/Issue48_qpx_harness_generality/wp2_fd_evidence_characterization.py",
+        "tests/Issue48_qpx_harness_generality/wp14_performance_cache_audit_cpp_characterization.py",
+        "tests/Issue48_qpx_harness_generality/wp16_issue46_v2_infrastructure_characterization.py",
+        "tests/Issue48_qpx_harness_generality/wp17_v5_v2_absorption_characterization.py",
+        "tests/Issue66_76_architecture_convergence/final_guard.py"
+      ],
+      "consumers_after": 0,
+      "terminal_state": "RETIRED"
+    },
+    {
+      "path": "qpx_harness/cases.py",
+      "canonical_owner": "qpx_harness/execution/cases.py",
+      "classification": "MIGRATE_INTERNAL_CONSUMERS_THEN_RETIRE",
+      "unique_behavior_removed": 0,
+      "consumers_before": [
+        "qpx_harness/coupling_evr1_runtime.py",
+        "qpx_harness/coupling_evr2_runtime.py",
+        "qpx_harness/coupling_evr1/orchestration.py",
+        "qpx_harness/issue43_coupling/characterization.py",
+        "qpx_harness/issue43_coupling/structure.py",
+        "qpx_harness/issue43_fast_base.py",
+        "qpx_harness/issue43_relaxation_runtime.py",
+        "qpx_harness/issue45/characterization.py",
+        "qpx_harness/issue45/orchestration.py",
+        "tests/Issue48_qpx_harness_generality/wp6_case_primitives_characterization.py",
+        "tests/Issue48_qpx_harness_generality/wp17_v5_v2_absorption_characterization.py",
+        "tests/Issue66_76_architecture_convergence/final_guard.py"
+      ],
+      "consumers_after": 0,
+      "terminal_state": "RETIRED"
+    },
+    {
+      "path": "qpx_harness/runtime.py",
+      "canonical_owner": "qpx_harness/execution/runtime.py",
+      "classification": "MIGRATE_INTERNAL_CONSUMERS_THEN_RETIRE",
+      "unique_behavior_removed": 0,
+      "consumers_before": [
+        "qpx_harness/analysis/performance/investigation.py",
+        "qpx_harness/coupling_evr1/orchestration.py",
+        "qpx_harness/coupling_evr2_runtime.py",
+        "qpx_harness/dmix/runtime.py",
+        "qpx_harness/issue43_coupling/orchestration.py",
+        "qpx_harness/issue43_fast_base.py",
+        "qpx_harness/issue43_relaxation_runtime.py",
+        "qpx_harness/issue45/first_linear_orchestration.py",
+        "qpx_harness/issue45/orchestration.py",
+        "qpx_harness/issue46_fd_reference.py",
+        "qpx_harness/issue46_jacobian_localization.py",
+        "qpx_harness/performance/probes/runtime.py",
+        "qpx_harness/performance/runner.py",
+        "qpx_harness/performance/smoke.py",
+        "qpx_harness/profiling.py",
+        "qpx_harness/regression.py",
+        "qpx_harness/status.py",
+        "tests/Issue48_qpx_harness_generality/wp16_issue46_v2_infrastructure_characterization.py",
+        "tests/Issue48_qpx_harness_generality/wp17_v5_v2_absorption_characterization.py",
+        "tests/Issue66_76_architecture_convergence/final_guard.py"
+      ],
+      "consumers_after": 0,
+      "terminal_state": "RETIRED"
+    },
+    {
+      "path": "qpx_harness/workspace.py",
+      "canonical_owner": "qpx_harness/execution/workspace.py",
+      "classification": "MIGRATE_INTERNAL_CONSUMERS_THEN_RETIRE",
+      "unique_behavior_removed": 0,
+      "consumers_before": [
+        "qpx_harness/regression.py",
+        "tests/Issue66_76_architecture_convergence/final_guard.py"
+      ],
+      "consumers_after": 0,
+      "terminal_state": "RETIRED"
+    }
+  ]
+}

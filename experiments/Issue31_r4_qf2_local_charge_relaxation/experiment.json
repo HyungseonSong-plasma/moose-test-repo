@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "experiment_id": "r4-qf2-local-charge-relaxation",
+  "protocol": "r4-qf2-local-charge-relaxation",
+  "execution": {
+    "timeout_seconds": 180.0
+  },
+  "outputs": {
+    "provenance": true,
+    "charge_conservation": true
+  }
+}

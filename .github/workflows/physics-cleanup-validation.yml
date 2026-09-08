@@ -1,0 +1,78 @@
+name: Physics CI validation
+
+# Canonical architecture and regression acceptance gate.
+on:
+  push:
+    branches:
+      - main
+      - development
+      - issue-128-retire-issue-namespaces
+      - issue-129-root-surface-cleanup
+      - 'issue-154-*'
+      - 'issue-156-*'
+      - review/development-semantic-architecture
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install validation dependencies
+        run: >-
+          python -m pip install
+          'pydantic>=2,<3'
+          'pytest>=8,<9'
+          -r requirements-evidence-engine.txt
+          -r requirements-ontology.txt
+      - name: Validate Evidence dependency direction
+        run: python tools/physics_dependency_guard.py --check evidence
+      - name: Validate Analysis dependency direction
+        run: python tools/physics_dependency_guard.py --check analysis
+      - name: Validate Execution dependency direction
+        run: python tools/physics_dependency_guard.py --check execution
+      - name: Validate presentation dependency direction
+        run: python tools/physics_dependency_guard.py --check presentation
+      - name: Validate canonical package cycles
+        run: python tools/physics_dependency_guard.py --check cycle
+      - name: Validate declarative experiment gateway
+        run: python tools/physics_experiment_gateway_guard.py
+      - name: Validate plasma semantic ownership
+        run: python tools/physics_plasma_semantic_residue_guard.py
+      - name: Validate campaign/performance/scale ownership
+        run: python tools/physics_campaign_residue_guard.py
+      - name: Validate numerical-method ownership
+        run: python tools/physics_numerical_method_ownership_guard.py
+      - name: Validate model terminology and MOOSE boundary ownership
+        run: python tools/physics_boundary_terminology_guard.py
+      - name: Validate strict zero-legacy architecture census
+        run: |
+          python tools/physics_architecture_census.py --require-no-legacy
+          python tools/physics_architecture_census.py --json-out physics-architecture-census.json --require-no-legacy
+      - name: Validate zero-legacy active CI surface
+        run: python tools/physics_public_artifact_residue_guard.py
+      - name: Upload architecture census
+        uses: actions/upload-artifact@v4
+        with:
+          name: physics-architecture-census
+          path: physics-architecture-census.json
+      - name: Run Physics pytest
+        run: python -m pytest -q
+      - name: Validate #17 R1 EI01 attachment source contract
+        run: python physics_app/ci/check_ei01_attachment_source_contract.py
+      - name: Validate #17 R2 O2 ionization lookup and ownership contract
+        run: python physics_app/ci/check_r2_o2_ionization_contract.py
+      - name: Validate #17 R2 O2 ionization production implementation
+        run: python physics_app/ci/check_r2_o2_ionization_implementation.py
+      - name: Run canonical Physics internal validation
+        run: python physics -i all
+      - name: Validate Issue 43/45 science refactor
+        run: python experiments/Issue43_45_science_refactor/final_guard.py
+      - name: Validate Issue 89 post-science canonicalization
+        run: python experiments/Issue89_post_science_canonicalization/final_guard.py
+      - name: Validate execution contract refactor
+        run: python experiments/execution_contract_refactor/guard.py

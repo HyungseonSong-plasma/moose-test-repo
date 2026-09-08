@@ -1,0 +1,27 @@
+{
+  "validation_schema": 2,
+  "name": "r15_qvt_migration_correction_off",
+  "type": "diagnostic",
+  "input": "input.i",
+  "prepare": "prepare.py",
+  "checker": "check.py",
+  "checker_args": [
+    "input_out.physical.csv",
+    "expected.json"
+  ],
+  "temporal_csv": [
+    {
+      "source": "input_out.csv",
+      "physical": "input_out.physical.csv",
+      "time_column": "time",
+      "initial_row_policy": "exclude_observation",
+      "initial_time": 0.0,
+      "time_tol": 1e-15,
+      "require_physical_rows": true
+    }
+  ],
+  "issue": "#15",
+  "path_contract": "Path B only",
+  "potential_contract": "prescribed phi=-E0*x; no Poisson feedback",
+  "mobility_contract": "COMSOL-default Einstein mobility from D_mix with T_ion=T_g; positive magnitude, signed z in drift kernel"
+}
