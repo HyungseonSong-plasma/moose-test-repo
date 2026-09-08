@@ -1,4 +1,4 @@
-"""QPX-free guard for the canonical schema-v2 experiment control plane."""
+"""Physics guard for the canonical schema-v2 experiment control plane."""
 from __future__ import annotations
 
 import json
@@ -7,11 +7,11 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 EXPERIMENTS = ROOT / "experiments"
-APPLICATION = ROOT / "qpx_harness" / "application"
+APPLICATION = ROOT / "physics_harness" / "application"
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from qpx_harness.specification import SCHEMA_VERSION, load_experiment_spec
+from physics_harness.specification import SCHEMA_VERSION, load_experiment_spec
 
 FORBIDDEN_PRODUCTION_PATHS = (
     APPLICATION / "experiment_registry.py",
@@ -76,7 +76,7 @@ def main() -> int:
                 f"{spec.relative_to(ROOT)}: unsupported experiment schema_version={version!r}"
             )
 
-    cli = (ROOT / "qpx_harness" / "cli" / "app.py").read_text(encoding="utf-8")
+    cli = (ROOT / "physics_harness" / "cli" / "app.py").read_text(encoding="utf-8")
     forbidden_cli_tokens = (
         "run_experiment(",
         "resolve_protocol",
@@ -84,11 +84,11 @@ def main() -> int:
     )
     for token in forbidden_cli_tokens:
         if token in cli:
-            errors.append(f"qpx_harness/cli/app.py: forbidden legacy experiment dispatch token {token!r}")
+            errors.append(f"physics_harness/cli/app.py: forbidden legacy experiment dispatch token {token!r}")
 
     application_init = (APPLICATION / "__init__.py").read_text(encoding="utf-8")
     if "load_experiment_spec" in application_init or "HistoricalExperimentFixture" in application_init:
-        errors.append("qpx_harness/application/__init__.py: historical fixture decoder must not be canonical application API")
+        errors.append("physics_harness/application/__init__.py: historical fixture decoder must not be canonical application API")
 
     if errors:
         print("EXPERIMENT_CONTROL_PLANE_GUARD: FAIL")
