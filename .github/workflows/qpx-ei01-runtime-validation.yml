@@ -86,17 +86,6 @@ jobs:
               (
                 cd ci
                 ../qpx-opt -i ei01_attachment_runtime_smoke.i
-                python3 - <<"PY"
-import csv
-import math
-rows = list(csv.DictReader(open("ei01_attachment_runtime_smoke_out.csv")))
-assert len(rows) >= 2, rows
-initial = float(rows[0]["n_e_hat_avg"])
-final = float(rows[-1]["n_e_hat_avg"])
-assert math.isclose(initial, 1.0, rel_tol=0.0, abs_tol=1e-12), (initial, final)
-assert final < initial, (initial, final)
-assert math.isclose(final, 0.9, rel_tol=1e-10, abs_tol=1e-12), (initial, final)
-print("QPX_EI01_CONTROLLED_RUNTIME_PASS")
-PY
+                python3 -c '"'"'import csv, math; rows=list(csv.DictReader(open("ei01_attachment_runtime_smoke_out.csv"))); assert len(rows)>=2, rows; initial=float(rows[0]["n_e_hat_avg"]); final=float(rows[-1]["n_e_hat_avg"]); assert math.isclose(initial,1.0,rel_tol=0.0,abs_tol=1e-12),(initial,final); assert final<initial,(initial,final); assert math.isclose(final,0.9,rel_tol=1e-10,abs_tol=1e-12),(initial,final); print("QPX_EI01_CONTROLLED_RUNTIME_PASS")'"'"'
               )
             '
