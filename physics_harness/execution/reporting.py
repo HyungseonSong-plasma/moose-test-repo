@@ -94,7 +94,7 @@ class ConsoleReporter:
         print(f"No {requested_type} tests found.")
 
     def suite_started(self, requested_type: str, total: int) -> None:
-        print(f"QPX {requested_type} suite")
+        print(f"Physics {requested_type} suite")
         print(f"CASES: {total}")
         print()
 
@@ -107,7 +107,7 @@ class ConsoleReporter:
     def suite_finished(self, result: "SuiteResult", *, results_root: Path | None) -> None:
         self._write_suite_summary(result, results_root=results_root)
         print("\n" + "=" * 48)
-        print("QPX SUITE SUMMARY")
+        print("PHYSICS SUITE SUMMARY")
         print()
         print(f"TYPE    {result.requested_type}")
         print(f"TOTAL   {result.total}")
