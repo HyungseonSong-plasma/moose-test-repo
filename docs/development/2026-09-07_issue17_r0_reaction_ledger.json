@@ -6,7 +6,9 @@
     "stage": "Stage 1 / R0",
     "baseline_sha": "a16c53f318017cb169dd07a3ecef1888b69342a2",
     "working_branch": "development",
-    "status": "AUDIT_IN_PROGRESS"
+    "status": "AUDIT_IN_PROGRESS",
+    "controller_batch": "R1_ATTACHMENT_DISCRIMINATOR",
+    "controller_step": "STEP_1_R1_READINESS_FROZEN"
   },
   "canonical_contract": {
     "internal_reaction_progress_unit": "mol/(m^3 s)",
@@ -17,7 +19,35 @@
     "constraint": "w_O2 = 1 - (w_O2s + w_O2p + w_O + w_Om + w_Op + w_Os)",
     "electron_mean_energy": "mean_en_solved = epsilon_ref * n_epsilon_hat / n_e_hat",
     "epsilon_ref_eV": 5.73276,
-    "lookup_bounds_eV": [1.40991, 22.1378]
+    "lookup_bounds_eV": [1.40991, 22.1378],
+    "supplied_electron_impact_rate_interpretation": {
+      "raw_unit": "m^3/(mol s)",
+      "qpx_molar_rate_coefficient": "k_raw",
+      "particle_rate_coefficient": "k_raw / N_A"
+    }
+  },
+  "r1_readiness_contract": {
+    "ready_reaction_ids": ["EI01_O2_ATTACHMENT"],
+    "sole_enabled_discriminator_reaction": "EI01_O2_ATTACHMENT",
+    "shared_progress_symbol": "R_attachment",
+    "shared_progress_rule": "compute one canonical R_attachment and reuse it for O, Om, and electron particle sources",
+    "electron_source_owner": "normalized n_e_hat continuity equation via a new electron-aware volumetric reaction source path",
+    "heavy_source_owner": "heavy O/Om sources derived from the identical R_attachment",
+    "electron_reaction_rate_inputs": ["mean_en_solved", "n_e_hat", "constrained O2 state"],
+    "forbidden_implementation_shortcut": "do not route electron-reactant attachment through the existing heavy-reactant-only QPXReactionRateMaterial evaluator",
+    "disabled_until_later_stages": [
+      "EI02_O2_ELASTIC",
+      "EI10_O2_TO_O2S",
+      "EI16_O2_IONIZATION",
+      "EI17_O_ELASTIC",
+      "EI18_O_TO_OS",
+      "EI19_O_EXCITATION_4P192",
+      "EI20_O_IONIZATION",
+      "all missing-rate species-changing electron-impact reactions",
+      "all heavy-ion reactions pending rate data"
+    ],
+    "pass_invariants": ["heavy_mass", "oxygen_atoms", "charge_including_electron", "rate_unit_basis", "source_sign_ownership"],
+    "status": "R1_READY_CONTRACT_FROZEN"
   },
   "species": [
     {"id": "e", "solver_id": "n_e_hat", "kind": "electron", "molar_mass_kg_per_mol": 0.0, "charge": -1, "oxygen_atoms": 0},
@@ -38,13 +68,20 @@
       "rate_model": "mean_energy_lookup",
       "data_source": "user_supplied:o2_attachment",
       "table_coordinate": "mean_en_solved_eV",
-      "table_value_unit": "R0_UNRESOLVED",
-      "production_basis": "R0_UNRESOLVED",
+      "table_value_unit": "m^3/(mol s)",
+      "production_basis": "QPX molar reaction progress; k_qpx = k_raw; particle coefficient = k_raw / N_A",
       "energy_model": "attachment_COMSOL_zero_loss_convention",
       "energy_loss_eV": 0.0,
       "source_paths": ["heavy", "electron_particle", "electron_energy"],
       "enabled": false,
-      "blocker": "uploaded table coefficient unit/basis must be frozen before activation"
+      "r1_status": "R1_READY",
+      "r1_shared_progress": "R_attachment",
+      "r1_ownership": {
+        "heavy": ["O", "Om"],
+        "electron_particle": ["n_e_hat"],
+        "electron_energy": "deferred to Stage 4/#26 E8; no independent duplicate rate calculation"
+      },
+      "blocker": null
     },
     {
       "id": "EI02_O2_ELASTIC",
@@ -54,13 +91,13 @@
       "rate_model": "mean_energy_lookup",
       "data_source": "user_supplied:o2_elastic",
       "table_coordinate": "mean_en_solved_eV",
-      "table_value_unit": "R0_UNRESOLVED",
-      "production_basis": "R0_UNRESOLVED",
+      "table_value_unit": "m^3/(mol s)",
+      "production_basis": "QPX molar reaction progress; k_qpx = k_raw; particle coefficient = k_raw / N_A",
       "energy_model": "elastic_electron_heavy_exchange",
       "energy_loss_eV": null,
       "source_paths": ["electron_energy"],
       "enabled": false,
-      "blocker": "lookup unit/basis and elastic energy-transfer law must be frozen"
+      "blocker": "elastic energy-transfer law must be frozen before Stage 4 activation"
     },
     {
       "id": "EI10_O2_TO_O2S",
@@ -86,13 +123,13 @@
       "rate_model": "mean_energy_lookup",
       "data_source": "user_supplied:o2_ionization",
       "table_coordinate": "mean_en_solved_eV",
-      "table_value_unit": "R0_UNRESOLVED",
-      "production_basis": "R0_UNRESOLVED",
+      "table_value_unit": "m^3/(mol s)",
+      "production_basis": "QPX molar reaction progress; k_qpx = k_raw; particle coefficient = k_raw / N_A",
       "energy_model": "inelastic_threshold",
       "energy_loss_eV": 12.06,
       "source_paths": ["heavy", "electron_particle", "electron_energy"],
       "enabled": false,
-      "blocker": "uploaded table coefficient unit/basis must be frozen before activation"
+      "blocker": "deferred outside R1 discriminator"
     },
     {
       "id": "EI17_O_ELASTIC",
@@ -102,13 +139,13 @@
       "rate_model": "mean_energy_lookup",
       "data_source": "user_supplied:o_elastic",
       "table_coordinate": "mean_en_solved_eV",
-      "table_value_unit": "R0_UNRESOLVED",
-      "production_basis": "R0_UNRESOLVED",
+      "table_value_unit": "m^3/(mol s)",
+      "production_basis": "QPX molar reaction progress; k_qpx = k_raw; particle coefficient = k_raw / N_A",
       "energy_model": "elastic_electron_heavy_exchange",
       "energy_loss_eV": null,
       "source_paths": ["electron_energy"],
       "enabled": false,
-      "blocker": "lookup unit/basis and elastic energy-transfer law must be frozen"
+      "blocker": "elastic energy-transfer law must be frozen before Stage 4 activation"
     },
     {
       "id": "EI18_O_TO_OS",
@@ -118,13 +155,13 @@
       "rate_model": "mean_energy_lookup",
       "data_source": "user_supplied:o_excitation_1d",
       "table_coordinate": "mean_en_solved_eV",
-      "table_value_unit": "R0_UNRESOLVED",
-      "production_basis": "R0_UNRESOLVED",
+      "table_value_unit": "m^3/(mol s)",
+      "production_basis": "QPX molar reaction progress; k_qpx = k_raw; particle coefficient = k_raw / N_A",
       "energy_model": "inelastic_threshold",
       "energy_loss_eV": 1.968,
       "source_paths": ["heavy", "electron_energy"],
       "enabled": false,
-      "blocker": "uploaded table coefficient unit/basis must be frozen before activation"
+      "blocker": "deferred outside R1 discriminator"
     },
     {
       "id": "EI19_O_EXCITATION_4P192",
@@ -134,13 +171,13 @@
       "rate_model": "mean_energy_lookup",
       "data_source": "user_supplied:o_excitation_1s",
       "table_coordinate": "mean_en_solved_eV",
-      "table_value_unit": "R0_UNRESOLVED",
-      "production_basis": "R0_UNRESOLVED",
+      "table_value_unit": "m^3/(mol s)",
+      "production_basis": "QPX molar reaction progress; k_qpx = k_raw; particle coefficient = k_raw / N_A",
       "energy_model": "inelastic_threshold_energy_only",
       "energy_loss_eV": 4.192,
       "source_paths": ["electron_energy"],
       "enabled": false,
-      "blocker": "uploaded table coefficient unit/basis must be frozen before activation"
+      "blocker": "deferred outside R1 discriminator"
     },
     {
       "id": "EI20_O_IONIZATION",
@@ -150,13 +187,13 @@
       "rate_model": "mean_energy_lookup",
       "data_source": "user_supplied:o_ionization",
       "table_coordinate": "mean_en_solved_eV",
-      "table_value_unit": "R0_UNRESOLVED",
-      "production_basis": "R0_UNRESOLVED",
+      "table_value_unit": "m^3/(mol s)",
+      "production_basis": "QPX molar reaction progress; k_qpx = k_raw; particle coefficient = k_raw / N_A",
       "energy_model": "inelastic_threshold",
       "energy_loss_eV": 13.618,
       "source_paths": ["heavy", "electron_particle", "electron_energy"],
       "enabled": false,
-      "blocker": "uploaded table coefficient unit/basis must be frozen before activation"
+      "blocker": "deferred outside R1 discriminator"
     }
   ],
   "explicitly_not_used": [
@@ -183,16 +220,14 @@
     "QPXReactionDatabase_energy_metadata": false,
     "QPXReactionDatabase_heavy_mass_invariant": true,
     "QPXReactionDatabase_charge_invariant_for_volume": true,
-    "QPXReactionDatabase_oxygen_atom_invariant": false,
+    "QPXReactionDatabase_oxygen_atom_invariant": true,
     "QPXReactionRateMaterial_internal_progress_is_molar": true,
     "QPXReactionRateMaterial_electron_reactants_supported": false,
     "QPXFVSpeciesReactionSource_consumes_signed_mass_source": true
   },
   "R0_blockers": [
-    "freeze uploaded electron-impact table coefficient units/basis before any production activation",
     "recover or explicitly freeze the constant coefficient for e + O2 -> e + O2s",
     "freeze elastic electron-heavy energy-transfer formulation",
-    "decide which missing species-changing and heavy-ion reactions are in the first restored production network",
-    "extend machine-checkable oxygen-atom conservation metadata/checking"
+    "decide which missing species-changing and heavy-ion reactions are in the first restored production network"
   ]
 }
