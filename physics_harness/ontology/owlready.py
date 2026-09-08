@@ -1,7 +1,7 @@
-"""Optional Owlready2 projection for the QPX semantic model.
+"""Optional Owlready2 projection for the Physics semantic model.
 
-The module deliberately imports Owlready2 lazily so QPX-free architecture tests do
-not require a JVM or reasoner. When used, every projection owns an explicit World;
+The module deliberately imports Owlready2 lazily so architecture tests do not
+require a JVM or reasoner. When used, every projection owns an explicit World;
 `default_world` is never semantic authority.
 """
 from __future__ import annotations
@@ -13,7 +13,7 @@ from typing import Any, Iterable
 
 from .records import ONTOLOGY_SCHEMA_VERSION, SEMANTIC_CONTRACT_ID
 
-ONTOLOGY_IRI = "https://qpx.local/ontology/development-state/v1#"
+ONTOLOGY_IRI = "https://physics.local/ontology/development-state/v1#"
 
 
 class Owlready2Unavailable(RuntimeError):
