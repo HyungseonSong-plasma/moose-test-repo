@@ -51,8 +51,8 @@ record_libdir() {
 }
 
 # Canonical executable and bounded smoke input.
-copy_path /opt/qpx/qpx-opt
-copy_path /opt/qpx/ci/smoke.i
+copy_path /opt/physics/physics-opt
+copy_path /opt/physics/ci/smoke.i
 
 # MOOSE resolves installed application data relative to the executable as
 # PREFIX/share/<name>/data. Preserve that canonical installed layout and also
@@ -70,7 +70,7 @@ done
 shopt -u nullglob
 
 for app_spec in \
-  "qpx:/opt/qpx/data" \
+  "physics:/opt/physics/data" \
   "crane:/opt/qpx_vendor/crane/data" \
   "squirrel:/opt/qpx_vendor/squirrel/data" \
   "zapdos:/opt/qpx_vendor/zapdos/data"
@@ -81,23 +81,21 @@ do
   copy_tree_to "$app_data" "$app_data"
 done
 
-# qpx-opt is linked against the application and test shared libraries produced
-# beside the canonical qpx_app source tree. They are not installed into a
-# system loader path during the source-build lane, so make their build layout
-# explicit for dependency discovery. ldd will then report those QPX-local
+# physics-opt is linked against the application and test shared libraries
+# produced beside the canonical physics_app source tree. They are not installed
+# into a system loader path during the source-build lane, so make their build
+# layout explicit for dependency discovery. ldd will then report those local
 # libraries together with their complete transitive MOOSE/PETSc dependencies.
-test -e /opt/qpx/lib/libqpx-opt.so.0
-test -e /opt/qpx/test/lib/libqpx_test-opt.so.0
-export LD_LIBRARY_PATH="/opt/qpx/test/lib:/opt/qpx/lib:${LD_LIBRARY_PATH:-}"
+test -e /opt/physics/lib/libphysics-opt.so.0
+test -e /opt/physics/test/lib/libphysics_test-opt.so.0
+export LD_LIBRARY_PATH="/opt/physics/test/lib:/opt/physics/lib:${LD_LIBRARY_PATH:-}"
 
 # One ldd invocation on the final executable is sufficient for the ELF loader's
-# complete transitive NEEDED closure. The previous implementation ran ldd over
-# every vendor shared object and spent ~95 seconds collecting a much larger,
-# mostly unused closure.
-ldd /opt/qpx/qpx-opt > "$LDD_OUTPUT"
+# complete transitive NEEDED closure.
+ldd /opt/physics/physics-opt > "$LDD_OUTPUT"
 if grep -Fq 'not found' "$LDD_OUTPUT"; then
   cat "$LDD_OUTPUT" >&2
-  echo "Unresolved dynamic dependency in qpx-opt" >&2
+  echo "Unresolved dynamic dependency in physics-opt" >&2
   exit 1
 fi
 
@@ -113,9 +111,8 @@ done < <(
 )
 
 # OpenMPI loads MCA components dynamically, so they are intentionally outside
-# qpx-opt's static ELF dependency graph. Keep only the OpenMPI runtime surface;
-# compiler-independent data and shared components are retained, while static
-# archives and development headers are not copied wholesale.
+# the executable's static ELF dependency graph. Keep only the OpenMPI runtime
+# surface; static archives and development headers are not copied wholesale.
 for runtime_path in \
   /opt/openmpi/bin \
   /opt/openmpi/share/openmpi \
@@ -135,7 +132,7 @@ printf '%s\n' /opt/openmpi/lib >> "$LIBDIRS_FILE"
 
 # Generate loader search metadata while build tooling is available. The final
 # image needs only ldconfig and does not need findutils.
-sort -u "$LIBDIRS_FILE" > "$DEST/etc/ld.so.conf.d/qpx-runtime.conf"
+sort -u "$LIBDIRS_FILE" > "$DEST/etc/ld.so.conf.d/physics-runtime.conf"
 
 # Hard acceptance guard: MOOSE core data must be available through the exact
 # installed path Registry::determineDataFilePath() checks first.
@@ -145,6 +142,6 @@ test -r "$DEST/opt/share/moose/data/README.md"
   echo "RUNTIME_ROOT_BYTES=$(du -sb "$DEST" | awk '{print $1}')"
   echo "RUNTIME_FILE_COUNT=$(find "$DEST" -type f | wc -l | tr -d ' ')"
   echo "ELF_DEPENDENCY_COUNT=$(awk '/=> \/[^ ]+/ {print $3} /^[[:space:]]*\/[^ ]+/ {print $1}' "$LDD_OUTPUT" | sort -u | wc -l | tr -d ' ')"
-} > "$DEST/opt/qpx/RUNTIME_CLOSURE.txt"
+} > "$DEST/opt/physics/RUNTIME_CLOSURE.txt"
 
-cat "$DEST/opt/qpx/RUNTIME_CLOSURE.txt"
+cat "$DEST/opt/physics/RUNTIME_CLOSURE.txt"
