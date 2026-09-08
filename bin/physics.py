@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Canonical process entrypoint for the QPX harness CLI."""
+"""Canonical process entrypoint for the Physics harness CLI."""
 from __future__ import annotations
 
 import sys
