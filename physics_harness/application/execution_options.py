@@ -9,7 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Mapping, Protocol, Any
 
-from qpx_harness.execution.runtime import resolve_results_root
+from physics_harness.execution.runtime import resolve_results_root
 
 
 class ExecutionOptionSource(Protocol):
@@ -27,9 +27,9 @@ def optional_path(spec: ExecutionOptionSource, key: str) -> Path | None:
     return spec.resolve_path(value)
 
 
-def experiment_results_root(spec: ExecutionOptionSource, qpx: object) -> Path:
-    executable = qpx if isinstance(qpx, (str, Path)) else None
-    return resolve_results_root(executable, optional_path(spec, "results_root"))
+def experiment_results_root(spec: ExecutionOptionSource, executable: object) -> Path:
+    executable_path = executable if isinstance(executable, (str, Path)) else None
+    return resolve_results_root(executable_path, optional_path(spec, "results_root"))
 
 
 def positive_timeout(spec: ExecutionOptionSource, *, default: float, key: str = "timeout_seconds") -> float:
