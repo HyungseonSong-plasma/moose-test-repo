@@ -4,7 +4,7 @@ from __future__ import annotations
 import hashlib
 import json
 
-from qpx_harness.ontology.records import ScientificPolicy
+from physics_harness.ontology.records import ScientificPolicy
 
 from .plan import ExecutionCase, ExecutionPlan
 
