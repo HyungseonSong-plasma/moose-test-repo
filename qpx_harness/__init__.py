@@ -1,4 +1,4 @@
-"""Reusable QPX regression, validation, and diagnostic harness."""
+"""Reusable Physics regression, validation, and diagnostic harness."""
 
 __all__ = [
     "analysis",

@@ -1,4 +1,4 @@
-"""Unified thin command routing for the reusable QPX harness."""
+"""Unified thin command routing for the reusable Physics harness."""
 from __future__ import annotations
 
 import argparse
@@ -37,7 +37,7 @@ COMMANDS = {
 
 INTERNAL_TARGETS = {
     "architecture": "run dependency, semantic-control, and architecture guards",
-    "regression": "run the qpx-free Python regression/unit suite",
+    "regression": "run the Physics Python regression/unit suite",
     "all": "run architecture guards then regression/unit suite",
 }
 
@@ -65,11 +65,11 @@ def _resolve_legacy_handler(command: str):
 
 def print_help() -> None:
     print("usage:")
-    print("  qpx compile <experiment.json>")
-    print("  qpx plan <experiment.json>")
-    print("  qpx lower <experiment.json>")
-    print("  qpx run <experiment.json>")
-    print("  qpx -i <internal-target>              # compatibility/internal")
+    print("  physics compile <experiment.json>")
+    print("  physics plan <experiment.json>")
+    print("  physics lower <experiment.json>")
+    print("  physics run <experiment.json>")
+    print("  physics -i <internal-target>          # compatibility/internal")
     print("\ncanonical commands:")
     width = max(len(name) for name in CANONICAL_COMMANDS)
     for name, description in CANONICAL_COMMANDS.items():
@@ -88,7 +88,7 @@ def _json_print(value) -> None:
 
 
 def semantic_compile_cli(argv: list[str]) -> int:
-    parser = argparse.ArgumentParser(prog="qpx compile")
+    parser = argparse.ArgumentParser(prog="physics compile")
     parser.add_argument("experiment")
     args = parser.parse_args(argv)
     try:
@@ -101,7 +101,7 @@ def semantic_compile_cli(argv: list[str]) -> int:
 
 
 def semantic_plan_cli(argv: list[str]) -> int:
-    parser = argparse.ArgumentParser(prog="qpx plan")
+    parser = argparse.ArgumentParser(prog="physics plan")
     parser.add_argument("experiment")
     args = parser.parse_args(argv)
     try:
@@ -114,7 +114,7 @@ def semantic_plan_cli(argv: list[str]) -> int:
 
 
 def semantic_lower_cli(argv: list[str]) -> int:
-    parser = argparse.ArgumentParser(prog="qpx lower")
+    parser = argparse.ArgumentParser(prog="physics lower")
     parser.add_argument("experiment")
     args = parser.parse_args(argv)
     try:
@@ -128,7 +128,7 @@ def semantic_lower_cli(argv: list[str]) -> int:
 
 def semantic_run_cli(argv: list[str]) -> int:
     """Prepare only the canonical semantic pipeline; never dispatch a protocol runner."""
-    parser = argparse.ArgumentParser(prog="qpx run")
+    parser = argparse.ArgumentParser(prog="physics run")
     parser.add_argument("experiment")
     args = parser.parse_args(argv)
     try:
@@ -136,7 +136,7 @@ def semantic_run_cli(argv: list[str]) -> int:
     except (OSError, ExperimentSpecError, ValueError, TypeError) as exc:
         print(f"semantic run preparation error: {exc}", file=sys.stderr)
         return 2
-    print("QPX_RUN_PREPARED: PASS")
+    print("PHYSICS_RUN_PREPARED: PASS")
     print(f"EXPERIMENT={planned.semantic.intent.experiment_id}")
     print(f"POLICY={planned.policy.policy_id}")
     print(f"EXECUTION_PLAN={planned.execution_plan.plan_id}")
@@ -150,7 +150,7 @@ def semantic_run_cli(argv: list[str]) -> int:
 
 
 def preflight_cli(argv: list[str]) -> int:
-    parser = argparse.ArgumentParser(prog="qpx preflight")
+    parser = argparse.ArgumentParser(prog="physics preflight")
     parser.add_argument("input", help="MOOSE input file to inspect")
     args = parser.parse_args(argv)
     validate_input_preflight(Path(args.input).expanduser().resolve())
@@ -158,7 +158,7 @@ def preflight_cli(argv: list[str]) -> int:
 
 
 def temporal_csv_cli(argv: list[str]) -> int:
-    parser = argparse.ArgumentParser(prog="qpx temporal-csv")
+    parser = argparse.ArgumentParser(prog="physics temporal-csv")
     parser.add_argument("source")
     parser.add_argument("--output", required=True)
     parser.add_argument("--time-column", default="time")
@@ -218,7 +218,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if args[0] == "-i":
         if len(args) != 2:
-            print("usage: qpx -i <architecture|regression|all>", file=sys.stderr)
+            print("usage: physics -i <architecture|regression|all>", file=sys.stderr)
             return 2
         return internal_cli(args[1])
     canonical_handlers = {

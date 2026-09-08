@@ -1,4 +1,4 @@
-"""QPX command presentation and routing boundary."""
+"""Physics command presentation and routing boundary."""
 
 from .app import COMMANDS, main, print_help
 
