@@ -1,25 +1,25 @@
-name: QPX EI01 runtime validation
+name: Physics EI01 runtime validation
 
 on:
   push:
     branches:
       - development
     paths:
-      - 'qpx_app/include/fvkernels/QPXFVElectronReactionSource.h'
-      - 'qpx_app/src/fvkernels/QPXFVElectronReactionSource.C'
-      - 'qpx_app/ci/ei01_attachment_runtime_smoke.i'
-      - '.github/workflows/qpx-ei01-runtime-validation.yml'
+      - 'physics_app/include/fvkernels/PhysicsFVElectronReactionSource.h'
+      - 'physics_app/src/fvkernels/PhysicsFVElectronReactionSource.C'
+      - 'physics_app/ci/ei01_attachment_runtime_smoke.i'
+      - '.github/workflows/physics-ei01-runtime-validation.yml'
   pull_request:
     branches:
       - development
     paths:
-      - 'qpx_app/include/fvkernels/QPXFVElectronReactionSource.h'
-      - 'qpx_app/src/fvkernels/QPXFVElectronReactionSource.C'
-      - 'qpx_app/ci/ei01_attachment_runtime_smoke.i'
-      - '.github/workflows/qpx-ei01-runtime-validation.yml'
+      - 'physics_app/include/fvkernels/PhysicsFVElectronReactionSource.h'
+      - 'physics_app/src/fvkernels/PhysicsFVElectronReactionSource.C'
+      - 'physics_app/ci/ei01_attachment_runtime_smoke.i'
+      - '.github/workflows/physics-ei01-runtime-validation.yml'
 
 concurrency:
-  group: qpx-ei01-runtime-validation-${{ github.ref }}
+  group: physics-ei01-runtime-validation-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -66,7 +66,7 @@ jobs:
           docker run --rm \
             --entrypoint /bin/bash \
             --user 0:0 \
-            --workdir /workspace/qpx_app \
+            --workdir /workspace/physics_app \
             -e GITHUB_SHA="$GITHUB_SHA" \
             -v "$PWD:/workspace" \
             "$BUILD_BASE_REF" \
@@ -82,10 +82,10 @@ jobs:
 
               test "$(git -C /workspace rev-parse HEAD)" = "${GITHUB_SHA}"
               make -j2
-              ./qpx-opt --check-input -i ci/ei01_attachment_runtime_smoke.i
+              ./physics-opt --check-input -i ci/ei01_attachment_runtime_smoke.i
               (
                 cd ci
-                ../qpx-opt -i ei01_attachment_runtime_smoke.i
-                python3 -c '"'"'import csv, math; rows=list(csv.DictReader(open("ei01_attachment_runtime_smoke_out.csv"))); assert len(rows)>=2, rows; initial=float(rows[0]["n_e_hat_avg"]); final=float(rows[-1]["n_e_hat_avg"]); assert math.isclose(initial,1.0,rel_tol=0.0,abs_tol=1e-12),(initial,final); assert final<initial,(initial,final); assert math.isclose(final,0.9,rel_tol=1e-10,abs_tol=1e-12),(initial,final); print("QPX_EI01_CONTROLLED_RUNTIME_PASS")'"'"'
+                ../physics-opt -i ei01_attachment_runtime_smoke.i
+                python3 -c '"'"'import csv, math; rows=list(csv.DictReader(open("ei01_attachment_runtime_smoke_out.csv"))); assert len(rows)>=2, rows; initial=float(rows[0]["n_e_hat_avg"]); final=float(rows[-1]["n_e_hat_avg"]); assert math.isclose(initial,1.0,rel_tol=0.0,abs_tol=1e-12),(initial,final); assert final<initial,(initial,final); assert math.isclose(final,0.9,rel_tol=1e-10,abs_tol=1e-12),(initial,final); print("PHYSICS_EI01_CONTROLLED_RUNTIME_PASS")'"'"'
               )
             '

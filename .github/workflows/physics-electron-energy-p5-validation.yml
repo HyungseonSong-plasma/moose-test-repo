@@ -1,4 +1,4 @@
-name: QPX P5 E7 real-QVT validation
+name: Physics P5 E7 real-QVT validation
 
 on:
   push:
@@ -6,26 +6,26 @@ on:
       - development
       - issue-26-electron-energy-p5
     paths:
-      - 'qpx_app/ci/electron_energy_real_qvt_inventory_smoke.i'
-      - 'qpx_app/ci/check_electron_energy_real_qvt_inventory.py'
-      - 'qpx_app/include/materials/QPXElectronMeanEnergyMaterial.h'
-      - 'qpx_app/src/materials/QPXElectronMeanEnergyMaterial.C'
-      - 'qpx_app/include/materials/QPXElectronTransportLookupMaterial.h'
-      - 'qpx_app/src/materials/QPXElectronTransportLookupMaterial.C'
+      - 'physics_app/ci/electron_energy_real_qvt_inventory_smoke.i'
+      - 'physics_app/ci/check_electron_energy_real_qvt_inventory.py'
+      - 'physics_app/include/materials/PhysicsElectronMeanEnergyMaterial.h'
+      - 'physics_app/src/materials/PhysicsElectronMeanEnergyMaterial.C'
+      - 'physics_app/include/materials/PhysicsElectronTransportLookupMaterial.h'
+      - 'physics_app/src/materials/PhysicsElectronTransportLookupMaterial.C'
       - 'experiments/Issue91_real_qvt_r3/r3_e0/qvt.msh'
       - 'experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt'
-      - '.github/workflows/qpx-electron-energy-p5-validation.yml'
+      - '.github/workflows/physics-electron-energy-p5-validation.yml'
   pull_request:
     branches:
       - development
     paths:
-      - 'qpx_app/**'
+      - 'physics_app/**'
       - 'experiments/Issue91_real_qvt_r3/r3_e0/qvt.msh'
       - 'experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt'
-      - '.github/workflows/qpx-electron-energy-p5-validation.yml'
+      - '.github/workflows/physics-electron-energy-p5-validation.yml'
 
 concurrency:
-  group: qpx-electron-energy-p5-${{ github.ref }}
+  group: physics-electron-energy-p5-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -50,8 +50,8 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
-          INPUT=qpx_app/ci/electron_energy_real_qvt_inventory_smoke.i
-          CHECK=qpx_app/ci/check_electron_energy_real_qvt_inventory.py
+          INPUT=physics_app/ci/electron_energy_real_qvt_inventory_smoke.i
+          CHECK=physics_app/ci/check_electron_energy_real_qvt_inventory.py
           TABLE=experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt
           MESH=experiments/Issue91_real_qvt_r3/r3_e0/qvt.msh
 
@@ -59,7 +59,7 @@ jobs:
           test -f "$CHECK"
           test -f "$TABLE"
           test -f "$MESH"
-          test -f qpx_app/dependencies.lock
+          test -f physics_app/dependencies.lock
 
           grep -Fq 'coord_type = RZ' "$INPUT"
           grep -Fq "qvt.msh'" "$INPUT"
@@ -68,12 +68,12 @@ jobs:
           grep -Fq 'operation = keep' "$INPUT"
           grep -Fq 'block = plasma' "$INPUT"
           grep -Fq "electron_moments.txt'" "$INPUT"
-          grep -Fq 'type = QPXElectronMeanEnergyMaterial' "$INPUT"
+          grep -Fq 'type = PhysicsElectronMeanEnergyMaterial' "$INPUT"
           grep -Fq 'energy_reference_eV = 5.73276' "$INPUT"
           grep -Fq 'mean_energy = mean_en_solved' "$INPUT"
           grep -Fq 'bounds_policy = error' "$INPUT"
           ! grep -Fq 'bounds_policy = clamp' "$INPUT"
-          test "$(grep -Fc 'type = QPXElectronTransportLookupMaterial' "$INPUT")" -eq 1
+          test "$(grep -Fc 'type = PhysicsElectronTransportLookupMaterial' "$INPUT")" -eq 1
           test "$(grep -Fc 'type = FVDiffusion' "$INPUT")" -eq 2
           grep -Fq 'coeff = electron_diffusion' "$INPUT"
           grep -Fq 'coeff = electron_energy_diffusion' "$INPUT"
@@ -91,16 +91,16 @@ jobs:
           test "$(awk 'END {print $1}' "$TABLE")" = '22.1378'
           grep -Fq '2 53 "plasma"' "$MESH"
 
-          grep -Fq 'std::isfinite(n_e_hat.value())' qpx_app/src/materials/QPXElectronMeanEnergyMaterial.C
-          grep -Fq 'std::isfinite(n_epsilon_hat.value())' qpx_app/src/materials/QPXElectronMeanEnergyMaterial.C
-          grep -Fq 'std::isfinite(mean_en_solved.value())' qpx_app/src/materials/QPXElectronMeanEnergyMaterial.C
-          grep -Fq 'No denominator floor is applied.' qpx_app/src/materials/QPXElectronMeanEnergyMaterial.C
-          grep -Fq 'No clamp is applied.' qpx_app/src/materials/QPXElectronMeanEnergyMaterial.C
+          grep -Fq 'std::isfinite(n_e_hat.value())' physics_app/src/materials/PhysicsElectronMeanEnergyMaterial.C
+          grep -Fq 'std::isfinite(n_epsilon_hat.value())' physics_app/src/materials/PhysicsElectronMeanEnergyMaterial.C
+          grep -Fq 'std::isfinite(mean_en_solved.value())' physics_app/src/materials/PhysicsElectronMeanEnergyMaterial.C
+          grep -Fq 'No denominator floor is applied.' physics_app/src/materials/PhysicsElectronMeanEnergyMaterial.C
+          grep -Fq 'No clamp is applied.' physics_app/src/materials/PhysicsElectronMeanEnergyMaterial.C
 
-          source qpx_app/dependencies.lock
+          source physics_app/dependencies.lock
           test "$MOOSE" = "$EXPECTED_MOOSE_SHA"
-          test "$QPX_BUILD_BASE" = "$BUILD_BASE_REF"
-          echo QPX_E7_STATIC_CONTRACT_PASS
+          test "$PHYSICS_BUILD_BASE" = "$BUILD_BASE_REF"
+          echo PHYSICS_E7_STATIC_CONTRACT_PASS
 
       - name: Log in to GHCR
         uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9
@@ -138,7 +138,7 @@ jobs:
           docker run --rm \
             --entrypoint /bin/bash \
             --user 0:0 \
-            --workdir /workspace/qpx_app \
+            --workdir /workspace/physics_app \
             -e GITHUB_SHA="$GITHUB_SHA" \
             -v "$PWD:/workspace" \
             "$BUILD_BASE_REF" \
@@ -160,13 +160,13 @@ jobs:
               export ZAPDOS_DIR=/opt/qpx_vendor/zapdos
               export METHOD=opt
 
-              test ! -e ./qpx-opt
+              test ! -e ./physics-opt
               make -j2
-              test -x ./qpx-opt
+              test -x ./physics-opt
 
               cd ci
-              ../qpx-opt --check-input -i electron_energy_real_qvt_inventory_smoke.i
-              ../qpx-opt -i electron_energy_real_qvt_inventory_smoke.i
+              ../physics-opt --check-input -i electron_energy_real_qvt_inventory_smoke.i
+              ../physics-opt -i electron_energy_real_qvt_inventory_smoke.i
               python3 check_electron_energy_real_qvt_inventory.py electron_energy_real_qvt_inventory_smoke_out.csv
             '
 

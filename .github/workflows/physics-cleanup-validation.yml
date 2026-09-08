@@ -1,4 +1,4 @@
-name: QPX CI validation
+name: Physics CI validation
 
 # Canonical architecture and regression acceptance gate.
 on:
@@ -6,7 +6,6 @@ on:
     branches:
       - main
       - development
-      - issue-126-qpx-harness-refactor
       - issue-128-retire-issue-namespaces
       - issue-129-root-surface-cleanup
       - 'issue-154-*'
@@ -53,22 +52,22 @@ jobs:
       - name: Validate strict zero-legacy architecture census
         run: |
           python tools/qpx_architecture_census.py --require-no-legacy
-          python tools/qpx_architecture_census.py --json-out qpx-architecture-census.json --require-no-legacy
+          python tools/qpx_architecture_census.py --json-out physics-architecture-census.json --require-no-legacy
       - name: Upload architecture census
         uses: actions/upload-artifact@v4
         with:
-          name: qpx-architecture-census
-          path: qpx-architecture-census.json
-      - name: Run QPX-free pytest
+          name: physics-architecture-census
+          path: physics-architecture-census.json
+      - name: Run Physics pytest
         run: python -m pytest -q
       - name: Validate #17 R1 EI01 attachment source contract
-        run: python qpx_app/ci/check_ei01_attachment_source_contract.py
+        run: python physics_app/ci/check_ei01_attachment_source_contract.py
       - name: Validate #17 R2 O2 ionization lookup and ownership contract
-        run: python qpx_app/ci/check_r2_o2_ionization_contract.py
+        run: python physics_app/ci/check_r2_o2_ionization_contract.py
       - name: Validate #17 R2 O2 ionization production implementation
-        run: python qpx_app/ci/check_r2_o2_ionization_implementation.py
-      - name: Run canonical QPX internal validation
-        run: python qpx -i all
+        run: python physics_app/ci/check_r2_o2_ionization_implementation.py
+      - name: Run canonical Physics internal validation
+        run: python physics -i all
       - name: Validate Issue 43/45 science refactor
         run: python experiments/Issue43_45_science_refactor/final_guard.py
       - name: Validate Issue 89 post-science canonicalization
