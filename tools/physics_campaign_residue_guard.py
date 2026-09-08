@@ -22,18 +22,18 @@ def text(path: str) -> str:
 
 def main() -> int:
     forbidden_campaign_modules = (
-        "qpx_harness/analysis/performance/cache.py",
-        "qpx_harness/analysis/performance/investigation.py",
-        "qpx_harness/execution/performance/smoke.py",
-        "qpx_harness/execution/performance/investigation.py",
-        "qpx_harness/adapters/moose/performance/probe_runtime.py",
-        "qpx_harness/adapters/moose/performance/transport_probe.py",
+        "physics_harness/analysis/performance/cache.py",
+        "physics_harness/analysis/performance/investigation.py",
+        "physics_harness/execution/performance/smoke.py",
+        "physics_harness/execution/performance/investigation.py",
+        "physics_harness/adapters/moose/performance/probe_runtime.py",
+        "physics_harness/adapters/moose/performance/transport_probe.py",
     )
     present = [path for path in forbidden_campaign_modules if (ROOT / path).exists()]
     if present:
         fail("campaign modules remain in production: " + ", ".join(present))
 
-    execution_performance = ROOT / "qpx_harness/execution/performance"
+    execution_performance = ROOT / "physics_harness/execution/performance"
     if execution_performance.exists():
         remaining = [
             str(path.relative_to(ROOT))
@@ -43,7 +43,7 @@ def main() -> int:
         if remaining:
             fail("redundant execution/performance surface remains: " + ", ".join(remaining))
 
-    app = text("qpx_harness/cli/app.py")
+    app = text("physics_harness/cli/app.py")
     retired_commands = (
         '"scale-audit"', '"measure-smoke"', '"investigate"',
         '"transport-probe"', '"cache-audit"',
@@ -53,10 +53,10 @@ def main() -> int:
         fail("campaign/default-specific CLI commands remain: " + ", ".join(leaked))
     if '"profile":' in app:
         fail("duplicate profile CLI command remains after canonical measure/PROFILE consolidation")
-    if "qpx_harness.execution.performance" in app:
+    if "physics_harness.execution.performance" in app:
         fail("CLI imports retired execution.performance namespace")
 
-    perf_cli = text("qpx_harness/cli/commands/performance.py")
+    perf_cli = text("physics_harness/cli/commands/performance.py")
     for token in ("PF-1", "PF-3", "Issue22", "Issue 22", "qvt", "QVT", "D_mix"):
         if token in perf_cli:
             fail(f"generic performance CLI contains campaign/default residue: {token}")
@@ -64,7 +64,7 @@ def main() -> int:
         if token in perf_cli:
             fail(f"performance CLI bypasses application boundary: {token}")
 
-    scale = text("qpx_harness/analysis/scale_audit.py")
+    scale = text("physics_harness/analysis/scale_audit.py")
     for token in (
         "Issue43", "Issue #43", "QVT", "qvt.msh", "DEFAULT_PRESSURE",
         "DEFAULT_ELECTRON_DENSITY", "DEFAULT_MU_N", "DEFAULT_D_N",
@@ -73,10 +73,10 @@ def main() -> int:
         if token in scale:
             fail(f"generic scale analysis contains policy anchor/residue: {token}")
 
-    generic_perf_root = ROOT / "qpx_harness/analysis/performance"
+    generic_perf_root = ROOT / "physics_harness/analysis/performance"
     concrete_tokens = (
-        "QPXThermalDiffusionMaterial",
-        "QPX_TRANSPORT_TIME_SECTION",
+        "PhysicsThermalDiffusionMaterial",
+        "PHYSICS_TRANSPORT_TIME_SECTION",
         "PerfGraphReporter",
         "SNESJacobianEval",
         "SNESSolve",
@@ -88,14 +88,14 @@ def main() -> int:
         source = path.read_text(encoding="utf-8")
         if any(token in source for token in concrete_tokens):
             concrete_hits.append(str(path.relative_to(ROOT)))
-        if "qpx_harness.adapters." in source or "...adapters" in source:
+        if "physics_harness.adapters." in source or "...adapters" in source:
             adapter_edges.append(str(path.relative_to(ROOT)))
     if concrete_hits:
         fail("generic performance owns concrete solver decoding: " + ", ".join(concrete_hits))
     if adapter_edges:
         fail("generic performance analysis imports external adapters: " + ", ".join(adapter_edges))
 
-    application_perf = text("qpx_harness/application/performance.py")
+    application_perf = text("physics_harness/application/performance.py")
     if "def run_measurement(" not in application_perf or "def analyze_profile(" not in application_perf:
         fail("canonical application performance entry surface is incomplete")
 
