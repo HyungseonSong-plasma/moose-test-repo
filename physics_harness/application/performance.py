@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from qpx_harness.adapters.moose.performance.collection import (
+from physics_harness.adapters.moose.performance.collection import (
     MoosePerformanceDecodeError,
     check_overlay_collisions,
     collect_perfgraph_json,
@@ -26,17 +26,17 @@ from qpx_harness.adapters.moose.performance.collection import (
     parse_problem_identity,
     read_last_metrics_row,
 )
-from qpx_harness.adapters.moose.performance.measurement import write_measurement_overlay
-from qpx_harness.adapters.moose.performance.profile import jacobian_self_time
-from qpx_harness.adapters.petsc.performance import (
+from physics_harness.adapters.moose.performance.measurement import write_measurement_overlay
+from physics_harness.adapters.moose.performance.profile import jacobian_self_time
+from physics_harness.adapters.petsc.performance import (
     collect_log_view_csv,
     decode_timing_facts,
     jacobian_evaluation_count,
     log_view_args,
 )
-from qpx_harness.analysis.performance.profile import analyze_facts
-from qpx_harness.evidence import ensure_fresh_directory, sha256_file
-from qpx_harness.execution.runtime import resolve_executable, run_qpx, validate_executable
+from physics_harness.analysis.performance.profile import analyze_facts
+from physics_harness.evidence import ensure_fresh_directory, sha256_file
+from physics_harness.execution.runtime import resolve_executable, run_physics, validate_executable
 
 SCHEMA_VERSION = 1
 VALID_MODES = {"BENCHMARK", "PROFILE"}
@@ -130,7 +130,7 @@ def validate_result_record(data: dict[str, Any]) -> dict[str, Any]:
     if root["mode"] not in VALID_MODES:
         raise PerformanceContractError(f"result.mode must be one of {sorted(VALID_MODES)}")
     identity = _mapping(root.get("identity"), "result.identity")
-    for key in ("input_sha256", "qpx_realpath", "executable_sha256"):
+    for key in ("input_sha256", "physics_realpath", "executable_sha256"):
         _string(identity, key, "result.identity")
     environment = _mapping(root.get("environment"), "result.environment")
     for key in ("hostname", "platform", "python"):
@@ -165,9 +165,9 @@ def validate_result_record(data: dict[str, Any]) -> dict[str, Any]:
 
 def build_measurement_stats(result: dict[str, Any]) -> Any:
     try:
-        from qpx_harness.analysis.statistics_builder import build_convergence_stats, build_simulation_stats
+        from physics_harness.analysis.statistics_builder import build_convergence_stats, build_simulation_stats
     except ImportError:
-        from qpx_harness.analysis.stats_builder import build_convergence_stats, build_simulation_stats
+        from physics_harness.analysis.stats_builder import build_convergence_stats, build_simulation_stats
     convergence = build_convergence_stats(work=_mapping(result.get("work"), "result.work"))
     return build_simulation_stats(result, convergence=convergence)
 
@@ -209,7 +209,7 @@ def _collect_environment(exe: Path) -> dict[str, Any]:
         "processor": _cpu_model(), "logical_cpu_count": os.cpu_count(),
         "python": platform.python_version(),
         "mpi_ranks": _env_int("OMPI_COMM_WORLD_SIZE", "PMI_SIZE"),
-        "threads": _env_int("OMP_NUM_THREADS"), "qpx_realpath": str(exe),
+        "threads": _env_int("OMP_NUM_THREADS"), "physics_realpath": str(exe),
     }
 
 
@@ -230,7 +230,7 @@ def run_measurement(manifest_path: Path, *, executable: str | Path | None = None
     mode = manifest["mode"]
     num_steps = int(manifest.get("runtime", {}).get("num_steps", 1))
     collectors = manifest.get("collectors", {})
-    prefix = _safe_token(manifest.get("overlay_prefix", "qpxperf"))
+    prefix = _safe_token(manifest.get("overlay_prefix", "physicsperf"))
     try:
         check_overlay_collisions(input_path, prefix)
     except MoosePerformanceDecodeError as exc:
@@ -245,13 +245,13 @@ def run_measurement(manifest_path: Path, *, executable: str | Path | None = None
     overlay = out_dir / "measurement_overlay.i"; p2_log = out_dir / "p2_check_input.log"; p3_log = out_dir / "p3_run.log"
     write_measurement_overlay(overlay, metrics_base=metrics_base, perfgraph_base=perfgraph_base, prefix=prefix)
     common = [str(overlay), f"Executioner/num_steps={num_steps}"]
-    p2 = run_qpx(exe, cwd=case_dir, input_name=case["input"], log_path=p2_log, extra_args=[*common, "--check-input"])
+    p2 = run_physics(exe, cwd=case_dir, input_name=case["input"], log_path=p2_log, extra_args=[*common, "--check-input"])
     p3 = None
     if p2.returncode == 0:
         p3_args = [*common]
         if petsc_path is not None:
             p3_args.extend(log_view_args(petsc_path))
-        p3 = run_qpx(exe, cwd=case_dir, input_name=case["input"], log_path=p3_log, extra_args=p3_args, stream=bool(manifest.get("stream_output", True)))
+        p3 = run_physics(exe, cwd=case_dir, input_name=case["input"], log_path=p3_log, extra_args=p3_args, stream=bool(manifest.get("stream_output", True)))
     metrics_csv = find_output(metrics_base, ".csv")
     perfgraph_json = find_output(perfgraph_base, ".json")
     metrics = read_last_metrics_row(metrics_csv)
@@ -269,7 +269,7 @@ def run_measurement(manifest_path: Path, *, executable: str | Path | None = None
     result = {
         "schema_version": SCHEMA_VERSION, "run_id": out_dir.name,
         "experiment_id": manifest["experiment_id"], "case_id": manifest["case_id"], "mode": mode,
-        "identity": {"input_sha256": sha256_file(input_path), "qpx_realpath": str(exe), "executable_sha256": sha256_file(exe), "manifest_sha256": sha256_file(manifest_path), "overlay_sha256": sha256_file(overlay)},
+        "identity": {"input_sha256": sha256_file(input_path), "physics_realpath": str(exe), "executable_sha256": sha256_file(exe), "manifest_sha256": sha256_file(manifest_path), "overlay_sha256": sha256_file(overlay)},
         "environment": environment,
         "problem": {"nodes": problem_log.get("nodes"), "elements": problem_log.get("elements"), "dofs": dofs if dofs is not None else problem_log.get("dofs"), "variables": problem_log.get("variables"), "species": manifest.get("physics", {}).get("species")},
         "work": {"nonlinear_iterations": metric_int(metrics, prefix, "nonlinear_iterations"), "linear_iterations": metric_int(metrics, prefix, "linear_iterations"), "residual_evaluations": metric_int(metrics, prefix, "residual_evaluations"), "jacobian_evaluations": jacobian_evaluation_count(petsc)},
@@ -302,12 +302,12 @@ def self_test() -> int:
         pass
     else:
         print("PF1_MUTATION_invalid_mode: MISSED"); return 1
-    result = {"schema_version": 1, "run_id": "run", "experiment_id": "exp", "case_id": "case", "mode": "PROFILE", "identity": {"input_sha256": "a", "qpx_realpath": "/tmp/qpx-opt", "executable_sha256": "b"}, "environment": {"hostname": "host", "platform": "linux", "python": "3.12"}, "problem": {"nodes": 1, "elements": 1, "dofs": 2, "variables": ["u"], "species": None}, "work": {"nonlinear_iterations": 1, "linear_iterations": 1, "residual_evaluations": 2, "jacobian_evaluations": 1}, "performance": {"wall_seconds": 1.0, "max_memory_mb": 10.0, "perfgraph": {}, "petsc": {}}, "validation": {"status": "P2_PASS_P3_PASS", "p2_returncode": 0, "p3_returncode": 0}, "evidence": {}}
+    result = {"schema_version": 1, "run_id": "run", "experiment_id": "exp", "case_id": "case", "mode": "PROFILE", "identity": {"input_sha256": "a", "physics_realpath": "/tmp/physics-opt", "executable_sha256": "b"}, "environment": {"hostname": "host", "platform": "linux", "python": "3.12"}, "problem": {"nodes": 1, "elements": 1, "dofs": 2, "variables": ["u"], "species": None}, "work": {"nonlinear_iterations": 1, "linear_iterations": 1, "residual_evaluations": 2, "jacobian_evaluations": 1}, "performance": {"wall_seconds": 1.0, "max_memory_mb": 10.0, "perfgraph": {}, "petsc": {}}, "validation": {"status": "P2_PASS_P3_PASS", "p2_returncode": 0, "p3_returncode": 0}, "evidence": {}}
     validate_result_record(result)
     stats = build_measurement_stats(result)
     if stats.common.case_id != "case" or stats.efficiency is None or stats.efficiency.jacobian_evaluations != 1:
         print("PF1_STATS_MAPPING_SELFTEST: FAIL"); return 1
-    print("QPX_PERFORMANCE_APPLICATION_SELFTEST: PASS"); return 0
+    print("PHYSICS_PERFORMANCE_APPLICATION_SELFTEST: PASS"); return 0
 
 
 __all__ = ["PerformanceContractError", "analyze_profile", "build_measurement_stats", "result_status", "run_measurement", "self_test", "validate_experiment_manifest", "validate_result_record"]
