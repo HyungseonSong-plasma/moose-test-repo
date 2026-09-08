@@ -61,6 +61,8 @@ jobs:
           path: qpx-architecture-census.json
       - name: Run QPX-free pytest
         run: python -m pytest -q
+      - name: Validate #17 R1 EI01 attachment source contract
+        run: python qpx_app/ci/check_ei01_attachment_source_contract.py
       - name: Run canonical QPX internal validation
         run: python qpx -i all
       - name: Validate Issue 43/45 science refactor
