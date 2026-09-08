@@ -8,7 +8,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from qpx_harness.application.gradient_reconstruction import analyze_gradient_reconstruction as _analyze_gradient_reconstruction
+from physics_harness.application.gradient_reconstruction import analyze_gradient_reconstruction as _analyze_gradient_reconstruction
 
 
 def analyze_gradient_reconstruction(
@@ -31,7 +31,7 @@ def diagnose_constant_reconstruction(
     tolerances: Any | None = None,
 ) -> dict[str, Any]:
     """Compose Evidence -> Analysis -> Reasoning for a constant-state check."""
-    from qpx_harness.reasoning.gradient_reconstruction import summarize_constant_state
+    from physics_harness.reasoning.gradient_reconstruction import summarize_constant_state
 
     face, cell = analyze_gradient_reconstruction(
         face_frame, method=method, radial_component=radial_component
@@ -50,7 +50,7 @@ def normalize_temporal_run_csv(
     time_tol: float,
     require_physical_rows: bool,
 ) -> dict[str, Any]:
-    from qpx_harness.analysis.temporal import normalize_temporal_csv
+    from physics_harness.analysis.temporal import normalize_temporal_csv
 
     return normalize_temporal_csv(
         Path(source),
