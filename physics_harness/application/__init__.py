@@ -1,4 +1,4 @@
-"""Canonical application services composing QPX subsystem public APIs."""
+"""Canonical application services composing Physics subsystem public APIs."""
 
 from .operations import (
     analyze_gradient_reconstruction,
