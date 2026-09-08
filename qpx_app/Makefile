@@ -94,7 +94,7 @@ include            $(FRAMEWORK_DIR)/app.mk
 
 # dep apps
 APPLICATION_DIR    := $(CURDIR)
-APPLICATION_NAME   := qpx
+APPLICATION_NAME   := physics
 BUILD_EXEC         := yes
 GEN_REVISION       := no
 DEP_APPS           := $(shell $(FRAMEWORK_DIR)/scripts/find_dep_apps.py $(APPLICATION_NAME))

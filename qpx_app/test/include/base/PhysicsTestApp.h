@@ -11,13 +11,13 @@
 
 #include "MooseApp.h"
 
-class qpxTestApp : public MooseApp
+class PhysicsTestApp : public MooseApp
 {
 public:
   static InputParameters validParams();
 
-  qpxTestApp(const InputParameters & parameters);
-  virtual ~qpxTestApp();
+  PhysicsTestApp(const InputParameters & parameters);
+  virtual ~PhysicsTestApp();
 
   static void registerApps();
   static void registerAll(Factory & f, ActionFactory & af, Syntax & s, bool use_test_objs = false);

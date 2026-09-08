@@ -1,6 +1,6 @@
 #include "CreateChangeMarker.h"
 
-registerMooseObject("qpxApp", CreateChangeMarker);
+registerMooseObject("PhysicsApp", CreateChangeMarker);
 
 InputParameters
 CreateChangeMarker::validParams()

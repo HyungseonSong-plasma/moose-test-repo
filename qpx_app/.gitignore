@@ -1,7 +1,7 @@
-# QPX build products: source-only canonical ownership.
-qpx-opt
-qpx-dbg
-qpx-devel
+# Physics build products: source-only canonical ownership.
+physics-opt
+physics-dbg
+physics-devel
 build/
 lib/
 .libs/

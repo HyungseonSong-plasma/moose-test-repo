@@ -1,6 +1,6 @@
 #include "FilterForwardInterpolate.h"
 
-registerMooseObject("qpxApp", FilterForwardInterpolate);
+registerMooseObject("PhysicsApp", FilterForwardInterpolate);
 
 InputParameters
 FilterForwardInterpolate::validParams()
@@ -40,7 +40,6 @@ FilterForwardInterpolate::execute()
   *_sample = _fv_values;
   if (n <= 2) return;
 
-  // Step 1: Find all valid "anchor" indices that form a monotonically increasing sequence
   std::vector<size_t> anchors;
   anchors.push_back(0);
 
@@ -52,12 +51,10 @@ FilterForwardInterpolate::execute()
     }
   }
 
-  // Step 2: Linearly interpolate the gaps between anchor points
   for (size_t a = 0; a < anchors.size() - 1; ++a) {
     size_t idx_start = anchors[a];
     size_t idx_end = anchors[a + 1];
 
-    // If there are indices trapped between two valid record peaks, interpolate them
     if (idx_end - idx_start > 1) {
       double y_start = _fv_values[idx_start];
       double y_end = _fv_values[idx_end];
@@ -70,7 +67,6 @@ FilterForwardInterpolate::execute()
     }
   }
 
-  // Step 3: Handle trailing dips (if data ends while dropping below the highest peak)
   size_t last_anchor = anchors.back();
   if (last_anchor < n - 1) {
     for (size_t i = last_anchor + 1; i < n; ++i) {

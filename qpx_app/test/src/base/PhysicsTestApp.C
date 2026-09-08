@@ -6,45 +6,45 @@
 //*
 //* Licensed under LGPL 2.1, please see LICENSE for details
 //* https://www.gnu.org/licenses/lgpl-2.1.html
-#include "qpxTestApp.h"
-#include "qpxApp.h"
+#include "PhysicsTestApp.h"
+#include "PhysicsApp.h"
 #include "Moose.h"
 #include "AppFactory.h"
 #include "MooseSyntax.h"
 
 InputParameters
-qpxTestApp::validParams()
+PhysicsTestApp::validParams()
 {
-  InputParameters params = qpxApp::validParams();
+  InputParameters params = PhysicsApp::validParams();
   params.set<bool>("use_legacy_material_output") = false;
   params.set<bool>("use_legacy_initial_residual_evaluation_behavior") = false;
   return params;
 }
 
-qpxTestApp::qpxTestApp(const InputParameters & parameters) : MooseApp(parameters)
+PhysicsTestApp::PhysicsTestApp(const InputParameters & parameters) : MooseApp(parameters)
 {
-  qpxTestApp::registerAll(
+  PhysicsTestApp::registerAll(
       _factory, _action_factory, _syntax, getParam<bool>("allow_test_objects"));
 }
 
-qpxTestApp::~qpxTestApp() {}
+PhysicsTestApp::~PhysicsTestApp() {}
 
 void
-qpxTestApp::registerAll(Factory & f, ActionFactory & af, Syntax & s, bool use_test_objs)
+PhysicsTestApp::registerAll(Factory & f, ActionFactory & af, Syntax & s, bool use_test_objs)
 {
-  qpxApp::registerAll(f, af, s);
+  PhysicsApp::registerAll(f, af, s);
   if (use_test_objs)
   {
-    Registry::registerObjectsTo(f, {"qpxTestApp"});
-    Registry::registerActionsTo(af, {"qpxTestApp"});
+    Registry::registerObjectsTo(f, {"PhysicsTestApp"});
+    Registry::registerActionsTo(af, {"PhysicsTestApp"});
   }
 }
 
 void
-qpxTestApp::registerApps()
+PhysicsTestApp::registerApps()
 {
-  registerApp(qpxApp);
-  registerApp(qpxTestApp);
+  registerApp(PhysicsApp);
+  registerApp(PhysicsTestApp);
 }
 
 /***************************************************************************************************
@@ -52,12 +52,12 @@ qpxTestApp::registerApps()
  **************************************************************************************************/
 // External entry point for dynamic application loading
 extern "C" void
-qpxTestApp__registerAll(Factory & f, ActionFactory & af, Syntax & s)
+PhysicsTestApp__registerAll(Factory & f, ActionFactory & af, Syntax & s)
 {
-  qpxTestApp::registerAll(f, af, s);
+  PhysicsTestApp::registerAll(f, af, s);
 }
 extern "C" void
-qpxTestApp__registerApps()
+PhysicsTestApp__registerApps()
 {
-  qpxTestApp::registerApps();
+  PhysicsTestApp::registerApps();
 }

@@ -1,8 +1,8 @@
-# QPX source provenance
+# Physics source provenance
 
-Canonical source owner: `moose-test-repo/qpx_app`.
+Canonical source owner: `moose-test-repo/physics_app`.
 
-Imported for Issue #165 from the QPX clean-build prototype source artifact:
+Imported for Issue #165 from the legacy clean-build prototype source artifact:
 
 `sha256:4f9973c9e8e2dc07be5b485338cc0e921578e0dc754bca90c499d0071f199e03`
 
