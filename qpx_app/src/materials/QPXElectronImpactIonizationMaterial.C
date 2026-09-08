@@ -7,8 +7,9 @@ QPXElectronImpactIonizationMaterial::validParams()
 {
   auto params = FunctorMaterial::validParams();
   params.addClassDescription(
-      "Computes the strict mean-energy lookup rate and shared particle sources for "
-      "e + O2 -> 2e + O2p without electron-energy coupling.");
+      "Computes the single strict-lookup molar reaction progress R_ion_O2 for "
+      "e + O2 -> 2e + O2p. Particle source projection is owned separately and "
+      "must consume this functor; electron-energy coupling remains deferred to #26 E8.");
   params.addRequiredParam<FileName>("rate_table_file",
                                     "Two-column table: mean energy [eV], k_raw [m^3/(mol s)].");
   params.addRequiredParam<MooseFunctorName>("mean_energy", "Solved mean electron energy [eV].");
@@ -16,7 +17,6 @@ QPXElectronImpactIonizationMaterial::validParams()
                                             "Physical electron number density [1/m^3].");
   params.addRequiredParam<MooseFunctorName>("o2_molar_concentration",
                                             "O2 molar concentration [mol/m^3].");
-  params.addParam<Real>("o2_molar_mass", 31.998e-3, "O2 molar mass [kg/mol].");
   return params;
 }
 
@@ -27,8 +27,7 @@ QPXElectronImpactIonizationMaterial::QPXElectronImpactIonizationMaterial(
     _electron_number_density(getFunctor<ADReal>("electron_number_density")),
     _o2_molar_concentration(getFunctor<ADReal>("o2_molar_concentration")),
     _rate_table_file(getParam<FileName>("rate_table_file")),
-    _table(_rate_table_file, 1, {2}),
-    _o2_molar_mass(getParam<Real>("o2_molar_mass"))
+    _table(_rate_table_file, 1, {2})
 {
   constexpr Real N_A = 6.02214076e23;
 
@@ -43,36 +42,6 @@ QPXElectronImpactIonizationMaterial::QPXElectronImpactIonizationMaterial(
         if (c_o2.value() < 0.0)
           mooseError("QPXElectronImpactIonizationMaterial requires c_O2 >= 0.");
         return interpolateStrict(_mean_energy(r, state)) * (n_e / N_A) * c_o2;
-      });
-
-  addFunctorProperty<ADReal>(
-      "O2_ionization_mass_source",
-      [this](const auto & r, const auto & state) -> ADReal
-      {
-        const ADReal R = interpolateStrict(_mean_energy(r, state)) *
-                         (_electron_number_density(r, state) / N_A) *
-                         _o2_molar_concentration(r, state);
-        return -_o2_molar_mass * R;
-      });
-
-  addFunctorProperty<ADReal>(
-      "O2p_ionization_mass_source",
-      [this](const auto & r, const auto & state) -> ADReal
-      {
-        const ADReal R = interpolateStrict(_mean_energy(r, state)) *
-                         (_electron_number_density(r, state) / N_A) *
-                         _o2_molar_concentration(r, state);
-        return _o2_molar_mass * R;
-      });
-
-  addFunctorProperty<ADReal>(
-      "electron_ionization_number_source",
-      [this](const auto & r, const auto & state) -> ADReal
-      {
-        const ADReal R = interpolateStrict(_mean_energy(r, state)) *
-                         (_electron_number_density(r, state) / N_A) *
-                         _o2_molar_concentration(r, state);
-        return N_A * R;
       });
 }
 
