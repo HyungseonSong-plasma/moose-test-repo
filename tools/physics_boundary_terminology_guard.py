@@ -6,7 +6,7 @@ import ast
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-HARNESS = ROOT / "qpx_harness"
+HARNESS = ROOT / "physics_harness"
 
 RETIRED_OWNER_PATHS = (
     HARNESS / "moose",
@@ -15,31 +15,31 @@ RETIRED_OWNER_PATHS = (
     HARNESS / "adapters" / "moose" / "mutation_spec" / "models.py",
 )
 RETIRED_IMPORT_PREFIXES = (
-    "qpx_harness.moose",
-    "qpx_harness.models",
-    "qpx_harness.ontology.model",
-    "qpx_harness.adapters.moose.mutation_spec.models",
+    "physics_harness.moose",
+    "physics_harness.models",
+    "physics_harness.ontology.model",
+    "physics_harness.adapters.moose.mutation_spec.models",
 )
 CONCRETE_MOOSE_PREFIXES = (
-    "qpx_harness.adapters.moose.input",
-    "qpx_harness.adapters.moose.blocks",
-    "qpx_harness.adapters.moose.parameters",
-    "qpx_harness.adapters.moose.preflight",
-    "qpx_harness.adapters.moose.log",
-    "qpx_harness.adapters.moose.nonlinear_solver",
-    "qpx_harness.adapters.moose.output_observation",
-    "qpx_harness.adapters.moose.petsc_options",
-    "qpx_harness.adapters.moose.transforms",
-    "qpx_harness.adapters.moose.regression",
+    "physics_harness.adapters.moose.input",
+    "physics_harness.adapters.moose.blocks",
+    "physics_harness.adapters.moose.parameters",
+    "physics_harness.adapters.moose.preflight",
+    "physics_harness.adapters.moose.log",
+    "physics_harness.adapters.moose.nonlinear_solver",
+    "physics_harness.adapters.moose.output_observation",
+    "physics_harness.adapters.moose.petsc_options",
+    "physics_harness.adapters.moose.transforms",
+    "physics_harness.adapters.moose.regression",
 )
 CANONICAL_MODEL_FIELD_FILES = (
-    "qpx_harness/specification/schema.py",
-    "qpx_harness/ontology/records.py",
-    "qpx_harness/execution/plan.py",
-    "qpx_harness/adapters/moose/target.py",
+    "physics_harness/specification/schema.py",
+    "physics_harness/ontology/records.py",
+    "physics_harness/execution/plan.py",
+    "physics_harness/adapters/moose/target.py",
 )
 EXPLICIT_CONCRETE_PRESENTATION_EXEMPTIONS = {
-    "qpx_harness/cli/app.py": {"qpx_harness.adapters.moose.preflight"},
+    "physics_harness/cli/app.py": {"physics_harness.adapters.moose.preflight"},
 }
 
 
@@ -95,7 +95,7 @@ def main() -> int:
         if "__pycache__" in path.parts:
             continue
         rel = _rel(path)
-        inside_moose_boundary = rel.startswith("qpx_harness/adapters/moose/")
+        inside_moose_boundary = rel.startswith("physics_harness/adapters/moose/")
         exemptions = EXPLICIT_CONCRETE_PRESENTATION_EXEMPTIONS.get(rel, set())
         for ref in sorted(_imports(path)):
             if _matches(ref, RETIRED_IMPORT_PREFIXES):
@@ -103,7 +103,7 @@ def main() -> int:
             if _matches(ref, CONCRETE_MOOSE_PREFIXES) and not inside_moose_boundary:
                 if not any(ref == allowed or ref.startswith(allowed + ".") for allowed in exemptions):
                     concrete_edges.append(f"{rel} -> {ref}")
-                    if rel.startswith("qpx_harness/evidence/"):
+                    if rel.startswith("physics_harness/evidence/"):
                         evidence_solver_edges.append(f"{rel} -> {ref}")
 
     ambiguous_fields: list[str] = []
