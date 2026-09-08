@@ -1,0 +1,112 @@
+name: Build and publish Physics build base
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: physics-build-base-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  IMAGE: ghcr.io/hyungseonsong-plasma/physics-build-base
+  IMAGE_TAG: moose-9f388366-deps-ba26970-16a26d5-9eceffb-v1
+  MOOSE_DEV_TAG: '2026.06.16'
+  MOOSE_SHA: 9f388366ccf38b9c34542ec5561198249fde0ac9
+  CRANE_SHA: ba26970cf419dcac563a20ed7079d445bc6341c3
+  SQUIRREL_SHA: 16a26d504f3ee11161a86d4e3ebf3c0e5f2afbb1
+  ZAPDOS_SHA: 9eceffbc46048c3760bbfa9a7f1ca681ae35af1d
+
+jobs:
+  build-base:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 1
+
+      - name: Log in to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f
+
+      - name: Build and publish precompiled Physics dependency base
+        id: build
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8
+        with:
+          context: ci/physics-build-base
+          file: ci/physics-build-base/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: ${{ env.IMAGE }}:${{ env.IMAGE_TAG }}
+          provenance: true
+          build-args: |
+            MOOSE_DEV_TAG=${{ env.MOOSE_DEV_TAG }}
+            MOOSE_SHA=${{ env.MOOSE_SHA }}
+            CRANE_SHA=${{ env.CRANE_SHA }}
+            SQUIRREL_SHA=${{ env.SQUIRREL_SHA }}
+            ZAPDOS_SHA=${{ env.ZAPDOS_SHA }}
+          cache-from: type=gha,scope=physics-build-base
+          cache-to: type=gha,mode=max,scope=physics-build-base
+
+      - name: Verify published build base by immutable digest
+        id: verify
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ref="${IMAGE}@${{ steps.build.outputs.digest }}"
+          start="$(date +%s)"
+          docker pull "$ref"
+          end="$(date +%s)"
+          size_bytes="$(docker image inspect "$ref" --format '{{.Size}}')"
+
+          test "$(docker image inspect "$ref" --format '{{ index .Config.Labels "io.physics.moose.sha" }}')" = "$MOOSE_SHA"
+          test "$(docker image inspect "$ref" --format '{{ index .Config.Labels "io.physics.crane.sha" }}')" = "$CRANE_SHA"
+          test "$(docker image inspect "$ref" --format '{{ index .Config.Labels "io.physics.squirrel.sha" }}')" = "$SQUIRREL_SHA"
+          test "$(docker image inspect "$ref" --format '{{ index .Config.Labels "io.physics.zapdos.sha" }}')" = "$ZAPDOS_SHA"
+
+          docker run --rm --entrypoint /bin/bash "$ref" -lc '
+            source /environment
+            test -e /opt/physics_vendor/squirrel/lib/libsquirrel-opt.la
+            test -e /opt/physics_vendor/crane/lib/libcrane-opt.la
+            test -e /opt/physics_vendor/zapdos/lib/libzapdos-opt.la
+            test -f /opt/physics-build-base/BUILD_BASE_PROVENANCE.txt
+          '
+
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+          echo "pull_seconds=$((end - start))" >> "$GITHUB_OUTPUT"
+          echo "size_bytes=$size_bytes" >> "$GITHUB_OUTPUT"
+
+      - name: Record build-base evidence
+        shell: bash
+        run: |
+          {
+            echo "IMAGE=${IMAGE}:${IMAGE_TAG}"
+            echo "IMAGE_DIGEST=${{ steps.build.outputs.digest }}"
+            echo "IMAGE_REF=${{ steps.verify.outputs.ref }}"
+            echo "IMAGE_PULL_SECONDS=${{ steps.verify.outputs.pull_seconds }}"
+            echo "IMAGE_LOCAL_SIZE_BYTES=${{ steps.verify.outputs.size_bytes }}"
+            echo "MOOSE_DEV_TAG=${MOOSE_DEV_TAG}"
+            echo "MOOSE_SHA=${MOOSE_SHA}"
+            echo "CRANE_SHA=${CRANE_SHA}"
+            echo "SQUIRREL_SHA=${SQUIRREL_SHA}"
+            echo "ZAPDOS_SHA=${ZAPDOS_SHA}"
+            echo "SCIENTIFIC_SEMANTICS_CHANGED=false"
+          } > physics-build-base-evidence.txt
+
+      - name: Upload build-base evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: physics-build-base-evidence
+          path: physics-build-base-evidence.txt
