@@ -1,13 +1,13 @@
-#include "QPXIonWallFluxMaterial.h"
+#include "PhysicsIonWallFluxMaterial.h"
 
-#include "QPX.h"
+#include "Physics.h"
 #include "FaceInfo.h"
 #include "MooseFunctorArguments.h"
 
 #include <cmath>
 #include <type_traits>
 
-registerMooseObject("qpxApp", QPXIonWallFluxMaterial);
+registerMooseObject("PhysicsApp", PhysicsIonWallFluxMaterial);
 
 namespace
 {
@@ -42,7 +42,7 @@ RealVectorValue
 outwardNormal(const Moose::FaceArg & face)
 {
   if (!face.fi)
-    mooseError("QPXIonWallFluxMaterial received a FaceArg without FaceInfo.");
+    mooseError("PhysicsIonWallFluxMaterial received a FaceArg without FaceInfo.");
 
   RealVectorValue n = face.fi->normal();
 
@@ -55,7 +55,7 @@ outwardNormal(const Moose::FaceArg & face)
       return -n;
 
     mooseError(
-        "QPXIonWallFluxMaterial received a FaceArg whose face_side does not "
+        "PhysicsIonWallFluxMaterial received a FaceArg whose face_side does not "
         "match either FaceInfo side.");
   }
 
@@ -63,14 +63,14 @@ outwardNormal(const Moose::FaceArg & face)
   // boundary. Internal plasma-material interfaces must supply face_side.
   if (face.fi->neighborPtr())
     mooseError(
-        "QPXIonWallFluxMaterial requires a sided FaceArg on internal boundaries.");
+        "PhysicsIonWallFluxMaterial requires a sided FaceArg on internal boundaries.");
 
   return n;
 }
 }
 
 InputParameters
-QPXIonWallFluxMaterial::validParams()
+PhysicsIonWallFluxMaterial::validParams()
 {
   auto params = FunctorMaterial::validParams();
 
@@ -108,7 +108,7 @@ QPXIonWallFluxMaterial::validParams()
   return params;
 }
 
-QPXIonWallFluxMaterial::QPXIonWallFluxMaterial(
+PhysicsIonWallFluxMaterial::PhysicsIonWallFluxMaterial(
     const InputParameters & parameters)
   : FunctorMaterial(parameters),
     _ion_number_density(getFunctor<ADReal>("ion_number_density")),
@@ -151,11 +151,11 @@ QPXIonWallFluxMaterial::QPXIonWallFluxMaterial(
           const ADReal T_g = _gas_temperature(r, state);
 
           if (MetaPhysicL::raw_value(T_g) <= 0.0)
-            mooseError("QPXIonWallFluxMaterial requires gas_temperature > 0 K.");
+            mooseError("PhysicsIonWallFluxMaterial requires gas_temperature > 0 K.");
 
           const ADReal v_th =
-              sqrt(8.0 * QPX_CONSTANTS::R * T_g /
-                   (QPX_CONSTANTS::pi * _molar_mass));
+              sqrt(8.0 * PHYSICS_CONSTANTS::R * T_g /
+                   (PHYSICS_CONSTANTS::pi * _molar_mass));
 
           return _sticking * 0.25 * n_i * v_th;
         }
@@ -203,11 +203,11 @@ QPXIonWallFluxMaterial::QPXIonWallFluxMaterial(
           const ADReal T_g = _gas_temperature(r, state);
 
           if (MetaPhysicL::raw_value(T_g) <= 0.0)
-            mooseError("QPXIonWallFluxMaterial requires gas_temperature > 0 K.");
+            mooseError("PhysicsIonWallFluxMaterial requires gas_temperature > 0 K.");
 
           const ADReal v_th =
-              sqrt(8.0 * QPX_CONSTANTS::R * T_g /
-                   (QPX_CONSTANTS::pi * _molar_mass));
+              sqrt(8.0 * PHYSICS_CONSTANTS::R * T_g /
+                   (PHYSICS_CONSTANTS::pi * _molar_mass));
 
           const ADReal surface =
               _sticking * 0.25 * n_i * v_th;
@@ -243,11 +243,11 @@ QPXIonWallFluxMaterial::QPXIonWallFluxMaterial(
           const ADReal n_i = _ion_number_density(r, state);
           const ADReal T_g = _gas_temperature(r, state);
           const ADReal v_th =
-              sqrt(8.0 * QPX_CONSTANTS::R * T_g /
-                   (QPX_CONSTANTS::pi * _molar_mass));
+              sqrt(8.0 * PHYSICS_CONSTANTS::R * T_g /
+                   (PHYSICS_CONSTANTS::pi * _molar_mass));
 
           return _sticking * 0.25 * n_i * v_th *
-                 _molar_mass / QPX_CONSTANTS::N_A;
+                 _molar_mass / PHYSICS_CONSTANTS::N_A;
         }
       });
 
@@ -273,7 +273,7 @@ QPXIonWallFluxMaterial::QPXIonWallFluxMaterial(
           return _ion_number_density(r, state) *
                  _mobility(r, state) *
                  outward_drift_field *
-                 _molar_mass / QPX_CONSTANTS::N_A;
+                 _molar_mass / PHYSICS_CONSTANTS::N_A;
         }
       });
 
@@ -292,8 +292,8 @@ QPXIonWallFluxMaterial::QPXIonWallFluxMaterial(
           const ADReal n_i = _ion_number_density(r, state);
           const ADReal T_g = _gas_temperature(r, state);
           const ADReal v_th =
-              sqrt(8.0 * QPX_CONSTANTS::R * T_g /
-                   (QPX_CONSTANTS::pi * _molar_mass));
+              sqrt(8.0 * PHYSICS_CONSTANTS::R * T_g /
+                   (PHYSICS_CONSTANTS::pi * _molar_mass));
 
           const ADReal surface =
               _sticking * 0.25 * n_i * v_th;
@@ -311,7 +311,7 @@ QPXIonWallFluxMaterial::QPXIonWallFluxMaterial(
               n_i * _mobility(r, state) * outward_drift_field;
 
           return (surface + migration) *
-                 _molar_mass / QPX_CONSTANTS::N_A;
+                 _molar_mass / PHYSICS_CONSTANTS::N_A;
         }
       });
 }

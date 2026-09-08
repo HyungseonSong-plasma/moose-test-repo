@@ -16,11 +16,11 @@
  * Positive return values are outward energy loss; negative values inject
  * electron energy into the domain.
  */
-class QPXFVElectronEnergyWallFluxBC : public FVFluxBC
+class PhysicsFVElectronEnergyWallFluxBC : public FVFluxBC
 {
 public:
   static InputParameters validParams();
-  QPXFVElectronEnergyWallFluxBC(const InputParameters & parameters);
+  PhysicsFVElectronEnergyWallFluxBC(const InputParameters & parameters);
 
 protected:
   ADReal computeQpResidual() override;

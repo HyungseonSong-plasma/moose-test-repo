@@ -1,16 +1,16 @@
-#include "QPXFVSurfaceChargeInterface.h"
+#include "PhysicsFVSurfaceChargeInterface.h"
 
-#include "QPX.h"
-#include "QPXSurfaceChargeState.h"
+#include "Physics.h"
+#include "PhysicsSurfaceChargeState.h"
 #include "FaceInfo.h"
 #include "MooseVariableFV.h"
 
 #include <cmath>
 
-registerMooseObject("qpxApp", QPXFVSurfaceChargeInterface);
+registerMooseObject("PhysicsApp", PhysicsFVSurfaceChargeInterface);
 
 InputParameters
-QPXFVSurfaceChargeInterface::validParams()
+PhysicsFVSurfaceChargeInterface::validParams()
 {
   auto params = FVInterfaceKernel::validParams();
 
@@ -28,12 +28,12 @@ QPXFVSurfaceChargeInterface::validParams()
   params.addParam<bool>(
       "use_surface_charge_state",
       false,
-      "Use QPXSurfaceChargeState plus the current wall-number-flux functor "
+      "Use PhysicsSurfaceChargeState plus the current wall-number-flux functor "
       "to construct the current implicit-Euler surface charge.");
 
   params.addParam<UserObjectName>(
       "surface_charge_state",
-      "QPXSurfaceChargeState that owns converged face-local sigma_s.");
+      "PhysicsSurfaceChargeState that owns converged face-local sigma_s.");
 
   params.addParam<MooseFunctorName>(
       "wall_number_flux",
@@ -51,7 +51,7 @@ QPXFVSurfaceChargeInterface::validParams()
   return params;
 }
 
-QPXFVSurfaceChargeInterface::QPXFVSurfaceChargeInterface(
+PhysicsFVSurfaceChargeInterface::PhysicsFVSurfaceChargeInterface(
     const InputParameters & parameters)
   : FVInterfaceKernel(parameters),
     _coeff1(getFunctor<ADReal>("coeff1")),
@@ -64,7 +64,7 @@ QPXFVSurfaceChargeInterface::QPXFVSurfaceChargeInterface(
   if (&var1() != &var2())
     paramError(
         "variable2",
-        "QPXFVSurfaceChargeInterface requires the same FV potential variable "
+        "PhysicsFVSurfaceChargeInterface requires the same FV potential variable "
         "on both sides. Omit variable2 or set it equal to variable1.");
 
   if (_use_surface_charge_state)
@@ -82,7 +82,7 @@ QPXFVSurfaceChargeInterface::QPXFVSurfaceChargeInterface(
           "use_surface_charge_state=true.");
 
     _surface_charge_state =
-        &getUserObject<QPXSurfaceChargeState>("surface_charge_state");
+        &getUserObject<PhysicsSurfaceChargeState>("surface_charge_state");
 
     _wall_number_flux =
         &getFunctor<ADReal>("wall_number_flux");
@@ -90,7 +90,7 @@ QPXFVSurfaceChargeInterface::QPXFVSurfaceChargeInterface(
 }
 
 ADReal
-QPXFVSurfaceChargeInterface::evaluateFaceFunctor(
+PhysicsFVSurfaceChargeInterface::evaluateFaceFunctor(
     const Moose::Functor<ADReal> & functor) const
 {
   const bool on_elem = functor.hasFaceSide(*_face_info, true);
@@ -124,7 +124,7 @@ QPXFVSurfaceChargeInterface::evaluateFaceFunctor(
 }
 
 ADReal
-QPXFVSurfaceChargeInterface::currentSurfaceCharge() const
+PhysicsFVSurfaceChargeInterface::currentSurfaceCharge() const
 {
   if (!_use_surface_charge_state)
     return _surface_charge[_qp];
@@ -140,11 +140,11 @@ QPXFVSurfaceChargeInterface::currentSurfaceCharge() const
       evaluateFaceFunctor(*_wall_number_flux);
 
   return sigma_old
-         - QPX_CONSTANTS::e * gamma_e_wall * _dt;
+         - PHYSICS_CONSTANTS::e * gamma_e_wall * _dt;
 }
 
 std::pair<ADReal, ADReal>
-QPXFVSurfaceChargeInterface::oneSidedFluxes() const
+PhysicsFVSurfaceChargeInterface::oneSidedFluxes() const
 {
   const auto state = determineState();
 
@@ -169,7 +169,7 @@ QPXFVSurfaceChargeInterface::oneSidedFluxes() const
 
   if (d1 <= 0.0 || d2 <= 0.0)
     mooseError(
-        "QPXFVSurfaceChargeInterface encountered a non-positive cell-to-face "
+        "PhysicsFVSurfaceChargeInterface encountered a non-positive cell-to-face "
         "normal distance.");
 
   const Moose::ElemArg arg1 = elemIsOne() ? elemArg() : neighborArg();
@@ -181,7 +181,7 @@ QPXFVSurfaceChargeInterface::oneSidedFluxes() const
   if (MetaPhysicL::raw_value(eps1) <= 0.0 ||
       MetaPhysicL::raw_value(eps2) <= 0.0)
     mooseError(
-        "QPXFVSurfaceChargeInterface requires positive relative permittivity.");
+        "PhysicsFVSurfaceChargeInterface requires positive relative permittivity.");
 
   const ADReal phi1 = var1().getElemValue(elem1, state);
   const ADReal phi2 = var2().getElemValue(elem2, state);
@@ -190,7 +190,7 @@ QPXFVSurfaceChargeInterface::oneSidedFluxes() const
   const ADReal g2 = eps2 / d2;
 
   const ADReal sigma_scaled =
-      currentSurfaceCharge() / QPX_CONSTANTS::eps_0;
+      currentSurfaceCharge() / PHYSICS_CONSTANTS::eps_0;
 
   const ADReal phi_face =
       (g1 * phi1 + g2 * phi2 + sigma_scaled) / (g1 + g2);
@@ -202,13 +202,13 @@ QPXFVSurfaceChargeInterface::oneSidedFluxes() const
 }
 
 ADReal
-QPXFVSurfaceChargeInterface::computeQpResidual()
+PhysicsFVSurfaceChargeInterface::computeQpResidual()
 {
   return oneSidedFluxes().first;
 }
 
 void
-QPXFVSurfaceChargeInterface::computeResidual(const FaceInfo & fi)
+PhysicsFVSurfaceChargeInterface::computeResidual(const FaceInfo & fi)
 {
   setupData(fi);
 
@@ -223,7 +223,7 @@ QPXFVSurfaceChargeInterface::computeResidual(const FaceInfo & fi)
 }
 
 void
-QPXFVSurfaceChargeInterface::computeJacobian(const FaceInfo & fi)
+PhysicsFVSurfaceChargeInterface::computeJacobian(const FaceInfo & fi)
 {
   setupData(fi);
 
@@ -241,7 +241,7 @@ QPXFVSurfaceChargeInterface::computeJacobian(const FaceInfo & fi)
 
   mooseAssert(
       dofs1.size() == 1 && dofs2.size() == 1,
-      "QPXFVSurfaceChargeInterface currently requires CONSTANT MONOMIAL FV "
+      "PhysicsFVSurfaceChargeInterface currently requires CONSTANT MONOMIAL FV "
       "variables.");
 
   addResidualsAndJacobian(

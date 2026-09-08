@@ -4,7 +4,7 @@
 
 #include <utility>
 
-class QPXSurfaceChargeState;
+class PhysicsSurfaceChargeState;
 
 /**
  * Finite-volume electrostatic interface with surface charge.
@@ -17,7 +17,7 @@ class QPXSurfaceChargeState;
  *
  * dynamic face state:
  *   use_surface_charge_state = true
- *   surface_charge_state = <QPXSurfaceChargeState>
+ *   surface_charge_state = <PhysicsSurfaceChargeState>
  *   wall_number_flux = <electron wall flux functor>
  *
  * In dynamic mode the nonlinear residual uses
@@ -26,7 +26,7 @@ class QPXSurfaceChargeState;
  *     = sigma_state^n(face)
  *       - e * Gamma_e,w^(n+1)(face) * dt
  *
- * while QPXSurfaceChargeState commits the converged value at TIMESTEP_END.
+ * while PhysicsSurfaceChargeState commits the converged value at TIMESTEP_END.
  *
  * One FV potential variable spans both subdomains:
  *
@@ -34,11 +34,11 @@ class QPXSurfaceChargeState;
  *
  * with n pointing from subdomain1 to subdomain2.
  */
-class QPXFVSurfaceChargeInterface : public FVInterfaceKernel
+class PhysicsFVSurfaceChargeInterface : public FVInterfaceKernel
 {
 public:
   static InputParameters validParams();
-  QPXFVSurfaceChargeInterface(const InputParameters & parameters);
+  PhysicsFVSurfaceChargeInterface(const InputParameters & parameters);
 
   void computeResidual(const FaceInfo & fi) override;
   void computeJacobian(const FaceInfo & fi) override;
@@ -62,6 +62,6 @@ private:
 
   const bool _use_surface_charge_state;
 
-  const QPXSurfaceChargeState * _surface_charge_state;
+  const PhysicsSurfaceChargeState * _surface_charge_state;
   const Moose::Functor<ADReal> * _wall_number_flux;
 };

@@ -29,11 +29,11 @@
  * should evaluate them with a sided FaceArg so that the same physical face
  * flux is shared by all consumers.
  */
-class QPXIonWallFluxMaterial : public FunctorMaterial
+class PhysicsIonWallFluxMaterial : public FunctorMaterial
 {
 public:
   static InputParameters validParams();
-  QPXIonWallFluxMaterial(const InputParameters & parameters);
+  PhysicsIonWallFluxMaterial(const InputParameters & parameters);
 
 protected:
   const Moose::Functor<ADReal> & _ion_number_density;

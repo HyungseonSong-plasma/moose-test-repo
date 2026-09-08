@@ -1,11 +1,11 @@
-#include "QPXFVElectronEnergyWallFluxBC.h"
+#include "PhysicsFVElectronEnergyWallFluxBC.h"
 
 #include <cmath>
 
-registerMooseObject("qpxApp", QPXFVElectronEnergyWallFluxBC);
+registerMooseObject("PhysicsApp", PhysicsFVElectronEnergyWallFluxBC);
 
 InputParameters
-QPXFVElectronEnergyWallFluxBC::validParams()
+PhysicsFVElectronEnergyWallFluxBC::validParams()
 {
   auto params = FVFluxBC::validParams();
 
@@ -29,7 +29,7 @@ QPXFVElectronEnergyWallFluxBC::validParams()
   return params;
 }
 
-QPXFVElectronEnergyWallFluxBC::QPXFVElectronEnergyWallFluxBC(
+PhysicsFVElectronEnergyWallFluxBC::PhysicsFVElectronEnergyWallFluxBC(
     const InputParameters & parameters)
   : FVFluxBC(parameters),
     _electron_energy_density(getFunctor<ADReal>("electron_energy_density")),
@@ -42,7 +42,7 @@ QPXFVElectronEnergyWallFluxBC::QPXFVElectronEnergyWallFluxBC(
 }
 
 ADReal
-QPXFVElectronEnergyWallFluxBC::computeQpResidual()
+PhysicsFVElectronEnergyWallFluxBC::computeQpResidual()
 {
   using std::sqrt;
 
