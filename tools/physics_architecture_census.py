@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Machine-checkable architecture census for capability-oriented QPX ownership."""
+"""Machine-checkable architecture census for capability-oriented Physics ownership."""
 from __future__ import annotations
 
 import argparse
@@ -10,7 +10,7 @@ from collections import Counter
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-HARNESS = ROOT / "qpx_harness"
+HARNESS = ROOT / "physics_harness"
 OWNERSHIP_PATH = ROOT / "docs" / "development" / "2026-09-01_issue73_recipe_ownership.json"
 
 # Transitional census vocabulary: retained legacy capability packages and the
@@ -58,32 +58,32 @@ GENERIC_ISSUE_EDGE_DIRS = {
 
 ISSUE_NAME_RE = re.compile(r"(?:^|/)(?:issue\d+|coupling_evr\d+)(?:_|/|\.py)", re.IGNORECASE)
 FORBIDDEN_PRODUCTION_NAMESPACE_RE = re.compile(
-    r"^qpx_harness/(?:issue\d+(?:_|/|\.py)|coupling_evr\d+(?:_|/|\.py))",
+    r"^physics_harness/(?:issue\d+(?:_|/|\.py)|coupling_evr\d+(?:_|/|\.py))",
     re.IGNORECASE,
 )
 FORBIDDEN_GENERIC_PREFIXES = (
     "recipes",
-    "qpx_harness.issue",
-    "qpx_harness.electron_inventory_nullspace",
-    "qpx_harness.coupling_evr",
+    "physics_harness.issue",
+    "physics_harness.electron_inventory_nullspace",
+    "physics_harness.coupling_evr",
 )
 
 # #143 compatibility-retirement scope. These are not canonical responsibility
 # owners even while their physical namespaces remain during bounded migration.
 LEGACY_NAMESPACE_PATHS = {
-    "qpx_harness.cpp": ROOT / "qpx_harness" / "cpp",
-    "qpx_harness.diagnose": ROOT / "qpx_harness" / "diagnose",
-    "qpx_harness.dmix": ROOT / "qpx_harness" / "dmix",
-    "qpx_harness.inventory": ROOT / "qpx_harness" / "inventory",
-    "qpx_harness.performance": ROOT / "qpx_harness" / "performance",
-    "qpx_harness.spec": ROOT / "qpx_harness" / "spec",
+    "physics_harness.cpp": ROOT / "physics_harness" / "cpp",
+    "physics_harness.diagnose": ROOT / "physics_harness" / "diagnose",
+    "physics_harness.dmix": ROOT / "physics_harness" / "dmix",
+    "physics_harness.inventory": ROOT / "physics_harness" / "inventory",
+    "physics_harness.performance": ROOT / "physics_harness" / "performance",
+    "physics_harness.spec": ROOT / "physics_harness" / "spec",
     "recipes": ROOT / "recipes",
 }
 # Once a namespace has completed zero-caller retirement, recreating it is a
 # normal-CI architecture regression rather than merely unfinished #143 debt.
 RETIRED_LEGACY_NAMESPACES = set(LEGACY_NAMESPACE_PATHS)
 SCAN_ROOTS = (
-    ROOT / "qpx_harness",
+    ROOT / "physics_harness",
     ROOT / "tests",
     ROOT / "experiments",
     ROOT / "recipes",
@@ -129,7 +129,7 @@ def classify(path: Path, recipe_map: dict[str, dict]) -> str:
         return "CLI_PRESENTATION"
     if parts[0] == "scripts":
         return "RETIREMENT_CANDIDATE"
-    if parts[0] != "qpx_harness":
+    if parts[0] != "physics_harness":
         return "UNCLASSIFIED"
     if len(parts) >= 3 and parts[1] in CAPABILITY_DIRS:
         return "CAPABILITY_OWNER"
@@ -137,7 +137,7 @@ def classify(path: Path, recipe_map: dict[str, dict]) -> str:
         return "CLI_PRESENTATION"
     if ISSUE_NAME_RE.search(rel):
         return "ISSUE_SPECIFIC_POLICY"
-    if rel == "qpx_harness/__init__.py":
+    if rel == "physics_harness/__init__.py":
         return "PACKAGE_ENTRYPOINT"
     return "UNCLASSIFIED"
 
@@ -196,7 +196,7 @@ def generic_issue_edges(files: list[Path]) -> list[dict[str, str]]:
     for path in files:
         rel = _rel(path)
         parts = Path(rel).parts
-        if len(parts) < 3 or parts[0] != "qpx_harness" or parts[1] not in GENERIC_ISSUE_EDGE_DIRS:
+        if len(parts) < 3 or parts[0] != "physics_harness" or parts[1] not in GENERIC_ISSUE_EDGE_DIRS:
             continue
         for module in imported_modules(path):
             if module.startswith(FORBIDDEN_GENERIC_PREFIXES):
@@ -205,7 +205,7 @@ def generic_issue_edges(files: list[Path]) -> list[dict[str, str]]:
 
 
 def _caller_class(rel: str) -> str:
-    if rel.startswith("qpx_harness/"):
+    if rel.startswith("physics_harness/"):
         return "production"
     if rel.startswith("tests/"):
         return "test"
@@ -261,7 +261,7 @@ def legacy_namespace_presence() -> list[str]:
 
 
 def forbidden_production_namespaces(files: list[Path]) -> list[str]:
-    """Return issue/campaign-numbered Python ownership under qpx_harness/."""
+    """Return issue/campaign-numbered Python ownership under physics_harness/."""
     return sorted(
         _rel(path)
         for path in files
@@ -270,7 +270,7 @@ def forbidden_production_namespaces(files: list[Path]) -> list[str]:
 
 
 def module_package_collisions() -> list[str]:
-    """Return direct qpx_harness names that exist as both module and package."""
+    """Return direct physics_harness names that exist as both module and package."""
     modules = {
         path.stem
         for path in HARNESS.glob("*.py")
@@ -285,7 +285,7 @@ def module_package_collisions() -> list[str]:
 
 
 def root_modules() -> list[str]:
-    """Return unowned direct Python modules at the qpx_harness package root."""
+    """Return unowned direct Python modules at the physics_harness package root."""
     return sorted(
         _rel(path)
         for path in HARNESS.glob("*.py")
@@ -370,7 +370,7 @@ def build_census() -> dict:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="qpx-architecture-census")
+    parser = argparse.ArgumentParser(prog="physics-architecture-census")
     parser.add_argument("--json-out")
     parser.add_argument(
         "--require-no-legacy",
