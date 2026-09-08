@@ -7,7 +7,7 @@
 
 class MooseObject;
 
-namespace QPXUtils
+namespace PhysicsUtils
 {
 using Real = libMesh::Real;
 
@@ -43,7 +43,7 @@ std::pair<std::vector<Real>, std::vector<Real>> getReactionRates(const MooseObje
  */
 std::vector<Real> getCoefficients(const MooseObject & object, const std::string & property_file);
 
-namespace qpxinternal
+namespace physicsinternal
 {
 /**
  * Internal helper used for getting the file name defined by the parameter "property_file"
@@ -52,5 +52,5 @@ namespace qpxinternal
  * Performs error checking on whether or not the file exists, and reports errors to \p object.
  */
 std::string getReactionRateFileName(const MooseObject & object, const std::string & property_file);
-} // namespace qpxinternal
-} // namespace QPXUtils
+} // namespace physicsinternal
+} // namespace PhysicsUtils

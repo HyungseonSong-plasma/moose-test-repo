@@ -11,14 +11,14 @@
  * columns are stored as dependent values. This helper has no MOOSE dependency
  * and can be unit-tested independently.
  */
-class QPXLookupTable1D
+class PhysicsLookupTable1D
 {
 public:
-  QPXLookupTable1D() = default;
+  PhysicsLookupTable1D() = default;
 
-  QPXLookupTable1D(const std::string & filename,
-                   std::size_t coordinate_column,
-                   const std::vector<std::size_t> & value_columns);
+  PhysicsLookupTable1D(const std::string & filename,
+                       std::size_t coordinate_column,
+                       const std::vector<std::size_t> & value_columns);
 
   void load(const std::string & filename,
             std::size_t coordinate_column,

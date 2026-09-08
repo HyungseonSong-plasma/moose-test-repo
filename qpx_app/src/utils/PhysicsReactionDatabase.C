@@ -1,4 +1,4 @@
-#include "QPXReactionDatabase.h"
+#include "PhysicsReactionDatabase.h"
 
 #include <algorithm>
 #include <cmath>
@@ -12,7 +12,7 @@ std::runtime_error
 parseError(const std::string & filename, unsigned int line, const std::string & message)
 {
   std::ostringstream oss;
-  oss << "QPXReactionDatabase parse error in '" << filename << "' at line " << line << ": "
+  oss << "PhysicsReactionDatabase parse error in '" << filename << "' at line " << line << ": "
       << message;
   return std::runtime_error(oss.str());
 }
@@ -24,13 +24,13 @@ nearlyZero(double value, double scale)
 }
 }
 
-QPXReactionDatabase::QPXReactionDatabase(const std::string & filename)
+PhysicsReactionDatabase::PhysicsReactionDatabase(const std::string & filename)
 {
   load(filename);
 }
 
 std::string
-QPXReactionDatabase::trim(const std::string & value)
+PhysicsReactionDatabase::trim(const std::string & value)
 {
   const auto first = value.find_first_not_of(" \t\r\n");
   if (first == std::string::npos)
@@ -40,8 +40,8 @@ QPXReactionDatabase::trim(const std::string & value)
   return value.substr(first, last - first + 1);
 }
 
-QPXReactionDatabase::SpeciesKind
-QPXReactionDatabase::parseSpeciesKind(const std::string & value)
+PhysicsReactionDatabase::SpeciesKind
+PhysicsReactionDatabase::parseSpeciesKind(const std::string & value)
 {
   if (value == "heavy")
     return SpeciesKind::Heavy;
@@ -51,8 +51,8 @@ QPXReactionDatabase::parseSpeciesKind(const std::string & value)
   throw std::runtime_error("Unknown species kind '" + value + "'.");
 }
 
-QPXReactionDatabase::Domain
-QPXReactionDatabase::parseDomain(const std::string & value)
+PhysicsReactionDatabase::Domain
+PhysicsReactionDatabase::parseDomain(const std::string & value)
 {
   if (value == "volume")
     return Domain::Volume;
@@ -62,8 +62,8 @@ QPXReactionDatabase::parseDomain(const std::string & value)
   throw std::runtime_error("Unknown reaction domain '" + value + "'.");
 }
 
-QPXReactionDatabase::RateModel
-QPXReactionDatabase::parseRateModel(const std::string & value)
+PhysicsReactionDatabase::RateModel
+PhysicsReactionDatabase::parseRateModel(const std::string & value)
 {
   if (value == "constant")
     return RateModel::Constant;
@@ -77,8 +77,8 @@ QPXReactionDatabase::parseRateModel(const std::string & value)
   throw std::runtime_error("Unknown rate model '" + value + "'.");
 }
 
-QPXReactionDatabase::RateBasis
-QPXReactionDatabase::parseRateBasis(const std::string & value)
+PhysicsReactionDatabase::RateBasis
+PhysicsReactionDatabase::parseRateBasis(const std::string & value)
 {
   if (value == "molar")
     return RateBasis::Molar;
@@ -89,7 +89,7 @@ QPXReactionDatabase::parseRateBasis(const std::string & value)
 }
 
 std::size_t
-QPXReactionDatabase::speciesIndex(const std::string & name) const
+PhysicsReactionDatabase::speciesIndex(const std::string & name) const
 {
   const auto it = _species_index.find(name);
   if (it == _species_index.end())
@@ -99,7 +99,7 @@ QPXReactionDatabase::speciesIndex(const std::string & name) const
 }
 
 std::size_t
-QPXReactionDatabase::reactionIndex(const std::string & name) const
+PhysicsReactionDatabase::reactionIndex(const std::string & name) const
 {
   const auto it = _reaction_index.find(name);
   if (it == _reaction_index.end())
@@ -108,21 +108,21 @@ QPXReactionDatabase::reactionIndex(const std::string & name) const
   return it->second;
 }
 
-const QPXReactionDatabase::Species &
-QPXReactionDatabase::species(const std::string & name) const
+const PhysicsReactionDatabase::Species &
+PhysicsReactionDatabase::species(const std::string & name) const
 {
   return _species.at(speciesIndex(name));
 }
 
-const QPXReactionDatabase::Reaction &
-QPXReactionDatabase::reaction(const std::string & name) const
+const PhysicsReactionDatabase::Reaction &
+PhysicsReactionDatabase::reaction(const std::string & name) const
 {
   return _reactions.at(reactionIndex(name));
 }
 
 double
-QPXReactionDatabase::stoichCoefficient(const Reaction & reaction,
-                                       std::size_t species_index) const
+PhysicsReactionDatabase::stoichCoefficient(const Reaction & reaction,
+                                           std::size_t species_index) const
 {
   double nu = 0.0;
 
@@ -138,7 +138,7 @@ QPXReactionDatabase::stoichCoefficient(const Reaction & reaction,
 }
 
 double
-QPXReactionDatabase::heavyMassImbalance(const Reaction & reaction) const
+PhysicsReactionDatabase::heavyMassImbalance(const Reaction & reaction) const
 {
   double imbalance = 0.0;
 
@@ -150,7 +150,7 @@ QPXReactionDatabase::heavyMassImbalance(const Reaction & reaction) const
 }
 
 double
-QPXReactionDatabase::chargeImbalance(const Reaction & reaction) const
+PhysicsReactionDatabase::chargeImbalance(const Reaction & reaction) const
 {
   double imbalance = 0.0;
 
@@ -161,12 +161,12 @@ QPXReactionDatabase::chargeImbalance(const Reaction & reaction) const
 }
 
 void
-QPXReactionDatabase::finalizeReaction(Reaction & reaction,
-                                      bool have_A,
-                                      bool have_basis,
-                                      bool have_sticking,
-                                      const std::string & filename,
-                                      unsigned int line_number)
+PhysicsReactionDatabase::finalizeReaction(Reaction & reaction,
+                                          bool have_A,
+                                          bool have_basis,
+                                          bool have_sticking,
+                                          const std::string & filename,
+                                          unsigned int line_number)
 {
   if (reaction.reactants.empty())
     throw parseError(filename, line_number, "Reaction '" + reaction.name + "' has no reactants.");
@@ -266,11 +266,11 @@ QPXReactionDatabase::finalizeReaction(Reaction & reaction,
 }
 
 void
-QPXReactionDatabase::load(const std::string & filename)
+PhysicsReactionDatabase::load(const std::string & filename)
 {
   std::ifstream in(filename);
   if (!in.good())
-    throw std::runtime_error("QPXReactionDatabase could not open chemistry file '" + filename + "'.");
+    throw std::runtime_error("PhysicsReactionDatabase could not open chemistry file '" + filename + "'.");
 
   bool in_reaction = false;
   Reaction current;
@@ -439,8 +439,8 @@ QPXReactionDatabase::load(const std::string & filename)
     throw parseError(filename, line_number, "Reaction block was not terminated by 'end'.");
 
   if (_species.empty())
-    throw std::runtime_error("QPXReactionDatabase chemistry file contains no species.");
+    throw std::runtime_error("PhysicsReactionDatabase chemistry file contains no species.");
 
   if (_reactions.empty())
-    throw std::runtime_error("QPXReactionDatabase chemistry file contains no reactions.");
+    throw std::runtime_error("PhysicsReactionDatabase chemistry file contains no reactions.");
 }

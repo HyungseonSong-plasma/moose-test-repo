@@ -1,12 +1,12 @@
-#include "QPXSurfaceChargeState.h"
+#include "PhysicsSurfaceChargeState.h"
 
-#include "QPX.h"
+#include "Physics.h"
 #include "FaceInfo.h"
 
-registerMooseObject("qpxApp", QPXSurfaceChargeState);
+registerMooseObject("PhysicsApp", PhysicsSurfaceChargeState);
 
 InputParameters
-QPXSurfaceChargeState::validParams()
+PhysicsSurfaceChargeState::validParams()
 {
   auto params = SideUserObject::validParams();
   params += ADFunctorInterface::validParams();
@@ -28,7 +28,7 @@ QPXSurfaceChargeState::validParams()
   return params;
 }
 
-QPXSurfaceChargeState::QPXSurfaceChargeState(
+PhysicsSurfaceChargeState::PhysicsSurfaceChargeState(
     const InputParameters & parameters)
   : SideUserObject(parameters),
     ADFunctorInterface(this),
@@ -42,14 +42,14 @@ QPXSurfaceChargeState::QPXSurfaceChargeState(
 }
 
 void
-QPXSurfaceChargeState::initialize()
+PhysicsSurfaceChargeState::initialize()
 {
   _pending_surface_charge.clear();
   _pending_face_measure.clear();
 }
 
 ADReal
-QPXSurfaceChargeState::evaluateFaceFunctor(
+PhysicsSurfaceChargeState::evaluateFaceFunctor(
     const Moose::Functor<ADReal> & functor,
     const FaceInfo & fi) const
 {
@@ -84,14 +84,14 @@ QPXSurfaceChargeState::evaluateFaceFunctor(
 }
 
 Real
-QPXSurfaceChargeState::surfaceCharge(const dof_id_type face_id) const
+PhysicsSurfaceChargeState::surfaceCharge(const dof_id_type face_id) const
 {
   const auto it = _surface_charge.find(face_id);
   return it == _surface_charge.end() ? _initial_surface_charge : it->second;
 }
 
 void
-QPXSurfaceChargeState::execute()
+PhysicsSurfaceChargeState::execute()
 {
   // SideUserObject supplies the active FaceInfo(s) corresponding to the
   // currently visited sideset side. This also handles the case in which
@@ -107,7 +107,7 @@ QPXSurfaceChargeState::execute()
     // interface during the nonlinear solve.
     const Real sigma_new =
         surfaceCharge(fi->id())
-        - QPX_CONSTANTS::e * gamma * _dt;
+        - PHYSICS_CONSTANTS::e * gamma * _dt;
 
     _pending_surface_charge[fi->id()] = sigma_new;
     _pending_face_measure[fi->id()] =
@@ -116,9 +116,9 @@ QPXSurfaceChargeState::execute()
 }
 
 void
-QPXSurfaceChargeState::threadJoin(const UserObject & y)
+PhysicsSurfaceChargeState::threadJoin(const UserObject & y)
 {
-  const auto & other = static_cast<const QPXSurfaceChargeState &>(y);
+  const auto & other = static_cast<const PhysicsSurfaceChargeState &>(y);
 
   for (const auto & [id, value] : other._pending_surface_charge)
     _pending_surface_charge[id] = value;
@@ -128,7 +128,7 @@ QPXSurfaceChargeState::threadJoin(const UserObject & y)
 }
 
 void
-QPXSurfaceChargeState::finalize()
+PhysicsSurfaceChargeState::finalize()
 {
   // Commit the just-converged timestep to restartable storage.
   for (const auto & [id, sigma] : _pending_surface_charge)

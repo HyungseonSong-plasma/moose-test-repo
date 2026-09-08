@@ -1,19 +1,19 @@
-#include "QPXLookupTable1D.h"
+#include "PhysicsLookupTable1D.h"
 
 #include <algorithm>
 #include <fstream>
 #include <sstream>
 #include <stdexcept>
 
-QPXLookupTable1D::QPXLookupTable1D(const std::string & filename,
-                                   std::size_t coordinate_column,
-                                   const std::vector<std::size_t> & value_columns)
+PhysicsLookupTable1D::PhysicsLookupTable1D(const std::string & filename,
+                                           std::size_t coordinate_column,
+                                           const std::vector<std::size_t> & value_columns)
 {
   load(filename, coordinate_column, value_columns);
 }
 
 std::string
-QPXLookupTable1D::trim(const std::string & input)
+PhysicsLookupTable1D::trim(const std::string & input)
 {
   const auto first = input.find_first_not_of(" \t\r\n");
   if (first == std::string::npos)
@@ -24,23 +24,23 @@ QPXLookupTable1D::trim(const std::string & input)
 }
 
 void
-QPXLookupTable1D::load(const std::string & filename,
-                       std::size_t coordinate_column,
-                       const std::vector<std::size_t> & value_columns)
+PhysicsLookupTable1D::load(const std::string & filename,
+                           std::size_t coordinate_column,
+                           const std::vector<std::size_t> & value_columns)
 {
   if (coordinate_column == 0)
-    throw std::runtime_error("QPXLookupTable1D uses 1-based column indices.");
+    throw std::runtime_error("PhysicsLookupTable1D uses 1-based column indices.");
 
   if (value_columns.empty())
-    throw std::runtime_error("QPXLookupTable1D requires at least one value column.");
+    throw std::runtime_error("PhysicsLookupTable1D requires at least one value column.");
 
   for (const auto column : value_columns)
     if (column == 0)
-      throw std::runtime_error("QPXLookupTable1D uses 1-based column indices.");
+      throw std::runtime_error("PhysicsLookupTable1D uses 1-based column indices.");
 
   std::ifstream in(filename);
   if (!in.good())
-    throw std::runtime_error("QPXLookupTable1D could not open '" + filename + "'.");
+    throw std::runtime_error("PhysicsLookupTable1D could not open '" + filename + "'.");
 
   _coordinate.clear();
   _values.assign(value_columns.size(), {});
@@ -74,7 +74,7 @@ QPXLookupTable1D::load(const std::string & filename,
     if (row.size() < required_column)
     {
       std::ostringstream oss;
-      oss << "QPXLookupTable1D malformed row in '" << filename << "' at line "
+      oss << "PhysicsLookupTable1D malformed row in '" << filename << "' at line "
           << line_number << ": expected at least " << required_column
           << " numeric columns, found " << row.size() << ".";
       throw std::runtime_error(oss.str());
@@ -87,32 +87,32 @@ QPXLookupTable1D::load(const std::string & filename,
   }
 
   if (_coordinate.size() < 2)
-    throw std::runtime_error("QPXLookupTable1D requires at least two rows.");
+    throw std::runtime_error("PhysicsLookupTable1D requires at least two rows.");
 
   for (std::size_t i = 1; i < _coordinate.size(); ++i)
     if (!(_coordinate[i] > _coordinate[i - 1]))
       throw std::runtime_error(
-          "QPXLookupTable1D coordinate must be strictly increasing.");
+          "PhysicsLookupTable1D coordinate must be strictly increasing.");
 
   for (const auto & values : _values)
     if (values.size() != _coordinate.size())
-      throw std::runtime_error("QPXLookupTable1D internal table-size mismatch.");
+      throw std::runtime_error("PhysicsLookupTable1D internal table-size mismatch.");
 }
 
 const std::vector<double> &
-QPXLookupTable1D::values(std::size_t value_index) const
+PhysicsLookupTable1D::values(std::size_t value_index) const
 {
   if (value_index >= _values.size())
-    throw std::out_of_range("QPXLookupTable1D value column index out of range.");
+    throw std::out_of_range("PhysicsLookupTable1D value column index out of range.");
 
   return _values[value_index];
 }
 
 std::size_t
-QPXLookupTable1D::lowerBracket(double x) const
+PhysicsLookupTable1D::lowerBracket(double x) const
 {
   if (_coordinate.size() < 2)
-    throw std::runtime_error("QPXLookupTable1D is not initialized.");
+    throw std::runtime_error("PhysicsLookupTable1D is not initialized.");
 
   if (x <= _coordinate.front())
     return 0;

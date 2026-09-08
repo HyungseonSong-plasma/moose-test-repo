@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-class QPXReactionDatabase
+class PhysicsReactionDatabase
 {
 public:
   enum class SpeciesKind
@@ -70,7 +70,7 @@ public:
     double reaction_order = 0.0;
   };
 
-  explicit QPXReactionDatabase(const std::string & filename);
+  explicit PhysicsReactionDatabase(const std::string & filename);
 
   const std::vector<Species> & species() const { return _species; }
   const std::vector<Reaction> & reactions() const { return _reactions; }

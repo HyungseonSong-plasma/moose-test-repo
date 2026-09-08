@@ -18,14 +18,14 @@
  *
  * using the same wall-number-flux functor consumed by the electron FV BC.
  *
- * During the nonlinear solve, QPXFVSurfaceChargeInterface queries sigma_s^n
+ * During the nonlinear solve, PhysicsFVSurfaceChargeInterface queries sigma_s^n
  * from this object and adds the current AD wall-flux increment itself.
  */
-class QPXSurfaceChargeState : public SideUserObject, public ADFunctorInterface
+class PhysicsSurfaceChargeState : public SideUserObject, public ADFunctorInterface
 {
 public:
   static InputParameters validParams();
-  QPXSurfaceChargeState(const InputParameters & parameters);
+  PhysicsSurfaceChargeState(const InputParameters & parameters);
 
   void initialize() override;
   void execute() override;

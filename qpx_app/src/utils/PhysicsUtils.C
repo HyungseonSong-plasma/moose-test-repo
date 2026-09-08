@@ -1,4 +1,4 @@
-#include "QPXUtils.h"
+#include "PhysicsUtils.h"
 
 #include "MooseUtils.h"
 #include "MooseObject.h"
@@ -7,7 +7,7 @@
 
 #include <fstream>
 
-namespace QPXUtils
+namespace PhysicsUtils
 {
 InputParameters
 propertyPathParams()
@@ -35,7 +35,7 @@ std::pair<std::vector<Real>, std::vector<Real>>
 getReactionRates(const MooseObject & object, bool _header)
 {
   const auto & property_file = object.getParam<RelativeFileName>("property_file");
-  const auto file_name = qpxinternal::getReactionRateFileName(object, property_file);
+  const auto file_name = physicsinternal::getReactionRateFileName(object, property_file);
 
   std::pair<std::vector<Real>, std::vector<Real>> values;
   auto & [x, y] = values;
@@ -67,7 +67,7 @@ getReactionRates(const MooseObject & object, bool _header)
 std::vector<Real>
 getCoefficients(const MooseObject & object, const std::string & property_file)
 {
-  const auto file_name = qpxinternal::getReactionRateFileName(object, property_file);
+  const auto file_name = physicsinternal::getReactionRateFileName(object, property_file);
 
   std::vector<Real> values;
 
@@ -89,7 +89,7 @@ getCoefficients(const MooseObject & object, const std::string & property_file)
   return values;
 }
 
-namespace qpxinternal
+namespace physicsinternal
 {
 std::string
 getReactionRateFileName(const MooseObject & object, const std::string & property_file)
@@ -107,5 +107,5 @@ getReactionRateFileName(const MooseObject & object, const std::string & property
   return file_name;
 }
 
-} // namespace qpxinternal
-} // namespace QPXUtils
+} // namespace physicsinternal
+} // namespace PhysicsUtils
