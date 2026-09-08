@@ -65,6 +65,8 @@ jobs:
         run: python qpx_app/ci/check_ei01_attachment_source_contract.py
       - name: Validate #17 R2 O2 ionization lookup and ownership contract
         run: python qpx_app/ci/check_r2_o2_ionization_contract.py
+      - name: Validate #17 R2 O2 ionization production implementation
+        run: python qpx_app/ci/check_r2_o2_ionization_implementation.py
       - name: Run canonical QPX internal validation
         run: python qpx -i all
       - name: Validate Issue 43/45 science refactor
