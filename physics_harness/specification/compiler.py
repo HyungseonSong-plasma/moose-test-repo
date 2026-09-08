@@ -6,7 +6,7 @@ import hashlib
 from pathlib import Path
 from typing import Iterable
 
-from qpx_harness.ontology.records import (
+from physics_harness.ontology.records import (
     CapabilityDescriptor,
     Constraint,
     DevelopmentGoal,
@@ -17,11 +17,11 @@ from qpx_harness.ontology.records import (
     SEMANTIC_CONTRACT_ID,
     ValidationClaim,
 )
-from qpx_harness.ontology.service import OntologyService
+from physics_harness.ontology.service import OntologyService
 
 from .schema import ExperimentSpec, UnsupportedCapabilityError
 
-COMPILER_ID = "qpx_harness.specification.compiler:v2"
+COMPILER_ID = "physics_harness.specification.compiler:v2"
 
 
 @dataclass(frozen=True)
