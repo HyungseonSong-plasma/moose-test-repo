@@ -1,4 +1,4 @@
-"""QPX-free guard for canonical package dependency direction."""
+"""Physics dependency guard for canonical package dependency direction."""
 from __future__ import annotations
 
 import argparse
@@ -6,7 +6,7 @@ import ast
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-PKG = ROOT / "qpx_harness"
+PKG = ROOT / "physics_harness"
 CANONICAL_PACKAGES = {
     "evidence", "evaluation", "analysis", "execution", "application", "cli",
     "validation", "provenance",
@@ -31,12 +31,12 @@ def imported_modules(path: Path) -> set[str]:
             imports.update(alias.name for alias in node.names)
         elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
             imports.add(node.module)
-    return {name for name in imports if name.startswith("qpx_harness")}
+    return {name for name in imports if name.startswith("physics_harness")}
 
 
 def top_package(module: str) -> str | None:
     parts = module.split(".")
-    if len(parts) < 2 or parts[0] != "qpx_harness":
+    if len(parts) < 2 or parts[0] != "physics_harness":
         return None
     return parts[1] if parts[1] in CANONICAL_PACKAGES else None
 
@@ -109,7 +109,7 @@ def audit() -> tuple[list[tuple[str, str]], list[str] | None]:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="qpx-dependency-guard")
+    parser = argparse.ArgumentParser(prog="physics-dependency-guard")
     parser.add_argument("--check", choices=sorted(CHECKS), default="all")
     args = parser.parse_args(argv)
     violations, cycle = audit()
