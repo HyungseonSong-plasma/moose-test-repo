@@ -58,11 +58,11 @@ copy_path /opt/physics/ci/smoke.i
 # PREFIX/share/<name>/data. Preserve that canonical installed layout and also
 # retain the original in-tree location as a fallback for binaries compiled with
 # absolute __FILE__ paths.
-copy_tree_to /opt/qpx_vendor/moose/framework/data /opt/share/moose/data
-copy_tree_to /opt/qpx_vendor/moose/framework/data /opt/qpx_vendor/moose/framework/data
+copy_tree_to /opt/physics_vendor/moose/framework/data /opt/share/moose/data
+copy_tree_to /opt/physics_vendor/moose/framework/data /opt/physics_vendor/moose/framework/data
 
 shopt -s nullglob
-for module_data in /opt/qpx_vendor/moose/modules/*/data; do
+for module_data in /opt/physics_vendor/moose/modules/*/data; do
   module_name="$(basename "$(dirname "$module_data")")"
   copy_tree_to "$module_data" "/opt/share/${module_name}/data"
   copy_tree_to "$module_data" "$module_data"
@@ -71,9 +71,9 @@ shopt -u nullglob
 
 for app_spec in \
   "physics:/opt/physics/data" \
-  "crane:/opt/qpx_vendor/crane/data" \
-  "squirrel:/opt/qpx_vendor/squirrel/data" \
-  "zapdos:/opt/qpx_vendor/zapdos/data"
+  "crane:/opt/physics_vendor/crane/data" \
+  "squirrel:/opt/physics_vendor/squirrel/data" \
+  "zapdos:/opt/physics_vendor/zapdos/data"
 do
   app_name="${app_spec%%:*}"
   app_data="${app_spec#*:}"
