@@ -42,10 +42,6 @@ Architecture and refactor work should prefer static, characterization, import/co
 
 This workspace stores regression inputs, minimal reproducers, checkers/reference data, incident/development logs, scripts, specifications, and small source deltas needed to reproduce or document MOOSE/Physics investigations. Production source changes belong in the appropriate source repository.
 
-## Legacy compatibility surfaces
-
-Repository-local project naming uses `Physics` / `physics`. Legacy `QPX` / `qpx` identifiers may remain only where they identify an external dependency, an already-published immutable artifact, or another compatibility surface that cannot be renamed without changing the referenced object. Such compatibility identifiers are not the canonical repository namespace.
-
 ## License
 
 Unless otherwise noted, repository-authored content is licensed under the Apache License 2.0. Commercial use, modification, redistribution, private use, and use within proprietary products are permitted subject to the license terms.
