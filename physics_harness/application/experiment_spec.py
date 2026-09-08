@@ -3,7 +3,7 @@
 This module is not an experiment control plane and performs no protocol lookup or
 execution dispatch. It exists only so characterization/provenance code can read
 immutable schema-v1 experiment fixtures while canonical execution uses
-``qpx_harness.specification.ExperimentSpec`` schema v2.
+``physics_harness.specification.ExperimentSpec`` schema v2.
 """
 from __future__ import annotations
 
