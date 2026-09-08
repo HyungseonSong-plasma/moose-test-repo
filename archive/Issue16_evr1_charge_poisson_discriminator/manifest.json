@@ -1,0 +1,46 @@
+{
+  "work_id": "heavy-charge-poisson-coupling",
+  "issue": 16,
+  "evr": "EVR1",
+  "scope": "controlled current-production charge/Poisson discriminator; qvt integration deferred to EVR2",
+  "qpx_head_expected": "4f42575257e6c4d52fee8617edaf34c9956457f2",
+  "constants": {
+    "e": 1.602e-19,
+    "eps0": 8.85e-12,
+    "NA": 6.022e+23
+  },
+  "target_scaled_source": 80.0,
+  "target_number_density": 4419475655.430712,
+  "target_ion_mass_fraction": 2.348442726233523e-16,
+  "cases": {
+    "positive_charge": {
+      "w": 2.348442726233523e-16,
+      "ne": 0.0,
+      "z": 1.0,
+      "S": 80.0
+    },
+    "negative_ion": {
+      "w": 2.348442726233523e-16,
+      "ne": 0.0,
+      "z": -1.0,
+      "S": -80.0
+    },
+    "balanced_charge": {
+      "w": 2.348442726233523e-16,
+      "ne": 4419475655.430712,
+      "z": 1.0,
+      "S": 0.0
+    },
+    "electron_only": {
+      "w": 0.0,
+      "ne": 4419475655.430712,
+      "z": 1.0,
+      "S": -80.0
+    }
+  },
+  "acceptance": {
+    "rel_tol": 0.002,
+    "zero_tol": 1e-08,
+    "sign_tol": 1e-09
+  }
+}

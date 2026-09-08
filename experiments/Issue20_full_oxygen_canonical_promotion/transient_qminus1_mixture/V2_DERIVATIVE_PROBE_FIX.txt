@@ -1,0 +1,26 @@
+R14 EVR1-D v2 derivative-probe correction
+
+Observed v1:
+  PREPARE PASS
+  CHECK-INPUT PASS (with conda environment active)
+  SOLVE PASS
+  CHECK FAIL
+
+Healthy v1 evidence:
+  mass closure error = 0
+  EOS relative error = 2.3395e-14
+
+Localized defect:
+  TimeDerivativeAux was applied to Mn_out/rho_out AuxVariables that are
+  themselves only updated at TIMESTEP_END. Those probes remained exactly zero
+  while CSV Mn/rho changed across physical timesteps.
+
+v2:
+  - TimeDerivativeAux is applied directly to the six solved nonlinear w_k.
+  - constrained O2 derivative follows Q-1 closure algebraically.
+  - dMn/dt is built by exact mixture chain rule.
+  - drho/dt = p/(R T) dMn/dt.
+  - checker verifies exact chain identity and independent CSV finite-difference
+    consistency.
+  - no transport coefficient, timestep, production source, or solver tolerance
+    was changed.

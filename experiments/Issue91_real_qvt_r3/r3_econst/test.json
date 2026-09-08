@@ -1,0 +1,23 @@
+{
+  "validation_schema": 2,
+  "name": "issue91_r3_econst",
+  "type": "diagnostic",
+  "input": "input.i",
+  "prepare": "prepare.py",
+  "prepare_args": ["--field", "0.01"],
+  "checker": "check.py",
+  "checker_args": ["input_out.physical.csv", "expected.json"],
+  "temporal_csv": [
+    {
+      "source": "input_out.csv",
+      "physical": "input_out.physical.csv",
+      "time_column": "time",
+      "initial_row_policy": "exclude_observation",
+      "initial_time": 0.0,
+      "time_tol": 1e-15,
+      "require_physical_rows": true
+    }
+  ],
+  "issue": "#91",
+  "claim": "Real-qvt heavy + electron transport composition under prescribed E=0.01 V/m with Poisson absent"
+}

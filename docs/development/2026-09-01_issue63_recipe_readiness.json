@@ -1,0 +1,138 @@
+{
+  "schema_version": 1,
+  "work_id": "qpx-recipe-readiness-classification",
+  "basis": "Issue59 symbol census + accepted ExperimentSpec v1 vocabulary",
+  "terminal_classifications": [
+    "SPEC_READY",
+    "PARTIAL_SPEC_PLUS_ALGORITHM",
+    "KEEP_PYTHON_ALGORITHM",
+    "BLOCKED_BY_MISSING_CAPABILITY"
+  ],
+  "recipes": {
+    "recipes/issue31_coupling.py": {
+      "terminal_classification": "BLOCKED_BY_MISSING_CAPABILITY",
+      "current_declarative_data_share": "Case/configuration data is JSON-suitable, but both transport construction transforms are only PARTIAL under v1.",
+      "python_responsibilities": [
+        "runtime physics CSV selection",
+        "physics checks and EVR2 classification"
+      ],
+      "missing_capabilities": [
+        "bounded complex MOOSE transport-input construction beyond ensure_block/set_parameter/add_petsc_flags",
+        "generic runtime observation owner for recipe-side CSV selection"
+      ],
+      "follow_up_group": "transform-vocabulary-v2-complex-construction",
+      "follow_up_boundary": "Add only the concrete bounded MOOSE construction operations required by transport coupling, then migrate declarative/data policy while retaining physics classification in Python.",
+      "compatibility_surface": [
+        "qpx_harness/coupling_evr1/orchestration.py",
+        "qpx_harness/coupling_evr2_runtime.py"
+      ],
+      "scientific_runtime_sensitivity": "HIGH",
+      "v1_without_extension": false
+    },
+    "recipes/issue43_fast_relaxation.py": {
+      "terminal_classification": "BLOCKED_BY_MISSING_CAPABILITY",
+      "current_declarative_data_share": "Configuration data is JSON-suitable, but formatting/top-level insertion/build transforms contain PARTIAL and NO v1 readiness.",
+      "python_responsibilities": [
+        "runtime relaxation CSV discovery/loading",
+        "relaxation distance/scaling analysis",
+        "physics pass and classification"
+      ],
+      "missing_capabilities": [
+        "deterministic bounded top-level placement/insertion semantics",
+        "construction primitives that replace recipe-local formatting without embedding a template language in JSON"
+      ],
+      "follow_up_group": "transform-vocabulary-v2-complex-construction",
+      "follow_up_boundary": "Define concrete reusable placement/construction primitives first; keep relaxation analysis and runtime observation in Python.",
+      "compatibility_surface": [
+        "qpx_harness/issue43_fast_base.py"
+      ],
+      "scientific_runtime_sensitivity": "HIGH",
+      "v1_without_extension": false
+    },
+    "recipes/issue45_first_linear.py": {
+      "terminal_classification": "PARTIAL_SPEC_PLUS_ALGORITHM",
+      "current_declarative_data_share": "Constants/data and instrument_first_linear are v1-ready; Jacobian and solver-termination interpretation are algorithmic Python responsibilities.",
+      "python_responsibilities": [
+        "Jacobian analysis",
+        "first failed nonlinear/linear reason extraction",
+        "first-linear termination classification"
+      ],
+      "missing_capabilities": [],
+      "follow_up_group": "hybrid-spec-plus-diagnostics-extraction",
+      "follow_up_boundary": "Move first-linear declarative policy/data into ExperimentSpec while preserving Python analysis; separately extract proven reusable Jacobian/nonlinear diagnostics.",
+      "compatibility_surface": [
+        "qpx_harness/issue45/first_linear_structure.py",
+        "qpx_harness/issue46_jacobian_localization.py",
+        "qpx_harness/issue46_fd_reference.py"
+      ],
+      "scientific_runtime_sensitivity": "HIGH",
+      "v1_without_extension": true
+    },
+    "recipes/issue45_inventory_constraint.py": {
+      "terminal_classification": "BLOCKED_BY_MISSING_CAPABILITY",
+      "current_declarative_data_share": "Data and Debug instrumentation are v1-ready, but constrained quasi-steady input construction is only PARTIAL under v1.",
+      "python_responsibilities": [
+        "electron/Poisson structure audits",
+        "flux-boundary and grounding audits",
+        "target-pair and runtime-pair interpretation"
+      ],
+      "missing_capabilities": [
+        "bounded constrained-input block insertion/removal/replacement operations",
+        "generic MOOSE structure-audit capability owner"
+      ],
+      "follow_up_group": "transform-vocabulary-v2-complex-construction",
+      "follow_up_boundary": "Add only required constrained-input transforms, then move policy/data to spec while extracting reusable structure audits to diagnostics.",
+      "compatibility_surface": [
+        "current consumer scan may be zero; preserve as orphan candidate until a dedicated retirement decision"
+      ],
+      "scientific_runtime_sensitivity": "HIGH",
+      "v1_without_extension": false
+    },
+    "recipes/issue46_fd_reference.py": {
+      "terminal_classification": "BLOCKED_BY_MISSING_CAPABILITY",
+      "current_declarative_data_share": "Reference data is JSON-suitable and instrument_ds_reference is v1-ready, but PETSc pair removal is PARTIAL and line masking is NO under v1.",
+      "python_responsibilities": [
+        "FD quantization prediction and historical characterization",
+        "Jacobian/runtime-core fact extraction",
+        "termination admissibility",
+        "runtime identity/provenance",
+        "directional localization and DS runtime analysis"
+      ],
+      "missing_capabilities": [
+        "bounded PETSc option-pair removal",
+        "generic non-DSL mechanism for line masking or equivalent structural PETSc edit",
+        "reusable Jacobian/termination/provenance diagnostic owners"
+      ],
+      "follow_up_group": "transform-vocabulary-v2-complex-construction",
+      "follow_up_boundary": "Do not encode line-processing algorithms in JSON; first provide bounded PETSc edits and extract reusable diagnostic/evidence algorithms, then migrate only declarative policy/data.",
+      "compatibility_surface": [
+        "qpx_harness/issue46_fd_reference.py"
+      ],
+      "scientific_runtime_sensitivity": "HIGH",
+      "v1_without_extension": false
+    },
+    "recipes/issue46_jacobian_localization.py": {
+      "terminal_classification": "SPEC_READY",
+      "current_declarative_data_share": "Recipe surface is data plus two declarative transforms, and both transforms are YES under ExperimentSpec v1.",
+      "python_responsibilities": [],
+      "missing_capabilities": [],
+      "follow_up_group": "spec-ready-recipe-migration",
+      "follow_up_boundary": "Migrate localization policy/data to JSON using v1 and retain only a compatibility adapter until consumers are migrated.",
+      "compatibility_surface": [
+        "qpx_harness/issue46_jacobian_localization.py",
+        "qpx_harness/issue46_fd_reference.py"
+      ],
+      "scientific_runtime_sensitivity": "HIGH",
+      "v1_without_extension": true
+    }
+  },
+  "follow_up_groups": {
+    "transform-vocabulary-v2-complex-construction": "Extend the bounded transform vocabulary only from concrete recipe needs; no general-purpose JSON control flow.",
+    "hybrid-spec-plus-diagnostics-extraction": "Migrate v1-ready declarative policy while extracting proven reusable diagnostic algorithms into capability owners.",
+    "spec-ready-recipe-migration": "Migrate recipes already expressible by v1 without adding vocabulary."
+  },
+  "scientific_runtime_freeze": {
+    "new_P3_or_EVR_for_classification": false,
+    "refactor_EVR": 0
+  }
+}

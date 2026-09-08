@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "experiment_id": "issue27-a1-o-recombination",
+  "protocol": "issue27-surface-reaction-controlled-wall",
+  "execution": {
+    "timeout_seconds": 180.0
+  },
+  "parameters": {
+    "reaction_id": "O_to_half_O2",
+    "event_flux_mol_m2_s": 0.1,
+    "wall_boundary": "plasma_wafer"
+  },
+  "outputs": {
+    "provenance": true,
+    "r4_qf1_predecessor": true,
+    "control_plus_minus_differential": true,
+    "wall_flux_sign_resolution": true,
+    "constrained_O2_bookkeeping": true,
+    "neutral_charge_invariance": true
+  }
+}

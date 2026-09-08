@@ -1,60 +1,53 @@
-# sol-adapter-moose Test Workspace
+# MOOSE/Physics Test Workspace
 
-This repository is the dedicated **sol-adapter-moose** workspace for executable regression tests, isolated MOOSE/QPX input cases, development logs, and reusable troubleshooting records.
+This repository is the operating and regression workspace for MOOSE/Physics plasma-simulation development.
 
-## Boundary
+## Operating boundary
 
-This repository belongs to the **sol-adapter-moose team only**. Work for other teams or repositories must not be mixed into this workspace.
+Use `OPERATING_CORE.md` for always-active invariants and `PROTOCOL_INDEX.md` for deterministic procedure routing. Current technical state is owned by the active GitHub issue or bounded work item; comments are historical evidence unless the canonical state says otherwise.
 
-## Primary uses
+For multi-issue capability delivery, use `docs/protocols/milestone_delivery.md`.
 
-- Store self-contained test inputs and checkers.
-- Reproduce numerical/solver failures with minimal cases.
-- Run tests against a local or repository-provided `qpx-opt` executable.
-- Preserve development and incident history.
-- Promote closed incidents into reusable troubleshooting knowledge.
+## Delivery model
 
-## Repository layout
+Non-trivial development is organized hierarchically:
 
 ```text
-bin/                         optional local/test executable location
-docs/
-  development/               development notes
-  incidents/                 chronological failure investigations
-  knowledge/                 reusable troubleshooting knowledge
-scripts/                     test runner utilities
-tests/
-  <area>/<case>/
-    test.json                test metadata
-    input.i                  executable input
-    check.py                 acceptance checker
-    <runtime dependencies>   mesh/data/reference files
-results/                     generated outputs; not committed
+Project / Architecture Goal
+  -> Milestone
+    -> Issue
+      -> Work Batch
+        -> Atomic Mutation / Validation Unit
 ```
 
-## Executable resolution
+The boundaries are intentionally distinct:
 
-The runners resolve the executable in this order:
-
-1. `QPX_EXECUTABLE` environment variable
-2. `bin/qpx-opt`
-3. `qpx-opt` from `PATH`
-
-Example:
-
-```bash
-export QPX_EXECUTABLE=/path/to/qpx-opt
-python3 scripts/run_test.py tests/m5_plasma_charge/ion_wall_migration_state
+```text
+Project    = strategic objective
+Milestone  = usable capability delivery boundary
+Issue      = semantic implementation and rollback boundary
+Work Batch = execution-efficiency boundary
+Mutation   = repository safety boundary
 ```
 
-or, if `bin/qpx-opt` exists:
+A milestone begins with capability/DAG planning, proceeds through independently accepted issues, and closes only after a milestone integration guard and capability-level acceptance. Issue-local validation evidence is reused at milestone closure when still current; milestone validation focuses on cross-issue integration plus the declared regression safety net.
 
-```bash
-python3 scripts/run_test.py tests/m5_plasma_charge/ion_wall_migration_state
-```
+## Validation model
 
-## Test rule
+GitHub Actions and static checks provide construction and regression evidence. Scientific runtime claims require the canonical real-runtime evidence defined by the operating protocols; CI success or failure alone must not be promoted to a scientific PASS or FAIL.
 
-A regression is not considered closed until its checker passes the intended physical/numerical gates, such as conservation, positivity, directionality, stoichiometry, units, and reference agreement.
+Architecture and refactor work should prefer static, characterization, import/contract, and consolidated harness validation. Scientific runtime evidence is consumed only when the scientific closure claim requires it and the relevant work explicitly authorizes it.
 
-Generated CSV/log/output files belong under `results/` and should not replace the canonical input/checker pair in `tests/`.
+## Repository role
+
+This workspace stores regression inputs, minimal reproducers, checkers/reference data, incident/development logs, scripts, specifications, and small source deltas needed to reproduce or document MOOSE/Physics investigations. Production source changes belong in the appropriate source repository.
+
+## Legacy compatibility surfaces
+
+Repository-local project naming uses `Physics` / `physics`. Legacy `QPX` / `qpx` identifiers may remain only where they identify an external dependency, an already-published immutable artifact, or another compatibility surface that cannot be renamed without changing the referenced object. Such compatibility identifiers are not the canonical repository namespace.
+
+## License
+
+Unless otherwise noted, repository-authored content is licensed under the Apache License 2.0. Commercial use, modification, redistribution, private use, and use within proprietary products are permitted subject to the license terms.
+
+Components that carry their own license remain governed by that license. In particular, `physics_app/LICENSE` currently contains GNU LGPL 2.1 terms and is not overridden by the repository-level Apache-2.0 license. External dependencies including MOOSE, PETSc, Crane, Squirrel, Zapdos, and their transitive dependencies retain their respective upstream licenses.

@@ -1,0 +1,84 @@
+{
+  "schema": "issue45_ksp_hypothesis_audit_v1",
+  "parent_issue": 45,
+  "work_issue": 87,
+  "input_evidence": "studies/issue45/evidence_inventory.json",
+  "runtime_policy": "NO_NEW_RUNTIME",
+  "evr_consumed": 0,
+  "trusted_baseline": {
+    "physical_inventory_closure": "ESTABLISHED_FOR_CURRENT_CLOSED_SOURCE_FREE_MODEL",
+    "augmented_jacobian": "TRUSTWORTHY_ON_DS_REFERENCE",
+    "ds_relative_error": 5.35565e-11,
+    "ds_nonzero_thresholded_difference_entries": 0,
+    "wp_difference_mechanism": "FD_REFERENCE_QUANTIZATION_CONFIRMED"
+  },
+  "observed_solver_chronology": {
+    "C0": "REPEATED_KSP_DIVERGED_BREAKDOWN",
+    "C1_first_linear": "CONVERGED_IN_3_ITERATIONS",
+    "C1_later": "KSP_BREAKDOWN_AND_NONLINEAR_LINE_SEARCH_FAILURE",
+    "ksp": "GMRES",
+    "restart": 30,
+    "pc": "LU",
+    "factor_shift_type": "NONZERO",
+    "leading_zero_pivot_or_direct_pc_failure": "NOT_OBSERVED",
+    "leading_nonfinite_nan": "NOT_OBSERVED",
+    "restart_causality": "NOT_ESTABLISHED"
+  },
+  "hypotheses": {
+    "H1_conditioning_or_scaling": {
+      "status": "PLAUSIBLE_UNRESOLVED",
+      "support": [
+        "the trustworthy augmented system fails in KSP rather than at Jacobian correctness or direct factorization gates",
+        "the constrained formulation is a saddle-point system with an electron/potential field block and one global multiplier/constraint block",
+        "C0 and C1 have materially different first-linear behavior despite the same formulation and solver realization"
+      ],
+      "limitations": [
+        "retained repository evidence contains no raw automatic-scaling-factor block for the failing C0 solve",
+        "retained repository evidence contains no assembled matrix row/column norm or singular-value dataset from the failing solve",
+        "Issue46 localization proves derivative correctness, not absolute conditioning"
+      ],
+      "quantitative_conditioning_measurement": "NOT_AVAILABLE_FROM_RETAINED_EVIDENCE"
+    },
+    "H2_krylov_residual_fidelity_or_orthogonality": {
+      "status": "PLAUSIBLE_UNRESOLVED",
+      "support": [
+        "accepted #45 state records a previously observed separation between recursively reported and true GMRES residuals",
+        "the scientific policy now treats reported-vs-true separation as a first-class audit fact rather than as restart causality",
+        "DIVERGED_BREAKDOWN is compatible with a Krylov-basis or residual-fidelity failure mode"
+      ],
+      "limitations": [
+        "raw p3_first_linear.log is not repository-accessible",
+        "iteration-level reported/true residual values, onset timing, and reduction factors cannot be recovered from accepted persisted summaries",
+        "synthetic _synthetic_log values are explicitly excluded from runtime inference"
+      ],
+      "quantitative_residual_fidelity_measurement": "NOT_AVAILABLE_FROM_RETAINED_EVIDENCE"
+    },
+    "H3_formulation_defect": {
+      "status": "DISFAVORED_NOT_SUPPORTED_BY_CURRENT_EVIDENCE",
+      "counterevidence": [
+        "the closed/source-free inventory nullspace and the need for one global inventory constraint are structurally established",
+        "the augmented assembled/AD Jacobian matches the accepted DS reference to 5.35565e-11 with zero thresholded differences",
+        "the historical WP mismatch is quantitatively explained by finite-difference step representability, not by an assembled Jacobian defect",
+        "C1 first linear solve converges in 3 iterations, which argues against an unavoidable structural singularity of the constrained formulation"
+      ],
+      "promotion_gate": "H3 may be revived only by positive evidence of an unresolved nullspace, inconsistent inventory response, structural singularity, or physical closure inconsistency"
+    }
+  },
+  "decision": {
+    "can_existing_evidence_distinguish_H1_from_H2": false,
+    "reason": "both required quantitative observables are absent: failing-run scaling/conditioning facts for H1 and raw iteration-level true-vs-reported residual history for H2",
+    "formulation_failure_is_leading_hypothesis": false,
+    "new_runtime_needed_for_scientific_discrimination": true,
+    "new_runtime_must_be_single_predeclared_diagnostic": true
+  },
+  "evr3_measurement_requirements": [
+    "preserve the exact C0 constrained steady formulation and solver realization",
+    "capture reported and true residual at every KSP iteration",
+    "capture automatic scaling factors for n_e, potential_plasma, and r45_inventory_lambda if exposed",
+    "capture an in-run conditioning proxy such as Krylov extreme singular values without changing the solve algorithm",
+    "record KSP iteration and restart-cycle position",
+    "record PC/factorization reason and nonlinear termination",
+    "change diagnostic observability only, not physics or solver tuning"
+  ],
+  "handoff": "Issue88 should design at most one diagnostic-only EVR3 that measures residual fidelity and a conditioning proxy simultaneously. The run is not authorized until the exact observability-only delta and predicted H1/H2 outcomes are predeclared."
+}

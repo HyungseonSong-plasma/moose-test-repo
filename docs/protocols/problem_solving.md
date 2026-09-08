@@ -1,0 +1,484 @@
+# Problem-Solving Protocol
+
+**Status:** canonical procedure  
+**Scope:** MOOSE/QPX technical issues and bounded child work items  
+**Purpose:** reduce external validation rounds by doing high-value research, framing, and discrimination before user-local runtime execution.
+
+## PS-01 — Phase 0 problem framing
+
+Before spending an EVR, define:
+
+```text
+Closure claim
+Known-good control
+Primary unknown classes
+Dependency graph
+Research questions
+Expected evidence/signatures
+Prospective EVR budget: 0/3
+```
+
+If the work boundary cannot be stated clearly, split or redefine the issue before runtime.
+
+## PS-02 — Role routing
+
+Use the Manager as orchestrator.
+
+Researcher is required for material questions involving source truth, literature, provenance, model alternatives, upstream state dependencies, or representation adequacy.
+
+Validator is required for adequacy, acceptance, test sufficiency, closure, false-PASS risk, and promotion decisions.
+
+Canonical mixed flow:
+
+```text
+Manager
+  -> Researcher: establish source/model truth
+  -> Validator: decide adequacy/applicability/acceptance
+  -> implementation/batch only after the decision
+```
+
+One material Researcher->Validator decision attributable to the work item counts as one RVR under `metrics_closure.md`.
+
+## PS-03 — Hypothesis register
+
+Before modifying code, enumerate materially plausible explanations. Typical classes:
+
+```text
+infrastructure/build
+environment/runtime identity
+harness/construction
+reference/source data
+transformation/unit/sign/indexing
+resolution/precedence/aliasing
+representation adequacy
+solver/convergence/scaling
+coupling/residual participation
+boundary/interface
+discretization/timestep
+implementation parity
+physics/model formulation
+```
+
+For each hypothesis, predeclare what observation would support or reject it.
+
+## PS-04 — Known-good control is mandatory when available
+
+Run a previously accepted control alongside a candidate whenever practical.
+
+```text
+candidate FAIL + control PASS -> candidate-specific class
+candidate FAIL + control FAIL -> environment/build/global class
+```
+
+A historical control is especially important after rebuilds, environment changes, or long pauses.
+
+## PS-05 — Test-independence audit
+
+Before execution, ask:
+
+```text
+If T1 fails, do T2/T3 still provide independent information?
+```
+
+If not, do not count them as parallel discriminators. Prefer orthogonal controls over dependency ladders whose descendants inherit the same primitive failure.
+
+The first batch should maximize independent information gain, not raw test count.
+
+## PS-06 — Predictive pre-mortem
+
+Assume the primary candidate fails. Add cheap, deterministic, independent branch tests for the likely next questions before external execution.
+
+At minimum consider:
+
+```text
+harness/construction
+known-good baseline
+source/reference
+representation
+implementation parity
+environment/build
+solver/convergence
+physics/model
+```
+
+Predicted result signatures should be written before execution whenever practical.
+
+## PS-07 — Three-EVR state machine
+
+The default budget for one bounded work item is:
+
+```text
+EVR #1 = broad discrimination
+EVR #2 = targeted confirmation / fix validation
+EVR #3 = canonical production regression
+```
+
+### EVR #1
+Goal: establish PASS or one dominant root-cause class.
+
+The batch should include the applicable P0-P3 path from `validation.md`, known-good control, candidate, independent oracle/reference, predeclared fail branches, and environment/executable identity.
+
+Valid terminal classes include:
+
+```text
+PASS
+SOURCE_MODEL_FAIL
+REFERENCE_DATA_FAIL
+REPRESENTATION_ADEQUACY_FAIL
+HARNESS_OR_CONSTRUCTION_FAIL
+ENVIRONMENT_OR_BUILD_FAIL
+SOLVER_CONVERGENCE_FAIL
+IMPLEMENTATION_PARITY_FAIL
+PHYSICS_MODEL_FAIL
+```
+
+`UNKNOWN_FAIL` after EVR #1 is a batch-design warning and requires Validator review before EVR #2.
+
+### EVR #2
+Reserved for the single diagnosed class from EVR #1. Change only that class unless new evidence falsifies the diagnosis.
+
+Pattern:
+
+```text
+one diagnosed class
+  -> one targeted fix
+  -> direct regression
+  -> negative control/mutation
+  -> representative original case
+```
+
+Do not stack speculative changes across physics, solver, parser, and environment in the same confirmation round.
+
+### EVR #3
+Canonical closure regression only. Include production path, representative regime matrix, boundary/edge case when relevant, physical/analytic invariant, known-good non-regression, and validator negative controls.
+
+If EVR #3 fails, do not automatically consume EVR #4 under the same unchanged scope. Instead:
+
+```text
+A. return to Researcher->Validator if a source/model assumption is doubtful;
+B. split a new independent child issue if a new failure class emerged;
+C. open/promote a framework/harness/environment incident when appropriate;
+D. redefine the bounded work claim if the original scope was too broad.
+```
+
+## PS-08 — Coupled nonlinear convergence triage
+
+For coupled problems, put convergence sensitivity in EVR #1 whenever a dominant subsystem can hide a smaller one, exact IC passes while zero/approximate IC fails, or a physical invariant is wrong despite solver convergence.
+
+High-value controls:
+
+```text
+default convergence
+forced additional nonlinear correction when supported
+tighter/effectively disabled relative tolerance
+subsystem/reference residual convergence
+```
+
+Interpret physical invariants, not only process return codes.
+
+Typical signature:
+
+```text
+default fails invariant + forced/tight variants recover
+  -> premature/global convergence criterion moves up sharply
+```
+
+A diagnostic workaround such as forced iterations is not automatically the production design. Prefer framework-native subsystem-aware convergence when validated.
+
+## PS-09 — Coupling localization
+
+When subsystems work alone but fail together, construct an ON/OFF matrix that changes one coupling axis at a time. If one row/column remains healthy, remove that subsystem from the active suspect list until new evidence contradicts it.
+
+For transient conservation failures, report the discrete accounting identity numerically:
+
+```text
+inventory change / dt
+  = volume sources
+  - sinks
+  - boundary outflux
+  + boundary influx
+```
+
+If a diagnostic flux exists but inventory does not contain it, test residual participation and convergence before changing its physical coefficient.
+
+## PS-10 — Representation-adequacy gate
+
+Before collapsing an upstream model into a simpler table/runtime schema, inventory every independent state variable and branch used by the source model.
+
+Example:
+
+```text
+source: Q = Q(T, Te, ne, interaction_type)
+target: Q = table(T)
+```
+
+Hold represented variables fixed and vary omitted variables independently. If the source changes beyond tolerance, classify `REPRESENTATION_ADEQUACY_FAIL` and change architecture/interface rather than densifying the inadequate table.
+
+## PS-11 — Evidence hierarchy
+
+Prefer, in order:
+
+```text
+analytic identity matched by measurement
+independent recovery perturbations
+orthogonal controlled experiment
+conservation/invariant accounting
+framework/source contract confirmed in source
+circumstantial symptom correlation
+code-appearance intuition
+```
+
+Declare a root cause only with sufficient independent evidence for the claim.
+
+## PS-12 — Source inspection must answer a concrete question
+
+Do not browse framework internals broadly to see what looks suspicious. First use black-box discrimination to narrow the question, then inspect only the source path necessary to answer it.
+
+## PS-13 — Incident-to-algorithm learning
+
+When a real failure is caught:
+
+```text
+preserve chronological incident evidence
+extract the reusable symptom -> discriminator mapping
+promote reusable checks to validation preflight or troubleshooting knowledge
+update this protocol only when the solving algorithm itself changes
+```
+
+## PS-14 — Optimization target
+
+Primary prospective target for bounded work:
+
+```text
+EVR <= 3
+DBR <= 2
+RWR = 0
+closure quality unchanged
+```
+
+RVR is not minimized. Its purpose is to move uncertainty earlier when doing so reduces downstream EVR/DBR/RWR or reopening risk.
+
+## PS-15 — Issue sizing and decomposition
+
+Execution issues should be small enough that one bounded closure claim can plausibly complete inside one prospective 3-EVR budget.
+
+Preferred execution boundary:
+
+```text
+1 closure claim
+1 bounded subsystem or coupling edge
+1 prospective EVR budget <= 3
+ideally 1 production decision
+complexity C1-C3 when practical
+```
+
+Treat C4 primarily as architecture/planning/tracking scope. Before technical runtime begins, decompose a C4 item into bounded C1-C3 successor issues when it contains multiple serial closure claims.
+
+Strong split signals include:
+
+```text
+"finish A, then implement B, then validate C"
+source/model uncertainty and runtime integration are separable
+multiple independent coupling edges require separate acceptance
+one stage can close while later stages remain blocked
+EVR #3 would only finish an intermediate stage rather than the issue claim
+```
+
+Do not keep a large parent open merely to accumulate unrelated downstream execution metrics. A parent may be closed as `DECOMPOSED_PARENT` after its validated history and successor links are recorded. This is not a claim that unfinished downstream physics is technically complete.
+
+Successor issues start with their own issue-local metrics and their own prospective `0/3` EVR budget. Historical metrics remain on the original parent and are not copied into successors.
+
+## PS-16 — Test IDs are not EVRs
+
+Name internal cases/tests independently from external validation rounds.
+
+Preferred form:
+
+```text
+T1 material exposure
+T2 independent oracle
+T3 coupling ON/OFF
+T4 transient integration
+
+EVR #1 = one user-local execution containing T1-T4 when practical
+```
+
+Do not create pseudo-EVR names such as `EVR1-A`, `EVR1-B`, etc. when each label is actually a test case. `EVR` increments only when a user-local QPX execution result is returned under `MET-05`.
+
+## PS-17 — Live EVR/RWR accounting
+
+Update issue-local accounting immediately after each attributable user-local result return.
+
+```text
+user-local execution result returned -> EVR += 1
+avoidable assistant-side artifact/config/checker defect caused extra user round -> RWR += 1
+```
+
+Do not postpone reconciliation until closure. If the prospective `3-EVR` budget is exhausted, the next action is Validator redesign/decomposition/incident routing, not an automatic fourth execution.
+
+## PS-18 — RWR stop-and-redesign rule
+
+For one bounded test/closure claim:
+
+```text
+RWR = 0 -> normal execution
+RWR = 1 -> one targeted correction permitted
+RWR >= 2 -> STOP additional external execution
+            re-audit observation graph, checker semantics, construction, and batch design
+```
+
+The stop applies before generating another external artifact unless a Validator decision documents why the failures are truly independent and a further run is justified.
+
+## PS-19 — Promotion-ready planning
+
+Phase 0 must classify intended tests as either diagnostic-only or promotion candidates.
+
+For each promotion candidate predeclare:
+
+```text
+canonical regression destination
+production mechanism exercised
+promotion condition
+representative invariant/control
+negative checker/mutation requirement
+final regression membership
+```
+
+A successful diagnostic should be promotable without redesigning its physical test semantics. If substantial checker, timestep, mesh, solver, or physical-model changes are required only at promotion time, return to Validator review before canonicalization.
+
+## PS-20 — Environment activation preflight
+
+Before spending an EVR on a user-local QPX batch that depends on a project runtime environment, verify the environment contract explicitly rather than assuming the interactive shell is already prepared.
+
+At minimum record or check the applicable activation state and executable identity before P2:
+
+```text
+required environment activated
+qpx-opt realpath matches the intended executable
+critical runtime/JIT dependencies resolve in that environment
+```
+
+If a previously accepted case fails at P2 with an environment-sensitive symptom such as JIT compilation failure, first compare the activation/runtime identity with the known-good environment before changing input physics or harness logic.
+
+## PS-21 — Performance-feasibility gate before closure-scale runtime
+
+Before a production-like coupled P3, and especially before EVR #3, estimate whether the proposed numerical architecture is practical enough to serve as a regression.
+
+Record the applicable cost drivers before external execution:
+
+```text
+nonlinear unknown blocks / approximate DOF count
+monolithic vs segregated coupling structure
+linear solver / preconditioner
+process/thread count
+time-step count and case-matrix size
+known-good subsystem wall times when available
+new global elliptic or strongly coupled blocks added since the known-good path
+```
+
+When a new architecture adds a global coupling block or materially enlarges the nonlinear system, include a bounded cost discriminator before the final regression, such as:
+
+```text
+standalone new subsystem runtime
+one physical timestep
+one representative coupling axis
+transport-only vs coupled wall-time comparison
+```
+
+If a representative first step is computationally impractical or the projected closure matrix is not regression-viable, classify the architecture before spending the closure EVR:
+
+```text
+PERFORMANCE_FEASIBILITY_UNRESOLVED
+PERFORMANCE_BOUND
+ARCHITECTURE_UNSUITABLE_FOR_REGRESSION
+```
+
+Do not compensate by arbitrary tolerance, timestep, source-amplitude, boundary-condition, or physics tuning. Redesign, segregate, precondition, or decompose from evidence.
+
+### Implementation granularity
+
+For performance-sensitive MOOSE/QPX implementation, separate **physics granularity** from **computational granularity**:
+
+```text
+physics decomposition      = split by mathematical/physical responsibility
+computational decomposition = split/share/fuse by measured execution cost
+```
+
+Logical modularity must not create computational duplication. In hot residual/Jacobian paths:
+
+1. a consumer should evaluate only the dependency cone required for its requested output;
+2. repeated expensive primitives may be shared when consumers use the same state, location, and execution frequency;
+3. do not fuse objects merely to reduce object count, and do not split expensive evaluation merely for interface symmetry;
+4. before changing granularity, measure or estimate call amplification, cost per call, duplicated work, and relevant AD dependency width;
+5. performance-specialized paths must preserve the production physics contract and receive direct equivalence/non-regression validation before promotion.
+
+The optimization target is not minimum object count. It is minimum repeated expensive work subject to physics clarity and validation parity.
+
+## PS-22 — Live observability is part of long-run batch design
+
+A runtime whose cost or convergence is uncertain must expose progress while it is running. Do not make process termination the first moment at which useful solver evidence becomes visible.
+
+Required when applicable:
+
+```text
+CASE START / CASE END markers
+stdout/stderr streamed live and written incrementally to a log
+elapsed wall time
+physical timestep / nonlinear iteration progress when the application exposes it
+return code and final result path
+```
+
+Using `subprocess.PIPE` is acceptable only if output is consumed and surfaced continuously. Capturing all solver output silently until process exit is not acceptable for a potentially long P3.
+
+If manual `/proc`, `ps`, CSV-row, I/O, or context-switch probes become necessary to determine whether a run is alive, the next artifact must promote the useful progress signals into runner-owned observability rather than repeating the same manual diagnosis.
+
+## PS-23 — Coupling-architecture gate: performance and stability are joint requirements
+
+A change between monolithic, segregated, staggered, explicit-lagged, fixed-point, or semi-implicit coupling is a numerical-model decision, not a pure performance refactor.
+
+Before freezing the new architecture, inventory the feedback edges and the stability/convergence mechanisms they lose or gain. Check the relevant physical/numerical timescales and contraction conditions, for example:
+
+```text
+dielectric / Maxwell relaxation
+advective CFL
+diffusive timescale
+reaction/chemistry timescale
+fixed-point/Gummel contraction
+lagged-field or lagged-source dependencies
+```
+
+Separate two claims:
+
+```text
+coupling closure: information reaches the intended downstream state
+numerical stability: the chosen split/iteration remains stable and convergent for the intended timestep/regime
+```
+
+A short causal-response test may prove closure without proving stability. If a one-pass staggered method violates a source-backed timescale or is noncontractive, prefer a justified block-iterative/fixed-point or semi-implicit architecture rather than reducing the physical timestep merely to make the regression pass.
+
+## PS-24 — Repetition-compression rule
+
+Repeated manual work is evidence of a missing reusable discriminator or missing automation.
+
+During a bounded work item, if the same diagnostic class is performed repeatedly, stop before adding another ad-hoc probe and ask:
+
+```text
+Can this evidence be emitted by the runner?
+Can it be checked in P0/P1/P2?
+Can a subsystem timing/control isolate it before full P3?
+Can a source/API audit settle it before another external run?
+```
+
+Promote the answer into the next artifact or canonical protocol when reusable. Typical examples include:
+
+```text
+live process/progress status
+wall-time accounting
+CSV physical-row detection
+provider/ownership inventory
+subsystem cost isolation
+coupling residual history
+stability-timescale diagnostics
+```
+
+The objective is not to eliminate all iteration; it is to prevent the same uncertainty from being rediscovered manually in successive rounds.

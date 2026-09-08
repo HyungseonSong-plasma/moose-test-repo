@@ -1,0 +1,228 @@
+{
+  "schema_version": 1,
+  "issue": 99,
+  "baseline_commit": "0b1286d5d2831c9bc9e003b46b53bd9f6d7d2507",
+  "scientific_state": "FROZEN",
+  "canonical_rule": {
+    "source_parser": "source-specific syntax parsing only",
+    "evidence": "observe, normalize, transform, persist, and preserve provenance without PASS/HOLD/FAIL or owner policy",
+    "diagnose": "interpret canonical evidence with metrics, thresholds, rules, localization, Z3 inference, and one-primary-owner selection"
+  },
+  "scope": [
+    "qpx_harness/evidence",
+    "qpx_harness/evidence_engine",
+    "qpx_harness/diagnostics"
+  ],
+  "boundary_dependencies": [
+    {
+      "path": "qpx_harness/petsc/jacobian.py",
+      "classification": "SOURCE_PARSER",
+      "canonical_owner": "qpx_harness.petsc",
+      "reason": "parses PETSc -snes_test_jacobian syntax into relative and absolute Frobenius-error facts"
+    },
+    {
+      "path": "qpx_harness/petsc/log.py",
+      "classification": "SOURCE_PARSER",
+      "canonical_owner": "qpx_harness.petsc",
+      "reason": "PETSc log syntax parser used by runtime evidence extraction"
+    },
+    {
+      "path": "qpx_harness/moose/log.py",
+      "classification": "SOURCE_PARSER",
+      "canonical_owner": "qpx_harness.adapters.moose",
+      "reason": "MOOSE log syntax parser used by runtime evidence extraction"
+    }
+  ],
+  "modules": [
+    {
+      "path": "qpx_harness/evidence/__init__.py",
+      "classification": "COMPATIBILITY",
+      "canonical_owner": "qpx_harness.evidence",
+      "migration_action": "replace evidence_engine re-export facade with the canonical Evidence public API during R1"
+    },
+    {
+      "path": "qpx_harness/evidence/artifacts.py",
+      "classification": "COMPATIBILITY",
+      "canonical_owner": "qpx_harness.evidence.artifacts",
+      "migration_action": "replace facade with current evidence_engine.artifacts implementation during R1"
+    },
+    {
+      "path": "qpx_harness/evidence/error_log.py",
+      "classification": "COMPATIBILITY",
+      "canonical_owner": "qpx_harness.evidence.errors",
+      "migration_action": "replace facade with current evidence_engine.errors implementation; preserve ErrorLedger and attribution semantics"
+    },
+    {
+      "path": "qpx_harness/evidence/identity.py",
+      "classification": "COMPATIBILITY",
+      "canonical_owner": "qpx_harness.evidence.identity",
+      "migration_action": "replace facade with current evidence_engine.identity implementation during R1"
+    },
+    {
+      "path": "qpx_harness/evidence_engine/__init__.py",
+      "classification": "COMPATIBILITY",
+      "canonical_owner": "SPLIT:qpx_harness.evidence|qpx_harness.diagnose",
+      "migration_action": "retain only as a temporary facade after R1/R2; retire in R4"
+    },
+    {
+      "path": "qpx_harness/evidence_engine/artifacts.py",
+      "classification": "EVIDENCE",
+      "canonical_owner": "qpx_harness.evidence.artifacts",
+      "migration_action": "move implementation in R1"
+    },
+    {
+      "path": "qpx_harness/evidence_engine/errors.py",
+      "classification": "EVIDENCE",
+      "canonical_owner": "qpx_harness.evidence.errors",
+      "migration_action": "move implementation in R1 without changing attribution, fingerprint, or dual-ledger behavior"
+    },
+    {
+      "path": "qpx_harness/evidence_engine/identity.py",
+      "classification": "EVIDENCE",
+      "canonical_owner": "qpx_harness.evidence.identity",
+      "migration_action": "move implementation in R1"
+    },
+    {
+      "path": "qpx_harness/evidence_engine/schema.py",
+      "classification": "EVIDENCE",
+      "canonical_owner": "qpx_harness.evidence.schema",
+      "migration_action": "move dynamic schema contracts and normalization unchanged in R1"
+    },
+    {
+      "path": "qpx_harness/evidence_engine/transform.py",
+      "classification": "EVIDENCE",
+      "canonical_owner": "qpx_harness.evidence.transform",
+      "migration_action": "move Polars Green-Gauss numerical evidence transforms unchanged in R1"
+    },
+    {
+      "path": "qpx_harness/evidence_engine/store.py",
+      "classification": "EVIDENCE",
+      "canonical_owner": "qpx_harness.evidence.store",
+      "migration_action": "move Parquet/DuckDB persistence and query layer unchanged in R1"
+    },
+    {
+      "path": "qpx_harness/evidence_engine/synthetic.py",
+      "classification": "EVIDENCE",
+      "canonical_owner": "qpx_harness.evidence testing support",
+      "migration_action": "move analytical evidence fixtures with the Evidence regression surface"
+    },
+    {
+      "path": "qpx_harness/evidence_engine/local_smoke.py",
+      "classification": "COMPATIBILITY",
+      "canonical_owner": "cross-boundary integration test support",
+      "migration_action": "keep behavior while R1/R2 proceed, then relocate outside either canonical business package or replace with Evidence+Diagnose integration smoke"
+    },
+    {
+      "path": "qpx_harness/evidence_engine/diagnose.py",
+      "classification": "COMPATIBILITY",
+      "canonical_owner": "qpx_harness.diagnose",
+      "migration_action": "retire facade after Diagnose callers migrate"
+    },
+    {
+      "path": "qpx_harness/evidence_engine/diagnosis/__init__.py",
+      "classification": "DIAGNOSE",
+      "canonical_owner": "qpx_harness.diagnose",
+      "migration_action": "move public diagnosis facade in R2"
+    },
+    {
+      "path": "qpx_harness/evidence_engine/diagnosis/models.py",
+      "classification": "DIAGNOSE",
+      "canonical_owner": "qpx_harness.diagnose.models",
+      "migration_action": "move Pydantic diagnosis ontology unchanged in R2"
+    },
+    {
+      "path": "qpx_harness/evidence_engine/diagnosis/evaluator.py",
+      "classification": "DIAGNOSE",
+      "canonical_owner": "qpx_harness.diagnose.evaluator",
+      "migration_action": "move metric aggregation, rule evaluation bridge, and failure localization in R2"
+    },
+    {
+      "path": "qpx_harness/evidence_engine/diagnosis/presets.py",
+      "classification": "DIAGNOSE",
+      "canonical_owner": "qpx_harness.diagnose.presets.green_gauss",
+      "migration_action": "move Green-Gauss policy in R2; split into preset package when Jacobian and coupled-solver presets are added"
+    },
+    {
+      "path": "qpx_harness/evidence_engine/diagnosis/z3_engine.py",
+      "classification": "DIAGNOSE",
+      "canonical_owner": "qpx_harness.diagnose.z3_engine",
+      "migration_action": "move generic SMT interpreter unchanged in R2"
+    },
+    {
+      "path": "qpx_harness/diagnostics/__init__.py",
+      "classification": "COMPATIBILITY",
+      "canonical_owner": "SPLIT:qpx_harness.evidence|qpx_harness.diagnose",
+      "migration_action": "migrate callers in R3 and retire public facade"
+    },
+    {
+      "path": "qpx_harness/diagnostics/termination.py",
+      "classification": "EVIDENCE",
+      "canonical_owner": "qpx_harness.evidence.ingest.termination",
+      "migration_action": "move invariant termination selection mechanics in R1"
+    },
+    {
+      "path": "qpx_harness/diagnostics/nonlinear_solver.py",
+      "classification": "EVIDENCE",
+      "canonical_owner": "qpx_harness.evidence.ingest.nonlinear_solver",
+      "migration_action": "move raw-log-to-structured-runtime-evidence extraction in R1; retain no owner policy"
+    },
+    {
+      "path": "qpx_harness/diagnostics/jacobian.py",
+      "classification": "COMPATIBILITY",
+      "canonical_owner": "SPLIT:qpx_harness.evidence.ingest.jacobian|qpx_harness.diagnose.presets.jacobian",
+      "migration_action": "replace mixed analyze_comparisons API with Evidence fact extraction plus Diagnose tolerance/policy evaluation"
+    },
+    {
+      "path": "qpx_harness/diagnostics/coupling.py",
+      "classification": "COMPATIBILITY",
+      "canonical_owner": "SPLIT:qpx_harness.evidence.ingest.nonlinear_solver|qpx_harness.diagnose.presets.coupled_solver",
+      "migration_action": "retain observable runtime facts in Evidence and replace if/elif failure classification with declarative Diagnose rules"
+    }
+  ],
+  "function_level_splits": [
+    {
+      "symbol": "qpx_harness.diagnostics.jacobian.analyze_comparisons",
+      "current_problem": "combines PETSc comparison extraction, finite/error aggregation, tolerance policy, and PASS/HOLD classification",
+      "evidence_destination": "structured Jacobian comparison facts including relative/absolute errors, finite flags, and worst observed values",
+      "diagnose_destination": "Jacobian tolerance predicates and JACOBIAN_MISMATCH/PASS interpretation"
+    },
+    {
+      "symbol": "qpx_harness.diagnostics.coupling.analyze_runtime_failure",
+      "current_problem": "combines runtime fact extraction with a priority-ordered failure-class decision tree",
+      "evidence_destination": "canonical solver facts from nonlinear_solver ingestion",
+      "diagnose_destination": "coupled-solver preset expressing PC/factorization, non-finite, scaling, and Jacobian/residual hypotheses declaratively"
+    },
+    {
+      "symbol": "qpx_harness.diagnostics.coupling.line_hits",
+      "current_problem": "generic raw-log observation helper located in a policy-bearing module",
+      "evidence_destination": "retain only if an active caller needs it; otherwise remove as dead code during R1/R3 census verification",
+      "diagnose_destination": null
+    }
+  ],
+  "duplicate_decision_paths": [
+    {
+      "path": "qpx_harness/diagnostics/jacobian.py",
+      "duplicates": "qpx_harness/evidence_engine/diagnosis",
+      "reason": "direct threshold comparison and PASS/HOLD classification bypass the registry/Z3 diagnosis path"
+    },
+    {
+      "path": "qpx_harness/diagnostics/coupling.py",
+      "duplicates": "qpx_harness/evidence_engine/diagnosis/z3_engine.py",
+      "reason": "ordered if/elif failure classification is an independent owner-style reasoning path"
+    }
+  ],
+  "migration_order": [
+    "R1: materialize canonical qpx_harness.evidence implementation and evidence ingest modules",
+    "R2: materialize canonical qpx_harness.diagnose and add Green-Gauss, Jacobian, and coupled-solver presets",
+    "R3: migrate active qpx_harness.diagnostics callers and retire duplicate classification paths",
+    "R4: migrate evidence_engine callers to Evidence or Diagnose and retire transitional implementation/facades",
+    "R5: add architecture guards for Evidence-no-policy and Diagnose-no-raw-parser invariants"
+  ],
+  "r0_exit_gate": {
+    "every_active_module_has_owner": true,
+    "mixed_modules_have_function_level_split": true,
+    "duplicate_decision_paths_identified": true,
+    "historical_code_rewrite_required": false,
+    "scientific_semantics_changed": false
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "name": "r14_dmix_evr1a",
+  "type": "diagnostic",
+  "input": "input.i",
+  "prepare": "prepare.py",
+  "checker": "check.py",
+  "checker_args": [
+    "input_out.csv",
+    "prepare_evidence.json"
+  ],
+  "claim": "The provenance-checked seven-species oxygen transport-data candidate resolves every non-charged-charged pair required by O2/O2s/O2p/O/Om/Op/Os, and production qpx-opt constructs/evaluates QPXThermalDiffusionMaterial with finite positive D_mix outputs while retaining D_T and kT.",
+  "fail_class": "production-path construction/data/resolver/representation/runtime; pre-physics failures are not physics failures",
+  "stage": "R14_EVR1_A_SEVEN_SPECIES_DATA_AND_MATERIAL_RUNTIME",
+  "evr_credit": "NONE_UNTIL_PARENT_EVR1_ACCEPTANCE",
+  "data_candidate_sha256": "2fa7988c79f6ea23ebdd50e6d1d7fc5018dc8854a27459511ec95c94ebe7ff3d"
+}

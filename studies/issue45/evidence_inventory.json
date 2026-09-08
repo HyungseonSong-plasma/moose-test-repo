@@ -1,0 +1,99 @@
+{
+  "schema": "issue45_science_evidence_inventory_v1",
+  "parent_issue": 45,
+  "work_issue": 86,
+  "runtime_policy": "NO_NEW_RUNTIME",
+  "evr_state": {
+    "consumed": 2,
+    "budget": 3,
+    "evr3": "PRESERVED_NOT_AUTHORIZED"
+  },
+  "evidence_classes": {
+    "RAW_RUNTIME_ARTIFACT": "actual user-local log, matrix, CSV, or summary produced by an authorized runtime",
+    "PERSISTED_SCIENTIFIC_SUMMARY": "accepted scientific facts retained in issue state or an accepted handoff, without the complete raw iteration stream",
+    "SYNTHETIC_CHARACTERIZATION": "parser/policy fixture used to validate analysis behavior; never promoted to runtime measurement"
+  },
+  "expected_raw_artifact_sets": [
+    {
+      "id": "constrained_steady_c0_c1_batch",
+      "historical_stem": "issue45_inventory_closure_runtime_<timestamp>",
+      "expected_files": [
+        "p3_C0_reference.log",
+        "p3_C1_shift.log",
+        "summary.json"
+      ],
+      "summary_contract": "stores each runtime case diagnostic/evaluation plus the C0/C1 pair decision",
+      "repository_accessibility": "NOT_FOUND",
+      "searches_performed": [
+        "p3_C0_reference.log",
+        "p3_C1_shift.log",
+        "issue45_inventory_closure_runtime_"
+      ]
+    },
+    {
+      "id": "c0_first_linear_diagnostic",
+      "historical_stem": "issue45_first_linear_diagnostic_<timestamp>",
+      "expected_files": [
+        "p3_first_linear.log",
+        "summary.json"
+      ],
+      "summary_contract": "stores runtime identity and analyze_first_linear_text decision, including KSP identity and true-residual evidence when observable",
+      "repository_accessibility": "NOT_FOUND",
+      "searches_performed": [
+        "p3_first_linear.log",
+        "issue45_first_linear_diagnostic_",
+        "true resid norm",
+        "DIVERGED_BREAKDOWN iterations 30"
+      ]
+    }
+  ],
+  "persisted_scientific_facts": {
+    "physical_inventory_nullspace": "ESTABLISHED_FOR_CURRENT_CLOSED_SOURCE_FREE_MODEL",
+    "inventory_constraint_requirement": "ESTABLISHED",
+    "augmented_jacobian": "TRUSTWORTHY_ON_ACCEPTED_DS_REFERENCE",
+    "ds_jacobian_relative_error": 5.35565e-11,
+    "historical_wp_mismatch": "FD_REFERENCE_QUANTIZATION_ARTIFACT",
+    "c0": "REPEATED_KSP_DIVERGED_BREAKDOWN_OBSERVED",
+    "c1_first_linear": "CONVERGED_IN_3_ITERATIONS",
+    "c1_later": "KSP_BREAKDOWN_AND_NONLINEAR_LINE_SEARCH_FAILURE_OBSERVED",
+    "leading_issue45_evr1_zero_pivot_or_direct_pc_factorization_failure": "NOT_OBSERVED",
+    "leading_issue45_evr1_nonfinite_nan": "NOT_OBSERVED",
+    "ksp_realization": {
+      "type": "GMRES",
+      "restart": 30,
+      "pc": "LU",
+      "factor_shift_type": "NONZERO"
+    },
+    "restart_boundary": "OBSERVED_CHRONOLOGY",
+    "restart_causality": "NOT_ESTABLISHED",
+    "reported_vs_true_residual_separation": "SCIENTIFICALLY_RELEVANT_BUT_RAW_ITERATION_VALUES_NOT_REPOSITORY_ACCESSIBLE"
+  },
+  "synthetic_characterization": {
+    "origin_commit": "3bc6aa83c0c7ce1d8c31a438587c14a24a2bd0a6",
+    "fixture_name": "_synthetic_log",
+    "example_rows": [
+      {
+        "iteration": 0,
+        "reported_residual": 0.008,
+        "true_residual": 0.008,
+        "relative_true_residual": 1.0
+      },
+      {
+        "iteration": 30,
+        "reported_residual": 1e-12,
+        "true_residual": 0.002,
+        "relative_true_residual": 0.25
+      }
+    ],
+    "runtime_measurement": false,
+    "allowed_use": "validate parser and residual-fidelity classification behavior only",
+    "forbidden_use": "do not report these values as EVR1 or first-linear measured residuals"
+  },
+  "reconstruction_status": {
+    "raw_iteration_level_table": "BLOCKED_BY_MISSING_RAW_ARTIFACTS",
+    "coarse_c0_c1_chronology": "AVAILABLE",
+    "missing_evidence_is_explicit": true,
+    "new_runtime_consumed": 0
+  },
+  "handoff_rule": "S2 may use persisted chronology and structural/Jacobian facts, but may not infer iteration-level residual magnitudes or onset timing from synthetic fixtures. EVR3 must not be spent merely to recreate missing evidence."
+}

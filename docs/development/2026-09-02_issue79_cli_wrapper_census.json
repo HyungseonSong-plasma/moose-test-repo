@@ -1,0 +1,34 @@
+{
+  "issue": 79,
+  "baseline_commit": "ae3fe31322b7b014e3e534172b64e6ce9034eaad",
+  "scientific_semantic_impact": "NONE",
+  "top_level_executable_wrappers_before": 3,
+  "top_level_executable_wrappers_after": 0,
+  "stable_commands_preserved": ["coupling-evr1", "coupling-evr2", "dmix-equivalence"],
+  "cli_command_modules_created": [
+    "qpx_harness/cli/commands/coupling.py",
+    "qpx_harness/cli/commands/dmix.py"
+  ],
+  "candidates": [
+    {
+      "path": "qpx_harness/coupling_evr1_runtime.py",
+      "disposition": "RETIRE_AFTER_CLI_MOVE",
+      "canonical_command": "qpx_harness.cli.commands.coupling.coupling_evr1_main",
+      "canonical_owners": ["qpx_harness.coupling_evr1", "recipes.issue31_coupling"]
+    },
+    {
+      "path": "qpx_harness/coupling_evr2_runtime.py",
+      "disposition": "RETIRE_AFTER_CLI_MOVE",
+      "canonical_command": "qpx_harness.cli.commands.coupling.coupling_evr2_main",
+      "canonical_owners": ["qpx_harness.coupling_evr2.orchestration", "recipes.issue31_coupling"]
+    },
+    {
+      "path": "qpx_harness/dmix_equivalence.py",
+      "disposition": "RETIRE_AFTER_CLI_MOVE",
+      "canonical_command": "qpx_harness.cli.commands.dmix.dmix_equivalence_main",
+      "canonical_owners": ["qpx_harness.dmix.analysis", "qpx_harness.dmix.runtime", "qpx_harness.dmix.source_transform"]
+    }
+  ],
+  "consumer_edges_migrated": 10,
+  "validation": {"scientific_p3": "NOT_RUN"}
+}

@@ -1,0 +1,21 @@
+# Physics build products: source-only canonical ownership.
+physics-opt
+physics-dbg
+physics-devel
+build/
+lib/
+.libs/
+.jitcache/
+.pytest_cache/
+*.o
+*.lo
+*.la
+*.d
+*.so
+*.so.*
+*.a
+
+# Generated test/runtime outputs.
+*_out.csv
+*_out.e
+out/

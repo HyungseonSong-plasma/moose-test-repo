@@ -1,0 +1,51 @@
+{
+  "schema_version": 2,
+  "experiment_id": "controlled-electron-energy-diffusion",
+  "description": "Controlled semantic experiment reproducing the accepted Issue26 E2a discriminator without Issue-specific execution policy.",
+  "objective": "Validate controlled electron-energy diffusion while preserving accepted held-fixed physics.",
+  "target_claims": [
+    "electron-energy diffusion produces the expected controlled profile response",
+    "closed-boundary electron-energy inventory remains acceptable"
+  ],
+  "requested_capabilities": [
+    "electron_energy_diffusion",
+    "electron_energy_inventory_observation"
+  ],
+  "parameters": {
+    "diffusivity": 100.0
+  },
+  "constraints": [
+    "drift disabled",
+    "Joule heating disabled",
+    "wall-energy terms held fixed",
+    "heavy-species state held fixed",
+    "Poisson feedback held fixed",
+    "transport lookup remains fixed during the E2a discriminator"
+  ],
+  "observations": [
+    "energy_inventory",
+    "energy_profile"
+  ],
+  "execution_bounds": {
+    "dt": 1e-08,
+    "end_time": 1e-08,
+    "max_steps": 1
+  },
+  "cases": [
+    {
+      "case_id": "controlled-diffusion",
+      "parameters": {
+        "diffusivity": 100.0
+      },
+      "constraints": [
+        "same mesh and time-step as control"
+      ]
+    }
+  ],
+  "provenance": {
+    "historical_source": "Issue26 E2a accepted controlled-diffusion discriminator",
+    "semantic_contract": "QPX_STATE_SEMANTICS_V1",
+    "behavioral_equivalence_target": "recipes/issue26_e2a.py"
+  },
+  "model_ref": "oxygen_icp_electron_energy"
+}

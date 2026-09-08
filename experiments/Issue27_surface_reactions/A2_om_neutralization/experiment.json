@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "experiment_id": "issue27-a2-om-neutralization",
+  "protocol": "issue27-surface-reaction-controlled-wall",
+  "execution": {
+    "timeout_seconds": 180.0
+  },
+  "parameters": {
+    "reaction_id": "Om_to_O",
+    "wall_model": "om_prescribed_control",
+    "wall_scope": "all_plasma_walls",
+    "secondary_emission_coefficient": 0.0,
+    "Om_event_flux_mol_m2_s": 0.00005
+  },
+  "outputs": {
+    "provenance": true,
+    "r4_qf1_predecessor": true,
+    "all_plasma_wall_scope": true,
+    "species_mass_bookkeeping": true,
+    "oxygen_atom_conservation": true,
+    "negative_ion_charge_removal": true,
+    "positive_volume_charge_shift": true,
+    "gauss_law": true,
+    "electron_compensation": false
+  }
+}

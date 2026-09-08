@@ -1,0 +1,85 @@
+{
+  "schema": "qpx_recipe_ownership_v1",
+  "source_issue": 73,
+  "recipes": {
+    "recipes/issue26_e1.py": {
+      "model": "PURE_PYTHON_SCIENTIFIC_POLICY",
+      "reason": "Issue26 E1 owns the normalized solved electron-energy state, zero-source conservation discriminator, solved mean-energy bridge, and bounded R4 composition while reusable MOOSE mutation and experiment execution mechanics remain in qpx_harness"
+    },
+    "recipes/issue26_e2a.py": {
+      "model": "PURE_PYTHON_SCIENTIFIC_POLICY",
+      "reason": "Issue26 E2a owns the controlled nonuniform electron-energy diffusion discriminator, zero-diffusion control, and scientific interpretation of profile smoothing versus conserved energy inventory while generic FV mutation and execution mechanics remain in qpx_harness"
+    },
+    "recipes/issue26_energy_chain.py": {
+      "model": "PURE_PYTHON_SCIENTIFIC_POLICY",
+      "reason": "Issue26 E2b-E5 owns the controlled energy-drift sign test, drift-only Joule source interpretation, COMSOL thermal electron-energy wall flux, A8 4 eV SEE energy coupling, and one-shot scientific evidence composition while generic MOOSE mutation and execution mechanics remain in qpx_harness"
+    },
+    "recipes/issue31_coupling.py": {
+      "model": "PURE_PYTHON_SCIENTIFIC_POLICY",
+      "reason": "parameterized transport/Poisson construction, runtime-physics CSV interpretation, and EVR discriminator algorithms require runtime values and scientific branching; converting them to JSON would require control-flow/template DSL creep"
+    },
+    "recipes/issue31_r4.py": {
+      "model": "PURE_PYTHON_SCIENTIFIC_POLICY",
+      "reason": "R4-Q0 composes the accepted normalized R3 control with physical volume-charge construction, complete-plasma all-ground Poisson semantics, feedback-off attribution, and Gauss-law observability while generic MOOSE mutation mechanics remain in qpx_harness"
+    },
+    "recipes/issue31_r4_qf1.py": {
+      "model": "PURE_PYTHON_SCIENTIFIC_POLICY",
+      "reason": "R4-QF1 closes the solved-Poisson electrostatic feedback loop over the accepted charged-heavy/electron transport operators and owns the one-step C2 global charge-conservation interpretation while preserving QN0 normalization and boundary semantics"
+    },
+    "recipes/issue31_r4_qf2.py": {
+      "model": "PURE_PYTHON_SCIENTIFIC_POLICY",
+      "reason": "R4-QF2 owns the final mesh-specific mean-preserving local electron-charge perturbation and the bounded local-relaxation/C1/C2 acceptance policy used to decide whether the solved-Poisson R4 architecture is ready to close"
+    },
+    "recipes/issue31_r4_qn0.py": {
+      "model": "PURE_PYTHON_SCIENTIFIC_POLICY",
+      "reason": "R4-QN0 derives a reproducible quasi-neutral electron reference from the frozen initial heavy-species charge ledger while preserving the normalized R3 electron representation and the feedback-off R4-Q0 Poisson/Gauss-law contract"
+    },
+    "recipes/issue43_coupling_diagnostic.py": {
+      "model": "SPEC_OWNED_COMPAT_ADAPTER",
+      "spec": "specs/experiments/issue43_coupling_diagnostic.json",
+      "reason": "bounded declarative instrumentation is spec-owned and the adapter preserves legacy surface/error semantics"
+    },
+    "recipes/issue43_execution_contract.py": {
+      "model": "PURE_PYTHON_SCIENTIFIC_POLICY",
+      "reason": "model representation, fixed-step scientific acceptance, and output-observation requirements are Issue43 experiment semantics; reusable contract evaluation and MOOSE parsing remain canonical qpx_harness capabilities"
+    },
+    "recipes/issue43_fast_relaxation.py": {
+      "model": "PURE_PYTHON_SCIENTIFIC_POLICY",
+      "reason": "parameterized reactor-scale construction and relaxation-trajectory interpretation require runtime numeric inputs and scientific algorithms beyond the bounded transform vocabulary"
+    },
+    "recipes/issue43_feedback_basis.py": {
+      "model": "PURE_PYTHON_SCIENTIFIC_POLICY",
+      "reason": "the accepted closed electron/bulk-Poisson feedback basis is scientific composition: Issue43 fast-model construction plus fixed-step and microtime observation contracts; the recipe keeps that accepted model identity explicit without depending on versioned qpx_harness facades"
+    },
+    "recipes/issue45_closure_basis.py": {
+      "model": "PURE_PYTHON_SCIENTIFIC_POLICY",
+      "reason": "the accepted Issue45 steady candidate is a scientific composition of the accepted Issue43 closed feedback basis and the inventory-constraint policy; keeping that dependency in recipes removes versioned qpx_harness facade coupling without pretending the composition is generic infrastructure"
+    },
+    "recipes/issue45_first_linear.py": {
+      "model": "HYBRID_SPEC_PLUS_PYTHON_POLICY",
+      "spec": "specs/experiments/issue45_first_linear.json",
+      "reason": "fixed diagnostic instrumentation is declarative while Jacobian/KSP/termination interpretation remains explicit Python scientific policy using reusable diagnostics"
+    },
+    "recipes/issue45_inventory_constraint.py": {
+      "model": "PURE_PYTHON_SCIENTIFIC_POLICY",
+      "reason": "construction is parameterized by the macro inventory target and is coupled to a detailed closure/BC/kernel structural audit; preserving this as explicit Python avoids introducing interpolation and conditional audit semantics into JSON"
+    },
+    "recipes/issue45_inventory_nullspace.py": {
+      "model": "PURE_PYTHON_SCIENTIFIC_POLICY",
+      "reason": "the closed/source-free electron residual structure and its aggregate [1^T,0] left-null identity are scientific assumptions and acceptance semantics, while parsing mechanics remain in canonical MOOSE helpers"
+    },
+    "recipes/issue46_fd_reference.py": {
+      "model": "PURE_PYTHON_SCIENTIFIC_POLICY",
+      "reason": "FD reference selection is inseparable from representability prediction, PETSc realization identity, provenance, matrix localization, inverse-pair checks, and scientific mechanism classification; a spec-only representation would not own the experiment semantics"
+    },
+    "recipes/issue46_jacobian_localization.py": {
+      "model": "SPEC_OWNED_COMPAT_ADAPTER",
+      "spec": "specs/experiments/issue46_jacobian_localization.json",
+      "reason": "all recipe construction is bounded observability instrumentation and is now ExperimentSpec-owned"
+    },
+    "recipes/issue91_r3.py": {
+      "model": "PURE_PYTHON_SCIENTIFIC_POLICY",
+      "reason": "R3 composes accepted heavy and electron transport contracts, binds live p/T_g, freezes prescribed-field/Poisson-off semantics, and owns the bounded common-timestep construction while generic MOOSE mutations remain in qpx_harness"
+    }
+  }
+}

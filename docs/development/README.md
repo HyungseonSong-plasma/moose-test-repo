@@ -1,6 +1,6 @@
 # Development Logs
 
-Use this directory for chronological sol-adapter-moose development notes that are broader than a single failure incident.
+Use this directory for chronological **moose-test-repo** development notes that are broader than a single failure incident.
 
 Recommended filename:
 

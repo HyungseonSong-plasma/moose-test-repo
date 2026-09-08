@@ -1,6 +1,0 @@
-{
-  "name": "migration_only_exact_phi_ic",
-  "input": "migration_only_exact_phi_ic.i",
-  "checker": "../check_migration_state.py",
-  "checker_args": ["migration_only_exact_phi_ic_out.csv", "migration_only"]
-}
