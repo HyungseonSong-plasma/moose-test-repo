@@ -1,4 +1,4 @@
-"""Canonical declarative QPX Experiment Specification.
+"""Canonical declarative Physics Experiment Specification.
 
 The schema describes scientific intent and deliberately excludes target-solver
 mutation operations.  Closed-world validation happens before semantic compilation.
