@@ -6,7 +6,7 @@ import json
 import math
 from typing import Any, Iterable
 
-from qpx_harness.ontology.records import (
+from physics_harness.ontology.records import (
     ActionSpec,
     CapabilityDescriptor,
     DevelopmentState,
