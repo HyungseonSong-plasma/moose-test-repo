@@ -43,7 +43,7 @@
     prop_values = '5.0 101325.0 300.0 0.0'
   []
   [electron_transport]
-    type = QPXElectronTransportLookupMaterial
+    type = PhysicsElectronTransportLookupMaterial
     property_table_file = electron_energy_transport_smoke_table.txt
     mean_energy = mean_en
     pressure = p
@@ -58,7 +58,7 @@
     variable = energy_drift
   []
   [energy_drift_joule]
-    type = QPXFVElectronEnergyJouleHeating
+    type = PhysicsFVElectronEnergyJouleHeating
     variable = energy_drift
     electron_density = n_profile
     potential = phi_plus
@@ -72,7 +72,7 @@
     variable = energy_plus
   []
   [energy_plus_joule]
-    type = QPXFVElectronEnergyJouleHeating
+    type = PhysicsFVElectronEnergyJouleHeating
     variable = energy_plus
     electron_density = n_profile
     potential = phi_plus
@@ -86,7 +86,7 @@
     variable = energy_minus
   []
   [energy_minus_joule]
-    type = QPXFVElectronEnergyJouleHeating
+    type = PhysicsFVElectronEnergyJouleHeating
     variable = energy_minus
     electron_density = n_profile
     potential = phi_minus

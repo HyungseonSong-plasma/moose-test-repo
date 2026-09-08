@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""QPX #17 R1 EI01 attachment particle-source discriminator.
+"""Physics #17 R1 EI01 attachment particle-source discriminator.
 
-This is deliberately qpx-free: it proves the frozen algebra/sign/unit contract
+This is deliberately framework-independent: it proves the frozen algebra/sign/unit contract
 before the controlled MOOSE runtime discriminator in the next controller step.
 """
 

@@ -48,7 +48,7 @@
 
 [FVBCs]
   [thermal_wall]
-    type = QPXFVElectronEnergyWallFluxBC
+    type = PhysicsFVElectronEnergyWallFluxBC
     variable = energy_thermal
     boundary = right
     electron_energy_density = energy_thermal
@@ -57,7 +57,7 @@
     energy_reference_eV = 5.0
   []
   [see_wall]
-    type = QPXFVElectronEnergyWallFluxBC
+    type = PhysicsFVElectronEnergyWallFluxBC
     variable = energy_see
     boundary = right
     electron_energy_density = energy_see

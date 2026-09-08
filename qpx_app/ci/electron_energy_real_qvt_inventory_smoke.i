@@ -64,7 +64,7 @@
   []
 
   [mean_energy_bridge]
-    type = QPXElectronMeanEnergyMaterial
+    type = PhysicsElectronMeanEnergyMaterial
     electron_energy_density = n_epsilon
     electron_density = n_e
     energy_reference_eV = 5.73276
@@ -72,7 +72,7 @@
   []
 
   [electron_transport]
-    type = QPXElectronTransportLookupMaterial
+    type = PhysicsElectronTransportLookupMaterial
     property_table_file = '../../experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt'
     mean_energy = mean_en_solved
     pressure = p

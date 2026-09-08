@@ -44,5 +44,5 @@ assert values[0][0] < values[1][0] < values[2][0]
 assert values[0][1] < values[1][1] < values[2][1]
 assert values[0][2] < values[1][2] < values[2][2]
 
-print("QPX_ELECTRON_SOLVED_MEAN_ENERGY_REACHES_LOOKUP_PASS")
-print("QPX_ELECTRON_TRANSPORT_RESPONSE_DISCRIMINATOR_PASS")
+print("PHYSICS_ELECTRON_SOLVED_MEAN_ENERGY_REACHES_LOOKUP_PASS")
+print("PHYSICS_ELECTRON_TRANSPORT_RESPONSE_DISCRIMINATOR_PASS")

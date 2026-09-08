@@ -23,7 +23,7 @@
 
 [AuxKernels]
   [background_density]
-    type = QPXBackgroundDensity
+    type = PhysicsBackgroundDensity
     variable = background_density
   []
 []

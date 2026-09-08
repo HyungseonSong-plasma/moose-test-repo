@@ -31,13 +31,13 @@
     prop_values = '101325.0 300.0 1.0'
   []
   [mean_energy_bridge]
-    type = QPXElectronMeanEnergyMaterial
+    type = PhysicsElectronMeanEnergyMaterial
     electron_energy_density = n_epsilon
     electron_density = n_e
     energy_reference_eV = 5.73276
   []
   [electron_transport]
-    type = QPXElectronTransportLookupMaterial
+    type = PhysicsElectronTransportLookupMaterial
     property_table_file = electron_energy_lookup_response_smoke_table.txt
     mean_energy = mean_en_solved
     pressure = p
@@ -61,7 +61,7 @@
     coeff = electron_energy_diffusion
   []
   [energy_drift]
-    type = QPXFVElectrostaticDrift
+    type = PhysicsFVElectrostaticDrift
     variable = n_epsilon
     potential = phi_zero
     mobility = electron_energy_mobility

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""QPX #17 R2 O2-ionization lookup/ownership contract discriminator.
+"""Physics #17 R2 O2-ionization lookup/ownership contract discriminator.
 
-QPX-free controller Step-1 gate. This freezes algebra, conservation, sign,
+Framework-independent controller Step-1 gate. This freezes algebra, conservation, sign,
 lookup-bound and single-progress ownership before production implementation.
 """
 
@@ -55,21 +55,17 @@ def main():
     n_ref = 4.0e16
     s = ionization_sources(R, n_ref)
 
-    # e + O2 -> 2e + O2p: net +1 electron, O2 consumed, O2p produced.
     assert s["electron_number"] > 0.0
     assert s["O2_mass"] < 0.0
     assert s["O2p_mass"] > 0.0
 
-    # Heavy mass and oxygen atoms close exactly for O2 -> O2p.
     assert math.isclose(s["O2_mass"] + s["O2p_mass"], 0.0, abs_tol=1e-14)
     oxygen_atom_molar = -2.0 * R + 2.0 * R
     assert math.isclose(oxygen_atom_molar, 0.0, abs_tol=1e-14)
 
-    # Electron production balances positive-ion production in charge ledger.
     assert math.isclose(charge_ledger(s["electron_number"], R), 0.0, abs_tol=1e-6)
     assert math.isclose(s["electron_normalized"] * n_ref, s["electron_number"], rel_tol=1e-15)
 
-    # Frozen molar-vs-particle coefficient algebra.
     k_raw = 3.7e9
     n_e = 1.2e16
     c_o2 = 0.031
@@ -77,11 +73,9 @@ def main():
     R_particle_basis = (k_raw / N_A) * n_e * c_o2
     assert math.isclose(R_molar, R_particle_basis, rel_tol=1e-15)
 
-    # Mutation discriminators: opposite electron sign and duplicated/perturbed progress fail charge closure.
     assert not math.isclose(charge_ledger(-N_A * R, R), 0.0, abs_tol=1e-6)
     assert not math.isclose(charge_ledger(s["electron_number"], 1.01 * R), 0.0, abs_tol=1e-6)
 
-    # Strict lookup-domain discriminator: values outside the frozen domain are invalid, not clampable.
     for value in (lo - 1e-9, hi + 1e-9):
         assert not (lo <= value <= hi)
     for value in (lo, 0.5 * (lo + hi), hi):

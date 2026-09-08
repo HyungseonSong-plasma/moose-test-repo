@@ -103,14 +103,14 @@ def main() -> int:
         f"{energy_range_initial} -> {energy_range_final}"
     )
 
-    print(f"QPX_E7_PARTICLE_INVENTORY_RELERR={particle_inventory_error:.16e}")
-    print(f"QPX_E7_ENERGY_INVENTORY_RELERR={energy_inventory_error:.16e}")
+    print(f"PHYSICS_E7_PARTICLE_INVENTORY_RELERR={particle_inventory_error:.16e}")
+    print(f"PHYSICS_E7_ENERGY_INVENTORY_RELERR={energy_inventory_error:.16e}")
     print(
-        "QPX_E7_MEAN_ENERGY_RANGE="
+        "PHYSICS_E7_MEAN_ENERGY_RANGE="
         f"{value(final, 'mean_en_solved_min'):.16e},"
         f"{value(final, 'mean_en_solved_max'):.16e}"
     )
-    print("QPX_E7_REAL_QVT_CHEMISTRY_OFF_INVENTORY_PASS")
+    print("PHYSICS_E7_REAL_QVT_CHEMISTRY_OFF_INVENTORY_PASS")
     return 0
 
 

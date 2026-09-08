@@ -6,9 +6,9 @@ from pathlib import Path
 
 N_A = 6.02214076e23
 M_O2 = 31.998e-3
-RATE = Path("qpx_app/src/materials/QPXElectronImpactIonizationMaterial.C").read_text()
-PROJ = Path("qpx_app/src/materials/QPXO2IonizationSourceMaterial.C").read_text()
-EK = Path("qpx_app/src/fvkernels/QPXFVElectronReactionSource.C").read_text()
+RATE = Path("physics_app/src/materials/PhysicsElectronImpactIonizationMaterial.C").read_text()
+PROJ = Path("physics_app/src/materials/PhysicsO2IonizationSourceMaterial.C").read_text()
+EK = Path("physics_app/src/fvkernels/PhysicsFVElectronReactionSource.C").read_text()
 
 # One rate owner: only the ionization material owns the lookup/table and publishes R_ion_O2.
 assert 'addFunctorProperty<ADReal>(\n      "R_ion_O2"' in RATE
@@ -22,7 +22,7 @@ assert '_reaction_progress(getFunctor<ADReal>("reaction_progress"))' in PROJ
 assert '"O2_ionization_mass_source"' in PROJ
 assert '"O2p_ionization_mass_source"' in PROJ
 assert '"electron_ionization_number_source"' in PROJ
-for forbidden in ("QPXLookupTable1D", "interpolate", "mean_energy", "electron_number_density", "o2_molar_concentration"):
+for forbidden in ("PhysicsLookupTable1D", "interpolate", "mean_energy", "electron_number_density", "o2_molar_concentration"):
     assert forbidden not in PROJ
 
 # Existing normalized electron equation consumes a signed physical number-source functor.
