@@ -2,7 +2,7 @@
 """Guard reusable plasma semantics against historical campaign ownership.
 
 Issue #148 permits exact physical names and immutable experiment/provenance data,
-but production qpx_harness modules must not be owned by D_mix comparison campaigns,
+but production physics_harness modules must not be owned by D_mix comparison campaigns,
 electron-only inventory packages, or Issue2/Issue45 fixture defaults.
 """
 from __future__ import annotations
@@ -11,7 +11,7 @@ import ast
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-PRODUCTION = ROOT / "qpx_harness"
+PRODUCTION = ROOT / "physics_harness"
 
 FORBIDDEN_PATH_PARTS = {"dmix_equivalence", "electron_inventory"}
 FORBIDDEN_IMPORT_PARTS = ("dmix_equivalence", "electron_inventory")
@@ -62,7 +62,7 @@ def main() -> int:
                 if fragment in text:
                     fixture_dependencies.append(f"{rel}: {fragment}")
 
-    domain = ROOT / "qpx_harness/domains/plasma/species_constraints.py"
+    domain = ROOT / "physics_harness/domains/plasma/species_constraints.py"
     parameterized_species = domain.is_file()
     dmix_campaign_modules = sum("dmix_equivalence" in value for value in forbidden_paths)
     electron_inventory_packages = sum("electron_inventory" in value for value in forbidden_paths)
