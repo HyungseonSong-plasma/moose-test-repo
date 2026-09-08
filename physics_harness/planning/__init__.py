@@ -1,4 +1,4 @@
-"""QPX solver-independent planning and ScientificPolicy synthesis."""
+"""Physics solver-independent planning and ScientificPolicy synthesis."""
 from .policy import (
     ActionSpec,
     CapabilityDescriptor,
