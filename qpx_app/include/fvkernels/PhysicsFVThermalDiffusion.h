@@ -12,12 +12,12 @@
  * where D_T is the multicomponent thermal diffusion coefficient
  * with units kg/(m s).
  */
-class QPXFVThermalDiffusion : public FVFluxKernel
+class PhysicsFVThermalDiffusion : public FVFluxKernel
 {
 public:
   static InputParameters validParams();
 
-  QPXFVThermalDiffusion(const InputParameters & parameters);
+  PhysicsFVThermalDiffusion(const InputParameters & parameters);
 
 protected:
   ADReal computeQpResidual() override;

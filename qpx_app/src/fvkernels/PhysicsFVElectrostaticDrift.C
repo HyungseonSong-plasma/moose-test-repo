@@ -1,13 +1,13 @@
-#include "QPXFVElectrostaticDrift.h"
+#include "PhysicsFVElectrostaticDrift.h"
 
 #include "FEProblemBase.h"
 #include "RelationshipManager.h"
 #include "metaphysicl/raw_type.h"
 
-registerMooseObject("qpxApp", QPXFVElectrostaticDrift);
+registerMooseObject("PhysicsApp", PhysicsFVElectrostaticDrift);
 
 InputParameters
-QPXFVElectrostaticDrift::validParams()
+PhysicsFVElectrostaticDrift::validParams()
 {
   auto params = FVFluxKernel::validParams();
 
@@ -46,7 +46,7 @@ QPXFVElectrostaticDrift::validParams()
   return params;
 }
 
-QPXFVElectrostaticDrift::QPXFVElectrostaticDrift(
+PhysicsFVElectrostaticDrift::PhysicsFVElectrostaticDrift(
     const InputParameters & parameters)
   : FVFluxKernel(parameters),
     _potential(getFunctor<ADReal>("potential")),
@@ -69,7 +69,7 @@ QPXFVElectrostaticDrift::QPXFVElectrostaticDrift(
 }
 
 ADReal
-QPXFVElectrostaticDrift::computeQpResidual()
+PhysicsFVElectrostaticDrift::computeQpResidual()
 {
   const auto state = determineState();
 

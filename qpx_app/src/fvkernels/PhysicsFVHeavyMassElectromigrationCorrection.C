@@ -1,13 +1,13 @@
-#include "QPXFVHeavyMassElectromigrationCorrection.h"
+#include "PhysicsFVHeavyMassElectromigrationCorrection.h"
 
 #include "FEProblemBase.h"
 #include "RelationshipManager.h"
 #include "metaphysicl/raw_type.h"
 
-registerMooseObject("qpxApp", QPXFVHeavyMassElectromigrationCorrection);
+registerMooseObject("PhysicsApp", PhysicsFVHeavyMassElectromigrationCorrection);
 
 InputParameters
-QPXFVHeavyMassElectromigrationCorrection::validParams()
+PhysicsFVHeavyMassElectromigrationCorrection::validParams()
 {
   auto params = FVFluxKernel::validParams();
 
@@ -53,8 +53,8 @@ QPXFVHeavyMassElectromigrationCorrection::validParams()
   return params;
 }
 
-QPXFVHeavyMassElectromigrationCorrection::
-    QPXFVHeavyMassElectromigrationCorrection(
+PhysicsFVHeavyMassElectromigrationCorrection::
+    PhysicsFVHeavyMassElectromigrationCorrection(
         const InputParameters & parameters)
   : FVFluxKernel(parameters),
     _potential(getFunctor<ADReal>("potential")),
@@ -74,7 +74,7 @@ QPXFVHeavyMassElectromigrationCorrection::
 
   if (_ion_mobility_names.size() != n || _ion_charges.size() != n)
     mooseError(
-        "QPXFVHeavyMassElectromigrationCorrection: ion_mass_fractions, "
+        "PhysicsFVHeavyMassElectromigrationCorrection: ion_mass_fractions, "
         "ion_mobilities, and ion_charges must have the same length.");
 
   _ion_mass_fractions.reserve(n);
@@ -84,7 +84,7 @@ QPXFVHeavyMassElectromigrationCorrection::
   {
     if (_ion_charges[i] == 0.0)
       mooseError(
-          "QPXFVHeavyMassElectromigrationCorrection: ion_charges must be "
+          "PhysicsFVHeavyMassElectromigrationCorrection: ion_charges must be "
           "nonzero for every listed charged-heavy species.");
 
     _ion_mass_fractions.push_back(
@@ -104,7 +104,7 @@ QPXFVHeavyMassElectromigrationCorrection::
 }
 
 ADReal
-QPXFVHeavyMassElectromigrationCorrection::computeQpResidual()
+PhysicsFVHeavyMassElectromigrationCorrection::computeQpResidual()
 {
   const auto state = determineState();
 
@@ -114,7 +114,7 @@ QPXFVHeavyMassElectromigrationCorrection::computeQpResidual()
           : Moose::StateArg(1, Moose::SolutionIterationType::Nonlinear);
 
   // Use the same centered electrostatic/carrier evaluation as
-  // QPXFVElectrostaticDrift.
+  // PhysicsFVElectrostaticDrift.
   const auto centered_face =
       makeFace(*_face_info,
                Moose::FV::LimiterType::CentralDifference,

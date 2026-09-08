@@ -9,7 +9,7 @@
  *
  * For every internal face, this kernel reconstructs the provisional direct
  * charged-heavy migration mass flux using the same electric-field, mobility,
- * density, and advected interpolation contract as QPXFVElectrostaticDrift:
+ * density, and advected interpolation contract as PhysicsFVElectrostaticDrift:
  *
  *   J_direct,n = sum_i rho_f * w_i,up * z_i * mu_i,f * (E_f . n)
  *
@@ -32,12 +32,12 @@
  * Physical wall losses are handled by wall boundary conditions; this kernel
  * should normally avoid external wall boundaries.
  */
-class QPXFVHeavyMassElectromigrationCorrection : public FVFluxKernel
+class PhysicsFVHeavyMassElectromigrationCorrection : public FVFluxKernel
 {
 public:
   static InputParameters validParams();
 
-  QPXFVHeavyMassElectromigrationCorrection(
+  PhysicsFVHeavyMassElectromigrationCorrection(
       const InputParameters & parameters);
 
 protected:

@@ -18,11 +18,11 @@
  * reaction rate.  Electron, heavy-species, and later electron-energy source
  * owners must therefore reuse one upstream canonical reaction progress R_r.
  */
-class QPXFVElectronReactionSource : public FVElementalKernel
+class PhysicsFVElectronReactionSource : public FVElementalKernel
 {
 public:
   static InputParameters validParams();
-  QPXFVElectronReactionSource(const InputParameters & parameters);
+  PhysicsFVElectronReactionSource(const InputParameters & parameters);
 
 protected:
   ADReal computeQpResidual() override;

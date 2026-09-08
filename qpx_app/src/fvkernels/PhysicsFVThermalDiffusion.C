@@ -1,9 +1,9 @@
-#include "QPXFVThermalDiffusion.h"
+#include "PhysicsFVThermalDiffusion.h"
 
-registerMooseObject("qpxApp", QPXFVThermalDiffusion);
+registerMooseObject("PhysicsApp", PhysicsFVThermalDiffusion);
 
 InputParameters
-QPXFVThermalDiffusion::validParams()
+PhysicsFVThermalDiffusion::validParams()
 {
   InputParameters params = FVFluxKernel::validParams();
 
@@ -26,7 +26,7 @@ QPXFVThermalDiffusion::validParams()
   return params;
 }
 
-QPXFVThermalDiffusion::QPXFVThermalDiffusion(
+PhysicsFVThermalDiffusion::PhysicsFVThermalDiffusion(
     const InputParameters & parameters)
   : FVFluxKernel(parameters),
     _temperature(getFunctor<ADReal>("temperature")),
@@ -38,7 +38,7 @@ QPXFVThermalDiffusion::QPXFVThermalDiffusion(
 }
 
 ADReal
-QPXFVThermalDiffusion::computeQpResidual()
+PhysicsFVThermalDiffusion::computeQpResidual()
 {
   using namespace Moose::FV;
 

@@ -1,11 +1,11 @@
 #pragma once
 
-#include "QPXFVMassFractionAdvection.h"
+#include "PhysicsFVMassFractionAdvection.h"
 
-registerADMooseObject("qpxApp", QPXFVMassFractionAdvection);
+registerADMooseObject("PhysicsApp", PhysicsFVMassFractionAdvection);
 
 InputParameters
-QPXFVMassFractionAdvection::validParams()
+PhysicsFVMassFractionAdvection::validParams()
 {
   InputParameters params = INSFVScalarFieldAdvection::validParams();
 
@@ -19,7 +19,7 @@ QPXFVMassFractionAdvection::validParams()
   return params;
 }
 
-QPXFVMassFractionAdvection::QPXFVMassFractionAdvection(
+PhysicsFVMassFractionAdvection::PhysicsFVMassFractionAdvection(
     const InputParameters & parameters)
   : INSFVScalarFieldAdvection(parameters),
     _rho(getFunctor<ADReal>("rho"))
@@ -27,7 +27,7 @@ QPXFVMassFractionAdvection::QPXFVMassFractionAdvection(
 }
 
 ADReal
-QPXFVMassFractionAdvection::computeQpResidual()
+PhysicsFVMassFractionAdvection::computeQpResidual()
 {
   const auto state = determineState();
 

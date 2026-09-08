@@ -1,9 +1,9 @@
-#include "QPXFVMassFractionTimeDerivative.h"
+#include "PhysicsFVMassFractionTimeDerivative.h"
 
-registerADMooseObject("qpxApp", QPXFVMassFractionTimeDerivative);
+registerADMooseObject("PhysicsApp", PhysicsFVMassFractionTimeDerivative);
 
 InputParameters
-QPXFVMassFractionTimeDerivative::validParams()
+PhysicsFVMassFractionTimeDerivative::validParams()
 {
   InputParameters params = FVTimeKernel::validParams();
 
@@ -18,7 +18,7 @@ QPXFVMassFractionTimeDerivative::validParams()
   return params;
 }
 
-QPXFVMassFractionTimeDerivative::QPXFVMassFractionTimeDerivative(
+PhysicsFVMassFractionTimeDerivative::PhysicsFVMassFractionTimeDerivative(
     const InputParameters & parameters)
   : FVTimeKernel(parameters),
     _rho(getFunctor<ADReal>("rho"))
@@ -26,7 +26,7 @@ QPXFVMassFractionTimeDerivative::QPXFVMassFractionTimeDerivative(
 }
 
 ADReal
-QPXFVMassFractionTimeDerivative::computeQpResidual()
+PhysicsFVMassFractionTimeDerivative::computeQpResidual()
 {
   const auto state = determineState();
 

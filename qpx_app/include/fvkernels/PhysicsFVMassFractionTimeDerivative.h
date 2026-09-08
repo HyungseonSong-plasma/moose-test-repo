@@ -20,12 +20,12 @@
  *   - density-weighted accumulation only
  *   - convection and reactions are handled by separate kernels
  */
-class QPXFVMassFractionTimeDerivative : public FVTimeKernel
+class PhysicsFVMassFractionTimeDerivative : public FVTimeKernel
 {
 public:
   static InputParameters validParams();
 
-  QPXFVMassFractionTimeDerivative(const InputParameters & parameters);
+  PhysicsFVMassFractionTimeDerivative(const InputParameters & parameters);
 
 protected:
   virtual ADReal computeQpResidual() override;

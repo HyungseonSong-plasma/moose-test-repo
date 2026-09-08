@@ -1,9 +1,9 @@
-#include "QPXFVElectronEnergyJouleHeating.h"
+#include "PhysicsFVElectronEnergyJouleHeating.h"
 
-registerMooseObject("qpxApp", QPXFVElectronEnergyJouleHeating);
+registerMooseObject("PhysicsApp", PhysicsFVElectronEnergyJouleHeating);
 
 InputParameters
-QPXFVElectronEnergyJouleHeating::validParams()
+PhysicsFVElectronEnergyJouleHeating::validParams()
 {
   auto params = FVElementalKernel::validParams();
 
@@ -27,7 +27,7 @@ QPXFVElectronEnergyJouleHeating::validParams()
   return params;
 }
 
-QPXFVElectronEnergyJouleHeating::QPXFVElectronEnergyJouleHeating(
+PhysicsFVElectronEnergyJouleHeating::PhysicsFVElectronEnergyJouleHeating(
     const InputParameters & parameters)
   : FVElementalKernel(parameters),
     _electron_density(getFunctor<ADReal>("electron_density")),
@@ -41,7 +41,7 @@ QPXFVElectronEnergyJouleHeating::QPXFVElectronEnergyJouleHeating(
 }
 
 ADReal
-QPXFVElectronEnergyJouleHeating::computeQpResidual()
+PhysicsFVElectronEnergyJouleHeating::computeQpResidual()
 {
   const auto elem = makeElemArg(_current_elem);
   const auto state = determineState();

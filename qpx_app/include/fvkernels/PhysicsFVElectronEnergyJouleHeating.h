@@ -16,13 +16,13 @@
  *
  * The kernel contributes -S_hat to the residual so positive electric work is
  * a positive right-hand-side source. The particle equation itself remains
- * owned by QPXFVElectrostaticDrift and framework FVDiffusion.
+ * owned by PhysicsFVElectrostaticDrift and framework FVDiffusion.
  */
-class QPXFVElectronEnergyJouleHeating : public FVElementalKernel
+class PhysicsFVElectronEnergyJouleHeating : public FVElementalKernel
 {
 public:
   static InputParameters validParams();
-  QPXFVElectronEnergyJouleHeating(const InputParameters & parameters);
+  PhysicsFVElectronEnergyJouleHeating(const InputParameters & parameters);
 
 protected:
   ADReal computeQpResidual() override;

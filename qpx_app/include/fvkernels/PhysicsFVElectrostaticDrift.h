@@ -18,11 +18,11 @@
  * limiter state is taken from the previous time level, while the current AD
  * solution is retained for the transported value and electrostatic field.
  */
-class QPXFVElectrostaticDrift : public FVFluxKernel
+class PhysicsFVElectrostaticDrift : public FVFluxKernel
 {
 public:
   static InputParameters validParams();
-  QPXFVElectrostaticDrift(const InputParameters & parameters);
+  PhysicsFVElectrostaticDrift(const InputParameters & parameters);
 
 protected:
   ADReal computeQpResidual() override;

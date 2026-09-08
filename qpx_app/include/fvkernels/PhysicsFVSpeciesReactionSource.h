@@ -11,11 +11,11 @@
  *
  * so the residual contribution is -S.
  */
-class QPXFVSpeciesReactionSource : public FVElementalKernel
+class PhysicsFVSpeciesReactionSource : public FVElementalKernel
 {
 public:
   static InputParameters validParams();
-  QPXFVSpeciesReactionSource(const InputParameters & parameters);
+  PhysicsFVSpeciesReactionSource(const InputParameters & parameters);
 
 protected:
   ADReal computeQpResidual() override;

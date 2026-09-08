@@ -1,9 +1,9 @@
-#include "QPXFVMixtureAveragedDiffusion.h"
+#include "PhysicsFVMixtureAveragedDiffusion.h"
 
-registerMooseObject("qpxApp", QPXFVMixtureAveragedDiffusion);
+registerMooseObject("PhysicsApp", PhysicsFVMixtureAveragedDiffusion);
 
 InputParameters
-QPXFVMixtureAveragedDiffusion::validParams()
+PhysicsFVMixtureAveragedDiffusion::validParams()
 {
   InputParameters params = FVFluxKernel::validParams();
 
@@ -35,7 +35,7 @@ QPXFVMixtureAveragedDiffusion::validParams()
   return params;
 }
 
-QPXFVMixtureAveragedDiffusion::QPXFVMixtureAveragedDiffusion(
+PhysicsFVMixtureAveragedDiffusion::PhysicsFVMixtureAveragedDiffusion(
     const InputParameters & parameters)
   : FVFluxKernel(parameters),
     _rho(getFunctor<ADReal>("rho")),
@@ -50,7 +50,7 @@ QPXFVMixtureAveragedDiffusion::QPXFVMixtureAveragedDiffusion(
 }
 
 ADReal
-QPXFVMixtureAveragedDiffusion::computeQpResidual()
+PhysicsFVMixtureAveragedDiffusion::computeQpResidual()
 {
   using namespace Moose::FV;
 

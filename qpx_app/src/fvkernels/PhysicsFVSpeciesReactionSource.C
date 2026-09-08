@@ -1,9 +1,9 @@
-#include "QPXFVSpeciesReactionSource.h"
+#include "PhysicsFVSpeciesReactionSource.h"
 
-registerMooseObject("qpxApp", QPXFVSpeciesReactionSource);
+registerMooseObject("PhysicsApp", PhysicsFVSpeciesReactionSource);
 
 InputParameters
-QPXFVSpeciesReactionSource::validParams()
+PhysicsFVSpeciesReactionSource::validParams()
 {
   auto params = FVElementalKernel::validParams();
 
@@ -17,13 +17,13 @@ QPXFVSpeciesReactionSource::validParams()
   return params;
 }
 
-QPXFVSpeciesReactionSource::QPXFVSpeciesReactionSource(const InputParameters & parameters)
+PhysicsFVSpeciesReactionSource::PhysicsFVSpeciesReactionSource(const InputParameters & parameters)
   : FVElementalKernel(parameters), _source(getFunctor<ADReal>("source"))
 {
 }
 
 ADReal
-QPXFVSpeciesReactionSource::computeQpResidual()
+PhysicsFVSpeciesReactionSource::computeQpResidual()
 {
   return -_source(makeElemArg(_current_elem), determineState());
 }

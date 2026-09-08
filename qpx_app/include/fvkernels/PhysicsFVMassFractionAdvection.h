@@ -12,12 +12,12 @@
  * using the same Rhie-Chow velocity and advected-variable interpolation
  * as INSFVScalarFieldAdvection.
  */
-class QPXFVMassFractionAdvection : public INSFVScalarFieldAdvection
+class PhysicsFVMassFractionAdvection : public INSFVScalarFieldAdvection
 {
 public:
   static InputParameters validParams();
 
-  QPXFVMassFractionAdvection(const InputParameters & parameters);
+  PhysicsFVMassFractionAdvection(const InputParameters & parameters);
 
 protected:
   virtual ADReal computeQpResidual() override;

@@ -10,7 +10,7 @@
  *   d(rho w_k)/dt
  *     ~= [rho^n w_k^n - rho^(n-1) w_k^(n-1)] / dt
  *
- * This object is intentionally separate from QPXFVMassFractionTimeDerivative,
+ * This object is intentionally separate from PhysicsFVMassFractionTimeDerivative,
  * which implements rho * d(w_k)/dt.
  *
  * Current supported temporal contract:
@@ -20,12 +20,12 @@
  * Generalized multi-step product differentiation (for example BDF2) is outside
  * the current object contract and must not be inferred from this implementation.
  */
-class QPXFVConservativeMassFractionTimeDerivative : public FVTimeKernel
+class PhysicsFVConservativeMassFractionTimeDerivative : public FVTimeKernel
 {
 public:
   static InputParameters validParams();
 
-  QPXFVConservativeMassFractionTimeDerivative(const InputParameters & parameters);
+  PhysicsFVConservativeMassFractionTimeDerivative(const InputParameters & parameters);
 
 protected:
   virtual ADReal computeQpResidual() override;

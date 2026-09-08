@@ -1,9 +1,9 @@
-#include "QPXFVConservativeMassFractionTimeDerivative.h"
+#include "PhysicsFVConservativeMassFractionTimeDerivative.h"
 
-registerADMooseObject("qpxApp", QPXFVConservativeMassFractionTimeDerivative);
+registerADMooseObject("PhysicsApp", PhysicsFVConservativeMassFractionTimeDerivative);
 
 InputParameters
-QPXFVConservativeMassFractionTimeDerivative::validParams()
+PhysicsFVConservativeMassFractionTimeDerivative::validParams()
 {
   InputParameters params = FVTimeKernel::validParams();
 
@@ -18,21 +18,21 @@ QPXFVConservativeMassFractionTimeDerivative::validParams()
   return params;
 }
 
-QPXFVConservativeMassFractionTimeDerivative::
-QPXFVConservativeMassFractionTimeDerivative(const InputParameters & parameters)
+PhysicsFVConservativeMassFractionTimeDerivative::
+PhysicsFVConservativeMassFractionTimeDerivative(const InputParameters & parameters)
   : FVTimeKernel(parameters),
     _rho(getFunctor<ADReal>("rho"))
 {
 }
 
 ADReal
-QPXFVConservativeMassFractionTimeDerivative::computeQpResidual()
+PhysicsFVConservativeMassFractionTimeDerivative::computeQpResidual()
 {
   if (!_subproblem.isTransient())
-    mooseError("QPXFVConservativeMassFractionTimeDerivative requires a transient problem.");
+    mooseError("PhysicsFVConservativeMassFractionTimeDerivative requires a transient problem.");
 
   if (_dt <= 0.0)
-    mooseError("QPXFVConservativeMassFractionTimeDerivative requires dt > 0.");
+    mooseError("PhysicsFVConservativeMassFractionTimeDerivative requires dt > 0.");
 
   const auto state = determineState();
   const auto elem_arg = makeElemArg(_current_elem);

@@ -1,9 +1,9 @@
-#include "QPXFVElectronReactionSource.h"
+#include "PhysicsFVElectronReactionSource.h"
 
-registerMooseObject("qpxApp", QPXFVElectronReactionSource);
+registerMooseObject("PhysicsApp", PhysicsFVElectronReactionSource);
 
 InputParameters
-QPXFVElectronReactionSource::validParams()
+PhysicsFVElectronReactionSource::validParams()
 {
   auto params = FVElementalKernel::validParams();
 
@@ -20,7 +20,7 @@ QPXFVElectronReactionSource::validParams()
   return params;
 }
 
-QPXFVElectronReactionSource::QPXFVElectronReactionSource(const InputParameters & parameters)
+PhysicsFVElectronReactionSource::PhysicsFVElectronReactionSource(const InputParameters & parameters)
   : FVElementalKernel(parameters),
     _number_source(getFunctor<ADReal>("number_source")),
     _n_ref(getParam<Real>("n_ref"))
@@ -28,7 +28,7 @@ QPXFVElectronReactionSource::QPXFVElectronReactionSource(const InputParameters &
 }
 
 ADReal
-QPXFVElectronReactionSource::computeQpResidual()
+PhysicsFVElectronReactionSource::computeQpResidual()
 {
   const ADReal physical_number_source =
       _number_source(makeElemArg(_current_elem), determineState());

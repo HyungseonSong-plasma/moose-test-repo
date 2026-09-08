@@ -19,12 +19,12 @@
  * Thermal diffusion, electric-field migration, and mixture-diffusion
  * correction are intentionally excluded in the first implementation.
  */
-class QPXFVMixtureAveragedDiffusion : public FVFluxKernel
+class PhysicsFVMixtureAveragedDiffusion : public FVFluxKernel
 {
 public:
   static InputParameters validParams();
 
-  QPXFVMixtureAveragedDiffusion(const InputParameters & parameters);
+  PhysicsFVMixtureAveragedDiffusion(const InputParameters & parameters);
 
 protected:
   virtual ADReal computeQpResidual() override;
