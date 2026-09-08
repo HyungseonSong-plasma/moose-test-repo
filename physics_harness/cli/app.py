@@ -198,13 +198,13 @@ def internal_cli(target: str) -> int:
     commands: list[list[str]] = []
     if target in {"architecture", "all"}:
         commands.extend([
-            [sys.executable, str(ROOT / "tools" / "qpx_dependency_guard.py")],
-            [sys.executable, str(ROOT / "tools" / "qpx_experiment_gateway_guard.py")],
-            [sys.executable, str(ROOT / "tools" / "qpx_plasma_semantic_residue_guard.py")],
-            [sys.executable, str(ROOT / "tools" / "qpx_campaign_residue_guard.py")],
-            [sys.executable, str(ROOT / "tools" / "qpx_numerical_method_ownership_guard.py")],
-            [sys.executable, str(ROOT / "tools" / "qpx_boundary_terminology_guard.py")],
-            [sys.executable, str(ROOT / "tools" / "qpx_architecture_census.py")],
+            [sys.executable, str(ROOT / "tools" / "physics_dependency_guard.py")],
+            [sys.executable, str(ROOT / "tools" / "physics_experiment_gateway_guard.py")],
+            [sys.executable, str(ROOT / "tools" / "physics_plasma_semantic_residue_guard.py")],
+            [sys.executable, str(ROOT / "tools" / "physics_campaign_residue_guard.py")],
+            [sys.executable, str(ROOT / "tools" / "physics_numerical_method_ownership_guard.py")],
+            [sys.executable, str(ROOT / "tools" / "physics_boundary_terminology_guard.py")],
+            [sys.executable, str(ROOT / "tools" / "physics_architecture_census.py")],
         ])
     if target in {"regression", "all"}:
         commands.append([sys.executable, "-m", "pytest", "-q"])
