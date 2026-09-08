@@ -9,11 +9,11 @@ from pathlib import Path
 import subprocess
 import sys
 
-from qpx_harness.application import normalize_temporal_run_csv
-from qpx_harness.adapters.moose.preflight import validate_input_preflight
-from qpx_harness.application.gateway import compile_experiment, lower_experiment, plan_experiment
-from qpx_harness.analysis.temporal import VALID_INITIAL_POLICIES
-from qpx_harness.specification import ExperimentSpecError
+from physics_harness.application import normalize_temporal_run_csv
+from physics_harness.adapters.moose.preflight import validate_input_preflight
+from physics_harness.application.gateway import compile_experiment, lower_experiment, plan_experiment
+from physics_harness.analysis.temporal import VALID_INITIAL_POLICIES
+from physics_harness.specification import ExperimentSpecError
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -42,12 +42,12 @@ INTERNAL_TARGETS = {
 }
 
 _LEGACY_TARGETS = {
-    "test": "qpx_harness.adapters.moose.regression:cli_run_test",
-    "test-all": "qpx_harness.adapters.moose.regression:cli_run_all",
-    "contract": "qpx_harness.execution.contract:main",
-    "measure": "qpx_harness.cli.commands.performance:measure_main",
-    "analyze": "qpx_harness.cli.commands.performance:analyze_main",
-    "inventory": "qpx_harness.execution.workspace:inventory_cli",
+    "test": "physics_harness.adapters.moose.regression:cli_run_test",
+    "test-all": "physics_harness.adapters.moose.regression:cli_run_all",
+    "contract": "physics_harness.execution.contract:main",
+    "measure": "physics_harness.cli.commands.performance:measure_main",
+    "analyze": "physics_harness.cli.commands.performance:analyze_main",
+    "inventory": "physics_harness.execution.workspace:inventory_cli",
 }
 
 

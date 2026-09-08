@@ -12,9 +12,9 @@ from ...application import performance
 
 
 def measure_main(argv: Iterable[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="qpx measure")
+    parser = argparse.ArgumentParser(prog="physics measure")
     parser.add_argument("manifest", nargs="?")
-    parser.add_argument("--qpx")
+    parser.add_argument("--physics")
     parser.add_argument("--out-dir")
     parser.add_argument("--self-test", action="store_true")
     args = parser.parse_args(list(argv) if argv is not None else None)
@@ -25,7 +25,7 @@ def measure_main(argv: Iterable[str] | None = None) -> int:
     try:
         return performance.run_measurement(
             Path(args.manifest),
-            executable=args.qpx,
+            executable=args.physics,
             out_dir=Path(args.out_dir) if args.out_dir else None,
         )
     except performance.PerformanceContractError as exc:
@@ -34,7 +34,7 @@ def measure_main(argv: Iterable[str] | None = None) -> int:
 
 
 def analyze_main(argv: Iterable[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="qpx analyze")
+    parser = argparse.ArgumentParser(prog="physics analyze")
     parser.add_argument("--summary", required=True)
     parser.add_argument("--petsc-log", required=True)
     parser.add_argument("--perf-log")

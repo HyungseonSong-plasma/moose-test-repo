@@ -1,4 +1,4 @@
-"""Bounded command adapters for the QPX CLI."""
+"""Bounded command adapters for the Physics CLI."""
 
 from . import performance
 
