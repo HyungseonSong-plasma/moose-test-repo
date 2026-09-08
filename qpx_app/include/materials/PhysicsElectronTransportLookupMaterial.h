@@ -1,7 +1,7 @@
 #pragma once
 
 #include "FunctorMaterial.h"
-#include "QPXLookupTable1D.h"
+#include "PhysicsLookupTable1D.h"
 
 /**
  * Electron transport closure based on the supplied reduced-coefficient table.
@@ -18,7 +18,7 @@
  *   D_e  = (D_e N_n) / N_n
  *
  * Under the local-mean-energy Maxwellian approximation used by the accepted
- * QPX/Hagelaar path, this same material also exposes
+ * Physics/Hagelaar path, this same material also exposes
  *
  *   mu_epsilon = (5/3) mu_e
  *   D_epsilon  = (5/3) D_e
@@ -29,11 +29,11 @@
  *
  * N_n is neutral-gas number density, not the Avogadro constant.
  */
-class QPXElectronTransportLookupMaterial : public FunctorMaterial
+class PhysicsElectronTransportLookupMaterial : public FunctorMaterial
 {
 public:
   static InputParameters validParams();
-  QPXElectronTransportLookupMaterial(const InputParameters & parameters);
+  PhysicsElectronTransportLookupMaterial(const InputParameters & parameters);
 
 protected:
   enum class BoundsPolicy
@@ -50,6 +50,6 @@ protected:
   const Moose::Functor<ADReal> & _gas_temperature;
 
   FileName _property_table_file;
-  QPXLookupTable1D _table;
+  PhysicsLookupTable1D _table;
   BoundsPolicy _bounds_policy;
 };

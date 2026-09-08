@@ -22,14 +22,14 @@
  *   Gamma_e,wall = s_e * (1/4) n_e v_bar
  *
  * The functor returned here is a positive outward-loss magnitude. In the
- * current QPX FV convention it is attached with factor = -1 in
+ * current Physics FV convention it is attached with factor = -1 in
  * FVFunctorNeumannBC.
  */
-class QPXElectronWallFluxMaterial : public FunctorMaterial
+class PhysicsElectronWallFluxMaterial : public FunctorMaterial
 {
 public:
   static InputParameters validParams();
-  QPXElectronWallFluxMaterial(const InputParameters & parameters);
+  PhysicsElectronWallFluxMaterial(const InputParameters & parameters);
 
 protected:
   const Moose::Functor<ADReal> & _electron_density;

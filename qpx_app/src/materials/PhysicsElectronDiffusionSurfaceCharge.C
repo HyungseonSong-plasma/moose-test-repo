@@ -1,9 +1,9 @@
-#include "QPXElectronDiffusionSurfaceCharge.h"
+#include "PhysicsElectronDiffusionSurfaceCharge.h"
 
-registerADMooseObject("qpxApp", QPXElectronDiffusionSurfaceCharge);
+registerADMooseObject("PhysicsApp", PhysicsElectronDiffusionSurfaceCharge);
 
 InputParameters
-QPXElectronDiffusionSurfaceCharge::validParams()
+PhysicsElectronDiffusionSurfaceCharge::validParams()
 {
   InputParameters params = ADMaterial::validParams();
   params.addRequiredCoupledVar("coupled_variable0",
@@ -14,7 +14,7 @@ QPXElectronDiffusionSurfaceCharge::validParams()
   return params;
 }
 
-QPXElectronDiffusionSurfaceCharge::QPXElectronDiffusionSurfaceCharge(const InputParameters & parameters)
+PhysicsElectronDiffusionSurfaceCharge::PhysicsElectronDiffusionSurfaceCharge(const InputParameters & parameters)
   : ADMaterial(parameters),
   _sigma(declareADProperty<Real>("surface_e")),
   _sigma_old(getMaterialPropertyOld<Real>("surface_e")),
@@ -23,23 +23,23 @@ QPXElectronDiffusionSurfaceCharge::QPXElectronDiffusionSurfaceCharge(const Input
   _mass(getMaterialProperty<Real>("masse"))
 {
   // Precalculate constant values
-  _q_times_NA = QPX_CONSTANTS::e * QPX_CONSTANTS::N_A;
+  _q_times_NA = PHYSICS_CONSTANTS::e * PHYSICS_CONSTANTS::N_A;
 }
 
 void
-QPXElectronDiffusionSurfaceCharge::initQpStatefulProperties()
+PhysicsElectronDiffusionSurfaceCharge::initQpStatefulProperties()
 {
   _sigma[_qp] = 0;
 }
 
 void
-QPXElectronDiffusionSurfaceCharge::computeQpProperties()
+PhysicsElectronDiffusionSurfaceCharge::computeQpProperties()
 {
   if (_material_data_type == Moose::FACE_MATERIAL_DATA || boundaryRestricted())
   {
     using std::exp;
     
-    ADReal _v_thermal = sqrt(8 * QPX_CONSTANTS::e * 2.0 / 3.0 * exp(_mean_en[_qp] - _e[_qp])
+    ADReal _v_thermal = sqrt(8 * PHYSICS_CONSTANTS::e * 2.0 / 3.0 * exp(_mean_en[_qp] - _e[_qp])
                         / (libMesh::pi * _mass[_qp]));
     
 

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "FunctorMaterial.h"
-#include "QPXLookupTable1D.h"
+#include "PhysicsLookupTable1D.h"
 
 /**
  * Canonical electron-impact O2 ionization rate owner for R2.
@@ -16,11 +16,11 @@
  * Particle source projection is a separate consumer of R_ion_O2. This object
  * intentionally owns no electron-energy source; #26 E8 must reuse R_ion_O2.
  */
-class QPXElectronImpactIonizationMaterial : public FunctorMaterial
+class PhysicsElectronImpactIonizationMaterial : public FunctorMaterial
 {
 public:
   static InputParameters validParams();
-  QPXElectronImpactIonizationMaterial(const InputParameters & parameters);
+  PhysicsElectronImpactIonizationMaterial(const InputParameters & parameters);
 
 protected:
   ADReal interpolateStrict(const ADReal & mean_energy) const;
@@ -29,5 +29,5 @@ protected:
   const Moose::Functor<ADReal> & _electron_number_density;
   const Moose::Functor<ADReal> & _o2_molar_concentration;
   FileName _rate_table_file;
-  QPXLookupTable1D _table;
+  PhysicsLookupTable1D _table;
 };

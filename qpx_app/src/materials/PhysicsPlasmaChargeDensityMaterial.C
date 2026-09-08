@@ -1,12 +1,12 @@
-#include "QPXPlasmaChargeDensityMaterial.h"
-#include "QPX.h"
+#include "PhysicsPlasmaChargeDensityMaterial.h"
+#include "Physics.h"
 
 #include <set>
 
-registerMooseObject("qpxApp", QPXPlasmaChargeDensityMaterial);
+registerMooseObject("PhysicsApp", PhysicsPlasmaChargeDensityMaterial);
 
 InputParameters
-QPXPlasmaChargeDensityMaterial::validParams()
+PhysicsPlasmaChargeDensityMaterial::validParams()
 {
   auto params = FunctorMaterial::validParams();
 
@@ -35,7 +35,7 @@ QPXPlasmaChargeDensityMaterial::validParams()
   return params;
 }
 
-QPXPlasmaChargeDensityMaterial::QPXPlasmaChargeDensityMaterial(
+PhysicsPlasmaChargeDensityMaterial::PhysicsPlasmaChargeDensityMaterial(
     const InputParameters & parameters)
   : FunctorMaterial(parameters),
     _density(getFunctor<ADReal>("density")),
@@ -49,12 +49,12 @@ QPXPlasmaChargeDensityMaterial::QPXPlasmaChargeDensityMaterial(
   const auto n = _ion_ids.size();
 
   if (n == 0)
-    mooseError("QPXPlasmaChargeDensityMaterial requires at least one ion.");
+    mooseError("PhysicsPlasmaChargeDensityMaterial requires at least one ion.");
 
   if (_ion_mass_fraction_names.size() != n ||
       _ion_molar_masses.size() != n ||
       _ion_charges.size() != n)
-    mooseError("QPXPlasmaChargeDensityMaterial: all ion vectors must have "
+    mooseError("PhysicsPlasmaChargeDensityMaterial: all ion vectors must have "
                "the same length.");
 
   std::set<std::string> ids;
@@ -79,7 +79,7 @@ QPXPlasmaChargeDensityMaterial::QPXPlasmaChargeDensityMaterial(
         {
           return _density(r, state) *
                  (*_ion_mass_fractions[i])(r, state) *
-                 QPX_CONSTANTS::N_A /
+                 PHYSICS_CONSTANTS::N_A /
                  _ion_molar_masses[i];
         });
   }
@@ -95,7 +95,7 @@ QPXPlasmaChargeDensityMaterial::QPXPlasmaChargeDensityMaterial(
               _ion_charges[i] *
               _density(r, state) *
               (*_ion_mass_fractions[i])(r, state) *
-              QPX_CONSTANTS::N_A /
+              PHYSICS_CONSTANTS::N_A /
               _ion_molar_masses[i];
 
         return n_charge;
@@ -112,10 +112,10 @@ QPXPlasmaChargeDensityMaterial::QPXPlasmaChargeDensityMaterial(
               _ion_charges[i] *
               _density(r, state) *
               (*_ion_mass_fractions[i])(r, state) *
-              QPX_CONSTANTS::N_A /
+              PHYSICS_CONSTANTS::N_A /
               _ion_molar_masses[i];
 
-        return QPX_CONSTANTS::e * n_charge;
+        return PHYSICS_CONSTANTS::e * n_charge;
       });
 
   addFunctorProperty<ADReal>(
@@ -129,9 +129,9 @@ QPXPlasmaChargeDensityMaterial::QPXPlasmaChargeDensityMaterial(
               _ion_charges[i] *
               _density(r, state) *
               (*_ion_mass_fractions[i])(r, state) *
-              QPX_CONSTANTS::N_A /
+              PHYSICS_CONSTANTS::N_A /
               _ion_molar_masses[i];
 
-        return QPX_CONSTANTS::e * n_charge / QPX_CONSTANTS::eps_0;
+        return PHYSICS_CONSTANTS::e * n_charge / PHYSICS_CONSTANTS::eps_0;
       });
 }

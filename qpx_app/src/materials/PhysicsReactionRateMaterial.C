@@ -1,13 +1,13 @@
-#include "QPXReactionRateMaterial.h"
+#include "PhysicsReactionRateMaterial.h"
 
 #include <cmath>
 #include <set>
 #include <stdexcept>
 
-registerMooseObject("qpxApp", QPXReactionRateMaterial);
+registerMooseObject("PhysicsApp", PhysicsReactionRateMaterial);
 
 InputParameters
-QPXReactionRateMaterial::validParams()
+PhysicsReactionRateMaterial::validParams()
 {
   auto params = FunctorMaterial::validParams();
 
@@ -15,7 +15,7 @@ QPXReactionRateMaterial::validParams()
       "Evaluates data-driven heavy-particle volume reaction rates and assembles "
       "stoichiometric species source functors.");
 
-  params.addRequiredParam<FileName>("chemistry_file", "QPX chemistry database.");
+  params.addRequiredParam<FileName>("chemistry_file", "Physics chemistry database.");
   params.addRequiredParam<MooseFunctorName>("density", "Heavy-mixture density [kg/m^3].");
   params.addRequiredParam<MooseFunctorName>("temperature", "Heavy-particle temperature [K].");
 
@@ -36,7 +36,7 @@ QPXReactionRateMaterial::validParams()
   return params;
 }
 
-QPXReactionRateMaterial::QPXReactionRateMaterial(const InputParameters & parameters)
+PhysicsReactionRateMaterial::PhysicsReactionRateMaterial(const InputParameters & parameters)
   : FunctorMaterial(parameters),
     _density(getFunctor<ADReal>("density")),
     _temperature(getFunctor<ADReal>("temperature")),
@@ -62,7 +62,7 @@ QPXReactionRateMaterial::QPXReactionRateMaterial(const InputParameters & paramet
     }
 
     const auto & species = _database.species().at(db_index);
-    if (species.kind != QPXReactionDatabase::SpeciesKind::Heavy)
+    if (species.kind != PhysicsReactionDatabase::SpeciesKind::Heavy)
       paramError("species",
                  "Mass-fraction input may only be supplied for heavy species. '",
                  species.name,
@@ -92,7 +92,7 @@ QPXReactionRateMaterial::QPXReactionRateMaterial(const InputParameters & paramet
       }
 
       const auto & reaction = _database.reactions().at(index);
-      if (reaction.domain != QPXReactionDatabase::Domain::Volume)
+      if (reaction.domain != PhysicsReactionDatabase::Domain::Volume)
         paramError("active_reactions",
                    "Reaction '",
                    name,
@@ -101,7 +101,7 @@ QPXReactionRateMaterial::QPXReactionRateMaterial(const InputParameters & paramet
       for (const auto & reactant : reaction.reactants)
       {
         const auto & species = _database.species().at(reactant.species_index);
-        if (species.kind == QPXReactionDatabase::SpeciesKind::Electron)
+        if (species.kind == PhysicsReactionDatabase::SpeciesKind::Electron)
           paramError("active_reactions",
                      "Electron-reactant volume reactions are reserved for the electron "
                      "lookup closure and cannot be activated here.");
@@ -123,14 +123,14 @@ QPXReactionRateMaterial::QPXReactionRateMaterial(const InputParameters & paramet
     for (std::size_t index = 0; index < _database.reactions().size(); ++index)
     {
       const auto & reaction = _database.reactions()[index];
-      if (reaction.domain != QPXReactionDatabase::Domain::Volume)
+      if (reaction.domain != PhysicsReactionDatabase::Domain::Volume)
         continue;
 
       bool compatible = true;
       for (const auto & reactant : reaction.reactants)
       {
         const auto & species = _database.species().at(reactant.species_index);
-        if (species.kind == QPXReactionDatabase::SpeciesKind::Electron ||
+        if (species.kind == PhysicsReactionDatabase::SpeciesKind::Electron ||
             !_mass_fraction_by_database_species.count(reactant.species_index))
         {
           compatible = false;
@@ -160,10 +160,10 @@ QPXReactionRateMaterial::QPXReactionRateMaterial(const InputParameters & paramet
         "reaction_number_source_" + species.solver_id,
         [this, species_index](const auto & r, const auto & state) -> ADReal
         {
-          return QPXReactionDatabase::avogadro() * molarSource(species_index, r, state);
+          return PhysicsReactionDatabase::avogadro() * molarSource(species_index, r, state);
         });
 
-    if (species.kind == QPXReactionDatabase::SpeciesKind::Heavy)
+    if (species.kind == PhysicsReactionDatabase::SpeciesKind::Heavy)
       addFunctorProperty<ADReal>(
           "reaction_source_" + species.solver_id,
           [this, species_index](const auto & r, const auto & state) -> ADReal
@@ -179,7 +179,7 @@ QPXReactionRateMaterial::QPXReactionRateMaterial(const InputParameters & paramet
       {
         ADReal sum = 0.0;
         for (std::size_t i = 0; i < _database.species().size(); ++i)
-          if (_database.species()[i].kind == QPXReactionDatabase::SpeciesKind::Heavy)
+          if (_database.species()[i].kind == PhysicsReactionDatabase::SpeciesKind::Heavy)
             sum += _database.species()[i].molar_mass * molarSource(i, r, state);
         return sum;
       });
@@ -187,7 +187,7 @@ QPXReactionRateMaterial::QPXReactionRateMaterial(const InputParameters & paramet
 
 template <typename SpaceArg, typename StateArg>
 ADReal
-QPXReactionRateMaterial::concentration(std::size_t database_species,
+PhysicsReactionRateMaterial::concentration(std::size_t database_species,
                                        const SpaceArg & r,
                                        const StateArg & state) const
 {
@@ -203,7 +203,7 @@ QPXReactionRateMaterial::concentration(std::size_t database_species,
 
 template <typename SpaceArg, typename StateArg>
 ADReal
-QPXReactionRateMaterial::reactionProgress(const QPXReactionDatabase::Reaction & reaction,
+PhysicsReactionRateMaterial::reactionProgress(const PhysicsReactionDatabase::Reaction & reaction,
                                           const SpaceArg & r,
                                           const StateArg & state) const
 {
@@ -212,7 +212,7 @@ QPXReactionRateMaterial::reactionProgress(const QPXReactionDatabase::Reaction & 
   const ADReal T = _temperature(r, state);
 
   ADReal k = reaction.A_molar;
-  if (reaction.model == QPXReactionDatabase::RateModel::PowerLaw)
+  if (reaction.model == PhysicsReactionDatabase::RateModel::PowerLaw)
     k *= pow(reaction.T_ref / T, reaction.exponent);
 
   ADReal progress = k;
@@ -231,7 +231,7 @@ QPXReactionRateMaterial::reactionProgress(const QPXReactionDatabase::Reaction & 
 
 template <typename SpaceArg, typename StateArg>
 ADReal
-QPXReactionRateMaterial::molarSource(std::size_t database_species,
+PhysicsReactionRateMaterial::molarSource(std::size_t database_species,
                                      const SpaceArg & r,
                                      const StateArg & state) const
 {

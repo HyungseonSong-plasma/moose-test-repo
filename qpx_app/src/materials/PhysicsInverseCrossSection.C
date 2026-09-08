@@ -1,9 +1,9 @@
-#include "QPXInverseCrossSection.h"
+#include "PhysicsInverseCrossSection.h"
 
-registerMooseObject("qpxApp", QPXInverseCrossSection);
+registerMooseObject("PhysicsApp", PhysicsInverseCrossSection);
 
 InputParameters
-QPXInverseCrossSection::validParams()
+PhysicsInverseCrossSection::validParams()
 {
   InputParameters params = Material::validParams();
   params.addRequiredParam<bool>("interp_cross_section",
@@ -24,7 +24,7 @@ QPXInverseCrossSection::validParams()
   return params;
 }
 
-QPXInverseCrossSection::QPXInverseCrossSection(const InputParameters & parameters)
+PhysicsInverseCrossSection::PhysicsInverseCrossSection(const InputParameters & parameters)
   : Material(parameters),
     _interp_cross_section("interp_cross_section"),
     _cross_section(declareADProperty<Real>("cross_section_" + getParam<std::string>("prop_name"))),
@@ -61,7 +61,7 @@ QPXInverseCrossSection::QPXInverseCrossSection(const InputParameters & parameter
 }
 
 void
-QPXInverseCrossSection::computeQpProperties()
+PhysicsInverseCrossSection::computeQpProperties()
 {
   if (_interp_cross_section)
   {

@@ -26,11 +26,11 @@
  *
  * This object deliberately contains no mobility, diffusion, or drift physics.
  */
-class QPXPlasmaChargeDensityMaterial : public FunctorMaterial
+class PhysicsPlasmaChargeDensityMaterial : public FunctorMaterial
 {
 public:
   static InputParameters validParams();
-  QPXPlasmaChargeDensityMaterial(const InputParameters & parameters);
+  PhysicsPlasmaChargeDensityMaterial(const InputParameters & parameters);
 
 protected:
   const Moose::Functor<ADReal> & _density;

@@ -6,10 +6,10 @@
 /*
  *  Material properties of electrons and universal constants
  */
-class QPXElectronTransportCoefficients : public ADMaterial
+class PhysicsElectronTransportCoefficients : public ADMaterial
 {
 public:
-  QPXElectronTransportCoefficients(const InputParameters & parameters);
+  PhysicsElectronTransportCoefficients(const InputParameters & parameters);
 
   static InputParameters validParams();
 

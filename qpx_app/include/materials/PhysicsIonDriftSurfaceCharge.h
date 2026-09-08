@@ -3,17 +3,17 @@
 #include "ADMaterial.h"
 #include "DerivativeMaterialPropertyNameInterface.h"
 #include "MooseUtils.h"
-#include "QPX.h"
+#include "Physics.h"
 
 /**
  *  Adds a surface charge material property based on the rate of change of the total charged
  *  flux to a boundary. (NOTE: this material is meant to be boundary-restricted.)
  */
-class QPXIonDriftSurfaceCharge : public ADMaterial, public DerivativeMaterialPropertyNameInterface
+class PhysicsIonDriftSurfaceCharge : public ADMaterial, public DerivativeMaterialPropertyNameInterface
 {
 public:
   static InputParameters validParams();
-  QPXIonDriftSurfaceCharge(const InputParameters & parameters);
+  PhysicsIonDriftSurfaceCharge(const InputParameters & parameters);
 
 protected:
   virtual void computeQpProperties() override;

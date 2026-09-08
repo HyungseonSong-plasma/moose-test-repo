@@ -1,9 +1,9 @@
-#include "QPXIonDriftSurfaceCharge.h"
+#include "PhysicsIonDriftSurfaceCharge.h"
 
-registerADMooseObject("qpxApp", QPXIonDriftSurfaceCharge);
+registerADMooseObject("PhysicsApp", PhysicsIonDriftSurfaceCharge);
 
 InputParameters
-QPXIonDriftSurfaceCharge::validParams()
+PhysicsIonDriftSurfaceCharge::validParams()
 {
   InputParameters params = ADMaterial::validParams();
   params.addRequiredCoupledVar("coupled_variable0",
@@ -17,7 +17,7 @@ QPXIonDriftSurfaceCharge::validParams()
   return params;
 }
 
-QPXIonDriftSurfaceCharge::QPXIonDriftSurfaceCharge(const InputParameters & parameters)
+PhysicsIonDriftSurfaceCharge::PhysicsIonDriftSurfaceCharge(const InputParameters & parameters)
   : ADMaterial(parameters),
   _sigma(declareADProperty<Real>("surface_ion")),
   _sigma_old(getMaterialPropertyOld<Real>("surface_ion")),
@@ -45,17 +45,17 @@ QPXIonDriftSurfaceCharge::QPXIonDriftSurfaceCharge(const InputParameters & param
   }
 
   // Precalculate constant values
-  _q_times_NA = QPX_CONSTANTS::e * QPX_CONSTANTS::N_A;
+  _q_times_NA = PHYSICS_CONSTANTS::e * PHYSICS_CONSTANTS::N_A;
 }
 
 void
-QPXIonDriftSurfaceCharge::initQpStatefulProperties()
+PhysicsIonDriftSurfaceCharge::initQpStatefulProperties()
 {
   _sigma[_qp] = 0;
 }
 
 void
-QPXIonDriftSurfaceCharge::computeQpProperties()
+PhysicsIonDriftSurfaceCharge::computeQpProperties()
 {
   if (_material_data_type == Moose::FACE_MATERIAL_DATA || boundaryRestricted())
   {

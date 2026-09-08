@@ -1,9 +1,9 @@
-#include "QPXO2IonizationSourceMaterial.h"
+#include "PhysicsO2IonizationSourceMaterial.h"
 
-registerMooseObject("qpxApp", QPXO2IonizationSourceMaterial);
+registerMooseObject("PhysicsApp", PhysicsO2IonizationSourceMaterial);
 
 InputParameters
-QPXO2IonizationSourceMaterial::validParams()
+PhysicsO2IonizationSourceMaterial::validParams()
 {
   auto params = FunctorMaterial::validParams();
   params.addClassDescription(
@@ -14,7 +14,7 @@ QPXO2IonizationSourceMaterial::validParams()
   return params;
 }
 
-QPXO2IonizationSourceMaterial::QPXO2IonizationSourceMaterial(const InputParameters & parameters)
+PhysicsO2IonizationSourceMaterial::PhysicsO2IonizationSourceMaterial(const InputParameters & parameters)
   : FunctorMaterial(parameters),
     _reaction_progress(getFunctor<ADReal>("reaction_progress")),
     _o2_molar_mass(getParam<Real>("o2_molar_mass"))
@@ -27,7 +27,7 @@ QPXO2IonizationSourceMaterial::QPXO2IonizationSourceMaterial(const InputParamete
       {
         const ADReal R = _reaction_progress(r, state);
         if (R.value() < 0.0)
-          mooseError("QPXO2IonizationSourceMaterial requires R_ion_O2 >= 0.");
+          mooseError("PhysicsO2IonizationSourceMaterial requires R_ion_O2 >= 0.");
         return -_o2_molar_mass * R;
       });
 

@@ -1,13 +1,13 @@
-#include "QPXElectronTransportLookupMaterial.h"
-#include "QPX.h"
+#include "PhysicsElectronTransportLookupMaterial.h"
+#include "Physics.h"
 
 #include <algorithm>
 #include <stdexcept>
 
-registerMooseObject("qpxApp", QPXElectronTransportLookupMaterial);
+registerMooseObject("PhysicsApp", PhysicsElectronTransportLookupMaterial);
 
 InputParameters
-QPXElectronTransportLookupMaterial::validParams()
+PhysicsElectronTransportLookupMaterial::validParams()
 {
   auto params = FunctorMaterial::validParams();
 
@@ -40,7 +40,7 @@ QPXElectronTransportLookupMaterial::validParams()
   return params;
 }
 
-QPXElectronTransportLookupMaterial::QPXElectronTransportLookupMaterial(
+PhysicsElectronTransportLookupMaterial::PhysicsElectronTransportLookupMaterial(
     const InputParameters & parameters)
   : FunctorMaterial(parameters),
     _mean_energy(getFunctor<ADReal>("mean_energy")),
@@ -58,9 +58,9 @@ QPXElectronTransportLookupMaterial::QPXElectronTransportLookupMaterial(
       {
         const ADReal T_g = _gas_temperature(r, state);
         if (T_g.value() <= 0.0)
-          mooseError("QPXElectronTransportLookupMaterial requires T_g > 0 K.");
+          mooseError("PhysicsElectronTransportLookupMaterial requires T_g > 0 K.");
 
-        return _pressure(r, state) / (QPX_CONSTANTS::k_boltz * T_g);
+        return _pressure(r, state) / (PHYSICS_CONSTANTS::k_boltz * T_g);
       });
 
   addFunctorProperty<ADReal>(
@@ -79,7 +79,7 @@ QPXElectronTransportLookupMaterial::QPXElectronTransportLookupMaterial(
       {
         const ADReal T_g = _gas_temperature(r, state);
         const ADReal N_n =
-            _pressure(r, state) / (QPX_CONSTANTS::k_boltz * T_g);
+            _pressure(r, state) / (PHYSICS_CONSTANTS::k_boltz * T_g);
 
         return interpolate(_mean_energy(r, state), 0) / N_n;
       });
@@ -90,12 +90,12 @@ QPXElectronTransportLookupMaterial::QPXElectronTransportLookupMaterial(
       {
         const ADReal T_g = _gas_temperature(r, state);
         const ADReal N_n =
-            _pressure(r, state) / (QPX_CONSTANTS::k_boltz * T_g);
+            _pressure(r, state) / (PHYSICS_CONSTANTS::k_boltz * T_g);
 
         return interpolate(_mean_energy(r, state), 1) / N_n;
       });
 
-  // Local-mean-energy closure used by the accepted QPX/Hagelaar path and COMSOL's
+  // Local-mean-energy closure used by the accepted Physics/Hagelaar path and COMSOL's
   // Maxwellian transport approximation. Keep particle and energy coefficients under
   // one lookup owner so a solved mean-energy coordinate cannot silently select a
   // different transport table or neutral-density conversion.
@@ -105,7 +105,7 @@ QPXElectronTransportLookupMaterial::QPXElectronTransportLookupMaterial(
       {
         const ADReal T_g = _gas_temperature(r, state);
         const ADReal N_n =
-            _pressure(r, state) / (QPX_CONSTANTS::k_boltz * T_g);
+            _pressure(r, state) / (PHYSICS_CONSTANTS::k_boltz * T_g);
 
         return energy_transport_factor * interpolate(_mean_energy(r, state), 0) / N_n;
       });
@@ -116,14 +116,14 @@ QPXElectronTransportLookupMaterial::QPXElectronTransportLookupMaterial(
       {
         const ADReal T_g = _gas_temperature(r, state);
         const ADReal N_n =
-            _pressure(r, state) / (QPX_CONSTANTS::k_boltz * T_g);
+            _pressure(r, state) / (PHYSICS_CONSTANTS::k_boltz * T_g);
 
         return energy_transport_factor * interpolate(_mean_energy(r, state), 1) / N_n;
       });
 }
 
-QPXElectronTransportLookupMaterial::BoundsPolicy
-QPXElectronTransportLookupMaterial::parseBoundsPolicy(const std::string & value)
+PhysicsElectronTransportLookupMaterial::BoundsPolicy
+PhysicsElectronTransportLookupMaterial::parseBoundsPolicy(const std::string & value)
 {
   if (value == "error")
     return BoundsPolicy::Error;
@@ -132,11 +132,11 @@ QPXElectronTransportLookupMaterial::parseBoundsPolicy(const std::string & value)
     return BoundsPolicy::Clamp;
 
   throw std::runtime_error(
-      "QPXElectronTransportLookupMaterial bounds_policy must be 'error' or 'clamp'.");
+      "PhysicsElectronTransportLookupMaterial bounds_policy must be 'error' or 'clamp'.");
 }
 
 ADReal
-QPXElectronTransportLookupMaterial::interpolate(const ADReal & coordinate,
+PhysicsElectronTransportLookupMaterial::interpolate(const ADReal & coordinate,
                                                 std::size_t value_index) const
 {
   const auto & x = _table.coordinate();

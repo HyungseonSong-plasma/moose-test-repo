@@ -1,11 +1,11 @@
-#include "QPXElectronTransportCoefficients.h"
+#include "PhysicsElectronTransportCoefficients.h"
 #include "MooseUtils.h"
 #include "Zapdos.h"
 
-registerMooseObject("qpxApp", QPXElectronTransportCoefficients);
+registerMooseObject("PhysicsApp", PhysicsElectronTransportCoefficients);
 
 InputParameters
-QPXElectronTransportCoefficients::validParams()
+PhysicsElectronTransportCoefficients::validParams()
 {
   InputParameters params = Material::validParams();
 
@@ -49,7 +49,7 @@ QPXElectronTransportCoefficients::validParams()
   return params;
 }
 
-QPXElectronTransportCoefficients::QPXElectronTransportCoefficients(const InputParameters & parameters)
+PhysicsElectronTransportCoefficients::PhysicsElectronTransportCoefficients(const InputParameters & parameters)
   : Material(parameters),
     _interp_trans_coeffs(getParam<bool>("interp_trans_coeffs")),
     _ramp_trans_coeffs(getParam<bool>("ramp_trans_coeffs")),
@@ -117,7 +117,7 @@ QPXElectronTransportCoefficients::QPXElectronTransportCoefficients(const InputPa
 }
 
 void
-QPXElectronTransportCoefficients::computeQpProperties()
+PhysicsElectronTransportCoefficients::computeQpProperties()
 {
   _massem[_qp] = 9.11e-31;
   Real N_inverse = (ZAPDOS_CONSTANTS::k_boltz * _T_gas[_qp]) / _p_gas[_qp];

@@ -22,11 +22,11 @@
  *   - no surface conduction
  *   - downstream electrostatic coupling is handled by the interface kernel
  */
-class QPXElectronSurfaceChargeMaterial : public ADMaterial
+class PhysicsElectronSurfaceChargeMaterial : public ADMaterial
 {
 public:
   static InputParameters validParams();
-  QPXElectronSurfaceChargeMaterial(const InputParameters & parameters);
+  PhysicsElectronSurfaceChargeMaterial(const InputParameters & parameters);
 
 protected:
   void initQpStatefulProperties() override;

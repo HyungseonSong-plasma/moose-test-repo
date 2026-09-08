@@ -3,15 +3,15 @@
 #include "ADMaterial.h"
 #include "LinearInterpolation.h"
 #include "MooseUtils.h"
-#include "QPX.h"
+#include "Physics.h"
 
 /*
  *  Cross section for one species.
  */
-class QPXInverseCrossSection : public ADMaterial
+class PhysicsInverseCrossSection : public ADMaterial
 {
 public:
-  QPXInverseCrossSection(const InputParameters & parameters);
+  PhysicsInverseCrossSection(const InputParameters & parameters);
 
   static InputParameters validParams();
 

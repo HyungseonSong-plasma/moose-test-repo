@@ -1,6 +1,6 @@
-#include "QPXTotalCrossSection.h"
+#include "PhysicsTotalCrossSection.h"
 
-registerMooseObject("qpxApp", TotalCrossSection);
+registerMooseObject("PhysicsApp", TotalCrossSection);
 
 InputParameters
 TotalCrossSection::validParams()

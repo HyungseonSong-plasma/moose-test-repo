@@ -2,7 +2,7 @@
 
 #include "ADMaterial.h"
 #include "MooseUtils.h"
-#include "QPX.h"
+#include "Physics.h"
 
 class TotalCrossSection : public ADMaterial
 {

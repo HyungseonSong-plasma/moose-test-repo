@@ -1,9 +1,9 @@
-#include "QPXElectronImpactIonizationMaterial.h"
+#include "PhysicsElectronImpactIonizationMaterial.h"
 
-registerMooseObject("qpxApp", QPXElectronImpactIonizationMaterial);
+registerMooseObject("PhysicsApp", PhysicsElectronImpactIonizationMaterial);
 
 InputParameters
-QPXElectronImpactIonizationMaterial::validParams()
+PhysicsElectronImpactIonizationMaterial::validParams()
 {
   auto params = FunctorMaterial::validParams();
   params.addClassDescription(
@@ -20,7 +20,7 @@ QPXElectronImpactIonizationMaterial::validParams()
   return params;
 }
 
-QPXElectronImpactIonizationMaterial::QPXElectronImpactIonizationMaterial(
+PhysicsElectronImpactIonizationMaterial::PhysicsElectronImpactIonizationMaterial(
     const InputParameters & parameters)
   : FunctorMaterial(parameters),
     _mean_energy(getFunctor<ADReal>("mean_energy")),
@@ -38,15 +38,15 @@ QPXElectronImpactIonizationMaterial::QPXElectronImpactIonizationMaterial(
         const ADReal n_e = _electron_number_density(r, state);
         const ADReal c_o2 = _o2_molar_concentration(r, state);
         if (n_e.value() < 0.0)
-          mooseError("QPXElectronImpactIonizationMaterial requires n_e >= 0.");
+          mooseError("PhysicsElectronImpactIonizationMaterial requires n_e >= 0.");
         if (c_o2.value() < 0.0)
-          mooseError("QPXElectronImpactIonizationMaterial requires c_O2 >= 0.");
+          mooseError("PhysicsElectronImpactIonizationMaterial requires c_O2 >= 0.");
         return interpolateStrict(_mean_energy(r, state)) * (n_e / N_A) * c_o2;
       });
 }
 
 ADReal
-QPXElectronImpactIonizationMaterial::interpolateStrict(const ADReal & coordinate) const
+PhysicsElectronImpactIonizationMaterial::interpolateStrict(const ADReal & coordinate) const
 {
   const auto & x = _table.coordinate();
   const auto & y = _table.values(0);

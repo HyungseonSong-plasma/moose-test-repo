@@ -1,11 +1,11 @@
-#include "QPXElectronMeanEnergyMaterial.h"
+#include "PhysicsElectronMeanEnergyMaterial.h"
 
 #include <cmath>
 
-registerMooseObject("qpxApp", QPXElectronMeanEnergyMaterial);
+registerMooseObject("PhysicsApp", PhysicsElectronMeanEnergyMaterial);
 
 InputParameters
-QPXElectronMeanEnergyMaterial::validParams()
+PhysicsElectronMeanEnergyMaterial::validParams()
 {
   auto params = FunctorMaterial::validParams();
 
@@ -28,7 +28,7 @@ QPXElectronMeanEnergyMaterial::validParams()
   return params;
 }
 
-QPXElectronMeanEnergyMaterial::QPXElectronMeanEnergyMaterial(
+PhysicsElectronMeanEnergyMaterial::PhysicsElectronMeanEnergyMaterial(
     const InputParameters & parameters)
   : FunctorMaterial(parameters),
     _electron_energy_density(getFunctor<ADReal>("electron_energy_density")),
@@ -47,25 +47,25 @@ QPXElectronMeanEnergyMaterial::QPXElectronMeanEnergyMaterial(
 
         if (!std::isfinite(n_e_hat.value()))
           mooseError(
-              "QPXElectronMeanEnergyMaterial requires finite n_e_hat; got ",
+              "PhysicsElectronMeanEnergyMaterial requires finite n_e_hat; got ",
               n_e_hat.value(),
               ".");
 
         if (n_e_hat.value() <= 0.0)
           mooseError(
-              "QPXElectronMeanEnergyMaterial requires n_e_hat > 0; got ",
+              "PhysicsElectronMeanEnergyMaterial requires n_e_hat > 0; got ",
               n_e_hat.value(),
               ". No denominator floor is applied.");
 
         if (!std::isfinite(n_epsilon_hat.value()))
           mooseError(
-              "QPXElectronMeanEnergyMaterial requires finite n_epsilon_hat; got ",
+              "PhysicsElectronMeanEnergyMaterial requires finite n_epsilon_hat; got ",
               n_epsilon_hat.value(),
               ".");
 
         if (n_epsilon_hat.value() < 0.0)
           mooseError(
-              "QPXElectronMeanEnergyMaterial requires n_epsilon_hat >= 0; got ",
+              "PhysicsElectronMeanEnergyMaterial requires n_epsilon_hat >= 0; got ",
               n_epsilon_hat.value(),
               ".");
 
@@ -74,7 +74,7 @@ QPXElectronMeanEnergyMaterial::QPXElectronMeanEnergyMaterial(
 
         if (!std::isfinite(mean_en_solved.value()))
           mooseError(
-              "QPXElectronMeanEnergyMaterial requires finite mean_en_solved; got ",
+              "PhysicsElectronMeanEnergyMaterial requires finite mean_en_solved; got ",
               mean_en_solved.value(),
               " eV. No clamp is applied.");
 

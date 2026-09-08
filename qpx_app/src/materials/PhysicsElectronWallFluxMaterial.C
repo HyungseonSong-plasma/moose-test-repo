@@ -1,13 +1,13 @@
-#include "QPXElectronWallFluxMaterial.h"
-#include "QPX.h"
-#include "QPXElectronWallPhysics.h"
+#include "PhysicsElectronWallFluxMaterial.h"
+#include "Physics.h"
+#include "PhysicsElectronWallPhysics.h"
 
 #include <cmath>
 
-registerMooseObject("qpxApp", QPXElectronWallFluxMaterial);
+registerMooseObject("PhysicsApp", PhysicsElectronWallFluxMaterial);
 
 InputParameters
-QPXElectronWallFluxMaterial::validParams()
+PhysicsElectronWallFluxMaterial::validParams()
 {
   auto params = FunctorMaterial::validParams();
 
@@ -29,7 +29,7 @@ QPXElectronWallFluxMaterial::validParams()
   return params;
 }
 
-QPXElectronWallFluxMaterial::QPXElectronWallFluxMaterial(
+PhysicsElectronWallFluxMaterial::PhysicsElectronWallFluxMaterial(
     const InputParameters & parameters)
   : FunctorMaterial(parameters),
     _electron_density(getFunctor<ADReal>("electron_density")),
@@ -46,9 +46,9 @@ QPXElectronWallFluxMaterial::QPXElectronWallFluxMaterial(
         const ADReal eps_bar = _mean_energy(r, state);
 
         if (eps_bar.value() <= 0.0)
-          mooseError("QPXElectronWallFluxMaterial requires mean_energy > 0 eV.");
+          mooseError("PhysicsElectronWallFluxMaterial requires mean_energy > 0 eV.");
 
-        return QPXElectronWallPhysics::meanSpeed(eps_bar);
+        return PhysicsElectronWallPhysics::meanSpeed(eps_bar);
       });
 
   addFunctorProperty<ADReal>(
@@ -57,7 +57,7 @@ QPXElectronWallFluxMaterial::QPXElectronWallFluxMaterial(
       {
         const ADReal eps_bar = _mean_energy(r, state);
 
-        return QPXElectronWallPhysics::absorbingNumberFlux(
+        return PhysicsElectronWallPhysics::absorbingNumberFlux(
             _electron_density(r, state), eps_bar, _sticking);
       });
 }

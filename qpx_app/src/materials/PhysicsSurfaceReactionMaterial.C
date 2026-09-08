@@ -1,13 +1,13 @@
-#include "QPXSurfaceReactionMaterial.h"
+#include "PhysicsSurfaceReactionMaterial.h"
 
 #include <cmath>
 #include <set>
 #include <stdexcept>
 
-registerMooseObject("qpxApp", QPXSurfaceReactionMaterial);
+registerMooseObject("PhysicsApp", PhysicsSurfaceReactionMaterial);
 
 InputParameters
-QPXSurfaceReactionMaterial::validParams()
+PhysicsSurfaceReactionMaterial::validParams()
 {
   auto params = FunctorMaterial::validParams();
 
@@ -15,7 +15,7 @@ QPXSurfaceReactionMaterial::validParams()
       "Evaluates data-driven neutral thermal-sticking surface reactions and "
       "provides signed outward species mass-flux functors.");
 
-  params.addRequiredParam<FileName>("chemistry_file", "QPX chemistry database.");
+  params.addRequiredParam<FileName>("chemistry_file", "Physics chemistry database.");
   params.addRequiredParam<MooseFunctorName>("density", "Heavy-mixture density [kg/m^3].");
   params.addRequiredParam<MooseFunctorName>("temperature", "Heavy-particle temperature [K].");
 
@@ -36,7 +36,7 @@ QPXSurfaceReactionMaterial::validParams()
   return params;
 }
 
-QPXSurfaceReactionMaterial::QPXSurfaceReactionMaterial(const InputParameters & parameters)
+PhysicsSurfaceReactionMaterial::PhysicsSurfaceReactionMaterial(const InputParameters & parameters)
   : FunctorMaterial(parameters),
     _density(getFunctor<ADReal>("density")),
     _temperature(getFunctor<ADReal>("temperature")),
@@ -62,7 +62,7 @@ QPXSurfaceReactionMaterial::QPXSurfaceReactionMaterial(const InputParameters & p
     }
 
     const auto & species = _database.species().at(db_index);
-    if (species.kind != QPXReactionDatabase::SpeciesKind::Heavy)
+    if (species.kind != PhysicsReactionDatabase::SpeciesKind::Heavy)
       paramError("species",
                  "Surface mass fractions may only be supplied for heavy species.");
 
@@ -79,8 +79,8 @@ QPXSurfaceReactionMaterial::QPXSurfaceReactionMaterial(const InputParameters & p
   {
     const auto & reaction = _database.reactions().at(index);
 
-    if (reaction.domain != QPXReactionDatabase::Domain::Surface ||
-        reaction.model != QPXReactionDatabase::RateModel::ThermalSticking)
+    if (reaction.domain != PhysicsReactionDatabase::Domain::Surface ||
+        reaction.model != PhysicsReactionDatabase::RateModel::ThermalSticking)
       paramError("active_reactions",
                  "Reaction '",
                  reaction.name,
@@ -95,7 +95,7 @@ QPXSurfaceReactionMaterial::QPXSurfaceReactionMaterial(const InputParameters & p
     const auto reactant_index = reaction.reactants.front().species_index;
     const auto & reactant = _database.species().at(reactant_index);
 
-    if (reactant.kind != QPXReactionDatabase::SpeciesKind::Heavy || reactant.charge != 0)
+    if (reactant.kind != PhysicsReactionDatabase::SpeciesKind::Heavy || reactant.charge != 0)
       paramError("active_reactions",
                  "Thermal-sticking v1 accepts neutral heavy reactants only. Reaction '",
                  reaction.name,
@@ -131,8 +131,8 @@ QPXSurfaceReactionMaterial::QPXSurfaceReactionMaterial(const InputParameters & p
     for (std::size_t index = 0; index < _database.reactions().size(); ++index)
     {
       const auto & reaction = _database.reactions()[index];
-      if (reaction.domain != QPXReactionDatabase::Domain::Surface ||
-          reaction.model != QPXReactionDatabase::RateModel::ThermalSticking ||
+      if (reaction.domain != PhysicsReactionDatabase::Domain::Surface ||
+          reaction.model != PhysicsReactionDatabase::RateModel::ThermalSticking ||
           reaction.reactants.size() != 1)
         continue;
 
@@ -153,7 +153,7 @@ QPXSurfaceReactionMaterial::QPXSurfaceReactionMaterial(const InputParameters & p
   for (std::size_t species_index = 0; species_index < _database.species().size(); ++species_index)
   {
     const auto & species = _database.species()[species_index];
-    if (species.kind != QPXReactionDatabase::SpeciesKind::Heavy)
+    if (species.kind != PhysicsReactionDatabase::SpeciesKind::Heavy)
       continue;
 
     addFunctorProperty<ADReal>(
@@ -168,7 +168,7 @@ QPXSurfaceReactionMaterial::QPXSurfaceReactionMaterial(const InputParameters & p
       {
         ADReal sum = 0.0;
         for (std::size_t i = 0; i < _database.species().size(); ++i)
-          if (_database.species()[i].kind == QPXReactionDatabase::SpeciesKind::Heavy)
+          if (_database.species()[i].kind == PhysicsReactionDatabase::SpeciesKind::Heavy)
             sum += outwardMassFlux(i, r, state);
         return sum;
       });
@@ -176,7 +176,7 @@ QPXSurfaceReactionMaterial::QPXSurfaceReactionMaterial(const InputParameters & p
 
 template <typename SpaceArg, typename StateArg>
 ADReal
-QPXSurfaceReactionMaterial::concentration(std::size_t database_species,
+PhysicsSurfaceReactionMaterial::concentration(std::size_t database_species,
                                           const SpaceArg & r,
                                           const StateArg & state) const
 {
@@ -192,7 +192,7 @@ QPXSurfaceReactionMaterial::concentration(std::size_t database_species,
 
 template <typename SpaceArg, typename StateArg>
 ADReal
-QPXSurfaceReactionMaterial::reactionProgress(const QPXReactionDatabase::Reaction & reaction,
+PhysicsSurfaceReactionMaterial::reactionProgress(const PhysicsReactionDatabase::Reaction & reaction,
                                              const SpaceArg & r,
                                              const StateArg & state) const
 {
@@ -203,7 +203,7 @@ QPXSurfaceReactionMaterial::reactionProgress(const QPXReactionDatabase::Reaction
 
   const ADReal T = _temperature(r, state);
   const ADReal c = concentration(reactant_term.species_index, r, state);
-  const ADReal mean_speed = sqrt(8.0 * QPX_CONSTANTS::R * T / (QPX_CONSTANTS::pi * reactant.molar_mass));
+  const ADReal mean_speed = sqrt(8.0 * PHYSICS_CONSTANTS::R * T / (PHYSICS_CONSTANTS::pi * reactant.molar_mass));
 
   const ADReal incident_molar_flux = 0.25 * c * mean_speed;
 
@@ -212,12 +212,12 @@ QPXSurfaceReactionMaterial::reactionProgress(const QPXReactionDatabase::Reaction
 
 template <typename SpaceArg, typename StateArg>
 ADReal
-QPXSurfaceReactionMaterial::outwardMassFlux(std::size_t database_species,
+PhysicsSurfaceReactionMaterial::outwardMassFlux(std::size_t database_species,
                                             const SpaceArg & r,
                                             const StateArg & state) const
 {
   const auto & species = _database.species().at(database_species);
-  if (species.kind != QPXReactionDatabase::SpeciesKind::Heavy)
+  if (species.kind != PhysicsReactionDatabase::SpeciesKind::Heavy)
     return ADReal(0.0);
 
   ADReal flux = 0.0;

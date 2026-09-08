@@ -1,13 +1,13 @@
-#include "QPXElectronSurfaceChargeMaterial.h"
+#include "PhysicsElectronSurfaceChargeMaterial.h"
 
-#include "QPX.h"
+#include "Physics.h"
 #include "FaceInfo.h"
 #include "MooseMesh.h"
 
-registerMooseObject("qpxApp", QPXElectronSurfaceChargeMaterial);
+registerMooseObject("PhysicsApp", PhysicsElectronSurfaceChargeMaterial);
 
 InputParameters
-QPXElectronSurfaceChargeMaterial::validParams()
+PhysicsElectronSurfaceChargeMaterial::validParams()
 {
   auto params = ADMaterial::validParams();
 
@@ -29,7 +29,7 @@ QPXElectronSurfaceChargeMaterial::validParams()
   return params;
 }
 
-QPXElectronSurfaceChargeMaterial::QPXElectronSurfaceChargeMaterial(
+PhysicsElectronSurfaceChargeMaterial::PhysicsElectronSurfaceChargeMaterial(
     const InputParameters & parameters)
   : ADMaterial(parameters),
     _wall_number_flux(getFunctor<ADReal>("wall_number_flux")),
@@ -46,19 +46,19 @@ QPXElectronSurfaceChargeMaterial::QPXElectronSurfaceChargeMaterial(
 }
 
 void
-QPXElectronSurfaceChargeMaterial::initQpStatefulProperties()
+PhysicsElectronSurfaceChargeMaterial::initQpStatefulProperties()
 {
   _surface_charge[_qp] = _initial_surface_charge;
 }
 
 void
-QPXElectronSurfaceChargeMaterial::computeQpProperties()
+PhysicsElectronSurfaceChargeMaterial::computeQpProperties()
 {
   const FaceInfo * const fi = _mesh.faceInfo(_current_elem, _current_side);
 
   if (!fi)
     mooseError(
-        "QPXElectronSurfaceChargeMaterial could not obtain FaceInfo for the "
+        "PhysicsElectronSurfaceChargeMaterial could not obtain FaceInfo for the "
         "current boundary side.");
 
   // Match the FV boundary-condition face evaluation:
@@ -100,7 +100,7 @@ QPXElectronSurfaceChargeMaterial::computeQpProperties()
   _surface_electron_number_flux[_qp] = flux;
 
   // Positive electron number flux leaves plasma and deposits negative charge.
-  _surface_current_density[_qp] = -QPX_CONSTANTS::e * flux;
+  _surface_current_density[_qp] = -PHYSICS_CONSTANTS::e * flux;
 
   // Local implicit-Euler accumulation.
   _surface_charge[_qp] =

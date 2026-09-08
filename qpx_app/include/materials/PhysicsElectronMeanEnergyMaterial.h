@@ -18,11 +18,11 @@
  * not floor the denominator or clamp the resulting mean energy; invalid state
  * rejection and lookup bounds remain explicit numerical contracts.
  */
-class QPXElectronMeanEnergyMaterial : public FunctorMaterial
+class PhysicsElectronMeanEnergyMaterial : public FunctorMaterial
 {
 public:
   static InputParameters validParams();
-  QPXElectronMeanEnergyMaterial(const InputParameters & parameters);
+  PhysicsElectronMeanEnergyMaterial(const InputParameters & parameters);
 
 protected:
   const Moose::Functor<ADReal> & _electron_energy_density;
