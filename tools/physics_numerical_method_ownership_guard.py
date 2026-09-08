@@ -14,39 +14,39 @@ def text(path: str) -> str:
 def main() -> int:
     failures: list[str] = []
 
-    schema = text("qpx_harness/evidence/schema.py")
+    schema = text("physics_harness/evidence/schema.py")
     if "DEFAULT_FACE_CONTRACT = CORE_FACE_CONTRACT" not in schema:
         failures.append("generic face evidence default is not CORE_FACE_CONTRACT")
     if "FACE_REQUIRED_COLUMNS = CORE_FACE_CONTRACT.required_columns" not in schema:
         failures.append("generic required face columns are method-specific")
 
-    for old in ("qpx_harness/application/green_gauss_workflow.py", "qpx_harness/reasoning/green_gauss.py"):
+    for old in ("physics_harness/application/green_gauss_workflow.py", "physics_harness/reasoning/green_gauss.py"):
         if (ROOT / old).exists():
             failures.append(f"historical/method-specific generic owner remains: {old}")
 
-    flat_green_gauss = ROOT / "qpx_harness/analysis/green_gauss.py"
-    nested_green_gauss = ROOT / "qpx_harness/analysis/gradient_reconstruction/green_gauss.py"
-    nested_capability_init = ROOT / "qpx_harness/analysis/gradient_reconstruction/__init__.py"
+    flat_green_gauss = ROOT / "physics_harness/analysis/green_gauss.py"
+    nested_green_gauss = ROOT / "physics_harness/analysis/gradient_reconstruction/green_gauss.py"
+    nested_capability_init = ROOT / "physics_harness/analysis/gradient_reconstruction/__init__.py"
     green_gauss_owners = sorted(
         path.relative_to(ROOT).as_posix()
-        for path in (ROOT / "qpx_harness/analysis").rglob("green_gauss.py")
+        for path in (ROOT / "physics_harness/analysis").rglob("green_gauss.py")
     )
     if flat_green_gauss.exists():
         failures.append("legacy top-level analysis/green_gauss.py remains")
     if not nested_green_gauss.is_file() or not nested_capability_init.is_file():
         failures.append("nested gradient-reconstruction Green-Gauss capability owner missing")
-    if green_gauss_owners != ["qpx_harness/analysis/gradient_reconstruction/green_gauss.py"]:
+    if green_gauss_owners != ["physics_harness/analysis/gradient_reconstruction/green_gauss.py"]:
         failures.append(f"Green-Gauss implementation ownership is not singular/canonical: {green_gauss_owners}")
 
-    app_reconstruction = text("qpx_harness/application/gradient_reconstruction.py")
-    reasoning_reconstruction = text("qpx_harness/reasoning/gradient_reconstruction.py")
+    app_reconstruction = text("physics_harness/application/gradient_reconstruction.py")
+    reasoning_reconstruction = text("physics_harness/reasoning/gradient_reconstruction.py")
     method_registry_owners: list[str] = []
-    for path in (ROOT / "qpx_harness").rglob("*.py"):
+    for path in (ROOT / "physics_harness").rglob("*.py"):
         source = path.read_text(encoding="utf-8")
         if "SUPPORTED_RECONSTRUCTION_METHODS" in source and "green_gauss" in source:
             method_registry_owners.append(path.relative_to(ROOT).as_posix())
     method_registry_owners.sort()
-    expected_registry_owner = ["qpx_harness/application/gradient_reconstruction.py"]
+    expected_registry_owner = ["physics_harness/application/gradient_reconstruction.py"]
     if method_registry_owners != expected_registry_owner:
         failures.append(
             "installed reconstruction-method registry is not application-owned only: "
@@ -55,45 +55,45 @@ def main() -> int:
     if "SUPPORTED_RECONSTRUCTION_METHODS" in reasoning_reconstruction or "def _validate_method" in reasoning_reconstruction:
         failures.append("reasoning still owns installed reconstruction-method validation")
     concrete_reconstruction_imports = (
-        "qpx_harness.analysis.green_gauss",
-        "qpx_harness.analysis.gradient_reconstruction.green_gauss",
+        "physics_harness.analysis.green_gauss",
+        "physics_harness.analysis.gradient_reconstruction.green_gauss",
     )
     if any(token in reasoning_reconstruction for token in concrete_reconstruction_imports):
         failures.append("reasoning imports a concrete reconstruction implementation")
-    if "qpx_harness.analysis.gradient_reconstruction.green_gauss" not in app_reconstruction:
+    if "physics_harness.analysis.gradient_reconstruction.green_gauss" not in app_reconstruction:
         failures.append("application dispatch does not target canonical nested Green-Gauss implementation")
     if "SUPPORTED_RECONSTRUCTION_METHODS = frozenset({\"green_gauss\"})" not in app_reconstruction:
         failures.append("application reconstruction registry/dispatch owner missing")
 
-    green_gauss_source = text("qpx_harness/analysis/gradient_reconstruction/green_gauss.py") if nested_green_gauss.is_file() else ""
+    green_gauss_source = text("physics_harness/analysis/gradient_reconstruction/green_gauss.py") if nested_green_gauss.is_file() else ""
     if "def derive_face_quantities" not in green_gauss_source or "def derive_cell_quantities" not in green_gauss_source:
         failures.append("analysis Green-Gauss formula owner is incomplete")
     if "ReconstructionTolerances" not in reasoning_reconstruction or "build_constant_state_ruleset" not in reasoning_reconstruction:
         failures.append("reasoning gradient-reconstruction diagnostic policy owner missing")
 
-    app_surface = text("qpx_harness/application/__init__.py") + text("qpx_harness/application/operations.py")
+    app_surface = text("physics_harness/application/__init__.py") + text("physics_harness/application/operations.py")
     if "analyze_green_gauss" in app_surface or "diagnose_constant_green_gauss" in app_surface:
         failures.append("canonical application still exports Green-Gauss-named generic operations")
     if "analyze_gradient_reconstruction" not in app_surface:
         failures.append("canonical gradient-reconstruction application owner missing")
 
-    jacobian_evidence = text("qpx_harness/evidence/normalization/jacobian.py")
+    jacobian_evidence = text("physics_harness/evidence/normalization/jacobian.py")
     if "petsc" in jacobian_evidence.lower():
         failures.append("generic Jacobian evidence depends on or names concrete PETSc decoding")
-    if "qpx_harness.diagnose" in jacobian_evidence:
+    if "physics_harness.diagnose" in jacobian_evidence:
         failures.append("stale diagnose namespace remains in Jacobian evidence")
 
-    jacobian_reasoning = text("qpx_harness/reasoning/jacobian.py")
+    jacobian_reasoning = text("physics_harness/reasoning/jacobian.py")
     if "PETSc" in jacobian_reasoning or "-snes_test_jacobian" in jacobian_reasoning:
         failures.append("Jacobian verification reasoning contains backend-specific wording")
     if "relative_tolerance" not in jacobian_reasoning:
         failures.append("Jacobian correctness tolerance is not explicit policy")
 
-    petsc_parser = text("qpx_harness/adapters/petsc/jacobian.py")
+    petsc_parser = text("physics_harness/adapters/petsc/jacobian.py")
     if "parse_comparisons" not in petsc_parser or "-snes_test_jacobian" not in petsc_parser:
         failures.append("PETSc Jacobian diagnostic parser owner missing")
 
-    coupled = text("qpx_harness/reasoning/coupled_solver.py")
+    coupled = text("physics_harness/reasoning/coupled_solver.py")
     if "COUPLED_JACOBIAN_OR_RESIDUAL_FAIL" not in coupled:
         failures.append("broad coupled Jacobian-or-residual runtime suspect classification missing")
     if "JACOBIAN_MISMATCH" in coupled:
