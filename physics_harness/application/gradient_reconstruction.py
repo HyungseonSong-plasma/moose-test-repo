@@ -2,7 +2,7 @@
 
 The application layer selects a reconstruction method explicitly, normalizes
 its external telemetry contract, and delegates quantitative formulas to the
-method implementation in :mod:`qpx_harness.analysis`.
+method implementation in :mod:`physics_harness.analysis`.
 """
 from __future__ import annotations
 
@@ -10,8 +10,8 @@ from pathlib import Path
 
 import polars as pl
 
-from qpx_harness.evidence.schema import GREEN_GAUSS_FACE_CONTRACT, DynamicSchemaContract
-from qpx_harness.evidence.transform import normalize_face_evidence
+from physics_harness.evidence.schema import GREEN_GAUSS_FACE_CONTRACT, DynamicSchemaContract
+from physics_harness.evidence.transform import normalize_face_evidence
 
 FrameLike = pl.DataFrame | pl.LazyFrame
 SUPPORTED_RECONSTRUCTION_METHODS = frozenset({"green_gauss"})
@@ -28,7 +28,7 @@ def _method_contract(method: str) -> DynamicSchemaContract:
 
 def _derive(method: str, normalized: pl.DataFrame, *, radial_component: int) -> tuple[pl.DataFrame, pl.DataFrame]:
     if method == "green_gauss":
-        from qpx_harness.analysis.gradient_reconstruction.green_gauss import derive_cell_quantities, derive_face_quantities
+        from physics_harness.analysis.gradient_reconstruction.green_gauss import derive_cell_quantities, derive_face_quantities
 
         face = derive_face_quantities(normalized)
         cell = derive_cell_quantities(normalized, radial_component=radial_component)
