@@ -1,4 +1,4 @@
-"""Static QPX workspace discovery, inventory, and comparison utilities."""
+"""Static Physics workspace discovery, inventory, and comparison utilities."""
 from __future__ import annotations
 
 import argparse
@@ -300,7 +300,7 @@ def comparison_to_dict(comparison: WorkspaceComparison) -> dict:
 
 
 def inventory_cli(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="qpx inventory")
+    parser = argparse.ArgumentParser(prog="physics inventory")
     parser.add_argument("root", help="workspace root to inventory")
     parser.add_argument("--compare-to", help="second workspace root for byte/path comparison")
     parser.add_argument("--find-reference", action="append", default=[])
@@ -310,7 +310,7 @@ def inventory_cli(argv: list[str] | None = None) -> int:
     inventory = inventory_workspace(Path(args.root))
     summary = summarize_workspace(inventory)
     payload: dict = {"inventory": inventory_to_dict(inventory)}
-    print("QPX WORKSPACE INVENTORY")
+    print("PHYSICS WORKSPACE INVENTORY")
     print(f"ROOT        {summary['root']}")
     print(f"FILES       {summary['file_count']}")
     print(f"MANIFESTS   {summary['manifest_count']}")
@@ -391,5 +391,5 @@ def self_test() -> int:
             any(f.generated_candidate for f in left_inv.files if f.relative_path.endswith("run.log")),
         ]
     ok = all(checks)
-    print("QPX_WORKSPACE_SELFTEST:", "PASS" if ok else "FAIL")
+    print("PHYSICS_WORKSPACE_SELFTEST:", "PASS" if ok else "FAIL")
     return 0 if ok else 1
