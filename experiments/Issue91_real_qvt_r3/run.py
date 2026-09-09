@@ -12,14 +12,14 @@ from pathlib import Path
 from typing import Any
 
 from experiments.Issue93_r3_electron_isolation.run import _electron_residuals
-from qpx_harness.adapters.moose.nonlinear_solver import failure_signature, runtime_core_facts
-from qpx_harness.evidence import (
+from physics_harness.adapters.moose.nonlinear_solver import failure_signature, runtime_core_facts
+from physics_harness.evidence import (
     create_collision_safe_directory,
     utc_timestamp,
     write_json_bundle,
 )
-from qpx_harness.execution.cases import stage_case
-from qpx_harness.execution.runtime import resolve_executable, run_qpx, validate_executable
+from physics_harness.execution.cases import stage_case
+from physics_harness.execution.runtime import resolve_executable, run_physics, validate_executable
 from experiments.historical_recipe_support.issue91_r3 import build_r3_input
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -72,7 +72,7 @@ def _stage(case_id: str, source_name: str, field_strength: float, target: Path) 
 
 
 def _p2(exe: Path, case_dir: Path, log: Path, timeout: float) -> dict[str, Any]:
-    result = run_qpx(
+    result = run_physics(
         exe,
         cwd=case_dir,
         input_name="input.i",
@@ -89,7 +89,7 @@ def _p2(exe: Path, case_dir: Path, log: Path, timeout: float) -> dict[str, Any]:
 
 
 def _runtime(exe: Path, case_dir: Path, log: Path, timeout: float) -> dict[str, Any]:
-    result = run_qpx(
+    result = run_physics(
         exe,
         cwd=case_dir,
         input_name="input.i",
