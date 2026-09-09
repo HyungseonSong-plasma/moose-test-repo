@@ -56,6 +56,7 @@ jobs:
           echo "size_bytes=$size_bytes" >> "$GITHUB_OUTPUT"
 
       - name: Verify immutable Physics provenance
+        id: provenance
         shell: bash
         run: |
           set -euxo pipefail
@@ -129,10 +130,12 @@ jobs:
           cat physics-runtime-census.txt
 
       - name: Run Physics check-input smoke
+        id: check_input
         shell: bash
         run: docker run --rm "$PHYSICS_RUNTIME_REF" --check-input -i /opt/physics/ci/smoke.i
 
       - name: Run bounded real Physics smoke
+        id: bounded_run
         shell: bash
         run: docker run --rm "$PHYSICS_RUNTIME_REF" -i /opt/physics/ci/smoke.i
 
@@ -145,9 +148,10 @@ jobs:
             echo "EXPECTED_BUILD_BASE_REF=$EXPECTED_BUILD_BASE_REF"
             echo "RUNTIME_PULL_SECONDS=${{ steps.pull.outputs.pull_seconds }}"
             echo "RUNTIME_LOCAL_SIZE_BYTES=${{ steps.pull.outputs.size_bytes }}"
-            echo "PUBLIC_RUNTIME_PULL_WITHOUT_PRIVATE_CREDENTIAL=${{ job.status == 'success' && 'PASS' || 'FAIL' }}"
-            echo "PHYSICS_CHECK_INPUT_SMOKE=${{ job.status == 'success' && 'PASS' || 'FAIL' }}"
-            echo "BOUNDED_REAL_PHYSICS_RUN=${{ job.status == 'success' && 'PASS' || 'FAIL' }}"
+            echo "PUBLIC_RUNTIME_PULL_WITHOUT_PRIVATE_CREDENTIAL=${{ steps.pull.outcome == 'success' && 'PASS' || 'FAIL' }}"
+            echo "PHYSICS_RUNTIME_PROVENANCE=${{ steps.provenance.outcome == 'success' && 'PASS' || 'FAIL' }}"
+            echo "PHYSICS_CHECK_INPUT_SMOKE=${{ steps.check_input.outcome == 'success' && 'PASS' || 'FAIL' }}"
+            echo "BOUNDED_REAL_PHYSICS_RUN=${{ steps.bounded_run.outcome == 'success' && 'PASS' || 'FAIL' }}"
             echo "ORDINARY_CI_PULLS_MOOSE_DEV=false"
             echo "ORDINARY_CI_PULLS_PHYSICS_BUILD_BASE=false"
             echo "ORDINARY_CI_REBUILDS_MOOSE_STACK=false"
