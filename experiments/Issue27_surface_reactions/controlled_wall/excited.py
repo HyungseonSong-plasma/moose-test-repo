@@ -10,11 +10,11 @@ from typing import Any, Mapping
 
 from experiments.Issue31_r4_q0_all_ground import run as q0_run
 from experiments.Issue91_real_qvt_r3 import run as issue91_run
-from qpx_harness.evidence import create_collision_safe_directory, utc_timestamp, write_json_bundle
-from qpx_harness.execution.cases import stage_case
-from qpx_harness.execution.runtime import resolve_executable, validate_executable
-from qpx_harness.adapters.moose import blocks as mb
-from qpx_harness.adapters.moose import parameters as mp
+from physics_harness.evidence import create_collision_safe_directory, utc_timestamp, write_json_bundle
+from physics_harness.execution.cases import stage_case
+from physics_harness.execution.runtime import resolve_executable, validate_executable
+from physics_harness.adapters.moose import blocks as mb
+from physics_harness.adapters.moose import parameters as mp
 from experiments.historical_recipe_support.issue31_r4_qf1 import build_r4_qf1_input
 
 ROOT = Path(__file__).resolve().parents[3]
