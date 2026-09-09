@@ -127,6 +127,52 @@ jobs:
             echo "RUNTIME_CENSUS_LARGEST_FILES_END"
           } > physics-runtime-census.txt
 
+          command -v readelf
+          command -v strip
+          petsc_before="$(du -sb "$rootfs/opt/petsc" | awk '{print $1}')"
+          libmesh_before="$(du -sb "$rootfs/opt/libmesh" | awk '{print $1}')"
+          combined_before="$((petsc_before + libmesh_before))"
+          elf_count=0
+
+          while IFS= read -r -d '' file; do
+            if readelf -h "$file" >/dev/null 2>&1; then
+              sudo strip --strip-debug "$file"
+              elf_count="$((elf_count + 1))"
+            fi
+          done < <(find "$rootfs/opt/petsc" "$rootfs/opt/libmesh" -type f -print0)
+
+          petsc_debug="$(du -sb "$rootfs/opt/petsc" | awk '{print $1}')"
+          libmesh_debug="$(du -sb "$rootfs/opt/libmesh" | awk '{print $1}')"
+          combined_debug="$((petsc_debug + libmesh_debug))"
+
+          while IFS= read -r -d '' file; do
+            if readelf -h "$file" >/dev/null 2>&1; then
+              sudo strip --strip-unneeded "$file"
+            fi
+          done < <(find "$rootfs/opt/petsc" "$rootfs/opt/libmesh" -type f -print0)
+
+          petsc_unneeded="$(du -sb "$rootfs/opt/petsc" | awk '{print $1}')"
+          libmesh_unneeded="$(du -sb "$rootfs/opt/libmesh" | awk '{print $1}')"
+          combined_unneeded="$((petsc_unneeded + libmesh_unneeded))"
+
+          {
+            echo "RUNTIME_STRIP_ESTIMATE_BEGIN"
+            echo "STRIP_TARGETS=/opt/petsc,/opt/libmesh"
+            echo "STRIP_ELF_FILE_COUNT=$elf_count"
+            echo "PETSC_BEFORE_BYTES=$petsc_before"
+            echo "LIBMESH_BEFORE_BYTES=$libmesh_before"
+            echo "COMBINED_BEFORE_BYTES=$combined_before"
+            echo "PETSC_STRIP_DEBUG_BYTES=$petsc_debug"
+            echo "LIBMESH_STRIP_DEBUG_BYTES=$libmesh_debug"
+            echo "COMBINED_STRIP_DEBUG_BYTES=$combined_debug"
+            echo "COMBINED_STRIP_DEBUG_SAVED_BYTES=$((combined_before - combined_debug))"
+            echo "PETSC_STRIP_UNNEEDED_BYTES=$petsc_unneeded"
+            echo "LIBMESH_STRIP_UNNEEDED_BYTES=$libmesh_unneeded"
+            echo "COMBINED_STRIP_UNNEEDED_BYTES=$combined_unneeded"
+            echo "COMBINED_STRIP_UNNEEDED_SAVED_BYTES=$((combined_before - combined_unneeded))"
+            echo "RUNTIME_STRIP_ESTIMATE_END"
+          } >> physics-runtime-census.txt
+
           cat physics-runtime-census.txt
 
       - name: Run Physics check-input smoke
