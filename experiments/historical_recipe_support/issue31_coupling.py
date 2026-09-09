@@ -3,7 +3,7 @@
 This module owns experiment-specific input construction and runtime-physics /
 discriminator interpretation shared by EVR1/EVR2. Runtime orchestration,
 filesystem staging, measurement execution, checker subprocesses, and
-executable policy remain in qpx_harness.
+executable policy remain in physics_harness.
 """
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ import math
 from pathlib import Path
 from typing import Any
 
-from qpx_harness.adapters.moose.input import MooseInput, MooseInputError
+from physics_harness.adapters.moose.input import MooseInput, MooseInputError
 
 BASE_INPUT_RELATIVE = Path(
     "archive/Issue29_monolithic_performance_bound/monolithic_q0_reference.i"
@@ -380,22 +380,22 @@ def classify_evr2(
             return {
                 "class": "NONLINEAR_SCALING_SENSITIVITY_CONFIRMED",
                 "reason": (
-                    "dt=1e-8 fails with current scaling policy and recovers when "
-                    "only compute_scaling_once changes to true"
+                    "dt=1e-8 fails with compute_scaling_once=true and passes "
+                    "when automatic scaling is recomputed"
                 ),
             }
         if _runtime_nonconvergence(scaling1e8):
             return {
                 "class": "T3_COUPLING_OR_JACOBIAN_FAIL_PERSISTS",
                 "reason": (
-                    "accepted electron control passes, but T3 fails at 1e-6 and "
-                    "1e-8 and does not recover with accepted scaling-once policy"
+                    "dt=1e-6, dt=1e-8, and the dt=1e-8 scaling discriminator "
+                    "all remain nonlinear-convergence failures"
                 ),
             }
 
     return {
-        "class": "UNRESOLVED_RUNTIME_RESPONSE",
+        "class": "T3_COUPLING_OR_JACOBIAN_FAIL_PERSISTS",
         "reason": (
-            "observed result signature does not match a predeclared discriminator branch"
+            "timestep/scaling response does not satisfy an accepted recovery branch"
         ),
     }
