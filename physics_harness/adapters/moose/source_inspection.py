@@ -2,7 +2,7 @@
 
 This module interprets source structures that are specifically meaningful in
 MOOSE. Generic C++ parsing remains in
-:mod:`qpx_harness.observation.source_code.cpp`.
+:mod:`physics_harness.observation.source_code.cpp`.
 """
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from qpx_harness.observation.source_code.cpp import (
+from physics_harness.observation.source_code.cpp import (
     CppSource,
     CppSourceError,
     split_call_arguments,
