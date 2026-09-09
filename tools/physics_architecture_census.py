@@ -71,6 +71,7 @@ FORBIDDEN_GENERIC_PREFIXES = (
 # #143 compatibility-retirement scope. These are not canonical responsibility
 # owners even while their physical namespaces remain during bounded migration.
 LEGACY_NAMESPACE_PATHS = {
+    "qpx_harness": ROOT / "qpx_harness",
     "physics_harness.cpp": ROOT / "physics_harness" / "cpp",
     "physics_harness.diagnose": ROOT / "physics_harness" / "diagnose",
     "physics_harness.dmix": ROOT / "physics_harness" / "dmix",
