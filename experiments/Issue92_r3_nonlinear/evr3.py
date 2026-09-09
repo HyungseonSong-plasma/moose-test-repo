@@ -40,7 +40,7 @@ from experiments.Issue92_r3_nonlinear.diagnose import (
     trajectory_improved,
 )
 from experiments.historical_recipe_support.issue91_r3 import build_r3_input
-from qpx_harness.adapters.moose import parameters as mp
+from physics_harness.adapters.moose import parameters as mp
 
 ISSUE = 92
 EVR = 3
