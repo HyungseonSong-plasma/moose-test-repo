@@ -478,6 +478,7 @@ def emit_moose_input(case: MooseCaseIR) -> str:
         lines.append(f"# QPX observation: {observation}")
     return "\n".join(lines) + "\n"
 
+
 __all__ = [
     "MooseAssignment", "MooseBlock", "MooseCaseIR", "MooseTargetIR",
     "MooseLoweringError", "lower_execution_plan", "emit_moose_input",
