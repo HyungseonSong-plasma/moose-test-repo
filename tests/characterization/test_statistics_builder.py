@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from qpx_harness.analysis.statistics_builder import (
+from physics_harness.analysis.statistics_builder import (
     build_accuracy_stats,
     build_common_stats,
     build_convergence_stats,
