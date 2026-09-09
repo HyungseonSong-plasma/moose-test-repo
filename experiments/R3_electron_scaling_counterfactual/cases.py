@@ -9,7 +9,7 @@ from typing import Any
 from experiments.Issue93_r3_electron_isolation.operator_decomposition import build_case_input
 from experiments.Issue93_r3_electron_isolation.prepare import ELECTRON_REFERENCE_CASE
 from experiments.historical_recipe_support.issue91_r3 import audit_r3_input, build_r3_input
-from qpx_harness.adapters.moose import parameters as mp
+from physics_harness.adapters.moose import parameters as mp
 
 ROOT = Path(__file__).resolve().parents[2]
 N_E_REF = 1.0e16
