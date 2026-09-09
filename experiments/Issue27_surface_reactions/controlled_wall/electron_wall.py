@@ -33,11 +33,11 @@ from experiments.Issue27_surface_reactions.controlled_wall.combined import (
     _build_a6_case_input,
     _charged_names,
 )
-from qpx_harness.evidence import create_collision_safe_directory, utc_timestamp, write_json_bundle
-from qpx_harness.execution.cases import stage_case
-from qpx_harness.execution.runtime import resolve_executable, validate_executable
-from qpx_harness.adapters.moose import blocks as mb
-from qpx_harness.adapters.moose import parameters as mp
+from physics_harness.evidence import create_collision_safe_directory, utc_timestamp, write_json_bundle
+from physics_harness.execution.cases import stage_case
+from physics_harness.execution.runtime import resolve_executable, validate_executable
+from physics_harness.adapters.moose import blocks as mb
+from physics_harness.adapters.moose import parameters as mp
 from experiments.historical_recipe_support.issue91_r3 import MEAN_ELECTRON_ENERGY_EV
 
 ROOT = Path(__file__).resolve().parents[3]
