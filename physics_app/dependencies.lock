@@ -5,4 +5,4 @@ CRANE=ba26970cf419dcac563a20ed7079d445bc6341c3
 SQUIRREL=16a26d504f3ee11161a86d4e3ebf3c0e5f2afbb1
 ZAPDOS=9eceffbc46048c3760bbfa9a7f1ca681ae35af1d
 PHYSICS_BUILD_BASE_IMAGE=ghcr.io/hyungseonsong-plasma/physics-build-base
-PHYSICS_BUILD_BASE=ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:PENDING_PUBLICATION
+PHYSICS_BUILD_BASE=ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
