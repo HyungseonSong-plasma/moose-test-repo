@@ -33,7 +33,7 @@ PhysicsElectronImpactIonizationMaterial::PhysicsElectronImpactIonizationMaterial
 
   addFunctorProperty<ADReal>(
       "R_ion_O2",
-      [this](const auto & r, const auto & state) -> ADReal
+      [this, N_A](const auto & r, const auto & state) -> ADReal
       {
         const ADReal n_e = _electron_number_density(r, state);
         const ADReal c_o2 = _o2_molar_concentration(r, state);
