@@ -38,6 +38,6 @@ PhysicsO2IonizationSourceMaterial::PhysicsO2IonizationSourceMaterial(const Input
 
   addFunctorProperty<ADReal>(
       "electron_ionization_number_source",
-      [this](const auto & r, const auto & state) -> ADReal
+      [this, N_A](const auto & r, const auto & state) -> ADReal
       { return N_A * _reaction_progress(r, state); });
 }
