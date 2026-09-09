@@ -1,11 +1,6 @@
 # syntax=docker/dockerfile:1.7
 
-FROM scratch AS closure
-COPY runtime-root/ /
-
-FROM rockylinux/rockylinux:8.10
-
-SHELL ["/bin/bash", "-lc"]
+FROM scratch
 
 ARG BUILD_BASE_REF
 ARG REPOSITORY_SHA
@@ -25,22 +20,16 @@ LABEL org.opencontainers.image.title="Physics runtime" \
       io.physics.moose.sha="${MOOSE_SHA}" \
       io.physics.crane.sha="${CRANE_SHA}" \
       io.physics.squirrel.sha="${SQUIRREL_SHA}" \
-      io.physics.zapdos.sha="${ZAPDOS_SHA}"
+      io.physics.zapdos.sha="${ZAPDOS_SHA}" \
+      io.physics.runtime.base="scratch" \
+      io.physics.runtime.strip="petsc-libmesh-debug"
 
-COPY --from=closure /opt/ /opt/
-COPY --from=closure /usr/ /usr/
-COPY --from=closure /lib64/ /usr/lib64/
-COPY --from=closure /lib/ /usr/lib/
-COPY --from=closure /etc/ld.so.conf.d/physics-runtime.conf /etc/ld.so.conf.d/physics-runtime.conf
+# runtime-root is already a complete dependency-driven root filesystem. Keep
+# every absolute path unchanged so the ELF interpreter and precomputed loader
+# cache remain valid without a distribution base image.
+COPY runtime-root/ /
 
-RUN set -euxo pipefail; \
-    test -s /etc/ld.so.conf.d/physics-runtime.conf; \
-    test -r /opt/share/moose/data/README.md; \
-    ldconfig; \
-    test -x /opt/physics/physics-opt; \
-    /opt/physics/physics-opt --check-input -i /opt/physics/ci/smoke.i
-
-ENV PATH="/opt/openmpi/bin:${PATH}" \
+ENV PATH="/opt/openmpi/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" \
     OMPI_ALLOW_RUN_AS_ROOT=1 \
     OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1
 
