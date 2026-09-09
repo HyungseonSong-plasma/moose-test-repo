@@ -63,11 +63,12 @@ jobs:
         run: python tools/physics_boundary_terminology_guard.py
       - name: Validate strict zero-legacy architecture census
         run: |
+          python tools/physics_architecture_census.py --json-out physics-architecture-census.json
           python tools/physics_architecture_census.py --require-no-legacy
-          python tools/physics_architecture_census.py --json-out physics-architecture-census.json --require-no-legacy
       - name: Validate zero-legacy active CI surface
         run: python tools/physics_public_artifact_residue_guard.py
       - name: Upload architecture census
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: physics-architecture-census
@@ -99,7 +100,7 @@ jobs:
         run: |
           set -euxo pipefail
           [[ "$PHYSICS_RUNTIME_REF" =~ ^ghcr\.io/hyungseonsong-plasma/physics-runtime@sha256:[0-9a-f]{64}$ ]]
-          [[ "$EXPECTED_BUILD_BASE_REF" =~ ^ghcr\.io/hyungseonsong-plasma/physics-build-base@sha256:[0-9a-f]{64}$ ]]
+          [[ "$EXPECTED_BUILD_BASE_REF" =~ ^ghcr\.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008$ ]]
           [[ "$EXPECTED_RUNTIME_REVISION" =~ ^[0-9a-f]{40}$ ]]
 
       - name: Pull accepted public Physics runtime without package credentials
