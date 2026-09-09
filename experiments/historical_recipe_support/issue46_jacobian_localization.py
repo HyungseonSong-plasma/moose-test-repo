@@ -6,18 +6,17 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
-from qpx_harness.adapters.moose import blocks as mb
-from qpx_harness.adapters.moose import parameters as mp
-from qpx_harness.adapters.moose.input import MooseInputError
-from qpx_harness.petsc import options as po
-from qpx_harness.adapters.moose.mutation_spec import compile_mutation_spec, load_mutation_json_file
-from qpx_harness.adapters.moose.mutation_spec.plan import MutationCasePlan, MutationPlan, OperationPlan
-from qpx_harness.adapters.moose.transforms import TransformError, apply_case_plan
+from physics_harness.adapters.moose import blocks as mb
+from physics_harness.adapters.moose import parameters as mp
+from physics_harness.adapters.moose.input import MooseInputError
+from physics_harness.adapters.moose import petsc_options as po
+from physics_harness.adapters.moose.mutation_spec import compile_mutation_spec, load_mutation_json_file
+from physics_harness.adapters.moose.mutation_spec.plan import MutationCasePlan, MutationPlan, OperationPlan
+from physics_harness.adapters.moose.transforms import TransformError, apply_case_plan
 
 TARGET = 1.0e16
 SPEC_PATH = (
     Path(__file__).resolve().parents[2]
-    / "qpx_harness"
     / "specs"
     / "experiments"
     / "issue46_jacobian_localization.json"
