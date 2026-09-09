@@ -78,6 +78,55 @@ jobs:
           test "$zapdos_sha" = "$EXPECTED_ZAPDOS_SHA"
           echo PHYSICS_RUNTIME_PROVENANCE_PASS
 
+      - name: Census runtime filesystem size
+        shell: bash
+        run: |
+          set -euxo pipefail
+          rootfs="$(mktemp -d)"
+          cid="$(docker create "$PHYSICS_RUNTIME_REF")"
+          cleanup() {
+            docker rm -f "$cid" >/dev/null 2>&1 || true
+            rm -rf "$rootfs"
+          }
+          trap cleanup EXIT
+
+          docker export "$cid" | tar -C "$rootfs" -xf -
+          docker rm "$cid" >/dev/null
+          cid=""
+
+          {
+            echo "RUNTIME_CENSUS_TOTAL_BYTES=$(du -sb "$rootfs" | awk '{print $1}')"
+            echo "RUNTIME_CENSUS_TOP_LEVEL_BEGIN"
+            for path in "$rootfs"/opt/* "$rootfs"/usr/* "$rootfs"/lib "$rootfs"/lib64; do
+              [[ -e "$path" || -L "$path" ]] || continue
+              bytes="$(du -sb "$path" | awk '{print $1}')"
+              printf '%s\t/%s\n' "$bytes" "${path#"$rootfs"/}"
+            done | sort -nr
+            echo "RUNTIME_CENSUS_TOP_LEVEL_END"
+
+            echo "RUNTIME_CENSUS_OPT_SHARE_BEGIN"
+            for path in "$rootfs"/opt/share/*; do
+              [[ -e "$path" || -L "$path" ]] || continue
+              bytes="$(du -sb "$path" | awk '{print $1}')"
+              printf '%s\t/%s\n' "$bytes" "${path#"$rootfs"/}"
+            done | sort -nr
+            echo "RUNTIME_CENSUS_OPT_SHARE_END"
+
+            echo "RUNTIME_CENSUS_PHYSICS_VENDOR_BEGIN"
+            for path in "$rootfs"/opt/physics_vendor/*; do
+              [[ -e "$path" || -L "$path" ]] || continue
+              bytes="$(du -sb "$path" | awk '{print $1}')"
+              printf '%s\t/%s\n' "$bytes" "${path#"$rootfs"/}"
+            done | sort -nr
+            echo "RUNTIME_CENSUS_PHYSICS_VENDOR_END"
+
+            echo "RUNTIME_CENSUS_LARGEST_FILES_BEGIN"
+            find "$rootfs" -type f -printf '%s\t/%P\n' | sort -nr | sed -n '1,40p'
+            echo "RUNTIME_CENSUS_LARGEST_FILES_END"
+          } > physics-runtime-census.txt
+
+          cat physics-runtime-census.txt
+
       - name: Run Physics check-input smoke
         shell: bash
         run: docker run --rm "$PHYSICS_RUNTIME_REF" --check-input -i /opt/physics/ci/smoke.i
@@ -110,3 +159,10 @@ jobs:
         with:
           name: physics-runtime-consumer-evidence
           path: physics-runtime-consumer-evidence.txt
+
+      - name: Upload runtime size census
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: physics-runtime-size-census
+          path: physics-runtime-census.txt
