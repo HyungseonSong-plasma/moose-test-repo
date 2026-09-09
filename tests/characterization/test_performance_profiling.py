@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from qpx_harness.adapters.moose.performance.measurement import build_bounded_executioner_overlay
+from physics_harness.adapters.moose.performance.measurement import build_bounded_executioner_overlay
 
 
 def test_bounded_profile_overlay_defaults_to_no_numerical_change() -> None:
