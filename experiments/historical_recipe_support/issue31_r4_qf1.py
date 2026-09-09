@@ -17,7 +17,7 @@ import math
 import re
 from typing import Any
 
-from qpx_harness.adapters.moose import parameters as mp
+from physics_harness.adapters.moose import parameters as mp
 from experiments.historical_recipe_support.issue31_r4_qn0 import (
     _replace_top_level_assignment,
     _top_level_float,
