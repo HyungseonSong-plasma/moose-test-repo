@@ -13,10 +13,10 @@ from experiments.Issue31_r4_q0_all_ground import run as q0_run
 from experiments.Issue31_r4_qf1_closed_feedback import run as qf1_run
 from experiments.Issue31_r4_qn0_all_ground import run as qn0_run
 from experiments.Issue91_real_qvt_r3 import run as issue91_run
-from qpx_harness.evidence import create_collision_safe_directory, sha256_file, utc_timestamp, write_json_bundle
-from qpx_harness.execution.cases import stage_case
-from qpx_harness.execution.runtime import resolve_executable, validate_executable
-from qpx_harness.provenance import ArtifactRef, FileIdentity, RunEnvelope, write_run_envelope
+from physics_harness.evidence import create_collision_safe_directory, sha256_file, utc_timestamp, write_json_bundle
+from physics_harness.execution.cases import stage_case
+from physics_harness.execution.runtime import resolve_executable, validate_executable
+from physics_harness.provenance import ArtifactRef, FileIdentity, RunEnvelope, write_run_envelope
 from experiments.historical_recipe_support.issue31_r4_qf2 import (
     QF2_CHARGE_MAX_PP,
     QF2_CHARGE_MIN_PP,

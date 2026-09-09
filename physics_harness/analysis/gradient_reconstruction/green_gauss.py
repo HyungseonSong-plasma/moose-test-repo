@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import polars as pl
 
-from qpx_harness.evidence.schema import CELL_KEY_COLUMNS, require_columns
+from physics_harness.evidence.schema import CELL_KEY_COLUMNS, require_columns
 
 FrameLike = pl.DataFrame | pl.LazyFrame
 
