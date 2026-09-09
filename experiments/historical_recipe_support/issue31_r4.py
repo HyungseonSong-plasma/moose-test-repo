@@ -13,8 +13,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from qpx_harness.adapters.moose import blocks as mb
-from qpx_harness.adapters.moose import parameters as mp
+from physics_harness.adapters.moose import blocks as mb
+from physics_harness.adapters.moose import parameters as mp
 from experiments.historical_recipe_support.issue91_r3 import audit_r3_input, build_r3_input
 
 EPSILON_0 = 8.8541878128e-12
