@@ -12,11 +12,11 @@ from pathlib import Path
 from typing import Callable, Iterable
 
 from .preflight import validate_input_preflight, validate_temporal_manifest_preflight
-from qpx_harness.execution.reporting import ConsoleReporter, Reporter
-from qpx_harness.execution.runtime import TelemetryCallback, TelemetrySample, resolve_executable, run_command, run_qpx, validate_executable
-from qpx_harness.execution.status import ExecutionState, LivenessClassifier
-from qpx_harness.analysis.temporal import normalize_from_manifest
-from qpx_harness.execution.workspace import discover_manifests, load_manifest, manifest_type
+from physics_harness.execution.reporting import ConsoleReporter, Reporter
+from physics_harness.execution.runtime import TelemetryCallback, TelemetrySample, resolve_executable, run_command, run_physics, validate_executable
+from physics_harness.execution.status import ExecutionState, LivenessClassifier
+from physics_harness.analysis.temporal import normalize_from_manifest
+from physics_harness.execution.workspace import discover_manifests, load_manifest, manifest_type
 
 StateCallback = Callable[[ExecutionState, float], None]
 
@@ -186,7 +186,7 @@ def run_case(
     validate_input_preflight(input_path)
     validate_temporal_manifest_preflight(input_path, cfg)
     active_reporter.executable_resolved(exe)
-    solve = run_qpx(
+    solve = run_physics(
         exe,
         cwd=case_dir,
         input_name=input_name,
