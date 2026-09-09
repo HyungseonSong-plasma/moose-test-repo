@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Runtime closure v2: installed data layout + dependency-driven ELF closure.
+# Runtime closure v3: dependency-driven ELF closure with precomputed loader cache.
 set -euo pipefail
 
 DEST="${1:-/runtime-root}"
@@ -48,6 +48,26 @@ copy_tree_to() {
 record_libdir() {
   local path="$1"
   dirname "$path" >> "$LIBDIRS_FILE"
+}
+
+bytes_of() {
+  local path="$1"
+  if [[ -e "$path" || -L "$path" ]]; then
+    du -sb "$path" | awk '{print $1}'
+  else
+    echo 0
+  fi
+}
+
+strip_debug_tree() {
+  local root="$1"
+  local file
+  [[ -d "$root" ]] || return 0
+  while IFS= read -r -d '' file; do
+    if readelf -h "$file" >/dev/null 2>&1; then
+      strip --strip-debug "$file"
+    fi
+  done < <(find "$root" -type f -print0)
 }
 
 # Canonical executable and bounded smoke input.
@@ -130,9 +150,28 @@ if [[ -d /opt/openmpi/lib ]]; then
 fi
 printf '%s\n' /opt/openmpi/lib >> "$LIBDIRS_FILE"
 
-# Generate loader search metadata while build tooling is available. The final
-# image needs only ldconfig and does not need findutils.
+# WP8 bounded optimization: the measured runtime copy of PETSc + libMesh carried
+# ~404 MB of removable debug sections. Strip debug sections only from the copied
+# closure. The build-base artifacts and canonical application binaries remain
+# untouched. Dynamic symbols and executable code are preserved.
+command -v readelf >/dev/null
+command -v strip >/dev/null
+petsc_before="$(bytes_of "$DEST/opt/petsc")"
+libmesh_before="$(bytes_of "$DEST/opt/libmesh")"
+strip_debug_tree "$DEST/opt/petsc"
+strip_debug_tree "$DEST/opt/libmesh"
+petsc_after="$(bytes_of "$DEST/opt/petsc")"
+libmesh_after="$(bytes_of "$DEST/opt/libmesh")"
+strip_saved="$((petsc_before + libmesh_before - petsc_after - libmesh_after))"
+
+# Generate the dynamic-loader configuration and cache while build tooling is
+# still available. The final scratch image contains neither ldconfig nor a shell,
+# so the cache must be complete before the closure becomes the image rootfs.
 sort -u "$LIBDIRS_FILE" > "$DEST/etc/ld.so.conf.d/physics-runtime.conf"
+printf '%s\n' 'include /etc/ld.so.conf.d/*.conf' > "$DEST/etc/ld.so.conf"
+command -v ldconfig >/dev/null
+ldconfig -r "$DEST"
+test -s "$DEST/etc/ld.so.cache"
 
 # Hard acceptance guard: MOOSE core data must be available through the exact
 # installed path Registry::determineDataFilePath() checks first.
@@ -142,6 +181,14 @@ test -r "$DEST/opt/share/moose/data/README.md"
   echo "RUNTIME_ROOT_BYTES=$(du -sb "$DEST" | awk '{print $1}')"
   echo "RUNTIME_FILE_COUNT=$(find "$DEST" -type f | wc -l | tr -d ' ')"
   echo "ELF_DEPENDENCY_COUNT=$(awk '/=> \/[^ ]+/ {print $3} /^[[:space:]]*\/[^ ]+/ {print $1}' "$LDD_OUTPUT" | sort -u | wc -l | tr -d ' ')"
+  echo "RUNTIME_STRIP_MODE=--strip-debug"
+  echo "RUNTIME_STRIP_TARGETS=/opt/petsc,/opt/libmesh"
+  echo "PETSC_BEFORE_BYTES=$petsc_before"
+  echo "PETSC_AFTER_BYTES=$petsc_after"
+  echo "LIBMESH_BEFORE_BYTES=$libmesh_before"
+  echo "LIBMESH_AFTER_BYTES=$libmesh_after"
+  echo "RUNTIME_STRIP_SAVED_BYTES=$strip_saved"
+  echo "RUNTIME_LD_CACHE_PRECOMPUTED=true"
 } > "$DEST/opt/physics/RUNTIME_CLOSURE.txt"
 
 cat "$DEST/opt/physics/RUNTIME_CLOSURE.txt"
