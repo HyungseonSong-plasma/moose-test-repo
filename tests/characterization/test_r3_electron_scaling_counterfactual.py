@@ -10,7 +10,7 @@ from experiments.R3_electron_scaling_counterfactual.cases import (
     build_normalized_r3_input,
 )
 from experiments.historical_recipe_support.issue91_r3 import build_r3_input
-from qpx_harness.adapters.moose import parameters as mp
+from physics_harness.adapters.moose import parameters as mp
 
 
 def test_normalized_electron_case_is_o1_zero_field_diffusion() -> None:

@@ -5,7 +5,7 @@ from collections.abc import Mapping
 
 import polars as pl
 
-from qpx_harness.analysis.diagnostic_metrics import (
+from physics_harness.analysis.diagnostic_metrics import (
     DiagnosticMetricSpec,
     aggregate_metric_values,
     failure_location_rows,

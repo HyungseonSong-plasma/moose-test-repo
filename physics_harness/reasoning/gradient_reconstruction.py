@@ -6,7 +6,7 @@ from typing import Any
 import polars as pl
 from pydantic import BaseModel, ConfigDict, Field
 
-from qpx_harness.analysis.diagnostic_metrics import DiagnosticMetricSpec
+from physics_harness.analysis.diagnostic_metrics import DiagnosticMetricSpec
 from .diagnosis import DiagnosisReport
 from .evaluator import evaluate_diagnostic_rules
 from .rules import MetricPredicate, ReasoningRule, RuleSet

@@ -17,9 +17,9 @@ from experiments.Issue27_surface_reactions.controlled_wall.electron_wall import 
     _thermal_speed_from_mean_energy,
     _validated_parameters,
 )
-from qpx_harness.application.experiment_spec import load_experiment_spec
-from qpx_harness.adapters.moose import blocks as mb
-from qpx_harness.adapters.moose import parameters as mp
+from physics_harness.application.experiment_spec import load_experiment_spec
+from physics_harness.adapters.moose import blocks as mb
+from physics_harness.adapters.moose import parameters as mp
 from experiments.historical_recipe_support.issue91_r3 import MEAN_ELECTRON_ENERGY_EV
 
 ROOT = Path(__file__).resolve().parents[2]

@@ -2,12 +2,12 @@ import polars as pl
 import pytest
 from pydantic import ValidationError
 
-from qpx_harness.analysis.diagnostic_metrics import DiagnosticMetricSpec
-from qpx_harness.application.gradient_reconstruction import (
+from physics_harness.analysis.diagnostic_metrics import DiagnosticMetricSpec
+from physics_harness.application.gradient_reconstruction import (
     analyze_gradient_reconstruction,
     write_reconstruction_evidence_bundle,
 )
-from qpx_harness.evidence import (
+from physics_harness.evidence import (
     CORE_FACE_CONTRACT,
     DEFAULT_FACE_CONTRACT,
     GREEN_GAUSS_FACE_CONTRACT,
@@ -17,22 +17,22 @@ from qpx_harness.evidence import (
     normalize_and_project,
     rz_constant_square_face_rows,
 )
-from qpx_harness.reasoning import (
+from physics_harness.reasoning import (
     DiagnosisReport,
     MetricPredicate,
     ReasoningRule,
     RuleSet,
     evaluate_diagnostic_rules,
 )
-from qpx_harness.reasoning.engines.z3 import evaluate_rules
-from qpx_harness.reasoning.gradient_reconstruction import (
+from physics_harness.reasoning.engines.z3 import evaluate_rules
+from physics_harness.reasoning.gradient_reconstruction import (
     ReconstructionTolerances,
     build_constant_state_metrics,
     build_constant_state_ruleset,
     summarize_constant_state,
     summarize_constant_state_report,
 )
-from qpx_harness.validation.evidence_diagnose_smoke import run_smoke
+from physics_harness.validation.evidence_diagnose_smoke import run_smoke
 
 METHOD = "green_gauss"
 

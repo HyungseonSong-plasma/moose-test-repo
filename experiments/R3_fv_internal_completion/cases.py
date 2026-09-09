@@ -14,7 +14,7 @@ from experiments.R3_electron_master_diagnostic.cases import (
     _set_or_insert,
     _set_variable_parameter,
 )
-from qpx_harness.execution.cases import stage_case, validate_case_references
+from physics_harness.execution.cases import stage_case, validate_case_references
 
 from .spec import CompletionCaseSpec, FROZEN_D
 

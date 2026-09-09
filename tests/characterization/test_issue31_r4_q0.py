@@ -4,8 +4,8 @@ import csv
 from pathlib import Path
 
 from experiments.Issue31_r4_q0_all_ground import run as issue31_run
-from qpx_harness.adapters.moose import blocks as mb
-from qpx_harness.adapters.moose import parameters as mp
+from physics_harness.adapters.moose import blocks as mb
+from physics_harness.adapters.moose import parameters as mp
 from experiments.historical_recipe_support.issue31_r4 import (
     EPSILON_0,
     MATERIAL_COVERAGE_FUNCTOR,

@@ -7,7 +7,7 @@ from experiments.Issue27_surface_reactions.controlled_wall.charged import (
     FARADAY_C_PER_MOL,
     _validated_parameters as validate_a3e,
 )
-from qpx_harness.application.experiment_spec import load_experiment_spec
+from physics_harness.application.experiment_spec import load_experiment_spec
 
 ROOT = Path(__file__).resolve().parents[2]
 A2_SPEC = ROOT / "experiments/Issue27_surface_reactions/A2_om_neutralization/experiment.json"
