@@ -6,21 +6,21 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
-from qpx_harness.reasoning import diagnose_coupled_runtime_evidence
-from qpx_harness.reasoning.jacobian import diagnose_jacobian_evidence
-from qpx_harness.adapters.moose.nonlinear_solver import runtime_core_facts
-from qpx_harness.evidence import (
+from physics_harness.reasoning import diagnose_coupled_runtime_evidence
+from physics_harness.reasoning.jacobian import diagnose_jacobian_evidence
+from physics_harness.adapters.moose.nonlinear_solver import runtime_core_facts
+from physics_harness.evidence import (
     extract_jacobian_evidence,
     first_failed_reason,
-    first_linear_termination,
 )
-from qpx_harness.adapters.moose import parameters as mp
-from qpx_harness.petsc import ksp
-from qpx_harness.petsc import log as petsc_log
-from qpx_harness.petsc import options as po
-from qpx_harness.adapters.moose.mutation_spec import compile_mutation_spec, load_mutation_json_file
-from qpx_harness.adapters.moose.mutation_spec.plan import MutationCasePlan, MutationPlan
-from qpx_harness.adapters.moose.transforms import TransformError, apply_case_plan
+from physics_harness.adapters.moose import parameters as mp
+from physics_harness.adapters.petsc import ksp
+from physics_harness.adapters.petsc import log as petsc_log
+from physics_harness.adapters.petsc.log import first_linear_termination
+from physics_harness.adapters.moose import petsc_options as po
+from physics_harness.adapters.moose.mutation_spec import compile_mutation_spec, load_mutation_json_file
+from physics_harness.adapters.moose.mutation_spec.plan import MutationCasePlan, MutationPlan
+from physics_harness.adapters.moose.transforms import TransformError, apply_case_plan
 
 ISSUE = 45
 TARGET = 1.0e16
@@ -30,7 +30,6 @@ COUPLED_SCALING_VARIABLES = ("n_e", "potential_plasma")
 
 SPEC_PATH = (
     Path(__file__).resolve().parents[2]
-    / "qpx_harness"
     / "specs"
     / "experiments"
     / "issue45_first_linear.json"
