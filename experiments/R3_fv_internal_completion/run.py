@@ -12,10 +12,10 @@ from experiments.Issue93_r3_electron_isolation.operator_decomposition import _ch
 from experiments.Issue93_r3_electron_isolation.prepare import ELECTRON_REFERENCE_CASE
 from experiments.Issue93_r3_electron_isolation.run import _electron_residuals
 from experiments.R3_electron_master_diagnostic.execution_status import solver_status
-from qpx_harness.reasoning.jacobian import diagnose_jacobian_evidence
-from qpx_harness.adapters.moose.nonlinear_solver import failure_signature, runtime_core_facts
-from qpx_harness.adapters.petsc.jacobian import parse_comparisons
-from qpx_harness.evidence import (
+from physics_harness.reasoning.jacobian import diagnose_jacobian_evidence
+from physics_harness.adapters.moose.nonlinear_solver import failure_signature, runtime_core_facts
+from physics_harness.adapters.petsc.jacobian import parse_comparisons
+from physics_harness.evidence import (
     AttributionSignals,
     ErrorLedger,
     classify_attribution,
@@ -25,7 +25,7 @@ from qpx_harness.evidence import (
     utc_timestamp,
     write_json_bundle,
 )
-from qpx_harness.execution.runtime import resolve_executable, run_qpx, validate_executable
+from physics_harness.execution.runtime import resolve_executable, run_qpx, validate_executable
 
 from .cases import stage_completion_case
 from .classify import classify_completion
