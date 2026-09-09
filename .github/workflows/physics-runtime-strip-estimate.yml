@@ -1,0 +1,108 @@
+name: Physics Runtime Strip Estimate
+
+on:
+  workflow_dispatch:
+    inputs:
+      runtime_ref:
+        description: 'Immutable public physics-runtime ref (image@sha256:digest)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  vtk-vendor-strip-estimate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      PHYSICS_RUNTIME_REF: ${{ inputs.runtime_ref }}
+
+    steps:
+      - name: Validate immutable runtime ref
+        shell: bash
+        run: |
+          set -euxo pipefail
+          [[ "$PHYSICS_RUNTIME_REF" =~ ^ghcr\.io/hyungseonsong-plasma/physics-runtime@sha256:[0-9a-f]{64}$ ]]
+
+      - name: Pull public runtime without package credentials
+        shell: bash
+        run: |
+          set -euxo pipefail
+          docker pull "$PHYSICS_RUNTIME_REF"
+
+      - name: Measure VTK and Physics vendor strip-debug savings
+        shell: bash
+        run: |
+          set -euxo pipefail
+          rootfs="$(mktemp -d)"
+          cid="$(docker create "$PHYSICS_RUNTIME_REF")"
+          cleanup() {
+            docker rm -f "$cid" >/dev/null 2>&1 || true
+            sudo rm -rf "$rootfs" || true
+          }
+          trap cleanup EXIT
+
+          docker export "$cid" | tar -C "$rootfs" -xf -
+          docker rm "$cid" >/dev/null
+          cid=""
+
+          command -v readelf
+          command -v strip
+
+          total_before="$(du -sb "$rootfs" | awk '{print $1}')"
+          vtk_before="$(du -sb "$rootfs/opt/vtk" | awk '{print $1}')"
+          vendor_before="$(du -sb "$rootfs/opt/physics_vendor" | awk '{print $1}')"
+          moose_before="$(du -sb "$rootfs/opt/physics_vendor/moose" | awk '{print $1}')"
+          crane_before="$(du -sb "$rootfs/opt/physics_vendor/crane" | awk '{print $1}')"
+          squirrel_before="$(du -sb "$rootfs/opt/physics_vendor/squirrel" | awk '{print $1}')"
+          zapdos_before="$(du -sb "$rootfs/opt/physics_vendor/zapdos" | awk '{print $1}')"
+          combined_before="$((vtk_before + vendor_before))"
+          elf_count=0
+
+          while IFS= read -r -d '' file; do
+            if readelf -h "$file" >/dev/null 2>&1; then
+              sudo strip --strip-debug "$file"
+              elf_count="$((elf_count + 1))"
+            fi
+          done < <(find "$rootfs/opt/vtk" "$rootfs/opt/physics_vendor" -type f -print0)
+
+          vtk_after="$(du -sb "$rootfs/opt/vtk" | awk '{print $1}')"
+          vendor_after="$(du -sb "$rootfs/opt/physics_vendor" | awk '{print $1}')"
+          moose_after="$(du -sb "$rootfs/opt/physics_vendor/moose" | awk '{print $1}')"
+          crane_after="$(du -sb "$rootfs/opt/physics_vendor/crane" | awk '{print $1}')"
+          squirrel_after="$(du -sb "$rootfs/opt/physics_vendor/squirrel" | awk '{print $1}')"
+          zapdos_after="$(du -sb "$rootfs/opt/physics_vendor/zapdos" | awk '{print $1}')"
+          combined_after="$((vtk_after + vendor_after))"
+          saved="$((combined_before - combined_after))"
+
+          cat <<EOF
+          RUNTIME_STRIP_UNIT2_BEGIN
+          RUNTIME_REF=$PHYSICS_RUNTIME_REF
+          RUNTIME_ROOTFS_BEFORE_BYTES=$total_before
+          STRIP_MODE=--strip-debug
+          STRIP_TARGETS=/opt/vtk,/opt/physics_vendor
+          STRIP_ELF_FILE_COUNT=$elf_count
+          VTK_BEFORE_BYTES=$vtk_before
+          VTK_AFTER_BYTES=$vtk_after
+          VTK_SAVED_BYTES=$((vtk_before - vtk_after))
+          PHYSICS_VENDOR_BEFORE_BYTES=$vendor_before
+          PHYSICS_VENDOR_AFTER_BYTES=$vendor_after
+          PHYSICS_VENDOR_SAVED_BYTES=$((vendor_before - vendor_after))
+          MOOSE_BEFORE_BYTES=$moose_before
+          MOOSE_AFTER_BYTES=$moose_after
+          MOOSE_SAVED_BYTES=$((moose_before - moose_after))
+          CRANE_BEFORE_BYTES=$crane_before
+          CRANE_AFTER_BYTES=$crane_after
+          CRANE_SAVED_BYTES=$((crane_before - crane_after))
+          SQUIRREL_BEFORE_BYTES=$squirrel_before
+          SQUIRREL_AFTER_BYTES=$squirrel_after
+          SQUIRREL_SAVED_BYTES=$((squirrel_before - squirrel_after))
+          ZAPDOS_BEFORE_BYTES=$zapdos_before
+          ZAPDOS_AFTER_BYTES=$zapdos_after
+          ZAPDOS_SAVED_BYTES=$((zapdos_before - zapdos_after))
+          COMBINED_BEFORE_BYTES=$combined_before
+          COMBINED_AFTER_BYTES=$combined_after
+          COMBINED_STRIP_DEBUG_SAVED_BYTES=$saved
+          RUNTIME_STRIP_UNIT2_END
+          EOF
