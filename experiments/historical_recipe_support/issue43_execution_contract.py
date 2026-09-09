@@ -2,15 +2,15 @@
 
 The declared model meaning, numerical acceptance, and output-observation checks
 are experiment policy. Generic contract evaluation and MOOSE parsing remain
-canonical qpx_harness capabilities.
+canonical physics_harness capabilities.
 """
 from __future__ import annotations
 
 from typing import Any
 
-from qpx_harness.execution import contract as ec
-from qpx_harness.adapters.moose import executioner as moose_executioner
-from qpx_harness.adapters.moose import output_observation as ooc
+from physics_harness.execution import contract as ec
+from physics_harness.adapters.moose import executioner as moose_executioner
+from physics_harness.adapters.moose import output_observation as ooc
 
 
 def case_semantics(case_id: str) -> tuple[str, list[str], list[str]]:
