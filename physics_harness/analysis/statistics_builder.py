@@ -10,7 +10,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from qpx_harness.evaluation.statistics import AccuracyStats, ConvergenceStats, SimulationStats
+from physics_harness.evaluation.statistics import AccuracyStats, ConvergenceStats, SimulationStats
 
 from .metrics.efficiency import build_efficiency_stats
 from .metrics.convergence import build_convergence_stats
