@@ -7,7 +7,7 @@ import re
 from typing import Any, Iterable, Mapping
 
 from . import log as moose_log
-from qpx_harness.adapters.petsc import log as petsc_log
+from physics_harness.adapters.petsc import log as petsc_log
 
 
 FAILURE_PATTERNS = (
