@@ -73,6 +73,16 @@ jobs:
         with:
           name: physics-architecture-census
           path: physics-architecture-census.json
+      - name: Upload migration source snapshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qpx-migration-source
+          path: |
+            physics_harness/**/*.py
+            experiments/**/*.py
+            tests/**/*.py
+          retention-days: 1
       - name: Run Physics pytest
         run: python -m pytest -q
       - name: Validate #17 R1 EI01 attachment source contract
