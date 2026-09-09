@@ -11,7 +11,19 @@ on:
       - 'issue-154-*'
       - 'issue-156-*'
       - review/development-semantic-architecture
+  pull_request:
+    branches:
+      - main
+      - development
   workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  PHYSICS_RUNTIME_REF: ghcr.io/hyungseonsong-plasma/physics-runtime@sha256:cda9f0d09a17aed5fa606e97d1ee5c3450f7280536cec2e5c635402bb07d972c
+  EXPECTED_BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+  EXPECTED_RUNTIME_REVISION: 565b500722c00e4ff6e759a02bd7bae52f8b13f0
 
 jobs:
   validate:
@@ -76,3 +88,58 @@ jobs:
         run: python experiments/Issue89_post_science_canonicalization/final_guard.py
       - name: Validate execution contract refactor
         run: python experiments/execution_contract_refactor/guard.py
+
+  runtime-smoke:
+    name: Public immutable Physics runtime smoke
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Validate accepted immutable runtime ref
+        shell: bash
+        run: |
+          set -euxo pipefail
+          [[ "$PHYSICS_RUNTIME_REF" =~ ^ghcr\.io/hyungseonsong-plasma/physics-runtime@sha256:[0-9a-f]{64}$ ]]
+          [[ "$EXPECTED_BUILD_BASE_REF" =~ ^ghcr\.io/hyungseonsong-plasma/physics-build-base@sha256:[0-9a-f]{64}$ ]]
+          [[ "$EXPECTED_RUNTIME_REVISION" =~ ^[0-9a-f]{40}$ ]]
+
+      - name: Pull accepted public Physics runtime without package credentials
+        id: pull
+        shell: bash
+        run: |
+          set -euxo pipefail
+          start="$(date +%s)"
+          docker pull "$PHYSICS_RUNTIME_REF"
+          end="$(date +%s)"
+          echo "pull_seconds=$((end - start))" >> "$GITHUB_OUTPUT"
+          echo "size_bytes=$(docker image inspect "$PHYSICS_RUNTIME_REF" --format '{{.Size}}')" >> "$GITHUB_OUTPUT"
+
+      - name: Verify accepted runtime provenance
+        shell: bash
+        run: |
+          set -euxo pipefail
+          test "$(docker image inspect "$PHYSICS_RUNTIME_REF" --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}')" = "$EXPECTED_RUNTIME_REVISION"
+          test "$(docker image inspect "$PHYSICS_RUNTIME_REF" --format '{{ index .Config.Labels "io.physics.build-base.ref" }}')" = "$EXPECTED_BUILD_BASE_REF"
+          test "$(docker image inspect "$PHYSICS_RUNTIME_REF" --format '{{ index .Config.Labels "io.physics.source.owner" }}')" = "moose-test-repo/physics_app"
+
+      - name: Run Physics check-input smoke
+        shell: bash
+        run: docker run --rm "$PHYSICS_RUNTIME_REF" --check-input -i /opt/physics/ci/smoke.i
+
+      - name: Run bounded real Physics smoke
+        shell: bash
+        run: docker run --rm "$PHYSICS_RUNTIME_REF" -i /opt/physics/ci/smoke.i
+
+      - name: Record ordinary CI runtime evidence
+        shell: bash
+        run: |
+          {
+            echo "PHYSICS_RUNTIME_REF=$PHYSICS_RUNTIME_REF"
+            echo "RUNTIME_PULL_SECONDS=${{ steps.pull.outputs.pull_seconds }}"
+            echo "RUNTIME_LOCAL_SIZE_BYTES=${{ steps.pull.outputs.size_bytes }}"
+            echo "ORDINARY_CI_USES_PHYSICS_RUNTIME=true"
+            echo "ORDINARY_CI_USES_RETIRED_RUNTIME=false"
+            echo "ORDINARY_CI_PULLS_MOOSE_DEV=false"
+            echo "ORDINARY_CI_PULLS_PHYSICS_BUILD_BASE=false"
+            echo "ORDINARY_CI_REBUILDS_MOOSE_STACK=false"
+            echo "ORDINARY_CI_COMPILES_PHYSICS_APPLICATION=false"
+          }
