@@ -10,7 +10,7 @@ from __future__ import annotations
 from typing import Any
 
 from experiments.historical_recipe_support import issue45_inventory_constraint as constraint_policy
-from qpx_harness.adapters.moose.preflight import validate_parser_symbols_text
+from physics_harness.adapters.moose.preflight import validate_parser_symbols_text
 
 ISSUE = 45
 EXPECTED_TRANSIENT_ELECTRON_KERNEL_TYPES = (
