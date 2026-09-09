@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from experiments.Issue27_surface_reactions.controlled_wall import electron_wall as base
-from qpx_harness.adapters.moose import parameters as mp
+from physics_harness.adapters.moose import parameters as mp
 
 A7_DISCRIMINATOR_DT_S = 1.0e-10
 _ORIGINAL_BUILD = base._build_a7_case_input

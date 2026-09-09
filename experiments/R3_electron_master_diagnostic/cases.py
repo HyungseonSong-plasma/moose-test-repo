@@ -8,7 +8,7 @@ from typing import Iterable
 from experiments.Issue94_r3_electron_diffusion_localization.localization import build_localization_input
 from experiments.Issue93_r3_electron_isolation.operator_decomposition import build_case_input as build_issue93_case
 from experiments.Issue93_r3_electron_isolation.prepare import ELECTRON_REFERENCE_CASE
-from qpx_harness.execution.cases import stage_case, validate_case_references
+from physics_harness.execution.cases import stage_case, validate_case_references
 
 from .spec import (
     CaseSpec,
