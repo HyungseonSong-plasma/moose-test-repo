@@ -7,8 +7,8 @@ from experiments.Issue27_surface_reactions.controlled_wall.electron_wall_stable 
     A7_DISCRIMINATOR_DT_S,
     _build_a7_case_input,
 )
-from qpx_harness.application.experiment_spec import load_experiment_spec
-from qpx_harness.adapters.moose import parameters as mp
+from physics_harness.application.experiment_spec import load_experiment_spec
+from physics_harness.adapters.moose import parameters as mp
 
 ROOT = Path(__file__).resolve().parents[2]
 R4_SOURCE = ROOT / "experiments/Issue91_real_qvt_r3/r3_e0/heavy_base.i"

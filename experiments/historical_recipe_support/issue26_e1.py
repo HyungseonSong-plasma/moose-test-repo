@@ -4,8 +4,8 @@ from __future__ import annotations
 import math
 from typing import Any
 
-from qpx_harness.adapters.moose import blocks as mb
-from qpx_harness.adapters.moose import parameters as mp
+from physics_harness.adapters.moose import blocks as mb
+from physics_harness.adapters.moose import parameters as mp
 from experiments.historical_recipe_support.issue31_r4_qf1 import build_r4_qf1_input
 from experiments.historical_recipe_support.issue91_r3 import MEAN_ELECTRON_ENERGY_EV
 

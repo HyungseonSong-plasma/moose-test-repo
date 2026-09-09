@@ -4,8 +4,8 @@ from __future__ import annotations
 import math
 from typing import Any
 
-from qpx_harness.adapters.moose import blocks as mb
-from qpx_harness.adapters.moose import parameters as mp
+from physics_harness.adapters.moose import blocks as mb
+from physics_harness.adapters.moose import parameters as mp
 from experiments.historical_recipe_support.issue26_e1 import (
     E1_DT_S,
     ENERGY_INVENTORY_PP,

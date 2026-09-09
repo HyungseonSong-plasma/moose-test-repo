@@ -22,9 +22,9 @@ from experiments.Issue27_surface_reactions.controlled_wall.sticking import (
     _build_sticking_case_input,
     _validated_sticking_parameters,
 )
-from qpx_harness.application.experiment_spec import load_experiment_spec
-from qpx_harness.adapters.moose import blocks as mb
-from qpx_harness.adapters.moose import parameters as mp
+from physics_harness.application.experiment_spec import load_experiment_spec
+from physics_harness.adapters.moose import blocks as mb
+from physics_harness.adapters.moose import parameters as mp
 
 ROOT = Path(__file__).resolve().parents[2]
 A1_SPEC = ROOT / "experiments/Issue27_surface_reactions/A1_o_recombination/experiment.json"

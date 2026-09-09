@@ -3,8 +3,8 @@ from __future__ import annotations
 
 from typing import Mapping
 
-from qpx_harness.reasoning.diagnosis import ReasoningDecision
-from qpx_harness.reasoning.rules import MetricPredicate, ReasoningRule, RuleSet
+from physics_harness.reasoning.diagnosis import ReasoningDecision
+from physics_harness.reasoning.rules import MetricPredicate, ReasoningRule, RuleSet
 
 
 class Z3BackendUnavailable(RuntimeError):

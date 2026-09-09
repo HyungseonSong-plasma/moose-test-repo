@@ -10,16 +10,16 @@ from typing import Any
 
 from experiments.Issue93_r3_electron_isolation.operator_decomposition import _check_accepted_qvt_csv
 from experiments.Issue93_r3_electron_isolation.run import _electron_residuals
-from qpx_harness.reasoning.jacobian import diagnose_jacobian_evidence
-from qpx_harness.adapters.moose.nonlinear_solver import failure_signature, runtime_core_facts
-from qpx_harness.adapters.petsc.jacobian import parse_comparisons
-from qpx_harness.evidence import (
+from physics_harness.reasoning.jacobian import diagnose_jacobian_evidence
+from physics_harness.adapters.moose.nonlinear_solver import failure_signature, runtime_core_facts
+from physics_harness.adapters.petsc.jacobian import parse_comparisons
+from physics_harness.evidence import (
     create_collision_safe_directory,
     extract_jacobian_evidence,
     utc_timestamp,
     write_json_bundle,
 )
-from qpx_harness.execution.runtime import resolve_executable, run_qpx, validate_executable
+from physics_harness.execution.runtime import resolve_executable, run_qpx, validate_executable
 
 from .cases import R3_E0_DIR, N_E_REF, stage_n0, stage_r3_case
 

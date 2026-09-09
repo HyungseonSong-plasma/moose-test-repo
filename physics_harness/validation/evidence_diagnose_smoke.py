@@ -12,12 +12,12 @@ from pathlib import Path
 import tempfile
 from typing import Any
 
-from qpx_harness.application.gradient_reconstruction import (
+from physics_harness.application.gradient_reconstruction import (
     analyze_gradient_reconstruction,
     write_reconstruction_evidence_bundle,
 )
-from qpx_harness.evidence import EvidenceStore, rz_constant_square_face_rows
-from qpx_harness.reasoning.gradient_reconstruction import (
+from physics_harness.evidence import EvidenceStore, rz_constant_square_face_rows
+from physics_harness.reasoning.gradient_reconstruction import (
     ReconstructionTolerances,
     summarize_constant_state,
 )

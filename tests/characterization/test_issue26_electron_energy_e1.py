@@ -3,9 +3,9 @@ from __future__ import annotations
 import math
 from pathlib import Path
 
-from qpx_harness.application.experiment_spec import load_experiment_spec
-from qpx_harness.adapters.moose import blocks as mb
-from qpx_harness.adapters.moose import parameters as mp
+from physics_harness.application.experiment_spec import load_experiment_spec
+from physics_harness.adapters.moose import blocks as mb
+from physics_harness.adapters.moose import parameters as mp
 from experiments.historical_recipe_support.issue26_e1 import (
     E1_DT_S,
     ENERGY_REFERENCE_EV,
