@@ -14,13 +14,13 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from qpx_harness.adapters.moose.nonlinear_solver import runtime_core_facts
-from qpx_harness.adapters.petsc import ksp
-from qpx_harness.evidence import extract_jacobian_evidence
-from qpx_harness.reasoning import diagnose_coupled_runtime_evidence
-from qpx_harness.reasoning.jacobian import diagnose_jacobian_evidence
-from qpx_harness.provenance.cases import QVT_PREPOISSON_CASE
-from qpx_harness.domains.plasma.species_constraints import (
+from physics_harness.adapters.moose.nonlinear_solver import runtime_core_facts
+from physics_harness.adapters.petsc import ksp
+from physics_harness.evidence import extract_jacobian_evidence
+from physics_harness.reasoning import diagnose_coupled_runtime_evidence
+from physics_harness.reasoning.jacobian import diagnose_jacobian_evidence
+from physics_harness.provenance.cases import QVT_PREPOISSON_CASE
+from physics_harness.domains.plasma.species_constraints import (
     SpeciesLinearConstraint,
     evaluate_species_constraint,
 )
@@ -36,11 +36,11 @@ def main() -> int:
     # may be recovered from Git history/experiment evidence, but is not production
     # architecture ownership.
     for rel in (
-        "qpx_harness/domains/plasma/electron_inventory.py",
-        "qpx_harness/analysis/electron_inventory",
-        "qpx_harness/adapters/moose/electron_inventory",
-        "qpx_harness/execution/electron_inventory",
-        "qpx_harness/cli/commands/inventory.py",
+        "physics_harness/domains/plasma/electron_inventory.py",
+        "physics_harness/analysis/electron_inventory",
+        "physics_harness/adapters/moose/electron_inventory",
+        "physics_harness/execution/electron_inventory",
+        "physics_harness/cli/commands/inventory.py",
     ):
         assert not (ROOT / rel).exists(), rel
 
@@ -49,7 +49,7 @@ def main() -> int:
         diagnose_jacobian_evidence
     )
 
-    cli_source = (ROOT / "qpx_harness/cli/app.py").read_text()
+    cli_source = (ROOT / "physics_harness/cli/app.py").read_text()
     assert "inventory-nullspace" not in cli_source
     assert "inventory-first-linear" not in cli_source
     assert "dmix-equivalence" not in cli_source
