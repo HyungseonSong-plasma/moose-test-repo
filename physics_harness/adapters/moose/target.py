@@ -8,7 +8,7 @@ from dataclasses import dataclass
 import math
 from typing import Any, Callable, Mapping
 
-from qpx_harness.execution.plan import ExecutionCase, ExecutionPlan
+from physics_harness.execution.plan import ExecutionCase, ExecutionPlan
 
 
 class MooseLoweringError(ValueError):
@@ -477,7 +477,6 @@ def emit_moose_input(case: MooseCaseIR) -> str:
     for observation in sorted(case.required_observations):
         lines.append(f"# QPX observation: {observation}")
     return "\n".join(lines) + "\n"
-
 
 __all__ = [
     "MooseAssignment", "MooseBlock", "MooseCaseIR", "MooseTargetIR",
