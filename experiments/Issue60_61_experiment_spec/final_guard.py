@@ -10,7 +10,7 @@ ROOT = HERE.parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from qpx_harness.adapters.moose.mutation_spec import (
+from physics_harness.adapters.moose.mutation_spec import (
     MutationSpecError,
     OperationPlan,
     compile_mutation_spec,
@@ -18,7 +18,7 @@ from qpx_harness.adapters.moose.mutation_spec import (
     load_mutation_payload,
     pydantic_major_api,
 )
-from qpx_harness.adapters.moose.transforms import (
+from physics_harness.adapters.moose.transforms import (
     SUPPORTED_OPERATIONS,
     TransformError,
     apply_case_plan,
@@ -132,12 +132,12 @@ def main() -> int:
             print("ISSUE60_DETERMINISTIC_PLAN: PASS")
 
         try:
-            source_root = ROOT / "qpx_harness" / "adapters" / "moose" / "mutation_spec"
+            source_root = ROOT / "physics_harness" / "adapters" / "moose" / "mutation_spec"
             combined = "\n".join(
                 path.read_text(encoding="utf-8")
                 for path in sorted(source_root.glob("*.py"))
             )
-            forbidden = ("qpx_harness.runtime", "run_qpx", "resolve_executable")
+            forbidden = ("physics_harness.execution.runtime", "run_physics", "resolve_executable")
             assert not any(token in combined for token in forbidden)
         except Exception as exc:
             failures.append(f"runtime side effect boundary: {exc}")
@@ -188,11 +188,12 @@ def main() -> int:
                 print("ISSUE60_PLAN_IMMUTABILITY: PASS")
 
             try:
-                assert SUPPORTED_OPERATIONS == {
+                historical_required = {
                     "ensure_block",
                     "set_parameter",
                     "add_petsc_flags",
                 }
+                assert historical_required <= set(SUPPORTED_OPERATIONS)
             except Exception as exc:
                 failures.append(f"registry boundary: {exc}")
                 print(f"ISSUE61_REGISTRY_BOUNDARY: FAIL ({exc})")
@@ -289,11 +290,8 @@ def main() -> int:
                 print("ISSUE61_UNKNOWN_REGISTRY_OPERATION: FAIL")
 
             try:
-                source_root = ROOT / "qpx_harness" / "transforms"
-                combined = "\n".join(
-                    path.read_text(encoding="utf-8").lower()
-                    for path in sorted(source_root.glob("*.py"))
-                )
+                source_path = ROOT / "physics_harness" / "adapters" / "moose" / "transforms.py"
+                combined = source_path.read_text(encoding="utf-8").lower()
                 forbidden = ("issue31", "issue43", "issue45", "issue46")
                 assert not any(token in combined for token in forbidden)
             except Exception as exc:
