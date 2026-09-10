@@ -19,7 +19,7 @@ from physics_harness.evidence import (
     utc_timestamp,
     write_json_bundle,
 )
-from physics_harness.execution.runtime import resolve_executable, run_qpx, validate_executable
+from physics_harness.execution.runtime import resolve_executable, run_physics, validate_executable
 
 from .cases import R3_E0_DIR, N_E_REF, stage_n0, stage_r3_case
 
@@ -36,7 +36,7 @@ def _last_csv(case_dir: Path) -> Path | None:
 
 
 def _run_case(exe: Path, case_dir: Path, log: Path, timeout: float) -> dict[str, Any]:
-    result = run_qpx(
+    result = run_physics(
         exe,
         cwd=case_dir,
         input_name="input.i",
@@ -103,7 +103,7 @@ def _jacobian_extra_args() -> tuple[str, ...]:
 
 
 def _run_jacobian(exe: Path, case_dir: Path, log: Path, timeout: float) -> dict[str, Any]:
-    result = run_qpx(
+    result = run_physics(
         exe,
         cwd=case_dir,
         input_name="input.i",
@@ -125,7 +125,7 @@ def _run_jacobian(exe: Path, case_dir: Path, log: Path, timeout: float) -> dict[
 
 
 def _p2(exe: Path, case_dir: Path, log: Path, timeout: float) -> dict[str, Any]:
-    result = run_qpx(
+    result = run_physics(
         exe,
         cwd=case_dir,
         input_name="input.i",
