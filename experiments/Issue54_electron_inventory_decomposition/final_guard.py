@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Final read-only ownership/compatibility gate for electron-inventory capability."""
+"""Final read-only gate for historical Issue45 inventory ownership after retirement."""
 from __future__ import annotations
 
-import importlib
+import ast
 import sys
 from pathlib import Path
 
@@ -10,97 +10,100 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-FACADE = ROOT / "qpx_harness" / "electron_inventory_nullspace.py"
-FIRST_LINEAR_FACADE = ROOT / "qpx_harness" / "issue45_first_linear.py"
-QPX_CLI = ROOT / "qpx_harness" / "cli" / "app.py"
-OWNER_FILES = (
-    ROOT / "qpx_harness/adapters/moose/electron_inventory/closure_model.py",
-    ROOT / "qpx_harness/adapters/moose/electron_inventory/constants.py",
-    ROOT / "qpx_harness/analysis/electron_inventory/closure_runtime.py",
-    ROOT / "qpx_harness/analysis/electron_inventory/closure_schema.py",
-    ROOT / "qpx_harness/analysis/electron_inventory/first_linear_stats.py",
-    ROOT / "qpx_harness/analysis/electron_inventory/first_linear_structure.py",
-    ROOT / "qpx_harness/analysis/electron_inventory/structure.py",
-    ROOT / "qpx_harness/execution/electron_inventory/first_linear_orchestration.py",
-    ROOT / "qpx_harness/execution/electron_inventory/orchestration.py",
-    ROOT / "qpx_harness/validation/electron_inventory/characterization.py",
-    ROOT / "qpx_harness/validation/electron_inventory/first_linear_characterization.py",
-    ROOT / "qpx_harness/cli/commands/inventory.py",
+from experiments.historical_recipe_support import issue45_inventory_constraint as inventory
+
+RETIRED_PATHS = (
+    "physics_harness/domains/plasma/electron_inventory.py",
+    "physics_harness/analysis/electron_inventory",
+    "physics_harness/adapters/moose/electron_inventory",
+    "physics_harness/execution/electron_inventory",
+    "physics_harness/validation/electron_inventory",
+    "physics_harness/cli/commands/inventory.py",
+    "physics_harness/electron_inventory_nullspace.py",
+    "physics_harness/issue45_first_linear.py",
 )
-EXPECTED_COMPAT_ATTRS = {
-    "ElectronInventoryNullspaceError",
-    "_base_case_context",
-    "_build_constrained_quasisteady_input",
-    "_evidence_root",
-    "_stage_case",
-    "_synthetic_constrained_input",
-    "audit_constrained_quasisteady_structure",
-}
+GENERIC_OWNER_FILES = (
+    "physics_harness/adapters/moose/blocks.py",
+    "physics_harness/adapters/moose/parameters.py",
+    "physics_harness/adapters/moose/preflight.py",
+    "physics_harness/adapters/moose/nonlinear_solver.py",
+    "physics_harness/adapters/moose/petsc_options.py",
+    "physics_harness/adapters/petsc/log.py",
+    "physics_harness/evidence/identity.py",
+)
 
 
 def main() -> int:
-    ok = True
-    missing = [str(path.relative_to(ROOT)) for path in OWNER_FILES if not path.is_file()]
+    missing = [relative for relative in GENERIC_OWNER_FILES if not (ROOT / relative).is_file()]
     print(
         "ISSUE54_FINAL_CANONICAL_INVENTORY_OWNER:",
         "PASS" if not missing else "FAIL missing=" + ",".join(missing),
     )
-    ok = ok and not missing
+    if missing:
+        return 1
 
-    cli_text = QPX_CLI.read_text()
+    resurrected = [relative for relative in RETIRED_PATHS if (ROOT / relative).exists()]
+    print(
+        "ISSUE54_FINAL_LEGACY_FACADE_COMPAT:",
+        "RETIRED" if not resurrected else "FAIL " + ",".join(resurrected),
+    )
+    if resurrected:
+        return 1
+    print("ISSUE54_FINAL_FIRST_LINEAR_COMPAT: RETIRED")
+
+    required_inventory = (
+        "build_constrained_quasisteady_input",
+        "audit_constrained_quasisteady_structure",
+        "target_only_pair_audit",
+        "evaluate_runtime_case_data",
+        "evaluate_runtime_pair",
+    )
+    required_first_linear = {
+        "instrument_first_linear",
+        "analyze_first_linear_text",
+    }
+    for name in required_inventory:
+        if not callable(getattr(inventory, name, None)):
+            raise AssertionError(f"historical inventory policy missing: {name}")
+
+    first_linear_path = ROOT / "experiments/historical_recipe_support/issue45_first_linear.py"
+    first_linear_source = first_linear_path.read_text(encoding="utf-8")
+    first_linear_tree = ast.parse(first_linear_source, filename=str(first_linear_path))
+    first_linear_functions = {
+        node.name
+        for node in first_linear_tree.body
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+    }
+    if not required_first_linear <= first_linear_functions:
+        raise AssertionError(
+            "historical first-linear policy missing: "
+            f"{sorted(required_first_linear - first_linear_functions)}"
+        )
+
+    inventory_source = Path(inventory.__file__).read_text(encoding="utf-8")
+    for label, source in (
+        ("inventory", inventory_source),
+        ("first-linear", first_linear_source),
+    ):
+        if "qpx_harness" in source:
+            raise AssertionError(
+                f"historical {label} recipe retains legacy production dependency"
+            )
+
+    cli_source = (ROOT / "physics_harness/cli/app.py").read_text(encoding="utf-8")
     cli_ok = (
-        '"inventory-nullspace": "qpx_harness.cli.commands.inventory:inventory_main"' in cli_text
-        and '"inventory-first-linear": "qpx_harness.cli.commands.inventory:first_linear_main"' in cli_text
-        and "qpx_harness.electron_inventory_nullspace" not in cli_text
-        and "qpx_harness.issue45_first_linear" not in cli_text
+        "inventory-nullspace" not in cli_source
+        and "inventory-first-linear" not in cli_source
+        and "electron_inventory" not in cli_source
     )
     print("ISSUE54_FINAL_CLI_CANONICAL_SURFACE:", "PASS" if cli_ok else "FAIL")
-    ok = ok and cli_ok
+    if not cli_ok:
+        return 1
 
-    try:
-        inventory_structure = importlib.import_module("qpx_harness.analysis.electron_inventory.structure")
-        inventory_model = importlib.import_module("qpx_harness.adapters.moose.electron_inventory.closure_model")
-        inventory_orchestration = importlib.import_module("qpx_harness.execution.electron_inventory.orchestration")
-        first_linear = importlib.import_module("qpx_harness.execution.electron_inventory.first_linear_orchestration")
-        if FACADE.is_file():
-            facade = importlib.import_module("qpx_harness.electron_inventory_nullspace")
-            compat = (
-                facade.audit_constrained_quasisteady_structure
-                is inventory_structure.audit_constrained_quasisteady_structure
-                and facade._build_constrained_quasisteady_input
-                is inventory_model._build_constrained_quasisteady_input
-                and facade._base_case_context is inventory_orchestration._base_case_context
-                and facade._stage_case is inventory_orchestration._stage_case
-            )
-            print("ISSUE54_FINAL_LEGACY_FACADE_COMPAT:", "PASS" if compat else "FAIL")
-            ok = ok and compat
-        else:
-            print("ISSUE54_FINAL_LEGACY_FACADE_COMPAT: RETIRED")
-
-        if FIRST_LINEAR_FACADE.is_file():
-            legacy_first = importlib.import_module("qpx_harness.issue45_first_linear")
-            missing_attrs = {
-                name for name in EXPECTED_COMPAT_ATTRS if not hasattr(legacy_first, name)
-            }
-            print(
-                "ISSUE54_FINAL_FIRST_LINEAR_COMPAT:",
-                "PASS" if not missing_attrs else "FAIL missing=" + ",".join(sorted(missing_attrs)),
-            )
-            ok = ok and not missing_attrs
-        else:
-            print("ISSUE54_FINAL_FIRST_LINEAR_COMPAT: RETIRED")
-
-        if first_linear.run_preflight is None:
-            raise AssertionError("canonical first-linear orchestration missing")
-    except Exception as exc:
-        print(f"ISSUE54_FINAL_IMPORT_IDENTITY: FAIL ({exc})")
-        ok = False
-    else:
-        print("ISSUE54_FINAL_IMPORT_IDENTITY: PASS")
-
+    print("ISSUE54_FINAL_IMPORT_IDENTITY: PASS")
     print("ISSUE54_FINAL_EVRS_CONSUMED_BY_REFACTOR: 0")
-    print("ISSUE54_FINAL_GUARD:", "PASS" if ok else "FAIL")
-    return 0 if ok else 1
+    print("ISSUE54_FINAL_GUARD: PASS")
+    return 0
 
 
 if __name__ == "__main__":
