@@ -89,6 +89,8 @@ jobs:
         run: python physics_app/ci/check_ei01_attachment_source_contract.py
       - name: Validate #17 R2 O2 ionization lookup and ownership contract
         run: python physics_app/ci/check_r2_o2_ionization_contract.py
+      - name: Validate #176 R3 O2s excitation constant-surrogate ownership contract
+        run: python physics_app/ci/check_r3_o2s_excitation_contract.py
       - name: Validate #17 R2 O2 ionization production implementation
         run: python physics_app/ci/check_r2_o2_ionization_implementation.py
       - name: Run canonical Physics internal validation
