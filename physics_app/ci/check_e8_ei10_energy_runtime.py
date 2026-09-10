@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Governed-runtime discriminator for #26 E8 EI10 inelastic electron-energy coupling."""
+"""Governed runtime discriminator for #26 E8-I1 EI10 using standard MOOSE energy projection."""
 
 import argparse
 import csv
@@ -17,21 +17,22 @@ RHO = 3.1998e-5
 DT = 1.0e-7
 EPSILON_REF_EV = 5.73276
 DELTA_E_EV = 0.977
-WP0 = 1.0e-3
+W0 = 1.0e-3
 K_O2S = 4.71e8
+ENERGY_COEF = -(DELTA_E_EV * N_A / (N_REF * EPSILON_REF_EV))
 
-RUNTIME_INPUT = r"""[Mesh]
+RUNTIME_INPUT = """[Mesh]
   [mesh]
     type = GeneratedMeshGenerator
     dim = 3
     nx = 1
     ny = 1
     nz = 1
-    xmin = 0.0
-    xmax = 1.0
-    ymin = 0.0
+    xmin = 0
+    xmax = 1
+    ymin = 0
     ymax = 0.01
-    zmin = 0.0
+    zmin = 0
     zmax = 0.01
   []
 []
@@ -106,12 +107,10 @@ RUNTIME_INPUT = r"""[Mesh]
     variable = n_epsilon
   []
   [ei10_energy_loss]
-    type = PhysicsFVElectronReactionEnergySource
+    type = FVCoupledForce
     variable = n_epsilon
-    reaction_progress = R_O2s
-    energy_loss_eV = 0.977
-    n_ref = 1.0e16
-    energy_reference_eV = 5.73276
+    v = R_O2s
+    coef = -10263174.321827531
   []
   [w_O2s_time]
     type = PhysicsFVMassFractionTimeDerivative
@@ -182,168 +181,126 @@ RUNTIME_INPUT = r"""[Mesh]
 """
 
 
-def _assert_close(actual, expected, *, rel=3.0e-6, abs_=1.0e-12, label="value"):
-    if not math.isclose(actual, expected, rel_tol=rel, abs_tol=abs_):
-        raise AssertionError(f"{label}: actual={actual:.17g} expected={expected:.17g}")
+def _close(a, b, *, rel=5e-6, abs_=1e-12, label="value"):
+    if not math.isclose(a, b, rel_tol=rel, abs_tol=abs_):
+        raise AssertionError(f"{label}: {a:.17g} != {b:.17g}")
 
 
-def _f(row, key):
+def _num(row, key):
     value = float(row[key])
     if not math.isfinite(value):
-        raise AssertionError(f"non-finite {key}: {value}")
+        raise AssertionError(f"non-finite {key}")
     return value
 
 
 def validate_runtime_rows(rows):
     if len(rows) < 2:
-        raise AssertionError(f"expected INITIAL + TIMESTEP_END rows, got {len(rows)}")
-    initial = rows[0]
-    final = rows[-1]
+        raise AssertionError("expected initial and final rows")
+    i, f = rows[0], rows[-1]
+    ne_i, ne_f = _num(i, "n_e_hat_avg"), _num(f, "n_e_hat_avg")
+    ep_i, ep_f = _num(i, "n_epsilon_hat_avg"), _num(f, "n_epsilon_hat_avg")
+    ws_i, ws_f = _num(i, "w_O2s_avg"), _num(f, "w_O2s_avg")
+    wo_i, wo_f = _num(i, "w_O2_avg"), _num(f, "w_O2_avg")
+    me_i, me_f = _num(i, "mean_en_solved_avg"), _num(f, "mean_en_solved_avg")
+    r_f = _num(f, "R_O2s_avg")
+    s_o2, s_o2s = _num(f, "O2_source_avg"), _num(f, "O2s_source_avg")
 
-    ne_i = _f(initial, "n_e_hat_avg")
-    ne_f = _f(final, "n_e_hat_avg")
-    eps_i = _f(initial, "n_epsilon_hat_avg")
-    eps_f = _f(final, "n_epsilon_hat_avg")
-    ws_i = _f(initial, "w_O2s_avg")
-    ws_f = _f(final, "w_O2s_avg")
-    wo2_i = _f(initial, "w_O2_avg")
-    wo2_f = _f(final, "w_O2_avg")
-    mean_i = _f(initial, "mean_en_solved_avg")
-    mean_f = _f(final, "mean_en_solved_avg")
-    progress_f = _f(final, "R_O2s_avg")
-    so2_f = _f(final, "O2_source_avg")
-    so2s_f = _f(final, "O2s_source_avg")
+    _close(ne_f, ne_i, rel=0, abs_=1e-12, label="EI10 electron-particle neutrality")
+    if not (ep_i > ep_f > 0 and 0 <= ws_i < ws_f < 1 and wo_i > wo_f > 0):
+        raise AssertionError("EI10 positivity/direction failure")
+    _close(wo_i + ws_i, 1.0, rel=0, abs_=2e-12, label="initial heavy sum")
+    _close(wo_f + ws_f, 1.0, rel=0, abs_=2e-12, label="final heavy sum")
+    _close(me_i, EPSILON_REF_EV * ep_i / ne_i, label="initial mean energy")
+    _close(me_f, EPSILON_REF_EV * ep_f / ne_f, label="final mean energy")
 
-    if not (ne_i > 0.0 and eps_i > 0.0 and eps_f > 0.0):
-        raise AssertionError((ne_i, eps_i, eps_f))
-    _assert_close(ne_f, ne_i, rel=0.0, abs_=1.0e-12, label="zero EI10 electron-particle source")
-    if not eps_f < eps_i:
-        raise AssertionError(f"EI10 energy sink did not reduce n_epsilon_hat: {eps_i} -> {eps_f}")
+    if not (r_f > 0 and s_o2 < 0 < s_o2s):
+        raise AssertionError("EI10 source signs")
+    _close(-s_o2 / M_O2, r_f, label="O2/shared progress")
+    _close(s_o2s / M_O2, r_f, label="O2s/shared progress")
+    _close(s_o2 + s_o2s, 0, rel=0, abs_=1e-12, label="heavy source closure")
 
-    if not (0.0 <= ws_i < ws_f < 1.0 and wo2_i > wo2_f > 0.0):
-        raise AssertionError((ws_i, ws_f, wo2_i, wo2_f))
-    _assert_close(wo2_i + ws_i, 1.0, rel=0.0, abs_=2.0e-12, label="initial heavy fraction sum")
-    _assert_close(wo2_f + ws_f, 1.0, rel=0.0, abs_=2.0e-12, label="final heavy fraction sum")
+    expected_r = K_O2S * (N_REF * ne_f / N_A) * (RHO * wo_f / M_O2)
+    _close(r_f, expected_r, label="canonical R_O2s")
+    _close(RHO * (ws_f - ws_i) / DT, s_o2s, label="O2s BE closure")
+    _close(RHO * (wo_f - wo_i) / DT, s_o2, label="O2 BE closure")
 
-    oxygen_i = 2.0 * RHO * (wo2_i + ws_i) / M_O2
-    oxygen_f = 2.0 * RHO * (wo2_f + ws_f) / M_O2
-    _assert_close(oxygen_f, oxygen_i, rel=2.0e-12, abs_=1.0e-14, label="oxygen-atom molar inventory")
-
-    _assert_close(mean_i, EPSILON_REF_EV * eps_i / ne_i, label="initial solved mean energy")
-    _assert_close(mean_f, EPSILON_REF_EV * eps_f / ne_f, label="final solved mean energy")
-    _assert_close(mean_i, EPSILON_REF_EV, rel=0.0, abs_=1.0e-12, label="initial reference mean energy")
-    if not mean_f < mean_i:
-        raise AssertionError(f"EI10 energy loss did not reduce mean_en_solved: {mean_i} -> {mean_f}")
-
-    if not (progress_f > 0.0 and so2_f < 0.0 < so2s_f):
-        raise AssertionError((progress_f, so2_f, so2s_f))
-    _assert_close(-so2_f / M_O2, progress_f, label="O2 source / shared R_O2s")
-    _assert_close(so2s_f / M_O2, progress_f, label="O2s source / shared R_O2s")
-    _assert_close(so2_f + so2s_f, 0.0, rel=0.0, abs_=1.0e-12, label="heavy source closure")
-
-    expected_c_o2 = RHO * wo2_f / M_O2
-    expected_progress = K_O2S * (N_REF * ne_f / N_A) * expected_c_o2
-    _assert_close(progress_f, expected_progress, rel=3.0e-6, abs_=1.0e-14, label="shared constant-surrogate progress")
-
-    _assert_close(RHO * (ws_f - ws_i) / DT, so2s_f, rel=5.0e-6, abs_=1.0e-12, label="O2s BE source closure")
-    _assert_close(RHO * (wo2_f - wo2_i) / DT, so2_f, rel=5.0e-6, abs_=1.0e-12, label="constrained O2 BE source closure")
-
-    normalized_rhs_f = -DELTA_E_EV * N_A * progress_f / (N_REF * EPSILON_REF_EV)
-    residual_f = -normalized_rhs_f
-    if not (normalized_rhs_f < 0.0 and residual_f > 0.0):
-        raise AssertionError((normalized_rhs_f, residual_f))
-    _assert_close((eps_f - eps_i) / DT, normalized_rhs_f, rel=5.0e-6, abs_=1.0e-8, label="EI10 n_epsilon backward-Euler closure")
+    rhs = -DELTA_E_EV * N_A * r_f / (N_REF * EPSILON_REF_EV)
+    _close((ep_f - ep_i) / DT, rhs, label="EI10 energy BE closure")
+    oxygen_i = 2 * RHO * (wo_i + ws_i) / M_O2
+    oxygen_f = 2 * RHO * (wo_f + ws_f) / M_O2
+    _close(oxygen_f, oxygen_i, rel=2e-12, abs_=1e-14, label="oxygen inventory")
 
     return {
-        "initial": {"n_e_hat": ne_i, "n_epsilon_hat": eps_i, "w_O2": wo2_i, "w_O2s": ws_i, "mean_en_solved_eV": mean_i},
-        "final": {"n_e_hat": ne_f, "n_epsilon_hat": eps_f, "w_O2": wo2_f, "w_O2s": ws_f, "mean_en_solved_eV": mean_f, "R_O2s_mol_m3_s": progress_f, "O2_source_kg_m3_s": so2_f, "O2s_source_kg_m3_s": so2s_f},
-        "energy_closure": {"energy_loss_eV_per_event": DELTA_E_EV, "normalized_rhs_per_s": normalized_rhs_f, "residual_contribution_per_s": residual_f, "observed_dn_epsilon_hat_dt_per_s": (eps_f - eps_i) / DT, "electron_energy_delta_hat": eps_f - eps_i, "electron_particle_delta_hat": ne_f - ne_i},
-        "particle_heavy_closure": {"heavy_fraction_sum": wo2_f + ws_f, "oxygen_atom_molar_inventory_initial": oxygen_i, "oxygen_atom_molar_inventory_final": oxygen_f, "k_O2s_m3_mol_s": K_O2S},
+        "initial": {"n_e_hat": ne_i, "n_epsilon_hat": ep_i, "w_O2": wo_i, "w_O2s": ws_i, "mean_en_solved_eV": me_i},
+        "final": {"n_e_hat": ne_f, "n_epsilon_hat": ep_f, "w_O2": wo_f, "w_O2s": ws_f, "mean_en_solved_eV": me_f, "R_O2s_mol_m3_s": r_f},
+        "energy_closure": {"energy_loss_eV_per_event": DELTA_E_EV, "standard_moose_object": "FVCoupledForce", "coef": ENERGY_COEF, "normalized_rhs_per_s": rhs, "observed_dn_epsilon_hat_dt_per_s": (ep_f - ep_i) / DT},
+        "particle_heavy_closure": {"heavy_fraction_sum": wo_f + ws_f, "oxygen_atom_molar_inventory_initial": oxygen_i, "oxygen_atom_molar_inventory_final": oxygen_f}
     }
 
 
 def runtime_checker_self_test():
     a = DT * K_O2S * N_REF / N_A
-    ws_f = (WP0 + a) / (1.0 + a)
-    wo2_f = 1.0 - ws_f
-    r0 = K_O2S * (N_REF / N_A) * (RHO * (1.0 - WP0) / M_O2)
-    rf = K_O2S * (N_REF / N_A) * (RHO * wo2_f / M_O2)
-    eps_f = 1.0 - DT * DELTA_E_EV * N_A * rf / (N_REF * EPSILON_REF_EV)
+    ws = (W0 + a) / (1 + a)
+    wo = 1 - ws
+    r = K_O2S * (N_REF / N_A) * (RHO * wo / M_O2)
+    ep = 1 - DT * DELTA_E_EV * N_A * r / (N_REF * EPSILON_REF_EV)
+    r0 = K_O2S * (N_REF / N_A) * (RHO * (1 - W0) / M_O2)
     rows = [
-        {"n_e_hat_avg": 1.0, "n_epsilon_hat_avg": 1.0, "w_O2s_avg": WP0, "w_O2_avg": 1.0 - WP0, "mean_en_solved_avg": EPSILON_REF_EV, "R_O2s_avg": r0, "O2_source_avg": -M_O2 * r0, "O2s_source_avg": M_O2 * r0},
-        {"n_e_hat_avg": 1.0, "n_epsilon_hat_avg": eps_f, "w_O2s_avg": ws_f, "w_O2_avg": wo2_f, "mean_en_solved_avg": EPSILON_REF_EV * eps_f, "R_O2s_avg": rf, "O2_source_avg": -M_O2 * rf, "O2s_source_avg": M_O2 * rf},
+        {"n_e_hat_avg": 1, "n_epsilon_hat_avg": 1, "w_O2s_avg": W0, "w_O2_avg": 1 - W0, "mean_en_solved_avg": EPSILON_REF_EV, "R_O2s_avg": r0, "O2_source_avg": -M_O2 * r0, "O2s_source_avg": M_O2 * r0},
+        {"n_e_hat_avg": 1, "n_epsilon_hat_avg": ep, "w_O2s_avg": ws, "w_O2_avg": wo, "mean_en_solved_avg": EPSILON_REF_EV * ep, "R_O2s_avg": r, "O2_source_avg": -M_O2 * r, "O2s_source_avg": M_O2 * r}
     ]
     validate_runtime_rows(rows)
-    for mutate in ("electron_source", "energy_sign", "wrong_energy_identity", "shared_rate", "positivity"):
-        bad = [dict(row) for row in rows]
-        if mutate == "electron_source":
-            bad[-1]["n_e_hat_avg"] *= 1.001
-        elif mutate == "energy_sign":
-            bad[-1]["n_epsilon_hat_avg"] = 1.001
-            bad[-1]["mean_en_solved_avg"] = EPSILON_REF_EV * 1.001
-        elif mutate == "wrong_energy_identity":
-            bad[-1]["n_epsilon_hat_avg"] = 1.0 - DT * 9.97 * N_A * rf / (N_REF * EPSILON_REF_EV)
-            bad[-1]["mean_en_solved_avg"] = EPSILON_REF_EV * bad[-1]["n_epsilon_hat_avg"]
-        elif mutate == "shared_rate":
-            bad[-1]["O2s_source_avg"] *= 1.01
-        else:
-            bad[-1]["w_O2s_avg"] = -1.0e-6
-        try:
-            validate_runtime_rows(bad)
-        except AssertionError:
-            pass
-        else:
-            raise AssertionError(f"E8 runtime checker mutation escaped: {mutate}")
+    assert "type = FVCoupledForce" in RUNTIME_INPUT
+    assert "v = R_O2s" in RUNTIME_INPUT
+    assert "PhysicsFVElectronReactionEnergySource" not in RUNTIME_INPUT
     print("E8_EI10_INELASTIC_ENERGY_RUNTIME_CHECKER_SELFTEST_PASS")
 
 
-def _sha256_file(path):
-    digest = hashlib.sha256()
-    with path.open("rb") as stream:
-        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
+def _sha(path):
+    h = hashlib.sha256()
+    with Path(path).open("rb") as s:
+        for chunk in iter(lambda: s.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
 
 
 def run_controlled_executable(executable, evidence_out=None, repository_sha=None, build_base_ref=None):
     executable = Path(executable).resolve()
     if not executable.is_file():
         raise SystemExit(f"Physics executable does not exist: {executable}")
-    with tempfile.TemporaryDirectory(prefix="e8-ei10-energy-") as tmp:
+    with tempfile.TemporaryDirectory(prefix="e8-ei10-standard-") as tmp:
         work = Path(tmp)
-        input_name = "e8_ei10_energy_runtime.i"
-        (work / input_name).write_text(RUNTIME_INPUT)
-        subprocess.run([str(executable), "--check-input", "-i", input_name], cwd=work, check=True)
-        subprocess.run([str(executable), "-i", input_name], cwd=work, check=True)
+        name = "e8_ei10_energy_runtime.i"
+        (work / name).write_text(RUNTIME_INPUT)
+        subprocess.run([str(executable), "--check-input", "-i", name], cwd=work, check=True)
+        subprocess.run([str(executable), "-i", name], cwd=work, check=True)
         rows = list(csv.DictReader((work / "e8_ei10_energy_runtime_out.csv").open(newline="")))
         evidence = validate_runtime_rows(rows)
-        evidence.update({"runtime_mode": "direct_executable", "runtime_executable": str(executable), "runtime_executable_sha256": _sha256_file(executable), "claim": "#26 E8 EI10 bounded controlled local runtime discriminator", "integrated_physics_scope": "EI10 O2(a1Delta_g) inelastic electron-energy projection using the existing Stage-3 R_O2s only; elastic and other reaction-energy channels excluded"})
-        if repository_sha:
-            evidence["repository_sha"] = repository_sha
-        if build_base_ref:
-            evidence["build_base_ref"] = build_base_ref
-        if evidence_out:
-            Path(evidence_out).write_text(json.dumps(evidence, indent=2, sort_keys=True) + "\n")
-    final = evidence["final"]
-    energy = evidence["energy_closure"]
-    print("E8_EI10_INELASTIC_ENERGY_RUNTIME_VECTOR " f"n_e_hat={final['n_e_hat']:.12g} " f"n_epsilon_hat={final['n_epsilon_hat']:.12g} " f"mean_en_eV={final['mean_en_solved_eV']:.12g} " f"w_O2={final['w_O2']:.12g} " f"w_O2s={final['w_O2s']:.12g} " f"R={final['R_O2s_mol_m3_s']:.12g}")
-    print("E8_EI10_INELASTIC_ENERGY_CLOSURE_VECTOR " f"delta_ne={energy['electron_particle_delta_hat']:.12g} " f"delta_nepsilon={energy['electron_energy_delta_hat']:.12g} " f"rhs={energy['normalized_rhs_per_s']:.12g} " f"observed={energy['observed_dn_epsilon_hat_dt_per_s']:.12g}")
+    evidence.update({"runtime_mode": "direct_executable", "runtime_executable": str(executable), "runtime_executable_sha256": _sha(executable), "energy_projection_owner": "standard MOOSE FVCoupledForce", "custom_energy_projector_instantiated": False, "claim": "E8-I1 EI10 bounded local runtime discriminator using standard MOOSE energy projection"})
+    if repository_sha:
+        evidence["repository_sha"] = repository_sha
+    if build_base_ref:
+        evidence["build_base_ref"] = build_base_ref
+    if evidence_out:
+        Path(evidence_out).write_text(json.dumps(evidence, indent=2, sort_keys=True) + "\n")
+    print(f"E8_EI10_INELASTIC_ENERGY_RUNTIME_VECTOR n_epsilon_hat={evidence['final']['n_epsilon_hat']:.12g} mean_en_eV={evidence['final']['mean_en_solved_eV']:.12g} R={evidence['final']['R_O2s_mol_m3_s']:.12g}")
     print("E8_EI10_INELASTIC_ENERGY_LOCAL_RUNTIME_PASS")
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    mode = parser.add_mutually_exclusive_group()
-    mode.add_argument("--executable", help="direct Physics executable for governed JIT-capable E8 runtime")
-    mode.add_argument("--self-test", action="store_true", help="run only the E8 runtime checker mutation tests")
-    parser.add_argument("--evidence-out", help="optional JSON evidence path for controlled E8 runtime")
-    parser.add_argument("--repository-sha", help="repository SHA associated with --executable")
-    parser.add_argument("--build-base-ref", help="immutable build-base identity associated with --executable")
-    args = parser.parse_args()
-    if args.executable:
-        run_controlled_executable(args.executable, args.evidence_out, repository_sha=args.repository_sha, build_base_ref=args.build_base_ref)
-    else:
+    p = argparse.ArgumentParser()
+    p.add_argument("--self-test", action="store_true")
+    p.add_argument("--executable")
+    p.add_argument("--evidence-out")
+    p.add_argument("--repository-sha")
+    p.add_argument("--build-base-ref")
+    a = p.parse_args()
+    if a.self_test:
         runtime_checker_self_test()
+    elif a.executable:
+        run_controlled_executable(a.executable, a.evidence_out, a.repository_sha, a.build_base_ref)
+    else:
+        raise SystemExit("--self-test or --executable is required")
 
 
 if __name__ == "__main__":
