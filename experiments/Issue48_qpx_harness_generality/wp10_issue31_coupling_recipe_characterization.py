@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""P0 characterization for canonical Issue31 coupling recipe semantics."""
+"""P0 characterization for historical Issue31 coupling recipe semantics."""
 from __future__ import annotations
 
 import ast
@@ -13,7 +13,6 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from experiments.historical_recipe_support import issue31_coupling as recipe
-from qpx_harness.coupling_evr2 import orchestration as evr2
 
 
 EXPECTED_CONSTANTS = {
@@ -143,6 +142,7 @@ def _write_csv(path: Path, rows: list[dict[str, str]]) -> None:
 
 def _imports_module(path: Path, module: str) -> bool:
     tree = ast.parse(path.read_text(), filename=str(path))
+    parent, _, leaf = module.rpartition(".")
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
             if any(alias.name == module for alias in node.names):
@@ -151,8 +151,7 @@ def _imports_module(path: Path, module: str) -> bool:
             base = node.module or ""
             if base == module:
                 return True
-            if base == "qpx_harness" and module.startswith("qpx_harness."):
-                leaf = module.split(".", 1)[1]
+            if parent and base == parent:
                 if any(alias.name == leaf for alias in node.names):
                     return True
     return False
@@ -269,32 +268,41 @@ def _check_physics_contract() -> None:
 
 def _check_production_cutover() -> None:
     this_path = Path(__file__)
-    for historical in (
+    retired_modules = (
         "qpx_harness.coupling_evr1",
         "qpx_harness.coupling_evr1_safe",
+        "qpx_harness.coupling_evr2",
         "qpx_harness.coupling_evr2_timestep",
-    ):
+    )
+    for historical in retired_modules:
         if _imports_module(this_path, historical):
-            raise AssertionError(f"WP10 retained historical oracle import: {historical}")
+            raise AssertionError(f"WP10 retained historical production import: {historical}")
 
-    evr2_path = Path(evr2.__file__)
-    for historical in (
-        "qpx_harness.coupling_evr1",
-        "qpx_harness.coupling_evr1_safe",
-        "qpx_harness.coupling_evr2_timestep",
+    recipe_path = Path(recipe.__file__).resolve()
+    historical_root = (ROOT / "experiments" / "historical_recipe_support").resolve()
+    if historical_root not in recipe_path.parents:
+        raise AssertionError("Issue31 historical recipe escaped experiment-local ownership")
+
+    production_root = ROOT / "physics_harness"
+    if not production_root.is_dir():
+        raise AssertionError("canonical physics_harness production root missing")
+    historical_recipe_module = "experiments.historical_recipe_support.issue31_coupling"
+    for path in production_root.rglob("*.py"):
+        if _imports_module(path, historical_recipe_module):
+            raise AssertionError(
+                f"production module depends on historical Issue31 recipe: {path.relative_to(ROOT)}"
+            )
+
+    for relative in (
+        "physics_harness/coupling_evr1",
+        "physics_harness/coupling_evr1.py",
+        "physics_harness/coupling_evr1_safe.py",
+        "physics_harness/coupling_evr2",
+        "physics_harness/coupling_evr2.py",
+        "physics_harness/coupling_evr2_timestep.py",
     ):
-        if _imports_module(evr2_path, historical):
-            raise AssertionError(f"EVR2 retained historical dependency: {historical}")
-    source = evr2_path.read_text()
-    for required in (
-        "from experiments.historical_recipe_support import issue31_coupling as recipe",
-        "validate_referenced_files",
-        "recipe.configured_transport_input",
-        "recipe.physics_check",
-        "recipe.SPECIES",
-    ):
-        if required not in source:
-            raise AssertionError(f"EVR2 recipe cutover missing: {required}")
+        if (ROOT / relative).exists():
+            raise AssertionError(f"retired Issue31 campaign owner resurrected: {relative}")
 
 
 def _check_boundary() -> None:
