@@ -6,7 +6,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
-QPX = ROOT / "qpx_harness"
+HARNESS = ROOT / "physics_harness"
 
 
 def _python_files(root: Path):
@@ -30,18 +30,18 @@ def test_canonical_responsibility_packages_exist():
         "observation", "analysis", "reasoning", "validation", "provenance",
         "domains", "application", "cli",
     }
-    actual = {path.name for path in QPX.iterdir() if path.is_dir()}
+    actual = {path.name for path in HARNESS.iterdir() if path.is_dir()}
     assert expected <= actual
 
 
 def test_domains_do_not_import_z3_cli_or_moose_adapter():
     forbidden_prefixes = (
         "z3",
-        "qpx_harness.reasoning.engines.z3",
-        "qpx_harness.cli",
-        "qpx_harness.adapters.moose",
+        "physics_harness.reasoning.engines.z3",
+        "physics_harness.cli",
+        "physics_harness.adapters.moose",
     )
-    for path in _python_files(QPX / "domains"):
+    for path in _python_files(HARNESS / "domains"):
         imports = _imports(path)
         assert not any(
             item == prefix or item.startswith(prefix + ".")
@@ -52,9 +52,9 @@ def test_domains_do_not_import_z3_cli_or_moose_adapter():
 
 def test_semantic_layers_do_not_import_moose_adapter():
     for package in ("specification", "ontology", "planning"):
-        for path in _python_files(QPX / package):
+        for path in _python_files(HARNESS / package):
             imports = _imports(path)
-            assert not any(item.startswith("qpx_harness.adapters.moose") for item in imports), path
+            assert not any(item.startswith("physics_harness.adapters.moose") for item in imports), path
 
 
 def test_new_canonical_code_does_not_import_legacy_cpp_or_diagnose():
@@ -62,10 +62,10 @@ def test_new_canonical_code_does_not_import_legacy_cpp_or_diagnose():
         "specification", "ontology", "planning", "execution", "adapters",
         "observation", "reasoning", "domains",
     ):
-        for path in _python_files(QPX / package):
+        for path in _python_files(HARNESS / package):
             imports = _imports(path)
-            assert not any(item.startswith("qpx_harness.cpp") for item in imports), path
-            assert not any(item.startswith("qpx_harness.diagnose") for item in imports), path
+            assert not any(item.startswith("physics_harness.cpp") for item in imports), path
+            assert not any(item.startswith("physics_harness.diagnose") for item in imports), path
 
 
 def test_root_recipes_are_physically_retired() -> None:
@@ -84,20 +84,20 @@ def test_canonical_capabilities_do_not_import_root_recipes():
         "domains",
     )
     for package in canonical_packages:
-        for path in _python_files(QPX / package):
+        for path in _python_files(HARNESS / package):
             imports = _imports(path)
             assert not any(
                 item == "recipes" or item.startswith("recipes.")
                 for item in imports
             ), f"{path} imports retired recipe authority: {sorted(imports)}"
 
-    gateway_imports = _imports(QPX / "application" / "gateway.py")
+    gateway_imports = _imports(HARNESS / "application" / "gateway.py")
     assert not any(
         item == "recipes" or item.startswith("recipes.")
         for item in gateway_imports
     )
     assert not any(
-        item.startswith("qpx_harness.application.protocols")
+        item.startswith("physics_harness.application.protocols")
         for item in gateway_imports
     )
 
@@ -105,10 +105,12 @@ def test_canonical_capabilities_do_not_import_root_recipes():
 def test_no_separate_qpx_run_executable():
     assert not (ROOT / "qpx-run").exists()
     assert not (ROOT / "bin" / "qpx-run").exists()
-    assert (ROOT / "bin" / "qpx.py").is_file()
+    assert (ROOT / "bin" / "physics.py").is_file()
 
 
 def test_root_qpx_is_bounded_launcher():
-    launcher = (ROOT / "qpx").read_text(encoding="utf-8")
+    launcher = (ROOT / "physics").read_text(encoding="utf-8")
     assert len(launcher.splitlines()) <= 20
-    assert "bin/qpx.py" in launcher or "bin/qpx" in launcher
+    assert "runpy.run_path" in launcher
+    assert '"bin"' in launcher
+    assert '"physics.py"' in launcher
