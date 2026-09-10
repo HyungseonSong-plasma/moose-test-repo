@@ -7,6 +7,7 @@ on:
     paths:
       - '.github/workflows/physics-science-validation.yml'
       - 'physics_app/**'
+      - 'bin/physics.py'
   workflow_dispatch:
 
 concurrency:
@@ -82,6 +83,7 @@ jobs:
               cp /workspace/r2-o2-ionization-environment.txt /workspace/e8-ei10-inelastic-energy-environment.txt
               cp /workspace/r2-o2-ionization-environment.txt /workspace/e8-ei16-ionization-energy-environment.txt
               cp /workspace/r2-o2-ionization-environment.txt /workspace/e8-elastic-ei19-environment.txt
+              python3 bin/physics.py preflight --self-test
               python3 physics_app/ci/check_r2_o2_ionization_implementation.py
               python3 physics_app/ci/check_r3_o2s_excitation_implementation.py
               python3 physics_app/ci/check_e8_ei10_energy_contract.py
