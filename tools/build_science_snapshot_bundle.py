@@ -19,6 +19,8 @@ from pathlib import Path
 from typing import Any, Iterable
 
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 DEFAULT_BASELINE = "c971440dfa4a274896c773969c39c9ac14eb68c9"
 BUNDLE_DATE = "2026-09-10"
 SOURCE_CASE = "experiments/Issue91_real_qvt_r3/r3_e0"
@@ -252,7 +254,6 @@ def _materialize_r2(baseline: str, root: Path) -> dict[str, Any]:
     baseline_blob = _git_blob(baseline, checker_path)
     if current_blob != baseline_blob:
         raise BundleError("R2 checker changed after science baseline; refuse to package stale candidate input")
-    sys.path.insert(0, str(ROOT))
     from physics_app.ci import check_r2_o2_ionization_implementation as r2
 
     case_dir = root / "candidate" / "r2_o2_ionization"
