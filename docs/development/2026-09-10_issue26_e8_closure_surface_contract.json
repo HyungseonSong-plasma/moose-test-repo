@@ -1,0 +1,137 @@
+{
+  "schema_version": 1,
+  "work_issue": 26,
+  "controller_issue": 176,
+  "stage": "STAGE_4_E8",
+  "audit_type": "E8_CLOSURE_SURFACE_AUDIT",
+  "audited_baseline_sha": "a727f45ec5a763b396667231b7322f3937714cd2",
+  "status": "CLOSURE_SURFACE_FROZEN",
+  "decision": {
+    "stage4_required_reaction_ids": [
+      "EI01_O2_ATTACHMENT",
+      "EI02_O2_ELASTIC",
+      "EI10_O2_TO_O2S",
+      "EI16_O2_IONIZATION",
+      "EI17_O_ELASTIC",
+      "EI19_O_EXCITATION_4P192"
+    ],
+    "stage5_deferred_reaction_ids": [
+      "EI18_O_TO_OS",
+      "EI20_O_IONIZATION"
+    ],
+    "stage5_deferred_classes": [
+      "all missing-rate species-changing electron-impact reactions",
+      "all heavy-ion reactions pending rate data"
+    ]
+  },
+  "boundary_rationale": [
+    "Stage 4 owns electron-energy completion for the already accepted Stage-3 chemistry subset plus energy-only electron-impact channels that do not require activation of a new species-changing chemistry path.",
+    "EI18 and EI20 are species-changing channels whose upstream heavy/electron-particle progress ownership has not been restored or accepted. Pulling them into Stage 4 would either advance Stage-5 chemistry early or violate the single-rate-owner rule by evaluating kinetics independently in the energy path.",
+    "EI19 changes no particle or heavy-species inventory and exists solely as an audited electron-energy-loss channel, so it belongs to Stage 4 rather than being silently deferred with species-changing Stage-5 chemistry.",
+    "EI01 has an audited zero-loss electron-energy convention. It requires explicit closure accounting but no nonzero electron-energy source implementation."
+  ],
+  "stage4_channels": [
+    {
+      "id": "EI01_O2_ATTACHMENT",
+      "formula": "e + O2 -> O + Om",
+      "canonical_progress": "R_attachment",
+      "progress_owner_state": "ACCEPTED_STAGE3_UPSTREAM",
+      "provenance": "user_supplied:o2_attachment",
+      "energy_law": "attachment_COMSOL_zero_loss_convention",
+      "energy_loss_eV_per_event": 0.0,
+      "energy_projection": "NONE_REQUIRED_ZERO_TERM",
+      "acceptance_state": "ACCOUNTED_ZERO_ENERGY_TERM"
+    },
+    {
+      "id": "EI02_O2_ELASTIC",
+      "formula": "e + O2 -> e + O2",
+      "canonical_progress": "TO_FREEZE_STAGE4_SINGLE_MOLAR_PROGRESS",
+      "progress_owner_state": "NOT_YET_IMPLEMENTED",
+      "provenance": "user_supplied:o2_elastic",
+      "energy_law": "Delta_epsilon=(3*m_e/m_O2)*(T_e[eV]-(k_B/e)*T_gas[K]); T_e=(2/3)*mean_en_solved; S_epsilon=-Delta_epsilon*N_A*R",
+      "energy_projection": "STATE_DEPENDENT_STAGE4_IMPLEMENTATION_REQUIRED",
+      "acceptance_state": "REMAINING_STAGE4"
+    },
+    {
+      "id": "EI10_O2_TO_O2S",
+      "formula": "e + O2 -> e + O2s",
+      "canonical_progress": "R_O2s",
+      "progress_owner_state": "ACCEPTED_STAGE3_UPSTREAM",
+      "provenance": "frozen O2(a1Delta_g) constant-surrogate contract; user_supplied:o2_excitation_9p97 is forbidden",
+      "energy_law": "S_epsilon=-0.977*eV*N_A*R_O2s",
+      "energy_projection": "standard MOOSE FVCoupledForce",
+      "acceptance_state": "ACCEPTED_BOUNDED"
+    },
+    {
+      "id": "EI16_O2_IONIZATION",
+      "formula": "e + O2 -> 2e + O2p",
+      "canonical_progress": "R_ion_O2",
+      "progress_owner_state": "ACCEPTED_STAGE3_UPSTREAM",
+      "provenance": "user_supplied:o2_ionization",
+      "energy_law": "S_epsilon=-12.06*eV*N_A*R_ion_O2",
+      "energy_projection": "standard MOOSE FVCoupledForce",
+      "acceptance_state": "ACCEPTED_BOUNDED"
+    },
+    {
+      "id": "EI17_O_ELASTIC",
+      "formula": "e + O -> e + O",
+      "canonical_progress": "TO_FREEZE_STAGE4_SINGLE_MOLAR_PROGRESS",
+      "progress_owner_state": "NOT_YET_IMPLEMENTED",
+      "provenance": "user_supplied:o_elastic",
+      "energy_law": "Delta_epsilon=(3*m_e/m_O)*(T_e[eV]-(k_B/e)*T_gas[K]); T_e=(2/3)*mean_en_solved; S_epsilon=-Delta_epsilon*N_A*R",
+      "energy_projection": "STATE_DEPENDENT_STAGE4_IMPLEMENTATION_REQUIRED",
+      "acceptance_state": "REMAINING_STAGE4"
+    },
+    {
+      "id": "EI19_O_EXCITATION_4P192",
+      "formula": "e + O -> e + O",
+      "canonical_progress": "TO_FREEZE_STAGE4_SINGLE_MOLAR_PROGRESS",
+      "progress_owner_state": "NOT_YET_IMPLEMENTED",
+      "provenance": "user_supplied:o_excitation_1s",
+      "energy_law": "S_epsilon=-4.192*eV*N_A*R",
+      "energy_projection": "STANDARD_MOOSE_FIRST; consume upstream strict mean-energy lookup progress",
+      "acceptance_state": "REMAINING_STAGE4"
+    }
+  ],
+  "stage5_deferred_channels": [
+    {
+      "id": "EI18_O_TO_OS",
+      "formula": "e + O -> e + Os",
+      "reason": "species-changing chemistry path is not yet restored/accepted",
+      "required_stage5_rule": "restore one canonical progress owner and reuse that same progress for heavy and electron-energy projections; energy_loss_eV_per_event=1.968"
+    },
+    {
+      "id": "EI20_O_IONIZATION",
+      "formula": "e + O -> 2e + Op",
+      "reason": "species-changing heavy/electron-particle chemistry path is not yet restored/accepted",
+      "required_stage5_rule": "restore one canonical progress owner and reuse that same progress for O/Op/electron-particle/electron-energy projections; energy_loss_eV_per_event=13.618"
+    }
+  ],
+  "remaining_stage4_work": [
+    "freeze canonical single-progress ownership and exact table/runtime provenance for EI02, EI17 and EI19",
+    "implement EI02/EI17 state-dependent elastic energy transfer without duplicate kinetic evaluation",
+    "implement EI19 energy-only inelastic loss using the canonical strict mean-energy lookup progress",
+    "run controlled hot/equality/reversed-temperature elastic discriminators",
+    "run EI19 threshold-loss ownership/sign/unit discriminator",
+    "preserve EI10/EI16 bounded acceptance and Standard-MOOSE FVCoupledForce reduction",
+    "perform final E8 no-missing/no-duplicate closure audit before recording E8 ACCEPTED"
+  ],
+  "closure_invariants": [
+    "one canonical reaction progress per reaction",
+    "electron-energy consumers never independently recompute kinetics",
+    "strict solved-mean-energy lookup range is preserved",
+    "no invented rate data or provenance",
+    "heavy mass, oxygen atoms and electron-inclusive charge remain preserved where particle sources exist",
+    "E0-E7 and accepted EI10/EI16 behavior remain unchanged",
+    "bounded Stage-4 acceptance does not establish full Integrated Physics Accuracy",
+    "Stage 5 must validate any newly restored EI18/EI20 energy coupling together with their particle/heavy chemistry paths"
+  ],
+  "evidence_sources": [
+    "GitHub issue #26 current handoff — 2026-09-10 E8 COMPLETION TARGET",
+    "GitHub issue #176 current handoff — 2026-09-10 Stage 4/#26 E8 completion target",
+    "docs/development/2026-09-07_issue17_r0_reaction_ledger.json",
+    "docs/development/2026-09-10_issue17_r3_o2s_excitation_contract.json",
+    "current production owners PhysicsElectronImpactO2sExcitationMaterial and PhysicsElectronImpactIonizationMaterial",
+    "current E8 CI contracts for EI10/EI16 and Standard-MOOSE energy projection"
+  ]
+}
