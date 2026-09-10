@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from physics_harness.execution import cases
+from qpx_harness.execution import cases
 
 
 V1_PURGE_DIRS = (".jitcache",)
