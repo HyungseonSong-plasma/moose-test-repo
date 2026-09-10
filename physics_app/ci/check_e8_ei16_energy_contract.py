@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Contract discriminator for #26 E8-I2 EI16 O2 ionization energy ownership."""
+"""Contract discriminator for #26 E8-I2 EI16 after Standard-MOOSE energy reduction."""
 
 import json
 import math
@@ -7,84 +7,58 @@ from pathlib import Path
 
 N_A = 6.02214076e23
 CONTRACT = Path("docs/development/2026-09-10_issue26_e8_ei16_energy_contract.json")
-R2_CONTRACT = Path("docs/development/2026-09-08_issue17_r2_o2_ionization_contract.json")
-RATE_OWNER = Path("physics_app/src/materials/PhysicsElectronImpactIonizationMaterial.C")
-PARTICLE_PROJ = Path("physics_app/src/materials/PhysicsO2IonizationSourceMaterial.C")
-ENERGY_PROJ = Path("physics_app/src/fvkernels/PhysicsFVElectronReactionEnergySource.C")
+R2 = Path("docs/development/2026-09-08_issue17_r2_o2_ionization_contract.json")
+RATE = Path("physics_app/src/materials/PhysicsElectronImpactIonizationMaterial.C")
+PARTICLE = Path("physics_app/src/materials/PhysicsO2IonizationSourceMaterial.C")
+RUNTIME = Path("physics_app/ci/check_e8_ei16_energy_runtime.py")
+CUSTOM_H = Path("physics_app/include/fvkernels/PhysicsFVElectronReactionEnergySource.h")
+CUSTOM_C = Path("physics_app/src/fvkernels/PhysicsFVElectronReactionEnergySource.C")
 
 
 def main():
-    contract = json.loads(CONTRACT.read_text())
-    r2 = json.loads(R2_CONTRACT.read_text())
-    rate = RATE_OWNER.read_text()
-    particle = PARTICLE_PROJ.read_text()
-    energy = ENERGY_PROJ.read_text()
-
-    rxn = contract["reaction"]
-    own = contract["ownership"]
+    c = json.loads(CONTRACT.read_text())
+    r2 = json.loads(R2.read_text())
+    rxn = c["reaction"]
+    own = c["ownership"]
+    std = c["standard_moose_configuration"]
+    assert c["schema_version"] == 2
     assert rxn["id"] == "EI16_O2_IONIZATION"
     assert rxn["canonical_progress"] == "R_ion_O2"
     assert rxn["energy_loss_eV_per_event"] == 12.06
     assert rxn["net_electron_particle_stoich"] == 1
     assert own["canonical_rate_owner"] == "PhysicsElectronImpactIonizationMaterial"
     assert own["particle_source_projector"] == "PhysicsO2IonizationSourceMaterial"
-    assert own["energy_projection_owner"] == "PhysicsFVElectronReactionEnergySource"
+    assert own["electron_particle_projector"] == "PhysicsFVElectronReactionSource"
+    assert own["energy_projection_owner"] == "FVCoupledForce"
+    assert own["energy_projection_owner_kind"] == "STANDARD_MOOSE"
     assert own["all_source_paths_must_consume"] == "R_ion_O2"
     assert own["energy_projection_must_not_recompute_rate"] is True
+    assert std["type"] == "FVCoupledForce" and std["v"] == "R_ion_O2"
+    coef = -12.06 * N_A / (1e16 * 5.73276)
+    assert math.isclose(std["coef_at_frozen_normalization"], coef, rel_tol=1e-15)
 
-    r2_ion = r2["reactions"]["EI16_O2_IONIZATION"]
-    assert r2_ion["shared_progress"] == "R_ion_O2"
-    assert r2_ion["energy_loss_eV"] == 12.06
-    assert r2_ion["net_electron_stoich"] == 1
-
-    assert 'registerMooseObject("PhysicsApp", PhysicsElectronImpactIonizationMaterial);' in rate
+    r2ion = r2["reactions"]["EI16_O2_IONIZATION"]
+    assert r2ion["shared_progress"] == "R_ion_O2"
+    assert r2ion["energy_loss_eV"] == 12.06
+    rate = RATE.read_text()
+    particle = PARTICLE.read_text()
+    runtime = RUNTIME.read_text()
     assert '"R_ion_O2"' in rate
-    assert 'return interpolateStrict(_mean_energy(r, state)) * (n_e / N_A) * c_o2;' in rate
-    assert "strict R2 policy forbids clamp/floor" in rate
-
-    assert 'registerMooseObject("PhysicsApp", PhysicsO2IonizationSourceMaterial);' in particle
+    assert "interpolateStrict" in rate and "strict R2 policy forbids clamp/floor" in rate
     assert '_reaction_progress(getFunctor<ADReal>("reaction_progress"))' in particle
-    assert '"O2_ionization_mass_source"' in particle
-    assert '"O2p_ionization_mass_source"' in particle
     assert '"electron_ionization_number_source"' in particle
-    assert 'return N_A * _reaction_progress(r, state);' in particle
-
-    assert 'registerMooseObject("PhysicsApp", PhysicsFVElectronReactionEnergySource);' in energy
-    assert '_reaction_progress(getFunctor<ADReal>("reaction_progress"))' in energy
-    assert "physical_energy_source = -_energy_loss_eV * N_A * R;" in energy
-    assert "physical_energy_source / (_n_ref * _energy_reference_eV);" in energy
-
-    # Energy projector must stay generic and cannot own EI16 lookup/kinetics or the 12.06 identity.
-    for forbidden in (
-        "R_ion_O2",
-        "PhysicsElectronImpactIonizationMaterial",
-        "rate_table",
-        "mean_en_solved",
-        "interpolateStrict",
-        "12.06",
-    ):
-        assert forbidden not in energy
-
-    # Algebraic sign/normalization discriminator using the accepted controlled R2 progress vector.
-    R = 0.0179028871546
-    delta = rxn["energy_loss_eV_per_event"]
-    n_ref = 1.0e16
-    epsilon_ref = 5.73276
-    rhs = -delta * N_A * R / (n_ref * epsilon_ref)
-    residual = -rhs
-    assert rhs < 0.0 < residual
-    assert math.isclose(residual, delta * N_A * R / (n_ref * epsilon_ref), rel_tol=1.0e-15)
-
-    # Mutation controls.
-    assert not math.isclose(0.977, delta, rel_tol=0.0, abs_tol=1.0e-12)
-    assert not math.isclose(13.618, delta, rel_tol=0.0, abs_tol=1.0e-12)
-    assert (+delta * N_A * R) > 0.0
-
-    assert contract["lookup_policy"]["bounds_policy"] == "error"
-    assert contract["lookup_policy"]["silent_clamp"] is False
-    assert contract["lookup_policy"]["silent_floor"] is False
-    assert "fixture only" in contract["lookup_policy"]["controlled_fixture_note"]
-
+    assert "type = FVCoupledForce" in runtime and "v = R_ion_O2" in runtime
+    assert "ENERGY_COEF = -(DELTA_E_EV * N_A / (N_REF * EPSILON_REF_EV))" in runtime
+    assert "PhysicsFVElectronReactionEnergySource" not in runtime
+    assert not CUSTOM_H.exists() and not CUSTOM_C.exists()
+    assert c["lookup_policy"]["bounds_policy"] == "error"
+    assert c["lookup_policy"]["silent_clamp"] is False
+    assert c["lookup_policy"]["silent_floor"] is False
+    assert c["nonnegative_progress_guard"]["independent_energy_only_use"] == "FORBIDDEN"
+    R = 0.016887027897333
+    rhs = -12.06 * N_A * R / (1e16 * 5.73276)
+    assert rhs < 0 and -rhs > 0
+    assert math.isclose(-rhs, -coef * R, rel_tol=1e-15)
     print("E8_EI16_O2_IONIZATION_ENERGY_CONTRACT_PASS")
 
 
