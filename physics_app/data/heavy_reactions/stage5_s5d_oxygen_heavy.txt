@@ -1,0 +1,49 @@
+# Stage-5 S5-D oxygen heavy-particle reaction database.
+# Derived from user_supplied:Ar_O2_plasma_chemistry.txt.
+species O2 O2 0.032 0 heavy
+species O2p O2p 0.032 1 heavy
+species O O 0.016 0 heavy
+species Om Om 0.016 -1 heavy
+species Op Op 0.016 1 heavy
+
+reaction H01_Op_O2_charge_transfer volume power_law
+reactant Op 1
+reactant O2 1
+product O 1
+product O2p 1
+A 2e-17
+basis particle
+T_ref 300
+exponent 0.5
+end
+
+reaction H02_Om_Op_neutralization volume power_law
+reactant Om 1
+reactant Op 1
+product O 2
+A 4e-14
+basis particle
+T_ref 300
+exponent 0.43
+end
+
+reaction H03_Om_O2p_to_3O volume power_law
+reactant Om 1
+reactant O2p 1
+product O 3
+A 2.6e-14
+basis particle
+T_ref 300
+exponent 0.44
+end
+
+reaction H04_Om_O2p_to_O_O2 volume power_law
+reactant Om 1
+reactant O2p 1
+product O 1
+product O2 1
+A 2.6e-14
+basis particle
+T_ref 300
+exponent 0.44
+end
