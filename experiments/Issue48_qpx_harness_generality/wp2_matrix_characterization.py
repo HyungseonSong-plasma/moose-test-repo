@@ -6,14 +6,95 @@ import json
 import math
 import sys
 from pathlib import Path
+from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from qpx_harness import issue46_jacobian_localization as issue46
-from qpx_harness.adapters.moose import dofmap as dm
-from qpx_harness.petsc import matrix as pm
+from physics_harness.adapters.moose import dofmap as dm
+from physics_harness.adapters.petsc import matrix as pm
+
+
+# Historical Issue46 oracle subset preserved from pre-retirement blob
+# a39d914330ec43da3612910b83c53e167f921b7c. The generic mechanics remain
+# owned by the current physics_harness capabilities above.
+ISSUE46_LOCALIZATION_THRESHOLD = 1.0e-7
+ISSUE46_LAMBDA_VARIABLE = "r45_inventory_lambda"
+ISSUE46_MAIN_VARIABLES = ("n_e", "potential_plasma", ISSUE46_LAMBDA_VARIABLE)
+ISSUE46_SCALAR_VARIABLES = (ISSUE46_LAMBDA_VARIABLE,)
+
+
+class _Issue46JacobianLocalizationError(RuntimeError):
+    pass
+
+
+def _issue46_parse_dof_map_text(
+    text: str,
+    *,
+    expected_variables: tuple[str, ...] = ISSUE46_MAIN_VARIABLES,
+    scalar_variables: tuple[str, ...] = ISSUE46_SCALAR_VARIABLES,
+) -> dict[str, Any]:
+    try:
+        return dm.parse_dof_map_text(
+            text,
+            expected_variables=expected_variables,
+            scalar_variables=scalar_variables,
+        )
+    except dm.DofMapError as exc:
+        raise _Issue46JacobianLocalizationError(str(exc)) from exc
+
+
+def _issue46_parse_threshold_difference_matrix(text: str) -> dict[str, Any]:
+    try:
+        return pm.parse_threshold_difference_matrix(text)
+    except pm.MatrixParseError as exc:
+        raise _Issue46JacobianLocalizationError(str(exc)) from exc
+
+
+def _issue46_synthetic_dof_map() -> str:
+    return json.dumps(
+        {
+            "ndof": 5,
+            "demangled": True,
+            "vars": [
+                {
+                    "name": "n_e",
+                    "subdomains": [{"id": 1, "kernels": [], "dofs": [0, 1]}],
+                },
+                {
+                    "name": "potential_plasma",
+                    "subdomains": [{"id": 1, "kernels": [], "dofs": [2, 3]}],
+                },
+                {
+                    "name": ISSUE46_LAMBDA_VARIABLE,
+                    "subdomains": [{"id": 1, "kernels": [], "dofs": []}],
+                },
+            ],
+        }
+    )
+
+
+def _issue46_synthetic_localization_log(
+    entries: list[tuple[int, int, float]],
+    jac_rel: float = 4.0e-5,
+) -> str:
+    rows: dict[int, list[tuple[int, float]]] = {}
+    for row, col, value in entries:
+        rows.setdefault(row, []).append((col, value))
+    matrix_lines = []
+    for row in sorted(rows):
+        payload = " ".join(f"({col}, {value:.12e})" for col, value in rows[row])
+        matrix_lines.append(f"row {row}: {payload}")
+    return (
+        "  ---------- Testing Jacobian -------------\n"
+        f"  ||J - Jfd||_F/||J||_F = {jac_rel:.12e}, ||J - Jfd||_F = 8.0e-04\n"
+        "  Hand-coded minus finite-difference Jacobian with tolerance "
+        f"{ISSUE46_LOCALIZATION_THRESHOLD:.12e} ----------\n"
+        "Mat Object: 1 MPI process\n  type: seqaij\n"
+        + "\n".join(matrix_lines)
+        + "\nLinear solve did not converge due to DIVERGED_BREAKDOWN iterations 30\n"
+    )
 
 
 def _dofmap_text() -> str:
@@ -67,12 +148,12 @@ def _check_dofmap() -> None:
     assert generic["variables"]["lambda"] == [6]
     assert generic["owner_by_dof"][6] == "lambda"
 
-    issue_text = issue46._synthetic_dof_map()
-    semantic = issue46.parse_dof_map_text(issue_text)
+    issue_text = _issue46_synthetic_dof_map()
+    semantic = _issue46_parse_dof_map_text(issue_text)
     generic_issue = dm.parse_dof_map_text(
         issue_text,
-        expected_variables=issue46.MAIN_VARIABLES,
-        scalar_variables=issue46.SCALAR_VARIABLES,
+        expected_variables=ISSUE46_MAIN_VARIABLES,
+        scalar_variables=ISSUE46_SCALAR_VARIABLES,
     )
     assert generic_issue == semantic
 
@@ -101,9 +182,17 @@ def _check_threshold_matrix() -> None:
     ]
     assert generic["section_observed"] is True
 
-    issue_log = issue46._synthetic_localization_log([(0, 4, 2.0e-4), (4, 1, -3.0e-4)])
-    assert pm.parse_threshold_difference_matrix(issue_log) == issue46.parse_threshold_difference_matrix(issue_log)
-    _expect_error(lambda: pm.parse_threshold_difference_matrix("no matrix section\n"), "missing threshold section")
+    issue_log = _issue46_synthetic_localization_log(
+        [(0, 4, 2.0e-4), (4, 1, -3.0e-4)]
+    )
+    assert (
+        pm.parse_threshold_difference_matrix(issue_log)
+        == _issue46_parse_threshold_difference_matrix(issue_log)
+    )
+    _expect_error(
+        lambda: pm.parse_threshold_difference_matrix("no matrix section\n"),
+        "missing threshold section",
+    )
 
 
 def _check_block_localization() -> None:
@@ -132,8 +221,8 @@ def _check_block_localization() -> None:
 
 def _check_policy_boundary() -> None:
     for rel in (
-        "qpx_harness/moose/dofmap.py",
-        "qpx_harness/petsc/matrix.py",
+        "physics_harness/adapters/moose/dofmap.py",
+        "physics_harness/adapters/petsc/matrix.py",
     ):
         source = (ROOT / rel).read_text()
         forbidden = (
