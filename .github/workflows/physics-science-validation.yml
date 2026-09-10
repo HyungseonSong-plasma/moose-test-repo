@@ -25,7 +25,7 @@ env:
 
 jobs:
   r2-o2-ionization:
-    name: Stage-3 regressions + Stage-4 E8 EI10 controlled P3
+    name: Stage-3 regressions + Stage-4 E8 I1/I2 controlled P3
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
@@ -33,7 +33,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
-
       - name: Validate immutable JIT-capable build-base identity
         shell: bash
         run: |
@@ -45,7 +44,6 @@ jobs:
           test "$SQUIRREL" = "$SQUIRREL_SHA"
           test "$ZAPDOS" = "$ZAPDOS_SHA"
           test "$PHYSICS_BUILD_BASE_IMAGE" = "ghcr.io/hyungseonsong-plasma/physics-build-base"
-
       - name: Pull and verify JIT-capable Physics build base
         shell: bash
         run: |
@@ -55,27 +53,12 @@ jobs:
           test "$(docker image inspect "$BUILD_BASE_REF" --format '{{ index .Config.Labels "io.physics.crane.sha" }}')" = "$CRANE_SHA"
           test "$(docker image inspect "$BUILD_BASE_REF" --format '{{ index .Config.Labels "io.physics.squirrel.sha" }}')" = "$SQUIRREL_SHA"
           test "$(docker image inspect "$BUILD_BASE_REF" --format '{{ index .Config.Labels "io.physics.zapdos.sha" }}')" = "$ZAPDOS_SHA"
-
       - name: Build current Physics source and execute bounded science P0-P3
         shell: bash
         run: |
           set -euxo pipefail
-          rm -f \
-            r2-o2-ionization-runtime-evidence.json \
-            r2-o2-ionization-environment.txt \
-            r3-o2s-excitation-runtime-evidence.json \
-            r3-o2s-excitation-environment.txt \
-            e8-ei10-inelastic-energy-runtime-evidence.json \
-            e8-ei10-inelastic-energy-environment.txt
-          docker run --rm \
-            --entrypoint /bin/bash \
-            --user 0:0 \
-            --workdir /workspace \
-            -e GITHUB_SHA="$GITHUB_SHA" \
-            -e BUILD_BASE_REF="$BUILD_BASE_REF" \
-            -v "$PWD:/workspace" \
-            "$BUILD_BASE_REF" \
-            -lc '
+          rm -f r2-o2-ionization-runtime-evidence.json r2-o2-ionization-environment.txt r3-o2s-excitation-runtime-evidence.json r3-o2s-excitation-environment.txt e8-ei10-inelastic-energy-runtime-evidence.json e8-ei10-inelastic-energy-environment.txt e8-ei16-ionization-energy-runtime-evidence.json e8-ei16-ionization-energy-environment.txt
+          docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace -e GITHUB_SHA="$GITHUB_SHA" -e BUILD_BASE_REF="$BUILD_BASE_REF" -v "$PWD:/workspace" "$BUILD_BASE_REF" -lc '
               set -euxo pipefail
               source /environment
               git config --global --add safe.directory /workspace
@@ -84,13 +67,7 @@ jobs:
               git config --global --add safe.directory /opt/physics_vendor/squirrel
               git config --global --add safe.directory /opt/physics_vendor/zapdos
               test "$(git -C /workspace rev-parse HEAD)" = "$GITHUB_SHA"
-
-              export MOOSE_DIR=/opt/physics_vendor/moose
-              export CRANE_DIR=/opt/physics_vendor/crane
-              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
-              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
-              export METHOD=opt
-
+              export MOOSE_DIR=/opt/physics_vendor/moose CRANE_DIR=/opt/physics_vendor/crane SQUIRREL_DIR=/opt/physics_vendor/squirrel ZAPDOS_DIR=/opt/physics_vendor/zapdos METHOD=opt
               command -v mpicxx
               command -v c++
               {
@@ -103,35 +80,22 @@ jobs:
               } > /workspace/r2-o2-ionization-environment.txt
               cp /workspace/r2-o2-ionization-environment.txt /workspace/r3-o2s-excitation-environment.txt
               cp /workspace/r2-o2-ionization-environment.txt /workspace/e8-ei10-inelastic-energy-environment.txt
-
+              cp /workspace/r2-o2-ionization-environment.txt /workspace/e8-ei16-ionization-energy-environment.txt
               python3 physics_app/ci/check_r2_o2_ionization_implementation.py
               python3 physics_app/ci/check_r3_o2s_excitation_implementation.py
               python3 physics_app/ci/check_e8_ei10_energy_contract.py
               python3 physics_app/ci/check_e8_ei10_energy_implementation.py
               python3 physics_app/ci/check_e8_ei10_energy_runtime.py --self-test
+              python3 physics_app/ci/check_e8_ei16_energy_contract.py
+              python3 physics_app/ci/check_e8_ei16_energy_runtime.py --self-test
               test ! -e physics_app/physics-opt
               make -C physics_app -j2
               test -x physics_app/physics-opt
-
-              python3 physics_app/ci/check_r2_o2_ionization_implementation.py \
-                --executable /workspace/physics_app/physics-opt \
-                --repository-sha "$GITHUB_SHA" \
-                --build-base-ref "$BUILD_BASE_REF" \
-                --evidence-out /workspace/r2-o2-ionization-runtime-evidence.json
-
-              python3 physics_app/ci/check_r3_o2s_excitation_implementation.py \
-                --executable /workspace/physics_app/physics-opt \
-                --repository-sha "$GITHUB_SHA" \
-                --build-base-ref "$BUILD_BASE_REF" \
-                --evidence-out /workspace/r3-o2s-excitation-runtime-evidence.json
-
-              python3 physics_app/ci/check_e8_ei10_energy_runtime.py \
-                --executable /workspace/physics_app/physics-opt \
-                --repository-sha "$GITHUB_SHA" \
-                --build-base-ref "$BUILD_BASE_REF" \
-                --evidence-out /workspace/e8-ei10-inelastic-energy-runtime-evidence.json
+              python3 physics_app/ci/check_r2_o2_ionization_implementation.py --executable /workspace/physics_app/physics-opt --repository-sha "$GITHUB_SHA" --build-base-ref "$BUILD_BASE_REF" --evidence-out /workspace/r2-o2-ionization-runtime-evidence.json
+              python3 physics_app/ci/check_r3_o2s_excitation_implementation.py --executable /workspace/physics_app/physics-opt --repository-sha "$GITHUB_SHA" --build-base-ref "$BUILD_BASE_REF" --evidence-out /workspace/r3-o2s-excitation-runtime-evidence.json
+              python3 physics_app/ci/check_e8_ei10_energy_runtime.py --executable /workspace/physics_app/physics-opt --repository-sha "$GITHUB_SHA" --build-base-ref "$BUILD_BASE_REF" --evidence-out /workspace/e8-ei10-inelastic-energy-runtime-evidence.json
+              python3 physics_app/ci/check_e8_ei16_energy_runtime.py --executable /workspace/physics_app/physics-opt --repository-sha "$GITHUB_SHA" --build-base-ref "$BUILD_BASE_REF" --evidence-out /workspace/e8-ei16-ionization-energy-runtime-evidence.json
             '
-
       - name: Upload R2 controlled science evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -140,7 +104,6 @@ jobs:
           path: |
             r2-o2-ionization-runtime-evidence.json
             r2-o2-ionization-environment.txt
-
       - name: Upload R3 controlled science evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -149,7 +112,6 @@ jobs:
           path: |
             r3-o2s-excitation-runtime-evidence.json
             r3-o2s-excitation-environment.txt
-
       - name: Upload E8 EI10 controlled science evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -158,3 +120,11 @@ jobs:
           path: |
             e8-ei10-inelastic-energy-runtime-evidence.json
             e8-ei10-inelastic-energy-environment.txt
+      - name: Upload E8 EI16 controlled science evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e8-ei16-ionization-energy-governed-runtime-evidence
+          path: |
+            e8-ei16-ionization-energy-runtime-evidence.json
+            e8-ei16-ionization-energy-environment.txt

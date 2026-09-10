@@ -99,6 +99,8 @@ jobs:
         run: python physics_app/ci/check_e8_ei10_energy_runtime.py --self-test
       - name: Validate #26 E8 EI16 ionization energy ownership contract
         run: python physics_app/ci/check_e8_ei16_energy_contract.py
+      - name: Validate #26 E8 EI16 runtime discriminator logic
+        run: python physics_app/ci/check_e8_ei16_energy_runtime.py --self-test
       - name: Validate #176 R3 O2s excitation production implementation
         run: python physics_app/ci/check_r3_o2s_excitation_implementation.py
       - name: Validate #17 R2 O2 ionization production implementation
@@ -118,7 +120,6 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
-
       - name: Validate accepted immutable runtime ref
         shell: bash
         run: |
@@ -126,7 +127,6 @@ jobs:
           [[ "$PHYSICS_RUNTIME_REF" =~ ^ghcr\.io/hyungseonsong-plasma/physics-runtime@sha256:[0-9a-f]{64}$ ]]
           [[ "$EXPECTED_BUILD_BASE_REF" =~ ^ghcr\.io/hyungseonsong-plasma/physics-build-base@sha256:[0-9a-f]{64}$ ]]
           [[ "$EXPECTED_RUNTIME_REVISION" =~ ^[0-9a-f]{40}$ ]]
-
       - name: Pull accepted public Physics runtime without package credentials
         id: pull
         shell: bash
@@ -137,7 +137,6 @@ jobs:
           end="$(date +%s)"
           echo "pull_seconds=$((end - start))" >> "$GITHUB_OUTPUT"
           echo "size_bytes=$(docker image inspect "$PHYSICS_RUNTIME_REF" --format '{{.Size}}')" >> "$GITHUB_OUTPUT"
-
       - name: Verify accepted runtime provenance
         shell: bash
         run: |
@@ -145,17 +144,12 @@ jobs:
           test "$(docker image inspect "$PHYSICS_RUNTIME_REF" --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}')" = "$EXPECTED_RUNTIME_REVISION"
           test "$(docker image inspect "$PHYSICS_RUNTIME_REF" --format '{{ index .Config.Labels "io.physics.build-base.ref" }}')" = "$EXPECTED_BUILD_BASE_REF"
           test "$(docker image inspect "$PHYSICS_RUNTIME_REF" --format '{{ index .Config.Labels "io.physics.source.owner" }}')" = "moose-test-repo/physics_app"
-
-      # #176 controlled scientific P3 intentionally does not run in this stripped
-      # runtime image: ADParsedFunctorMaterial requires a JIT-capable execution lane.
       - name: Run Physics check-input smoke
         shell: bash
         run: docker run --rm "$PHYSICS_RUNTIME_REF" --check-input -i /opt/physics/ci/smoke.i
-
       - name: Run bounded real Physics smoke
         shell: bash
         run: docker run --rm "$PHYSICS_RUNTIME_REF" -i /opt/physics/ci/smoke.i
-
       - name: Record ordinary CI runtime evidence
         shell: bash
         run: |
