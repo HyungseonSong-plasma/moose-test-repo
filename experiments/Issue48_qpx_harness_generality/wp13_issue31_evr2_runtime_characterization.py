@@ -1,22 +1,32 @@
 #!/usr/bin/env python3
-"""P0 characterization for the canonical Issue31 EVR2 runtime owner."""
+"""P0 characterization for the retired Issue31 EVR2 runtime contract."""
 from __future__ import annotations
 
-import ast
 import sys
 import tempfile
 from pathlib import Path
+from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from experiments.historical_recipe_support import issue31_coupling as recipe
-from qpx_harness.coupling_evr2 import orchestration as runtime
-from qpx_harness.adapters.moose.nonlinear_solver import artifact_failure_signature
-from qpx_harness.execution.cases import stage_case
-from qpx_harness.execution.performance.runner import result_status
-from qpx_harness.execution.performance.smoke import build_smoke_manifest
+from physics_harness.adapters.moose.nonlinear_solver import artifact_failure_signature
+from physics_harness.application.performance import result_status, validate_experiment_manifest
+from physics_harness.execution.cases import stage_case
+
+
+HISTORICAL_EXPERIMENT_ID = "issue31-evr2-timestep-scaling"
+HISTORICAL_PURGE_DIRECTORY_NAMES = (".jitcache",)
+HISTORICAL_PURGE_PATTERNS = (
+    "input_out*",
+    "r29_csv*",
+    "qpxperf*",
+    "perfgraph*",
+    "petsc_log*",
+    "metrics*",
+)
 
 
 def _case(
@@ -35,6 +45,50 @@ def _case(
     if checker is not None:
         value["canonical_checker"] = {"status": checker}
     return value
+
+
+def _historical_manifest(
+    *, case_dir: Path, case_id: str, species: list[str] | None = None
+) -> dict[str, Any]:
+    manifest: dict[str, Any] = {
+        "schema_version": 1,
+        "experiment_id": HISTORICAL_EXPERIMENT_ID,
+        "case_id": case_id,
+        "mode": "BENCHMARK",
+        "case": {
+            "directory": str(Path(case_dir).expanduser().resolve()),
+            "input": "input.i",
+        },
+        "runtime": {"num_steps": 1},
+        "collectors": {
+            "work_counters": True,
+            "perfgraph": False,
+            "petsc_log": False,
+        },
+        "stream_output": True,
+    }
+    if species:
+        manifest["physics"] = {"species": list(species)}
+    validate_experiment_manifest(manifest)
+    return manifest
+
+
+def _stage_kg_e(repo_root: Path, cases_root: Path) -> Path:
+    """Frozen pre-retirement EVR2 wrapper over generic case staging."""
+    source_parent = repo_root / recipe.KG_E_PARENT_RELATIVE
+    if not source_parent.is_dir():
+        raise RuntimeError(f"missing accepted electron control tree: {source_parent}")
+    target_parent = cases_root / "kg_e_parent"
+    stage_case(
+        source_parent,
+        target_parent,
+        purge_directory_names=HISTORICAL_PURGE_DIRECTORY_NAMES,
+        purge_patterns=HISTORICAL_PURGE_PATTERNS,
+    )
+    case = target_parent / "qvt_prepoisson"
+    if not case.is_dir():
+        raise RuntimeError(f"copied electron control missing qvt_prepoisson: {case}")
+    return case
 
 
 def _check_state_helper_contract() -> None:
@@ -60,9 +114,9 @@ def _check_state_helper_contract() -> None:
     for case, status, nonconvergence, case_pass in scenarios:
         if result_status((case or {}).get("result")) != status:
             raise AssertionError("EVR2 result-status helper contract drift")
-        if runtime._runtime_nonconvergence(case) is not nonconvergence:
+        if recipe._runtime_nonconvergence(case) is not nonconvergence:
             raise AssertionError("EVR2 runtime-nonconvergence helper contract drift")
-        if runtime._case_pass(case) is not case_pass:
+        if recipe._case_pass(case) is not case_pass:
             raise AssertionError("EVR2 case-pass helper contract drift")
 
     kg_scenarios = (
@@ -71,7 +125,7 @@ def _check_state_helper_contract() -> None:
         (_case("RUNTIME_FAIL_OR_NONCONVERGENCE", checker="PASS"), False),
     )
     for case, expected in kg_scenarios:
-        if runtime._kg_e_pass(case) is not expected:
+        if recipe._kg_e_pass(case) is not expected:
             raise AssertionError("EVR2 KG-E pass helper contract drift")
 
 
@@ -79,20 +133,26 @@ def _check_manifest_contract() -> None:
     with tempfile.TemporaryDirectory() as tmp_name:
         case_dir = Path(tmp_name)
         (case_dir / "input.i").write_text("[Mesh]\n[]\n")
-        expected = build_smoke_manifest(
-            mode="BENCHMARK",
-            case_dir=case_dir,
-            input_name="input.i",
-            experiment_id=runtime.EXPERIMENT_ID,
-            case_id="Issue31_T3_dt1e8",
-            num_steps=1,
-            species=list(recipe.SPECIES),
-        )
-        actual = runtime._manifest(
+        actual = _historical_manifest(
             case_dir=case_dir,
             case_id="Issue31_T3_dt1e8",
             species=list(recipe.SPECIES),
         )
+        expected = {
+            "schema_version": 1,
+            "experiment_id": HISTORICAL_EXPERIMENT_ID,
+            "case_id": "Issue31_T3_dt1e8",
+            "mode": "BENCHMARK",
+            "case": {"directory": str(case_dir.resolve()), "input": "input.i"},
+            "runtime": {"num_steps": 1},
+            "collectors": {
+                "work_counters": True,
+                "perfgraph": False,
+                "petsc_log": False,
+            },
+            "stream_output": True,
+            "physics": {"species": list(recipe.SPECIES)},
+        }
         if actual != expected:
             raise AssertionError("EVR2 BENCHMARK manifest contract drift")
 
@@ -145,8 +205,8 @@ def _check_generic_staging() -> None:
             asset,
             target,
             input_text="new input\n",
-            purge_directory_names=runtime.PURGE_DIRECTORY_NAMES,
-            purge_patterns=runtime.PURGE_PATTERNS,
+            purge_directory_names=HISTORICAL_PURGE_DIRECTORY_NAMES,
+            purge_patterns=HISTORICAL_PURGE_PATTERNS,
         )
         if (target / "input.i").read_text() != "new input\n":
             raise AssertionError("EVR2 transport staging did not replace input")
@@ -168,7 +228,7 @@ def _check_generic_staging() -> None:
         (case / "petsc_log_stale").write_text("stale\n")
         cases_root = Path(tmp_name) / "cases"
         cases_root.mkdir()
-        staged = runtime._stage_kg_e(repo_root, cases_root)
+        staged = _stage_kg_e(repo_root, cases_root)
         if staged != cases_root / "kg_e_parent" / "qvt_prepoisson":
             raise AssertionError("EVR2 KG-E staging path drift")
         if not (staged / "test.json").is_file():
@@ -177,78 +237,37 @@ def _check_generic_staging() -> None:
             raise AssertionError("EVR2 KG-E staging retained generated artifact")
 
 
-def _imports_module(path: Path, module: str) -> bool:
-    tree = ast.parse(path.read_text(), filename=str(path))
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Import):
-            if any(alias.name == module for alias in node.names):
-                return True
-        elif isinstance(node, ast.ImportFrom):
-            base = node.module or ""
-            if base == module:
-                return True
-            if base == "qpx_harness" and module.startswith("qpx_harness."):
-                leaf = module.split(".", 1)[1]
-                if any(alias.name == leaf for alias in node.names):
-                    return True
-    return False
-
-
 def _check_runtime_boundary() -> None:
-    path = Path(runtime.__file__)
-    source = path.read_text()
-    for required in (
-        "from experiments.historical_recipe_support import issue31_coupling as recipe",
-        "from ..evidence.artifacts import write_json_bundle",
-        "stage_case",
-        "validate_referenced_files",
-        "create_collision_safe_directory",
-        "run_managed_measurement",
-        "artifact_failure_signature",
-        "run_command",
-        "recipe.configured_transport_input",
-        "recipe.classify_evr2",
+    for relative in (
+        "qpx_harness/coupling_evr2",
+        "qpx_harness/coupling_evr2_runtime.py",
+        "qpx_harness/coupling_evr2_timestep.py",
+        "physics_harness/coupling_evr2",
+        "physics_harness/coupling_evr2_runtime.py",
+        "physics_harness/coupling_evr2_timestep.py",
     ):
-        if required not in source:
-            raise AssertionError(f"EVR2 runtime owner missing required composition: {required}")
+        if (ROOT / relative).exists():
+            raise AssertionError(f"retired EVR2 runtime owner resurrected: {relative}")
 
-    for forbidden in (
-        "coupling_evr2_timestep",
-        "import hashlib",
-        "import shutil",
-        "from datetime import",
-        "hashlib.sha256",
-        "shutil.copytree",
-        "datetime.now",
-        "def _write_json",
-        "def _load_json",
-        "def _create_root",
-        "def _stage_transport_case",
-        "def _failure_signature",
-        "subprocess.run",
-        "run_measurement(",
-        "def _purge_runtime_artifacts",
+    for relative in (
+        "physics_harness/adapters/moose/nonlinear_solver.py",
+        "physics_harness/application/performance.py",
+        "physics_harness/execution/cases.py",
+        "physics_harness/execution/runtime.py",
+        "physics_harness/evidence",
     ):
-        if forbidden in source:
-            raise AssertionError(f"EVR2 runtime owner retained duplicate mechanics: {forbidden}")
-    if _imports_module(path, "qpx_harness.coupling_evr2_timestep"):
-        raise AssertionError("EVR2 runtime owner reverse-imports legacy EVR2 owner")
+        if not (ROOT / relative).exists():
+            raise AssertionError(f"canonical EVR2 generic capability missing: {relative}")
+
+    if "qpx_harness" in Path(recipe.__file__).read_text():
+        raise AssertionError("Issue31 recipe retained legacy runtime dependency")
 
 
 def _check_production_route() -> None:
-    source = (ROOT / "qpx_harness/cli/app.py").read_text()
-    if "from qpx_harness.cli.commands.coupling import" not in source:
-        raise AssertionError("EVR2 canonical CLI adapter is not routed by CLI")
-    if "from qpx_harness.coupling_evr2_timestep import" in source:
-        raise AssertionError("EVR2 legacy timestep owner remains routed by CLI")
-    if '"coupling-evr2": coupling_evr2_main' not in source:
-        raise AssertionError("EVR2 command dispatch no longer uses canonical alias")
-
-
-def _check_oracle_retirement() -> None:
-    this_path = Path(__file__)
-    if _imports_module(this_path, "qpx_harness.coupling_evr2_timestep"):
-        raise AssertionError("WP13 retained legacy EVR2 oracle import")
+    source = (ROOT / "physics_harness" / "cli" / "app.py").read_text()
+    for retired in ("coupling-evr2", "coupling_evr2_main", "coupling_evr2_timestep"):
+        if retired in source:
+            raise AssertionError(f"retired EVR2 CLI route resurrected: {retired}")
 
 
 def main() -> int:
@@ -259,7 +278,6 @@ def main() -> int:
         _check_generic_staging()
         _check_runtime_boundary()
         _check_production_route()
-        _check_oracle_retirement()
     except Exception as exc:
         print(f"ISSUE48_ISSUE31_EVR2_RUNTIME_SELFTEST: FAIL ({exc})")
         return 1
