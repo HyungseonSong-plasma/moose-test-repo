@@ -1,0 +1,77 @@
+name: Science standalone bundle
+
+on:
+  push:
+    branches:
+      - science-standalone-bundle
+    paths:
+      - tools/build_science_snapshot_bundle.py
+      - .github/workflows/science-standalone-bundle.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bundle:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Syntax-check standalone bundle exporter
+        run: python -m py_compile tools/build_science_snapshot_bundle.py
+
+      - name: Build standalone science input/data snapshot
+        run: >-
+          python tools/build_science_snapshot_bundle.py
+          --science-baseline c971440dfa4a274896c773969c39c9ac14eb68c9
+          --output-dir dist
+
+      - name: Verify archive manifest and checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+          bundle_dir="$(find dist -maxdepth 1 -type d -name 'physics-science-snapshot-*' -print -quit)"
+          bundle_zip="$(find dist -maxdepth 1 -type f -name 'physics-science-snapshot-*.zip' -print -quit)"
+          test -n "$bundle_dir"
+          test -n "$bundle_zip"
+          (
+            cd "$bundle_dir"
+            sha256sum -c checksums.sha256
+          )
+          python - "$bundle_dir/manifest.json" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          manifest = json.loads(Path(sys.argv[1]).read_text())
+          assert manifest["science_baseline"] == "c971440dfa4a274896c773969c39c9ac14eb68c9"
+          assert manifest["case_counts"] == {"accepted": 5, "candidate": 1, "total": 6}
+          status = {case["id"]: case["status"] for case in manifest["cases"]}
+          assert status["r2_o2_ionization"] == "CANDIDATE_RUNTIME_PENDING"
+          assert all(
+              not case["validation"]["contains_retired_qpx_object_type"]
+              for case in manifest["cases"]
+          )
+          print("SCIENCE_BUNDLE_MANIFEST: PASS")
+          PY
+          unzip -t "$bundle_zip"
+
+      - name: Upload standalone science bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: physics-science-standalone-bundle-2026-09-10
+          path: |
+            dist/physics-science-snapshot-*.zip
+            dist/physics-science-snapshot-*/manifest.json
+            dist/physics-science-snapshot-*/checksums.sha256
+            dist/physics-science-snapshot-*/README.md
+          if-no-files-found: error
+          retention-days: 30
