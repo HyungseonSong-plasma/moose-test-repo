@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """P0/static gate for #26 E8 EI02/EI17 elastic and EI19 energy-only restoration."""
 
+import ast
 import hashlib
 import json
 import math
@@ -130,6 +131,23 @@ def _validate_contract(contract):
             raise AssertionError(f"missing staging constraint: {required}")
 
 
+def _runtime_checker_production_surface(text):
+    """Return runtime-checker source excluding only the negative-control self-test body."""
+    tree = ast.parse(text)
+    lines = text.splitlines()
+    excluded = set()
+    found_self_test = False
+    for node in tree.body:
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == "runtime_checker_self_test":
+            found_self_test = True
+            if node.end_lineno is None:
+                raise AssertionError("runtime checker self-test has no AST end line")
+            excluded.update(range(node.lineno - 1, node.end_lineno))
+    if not found_self_test:
+        raise AssertionError("runtime checker self-test function missing")
+    return "\n".join(line for index, line in enumerate(lines) if index not in excluded)
+
+
 def _validate_runtime_checker_text(text):
     for required in (
         "PhysicsElectronImpactRateMaterial",
@@ -146,8 +164,10 @@ def _validate_runtime_checker_text(text):
     ):
         if required not in text:
             raise AssertionError(f"runtime checker missing required surface: {required}")
+
+    production_text = _runtime_checker_production_surface(text)
     for deferred in ("o_excitation_1d.txt", "R_ion_O", "o_ionization.txt"):
-        if deferred in text:
+        if deferred in production_text:
             raise AssertionError(f"Stage-5 deferred channel activated: {deferred}")
 
 
@@ -203,6 +223,15 @@ def mutation_self_test():
         p = Path(tmp) / "bad_table.txt"
         p.write_bytes(original.replace(b"1.40991", b"1.40990", 1))
         _expect_failure(_validate_table_bytes, p.read_bytes(), EXPECTED_TABLES["o2_elastic.txt"], "bad_domain")
+
+    runtime_text = RUNTIME_CHECKER.read_text()
+    _validate_runtime_checker_text(runtime_text)
+    insertion = '\nDEFERRED_STAGE5_ACTIVATION = "o_excitation_1d.txt"\n\n'
+    marker = "\ndef run_controlled_executable("
+    if marker not in runtime_text:
+        raise AssertionError("runtime checker mutation marker missing")
+    activated_runtime = runtime_text.replace(marker, insertion + "def run_controlled_executable(", 1)
+    _expect_failure(_validate_runtime_checker_text, activated_runtime)
 
 
 def main():
