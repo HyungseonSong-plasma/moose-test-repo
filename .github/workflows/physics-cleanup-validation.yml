@@ -134,20 +134,8 @@ jobs:
           test "$(docker image inspect "$PHYSICS_RUNTIME_REF" --format '{{ index .Config.Labels "io.physics.build-base.ref" }}')" = "$EXPECTED_BUILD_BASE_REF"
           test "$(docker image inspect "$PHYSICS_RUNTIME_REF" --format '{{ index .Config.Labels "io.physics.source.owner" }}')" = "moose-test-repo/physics_app"
 
-      - name: Run #176 R2 O2 ionization controlled runtime acceptance
-        shell: bash
-        run: >-
-          python3 physics_app/ci/check_r2_o2_ionization_implementation.py
-          --runtime-ref "$PHYSICS_RUNTIME_REF"
-          --evidence-out r2-o2-ionization-runtime-evidence.json
-
-      - name: Upload #176 R2 runtime evidence
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: r2-o2-ionization-runtime-evidence
-          path: r2-o2-ionization-runtime-evidence.json
-
+      # #176 controlled scientific P3 intentionally does not run in this stripped
+      # runtime image: ADParsedFunctorMaterial requires a JIT-capable execution lane.
       - name: Run Physics check-input smoke
         shell: bash
         run: docker run --rm "$PHYSICS_RUNTIME_REF" --check-input -i /opt/physics/ci/smoke.i
