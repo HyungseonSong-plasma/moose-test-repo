@@ -11,15 +11,15 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from qpx_harness import evidence, execution
-from qpx_harness.evidence import artifacts
-from qpx_harness.execution import cases, runtime, workspace
+from physics_harness import evidence, execution
+from physics_harness.evidence import artifacts
+from physics_harness.execution import cases, runtime, workspace
 
 RETIRED = {
-    "qpx_harness.artifacts": ROOT / "qpx_harness" / "artifacts.py",
-    "qpx_harness.cases": ROOT / "qpx_harness" / "cases.py",
-    "qpx_harness.runtime": ROOT / "qpx_harness" / "runtime.py",
-    "qpx_harness.workspace": ROOT / "qpx_harness" / "workspace.py",
+    "physics_harness.artifacts": ROOT / "physics_harness" / "artifacts.py",
+    "physics_harness.cases": ROOT / "physics_harness" / "cases.py",
+    "physics_harness.runtime": ROOT / "physics_harness" / "runtime.py",
+    "physics_harness.workspace": ROOT / "physics_harness" / "workspace.py",
 }
 CENSUS = ROOT / "docs" / "development" / "2026-09-02_issue77_facade_census.json"
 
@@ -38,7 +38,7 @@ def _absolute_from(path: Path, node: ast.ImportFrom) -> str:
 
 def _consumer_census() -> dict[str, list[str]]:
     hits = {module: [] for module in RETIRED}
-    roots = (ROOT / "qpx_harness", ROOT / "recipes", ROOT / "bin", ROOT / "tests", ROOT / "tools")
+    roots = (ROOT / "physics_harness", ROOT / "experiments", ROOT / "bin", ROOT / "tests", ROOT / "tools")
     for source_root in roots:
         for path in sorted(source_root.rglob("*.py")):
             tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
@@ -68,17 +68,20 @@ def main() -> int:
         assert row["consumers_after"] == 0
         assert row["terminal_state"] == "RETIRED"
         assert not (ROOT / row["path"]).exists()
-        assert (ROOT / row["canonical_owner"]).exists()
+        current_owner = ROOT / row["canonical_owner"].replace(
+            "qpx_harness/", "physics_harness/", 1
+        )
+        assert current_owner.exists(), current_owner
 
     hits = _consumer_census()
     assert not any(hits.values()), hits
 
-    import qpx_harness
+    import physics_harness
 
-    assert "execution" in qpx_harness.__all__
-    assert "evidence" in qpx_harness.__all__
-    assert not ({"artifacts", "cases", "runtime", "workspace"} & set(qpx_harness.__all__))
-    assert execution.run_qpx is runtime.run_qpx
+    assert "execution" in physics_harness.__all__
+    assert "evidence" in physics_harness.__all__
+    assert not ({"artifacts", "cases", "runtime", "workspace"} & set(physics_harness.__all__))
+    assert execution.run_physics is runtime.run_physics
     assert execution.stage_case is cases.stage_case
     assert execution.discover_manifests is workspace.discover_manifests
     assert evidence.write_json_bundle is artifacts.write_json_bundle
