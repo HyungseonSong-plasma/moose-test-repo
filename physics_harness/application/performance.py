@@ -164,10 +164,8 @@ def validate_result_record(data: dict[str, Any]) -> dict[str, Any]:
 
 
 def build_measurement_stats(result: dict[str, Any]) -> Any:
-    try:
-        from physics_harness.analysis.statistics_builder import build_convergence_stats, build_simulation_stats
-    except ImportError:
-        from physics_harness.analysis.stats_builder import build_convergence_stats, build_simulation_stats
+    from physics_harness.analysis.statistics_builder import build_convergence_stats, build_simulation_stats
+
     convergence = build_convergence_stats(work=_mapping(result.get("work"), "result.work"))
     return build_simulation_stats(result, convergence=convergence)
 
