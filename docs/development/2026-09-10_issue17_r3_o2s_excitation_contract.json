@@ -1,0 +1,102 @@
+{
+  "schema_version": 1,
+  "parent_issue": 17,
+  "execution_issue": 176,
+  "controller_batch": "R3_O2S_EXCITATION",
+  "controller_step": "STEP_1_CONSTANT_SURROGATE_OWNERSHIP_CONTRACT",
+  "repository_baseline": "b774cf7002221b9fb449c75c060017ce779043d2",
+  "prior_acceptance": {
+    "EI01_O2_ATTACHMENT": {
+      "state": "R1_CONTROLLED_RUNTIME_PASS",
+      "net_electron_stoich": -1
+    },
+    "EI16_O2_IONIZATION": {
+      "state": "R2_CONTROLLED_RUNTIME_PASS",
+      "net_electron_stoich": 1,
+      "integrated_physics_accuracy": "NOT_ESTABLISHED"
+    }
+  },
+  "controlled_stage3_subset": [
+    "EI01_O2_ATTACHMENT",
+    "EI16_O2_IONIZATION",
+    "EI10_O2_TO_O2S"
+  ],
+  "reaction": {
+    "id": "EI10_O2_TO_O2S",
+    "formula": "e + O2(X3Sigma_g-) -> e + O2(a1Delta_g)",
+    "state": "R3_READY_CONTRACT_FROZEN",
+    "reactants": {
+      "e": 1,
+      "O2": 1
+    },
+    "products": {
+      "e": 1,
+      "O2s": 1
+    },
+    "net_electron_stoich": 0,
+    "expected_electron_particle_source": 0.0,
+    "shared_progress": "R_O2s",
+    "shared_progress_rule": "compute one canonical R_O2s and reuse it for constrained-O2 consumption and O2s production; do not create an independent electron-particle or electron-energy rate evaluation",
+    "molar_progress": "R_O2s = k_physics_const * (n_e_physical / N_A) * c_O2",
+    "state_inputs": {
+      "electron_number_density": "n_e_physical = n_ref * n_e_hat",
+      "constrained_o2_mass_fraction": "w_O2 = 1 - (w_O2s + w_O2p + w_O + w_Om + w_Op + w_Os)",
+      "o2_molar_concentration": "c_O2 = rho * w_O2 / M_O2"
+    }
+  },
+  "constant_surrogate_model": {
+    "classification": "EXPLICIT_USER_AUTHORIZED_MODELING_DECISION",
+    "physical_channel_identity": "O2(a1Delta_g)",
+    "threshold_energy_eV": 0.977,
+    "external_kinetic_law": "k_particle(Te) = 1.37e-15 * exp(-2.14 / Te) m^3/s",
+    "external_fit_temperature_range_eV": [1.0, 7.0],
+    "reference_mean_energy_eV": 5.73276,
+    "maxwellian_relation": "mean_en = 1.5 * Te",
+    "reference_Te_eV": 3.82184,
+    "derived_particle_coefficient_m3_per_s": 7.8260e-16,
+    "canonical_particle_coefficient_m3_per_s": 7.83e-16,
+    "derived_physics_molar_coefficient_m3_per_mol_s": 4.71295e8,
+    "canonical_physics_molar_coefficient_m3_per_mol_s": 4.71e8,
+    "molar_conversion": "k_physics = N_A * k_particle",
+    "forbidden_substitute": "user_supplied:o2_excitation_9p97",
+    "forbidden_substitute_reason": "the 9.97 eV O2 excitation table is not the 0.977 eV O2(a1Delta_g) channel"
+  },
+  "source_ownership": {
+    "canonical_rate_owner": "R3 electron-impact O2s excitation material",
+    "heavy_sources": {
+      "O2": "-M_O2 * R_O2s",
+      "O2s": "+M_O2 * R_O2s"
+    },
+    "electron_particle": "NO_SOURCE_FOR_EI10_NET_STOICHIOMETRY_ZERO",
+    "electron_energy": "DEFERRED_TO_STAGE_4_ISSUE_26_E8",
+    "energy_coupling_enabled": false
+  },
+  "pass_invariants": [
+    "single_R_O2s_ownership",
+    "O2_O2s_equal_and_opposite_mass_sources",
+    "heavy_mass",
+    "oxygen_atoms",
+    "charge_including_electron",
+    "zero_electron_particle_source",
+    "positive_finite_heavy_state",
+    "constrained_O2_state_ownership",
+    "constant_surrogate_identity_and_units",
+    "9p97_eV_substitution_rejected",
+    "no_stage3_electron_energy_source"
+  ],
+  "runtime_acceptance": {
+    "required": true,
+    "execution_lane": "repository_governed_JIT_capable_Physics_science_lane",
+    "minimum_claim": "controlled R3 local runtime discriminator only",
+    "must_not_claim": "full real-QVT Integrated Physics Accuracy"
+  },
+  "disabled_or_deferred": [
+    "EI02_O2_ELASTIC electron-energy transfer until Stage 4/#26 E8",
+    "EI17_O_ELASTIC electron-energy transfer until Stage 4/#26 E8",
+    "EI18_O_TO_OS until separately bounded",
+    "EI19_O_EXCITATION_4P192 until electron-energy Stage 4 or later",
+    "EI20_O_IONIZATION until separately bounded",
+    "all missing-rate species-changing electron-impact reactions",
+    "all heavy-ion reactions pending rate data"
+  ]
+}
