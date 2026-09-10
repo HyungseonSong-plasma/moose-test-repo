@@ -95,6 +95,8 @@ jobs:
         run: python physics_app/ci/check_e8_ei10_energy_contract.py
       - name: Validate #26 E8 EI10 inelastic energy production implementation
         run: python physics_app/ci/check_e8_ei10_energy_implementation.py
+      - name: Validate #26 E8 EI10 runtime discriminator logic
+        run: python physics_app/ci/check_e8_ei10_energy_runtime.py --self-test
       - name: Validate #176 R3 O2s excitation production implementation
         run: python physics_app/ci/check_r3_o2s_excitation_implementation.py
       - name: Validate #17 R2 O2 ionization production implementation
