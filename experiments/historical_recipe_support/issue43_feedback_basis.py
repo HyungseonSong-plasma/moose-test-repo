@@ -1,7 +1,7 @@
 """Accepted Issue43 closed electron/bulk-Poisson feedback basis.
 
 This recipe owns the scientific composition of the accepted feedback model.
-Reusable fixed-step and output-observation mechanics remain qpx_harness
+Reusable fixed-step and output-observation mechanics remain physics_harness
 capabilities; versioned/Issue-numbered runtime facades are not dependencies.
 """
 from __future__ import annotations
@@ -9,14 +9,15 @@ from __future__ import annotations
 from typing import Any
 
 from experiments.historical_recipe_support import issue43_fast_relaxation as fast_relaxation
-from qpx_harness.adapters.moose.executioner import apply_fixed_step_contract
-from qpx_harness.adapters.moose.output_observation import apply_microtime_output_contract
-from qpx_harness.analysis.scale_audit import DEFAULT_ELECTRON_DENSITY, DEFAULT_GAS_TEMPERATURE
+from physics_harness.adapters.moose.executioner import apply_fixed_step_contract
+from physics_harness.adapters.moose.output_observation import apply_microtime_output_contract
 
 DT_REFERENCE = 1.0e-13
 STEPS = 1
-ACCEPTED_GAS_TEMPERATURE = DEFAULT_GAS_TEMPERATURE
-ACCEPTED_ELECTRON_DENSITY = DEFAULT_ELECTRON_DENSITY
+
+# Frozen accepted Issue43 anchors; generic scale analysis intentionally owns no defaults.
+ACCEPTED_GAS_TEMPERATURE = 300.0
+ACCEPTED_ELECTRON_DENSITY = 1.0e16
 
 
 def build_closed_feedback_input(
