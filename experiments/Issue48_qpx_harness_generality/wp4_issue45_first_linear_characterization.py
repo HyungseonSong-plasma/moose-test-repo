@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""P0 behavior characterization for the canonical Issue45 first-linear recipe."""
+"""P0 behavior characterization for the historical Issue45 first-linear recipe."""
 from __future__ import annotations
 
 import sys
@@ -9,11 +9,109 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from qpx_harness.adapters.moose.electron_inventory.closure_model import _synthetic_constrained_input
-from qpx_harness.analysis.electron_inventory.structure import audit_constrained_quasisteady_structure
-from qpx_harness.adapters.moose import parameters as mp
-from qpx_harness.petsc import options as po
+from physics_harness.adapters.moose import parameters as mp
+from physics_harness.adapters.moose import petsc_options as po
+from experiments.historical_recipe_support import issue45_inventory_constraint as inventory
 from experiments.historical_recipe_support import issue45_first_linear as recipe
+
+
+def _synthetic_constrained_input(
+    macro_avg: float = inventory.DEFAULT_MACRO_ELECTRON_AVG,
+) -> str:
+    """Preserve the accepted pre-retirement Issue45 constrained fixture."""
+    boundaries = " ".join(sorted(inventory.EXPECTED_DRIFT_BOUNDARIES))
+    return f"""[Variables]
+  [n_e]
+    type = MooseVariableFVReal
+  []
+  [potential_plasma]
+    type = MooseVariableFVReal
+  []
+  [{inventory.LAMBDA_VARIABLE}]
+    type = MooseVariableScalar
+  []
+[]
+[FVKernels]
+  [diffusion]
+    type = FVDiffusion
+    variable = n_e
+  []
+  [drift]
+    type = {inventory.DRIFT_TYPE}
+    variable = n_e
+    boundaries_to_avoid = '{boundaries}'
+  []
+  [phi]
+    type = FVDiffusion
+    variable = potential_plasma
+  []
+  [inventory_constraint]
+    type = {inventory.CONSTRAINT_TYPE}
+    variable = n_e
+    lambda = {inventory.LAMBDA_VARIABLE}
+    phi0 = {inventory.MACRO_AVG_POSTPROCESSOR}
+    block = plasma
+  []
+[]
+[FVBCs]
+  [g0]
+    type = FVDirichletBC
+    variable = potential_plasma
+    boundary = plasma_metal
+    value = 0
+  []
+  [g1]
+    type = FVDirichletBC
+    variable = potential_plasma
+    boundary = plasma_electrode
+    value = 0
+  []
+  [g2]
+    type = FVDirichletBC
+    variable = potential_plasma
+    boundary = plasma_right
+    value = 0
+  []
+  [g3]
+    type = FVDirichletBC
+    variable = potential_plasma
+    boundary = inlet
+    value = 0
+  []
+  [g4]
+    type = FVDirichletBC
+    variable = potential_plasma
+    boundary = outlet
+    value = 0
+  []
+[]
+[Postprocessors]
+  [{inventory.MACRO_AVG_POSTPROCESSOR}]
+    type = ConstantPostprocessor
+    value = {macro_avg:.17g}
+  []
+[]
+[Executioner]
+  type = Steady
+  solve_type = NEWTON
+  petsc_options_iname = '-pc_type -pc_factor_shift_type'
+  petsc_options_value = 'lu NONZERO'
+[]
+[Outputs]
+  [out]
+    type = CSV
+    execute_on = FINAL
+  []
+  [console]
+    type = Console
+    execute_on = FINAL
+    all_variable_norms = true
+  []
+[]
+[Debug]
+  show_var_residual_norms = true
+[]
+"""
 
 
 def _synthetic_log(jac_rel: float = 2.0e-9) -> str:
@@ -43,7 +141,7 @@ def _check_construction() -> None:
     base = _synthetic_constrained_input(recipe.TARGET)
     text, meta = recipe.instrument_first_linear(base)
 
-    closure = audit_constrained_quasisteady_structure(
+    closure = inventory.audit_constrained_quasisteady_structure(
         text,
         expected_macro_avg=recipe.TARGET,
     )
@@ -146,20 +244,24 @@ def _check_analysis_negative_controls() -> None:
 
 
 def _check_primitive_usage() -> None:
-    source = (ROOT / "recipes" / "issue45_first_linear.py").read_text()
+    source = Path(recipe.__file__).read_text()
     required = (
-        "from qpx_harness.adapters.moose import log as moose_log",
-        "from qpx_harness.adapters.moose import parameters as mp",
-        "from qpx_harness.petsc import jacobian as jac",
-        "from qpx_harness.petsc import ksp",
-        "from qpx_harness.petsc import log as petsc_log",
-        "from qpx_harness.petsc import options as po",
+        "from physics_harness.reasoning import diagnose_coupled_runtime_evidence",
+        "from physics_harness.reasoning.jacobian import diagnose_jacobian_evidence",
+        "from physics_harness.adapters.moose.nonlinear_solver import runtime_core_facts",
+        "from physics_harness.adapters.petsc import ksp",
+        "from physics_harness.adapters.petsc import log as petsc_log",
+        "from physics_harness.adapters.petsc.log import first_linear_termination",
+        "from physics_harness.adapters.moose import petsc_options as po",
+        "from physics_harness.adapters.moose.mutation_spec import compile_mutation_spec, load_mutation_json_file",
+        "from physics_harness.adapters.moose.transforms import TransformError, apply_case_plan",
     )
     for token in required:
         if token not in source:
             raise AssertionError(f"recipe does not use expected generic primitive: {token}")
 
     forbidden = (
+        "qpx_harness",
         "electron_inventory_nullspace",
         "petsc_first_linear_diagnostic",
         "fast_plasma_coupling_diagnostic",
