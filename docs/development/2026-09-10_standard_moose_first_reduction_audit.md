@@ -6,15 +6,15 @@ Adopt **Standard MOOSE First** for `physics_app`.
 
 A custom C++ `MooseObject` is justified only when the required scientific/numerical contract cannot be expressed with pinned standard MOOSE objects without weakening semantics, AD coupling, validation, bounds policy, conservation, or ownership.
 
-The pinned framework baseline for this audit is:
+Pinned framework baseline:
 
 ```text
 MOOSE = 9f388366ccf38b9c34542ec5561198249fde0ac9
 ```
 
-This is a reduction/refactor policy only. It must not change accepted physics semantics.
+This is a reduction/refactor policy. It must not change accepted physics semantics.
 
-## Exact standard capability used first
+## First reduction — E8 reaction-energy projection
 
 Pinned MOOSE `FVCoupledForce` accepts a `MooseFunctorName v`, evaluates it as `ADReal`, and contributes
 
@@ -22,14 +22,14 @@ Pinned MOOSE `FVCoupledForce` accepts a `MooseFunctorName v`, evaluates it as `A
 residual = -coef * v
 ```
 
-Therefore the accepted E8 reaction-energy mapping
+Therefore
 
 ```text
 S_hat = -Delta_epsilon_eV * N_A * R_k / (n_ref * epsilon_ref_eV)
 residual = -S_hat
 ```
 
-can be represented directly as
+is represented directly as
 
 ```text
 type = FVCoupledForce
@@ -37,31 +37,27 @@ v = R_k
 coef = -Delta_epsilon_eV * N_A / (n_ref * epsilon_ref_eV)
 ```
 
-without a custom energy-source kernel and without recomputing kinetics.
+with no custom reaction-energy kernel and no duplicate kinetic-rate evaluation.
 
-## Reduction classification
+### A/B acceptance
 
-| Current custom surface | Disposition | Reason |
-|---|---|---|
-| `PhysicsFVElectronReactionEnergySource` | **REMOVE after A/B PASS** | Pure constant scaling/sign projection of an existing AD functor; `FVCoupledForce` is exactly sufficient. |
-| `PhysicsFVElectronReactionSource` | **NEXT reduction candidate** | Pure normalized source projection; likely direct `FVCoupledForce` with `v=canonical source/progress`. Requires A/B before removal. |
-| `PhysicsFVSpeciesReactionSource` | **NEXT reduction candidate** | Pure volumetric source projection; likely direct `FVCoupledForce`. Requires mass-fraction equation A/B. |
-| `PhysicsO2IonizationSourceMaterial` | **NEXT reduction candidate** | Algebraic stoichiometric projection from one canonical progress. Can likely move coefficients directly to standard source kernels. |
-| `PhysicsO2sExcitationSourceMaterial` | **NEXT reduction candidate** | Same algebraic projector pattern. |
-| `PhysicsElectronImpactO2sExcitationMaterial` | **NEXT reduction candidate** | Frozen constant-rate algebra; `ADParsedFunctorMaterial` can express it. Preserve exact `R_O2s` ownership and coefficient identity. |
-| `PhysicsElectronMeanEnergyMaterial` | **AUDIT** | Algebra is standard-parsable, but current positivity/error semantics must be reproduced before removal. |
-| `PhysicsElectronImpactIonizationMaterial` | **KEEP for now** | Owns strict tabulated interpolation with explicit out-of-range error. No standard replacement accepted until identical bounds and AD semantics are demonstrated. |
-| transport lookup / cross-section table owners | **KEEP for now** | Same strict data/provenance/bounds concern. |
-| drift, diffusion, conservative heavy transport, wall/SEE objects | **SEPARATE audit** | These encode discretization/boundary semantics; not safe to classify as algebraic wrappers without dedicated equivalence tests. |
+Accepted custom oracle repository:
 
-## First A/B gate
+```text
+b882211eb24a94bb645d0c13ecd96badc2c35095
+```
 
-Compare the already accepted custom E8 vectors at repository
-`b882211eb24a94bb645d0c13ecd96badc2c35095`
-against a standard-MOOSE implementation that instantiates no
-`PhysicsFVElectronReactionEnergySource`.
+Standard-MOOSE A/B repository:
 
-Frozen accepted oracle:
+```text
+cdc8a9d5b3898a10706a6bfb1f4d3518dd1170a9
+workflow run = 34505556177 / SUCCESS
+artifact = standard-moose-energy-projection-ab-evidence
+artifact id = 10163796796
+artifact digest = sha256:0c80a4712c02dfbbd5c5f359bd1008ab75d1a998d502e7bca6e86c26f9634246
+```
+
+The A/B discriminator instantiated no `PhysicsFVElectronReactionEnergySource` and returned **exact zero delta** for every compared EI10 and EI16 final-state quantity.
 
 ```text
 EI10 n_epsilon_hat = 0.99198106194124
@@ -74,25 +70,43 @@ EI16 mean_en       = 4.0903346174113 eV
 EI16 R_ion_O2      = 0.016887027897333 mol/(m^3 s)
 ```
 
-Standard coefficients:
+All recorded `delta_from_accepted_oracle` entries are `0.0`.
+
+Frozen coefficients:
 
 ```text
-EI10 coef = -0.977 * N_A / (1e16 * 5.73276)
-           = -10263174.32182753
-
-EI16 coef = -12.06 * N_A / (1e16 * 5.73276)
-           = -126687699.40761518
+EI10 coef = -10263174.32182753
+EI16 coef = -126687699.40761518
 ```
 
-A/B PASS requires the same final nonlinear vectors within the existing controlled-discriminator tolerance, while preserving the same upstream canonical reaction-progress owners.
+### Nonnegative-progress guard
+
+`FVCoupledForce` itself is an algebraic projector and does not own a `R_k >= 0` error check.
+
+The reduction is accepted only on the existing **shared canonical path**, where the upstream reaction-rate/source owners already constrain the controlled reaction progress. Independent energy-only use of these E8 configurations is forbidden. This avoids turning the standard source kernel into an alternate kinetics path.
+
+## Reduction classification
+
+| Custom surface | Disposition | Reason |
+|---|---|---|
+| `PhysicsFVElectronReactionEnergySource` | **RETIRE** | Exact-zero A/B against accepted EI10/EI16 oracles; `FVCoupledForce` is sufficient. |
+| `PhysicsFVElectronReactionSource` | **NEXT reduction candidate** | Pure normalization/source projection; test direct standard functor source A/B. |
+| `PhysicsFVSpeciesReactionSource` | **NEXT reduction candidate** | Pure volumetric source projection; test mass-fraction equation A/B. |
+| `PhysicsO2IonizationSourceMaterial` | **NEXT reduction candidate** | Algebraic stoichiometric projection from one canonical progress. |
+| `PhysicsO2sExcitationSourceMaterial` | **NEXT reduction candidate** | Algebraic stoichiometric projection from one canonical progress. |
+| `PhysicsElectronImpactO2sExcitationMaterial` | **NEXT reduction candidate** | Frozen constant-rate algebra; likely expressible with `ADParsedFunctorMaterial`. |
+| `PhysicsElectronMeanEnergyMaterial` | **AUDIT** | Algebra is parsable, but positivity/error semantics must be reproduced before removal. |
+| `PhysicsElectronImpactIonizationMaterial` | **KEEP for now** | Owns strict tabulated interpolation and explicit fail-on-out-of-range behavior. |
+| transport lookup / cross-section table owners | **KEEP for now** | Strict data/provenance/bounds behavior must be preserved. |
+| drift/diffusion/conservative heavy transport/wall/SEE | **SEPARATE audit** | Encode discretization or boundary semantics; require dedicated equivalence tests. |
 
 ## Follow-up order
 
-1. E8 custom energy projector -> `FVCoupledForce`.
+1. Retire custom E8 energy projector after canonical post-removal regression. **CURRENT**
 2. Electron and heavy source projectors -> standard functor source kernels.
 3. R3 constant-rate and stoichiometric source materials -> parsed/standard composition.
 4. Mean-energy bridge only after equivalent positivity/error handling is frozen.
 5. Strict tabulated kinetics only if standard MOOSE can reproduce exact fail-on-bounds and AD behavior.
 6. Transport/discretization/boundary custom objects in separate bounded audits.
 
-No source is removed merely to reduce C++ line count. Scientific contract equivalence is the gate.
+No object is removed merely to reduce C++ line count. Scientific and numerical contract equivalence is the gate.
