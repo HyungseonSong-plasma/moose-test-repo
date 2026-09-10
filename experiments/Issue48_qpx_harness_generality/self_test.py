@@ -12,23 +12,167 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from qpx_harness.evidence import artifacts as qa
-from qpx_harness.analysis import temporal as qt
-from qpx_harness.adapters.moose import blocks as mb
-from qpx_harness.adapters.moose import executioner as me
-from qpx_harness.adapters.moose import parameters as mp
-from qpx_harness.petsc import options as po
-from qpx_harness import issue46_jacobian_localization as issue46_semantic
-from qpx_harness import electron_inventory_nullspace as issue45_inventory_legacy
-from qpx_harness import issue43_coupling_diagnostic as issue43_legacy
+from physics_harness.evidence import artifacts as qa
+from physics_harness.analysis import temporal as qt
+from physics_harness.adapters.moose import blocks as mb
+from physics_harness.adapters.moose import executioner as me
+from physics_harness.adapters.moose import parameters as mp
+from physics_harness.adapters.moose import petsc_options as po
 from experiments.historical_recipe_support import issue43_coupling_diagnostic as issue43_recipe
 from experiments.historical_recipe_support import issue45_first_linear as issue45_recipe
 from experiments.historical_recipe_support import issue45_inventory_constraint as issue45_inventory_recipe
 from experiments.historical_recipe_support import issue46_jacobian_localization as issue46_recipe
 
 
+HISTORICAL_ISSUE43_DIAGNOSTIC_FLAGS = (
+    "-snes_converged_reason",
+    "-ksp_converged_reason",
+    "-snes_monitor",
+    "-ksp_monitor",
+)
+
+
 def _fixture() -> str:
     return """[Executioner]\n  type = Transient\n  petsc_options = '-snes_converged_reason -ksp_converged_reason'\n  petsc_options_iname = '-pc_type -pc_factor_shift_type'\n  petsc_options_value = 'lu NONZERO'\n[]\n\n[Outputs]\n  [console]\n    type = Console\n  []\n[]\n"""
+
+
+def _historical_issue43_instrumentation(
+    text: str, *, jacobian_test: bool
+) -> tuple[str, dict[str, object]]:
+    """Preserve the pre-retirement Issue43 recipe contract as a local oracle."""
+    if not mb.has_block(text, "Debug"):
+        out = mb.append_top_level_block(
+            text,
+            "[Debug]\n  show_var_residual_norms = true\n[]",
+        )
+    else:
+        out = mp.upsert_parameter(text, "Debug", "show_var_residual_norms", "true")
+    out = mp.upsert_parameter(out, "Executioner", "verbose", "true")
+    flags = HISTORICAL_ISSUE43_DIAGNOSTIC_FLAGS
+    if jacobian_test:
+        flags += ("-snes_test_jacobian",)
+    out = po.add_flags(out, flags)
+    out = mp.upsert_parameter(out, "Outputs/console", "all_variable_norms", "true")
+    return out, {
+        "debug_show_var_residual_norms": True,
+        "executioner_verbose": True,
+        "console_all_variable_norms": True,
+        "petsc_options_added": list(flags),
+        "jacobian_test": jacobian_test,
+        "physics_or_numerics_changed": False,
+    }
+
+
+def _historical_issue45_constrained_input(
+    macro_avg: float = issue45_inventory_recipe.DEFAULT_MACRO_ELECTRON_AVG,
+) -> str:
+    """Preserve the accepted pre-retirement synthetic constrained fixture."""
+    boundaries = " ".join(sorted(issue45_inventory_recipe.EXPECTED_DRIFT_BOUNDARIES))
+    return f"""[Variables]
+  [n_e]
+    type = MooseVariableFVReal
+  []
+  [potential_plasma]
+    type = MooseVariableFVReal
+  []
+  [{issue45_inventory_recipe.LAMBDA_VARIABLE}]
+    type = MooseVariableScalar
+  []
+[]
+[FVKernels]
+  [diffusion]
+    type = FVDiffusion
+    variable = n_e
+  []
+  [drift]
+    type = {issue45_inventory_recipe.DRIFT_TYPE}
+    variable = n_e
+    boundaries_to_avoid = '{boundaries}'
+  []
+  [phi]
+    type = FVDiffusion
+    variable = potential_plasma
+  []
+  [inventory_constraint]
+    type = {issue45_inventory_recipe.CONSTRAINT_TYPE}
+    variable = n_e
+    lambda = {issue45_inventory_recipe.LAMBDA_VARIABLE}
+    phi0 = {issue45_inventory_recipe.MACRO_AVG_POSTPROCESSOR}
+    block = plasma
+  []
+[]
+[FVBCs]
+  [g0]
+    type = FVDirichletBC
+    variable = potential_plasma
+    boundary = plasma_metal
+    value = 0
+  []
+  [g1]
+    type = FVDirichletBC
+    variable = potential_plasma
+    boundary = plasma_electrode
+    value = 0
+  []
+  [g2]
+    type = FVDirichletBC
+    variable = potential_plasma
+    boundary = plasma_right
+    value = 0
+  []
+  [g3]
+    type = FVDirichletBC
+    variable = potential_plasma
+    boundary = inlet
+    value = 0
+  []
+  [g4]
+    type = FVDirichletBC
+    variable = potential_plasma
+    boundary = outlet
+    value = 0
+  []
+[]
+[Postprocessors]
+  [{issue45_inventory_recipe.MACRO_AVG_POSTPROCESSOR}]
+    type = ConstantPostprocessor
+    value = {macro_avg:.17g}
+  []
+[]
+[Executioner]
+  type = Steady
+  solve_type = NEWTON
+  petsc_options_iname = '-pc_type -pc_factor_shift_type'
+  petsc_options_value = 'lu NONZERO'
+[]
+[Outputs]
+  [out]
+    type = CSV
+    execute_on = FINAL
+  []
+  [console]
+    type = Console
+    execute_on = FINAL
+    all_variable_norms = true
+  []
+[]
+[Debug]
+  show_var_residual_norms = true
+[]
+"""
+
+
+def _historical_issue46_localization(text: str) -> str:
+    """Preserve the pre-retirement Issue46 localization construction oracle."""
+    out = po.remove_flags(text, ["-snes_test_jacobian"])
+    out = po.add_flags(out, ["-snes_test_jacobian_view"])
+    out = po.upsert_name_value(out, "-snes_test_jacobian", "1e-07")
+    block = """  [r46_dofmap]
+    type = DOFMap
+    execute_on = INITIAL
+    file_base = r46_dofmap
+  []"""
+    return mb.insert_child_block(out, "Outputs", block)
 
 
 def _expect_error(fn, label: str) -> None:
@@ -283,13 +427,13 @@ def _check_recipe_equivalence() -> None:
     text = _fixture()
 
     for jacobian_test in (False, True):
-        old_text, old_meta = issue43_legacy.instrument_input(
+        expected_text, expected_meta = _historical_issue43_instrumentation(
             text, jacobian_test=jacobian_test
         )
         new_text, new_meta = issue43_recipe.instrument_input(
             text, jacobian_test=jacobian_test
         )
-        if new_text != old_text or new_meta != old_meta:
+        if new_text != expected_text or new_meta != expected_meta:
             raise AssertionError(
                 f"Issue43 recipe drift for jacobian_test={jacobian_test}"
             )
@@ -318,32 +462,72 @@ def _check_recipe_equivalence() -> None:
     if first45_meta != expected45_meta:
         raise AssertionError("Issue45 first-linear metadata contract drift")
 
-    constrained = issue45_inventory_legacy._synthetic_constrained_input()
-    old_inventory = issue45_inventory_legacy.audit_constrained_quasisteady_structure(
+    constrained = _historical_issue45_constrained_input()
+    inventory = issue45_inventory_recipe.audit_constrained_quasisteady_structure(
         constrained,
-        expected_macro_avg=issue45_inventory_legacy.DEFAULT_MACRO_ELECTRON_AVG,
+        expected_macro_avg=issue45_inventory_recipe.DEFAULT_MACRO_ELECTRON_AVG,
     )
-    new_inventory = issue45_inventory_recipe.audit_constrained_quasisteady_structure(
-        constrained,
-        expected_macro_avg=issue45_inventory_legacy.DEFAULT_MACRO_ELECTRON_AVG,
-    )
-    if new_inventory != old_inventory:
-        raise AssertionError("Issue45 inventory-constraint recipe drift")
+    expected_inventory_checks = [
+        "parser-symbol-preflight",
+        "quasisteady-electron-kernel-set",
+        "fvtimekernel-removed",
+        "one-electrostatic-drift",
+        "one-electron-diffusion",
+        "drift-closes-all-plasma-boundaries",
+        "drift-no-forced-boundaries",
+        "drift-no-force-all-boundaries",
+        "diffusion-natural-boundary-path",
+        "no-electron-fvbc",
+        "poisson-ground-boundary-set",
+        "poisson-ground-values-zero",
+        "one-scalar-lagrange-multiplier",
+        "scalar-lagrange-multiplier-type",
+        "one-inventory-constraint",
+        "constraint-couples-scalar-lambda",
+        "constraint-uses-macro-average-postprocessor",
+        "constraint-block-is-plasma",
+        "one-macro-average-provider",
+        "macro-average-provider-type",
+        "macro-average-target-preserved",
+        "steady-executioner",
+        "lm-saddle-factorization-contract",
+        "final-csv-observation",
+        "runtime-variable-residual-observability",
+        "runtime-console-variable-norms",
+    ]
+    if inventory.get("status") != "PASS" or inventory.get("class") != "CONSTRAINED_QUASISTEADY_STRUCTURE_PASS":
+        raise AssertionError(f"Issue45 inventory-constraint recipe drift: {inventory}")
+    if inventory.get("blockers"):
+        raise AssertionError(f"Issue45 inventory-constraint blocker drift: {inventory['blockers']}")
+    if [item.get("id") for item in inventory.get("checks", [])] != expected_inventory_checks:
+        raise AssertionError("Issue45 inventory-constraint check inventory drift")
+    if any(item.get("status") != "PASS" for item in inventory.get("checks", [])):
+        raise AssertionError("Issue45 inventory-constraint accepted fixture no longer fully passes")
 
-    semantic46_text, semantic46_meta = issue46_semantic.instrument_localization(first45_text)
+    expected46_text = _historical_issue46_localization(first45_text)
     recipe46_text, recipe46_meta = issue46_recipe.instrument_localization(first45_text)
-    if recipe46_text != semantic46_text or recipe46_meta != semantic46_meta:
+    expected46_meta = {
+        "target": issue46_recipe.TARGET,
+        "localization_threshold": issue46_recipe.LOCALIZATION_THRESHOLD,
+        "dofmap_output": issue46_recipe.DOFMAP_OUTPUT,
+        "physics_changed": False,
+        "closure_changed": False,
+        "solver_realization_changed": False,
+        "scaling_policy_changed": False,
+        "diagnostic_observability_only": True,
+    }
+    if recipe46_text != expected46_text or recipe46_meta != expected46_meta:
         raise AssertionError("Issue46 semantic/recipe construction drift")
 
 
 def _check_generality_surface() -> None:
     for rel in (
-        "qpx_harness/evidence/artifacts.py",
-        "qpx_harness/moose/parameters.py",
-        "qpx_harness/moose/blocks.py",
-        "qpx_harness/moose/executioner.py",
-        "qpx_harness/petsc/options.py",
-        "qpx_harness/analysis/temporal.py",
+        "physics_harness/evidence/artifacts.py",
+        "physics_harness/adapters/moose/parameters.py",
+        "physics_harness/adapters/moose/blocks.py",
+        "physics_harness/adapters/moose/executioner.py",
+        "physics_harness/adapters/moose/petsc_options.py",
+        "physics_harness/analysis/temporal.py",
     ):
         source = (ROOT / rel).read_text()
         for forbidden in (
@@ -370,10 +554,10 @@ def _check_generality_surface() -> None:
                 )
 
     recipe_paths = (
-        "recipes/issue43_coupling_diagnostic.py",
-        "recipes/issue45_first_linear.py",
-        "recipes/issue45_inventory_constraint.py",
-        "recipes/issue46_jacobian_localization.py",
+        "experiments/historical_recipe_support/issue43_coupling_diagnostic.py",
+        "experiments/historical_recipe_support/issue45_first_linear.py",
+        "experiments/historical_recipe_support/issue45_inventory_constraint.py",
+        "experiments/historical_recipe_support/issue46_jacobian_localization.py",
     )
     legacy_names = (
         "fast_plasma_coupling_diagnostic",
@@ -384,12 +568,12 @@ def _check_generality_surface() -> None:
     )
     for rel in recipe_paths:
         source = (ROOT / rel).read_text()
-        if "qpx_harness.adapters.moose" not in source and "qpx_harness.petsc" not in source:
-            raise AssertionError(f"recipe does not compose generic primitives: {rel}")
+        if "physics_harness.adapters.moose" not in source:
+            raise AssertionError(f"historical recipe does not compose canonical primitives: {rel}")
         leaked = [name for name in legacy_names if name in source]
         if leaked:
             raise AssertionError(
-                f"recipe reverse-imports legacy module {rel}: {leaked}"
+                f"historical recipe reverse-imports legacy module {rel}: {leaked}"
             )
 
 
@@ -398,17 +582,17 @@ def _check_script_surface() -> dict[str, list[str]]:
     if scripts.exists() and any(scripts.iterdir()):
         raise AssertionError("retired scripts entrypoint surface reappeared")
 
-    qpx_source = (ROOT / "bin/qpx.py").read_text()
-    if "from qpx_harness.cli import main" not in qpx_source:
-        raise AssertionError("canonical bin/qpx.py launcher drifted")
+    physics_source = (ROOT / "bin/physics.py").read_text()
+    if "from physics_harness.cli import main" not in physics_source:
+        raise AssertionError("canonical bin/physics.py launcher drifted")
 
-    # User-local QPX mirrors intentionally carry executable harness/test
+    # User-local Physics mirrors intentionally carry executable harness/test
     # surfaces without necessarily carrying repository governance files such as
     # .github/ and docs/. Those missing repository-only surfaces must not turn
     # a portable P0 into a false failure. When a canonical surface is present,
     # however, still enforce that it no longer references the retired wrappers.
     canonical_refs = (
-        ROOT / ".github/workflows/qpx-regression.yml",
+        ROOT / ".github/workflows/physics-cleanup-validation.yml",
         ROOT / "docs/protocols/validation.md",
         ROOT / "tests/README.md",
     )
