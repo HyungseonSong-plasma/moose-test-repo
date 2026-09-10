@@ -25,7 +25,7 @@ from physics_harness.evidence import (
     utc_timestamp,
     write_json_bundle,
 )
-from physics_harness.execution.runtime import resolve_executable, run_qpx, validate_executable
+from physics_harness.execution.runtime import resolve_executable, run_physics, validate_executable
 
 from .cases import stage_completion_case
 from .classify import classify_completion
@@ -81,7 +81,7 @@ def _accepted_checker(case_dir: Path) -> dict[str, Any]:
 
 
 def _p2_case(exe: Path, case_dir: Path, log: Path, timeout: float) -> dict[str, Any]:
-    result = run_qpx(
+    result = run_physics(
         exe,
         cwd=case_dir,
         input_name="input.i",
@@ -100,7 +100,7 @@ def _p2_case(exe: Path, case_dir: Path, log: Path, timeout: float) -> dict[str, 
 
 
 def _run_solve_case(exe: Path, spec: CompletionCaseSpec, case_dir: Path, log: Path, timeout: float) -> dict[str, Any]:
-    result = run_qpx(
+    result = run_physics(
         exe,
         cwd=case_dir,
         input_name="input.i",
@@ -227,7 +227,7 @@ def _run_gradient_case(
     timeout: float,
     interior_centroids: set[tuple[float, float]],
 ) -> dict[str, Any]:
-    result = run_qpx(
+    result = run_physics(
         exe,
         cwd=case_dir,
         input_name="input.i",
@@ -258,7 +258,7 @@ def _jacobian_case(
     tolerance: float,
 ) -> dict[str, Any]:
     stage_completion_case(spec, target)
-    result = run_qpx(
+    result = run_physics(
         exe,
         cwd=target,
         input_name="input.i",
