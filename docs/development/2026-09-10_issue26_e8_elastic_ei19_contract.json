@@ -1,0 +1,170 @@
+{
+  "schema_version": 1,
+  "work_issue": 26,
+  "controller_issue": 176,
+  "stage": "STAGE_4_E8",
+  "bounded_step": "E8_ELASTIC_EI19_OWNERSHIP_CONTRACT",
+  "repository_baseline": "db5b9793935d5a16f02cebb62a2510ab196ca097",
+  "status": "CONTRACT_FROZEN",
+  "prior_acceptance": {
+    "E0_E7": "PASS_FROZEN",
+    "EI01_energy": "ACCOUNTED_ZERO_TERM",
+    "EI10_energy": "ACCEPTED_BOUNDED",
+    "EI16_energy": "ACCEPTED_BOUNDED",
+    "standard_moose_energy_projection": "ACCEPTED"
+  },
+  "canonical_state": {
+    "n_e_physical": "n_ref*n_e_hat",
+    "mean_en_solved_eV": "epsilon_ref*n_epsilon_hat/n_e_hat",
+    "epsilon_ref_eV": 5.73276,
+    "electron_temperature_eV": "(2/3)*mean_en_solved_eV",
+    "lookup_domain_eV": [1.40991, 22.1378],
+    "lookup_bounds_policy": "STRICT_ERROR_NO_CLAMP_NO_FLOOR",
+    "rate_table_unit": "m^3/(mol s)",
+    "canonical_molar_progress": "R_k = k_raw(mean_en_solved)*(n_e_physical/N_A)*c_target"
+  },
+  "rate_ownership": {
+    "policy": "ONE_CANONICAL_PROGRESS_PER_REACTION",
+    "implementation_direction": "Use one reusable strict mean-energy tabulated electron-impact rate owner for EI02, EI17 and EI19. It owns interpolation/range failure and publishes one named AD molar-progress functor. Energy projection is downstream only and must not re-read or independently interpolate the kinetic table.",
+    "standard_moose_first_note": "Strict tabulated kinetics remains a justified custom owner until pinned standard MOOSE can reproduce exact strict bounds and AD interpolation semantics. State-dependent energy algebra and residual projection should use standard MOOSE composition.",
+    "required_inputs": [
+      "rate_table_file",
+      "mean_en_solved",
+      "n_e_physical",
+      "canonical target molar concentration",
+      "reaction progress property name"
+    ]
+  },
+  "gas_temperature_contract": {
+    "production_input": "required gas-temperature functor in K supplied by the owning heavy-mixture state; the electron-energy path does not create a second gas-temperature state",
+    "bounded_discriminator_binding": "A controlled constant T_gas functor is allowed only for the Stage-4 sign discriminator.",
+    "integrated_stage_rule": "Stage-5/representative coupled execution must bind the canonical heavy-mixture gas-temperature owner rather than the controlled constant."
+  },
+  "reactions": [
+    {
+      "id": "EI02_O2_ELASTIC",
+      "formula": "e + O2 -> e + O2",
+      "canonical_progress": "R_elastic_O2",
+      "target_molar_concentration": "c_O2 from the canonical constrained-O2 heavy-mixture state",
+      "data_source": "user_supplied:o2_elastic",
+      "source_table_identity_anchors": {
+        "1.40991_eV": 26200000000.0,
+        "5.73276_eV": 55300000000.0,
+        "22.1378_eV": 119000000000.0
+      },
+      "energy_model": "elastic_electron_heavy_exchange",
+      "target_particle_mass": "m_O2 = M_O2/N_A",
+      "energy_loss_per_collision_eV": "Delta_epsilon=(3*m_e/m_O2)*((2/3)*mean_en_solved-(k_B/e)*T_gas)",
+      "physical_source_eV_per_m3_s": "S_epsilon=-Delta_epsilon*N_A*R_elastic_O2",
+      "normalized_source": "S_hat=S_epsilon/(n_ref*epsilon_ref)",
+      "energy_projection": "ADParsedFunctorMaterial state-dependent S_hat functor -> standard MOOSE FVCoupledForce with v=S_hat and coef=1",
+      "status": "READY_FOR_MINIMUM_IMPLEMENTATION"
+    },
+    {
+      "id": "EI17_O_ELASTIC",
+      "formula": "e + O -> e + O",
+      "canonical_progress": "R_elastic_O",
+      "target_molar_concentration": "c_O from the canonical heavy-mixture O state",
+      "data_source": "user_supplied:o_elastic",
+      "source_table_identity_anchors": {
+        "1.40991_eV": 20800000000.0,
+        "5.73276_eV": 58900000000.0,
+        "22.1378_eV": 219000000000.0
+      },
+      "energy_model": "elastic_electron_heavy_exchange",
+      "target_particle_mass": "m_O = M_O/N_A",
+      "energy_loss_per_collision_eV": "Delta_epsilon=(3*m_e/m_O)*((2/3)*mean_en_solved-(k_B/e)*T_gas)",
+      "physical_source_eV_per_m3_s": "S_epsilon=-Delta_epsilon*N_A*R_elastic_O",
+      "normalized_source": "S_hat=S_epsilon/(n_ref*epsilon_ref)",
+      "energy_projection": "ADParsedFunctorMaterial state-dependent S_hat functor -> standard MOOSE FVCoupledForce with v=S_hat and coef=1",
+      "status": "READY_FOR_MINIMUM_IMPLEMENTATION"
+    },
+    {
+      "id": "EI19_O_EXCITATION_4P192",
+      "formula": "e + O -> e + O",
+      "canonical_progress": "R_excitation_O_4p192",
+      "target_molar_concentration": "c_O from the canonical heavy-mixture O state",
+      "data_source": "user_supplied:o_excitation_1s",
+      "source_table_identity_anchors": {
+        "1.40991_eV": 325000.0,
+        "5.73276_eV": 109000000.0,
+        "22.1378_eV": 190000000.0
+      },
+      "energy_model": "inelastic_threshold_energy_only",
+      "energy_loss_eV_per_event": 4.192,
+      "physical_source_eV_per_m3_s": "S_epsilon=-4.192*N_A*R_excitation_O_4p192",
+      "normalized_source": "S_hat=S_epsilon/(n_ref*epsilon_ref)",
+      "energy_projection": "standard MOOSE FVCoupledForce with v=R_excitation_O_4p192 and coef=-4.192*N_A/(n_ref*epsilon_ref)",
+      "particle_or_heavy_projection": "NONE; audited reaction identity has zero net species change",
+      "status": "READY_FOR_MINIMUM_IMPLEMENTATION"
+    }
+  ],
+  "controlled_elastic_discriminator": {
+    "purpose": "Prove sign, zero crossing, units, finite state and exact-rate reuse without violating the strict kinetic lookup domain.",
+    "fixed_inputs": {
+      "mean_en_solved_eV": 5.73276,
+      "electron_temperature_eV": 3.82184,
+      "electron_density_and_target_concentrations": "held identical across the three regimes",
+      "rate_tables": "production source tables; no synthetic kinetic coefficient"
+    },
+    "reason_Tgas_600K_cannot_test_equality": {
+      "Tgas_K": 600.0,
+      "gas_equivalent_temperature_eV": 0.0517039995728707,
+      "equality_mean_energy_eV": 0.0775559993593066,
+      "lookup_min_eV": 1.40991,
+      "conclusion": "equality at 600 K lies outside the strict kinetic lookup domain and is therefore forbidden as the equality runtime case"
+    },
+    "regimes": [
+      {
+        "id": "HOT_ELECTRON",
+        "Tgas_K": 600.0,
+        "expected": "Delta_epsilon>0; S_hat<0; electron-energy sink"
+      },
+      {
+        "id": "THERMAL_EQUALITY",
+        "Tgas_K": 44350.611537665,
+        "expected": "Delta_epsilon approximately 0; S_hat approximately 0"
+      },
+      {
+        "id": "REVERSED_ORDERING",
+        "Tgas_K": 60000.0,
+        "expected": "Delta_epsilon<0; S_hat>0; electron-energy source"
+      }
+    ],
+    "identity_invariant": "Because mean_en_solved, n_e and target concentrations are held fixed, R_elastic_O2 and R_elastic_O must be numerically identical across HOT_ELECTRON, THERMAL_EQUALITY and REVERSED_ORDERING. Only the elastic energy factor may change sign.",
+    "scope_warning": "The high controlled gas temperatures are mathematical sign discriminators only and are not representative integrated-physics states."
+  },
+  "EI19_discriminator": {
+    "mean_en_solved_eV": 5.73276,
+    "expected_table_coefficient_m3_per_mol_s": 109000000.0,
+    "required_checks": [
+      "strict in-domain lookup",
+      "R_excitation_O_4p192 >= 0",
+      "electron-energy source is a sink for positive progress",
+      "4.192 eV coefficient and normalization are exact",
+      "no particle/heavy source is created",
+      "energy path consumes the published canonical progress exactly once"
+    ]
+  },
+  "implementation_constraints": [
+    "Do not recreate PhysicsFVElectronReactionEnergySource.",
+    "Do not create separate kinetic evaluators inside electron-energy source objects.",
+    "Do not clamp or floor solved mean energy at the rate-table boundary.",
+    "Do not replace user-supplied production rate tables with synthetic rates; synthetic data may be used only for an explicitly isolated checker self-test.",
+    "Preserve accepted EI10/EI16 FVCoupledForce projection and E0-E7 contracts.",
+    "EI18 and EI20 remain Stage-5 deferred and must not be activated by this bounded implementation."
+  ],
+  "acceptance_layers": {
+    "contract_accuracy": "FROZEN",
+    "local_runtime_accuracy": "NOT_YET_TESTED",
+    "integrated_physics_accuracy": "NOT_YET_TESTED"
+  },
+  "next_actions": [
+    "implement reusable strict mean-energy reaction-progress owner for EI02/EI17/EI19",
+    "compose elastic normalized source with ADParsedFunctorMaterial and FVCoupledForce",
+    "compose EI19 fixed-loss projection with FVCoupledForce",
+    "add source/ownership/bounds/mutation CI gates",
+    "run the controlled three-regime elastic discriminator and EI19 local discriminator on exact head",
+    "perform final Stage-4 no-missing/no-duplicate closure audit"
+  ]
+}
