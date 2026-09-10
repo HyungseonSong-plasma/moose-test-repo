@@ -105,6 +105,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
+      - uses: actions/checkout@v4
+
       - name: Validate accepted immutable runtime ref
         shell: bash
         run: |
@@ -131,6 +133,20 @@ jobs:
           test "$(docker image inspect "$PHYSICS_RUNTIME_REF" --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}')" = "$EXPECTED_RUNTIME_REVISION"
           test "$(docker image inspect "$PHYSICS_RUNTIME_REF" --format '{{ index .Config.Labels "io.physics.build-base.ref" }}')" = "$EXPECTED_BUILD_BASE_REF"
           test "$(docker image inspect "$PHYSICS_RUNTIME_REF" --format '{{ index .Config.Labels "io.physics.source.owner" }}')" = "moose-test-repo/physics_app"
+
+      - name: Run #176 R2 O2 ionization controlled runtime acceptance
+        shell: bash
+        run: >-
+          python3 physics_app/ci/check_r2_o2_ionization_implementation.py
+          --runtime-ref "$PHYSICS_RUNTIME_REF"
+          --evidence-out r2-o2-ionization-runtime-evidence.json
+
+      - name: Upload #176 R2 runtime evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r2-o2-ionization-runtime-evidence
+          path: r2-o2-ionization-runtime-evidence.json
 
       - name: Run Physics check-input smoke
         shell: bash
