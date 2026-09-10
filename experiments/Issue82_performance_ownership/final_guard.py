@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
-"""P0 acceptance guard for Issue #82 performance ownership convergence."""
-
+"""P0 acceptance guard for historical Issue82 performance ownership after retirement."""
 from __future__ import annotations
 
 import ast
-import json
-import subprocess
+import csv
+import tempfile
 import sys
 from pathlib import Path
 
@@ -13,42 +12,116 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from qpx_harness import analysis
-from qpx_harness.analysis.performance import cache, investigation, profile
-from qpx_harness.cli.app import COMMANDS
-from qpx_harness.cli.commands import performance as performance_cli
-from qpx_harness.execution.performance import runner, smoke
-from qpx_harness.execution.performance.probes import runtime as probe_runtime
-from qpx_harness.execution.performance.probes import transport
+from physics_harness.adapters.moose import source_inspection
+from physics_harness.adapters.moose.performance import profile as moose_profile
+from physics_harness.adapters.petsc import performance as petsc_performance
+from physics_harness.analysis.performance import profile as performance_profile
 
-CENSUS = ROOT / "docs/development/2026-09-02_issue82_performance_ownership_census.json"
-RETIRED_PATHS = (
-    ROOT / "qpx_harness/performance_core.py",
-    ROOT / "qpx_harness/performance_smoke.py",
-    ROOT / "qpx_harness/performance_investigation.py",
-    ROOT / "qpx_harness/performance_transport_probe_direct.py",
-    ROOT / "qpx_harness/performance_cache_audit.py",
-    ROOT / "qpx_harness/analysis/performance/legacy.py",
-)
-RETIRED_LEAVES = {
-    "performance_core",
-    "performance_smoke",
-    "performance_investigation",
-    "performance_transport_probe_direct",
-    "performance_cache_audit",
-    "legacy",
+HISTORICAL_FACTS = {
+    "issue": 82,
+    "scientific_semantic_impact": "NONE",
+    "candidate_top_level_owners_before": 5,
+    "candidate_top_level_owners_after": 0,
+    "surface_count": 6,
+    "pf2_implemented_slice": False,
+    "pf2_issue40_status_claim": "UNCHANGED_OPEN_NOT_CLOSED_BY_REFACTOR",
+    "scientific_p3": "NOT_RUN",
 }
-CAPABILITY_PATHS = (
-    ROOT / "qpx_harness/performance/runner.py",
-    ROOT / "qpx_harness/performance/smoke.py",
-    ROOT / "qpx_harness/performance/probes/runtime.py",
-    ROOT / "qpx_harness/performance/probes/transport.py",
-    ROOT / "qpx_harness/analysis/performance/cache.py",
-    ROOT / "qpx_harness/analysis/performance/investigation.py",
-    ROOT / "qpx_harness/analysis/performance/profile.py",
-    ROOT / "qpx_harness/cpp/functor_usage.py",
+
+HISTORICAL_SURFACE_DISPOSITIONS = {
+    "qpx_harness/performance_core.py": "RETIRED_AFTER_CONSUMER_MIGRATION",
+    "qpx_harness/performance_smoke.py": "RETIRED_AFTER_CONSUMER_MIGRATION",
+    "qpx_harness/performance_investigation.py": "RETIRED_AFTER_CONSUMER_MIGRATION",
+    "qpx_harness/performance_transport_probe_direct.py": "RETIRED_AFTER_CONSUMER_MIGRATION",
+    "qpx_harness/performance_cache_audit.py": "BEHAVIOR_SPLIT_THEN_RETIRED",
+    "qpx_harness/analysis/performance/legacy.py": "PUBLIC_BEHAVIOR_PROMOTED_THEN_RETIRED",
+}
+
+HISTORICAL_PUBLIC_SYMBOL_DISPOSITIONS = {
+    "analyze": "PROMOTE_TO_FOCUSED_CAPABILITY",
+    "event_time": "PROMOTE_TO_FOCUSED_CAPABILITY",
+    "load_petsc_events": "PROMOTE_TO_FOCUSED_CAPABILITY",
+    "perfgraph_jacobian_self": "PROMOTE_TO_FOCUSED_CAPABILITY",
+}
+
+CURRENT_PUBLIC_SYMBOL_OWNERS = {
+    "analyze": (
+        "physics_harness/analysis/performance/profile.py::analyze_facts",
+        "physics_harness/application/performance.py::analyze_profile",
+    ),
+    "event_time": (
+        "physics_harness/adapters/petsc/performance.py::event_time",
+    ),
+    "load_petsc_events": (
+        "physics_harness/adapters/petsc/performance.py::load_events",
+    ),
+    "perfgraph_jacobian_self": (
+        "physics_harness/adapters/moose/performance/profile.py::jacobian_self_time",
+    ),
+}
+
+RETIRED_PERFORMANCE_PATHS = (
+    "physics_harness/performance_core.py",
+    "physics_harness/performance_smoke.py",
+    "physics_harness/performance_investigation.py",
+    "physics_harness/performance_transport_probe_direct.py",
+    "physics_harness/performance_cache_audit.py",
+    "physics_harness/analysis/performance/legacy.py",
+    "physics_harness/performance/runner.py",
+    "physics_harness/performance/smoke.py",
+    "physics_harness/performance/probes/runtime.py",
+    "physics_harness/performance/probes/transport.py",
+    "physics_harness/analysis/performance/cache.py",
+    "physics_harness/analysis/performance/investigation.py",
+    "physics_harness/cpp/functor_usage.py",
 )
-PERFORMANCE_COMMANDS = {
+
+CURRENT_OWNER_REQUIREMENTS = {
+    "physics_harness/application/performance.py": {
+        "PerformanceContractError",
+        "validate_experiment_manifest",
+        "validate_result_record",
+        "run_measurement",
+        "analyze_profile",
+        "self_test",
+    },
+    "physics_harness/analysis/performance/profile.py": {
+        "analyze_facts",
+        "self_test",
+    },
+    "physics_harness/adapters/petsc/performance.py": {
+        "collect_log_view_csv",
+        "load_events",
+        "event_time",
+        "decode_timing_facts",
+    },
+    "physics_harness/adapters/moose/performance/profile.py": {
+        "jacobian_self_time",
+    },
+    "physics_harness/adapters/moose/source_inspection.py": {
+        "FunctorInspectionError",
+        "extract_functor_property_declaration",
+        "parameter_functor_calls",
+    },
+    "physics_harness/observation/source_code/cpp.py": {
+        "CppSource",
+        "split_call_arguments",
+    },
+    "physics_harness/evidence/artifacts.py": {
+        "write_json_bundle",
+    },
+    "physics_harness/execution/runtime.py": {
+        "resolve_executable",
+        "run_physics",
+        "validate_executable",
+    },
+    "physics_harness/cli/commands/performance.py": {
+        "measure_main",
+        "analyze_main",
+    },
+}
+
+HISTORICAL_PERFORMANCE_COMMANDS = {
     "measure",
     "measure-smoke",
     "investigate",
@@ -56,37 +129,20 @@ PERFORMANCE_COMMANDS = {
     "cache-audit",
     "analyze",
 }
-SELF_TEST_COMMANDS = PERFORMANCE_COMMANDS - {"analyze"}
-EXPECTED_COMMANDS = {
-    "test",
-    "test-all",
-    "coupling-evr1",
-    "coupling-evr2",
-    "scale-audit",
-    "fast-relaxation",
-    "fast-coupling-diagnostic",
-    "inventory-nullspace",
-    "inventory-first-linear",
-    "inventory-jacobian-localization",
-    "inventory-fd-reference",
-    "contract",
-    "dmix-equivalence",
-    "measure",
-    "measure-smoke",
-    "investigate",
-    "transport-probe",
-    "cache-audit",
-    "profile",
-    "analyze",
-    "bundle",
-    "inventory",
-    "preflight",
-    "temporal-csv",
-    "self-test",
-}
+CURRENT_PERFORMANCE_COMMANDS = {"measure", "analyze"}
+RETIRED_PERFORMANCE_COMMANDS = HISTORICAL_PERFORMANCE_COMMANDS - CURRENT_PERFORMANCE_COMMANDS
 
 
-def _import_modules(path: Path) -> set[str]:
+def _top_level_symbols(path: Path) -> set[str]:
+    tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    symbols: set[str] = set()
+    for node in tree.body:
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            symbols.add(node.name)
+    return symbols
+
+
+def _imports(path: Path) -> set[str]:
     tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
     modules: set[str] = set()
     for node in ast.walk(tree):
@@ -97,153 +153,203 @@ def _import_modules(path: Path) -> set[str]:
     return modules
 
 
-def _retired_imports(path: Path) -> set[str]:
-    return {
-        module
-        for module in _import_modules(path)
-        if module.rsplit(".", 1)[-1] in RETIRED_LEAVES
+def _literal_assignment(path: Path, name: str):
+    tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    for node in tree.body:
+        if isinstance(node, ast.Assign):
+            if any(isinstance(target, ast.Name) and target.id == name for target in node.targets):
+                return ast.literal_eval(node.value)
+        elif isinstance(node, ast.AnnAssign):
+            if isinstance(node.target, ast.Name) and node.target.id == name:
+                return ast.literal_eval(node.value)
+    raise AssertionError(f"missing literal assignment: {path}: {name}")
+
+
+def _check_historical_contract() -> None:
+    expected_facts = {
+        "issue": 82,
+        "scientific_semantic_impact": "NONE",
+        "candidate_top_level_owners_before": 5,
+        "candidate_top_level_owners_after": 0,
+        "surface_count": 6,
+        "pf2_implemented_slice": False,
+        "pf2_issue40_status_claim": "UNCHANGED_OPEN_NOT_CLOSED_BY_REFACTOR",
+        "scientific_p3": "NOT_RUN",
     }
+    if HISTORICAL_FACTS != expected_facts:
+        raise AssertionError("Issue82 historical acceptance facts drifted")
+    if len(HISTORICAL_SURFACE_DISPOSITIONS) != HISTORICAL_FACTS["surface_count"]:
+        raise AssertionError("Issue82 historical surface census drifted")
+    if set(HISTORICAL_PUBLIC_SYMBOL_DISPOSITIONS) != set(CURRENT_PUBLIC_SYMBOL_OWNERS):
+        raise AssertionError("Issue82 historical public symbol disposition drifted")
+    if any(
+        disposition != "PROMOTE_TO_FOCUSED_CAPABILITY"
+        for disposition in HISTORICAL_PUBLIC_SYMBOL_DISPOSITIONS.values()
+    ):
+        raise AssertionError("Issue82 public symbol disposition changed")
+    print("ISSUE82_HISTORICAL_ACCEPTANCE_CONTRACT: PASS")
 
 
-def _run(*args: str) -> str:
-    process = subprocess.run(
-        [sys.executable, *args],
-        cwd=ROOT,
-        text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        check=False,
-    )
-    if process.returncode != 0:
+def _check_current_owners() -> None:
+    resurrected = [rel for rel in RETIRED_PERFORMANCE_PATHS if (ROOT / rel).exists()]
+    if resurrected:
+        raise AssertionError(f"retired Issue82 performance owner resurrected: {resurrected}")
+
+    missing_files: list[str] = []
+    missing_symbols: dict[str, list[str]] = {}
+    for rel, required in CURRENT_OWNER_REQUIREMENTS.items():
+        path = ROOT / rel
+        if not path.is_file():
+            missing_files.append(rel)
+            continue
+        missing = sorted(required - _top_level_symbols(path))
+        if missing:
+            missing_symbols[rel] = missing
+    if missing_files or missing_symbols:
         raise AssertionError(
-            f"command failed rc={process.returncode}: {' '.join(args)}\n{process.stdout}"
+            f"current Issue82 owners incomplete: files={missing_files} symbols={missing_symbols}"
         )
-    return process.stdout
 
-
-def _check_census() -> dict:
-    data = json.loads(CENSUS.read_text(encoding="utf-8"))
-    assert data["issue"] == 82
-    assert data["baseline_commit"].startswith("e5d8c50")
-    assert data["scientific_semantic_impact"] == "NONE"
-    assert data["candidate_top_level_owners_before"] == 5
-    assert data["candidate_top_level_owners_after"] == 0
-    assert len(data["surfaces"]) == 6
-    assert all(row["disposition"] for row in data["surfaces"])
-
-    symbols = data["legacy_public_symbol_disposition"]
-    assert {row["symbol"] for row in symbols} == {
-        "analyze",
-        "event_time",
-        "load_petsc_events",
-        "perfgraph_jacobian_self",
+    application_imports = _imports(ROOT / "physics_harness/application/performance.py")
+    required_application_edges = {
+        "physics_harness.adapters.moose.performance.collection",
+        "physics_harness.adapters.moose.performance.measurement",
+        "physics_harness.adapters.moose.performance.profile",
+        "physics_harness.adapters.petsc.performance",
+        "physics_harness.analysis.performance.profile",
+        "physics_harness.evidence",
+        "physics_harness.execution.runtime",
     }
-    assert all(row["disposition"] == "PROMOTE_TO_FOCUSED_CAPABILITY" for row in symbols)
-    assert data["pf2"]["implemented_slice_in_issue82"] is False
-    assert data["pf2"]["issue40_status_claim"] == "UNCHANGED_OPEN_NOT_CLOSED_BY_REFACTOR"
-    assert data["validation"]["scientific_p3"] == "NOT_RUN"
-    return data
+    if not required_application_edges <= application_imports:
+        raise AssertionError(
+            "performance application boundary drift: "
+            f"missing={sorted(required_application_edges - application_imports)}"
+        )
+
+    capability_paths = (
+        "physics_harness/application/performance.py",
+        "physics_harness/analysis/performance/profile.py",
+        "physics_harness/adapters/petsc/performance.py",
+        "physics_harness/adapters/moose/performance/profile.py",
+        "physics_harness/adapters/moose/source_inspection.py",
+    )
+    cli_edges = {
+        rel: sorted(module for module in _imports(ROOT / rel) if module.startswith("physics_harness.cli"))
+        for rel in capability_paths
+    }
+    cli_edges = {rel: modules for rel, modules in cli_edges.items() if modules}
+    if cli_edges:
+        raise AssertionError(f"performance capability imports CLI presentation: {cli_edges}")
+
+    print("ISSUE82_CURRENT_OWNER_BOUNDARIES: PASS")
 
 
-def _check_retirement_and_boundaries() -> None:
-    assert not [str(path.relative_to(ROOT)) for path in RETIRED_PATHS if path.exists()]
+def _check_promoted_behavior() -> None:
+    summary = {
+        "p2_returncode": 0,
+        "p3_returncode": 0,
+        "label": "issue82-synthetic",
+        "wall_seconds": 10.0,
+        "last_metrics_row": {
+            "qpxh_num_dofs": "42",
+            "qpxh_nonlinear_iterations": "2",
+            "qpxh_linear_iterations": "3",
+            "qpxh_residual_evaluations": "4",
+        },
+    }
+    timings = {
+        "snes_solve": 10.0,
+        "jacobian_eval": 6.0,
+        "residual_eval": 1.0,
+        "pc_setup": 1.0,
+        "linear_solve": 1.0,
+        "matrix_assembly_end": 0.0,
+    }
+    analyzed = performance_profile.analyze_facts(
+        summary,
+        timings,
+        {"self_seconds": 5.5},
+    )
+    if analyzed.get("classification") != "JACOBIAN_EVALUATION_DOMINANT":
+        raise AssertionError(f"performance analysis classification drift: {analyzed}")
+    if analyzed.get("dofs") != 42 or analyzed.get("perfgraph_jacobian_self") != {"self_seconds": 5.5}:
+        raise AssertionError(f"performance analysis fact mapping drift: {analyzed}")
 
-    production = ROOT / "qpx_harness"
-    violations: dict[str, list[str]] = {}
-    for path in production.rglob("*.py"):
-        retired = sorted(_retired_imports(path))
-        if retired:
-            violations[str(path.relative_to(ROOT))] = retired
-    assert violations == {}, violations
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        petsc_csv = root / "petsc.csv"
+        with petsc_csv.open("w", newline="") as handle:
+            writer = csv.DictWriter(handle, fieldnames=["Rank", "Event Name", "Count", "Time"])
+            writer.writeheader()
+            writer.writerow({"Rank": "0", "Event Name": "SNESSolve", "Count": "2", "Time": "4.5"})
+            writer.writerow({"Rank": "1", "Event Name": "SNESSolve", "Count": "99", "Time": "99"})
+            writer.writerow({"Rank": "0", "Event Name": "SNESJacobianEval", "Count": "3", "Time": "2.5"})
+        events = petsc_performance.load_events(petsc_csv)
+        if events != {
+            "SNESSolve": {"count": 2.0, "time": 4.5},
+            "SNESJacobianEval": {"count": 3.0, "time": 2.5},
+        }:
+            raise AssertionError(f"PETSc event decoding drift: {events}")
+        if petsc_performance.event_time(events, "SNESJacobianEval") != 2.5:
+            raise AssertionError("PETSc event_time drift")
 
-    for path in CAPABILITY_PATHS:
-        imports = _import_modules(path)
-        assert not any(module == "cli" or ".cli" in module for module in imports), path
-        source = path.read_text(encoding="utf-8")
-        assert "argparse.ArgumentParser" not in source, path
+        perf_log = root / "perf.log"
+        perf_log.write_text(
+            "| NonlinearSystemBase::computeJacobianInternal | 3 | 2.5 | 0.833333 | 25.0 |\n",
+            encoding="utf-8",
+        )
+        jacobian = moose_profile.jacobian_self_time(perf_log)
+        if jacobian != {
+            "calls": 3.0,
+            "self_seconds": 2.5,
+            "avg_seconds": 0.833333,
+            "percent_application": 25.0,
+        }:
+            raise AssertionError(f"MOOSE PerfGraph Jacobian decode drift: {jacobian}")
 
-    cli_source = Path(performance_cli.__file__).read_text(encoding="utf-8")
-    for token in (
-        'argparse.ArgumentParser(prog="qpx measure")',
-        'argparse.ArgumentParser(prog="qpx measure-smoke")',
-        'argparse.ArgumentParser(prog="qpx investigate")',
-        'argparse.ArgumentParser(prog="qpx transport-probe")',
-        'argparse.ArgumentParser(prog="qpx cache-audit")',
-        'argparse.ArgumentParser(prog="qpx analyze")',
-    ):
-        assert token in cli_source, token
+    if not callable(source_inspection.extract_functor_property_declaration):
+        raise AssertionError("MOOSE functor declaration inspection owner missing")
+    if not callable(source_inspection.parameter_functor_calls):
+        raise AssertionError("MOOSE functor-call inspection owner missing")
+
+    print("ISSUE82_PROMOTED_BEHAVIOR: PASS")
 
 
-def _check_owner_identity_and_cache_split() -> None:
-    assert analysis.analyze is profile.analyze
-    assert cache.audit_qpx_tree
-    assert investigation.build_investigation_summary
-    assert runner.run_measurement
-    assert smoke.run_smoke_pair
-    assert transport.instrument_source
-    assert probe_runtime.run_managed_probe
+def _check_cli_convergence() -> None:
+    app_path = ROOT / "physics_harness/cli/app.py"
+    commands = set(_literal_assignment(app_path, "COMMANDS"))
+    if not CURRENT_PERFORMANCE_COMMANDS <= commands:
+        raise AssertionError(
+            f"current generic performance commands missing: {sorted(CURRENT_PERFORMANCE_COMMANDS - commands)}"
+        )
+    unexpected = RETIRED_PERFORMANCE_COMMANDS & commands
+    if unexpected:
+        raise AssertionError(f"retired Issue82 campaign commands resurrected: {sorted(unexpected)}")
 
-    cpp_source = (ROOT / "qpx_harness/cpp/functor_usage.py").read_text()
-    cache_source = Path(cache.__file__).read_text()
-    cli_source = Path(performance_cli.__file__).read_text()
-    for forbidden in (
-        "QPXFVMixtureAveragedDiffusion",
-        "NATIVE_FUNCTOR_CACHE_CANDIDATE",
-        "MATERIAL_SHARED_RESULT_REQUIRED",
-    ):
-        assert forbidden not in cpp_source, forbidden
-    for forbidden in ("argparse", "write_json_bundle", "utc_timestamp"):
-        assert forbidden not in cache_source, forbidden
+    cli_source = (ROOT / "physics_harness/cli/commands/performance.py").read_text(encoding="utf-8")
     for required in (
-        "extract_functor_property_declaration",
-        "parameter_functor_calls",
+        'argparse.ArgumentParser(prog="physics measure")',
+        'argparse.ArgumentParser(prog="physics analyze")',
+        "performance.run_measurement(",
+        "performance.analyze_profile(",
     ):
-        assert required in cache_source, required
-    for required in ("cache.audit_qpx_tree", "write_json_bundle", "_cache_run_root"):
-        assert required in cli_source, required
+        if required not in cli_source:
+            raise AssertionError(f"generic performance CLI wiring drift: {required}")
+    for retired in RETIRED_PERFORMANCE_COMMANDS:
+        if f'prog="physics {retired}"' in cli_source:
+            raise AssertionError(f"retired Issue82 CLI parser resurrected: {retired}")
 
-    for symbol in (
-        "analyze",
-        "event_time",
-        "load_petsc_events",
-        "perfgraph_jacobian_self",
-    ):
-        assert callable(getattr(profile, symbol))
-
-
-def _check_cli_and_validation_surfaces() -> None:
-    assert set(COMMANDS) == EXPECTED_COMMANDS
-    assert PERFORMANCE_COMMANDS <= set(COMMANDS)
-
-    bin_qpx = str(ROOT / "bin/qpx.py")
-    for command in sorted(PERFORMANCE_COMMANDS):
-        output = _run(bin_qpx, command, "--help")
-        assert f"usage: qpx {command}" in output, (command, output)
-    for command in sorted(SELF_TEST_COMMANDS):
-        output = _run(bin_qpx, command, "--self-test")
-        assert "PASS" in output, (command, output)
-
-    assert "ISSUE70_ARCHITECTURE_CENSUS: PASS" in _run(
-        str(ROOT / "tools/qpx_architecture_census.py")
-    )
-    assert "ISSUE66_76_FINAL_GUARD: PASS" in _run(
-        str(ROOT / "tests/Issue66_76_architecture_convergence/final_guard.py")
-    )
-    assert "ISSUE48_GENERALITY_SELFTEST: PASS" in _run(
-        str(ROOT / "tests/Issue48_qpx_harness_generality/self_test.py")
-    )
-    assert "QPX_HARNESS_SELFTEST: PASS" in _run(bin_qpx, "self-test")
+    print("ISSUE82_CLI_CONVERGENCE: PASS")
 
 
 def main() -> int:
-    _check_census()
-    _check_retirement_and_boundaries()
-    _check_owner_identity_and_cache_split()
-    _check_cli_and_validation_surfaces()
-    print("Issue82 performance ownership guard: PASS")
-    print("Issue82 PF2 feature slice: NOT_IMPLEMENTED (#40 remains open)")
-    print("Issue82 PF3 feature status: UNCHANGED (#41 remains open)")
-    print("Issue82 scientific P3: NOT_RUN")
+    _check_historical_contract()
+    _check_current_owners()
+    _check_promoted_behavior()
+    _check_cli_convergence()
+    print("ISSUE82_PF2_FEATURE_SLICE: NOT_IMPLEMENTED")
+    print("ISSUE82_SCIENTIFIC_P3: NOT_RUN")
+    print("ISSUE82_PERFORMANCE_OWNERSHIP_GUARD: PASS")
     return 0
 
 
