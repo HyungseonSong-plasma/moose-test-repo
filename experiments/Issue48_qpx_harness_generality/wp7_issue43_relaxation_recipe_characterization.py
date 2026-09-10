@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""P0 characterization for the canonical Issue43 fast-relaxation recipe/runtime split."""
+"""P0 characterization for the historical Issue43 fast-relaxation recipe/runtime split."""
 from __future__ import annotations
 
 import sys
@@ -10,8 +10,12 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from qpx_harness import issue43_relaxation_runtime as runtime43
 from experiments.historical_recipe_support import issue43_fast_relaxation as recipe
+
+
+HISTORICAL_RUNTIME_DT_FEEDBACK_BASE = 1.0e-13
+HISTORICAL_RUNTIME_DT_FEEDBACK_SMALL = 1.0e-14
+HISTORICAL_RUNTIME_DT_FEEDBACK_LARGE = 1.0e-12
 
 
 def _fixture() -> str:
@@ -198,57 +202,33 @@ def _check_classification_contract() -> None:
                 f"classification branch drift: expected {expected_class}, got {current.get('class')}"
             )
 
-    if recipe.DT_FEEDBACK_BASE != runtime43.DT_FEEDBACK_BASE:
-        raise AssertionError("recipe base feedback timestep drifted from runtime owner")
-    if recipe.DT_FEEDBACK_SMALL != runtime43.DT_FEEDBACK_SMALL:
-        raise AssertionError("recipe small feedback timestep drifted from runtime owner")
-    if recipe.DT_FEEDBACK_LARGE != runtime43.DT_FEEDBACK_LARGE:
-        raise AssertionError("recipe large feedback timestep drifted from runtime owner")
+    frozen_runtime_aliases = {
+        "DT_FEEDBACK_BASE": HISTORICAL_RUNTIME_DT_FEEDBACK_BASE,
+        "DT_FEEDBACK_SMALL": HISTORICAL_RUNTIME_DT_FEEDBACK_SMALL,
+        "DT_FEEDBACK_LARGE": HISTORICAL_RUNTIME_DT_FEEDBACK_LARGE,
+    }
+    for name, expected in frozen_runtime_aliases.items():
+        if getattr(recipe, name) != expected:
+            raise AssertionError(f"historical runtime alias drifted: {name}")
 
 
 def _check_runtime_composition_boundary() -> None:
-    source = Path(runtime43.__file__).read_text()
-    if "from experiments.historical_recipe_support import issue43_fast_relaxation as relaxation_recipe" not in source:
-        raise AssertionError("runtime does not bind the canonical Issue43 recipe")
-    for forbidden in (
-        "fast_plasma_relaxation_v2",
-        "fast_plasma_relaxation_v5",
+    for relative in (
+        "qpx_harness/issue43_relaxation_runtime.py",
+        "physics_harness/issue43_relaxation_runtime.py",
     ):
-        if forbidden in source:
-            raise AssertionError(f"runtime version dependency leaked: {forbidden}")
+        if (ROOT / relative).exists():
+            raise AssertionError(f"retired Issue43 runtime owner resurrected: {relative}")
 
-    for name in (
-        "build_electron_300k",
-        "build_oneway",
-        "build_feedback",
-        "run_case",
-        "run_known_good",
-        "nonlinear_residual_summary",
-        "attach_nonlinear_residual",
-        "physics_pass",
+    for relative in (
+        "physics_harness/execution/runtime.py",
+        "physics_harness/execution/cases.py",
+        "physics_harness/adapters/moose/input.py",
+        "physics_harness/adapters/petsc/log.py",
+        "physics_harness/analysis/scale_audit.py",
     ):
-        if not callable(getattr(runtime43, name, None)):
-            raise AssertionError(f"canonical Issue43 runtime surface missing: {name}")
-
-    feedback = runtime43.build_feedback(
-        _fixture(),
-        dt=1.0e-13,
-        steps=5,
-        radial_span=0.243,
-    )
-    expected, _ = recipe.build_fast_input(
-        _fixture(),
-        gas_temperature=runtime43.GAS_TEMPERATURE,
-        electron_density=runtime43.DEFAULT_ELECTRON_DENSITY,
-        dt=1.0e-13,
-        end_time=5.0e-13,
-        radial_span=0.243,
-    )
-    if feedback != expected:
-        raise AssertionError("runtime feedback builder drifted from canonical recipe")
-
-    if runtime43.self_test() != 0:
-        raise AssertionError("canonical Issue43 runtime self-test failed")
+        if not (ROOT / relative).is_file():
+            raise AssertionError(f"canonical generic runtime primitive missing: {relative}")
 
 
 def _check_recipe_boundary() -> None:
