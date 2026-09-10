@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "work_issue": 26,
+  "controller_issue": 176,
+  "controller_stage": "STAGE_4_E8",
+  "bounded_step": "E8_I2_EI16_O2_IONIZATION_ENERGY_OWNERSHIP_CONTRACT",
+  "repository_baseline": "01a347e8ed0dae3e96687b8b6e7ab9a107bc13dd",
+  "prior_acceptance": {
+    "E0_E7": "PASS_FROZEN",
+    "stage3_R2_EI16_particle_heavy_electron": "PASS_BOUNDED_CONTROLLED",
+    "E8_I1_EI10_energy": "PASS_BOUNDED_CONTROLLED"
+  },
+  "reaction": {
+    "id": "EI16_O2_IONIZATION",
+    "formula": "e + O2 -> 2e + O2p",
+    "canonical_progress": "R_ion_O2",
+    "canonical_progress_units": "mol/(m^3 s)",
+    "energy_loss_eV_per_event": 12.06,
+    "net_electron_particle_stoich": 1
+  },
+  "ownership": {
+    "canonical_rate_owner": "PhysicsElectronImpactIonizationMaterial",
+    "particle_source_projector": "PhysicsO2IonizationSourceMaterial",
+    "electron_particle_projector": "PhysicsFVElectronReactionSource",
+    "energy_projection_owner": "PhysicsFVElectronReactionEnergySource",
+    "all_source_paths_must_consume": "R_ion_O2",
+    "energy_projection_must_not_recompute_rate": true,
+    "normalized_equation_variable": "n_epsilon_hat"
+  },
+  "normalization": {
+    "physical_energy_source_eV_m3_s": "S_epsilon = -12.06 * N_A * R_ion_O2",
+    "normalized_rhs": "S_hat = S_epsilon / (n_ref * epsilon_ref_eV)",
+    "fv_residual_convention": "residual contribution = -S_hat"
+  },
+  "lookup_policy": {
+    "rate_coordinate": "mean_en_solved",
+    "bounds_policy": "error",
+    "silent_clamp": false,
+    "silent_floor": false,
+    "controlled_fixture_note": "The existing R2 synthetic ionization table is a discriminator fixture only and is not physical rate provenance."
+  },
+  "pass_invariants": [
+    "single_existing_R_ion_O2_consumption",
+    "no_independent_rate_evaluation",
+    "exact_12p06_eV_identity",
+    "energy_source_negative_on_rhs_for_positive_R_ion_O2",
+    "N_A_molar_to_particle_conversion",
+    "n_ref_epsilon_ref_normalization",
+    "same_R_ion_O2_drives_O2_O2p_electron_and_energy_paths",
+    "R2_heavy_mass_oxygen_charge_and_particle_closure_preserved",
+    "strict_lookup_range_preserved"
+  ],
+  "runtime_acceptance": {
+    "required": true,
+    "execution_lane": "repository_governed_JIT_capable_Physics_science_lane",
+    "minimum_claim": "bounded EI16 E8 local runtime discriminator only",
+    "must_not_claim": "physical rate provenance, full E8 integrated physics, or full real-QVT Integrated Physics Accuracy"
+  },
+  "deferred": [
+    "elastic electron-heavy energy transfer",
+    "EI18 O excitation energy loss",
+    "EI19 O excitation energy loss",
+    "EI20 O ionization energy loss",
+    "full-network reaction-energy coupling"
+  ]
+}
