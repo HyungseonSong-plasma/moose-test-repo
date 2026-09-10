@@ -10,9 +10,9 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from qpx_harness.evidence import artifacts
-from qpx_harness import issue46_fd_reference as legacy
-from qpx_harness.petsc import fd_reference
+from physics_harness.evidence import artifacts
+from experiments.historical_recipe_support import issue46_fd_reference as legacy
+from physics_harness.adapters.petsc import fd_reference
 
 
 def _check_fd_predictor() -> None:
@@ -192,7 +192,7 @@ def _check_legacy_provenance_equivalence() -> None:
             },
         )
         for scenario in scenarios:
-            old = legacy._evidence_provenance_status(
+            old = legacy.evidence_provenance_status(
                 root=root,
                 case_dir=case,
                 input_path=input_path,
@@ -234,8 +234,8 @@ def _check_legacy_provenance_equivalence() -> None:
 
 def _check_policy_boundary() -> None:
     for rel in (
-        "qpx_harness/petsc/fd_reference.py",
-        "qpx_harness/evidence/artifacts.py",
+        "physics_harness/adapters/petsc/fd_reference.py",
+        "physics_harness/evidence/artifacts.py",
     ):
         source = (ROOT / rel).read_text()
         forbidden = (
