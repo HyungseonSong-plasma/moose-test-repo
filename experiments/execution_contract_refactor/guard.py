@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from qpx_harness.execution import contract as canonical  # noqa: E402
+from physics_harness.execution import contract as canonical  # noqa: E402
 
 
 def _require(condition: bool, message: str) -> None:
@@ -26,15 +26,15 @@ def _legacy_imports(path: Path) -> list[str]:
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
             for alias in node.names:
-                if alias.name == "qpx_harness.execution_contract":
+                if alias.name == "physics_harness.execution_contract":
                     hits.append(alias.name)
         elif isinstance(node, ast.ImportFrom):
-            if node.module == "qpx_harness.execution_contract":
+            if node.module == "physics_harness.execution_contract":
                 hits.append(node.module)
-            elif node.module == "qpx_harness":
+            elif node.module == "physics_harness":
                 for alias in node.names:
                     if alias.name == "execution_contract":
-                        hits.append("qpx_harness.execution_contract")
+                        hits.append("physics_harness.execution_contract")
     return hits
 
 
@@ -49,7 +49,7 @@ def main() -> int:
         "operator registry and declared operator set diverged",
     )
 
-    facade_path = ROOT / "qpx_harness/execution_contract.py"
+    facade_path = ROOT / "physics_harness/execution_contract.py"
     _require(
         not facade_path.exists(),
         "retired execution_contract compatibility facade still exists",
@@ -57,34 +57,34 @@ def main() -> int:
 
     recipe_source = (ROOT / "experiments/historical_recipe_support/issue43_execution_contract.py").read_text()
     _require(
-        "from qpx_harness.execution import contract as ec" in recipe_source,
+        "from physics_harness.execution import contract as ec" in recipe_source,
         "Issue43 execution policy is not attached to the canonical capability",
     )
     _require(
-        "from qpx_harness import execution_contract as ec" not in recipe_source,
+        "from physics_harness import execution_contract as ec" not in recipe_source,
         "Issue43 execution policy still depends on the retired facade",
     )
 
-    cli_source = (ROOT / "qpx_harness/cli/app.py").read_text()
+    cli_source = (ROOT / "physics_harness/cli/app.py").read_text()
     _require(
-        '"contract": "qpx_harness.execution.contract:main"' in cli_source,
+        '"contract": "physics_harness.execution.contract:main"' in cli_source,
         "CLI contract command is not lazily attached to the canonical execution capability",
     )
     _require(
-        "qpx_harness.execution_contract" not in cli_source,
+        "physics_harness.execution_contract" not in cli_source,
         "CLI still imports the retired execution_contract facade",
     )
 
     stale: dict[str, list[str]] = {}
-    for base in (ROOT / "qpx_harness", ROOT / "experiments/historical_recipe_support"):
+    for base in (ROOT / "physics_harness", ROOT / "experiments/historical_recipe_support"):
         for path in base.rglob("*.py"):
             hits = _legacy_imports(path)
             if hits:
                 stale[str(path.relative_to(ROOT))] = hits
     _require(stale == {}, f"retired execution_contract imports remain: {stale}")
 
-    canonical_source = (ROOT / "qpx_harness/execution/contract.py").read_text()
-    for forbidden in ("from recipes", "import recipes", "qpx_harness.issue"):
+    canonical_source = (ROOT / "physics_harness/execution/contract.py").read_text()
+    for forbidden in ("from recipes", "import recipes", "physics_harness.issue"):
         _require(
             forbidden not in canonical_source,
             f"generic execution contract acquired experiment dependency: {forbidden}",
