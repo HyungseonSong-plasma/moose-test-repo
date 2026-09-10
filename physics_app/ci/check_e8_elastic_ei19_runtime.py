@@ -212,6 +212,7 @@ def _elastic_input(spec, tgas, mean_energy=EPSILON_REF_EV):
   dt = {DT:.17g}
   end_time = {DT:.17g}
   solve_type = NEWTON
+  nl_abs_tol = 1e-11
 []
 
 [Outputs]
@@ -487,6 +488,8 @@ def runtime_checker_self_test():
             raise AssertionError(f"{species}: elastic projection wiring changed")
         if "meanE tgas rprog" not in text:
             raise AssertionError(f"{species}: parser aliases changed")
+        if "nl_abs_tol = 1e-11" not in text:
+            raise AssertionError(f"{species}: equality-safe nonlinear tolerance missing")
         if any(alias in {"x", "y", "z", "t", "pi", "e"} for alias in ("meanE", "tgas", "rprog")):
             raise AssertionError("reserved parsed-functor symbol")
 
