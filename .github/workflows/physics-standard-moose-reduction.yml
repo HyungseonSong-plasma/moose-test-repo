@@ -1,0 +1,91 @@
+name: Physics Standard-MOOSE reduction A/B
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/physics-standard-moose-reduction.yml'
+      - 'physics_app/ci/check_standard_moose_energy_projection.py'
+      - 'physics_app/src/fvkernels/PhysicsFVElectronReactionEnergySource.C'
+      - 'physics_app/include/fvkernels/PhysicsFVElectronReactionEnergySource.h'
+      - 'docs/development/2026-09-10_standard_moose_first_reduction_audit.md'
+  workflow_dispatch:
+
+concurrency:
+  group: physics-standard-moose-reduction-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+  MOOSE_SHA: 9f388366ccf38b9c34542ec5561198249fde0ac9
+
+jobs:
+  energy-projection-ab:
+    name: Standard MOOSE E8 energy projection A/B
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout canonical source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Pull JIT-capable Physics build base
+        shell: bash
+        run: |
+          set -euxo pipefail
+          source physics_app/dependencies.lock
+          test "$MOOSE" = "$MOOSE_SHA"
+          docker pull "$BUILD_BASE_REF"
+          test "$(docker image inspect "$BUILD_BASE_REF" --format '{{ index .Config.Labels "io.physics.moose.sha" }}')" = "$MOOSE_SHA"
+
+      - name: Build current source and run Standard-MOOSE A/B
+        shell: bash
+        run: |
+          set -euxo pipefail
+          rm -f standard-moose-energy-ab-evidence.json
+          docker run --rm \
+            --entrypoint /bin/bash \
+            --user 0:0 \
+            --workdir /workspace \
+            -e GITHUB_SHA="$GITHUB_SHA" \
+            -e BUILD_BASE_REF="$BUILD_BASE_REF" \
+            -v "$PWD:/workspace" \
+            "$BUILD_BASE_REF" \
+            -lc '
+              set -euxo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              git config --global --add safe.directory /opt/physics_vendor/moose
+              git config --global --add safe.directory /opt/physics_vendor/crane
+              git config --global --add safe.directory /opt/physics_vendor/squirrel
+              git config --global --add safe.directory /opt/physics_vendor/zapdos
+              test "$(git -C /workspace rev-parse HEAD)" = "$GITHUB_SHA"
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+
+              python3 physics_app/ci/check_standard_moose_energy_projection.py --self-test
+              test ! -e physics_app/physics-opt
+              make -C physics_app -j2
+              test -x physics_app/physics-opt
+
+              python3 physics_app/ci/check_standard_moose_energy_projection.py \
+                --executable /workspace/physics_app/physics-opt \
+                --repository-sha "$GITHUB_SHA" \
+                --build-base-ref "$BUILD_BASE_REF" \
+                --evidence-out /workspace/standard-moose-energy-ab-evidence.json
+            '
+
+      - name: Upload Standard-MOOSE A/B evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: standard-moose-energy-projection-ab-evidence
+          path: standard-moose-energy-ab-evidence.json
