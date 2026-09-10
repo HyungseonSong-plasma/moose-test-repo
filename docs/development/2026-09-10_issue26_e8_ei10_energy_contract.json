@@ -1,13 +1,15 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "work_issue": 26,
   "controller_issue": 176,
   "controller_stage": "STAGE_4_E8",
   "bounded_step": "E8_I1_EI10_INELASTIC_ENERGY_OWNERSHIP_CONTRACT",
-  "repository_baseline": "44cd58fc6c5eaae57b8f081ec1dac9a99f7732aa",
+  "repository_baseline": "cdc8a9d5b3898a10706a6bfb1f4d3518dd1170a9",
   "prior_acceptance": {
     "E0_E7": "PASS_FROZEN",
-    "stage3_R1_R2_R3_particle_heavy": "PASS_BOUNDED_CONTROLLED"
+    "stage3_R1_R2_R3_particle_heavy": "PASS_BOUNDED_CONTROLLED",
+    "E8_I1_custom_projector_oracle": "PASS_BOUNDED_CONTROLLED",
+    "standard_moose_ab": "PASS_EXACT_ZERO_DELTA"
   },
   "reaction": {
     "id": "EI10_O2_TO_O2S",
@@ -20,21 +22,24 @@
   "ownership": {
     "canonical_rate_owner": "PhysicsElectronImpactO2sExcitationMaterial",
     "particle_source_projector": "PhysicsO2sExcitationSourceMaterial",
-    "energy_projection_owner": "PhysicsFVElectronReactionEnergySource",
+    "energy_projection_owner": "FVCoupledForce",
+    "energy_projection_owner_kind": "STANDARD_MOOSE",
     "energy_projection_must_consume": "R_O2s",
     "energy_projection_must_not_recompute_rate": true,
-    "normalized_equation_variable": "n_epsilon_hat"
+    "normalized_equation_variable": "n_epsilon_hat",
+    "shared_path_required": true
+  },
+  "standard_moose_configuration": {
+    "type": "FVCoupledForce",
+    "v": "R_O2s",
+    "coef_formula": "-Delta_epsilon_eV * N_A / (n_ref * epsilon_ref_eV)",
+    "coef_at_frozen_normalization": -10263174.32182753,
+    "residual_formula": "-coef * v"
   },
   "normalization": {
     "physical_energy_source_eV_m3_s": "S_epsilon = -Delta_epsilon_eV * N_A * R_O2s",
     "normalized_rhs": "S_hat = S_epsilon / (n_ref * epsilon_ref_eV)",
-    "fv_residual_convention": "residual contribution = -S_hat",
-    "required_parameters": [
-      "reaction_progress",
-      "energy_loss_eV",
-      "n_ref",
-      "energy_reference_eV"
-    ]
+    "fv_residual_convention": "residual contribution = -S_hat"
   },
   "identity_guards": {
     "required_channel": "O2(a1Delta_g)",
@@ -42,29 +47,27 @@
     "forbidden_substitute": "user_supplied:o2_excitation_9p97",
     "forbidden_reason": "9.97 eV O2 excitation is not EI10 O2(a1Delta_g)"
   },
+  "nonnegative_progress_guard": {
+    "policy": "must be guaranteed by the canonical shared upstream rate/source path; FVCoupledForce is not an independent energy-only kinetics path",
+    "independent_energy_only_use": "FORBIDDEN"
+  },
   "pass_invariants": [
     "single_existing_R_O2s_consumption",
     "no_independent_rate_evaluation",
+    "standard_MOOSE_energy_projection_only",
     "energy_source_negative_on_rhs_for_positive_R_O2s",
     "residual_contribution_positive_for_positive_R_O2s",
     "exact_0p977_eV_identity",
     "N_A_molar_to_particle_conversion",
     "n_ref_epsilon_ref_normalization",
     "stage3_particle_heavy_sources_unchanged",
-    "E0_E7_energy_mechanics_unchanged"
+    "E0_E7_energy_mechanics_unchanged",
+    "custom_energy_projector_absent"
   ],
   "runtime_acceptance": {
     "required": true,
     "execution_lane": "repository_governed_JIT_capable_Physics_science_lane",
     "minimum_claim": "bounded EI10 E8 local runtime discriminator only",
     "must_not_claim": "full E8 integrated physics or full real-QVT Integrated Physics Accuracy"
-  },
-  "deferred": [
-    "elastic electron-heavy energy transfer",
-    "EI01 attachment energy loss",
-    "EI16 O2 ionization energy loss",
-    "EI19 O excitation energy loss",
-    "EI20 O ionization energy loss",
-    "all full-network reaction-energy coupling"
-  ]
+  }
 }
