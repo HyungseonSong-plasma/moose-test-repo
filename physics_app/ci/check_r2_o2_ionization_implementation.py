@@ -3,6 +3,7 @@
 
 import argparse
 import csv
+import hashlib
 import json
 import math
 import re
@@ -399,29 +400,34 @@ def static_implementation_gate():
     print("R2_O2_IONIZATION_IMPLEMENTATION_PASS")
 
 
-def run_controlled_runtime(runtime_ref, evidence_out=None):
-    if not RUNTIME_REF_RE.fullmatch(runtime_ref):
-        raise SystemExit(f"runtime_ref must be an immutable Physics runtime digest: {runtime_ref}")
+def _prepare_runtime_fixture(work):
+    (work / "r2_o2_ionization_runtime.i").write_text(RUNTIME_INPUT)
+    (work / "r2_o2_ionization_runtime_table.txt").write_text(
+        "".join(f"{energy:.8g} {rate:.17g}\n" for energy, rate in RATE_TABLE)
+    )
 
-    with tempfile.TemporaryDirectory(prefix="r2-o2-ionization-") as tmp:
-        work = Path(tmp)
-        (work / "r2_o2_ionization_runtime.i").write_text(RUNTIME_INPUT)
-        (work / "r2_o2_ionization_runtime_table.txt").write_text(
-            "".join(f"{energy:.8g} {rate:.17g}\n" for energy, rate in RATE_TABLE)
-        )
-        mount = f"{work.resolve()}:/work"
-        base = ["docker", "run", "--rm", "-v", mount, "-w", "/work", runtime_ref]
-        subprocess.run(base + ["--check-input", "-i", "r2_o2_ionization_runtime.i"], check=True)
-        subprocess.run(base + ["-i", "r2_o2_ionization_runtime.i"], check=True)
-        csv_path = work / "r2_o2_ionization_runtime_out.csv"
-        rows = list(csv.DictReader(csv_path.open(newline="")))
-        evidence = validate_runtime_rows(rows)
-        evidence["runtime_ref"] = runtime_ref
-        evidence["claim"] = "R2 controlled local runtime/integration discriminator"
-        evidence["integrated_physics_scope"] = "reaction-only particle coupling; #26 E8 and full R2/R3 network excluded"
-        if evidence_out:
-            Path(evidence_out).write_text(json.dumps(evidence, indent=2, sort_keys=True) + "\n")
 
+def _sha256_file(path):
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _accept_runtime_fixture(work, identity, evidence_out=None):
+    csv_path = work / "r2_o2_ionization_runtime_out.csv"
+    rows = list(csv.DictReader(csv_path.open(newline="")))
+    evidence = validate_runtime_rows(rows)
+    evidence.update(identity)
+    evidence["claim"] = "R2 controlled local runtime/integration discriminator"
+    evidence["integrated_physics_scope"] = "reaction-only particle coupling; #26 E8 and full R2/R3 network excluded"
+    if evidence_out:
+        Path(evidence_out).write_text(json.dumps(evidence, indent=2, sort_keys=True) + "\n")
+    return evidence
+
+
+def _print_runtime_acceptance(evidence):
     final = evidence["final"]
     closure = evidence["closure"]
     print(
@@ -441,15 +447,78 @@ def run_controlled_runtime(runtime_ref, evidence_out=None):
     print("R2_O2_IONIZATION_LOCAL_RUNTIME_PASS")
 
 
+def run_controlled_runtime(runtime_ref, evidence_out=None):
+    if not RUNTIME_REF_RE.fullmatch(runtime_ref):
+        raise SystemExit(f"runtime_ref must be an immutable Physics runtime digest: {runtime_ref}")
+
+    with tempfile.TemporaryDirectory(prefix="r2-o2-ionization-") as tmp:
+        work = Path(tmp)
+        _prepare_runtime_fixture(work)
+        mount = f"{work.resolve()}:/work"
+        base = ["docker", "run", "--rm", "-v", mount, "-w", "/work", runtime_ref]
+        subprocess.run(base + ["--check-input", "-i", "r2_o2_ionization_runtime.i"], check=True)
+        subprocess.run(base + ["-i", "r2_o2_ionization_runtime.i"], check=True)
+        evidence = _accept_runtime_fixture(
+            work,
+            {"runtime_mode": "immutable_runtime", "runtime_ref": runtime_ref},
+            evidence_out,
+        )
+
+    _print_runtime_acceptance(evidence)
+
+
+def run_controlled_executable(executable, evidence_out=None, repository_sha=None, build_base_ref=None):
+    executable = Path(executable).resolve()
+    if not executable.is_file():
+        raise SystemExit(f"Physics executable does not exist: {executable}")
+
+    with tempfile.TemporaryDirectory(prefix="r2-o2-ionization-") as tmp:
+        work = Path(tmp)
+        _prepare_runtime_fixture(work)
+        subprocess.run(
+            [str(executable), "--check-input", "-i", "r2_o2_ionization_runtime.i"],
+            cwd=work,
+            check=True,
+        )
+        subprocess.run(
+            [str(executable), "-i", "r2_o2_ionization_runtime.i"],
+            cwd=work,
+            check=True,
+        )
+        identity = {
+            "runtime_mode": "direct_executable",
+            "runtime_executable": str(executable),
+            "runtime_executable_sha256": _sha256_file(executable),
+        }
+        if repository_sha:
+            identity["repository_sha"] = repository_sha
+        if build_base_ref:
+            identity["build_base_ref"] = build_base_ref
+        evidence = _accept_runtime_fixture(work, identity, evidence_out)
+
+    _print_runtime_acceptance(evidence)
+
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--runtime-ref", help="immutable ghcr Physics runtime ref for controlled P3")
-    parser.add_argument("--evidence-out", help="optional JSON evidence path for --runtime-ref")
-    parser.add_argument("--self-test", action="store_true", help="run only the runtime checker P0 self-test")
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--runtime-ref", help="immutable ghcr Physics runtime ref for controlled P3")
+    mode.add_argument("--executable", help="direct Physics executable for controlled P3 in a governed JIT-capable environment")
+    mode.add_argument("--self-test", action="store_true", help="run only the runtime checker P0 self-test")
+    parser.add_argument("--evidence-out", help="optional JSON evidence path for controlled P3")
+    parser.add_argument("--repository-sha", help="repository SHA associated with --executable")
+    parser.add_argument("--build-base-ref", help="immutable build-base identity associated with --executable")
     args = parser.parse_args()
 
     if args.runtime_ref:
         run_controlled_runtime(args.runtime_ref, args.evidence_out)
+    elif args.executable:
+        run_controlled_executable(
+            args.executable,
+            args.evidence_out,
+            repository_sha=args.repository_sha,
+            build_base_ref=args.build_base_ref,
+        )
     elif args.self_test:
         runtime_checker_self_test()
     else:
