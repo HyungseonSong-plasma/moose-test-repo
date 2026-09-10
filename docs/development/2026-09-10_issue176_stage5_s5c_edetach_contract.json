@@ -1,0 +1,104 @@
+{
+  "schema_version": 1,
+  "controller_issue": 176,
+  "stage": "STAGE_5",
+  "slice": "S5-C_EDETACH_OM",
+  "repository_parent": "8e6bf816df740d1758082fb29fe5936d2a07b4fa",
+  "status": "CONTRACT_FROZEN",
+  "purpose": "Freeze the analytic electron-impact O- detachment rate, shared progress ownership, particle/heavy projections, and 12.0-eV electron-energy loss semantics before bounded implementation.",
+  "reaction": {
+    "id": "EDETACH_OM",
+    "formula": "e + Om -> O + 2e",
+    "canonical_progress": "R_detach_Om",
+    "progress_units": "mol/(m^3 s)",
+    "heavy_stoichiometry": {
+      "Om": -1,
+      "O": 1
+    },
+    "net_electron_particle_stoich": 1,
+    "required_invariants": [
+      "heavy mass conserved",
+      "oxygen atoms conserved",
+      "electron-inclusive charge conserved",
+      "one net electron produced",
+      "positive progress gives electron-energy sink"
+    ]
+  },
+  "source_provenance": {
+    "file": "user_supplied:Ar_O2_plasma_chemistry.txt",
+    "exact_line": "e+O-=>O+e+e  !   Ionization    12.0  5.47e-14[m^3/s]*N_A_const*exp(-2.98[V]/TE)*(TE/1[V])^0.324   0   0",
+    "exact_line_sha256": "6868942d863d028703aac20e86cda8101f172ea1961655f7d4b04eb5de3ef2e2",
+    "collision_type": "Ionization",
+    "collision_metadata_value": 12.0,
+    "collision_metadata_semantics": "electron energy loss in eV",
+    "semantic_basis": "COMSOL Plasma Module user-guide convention: for ELECTRONIMPACTREACTIONS ARRHENIUSPARAMETERS, the field following Excitation or Ionization is the energy loss."
+  },
+  "rate_law": {
+    "source_expression": "5.47e-14[m^3/s]*N_A*exp(-2.98[eV]/Te[eV])*(Te[eV])^0.324",
+    "particle_rate_prefactor_m3_s": 5.47e-14,
+    "molar_rate_prefactor_m3_mol_s": 32941109957.2,
+    "activation_eV": 2.98,
+    "temperature_exponent": 0.324,
+    "canonical_temperature_mapping": "Te_eV=(2/3)*mean_en_solved_eV",
+    "electron_molar_concentration": "c_e=n_e_physical/N_A",
+    "target_molar_concentration": "c_Om=rho*w_Om/M_O",
+    "canonical_progress_law": "R_detach_Om=(5.47e-14*N_A)*exp(-2.98/Te_eV)*(Te_eV^0.324)*c_e*c_Om",
+    "equivalent_reduced_law": "R_detach_Om=5.47e-14*n_e_physical*c_Om*exp(-2.98/Te_eV)*(Te_eV^0.324)",
+    "progress_owner": "ADParsedFunctorMaterial",
+    "parser_safe_symbols": [
+      "teev",
+      "celec",
+      "comneg"
+    ],
+    "domain_policy": "Te_eV must be positive and finite; no floor/clamp is allowed."
+  },
+  "projection": {
+    "Om_mass_source": "-M_O*R_detach_Om",
+    "O_mass_source": "+M_O*R_detach_Om",
+    "electron_number_source": "+N_A*R_detach_Om",
+    "electron_particle_projector": "PhysicsFVElectronReactionSource",
+    "heavy_species_projector": "PhysicsFVSpeciesReactionSource",
+    "energy_loss_eV_per_event": 12.0,
+    "electron_energy_source": "-12.0*N_A*R_detach_Om",
+    "energy_projection_owner": "FVCoupledForce",
+    "energy_projection_owner_kind": "STANDARD_MOOSE",
+    "normalized_energy_coef_formula": "-12.0*N_A/(n_ref*epsilon_ref_eV)",
+    "normalized_energy_coef_at_frozen_normalization": -126057412.34588574
+  },
+  "controlled_discriminator": {
+    "n_ref_m3": 1e+16,
+    "epsilon_ref_eV": 5.73276,
+    "rho_kg_m3": 3.1998e-05,
+    "M_O_kg_mol": 0.016,
+    "initial_n_e_hat": 1.0,
+    "initial_n_epsilon_hat": 1.0,
+    "initial_w_Om": 0.001,
+    "initial_mean_en_eV": 5.73276,
+    "initial_Te_eV": 3.82184,
+    "initial_c_Om_mol_m3": 1.999875e-06,
+    "initial_k_particle_m3_s": 3.8726794929957595e-14,
+    "initial_k_molar_m3_mol_s": 23321821025.185898,
+    "initial_R_detach_Om_mol_m3_s": 0.0007744874901054894,
+    "dt_s": 1e-07
+  },
+  "acceptance": {
+    "P0": [
+      "contract/source-line identity",
+      "analytic coefficient activation exponent and Te mapping",
+      "parser-safe aliases",
+      "exactly one R_detach_Om owner",
+      "all source and energy consumers reuse R_detach_Om",
+      "targeted mutation controls reject wrong rate coefficient/exponent/sign/energy and duplicate progress ownership"
+    ],
+    "P2": "canonical physics preflight/check-input succeeds for bounded input",
+    "P3": [
+      "w_Om decreases and complementary w_O increases",
+      "n_e_hat increases by one net electron per reaction event",
+      "n_epsilon_hat decreases with 12.0-eV event loss",
+      "heavy mass and oxygen inventory close",
+      "electron-inclusive charge closes",
+      "backward-Euler source/state closures match the single final-state R_detach_Om"
+    ],
+    "claim_boundary": "Bounded local runtime acceptance for S5-C only. This is not representative real-QVT evidence and does not establish Integrated Physics Accuracy."
+  }
+}
