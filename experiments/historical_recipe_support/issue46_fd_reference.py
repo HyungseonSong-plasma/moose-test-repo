@@ -11,15 +11,15 @@ import re
 from pathlib import Path
 from typing import Any
 
-from qpx_harness.evidence import artifacts
-from qpx_harness.adapters.moose import dofmap as dm
-from qpx_harness.adapters.moose import log as moose_log
-from qpx_harness.adapters.moose import parameters as mp
-from qpx_harness.petsc import fd_reference as fd
-from qpx_harness.petsc import jacobian as jac
-from qpx_harness.petsc import log as petsc_log
-from qpx_harness.petsc import matrix as matrix
-from qpx_harness.petsc import options as options
+from physics_harness.evidence import artifacts
+from physics_harness.adapters.moose import dofmap as dm
+from physics_harness.adapters.moose import log as moose_log
+from physics_harness.adapters.moose import parameters as mp
+from physics_harness.adapters.petsc import fd_reference as fd
+from physics_harness.adapters.petsc import jacobian as jac
+from physics_harness.adapters.petsc import log as petsc_log
+from physics_harness.adapters.petsc import matrix as matrix
+from physics_harness.adapters.moose import petsc_options as options
 
 ISSUE = 46
 TARGET = 1.0e16
