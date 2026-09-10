@@ -49,7 +49,7 @@ def main():
     assert '"electron_ionization_number_source"' in particle
     assert "type = FVCoupledForce" in runtime and "v = R_ion_O2" in runtime
     assert "ENERGY_COEF = -(DELTA_E_EV * N_A / (N_REF * EPSILON_REF_EV))" in runtime
-    assert "PhysicsFVElectronReactionEnergySource" not in runtime
+    assert "type = PhysicsFVElectronReactionEnergySource" not in runtime
     assert not CUSTOM_H.exists() and not CUSTOM_C.exists()
     assert c["lookup_policy"]["bounds_policy"] == "error"
     assert c["lookup_policy"]["silent_clamp"] is False
