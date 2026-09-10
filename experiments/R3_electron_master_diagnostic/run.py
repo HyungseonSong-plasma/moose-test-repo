@@ -11,20 +11,19 @@ from typing import Any
 from experiments.Issue93_r3_electron_isolation.operator_decomposition import _check_accepted_qvt_csv
 from experiments.Issue93_r3_electron_isolation.prepare import ELECTRON_REFERENCE_CASE
 from experiments.Issue93_r3_electron_isolation.run import _electron_residuals
-from qpx_harness.reasoning.jacobian import diagnose_jacobian_evidence
-from qpx_harness.adapters.moose.nonlinear_solver import runtime_core_facts
-from qpx_harness.evidence import (
+from physics_harness.reasoning.jacobian import diagnose_jacobian_evidence
+from physics_harness.adapters.moose.nonlinear_solver import failure_signature, runtime_core_facts
+from physics_harness.evidence import (
     AttributionSignals,
     ErrorLedger,
     classify_attribution,
     create_collision_safe_directory,
     extract_jacobian_evidence,
-    failure_signature,
     sha256_file,
     utc_timestamp,
     write_json_bundle,
 )
-from qpx_harness.execution.runtime import resolve_executable, run_qpx, validate_executable
+from physics_harness.execution.runtime import resolve_executable, run_physics, validate_executable
 
 from .cases import stage_master_case, stage_r3_proxy_case
 from .classify import classify_matrix
@@ -107,7 +106,7 @@ def _record_event(
 
 
 def _p2_case(*, exe: Path, case_dir: Path, log: Path, timeout: float | None) -> dict[str, Any]:
-    result = run_qpx(
+    result = run_physics(
         exe,
         cwd=case_dir,
         input_name="input.i",
@@ -126,7 +125,7 @@ def _p2_case(*, exe: Path, case_dir: Path, log: Path, timeout: float | None) -> 
 
 
 def _p3_case(*, exe: Path, case_dir: Path, log: Path, timeout: float | None) -> dict[str, Any]:
-    result = run_qpx(
+    result = run_physics(
         exe,
         cwd=case_dir,
         input_name="input.i",
@@ -170,7 +169,7 @@ def _jacobian_case(
     case_dir = root / spec.case_id
     stage_master_case(spec, case_dir)
     log = root / f"{spec.case_id}.log"
-    result = run_qpx(
+    result = run_physics(
         exe,
         cwd=case_dir,
         input_name="input.i",
