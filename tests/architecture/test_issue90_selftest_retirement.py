@@ -10,14 +10,14 @@ CENSUS = ROOT / "docs/development/2026-09-02_issue90_selftest_census.json"
 
 
 def test_aggregate_selftest_cli_and_ci_step_are_retired() -> None:
-    app = (ROOT / "qpx_harness/cli/app.py").read_text()
-    cli_init = (ROOT / "qpx_harness/cli/__init__.py").read_text()
-    workflow = (ROOT / ".github/workflows/qpx-cleanup-validation.yml").read_text()
+    app = (ROOT / "physics_harness/cli/app.py").read_text()
+    cli_init = (ROOT / "physics_harness/cli/__init__.py").read_text()
+    workflow = (ROOT / ".github/workflows/physics-cleanup-validation.yml").read_text()
     assert '"self-test"' not in app
     assert "self_test_cli" not in app
     assert "self_test_cli" not in cli_init
     assert "transitional harness self-test" not in workflow.lower()
-    assert "python bin/qpx.py self-test" not in workflow
+    assert "python bin/physics.py self-test" not in workflow
 
 
 def test_production_runtime_surfaces_do_not_auto_gate_on_selftests() -> None:
@@ -25,9 +25,9 @@ def test_production_runtime_surfaces_do_not_auto_gate_on_selftests() -> None:
     # still expose an explicit --self-test option; the architectural prohibition
     # is an unconditional/automatic self-test gate on normal runtime execution.
     paths = (
-        "qpx_harness/execution/contract.py",
-        "qpx_harness/execution/workspace.py",
-        "qpx_harness/analysis/scale_audit.py",
+        "physics_harness/execution/contract.py",
+        "physics_harness/execution/workspace.py",
+        "physics_harness/analysis/scale_audit.py",
     )
     for relative in paths:
         source = (ROOT / relative).read_text()
