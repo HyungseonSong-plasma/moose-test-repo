@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""P0 characterization for Issue31 EVR2 recipe-backed production cutover."""
+"""P0 characterization for historical Issue31 EVR2 recipe semantics."""
 from __future__ import annotations
 
 import ast
@@ -11,7 +11,6 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from experiments.historical_recipe_support import issue31_coupling as recipe
-from qpx_harness.coupling_evr2 import orchestration as production
 
 
 EXPECTED_EVR1_BASELINE = {
@@ -285,7 +284,7 @@ def _check_classification_contract() -> None:
     _assert_decision(
         {
             "class": "NONLINEAR_SCALING_SENSITIVITY_CONFIRMED",
-            "reason": "dt=1e-8 fails with current scaling policy and recovers when only compute_scaling_once changes to true",
+            "reason": "dt=1e-8 fails with compute_scaling_once=true and passes when automatic scaling is recomputed",
         },
         kg,
         nonlinear_fail,
@@ -295,7 +294,7 @@ def _check_classification_contract() -> None:
     _assert_decision(
         {
             "class": "T3_COUPLING_OR_JACOBIAN_FAIL_PERSISTS",
-            "reason": "accepted electron control passes, but T3 fails at 1e-6 and 1e-8 and does not recover with accepted scaling-once policy",
+            "reason": "dt=1e-6, dt=1e-8, and the dt=1e-8 scaling discriminator all remain nonlinear-convergence failures",
         },
         kg,
         nonlinear_fail,
@@ -304,8 +303,8 @@ def _check_classification_contract() -> None:
     )
     _assert_decision(
         {
-            "class": "UNRESOLVED_RUNTIME_RESPONSE",
-            "reason": "observed result signature does not match a predeclared discriminator branch",
+            "class": "T3_COUPLING_OR_JACOBIAN_FAIL_PERSISTS",
+            "reason": "timestep/scaling response does not satisfy an accepted recovery branch",
         },
         kg,
         runtime_other,
@@ -316,6 +315,7 @@ def _check_classification_contract() -> None:
 
 def _imports_module(path: Path, module: str) -> bool:
     tree = ast.parse(path.read_text(), filename=str(path))
+    parent, _, leaf = module.rpartition(".")
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
             if any(alias.name == module for alias in node.names):
@@ -324,10 +324,8 @@ def _imports_module(path: Path, module: str) -> bool:
             base = node.module or ""
             if base == module:
                 return True
-            if base == "qpx_harness" and module.startswith("qpx_harness."):
-                leaf = module.split(".", 1)[1]
-                if any(alias.name == leaf for alias in node.names):
-                    return True
+            if parent and base == parent and any(alias.name == leaf for alias in node.names):
+                return True
     return False
 
 
@@ -344,53 +342,36 @@ def _check_recipe_boundary() -> None:
         "hashlib.sha256",
         "normalize_from_manifest",
         "default_results_root",
+        "qpx_harness",
     ):
         if forbidden in source:
             raise AssertionError(f"Issue31 recipe leaked EVR2 runtime mechanics: {forbidden}")
-    if _imports_module(path, "qpx_harness.coupling_evr2_timestep"):
-        raise AssertionError("Issue31 recipe reverse-imports EVR2 runtime owner")
 
 
 def _check_production_cutover() -> None:
     this_path = Path(__file__)
-    if _imports_module(this_path, "qpx_harness.coupling_evr2_timestep"):
-        raise AssertionError("WP12 retained legacy EVR2 oracle import")
+    if _imports_module(this_path, "qpx_harness.coupling_evr2"):
+        raise AssertionError("WP12 retained retired EVR2 production import")
 
-    source = Path(production.__file__).read_text()
-    for required in (
-        "recipe.configured_transport_input(",
-        "recipe.classify_evr2(",
-        "recipe.KG_E_PARENT_RELATIVE",
-        "recipe.EVR1_BASELINE",
-        "recipe.DT_1E6",
-        "recipe.DT_1E8",
-        "recipe.EVR2_TERMINAL_CLASSES",
+    for relative in (
+        "qpx_harness/coupling_evr2",
+        "qpx_harness/coupling_evr2.py",
+        "qpx_harness/coupling_evr2_timestep.py",
+        "physics_harness/coupling_evr2",
+        "physics_harness/coupling_evr2.py",
+        "physics_harness/coupling_evr2_timestep.py",
     ):
-        if required not in source:
-            raise AssertionError(f"EVR2 production recipe cutover missing: {required}")
-    for forbidden in (
-        "def configured_transport_input(",
-        "def classify(",
-        "KG_E_PARENT_RELATIVE =",
-        "EVR1_BASELINE =",
-        "DT_1E6 =",
-        "DT_1E8 =",
-        "from .moose.input import",
-        "coupling_evr2_timestep",
+        if (ROOT / relative).exists():
+            raise AssertionError(f"retired EVR2 campaign owner resurrected: {relative}")
+
+    for relative in (
+        "physics_harness/execution/runtime.py",
+        "physics_harness/execution/cases.py",
+        "physics_harness/evidence",
+        "physics_harness/adapters/moose/input.py",
     ):
-        if forbidden in source:
-            raise AssertionError(f"EVR2 production retained scientific/legacy duplicate: {forbidden}")
-    for runtime_token in (
-        "run_measurement",
-        "subprocess.run",
-        "stage_case",
-        "write_json_bundle",
-        "sha256_file",
-        "resolve_executable",
-        "validate_executable",
-    ):
-        if runtime_token not in source:
-            raise AssertionError(f"EVR2 canonical runtime ownership missing: {runtime_token}")
+        if not (ROOT / relative).exists():
+            raise AssertionError(f"canonical generic runtime capability missing: {relative}")
 
 
 def main() -> int:
@@ -400,8 +381,6 @@ def main() -> int:
         _check_classification_contract()
         _check_recipe_boundary()
         _check_production_cutover()
-        if production.self_test() != 0:
-            raise AssertionError("EVR2 canonical runtime self-test failed after recipe cutover")
     except Exception as exc:
         print(f"ISSUE48_ISSUE31_EVR2_RECIPE_SELFTEST: FAIL ({exc})")
         return 1
