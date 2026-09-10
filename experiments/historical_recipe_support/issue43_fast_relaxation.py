@@ -2,7 +2,7 @@
 
 This module owns experiment-specific input construction and relaxation-evidence
 interpretation. Runtime orchestration, filesystem staging, and executable policy
-remain in qpx_harness.
+remain in physics_harness.
 """
 from __future__ import annotations
 
@@ -11,8 +11,10 @@ import math
 from pathlib import Path
 from typing import Any
 
-from qpx_harness.adapters.moose.input import MooseInput, MooseInputError
-from qpx_harness.analysis.scale_audit import DEFAULT_PRESSURE
+from physics_harness.adapters.moose.input import MooseInput, MooseInputError
+
+# Frozen Issue43 oxygen anchor; production scale analysis intentionally has no defaults.
+DEFAULT_PRESSURE = 1.33322
 
 MEAN_ENERGY_EV = 5.73276
 PERTURBATION_FRACTION = 1.0e-6
