@@ -8,6 +8,7 @@ on:
       - '.github/workflows/physics-science-validation.yml'
       - 'physics_app/**'
       - 'bin/physics.py'
+      - 'docs/development/2026-09-10_issue176_stage5_s5c_edetach_contract.json'
   workflow_dispatch:
 
 concurrency:
@@ -26,7 +27,7 @@ env:
 
 jobs:
   r2-o2-ionization:
-    name: Stage-3/4 regressions + Stage-5 S5-A/S5-B controlled P3
+    name: Stage-3/4 regressions + Stage-5 S5-A/S5-B/S5-C controlled P3
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
@@ -58,7 +59,7 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
-          rm -f r2-o2-ionization-runtime-evidence.json r2-o2-ionization-environment.txt r3-o2s-excitation-runtime-evidence.json r3-o2s-excitation-environment.txt e8-ei10-inelastic-energy-runtime-evidence.json e8-ei10-inelastic-energy-environment.txt e8-ei16-ionization-energy-runtime-evidence.json e8-ei16-ionization-energy-environment.txt e8-elastic-ei19-runtime-evidence.json e8-elastic-ei19-environment.txt stage5-ei18-runtime-evidence.json stage5-ei18-environment.txt stage5-ei20-runtime-evidence.json stage5-ei20-environment.txt
+          rm -f r2-o2-ionization-runtime-evidence.json r2-o2-ionization-environment.txt r3-o2s-excitation-runtime-evidence.json r3-o2s-excitation-environment.txt e8-ei10-inelastic-energy-runtime-evidence.json e8-ei10-inelastic-energy-environment.txt e8-ei16-ionization-energy-runtime-evidence.json e8-ei16-ionization-energy-environment.txt e8-elastic-ei19-runtime-evidence.json e8-elastic-ei19-environment.txt stage5-ei18-runtime-evidence.json stage5-ei18-environment.txt stage5-ei20-runtime-evidence.json stage5-ei20-environment.txt stage5-edetach-runtime-evidence.json stage5-edetach-environment.txt
           docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace -e GITHUB_SHA="$GITHUB_SHA" -e BUILD_BASE_REF="$BUILD_BASE_REF" -v "$PWD:/workspace" "$BUILD_BASE_REF" -lc '
               set -euxo pipefail
               source /environment
@@ -85,8 +86,10 @@ jobs:
               cp /workspace/r2-o2-ionization-environment.txt /workspace/e8-elastic-ei19-environment.txt
               cp /workspace/r2-o2-ionization-environment.txt /workspace/stage5-ei18-environment.txt
               cp /workspace/r2-o2-ionization-environment.txt /workspace/stage5-ei20-environment.txt
+              cp /workspace/r2-o2-ionization-environment.txt /workspace/stage5-edetach-environment.txt
               sed -i "s/SCIENTIFIC_SEMANTICS_CHANGED=false/SCIENTIFIC_SEMANTICS_CHANGED=true/" /workspace/stage5-ei18-environment.txt
               sed -i "s/SCIENTIFIC_SEMANTICS_CHANGED=false/SCIENTIFIC_SEMANTICS_CHANGED=true/" /workspace/stage5-ei20-environment.txt
+              sed -i "s/SCIENTIFIC_SEMANTICS_CHANGED=false/SCIENTIFIC_SEMANTICS_CHANGED=true/" /workspace/stage5-edetach-environment.txt
               python3 bin/physics.py preflight --self-test
               python3 physics_app/ci/check_r2_o2_ionization_implementation.py
               python3 physics_app/ci/check_r3_o2s_excitation_implementation.py
@@ -101,6 +104,8 @@ jobs:
               python3 physics_app/ci/check_stage5_ei18_runtime.py --static
               python3 physics_app/ci/check_stage5_ei20_runtime.py --self-test
               python3 physics_app/ci/check_stage5_ei20_runtime.py --static
+              python3 physics_app/ci/check_stage5_edetach_runtime.py --self-test
+              python3 physics_app/ci/check_stage5_edetach_runtime.py --static
               test ! -e physics_app/physics-opt
               make -C physics_app -j2
               test -x physics_app/physics-opt
@@ -111,6 +116,7 @@ jobs:
               python3 physics_app/ci/check_e8_elastic_ei19_runtime.py --executable /workspace/physics_app/physics-opt --repository-sha "$GITHUB_SHA" --build-base-ref "$BUILD_BASE_REF" --evidence-out /workspace/e8-elastic-ei19-runtime-evidence.json
               python3 physics_app/ci/check_stage5_ei18_runtime.py --executable /workspace/physics_app/physics-opt --repository-sha "$GITHUB_SHA" --build-base-ref "$BUILD_BASE_REF" --evidence-out /workspace/stage5-ei18-runtime-evidence.json
               python3 physics_app/ci/check_stage5_ei20_runtime.py --executable /workspace/physics_app/physics-opt --repository-sha "$GITHUB_SHA" --build-base-ref "$BUILD_BASE_REF" --evidence-out /workspace/stage5-ei20-runtime-evidence.json
+              python3 physics_app/ci/check_stage5_edetach_runtime.py --executable /workspace/physics_app/physics-opt --repository-sha "$GITHUB_SHA" --build-base-ref "$BUILD_BASE_REF" --evidence-out /workspace/stage5-edetach-runtime-evidence.json
             '
       - name: Upload R2 controlled science evidence
         if: always()
@@ -168,3 +174,11 @@ jobs:
           path: |
             stage5-ei20-runtime-evidence.json
             stage5-ei20-environment.txt
+      - name: Upload Stage-5 electron detachment controlled science evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stage5-edetach-governed-runtime-evidence
+          path: |
+            stage5-edetach-runtime-evidence.json
+            stage5-edetach-environment.txt
