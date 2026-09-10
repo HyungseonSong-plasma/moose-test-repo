@@ -25,7 +25,7 @@ env:
 
 jobs:
   r2-o2-ionization:
-    name: R2 O2 ionization controlled P3
+    name: Stage-3 R2/R3 controlled P3
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
@@ -56,11 +56,15 @@ jobs:
           test "$(docker image inspect "$BUILD_BASE_REF" --format '{{ index .Config.Labels "io.physics.squirrel.sha" }}')" = "$SQUIRREL_SHA"
           test "$(docker image inspect "$BUILD_BASE_REF" --format '{{ index .Config.Labels "io.physics.zapdos.sha" }}')" = "$ZAPDOS_SHA"
 
-      - name: Build current Physics source and execute R2 P0-P3
+      - name: Build current Physics source and execute Stage-3 P0-P3
         shell: bash
         run: |
           set -euxo pipefail
-          rm -f r2-o2-ionization-runtime-evidence.json r2-o2-ionization-environment.txt
+          rm -f \
+            r2-o2-ionization-runtime-evidence.json \
+            r2-o2-ionization-environment.txt \
+            r3-o2s-excitation-runtime-evidence.json \
+            r3-o2s-excitation-environment.txt
           docker run --rm \
             --entrypoint /bin/bash \
             --user 0:0 \
@@ -95,8 +99,10 @@ jobs:
                 echo "MPICXX_VERSION=$(mpicxx --version | head -n 1)"
                 echo "SCIENTIFIC_SEMANTICS_CHANGED=false"
               } > /workspace/r2-o2-ionization-environment.txt
+              cp /workspace/r2-o2-ionization-environment.txt /workspace/r3-o2s-excitation-environment.txt
 
               python3 physics_app/ci/check_r2_o2_ionization_implementation.py
+              python3 physics_app/ci/check_r3_o2s_excitation_implementation.py
               test ! -e physics_app/physics-opt
               make -C physics_app -j2
               test -x physics_app/physics-opt
@@ -106,6 +112,12 @@ jobs:
                 --repository-sha "$GITHUB_SHA" \
                 --build-base-ref "$BUILD_BASE_REF" \
                 --evidence-out /workspace/r2-o2-ionization-runtime-evidence.json
+
+              python3 physics_app/ci/check_r3_o2s_excitation_implementation.py \
+                --executable /workspace/physics_app/physics-opt \
+                --repository-sha "$GITHUB_SHA" \
+                --build-base-ref "$BUILD_BASE_REF" \
+                --evidence-out /workspace/r3-o2s-excitation-runtime-evidence.json
             '
 
       - name: Upload R2 controlled science evidence
@@ -116,3 +128,12 @@ jobs:
           path: |
             r2-o2-ionization-runtime-evidence.json
             r2-o2-ionization-environment.txt
+
+      - name: Upload R3 controlled science evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r3-o2s-excitation-governed-runtime-evidence
+          path: |
+            r3-o2s-excitation-runtime-evidence.json
+            r3-o2s-excitation-environment.txt
