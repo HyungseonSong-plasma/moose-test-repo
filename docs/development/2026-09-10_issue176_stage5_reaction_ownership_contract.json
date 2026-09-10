@@ -1,0 +1,190 @@
+{
+  "schema_version": 1,
+  "controller_issue": 176,
+  "upstream_issue": 26,
+  "stage": "STAGE_5_FULL_CHEMISTRY_REPRESENTATIVE_REAL_QVT",
+  "repository_baseline": "7d69d5673400af95158c5c270d3308518d871123",
+  "status": "CONTRACT_FROZEN",
+  "purpose": "Freeze the Stage-5 reaction/progress/provenance boundary before production chemistry mutation. Admit only channels with auditable source data and complete source/energy semantics; preserve explicit deferral for channels whose executable provenance or coupling semantics remain unresolved.",
+  "accepted_upstream": {
+    "stage3_bounded_chemistry": "ACCEPTED",
+    "stage4_issue26_e8": "ACCEPTED",
+    "standard_moose_energy_projection": "PRESERVED",
+    "integrated_physics_accuracy": "NOT_ESTABLISHED"
+  },
+  "representative_real_qvt_basis": {
+    "geometry": "experiments/Issue91_real_qvt_r3/r3_e0/qvt.msh",
+    "heavy_state_reference": "experiments/Issue91_real_qvt_r3/r3_e0/heavy_base.i",
+    "electron_energy_chemistry_off_oracle": "physics_app/ci/electron_energy_real_qvt_inventory_smoke.i",
+    "gas_temperature_binding": "Reuse the accepted heavy-state T_g functor. Stage-5 electron-energy chemistry must not create a separate local T_gas state.",
+    "note": "The accepted real-QVT heavy reference currently supplies T_g through the heavy-state provider. This is distinct from the isolated Stage-4 hot/equality/reversed discriminator constants."
+  },
+  "canonical_ownership_rules": [
+    "One canonical molar reaction progress R_k [mol/(m^3 s)] per reaction.",
+    "Every heavy-species, electron-particle and electron-energy consumer reuses the same R_k; no downstream kinetic reevaluation.",
+    "Lookup-table electron-impact rates reuse PhysicsElectronImpactRateMaterial unless a demonstrated capability gap requires another owner.",
+    "Heavy-species signed mass-source functors are projected through the existing PhysicsFVSpeciesReactionSource or an independently validated Standard-MOOSE equivalent.",
+    "Signed physical electron-number sources are projected through the existing PhysicsFVElectronReactionSource or an independently validated Standard-MOOSE equivalent.",
+    "Electron-energy loss uses Standard-MOOSE FVCoupledForce where the source is representable by a progress functor and coefficient.",
+    "Molar masses and concentrations must reuse the canonical heavy-mixture species state rather than introduce a second composition basis.",
+    "Missing source data is a hard admission block; no synthetic rate is allowed in production."
+  ],
+  "stage5_admitted_primary_channels": [
+    {
+      "id": "EI18_O_TO_OS",
+      "formula": "e + O -> e + Os",
+      "admission": "DATA_READY_FIRST_SLICE",
+      "source": "user_supplied:o_excitation_1d.txt",
+      "source_table": {
+        "rows": 100,
+        "lookup_domain_eV": [1.40991, 22.1378],
+        "anchors_m3_per_mol_s": {
+          "1.40991": 154000000.0,
+          "5.73276": 1570000000.0,
+          "22.1378": 1860000000.0
+        }
+      },
+      "canonical_progress": "R_excitation_O_1p968",
+      "progress_owner": "PhysicsElectronImpactRateMaterial",
+      "target_concentration": "c_O from canonical heavy-mixture state",
+      "progress_law": "R_excitation_O_1p968 = k_raw(mean_en_solved)*(n_e_physical/N_A)*c_O",
+      "heavy_stoichiometry": {"O": -1, "Os": 1},
+      "net_electron_particle_stoich": 0,
+      "energy_loss_eV_per_event": 1.968,
+      "electron_energy_source": "S_epsilon=-1.968*N_A*R_excitation_O_1p968",
+      "required_projection": "O/Os signed mass-source functors from the single progress; electron-energy FVCoupledForce consumes the same progress",
+      "required_invariants": ["heavy mass conserved", "oxygen atoms conserved", "charge conserved", "electron number unchanged", "positive progress gives electron-energy sink"]
+    },
+    {
+      "id": "EI20_O_IONIZATION",
+      "formula": "e + O -> 2e + Op",
+      "admission": "DATA_READY_SECOND_SLICE",
+      "source": "user_supplied:o_ionization.txt",
+      "source_table": {
+        "rows": 100,
+        "lookup_domain_eV": [1.40991, 22.1378],
+        "anchors_m3_per_mol_s": {
+          "1.40991": 0.0,
+          "5.73276": 54100000.0,
+          "22.1378": 11900000000.0
+        }
+      },
+      "canonical_progress": "R_ion_O",
+      "progress_owner": "PhysicsElectronImpactRateMaterial",
+      "target_concentration": "c_O from canonical heavy-mixture state",
+      "progress_law": "R_ion_O = k_raw(mean_en_solved)*(n_e_physical/N_A)*c_O",
+      "heavy_stoichiometry": {"O": -1, "Op": 1},
+      "net_electron_particle_stoich": 1,
+      "electron_number_source": "+N_A*R_ion_O",
+      "energy_loss_eV_per_event": 13.618,
+      "electron_energy_source": "S_epsilon=-13.618*N_A*R_ion_O",
+      "required_projection": "O/Op signed mass-source functors, electron-number source and electron-energy FVCoupledForce all consume the single R_ion_O",
+      "required_invariants": ["heavy mass conserved", "oxygen atoms conserved", "electron-inclusive charge conserved", "one net electron produced", "positive progress gives electron-energy sink"]
+    }
+  ],
+  "stage5_discovered_additional_source_channels": [
+    {
+      "id": "EDETACH_OM",
+      "formula": "e + Om -> O + 2e",
+      "source": "user_supplied:Ar_O2_plasma_chemistry.txt",
+      "source_expression": "5.47e-14[m^3/s]*N_A*exp(-2.98[eV]/Te[eV])*(Te[eV])^0.324",
+      "source_collision_metadata": "Ionization 12.0",
+      "canonical_temperature_mapping": "Te[eV]=(2/3)*mean_en_solved",
+      "admission": "SOURCE_READY_REQUIRES_DEDICATED_CONTRACT_BEFORE_IMPLEMENTATION",
+      "reason": "The source rate and 12.0-eV collision metadata are present, but this channel was absent from the previously accepted Stage-3/4 source ownership and needs a dedicated progress/source/energy mutation gate before entering representative coupling."
+    },
+    {
+      "id": "H01_OP_O2_CHARGE_TRANSFER",
+      "formula": "Op + O2 -> O + O2p",
+      "source": "user_supplied:Ar_O2_plasma_chemistry.txt",
+      "k_molar": "2e-17*N_A*(300/T_g)^0.5 [m^3/(mol s)]",
+      "admission": "RATE_READY_AFTER_EI18_EI20"
+    },
+    {
+      "id": "H02_OM_OP_NEUTRALIZATION",
+      "formula": "Om + Op -> O + O",
+      "source": "user_supplied:Ar_O2_plasma_chemistry.txt",
+      "k_molar": "4e-14*N_A*(300/T_g)^0.43 [m^3/(mol s)]",
+      "admission": "RATE_READY_AFTER_EI18_EI20"
+    },
+    {
+      "id": "H03_OM_O2P_TO_3O",
+      "formula": "Om + O2p -> O + O + O",
+      "source": "user_supplied:Ar_O2_plasma_chemistry.txt",
+      "k_molar": "2.6e-14*N_A*(300/T_g)^0.44 [m^3/(mol s)]",
+      "admission": "RATE_READY_AFTER_EI18_EI20"
+    },
+    {
+      "id": "H04_OM_O2P_TO_O_O2",
+      "formula": "Om + O2p -> O + O2",
+      "source": "user_supplied:Ar_O2_plasma_chemistry.txt",
+      "k_molar": "2.6e-14*N_A*(300/T_g)^0.44 [m^3/(mol s)]",
+      "admission": "RATE_READY_AFTER_EI18_EI20"
+    },
+    {
+      "id": "H05_OM_O_DETACHMENT",
+      "formula": "Om + O -> O2 + e",
+      "source": "user_supplied:Ar_O2_plasma_chemistry.txt",
+      "k_molar": "3.0e-16*N_A [m^3/(mol s)]",
+      "admission": "RATE_READY_BUT_ELECTRON_ENERGY_CONVENTION_REQUIRES_AUDIT",
+      "reason": "The heavy reaction produces an electron but the supplied heavy-reaction line does not independently freeze an electron birth-energy convention. Do not activate it in the coupled electron-energy system until that semantic is explicit."
+    }
+  ],
+  "stage5_deferred_channels": [
+    {
+      "formula": "e + O2 -> e + O + O",
+      "state": "BLOCKED_SOURCE_REFERENCE_ONLY",
+      "reason": "The user chemistry file references O2_phelps_xsecs.txt, but no exact executable cross-section/rate dataset for this channel is currently available in the canonical repository or recovered File Library evidence."
+    },
+    {
+      "formula": "e + O2 -> e + O + Os",
+      "state": "BLOCKED_SOURCE_REFERENCE_ONLY",
+      "reason": "A cross-section filename/reference is insufficient production provenance without the actual source data and reaction identity mapping."
+    },
+    {
+      "formula": "Om + Arp -> O + Ar",
+      "state": "OUT_OF_SCOPE",
+      "reason": "Argon ion/species are outside the current seven-heavy-species oxygen Stage-5 state."
+    }
+  ],
+  "representative_stage5_required_surface": {
+    "accepted_channels_to_preserve": ["EI01", "EI02", "EI10", "EI16", "EI17", "EI19"],
+    "new_primary_channels": ["EI18", "EI20"],
+    "additional_source_ready_channels_to_admit_only_after_dedicated_contract": ["EDETACH_OM", "H01", "H02", "H03", "H04", "H05"],
+    "required_state_binding": ["accepted real-QVT geometry", "canonical heavy-mixture composition and rho", "canonical heavy-state T_g", "n_e_physical", "mean_en_solved"],
+    "acceptance_boundary": "Stage 5 is not accepted until a representative real-QVT coupled run exercises the complete admitted Stage-5 chemistry set together with accepted Stage-3/4 channels and preserves mass, oxygen atoms, electron-inclusive charge, positivity, strict lookup bounds and E0-E8 regressions."
+  },
+  "implementation_order": [
+    "S5-A: import and freeze exact EI18 o_excitation_1d production table; implement one-progress O->Os + 1.968-eV energy coupling; governed P0-P3 immediately",
+    "S5-B: import and freeze exact EI20 o_ionization production table; implement O->Op + electron production + 13.618-eV energy coupling from one R_ion_O; governed P0-P3 immediately",
+    "S5-C: freeze a dedicated contract for EDETACH_OM analytic Te-dependent rate and 12.0-eV energy metadata before implementation",
+    "S5-D: freeze and implement H01-H04 heavy-reaction progress/source projections using canonical T_g and composition",
+    "S5-E: resolve H05 electron birth-energy convention before activation; keep deferred if unresolved",
+    "S5-R: assemble representative real-QVT chemistry with all admitted channels and accepted E0-E8 physics; run governed coupled acceptance",
+    "Only after S5-R acceptance release Stage 6/#27"
+  ],
+  "first_slice_acceptance": {
+    "id": "S5-A_EI18",
+    "required_evidence": [
+      "source-table row/domain/anchor identity and immutable repository blob after import",
+      "one and only one R_excitation_O_1p968 owner",
+      "O and Os source signs and equal atomic-mass magnitude",
+      "zero net heavy mass and zero net charge",
+      "electron particle inventory unchanged",
+      "1.968-eV electron-energy sink from the same progress",
+      "strict below/above lookup negative controls",
+      "P0 checker mutation self-test, P2 check-input and P3 bounded runtime",
+      "accepted R2/R3/E8 regressions preserved"
+    ]
+  },
+  "source_evidence": [
+    "docs/development/2026-09-07_issue17_r0_reaction_ledger.json",
+    "docs/development/2026-09-10_issue26_e8_closure_surface_contract.json",
+    "docs/development/2026-09-10_issue26_e8_elastic_ei19_contract.json",
+    "user-uploaded o_excitation_1d.txt recovered from File Library on 2026-09-10",
+    "user-uploaded o_ionization.txt recovered from File Library on 2026-09-10",
+    "user-uploaded Ar_O2_plasma_chemistry.txt recovered from File Library on 2026-09-10",
+    "experiments/Issue91_real_qvt_r3/r3_e0/heavy_base.i",
+    "physics_app/ci/electron_energy_real_qvt_inventory_smoke.i"
+  ]
+}
