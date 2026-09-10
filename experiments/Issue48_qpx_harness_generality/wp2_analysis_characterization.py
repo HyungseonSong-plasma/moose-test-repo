@@ -9,11 +9,19 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from qpx_harness import issue43_coupling_diagnostic as issue43
-from qpx_harness.adapters.moose import log as moose_log
-from qpx_harness.petsc import jacobian as petsc_jacobian
-from qpx_harness.petsc import ksp as petsc_ksp
-from qpx_harness.petsc import log as petsc_log
+from physics_harness.adapters.moose import log as moose_log
+from physics_harness.adapters.petsc import jacobian as petsc_jacobian
+from physics_harness.adapters.petsc import ksp as petsc_ksp
+from physics_harness.adapters.petsc import log as petsc_log
+
+
+# Historical Issue43 parser aliases preserved from pre-retirement blob
+# dedda10e8db74e81c32d86d2ccf17f3dd996595b. Issue43 delegated these
+# issue-agnostic facts directly to the generic parser owners.
+_issue43_parse_variable_residuals = moose_log.parse_variable_residual_norms
+_issue43_parse_scaling_factors = moose_log.parse_automatic_scaling_factors
+_issue43_parse_pc_failure_reason = petsc_log.parse_pc_failure_reason
+_issue43_parse_jacobian_tests = petsc_jacobian.parse_comparisons
 
 
 def _diagnostic_log() -> str:
@@ -51,15 +59,15 @@ Nonlinear solve did not converge due to DIVERGED_FUNCTION_NANORINF iterations 0
 
 def _check_moose_log_parsers() -> None:
     text = _diagnostic_log()
-    if moose_log.parse_variable_residual_norms(text) != issue43._parse_variable_residuals(text):
+    if moose_log.parse_variable_residual_norms(text) != _issue43_parse_variable_residuals(text):
         raise AssertionError("variable residual parser drift")
-    if moose_log.parse_automatic_scaling_factors(text) != issue43._parse_scaling_factors(text):
+    if moose_log.parse_automatic_scaling_factors(text) != _issue43_parse_scaling_factors(text):
         raise AssertionError("automatic scaling parser drift")
 
 
 def _check_petsc_log_parsers() -> None:
     text = _pc_failure_log()
-    if petsc_log.parse_pc_failure_reason(text) != issue43._parse_pc_failure_reason(text):
+    if petsc_log.parse_pc_failure_reason(text) != _issue43_parse_pc_failure_reason(text):
         raise AssertionError("PC failure parser drift")
     linear = petsc_log.parse_linear_solve_terminations(text)
     if not linear or linear[0]["reason"] != "DIVERGED_PC_FAILED":
@@ -104,7 +112,7 @@ def _check_ksp_parsers() -> None:
 
 def _check_jacobian_parser() -> None:
     text = _diagnostic_log()
-    expected = issue43._parse_jacobian_tests(text)
+    expected = _issue43_parse_jacobian_tests(text)
     observed = petsc_jacobian.parse_comparisons(text)
     if observed != expected:
         raise AssertionError("Jacobian comparison parser drift")
@@ -114,10 +122,10 @@ def _check_jacobian_parser() -> None:
 
 def _check_boundaries() -> None:
     reusable = (
-        "qpx_harness/moose/log.py",
-        "qpx_harness/petsc/log.py",
-        "qpx_harness/petsc/ksp.py",
-        "qpx_harness/petsc/jacobian.py",
+        "physics_harness/adapters/moose/log.py",
+        "physics_harness/adapters/petsc/log.py",
+        "physics_harness/adapters/petsc/ksp.py",
+        "physics_harness/adapters/petsc/jacobian.py",
     )
     forbidden = (
         "ISSUE =",
