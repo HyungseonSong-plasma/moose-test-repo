@@ -1,602 +1,282 @@
 # Repository Mutation Safety Protocol
 
 **Status:** canonical procedure  
-**Scope:** GitHub issue/file/branch/ref mutations and repository state synchronization  
-**Purpose:** prevent no-op commits, wrong-action writes, repeated same-target writes, and stale current-state copies.
+**Scope:** GitHub issue/file/branch/ref/Git-object mutations and repository state synchronization  
+**Purpose:** preserve canonical repository correctness without allowing process guards to block otherwise safe forward progress.
 
-Use this procedure whenever the requested work mutates repository state. It complements `OPERATING_CORE.md`; it does not change meeting/approval semantics.
+This procedure separates **real repository-safety failures** from **soft control anomalies**. A mutation workflow stops only when canonical repository state is at risk, the intended change cannot be proven safe, or an explicitly gated validation run is active. Soft control anomalies are diagnosed and recorded, but they do not automatically terminate valid work.
 
-## RM-01 — Mutation intent tuple
+## RM-01 — Intent and target binding
 
-Before every mutation, state internally and unambiguously:
+Before a repository mutation, identify:
 
 ```text
-resource = issue | file | branch/ref | comment | other
-exact target = issue number or repository path/ref
-mutation action = create | update | delete | close/open | add/remove | move ref
+resource = issue | file | branch/ref | comment | git-object | other
+exact target = issue number, repository path, ref, or intended Git object purpose
+action = create | update | delete | close/open | add/remove | move ref | construct snapshot
 expected semantic diff = what must become different
-expected unchanged scope = what must not change
+expected unchanged scope = what must remain unchanged
 ```
 
-If any field is unresolved, do not mutate yet.
+The mutation must target the identified resource and implement the identified action. Do not substitute a different resource or surrogate target.
 
-Structural actions (`create`, `delete`, branch/ref movement) require an exact target and a positive reason. Placeholder targets such as `__noop__`, fake files, or connectivity-test commits are prohibited.
+## RM-02 — Fresh read before write
 
-## RM-02 — Read before write
+For an existing canonical target, fetch its current state immediately before mutation.
 
-For an existing target, fetch the current canonical state immediately before mutation.
+For files, retain the current blob SHA and the content needed to construct the replacement. For issues, retain the fields being changed. For branch/ref movement, retain the current head SHA. For a Git snapshot, retain the base tree/parent commit identity.
 
-For files record the current blob SHA and full content required to construct the replacement. For issues record the current body/state fields being changed.
-
-Do not write from stale conversation memory when the target can be fetched.
+Conversation memory is not a substitute for a fresh canonical read when the target is available from GitHub.
 
 ## RM-03 — Semantic-diff gate
 
-Construct the complete intended replacement, then compare it with the fetched current state.
+Do not intentionally write an unchanged canonical state.
 
 ```text
-if intended semantic state == current semantic state:
-    STOP -> NO_MUTATION_NEEDED
+intended semantic state == current semantic state
+    -> NO_MUTATION_NEEDED
 ```
 
-A no-op is a successful decision to avoid a write, not a reason to create a commit.
+Formatting-only changes are allowed only when formatting itself is the intended change.
 
-Formatting-only changes must be intentional and attributable; they are not a substitute for a semantic change.
+## RM-04 — Exact mutator binding
 
-## RM-04 — One successful write per target
+Immediately before mutation, verify:
 
-After one successful mutation to a target, the write phase for that target is closed.
+```text
+selected mutator implements intended action
+payload target == exact target
+payload resource class == intended resource class
+```
 
-A second mutation to the same target is allowed only when:
+Examples:
 
-1. a fresh post-write read is performed;
-2. that read proves a new semantic difference remains; and
-3. the second expected diff is explicitly identified.
+```text
+update issue       -> update_issue
+update file        -> update_file with fresh blob SHA
+create file        -> create_file at exact intended path
+delete file        -> delete_file with fresh blob SHA
+move branch/ref    -> update_ref with intended commit SHA
+construct snapshot -> Git-object operations tied to the declared snapshot
+```
 
-Sparse tool output, uncertainty about propagation, or desire to “make sure” are not valid reasons for another write.
+A wrong resource, wrong target, or wrong structural action is not made acceptable merely because the resulting state happens to be unchanged.
 
 ## RM-05 — Post-write verification
 
-After every successful mutation, verify with a read or returned canonical snapshot before moving on.
+After every successful canonical mutation, verify the result read-only before relying on it.
 
-For files verify:
-- target path;
-- expected content/state;
-- resulting blob/content SHA when available.
-
-For issues verify:
-- issue number;
-- state/state reason when changed;
-- canonical body status/dependency text.
-
-If a write returns success but the semantic state is unchanged unexpectedly, classify it as a no-op mutation incident and STOP. Do not repeat the same write.
-
-## RM-05A — Post-write verification read-only lock
-
-Once a successful write enters post-write verification, the workflow is in **VERIFY mode** and must be action-locked to read-only tools.
-
-Permitted actions in VERIFY mode:
+Verify at minimum:
 
 ```text
-fetch/read/get/open/search of the just-written canonical target
+target identity
+expected semantic state
+unexpected collateral changes absent
+resulting SHA/state when available
 ```
 
-Forbidden actions in VERIFY mode:
+Do not repeat the same write merely to confirm propagation.
+
+A second mutation to the same target is allowed when a fresh read proves a distinct remaining semantic difference.
+
+## RM-06 — HARD STOP conditions
+
+A **HARD STOP** is reserved for conditions that threaten or obscure canonical repository correctness.
+
+Stop repository mutation and diagnose before continuing when any of the following is true:
+
+1. A mutator changed the **wrong canonical resource or wrong canonical target**.
+2. A structural operation performed the **wrong action** and changed live canonical state or history.
+3. A branch/ref movement is non-fast-forward unless history rewriting was explicitly authorized.
+4. The current canonical state cannot be determined reliably enough to construct the intended mutation.
+5. The intended replacement cannot be distinguished from a no-op where the mutation would create unwanted history.
+6. Post-write verification shows an unexpected canonical state, collateral change, or inconsistent dependency state.
+7. An exact-head CI/science validation lock is active and repository policy requires that run to complete before further mutation.
+8. A destructive operation lacks the exact target identity or fresh pre-write identity required to execute safely.
+9. Repeated tool-routing errors make it impossible to establish which canonical target would be mutated next.
+
+When a HARD STOP occurs:
 
 ```text
-update_*
-create_*
-delete_*
-move/ref mutation
-comment/reaction mutation
-any other mutator, even against the correct resource and correct target
+stop further business mutation
+verify canonical state
+repair only actual unintended canonical state when necessary
+record the incident when material
+resume once the target/action/state is again provably safe
 ```
 
-Do not reuse the prior write payload, intended replacement content, blob SHA, or a nearby mutator call merely to “verify” propagation. Verification proves state by reading it.
+A fresh assistant-response boundary is **not inherently required**. Safety is established by fresh state, exact target/action binding, and verification.
 
-A new mutation to the same target may begin only after:
+## RM-07 — SOFT CONTROL conditions
+
+A **SOFT CONTROL** anomaly is a warning, diagnostic, or harness problem that does not by itself threaten canonical repository state.
+
+The following are soft controls unless additional evidence shows a real repository-safety failure:
+
+1. Tool-schema discovery exposes unrelated mutators.
+2. A checker detects a forbidden token that appears only in a negative test, comment, guard, or diagnostic string.
+3. A validator/checker produces a false positive before production build/runtime execution.
+4. A Git blob/tree object is created but remains unattached to every canonical commit/ref and no canonical state changes.
+5. A read-only verification reveals that an attempted operation had no semantic effect.
+6. A tool is unavailable or inconvenient but another **exactly equivalent, target-correct** safe path exists.
+7. A protocol assertion fails because of process metadata while the exact target, action, and canonical state remain independently verifiable.
+
+For a soft control:
 
 ```text
-1. VERIFY mode completed with a fresh canonical read;
-2. a new semantic difference is explicitly identified;
-3. a new RM-01 intent tuple and RM-03 semantic-diff gate are constructed.
+classify the anomaly
+verify that canonical state is safe
+correct the guard/checker/tool route when needed
+continue the intended work when target/action binding remains unambiguous
 ```
 
-If a mutator is invoked during VERIFY mode, treat it as a wrong-action mutation even when the bytes remain identical and the resource/target are correct. Apply RM-09/RM-09A.
+Do **not** convert a soft control into a repository-wide or response-wide circuit breaker merely because it occurred.
 
-## RM-06 — Tool/action binding guard
+## RM-08 — Validator failure classification
 
-Immediately before invocation, match the selected mutator against the mutation intent tuple.
-
-Examples:
+Validation failures must be classified by the layer that actually failed.
 
 ```text
-update existing issue body -> update_issue
-create new issue -> create_issue
-update existing file -> update_file using fetched blob SHA
-create new canonical file -> create_file only after confirming path does not exist
-delete file -> delete_file using freshly fetched blob SHA
+P0 checker/self-test failure
+    -> checker/harness/construction failure unless physics executed
+
+P1 static failure
+    -> implementation/static-contract failure
+
+P2 check-input/preflight failure
+    -> construction/configuration/interface failure unless evidence proves physics semantics
+
+P3 runtime discriminator failure
+    -> bounded runtime/physics failure only for the semantics actually exercised
 ```
 
-If the tool action does not exactly implement the intended action, do not call it.
+A workflow-level `failure` conclusion must not automatically be reported as a physics failure.
 
-Create/delete/ref movement are treated as high-impact structural operations and must never be used as tool probes.
+Forbidden-token checks must inspect the **production-generating surface**, not blindly reject a token because the checker itself mentions that token in a negative-control guard.
 
-## RM-06A — Mutator recipient freeze
+## RM-09 — Multi-target and multi-resource progress
 
-The intent tuple must be converted into a single allowed mutator **before mutation arguments are composed**.
-
-Freeze internally:
+Multiple repository targets or resource classes may be handled in one response when all of the following hold:
 
 ```text
-INTENT_RESOURCE = issue | file | branch/ref | comment | other
-INTENT_TARGET   = exact issue number or path/ref
-ALLOWED_MUTATOR = exact mutation function
+each intended target is known before its write
+each write uses the correct resource/action/target
+writes are sequential where ordering matters
+each completed write is verified before a dependent write proceeds
+no exact-head CI/science mutation lock is active
 ```
 
-Immediately before the call, verify all three again against the selected function and its target field. If the selected function operates on a different resource class or target, STOP before invocation.
+There is no general requirement to split file, ref, and issue synchronization across separate assistant responses.
 
-Examples:
+Use separate phases only when the operations are causally independent enough that separation improves safety or when an active CI/science lock requires it.
+
+## RM-10 — Git-object and snapshot operations
+
+Git-object construction is allowed when it directly serves an identified immutable snapshot/commit operation.
+
+Before constructing a snapshot, identify:
 
 ```text
-INTENT_RESOURCE=issue, INTENT_TARGET=#16
-  -> ALLOWED_MUTATOR=update_issue
-  -> update_file/create_file/delete_file are forbidden in this write phase
-
-INTENT_RESOURCE=file, INTENT_TARGET=README.md
-  -> ALLOWED_MUTATOR=update_file
-  -> issue mutators are forbidden in this write phase
+base tree / parent commit
+intended changed paths
+intended resulting commit purpose
 ```
 
-Do not reuse a mutator recipient or payload shape from a previous repository operation merely because it is already loaded or nearby in context. A multi-target operation may switch mutators only after the previous target has been post-write verified and the next target appears explicitly in the RM-08 plan.
+`create_blob`, `create_tree`, and `create_commit` may be used as parts of that construction when each generated object is attributable to the intended snapshot.
 
-## RM-06B — File byte-state guard
-
-For `update_file`, compare the complete intended replacement with the freshly fetched file content before invoking the mutator.
+Unexpected unattached Git objects are a **soft incident** when all of the following are verified:
 
 ```text
-intended bytes == fetched bytes -> STOP / NO_MUTATION_NEEDED
+no branch/ref moved
+no commit reachable from a canonical ref contains the object
+no canonical file/tree state changed
 ```
 
-When a fetched content/blob SHA and a returned content/blob SHA are available, equality after an intended semantic change is an incident signature, not a reason to retry the write.
+Do not rewrite shared history merely to hide unreachable objects. Record material recurrence and improve routing prospectively.
 
-## RM-06C — Create-action exact-target attestation
+## RM-11 — Branch/ref safety
 
-Every `create_*` mutation requires an exact pre-create target identity already present in the RM-08 plan before the mutator is selected.
-
-Use the resource's real pre-create identity:
+Branch/ref movement requires:
 
 ```text
-create issue   -> exact repository + intended title/purpose
-create file    -> exact repository path
-create branch  -> exact repository + branch name + source ref
-create comment -> exact repository + issue/PR number + intended comment purpose
+fresh current ref
+intended destination commit
+ancestry/compare check when practical
+force = false by default
 ```
 
-Immediately before invocation verify:
+If the destination is not a fast-forward, stop unless the user explicitly authorizes history rewriting.
+
+After ref movement, read the ref back and verify the exact head SHA.
+
+## RM-12 — CI/science mutation lock
+
+When a canonical mutation triggers required exact-head CI or governed science validation, repository mutation is locked until the required run set completes.
+
+During the lock:
 
 ```text
-selected create mutator resource class == planned resource class
-selected target identity == planned target identity
-no placeholder, probe, stand-in, or invented surrogate target is present
+read-only inspection, logs, artifacts, and diagnosis are allowed
+repository writes are not allowed
 ```
 
-For server-assigned resources such as issues, the absence of the future numeric ID does not permit a substitute target. The repository plus intended title/purpose is the target identity until creation returns the canonical ID.
+After completion:
 
-If the required create mutator is not currently loaded, discover/load that exact mutator and then call it. Never substitute another `create_*` action merely to test availability or preserve flow.
+- success permits the next planned mutation/acceptance step;
+- failure is classified by the actual failing validation layer under RM-08;
+- checker/harness false positives may be repaired without labeling the underlying physics as failed.
 
-## RM-06D — Resource-class payload-shape lock
+## RM-13 — Dependency/state synchronization
 
-The frozen `INTENT_RESOURCE` must constrain not only the mutator name but also the **argument schema** allowed to reach a write call.
+When changing lifecycle or dependency state, discover direct current-state fan-out before or during the synchronization and update stale canonical surfaces sequentially.
 
-Before invocation, inspect the composed payload itself:
+Historical evidence and incident records must not be rewritten merely because current state changed.
+
+A missed downstream surface is a planning defect to repair; it is not automatically a session-wide stop unless the repository is left materially inconsistent and the correct state cannot be established.
+
+## RM-14 — Placeholder and probe prohibition
+
+Do not create canonical files, commits, refs, issues, or comments solely to test whether a mutator works.
+
+Surrogate targets and connectivity-test mutations are forbidden. Tool capability is established through schema/discovery/read operations, not live repository pollution.
+
+An accidentally created **unreachable Git object** is handled under RM-10; an accidentally created reachable canonical resource is handled as a HARD STOP under RM-06.
+
+## RM-15 — Incident severity
+
+Classify repository-operation incidents by effect:
 
 ```text
-INTENT_RESOURCE=issue
-  -> payload must contain issue identity fields
-  -> any repository file path/content/blob-SHA mutation fields are a HARD STOP
+SEV-A  canonical wrong-state mutation / destructive or history-affecting error
+       -> HARD STOP
 
-INTENT_RESOURCE=file
-  -> payload must contain the exact planned repository path
-  -> any issue-number/title/body mutation fields are a HARD STOP
+SEV-B  canonical no-op history pollution or recoverable wrong action
+       -> stop that action, verify/repair, then continue when safe
+
+SEV-C  checker/schema/tool-routing anomaly with no canonical state change
+       -> SOFT CONTROL; diagnose and continue
+
+SEV-D  informational warning with no mutation effect
+       -> record only if useful
 ```
 
-Equivalent checks apply to branch/ref and comment resources. A payload shape belonging to another resource class proves mutator-routing failure even if the prose intent is correct.
+Escalation depends on actual effect and uncertainty, not merely on the presence of a mutator name in the tool surface.
 
-Required pre-call decision:
+## RM-16 — Completion criteria
+
+Repository synchronization is complete when:
 
 ```text
-selected mutator == ALLOWED_MUTATOR
-AND
-payload resource class == INTENT_RESOURCE
-AND
-payload target == INTENT_TARGET
+all intended canonical targets have the expected semantic state
+no unintended reachable resource remains
+required branch/ref destinations are verified
+required exact-head CI/science gates have completed successfully or are explicitly classified
+current dependency state is internally consistent
+no unjustified repeated write was performed
 ```
 
-If any term is false, do not invoke any write tool. Do not replace the payload with a placeholder target, empty file, dummy path, or probe action.
+## Operating principle
 
-This check is mandatory after prior wrong-action incidents because a correct written intent alone has not prevented file mutators from being selected during issue updates.
+The safety objective is **canonical correctness with forward progress**.
 
-## RM-06E — Mutation-enabled phase latch
-
-Repository mutators are forbidden unless the **current workflow step itself is explicitly a planned mutation step**. Tool availability, a previously approved work package, or a valid earlier mutation intent does not keep mutation permission open across unrelated work.
-
-Maintain an internal phase latch:
-
-```text
-MUTATION_ALLOWED = false   # default
-```
-
-Set it to `true` only immediately before one predeclared RM-08 mutation target after RM-01/RM-03/RM-06 checks have passed. Reset it to `false` immediately after the mutator returns, before verification or any local/sandbox analysis begins.
-
-The following phases must always have `MUTATION_ALLOWED=false`:
-
-```text
-local staging
-code generation in sandbox/container
-syntax/self-test execution
-read/search/discovery
-post-write verification
-analysis/planning
-commentary/status updates
-tool-schema discovery
-```
-
-Hard pre-call gate:
-
-```text
-if MUTATION_ALLOWED != true:
-    every create_*/update_*/delete_*/ref/comment mutator is FORBIDDEN
-```
-
-A valid-looking target does not override this gate. An accidental mutator call while `MUTATION_ALLOWED=false` is a wrong-action mutation and must trip RM-09A immediately.
-
-## RM-06F — Adjacent one-shot mutation envelope
-
-Immediately before every repository mutator, freeze a one-shot call envelope **after** the fresh read, semantic diff, resource-class check, and RM-08 target selection are complete.
-
-Required envelope:
-
-```text
-NEXT_MUTATION_RESOURCE = exact resource class
-NEXT_MUTATION_TARGET = exact issue number/path/ref
-NEXT_MUTATION_ACTION = exact action
-NEXT_MUTATION_MUTATOR = exact mutator function
-NEXT_MUTATION_TARGET_KEY = issue_number | path | branch/ref key | comment id
-NEXT_MUTATION_EXPECTED_DIFF = exact semantic change
-NEXT_MUTATION_PREWRITE_IDENTITY = issue state/body identity or file blob/content SHA
-```
-
-The envelope authorizes **exactly one immediate next tool call**. The next call must be the frozen mutator against the frozen target.
-
-Any intervening action invalidates the envelope and resets mutation permission:
-
-```text
-commentary/status update
-analysis/planning
-read/search/fetch
-local/sandbox execution
-tool discovery/schema lookup
-any different tool call
-```
-
-After invalidation, return to `MUTATION_ALLOWED=false` and rebuild the envelope from a fresh canonical read before any mutation.
-
-Hard call-boundary rule:
-
-```text
-selected mutator == NEXT_MUTATION_MUTATOR
-AND payload target key == NEXT_MUTATION_TARGET_KEY
-AND payload target == NEXT_MUTATION_TARGET
-AND target appears in the pending RM-08 plan
-```
-
-If any term is false, the call is forbidden.
-
-For `update_file`, the envelope must also carry the fresh pre-write blob/content identity and prove:
-
-```text
-intended replacement bytes != fresh-read bytes
-```
-
-Commit messages or payloads whose purpose is `noop`, `probe`, `connectivity test`, `ensure`, `make sure`, or equivalent are prohibited. An identical-content `update_file` is forbidden even if the target path is valid.
-
-For issue mutations, any file-mutator recipient or payload containing file `path`/blob-SHA/content replacement fields invalidates the envelope. For file mutations, issue-number/title/body/state payloads invalidate the envelope.
-
-The envelope is consumed when its one mutator returns, whether the mutation succeeds or fails. Verification then occurs under RM-05A with `MUTATION_ALLOWED=false`.
-
-## RM-06G — Cross-resource mutation isolation after recurrence
-
-After repeated wrong-action incidents, this repository uses a stricter response-level interlock:
-
-```text
-one assistant response / live mutation phase = one repository resource class
-```
-
-If a response begins an **issue** mutation phase, only issue mutators are allowed for business work in that response. File implementation must wait for a later fresh response after the issue mutation is read-back verified.
-
-If a response begins a **file** mutation phase, only file mutators are allowed for business work in that response. Issue-body/status synchronization must occur in a separate fresh response.
-
-Equivalent isolation applies to branch/ref and comment mutation phases. Do not mix resource classes merely because all targets were listed in one RM-08 plan.
-
-The only exception is RM-09A incident handling, where minimal repair plus incident/protocol governance mutations are explicitly permitted.
-
-This rule is specifically intended to prevent a planned issue transition from being accidentally routed to a file mutator, or vice versa. If the intended work requires both governance and implementation:
-
-```text
-response A: issue-only mutation + read-only verification
-response B: fresh protocol read + file-only implementation mutations + verification
-response C: optional issue-only evidence/status synchronization
-```
-
-A fresh response boundary is therefore part of the mutation safety contract after recurrence, not optional workflow polish.
-
-## RM-06H — Exact mutator availability is a hard precondition
-
-After a fourth wrong-action recurrence, a planned repository mutation may proceed only when the exact mutator frozen in the one-shot envelope is the actual callable selected for the immediate next tool call.
-
-Required gate:
-
-```text
-NEXT_MUTATION_MUTATOR is available
-AND selected callable == NEXT_MUTATION_MUTATOR
-AND selected callable's resource class == NEXT_MUTATION_RESOURCE
-AND selected payload target == NEXT_MUTATION_TARGET
-```
-
-If the exact mutator is unavailable, cannot be addressed unambiguously, or does not accept the planned target identity, the only valid action is:
-
-```text
-STOP / NO REPOSITORY MUTATION
-```
-
-Never substitute a different mutator, different resource class, surrogate target, dummy file, placeholder issue, probe payload, or connectivity-test action. Tool unavailability is a reason to defer the mutation, not to approximate it.
-
-For create operations, the server-assigned future identifier does not relax this rule. The pre-create target identity from RM-06C remains authoritative until the exact create mutator returns the canonical identifier.
-
-## RM-06I — Bulk snapshot mutator-family lock
-
-When the intended semantic change is a validated directory/tree replacement, declare the upload mode before any repository write:
-
-```text
-UPLOAD_MODE = git_tree_snapshot
-SNAPSHOT_TARGET = exact directory/tree path
-SNAPSHOT_MANIFEST = exact validated local file set
-```
-
-In that file-object phase, the business mutator family is locked to Git object construction:
-
-```text
-PERMITTED:
-  create_tree for the validated snapshot
-  create_commit for the immutable snapshot commit
-
-FORBIDDEN:
-  create_file
-  update_file
-  delete_file
-  any contents-API staging file
-  any placeholder/sentinel/probe path
-  branch/ref movement in the same response
-```
-
-Every tree entry must come from `SNAPSHOT_MANIFEST`; no extra path may be invented at invocation time. If the selected next mutator is a contents-API file action, or if its path is not in the validated manifest, this is a hard stop before the call.
-
-After the immutable snapshot commit is read-back verified, move the branch/ref only from a fresh branch/ref mutation response under RM-06G. Do not use a temporary file to prove that the branch or connector is writable.
-
-## RM-06J — Structural-action opcode lock
-
-For high-impact structural mutations, freeze the exact action family independently from resource class and target. The selected callable name must literally match the frozen structural opcode.
-
-Canonical mapping:
-
-```text
-delete existing file -> delete_file(path=<exact path>, sha=<fresh blob SHA>)
-create new file       -> create_file(path=<exact path>)
-move branch/ref       -> update_ref(branch_name=<exact branch>, sha=<intended commit>)
-```
-
-Hard rule:
-
-```text
-NEXT_MUTATION_ACTION == delete existing file
-  -> selected callable MUST be delete_file
-  -> payload MUST contain exact file path + fresh blob SHA
-  -> update_ref/create_file/update_file/create_tree/create_commit are FORBIDDEN
-
-NEXT_MUTATION_ACTION == move branch/ref
-  -> selected callable MUST be update_ref
-  -> file-content mutators are FORBIDDEN
-```
-
-A branch name being correct, a branch already pointing at the supplied SHA, or a wrong structural call producing no semantic change does not make the action acceptable. Any mismatch between the frozen structural action and the selected callable trips RM-09A before the originally intended business mutation can continue.
-
-## RM-07 — State-transition fan-out synchronization
-
-When an issue changes lifecycle/dependency state (for example ACTIVE -> CLOSED/PASS, BLOCKED -> ACTIVE, or one blocker is replaced by a successor), treat downstream current-state synchronization as part of the same governance operation.
-
-**Discover the fan-out before the first write.** A state transition must not begin by mutating the canonical issue and only afterward discovering downstream current-state surfaces one at a time.
-
-Procedure:
-
-```text
-1. fetch the canonical issue that is expected to change
-2. search open/current-state surfaces for the old issue number, status phrase, blocker edge, and directly dependent work items
-3. distinguish historical evidence/comments from current-state text
-4. place every known stale current-state target into the RM-08 pre-mutation plan
-5. perform the canonical state change
-6. update only the predeclared stale current-state surfaces sequentially
-7. run a final stale-phrase/dependency search to catch genuinely missed surfaces
-8. do not rewrite historical issue comments/evidence
-9. verify the resulting dependency chain is internally consistent
-```
-
-Typical current-state surfaces:
-- dependent open issue bodies;
-- README/current-development summary when it intentionally mirrors active state;
-- milestone/current-work summary documents.
-
-Historical comments and incident records must retain historical wording.
-
-If the final search reveals a target that could reasonably have been discovered by the pre-write search, treat that as a fan-out planning miss and improve the discovery query rather than normalizing repeated post-write cleanup.
-
-## RM-08 — Pre-mutation target plan
-
-For a multi-target synchronization, list the exact targets before the first write and execute sequentially.
-
-Example:
-
-```text
-Target A: issue #2 state -> CLOSED/PASS
-Target B: issue #16 blocker -> removed / ACTIVE
-Target C: issue #17 upstream text -> synchronized
-Target D: README current sequence -> synchronized
-```
-
-For lifecycle/dependency mutations, the target plan must be built from the RM-07 **pre-write fan-out search**, not only from conversation memory or direct dependents already known to the operator.
-
-For create operations, the plan must state the exact pre-create target identity defined by RM-06C before the first create call.
-
-Do not discover new mutation targets by repeatedly writing. Discovery is read/search work.
-
-## RM-09 — Commit/no-op hygiene
-
-The following are operating errors:
-- repeated identical-content writes;
-- placeholder commits/files;
-- create-then-delete probes;
-- repeated update attempts after a success without fresh-read evidence;
-- mutator invocation during RM-05A VERIFY mode;
-- mutator invocation while RM-06E `MUTATION_ALLOWED=false`;
-- mutator invocation that does not match the active RM-06F one-shot envelope;
-- unnecessary history rewrite used to conceal an assistant mutation error.
-
-When such an error occurs:
-
-```text
-stop further mutation
-repair any live accidental state minimally
-record the incident/root cause
-add or strengthen one canonical preventive rule
-resume only after the new guard is clear
-```
-
-Shared-branch history is preserved by default; prevention is prospective unless the user explicitly authorizes history surgery.
-
-## RM-09A — Session circuit breaker after wrong-action mutation
-
-If a repository mutation acts on the wrong resource class, wrong target, or wrong action for the current phase and reaches live repository state/history, trip a session-level circuit breaker.
-
-For the remainder of the same assistant response/session:
-
-```text
-PERMITTED:
-  read/verify repository state
-  minimal repair of the accidental live target
-  incident-record update
-  canonical mutation-safety rule update required by RM-09
-
-FORBIDDEN:
-  the originally intended business mutation
-  new issue/file/branch creation unrelated to repair
-  dependency synchronization
-  retries intended to prove the new guard works
-```
-
-After repair and governance recording, verify the accidental target is absent, restored, or byte-identical when the failure was a no-op, then end the repository write phase. Resume intended/business mutations only from a fresh mutation context that reloads the canonical mutation protocol and reconstructs the RM-08 plan from current state.
-
-A repeated wrong-action mutation after a guard update is evidence that the current mutation context is unsafe; it is not permission to test another mutator.
-
-## RM-10 — Final mutation closure check
-
-Before declaring repository synchronization complete, verify:
-
-```text
-all intended targets have the expected semantic state
-no unintended created target remains
-no known stale current-state phrase remains in direct dependents or other open current-state surfaces discovered by RM-07
-no target received an unjustified second write
-all protocol/index references point to one canonical owner
-```
-
-For dependency changes, perform a final search using the old status/dependency phrase and relevant old issue number. A hit in historical evidence is acceptable; a hit in a current open issue body is not.
-
-## RM-11 — Incident promotion trigger
-
-A new repository-mutation failure class is material when it can pollute history, change live repository state, or leave canonical current state inconsistent. Record it under `docs/incidents/` and promote the reusable prevention here rather than creating overlapping mutation guides.
-
-Current originating incident:
-
-```text
-docs/incidents/repository_noop_and_wrong_action_mutation.md
-```
-
-## RM-12 — Resource-class schema-surface isolation
-
-Once a response declares a live mutation resource class, tool-schema discovery must preserve that same resource-class boundary **before** any business mutator is called.
-
-Canonical rule:
-
-```text
-ACTIVE_MUTATION_RESOURCE = file
-  -> discover/load file mutators only
-  -> issue/comment/branch mutator schema loading is a HARD STOP for business mutation
-
-ACTIVE_MUTATION_RESOURCE = issue
-  -> discover/load issue mutators only
-  -> file/comment/branch mutator schema loading is a HARD STOP for business mutation
-```
-
-Read-only tools from other resource classes may still be used when required for discovery or verification, but mutator-schema discovery is resource-class scoped.
-
-If a mutator schema from the wrong resource class is loaded after the mutation phase has been frozen, treat the current tool surface as contaminated:
-
-```text
-MUTATION_ALLOWED = false
-business mutation for this response = FORBIDDEN
-resume only in a fresh response with the intended resource class reloaded
-```
-
-Do not test whether the wrong-resource mutator is harmless. Do not invoke it with a placeholder target. Do not rely on the later RM-06D payload check to recover safety. The purpose of this rule is to remove unrelated mutators from the callable surface before target/action binding occurs.
-
-Originating recurrence:
-
-```text
-docs/incidents/issue60_wrong_action_placeholder_issue65_2026-09-01.md
-```
-
-## RM-13 — Literal recipient and forbidden-placeholder call gate
-
-The final tool-call recipient is a first-class safety field and must be checked literally at the invocation boundary, independently of prose intent or payload validation.
-
-Required gate immediately before every mutator:
-
-```text
-selected callable name == ALLOWED_MUTATOR
-selected callable resource class == ACTIVE_MUTATION_RESOURCE
-payload target == NEXT_MUTATION_TARGET
-```
-
-In an issue-only phase, the recipient must literally be an issue mutator such as `GitHub.update_issue`; any `*_file`, ref, branch, or comment mutator recipient is an unconditional hard stop. Equivalent literal recipient constraints apply to every other resource class.
-
-The following placeholder/probe signatures are forbidden in every live repository mutator payload unless they are the actual canonical business data being intentionally edited, which must itself be independently read-back verified:
-
-```text
-__noop__
-deadbeef
-noop
-probe
-connectivity test
-dummy
-placeholder
-```
-
-If any such token appears as a target, SHA, commit message, branch/ref, or surrogate identity during mutation routing, set `MUTATION_ALLOWED=false` and do not invoke any mutator. Never use a placeholder to recover from uncertainty about the intended tool or target.
-
-A recipient/payload mismatch at this final gate trips RM-09A before invocation. The presence of a valid intended issue number elsewhere in context does not authorize a different resource-class mutator.
-
-Originating recurrence:
-
-```text
-docs/protocols/repository_mutation_incidents.md#2026-09-02--wrong-resourcetarget-mutation-during-issue-93-synchronization
-```
+Use hard stops for real state risk. Use soft controls for false positives, checker defects, schema exposure, and other process anomalies that can be independently shown not to affect canonical state. A safety protocol that repeatedly blocks verified-safe work is itself a liveness defect and should be simplified rather than strengthened mechanically.
