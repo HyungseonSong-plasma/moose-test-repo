@@ -77,7 +77,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: qpx-migration-source
+          name: physics-migration-source
           path: |
             physics_harness/**/*.py
             experiments/**/*.py
