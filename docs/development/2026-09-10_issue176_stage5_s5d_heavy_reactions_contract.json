@@ -1,0 +1,211 @@
+{
+  "schema_version": 1,
+  "controller_issue": 176,
+  "stage": "STAGE_5",
+  "slice": "S5-D_H01_H04_HEAVY_REACTIONS",
+  "baseline_sha": "f9747b057302824cbb568301a94942ae31974869",
+  "status": "CONTRACT_FROZEN",
+  "claim_boundary": {
+    "accepted_if_green": "bounded local runtime accuracy for H01-H04 rate/projection semantics",
+    "not_established": [
+      "representative real-QVT chemistry accuracy",
+      "integrated physics accuracy",
+      "Stage-5 acceptance"
+    ]
+  },
+  "source_provenance": {
+    "source": "user_supplied:Ar_O2_plasma_chemistry.txt",
+    "source_group": "HEAVYSPECIESREACTIONS",
+    "recovered_exact_text_from_file_library": true,
+    "reactions": [
+      {
+        "id": "H01_OP_O2_CHARGE_TRANSFER",
+        "exact_line": "O++O2=>O+O2+\t!   2e-17[m^3/s]*N_A_const*(300[K]/TGAS)^0.5       0    0",
+        "line_sha256": "358b11b65540a6d40cd58bd8ca3a5480e783bcc18a13c177015911b8f9707356"
+      },
+      {
+        "id": "H02_OM_OP_NEUTRALIZATION",
+        "exact_line": "O-+O+=>O+O\t  !   4e-14[m^3/s]*N_A_const*(300[K]/TGAS)^0.43      0    0",
+        "line_sha256": "186896660a9af51666a42c5b022b7c7ce939fdb6c65d73efbda083d44588067a"
+      },
+      {
+        "id": "H03_OM_O2P_TO_3O",
+        "exact_line": "O-+O2+=>O+O+O\t!   2.6e-14[m^3/s]*N_A_const*(300[K]/TGAS)^0.44    0    0",
+        "line_sha256": "09074dc0053e0f4cde6977fea37abfe8b3423c0e28dee1b838aa74c443fe2dbf"
+      },
+      {
+        "id": "H04_OM_O2P_TO_O_O2",
+        "exact_line": "O-+O2+=>O+O2\t!   2.6e-14[m^3/s]*N_A_const*(300[K]/TGAS)^0.44    0    0",
+        "line_sha256": "f6e23584b682be5abb736de840be04d246277e68c235eef1b1e33988240eb0d3"
+      }
+    ],
+    "source_semantics": "All four are heavy-species reactions. The two trailing source fields are zero; no free-electron particle or electron-energy projection is specified."
+  },
+  "canonical_state": {
+    "gas_temperature_functor": "T_g",
+    "temperature_domain": "finite and > 0 K",
+    "temperature_policy": "No clamp, floor, fallback, or separate Tgas state. Representative S5-R must bind the accepted heavy-mixture T_g.",
+    "density_functor": "rho_mat",
+    "constrained_species": "O2",
+    "constraint": "w_O2 = 1 - (w_O2s + w_O2p + w_O + w_Om + w_Op + w_Os)",
+    "molar_concentration": "c_k = rho_mat*w_k/M_k [mol/m^3]",
+    "molar_masses_kg_per_mol": {
+      "O2": 0.032,
+      "O2p": 0.032,
+      "O": 0.016,
+      "Om": 0.016,
+      "Op": 0.016
+    }
+  },
+  "production_owner": {
+    "rate_owner": "PhysicsReactionRateMaterial",
+    "chemistry_database_path": "physics_app/data/heavy_reactions/stage5_s5d_oxygen_heavy.txt",
+    "database_rate_basis": "particle",
+    "database_conversion": "For second-order reactions PhysicsReactionDatabase multiplies A_particle by N_A once, yielding A_molar [m^3/(mol s)].",
+    "canonical_progress_policy": "Exactly one published reaction_rate_<reaction-name> molar progress per channel. All S5-D source projections consume those published progress functors; no downstream kinetic re-evaluation.",
+    "heavy_projector": "PhysicsFVSpeciesReactionSource",
+    "electron_particle_projector": "NONE",
+    "electron_energy_projector": "NONE"
+  },
+  "reactions": [
+    {
+      "id": "H01_OP_O2_CHARGE_TRANSFER",
+      "database_name": "H01_Op_O2_charge_transfer",
+      "formula": "Op + O2 -> O + O2p",
+      "A_particle_m3_s": 2e-17,
+      "T_ref_K": 300.0,
+      "exponent": 0.5,
+      "canonical_progress": "reaction_rate_H01_Op_O2_charge_transfer",
+      "progress_formula": "R_H01 = 2e-17*N_A*(300/T_g)^0.5*c_Op*c_O2",
+      "stoichiometry": {
+        "Op": -1,
+        "O2": -1,
+        "O": 1,
+        "O2p": 1
+      },
+      "solved_mass_sources": {
+        "Op": "-M_O*R_H01",
+        "O": "+M_O*R_H01",
+        "O2p": "+M_O2*R_H01"
+      },
+      "constrained_O2_source": "-M_O2*R_H01, recovered implicitly from w_O2=1-sum(w_solved)",
+      "invariants": [
+        "heavy mass",
+        "oxygen atoms",
+        "heavy charge +1 -> +1",
+        "no free-electron source"
+      ]
+    },
+    {
+      "id": "H02_OM_OP_NEUTRALIZATION",
+      "database_name": "H02_Om_Op_neutralization",
+      "formula": "Om + Op -> 2O",
+      "A_particle_m3_s": 4e-14,
+      "T_ref_K": 300.0,
+      "exponent": 0.43,
+      "canonical_progress": "reaction_rate_H02_Om_Op_neutralization",
+      "progress_formula": "R_H02 = 4e-14*N_A*(300/T_g)^0.43*c_Om*c_Op",
+      "stoichiometry": {
+        "Om": -1,
+        "Op": -1,
+        "O": 2
+      },
+      "solved_mass_sources": {
+        "Om": "-M_O*R_H02",
+        "Op": "-M_O*R_H02",
+        "O": "+2*M_O*R_H02"
+      },
+      "constrained_O2_source": "0",
+      "invariants": [
+        "heavy mass",
+        "oxygen atoms",
+        "heavy charge -1+1 -> 0",
+        "no free-electron source"
+      ]
+    },
+    {
+      "id": "H03_OM_O2P_TO_3O",
+      "database_name": "H03_Om_O2p_to_3O",
+      "formula": "Om + O2p -> 3O",
+      "A_particle_m3_s": 2.6e-14,
+      "T_ref_K": 300.0,
+      "exponent": 0.44,
+      "canonical_progress": "reaction_rate_H03_Om_O2p_to_3O",
+      "progress_formula": "R_H03 = 2.6e-14*N_A*(300/T_g)^0.44*c_Om*c_O2p",
+      "stoichiometry": {
+        "Om": -1,
+        "O2p": -1,
+        "O": 3
+      },
+      "solved_mass_sources": {
+        "Om": "-M_O*R_H03",
+        "O2p": "-M_O2*R_H03",
+        "O": "+3*M_O*R_H03"
+      },
+      "constrained_O2_source": "0",
+      "invariants": [
+        "heavy mass",
+        "oxygen atoms",
+        "heavy charge -1+1 -> 0",
+        "no free-electron source"
+      ]
+    },
+    {
+      "id": "H04_OM_O2P_TO_O_O2",
+      "database_name": "H04_Om_O2p_to_O_O2",
+      "formula": "Om + O2p -> O + O2",
+      "A_particle_m3_s": 2.6e-14,
+      "T_ref_K": 300.0,
+      "exponent": 0.44,
+      "canonical_progress": "reaction_rate_H04_Om_O2p_to_O_O2",
+      "progress_formula": "R_H04 = 2.6e-14*N_A*(300/T_g)^0.44*c_Om*c_O2p",
+      "stoichiometry": {
+        "Om": -1,
+        "O2p": -1,
+        "O": 1,
+        "O2": 1
+      },
+      "solved_mass_sources": {
+        "Om": "-M_O*R_H04",
+        "O2p": "-M_O2*R_H04",
+        "O": "+M_O*R_H04"
+      },
+      "constrained_O2_source": "+M_O2*R_H04, recovered implicitly from w_O2=1-sum(w_solved)",
+      "invariants": [
+        "heavy mass",
+        "oxygen atoms",
+        "heavy charge -1+1 -> 0",
+        "no free-electron source"
+      ]
+    }
+  ],
+  "cross_channel_rules": [
+    "H03 and H04 remain distinct reaction identities and distinct canonical progresses even though their reactants and rate laws are identical.",
+    "For identical state H03 and H04 progresses must be numerically identical; their source projections differ by stoichiometry.",
+    "No H01-H04 path changes n_e_hat or n_epsilon_hat."
+  ],
+  "bounded_acceptance": {
+    "P0": [
+      "contract/data exactness and source-line provenance",
+      "checker self-test with targeted mutations of prefactor, exponent, channel identity, projection sign, and T_g scaling",
+      "source projections are built from published reaction_rate_* functors rather than an independent kinetic expression"
+    ],
+    "P1": [
+      "database parser invariants: second-order particle basis converts by one N_A; heavy mass and charge balance"
+    ],
+    "P2": [
+      "bin/physics.py preflight and physics-opt --check-input for controlled H01-H04 surface"
+    ],
+    "P3": [
+      "one-cell transient with H01-H04 simultaneously active at T_g=600 K",
+      "second controlled case at T_g=1200 K verifies per-channel power-law scaling from identical initial state",
+      "backward-Euler species-source closure, constrained-O2 closure, oxygen-atom conservation, and heavy-charge conservation",
+      "targeted non-positive T_g runtime must be rejected; no clamp/floor is permitted"
+    ]
+  },
+  "deferred": {
+    "H05_OM_O_TO_O2_E": "Blocked on electron birth-energy convention.",
+    "S5_R": "Representative real-QVT all-admitted-channel run follows bounded S5-D/S5-E decisions.",
+    "Stage6_issue27": "Blocked until Stage-5 acceptance."
+  }
+}
