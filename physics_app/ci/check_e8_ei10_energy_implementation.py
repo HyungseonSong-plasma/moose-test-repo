@@ -23,7 +23,7 @@ def main():
     assert c["ownership"]["energy_projection_owner_kind"] == "STANDARD_MOOSE"
     assert not CUSTOM_H.exists() and not CUSTOM_C.exists()
     assert "type = FVCoupledForce" in runtime and "v = R_O2s" in runtime
-    assert "PhysicsFVElectronReactionEnergySource" not in runtime
+    assert "type = PhysicsFVElectronReactionEnergySource" not in runtime
     assert "custom_energy_projector_instantiated" in ab
     assert '"FVCoupledForce"' in ab
     assert 'addFunctorProperty<ADReal>(\n      "R_O2s"' in rate

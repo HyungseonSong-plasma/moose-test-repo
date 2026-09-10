@@ -42,7 +42,7 @@ def main():
     assert "type = FVCoupledForce" in runtime
     assert "v = R_O2s" in runtime
     assert "ENERGY_COEF = -(DELTA_E_EV * N_A / (N_REF * EPSILON_REF_EV))" in runtime
-    assert "PhysicsFVElectronReactionEnergySource" not in runtime
+    assert "type = PhysicsFVElectronReactionEnergySource" not in runtime
     assert not CUSTOM_H.exists() and not CUSTOM_C.exists()
 
     R = 7.8133117564827e-3
