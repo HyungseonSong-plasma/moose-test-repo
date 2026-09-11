@@ -134,7 +134,7 @@ Generated evidence should preserve enough identity and provenance to interpret t
 
 ## CODE-09 — One command should produce one interpretable result surface
 
-A user-local command should emit concise terminal result markers and write a structured summary/log path when the result needs later diagnosis.
+A validation/runtime command should emit concise terminal result markers and write a structured summary/log path when the result needs later diagnosis, whether it runs in governed CI or user-local execution.
 
 Prefer:
 
@@ -147,7 +147,7 @@ Prefer:
 <TEST>_SUMMARY: <path>
 ```
 
-Do not require the user to reconstruct the decision by manually combining several unrelated commands when the harness can do so deterministically.
+Do not require manual reconstruction of the decision by combining several unrelated commands when the harness can do so deterministically.
 
 ## CODE-10 — Preserve accepted behavior while adding diagnostics
 
@@ -155,15 +155,15 @@ Instrumentation, provenance, logging, introspection, and validation controls mus
 
 If implementation changes both behavior and observability, separate those claims and validate them independently under CORE-16 and `validation.md`.
 
-## CODE-11 — User-local execution boundary
+## CODE-11 — Runtime execution authority
 
-Repository code may construct and statically validate Physics work, but real Physics runtime evidence remains user-local under CORE-05.
+Runtime evidence authority is owned by CORE-05. Harness and repository code may produce authoritative Physics runtime evidence in any execution venue that satisfies the CORE-05 provenance-controlled real-`physics-opt` contract.
 
-Do not label repository/static execution as physics PASS. Harness code should make the distinction between static construction, executable preflight, runtime-semantic evidence, and physics decisions machine-visible.
+Do not label static, mock, checker-only, parser-only, or `--check-input` execution as Physics runtime PASS. Harness code should make the distinction between static construction, executable preflight, runtime-semantic evidence, execution venue, and physics decisions machine-visible.
 
 ## CODE-12 — Implementation delivery gate
 
-Before asking the user to run a new or changed command, verify the implementation against this checklist:
+Before presenting a new or changed command as ready for execution, verify the implementation against this checklist:
 
 ```text
 existing semantic owner searched
@@ -177,11 +177,11 @@ result markers and evidence paths are deterministic
 validation protocol requirements are satisfied
 ```
 
-If any material item is unresolved, do not present the command as ready for external execution.
+If any material item is unresolved, do not present the command as ready for execution.
 
 ## CODE-13 — Staged validation queue stack
 
-When one issue requires several small, causally ordered implementation cuts, do not require a separate user-local validation round after every low-risk cut. Preserve the validation obligation for each cut in an ordered **validation queue stack**, continue implementation while the dependency chain remains interpretable and reversible, then discharge the queued validations in causal order.
+When one issue requires several small, causally ordered implementation cuts, do not require a separate validation round after every low-risk cut. Preserve the validation obligation for each cut in an ordered **validation queue stack**, continue implementation while the dependency chain remains interpretable and reversible, then discharge the queued validations in causal order.
 
 Canonical shape:
 
@@ -258,4 +258,4 @@ the validation itself is a required gate before the next cut
 
 Lightweight additive helpers, reversible caller rewiring, duplicated plumbing removal, and other causally isolated refactors are normal candidates for queued validation.
 
-The queue reduces the **number of user-local validation rounds**, not the required evidence. Before issue closure or canonical retirement, every non-dropped queued validation must be discharged successfully, and the final validation gates required by `validation.md` still apply.
+The queue reduces the **number of validation rounds**, not the required evidence. Before issue closure or canonical retirement, every non-dropped queued validation must be discharged successfully, and the final validation gates required by `validation.md` still apply.
