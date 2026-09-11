@@ -111,6 +111,33 @@ ENERGY_LOSS_EV = {
 }
 
 SOLVED_HEAVY = ("O2s", "O2p", "O", "Om", "Op", "Os")
+CURRENT_PHYSICS_OBJECT_TYPES = {
+    "FunctorMaterials/heavy_transport": "PhysicsThermalDiffusionMaterial",
+    "FunctorMaterials/electron_transport": "PhysicsElectronTransportLookupMaterial",
+    "FunctorMaterials/r31_charge_density": "PhysicsPlasmaChargeDensityMaterial",
+    "FVKernels/n_e_drift": "PhysicsFVElectrostaticDrift",
+    **{
+        f"FVKernels/{species}_time": "PhysicsFVConservativeMassFractionTimeDerivative"
+        for species in SOLVED_HEAVY
+    },
+    **{
+        f"FVKernels/{species}_advection": "PhysicsFVMassFractionAdvection"
+        for species in SOLVED_HEAVY
+    },
+    **{
+        f"FVKernels/{species}_diffusion": "PhysicsFVMixtureAveragedDiffusion"
+        for species in SOLVED_HEAVY
+    },
+    **{
+        f"FVKernels/{species}_electrostatic_drift": "PhysicsFVElectrostaticDrift"
+        for species in ("O2p", "Om", "Op")
+    },
+    **{
+        f"FVKernels/{species}_heavy_mass_em_correction":
+            "PhysicsFVHeavyMassElectromigrationCorrection"
+        for species in SOLVED_HEAVY
+    },
+}
 MOLAR_MASS = {
     "O2": M_O2,
     "O2s": M_O2,
@@ -170,6 +197,17 @@ def _insert_material(text: str, name: str, body: str) -> str:
 def _insert_kernel(text: str, name: str, body: str) -> str:
     mb.require_absent(text, f"FVKernels/{name}")
     return mb.insert_child_block(text, "FVKernels", f"  [{name}]\n{body}\n  []")
+
+
+def _promote_current_physics_object_types(text: str) -> str:
+    """Retarget inherited live blocks while preserving historical source assets."""
+    for path, type_name in CURRENT_PHYSICS_OBJECT_TYPES.items():
+        if not mb.has_block(text, path):
+            raise Issue192S5RError(
+                f"missing inherited block required for Physics object promotion: {path}"
+            )
+        text = mp.upsert_parameter(text, path, "type", type_name)
+    return text
 
 
 def _insert_energy_state(text: str) -> str:
@@ -607,10 +645,11 @@ def _owner_paths_by_type(text: str) -> set[str]:
 def audit_s5r_input(text: str) -> dict[str, Any]:
     checks: dict[str, bool] = {}
 
-    checks["current_heavy_transport_object"] = (
-        mp.get_parameter(text, "FunctorMaterials/heavy_transport", "type")
-        == "PhysicsThermalDiffusionMaterial"
-    )
+    for path, type_name in CURRENT_PHYSICS_OBJECT_TYPES.items():
+        checks[f"current_object:{path}"] = (
+            mp.get_parameter(text, path, "type") == type_name
+        )
+    checks["no_legacy_qpx_object_types"] = "type = QPX" not in text
     checks["solved_energy_variable"] = mb.has_block(text, "Variables/n_epsilon")
     checks["mean_energy_bridge"] = (
         mp.get_parameter(text, "FunctorMaterials/s5r_mean_energy", "type")
@@ -819,13 +858,8 @@ def build_s5r_input(base_text: str) -> tuple[str, dict[str, Any]]:
         raise Issue192S5RError("R4-QF1 predecessor audit is not PASS")
 
     # Historical accepted R3/R4 assets retain their original object spellings.
-    # The live S5-R surface must target the currently registered Physics object.
-    text = mp.upsert_parameter(
-        text,
-        "FunctorMaterials/heavy_transport",
-        "type",
-        "PhysicsThermalDiffusionMaterial",
-    )
+    # The live S5-R surface must target the currently registered Physics objects.
+    text = _promote_current_physics_object_types(text)
 
     n_ref = _top_level_float(text, "n_e_value")
     text = _insert_energy_state(text)
@@ -850,6 +884,7 @@ def build_s5r_input(base_text: str) -> tuple[str, dict[str, Any]]:
         "admitted_ledger": list(ADMITTED_CHANNELS),
         "progress_map": dict(PROGRESS),
         "owner_map": dict(OWNER_BLOCKS),
+        "current_physics_object_types": dict(CURRENT_PHYSICS_OBJECT_TYPES),
         "common_heavy_temperature": "T_g",
         "solved_mean_energy": "mean_en_solved",
         "electron_transport_bounds_policy": "error",
@@ -862,6 +897,7 @@ def build_s5r_input(base_text: str) -> tuple[str, dict[str, Any]]:
 
 __all__ = [
     "ADMITTED_CHANNELS",
+    "CURRENT_PHYSICS_OBJECT_TYPES",
     "DEFERRED_TOKENS",
     "H01_H04_ACTIVE",
     "H05_ACTIVE",
