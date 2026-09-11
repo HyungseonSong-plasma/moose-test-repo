@@ -12,8 +12,9 @@ PhysicsReactionRateMaterial::validParams()
   auto params = FunctorMaterial::validParams();
 
   params.addClassDescription(
-      "Evaluates data-driven heavy-particle volume reaction rates and assembles "
-      "stoichiometric species source functors.");
+      "Evaluates data-driven heavy-particle volume reaction rates and publishes one "
+      "canonical molar reaction-progress functor per active reaction. Downstream "
+      "source projectors must reuse those progress functors.");
 
   params.addRequiredParam<FileName>("chemistry_file", "Physics chemistry database.");
   params.addRequiredParam<MooseFunctorName>("density", "Heavy-mixture density [kg/m^3].");
@@ -151,45 +152,13 @@ PhysicsReactionRateMaterial::PhysicsReactionRateMaterial(const InputParameters &
         [this, reaction_index](const auto & r, const auto & state) -> ADReal
         { return reactionProgress(_database.reactions().at(reaction_index), r, state); });
   }
-
-  for (std::size_t species_index = 0; species_index < _database.species().size(); ++species_index)
-  {
-    const auto & species = _database.species()[species_index];
-
-    addFunctorProperty<ADReal>(
-        "reaction_number_source_" + species.solver_id,
-        [this, species_index](const auto & r, const auto & state) -> ADReal
-        {
-          return PhysicsReactionDatabase::avogadro() * molarSource(species_index, r, state);
-        });
-
-    if (species.kind == PhysicsReactionDatabase::SpeciesKind::Heavy)
-      addFunctorProperty<ADReal>(
-          "reaction_source_" + species.solver_id,
-          [this, species_index](const auto & r, const auto & state) -> ADReal
-          {
-            return _database.species()[species_index].molar_mass *
-                   molarSource(species_index, r, state);
-          });
-  }
-
-  addFunctorProperty<ADReal>(
-      "reaction_mass_source_sum",
-      [this](const auto & r, const auto & state) -> ADReal
-      {
-        ADReal sum = 0.0;
-        for (std::size_t i = 0; i < _database.species().size(); ++i)
-          if (_database.species()[i].kind == PhysicsReactionDatabase::SpeciesKind::Heavy)
-            sum += _database.species()[i].molar_mass * molarSource(i, r, state);
-        return sum;
-      });
 }
 
 template <typename SpaceArg, typename StateArg>
 ADReal
 PhysicsReactionRateMaterial::concentration(std::size_t database_species,
-                                       const SpaceArg & r,
-                                       const StateArg & state) const
+                                           const SpaceArg & r,
+                                           const StateArg & state) const
 {
   const auto it = _mass_fraction_by_database_species.find(database_species);
   if (it == _mass_fraction_by_database_species.end())
@@ -204,8 +173,8 @@ PhysicsReactionRateMaterial::concentration(std::size_t database_species,
 template <typename SpaceArg, typename StateArg>
 ADReal
 PhysicsReactionRateMaterial::reactionProgress(const PhysicsReactionDatabase::Reaction & reaction,
-                                          const SpaceArg & r,
-                                          const StateArg & state) const
+                                              const SpaceArg & r,
+                                              const StateArg & state) const
 {
   using std::pow;
 
@@ -227,24 +196,4 @@ PhysicsReactionRateMaterial::reactionProgress(const PhysicsReactionDatabase::Rea
   }
 
   return progress;
-}
-
-template <typename SpaceArg, typename StateArg>
-ADReal
-PhysicsReactionRateMaterial::molarSource(std::size_t database_species,
-                                     const SpaceArg & r,
-                                     const StateArg & state) const
-{
-  ADReal source = 0.0;
-
-  for (const auto reaction_index : _active_reactions)
-  {
-    const auto & reaction = _database.reactions().at(reaction_index);
-    const auto nu = _database.stoichCoefficient(reaction, database_species);
-
-    if (std::abs(nu) > 0.0)
-      source += nu * reactionProgress(reaction, r, state);
-  }
-
-  return source;
 }
