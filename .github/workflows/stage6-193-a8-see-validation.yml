@@ -78,7 +78,7 @@ jobs:
           export ZAPDOS_DIR=/opt/physics_vendor/zapdos
           export METHOD=opt
           export PYTHONPATH=/workspace
-          uv pip install --system -r requirements-evidence-engine.txt
+          uv pip install --system --python "$(command -v python3)" -r requirements-evidence-engine.txt
           python3 bin/physics.py preflight --self-test
           python3 experiments/Issue193_a8_see_acceptance/run.py --self-test
           test ! -e physics_app/physics-opt
