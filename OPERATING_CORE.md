@@ -21,7 +21,7 @@ When the user says `meeting`, discuss and plan only. Do not mutate GitHub, files
 Technical execution must be attributable to a concrete issue or bounded work item with a closure claim. For active/open work, the issue body/current status block is the canonical STATE record; comments are historical evidence unless the body is explicitly stale and being repaired.
 
 ### CORE-05 — Runtime evidence authority
-Canonical QPX runtime evidence comes from the user's real local `qpx-opt`. Static/CI evidence may support construction checks but must not be promoted to QPX physics PASS/FAIL evidence when the real executable path was not exercised.
+Canonical QPX runtime evidence comes from the user's real local `physics-opt`. Static/CI evidence may support construction checks but must not be promoted to QPX physics PASS/FAIL evidence when the real executable path was not exercised.
 
 ### CORE-06 — One canonical owner per rule
 Do not duplicate canonical procedure text across issue bodies, comments, READMEs, guides, or protocols. Reference the Rule ID or canonical owner. When a rule changes, update its one owner and route to it.

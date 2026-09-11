@@ -75,7 +75,7 @@ No new universal acceptance threshold is hard-coded. The purpose of this run is 
 git pull
 
 python -m experiments.Issue31_r4_qn0_all_ground.run \
-  --qpx "$QPX_OPT" \
+  --qpx "$PHYSICS_EXECUTABLE" \
   --results-root "$PWD/r4_results"
 ```
 
@@ -83,7 +83,7 @@ The queue is:
 
 ```text
 canonical QN0 construction/audit
--> qpx-opt --check-input
+-> physics-opt --check-input
 -> one feedback-off R4-QN0 runtime
 -> R3 physical invariant checker using the QN electron reference
 -> C1 Gauss-law measurement

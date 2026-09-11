@@ -354,7 +354,7 @@ At minimum record or check the applicable activation state and executable identi
 
 ```text
 required environment activated
-qpx-opt realpath matches the intended executable
+physics-opt realpath matches the intended executable
 critical runtime/JIT dependencies resolve in that environment
 ```
 
