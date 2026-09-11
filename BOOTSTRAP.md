@@ -1,4 +1,4 @@
-# MOOSE/QPX Cross-Chat Bootstrap
+# MOOSE/Physics Cross-Chat Bootstrap
 
 **Status:** canonical entry point  
 **Command:** `moose-test-init`  

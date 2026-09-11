@@ -1,4 +1,4 @@
-# MOOSE/QPX Protocol Index
+# MOOSE/Physics Protocol Index
 
 **Status:** canonical router  
 **Purpose:** select the minimum procedure set required for the current request and current development phase.

@@ -1,4 +1,4 @@
-# MOOSE/QPX Rule Inventory
+# MOOSE/Physics Rule Inventory
 
 **Status:** canonical inventory index  
 **Purpose:** locate dormant rule owners and phase packs without loading their full contents.

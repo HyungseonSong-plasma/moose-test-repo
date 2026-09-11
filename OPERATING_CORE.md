@@ -1,15 +1,15 @@
-# MOOSE/QPX Operating Core
+# MOOSE/Physics Operating Core
 
 **Status:** canonical  
 **Scope:** always-active operating invariants for this repository  
 **Purpose:** keep the always-loaded rule set small, stable, and unambiguous.
 
-This file contains only invariants that apply across essentially every MOOSE/QPX work item. Conditional behavior is loaded through `PROTOCOL_INDEX.md` and `docs/protocols/rule_working_set.md`.
+This file contains only invariants that apply across essentially every MOOSE/Physics work item. Conditional behavior is loaded through `PROTOCOL_INDEX.md` and `docs/protocols/rule_working_set.md`.
 
 ## Canonical always-active invariants
 
 ### CORE-01 — Team boundary
-This repository is for MOOSE/QPX work. Do not perform SOL-team or `sol-adapter-moose` work here unless the user explicitly changes scope.
+This repository is for MOOSE/Physics work. Do not perform SOL-team or `sol-adapter-moose` work here unless the user explicitly changes scope.
 
 ### CORE-02 — Meeting means no mutation
 When the user says `meeting`, discuss and plan only. Do not mutate GitHub, files, issues, or production artifacts.
@@ -21,7 +21,9 @@ When the user says `meeting`, discuss and plan only. Do not mutate GitHub, files
 Technical execution must be attributable to a concrete issue or bounded work item with a closure claim. For active/open work, the issue body/current status block is the canonical STATE record; comments are historical evidence unless the body is explicitly stale and being repaired.
 
 ### CORE-05 — Runtime evidence authority
-Canonical QPX runtime evidence comes from the user's real local `physics-opt`. Static/CI evidence may support construction checks but must not be promoted to QPX physics PASS/FAIL evidence when the real executable path was not exercised.
+Canonical Physics runtime evidence comes from the user's real local `physics-opt`. Static/CI evidence may support construction checks but must not be promoted to Physics runtime PASS/FAIL evidence when the real executable path was not exercised.
+
+`QPX` / `qpx-opt` are historical names only. Historical incident records, archived experiments, immutable snapshots, or prior closure evidence may retain those names when they identify the executable or architecture actually used at that time; current runtime ownership and new instructions use `Physics` / `physics-opt`.
 
 ### CORE-06 — One canonical owner per rule
 Do not duplicate canonical procedure text across issue bodies, comments, READMEs, guides, or protocols. Reference the Rule ID or canonical owner. When a rule changes, update its one owner and route to it.

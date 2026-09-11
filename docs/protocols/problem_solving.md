@@ -1,7 +1,7 @@
 # Problem-Solving Protocol
 
 **Status:** canonical procedure  
-**Scope:** MOOSE/QPX technical issues and bounded child work items  
+**Scope:** MOOSE/Physics technical issues and bounded child work items  
 **Purpose:** reduce external validation rounds by doing high-value research, framing, and discrimination before user-local runtime execution.
 
 ## PS-01 — Phase 0 problem framing
@@ -303,7 +303,7 @@ T4 transient integration
 EVR #1 = one user-local execution containing T1-T4 when practical
 ```
 
-Do not create pseudo-EVR names such as `EVR1-A`, `EVR1-B`, etc. when each label is actually a test case. `EVR` increments only when a user-local QPX execution result is returned under `MET-05`.
+Do not create pseudo-EVR names such as `EVR1-A`, `EVR1-B`, etc. when each label is actually a test case. `EVR` increments only when a user-local Physics execution result is returned under `MET-05`.
 
 ## PS-17 — Live EVR/RWR accounting
 
@@ -348,7 +348,7 @@ A successful diagnostic should be promotable without redesigning its physical te
 
 ## PS-20 — Environment activation preflight
 
-Before spending an EVR on a user-local QPX batch that depends on a project runtime environment, verify the environment contract explicitly rather than assuming the interactive shell is already prepared.
+Before spending an EVR on a user-local Physics batch that depends on a project runtime environment, verify the environment contract explicitly rather than assuming the interactive shell is already prepared.
 
 At minimum record or check the applicable activation state and executable identity before P2:
 
@@ -397,7 +397,7 @@ Do not compensate by arbitrary tolerance, timestep, source-amplitude, boundary-c
 
 ### Implementation granularity
 
-For performance-sensitive MOOSE/QPX implementation, separate **physics granularity** from **computational granularity**:
+For performance-sensitive MOOSE/Physics implementation, separate **physics granularity** from **computational granularity**:
 
 ```text
 physics decomposition      = split by mathematical/physical responsibility

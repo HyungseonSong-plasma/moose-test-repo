@@ -35,7 +35,7 @@ NUMERICAL REGIME
   discretization, timestep/cadence, coupling, solver, and scale-resolution intent
 
 FRAMEWORK-EFFECTIVE CONFIGURATION
-  what QPX/MOOSE actually executes after defaults, overrides, adaptivity, synchronization, and ownership rules
+  what Physics/MOOSE actually executes after defaults, overrides, adaptivity, synchronization, and ownership rules
 
 RUNTIME REGIME / TRAJECTORY
   the regime actually traversed during execution, including material state-dependent scale changes
