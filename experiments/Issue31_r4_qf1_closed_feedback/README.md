@@ -179,7 +179,7 @@ The runner records both a component-relative defect and a carrier-charge-scaled 
 git pull
 
 python -m experiments.Issue31_r4_qf1_closed_feedback.run \
-  --qpx "$QPX_OPT" \
+  --qpx "$PHYSICS_EXECUTABLE" \
   --results-root "$PWD/r4_results"
 ```
 
@@ -187,7 +187,7 @@ Bounded queue:
 
 ```text
 canonical QF1 construction/audit
--> qpx-opt --check-input
+-> physics-opt --check-input
 -> one monolithic implicit QF1 runtime
 -> preserved physical state/inventory checker
 -> C1 Gauss-law measurement

@@ -10,7 +10,7 @@ Allowed content:
 
 Forbidden from the default pytest suite:
 
-- `qpx-opt` execution;
+- `physics-opt` execution;
 - framework-effective `--check-input` / P2 execution;
 - P3 scientific runtime;
 - EVR consumption;
