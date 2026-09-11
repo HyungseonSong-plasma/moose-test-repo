@@ -9,6 +9,7 @@ representative runtime evidence exists.
 
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -20,6 +21,8 @@ OWNERSHIP = ROOT / "docs/development/2026-09-10_issue176_stage5_reaction_ownersh
 E8 = ROOT / "docs/development/2026-09-10_issue26_e8_closure_surface_contract.json"
 E8_ELASTIC = ROOT / "docs/development/2026-09-10_issue26_e8_elastic_ei19_contract.json"
 H05 = ROOT / "docs/development/2026-09-11_issue191_stage5_h05_contract.json"
+EI01_RECOVERY = ROOT / "docs/development/2026-09-11_issue192_s5r_ei01_attachment_recovery.json"
+EI01_TABLE = ROOT / "physics_app/data/electron_impact/o2_attachment.txt"
 
 EXPECTED_LEDGER = [
     "EI01",
@@ -67,12 +70,96 @@ def _require(text: str, token: str, label: str) -> None:
         raise AssertionError(f"{label}: missing {token!r}")
 
 
+def _read_two_column_table(path: Path) -> list[tuple[float, float]]:
+    if not path.is_file():
+        raise AssertionError(f"missing required table: {path.relative_to(ROOT)}")
+    rows = []
+    for line_no, raw in enumerate(path.read_text().splitlines(), start=1):
+        stripped = raw.strip()
+        if not stripped:
+            continue
+        fields = stripped.split()
+        if len(fields) != 2:
+            raise AssertionError(f"{path.relative_to(ROOT)}:{line_no}: expected two columns")
+        rows.append((float(fields[0]), float(fields[1])))
+    return rows
+
+
+def _check_ei01_recovery() -> None:
+    recovery = _load_json(EI01_RECOVERY)
+    if recovery.get("schema_version") != 1:
+        raise AssertionError("unexpected EI01 recovery schema")
+    if recovery.get("controller_issue") != 176 or recovery.get("child_issue") != 192:
+        raise AssertionError("EI01 recovery controller/child identity changed")
+    if recovery.get("channel") != "EI01_O2_ATTACHMENT":
+        raise AssertionError("EI01 recovery channel identity changed")
+    if recovery.get("status") != "PRODUCTION_RATE_OWNER_RECOVERED":
+        raise AssertionError("EI01 production rate owner is not recovered")
+
+    provenance = recovery.get("provenance", {})
+    if provenance.get("source_identity") != "user_supplied:o2_attachment":
+        raise AssertionError("EI01 source identity changed")
+    if provenance.get("canonical_path") != "physics_app/data/electron_impact/o2_attachment.txt":
+        raise AssertionError("EI01 canonical table path changed")
+
+    raw = EI01_TABLE.read_bytes()
+    if hashlib.sha256(raw).hexdigest() != provenance.get("sha256"):
+        raise AssertionError("EI01 table SHA-256 does not match frozen recovery provenance")
+
+    lookup = recovery.get("lookup_contract", {})
+    if lookup.get("coordinate") != "mean_en_solved":
+        raise AssertionError("EI01 lookup coordinate is not solved mean energy")
+    if lookup.get("coordinate_unit") != "eV":
+        raise AssertionError("EI01 lookup coordinate unit changed")
+    if lookup.get("value_unit") != "m^3/(mol s)":
+        raise AssertionError("EI01 lookup rate unit changed")
+    if lookup.get("rows") != 100:
+        raise AssertionError("EI01 lookup row count contract changed")
+    if lookup.get("domain_eV") != [1.40991, 22.1378]:
+        raise AssertionError("EI01 lookup domain changed")
+    if lookup.get("bounds_policy") != "error":
+        raise AssertionError("EI01 lookup must remain strict")
+
+    rows = _read_two_column_table(EI01_TABLE)
+    if len(rows) != lookup["rows"]:
+        raise AssertionError("EI01 table row count does not match recovery contract")
+    if rows[0][0] != lookup["domain_eV"][0] or rows[-1][0] != lookup["domain_eV"][1]:
+        raise AssertionError("EI01 table domain does not match recovery contract")
+    for (x0, _), (x1, _) in zip(rows, rows[1:]):
+        if not x1 > x0:
+            raise AssertionError("EI01 mean-energy grid must be strictly increasing")
+
+    row_map = dict(rows)
+    anchors = lookup.get("anchors_m3_per_mol_s", {})
+    for x_text, expected in anchors.items():
+        x = float(x_text)
+        if x not in row_map or row_map[x] != expected:
+            raise AssertionError(f"EI01 table anchor mismatch at {x_text} eV")
+
+    owner = recovery.get("progress_owner", {})
+    if owner.get("type") != "PhysicsElectronImpactRateMaterial":
+        raise AssertionError("EI01 progress owner type changed")
+    if owner.get("rate_table_file") != "physics_app/data/electron_impact/o2_attachment.txt":
+        raise AssertionError("EI01 progress owner table binding changed")
+    if owner.get("mean_energy") != "mean_en_solved":
+        raise AssertionError("EI01 progress owner mean-energy binding changed")
+    if owner.get("reaction_progress") != "R_attachment":
+        raise AssertionError("EI01 canonical progress identity changed")
+
+    projection = recovery.get("projection_contract", {})
+    if projection.get("electron_energy") != "NONE_REQUIRED_ZERO_TERM":
+        raise AssertionError("EI01 zero-energy convention changed")
+    if projection.get("duplicate_kinetic_reevaluation") != "FORBIDDEN":
+        raise AssertionError("EI01 duplicate kinetic reevaluation guard changed")
+
+
 def check() -> None:
     contract = _load_json(CONTRACT)
     _load_json(OWNERSHIP)
     _load_json(E8)
     _load_json(E8_ELASTIC)
     h05 = _load_json(H05)
+    _check_ei01_recovery()
 
     if contract.get("schema_version") != 1:
         raise AssertionError("unexpected S5-R contract schema")
@@ -125,8 +212,6 @@ def check() -> None:
     if "ADMITTED" not in h05_row.get("model_decision", ""):
         raise AssertionError("H05 admitted disposition missing from S5-R owner map")
     if h05.get("status") not in {"MODEL_DECISION_FROZEN", "ACCEPTED_BOUNDED"}:
-        # Contract schemas have evolved; require an explicit admitted/no-energy surface below
-        # rather than relying only on one historical status spelling.
         h05_text = H05.read_text()
         _require(h05_text, "3.0e-16", "H05 contract")
         _require(h05_text, "electron", "H05 contract")
@@ -184,6 +269,7 @@ def check() -> None:
         raise AssertionError("S5-R construction target changed")
 
     print("S5R_P0_PROVIDER_OWNER_PREFLIGHT_PASS")
+    print("ei01_production_rate_owner=RECOVERED")
     print("claim=provider/ledger/state-binding preflight only")
     print("representative_assembly=NOT_YET_ESTABLISHED")
     print("check_input=NOT_YET_ESTABLISHED")

@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "controller_issue": 176,
+  "child_issue": 192,
+  "channel": "EI01_O2_ATTACHMENT",
+  "status": "PRODUCTION_RATE_OWNER_RECOVERED",
+  "claim_boundary": {
+    "establishes": [
+      "canonical user-supplied EI01 mean-energy lookup artifact",
+      "concrete production progress owner for R_attachment",
+      "strict lookup domain and unit binding"
+    ],
+    "does_not_establish": [
+      "S5-R representative assembly",
+      "qpx-opt --check-input",
+      "representative runtime PASS",
+      "Stage-5 acceptance"
+    ]
+  },
+  "provenance": {
+    "source_identity": "user_supplied:o2_attachment",
+    "recovered_file_library_uploads": [
+      {
+        "created_at": "2026-09-07T16:07:05Z",
+        "role": "R1-era recovered source"
+      },
+      {
+        "created_at": "2026-08-25T12:12:12Z",
+        "role": "earlier identical recovered source"
+      }
+    ],
+    "canonical_path": "physics_app/data/electron_impact/o2_attachment.txt",
+    "sha256": "06024a3f38c91bbfe00e9649fedebda6bdcc0fa2171e2b50efdb1165545960cb",
+    "companion_identity_check": {
+      "canonical_companion": "physics_app/data/electron_impact/o_ionization.txt",
+      "finding": "Recovered o_ionization.txt matches the canonical user-supplied companion table row-for-row; o2_attachment is from the same mean-energy table family."
+    }
+  },
+  "lookup_contract": {
+    "coordinate": "mean_en_solved",
+    "coordinate_unit": "eV",
+    "value_unit": "m^3/(mol s)",
+    "rows": 100,
+    "domain_eV": [
+      1.40991,
+      22.1378
+    ],
+    "anchors_m3_per_mol_s": {
+      "1.40991": 24500.0,
+      "5.73276": 27300000.0,
+      "22.1378": 21200000.0
+    },
+    "bounds_policy": "error"
+  },
+  "progress_owner": {
+    "type": "PhysicsElectronImpactRateMaterial",
+    "rate_table_file": "physics_app/data/electron_impact/o2_attachment.txt",
+    "mean_energy": "mean_en_solved",
+    "electron_number_density": "canonical n_e_physical mapping",
+    "target_molar_concentration": "constrained O2 molar concentration from canonical heavy state",
+    "reaction_progress": "R_attachment",
+    "law": "R_attachment = k_raw(mean_en_solved)*(n_e_physical/N_A)*c_O2"
+  },
+  "projection_contract": {
+    "heavy": [
+      "O2 loss",
+      "O production",
+      "Om production"
+    ],
+    "electron_particle": "PhysicsFVElectronReactionSource consumes the same R_attachment with net electron stoich -1",
+    "electron_energy": "NONE_REQUIRED_ZERO_TERM",
+    "duplicate_kinetic_reevaluation": "FORBIDDEN"
+  },
+  "source_contracts": [
+    "docs/development/2026-09-07_issue17_r0_reaction_ledger.json",
+    "docs/development/2026-09-10_issue26_e8_closure_surface_contract.json",
+    "docs/development/2026-09-11_issue192_stage5_s5r_representative_contract.json"
+  ],
+  "evidence_parent_head": "bf36b6e2727d526b852737bff07ef4b85a40e7fa"
+}
