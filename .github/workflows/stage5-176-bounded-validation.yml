@@ -11,6 +11,7 @@ on:
       - 'experiments/Issue192_s5r_representative/run.py'
       - 'experiments/historical_recipe_support/issue31_r4_qf1.py'
       - 'experiments/Issue91_real_qvt_r3/r3_e0/**'
+      - 'physics_app/include/base/Physics.h'
       - 'physics_app/data/electron_impact/**'
       - 'physics_app/data/heavy_reactions/stage5_s5d_oxygen_heavy.txt'
       - 'physics_app/data/heavy_reactions/stage5_s5e_h05_oxygen_heavy.txt'
