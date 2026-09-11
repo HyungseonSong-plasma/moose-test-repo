@@ -11,6 +11,7 @@ on:
       - 'docs/development/2026-09-10_issue176_stage5_s5c_edetach_contract.json'
       - 'docs/development/2026-09-10_issue176_stage5_s5d_heavy_reactions_contract.json'
       - 'docs/development/2026-09-11_issue191_stage5_h05_contract.json'
+      - 'docs/development/2026-09-11_issue192_stage5_s5r_representative_contract.json'
   workflow_dispatch:
 
 concurrency:
@@ -116,6 +117,7 @@ jobs:
               python3 physics_app/ci/check_stage5_s5d_heavy_reactions.py --static
               python3 physics_app/ci/check_stage5_h05_runtime.py --self-test
               python3 physics_app/ci/check_stage5_h05_runtime.py --static
+              python3 physics_app/ci/check_stage5_s5r_preflight.py
               test ! -e physics_app/physics-opt
               make -C physics_app -j2
               test -x physics_app/physics-opt
