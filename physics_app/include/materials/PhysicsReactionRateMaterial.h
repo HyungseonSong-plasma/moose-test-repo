@@ -10,14 +10,11 @@
 /**
  * Evaluates selected heavy-particle volume reactions from a chemistry database.
  *
- * Canonical internal reaction progress:
+ * Publishes one canonical reaction progress per active reaction:
  *   R_r [mol/(m^3 s)]
  *
- * Heavy-species mass source:
- *   S_k = M_k * sum_r(nu_kr R_r) [kg/(m^3 s)]
- *
- * Species number source:
- *   Ndot_k = N_A * sum_r(nu_kr R_r) [1/(m^3 s)]
+ * Species/electron/energy source projections are owned downstream and must reuse
+ * these canonical progress functors rather than re-evaluating the kinetic law.
  */
 class PhysicsReactionRateMaterial : public FunctorMaterial
 {
@@ -35,11 +32,6 @@ protected:
   ADReal reactionProgress(const PhysicsReactionDatabase::Reaction & reaction,
                           const SpaceArg & r,
                           const StateArg & state) const;
-
-  template <typename SpaceArg, typename StateArg>
-  ADReal molarSource(std::size_t database_species,
-                     const SpaceArg & r,
-                     const StateArg & state) const;
 
   const Moose::Functor<ADReal> & _density;
   const Moose::Functor<ADReal> & _temperature;
