@@ -1,4 +1,4 @@
-name: Stage-5 S5-R representative assembly validation
+name: Stage-5 S5-R governed representative validation
 
 on:
   push:
@@ -6,6 +6,8 @@ on:
       - main
     paths:
       - '.github/workflows/stage5-s5r-validation.yml'
+      - 'OPERATING_CORE.md'
+      - 'experiments/README.md'
       - 'experiments/historical_recipe_support/issue192_s5r.py'
       - 'experiments/Issue192_s5r_representative/**'
       - 'experiments/historical_recipe_support/issue31_r4_qf1.py'
@@ -40,10 +42,10 @@ env:
   ZAPDOS_SHA: 9eceffbc46048c3760bbfa9a7f1ca681ae35af1d
 
 jobs:
-  s5r-assembly:
-    name: S5-R P0/P1/P2 representative assembly
+  s5r-governed-runtime:
+    name: S5-R P0/P1/P2/P3 governed representative runtime
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 60
     steps:
       - name: Checkout canonical source
         uses: actions/checkout@v4
@@ -72,11 +74,12 @@ jobs:
           test "$(docker image inspect "$BUILD_BASE_REF" --format '{{ index .Config.Labels "io.physics.squirrel.sha" }}')" = "$SQUIRREL_SHA"
           test "$(docker image inspect "$BUILD_BASE_REF" --format '{{ index .Config.Labels "io.physics.zapdos.sha" }}')" = "$ZAPDOS_SHA"
 
-      - name: Build exact head and validate S5-R assembly
+      - name: Build exact head and run governed S5-R P0-P3
         shell: bash
         run: |
           set -euxo pipefail
-          rm -f stage5-s5r-assembly-evidence.json stage5-s5r-assembly-environment.txt
+          rm -f stage5-s5r-assembly-evidence.json stage5-s5r-runtime-environment.txt
+          rm -rf stage5-s5r-runtime-results
           docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace \
             -e GITHUB_SHA="$GITHUB_SHA" -e BUILD_BASE_REF="$BUILD_BASE_REF" \
             -e MOOSE_SHA="$MOOSE_SHA" -e CRANE_SHA="$CRANE_SHA" \
@@ -103,9 +106,10 @@ jobs:
                 echo "CRANE_SHA=$CRANE_SHA"
                 echo "SQUIRREL_SHA=$SQUIRREL_SHA"
                 echo "ZAPDOS_SHA=$ZAPDOS_SHA"
+                echo "RUNTIME_AUTHORITY=governed_ci_provenance_controlled"
                 echo "SCIENTIFIC_SEMANTICS_CHANGED=false"
                 echo "REPRESENTATIVE_RUNTIME_EXECUTED=false"
-              } > /workspace/stage5-s5r-assembly-environment.txt
+              } > /workspace/stage5-s5r-runtime-environment.txt
 
               python3 bin/physics.py preflight --self-test
               python3 physics_app/ci/check_stage5_s5r_preflight.py
@@ -117,19 +121,49 @@ jobs:
               test ! -e physics_app/physics-opt
               make -C physics_app -j2
               test -x physics_app/physics-opt
+              PHYSICS_OPT_REALPATH="$(realpath physics_app/physics-opt)"
+              PHYSICS_OPT_SHA256="$(sha256sum physics_app/physics-opt | awk "{print \$1}")"
+              {
+                echo "PHYSICS_OPT_REALPATH=$PHYSICS_OPT_REALPATH"
+                echo "PHYSICS_OPT_SHA256=$PHYSICS_OPT_SHA256"
+              } >> /workspace/stage5-s5r-runtime-environment.txt
 
               python3 physics_app/ci/check_stage5_s5r_assembly.py \
                 --executable /workspace/physics_app/physics-opt \
                 --repository-sha "$GITHUB_SHA" \
                 --build-base-ref "$BUILD_BASE_REF" \
                 --evidence-out /workspace/stage5-s5r-assembly-evidence.json
+
+              python3 experiments/Issue192_s5r_representative/run.py \
+                --physics /workspace/physics_app/physics-opt \
+                --results-root /workspace/stage5-s5r-runtime-results \
+                --timeout 900
+
+              SUMMARY="$(find /workspace/stage5-s5r-runtime-results -type f -name summary.json -print -quit)"
+              test -n "$SUMMARY"
+              grep -q '"'"'status'"'"': '"'"'S5R_REPRESENTATIVE_EVIDENCE_READY'"'"'' "$SUMMARY"
+              cat "$SUMMARY"
+              sed -i "s/REPRESENTATIVE_RUNTIME_EXECUTED=false/REPRESENTATIVE_RUNTIME_EXECUTED=true/" \
+                /workspace/stage5-s5r-runtime-environment.txt
+              echo "P3_STATUS=S5R_REPRESENTATIVE_EVIDENCE_READY" >> \
+                /workspace/stage5-s5r-runtime-environment.txt
             '
 
-      - name: Upload S5-R assembly evidence
+      - name: Upload S5-R construction evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: stage5-s5r-representative-assembly-evidence
           path: |
             stage5-s5r-assembly-evidence.json
-            stage5-s5r-assembly-environment.txt
+            stage5-s5r-runtime-environment.txt
+
+      - name: Upload governed S5-R P3 runtime evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stage5-s5r-governed-runtime-evidence
+          path: |
+            stage5-s5r-runtime-results/**
+            stage5-s5r-runtime-environment.txt
+          if-no-files-found: warn
