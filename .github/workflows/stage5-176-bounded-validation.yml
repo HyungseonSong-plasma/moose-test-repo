@@ -62,108 +62,77 @@ jobs:
           set -euxo pipefail
           rm -rf stage5-176-bounded-results
           mkdir -p stage5-176-bounded-results
-          docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace \
-            -e GITHUB_SHA="$GITHUB_SHA" -e BUILD_BASE_REF="$BUILD_BASE_REF" \
-            -e MOOSE_SHA="$MOOSE_SHA" -e CRANE_SHA="$CRANE_SHA" \
-            -e SQUIRREL_SHA="$SQUIRREL_SHA" -e ZAPDOS_SHA="$ZAPDOS_SHA" \
-            -v "$PWD:/workspace" "$BUILD_BASE_REF" -lc '
-              set -euxo pipefail
-              source /environment
-              git config --global --add safe.directory /workspace
-              git config --global --add safe.directory /opt/physics_vendor/moose
-              git config --global --add safe.directory /opt/physics_vendor/crane
-              git config --global --add safe.directory /opt/physics_vendor/squirrel
-              git config --global --add safe.directory /opt/physics_vendor/zapdos
-              test "$(git -C /workspace rev-parse HEAD)" = "$GITHUB_SHA"
-              export MOOSE_DIR=/opt/physics_vendor/moose
-              export CRANE_DIR=/opt/physics_vendor/crane
-              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
-              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
-              export METHOD=opt
 
-              python3 bin/physics.py preflight --self-test
-              python3 experiments/Issue192_s5r_representative/run.py --self-test
-              test ! -e physics_app/physics-opt
-              make -C physics_app -j2
-              test -x physics_app/physics-opt
-
-              python3 - <<"PY"
+          cat > stage5-176-bounded-results/runner.py <<'PY'
           from __future__ import annotations
-          import copy
-          import csv
           import hashlib
           import json
-          import math
-          import shutil
+          import os
           from pathlib import Path
 
           from experiments.Issue192_s5r_representative import run as s5r
           from physics_harness.adapters.moose import parameters as mp
           from physics_harness.execution.cases import stage_case, validate_case_references
 
-          ROOT = Path("/workspace")
-          OUT = ROOT / "stage5-176-bounded-results"
-          CASES = OUT / "cases"
-          LOGS = OUT / "logs"
+          ROOT = Path('/workspace')
+          OUT = ROOT / 'stage5-176-bounded-results'
+          CASES = OUT / 'cases'
+          LOGS = OUT / 'logs'
           CASES.mkdir(parents=True, exist_ok=True)
           LOGS.mkdir(parents=True, exist_ok=True)
-          EXE = ROOT / "physics_app/physics-opt"
+          EXE = ROOT / 'physics_app/physics-opt'
           END_TIME = 1.0e-5
-          CASE_SPECS = (("dt_10us", 1.0e-5), ("dt_5us", 5.0e-6))
+          CASE_SPECS = (('dt_10us', 1.0e-5), ('dt_5us', 5.0e-6))
 
           def sha256(path: Path) -> str:
               h = hashlib.sha256()
-              with path.open("rb") as f:
-                  for chunk in iter(lambda: f.read(1024 * 1024), b""):
+              with path.open('rb') as handle:
+                  for chunk in iter(lambda: handle.read(1024 * 1024), b''):
                       h.update(chunk)
               return h.hexdigest()
 
-          # The inherited R3 postprocessors are TIMESTEP_END-only.  In CSV the
-          # synthetic INITIAL row is therefore zero for mass/electron inventory.
-          # This is evidence instrumentation, not physics.  Execute the inventory
-          # observers at INITIAL so the first discrete balance uses the actual IC.
           INITIAL_INVENTORY_PPS = (
-              "n_e_inventory",
-              "domain_volume",
-              "mass_total",
-              "mass_O2",
-              "mass_O2s",
-              "mass_O2p",
-              "mass_O",
-              "mass_Om",
-              "mass_Op",
-              "mass_Os",
+              'n_e_inventory',
+              'domain_volume',
+              'mass_total',
+              'mass_O2',
+              'mass_O2s',
+              'mass_O2p',
+              'mass_O',
+              'mass_Om',
+              'mass_Op',
+              'mass_Os',
           )
 
           summary = {
-              "schema_version": 1,
-              "issue": 176,
-              "stage": "STAGE_5_BOUNDED_PRE_MAXWELL",
-              "repository_head": __import__("os").environ["GITHUB_SHA"],
-              "runtime_authority": "governed_ci_provenance_controlled",
-              "physics_opt_sha256": sha256(EXE),
-              "physical_horizon_s": END_TIME,
-              "claim_boundary": {
-                  "on_green": "bounded pre-Maxwell representative Stage-5 chemistry integration evidence ready for controller review",
-                  "does_not_establish": [
-                      "long-time unpowered electron-energy stability",
-                      "RF/Maxwell powered ICP closure",
-                      "Stage-6 acceptance",
-                      "Integrated Physics Accuracy",
+              'schema_version': 1,
+              'issue': 176,
+              'stage': 'STAGE_5_BOUNDED_PRE_MAXWELL',
+              'repository_head': os.environ['GITHUB_SHA'],
+              'runtime_authority': 'governed_ci_provenance_controlled',
+              'physics_opt_sha256': sha256(EXE),
+              'physical_horizon_s': END_TIME,
+              'claim_boundary': {
+                  'on_green': 'bounded pre-Maxwell representative Stage-5 chemistry integration evidence ready for controller review',
+                  'does_not_establish': [
+                      'long-time unpowered electron-energy stability',
+                      'RF/Maxwell powered ICP closure',
+                      'Stage-6 acceptance',
+                      'Integrated Physics Accuracy',
                   ],
               },
-              "instrumentation_decision": {
-                  "initial_inventory_observers": "execute on INITIAL and TIMESTEP_END",
-                  "physics_semantics_changed": False,
+              'instrumentation_decision': {
+                  'initial_inventory_observers': 'execute on INITIAL and TIMESTEP_END',
+                  'physics_semantics_changed': False,
               },
-              "cases": {},
-              "timestep_sensitivity": {},
-              "status": "NOT_RUN",
+              'cases': {},
+              'timestep_sensitivity': {},
+              'status': 'NOT_RUN',
           }
 
-          # The canonical #192 implementation hard-coded 0.5 ms as an experiment
-          # horizon; the Stage-5 contract did not freeze that horizon.  This bounded
-          # #176 surface deliberately exercises the same production physics for 10 us.
+          # The old #192 experiment selected 0.5 ms, but the Stage-5 contract did
+          # not freeze that horizon.  #176 exercises the identical production model
+          # over a bounded 10 us pre-Maxwell transient without changing source laws.
           s5r.END_TIME_S = END_TIME
 
           endpoints = {}
@@ -172,75 +141,110 @@ jobs:
               case_dir = CASES / name
               case_dir.mkdir(parents=True, exist_ok=True)
               text, meta = s5r._runtime_input(dt)
+
+              # Inherited R3 inventory postprocessors are TIMESTEP_END-only; their
+              # CSV INITIAL row is zero even though the solver IC is nonzero.  Make
+              # those observers execute at INITIAL as an evidence-only correction.
               for pp in INITIAL_INVENTORY_PPS:
                   text = mp.upsert_parameter(
                       text,
-                      f"Postprocessors/{pp}",
-                      "execute_on",
+                      f'Postprocessors/{pp}',
+                      'execute_on',
                       "'INITIAL TIMESTEP_END'",
                   )
+
               audit = s5r.audit_s5r_input(text)
-              if audit["status"] != "PASS":
-                  raise RuntimeError(f"{name}: S5-R semantic audit failed: {audit['failed_checks']}")
+              if audit['status'] != 'PASS':
+                  raise RuntimeError(
+                      f"{name}: S5-R semantic audit failed: {audit['failed_checks']}"
+                  )
 
               staged = stage_case(
                   s5r.SOURCE,
                   case_dir,
                   input_text=text,
-                  purge_directory_names=(".jitcache", "checkpoint", "checkpoints"),
-                  purge_patterns=("input_out*", "*.log", "*.e", "*.exo", "prepare_evidence.json"),
+                  purge_directory_names=('.jitcache', 'checkpoint', 'checkpoints'),
+                  purge_patterns=('input_out*', '*.log', '*.e', '*.exo', 'prepare_evidence.json'),
               )
               s5r._copy_runtime_assets(case_dir)
               references = validate_case_references(case_dir)
-              (case_dir / "prepare_evidence.json").write_text(
-                  json.dumps(meta, indent=2, sort_keys=True) + "\n"
+              (case_dir / 'prepare_evidence.json').write_text(
+                  json.dumps(meta, indent=2, sort_keys=True) + '\n'
               )
 
-              p2 = s5r._p2(EXE, case_dir, LOGS / f"{name}_p2.log", timeout=900.0)
-              runtime = {"returncode": None}
-              evidence = {"hard_pass": False}
-              if p2["returncode"] == 0:
+              p2 = s5r._p2(EXE, case_dir, LOGS / f'{name}_p2.log', timeout=900.0)
+              runtime = {'returncode': None}
+              evidence = {'hard_pass': False}
+              if p2['returncode'] == 0:
                   runtime = s5r._runtime(
-                      EXE, case_dir, LOGS / f"{name}_runtime.log", timeout=900.0
+                      EXE, case_dir, LOGS / f'{name}_runtime.log', timeout=900.0
                   )
-                  if runtime["returncode"] == 0:
+                  if runtime['returncode'] == 0:
                       evidence = s5r._analyze_case(case_dir, input_text=text)
 
               case_pass = (
-                  p2["returncode"] == 0
-                  and runtime.get("returncode") == 0
-                  and evidence.get("hard_pass") is True
+                  p2['returncode'] == 0
+                  and runtime.get('returncode') == 0
+                  and evidence.get('hard_pass') is True
               )
               all_pass = all_pass and case_pass
-              summary["cases"][name] = {
-                  "dt_s": dt,
-                  "end_time_s": END_TIME,
-                  "semantic_audit": audit,
-                  "staging": staged,
-                  "references": references,
-                  "p2": p2,
-                  "runtime": runtime,
-                  "evidence": evidence,
-                  "pass": case_pass,
+              summary['cases'][name] = {
+                  'dt_s': dt,
+                  'end_time_s': END_TIME,
+                  'semantic_audit': audit,
+                  'staging': staged,
+                  'references': references,
+                  'p2': p2,
+                  'runtime': runtime,
+                  'evidence': evidence,
+                  'pass': case_pass,
               }
               if case_pass:
-                  endpoints[name] = evidence["endpoint"]
+                  endpoints[name] = evidence['endpoint']
 
           if all_pass:
-              summary["timestep_sensitivity"] = s5r._timestep_sensitivity(
-                  endpoints["dt_10us"], endpoints["dt_5us"]
+              summary['timestep_sensitivity'] = s5r._timestep_sensitivity(
+                  endpoints['dt_10us'], endpoints['dt_5us']
               )
-              summary["status"] = "STAGE5_BOUNDED_REPRESENTATIVE_EVIDENCE_READY"
+              summary['status'] = 'STAGE5_BOUNDED_REPRESENTATIVE_EVIDENCE_READY'
           else:
-              summary["status"] = "STAGE5_BOUNDED_REPRESENTATIVE_FAIL"
+              summary['status'] = 'STAGE5_BOUNDED_REPRESENTATIVE_FAIL'
 
-          path = OUT / "summary.json"
-          path.write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n")
+          path = OUT / 'summary.json'
+          path.write_text(json.dumps(summary, indent=2, sort_keys=True) + '\n')
           print(path.read_text())
           if not all_pass:
               raise SystemExit(1)
           PY
-            '
+
+          CONTAINER_SCRIPT="$(cat <<'BASH'
+          set -euxo pipefail
+          source /environment
+          git config --global --add safe.directory /workspace
+          git config --global --add safe.directory /opt/physics_vendor/moose
+          git config --global --add safe.directory /opt/physics_vendor/crane
+          git config --global --add safe.directory /opt/physics_vendor/squirrel
+          git config --global --add safe.directory /opt/physics_vendor/zapdos
+          test "$(git -C /workspace rev-parse HEAD)" = "$GITHUB_SHA"
+          export MOOSE_DIR=/opt/physics_vendor/moose
+          export CRANE_DIR=/opt/physics_vendor/crane
+          export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+          export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+          export METHOD=opt
+          python3 bin/physics.py preflight --self-test
+          python3 experiments/Issue192_s5r_representative/run.py --self-test
+          test ! -e physics_app/physics-opt
+          make -C physics_app -j2
+          test -x physics_app/physics-opt
+          python3 stage5-176-bounded-results/runner.py
+          BASH
+          )"
+
+          docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace \
+            -e GITHUB_SHA="$GITHUB_SHA" -e BUILD_BASE_REF="$BUILD_BASE_REF" \
+            -e MOOSE_SHA="$MOOSE_SHA" -e CRANE_SHA="$CRANE_SHA" \
+            -e SQUIRREL_SHA="$SQUIRREL_SHA" -e ZAPDOS_SHA="$ZAPDOS_SHA" \
+            -v "$PWD:/workspace" "$BUILD_BASE_REF" -lc "$CONTAINER_SCRIPT"
 
       - name: Upload bounded Stage-5 evidence
         if: always()
