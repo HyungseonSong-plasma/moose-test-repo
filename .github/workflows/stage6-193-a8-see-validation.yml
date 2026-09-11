@@ -1,0 +1,106 @@
+name: Stage-6 #193 A8 finite-SEE acceptance
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/stage6-193-a8-see-validation.yml'
+      - 'experiments/Issue193_a8_see_acceptance/**'
+      - 'experiments/Issue27_surface_reactions/controlled_wall/see.py'
+      - 'experiments/Issue27_surface_reactions/controlled_wall/electron_wall_stable.py'
+      - 'experiments/Issue27_surface_reactions/controlled_wall/electron_wall.py'
+      - 'experiments/Issue27_surface_reactions/controlled_wall/combined.py'
+      - 'experiments/Issue27_surface_reactions/A8_finite_see/experiment.json'
+      - 'experiments/Issue91_real_qvt_r3/r3_e0/**'
+      - 'physics_app/**'
+  workflow_dispatch:
+
+concurrency:
+  group: stage6-193-a8-see-validation-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+  MOOSE_SHA: 9f388366ccf38b9c34542ec5561198249fde0ac9
+  CRANE_SHA: ba26970cf419dcac563a20ed7079d445bc6341c3
+  SQUIRREL_SHA: 16a26d504f3ee11161a86d4e3ebf3c0e5f2afbb1
+  ZAPDOS_SHA: 9eceffbc46048c3760bbfa9a7f1ca681ae35af1d
+
+jobs:
+  governed-a8-see:
+    name: '#193 governed bounded A8 finite-SEE runtime'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - name: Checkout canonical source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Validate immutable runtime identity
+        shell: bash
+        run: |
+          set -euxo pipefail
+          [[ "$BUILD_BASE_REF" =~ ^ghcr\.io/hyungseonsong-plasma/physics-build-base@sha256:[0-9a-f]{64}$ ]]
+          source physics_app/dependencies.lock
+          test "$MOOSE" = "$MOOSE_SHA"
+          test "$CRANE" = "$CRANE_SHA"
+          test "$SQUIRREL" = "$SQUIRREL_SHA"
+          test "$ZAPDOS" = "$ZAPDOS_SHA"
+          docker pull "$BUILD_BASE_REF"
+          test "$(docker image inspect "$BUILD_BASE_REF" --format '{{ index .Config.Labels "io.physics.moose.sha" }}')" = "$MOOSE_SHA"
+          test "$(docker image inspect "$BUILD_BASE_REF" --format '{{ index .Config.Labels "io.physics.crane.sha" }}')" = "$CRANE_SHA"
+          test "$(docker image inspect "$BUILD_BASE_REF" --format '{{ index .Config.Labels "io.physics.squirrel.sha" }}')" = "$SQUIRREL_SHA"
+          test "$(docker image inspect "$BUILD_BASE_REF" --format '{{ index .Config.Labels "io.physics.zapdos.sha" }}')" = "$ZAPDOS_SHA"
+
+      - name: Build exact head and run Issue-193 acceptance
+        shell: bash
+        run: |
+          set -euxo pipefail
+          rm -rf issue193-a8-see-results
+
+          CONTAINER_SCRIPT="$(cat <<'BASH'
+          set -euxo pipefail
+          source /environment
+          git config --global --add safe.directory /workspace
+          git config --global --add safe.directory /opt/physics_vendor/moose
+          git config --global --add safe.directory /opt/physics_vendor/crane
+          git config --global --add safe.directory /opt/physics_vendor/squirrel
+          git config --global --add safe.directory /opt/physics_vendor/zapdos
+          test "$(git -C /workspace rev-parse HEAD)" = "$GITHUB_SHA"
+          export MOOSE_DIR=/opt/physics_vendor/moose
+          export CRANE_DIR=/opt/physics_vendor/crane
+          export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+          export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+          export METHOD=opt
+          export PYTHONPATH=/workspace
+          python3 bin/physics.py preflight --self-test
+          python3 experiments/Issue193_a8_see_acceptance/run.py --self-test
+          test ! -e physics_app/physics-opt
+          make -C physics_app -j2
+          test -x physics_app/physics-opt
+          python3 experiments/Issue193_a8_see_acceptance/run.py \
+            --physics-opt physics_app/physics-opt \
+            --results-root issue193-a8-see-results \
+            --timeout 900
+          BASH
+          )"
+
+          docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace \
+            -e GITHUB_SHA="$GITHUB_SHA" -e BUILD_BASE_REF="$BUILD_BASE_REF" \
+            -e MOOSE_SHA="$MOOSE_SHA" -e CRANE_SHA="$CRANE_SHA" \
+            -e SQUIRREL_SHA="$SQUIRREL_SHA" -e ZAPDOS_SHA="$ZAPDOS_SHA" \
+            -v "$PWD:/workspace" "$BUILD_BASE_REF" -lc "$CONTAINER_SCRIPT"
+
+      - name: Upload Issue-193 governed evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue193-a8-finite-see-governed-evidence
+          path: issue193-a8-see-results/**
+          if-no-files-found: warn
+          retention-days: 30
