@@ -12,8 +12,8 @@ inline constexpr Real pi =
 /// Boltzmann solver energy factor, sqrt(2*e/m).
 inline constexpr Real gamma = 593097.0;
 
-/// Elementary charge [C].
-inline constexpr Real e = 1.602e-19;
+/// Elementary charge [C] (exact SI definition).
+inline constexpr Real e = 1.602176634e-19;
 
 /// Electron mass [kg].
 inline constexpr Real m = 9.1095e-31;
@@ -30,8 +30,8 @@ inline constexpr Real k_boltzeV = 8.617333e-5;
 /// Universal gas constant [J/(mol K)].
 inline constexpr Real R = 8.31446261815324;
 
-/// Permittivity of free space [F/m].
-inline constexpr Real eps_0 = 8.85e-12;
+/// Permittivity of free space [F/m] (CODATA/SI-consistent value).
+inline constexpr Real eps_0 = 8.8541878128e-12;
 
 /// Permeability of free space [H/m].
 inline constexpr Real mu_0 = 4.0 * pi * 1e-7;
