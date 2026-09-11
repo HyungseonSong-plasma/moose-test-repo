@@ -21,7 +21,9 @@ When the user says `meeting`, discuss and plan only. Do not mutate GitHub, files
 Technical execution must be attributable to a concrete issue or bounded work item with a closure claim. For active/open work, the issue body/current status block is the canonical STATE record; comments are historical evidence unless the body is explicitly stale and being repaired.
 
 ### CORE-05 — Runtime evidence authority
-Canonical Physics runtime evidence comes from the user's real local `physics-opt`. Static/CI evidence may support construction checks but must not be promoted to Physics runtime PASS/FAIL evidence when the real executable path was not exercised.
+Canonical Physics runtime evidence requires provenance-controlled execution of the real `physics-opt` production path. Governed CI and user-local execution may both be authoritative when the source revision, executable identity, dependency/runtime-environment identity, scientific execution contract, and preserved evidence are sufficient for the owning claim.
+
+Static analysis, mocks, checker-only execution, parser acceptance, and `physics-opt --check-input` are not Physics runtime evidence. User-local execution is an independent cross-environment validation layer rather than a universal prerequisite; require it only when the owning issue explicitly needs a local/environment-specific claim or when governed CI cannot reproduce the required production execution surface.
 
 `QPX` / `qpx-opt` are historical names only. Historical incident records, archived experiments, immutable snapshots, or prior closure evidence may retain those names when they identify the executable or architecture actually used at that time; current runtime ownership and new instructions use `Physics` / `physics-opt`.
 
