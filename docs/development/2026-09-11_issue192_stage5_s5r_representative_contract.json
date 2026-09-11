@@ -1,0 +1,172 @@
+{
+  "schema_version": 1,
+  "controller_issue": 176,
+  "child_issue": 192,
+  "stage": "STAGE_5_S5_R_REPRESENTATIVE_REAL_QVT",
+  "baseline_sha": "87d2bd79e93a3aa7b84f1f15202f801c5aa2b81b",
+  "status": "ASSEMBLY_CONTRACT_FROZEN",
+  "claim_boundary": {
+    "establishes": "canonical S5-R ledger, ownership/state binding, construction and validation contract",
+    "does_not_establish": [
+      "representative runtime PASS",
+      "Stage-5 acceptance",
+      "Integrated Physics Accuracy"
+    ]
+  },
+  "representative_identity": {
+    "geometry": "experiments/Issue91_real_qvt_r3/r3_e0/qvt.msh",
+    "heavy_state_reference": "experiments/Issue91_real_qvt_r3/r3_e0/heavy_base.i",
+    "electron_energy_reference": "physics_app/ci/electron_energy_real_qvt_inventory_smoke.i",
+    "electron_transport_table": "experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt",
+    "required_heavy_temperature_functor": "T_g",
+    "required_density_functor": "rho_mat",
+    "required_constrained_oxygen_functor": "w_O2_constraint",
+    "required_solved_mean_energy_functor": "mean_en_solved"
+  },
+  "admitted_ledger_version": "S5-R-v1",
+  "admitted_channels": [
+    "EI01",
+    "EI02",
+    "EI10",
+    "EI16",
+    "EI17",
+    "EI19",
+    "EI18_O_TO_OS",
+    "EI20_O_IONIZATION",
+    "EDETACH_OM",
+    "H01_OP_O2_CHARGE_TRANSFER",
+    "H02_OM_OP_NEUTRALIZATION",
+    "H03_OM_O2P_TO_3O",
+    "H04_OM_O2P_TO_O_O2",
+    "H05_OM_O_DETACHMENT"
+  ],
+  "explicit_exclusions": [
+    {
+      "channel": "e + O2 -> e + O + O",
+      "disposition": "BLOCKED_SOURCE_REFERENCE_ONLY"
+    },
+    {
+      "channel": "e + O2 -> e + O + Os",
+      "disposition": "BLOCKED_SOURCE_REFERENCE_ONLY"
+    },
+    {
+      "channel": "Om + Arp -> O + Ar",
+      "disposition": "OUT_OF_SCOPE"
+    }
+  ],
+  "ownership_rules": {
+    "exactly_one_progress_owner_per_admitted_channel": true,
+    "downstream_kinetic_reevaluation_forbidden": true,
+    "all_species_particle_energy_projections_consume_canonical_progress": true,
+    "reuse_standard_moose_energy_projection_when_representable": true
+  },
+  "stage5_owner_map": {
+    "EI18_O_TO_OS": {
+      "progress": "R_excitation_O_1p968",
+      "owner": "PhysicsElectronImpactRateMaterial",
+      "electron_particle_projection": "NONE",
+      "electron_energy_projection": "FVCoupledForce"
+    },
+    "EI20_O_IONIZATION": {
+      "progress": "R_ion_O",
+      "owner": "PhysicsElectronImpactRateMaterial",
+      "electron_particle_projection": "PhysicsFVElectronReactionSource",
+      "electron_energy_projection": "FVCoupledForce"
+    },
+    "EDETACH_OM": {
+      "progress": "R_detach_Om",
+      "owner": "ADParsedFunctorMaterial",
+      "electron_particle_projection": "PhysicsFVElectronReactionSource",
+      "electron_energy_projection": "FVCoupledForce"
+    },
+    "H01_OP_O2_CHARGE_TRANSFER": {
+      "progress": "reaction_rate_H01_Op_O2_charge_transfer",
+      "owner": "PhysicsReactionRateMaterial",
+      "electron_particle_projection": "NONE",
+      "electron_energy_projection": "NONE"
+    },
+    "H02_OM_OP_NEUTRALIZATION": {
+      "progress": "reaction_rate_H02_Om_Op_neutralization",
+      "owner": "PhysicsReactionRateMaterial",
+      "electron_particle_projection": "NONE",
+      "electron_energy_projection": "NONE"
+    },
+    "H03_OM_O2P_TO_3O": {
+      "progress": "reaction_rate_H03_Om_O2p_to_3O",
+      "owner": "PhysicsReactionRateMaterial",
+      "electron_particle_projection": "NONE",
+      "electron_energy_projection": "NONE"
+    },
+    "H04_OM_O2P_TO_O_O2": {
+      "progress": "reaction_rate_H04_Om_O2p_to_O_O2",
+      "owner": "PhysicsReactionRateMaterial",
+      "electron_particle_projection": "NONE",
+      "electron_energy_projection": "NONE"
+    },
+    "H05_OM_O_DETACHMENT": {
+      "progress": "reaction_rate_H05_Om_O_detachment",
+      "owner": "PhysicsReactionRateMaterial",
+      "electron_particle_projection": "PhysicsFVElectronReactionSource",
+      "electron_energy_projection": "NONE",
+      "model_decision": "ADMITTED under issue #191; no explicit H05-specific electron-energy source"
+    }
+  },
+  "inherited_stage3_stage4_ownership": {
+    "channels": ["EI01", "EI02", "EI10", "EI16", "EI17", "EI19"],
+    "policy": "Reuse accepted Stage-3/Stage-4 canonical progress and projection owners unchanged; S5-R must not instantiate a second kinetic evaluator for any inherited channel.",
+    "contracts": [
+      "docs/development/2026-09-10_issue26_e8_closure_surface_contract.json",
+      "docs/development/2026-09-10_issue26_e8_elastic_ei19_contract.json",
+      "docs/development/2026-09-10_issue176_stage5_reaction_ownership_contract.json"
+    ]
+  },
+  "state_binding": {
+    "heavy_temperature": "All temperature-dependent chemistry and EI02/EI17 elastic exchange consume the accepted heavy-mixture T_g functor; no second T_gas constant/functor is allowed.",
+    "heavy_composition": "Reuse canonical seven-heavy-species state and constrained O2 = 1 - (O2s + O2p + O + Om + Op + Os).",
+    "electron_density": "Use the representative normalized electron transport state and its canonical n_e_physical mapping.",
+    "electron_energy": "mean_en_solved is derived strictly from solved n_epsilon/n_e through PhysicsElectronMeanEnergyMaterial.",
+    "electron_transport": "PhysicsElectronTransportLookupMaterial consumes mean_en_solved with bounds_policy=error; no clamp/floor/fallback."
+  },
+  "construction_gate": {
+    "next_artifact": "canonical executable S5-R representative input/checker surface",
+    "required_before_runtime": [
+      "provider/owner-map P0 passes",
+      "exactly-one owner and zero duplicate kinetic evaluator checks pass",
+      "zero missing admitted channels and zero unintended active channels",
+      "deferred channels remain visibly excluded",
+      "canonical T_g and mean_en_solved bindings pass static audit",
+      "physics preflight succeeds",
+      "qpx-opt --check-input succeeds"
+    ]
+  },
+  "representative_runtime_requirements": [
+    "real-QVT geometry/mesh",
+    "heavy mixture and charged-heavy transport",
+    "normalized electron transport",
+    "solved electron energy",
+    "solved electrostatics/charge coupling",
+    "complete admitted volumetric chemistry ledger",
+    "Standard-MOOSE electron-energy projection",
+    "heavy-mass conservation",
+    "oxygen-nuclei conservation",
+    "electron-inclusive charge conservation",
+    "particle/energy source consistency",
+    "finite/positive physical-state guards",
+    "nonlinear convergence",
+    "timestep sensitivity sufficient to reject obvious source-stiffness artifacts"
+  ],
+  "diagnostic_subgraph_on_unexpected_runtime": [
+    "source_or_ownership_defect",
+    "timestep_or_source_stiffness",
+    "nonlinear_configuration",
+    "environment_or_infrastructure_defect",
+    "genuine_model_issue"
+  ],
+  "evidence_invalidation": "Invalidate only evidence whose semantic dependency changed. S5-A/B/C/D and #191 bounded evidence remain accepted unless their progress law, provenance, projection ownership, normalization, or state binding changes.",
+  "source_contracts": [
+    "docs/development/2026-09-10_issue176_stage5_reaction_ownership_contract.json",
+    "docs/development/2026-09-10_issue176_stage5_s5c_edetach_contract.json",
+    "docs/development/2026-09-10_issue176_stage5_s5d_heavy_reactions_contract.json",
+    "issue:#191"
+  ]
+}
