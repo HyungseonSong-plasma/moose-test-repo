@@ -142,6 +142,8 @@ jobs:
                 --timeout 900
               P3_RC=$?
               set -e
+              sed -i "s/REPRESENTATIVE_RUNTIME_EXECUTED=false/REPRESENTATIVE_RUNTIME_EXECUTED=true/" \
+                /workspace/stage5-s5r-runtime-environment.txt
 
               SUMMARY="$(find /workspace/stage5-s5r-runtime-results -type f -name summary.json -print -quit)"
               test -n "$SUMMARY"
@@ -163,8 +165,6 @@ jobs:
                 exit "$P3_RC"
               fi
               test "$P3_STATUS" = "S5R_REPRESENTATIVE_EVIDENCE_READY"
-              sed -i "s/REPRESENTATIVE_RUNTIME_EXECUTED=false/REPRESENTATIVE_RUNTIME_EXECUTED=true/" \
-                /workspace/stage5-s5r-runtime-environment.txt
             '
 
       - name: Upload S5-R construction evidence
