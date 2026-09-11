@@ -231,6 +231,7 @@ jobs:
           export SQUIRREL_DIR=/opt/physics_vendor/squirrel
           export ZAPDOS_DIR=/opt/physics_vendor/zapdos
           export METHOD=opt
+          export PYTHONPATH=/workspace
           python3 bin/physics.py preflight --self-test
           python3 experiments/Issue192_s5r_representative/run.py --self-test
           test ! -e physics_app/physics-opt
