@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 """User-local Stage-5 S5-R representative runtime/evidence harness for issue #192.
 
-This surface executes the canonical representative assembly with the user's real
-``physics-opt``. It runs the frozen baseline timestep and a half-timestep case
-to expose obvious source-stiffness/timestep sensitivity. A successful invocation
-produces governed evidence; it does not by itself declare Stage-5 acceptance or
-Integrated Physics Accuracy.
+This runner stages the canonical S5-R production assembly and executes it only
+with the user's real ``physics-opt``.  It deliberately keeps the execution
+surface independent of the optional evidence/dataframe stack so it can run in
+both the JIT-capable validation image and the user-local Physics environment.
+
+A green run establishes an S5-R representative evidence bundle ready for review;
+it does not automatically establish Stage-5 acceptance or Integrated Physics
+Accuracy.
 """
 from __future__ import annotations
 
@@ -18,7 +21,7 @@ import math
 import shutil
 import subprocess
 import sys
-import tempfile
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -26,11 +29,7 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from experiments.Issue31_r4_q0_all_ground import run as q0_run  # noqa: E402
-from experiments.Issue31_r4_qn0_all_ground import run as qn0_run  # noqa: E402
-from experiments.historical_recipe_support.issue31_r4_qf1 import (  # noqa: E402
-    CHARGED_HEAVY_C2,
-)
+from experiments.historical_recipe_support.issue31_r4_qf1 import CHARGED_HEAVY_C2  # noqa: E402
 from experiments.historical_recipe_support.issue192_s5r import (  # noqa: E402
     ADMITTED_CHANNELS,
     AVOGADRO,
@@ -43,19 +42,7 @@ from experiments.historical_recipe_support.issue192_s5r import (  # noqa: E402
 )
 from physics_harness.adapters.moose import blocks as mb  # noqa: E402
 from physics_harness.adapters.moose import parameters as mp  # noqa: E402
-from physics_harness.adapters.moose.nonlinear_solver import (  # noqa: E402
-    failure_signature,
-    runtime_core_facts,
-)
-from physics_harness.evidence import (  # noqa: E402
-    create_collision_safe_directory,
-    utc_timestamp,
-    write_json_bundle,
-)
-from physics_harness.execution.cases import (  # noqa: E402
-    stage_case,
-    validate_case_references,
-)
+from physics_harness.execution.cases import stage_case, validate_case_references  # noqa: E402
 from physics_harness.execution.runtime import (  # noqa: E402
     resolve_executable,
     resolve_results_root,
@@ -74,8 +61,8 @@ LOOKUP_MIN_EV = 1.40991
 LOOKUP_MAX_EV = 22.1378
 ELEMENTARY_CHARGE_C = 1.602176634e-19
 
-# Reuse already-accepted numerical bookkeeping envelopes; do not invent a new
-# science threshold in the first representative runtime.
+# Reuse already accepted numerical bookkeeping envelopes.  The first
+# representative timestep comparison itself remains measurement-only.
 SPECIES_BALANCE_REL_TOL = 0.05
 CONSTRAINED_O2_BALANCE_REL_TOL = 0.12
 TOTAL_BALANCE_REL_TOL = 0.08
@@ -87,12 +74,27 @@ MAX_GAUSS_RELATIVE_DEFECT = 1.0e-3
 MAX_C2_CARRIER_SCALED_DEFECT = 1.0e-10
 
 ALL_HEAVY = ("O2", "O2s", "O2p", "O", "Om", "Op", "Os")
-SOLVED_HEAVY = ("O2s", "O2p", "O", "Om", "Op", "Os")
-OXYGEN_ATOMS = {"O2": 2, "O2s": 2, "O2p": 2, "O": 1, "Om": 1, "Op": 1, "Os": 1}
-HEAVY_CHARGE = {"O2": 0, "O2s": 0, "O2p": 1, "O": 0, "Om": -1, "Op": 1, "Os": 0}
+OXYGEN_ATOMS = {
+    "O2": 2,
+    "O2s": 2,
+    "O2p": 2,
+    "O": 1,
+    "Om": 1,
+    "Op": 1,
+    "Os": 1,
+}
+HEAVY_CHARGE = {
+    "O2": 0,
+    "O2s": 0,
+    "O2p": 1,
+    "O": 0,
+    "Om": -1,
+    "Op": 1,
+    "Os": 0,
+}
 
-# Full representative stoichiometry used only for evidence reconstruction.
-# Production ownership stays in issue192_s5r.py.
+# Evidence reconstruction only.  Kinetic ownership remains exclusively in the
+# canonical issue192_s5r assembly.
 FULL_HEAVY_STOICH: dict[str, dict[str, int]] = {
     "EI01": {"O2": -1, "O": 1, "Om": 1},
     "EI02": {},
@@ -143,6 +145,31 @@ def _repo_head() -> str | None:
     return proc.stdout.strip() if proc.returncode == 0 else None
 
 
+def _utc_stamp() -> str:
+    return datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+
+
+def _collision_safe_directory(parent: Path, stem: str) -> Path:
+    parent = Path(parent)
+    parent.mkdir(parents=True, exist_ok=True)
+    candidate = parent / stem
+    if not candidate.exists():
+        candidate.mkdir()
+        return candidate
+    for index in range(1, 10000):
+        candidate = parent / f"{stem}_{index:03d}"
+        if not candidate.exists():
+            candidate.mkdir()
+            return candidate
+    raise S5RRuntimeError(f"unable to allocate collision-safe directory under {parent}")
+
+
+def _write_summary(root: Path, summary: dict[str, Any]) -> Path:
+    path = root / "summary.json"
+    path.write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n")
+    return path
+
+
 def _num(row: dict[str, str], key: str) -> float:
     if key not in row:
         raise S5RRuntimeError(f"missing CSV column {key}")
@@ -161,40 +188,19 @@ def _rel_defect(lhs: float, rhs: float, *scales: float) -> float:
 
 
 def _insert_runtime_observables(text: str) -> str:
-    observables = (
-        (
-            "s5r_n_epsilon_inventory",
-            "ADElementIntegralFunctorPostprocessor",
-            "n_epsilon",
-            "",
-        ),
-        (
-            "s5r_mean_en_avg",
-            "ElementAverageFunctorPostprocessor",
-            "mean_en_solved",
-            "",
-        ),
-        (
-            "s5r_ei02_elastic_energy_avg",
-            "ElementAverageFunctorPostprocessor",
-            "S_ei02_elastic_hat",
-            "",
-        ),
-        (
-            "s5r_ei17_elastic_energy_avg",
-            "ElementAverageFunctorPostprocessor",
-            "S_ei17_elastic_hat",
-            "",
-        ),
-    )
-    for name, typ, functor, extra in observables:
+    for name, typ, functor in (
+        ("s5r_n_epsilon_inventory", "ADElementIntegralFunctorPostprocessor", "n_epsilon"),
+        ("s5r_mean_en_avg", "ElementAverageFunctorPostprocessor", "mean_en_solved"),
+        ("s5r_ei02_elastic_energy_avg", "ElementAverageFunctorPostprocessor", "S_ei02_elastic_hat"),
+        ("s5r_ei17_elastic_energy_avg", "ElementAverageFunctorPostprocessor", "S_ei17_elastic_hat"),
+    ):
         mb.require_absent(text, f"Postprocessors/{name}")
         text = mb.insert_child_block(
             text,
             "Postprocessors",
             f"""  [{name}]
     type = {typ}
-    functor = {functor}{extra}
+    functor = {functor}
     block = plasma
     execute_on = 'INITIAL TIMESTEP_END'
   []""",
@@ -220,10 +226,10 @@ def _runtime_input(dt_s: float) -> tuple[str, dict[str, Any]]:
     )
     text = _insert_runtime_observables(text)
 
-    post_audit = audit_s5r_input(text)
-    if post_audit["status"] != "PASS":
+    audit = audit_s5r_input(text)
+    if audit["status"] != "PASS":
         raise S5RRuntimeError(
-            f"runtime observables changed S5-R semantics: {post_audit['failed_checks']}"
+            f"runtime observables changed S5-R semantics: {audit['failed_checks']}"
         )
     for token in DEFERRED_TOKENS:
         if token in text:
@@ -242,7 +248,10 @@ def _runtime_input(dt_s: float) -> tuple[str, dict[str, Any]]:
 def _copy_runtime_assets(case_dir: Path) -> None:
     for name in sorted(set(RATE_TABLES.values())):
         shutil.copy2(ELECTRON_DATA / name, case_dir / name)
-    for name in ("stage5_s5d_oxygen_heavy.txt", "stage5_s5e_h05_oxygen_heavy.txt"):
+    for name in (
+        "stage5_s5d_oxygen_heavy.txt",
+        "stage5_s5e_h05_oxygen_heavy.txt",
+    ):
         shutil.copy2(HEAVY_DATA / name, case_dir / name)
 
 
@@ -313,37 +322,35 @@ def _species_source_density(row: dict[str, str], species: str) -> float:
 
 def _source_invariants(row: dict[str, str]) -> dict[str, float]:
     heavy_mass = 0.0
-    oxygen_molar_atoms = 0.0
-    heavy_charge_molar = 0.0
-    scale_mass = 0.0
-    scale_oxygen = 0.0
-    scale_charge = 0.0
+    oxygen_atoms = 0.0
+    heavy_charge = 0.0
+    mass_scale = 0.0
+    oxygen_scale = 0.0
+    charge_scale = 0.0
     for channel, stoich in FULL_HEAVY_STOICH.items():
         rate = _progress(row, channel)
         for species, nu in stoich.items():
-            molar_term = nu * rate
-            mass_term = MOLAR_MASS[species] * molar_term
-            oxygen_term = OXYGEN_ATOMS[species] * molar_term
-            charge_term = HEAVY_CHARGE[species] * molar_term
-            heavy_mass += mass_term
-            oxygen_molar_atoms += oxygen_term
-            heavy_charge_molar += charge_term
-            scale_mass += abs(mass_term)
-            scale_oxygen += abs(oxygen_term)
-            scale_charge += abs(charge_term)
+            molar = nu * rate
+            mass = MOLAR_MASS[species] * molar
+            oxygen = OXYGEN_ATOMS[species] * molar
+            charge = HEAVY_CHARGE[species] * molar
+            heavy_mass += mass
+            oxygen_atoms += oxygen
+            heavy_charge += charge
+            mass_scale += abs(mass)
+            oxygen_scale += abs(oxygen)
+            charge_scale += abs(charge)
 
     electron_molar = _num(row, "s5r_electron_source_avg") / AVOGADRO
-    charge_closure = heavy_charge_molar - electron_molar
-    scale_charge += abs(electron_molar)
+    charge_closure = heavy_charge - electron_molar
+    charge_scale += abs(electron_molar)
     return {
         "heavy_mass_source_kg_m3_s": heavy_mass,
-        "heavy_mass_relative_closure": abs(heavy_mass) / max(scale_mass, 1.0e-300),
-        "oxygen_atom_source_mol_m3_s": oxygen_molar_atoms,
-        "oxygen_atom_relative_closure": abs(oxygen_molar_atoms)
-        / max(scale_oxygen, 1.0e-300),
+        "heavy_mass_relative_closure": abs(heavy_mass) / max(mass_scale, 1.0e-300),
+        "oxygen_atom_source_mol_m3_s": oxygen_atoms,
+        "oxygen_atom_relative_closure": abs(oxygen_atoms) / max(oxygen_scale, 1.0e-300),
         "charge_equivalent_source_mol_m3_s": charge_closure,
-        "charge_relative_closure": abs(charge_closure)
-        / max(scale_charge, 1.0e-300),
+        "charge_relative_closure": abs(charge_closure) / max(charge_scale, 1.0e-300),
     }
 
 
@@ -352,113 +359,91 @@ def _energy_coefficients(input_text: str) -> dict[str, float]:
     for channel in ENERGY_CHANNELS:
         path = f"FVKernels/s5r_energy_{channel.lower()}"
         if mp.get_parameter(input_text, path, "v") != PROGRESS[channel]:
-            raise S5RRuntimeError(f"energy projector does not consume canonical progress: {channel}")
+            raise S5RRuntimeError(
+                f"energy projector does not consume canonical progress: {channel}"
+            )
         result[channel] = float(mp.get_parameter(input_text, path, "coef"))
     return result
 
 
 def _energy_source_density(
-    row: dict[str, str],
-    energy_coefficients: dict[str, float],
+    row: dict[str, str], coefficients: dict[str, float]
 ) -> float:
     total = _num(row, "s5r_ei02_elastic_energy_avg")
     total += _num(row, "s5r_ei17_elastic_energy_avg")
-    for channel, coefficient in energy_coefficients.items():
+    for channel, coefficient in coefficients.items():
         total += coefficient * _progress(row, channel)
     return total
 
 
 def _state_evidence(rows: list[dict[str, str]]) -> dict[str, Any]:
-    hard_failures: list[str] = []
+    failures: list[str] = []
     mass_partition_max = 0.0
-    source_closure = {
-        "heavy_mass_relative": 0.0,
-        "oxygen_relative": 0.0,
-        "charge_relative": 0.0,
-    }
+    closure_max = {"heavy_mass_relative": 0.0, "oxygen_relative": 0.0, "charge_relative": 0.0}
 
     for row in rows:
+        time = _num(row, "time")
         sum_error = max(
             abs(_num(row, "sum_w_min") - 1.0),
             abs(_num(row, "sum_w_max") - 1.0),
         )
         if sum_error > SUM_W_ABS_TOL:
-            hard_failures.append(f"sum(w) closure {sum_error:.6e} at t={_num(row, 'time'):.6e}")
+            failures.append(f"sum(w) closure {sum_error:.6e} at t={time:.6e}")
 
         species_mass_sum = 0.0
         for species in ALL_HEAVY:
             low = _num(row, f"w_{species}_min")
             high = _num(row, f"w_{species}_max")
             if low < -SPECIES_BOUND_TOL or high > 1.0 + SPECIES_BOUND_TOL or high < low:
-                hard_failures.append(
-                    f"{species} bounds [{low:.6e}, {high:.6e}] at t={_num(row, 'time'):.6e}"
-                )
+                failures.append(f"{species} bounds [{low:.6e},{high:.6e}] at t={time:.6e}")
             species_mass_sum += _num(row, f"mass_{species}")
         total_mass = _num(row, "mass_total")
         partition = abs(species_mass_sum - total_mass) / max(abs(total_mass), 1.0e-300)
         mass_partition_max = max(mass_partition_max, partition)
         if partition > MASS_PARTITION_REL_TOL:
-            hard_failures.append(
-                f"mass partition rel={partition:.6e} at t={_num(row, 'time'):.6e}"
-            )
+            failures.append(f"mass partition {partition:.6e} at t={time:.6e}")
 
         if _num(row, "n_e_min") < 0.0:
-            hard_failures.append(f"negative electron density at t={_num(row, 'time'):.6e}")
+            failures.append(f"negative electron density at t={time:.6e}")
         if _num(row, "s5r_n_epsilon_min") <= 0.0:
-            hard_failures.append(f"non-positive electron energy at t={_num(row, 'time'):.6e}")
+            failures.append(f"non-positive electron energy at t={time:.6e}")
         mean_low = _num(row, "s5r_mean_en_min")
         mean_high = _num(row, "s5r_mean_en_max")
-        if (
-            mean_low < LOOKUP_MIN_EV
-            or mean_high > LOOKUP_MAX_EV
-            or mean_high < mean_low
-        ):
-            hard_failures.append(
-                f"mean energy outside strict lookup domain [{mean_low:.6e}, {mean_high:.6e}]"
-            )
+        if mean_low < LOOKUP_MIN_EV or mean_high > LOOKUP_MAX_EV or mean_high < mean_low:
+            failures.append(f"mean energy outside lookup domain [{mean_low:.6e},{mean_high:.6e}]")
 
         for channel in ADMITTED_CHANNELS:
             rate = _progress(row, channel)
             if rate < 0.0:
-                hard_failures.append(
-                    f"negative canonical progress {channel}={rate:.6e}"
-                )
+                failures.append(f"negative canonical progress {channel}={rate:.6e}")
 
         closure = _source_invariants(row)
-        source_closure["heavy_mass_relative"] = max(
-            source_closure["heavy_mass_relative"],
-            closure["heavy_mass_relative_closure"],
+        closure_max["heavy_mass_relative"] = max(
+            closure_max["heavy_mass_relative"], closure["heavy_mass_relative_closure"]
         )
-        source_closure["oxygen_relative"] = max(
-            source_closure["oxygen_relative"],
-            closure["oxygen_atom_relative_closure"],
+        closure_max["oxygen_relative"] = max(
+            closure_max["oxygen_relative"], closure["oxygen_atom_relative_closure"]
         )
-        source_closure["charge_relative"] = max(
-            source_closure["charge_relative"],
-            closure["charge_relative_closure"],
+        closure_max["charge_relative"] = max(
+            closure_max["charge_relative"], closure["charge_relative_closure"]
         )
 
     return {
         "status": "MEASURED",
-        "hard_pass": not hard_failures,
-        "hard_failures": hard_failures,
+        "hard_pass": not failures,
+        "hard_failures": failures,
         "mass_partition_max_relative": mass_partition_max,
-        "source_level_closure": source_closure,
+        "source_level_closure": closure_max,
         "mean_energy_domain_eV": [LOOKUP_MIN_EV, LOOKUP_MAX_EV],
     }
 
 
 def _discrete_balances(
-    rows: list[dict[str, str]],
-    *,
-    energy_coefficients: dict[str, float],
+    rows: list[dict[str, str]], *, energy_coefficients: dict[str, float]
 ) -> dict[str, Any]:
     species_max = {species: 0.0 for species in ALL_HEAVY}
-    total_max = 0.0
-    electron_max = 0.0
-    energy_max = 0.0
-    c2_component_max = 0.0
-    c2_carrier_max = 0.0
+    total_max = electron_max = energy_max = 0.0
+    c2_component_max = c2_carrier_max = 0.0
     per_step: list[dict[str, Any]] = []
 
     for previous, current in zip(rows[:-1], rows[1:]):
@@ -471,11 +456,10 @@ def _discrete_balances(
         if volume <= 0.0:
             raise S5RRuntimeError("non-positive plasma domain volume")
 
-        current_species: dict[str, Any] = {}
+        species_step: dict[str, Any] = {}
         for species in ALL_HEAVY:
             accumulation = (
-                _num(current, f"mass_{species}")
-                - _num(previous, f"mass_{species}")
+                _num(current, f"mass_{species}") - _num(previous, f"mass_{species}")
             ) / dt
             inlet = _num(current, "inlet_mdot") if species == "O2" else 0.0
             outlet = _num(current, f"outlet_mdot_{species}")
@@ -483,7 +467,7 @@ def _discrete_balances(
             rhs = inlet - outlet + reaction
             defect = _rel_defect(accumulation, rhs, inlet, outlet, reaction)
             species_max[species] = max(species_max[species], defect)
-            current_species[species] = {
+            species_step[species] = {
                 "accumulation_kg_s": accumulation,
                 "inlet_kg_s": inlet,
                 "outlet_kg_s": outlet,
@@ -522,9 +506,7 @@ def _discrete_balances(
         total_boundary_current = 0.0
         species_current: dict[str, float] = {}
         for species, contract in CHARGED_HEAVY_C2.items():
-            inlet_mdot = 0.0
-            outlet_mdot = _num(current, f"outlet_mdot_{species}")
-            outward_mass_rate = outlet_mdot - inlet_mdot
+            outward_mass_rate = _num(current, f"outlet_mdot_{species}")
             current_amp = (
                 ELEMENTARY_CHARGE_C
                 * int(contract["z"])
@@ -537,12 +519,11 @@ def _discrete_balances(
         delta_q = _num(current, "r31_charge_integral") - _num(
             previous, "r31_charge_integral"
         )
-        q_boundary = dt * total_boundary_current
-        charge_residual = delta_q + q_boundary
-        component_scale = max(abs(delta_q), abs(q_boundary), 1.0e-300)
+        boundary_charge = dt * total_boundary_current
+        charge_residual = delta_q + boundary_charge
+        component_scale = max(abs(delta_q), abs(boundary_charge), 1.0e-300)
         carrier_scale = max(
-            ELEMENTARY_CHARGE_C * _num(current, "n_e_inventory"),
-            1.0e-300,
+            ELEMENTARY_CHARGE_C * _num(current, "n_e_inventory"), 1.0e-300
         )
         c2_component = abs(charge_residual) / component_scale
         c2_carrier = abs(charge_residual) / carrier_scale
@@ -554,14 +535,13 @@ def _discrete_balances(
                 "time_initial_s": t0,
                 "time_final_s": t1,
                 "dt_s": dt,
-                "species": current_species,
+                "species": species_step,
                 "total_mass_relative_defect": total_defect,
                 "electron_particle_relative_defect": electron_defect,
                 "electron_energy_relative_defect": energy_defect,
                 "charge": {
                     "delta_Q_C": delta_q,
-                    "outward_boundary_current_C_s": total_boundary_current,
-                    "boundary_charge_C": q_boundary,
+                    "boundary_charge_C": boundary_charge,
                     "residual_C": charge_residual,
                     "component_relative_defect": c2_component,
                     "carrier_scaled_defect": c2_carrier,
@@ -570,14 +550,10 @@ def _discrete_balances(
             }
         )
 
-    hard_gates = {
+    gates = {
         "species_balance": all(
             defect
-            <= (
-                CONSTRAINED_O2_BALANCE_REL_TOL
-                if species == "O2"
-                else SPECIES_BALANCE_REL_TOL
-            )
+            <= (CONSTRAINED_O2_BALANCE_REL_TOL if species == "O2" else SPECIES_BALANCE_REL_TOL)
             for species, defect in species_max.items()
         ),
         "total_mass_balance": total_max <= TOTAL_BALANCE_REL_TOL,
@@ -593,17 +569,95 @@ def _discrete_balances(
         "electron_energy_max_relative_defect": energy_max,
         "charge_component_max_relative_defect": c2_component_max,
         "charge_carrier_scaled_max_defect": c2_carrier_max,
-        "hard_gates": hard_gates,
-        "hard_pass": all(hard_gates.values()),
-        "tolerances": {
-            "species_non_O2": SPECIES_BALANCE_REL_TOL,
-            "constrained_O2": CONSTRAINED_O2_BALANCE_REL_TOL,
-            "total_mass": TOTAL_BALANCE_REL_TOL,
-            "electron_particle": GENERIC_COUPLED_BALANCE_REL_TOL,
-            "electron_energy": GENERIC_COUPLED_BALANCE_REL_TOL,
-            "global_charge_carrier_scaled": MAX_C2_CARRIER_SCALED_DEFECT,
-        },
+        "hard_gates": gates,
+        "hard_pass": all(gates.values()),
         "steps": per_step,
+    }
+
+
+def _gauss_evidence(csv_path: Path) -> dict[str, Any]:
+    if not csv_path.is_file():
+        return {"status": "MISSING", "error": f"missing {csv_path.name}"}
+    with csv_path.open(newline="") as handle:
+        rows = list(csv.DictReader(handle))
+    if not rows:
+        return {"status": "MISSING", "error": "physical CSV has no rows"}
+    row = rows[-1]
+    required = ("time", "r31_charge_integral", "r31_gauss_flux_charge")
+    missing = [name for name in required if name not in row]
+    if missing:
+        return {"status": "MISSING", "error": f"missing Gauss-law columns: {missing}"}
+    try:
+        time = float(row["time"])
+        q_volume = float(row["r31_charge_integral"])
+        q_flux = float(row["r31_gauss_flux_charge"])
+    except (TypeError, ValueError) as exc:
+        return {"status": "INVALID", "error": str(exc)}
+    if not all(math.isfinite(value) for value in (time, q_volume, q_flux)):
+        return {"status": "INVALID", "error": "non-finite Gauss-law scalar"}
+    defect = q_flux - q_volume
+    scale = max(abs(q_volume), abs(q_flux), 1.0e-300)
+    return {
+        "status": "MEASURED",
+        "time": time,
+        "volume_charge_C": q_volume,
+        "boundary_displacement_flux_C": q_flux,
+        "signed_defect_C": defect,
+        "absolute_defect_C": abs(defect),
+        "relative_defect": abs(defect) / scale,
+        "sign_convention": (
+            "SideDiffusiveFluxIntegral = integral(-eps_r*grad(phi).n)dA; "
+            "scaled by eps0 and compared directly with integral(rho_q)dV"
+        ),
+    }
+
+
+def _electrostatic_state_evidence(csv_path: Path) -> dict[str, Any]:
+    if not csv_path.is_file():
+        return {"status": "MISSING", "error": f"missing {csv_path.name}"}
+    with csv_path.open(newline="") as handle:
+        rows = list(csv.DictReader(handle))
+    if not rows:
+        return {"status": "MISSING", "error": "physical CSV has no rows"}
+    row = rows[-1]
+    required = (
+        "time",
+        "domain_volume",
+        "n_e_avg",
+        "n_e_min",
+        "n_e_max",
+        "r31_charge_integral",
+        "r31_phi_min",
+        "r31_phi_max",
+    )
+    missing = [name for name in required if name not in row]
+    if missing:
+        return {"status": "MISSING", "error": f"missing state columns: {missing}"}
+    try:
+        values = {name: float(row[name]) for name in required}
+    except (TypeError, ValueError) as exc:
+        return {"status": "INVALID", "error": str(exc)}
+    if not all(math.isfinite(value) for value in values.values()):
+        return {"status": "INVALID", "error": "non-finite electrostatic state scalar"}
+    volume = values["domain_volume"]
+    if volume <= 0.0:
+        return {"status": "INVALID", "error": f"non-positive domain volume {volume}"}
+    q_volume = values["r31_charge_integral"]
+    phi_min = values["r31_phi_min"]
+    phi_max = values["r31_phi_max"]
+    return {
+        "status": "MEASURED",
+        "time": values["time"],
+        "domain_volume_m3": volume,
+        "electron_density_avg_m3": values["n_e_avg"],
+        "electron_density_min_m3": values["n_e_min"],
+        "electron_density_max_m3": values["n_e_max"],
+        "volume_charge_C": q_volume,
+        "average_charge_density_C_per_m3": q_volume / volume,
+        "phi_min_V": phi_min,
+        "phi_max_V": phi_max,
+        "phi_span_V": phi_max - phi_min,
+        "phi_abs_max_V": max(abs(phi_min), abs(phi_max)),
     }
 
 
@@ -621,18 +675,16 @@ def _endpoint(row: dict[str, str]) -> dict[str, float]:
 
 
 def _timestep_sensitivity(
-    baseline: dict[str, float],
-    half_dt: dict[str, float],
+    baseline: dict[str, float], half_dt: dict[str, float]
 ) -> dict[str, Any]:
-    comparison = {}
-    for key in baseline:
-        a = baseline[key]
-        b = half_dt[key]
+    comparison: dict[str, Any] = {}
+    for key, baseline_value in baseline.items():
+        half_value = half_dt[key]
         comparison[key] = {
-            "baseline": a,
-            "half_dt": b,
-            "symmetric_relative_difference": abs(a - b)
-            / max(abs(a), abs(b), 1.0e-300),
+            "baseline": baseline_value,
+            "half_dt": half_value,
+            "symmetric_relative_difference": abs(baseline_value - half_value)
+            / max(abs(baseline_value), abs(half_value), 1.0e-300),
         }
     return {
         "status": "MEASURED_UNTHRESHOLDED",
@@ -644,12 +696,20 @@ def _timestep_sensitivity(
     }
 
 
+def _runtime_log_facts(text: str, *, returncode: int, timed_out: bool) -> dict[str, Any]:
+    lower = text.lower()
+    return {
+        "returncode": returncode,
+        "timed_out": timed_out,
+        "contains_converged_reason": "converged reason" in lower,
+        "contains_diverged": "diverged" in lower,
+        "contains_nan": " nan" in lower or "nan " in lower,
+        "contains_error": "*** error ***" in lower,
+    }
+
+
 def _runtime(
-    executable: Path,
-    case_dir: Path,
-    log: Path,
-    *,
-    timeout: float,
+    executable: Path, case_dir: Path, log: Path, *, timeout: float
 ) -> dict[str, Any]:
     result = run_physics(
         executable,
@@ -664,22 +724,15 @@ def _runtime(
         "returncode": result.returncode,
         "wall_seconds": result.wall_seconds,
         "timed_out": result.timed_out,
-        "failure_signature": failure_signature(text),
-        "runtime_facts": runtime_core_facts(
-            text,
-            returncode=result.returncode,
-            coupled_scaling_variables=("n_e", "n_epsilon"),
+        "runtime_facts": _runtime_log_facts(
+            text, returncode=result.returncode, timed_out=result.timed_out
         ),
         "log": str(log),
     }
 
 
 def _p2(
-    executable: Path,
-    case_dir: Path,
-    log: Path,
-    *,
-    timeout: float,
+    executable: Path, case_dir: Path, log: Path, *, timeout: float
 ) -> dict[str, Any]:
     result = run_physics(
         executable,
@@ -697,42 +750,34 @@ def _p2(
     }
 
 
-def _analyze_case(
-    case_dir: Path,
-    *,
-    input_text: str,
-) -> dict[str, Any]:
+def _analyze_case(case_dir: Path, *, input_text: str) -> dict[str, Any]:
     rows = _read_rows(case_dir / "input_out.csv")
     physical_path = _write_physical_csv(case_dir, rows)
     physical_rows = [row for row in rows if _num(row, "time") > 1.0e-15]
     state = _state_evidence(physical_rows)
     balances = _discrete_balances(
-        rows,
-        energy_coefficients=_energy_coefficients(input_text),
+        rows, energy_coefficients=_energy_coefficients(input_text)
     )
-    gauss = q0_run._gauss_evidence(physical_path)
-    electrostatic_state = qn0_run._state_evidence(physical_path)
+    gauss = _gauss_evidence(physical_path)
+    electrostatic = _electrostatic_state_evidence(physical_path)
     gauss_pass = (
         gauss.get("status") == "MEASURED"
         and float(gauss["relative_defect"]) <= MAX_GAUSS_RELATIVE_DEFECT
     )
-    evidence_pass = (
+    hard_pass = (
         state["hard_pass"]
         and balances["hard_pass"]
         and gauss_pass
-        and electrostatic_state.get("status") == "MEASURED"
+        and electrostatic.get("status") == "MEASURED"
     )
     return {
         "state": state,
         "balances": balances,
         "gauss_law": gauss,
-        "gauss_gate": {
-            "max_relative_defect": MAX_GAUSS_RELATIVE_DEFECT,
-            "pass": gauss_pass,
-        },
-        "electrostatic_state": electrostatic_state,
+        "gauss_gate": {"max_relative_defect": MAX_GAUSS_RELATIVE_DEFECT, "pass": gauss_pass},
+        "electrostatic_state": electrostatic,
         "endpoint": _endpoint(physical_rows[-1]),
-        "hard_pass": evidence_pass,
+        "hard_pass": hard_pass,
     }
 
 
@@ -786,12 +831,10 @@ def self_test() -> None:
     baseline_text, _ = _runtime_input(BASELINE_DT_S)
     half_text, _ = _runtime_input(HALF_DT_S)
     assert math.isclose(
-        float(mp.get_parameter(baseline_text, "Executioner", "dt")),
-        BASELINE_DT_S,
+        float(mp.get_parameter(baseline_text, "Executioner", "dt")), BASELINE_DT_S
     )
     assert math.isclose(
-        float(mp.get_parameter(half_text, "Executioner", "dt")),
-        HALF_DT_S,
+        float(mp.get_parameter(half_text, "Executioner", "dt")), HALF_DT_S
     )
     for text in (baseline_text, half_text):
         assert audit_s5r_input(text)["status"] == "PASS"
@@ -804,13 +847,9 @@ def self_test() -> None:
             assert token not in text
 
     rows = _synthetic_rows(BASELINE_DT_S)
-    state = _state_evidence(rows[1:])
-    balances = _discrete_balances(
-        rows,
-        energy_coefficients={channel: -1.0 for channel in ENERGY_CHANNELS},
-    )
-    assert state["hard_pass"]
-    assert balances["hard_pass"]
+    coefficients = {channel: -1.0 for channel in ENERGY_CHANNELS}
+    assert _state_evidence(rows[1:])["hard_pass"]
+    assert _discrete_balances(rows, energy_coefficients=coefficients)["hard_pass"]
 
     negative = copy.deepcopy(rows)
     negative[-1]["w_Om_min"] = "-0.1"
@@ -819,22 +858,19 @@ def self_test() -> None:
     broken_species = copy.deepcopy(rows)
     broken_species[-1]["mass_O"] = "0.2"
     assert not _discrete_balances(
-        broken_species,
-        energy_coefficients={channel: -1.0 for channel in ENERGY_CHANNELS},
+        broken_species, energy_coefficients=coefficients
     )["hard_pass"]
 
     broken_electron = copy.deepcopy(rows)
     broken_electron[-1]["n_e_inventory"] = "1.1e16"
     assert not _discrete_balances(
-        broken_electron,
-        energy_coefficients={channel: -1.0 for channel in ENERGY_CHANNELS},
+        broken_electron, energy_coefficients=coefficients
     )["hard_pass"]
 
     broken_energy = copy.deepcopy(rows)
     broken_energy[-1]["s5r_n_epsilon_inventory"] = "1.1"
     assert not _discrete_balances(
-        broken_energy,
-        energy_coefficients={channel: -1.0 for channel in ENERGY_CHANNELS},
+        broken_energy, energy_coefficients=coefficients
     )["hard_pass"]
 
     print("S5R_REPRESENTATIVE_RUNTIME_HARNESS_SELFTEST_PASS")
@@ -846,11 +882,8 @@ def run(args: argparse.Namespace) -> int:
     validate_executable(executable)
     results_root = resolve_results_root(executable, args.results_root)
     results_root.mkdir(parents=True, exist_ok=True)
-
-    stamp = utc_timestamp().replace(":", "").replace("-", "")
-    root = create_collision_safe_directory(
-        results_root,
-        f"issue192_s5r_representative_{stamp}",
+    root = _collision_safe_directory(
+        results_root, f"issue192_s5r_representative_{_utc_stamp()}"
     )
     cases_root = root / "cases"
     logs = root / "logs"
@@ -867,32 +900,27 @@ def run(args: argparse.Namespace) -> int:
         "physics_opt_sha256": _sha256(executable),
         "claim_boundary": {
             "on_green": "Stage-5 S5-R representative coupled chemistry evidence ready for review",
-            "not_automatic": [
-                "Stage-5 acceptance",
-                "Integrated Physics Accuracy",
-            ],
+            "not_automatic": ["Stage-5 acceptance", "Integrated Physics Accuracy"],
         },
         "cases": {},
         "timestep_sensitivity": {},
         "status": "NOT_RUN",
     }
 
-    staged: dict[str, dict[str, Any]] = {}
     input_texts: dict[str, str] = {}
     for case_name, dt_s in CASE_SPECS:
         case_dir = cases_root / case_name
-        staged[case_name] = _stage(case_dir, dt_s=dt_s)
+        staged = _stage(case_dir, dt_s=dt_s)
         input_texts[case_name] = (case_dir / "input.i").read_text()
         summary["cases"][case_name] = {
             "dt_s": dt_s,
             "end_time_s": END_TIME_S,
-            "staged": staged[case_name],
+            "staged": staged,
             "p2": {},
             "runtime": {},
             "evidence": {},
         }
 
-    # Fail-fast before representative runtime if either exact staged input does not parse.
     for case_name, _ in CASE_SPECS:
         case_dir = cases_root / case_name
         p2 = _p2(
@@ -904,7 +932,7 @@ def run(args: argparse.Namespace) -> int:
         summary["cases"][case_name]["p2"] = p2
         if p2["returncode"] != 0:
             summary["status"] = f"P2_FAIL_{case_name.upper()}"
-            write_json_bundle(root, {"summary": ("summary.json", summary)})
+            _write_summary(root, summary)
             print(f"S5R_REPRESENTATIVE_ROOT: {root}")
             print(f"S5R_REPRESENTATIVE_STATUS: {summary['status']}")
             return 2
@@ -922,16 +950,14 @@ def run(args: argparse.Namespace) -> int:
         runtime_success[case_name] = runtime["returncode"] == 0
         if runtime_success[case_name]:
             try:
-                evidence = _analyze_case(
-                    case_dir,
-                    input_text=input_texts[case_name],
+                summary["cases"][case_name]["evidence"] = _analyze_case(
+                    case_dir, input_text=input_texts[case_name]
                 )
             except (S5RRuntimeError, AssertionError, KeyError, ValueError) as exc:
-                evidence = {
+                summary["cases"][case_name]["evidence"] = {
                     "hard_pass": False,
                     "analysis_error": str(exc),
                 }
-            summary["cases"][case_name]["evidence"] = evidence
 
     if not runtime_success.get("baseline", False):
         summary["status"] = (
@@ -939,7 +965,7 @@ def run(args: argparse.Namespace) -> int:
             if runtime_success.get("half_dt", False)
             else "REPRESENTATIVE_RUNTIME_FAIL_BOTH_TIMESTEPS"
         )
-        write_json_bundle(root, {"summary": ("summary.json", summary)})
+        _write_summary(root, summary)
         print(f"S5R_REPRESENTATIVE_ROOT: {root}")
         print(f"S5R_REPRESENTATIVE_STATUS: {summary['status']}")
         print(f"S5R_REPRESENTATIVE_SUMMARY: {root / 'summary.json'}")
@@ -947,28 +973,27 @@ def run(args: argparse.Namespace) -> int:
 
     if not runtime_success.get("half_dt", False):
         summary["status"] = "HALF_DT_RUNTIME_FAIL"
-        write_json_bundle(root, {"summary": ("summary.json", summary)})
+        _write_summary(root, summary)
         print(f"S5R_REPRESENTATIVE_ROOT: {root}")
         print(f"S5R_REPRESENTATIVE_STATUS: {summary['status']}")
         print(f"S5R_REPRESENTATIVE_SUMMARY: {root / 'summary.json'}")
         return 1
 
-    baseline_evidence = summary["cases"]["baseline"]["evidence"]
-    half_evidence = summary["cases"]["half_dt"]["evidence"]
-    if not baseline_evidence.get("hard_pass") or not half_evidence.get("hard_pass"):
+    baseline = summary["cases"]["baseline"]["evidence"]
+    half = summary["cases"]["half_dt"]["evidence"]
+    if not baseline.get("hard_pass") or not half.get("hard_pass"):
         summary["status"] = "REPRESENTATIVE_RUNTIME_INVARIANT_FAIL"
-        write_json_bundle(root, {"summary": ("summary.json", summary)})
+        _write_summary(root, summary)
         print(f"S5R_REPRESENTATIVE_ROOT: {root}")
         print(f"S5R_REPRESENTATIVE_STATUS: {summary['status']}")
         print(f"S5R_REPRESENTATIVE_SUMMARY: {root / 'summary.json'}")
         return 1
 
     summary["timestep_sensitivity"] = _timestep_sensitivity(
-        baseline_evidence["endpoint"],
-        half_evidence["endpoint"],
+        baseline["endpoint"], half["endpoint"]
     )
     summary["status"] = "S5R_REPRESENTATIVE_EVIDENCE_READY"
-    write_json_bundle(root, {"summary": ("summary.json", summary)})
+    _write_summary(root, summary)
     print(f"S5R_REPRESENTATIVE_ROOT: {root}")
     print(f"S5R_REPRESENTATIVE_STATUS: {summary['status']}")
     print("S5R_REPRESENTATIVE_TIMESTEP_SENSITIVITY: MEASURED_UNTHRESHOLDED")
