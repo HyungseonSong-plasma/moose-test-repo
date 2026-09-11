@@ -166,7 +166,7 @@ The first controlled Q0 run is used to establish the numerical defect scale. The
 git pull
 
 python -m experiments.Issue31_r4_q0_all_ground.run \
-  --qpx "$QPX_OPT" \
+  --qpx "$PHYSICS_EXECUTABLE" \
   --results-root "$PWD/r4_results"
 ```
 
@@ -174,7 +174,7 @@ The bounded queue is:
 
 ```text
 canonical construction/audit
--> qpx-opt --check-input
+-> physics-opt --check-input
 -> one R4-Q0 runtime
 -> preserved #91 physical invariant checker
 -> C1 Gauss-law measurement
