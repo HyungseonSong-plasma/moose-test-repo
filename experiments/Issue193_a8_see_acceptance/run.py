@@ -13,11 +13,13 @@ import hashlib
 import json
 import math
 import os
+import re
 from pathlib import Path
 from typing import Any, Mapping
 
 from experiments.Issue27_surface_reactions.controlled_wall import see as a8
 from experiments.Issue27_surface_reactions.controlled_wall.combined import (
+    CHARGED,
     M_O2_KG_PER_MOL,
     M_O_KG_PER_MOL,
     PLASMA_WALLS,
@@ -28,6 +30,9 @@ from experiments.Issue27_surface_reactions.controlled_wall.electron_wall import 
     THERMAL_PP,
 )
 from experiments.Issue31_r4_q0_all_ground import run as q0_run
+from experiments.historical_recipe_support.issue192_s5r import (
+    _promote_current_physics_object_types,
+)
 from physics_harness.application.experiment_spec import load_experiment_spec
 from physics_harness.adapters.moose import blocks as mb
 from physics_harness.adapters.moose import parameters as mp
@@ -71,17 +76,66 @@ def _factor(text: str, path: str) -> float:
     return float(mp.get_parameter(text, path, "factor") or "nan")
 
 
+def _promote_current_acceptance_types(text: str) -> tuple[str, dict[str, Any]]:
+    """Promote a historical R4/A8 construction to the current Physics namespace.
+
+    Historical source assets and characterization fixtures deliberately retain
+    their old object names. Current governed execution must instead use the
+    current registered Physics objects. Reuse the already accepted Stage-5
+    promotion map, then promote the A6 ion-wall materials that are added after
+    the inherited R4 topology is built.
+    """
+    promoted = _promote_current_physics_object_types(text)
+    wall_promotions: dict[str, Any] = {}
+    for species in CHARGED:
+        path = f"FunctorMaterials/issue27_a6_{species}_wall_flux"
+        if not mb.has_block(promoted, path):
+            raise Issue193AcceptanceError(
+                f"missing A6 ion-wall material required for current Physics promotion: {path}"
+            )
+        previous = mp.get_parameter(promoted, path, "type")
+        promoted = mp.upsert_parameter(
+            promoted, path, "type", "PhysicsIonWallFluxMaterial"
+        )
+        wall_promotions[species] = {
+            "path": path,
+            "from": previous,
+            "to": "PhysicsIonWallFluxMaterial",
+        }
+
+    remaining_qpx_types = re.findall(
+        r"(?m)^\s*type\s*=\s*(QPX[A-Za-z0-9_]+)\s*$", promoted
+    )
+    if remaining_qpx_types:
+        raise Issue193AcceptanceError(
+            "current #193 staged input still contains retired QPX object types: "
+            + ", ".join(sorted(set(remaining_qpx_types)))
+        )
+    return promoted, {
+        "inherited_stage5_promotion": True,
+        "ion_wall_promotions": wall_promotions,
+        "remaining_qpx_object_types": remaining_qpx_types,
+    }
+
+
 def _construction_audit(parameters: Mapping[str, Any]) -> dict[str, Any]:
     base = (SOURCE / "heavy_base.i").read_text(encoding="utf-8")
     texts: dict[str, str] = {}
+    promoted_texts: dict[str, str] = {}
+    promotion_meta: dict[str, Any] = {}
     meta: dict[str, Any] = {}
     for mode in CASE_MODES:
         text, item = a8._build_a8_case_input(base, parameters=parameters, mode=mode)
+        promoted, promotion = _promote_current_acceptance_types(text)
         texts[mode] = text
+        promoted_texts[mode] = promoted
+        promotion_meta[mode] = promotion
         meta[mode] = item
 
     on = texts["see_on"]
     off = texts["see_off"]
+    promoted_on = promoted_texts["see_on"]
+    promoted_off = promoted_texts["see_off"]
     functors = mp.words(
         mp.get_parameter(on, f"FunctorMaterials/{a8.SEE_MATERIAL}", "functor_names")
     )
@@ -93,6 +147,14 @@ def _construction_audit(parameters: Mapping[str, Any]) -> dict[str, Any]:
     )
     expected_energy_scale = n_ref * ELEMENTARY_CHARGE_C * 4.0
 
+    current_ion_types = {
+        species: mp.get_parameter(
+            promoted_on,
+            f"FunctorMaterials/issue27_a6_{species}_wall_flux",
+            "type",
+        )
+        for species in CHARGED
+    }
     checks = {
         "gamma_O2p_exact": frozen["O2p_secondary_emission_coefficient"] == 0.05,
         "gamma_Op_exact": frozen["Op_secondary_emission_coefficient"] == 0.05,
@@ -118,6 +180,11 @@ def _construction_audit(parameters: Mapping[str, Any]) -> dict[str, Any]:
         ),
         "bounded_dt_exact": float(mp.get_parameter(on, "Executioner", "dt") or "nan") == 1.0e-10,
         "bounded_end_exact": float(mp.get_parameter(on, "Executioner", "end_time") or "nan") == 1.0e-10,
+        "current_object_namespace_clean_on": "type = QPX" not in promoted_on,
+        "current_object_namespace_clean_off": "type = QPX" not in promoted_off,
+        "current_ion_wall_types": all(
+            value == "PhysicsIonWallFluxMaterial" for value in current_ion_types.values()
+        ),
     }
     return {
         "status": "PASS" if all(checks.values()) else "FAIL",
@@ -127,6 +194,8 @@ def _construction_audit(parameters: Mapping[str, Any]) -> dict[str, Any]:
         "n_ref_m3": n_ref,
         "expected_energy_scale": expected_energy_scale,
         "measured_energy_scale": measured_energy_scale,
+        "current_ion_wall_types": current_ion_types,
+        "promotion": promotion_meta,
     }
 
 
@@ -379,6 +448,9 @@ def _self_test() -> int:
     spec = load_experiment_spec(A8_SPEC)
     construction = _construction_audit(spec.parameters)
     assert construction["status"] == "PASS"
+    assert construction["checks"]["current_object_namespace_clean_on"] is True
+    assert construction["checks"]["current_object_namespace_clean_off"] is True
+    assert construction["checks"]["current_ion_wall_types"] is True
     metrics = _synthetic_metrics()
     decision = _evaluate_gates(construction, metrics, runtime_ok=True)
     assert decision["scientific_hard_pass"] is True
@@ -433,6 +505,14 @@ def _run_case(
     logs = out / "logs"
     logs.mkdir(parents=True, exist_ok=True)
     staging = a8._stage_case(case_dir, parameters=parameters, mode=mode)
+
+    input_path = case_dir / "input.i"
+    promoted_text, promotion = _promote_current_acceptance_types(
+        input_path.read_text(encoding="utf-8")
+    )
+    input_path.write_text(promoted_text, encoding="utf-8")
+    staging["current_physics_object_promotion"] = promotion
+
     p2 = q0_run._p2(exe, case_dir, logs / f"{mode}_p2.log", timeout)
     runtime: dict[str, Any] = {"returncode": None}
     state: dict[str, Any] = {"status": "NOT_RUN"}
