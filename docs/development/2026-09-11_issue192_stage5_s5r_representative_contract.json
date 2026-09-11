@@ -104,7 +104,7 @@
       "electron_energy_projection": "NONE"
     },
     "H05_OM_O_DETACHMENT": {
-      "progress": "reaction_rate_H05_Om_O_detachment",
+      "progress": "reaction_rate_H05_Om_O_to_O2_electron",
       "owner": "PhysicsReactionRateMaterial",
       "electron_particle_projection": "PhysicsFVElectronReactionSource",
       "electron_energy_projection": "NONE",
