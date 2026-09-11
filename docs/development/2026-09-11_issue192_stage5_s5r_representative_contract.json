@@ -136,7 +136,7 @@
       "deferred channels remain visibly excluded",
       "canonical T_g and mean_en_solved bindings pass static audit",
       "physics preflight succeeds",
-      "qpx-opt --check-input succeeds"
+      "physics-opt --check-input succeeds"
     ]
   },
   "representative_runtime_requirements": [
