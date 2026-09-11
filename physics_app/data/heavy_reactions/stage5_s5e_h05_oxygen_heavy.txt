@@ -1,15 +1,20 @@
 # Stage-5 S5-E H05-only oxygen heavy-particle reaction database.
 # Derived from user_supplied:Ar_O2_plasma_chemistry.txt.
-# Electron production is projected explicitly from the shared canonical progress;
-# the frozen #191 convention adds no H05-specific electron-energy source.
+# The electron is declared here only for stoichiometric charge bookkeeping so the
+# database can enforce charge conservation. Electron particle production remains
+# projected explicitly from the shared canonical reaction progress; this database
+# declaration is not a second source owner. The frozen #191 convention still adds
+# no H05-specific electron-energy source.
 species O2 O2 0.032 0 heavy
 species O O 0.016 0 heavy
 species Om Om 0.016 -1 heavy
+species electron electron 0 -1 electron
 
 reaction H05_Om_O_to_O2_electron volume power_law
 reactant Om 1
 reactant O 1
 product O2 1
+product electron 1
 A 3e-16
 basis particle
 T_ref 300
