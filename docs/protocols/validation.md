@@ -9,7 +9,7 @@
 ```text
 P0 checker/analyzer self-test and mutation controls
 P1 static construction/input checks
-P2 qpx-opt --check-input
+P2 physics-opt --check-input
 P3 full runtime / physics validation
 ```
 
@@ -42,7 +42,7 @@ BATCH_ACCEPTED_FOR_EXECUTION
 
 ## VAL-03 — Static construction defenses
 
-Apply relevant checks before `qpx-opt`:
+Apply relevant checks before `physics-opt`:
 
 ```text
 duplicate blocks/objects
@@ -307,7 +307,7 @@ For environment-sensitive cases, record:
 
 ```text
 activation environment / expected conda environment
-qpx-opt realpath
+physics-opt realpath
 relevant JIT/runtime dependency availability
 ```
 
@@ -315,7 +315,7 @@ A symptom such as `ADFParser::JITCompile() failed` at P2 is initially `ENVIRONME
 
 ## VAL-19 — Parsed-function namespace preflight
 
-Any test, diagnostic, standalone input, or canonical regression that contains `ParsedFunctorMaterial` or `ADParsedFunctorMaterial` must pass a parser-namespace static preflight before `qpx-opt --check-input`.
+Any test, diagnostic, standalone input, or canonical regression that contains `ParsedFunctorMaterial` or `ADParsedFunctorMaterial` must pass a parser-namespace static preflight before `physics-opt --check-input`.
 
 MOOSE `ParsedFunctorMaterial` appends coordinate/time parser variables `x,y,z,t` and registers constants `pi,e`. Therefore user-provided parser aliases must not collide with those names.
 
@@ -437,7 +437,7 @@ MultiApp/subcycle dt ownership
 nonlinear/linear solve controls when they determine the experiment semantics
 ```
 
-Prefer executable-derived framework truth from the actual user-local `qpx-opt` when practical. MOOSE applications expose registered input syntax and defaults through syntax dumps such as `--yaml` / `--json`, while `--show-input` exposes the parsed input after input processing/overrides. If executable introspection cannot provide the required effective value, use pinned framework/QPX source or versioned documentation and record that fallback identity. Do not silently hardcode a framework default into a reusable runner without an identity/provenance contract.
+Prefer executable-derived framework truth from the actual user-local `physics-opt` when practical. MOOSE applications expose registered input syntax and defaults through syntax dumps such as `--yaml` / `--json`, while `--show-input` exposes the parsed input after input processing/overrides. If executable introspection cannot provide the required effective value, use pinned framework/QPX source or versioned documentation and record that fallback identity. Do not silently hardcode a framework default into a reusable runner without an identity/provenance contract.
 
 Reject hard contradictions before P2. Applicable examples include:
 
