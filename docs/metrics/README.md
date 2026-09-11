@@ -1,7 +1,7 @@
 # Metrics Context
 
 **Status:** canonical metrics observation entry point  
-**Scope:** operational evidence used to evaluate and improve the MOOSE/QPX operating system  
+**Scope:** operational evidence used to evaluate and improve the MOOSE/Physics operating system  
 **Canonical metric semantics:** `docs/protocols/metrics_closure.md`
 
 This directory stores observations, ledgers, snapshots, and derived analyses. It does **not** redefine the canonical metric rules.

@@ -1,6 +1,6 @@
 # Workspace Operating Boundary
 
-This repository is reserved for MOOSE/QPX development, regression, verification, troubleshooting, and operating-system evidence.
+This repository is reserved for MOOSE/Physics development, regression, verification, troubleshooting, and operating-system evidence.
 
 ## Cross-chat entry
 
@@ -56,6 +56,8 @@ Use only when their phase/trigger is active:
 
 For current work state, use the active GitHub issue body/current status block. Issue comments are chronological evidence, not canonical current state.
 
-Repository content may include MOOSE/QPX regression inputs, minimal reproducers, checkers/reference data, incident/development logs, scripts, and compatible local test executables.
+Repository content may include MOOSE/Physics regression inputs, minimal reproducers, checkers/reference data, incident/development logs, scripts, and compatible local test executables.
+
+Current runtime naming is `Physics` / `physics-opt`. Historical incident records, archived experiments, immutable snapshots, or old closure evidence may retain `QPX` / `qpx-opt` when those names identify what was actually executed at the time; those historical names do not redefine the current runtime owner.
 
 Production source changes belong in the appropriate source repository. This workspace primarily stores test/development evidence and small source deltas only when needed to reproduce or document an investigation.

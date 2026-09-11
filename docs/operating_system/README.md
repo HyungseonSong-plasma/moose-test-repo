@@ -1,4 +1,4 @@
-# MOOSE/QPX Operating System Versions
+# MOOSE/Physics Operating System Versions
 
 **Current version name:** Calvin  
 **Current baseline date:** 2026-09-01  
@@ -7,6 +7,8 @@
 **Status:** active experimental operating baseline
 
 This directory records named operating-system baselines so later revisions can be compared against earlier ones using observed execution, routing, incident, and rule-activation data.
+
+Current product/runtime naming is `MOOSE/Physics` and `physics-opt`. Immutable historical version records may retain `MOOSE/QPX` or `qpx-opt` when those names describe the system that existed at the time; do not rewrite those historical baselines merely to follow the current rename.
 
 ## Current operating system
 

@@ -3,7 +3,7 @@
 **Status:** reserved successor; not active  
 **Reserved version name:** Paul  
 **Predecessor:** Calvin  
-**Purpose:** define the conditions and comparison contract for the next materially upgraded MOOSE/QPX operating-system baseline without prematurely declaring that upgrade complete.
+**Purpose:** define the conditions and comparison contract for the next materially upgraded MOOSE/Physics operating-system baseline without prematurely declaring that upgrade complete.
 
 ## 1. Successor rule
 

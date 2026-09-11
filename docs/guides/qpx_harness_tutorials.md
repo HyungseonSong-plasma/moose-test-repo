@@ -1,29 +1,31 @@
-# QPX Harness Tutorial Series
+# Physics Harness Tutorial Series
 
-This tutorial series teaches the QPX harness from the simplest user workflow to real scientific experiment design.
+This tutorial series teaches the Physics harness from the simplest user workflow to real scientific experiment design.
 
 The tutorials intentionally start with simple mental models. You do not need to understand the internal Python implementation before using the harness.
 
+The file path is retained for compatibility with historical links. Current product/harness naming is `Physics`; historical issue names and archived evidence may still contain `QPX`.
+
 ---
 
-# Tutorial #1 — Getting Started with the QPX Harness
+# Tutorial #1 — Getting Started with the Physics Harness
 
 ## Goal
 
-By the end of this tutorial, you should understand what the QPX harness does and be able to run its basic internal health check.
+By the end of this tutorial, you should understand what the Physics harness does and be able to run its basic internal health check.
 
-## 1. What is the QPX Harness?
+## 1. What is the Physics Harness?
 
-Think of QPX as a scientific machine and the QPX harness as the helper standing next to that machine.
+Think of Physics as a scientific machine and the Physics harness as the helper standing next to that machine.
 
 The harness helps you:
 
 1. prepare an experiment,
-2. run QPX,
+2. run Physics,
 3. collect the result,
 4. check whether the result satisfies the experiment contract.
 
-You normally enter the harness through the `qpx` command instead of calling internal Python modules yourself.
+You normally enter the harness through the `physics` command instead of calling internal Python modules yourself.
 
 ## 2. The Two Main Doors: `-i` and `-e`
 
@@ -32,25 +34,25 @@ There are two important gateways.
 ### Door A — Internal validation
 
 ```bash
-python qpx -i all
+python physics -i all
 ```
 
 `-i` means **internal**.
 
 Use it when you want to ask:
 
-> Is the QPX harness and repository machinery healthy?
+> Is the Physics harness and repository machinery healthy?
 
 The available basic internal targets are:
 
 ```bash
-python qpx -i architecture
-python qpx -i regression
-python qpx -i all
+python physics -i architecture
+python physics -i regression
+python physics -i all
 ```
 
 - `architecture` checks architecture and gateway guards.
-- `regression` runs the QPX-free Python regression/unit suite.
+- `regression` runs the Physics-runtime-free Python regression/unit suite.
 - `all` runs both.
 
 These checks validate repository/harness infrastructure. They are not automatically scientific experiment evidence.
@@ -58,7 +60,7 @@ These checks validate repository/harness infrastructure. They are not automatica
 ### Door B — Scientific experiment
 
 ```bash
-python qpx -e <experiment.json>
+python physics -e <experiment.json>
 ```
 
 `-e` means **experiment**.
@@ -68,7 +70,7 @@ Use it when you want to ask a scientific question by executing a declarative exp
 For example:
 
 ```bash
-python qpx -e experiments/MyExperiment/experiment.json
+python physics -e experiments/MyExperiment/experiment.json
 ```
 
 A useful mental model is:
@@ -85,7 +87,7 @@ Do not confuse these two purposes.
 From the repository root, run:
 
 ```bash
-python qpx -i all
+python physics -i all
 ```
 
 The harness runs its architecture checks and regression/unit suite.
@@ -285,7 +287,7 @@ The exact meaning of each output key belongs to the selected protocol. A boolean
 Once the declaration is ready, submit it through the experiment gateway:
 
 ```bash
-python qpx -e experiments/MyFirstExperiment/experiment.json
+python physics -e experiments/MyFirstExperiment/experiment.json
 ```
 
 Conceptually, the flow is:
@@ -294,7 +296,7 @@ Conceptually, the flow is:
 experiment.json
       |
       v
-QPX experiment gateway
+Physics experiment gateway
       |
       v
 load and validate declaration
@@ -303,7 +305,7 @@ load and validate declaration
 select experiment implementation/protocol
       |
       v
-execute QPX workflow
+execute Physics workflow
       |
       v
 collect/check evidence
@@ -323,7 +325,7 @@ configuration/declaration
         ↓
 input/preflight
         ↓
-QPX runtime / nonlinear solve
+Physics runtime / nonlinear solve
         ↓
 result collection
         ↓
@@ -363,7 +365,7 @@ You have now completed Tutorial #2.
 
 Tutorial #1 taught you how to enter the harness. Tutorial #2 taught you how to read and write an experiment declaration.
 
-Now we follow the scientific reasoning used by a real QPX experiment family: the Issue #31 R4 solved-Poisson feedback work.
+Now we follow the scientific reasoning used by the Issue #31 R4 solved-Poisson feedback experiment family. Historical records for this family may use the former QPX name; current execution ownership is Physics.
 
 The goal is not merely to type a command. The goal is to understand the full chain:
 
@@ -374,7 +376,7 @@ control/discriminator design
     ↓
 experiment declaration
     ↓
-QPX execution
+Physics execution
     ↓
 evidence
     ↓
@@ -505,10 +507,10 @@ Do not guess new parameter names. Use the actual declaration and the protocol/re
 For a declarative experiment, use:
 
 ```bash
-python qpx -e <path-to-experiment.json>
+python physics -e <path-to-experiment.json>
 ```
 
-Do not replace this with `python qpx -i ...` merely because both commands run checks. They have different purposes.
+Do not replace this with `python physics -i ...` merely because both commands run checks. They have different purposes.
 
 ## 7. Read the Result as Evidence
 
@@ -588,7 +590,7 @@ Together, the two cases are much stronger than either case alone.
 
 This is the main lesson of Tutorial #3:
 
-> A good QPX experiment is not just a solver run. It is a deliberately designed question with a prediction, a control or discriminator, measurable evidence, and a scientific conclusion.
+> A good Physics experiment is not just a solver run. It is a deliberately designed question with a prediction, a control or discriminator, measurable evidence, and a scientific conclusion.
 
 ---
 
@@ -624,20 +626,20 @@ Tutorial #4: I can design and implement advanced experiment machinery.
 # Quick Reference
 
 ```bash
-# Show QPX help
-python qpx --help
+# Show Physics help
+python physics --help
 
 # Check architecture/gateway machinery
-python qpx -i architecture
+python physics -i architecture
 
 # Run Python regression/unit validation
-python qpx -i regression
+python physics -i regression
 
 # Run both internal groups
-python qpx -i all
+python physics -i all
 
 # Execute one declarative scientific experiment
-python qpx -e experiments/<experiment>/experiment.json
+python physics -e experiments/<experiment>/experiment.json
 ```
 
 Remember the simplest rule:

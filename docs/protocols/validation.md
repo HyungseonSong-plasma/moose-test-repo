@@ -1,7 +1,7 @@
 # Validation Protocol
 
 **Status:** canonical procedure  
-**Scope:** MOOSE/QPX executable batches, checkers, production parity, and imported-data validation  
+**Scope:** MOOSE/Physics executable batches, checkers, production parity, and imported-data validation  
 **Purpose:** catch construction and checker defects before user runtime and produce causally interpretable evidence.
 
 ## VAL-01 — Mandatory P0-P3 order
@@ -69,7 +69,7 @@ For generated overlay/integration inputs, P0 must build a block-qualified provid
 
 A referenced property with no applicable producer is a hard construction failure. Multiple unintended producers for the same property on the same applicable block are also a hard construction failure and should be classified `DUPLICATE_PROVIDER_FAIL`. Prefer reusing the already-owned upstream provider for shared state such as gas temperature, pressure, density, or common mesh/material properties rather than recursively copying a second provider subgraph. When this failure class is in scope, include a negative mutation that deliberately duplicates one shared provider and prove P0 rejects it before P2.
 
-For `ParsedFunctorMaterial` / `ADParsedFunctorMaterial`, reserved-symbol validation is a **hard machine-enforced P0 gate**, not a manual-review item. Every generated or packaged input containing these objects must run `python3 bin/qpx.py preflight <input.i>` or an equivalent embedded guard before P2. See VAL-19.
+For `ParsedFunctorMaterial` / `ADParsedFunctorMaterial`, reserved-symbol validation is a **hard machine-enforced P0 gate**, not a manual-review item. Every generated or packaged input containing these objects must run `python3 bin/physics.py preflight <input.i>` or an equivalent embedded guard before P2. See VAL-19.
 
 If property `X_state` is created with `define_dot_functors = true`, the generated derivative functor is `dX_state_dt`. Example: `w_O_state -> dw_O_state_dt`.
 
@@ -118,7 +118,7 @@ Do not report only PASS/FAIL. Preserve the numeric/structural result vector need
 
 ## VAL-08 — Production-path parity
 
-Static/reference agreement is insufficient when the real QPX parser/resolver/material/solver path could differ. Canonical promotion requires representative production-path execution against an independent reference or invariant where applicable.
+Static/reference agreement is insufficient when the real Physics parser/resolver/material/solver path could differ. Canonical promotion requires representative production-path execution against an independent reference or invariant where applicable.
 
 ## VAL-09 — Artifact packaging
 
@@ -183,7 +183,7 @@ Check exact grid points, off-grid points, boundaries, boundary ±epsilon, clippi
 Required explicit pairs must report explicit provenance; true missing pairs must report the declared fallback; fallbacks must not shadow explicit data.
 
 ### A6 — production-path end-to-end parity
-Exercise representative explicit, alias-to-explicit, ion-neutral fallback, and charged-charged fallback cases through the real QPX path and compare with an independent reference.
+Exercise representative explicit, alias-to-explicit, ion-neutral fallback, and charged-charged fallback cases through the real Physics path and compare with an independent reference.
 
 ### A7 — validator mutation self-test
 Inject controlled defects such as charge collapse, removed explicit pair, unit-factor deletion, precedence inversion, interpolation change, duplicate alias, or missing functor. The intended gate must detect each mutation.
@@ -301,7 +301,7 @@ When a prior failure involved initialization order, Aux execution stage, old/cur
 
 ## VAL-18 — Runtime environment/JIT preflight
 
-When QPX/MOOSE input construction depends on runtime/JIT facilities, P1/P2 preparation must verify the required project environment before classifying parser/JIT failures as input defects.
+When Physics/MOOSE input construction depends on runtime/JIT facilities, P1/P2 preparation must verify the required project environment before classifying parser/JIT failures as input defects.
 
 For environment-sensitive cases, record:
 
@@ -331,8 +331,8 @@ parser symbols are valid identifiers
 Canonical implementation:
 
 ```text
-python3 bin/qpx.py preflight --self-test
-python3 bin/qpx.py preflight <generated-or-packaged-input.i>
+python3 bin/physics.py preflight --self-test
+python3 bin/physics.py preflight <generated-or-packaged-input.i>
 ```
 
 For external overlay bundles that do not carry the repository `bin/` entrypoint, the case `prepare.py` must embed or invoke an equivalent guard. A bundle containing parsed functor objects is not `BATCH_ACCEPTED_FOR_EXECUTION` until this gate passes.
@@ -373,7 +373,7 @@ When the `INITIAL` / start-time row is observation-only, declare separate raw an
 }
 ```
 
-Canonical command-line implementation is `python3 bin/qpx.py temporal-csv ...`; the reusable implementation is `qpx_harness.temporal`. The runner normalizes the raw CSV after P3 and before the case checker. Raw runtime evidence is preserved unchanged.
+Canonical command-line implementation is `python3 bin/physics.py temporal-csv ...`; the reusable implementation is `physics_harness.temporal`. The runner normalizes the raw CSV after P3 and before the case checker. Raw runtime evidence is preserved unchanged.
 
 Hard schema-v2 rules:
 
@@ -437,7 +437,7 @@ MultiApp/subcycle dt ownership
 nonlinear/linear solve controls when they determine the experiment semantics
 ```
 
-Prefer executable-derived framework truth from the actual user-local `physics-opt` when practical. MOOSE applications expose registered input syntax and defaults through syntax dumps such as `--yaml` / `--json`, while `--show-input` exposes the parsed input after input processing/overrides. If executable introspection cannot provide the required effective value, use pinned framework/QPX source or versioned documentation and record that fallback identity. Do not silently hardcode a framework default into a reusable runner without an identity/provenance contract.
+Prefer executable-derived framework truth from the actual user-local `physics-opt` when practical. MOOSE applications expose registered input syntax and defaults through syntax dumps such as `--yaml` / `--json`, while `--show-input` exposes the parsed input after input processing/overrides. If executable introspection cannot provide the required effective value, use pinned framework/Physics source or versioned documentation and record that fallback identity. Do not silently hardcode a framework default into a reusable runner without an identity/provenance contract.
 
 Reject hard contradictions before P2. Applicable examples include:
 

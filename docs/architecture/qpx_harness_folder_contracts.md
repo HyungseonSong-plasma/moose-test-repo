@@ -1,13 +1,15 @@
-# QPX Harness Folder Contracts
+# Physics Harness Folder Contracts
 
 Status: canonical package responsibility contract for `development`.
+
+This file path is retained for compatibility with historical references. The current canonical product/harness naming is `Physics` / `physics_harness`.
 
 ## Canonical root
 
 ```text
 repo/
 ├── bin/
-├── qpx_harness/
+├── physics_harness/
 ├── experiments/
 ├── tests/
 ├── docs/
@@ -19,7 +21,7 @@ Other long-lived architectural roots are non-canonical and require an explicit b
 ## Internal responsibility hierarchy
 
 ```text
-qpx_harness/
+physics_harness/
 ├── specification/
 ├── ontology/
 ├── planning/
@@ -161,7 +163,7 @@ Purpose: argument parsing, bounded routing, presentation, exit-code mapping.
 
 Must not own: scientific thresholds/policy, target lowering, ontology vocabulary, reasoning backend, process execution implementation.
 
-Canonical operator model: `qpx <subcommand> ...`. One canonical implementation lives at `bin/qpx.py`; the root `qpx` file is a compatibility launcher only.
+Canonical operator model: `physics <subcommand> ...`. One canonical implementation lives at `bin/physics.py`; the root `physics` file is a compatibility launcher only.
 
 ## Dependency contract
 
@@ -185,16 +187,18 @@ cli -> domain reasoning backend                   FORBID
 application -> duplicate process execution        FORBID
 ```
 
-## Legacy migration dispositions
+## Historical migration dispositions
+
+The following `qpx_harness` paths are historical migration identifiers. They are retained here only so old issue/refactor evidence remains interpretable; they are not current canonical package names.
 
 ```text
-qpx_harness/spec        -> semantic user spec migrates to specification; low-level mutation IR becomes internal/legacy
-qpx_harness/cpp         -> retire after observation/source_code migration (#139)
-qpx_harness/diagnose    -> retire after reasoning/backend/domain-rule split (#140)
-qpx_harness/inventory   -> split/retire or explicit domain retention after #141
-qpx_harness/dmix        -> split/retire after #141
-qpx_harness/performance -> split/retire after #141
-recipes/                -> decompose then retire (#138)
+qpx_harness/spec        -> semantic user spec migrated to specification; low-level mutation IR became internal/legacy
+qpx_harness/cpp         -> retired after observation/source_code migration (#139)
+qpx_harness/diagnose    -> retired after reasoning/backend/domain-rule split (#140)
+qpx_harness/inventory   -> split/retired or explicit domain retention after #141
+qpx_harness/dmix        -> split/retired after #141
+qpx_harness/performance -> split/retired after #141
+recipes/                -> decomposed then retired (#138)
 ```
 
 ## Migration protocol

@@ -22,13 +22,13 @@ A new file is not justified merely because the current change is issue-specific 
 
 ## CODE-02 — Stable user entry point
 
-User-facing QPX test and diagnostic execution routes through the canonical executable entrypoint:
+User-facing Physics test and diagnostic execution routes through the canonical executable entrypoint:
 
 ```text
-python3 bin/qpx.py <command> [args]
+python3 bin/physics.py <command> [args]
 ```
 
-Command routing/presentation is owned by `qpx_harness/cli/`; `bin/qpx.py` is a thin process launcher only. Do not create an issue-specific top-level executable when an existing `qpx` command and harness module can represent the operation as a mode or subcommand.
+Command routing/presentation is owned by `physics_harness/cli/`; `bin/physics.py` is a thin process launcher only. Do not create an issue-specific top-level executable when an existing `physics` command and harness module can represent the operation as a mode or subcommand.
 
 Developer/repository utilities that are not product/user commands belong under `tools/` when a standalone utility is genuinely justified. Do not recreate a general `scripts/` dumping ground.
 
@@ -37,25 +37,25 @@ Developer/repository utilities that are not product/user commands belong under `
 Use repository layers consistently:
 
 ```text
-bin/qpx.py
+bin/physics.py
   -> thin executable entrypoint only
 
-qpx_harness/cli/
+physics_harness/cli/
   -> command presentation, routing, output boundary
 
 tools/*.py
   -> developer/repository utilities only when standalone ownership is justified
 
-qpx_harness/
+physics_harness/
   -> reusable capability packages plus explicit scientific/compatibility policy owners
 
-qpx_harness/execution/
+physics_harness/execution/
   -> generic process execution, case staging, workspace coordination
 
-qpx_harness/evidence/
+physics_harness/evidence/
   -> generic evidence/provenance/identity mechanics
 
-qpx_harness/diagnostics/
+physics_harness/diagnostics/
   -> reusable diagnostic fact extraction and invariant analysis
 
 tests/
@@ -65,7 +65,7 @@ docs/
   -> protocols, knowledge, incidents, development evidence; not executable glue
 ```
 
-Do not duplicate command routing between `bin/` and `qpx_harness/cli/`, or execution/evidence semantics between capability packages and compatibility facades.
+Do not duplicate command routing between `bin/` and `physics_harness/cli/`, or execution/evidence semantics between capability packages and compatibility facades.
 
 ## CODE-04 — Extend the current canonical harness before version proliferation
 
@@ -82,14 +82,14 @@ Keep low-level reusable semantics in focused modules and orchestration in the ow
 Examples:
 
 ```text
-MOOSE input editing        -> qpx_harness/moose or input helper
-executable/process runtime -> qpx_harness/execution
-identity/provenance        -> qpx_harness/evidence
-generic solver diagnostics -> qpx_harness/diagnostics
+MOOSE input editing        -> physics_harness/moose or input helper
+executable/process runtime -> physics_harness/execution
+identity/provenance        -> physics_harness/evidence
+generic solver diagnostics -> physics_harness/diagnostics
 execution-contract logic   -> execution-contract semantic owner
 case/branch sequencing     -> owning orchestration capability/policy
-CLI dispatch               -> qpx_harness/cli
-process entrypoint         -> bin/qpx.py
+CLI dispatch               -> physics_harness/cli
+process entrypoint         -> bin/physics.py
 ```
 
 Do not reimplement executable resolution, hashing, logging, input parsing, evidence-directory behavior, or other existing primitives inside a new runner.
@@ -122,7 +122,7 @@ phase-only mode cannot leak into later phases
 semantic/evidence parser rejects incomplete or contradictory evidence
 ```
 
-Integrate reusable self-tests into the existing harness and, when appropriate, the unified `python3 bin/qpx.py self-test` path rather than adding a separate manual test command.
+Integrate reusable self-tests into the existing harness and, when appropriate, the unified `python3 bin/physics.py self-test` path rather than adding a separate manual test command.
 
 ## CODE-08 — Evidence must be runner-owned
 
@@ -157,7 +157,7 @@ If implementation changes both behavior and observability, separate those claims
 
 ## CODE-11 — User-local execution boundary
 
-Repository code may construct and statically validate QPX work, but real QPX runtime evidence remains user-local under CORE-06.
+Repository code may construct and statically validate Physics work, but real Physics runtime evidence remains user-local under CORE-05.
 
 Do not label repository/static execution as physics PASS. Harness code should make the distinction between static construction, executable preflight, runtime-semantic evidence, and physics decisions machine-visible.
 
