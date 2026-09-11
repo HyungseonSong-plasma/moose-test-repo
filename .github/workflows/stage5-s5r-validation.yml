@@ -1,0 +1,130 @@
+name: Stage-5 S5-R representative assembly validation
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/stage5-s5r-validation.yml'
+      - 'experiments/historical_recipe_support/issue192_s5r.py'
+      - 'experiments/historical_recipe_support/issue31_r4_qf1.py'
+      - 'experiments/Issue91_real_qvt_r3/r3_e0/**'
+      - 'physics_app/ci/check_stage5_s5r_preflight.py'
+      - 'physics_app/ci/check_stage5_s5r_ei16_recovery.py'
+      - 'physics_app/ci/check_stage5_s5r_assembly.py'
+      - 'physics_app/data/electron_impact/**'
+      - 'physics_app/data/heavy_reactions/stage5_s5d_oxygen_heavy.txt'
+      - 'physics_app/data/heavy_reactions/stage5_s5e_h05_oxygen_heavy.txt'
+      - 'docs/development/2026-09-11_issue192_stage5_s5r_representative_contract.json'
+      - 'docs/development/2026-09-11_issue192_s5r_ei01_attachment_recovery.json'
+      - 'docs/development/2026-09-11_issue192_s5r_ei16_ionization_recovery.json'
+      - 'tests/characterization/test_issue192_s5r.py'
+  workflow_dispatch:
+
+concurrency:
+  group: stage5-s5r-validation-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+  MOOSE_SHA: 9f388366ccf38b9c34542ec5561198249fde0ac9
+  CRANE_SHA: ba26970cf419dcac563a20ed7079d445bc6341c3
+  SQUIRREL_SHA: 16a26d504f3ee11161a86d4e3ebf3c0e5f2afbb1
+  ZAPDOS_SHA: 9eceffbc46048c3760bbfa9a7f1ca681ae35af1d
+
+jobs:
+  s5r-assembly:
+    name: S5-R P0/P1/P2 representative assembly
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout canonical source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Validate immutable build-base identity
+        shell: bash
+        run: |
+          set -euxo pipefail
+          [[ "$BUILD_BASE_REF" =~ ^ghcr\.io/hyungseonsong-plasma/physics-build-base@sha256:[0-9a-f]{64}$ ]]
+          source physics_app/dependencies.lock
+          test "$MOOSE" = "$MOOSE_SHA"
+          test "$CRANE" = "$CRANE_SHA"
+          test "$SQUIRREL" = "$SQUIRREL_SHA"
+          test "$ZAPDOS" = "$ZAPDOS_SHA"
+          test "$PHYSICS_BUILD_BASE_IMAGE" = "ghcr.io/hyungseonsong-plasma/physics-build-base"
+
+      - name: Pull and verify JIT-capable Physics build base
+        shell: bash
+        run: |
+          set -euxo pipefail
+          docker pull "$BUILD_BASE_REF"
+          test "$(docker image inspect "$BUILD_BASE_REF" --format '{{ index .Config.Labels "io.physics.moose.sha" }}')" = "$MOOSE_SHA"
+          test "$(docker image inspect "$BUILD_BASE_REF" --format '{{ index .Config.Labels "io.physics.crane.sha" }}')" = "$CRANE_SHA"
+          test "$(docker image inspect "$BUILD_BASE_REF" --format '{{ index .Config.Labels "io.physics.squirrel.sha" }}')" = "$SQUIRREL_SHA"
+          test "$(docker image inspect "$BUILD_BASE_REF" --format '{{ index .Config.Labels "io.physics.zapdos.sha" }}')" = "$ZAPDOS_SHA"
+
+      - name: Build exact head and validate S5-R assembly
+        shell: bash
+        run: |
+          set -euxo pipefail
+          rm -f stage5-s5r-assembly-evidence.json stage5-s5r-assembly-environment.txt
+          docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace \
+            -e GITHUB_SHA="$GITHUB_SHA" -e BUILD_BASE_REF="$BUILD_BASE_REF" \
+            -e MOOSE_SHA="$MOOSE_SHA" -e CRANE_SHA="$CRANE_SHA" \
+            -e SQUIRREL_SHA="$SQUIRREL_SHA" -e ZAPDOS_SHA="$ZAPDOS_SHA" \
+            -v "$PWD:/workspace" "$BUILD_BASE_REF" -lc '
+              set -euxo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              git config --global --add safe.directory /opt/physics_vendor/moose
+              git config --global --add safe.directory /opt/physics_vendor/crane
+              git config --global --add safe.directory /opt/physics_vendor/squirrel
+              git config --global --add safe.directory /opt/physics_vendor/zapdos
+              test "$(git -C /workspace rev-parse HEAD)" = "$GITHUB_SHA"
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+
+              {
+                echo "REPOSITORY_SHA=$GITHUB_SHA"
+                echo "BUILD_BASE_REF=$BUILD_BASE_REF"
+                echo "MOOSE_SHA=$MOOSE_SHA"
+                echo "CRANE_SHA=$CRANE_SHA"
+                echo "SQUIRREL_SHA=$SQUIRREL_SHA"
+                echo "ZAPDOS_SHA=$ZAPDOS_SHA"
+                echo "SCIENTIFIC_SEMANTICS_CHANGED=true"
+                echo "REPRESENTATIVE_RUNTIME_EXECUTED=false"
+              } > /workspace/stage5-s5r-assembly-environment.txt
+
+              python3 bin/physics.py preflight --self-test
+              python3 physics_app/ci/check_stage5_s5r_preflight.py
+              python3 physics_app/ci/check_stage5_s5r_ei16_recovery.py
+              python3 physics_app/ci/check_stage5_s5r_assembly.py --self-test
+              python3 physics_app/ci/check_stage5_s5r_assembly.py --static
+
+              test ! -e physics_app/physics-opt
+              make -C physics_app -j2
+              test -x physics_app/physics-opt
+
+              python3 physics_app/ci/check_stage5_s5r_assembly.py \
+                --executable /workspace/physics_app/physics-opt \
+                --repository-sha "$GITHUB_SHA" \
+                --build-base-ref "$BUILD_BASE_REF" \
+                --evidence-out /workspace/stage5-s5r-assembly-evidence.json
+            '
+
+      - name: Upload S5-R assembly evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stage5-s5r-representative-assembly-evidence
+          path: |
+            stage5-s5r-assembly-evidence.json
+            stage5-s5r-assembly-environment.txt
