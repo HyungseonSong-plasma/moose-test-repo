@@ -1,0 +1,66 @@
+{
+  "acceptance": {
+    "claim_if_green": "bounded local H05 implementation/runtime accuracy",
+    "not_established": [
+      "representative real-QVT chemistry accuracy",
+      "Stage-5 acceptance",
+      "Integrated Physics Accuracy"
+    ],
+    "requires": [
+      "single canonical progress owner",
+      "3.0e-16 m3/s coefficient",
+      "heavy mass closure",
+      "oxygen nuclei closure",
+      "electron-inclusive charge closure",
+      "normalized electron particle production",
+      "zero explicit H05 electron-energy source",
+      "negative mutation controls",
+      "P2 check-input",
+      "bounded P3 runtime",
+      "upstream Stage-3/E8/S5-A/B/C/D regressions"
+    ]
+  },
+  "controller": 176,
+  "electron_energy": {
+    "confidence": {
+      "microscopic_partition": "PARTIAL",
+      "source_format_and_owner_semantics": "HIGH"
+    },
+    "explicit_source": 0.0,
+    "invalidation_trigger": "authoritative finite H05 electron-energy provenance or demonstrated incompatibility with accepted electron-energy ownership/conservation",
+    "microscopic_birth_energy_claim": "NOT_ESTABLISHED",
+    "selected_model": "electron particle production with no explicit H05 electron-energy source"
+  },
+  "issue": 191,
+  "kinetics": {
+    "A_particle_m3_s": 3e-16,
+    "basis": "particle",
+    "law": "second_order_heavy_particle_power_law",
+    "molar_progress": "R_H05 = 3.0e-16 * N_A * c_Om * c_O",
+    "temperature_exponent": 0.0
+  },
+  "ownership": {
+    "canonical_progress": "reaction_rate_H05_Om_O_to_O2_electron",
+    "electron_energy_projection": "none",
+    "electron_particle_projection": "PhysicsFVElectronReactionSource consuming +N_A*R_H05",
+    "heavy_projection": "PhysicsFVSpeciesReactionSource consuming shared progress",
+    "progress_owner": "PhysicsReactionRateMaterial"
+  },
+  "reaction": {
+    "formula": "Om + O -> O2 + e",
+    "id": "H05_Om_O_to_O2_electron",
+    "source_identity": "user_supplied:Ar_O2_plasma_chemistry.txt",
+    "source_line": "O-+O=>O2+e ! 3.0e-16[m^3/s]*N_A_const 0 0"
+  },
+  "schema_version": 1,
+  "stage": "STAGE_5_S5_E_H05",
+  "status": "MODEL_DECISION_FROZEN",
+  "stoichiometry": {
+    "electron_particle": 1,
+    "heavy": {
+      "O": -1,
+      "O2": 1,
+      "Om": -1
+    }
+  }
+}
