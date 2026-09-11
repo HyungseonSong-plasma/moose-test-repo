@@ -46,7 +46,7 @@ EXPECTED_STAGE5 = {
     "H02_OM_OP_NEUTRALIZATION": ("reaction_rate_H02_Om_Op_neutralization", "PhysicsReactionRateMaterial"),
     "H03_OM_O2P_TO_3O": ("reaction_rate_H03_Om_O2p_to_3O", "PhysicsReactionRateMaterial"),
     "H04_OM_O2P_TO_O_O2": ("reaction_rate_H04_Om_O2p_to_O_O2", "PhysicsReactionRateMaterial"),
-    "H05_OM_O_DETACHMENT": ("reaction_rate_H05_Om_O_detachment", "PhysicsReactionRateMaterial"),
+    "H05_OM_O_DETACHMENT": ("reaction_rate_H05_Om_O_to_O2_electron", "PhysicsReactionRateMaterial"),
 }
 
 EXPECTED_EXCLUSIONS = {
