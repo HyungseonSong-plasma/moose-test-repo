@@ -607,6 +607,10 @@ def _owner_paths_by_type(text: str) -> set[str]:
 def audit_s5r_input(text: str) -> dict[str, Any]:
     checks: dict[str, bool] = {}
 
+    checks["current_heavy_transport_object"] = (
+        mp.get_parameter(text, "FunctorMaterials/heavy_transport", "type")
+        == "PhysicsThermalDiffusionMaterial"
+    )
     checks["solved_energy_variable"] = mb.has_block(text, "Variables/n_epsilon")
     checks["mean_energy_bridge"] = (
         mp.get_parameter(text, "FunctorMaterials/s5r_mean_energy", "type")
@@ -813,6 +817,15 @@ def build_s5r_input(base_text: str) -> tuple[str, dict[str, Any]]:
     text, predecessor = build_r4_qf1_input(base_text)
     if predecessor["audit"]["status"] != "PASS":
         raise Issue192S5RError("R4-QF1 predecessor audit is not PASS")
+
+    # Historical accepted R3/R4 assets retain their original object spellings.
+    # The live S5-R surface must target the currently registered Physics object.
+    text = mp.upsert_parameter(
+        text,
+        "FunctorMaterials/heavy_transport",
+        "type",
+        "PhysicsThermalDiffusionMaterial",
+    )
 
     n_ref = _top_level_float(text, "n_e_value")
     text = _insert_energy_state(text)
