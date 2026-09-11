@@ -139,7 +139,6 @@ jobs:
           all_pass = True
           for name, dt in CASE_SPECS:
               case_dir = CASES / name
-              case_dir.mkdir(parents=True, exist_ok=True)
               text, meta = s5r._runtime_input(dt)
 
               # Inherited R3 inventory postprocessors are TIMESTEP_END-only; their
