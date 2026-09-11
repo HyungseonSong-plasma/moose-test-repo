@@ -7,6 +7,7 @@ on:
     paths:
       - '.github/workflows/stage5-s5r-validation.yml'
       - 'experiments/historical_recipe_support/issue192_s5r.py'
+      - 'experiments/Issue192_s5r_representative/**'
       - 'experiments/historical_recipe_support/issue31_r4_qf1.py'
       - 'experiments/Issue91_real_qvt_r3/r3_e0/**'
       - 'physics_app/ci/check_stage5_s5r_preflight.py'
@@ -21,6 +22,7 @@ on:
       - 'docs/development/2026-09-11_issue192_s5r_ei01_attachment_recovery.json'
       - 'docs/development/2026-09-11_issue192_s5r_ei16_ionization_recovery.json'
       - 'tests/characterization/test_issue192_s5r.py'
+      - 'tests/characterization/test_issue192_s5r_runtime.py'
   workflow_dispatch:
 
 concurrency:
@@ -101,7 +103,7 @@ jobs:
                 echo "CRANE_SHA=$CRANE_SHA"
                 echo "SQUIRREL_SHA=$SQUIRREL_SHA"
                 echo "ZAPDOS_SHA=$ZAPDOS_SHA"
-                echo "SCIENTIFIC_SEMANTICS_CHANGED=true"
+                echo "SCIENTIFIC_SEMANTICS_CHANGED=false"
                 echo "REPRESENTATIVE_RUNTIME_EXECUTED=false"
               } > /workspace/stage5-s5r-assembly-environment.txt
 
@@ -110,6 +112,7 @@ jobs:
               python3 physics_app/ci/check_stage5_s5r_ei16_recovery.py
               python3 physics_app/ci/check_stage5_s5r_assembly.py --self-test
               python3 physics_app/ci/check_stage5_s5r_assembly.py --static
+              python3 experiments/Issue192_s5r_representative/run.py --self-test
 
               test ! -e physics_app/physics-opt
               make -C physics_app -j2
