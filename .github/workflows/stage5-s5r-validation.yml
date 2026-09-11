@@ -74,12 +74,12 @@ jobs:
           test "$(docker image inspect "$BUILD_BASE_REF" --format '{{ index .Config.Labels "io.physics.squirrel.sha" }}')" = "$SQUIRREL_SHA"
           test "$(docker image inspect "$BUILD_BASE_REF" --format '{{ index .Config.Labels "io.physics.zapdos.sha" }}')" = "$ZAPDOS_SHA"
 
-      - name: Build exact head and run governed S5-R P0-P3
+      - name: Build exact head and run governed S5-R P0-P3 plus diagnostics
         shell: bash
         run: |
           set -euxo pipefail
           rm -f stage5-s5r-assembly-evidence.json stage5-s5r-runtime-environment.txt
-          rm -rf stage5-s5r-runtime-results
+          rm -rf stage5-s5r-runtime-results stage5-s5r-diagnostic-results
           docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace \
             -e GITHUB_SHA="$GITHUB_SHA" -e BUILD_BASE_REF="$BUILD_BASE_REF" \
             -e MOOSE_SHA="$MOOSE_SHA" -e CRANE_SHA="$CRANE_SHA" \
@@ -117,6 +117,7 @@ jobs:
               python3 physics_app/ci/check_stage5_s5r_assembly.py --self-test
               python3 physics_app/ci/check_stage5_s5r_assembly.py --static
               python3 experiments/Issue192_s5r_representative/run.py --self-test
+              python3 experiments/Issue192_s5r_representative/diagnostic_matrix.py --self-test
 
               test ! -e physics_app/physics-opt
               make -C physics_app -j2
@@ -134,18 +135,35 @@ jobs:
                 --build-base-ref "$BUILD_BASE_REF" \
                 --evidence-out /workspace/stage5-s5r-assembly-evidence.json
 
+              set +e
               python3 experiments/Issue192_s5r_representative/run.py \
                 --physics /workspace/physics_app/physics-opt \
                 --results-root /workspace/stage5-s5r-runtime-results \
                 --timeout 900
+              P3_RC=$?
+              set -e
 
               SUMMARY="$(find /workspace/stage5-s5r-runtime-results -type f -name summary.json -print -quit)"
               test -n "$SUMMARY"
-              grep -q "\"status\": \"S5R_REPRESENTATIVE_EVIDENCE_READY\"" "$SUMMARY"
               cat "$SUMMARY"
+              P3_STATUS="$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))[\"status\"])" "$SUMMARY")"
+              echo "P3_STATUS=$P3_STATUS" >> /workspace/stage5-s5r-runtime-environment.txt
+
+              python3 experiments/Issue192_s5r_representative/diagnostic_matrix.py \
+                --physics /workspace/physics_app/physics-opt \
+                --results-root /workspace/stage5-s5r-diagnostic-results \
+                --timeout 900
+
+              DIAG_SUMMARY="$(find /workspace/stage5-s5r-diagnostic-results -type f -name summary.json -print -quit)"
+              test -n "$DIAG_SUMMARY"
+              cat "$DIAG_SUMMARY"
+              echo "P3_DIAGNOSTIC_MATRIX=COMPLETE" >> /workspace/stage5-s5r-runtime-environment.txt
+
+              if [ "$P3_RC" -ne 0 ]; then
+                exit "$P3_RC"
+              fi
+              test "$P3_STATUS" = "S5R_REPRESENTATIVE_EVIDENCE_READY"
               sed -i "s/REPRESENTATIVE_RUNTIME_EXECUTED=false/REPRESENTATIVE_RUNTIME_EXECUTED=true/" \
-                /workspace/stage5-s5r-runtime-environment.txt
-              echo "P3_STATUS=S5R_REPRESENTATIVE_EVIDENCE_READY" >> \
                 /workspace/stage5-s5r-runtime-environment.txt
             '
 
@@ -165,5 +183,15 @@ jobs:
           name: stage5-s5r-governed-runtime-evidence
           path: |
             stage5-s5r-runtime-results/**
+            stage5-s5r-runtime-environment.txt
+          if-no-files-found: warn
+
+      - name: Upload governed S5-R diagnostic matrix
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stage5-s5r-governed-diagnostic-matrix
+          path: |
+            stage5-s5r-diagnostic-results/**
             stage5-s5r-runtime-environment.txt
           if-no-files-found: warn
