@@ -1,31 +1,27 @@
-# Issue #27 A5+A6 — combined COMSOL-style wall integration
+# Issue #27 A5+A6 — historical combined COMSOL-style wall integration
 
-This experiment intentionally combines the A5 constrained-`O2` bookkeeping check and the A6 bounded six-wall Phase-A chemistry run into one scientific execution.
+**Status:** accepted historical Phase-A provenance / characterization  
+**Control-plane status:** schema-v1 fixture; non-executable under the current experiment control plane
 
-## Run
+This directory preserves the A5 constrained-`O2` bookkeeping check and A6 bounded six-wall chemistry integration used during Issue #27 development. Its `experiment.json` is retained as provenance/characterization input only. It does not authorize current scientific execution.
 
-```bash
-python qpx -i all
-python qpx -e experiments/Issue27_surface_reactions/A6_combined_wall_integration/experiment.json
-```
+Current closure-grade runtime must use the current Physics architecture and an explicitly governed acceptance surface owned by the active issue.
 
-`qpx -i` is repository/harness validation. The `qpx -e` command is the single scientific run and contains the A5 preflight plus all A6 runtime cases.
+## Historical A5 preflight contract
 
-## A5 preflight
-
-Before QPX runtime the runner verifies:
+The A5 preflight established that:
 
 - no independent `w_O2` solver variable exists;
 - `O2` remains the constrained N-1 species;
 - the wall set is exactly the six plasma-facing boundaries;
 - `inlet` and `outlet` are excluded;
-- `QPXFVElectrostaticDrift` for `O2p`, `Om`, and `Op` avoids all physical boundaries, preventing interior/wall drift double counting;
-- each charged wall model is `QPXIonWallFluxMaterial` driven by solved `potential_plasma`;
-- all six Phase-A reactions conserve oxygen mass algebraically.
+- bulk charged drift avoids physical boundaries where wall migration is owned;
+- charged wall flux uses solved `potential_plasma`;
+- the Phase-A reactions conserve oxygen mass algebraically.
 
-## A6 wall model
+## Historical A6 wall model
 
-Neutral reactions use the already accepted state-dependent sticking law:
+Neutral reactions:
 
 ```text
 O   -> 0.5 O2   s = 0.2
@@ -33,7 +29,7 @@ O2s -> O2       s = 1.0
 Os  -> 0.5 O2   s = 0.2
 ```
 
-Charged reactions use the Issue #1 validated `QPXIonWallFluxMaterial`:
+Charged reactions:
 
 ```text
 O2p -> constrained O2   s = 1.0
@@ -41,48 +37,13 @@ Om  -> O                s = 1.0
 Op  -> O                s = 1.0
 ```
 
-The charged wall flux is decomposed as
+Charged wall transport was decomposed as:
 
 ```text
 surface-reaction mass flux
 + one-sided electric-migration mass flux
 ```
 
-where the migration part follows the accepted COMSOL-style signed outward-normal gate owned by `QPXIonWallFluxMaterial`. Each charged species and each of the six walls has separate surface and migration flux evidence.
+The bounded historical cases were `control`, `surface_only`, and `comsol_wall`. Their evidence covered composition, mass bookkeeping, side-resolved charged wall rates, electron-ledger response, volume-charge behavior, and Poisson/Gauss consistency.
 
-The bulk `QPXFVElectrostaticDrift` remains excluded from the wall boundaries; the boundary material owns the migration contribution there.
-
-## Runtime cases
-
-```text
-control
-  all Issue #27 wall fluxes OFF
-
-surface_only
-  all six Phase-A surface reactions ON
-  charged electric-migration wall flux OFF
-  matched signed electron charge ledger ON
-
-comsol_wall
-  same surface chemistry
-  charged one-sided electric-migration wall flux ON
-  matched signed electron charge ledger ON
-```
-
-The electron term remains the A3e-approved matched charge-ledger control. It is not yet a production electron sheath law. `SEE=0`, volumetric chemistry is OFF, and `sigma_s` is OFF.
-
-## Acceptance surface
-
-Scientific review must check:
-
-- A5 preflight PASS for every staged case;
-- P2/runtime return code 0 for every case;
-- N-1 composition closure and nonnegative species state;
-- species/product and total-heavy-mass bookkeeping;
-- side-resolved charged `surface`, `migration`, and `total` wall rates;
-- migration activation consistent with the signed one-sided wall gate;
-- matched electron inventory response;
-- control-relative volume-charge restoration;
-- Poisson/Gauss consistency.
-
-Passing A6 closes the bounded Phase-A six-wall integration only. Full Issue #27 closure still requires Phase-B volumetric-chemistry compatibility and Phase-C finite SEE/electron-energy coupling.
+A6 acceptance established only the bounded Phase-A six-wall integration. It did not establish finite SEE, solved electron-energy coupling, Stage-6 acceptance, or Integrated Physics Accuracy.
