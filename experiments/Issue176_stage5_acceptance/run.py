@@ -112,6 +112,7 @@ def _canonical_input(dt_s: float) -> tuple[str, dict[str, Any]]:
 
 def _run_case(exe: Path, out: Path, name: str, dt_s: float, timeout: float) -> dict[str, Any]:
     case_dir = out / "cases" / name
+    case_dir.parent.mkdir(parents=True, exist_ok=True)
     logs = out / "logs"
     logs.mkdir(parents=True, exist_ok=True)
 
