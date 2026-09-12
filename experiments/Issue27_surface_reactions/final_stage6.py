@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from experiments.Issue27_surface_reactions.controlled_wall.combined import CHARGED
 from experiments.Issue27_surface_reactions.controlled_wall.electron_wall import (
     THERMAL_BC,
     THERMAL_MATERIAL,
@@ -33,6 +34,23 @@ from physics_harness.adapters.moose import parameters as mp
 
 class Issue27Stage6FinalError(RuntimeError):
     pass
+
+
+def _promote_current_wall_object_types(text: str) -> str:
+    """Apply the accepted #193 A6 ion-wall promotion to the final composition.
+
+    The historical A8 construction intentionally retains QPXIonWallFluxMaterial
+    names.  Governed #193 execution proved that the current production registry
+    equivalent is PhysicsIonWallFluxMaterial for each charged-heavy wall owner.
+    """
+    for species in CHARGED:
+        path = f"FunctorMaterials/issue27_a6_{species}_wall_flux"
+        if not mb.has_block(text, path):
+            raise Issue27Stage6FinalError(
+                f"missing accepted A6 ion-wall material required for Physics promotion: {path}"
+            )
+        text = mp.upsert_parameter(text, path, "type", "PhysicsIonWallFluxMaterial")
+    return text
 
 
 def _retarget_thermal_particle_flux_to_solved_energy(text: str) -> str:
@@ -133,7 +151,10 @@ def build_stage6_final_input(base_text: str) -> tuple[str, dict[str, Any]]:
     )
 
     # Promote inherited live runtime objects to the current Physics registrations.
+    # #193 additionally established the current ion-wall registration for the A6
+    # materials that are introduced after the inherited R4 topology is built.
     text = s5r._promote_current_physics_object_types(text)
+    text = _promote_current_wall_object_types(text)
 
     # Promote the same electron equation to the accepted solved-energy + Stage-5
     # chemistry surface.  These helpers are exactly the accepted S5-R owners.
