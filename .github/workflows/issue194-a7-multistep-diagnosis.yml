@@ -62,6 +62,7 @@ jobs:
           git config --global --add safe.directory /workspace
           export PYTHONPATH=/workspace
           test "$(git -C /workspace rev-parse HEAD)" = "$GITHUB_SHA"
+          uv pip install --system --python "$(command -v python3)" -r requirements-evidence-engine.txt
           python3 -m py_compile /workspace/.github/scripts/issue194_a7_multistep.py
           python3 -c "from experiments.Issue27_surface_reactions.controlled_wall import combined, electron_wall; from experiments.Issue31_r4_q0_all_ground import run; from experiments.Issue193_a8_see_acceptance.run import _promote_current_acceptance_types; from physics_harness.adapters.moose import blocks, parameters; from physics_harness.execution.cases import stage_case; print('issue194 diagnostic imports: OK')"
           test -f /workspace/experiments/Issue91_real_qvt_r3/r3_e0/heavy_base.i
@@ -88,6 +89,7 @@ jobs:
           export ZAPDOS_DIR=/opt/physics_vendor/zapdos
           export METHOD=opt
           export PYTHONPATH=/workspace
+          uv pip install --system --python "$(command -v python3)" -r requirements-evidence-engine.txt
           test "$(git -C /workspace rev-parse HEAD)" = "$GITHUB_SHA"
           test ! -e physics_app/physics-opt
           make -C physics_app -j2
