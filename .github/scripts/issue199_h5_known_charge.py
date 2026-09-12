@@ -7,7 +7,6 @@ import subprocess
 from pathlib import Path
 
 from experiments.Issue31_r4_q0_all_ground import run as q0_run
-from experiments.Issue193_a8_see_acceptance.run import _promote_current_acceptance_types
 from physics_harness.execution.cases import stage_case
 
 ROOT = Path('/workspace')
@@ -18,6 +17,7 @@ SOURCE = ROOT / 'experiments/Issue1_reactor_o2plus_integration/poisson_analytic'
 EXE = ROOT / 'physics_app/physics-opt'
 CASES.mkdir(parents=True, exist_ok=True)
 LOGS.mkdir(parents=True, exist_ok=True)
+(OUT / 'driver_state.json').write_text(json.dumps({'status': 'STARTED'}, indent=2) + '\n')
 
 E_CHARGE = 1.602176634e-19
 AVOGADRO = 6.02214076e23
@@ -66,8 +66,20 @@ def build_case_text(*, w_target, electron_density):
     text = replace_scalar(text, 'rho0', RHO0)
     text = replace_scalar(text, 'w_target_value', w_target)
     text = replace_scalar(text, 'electron_density_value', electron_density)
-    promoted, promotion = _promote_current_acceptance_types(text)
-    return promoted, promotion
+    old_type = 'QPXPlasmaChargeDensityMaterial'
+    new_type = 'PhysicsPlasmaChargeDensityMaterial'
+    count = text.count(old_type)
+    if count != 1:
+        raise RuntimeError(
+            f'expected exactly one {old_type} in analytic input, found {count}'
+        )
+    text = text.replace(old_type, new_type)
+    promotion = {
+        'status': 'PROMOTED',
+        'replacements': {old_type: new_type},
+        'scope': 'Issue-1 standalone Poisson analytic input only',
+    }
+    return text, promotion
 
 
 def run_case(name, *, w_target, electron_density):
@@ -221,6 +233,9 @@ summary['evidence_identity'] = (
 )
 
 (OUT / 'summary.json').write_text(json.dumps(summary, indent=2, sort_keys=True) + '\n')
+(OUT / 'driver_state.json').write_text(
+    json.dumps({'status': summary['status'], 'evidence_identity': summary['evidence_identity']}, indent=2, sort_keys=True) + '\n'
+)
 print(json.dumps(summary, indent=2, sort_keys=True))
 
 if summary['status'] == 'H5_KNOWN_CHARGE_PASS':
