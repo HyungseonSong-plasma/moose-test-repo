@@ -25,6 +25,7 @@ from experiments.historical_recipe_support.issue26_energy_chain import (
     SEE_ENERGY_BC,
     _insert_energy_wall_terms,
 )
+from experiments.Issue192_s5r_representative import run as s5r_runtime
 from experiments.Issue27_surface_reactions.controlled_wall.electron_wall_stable import (
     A7_DISCRIMINATOR_DT_S,
 )
@@ -63,6 +64,21 @@ def _retarget_thermal_particle_flux_to_solved_energy(text: str) -> str:
         "functor_names",
         "'n_e mean_en_solved'",
     )
+
+
+def _insert_final_runtime_observables(text: str) -> str:
+    """Reuse the accepted #192 runtime evidence surface required by #27 analysis.
+
+    These postprocessors are diagnostics only.  They do not alter the production
+    residual, wall laws, source ownership, or any frozen Stage-6 coefficient.
+    """
+    text = mp.upsert_parameter(
+        text,
+        "Postprocessors/r31_charge_integral",
+        "execute_on",
+        "'INITIAL TIMESTEP_END'",
+    )
+    return s5r_runtime._insert_runtime_observables(text)
 
 
 def audit_stage6_final_input(text: str) -> dict[str, Any]:
@@ -128,6 +144,15 @@ def audit_stage6_final_input(text: str) -> dict[str, Any]:
             "issue26_see_energy_normalized_flux_inward",
         )
     )
+    checks["runtime_energy_observables_present"] = all(
+        mb.has_block(text, f"Postprocessors/{name}")
+        for name in (
+            "s5r_n_epsilon_inventory",
+            "s5r_mean_en_avg",
+            "s5r_ei02_elastic_energy_avg",
+            "s5r_ei17_elastic_energy_avg",
+        )
+    )
     checks["no_legacy_qpx_object_types"] = "type = QPX" not in text
 
     failed = sorted(name for name, passed in checks.items() if not passed)
@@ -167,6 +192,11 @@ def build_stage6_final_input(base_text: str) -> tuple[str, dict[str, Any]]:
     text = s5r._insert_electron_source(text, n_ref=n_ref)
     text = s5r._insert_energy_sources(text, n_ref=n_ref)
     text = s5r._insert_observables(text)
+
+    # The final acceptance analyzer reuses the already-accepted Stage-5 energy
+    # reconstruction.  Attach the exact runtime-only postprocessors that #192
+    # used for that reconstruction; this is evidence plumbing, not new physics.
+    text = _insert_final_runtime_observables(text)
 
     # Consume the accepted #26 E4/E5 wall-energy mapping without redefining gamma
     # or the 4 eV emitted-electron energy.
