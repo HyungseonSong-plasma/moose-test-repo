@@ -134,10 +134,13 @@ def normalize_controls(text):
 
 
 def p0_self_test():
+    self_test_text, _ = a7._build_a7_case_input(
+        base_text, parameters=params, mode='electron_thermal_only'
+    )
     rendered = {}
     for control in CONTROLS:
         rendered[control['id']], _ = _promote_current_acceptance_types(
-            instrument(base_text, control)
+            instrument(self_test_text, control)
         )
     baseline = normalize_controls(rendered['baseline_fullstep'])
     for control in CONTROLS[1:]:
