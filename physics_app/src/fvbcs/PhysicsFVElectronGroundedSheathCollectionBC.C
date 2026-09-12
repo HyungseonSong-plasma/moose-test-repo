@@ -7,7 +7,7 @@ registerMooseObject("PhysicsApp", PhysicsFVElectronGroundedSheathCollectionBC);
 InputParameters
 PhysicsFVElectronGroundedSheathCollectionBC::validParams()
 {
-  auto params = FVFluxBC::validParams();
+  auto params = FVQpFluxBC::validParams();
 
   params.addClassDescription(
       "Applies the W3 grounded-conductor sheath-unresolved primary-electron collection "
@@ -26,7 +26,7 @@ PhysicsFVElectronGroundedSheathCollectionBC::validParams()
 
 PhysicsFVElectronGroundedSheathCollectionBC::
     PhysicsFVElectronGroundedSheathCollectionBC(const InputParameters & parameters)
-  : FVFluxBC(parameters),
+  : FVQpFluxBC(parameters),
     _mean_electron_energy(getFunctor<ADReal>("mean_electron_energy")),
     _potential(getFunctor<ADReal>("potential"))
 {
@@ -82,6 +82,6 @@ PhysicsFVElectronGroundedSheathCollectionBC::computeQpResidual()
   const ADReal suppression = exp(-effective_drop_V / electron_temperature_eV);
 
   // n_e is normalized by n_ref, so Gamma_e,out / n_ref has units of m/s.
-  // FVFluxBC positive residual is outward loss.
+  // FVQpFluxBC positive residual is outward loss.
   return 0.25 * n_e_hat * mean_speed_m_s * suppression;
 }
