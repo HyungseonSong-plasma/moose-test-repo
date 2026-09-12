@@ -1,0 +1,162 @@
+name: Issue-215 grounded electron sheath particle closure
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/issue215-grounded-sheath-particle.yml'
+      - '.github/scripts/issue215_sheath_particle.py'
+      - 'physics_app/include/fvbcs/PhysicsFVElectronGroundedSheathCollectionBC.h'
+      - 'physics_app/src/fvbcs/PhysicsFVElectronGroundedSheathCollectionBC.C'
+      - 'physics_app/ci/electron_sheath_collection_smoke.i'
+      - 'experiments/Issue27_surface_reactions/controlled_wall/**'
+      - 'experiments/Issue91_real_qvt_r3/r3_e0/**'
+      - 'experiments/Issue193_a8_see_acceptance/**'
+      - 'experiments/historical_recipe_support/issue31_r4_qf1.py'
+      - 'experiments/historical_recipe_support/issue91_r3.py'
+  workflow_dispatch:
+
+concurrency:
+  group: issue215-grounded-sheath-particle-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+  MOOSE_SHA: 9f388366ccf38b9c34542ec5561198249fde0ac9
+  CRANE_SHA: ba26970cf419dcac563a20ed7079d445bc6341c3
+  SQUIRREL_SHA: 16a26d504f3ee11161a86d4e3ebf3c0e5f2afbb1
+  ZAPDOS_SHA: 9eceffbc46048c3760bbfa9a7f1ca681ae35af1d
+
+jobs:
+  grounded-sheath-particle:
+    name: W4 grounded sheath particle/current precursor
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Validate immutable build-base identity
+        shell: bash
+        run: |
+          set -euxo pipefail
+          source physics_app/dependencies.lock
+          test "$MOOSE" = "$MOOSE_SHA"
+          test "$CRANE" = "$CRANE_SHA"
+          test "$SQUIRREL" = "$SQUIRREL_SHA"
+          test "$ZAPDOS" = "$ZAPDOS_SHA"
+          docker pull "$BUILD_BASE_REF"
+          test "$(docker image inspect "$BUILD_BASE_REF" --format '{{ index .Config.Labels "io.physics.moose.sha" }}')" = "$MOOSE_SHA"
+          test "$(docker image inspect "$BUILD_BASE_REF" --format '{{ index .Config.Labels "io.physics.crane.sha" }}')" = "$CRANE_SHA"
+          test "$(docker image inspect "$BUILD_BASE_REF" --format '{{ index .Config.Labels "io.physics.squirrel.sha" }}')" = "$SQUIRREL_SHA"
+          test "$(docker image inspect "$BUILD_BASE_REF" --format '{{ index .Config.Labels "io.physics.zapdos.sha" }}')" = "$ZAPDOS_SHA"
+
+      - name: P0 preflight W4 contract and negative controls
+        shell: bash
+        run: |
+          set -euxo pipefail
+          CONTAINER_PREFLIGHT=$(cat <<'BASH'
+          set -euxo pipefail
+          source /environment
+          git config --global --add safe.directory /workspace
+          export PYTHONPATH=/workspace
+          test "$(git -C /workspace rev-parse HEAD)" = "$GITHUB_SHA"
+          uv pip install --system --python "$(command -v python3)" -r requirements-evidence-engine.txt
+          python3 -m py_compile /workspace/.github/scripts/issue215_sheath_particle.py
+          python3 /workspace/.github/scripts/issue215_sheath_particle.py --self-test
+          BASH
+          )
+          docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace \
+            -e GITHUB_SHA="$GITHUB_SHA" \
+            -v "$PWD:/workspace" "$BUILD_BASE_REF" -lc "$CONTAINER_PREFLIGHT"
+
+      - name: Build exact head and execute W4 smoke + reactor discriminator
+        shell: bash
+        run: |
+          set -euxo pipefail
+          rm -rf issue215-sheath-particle-results issue215-smoke
+          mkdir -p issue215-sheath-particle-results issue215-smoke
+          CONTAINER_SCRIPT=$(cat <<'BASH'
+          set -euxo pipefail
+          source /environment
+          git config --global --add safe.directory /workspace
+          export MOOSE_DIR=/opt/physics_vendor/moose
+          export CRANE_DIR=/opt/physics_vendor/crane
+          export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+          export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+          export METHOD=opt
+          export PYTHONPATH=/workspace
+          uv pip install --system --python "$(command -v python3)" -r requirements-evidence-engine.txt
+          test "$(git -C /workspace rev-parse HEAD)" = "$GITHUB_SHA"
+          test ! -e physics_app/physics-opt
+          make -C physics_app -j2
+          test -x physics_app/physics-opt
+
+          cp physics_app/ci/electron_sheath_collection_smoke.i issue215-smoke/input.i
+          physics_app/physics-opt --check-input -i issue215-smoke/input.i
+          (
+            cd issue215-smoke
+            ../physics_app/physics-opt -i input.i
+          )
+          python3 - <<'PY'
+          import csv
+          import math
+          from pathlib import Path
+
+          path = Path("issue215-smoke/input_out.csv")
+          rows = list(csv.DictReader(path.open(newline="")))
+          assert len(rows) >= 2, rows
+          final = rows[-1]
+          mean_e = 5.73276
+          te = (2.0 / 3.0) * mean_e
+          e = 1.602176634e-19
+          me = 9.1093837139e-31
+          cbar = math.sqrt(8.0 * e * te / (math.pi * me))
+          k = 0.25 * cbar
+          dt = 1.0e-8
+          expected_zero = 1.0 / (1.0 + k * dt)
+          suppression = math.exp(-10.0 / te)
+          expected_cell = 1.0 / (1.0 + k * suppression * dt)
+          measured_zero = float(final["n_zero_avg"])
+          measured_cell = float(final["n_cell_avg"])
+          measured_phi = float(final["potential_cell_avg"])
+          assert math.isclose(measured_phi, 10.0, rel_tol=0.0, abs_tol=1.0e-10), (measured_phi, final)
+          assert math.isclose(measured_zero, expected_zero, rel_tol=1.0e-8, abs_tol=1.0e-12), (measured_zero, expected_zero)
+          assert math.isclose(measured_cell, expected_cell, rel_tol=1.0e-8, abs_tol=1.0e-12), (measured_cell, expected_cell)
+          assert measured_cell > measured_zero, (measured_cell, measured_zero)
+          print({
+              "W4_SMOKE": "PASS",
+              "cell_side_phi_V": measured_phi,
+              "zero_drop_density": measured_zero,
+              "10V_drop_density": measured_cell,
+              "suppression_10V": suppression,
+          })
+          PY
+
+          python3 /workspace/.github/scripts/issue215_sheath_particle.py
+          test -f /workspace/issue215-sheath-particle-results/summary.json
+          cat /workspace/issue215-sheath-particle-results/summary.json
+          BASH
+          )
+          docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace \
+            -e GITHUB_SHA="$GITHUB_SHA" \
+            -e BUILD_BASE_REF="$BUILD_BASE_REF" \
+            -e MOOSE_SHA="$MOOSE_SHA" -e CRANE_SHA="$CRANE_SHA" \
+            -e SQUIRREL_SHA="$SQUIRREL_SHA" -e ZAPDOS_SHA="$ZAPDOS_SHA" \
+            -v "$PWD:/workspace" "$BUILD_BASE_REF" -lc "$CONTAINER_SCRIPT"
+
+      - name: Upload W4 particle/current precursor evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue215-grounded-sheath-particle-evidence
+          path: |
+            issue215-sheath-particle-results/**
+            issue215-smoke/**
+          if-no-files-found: error
+          retention-days: 7
