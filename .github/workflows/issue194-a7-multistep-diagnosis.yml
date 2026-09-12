@@ -67,6 +67,7 @@ jobs:
           export SQUIRREL_DIR=/opt/physics_vendor/squirrel
           export ZAPDOS_DIR=/opt/physics_vendor/zapdos
           export METHOD=opt
+          export PYTHONPATH=/workspace
           test "$(git -C /workspace rev-parse HEAD)" = "$GITHUB_SHA"
           test ! -e physics_app/physics-opt
           make -C physics_app -j2
