@@ -1,0 +1,120 @@
+name: Issue-213 electron wall-drift discriminator
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/issue213-electron-wall-drift.yml'
+      - '.github/scripts/issue213_wall_drift.py'
+      - 'experiments/Issue27_surface_reactions/controlled_wall/**'
+      - 'experiments/Issue91_real_qvt_r3/r3_e0/**'
+      - 'experiments/Issue193_a8_see_acceptance/**'
+      - 'experiments/historical_recipe_support/issue31_r4_qf1.py'
+      - 'experiments/historical_recipe_support/issue91_r3.py'
+      - 'experiments/historical_recipe_support/issue192_s5r.py'
+      - 'physics_app/src/fvkernels/PhysicsFVElectrostaticDrift.C'
+  workflow_dispatch:
+
+concurrency:
+  group: issue213-wall-drift-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+  MOOSE_SHA: 9f388366ccf38b9c34542ec5561198249fde0ac9
+  CRANE_SHA: ba26970cf419dcac563a20ed7079d445bc6341c3
+  SQUIRREL_SHA: 16a26d504f3ee11161a86d4e3ebf3c0e5f2afbb1
+  ZAPDOS_SHA: 9eceffbc46048c3760bbfa9a7f1ca681ae35af1d
+
+jobs:
+  wall-drift:
+    name: W2 wall-coupled electron drift current
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Validate immutable build-base identity
+        shell: bash
+        run: |
+          set -euxo pipefail
+          source physics_app/dependencies.lock
+          test "$MOOSE" = "$MOOSE_SHA"
+          test "$CRANE" = "$CRANE_SHA"
+          test "$SQUIRREL" = "$SQUIRREL_SHA"
+          test "$ZAPDOS" = "$ZAPDOS_SHA"
+          docker pull "$BUILD_BASE_REF"
+          test "$(docker image inspect "$BUILD_BASE_REF" --format '{{ index .Config.Labels "io.physics.moose.sha" }}')" = "$MOOSE_SHA"
+          test "$(docker image inspect "$BUILD_BASE_REF" --format '{{ index .Config.Labels "io.physics.crane.sha" }}')" = "$CRANE_SHA"
+          test "$(docker image inspect "$BUILD_BASE_REF" --format '{{ index .Config.Labels "io.physics.squirrel.sha" }}')" = "$SQUIRREL_SHA"
+          test "$(docker image inspect "$BUILD_BASE_REF" --format '{{ index .Config.Labels "io.physics.zapdos.sha" }}')" = "$ZAPDOS_SHA"
+
+      - name: Preflight W2 Python surface
+        shell: bash
+        run: |
+          set -euxo pipefail
+          CONTAINER_PREFLIGHT=$(cat <<'BASH'
+          set -euxo pipefail
+          source /environment
+          git config --global --add safe.directory /workspace
+          export PYTHONPATH=/workspace
+          test "$(git -C /workspace rev-parse HEAD)" = "$GITHUB_SHA"
+          uv pip install --system --python "$(command -v python3)" -r requirements-evidence-engine.txt
+          python3 -m py_compile /workspace/.github/scripts/issue213_wall_drift.py
+          python3 -c "from experiments.Issue27_surface_reactions.controlled_wall import electron_wall; from experiments.Issue193_a8_see_acceptance.run import _promote_current_acceptance_types; from physics_harness.adapters.moose import blocks, parameters; print('issue213 discriminator imports: OK')"
+          test -f /workspace/experiments/Issue91_real_qvt_r3/r3_e0/heavy_base.i
+          test -f /workspace/experiments/Issue27_surface_reactions/A7_comsol_electron_wall/experiment.json
+          BASH
+          )
+          docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace \
+            -e GITHUB_SHA="$GITHUB_SHA" \
+            -v "$PWD:/workspace" "$BUILD_BASE_REF" -lc "$CONTAINER_PREFLIGHT"
+
+      - name: Build exact head and execute W2 discriminator
+        shell: bash
+        run: |
+          set -euxo pipefail
+          rm -rf issue213-wall-drift-results
+          mkdir -p issue213-wall-drift-results
+          CONTAINER_SCRIPT=$(cat <<'BASH'
+          set -euxo pipefail
+          source /environment
+          git config --global --add safe.directory /workspace
+          export MOOSE_DIR=/opt/physics_vendor/moose
+          export CRANE_DIR=/opt/physics_vendor/crane
+          export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+          export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+          export METHOD=opt
+          export PYTHONPATH=/workspace
+          uv pip install --system --python "$(command -v python3)" -r requirements-evidence-engine.txt
+          test "$(git -C /workspace rev-parse HEAD)" = "$GITHUB_SHA"
+          test ! -e physics_app/physics-opt
+          make -C physics_app -j2
+          test -x physics_app/physics-opt
+          python3 /workspace/.github/scripts/issue213_wall_drift.py
+          test -f /workspace/issue213-wall-drift-results/summary.json
+          cat /workspace/issue213-wall-drift-results/summary.json
+          BASH
+          )
+          docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace \
+            -e GITHUB_SHA="$GITHUB_SHA" \
+            -e BUILD_BASE_REF="$BUILD_BASE_REF" \
+            -e MOOSE_SHA="$MOOSE_SHA" -e CRANE_SHA="$CRANE_SHA" \
+            -e SQUIRREL_SHA="$SQUIRREL_SHA" -e ZAPDOS_SHA="$ZAPDOS_SHA" \
+            -v "$PWD:/workspace" "$BUILD_BASE_REF" -lc "$CONTAINER_SCRIPT"
+
+      - name: Upload W2 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue213-electron-wall-drift-evidence
+          path: |
+            issue213-wall-drift-results/**
+          if-no-files-found: error
+          retention-days: 7
