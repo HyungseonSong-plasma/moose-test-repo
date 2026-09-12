@@ -1,0 +1,114 @@
+name: Issue-199 H5 known-charge electrostatic scale
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/issue199-h5-known-charge.yml'
+      - '.github/scripts/issue199_h5_known_charge.py'
+      - 'experiments/Issue1_reactor_o2plus_integration/poisson_analytic/**'
+      - 'physics_app/include/base/Physics.h'
+      - 'physics_app/include/materials/PhysicsPlasmaChargeDensityMaterial.h'
+      - 'physics_app/src/materials/PhysicsPlasmaChargeDensityMaterial.C'
+      - 'physics_app/**'
+  workflow_dispatch:
+
+concurrency:
+  group: issue199-h5-known-charge-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+  MOOSE_SHA: 9f388366ccf38b9c34542ec5561198249fde0ac9
+  CRANE_SHA: ba26970cf419dcac563a20ed7079d445bc6341c3
+  SQUIRREL_SHA: 16a26d504f3ee11161a86d4e3ebf3c0e5f2afbb1
+  ZAPDOS_SHA: 9eceffbc46048c3760bbfa9a7f1ca681ae35af1d
+
+jobs:
+  h5-known-charge:
+    name: H5 independent known-charge electrostatic scale
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Validate immutable build-base identity
+        shell: bash
+        run: |
+          set -euxo pipefail
+          source physics_app/dependencies.lock
+          test "$MOOSE" = "$MOOSE_SHA"
+          test "$CRANE" = "$CRANE_SHA"
+          test "$SQUIRREL" = "$SQUIRREL_SHA"
+          test "$ZAPDOS" = "$ZAPDOS_SHA"
+          docker pull "$BUILD_BASE_REF"
+          test "$(docker image inspect "$BUILD_BASE_REF" --format '{{ index .Config.Labels "io.physics.moose.sha" }}')" = "$MOOSE_SHA"
+          test "$(docker image inspect "$BUILD_BASE_REF" --format '{{ index .Config.Labels "io.physics.crane.sha" }}')" = "$CRANE_SHA"
+          test "$(docker image inspect "$BUILD_BASE_REF" --format '{{ index .Config.Labels "io.physics.squirrel.sha" }}')" = "$SQUIRREL_SHA"
+          test "$(docker image inspect "$BUILD_BASE_REF" --format '{{ index .Config.Labels "io.physics.zapdos.sha" }}')" = "$ZAPDOS_SHA"
+
+      - name: Cheap H5 diagnostic preflight
+        shell: bash
+        run: |
+          set -euxo pipefail
+          CONTAINER_PREFLIGHT=$(cat <<'BASH'
+          set -euxo pipefail
+          source /environment
+          git config --global --add safe.directory /workspace
+          export PYTHONPATH=/workspace
+          test "$(git -C /workspace rev-parse HEAD)" = "$GITHUB_SHA"
+          uv pip install --system --python "$(command -v python3)" -r requirements-evidence-engine.txt
+          python3 -m py_compile /workspace/.github/scripts/issue199_h5_known_charge.py
+          python3 -c "from experiments.Issue31_r4_q0_all_ground import run; from experiments.Issue193_a8_see_acceptance.run import _promote_current_acceptance_types; from physics_harness.execution.cases import stage_case; print('issue199 H5 diagnostic imports: OK')"
+          test -f /workspace/experiments/Issue1_reactor_o2plus_integration/poisson_analytic/poisson_analytic.i
+          BASH
+          )
+          docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace \
+            -e GITHUB_SHA="$GITHUB_SHA" \
+            -v "$PWD:/workspace" "$BUILD_BASE_REF" -lc "$CONTAINER_PREFLIGHT"
+
+      - name: Build exact head and execute H5 known-charge discriminator
+        shell: bash
+        run: |
+          set -euxo pipefail
+          rm -rf issue199-h5-results
+          mkdir -p issue199-h5-results
+          CONTAINER_SCRIPT=$(cat <<'BASH'
+          set -euxo pipefail
+          source /environment
+          git config --global --add safe.directory /workspace
+          export MOOSE_DIR=/opt/physics_vendor/moose
+          export CRANE_DIR=/opt/physics_vendor/crane
+          export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+          export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+          export METHOD=opt
+          export PYTHONPATH=/workspace
+          uv pip install --system --python "$(command -v python3)" -r requirements-evidence-engine.txt
+          test "$(git -C /workspace rev-parse HEAD)" = "$GITHUB_SHA"
+          test ! -e physics_app/physics-opt
+          make -C physics_app -j2
+          test -x physics_app/physics-opt
+          python3 /workspace/.github/scripts/issue199_h5_known_charge.py
+          test -f /workspace/issue199-h5-results/summary.json
+          cat /workspace/issue199-h5-results/summary.json
+          BASH
+          )
+          docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace \
+            -e GITHUB_SHA="$GITHUB_SHA" \
+            -v "$PWD:/workspace" "$BUILD_BASE_REF" -lc "$CONTAINER_SCRIPT"
+
+      - name: Upload H5 known-charge evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue199-h5-known-charge-evidence
+          path: |
+            issue199-h5-results/**
+          if-no-files-found: error
+          retention-days: 7
