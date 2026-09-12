@@ -1,0 +1,159 @@
+name: Issue-216 W5 multi-step conducting-wall acceptance
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/issue216-w5-multistep-acceptance.yml'
+      - 'experiments/Issue216_w5_multistep_acceptance/**'
+      - 'experiments/Issue217_sheath_energy_closure/**'
+      - 'experiments/Issue27_surface_reactions/final_stage6.py'
+      - 'experiments/Issue27_surface_reactions/controlled_wall/**'
+      - 'experiments/Issue27_stage6_final_acceptance/**'
+      - 'experiments/Issue192_s5r_representative/**'
+      - 'experiments/Issue91_real_qvt_r3/r3_e0/**'
+      - 'experiments/historical_recipe_support/issue26_energy_chain.py'
+      - 'experiments/historical_recipe_support/issue26_e1.py'
+      - 'physics_app/include/fvbcs/PhysicsGroundedElectronSheathFlux.h'
+      - 'physics_app/include/fvbcs/PhysicsFVElectronGroundedSheathCollectionBC.h'
+      - 'physics_app/src/fvbcs/PhysicsFVElectronGroundedSheathCollectionBC.C'
+      - 'physics_app/include/fvbcs/PhysicsFVElectronGroundedSheathEnergyBC.h'
+      - 'physics_app/src/fvbcs/PhysicsFVElectronGroundedSheathEnergyBC.C'
+  workflow_dispatch:
+
+concurrency:
+  group: issue216-w5-multistep-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+  MOOSE_SHA: 9f388366ccf38b9c34542ec5561198249fde0ac9
+  CRANE_SHA: ba26970cf419dcac563a20ed7079d445bc6341c3
+  SQUIRREL_SHA: 16a26d504f3ee11161a86d4e3ebf3c0e5f2afbb1
+  ZAPDOS_SHA: 9eceffbc46048c3760bbfa9a7f1ca681ae35af1d
+
+jobs:
+  w5-multistep:
+    name: W5 multi-step wall current/charge/Gauss acceptance
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Validate immutable build-base identity
+        shell: bash
+        run: |
+          set -euxo pipefail
+          source physics_app/dependencies.lock
+          test "$MOOSE" = "$MOOSE_SHA"
+          test "$CRANE" = "$CRANE_SHA"
+          test "$SQUIRREL" = "$SQUIRREL_SHA"
+          test "$ZAPDOS" = "$ZAPDOS_SHA"
+          docker pull "$BUILD_BASE_REF"
+          test "$(docker image inspect "$BUILD_BASE_REF" --format '{{ index .Config.Labels "io.physics.moose.sha" }}')" = "$MOOSE_SHA"
+          test "$(docker image inspect "$BUILD_BASE_REF" --format '{{ index .Config.Labels "io.physics.crane.sha" }}')" = "$CRANE_SHA"
+          test "$(docker image inspect "$BUILD_BASE_REF" --format '{{ index .Config.Labels "io.physics.squirrel.sha" }}')" = "$SQUIRREL_SHA"
+          test "$(docker image inspect "$BUILD_BASE_REF" --format '{{ index .Config.Labels "io.physics.zapdos.sha" }}')" = "$ZAPDOS_SHA"
+
+      - name: P0 preflight W5 construction and negative controls
+        shell: bash
+        run: |
+          set -euxo pipefail
+          CONTAINER_PREFLIGHT=$(cat <<'BASH'
+          set -euxo pipefail
+          source /environment
+          git config --global --add safe.directory /workspace
+          export PYTHONPATH=/workspace
+          test "$(git -C /workspace rev-parse HEAD)" = "$GITHUB_SHA"
+          uv pip install --system --python "$(command -v python3)" -r requirements-evidence-engine.txt
+          python3 -m py_compile /workspace/experiments/Issue216_w5_multistep_acceptance/run.py
+          python3 /workspace/experiments/Issue216_w5_multistep_acceptance/run.py --self-test
+          python3 /workspace/experiments/Issue27_stage6_final_acceptance/run.py --self-test
+          BASH
+          )
+          docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace \
+            -e GITHUB_SHA="$GITHUB_SHA" \
+            -v "$PWD:/workspace" "$BUILD_BASE_REF" -lc "$CONTAINER_PREFLIGHT"
+
+      - name: Build exact head and execute W5 plus same-build Stage-6 control
+        shell: bash
+        run: |
+          set -euxo pipefail
+          rm -rf issue216-w5-multistep-results issue216-stage6-control-results
+          mkdir -p issue216-w5-multistep-results issue216-stage6-control-results
+          CONTAINER_SCRIPT=$(cat <<'BASH'
+          set -euxo pipefail
+          source /environment
+          git config --global --add safe.directory /workspace
+          export MOOSE_DIR=/opt/physics_vendor/moose
+          export CRANE_DIR=/opt/physics_vendor/crane
+          export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+          export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+          export METHOD=opt
+          export PYTHONPATH=/workspace
+          uv pip install --system --python "$(command -v python3)" -r requirements-evidence-engine.txt
+          test "$(git -C /workspace rev-parse HEAD)" = "$GITHUB_SHA"
+          test ! -e physics_app/physics-opt
+          make -C physics_app -j2
+          test -x physics_app/physics-opt
+
+          set +e
+          python3 /workspace/experiments/Issue216_w5_multistep_acceptance/run.py \
+            --physics-opt /workspace/physics_app/physics-opt \
+            --results-root /workspace/issue216-w5-multistep-results \
+            --timeout 1800
+          W5_RC=$?
+
+          python3 /workspace/experiments/Issue27_stage6_final_acceptance/run.py \
+            --physics-opt /workspace/physics_app/physics-opt \
+            --results-root /workspace/issue216-stage6-control-results \
+            --timeout 900
+          STAGE6_RC=$?
+          set -e
+
+          test -f /workspace/issue216-w5-multistep-results/summary.json
+          test -f /workspace/issue216-stage6-control-results/summary.json
+
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          w5 = json.loads(Path("/workspace/issue216-w5-multistep-results/summary.json").read_text())
+          s6 = json.loads(Path("/workspace/issue216-stage6-control-results/summary.json").read_text())
+          print({
+              "W5_STATUS": w5.get("status"),
+              "W5_CORE_HARD_PASS": w5.get("decision", {}).get("core_hard_pass"),
+              "W5_VALIDATOR_REVIEW_REQUIRED": w5.get("decision", {}).get("validator_review_required"),
+              "STAGE6_STATUS": s6.get("status"),
+              "STAGE6_SCIENTIFIC_HARD_PASS": s6.get("decision", {}).get("scientific_hard_pass"),
+          })
+          assert s6.get("decision", {}).get("scientific_hard_pass") is True
+          PY
+
+          test "$W5_RC" -eq 0
+          test "$STAGE6_RC" -eq 0
+          BASH
+          )
+          docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace \
+            -e GITHUB_SHA="$GITHUB_SHA" \
+            -e BUILD_BASE_REF="$BUILD_BASE_REF" \
+            -e MOOSE_SHA="$MOOSE_SHA" -e CRANE_SHA="$CRANE_SHA" \
+            -e SQUIRREL_SHA="$SQUIRREL_SHA" -e ZAPDOS_SHA="$ZAPDOS_SHA" \
+            -v "$PWD:/workspace" "$BUILD_BASE_REF" -lc "$CONTAINER_SCRIPT"
+
+      - name: Upload W5 multi-step acceptance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue216-w5-multistep-evidence
+          path: |
+            issue216-w5-multistep-results/**
+            issue216-stage6-control-results/**
+          if-no-files-found: error
+          retention-days: 7
