@@ -24,8 +24,8 @@
 [FunctorMaterials]
   [constants]
     type = ADGenericFunctorMaterial
-    prop_names = 'mean_en zero_phi'
-    prop_values = '5.73276 0.0'
+    prop_names = 'mean_en zero_phi zero_flux'
+    prop_values = '5.73276 0.0 0.0'
   []
 []
 
@@ -34,9 +34,19 @@
     type = FVTimeKernel
     variable = n_zero_drop
   []
+  [n_zero_face_driver]
+    type = FVDiffusion
+    variable = n_zero_drop
+    coeff = zero_flux
+  []
   [n_cell_time]
     type = FVTimeKernel
     variable = n_cell_drop
+  []
+  [n_cell_face_driver]
+    type = FVDiffusion
+    variable = n_cell_drop
+    coeff = zero_flux
   []
   [potential_time]
     type = FVTimeKernel
