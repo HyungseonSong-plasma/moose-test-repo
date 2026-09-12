@@ -206,7 +206,8 @@ def _runtime_metrics(case_dir: Path, *, input_text: str, meta: Mapping[str, Any]
     charge_defect = abs(measured_charge_delta - expected_charge_delta) / charge_scale
 
     gauss = s5r._gauss_evidence(csv_path)
-    state = s5r._state_evidence(rows)
+    physical_rows = [row for row in rows if s5r._num(row, "time") > 1.0e-15]
+    state = s5r._state_evidence(physical_rows)
     composition_error = max(
         abs(s5r._num(final, "sum_w_min") - 1.0),
         abs(s5r._num(final, "sum_w_max") - 1.0),
