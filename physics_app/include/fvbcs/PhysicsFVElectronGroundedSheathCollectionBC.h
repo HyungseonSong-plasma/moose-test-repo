@@ -1,6 +1,6 @@
 #pragma once
 
-#include "FVFluxBC.h"
+#include "FVQpFluxBC.h"
 
 /**
  * Primary-electron collection at a grounded conducting wall for a
@@ -19,7 +19,7 @@
  * Positive return values are outward primary-electron loss.  Secondary
  * emission remains a separate owner and is intentionally not represented here.
  */
-class PhysicsFVElectronGroundedSheathCollectionBC : public FVFluxBC
+class PhysicsFVElectronGroundedSheathCollectionBC : public FVQpFluxBC
 {
 public:
   static InputParameters validParams();
