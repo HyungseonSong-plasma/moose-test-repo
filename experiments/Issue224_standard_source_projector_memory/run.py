@@ -25,6 +25,7 @@ from physics_harness.execution.cases import stage_case, validate_case_references
 
 DT_S = w5.BASELINE_DT_S
 END_TIME_S = w5.END_TIME_S
+SOLVED_HEAVY = ("O2s", "O2p", "O", "Om", "Op", "Os")
 CASE_SPECS = (
     ("r1_custom", 1, False),
     ("r1_standard", 1, True),
@@ -40,7 +41,7 @@ class Issue224Error(RuntimeError):
 def _replace_source_projectors(text: str) -> tuple[str, dict[str, Any]]:
     replacements: list[dict[str, Any]] = []
 
-    for species in s5r.SOLVED_HEAVY:
+    for species in SOLVED_HEAVY:
         path = f"FVKernels/s5r_source_{species}"
         typ = mp.get_parameter(text, path, "type")
         source = mp.get_parameter(text, path, "source")
@@ -209,8 +210,8 @@ def self_test() -> dict[str, Any]:
     checks: dict[str, bool] = {}
     custom, _ = _build(1, False)
     standard, meta = _build(1, True)
-    checks["replacement_count_7"] = meta["replacement"]["replacement_count"] == len(s5r.SOLVED_HEAVY) + 1
-    for species in s5r.SOLVED_HEAVY:
+    checks["replacement_count_7"] = meta["replacement"]["replacement_count"] == len(SOLVED_HEAVY) + 1
+    for species in SOLVED_HEAVY:
         source_path = f"FVKernels/s5r_source_{species}"
         time_path = f"FVKernels/{species}_time"
         checks[f"custom_heavy_projector:{species}"] = mp.get_parameter(custom, source_path, "type") == "PhysicsFVSpeciesReactionSource"
