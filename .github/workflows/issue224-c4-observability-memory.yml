@@ -58,7 +58,8 @@ jobs:
               test "$(git -C /workspace rev-parse HEAD)" = "$GITHUB_SHA"
               uv pip install --system --python "$(command -v python3)" -r requirements-evidence-engine.txt
               python3 -m py_compile /workspace/experiments/Issue224_observability_memory/run.py
-              python3 /workspace/experiments/Issue224_observability_memory/run.py --self-test
+              python3 -m py_compile /workspace/experiments/Issue224_observability_memory/run_c4.py
+              python3 /workspace/experiments/Issue224_observability_memory/run_c4.py --self-test
             '
 
       - name: Build exact head and execute zero-timestep memory discriminator
@@ -85,7 +86,7 @@ jobs:
               make -C physics_app -j2
               test -x physics_app/physics-opt
               /usr/bin/time -v -o /workspace/issue224-c4-observability-memory-results/runner_resource.txt \
-                python3 /workspace/experiments/Issue224_observability_memory/run.py \
+                python3 /workspace/experiments/Issue224_observability_memory/run_c4.py \
                   --physics-opt /workspace/physics_app/physics-opt \
                   --results-root /workspace/issue224-c4-observability-memory-results \
                   --timeout 180
