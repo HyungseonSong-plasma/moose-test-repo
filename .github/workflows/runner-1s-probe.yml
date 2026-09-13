@@ -1,0 +1,23 @@
+name: Runner 1s probe
+
+on:
+  push:
+    branches:
+      - probe/runner-1s-20260913
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    name: 1-second runner probe
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - name: One-second payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "RUNNER_PROBE_START=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          sleep 1
+          echo "RUNNER_PROBE_END=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
