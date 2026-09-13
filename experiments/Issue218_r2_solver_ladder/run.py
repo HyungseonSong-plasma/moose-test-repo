@@ -7,6 +7,10 @@ and then GMRES+ILU(2) are tested at R1. The first candidate that passes both
 W5 hard gates (including solver convergence) and the endpoint-equivalence gate
 is admitted unchanged to uniform_refine=2. No post-hoc solver-gate relaxation
 is permitted.
+
+Issue #221 extends this existing ladder only with the reusable Issue-220 live
+resident-memory parser. The scientific #218 decision and the #221 engineering
+peak-memory target remain separate result fields.
 """
 from __future__ import annotations
 
@@ -14,6 +18,7 @@ import argparse
 import json
 import math
 import os
+import tempfile
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -22,6 +27,7 @@ from experiments.Issue216_w5_multistep_acceptance import run as w5
 from experiments.Issue216_w5_multistep_acceptance import evr2_mesh as evr2
 from experiments.Issue218_r2_resource import run as bridge0
 from physics_harness.adapters.moose import parameters as mp
+from physics_harness.adapters.moose.performance.profile import resident_memory_profile
 from physics_harness.execution.cases import stage_case, validate_case_references
 
 DT_S = w5.BASELINE_DT_S
@@ -30,6 +36,7 @@ EQUIV_REL_TOL = bridge0.EQUIV_REL_TOL
 EQUIV_KEYS = bridge0.EQUIV_KEYS
 CANDIDATE_LEVELS = (1, 2)
 ITER_INAME = "-ksp_type -pc_type -pc_factor_levels -ksp_rtol -ksp_max_it"
+M2A_R2_PEAK_LIMIT_MB = 12.0 * 1024.0
 
 
 class Issue218LadderError(RuntimeError):
@@ -38,6 +45,33 @@ class Issue218LadderError(RuntimeError):
 
 def _iter_values(level: int) -> str:
     return f"gmres ilu {level} 1e-10 500"
+
+
+def _sample_mb(sample: Mapping[str, Any] | None) -> float | None:
+    if not sample:
+        return None
+    value = sample.get("resident_mb")
+    return float(value) if isinstance(value, (int, float)) else None
+
+
+def _memory_summary(runtime_log: Path) -> dict[str, Any]:
+    profile = resident_memory_profile(runtime_log)
+    first_linear = profile.get("first_linear_solve") or {}
+    before_mb = _sample_mb(first_linear.get("before"))
+    after_mb = _sample_mb(first_linear.get("after"))
+    peak_mb = _sample_mb(profile.get("peak"))
+    return {
+        "pre_first_linear_mb": before_mb,
+        "post_first_linear_mb": after_mb,
+        "first_linear_increment_mb": (
+            after_mb - before_mb
+            if before_mb is not None and after_mb is not None
+            else None
+        ),
+        "peak_resident_mb": peak_mb,
+        "samples_observed": len(profile.get("samples", [])),
+        "linear_solves_observed": len(profile.get("linear_solve_transitions", [])),
+    }
 
 
 def _build(level: int, *, ilu_level: int | None) -> tuple[str, dict[str, Any]]:
@@ -51,6 +85,7 @@ def _build(level: int, *, ilu_level: int | None) -> tuple[str, dict[str, Any]]:
         **meta,
         "issue": 218,
         "parent_issue": 216,
+        "memory_optimization_issue": 221,
         "numerical_solver": solver_name,
         "physics_semantics_changed": False,
         "solver_ladder_pre_registered": True,
@@ -94,6 +129,7 @@ def _execute(exe: Path, out: Path, name: str, level: int, ilu_level: int | None,
     runtime_log = logs / f"{name}_runtime.log"
     runtime = s5r._runtime(exe, case_dir, runtime_log, timeout=timeout)
     item["runtime"] = runtime
+    item["memory"] = _memory_summary(runtime_log)
     try:
         evidence = w5._analyze_case(
             case_dir,
@@ -130,6 +166,26 @@ def self_test() -> dict[str, Any]:
     bad = bridge0._equivalence({k: 1.0 for k in EQUIV_KEYS}, {k: 1.0 + 2e-4 for k in EQUIV_KEYS})
     checks["equivalence_positive_control"] = good["passed"] is True
     checks["equivalence_negative_control"] = bad["passed"] is False
+
+    with tempfile.TemporaryDirectory() as tmp:
+        log = Path(tmp) / "memory.log"
+        log.write_text(
+            "\n".join(
+                [
+                    "Computing Jacobian [ 2.00 s] [ 150 MB]",
+                    "Linear solve converged due to CONVERGED_RTOL iterations 1",
+                    "Computing Residual [ 3.00 s] [ 500 MB]",
+                ]
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        memory = _memory_summary(log)
+        checks["memory_pre_linear"] = math.isclose(float(memory["pre_first_linear_mb"]), 150.0)
+        checks["memory_post_linear"] = math.isclose(float(memory["post_first_linear_mb"]), 500.0)
+        checks["memory_increment"] = math.isclose(float(memory["first_linear_increment_mb"]), 350.0)
+        checks["memory_peak"] = math.isclose(float(memory["peak_resident_mb"]), 500.0)
+
     failed = sorted(k for k, ok in checks.items() if not ok)
     return {"status": "PASS" if not failed else "FAIL", "checks": checks, "failed_checks": failed}
 
@@ -144,20 +200,23 @@ def run(args: argparse.Namespace) -> int:
 
     out = args.results_root.resolve()
     summary: dict[str, Any] = {
-        "schema_version": 1,
+        "schema_version": 2,
         "issue": 218,
         "parent_issue": 216,
+        "memory_optimization_issue": 221,
         "repository_head": os.environ.get("GITHUB_SHA"),
         "physics_opt_sha256": w5._sha256(exe),
         "dt_s": DT_S,
         "end_time_s": END_TIME_S,
         "equivalence_tolerance": EQUIV_REL_TOL,
+        "m2a_r2_peak_limit_mb": M2A_R2_PEAK_LIMIT_MB,
         "candidate_order": [f"gmres_ilu{x}" for x in CANDIDATE_LEVELS],
         "p0": p0,
         "cases": {},
         "candidate_assessment": {},
         "selected_candidate": None,
         "mesh_convergence": {},
+        "m2a": {},
         "decision": {},
     }
 
@@ -165,6 +224,7 @@ def run(args: argparse.Namespace) -> int:
     summary["cases"]["r1_lu"] = _execute(exe, out, "r1_lu", 1, None, args.timeout)
     if not (summary["cases"]["coarse_lu"]["hard_pass"] and summary["cases"]["r1_lu"]["hard_pass"]):
         summary["status"] = "ISSUE218_LADDER_REFERENCE_FAIL"
+        summary["m2a"] = {"status": "REFERENCE_OR_ENVIRONMENT_FAIL", "engineering_ready": False}
         summary["decision"] = {"resource_remediation_ready": False, "reason": "same-build accepted direct-LU reference failed"}
         _write(out, summary)
         return 2
@@ -175,7 +235,12 @@ def run(args: argparse.Namespace) -> int:
         name = f"r1_ilu{ilu_level}"
         case = _execute(exe, out, name, 1, ilu_level, args.timeout)
         summary["cases"][name] = case
-        assessment: dict[str, Any] = {"hard_pass": case["hard_pass"], "equivalence": None, "admitted": False}
+        assessment: dict[str, Any] = {
+            "hard_pass": case["hard_pass"],
+            "equivalence": None,
+            "admitted": False,
+            "memory": case.get("memory"),
+        }
         if case["hard_pass"]:
             eq = bridge0._equivalence(r1_ref, case["evidence"]["endpoint"])
             assessment["equivalence"] = eq
@@ -188,6 +253,7 @@ def run(args: argparse.Namespace) -> int:
 
     if selected is None:
         summary["status"] = "ISSUE218_SOLVER_LADDER_EXHAUSTED"
+        summary["m2a"] = {"status": "SOLVER_LADDER_EXHAUSTED", "engineering_ready": False}
         summary["decision"] = {
             "resource_remediation_ready": False,
             "reason": "No pre-registered ILU(1/2) candidate passed both W5 hard gates and the fixed R1 endpoint-equivalence gate",
@@ -201,6 +267,11 @@ def run(args: argparse.Namespace) -> int:
     summary["cases"][r2_name] = _execute(exe, out, r2_name, 2, selected, args.timeout)
     if not summary["cases"][r2_name]["hard_pass"]:
         summary["status"] = "ISSUE218_R2_STILL_BLOCKED"
+        summary["m2a"] = {
+            "status": "R2_NUMERICAL_FAIL",
+            "engineering_ready": False,
+            "r2_memory": summary["cases"][r2_name].get("memory"),
+        }
         summary["decision"] = {
             "resource_remediation_ready": False,
             "selected_candidate": summary["selected_candidate"],
@@ -216,6 +287,24 @@ def run(args: argparse.Namespace) -> int:
         "refine_2": summary["cases"][r2_name]["evidence"]["endpoint"],
     }
     summary["mesh_convergence"] = evr2._mesh_trends(endpoints)
+
+    r2_memory = summary["cases"][r2_name].get("memory") or {}
+    r2_peak = r2_memory.get("peak_resident_mb")
+    peak_target_pass = isinstance(r2_peak, (int, float)) and float(r2_peak) <= M2A_R2_PEAK_LIMIT_MB
+    summary["m2a"] = {
+        "status": (
+            "PASS"
+            if peak_target_pass
+            else "SCIENTIFIC_R2_READY_MEMORY_TARGET_MISS"
+            if isinstance(r2_peak, (int, float))
+            else "MEMORY_EVIDENCE_UNAVAILABLE"
+        ),
+        "engineering_ready": peak_target_pass,
+        "r2_peak_limit_mb": M2A_R2_PEAK_LIMIT_MB,
+        "r2_peak_resident_mb": r2_peak,
+        "r2_memory": r2_memory,
+        "scientific_r2_ready_independent_of_engineering_target": True,
+    }
     summary["status"] = "ISSUE218_R2_ENDPOINT_AND_MESH_TREND_READY"
     summary["decision"] = {
         "resource_remediation_ready": True,
@@ -225,7 +314,8 @@ def run(args: argparse.Namespace) -> int:
         "validator_review_required": True,
         "post_hoc_threshold_used": False,
         "solver_gate_relaxed": False,
-        "reason": "Pre-registered R1 solver candidate passed W5 hard gates and fixed equivalence before unchanged R2 use; R2 endpoint and mesh trend are ready for #216 review",
+        "m2a_peak_target_pass": peak_target_pass,
+        "reason": "Pre-registered R1 solver candidate passed W5 hard gates and fixed equivalence before unchanged R2 use; R2 endpoint and mesh trend are ready for #216 review. Issue-221 engineering peak target is reported independently.",
     }
     _write(out, summary)
     print((out / "summary.json").read_text(encoding="utf-8"))
