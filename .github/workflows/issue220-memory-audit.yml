@@ -1,0 +1,101 @@
+name: Issue-220 M1 memory audit
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/issue220-memory-audit.yml'
+      - 'experiments/Issue220_memory_audit/**'
+      - 'physics_harness/adapters/moose/performance/profile.py'
+  workflow_dispatch:
+
+concurrency:
+  group: issue220-memory-audit-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  SOURCE_RUN_ID: '34723732242'
+  SOURCE_HEAD: '39ca8b09317095f58b61df84c9fb3f40b4ff0ddc'
+  SOURCE_ARTIFACT: issue216-w5-evr2-mesh-evidence
+  SOURCE_DIGEST: sha256:22f855f72b4e0f1255dab566c699b6c9952de0cccd0addba23814ee77230b592
+
+jobs:
+  memory-audit:
+    name: Historical EVR-2 phase-resolved memory attribution
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: P0 memory parser self-test
+        shell: bash
+        run: |
+          set -euxo pipefail
+          export PYTHONPATH="$PWD"
+          python3 -m py_compile \
+            physics_harness/adapters/moose/performance/profile.py \
+            experiments/Issue220_memory_audit/analyze.py
+          python3 experiments/Issue220_memory_audit/analyze.py --self-test
+
+      - name: Validate governed historical evidence identity
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euxo pipefail
+          test "$(gh run view "$SOURCE_RUN_ID" --json headSha --jq .headSha)" = "$SOURCE_HEAD"
+          DIGEST="$(
+            gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${SOURCE_RUN_ID}/artifacts" \
+              --jq ".artifacts[] | select(.name == \"${SOURCE_ARTIFACT}\") | .digest"
+          )"
+          test "$DIGEST" = "$SOURCE_DIGEST"
+
+          # Since the governed EVR-2 capture, current main changed only Issue-218
+          # numerical remediation artifacts. The production W5 physics owners
+          # consumed by this memory evidence must remain byte-identical.
+          git diff --quiet "$SOURCE_HEAD"...HEAD -- \
+            physics_app \
+            experiments/Issue192_s5r_representative \
+            experiments/Issue216_w5_multistep_acceptance \
+            experiments/Issue217_sheath_energy_closure
+
+      - name: Download governed EVR-2 artifact
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euxo pipefail
+          rm -rf historical_evr2 issue220-memory-audit-results
+          mkdir -p historical_evr2
+          gh run download "$SOURCE_RUN_ID" \
+            --name "$SOURCE_ARTIFACT" \
+            --dir historical_evr2
+          test -f historical_evr2/issue216-w5-evr2-results/logs/refine_2_runtime.log
+
+      - name: Analyze R0 R1 R2 resident-memory phases
+        shell: bash
+        run: |
+          set -euxo pipefail
+          export PYTHONPATH="$PWD"
+          python3 experiments/Issue220_memory_audit/analyze.py \
+            --artifact-root historical_evr2/issue216-w5-evr2-results \
+            --results-root issue220-memory-audit-results \
+            --source-run-id "$SOURCE_RUN_ID" \
+            --source-head "$SOURCE_HEAD" \
+            --artifact-digest "$SOURCE_DIGEST"
+
+      - name: Upload Issue-220 M1 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue220-memory-audit-evidence
+          path: issue220-memory-audit-results/**
+          if-no-files-found: error
+          retention-days: 14
