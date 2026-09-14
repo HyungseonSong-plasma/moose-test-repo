@@ -3,6 +3,7 @@
 #include "metaphysicl/raw_type.h"
 
 #include <algorithm>
+#include <iostream>
 
 registerMooseObject("PhysicsApp", PhysicsFVElectrostaticDriftDiagnostic);
 
@@ -90,24 +91,25 @@ PhysicsFVElectrostaticDriftDiagnostic::computeQpResidual()
   const Real actual_grad_phi_normal = MetaPhysicL::raw_value(grad_phi_normal);
   const auto & fc = _face_info->faceCentroid();
 
-  mooseInfo("ISSUE228_DRIFT",
-            " elem=", _face_info->elem().id(),
-            " neighbor=", _face_info->neighbor().id(),
-            " face_x=", fc(0),
-            " face_y=", fc(1),
-            " phi_elem=", MetaPhysicL::raw_value(phi_elem),
-            " phi_neighbor=", MetaPhysicL::raw_value(phi_neighbor),
-            " central_grad_phi_n=", central_grad_phi_normal,
-            " actual_grad_phi_n=", actual_grad_phi_normal,
-            " nonorth_corr_grad_phi_n=", actual_grad_phi_normal - central_grad_phi_normal,
-            " E_n=", MetaPhysicL::raw_value(electric_field_normal),
-            " mobility=", MetaPhysicL::raw_value(mobility_face),
-            " drift_velocity_n=", MetaPhysicL::raw_value(drift_normal),
-            " u_elem=", MetaPhysicL::raw_value(u_elem),
-            " u_neighbor=", MetaPhysicL::raw_value(u_neighbor),
-            " u_face=", MetaPhysicL::raw_value(transported_value),
-            " residual=", MetaPhysicL::raw_value(parent_residual),
-            " residual_reconstructed=", MetaPhysicL::raw_value(reconstructed_residual));
+  std::cout << "ISSUE228_DRIFT"
+            << " elem=" << _face_info->elem().id()
+            << " neighbor=" << _face_info->neighbor().id()
+            << " face_x=" << fc(0)
+            << " face_y=" << fc(1)
+            << " phi_elem=" << MetaPhysicL::raw_value(phi_elem)
+            << " phi_neighbor=" << MetaPhysicL::raw_value(phi_neighbor)
+            << " central_grad_phi_n=" << central_grad_phi_normal
+            << " actual_grad_phi_n=" << actual_grad_phi_normal
+            << " nonorth_corr_grad_phi_n=" << actual_grad_phi_normal - central_grad_phi_normal
+            << " E_n=" << MetaPhysicL::raw_value(electric_field_normal)
+            << " mobility=" << MetaPhysicL::raw_value(mobility_face)
+            << " drift_velocity_n=" << MetaPhysicL::raw_value(drift_normal)
+            << " u_elem=" << MetaPhysicL::raw_value(u_elem)
+            << " u_neighbor=" << MetaPhysicL::raw_value(u_neighbor)
+            << " u_face=" << MetaPhysicL::raw_value(transported_value)
+            << " residual=" << MetaPhysicL::raw_value(parent_residual)
+            << " residual_reconstructed=" << MetaPhysicL::raw_value(reconstructed_residual)
+            << std::endl;
 
   return parent_residual;
 }
