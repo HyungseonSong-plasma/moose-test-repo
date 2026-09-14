@@ -2,9 +2,10 @@
 """Long-horizon standalone production check for Issue #211.
 
 Runs accepted production wall physics (sheath suppression ON + wall-energy
-feedback ON) at the baseline R0 mesh for 10, 20, or 30 physical steps.
-The purpose is to test whether the 5-step potential/current plateau persists,
-not to establish mesh convergence.
+feedback ON) at the baseline R0 mesh for selected long horizons through
+100 physical steps. The purpose is to test whether the early potential/current
+plateau persists and to detect any delayed runaway; this does not establish
+mesh convergence.
 """
 from __future__ import annotations
 
@@ -22,7 +23,7 @@ from experiments.Issue216_w5_multistep_acceptance import run as w5
 from physics_harness.adapters.moose import parameters as mp
 
 DT_S = w5.BASELINE_DT_S
-ALLOWED_STEPS = (10, 20, 30)
+ALLOWED_STEPS = (10, 20, 30, 100)
 
 
 def _write(path: Path, payload: Mapping[str, Any]) -> None:
@@ -90,7 +91,7 @@ def _analyze(case_dir: Path, text: str, meta: Mapping[str, Any], runtime_log: Pa
         "solver_evidence": solver.get("healthy") is True,
     }
     checkpoints = {}
-    for idx in (5, 10, 20, 30):
+    for idx in (5, 10, 20, 30, 50, 75, 100):
         if idx <= len(steps_ev):
             step = steps_ev[idx - 1]
             checkpoints[str(idx)] = {
