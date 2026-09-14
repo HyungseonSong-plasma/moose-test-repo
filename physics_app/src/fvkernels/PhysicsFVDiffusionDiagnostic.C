@@ -3,6 +3,7 @@
 #include "metaphysicl/raw_type.h"
 
 #include <algorithm>
+#include <iostream>
 
 registerMooseObject("PhysicsApp", PhysicsFVDiffusionDiagnostic);
 
@@ -59,17 +60,18 @@ PhysicsFVDiffusionDiagnostic::computeQpResidual()
   const Real actual_dudn = MetaPhysicL::raw_value(dudn);
   const auto & fc = _face_info->faceCentroid();
 
-  mooseInfo("ISSUE228_DIFF",
-            " elem=", _face_info->elem().id(),
-            " neighbor=", _face_info->neighbor().id(),
-            " face_x=", fc(0),
-            " face_y=", fc(1),
-            " u_elem=", MetaPhysicL::raw_value(u_elem),
-            " u_neighbor=", MetaPhysicL::raw_value(u_neighbor),
-            " central_dudn=", central_dudn,
-            " actual_dudn=", actual_dudn,
-            " nonorth_corr_dudn=", actual_dudn - central_dudn,
-            " residual=", MetaPhysicL::raw_value(parent_residual));
+  std::cout << "ISSUE228_DIFF"
+            << " elem=" << _face_info->elem().id()
+            << " neighbor=" << _face_info->neighbor().id()
+            << " face_x=" << fc(0)
+            << " face_y=" << fc(1)
+            << " u_elem=" << MetaPhysicL::raw_value(u_elem)
+            << " u_neighbor=" << MetaPhysicL::raw_value(u_neighbor)
+            << " central_dudn=" << central_dudn
+            << " actual_dudn=" << actual_dudn
+            << " nonorth_corr_dudn=" << actual_dudn - central_dudn
+            << " residual=" << MetaPhysicL::raw_value(parent_residual)
+            << std::endl;
 
   return parent_residual;
 }
