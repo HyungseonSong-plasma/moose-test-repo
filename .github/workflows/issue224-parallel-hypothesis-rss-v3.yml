@@ -139,9 +139,9 @@ jobs:
               if sid in ids:
                   raise SystemExit(f'duplicate experiment id: {sid}')
               ids.add(sid)
-              if mode not in {'keep_initial', 'cell_average'}:
+              if mode not in {'keep_initial', 'cell_average', 'dependency_substitution'}:
                   raise SystemExit(f'unsupported mode for {sid}: {mode!r}')
-              extra = sorted(set(spec) - {'id', 'mode', 'keep_paths', 'target_paths'})
+              extra = sorted(set(spec) - {'id', 'mode', 'keep_paths', 'target_paths', 'substitutions'})
               if extra:
                   raise SystemExit(f'unsupported keys for {sid}: {extra}')
               normalized.append(spec)
@@ -521,7 +521,7 @@ jobs:
           EXPECTED_BUNDLE_SHA256: ${{ needs.build-runtime-bundle.outputs.bundle_sha256 }}
           EXPECTED_DRIVER_SHA256: ${{ needs.build-runtime-bundle.outputs.driver_sha256 }}
           CONTROL_PLANE_SHA: ${{ github.sha }}
-          SPEC_JSON: '{"id":"INFRA-CANARY-domain-volume","mode":"keep_initial","keep_paths":["Postprocessors/domain_volume"]}'
+          SPEC_JSON: '{"id":"INFRA-CANARY-dependency-substitution","mode":"dependency_substitution","keep_paths":["Postprocessors/n_e_inventory"],"substitutions":[{"path":"Postprocessors/n_e_inventory","expected_functor":"n_e_physical","replacement_functor":"carrier_one"}]}'
           RESULTS_ROOT: issue224-v3-infra-canary-results
         shell: bash
         run: |
@@ -532,7 +532,7 @@ jobs:
           cat >> "$GITHUB_STEP_SUMMARY" <<'EOF'
           P1 infrastructure canary passed the same runtime driver used by the N-way matrix:
           artifact download -> manifest/hash verification -> clean restore -> ldd ->
-          runner self-test -> P2 -> zero-step four-case measurement -> evidence contract.
+          runner self-test -> dependency substitution -> P2 -> zero-step four-case measurement -> evidence contract.
           EOF
 
       - name: Upload canary evidence
