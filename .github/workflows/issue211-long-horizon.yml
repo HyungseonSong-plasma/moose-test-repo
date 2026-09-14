@@ -1,4 +1,4 @@
-name: Issue-211 standalone long-horizon 10-30 step check
+name: Issue-211 standalone 100-step long-horizon check
 
 on:
   push:
@@ -24,15 +24,7 @@ env:
 jobs:
   long-horizon:
     runs-on: ubuntu-24.04
-    timeout-minutes: 35
-    strategy:
-      fail-fast: false
-      max-parallel: 3
-      matrix:
-        include:
-          - {steps: 10, timeout: 900}
-          - {steps: 20, timeout: 1200}
-          - {steps: 30, timeout: 1500}
+    timeout-minutes: 90
 
     steps:
       - uses: actions/checkout@v4
@@ -52,11 +44,11 @@ jobs:
           docker pull "$BUILD_BASE_REF"
           test "$(docker image inspect "$BUILD_BASE_REF" --format '{{ index .Config.Labels "io.physics.moose.sha" }}')" = "$MOOSE_SHA"
 
-      - name: Build and run ${{ matrix.steps }} steps
+      - name: Build and run 100 steps
         shell: bash
         run: |
           set -euxo pipefail
-          rm -rf "issue211-long-${{ matrix.steps }}"
+          rm -rf issue211-long-100
           docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace \
             -e GITHUB_SHA="$GITHUB_SHA" \
             -v "$PWD:/workspace" "$BUILD_BASE_REF" -lc '
@@ -76,16 +68,16 @@ jobs:
               test -x physics_app/physics-opt
               python3 experiments/Issue211_long_horizon/run.py \
                 --physics-opt physics_app/physics-opt \
-                --steps "${{ matrix.steps }}" \
-                --results-root "issue211-long-${{ matrix.steps }}" \
-                --timeout "${{ matrix.timeout }}"
+                --steps 100 \
+                --results-root issue211-long-100 \
+                --timeout 4800
             '
 
-      - name: Upload ${{ matrix.steps }}-step evidence
+      - name: Upload 100-step evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: issue211-long-${{ matrix.steps }}
-          path: issue211-long-${{ matrix.steps }}
+          name: issue211-long-100
+          path: issue211-long-100
           if-no-files-found: error
           retention-days: 7
