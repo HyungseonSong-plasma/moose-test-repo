@@ -146,16 +146,116 @@ jobs:
           print(json.dumps({'base_sha': base_sha.lower(), 'experiment_ids': sorted(ids)}))
           PY
 
-  hypothesis:
+  build:
     needs: plan
     if: needs.plan.result == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    outputs:
+      build_key: ${{ steps.build-key.outputs.key }}
+      cache_hit: ${{ steps.physics-cache.outputs.cache-hit }}
+      binary_sha256: ${{ steps.manifest.outputs.binary_sha256 }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.plan.outputs.base_sha }}
+          fetch-depth: 1
+      - name: Verify immutable build identity
+        shell: bash
+        env:
+          EXPERIMENT_BASE_SHA: ${{ needs.plan.outputs.base_sha }}
+        run: |
+          set -euxo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPERIMENT_BASE_SHA"
+          source physics_app/dependencies.lock
+          test "$MOOSE" = "$MOOSE_SHA"
+          test "$CRANE" = "$CRANE_SHA"
+          test "$SQUIRREL" = "$SQUIRREL_SHA"
+          test "$ZAPDOS" = "$ZAPDOS_SHA"
+          docker pull "$BUILD_BASE_REF"
+          test "$(docker image inspect "$BUILD_BASE_REF" --format '{{ index .Config.Labels "io.physics.moose.sha" }}')" = "$MOOSE_SHA"
+      - name: Compute build-relevant cache key
+        id: build-key
+        shell: bash
+        run: |
+          set -euo pipefail
+          physics_tree="$(git ls-files -s physics_app | sha256sum | awk '{print $1}')"
+          vendor_identity="$(printf '%s\n' "$BUILD_BASE_REF" "$MOOSE_SHA" "$CRANE_SHA" "$SQUIRREL_SHA" "$ZAPDOS_SHA" 'METHOD=opt' | sha256sum | awk '{print $1}')"
+          key="issue224-physics-opt-${physics_tree}-${vendor_identity}"
+          echo "key=$key" >> "$GITHUB_OUTPUT"
+          echo "physics_tree=$physics_tree" >> "$GITHUB_OUTPUT"
+      - name: Restore exact physics-opt cache
+        id: physics-cache
+        uses: actions/cache@v4
+        with:
+          path: physics_app/physics-opt
+          key: ${{ steps.build-key.outputs.key }}
+      - name: Build once on cache miss
+        if: steps.physics-cache.outputs.cache-hit != 'true'
+        shell: bash
+        env:
+          EXPERIMENT_BASE_SHA: ${{ needs.plan.outputs.base_sha }}
+        run: |
+          set -euxo pipefail
+          rm -f physics_app/physics-opt
+          docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace \
+            -e EXPERIMENT_BASE_SHA="$EXPERIMENT_BASE_SHA" \
+            -v "$PWD:/workspace" "$BUILD_BASE_REF" -lc '
+              set -euxo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+              test "$(git -C /workspace rev-parse HEAD)" = "$EXPERIMENT_BASE_SHA"
+              make -C /workspace/physics_app -j2
+              test -x /workspace/physics_app/physics-opt
+            '
+      - name: Record binary provenance manifest
+        id: manifest
+        shell: bash
+        env:
+          EXPERIMENT_BASE_SHA: ${{ needs.plan.outputs.base_sha }}
+          BUILD_KEY: ${{ steps.build-key.outputs.key }}
+          CACHE_HIT: ${{ steps.physics-cache.outputs.cache-hit }}
+        run: |
+          set -euxo pipefail
+          test -f physics_app/physics-opt
+          chmod +x physics_app/physics-opt
+          binary_sha256="$(sha256sum physics_app/physics-opt | awk '{print $1}')"
+          echo "binary_sha256=$binary_sha256" >> "$GITHUB_OUTPUT"
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          Path('physics_app/physics-opt.manifest.json').write_text(json.dumps({
+              'experiment_base_sha': os.environ['EXPERIMENT_BASE_SHA'],
+              'build_key': os.environ['BUILD_KEY'],
+              'cache_hit': os.environ.get('CACHE_HIT') == 'true',
+              'binary_sha256': os.popen("sha256sum physics_app/physics-opt | awk '{print $1}'").read().strip(),
+          }, indent=2, sort_keys=True) + '\n')
+          PY
+      - name: Upload shared physics binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue224-shared-physics-opt
+          path: |
+            physics_app/physics-opt
+            physics_app/physics-opt.manifest.json
+          if-no-files-found: error
+          retention-days: 1
+
+  hypothesis:
+    needs: [plan, build]
+    if: needs.plan.result == 'success' && needs.build.result == 'success'
     strategy:
       fail-fast: false
-      max-parallel: 6
+      max-parallel: 10
       matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
     name: ${{ matrix.spec.id }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
         with:
@@ -175,7 +275,31 @@ jobs:
           test "$ZAPDOS" = "$ZAPDOS_SHA"
           docker pull "$BUILD_BASE_REF"
           test "$(docker image inspect "$BUILD_BASE_REF" --format '{{ index .Config.Labels "io.physics.moose.sha" }}')" = "$MOOSE_SHA"
-      - name: Build exact base and run hypothesis
+      - name: Download shared exact physics binary
+        uses: actions/download-artifact@v4
+        with:
+          name: issue224-shared-physics-opt
+          path: physics_app
+      - name: Verify shared binary provenance
+        shell: bash
+        env:
+          EXPERIMENT_BASE_SHA: ${{ needs.plan.outputs.base_sha }}
+          EXPECTED_BUILD_KEY: ${{ needs.build.outputs.build_key }}
+          EXPECTED_BINARY_SHA256: ${{ needs.build.outputs.binary_sha256 }}
+        run: |
+          set -euxo pipefail
+          chmod +x physics_app/physics-opt
+          test "$(sha256sum physics_app/physics-opt | awk '{print $1}')" = "$EXPECTED_BINARY_SHA256"
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          m = json.loads(Path('physics_app/physics-opt.manifest.json').read_text())
+          assert m['experiment_base_sha'] == os.environ['EXPERIMENT_BASE_SHA']
+          assert m['build_key'] == os.environ['EXPECTED_BUILD_KEY']
+          assert m['binary_sha256'] == os.environ['EXPECTED_BINARY_SHA256']
+          print(m)
+          PY
+      - name: Run hypothesis with shared binary
         shell: bash
         env:
           EXPERIMENT_BASE_SHA: ${{ needs.plan.outputs.base_sha }}
@@ -202,12 +326,10 @@ jobs:
               export PYTHONPATH=/workspace
               test "$(git -C /workspace rev-parse HEAD)" = "$EXPERIMENT_BASE_SHA"
               test -x /usr/bin/time
+              test -x /workspace/physics_app/physics-opt
               uv pip install --system --python "$(command -v python3)" -r requirements-evidence-engine.txt
               python3 -m py_compile /workspace/experiments/Issue224_element_aggregate_memory/run_parallel.py
               python3 /workspace/experiments/Issue224_element_aggregate_memory/run_parallel.py --self-test
-              test ! -e /workspace/physics_app/physics-opt
-              make -C /workspace/physics_app -j2
-              test -x /workspace/physics_app/physics-opt
               python3 /workspace/experiments/Issue224_element_aggregate_memory/run_parallel.py \
                 --physics-opt /workspace/physics_app/physics-opt \
                 --results-root "/workspace/'"$out"'" \
@@ -245,6 +367,8 @@ jobs:
               'CANDIDATE_CLASS': s['decision']['candidate_reduction_classification'],
               'LOW_CONTROL_CLASS': s['decision']['low_control_reduction_classification'],
               'CONTROL_DRIFT': s['decision']['production_control_drift'],
+              'BUILD_CACHE_HIT': '${{ needs.build.outputs.cache_hit }}',
+              'BINARY_SHA256': '${{ needs.build.outputs.binary_sha256 }}',
           })
           PY
       - name: Upload hypothesis evidence
