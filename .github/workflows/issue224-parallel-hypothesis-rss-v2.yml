@@ -186,8 +186,9 @@ jobs:
               test -d /workspace/physics_app/lib
               test -d /workspace/physics_app/test/lib
               tar -C /workspace/physics_app -czf /workspace/physics_app/issue224-runtime-bundle.tgz physics-opt lib test/lib
-              tar -tzf /workspace/physics_app/issue224-runtime-bundle.tgz | grep -q "lib/.libs/libphysics-opt.so"
-              tar -tzf /workspace/physics_app/issue224-runtime-bundle.tgz | grep -q "test/lib/.libs/libphysics_test-opt.so"
+              tar -tzf /workspace/physics_app/issue224-runtime-bundle.tgz > /workspace/physics_app/issue224-runtime-bundle.contents.txt
+              grep -q "lib/.libs/libphysics-opt.so" /workspace/physics_app/issue224-runtime-bundle.contents.txt
+              grep -q "test/lib/.libs/libphysics_test-opt.so" /workspace/physics_app/issue224-runtime-bundle.contents.txt
             '
       - name: Record runtime bundle provenance
         id: manifest
