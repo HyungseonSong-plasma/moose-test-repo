@@ -67,6 +67,21 @@ jobs:
               python3 -m py_compile /workspace/experiments/Issue224_element_aggregate_memory/run_parallel.py
               python3 /workspace/experiments/Issue224_element_aggregate_memory/run_parallel.py --self-test
             '
+      - name: P0 nested-shell SHA verification self-test
+        shell: bash
+        run: |
+          set -euxo pipefail
+          printf 'issue224-sha-self-test\n' > .issue224-sha-self-test
+          read -r EXPECTED_SHA256 _ < <(sha256sum .issue224-sha-self-test)
+          docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace \
+            -e EXPECTED_SHA256="$EXPECTED_SHA256" \
+            -v "$PWD:/workspace" "$BUILD_BASE_REF" -lc '
+              set -euxo pipefail
+              source /environment
+              read -r actual_sha256 _ < <(sha256sum /workspace/.issue224-sha-self-test)
+              test "$actual_sha256" = "$EXPECTED_SHA256"
+            '
+          rm -f .issue224-sha-self-test
 
   plan:
     if: >-
@@ -197,8 +212,8 @@ jobs:
           EXPERIMENT_BASE_SHA: ${{ needs.plan.outputs.base_sha }}
         run: |
           set -euxo pipefail
-          binary_sha256="$(sha256sum physics_app/physics-opt | awk '{print $1}')"
-          bundle_sha256="$(sha256sum physics_app/issue224-runtime-bundle.tgz | awk '{print $1}')"
+          read -r binary_sha256 _ < <(sha256sum physics_app/physics-opt)
+          read -r bundle_sha256 _ < <(sha256sum physics_app/issue224-runtime-bundle.tgz)
           echo "binary_sha256=$binary_sha256" >> "$GITHUB_OUTPUT"
           echo "bundle_sha256=$bundle_sha256" >> "$GITHUB_OUTPUT"
           python3 - <<'PY'
@@ -264,7 +279,8 @@ jobs:
           EXPECTED_BUNDLE_SHA256: ${{ needs.build-runtime-bundle.outputs.bundle_sha256 }}
         run: |
           set -euxo pipefail
-          test "$(sha256sum physics_app/issue224-runtime-bundle.tgz | awk '{print $1}')" = "$EXPECTED_BUNDLE_SHA256"
+          read -r actual_bundle_sha256 _ < <(sha256sum physics_app/issue224-runtime-bundle.tgz)
+          test "$actual_bundle_sha256" = "$EXPECTED_BUNDLE_SHA256"
           python3 - <<'PY'
           import json, os
           from pathlib import Path
@@ -281,7 +297,8 @@ jobs:
               source /environment
               tar -xzf /workspace/physics_app/issue224-runtime-bundle.tgz -C /workspace/physics_app
               test -x /workspace/physics_app/physics-opt
-              test "$(sha256sum /workspace/physics_app/physics-opt | awk "{print \\$1}")" = "$EXPECTED_BINARY_SHA256"
+              read -r actual_binary_sha256 _ < <(sha256sum /workspace/physics_app/physics-opt)
+              test "$actual_binary_sha256" = "$EXPECTED_BINARY_SHA256"
               ldd /workspace/physics_app/physics-opt | tee /workspace/physics_app/issue224-restored-ldd.txt
               ! grep -q "not found" /workspace/physics_app/issue224-restored-ldd.txt
             '
