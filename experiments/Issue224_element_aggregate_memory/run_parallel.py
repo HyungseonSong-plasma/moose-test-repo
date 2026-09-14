@@ -10,6 +10,7 @@ low-memory control.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
 import os
@@ -28,8 +29,9 @@ from physics_harness.adapters.moose.performance.collection import parse_problem_
 from physics_harness.adapters.moose.performance.profile import live_memory_samples
 from physics_harness.execution.cases import stage_case, validate_case_references
 
-ALLOWED_MODES = {"keep_initial", "cell_average"}
+ALLOWED_MODES = {"keep_initial", "cell_average", "dependency_substitution"}
 ID_RE = re.compile(r"^[A-Za-z0-9_.-]{1,48}$")
+FUNCTOR_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_.:-]*$")
 ELEMENT_TYPES = {
     "ElementAverageFunctorPostprocessor",
     "ADElementIntegralFunctorPostprocessor",
@@ -55,6 +57,77 @@ def _element_paths(text: str) -> list[str]:
     return paths
 
 
+def _validate_path_list(
+    spec: Mapping[str, Any], key: str, allowed: set[str], *, mode: str
+) -> list[str]:
+    value = spec.get(key)
+    if not isinstance(value, list) or not value:
+        raise Issue224ParallelError(f"{mode} requires non-empty {key}")
+    if not all(isinstance(x, str) for x in value):
+        raise Issue224ParallelError(f"{key} must contain strings")
+    if len(set(value)) != len(value):
+        raise Issue224ParallelError(f"{key} contains duplicates")
+    unknown = sorted(set(value) - allowed)
+    if unknown:
+        raise Issue224ParallelError(f"{key} outside accepted 57-object family: {unknown}")
+    return sorted(value)
+
+
+def _validate_substitutions(
+    spec: Mapping[str, Any], text: str, keep: set[str]
+) -> list[dict[str, str]]:
+    raw = spec.get("substitutions")
+    if not isinstance(raw, list) or not raw:
+        raise Issue224ParallelError(
+            "dependency_substitution requires non-empty substitutions"
+        )
+
+    seen: set[str] = set()
+    normalized: list[dict[str, str]] = []
+    required = {"path", "expected_functor", "replacement_functor"}
+    for index, item in enumerate(raw):
+        if not isinstance(item, Mapping):
+            raise Issue224ParallelError(f"substitution[{index}] must be an object")
+        keys = set(item)
+        if keys != required:
+            raise Issue224ParallelError(
+                f"substitution[{index}] keys must be exactly {sorted(required)}, got {sorted(keys)}"
+            )
+        path = item.get("path")
+        expected = item.get("expected_functor")
+        replacement = item.get("replacement_functor")
+        if not isinstance(path, str) or path not in keep:
+            raise Issue224ParallelError(
+                f"substitution[{index}] path must be one of keep_paths: {path!r}"
+            )
+        if path in seen:
+            raise Issue224ParallelError(f"duplicate substitution path: {path}")
+        seen.add(path)
+        for label, value in (("expected_functor", expected), ("replacement_functor", replacement)):
+            if not isinstance(value, str) or not FUNCTOR_RE.fullmatch(value):
+                raise Issue224ParallelError(
+                    f"substitution[{index}] invalid {label}: {value!r}"
+                )
+        if expected == replacement:
+            raise Issue224ParallelError(
+                f"substitution[{index}] replacement must differ from expected functor"
+            )
+        current = mp.get_parameter(text, path, "functor")
+        if current != expected:
+            raise Issue224ParallelError(
+                f"substitution[{index}] expected functor mismatch for {path}: "
+                f"expected={expected!r}, production={current!r}"
+            )
+        normalized.append(
+            {
+                "path": path,
+                "expected_functor": expected,
+                "replacement_functor": replacement,
+            }
+        )
+    return sorted(normalized, key=lambda row: row["path"])
+
+
 def _validate_spec(spec: Mapping[str, Any], text: str) -> dict[str, Any]:
     sid = spec.get("id")
     mode = spec.get("mode")
@@ -66,36 +139,67 @@ def _validate_spec(spec: Mapping[str, Any], text: str) -> dict[str, Any]:
     allowed = set(_element_paths(text))
     out: dict[str, Any] = {"id": sid, "mode": mode}
     if mode == "keep_initial":
-        keep = spec.get("keep_paths")
-        if not isinstance(keep, list) or not keep:
-            raise Issue224ParallelError("keep_initial requires non-empty keep_paths")
-        if not all(isinstance(x, str) for x in keep):
-            raise Issue224ParallelError("keep_paths must contain strings")
-        if len(set(keep)) != len(keep):
-            raise Issue224ParallelError("keep_paths contains duplicates")
-        unknown = sorted(set(keep) - allowed)
-        if unknown:
-            raise Issue224ParallelError(f"keep_paths outside accepted 57-object family: {unknown}")
-        out["keep_paths"] = sorted(keep)
-    else:
+        extra = sorted(set(spec) - {"id", "mode", "keep_paths"})
+        if extra:
+            raise Issue224ParallelError(f"unsupported keys for keep_initial: {extra}")
+        out["keep_paths"] = _validate_path_list(
+            spec, "keep_paths", allowed, mode="keep_initial"
+        )
+    elif mode == "cell_average":
+        extra = sorted(set(spec) - {"id", "mode", "target_paths"})
+        if extra:
+            raise Issue224ParallelError(f"unsupported keys for cell_average: {extra}")
         targets = spec.get("target_paths")
         if targets is None:
             targets = sorted(allowed)
-        if not isinstance(targets, list) or not targets:
-            raise Issue224ParallelError("cell_average requires non-empty target_paths")
-        if not all(isinstance(x, str) for x in targets):
-            raise Issue224ParallelError("target_paths must contain strings")
-        if len(set(targets)) != len(targets):
-            raise Issue224ParallelError("target_paths contains duplicates")
-        unknown = sorted(set(targets) - allowed)
-        if unknown:
-            raise Issue224ParallelError(f"target_paths outside accepted 57-object family: {unknown}")
-        out["target_paths"] = sorted(targets)
+            spec = {**spec, "target_paths": targets}
+        out["target_paths"] = _validate_path_list(
+            spec, "target_paths", allowed, mode="cell_average"
+        )
+    else:
+        extra = sorted(set(spec) - {"id", "mode", "keep_paths", "substitutions"})
+        if extra:
+            raise Issue224ParallelError(
+                f"unsupported keys for dependency_substitution: {extra}"
+            )
+        keep = _validate_path_list(
+            spec, "keep_paths", allowed, mode="dependency_substitution"
+        )
+        out["keep_paths"] = keep
+        out["substitutions"] = _validate_substitutions(spec, text, set(keep))
     return out
 
 
 def _all_deferred(text: str) -> tuple[str, dict[str, Any]]:
     return c6._defer_variant(text, "element_aggregate_all")
+
+
+def _defer_except(
+    text: str,
+    *,
+    keep: set[str],
+    before: Mapping[str, Mapping[str, str]],
+    element_set: set[str],
+) -> tuple[str, list[str]]:
+    deferred = sorted(element_set - keep)
+    for path in deferred:
+        text = mp.upsert_parameter(text, path, "execute_on", "'TIMESTEP_END'")
+    after = c5._observer_snapshot(text)
+    changed_non_target = [
+        path for path in before if path not in element_set and after[path] != before[path]
+    ]
+    bad_deferred = [
+        path
+        for path in deferred
+        if after[path]["execute_on"].strip("'\"") != "TIMESTEP_END"
+    ]
+    bad_keep = [path for path in keep if after[path] != before[path]]
+    if changed_non_target or bad_deferred or bad_keep:
+        raise Issue224ParallelError(
+            f"keep schedule mutation contract failed: non_target={changed_non_target}, "
+            f"bad_deferred={bad_deferred}, bad_keep={bad_keep}"
+        )
+    return text, deferred
 
 
 def _candidate(text: str, spec: Mapping[str, Any]) -> tuple[str, dict[str, Any]]:
@@ -104,31 +208,77 @@ def _candidate(text: str, spec: Mapping[str, Any]) -> tuple[str, dict[str, Any]]
     element_paths = _element_paths(text)
     element_set = set(element_paths)
 
-    if spec["mode"] == "keep_initial":
+    if spec["mode"] in {"keep_initial", "dependency_substitution"}:
         keep = set(spec["keep_paths"])
-        deferred = sorted(element_set - keep)
-        for path in deferred:
-            text = mp.upsert_parameter(text, path, "execute_on", "'TIMESTEP_END'")
-        after = c5._observer_snapshot(text)
-        changed_non_target = [
-            path for path in before if path not in element_set and after[path] != before[path]
-        ]
-        bad_deferred = [
-            path
-            for path in deferred
-            if after[path]["execute_on"].strip("'\"") != "TIMESTEP_END"
-        ]
-        bad_keep = [path for path in keep if after[path] != before[path]]
-        if changed_non_target or bad_deferred or bad_keep:
+        original_functors = {
+            path: mp.get_parameter(text, path, "functor") for path in element_paths
+        }
+        text, deferred = _defer_except(
+            text, keep=keep, before=before, element_set=element_set
+        )
+
+        if spec["mode"] == "keep_initial":
+            return text, {
+                "spec": spec,
+                "target_family_count": 57,
+                "kept_initial_count": len(keep),
+                "deferred_count": len(deferred),
+                "non_target_changed_count": 0,
+            }
+
+        applied: list[dict[str, str]] = []
+        for row in spec["substitutions"]:
+            path = row["path"]
+            current = mp.get_parameter(text, path, "functor")
+            if current != row["expected_functor"]:
+                raise Issue224ParallelError(
+                    f"pre-substitution functor drift for {path}: "
+                    f"expected={row['expected_functor']!r}, current={current!r}"
+                )
+            text = mp.upsert_parameter(
+                text, path, "functor", row["replacement_functor"]
+            )
+            actual = mp.get_parameter(text, path, "functor")
+            if actual != row["replacement_functor"]:
+                raise Issue224ParallelError(
+                    f"failed functor substitution for {path}: {actual!r}"
+                )
+            applied.append(dict(row))
+
+        schedule_after = c5._observer_snapshot(text)
+        expected_schedule = c5._observer_snapshot(
+            _defer_except(
+                _production()[0],
+                keep=keep,
+                before=c5._observer_snapshot(_production()[0]),
+                element_set=set(_element_paths(_production()[0])),
+            )[0]
+        )
+        if schedule_after != expected_schedule:
             raise Issue224ParallelError(
-                f"keep_initial mutation contract failed: non_target={changed_non_target}, "
-                f"bad_deferred={bad_deferred}, bad_keep={bad_keep}"
+                "dependency_substitution changed observer schedule/type outside the keep/defer contract"
+            )
+
+        final_functors = {
+            path: mp.get_parameter(text, path, "functor") for path in element_paths
+        }
+        changed_functors = sorted(
+            path for path in element_paths if final_functors[path] != original_functors[path]
+        )
+        expected_changed = sorted(row["path"] for row in applied)
+        if changed_functors != expected_changed:
+            raise Issue224ParallelError(
+                f"unexpected functor mutation surface: expected={expected_changed}, "
+                f"observed={changed_functors}"
             )
         return text, {
             "spec": spec,
             "target_family_count": 57,
             "kept_initial_count": len(keep),
             "deferred_count": len(deferred),
+            "substitution_count": len(applied),
+            "substitutions": applied,
+            "changed_functor_paths": changed_functors,
             "non_target_changed_count": 0,
         }
 
@@ -172,6 +322,7 @@ def _build(kind: str, spec: Mapping[str, Any]) -> tuple[str, dict[str, Any]]:
         "uniform_refine": 2,
         "num_steps": 0,
         "physical_timestep_executed": False,
+        "input_sha256": hashlib.sha256(text.encode("utf-8")).hexdigest(),
         "mutation": mutation,
         "production_promotion_claim": False,
     }
@@ -282,12 +433,76 @@ def self_test() -> dict[str, Any]:
         "c6_self_test": c6.self_test().get("status") == "PASS",
         "element_aggregate_count_57": len(paths) == 57,
     }
-    for spec in (
+    specs = (
         {"id": "H-test-one", "mode": "keep_initial", "keep_paths": ["Postprocessors/domain_volume"]},
         {"id": "H-test-cell", "mode": "cell_average", "target_paths": paths},
-    ):
+        {
+            "id": "H-test-dependency-substitution",
+            "mode": "dependency_substitution",
+            "keep_paths": ["Postprocessors/n_e_inventory"],
+            "substitutions": [
+                {
+                    "path": "Postprocessors/n_e_inventory",
+                    "expected_functor": "n_e_physical",
+                    "replacement_functor": "carrier_one",
+                }
+            ],
+        },
+    )
+    for spec in specs:
         mutated, meta = _candidate(text, spec)
-        checks[f"candidate_{spec['id']}_built"] = mutated != text and meta["non_target_changed_count"] == 0
+        checks[f"candidate_{spec['id']}_built"] = (
+            mutated != text and meta["non_target_changed_count"] == 0
+        )
+    dep_mutated, dep_meta = _candidate(text, specs[2])
+    checks["dependency_substitution_exact_functor"] = (
+        mp.get_parameter(dep_mutated, "Postprocessors/n_e_inventory", "functor")
+        == "carrier_one"
+        and dep_meta.get("changed_functor_paths") == ["Postprocessors/n_e_inventory"]
+    )
+
+    try:
+        _candidate(
+            text,
+            {
+                "id": "H-test-dependency-mismatch",
+                "mode": "dependency_substitution",
+                "keep_paths": ["Postprocessors/n_e_inventory"],
+                "substitutions": [
+                    {
+                        "path": "Postprocessors/n_e_inventory",
+                        "expected_functor": "wrong_functor",
+                        "replacement_functor": "carrier_one",
+                    }
+                ],
+            },
+        )
+    except Issue224ParallelError:
+        checks["dependency_substitution_rejects_expected_mismatch"] = True
+    else:
+        checks["dependency_substitution_rejects_expected_mismatch"] = False
+
+    try:
+        _candidate(
+            text,
+            {
+                "id": "H-test-dependency-outside-keep",
+                "mode": "dependency_substitution",
+                "keep_paths": ["Postprocessors/domain_volume"],
+                "substitutions": [
+                    {
+                        "path": "Postprocessors/n_e_inventory",
+                        "expected_functor": "n_e_physical",
+                        "replacement_functor": "carrier_one",
+                    }
+                ],
+            },
+        )
+    except Issue224ParallelError:
+        checks["dependency_substitution_rejects_path_outside_keep"] = True
+    else:
+        checks["dependency_substitution_rejects_path_outside_keep"] = False
+
     failed = sorted(key for key, ok in checks.items() if not ok)
     return {"status": "PASS" if not failed else "FAIL", "checks": checks, "failed_checks": failed}
 
@@ -310,13 +525,16 @@ def run(args: argparse.Namespace) -> int:
 
     out = args.results_root.resolve()
     summary: dict[str, Any] = {
-        "schema_version": 1,
+        "schema_version": 2,
         "issue": 224,
         "hypothesis_id": spec["id"],
         "spec": spec,
         "base_sha": os.environ.get("EXPERIMENT_BASE_SHA"),
         "workflow_event_sha": os.environ.get("GITHUB_SHA"),
         "physics_opt_sha256": w5._sha256(exe),
+        "production_input_sha256": hashlib.sha256(
+            production_text.encode("utf-8")
+        ).hexdigest(),
         "diagnostic": "PARALLEL_HYPOTHESIS_ZERO_STEP_OS_RSS",
         "physical_timesteps_authorized": 0,
         "authoritative_peak_metric": "GNU_time_v_Maximum_resident_set_size",
