@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
-"""Long-horizon standalone production check for Issue #211.
+"""100-step standalone production check for Issue #211 with Exodus output.
 
 Runs accepted production wall physics (sheath suppression ON + wall-energy
-feedback ON) at the baseline R0 mesh for selected long horizons through
-100 physical steps. The purpose is to test whether the early potential/current
-plateau persists and to detect any delayed runaway; this does not establish
-mesh convergence.
+feedback ON) at the baseline R0 mesh for 100 physical steps. CSV, checkpoint,
+and Exodus outputs are retained so the long-horizon scalar ledgers and full
+spatial fields can both be inspected. This does not establish mesh convergence.
 """
 from __future__ import annotations
 
@@ -23,7 +22,7 @@ from experiments.Issue216_w5_multistep_acceptance import run as w5
 from physics_harness.adapters.moose import parameters as mp
 
 DT_S = w5.BASELINE_DT_S
-ALLOWED_STEPS = (10, 20, 30, 100)
+ALLOWED_STEPS = (100,)
 
 
 def _write(path: Path, payload: Mapping[str, Any]) -> None:
@@ -37,15 +36,17 @@ def build_case(steps: int) -> tuple[str, dict[str, Any]]:
     text, meta = w5._build_case(dt_s=DT_S, uniform_refine=0)
     end_time = steps * DT_S
     text = mp.upsert_parameter(text, "Executioner", "end_time", f"{end_time:.17g}")
+    text = mp.upsert_parameter(text, "Outputs", "exodus", "true")
     meta = {
         **meta,
         "issue": 211,
-        "claim": "standalone_long_horizon_plateau",
+        "claim": "standalone_100step_long_horizon_with_exodus",
         "expected_steps": steps,
         "end_time_s": end_time,
         "uniform_refine": 0,
         "sheath_potential_suppression": True,
         "wall_energy_feedback": True,
+        "exodus_output": True,
     }
     return text, meta
 
@@ -64,6 +65,8 @@ def self_test() -> dict[str, Any]:
             rel_tol=0.0,
             abs_tol=1e-24,
         )
+        exodus = (mp.get_parameter(text, "Outputs", "exodus") or "").strip().strip("'\"").lower()
+        checks[f"steps_{steps}_exodus"] = exodus == "true"
     failed = sorted(k for k, v in checks.items() if not v)
     return {"status": "PASS" if not failed else "FAIL", "checks": checks, "failed_checks": failed}
 
@@ -83,12 +86,14 @@ def _analyze(case_dir: Path, text: str, meta: Mapping[str, Any], runtime_log: Pa
     solver = w5._solver_evidence(runtime_log, returncode=returncode)
     state = s5r._state_evidence(physical)
     target_time = float(meta["end_time_s"])
+    exodus_files = sorted(path.name for path in case_dir.glob("*.e*"))
     gates = {
         "runtime_complete": returncode == 0 and math.isclose(final_time, target_time, rel_tol=0.0, abs_tol=1e-18),
         "expected_step_count": len(steps_ev) == expected_steps,
         "all_step_ledgers": bool(steps_ev) and all(step["hard_pass"] for step in steps_ev),
         "state_invariants": state.get("hard_pass") is True,
         "solver_evidence": solver.get("healthy") is True,
+        "exodus_output_present": bool(exodus_files),
     }
     checkpoints = {}
     for idx in (5, 10, 20, 30, 50, 75, 100):
@@ -121,6 +126,7 @@ def _analyze(case_dir: Path, text: str, meta: Mapping[str, Any], runtime_log: Pa
         "solver": solver,
         "endpoint": w5._endpoint(physical, meta=meta),
         "checkpoints": checkpoints,
+        "exodus_files": exodus_files,
         "phi_max_series_V": phi_series,
         "net_wall_current_series_A": current_series,
         "tail_5step_phi_span_V": plateau_span,
@@ -176,7 +182,7 @@ def main() -> int:
     parser.add_argument("--physics-opt", type=Path)
     parser.add_argument("--results-root", type=Path, default=Path("issue211-long-horizon-results"))
     parser.add_argument("--steps", type=int, choices=ALLOWED_STEPS)
-    parser.add_argument("--timeout", type=float, default=1200.0)
+    parser.add_argument("--timeout", type=float, default=4800.0)
     parser.add_argument("--self-test", action="store_true")
     args = parser.parse_args()
     if args.self_test:
