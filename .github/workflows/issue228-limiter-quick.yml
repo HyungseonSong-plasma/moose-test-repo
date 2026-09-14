@@ -45,6 +45,7 @@ jobs:
               export ZAPDOS_DIR=/opt/physics_vendor/zapdos
               export METHOD=opt
               git config --global --add safe.directory /workspace
+              uv pip install --system --python "$(command -v python3)" -r requirements-evidence-engine.txt
               make -C physics_app -j2
               python3 experiments/Issue228_limiter_quick/run.py \
                 --physics-opt physics_app/physics-opt \
