@@ -116,6 +116,17 @@ def _move_gmsh_node(path: Path, tag: int, new_xy: tuple[float, float]) -> dict[s
     return found
 
 
+def _validated_case_references(case_dir: Path) -> list[dict[str, str]]:
+    """Validate staged input references and enforce the shared list-return contract."""
+    refs = validate_case_references(case_dir)
+    if not isinstance(refs, list) or not all(isinstance(item, dict) for item in refs):
+        raise TypeError(
+            "validate_case_references contract changed: expected list[dict[str, str]], "
+            f"got {type(refs).__name__}"
+        )
+    return refs
+
+
 def self_test() -> dict[str, Any]:
     checks: dict[str, bool] = {}
     for mode in MODES:
@@ -146,19 +157,36 @@ def run(args: argparse.Namespace) -> int:
         case_dir = out / "cases" / mode
         logs = out / "logs" / mode
         logs.mkdir(parents=True, exist_ok=True)
-        stage = sci._stage(case_dir, text, meta)
-        mesh_edit = None
-        if mode == "mesh_quality":
-            mesh_edit = _move_gmsh_node(case_dir / "qvt.msh", NODE_TAG, NEW_XY)
-            refs = validate_case_references(case_dir)
-            if not refs.get("ok", False):
-                raise RuntimeError(f"references invalid after mesh edit: {refs}")
+        cs: dict[str, Any] = {"meta": meta}
+        try:
+            stage = sci._stage(case_dir, text, meta)
+            mesh_edit = None
+            references_after_mesh_edit = None
+            if mode == "mesh_quality":
+                mesh_edit = _move_gmsh_node(case_dir / "qvt.msh", NODE_TAG, NEW_XY)
+                references_after_mesh_edit = _validated_case_references(case_dir)
+            cs.update(
+                {
+                    "stage": stage,
+                    "mesh_edit": mesh_edit,
+                    "references_after_mesh_edit": references_after_mesh_edit,
+                }
+            )
+        except Exception as exc:
+            cs["status"] = "HARNESS_FAIL"
+            cs["harness_error"] = f"{type(exc).__name__}: {exc}"
+            good = False
+            summary["cases"][mode] = cs
+            _write(out / "summary.partial.json", summary)
+            continue
+
         p2 = s5r._p2(exe, case_dir, logs / "p2.log", timeout=min(float(args.timeout), 300.0))
-        cs: dict[str, Any] = {"meta": meta, "stage": stage, "mesh_edit": mesh_edit, "p2": p2}
+        cs["p2"] = p2
         if p2.get("returncode") != 0:
             cs["status"] = "P2_FAIL"
             good = False
             summary["cases"][mode] = cs
+            _write(out / "summary.partial.json", summary)
             continue
         runtime = sci._runtime(exe, case_dir, logs / "runtime.log", logs / "time_v.log", float(args.timeout))
         cs["runtime"] = runtime
