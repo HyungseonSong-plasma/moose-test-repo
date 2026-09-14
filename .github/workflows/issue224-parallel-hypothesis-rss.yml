@@ -222,8 +222,7 @@ jobs:
           CACHE_HIT: ${{ steps.physics-cache.outputs.cache-hit }}
         run: |
           set -euxo pipefail
-          test -f physics_app/physics-opt
-          chmod +x physics_app/physics-opt
+          test -x physics_app/physics-opt
           binary_sha256="$(sha256sum physics_app/physics-opt | awk '{print $1}')"
           echo "binary_sha256=$binary_sha256" >> "$GITHUB_OUTPUT"
           python3 - <<'PY'
