@@ -1,0 +1,62 @@
+name: Issue-228 quick limiter controls
+
+on:
+  push:
+    branches: [issue-228-face-flux-probe]
+    paths:
+      - '.github/workflows/issue228-limiter-quick.yml'
+      - 'experiments/Issue228_limiter_quick/**'
+
+permissions:
+  contents: read
+
+env:
+  BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+  MOOSE_SHA: 9f388366ccf38b9c34542ec5561198249fde0ac9
+  CRANE_SHA: ba26970cf419dcac563a20ed7079d445bc6341c3
+  SQUIRREL_SHA: 16a26d504f3ee11161a86d4e3ebf3c0e5f2afbb1
+  ZAPDOS_SHA: 9eceffbc46048c3760bbfa9a7f1ca681ae35af1d
+
+jobs:
+  limiter:
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [limit_050, limit_100]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Build and run ${{ matrix.mode }}
+        shell: bash
+        run: |
+          set -euxo pipefail
+          docker pull "$BUILD_BASE_REF"
+          docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace \
+            -e GITHUB_SHA="$GITHUB_SHA" -v "$PWD:/workspace" "$BUILD_BASE_REF" -lc '
+              set -euxo pipefail
+              source /environment
+              export PYTHONPATH=/workspace
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+              git config --global --add safe.directory /workspace
+              make -C physics_app -j2
+              python3 experiments/Issue228_limiter_quick/run.py \
+                --physics-opt physics_app/physics-opt \
+                --mode ${{ matrix.mode }} \
+                --results-root issue228-limiter-${{ matrix.mode }} \
+                --timeout 300
+            '
+      - name: Upload ${{ matrix.mode }} evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue228-limiter-${{ matrix.mode }}
+          path: issue228-limiter-${{ matrix.mode }}
+          if-no-files-found: error
+          retention-days: 7
