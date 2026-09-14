@@ -1,0 +1,140 @@
+name: Issue-224 R2 science profile qualification
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/issue224-science-profile-qualification.yml'
+      - 'experiments/Issue224_science_profiles/run.py'
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  issues: read
+
+concurrency:
+  group: issue224-science-profile-${{ github.event_name }}-${{ github.event.issue.number || github.run_id }}
+  cancel-in-progress: false
+
+env:
+  BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+  MOOSE_SHA: 9f388366ccf38b9c34542ec5561198249fde0ac9
+  CRANE_SHA: ba26970cf419dcac563a20ed7079d445bc6341c3
+  SQUIRREL_SHA: 16a26d504f3ee11161a86d4e3ebf3c0e5f2afbb1
+  ZAPDOS_SHA: 9eceffbc46048c3760bbfa9a7f1ca681ae35af1d
+
+jobs:
+  p0-static-contract:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate science-profile runner
+        shell: bash
+        run: |
+          set -euxo pipefail
+          docker pull "$BUILD_BASE_REF"
+          docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace \
+            -e GITHUB_SHA="$GITHUB_SHA" \
+            -v "$PWD:/workspace" "$BUILD_BASE_REF" -lc '
+              set -euxo pipefail
+              source /environment
+              export PYTHONPATH=/workspace
+              git config --global --add safe.directory /workspace
+              test "$(git -C /workspace rev-parse HEAD)" = "$GITHUB_SHA"
+              uv pip install --system --python "$(command -v python3)" -r requirements-evidence-engine.txt
+              python3 -m py_compile experiments/Issue224_science_profiles/run.py
+              python3 experiments/Issue224_science_profiles/run.py --self-test
+            '
+
+  qualify:
+    if: >-
+      github.event_name == 'issue_comment' &&
+      github.event.issue.number == 224 &&
+      github.event.comment.user.login == 'HyungseonSong-plasma' &&
+      startsWith(github.event.comment.body, '/issue224-science-profile-qual')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    steps:
+      - name: Parse immutable base SHA
+        id: request
+        env:
+          COMMENT_BODY: ${{ github.event.comment.body }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, re
+          from pathlib import Path
+          lines = os.environ["COMMENT_BODY"].splitlines()
+          if not lines or lines[0].strip() != "/issue224-science-profile-qual":
+              raise SystemExit("invalid command header")
+          payload = json.loads("\n".join(lines[1:]).strip())
+          sha = str(payload.get("base_sha", "")).strip().lower()
+          if not re.fullmatch(r"[0-9a-f]{40}", sha):
+              raise SystemExit(f"invalid base_sha: {sha!r}")
+          with Path(os.environ["GITHUB_OUTPUT"]).open("a") as f:
+              f.write(f"base_sha={sha}\n")
+          PY
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.request.outputs.base_sha }}
+          fetch-depth: 1
+
+      - name: Verify exact provenance and pinned dependencies
+        env:
+          EXPERIMENT_BASE_SHA: ${{ steps.request.outputs.base_sha }}
+        shell: bash
+        run: |
+          set -euxo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPERIMENT_BASE_SHA"
+          source physics_app/dependencies.lock
+          test "$MOOSE" = "$MOOSE_SHA"
+          test "$CRANE" = "$CRANE_SHA"
+          test "$SQUIRREL" = "$SQUIRREL_SHA"
+          test "$ZAPDOS" = "$ZAPDOS_SHA"
+          docker pull "$BUILD_BASE_REF"
+          test "$(docker image inspect "$BUILD_BASE_REF" --format '{{ index .Config.Labels "io.physics.moose.sha" }}')" = "$MOOSE_SHA"
+
+      - name: Build and execute terminal R2 qualification
+        env:
+          EXPERIMENT_BASE_SHA: ${{ steps.request.outputs.base_sha }}
+        shell: bash
+        run: |
+          set -euxo pipefail
+          rm -rf issue224-science-profile-results
+          docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace \
+            -e GITHUB_SHA="$GITHUB_SHA" \
+            -e EXPERIMENT_BASE_SHA="$EXPERIMENT_BASE_SHA" \
+            -v "$PWD:/workspace" "$BUILD_BASE_REF" -lc '
+              set -euxo pipefail
+              source /environment
+              export PYTHONPATH=/workspace
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+              git config --global --add safe.directory /workspace
+              test "$(git -C /workspace rev-parse HEAD)" = "$EXPERIMENT_BASE_SHA"
+              uv pip install --system --python "$(command -v python3)" -r requirements-evidence-engine.txt
+              python3 experiments/Issue224_science_profiles/run.py --self-test
+              make -C physics_app -j2
+              test -x physics_app/physics-opt
+              python3 experiments/Issue224_science_profiles/run.py \
+                --physics-opt physics_app/physics-opt \
+                --results-root issue224-science-profile-results \
+                --timeout 3600
+            '
+
+      - name: Upload science-profile evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue224-science-profile-qualification-evidence
+          path: issue224-science-profile-results
+          if-no-files-found: error
+          retention-days: 14
