@@ -56,6 +56,7 @@ jobs:
         run: |
           set -euxo pipefail
           rm -rf issue236-m1a-results
+          mkdir -p issue236-m1a-results
           docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace \
             -e GITHUB_SHA="$GITHUB_SHA" \
             -v "$PWD:/workspace" "$BUILD_BASE_REF" -lc '
@@ -69,7 +70,8 @@ jobs:
               export METHOD=opt
               git config --global --add safe.directory /workspace
               test "$(git -C /workspace rev-parse HEAD)" = "$GITHUB_SHA"
-              python3 experiments/Issue236_m1a_multiapp_smoke/run.py --self-test
+              uv pip install --system --python "$(command -v python3)" -r requirements-evidence-engine.txt
+              python3 experiments/Issue236_m1a_multiapp_smoke/run.py --self-test | tee issue236-m1a-results/preflight.log
               make -C physics_app -j2
               test -x physics_app/physics-opt
               python3 experiments/Issue236_m1a_multiapp_smoke/run.py \
