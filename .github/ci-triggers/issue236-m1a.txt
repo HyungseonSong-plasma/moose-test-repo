@@ -3,4 +3,4 @@ Issue-236 M1-A CI trigger.
 Only update this file after the runner, workflow, physics code, and generated-input contract are all ready for an intentional CI run.
 Changing experiment/helper/source files alone must not trigger the Issue-236 smoke workflow.
 
-Intentional run: freeze heavy-transport electron density during the fast electron+Poisson solve while keeping live n_e in chemistry and Poisson.
+Intentional run: disable volumetric electron chemistry and volumetric electron-energy source/sink kernels while keeping electron/energy wall losses, SEE, live electron transport, Poisson coupling, and frozen heavy-transport electron density.
