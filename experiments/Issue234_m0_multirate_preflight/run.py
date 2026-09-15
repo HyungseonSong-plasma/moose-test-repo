@@ -28,6 +28,16 @@ DT_E_CANDIDATE_S = 1.0e-11
 DT_E_REFERENCE_S = 5.0e-12
 DT_E_COARSE_S = (2.0e-11, 1.0e-10)
 HEAVY_SPECIES = ("w_O", "w_O2p", "w_O2s", "w_Om", "w_Op", "w_Os")
+TRANSPORT_KEYS = (
+    "electron_diffusion_avg",
+    "electron_mobility_avg",
+    "Dmix_O2p_avg",
+    "mu_O2p_avg",
+    "Dmix_Om_avg",
+    "mu_Om_avg",
+    "Dmix_Op_avg",
+    "mu_Op_avg",
+)
 
 
 def _write(path: Path, payload: Any) -> None:
@@ -45,6 +55,21 @@ def _read_csv_endpoint(path: Path) -> dict[str, float]:
     if not rows:
         raise RuntimeError(f"empty CSV: {path}")
     return {k: float(v) for k, v in rows[-1].items() if v not in (None, "")}
+
+
+def _validate_transport_coefficients(endpoint: dict[str, float]) -> tuple[dict[str, float], dict[str, str]]:
+    valid: dict[str, float] = {}
+    invalid: dict[str, str] = {}
+    for key in TRANSPORT_KEYS:
+        if key not in endpoint:
+            invalid[key] = "missing"
+            continue
+        value = float(endpoint[key])
+        if not math.isfinite(value) or value <= 0.0:
+            invalid[key] = repr(value)
+            continue
+        valid[key] = value
+    return valid, invalid
 
 
 def _read_snapshot(root: Path):
@@ -112,6 +137,16 @@ def self_test() -> int:
     assert DT_E_REFERENCE_S < DT_E_CANDIDATE_S < DT_HEAVY_CANDIDATE_S
     assert math.isclose(DT_HEAVY_CANDIDATE_S / DT_E_CANDIDATE_S, 1000.0)
     assert math.isclose(DT_HEAVY_CANDIDATE_S / DT_E_REFERENCE_S, 2000.0)
+
+    valid, invalid = _validate_transport_coefficients({key: 1.0 for key in TRANSPORT_KEYS})
+    assert len(valid) == len(TRANSPORT_KEYS) and not invalid
+    _, invalid = _validate_transport_coefficients({
+        **{key: 1.0 for key in TRANSPORT_KEYS},
+        "electron_diffusion_avg": float("nan"),
+        "mu_O2p_avg": 0.0,
+    })
+    assert set(invalid) == {"electron_diffusion_avg", "mu_O2p_avg"}
+
     print("Issue234 M0 self-test PASS")
     return 0
 
@@ -131,6 +166,17 @@ def run(args: argparse.Namespace) -> int:
         return 1
 
     coords, conn, times, values, endpoint, summary = _read_snapshot(root)
+    transport, invalid_transport = _validate_transport_coefficients(endpoint)
+    if invalid_transport:
+        payload = {
+            "status": "HARNESS_OR_CONSTRUCTION_FAIL",
+            "evidence_valid": False,
+            "error": "transport coefficients must be present, finite, and strictly positive",
+            "invalid_transport_coefficients": invalid_transport,
+        }
+        _write(out / "summary.json", payload)
+        return 1
+
     centroids = coords[conn].mean(axis=1)
     pairs = _internal_pairs(conn)
     dcc = np.asarray([np.linalg.norm(centroids[j] - centroids[i]) for i, j in pairs], dtype=float)
@@ -138,8 +184,8 @@ def run(args: argparse.Namespace) -> int:
         raise RuntimeError("invalid internal FV centroid spacing")
     dcc_min = float(np.min(dcc))
 
-    D_e = float(endpoint["electron_diffusion_avg"])
-    mu_e = float(endpoint["electron_mobility_avg"])
+    D_e = transport["electron_diffusion_avg"]
+    mu_e = transport["electron_mobility_avg"]
     D_eps = ENERGY_TRANSPORT_FACTOR * D_e
     tau_e_particle_diff = dcc_min * dcc_min / (2.0 * D_e)
     tau_e_energy_diff = dcc_min * dcc_min / (2.0 * D_eps)
@@ -157,12 +203,11 @@ def run(args: argparse.Namespace) -> int:
     ion_transport = {}
     ion_tau_diff = []
     ion_tau_drift = []
-    Emax = float(np.max(approx_e))
     for sp in ("O2p", "Om", "Op"):
-        D = float(endpoint[f"Dmix_{sp}_avg"])
-        mu = float(endpoint[f"mu_{sp}_avg"])
+        D = transport[f"Dmix_{sp}_avg"]
+        mu = transport[f"mu_{sp}_avg"]
         td = dcc_min * dcc_min / (2.0 * D)
-        te = dcc_min / (mu * Emax)
+        te = float(np.min(dcc[mask] / (mu * approx_e[mask]))) if np.any(mask) else math.inf
         ion_transport[sp] = {"D_avg_m2_s": D, "mu_avg_m2_V_s": mu,
                              "tau_diff_min_s": td, "tau_drift_supporting_s": te}
         ion_tau_diff.append(td)
