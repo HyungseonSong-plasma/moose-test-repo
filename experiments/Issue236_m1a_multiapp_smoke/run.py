@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
-"""Issue #236 / #234 M1-A: one-parent-interval multirate MultiApp construction smoke.
+"""Issue #236 / #234 M1-A: one-parent-interval multirate MultiApp smoke.
 
-This stage is deliberately narrower than the M1 timestep-convergence campaign.
-It proves that the accepted production composition can be partitioned into a
-no-solve heavy-state parent and a subcycled electron/energy/Poisson child
-without changing the accepted fast-system physics objects.
+The split is deliberately asymmetric:
 
-The parent freezes heavy state for one synchronization interval. The child owns
-only n_e, n_epsilon, and potential_plasma as nonlinear variables. Heavy state
-appears in the child only as FV auxiliary transfer targets. Endpoint fast state
-is copied back to parent mirrors as a synchronization smoke; this is not the
-final interval-integrated heavy-source conservation contract.
+* parent: solves the heavy-fluid/heavy-species system once with dt_h;
+* child: solves only n_e, n_epsilon, and potential_plasma and sub-cycles with dt_e.
+
+At TIMESTEP_BEGIN the parent heavy state is copied to child auxiliary mirrors,
+the electron/energy/Poisson child advances to the parent target time using
+sub-cycling, and the child fast state is copied back to parent auxiliary
+mirrors before the heavy parent solve. This is a construction/runtime smoke,
+not the final interval-integrated source-conservation contract.
 """
 from __future__ import annotations
 
@@ -34,6 +34,7 @@ SOURCE = w5.SOURCE
 
 DT_H_S = 1.0e-8
 DT_E_SMOKE_S = 1.0e-10
+
 FAST_SOLVER_VARIABLES = ("n_e", "n_epsilon", "potential_plasma")
 HEAVY_TRANSFER_VARIABLES = (
     "p",
@@ -44,8 +45,11 @@ HEAVY_TRANSFER_VARIABLES = (
     "w_Op",
     "w_Os",
 )
-HEAVY_AUX_VARIABLES = ("u", "v", *HEAVY_TRANSFER_VARIABLES)
-EXPECTED_VARIABLES = set((*HEAVY_AUX_VARIABLES, *FAST_SOLVER_VARIABLES))
+HEAVY_SOLVER_VARIABLES = ("u", "v", *HEAVY_TRANSFER_VARIABLES)
+
+# Backward-compatible name used by the CI wrapper for child auxiliary ownership.
+HEAVY_AUX_VARIABLES = HEAVY_SOLVER_VARIABLES
+EXPECTED_VARIABLES = set((*HEAVY_SOLVER_VARIABLES, *FAST_SOLVER_VARIABLES))
 
 PARENT_FAST_PPS = {
     "m1_parent_n_e_hat_avg": "n_e",
@@ -108,6 +112,14 @@ def _move_variables_to_aux(text: str, names: Iterable[str]) -> str:
     return text
 
 
+def _remove_solver_variables(text: str, names: Iterable[str]) -> str:
+    for name in names:
+        path = f"Variables/{name}"
+        if mb.has_block(text, path):
+            text = mb.remove_block(text, path)
+    return text
+
+
 def _remove_top_if_present(text: str, name: str) -> str:
     return mb.remove_block(text, name) if mb.has_block(text, name) else text
 
@@ -128,8 +140,48 @@ def _insert_fast_pp(text: str, name: str, functor: str) -> str:
     )
 
 
+def _remove_equations_owned_by(
+    text: str, owners: set[str]
+) -> tuple[str, set[str]]:
+    removed_bc_names: set[str] = set()
+    for section in ("FVKernels", "FVBCs"):
+        for path in list(_children(text, section)):
+            variable = mp.unquote(mp.get_parameter(text, path, "variable"))
+            if variable in owners:
+                if section == "FVBCs":
+                    removed_bc_names.add(_name(path))
+                text = mb.remove_block(text, path)
+    return text, removed_bc_names
+
+
+def _remove_heavy_equations(text: str) -> tuple[str, set[str]]:
+    return _remove_equations_owned_by(text, set(HEAVY_SOLVER_VARIABLES))
+
+
+def _remove_fast_equations(text: str) -> tuple[str, set[str]]:
+    return _remove_equations_owned_by(text, set(FAST_SOLVER_VARIABLES))
+
+
+def _remove_postprocessors_for_missing_bcs(text: str, removed_bcs: set[str]) -> str:
+    removed_pp: set[str] = set()
+    changed = True
+    while changed:
+        changed = False
+        for path in list(_children(text, "Postprocessors")):
+            if not mb.has_block(text, path):
+                continue
+            fvbcs = set(mp.words(mp.get_parameter(text, path, "fvbcs")))
+            value = mp.unquote(mp.get_parameter(text, path, "value"))
+            if (fvbcs & removed_bcs) or (value in removed_pp):
+                removed_pp.add(_name(path))
+                text = mb.remove_block(text, path)
+                changed = True
+    return text
+
+
 def _set_parent_execution(text: str) -> str:
-    text = mp.upsert_parameter(text, "Problem", "solve", "false")
+    # Parent is the slow heavy solve. It must not be a no-solve carrier.
+    text = mp.upsert_parameter(text, "Problem", "solve", "true")
     text = mp.upsert_parameter(text, "Executioner", "dt", f"{DT_H_S:.17g}")
     text = mp.upsert_parameter(text, "Executioner", "end_time", f"{DT_H_S:.17g}")
     return text
@@ -143,22 +195,16 @@ def build_parent_input(production_text: str) -> str:
             f"expected {sorted(EXPECTED_VARIABLES)}"
         )
 
-    text = _move_variables_to_aux(production_text, sorted(EXPECTED_VARIABLES))
-    text = _remove_top_if_present(text, "Variables")
+    # Parent owns the slow heavy/flow nonlinear system. Fast variables are
+    # mirrors only, populated from the electron child before the heavy solve.
+    text = _move_variables_to_aux(production_text, FAST_SOLVER_VARIABLES)
+    text, _removed_fast_bcs = _remove_fast_equations(text)
 
-    # M1-A parent is a synchronization/state carrier only.
-    for top in (
-        "GlobalParams",
-        "Materials",
-        "FunctorMaterials",
-        "UserObjects",
-        "FVKernels",
-        "FVBCs",
-        "AuxKernels",
-        "Postprocessors",
-        "VectorPostprocessors",
-    ):
-        text = _remove_top_if_present(text, top)
+    # Production diagnostics are not part of the M1-A ownership contract and
+    # frequently bind to fast-only BCs/objects. Keep the heavy physics objects,
+    # but rebuild only the three synchronization observables.
+    text = _remove_top_if_present(text, "Postprocessors")
+    text = _remove_top_if_present(text, "VectorPostprocessors")
 
     text = _set_parent_execution(text)
     for name, functor in PARENT_FAST_PPS.items():
@@ -171,7 +217,7 @@ def build_parent_input(production_text: str) -> str:
         """  [electron]
     type = TransientMultiApp
     input_files = 'electron_sub.i'
-    execute_on = TIMESTEP_END
+    execute_on = TIMESTEP_BEGIN
     sub_cycling = true
     output_sub_cycles = true
     print_sub_cycles = false
@@ -201,35 +247,6 @@ def build_parent_input(production_text: str) -> str:
     variable = '{fast_words}'
   []""",
     )
-    return text
-
-
-def _remove_heavy_equations(text: str) -> tuple[str, set[str]]:
-    removed_bc_names: set[str] = set()
-    for section in ("FVKernels", "FVBCs"):
-        for path in list(_children(text, section)):
-            variable = mp.unquote(mp.get_parameter(text, path, "variable"))
-            if variable and variable not in FAST_SOLVER_VARIABLES:
-                if section == "FVBCs":
-                    removed_bc_names.add(_name(path))
-                text = mb.remove_block(text, path)
-    return text, removed_bc_names
-
-
-def _remove_postprocessors_for_missing_bcs(text: str, removed_bcs: set[str]) -> str:
-    removed_pp: set[str] = set()
-    changed = True
-    while changed:
-        changed = False
-        for path in list(_children(text, "Postprocessors")):
-            if not mb.has_block(text, path):
-                continue
-            fvbcs = set(mp.words(mp.get_parameter(text, path, "fvbcs")))
-            value = mp.unquote(mp.get_parameter(text, path, "value"))
-            if (fvbcs & removed_bcs) or (value in removed_pp):
-                removed_pp.add(_name(path))
-                text = mb.remove_block(text, path)
-                changed = True
     return text
 
 
@@ -263,7 +280,11 @@ def build_child_input(production_text: str, *, dt_e: float) -> str:
             f"expected {sorted(EXPECTED_VARIABLES)}"
         )
 
-    text = _move_variables_to_aux(production_text, HEAVY_AUX_VARIABLES)
+    # Child owns only electron density, electron energy, and Poisson.
+    # The heavy thermochemical state needed by rates/transport is transferred
+    # into auxiliary mirrors. Flow velocity has no ownership/use in the child.
+    text = _move_variables_to_aux(production_text, HEAVY_TRANSFER_VARIABLES)
+    text = _remove_solver_variables(text, ("u", "v"))
     text, removed_bcs = _remove_heavy_equations(text)
     text = _remove_postprocessors_for_missing_bcs(text, removed_bcs)
     text = _prune_child_flow_ownership(text)
@@ -279,21 +300,64 @@ def build_child_input(production_text: str, *, dt_e: float) -> str:
     return text
 
 
+def _owned_variables(text: str, section: str) -> list[str]:
+    result: list[str] = []
+    for path in _children(text, section):
+        variable = mp.unquote(mp.get_parameter(text, path, "variable"))
+        if variable:
+            result.append(variable)
+    return result
+
+
 def _audit_parent(text: str) -> dict[str, Any]:
     checks: dict[str, bool] = {}
-    checks["problem_no_solve"] = (
-        (mp.unquote(mp.get_parameter(text, "Problem", "solve")) or "").lower() == "false"
-    )
+    solve = (mp.unquote(mp.get_parameter(text, "Problem", "solve")) or "true").lower()
+    checks["parent_solve_enabled"] = solve == "true"
     checks["parent_dt"] = math.isclose(
         float(mp.get_parameter(text, "Executioner", "dt") or "nan"), DT_H_S
     )
     checks["parent_end_time"] = math.isclose(
         float(mp.get_parameter(text, "Executioner", "end_time") or "nan"), DT_H_S
     )
-    checks["no_parent_solver_variables"] = not mb.has_block(text, "Variables")
-    for name in EXPECTED_VARIABLES:
-        checks[f"parent_aux:{name}"] = mb.has_block(text, f"AuxVariables/{name}")
-    checks["multiapp_type"] = mp.get_parameter(text, "MultiApps/electron", "type") == "TransientMultiApp"
+
+    for name in HEAVY_SOLVER_VARIABLES:
+        checks[f"parent_heavy_solver:{name}"] = mb.has_block(text, f"Variables/{name}")
+        checks[f"parent_heavy_not_aux:{name}"] = not mb.has_block(text, f"AuxVariables/{name}")
+    for name in FAST_SOLVER_VARIABLES:
+        checks[f"parent_fast_aux:{name}"] = mb.has_block(text, f"AuxVariables/{name}")
+        checks[f"parent_fast_not_solver:{name}"] = not mb.has_block(text, f"Variables/{name}")
+
+    kernel_vars = _owned_variables(text, "FVKernels")
+    bc_vars = _owned_variables(text, "FVBCs")
+    checks["parent_kernels_heavy_only"] = bool(kernel_vars) and all(
+        variable in HEAVY_SOLVER_VARIABLES for variable in kernel_vars
+    )
+    checks["parent_bcs_heavy_only"] = all(
+        variable in HEAVY_SOLVER_VARIABLES for variable in bc_vars
+    )
+    checks["parent_has_heavy_time_owners"] = (
+        mb.has_block(text, "FVKernels/mass_time")
+        and mb.has_block(text, "FVKernels/O2s_time")
+        and mb.has_block(text, "FVKernels/O2p_time")
+        and mb.has_block(text, "FVKernels/O_time")
+        and mb.has_block(text, "FVKernels/Om_time")
+        and mb.has_block(text, "FVKernels/Op_time")
+        and mb.has_block(text, "FVKernels/Os_time")
+    )
+    checks["parent_has_no_electron_time"] = not mb.has_block(text, "FVKernels/n_e_time")
+    checks["parent_has_no_energy_time"] = not mb.has_block(text, "FVKernels/s5r_n_epsilon_time")
+    checks["parent_has_no_poisson"] = (
+        not mb.has_block(text, "FVKernels/r31_phi_diffusion")
+        and not mb.has_block(text, "FVKernels/r31_phi_charge_source")
+    )
+
+    checks["multiapp_type"] = (
+        mp.get_parameter(text, "MultiApps/electron", "type") == "TransientMultiApp"
+    )
+    checks["multiapp_at_timestep_begin"] = (
+        mp.unquote(mp.get_parameter(text, "MultiApps/electron", "execute_on"))
+        == "TIMESTEP_BEGIN"
+    )
     checks["subcycling"] = (
         (mp.unquote(mp.get_parameter(text, "MultiApps/electron", "sub_cycling")) or "").lower()
         == "true"
@@ -320,8 +384,15 @@ def _audit_parent(text: str) -> dict[str, Any]:
     checks["fast_transfer_target"] = tuple(
         mp.words(mp.get_parameter(text, "Transfers/fast_from_electron", "variable"))
     ) == FAST_SOLVER_VARIABLES
+
     failed = sorted(key for key, ok in checks.items() if not ok)
-    return {"status": "PASS" if not failed else "FAIL", "checks": checks, "failed_checks": failed}
+    return {
+        "status": "PASS" if not failed else "FAIL",
+        "checks": checks,
+        "failed_checks": failed,
+        "kernel_variables": kernel_vars,
+        "bc_variables": bc_vars,
+    }
 
 
 def _audit_child(text: str, *, dt_e: float) -> dict[str, Any]:
@@ -329,21 +400,20 @@ def _audit_child(text: str, *, dt_e: float) -> dict[str, Any]:
     for name in FAST_SOLVER_VARIABLES:
         checks[f"fast_solver:{name}"] = mb.has_block(text, f"Variables/{name}")
         checks[f"fast_not_aux:{name}"] = not mb.has_block(text, f"AuxVariables/{name}")
-    for name in HEAVY_AUX_VARIABLES:
+    for name in HEAVY_TRANSFER_VARIABLES:
         checks[f"heavy_aux:{name}"] = mb.has_block(text, f"AuxVariables/{name}")
         checks[f"heavy_not_solver:{name}"] = not mb.has_block(text, f"Variables/{name}")
+    for name in ("u", "v"):
+        checks[f"flow_absent:{name}"] = (
+            not mb.has_block(text, f"Variables/{name}")
+            and not mb.has_block(text, f"AuxVariables/{name}")
+        )
 
-    kernel_vars: list[str] = []
-    for path in _children(text, "FVKernels"):
-        variable = mp.unquote(mp.get_parameter(text, path, "variable"))
-        if variable:
-            kernel_vars.append(variable)
-    bc_vars: list[str] = []
-    for path in _children(text, "FVBCs"):
-        variable = mp.unquote(mp.get_parameter(text, path, "variable"))
-        if variable:
-            bc_vars.append(variable)
-    checks["all_kernel_owners_fast"] = all(v in FAST_SOLVER_VARIABLES for v in kernel_vars)
+    kernel_vars = _owned_variables(text, "FVKernels")
+    bc_vars = _owned_variables(text, "FVBCs")
+    checks["all_kernel_owners_fast"] = bool(kernel_vars) and all(
+        v in FAST_SOLVER_VARIABLES for v in kernel_vars
+    )
     checks["all_bc_owners_fast"] = all(v in FAST_SOLVER_VARIABLES for v in bc_vars)
     checks["poisson_kernel_present"] = (
         mb.has_block(text, "FVKernels/r31_phi_diffusion")
@@ -369,7 +439,9 @@ def _audit_child(text: str, *, dt_e: float) -> dict[str, Any]:
 
 
 def build_split(*, dt_e: float = DT_E_SMOKE_S) -> tuple[str, str, dict[str, Any]]:
-    production_text, production_meta = w5._build_case(dt_s=w5.BASELINE_DT_S, uniform_refine=0)
+    production_text, production_meta = w5._build_case(
+        dt_s=w5.BASELINE_DT_S, uniform_refine=0
+    )
     parent = build_parent_input(production_text)
     child = build_child_input(production_text, dt_e=dt_e)
     parent_audit = _audit_parent(parent)
@@ -377,7 +449,11 @@ def build_split(*, dt_e: float = DT_E_SMOKE_S) -> tuple[str, str, dict[str, Any]
     meta = {
         "issue": 236,
         "parent_issue": 234,
-        "claim": "one_interval_actual_transient_multiapp_construction_smoke",
+        "claim": "heavy_parent_plus_subcycled_electron_poisson_smoke",
+        "operator_split": (
+            "TIMESTEP_BEGIN heavy->child transfer; electron/energy/Poisson "
+            "subcycle; fast->parent transfer; one heavy parent solve"
+        ),
         "dt_h_s": DT_H_S,
         "dt_e_s": dt_e,
         "subcycles_expected": int(round(DT_H_S / dt_e)),
@@ -421,7 +497,14 @@ def _stage(out: Path, *, dt_e: float) -> tuple[Path, dict[str, Any]]:
         input_text=parent,
         input_name="input.i",
         purge_directory_names=(".jitcache", "checkpoint", "checkpoints"),
-        purge_patterns=("input_out*", "electron_sub*", "*.log", "*.e", "*.exo", "prepare_evidence.json"),
+        purge_patterns=(
+            "input_out*",
+            "electron_sub*",
+            "*.log",
+            "*.e",
+            "*.exo",
+            "prepare_evidence.json",
+        ),
     )
     (case_dir / "electron_sub.i").write_text(child, encoding="utf-8")
     meta["staging"] = stage
@@ -493,7 +576,7 @@ def _runtime_analysis(
         ("m1_parent_n_epsilon_hat_avg", "m1_child_n_epsilon_hat_avg"),
         ("m1_parent_phi_avg", "m1_child_phi_avg"),
     )
-    mirror = {}
+    mirror: dict[str, Any] = {}
     for parent_key, child_key in mirror_pairs:
         if parent_key not in parent_final or child_key not in child_final:
             gates[f"mirror_column:{parent_key}"] = False
