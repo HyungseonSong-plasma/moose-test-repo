@@ -5,7 +5,7 @@ This wrapper keeps the accepted multirate schedule and fast electron+Poisson
 coupling from run_live_ci_dr.py, including frozen heavy-transport electron
 density, thermal electron particle/energy wall losses, and SEE boundary
 sources. It removes only volumetric electron number-source and electron-energy
-source/sink kernels from the fast child and restores the missing conservative
+source/sink kernels from the fast child and requires the canonical conservative
 electron-energy electrostatic drift term.
 
 Fast child evolution therefore contains:
@@ -83,34 +83,6 @@ def _remove_volumetric_electron_chemistry(text: str) -> str:
     return text
 
 
-def _restore_energy_drift(text: str) -> str:
-    """Restore n_epsilon drift by cloning the accepted n_e drift topology."""
-    if not base.mb.has_block(text, _PARTICLE_DRIFT):
-        raise base.Issue236Error(f"missing particle drift owner: {_PARTICLE_DRIFT}")
-    if base.mb.has_block(text, _ENERGY_DRIFT):
-        raise base.Issue236Error(f"duplicate electron-energy drift owner: {_ENERGY_DRIFT}")
-
-    text = base.mb.insert_child_block(
-        text,
-        "FVKernels",
-        f"""  [{_ENERGY_DRIFT_NAME}]
-    type = PhysicsFVElectrostaticDrift
-    variable = n_epsilon
-    mobility = electron_energy_mobility
-  []""",
-    )
-
-    for parameter in _DRIFT_TOPOLOGY_PARAMETERS:
-        value = base.mp.get_parameter(text, _PARTICLE_DRIFT, parameter)
-        if value is None:
-            raise base.Issue236Error(
-                f"particle drift lacks required topology parameter '{parameter}'"
-            )
-        text = base.mp.upsert_parameter(text, _ENERGY_DRIFT, parameter, value)
-
-    return text
-
-
 def _energy_drift_matches_particle_topology(text: str) -> bool:
     """Check that energy drift differs from particle drift only by state/mobility."""
     if not base.mb.has_block(text, _PARTICLE_DRIFT) or not base.mb.has_block(
@@ -139,9 +111,16 @@ def _energy_drift_matches_particle_topology(text: str) -> bool:
 
 
 def _build_child_input(production_text: str, *, dt_e: float) -> str:
-    """Build the no-chemistry child and restore the complete energy transport pair."""
+    """Build the no-chemistry child while preserving canonical energy transport."""
     text = _dr_build_child_input(production_text, dt_e=dt_e)
-    text = _restore_energy_drift(text)
+    if not base.mb.has_block(text, _ENERGY_DRIFT):
+        raise base.Issue236Error(
+            "canonical Stage-5 child lacks electron-energy electrostatic drift"
+        )
+    if not _energy_drift_matches_particle_topology(text):
+        raise base.Issue236Error(
+            "canonical electron-energy drift does not match particle-drift topology"
+        )
     return _remove_volumetric_electron_chemistry(text)
 
 

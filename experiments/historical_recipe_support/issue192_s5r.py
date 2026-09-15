@@ -216,6 +216,7 @@ def _insert_energy_state(text: str) -> str:
         "FunctorMaterials/s5r_mean_energy",
         "FVKernels/s5r_n_epsilon_time",
         "FVKernels/s5r_n_epsilon_diffusion",
+        "FVKernels/s5r_n_epsilon_drift",
     ):
         mb.require_absent(text, path)
 
@@ -273,6 +274,30 @@ def _insert_energy_state(text: str) -> str:
     coeff = electron_energy_diffusion
     block = plasma""",
     )
+    text = _insert_kernel(
+        text,
+        "s5r_n_epsilon_drift",
+        """    type = PhysicsFVElectrostaticDrift
+    variable = n_epsilon
+    mobility = electron_energy_mobility
+    block = plasma""",
+    )
+    for parameter in (
+        "potential",
+        "carrier",
+        "charge_number",
+        "advected_interp_method",
+        "boundaries_to_avoid",
+        "block",
+    ):
+        value = mp.get_parameter(text, "FVKernels/n_e_drift", parameter)
+        if value is None:
+            raise Issue192S5RError(
+                f"particle drift lacks required energy-transport topology parameter {parameter!r}"
+            )
+        text = mp.upsert_parameter(
+            text, "FVKernels/s5r_n_epsilon_drift", parameter, value
+        )
     return text
 
 
@@ -673,6 +698,32 @@ def audit_s5r_input(text: str) -> dict[str, Any]:
         and mp.get_parameter(text, "FunctorMaterials/electron_transport", "bounds_policy")
         == "error"
     )
+    energy_drift_path = "FVKernels/s5r_n_epsilon_drift"
+    particle_drift_path = "FVKernels/n_e_drift"
+    energy_drift_topology = (
+        "potential",
+        "carrier",
+        "charge_number",
+        "advected_interp_method",
+        "boundaries_to_avoid",
+        "block",
+    )
+    checks["solved_energy_transport_complete"] = (
+        mb.has_block(text, "FVKernels/s5r_n_epsilon_time")
+        and mb.has_block(text, "FVKernels/s5r_n_epsilon_diffusion")
+        and mb.has_block(text, energy_drift_path)
+        and mp.get_parameter(text, energy_drift_path, "type")
+        == "PhysicsFVElectrostaticDrift"
+        and mp.get_parameter(text, energy_drift_path, "variable") == "n_epsilon"
+        and mp.get_parameter(text, energy_drift_path, "mobility")
+        == "electron_energy_mobility"
+        and all(
+            mp.get_parameter(text, energy_drift_path, parameter)
+            == mp.get_parameter(text, particle_drift_path, parameter)
+            for parameter in energy_drift_topology
+        )
+    )
+
     checks["solved_poisson_feedback_preserved"] = (
         mp.get_parameter(text, "FVKernels/n_e_drift", "potential") == FEEDBACK_POTENTIAL
         and mp.get_parameter(text, "FVKernels/O2p_electrostatic_drift", "potential")
