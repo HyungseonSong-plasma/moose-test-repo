@@ -1,0 +1,4 @@
+Issue-236 M1-A CI trigger.
+
+Only update this file after the runner, workflow, physics code, and generated-input contract are all ready for an intentional CI run.
+Changing experiment/helper/source files alone must not trigger the Issue-236 smoke workflow.
