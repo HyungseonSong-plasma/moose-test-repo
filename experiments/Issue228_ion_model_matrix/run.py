@@ -8,7 +8,7 @@ Only the charged-heavy diffusion law changes.
 Cases
 -----
 mixture
-    Production QPXFVMixtureAveragedDiffusion for O2+, O-, O+.
+    Production PhysicsFVMixtureAveragedDiffusion for O2+, O-, O+.
 no_molar_grad
     Same mixture-averaged kernel and transport coefficients, but disables only
     the mean-molar-mass-gradient contribution for the charged species.
@@ -43,6 +43,7 @@ CHARGED = (
     ("Om", "w_Om", "D_mix_Om", "mu_Om", -1),
     ("Op", "w_Op", "D_mix_Op", "mu_Op", 1),
 )
+PRODUCTION_DIFFUSION_TYPE = "PhysicsFVMixtureAveragedDiffusion"
 
 
 def _write(path: Path, payload: Any) -> None:
@@ -63,8 +64,11 @@ def _require_production_charged_contract(text: str) -> None:
         dpath = _diff_path(species)
         if not mb.has_block(text, dpath):
             raise RuntimeError(f"missing production charged diffusion block: {dpath}")
-        if mp.get_parameter(text, dpath, "type") != "QPXFVMixtureAveragedDiffusion":
-            raise RuntimeError(f"unexpected production diffusion type at {dpath}")
+        if mp.get_parameter(text, dpath, "type") != PRODUCTION_DIFFUSION_TYPE:
+            raise RuntimeError(
+                f"unexpected production diffusion type at {dpath}: "
+                f"{mp.get_parameter(text, dpath, 'type')!r}"
+            )
         if mp.get_parameter(text, dpath, "variable") != variable:
             raise RuntimeError(f"unexpected production variable at {dpath}")
         if mp.get_parameter(text, dpath, "diffusivity") != diffusivity:
@@ -192,10 +196,10 @@ def self_test() -> dict[str, Any]:
             checks[f"{mode}:{species}:drift_potential"] = mp.get_parameter(text, drift, "potential") == "potential_plasma"
 
             if mode == "mixture":
-                checks[f"{mode}:{species}:diff_type"] = mp.get_parameter(text, dpath, "type") == "QPXFVMixtureAveragedDiffusion"
+                checks[f"{mode}:{species}:diff_type"] = mp.get_parameter(text, dpath, "type") == PRODUCTION_DIFFUSION_TYPE
                 checks[f"{mode}:{species}:molar_grad"] = mp.get_parameter(text, dpath, "include_molar_mass_gradient") == "true"
             elif mode == "no_molar_grad":
-                checks[f"{mode}:{species}:diff_type"] = mp.get_parameter(text, dpath, "type") == "QPXFVMixtureAveragedDiffusion"
+                checks[f"{mode}:{species}:diff_type"] = mp.get_parameter(text, dpath, "type") == PRODUCTION_DIFFUSION_TYPE
                 checks[f"{mode}:{species}:molar_grad_off"] = mp.get_parameter(text, dpath, "include_molar_mass_gradient") == "false"
             else:
                 mat_name = f"r228_rhoD_{species}"
