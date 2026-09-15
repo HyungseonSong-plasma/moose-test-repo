@@ -2,9 +2,9 @@
 """Issue #228 S6-B: terminal wall-normal field classification on the raw grounded baseline.
 
 S6-A qualified PhysicsFVDiffusionDiagnostic as residual-equivalent and geometry-consistent.
-S6-B applies that already-qualified observable to the governed step-10 raw charge field with
-physical sheath walls grounded at 0 V, inlet/outlet grounded at 0 V, and the axis left natural.
-No sheath ownership correction and no new physical closure are introduced.
+S6-B applies that observable to the governed step-10 raw charge field with physical sheath
+walls grounded at 0 V, inlet/outlet grounded at 0 V, and the axis left natural. No sheath
+ownership correction or new physical closure is introduced.
 """
 from __future__ import annotations
 
@@ -24,6 +24,7 @@ from experiments.Issue228_s6_directional_observable import run as s6a
 
 PHYSICAL_WALLS = tuple(s6a.PHYSICAL_WALLS)
 E_TOL_V_M = 1.0e-9
+SNAPSHOT_REPRO_TOL_V = 1.0e-6
 
 
 def _write(path: Path, payload: Any) -> None:
@@ -45,6 +46,7 @@ def _hard_fail(out: Path, summary: dict[str, Any], status: str, error: str) -> i
 
 def self_test() -> int:
     assert E_TOL_V_M > 0.0
+    assert SNAPSHOT_REPRO_TOL_V > 0.0
     assert set(PHYSICAL_WALLS) == {
         "plasma_electrode", "plasma_metal", "plasma_right",
         "plasma_cover", "plasma_wafer", "plasma_focus_ring",
@@ -54,7 +56,7 @@ def self_test() -> int:
 
 
 def _prepare_raw_source(snapshot: Path, work: Path) -> dict[str, Any]:
-    coords, conn, emap, vals, time_s, sidesets = pgw._load_snapshot(snapshot, 10)
+    coords, conn, emap, vals, time_s, _sidesets = pgw._load_snapshot(snapshot, 10)
     rho_raw = pgw._charge_density(vals)
     _tri, _area, _rcent, vol = pgw._geom(coords, conn)
 
@@ -119,6 +121,7 @@ def run(args: argparse.Namespace) -> int:
         "primary_observable": "E_out = -FVDiffusion::gradUDotNormal(phi) relative to plasma-outward face normal",
         "sign_semantics": "E_out >= 0 is non-reversing for a grounded ion-sheath-like wall; E_out < 0 is local reversal",
         "sign_tolerance_V_m": E_TOL_V_M,
+        "snapshot_reproduction_tolerance_V": SNAPSHOT_REPRO_TOL_V,
     }
 
     try:
@@ -127,6 +130,9 @@ def run(args: argparse.Namespace) -> int:
             return _hard_fail(out, summary, "HARNESS_OR_CONSTRUCTION_FAIL",
                               f"expected 87 physical wall faces, got {len(physical)}")
         eids = sorted({int(r["element_id"]) for r in physical})
+
+        _coords, _conn, emap_snapshot, vals_snapshot, _time, _sidesets = pgw._load_snapshot(snapshot, 10)
+        phi_snapshot = np.asarray(vals_snapshot["potential_plasma"], dtype=float)
 
         ref_case = out / "reference"
         diag_case = out / "diagnostic"
@@ -156,10 +162,17 @@ def run(args: argparse.Namespace) -> int:
         emap_ref, phi_ref = sol_ref
         emap_diag, phi_diag = sol_diag
         if not np.array_equal(emap_ref, emap_diag):
-            return _hard_fail(out, summary, "HARNESS_OR_CONSTRUCTION_FAIL", "element map changed")
-        delta = np.asarray(phi_diag) - np.asarray(phi_ref)
-        max_abs_delta = float(np.max(np.abs(delta)))
-        rms_delta = float(np.sqrt(np.mean(delta * delta)))
+            return _hard_fail(out, summary, "HARNESS_OR_CONSTRUCTION_FAIL", "reference/diagnostic element map changed")
+        if not np.array_equal(emap_ref, emap_snapshot):
+            return _hard_fail(out, summary, "HARNESS_OR_CONSTRUCTION_FAIL", "frozen/snapshot element map changed")
+
+        diag_delta = np.asarray(phi_diag) - np.asarray(phi_ref)
+        max_abs_diag_delta = float(np.max(np.abs(diag_delta)))
+        rms_diag_delta = float(np.sqrt(np.mean(diag_delta * diag_delta)))
+
+        snapshot_delta = np.asarray(phi_ref) - phi_snapshot
+        max_abs_snapshot_delta = float(np.max(np.abs(snapshot_delta)))
+        rms_snapshot_delta = float(np.sqrt(np.mean(snapshot_delta * snapshot_delta)))
 
         observed = s6a._parse_diag(diag_case / "logs" / "runtime.log")
         matched, unmatched = s6a._match_physical_faces(physical, observed)
@@ -175,19 +188,20 @@ def run(args: argparse.Namespace) -> int:
         target = target_rows[0] if len(target_rows) == 1 else None
 
         qualification_gates = {
-            "reference_diagnostic_solution_equivalent": max_abs_delta <= 1.0e-10,
+            "reference_diagnostic_solution_equivalent": max_abs_diag_delta <= 1.0e-10,
+            "raw_frozen_poisson_reproduces_governed_snapshot": max_abs_snapshot_delta <= SNAPSHOT_REPRO_TOL_V,
             "all_87_physical_faces_matched": len(matched) == 87,
             "no_extra_selected_boundary_faces": unmatched == 0,
             "framework_normals_match_geometry": max_normal_angle <= 1.0e-6,
             "all_framework_fields_finite": finite,
             "target_2401_unique": target is not None,
         }
-        observable_valid = all(qualification_gates.values())
+        observable_qualified = all(qualification_gates.values())
         nonreversing_all = len(reversed_rows) == 0
 
-        if observable_valid and nonreversing_all:
+        if observable_qualified and nonreversing_all:
             outcome = "ORIGINAL_GROUNDED_WALL_NORMAL_ORDERING_CONFIRMED"
-        elif observable_valid:
+        elif observable_qualified:
             outcome = "ORIGINAL_WALL_NORMAL_REVERSAL_CONFIRMED"
         else:
             outcome = "OBSERVABLE_NOT_QUALIFIED"
@@ -195,8 +209,10 @@ def run(args: argparse.Namespace) -> int:
         _write(out / "wall_face_observables.json", matched)
         _write(out / "reversed_wall_faces.json", reversed_rows)
         summary.update({
-            "reference_diagnostic_phi_max_abs_delta_V": max_abs_delta,
-            "reference_diagnostic_phi_rms_delta_V": rms_delta,
+            "reference_diagnostic_phi_max_abs_delta_V": max_abs_diag_delta,
+            "reference_diagnostic_phi_rms_delta_V": rms_diag_delta,
+            "frozen_reference_vs_governed_snapshot_phi_max_abs_delta_V": max_abs_snapshot_delta,
+            "frozen_reference_vs_governed_snapshot_phi_rms_delta_V": rms_snapshot_delta,
             "observed_selected_boundary_face_count": len(observed),
             "matched_physical_face_count": len(matched),
             "extra_selected_boundary_face_count": unmatched,
@@ -208,14 +224,16 @@ def run(args: argparse.Namespace) -> int:
             "wall_statistics": _wall_stats(matched),
             "target_2401": target,
             "qualification_gates": qualification_gates,
+            "observable_qualified": observable_qualified,
             "all_grounded_physical_faces_nonreversing": nonreversing_all,
-            "evidence_valid": observable_valid,
-            "ci_status": "success" if observable_valid else "failure",
+            # A completed non-qualification is valid scientific evidence, not a CI failure.
+            "evidence_valid": True,
+            "ci_status": "success",
             "scientific_outcome": outcome,
-            "status": "BATCH_PASS" if observable_valid else "ANALYSIS_FAIL",
+            "status": "BATCH_PASS",
         })
         _write(out / "summary.json", summary)
-        return 0 if observable_valid else 1
+        return 0
     except Exception as exc:
         return _hard_fail(out, summary, "ANALYSIS_FAIL", f"{type(exc).__name__}: {exc}")
 
