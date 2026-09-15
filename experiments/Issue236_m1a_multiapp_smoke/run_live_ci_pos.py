@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Live-electron CI with solver-level positivity and 100:1 subcycling.
+"""Live-electron CI with electron-first coupling, solver-level positivity, and 100:1 subcycling.
 
 Schedule:
 * heavy/ion parent: dt_h = 1e-7 s, 10 steps, t_end = 1e-6 s;
 * electron density + electron energy + Poisson child: dt_e = 1e-9 s;
-* 100 electron subcycles follow each heavy step (1000 electron steps total);
+* 100 electron subcycles run before each heavy step (1000 electron steps total);
 * electron particle and energy surface losses remain active.
 
 The child nonlinear solve uses PETSc's reduced-space variational-inequality
@@ -12,6 +12,10 @@ Newton method with explicit lower bounds on the normalized electron density and
 normalized electron-energy density. Existing trial-state material guards remain
 as defensive diagnostics, but positivity ownership belongs to the nonlinear
 solver rather than to individual reaction/material closures.
+
+The MultiApp executes at TIMESTEP_BEGIN so each interval uses the old heavy
+state to relax the fast electron/energy/Poisson subsystem first. The resulting
+fast state is copied back to the parent before the heavy nonlinear solve.
 """
 from __future__ import annotations
 
@@ -32,8 +36,11 @@ base = live.base
 base.DT_H_S = live.HEAVY_DT_S
 base.DT_E_SMOKE_S = live.ELECTRON_DT_S
 
+_live_build_parent_input = base.build_parent_input
 _live_build_child_input = base.build_child_input
+_live_audit_parent = base._audit_parent
 _live_audit_child = base._audit_child
+_live_build_split = base.build_split
 _live_self_test = base.self_test
 
 _ZERO_RATE_GUARD_TYPES = (
@@ -47,6 +54,15 @@ _NE_LOWER_BOUND = "issue236_n_e_lower_bound"
 _EPS_LOWER_BOUND = "issue236_n_epsilon_lower_bound"
 _NORMALIZED_POSITIVITY_FLOOR = 1.0e-12
 _VI_SNES_TYPE = "vinewtonrsls"
+
+
+def _build_parent_input(production_text: str) -> str:
+    text = _live_build_parent_input(production_text)
+    # Electron-first Lie split: heavy state -> child at TIMESTEP_BEGIN,
+    # child subcycles to the target time, fast state -> parent, then heavy solve.
+    return base.mp.upsert_parameter(
+        text, "MultiApps/electron", "execute_on", "TIMESTEP_BEGIN"
+    )
 
 
 def _enable_trial_state_guards(text: str) -> str:
@@ -197,6 +213,20 @@ def _positivity_checks(text: str) -> dict[str, bool]:
     return checks
 
 
+def _audit_parent(text: str):
+    result = _live_audit_parent(text)
+    result["checks"].pop("multiapp_at_timestep_end", None)
+    result["checks"]["multiapp_at_timestep_begin"] = (
+        base.mp.unquote(base.mp.get_parameter(text, "MultiApps/electron", "execute_on"))
+        == "TIMESTEP_BEGIN"
+    )
+    result["failed_checks"] = sorted(
+        key for key, ok in result["checks"].items() if not ok
+    )
+    result["status"] = "PASS" if not result["failed_checks"] else "FAIL"
+    return result
+
+
 def _audit_child(text: str, *, dt_e: float):
     result = _live_audit_child(text, dt_e=dt_e)
     result["checks"].update(_positivity_checks(text))
@@ -207,9 +237,20 @@ def _audit_child(text: str, *, dt_e: float):
     return result
 
 
+def _build_split(*, dt_e: float = live.ELECTRON_DT_S):
+    parent, child, meta = _live_build_split(dt_e=dt_e)
+    meta["operator_split"] = (
+        "TIMESTEP_BEGIN heavy->child transfer -> electron/energy/Poisson subcycles "
+        "-> fast transfer back -> one heavy parent solve"
+    )
+    meta["coupling_order"] = "electron_first"
+    return parent, child, meta
+
+
 def _self_test():
     # Reuse inherited structural checks, but replace all schedule-specific
-    # assertions from the older 10:1 smoke contract with the requested 100:1 contract.
+    # assertions from the older 10:1/heavy-first smoke contract with the
+    # requested 100:1 electron-first contract.
     result = _live_self_test()
     checks = result.setdefault("checks", {})
     for obsolete in (
@@ -217,10 +258,11 @@ def _self_test():
         "ten_electron_steps_per_heavy",
         "hundred_total_electron_steps",
         "smoke_subcycles",
+        "heavy_first_execute_point",
     ):
         checks.pop(obsolete, None)
 
-    _parent, child, meta = base.build_split(dt_e=live.ELECTRON_DT_S)
+    parent, child, meta = base.build_split(dt_e=live.ELECTRON_DT_S)
     checks["heavy_dt_1e_7"] = math.isclose(
         meta["dt_h_s"], 1.0e-7, rel_tol=0.0, abs_tol=0.0
     )
@@ -235,6 +277,11 @@ def _self_test():
     )
     checks["multirate_ratio_100"] = math.isclose(
         meta["dt_h_s"] / meta["dt_e_s"], 100.0, rel_tol=0.0, abs_tol=1.0e-12
+    )
+    checks["electron_first_execute_point"] = (
+        base.mp.unquote(base.mp.get_parameter(parent, "MultiApps/electron", "execute_on"))
+        == "TIMESTEP_BEGIN"
+        and meta.get("coupling_order") == "electron_first"
     )
 
     for type_name in _ZERO_RATE_GUARD_TYPES:
@@ -268,8 +315,11 @@ def _self_test():
     return result
 
 
+base.build_parent_input = _build_parent_input
 base.build_child_input = _build_child_input
+base._audit_parent = _audit_parent
 base._audit_child = _audit_child
+base.build_split = _build_split
 base.self_test = _self_test
 
 if __name__ == "__main__":
