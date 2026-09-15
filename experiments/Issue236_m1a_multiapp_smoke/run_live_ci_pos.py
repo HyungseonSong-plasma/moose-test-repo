@@ -30,8 +30,9 @@ _live_build_child_input = base.build_child_input
 _live_self_test = base.self_test
 
 
-def _enable_trial_density_clamp(text: str) -> str:
+def _enable_trial_state_guards(text: str) -> str:
     rate_materials = []
+    mean_energy_materials = []
     for path in base._children(text, "FunctorMaterials"):
         type_name = base.mp.unquote(base.mp.get_parameter(text, path, "type"))
         if type_name == "PhysicsElectronImpactRateMaterial":
@@ -39,14 +40,30 @@ def _enable_trial_density_clamp(text: str) -> str:
                 text, path, "clamp_negative_electron_density", "true"
             )
             rate_materials.append(path)
+        elif type_name == "PhysicsElectronMeanEnergyMaterial":
+            energy_ref = base.mp.get_parameter(text, path, "energy_reference_eV")
+            if energy_ref is None:
+                raise base.Issue236Error(
+                    f"mean-energy material lacks energy_reference_eV: {path}"
+                )
+            text = base.mp.upsert_parameter(
+                text, path, "use_trial_state_fallback", "true"
+            )
+            text = base.mp.upsert_parameter(
+                text, path, "trial_fallback_mean_energy_eV", energy_ref
+            )
+            mean_energy_materials.append(path)
+
     if not rate_materials:
         raise base.Issue236Error("no PhysicsElectronImpactRateMaterial blocks found in live child")
+    if not mean_energy_materials:
+        raise base.Issue236Error("no PhysicsElectronMeanEnergyMaterial block found in live child")
     return text
 
 
 def _build_child_input(production_text: str, *, dt_e: float) -> str:
     text = _live_build_child_input(production_text, dt_e=dt_e)
-    return _enable_trial_density_clamp(text)
+    return _enable_trial_state_guards(text)
 
 
 def _self_test():
@@ -89,6 +106,19 @@ def _self_test():
         (base.mp.unquote(base.mp.get_parameter(child, path, "clamp_negative_electron_density")) or "").lower()
         == "true"
         for path in rate_paths
+    )
+
+    mean_paths = [
+        path
+        for path in base._children(child, "FunctorMaterials")
+        if base.mp.unquote(base.mp.get_parameter(child, path, "type"))
+        == "PhysicsElectronMeanEnergyMaterial"
+    ]
+    checks["mean_energy_trial_state_fallback"] = bool(mean_paths) and all(
+        (base.mp.unquote(base.mp.get_parameter(child, path, "use_trial_state_fallback")) or "").lower()
+        == "true"
+        and float(base.mp.get_parameter(child, path, "trial_fallback_mean_energy_eV") or "nan") > 0.0
+        for path in mean_paths
     )
 
     result["failed_checks"] = sorted(key for key, ok in checks.items() if not ok)
