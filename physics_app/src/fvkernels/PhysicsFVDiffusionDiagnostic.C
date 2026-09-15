@@ -19,7 +19,9 @@ PhysicsFVDiffusionDiagnostic::validParams()
       "faces. The diagnostic does not change the parent residual.");
   params.addRequiredParam<std::vector<unsigned int>>(
       "diagnostic_element_ids",
-      "Element IDs defining plasma cells whose internal or side-set faces may be reported.");
+      "Governed Exodus element IDs (elem_num_map values, one-based) defining plasma cells whose "
+      "internal or side-set faces may be reported. libMesh Elem::id() is converted to this "
+      "one-based convention at the diagnostic boundary.");
   params.addParam<bool>(
       "diagnostic_boundary_faces",
       false,
@@ -43,16 +45,17 @@ PhysicsFVDiffusionDiagnostic::probeFace() const
   if (!_face_info)
     return false;
 
-  const auto selected = [this](const unsigned int id)
+  // Exodus elem_num_map is one-based relative to libMesh Elem::id() for this governed mesh.
+  // Keep all external evidence in the governed Exodus convention and convert only here.
+  const auto selected = [this](const dof_id_type libmesh_id)
   {
-    return std::find(_diagnostic_element_ids.begin(), _diagnostic_element_ids.end(), id) !=
+    const auto exodus_id = static_cast<unsigned int>(libmesh_id + 1);
+    return std::find(_diagnostic_element_ids.begin(), _diagnostic_element_ids.end(), exodus_id) !=
            _diagnostic_element_ids.end();
   };
 
-  const bool elem_selected = selected(static_cast<unsigned int>(_face_info->elem().id()));
-  const bool neighbor_selected =
-      _face_info->neighborPtr() &&
-      selected(static_cast<unsigned int>(_face_info->neighbor().id()));
+  const bool elem_selected = selected(_face_info->elem().id());
+  const bool neighbor_selected = _face_info->neighborPtr() && selected(_face_info->neighbor().id());
   const bool has_boundary_tag = !_face_info->boundaryIDs().empty();
 
   // A physical plasma-wall side set can be a mesh-internal plasma/solid interface, while a
@@ -76,29 +79,29 @@ PhysicsFVDiffusionDiagnostic::computeQpResidual()
   const auto state = determineState();
   const ADReal dudn_parent = gradUDotNormal(state, _correct_skewness);
 
-  const auto selected = [this](const unsigned int id)
+  const auto selected = [this](const dof_id_type libmesh_id)
   {
-    return std::find(_diagnostic_element_ids.begin(), _diagnostic_element_ids.end(), id) !=
+    const auto exodus_id = static_cast<unsigned int>(libmesh_id + 1);
+    return std::find(_diagnostic_element_ids.begin(), _diagnostic_element_ids.end(), exodus_id) !=
            _diagnostic_element_ids.end();
   };
-  const bool elem_selected = selected(static_cast<unsigned int>(_face_info->elem().id()));
-  const bool neighbor_selected =
-      _face_info->neighborPtr() &&
-      selected(static_cast<unsigned int>(_face_info->neighbor().id()));
+  const bool elem_selected = selected(_face_info->elem().id());
+  const bool neighbor_selected = _face_info->neighborPtr() && selected(_face_info->neighbor().id());
   const bool has_boundary_tag = !_face_info->boundaryIDs().empty();
 
   // For a tagged physical face, standardize every reported directional quantity relative to the
   // selected plasma cell: normal points from that plasma cell across the face (plasma-outward).
   // FVFluxKernel::_normal is elem->neighbor, so flip it if the selected plasma cell is neighbor.
   Real orientation = 1.0;
-  unsigned int selected_element_id = static_cast<unsigned int>(_face_info->elem().id());
+  dof_id_type selected_libmesh_id = _face_info->elem().id();
   ADReal selected_value = _var(elemArg(), state);
   if (has_boundary_tag && !elem_selected && neighbor_selected)
   {
     orientation = -1.0;
-    selected_element_id = static_cast<unsigned int>(_face_info->neighbor().id());
+    selected_libmesh_id = _face_info->neighbor().id();
     selected_value = _var(neighborArg(), state);
   }
+  const auto selected_exodus_id = static_cast<unsigned int>(selected_libmesh_id + 1);
 
   const ADReal dudn_selected_outward = orientation * dudn_parent;
   const RealVectorValue selected_outward_normal = orientation * _normal;
@@ -129,9 +132,9 @@ PhysicsFVDiffusionDiagnostic::computeQpResidual()
   std::cout << std::setprecision(17)
             << "ISSUE228_DIFF"
             << " face_type=" << (has_boundary_tag ? "boundary" : "internal")
-            << " elem=" << selected_element_id;
+            << " elem=" << selected_exodus_id;
   if (!has_boundary_tag && _face_info->neighborPtr())
-    std::cout << " neighbor=" << _face_info->neighbor().id();
+    std::cout << " neighbor=" << static_cast<unsigned int>(_face_info->neighbor().id() + 1);
   std::cout << " boundary_ids=" << boundary_ids.str()
             << " face_x=" << fc(0)
             << " face_y=" << fc(1)
