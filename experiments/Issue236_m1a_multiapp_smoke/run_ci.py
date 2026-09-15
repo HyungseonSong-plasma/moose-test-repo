@@ -50,7 +50,25 @@ def _stage(out: Path, *, dt_e: float) -> tuple[Path, dict[str, Any]]:
     return case_dir, meta
 
 
+_base_self_test = base.self_test
+
+
+def _self_test() -> dict[str, Any]:
+    """Contain split-construction failures as structured governed evidence."""
+    try:
+        return _base_self_test()
+    except base.Issue236Error as error:
+        detail = error.args[0] if error.args else str(error)
+        return {
+            "status": "FAIL",
+            "checks": {"split_builds": False},
+            "failed_checks": ["split_builds"],
+            "detail": {"split_error": detail},
+        }
+
+
 base._stage = _stage
+base.self_test = _self_test
 
 if __name__ == "__main__":
     raise SystemExit(base.main())
