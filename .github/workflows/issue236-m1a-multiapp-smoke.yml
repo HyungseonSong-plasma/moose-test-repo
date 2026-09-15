@@ -53,8 +53,8 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
-          rm -rf issue236-m1a-results
-          mkdir -p issue236-m1a-results
+          rm -rf issue236-m1a-results issue236-m1a-logs
+          mkdir -p issue236-m1a-results issue236-m1a-logs
           docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace \
             -e GITHUB_SHA="$GITHUB_SHA" \
             -v "$PWD:/workspace" "$BUILD_BASE_REF" -lc '
@@ -69,7 +69,7 @@ jobs:
               git config --global --add safe.directory /workspace
               test "$(git -C /workspace rev-parse HEAD)" = "$GITHUB_SHA"
               uv pip install --system --python "$(command -v python3)" -r requirements-evidence-engine.txt
-              python3 experiments/Issue236_m1a_multiapp_smoke/run_live_ci_nochem.py --self-test | tee issue236-m1a-results/preflight.log
+              python3 experiments/Issue236_m1a_multiapp_smoke/run_live_ci_nochem.py --self-test | tee issue236-m1a-logs/preflight.log
               make -C physics_app -j2
               test -x physics_app/physics-opt
               python3 experiments/Issue236_m1a_multiapp_smoke/run_live_ci_nochem.py \
@@ -84,6 +84,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: issue236-m1a-multiapp-smoke
-          path: issue236-m1a-results
+          path: |
+            issue236-m1a-results
+            issue236-m1a-logs
           if-no-files-found: error
           retention-days: 14
