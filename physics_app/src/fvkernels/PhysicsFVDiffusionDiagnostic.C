@@ -48,8 +48,17 @@ PhysicsFVDiffusionDiagnostic::probeFace() const
   };
 
   const auto elem_id = static_cast<unsigned int>(_face_info->elem().id());
-  if (!_face_info->neighborPtr())
+  const bool is_internal = _var.isInternalFace(*_face_info);
+
+  // IMPORTANT: do not use neighborPtr()==nullptr to identify a physical FV boundary.
+  // MOOSE may attach a ghost neighbor for Dirichlet boundary reconstruction, so a physical
+  // boundary can have a non-null neighborPtr().  The variable's isInternalFace() predicate is
+  // the framework-semantic discriminator used by FVDiffusion itself.
+  if (!is_internal)
     return _diagnostic_boundary_faces && selected(elem_id);
+
+  if (!_face_info->neighborPtr())
+    return false;
 
   const auto neighbor_id = static_cast<unsigned int>(_face_info->neighbor().id());
   return selected(elem_id) && selected(neighbor_id);
@@ -68,7 +77,7 @@ PhysicsFVDiffusionDiagnostic::computeQpResidual()
   const auto state = determineState();
   const ADReal dudn = gradUDotNormal(state, _correct_skewness);
   const ADReal u_elem = _var(elemArg(), state);
-  const bool is_boundary = !_face_info->neighborPtr();
+  const bool is_boundary = !_var.isInternalFace(*_face_info);
 
   Real central_dudn = 0.0;
   Real u_neighbor = 0.0;
