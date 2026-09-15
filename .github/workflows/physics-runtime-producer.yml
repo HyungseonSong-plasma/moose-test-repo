@@ -45,6 +45,16 @@ jobs:
           test "$SQUIRREL" = "$SQUIRREL_SHA"
           test "$ZAPDOS" = "$ZAPDOS_SHA"
           test "$PHYSICS_BUILD_BASE_IMAGE" = "ghcr.io/hyungseonsong-plasma/physics-build-base"
+          
+          # Enforce that BUILD_BASE_REF exactly matches the canonical digest from dependencies.lock
+          if [ "$BUILD_BASE_REF" != "$PHYSICS_BUILD_BASE" ]; then
+            echo "ERROR: Build base reference does not match canonical locked digest" >&2
+            echo "  Provided: $BUILD_BASE_REF" >&2
+            echo "  Required: $PHYSICS_BUILD_BASE" >&2
+            exit 1
+          fi
+          
+          # Validate format as defense-in-depth
           case "$BUILD_BASE_REF" in
             "$PHYSICS_BUILD_BASE_IMAGE"@sha256:*) ;;
             *) echo "Unexpected Physics build-base ref: $BUILD_BASE_REF" >&2; exit 1 ;;
