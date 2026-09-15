@@ -29,17 +29,23 @@ base.DT_E_SMOKE_S = live.ELECTRON_DT_S
 _live_build_child_input = base.build_child_input
 _live_self_test = base.self_test
 
+_ZERO_RATE_GUARD_TYPES = (
+    "PhysicsElectronImpactRateMaterial",
+    "PhysicsElectronImpactIonizationMaterial",
+    "PhysicsElectronImpactO2sExcitationMaterial",
+)
+
 
 def _enable_trial_state_guards(text: str) -> str:
-    rate_materials = []
+    zero_rate_materials: dict[str, list[str]] = {name: [] for name in _ZERO_RATE_GUARD_TYPES}
     mean_energy_materials = []
     for path in base._children(text, "FunctorMaterials"):
         type_name = base.mp.unquote(base.mp.get_parameter(text, path, "type"))
-        if type_name == "PhysicsElectronImpactRateMaterial":
+        if type_name in zero_rate_materials:
             text = base.mp.upsert_parameter(
                 text, path, "clamp_negative_electron_density", "true"
             )
-            rate_materials.append(path)
+            zero_rate_materials[type_name].append(path)
         elif type_name == "PhysicsElectronMeanEnergyMaterial":
             energy_ref = base.mp.get_parameter(text, path, "energy_reference_eV")
             if energy_ref is None:
@@ -54,8 +60,11 @@ def _enable_trial_state_guards(text: str) -> str:
             )
             mean_energy_materials.append(path)
 
-    if not rate_materials:
-        raise base.Issue236Error("no PhysicsElectronImpactRateMaterial blocks found in live child")
+    missing_rate_types = [name for name, paths in zero_rate_materials.items() if not paths]
+    if missing_rate_types:
+        raise base.Issue236Error(
+            f"missing electron-impact rate material types in live child: {missing_rate_types}"
+        )
     if not mean_energy_materials:
         raise base.Issue236Error("no PhysicsElectronMeanEnergyMaterial block found in live child")
     return text
@@ -96,17 +105,17 @@ def _self_test():
         meta["dt_h_s"] / meta["dt_e_s"], 100.0, rel_tol=0.0, abs_tol=1.0e-12
     )
 
-    rate_paths = [
-        path
-        for path in base._children(child, "FunctorMaterials")
-        if base.mp.unquote(base.mp.get_parameter(child, path, "type"))
-        == "PhysicsElectronImpactRateMaterial"
-    ]
-    checks["electron_impact_trial_density_clamp"] = bool(rate_paths) and all(
-        (base.mp.unquote(base.mp.get_parameter(child, path, "clamp_negative_electron_density")) or "").lower()
-        == "true"
-        for path in rate_paths
-    )
+    for type_name in _ZERO_RATE_GUARD_TYPES:
+        paths = [
+            path
+            for path in base._children(child, "FunctorMaterials")
+            if base.mp.unquote(base.mp.get_parameter(child, path, "type")) == type_name
+        ]
+        checks[f"trial_zero_rate_guard:{type_name}"] = bool(paths) and all(
+            (base.mp.unquote(base.mp.get_parameter(child, path, "clamp_negative_electron_density")) or "").lower()
+            == "true"
+            for path in paths
+        )
 
     mean_paths = [
         path

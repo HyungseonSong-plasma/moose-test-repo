@@ -17,6 +17,11 @@ PhysicsElectronImpactIonizationMaterial::validParams()
                                             "Physical electron number density [1/m^3].");
   params.addRequiredParam<MooseFunctorName>("o2_molar_concentration",
                                             "O2 molar concentration [mol/m^3].");
+  params.addParam<bool>(
+      "clamp_negative_electron_density",
+      false,
+      "If true, a negative intermediate nonlinear-trial electron density contributes zero "
+      "ionization rate instead of aborting. The solved electron variable is not modified.");
   return params;
 }
 
@@ -26,6 +31,7 @@ PhysicsElectronImpactIonizationMaterial::PhysicsElectronImpactIonizationMaterial
     _mean_energy(getFunctor<ADReal>("mean_energy")),
     _electron_number_density(getFunctor<ADReal>("electron_number_density")),
     _o2_molar_concentration(getFunctor<ADReal>("o2_molar_concentration")),
+    _clamp_negative_electron_density(getParam<bool>("clamp_negative_electron_density")),
     _rate_table_file(getParam<FileName>("rate_table_file")),
     _table(_rate_table_file, 1, {2})
 {
@@ -37,10 +43,13 @@ PhysicsElectronImpactIonizationMaterial::PhysicsElectronImpactIonizationMaterial
       {
         const ADReal n_e = _electron_number_density(r, state);
         const ADReal c_o2 = _o2_molar_concentration(r, state);
-        if (n_e.value() < 0.0)
+        const bool negative_n_e = n_e.value() < 0.0;
+        if (negative_n_e && !_clamp_negative_electron_density)
           mooseError("PhysicsElectronImpactIonizationMaterial requires n_e >= 0.");
         if (c_o2.value() < 0.0)
           mooseError("PhysicsElectronImpactIonizationMaterial requires c_O2 >= 0.");
+        if (negative_n_e)
+          return ADReal(0.0);
         return interpolateStrict(_mean_energy(r, state)) * (n_e / N_A) * c_o2;
       });
 }
