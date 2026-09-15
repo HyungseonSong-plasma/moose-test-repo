@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
-"""CI entrypoint for Issue-236 M1-A with governed W5 runtime-asset staging.
+"""CI entrypoint for Issue-236 M1-A with governed staging and split audits.
 
-Kept separate from the scientific split builder so harness/runtime corrections
-remain visible: it stages the W5 rate/chemistry assets, strips inherited
-heavy-system diagnostics from the fast electron child, garbage-collects
-root HIT parameters that no surviving object references after the split, and
-observes parent fast-state mirrors at FINAL after child-to-parent transfer.
+The parent remains the solving heavy-fluid/heavy-species application.  The
+child owns only electron density, electron energy, and Poisson and sub-cycles.
+This wrapper keeps runtime assets and only the diagnostics/dependencies needed
+by each side of that ownership split.
 """
 from __future__ import annotations
 
@@ -23,12 +22,15 @@ _base_prune_child_flow_ownership = base._prune_child_flow_ownership
 _base_audit_parent = base._audit_parent
 _base_audit_child = base._audit_child
 _base_self_test = base.self_test
+_base_remove_top_if_present = base._remove_top_if_present
 
 _ROOT_ASSIGNMENT_RE = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*$")
+_PP_REF_RE = re.compile(
+    r"^\s*([A-Za-z_][A-Za-z0-9_]*_pp)\s*=\s*['\"]?([A-Za-z_][A-Za-z0-9_]*)"
+)
 
 
 def _strip_hit_comment(line: str) -> str:
-    """Strip a HIT comment while preserving # characters inside quotes."""
     quote: str | None = None
     escaped = False
     out: list[str] = []
@@ -57,7 +59,6 @@ def _strip_hit_comment(line: str) -> str:
 
 
 def _root_assignment_table(text: str) -> dict[str, dict[str, Any]]:
-    """Return unique unindented root assignments and their dependency payload."""
     result: dict[str, dict[str, Any]] = {}
     for index, line in enumerate(text.splitlines(keepends=True)):
         raw = line.rstrip("\r\n")
@@ -74,23 +75,19 @@ def _root_assignment_table(text: str) -> dict[str, dict[str, Any]]:
 
 
 def _mentions_symbol(text: str, name: str) -> bool:
-    return (
-        re.search(rf"(?<![A-Za-z0-9_]){re.escape(name)}(?![A-Za-z0-9_])", text)
-        is not None
-    )
+    return re.search(
+        rf"(?<![A-Za-z0-9_]){re.escape(name)}(?![A-Za-z0-9_])", text
+    ) is not None
 
 
 def _root_liveness(text: str) -> dict[str, Any]:
-    """Compute live/dead root assignments from surviving HIT references."""
     roots = _root_assignment_table(text)
     names = set(roots)
     dependencies: dict[str, set[str]] = {name: set() for name in names}
     for name, entry in roots.items():
         rhs = str(entry["rhs"])
         dependencies[name] = {
-            other
-            for other in names
-            if other != name and _mentions_symbol(rhs, other)
+            other for other in names if other != name and _mentions_symbol(rhs, other)
         }
 
     assignment_lines = {int(entry["line_index"]) for entry in roots.values()}
@@ -123,7 +120,6 @@ def _root_liveness(text: str) -> dict[str, Any]:
 
 
 def _prune_dead_root_parameters(text: str) -> tuple[str, dict[str, Any]]:
-    """Remove the full transitive closure of unreferenced root assignments."""
     before = _root_liveness(text)
     dead = set(before["dead_root_parameters"])
     if not dead:
@@ -141,8 +137,37 @@ def _prune_dead_root_parameters(text: str) -> tuple[str, dict[str, Any]]:
     return pruned, {"before": before, "after": after, "removed": sorted(dead)}
 
 
+def _postprocessor_references(text: str) -> list[dict[str, str]]:
+    """Collect input parameters whose names explicitly identify PP dependencies."""
+    refs: list[dict[str, str]] = []
+    for line in text.splitlines():
+        match = _PP_REF_RE.match(_strip_hit_comment(line))
+        if match:
+            parameter, target = match.groups()
+            refs.append({"parameter": parameter, "target": target})
+    return refs
+
+
+def _missing_postprocessor_references(text: str) -> list[str]:
+    return sorted(
+        {
+            ref["target"]
+            for ref in _postprocessor_references(text)
+            if not base.mb.has_block(text, f"Postprocessors/{ref['target']}")
+        }
+    )
+
+
+def _fast_bc_names(production_text: str) -> set[str]:
+    removed: set[str] = set()
+    for path in base._children(production_text, "FVBCs"):
+        variable = base.mp.unquote(base.mp.get_parameter(production_text, path, "variable"))
+        if variable in base.FAST_SOLVER_VARIABLES:
+            removed.add(base._name(path))
+    return removed
+
+
 def _set_parent_final_observation(text: str) -> str:
-    """Observe transferred parent mirrors only after TIMESTEP_END transfers finish."""
     for name in base.PARENT_FAST_PPS:
         text = base.mp.upsert_parameter(
             text,
@@ -156,20 +181,39 @@ def _set_parent_final_observation(text: str) -> str:
 
 
 def _build_parent_input(production_text: str) -> str:
-    """Build the no-solve parent, prune dead scalars, and observe after transfer."""
-    text = _base_build_parent_input(production_text)
+    """Keep heavy PP dependencies while pruning diagnostics tied to removed fast BCs."""
+    removed_fast_bcs = _fast_bc_names(production_text)
+
+    # The base split removes all parent Postprocessors.  That is too aggressive
+    # for a solving heavy parent because inlet FVBCs consume Receiver/area PPs.
+    # Preserve only the Postprocessors top block during base construction; keep
+    # the base behavior for VectorPostprocessors and every other top-level block.
+    original_remove_top = base._remove_top_if_present
+
+    def preserve_postprocessors(text: str, name: str) -> str:
+        if name == "Postprocessors":
+            return text
+        return _base_remove_top_if_present(text, name)
+
+    base._remove_top_if_present = preserve_postprocessors
+    try:
+        text = _base_build_parent_input(production_text)
+    finally:
+        base._remove_top_if_present = original_remove_top
+
+    # Remove only diagnostics whose FVBC owners were intentionally removed with
+    # the fast subsystem.  Heavy inlet/outlet PPs remain available to heavy BCs.
+    text = base._remove_postprocessors_for_missing_bcs(text, removed_fast_bcs)
     text = _set_parent_final_observation(text)
     return _prune_dead_root_parameters(text)[0]
 
 
 def _build_child_input(production_text: str, *, dt_e: float) -> str:
-    """Build the fast child and garbage-collect roots orphaned by heavy pruning."""
     text = _base_build_child_input(production_text, dt_e=dt_e)
     return _prune_dead_root_parameters(text)[0]
 
 
 def _rc_dependent_postprocessors(text: str) -> list[str]:
-    """Return child postprocessors that still require the removed rc object."""
     return [
         path
         for path in base._children(text, "Postprocessors")
@@ -178,26 +222,25 @@ def _rc_dependent_postprocessors(text: str) -> list[str]:
 
 
 def _prune_child_flow_ownership(text: str) -> str:
-    """Remove inherited heavy-flow ownership and all production diagnostics."""
     text = _base_prune_child_flow_ownership(text)
-    # Production postprocessors depend on heavy-flow/user-object/functor owners
-    # intentionally absent from the fast child. build_child_input() recreates
-    # only the three M1-A fast-state postprocessors after this pruning step.
     if base.mb.has_block(text, "Postprocessors"):
         text = base.mb.remove_block(text, "Postprocessors")
     return text
 
 
 def _finalize_audit(result: dict[str, Any]) -> dict[str, Any]:
-    result["failed_checks"] = sorted(key for key, ok in result["checks"].items() if not ok)
+    result["failed_checks"] = sorted(
+        key for key, ok in result["checks"].items() if not ok
+    )
     result["status"] = "PASS" if not result["failed_checks"] else "FAIL"
     return result
 
 
 def _audit_parent(text: str) -> dict[str, Any]:
-    """Extend parent audit with root liveness and post-transfer observation timing."""
     result = _base_audit_parent(text)
     liveness = _root_liveness(text)
+    pp_refs = _postprocessor_references(text)
+    missing_pp_refs = _missing_postprocessor_references(text)
     parent_pp_execute_on = {
         name: base.mp.words(
             base.mp.get_parameter(text, f"Postprocessors/{name}", "execute_on")
@@ -209,19 +252,22 @@ def _audit_parent(text: str) -> dict[str, Any]:
         if base.mb.has_block(text, "Outputs")
         else []
     )
+
     result["checks"]["no_dead_root_parameters"] = not liveness["dead_root_parameters"]
+    result["checks"]["all_parent_pp_dependencies_present"] = not missing_pp_refs
     result["checks"]["parent_mirrors_observed_at_final"] = all(
         "FINAL" in execute_on for execute_on in parent_pp_execute_on.values()
     )
     result["checks"]["parent_output_at_final"] = "FINAL" in output_execute_on
     result["root_liveness"] = liveness
+    result["postprocessor_references"] = pp_refs
+    result["missing_postprocessor_references"] = missing_pp_refs
     result["parent_postprocessor_execute_on"] = parent_pp_execute_on
     result["parent_output_execute_on"] = output_execute_on
     return _finalize_audit(result)
 
 
 def _audit_child(text: str, *, dt_e: float) -> dict[str, Any]:
-    """Extend the child audit with fast-only diagnostics and root liveness."""
     result = _base_audit_child(text, dt_e=dt_e)
     remaining = _rc_dependent_postprocessors(text)
     postprocessor_names = {
@@ -259,8 +305,6 @@ def _stage(out: Path, *, dt_e: float) -> tuple[Path, dict[str, Any]]:
         ),
     )
     (case_dir / "electron_sub.i").write_text(child, encoding="utf-8")
-
-    # Exact staging contract already used by Issue-216 W5 and its R2 successors.
     base.w5.s5r._copy_runtime_assets(case_dir)
 
     meta["staging"] = staged
@@ -277,7 +321,6 @@ def _stage(out: Path, *, dt_e: float) -> tuple[Path, dict[str, Any]]:
 
 
 def _self_test() -> dict[str, Any]:
-    """Contain split failures and verify transitive root-liveness pruning."""
     try:
         result = _base_self_test()
         synthetic = "A = 1\nB = ${fparse A + 1}\nC = 3\n[Test]\n  value = ${C}\n[]\n"
