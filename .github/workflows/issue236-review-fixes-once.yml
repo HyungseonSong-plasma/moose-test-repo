@@ -30,7 +30,8 @@ jobs:
             experiments/Issue236_m1a_multiapp_smoke/run.py \
             experiments/Issue236_m1a_multiapp_smoke/run_live_ci_nochem.py \
             tests/characterization/test_issue192_s5r_energy_transport.py
-          python3 -m pip install --disable-pip-version-check --quiet pytest
+          python3 -m pip install --disable-pip-version-check --quiet \
+            -r requirements-evidence-engine.txt pytest
           PYTHONPATH="$GITHUB_WORKSPACE" python3 -m pytest -q \
             tests/characterization/test_issue192_s5r.py \
             tests/characterization/test_issue192_s5r_energy_transport.py
