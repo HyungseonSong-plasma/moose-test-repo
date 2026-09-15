@@ -3,6 +3,7 @@
 #include "metaphysicl/raw_type.h"
 
 #include <algorithm>
+#include <iomanip>
 #include <iostream>
 #include <sstream>
 
@@ -58,7 +59,7 @@ ADReal
 PhysicsFVDiffusionDiagnostic::computeQpResidual()
 {
   // The diagnostic is deliberately residual-equivalent: the parent residual is evaluated first
-  // and returned unchanged.  Any reported dudn therefore comes from the same framework helper
+  // and returned unchanged. Any reported dudn therefore comes from the same framework helper
   // used by FVDiffusion itself, including the Dirichlet ghost-cell path on boundary faces.
   const ADReal parent_residual = FVDiffusion::computeQpResidual();
   if (!probeFace())
@@ -91,7 +92,8 @@ PhysicsFVDiffusionDiagnostic::computeQpResidual()
   }
 
   const auto & fc = _face_info->faceCentroid();
-  std::cout << "ISSUE228_DIFF"
+  std::cout << std::setprecision(17)
+            << "ISSUE228_DIFF"
             << " face_type=" << (is_boundary ? "boundary" : "internal")
             << " elem=" << _face_info->elem().id();
   if (!is_boundary)
