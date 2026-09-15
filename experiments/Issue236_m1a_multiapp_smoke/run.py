@@ -468,7 +468,16 @@ def build_split(*, dt_e: float = DT_E_SMOKE_S) -> tuple[str, str, dict[str, Any]
 
 def self_test() -> dict[str, Any]:
     checks: dict[str, bool] = {}
-    parent, child, meta = build_split(dt_e=DT_E_SMOKE_S)
+    try:
+        parent, child, meta = build_split(dt_e=DT_E_SMOKE_S)
+    except Issue236Error as error:
+        detail = error.args[0] if error.args else str(error)
+        return {
+            "status": "FAIL",
+            "checks": {"split_builds": False},
+            "failed_checks": ["split_builds"],
+            "detail": {"split_error": detail},
+        }
     checks["split_builds"] = True
     checks["parent_audit"] = meta["parent_audit"]["status"] == "PASS"
     checks["child_audit"] = meta["child_audit"]["status"] == "PASS"
@@ -507,6 +516,7 @@ def _stage(out: Path, *, dt_e: float) -> tuple[Path, dict[str, Any]]:
         ),
     )
     (case_dir / "electron_sub.i").write_text(child, encoding="utf-8")
+    w5.s5r._copy_runtime_assets(case_dir)
     meta["staging"] = stage
     meta["parent_references"] = validate_referenced_files(parent, case_dir, skip_dynamic=True)
     meta["child_references"] = validate_referenced_files(child, case_dir, skip_dynamic=True)
