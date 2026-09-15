@@ -4,3 +4,5 @@ Only update this file after the runner, workflow, physics code, and generated-in
 Changing experiment/helper/source files alone must not trigger the Issue-236 smoke workflow.
 
 Intentional run: disable volumetric electron chemistry and volumetric electron-energy source/sink kernels while keeping electron/energy wall losses, SEE, live electron transport, Poisson coupling, and frozen heavy-transport electron density.
+
+Intentional run: validate canonical electron-energy electrostatic drift restoration with dt_e=1e-10 s, dt_h=1e-8 s, 100 fast electron+energy+Poisson substeps per heavy step, and total time 2e-8 s.
