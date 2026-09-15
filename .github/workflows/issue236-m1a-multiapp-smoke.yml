@@ -1,24 +1,22 @@
 name: Issue-236 M1-A live-electron multirate smoke
 
 on:
+  workflow_dispatch:
   push:
     branches: [issue-236-m1a-multiapp-smoke]
     paths:
-      - '.github/workflows/issue236-m1a-multiapp-smoke.yml'
-      - 'experiments/Issue236_m1a_multiapp_smoke/**'
-      - 'experiments/Issue216_w5_multistep_acceptance/**'
-      - 'experiments/Issue217_sheath_energy_closure/**'
-      - 'experiments/Issue27_surface_reactions/**'
-      - 'experiments/historical_recipe_support/**'
-      - 'physics_app/**'
-      - 'physics_harness/**'
+      - '.github/ci-triggers/issue236-m1a.txt'
 
 permissions:
   contents: read
 
+# This workflow is intentionally gated. Intermediate edits to runners, physics
+# code, or generated-input helpers must not start CI. After all coordinated
+# changes are ready, update .github/ci-triggers/issue236-m1a.txt (or dispatch
+# manually) to run one coherent revision.
 concurrency:
-  group: issue236-m1a-${{ github.sha }}
-  cancel-in-progress: false
+  group: issue236-m1a-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
