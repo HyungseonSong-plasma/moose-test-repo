@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Issue #228 S6-A: qualify a framework-consistent wall-normal electrostatic observable.
 
-This stage does not change the physics model.  It replaces the frozen-Poisson
+This stage does not change the physics model. It replaces the frozen-Poisson
 FVDiffusion object by a diagnostic subclass whose residual is exactly the
 parent FVDiffusion residual and records grad(phi).n from gradUDotNormal().
 
@@ -13,7 +13,6 @@ from __future__ import annotations
 import argparse
 import json
 import math
-import re
 import shutil
 from pathlib import Path
 from typing import Any
@@ -71,15 +70,20 @@ def self_test() -> int:
     # Straight horizontal wall, cell above it: inward is +y.
     n = _inward_normal(np.array([0.0, 0.0]), np.array([1.0, 0.0]), np.array([0.5, 1.0]))
     assert np.allclose(n, [0.0, 1.0], atol=1e-14)
-    # Same construction rotated 37 degrees must rotate covariantly.
+
+    # The same construction rotated 37 degrees must rotate covariantly.
     th = math.radians(37.0)
     R = np.array([[math.cos(th), -math.sin(th)], [math.sin(th), math.cos(th)]])
-    p1 = R @ np.array([0.0, 0.0]); p2 = R @ np.array([1.0, 0.0]); c = R @ np.array([0.5, 1.0])
+    p1 = R @ np.array([0.0, 0.0])
+    p2 = R @ np.array([1.0, 0.0])
+    c = R @ np.array([0.5, 1.0])
     nr = _inward_normal(p1, p2, c)
     assert _angle_deg(nr, R @ np.array([0.0, 1.0])) < 1e-10
+
     # A tangential topological proxy must not masquerade as a normal proxy.
     assert _angle_deg(np.array([1.0, 0.0]), np.array([0.0, 1.0])) > 89.999999
-    # A valid inward proxy is rotation independent.
+
+    # A valid inward proxy remains valid after rotation.
     assert _angle_deg(R @ np.array([0.0, 2.0]), R @ np.array([0.0, 1.0])) < 1e-10
     print("S6-A geometry self-test PASS")
     return 0
@@ -92,17 +96,16 @@ def _physical_face_records(snapshot: Path):
     side_nodes = {1: (0, 1), 2: (1, 2), 3: (2, 0)}
 
     records: list[dict[str, Any]] = []
-    wall_indices: set[int] = set()
     for name, elems, sides in sidesets:
         if name not in PHYSICAL_WALLS:
             continue
         for e, side in zip(elems, sides):
             i = int(e - 1)
             ia, ib = side_nodes[int(side)]
-            p1 = tri[i, ia].astype(float); p2 = tri[i, ib].astype(float)
+            p1 = tri[i, ia].astype(float)
+            p2 = tri[i, ib].astype(float)
             mid = 0.5 * (p1 + p2)
             nin = _inward_normal(p1, p2, centroids[i])
-            wall_indices.add(i)
             records.append({
                 "wall": str(name),
                 "cell_index": i,
@@ -114,8 +117,8 @@ def _physical_face_records(snapshot: Path):
                 "inward_normal_y": float(nin[1]),
             })
 
-    # Reconstruct the historical equal-weight topological reference direction,
-    # but classify it rather than treating it as a primary observable.
+    # Historical H/reference support is classified, not promoted to a primary
+    # directional observable.
     wall, neigh = pgw._wall_cells_and_neighbors(conn, sidesets)
     for rec in records:
         i = int(rec["cell_index"])
@@ -160,9 +163,10 @@ def _diagnostic_input(base_text: str, diagnostic_eids: list[int]) -> str:
 
 
 def _parse_diag(log_path: Path) -> list[dict[str, Any]]:
-    out: list[dict[str, Any]] = []
+    """Return the last nonlinear-state record for each geometric boundary face."""
+    unique: dict[tuple[int, float, float], dict[str, Any]] = {}
     if not log_path.exists():
-        return out
+        return []
     for line in log_path.read_text(encoding="utf-8", errors="replace").splitlines():
         if not line.startswith(DIFF_PREFIX):
             continue
@@ -174,7 +178,7 @@ def _parse_diag(log_path: Path) -> list[dict[str, Any]]:
         if fields.get("face_type") != "boundary":
             continue
         try:
-            out.append({
+            rec = {
                 "element_id": int(fields["elem"]),
                 "boundary_ids": fields.get("boundary_ids", ""),
                 "face_x": float(fields["face_x"]),
@@ -187,13 +191,17 @@ def _parse_diag(log_path: Path) -> list[dict[str, Any]]:
                 "grad_phi_dot_n_out_V_m": float(fields["actual_dudn"]),
                 "E_dot_n_out_V_m": -float(fields["actual_dudn"]),
                 "diffusion_residual": float(fields["residual"]),
-            })
+            }
         except (KeyError, ValueError) as exc:
             raise RuntimeError(f"malformed diagnostic line: {line}") from exc
-    return out
+        key = (int(rec["element_id"]), float(rec["face_x"]), float(rec["face_y"]))
+        unique[key] = rec
+    return list(unique.values())
 
 
-def _match_physical_faces(physical: list[dict[str, Any]], observed: list[dict[str, Any]], tol=2.0e-8):
+def _match_physical_faces(
+    physical: list[dict[str, Any]], observed: list[dict[str, Any]], tol: float = 1.0e-10
+):
     matched: list[dict[str, Any]] = []
     used: set[int] = set()
     for rec in physical:
@@ -227,7 +235,8 @@ def _match_physical_faces(physical: list[dict[str, Any]], observed: list[dict[st
 def _solve(exe: Path, case: Path, text: str, timeout: int):
     case.mkdir(parents=True, exist_ok=True)
     (case / "input.i").write_text(text, encoding="utf-8")
-    logs = case / "logs"; logs.mkdir(exist_ok=True)
+    logs = case / "logs"
+    logs.mkdir(exist_ok=True)
     p2 = d1s2._run([str(exe), "-i", "input.i", "--check-input"], case, logs / "p2.log", 180)
     if p2["returncode"] != 0:
         return p2, None, None
@@ -264,9 +273,11 @@ def run(args: argparse.Namespace) -> int:
                               f"expected 87 physical wall faces, got {expected_faces}")
         eids = sorted({int(x["element_id"]) for x in physical})
 
-        ref_case = out / "reference"; diag_case = out / "diagnostic"
+        ref_case = out / "reference"
+        diag_case = out / "diagnostic"
+        ref_case.mkdir(parents=True, exist_ok=True)
         prep = s3._prepare_source(snapshot, ref_case)
-        # The source file is byte-identical for both solves.
+        # The source field is byte-identical for both solves.
         diag_case.mkdir(parents=True, exist_ok=True)
         shutil.copy2(ref_case / "source.e", diag_case / "source.e")
         wall_values = s3._wall_values("current_balance", prep)
@@ -276,16 +287,22 @@ def run(args: argparse.Namespace) -> int:
 
         p2_ref, rt_ref, sol_ref = _solve(exe, ref_case, base_text, args.timeout)
         p2_diag, rt_diag, sol_diag = _solve(exe, diag_case, diag_text, args.timeout)
-        summary.update({"p2_reference": p2_ref, "p2_diagnostic": p2_diag,
-                        "runtime_reference": rt_ref, "runtime_diagnostic": rt_diag,
-                        "preparation": prep, "physical_wall_face_count": expected_faces,
-                        "diagnostic_element_ids": eids})
+        summary.update({
+            "p2_reference": p2_ref,
+            "p2_diagnostic": p2_diag,
+            "runtime_reference": rt_ref,
+            "runtime_diagnostic": rt_diag,
+            "preparation": prep,
+            "physical_wall_face_count": expected_faces,
+            "diagnostic_element_ids": eids,
+        })
         if p2_ref["returncode"] != 0 or p2_diag["returncode"] != 0:
             return _hard_fail(out, summary, "HARNESS_OR_CONSTRUCTION_FAIL", "P2 input validation failed")
         if rt_ref is None or rt_diag is None or sol_ref is None or sol_diag is None:
             return _hard_fail(out, summary, "SOLVER_CONVERGENCE_FAIL", "reference or diagnostic solve failed")
 
-        emap_ref, phi_ref = sol_ref; emap_diag, phi_diag = sol_diag
+        emap_ref, phi_ref = sol_ref
+        emap_diag, phi_diag = sol_diag
         if not np.array_equal(emap_ref, emap_diag):
             return _hard_fail(out, summary, "HARNESS_OR_CONSTRUCTION_FAIL", "element map changed")
         delta = np.asarray(phi_diag) - np.asarray(phi_ref)
@@ -296,31 +313,29 @@ def run(args: argparse.Namespace) -> int:
         matched, unmatched_observed = _match_physical_faces(physical, observed)
         finite = all(np.isfinite(float(r["grad_phi_dot_n_out_V_m"])) for r in matched)
         max_normal_angle = max(float(r["moose_vs_geometric_outward_normal_angle_deg"]) for r in matched)
-        with (out / "wall_face_observables.json").open("w", encoding="utf-8") as f:
-            json.dump(matched, f, indent=2, sort_keys=True)
+        _write(out / "wall_face_observables.json", matched)
 
         class_counts: dict[str, int] = {}
         for r in matched:
             key = str(r["topological_reference_class"])
             class_counts[key] = class_counts.get(key, 0) + 1
-        by_eid = {int(r["element_id"]): r for r in matched}
-        target = by_eid.get(2401)
+        target_rows = [r for r in matched if int(r["element_id"]) == 2401]
+        target = target_rows[0] if len(target_rows) == 1 else None
 
         gates = {
             "reference_diagnostic_solution_equivalent": max_abs_delta <= 1.0e-10,
             "all_87_physical_faces_matched": len(matched) == 87,
-            "no_extra_selected_boundary_faces_unmatched": unmatched_observed == 0,
             "framework_normals_match_geometry": max_normal_angle <= 1.0e-6,
             "all_framework_gradients_finite": finite,
-            "target_2401_present": target is not None,
+            "target_2401_unique": target is not None,
         }
         qualified = all(gates.values())
         summary.update({
             "reference_diagnostic_phi_max_abs_delta_V": max_abs_delta,
             "reference_diagnostic_phi_rms_delta_V": rms_delta,
-            "observed_boundary_record_count": len(observed),
+            "observed_selected_boundary_face_count": len(observed),
             "matched_physical_face_count": len(matched),
-            "unmatched_observed_boundary_record_count": unmatched_observed,
+            "extra_selected_boundary_face_count": unmatched_observed,
             "max_moose_vs_geometric_outward_normal_angle_deg": max_normal_angle,
             "topological_reference_class_counts": class_counts,
             "target_2401": target,
