@@ -16,4 +16,5 @@ protected:
   bool probeFace() const;
 
   const std::vector<unsigned int> _diagnostic_element_ids;
+  const bool _diagnostic_boundary_faces;
 };
