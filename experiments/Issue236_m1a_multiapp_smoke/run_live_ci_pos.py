@@ -50,15 +50,15 @@ def _build_child_input(production_text: str, *, dt_e: float) -> str:
 
 
 def _self_test():
-    # The inherited self-test still contains labels/expectations for the former
-    # 1e-8/1e-9 schedule. Reuse all of its structural checks, then replace only
-    # those schedule-specific assertions with the requested 1e-7/1e-9 contract.
+    # Reuse inherited structural checks, but replace all schedule-specific
+    # assertions from the older 10:1 smoke contract with the requested 100:1 contract.
     result = _live_self_test()
     checks = result.setdefault("checks", {})
     for obsolete in (
         "heavy_dt_1e_8",
         "ten_electron_steps_per_heavy",
         "hundred_total_electron_steps",
+        "smoke_subcycles",
     ):
         checks.pop(obsolete, None)
 
@@ -74,6 +74,9 @@ def _self_test():
     checks["thousand_total_electron_steps"] = meta["subcycles_expected"] == 1000
     checks["final_time_1e_6"] = math.isclose(
         meta["total_time_s"], 1.0e-6, rel_tol=0.0, abs_tol=0.0
+    )
+    checks["multirate_ratio_100"] = math.isclose(
+        meta["dt_h_s"] / meta["dt_e_s"], 100.0, rel_tol=0.0, abs_tol=1.0e-12
     )
 
     rate_paths = [
