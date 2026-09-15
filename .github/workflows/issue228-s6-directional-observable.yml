@@ -55,7 +55,10 @@ jobs:
         run: |
           set -euxo pipefail
           rm -rf issue228-s6a-results
+          mkdir -p issue228-s6a-results
+          set +e
           docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace \
+            -e GITHUB_SHA="$GITHUB_SHA" \
             -v "$PWD:/workspace" "$BUILD_BASE_REF" -lc '
               set -euxo pipefail
               source /environment
@@ -79,6 +82,32 @@ jobs:
                 --results-root issue228-s6a-results \
                 --timeout 900
             '
+          rc=$?
+          set -e
+          if [ "$rc" -ne 0 ] && [ ! -f issue228-s6a-results/summary.json ]; then
+            python3 - "$rc" "$GITHUB_SHA" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          rc = int(sys.argv[1])
+          sha = sys.argv[2]
+          payload = {
+              "ci_status": "FAILURE",
+              "evidence_valid": False,
+              "scientific_outcome": "NOT_EVALUATED",
+              "status": "HARNESS_OR_CONSTRUCTION_FAIL",
+              "failure_stage": "workflow_or_container_pre_science",
+              "container_exit_code": rc,
+              "github_sha": sha,
+          }
+          Path("issue228-s6a-results/summary.json").write_text(
+              json.dumps(payload, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+          PY
+          fi
+          exit "$rc"
 
       - name: Upload S6-A evidence
         if: always()
