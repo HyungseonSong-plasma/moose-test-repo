@@ -31,5 +31,6 @@ protected:
   const Moose::Functor<ADReal> & _target_molar_concentration;
   const FileName _rate_table_file;
   const std::string _reaction_progress_name;
+  const bool _clamp_negative_electron_density;
   PhysicsLookupTable1D _table;
 };
