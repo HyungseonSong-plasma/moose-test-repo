@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """CI entrypoint for Issue-236 M1-A with governed W5 runtime-asset staging.
 
-Kept separate from the scientific split builder so this correction is visibly a
-harness/staging fix: it copies the same rate/chemistry assets used by the W5
-production path before validating references and invoking MOOSE.
+Kept separate from the scientific split builder so harness/runtime corrections
+remain visible: it stages the W5 rate/chemistry assets and removes inherited
+heavy-flow diagnostics whose Rhie-Chow dependency is intentionally absent from
+the fast electron child.
 """
 from __future__ import annotations
 
@@ -12,6 +13,39 @@ from pathlib import Path
 from typing import Any
 
 from experiments.Issue236_m1a_multiapp_smoke import run as base
+
+
+_base_prune_child_flow_ownership = base._prune_child_flow_ownership
+_base_audit_child = base._audit_child
+_base_self_test = base.self_test
+
+
+def _rc_dependent_postprocessors(text: str) -> list[str]:
+    """Return child postprocessors that still require the removed rc object."""
+    return [
+        path
+        for path in base._children(text, "Postprocessors")
+        if base.mp.unquote(base.mp.get_parameter(text, path, "rhie_chow_user_object")) == "rc"
+    ]
+
+
+def _prune_child_flow_ownership(text: str) -> str:
+    """Prune flow ownership plus inherited diagnostics tied to Rhie-Chow."""
+    text = _base_prune_child_flow_ownership(text)
+    for path in _rc_dependent_postprocessors(text):
+        text = base.mb.remove_block(text, path)
+    return text
+
+
+def _audit_child(text: str, *, dt_e: float) -> dict[str, Any]:
+    """Extend the split audit with an explicit no-hidden-rc contract."""
+    result = _base_audit_child(text, dt_e=dt_e)
+    remaining = _rc_dependent_postprocessors(text)
+    result["checks"]["no_rc_dependent_postprocessors"] = not remaining
+    result["rc_dependent_postprocessors"] = remaining
+    result["failed_checks"] = sorted(key for key, ok in result["checks"].items() if not ok)
+    result["status"] = "PASS" if not result["failed_checks"] else "FAIL"
+    return result
 
 
 def _stage(out: Path, *, dt_e: float) -> tuple[Path, dict[str, Any]]:
@@ -50,9 +84,6 @@ def _stage(out: Path, *, dt_e: float) -> tuple[Path, dict[str, Any]]:
     return case_dir, meta
 
 
-_base_self_test = base.self_test
-
-
 def _self_test() -> dict[str, Any]:
     """Contain split-construction failures as structured governed evidence."""
     try:
@@ -67,6 +98,8 @@ def _self_test() -> dict[str, Any]:
         }
 
 
+base._prune_child_flow_ownership = _prune_child_flow_ownership
+base._audit_child = _audit_child
 base._stage = _stage
 base.self_test = _self_test
 
