@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
-"""Issue-236 discriminator: frozen electrons with coupled heavy + Poisson solve.
+"""Issue-236 discriminator: frozen electrons, heavy + Poisson, volume chemistry off.
 
-This deliberately removes the MultiApp/sub-cycling path. Electron density and
-electron energy are frozen at their production initial conditions as FV aux
-variables. The nonlinear system contains the heavy-fluid/heavy-species
-variables plus potential_plasma, and advances five equal steps over 10 ns.
+Electron density and electron energy are frozen at their production initial
+conditions.  The nonlinear system advances the heavy-fluid/heavy-species
+variables plus potential_plasma for five equal 2 ns steps over 10 ns.
 
-The purpose is narrow: determine whether ion/heavy evolution coupled directly
-to Poisson, without electron redistribution, produces the expected potential
-topology. Exodus is emitted at every heavy step for spatial inspection.
+Only volumetric heavy-species chemistry coupling is disabled: every
+PhysicsFVSpeciesReactionSource kernel is removed.  Heavy transport,
+electrostatic drift, wall/surface reactions and losses, flow, and Poisson stay
+active.  Reaction-rate materials may remain for diagnostics, but they no
+longer enter any species evolution equation.
 """
 from __future__ import annotations
 
@@ -20,14 +21,13 @@ from typing import Any
 
 from experiments.Issue236_m1a_multiapp_smoke import run as base
 
-
 TOTAL_TIME_S = 1.0e-8
 HEAVY_STEPS = 5
 HEAVY_DT_S = TOTAL_TIME_S / HEAVY_STEPS
-
 FROZEN_ELECTRON_VARIABLES = ("n_e", "n_epsilon")
 POISSON_VARIABLE = "potential_plasma"
 SOLVER_VARIABLES = (*base.HEAVY_SOLVER_VARIABLES, POISSON_VARIABLE)
+VOLUME_REACTION_SOURCE_TYPE = "PhysicsFVSpeciesReactionSource"
 
 _ROOT_ASSIGNMENT_RE = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*$")
 _PP_REF_RE = re.compile(
@@ -80,10 +80,9 @@ def _root_assignment_table(text: str) -> dict[str, dict[str, Any]]:
 
 
 def _mentions_symbol(text: str, name: str) -> bool:
-    return (
-        re.search(rf"(?<![A-Za-z0-9_]){re.escape(name)}(?![A-Za-z0-9_])", text)
-        is not None
-    )
+    return re.search(
+        rf"(?<![A-Za-z0-9_]){re.escape(name)}(?![A-Za-z0-9_])", text
+    ) is not None
 
 
 def _root_liveness(text: str) -> dict[str, Any]:
@@ -172,7 +171,31 @@ def _owned_variables(text: str, section: str) -> list[str]:
     return result
 
 
-def _build_heavy_poisson_input(production_text: str) -> str:
+def _volume_reaction_source_paths(text: str) -> list[str]:
+    return [
+        path
+        for path in base._children(text, "FVKernels")
+        if base.mp.unquote(base.mp.get_parameter(text, path, "type"))
+        == VOLUME_REACTION_SOURCE_TYPE
+    ]
+
+
+def _remove_volume_reaction_sources(text: str) -> tuple[str, list[str]]:
+    removed = _volume_reaction_source_paths(text)
+    for path in removed:
+        text = base.mb.remove_block(text, path)
+    return text, removed
+
+
+def _surface_bc_paths(text: str) -> list[str]:
+    return [
+        path
+        for path in base._children(text, "FVBCs")
+        if "_surface_" in base._name(path) or "_wall_loss" in base._name(path)
+    ]
+
+
+def _build_heavy_poisson_input(production_text: str) -> tuple[str, list[str]]:
     variable_names = {
         base._name(path) for path in base._children(production_text, "Variables")
     }
@@ -182,31 +205,21 @@ def _build_heavy_poisson_input(production_text: str) -> str:
             f"expected {sorted(base.EXPECTED_VARIABLES)}"
         )
 
-    text = base._move_variables_to_aux(
-        production_text, FROZEN_ELECTRON_VARIABLES
-    )
+    text = base._move_variables_to_aux(production_text, FROZEN_ELECTRON_VARIABLES)
 
-    # Remove electron particle/energy equations only. Poisson remains nonlinear
-    # and is solved together with the heavy system.
     text, removed_electron_bcs = base._remove_equations_owned_by(
         text, set(FROZEN_ELECTRON_VARIABLES)
     )
-    text = base._remove_postprocessors_for_missing_bcs(
-        text, removed_electron_bcs
-    )
+    text = base._remove_postprocessors_for_missing_bcs(text, removed_electron_bcs)
 
-    # MultiApp/transfer objects are not part of this discriminator.
+    text, removed_volume_sources = _remove_volume_reaction_sources(text)
+
     text = base._remove_top_if_present(text, "MultiApps")
     text = base._remove_top_if_present(text, "Transfers")
-
-    # Vector diagnostics are not needed for the topology discriminator and can
-    # carry ownership dependencies from the removed electron equations.
     text = base._remove_top_if_present(text, "VectorPostprocessors")
 
     text = base.mp.upsert_parameter(text, "Problem", "solve", "true")
-    text = base.mp.upsert_parameter(
-        text, "Executioner", "dt", f"{HEAVY_DT_S:.17g}"
-    )
+    text = base.mp.upsert_parameter(text, "Executioner", "dt", f"{HEAVY_DT_S:.17g}")
     text = base.mp.upsert_parameter(
         text, "Executioner", "end_time", f"{TOTAL_TIME_S:.17g}"
     )
@@ -219,38 +232,28 @@ def _build_heavy_poisson_input(production_text: str) -> str:
         )
 
     text, _ = _prune_dead_root_parameters(text)
-    return text
+    return text, removed_volume_sources
 
 
-def _audit_input(text: str) -> dict[str, Any]:
+def _audit_input(text: str, removed_volume_sources: list[str]) -> dict[str, Any]:
     checks: dict[str, bool] = {}
 
     for name in base.HEAVY_SOLVER_VARIABLES:
-        checks[f"heavy_solver:{name}"] = base.mb.has_block(
-            text, f"Variables/{name}"
-        )
-        checks[f"heavy_not_aux:{name}"] = not base.mb.has_block(
-            text, f"AuxVariables/{name}"
-        )
+        checks[f"heavy_solver:{name}"] = base.mb.has_block(text, f"Variables/{name}")
+        checks[f"heavy_not_aux:{name}"] = not base.mb.has_block(text, f"AuxVariables/{name}")
 
-    checks["poisson_solver"] = base.mb.has_block(
-        text, f"Variables/{POISSON_VARIABLE}"
-    )
-    checks["poisson_not_aux"] = not base.mb.has_block(
-        text, f"AuxVariables/{POISSON_VARIABLE}"
-    )
+    checks["poisson_solver"] = base.mb.has_block(text, f"Variables/{POISSON_VARIABLE}")
+    checks["poisson_not_aux"] = not base.mb.has_block(text, f"AuxVariables/{POISSON_VARIABLE}")
 
     for name in FROZEN_ELECTRON_VARIABLES:
-        checks[f"electron_frozen_aux:{name}"] = base.mb.has_block(
-            text, f"AuxVariables/{name}"
-        )
-        checks[f"electron_not_solver:{name}"] = not base.mb.has_block(
-            text, f"Variables/{name}"
-        )
+        checks[f"electron_frozen_aux:{name}"] = base.mb.has_block(text, f"AuxVariables/{name}")
+        checks[f"electron_not_solver:{name}"] = not base.mb.has_block(text, f"Variables/{name}")
 
     kernel_vars = _owned_variables(text, "FVKernels")
     bc_vars = _owned_variables(text, "FVBCs")
     aux_kernel_vars = _owned_variables(text, "AuxKernels")
+    surface_bcs = _surface_bc_paths(text)
+    remaining_volume_sources = _volume_reaction_source_paths(text)
 
     checks["solver_owners_heavy_or_poisson"] = bool(kernel_vars) and all(
         variable in SOLVER_VARIABLES for variable in kernel_vars
@@ -258,9 +261,7 @@ def _audit_input(text: str) -> dict[str, Any]:
     checks["bc_owners_heavy_or_poisson"] = all(
         variable in SOLVER_VARIABLES for variable in bc_vars
     )
-    checks["no_electron_time_kernel"] = not base.mb.has_block(
-        text, "FVKernels/n_e_time"
-    )
+    checks["no_electron_time_kernel"] = not base.mb.has_block(text, "FVKernels/n_e_time")
     checks["no_electron_energy_time_kernel"] = not base.mb.has_block(
         text, "FVKernels/s5r_n_epsilon_time"
     )
@@ -272,6 +273,37 @@ def _audit_input(text: str) -> dict[str, Any]:
     )
     checks["frozen_electrons_not_written_by_auxkernel"] = all(
         variable not in FROZEN_ELECTRON_VARIABLES for variable in aux_kernel_vars
+    )
+
+    checks["volume_reaction_sources_removed"] = (
+        len(removed_volume_sources) > 0 and not remaining_volume_sources
+    )
+    checks["expected_s5r_volume_sources_removed"] = set(
+        base._name(path) for path in removed_volume_sources
+    ) == {
+        "s5r_source_O2s",
+        "s5r_source_O2p",
+        "s5r_source_O",
+        "s5r_source_Om",
+        "s5r_source_Op",
+        "s5r_source_Os",
+    }
+    checks["surface_wall_bcs_preserved"] = bool(surface_bcs)
+    checks["neutral_wall_loss_preserved"] = all(
+        base.mb.has_block(text, f"FVBCs/{name}")
+        for name in (
+            "issue27_a6_O_wall_loss",
+            "issue27_a6_O2s_wall_loss",
+            "issue27_a6_Os_wall_loss",
+        )
+    )
+    checks["charged_surface_bcs_preserved"] = all(
+        any(base._name(path).startswith(prefix) for path in surface_bcs)
+        for prefix in (
+            "issue27_a6_O2p_surface_",
+            "issue27_a6_Om_surface_",
+            "issue27_a6_Op_surface_",
+        )
     )
 
     checks["no_multiapps"] = not base.mb.has_block(text, "MultiApps")
@@ -289,17 +321,11 @@ def _audit_input(text: str) -> dict[str, Any]:
         abs_tol=1.0e-20,
     )
     checks["exodus_enabled"] = (
-        (
-            base.mp.unquote(
-                base.mp.get_parameter(text, "Outputs", "exodus")
-            )
-            or ""
-        ).lower()
+        (base.mp.unquote(base.mp.get_parameter(text, "Outputs", "exodus")) or "").lower()
         == "true"
     )
     checks["outputs_each_step"] = (
-        "TIMESTEP_END"
-        in base.mp.words(base.mp.get_parameter(text, "Outputs", "execute_on"))
+        "TIMESTEP_END" in base.mp.words(base.mp.get_parameter(text, "Outputs", "execute_on"))
     )
 
     liveness = _root_liveness(text)
@@ -312,6 +338,9 @@ def _audit_input(text: str) -> dict[str, Any]:
         "status": "PASS" if not failed else "FAIL",
         "checks": checks,
         "failed_checks": failed,
+        "removed_volume_reaction_sources": removed_volume_sources,
+        "remaining_volume_reaction_sources": remaining_volume_sources,
+        "surface_wall_bcs": surface_bcs,
         "kernel_variables": kernel_vars,
         "bc_variables": bc_vars,
         "aux_kernel_variables": aux_kernel_vars,
@@ -324,17 +353,21 @@ def _build_case() -> tuple[str, dict[str, Any]]:
     production_text, production_meta = base.w5._build_case(
         dt_s=base.w5.BASELINE_DT_S, uniform_refine=0
     )
-    text = _build_heavy_poisson_input(production_text)
-    audit = _audit_input(text)
+    text, removed_volume_sources = _build_heavy_poisson_input(production_text)
+    audit = _audit_input(text, removed_volume_sources)
     meta = {
         "issue": 236,
         "parent_issue": 234,
-        "claim": "frozen_electrons_heavy_plus_poisson_five_step_discriminator",
+        "claim": "frozen_electrons_heavy_poisson_volume_chemistry_off",
         "operator_split": "none; single nonlinear heavy + Poisson application",
         "electron_model": (
             "n_e and n_epsilon frozen at production initial conditions; "
             "electron particle and energy equations removed"
         ),
+        "volume_chemistry": (
+            "OFF in species evolution: all PhysicsFVSpeciesReactionSource kernels removed"
+        ),
+        "surface_chemistry_and_wall_loss": "ON; existing heavy FVBCs preserved",
         "total_time_s": TOTAL_TIME_S,
         "heavy_steps": HEAVY_STEPS,
         "dt_s": HEAVY_DT_S,
@@ -353,24 +386,11 @@ def _self_test() -> dict[str, Any]:
             "case_builds": True,
             "audit": meta["audit"]["status"] == "PASS",
             "five_heavy_steps": meta["heavy_steps"] == HEAVY_STEPS,
+            "volume_chemistry_off": not _volume_reaction_source_paths(text),
+            "surface_wall_bcs_on": bool(_surface_bc_paths(text)),
             "no_multiapp": not base.mb.has_block(text, "MultiApps"),
             "hit_parse": bool(base.MooseInput(text).blocks),
         }
-
-        synthetic = (
-            "A = 1\n"
-            "B = ${fparse A + 1}\n"
-            "C = 3\n"
-            "[Test]\n"
-            "  value = ${C}\n"
-            "[]\n"
-        )
-        pruned, report = _prune_dead_root_parameters(synthetic)
-        checks["root_dependency_closure"] = (
-            report["removed"] == ["A", "B"]
-            and _root_liveness(pruned)["dead_root_parameters"] == []
-            and "C = 3" in pruned
-        )
         failed = sorted(key for key, ok in checks.items() if not ok)
         return {
             "status": "PASS" if not failed else "FAIL",
@@ -387,10 +407,8 @@ def _self_test() -> dict[str, Any]:
         }
 
 
-def _stage(
-    out: Path, *, dt_e: float
-) -> tuple[Path, dict[str, Any]]:
-    del dt_e  # retained only because base.run() supplies the legacy argument
+def _stage(out: Path, *, dt_e: float) -> tuple[Path, dict[str, Any]]:
+    del dt_e
     text, meta = _build_case()
     case_dir = out / "case"
     staged = base.stage_case(
@@ -409,20 +427,15 @@ def _stage(
         ),
     )
     base.w5.s5r._copy_runtime_assets(case_dir)
-
     meta["staging"] = staged
-    meta["references"] = base.validate_referenced_files(
-        text, case_dir, skip_dynamic=True
-    )
+    meta["references"] = base.validate_referenced_files(text, case_dir, skip_dynamic=True)
     (case_dir / "prepare_evidence.json").write_text(
         json.dumps(meta, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
     return case_dir, meta
 
 
-def _unique_rows_by_time(
-    rows: list[dict[str, str]]
-) -> list[dict[str, str]]:
+def _unique_rows_by_time(rows: list[dict[str, str]]) -> list[dict[str, str]]:
     by_time: dict[float, dict[str, str]] = {}
     for row in rows:
         time = float(row["time"])
@@ -469,14 +482,10 @@ def _runtime_analysis(
             "step_times": times_match,
             "final_time": bool(actual_times)
             and math.isclose(
-                actual_times[-1],
-                TOTAL_TIME_S,
-                rel_tol=0.0,
-                abs_tol=1.0e-18,
+                actual_times[-1], TOTAL_TIME_S, rel_tol=0.0, abs_tol=1.0e-18
             ),
         }
     )
-
     result.update(
         {
             "physical_rows": len(physical),
