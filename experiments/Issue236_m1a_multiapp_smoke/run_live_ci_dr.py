@@ -3,7 +3,7 @@
 
 Coupling per heavy interval:
 
-1. hold the heavy state fixed;
+1. hold the heavy state and heavy-transport electron-density input fixed;
 2. solve n_e, n_epsilon, and potential_plasma together for 100 fast substeps;
 3. transfer the relaxed electron/energy/Poisson state back to the parent;
 4. advance the heavy system once.
@@ -16,10 +16,12 @@ Schedule:
 * total time = 2e-8 s;
 * 200 electron/Poisson steps total.
 
-The production strict electron-impact lookup policy remains enabled.  This test
-therefore checks whether resolving the fast dielectric response removes the
-out-of-range nonlinear excursion seen at dt_e = 1e-9 s rather than hiding it
-with a kinetic-table clamp.
+The production strict electron-impact lookup policy remains enabled.  Heavy
+transport is deliberately evaluated with a frozen copy of the parent electron
+density during each fast interval: heavy species are not advanced in the fast
+child, so their Debye-Huckel transport/mobility closure must not depend on an
+intermediate electron Newton trial state.  Live n_e remains coupled to electron
+chemistry and Poisson.
 """
 from __future__ import annotations
 
@@ -39,7 +41,143 @@ live.ELECTRON_STEPS_PER_HEAVY = 100
 base.DT_H_S = live.HEAVY_DT_S
 base.DT_E_SMOKE_S = live.ELECTRON_DT_S
 
+_pos_build_parent_input = base.build_parent_input
+_pos_build_child_input = base.build_child_input
+_pos_audit_parent = base._audit_parent
+_pos_audit_child = base._audit_child
 _pos_self_test = base.self_test
+
+_FROZEN_NE_AUX = "n_e_heavy_frozen"
+_FROZEN_NE_PHYSICAL = "n_e_heavy_frozen_physical"
+_FROZEN_NE_TRANSFER = "frozen_ne_to_electron"
+_FROZEN_NE_MATERIAL = "issue236_frozen_heavy_electron_density"
+
+
+def _finalize(result):
+    result["failed_checks"] = sorted(
+        key for key, ok in result["checks"].items() if not ok
+    )
+    result["status"] = "PASS" if not result["failed_checks"] else "FAIL"
+    return result
+
+
+def _build_parent_input(production_text: str) -> str:
+    text = _pos_build_parent_input(production_text)
+    path = f"Transfers/{_FROZEN_NE_TRANSFER}"
+    if base.mb.has_block(text, path):
+        raise base.Issue236Error(f"duplicate frozen-electron transfer: {path}")
+    text = base.mb.insert_child_block(
+        text,
+        "Transfers",
+        f"""  [{_FROZEN_NE_TRANSFER}]
+    type = MultiAppCopyTransfer
+    to_multi_app = electron
+    source_variable = n_e
+    variable = {_FROZEN_NE_AUX}
+    execute_on = TIMESTEP_BEGIN
+  []""",
+    )
+    return text
+
+
+def _build_child_input(production_text: str, *, dt_e: float) -> str:
+    text = _pos_build_child_input(production_text, dt_e=dt_e)
+
+    text = base._ensure_top_block(text, "AuxVariables")
+    aux_path = f"AuxVariables/{_FROZEN_NE_AUX}"
+    if base.mb.has_block(text, aux_path):
+        raise base.Issue236Error(f"duplicate frozen heavy electron variable: {aux_path}")
+    text = base.mb.insert_child_block(
+        text,
+        "AuxVariables",
+        f"""  [{_FROZEN_NE_AUX}]
+    type = MooseVariableFVReal
+    initial_condition = 1.0
+    block = plasma
+  []""",
+    )
+
+    material_path = f"FunctorMaterials/{_FROZEN_NE_MATERIAL}"
+    if base.mb.has_block(text, material_path):
+        raise base.Issue236Error(f"duplicate frozen heavy electron material: {material_path}")
+    text = base.mb.insert_child_block(
+        text,
+        "FunctorMaterials",
+        f"""  [{_FROZEN_NE_MATERIAL}]
+    type = ADParsedFunctorMaterial
+    property_name = {_FROZEN_NE_PHYSICAL}
+    functor_names = '{_FROZEN_NE_AUX}'
+    functor_symbols = 'ne_hat_frozen'
+    expression = '${{n_e_value}}*ne_hat_frozen'
+    block = plasma
+  []""",
+    )
+
+    heavy_transport = "FunctorMaterials/heavy_transport"
+    if not base.mb.has_block(text, heavy_transport):
+        raise base.Issue236Error("live child lacks FunctorMaterials/heavy_transport")
+    text = base.mp.upsert_parameter(
+        text,
+        heavy_transport,
+        "electron_number_density",
+        _FROZEN_NE_PHYSICAL,
+    )
+    return text
+
+
+def _audit_parent(text: str):
+    result = _pos_audit_parent(text)
+    path = f"Transfers/{_FROZEN_NE_TRANSFER}"
+    result["checks"]["frozen_ne_transfer"] = (
+        base.mb.has_block(text, path)
+        and base.mp.unquote(base.mp.get_parameter(text, path, "type"))
+        == "MultiAppCopyTransfer"
+        and base.mp.unquote(base.mp.get_parameter(text, path, "to_multi_app")) == "electron"
+        and base.mp.words(base.mp.get_parameter(text, path, "source_variable")) == ["n_e"]
+        and base.mp.words(base.mp.get_parameter(text, path, "variable")) == [_FROZEN_NE_AUX]
+        and base.mp.unquote(base.mp.get_parameter(text, path, "execute_on"))
+        == "TIMESTEP_BEGIN"
+    )
+    return _finalize(result)
+
+
+def _audit_child(text: str, *, dt_e: float):
+    result = _pos_audit_child(text, dt_e=dt_e)
+    aux_path = f"AuxVariables/{_FROZEN_NE_AUX}"
+    material_path = f"FunctorMaterials/{_FROZEN_NE_MATERIAL}"
+    heavy_transport = "FunctorMaterials/heavy_transport"
+    result["checks"]["frozen_heavy_ne_aux"] = (
+        base.mb.has_block(text, aux_path)
+        and base.mp.unquote(base.mp.get_parameter(text, aux_path, "type"))
+        == "MooseVariableFVReal"
+        and base.mp.unquote(base.mp.get_parameter(text, aux_path, "block")) == "plasma"
+    )
+    result["checks"]["frozen_heavy_ne_material"] = (
+        base.mb.has_block(text, material_path)
+        and base.mp.unquote(base.mp.get_parameter(text, material_path, "type"))
+        == "ADParsedFunctorMaterial"
+        and base.mp.unquote(base.mp.get_parameter(text, material_path, "property_name"))
+        == _FROZEN_NE_PHYSICAL
+        and base.mp.words(base.mp.get_parameter(text, material_path, "functor_names"))
+        == [_FROZEN_NE_AUX]
+    )
+    result["checks"]["heavy_transport_uses_frozen_ne"] = (
+        base.mb.has_block(text, heavy_transport)
+        and base.mp.unquote(
+            base.mp.get_parameter(text, heavy_transport, "electron_number_density")
+        )
+        == _FROZEN_NE_PHYSICAL
+    )
+    result["checks"]["poisson_still_uses_live_ne"] = (
+        base.mb.has_block(text, "FunctorMaterials/r31_charge_density")
+        and base.mp.unquote(
+            base.mp.get_parameter(
+                text, "FunctorMaterials/r31_charge_density", "electron_density"
+            )
+        )
+        == "n_e_physical"
+    )
+    return _finalize(result)
 
 
 def _self_test():
@@ -104,12 +242,34 @@ def _self_test():
         base.mp.get_parameter(child, path, "clamp_mean_energy_to_table") is None
         for path in base._children(child, "FunctorMaterials")
     )
+    checks["heavy_transport_frozen_during_fast_solve"] = (
+        base.mp.unquote(
+            base.mp.get_parameter(
+                child, "FunctorMaterials/heavy_transport", "electron_number_density"
+            )
+        )
+        == _FROZEN_NE_PHYSICAL
+        and base.mb.has_block(child, f"AuxVariables/{_FROZEN_NE_AUX}")
+        and base.mb.has_block(parent, f"Transfers/{_FROZEN_NE_TRANSFER}")
+    )
+    checks["live_ne_retained_for_poisson"] = (
+        base.mp.unquote(
+            base.mp.get_parameter(
+                child, "FunctorMaterials/r31_charge_density", "electron_density"
+            )
+        )
+        == "n_e_physical"
+    )
 
     result["failed_checks"] = sorted(key for key, ok in checks.items() if not ok)
     result["status"] = "PASS" if not result["failed_checks"] else "FAIL"
     return result
 
 
+base.build_parent_input = _build_parent_input
+base.build_child_input = _build_child_input
+base._audit_parent = _audit_parent
+base._audit_child = _audit_child
 base.self_test = _self_test
 
 if __name__ == "__main__":
