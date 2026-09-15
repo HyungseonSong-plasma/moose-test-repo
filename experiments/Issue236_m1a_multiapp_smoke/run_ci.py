@@ -3,8 +3,9 @@
 
 Kept separate from the scientific split builder so harness/runtime corrections
 remain visible: it stages the W5 rate/chemistry assets, strips inherited
-heavy-system diagnostics from the fast electron child, and garbage-collects
-root HIT parameters that no surviving object references after the split.
+heavy-system diagnostics from the fast electron child, garbage-collects
+root HIT parameters that no surviving object references after the split, and
+observes parent fast-state mirrors at FINAL after child-to-parent transfer.
 """
 from __future__ import annotations
 
@@ -140,9 +141,24 @@ def _prune_dead_root_parameters(text: str) -> tuple[str, dict[str, Any]]:
     return pruned, {"before": before, "after": after, "removed": sorted(dead)}
 
 
+def _set_parent_final_observation(text: str) -> str:
+    """Observe transferred parent mirrors only after TIMESTEP_END transfers finish."""
+    for name in base.PARENT_FAST_PPS:
+        text = base.mp.upsert_parameter(
+            text,
+            f"Postprocessors/{name}",
+            "execute_on",
+            "'INITIAL FINAL'",
+        )
+    if base.mb.has_block(text, "Outputs"):
+        text = base.mp.upsert_parameter(text, "Outputs", "execute_on", "'INITIAL FINAL'")
+    return text
+
+
 def _build_parent_input(production_text: str) -> str:
-    """Build the no-solve parent and garbage-collect dead production scalars."""
+    """Build the no-solve parent, prune dead scalars, and observe after transfer."""
     text = _base_build_parent_input(production_text)
+    text = _set_parent_final_observation(text)
     return _prune_dead_root_parameters(text)[0]
 
 
@@ -179,11 +195,28 @@ def _finalize_audit(result: dict[str, Any]) -> dict[str, Any]:
 
 
 def _audit_parent(text: str) -> dict[str, Any]:
-    """Extend the parent audit with root-parameter liveness."""
+    """Extend parent audit with root liveness and post-transfer observation timing."""
     result = _base_audit_parent(text)
     liveness = _root_liveness(text)
+    parent_pp_execute_on = {
+        name: base.mp.words(
+            base.mp.get_parameter(text, f"Postprocessors/{name}", "execute_on")
+        )
+        for name in base.PARENT_FAST_PPS
+    }
+    output_execute_on = (
+        base.mp.words(base.mp.get_parameter(text, "Outputs", "execute_on"))
+        if base.mb.has_block(text, "Outputs")
+        else []
+    )
     result["checks"]["no_dead_root_parameters"] = not liveness["dead_root_parameters"]
+    result["checks"]["parent_mirrors_observed_at_final"] = all(
+        "FINAL" in execute_on for execute_on in parent_pp_execute_on.values()
+    )
+    result["checks"]["parent_output_at_final"] = "FINAL" in output_execute_on
     result["root_liveness"] = liveness
+    result["parent_postprocessor_execute_on"] = parent_pp_execute_on
+    result["parent_output_execute_on"] = output_execute_on
     return _finalize_audit(result)
 
 
