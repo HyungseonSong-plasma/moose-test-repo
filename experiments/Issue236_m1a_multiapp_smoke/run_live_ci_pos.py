@@ -1,11 +1,17 @@
 #!/usr/bin/env python3
-"""Live-electron CI with nonlinear-trial positivity protection and 100:1 subcycling.
+"""Live-electron CI with solver-level positivity and 100:1 subcycling.
 
 Schedule:
 * heavy/ion parent: dt_h = 1e-7 s, 10 steps, t_end = 1e-6 s;
 * electron density + electron energy + Poisson child: dt_e = 1e-9 s;
 * 100 electron subcycles follow each heavy step (1000 electron steps total);
 * electron particle and energy surface losses remain active.
+
+The child nonlinear solve uses PETSc's reduced-space variational-inequality
+Newton method with explicit lower bounds on the normalized electron density and
+normalized electron-energy density. Existing trial-state material guards remain
+as defensive diagnostics, but positivity ownership belongs to the nonlinear
+solver rather than to individual reaction/material closures.
 """
 from __future__ import annotations
 
@@ -27,6 +33,7 @@ base.DT_H_S = live.HEAVY_DT_S
 base.DT_E_SMOKE_S = live.ELECTRON_DT_S
 
 _live_build_child_input = base.build_child_input
+_live_audit_child = base._audit_child
 _live_self_test = base.self_test
 
 _ZERO_RATE_GUARD_TYPES = (
@@ -34,6 +41,12 @@ _ZERO_RATE_GUARD_TYPES = (
     "PhysicsElectronImpactIonizationMaterial",
     "PhysicsElectronImpactO2sExcitationMaterial",
 )
+
+_BOUNDS_DUMMY = "issue236_electron_bounds_dummy"
+_NE_LOWER_BOUND = "issue236_n_e_lower_bound"
+_EPS_LOWER_BOUND = "issue236_n_epsilon_lower_bound"
+_NORMALIZED_POSITIVITY_FLOOR = 1.0e-12
+_VI_SNES_TYPE = "vinewtonrsls"
 
 
 def _enable_trial_state_guards(text: str) -> str:
@@ -70,9 +83,128 @@ def _enable_trial_state_guards(text: str) -> str:
     return text
 
 
+def _set_petsc_option(text: str, name: str, value: str) -> str:
+    inames = base.mp.words(base.mp.get_parameter(text, "Executioner", "petsc_options_iname"))
+    values = base.mp.words(base.mp.get_parameter(text, "Executioner", "petsc_options_value"))
+    if len(inames) != len(values):
+        raise base.Issue236Error(
+            "Executioner PETSc option names/values have inconsistent lengths: "
+            f"{len(inames)} != {len(values)}"
+        )
+
+    if name in inames:
+        values[inames.index(name)] = value
+    else:
+        inames.append(name)
+        values.append(value)
+
+    text = base.mp.upsert_parameter(
+        text, "Executioner", "petsc_options_iname", "'" + " ".join(inames) + "'"
+    )
+    text = base.mp.upsert_parameter(
+        text, "Executioner", "petsc_options_value", "'" + " ".join(values) + "'"
+    )
+    return text
+
+
+def _enable_solver_positivity(text: str) -> str:
+    text = base._ensure_top_block(text, "AuxVariables")
+    dummy_path = f"AuxVariables/{_BOUNDS_DUMMY}"
+    if base.mb.has_block(text, dummy_path):
+        raise base.Issue236Error(f"duplicate bounds dummy variable: {dummy_path}")
+    text = base.mb.insert_child_block(
+        text,
+        "AuxVariables",
+        f"""  [{_BOUNDS_DUMMY}]
+    type = MooseVariableFVReal
+    block = plasma
+  []""",
+    )
+
+    text = base._ensure_top_block(text, "Bounds")
+    for name, bounded_variable in (
+        (_NE_LOWER_BOUND, "n_e"),
+        (_EPS_LOWER_BOUND, "n_epsilon"),
+    ):
+        path = f"Bounds/{name}"
+        if base.mb.has_block(text, path):
+            raise base.Issue236Error(f"duplicate electron positivity bound: {path}")
+        text = base.mb.insert_child_block(
+            text,
+            "Bounds",
+            f"""  [{name}]
+    type = ConstantBounds
+    variable = {_BOUNDS_DUMMY}
+    bounded_variable = {bounded_variable}
+    bound_type = lower
+    bound_value = {_NORMALIZED_POSITIVITY_FLOOR:.17g}
+    block = plasma
+  []""",
+        )
+
+    # ConstantBounds is enforced by PETSc's variational-inequality SNES. Keep
+    # the existing LU/NONZERO preconditioning contract and append only SNES type.
+    text = base.mp.upsert_parameter(text, "Executioner", "solve_type", "NEWTON")
+    text = _set_petsc_option(text, "-snes_type", _VI_SNES_TYPE)
+    return text
+
+
 def _build_child_input(production_text: str, *, dt_e: float) -> str:
     text = _live_build_child_input(production_text, dt_e=dt_e)
-    return _enable_trial_state_guards(text)
+    text = _enable_trial_state_guards(text)
+    return _enable_solver_positivity(text)
+
+
+def _positivity_checks(text: str) -> dict[str, bool]:
+    checks: dict[str, bool] = {}
+    dummy_path = f"AuxVariables/{_BOUNDS_DUMMY}"
+    checks["electron_bounds_dummy_fv"] = (
+        base.mb.has_block(text, dummy_path)
+        and base.mp.unquote(base.mp.get_parameter(text, dummy_path, "type"))
+        == "MooseVariableFVReal"
+        and base.mp.unquote(base.mp.get_parameter(text, dummy_path, "block")) == "plasma"
+    )
+
+    for name, bounded_variable in (
+        (_NE_LOWER_BOUND, "n_e"),
+        (_EPS_LOWER_BOUND, "n_epsilon"),
+    ):
+        path = f"Bounds/{name}"
+        checks[f"positive_lower_bound:{bounded_variable}"] = (
+            base.mb.has_block(text, path)
+            and base.mp.unquote(base.mp.get_parameter(text, path, "type")) == "ConstantBounds"
+            and base.mp.unquote(base.mp.get_parameter(text, path, "variable")) == _BOUNDS_DUMMY
+            and base.mp.unquote(base.mp.get_parameter(text, path, "bounded_variable"))
+            == bounded_variable
+            and base.mp.unquote(base.mp.get_parameter(text, path, "bound_type")) == "lower"
+            and math.isclose(
+                float(base.mp.get_parameter(text, path, "bound_value") or "nan"),
+                _NORMALIZED_POSITIVITY_FLOOR,
+                rel_tol=0.0,
+                abs_tol=0.0,
+            )
+            and base.mp.unquote(base.mp.get_parameter(text, path, "block")) == "plasma"
+        )
+
+    inames = base.mp.words(base.mp.get_parameter(text, "Executioner", "petsc_options_iname"))
+    values = base.mp.words(base.mp.get_parameter(text, "Executioner", "petsc_options_value"))
+    option_map = dict(zip(inames, values)) if len(inames) == len(values) else {}
+    checks["vi_newton_solver"] = option_map.get("-snes_type") == _VI_SNES_TYPE
+    checks["existing_lu_preconditioner_preserved"] = (
+        option_map.get("-pc_type") == "lu"
+        and option_map.get("-pc_factor_shift_type") == "NONZERO"
+    )
+    return checks
+
+
+def _audit_child(text: str, *, dt_e: float):
+    result = _live_audit_child(text, dt_e=dt_e)
+    result["checks"].update(_positivity_checks(text))
+    result["failed_checks"] = sorted(
+        key for key, ok in result["checks"].items() if not ok
+    )
+    result["status"] = "PASS" if not result["failed_checks"] else "FAIL"
+    return result
 
 
 def _self_test():
@@ -129,6 +261,7 @@ def _self_test():
         and float(base.mp.get_parameter(child, path, "trial_fallback_mean_energy_eV") or "nan") > 0.0
         for path in mean_paths
     )
+    checks.update(_positivity_checks(child))
 
     result["failed_checks"] = sorted(key for key, ok in checks.items() if not ok)
     result["status"] = "PASS" if not result["failed_checks"] else "FAIL"
@@ -136,6 +269,7 @@ def _self_test():
 
 
 base.build_child_input = _build_child_input
+base._audit_child = _audit_child
 base.self_test = _self_test
 
 if __name__ == "__main__":
