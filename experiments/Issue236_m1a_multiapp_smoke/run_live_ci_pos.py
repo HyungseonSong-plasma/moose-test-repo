@@ -1,10 +1,31 @@
 #!/usr/bin/env python3
-"""Live-electron CI with nonlinear-trial positivity protection for reaction rates."""
+"""Live-electron CI with nonlinear-trial positivity protection and 100:1 subcycling.
+
+Schedule:
+* heavy/ion parent: dt_h = 1e-7 s, 10 steps, t_end = 1e-6 s;
+* electron density + electron energy + Poisson child: dt_e = 1e-9 s;
+* 100 electron subcycles follow each heavy step (1000 electron steps total);
+* electron particle and energy surface losses remain active.
+"""
 from __future__ import annotations
+
+import math
 
 from experiments.Issue236_m1a_multiapp_smoke import run_live_ci as live
 
+# Override only the multirate schedule. The underlying live-electron split,
+# thermal surface-loss closure, audits, runtime analysis, and staging remain
+# owned by run_live_ci.py and read these module globals dynamically.
+live.TOTAL_TIME_S = 1.0e-6
+live.HEAVY_STEPS = 10
+live.HEAVY_DT_S = 1.0e-7
+live.ELECTRON_DT_S = 1.0e-9
+live.ELECTRON_STEPS_PER_HEAVY = 100
+
 base = live.base
+base.DT_H_S = live.HEAVY_DT_S
+base.DT_E_SMOKE_S = live.ELECTRON_DT_S
+
 _live_build_child_input = base.build_child_input
 _live_self_test = base.self_test
 
@@ -29,25 +50,45 @@ def _build_child_input(production_text: str, *, dt_e: float) -> str:
 
 
 def _self_test():
+    # The inherited self-test still contains labels/expectations for the former
+    # 1e-8/1e-9 schedule. Reuse all of its structural checks, then replace only
+    # those schedule-specific assertions with the requested 1e-7/1e-9 contract.
     result = _live_self_test()
-    if result.get("status") != "PASS":
-        return result
-    _parent, child, _meta = base.build_split(dt_e=live.ELECTRON_DT_S)
+    checks = result.setdefault("checks", {})
+    for obsolete in (
+        "heavy_dt_1e_8",
+        "ten_electron_steps_per_heavy",
+        "hundred_total_electron_steps",
+    ):
+        checks.pop(obsolete, None)
+
+    _parent, child, meta = base.build_split(dt_e=live.ELECTRON_DT_S)
+    checks["heavy_dt_1e_7"] = math.isclose(
+        meta["dt_h_s"], 1.0e-7, rel_tol=0.0, abs_tol=0.0
+    )
+    checks["electron_dt_1e_9"] = math.isclose(
+        meta["dt_e_s"], 1.0e-9, rel_tol=0.0, abs_tol=0.0
+    )
+    checks["ten_heavy_steps"] = meta["heavy_steps"] == 10
+    checks["hundred_electron_steps_per_heavy"] = meta["subcycles_per_heavy"] == 100
+    checks["thousand_total_electron_steps"] = meta["subcycles_expected"] == 1000
+    checks["final_time_1e_6"] = math.isclose(
+        meta["total_time_s"], 1.0e-6, rel_tol=0.0, abs_tol=0.0
+    )
+
     rate_paths = [
         path
         for path in base._children(child, "FunctorMaterials")
         if base.mp.unquote(base.mp.get_parameter(child, path, "type"))
         == "PhysicsElectronImpactRateMaterial"
     ]
-    clamp_enabled = bool(rate_paths) and all(
+    checks["electron_impact_trial_density_clamp"] = bool(rate_paths) and all(
         (base.mp.unquote(base.mp.get_parameter(child, path, "clamp_negative_electron_density")) or "").lower()
         == "true"
         for path in rate_paths
     )
-    result["checks"]["electron_impact_trial_density_clamp"] = clamp_enabled
-    result["failed_checks"] = sorted(
-        key for key, ok in result["checks"].items() if not ok
-    )
+
+    result["failed_checks"] = sorted(key for key, ok in checks.items() if not ok)
     result["status"] = "PASS" if not result["failed_checks"] else "FAIL"
     return result
 
