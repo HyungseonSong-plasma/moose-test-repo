@@ -7,6 +7,9 @@ on:
       - '.github/workflows/issue228-s6b-baseline-wall-field.yml'
       - 'experiments/Issue228_s6b_baseline_wall_field/**'
       - 'experiments/Issue228_s6_directional_observable/**'
+      - 'experiments/Issue228_d1_s2/**'
+      - 'experiments/Issue228_d1_s3/**'
+      - 'experiments/Issue228_pgw_parallel/**'
       - 'physics_app/include/fvkernels/PhysicsFVDiffusionDiagnostic.h'
       - 'physics_app/src/fvkernels/PhysicsFVDiffusionDiagnostic.C'
 
