@@ -2,9 +2,9 @@
 """CI entrypoint for Issue-236 M1-A with governed W5 runtime-asset staging.
 
 Kept separate from the scientific split builder so harness/runtime corrections
-remain visible: it stages the W5 rate/chemistry assets and removes inherited
-heavy-flow diagnostics whose Rhie-Chow dependency is intentionally absent from
-the fast electron child.
+remain visible: it stages the W5 rate/chemistry assets and strips inherited
+heavy-system diagnostics from the fast electron child before M1-A smoke output
+is rebuilt from its three dedicated fast-state postprocessors.
 """
 from __future__ import annotations
 
@@ -30,19 +30,30 @@ def _rc_dependent_postprocessors(text: str) -> list[str]:
 
 
 def _prune_child_flow_ownership(text: str) -> str:
-    """Prune flow ownership plus inherited diagnostics tied to Rhie-Chow."""
+    """Remove inherited heavy-flow ownership and all production diagnostics."""
     text = _base_prune_child_flow_ownership(text)
-    for path in _rc_dependent_postprocessors(text):
-        text = base.mb.remove_block(text, path)
+    # Production postprocessors depend on heavy-flow/user-object/functor owners
+    # intentionally absent from the fast child. build_child_input() recreates
+    # only the three M1-A fast-state postprocessors after this pruning step.
+    if base.mb.has_block(text, "Postprocessors"):
+        text = base.mb.remove_block(text, "Postprocessors")
     return text
 
 
 def _audit_child(text: str, *, dt_e: float) -> dict[str, Any]:
-    """Extend the split audit with an explicit no-hidden-rc contract."""
+    """Extend the split audit with exact fast-only diagnostic ownership."""
     result = _base_audit_child(text, dt_e=dt_e)
     remaining = _rc_dependent_postprocessors(text)
+    postprocessor_names = {
+        base._name(path) for path in base._children(text, "Postprocessors")
+    }
+    expected_postprocessors = set(base.CHILD_FAST_PPS)
     result["checks"]["no_rc_dependent_postprocessors"] = not remaining
+    result["checks"]["child_postprocessors_fast_only"] = (
+        postprocessor_names == expected_postprocessors
+    )
     result["rc_dependent_postprocessors"] = remaining
+    result["postprocessors"] = sorted(postprocessor_names)
     result["failed_checks"] = sorted(key for key, ok in result["checks"].items() if not ok)
     result["status"] = "PASS" if not result["failed_checks"] else "FAIL"
     return result
