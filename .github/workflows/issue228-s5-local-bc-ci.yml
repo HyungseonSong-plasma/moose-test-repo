@@ -29,9 +29,9 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
-          python3 -m py_compile experiments/Issue228_s5_local_bc/run.py
-          python3 experiments/Issue228_s5_local_bc/run.py ci-self-test \
-            --results-root issue228-ci-semantics-self-test
+          python3 -m py_compile experiments/Issue228_s5_local_bc/ci_semantics_self_test.py
+          python3 experiments/Issue228_s5_local_bc/ci_semantics_self_test.py \
+            --output issue228-ci-semantics-self-test/summary.json
       - name: Upload CI semantics evidence
         if: always()
         uses: actions/upload-artifact@v4
