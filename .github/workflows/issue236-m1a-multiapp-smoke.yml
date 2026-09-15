@@ -49,7 +49,7 @@ jobs:
           docker pull "$BUILD_BASE_REF"
           test "$(docker image inspect "$BUILD_BASE_REF" --format '{{ index .Config.Labels "io.physics.moose.sha" }}')" = "$MOOSE_SHA"
 
-      - name: Build and execute no-chemistry dielectric-relaxation M1-A
+      - name: Build and execute no-chemistry transfer diagnostics
         shell: bash
         run: |
           set -euxo pipefail
@@ -69,10 +69,10 @@ jobs:
               git config --global --add safe.directory /workspace
               test "$(git -C /workspace rev-parse HEAD)" = "$GITHUB_SHA"
               uv pip install --system --python "$(command -v python3)" -r requirements-evidence-engine.txt
-              python3 experiments/Issue236_m1a_multiapp_smoke/run_live_ci_nochem.py --self-test | tee issue236-m1a-logs/preflight.log
+              python3 experiments/Issue236_m1a_multiapp_smoke/run_live_ci_transfer_diag.py --self-test | tee issue236-m1a-logs/preflight.log
               make -C physics_app -j2
               test -x physics_app/physics-opt
-              python3 experiments/Issue236_m1a_multiapp_smoke/run_live_ci_nochem.py \
+              python3 experiments/Issue236_m1a_multiapp_smoke/run_live_ci_transfer_diag.py \
                 --physics-opt physics_app/physics-opt \
                 --dt-e 1e-10 \
                 --results-root issue236-m1a-results \
