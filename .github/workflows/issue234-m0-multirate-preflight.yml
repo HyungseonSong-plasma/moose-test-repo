@@ -1,0 +1,64 @@
+name: Issue-234 M0 multirate characteristic-time preflight
+
+on:
+  push:
+    branches: [issue-234-m0-multirate-preflight]
+    paths:
+      - '.github/workflows/issue234-m0-multirate-preflight.yml'
+      - 'experiments/Issue234_m0_multirate_preflight/**'
+      - 'physics_app/src/materials/PhysicsElectronTransportLookupMaterial.C'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  m0-characteristic-time-preflight:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Verify provenance
+        shell: bash
+        run: |
+          set -euxo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+
+      - name: Download governed Issue-228 snapshot
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euxo pipefail
+          mkdir -p snapshot
+          gh run download 34949699566 -n issue228-pgw-baseline-snapshot -D snapshot
+          test -f snapshot/case/input_out.e
+          test -f snapshot/case/input_out.csv
+          test -f snapshot/summary.json
+
+      - name: Run M0 timestep preflight
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python3 -m pip install --disable-pip-version-check --quiet numpy scipy
+          python3 -m py_compile experiments/Issue234_m0_multirate_preflight/run.py
+          python3 experiments/Issue234_m0_multirate_preflight/run.py --self-test
+          rm -rf issue234-m0-results
+          mkdir -p issue234-m0-results
+          python3 experiments/Issue234_m0_multirate_preflight/run.py \
+            --snapshot-root snapshot \
+            --repo-root . \
+            --results-root issue234-m0-results
+          cat issue234-m0-results/summary.json
+
+      - name: Upload M0 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue234-m0-multirate-preflight
+          path: issue234-m0-results
+          if-no-files-found: error
+          retention-days: 14
