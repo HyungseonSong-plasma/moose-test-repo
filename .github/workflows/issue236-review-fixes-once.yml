@@ -1,4 +1,4 @@
-name: Issue-236 apply reviewed fixes once
+name: Issue-236 apply reviewed code fixes once
 
 on:
   push:
@@ -18,7 +18,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Apply reviewed Issue-236 fixes atomically
+      - name: Apply reviewed Issue-236 code fixes
         shell: bash
         env:
           GH_PUSH_TOKEN: ${{ github.token }}
@@ -54,15 +54,15 @@ jobs:
           test_path = Path("tests/characterization/test_issue192_s5r_energy_transport.py")
           if test_path.exists():
               raise RuntimeError(f"unexpected existing test: {test_path}")
-          test_path.write_text('''from __future__ import annotations\n\nfrom pathlib import Path\n\nfrom experiments.historical_recipe_support.issue192_s5r import (\n    audit_s5r_input,\n    build_s5r_input,\n)\nfrom physics_harness.adapters.moose import blocks as mb\nfrom physics_harness.adapters.moose import parameters as mp\n\nROOT = Path(__file__).resolve().parents[2]\nBASE = ROOT / "experiments/Issue91_real_qvt_r3/r3_e0/heavy_base.i"\nENERGY_DRIFT = "FVKernels/s5r_n_epsilon_drift"\nPARTICLE_DRIFT = "FVKernels/n_e_drift"\nTOPOLOGY = (\n    "potential",\n    "carrier",\n    "charge_number",\n    "advected_interp_method",\n    "boundaries_to_avoid",\n    "block",\n)\n\n\ndef _build() -> str:\n    text, _meta = build_s5r_input(BASE.read_text())\n    return text\n\n\ndef test_s5r_energy_transport_has_time_diffusion_and_drift() -> None:\n    text = _build()\n    assert mb.has_block(text, "FVKernels/s5r_n_epsilon_time")\n    assert mb.has_block(text, "FVKernels/s5r_n_epsilon_diffusion")\n    assert mb.has_block(text, ENERGY_DRIFT)\n    assert mp.get_parameter(text, ENERGY_DRIFT, "type") == "PhysicsFVElectrostaticDrift"\n    assert mp.get_parameter(text, ENERGY_DRIFT, "variable") == "n_epsilon"\n    assert mp.get_parameter(text, ENERGY_DRIFT, "mobility") == "electron_energy_mobility"\n    assert audit_s5r_input(text)["checks"]["solved_energy_transport_complete"] is True\n\n\ndef test_s5r_energy_drift_matches_particle_topology() -> None:\n    text = _build()\n    for parameter in TOPOLOGY:\n        assert mp.get_parameter(text, ENERGY_DRIFT, parameter) == mp.get_parameter(\n            text, PARTICLE_DRIFT, parameter\n        )\n\n\ndef test_s5r_energy_drift_mutation_fails_audit() -> None:\n    text = _build()\n    mutated = mp.upsert_parameter(text, ENERGY_DRIFT, "charge_number", "1")\n    assert audit_s5r_input(mutated)["status"] == "FAIL"\n    assert (\n        audit_s5r_input(mutated)["checks"]["solved_energy_transport_complete"]\n        is False\n    )\n''')
+          test_path.write_text('''from __future__ import annotations\n\nfrom pathlib import Path\n\nfrom experiments.historical_recipe_support.issue192_s5r import (\n    audit_s5r_input,\n    build_s5r_input,\n)\nfrom physics_harness.adapters.moose import blocks as mb\nfrom physics_harness.adapters.moose import parameters as mp\n\nROOT = Path(__file__).resolve().parents[2]\nBASE = ROOT / "experiments/Issue91_real_qvt_r3/r3_e0/heavy_base.i"\nENERGY_DRIFT = "FVKernels/s5r_n_epsilon_drift"\nPARTICLE_DRIFT = "FVKernels/n_e_drift"\nTOPOLOGY = (\n    "potential",\n    "carrier",\n    "charge_number",\n    "advected_interp_method",\n    "boundaries_to_avoid",\n    "block",\n)\n\n\ndef _build() -> str:\n    text, _meta = build_s5r_input(BASE.read_text())\n    return text\n\n\ndef test_s5r_energy_transport_has_time_diffusion_and_drift() -> None:\n    text = _build()\n    assert mb.has_block(text, "FVKernels/s5r_n_epsilon_time")\n    assert mb.has_block(text, "FVKernels/s5r_n_epsilon_diffusion")\n    assert mb.has_block(text, ENERGY_DRIFT)\n    assert mp.get_parameter(text, ENERGY_DRIFT, "type") == "PhysicsFVElectrostaticDrift"\n    assert mp.get_parameter(text, ENERGY_DRIFT, "variable") == "n_epsilon"\n    assert mp.get_parameter(text, ENERGY_DRIFT, "mobility") == "electron_energy_mobility"\n    assert audit_s5r_input(text)["checks"]["solved_energy_transport_complete"] is True\n\n\ndef test_s5r_energy_drift_matches_particle_topology() -> None:\n    text = _build()\n    for parameter in TOPOLOGY:\n        assert mp.get_parameter(text, ENERGY_DRIFT, parameter) == mp.get_parameter(\n            text, PARTICLE_DRIFT, parameter\n        )\n\n\ndef test_s5r_energy_drift_mutation_fails_audit() -> None:\n    text = _build()\n    mutated = mp.upsert_parameter(text, ENERGY_DRIFT, "charge_number", "1")\n    mutated_audit = audit_s5r_input(mutated)\n    assert mutated_audit["status"] == "FAIL"\n    assert mutated_audit["checks"]["solved_energy_transport_complete"] is False\n''')
 
           nochem = "experiments/Issue236_m1a_multiapp_smoke/run_live_ci_nochem.py"
           p = Path(nochem)
           text = p.read_text()
           text = text.replace(
-              "source/sink kernels from the fast child and restores the missing conservative\\n"
+              "source/sink kernels from the fast child and restores the missing conservative\n"
               "electron-energy electrostatic drift term.",
-              "source/sink kernels from the fast child and requires the canonical conservative\\n"
+              "source/sink kernels from the fast child and requires the canonical conservative\n"
               "electron-energy electrostatic drift term.",
           )
           pattern = r'\n\ndef _restore_energy_drift\(text: str\) -> str:\n.*?(?=\n\ndef _energy_drift_matches_particle_topology)'
@@ -87,20 +87,6 @@ jobs:
               '''    (case_dir / "electron_sub.i").write_text(child, encoding="utf-8")\n    w5.s5r._copy_runtime_assets(case_dir)\n    meta["staging"] = stage\n''',
           )
 
-          workflow = ".github/workflows/issue236-m1a-multiapp-smoke.yml"
-          replace_once(
-              workflow,
-              '''              python3 experiments/Issue236_m1a_multiapp_smoke/run_live_ci_nochem.py --self-test | tee issue236-m1a-results/preflight.log\n''',
-              '''              mkdir -p issue236-m1a-logs\n              python3 experiments/Issue236_m1a_multiapp_smoke/run_live_ci_nochem.py --self-test | tee issue236-m1a-logs/preflight.log\n''',
-          )
-          replace_once(
-              workflow,
-              '''          path: issue236-m1a-results\n''',
-              '''          path: |\n            issue236-m1a-results\n            issue236-m1a-logs\n''',
-          )
-          if "--dt-e 1e-10" not in Path(workflow).read_text():
-              raise RuntimeError("Issue-236 workflow no longer preserves dt_e=1e-10")
-
           readme = "experiments/Issue236_m1a_multiapp_smoke/README.md"
           replace_once(
               readme,
@@ -117,9 +103,6 @@ jobs:
               '''- parent has no nonlinear solver-variable ownership;\n''',
               '''- parent owns the heavy/flow nonlinear variables while fast variables are auxiliary mirrors only;\n''',
           )
-
-          # Remove this one-shot workflow in the same atomic fix commit.
-          Path(".github/workflows/issue236-review-fixes-once.yml").unlink()
           PY
 
           python3 -m py_compile \
@@ -137,7 +120,12 @@ jobs:
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
+          git add \
+            experiments/historical_recipe_support/issue192_s5r.py \
+            experiments/Issue236_m1a_multiapp_smoke/run.py \
+            experiments/Issue236_m1a_multiapp_smoke/run_live_ci_nochem.py \
+            experiments/Issue236_m1a_multiapp_smoke/README.md \
+            tests/characterization/test_issue192_s5r_energy_transport.py
           git commit -m "Issue 236: apply review fixes and canonical energy drift [skip ci]"
           git remote set-url origin "https://x-access-token:${GH_PUSH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
           git push origin "HEAD:${GITHUB_REF_NAME}"
