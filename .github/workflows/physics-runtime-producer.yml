@@ -33,18 +33,55 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           fetch-depth: 1
+          persist-credentials: false
 
       - name: Resolve and validate canonical source identity
         id: source
         shell: bash
         run: |
           set -euxo pipefail
-          source physics_app/dependencies.lock
+          
+          # Safely parse dependencies.lock without executing arbitrary code
+          lockfile="physics_app/dependencies.lock"
+          test -f "$lockfile"
+          
+          # Extract values using grep and validate format (key=value with SHA or image reference)
+          # Only accept lines matching expected variable assignment patterns
+          extract_var() {
+            local var_name="$1"
+            local pattern="$2"
+            local value
+            value=$(grep -E "^${var_name}=${pattern}\$" "$lockfile" | head -n1 | cut -d= -f2-)
+            if [[ -z "$value" ]]; then
+              echo "ERROR: Missing or invalid $var_name in $lockfile" >&2
+              exit 1
+            fi
+            echo "$value"
+          }
+          
+          # Extract and validate each dependency SHA (40-char hex)
+          MOOSE=$(extract_var "MOOSE" "[0-9a-f]{40}")
+          CRANE=$(extract_var "CRANE" "[0-9a-f]{40}")
+          SQUIRREL=$(extract_var "SQUIRREL" "[0-9a-f]{40}")
+          ZAPDOS=$(extract_var "ZAPDOS" "[0-9a-f]{40}")
+          
+          # Extract and validate image references
+          PHYSICS_BUILD_BASE_IMAGE=$(extract_var "PHYSICS_BUILD_BASE_IMAGE" "ghcr\\.io/[a-z0-9._-]+/[a-z0-9._-]+")
+          
+          # Verify extracted values match expected canonical values
           test "$MOOSE" = "$MOOSE_SHA"
           test "$CRANE" = "$CRANE_SHA"
           test "$SQUIRREL" = "$SQUIRREL_SHA"
           test "$ZAPDOS" = "$ZAPDOS_SHA"
           test "$PHYSICS_BUILD_BASE_IMAGE" = "ghcr.io/hyungseonsong-plasma/physics-build-base"
+          
+          # Validate that lockfile contains only expected content (comments and variable assignments)
+          # Reject any file with suspicious content like command substitution, pipes, redirects, etc.
+          if grep -qE '[$`();|&<>]|^[^#A-Z_]' "$lockfile"; then
+            echo "ERROR: dependencies.lock contains suspicious shell metacharacters or invalid syntax" >&2
+            exit 1
+          fi
+          
           case "$BUILD_BASE_REF" in
             "$PHYSICS_BUILD_BASE_IMAGE"@sha256:*) ;;
             *) echo "Unexpected Physics build-base ref: $BUILD_BASE_REF" >&2; exit 1 ;;
