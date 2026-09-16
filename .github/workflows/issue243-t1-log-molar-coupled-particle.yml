@@ -3,7 +3,8 @@ name: Issue-243 T1 coupled log-molar electron particle
 on:
   workflow_dispatch:
   push:
-    branches: [issue-243-t1-log-molar-coupled-particle]
+    branches:
+      - issue-243-t1-log-molar-coupled-particle
     paths:
       - physics_app/include/fvkernels/PhysicsFVLogMolarElectronTransport.h
       - physics_app/src/fvkernels/PhysicsFVLogMolarElectronTransport.C
@@ -28,12 +29,14 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
       - name: P0 static ownership
+        shell: bash
         run: |
           set -euxo pipefail
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           python3 -m py_compile experiments/Issue243_t1_log_molar_coupled_particle/run.py
           python3 experiments/Issue243_t1_log_molar_coupled_particle/run.py | tee issue243-static.txt
       - name: P1-P2 build and construct
+        shell: bash
         run: |
           set -euxo pipefail
           mkdir -p issue243-logs issue243-case
@@ -44,14 +47,7 @@ jobs:
             export PYTHONPATH=/workspace
             export MOOSE_DIR=/opt/physics_vendor/moose CRANE_DIR=/opt/physics_vendor/crane SQUIRREL_DIR=/opt/physics_vendor/squirrel ZAPDOS_DIR=/opt/physics_vendor/zapdos METHOD=opt
             make -C physics_app -j2
-            python3 - <<"PY"
-from pathlib import Path
-from experiments.Issue243_t1_log_molar_coupled_particle.run import build_t1_input, audit_t1_input
-text, meta = build_t1_input()
-audit = audit_t1_input(text)
-assert audit["status"] == "PASS", audit
-Path("issue243-case/input.i").write_text(text)
-PY
+            python3 -c "from pathlib import Path; from experiments.Issue243_t1_log_molar_coupled_particle.run import build_t1_input,audit_t1_input; text,meta=build_t1_input(); audit=audit_t1_input(text); assert audit[\"status\"]==\"PASS\", audit; Path(\"issue243-case/input.i\").write_text(text)"
             cp experiments/Issue91_real_qvt_r3/r3_e0/qvt.msh issue243-case/
             cp experiments/Issue91_real_qvt_r3/r3_e0/transport_data.txt issue243-case/
             cp physics_app/data/electron_impact/* issue243-case/ || true
