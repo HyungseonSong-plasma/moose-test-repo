@@ -1,9 +1,9 @@
 """Stdlib-only dependency bootstrap for Physics harness workflows.
 
 The committed requirements files own dependency constraints. This module owns
-when and how those constraints are installed, verifies importability, and emits
-a provenance manifest. It intentionally imports only Python's standard library
-so it can run before third-party dependencies are available.
+when and where those constraints are installed, verifies importability from the
+explicit target, and emits a provenance manifest. It intentionally imports only
+Python's standard library so it can run before third-party dependencies exist.
 """
 
 from __future__ import annotations
@@ -13,7 +13,6 @@ import hashlib
 import importlib
 import importlib.metadata
 import json
-import os
 from pathlib import Path
 import shutil
 import subprocess
@@ -44,6 +43,7 @@ PROFILES: dict[str, Profile] = {
 }
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
+_DEPS_ROOT = _REPO_ROOT / ".physics-harness-deps"
 
 
 def _profile(name: str) -> Profile:
@@ -69,6 +69,17 @@ def _requirements_path(profile: Profile) -> Path:
     return path
 
 
+def _target_path(name: str) -> Path:
+    """Return the repository-local dependency target for a profile."""
+
+    target = (_DEPS_ROOT / name).resolve()
+    try:
+        target.relative_to(_REPO_ROOT)
+    except ValueError as error:
+        raise BootstrapError(f"dependency target escapes repository root: {target}") from error
+    return target
+
+
 def _sha256(path: Path) -> str:
     """Return a SHA-256 digest for a file."""
 
@@ -79,24 +90,24 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-def _in_virtualenv() -> bool:
-    """Return whether the current interpreter is running in a virtual environment."""
+def _uv_install_command(uv: str, requirements: Path, target: Path) -> list[str]:
+    """Build a uv command that installs into an explicit repository-local target."""
 
-    return sys.prefix != sys.base_prefix or os.environ.get("VIRTUAL_ENV") is not None
+    return [
+        uv,
+        "pip",
+        "install",
+        "--python",
+        sys.executable,
+        "--target",
+        str(target),
+        "-r",
+        str(requirements),
+    ]
 
 
-def _uv_install_command(uv: str, requirements: Path, *, in_virtualenv: bool) -> list[str]:
-    """Build a uv install command bound to the current interpreter."""
-
-    command = [uv, "pip", "install"]
-    if not in_virtualenv:
-        command.append("--system")
-    command.extend(["--python", sys.executable, "-r", str(requirements)])
-    return command
-
-
-def _pip_install_command(requirements: Path) -> list[str]:
-    """Build a pip command that installs into the current interpreter environment."""
+def _pip_install_command(requirements: Path, target: Path) -> list[str]:
+    """Build a pip command that installs into an explicit repository-local target."""
 
     return [
         sys.executable,
@@ -104,37 +115,52 @@ def _pip_install_command(requirements: Path) -> list[str]:
         "pip",
         "install",
         "--disable-pip-version-check",
+        "--target",
+        str(target),
         "-r",
         str(requirements),
     ]
 
 
-def _installer_command(requirements: Path, installer: str = "auto") -> list[str]:
-    """Build the install command for the current interpreter."""
+def _installer_command(requirements: Path, target: Path, installer: str = "auto") -> list[str]:
+    """Build the install command for the explicit dependency target."""
 
     selected = installer
     uv = shutil.which("uv")
     if selected == "auto":
         selected = "uv" if uv else "pip"
 
-    in_virtualenv = _in_virtualenv()
-
     if selected == "uv":
         if not uv:
             raise BootstrapError("installer 'uv' requested but uv is not available on PATH")
-        return _uv_install_command(uv, requirements, in_virtualenv=in_virtualenv)
+        return _uv_install_command(uv, requirements, target)
 
     if selected == "pip":
-        # Bind installation to the same interpreter used for subsequent smoke tests.
-        # Do not use --user: some CI interpreters disable the user site, which can
-        # report a successful install while leaving the installed packages invisible.
-        return _pip_install_command(requirements)
+        return _pip_install_command(requirements, target)
 
     raise BootstrapError(f"unsupported installer: {installer!r}")
 
 
-def _verify_imports(modules: Iterable[str]) -> dict[str, str]:
-    """Import all required modules and return their resolved source locations."""
+def _prepare_target(target: Path) -> None:
+    """Create a clean dependency target so stale wheels cannot contaminate evidence."""
+
+    if target.exists():
+        shutil.rmtree(target)
+    target.mkdir(parents=True, exist_ok=True)
+
+
+def _activate_target(target: Path) -> None:
+    """Put the explicit dependency target first on this process's import path."""
+
+    target_text = str(target)
+    if target_text in sys.path:
+        sys.path.remove(target_text)
+    sys.path.insert(0, target_text)
+    importlib.invalidate_caches()
+
+
+def _verify_imports(modules: Iterable[str], target: Path) -> dict[str, str]:
+    """Import required modules and prove they resolve from the explicit target."""
 
     resolved: dict[str, str] = {}
     failures: list[str] = []
@@ -144,32 +170,51 @@ def _verify_imports(modules: Iterable[str]) -> dict[str, str]:
         except Exception as error:  # import failures need full diagnostic context
             failures.append(f"{module_name}: {type(error).__name__}: {error}")
             continue
-        resolved[module_name] = str(getattr(module, "__file__", "<built-in>"))
+
+        location = getattr(module, "__file__", None)
+        if not location:
+            failures.append(f"{module_name}: imported module has no file location")
+            continue
+        path = Path(location).resolve()
+        try:
+            path.relative_to(target)
+        except ValueError:
+            failures.append(f"{module_name}: resolved outside target at {path}")
+            continue
+        resolved[module_name] = str(path)
+
     if failures:
         raise BootstrapError("dependency import smoke test failed: " + "; ".join(failures))
     return resolved
 
 
-def _distribution_versions(names: Iterable[str]) -> dict[str, str]:
-    """Return installed versions for all required distributions."""
+def _distribution_versions(names: Iterable[str], target: Path) -> dict[str, str]:
+    """Return versions from distribution metadata stored in the explicit target."""
 
+    found = {
+        dist.metadata["Name"].lower().replace("_", "-"): dist.version
+        for dist in importlib.metadata.distributions(path=[str(target)])
+        if dist.metadata.get("Name")
+    }
     versions: dict[str, str] = {}
     failures: list[str] = []
     for name in names:
-        try:
-            versions[name] = importlib.metadata.version(name)
-        except importlib.metadata.PackageNotFoundError:
+        key = name.lower().replace("_", "-")
+        if key not in found:
             failures.append(name)
+        else:
+            versions[name] = found[key]
     if failures:
-        raise BootstrapError("installed distribution metadata missing: " + ", ".join(failures))
+        raise BootstrapError("target distribution metadata missing: " + ", ".join(failures))
     return versions
 
 
-def _manifest(name: str, profile: Profile, requirements: Path) -> dict[str, object]:
-    """Build the bootstrap provenance manifest after import verification."""
+def _manifest(name: str, profile: Profile, requirements: Path, target: Path) -> dict[str, object]:
+    """Build the bootstrap provenance manifest after target verification."""
 
-    imports = _verify_imports(profile.imports)
-    versions = _distribution_versions(profile.distributions)
+    _activate_target(target)
+    imports = _verify_imports(profile.imports, target)
+    versions = _distribution_versions(profile.distributions, target)
     return {
         "schema": "PHYSICS_HARNESS_BOOTSTRAP_V1",
         "profile": name,
@@ -177,6 +222,7 @@ def _manifest(name: str, profile: Profile, requirements: Path) -> dict[str, obje
         "python_version": sys.version.split()[0],
         "requirements_file": profile.requirements,
         "requirements_sha256": _sha256(requirements),
+        "target": str(target),
         "imports": imports,
         "distributions": versions,
     }
@@ -189,11 +235,12 @@ def ensure(
     manifest_out: Path | None = None,
     dry_run: bool = False,
 ) -> dict[str, object]:
-    """Install a canonical profile, verify imports, and return provenance."""
+    """Install a canonical profile into its target, verify it, and return provenance."""
 
     profile = _profile(name)
     requirements = _requirements_path(profile)
-    command = _installer_command(requirements, installer)
+    target = _target_path(name)
+    command = _installer_command(requirements, target, installer)
 
     if dry_run:
         payload: dict[str, object] = {
@@ -201,13 +248,16 @@ def ensure(
             "profile": name,
             "requirements_file": profile.requirements,
             "requirements_sha256": _sha256(requirements),
+            "target": str(target),
             "installer_command": command,
             "dry_run": True,
         }
     else:
+        _prepare_target(target)
         subprocess.run(command, cwd=_REPO_ROOT, check=True)
-        payload = _manifest(name, profile, requirements)
+        payload = _manifest(name, profile, requirements, target)
         payload["installer"] = "uv" if Path(command[0]).name == "uv" else "pip"
+        payload["installer_command"] = command
 
     if manifest_out is not None:
         manifest_out.parent.mkdir(parents=True, exist_ok=True)
@@ -216,11 +266,14 @@ def ensure(
 
 
 def check(name: str, *, manifest_out: Path | None = None) -> dict[str, object]:
-    """Verify an already-prepared profile without installing anything."""
+    """Verify an already-prepared explicit target without installing anything."""
 
     profile = _profile(name)
     requirements = _requirements_path(profile)
-    payload = _manifest(name, profile, requirements)
+    target = _target_path(name)
+    if not target.is_dir():
+        raise BootstrapError(f"dependency target not found: {target}")
+    payload = _manifest(name, profile, requirements, target)
     payload["installer"] = None
     if manifest_out is not None:
         manifest_out.parent.mkdir(parents=True, exist_ok=True)
@@ -229,14 +282,17 @@ def check(name: str, *, manifest_out: Path | None = None) -> dict[str, object]:
 
 
 def self_test() -> dict[str, object]:
-    """Exercise stdlib-only profile resolution and command construction."""
+    """Exercise stdlib-only profile, target, and command construction contracts."""
 
     checks: dict[str, bool] = {}
     evidence = _profile("evidence")
     requirements = _requirements_path(evidence)
+    target = _target_path("evidence")
     checks["evidence_requirements_exists"] = requirements.name == "requirements-evidence-engine.txt"
     checks["evidence_requirements_inside_repo"] = _REPO_ROOT in requirements.parents
     checks["evidence_requirements_digest"] = len(_sha256(requirements)) == 64
+    checks["target_inside_repo"] = _REPO_ROOT in target.parents
+    checks["target_is_profile_scoped"] = target.name == "evidence" and target.parent.name == ".physics-harness-deps"
     checks["polars_import_declared"] = "polars" in evidence.imports
     checks["pyarrow_import_declared"] = "pyarrow" in evidence.imports
     checks["z3_distribution_mapping"] = "z3" in evidence.imports and "z3-solver" in evidence.distributions
@@ -248,24 +304,24 @@ def self_test() -> dict[str, object]:
     else:
         checks["unknown_profile_rejected"] = False
 
-    auto_command = _installer_command(requirements, "auto")
+    auto_command = _installer_command(requirements, target, "auto")
     checks["installer_uses_current_python_or_uv"] = (
         (Path(auto_command[0]).name == "uv" and sys.executable in auto_command)
         or auto_command[:3] == [sys.executable, "-m", "pip"]
     )
-    checks["installer_binds_requirements_file"] = str(requirements) == auto_command[-1]
+    checks["installer_binds_requirements_file"] = auto_command[-1] == str(requirements)
+    checks["installer_binds_explicit_target"] = "--target" in auto_command and str(target) in auto_command
+    checks["installer_avoids_user_and_system_sites"] = "--user" not in auto_command and "--system" not in auto_command
 
-    uv_system = _uv_install_command("/test/uv", requirements, in_virtualenv=False)
-    uv_virtualenv = _uv_install_command("/test/uv", requirements, in_virtualenv=True)
-    checks["uv_system_mode_uses_system"] = "--system" in uv_system
-    checks["uv_virtualenv_omits_system"] = "--system" not in uv_virtualenv
-    checks["uv_modes_bind_current_python"] = (
-        sys.executable in uv_system and sys.executable in uv_virtualenv
-    )
+    uv_command = _uv_install_command("/test/uv", requirements, target)
+    checks["uv_binds_current_python"] = sys.executable in uv_command
+    checks["uv_binds_explicit_target"] = "--target" in uv_command and str(target) in uv_command
+    checks["uv_avoids_user_and_system_sites"] = "--user" not in uv_command and "--system" not in uv_command
 
-    pip_command = _pip_install_command(requirements)
+    pip_command = _pip_install_command(requirements, target)
     checks["pip_binds_current_python"] = pip_command[:3] == [sys.executable, "-m", "pip"]
-    checks["pip_avoids_user_site"] = "--user" not in pip_command
+    checks["pip_binds_explicit_target"] = "--target" in pip_command and str(target) in pip_command
+    checks["pip_avoids_user_and_system_sites"] = "--user" not in pip_command and "--system" not in pip_command
     checks["pip_binds_requirements_file"] = pip_command[-1] == str(requirements)
 
     failed = sorted(name for name, passed in checks.items() if not passed)
@@ -321,6 +377,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             payload = {
                 name: {
                     "requirements_file": profile.requirements,
+                    "target": str(_target_path(name)),
                     "imports": list(profile.imports),
                     "distributions": list(profile.distributions),
                 }
