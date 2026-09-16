@@ -1,0 +1,183 @@
+name: Issue-236 Om Wave-O v4 forensic qualification
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: issue236-om-wave-o-v4-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+  MOOSE_SHA: 9f388366ccf38b9c34542ec5561198249fde0ac9
+  CRANE_SHA: ba26970cf419dcac563a20ed7079d445bc6341c3
+  SQUIRREL_SHA: 16a26d504f3ee11161a86d4e3ebf3c0e5f2afbb1
+  ZAPDOS_SHA: 9eceffbc46048c3760bbfa9a7f1ca681ae35af1d
+
+jobs:
+  forensic-case:
+    name: Wave-O-v4 ${{ matrix.case }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - case: O0
+            recorder: off
+          - case: O1
+            recorder: on
+          - case: O2
+            recorder: on
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Static v4 qualification gate
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python3 -m py_compile experiments/Issue236_m1a_multiapp_smoke/run_om_forensic_ci.py
+          python3 -m py_compile experiments/Issue236_m1a_multiapp_smoke/run_om_forensic_ci_v4.py
+          python3 -m py_compile experiments/Issue236_m1a_multiapp_smoke/check_om_forensic_o.py
+          python3 -m py_compile experiments/Issue236_m1a_multiapp_smoke/check_om_forensic_o_v4.py
+          python3 -m py_compile experiments/Issue236_m1a_multiapp_smoke/write_om_wave_o_manifest_v4.py
+          python3 experiments/Issue236_m1a_multiapp_smoke/check_om_forensic_o.py --self-test
+          python3 experiments/Issue236_m1a_multiapp_smoke/check_om_forensic_o_v4.py --self-test
+
+      - name: Verify exact provenance and pinned dependencies
+        shell: bash
+        run: |
+          set -euxo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          source physics_app/dependencies.lock
+          test "$MOOSE" = "$MOOSE_SHA"
+          test "$CRANE" = "$CRANE_SHA"
+          test "$SQUIRREL" = "$SQUIRREL_SHA"
+          test "$ZAPDOS" = "$ZAPDOS_SHA"
+          docker pull "$BUILD_BASE_REF"
+          test "$(docker image inspect "$BUILD_BASE_REF" --format '{{ index .Config.Labels "io.physics.moose.sha" }}')" = "$MOOSE_SHA"
+
+      - name: Build independently and run ${{ matrix.case }}
+        shell: bash
+        env:
+          CASE_ID: ${{ matrix.case }}
+          RECORDER: ${{ matrix.recorder }}
+        run: |
+          set -euxo pipefail
+          rm -rf "issue236-om-results/$CASE_ID" "issue236-om-logs/$CASE_ID"
+          mkdir -p "issue236-om-results/$CASE_ID" "issue236-om-logs/$CASE_ID"
+          docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace \
+            -e GITHUB_SHA="$GITHUB_SHA" -e GITHUB_RUN_ID="$GITHUB_RUN_ID" \
+            -e GITHUB_RUN_ATTEMPT="$GITHUB_RUN_ATTEMPT" -e BUILD_BASE_REF="$BUILD_BASE_REF" \
+            -e MOOSE_SHA="$MOOSE_SHA" -e CRANE_SHA="$CRANE_SHA" \
+            -e SQUIRREL_SHA="$SQUIRREL_SHA" -e ZAPDOS_SHA="$ZAPDOS_SHA" \
+            -e CASE_ID="$CASE_ID" -e RECORDER="$RECORDER" \
+            -v "$PWD:/workspace" "$BUILD_BASE_REF" -lc '
+              set -euxo pipefail
+              source /environment
+              export PYTHONPATH=/workspace MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos METHOD=opt
+              export ISSUE236_NE_BOUNDARY_MODE=mirrors_one_term
+              export ISSUE236_OM_FORENSIC="$RECORDER" ISSUE236_OM_CASE_ID="$CASE_ID"
+              git config --global --add safe.directory /workspace
+              test "$(git -C /workspace rev-parse HEAD)" = "$GITHUB_SHA"
+              uv pip install --system --python "$(command -v python3)" -r requirements-evidence-engine.txt
+              python3 experiments/Issue236_m1a_multiapp_smoke/run_om_forensic_ci_v4.py --self-test \
+                | tee "issue236-om-logs/$CASE_ID/preflight.log"
+              make -C physics_app -j2
+              test -x physics_app/physics-opt
+              sha256sum physics_app/physics-opt | tee "issue236-om-logs/$CASE_ID/physics-opt.sha256"
+              set +e
+              python3 experiments/Issue236_m1a_multiapp_smoke/run_om_forensic_ci_v4.py \
+                --physics-opt physics_app/physics-opt --dt-e 1e-10 \
+                --results-root "issue236-om-results/$CASE_ID" --timeout 1200
+              RC=$?
+              set -e
+              printf "%s\n" "$RC" | tee "issue236-om-logs/$CASE_ID/wrapper-returncode.txt"
+              python3 experiments/Issue236_m1a_multiapp_smoke/write_om_wave_o_manifest_v4.py \
+                --case "$CASE_ID" --recorder "$RECORDER" --wrapper-rc "$RC" \
+                --results-root "issue236-om-results/$CASE_ID" \
+                --logs-root "issue236-om-logs/$CASE_ID" --physics-opt physics_app/physics-opt
+            '
+
+      - name: Finalize missing manifest as incomplete
+        if: always()
+        shell: bash
+        env:
+          CASE_ID: ${{ matrix.case }}
+          RECORDER: ${{ matrix.recorder }}
+        run: |
+          set -euo pipefail
+          mkdir -p "issue236-om-logs/$CASE_ID"
+          if test ! -f "issue236-om-logs/$CASE_ID/manifest.json"; then
+            python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          case = os.environ["CASE_ID"]
+          payload = {
+              "schema": "ISSUE236_OM_WAVE_O_ARTIFACT_V3", "state": "INCOMPLETE",
+              "case": case, "recorder": os.environ["RECORDER"],
+              "git_sha": os.environ.get("GITHUB_SHA"), "run_id": os.environ.get("GITHUB_RUN_ID"),
+              "run_attempt": os.environ.get("GITHUB_RUN_ATTEMPT"),
+              "build_base": os.environ.get("BUILD_BASE_REF"), "runtime_evidence_valid": False,
+          }
+          Path(f"issue236-om-logs/{case}/manifest.json").write_text(
+              json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+          PY
+          fi
+
+      - name: Upload ${{ matrix.case }} v4 evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: issue236-om-wave-o-v4-${{ matrix.case }}
+          path: |
+            issue236-om-results/${{ matrix.case }}
+            issue236-om-logs/${{ matrix.case }}
+          if-no-files-found: error
+          retention-days: 14
+
+  aggregate:
+    name: Wave-O-v4 aggregate qualification
+    needs: forensic-case
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Download matrix evidence
+        continue-on-error: true
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: issue236-om-wave-o-v4-*
+          path: issue236-om-aggregate
+          merge-multiple: true
+      - name: Qualify v4 recorder and fail closed
+        shell: bash
+        run: |
+          set -uxo pipefail
+          python3 experiments/Issue236_m1a_multiapp_smoke/check_om_forensic_o_v4.py --self-test
+          python3 experiments/Issue236_m1a_multiapp_smoke/check_om_forensic_o_v4.py \
+            issue236-om-aggregate/issue236-om-results/O0/summary.json \
+            issue236-om-aggregate/issue236-om-results/O1/summary.json \
+            issue236-om-aggregate/issue236-om-results/O2/summary.json \
+            --artifact-root issue236-om-aggregate \
+            --output issue236-om-aggregate/wave-o-qualification-v4.json
+      - name: Upload aggregate decision
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: issue236-om-wave-o-v4-aggregate
+          path: issue236-om-aggregate
+          if-no-files-found: error
+          retention-days: 14
