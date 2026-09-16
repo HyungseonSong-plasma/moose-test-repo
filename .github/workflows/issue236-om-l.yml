@@ -28,7 +28,7 @@ env:
 jobs:
   bootstrap-smoke:
     if: github.event_name == 'push'
-    name: Evidence bootstrap explicit-target smoke
+    name: Evidence bootstrap host+container smoke
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -44,7 +44,7 @@ jobs:
           test "$GITHUB_REF_NAME" = "issue-236-m1a-multiapp-smoke"
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
 
-      - name: Bootstrap evidence dependencies
+      - name: Bootstrap host evidence dependencies
         shell: bash
         run: |
           set -euxo pipefail
@@ -55,15 +55,41 @@ jobs:
             --manifest-out issue236-bootstrap-smoke.json 2>&1 \
             | tee issue236-bootstrap-install.log
 
-      - name: Verify from fresh Python process
+      - name: Verify host from fresh Python process
         shell: bash
         run: |
           set -euxo pipefail
           python3 -m physics_harness.bootstrap check evidence \
             --manifest-out issue236-bootstrap-fresh-check.json 2>&1 \
             | tee issue236-bootstrap-fresh-check.log
-          python3 -c "import duckdb, polars, pyarrow, pydantic, z3; print('BOOTSTRAP_FRESH_IMPORT_PASS')" \
+          python3 -c "import duckdb, polars, pyarrow, pydantic, z3; print('BOOTSTRAP_HOST_FRESH_IMPORT_PASS')" \
             | tee issue236-bootstrap-fresh-import.log
+
+      - name: Bootstrap container evidence dependencies with uv
+        shell: bash
+        run: |
+          set -euxo pipefail
+          docker pull "$BUILD_BASE_REF"
+          docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace \
+            -e GITHUB_SHA="$GITHUB_SHA" \
+            -v "$PWD:/workspace" "$BUILD_BASE_REF" -lc '
+              set -euxo pipefail
+              source /environment
+              export PYTHONPATH=/workspace/.physics-harness-deps/evidence:/workspace
+              git config --global --add safe.directory /workspace
+              test "$(git -C /workspace rev-parse HEAD)" = "$GITHUB_SHA"
+              python3 --version | tee issue236-bootstrap-container-python.log
+              command -v uv | tee issue236-bootstrap-container-uv.log
+              rm -rf /workspace/.physics-harness-deps/evidence
+              python3 -m physics_harness.bootstrap ensure evidence --installer uv \
+                --manifest-out issue236-bootstrap-container.json 2>&1 \
+                | tee issue236-bootstrap-container-install.log
+              python3 -m physics_harness.bootstrap check evidence \
+                --manifest-out issue236-bootstrap-container-check.json 2>&1 \
+                | tee issue236-bootstrap-container-check.log
+              python3 -c "import duckdb, polars, pyarrow, pydantic, z3; print(\"BOOTSTRAP_CONTAINER_FRESH_IMPORT_PASS\")" \
+                | tee issue236-bootstrap-container-import.log
+            '
 
       - name: Upload bootstrap smoke evidence
         if: always()
@@ -77,6 +103,13 @@ jobs:
             issue236-bootstrap-fresh-check.log
             issue236-bootstrap-fresh-check.json
             issue236-bootstrap-fresh-import.log
+            issue236-bootstrap-container-python.log
+            issue236-bootstrap-container-uv.log
+            issue236-bootstrap-container-install.log
+            issue236-bootstrap-container.json
+            issue236-bootstrap-container-check.log
+            issue236-bootstrap-container-check.json
+            issue236-bootstrap-container-import.log
           if-no-files-found: error
           retention-days: 7
 
@@ -163,7 +196,8 @@ jobs:
               git config --global --add safe.directory /workspace
               test "$(git -C /workspace rev-parse HEAD)" = "$GITHUB_SHA"
 
-              python3 -m physics_harness.bootstrap ensure evidence --installer pip \
+              rm -rf /workspace/.physics-harness-deps/evidence
+              python3 -m physics_harness.bootstrap ensure evidence --installer uv \
                 --manifest-out issue236-om-l1-extended-logs/bootstrap-container.json 2>&1 \
                 | tee issue236-om-l1-extended-logs/bootstrap-container.log
               python3 -m physics_harness.bootstrap check evidence \
