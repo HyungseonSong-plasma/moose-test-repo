@@ -2,6 +2,13 @@ name: Issue-236 Om L nonlinear-globalization discriminator
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - issue-236-m1a-multiapp-smoke
+    paths:
+      - physics_harness/bootstrap.py
+      - requirements-evidence-engine.txt
+      - .github/workflows/issue236-om-l.yml
 
 permissions:
   contents: read
@@ -16,10 +23,65 @@ env:
   CRANE_SHA: ba26970cf419dcac563a20ed7079d445bc6341c3
   SQUIRREL_SHA: 16a26d504f3ee11161a86d4e3ebf3c0e5f2afbb1
   ZAPDOS_SHA: 9eceffbc46048c3760bbfa9a7f1ca681ae35af1d
-  PYTHONPATH: .
+  PYTHONPATH: .physics-harness-deps/evidence:.
 
 jobs:
+  bootstrap-smoke:
+    if: github.event_name == 'push'
+    name: Evidence bootstrap explicit-target smoke
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Verify exact pushed revision
+        shell: bash
+        run: |
+          set -euxo pipefail
+          test "$GITHUB_REF_NAME" = "issue-236-m1a-multiapp-smoke"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+
+      - name: Bootstrap evidence dependencies
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python3 -m py_compile physics_harness/bootstrap.py
+          python3 -m physics_harness.bootstrap --self-test 2>&1 \
+            | tee issue236-bootstrap-self-test.log
+          python3 -m physics_harness.bootstrap ensure evidence --installer pip \
+            --manifest-out issue236-bootstrap-smoke.json 2>&1 \
+            | tee issue236-bootstrap-install.log
+
+      - name: Verify from fresh Python process
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python3 -m physics_harness.bootstrap check evidence \
+            --manifest-out issue236-bootstrap-fresh-check.json 2>&1 \
+            | tee issue236-bootstrap-fresh-check.log
+          python3 -c "import duckdb, polars, pyarrow, pydantic, z3; print('BOOTSTRAP_FRESH_IMPORT_PASS')" \
+            | tee issue236-bootstrap-fresh-import.log
+
+      - name: Upload bootstrap smoke evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: issue236-bootstrap-smoke-evidence
+          path: |
+            issue236-bootstrap-self-test.log
+            issue236-bootstrap-install.log
+            issue236-bootstrap-smoke.json
+            issue236-bootstrap-fresh-check.log
+            issue236-bootstrap-fresh-check.json
+            issue236-bootstrap-fresh-import.log
+          if-no-files-found: error
+          retention-days: 7
+
   nonlinear-discriminator:
+    if: github.event_name == 'workflow_dispatch'
     name: Om L1 damping-0.5 extended discriminator
     runs-on: ubuntu-24.04
     timeout-minutes: 65
@@ -43,9 +105,11 @@ jobs:
           python3 -m py_compile physics_harness/bootstrap.py
           python3 -m physics_harness.bootstrap --self-test 2>&1 \
             | tee issue236-om-l1-bootstrap-self-test.log
-          python3 -m physics_harness.bootstrap ensure evidence \
+          python3 -m physics_harness.bootstrap ensure evidence --installer pip \
             --manifest-out issue236-om-l1-bootstrap-host.json 2>&1 \
             | tee issue236-om-l1-bootstrap-host.log
+          python3 -m physics_harness.bootstrap check evidence \
+            --manifest-out issue236-om-l1-bootstrap-host-check.json
 
       - name: Static L1 qualification gate
         shell: bash
@@ -88,7 +152,8 @@ jobs:
             -v "$PWD:/workspace" "$BUILD_BASE_REF" -lc '
               set -euxo pipefail
               source /environment
-              export PYTHONPATH=/workspace MOOSE_DIR=/opt/physics_vendor/moose
+              export PYTHONPATH=/workspace/.physics-harness-deps/evidence:/workspace
+              export MOOSE_DIR=/opt/physics_vendor/moose
               export CRANE_DIR=/opt/physics_vendor/crane SQUIRREL_DIR=/opt/physics_vendor/squirrel
               export ZAPDOS_DIR=/opt/physics_vendor/zapdos METHOD=opt
               export ISSUE236_NE_BOUNDARY_MODE=mirrors_one_term
@@ -98,9 +163,11 @@ jobs:
               git config --global --add safe.directory /workspace
               test "$(git -C /workspace rev-parse HEAD)" = "$GITHUB_SHA"
 
-              python3 -m physics_harness.bootstrap ensure evidence \
+              python3 -m physics_harness.bootstrap ensure evidence --installer pip \
                 --manifest-out issue236-om-l1-extended-logs/bootstrap-container.json 2>&1 \
                 | tee issue236-om-l1-extended-logs/bootstrap-container.log
+              python3 -m physics_harness.bootstrap check evidence \
+                --manifest-out issue236-om-l1-extended-logs/bootstrap-container-check.json
               make -C physics_app -j2
               test -x physics_app/physics-opt
               PHYSICS_SHA="$(sha256sum physics_app/physics-opt | awk "{print \$1}")"
@@ -129,6 +196,7 @@ jobs:
             issue236-om-l1-extended-results
             issue236-om-l1-extended-logs
             issue236-om-l1-bootstrap-host.json
+            issue236-om-l1-bootstrap-host-check.json
             issue236-om-l1-bootstrap-host.log
             issue236-om-l1-bootstrap-self-test.log
             l1-preflight-static.json
