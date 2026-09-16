@@ -107,14 +107,6 @@ jobs:
               test "$(sha256sum physics_app/physics-opt | awk "{print \$1}")" = "$PHYSICS_SHA"
             '
 
-      - name: Summarize L1 extended evidence
-        if: always()
-        shell: bash
-        run: |
-          set -euxo pipefail
-          test -f issue236-om-l1-extended-results/summary.json
-          python3 -c "import json; from pathlib import Path; s=json.load(open('issue236-om-l1-extended-results/summary.json')); b=1.2451171875e-9; p=s.get('progress_s'); om=bool(s.get('om_error_present')); to=bool(s.get('timed_out')); sig=('DELAY_ONLY' if om and p and p>b else 'NO_PROGRESS_GAIN' if om else 'BASELINE_FAILURE_TIME_CROSSED_WITHOUT_OM_NEGATIVITY' if p and p>b else 'STILL_NOT_INTERPRETABLE_TIMEOUT_BEFORE_BASELINE' if to else 'OTHER_TERMINATION_BEFORE_BASELINE'); out={'schema':'ISSUE236_OM_L1_EXTENDED_V1','mode':'L1_damp_0p5','baseline_failure_progress_s':b,'runtime_returncode':s.get('runtime_returncode'),'timed_out':to,'progress_s':p,'om_error_present':om,'om_error_value':s.get('om_error_value'),'first_invalid_material_event':s.get('first_invalid_material_event'),'scientific_signal':sig}; Path('issue236-om-l1-extended-results/l1-extended-qualification.json').write_text(json.dumps(out,indent=2,sort_keys=True)+'\\n'); print(json.dumps(out,indent=2,sort_keys=True))"
-
       - name: Upload L1 extended evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
