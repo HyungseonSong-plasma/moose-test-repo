@@ -1,0 +1,150 @@
+name: Issue-242 electron log-molar transport discriminator
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - issue-242-electron-log-molar-transport
+    paths:
+      - physics_app/include/fvkernels/PhysicsFVLogMolarElectronTransport.h
+      - physics_app/src/fvkernels/PhysicsFVLogMolarElectronTransport.C
+      - experiments/Issue242_electron_log_molar_transport/**
+      - .github/workflows/issue242-electron-log-molar-transport.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: issue242-log-molar-transport-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+  MOOSE_SHA: 9f388366ccf38b9c34542ec5561198249fde0ac9
+  CRANE_SHA: ba26970cf419dcac563a20ed7079d445bc6341c3
+  SQUIRREL_SHA: 16a26d504f3ee11161a86d4e3ebf3c0e5f2afbb1
+  ZAPDOS_SHA: 9eceffbc46048c3760bbfa9a7f1ca681ae35af1d
+  PYTHONPATH: .physics-harness-deps/evidence:.
+
+jobs:
+  transport-discriminator:
+    name: Log-molar electron transport A/B
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Require exact governed revision
+        shell: bash
+        run: |
+          set -euxo pipefail
+          test "$GITHUB_REF_NAME" = "issue-242-electron-log-molar-transport"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+
+      - name: Bootstrap evidence dependencies
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python3 -m physics_harness.bootstrap ensure evidence --installer pip \
+            --manifest-out issue242-bootstrap-host.json
+          python3 -m physics_harness.bootstrap check evidence \
+            --manifest-out issue242-bootstrap-host-check.json
+
+      - name: P0 checker and scope self-test
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python3 -m py_compile experiments/Issue242_electron_log_molar_transport/check.py
+          python3 experiments/Issue242_electron_log_molar_transport/check.py --self-test \
+            | tee issue242-checker-self-test.json
+          python3 - <<'PY'
+          from pathlib import Path
+          import json
+          p=json.load(open('issue242-checker-self-test.json'))
+          assert p['status']=='PASS', p
+          inp=Path('experiments/Issue242_electron_log_molar_transport/input.i').read_text()
+          src=Path('physics_app/src/fvkernels/PhysicsFVLogMolarElectronTransport.C').read_text()
+          assert 'n_ref' not in inp
+          assert 'n_ref' not in src
+          for forbidden in ('n_epsilon','potential_plasma','GroundedSheath','SEE'):
+              assert forbidden not in inp, forbidden
+          assert '6.02214076e23*exp(le)' in inp
+          assert 'PhysicsFVLogMolarElectronTimeDerivative' in inp
+          assert 'PhysicsFVLogMolarElectronDiffusion' in inp
+          assert 'PhysicsFVLogMolarElectrostaticDrift' in inp
+          PY
+
+      - name: Verify pinned production provenance
+        shell: bash
+        run: |
+          set -euxo pipefail
+          source physics_app/dependencies.lock
+          test "$MOOSE" = "$MOOSE_SHA"
+          test "$CRANE" = "$CRANE_SHA"
+          test "$SQUIRREL" = "$SQUIRREL_SHA"
+          test "$ZAPDOS" = "$ZAPDOS_SHA"
+          docker pull "$BUILD_BASE_REF"
+          test "$(docker image inspect "$BUILD_BASE_REF" --format '{{ index .Config.Labels "io.physics.moose.sha" }}')" = "$MOOSE_SHA"
+
+      - name: Build and execute P1-P3
+        shell: bash
+        run: |
+          set -euxo pipefail
+          rm -rf issue242-results issue242-logs
+          mkdir -p issue242-results issue242-logs
+          docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace \
+            -e GITHUB_SHA="$GITHUB_SHA" \
+            -v "$PWD:/workspace" "$BUILD_BASE_REF" -lc '
+              set -euxo pipefail
+              source /environment
+              export PYTHONPATH=/workspace/.physics-harness-deps/evidence:/workspace
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+              git config --global --add safe.directory /workspace
+              test "$(git -C /workspace rev-parse HEAD)" = "$GITHUB_SHA"
+
+              rm -rf /workspace/.physics-harness-deps/evidence
+              python3 -m physics_harness.bootstrap ensure evidence --installer uv \
+                --manifest-out issue242-logs/bootstrap-container.json
+              python3 -m physics_harness.bootstrap check evidence \
+                --manifest-out issue242-logs/bootstrap-container-check.json
+
+              make -C physics_app -j2
+              test -x physics_app/physics-opt
+              sha256sum physics_app/physics-opt | tee issue242-logs/physics-opt.sha256
+
+              CASE=experiments/Issue242_electron_log_molar_transport
+              python3 bin/physics.py preflight --self-test | tee issue242-logs/preflight-self-test.txt
+              python3 bin/physics.py preflight "$CASE/input.i" | tee issue242-logs/preflight.txt
+
+              physics_app/physics-opt -i "$CASE/input.i" --check-input \
+                > issue242-logs/check-input.log 2>&1
+
+              rm -f "$CASE/input_out.csv"
+              physics_app/physics-opt -i "$CASE/input.i" \
+                > issue242-logs/runtime.log 2>&1
+              test -s "$CASE/input_out.csv"
+              cp "$CASE/input_out.csv" issue242-results/input_out.csv
+              python3 "$CASE/check.py" --csv "$CASE/input_out.csv" \
+                | tee issue242-results/analysis.json
+            '
+
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: issue242-electron-log-molar-transport-evidence
+          path: |
+            issue242-results
+            issue242-logs
+            issue242-bootstrap-host.json
+            issue242-bootstrap-host-check.json
+            issue242-checker-self-test.json
+          if-no-files-found: warn
+          retention-days: 14
