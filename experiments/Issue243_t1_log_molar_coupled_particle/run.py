@@ -105,7 +105,7 @@ def build_t1_input() -> tuple[str, dict[str, Any]]:
     for pp in ("n_e_avg", "n_e_min", "n_e_max", "n_e_inventory"):
         if mb.has_block(text, f"Postprocessors/{pp}"):
             text = mp.upsert_parameter(text, f"Postprocessors/{pp}", "functor", PHYSICAL)
-    text = mp.upsert_parameter(text, "Executioner", "automatic_scaling", "false")
+    text = mp.upsert_parameter(text, "Executioner", "automatic_scaling", "true")
 
     return text, {
         **predecessor,
@@ -147,7 +147,7 @@ def audit_t1_input(text: str) -> dict[str, Any]:
         "energy_compat_present": mb.has_block(text, f"FunctorMaterials/{ENERGY_COMPAT}"),
         "mean_energy_uses_energy_compat": mp.get_parameter(text, "FunctorMaterials/s5r_mean_energy", "electron_density") == ENERGY_COMPAT,
         "energy_wall_uses_energy_compat": mp.get_parameter(text, f"FVBCs/{w45.ENERGY_BC}", "electron_density") == ENERGY_COMPAT,
-        "automatic_scaling_off": mp.get_parameter(text, "Executioner", "automatic_scaling") == "false",
+        "automatic_scaling_on": mp.get_parameter(text, "Executioner", "automatic_scaling") == "true",
     }
     checks["particle_paths_no_n_ref_token"] = all("n_ref" not in _block_text(text, p) for p in particle_paths)
     failed = sorted(k for k, ok in checks.items() if not ok)
