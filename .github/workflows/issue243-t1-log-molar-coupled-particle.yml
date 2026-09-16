@@ -35,6 +35,8 @@ jobs:
           set -euxo pipefail
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           python3 -m physics_harness.bootstrap_environment --self-test
+          python3 -m physics_harness.bootstrap ensure evidence --installer pip --manifest-out issue243-bootstrap-host.json
+          python3 -m physics_harness.bootstrap check evidence --manifest-out issue243-bootstrap-host-check.json
           eval "$(python3 -m physics_harness.bootstrap_environment --profile evidence --shell bash)"
           test "$PHYSICS_REPO_ROOT" = "$GITHUB_WORKSPACE"
           python3 -m py_compile experiments/Issue243_t1_log_molar_coupled_particle/run.py
@@ -48,6 +50,8 @@ jobs:
           docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace -v "$PWD:/workspace" "$BUILD_BASE_REF" -lc '
             set -euxo pipefail
             source /environment
+            python3 -m physics_harness.bootstrap ensure evidence --installer uv --manifest-out issue243-logs/bootstrap-container.json
+            python3 -m physics_harness.bootstrap check evidence --manifest-out issue243-logs/bootstrap-container-check.json
             eval "$(python3 -m physics_harness.bootstrap_environment --profile evidence --shell bash)"
             test "$PHYSICS_REPO_ROOT" = /workspace
             export MOOSE_DIR=/opt/physics_vendor/moose CRANE_DIR=/opt/physics_vendor/crane SQUIRREL_DIR=/opt/physics_vendor/squirrel ZAPDOS_DIR=/opt/physics_vendor/zapdos METHOD=opt
@@ -66,6 +70,8 @@ jobs:
           name: issue243-t1-evidence
           path: |
             issue243-static.txt
+            issue243-bootstrap-host.json
+            issue243-bootstrap-host-check.json
             issue243-logs
             issue243-case/input.i
           if-no-files-found: warn
