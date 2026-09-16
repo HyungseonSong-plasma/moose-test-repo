@@ -79,6 +79,22 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _in_virtualenv() -> bool:
+    """Return whether the current interpreter is running in a virtual environment."""
+
+    return sys.prefix != sys.base_prefix or os.environ.get("VIRTUAL_ENV") is not None
+
+
+def _uv_install_command(uv: str, requirements: Path, *, in_virtualenv: bool) -> list[str]:
+    """Build a uv install command bound to the current interpreter."""
+
+    command = [uv, "pip", "install"]
+    if not in_virtualenv:
+        command.append("--system")
+    command.extend(["--python", sys.executable, "-r", str(requirements)])
+    return command
+
+
 def _installer_command(requirements: Path, installer: str = "auto") -> list[str]:
     """Build the install command for the current interpreter."""
 
@@ -87,19 +103,12 @@ def _installer_command(requirements: Path, installer: str = "auto") -> list[str]
     if selected == "auto":
         selected = "uv" if uv else "pip"
 
+    in_virtualenv = _in_virtualenv()
+
     if selected == "uv":
         if not uv:
             raise BootstrapError("installer 'uv' requested but uv is not available on PATH")
-        return [
-            uv,
-            "pip",
-            "install",
-            "--system",
-            "--python",
-            sys.executable,
-            "-r",
-            str(requirements),
-        ]
+        return _uv_install_command(uv, requirements, in_virtualenv=in_virtualenv)
 
     if selected == "pip":
         command = [
@@ -110,7 +119,7 @@ def _installer_command(requirements: Path, installer: str = "auto") -> list[str]
             "--disable-pip-version-check",
         ]
         # Keep the fallback non-destructive for an unmanaged system Python.
-        if sys.prefix == sys.base_prefix and os.environ.get("VIRTUAL_ENV") is None:
+        if not in_virtualenv:
             command.append("--user")
         command.extend(["-r", str(requirements)])
         return command
@@ -239,6 +248,14 @@ def self_test() -> dict[str, object]:
         or auto_command[:3] == [sys.executable, "-m", "pip"]
     )
     checks["installer_binds_requirements_file"] = str(requirements) == auto_command[-1]
+
+    uv_system = _uv_install_command("/test/uv", requirements, in_virtualenv=False)
+    uv_virtualenv = _uv_install_command("/test/uv", requirements, in_virtualenv=True)
+    checks["uv_system_mode_uses_system"] = "--system" in uv_system
+    checks["uv_virtualenv_omits_system"] = "--system" not in uv_virtualenv
+    checks["uv_modes_bind_current_python"] = (
+        sys.executable in uv_system and sys.executable in uv_virtualenv
+    )
 
     failed = sorted(name for name, passed in checks.items() if not passed)
     return {
