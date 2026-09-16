@@ -39,9 +39,9 @@ jobs:
           python3 -m physics_harness.bootstrap check evidence --manifest-out issue243-bootstrap-host-check.json
           eval "$(python3 -m physics_harness.bootstrap_environment --profile evidence --shell bash)"
           test "$PHYSICS_REPO_ROOT" = "$GITHUB_WORKSPACE"
-          python3 -m py_compile experiments/Issue243_t1_log_molar_coupled_particle/run.py
+          python3 -m py_compile experiments/Issue243_t1_log_molar_coupled_particle/run.py experiments/Issue243_t1_log_molar_coupled_particle/p3_runtime.py
           python3 -m experiments.Issue243_t1_log_molar_coupled_particle.run | tee issue243-static.txt
-      - name: P1-P2 build and construct
+      - name: P1-P3 build construct and coupled runtime
         shell: bash
         run: |
           set -euxo pipefail
@@ -64,6 +64,8 @@ jobs:
             cp physics_app/data/electron_impact/* issue243-case/ || true
             cp physics_app/data/heavy_reactions/* issue243-case/ || true
             physics_app/physics-opt -i issue243-case/input.i --check-input > issue243-logs/check-input.log 2>&1
+            timeout 1200s physics_app/physics-opt -i issue243-case/input.i > issue243-logs/runtime.log 2>&1
+            python3 -m experiments.Issue243_t1_log_molar_coupled_particle.p3_runtime --case-dir issue243-case --input-file issue243-case/input.i --summary issue243-logs/p3-summary.json
           '
       - name: Upload evidence
         if: always()
@@ -76,5 +78,6 @@ jobs:
             issue243-bootstrap-host-check.json
             issue243-logs
             issue243-case/input.i
+            issue243-case/input_out.csv
           if-no-files-found: warn
           retention-days: 14
