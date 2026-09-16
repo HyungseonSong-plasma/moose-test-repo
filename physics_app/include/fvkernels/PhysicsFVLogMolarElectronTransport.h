@@ -2,6 +2,7 @@
 
 #include "FVElementalKernel.h"
 #include "FVFluxKernel.h"
+#include "FVDiffusionInterpolationInterface.h"
 
 /**
  * Backward-Euler time derivative for c_e = exp(log_e), where c_e is the
@@ -25,7 +26,8 @@ protected:
  *
  * Continuous flux: Gamma_diff = -D_e * c_e * grad(log_e) = -D_e * grad(c_e).
  */
-class PhysicsFVLogMolarElectronDiffusion : public FVFluxKernel
+class PhysicsFVLogMolarElectronDiffusion : public FVFluxKernel,
+                                          public FVDiffusionInterpolationInterface
 {
 public:
   static InputParameters validParams();
