@@ -1,0 +1,71 @@
+name: Issue-243 T1 coupled log-molar electron particle
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [issue-243-t1-log-molar-coupled-particle]
+    paths:
+      - physics_app/include/fvkernels/PhysicsFVLogMolarElectronTransport.h
+      - physics_app/src/fvkernels/PhysicsFVLogMolarElectronTransport.C
+      - physics_app/include/fvbcs/PhysicsFVElectronGroundedSheathCollectionBC.h
+      - physics_app/src/fvbcs/PhysicsFVElectronGroundedSheathCollectionBC.C
+      - experiments/Issue243_t1_log_molar_coupled_particle/**
+      - .github/workflows/issue243-t1-log-molar-coupled-particle.yml
+
+permissions:
+  contents: read
+
+env:
+  BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+
+jobs:
+  t1:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+      - name: P0 static ownership
+        run: |
+          set -euxo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          python3 -m py_compile experiments/Issue243_t1_log_molar_coupled_particle/run.py
+          python3 experiments/Issue243_t1_log_molar_coupled_particle/run.py | tee issue243-static.txt
+      - name: P1-P2 build and construct
+        run: |
+          set -euxo pipefail
+          mkdir -p issue243-logs issue243-case
+          docker pull "$BUILD_BASE_REF"
+          docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace -v "$PWD:/workspace" "$BUILD_BASE_REF" -lc '
+            set -euxo pipefail
+            source /environment
+            export PYTHONPATH=/workspace
+            export MOOSE_DIR=/opt/physics_vendor/moose CRANE_DIR=/opt/physics_vendor/crane SQUIRREL_DIR=/opt/physics_vendor/squirrel ZAPDOS_DIR=/opt/physics_vendor/zapdos METHOD=opt
+            make -C physics_app -j2
+            python3 - <<"PY"
+from pathlib import Path
+from experiments.Issue243_t1_log_molar_coupled_particle.run import build_t1_input, audit_t1_input
+text, meta = build_t1_input()
+audit = audit_t1_input(text)
+assert audit["status"] == "PASS", audit
+Path("issue243-case/input.i").write_text(text)
+PY
+            cp experiments/Issue91_real_qvt_r3/r3_e0/qvt.msh issue243-case/
+            cp experiments/Issue91_real_qvt_r3/r3_e0/transport_data.txt issue243-case/
+            cp physics_app/data/electron_impact/* issue243-case/ || true
+            cp physics_app/data/heavy_reactions/* issue243-case/ || true
+            physics_app/physics-opt -i issue243-case/input.i --check-input > issue243-logs/check-input.log 2>&1
+          '
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: issue243-t1-evidence
+          path: |
+            issue243-static.txt
+            issue243-logs
+            issue243-case/input.i
+          if-no-files-found: warn
+          retention-days: 14
