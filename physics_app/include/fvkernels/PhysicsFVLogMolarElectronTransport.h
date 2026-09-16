@@ -46,3 +46,16 @@ protected:
   const Real _charge_number;
   Moose::FV::InterpMethod _advected_interp_method;
 };
+
+/** Convert a physical electron number source [1/(m^3 s)] to molar source [mol/(m^3 s)]. */
+class PhysicsFVLogMolarElectronReactionSource : public FVElementalKernel
+{
+public:
+  static InputParameters validParams();
+  PhysicsFVLogMolarElectronReactionSource(const InputParameters & parameters);
+
+protected:
+  ADReal computeQpResidual() override;
+
+  const Moose::Functor<ADReal> & _number_source;
+};
