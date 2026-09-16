@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Wave-O v2 qualification runner for exact O- invalid-evaluation forensics.
+"""Wave-O v3 qualification runner for exact O- invalid-evaluation forensics.
 
 O0 leaves heavy_transport bound directly to w_Om. O1/O2 route only that one
 mass-fraction entry through PhysicsPassThroughForensicMaterial. All cases retain
-Run-35 C (mirrors_one_term) physics, use one process / one MOOSE thread, and
-emit canonical trajectory hashes for observer-effect qualification.
+Run-35 C (mirrors_one_term) physics, request one process / one MOOSE thread, and
+emit canonical trajectory hashes plus runtime-observed MOOSE parallelism for
+observer-effect qualification.
 """
 from __future__ import annotations
 
@@ -42,6 +43,7 @@ _FORENSIC_NAME = "issue236_om_forensic"
 _FORENSIC_PATH = f"FunctorMaterials/{_FORENSIC_NAME}"
 _FORENSIC_PROPERTY = "issue236_forensic_w_Om"
 _ORIGINAL_OM = "w_Om"
+_OM_ERROR_TEXT = "Species 'Om' has Y="
 _OM_ERROR = re.compile(r"Species 'Om' has Y=([-+0-9.eE]+)")
 _MARKER = "ISSUE236_OM_FORENSIC_V2"
 _PETSC_TOKENS = (
@@ -52,6 +54,8 @@ _PETSC_TOKENS = (
     "Nonlinear solve",
     "Linear solve",
 )
+_PROCESSORS_RE = re.compile(r"Num Processors:\s*(\d+)")
+_THREADS_RE = re.compile(r"Num Threads:\s*(\d+)")
 
 _prior_build_parent = base.build_parent_input
 _prior_build_child = base.build_child_input
@@ -187,7 +191,7 @@ def _self_test():
         and math.isclose(meta["dt_h_s"], 1.0e-8, rel_tol=0.0, abs_tol=0.0)
         and math.isclose(meta["dt_e_s"], 1.0e-10, rel_tol=0.0, abs_tol=0.0)
     )
-    result["checks"]["om_forensic:serial_contract"] = True
+    result["checks"]["om_forensic:serial_request_contract"] = True
     result["om_forensic_case"] = _CASE_ID
     result["om_forensic_enabled"] = _RECORDER_ENABLED
     return _finalize(result)
@@ -307,6 +311,28 @@ def _petsc_trace(log_text: str) -> list[str]:
     return [line.strip() for line in log_text.splitlines() if any(token in line for token in _PETSC_TOKENS)]
 
 
+def _terminal_om_error(log_text: str) -> list[str]:
+    return [line.strip() for line in log_text.splitlines() if _OM_ERROR_TEXT in line]
+
+
+def _parallelism_observation(log_text: str) -> dict[str, Any]:
+    processors = [int(value) for value in _PROCESSORS_RE.findall(log_text)]
+    threads = [int(value) for value in _THREADS_RE.findall(log_text)]
+    return {
+        "requested_direct_process_execution": True,
+        "requested_moose_threads": 1,
+        "observed_num_processors": processors,
+        "observed_num_threads": threads,
+        "parallelism_banner_present": bool(processors) and bool(threads),
+        "serial_observed": (
+            bool(processors)
+            and bool(threads)
+            and all(value == 1 for value in processors)
+            and all(value == 1 for value in threads)
+        ),
+    }
+
+
 def _trajectory(case_dir: Path, analysis: dict[str, Any], log_text: str) -> dict[str, Any]:
     child_rows = boundary._lane_rows(case_dir, "child_accepted")
     parent_attempt_rows = boundary._lane_rows(case_dir, "parent_after_transfer")
@@ -320,14 +346,10 @@ def _trajectory(case_dir: Path, analysis: dict[str, Any], log_text: str) -> dict
         "parent_attempts": _lane_context(parent_attempt_rows, "parent_after_transfer"),
         "parent_nonlinear": _stable_rows(parent_nonlinear_rows),
         "petsc_monitor": _petsc_trace(log_text),
+        "terminal_om_error": _terminal_om_error(log_text),
     }
     return {
-        "execution_contract": {
-            "mpi_ranks": 1,
-            "moose_threads": 1,
-            "direct_process_execution": True,
-            "petsc_monitor_enabled": True,
-        },
+        "execution_contract": _parallelism_observation(log_text),
         "payloads": payloads,
         "hashes": {name: _digest(payload) for name, payload in payloads.items()},
     }
@@ -364,14 +386,14 @@ def _runtime_analysis(case_dir: Path, *, dt_e: float, returncode: int, timed_out
         "record_count": len(records),
         "first_invalid_material_event": first,
         "interpretation": _record_interpretation(first),
-        "om_error_signature_present": "Species 'Om' has Y=" in log_text,
+        "om_error_signature_present": _OM_ERROR_TEXT in log_text,
         "om_error_value": _om_error_value(log_text),
         "negative_electron_signature_present": boundary._NEGATIVE_NE_SIGNATURE in log_text,
         "evidence_record_present_when_required": (not _RECORDER_ENABLED) or bool(records),
         "trajectory": trajectory,
         "claim_scope": (
             "first observed invalid Om evaluation on the heavy-transport mass-fraction "
-            "functor path under one-process/one-thread execution"
+            "functor path under runtime-observed serial MOOSE execution"
         ),
     }
     return result
