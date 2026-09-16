@@ -51,6 +51,7 @@ InputParameters
 PhysicsFVLogMolarElectronDiffusion::validParams()
 {
   auto params = FVFluxKernel::validParams();
+  params += FVDiffusionInterpolationInterface::validParams();
   params.addClassDescription(
       "Electron diffusion for a log-molar solved state: -D*exp(log_e)*grad(log_e). "
       "This is the conservative molar flux -D*grad(c_e) in continuous form.");
@@ -74,6 +75,7 @@ PhysicsFVLogMolarElectronDiffusion::validParams()
 PhysicsFVLogMolarElectronDiffusion::PhysicsFVLogMolarElectronDiffusion(
     const InputParameters & parameters)
   : FVFluxKernel(parameters),
+    FVDiffusionInterpolationInterface(parameters),
     _coeff(getFunctor<ADReal>("coeff")),
     _coeff_interp_method(
         Moose::FV::selectInterpolationMethod(getParam<MooseEnum>("coeff_interp_method")))
