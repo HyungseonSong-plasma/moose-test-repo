@@ -2,6 +2,7 @@
 
 #include "FVElementalKernel.h"
 #include "FVFluxKernel.h"
+#include "FVDiffusionInterpolationInterface.h"
 
 /** Conservative backward-Euler time derivative of c_e = exp(log_e) [mol/m^3]. */
 class PhysicsFVLogMolarElectronTimeDerivative : public FVElementalKernel
@@ -15,7 +16,8 @@ protected:
 };
 
 /** Conservative electron diffusion for c_e = exp(log_e) on FV cells. */
-class PhysicsFVLogMolarElectronDiffusion : public FVFluxKernel
+class PhysicsFVLogMolarElectronDiffusion : public FVFluxKernel,
+                                           public FVDiffusionInterpolationInterface
 {
 public:
   static InputParameters validParams();
