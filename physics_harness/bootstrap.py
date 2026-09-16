@@ -95,6 +95,20 @@ def _uv_install_command(uv: str, requirements: Path, *, in_virtualenv: bool) -> 
     return command
 
 
+def _pip_install_command(requirements: Path) -> list[str]:
+    """Build a pip command that installs into the current interpreter environment."""
+
+    return [
+        sys.executable,
+        "-m",
+        "pip",
+        "install",
+        "--disable-pip-version-check",
+        "-r",
+        str(requirements),
+    ]
+
+
 def _installer_command(requirements: Path, installer: str = "auto") -> list[str]:
     """Build the install command for the current interpreter."""
 
@@ -111,18 +125,10 @@ def _installer_command(requirements: Path, installer: str = "auto") -> list[str]
         return _uv_install_command(uv, requirements, in_virtualenv=in_virtualenv)
 
     if selected == "pip":
-        command = [
-            sys.executable,
-            "-m",
-            "pip",
-            "install",
-            "--disable-pip-version-check",
-        ]
-        # Keep the fallback non-destructive for an unmanaged system Python.
-        if not in_virtualenv:
-            command.append("--user")
-        command.extend(["-r", str(requirements)])
-        return command
+        # Bind installation to the same interpreter used for subsequent smoke tests.
+        # Do not use --user: some CI interpreters disable the user site, which can
+        # report a successful install while leaving the installed packages invisible.
+        return _pip_install_command(requirements)
 
     raise BootstrapError(f"unsupported installer: {installer!r}")
 
@@ -256,6 +262,11 @@ def self_test() -> dict[str, object]:
     checks["uv_modes_bind_current_python"] = (
         sys.executable in uv_system and sys.executable in uv_virtualenv
     )
+
+    pip_command = _pip_install_command(requirements)
+    checks["pip_binds_current_python"] = pip_command[:3] == [sys.executable, "-m", "pip"]
+    checks["pip_avoids_user_site"] = "--user" not in pip_command
+    checks["pip_binds_requirements_file"] = pip_command[-1] == str(requirements)
 
     failed = sorted(name for name, passed in checks.items() if not passed)
     return {
