@@ -1,0 +1,143 @@
+name: Issue-236 electron grounded-sheath qualification
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - issue-236-m1a-multiapp-smoke
+    paths:
+      - experiments/Issue236_m1a_multiapp_smoke/run_electron_sheath_qualification.py
+
+permissions:
+  contents: read
+
+concurrency:
+  group: issue236-electron-sheath-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+  MOOSE_SHA: 9f388366ccf38b9c34542ec5561198249fde0ac9
+  CRANE_SHA: ba26970cf419dcac563a20ed7079d445bc6341c3
+  SQUIRREL_SHA: 16a26d504f3ee11161a86d4e3ebf3c0e5f2afbb1
+  ZAPDOS_SHA: 9eceffbc46048c3760bbfa9a7f1ca681ae35af1d
+  PYTHONPATH: .physics-harness-deps/evidence:.
+
+jobs:
+  electron-sheath-qualification:
+    name: Standalone electron 100-step accepted-sheath qualification
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Require exact governed revision
+        shell: bash
+        run: |
+          set -euxo pipefail
+          test "$GITHUB_REF_NAME" = "issue-236-m1a-multiapp-smoke"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+
+      - name: Bootstrap evidence dependencies
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python3 -m physics_harness.bootstrap ensure evidence --installer pip \
+            --manifest-out issue236-electron-sheath-bootstrap-host.json
+          python3 -m physics_harness.bootstrap check evidence \
+            --manifest-out issue236-electron-sheath-bootstrap-host-check.json
+
+      - name: Static construction and suppression contract
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python3 -m py_compile experiments/Issue236_m1a_multiapp_smoke/run_electron_sheath_qualification.py
+          python3 experiments/Issue236_m1a_multiapp_smoke/run_electron_sheath_qualification.py \
+            --self-test | tee issue236-electron-sheath-preflight.json
+          python3 - <<'PY'
+          import json
+          p = json.load(open('issue236-electron-sheath-preflight.json'))
+          assert p['status'] == 'PASS', p
+          assert p['checks']['accepted_particle_owner']
+          assert p['checks']['accepted_energy_owner']
+          assert p['checks']['issue217_cpp_suppression_contract']
+          assert p['checks']['issue217_analytic_suppression_contract']
+          assert p['checks']['standalone_no_multiapp']
+          assert p['checks']['registered_100_steps']
+          PY
+
+      - name: Verify pinned production provenance
+        shell: bash
+        run: |
+          set -euxo pipefail
+          source physics_app/dependencies.lock
+          test "$MOOSE" = "$MOOSE_SHA"
+          test "$CRANE" = "$CRANE_SHA"
+          test "$SQUIRREL" = "$SQUIRREL_SHA"
+          test "$ZAPDOS" = "$ZAPDOS_SHA"
+          docker pull "$BUILD_BASE_REF"
+          test "$(docker image inspect "$BUILD_BASE_REF" --format '{{ index .Config.Labels "io.physics.moose.sha" }}')" = "$MOOSE_SHA"
+          test "$(docker image inspect "$BUILD_BASE_REF" --format '{{ index .Config.Labels "io.physics.crane.sha" }}')" = "$CRANE_SHA"
+          test "$(docker image inspect "$BUILD_BASE_REF" --format '{{ index .Config.Labels "io.physics.squirrel.sha" }}')" = "$SQUIRREL_SHA"
+          test "$(docker image inspect "$BUILD_BASE_REF" --format '{{ index .Config.Labels "io.physics.zapdos.sha" }}')" = "$ZAPDOS_SHA"
+
+      - name: Build Physics and run standalone qualification
+        shell: bash
+        run: |
+          set -euxo pipefail
+          rm -rf issue236-electron-sheath-results issue236-electron-sheath-logs
+          mkdir -p issue236-electron-sheath-results issue236-electron-sheath-logs
+          docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace \
+            -e GITHUB_SHA="$GITHUB_SHA" \
+            -v "$PWD:/workspace" "$BUILD_BASE_REF" -lc '
+              set -euxo pipefail
+              source /environment
+              export PYTHONPATH=/workspace/.physics-harness-deps/evidence:/workspace
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+              git config --global --add safe.directory /workspace
+              test "$(git -C /workspace rev-parse HEAD)" = "$GITHUB_SHA"
+
+              rm -rf /workspace/.physics-harness-deps/evidence
+              python3 -m physics_harness.bootstrap ensure evidence --installer uv \
+                --manifest-out issue236-electron-sheath-logs/bootstrap-container.json
+              python3 -m physics_harness.bootstrap check evidence \
+                --manifest-out issue236-electron-sheath-logs/bootstrap-container-check.json
+
+              make -C physics_app -j2
+              test -x physics_app/physics-opt
+              sha256sum physics_app/physics-opt | tee issue236-electron-sheath-logs/physics-opt.sha256
+
+              python3 experiments/Issue236_m1a_multiapp_smoke/run_electron_sheath_qualification.py \
+                --self-test | tee issue236-electron-sheath-logs/self-test.json
+
+              set +e
+              python3 experiments/Issue236_m1a_multiapp_smoke/run_electron_sheath_qualification.py \
+                --physics-opt physics_app/physics-opt \
+                --results-root issue236-electron-sheath-results \
+                --timeout 2400
+              RC=$?
+              set -e
+              printf "%s\n" "$RC" | tee issue236-electron-sheath-logs/wrapper-returncode.txt
+              exit "$RC"
+            '
+
+      - name: Upload qualification evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: issue236-electron-sheath-qualification-evidence
+          path: |
+            issue236-electron-sheath-results
+            issue236-electron-sheath-logs
+            issue236-electron-sheath-bootstrap-host.json
+            issue236-electron-sheath-bootstrap-host-check.json
+            issue236-electron-sheath-preflight.json
+          if-no-files-found: warn
+          retention-days: 14
