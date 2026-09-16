@@ -10,6 +10,7 @@ on:
       - physics_app/src/fvkernels/PhysicsFVLogMolarElectronTransport.C
       - physics_app/include/fvbcs/PhysicsFVElectronGroundedSheathCollectionBC.h
       - physics_app/src/fvbcs/PhysicsFVElectronGroundedSheathCollectionBC.C
+      - physics_harness/bootstrap_environment.py
       - experiments/Issue243_t1_log_molar_coupled_particle/**
       - .github/workflows/issue243-t1-log-molar-coupled-particle.yml
 
@@ -33,8 +34,11 @@ jobs:
         run: |
           set -euxo pipefail
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          python3 -m physics_harness.bootstrap_environment --self-test
+          eval "$(python3 -m physics_harness.bootstrap_environment --profile evidence --shell bash)"
+          test "$PHYSICS_REPO_ROOT" = "$GITHUB_WORKSPACE"
           python3 -m py_compile experiments/Issue243_t1_log_molar_coupled_particle/run.py
-          python3 experiments/Issue243_t1_log_molar_coupled_particle/run.py | tee issue243-static.txt
+          python3 -m experiments.Issue243_t1_log_molar_coupled_particle.run | tee issue243-static.txt
       - name: P1-P2 build and construct
         shell: bash
         run: |
@@ -44,7 +48,8 @@ jobs:
           docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace -v "$PWD:/workspace" "$BUILD_BASE_REF" -lc '
             set -euxo pipefail
             source /environment
-            export PYTHONPATH=/workspace
+            eval "$(python3 -m physics_harness.bootstrap_environment --profile evidence --shell bash)"
+            test "$PHYSICS_REPO_ROOT" = /workspace
             export MOOSE_DIR=/opt/physics_vendor/moose CRANE_DIR=/opt/physics_vendor/crane SQUIRREL_DIR=/opt/physics_vendor/squirrel ZAPDOS_DIR=/opt/physics_vendor/zapdos METHOD=opt
             make -C physics_app -j2
             python3 -c "from pathlib import Path; from experiments.Issue243_t1_log_molar_coupled_particle.run import build_t1_input,audit_t1_input; text,meta=build_t1_input(); audit=audit_t1_input(text); assert audit[\"status\"]==\"PASS\", audit; Path(\"issue243-case/input.i\").write_text(text)"
