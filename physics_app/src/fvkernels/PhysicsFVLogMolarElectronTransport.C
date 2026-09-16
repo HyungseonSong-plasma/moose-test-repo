@@ -10,12 +10,19 @@ registerMooseObject("PhysicsApp", PhysicsFVLogMolarElectronTimeDerivative);
 registerMooseObject("PhysicsApp", PhysicsFVLogMolarElectronDiffusion);
 registerMooseObject("PhysicsApp", PhysicsFVLogMolarElectrostaticDrift);
 
+namespace
+{
+constexpr Real avogadro_per_mol = 6.02214076e23;
+}
+
 InputParameters
 PhysicsFVLogMolarElectronTimeDerivative::validParams()
 {
   auto params = FVElementalKernel::validParams();
   params.addClassDescription(
-      "Conservative backward-Euler time derivative of c_e=exp(log_e), with log_e solved.");
+      "Conservative backward-Euler physical-number balance reconstructed from "
+      "c_e=exp(log_e) mol/m^3. The Avogadro factor is a physical unit conversion, "
+      "not an electron reference-density normalization.");
   params.set<MultiMooseEnum>("vector_tags") = "time";
   params.set<MultiMooseEnum>("matrix_tags") = "system time";
   return params;
@@ -39,7 +46,11 @@ PhysicsFVLogMolarElectronTimeDerivative::computeQpResidual()
   const auto elem = makeElemArg(_current_elem);
   const ADReal log_c_new = _var(elem, determineState());
   const ADReal log_c_old = _var(elem, Moose::oldState());
-  return (exp(log_c_new) - exp(log_c_old)) / _dt;
+
+  // n_e = N_A c_e. Multiplying the conservative molar balance by N_A leaves
+  // the mathematical solution unchanged while expressing the nonlinear
+  // residual in the same physical-number units as the control equation.
+  return avogadro_per_mol * (exp(log_c_new) - exp(log_c_old)) / _dt;
 }
 
 InputParameters
@@ -48,7 +59,8 @@ PhysicsFVLogMolarElectronDiffusion::validParams()
   auto params = FVFluxKernel::validParams();
   params += FVDiffusionInterpolationInterface::validParams();
   params.addClassDescription(
-      "Orthogonal FV diffusion of c_e=exp(log_e): -D grad(c_e), for the Issue-242 transport discriminator.");
+      "Orthogonal FV electron diffusion reconstructed from c_e=exp(log_e), "
+      "returned in physical particle-flux units through N_A.");
   params.addRequiredParam<MooseFunctorName>("coeff", "Electron diffusion coefficient [m^2/s].");
   MooseEnum coeff_interp_method("average harmonic", "harmonic");
   params.addParam<MooseEnum>(
@@ -81,8 +93,8 @@ PhysicsFVLogMolarElectronDiffusion::computeQpResidual()
   using std::exp;
 
   // T0 uses a 1D orthogonal generated mesh with natural zero diffusive wall flux.
-  // On internal faces evaluate -D * (c_N-c_P)/d_CN directly so the discrete
-  // transported quantity is c_e=exp(log_e), not log_e itself.
+  // Evaluate the physical particle flux directly from n_e=N_A*exp(log_e), so
+  // the candidate and control use the same discrete transported quantity.
   if (!_var.isInternalFace(*_face_info))
     return 0.0;
 
@@ -97,7 +109,7 @@ PhysicsFVLogMolarElectronDiffusion::computeQpResidual()
 
   const ADReal c_elem = exp(_var(elemArg(), state));
   const ADReal c_neighbor = exp(_var(neighborArg(), state));
-  return -coeff_face * (c_neighbor - c_elem) / _face_info->dCNMag();
+  return -avogadro_per_mol * coeff_face * (c_neighbor - c_elem) / _face_info->dCNMag();
 }
 
 InputParameters
@@ -105,7 +117,8 @@ PhysicsFVLogMolarElectrostaticDrift::validParams()
 {
   auto params = FVFluxKernel::validParams();
   params.addClassDescription(
-      "Electrostatic FV drift of c_e=exp(log_e), preserving PhysicsFVElectrostaticDrift face/upwind semantics.");
+      "Electrostatic FV drift reconstructed from c_e=exp(log_e), preserving "
+      "PhysicsFVElectrostaticDrift face/upwind semantics and returning physical particle flux.");
   params.addRequiredParam<MooseFunctorName>("potential", "Electrostatic potential phi [V].");
   params.addRequiredParam<MooseFunctorName>("mobility", "Positive mobility magnitude [m^2/(V s)].");
   params.addRequiredParam<MooseFunctorName>(
@@ -172,5 +185,5 @@ PhysicsFVLogMolarElectrostaticDrift::computeQpResidual()
                &limiter_time);
 
   const ADReal c_face = exp(_var(transported_face, state));
-  return carrier_face * c_face * drift_normal;
+  return avogadro_per_mol * carrier_face * c_face * drift_normal;
 }
