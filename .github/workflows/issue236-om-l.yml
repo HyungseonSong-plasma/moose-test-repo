@@ -41,9 +41,11 @@ jobs:
         run: |
           set -euxo pipefail
           python3 -m py_compile physics_harness/bootstrap.py
-          python3 -m physics_harness.bootstrap --self-test
+          python3 -m physics_harness.bootstrap --self-test 2>&1 \
+            | tee issue236-om-l1-bootstrap-self-test.log
           python3 -m physics_harness.bootstrap ensure evidence \
-            --manifest-out issue236-om-l1-bootstrap-host.json
+            --manifest-out issue236-om-l1-bootstrap-host.json 2>&1 \
+            | tee issue236-om-l1-bootstrap-host.log
 
       - name: Static L1 qualification gate
         shell: bash
@@ -126,6 +128,8 @@ jobs:
             issue236-om-l1-extended-results
             issue236-om-l1-extended-logs
             issue236-om-l1-bootstrap-host.json
+            issue236-om-l1-bootstrap-host.log
+            issue236-om-l1-bootstrap-self-test.log
             l1-preflight-static.json
           if-no-files-found: error
           retention-days: 14
