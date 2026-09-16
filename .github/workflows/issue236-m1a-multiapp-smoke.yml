@@ -40,9 +40,10 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
-          python3 -m py_compile experiments/Issue236_m1a_multiapp_smoke/run_live_ci_transfer_diag.py
-          python3 -m py_compile experiments/Issue236_m1a_multiapp_smoke/run_live_ci_boundary_diag.py
-          python3 -m py_compile experiments/Issue236_m1a_multiapp_smoke/check_boundary_ab.py
+          mkdir -p issue236-m1a-logs
+          python3 -m py_compile experiments/Issue236_m1a_multiapp_smoke/run_live_ci_transfer_diag.py 2>&1 | tee -a issue236-m1a-logs/host-syntax-gate.log
+          python3 -m py_compile experiments/Issue236_m1a_multiapp_smoke/run_live_ci_boundary_diag.py 2>&1 | tee -a issue236-m1a-logs/host-syntax-gate.log
+          python3 -m py_compile experiments/Issue236_m1a_multiapp_smoke/check_boundary_ab.py 2>&1 | tee -a issue236-m1a-logs/host-syntax-gate.log
 
       - name: Verify exact provenance and pinned dependencies
         shell: bash
@@ -57,11 +58,11 @@ jobs:
           docker pull "$BUILD_BASE_REF"
           test "$(docker image inspect "$BUILD_BASE_REF" --format '{{ index .Config.Labels "io.physics.moose.sha" }}')" = "$MOOSE_SHA"
 
-      - name: Build and execute boundary-face A/B diagnostics
+      - name: Build and execute boundary-face A/B/C diagnostics
         shell: bash
         run: |
           set -euxo pipefail
-          rm -rf issue236-m1a-results issue236-m1a-logs
+          rm -rf issue236-m1a-results
           mkdir -p issue236-m1a-results issue236-m1a-logs
           docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace \
             -e GITHUB_SHA="$GITHUB_SHA" \
@@ -78,7 +79,8 @@ jobs:
               test "$(git -C /workspace rev-parse HEAD)" = "$GITHUB_SHA"
               uv pip install --system --python "$(command -v python3)" -r requirements-evidence-engine.txt
               ISSUE236_NE_BOUNDARY_MODE=two_term python3 experiments/Issue236_m1a_multiapp_smoke/run_live_ci_boundary_diag.py --self-test | tee issue236-m1a-logs/preflight-two-term.log
-              ISSUE236_NE_BOUNDARY_MODE=one_term python3 experiments/Issue236_m1a_multiapp_smoke/run_live_ci_boundary_diag.py --self-test | tee issue236-m1a-logs/preflight-one-term.log
+              ISSUE236_NE_BOUNDARY_MODE=one_term python3 experiments/Issue236_m1a_multiapp_smoke/run_live_ci_boundary_diag.py --self-test | tee issue236-m1a-logs/preflight-parent-one-term.log
+              ISSUE236_NE_BOUNDARY_MODE=mirrors_one_term python3 experiments/Issue236_m1a_multiapp_smoke/run_live_ci_boundary_diag.py --self-test | tee issue236-m1a-logs/preflight-mirrors-one-term.log
               make -C physics_app -j2
               test -x physics_app/physics-opt
 
@@ -92,16 +94,23 @@ jobs:
               ISSUE236_NE_BOUNDARY_MODE=one_term python3 experiments/Issue236_m1a_multiapp_smoke/run_live_ci_boundary_diag.py \
                 --physics-opt physics_app/physics-opt \
                 --dt-e 1e-10 \
-                --results-root issue236-m1a-results/one-term \
+                --results-root issue236-m1a-results/parent-one-term \
                 --timeout 1800
               B_RC=$?
+              ISSUE236_NE_BOUNDARY_MODE=mirrors_one_term python3 experiments/Issue236_m1a_multiapp_smoke/run_live_ci_boundary_diag.py \
+                --physics-opt physics_app/physics-opt \
+                --dt-e 1e-10 \
+                --results-root issue236-m1a-results/mirrors-one-term \
+                --timeout 1800
+              C_RC=$?
               set -e
 
-              printf "two_term=%s\none_term=%s\n" "$A_RC" "$B_RC" | tee issue236-m1a-logs/boundary-ab-returncodes.txt
+              printf "two_term=%s\nparent_one_term=%s\nmirrors_one_term=%s\n" "$A_RC" "$B_RC" "$C_RC" | tee issue236-m1a-logs/boundary-abc-returncodes.txt
               python3 experiments/Issue236_m1a_multiapp_smoke/check_boundary_ab.py \
                 issue236-m1a-results/two-term/summary.json \
-                issue236-m1a-results/one-term/summary.json \
-                | tee issue236-m1a-logs/boundary-ab-gate.json
+                issue236-m1a-results/parent-one-term/summary.json \
+                issue236-m1a-results/mirrors-one-term/summary.json \
+                | tee issue236-m1a-logs/boundary-abc-gate.json
             '
 
       - name: Upload M1-A evidence
