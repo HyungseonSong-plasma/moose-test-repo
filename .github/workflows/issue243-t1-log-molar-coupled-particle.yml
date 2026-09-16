@@ -50,6 +50,7 @@ jobs:
           docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace -v "$PWD:/workspace" "$BUILD_BASE_REF" -lc '
             set -euxo pipefail
             source /environment
+            git config --global --add safe.directory /workspace
             python3 -m physics_harness.bootstrap ensure evidence --installer uv --manifest-out issue243-logs/bootstrap-container.json
             python3 -m physics_harness.bootstrap check evidence --manifest-out issue243-logs/bootstrap-container-check.json
             eval "$(python3 -m physics_harness.bootstrap_environment --profile evidence --shell bash)"
@@ -59,6 +60,7 @@ jobs:
             python3 -c "from pathlib import Path; from experiments.Issue243_t1_log_molar_coupled_particle.run import build_t1_input,audit_t1_input; text,meta=build_t1_input(); audit=audit_t1_input(text); assert audit[\"status\"]==\"PASS\", audit; Path(\"issue243-case/input.i\").write_text(text)"
             cp experiments/Issue91_real_qvt_r3/r3_e0/qvt.msh issue243-case/
             cp experiments/Issue91_real_qvt_r3/r3_e0/transport_data.txt issue243-case/
+            cp experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt issue243-case/
             cp physics_app/data/electron_impact/* issue243-case/ || true
             cp physics_app/data/heavy_reactions/* issue243-case/ || true
             physics_app/physics-opt -i issue243-case/input.i --check-input > issue243-logs/check-input.log 2>&1
