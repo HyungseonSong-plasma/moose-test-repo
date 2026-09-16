@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+import re
 from typing import Any
 
 from experiments.Issue217_sheath_energy_closure import run as w45
@@ -22,9 +23,20 @@ def _block_text(text: str, path: str) -> str:
     return text[span.start:span.end]
 
 
+def _remove_root_parameter(text: str, name: str) -> str:
+    pattern = re.compile(rf"(?m)^{re.escape(name)}\s*=\s*[^#\r\n]*(?:\s*#.*)?(?:\r?\n|$)")
+    matches = list(pattern.finditer(text))
+    if len(matches) != 1:
+        raise RuntimeError(f"expected exactly one root parameter {name}, found {len(matches)}")
+    out = pattern.sub("", text, count=1)
+    MooseInput(out)
+    return out
+
+
 def build_t1_input() -> tuple[str, dict[str, Any]]:
     text, predecessor = w45.build_issue217_input()
     n_ref = float(predecessor["electron_reference_density_m3"])
+    text = _remove_root_parameter(text, "n_e_value")
     if not mb.has_block(text, "Variables/n_e"):
         raise RuntimeError("accepted predecessor lacks Variables/n_e")
     text = mb.remove_block(text, "Variables/n_e")
@@ -93,6 +105,7 @@ def audit_t1_input(text: str) -> dict[str, Any]:
         "FunctorMaterials/electron_density_physical",
     )
     checks = {
+        "legacy_root_n_e_value_absent": re.search(r"(?m)^n_e_value\s*=", text) is None,
         "log_state_present": mb.has_block(text, f"Variables/{LOG_E}"),
         "old_particle_state_absent": not mb.has_block(text, "Variables/n_e"),
         "physical_bridge_exact": mp.get_parameter(text, "FunctorMaterials/electron_density_physical", "expression") == f"'{AVOGADRO:.17g}*exp(loge)'",
