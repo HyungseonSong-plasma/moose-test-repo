@@ -207,9 +207,7 @@
   nl_rel_tol = 1e-11
   nl_abs_tol = 1e-13
   nl_max_its = 40
-  automatic_scaling = true
-  off_diagonals_in_auto_scaling = true
-  compute_scaling_once = true
+  automatic_scaling = false
   petsc_options_iname = '-pc_type'
   petsc_options_value = 'lu'
 []
