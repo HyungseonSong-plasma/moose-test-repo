@@ -6,8 +6,8 @@ on:
 permissions:
   contents: read
 
-# Review-stage workflow: manual dispatch only. No push path is allowed to
-# trigger scientific execution before the forensic implementation is reviewed.
+# Review-stage workflow: manual dispatch only. Wave-O remains blocked until
+# CodeRabbit and Greptile implementation review findings are closed.
 concurrency:
   group: issue236-om-wave-o-${{ github.ref }}
   cancel-in-progress: false
@@ -111,27 +111,85 @@ jobs:
                 --physics-opt physics_app/physics-opt \
                 --dt-e 1e-10 \
                 --results-root "issue236-om-results/$CASE_ID" \
-                --timeout 1500
+                --timeout 1200
               RC=$?
               set -e
-              printf "%s\n" "$RC" | tee "issue236-om-logs/$CASE_ID/physics-returncode.txt"
+              export WAVE_O_WRAPPER_RC="$RC"
+              printf "%s\n" "$RC" | tee "issue236-om-logs/$CASE_ID/wrapper-returncode.txt"
 
               python3 - <<PY
-              import hashlib, json, os
+              import hashlib
+              import json
+              import os
               from pathlib import Path
+              from experiments.Issue236_m1a_multiapp_smoke import run_om_forensic_ci as om
+
               case = os.environ["CASE_ID"]
               recorder = os.environ["RECORDER"]
               result_root = Path(f"issue236-om-results/{case}")
-              summary = result_root / "summary.json"
+              log_root = Path(f"issue236-om-logs/{case}")
+              summary_path = result_root / "summary.json"
+              runtime_log = result_root / "runtime.log"
               executable = Path("physics_app/physics-opt")
+              wrapper_rc = int(os.environ["WAVE_O_WRAPPER_RC"])
+
+              try:
+                  summary = json.loads(summary_path.read_text(encoding="utf-8"))
+              except (OSError, json.JSONDecodeError):
+                  summary = {}
+              runtime = summary.get("runtime") if isinstance(summary.get("runtime"), dict) else {}
+              analysis = summary.get("analysis") if isinstance(summary.get("analysis"), dict) else {}
+              forensic = analysis.get("om_forensic") if isinstance(analysis.get("om_forensic"), dict) else {}
+              trajectory = forensic.get("trajectory") if isinstance(forensic.get("trajectory"), dict) else {}
+              trajectory_hashes = trajectory.get("hashes") if isinstance(trajectory.get("hashes"), dict) else {}
+
+              input_paths = sorted(path for path in result_root.rglob("*.i") if path.is_file())
               input_hashes = {
                   str(path.relative_to(result_root)): hashlib.sha256(path.read_bytes()).hexdigest()
-                  for path in sorted(result_root.rglob("*.i"))
-                  if path.is_file()
+                  for path in input_paths
               }
+              observer_hashes = {
+                  str(path.relative_to(result_root)): om.canonical_observer_input_hash(
+                      path.read_text(encoding="utf-8")
+                  )
+                  for path in input_paths
+              }
+
+              log_text = runtime_log.read_text(encoding="utf-8", errors="replace") if runtime_log.is_file() else ""
+              solver_rc = runtime.get("returncode")
+              timed_out = runtime.get("timed_out")
+              physics_opt_started = (
+                  isinstance(solver_rc, int)
+                  and runtime_log.is_file()
+                  and runtime_log.stat().st_size > 0
+              )
+              expected_om_error = (
+                  "Species 'Om' has Y=" in log_text
+                  and forensic.get("om_error_signature_present") is True
+              )
+              runtime_evidence_valid = (
+                  physics_opt_started
+                  and solver_rc != 0
+                  and timed_out is False
+                  and wrapper_rc == 1
+                  and expected_om_error
+                  and bool(input_hashes)
+                  and all(
+                      isinstance(trajectory_hashes.get(key), str)
+                      and len(trajectory_hashes[key]) == 64
+                      for key in (
+                          "accepted_parent_times",
+                          "accepted_child",
+                          "parent_attempts",
+                          "parent_nonlinear",
+                          "petsc_monitor",
+                      )
+                  )
+              )
+
               manifest = {
-                  "schema": "ISSUE236_OM_WAVE_O_ARTIFACT_V1",
-                  "state": "FINAL" if summary.is_file() else "INCOMPLETE",
+                  "schema": "ISSUE236_OM_WAVE_O_ARTIFACT_V2",
+                  "state": "FINAL_VALIDATED" if runtime_evidence_valid else "FINAL_INVALID",
                   "case": case,
                   "recorder": recorder,
                   "git_sha": os.environ["GITHUB_SHA"],
@@ -145,14 +203,71 @@ jobs:
                       "ZAPDOS": os.environ["ZAPDOS_SHA"],
                   },
                   "physics_opt_sha256": hashlib.sha256(executable.read_bytes()).hexdigest(),
+                  "physics_opt_started": physics_opt_started,
+                  "solver_returncode": solver_rc,
+                  "wrapper_returncode": wrapper_rc,
+                  "timed_out": timed_out,
+                  "expected_om_error": expected_om_error,
+                  "runtime_evidence_valid": runtime_evidence_valid,
+                  "runtime_log_sha256": (
+                      hashlib.sha256(runtime_log.read_bytes()).hexdigest()
+                      if runtime_log.is_file()
+                      else None
+                  ),
                   "input_sha256": input_hashes,
-                  "summary_sha256": hashlib.sha256(summary.read_bytes()).hexdigest() if summary.is_file() else None,
+                  "observer_input_sha256": observer_hashes,
+                  "trajectory_hashes": trajectory_hashes,
+                  "summary_sha256": (
+                      hashlib.sha256(summary_path.read_bytes()).hexdigest()
+                      if summary_path.is_file()
+                      else None
+                  ),
               }
-              Path(f"issue236-om-logs/{case}/manifest.json").write_text(
-                  json.dumps(manifest, indent=2, sort_keys=True) + "\\n", encoding="utf-8"
+              (log_root / "manifest.json").write_text(
+                  json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+                  encoding="utf-8",
               )
               PY
             '
+
+      - name: Finalize missing manifest as incomplete
+        if: always()
+        shell: bash
+        env:
+          CASE_ID: ${{ matrix.case }}
+          RECORDER: ${{ matrix.recorder }}
+        run: |
+          set -euo pipefail
+          mkdir -p "issue236-om-logs/$CASE_ID"
+          if test ! -f "issue236-om-logs/$CASE_ID/manifest.json"; then
+            python3 - <<'PY'
+            import json
+            import os
+            from pathlib import Path
+            case = os.environ["CASE_ID"]
+            payload = {
+                "schema": "ISSUE236_OM_WAVE_O_ARTIFACT_V2",
+                "state": "INCOMPLETE",
+                "case": case,
+                "recorder": os.environ["RECORDER"],
+                "git_sha": os.environ["GITHUB_SHA"],
+                "run_id": os.environ.get("GITHUB_RUN_ID"),
+                "run_attempt": os.environ.get("GITHUB_RUN_ATTEMPT"),
+                "build_base": os.environ["BUILD_BASE_REF"],
+                "dependencies": {
+                    "MOOSE": os.environ["MOOSE_SHA"],
+                    "CRANE": os.environ["CRANE_SHA"],
+                    "SQUIRREL": os.environ["SQUIRREL_SHA"],
+                    "ZAPDOS": os.environ["ZAPDOS_SHA"],
+                },
+                "runtime_evidence_valid": False,
+            }
+            Path(f"issue236-om-logs/{case}/manifest.json").write_text(
+                json.dumps(payload, indent=2, sort_keys=True) + "\n",
+                encoding="utf-8",
+            )
+            PY
+          fi
 
       - name: Upload ${{ matrix.case }} evidence
         if: always()
