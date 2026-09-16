@@ -6,6 +6,9 @@ remaining CodeRabbit closure requirements:
 * bind the wrapper return code to the downloaded artifact;
 * bind the failing parent attempt to structured nonlinear solver context and
   the actual automatic-scaling/SNESComputeFunction Om-error path.
+
+Recovery/cutback attempts are correlated by the full structured attempt
+identity ``(step, failed, dt, time)`` rather than by maximum simulation time.
 """
 from __future__ import annotations
 
@@ -135,10 +138,63 @@ def _parse_parent_attempts(log_text: str) -> list[dict[str, Any]]:
     return attempts
 
 
+def _attempt_identity(row: dict[str, Any]) -> tuple[int, int, float, float] | None:
+    step = _int(row.get("step"))
+    failed = _int(row.get("failed"))
+    dt = _float(row.get("dt"))
+    time = _float(row.get("time"))
+    if step is None or failed is None or dt is None or time is None:
+        return None
+    return step, failed, dt, time
+
+
+def _same_attempt(left: dict[str, Any], right: dict[str, Any]) -> bool:
+    lhs = _attempt_identity(left)
+    rhs = _attempt_identity(right)
+    if lhs is None or rhs is None or lhs[:2] != rhs[:2]:
+        return False
+    return _close(lhs[2], rhs[2]) and _close(lhs[3], rhs[3], abs_=1e-15)
+
+
+def _same_log_csv_attempt(log_row: dict[str, Any], csv_row: dict[str, Any]) -> bool:
+    return (
+        _int(log_row.get("step")) == _int(csv_row.get("step"))
+        and _close(log_row.get("time"), csv_row.get("time"), rel=1e-8, abs_=1e-15)
+        and _close(log_row.get("dt"), csv_row.get("dt"), rel=1e-8, abs_=1e-18)
+    )
+
+
+def _bind_log_attempts(
+    attempts: list[dict[str, Any]], attempt_rows: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    """Bind ordered log attempts to ordered CSV attempts and recover failed-count identity."""
+    bound: list[dict[str, Any]] = []
+    cursor = 0
+    for attempt in attempts:
+        match_index: int | None = None
+        for index in range(cursor, len(attempt_rows)):
+            if _same_log_csv_attempt(attempt, attempt_rows[index]):
+                match_index = index
+                break
+        if match_index is None:
+            return []
+        csv_row = attempt_rows[match_index]
+        identity = {
+            "step": csv_row["step"],
+            "failed": csv_row["failed"],
+            "dt": csv_row["dt"],
+            "time": csv_row["time"],
+        }
+        bound.append({**attempt, "failed": csv_row["failed"], "attempt_identity": identity})
+        cursor = match_index + 1
+    return bound
+
+
 def _attempt_digest(attempts: list[dict[str, Any]]) -> str:
     canonical = [
         {
             "step": row.get("step"),
+            "failed": row.get("failed"),
             "time": row.get("time"),
             "dt": row.get("dt"),
             "snes": row.get("snes", []),
@@ -221,25 +277,32 @@ def _add_v4_checks(
             except OSError:
                 log_text = ""
             attempts = _parse_parent_attempts(log_text)
-            attempt_digests[case] = _attempt_digest(attempts)
-            terminal_log = max(attempts, key=lambda row: row["time"]) if attempts else None
-            terminal_csv = max(attempt_raw, key=lambda row: row["time"]) if attempt_raw else None
-            if terminal_log and terminal_csv:
-                terminal_match = (
-                    terminal_log["step"] == terminal_csv["step"]
-                    and _close(terminal_log["time"], terminal_csv["time"], rel=1e-8, abs_=1e-15)
-                    and _close(terminal_log["dt"], terminal_csv["dt"], rel=1e-8, abs_=1e-18)
-                )
-                same_attempt_nonlinear = [
-                    row
-                    for row in nonlinear_raw
-                    if row["step"] == terminal_csv["step"]
-                    and row["failed"] == terminal_csv["failed"]
-                    and _close(row["dt"], terminal_csv["dt"])
-                ]
-            else:
-                terminal_match = False
-                same_attempt_nonlinear = []
+            bound_attempts = _bind_log_attempts(attempts, attempt_raw)
+            sequence_bound = bool(attempts) and len(bound_attempts) == len(attempts)
+            checks[f"v4:{case}:log_csv_attempt_sequence_bound"] = sequence_bound
+            if sequence_bound:
+                attempt_digests[case] = _attempt_digest(bound_attempts)
+
+            failing_attempts = [
+                row
+                for row in bound_attempts
+                if row.get("automatic_scaling") is True
+                and row.get("om_error") is True
+                and row.get("stack_snes_compute_function") is True
+            ]
+            checks[f"v4:{case}:terminal_om_failure_unique"] = len(failing_attempts) == 1
+            terminal_log = failing_attempts[0] if len(failing_attempts) == 1 else None
+            terminal_csv = terminal_log.get("attempt_identity") if terminal_log else None
+            terminal_match = bool(
+                terminal_log
+                and isinstance(terminal_csv, dict)
+                and _same_attempt(terminal_log, terminal_csv)
+            )
+            same_attempt_nonlinear = (
+                [row for row in nonlinear_raw if _same_attempt(row, terminal_csv)]
+                if isinstance(terminal_csv, dict)
+                else []
+            )
             checks[f"v4:{case}:terminal_log_csv_attempt_match"] = terminal_match
             checks[f"v4:{case}:terminal_attempt_nonlinear_context"] = bool(same_attempt_nonlinear)
             checks[f"v4:{case}:terminal_automatic_scaling_snes_error"] = bool(terminal_log) and (
@@ -247,15 +310,17 @@ def _add_v4_checks(
                 and terminal_log.get("om_error") is True
                 and terminal_log.get("stack_snes_compute_function") is True
             )
-            preterminal = attempts[:-1] if len(attempts) >= 2 else []
+            if terminal_log is not None:
+                terminal_index = bound_attempts.index(terminal_log)
+                preterminal = bound_attempts[:terminal_index]
+            else:
+                preterminal = []
             checks[f"v4:{case}:preterminal_snes_history"] = bool(preterminal) and any(
                 bool(row.get("snes")) or bool(row.get("solver_reasons")) for row in preterminal
             )
 
             result.setdefault("cases", {}).setdefault(case, {})["v4_terminal_attempt"] = (
-                {**terminal_log, "failed": terminal_csv.get("failed") if terminal_csv else None}
-                if terminal_log
-                else None
+                terminal_log if terminal_log else None
             )
 
         checks["v4:observer_parent_solver_attempts_equal"] = (
@@ -275,21 +340,51 @@ def _add_v4_checks(
 
 
 def self_test() -> int:
-    log = """Time Step 7, time = 9.32617e-10, dt = 1.5625e-10
+    log = """Time Step 7, time = 1.2e-09, dt = 2e-10
   0 SNES Function norm 1.0
   Nonlinear solve did not converge due to DIVERGED_MAX_IT iterations 80
-Time Step 8, time = 1.2451171875e-09, dt = 3.125e-10
+Time Step 7, time = 1.0e-09, dt = 1e-10
+  0 SNES Function norm 0.5
+  Nonlinear solve did not converge due to DIVERGED_MAX_IT iterations 80
+Time Step 7, time = 1.0e-09, dt = 5e-11
 Performing automatic scaling calculation
 PhysicsThermalDiffusionMaterial requires non-negative mass fractions. Species 'Om' has Y=-0.00402221
 12: SNESComputeFunction
 """
     parsed = _parse_parent_attempts(log)
+    attempt_rows = [
+        {"step": 7, "failed": 0, "time": 1.2e-09, "dt": 2e-10},
+        {"step": 7, "failed": 1, "time": 1.0e-09, "dt": 1e-10},
+        {"step": 7, "failed": 2, "time": 1.0e-09, "dt": 5e-11},
+    ]
+    nonlinear_rows = [
+        {"step": 7, "failed": 0, "time": 1.2e-09, "dt": 2e-10},
+        {"step": 7, "failed": 1, "time": 1.0e-09, "dt": 1e-10},
+        {"step": 7, "failed": 2, "time": 1.0e-09, "dt": 5e-11},
+    ]
+    bound = _bind_log_attempts(parsed, attempt_rows)
+    failing = [
+        row
+        for row in bound
+        if row.get("automatic_scaling") is True
+        and row.get("om_error") is True
+        and row.get("stack_snes_compute_function") is True
+    ]
+    failing_identity = failing[0].get("attempt_identity") if len(failing) == 1 else None
+    matched_nonlinear = (
+        [row for row in nonlinear_rows if _same_attempt(row, failing_identity)]
+        if isinstance(failing_identity, dict)
+        else []
+    )
     ok = (
-        len(parsed) == 2
+        len(parsed) == 3
         and parsed[0]["snes"] == [{"iteration": 0, "residual": 1.0}]
-        and parsed[-1]["automatic_scaling"] is True
-        and parsed[-1]["om_error"] is True
-        and parsed[-1]["stack_snes_compute_function"] is True
+        and max(parsed, key=lambda row: row["time"])["om_error"] is False
+        and len(bound) == 3
+        and len(failing) == 1
+        and failing[0]["failed"] == 2
+        and failing_identity == attempt_rows[2]
+        and matched_nonlinear == [nonlinear_rows[2]]
     )
     print(json.dumps({"CHECK_OM_FORENSIC_O_V4_P0": "PASS" if ok else "FAIL"}))
     return 0 if ok else 1
