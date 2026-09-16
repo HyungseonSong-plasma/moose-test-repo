@@ -7,7 +7,7 @@ permissions:
   contents: read
 
 # Review-stage workflow: manual dispatch only. Wave-O remains blocked until
-# CodeRabbit and Greptile implementation review findings are closed.
+# CodeRabbit and Greptile implementation-review findings are closed.
 concurrency:
   group: issue236-om-wave-o-${{ github.ref }}
   cancel-in-progress: false
@@ -142,6 +142,16 @@ jobs:
               forensic = analysis.get("om_forensic") if isinstance(analysis.get("om_forensic"), dict) else {}
               trajectory = forensic.get("trajectory") if isinstance(forensic.get("trajectory"), dict) else {}
               trajectory_hashes = trajectory.get("hashes") if isinstance(trajectory.get("hashes"), dict) else {}
+              trajectory_payloads = trajectory.get("payloads") if isinstance(trajectory.get("payloads"), dict) else {}
+              execution_contract = trajectory.get("execution_contract") if isinstance(trajectory.get("execution_contract"), dict) else {}
+              required_trace_keys = (
+                  "accepted_parent_times",
+                  "accepted_child",
+                  "parent_attempts",
+                  "parent_nonlinear",
+                  "petsc_monitor",
+                  "terminal_om_error",
+              )
 
               input_paths = sorted(path for path in result_root.rglob("*.i") if path.is_file())
               input_hashes = {
@@ -167,6 +177,22 @@ jobs:
                   "Species 'Om' has Y=" in log_text
                   and forensic.get("om_error_signature_present") is True
               )
+              trajectory_complete = all(
+                  isinstance(trajectory_payloads.get(key), list)
+                  and len(trajectory_payloads[key]) > 0
+                  and isinstance(trajectory_hashes.get(key), str)
+                  and len(trajectory_hashes[key]) == 64
+                  for key in required_trace_keys
+              )
+              serial_runtime_observed = (
+                  execution_contract.get("serial_observed") is True
+                  and isinstance(execution_contract.get("observed_num_processors"), list)
+                  and len(execution_contract["observed_num_processors"]) > 0
+                  and all(value == 1 for value in execution_contract["observed_num_processors"])
+                  and isinstance(execution_contract.get("observed_num_threads"), list)
+                  and len(execution_contract["observed_num_threads"]) > 0
+                  and all(value == 1 for value in execution_contract["observed_num_threads"])
+              )
               runtime_evidence_valid = (
                   physics_opt_started
                   and solver_rc != 0
@@ -174,21 +200,12 @@ jobs:
                   and wrapper_rc == 1
                   and expected_om_error
                   and bool(input_hashes)
-                  and all(
-                      isinstance(trajectory_hashes.get(key), str)
-                      and len(trajectory_hashes[key]) == 64
-                      for key in (
-                          "accepted_parent_times",
-                          "accepted_child",
-                          "parent_attempts",
-                          "parent_nonlinear",
-                          "petsc_monitor",
-                      )
-                  )
+                  and trajectory_complete
+                  and serial_runtime_observed
               )
 
               manifest = {
-                  "schema": "ISSUE236_OM_WAVE_O_ARTIFACT_V2",
+                  "schema": "ISSUE236_OM_WAVE_O_ARTIFACT_V3",
                   "state": "FINAL_VALIDATED" if runtime_evidence_valid else "FINAL_INVALID",
                   "case": case,
                   "recorder": recorder,
@@ -208,6 +225,8 @@ jobs:
                   "wrapper_returncode": wrapper_rc,
                   "timed_out": timed_out,
                   "expected_om_error": expected_om_error,
+                  "trajectory_complete": trajectory_complete,
+                  "serial_runtime_observed": serial_runtime_observed,
                   "runtime_evidence_valid": runtime_evidence_valid,
                   "runtime_log_sha256": (
                       hashlib.sha256(runtime_log.read_bytes()).hexdigest()
@@ -246,7 +265,7 @@ jobs:
             from pathlib import Path
             case = os.environ["CASE_ID"]
             payload = {
-                "schema": "ISSUE236_OM_WAVE_O_ARTIFACT_V2",
+                "schema": "ISSUE236_OM_WAVE_O_ARTIFACT_V3",
                 "state": "INCOMPLETE",
                 "case": case,
                 "recorder": os.environ["RECORDER"],
