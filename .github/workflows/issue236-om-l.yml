@@ -99,7 +99,8 @@ jobs:
               test "$(git -C /workspace rev-parse HEAD)" = "$GITHUB_SHA"
 
               python3 -m physics_harness.bootstrap ensure evidence \
-                --manifest-out issue236-om-l1-extended-logs/bootstrap-container.json
+                --manifest-out issue236-om-l1-extended-logs/bootstrap-container.json 2>&1 \
+                | tee issue236-om-l1-extended-logs/bootstrap-container.log
               make -C physics_app -j2
               test -x physics_app/physics-opt
               PHYSICS_SHA="$(sha256sum physics_app/physics-opt | awk "{print \$1}")"
