@@ -90,26 +90,21 @@ jobs:
               printf "%s  physics_app/physics-opt\n" "$PHYSICS_SHA" \
                 | tee issue236-om-l-logs/shared/physics-opt.sha256
 
-              python3 - <<PY
-              import json, os
-              from pathlib import Path
-              payload = {
-                  "git_sha": os.environ["GITHUB_SHA"],
-                  "run_id": os.environ["GITHUB_RUN_ID"],
-                  "run_attempt": os.environ["GITHUB_RUN_ATTEMPT"],
-                  "build_base": os.environ["BUILD_BASE_REF"],
-                  "MOOSE_SHA": os.environ["MOOSE_SHA"],
-                  "CRANE_SHA": os.environ["CRANE_SHA"],
-                  "SQUIRREL_SHA": os.environ["SQUIRREL_SHA"],
-                  "ZAPDOS_SHA": os.environ["ZAPDOS_SHA"],
-                  "physics_opt_sha256": "$PHYSICS_SHA",
-                  "campaign": "Issue-236 Om L nonlinear-globalization discriminator",
-                  "same_binary": True,
-              }
-              Path("issue236-om-l-logs/provenance.json").write_text(
-                  json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
-              )
-              PY
+              printf "%s\n" \
+                "{" \
+                "  \"git_sha\": \"$GITHUB_SHA\"," \
+                "  \"run_id\": \"$GITHUB_RUN_ID\"," \
+                "  \"run_attempt\": \"$GITHUB_RUN_ATTEMPT\"," \
+                "  \"build_base\": \"$BUILD_BASE_REF\"," \
+                "  \"MOOSE_SHA\": \"$MOOSE_SHA\"," \
+                "  \"CRANE_SHA\": \"$CRANE_SHA\"," \
+                "  \"SQUIRREL_SHA\": \"$SQUIRREL_SHA\"," \
+                "  \"ZAPDOS_SHA\": \"$ZAPDOS_SHA\"," \
+                "  \"physics_opt_sha256\": \"$PHYSICS_SHA\"," \
+                "  \"campaign\": \"Issue-236 Om L nonlinear-globalization discriminator\"," \
+                "  \"same_binary\": true" \
+                "}" > issue236-om-l-logs/provenance.json
+              python3 -m json.tool issue236-om-l-logs/provenance.json >/dev/null
 
               run_case() {
                 MODE="$1"
