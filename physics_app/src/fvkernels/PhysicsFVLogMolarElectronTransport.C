@@ -9,6 +9,7 @@
 registerMooseObject("PhysicsApp", PhysicsFVLogMolarElectronTimeDerivative);
 registerMooseObject("PhysicsApp", PhysicsFVLogMolarElectronDiffusion);
 registerMooseObject("PhysicsApp", PhysicsFVLogMolarElectrostaticDrift);
+registerMooseObject("PhysicsApp", PhysicsFVLogMolarElectronReactionSource);
 
 namespace
 {
@@ -46,10 +47,6 @@ PhysicsFVLogMolarElectronTimeDerivative::computeQpResidual()
   const auto elem = makeElemArg(_current_elem);
   const ADReal log_c_new = _var(elem, determineState());
   const ADReal log_c_old = _var(elem, Moose::oldState());
-
-  // n_e = N_A c_e. Multiplying the conservative molar balance by N_A leaves
-  // the mathematical solution unchanged while expressing the nonlinear
-  // residual in the same physical-number units as the control equation.
   return avogadro_per_mol * (exp(log_c_new) - exp(log_c_old)) / _dt;
 }
 
@@ -91,10 +88,6 @@ PhysicsFVLogMolarElectronDiffusion::computeQpResidual()
 {
   using namespace Moose::FV;
   using std::exp;
-
-  // T0 uses a 1D orthogonal generated mesh with natural zero diffusive wall flux.
-  // Evaluate the physical particle flux directly from n_e=N_A*exp(log_e), so
-  // the candidate and control use the same discrete transported quantity.
   if (!_var.isInternalFace(*_face_info))
     return 0.0;
 
@@ -186,4 +179,33 @@ PhysicsFVLogMolarElectrostaticDrift::computeQpResidual()
 
   const ADReal c_face = exp(_var(transported_face, state));
   return avogadro_per_mol * carrier_face * c_face * drift_normal;
+}
+
+InputParameters
+PhysicsFVLogMolarElectronReactionSource::validParams()
+{
+  auto params = FVElementalKernel::validParams();
+  params.addClassDescription(
+      "Applies a signed physical electron number source to the log-molar electron equation "
+      "using only the exact Avogadro number conversion; no n_ref normalization is used.");
+  params.addRequiredParam<MooseFunctorName>(
+      "number_source", "Signed physical electron number source [1/(m^3 s)]. Positive is production.");
+  return params;
+}
+
+PhysicsFVLogMolarElectronReactionSource::PhysicsFVLogMolarElectronReactionSource(
+    const InputParameters & parameters)
+  : FVElementalKernel(parameters), _number_source(getFunctor<ADReal>("number_source"))
+{
+}
+
+ADReal
+PhysicsFVLogMolarElectronReactionSource::computeQpResidual()
+{
+  const ADReal physical_number_source =
+      _number_source(makeElemArg(_current_elem), determineState());
+  // Transport residuals are expressed in physical-number units (N_A*c_e), so
+  // the canonical physical source enters directly. Equivalently, dividing the
+  // entire equation by N_A yields the molar source S_e/N_A.
+  return -physical_number_source;
 }
