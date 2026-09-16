@@ -1,0 +1,77 @@
+name: Issue-228 W2 second harness-corrected rerun
+
+on:
+  push:
+    branches: [issue-228-p2-e1-w2-pg]
+    paths:
+      - '.github/workflows/issue228-w2-rerun2.yml'
+      - 'experiments/Issue228_w2_rerun2.py'
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+
+jobs:
+  w2:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {name: f000, fraction: 0.0}
+          - {name: f025, fraction: 0.25}
+          - {name: f050, fraction: 0.5}
+          - {name: f075, fraction: 0.75}
+          - {name: f100, fraction: 1.0}
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 1}
+      - name: Download governed baseline snapshot
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euxo pipefail
+          mkdir -p snapshot
+          gh run download 34949699566 -n issue228-pgw-baseline-snapshot -D snapshot
+          test -f snapshot/case/input_out.e
+      - name: Run W2 ${{ matrix.name }}
+        shell: bash
+        env:
+          CASE_NAME: ${{ matrix.name }}
+          FRACTION: ${{ matrix.fraction }}
+        run: |
+          set -euxo pipefail
+          docker pull "$BUILD_BASE_REF"
+          docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace \
+            -e CASE_NAME="$CASE_NAME" -e FRACTION="$FRACTION" \
+            -v "$PWD:/workspace" "$BUILD_BASE_REF" -lc '
+              set -euxo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              export PYTHONPATH=/workspace
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+              uv pip install --system --python "$(command -v python3)" -r requirements-evidence-engine.txt
+              uv pip install --system --python "$(command -v python3)" scipy
+              make -C physics_app -j2
+              python3 experiments/Issue228_w2_rerun2.py \
+                --suppression-fraction "$FRACTION" --snapshot-root snapshot \
+                --physics-opt physics_app/physics-opt \
+                --results-root "issue228-w2-rerun2-${CASE_NAME}-results"
+            '
+      - name: Upload W2 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue228-w2-rerun2-${{ matrix.name }}
+          path: issue228-w2-rerun2-${{ matrix.name }}-results
+          if-no-files-found: error
+          retention-days: 7

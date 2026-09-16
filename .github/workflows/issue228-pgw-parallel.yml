@@ -1,0 +1,192 @@
+name: Issue-228 P/G/W parallel discriminator campaign
+
+on:
+  push:
+    branches: [issue-228-pgw-parallel]
+    paths:
+      - '.github/workflows/issue228-pgw-parallel.yml'
+      - 'experiments/Issue228_pgw_parallel/**'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: issue228-pgw-parallel-${{ github.sha }}
+  cancel-in-progress: false
+
+env:
+  BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+  MOOSE_SHA: 9f388366ccf38b9c34542ec5561198249fde0ac9
+  CRANE_SHA: ba26970cf419dcac563a20ed7079d445bc6341c3
+  SQUIRREL_SHA: 16a26d504f3ee11161a86d4e3ebf3c0e5f2afbb1
+  ZAPDOS_SHA: 9eceffbc46048c3760bbfa9a7f1ca681ae35af1d
+
+jobs:
+  baseline-snapshot:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Verify provenance and image
+        shell: bash
+        run: |
+          set -euxo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          source physics_app/dependencies.lock
+          test "$MOOSE" = "$MOOSE_SHA"
+          test "$CRANE" = "$CRANE_SHA"
+          test "$SQUIRREL" = "$SQUIRREL_SHA"
+          test "$ZAPDOS" = "$ZAPDOS_SHA"
+          docker pull "$BUILD_BASE_REF"
+          test "$(docker image inspect "$BUILD_BASE_REF" --format '{{ index .Config.Labels "io.physics.moose.sha" }}')" = "$MOOSE_SHA"
+      - name: Build and run shared 10-step baseline snapshot
+        shell: bash
+        run: |
+          set -euxo pipefail
+          rm -rf issue228-pgw-baseline-results
+          docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace \
+            -e GITHUB_SHA="$GITHUB_SHA" \
+            -v "$PWD:/workspace" "$BUILD_BASE_REF" -lc '
+              set -euxo pipefail
+              source /environment
+              export PYTHONPATH=/workspace
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+              git config --global --add safe.directory /workspace
+              uv pip install --system --python "$(command -v python3)" -r requirements-evidence-engine.txt
+              python3 -m py_compile experiments/Issue228_pgw_parallel/run.py
+              python3 experiments/Issue228_pgw_parallel/run.py runtime --mode baseline --physics-opt physics_app/physics-opt --results-root /tmp/selftest --self-test
+              make -C physics_app -j2
+              test -x physics_app/physics-opt
+              python3 experiments/Issue228_pgw_parallel/run.py runtime \
+                --mode baseline \
+                --physics-opt physics_app/physics-opt \
+                --results-root issue228-pgw-baseline-results \
+                --timeout 1800
+            '
+      - name: Upload shared snapshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue228-pgw-baseline-snapshot
+          path: issue228-pgw-baseline-results
+          if-no-files-found: error
+          retention-days: 7
+
+  wafer-av:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [wafer_moderate, wafer_matched]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Verify provenance and image
+        shell: bash
+        run: |
+          set -euxo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          source physics_app/dependencies.lock
+          test "$MOOSE" = "$MOOSE_SHA"
+          test "$CRANE" = "$CRANE_SHA"
+          test "$SQUIRREL" = "$SQUIRREL_SHA"
+          test "$ZAPDOS" = "$ZAPDOS_SHA"
+          docker pull "$BUILD_BASE_REF"
+      - name: Run wafer A/V ${{ matrix.mode }}
+        shell: bash
+        env:
+          MODE: ${{ matrix.mode }}
+        run: |
+          set -euxo pipefail
+          RESULTS="issue228-pgw-${MODE}-results"
+          rm -rf "$RESULTS"
+          docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace \
+            -e GITHUB_SHA="$GITHUB_SHA" -e MODE="$MODE" \
+            -v "$PWD:/workspace" "$BUILD_BASE_REF" -lc '
+              set -euxo pipefail
+              source /environment
+              export PYTHONPATH=/workspace
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+              git config --global --add safe.directory /workspace
+              uv pip install --system --python "$(command -v python3)" -r requirements-evidence-engine.txt
+              python3 -m py_compile experiments/Issue228_pgw_parallel/run.py
+              make -C physics_app -j2
+              test -x physics_app/physics-opt
+              python3 experiments/Issue228_pgw_parallel/run.py runtime \
+                --mode "$MODE" \
+                --physics-opt physics_app/physics-opt \
+                --results-root "issue228-pgw-${MODE}-results" \
+                --timeout 1800
+            '
+      - name: Upload wafer evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue228-pgw-${{ matrix.mode }}
+          path: issue228-pgw-${{ matrix.mode }}-results
+          if-no-files-found: error
+          retention-days: 7
+
+  frozen-pw:
+    needs: baseline-snapshot
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: p_step1
+            step_index: 1
+            relocate: 0.0
+          - name: p_step10
+            step_index: 10
+            relocate: 0.0
+          - name: w50_step10
+            step_index: 10
+            relocate: 0.5
+          - name: w100_step10
+            step_index: 10
+            relocate: 1.0
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - uses: actions/download-artifact@v4
+        with:
+          name: issue228-pgw-baseline-snapshot
+          path: snapshot
+      - name: Frozen P/W discriminator ${{ matrix.name }}
+        shell: bash
+        env:
+          CASE_NAME: ${{ matrix.name }}
+          STEP_INDEX: ${{ matrix.step_index }}
+          RELOCATE: ${{ matrix.relocate }}
+        run: |
+          set -euxo pipefail
+          python3 -m pip install --disable-pip-version-check --quiet numpy scipy
+          python3 -m py_compile experiments/Issue228_pgw_parallel/run.py
+          python3 experiments/Issue228_pgw_parallel/run.py frozen \
+            --snapshot-root snapshot \
+            --step-index "$STEP_INDEX" \
+            --relocate-fraction "$RELOCATE" \
+            --results-root "issue228-pgw-${CASE_NAME}-results"
+      - name: Upload frozen evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue228-pgw-${{ matrix.name }}
+          path: issue228-pgw-${{ matrix.name }}-results
+          if-no-files-found: error
+          retention-days: 7

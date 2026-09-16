@@ -21,4 +21,5 @@ public:
 protected:
   const Moose::Functor<ADReal> & _electron_number_density;
   const Moose::Functor<ADReal> & _o2_molar_concentration;
+  const bool _clamp_negative_electron_density;
 };

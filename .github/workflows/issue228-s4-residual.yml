@@ -1,0 +1,88 @@
+name: Issue-228 S4 residual closure
+
+on:
+  push:
+    branches: [issue-228-s4-residual]
+    paths:
+      - '.github/workflows/issue228-s4-residual.yml'
+      - 'experiments/Issue228_s4_residual/run.py'
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+  MOOSE_SHA: 9f388366ccf38b9c34542ec5561198249fde0ac9
+  CRANE_SHA: ba26970cf419dcac563a20ed7079d445bc6341c3
+  SQUIRREL_SHA: 16a26d504f3ee11161a86d4e3ebf3c0e5f2afbb1
+  ZAPDOS_SHA: 9eceffbc46048c3760bbfa9a7f1ca681ae35af1d
+
+jobs:
+  s4-residual:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [s4_0, s4_g, s4_q]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify provenance and pinned image
+        shell: bash
+        run: |
+          set -euxo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          source physics_app/dependencies.lock
+          test "$MOOSE" = "$MOOSE_SHA"
+          test "$CRANE" = "$CRANE_SHA"
+          test "$SQUIRREL" = "$SQUIRREL_SHA"
+          test "$ZAPDOS" = "$ZAPDOS_SHA"
+          docker pull "$BUILD_BASE_REF"
+      - name: Download governed step-10 snapshot and S3 reference
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euxo pipefail
+          mkdir -p snapshot s3ref
+          gh run download 34949699566 -n issue228-pgw-baseline-snapshot -D snapshot
+          gh run download 34959521618 -n issue228-s3-current_balance -D s3ref
+          test -f snapshot/case/input_out.e
+          test -f snapshot/summary.json
+          test -f s3ref/summary.json
+      - name: Run S4 ${{ matrix.mode }}
+        shell: bash
+        env:
+          MODE: ${{ matrix.mode }}
+        run: |
+          set -euxo pipefail
+          docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace \
+            -e MODE="$MODE" -v "$PWD:/workspace" "$BUILD_BASE_REF" -lc '
+              set -euxo pipefail
+              source /environment
+              export PYTHONPATH=/workspace
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+              uv pip install --system --python "$(command -v python3)" -r requirements-evidence-engine.txt
+              uv pip install --system --python "$(command -v python3)" scipy
+              python3 -m py_compile experiments/Issue228_s4_residual/run.py
+              make -C physics_app -j2
+              python3 experiments/Issue228_s4_residual/run.py \
+                --mode "$MODE" \
+                --snapshot-root snapshot \
+                --s3-reference-root s3ref \
+                --physics-opt physics_app/physics-opt \
+                --results-root "issue228-s4-${MODE}-results"
+            '
+      - name: Upload S4 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue228-s4-${{ matrix.mode }}
+          path: issue228-s4-${{ matrix.mode }}-results
+          if-no-files-found: error
+          retention-days: 7

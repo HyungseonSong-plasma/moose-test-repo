@@ -1,0 +1,91 @@
+name: Issue-236 M1-A live-electron multirate smoke
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [issue-236-m1a-multiapp-smoke]
+    paths:
+      - '.github/ci-triggers/issue236-m1a.txt'
+
+permissions:
+  contents: read
+
+# This workflow is intentionally gated. Intermediate edits to runners, physics
+# code, or generated-input helpers must not start CI. After all coordinated
+# changes are ready, update .github/ci-triggers/issue236-m1a.txt (or dispatch
+# manually) to run one coherent revision.
+concurrency:
+  group: issue236-m1a-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+  MOOSE_SHA: 9f388366ccf38b9c34542ec5561198249fde0ac9
+  CRANE_SHA: ba26970cf419dcac563a20ed7079d445bc6341c3
+  SQUIRREL_SHA: 16a26d504f3ee11161a86d4e3ebf3c0e5f2afbb1
+  ZAPDOS_SHA: 9eceffbc46048c3760bbfa9a7f1ca681ae35af1d
+
+jobs:
+  m1a-multiapp-smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Verify exact provenance and pinned dependencies
+        shell: bash
+        run: |
+          set -euxo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          source physics_app/dependencies.lock
+          test "$MOOSE" = "$MOOSE_SHA"
+          test "$CRANE" = "$CRANE_SHA"
+          test "$SQUIRREL" = "$SQUIRREL_SHA"
+          test "$ZAPDOS" = "$ZAPDOS_SHA"
+          docker pull "$BUILD_BASE_REF"
+          test "$(docker image inspect "$BUILD_BASE_REF" --format '{{ index .Config.Labels "io.physics.moose.sha" }}')" = "$MOOSE_SHA"
+
+      - name: Build and execute no-chemistry transfer diagnostics
+        shell: bash
+        run: |
+          set -euxo pipefail
+          rm -rf issue236-m1a-results issue236-m1a-logs
+          mkdir -p issue236-m1a-results issue236-m1a-logs
+          docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace \
+            -e GITHUB_SHA="$GITHUB_SHA" \
+            -v "$PWD:/workspace" "$BUILD_BASE_REF" -lc '
+              set -euxo pipefail
+              source /environment
+              export PYTHONPATH=/workspace
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+              git config --global --add safe.directory /workspace
+              test "$(git -C /workspace rev-parse HEAD)" = "$GITHUB_SHA"
+              uv pip install --system --python "$(command -v python3)" -r requirements-evidence-engine.txt
+              python3 experiments/Issue236_m1a_multiapp_smoke/run_live_ci_transfer_diag.py --self-test | tee issue236-m1a-logs/preflight.log
+              make -C physics_app -j2
+              test -x physics_app/physics-opt
+              python3 experiments/Issue236_m1a_multiapp_smoke/run_live_ci_transfer_diag.py \
+                --physics-opt physics_app/physics-opt \
+                --dt-e 1e-10 \
+                --results-root issue236-m1a-results \
+                --timeout 1800
+            '
+
+      - name: Upload M1-A evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue236-m1a-multiapp-smoke
+          path: |
+            issue236-m1a-results
+            issue236-m1a-logs
+          if-no-files-found: error
+          retention-days: 14

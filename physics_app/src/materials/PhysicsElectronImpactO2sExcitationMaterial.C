@@ -14,6 +14,11 @@ PhysicsElectronImpactO2sExcitationMaterial::validParams()
                                             "Physical electron number density [1/m^3].");
   params.addRequiredParam<MooseFunctorName>("o2_molar_concentration",
                                             "O2 molar concentration [mol/m^3].");
+  params.addParam<bool>(
+      "clamp_negative_electron_density",
+      false,
+      "If true, a negative intermediate nonlinear-trial electron density contributes zero "
+      "excitation rate instead of aborting. The solved electron variable is not modified.");
   return params;
 }
 
@@ -21,7 +26,8 @@ PhysicsElectronImpactO2sExcitationMaterial::PhysicsElectronImpactO2sExcitationMa
     const InputParameters & parameters)
   : FunctorMaterial(parameters),
     _electron_number_density(getFunctor<ADReal>("electron_number_density")),
-    _o2_molar_concentration(getFunctor<ADReal>("o2_molar_concentration"))
+    _o2_molar_concentration(getFunctor<ADReal>("o2_molar_concentration")),
+    _clamp_negative_electron_density(getParam<bool>("clamp_negative_electron_density"))
 {
   addFunctorProperty<ADReal>(
       "R_O2s",
@@ -31,10 +37,13 @@ PhysicsElectronImpactO2sExcitationMaterial::PhysicsElectronImpactO2sExcitationMa
         constexpr Real K_O2S = 4.71e8;
         const ADReal n_e = _electron_number_density(r, state);
         const ADReal c_o2 = _o2_molar_concentration(r, state);
-        if (n_e.value() < 0.0)
+        const bool negative_n_e = n_e.value() < 0.0;
+        if (negative_n_e && !_clamp_negative_electron_density)
           mooseError("PhysicsElectronImpactO2sExcitationMaterial requires n_e >= 0.");
         if (c_o2.value() < 0.0)
           mooseError("PhysicsElectronImpactO2sExcitationMaterial requires c_O2 >= 0.");
+        if (negative_n_e)
+          return ADReal(0.0);
         return K_O2S * (n_e / N_A) * c_o2;
       });
 }

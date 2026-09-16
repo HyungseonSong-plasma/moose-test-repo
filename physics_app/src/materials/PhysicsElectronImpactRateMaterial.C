@@ -18,6 +18,11 @@ PhysicsElectronImpactRateMaterial::validParams()
                                             "Target-species molar concentration [mol/m^3].");
   params.addRequiredParam<std::string>("reaction_progress",
                                        "Name of the published molar reaction-progress functor.");
+  params.addParam<bool>(
+      "clamp_negative_electron_density",
+      false,
+      "If true, negative nonlinear trial values of electron density contribute zero "
+      "electron-impact progress instead of aborting. The converged solution is not clipped.");
   return params;
 }
 
@@ -29,6 +34,7 @@ PhysicsElectronImpactRateMaterial::PhysicsElectronImpactRateMaterial(
     _target_molar_concentration(getFunctor<ADReal>("target_molar_concentration")),
     _rate_table_file(getParam<FileName>("rate_table_file")),
     _reaction_progress_name(getParam<std::string>("reaction_progress")),
+    _clamp_negative_electron_density(getParam<bool>("clamp_negative_electron_density")),
     _table(_rate_table_file, 1, {2})
 {
   constexpr Real N_A = 6.02214076e23;
@@ -42,7 +48,8 @@ PhysicsElectronImpactRateMaterial::PhysicsElectronImpactRateMaterial(
       {
         const ADReal n_e = _electron_number_density(r, state);
         const ADReal c_target = _target_molar_concentration(r, state);
-        if (n_e.value() < 0.0)
+        const bool negative_n_e = n_e.value() < 0.0;
+        if (negative_n_e && !_clamp_negative_electron_density)
           mooseError("PhysicsElectronImpactRateMaterial requires n_e >= 0 for '",
                      _reaction_progress_name,
                      "'.");
@@ -56,7 +63,9 @@ PhysicsElectronImpactRateMaterial::PhysicsElectronImpactRateMaterial(
           mooseError("PhysicsElectronImpactRateMaterial encountered a negative tabulated rate for '",
                      _reaction_progress_name,
                      "'.");
-        return k_raw * (n_e / N_A) * c_target;
+
+        const ADReal n_e_for_rate = negative_n_e ? ADReal(0.0) : n_e;
+        return k_raw * (n_e_for_rate / N_A) * c_target;
       });
 }
 
