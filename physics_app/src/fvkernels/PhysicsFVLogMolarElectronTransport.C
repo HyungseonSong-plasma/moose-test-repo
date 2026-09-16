@@ -46,6 +46,7 @@ InputParameters
 PhysicsFVLogMolarElectronDiffusion::validParams()
 {
   auto params = FVFluxKernel::validParams();
+  params += FVDiffusionInterpolationInterface::validParams();
   params.addClassDescription(
       "Orthogonal FV diffusion of c_e=exp(log_e): -D grad(c_e), for the Issue-242 transport discriminator.");
   params.addRequiredParam<MooseFunctorName>("coeff", "Electron diffusion coefficient [m^2/s].");
@@ -66,6 +67,7 @@ PhysicsFVLogMolarElectronDiffusion::validParams()
 PhysicsFVLogMolarElectronDiffusion::PhysicsFVLogMolarElectronDiffusion(
     const InputParameters & parameters)
   : FVFluxKernel(parameters),
+    FVDiffusionInterpolationInterface(parameters),
     _coeff(getFunctor<ADReal>("coeff")),
     _coeff_interp_method(
         Moose::FV::selectInterpolationMethod(getParam<MooseEnum>("coeff_interp_method")))
