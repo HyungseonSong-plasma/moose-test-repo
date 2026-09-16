@@ -8,6 +8,7 @@ from typing import Any
 
 from experiments.Issue217_sheath_energy_closure import run as w45
 from experiments.Issue27_surface_reactions.controlled_wall import see as a8
+from experiments.historical_recipe_support import issue26_energy_chain as energy
 from physics_harness.adapters.moose import blocks as mb
 from physics_harness.adapters.moose import parameters as mp
 from physics_harness.adapters.moose.input import MooseInput
@@ -16,6 +17,8 @@ AVOGADRO = 6.02214076e23
 LOG_E = "log_e"
 PHYSICAL = "n_e_physical"
 ENERGY_COMPAT = "issue243_energy_ne_hat_compat"
+PHYSICAL_SEE_MATERIAL = "issue243_see_physical_particle_material"
+PHYSICAL_SEE_FUNCTOR = "issue243_see_physical_particle_flux_inward"
 
 
 def _block_text(text: str, path: str) -> str:
@@ -64,9 +67,28 @@ def build_t1_input() -> tuple[str, dict[str, Any]]:
 
     text = mp.upsert_parameter(text, f"FVBCs/{w45.PARTICLE_BC}", "variable", LOG_E)
     text = mp.upsert_parameter(text, f"FVBCs/{w45.PARTICLE_BC}", "log_molar_state", "true")
-    see_expr = (mp.get_parameter(text, f"FunctorMaterials/{a8.SEE_MATERIAL}", "expression") or "").strip("'")
-    text = mp.upsert_parameter(text, f"FunctorMaterials/{a8.SEE_MATERIAL}", "expression", f"'{n_ref:.17g}*({see_expr})'")
+
+    mb.require_absent(text, f"FunctorMaterials/{PHYSICAL_SEE_MATERIAL}")
+    gamma = 0.05
+    physical_see_expression = (
+        f"{gamma:.17g}*{AVOGADRO:.17g}*("
+        f"(o2ps+o2pm)/{a8.M_O2_KG_PER_MOL:.17g}+"
+        f"(ops+opm)/{a8.M_O_KG_PER_MOL:.17g})"
+    )
+    text = mb.insert_child_block(
+        text,
+        "FunctorMaterials",
+        f"""  [{PHYSICAL_SEE_MATERIAL}]
+    type = ADParsedFunctorMaterial
+    property_name = {PHYSICAL_SEE_FUNCTOR}
+    functor_names = 'ion_surface_mass_flux_O2p ion_migration_mass_flux_O2p ion_surface_mass_flux_Op ion_migration_mass_flux_Op'
+    functor_symbols = 'o2ps o2pm ops opm'
+    expression = '{physical_see_expression}'
+    block = plasma
+  []""",
+    )
     text = mp.upsert_parameter(text, f"FVBCs/{a8.SEE_BC}", "variable", LOG_E)
+    text = mp.upsert_parameter(text, f"FVBCs/{a8.SEE_BC}", "functor", PHYSICAL_SEE_FUNCTOR)
 
     mb.require_absent(text, f"FunctorMaterials/{ENERGY_COMPAT}")
     text = mb.insert_child_block(text, "FunctorMaterials", f"""  [{ENERGY_COMPAT}]
@@ -94,6 +116,8 @@ def build_t1_input() -> tuple[str, dict[str, Any]]:
         "particle_reference_density_removed": True,
         "energy_representation_frozen": True,
         "energy_only_compatibility_bridge": ENERGY_COMPAT,
+        "particle_see_functor": PHYSICAL_SEE_FUNCTOR,
+        "energy_see_functor_preserved": a8.SEE_FUNCTOR,
     }
 
 
@@ -101,7 +125,7 @@ def audit_t1_input(text: str) -> dict[str, Any]:
     particle_paths = (
         "FVKernels/n_e_time", "FVKernels/n_e_diffusion", "FVKernels/n_e_drift",
         "FVKernels/s5r_electron_source", f"FVBCs/{w45.PARTICLE_BC}",
-        f"FunctorMaterials/{a8.SEE_MATERIAL}", f"FVBCs/{a8.SEE_BC}",
+        f"FunctorMaterials/{PHYSICAL_SEE_MATERIAL}", f"FVBCs/{a8.SEE_BC}",
         "FunctorMaterials/electron_density_physical",
     )
     checks = {
@@ -115,7 +139,10 @@ def audit_t1_input(text: str) -> dict[str, Any]:
         "particle_drift_log": mp.get_parameter(text, "FVKernels/n_e_drift", "type") == "PhysicsFVLogMolarElectrostaticDrift" and mp.get_parameter(text, "FVKernels/n_e_drift", "variable") == LOG_E,
         "particle_source_no_nref": mp.get_parameter(text, "FVKernels/s5r_electron_source", "type") == "PhysicsFVLogMolarElectronReactionSource" and mp.get_parameter(text, "FVKernels/s5r_electron_source", "n_ref") is None,
         "primary_sheath_log": mp.get_parameter(text, f"FVBCs/{w45.PARTICLE_BC}", "variable") == LOG_E and mp.get_parameter(text, f"FVBCs/{w45.PARTICLE_BC}", "log_molar_state") == "true",
-        "see_log": mp.get_parameter(text, f"FVBCs/{a8.SEE_BC}", "variable") == LOG_E,
+        "particle_see_log": mp.get_parameter(text, f"FVBCs/{a8.SEE_BC}", "variable") == LOG_E,
+        "particle_see_uses_physical_functor": mp.get_parameter(text, f"FVBCs/{a8.SEE_BC}", "functor") == PHYSICAL_SEE_FUNCTOR,
+        "physical_see_material_present": mb.has_block(text, f"FunctorMaterials/{PHYSICAL_SEE_MATERIAL}"),
+        "energy_see_uses_original_normalized_functor": a8.SEE_FUNCTOR in mp.words(mp.get_parameter(text, f"FunctorMaterials/{energy.SEE_ENERGY_MATERIAL}", "functor_names")),
         "energy_state_unchanged": mb.has_block(text, "Variables/n_epsilon"),
         "energy_compat_present": mb.has_block(text, f"FunctorMaterials/{ENERGY_COMPAT}"),
         "mean_energy_uses_energy_compat": mp.get_parameter(text, "FunctorMaterials/s5r_mean_energy", "electron_density") == ENERGY_COMPAT,
