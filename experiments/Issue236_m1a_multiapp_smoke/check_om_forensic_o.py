@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Aggregate Wave-O recorder qualification evidence.
+"""Aggregate Wave-O v2 recorder qualification evidence.
 
-A green gate means the recorder is observationally qualified for later R/L/W
-campaigns.  It is not a physics acceptance and does not establish a production
+PASS means the pass-through recorder is observationally qualified for later
+mechanism experiments. It is not a physics acceptance and is not a production
 fix for negative O- mass fraction.
 """
 from __future__ import annotations
@@ -21,6 +21,17 @@ class QualificationError(RuntimeError):
     pass
 
 
+_CASES = ("O0", "O1", "O2")
+_EXPECTED_RECORDER = {"O0": "off", "O1": "on", "O2": "on"}
+_TRACE_KEYS = (
+    "accepted_parent_times",
+    "accepted_child",
+    "parent_attempts",
+    "parent_nonlinear",
+    "petsc_monitor",
+)
+
+
 def _load(path: Path) -> dict[str, Any]:
     if not path.is_file():
         raise QualificationError(f"missing summary: {path}")
@@ -30,21 +41,24 @@ def _load(path: Path) -> dict[str, Any]:
     return data
 
 
-def _forensic(summary: dict[str, Any]) -> dict[str, Any]:
-    value = summary.get("om_forensic")
+def _analysis(summary: dict[str, Any]) -> dict[str, Any]:
+    value = summary.get("analysis")
     return value if isinstance(value, dict) else {}
 
 
-def _close(a: Any, b: Any, *, rel: float = 1.0e-8, abs_: float = 1.0e-14) -> bool:
-    if not isinstance(a, (int, float)) or not isinstance(b, (int, float)):
-        return False
-    return math.isclose(float(a), float(b), rel_tol=rel, abs_tol=abs_)
+def _runtime(summary: dict[str, Any]) -> dict[str, Any]:
+    value = summary.get("runtime")
+    return value if isinstance(value, dict) else {}
 
 
-def _same_optional_number(a: Any, b: Any) -> bool:
-    if a is None and b is None:
-        return True
-    return _close(a, b, rel=0.0, abs_=1.0e-18)
+def _forensic(summary: dict[str, Any]) -> dict[str, Any]:
+    value = _analysis(summary).get("om_forensic")
+    return value if isinstance(value, dict) else {}
+
+
+def _trajectory(summary: dict[str, Any]) -> dict[str, Any]:
+    value = _forensic(summary).get("trajectory")
+    return value if isinstance(value, dict) else {}
 
 
 def _first(summary: dict[str, Any]) -> dict[str, Any]:
@@ -52,19 +66,61 @@ def _first(summary: dict[str, Any]) -> dict[str, Any]:
     return value if isinstance(value, dict) else {}
 
 
+def _close(a: Any, b: Any, *, rel: float = 1.0e-10, abs_: float = 1.0e-14) -> bool:
+    return (
+        isinstance(a, (int, float))
+        and isinstance(b, (int, float))
+        and math.isclose(float(a), float(b), rel_tol=rel, abs_tol=abs_)
+    )
+
+
+def _trace_hashes(summary: dict[str, Any]) -> dict[str, str]:
+    value = _trajectory(summary).get("hashes")
+    return value if isinstance(value, dict) else {}
+
+
 def qualify(o0: dict[str, Any], o1: dict[str, Any], o2: dict[str, Any]) -> dict[str, Any]:
     cases = {"O0": o0, "O1": o1, "O2": o2}
     f = {case: _forensic(summary) for case, summary in cases.items()}
     first = {case: _first(summary) for case, summary in cases.items()}
+    runtimes = {case: _runtime(summary) for case, summary in cases.items()}
+    traces = {case: _trajectory(summary) for case, summary in cases.items()}
+    hashes = {case: _trace_hashes(summary) for case, summary in cases.items()}
 
     checks: dict[str, bool] = {}
-    for case in ("O0", "O1", "O2"):
-        checks[f"{case}:case_identity"] = f[case].get("case_id") == case
-        checks[f"{case}:om_failure_reproduced"] = bool(f[case].get("om_error_signature_present"))
-        checks[f"{case}:old_negative_ne_absent"] = not bool(
-            f[case].get("negative_electron_signature_present")
+    for case in _CASES:
+        checks[f"{case}:summary_expected_failure"] = cases[case].get("status") == "FAIL"
+        checks[f"{case}:runtime_returncode_present"] = isinstance(
+            runtimes[case].get("returncode"), int
         )
-        checks[f"{case}:not_timeout"] = not bool(cases[case].get("timed_out"))
+        checks[f"{case}:runtime_returncode_nonzero"] = isinstance(
+            runtimes[case].get("returncode"), int
+        ) and runtimes[case]["returncode"] != 0
+        checks[f"{case}:runtime_not_timeout"] = runtimes[case].get("timed_out") is False
+        checks[f"{case}:analysis_present"] = bool(_analysis(cases[case]))
+        checks[f"{case}:case_identity"] = f[case].get("case_id") == case
+        checks[f"{case}:om_failure_reproduced"] = f[case].get(
+            "om_error_signature_present"
+        ) is True
+        checks[f"{case}:old_negative_ne_absent"] = f[case].get(
+            "negative_electron_signature_present"
+        ) is False
+
+        contract = traces[case].get("execution_contract")
+        checks[f"{case}:serial_execution_contract"] = isinstance(contract, dict) and (
+            contract.get("mpi_ranks") == 1
+            and contract.get("moose_threads") == 1
+            and contract.get("direct_process_execution") is True
+            and contract.get("petsc_monitor_enabled") is True
+        )
+        payloads = traces[case].get("payloads")
+        checks[f"{case}:trajectory_payloads_present"] = isinstance(payloads, dict) and all(
+            key in payloads for key in _TRACE_KEYS
+        )
+        checks[f"{case}:trajectory_hashes_present"] = all(
+            isinstance(hashes[case].get(key), str) and len(hashes[case][key]) == 64
+            for key in _TRACE_KEYS
+        )
 
     checks["O0:recorder_disabled"] = f["O0"].get("enabled") is False
     checks["O0:no_forensic_record"] = int(f["O0"].get("record_count", -1)) == 0
@@ -81,21 +137,16 @@ def qualify(o0: dict[str, Any], o1: dict[str, Any], o2: dict[str, Any]) -> dict[
             "Other",
         }
         checks[f"{case}:state_identified"] = isinstance(first[case].get("state"), int)
-        checks[f"{case}:evidence_contract"] = bool(
-            f[case].get("evidence_record_present_when_required")
-        )
+        checks[f"{case}:evidence_contract"] = f[case].get(
+            "evidence_record_present_when_required"
+        ) is True
 
-    # Observer-effect gate: enabling the recorder must not move the baseline
-    # accepted trajectory or change the production error seen by the transport
-    # material.  The printed material Y is deliberately compared separately
-    # from the full-precision forensic value.
     for case in ("O1", "O2"):
-        checks[f"observer:{case}:parent_final_time"] = _same_optional_number(
-            o0.get("parent_final_time_s"), cases[case].get("parent_final_time_s")
-        )
-        checks[f"observer:{case}:child_final_time"] = _same_optional_number(
-            o0.get("child_final_time_s"), cases[case].get("child_final_time_s")
-        )
+        for key in _TRACE_KEYS:
+            checks[f"observer:{case}:{key}"] = (
+                hashes["O0"].get(key) == hashes[case].get(key)
+                and isinstance(hashes["O0"].get(key), str)
+            )
         checks[f"observer:{case}:material_error_value"] = _close(
             f["O0"].get("om_error_value"),
             f[case].get("om_error_value"),
@@ -103,7 +154,6 @@ def qualify(o0: dict[str, Any], o1: dict[str, Any], o2: dict[str, Any]) -> dict[
             abs_=1.0e-12,
         )
 
-    # Independent recorder-on replicate must identify the same consumer context.
     checks["replicate:argument_kind"] = first["O1"].get("arg") == first["O2"].get("arg")
     for key in ("elem_id", "face_id", "neighbor_id", "face_side_id", "state", "iteration_type"):
         checks[f"replicate:{key}"] = first["O1"].get(key) == first["O2"].get(key)
@@ -116,7 +166,7 @@ def qualify(o0: dict[str, Any], o1: dict[str, Any], o2: dict[str, Any]) -> dict[
 
     failed = sorted(key for key, ok in checks.items() if not ok)
     return {
-        "schema": "ISSUE236_OM_WAVE_O_QUALIFICATION_V1",
+        "schema": "ISSUE236_OM_WAVE_O_QUALIFICATION_V2",
         "status": "PASS" if not failed else "FAIL",
         "evidence_validity": "EVIDENCE_VALID" if not failed else "EVIDENCE_INVALID",
         "claim": (
@@ -127,47 +177,129 @@ def qualify(o0: dict[str, Any], o1: dict[str, Any], o2: dict[str, Any]) -> dict[
         "failed_checks": failed,
         "cases": {
             case: {
+                "solver_returncode": runtimes[case].get("returncode"),
                 "om_error_value": f[case].get("om_error_value"),
-                "parent_final_time_s": cases[case].get("parent_final_time_s"),
-                "child_final_time_s": cases[case].get("child_final_time_s"),
                 "record_count": f[case].get("record_count"),
                 "interpretation": f[case].get("interpretation"),
+                "trajectory_hashes": hashes[case],
                 "first_invalid_material_event": first[case] or None,
             }
-            for case in ("O0", "O1", "O2")
+            for case in _CASES
         },
     }
 
 
+def _json_or_empty(path: Path) -> dict[str, Any]:
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return value if isinstance(value, dict) else {}
+
+
+def _sha256(path: Path) -> str | None:
+    try:
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+    except OSError:
+        return None
+
+
 def _apply_manifest_gate(result: dict[str, Any], root: Path | None) -> None:
     if root is None:
-        return
-    expected_recorder = {"O0": "off", "O1": "on", "O2": "on"}
-    manifest_checks: dict[str, bool] = {}
-    for case in ("O0", "O1", "O2"):
-        path = root / "issue236-om-logs" / case / "manifest.json"
-        summary = root / "issue236-om-results" / case / "summary.json"
-        try:
-            data = json.loads(path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
-            data = {}
-        manifest_checks[f"manifest:{case}:exists_and_final"] = bool(data) and data.get("state") == "FINAL"
-        manifest_checks[f"manifest:{case}:identity"] = (
-            data.get("case") == case and data.get("recorder") == expected_recorder[case]
+        result.setdefault("checks", {})["manifest:artifact_root_required"] = False
+        result["failed_checks"] = sorted(
+            key for key, ok in result["checks"].items() if not ok
         )
-        current_sha = os.environ.get("GITHUB_SHA")
-        manifest_checks[f"manifest:{case}:git_sha"] = (
+        result["status"] = "FAIL"
+        result["evidence_validity"] = "EVIDENCE_INVALID"
+        return
+
+    checks: dict[str, bool] = {}
+    manifests: dict[str, dict[str, Any]] = {}
+    current_sha = os.environ.get("GITHUB_SHA")
+    expected_build = os.environ.get("BUILD_BASE_REF")
+    expected_dependencies = {
+        "MOOSE": os.environ.get("MOOSE_SHA"),
+        "CRANE": os.environ.get("CRANE_SHA"),
+        "SQUIRREL": os.environ.get("SQUIRREL_SHA"),
+        "ZAPDOS": os.environ.get("ZAPDOS_SHA"),
+    }
+
+    for case in _CASES:
+        manifest_path = root / "issue236-om-logs" / case / "manifest.json"
+        summary_path = root / "issue236-om-results" / case / "summary.json"
+        data = _json_or_empty(manifest_path)
+        manifests[case] = data
+
+        checks[f"manifest:{case}:final_validated"] = (
+            bool(data) and data.get("state") == "FINAL_VALIDATED"
+        )
+        checks[f"manifest:{case}:identity"] = (
+            data.get("case") == case
+            and data.get("recorder") == _EXPECTED_RECORDER[case]
+        )
+        checks[f"manifest:{case}:git_sha"] = isinstance(data.get("git_sha"), str) and (
             current_sha is None or data.get("git_sha") == current_sha
         )
-        if summary.is_file():
-            digest = hashlib.sha256(summary.read_bytes()).hexdigest()
-        else:
-            digest = None
-        manifest_checks[f"manifest:{case}:summary_hash"] = (
-            digest is not None and data.get("summary_sha256") == digest
+        checks[f"manifest:{case}:build_base"] = isinstance(data.get("build_base"), str) and (
+            expected_build is None or data.get("build_base") == expected_build
+        )
+        deps = data.get("dependencies")
+        checks[f"manifest:{case}:dependencies"] = isinstance(deps, dict) and all(
+            isinstance(deps.get(name), str)
+            and (expected is None or deps.get(name) == expected)
+            for name, expected in expected_dependencies.items()
+        )
+        checks[f"manifest:{case}:physics_opt_sha256"] = (
+            isinstance(data.get("physics_opt_sha256"), str)
+            and len(data["physics_opt_sha256"]) == 64
+        )
+        checks[f"manifest:{case}:input_sha256"] = (
+            isinstance(data.get("input_sha256"), dict) and bool(data["input_sha256"])
+        )
+        checks[f"manifest:{case}:observer_input_sha256"] = (
+            isinstance(data.get("observer_input_sha256"), dict)
+            and bool(data["observer_input_sha256"])
+        )
+        summary_digest = _sha256(summary_path)
+        checks[f"manifest:{case}:summary_hash"] = (
+            summary_digest is not None and data.get("summary_sha256") == summary_digest
+        )
+        checks[f"manifest:{case}:runtime_log_sha256"] = (
+            isinstance(data.get("runtime_log_sha256"), str)
+            and len(data["runtime_log_sha256"]) == 64
+        )
+        checks[f"manifest:{case}:physics_opt_started"] = data.get("physics_opt_started") is True
+        checks[f"manifest:{case}:not_timeout"] = data.get("timed_out") is False
+        checks[f"manifest:{case}:solver_returncode"] = isinstance(
+            data.get("solver_returncode"), int
+        ) and data["solver_returncode"] != 0
+        checks[f"manifest:{case}:expected_om_error"] = data.get(
+            "expected_om_error"
+        ) is True
+        checks[f"manifest:{case}:runtime_evidence_valid"] = data.get(
+            "runtime_evidence_valid"
+        ) is True
+
+    for field in ("git_sha", "run_id", "run_attempt", "build_base", "dependencies"):
+        values = [manifests[case].get(field) for case in _CASES]
+        checks[f"manifest:cross_case:{field}"] = (
+            values[0] is not None and values[0] == values[1] == values[2]
         )
 
-    result.setdefault("checks", {}).update(manifest_checks)
+    o1_inputs = manifests["O1"].get("input_sha256")
+    o2_inputs = manifests["O2"].get("input_sha256")
+    checks["manifest:recorder_replicate:exact_inputs"] = (
+        isinstance(o1_inputs, dict) and bool(o1_inputs) and o1_inputs == o2_inputs
+    )
+
+    observer_maps = [manifests[case].get("observer_input_sha256") for case in _CASES]
+    checks["manifest:observer:canonical_inputs_equal"] = (
+        all(isinstance(value, dict) and bool(value) for value in observer_maps)
+        and observer_maps[0] == observer_maps[1] == observer_maps[2]
+    )
+
+    result.setdefault("checks", {}).update(checks)
     failed = sorted(key for key, ok in result["checks"].items() if not ok)
     result["failed_checks"] = failed
     if failed:
@@ -189,28 +321,46 @@ def _synthetic(case: str, *, enabled: bool) -> dict[str, Any]:
             "state": 0,
             "iteration_type": 0,
             "consumed_value": -0.00402221,
-            "elem_ref": 0.005,
-            "neighbor_ref": None,
         }
         count = 1
+    payloads = {
+        "accepted_parent_times": ["9.326171875e-10"],
+        "accepted_child": [{"time": "1.2451171875e-09"}],
+        "parent_attempts": [{"time": "9.326171875e-10"}],
+        "parent_nonlinear": [{"time": "9.326171875e-10", "x": "1"}],
+        "petsc_monitor": ["0 SNES Function norm 1.0"],
+    }
+    hashes = {
+        key: hashlib.sha256(
+            json.dumps(value, sort_keys=True, separators=(",", ":")).encode()
+        ).hexdigest()
+        for key, value in payloads.items()
+    }
     return {
-        "timed_out": False,
-        "parent_final_time_s": 9.326171875e-10,
-        "child_final_time_s": 1.2451171875e-9,
-        "om_forensic": {
-            "case_id": case,
-            "enabled": enabled,
-            "record_count": count,
-            "first_invalid_material_event": event,
-            "interpretation": (
-                "NEGATIVE_FACEARG_WITH_NONNEGATIVE_CELL_REFERENCES"
-                if enabled
-                else "NO_FORENSIC_RECORD"
-            ),
-            "om_error_signature_present": True,
-            "om_error_value": -0.00402221,
-            "negative_electron_signature_present": False,
-            "evidence_record_present_when_required": True,
+        "status": "FAIL",
+        "runtime": {"returncode": 1, "timed_out": False},
+        "analysis": {
+            "om_forensic": {
+                "case_id": case,
+                "enabled": enabled,
+                "record_count": count,
+                "first_invalid_material_event": event,
+                "interpretation": "NEGATIVE_FACEARG_OBSERVED" if enabled else "NO_FORENSIC_RECORD",
+                "om_error_signature_present": True,
+                "om_error_value": -0.00402221,
+                "negative_electron_signature_present": False,
+                "evidence_record_present_when_required": True,
+                "trajectory": {
+                    "execution_contract": {
+                        "mpi_ranks": 1,
+                        "moose_threads": 1,
+                        "direct_process_execution": True,
+                        "petsc_monitor_enabled": True,
+                    },
+                    "payloads": payloads,
+                    "hashes": hashes,
+                },
+            }
         },
     }
 
@@ -225,8 +375,7 @@ def self_test() -> int:
         return 1
 
     mutated = copy.deepcopy(o1)
-    mutated["om_forensic"]["record_count"] = 0
-    mutated["om_forensic"]["first_invalid_material_event"] = None
+    mutated["analysis"]["om_forensic"]["trajectory"]["hashes"]["parent_nonlinear"] = "0" * 64
     negative = qualify(o0, mutated, o2)
     if negative["status"] != "FAIL":
         print(json.dumps({"CHECK_OM_FORENSIC_O_P0": "FAIL", "negative": negative}, indent=2))
@@ -255,7 +404,7 @@ def main() -> int:
         result = qualify(_load(args.o0), _load(args.o1), _load(args.o2))
     except (QualificationError, OSError, json.JSONDecodeError, ValueError) as error:
         result = {
-            "schema": "ISSUE236_OM_WAVE_O_QUALIFICATION_V1",
+            "schema": "ISSUE236_OM_WAVE_O_QUALIFICATION_V2",
             "status": "FAIL",
             "evidence_validity": "EVIDENCE_INVALID",
             "checks": {},

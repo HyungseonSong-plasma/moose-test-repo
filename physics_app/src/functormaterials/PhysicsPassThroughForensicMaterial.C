@@ -58,17 +58,18 @@ PhysicsPassThroughForensicMaterial::PhysicsPassThroughForensicMaterial(
       _property_name,
       [this](const auto & r, const auto & state) -> ADReal
       {
+        // Exact-consumer contract: evaluate the wrapped source once, with the
+        // framework-supplied (r, state), and return that exact ADReal unchanged.
         const ADReal value = _source(r, state);
 
-        // Numerically transparent fast path. Only an already-invalid value
-        // enters the forensic branch; no valid evaluation performs I/O.
+        // Valid evaluations take the transparent fast path with no I/O.
         if (_diagnostic_file.empty() || value.value() >= 0.0)
           return value;
 
         const auto event = forensic_event_sequence.fetch_add(1) + 1;
         std::ostringstream record;
         record << std::setprecision(17)
-               << "ISSUE236_OM_FORENSIC_V1"
+               << "ISSUE236_OM_FORENSIC_V2"
                << " event=" << event
                << " tag=" << (_diagnostic_tag.empty() ? "NA" : _diagnostic_tag)
                << " material=" << name()
@@ -88,39 +89,19 @@ PhysicsPassThroughForensicMaterial::PhysicsPassThroughForensicMaterial(
         {
           record << " arg=FaceArg";
           if (!r.fi)
-            record << " face_id=NA elem_id=NA neighbor_id=NA face_side_id=NA"
-                   << " cell_ref_id=NA cell_ref=NA";
+            record << " face_id=NA elem_id=NA neighbor_id=NA face_side_id=NA";
           else
-          {
             record << " face_id=" << r.fi->id()
                    << " elem_id=" << r.fi->elem().id()
                    << " neighbor_id=" << idOrNA(r.fi->neighborPtr())
                    << " face_side_id=" << idOrNA(r.face_side);
-
-            // A cell reference is diagnostic context only; the exact consumed
-            // face value is `value` above.  Re-evaluate only a side that is
-            // unambiguous, so diagnostics cannot create a new block-restriction
-            // failure on the opposite side of an internal face.
-            const libMesh::Elem * reference_side = r.face_side;
-            if (!reference_side && !r.fi->neighborPtr())
-              reference_side = &r.fi->elem();
-
-            if (reference_side)
-            {
-              const Moose::ElemArg cell_arg{reference_side, r.correct_skewness};
-              const ADReal cell_ref = _source(cell_arg, state);
-              record << " cell_ref_id=" << reference_side->id()
-                     << " cell_ref=" << cell_ref.value();
-            }
-            else
-              record << " cell_ref_id=NA cell_ref=NA";
-          }
         }
         else
           record << " arg=Other";
 
-        // Missing diagnostics make evidence invalid, but I/O failure must not
-        // replace the production material's existing hard error.
+        // Recording failure must never replace the production consumer's
+        // existing hard error. Failure to persist this record is handled later
+        // by the evidence gate, not by throwing from the observer.
         {
           std::lock_guard<std::mutex> lock(forensic_write_mutex);
           std::ofstream output(_diagnostic_file, std::ios::out | std::ios::app);

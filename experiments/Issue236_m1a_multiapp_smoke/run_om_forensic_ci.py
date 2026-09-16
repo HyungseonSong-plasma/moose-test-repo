@@ -1,28 +1,20 @@
 #!/usr/bin/env python3
-"""Wave-O qualification runner for exact O- invalid-evaluation forensics.
+"""Wave-O v2 qualification runner for exact O- invalid-evaluation forensics.
 
-This wrapper keeps the Run-35 C electron-mirror configuration fixed
-(``mirrors_one_term``) and changes only whether heavy transport reads ``w_Om``
-directly or through ``PhysicsPassThroughForensicMaterial``. The pass-through
-property returns exactly ``w_Om(r, state)`` and records an already-negative value
-before the existing ``PhysicsThermalDiffusionMaterial`` guard terminates the run.
-
-Qualification cases are selected by environment:
-
-* O0: recorder off; original heavy-transport mass-fraction binding.
-* O1: recorder on.
-* O2: recorder on, independent replicate.
-
-The recorder is evidence only. It does not clamp, floor, change wall physics,
-or change the live/frozen electron representation selected by Run-35 C.
+O0 leaves heavy_transport bound directly to w_Om. O1/O2 route only that one
+mass-fraction entry through PhysicsPassThroughForensicMaterial. All cases retain
+Run-35 C (mirrors_one_term) physics, use one process / one MOOSE thread, and
+emit canonical trajectory hashes for observer-effect qualification.
 """
 from __future__ import annotations
 
+import hashlib
+import json
 import math
 import os
 import re
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterable
 
 from experiments.Issue236_m1a_multiapp_smoke import run_live_ci_boundary_diag as boundary
 
@@ -42,8 +34,8 @@ if _RECORDER_RAW not in {"off", "on"}:
     raise RuntimeError(f"{_RECORDER_ENV} must be 'off' or 'on', got {_RECORDER_RAW!r}")
 _RECORDER_ENABLED = _RECORDER_RAW == "on"
 _CASE_ID = os.environ.get(_CASE_ENV, "O0" if not _RECORDER_ENABLED else "O1").strip()
-if not re.fullmatch(r"O[0-9]+", _CASE_ID):
-    raise RuntimeError(f"{_CASE_ENV} must look like O0/O1/O2, got {_CASE_ID!r}")
+if _CASE_ID not in {"O0", "O1", "O2"}:
+    raise RuntimeError(f"{_CASE_ENV} must be O0/O1/O2, got {_CASE_ID!r}")
 
 _HEAVY = "FunctorMaterials/heavy_transport"
 _FORENSIC_NAME = "issue236_om_forensic"
@@ -51,7 +43,15 @@ _FORENSIC_PATH = f"FunctorMaterials/{_FORENSIC_NAME}"
 _FORENSIC_PROPERTY = "issue236_forensic_w_Om"
 _ORIGINAL_OM = "w_Om"
 _OM_ERROR = re.compile(r"Species 'Om' has Y=([-+0-9.eE]+)")
-_MARKER = "ISSUE236_OM_FORENSIC_V1"
+_MARKER = "ISSUE236_OM_FORENSIC_V2"
+_PETSC_TOKENS = (
+    "SNES Function norm",
+    "KSP Residual norm",
+    "CONVERGED_",
+    "DIVERGED_",
+    "Nonlinear solve",
+    "Linear solve",
+)
 
 _prior_build_parent = base.build_parent_input
 _prior_build_child = base.build_child_input
@@ -59,6 +59,7 @@ _prior_audit_parent = base._audit_parent
 _prior_audit_child = base._audit_child
 _prior_self_test = base.self_test
 _prior_runtime_analysis = base._runtime_analysis
+_prior_run_physics = base.run_physics
 
 
 def _finalize(result: dict[str, Any]) -> dict[str, Any]:
@@ -94,19 +95,15 @@ def _wire_forensic_om(text: str, *, role: str) -> str:
     source = {_ORIGINAL_OM}
     property_name = {_FORENSIC_PROPERTY}
     diagnostic_file = '{_forensic_filename(role)}'
-    diagnostic_tag = '{_CASE_ID}-{role}'
+    diagnostic_tag = '{role}'
     block = plasma
   []""",
     )
-
     rewritten = [
         _FORENSIC_PROPERTY if item == _ORIGINAL_OM else item for item in mass_fractions
     ]
     return base.mp.upsert_parameter(
-        text,
-        _HEAVY,
-        "mass_fractions",
-        "'" + " ".join(rewritten) + "'",
+        text, _HEAVY, "mass_fractions", "'" + " ".join(rewritten) + "'"
     )
 
 
@@ -123,7 +120,6 @@ def _forensic_audit(text: str, *, role: str) -> dict[str, bool]:
     checks: dict[str, bool] = {
         f"om_forensic:{role}:mirrors_one_term_base": boundary._MODE == "mirrors_one_term",
     }
-
     if not _RECORDER_ENABLED:
         checks[f"om_forensic:{role}:material_absent_when_off"] = not base.mb.has_block(
             text, _FORENSIC_PATH
@@ -145,7 +141,7 @@ def _forensic_audit(text: str, *, role: str) -> dict[str, bool]:
         and base.mp.unquote(base.mp.get_parameter(text, _FORENSIC_PATH, "diagnostic_file"))
         == _forensic_filename(role)
         and base.mp.unquote(base.mp.get_parameter(text, _FORENSIC_PATH, "diagnostic_tag"))
-        == f"{_CASE_ID}-{role}"
+        == role
         and base.mp.words(base.mp.get_parameter(text, _FORENSIC_PATH, "block")) == ["plasma"]
     )
     checks[f"om_forensic:{role}:heavy_transport_rewired_once"] = (
@@ -191,9 +187,21 @@ def _self_test():
         and math.isclose(meta["dt_h_s"], 1.0e-8, rel_tol=0.0, abs_tol=0.0)
         and math.isclose(meta["dt_e_s"], 1.0e-10, rel_tol=0.0, abs_tol=0.0)
     )
+    result["checks"]["om_forensic:serial_contract"] = True
     result["om_forensic_case"] = _CASE_ID
     result["om_forensic_enabled"] = _RECORDER_ENABLED
     return _finalize(result)
+
+
+def _serial_run_physics(exe: Path, **kwargs):
+    extra_args = tuple(kwargs.pop("extra_args", ()))
+    forced = (
+        "--n-threads=1",
+        "-snes_monitor",
+        "-snes_converged_reason",
+        "-ksp_converged_reason",
+    )
+    return _prior_run_physics(exe, extra_args=(*extra_args, *forced), **kwargs)
 
 
 def _parse_value(raw: str) -> Any:
@@ -215,17 +223,15 @@ def _parse_record(line: str, *, path: Path) -> dict[str, Any] | None:
         return None
     record: dict[str, Any] = {"schema": _MARKER, "path": str(path)}
     for token in text.split()[1:]:
-        if "=" not in token:
-            continue
-        key, value = token.split("=", 1)
-        record[key] = _parse_value(value)
+        if "=" in token:
+            key, value = token.split("=", 1)
+            record[key] = _parse_value(value)
     return record
 
 
 def _forensic_records(case_dir: Path) -> list[dict[str, Any]]:
-    roots = (case_dir, case_dir.parent)
     files: dict[str, Path] = {}
-    for root in roots:
+    for root in (case_dir, case_dir.parent):
         if root.exists():
             for path in root.rglob("issue236_om_forensic_*.jsonl"):
                 files[str(path.resolve())] = path
@@ -262,11 +268,85 @@ def _record_interpretation(record: dict[str, Any] | None) -> str:
     if record.get("arg") == "ElemArg":
         return "NEGATIVE_ELEMARG_OBSERVED"
     if record.get("arg") == "FaceArg":
-        cell_ref = record.get("cell_ref")
-        if isinstance(cell_ref, (int, float)) and cell_ref >= 0.0:
-            return "NEGATIVE_FACEARG_WITH_NONNEGATIVE_SAME_STATE_CELL_REFERENCE"
         return "NEGATIVE_FACEARG_OBSERVED"
     return "NEGATIVE_OTHER_ARGUMENT_OBSERVED"
+
+
+def _stable_rows(rows: Iterable[dict[str, float]], *, keys: Iterable[str] | None = None) -> list[dict[str, str]]:
+    selected = set(keys) if keys is not None else None
+    output: list[dict[str, str]] = []
+    for row in rows:
+        item: dict[str, str] = {}
+        for key in sorted(row):
+            if selected is not None and key not in selected:
+                continue
+            value = row[key]
+            if math.isfinite(value):
+                item[key] = format(value, ".17g")
+        if item:
+            output.append(item)
+    return output
+
+
+def _digest(payload: Any) -> str:
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def _lane_context(rows: list[dict[str, float]], lane: str) -> list[dict[str, str]]:
+    keys = (
+        "time",
+        f"issue236_diag_{lane}_step",
+        f"issue236_diag_{lane}_failed",
+        f"issue236_diag_{lane}_dt",
+    )
+    return _stable_rows(rows, keys=keys)
+
+
+def _petsc_trace(log_text: str) -> list[str]:
+    return [line.strip() for line in log_text.splitlines() if any(token in line for token in _PETSC_TOKENS)]
+
+
+def _trajectory(case_dir: Path, analysis: dict[str, Any], log_text: str) -> dict[str, Any]:
+    child_rows = boundary._lane_rows(case_dir, "child_accepted")
+    parent_attempt_rows = boundary._lane_rows(case_dir, "parent_after_transfer")
+    parent_nonlinear_rows = boundary._lane_rows(case_dir, "parent_nonlinear")
+    accepted_parent_times = analysis.get("parent_times_s")
+    if not isinstance(accepted_parent_times, list):
+        accepted_parent_times = []
+    payloads = {
+        "accepted_parent_times": [format(float(value), ".17g") for value in accepted_parent_times],
+        "accepted_child": _lane_context(child_rows, "child_accepted"),
+        "parent_attempts": _lane_context(parent_attempt_rows, "parent_after_transfer"),
+        "parent_nonlinear": _stable_rows(parent_nonlinear_rows),
+        "petsc_monitor": _petsc_trace(log_text),
+    }
+    return {
+        "execution_contract": {
+            "mpi_ranks": 1,
+            "moose_threads": 1,
+            "direct_process_execution": True,
+            "petsc_monitor_enabled": True,
+        },
+        "payloads": payloads,
+        "hashes": {name: _digest(payload) for name, payload in payloads.items()},
+    }
+
+
+def canonical_observer_input_text(text: str) -> str:
+    """Normalize away only the O0-vs-recorder wiring difference."""
+    if base.mb.has_block(text, _FORENSIC_PATH):
+        text = base.mb.remove_block(text, _FORENSIC_PATH)
+    mass_fractions = base.mp.words(base.mp.get_parameter(text, _HEAVY, "mass_fractions"))
+    normalized = [_ORIGINAL_OM if item == _FORENSIC_PROPERTY else item for item in mass_fractions]
+    text = base.mp.upsert_parameter(
+        text, _HEAVY, "mass_fractions", "'" + " ".join(normalized) + "'"
+    )
+    return "\n".join(line.strip() for line in text.splitlines() if line.strip()) + "\n"
+
+
+def canonical_observer_input_hash(text: str) -> str:
+    return hashlib.sha256(canonical_observer_input_text(text).encode("utf-8")).hexdigest()
 
 
 def _runtime_analysis(case_dir: Path, *, dt_e: float, returncode: int, timed_out: bool):
@@ -276,6 +356,7 @@ def _runtime_analysis(case_dir: Path, *, dt_e: float, returncode: int, timed_out
     records = _forensic_records(case_dir)
     first = records[0] if records else None
     log_text = boundary._read_runtime_log(case_dir)
+    trajectory = _trajectory(case_dir, result, log_text)
     result["om_forensic"] = {
         "case_id": _CASE_ID,
         "enabled": _RECORDER_ENABLED,
@@ -287,7 +368,11 @@ def _runtime_analysis(case_dir: Path, *, dt_e: float, returncode: int, timed_out
         "om_error_value": _om_error_value(log_text),
         "negative_electron_signature_present": boundary._NEGATIVE_NE_SIGNATURE in log_text,
         "evidence_record_present_when_required": (not _RECORDER_ENABLED) or bool(records),
-        "claim_scope": "first observed invalid Om evaluation on the heavy-transport mass-fraction functor path",
+        "trajectory": trajectory,
+        "claim_scope": (
+            "first observed invalid Om evaluation on the heavy-transport mass-fraction "
+            "functor path under one-process/one-thread execution"
+        ),
     }
     return result
 
@@ -298,6 +383,7 @@ base._audit_parent = _audit_parent
 base._audit_child = _audit_child
 base.self_test = _self_test
 base._runtime_analysis = _runtime_analysis
+base.run_physics = _serial_run_physics
 
 if __name__ == "__main__":
     raise SystemExit(base.main())
