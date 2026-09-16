@@ -8,3 +8,5 @@ Intentional run: disable volumetric electron chemistry and volumetric electron-e
 Intentional run: validate canonical electron-energy electrostatic drift restoration with dt_e=1e-10 s, dt_h=1e-8 s, 100 fast electron+energy+Poisson substeps per heavy step, and total time 2e-8 s.
 
 Intentional diagnostic run: record recovery-safe parallel A/B/C/D evidence for accepted child state, same-event child-to-parent operational vs snapshot transfer, parent heavy nonlinear state, and the exact heavy_transport electron-density functor. Parent attempts are keyed by timestep, failed-step count, dt, and time; accepted lanes exclude FAILED output.
+
+Intentional rerun: execute the unchanged A/B/C/D discriminator after adding the host-side Python syntax gate and retaining the pinned-container self-test. No physics, timestep, transfer payload, or diagnostic-lane semantics are changed.
