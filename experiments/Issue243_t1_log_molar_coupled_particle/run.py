@@ -71,7 +71,7 @@ def build_t1_input() -> tuple[str, dict[str, Any]]:
     mb.require_absent(text, f"FunctorMaterials/{PHYSICAL_SEE_MATERIAL}")
     gamma = 0.05
     physical_see_expression = (
-        f"{gamma:.17g}*{AVOGADRO:.17g}*("
+        f"{gamma:.17g}*("
         f"(o2ps+o2pm)/{a8.M_O2_KG_PER_MOL:.17g}+"
         f"(ops+opm)/{a8.M_O_KG_PER_MOL:.17g})"
     )
@@ -140,7 +140,7 @@ def audit_t1_input(text: str) -> dict[str, Any]:
         "particle_source_no_nref": mp.get_parameter(text, "FVKernels/s5r_electron_source", "type") == "PhysicsFVLogMolarElectronReactionSource" and mp.get_parameter(text, "FVKernels/s5r_electron_source", "n_ref") is None,
         "primary_sheath_log": mp.get_parameter(text, f"FVBCs/{w45.PARTICLE_BC}", "variable") == LOG_E and mp.get_parameter(text, f"FVBCs/{w45.PARTICLE_BC}", "log_molar_state") == "true",
         "particle_see_log": mp.get_parameter(text, f"FVBCs/{a8.SEE_BC}", "variable") == LOG_E,
-        "particle_see_uses_physical_functor": mp.get_parameter(text, f"FVBCs/{a8.SEE_BC}", "functor") == PHYSICAL_SEE_FUNCTOR,
+        "particle_see_uses_molar_functor": mp.get_parameter(text, f"FVBCs/{a8.SEE_BC}", "functor") == PHYSICAL_SEE_FUNCTOR and f"{AVOGADRO:.17g}" not in _block_text(text, f"FunctorMaterials/{PHYSICAL_SEE_MATERIAL}"),
         "physical_see_material_present": mb.has_block(text, f"FunctorMaterials/{PHYSICAL_SEE_MATERIAL}"),
         "energy_see_uses_original_normalized_functor": a8.SEE_FUNCTOR in mp.words(mp.get_parameter(text, f"FunctorMaterials/{energy.SEE_ENERGY_MATERIAL}", "functor_names")),
         "energy_state_unchanged": mb.has_block(text, "Variables/n_epsilon"),
