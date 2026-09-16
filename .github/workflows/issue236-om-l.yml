@@ -45,14 +45,8 @@ jobs:
           ISSUE236_OM_FORENSIC=on \
           ISSUE236_OM_CASE_ID=O1 \
           ISSUE236_OM_L_MODE=L1_damp_0p5 \
-          python3 experiments/Issue236_m1a_multiapp_smoke/run_om_nonlinear_ci.py --self-test >/tmp/l1-self-test.json
-          python3 - <<'PY'
-          import json
-          data = json.load(open('/tmp/l1-self-test.json'))
-          assert data['status'] == 'PASS'
-          assert data['om_nonlinear_mode'] == 'L1_damp_0p5'
-          assert data['om_nonlinear_control'] == {'line_search': 'basic', 'damping': 0.5}
-          PY
+          python3 experiments/Issue236_m1a_multiapp_smoke/run_om_nonlinear_ci.py --self-test > l1-preflight-static.json
+          python3 -c "import json; d=json.load(open('l1-preflight-static.json')); assert d['status']=='PASS'; assert d['om_nonlinear_mode']=='L1_damp_0p5'; assert d['om_nonlinear_control']=={'line_search':'basic','damping':0.5}"
 
       - name: Verify exact provenance and pinned dependencies
         shell: bash
@@ -77,8 +71,7 @@ jobs:
           mkdir -p issue236-om-l1-extended-results issue236-om-l1-extended-logs
 
           docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace \
-            -e GITHUB_SHA="$GITHUB_SHA" -e GITHUB_RUN_ID="$GITHUB_RUN_ID" \
-            -e GITHUB_RUN_ATTEMPT="$GITHUB_RUN_ATTEMPT" -e BUILD_BASE_REF="$BUILD_BASE_REF" \
+            -e GITHUB_SHA="$GITHUB_SHA" -e BUILD_BASE_REF="$BUILD_BASE_REF" \
             -e MOOSE_SHA="$MOOSE_SHA" -e CRANE_SHA="$CRANE_SHA" \
             -e SQUIRREL_SHA="$SQUIRREL_SHA" -e ZAPDOS_SHA="$ZAPDOS_SHA" \
             -v "$PWD:/workspace" "$BUILD_BASE_REF" -lc '
@@ -112,40 +105,15 @@ jobs:
               set -e
               printf "%s\n" "$RC" | tee issue236-om-l1-extended-logs/wrapper-returncode.txt
               test "$(sha256sum physics_app/physics-opt | awk "{print \$1}")" = "$PHYSICS_SHA"
-
-              python3 - <<'PY'
-              import json
-              from pathlib import Path
-              p = Path('issue236-om-l1-extended-results/summary.json')
-              if not p.exists():
-                  raise SystemExit('missing L1 extended summary.json')
-              s = json.loads(p.read_text())
-              out = {
-                  'schema': 'ISSUE236_OM_L1_EXTENDED_V1',
-                  'mode': 'L1_damp_0p5',
-                  'baseline_failure_progress_s': 1.2451171875e-09,
-                  'runtime_returncode': s.get('runtime_returncode'),
-                  'timed_out': s.get('timed_out'),
-                  'progress_s': s.get('progress_s'),
-                  'om_error_present': s.get('om_error_present'),
-                  'om_error_value': s.get('om_error_value'),
-                  'first_invalid_material_event': s.get('first_invalid_material_event'),
-              }
-              progress = out['progress_s']
-              if out['om_error_present']:
-                  out['scientific_signal'] = 'DELAY_ONLY' if progress and progress > out['baseline_failure_progress_s'] else 'NO_PROGRESS_GAIN'
-              elif progress and progress > out['baseline_failure_progress_s']:
-                  out['scientific_signal'] = 'BASELINE_FAILURE_TIME_CROSSED_WITHOUT_OM_NEGATIVITY'
-              elif out['timed_out']:
-                  out['scientific_signal'] = 'STILL_NOT_INTERPRETABLE_TIMEOUT_BEFORE_BASELINE'
-              else:
-                  out['scientific_signal'] = 'OTHER_TERMINATION_BEFORE_BASELINE'
-              Path('issue236-om-l1-extended-results/l1-extended-qualification.json').write_text(
-                  json.dumps(out, indent=2, sort_keys=True) + '\n', encoding='utf-8'
-              )
-              print(json.dumps(out, indent=2, sort_keys=True))
-              PY
             '
+
+      - name: Summarize L1 extended evidence
+        if: always()
+        shell: bash
+        run: |
+          set -euxo pipefail
+          test -f issue236-om-l1-extended-results/summary.json
+          python3 -c "import json; from pathlib import Path; s=json.load(open('issue236-om-l1-extended-results/summary.json')); b=1.2451171875e-9; p=s.get('progress_s'); om=bool(s.get('om_error_present')); to=bool(s.get('timed_out')); sig=('DELAY_ONLY' if om and p and p>b else 'NO_PROGRESS_GAIN' if om else 'BASELINE_FAILURE_TIME_CROSSED_WITHOUT_OM_NEGATIVITY' if p and p>b else 'STILL_NOT_INTERPRETABLE_TIMEOUT_BEFORE_BASELINE' if to else 'OTHER_TERMINATION_BEFORE_BASELINE'); out={'schema':'ISSUE236_OM_L1_EXTENDED_V1','mode':'L1_damp_0p5','baseline_failure_progress_s':b,'runtime_returncode':s.get('runtime_returncode'),'timed_out':to,'progress_s':p,'om_error_present':om,'om_error_value':s.get('om_error_value'),'first_invalid_material_event':s.get('first_invalid_material_event'),'scientific_signal':sig}; Path('issue236-om-l1-extended-results/l1-extended-qualification.json').write_text(json.dumps(out,indent=2,sort_keys=True)+'\\n'); print(json.dumps(out,indent=2,sort_keys=True))"
 
       - name: Upload L1 extended evidence
         if: always()
@@ -155,5 +123,6 @@ jobs:
           path: |
             issue236-om-l1-extended-results
             issue236-om-l1-extended-logs
+            l1-preflight-static.json
           if-no-files-found: error
           retention-days: 14
