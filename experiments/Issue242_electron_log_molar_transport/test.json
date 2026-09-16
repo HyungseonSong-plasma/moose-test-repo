@@ -1,0 +1,12 @@
+{
+  "name": "issue242_electron_log_molar_transport",
+  "type": "diagnostic",
+  "validation_schema": 2,
+  "input": "input.i",
+  "checker": "check.py",
+  "checker_args": [
+    "--csv",
+    "input_out.csv"
+  ],
+  "temporal_csv_policy": "include_initial_as_physics"
+}
