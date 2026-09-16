@@ -21,9 +21,7 @@ PhysicsFVLogMolarElectronTimeDerivative::validParams()
 {
   auto params = FVElementalKernel::validParams();
   params.addClassDescription(
-      "Conservative backward-Euler physical-number balance reconstructed from "
-      "c_e=exp(log_e) mol/m^3. The Avogadro factor is a physical unit conversion, "
-      "not an electron reference-density normalization.");
+      "Conservative backward-Euler molar balance reconstructed from c_e=exp(log_e) mol/m^3.");
   params.set<MultiMooseEnum>("vector_tags") = "time";
   params.set<MultiMooseEnum>("matrix_tags") = "system time";
   return params;
@@ -47,7 +45,7 @@ PhysicsFVLogMolarElectronTimeDerivative::computeQpResidual()
   const auto elem = makeElemArg(_current_elem);
   const ADReal log_c_new = _var(elem, determineState());
   const ADReal log_c_old = _var(elem, Moose::oldState());
-  return avogadro_per_mol * (exp(log_c_new) - exp(log_c_old)) / _dt;
+  return (exp(log_c_new) - exp(log_c_old)) / _dt;
 }
 
 InputParameters
@@ -56,8 +54,7 @@ PhysicsFVLogMolarElectronDiffusion::validParams()
   auto params = FVFluxKernel::validParams();
   params += FVDiffusionInterpolationInterface::validParams();
   params.addClassDescription(
-      "Orthogonal FV electron diffusion reconstructed from c_e=exp(log_e), "
-      "returned in physical particle-flux units through N_A.");
+      "Orthogonal FV electron diffusion reconstructed from c_e=exp(log_e), returned in molar flux units.");
   params.addRequiredParam<MooseFunctorName>("coeff", "Electron diffusion coefficient [m^2/s].");
   MooseEnum coeff_interp_method("average harmonic", "harmonic");
   params.addParam<MooseEnum>(
@@ -102,7 +99,7 @@ PhysicsFVLogMolarElectronDiffusion::computeQpResidual()
 
   const ADReal c_elem = exp(_var(elemArg(), state));
   const ADReal c_neighbor = exp(_var(neighborArg(), state));
-  return -avogadro_per_mol * coeff_face * (c_neighbor - c_elem) / _face_info->dCNMag();
+  return -coeff_face * (c_neighbor - c_elem) / _face_info->dCNMag();
 }
 
 InputParameters
@@ -111,7 +108,7 @@ PhysicsFVLogMolarElectrostaticDrift::validParams()
   auto params = FVFluxKernel::validParams();
   params.addClassDescription(
       "Electrostatic FV drift reconstructed from c_e=exp(log_e), preserving "
-      "PhysicsFVElectrostaticDrift face/upwind semantics and returning physical particle flux.");
+      "PhysicsFVElectrostaticDrift face/upwind semantics and returning molar flux.");
   params.addRequiredParam<MooseFunctorName>("potential", "Electrostatic potential phi [V].");
   params.addRequiredParam<MooseFunctorName>("mobility", "Positive mobility magnitude [m^2/(V s)].");
   params.addRequiredParam<MooseFunctorName>(
@@ -178,7 +175,7 @@ PhysicsFVLogMolarElectrostaticDrift::computeQpResidual()
                &limiter_time);
 
   const ADReal c_face = exp(_var(transported_face, state));
-  return avogadro_per_mol * carrier_face * c_face * drift_normal;
+  return carrier_face * c_face * drift_normal;
 }
 
 InputParameters
@@ -186,8 +183,7 @@ PhysicsFVLogMolarElectronReactionSource::validParams()
 {
   auto params = FVElementalKernel::validParams();
   params.addClassDescription(
-      "Applies a signed physical electron number source to the log-molar electron equation "
-      "using only the exact Avogadro number conversion; no n_ref normalization is used.");
+      "Converts a signed physical electron number source to molar source for the log-molar equation.");
   params.addRequiredParam<MooseFunctorName>(
       "number_source", "Signed physical electron number source [1/(m^3 s)]. Positive is production.");
   return params;
@@ -204,8 +200,5 @@ PhysicsFVLogMolarElectronReactionSource::computeQpResidual()
 {
   const ADReal physical_number_source =
       _number_source(makeElemArg(_current_elem), determineState());
-  // Transport residuals are expressed in physical-number units (N_A*c_e), so
-  // the canonical physical source enters directly. Equivalently, dividing the
-  // entire equation by N_A yields the molar source S_e/N_A.
-  return -physical_number_source;
+  return -physical_number_source / avogadro_per_mol;
 }

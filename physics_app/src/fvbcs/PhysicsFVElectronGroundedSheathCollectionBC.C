@@ -16,7 +16,7 @@ PhysicsFVElectronGroundedSheathCollectionBC::validParams()
   auto params = FVQpFluxBC::validParams();
   params.addClassDescription(
       "Applies the accepted grounded-conductor primary-electron collection law using the "
-      "plasma-side FV state. T1 can reconstruct physical density from a log-molar state.");
+      "plasma-side FV state. T1 can reconstruct molar flux from a log-molar state.");
   params.addRequiredParam<MooseFunctorName>(
       "mean_electron_energy",
       "Plasma-side electron mean energy [eV]. The sheath temperature is (2/3) mean energy.");
@@ -25,7 +25,7 @@ PhysicsFVElectronGroundedSheathCollectionBC::validParams()
       "Plasma potential [V]. This object evaluates the plasma-side element value.");
   params.addParam<bool>(
       "log_molar_state", false,
-      "If true, interpret the solved variable as log(c_e/[1 mol/m^3]) and return physical particle flux.");
+      "If true, interpret the solved variable as log(c_e/[1 mol/m^3]) and return molar particle flux.");
   return params;
 }
 
@@ -66,5 +66,6 @@ PhysicsFVElectronGroundedSheathCollectionBC::computeQpResidual()
   using std::exp;
   const ADReal physical_density = avogadro_per_mol * exp(solved_state);
   return PhysicsGroundedElectronSheath::primaryParticleFluxHat(
-      physical_density, mean_energy_eV, effective_drop_V);
+             physical_density, mean_energy_eV, effective_drop_V) /
+         avogadro_per_mol;
 }
