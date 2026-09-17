@@ -1,5 +1,5 @@
-# Issue #234 bottom-up discriminator: 1D log-molar electron thermal surface loss, E = 0.
-# No Poisson, diffusion, chemistry, electron-energy solve, SEE, or RF/electrostatic heating.
+# Issue #234 bottom-up discriminator: 1D log-molar electron diffusion + thermal surface loss, E = 0.
+# No Poisson, chemistry, electron-energy solve, SEE, or RF/electrostatic heating.
 
 [Mesh]
   type = GeneratedMesh
@@ -31,8 +31,10 @@
 [FunctorMaterials]
   [constants]
     type = ADGenericFunctorMaterial
-    prop_names = 'mean_en_eV electron_mobility carrier_one'
-    prop_values = '5.73276 9750.0 1.0'
+    # Frozen transport coefficients for the bottom-up discriminator.
+    # Values correspond to the previously audited 5.73276 eV, 1.33322 Pa, 600 K state.
+    prop_names = 'mean_en_eV electron_mobility electron_diffusion carrier_one'
+    prop_values = '5.73276 9755.114369721427 41257.29899041419 1.0'
   []
 
   [electron_molar_density]
@@ -67,6 +69,13 @@
   [electron_time]
     type = PhysicsFVLogMolarElectronTimeDerivative
     variable = log_e
+  []
+
+  [electron_diffusion]
+    type = PhysicsFVLogMolarElectronDiffusion
+    variable = log_e
+    coeff = electron_diffusion
+    coeff_interp_method = harmonic
   []
 
   [electron_drift_zero_field]
@@ -146,5 +155,6 @@
 
 [Outputs]
   csv = true
+  exodus = true
   execute_on = 'INITIAL TIMESTEP_END'
 []
