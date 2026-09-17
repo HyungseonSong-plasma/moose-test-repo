@@ -1,5 +1,5 @@
 Issue #234 M1 representation construction gate
 Base: 97e39479c818f1027235d11f7a0bc546858e0c99
-Campaign: P0 mutation/temporal/flow-liveness -> P1 ownership/T2/parser preflight -> P2 parent+child check-input -> P3 T2 control + bounded MultiApp construction
+Campaign: P0 mutation/temporal/parent-liveness/flow-liveness -> P1 ownership/T2/parser preflight -> P2 parent+child check-input -> P3 T2 control + bounded MultiApp construction
 Construction dt_h=1e-8 s, dt_e=1e-10 s (coarse control only; no timestep promotion)
-Rerun discriminator: prune stale u/v/rc flow postprocessors exposed by run 35218601103 P2; correct latent T2-control shell quoting before P3.
+Rerun discriminator: close no-solve parent liveness by retaining only frozen-state root substitutions and removing inherited Functions/GlobalParams/dead flow and inlet configuration exposed by run 35219502100 P2.
