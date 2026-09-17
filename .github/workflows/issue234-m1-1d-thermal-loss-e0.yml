@@ -1,4 +1,4 @@
-name: Issue-234 M1 1D E0 thermal surface-loss discriminator
+name: Issue-234 M1 1D E0 diffusion + thermal surface-loss discriminator
 
 on:
   push:
@@ -26,8 +26,8 @@ env:
   ZAPDOS_SHA: 9eceffbc46048c3760bbfa9a7f1ca681ae35af1d
 
 jobs:
-  e0-thermal-loss:
-    name: 1D E=0 pure thermal electron wall loss
+  e0-diffusion-thermal-loss:
+    name: 1D E=0 electron diffusion + pure thermal wall loss
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
@@ -92,10 +92,11 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: issue234-m1-1d-thermal-loss-e0
+          name: issue234-m1-1d-diffusion-thermal-loss-e0
           path: |
             experiments/Issue234_m1_1d_thermal_loss_e0/input.i
             experiments/Issue234_m1_1d_thermal_loss_e0/input_out.csv
+            experiments/Issue234_m1_1d_thermal_loss_e0/input_out.e
             experiments/Issue234_m1_1d_thermal_loss_e0/check_input.log
             experiments/Issue234_m1_1d_thermal_loss_e0/runtime.log
             experiments/Issue234_m1_1d_thermal_loss_e0/validation.log
