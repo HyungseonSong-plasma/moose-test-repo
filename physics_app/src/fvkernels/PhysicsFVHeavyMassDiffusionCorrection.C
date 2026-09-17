@@ -46,8 +46,8 @@ PhysicsFVHeavyMassDiffusionCorrection::PhysicsFVHeavyMassDiffusionCorrection(
 
   for (std::size_t i = 0; i < _mass_fraction_names.size(); ++i)
   {
-    _mass_fractions.push_back(getFunctorByName<ADReal>(_mass_fraction_names[i]));
-    _diffusivities.push_back(getFunctorByName<ADReal>(_diffusivity_names[i]));
+    _mass_fractions.push_back(&getFunctorByName<ADReal>(_mass_fraction_names[i]));
+    _diffusivities.push_back(&getFunctorByName<ADReal>(_diffusivity_names[i]));
   }
 }
 
