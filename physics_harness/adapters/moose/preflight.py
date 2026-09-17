@@ -5,6 +5,8 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+from .dependencies import dependency_closure_self_test, validate_dependency_closure_text
+
 
 TEMPORAL_RAW_POLICIES = {
     "include_initial_as_physics",
@@ -128,14 +130,28 @@ def validate_input_preflight(input_path: Path) -> None:
     if not input_path.is_file():
         raise SystemExit(f"missing test input: {input_path}")
 
-    errors = validate_parser_symbols_file(input_path)
+    try:
+        text = input_path.read_text()
+    except UnicodeDecodeError as exc:
+        print("PARSER_P0  : FAIL")
+        print("  -", f"{input_path}: cannot decode input as UTF-8: {exc}")
+        raise SystemExit(2) from exc
+
+    errors = validate_parser_symbols_text(text, str(input_path))
     if errors:
         print("PARSER_P0  : FAIL")
         for error in errors:
             print("  -", error)
         raise SystemExit(2)
-
     print("PARSER_P0  : PASS")
+
+    findings = validate_dependency_closure_text(text, str(input_path))
+    if findings:
+        print("DEPENDENCY_P0: FAIL")
+        for finding in findings:
+            print("  -", finding.format(str(input_path)))
+        raise SystemExit(2)
+    print("DEPENDENCY_P0: PASS")
 
 
 def is_transient_input(input_path: Path) -> bool:
@@ -286,4 +302,4 @@ def parser_symbol_self_test() -> int:
         return 1
 
     print("PARSER_SYMBOL_PREFLIGHT_SELFTEST: PASS")
-    return 0
+    return dependency_closure_self_test()
