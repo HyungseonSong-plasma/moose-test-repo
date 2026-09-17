@@ -1,0 +1,93 @@
+name: Issue-245 T2 conservative molar electron energy
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - issue-245-t2-molar-electron-energy
+    paths:
+      - physics_app/include/fvbcs/PhysicsFVElectronGroundedSheathEnergyBC.h
+      - physics_app/src/fvbcs/PhysicsFVElectronGroundedSheathEnergyBC.C
+      - experiments/Issue245_t2_molar_electron_energy/**
+      - .github/workflows/issue245-t2-molar-electron-energy.yml
+
+permissions:
+  contents: read
+
+env:
+  BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+
+jobs:
+  t2:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 80
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: P0 static ownership and mutation tests
+        shell: bash
+        run: |
+          set -euxo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          python3 -m physics_harness.bootstrap_environment --self-test
+          python3 -m physics_harness.bootstrap ensure evidence --installer pip --manifest-out issue245-bootstrap-host.json
+          python3 -m physics_harness.bootstrap check evidence --manifest-out issue245-bootstrap-host-check.json
+          eval "$(python3 -m physics_harness.bootstrap_environment --profile evidence --shell bash)"
+          test "$PHYSICS_REPO_ROOT" = "$GITHUB_WORKSPACE"
+          python3 -m py_compile \
+            experiments/Issue245_t2_molar_electron_energy/run.py \
+            experiments/Issue245_t2_molar_electron_energy/p3_runtime.py \
+            experiments/Issue245_t2_molar_electron_energy/p3_runtime_v2.py
+          python3 -m experiments.Issue245_t2_molar_electron_energy.run | tee issue245-static.txt
+
+      - name: P1-P3 build construct and coupled runtime
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p issue245-logs issue245-case
+          docker pull "$BUILD_BASE_REF"
+          docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace -v "$PWD:/workspace" "$BUILD_BASE_REF" -lc '
+            set -euxo pipefail
+            source /environment
+            git config --global --add safe.directory /workspace
+            python3 -m physics_harness.bootstrap ensure evidence --installer uv --manifest-out issue245-logs/bootstrap-container.json
+            python3 -m physics_harness.bootstrap check evidence --manifest-out issue245-logs/bootstrap-container-check.json
+            eval "$(python3 -m physics_harness.bootstrap_environment --profile evidence --shell bash)"
+            test "$PHYSICS_REPO_ROOT" = /workspace
+            export MOOSE_DIR=/opt/physics_vendor/moose CRANE_DIR=/opt/physics_vendor/crane SQUIRREL_DIR=/opt/physics_vendor/squirrel ZAPDOS_DIR=/opt/physics_vendor/zapdos METHOD=opt
+            make -C physics_app -j2
+            python3 -c "from pathlib import Path; from experiments.Issue245_t2_molar_electron_energy.run import build_t2_input,audit_t2_input; text,meta=build_t2_input(); audit=audit_t2_input(text); assert audit[\"status\"]==\"PASS\", audit; Path(\"issue245-case/input.i\").write_text(text)"
+            cp experiments/Issue91_real_qvt_r3/r3_e0/qvt.msh issue245-case/
+            cp experiments/Issue91_real_qvt_r3/r3_e0/transport_data.txt issue245-case/
+            cp experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt issue245-case/
+            cp physics_app/data/electron_impact/* issue245-case/ || true
+            cp physics_app/data/heavy_reactions/* issue245-case/ || true
+            physics_app/physics-opt -i issue245-case/input.i --check-input > issue245-logs/check-input.log 2>&1
+            physics_app/physics-opt -i physics_app/ci/electron_grounded_sheath_energy_smoke.i --check-input > issue245-logs/legacy-explicit-scale-check.log 2>&1
+            sed -E "/^[[:space:]]*energy_reference_eV[[:space:]]*=/d" physics_app/ci/electron_grounded_sheath_energy_smoke.i > issue245-case/legacy-missing-energy-reference.i
+            if physics_app/physics-opt -i issue245-case/legacy-missing-energy-reference.i --check-input > issue245-logs/legacy-missing-scale-check.log 2>&1; then
+              echo "legacy missing energy_reference_eV unexpectedly passed --check-input" >&2
+              exit 1
+            fi
+            grep -Fq "Legacy normalized-energy mode requires an explicit energy_reference_eV" issue245-logs/legacy-missing-scale-check.log
+            timeout 3600s physics_app/physics-opt -i issue245-case/input.i > issue245-logs/runtime.log 2>&1
+            python3 -m experiments.Issue245_t2_molar_electron_energy.p3_runtime_v2 --case-dir issue245-case --input-file issue245-case/input.i --summary issue245-logs/p3-summary.json
+          '
+
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: issue245-t2-evidence
+          path: |
+            issue245-static.txt
+            issue245-bootstrap-host.json
+            issue245-bootstrap-host-check.json
+            issue245-logs
+            issue245-case/input.i
+            issue245-case/input_out.csv
+          if-no-files-found: warn
+          retention-days: 14
