@@ -225,7 +225,7 @@
   [electron_diffusion]
     type = PhysicsFVLogMolarElectronDiffusion
     variable = log_e
-    diffusivity = electron_diffusion
+    coeff = electron_diffusion
   []
 
   [O2s_time]
