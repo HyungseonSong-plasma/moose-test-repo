@@ -13,6 +13,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import re
 from pathlib import Path
 from typing import Any
 
@@ -21,12 +22,33 @@ from experiments.Issue27_surface_reactions.controlled_wall import see as a8
 from experiments.historical_recipe_support import issue26_energy_chain as energy
 from experiments.historical_recipe_support.issue26_e1 import ENERGY_REFERENCE_EV
 from experiments.Issue243_t1_log_molar_coupled_particle import run as t1
+from physics_harness.adapters.moose import parameters as mp
 
 ELEMENTARY_CHARGE_C = 1.602176634e-19
 AVOGADRO = 6.02214076e23
 
 
-def _metrics(case_dir: Path, input_text: str, meta: dict[str, Any]) -> dict[str, Any]:
+def _energy_reference_density(input_text: str) -> float:
+    expression = mp.get_parameter(
+        input_text,
+        f"FunctorMaterials/{t1.ENERGY_COMPAT}",
+        "expression",
+    )
+    if expression is None:
+        raise RuntimeError("selected input is missing the T1 energy compatibility expression")
+    match = re.fullmatch(r"'nephys/([0-9eE+.-]+)'", expression.strip())
+    if match is None:
+        raise RuntimeError(
+            "selected input has an unsupported T1 energy compatibility expression: "
+            f"{expression!r}"
+        )
+    n_ref = float(match.group(1))
+    if not math.isfinite(n_ref) or n_ref <= 0.0:
+        raise RuntimeError(f"selected input has invalid electron energy reference density {n_ref}")
+    return n_ref
+
+
+def _metrics(case_dir: Path, input_text: str, n_ref: float) -> dict[str, Any]:
     rows = w45.s5r._read_rows(case_dir / "input_out.csv")
     if len(rows) < 2:
         raise RuntimeError("P3 requires INITIAL and TIMESTEP_END rows")
@@ -36,7 +58,6 @@ def _metrics(case_dir: Path, input_text: str, meta: dict[str, Any]) -> dict[str,
         raise RuntimeError(f"non-positive P3 dt={dt}")
 
     volume = w45.s5r._num(final, "domain_volume")
-    n_ref = float(meta["electron_reference_density_m3"])
     wall = w45._wall_observables(final)
 
     primary_rate = AVOGADRO * w45._physical(w45.s5r._num(final, w45.PARTICLE_PP))
@@ -77,6 +98,7 @@ def _metrics(case_dir: Path, input_text: str, meta: dict[str, Any]) -> dict[str,
 
     return {
         "dt_s": dt, "state": state, "gauss": gauss, "wall": wall,
+        "energy_reference_density_m3": n_ref,
         "electron_particle": {"units": "physical_particles_per_s", "accumulation_rate_s-1": electron_accumulation, "volumetric_source_rate_s-1": volumetric_electron_rate, "primary_wall_loss_rate_s-1": primary_rate, "see_wall_source_rate_s-1": see_rate, "expected_rate_s-1": expected_electron_rate, "relative_defect": electron_defect},
         "electron_energy": {"representation": "frozen_normalized_T1", "accumulation_normalized_rate": energy_accum_norm_rate, "volumetric_source_normalized_rate": volumetric_energy_norm_rate, "primary_wall_power_W": primary_power, "see_wall_power_W": see_power, "expected_normalized_rate": expected_energy_norm_rate, "relative_defect": energy_defect},
         "see_4eV_mapping": {"expected_power_W": expected_see_power, "measured_power_W": see_power, "relative_defect": see_mapping_defect},
@@ -88,7 +110,7 @@ def _metrics(case_dir: Path, input_text: str, meta: dict[str, Any]) -> dict[str,
     }
 
 
-def _evaluate(meta: dict[str, Any], metrics: dict[str, Any], input_text: str) -> dict[str, Any]:
+def _evaluate(metrics: dict[str, Any], input_text: str) -> dict[str, Any]:
     gates = {
         "G01_t1_static_contract": t1.audit_t1_input(input_text)["status"] == "PASS",
         "G02_stage5_state_invariants": metrics["state"].get("hard_pass") is True,
@@ -112,9 +134,9 @@ def main() -> int:
     args = parser.parse_args()
 
     input_text = args.input_file.read_text(encoding="utf-8")
-    _, meta = t1.build_t1_input()
-    metrics = _metrics(args.case_dir, input_text, meta)
-    decision = _evaluate(meta, metrics, input_text)
+    n_ref = _energy_reference_density(input_text)
+    metrics = _metrics(args.case_dir, input_text, n_ref)
+    decision = _evaluate(metrics, input_text)
     summary = {"schema": "ISSUE243_T1_P3_V1", "claim": "coupled_one_step_log_molar_particle_with_frozen_energy_representation", "metrics": metrics, "decision": decision, "status": "PASS" if decision["scientific_hard_pass"] else "FAIL"}
     args.summary.parent.mkdir(parents=True, exist_ok=True)
     args.summary.write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8")
