@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate Issue #234 1D E=0 flow + corrected heavy diffusion + surface reactions."""
+"""Validate Issue #234 1D E=0 open-flow + corrected heavy diffusion discriminator."""
 from __future__ import annotations
 
 import csv
@@ -14,6 +14,10 @@ CSV = ROOT / "input_flow_corrected_out.csv"
 P_PA = 1.33322
 TG_K = 300.0
 END_S = 1.0e-8
+Q_SCCM = 20.0
+M_INLET = 0.032
+VM_STD = 0.0224136
+MDOT_EXPECTED = Q_SCCM * 1.0e-6 / 60.0 * M_INLET / VM_STD
 
 
 def static_contract() -> dict[str, bool]:
@@ -22,7 +26,7 @@ def static_contract() -> dict[str, bool]:
     all_diff = "diffusivities = 'D_mix_O2 D_mix_O2s D_mix_O2p D_mix_O D_mix_Om D_mix_Op D_mix_Os'"
     return {
         "one_dimensional": "dim = 1" in text,
-        "pressure_10mTorr": "1.33322" in text,
+        "pressure_10mTorr": "outlet_pressure = 1.33322" in text,
         "gas_temperature_300K": "prop_values = '300.0 1.33322" in text,
         "flow_solved": all(tok in text for tok in (
             "type = INSFVVelocityVariable",
@@ -33,7 +37,20 @@ def static_contract() -> dict[str, bool]:
             "type = INSFVMomentumDiffusion",
             "type = INSFVMomentumPressure",
         )),
-        "flow_unforced_zero_baseline": "boundary = 'left right'" in text and "function = 1.33322" in text,
+        "right_20sccm_inlet": all(tok in text for tok in (
+            "Q_sccm = 20",
+            "M_inlet = 0.032",
+            "type = WCNSFVMassFluxBC",
+            "boundary = right",
+            "direction = '-1 0 0'",
+        )),
+        "left_pressure_outlet": "type = INSFVOutletPressureBC" in text and "boundary = left" in text,
+        "pure_O2_inlet_for_solved_species": text.count("type = WCNSFVScalarFluxBC") == 6 and text.count("default = 0") >= 6,
+        "no_solid_wall_bc_on_open_ends": all(tok not in text for tok in (
+            "[O_surface_loss]", "[O2s_surface_loss]", "[Os_surface_loss]",
+            "[O2p_surface_loss]", "[Om_surface_loss]", "[Op_surface_loss]",
+            "[O_neutralization_return]", "[electron_thermal_loss]",
+        )),
         "no_poisson": "PhysicsFVPoisson" not in text and "potential_plasma" not in text,
         "no_electric_motion": all(tok not in text for tok in (
             "ElectrostaticDrift", "Electromigration", "ion_migration", "phi_zero"
@@ -47,14 +64,6 @@ def static_contract() -> dict[str, bool]:
         "all_species_in_correction": text.count(all_species) >= 7,
         "all_diffusivities_in_correction": text.count(all_diff) == 6,
         "mass_fraction_constraint": "expression = '1.0-s1-s2-s3-s4-s5-s6'" in text,
-        "thermal_electron_loss_on": "[electron_thermal_loss]" in text,
-        "neutral_surface_network": all(tok in text for tok in (
-            "[O_surface_loss]", "[O2s_surface_loss]", "[Os_surface_loss]"
-        )),
-        "charged_surface_network_thermal_only": all(tok in text for tok in (
-            "[O2p_surface_loss]", "[Om_surface_loss]", "[Op_surface_loss]"
-        )),
-        "neutralization_return": "[O_neutralization_return]" in text,
         "automatic_scaling_off": "automatic_scaling = false" in text,
     }
 
@@ -71,10 +80,9 @@ def main() -> int:
     initial, final = rows[0], rows[-1]
 
     required = (
-        "time", "electron_inventory", "electron_thermal_rate", "electron_thermal_integral",
-        "sum_w_min", "sum_w_max", "O2_min", "u_min", "u_max", "p_min", "p_max",
-        "O_surface_rate", "O2s_surface_rate", "Os_surface_rate",
-        "O2p_surface_rate", "Om_surface_rate", "Op_surface_rate",
+        "time", "inlet_area", "inlet_mdot", "inlet_mass_actual", "outlet_mass_actual",
+        "outlet_p_avg", "electron_inventory", "sum_w_min", "sum_w_max", "O2_min",
+        "u_min", "u_max", "p_min", "p_max",
     )
     missing = [name for name in required if name not in final]
     if missing:
@@ -88,44 +96,39 @@ def main() -> int:
     def close(a: float, b: float, rel: float = 2e-7, abs_: float = 1e-15) -> bool:
         return math.isclose(a, b, rel_tol=rel, abs_tol=abs_)
 
-    measured_electron_loss = v0["electron_inventory"] - vf["electron_inventory"]
-    expected_electron_loss = vf["electron_thermal_integral"]
-
     runtime_checks = {
         "final_time": close(vf["time"], END_S, rel=0.0, abs_=1e-18),
+        "sccm_to_mdot": close(vf["inlet_mdot"], MDOT_EXPECTED, rel=2e-8, abs_=1e-18),
+        "inlet_area_positive": vf["inlet_area"] > 0.0,
+        "right_inlet_direction_negative_x": vf["inlet_mass_actual"] < 0.0,
+        "left_outlet_direction": vf["outlet_mass_actual"] > 0.0,
+        "steady_mass_flow_closure": abs(vf["outlet_mass_actual"] - MDOT_EXPECTED) / MDOT_EXPECTED < 2e-2,
+        "left_pressure_10mTorr": close(vf["outlet_p_avg"], P_PA, rel=5e-3, abs_=1e-10),
+        "velocity_negative_x": vf["u_min"] < 0.0 and vf["u_max"] < 0.0,
+        "pressure_positive": vf["p_min"] > 0.0 and vf["p_max"] > 0.0,
         "sum_w_min_one": close(vf["sum_w_min"], 1.0, rel=0.0, abs_=1e-10),
         "sum_w_max_one": close(vf["sum_w_max"], 1.0, rel=0.0, abs_=1e-10),
         "O2_positive": vf["O2_min"] > 0.0,
         "electron_inventory_positive": vf["electron_inventory"] > 0.0,
-        "thermal_electron_loss_positive": vf["electron_thermal_rate"] > 0.0,
-        "electron_particle_ledger": close(measured_electron_loss, expected_electron_loss),
-        "flow_velocity_zero": max(abs(vf["u_min"]), abs(vf["u_max"])) < 1e-10,
-        "pressure_uniform_10mTorr": close(vf["p_min"], P_PA, rel=0.0, abs_=1e-8) and close(vf["p_max"], P_PA, rel=0.0, abs_=1e-8),
-        "O_surface_active": vf["O_surface_rate"] > 0.0,
-        "O2s_surface_active": vf["O2s_surface_rate"] > 0.0,
-        "Os_surface_active": vf["Os_surface_rate"] > 0.0,
-        "O2p_surface_active": vf["O2p_surface_rate"] > 0.0,
-        "Om_surface_active": vf["Om_surface_rate"] > 0.0,
-        "Op_surface_active": vf["Op_surface_rate"] > 0.0,
+        "electron_inventory_conserved_open_no_drift": close(
+            vf["electron_inventory"], v0["electron_inventory"], rel=2e-7, abs_=1e-15
+        ),
     }
     failed_runtime = sorted(k for k, ok in runtime_checks.items() if not ok)
 
     summary = {
         "status": "PASS" if not failed_runtime else "FAIL",
-        "claim_scope": "1D E=0 solved gas flow + corrected heavy diffusion + surface reactions; electron diffusion + thermal loss; SEE off",
+        "claim_scope": "1D E=0 right 20 sccm pure-O2 inlet + left 10 mTorr outlet; corrected heavy diffusion; open-end flow discriminator",
         "gas": {"pressure_Pa": P_PA, "pressure_mTorr": 10.0, "temperature_K": TG_K},
+        "inlet": {"side": "right", "flow_sccm": Q_SCCM, "M_kg_per_mol": M_INLET, "expected_mdot_kg_per_s": MDOT_EXPECTED},
+        "outlet": {"side": "left", "pressure_Pa": P_PA},
         "electric_motion": False,
         "see": False,
         "bulk_chemistry": False,
+        "surface_reactions_in_this_open_end_run": False,
         "diffusion_mass_frame_contract": "J_k = J_k_raw - w_k*sum_j(J_j_raw); sum_k J_k = 0 when sum_k w_k = 1",
         "static_checks": checks,
         "runtime_checks": runtime_checks,
-        "electron_ledger": {
-            "initial_inventory_mol_m2": v0["electron_inventory"],
-            "final_inventory_mol_m2": vf["electron_inventory"],
-            "measured_loss_mol_m2": measured_electron_loss,
-            "thermal_loss_integral_mol_m2": expected_electron_loss,
-        },
         "final": vf,
         "failed_runtime_checks": failed_runtime,
         "science_claim": False,
