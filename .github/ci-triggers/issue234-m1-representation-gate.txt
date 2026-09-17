@@ -1,0 +1,4 @@
+Issue #234 M1 representation construction gate
+Base: 97e39479c818f1027235d11f7a0bc546858e0c99
+Campaign: P0 mutation/temporal -> P1 ownership/T2 contract -> P2 parent+child check-input -> P3 T2 control + bounded MultiApp construction
+Construction dt_h=1e-8 s, dt_e=1e-10 s (coarse control only; no timestep promotion)
