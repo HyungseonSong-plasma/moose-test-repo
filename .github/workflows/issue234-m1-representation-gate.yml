@@ -95,12 +95,20 @@ jobs:
               python3 -m experiments.Issue234_m1_representation_gate.run --self-test \
                 | tee issue234-m1-logs/p1-self-test.json
 
-              # P2: materialize both generated inputs and check each with the
-              # real production executable before any construction runtime.
+              # Materialize both generated inputs, then enforce parsed-functor
+              # namespace preflight before entering physics-opt P2.
               python3 -m experiments.Issue234_m1_representation_gate.run \
                 --prepare-only \
                 --dt-e 1e-10 \
                 --results-root issue234-m1-preflight
+              python3 bin/physics.py preflight --self-test \
+                | tee issue234-m1-logs/p1-parser-preflight-self-test.log
+              python3 bin/physics.py preflight issue234-m1-preflight/case/input.i \
+                | tee issue234-m1-logs/p1-parent-preflight.log
+              python3 bin/physics.py preflight issue234-m1-preflight/case/electron_sub.i \
+                | tee issue234-m1-logs/p1-child-preflight.log
+
+              # P2: both inputs must be accepted by the real production parser.
               physics_app/physics-opt -i issue234-m1-preflight/case/input.i --check-input \
                 > issue234-m1-logs/p2-parent-check-input.log 2>&1
               physics_app/physics-opt -i issue234-m1-preflight/case/electron_sub.i --check-input \
@@ -108,7 +116,7 @@ jobs:
 
               # P3 control: re-run the accepted T2 monolithic one-step path at
               # this exact head before interpreting the new MultiApp result.
-              python3 -c "from pathlib import Path; from experiments.Issue217_sheath_energy_closure import run as w45; from experiments.Issue245_t2_molar_electron_energy import run as t2; from physics_harness.execution.cases import stage_case; text,meta=t2.build_t2_input(); audit=t2.audit_t2_input(text); assert audit['status']=='PASS', audit; case=Path('issue234-t2-control'); stage_case(w45.SOURCE, case, input_text=text, input_name='input.i', purge_directory_names=('.jitcache','checkpoint','checkpoints'), purge_patterns=('input_out*','*.log','*.e','*.exo')); w45.s5r._copy_runtime_assets(case)"
+              python3 -c "from pathlib import Path; from experiments.Issue217_sheath_energy_closure import run as w45; from experiments.Issue245_t2_molar_electron_energy import run as t2; from physics_harness.execution.cases import stage_case; text,meta=t2.build_t2_input(); audit=t2.audit_t2_input(text); assert audit[\"status\"]==\"PASS\",audit; case=Path(\"issue234-t2-control\"); stage_case(w45.SOURCE,case,input_text=text,input_name=\"input.i\",purge_directory_names=(\".jitcache\",\"checkpoint\",\"checkpoints\"),purge_patterns=(\"input_out*\",\"*.log\",\"*.e\",\"*.exo\")); w45.s5r._copy_runtime_assets(case)"
               timeout 3600s physics_app/physics-opt -i issue234-t2-control/input.i \
                 > issue234-m1-logs/p3-t2-control-runtime.log 2>&1
               python3 -m experiments.Issue245_t2_molar_electron_energy.p3_runtime_v2 \
