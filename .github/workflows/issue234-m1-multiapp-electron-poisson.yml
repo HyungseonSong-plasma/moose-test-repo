@@ -1,0 +1,98 @@
+name: Issue-234 M1 electron-Poisson MultiApp smoke
+
+on:
+  push:
+    branches:
+      - issue-234-m1-multiapp-electron-poisson
+    paths:
+      - '.github/workflows/issue234-m1-multiapp-electron-poisson.yml'
+      - 'experiments/Issue234_m1_multiapp_electron_poisson/**'
+      - 'experiments/Issue91_real_qvt_r3/r3_e0/transport_data.txt'
+      - 'physics_app/**'
+  workflow_dispatch:
+
+concurrency:
+  group: issue234-m1-multiapp-electron-poisson-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+  MOOSE_SHA: 9f388366ccf38b9c34542ec5561198249fde0ac9
+  CRANE_SHA: ba26970cf419dcac563a20ed7079d445bc6341c3
+  SQUIRREL_SHA: 16a26d504f3ee11161a86d4e3ebf3c0e5f2afbb1
+  ZAPDOS_SHA: 9eceffbc46048c3760bbfa9a7f1ca681ae35af1d
+
+jobs:
+  multiapp-smoke:
+    name: heavy parent + electron subcycle + nested Poisson
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Validate exact dependency identity
+        shell: bash
+        run: |
+          set -euxo pipefail
+          source physics_app/dependencies.lock
+          test "$MOOSE" = "$MOOSE_SHA"
+          test "$CRANE" = "$CRANE_SHA"
+          test "$SQUIRREL" = "$SQUIRREL_SHA"
+          test "$ZAPDOS" = "$ZAPDOS_SHA"
+          docker pull "$BUILD_BASE_REF"
+          test "$(docker image inspect "$BUILD_BASE_REF" --format '{{ index .Config.Labels "io.physics.moose.sha" }}')" = "$MOOSE_SHA"
+
+      - name: Build exact head and run MultiApp smoke
+        shell: bash
+        run: |
+          set -euxo pipefail
+          CONTAINER_SCRIPT=$(cat <<'BASH'
+          set -euxo pipefail
+          source /environment
+          git config --global --add safe.directory /workspace
+          export MOOSE_DIR=/opt/physics_vendor/moose
+          export CRANE_DIR=/opt/physics_vendor/crane
+          export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+          export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+          export METHOD=opt
+          export PYTHONPATH=/workspace
+          test "$(git -C /workspace rev-parse HEAD)" = "$GITHUB_SHA"
+
+          python3 -m py_compile /workspace/experiments/Issue234_m1_multiapp_electron_poisson/validate_multiapp.py
+          cd /workspace
+          test ! -e physics_app/physics-opt
+          make -C physics_app -j2
+          test -x physics_app/physics-opt
+
+          cd /workspace/experiments/Issue234_m1_multiapp_electron_poisson
+          /workspace/physics_app/physics-opt --check-input -i poisson_sub.i | tee check_poisson.log
+          /workspace/physics_app/physics-opt --check-input -i electron_sub.i | tee check_electron.log
+          /workspace/physics_app/physics-opt --check-input -i heavy_parent.i | tee check_parent.log
+          /workspace/physics_app/physics-opt -i heavy_parent.i | tee runtime_multiapp.log
+          python3 validate_multiapp.py | tee validation_multiapp.log
+          BASH
+          )
+          docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace \
+            -e GITHUB_SHA="$GITHUB_SHA" \
+            -e MOOSE_SHA="$MOOSE_SHA" -e CRANE_SHA="$CRANE_SHA" \
+            -e SQUIRREL_SHA="$SQUIRREL_SHA" -e ZAPDOS_SHA="$ZAPDOS_SHA" \
+            -v "$PWD:/workspace" "$BUILD_BASE_REF" -lc "$CONTAINER_SCRIPT"
+
+      - name: Upload MultiApp evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue234-m1-multiapp-electron-poisson
+          path: |
+            experiments/Issue234_m1_multiapp_electron_poisson/*.i
+            experiments/Issue234_m1_multiapp_electron_poisson/*.csv
+            experiments/Issue234_m1_multiapp_electron_poisson/*.e
+            experiments/Issue234_m1_multiapp_electron_poisson/*.log
+            experiments/Issue234_m1_multiapp_electron_poisson/validation_multiapp_summary.json
+          if-no-files-found: warn
+          retention-days: 7
