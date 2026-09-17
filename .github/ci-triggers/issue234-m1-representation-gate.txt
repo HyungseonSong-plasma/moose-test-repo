@@ -1,5 +1,5 @@
 Issue #234 M1 representation construction gate
 Base: 97e39479c818f1027235d11f7a0bc546858e0c99
-Campaign: P0 mutation/temporal/parent-liveness/IC-function/flow-liveness -> P1 ownership/T2/parser preflight -> P2 parent+child check-input -> P3 T2 control + bounded MultiApp construction
+Campaign: P0 mutation/temporal/parent-liveness/IC-function/flow-liveness/heavy-transient-functor-liveness -> P1 ownership/T2/parser preflight -> P2 parent+child check-input -> P3 T2 control + bounded MultiApp construction
 Construction dt_h=1e-8 s, dt_e=1e-10 s (coarse control only; no timestep promotion)
-Rerun discriminator: preserve exactly the Function providers still referenced by retained parent ICs after pruning; run 35221408930 exposed missing ic_w_O_transient at parent P2.
+Rerun discriminator: prune dMn_dt_avg/drho_dt_avg when their heavy transient functor providers are removed from the fast child; mutation audit must reject reintroduced consumers before P2. Run 35222933644 reached M1 child initialSetup and exposed missing dMn_dt_model after all P0/P1/P2 checks and the T2 scientific control passed.
