@@ -17,7 +17,7 @@
   [log_e]
     type = MooseVariableFVReal
     # n_e0 = 1e18 m^-3 -> c_e0 = n_e0/N_A mol/m^3
-    initial_condition = -13.308856150326917
+    initial_condition = -13.30836826905085
   []
 []
 
