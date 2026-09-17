@@ -47,6 +47,26 @@ jobs:
           docker pull "$BUILD_BASE_REF"
           test "$(docker image inspect "$BUILD_BASE_REF" --format '{{ index .Config.Labels "io.physics.moose.sha" }}')" = "$MOOSE_SHA"
 
+      - name: HIT syntax preflight before build
+        shell: bash
+        run: |
+          set -euxo pipefail
+          PRECHECK=$(cat <<'BASH'
+          set -euxo pipefail
+          source /environment
+          HIT=/opt/physics_vendor/moose/framework/contrib/hit/hit
+          test -x "$HIT"
+          cd /workspace/experiments/Issue234_m1_multiapp_electron_poisson
+          python3 -m py_compile validate_multiapp.py
+          for input in poisson_sub.i electron_sub.i heavy_parent.i; do
+            echo "HIT syntax check: $input"
+            "$HIT" format "$input" >/dev/null
+          done
+          BASH
+          )
+          docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace \
+            -v "$PWD:/workspace" "$BUILD_BASE_REF" -lc "$PRECHECK"
+
       - name: Build exact head and run MultiApp smoke
         shell: bash
         run: |
@@ -63,7 +83,6 @@ jobs:
           export PYTHONPATH=/workspace
           test "$(git -C /workspace rev-parse HEAD)" = "$GITHUB_SHA"
 
-          python3 -m py_compile /workspace/experiments/Issue234_m1_multiapp_electron_poisson/validate_multiapp.py
           cd /workspace
           test ! -e physics_app/physics-opt
           make -C physics_app -j2
