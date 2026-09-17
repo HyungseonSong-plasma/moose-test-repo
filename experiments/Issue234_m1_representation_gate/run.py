@@ -176,6 +176,36 @@ def _remove_postprocessors_for_missing_bcs(text: str, removed_bcs: set[str]) -> 
     return text
 
 
+def _flow_dependent_postprocessor_paths(text: str) -> list[str]:
+    """Return postprocessors that directly require removed flow ownership."""
+    result: list[str] = []
+    for path in _children(text, "Postprocessors"):
+        vel_x = mp.unquote(mp.get_parameter(text, path, "vel_x"))
+        vel_y = mp.unquote(mp.get_parameter(text, path, "vel_y"))
+        rhie_chow = mp.unquote(mp.get_parameter(text, path, "rhie_chow_user_object"))
+        if vel_x in FLOW_VARIABLES or vel_y in FLOW_VARIABLES or rhie_chow == "rc":
+            result.append(path)
+    return result
+
+
+def _remove_flow_dependent_postprocessors(text: str) -> str:
+    """Remove direct flow diagnostics and postprocessors depending on them."""
+    removed_pp = {_name(path) for path in _flow_dependent_postprocessor_paths(text)}
+    for name in sorted(removed_pp):
+        text = mb.remove_block(text, f"Postprocessors/{name}")
+
+    changed = True
+    while changed:
+        changed = False
+        for path in list(_children(text, "Postprocessors")):
+            value = mp.unquote(mp.get_parameter(text, path, "value"))
+            if value in removed_pp:
+                removed_pp.add(_name(path))
+                text = mb.remove_block(text, path)
+                changed = True
+    return text
+
+
 def _prune_child_flow_ownership(text: str) -> str:
     if mb.has_block(text, "UserObjects/rc"):
         text = mb.remove_block(text, "UserObjects/rc")
@@ -347,6 +377,7 @@ def build_child_input(production_text: str, *, dt_e: float) -> str:
     text = _remove_solver_variables(text, FLOW_VARIABLES)
     text, removed_bcs = _remove_equations_owned_by(text, set(HEAVY_STATE_VARIABLES))
     text = _remove_postprocessors_for_missing_bcs(text, removed_bcs)
+    text = _remove_flow_dependent_postprocessors(text)
     text = _prune_child_flow_ownership(text)
 
     text = mp.upsert_parameter(text, "Executioner", "dt", f"{dt_e:.17g}")
@@ -488,6 +519,7 @@ def _audit_child(text: str, *, dt_e: float) -> dict[str, Any]:
     checks["energy_time_molar"] = (
         mp.get_parameter(text, "FVKernels/s5r_n_epsilon_time", "variable") == t2.C_EPSILON
     )
+    checks["flow_dependent_postprocessors_absent"] = not _flow_dependent_postprocessor_paths(text)
     checks["child_dt"] = math.isclose(
         float(mp.get_parameter(text, "Executioner", "dt") or "nan"), dt_e
     )
@@ -619,6 +651,27 @@ def self_test() -> dict[str, Any]:
         and "ledger_source_integrated" in ledger_mutation_audit["failed_checks"]
     )
 
+    # Flow-liveness mutation: once u/v/rc are removed, a lingering flow
+    # postprocessor must be rejected before P2.
+    mutated_child = _ensure_top_block(child, "Postprocessors")
+    mutated_child = mb.insert_child_block(
+        mutated_child,
+        "Postprocessors",
+        """  [m1_bad_flow_postprocessor]
+    type = VolumetricFlowRate
+    boundary = outlet
+    vel_x = u
+    vel_y = v
+    advected_quantity = p
+    rhie_chow_user_object = rc
+  []""",
+    )
+    flow_mutation_audit = _audit_child(mutated_child, dt_e=DT_E_CONSTRUCTION_S)
+    checks["reject_flow_postprocessor_after_flow_prune"] = (
+        flow_mutation_audit["status"] == "FAIL"
+        and "flow_dependent_postprocessors_absent" in flow_mutation_audit["failed_checks"]
+    )
+
     try:
         production = t2.build_t2_input()[0]
         build_child_input(production, dt_e=3.0e-11)
@@ -630,6 +683,7 @@ def self_test() -> dict[str, Any]:
     detail["parent_mutation_failed_checks"] = parent_mutation_audit["failed_checks"]
     detail["temporal_mutation_failed_checks"] = child_temporal_audit["failed_checks"]
     detail["ledger_mutation_failed_checks"] = ledger_mutation_audit["failed_checks"]
+    detail["flow_mutation_failed_checks"] = flow_mutation_audit["failed_checks"]
 
     failed = sorted(key for key, ok in checks.items() if not ok)
     return {
