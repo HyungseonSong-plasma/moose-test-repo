@@ -150,11 +150,42 @@ def _remove_root_assignment(text: str, name: str) -> str:
     return out
 
 
+def _ic_function_references(text: str) -> set[str]:
+    references: set[str] = set()
+    for path in _children(text, "ICs"):
+        function = mp.unquote(mp.get_parameter(text, path, "function"))
+        if function:
+            references.add(function)
+    return references
+
+
+def _prune_functions_to_ic_dependencies(text: str) -> str:
+    references = _ic_function_references(text)
+    if not references:
+        return _remove_top_if_present(text, "Functions")
+    if not mb.has_block(text, "Functions"):
+        raise Issue234M1Error(
+            f"parent IC function providers missing: {sorted(references)}"
+        )
+
+    providers = {_name(path) for path in _children(text, "Functions")}
+    missing = references - providers
+    if missing:
+        raise Issue234M1Error(
+            f"parent IC function providers missing: {sorted(missing)}"
+        )
+    for path in list(_children(text, "Functions")):
+        if _name(path) not in references:
+            text = mb.remove_block(text, path)
+    return text
+
+
 def _prune_parent_inherited_configuration(text: str) -> str:
-    # Global flow/interpolation defaults and prescribed helper functions belong
-    # to the removed production physics objects, not to a no-solve carrier.
+    # Global flow/interpolation defaults belong to removed production physics.
+    # Functions are different: retain exactly those still required by retained
+    # ICs so the frozen parent state preserves its production initialization.
     text = _remove_top_if_present(text, "GlobalParams")
-    text = _remove_top_if_present(text, "Functions")
+    text = _prune_functions_to_ic_dependencies(text)
     for name in PARENT_DEAD_ROOT_PARAMETERS:
         text = _remove_root_assignment(text, name)
     return text
@@ -481,7 +512,11 @@ def _audit_parent(text: str) -> dict[str, Any]:
         root_parameters == PARENT_STATE_ROOT_PARAMETERS
     )
     checks["parent_global_params_absent"] = not mb.has_block(text, "GlobalParams")
-    checks["parent_functions_absent"] = not mb.has_block(text, "Functions")
+    ic_function_references = _ic_function_references(text)
+    function_providers = {_name(path) for path in _children(text, "Functions")}
+    checks["parent_ic_function_dependencies_closed"] = (
+        ic_function_references == function_providers
+    )
 
     checks["parent_no_nonlinear_variables"] = len(_children(text, "Variables")) == 0
     for name in EXPECTED_VARIABLES:
@@ -560,6 +595,8 @@ def _audit_parent(text: str) -> dict[str, Any]:
         "checks": checks,
         "failed_checks": failed,
         "root_parameters": sorted(root_parameters),
+        "ic_function_references": sorted(ic_function_references),
+        "function_providers": sorted(function_providers),
     }
 
 
@@ -717,6 +754,24 @@ def self_test() -> dict[str, Any]:
         in parent_liveness_audit["failed_checks"]
     )
 
+    # IC dependency mutation: retained FunctionICs must never outlive their
+    # exact Function providers when the parent is pruned to a state carrier.
+    function_references = sorted(_ic_function_references(parent))
+    if function_references:
+        missing_name = function_references[0]
+        mutated_parent_function = mb.remove_block(
+            parent, f"Functions/{missing_name}"
+        )
+        parent_function_audit = _audit_parent(mutated_parent_function)
+        checks["reject_missing_parent_ic_function"] = (
+            parent_function_audit["status"] == "FAIL"
+            and "parent_ic_function_dependencies_closed"
+            in parent_function_audit["failed_checks"]
+        )
+    else:
+        parent_function_audit = {"failed_checks": ["no_ic_function_reference"]}
+        checks["reject_missing_parent_ic_function"] = False
+
     # Temporal mutation: child must synchronize exactly to the heavy interval.
     mutated_child = mp.upsert_parameter(
         child, "Executioner", "end_time", f"{0.5 * DT_H_S:.17g}"
@@ -772,6 +827,9 @@ def self_test() -> dict[str, Any]:
 
     detail["parent_mutation_failed_checks"] = parent_mutation_audit["failed_checks"]
     detail["parent_liveness_mutation_failed_checks"] = parent_liveness_audit[
+        "failed_checks"
+    ]
+    detail["parent_function_mutation_failed_checks"] = parent_function_audit[
         "failed_checks"
     ]
     detail["temporal_mutation_failed_checks"] = child_temporal_audit["failed_checks"]
