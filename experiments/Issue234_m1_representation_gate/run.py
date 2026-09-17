@@ -18,6 +18,7 @@ import argparse
 import csv
 import json
 import math
+import re
 import shutil
 from pathlib import Path
 from typing import Any, Iterable
@@ -51,6 +52,42 @@ HEAVY_TRANSFER_VARIABLES = (
 FLOW_VARIABLES = ("u", "v")
 HEAVY_STATE_VARIABLES = (*FLOW_VARIABLES, *HEAVY_TRANSFER_VARIABLES)
 EXPECTED_VARIABLES = set((*HEAVY_STATE_VARIABLES, *FAST_SOLVER_VARIABLES))
+
+# The no-solve parent retains only scalar substitutions that initialize the
+# frozen state it actually owns. Everything else belongs to physics objects
+# removed from the construction parent and must not survive as dead config.
+PARENT_STATE_ROOT_PARAMETERS = frozenset(
+    {
+        "outlet_pressure",
+        "Yin_O2s",
+        "Yin_O2p",
+        "Yin_Om",
+        "Yin_Op",
+        "Yin_Os",
+    }
+)
+PARENT_DEAD_ROOT_PARAMETERS = (
+    "Q_sccm",
+    "Vm_std",
+    "T_g_value",
+    "T_e_value",
+    "mu_const",
+    "E0_migration",
+    "e_over_kB_K_per_V",
+    "M_inlet",
+    "Q_std",
+    "inlet_mdot_value",
+    "inlet_mdot_O2s_value",
+    "inlet_mdot_O2p_value",
+    "inlet_mdot_O_value",
+    "inlet_mdot_Om_value",
+    "inlet_mdot_Op_value",
+    "inlet_mdot_Os_value",
+)
+ROOT_ASSIGNMENT_RE = re.compile(
+    r"(?m)^(?P<name>[A-Za-z_][A-Za-z0-9_]*)\s*=\s*[^#\r\n]*"
+    r"(?:\s*#.*)?(?:\r?\n|$)"
+)
 
 PARENT_FAST_PPS = {
     "m1_parent_log_e_avg": t1.LOG_E,
@@ -93,6 +130,34 @@ def _ensure_top_block(text: str, name: str) -> str:
 
 def _remove_top_if_present(text: str, name: str) -> str:
     return mb.remove_block(text, name) if mb.has_block(text, name) else text
+
+
+def _root_assignment_names(text: str) -> set[str]:
+    return {match.group("name") for match in ROOT_ASSIGNMENT_RE.finditer(text)}
+
+
+def _remove_root_assignment(text: str, name: str) -> str:
+    matches = [
+        match for match in ROOT_ASSIGNMENT_RE.finditer(text) if match.group("name") == name
+    ]
+    if len(matches) > 1:
+        raise Issue234M1Error(f"ambiguous root parameter {name}: {len(matches)} assignments")
+    if not matches:
+        return text
+    match = matches[0]
+    out = text[: match.start()] + text[match.end() :]
+    MooseInput(out)
+    return out
+
+
+def _prune_parent_inherited_configuration(text: str) -> str:
+    # Global flow/interpolation defaults and prescribed helper functions belong
+    # to the removed production physics objects, not to a no-solve carrier.
+    text = _remove_top_if_present(text, "GlobalParams")
+    text = _remove_top_if_present(text, "Functions")
+    for name in PARENT_DEAD_ROOT_PARAMETERS:
+        text = _remove_root_assignment(text, name)
+    return text
 
 
 def _aux_block_from_variable(text: str, name: str) -> str:
@@ -289,6 +354,7 @@ def build_parent_input(production_text: str) -> str:
         "VectorPostprocessors",
     ):
         text = _remove_top_if_present(text, section)
+    text = _prune_parent_inherited_configuration(text)
 
     text = mp.upsert_parameter(text, "Problem", "solve", "false")
     text = mp.upsert_parameter(text, "Executioner", "dt", f"{DT_H_S:.17g}")
@@ -410,6 +476,13 @@ def _audit_parent(text: str) -> dict[str, Any]:
         float(mp.get_parameter(text, "Executioner", "end_time") or "nan"), DT_H_S
     )
 
+    root_parameters = _root_assignment_names(text)
+    checks["parent_root_state_parameters_exact"] = (
+        root_parameters == PARENT_STATE_ROOT_PARAMETERS
+    )
+    checks["parent_global_params_absent"] = not mb.has_block(text, "GlobalParams")
+    checks["parent_functions_absent"] = not mb.has_block(text, "Functions")
+
     checks["parent_no_nonlinear_variables"] = len(_children(text, "Variables")) == 0
     for name in EXPECTED_VARIABLES:
         checks[f"parent_aux:{name}"] = mb.has_block(text, f"AuxVariables/{name}")
@@ -482,7 +555,12 @@ def _audit_parent(text: str) -> dict[str, Any]:
     )
 
     failed = sorted(key for key, ok in checks.items() if not ok)
-    return {"status": "PASS" if not failed else "FAIL", "checks": checks, "failed_checks": failed}
+    return {
+        "status": "PASS" if not failed else "FAIL",
+        "checks": checks,
+        "failed_checks": failed,
+        "root_parameters": sorted(root_parameters),
+    }
 
 
 def _audit_child(text: str, *, dt_e: float) -> dict[str, Any]:
@@ -627,6 +705,18 @@ def self_test() -> dict[str, Any]:
         and "fast_transfer_source" in parent_mutation_audit["failed_checks"]
     )
 
+    # Parent-liveness mutation: the carrier must reject any reintroduced root
+    # configuration outside the exact frozen-state initialization set.
+    mutated_parent_liveness = parent.replace(
+        "[Problem]", "m1_dead_parent_value = 1\n\n[Problem]", 1
+    )
+    parent_liveness_audit = _audit_parent(mutated_parent_liveness)
+    checks["reject_dead_parent_root_parameter"] = (
+        parent_liveness_audit["status"] == "FAIL"
+        and "parent_root_state_parameters_exact"
+        in parent_liveness_audit["failed_checks"]
+    )
+
     # Temporal mutation: child must synchronize exactly to the heavy interval.
     mutated_child = mp.upsert_parameter(
         child, "Executioner", "end_time", f"{0.5 * DT_H_S:.17g}"
@@ -681,6 +771,9 @@ def self_test() -> dict[str, Any]:
         checks["reject_noninteger_subcycle_ratio"] = False
 
     detail["parent_mutation_failed_checks"] = parent_mutation_audit["failed_checks"]
+    detail["parent_liveness_mutation_failed_checks"] = parent_liveness_audit[
+        "failed_checks"
+    ]
     detail["temporal_mutation_failed_checks"] = child_temporal_audit["failed_checks"]
     detail["ledger_mutation_failed_checks"] = ledger_mutation_audit["failed_checks"]
     detail["flow_mutation_failed_checks"] = flow_mutation_audit["failed_checks"]
