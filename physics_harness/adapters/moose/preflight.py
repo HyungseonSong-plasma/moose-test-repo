@@ -6,6 +6,7 @@ import re
 from pathlib import Path
 
 from .dependencies import dependency_closure_self_test, validate_dependency_closure_text
+from .input import MooseInput, MooseInputError
 
 
 TEMPORAL_RAW_POLICIES = {
@@ -135,6 +136,13 @@ def validate_input_preflight(input_path: Path) -> None:
     except UnicodeDecodeError as exc:
         print("PARSER_P0  : FAIL")
         print("  -", f"{input_path}: cannot decode input as UTF-8: {exc}")
+        raise SystemExit(2) from exc
+
+    try:
+        MooseInput(text)
+    except MooseInputError as exc:
+        print("PARSER_P0  : FAIL")
+        print("  -", f"{input_path}: malformed MOOSE/HIT structure: {exc}")
         raise SystemExit(2) from exc
 
     errors = validate_parser_symbols_text(text, str(input_path))
@@ -269,6 +277,12 @@ def parser_symbol_self_test() -> int:
 []
 """
 
+    malformed_rejected = False
+    try:
+        MooseInput("[Variables]\n  [u]\n  []\n")
+    except MooseInputError:
+        malformed_rejected = True
+
     checks = [
         ("safe aliases", not validate_parser_symbols_text(safe)),
         (
@@ -292,6 +306,7 @@ def parser_symbol_self_test() -> int:
                 for error in validate_parser_symbols_text(bad_duplicate)
             ),
         ),
+        ("malformed HIT structure rejected", malformed_rejected),
     ]
 
     failed = [name for name, ok in checks if not ok]
