@@ -66,6 +66,13 @@ jobs:
             cp physics_app/data/electron_impact/* issue245-case/ || true
             cp physics_app/data/heavy_reactions/* issue245-case/ || true
             physics_app/physics-opt -i issue245-case/input.i --check-input > issue245-logs/check-input.log 2>&1
+            physics_app/physics-opt -i physics_app/ci/electron_grounded_sheath_energy_smoke.i --check-input > issue245-logs/legacy-explicit-scale-check.log 2>&1
+            sed -E "/^[[:space:]]*energy_reference_eV[[:space:]]*=/d" physics_app/ci/electron_grounded_sheath_energy_smoke.i > issue245-case/legacy-missing-energy-reference.i
+            if physics_app/physics-opt -i issue245-case/legacy-missing-energy-reference.i --check-input > issue245-logs/legacy-missing-scale-check.log 2>&1; then
+              echo "legacy missing energy_reference_eV unexpectedly passed --check-input" >&2
+              exit 1
+            fi
+            grep -Fq "Legacy normalized-energy mode requires an explicit energy_reference_eV" issue245-logs/legacy-missing-scale-check.log
             timeout 3600s physics_app/physics-opt -i issue245-case/input.i > issue245-logs/runtime.log 2>&1
             python3 -m experiments.Issue245_t2_molar_electron_energy.p3_runtime_v2 --case-dir issue245-case --input-file issue245-case/input.i --summary issue245-logs/p3-summary.json
           '

@@ -25,7 +25,7 @@ PhysicsFVElectronGroundedSheathEnergyBC::validParams()
   params.addParam<Real>(
       "energy_reference_eV",
       1.0,
-      "Positive legacy normalization energy epsilon_ref [eV]. Ignored in molar-energy mode.");
+      "Positive legacy normalization energy epsilon_ref [eV]. Must be explicitly supplied in legacy mode and is ignored in molar-energy mode.");
   params.addParam<bool>(
       "molar_energy_state",
       false,
@@ -43,6 +43,9 @@ PhysicsFVElectronGroundedSheathEnergyBC::PhysicsFVElectronGroundedSheathEnergyBC
     _energy_reference_eV(getParam<Real>("energy_reference_eV")),
     _molar_energy_state(getParam<bool>("molar_energy_state"))
 {
+  if (!_molar_energy_state && !parameters.isParamSetByUser("energy_reference_eV"))
+    paramError("energy_reference_eV",
+               "Legacy normalized-energy mode requires an explicit energy_reference_eV.");
   if (!_molar_energy_state && _energy_reference_eV <= 0.0)
     paramError("energy_reference_eV", "Electron-energy normalization scale must be positive.");
 }
