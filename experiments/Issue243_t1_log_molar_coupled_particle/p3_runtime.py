@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 """Issue #243 T1 P3 coupled one-step runtime qualification.
 
-Particle transport/primary-sheath/SEE rates are evaluated in physical-number
-units after the log-molar conversion. Electron-energy representation remains
-frozen on the accepted normalized basis until T2.
+The T1 electron transport equation and its particle wall BCs are expressed in
+molar units. P3 converts the particle wall integrals back to physical-number
+rates with the exact Avogadro constant before comparing them with the physical
+electron inventory/source and before constructing charge/SEE-energy ledgers.
+Electron-energy representation remains frozen on the accepted normalized basis
+until T2.
 """
 from __future__ import annotations
 
@@ -36,9 +39,10 @@ def _metrics(case_dir: Path, input_text: str, meta: dict[str, Any]) -> dict[str,
     n_ref = float(meta["electron_reference_density_m3"])
     wall = w45._wall_observables(final)
 
-    # T1 particle BCs and particle inventory are already in physical-number units.
-    primary_rate = w45._physical(w45.s5r._num(final, w45.PARTICLE_PP))
-    see_rate = w45._physical(w45.s5r._num(final, a8.SEE_PP))
+    # T1 particle wall BCs are molar fluxes; inventory and volumetric source are
+    # physical-number observables. Convert only the wall particle integrals.
+    primary_rate = AVOGADRO * w45._physical(w45.s5r._num(final, w45.PARTICLE_PP))
+    see_rate = AVOGADRO * w45._physical(w45.s5r._num(final, a8.SEE_PP))
     electron_accumulation = (
         w45.s5r._num(final, "n_e_inventory")
         - w45.s5r._num(initial, "n_e_inventory")
@@ -53,7 +57,6 @@ def _metrics(case_dir: Path, input_text: str, meta: dict[str, Any]) -> dict[str,
         primary_rate,
     )
 
-    # Energy remains on the accepted normalized representation in T1.
     coefficients = w45.s5r._energy_coefficients(input_text)
     volumetric_energy_norm_rate = w45.s5r._energy_source_density(final, coefficients) * volume
     energy_accum_norm_rate = (
