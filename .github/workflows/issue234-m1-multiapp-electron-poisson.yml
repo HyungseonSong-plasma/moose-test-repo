@@ -57,7 +57,7 @@ jobs:
           HIT=/opt/physics_vendor/moose/framework/contrib/hit/hit
           test -x "$HIT"
           cd /workspace/experiments/Issue234_m1_multiapp_electron_poisson
-          python3 -m py_compile validate_multiapp.py
+          python3 -m py_compile validate_multiapp.py analyze_pileup.py
           for input in poisson_sub.i electron_sub.i heavy_parent.i; do
             echo "HIT syntax check: $input"
             "$HIT" format "$input" >/dev/null
@@ -92,7 +92,18 @@ jobs:
           /workspace/physics_app/physics-opt --check-input -i poisson_sub.i | tee check_poisson.log
           /workspace/physics_app/physics-opt --check-input -i electron_sub.i | tee check_electron.log
           /workspace/physics_app/physics-opt --check-input -i heavy_parent.i | tee check_parent.log
+
+          set +e
           /workspace/physics_app/physics-opt -i heavy_parent.i | tee runtime_multiapp.log
+          runtime_rc=${PIPESTATUS[0]}
+          set -e
+
+          python3 analyze_pileup.py | tee pileup_diagnostic.log || true
+
+          if [ "$runtime_rc" -ne 0 ]; then
+            exit "$runtime_rc"
+          fi
+
           python3 validate_multiapp.py | tee validation_multiapp.log
           BASH
           )
@@ -109,9 +120,10 @@ jobs:
           name: issue234-m1-multiapp-electron-poisson
           path: |
             experiments/Issue234_m1_multiapp_electron_poisson/*.i
-            experiments/Issue234_m1_multiapp_electron_poisson/*.csv
-            experiments/Issue234_m1_multiapp_electron_poisson/*.e
-            experiments/Issue234_m1_multiapp_electron_poisson/*.log
+            experiments/Issue234_m1_multiapp_electron_poisson/**/*.csv
+            experiments/Issue234_m1_multiapp_electron_poisson/**/*.e
+            experiments/Issue234_m1_multiapp_electron_poisson/**/*.log
+            experiments/Issue234_m1_multiapp_electron_poisson/pileup_diagnostic_summary.json
             experiments/Issue234_m1_multiapp_electron_poisson/validation_multiapp_summary.json
           if-no-files-found: warn
           retention-days: 7
