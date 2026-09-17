@@ -1,16 +1,11 @@
-# Issue #234 bottom-up discriminator: 1D oxygen heavy flow + corrected diffusion
-# with no electric motion and no SEE.
+# Issue #234 bottom-up discriminator: independent electron wall-loss transport
+# plus 1D oxygen heavy flow with corrected diffusion, E = 0 and no SEE.
 #
 # Gas: chamber pressure 10 mTorr = 1.33322 Pa, Tg = 300 K.
-# Flow: right pure-O2 20 sccm inlet, left absolute-pressure outlet at chamber pressure.
-# Species: heavy advection + mass-average-corrected mixture diffusion.
-# Electron: diffusion only in this open-end flow discriminator.
-# No Poisson, no electrostatic drift/migration, no volumetric chemistry, no SEE.
-#
-# NOTE: In 1D the two end faces are now open inlet/outlet boundaries, so solid-wall
-# surface reactions are intentionally not superposed on them. The previous wall-only
-# discriminator remains the surface-reaction evidence; combined flow + wall chemistry
-# requires a geometry with a distinct wall boundary.
+# Heavy flow: right pure-O2 20 sccm inlet, left absolute-pressure outlet at chamber pressure.
+# Heavy species: gas advection + mass-average-corrected mixture diffusion.
+# Electron: previous E=0 diffusion + pure thermal right-wall loss contract; no gas-flow advection.
+# No Poisson, no volumetric chemistry, no SEE, no nonzero electric drift/migration.
 
 Q_sccm = 20
 M_inlet = 0.032
@@ -56,6 +51,7 @@ inlet_mdot_value = ${fparse Q_std * M_inlet / Vm_std}
   []
   [log_e]
     type = MooseVariableFVReal
+    # n_e0 = 1e18 m^-3 -> c_e0 = n_e0/N_A mol/m^3
     initial_condition = -13.30836826905085
   []
   [w_O2s]
@@ -84,11 +80,18 @@ inlet_mdot_value = ${fparse Q_std * M_inlet / Vm_std}
   []
 []
 
+[Functions]
+  [phi_zero]
+    type = ParsedFunction
+    expression = '0.0*x'
+  []
+[]
+
 [FunctorMaterials]
   [constants]
     type = ADGenericFunctorMaterial
-    prop_names = 'T_g p_gas T_e_K rho_const mu_const mean_en_eV electron_diffusion'
-    prop_values = '300.0 1.33322 44350.61153766496 1.3793506167141378e-5 2.0e-5 5.73276 4.12573e4'
+    prop_names = 'T_g p_gas T_e_K rho_const mu_const mean_en_eV electron_mobility electron_diffusion carrier_one'
+    prop_values = '300.0 1.33322 44350.61153766496 1.3793506167141378e-5 2.0e-5 5.73276 9755.114369721427 41257.29899041419 1.0'
   []
 
   [electron_molar_density]
@@ -105,6 +108,15 @@ inlet_mdot_value = ${fparse Q_std * M_inlet / Vm_std}
     functor_names = 'log_e'
     functor_symbols = 'loge'
     expression = '6.02214076e23*exp(loge)'
+  []
+
+  [thermal_surface_flux]
+    type = ADParsedFunctorMaterial
+    property_name = thermal_flux_molar_outward
+    functor_names = 'log_e mean_en_eV'
+    functor_symbols = 'loge mean_ev'
+    # Previous pure isotropic-Maxwellian electron wall collection, no sheath suppression.
+    expression = '0.25*exp(loge)*sqrt(16.0*1.602176634e-19*mean_ev/(3.0*pi*9.1093837139e-31))'
   []
 
   [O2_constraint]
@@ -179,6 +191,17 @@ inlet_mdot_value = ${fparse Q_std * M_inlet / Vm_std}
     type = PhysicsFVLogMolarElectronDiffusion
     variable = log_e
     coeff = electron_diffusion
+    coeff_interp_method = harmonic
+  []
+  [electron_drift_zero_field]
+    type = PhysicsFVLogMolarElectrostaticDrift
+    variable = log_e
+    potential = phi_zero
+    mobility = electron_mobility
+    carrier = carrier_one
+    charge_number = -1
+    advected_interp_method = upwind
+    boundaries_to_avoid = 'left right'
   []
 
   [O2s_time]
@@ -303,6 +326,8 @@ inlet_mdot_value = ${fparse Q_std * M_inlet / Vm_std}
 []
 
 [FVBCs]
+  # Heavy-flow inlet/outlet conditions and electron wall collection are intentionally
+  # separate variable contracts even though they share the same 1D right boundary.
   [inlet_mass]
     type = WCNSFVMassFluxBC
     variable = p
@@ -398,6 +423,14 @@ inlet_mdot_value = ${fparse Q_std * M_inlet / Vm_std}
     boundary = left
     function = ${outlet_pressure}
   []
+
+  [right_thermal_surface_loss]
+    type = FVFunctorNeumannBC
+    variable = log_e
+    boundary = right
+    functor = thermal_flux_molar_outward
+    factor = -1
+  []
 []
 
 [Postprocessors]
@@ -464,6 +497,32 @@ inlet_mdot_value = ${fparse Q_std * M_inlet / Vm_std}
     functor = c_e_molar
     execute_on = 'INITIAL TIMESTEP_END'
   []
+  [n_e_min]
+    type = ADElementExtremeFunctorValue
+    functor = electron_density_m3
+    value_type = min
+    execute_on = 'INITIAL TIMESTEP_END'
+  []
+  [n_e_max]
+    type = ADElementExtremeFunctorValue
+    functor = electron_density_m3
+    value_type = max
+    execute_on = 'INITIAL TIMESTEP_END'
+  []
+  [wall_thermal_flux_rate_per_area]
+    type = ADSideIntegralFunctorPostprocessor
+    boundary = right
+    functor = thermal_flux_molar_outward
+    restrict_to_functors_domain = true
+    execute_on = 'INITIAL TIMESTEP_END'
+  []
+  [wall_thermal_loss_integral_per_area]
+    type = TimeIntegratedPostprocessor
+    value = wall_thermal_flux_rate_per_area
+    time_integration_scheme = 'implicit-euler'
+    execute_on = 'INITIAL TIMESTEP_END'
+  []
+
   [sum_w_min]
     type = ADElementExtremeFunctorValue
     functor = sum_w_functor
