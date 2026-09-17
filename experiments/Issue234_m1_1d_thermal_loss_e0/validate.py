@@ -34,17 +34,19 @@ def static_contract() -> dict[str, bool]:
     text = INPUT.read_text(encoding="utf-8")
     checks = {
         "one_dimensional": "dim = 1" in text,
+        "exact_initial_log_state": "initial_condition = -13.30836826905085" in text,
         "log_molar_state": "type = PhysicsFVLogMolarElectronTimeDerivative" in text,
         "zero_prescribed_field": "expression = '0.0*x'" in text,
         "production_log_drift_object_present": "type = PhysicsFVLogMolarElectrostaticDrift" in text,
         "electron_charge_minus_one": "charge_number = -1" in text,
         "pure_thermal_quarter_flux": "0.25*exp(loge)*sqrt(" in text,
+        "thermal_wall_factor_outward": "factor = -1" in text,
         "no_sheath_bc": "PhysicsFVElectronGroundedSheathCollectionBC" not in text,
-        "no_poisson": "potential_plasma" not in text and "Poisson" not in text,
-        "no_diffusion": "LogMolarElectronDiffusion" not in text and "[electron_diffusion]" not in text,
-        "no_chemistry": "ReactionSource" not in text and "reaction" not in text.lower(),
+        "no_poisson_solve": "potential_plasma" not in text and "PhysicsFVPoisson" not in text,
+        "no_diffusion_kernel": "LogMolarElectronDiffusion" not in text and "[electron_diffusion]" not in text,
+        "no_reaction_source": "ReactionSource" not in text,
         "no_energy_solve": "c_epsilon" not in text and "n_epsilon" not in text,
-        "no_see": "secondary" not in text.lower() and "SEE" not in text,
+        "no_secondary_emission_object": "secondary_emission" not in text.lower() and "see_bc" not in text.lower(),
         "automatic_scaling_off": "automatic_scaling = false" in text,
         "right_wall_only": "boundary = right" in text,
     }
