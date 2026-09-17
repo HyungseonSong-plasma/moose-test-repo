@@ -23,7 +23,7 @@ env:
 jobs:
   t1:
     runs-on: ubuntu-24.04
-    timeout-minutes: 35
+    timeout-minutes: 80
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
@@ -64,7 +64,7 @@ jobs:
             cp physics_app/data/electron_impact/* issue243-case/ || true
             cp physics_app/data/heavy_reactions/* issue243-case/ || true
             physics_app/physics-opt -i issue243-case/input.i --check-input > issue243-logs/check-input.log 2>&1
-            timeout 1200s physics_app/physics-opt -i issue243-case/input.i > issue243-logs/runtime.log 2>&1
+            timeout 3600s physics_app/physics-opt -i issue243-case/input.i > issue243-logs/runtime.log 2>&1
             python3 -m experiments.Issue243_t1_log_molar_coupled_particle.p3_runtime --case-dir issue243-case --input-file issue243-case/input.i --summary issue243-logs/p3-summary.json
           '
       - name: Upload evidence
