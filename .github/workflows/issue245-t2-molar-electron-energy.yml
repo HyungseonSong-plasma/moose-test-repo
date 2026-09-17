@@ -39,7 +39,8 @@ jobs:
           test "$PHYSICS_REPO_ROOT" = "$GITHUB_WORKSPACE"
           python3 -m py_compile \
             experiments/Issue245_t2_molar_electron_energy/run.py \
-            experiments/Issue245_t2_molar_electron_energy/p3_runtime.py
+            experiments/Issue245_t2_molar_electron_energy/p3_runtime.py \
+            experiments/Issue245_t2_molar_electron_energy/p3_runtime_v2.py
           python3 -m experiments.Issue245_t2_molar_electron_energy.run | tee issue245-static.txt
 
       - name: P1-P3 build construct and coupled runtime
@@ -66,7 +67,7 @@ jobs:
             cp physics_app/data/heavy_reactions/* issue245-case/ || true
             physics_app/physics-opt -i issue245-case/input.i --check-input > issue245-logs/check-input.log 2>&1
             timeout 3600s physics_app/physics-opt -i issue245-case/input.i > issue245-logs/runtime.log 2>&1
-            python3 -m experiments.Issue245_t2_molar_electron_energy.p3_runtime --case-dir issue245-case --input-file issue245-case/input.i --summary issue245-logs/p3-summary.json
+            python3 -m experiments.Issue245_t2_molar_electron_energy.p3_runtime_v2 --case-dir issue245-case --input-file issue245-case/input.i --summary issue245-logs/p3-summary.json
           '
 
       - name: Upload evidence
