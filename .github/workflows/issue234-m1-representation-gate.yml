@@ -1,0 +1,141 @@
+name: Issue-234 M1 T2 representation construction gate
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - issue-234-m1-representation-gate
+    paths:
+      - .github/ci-triggers/issue234-m1-representation-gate.txt
+
+permissions:
+  contents: read
+
+# Coordinated M1 construction edits do not trigger governed execution until the
+# marker is advanced. This keeps P0/P1/P2/P3 evidence tied to one exact head.
+concurrency:
+  group: issue234-m1-representation-gate-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+  MOOSE_SHA: 9f388366ccf38b9c34542ec5561198249fde0ac9
+  CRANE_SHA: ba26970cf419dcac563a20ed7079d445bc6341c3
+  SQUIRREL_SHA: 16a26d504f3ee11161a86d4e3ebf3c0e5f2afbb1
+  ZAPDOS_SHA: 9eceffbc46048c3760bbfa9a7f1ca681ae35af1d
+
+jobs:
+  construction-gate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 80
+
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: P0 host mutation and temporal self-tests
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p issue234-m1-logs
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          python3 -m physics_harness.bootstrap_environment --self-test
+          python3 -m physics_harness.bootstrap ensure evidence --installer pip --manifest-out issue234-m1-logs/bootstrap-host.json
+          python3 -m physics_harness.bootstrap check evidence --manifest-out issue234-m1-logs/bootstrap-host-check.json
+          eval "$(python3 -m physics_harness.bootstrap_environment --profile evidence --shell bash)"
+          test "$PHYSICS_REPO_ROOT" = "$GITHUB_WORKSPACE"
+          python3 -m py_compile experiments/Issue234_m1_representation_gate/run.py
+          python3 -m experiments.Issue234_m1_representation_gate.run --self-test \
+            | tee issue234-m1-logs/p0-self-test.json
+
+      - name: Verify exact dependency and container identity
+        shell: bash
+        run: |
+          set -euxo pipefail
+          source physics_app/dependencies.lock
+          test "$MOOSE" = "$MOOSE_SHA"
+          test "$CRANE" = "$CRANE_SHA"
+          test "$SQUIRREL" = "$SQUIRREL_SHA"
+          test "$ZAPDOS" = "$ZAPDOS_SHA"
+          docker pull "$BUILD_BASE_REF"
+          test "$(docker image inspect "$BUILD_BASE_REF" --format '{{ index .Config.Labels "io.physics.moose.sha" }}')" = "$MOOSE_SHA"
+
+      - name: P1-P3 build audit control and bounded MultiApp construction
+        shell: bash
+        run: |
+          set -euxo pipefail
+          rm -rf issue234-m1-preflight issue234-m1-results issue234-t2-control
+          mkdir -p issue234-m1-logs
+          docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace \
+            -e GITHUB_SHA="$GITHUB_SHA" \
+            -v "$PWD:/workspace" "$BUILD_BASE_REF" -lc '
+              set -euxo pipefail
+              source /environment
+              export PYTHONPATH=/workspace
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+              git config --global --add safe.directory /workspace
+              test "$(git -C /workspace rev-parse HEAD)" = "$GITHUB_SHA"
+
+              python3 -m physics_harness.bootstrap ensure evidence --installer uv --manifest-out issue234-m1-logs/bootstrap-container.json
+              python3 -m physics_harness.bootstrap check evidence --manifest-out issue234-m1-logs/bootstrap-container-check.json
+              eval "$(python3 -m physics_harness.bootstrap_environment --profile evidence --shell bash)"
+              test "$PHYSICS_REPO_ROOT" = /workspace
+
+              make -C physics_app -j2
+              test -x physics_app/physics-opt
+
+              # P1: repeat the ownership/representation/mutation audit in the
+              # exact production build environment.
+              python3 -m experiments.Issue234_m1_representation_gate.run --self-test \
+                | tee issue234-m1-logs/p1-self-test.json
+
+              # P2: materialize both generated inputs and check each with the
+              # real production executable before any construction runtime.
+              python3 -m experiments.Issue234_m1_representation_gate.run \
+                --prepare-only \
+                --dt-e 1e-10 \
+                --results-root issue234-m1-preflight
+              physics_app/physics-opt -i issue234-m1-preflight/case/input.i --check-input \
+                > issue234-m1-logs/p2-parent-check-input.log 2>&1
+              physics_app/physics-opt -i issue234-m1-preflight/case/electron_sub.i --check-input \
+                > issue234-m1-logs/p2-child-check-input.log 2>&1
+
+              # P3 control: re-run the accepted T2 monolithic one-step path at
+              # this exact head before interpreting the new MultiApp result.
+              python3 -c "from pathlib import Path; from experiments.Issue217_sheath_energy_closure import run as w45; from experiments.Issue245_t2_molar_electron_energy import run as t2; from physics_harness.execution.cases import stage_case; text,meta=t2.build_t2_input(); audit=t2.audit_t2_input(text); assert audit['status']=='PASS', audit; case=Path('issue234-t2-control'); stage_case(w45.SOURCE, case, input_text=text, input_name='input.i', purge_directory_names=('.jitcache','checkpoint','checkpoints'), purge_patterns=('input_out*','*.log','*.e','*.exo')); w45.s5r._copy_runtime_assets(case)"
+              timeout 3600s physics_app/physics-opt -i issue234-t2-control/input.i \
+                > issue234-m1-logs/p3-t2-control-runtime.log 2>&1
+              python3 -m experiments.Issue245_t2_molar_electron_energy.p3_runtime_v2 \
+                --case-dir issue234-t2-control \
+                --input-file issue234-t2-control/input.i \
+                --summary issue234-m1-logs/p3-t2-control-summary.json
+
+              # P3 construction: one heavy interval with dt_e=1e-10. This is
+              # construction evidence only; it is not M1 timestep promotion.
+              python3 -m experiments.Issue234_m1_representation_gate.run \
+                --physics-opt physics_app/physics-opt \
+                --dt-e 1e-10 \
+                --results-root issue234-m1-results \
+                --timeout 1800
+              cat issue234-m1-results/summary.json
+            '
+
+      - name: Upload M1 construction evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: issue234-m1-representation-gate
+          path: |
+            issue234-m1-logs
+            issue234-m1-preflight
+            issue234-m1-results
+            issue234-t2-control/input.i
+            issue234-t2-control/input_out.csv
+          if-no-files-found: warn
+          retention-days: 14
