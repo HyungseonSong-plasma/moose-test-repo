@@ -1,6 +1,6 @@
 # Issue #234 fast electron subapp.
- One electron step uses the potential returned by the previous Poisson solve.
-// Heavy ion fields are AuxVariables frozen by the heavy parent over the whole parent interval.
+# One electron step uses the potential returned by the previous Poisson solve.
+# Heavy ion fields are AuxVariables frozen by the heavy parent over the whole parent interval.
 
 [Mesh]
   type = GeneratedMesh
