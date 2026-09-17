@@ -46,8 +46,10 @@ jobs:
           python3 -m physics_harness.bootstrap check evidence --manifest-out issue234-m1-logs/bootstrap-host-check.json
           eval "$(python3 -m physics_harness.bootstrap_environment --profile evidence --shell bash)"
           test "$PHYSICS_REPO_ROOT" = "$GITHUB_WORKSPACE"
-          python3 -m py_compile experiments/Issue234_m1_representation_gate/run.py
-          python3 -m experiments.Issue234_m1_representation_gate.run --self-test \
+          python3 -m py_compile \
+            experiments/Issue234_m1_representation_gate/run.py \
+            experiments/Issue234_m1_representation_gate/run_dependency_closure.py
+          python3 -m experiments.Issue234_m1_representation_gate.run_dependency_closure --self-test \
             | tee issue234-m1-logs/p0-self-test.json
 
       - name: Verify exact dependency and container identity
@@ -91,13 +93,14 @@ jobs:
               test -x physics_app/physics-opt
 
               # P1: repeat the ownership/representation/mutation audit in the
-              # exact production build environment.
-              python3 -m experiments.Issue234_m1_representation_gate.run --self-test \
+              # exact production build environment, including the bounded
+              # heavy-transient functor dependency-closure mutation.
+              python3 -m experiments.Issue234_m1_representation_gate.run_dependency_closure --self-test \
                 | tee issue234-m1-logs/p1-self-test.json
 
               # Materialize both generated inputs, then enforce parsed-functor
               # namespace preflight before entering physics-opt P2.
-              python3 -m experiments.Issue234_m1_representation_gate.run \
+              python3 -m experiments.Issue234_m1_representation_gate.run_dependency_closure \
                 --prepare-only \
                 --dt-e 1e-10 \
                 --results-root issue234-m1-preflight
@@ -126,7 +129,7 @@ jobs:
 
               # P3 construction: one heavy interval with dt_e=1e-10. This is
               # construction evidence only; it is not M1 timestep promotion.
-              python3 -m experiments.Issue234_m1_representation_gate.run \
+              python3 -m experiments.Issue234_m1_representation_gate.run_dependency_closure \
                 --physics-opt physics_app/physics-opt \
                 --dt-e 1e-10 \
                 --results-root issue234-m1-results \
