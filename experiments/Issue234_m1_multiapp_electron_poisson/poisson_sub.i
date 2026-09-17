@@ -1,5 +1,5 @@
 # Issue #234 nested Poisson subapp.
- Frozen electron + heavy-ion state is transferred before each solve.
+# Frozen electron + heavy-ion state is transferred before each solve.
 
 [Mesh]
   type = GeneratedMesh
