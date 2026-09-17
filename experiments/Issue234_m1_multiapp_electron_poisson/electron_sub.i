@@ -194,6 +194,15 @@
   []
 []
 
+[VectorPostprocessors]
+  [electron_profile]
+    type = ElementValueSampler
+    variable = 'electron_density_out potential_from_poisson'
+    sort_by = id
+    execute_on = 'INITIAL TIMESTEP_END'
+  []
+[]
+
 [Executioner]
   type = Transient
   scheme = implicit-euler
