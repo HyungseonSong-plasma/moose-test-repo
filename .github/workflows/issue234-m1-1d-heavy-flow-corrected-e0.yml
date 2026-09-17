@@ -1,0 +1,108 @@
+name: Issue-234 M1 1D heavy flow corrected diffusion E0
+
+on:
+  push:
+    branches:
+      - issue-234-m1-1d-heavy-surface-e0
+    paths:
+      - '.github/workflows/issue234-m1-1d-heavy-flow-corrected-e0.yml'
+      - 'experiments/Issue234_m1_1d_heavy_surface_e0/input_flow_corrected.i'
+      - 'experiments/Issue234_m1_1d_heavy_surface_e0/validate_flow_corrected.py'
+      - 'experiments/Issue91_real_qvt_r3/r3_e0/transport_data.txt'
+      - 'physics_app/include/fvkernels/PhysicsFVHeavyMassCorrectedDiffusion.h'
+      - 'physics_app/src/fvkernels/PhysicsFVHeavyMassCorrectedDiffusion.C'
+  workflow_dispatch:
+
+concurrency:
+  group: issue234-m1-1d-heavy-flow-corrected-e0-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+  MOOSE_SHA: 9f388366ccf38b9c34542ec5561198249fde0ac9
+  CRANE_SHA: ba26970cf419dcac563a20ed7079d445bc6341c3
+  SQUIRREL_SHA: 16a26d504f3ee11161a86d4e3ebf3c0e5f2afbb1
+  ZAPDOS_SHA: 9eceffbc46048c3760bbfa9a7f1ca681ae35af1d
+
+jobs:
+  heavy-flow-corrected-e0:
+    name: 1D E0 solved flow + corrected heavy diffusion + surface reactions
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Validate exact dependency identity
+        shell: bash
+        run: |
+          set -euxo pipefail
+          source physics_app/dependencies.lock
+          test "$MOOSE" = "$MOOSE_SHA"
+          test "$CRANE" = "$CRANE_SHA"
+          test "$SQUIRREL" = "$SQUIRREL_SHA"
+          test "$ZAPDOS" = "$ZAPDOS_SHA"
+          docker pull "$BUILD_BASE_REF"
+          test "$(docker image inspect "$BUILD_BASE_REF" --format '{{ index .Config.Labels "io.physics.moose.sha" }}')" = "$MOOSE_SHA"
+
+      - name: Build exact head, check input, and run discriminator
+        shell: bash
+        run: |
+          set -euxo pipefail
+          CONTAINER_SCRIPT=$(cat <<'BASH'
+          set -euxo pipefail
+          source /environment
+          git config --global --add safe.directory /workspace
+          export MOOSE_DIR=/opt/physics_vendor/moose
+          export CRANE_DIR=/opt/physics_vendor/crane
+          export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+          export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+          export METHOD=opt
+          export PYTHONPATH=/workspace
+          test "$(git -C /workspace rev-parse HEAD)" = "$GITHUB_SHA"
+
+          python3 -m py_compile /workspace/experiments/Issue234_m1_1d_heavy_surface_e0/validate_flow_corrected.py
+          python3 - <<'PY'
+          from experiments.Issue234_m1_1d_heavy_surface_e0.validate_flow_corrected import static_contract
+          checks = static_contract()
+          failed = sorted(k for k, ok in checks.items() if not ok)
+          assert not failed, failed
+          print({"STATIC_CONTRACT": "PASS", "checks": checks})
+          PY
+
+          test ! -e physics_app/physics-opt
+          make -C physics_app -j2
+          test -x physics_app/physics-opt
+
+          cd /workspace/experiments/Issue234_m1_1d_heavy_surface_e0
+          /workspace/physics_app/physics-opt --check-input -i input_flow_corrected.i | tee check_input_flow_corrected.log
+          /workspace/physics_app/physics-opt -i input_flow_corrected.i | tee runtime_flow_corrected.log
+          python3 validate_flow_corrected.py | tee validation_flow_corrected.log
+          test -f validation_flow_corrected_summary.json
+          BASH
+          )
+          docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace \
+            -e GITHUB_SHA="$GITHUB_SHA" \
+            -e MOOSE_SHA="$MOOSE_SHA" -e CRANE_SHA="$CRANE_SHA" \
+            -e SQUIRREL_SHA="$SQUIRREL_SHA" -e ZAPDOS_SHA="$ZAPDOS_SHA" \
+            -v "$PWD:/workspace" "$BUILD_BASE_REF" -lc "$CONTAINER_SCRIPT"
+
+      - name: Upload 1D flow/corrected-diffusion evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue234-m1-1d-heavy-flow-corrected-e0
+          path: |
+            experiments/Issue234_m1_1d_heavy_surface_e0/input_flow_corrected.i
+            experiments/Issue234_m1_1d_heavy_surface_e0/input_flow_corrected_out.csv
+            experiments/Issue234_m1_1d_heavy_surface_e0/input_flow_corrected_out.e
+            experiments/Issue234_m1_1d_heavy_surface_e0/check_input_flow_corrected.log
+            experiments/Issue234_m1_1d_heavy_surface_e0/runtime_flow_corrected.log
+            experiments/Issue234_m1_1d_heavy_surface_e0/validation_flow_corrected.log
+            experiments/Issue234_m1_1d_heavy_surface_e0/validation_flow_corrected_summary.json
+          if-no-files-found: warn
+          retention-days: 7
