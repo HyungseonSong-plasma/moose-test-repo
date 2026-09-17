@@ -1,11 +1,23 @@
 # Issue #234 bottom-up discriminator: 1D oxygen heavy flow + corrected diffusion
-# + surface reactions, with no electric motion and no SEE.
+# with no electric motion and no SEE.
 #
-# Gas: 10 mTorr = 1.33322 Pa, Tg = 300 K.
-# Flow: solved 1D incompressible u-p system; no imposed pressure drop/flow, so u=0 baseline.
-# Species: heavy advection + mass-average-corrected mixture diffusion + right-wall reactions.
-# Electron: diffusion + right-wall thermal loss only.
+# Gas: chamber pressure 10 mTorr = 1.33322 Pa, Tg = 300 K.
+# Flow: right pure-O2 20 sccm inlet, left absolute-pressure outlet at chamber pressure.
+# Species: heavy advection + mass-average-corrected mixture diffusion.
+# Electron: diffusion only in this open-end flow discriminator.
 # No Poisson, no electrostatic drift/migration, no volumetric chemistry, no SEE.
+#
+# NOTE: In 1D the two end faces are now open inlet/outlet boundaries, so solid-wall
+# surface reactions are intentionally not superposed on them. The previous wall-only
+# discriminator remains the surface-reaction evidence; combined flow + wall chemistry
+# requires a geometry with a distinct wall boundary.
+
+Q_sccm = 20
+M_inlet = 0.032
+Vm_std = 0.0224136
+outlet_pressure = 1.33322
+Q_std = ${fparse Q_sccm * 1e-6 / 60.0}
+inlet_mdot_value = ${fparse Q_std * M_inlet / Vm_std}
 
 [Mesh]
   type = GeneratedMesh
@@ -131,65 +143,6 @@
     D_mix_names = 'D_mix_O2 D_mix_O2s D_mix_O2p D_mix_O D_mix_Om D_mix_Op D_mix_Os'
     D_T_names = 'D_T_O2 D_T_O2s D_T_O2p D_T_O D_T_Om D_T_Op D_T_Os'
     kT_names = 'kT_O2 kT_O2s kT_O2p kT_O kT_Om kT_Op kT_Os'
-  []
-
-  [O_surface]
-    type = ADParsedFunctorMaterial
-    property_name = O_surface_mass_flux
-    functor_names = 'rho_const w_O T_g'
-    functor_symbols = 'rho w tg'
-    expression = '0.2*0.25*sqrt(8.0*8.31446*tg/(pi*0.016))*rho*w'
-  []
-  [O2s_surface]
-    type = ADParsedFunctorMaterial
-    property_name = O2s_surface_mass_flux
-    functor_names = 'rho_const w_O2s T_g'
-    functor_symbols = 'rho w tg'
-    expression = '1.0*0.25*sqrt(8.0*8.31446*tg/(pi*0.032))*rho*w'
-  []
-  [Os_surface]
-    type = ADParsedFunctorMaterial
-    property_name = Os_surface_mass_flux
-    functor_names = 'rho_const w_Os T_g'
-    functor_symbols = 'rho w tg'
-    expression = '0.2*0.25*sqrt(8.0*8.31446*tg/(pi*0.016))*rho*w'
-  []
-  [O2p_surface]
-    type = ADParsedFunctorMaterial
-    property_name = O2p_surface_mass_flux
-    functor_names = 'rho_const w_O2p T_g'
-    functor_symbols = 'rho w tg'
-    expression = '0.25*sqrt(8.0*8.31446*tg/(pi*0.032))*rho*w'
-  []
-  [Om_surface]
-    type = ADParsedFunctorMaterial
-    property_name = Om_surface_mass_flux
-    functor_names = 'rho_const w_Om T_g'
-    functor_symbols = 'rho w tg'
-    expression = '0.25*sqrt(8.0*8.31446*tg/(pi*0.016))*rho*w'
-  []
-  [Op_surface]
-    type = ADParsedFunctorMaterial
-    property_name = Op_surface_mass_flux
-    functor_names = 'rho_const w_Op T_g'
-    functor_symbols = 'rho w tg'
-    expression = '0.25*sqrt(8.0*8.31446*tg/(pi*0.016))*rho*w'
-  []
-
-  [O_return]
-    type = ADParsedFunctorMaterial
-    property_name = O_return_mass_flux_inward
-    functor_names = 'Op_surface_mass_flux Om_surface_mass_flux'
-    functor_symbols = 'op om'
-    expression = 'op+om'
-  []
-
-  [electron_thermal_surface]
-    type = ADParsedFunctorMaterial
-    property_name = electron_thermal_flux_molar_outward
-    functor_names = 'log_e mean_en_eV'
-    functor_symbols = 'loge mean_ev'
-    expression = '0.25*exp(loge)*sqrt(16.0*1.602176634e-19*mean_ev/(3.0*pi*9.1093837139e-31))'
   []
 []
 
@@ -350,98 +303,167 @@
 []
 
 [FVBCs]
-  [wall_u]
-    type = INSFVNoSlipWallBC
-    variable = u
-    boundary = 'left right'
-    function = 0
+  [inlet_mass]
+    type = WCNSFVMassFluxBC
+    variable = p
+    boundary = right
+    mdot_pp = inlet_mdot
+    area_pp = inlet_area
+    rho = rho_const
+    vel_x = u
+    direction = '-1 0 0'
   []
+  [inlet_u]
+    type = WCNSFVMomentumFluxBC
+    variable = u
+    boundary = right
+    mdot_pp = inlet_mdot
+    area_pp = inlet_area
+    rho = rho_const
+    vel_x = u
+    momentum_component = x
+    direction = '-1 0 0'
+  []
+
+  [inlet_O2s]
+    type = WCNSFVScalarFluxBC
+    variable = w_O2s
+    boundary = right
+    passive_scalar = w_O2s
+    scalar_flux_pp = inlet_mdot_O2s
+    area_pp = inlet_area
+    rho = rho_const
+    vel_x = u
+    direction = '-1 0 0'
+  []
+  [inlet_O2p]
+    type = WCNSFVScalarFluxBC
+    variable = w_O2p
+    boundary = right
+    passive_scalar = w_O2p
+    scalar_flux_pp = inlet_mdot_O2p
+    area_pp = inlet_area
+    rho = rho_const
+    vel_x = u
+    direction = '-1 0 0'
+  []
+  [inlet_O]
+    type = WCNSFVScalarFluxBC
+    variable = w_O
+    boundary = right
+    passive_scalar = w_O
+    scalar_flux_pp = inlet_mdot_O
+    area_pp = inlet_area
+    rho = rho_const
+    vel_x = u
+    direction = '-1 0 0'
+  []
+  [inlet_Om]
+    type = WCNSFVScalarFluxBC
+    variable = w_Om
+    boundary = right
+    passive_scalar = w_Om
+    scalar_flux_pp = inlet_mdot_Om
+    area_pp = inlet_area
+    rho = rho_const
+    vel_x = u
+    direction = '-1 0 0'
+  []
+  [inlet_Op]
+    type = WCNSFVScalarFluxBC
+    variable = w_Op
+    boundary = right
+    passive_scalar = w_Op
+    scalar_flux_pp = inlet_mdot_Op
+    area_pp = inlet_area
+    rho = rho_const
+    vel_x = u
+    direction = '-1 0 0'
+  []
+  [inlet_Os]
+    type = WCNSFVScalarFluxBC
+    variable = w_Os
+    boundary = right
+    passive_scalar = w_Os
+    scalar_flux_pp = inlet_mdot_Os
+    area_pp = inlet_area
+    rho = rho_const
+    vel_x = u
+    direction = '-1 0 0'
+  []
+
   [outlet_p]
     type = INSFVOutletPressureBC
     variable = p
-    boundary = right
-    function = 1.33322
-  []
-
-  [O_surface_loss]
-    type = FVFunctorNeumannBC
-    variable = w_O
-    boundary = right
-    functor = O_surface_mass_flux
-    factor = -1
-  []
-  [O2s_surface_loss]
-    type = FVFunctorNeumannBC
-    variable = w_O2s
-    boundary = right
-    functor = O2s_surface_mass_flux
-    factor = -1
-  []
-  [Os_surface_loss]
-    type = FVFunctorNeumannBC
-    variable = w_Os
-    boundary = right
-    functor = Os_surface_mass_flux
-    factor = -1
-  []
-  [O2p_surface_loss]
-    type = FVFunctorNeumannBC
-    variable = w_O2p
-    boundary = right
-    functor = O2p_surface_mass_flux
-    factor = -1
-  []
-  [Om_surface_loss]
-    type = FVFunctorNeumannBC
-    variable = w_Om
-    boundary = right
-    functor = Om_surface_mass_flux
-    factor = -1
-  []
-  [Op_surface_loss]
-    type = FVFunctorNeumannBC
-    variable = w_Op
-    boundary = right
-    functor = Op_surface_mass_flux
-    factor = -1
-  []
-  [O_neutralization_return]
-    type = FVFunctorNeumannBC
-    variable = w_O
-    boundary = right
-    functor = O_return_mass_flux_inward
-    factor = 1
-  []
-
-  [electron_thermal_loss]
-    type = FVFunctorNeumannBC
-    variable = log_e
-    boundary = right
-    functor = electron_thermal_flux_molar_outward
-    factor = -1
+    boundary = left
+    function = ${outlet_pressure}
   []
 []
 
 [Postprocessors]
+  [inlet_area]
+    type = AreaPostprocessor
+    boundary = right
+    execute_on = INITIAL
+  []
+  [inlet_mdot]
+    type = Receiver
+    default = ${inlet_mdot_value}
+  []
+  [inlet_mdot_O2s]
+    type = Receiver
+    default = 0
+  []
+  [inlet_mdot_O2p]
+    type = Receiver
+    default = 0
+  []
+  [inlet_mdot_O]
+    type = Receiver
+    default = 0
+  []
+  [inlet_mdot_Om]
+    type = Receiver
+    default = 0
+  []
+  [inlet_mdot_Op]
+    type = Receiver
+    default = 0
+  []
+  [inlet_mdot_Os]
+    type = Receiver
+    default = 0
+  []
+
+  [inlet_mass_actual]
+    type = VolumetricFlowRate
+    boundary = right
+    vel_x = u
+    advected_quantity = rho_const
+    rhie_chow_user_object = rc
+    execute_on = 'INITIAL TIMESTEP_END'
+  []
+  [outlet_mass_actual]
+    type = VolumetricFlowRate
+    boundary = left
+    vel_x = u
+    advected_quantity = rho_const
+    rhie_chow_user_object = rc
+    execute_on = 'INITIAL TIMESTEP_END'
+  []
+  [outlet_p_avg]
+    type = SideAverageFunctorPostprocessor
+    boundary = left
+    functor = p
+    restrict_to_functors_domain = true
+    execute_on = 'INITIAL TIMESTEP_END'
+  []
+
   [electron_inventory]
     type = ADElementIntegralFunctorPostprocessor
     functor = c_e_molar
     execute_on = 'INITIAL TIMESTEP_END'
   []
-  [electron_thermal_rate]
-    type = ADSideIntegralFunctorPostprocessor
-    boundary = right
-    functor = electron_thermal_flux_molar_outward
-    restrict_to_functors_domain = true
-    execute_on = 'INITIAL TIMESTEP_END'
-  []
-  [electron_thermal_integral]
-    type = TimeIntegratedPostprocessor
-    value = electron_thermal_rate
-    time_integration_scheme = 'implicit-euler'
-    execute_on = 'INITIAL TIMESTEP_END'
-  []
-
   [sum_w_min]
     type = ADElementExtremeFunctorValue
     functor = sum_w_functor
@@ -482,49 +504,6 @@
     type = ADElementExtremeFunctorValue
     functor = p
     value_type = max
-    execute_on = 'INITIAL TIMESTEP_END'
-  []
-
-  [O_surface_rate]
-    type = ADSideIntegralFunctorPostprocessor
-    boundary = right
-    functor = O_surface_mass_flux
-    restrict_to_functors_domain = true
-    execute_on = 'INITIAL TIMESTEP_END'
-  []
-  [O2s_surface_rate]
-    type = ADSideIntegralFunctorPostprocessor
-    boundary = right
-    functor = O2s_surface_mass_flux
-    restrict_to_functors_domain = true
-    execute_on = 'INITIAL TIMESTEP_END'
-  []
-  [Os_surface_rate]
-    type = ADSideIntegralFunctorPostprocessor
-    boundary = right
-    functor = Os_surface_mass_flux
-    restrict_to_functors_domain = true
-    execute_on = 'INITIAL TIMESTEP_END'
-  []
-  [O2p_surface_rate]
-    type = ADSideIntegralFunctorPostprocessor
-    boundary = right
-    functor = O2p_surface_mass_flux
-    restrict_to_functors_domain = true
-    execute_on = 'INITIAL TIMESTEP_END'
-  []
-  [Om_surface_rate]
-    type = ADSideIntegralFunctorPostprocessor
-    boundary = right
-    functor = Om_surface_mass_flux
-    restrict_to_functors_domain = true
-    execute_on = 'INITIAL TIMESTEP_END'
-  []
-  [Op_surface_rate]
-    type = ADSideIntegralFunctorPostprocessor
-    boundary = right
-    functor = Op_surface_mass_flux
-    restrict_to_functors_domain = true
     execute_on = 'INITIAL TIMESTEP_END'
   []
 []
