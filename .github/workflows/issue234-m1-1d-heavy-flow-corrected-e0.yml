@@ -9,8 +9,7 @@ on:
       - 'experiments/Issue234_m1_1d_heavy_surface_e0/input_flow_corrected.i'
       - 'experiments/Issue234_m1_1d_heavy_surface_e0/validate_flow_corrected.py'
       - 'experiments/Issue91_real_qvt_r3/r3_e0/transport_data.txt'
-      - 'physics_app/include/fvkernels/PhysicsFVHeavyMassCorrectedDiffusion.h'
-      - 'physics_app/src/fvkernels/PhysicsFVHeavyMassCorrectedDiffusion.C'
+      - 'physics_app/**'
   workflow_dispatch:
 
 concurrency:
