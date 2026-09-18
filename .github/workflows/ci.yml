@@ -164,3 +164,39 @@ jobs:
             echo "ORDINARY_CI_REBUILDS_MOOSE_STACK=false"
             echo "ORDINARY_CI_COMPILES_PHYSICS_APPLICATION=false"
           }
+
+  central-mutation-qualification:
+    name: Central repository-mutation qualification
+    if: github.event_name == 'pull_request' && github.head_ref == 'issue-270-central-mutation-adoption'
+    needs: [validate, runtime-smoke]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+      - name: Execute central repository mutation
+        id: central_mutation
+        uses: HyungseonSong-plasma/chatgpt-operation/.github/actions/repository-mutation@71f8faf51cb5060ae8173868e816261f65215193
+        with:
+          manifest: automation/mutations/issue270-central-adoption.json
+          policy: .chatgpt-operation.json
+          repository: ${{ github.repository }}
+          github-token: ${{ github.token }}
+          current-run-id: ${{ github.run_id }}
+          result-path: central-mutation-result.json
+      - name: Verify central mutation result
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "${{ steps.central_mutation.outputs.status }}" in
+            PASS|NO_MUTATION_NEEDED) ;;
+            *) exit 1 ;;
+          esac
+          test -n "${{ steps.central_mutation.outputs.operation-id }}"
+          test -f central-mutation-result.json
