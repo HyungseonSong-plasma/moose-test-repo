@@ -3,16 +3,28 @@
   "repository": "HyungseonSong-plasma/moose-test-repo",
   "mutation": {
     "allow": {
-      "file": ["create"],
+      "file": [
+        "update"
+      ],
       "branch": []
     },
     "file_paths": {
-      "allow": ["docs/provenance/central-repository-mutation-adoption.md"],
-      "deny": [".github/**", "skills/**", "physics_app/**"]
+      "allow": [
+        "docs/provenance/central-repository-mutation-adoption.md"
+      ],
+      "deny": [
+        ".github/**",
+        "skills/**",
+        "physics_app/**"
+      ]
     },
     "branch_names": {
-      "allow": ["issue-270-central-mutation-adoption"],
-      "deny": ["main"]
+      "allow": [
+        "issue-270-central-mutation-adoption"
+      ],
+      "deny": [
+        "main"
+      ]
     }
   },
   "validation_gate": {
