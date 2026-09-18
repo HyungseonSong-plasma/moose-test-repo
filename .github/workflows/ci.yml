@@ -165,38 +165,41 @@ jobs:
             echo "ORDINARY_CI_COMPILES_PHYSICS_APPLICATION=false"
           }
 
-  central-mutation-qualification:
-    name: Central repository-mutation qualification
+  central-code-qualification:
+    name: Central repository-mutation code qualification
     if: github.event_name == 'pull_request' && github.head_ref == 'issue-270-central-mutation-adoption'
     needs: [validate, runtime-smoke]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
-      contents: write
-      actions: read
+      contents: read
     steps:
       - name: Checkout exact PR head
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 1
-      - name: Execute central repository mutation
-        id: central_mutation
-        uses: HyungseonSong-plasma/chatgpt-operation/.github/actions/repository-mutation@71f8faf51cb5060ae8173868e816261f65215193
-        with:
-          manifest: automation/mutations/issue270-central-adoption.json
-          policy: .chatgpt-operation.json
-          repository: ${{ github.repository }}
-          github-token: ${{ github.token }}
-          current-run-id: ${{ github.run_id }}
-          result-path: central-mutation-result.json
-      - name: Verify central mutation result
+      - name: Verify exact central source blobs
         shell: bash
         run: |
           set -euo pipefail
-          case "${{ steps.central_mutation.outputs.status }}" in
-            PASS|NO_MUTATION_NEEDED) ;;
-            *) exit 1 ;;
-          esac
-          test -n "${{ steps.central_mutation.outputs.operation-id }}"
-          test -f central-mutation-result.json
+          test "$(git hash-object qualification/chatgpt-operation/src/chatgpt_operation/__init__.py)" = "c3b5462f035d742e77a0ccd72208bcf30264d5bb"
+          test "$(git hash-object qualification/chatgpt-operation/src/chatgpt_operation/cli.py)" = "191062926c359b3f205a200f4e9cac8627ab6a47"
+          test "$(git hash-object qualification/chatgpt-operation/src/chatgpt_operation/source.py)" = "809a89fde46f0a1bede75050bde8808e1f19146b"
+          test "$(git hash-object qualification/chatgpt-operation/src/chatgpt_operation/repository/__init__.py)" = "54cb5a52c4ad992faba0d351440dc82c592adbd8"
+          test "$(git hash-object qualification/chatgpt-operation/src/chatgpt_operation/repository/mutation.py)" = "c32948aa66fa719d29cd03efadb9267b9ecd6452"
+          test "$(git hash-object qualification/chatgpt-operation/tests/test_repository_mutation.py)" = "f7fb9bbf82a52ea6f3164ab10283a6a861d9ec11"
+      - name: Compile exact central package snapshot
+        run: python3 -m compileall -q qualification/chatgpt-operation/src
+      - name: Run exact central mutation tests
+        env:
+          PYTHONPATH: qualification/chatgpt-operation/src
+        run: python3 -m unittest discover -s qualification/chatgpt-operation/tests -v
+      - name: Verify exact central CLI surface
+        env:
+          PYTHONPATH: qualification/chatgpt-operation/src
+        run: |
+          python3 -m chatgpt_operation.cli --help
+          python3 -m chatgpt_operation.cli repository mutate --help
+          python3 -m chatgpt_operation.cli source verify --help
+
