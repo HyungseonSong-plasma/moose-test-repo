@@ -203,7 +203,7 @@ def main() -> None:
         "profile_count": len(profiles),
         "profiles": profiles,
         "science_claim": False,
-        "claim_scope": "20-step fixed-chi runtime-dt audit",
+        "claim_scope": "fixed-density dt-over-relaxation-time discriminator",
     }
     out = ROOT / "density_scan_summary.json"
     out.write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n")
@@ -211,7 +211,7 @@ def main() -> None:
 
     if not runtime_contract_pass:
         raise SystemExit(
-            "runtime contract failed: requested dt / 20-step horizon or final profile was not preserved"
+            "runtime contract failed: requested dt / fixed-horizon step contract or final profile was not preserved"
         )
 
 

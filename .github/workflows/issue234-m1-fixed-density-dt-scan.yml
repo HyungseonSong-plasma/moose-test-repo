@@ -1,0 +1,176 @@
+name: Issue-234 M1 fixed-density dt-over-tau discriminator
+
+on:
+  push:
+    branches:
+      - issue-234-m1-fixed-density-dt-scan
+    paths:
+      - '.github/workflows/issue234-m1-fixed-density-dt-scan.yml'
+      - 'experiments/Issue234_m1_multiapp_electron_poisson/**'
+      - 'experiments/Issue91_real_qvt_r3/r3_e0/transport_data.txt'
+      - 'physics_app/**'
+  workflow_dispatch:
+
+concurrency:
+  group: issue234-m1-fixed-density-dt-scan-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+  MOOSE_SHA: 9f388366ccf38b9c34542ec5561198249fde0ac9
+  CRANE_SHA: ba26970cf419dcac563a20ed7079d445bc6341c3
+  SQUIRREL_SHA: 16a26d504f3ee11161a86d4e3ebf3c0e5f2afbb1
+  ZAPDOS_SHA: 9eceffbc46048c3760bbfa9a7f1ca681ae35af1d
+  NE0: '1.0e16'
+  TAU_EPSILON: '5.665079002261789e-13'
+  TARGET_END: '1.1330158004523578e-11'
+
+jobs:
+  dt-scan:
+    name: fixed-ne dt/tau ${{ matrix.label }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: chi0p1
+            chi: '0.1'
+            dt_e: '5.665079002261789e-14'
+            steps: '200'
+          - label: chi0p5
+            chi: '0.5'
+            dt_e: '2.8325395011308946e-13'
+            steps: '40'
+          - label: chi1
+            chi: '1.0'
+            dt_e: '5.665079002261789e-13'
+            steps: '20'
+          - label: chi2
+            chi: '2.0'
+            dt_e: '1.1330158004523578e-12'
+            steps: '10'
+          - label: chi5
+            chi: '5.0'
+            dt_e: '2.8325395011308946e-12'
+            steps: '4'
+          - label: chi10
+            chi: '10.0'
+            dt_e: '5.665079002261789e-12'
+            steps: '2'
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Validate exact dependency identity
+        shell: bash
+        run: |
+          set -euxo pipefail
+          source physics_app/dependencies.lock
+          test "$MOOSE" = "$MOOSE_SHA"
+          test "$CRANE" = "$CRANE_SHA"
+          test "$SQUIRREL" = "$SQUIRREL_SHA"
+          test "$ZAPDOS" = "$ZAPDOS_SHA"
+          docker pull "$BUILD_BASE_REF"
+          test "$(docker image inspect "$BUILD_BASE_REF" --format '{{ index .Config.Labels "io.physics.moose.sha" }}')" = "$MOOSE_SHA"
+
+      - name: Generate fixed-density dt/tau case and HIT preflight
+        shell: bash
+        env:
+          DT_E: ${{ matrix.dt_e }}
+          EXPECTED_STEPS: ${{ matrix.steps }}
+          CHI: ${{ matrix.chi }}
+        run: |
+          set -euxo pipefail
+          PRECHECK=$(cat <<'BASH'
+          set -euxo pipefail
+          source /environment
+          HIT=/opt/physics_vendor/moose/framework/contrib/hit/hit
+          test -x "$HIT"
+          cd /workspace/experiments/Issue234_m1_multiapp_electron_poisson
+          python3 -m py_compile build_density_case.py analyze_density_case.py
+          python3 build_density_case.py --ne "$NE0" --dt-e "$DT_E" --steps "$EXPECTED_STEPS"
+          python3 - <<'PY'
+          import json, math, os
+          from pathlib import Path
+          p = Path("density_scan_parameters.json")
+          d = json.loads(p.read_text())
+          d["tau_dielectric_s"] = float(os.environ["TAU_EPSILON"])
+          d["requested_dt_over_tau"] = float(os.environ["CHI"])
+          d["fixed_target_end_s"] = float(os.environ["TARGET_END"])
+          if not math.isclose(d["expected_end_time_s"], d["fixed_target_end_s"], rel_tol=1e-12, abs_tol=1e-30):
+              raise SystemExit(f"fixed horizon mismatch: {d['expected_end_time_s']} vs {d['fixed_target_end_s']}")
+          p.write_text(json.dumps(d, indent=2, sort_keys=True) + "\n")
+          PY
+          cat density_scan_parameters.json
+          for input in poisson_sub_scan.i electron_sub_scan.i heavy_parent_scan.i; do
+            echo "HIT syntax check: $input"
+            "$HIT" format "$input" >/dev/null
+          done
+          BASH
+          )
+          docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace             -e NE0="$NE0" -e DT_E="$DT_E" -e EXPECTED_STEPS="$EXPECTED_STEPS"             -e CHI="$CHI" -e TAU_EPSILON="$TAU_EPSILON" -e TARGET_END="$TARGET_END"             -v "$PWD:/workspace" "$BUILD_BASE_REF" -lc "$PRECHECK"
+
+      - name: Build exact head and run fixed-density discriminator
+        shell: bash
+        env:
+          DT_E: ${{ matrix.dt_e }}
+          EXPECTED_STEPS: ${{ matrix.steps }}
+          CHI: ${{ matrix.chi }}
+          CASE_LABEL: ${{ matrix.label }}
+        run: |
+          set -euxo pipefail
+          CONTAINER_SCRIPT=$(cat <<'BASH'
+          set -euxo pipefail
+          source /environment
+          git config --global --add safe.directory /workspace
+          export MOOSE_DIR=/opt/physics_vendor/moose
+          export CRANE_DIR=/opt/physics_vendor/crane
+          export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+          export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+          export METHOD=opt
+          export PYTHONPATH=/workspace
+          test "$(git -C /workspace rev-parse HEAD)" = "$GITHUB_SHA"
+
+          cd /workspace
+          test ! -e physics_app/physics-opt
+          make -C physics_app -j2
+          test -x physics_app/physics-opt
+
+          cd /workspace/experiments/Issue234_m1_multiapp_electron_poisson
+          /workspace/physics_app/physics-opt --check-input -i poisson_sub_scan.i | tee check_poisson_scan.log
+          /workspace/physics_app/physics-opt --check-input -i electron_sub_scan.i | tee check_electron_scan.log
+          /workspace/physics_app/physics-opt --check-input -i heavy_parent_scan.i | tee check_parent_scan.log
+
+          set +e
+          /workspace/physics_app/physics-opt -i heavy_parent_scan.i | tee runtime_density_scan.log
+          runtime_rc=${PIPESTATUS[0]}
+          set -e
+
+          echo "runtime_rc=$runtime_rc" > density_scan_runtime_status.txt
+          python3 analyze_density_case.py             --ne "$NE0"             --dt-e "$DT_E"             --expected-steps "$EXPECTED_STEPS"             --runtime-rc "$runtime_rc" | tee density_scan_analysis.log
+          test -s density_scan_summary.json
+          BASH
+          )
+          docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace             -e GITHUB_SHA="$GITHUB_SHA"             -e NE0="$NE0" -e DT_E="$DT_E" -e EXPECTED_STEPS="$EXPECTED_STEPS"             -e CHI="$CHI" -e CASE_LABEL="$CASE_LABEL"             -e MOOSE_SHA="$MOOSE_SHA" -e CRANE_SHA="$CRANE_SHA"             -e SQUIRREL_SHA="$SQUIRREL_SHA" -e ZAPDOS_SHA="$ZAPDOS_SHA"             -v "$PWD:/workspace" "$BUILD_BASE_REF" -lc "$CONTAINER_SCRIPT"
+
+      - name: Upload fixed-density dt/tau evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue234-fixed-ne1e16-${{ matrix.label }}
+          path: |
+            experiments/Issue234_m1_multiapp_electron_poisson/*_scan.i
+            experiments/Issue234_m1_multiapp_electron_poisson/density_scan_parameters.json
+            experiments/Issue234_m1_multiapp_electron_poisson/density_scan_summary.json
+            experiments/Issue234_m1_multiapp_electron_poisson/density_scan_runtime_status.txt
+            experiments/Issue234_m1_multiapp_electron_poisson/*scan*.log
+            experiments/Issue234_m1_multiapp_electron_poisson/heavy_parent_scan_out*.csv
+            experiments/Issue234_m1_multiapp_electron_poisson/heavy_parent_scan_out*.e
+          if-no-files-found: warn
+          retention-days: 7
