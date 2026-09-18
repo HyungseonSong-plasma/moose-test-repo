@@ -74,9 +74,9 @@ def check(root: Path) -> list[str]:
         (workflow_dir / "refactor.yml").read_text(encoding="utf-8")
         if (workflow_dir / "refactor.yml").is_file() else ""
     )
-    if "Issue_\${{ inputs.issue }}_experiments\${{ inputs.sequence }}" not in experiment:
+    if "Issue_${{ inputs.issue }}_experiments${{ inputs.sequence }}" not in experiment:
         errors.append("experiment.yml: canonical dynamic run-name missing")
-    if "Issue_\${{ inputs.issue }}_refactor\${{ inputs.sequence }}" not in refactor:
+    if "Issue_${{ inputs.issue }}_refactor${{ inputs.sequence }}" not in refactor:
         errors.append("refactor.yml: canonical dynamic run-name missing")
     return errors
 
@@ -88,9 +88,9 @@ def self_test() -> int:
         for name, allowed_events in ENTRYPOINTS.items():
             body = "name: x\n"
             if name == "experiment.yml":
-                body += "run-name: Issue_\${{ inputs.issue }}_experiments\${{ inputs.sequence }}\n"
+                body += "run-name: Issue_${{ inputs.issue }}_experiments${{ inputs.sequence }}\n"
             if name == "refactor.yml":
-                body += "run-name: Issue_\${{ inputs.issue }}_refactor\${{ inputs.sequence }}\n"
+                body += "run-name: Issue_${{ inputs.issue }}_refactor${{ inputs.sequence }}\n"
             body += "on:\n" + "".join(
                 f"  {event}:\n" for event in sorted(allowed_events)
             )

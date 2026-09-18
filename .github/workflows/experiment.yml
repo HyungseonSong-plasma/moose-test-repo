@@ -1,5 +1,5 @@
 name: Governed experiment entrypoint
-run-name: Issue_\${{ inputs.issue }}_experiments\${{ inputs.sequence }}
+run-name: Issue_${{ inputs.issue }}_experiments${{ inputs.sequence }}
 
 on:
   workflow_dispatch:
@@ -25,7 +25,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: experiment-\${{ inputs.issue }}-\${{ inputs.sequence }}-\${{ inputs.base_sha }}
+  group: experiment-${{ inputs.issue }}-${{ inputs.sequence }}-${{ inputs.base_sha }}
   cancel-in-progress: false
 
 jobs:
@@ -33,10 +33,10 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     env:
-      ISSUE: \${{ inputs.issue }}
-      SEQUENCE: \${{ inputs.sequence }}
-      MANIFEST_INPUT: \${{ inputs.manifest }}
-      BASE_SHA: \${{ inputs.base_sha }}
+      ISSUE: ${{ inputs.issue }}
+      SEQUENCE: ${{ inputs.sequence }}
+      MANIFEST_INPUT: ${{ inputs.manifest }}
+      BASE_SHA: ${{ inputs.base_sha }}
     steps:
       - name: Checkout control plane
         uses: actions/checkout@v4
@@ -47,7 +47,7 @@ jobs:
       - name: Checkout exact experiment source
         uses: actions/checkout@v4
         with:
-          ref: \${{ inputs.base_sha }}
+          ref: ${{ inputs.base_sha }}
           path: target
           fetch-depth: 1
 
@@ -74,7 +74,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Issue_\${{ inputs.issue }}_experiments\${{ inputs.sequence }}-evidence
+          name: Issue_${{ inputs.issue }}_experiments${{ inputs.sequence }}-evidence
           path: workflow-results/**
           if-no-files-found: warn
           retention-days: 30
