@@ -29,9 +29,6 @@ EXPECTED_TRANSITIONAL_MOOSE_EDGES = {
     ("physics_harness/application/gateway.py", MOOSE_PREFIX),
 }
 
-# These categories are owned by simulation-ontology/sol-adapter-runtime. Match
-# path components by normalized tokens so spelling variants cannot create a
-# second Physics-local owner under a slightly different filename.
 FORBIDDEN_LOCAL_OWNER_TOKEN_GROUPS = (
     frozenset({"adapter", "runtime"}),
     frozenset({"adapter", "transport"}),
@@ -78,7 +75,6 @@ def _import_modules_from_tree(tree: ast.AST, package: tuple[str, ...]) -> set[st
             continue
         if not isinstance(node, ast.ImportFrom):
             continue
-
         if node.level:
             if node.level > len(package):
                 continue
@@ -120,16 +116,20 @@ def _is_moose_import(module: str) -> bool:
 
 
 def _path_tokens(path: Path) -> set[str]:
-    """Tokenize path components across separators and CamelCase boundaries."""
+    """Tokenize path components across separators, case, and known compounds."""
     tokens: set[str] = set()
     for part in path.parts:
         split_case = re.sub(r"(?<=[a-z0-9])(?=[A-Z])", "_", part)
         split_acronym = re.sub(r"(?<=[A-Z])(?=[A-Z][a-z])", "_", split_case)
-        tokens.update(
-            token
-            for token in re.split(r"[^a-z0-9]+", split_acronym.lower())
-            if token
-        )
+        for token in re.split(r"[^a-z0-9]+", split_acronym.lower()):
+            if not token:
+                continue
+            if token == "adapters":
+                tokens.add("adapter")
+            elif token == "jsonrpc":
+                tokens.update(("json", "rpc"))
+            else:
+                tokens.add(token)
     return tokens
 
 
@@ -158,7 +158,6 @@ def _semantic_moose_edges() -> set[tuple[str, str]]:
     for path in _semantic_paths():
         for module in _import_modules(path):
             if _is_moose_import(module):
-                # Normalize submodule/alias imports to the architectural owner.
                 edges.add((_rel(path), MOOSE_PREFIX))
     return edges
 
@@ -179,31 +178,41 @@ def _annotation_identifiers(node: ast.AST | None) -> set[str]:
         elif isinstance(child, ast.Attribute):
             names.add(child.attr)
         elif isinstance(child, ast.Constant) and isinstance(child.value, str):
-            names.update(
-                token
-                for token in re.findall(r"[A-Za-z_][A-Za-z0-9_]*", child.value)
-            )
+            names.update(re.findall(r"[A-Za-z_][A-Za-z0-9_]*", child.value))
     return names
 
 
 def _state_target_names(node: ast.AST) -> set[str]:
-    """Extract state names written by assignments, including self.__dict__ keys."""
+    """Extract only ExecutionPlan instance-state names written by an assignment."""
+    names: set[str] = set()
+    if isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name) and node.value.id == "self":
+        names.add(node.attr)
+    elif (
+        isinstance(node, ast.Subscript)
+        and isinstance(node.value, ast.Attribute)
+        and isinstance(node.value.value, ast.Name)
+        and node.value.value.id == "self"
+        and node.value.attr == "__dict__"
+        and isinstance(node.slice, ast.Constant)
+        and isinstance(node.slice.value, str)
+    ):
+        names.add(node.slice.value)
+    elif isinstance(node, (ast.Tuple, ast.List)):
+        for element in node.elts:
+            names.update(_state_target_names(element))
+    return names
+
+
+def _expression_identifiers(node: ast.AST | None) -> set[str]:
+    """Extract constructor/type identities referenced by an assigned expression."""
+    if node is None:
+        return set()
     names: set[str] = set()
     for child in ast.walk(node):
         if isinstance(child, ast.Name):
             names.add(child.id)
-        elif isinstance(child, ast.Attribute) and isinstance(child.value, ast.Name) and child.value.id == "self":
+        elif isinstance(child, ast.Attribute):
             names.add(child.attr)
-        elif (
-            isinstance(child, ast.Subscript)
-            and isinstance(child.value, ast.Attribute)
-            and isinstance(child.value.value, ast.Name)
-            and child.value.value.id == "self"
-            and child.value.attr == "__dict__"
-        ):
-            slice_node = child.slice
-            if isinstance(slice_node, ast.Constant) and isinstance(slice_node.value, str):
-                names.add(slice_node.value)
     return names
 
 
@@ -236,21 +245,27 @@ def _execution_plan_conflations_from_tree(tree: ast.Module) -> list[str]:
         if _identity_key(name) in FORBIDDEN_EXECUTION_PLAN_IDENTITY_KEYS:
             found.add(name)
 
+    def inspect_assignment(targets: list[ast.AST], value: ast.AST | None) -> None:
+        state_names = {name for target in targets for name in _state_target_names(target)}
+        for name in state_names:
+            inspect(name)
+        if state_names:
+            for name in _expression_identifiers(value):
+                inspect(name)
+
     for base in plan.bases:
         for name in _annotation_identifiers(base):
             inspect(name)
 
     for statement in plan.body:
         if isinstance(statement, ast.AnnAssign):
-            for name in _state_target_names(statement.target):
-                inspect(name)
+            inspect_assignment([statement.target], statement.value)
             for name in _annotation_identifiers(statement.annotation):
                 inspect(name)
-        elif isinstance(statement, (ast.Assign, ast.AugAssign)):
-            targets = statement.targets if isinstance(statement, ast.Assign) else [statement.target]
-            for target in targets:
-                for name in _state_target_names(target):
-                    inspect(name)
+        elif isinstance(statement, ast.Assign):
+            inspect_assignment(list(statement.targets), statement.value)
+        elif isinstance(statement, ast.AugAssign):
+            inspect_assignment([statement.target], statement.value)
         elif isinstance(statement, (ast.FunctionDef, ast.AsyncFunctionDef)):
             for arg in (*statement.args.posonlyargs, *statement.args.args, *statement.args.kwonlyargs):
                 for name in _annotation_identifiers(arg.annotation):
@@ -266,21 +281,22 @@ def _execution_plan_conflations_from_tree(tree: ast.Module) -> list[str]:
 
             for child in ast.walk(statement):
                 if isinstance(child, ast.AnnAssign):
-                    for name in _state_target_names(child.target):
-                        inspect(name)
+                    inspect_assignment([child.target], child.value)
                     for name in _annotation_identifiers(child.annotation):
                         inspect(name)
-                elif isinstance(child, (ast.Assign, ast.AugAssign, ast.NamedExpr)):
-                    if isinstance(child, ast.Assign):
-                        targets = child.targets
-                    else:
-                        targets = [child.target]
-                    for target in targets:
-                        for name in _state_target_names(target):
-                            inspect(name)
+                elif isinstance(child, ast.Assign):
+                    inspect_assignment(list(child.targets), child.value)
+                elif isinstance(child, ast.AugAssign):
+                    inspect_assignment([child.target], child.value)
+                elif isinstance(child, ast.NamedExpr):
+                    inspect_assignment([child.target], child.value)
                 elif isinstance(child, ast.Call):
-                    for name in _call_state_names(child):
+                    state_names = _call_state_names(child)
+                    for name in state_names:
                         inspect(name)
+                    if state_names and len(child.args) >= 3:
+                        for name in _expression_identifiers(child.args[2]):
+                            inspect(name)
     return sorted(found)
 
 
@@ -337,6 +353,8 @@ def _self_test() -> list[str]:
         "AdapterRuntime.py",
         "adapterRuntime.py",
         "JsonRpcTransport.py",
+        "adapters/runtime.py",
+        "jsonrpc_transport.py",
     )
     for name in owner_cases:
         if not _is_forbidden_local_owner(Path(name)):
@@ -358,6 +376,7 @@ def _self_test() -> list[str]:
         "        self.__dict__[\"adapter_protocol_version\"] = \"0.2\"\n"
         "    def attach(self, payload: \"MooseCaseIR\"):\n"
         "        self.public_contract_version = \"0.2\"\n"
+        "        self.payload = MappingPlan()\n"
         "        setattr(self, \"realization_spec\", payload)\n"
     )
     conflations = _execution_plan_conflations_from_tree(synthetic_plan)
@@ -372,6 +391,15 @@ def _self_test() -> list[str]:
     ):
         if expected not in conflations:
             errors.append(f"self-test missed ExecutionPlan identity escape path: {expected}")
+
+    harmless_local = ast.parse(
+        "class ExecutionPlan:\n"
+        "    def attach(self):\n"
+        "        mapping_plan = build()\n"
+        "        return mapping_plan\n"
+    )
+    if _execution_plan_conflations_from_tree(harmless_local):
+        errors.append("self-test treated method-local identity spelling as ExecutionPlan state")
 
     harmless_doc = ast.parse(
         "class ExecutionPlan:\n"
