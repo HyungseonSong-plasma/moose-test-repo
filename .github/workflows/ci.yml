@@ -25,6 +25,8 @@ jobs:
           python3 skills/workflow/workflow_guard.py --self-test
           python3 skills/workflow/workflow_guard.py --check
           python3 skills/workflow/run_work.py --self-test
+      - name: Validate repository mutation skill
+        run: python3 skills/repository/mutation.py --self-test
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
