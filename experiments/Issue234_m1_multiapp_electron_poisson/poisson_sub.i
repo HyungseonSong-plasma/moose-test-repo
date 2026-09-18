@@ -78,10 +78,10 @@
 []
 
 [FVBCs]
-  [left_ground]
+  [right_ground]
     type = FVDirichletBC
     variable = potential_plasma
-    boundary = left
+    boundary = right
     value = 0.0
   []
 []
