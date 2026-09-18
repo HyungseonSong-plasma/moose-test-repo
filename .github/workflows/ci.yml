@@ -203,3 +203,45 @@ jobs:
           python3 -m chatgpt_operation.cli repository mutate --help
           python3 -m chatgpt_operation.cli source verify --help
 
+  central-action-qualification:
+    name: Central repository-mutation private action qualification
+    if: github.event_name == 'pull_request' && github.head_ref == 'issue-270-central-mutation-adoption'
+    needs: [validate, runtime-smoke, central-code-qualification]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+      - name: Execute exact central private action
+        id: central_mutation
+        uses: HyungseonSong-plasma/chatgpt-operation/.github/actions/repository-mutation@2719adaca20bcb5833752e4ad8e69a2d136e56b6
+        with:
+          manifest: automation/mutations/issue270-central-adoption.json
+          policy: .chatgpt-operation.json
+          repository: ${{ github.repository }}
+          github-token: ${{ github.token }}
+          current-run-id: ${{ github.run_id }}
+          result-path: central-mutation-result.json
+      - name: Verify central private action result
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "${{ steps.central_mutation.outputs.status }}" in
+            PASS|NO_MUTATION_NEEDED) ;;
+            *) exit 1 ;;
+          esac
+          test -n "${{ steps.central_mutation.outputs.operation-id }}"
+          test -f central-mutation-result.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          result=json.loads(Path("central-mutation-result.json").read_text(encoding="utf-8"))
+          assert result["status"] in {"PASS","NO_MUTATION_NEEDED"}
+          assert len(result["operation_id"]) == 64
+          PY
