@@ -183,17 +183,47 @@ read-back verification
 PASS | NO_MUTATION_NEEDED | HARD_STOP
 ```
 
-Initial generic resource support:
+Portable v1 distinguishes operations with a server-enforced compare-and-swap identity from operations that only support a read-then-write check.
 
-| Resource | Actions | Identity |
+| Resource | v1 default | Concurrency property |
 |---|---|---|
-| file | create/update/delete | absence or blob SHA |
-| branch | create/move/delete | absence or exact head SHA |
-| issue | update/close/reopen | exact updated-at identity |
+| file | create/update/delete | GitHub Contents update/delete uses the expected blob SHA |
+| branch create | supported | expected absence |
+| branch move | disabled by default | no server-side expected-old-SHA precondition; may be enabled only under consumer-enforced exclusive-writer serialization |
+| branch delete | unsupported in v1 | no server-side expected-SHA delete precondition; read-then-delete is TOCTOU-vulnerable |
+| issue update/close/reopen | unsupported in v1 | REST issue PATCH is not conditional on the prior `updated_at`; read-then-PATCH can overwrite a concurrent edit |
 
-Branch movement remains fast-forward only by default.
+The portable engine must not claim exact-identity safety for an API that does not provide a server-side conditional mutation primitive.
+
+If a future consumer enables a non-CAS mutation through an external serialization mechanism, that serialization becomes part of the explicit consumer safety contract and must be validated independently.
+
+Any issue-like response containing GitHub's `pull_request` marker must be rejected by an `issue` resource handler. Pull requests are a distinct resource class and are not implicitly authorized by issue permissions.
 
 History rewrite is not part of v1.
+
+## 7A. Review-derived hard requirements from the existing prototype
+
+Greptile's review of the current `moose-test-repo` mutation prototype identified several portability/security issues that become hard requirements for the central design:
+
+1. **Trusted control plane and mutation target must be separate identities.**  
+   The code that receives a write-scoped token must come from the consumer's immutable central-skill pin. A mutation manifest, target commit, or caller-supplied source SHA must never select executable control-plane code.
+
+2. **No read-then-write operation may be advertised as exact-identity safe without server-side CAS or exclusive serialization.**  
+   This applies directly to branch deletion and issue PATCH operations in the current prototype.
+
+3. **Issue handlers must reject pull requests.**  
+   GitHub exposes PRs through the Issues API; the closed-world resource schema must preserve the distinction.
+
+4. **All privileged third-party actions must be pinned to reviewed full commit SHAs.**  
+   Mutable action tags such as `@v4` are not acceptable in a write-scoped mutation job.
+
+5. **Boundary failures must remain inside the structured result contract.**  
+   Malformed manifests, encoding/decoding errors, network timeouts, non-JSON responses, and result-write failures must produce a deterministic `HARD_STOP`-class result rather than an unclassified traceback.
+
+6. **Mutation retry must be idempotent after ambiguous local result persistence.**  
+   A remote mutation may succeed even if local artifact writing fails. The operation contract therefore needs a deterministic operation identity plus post-state/no-op recognition so retry does not create a second semantic mutation.
+
+These requirements are inherited from review evidence on the local prototype and must be resolved before that prototype is generalized.
 
 ## 8. Lock policy
 
@@ -217,6 +247,8 @@ Open question: should the default be `all_actions` (safer) or require each consu
 
 The reusable workflow should run using the **consumer repository's workflow token**, not a long-lived token stored in `chatgpt-operation`.
 
+The reusable workflow implementation itself must come only from the immutable central workflow revision selected in the caller's `uses: ...@<exact-sha>` reference. A consumer-supplied target SHA may identify data or mutation target state, but must never select the executable code that receives the write token.
+
 Principles:
 
 - least privilege;
@@ -224,7 +256,9 @@ Principles:
 - no token in artifacts/logs;
 - explicit permissions in the caller/reusable workflow contract;
 - read-only review workflows must not acquire mutation permission;
-- mutation workflow should expose only closed-world resource/action paths.
+- mutation workflow should expose only closed-world resource/action paths;
+- every third-party action executed in a write-scoped job is pinned to a reviewed full commit SHA;
+- resource-specific workflows are preferred when they materially reduce token scope.
 
 Open question: which permission split best avoids over-granting for a workflow supporting files, refs, and issues in one entrypoint?
 
@@ -285,7 +319,8 @@ Central tests should include:
 - policy schema negative controls;
 - stale file identity;
 - stale branch identity;
-- stale issue identity;
+- stale issue identity and explicit proof that issue mutation remains disabled without serialization;
+- PR-as-issue rejection;
 - no-op suppression;
 - non-fast-forward rejection;
 - lock-policy enforcement;
@@ -293,7 +328,11 @@ Central tests should include:
 - post-write verification mismatch;
 - token/secret redaction;
 - consumer-policy denial;
-- package/CLI equivalence.
+- package/CLI equivalence;
+- control-plane SHA cannot be influenced by the mutation target/manifest;
+- privileged action references are immutable full SHAs;
+- malformed JSON/UTF-8/base64, timeout, and non-JSON response failures remain structured;
+- successful remote mutation followed by local result-write failure is retry-safe.
 
 A local fake/in-memory transport remains mandatory for mutation self-tests.
 
@@ -360,9 +399,10 @@ Reviewers should explicitly challenge:
 5. Should CI locks be centralized mechanics or entirely consumer-defined policy?
 6. Is a single mutation workflow with `contents: write` + `issues: write` too broad?
 7. Should file/ref/issue mutation engines be separate packages/workflows for permission isolation?
-8. Is `updated_at` a sufficiently strong issue concurrency identity, or should v1 use another conflict-control mechanism?
-9. What is missing for package integrity, provenance, release signing, and reproducibility?
-10. Which parts of the current repository-mutation prototype should **not** be generalized?
+8. Since `updated_at` is not a PATCH precondition, should issue mutation remain entirely outside v1 unless an exclusive-writer lease is proven?
+9. Should branch move/delete remain disabled unless a server-side CAS or repository-wide exclusive-writer mechanism exists?
+10. What is missing for package integrity, provenance, release signing, and reproducibility?
+11. Which parts of the current repository-mutation prototype should **not** be generalized?
 
 ## 17. Acceptance for this RFC
 
