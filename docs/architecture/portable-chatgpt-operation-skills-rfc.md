@@ -31,7 +31,7 @@ The next step is to make that capability portable across repositories without co
 ```text
 chatgpt-operation
 ├── Python package / CLI
-├── reusable GitHub workflows
+├── private composite GitHub Actions
 ├── schemas
 ├── shared tests
 └── skill documentation
@@ -66,14 +66,17 @@ chatgpt-operation/
 │   └── repository-mutation/
 │       └── README.md
 ├── .github/
-│   └── workflows/
-│       └── repository-mutation.yml
+│   └── actions/
+│       └── repository-mutation/
+│           └── action.yml
 └── tests/
 ```
 
 The Python package is the deterministic engine.
 
-The reusable workflow is the GitHub-hosted execution surface.
+The private composite action is the GitHub-hosted execution surface. The action invokes package code from its own immutable action revision through `GITHUB_ACTION_PATH`; it does not clone or install the central private repository with the consumer repository's `GITHUB_TOKEN`.
+
+A consumer-local workflow owns token permissions, triggers, concurrency, and repository-specific gating.
 
 The Markdown skill documentation describes intent, boundaries, and review guidance; it is not the enforcement mechanism.
 
@@ -92,17 +95,31 @@ consumer-repo/
         └── repository-mutation.yml
 ```
 
-The caller workflow should reference the central workflow by an **exact commit SHA**, not by a moving branch.
+The **consumer-local workflow** should reference the central private action by an **exact commit SHA**, not by a moving branch or tag.
 
 Example concept:
 
 ```yaml
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: repository-mutation-${{ github.repository }}
+  cancel-in-progress: false
+
 jobs:
   mutate:
-    uses: HyungseonSong-plasma/chatgpt-operation/.github/workflows/repository-mutation.yml@<exact-sha>
-    with:
-      manifest: automation/mutations/update.json
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@<reviewed-full-sha>
+      - uses: HyungseonSong-plasma/chatgpt-operation/.github/actions/repository-mutation@<exact-central-sha>
+        with:
+          manifest: automation/mutations/update.json
+          policy: .chatgpt-operation.yml
 ```
+
+For private-to-private reuse, the central repository's GitHub Actions **Access** setting must explicitly allow consumer repositories owned by the same user/organization. GitHub then supplies the runner a short-lived scoped installation token to download the private action. The design does not rely on the consumer `GITHUB_TOKEN` cloning `chatgpt-operation`.
 
 ## 5. Package distribution
 
@@ -120,11 +137,13 @@ Proposed Python API:
 from chatgpt_operation.repository.mutation import MutationEngine
 ```
 
-Initial distribution options:
+Initial distribution is deliberately split by execution venue:
 
-1. install directly from the private Git repository at an exact commit;
-2. build wheel artifacts on tagged releases;
+1. **GitHub Actions:** use the private composite action at an exact commit SHA through GitHub's private-action sharing mechanism;
+2. **developer/local Python:** install from the private Git repository using the developer's own authenticated Git access at an exact commit, or install a release wheel;
 3. add a private Python registry or PyPI publication only if operationally justified later.
+
+The privileged GitHub workflow must **not** perform `pip install git+...` or `actions/checkout` against the private central repository using the consumer repository's write token.
 
 Copying `mutation.py` independently into every consumer repository is explicitly rejected because it creates skill drift.
 
@@ -144,10 +163,9 @@ repository:
 mutation:
   allow:
     file: [create, update, delete]
-    branch: [create, move, delete]
-    issue: [update, close, reopen]
+    branch: [create]
 
-lock:
+validation_gate:
   workflows:
     - Repository CI
     - Governed refactor entrypoint
@@ -225,52 +243,62 @@ Greptile's review of the current `moose-test-repo` mutation prototype identified
 
 These requirements are inherited from review evidence on the local prototype and must be resolved before that prototype is generalized.
 
-## 8. Lock policy
+## 8. Validation gate versus mutation serialization
 
-The current prototype blocks when any other queued/in-progress Actions run exists.
+The current prototype checks queued/in-progress Actions runs before mutation. That check is a **validation gate snapshot**, not a repository reservation and not a concurrency primitive.
 
-That is intentionally conservative but may be too repository-specific.
-
-Portable v1 should support a policy-defined lock set.
-
-Candidate semantics:
+Portable v1 therefore separates two concepts:
 
 ```text
-lock.mode = named_workflows | all_actions
-lock.workflows = [...]
-lock.ignore_current_run = true
+validation gate
+  -> consumer policy may refuse to begin while named/all Actions validations are active
+
+workflow serialization
+  -> consumer-local GitHub Actions `concurrency` serializes mutation workflow instances
+
+mutation conflict safety
+  -> supported v1 mutations must remain safe even if a non-Actions writer races them
+  -> server-side CAS/uniqueness is the authority
 ```
 
-Open question: should the default be `all_actions` (safer) or require each consumer to declare a lock policy explicitly (less surprising)?
+Candidate validation-gate semantics:
+
+```text
+validation_gate.mode = named_workflows | all_actions
+validation_gate.workflows = [...]
+validation_gate.ignore_current_run = true
+```
+
+GitHub Actions `concurrency` is useful for serializing this skill's own workflow runs, but it does not cover humans or external API writers and therefore cannot make a non-CAS mutation safe.
+
+Any future branch-move/delete or issue-PATCH support must provide a separately reviewed lease/serialization mechanism whose scope covers **all** relevant writers, or remain unsupported.
 
 ## 9. GitHub authentication and permissions
 
-The reusable workflow should run using the **consumer repository's workflow token**, not a long-lived token stored in `chatgpt-operation`.
+The consumer-local workflow should run using the **consumer repository's workflow token**, not a long-lived token stored in `chatgpt-operation`.
 
-The reusable workflow implementation itself must come only from the immutable central workflow revision selected in the caller's `uses: ...@<exact-sha>` reference. A consumer-supplied target SHA may identify data or mutation target state, but must never select the executable code that receives the write token.
+The central composite action implementation must come only from the immutable revision selected in the consumer's `uses: ...@<exact-sha>` reference. GitHub's private-action sharing mechanism provides a short-lived scoped installation token for downloading the central action when repository Access is configured. A consumer-supplied target SHA may identify data or mutation target state, but must never select executable control-plane code.
 
 Principles:
 
 - least privilege;
 - no token in manifests;
 - no token in artifacts/logs;
-- explicit permissions in the caller/reusable workflow contract;
+- explicit permissions are owned by the consumer-local workflow;
+- composite actions cannot silently elevate those permissions;
 - read-only review workflows must not acquire mutation permission;
-- mutation workflow should expose only closed-world resource/action paths;
+- mutation execution exposes only closed-world resource/action paths;
 - every third-party action executed in a write-scoped job is pinned to a reviewed full commit SHA;
-- resource-specific workflows are preferred when they materially reduce token scope.
+- v1 excludes issue mutation, so the default mutation workflow does not need `issues: write`.
 
-Open question: which permission split best avoids over-granting for a workflow supporting files, refs, and issues in one entrypoint?
-
-Possible answer:
+Portable v1 target permissions:
 
 ```text
 contents: write
-issues: write
 actions: read
 ```
 
-but reviewers should challenge whether separate workflows per resource class are safer.
+If future resource classes require additional scopes, they should prefer separate consumer workflows/actions when that materially reduces privilege.
 
 ## 10. Supply-chain and versioning model
 
@@ -297,19 +325,28 @@ Open question: should exact commit SHA remain canonical even when release tags a
 
 Proposed answer: yes. Tags are human-readable discovery aliases; consumer execution pins exact SHA.
 
-## 11. Reusable workflow boundary
+## 11. GitHub Actions execution boundary
 
-The reusable workflow should be thin.
+Portable v1 does **not** require a central reusable workflow.
 
-It should:
+The consumer-local workflow should:
 
-1. check out the central implementation at the referenced immutable revision;
-2. check out/read the consumer manifest and policy;
-3. establish execution identity;
-4. invoke the package;
-5. emit structured result artifacts.
+1. own triggers, permissions, validation gating, and GitHub Actions concurrency;
+2. check out the consumer repository using a third-party action pinned to a reviewed full SHA;
+3. invoke the private central composite action using an exact central commit SHA;
+4. pass only the consumer-local manifest/policy paths and execution identity;
+5. upload or expose the structured result through consumer-controlled steps.
 
-It should not duplicate mutation logic already implemented in the package.
+The central composite action should:
+
+1. execute package code bundled in the same immutable central revision;
+2. validate the consumer manifest and policy;
+3. perform only the closed-world mutation operations allowed by portable v1;
+4. emit structured outputs.
+
+It must not dynamically check out or execute arbitrary control-plane code selected by manifest input.
+
+A reusable workflow may be added later as a convenience layer, but it is not part of the trusted v1 core.
 
 ## 12. Review and test strategy
 
@@ -351,11 +388,13 @@ Phase 2
   preserve behavior
 
 Phase 3
-  add reusable workflow
+  add private composite action
   add repository-policy adapter
+  configure chatgpt-operation Actions access for private consumers
 
 Phase 4
-  consume central skill from moose-test-repo at exact SHA
+  add consumer-local mutation workflow in moose-test-repo
+  consume central private action at exact SHA
   run full consumer CI
 
 Phase 5
@@ -392,13 +431,13 @@ Portability is not considered proven until Phase 4 passes in a real consumer rep
 
 Reviewers should explicitly challenge:
 
-1. Is the package + reusable-workflow split appropriate, or should only one distribution mechanism exist?
-2. Is a private central repository compatible with reliable reusable-workflow consumption across the owner's private repositories?
+1. Is the package + private-composite-action split appropriate for v1, with consumer-local workflows owning permissions and concurrency?
+2. Is private-action sharing through the central repository's Actions Access setting sufficient, or is an immutable package artifact preferable?
 3. Does exact-SHA pinning sufficiently address central supply-chain risk?
 4. Is the proposed consumer policy expressive enough without becoming another large rule language?
-5. Should CI locks be centralized mechanics or entirely consumer-defined policy?
-6. Is a single mutation workflow with `contents: write` + `issues: write` too broad?
-7. Should file/ref/issue mutation engines be separate packages/workflows for permission isolation?
+5. Is the validation-gate/concurrency/CAS separation explicit enough to avoid treating a point-in-time Actions check as a lease?
+6. Does v1's reduced `contents: write` + `actions: read` scope sufficiently minimize privilege?
+7. Should future resource classes use separate composite actions/workflows for permission isolation?
 8. Since `updated_at` is not a PATCH precondition, should issue mutation remain entirely outside v1 unless an exclusive-writer lease is proven?
 9. Should branch move/delete remain disabled unless a server-side CAS or repository-wide exclusive-writer mechanism exists?
 10. What is missing for package integrity, provenance, release signing, and reproducibility?
@@ -410,6 +449,6 @@ This RFC should not be accepted until:
 
 - at least two independent automated reviewers have examined it where available;
 - security/permission objections are dispositioned;
-- the package/reusable-workflow boundary is explicit;
+- the package/private-action/consumer-workflow boundary is explicit;
 - consumer policy ownership is explicit;
 - migration can be performed without weakening the current `moose-test-repo` mutation safety contract.
