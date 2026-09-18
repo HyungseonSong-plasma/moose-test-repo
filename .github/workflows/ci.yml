@@ -99,6 +99,10 @@ jobs:
         run: python physics_app/ci/check_r3_o2s_excitation_implementation.py
       - name: Validate #17 R2 O2 ionization production implementation
         run: python physics_app/ci/check_r2_o2_ionization_implementation.py
+      - name: Validate canonical electron molar representation contract
+        run: |
+          python physics_app/ci/check_electron_molar_representation_contract.py --self-test
+          python physics_app/ci/check_electron_molar_representation_contract.py
       - name: Run canonical Physics internal validation
         run: python physics -i all
       - name: Validate Issue 43/45 science refactor
