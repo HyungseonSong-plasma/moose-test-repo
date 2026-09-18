@@ -30,7 +30,7 @@ python3 bin/physics.py <command> [args]
 
 Command routing/presentation is owned by `physics_harness/cli/`; `bin/physics.py` is a thin process launcher only. Do not create an issue-specific top-level executable when an existing `physics` command and harness module can represent the operation as a mode or subcommand.
 
-Developer/repository utilities that are not product/user commands belong under `tools/` when a standalone utility is genuinely justified. Do not recreate a general `scripts/` dumping ground.
+Developer/repository utilities that are not product/user commands belong under an explicit `tools/` owner. Repository workflow orchestration belongs in `tools/workflow/`; repository/static architecture guards belong in `tools/guards/`. Do not recreate a loose root-level tool surface or a general `scripts/` dumping ground.
 
 ## CODE-03 — File placement ownership
 
@@ -43,8 +43,14 @@ bin/physics.py
 physics_harness/cli/
   -> command presentation, routing, output boundary
 
+tools/workflow/
+  -> repository workflow/control-plane utilities only
+
+tools/guards/
+  -> repository/static architecture guards; may inspect the harness but do not own runtime/science behavior
+
 tools/*.py
-  -> developer/repository utilities only when standalone ownership is justified
+  -> avoid loose root-level utilities; place new developer code under an explicit tools owner
 
 physics_harness/
   -> reusable capability packages plus explicit scientific/compatibility policy owners

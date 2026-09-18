@@ -7,7 +7,7 @@ EXPECTED_CANONICAL_COMMANDS = frozenset({
 EXPECTED_LEGACY_COMMANDS = frozenset({
     "test", "test-all", "contract", "measure", "analyze", "inventory",
 })
-EXPECTED_INTERNAL_TARGETS = frozenset({"architecture", "regression", "all"})
+EXPECTED_INTERNAL_TARGETS = frozenset({"regression"})
 
 
 def validate_command_surface(

@@ -36,9 +36,7 @@ COMMANDS = {
 }
 
 INTERNAL_TARGETS = {
-    "architecture": "run dependency, semantic-control, and architecture guards",
     "regression": "run the Physics Python regression/unit suite",
-    "all": "run architecture guards then regression/unit suite",
 }
 
 _LEGACY_TARGETS = {
@@ -195,20 +193,7 @@ def internal_cli(target: str) -> int:
         known = ", ".join(INTERNAL_TARGETS)
         print(f"unknown internal target: {target}; choose from {known}", file=sys.stderr)
         return 2
-    commands: list[list[str]] = []
-    if target in {"architecture", "all"}:
-        commands.extend([
-            [sys.executable, str(ROOT / "tools" / "physics_dependency_guard.py")],
-            [sys.executable, str(ROOT / "tools" / "physics_experiment_gateway_guard.py")],
-            [sys.executable, str(ROOT / "tools" / "physics_plasma_semantic_residue_guard.py")],
-            [sys.executable, str(ROOT / "tools" / "physics_campaign_residue_guard.py")],
-            [sys.executable, str(ROOT / "tools" / "physics_numerical_method_ownership_guard.py")],
-            [sys.executable, str(ROOT / "tools" / "physics_boundary_terminology_guard.py")],
-            [sys.executable, str(ROOT / "tools" / "physics_architecture_census.py")],
-        ])
-    if target in {"regression", "all"}:
-        commands.append([sys.executable, "-m", "pytest", "-q"])
-    return _run_commands(commands)
+    return _run_commands([[sys.executable, "-m", "pytest", "-q"]])
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -218,7 +203,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if args[0] == "-i":
         if len(args) != 2:
-            print("usage: physics -i <architecture|regression|all>", file=sys.stderr)
+            print("usage: physics -i <regression>", file=sys.stderr)
             return 2
         return internal_cli(args[1])
     canonical_handlers = {
