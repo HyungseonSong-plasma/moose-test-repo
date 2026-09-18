@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import math
 from pathlib import Path
 
@@ -11,22 +12,32 @@ M_O2P = 0.032
 
 ROOT = Path(__file__).resolve().parent
 
+
 def replace_once(text: str, old: str, new: str, label: str) -> str:
     count = text.count(old)
     if count != 1:
         raise RuntimeError(f"{label}: expected exactly one occurrence, found {count}")
     return text.replace(old, new)
 
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--ne", type=float, required=True)
-    ap.add_argument("--dt-e", type=float, default=None)
+    ap.add_argument("--dt-e", type=float, required=True)
+    ap.add_argument("--steps", type=int, default=20)
     args = ap.parse_args()
+
     ne = args.ne
     dt_e = args.dt_e
+    steps = args.steps
     if ne <= 0:
         raise SystemExit("--ne must be positive")
+    if dt_e <= 0:
+        raise SystemExit("--dt-e must be positive")
+    if steps <= 0:
+        raise SystemExit("--steps must be positive")
 
+    target_end = steps * dt_e
     log_ce = math.log(ne / NA)
     w_o2p = ne * M_O2P / (RHO * NA)
 
@@ -52,12 +63,25 @@ def main() -> None:
         "input_files = electron_sub_scan.i",
         "heavy electron input",
     )
+    heavy = replace_once(
+        heavy,
+        "  dt = 1.0e-9\n  end_time = 1.0e-9",
+        f"  dt = {target_end:.17g}\n  end_time = {target_end:.17g}",
+        "heavy 20-step sync horizon",
+    )
 
-    if dt_e is not None:
-        if dt_e <= 0:
-            raise SystemExit("--dt-e must be positive")
-        electron = replace_once(electron, "dt = 1.0e-10", f"dt = {dt_e:.17g}", "electron dt")
-
+    electron = replace_once(
+        electron,
+        "  dt = 1.0e-10\n  end_time = 1.0e-9",
+        (
+            f"  dt = {dt_e:.17g}\n"
+            f"  dtmin = {dt_e:.17g}\n"
+            f"  dtmax = {dt_e:.17g}\n"
+            f"  end_time = {target_end:.17g}\n"
+            f"  num_steps = {steps}"
+        ),
+        "electron runtime contract",
+    )
     electron = replace_once(
         electron,
         "initial_condition = -15.610953362044896",
@@ -99,18 +123,27 @@ def main() -> None:
     (ROOT / "heavy_parent_scan.i").write_text(heavy)
     (ROOT / "electron_sub_scan.i").write_text(electron)
     (ROOT / "poisson_sub_scan.i").write_text(poisson)
+    parameters = {
+        "ne0_m3": ne,
+        "log_ce0": log_ce,
+        "w_O2p0": w_o2p,
+        "requested_dt_e_s": dt_e,
+        "expected_electron_steps": steps,
+        "expected_end_time_s": target_end,
+        "electron_dtmin_s": dt_e,
+        "electron_dtmax_s": dt_e,
+    }
     (ROOT / "density_scan_parameters.json").write_text(
-        "{\n"
-        f'  "ne0_m3": {ne:.17g},\n'
-        f'  "log_ce0": {log_ce:.17g},\n'
-        f'  "w_O2p0": {w_o2p:.17g},\n'
-        f'  "dt_e_s": {dt_e if dt_e is not None else 1.0e-10:.17g}\n'
-        "}\n"
+        json.dumps(parameters, indent=2, sort_keys=True) + "\n"
     )
+
     print(f"ne0={ne:.6e} m^-3")
+    print(f"requested_dt_e={dt_e:.16e} s")
+    print(f"expected_steps={steps}")
+    print(f"expected_end_time={target_end:.16e} s")
     print(f"log_ce0={log_ce:.16e}")
     print(f"w_O2p0={w_o2p:.16e}")
-    print(f"dt_e={dt_e if dt_e is not None else 1.0e-10:.16e} s")
+
 
 if __name__ == "__main__":
     main()
