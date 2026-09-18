@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: issue234-m1-fixed-density-dt-scan-${{ github.ref }}
+  group: issue234-m1-density-robustness-ne1e15-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -39,15 +39,15 @@ jobs:
         include:
           - label: chi0p1
             chi: '0.1'
-            dt_e: '5.665079002261789e-11'
+            dt_e: '5.665079002261789e-13'
             steps: '200'
           - label: chi0p5
             chi: '0.5'
-            dt_e: '2.8325395011308946e-11'
+            dt_e: '2.8325395011308946e-12'
             steps: '40'
           - label: chi1
             chi: '1.0'
-            dt_e: '5.665079002261789e-13'
+            dt_e: '5.665079002261789e-12'
             steps: '20'
           - label: chi2
             chi: '2.0'
@@ -55,11 +55,11 @@ jobs:
             steps: '10'
           - label: chi5
             chi: '5.0'
-            dt_e: '2.8325395011308946e-12'
+            dt_e: '2.8325395011308946e-11'
             steps: '4'
           - label: chi10
             chi: '10.0'
-            dt_e: '5.665079002261789e-12'
+            dt_e: '5.665079002261789e-11'
             steps: '2'
 
     steps:
