@@ -1,7 +1,7 @@
 name: Physics Runtime Strip Estimate
 
 on:
-  workflow_dispatch:
+  workflow_call:
     inputs:
       runtime_ref:
         description: 'Immutable public physics-runtime ref (image@sha256:digest)'

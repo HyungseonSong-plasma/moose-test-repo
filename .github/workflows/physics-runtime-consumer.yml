@@ -1,7 +1,7 @@
 name: Physics Runtime Consumer
 
 on:
-  workflow_dispatch:
+  workflow_call:
     inputs:
       runtime_ref:
         description: 'Immutable public physics-runtime ref (image@sha256:digest)'
@@ -14,7 +14,7 @@ on:
 
 concurrency:
   group: physics-runtime-consumer-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 permissions:
   contents: read

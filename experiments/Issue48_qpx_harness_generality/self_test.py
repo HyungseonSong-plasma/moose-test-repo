@@ -592,7 +592,7 @@ def _check_script_surface() -> dict[str, list[str]]:
     # a portable P0 into a false failure. When a canonical surface is present,
     # however, still enforce that it no longer references the retired wrappers.
     canonical_refs = (
-        ROOT / ".github/workflows/physics-cleanup-validation.yml",
+        ROOT / ".github/workflows/ci.yml",
         ROOT / "docs/protocols/validation.md",
         ROOT / "tests/README.md",
     )

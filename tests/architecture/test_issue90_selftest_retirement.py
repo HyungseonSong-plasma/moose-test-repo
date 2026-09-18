@@ -12,7 +12,7 @@ CENSUS = ROOT / "docs/development/2026-09-02_issue90_selftest_census.json"
 def test_aggregate_selftest_cli_and_ci_step_are_retired() -> None:
     app = (ROOT / "physics_harness/cli/app.py").read_text()
     cli_init = (ROOT / "physics_harness/cli/__init__.py").read_text()
-    workflow = (ROOT / ".github/workflows/physics-cleanup-validation.yml").read_text()
+    workflow = (ROOT / ".github/workflows/ci.yml").read_text()
     assert '"self-test"' not in app
     assert "self_test_cli" not in app
     assert "self_test_cli" not in cli_init

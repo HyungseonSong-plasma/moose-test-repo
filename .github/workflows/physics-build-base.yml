@@ -1,11 +1,11 @@
 name: Build and publish Physics build base
 
 on:
-  workflow_dispatch:
+  workflow_call:
 
 concurrency:
   group: physics-build-base-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 permissions:
   contents: read

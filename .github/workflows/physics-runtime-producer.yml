@@ -1,7 +1,7 @@
 name: Physics runtime producer
 
 on:
-  workflow_dispatch:
+  workflow_call:
     inputs:
       build_base_ref:
         description: 'Immutable physics-build-base ref (image@sha256:digest)'
@@ -10,7 +10,7 @@ on:
 
 concurrency:
   group: physics-runtime-producer-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 permissions:
   contents: read

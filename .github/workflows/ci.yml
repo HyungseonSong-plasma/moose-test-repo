@@ -1,21 +1,10 @@
-name: Physics CI validation
+name: Repository CI
 
-# Canonical architecture and regression acceptance gate.
 on:
   push:
-    branches:
-      - main
-      - development
-      - issue-128-retire-issue-namespaces
-      - issue-129-root-surface-cleanup
-      - 'issue-154-*'
-      - 'issue-156-*'
-      - review/development-semantic-architecture
+    branches: [main]
   pull_request:
-    branches:
-      - main
-      - development
-  workflow_dispatch:
+    branches: [main]
 
 permissions:
   contents: read
@@ -31,6 +20,11 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+      - name: Validate governed workflow surface
+        run: |
+          python3 tools/workflow/workflow_guard.py --self-test
+          python3 tools/workflow/workflow_guard.py --check
+          python3 tools/workflow/run_work.py --self-test
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
