@@ -14,3 +14,7 @@ Retention policy:
 - delete only when the live remote SHA exactly matches the pre-prune inventory.
 
 The exact pre/post refs and deletion results are preserved in this directory.
+
+## Validation note
+
+The one-shot prune itself completed successfully in workflow run 35352288997. The concurrent Repository CI run on the temporary staging commit (35352288994) failed before architecture/scientific validation because the temporary workflow-guard edit contained a literal backslash-n sequence and therefore produced a Python SyntaxError. This was a staging-only harness/construction failure: it did not change the SHA-bound branch selection or deletion result. The self-cleanup commit restored the canonical workflow guard and removed the temporary workflow/script before this provenance update.
