@@ -7,7 +7,7 @@ from pathlib import Path
 ENTRYPOINTS = {
     "ci.yml": {"push", "pull_request"},
     "experiment.yml": {"workflow_dispatch"},
-    "refactor.yml": {"workflow_dispatch", "push"},
+    "refactor.yml": {"workflow_dispatch"},
 }
 REUSABLE = {
     "physics-build-base.yml": {"workflow_call"},
