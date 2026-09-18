@@ -74,7 +74,7 @@ jobs:
           path: target
           fetch-depth: 1
 
-      - name: Execute governed refactor manifest
+      - name: Validate governed refactor dispatch
         shell: bash
         run: |
           set -euo pipefail
@@ -82,16 +82,19 @@ jobs:
           [[ "$SEQUENCE" =~ ^[0-9]+$ ]]
           [[ "$BASE_SHA" =~ ^[0-9a-f]{40}$ ]]
           [[ "$MANIFEST_INPUT" =~ ^automation/manifests/refactors/[A-Za-z0-9_.-]+\.json$ ]]
-          python3 control/skills/workflow/workflow_guard.py --check --root control
-          python3 control/skills/workflow/run_work.py \
-            --kind refactor \
-            --manifest "$GITHUB_WORKSPACE/control/$MANIFEST_INPUT" \
-            --control-root "$GITHUB_WORKSPACE/control" \
-            --workspace "$GITHUB_WORKSPACE/target" \
-            --base-sha "$BASE_SHA" \
-            --issue "$ISSUE" \
-            --sequence "$SEQUENCE" \
-            --results "$GITHUB_WORKSPACE/workflow-results"
+          python3 control/ci/guards/workflow_surface_guard.py --check --root control
+
+      - name: Execute central governed refactor
+        uses: HyungseonSong-plasma/chatgpt-operation/.github/actions/governed-work@4d5683b12be31e28b44bbe34723b02ae3493b172
+        with:
+          kind: refactor
+          manifest: ${{ github.workspace }}/control/${{ inputs.manifest }}
+          control-root: ${{ github.workspace }}/control
+          workspace: ${{ github.workspace }}/target
+          base-sha: ${{ inputs.base_sha }}
+          issue: ${{ inputs.issue }}
+          sequence: ${{ inputs.sequence }}
+          results: ${{ github.workspace }}/workflow-results
 
       - name: Upload governed evidence
         if: always()
