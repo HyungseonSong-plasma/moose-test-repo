@@ -187,8 +187,8 @@ jobs:
           test "$(git hash-object qualification/chatgpt-operation/src/chatgpt_operation/cli.py)" = "191062926c359b3f205a200f4e9cac8627ab6a47"
           test "$(git hash-object qualification/chatgpt-operation/src/chatgpt_operation/source.py)" = "809a89fde46f0a1bede75050bde8808e1f19146b"
           test "$(git hash-object qualification/chatgpt-operation/src/chatgpt_operation/repository/__init__.py)" = "54cb5a52c4ad992faba0d351440dc82c592adbd8"
-          test "$(git hash-object qualification/chatgpt-operation/src/chatgpt_operation/repository/mutation.py)" = "c32948aa66fa719d29cd03efadb9267b9ecd6452"
-          test "$(git hash-object qualification/chatgpt-operation/tests/test_repository_mutation.py)" = "f7fb9bbf82a52ea6f3164ab10283a6a861d9ec11"
+          test "$(git hash-object qualification/chatgpt-operation/src/chatgpt_operation/repository/mutation.py)" = "d974fbeab6d91006e360ac9cdcac47adac82a97f"
+          test "$(git hash-object qualification/chatgpt-operation/tests/test_repository_mutation.py)" = "04511edc45a17ea9936c6d6446f3a2baee6000c8"
       - name: Compile exact central package snapshot
         run: python3 -m compileall -q qualification/chatgpt-operation/src
       - name: Run exact central mutation tests
@@ -204,7 +204,7 @@ jobs:
           python3 -m chatgpt_operation.cli source verify --help
 
   central-action-qualification:
-    name: Central repository-mutation private action qualification
+    name: Central repository-mutation action qualification
     if: github.event_name == 'pull_request' && github.head_ref == 'issue-270-central-mutation-adoption'
     needs: [validate, runtime-smoke, central-code-qualification]
     runs-on: ubuntu-24.04
@@ -218,9 +218,9 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 1
-      - name: Execute exact central private action
+      - name: Execute exact central action
         id: central_mutation
-        uses: HyungseonSong-plasma/chatgpt-operation/.github/actions/repository-mutation@2719adaca20bcb5833752e4ad8e69a2d136e56b6
+        uses: HyungseonSong-plasma/chatgpt-operation/.github/actions/repository-mutation@661ca7fe3b214e9ca8ac802d517fa1e40f65ecca
         with:
           manifest: automation/mutations/issue270-central-adoption.json
           policy: .chatgpt-operation.json
@@ -228,7 +228,7 @@ jobs:
           github-token: ${{ github.token }}
           current-run-id: ${{ github.run_id }}
           result-path: central-mutation-result.json
-      - name: Verify central private action result
+      - name: Verify central action result
         shell: bash
         run: |
           set -euo pipefail
