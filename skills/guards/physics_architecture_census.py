@@ -89,7 +89,7 @@ SCAN_ROOTS = (
     ROOT / "experiments",
     ROOT / "recipes",
     ROOT / "bin",
-    ROOT / "tools",
+    ROOT / "skills",
 )
 
 
@@ -214,7 +214,7 @@ def _caller_class(rel: str) -> str:
         return "historical"
     if rel.startswith("bin/"):
         return "operator"
-    if rel.startswith("tools/"):
+    if rel.startswith("skills/"):
         return "developer"
     return "other"
 

@@ -6,7 +6,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[2]
 LEGACY_NAMESPACE = "qpx_harness.dmix"
 LEGACY_DIR = REPO_ROOT / "qpx_harness" / "dmix"
-SCAN_ROOTS = ("qpx_harness", "tests", "experiments", "recipes", "bin", "tools")
+SCAN_ROOTS = ("qpx_harness", "tests", "experiments", "recipes", "bin", "skills")
 
 
 def _legacy_references(path: Path) -> list[str]:

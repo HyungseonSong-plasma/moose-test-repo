@@ -62,19 +62,19 @@ def violation(src: str, dst: str) -> tuple[str, str] | None:
 
 
 def repository_tool_references() -> list[str]:
-    """Reject reverse dependencies from product harness code into repository tools."""
+    """Reject reverse dependencies from product harness code into repository skills."""
     failures: list[str] = []
     for path in sorted(PKG.rglob("*.py")):
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
         refs: set[str] = set()
         for node in ast.walk(tree):
             if isinstance(node, ast.Import):
-                refs.update(alias.name for alias in node.names if alias.name == "tools" or alias.name.startswith("tools."))
+                refs.update(alias.name for alias in node.names if alias.name == "skills" or alias.name.startswith("skills."))
             elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
-                if node.module == "tools" or node.module.startswith("tools."):
+                if node.module == "skills" or node.module.startswith("skills."):
                     refs.add(node.module)
             elif isinstance(node, ast.Constant) and isinstance(node.value, str):
-                if node.value == "tools" or node.value.startswith("tools/"):
+                if node.value == "skills" or node.value.startswith("skills/"):
                     refs.add(node.value)
         if refs:
             rel = path.relative_to(ROOT).as_posix()

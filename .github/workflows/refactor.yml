@@ -81,8 +81,8 @@ jobs:
           [[ "$SEQUENCE" =~ ^[0-9]+$ ]]
           [[ "$BASE_SHA" =~ ^[0-9a-f]{40}$ ]]
           [[ "$MANIFEST_INPUT" =~ ^automation/manifests/refactors/[A-Za-z0-9_.-]+\.json$ ]]
-          python3 control/tools/workflow/workflow_guard.py --check --root control
-          python3 control/tools/workflow/run_work.py \
+          python3 control/skills/workflow/workflow_guard.py --check --root control
+          python3 control/skills/workflow/run_work.py \
             --kind refactor \
             --manifest "$GITHUB_WORKSPACE/control/$MANIFEST_INPUT" \
             --control-root "$GITHUB_WORKSPACE/control" \

@@ -22,9 +22,9 @@ jobs:
       - uses: actions/checkout@v4
       - name: Validate governed workflow surface
         run: |
-          python3 tools/workflow/workflow_guard.py --self-test
-          python3 tools/workflow/workflow_guard.py --check
-          python3 tools/workflow/run_work.py --self-test
+          python3 skills/workflow/workflow_guard.py --self-test
+          python3 skills/workflow/workflow_guard.py --check
+          python3 skills/workflow/run_work.py --self-test
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -36,33 +36,33 @@ jobs:
           -r requirements-evidence-engine.txt
           -r requirements-ontology.txt
       - name: Validate Evidence dependency direction
-        run: python tools/guards/physics_dependency_guard.py --check evidence
+        run: python skills/guards/physics_dependency_guard.py --check evidence
       - name: Validate Analysis dependency direction
-        run: python tools/guards/physics_dependency_guard.py --check analysis
+        run: python skills/guards/physics_dependency_guard.py --check analysis
       - name: Validate Execution dependency direction
-        run: python tools/guards/physics_dependency_guard.py --check execution
+        run: python skills/guards/physics_dependency_guard.py --check execution
       - name: Validate presentation dependency direction
-        run: python tools/guards/physics_dependency_guard.py --check presentation
+        run: python skills/guards/physics_dependency_guard.py --check presentation
       - name: Validate repository-tool dependency direction
-        run: python tools/guards/physics_dependency_guard.py --check repository
+        run: python skills/guards/physics_dependency_guard.py --check repository
       - name: Validate canonical package cycles
-        run: python tools/guards/physics_dependency_guard.py --check cycle
+        run: python skills/guards/physics_dependency_guard.py --check cycle
       - name: Validate declarative experiment gateway
-        run: python tools/guards/physics_experiment_gateway_guard.py
+        run: python skills/guards/physics_experiment_gateway_guard.py
       - name: Validate plasma semantic ownership
-        run: python tools/guards/physics_plasma_semantic_residue_guard.py
+        run: python skills/guards/physics_plasma_semantic_residue_guard.py
       - name: Validate campaign/performance/scale ownership
-        run: python tools/guards/physics_campaign_residue_guard.py
+        run: python skills/guards/physics_campaign_residue_guard.py
       - name: Validate numerical-method ownership
-        run: python tools/guards/physics_numerical_method_ownership_guard.py
+        run: python skills/guards/physics_numerical_method_ownership_guard.py
       - name: Validate model terminology and MOOSE boundary ownership
-        run: python tools/guards/physics_boundary_terminology_guard.py
+        run: python skills/guards/physics_boundary_terminology_guard.py
       - name: Validate strict zero-legacy architecture census
         run: |
-          python tools/guards/physics_architecture_census.py --json-out physics-architecture-census.json
-          python tools/guards/physics_architecture_census.py --require-no-legacy
+          python skills/guards/physics_architecture_census.py --json-out physics-architecture-census.json
+          python skills/guards/physics_architecture_census.py --require-no-legacy
       - name: Validate zero-legacy active CI surface
-        run: python tools/guards/physics_public_artifact_residue_guard.py
+        run: python skills/guards/physics_public_artifact_residue_guard.py
       - name: Upload architecture census
         if: always()
         uses: actions/upload-artifact@v4
