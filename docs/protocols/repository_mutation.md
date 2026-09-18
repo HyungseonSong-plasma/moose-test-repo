@@ -6,6 +6,8 @@
 
 This procedure separates **real repository-safety failures** from **soft control anomalies**. A mutation workflow stops only when canonical repository state is at risk, the intended change cannot be proven safe, or an explicitly gated validation run is active. Soft control anomalies are diagnosed and recorded, but they do not automatically terminate valid work.
 
+For supported file, branch/ref, and issue mutations, the repetitive mechanical enforcement of RM-01 through RM-05, RM-11, the mutation-lock portion of RM-12, and post-write completion checks is owned by `skills/repository/mutation.py`. Prefer a governed mutation manifest over manually reconstructing those checks. This protocol remains authoritative for semantic intent, unsupported resource classes, HARD STOP/SOFT CONTROL interpretation, dependency synchronization, incident severity, and exceptions that the skill does not encode.
+
 ## RM-01 — Intent and target binding
 
 Before a repository mutation, identify:
