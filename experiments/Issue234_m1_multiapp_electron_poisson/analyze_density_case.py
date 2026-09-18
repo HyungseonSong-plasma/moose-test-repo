@@ -77,12 +77,19 @@ def main() -> None:
             continue
         pts.sort()
         peak = max(pts, key=lambda x: x[1])
+        match = re.search(r"_([0-9]+)\\.csv$", path.name)
+        output_step = int(match.group(1)) if match else None
         profiles.append(
             {
                 "file": path.name,
+                "output_step": output_step,
                 "peak_x_m": peak[0],
                 "peak_ne_m3": peak[1],
                 "peak_phi_V": peak[2],
+                "min_ne_m3": min(p[1] for p in pts),
+                "max_ne_m3": max(p[1] for p in pts),
+                "min_phi_V": min(p[2] for p in pts),
+                "max_phi_V": max(p[2] for p in pts),
                 "left_ne_m3": pts[0][1],
                 "right_ne_m3": pts[-1][1],
                 "right_to_left_ratio": pts[-1][1] / max(pts[0][1], 1e-300),
@@ -130,14 +137,40 @@ def main() -> None:
     times = [x for x in times if math.isfinite(x)]
     last_e_time = max(times) if times else math.nan
     csv_final_time_match = math.isfinite(last_e_time) and close(last_e_time, expected_end)
+    final_profile = next(
+        (p for p in profiles if p.get("output_step") == expected_steps),
+        None,
+    )
+    final_profile_step_match = final_profile is not None
 
     runtime_contract_pass = (
         args.runtime_rc == 0
         and dt_match
         and step_count_match
         and runtime_final_time_match
-        and csv_final_time_match
+        and final_profile_step_match
         and not failure_tokens
+    )
+
+    final_ne_min = (
+        final_profile["min_ne_m3"]
+        if final_profile is not None
+        else (fval(last_e, "n_e_min") if last_e else math.nan)
+    )
+    final_ne_max = (
+        final_profile["max_ne_m3"]
+        if final_profile is not None
+        else (fval(last_e, "n_e_max") if last_e else math.nan)
+    )
+    final_phi_min = (
+        final_profile["min_phi_V"]
+        if final_profile is not None
+        else (fval(last_e, "phi_min") if last_e else math.nan)
+    )
+    final_phi_max = (
+        final_profile["max_phi_V"]
+        if final_profile is not None
+        else (fval(last_e, "phi_max") if last_e else math.nan)
     )
 
     summary = {
@@ -158,13 +191,14 @@ def main() -> None:
         "runtime_step_count_match": step_count_match,
         "runtime_final_time_match": runtime_final_time_match,
         "csv_final_time_match": csv_final_time_match,
+        "final_profile_step_match": final_profile_step_match,
         "runtime_contract_pass": runtime_contract_pass,
         "electron_rows": len(erows),
         "parent_rows": len(prows),
-        "last_n_e_min_m3": fval(last_e, "n_e_min") if last_e else math.nan,
-        "last_n_e_max_m3": fval(last_e, "n_e_max") if last_e else math.nan,
-        "last_phi_min_V": fval(last_e, "phi_min") if last_e else math.nan,
-        "last_phi_max_V": fval(last_e, "phi_max") if last_e else math.nan,
+        "last_n_e_min_m3": final_ne_min,
+        "last_n_e_max_m3": final_ne_max,
+        "last_phi_min_V": final_phi_min,
+        "last_phi_max_V": final_phi_max,
         "failure_tokens": failure_tokens,
         "profile_count": len(profiles),
         "profiles": profiles,
@@ -176,7 +210,9 @@ def main() -> None:
     print(json.dumps(summary, indent=2, sort_keys=True))
 
     if not runtime_contract_pass:
-        raise SystemExit("runtime contract failed: requested dt / 20-step horizon was not preserved")
+        raise SystemExit(
+            "runtime contract failed: requested dt / 20-step horizon or final profile was not preserved"
+        )
 
 
 if __name__ == "__main__":
