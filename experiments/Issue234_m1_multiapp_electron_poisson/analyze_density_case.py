@@ -29,8 +29,8 @@ def fval(row, key):
         return math.nan
 
 
-def close(a: float, b: float) -> bool:
-    return math.isclose(a, b, rel_tol=1.0e-10, abs_tol=max(1.0e-30, abs(b) * 1.0e-12))
+def close(a: float, b: float, rel_tol: float = 1.0e-10) -> bool:
+    return math.isclose(a, b, rel_tol=rel_tol, abs_tol=max(1.0e-30, abs(b) * 1.0e-12))
 
 
 def main() -> None:
@@ -77,8 +77,7 @@ def main() -> None:
             continue
         pts.sort()
         peak = max(pts, key=lambda x: x[1])
-        match = re.search(r"_([0-9]+)\\.csv$", path.name)
-        output_step = int(match.group(1)) if match else None
+        output_step = int(path.stem.rsplit("_", 1)[1])
         profiles.append(
             {
                 "file": path.name,
@@ -127,11 +126,17 @@ def main() -> None:
     max_observed_step = max(observed_step_numbers) if observed_step_numbers else 0
     last_runtime_time = max((r["time_s"] for r in runtime_steps), default=math.nan)
 
-    dt_match = bool(runtime_steps) and all(close(r["dt_s"], requested_dt) for r in runtime_steps)
+    # MOOSE console output is rounded to about six significant digits, so use
+    # a log-format tolerance here; generated input/CSV checks remain strict.
+    dt_match = bool(runtime_steps) and all(
+        close(r["dt_s"], requested_dt, rel_tol=1.0e-5) for r in runtime_steps
+    )
     step_count_match = max_observed_step == expected_steps and observed_step_numbers == list(
         range(1, expected_steps + 1)
     )
-    runtime_final_time_match = math.isfinite(last_runtime_time) and close(last_runtime_time, expected_end)
+    runtime_final_time_match = math.isfinite(last_runtime_time) and close(
+        last_runtime_time, expected_end, rel_tol=1.0e-5
+    )
 
     times = [fval(r, "time") for r in erows if "time" in r]
     times = [x for x in times if math.isfinite(x)]
