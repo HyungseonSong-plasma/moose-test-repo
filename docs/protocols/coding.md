@@ -49,6 +49,9 @@ skills/workflow/
 skills/guards/
   -> repository/static architecture guards; may inspect the harness but do not own runtime/science behavior
 
+skills/repository/
+  -> deterministic repository-mutation capability; fresh-read, identity, no-op, CI-lock, mutation, and read-back mechanics
+
 skills/*.py
   -> avoid loose root-level utilities; place new developer code under an explicit skills owner
 
