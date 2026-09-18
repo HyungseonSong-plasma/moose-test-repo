@@ -8,7 +8,6 @@ ENTRYPOINTS = {
     "ci.yml": {"push", "pull_request"},
     "experiment.yml": {"workflow_dispatch"},
     "refactor.yml": {"workflow_dispatch"},
-    "branch-cleanup-once.yml": {"push"},
 }
 REUSABLE = {
     "physics-build-base.yml": {"workflow_call"},
