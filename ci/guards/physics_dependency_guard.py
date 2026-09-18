@@ -61,20 +61,20 @@ def violation(src: str, dst: str) -> tuple[str, str] | None:
     return None
 
 
-def repository_tool_references() -> list[str]:
-    """Reject reverse dependencies from product harness code into repository skills."""
+def repository_ci_references() -> list[str]:
+    """Reject reverse dependencies from product harness code into repository CI utilities."""
     failures: list[str] = []
     for path in sorted(PKG.rglob("*.py")):
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
         refs: set[str] = set()
         for node in ast.walk(tree):
             if isinstance(node, ast.Import):
-                refs.update(alias.name for alias in node.names if alias.name == "skills" or alias.name.startswith("skills."))
+                refs.update(alias.name for alias in node.names if alias.name == "ci" or alias.name.startswith("ci."))
             elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
-                if node.module == "skills" or node.module.startswith("skills."):
+                if node.module == "ci" or node.module.startswith("ci."):
                     refs.add(node.module)
             elif isinstance(node, ast.Constant) and isinstance(node.value, str):
-                if node.value == "skills" or node.value.startswith("skills/"):
+                if node.value == "ci" or node.value.startswith("ci/"):
                     refs.add(node.value)
         if refs:
             rel = path.relative_to(ROOT).as_posix()
@@ -141,7 +141,7 @@ def main(argv: list[str] | None = None) -> int:
             if args.check == "all" or category == args.check
         )
     if args.check in {"all", "repository"}:
-        failures.extend(repository_tool_references())
+        failures.extend(repository_ci_references())
     if args.check in {"all", "cycle"} and cycle:
         failures.append("canonical package cycle: " + " -> ".join(cycle))
     marker = args.check.upper()

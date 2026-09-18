@@ -30,7 +30,7 @@ python3 bin/physics.py <command> [args]
 
 Command routing/presentation is owned by `physics_harness/cli/`; `bin/physics.py` is a thin process launcher only. Do not create an issue-specific top-level executable when an existing `physics` command and harness module can represent the operation as a mode or subcommand.
 
-Developer/repository utilities that are not product/user commands belong under an explicit `skills/` owner. Repository workflow orchestration belongs in `skills/workflow/`; repository/static architecture guards belong in `skills/guards/`. Portable repository mutation is centrally owned by `HyungseonSong-plasma/chatgpt-operation@661ca7fe3b214e9ca8ac802d517fa1e40f65ecca` and must not be vendored back into this repository. Do not recreate a loose root-level tool surface or a general `scripts/` dumping ground.
+Repository-specific developer/static validation belongs under `ci/guards/`. Reusable operational skills are centrally owned by `HyungseonSong-plasma/chatgpt-operation` and must not be vendored into this repository. Repository mutation is pinned at `661ca7fe3b214e9ca8ac802d517fa1e40f65ecca`; governed-work execution is pinned at `4d5683b12be31e28b44bbe34723b02ae3493b172`. Do not recreate a local `skills/`, loose root-level tool surface, or general `scripts/` dumping ground.
 
 ## CODE-03 — File placement ownership
 
@@ -43,11 +43,11 @@ bin/physics.py
 physics_harness/cli/
   -> command presentation, routing, output boundary
 
-skills/workflow/
-  -> repository workflow/control-plane utilities only
+ci/guards/
+  -> repository-specific CI/static architecture guards; may inspect the harness but do not own runtime/science behavior
 
-skills/guards/
-  -> repository/static architecture guards; may inspect the harness but do not own runtime/science behavior
+automation/
+  -> consumer-local declarative manifests and mutation inputs; execution mechanics remain centralized
 
 .chatgpt-operation.json
   -> consumer-local authorization policy for the exact-SHA central repository-mutation skill
@@ -55,8 +55,8 @@ skills/guards/
 chatgpt-operation@661ca7fe3b214e9ca8ac802d517fa1e40f65ecca
   -> external reusable repository-mutation mechanics; no vendored implementation in this repository
 
-skills/*.py
-  -> avoid loose root-level utilities; place new developer code under an explicit skills owner
+chatgpt-operation@4d5683b12be31e28b44bbe34723b02ae3493b172
+  -> external reusable governed-work manifest/runner mechanics; no vendored implementation in this repository
 
 physics_harness/
   -> reusable capability packages plus explicit scientific/compatibility policy owners
