@@ -23,8 +23,9 @@ on:
           - runtime_producer
           - runtime_consumer
           - runtime_strip
+          - repository_mutation
       manifest:
-        description: 'Path below automation/manifests/refactors/ when task=manifest'
+        description: 'Path below automation/manifests/refactors/ for manifest or automation/mutations/ for repository_mutation'
         required: false
         type: string
       base_sha:
@@ -44,6 +45,7 @@ permissions:
   contents: write
   packages: write
   actions: read
+  issues: write
 
 concurrency:
   group: refactor-${{ inputs.issue }}-${{ inputs.sequence }}-${{ inputs.task }}
@@ -98,6 +100,44 @@ jobs:
         with:
           name: Issue_${{ inputs.issue }}_refactor${{ inputs.sequence }}-evidence
           path: workflow-results/**
+          if-no-files-found: warn
+          retention-days: 30
+
+  repository-mutation:
+    if: inputs.task == 'repository_mutation'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      ISSUE: ${{ inputs.issue }}
+      SEQUENCE: ${{ inputs.sequence }}
+      MANIFEST_INPUT: ${{ inputs.manifest }}
+      GITHUB_TOKEN: ${{ github.token }}
+    steps:
+      - name: Checkout control plane
+        uses: actions/checkout@v4
+        with:
+          path: control
+          fetch-depth: 1
+
+      - name: Execute governed repository mutation
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$ISSUE" =~ ^[1-9][0-9]*$ ]]
+          [[ "$SEQUENCE" =~ ^[0-9]+$ ]]
+          [[ "$MANIFEST_INPUT" =~ ^automation/mutations/[A-Za-z0-9_.-]+\.json$ ]]
+          mkdir -p "$GITHUB_WORKSPACE/repository-mutation-results"
+          python3 control/skills/repository/mutation.py \
+            --manifest "$GITHUB_WORKSPACE/control/$MANIFEST_INPUT" \
+            --repository "$GITHUB_REPOSITORY" \
+            --result "$GITHUB_WORKSPACE/repository-mutation-results/result.json"
+
+      - name: Upload repository mutation result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Issue_${{ inputs.issue }}_refactor${{ inputs.sequence }}-repository-mutation
+          path: repository-mutation-results/**
           if-no-files-found: warn
           retention-days: 30
 
