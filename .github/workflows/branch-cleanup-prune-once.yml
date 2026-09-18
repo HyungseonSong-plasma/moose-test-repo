@@ -1,0 +1,23 @@
+name: One-shot Issue 234 branch prune
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/branch-cleanup-prune-once.yml'
+      - 'tools/workflow/branch_cleanup_prune_once.py'
+      - 'tools/workflow/workflow_guard.py'
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - name: Prune completed Issue 234 branches
+        run: python3 tools/workflow/branch_cleanup_prune_once.py
