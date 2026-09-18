@@ -1,0 +1,72 @@
+name: One-shot history rewrite provenance persistence
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/history-rewrite-provenance-once.yml'
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  persist:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Download rewrite provenance artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/rewrite-provenance
+          mkdir -p /tmp/rewrite-provenance
+          gh run download 35348283072             --repo "$GITHUB_REPOSITORY"             --name reachable-history-rewrite-provenance             --dir /tmp/rewrite-provenance
+          test -f /tmp/rewrite-provenance/commit-map.tsv
+          test -f /tmp/rewrite-provenance/refs-before.tsv
+          test -f /tmp/rewrite-provenance/rewrite-summary.txt
+
+      - name: Persist provenance on rewritten main and remove one-shot workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          target="docs/provenance/history-rewrite-2026-09-18"
+          mkdir -p "$target"
+          cp /tmp/rewrite-provenance/commit-map.tsv "$target/commit-map.tsv"
+          cp /tmp/rewrite-provenance/refs-before.tsv "$target/refs-before.tsv"
+          cp /tmp/rewrite-provenance/rewrite-summary.txt "$target/rewrite-summary.txt"
+          git ls-remote --heads origin | awk '{print "refs/heads/" substr($2,12) "\t" $1}' | sort > "$target/refs-after.tsv"
+
+          cat > "$target/README.md" <<'EOF'
+          # Reachable-history rewrite provenance
+
+          Date: 2026-09-18
+
+          The repository's reachable branch history was rewritten to remove a retired
+          QPX-era heavy-transport class symbol and replace it with the canonical Physics
+          class name. The one-shot rewrite validated that the retired symbol had zero
+          reachable occurrences before force-pushing rewritten branch heads.
+
+          Files:
+          - commit-map.tsv: old commit SHA -> rewritten commit SHA
+          - refs-before.tsv: branch/tag refs before rewrite
+          - refs-after.tsv: branch refs after rewrite
+          - rewrite-summary.txt: head/tag counts and rewrite validation summary
+
+          This provenance does not claim deletion from external clones, forks, caches,
+          or GitHub's internal unreachable-object retention.
+          EOF
+
+          rm -f .github/workflows/history-rewrite-provenance-once.yml
+
+          git config user.name "physics-history-rewrite"
+          git config user.email "actions@users.noreply.github.com"
+          git add "$target" .github/workflows/history-rewrite-provenance-once.yml
+          git commit -m "Persist history rewrite provenance"
+          git push origin HEAD:main
