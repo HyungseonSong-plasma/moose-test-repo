@@ -95,7 +95,6 @@ jobs:
           NE0: ${{ matrix.ne }}
           DT_E: ${{ matrix.dt_e }}
           CASE_LABEL: ${{ matrix.label }}
-          DT_E: ${{ matrix.dt_e }}
         run: |
           set -euxo pipefail
           CONTAINER_SCRIPT=$(cat <<'BASH'
