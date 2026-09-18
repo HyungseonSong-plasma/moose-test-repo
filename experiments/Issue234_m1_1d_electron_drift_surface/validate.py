@@ -182,7 +182,7 @@ def main() -> int:
 
     surface_runtime = {
         "final_time": close(sf["time"], END_S, rel=0.0, abs_=1.0e-18),
-        "initial_inventory": close(sf["c_e_inventory_per_area"], inventory_initial_expected),
+        "initial_inventory": close(s0["c_e_inventory_per_area"], inventory_initial_expected),
         "density_positive": sf["n_e_min"] > 0.0,
         "inventory_decreases": 0.0
         < sf["c_e_inventory_per_area"]
