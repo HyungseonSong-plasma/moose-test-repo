@@ -5,7 +5,7 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-ACTIVE_ROOTS = ("qpx_harness", "tests", "experiments", "recipes", "tools")
+ACTIVE_ROOTS = ("qpx_harness", "tests", "experiments", "recipes", "skills")
 LEGACY_PACKAGES = ("qpx_harness.evidence_engine", "qpx_harness.diagnostics")
 LEGACY_DIRS = (
     REPO_ROOT / "qpx_harness" / "evidence_engine",
