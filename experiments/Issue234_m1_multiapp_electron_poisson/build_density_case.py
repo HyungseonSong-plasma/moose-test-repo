@@ -20,8 +20,10 @@ def replace_once(text: str, old: str, new: str, label: str) -> str:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--ne", type=float, required=True)
+    ap.add_argument("--dt-e", type=float, default=None)
     args = ap.parse_args()
     ne = args.ne
+    dt_e = args.dt_e
     if ne <= 0:
         raise SystemExit("--ne must be positive")
 
@@ -50,6 +52,11 @@ def main() -> None:
         "input_files = electron_sub_scan.i",
         "heavy electron input",
     )
+
+    if dt_e is not None:
+        if dt_e <= 0:
+            raise SystemExit("--dt-e must be positive")
+        electron = replace_once(electron, "dt = 1.0e-10", f"dt = {dt_e:.17g}", "electron dt")
 
     electron = replace_once(
         electron,
@@ -96,12 +103,14 @@ def main() -> None:
         "{\n"
         f'  "ne0_m3": {ne:.17g},\n'
         f'  "log_ce0": {log_ce:.17g},\n'
-        f'  "w_O2p0": {w_o2p:.17g}\n'
+        f'  "w_O2p0": {w_o2p:.17g},\n'
+        f'  "dt_e_s": {dt_e if dt_e is not None else 1.0e-10:.17g}\n'
         "}\n"
     )
     print(f"ne0={ne:.6e} m^-3")
     print(f"log_ce0={log_ce:.16e}")
     print(f"w_O2p0={w_o2p:.16e}")
+    print(f"dt_e={dt_e if dt_e is not None else 1.0e-10:.16e} s")
 
 if __name__ == "__main__":
     main()
