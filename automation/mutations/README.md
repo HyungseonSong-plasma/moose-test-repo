@@ -12,8 +12,9 @@ Rules:
 
 - one manifest declares one resource/action/target;
 - bind the exact repository;
-- use fresh blob/head/`updated_at` identity immediately before committing the manifest;
+- use fresh blob identity immediately before file update/delete manifests;
 - file and branch creation require `expected.absent=true`;
+- branch move/delete and issue/PR mutation are not accepted by the v1 schema;
 - never use a mutation manifest as a connectivity probe;
 - do not place secrets or tokens in a manifest;
 - mutation results are workflow artifacts, not scientific evidence.
