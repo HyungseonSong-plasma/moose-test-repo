@@ -1,9 +1,9 @@
-name: Issue-234 M1 MultiApp density scaling discriminator
+name: Issue-234 M1 fixed-chi dielectric-timescale discriminator
 
 on:
   push:
     branches:
-      - issue-234-m1-multiapp-density-scan
+      - issue-234-m1-fixed-chi-scan
     paths:
       - '.github/workflows/issue234-m1-multiapp-density-scan.yml'
       - 'experiments/Issue234_m1_multiapp_electron_poisson/**'
@@ -34,14 +34,18 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - label: ne1e17
+          - label: ne1e17-dt1e13
             ne: '1.0e17'
-          - label: ne1e16
+            dt_e: '1.0e-13'
+          - label: ne1e16-dt1e12
             ne: '1.0e16'
-          - label: ne1e15
+            dt_e: '1.0e-12'
+          - label: ne1e15-dt1e11
             ne: '1.0e15'
-          - label: ne1e14
+            dt_e: '1.0e-11'
+          - label: ne1e14-dt1e10
             ne: '1.0e14'
+            dt_e: '1.0e-10'
 
     steps:
       - uses: actions/checkout@v4
@@ -64,6 +68,7 @@ jobs:
         shell: bash
         env:
           NE0: ${{ matrix.ne }}
+          DT_E: ${{ matrix.dt_e }}
         run: |
           set -euxo pipefail
           PRECHECK=$(cat <<'BASH'
@@ -73,7 +78,7 @@ jobs:
           test -x "$HIT"
           cd /workspace/experiments/Issue234_m1_multiapp_electron_poisson
           python3 -m py_compile build_density_case.py analyze_density_case.py
-          python3 build_density_case.py --ne "$NE0"
+          python3 build_density_case.py --ne "$NE0" --dt-e "$DT_E"
           for input in poisson_sub_scan.i electron_sub_scan.i heavy_parent_scan.i; do
             echo "HIT syntax check: $input"
             "$HIT" format "$input" >/dev/null
@@ -88,7 +93,9 @@ jobs:
         shell: bash
         env:
           NE0: ${{ matrix.ne }}
+          DT_E: ${{ matrix.dt_e }}
           CASE_LABEL: ${{ matrix.label }}
+          DT_E: ${{ matrix.dt_e }}
         run: |
           set -euxo pipefail
           CONTAINER_SCRIPT=$(cat <<'BASH'
@@ -135,7 +142,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: issue234-density-${{ matrix.label }}
+          name: issue234-fixed-chi-${{ matrix.label }}
           path: |
             experiments/Issue234_m1_multiapp_electron_poisson/*_scan.i
             experiments/Issue234_m1_multiapp_electron_poisson/density_scan_parameters.json
