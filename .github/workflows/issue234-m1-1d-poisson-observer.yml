@@ -1,0 +1,125 @@
+name: Issue-234 M1 1D one-way Poisson observer
+
+on:
+  push:
+    branches:
+      - issue-234-m1-1d-poisson-observer
+    paths:
+      - '.github/workflows/issue234-m1-1d-poisson-observer.yml'
+      - 'experiments/Issue234_m1_1d_poisson_observer/**'
+      - 'experiments/Issue234_m1_1d_electron_drift_surface/**'
+      - 'physics_app/src/fvkernels/PhysicsFVLogMolarElectronTransport.C'
+      - 'physics_app/include/fvkernels/PhysicsFVLogMolarElectronTransport.h'
+  workflow_dispatch:
+
+concurrency:
+  group: issue234-m1-1d-poisson-observer-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+  MOOSE_SHA: 9f388366ccf38b9c34542ec5561198249fde0ac9
+  CRANE_SHA: ba26970cf419dcac563a20ed7079d445bc6341c3
+  SQUIRREL_SHA: 16a26d504f3ee11161a86d4e3ebf3c0e5f2afbb1
+  ZAPDOS_SHA: 9eceffbc46048c3760bbfa9a7f1ca681ae35af1d
+
+jobs:
+  poisson-observer:
+    name: electron-only one-way Poisson observer
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Validate exact dependency identity
+        shell: bash
+        run: |
+          set -euxo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          source physics_app/dependencies.lock
+          test "$MOOSE" = "$MOOSE_SHA"
+          test "$CRANE" = "$CRANE_SHA"
+          test "$SQUIRREL" = "$SQUIRREL_SHA"
+          test "$ZAPDOS" = "$ZAPDOS_SHA"
+          docker pull "$BUILD_BASE_REF"
+          test "$(docker image inspect "$BUILD_BASE_REF" --format '{{ index .Config.Labels "io.physics.moose.sha" }}')" = "$MOOSE_SHA"
+
+      - name: P0-P3 one-way Poisson observer
+        shell: bash
+        run: |
+          set -euxo pipefail
+          CONTAINER_SCRIPT=$(cat <<'BASH'
+          set -euxo pipefail
+          source /environment
+          git config --global --add safe.directory /workspace
+          export MOOSE_DIR=/opt/physics_vendor/moose
+          export CRANE_DIR=/opt/physics_vendor/crane
+          export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+          export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+          export METHOD=opt
+          export PYTHONPATH=/workspace
+          test "$(git -C /workspace rev-parse HEAD)" = "$GITHUB_SHA"
+
+          cd /workspace/experiments/Issue234_m1_1d_poisson_observer
+          python3 -m py_compile build.py validate.py
+          python3 build.py
+          python3 - <<'PY'
+          from pathlib import Path
+          from build import static_contract_text
+          text = Path("input_poisson_observer.i").read_text(encoding="utf-8")
+          checks = static_contract_text(text)
+          failed = sorted(k for k, ok in checks.items() if not ok)
+          assert not failed, failed
+          print({"STATIC_CONTRACT": "PASS", "checks": checks})
+          PY
+
+          uv pip install --system --python "$(command -v python3)" -r /workspace/requirements-evidence-engine.txt
+          python3 /workspace/bin/physics.py preflight --self-test
+          python3 /workspace/bin/physics.py preflight /workspace/experiments/Issue234_m1_1d_electron_drift_surface/input_drift_surface.i
+          python3 /workspace/bin/physics.py preflight input_poisson_observer.i
+
+          test ! -e /workspace/physics_app/physics-opt
+          make -C /workspace/physics_app -j2
+          test -x /workspace/physics_app/physics-opt
+
+          /workspace/physics_app/physics-opt --check-input             -i /workspace/experiments/Issue234_m1_1d_electron_drift_surface/input_drift_surface.i             | tee control_check.log
+          /workspace/physics_app/physics-opt --check-input -i input_poisson_observer.i             | tee candidate_check.log
+
+          cd /workspace/experiments/Issue234_m1_1d_electron_drift_surface
+          /workspace/physics_app/physics-opt -i input_drift_surface.i | tee poisson_observer_control_runtime.log
+
+          cd /workspace/experiments/Issue234_m1_1d_poisson_observer
+          /workspace/physics_app/physics-opt -i input_poisson_observer.i | tee candidate_runtime.log
+          python3 validate.py | tee validation.log
+
+          test -f validation_summary.json
+          test -f input_poisson_observer_out.e
+          test -f /workspace/experiments/Issue234_m1_1d_electron_drift_surface/input_drift_surface_out.e
+          BASH
+          )
+          docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace             -e GITHUB_SHA="$GITHUB_SHA"             -e MOOSE_SHA="$MOOSE_SHA" -e CRANE_SHA="$CRANE_SHA"             -e SQUIRREL_SHA="$SQUIRREL_SHA" -e ZAPDOS_SHA="$ZAPDOS_SHA"             -v "$PWD:/workspace" "$BUILD_BASE_REF" -lc "$CONTAINER_SCRIPT"
+
+      - name: Upload Poisson-observer evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue234-m1-1d-poisson-observer
+          path: |
+            experiments/Issue234_m1_1d_poisson_observer/input_poisson_observer.i
+            experiments/Issue234_m1_1d_poisson_observer/input_poisson_observer_out.csv
+            experiments/Issue234_m1_1d_poisson_observer/input_poisson_observer_out.e
+            experiments/Issue234_m1_1d_poisson_observer/control_check.log
+            experiments/Issue234_m1_1d_poisson_observer/candidate_check.log
+            experiments/Issue234_m1_1d_poisson_observer/candidate_runtime.log
+            experiments/Issue234_m1_1d_poisson_observer/validation.log
+            experiments/Issue234_m1_1d_poisson_observer/validation_summary.json
+            experiments/Issue234_m1_1d_electron_drift_surface/input_drift_surface_out.csv
+            experiments/Issue234_m1_1d_electron_drift_surface/input_drift_surface_out.e
+            experiments/Issue234_m1_1d_electron_drift_surface/poisson_observer_control_runtime.log
+          if-no-files-found: warn
+          retention-days: 7
