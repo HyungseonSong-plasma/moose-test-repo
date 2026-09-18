@@ -34,18 +34,18 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - label: ne1e17-dt1e13
+          - label: ne1e17-dt5e14
             ne: '1.0e17'
-            dt_e: '1.0e-13'
-          - label: ne1e16-dt1e12
+            dt_e: '5.0e-14'
+          - label: ne1e16-dt5e13
             ne: '1.0e16'
-            dt_e: '1.0e-12'
-          - label: ne1e15-dt1e11
+            dt_e: '5.0e-13'
+          - label: ne1e15-dt5e12
             ne: '1.0e15'
-            dt_e: '1.0e-11'
-          - label: ne1e14-dt1e10
+            dt_e: '5.0e-12'
+          - label: ne1e14-dt5e11
             ne: '1.0e14'
-            dt_e: '1.0e-10'
+            dt_e: '5.0e-11'
 
     steps:
       - uses: actions/checkout@v4
