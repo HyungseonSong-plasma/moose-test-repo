@@ -104,41 +104,57 @@ jobs:
           retention-days: 30
 
   repository-mutation:
-    if: inputs.task == 'repository_mutation'
+    if: inputs.task == 'repository_mutation' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
+    permissions:
+      contents: write
+      actions: read
     env:
       ISSUE: ${{ inputs.issue }}
       SEQUENCE: ${{ inputs.sequence }}
       MANIFEST_INPUT: ${{ inputs.manifest }}
       BASE_SHA: ${{ inputs.base_sha }}
+      WORKFLOW_SHA: ${{ github.workflow_sha }}
       GITHUB_TOKEN: ${{ github.token }}
     steps:
-      - name: Checkout exact mutation control plane
-        uses: actions/checkout@v4
+      - name: Checkout trusted mutation control plane
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
-          ref: ${{ inputs.base_sha }}
+          ref: ${{ github.workflow_sha }}
           path: control
           fetch-depth: 1
+          persist-credentials: false
+
+      - name: Checkout exact mutation manifest source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ inputs.base_sha }}
+          path: target
+          fetch-depth: 1
+          persist-credentials: false
 
       - name: Execute governed repository mutation
         shell: bash
         run: |
           set -euo pipefail
+          [[ "$GITHUB_REF" == "refs/heads/main" ]]
           [[ "$ISSUE" =~ ^[1-9][0-9]*$ ]]
           [[ "$SEQUENCE" =~ ^[0-9]+$ ]]
           [[ "$BASE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$WORKFLOW_SHA" =~ ^[0-9a-f]{40}$ ]]
           [[ "$MANIFEST_INPUT" =~ ^automation/mutations/[A-Za-z0-9_.-]+\.json$ ]]
-          test "$(git -C "$GITHUB_WORKSPACE/control" rev-parse HEAD)" = "$BASE_SHA"
+          test "$(git -C "$GITHUB_WORKSPACE/control" rev-parse HEAD)" = "$WORKFLOW_SHA"
+          test "$(git -C "$GITHUB_WORKSPACE/target" rev-parse HEAD)" = "$BASE_SHA"
           mkdir -p "$GITHUB_WORKSPACE/repository-mutation-results"
           python3 control/skills/repository/mutation.py \
-            --manifest "$GITHUB_WORKSPACE/control/$MANIFEST_INPUT" \
+            --manifest "$GITHUB_WORKSPACE/target/$MANIFEST_INPUT" \
             --repository "$GITHUB_REPOSITORY" \
             --result "$GITHUB_WORKSPACE/repository-mutation-results/result.json"
 
       - name: Upload repository mutation result
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: Issue_${{ inputs.issue }}_refactor${{ inputs.sequence }}-repository-mutation
           path: repository-mutation-results/**
