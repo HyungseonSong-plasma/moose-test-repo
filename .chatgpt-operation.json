@@ -4,32 +4,39 @@
   "mutation": {
     "allow": {
       "file": [
-        "update"
+        "create",
+        "update",
+        "delete"
       ],
-      "branch": []
+      "branch": [
+        "create"
+      ]
     },
     "file_paths": {
       "allow": [
-        "docs/provenance/central-repository-mutation-adoption.md"
+        "**"
       ],
       "deny": [
-        ".github/**",
-        "skills/**",
-        "physics_app/**"
+        ".github/workflows/**",
+        ".github/actions/**"
       ]
     },
     "branch_names": {
       "allow": [
-        "issue-270-central-mutation-adoption"
+        "issue-*",
+        "cleanup-*"
       ],
       "deny": [
-        "main"
+        "main",
+        "master"
       ]
     }
   },
   "validation_gate": {
-    "mode": "all_actions",
-    "workflows": [],
+    "mode": "named_workflows",
+    "workflows": [
+      "Repository CI"
+    ],
     "ignore_current_run": true
   }
 }

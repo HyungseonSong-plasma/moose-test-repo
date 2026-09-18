@@ -25,8 +25,21 @@ jobs:
           python3 skills/workflow/workflow_guard.py --self-test
           python3 skills/workflow/workflow_guard.py --check
           python3 skills/workflow/run_work.py --self-test
-      - name: Validate repository mutation skill
-        run: python3 skills/repository/mutation.py --self-test
+      - name: Validate central repository mutation consumer contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          test ! -e skills/repository/mutation.py
+          grep -Fq 'HyungseonSong-plasma/chatgpt-operation/.github/actions/repository-mutation@661ca7fe3b214e9ca8ac802d517fa1e40f65ecca' .github/workflows/refactor.yml
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          policy=json.loads(Path(".chatgpt-operation.json").read_text(encoding="utf-8"))
+          assert policy["schema_version"] == 1
+          assert policy["repository"] == "HyungseonSong-plasma/moose-test-repo"
+          assert policy["validation_gate"]["mode"] == "named_workflows"
+          assert "Repository CI" in policy["validation_gate"]["workflows"]
+          PY
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -164,84 +177,3 @@ jobs:
             echo "ORDINARY_CI_REBUILDS_MOOSE_STACK=false"
             echo "ORDINARY_CI_COMPILES_PHYSICS_APPLICATION=false"
           }
-
-  central-code-qualification:
-    name: Central repository-mutation code qualification
-    if: github.event_name == 'pull_request' && github.head_ref == 'issue-270-central-mutation-adoption'
-    needs: [validate, runtime-smoke]
-    runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    permissions:
-      contents: read
-    steps:
-      - name: Checkout exact PR head
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          fetch-depth: 1
-      - name: Verify exact central source blobs
-        shell: bash
-        run: |
-          set -euo pipefail
-          test "$(git hash-object qualification/chatgpt-operation/src/chatgpt_operation/__init__.py)" = "c3b5462f035d742e77a0ccd72208bcf30264d5bb"
-          test "$(git hash-object qualification/chatgpt-operation/src/chatgpt_operation/cli.py)" = "191062926c359b3f205a200f4e9cac8627ab6a47"
-          test "$(git hash-object qualification/chatgpt-operation/src/chatgpt_operation/source.py)" = "809a89fde46f0a1bede75050bde8808e1f19146b"
-          test "$(git hash-object qualification/chatgpt-operation/src/chatgpt_operation/repository/__init__.py)" = "54cb5a52c4ad992faba0d351440dc82c592adbd8"
-          test "$(git hash-object qualification/chatgpt-operation/src/chatgpt_operation/repository/mutation.py)" = "d974fbeab6d91006e360ac9cdcac47adac82a97f"
-          test "$(git hash-object qualification/chatgpt-operation/tests/test_repository_mutation.py)" = "04511edc45a17ea9936c6d6446f3a2baee6000c8"
-      - name: Compile exact central package snapshot
-        run: python3 -m compileall -q qualification/chatgpt-operation/src
-      - name: Run exact central mutation tests
-        env:
-          PYTHONPATH: qualification/chatgpt-operation/src
-        run: python3 -m unittest discover -s qualification/chatgpt-operation/tests -v
-      - name: Verify exact central CLI surface
-        env:
-          PYTHONPATH: qualification/chatgpt-operation/src
-        run: |
-          python3 -m chatgpt_operation.cli --help
-          python3 -m chatgpt_operation.cli repository mutate --help
-          python3 -m chatgpt_operation.cli source verify --help
-
-  central-action-qualification:
-    name: Central repository-mutation action qualification
-    if: github.event_name == 'pull_request' && github.head_ref == 'issue-270-central-mutation-adoption'
-    needs: [validate, runtime-smoke, central-code-qualification]
-    runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    permissions:
-      contents: write
-      actions: read
-    steps:
-      - name: Checkout exact PR head
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          fetch-depth: 1
-      - name: Execute exact central action
-        id: central_mutation
-        uses: HyungseonSong-plasma/chatgpt-operation/.github/actions/repository-mutation@661ca7fe3b214e9ca8ac802d517fa1e40f65ecca
-        with:
-          manifest: automation/mutations/issue270-central-adoption.json
-          policy: .chatgpt-operation.json
-          repository: ${{ github.repository }}
-          github-token: ${{ github.token }}
-          current-run-id: ${{ github.run_id }}
-          result-path: central-mutation-result.json
-      - name: Verify central action result
-        shell: bash
-        run: |
-          set -euo pipefail
-          case "${{ steps.central_mutation.outputs.status }}" in
-            PASS|NO_MUTATION_NEEDED) ;;
-            *) exit 1 ;;
-          esac
-          test -n "${{ steps.central_mutation.outputs.operation-id }}"
-          test -f central-mutation-result.json
-          python3 - <<'PY'
-          import json
-          from pathlib import Path
-          result=json.loads(Path("central-mutation-result.json").read_text(encoding="utf-8"))
-          assert result["status"] in {"PASS","NO_MUTATION_NEEDED"}
-          assert len(result["operation_id"]) == 64
-          PY
