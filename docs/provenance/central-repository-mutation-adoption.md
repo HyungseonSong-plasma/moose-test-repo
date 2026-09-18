@@ -4,16 +4,16 @@ Issue: #270
 
 Qualified central source:
 
-`HyungseonSong-plasma/chatgpt-operation@2719adaca20bcb5833752e4ad8e69a2d136e56b6`
+`HyungseonSong-plasma/chatgpt-operation@661ca7fe3b214e9ca8ac802d517fa1e40f65ecca`
 
 Qualification contract:
 
 - exact central source blobs and test suite are qualified in `moose-test-repo` CI;
-- the private composite action is invoked directly from the exact central SHA above;
+- the central composite action is invoked directly from the exact central SHA above;
 - the consumer policy authorizes only this provenance path on the Issue #270 branch;
 - Repository CI validate, runtime-smoke, and central code qualification complete before the write-scoped action job;
-- the central skill performs a real file-create mutation through the GitHub Contents API;
+- the central skill performs an exact-SHA file update through the GitHub Contents API;
 - post-write read-back must match this desired content;
-- a repeated qualification converges to `NO_MUTATION_NEEDED` and performs no second semantic write.
+- a repeated qualification recognizes the achieved post-state before stale-identity rejection, converges to `NO_MUTATION_NEEDED`, and performs no second semantic write.
 
-This document is created by the central repository-mutation skill itself and retained as migration provenance.
+This document is maintained by the central repository-mutation skill and retained as migration provenance.
