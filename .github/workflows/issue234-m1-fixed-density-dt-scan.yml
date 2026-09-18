@@ -159,6 +159,25 @@ jobs:
           )
           docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace             -e GITHUB_SHA="$GITHUB_SHA"             -e NE0="$NE0" -e DT_E="$DT_E" -e EXPECTED_STEPS="$EXPECTED_STEPS"             -e CHI="$CHI" -e CASE_LABEL="$CASE_LABEL"             -e MOOSE_SHA="$MOOSE_SHA" -e CRANE_SHA="$CRANE_SHA"             -e SQUIRREL_SHA="$SQUIRREL_SHA" -e ZAPDOS_SHA="$ZAPDOS_SHA"             -v "$PWD:/workspace" "$BUILD_BASE_REF" -lc "$CONTAINER_SCRIPT"
 
+      - name: Verify required Exodus outputs
+        if: always()
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd experiments/Issue234_m1_multiapp_electron_poisson
+          files=(
+            heavy_parent_scan_out.e
+            heavy_parent_scan_out_electron_fast0.e
+            heavy_parent_scan_out_electron_fast0_poisson0.e
+          )
+          : > exodus_manifest.txt
+          for f in "${files[@]}"; do
+            test -s "$f"
+            bytes=$(stat -c %s "$f")
+            sha=$(sha256sum "$f" | awk '{print $1}')
+            printf '%s  bytes=%s  sha256=%s\n' "$f" "$bytes" "$sha" | tee -a exodus_manifest.txt
+          done
+
       - name: Upload fixed-density dt/tau evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -171,6 +190,9 @@ jobs:
             experiments/Issue234_m1_multiapp_electron_poisson/density_scan_runtime_status.txt
             experiments/Issue234_m1_multiapp_electron_poisson/*scan*.log
             experiments/Issue234_m1_multiapp_electron_poisson/heavy_parent_scan_out*.csv
-            experiments/Issue234_m1_multiapp_electron_poisson/heavy_parent_scan_out*.e
-          if-no-files-found: warn
+            experiments/Issue234_m1_multiapp_electron_poisson/heavy_parent_scan_out.e
+            experiments/Issue234_m1_multiapp_electron_poisson/heavy_parent_scan_out_electron_fast0.e
+            experiments/Issue234_m1_multiapp_electron_poisson/heavy_parent_scan_out_electron_fast0_poisson0.e
+            experiments/Issue234_m1_multiapp_electron_poisson/exodus_manifest.txt
+          if-no-files-found: error
           retention-days: 7
