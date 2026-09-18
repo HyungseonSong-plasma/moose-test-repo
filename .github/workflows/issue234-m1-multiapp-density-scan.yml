@@ -86,7 +86,7 @@ jobs:
           BASH
           )
           docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace \
-            -e NE0="$NE0" \
+            -e NE0="$NE0" -e DT_E="$DT_E" \
             -v "$PWD:/workspace" "$BUILD_BASE_REF" -lc "$PRECHECK"
 
       - name: Build exact head and run density experiment
@@ -132,7 +132,7 @@ jobs:
           )
           docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace \
             -e GITHUB_SHA="$GITHUB_SHA" \
-            -e NE0="$NE0" -e CASE_LABEL="$CASE_LABEL" \
+            -e NE0="$NE0" -e DT_E="$DT_E" -e CASE_LABEL="$CASE_LABEL" \
             -e MOOSE_SHA="$MOOSE_SHA" -e CRANE_SHA="$CRANE_SHA" \
             -e SQUIRREL_SHA="$SQUIRREL_SHA" -e ZAPDOS_SHA="$ZAPDOS_SHA" \
             -v "$PWD:/workspace" "$BUILD_BASE_REF" -lc "$CONTAINER_SCRIPT"
