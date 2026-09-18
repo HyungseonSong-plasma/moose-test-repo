@@ -59,15 +59,18 @@ FORBIDDEN_EXECUTION_PLAN_IDENTITY_KEYS = {
 
 
 def _rel(path: Path) -> str:
+    """Return a repository-relative POSIX path."""
     return path.relative_to(ROOT).as_posix()
 
 
 def _module_package(path: Path) -> tuple[str, ...]:
+    """Return the package components containing a Python source file."""
     relative = path.relative_to(ROOT).with_suffix("")
     return relative.parts[:-1]
 
 
 def _import_modules_from_tree(tree: ast.AST, package: tuple[str, ...]) -> set[str]:
+    """Resolve effective imported modules, including relative ImportFrom aliases."""
     modules: set[str] = set()
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
@@ -98,11 +101,13 @@ def _import_modules_from_tree(tree: ast.AST, package: tuple[str, ...]) -> set[st
 
 
 def _import_modules(path: Path) -> set[str]:
+    """Resolve imported module names from one repository Python file."""
     tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
     return _import_modules_from_tree(tree, _module_package(path))
 
 
 def _semantic_paths() -> list[Path]:
+    """Enumerate the canonical semantic-control-plane Python surface."""
     paths = [GATEWAY]
     for directory in SEMANTIC_DIRS:
         paths.extend(sorted(directory.rglob("*.py")))
@@ -110,22 +115,32 @@ def _semantic_paths() -> list[Path]:
 
 
 def _is_moose_import(module: str) -> bool:
+    """Return whether a module belongs to the local MOOSE adapter boundary."""
     return module == MOOSE_PREFIX or module.startswith(MOOSE_PREFIX + ".")
 
 
 def _path_tokens(path: Path) -> set[str]:
+    """Tokenize path components across separators and CamelCase boundaries."""
     tokens: set[str] = set()
     for part in path.parts:
-        tokens.update(token for token in re.split(r"[^a-z0-9]+", part.lower()) if token)
+        split_case = re.sub(r"(?<=[a-z0-9])(?=[A-Z])", "_", part)
+        split_acronym = re.sub(r"(?<=[A-Z])(?=[A-Z][a-z])", "_", split_case)
+        tokens.update(
+            token
+            for token in re.split(r"[^a-z0-9]+", split_acronym.lower())
+            if token
+        )
     return tokens
 
 
 def _is_forbidden_local_owner(path: Path) -> bool:
+    """Return whether a path names a SOL-runtime responsibility locally."""
     tokens = _path_tokens(path)
     return any(group <= tokens for group in FORBIDDEN_LOCAL_OWNER_TOKEN_GROUPS)
 
 
 def _runtime_owner_paths() -> list[str]:
+    """List Physics-local paths that duplicate SOL runtime ownership."""
     violations: list[str] = []
     for path in HARNESS.rglob("*"):
         if "__pycache__" in path.parts or not _is_forbidden_local_owner(path):
@@ -138,6 +153,7 @@ def _runtime_owner_paths() -> list[str]:
 
 
 def _semantic_moose_edges() -> set[tuple[str, str]]:
+    """Collect direct semantic-control-plane dependencies on local MOOSE code."""
     edges: set[tuple[str, str]] = set()
     for path in _semantic_paths():
         for module in _import_modules(path):
@@ -148,10 +164,12 @@ def _semantic_moose_edges() -> set[tuple[str, str]]:
 
 
 def _identity_key(name: str) -> str:
+    """Normalize identity spellings across case and separators."""
     return re.sub(r"[^a-z0-9]", "", name.lower())
 
 
 def _annotation_identifiers(node: ast.AST | None) -> set[str]:
+    """Extract identity-bearing names from annotations, including forward refs."""
     if node is None:
         return set()
     names: set[str] = set()
@@ -160,20 +178,52 @@ def _annotation_identifiers(node: ast.AST | None) -> set[str]:
             names.add(child.id)
         elif isinstance(child, ast.Attribute):
             names.add(child.attr)
+        elif isinstance(child, ast.Constant) and isinstance(child.value, str):
+            names.update(
+                token
+                for token in re.findall(r"[A-Za-z_][A-Za-z0-9_]*", child.value)
+            )
     return names
 
 
 def _state_target_names(node: ast.AST) -> set[str]:
+    """Extract state names written by assignments, including self.__dict__ keys."""
     names: set[str] = set()
     for child in ast.walk(node):
         if isinstance(child, ast.Name):
             names.add(child.id)
         elif isinstance(child, ast.Attribute) and isinstance(child.value, ast.Name) and child.value.id == "self":
             names.add(child.attr)
+        elif (
+            isinstance(child, ast.Subscript)
+            and isinstance(child.value, ast.Attribute)
+            and isinstance(child.value.value, ast.Name)
+            and child.value.value.id == "self"
+            and child.value.attr == "__dict__"
+        ):
+            slice_node = child.slice
+            if isinstance(slice_node, ast.Constant) and isinstance(slice_node.value, str):
+                names.add(slice_node.value)
     return names
 
 
+def _call_state_names(node: ast.Call) -> set[str]:
+    """Extract dynamic state names from setattr(self, <name>, value)."""
+    if (
+        isinstance(node.func, ast.Name)
+        and node.func.id == "setattr"
+        and len(node.args) >= 2
+        and isinstance(node.args[0], ast.Name)
+        and node.args[0].id == "self"
+        and isinstance(node.args[1], ast.Constant)
+        and isinstance(node.args[1].value, str)
+    ):
+        return {node.args[1].value}
+    return set()
+
+
 def _execution_plan_conflations_from_tree(tree: ast.Module) -> list[str]:
+    """Reject SOL/MOOSE identity state anywhere on the ExecutionPlan class."""
     found: set[str] = set()
     plan = next(
         (node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == "ExecutionPlan"),
@@ -185,6 +235,10 @@ def _execution_plan_conflations_from_tree(tree: ast.Module) -> list[str]:
     def inspect(name: str) -> None:
         if _identity_key(name) in FORBIDDEN_EXECUTION_PLAN_IDENTITY_KEYS:
             found.add(name)
+
+    for base in plan.bases:
+        for name in _annotation_identifiers(base):
+            inspect(name)
 
     for statement in plan.body:
         if isinstance(statement, ast.AnnAssign):
@@ -201,30 +255,44 @@ def _execution_plan_conflations_from_tree(tree: ast.Module) -> list[str]:
             for arg in (*statement.args.posonlyargs, *statement.args.args, *statement.args.kwonlyargs):
                 for name in _annotation_identifiers(arg.annotation):
                     inspect(name)
+            if statement.args.vararg:
+                for name in _annotation_identifiers(statement.args.vararg.annotation):
+                    inspect(name)
+            if statement.args.kwarg:
+                for name in _annotation_identifiers(statement.args.kwarg.annotation):
+                    inspect(name)
             for name in _annotation_identifiers(statement.returns):
                 inspect(name)
-            if statement.name == "__init__":
-                for child in ast.walk(statement):
-                    if isinstance(child, ast.AnnAssign):
-                        for name in _state_target_names(child.target):
+
+            for child in ast.walk(statement):
+                if isinstance(child, ast.AnnAssign):
+                    for name in _state_target_names(child.target):
+                        inspect(name)
+                    for name in _annotation_identifiers(child.annotation):
+                        inspect(name)
+                elif isinstance(child, (ast.Assign, ast.AugAssign, ast.NamedExpr)):
+                    if isinstance(child, ast.Assign):
+                        targets = child.targets
+                    else:
+                        targets = [child.target]
+                    for target in targets:
+                        for name in _state_target_names(target):
                             inspect(name)
-                        for name in _annotation_identifiers(child.annotation):
-                            inspect(name)
-                    elif isinstance(child, (ast.Assign, ast.AugAssign)):
-                        targets = child.targets if isinstance(child, ast.Assign) else [child.target]
-                        for target in targets:
-                            for name in _state_target_names(target):
-                                inspect(name)
+                elif isinstance(child, ast.Call):
+                    for name in _call_state_names(child):
+                        inspect(name)
     return sorted(found)
 
 
 def _execution_plan_conflations() -> list[str]:
+    """Inspect the production ExecutionPlan declaration for forbidden identities."""
     path = HARNESS / "execution" / "plan.py"
     tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
     return _execution_plan_conflations_from_tree(tree)
 
 
 def _self_test() -> list[str]:
+    """Mutation-test the boundary guard's own failure detectors."""
     errors: list[str] = []
 
     positive = (
@@ -266,6 +334,9 @@ def _self_test() -> list[str]:
         "adapter_compatibility.py",
         "adapter_selector.py",
         "response_loss.py",
+        "AdapterRuntime.py",
+        "adapterRuntime.py",
+        "JsonRpcTransport.py",
     )
     for name in owner_cases:
         if not _is_forbidden_local_owner(Path(name)):
@@ -279,16 +350,28 @@ def _self_test() -> list[str]:
         errors.append("self-test expects exactly one transitional semantic MOOSE edge")
 
     synthetic_plan = ast.parse(
-        "class ExecutionPlan:\n"
+        "class ExecutionPlan(MappingPlan):\n"
         "    mapping_plan: int\n"
-        "    realization_spec: str\n"
+        "    realization_spec: \"RealizationSpec\"\n"
         "    def __init__(self):\n"
         "        self.moose_target_ir = None\n"
+        "        self.__dict__[\"adapter_protocol_version\"] = \"0.2\"\n"
+        "    def attach(self, payload: \"MooseCaseIR\"):\n"
+        "        self.public_contract_version = \"0.2\"\n"
+        "        setattr(self, \"realization_spec\", payload)\n"
     )
     conflations = _execution_plan_conflations_from_tree(synthetic_plan)
-    for expected in ("mapping_plan", "realization_spec", "moose_target_ir"):
+    for expected in (
+        "MappingPlan",
+        "mapping_plan",
+        "realization_spec",
+        "moose_target_ir",
+        "adapter_protocol_version",
+        "MooseCaseIR",
+        "public_contract_version",
+    ):
         if expected not in conflations:
-            errors.append(f"self-test missed normalized ExecutionPlan identity: {expected}")
+            errors.append(f"self-test missed ExecutionPlan identity escape path: {expected}")
 
     harmless_doc = ast.parse(
         "class ExecutionPlan:\n"
@@ -302,6 +385,7 @@ def _self_test() -> list[str]:
 
 
 def _check() -> list[str]:
+    """Evaluate current repository state against the frozen RFC invariants."""
     errors: list[str] = []
 
     runtime_owners = _runtime_owner_paths()
@@ -334,6 +418,7 @@ def _check() -> list[str]:
 
 
 def main() -> int:
+    """Run guard self-tests and/or repository boundary checks."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--self-test", action="store_true")
     parser.add_argument("--check", action="store_true")
