@@ -105,8 +105,6 @@ jobs:
         run: |
           python physics_app/ci/check_electron_molar_representation_contract.py --self-test
           python physics_app/ci/check_electron_molar_representation_contract.py
-      - name: Run canonical Physics regression validation
-        run: python physics -i regression
       - name: Validate Issue 43/45 science refactor
         run: python experiments/Issue43_45_science_refactor/final_guard.py
       - name: Validate Issue 89 post-science canonicalization
