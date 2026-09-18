@@ -38,6 +38,7 @@ def main() -> None:
         raise SystemExit("--steps must be positive")
 
     target_end = steps * dt_e
+    time_tol = max(dt_e * 1.0e-6, 1.0e-30)
     log_ce = math.log(ne / NA)
     w_o2p = ne * M_O2P / (RHO * NA)
 
@@ -66,7 +67,14 @@ def main() -> None:
     heavy = replace_once(
         heavy,
         "  dt = 1.0e-9\n  end_time = 1.0e-9",
-        f"  dt = {target_end:.17g}\n  end_time = {target_end:.17g}",
+        (
+            f"  dt = {target_end:.17g}\n"
+            f"  dtmin = {target_end:.17g}\n"
+            f"  dtmax = {target_end:.17g}\n"
+            f"  timestep_tolerance = {time_tol:.17g}\n"
+            f"  end_time = {target_end:.17g}\n"
+            "  num_steps = 1"
+        ),
         "heavy 20-step sync horizon",
     )
 
@@ -77,6 +85,7 @@ def main() -> None:
             f"  dt = {dt_e:.17g}\n"
             f"  dtmin = {dt_e:.17g}\n"
             f"  dtmax = {dt_e:.17g}\n"
+            f"  timestep_tolerance = {time_tol:.17g}\n"
             f"  end_time = {target_end:.17g}\n"
             f"  num_steps = {steps}"
         ),
@@ -132,6 +141,10 @@ def main() -> None:
         "expected_end_time_s": target_end,
         "electron_dtmin_s": dt_e,
         "electron_dtmax_s": dt_e,
+        "timestep_tolerance_s": time_tol,
+        "parent_dt_s": target_end,
+        "parent_dtmin_s": target_end,
+        "parent_dtmax_s": target_end,
     }
     (ROOT / "density_scan_parameters.json").write_text(
         json.dumps(parameters, indent=2, sort_keys=True) + "\n"
