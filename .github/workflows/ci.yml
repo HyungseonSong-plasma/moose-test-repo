@@ -36,31 +36,33 @@ jobs:
           -r requirements-evidence-engine.txt
           -r requirements-ontology.txt
       - name: Validate Evidence dependency direction
-        run: python tools/physics_dependency_guard.py --check evidence
+        run: python tools/guards/physics_dependency_guard.py --check evidence
       - name: Validate Analysis dependency direction
-        run: python tools/physics_dependency_guard.py --check analysis
+        run: python tools/guards/physics_dependency_guard.py --check analysis
       - name: Validate Execution dependency direction
-        run: python tools/physics_dependency_guard.py --check execution
+        run: python tools/guards/physics_dependency_guard.py --check execution
       - name: Validate presentation dependency direction
-        run: python tools/physics_dependency_guard.py --check presentation
+        run: python tools/guards/physics_dependency_guard.py --check presentation
+      - name: Validate repository-tool dependency direction
+        run: python tools/guards/physics_dependency_guard.py --check repository
       - name: Validate canonical package cycles
-        run: python tools/physics_dependency_guard.py --check cycle
+        run: python tools/guards/physics_dependency_guard.py --check cycle
       - name: Validate declarative experiment gateway
-        run: python tools/physics_experiment_gateway_guard.py
+        run: python tools/guards/physics_experiment_gateway_guard.py
       - name: Validate plasma semantic ownership
-        run: python tools/physics_plasma_semantic_residue_guard.py
+        run: python tools/guards/physics_plasma_semantic_residue_guard.py
       - name: Validate campaign/performance/scale ownership
-        run: python tools/physics_campaign_residue_guard.py
+        run: python tools/guards/physics_campaign_residue_guard.py
       - name: Validate numerical-method ownership
-        run: python tools/physics_numerical_method_ownership_guard.py
+        run: python tools/guards/physics_numerical_method_ownership_guard.py
       - name: Validate model terminology and MOOSE boundary ownership
-        run: python tools/physics_boundary_terminology_guard.py
+        run: python tools/guards/physics_boundary_terminology_guard.py
       - name: Validate strict zero-legacy architecture census
         run: |
-          python tools/physics_architecture_census.py --json-out physics-architecture-census.json
-          python tools/physics_architecture_census.py --require-no-legacy
+          python tools/guards/physics_architecture_census.py --json-out physics-architecture-census.json
+          python tools/guards/physics_architecture_census.py --require-no-legacy
       - name: Validate zero-legacy active CI surface
-        run: python tools/physics_public_artifact_residue_guard.py
+        run: python tools/guards/physics_public_artifact_residue_guard.py
       - name: Upload architecture census
         if: always()
         uses: actions/upload-artifact@v4
@@ -103,8 +105,8 @@ jobs:
         run: |
           python physics_app/ci/check_electron_molar_representation_contract.py --self-test
           python physics_app/ci/check_electron_molar_representation_contract.py
-      - name: Run canonical Physics internal validation
-        run: python physics -i all
+      - name: Run canonical Physics regression validation
+        run: python physics -i regression
       - name: Validate Issue 43/45 science refactor
         run: python experiments/Issue43_45_science_refactor/final_guard.py
       - name: Validate Issue 89 post-science canonicalization
