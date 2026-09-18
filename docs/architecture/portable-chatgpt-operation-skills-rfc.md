@@ -137,11 +137,18 @@ Proposed Python API:
 from chatgpt_operation.repository.mutation import MutationEngine
 ```
 
-Initial distribution is deliberately split by execution venue:
+Initial v1 distribution is deliberately narrow:
 
 1. **GitHub Actions:** use the private composite action at an exact commit SHA through GitHub's private-action sharing mechanism;
-2. **developer/local Python:** install from the private Git repository using the developer's own authenticated Git access at an exact commit, or install a release wheel;
-3. add a private Python registry or PyPI publication only if operationally justified later.
+2. **developer/local Python:** install only from the canonical private repository `HyungseonSong-plasma/chatgpt-operation` using authenticated Git access and an exact 40-hex commit SHA.
+
+Portable v1 publishes **no wheel/package artifact** and has **no third-party Python runtime dependencies**. This removes an unnecessary artifact-provenance surface from the first release.
+
+A local installer or bootstrap check must verify both:
+- the canonical repository identity/remote URL; and
+- the resolved commit equals the requested exact SHA.
+
+If wheel or registry distribution is introduced later, it requires a separate reviewed design for immutable digest verification plus signed/attested provenance and dependency integrity.
 
 The privileged GitHub workflow must **not** perform `pip install git+...` or `actions/checkout` against the private central repository using the consumer repository's write token.
 
@@ -165,6 +172,14 @@ mutation:
     file: [create, update, delete]
     branch: [create]
 
+  file_paths:
+    allow:
+      - "docs/**"
+      - "automation/mutations/**"
+    deny:
+      - ".github/workflows/**"
+      - ".github/actions/**"
+
 validation_gate:
   workflows:
     - Repository CI
@@ -172,6 +187,13 @@ validation_gate:
 ```
 
 The central engine validates the policy schema and fails closed for unsupported fields or actions.
+
+File mutation authorization is path-sensitive:
+- `deny` rules take precedence over `allow`;
+- a file path that matches no `allow` rule is denied;
+- patterns are repository-relative POSIX-style globs;
+- path normalization occurs before authorization and `..\`, absolute paths, and ambiguous normalized forms are rejected;
+- protected paths must be routed through a separately reviewed higher-trust workflow/policy rather than bypassing the generic action.
 
 Policy should be treated as authorization constraints, not suggestions.
 
@@ -241,7 +263,55 @@ Greptile's review of the current `moose-test-repo` mutation prototype identified
 6. **Mutation retry must be idempotent after ambiguous local result persistence.**  
    A remote mutation may succeed even if local artifact writing fails. The operation contract therefore needs a deterministic operation identity plus post-state/no-op recognition so retry does not create a second semantic mutation.
 
+7. **File mutation authorization is path-sensitive and fail-closed.**  
+   Resource/action authorization alone is insufficient. Consumer policy must explicitly authorize target paths; deny rules win; unmatched paths are rejected.
+
+8. **Validation-gate enumeration must be complete.**  
+   GitHub Actions run enumeration must paginate until exhaustion. Any pagination/API failure before completeness is proven yields `HARD_STOP`.
+
+9. **Local package provenance is intentionally minimized in v1.**  
+   v1 supports exact-SHA installation only from the canonical private repository and has no external Python runtime dependencies or wheel distribution.
+
 These requirements are inherited from review evidence on the local prototype and must be resolved before that prototype is generalized.
+
+## 7B. Deterministic operation identity and retry semantics
+
+Every mutation computes:
+
+```text
+operation_id = SHA-256(canonical JSON of:
+  schema_version,
+  repository,
+  resource,
+  action,
+  normalized target,
+  normalized desired state)
+```
+
+`expected` concurrency identity is deliberately excluded from the semantic operation identity; it proves whether a first write may proceed, but it does not change the desired end state.
+
+For file operations, **post-state recognition occurs before stale-identity rejection**:
+
+```text
+create:
+  target exists with desired content -> NO_MUTATION_NEEDED
+  target exists with different content -> HARD_STOP
+  target absent -> create
+
+update:
+  target content already equals desired -> NO_MUTATION_NEEDED
+  target differs and current blob SHA != expected -> HARD_STOP
+  target differs and SHA matches -> update
+
+delete:
+  target absent -> NO_MUTATION_NEEDED
+  target exists and current blob SHA != expected -> HARD_STOP
+  target exists and SHA matches -> delete
+```
+
+This ordering makes a retry safe when GitHub accepted the mutation but local result persistence failed afterward.
+
+The structured result includes `operation_id`, status, and resulting identity when available. A retry of the same semantic operation must converge to the same post-state without creating a second semantic mutation.
 
 ## 8. Validation gate versus mutation serialization
 
@@ -268,6 +338,8 @@ validation_gate.mode = named_workflows | all_actions
 validation_gate.workflows = [...]
 validation_gate.ignore_current_run = true
 ```
+
+Enumeration is complete-or-fail-closed: the implementation requests all pages of queued and in-progress workflow runs until GitHub returns no further page. If any page cannot be retrieved or decoded, the gate returns `HARD_STOP`; it must never interpret an incomplete first page as proof that no gated validation is active.
 
 GitHub Actions `concurrency` is useful for serializing this skill's own workflow runs, but it does not cover humans or external API writers and therefore cannot make a non-CAS mutation safe.
 
@@ -369,7 +441,13 @@ Central tests should include:
 - control-plane SHA cannot be influenced by the mutation target/manifest;
 - privileged action references are immutable full SHAs;
 - malformed JSON/UTF-8/base64, timeout, and non-JSON response failures remain structured;
-- successful remote mutation followed by local result-write failure is retry-safe.
+- successful remote mutation followed by local result-write failure is retry-safe;
+- file create/update/delete recognize already-achieved post-state before stale-identity rejection;
+- operation IDs are deterministic across retry;
+- file-path deny precedence, unmatched-path rejection, normalization, and protected-path routing;
+- validation-gate pagination with more than 100 runs and fail-closed page-fetch failure;
+- local exact-SHA install rejects a non-canonical repository source or mismatched resolved commit;
+- v1 package imports and CLI run with no third-party Python runtime dependency.
 
 A local fake/in-memory transport remains mandatory for mutation self-tests.
 
@@ -440,8 +518,9 @@ Reviewers should explicitly challenge:
 7. Should future resource classes use separate composite actions/workflows for permission isolation?
 8. Since `updated_at` is not a PATCH precondition, should issue mutation remain entirely outside v1 unless an exclusive-writer lease is proven?
 9. Should branch move/delete remain disabled unless a server-side CAS or repository-wide exclusive-writer mechanism exists?
-10. What is missing for package integrity, provenance, release signing, and reproducibility?
-11. Which parts of the current repository-mutation prototype should **not** be generalized?
+10. Is the v1 decision to avoid wheel/registry distribution sufficient to defer artifact-signing requirements without weakening GitHub Actions consumption?
+11. Are path-level allow/deny rules sufficient, or should protected paths always require a distinct action/workflow identity?
+12. Which parts of the current repository-mutation prototype should **not** be generalized?
 
 ## 17. Acceptance for this RFC
 
@@ -451,4 +530,5 @@ This RFC should not be accepted until:
 - security/permission objections are dispositioned;
 - the package/private-action/consumer-workflow boundary is explicit;
 - consumer policy ownership is explicit;
-- migration can be performed without weakening the current `moose-test-repo` mutation safety contract.
+- migration can be performed without weakening the current `moose-test-repo` mutation safety contract;
+- CodeRabbit findings on package provenance, path authorization, retry idempotency, and complete validation-gate enumeration are represented as executable acceptance tests before consumer migration.
