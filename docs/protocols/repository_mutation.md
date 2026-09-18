@@ -6,7 +6,7 @@
 
 This procedure separates **real repository-safety failures** from **soft control anomalies**. A mutation workflow stops only when canonical repository state is at risk, the intended change cannot be proven safe, or an explicitly gated validation run is active. Soft control anomalies are diagnosed and recorded, but they do not automatically terminate valid work.
 
-For supported file, branch/ref, and issue mutations, the repetitive mechanical enforcement of RM-01 through RM-05, RM-11, the mutation-lock portion of RM-12, and post-write completion checks is owned by `skills/repository/mutation.py`. Prefer a governed mutation manifest over manually reconstructing those checks. This protocol remains authoritative for semantic intent, unsupported resource classes, HARD STOP/SOFT CONTROL interpretation, dependency synchronization, incident severity, and exceptions that the skill does not encode.
+For portable-v1 file create/update/delete and branch-create mutations, repetitive mechanical enforcement is owned by the central skill `HyungseonSong-plasma/chatgpt-operation@661ca7fe3b214e9ca8ac802d517fa1e40f65ecca`, consumed through `.github/workflows/refactor.yml` under the local authorization policy `.chatgpt-operation.json`. Prefer a governed mutation manifest over manually reconstructing those checks. Branch move/delete, issue/PR mutation, Git-object construction, and every unsupported resource class remain governed directly by this protocol and an explicitly safe mutator. This protocol remains authoritative for semantic intent, HARD STOP/SOFT CONTROL interpretation, dependency synchronization, incident severity, and exceptions that the central skill does not encode.
 
 ## RM-01 — Intent and target binding
 

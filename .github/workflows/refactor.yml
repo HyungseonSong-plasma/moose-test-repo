@@ -45,7 +45,6 @@ permissions:
   contents: write
   packages: write
   actions: read
-  issues: write
 
 concurrency:
   group: refactor-${{ inputs.issue }}-${{ inputs.sequence }}-${{ inputs.task }}
@@ -107,21 +106,23 @@ jobs:
     if: inputs.task == 'repository_mutation'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
+    permissions:
+      contents: write
+      actions: read
     env:
       ISSUE: ${{ inputs.issue }}
       SEQUENCE: ${{ inputs.sequence }}
       MANIFEST_INPUT: ${{ inputs.manifest }}
       BASE_SHA: ${{ inputs.base_sha }}
-      GITHUB_TOKEN: ${{ github.token }}
     steps:
       - name: Checkout exact mutation control plane
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           ref: ${{ inputs.base_sha }}
           path: control
           fetch-depth: 1
 
-      - name: Execute governed repository mutation
+      - name: Validate governed repository mutation request
         shell: bash
         run: |
           set -euo pipefail
@@ -130,15 +131,24 @@ jobs:
           [[ "$BASE_SHA" =~ ^[0-9a-f]{40}$ ]]
           [[ "$MANIFEST_INPUT" =~ ^automation/mutations/[A-Za-z0-9_.-]+\.json$ ]]
           test "$(git -C "$GITHUB_WORKSPACE/control" rev-parse HEAD)" = "$BASE_SHA"
+          test -f "$GITHUB_WORKSPACE/control/.chatgpt-operation.json"
+          test -f "$GITHUB_WORKSPACE/control/$MANIFEST_INPUT"
           mkdir -p "$GITHUB_WORKSPACE/repository-mutation-results"
-          python3 control/skills/repository/mutation.py \
-            --manifest "$GITHUB_WORKSPACE/control/$MANIFEST_INPUT" \
-            --repository "$GITHUB_REPOSITORY" \
-            --result "$GITHUB_WORKSPACE/repository-mutation-results/result.json"
+
+      - name: Execute central repository mutation
+        id: repository_mutation
+        uses: HyungseonSong-plasma/chatgpt-operation/.github/actions/repository-mutation@661ca7fe3b214e9ca8ac802d517fa1e40f65ecca
+        with:
+          manifest: ${{ github.workspace }}/control/${{ inputs.manifest }}
+          policy: ${{ github.workspace }}/control/.chatgpt-operation.json
+          repository: ${{ github.repository }}
+          github-token: ${{ github.token }}
+          current-run-id: ${{ github.run_id }}
+          result-path: ${{ github.workspace }}/repository-mutation-results/result.json
 
       - name: Upload repository mutation result
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: Issue_${{ inputs.issue }}_refactor${{ inputs.sequence }}-repository-mutation
           path: repository-mutation-results/**

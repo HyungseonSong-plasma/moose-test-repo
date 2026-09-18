@@ -25,8 +25,21 @@ jobs:
           python3 skills/workflow/workflow_guard.py --self-test
           python3 skills/workflow/workflow_guard.py --check
           python3 skills/workflow/run_work.py --self-test
-      - name: Validate repository mutation skill
-        run: python3 skills/repository/mutation.py --self-test
+      - name: Validate central repository mutation consumer contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          test ! -e skills/repository/mutation.py
+          grep -Fq 'HyungseonSong-plasma/chatgpt-operation/.github/actions/repository-mutation@661ca7fe3b214e9ca8ac802d517fa1e40f65ecca' .github/workflows/refactor.yml
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          policy=json.loads(Path(".chatgpt-operation.json").read_text(encoding="utf-8"))
+          assert policy["schema_version"] == 1
+          assert policy["repository"] == "HyungseonSong-plasma/moose-test-repo"
+          assert policy["validation_gate"]["mode"] == "named_workflows"
+          assert "Repository CI" in policy["validation_gate"]["workflows"]
+          PY
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
