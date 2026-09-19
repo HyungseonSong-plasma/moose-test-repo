@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from physics_harness.sol.model_artifact import (
+from physics_harness.ontology.model_artifact import (
     CanonicalModelArtifactRef,
     ModelArtifactCatalog,
     ModelArtifactResolutionError,
