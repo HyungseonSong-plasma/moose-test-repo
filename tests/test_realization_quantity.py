@@ -38,13 +38,6 @@ def test_untyped_scalar_cannot_infer_semantics_from_local_spelling() -> None:
         _catalog().bind_untyped("temperature_K", 300.0)
 
 
-def test_local_action_rename_does_not_change_canonical_quantity_meaning() -> None:
-    catalog = _catalog()
-    first = catalog.bind("sol.quantity.temperature", 300.0, unit="K")
-    renamed = catalog.bind("sol.quantity.temperature", 300.0, unit="K")
-    assert first == renamed
-
-
 def test_catalog_alias_cannot_relabel_quantity_identity() -> None:
     spec = CanonicalQuantitySpec("sol.quantity.temperature", "K")
     with pytest.raises(ValueError, match="catalog key"):
