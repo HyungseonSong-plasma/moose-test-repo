@@ -38,6 +38,13 @@ def test_resolves_exact_canonical_artifact() -> None:
     assert ref.to_dict() == steady_thermal_ref().to_dict()
 
 
+def test_catalog_rejects_artifact_identity_alias() -> None:
+    ref = steady_thermal_ref()
+
+    with pytest.raises(ValueError, match="catalog key must match"):
+        ModelArtifactCatalog({"sol:artifact:alias": ref})
+
+
 def test_unavailable_artifact_fails_closed() -> None:
     catalog = ModelArtifactCatalog({})
 
