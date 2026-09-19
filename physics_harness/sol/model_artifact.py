@@ -47,7 +47,13 @@ class ModelArtifactCatalog:
     """Resolve immutable canonical references without guessing from local names."""
 
     def __init__(self, artifacts: Mapping[str, CanonicalModelArtifactRef]) -> None:
-        self._artifacts = dict(artifacts)
+        resolved_artifacts = dict(artifacts)
+        for artifact_id, ref in resolved_artifacts.items():
+            if artifact_id != ref.artifact_id:
+                raise ValueError(
+                    "catalog key must match CanonicalModelArtifactRef.artifact_id"
+                )
+        self._artifacts = resolved_artifacts
 
     def resolve(self, artifact_id: str) -> CanonicalModelArtifactRef:
         try:
