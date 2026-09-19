@@ -248,6 +248,10 @@ def _execution_plan_conflations_from_tree(tree: ast.Module) -> list[str]:
         state_names = {name for target in targets for name in _state_target_names(target)}
         for name in state_names:
             inspect(name)
+        if class_scope:
+            for target in targets:
+                for name in _expression_identifiers(target):
+                    inspect(name)
         if state_names or class_scope:
             for name in _expression_identifiers(value):
                 inspect(name)
