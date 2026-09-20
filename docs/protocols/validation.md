@@ -516,3 +516,41 @@ terminal validation class
 ```
 
 This layer is intended to generalize across electron/Poisson microsteps, chemistry stiffness, Maxwell period handling, heavy-transport scale audits, MultiApp subcycling, and other multiphysics cases without forcing all physics into one timestep or duplicating the scale definitions owned elsewhere.
+
+## VAL-22 — Validation-route liveness
+
+Validation readiness includes **route existence**, not only the semantics of a run after it starts.
+
+Whenever repository state is expected to launch required exact-head CI/review validation, confirm that the route materialized:
+
+```text
+expected head SHA
+expected event/dispatch
+required validation surface
+matching run/check existence
+```
+
+Classify:
+
+```text
+matching run queued/in_progress
+  -> VALIDATION_ACTIVE
+
+matching run terminal
+  -> interpret the actual validation result
+
+required/expected launch + matching run count = 0
+  -> MISSING_VALIDATION_ROUTE
+  -> orchestration FIX, not WAIT and not scientific FAIL
+```
+
+Common route defects include PR base retargeting that is not covered by the workflow's configured pull-request event types, workflow/path filters that exclude the changed route, stale branch/workflow identity, and dispatch surfaces that are unavailable to the caller.
+
+A controller must repair or explicitly reroute `MISSING_VALIDATION_ROUTE` before spending another scheduled cycle on the same wait condition.
+
+Do not use empty commits or irrelevant canonical mutations merely to trigger CI. Prefer a real synchronization/reconciliation change when required by the branch, a workflow event that correctly covers the state transition, or an explicitly supported dispatch surface.
+
+**Same-cycle rule:** after launch, confirm that a matching run exists. If later useful work naturally consumes enough time that the run may have become terminal, one additional status read is permitted. Do not sleep or busy-poll solely to await completion.
+
+This liveness rule does not weaken P0-P3, exact-head identity, review, runtime, or scientific acceptance requirements.
+
