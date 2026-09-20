@@ -61,6 +61,7 @@ jobs:
           skills=json.loads(Path("docs/operating_system/central_skills.json").read_text(encoding="utf-8"))
           assert skills["schema_version"] == 1
           assert skills["source_repository"] == "HyungseonSong-plasma/chatgpt-operation"
+          assert len(skills["skills"]) == 5
           entries={item["name"]: item for item in skills["skills"]}
           assert set(entries) == {
               "controller-lifecycle",
