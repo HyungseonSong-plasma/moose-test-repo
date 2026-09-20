@@ -44,27 +44,33 @@ def _write_consumer(tmp_path: Path, body: str) -> Path:
 
 
 def test_success_requires_explicit_no_replay_evidence(tmp_path):
-    consumer = _write_consumer(
-        tmp_path,
-        "import json\nprint(json.dumps({'status':'completed','execute_response_loss_replay':'forbidden'}))\n",
-    )
+    consumer = _write_consumer(tmp_path, "import json\nprint(json.dumps({'status':'completed','execute_response_loss_replay':'forbidden'}))\n")
     result = invoke_runtime_consumer(consumer, Path("adapter"), _request())
     assert result.completed
 
 
 def test_nonzero_runtime_validation_failure_is_typed(tmp_path):
-    consumer = _write_consumer(
-        tmp_path,
-        "import sys\nsys.stderr.write('VALIDATION_REJECTED:Rejected')\nsys.exit(1)\n",
-    )
+    consumer = _write_consumer(tmp_path, "import sys\nsys.stderr.write('VALIDATION_REJECTED:Rejected')\nsys.exit(1)\n")
     result = invoke_runtime_consumer(consumer, Path("adapter"), _request())
     assert result.kind is SolRuntimeFailureKind.VALIDATION
 
 
-def test_malformed_success_is_protocol_failure(tmp_path):
+def test_malformed_success_preserves_no_replay_ambiguity(tmp_path):
     consumer = _write_consumer(tmp_path, "print('not-json')\n")
     result = invoke_runtime_consumer(consumer, Path("adapter"), _request())
-    assert result.kind is SolRuntimeFailureKind.PROTOCOL
+    assert result.kind is SolRuntimeFailureKind.NO_REPLAY_AMBIGUITY
+
+
+def test_incomplete_success_preserves_no_replay_ambiguity(tmp_path):
+    consumer = _write_consumer(tmp_path, "print('{\"status\":\"incomplete\"}')\n")
+    result = invoke_runtime_consumer(consumer, Path("adapter"), _request())
+    assert result.kind is SolRuntimeFailureKind.NO_REPLAY_AMBIGUITY
+
+
+def test_arbitrary_replay_stderr_is_not_no_replay_evidence(tmp_path):
+    consumer = _write_consumer(tmp_path, "import sys\nsys.stderr.write('response replay diagnostic')\nsys.exit(1)\n")
+    result = invoke_runtime_consumer(consumer, Path("adapter"), _request())
+    assert result.kind is SolRuntimeFailureKind.RUNTIME
 
 
 def test_success_without_no_replay_proof_is_ambiguous(tmp_path):
@@ -81,15 +87,7 @@ def test_missing_consumer_binary_is_typed_runtime_failure(tmp_path):
 
 
 def test_consumer_timeout_preserves_no_replay_ambiguity(tmp_path):
-    consumer = _write_consumer(
-        tmp_path,
-        "import time\ntime.sleep(1)\n",
-    )
-    result = invoke_runtime_consumer(
-        consumer,
-        Path("adapter"),
-        _request(),
-        timeout_seconds=0.01,
-    )
+    consumer = _write_consumer(tmp_path, "import time\ntime.sleep(1)\n")
+    result = invoke_runtime_consumer(consumer, Path("adapter"), _request(), timeout_seconds=0.01)
     assert result.kind is SolRuntimeFailureKind.NO_REPLAY_AMBIGUITY
     assert result.evidence["exception_type"] == "TimeoutExpired"
