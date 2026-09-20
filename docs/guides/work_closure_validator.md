@@ -1,10 +1,20 @@
-# Deprecated Compatibility Entry — Work Closure Validator
+# Work Closure Validator — Historical Compatibility Entry
 
-**Status:** deprecated compatibility shim  
-**Canonical owner:** `docs/protocols/metrics_closure.md`
+**Status:** historical compatibility shim
 
-This file is retained for historical references only. WCC, T-WCC, RVR, EVR, DBR, RWR, CLR, FBR, complexity classes, closure-quality guardrails, work-close records, and retrospective accounting are now canonical in `docs/protocols/metrics_closure.md`.
+The former WCC/T-WCC/RVR/EVR/DBR/RWR/CLR/FBR operating-metrics system is retired from live Paul operation.
 
-Test sufficiency and P0-P3 belong to `docs/protocols/validation.md`; 3-EVR execution logic belongs to `docs/protocols/problem_solving.md`.
+Historical definitions and ledgers are preserved under:
 
-Do not add new rules here.
+```text
+archive/operating_metrics/
+```
+
+Current closure uses:
+
+- owning issue/milestone acceptance criteria;
+- `docs/protocols/validation.md` for evidence sufficiency;
+- `docs/protocols/milestone_delivery.md` for capability/integration closure;
+- current GitHub issue/PR/main evidence.
+
+No operating-process metric is required to close current work.

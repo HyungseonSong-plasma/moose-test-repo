@@ -225,7 +225,7 @@ All actual writes remain subject to `docs/protocols/repository_mutation.md`, inc
 
 A milestone may contain architecture, harness, scientific, and diagnostic issues, but accepted evidence scopes must not be silently mixed.
 
-Architecture/refactor issues must not consume new scientific EVR/P3 evidence merely to prove code organization unless explicitly authorized. Scientific claims continue to use their own validation and evidence contracts.
+Architecture/refactor issues must not consume new scientific runtime/P3 evidence merely to prove code organization unless explicitly authorized. Scientific claims continue to use their own validation and evidence contracts.
 
 ## MD-15 — Milestone closure output
 

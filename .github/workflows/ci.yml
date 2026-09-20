@@ -29,29 +29,108 @@ jobs:
         run: |
           python3 ci/guards/workflow_surface_guard.py --self-test
           python3 ci/guards/workflow_surface_guard.py --check
-      - name: Validate central operational skill consumer contracts
+      - name: Validate Paul central operating contracts
         shell: bash
         run: |
           set -euo pipefail
           test ! -e skills
           test ! -e src/chatgpt_operation
-          grep -Fq 'controller lifecycle/throughput/state-refresh evaluation is pinned at `ab9091e2eb2e1f186110a0afc5b1da4479349e1b`' docs/protocols/coding.md
-          grep -Fq 'controller-lifecycle/controller-throughput/state-refresh skills pinned at `ab9091e2eb2e1f186110a0afc5b1da4479349e1b`' docs/protocols/rule_working_set.md
-          grep -Fq 'chatgpt-operation/state-refresh' BOOTSTRAP.md
-          ! grep -Fq '6857e641d0f45962d260ab21a885c5131311e5a2' docs/protocols/coding.md
-          ! grep -Fq '6857e641d0f45962d260ab21a885c5131311e5a2' docs/protocols/rule_working_set.md
-          grep -Fq 'HyungseonSong-plasma/chatgpt-operation/.github/actions/repository-mutation@661ca7fe3b214e9ca8ac802d517fa1e40f65ecca' .github/workflows/refactor.yml
-          grep -Fq 'HyungseonSong-plasma/chatgpt-operation/.github/actions/governed-work@4d5683b12be31e28b44bbe34723b02ae3493b172' .github/workflows/refactor.yml
-          grep -Fq 'HyungseonSong-plasma/chatgpt-operation/.github/actions/governed-work@4d5683b12be31e28b44bbe34723b02ae3493b172' .github/workflows/experiment.yml
+          test -f docs/operating_system/README.md
+          test -f docs/operating_system/CENTRAL_SKILLS.md
+          test -f docs/operating_system/central_skills.json
+          grep -Fq '908d5b695b4640727b3c45d8044763c5fcca1d08' docs/operating_system/README.md
+          grep -Fq 'Expected OS:** Paul' docs/operating_system/README.md
+          grep -Fq '908d5b695b4640727b3c45d8044763c5fcca1d08' docs/operating_system/CENTRAL_SKILLS.md
+
+          # Calvin operating metrics are archive-only under Paul.
+          test ! -e docs/metrics
+          test ! -e docs/protocols/metrics_closure.md
+          test -d archive/operating_metrics/calvin/docs_metrics
+          test -f archive/operating_metrics/calvin/metrics_closure.md
+
+          # Executable central actions use the same exact Paul revision.
+          grep -Fq 'HyungseonSong-plasma/chatgpt-operation/.github/actions/repository-mutation@908d5b695b4640727b3c45d8044763c5fcca1d08' .github/workflows/refactor.yml
+          grep -Fq 'HyungseonSong-plasma/chatgpt-operation/.github/actions/governed-work@908d5b695b4640727b3c45d8044763c5fcca1d08' .github/workflows/refactor.yml
+          grep -Fq 'HyungseonSong-plasma/chatgpt-operation/.github/actions/governed-work@908d5b695b4640727b3c45d8044763c5fcca1d08' .github/workflows/experiment.yml
+
           python3 - <<'PY'
           import json
           from pathlib import Path
+
+          manifest=json.loads(Path("docs/operating_system/central_skills.json").read_text(encoding="utf-8"))
+          assert manifest["schema_version"] == 2
+          assert manifest["source_repository"] == "HyungseonSong-plasma/chatgpt-operation"
+          os_meta=manifest["operating_system"]
+          assert os_meta["revision"] == "908d5b695b4640727b3c45d8044763c5fcca1d08"
+          assert os_meta["expected_version"] == "Paul"
+          assert os_meta["index"] == {
+              "path": "docs/operating_system/README.md",
+              "expected_blob_sha": "c5158404c680ad8393e1b88bdeb1a0a8e6145e62",
+          }
+          assert os_meta["essential_rules"] == {
+              "path": "docs/operating_system/ESSENTIAL_RULES.md",
+              "expected_blob_sha": "adfad6c7acc7b371b5aa840c6fb830ca696e60ac",
+          }
+
+          entries={item["name"]: item for item in manifest["skills"]}
+          assert set(entries) == {
+              "session-bootstrap",
+              "state-refresh",
+              "repository-mutation",
+              "governed-work",
+              "controller-throughput",
+              "controller-lifecycle",
+          }
+          for item in entries.values():
+              assert item["revision"] == "908d5b695b4640727b3c45d8044763c5fcca1d08"
+          assert entries["session-bootstrap"]["load_on"] == ["INIT"]
+          assert entries["state-refresh"]["load_on"] == ["INIT","SCHEDULED_CONTROLLER"]
+          assert entries["repository-mutation"]["load_on"] == ["MUTATE"]
+          assert entries["governed-work"]["load_on"] == ["GOVERNED_WORK"]
+          assert entries["controller-throughput"]["load_on"] == ["SCHEDULED_CONTROLLER"]
+          assert entries["controller-lifecycle"]["load_on"] == ["SCHEDULED_CONTROLLER"]
+
           policy=json.loads(Path(".chatgpt-operation.json").read_text(encoding="utf-8"))
           assert policy["schema_version"] == 1
           assert policy["repository"] == "HyungseonSong-plasma/moose-test-repo"
           assert policy["validation_gate"]["mode"] == "named_workflows"
           assert "Repository CI" in policy["validation_gate"]["workflows"]
           PY
+
+          central_dir="$(mktemp -d)"
+          git -C "$central_dir" init -q
+          git -C "$central_dir" remote add origin https://github.com/HyungseonSong-plasma/chatgpt-operation.git
+          git -C "$central_dir" fetch --quiet --depth=1 origin "908d5b695b4640727b3c45d8044763c5fcca1d08"
+          CENTRAL_DIR="$central_dir" python3 - <<'PY'
+          import json
+          import os
+          import subprocess
+          from pathlib import Path
+
+          manifest=json.loads(Path("docs/operating_system/central_skills.json").read_text(encoding="utf-8"))
+          root=os.environ["CENTRAL_DIR"]
+          revision=manifest["operating_system"]["revision"]
+
+          expected=[
+              manifest["operating_system"]["index"],
+              manifest["operating_system"]["essential_rules"],
+          ]
+          expected += [
+              {"path": item["path"], "expected_blob_sha": item["expected_blob_sha"]}
+              for item in manifest["skills"]
+          ]
+
+          for item in expected:
+              actual=subprocess.check_output(
+                  ["git","-C",root,"rev-parse",f'{revision}:{item["path"]}'],
+                  text=True,
+              ).strip()
+              assert actual == item["expected_blob_sha"], (
+                  item["path"], item["expected_blob_sha"], actual
+              )
+          PY
+          rm -rf "$central_dir"
+
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'

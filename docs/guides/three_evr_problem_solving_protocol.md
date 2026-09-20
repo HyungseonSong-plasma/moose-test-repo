@@ -1,10 +1,17 @@
-# Deprecated Compatibility Entry — 3-EVR Problem-Solving Protocol
+# 3-EVR Problem-Solving Protocol — Calvin Historical Entry
 
-**Status:** deprecated compatibility shim  
-**Canonical owner:** `docs/protocols/problem_solving.md`
+**Status:** historical compatibility shim
 
-This file is retained for historical references only. The prospective EVR budget, Phase 0 framing, EVR #1 broad discrimination, EVR #2 targeted confirmation/fix, EVR #3 canonical regression, and post-EVR3 rescope rule are now canonical in `docs/protocols/problem_solving.md`.
+The former fixed 3-EVR budget and EVR/RWR accounting are retired from live Paul operation.
 
-Metric definitions and reporting belong to `docs/protocols/metrics_closure.md`.
+The useful non-metric reasoning pattern is retained in `docs/protocols/problem_solving.md` as:
 
-Do not add new rules here.
+```text
+broad discrimination
+-> targeted confirmation when needed
+-> production regression when the claim is ready
+```
+
+This sequence is evidence-driven, not numerically budgeted or scored.
+
+Historical metric definitions and records are preserved under `archive/operating_metrics/`.

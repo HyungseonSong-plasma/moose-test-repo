@@ -1,92 +1,73 @@
 # MOOSE/Physics Operating Core
 
-**Status:** canonical  
-**Scope:** always-active operating invariants for this repository  
-**Purpose:** keep the always-loaded rule set small, stable, and unambiguous.
+**Status:** canonical consumer-local core under Paul  
+**Purpose:** retain only Physics-specific invariants that cannot be delegated to central Paul rules/skills.
 
-This file contains only invariants that apply across essentially every MOOSE/Physics work item. Conditional behavior is loaded through `PROTOCOL_INDEX.md` and `docs/protocols/rule_working_set.md`.
+Paul `ESSENTIAL_RULES.md` is loaded before this file during initialization. Do not duplicate those generic rules here.
 
-## Canonical always-active invariants
+## Local always-active invariants
 
-### CORE-01 — Team boundary
-This repository is for MOOSE/Physics work. Do not perform SOL-team or `sol-adapter-moose` work here unless the user explicitly changes scope.
+### PCORE-01 — Team boundary
 
-### CORE-02 — Meeting means no mutation
-When the user says `meeting`, discuss and plan only. Do not mutate GitHub, files, issues, or production artifacts.
+This repository is for MOOSE/Physics work. Do not perform SOL Platform or `sol-adapter-moose` work here unless the user explicitly changes scope.
 
-### CORE-03 — Approval authorizes execution
-`승인` / `approve` authorizes the agreed plan. `resume` authorizes continuation of the currently agreed work package. Discussion alone does not authorize execution.
+### PCORE-02 — Local mode authority
 
-### CORE-04 — Work identity and current state
-Technical execution must be attributable to a concrete issue or bounded work item with a closure claim. For active/open work, the issue body/current status block is the canonical STATE record; comments are historical evidence unless the body is explicitly stale and being repaired.
+`meeting` is discussion/planning only and does not authorize repository mutation.
 
-### CORE-05 — Runtime evidence authority
-Canonical Physics runtime evidence requires provenance-controlled execution of the real `physics-opt` production path. Governed CI and user-local execution may both be authoritative when the source revision, executable identity, dependency/runtime-environment identity, scientific execution contract, and preserved evidence are sufficient for the owning claim.
+`승인` / `approve` authorizes the agreed plan. `resume` authorizes continuation of the currently accepted work package. Discussion alone does not authorize execution.
 
-Static analysis, mocks, checker-only execution, parser acceptance, and `physics-opt --check-input` are not Physics runtime evidence. User-local execution is an independent cross-environment validation layer rather than a universal prerequisite; require it only when the owning issue explicitly needs a local/environment-specific claim or when governed CI cannot reproduce the required production execution surface.
+### PCORE-03 — Work identity and STATE
 
-`QPX` / `qpx-opt` are historical names only. Historical incident records, archived experiments, immutable snapshots, or prior closure evidence may retain those names when they identify the executable or architecture actually used at that time; current runtime ownership and new instructions use `Physics` / `physics-opt`.
+Technical execution must be attributable to a concrete issue or bounded work item with a closure claim.
 
-### CORE-06 — One canonical owner per rule
-Do not duplicate canonical procedure text across issue bodies, comments, READMEs, guides, or protocols. Reference the Rule ID or canonical owner. When a rule changes, update its one owner and route to it.
+For active/open work, the issue body/current status block is the canonical local STATE record. Comments are chronological evidence unless the body is explicitly stale and being repaired.
 
-### CORE-15 — Adaptive rule working set
-Do not preload the repository's complete rule graph. Maintain the smallest relevant working set:
+### PCORE-04 — Physics runtime evidence authority
 
-```text
-CORE
-+ current PHASE PACK
-+ only triggered TEMPORARY DIAGNOSTIC material
-```
+Canonical Physics runtime evidence requires provenance-controlled execution of the real `physics-opt` production path.
 
-Load, unload, sizing heuristics, phase transitions, and inventory lookup are defined in `docs/protocols/rule_working_set.md`. Rule accumulation is not a substitute for correct routing.
+Governed CI and user-local execution may both be authoritative when source revision, executable identity, dependency/runtime-environment identity, scientific execution contract, and preserved evidence are sufficient for the owning claim.
 
-### CORE-16 — Intent-preserving scientific validity
-A scientific computation is valid only when the actual execution preserves the scientific intent and regime required by the closure claim. Parser acceptance, return code, solver convergence, or output existence alone are never sufficient proof of scientific validity.
+Static analysis, mocks, checker-only execution, parser acceptance, and `physics-opt --check-input` are not Physics runtime evidence.
 
-When this cross-layer contract is material, load `docs/protocols/scientific_execution.md`. Model/regime meaning is delegated to `docs/protocols/problem_solving.md`; execution/evidence sufficiency is delegated to `docs/protocols/validation.md`.
+Historical `QPX` / `qpx-opt` names may remain in historical records; current runtime ownership uses `Physics` / `physics-opt`.
 
-### CORE-17 — Hierarchical delivery boundaries
-For non-trivial development, preserve distinct delivery boundaries:
+### PCORE-05 — Intent-preserving scientific validity
+
+A scientific computation is valid only when actual execution preserves the scientific intent and regime required by the claim.
+
+Parser acceptance, return code, solver convergence, or output existence alone are never sufficient proof of scientific validity.
+
+Use `docs/protocols/scientific_execution.md` when cross-layer intent/regime preservation is material, `problem_solving.md` for model/regime meaning, and `validation.md` for evidence sufficiency.
+
+### PCORE-06 — Hierarchical delivery boundaries
+
+For non-trivial development preserve:
 
 ```text
 Project -> Milestone -> Issue -> Work Batch -> Mutation/Validation Unit
 ```
 
-A milestone delivers one usable capability; an issue remains the semantic implementation/rollback boundary; a work batch is the execution-efficiency boundary; repository mutation safety remains independent. Detailed milestone planning, DAG, integration, and closure semantics are owned by `docs/protocols/milestone_delivery.md`.
+A milestone is a capability boundary; an issue is the semantic implementation/rollback boundary; a work batch is an execution boundary; mutation safety remains independent.
 
-## Conditional-rule ownership map
+Detailed milestone semantics are owned by `docs/protocols/milestone_delivery.md`.
 
-The following former always-active concerns remain canonical but are no longer permanently loaded. Their legacy CORE IDs are retained here only for compatibility and routing.
-
-| Legacy ID | Concern | Canonical phase owner |
-|---|---|---|
-| CORE-07 | Construction failure is not physics failure | `docs/protocols/validation.md` |
-| CORE-08 | P0 -> P1 -> P2 -> P3 validation order | `docs/protocols/validation.md` |
-| CORE-09 | Research before guessing material source/model facts | `docs/protocols/problem_solving.md` |
-| CORE-10 | Validator owns sufficiency / false-PASS decisions | `docs/protocols/validation.md` |
-| CORE-11 | New failure -> reusable evidence / recurrence learning | `docs/protocols/metrics_closure.md` + incident/knowledge owners |
-| CORE-12 | 3-EVR bounded-work protocol | `docs/protocols/problem_solving.md` |
-| CORE-13 | Closure-quality guardrail | `docs/protocols/metrics_closure.md` |
-| CORE-14 | External bundle/path safety | `docs/protocols/validation.md` / `docs/protocols/coding.md` as triggered |
-
-A legacy reference to CORE-07 through CORE-14 means "route to the canonical owner above"; it does not mean the full owner must remain in every active context.
-
-## Always-load sequence
+## Paul composition
 
 For technical work:
 
 ```text
-1. read OPERATING_CORE.md
-2. read current issue/body/status when work state is material
-3. read PROTOCOL_INDEX.md
-4. apply docs/protocols/rule_working_set.md
-5. load only the current phase owner(s)
-6. load incident/knowledge material only when triggered
+Paul essential rules
++ this Physics core
++ current issue/STATE
++ one current local semantic phase owner
++ only central skills triggered by the immediate obligation
++ temporary diagnostic evidence only when needed
 ```
 
-## `moose-test-init` bootstrap
+No weighted rule-load threshold or operating metric is part of the live core.
 
-`moose-test-init` is the official cross-chat initialization command. Its one canonical procedure is `BOOTSTRAP.md`.
+## Initialization
 
-Do not duplicate the bootstrap algorithm here. On `moose-test-init`, route to `BOOTSTRAP.md`, restore the minimum safe resume context, and then use the adaptive working-set rules for subsequent user turns.
+`moose-test-init` routes to `BOOTSTRAP.md`, which delegates generic bootstrap mechanics to the pinned central `session-bootstrap` skill.

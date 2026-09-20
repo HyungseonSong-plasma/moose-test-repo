@@ -2,11 +2,11 @@
 
 **Status:** canonical procedure  
 **Scope:** MOOSE/Physics technical issues and bounded child work items  
-**Purpose:** reduce external validation rounds by doing high-value research, framing, and discrimination before user-local runtime execution.
+**Purpose:** front-load high-value research, framing, and discrimination so external runtime execution is informative and avoidable repetition is reduced.
 
 ## PS-01 — Phase 0 problem framing
 
-Before spending an EVR, define:
+Before external runtime execution, define:
 
 ```text
 Closure claim
@@ -15,7 +15,6 @@ Primary unknown classes
 Dependency graph
 Research questions
 Expected evidence/signatures
-Prospective EVR budget: 0/3
 ```
 
 If the work boundary cannot be stated clearly, split or redefine the issue before runtime.
@@ -37,7 +36,6 @@ Manager
   -> implementation/batch only after the decision
 ```
 
-One material Researcher->Validator decision attributable to the work item counts as one RVR under `metrics_closure.md`.
 
 ## PS-03 — Hypothesis register
 
@@ -103,67 +101,29 @@ physics/model
 
 Predicted result signatures should be written before execution whenever practical.
 
-## PS-07 — Three-EVR state machine
+## PS-07 — External execution sequence
 
-The default budget for one bounded work item is:
-
-```text
-EVR #1 = broad discrimination
-EVR #2 = targeted confirmation / fix validation
-EVR #3 = canonical production regression
-```
-
-### EVR #1
-Goal: establish PASS or one dominant root-cause class.
-
-The batch should include the applicable P0-P3 path from `validation.md`, known-good control, candidate, independent oracle/reference, predeclared fail branches, and environment/executable identity.
-
-Valid terminal classes include:
+When runtime execution is required, prefer an information-rich sequence rather than repeated ad-hoc runs:
 
 ```text
-PASS
-SOURCE_MODEL_FAIL
-REFERENCE_DATA_FAIL
-REPRESENTATION_ADEQUACY_FAIL
-HARNESS_OR_CONSTRUCTION_FAIL
-ENVIRONMENT_OR_BUILD_FAIL
-SOLVER_CONVERGENCE_FAIL
-IMPLEMENTATION_PARITY_FAIL
-PHYSICS_MODEL_FAIL
+broad discrimination
+  -> targeted confirmation / fix validation when needed
+  -> canonical production regression when the claim is ready to close
 ```
 
-`UNKNOWN_FAIL` after EVR #1 is a batch-design warning and requires Validator review before EVR #2.
+The sequence is not a numeric budget and is not scored.
 
-### EVR #2
-Reserved for the single diagnosed class from EVR #1. Change only that class unless new evidence falsifies the diagnosis.
+Broad discrimination should combine applicable P0-P3 checks, a known-good control, candidate, independent reference/oracle, predeclared failure branches, and environment/executable identity.
 
-Pattern:
+After one dominant failure class is established, change only that class unless new evidence falsifies the diagnosis. Do not stack speculative changes across physics, solver, parser, and environment.
 
-```text
-one diagnosed class
-  -> one targeted fix
-  -> direct regression
-  -> negative control/mutation
-  -> representative original case
-```
+The final production regression should exercise the canonical path, representative regime, relevant boundary/edge cases, physical/analytic invariants, known-good non-regression, and negative controls.
 
-Do not stack speculative changes across physics, solver, parser, and environment in the same confirmation round.
-
-### EVR #3
-Canonical closure regression only. Include production path, representative regime matrix, boundary/edge case when relevant, physical/analytic invariant, known-good non-regression, and validator negative controls.
-
-If EVR #3 fails, do not automatically consume EVR #4 under the same unchanged scope. Instead:
-
-```text
-A. return to Researcher->Validator if a source/model assumption is doubtful;
-B. split a new independent child issue if a new failure class emerged;
-C. open/promote a framework/harness/environment incident when appropriate;
-D. redefine the bounded work claim if the original scope was too broad.
-```
+If closure regression fails, return to diagnosis, split a newly independent failure class, or redefine the claim rather than treating another external run as automatic progress.
 
 ## PS-08 — Coupled nonlinear convergence triage
 
-For coupled problems, put convergence sensitivity in EVR #1 whenever a dominant subsystem can hide a smaller one, exact IC passes while zero/approximate IC fails, or a physical invariant is wrong despite solver convergence.
+For coupled problems, include convergence sensitivity in the initial discrimination batch whenever a dominant subsystem can hide a smaller one, exact IC passes while zero/approximate IC fails, or a physical invariant is wrong despite solver convergence.
 
 High-value controls:
 
@@ -247,87 +207,51 @@ update this protocol only when the solving algorithm itself changes
 
 ## PS-14 — Optimization target
 
-Primary prospective target for bounded work:
+Minimize avoidable external execution and assistant-caused rework while preserving or improving closure quality.
 
-```text
-EVR <= 3
-DBR <= 2
-RWR = 0
-closure quality unchanged
-```
-
-RVR is not minimized. Its purpose is to move uncertainty earlier when doing so reduces downstream EVR/DBR/RWR or reopening risk.
+Do not maintain interaction-efficiency counters as a Paul operating metric. Use current evidence to decide whether another run adds independent information or whether the plan should be redesigned.
 
 ## PS-15 — Issue sizing and decomposition
 
-Execution issues should be small enough that one bounded closure claim can plausibly complete inside one prospective 3-EVR budget.
+Execution issues should be small enough that one bounded closure claim has a coherent diagnosis, implementation, and validation path.
 
 Preferred execution boundary:
 
 ```text
 1 closure claim
 1 bounded subsystem or coupling edge
-1 prospective EVR budget <= 3
 ideally 1 production decision
-complexity C1-C3 when practical
+clear rollback / acceptance boundary
 ```
 
-Treat C4 primarily as architecture/planning/tracking scope. Before technical runtime begins, decompose a C4 item into bounded C1-C3 successor issues when it contains multiple serial closure claims.
+Treat broad architecture/planning items primarily as parents. Decompose when they contain multiple serial closure claims, separable source/model uncertainty and runtime integration, independent coupling edges, or stages that can close independently.
 
-Strong split signals include:
+Do not keep a large parent open merely to aggregate operating-process statistics. A parent may close as `DECOMPOSED_PARENT` after validated history and successor links are recorded; that does not claim downstream physics is complete.
 
-```text
-"finish A, then implement B, then validate C"
-source/model uncertainty and runtime integration are separable
-multiple independent coupling edges require separate acceptance
-one stage can close while later stages remain blocked
-EVR #3 would only finish an intermediate stage rather than the issue claim
-```
+## PS-16 — Test IDs and execution batches are distinct
 
-Do not keep a large parent open merely to accumulate unrelated downstream execution metrics. A parent may be closed as `DECOMPOSED_PARENT` after its validated history and successor links are recorded. This is not a claim that unfinished downstream physics is technically complete.
-
-Successor issues start with their own issue-local metrics and their own prospective `0/3` EVR budget. Historical metrics remain on the original parent and are not copied into successors.
-
-## PS-16 — Test IDs are not EVRs
-
-Name internal cases/tests independently from external validation rounds.
-
-Preferred form:
+Name internal cases/tests by the discriminator they own:
 
 ```text
 T1 material exposure
 T2 independent oracle
 T3 coupling ON/OFF
 T4 transient integration
-
-EVR #1 = one user-local execution containing T1-T4 when practical
 ```
 
-Do not create pseudo-EVR names such as `EVR1-A`, `EVR1-B`, etc. when each label is actually a test case. `EVR` increments only when a user-local Physics execution result is returned under `MET-05`.
+A runtime batch may contain several such tests. Do not encode operating-round counters into test identity.
 
-## PS-17 — Live EVR/RWR accounting
+## PS-17 — No operating-round accounting
 
-Update issue-local accounting immediately after each attributable user-local result return.
+Paul does not increment interaction-efficiency counters.
 
-```text
-user-local execution result returned -> EVR += 1
-avoidable assistant-side artifact/config/checker defect caused extra user round -> RWR += 1
-```
+After each attributable runtime result, update only the durable technical state that matters: established evidence, rejected hypotheses, unresolved class, next validation obligation, and any assistant-caused defect that needs correction.
 
-Do not postpone reconciliation until closure. If the prospective `3-EVR` budget is exhausted, the next action is Validator redesign/decomposition/incident routing, not an automatic fourth execution.
+## PS-18 — Repetition stop-and-redesign rule
 
-## PS-18 — RWR stop-and-redesign rule
+Repeated avoidable external execution is a qualitative redesign signal, not a scored threshold.
 
-For one bounded test/closure claim:
-
-```text
-RWR = 0 -> normal execution
-RWR = 1 -> one targeted correction permitted
-RWR >= 2 -> STOP additional external execution
-            re-audit observation graph, checker semantics, construction, and batch design
-```
-
-The stop applies before generating another external artifact unless a Validator decision documents why the failures are truly independent and a further run is justified.
+Before asking for another run after an assistant-side artifact/config/checker defect or repeated nondiscriminating result, re-audit the observation graph, checker semantics, construction, and batch design. Continue only when the next run has a clear independent claim.
 
 ## PS-19 — Promotion-ready planning
 
@@ -348,7 +272,7 @@ A successful diagnostic should be promotable without redesigning its physical te
 
 ## PS-20 — Environment activation preflight
 
-Before spending an EVR on a user-local Physics batch that depends on a project runtime environment, verify the environment contract explicitly rather than assuming the interactive shell is already prepared.
+Before running a user-local Physics batch that depends on a project runtime environment, verify the environment contract explicitly rather than assuming the interactive shell is already prepared.
 
 At minimum record or check the applicable activation state and executable identity before P2:
 
@@ -362,7 +286,7 @@ If a previously accepted case fails at P2 with an environment-sensitive symptom 
 
 ## PS-21 — Performance-feasibility gate before closure-scale runtime
 
-Before a production-like coupled P3, and especially before EVR #3, estimate whether the proposed numerical architecture is practical enough to serve as a regression.
+Before a production-like coupled P3 or closure-scale regression, estimate whether the proposed numerical architecture is practical enough to serve as a regression.
 
 Record the applicable cost drivers before external execution:
 
@@ -385,7 +309,7 @@ one representative coupling axis
 transport-only vs coupled wall-time comparison
 ```
 
-If a representative first step is computationally impractical or the projected closure matrix is not regression-viable, classify the architecture before spending the closure EVR:
+If a representative first step is computationally impractical or the projected closure matrix is not regression-viable, classify the architecture before spending the closure-scale runtime:
 
 ```text
 PERFORMANCE_FEASIBILITY_UNRESOLVED

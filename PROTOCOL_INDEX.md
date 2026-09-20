@@ -1,13 +1,13 @@
 # MOOSE/Physics Protocol Index
 
-**Status:** canonical router  
-**Purpose:** select the minimum procedure set required for the current request and current development phase.
+**Status:** canonical consumer-local router under Paul  
+**Purpose:** route only Physics/domain semantics and trigger the minimum required central skills.
 
-Always read `OPERATING_CORE.md` first. Use `docs/protocols/rule_working_set.md` to keep the active rule context bounded. Consult `docs/rules/INVENTORY.md` only when the appropriate dormant owner is unclear or a trigger indicates inventory expansion.
+Paul essential rules are already active. Generic deterministic mechanics are not redefined here.
 
-## Primary phase selection
+## Primary local phase
 
-Choose one primary phase for the immediate obligation:
+Choose one primary semantic phase for the immediate obligation:
 
 ```text
 PLAN
@@ -17,224 +17,133 @@ VALIDATE
 CLOSE
 ```
 
-`MUTATE` is an adjacent short-lived pack used only for actual repository writes. `SCIENTIFIC_EXECUTION` is an auxiliary pack loaded only when cross-layer intent/regime preservation is material to an executable scientific claim.
+Auxiliary local semantic pack:
 
-Do not keep a previous phase pack active merely because it was used earlier. Preserve only unresolved material obligations across transitions.
+```text
+SCIENTIFIC_EXECUTION
+```
 
-## Routing table
+Central skill triggers:
 
-### ROUTE-01 — Meeting / governance / scope
+```text
+MUTATE               -> repository-mutation
+GOVERNED_WORK        -> governed-work
+SCHEDULED_CONTROLLER -> state-refresh + controller-throughput + controller-lifecycle
+```
+
+All central skills come from `docs/operating_system/central_skills.json`.
+
+## Routes
+
+### ROUTE-01 — Meeting / scope
+
 Primary phase: `PLAN` or no technical phase.
 
-Read only what the discussion requires. When the user says `meeting`, CORE-02 prohibits mutation.
+Use local mode semantics in `OPERATING_CORE.md`. Read only the domain material needed for the decision.
 
-### ROUTE-02 — New technical issue or bounded work package
+### ROUTE-02 — New technical issue / bounded work
+
 Primary phase: `PLAN`.
 
-Read:
-- relevant planning/diagnostic sections of `docs/protocols/problem_solving.md`
+Read relevant planning/diagnostic sections of `docs/protocols/problem_solving.md`.
 
-Load `docs/protocols/metrics_closure.md` only when work-boundary metrics or closure-contract construction is currently material, not by default at issue creation.
+Define the closure claim, dependencies, acceptance evidence, and next real gate. Do not create operating-metric obligations.
 
-### ROUTE-03 — Source / literature / model / provenance / representation uncertainty
+### ROUTE-03 — Source / literature / model / provenance uncertainty
+
 Primary phase: `RESEARCH`.
 
-Read:
-- Researcher/Validator sections of `docs/protocols/problem_solving.md`
+Read the relevant Researcher/Validator portions of `problem_solving.md` and retrieve attributable source evidence.
 
-Retrieve source/reference evidence as needed. If the result changes implementation or acceptance, record the attributable research-validation decision under the existing metrics contract.
+### ROUTE-04 — Runtime / construction / solver / convergence / coupling failure
 
-### ROUTE-04 — Runtime, parser, construction, solver, convergence, or coupling failure
-Primary phase: usually `VALIDATE`; use `PLAN` first only when the hypothesis space itself is unresolved.
+Primary phase: usually `VALIDATE`.
 
-Read:
-- `docs/protocols/validation.md` for classification/gates
-- `docs/protocols/problem_solving.md` only for active hypothesis/model-regime obligations
+Read `validation.md`; add only the active model/regime material from `problem_solving.md`.
 
-Load temporary diagnostic evidence from `docs/knowledge/TROUBLESHOOTING_INDEX.md` or `docs/incidents/` only when the symptom matches or prior RCA is needed.
+Use `TROUBLESHOOTING_INDEX.md` or a relevant incident record only when the symptom matches.
 
-Add `SCIENTIFIC_EXECUTION` when the failure crosses model/numerical/framework/runtime/observation semantics.
+Add `SCIENTIFIC_EXECUTION` when the claim crosses model/numerical/framework/runtime/observation semantics.
 
-### ROUTE-05 — Test bundle / checker / canonical regression construction
+### ROUTE-05 — Regression / checker / executable validation
+
 Primary phase: `VALIDATE`.
 
-Read:
-- `docs/protocols/validation.md`
+Read `validation.md`. Add `IMPLEMENT` only while code/harness/checker implementation is the immediate obligation.
 
-Add `IMPLEMENT` only while actual checker/harness/script code is being modified. Unload it when implementation is complete and validation becomes primary again.
+### ROUTE-06 — Closure / retrospective / incident record
 
-### ROUTE-06 — Metrics, closure, retrospective, incident learning, or efficiency analysis
 Primary phase: `CLOSE`.
 
-Read:
-- `docs/protocols/metrics_closure.md`
+Closure uses the owning issue/milestone acceptance criteria and current validation evidence. No operating-process or rule-effectiveness accounting is required.
 
-This route owns MET-20/MET-21/MET-22 incident learning and enforcement-promotion decisions. Load technical phase packs only when a retrospective exposes an unresolved technical obligation.
+When a material incident is worth preserving, record factual evidence under the attributable issue or `docs/incidents/`. A reusable deterministic mechanics defect should be fixed in the owning central skill/guard; a Physics semantic defect should be fixed in its local owner.
 
 ### ROUTE-07 — Imported transport / thermo / chemistry data
-Primary phase: `RESEARCH` while source/model/representation truth is unresolved; transition to `VALIDATE` for A0-A7 pipeline acceptance.
 
-Read only the currently required owner:
-- `docs/protocols/problem_solving.md` for source/model/representation gates
-- `docs/protocols/validation.md` for executable/data-pipeline validation
-
-Do not keep both fully active after the transition unless an unresolved cross-phase obligation requires both.
+Use `RESEARCH` while source/model/representation truth is unresolved; transition to `VALIDATE` for executable/data-pipeline acceptance.
 
 ### ROUTE-08 — Known recurring symptom
-Primary phase: determined by the active failure surface.
 
-Read:
-- matching entry from `docs/knowledge/TROUBLESHOOTING_INDEX.md`
-- then only the phase owner selected by that symptom
+Load only the matching troubleshooting/incident evidence and the phase owner selected by the actual failure surface.
 
-Knowledge is evidence, not current STATE and not an always-active pack.
+Historical incident records are evidence, not current STATE.
 
-### ROUTE-09 — Repository / issue / file mutation and state synchronization
-Adjacent pack: `MUTATE`.
+### ROUTE-09 — Repository mutation
 
-Read:
-- `docs/protocols/repository_mutation.md`
+Trigger central `repository-mutation` before the actual write.
 
-Load this only immediately before an actual GitHub issue/file/branch/ref/comment mutation. Unload it after read-back verification unless another predeclared write remains the immediate next obligation.
+The local `repository_mutation.md` file, when consulted, supplies consumer policy/authorization only; deterministic mutation mechanics come from the central skill.
 
 ### ROUTE-10 — Code / harness / script / checker implementation
+
 Primary phase: `IMPLEMENT`.
 
-Read:
-- `docs/protocols/coding.md`
-
-Add ROUTE-09 only for the actual repository-write step. Transition to `VALIDATE` before delivering or accepting executable behavior/results.
+Read `coding.md`; transition to `VALIDATE` before accepting executable behavior/results.
 
 ### ROUTE-11 — Scientific execution integrity
-Auxiliary pack: `SCIENTIFIC_EXECUTION`.
 
-Read:
-- `docs/protocols/scientific_execution.md`
+Auxiliary: `SCIENTIFIC_EXECUTION`.
 
-Trigger when a claim depends on preserving intent through:
-
-```text
-model
--> numerical regime
--> framework-effective configuration
--> runtime trajectory
--> observation/evidence
--> decision
-```
-
-Do not load this ontology merely because the repository is scientific; load it when one of those links is material to the current claim or failure.
+Read `scientific_execution.md` only when intent/regime preservation across execution layers is material to the claim.
 
 ### ROUTE-12 — Milestone / multi-issue capability delivery
-Primary phase: `PLAN` when defining or restructuring the milestone; later transition through each issue's normal phase and return to `VALIDATE` / `CLOSE` for milestone integration and closure.
 
-Read:
-- `docs/protocols/milestone_delivery.md`
+Read `milestone_delivery.md`.
 
-Trigger when multiple issues are intentionally composed to deliver one usable capability. Use milestone M0 to define the capability statement, dependency DAG, issue queue, integration risks, and milestone Definition of Done before large implementation fan-out.
+Each issue remains an independent semantic/rollback boundary; milestone acceptance adds capability-level integration evidence.
 
-Milestone batching does not replace issue-local acceptance or repository mutation safety. Each issue remains an independent semantic/rollback boundary; the milestone adds only capability-level planning and cross-issue integration acceptance.
+### ROUTE-13 — Scheduled controller
 
-## Standard obligation routing
+Trigger central state-refresh, controller-throughput, and controller-lifecycle from the exact Paul pin.
 
-```text
-SOURCE_TRUTH          -> ROUTE-03 / RESEARCH
-DIAGNOSIS             -> ROUTE-02 or ROUTE-04
-MODEL_REGIME          -> RESEARCH or PLAN; problem_solving.md owns meaning
-IMPLEMENTATION        -> ROUTE-10 / IMPLEMENT
-EXECUTION_CONFORMANCE -> ROUTE-05 / VALIDATE; add ROUTE-11 when cross-layer semantics matter
-VALIDATION            -> ROUTE-05 / VALIDATE
-KNOWN_SYMPTOM         -> ROUTE-08 + selected phase pack
-MUTATION              -> ROUTE-09 / MUTATE
-CLOSURE_OR_REVIEW     -> ROUTE-06 / CLOSE
-MILESTONE_DELIVERY    -> ROUTE-12 / PLAN -> issue phases -> VALIDATE/CLOSE
-```
+The central skills decide generic liveness/lifecycle mechanics. This repository decides Physics dependency readiness, resource meaning, and scientific HOLD/PASS semantics.
 
-## Contract-chain resolution
+## Paul rule-reuse gate
 
-Treat every loaded procedure as a contract:
+Before adding a repeated operating rule, classify it:
 
 ```text
-input  = current problem, accepted state, and existing evidence
-output = decision plus zero or more unresolved obligations
+cross-repository authority/claim invariant -> propose Paul essential rule
+portable deterministic procedure          -> central skill
+Physics-specific semantic/acceptance rule -> existing/new local owner
+historical observation                    -> issue/incident/archive, not a rule
 ```
 
-Canonical flow:
+Do not restore Calvin rule-load scoring or operating metrics to decide whether a rule is useful.
 
-```text
-problem observed
--> apply CORE + current STATE
--> select primary phase
--> load that phase pack
--> apply the minimum selected contract
--> route only unresolved material obligations
--> temporarily expand when a trigger requires another owner
--> shrink again when the discriminator/obligation is resolved
--> transition phase when the immediate work changes
--> stop on explicit HOLD/BLOCKED or when no obligation remains
-```
+## Local canonical owners
 
-Chain invariants:
+- Physics always-active invariants -> `OPERATING_CORE.md`
+- local rule/skill activation -> `docs/protocols/rule_working_set.md`
+- owner discovery -> `docs/rules/INVENTORY.md`
+- planning/model/regime meaning -> `problem_solving.md`
+- implementation -> `coding.md`
+- validation/P0-P3 -> `validation.md`
+- scientific execution integrity -> `scientific_execution.md`
+- milestone delivery -> `milestone_delivery.md`
+- mutation policy overlay -> `repository_mutation.md`
+- symptom knowledge -> `docs/knowledge/TROUBLESHOOTING_INDEX.md`
+- current STATE -> active issue body/status
 
-1. A downstream contract may refine an upstream decision but may not weaken a CORE invariant or erase accepted evidence without contradictory evidence.
-2. Accepted outputs become inputs to the next contract; do not rediscover the same fact unless stale, contradicted, or identity-sensitive.
-3. Resolve prerequisites before dependent obligations.
-4. Reference downstream owners instead of copying procedure text.
-5. If the active pack seems insufficient, apply `rule_working_set.md` inventory lookup before creating a new rule.
-6. For executable scientific claims, a downstream PASS must not bypass an unresolved material scientific-execution link.
-
-## Rule-working-set escalation
-
-Before adding another rule because a problem was missed, classify the miss:
-
-```text
-RULE_ABSENT
-RULE_EXISTS_BUT_NOT_LOADED
-TRIGGER_OR_ROUTING_MISSED
-GATE_BYPASSED
-GATE_DEFECT
-ENVIRONMENT_ESCAPE
-```
-
-Only `RULE_ABSENT` is direct evidence for a genuinely missing semantic rule. The other classes require working-set, routing, enforcement, validator, or environment repair through existing owners.
-
-Map incident learning to MET-20/MET-22; do not create a duplicate incident taxonomy here.
-
-## Canonical ownership map
-
-- Always-active invariants and authorization/state/evidence authority -> `OPERATING_CORE.md`
-- Adaptive loading/unloading and working-set size -> `docs/protocols/rule_working_set.md`
-- Dormant rule/pack discovery metadata -> `docs/rules/INVENTORY.md`
-- Request routing and rule-reuse decisions -> `PROTOCOL_INDEX.md`
-- Milestone capability delivery, issue DAG, integration, and milestone closure -> `docs/protocols/milestone_delivery.md`
-- Scientific-execution integrity ontology -> `docs/protocols/scientific_execution.md`
-- Planning, diagnosis, Researcher/Validator flow, EVR strategy, model/regime meaning -> `docs/protocols/problem_solving.md`
-- Code/harness/script/checker implementation ownership -> `docs/protocols/coding.md`
-- P0-P3, validation, checker self-tests, numerical/runtime gates, production parity -> `docs/protocols/validation.md`
-- Work metrics, closure, incident learning, prevention KPIs, enforcement promotion -> `docs/protocols/metrics_closure.md`
-- Repository mutation safety -> `docs/protocols/repository_mutation.md`
-- Reusable symptom/fix knowledge -> `docs/knowledge/TROUBLESHOOTING_INDEX.md`
-- Current work state -> active issue body/status
-- Chronological incident evidence -> issue comments / `docs/incidents/`
-
-## Legacy-guide mapping
-
-Compatibility entry points must not contain independent canonical rule definitions:
-
-- `docs/guides/manager_role_routing.md` -> this index + `docs/protocols/problem_solving.md`
-- `docs/guides/multiphysics_problem_solving_protocol.md` -> `docs/protocols/problem_solving.md`
-- `docs/guides/predictive_batch_test_design.md` -> `docs/protocols/validation.md`
-- `docs/guides/three_evr_problem_solving_protocol.md` -> `docs/protocols/problem_solving.md`
-- `docs/guides/work_closure_validator.md` -> `docs/protocols/metrics_closure.md`
-
-## Rule-reuse gate
-
-Prefer a small number of broad rules with explicit triggers over case-specific rule accumulation.
-
-Before adding or extending any rule, protocol, or reusable knowledge entry:
-
-1. check the active working set and `docs/rules/INVENTORY.md` for an existing owner;
-2. if the lesson is already covered, add no semantic rule and fix only why it was missed: load selection, trigger, routing, enforcement, evidence identity, gate behavior, or environment;
-3. if only partly covered, minimally extend the existing canonical owner;
-4. create a new Rule ID/document only when the behavior is materially distinct and no existing owner can cover it without mixing responsibilities.
-
-The goal is not universal simultaneous coverage. The goal is high local decision quality with a small active working set that can expand and contract as evidence changes.
+Calvin operating metrics are archived under `archive/operating_metrics/`; they have no live owner.

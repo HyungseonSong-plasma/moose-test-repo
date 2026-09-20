@@ -1,63 +1,59 @@
 # Workspace Operating Boundary
 
-This repository is reserved for MOOSE/Physics development, regression, verification, troubleshooting, and operating-system evidence.
+This repository is reserved for MOOSE/Physics development, regression, verification, troubleshooting, and scientific evidence.
 
 ## Cross-chat entry
 
-For a fresh chat, use:
+Use:
 
 ```text
 moose-test-init
 ```
 
-`BOOTSTRAP.md` is the canonical cross-chat entry point. It restores the minimum safe operating context from repository state rather than relying on prior-chat memory.
+`BOOTSTRAP.md` applies the exact pinned Paul OS and central `session-bootstrap` mechanics, then restores Physics-local authority/current state.
 
-## Adaptive operating architecture
-
-Canonical operating rules are not duplicated here. The operating stack is:
+## Paul operating stack
 
 ```text
-BOOTSTRAP.md                       -> cross-chat initialization
-OPERATING_CORE.md                  -> always-active invariants
-PROTOCOL_INDEX.md                  -> phase / obligation router
-docs/protocols/rule_working_set.md -> dynamic load / unload policy
-docs/rules/INVENTORY.md            -> dormant rule-owner locator
-active issue/body                   -> current STATE
-phase protocol                      -> current procedure
+docs/operating_system/README.md
+  -> exact Paul binding
+
+central ESSENTIAL_RULES + session-bootstrap/state-refresh
+  -> generic authority/bootstrap mechanics
+
+OPERATING_CORE.md
+  -> Physics-specific invariants
+
+active issue/body
+  -> current STATE
+
+PROTOCOL_INDEX.md
+  -> local semantic phase + central-skill trigger routing
+
+current protocol owner
+  -> only the Physics semantics required now
 ```
 
-Primary phase packs are:
-
-```text
-PLAN
-RESEARCH
-IMPLEMENT
-VALIDATE
-CLOSE
-```
-
-`MUTATE` and `SCIENTIFIC_EXECUTION` are auxiliary packs loaded only when triggered. Incident/knowledge material is temporary diagnostic context, not an always-active rule set.
-
-The operating objective is not universal simultaneous rule coverage. Maintain the smallest relevant rule working set for the current phase and re-evaluate it when user intent, evidence, symptoms, or unresolved obligations change.
+Central mutation/governed/controller skills are loaded only when their trigger applies.
 
 ## Canonical technical owners
 
-Use only when their phase/trigger is active:
+- `problem_solving.md` — planning, diagnosis, source/model/regime reasoning;
+- `coding.md` — code/harness/script/checker implementation;
+- `validation.md` — P0-P3 and runtime/data validation;
+- `scientific_execution.md` — cross-layer intent/regime preservation;
+- `milestone_delivery.md` — multi-issue capability planning/integration;
+- `repository_mutation.md` — local mutation policy overlay;
+- `TROUBLESHOOTING_INDEX.md` — symptom-specific reusable evidence.
 
-- `docs/protocols/problem_solving.md` — planning, diagnosis framing, research/model-regime work, bounded problem solving, and 3-EVR workflow;
-- `docs/protocols/coding.md` — code/harness/script/checker implementation;
-- `docs/protocols/validation.md` — P0-P3, checker/analyzer, production-path, runtime-semantic, and data validation;
-- `docs/protocols/scientific_execution.md` — cross-layer intent/regime preservation for executable scientific claims;
-- `docs/protocols/metrics_closure.md` — closure metrics, incident learning, recurrence, and enforcement promotion;
-- `docs/protocols/repository_mutation.md` — repository write safety for the immediate mutation step;
-- `docs/knowledge/TROUBLESHOOTING_INDEX.md` — reusable symptom-specific knowledge loaded only on matching signals.
+## Metrics boundary
+
+Calvin operating-process/rule metrics are archived under `archive/operating_metrics/` and are not live Paul inputs.
+
+Scientific, numerical, runtime, convergence, accuracy, performance, and scalability metrics required by technical validation remain live and are not part of that archive policy.
 
 ## State and evidence
 
-For current work state, use the active GitHub issue body/current status block. Issue comments are chronological evidence, not canonical current state.
+Current work state is owned by the active GitHub issue/body/status. Comments are chronological evidence, not canonical current state.
 
-Repository content may include MOOSE/Physics regression inputs, minimal reproducers, checkers/reference data, incident/development logs, scripts, and compatible local test executables.
-
-Current runtime naming is `Physics` / `physics-opt`. Historical incident records, archived experiments, immutable snapshots, or old closure evidence may retain `QPX` / `qpx-opt` when those names identify what was actually executed at the time; those historical names do not redefine the current runtime owner.
-
-Production source changes belong in the appropriate source repository. This workspace primarily stores test/development evidence and small source deltas only when needed to reproduce or document an investigation.
+Current runtime naming is `Physics` / `physics-opt`. Historical artifacts may retain `QPX` / `qpx-opt` when they identify what actually ran at that time.
