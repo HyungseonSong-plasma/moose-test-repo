@@ -21,6 +21,7 @@ FORBIDDEN_EVENTS = {
 }
 REQUIRED_CI_PULL_REQUEST_TYPES = {"opened", "synchronize", "reopened", "edited"}
 REQUIRED_CI_EDIT_FILTER_JOBS = {"validate", "runtime-smoke"}
+REQUIRED_CI_CONCURRENCY_GROUP = "repository-ci-${{ github.event.pull_request.number || github.ref }}"
 TOP_KEY = re.compile(r"^[A-Za-z_][A-Za-z0-9_-]*:\s*(?:#.*)?$")
 EVENT_KEY = re.compile(r"^  ([A-Za-z_][A-Za-z0-9_-]*):")
 
@@ -106,6 +107,10 @@ def check(root: Path) -> list[str]:
             )
         if name == "ci.yml":
             workflow_text = path.read_text(encoding="utf-8")
+            if f"group: {REQUIRED_CI_CONCURRENCY_GROUP}" not in workflow_text:
+                errors.append("ci.yml: canonical concurrency group missing")
+            if "cancel-in-progress: true" not in workflow_text:
+                errors.append("ci.yml: cancel-in-progress must be true")
             pr_types = pull_request_types(workflow_text)
             if pr_types != REQUIRED_CI_PULL_REQUEST_TYPES:
                 errors.append(
@@ -147,6 +152,10 @@ def self_test() -> int:
                 body += "run-name: Issue_${{ inputs.issue }}_experiments${{ inputs.sequence }}\n"
             if name == "refactor.yml":
                 body += "run-name: Issue_${{ inputs.issue }}_refactor${{ inputs.sequence }}\n"
+            if name == "ci.yml":
+                body += "concurrency:\n"
+                body += f"  group: {REQUIRED_CI_CONCURRENCY_GROUP}\n"
+                body += "  cancel-in-progress: true\n"
             body += "on:\n"
             for event in sorted(allowed_events):
                 if name == "ci.yml" and event == "pull_request":
@@ -186,6 +195,13 @@ def self_test() -> int:
             encoding="utf-8",
         )
         assert any("pull_request types=" in error for error in check(root))
+        ci_path.write_text(valid_ci, encoding="utf-8")
+        assert not check(root), check(root)
+        ci_path.write_text(
+            valid_ci.replace("  cancel-in-progress: true\n", "  cancel-in-progress: false\n"),
+            encoding="utf-8",
+        )
+        assert any("cancel-in-progress must be true" in error for error in check(root))
         ci_path.write_text(valid_ci, encoding="utf-8")
         assert not check(root), check(root)
         ci_path.write_text(
