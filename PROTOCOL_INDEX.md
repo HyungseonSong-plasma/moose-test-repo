@@ -92,10 +92,11 @@ Knowledge is evidence, not current STATE and not an always-active pack.
 ### ROUTE-09 — Repository / issue / file mutation and state synchronization
 Adjacent pack: `MUTATE`.
 
-Read:
-- `docs/protocols/repository_mutation.md`
+Before mutation, load:
+- the pinned central `repository-mutation` contract declared in `docs/operating_system/CENTRAL_SKILLS.md`;
+- `docs/protocols/repository_mutation.md` for repository-specific semantics and unsupported mutation classes.
 
-Load this only immediately before an actual GitHub issue/file/branch/ref/comment mutation. Unload it after read-back verification unless another predeclared write remains the immediate next obligation.
+Load these only immediately before an actual GitHub issue/file/branch/ref/comment mutation. Unload the MUTATE pack after read-back verification unless another predeclared write remains the immediate next obligation. The central portable-v1 contract does not replace local handling for resource/action pairs outside its supported surface.
 
 ### ROUTE-10 — Code / harness / script / checker implementation
 Primary phase: `IMPLEMENT`.
