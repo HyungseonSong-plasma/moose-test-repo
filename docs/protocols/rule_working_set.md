@@ -301,12 +301,12 @@ Do not copy rule text into the issue. Record only owner IDs/paths and state.
 
 `moose-test-init` restores enough context to resume safely, not every repository rule or every central skill.
 
-Bootstrap must first apply the exact consumer load manifest in `docs/operating_system/CENTRAL_SKILLS.md`. The three central controller contracts declared `ALWAYS` there are part of the initialization context and must be fetched/read from their exact immutable revisions before bootstrap completion is claimed.
+Bootstrap must first apply the machine-readable exact identities in `docs/operating_system/central_skills.json` together with the consumer semantics in `docs/operating_system/CENTRAL_SKILLS.md`. The three central controller contracts declared `ALWAYS` there are part of the initialization context and must be fetched/read from their exact immutable revisions before bootstrap completion is claimed.
 
 Bootstrap should then load:
 
 ```text
-1. CENTRAL_SKILLS.md + every ALWAYS central skill contract
+1. central_skills.json + CENTRAL_SKILLS.md + every ALWAYS central skill contract
 2. OPERATING_CORE.md
 3. active issue/current-state checkpoint
 4. PROTOCOL_INDEX.md
