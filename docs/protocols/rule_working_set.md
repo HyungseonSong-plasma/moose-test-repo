@@ -313,3 +313,53 @@ Bootstrap should load:
 ```
 
 Do not load all technical protocols during bootstrap. If the phase changes later, load the new pack at that transition.
+
+## RWS-13 — Scheduled-controller fast resume
+
+A scheduled controller continuing the same bounded campaign should resume from a **durable controller checkpoint**, not replay full `moose-test-init` on every invocation.
+
+Minimum fast-resume read set:
+
+```text
+durable controller checkpoint / authority state
+active work item
+current branch/head
+relevant exact-head CI/review state
+direct dependency surfaces that changed since the checkpoint
+```
+
+Fresh-read every mutable target immediately before acting on it under RM-02. However, do not re-read unchanged canonical rule documents merely to prove that they still exist.
+
+Escalate from fast resume to full bootstrap/rule-owner reload when any of these is true:
+
+```text
+no trustworthy durable checkpoint exists
+checkpoint authority conflicts with the scheduled intent
+primary phase changed
+a canonical rule-owner revision/pin changed
+current evidence contradicts checkpoint state
+a new trigger requires another phase/auxiliary pack
+the next action cannot be established from the compact state
+```
+
+A prompt-only ACTIVE/RESUME instruction must not silently override a durable PAUSED checkpoint. Synchronize the canonical authority state first.
+
+## RWS-14 — Controller work-burst semantics
+
+For scheduled controller work, optimize the invocation around the next **external wait boundary**, not around one mechanical action.
+
+```text
+one scheduled invocation
+  -> fresh-read decision-critical mutable state
+  -> execute causally ordered synchronous safe steps
+  -> confirm any expected validation route exists
+  -> use dependency-independent lanes when RM-12 permits
+  -> stop at a real external wait / HOLD / bounded budget
+```
+
+Do not impose `one invocation = one mutation` or `one invocation = one causal micro-step` when several synchronous steps can be completed with clear read-back and rollback boundaries.
+
+A newly launched asynchronous gate does not require immediate session termination when useful independent work remains. It does require preserving the pending evidence scope and obeying RM-12. A natural later terminal-status recheck is allowed; busy polling is not.
+
+Portable scheduling/liveness mechanics belong in the external `chatgpt-operation` controller-throughput skill. This repository owns only its domain dependency graph, scientific gates, resource identities, and local authorization.
+
