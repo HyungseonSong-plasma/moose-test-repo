@@ -1,16 +1,12 @@
-# Deprecated Compatibility Entry — Multiphysics Problem-Solving Protocol
+# Multiphysics Problem-Solving Protocol — Compatibility Entry
 
-**Status:** deprecated compatibility shim  
-**Canonical owner:** `docs/protocols/problem_solving.md`
+**Status:** compatibility shim
 
-This file is retained for historical references only. The reusable hypothesis-triage, known-good-control, convergence, coupling-localization, evidence-hierarchy, and 3-EVR rules now live in `docs/protocols/problem_solving.md`.
+Current owners:
 
-Supporting canonical modules:
+- `docs/protocols/problem_solving.md` — framing, hypotheses, controls, source/model reasoning, coupling/convergence discrimination;
+- `docs/protocols/validation.md` — validation evidence and P0-P3;
+- `docs/protocols/scientific_execution.md` — cross-layer intent/regime preservation;
+- `docs/knowledge/TROUBLESHOOTING_INDEX.md` — reusable symptom/discriminator knowledge.
 
-- `OPERATING_CORE.md` — always-active invariants;
-- `PROTOCOL_INDEX.md` — request router;
-- `docs/protocols/validation.md` — P0-P3 and executable/checker validation;
-- `docs/protocols/metrics_closure.md` — metrics and retrospective accounting;
-- `docs/knowledge/TROUBLESHOOTING_INDEX.md` — reusable symptom-specific knowledge.
-
-Do not add new rules here.
+The former 3-EVR budget and operating-process metrics are Calvin historical material and are not current Paul controls.
