@@ -351,20 +351,19 @@ A prompt-only ACTIVE/RESUME instruction must not silently override a durable PAU
 
 ## RWS-14 — Controller work-burst semantics
 
-For scheduled controller work, optimize the invocation around the next **external wait boundary**, not around one mechanical action.
+Generic scheduled-controller burst/parallel/wait classification is owned by the external `chatgpt-operation` `controller-throughput` skill pinned at `ab9091e2eb2e1f186110a0afc5b1da4479349e1b`. Do not reproduce its scheduling algorithm locally.
+
+This repository supplies only the inputs whose meaning is repository-specific:
 
 ```text
-one scheduled invocation
-  -> fresh-read decision-critical mutable state
-  -> execute causally ordered synchronous safe steps
-  -> confirm any expected validation route exists
-  -> use dependency-independent lanes when RM-12 permits
-  -> stop at a real external wait / HOLD / bounded budget
+dependency-ready task set
+task mutation/read-only classification
+resource keys and conflicts
+RM-12 GLOBAL / SCOPED / NONE validation-lineage lock
+validation-required / launch-expected / exact-head run counts
+scientific and architectural HOLD conditions
 ```
 
-Do not impose `one invocation = one mutation` or `one invocation = one causal micro-step` when several synchronous steps can be completed with clear read-back and rollback boundaries.
-
-A newly launched asynchronous gate does not require immediate session termination when useful independent work remains. It does require preserving the pending evidence scope and obeying RM-12. A natural later terminal-status recheck is allowed; busy polling is not.
+Follow the central result (`SYNC_AUTHORITY`, `MISSING_VALIDATION_ROUTE`, `BURST_ADVANCE`, `PARALLEL_ADVANCE`, `WAIT_EXTERNAL`, `IDLE`, or `PAUSED`) and then apply the owning local protocol for the selected task. A central scheduling result never establishes scientific PASS, changes RM-12 evidence meaning, or authorizes a dependency that this repository has not declared ready.
 
 Portable scheduling/liveness/refresh mechanics belong in the external `chatgpt-operation` controller-lifecycle/controller-throughput/state-refresh skills pinned at `ab9091e2eb2e1f186110a0afc5b1da4479349e1b` (post-merge CI `35535345477` PASS). This repository owns only its domain dependency graph, scientific gates, resource identities, refresh-surface mappings, and local authorization.
-
