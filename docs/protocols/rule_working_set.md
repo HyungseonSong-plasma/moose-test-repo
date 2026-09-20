@@ -299,20 +299,25 @@ Do not copy rule text into the issue. Record only owner IDs/paths and state.
 
 ## RWS-12 — Bootstrap rule
 
-`moose-test-init` restores enough context to resume safely, not every repository rule.
+`moose-test-init` restores enough context to resume safely, not every repository rule or every central skill.
 
-Bootstrap should load:
+Bootstrap must first apply the exact consumer load manifest in `docs/operating_system/CENTRAL_SKILLS.md`. The three central controller contracts declared `ALWAYS` there are part of the initialization context and must be fetched/read from their exact immutable revisions before bootstrap completion is claimed.
+
+Bootstrap should then load:
 
 ```text
-1. OPERATING_CORE.md
-2. active issue/current-state checkpoint
-3. PROTOCOL_INDEX.md
-4. this rule-working-set protocol
-5. the phase pack selected for the immediate resume obligation
-6. only triggered temporary diagnostic evidence
+1. CENTRAL_SKILLS.md + every ALWAYS central skill contract
+2. OPERATING_CORE.md
+3. active issue/current-state checkpoint
+4. PROTOCOL_INDEX.md
+5. this rule-working-set protocol
+6. the phase pack selected for the immediate resume obligation
+7. only triggered central/local auxiliary or temporary diagnostic material
 ```
 
-Do not load all technical protocols during bootstrap. If the phase changes later, load the new pack at that transition.
+Trigger-loaded central skills remain dormant until their owning operation is selected. In particular, load the pinned `repository-mutation` contract before MUTATE and the pinned `governed-work` contract before governed manifest execution.
+
+Do not load all technical protocols or all central skills during bootstrap. If the phase changes later, load the new local pack at that transition; if a central trigger activates, load only the corresponding pinned central contract.
 
 ## RWS-13 — Scheduled-controller fast resume
 
