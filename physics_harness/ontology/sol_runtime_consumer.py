@@ -93,7 +93,15 @@ def invoke_runtime_consumer(
             timeout=timeout_seconds,
             check=False,
         )
-    except (OSError, subprocess.TimeoutExpired) as exc:
+    except subprocess.TimeoutExpired as exc:
+        return SolRuntimeOutcome(
+            SolRuntimeFailureKind.NO_REPLAY_AMBIGUITY,
+            {
+                "exception_type": type(exc).__name__,
+                "error": str(exc),
+            },
+        )
+    except OSError as exc:
         return SolRuntimeOutcome(
             SolRuntimeFailureKind.RUNTIME,
             {
