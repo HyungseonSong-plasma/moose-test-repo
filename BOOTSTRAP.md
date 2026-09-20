@@ -42,6 +42,12 @@ Metrics observations inform operating decisions but do not override canonical ru
 
 The named operating-system baseline is descriptive/versioning state. Its historical log must not replace or override the live canonical operating documents.
 
+### Scheduled-controller continuation
+
+The full bootstrap sequence is for a fresh/uncertain operating context. A scheduled controller continuing the same bounded campaign from a trustworthy durable checkpoint uses the fast-resume contract in `docs/protocols/rule_working_set.md` RWS-13 instead of replaying the full bootstrap every invocation.
+
+Fast resume does **not** waive RM-02 fresh reads of mutable targets. Escalate to the full bootstrap when authority, phase, rule revision, or checkpoint/current-state consistency is uncertain.
+
 ## Metrics bootstrap contract
 
 `docs/metrics/README.md` is the one entry point for metrics loading. Follow its current bootstrap list rather than duplicating metric-file selection rules here.
