@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
+import math
 
 import pytest
 
@@ -88,6 +89,36 @@ def test_missing_or_noncanonical_unit_rejects() -> None:
         _compiler().compile(model, physics_capabilities=("steady_thermal",))
 
 
+def test_nonfinite_quantity_rejects() -> None:
+    for value in (math.nan, math.inf, -math.inf):
+        bad_quantity = RealizationQuantity(
+            CanonicalQuantitySpec("sol.quantity.temperature", "si.K"), value
+        )
+        bad_entity = replace(_model().entities[0], parameters=(bad_quantity,))
+        model = replace(_model(), entities=(bad_entity, _model().entities[1]))
+        with pytest.raises(SolRequestCompilationError, match="finite numeric"):
+            _compiler().compile(model, physics_capabilities=("steady_thermal",))
+
+
+def test_duplicate_graph_identifiers_reject() -> None:
+    model = _model()
+    with pytest.raises(SolRequestCompilationError, match="duplicate entity"):
+        _compiler().compile(
+            replace(model, entities=model.entities + (model.entities[0],)),
+            physics_capabilities=("steady_thermal",),
+        )
+    with pytest.raises(SolRequestCompilationError, match="duplicate scope"):
+        _compiler().compile(
+            replace(model, scopes=model.scopes + (model.scopes[0],)),
+            physics_capabilities=("steady_thermal",),
+        )
+    with pytest.raises(SolRequestCompilationError, match="duplicate action"):
+        _compiler().compile(
+            replace(model, action_bindings=model.action_bindings + (model.action_bindings[0],)),
+            physics_capabilities=("steady_thermal",),
+        )
+
+
 def test_unsupported_capability_mapping_rejects() -> None:
     with pytest.raises(SolRequestCompilationError, match="unsupported Physics capability"):
         _compiler().compile(_model(), physics_capabilities=("plasma_unknown",))
@@ -103,6 +134,13 @@ def test_action_rename_preserves_realization_meaning() -> None:
     assert first_spec == second_spec
     assert first.realization_spec["action_bindings"][0]["subjects"] == second.realization_spec["action_bindings"][0]["subjects"]
     assert first.realization_spec["action_bindings"][0]["scopes"] == second.realization_spec["action_bindings"][0]["scopes"]
+
+
+def test_action_ids_are_opaque_to_backend_spelling() -> None:
+    request = _compiler().compile(
+        _model("opaque_moose_lineage"), physics_capabilities=("steady_thermal",)
+    )
+    assert request.mapping_plan["actions"][0]["id"] == "opaque_moose_lineage"
 
 
 def test_moose_spelling_injected_upstream_rejects() -> None:
