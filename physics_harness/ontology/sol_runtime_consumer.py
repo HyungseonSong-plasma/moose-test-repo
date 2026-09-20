@@ -11,6 +11,7 @@ from enum import Enum
 import json
 from pathlib import Path
 import subprocess
+import tempfile
 from typing import Any, Mapping, Sequence
 
 from .sol_request import SolRequest
@@ -80,14 +81,17 @@ def invoke_runtime_consumer(
     *,
     timeout_seconds: float = 120.0,
 ) -> SolRuntimeOutcome:
-    """Invoke the upstream consumer as an opaque subprocess boundary."""
+    """Invoke the upstream consumer through its supported ``run`` CLI surface."""
     if timeout_seconds <= 0:
         raise ValueError("timeout_seconds must be positive")
     envelope = build_runtime_envelope(request)
+    request_path: Path | None = None
     try:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as handle:
+            json.dump(envelope, handle, sort_keys=True)
+            request_path = Path(handle.name)
         proc = subprocess.run(
-            [str(consumer), str(adapter)],
-            input=json.dumps(envelope, sort_keys=True),
+            [str(consumer), "run", str(adapter), str(request_path)],
             text=True,
             capture_output=True,
             timeout=timeout_seconds,
@@ -96,19 +100,16 @@ def invoke_runtime_consumer(
     except subprocess.TimeoutExpired as exc:
         return SolRuntimeOutcome(
             SolRuntimeFailureKind.NO_REPLAY_AMBIGUITY,
-            {
-                "exception_type": type(exc).__name__,
-                "error": str(exc),
-            },
+            {"exception_type": type(exc).__name__, "error": str(exc)},
         )
     except OSError as exc:
         return SolRuntimeOutcome(
             SolRuntimeFailureKind.RUNTIME,
-            {
-                "exception_type": type(exc).__name__,
-                "error": str(exc),
-            },
+            {"exception_type": type(exc).__name__, "error": str(exc)},
         )
+    finally:
+        if request_path is not None:
+            request_path.unlink(missing_ok=True)
     if proc.returncode != 0:
         return SolRuntimeOutcome(
             _classify_failure(proc.stderr),
