@@ -139,9 +139,8 @@ semantic equivalence, numerical/framework preflight,
 runtime-semantic conformance, evidence sufficiency
   -> docs/protocols/validation.md
 
-incident novelty, recurrence, prevention maturity,
-enforcement promotion
-  -> docs/protocols/metrics_closure.md
+historical incident evidence / reusable symptom records
+  -> docs/incidents/ + docs/knowledge/TROUBLESHOOTING_INDEX.md
 ```
 
 Do not duplicate those procedures here.
