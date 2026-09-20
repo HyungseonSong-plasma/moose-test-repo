@@ -84,14 +84,23 @@ def invoke_runtime_consumer(
     if timeout_seconds <= 0:
         raise ValueError("timeout_seconds must be positive")
     envelope = build_runtime_envelope(request)
-    proc = subprocess.run(
-        [str(consumer), str(adapter)],
-        input=json.dumps(envelope, sort_keys=True),
-        text=True,
-        capture_output=True,
-        timeout=timeout_seconds,
-        check=False,
-    )
+    try:
+        proc = subprocess.run(
+            [str(consumer), str(adapter)],
+            input=json.dumps(envelope, sort_keys=True),
+            text=True,
+            capture_output=True,
+            timeout=timeout_seconds,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return SolRuntimeOutcome(
+            SolRuntimeFailureKind.RUNTIME,
+            {
+                "exception_type": type(exc).__name__,
+                "error": str(exc),
+            },
+        )
     if proc.returncode != 0:
         return SolRuntimeOutcome(
             _classify_failure(proc.stderr),
