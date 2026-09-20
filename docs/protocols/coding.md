@@ -30,7 +30,7 @@ python3 bin/physics.py <command> [args]
 
 Command routing/presentation is owned by `physics_harness/cli/`; `bin/physics.py` is a thin process launcher only. Do not create an issue-specific top-level executable when an existing `physics` command and harness module can represent the operation as a mode or subcommand.
 
-Repository-specific developer/static validation belongs under `ci/guards/`. Reusable operational skills are centrally owned by `HyungseonSong-plasma/chatgpt-operation` and must not be vendored into this repository. Repository mutation is pinned at `661ca7fe3b214e9ca8ac802d517fa1e40f65ecca`; governed-work execution is pinned at `4d5683b12be31e28b44bbe34723b02ae3493b172`. Do not recreate a local `skills/`, loose root-level tool surface, or general `scripts/` dumping ground.
+Repository-specific developer/static validation belongs under `ci/guards/`. Reusable operational skills are centrally owned by `HyungseonSong-plasma/chatgpt-operation` and must not be vendored into this repository. Repository mutation is pinned at `661ca7fe3b214e9ca8ac802d517fa1e40f65ecca`; governed-work execution is pinned at `4d5683b12be31e28b44bbe34723b02ae3493b172`; controller lifecycle/throughput evaluation is pinned at `6857e641d0f45962d260ab21a885c5131311e5a2`. Do not recreate a local `skills/`, loose root-level tool surface, or general `scripts/` dumping ground.
 
 ## CODE-03 — File placement ownership
 

@@ -165,12 +165,13 @@ each intended target is known before its write
 each write uses the correct resource/action/target
 writes are sequential where ordering matters
 each completed write is verified before a dependent write proceeds
-no exact-head CI/science mutation lock is active
+no GLOBAL exact-head CI/science mutation lock is active
+every active SCOPED lock is non-conflicting with every contemplated write under RM-12
 ```
 
 There is no general requirement to split file, ref, and issue synchronization across separate assistant responses.
 
-Use separate phases only when the operations are causally independent enough that separation improves safety or when an active CI/science lock requires it.
+Use separate phases only when causal separation improves safety, when a GLOBAL lock is active, or when a contemplated write conflicts with an active SCOPED lock. A non-conflicting SCOPED lock does not by itself require serialization.
 
 ## RM-10 — Git-object and snapshot operations
 
@@ -211,22 +212,69 @@ If the destination is not a fast-forward, stop unless the user explicitly author
 
 After ref movement, read the ref back and verify the exact head SHA.
 
-## RM-12 — CI/science mutation lock
+## RM-12 — Validation-lineage mutation lock
 
-When a canonical mutation triggers required exact-head CI or governed science validation, repository mutation is locked until the required run set completes.
+When a canonical mutation triggers required exact-head CI or governed science validation, lock the **evidence lineage that the pending validation proves**, not the entire repository by default.
 
-During the lock:
+Classify the lock immediately:
 
 ```text
-read-only inspection, logs, artifacts, and diagnosis are allowed
-repository writes are not allowed
+GLOBAL
+  pending evidence targets main/canonical shared state or another mutation could
+  change the meaning/provenance of the run
+  -> all canonical mutation waits
+
+SCOPED
+  pending evidence is attributable to explicit branch/resource/evidence keys
+  -> conflicting mutation waits
+  -> dependency-independent non-overlapping work may proceed
+
+NONE
+  no pending validation can be invalidated by the contemplated mutation
 ```
+
+A SCOPED lock must record enough identity to decide conflicts, for example:
+
+```text
+branch/head SHA
+owned files/resources or canonical interface surface
+dependent work items
+evidence/run identity
+```
+
+During an active SCOPED lock:
+
+- read-only inspection, logs, artifacts, diagnosis, and dependency planning are allowed;
+- mutations to the same branch/resources or to dependent canonical state are forbidden;
+- a mutation on a distinct branch/resource may proceed only when it cannot change the pending run's source, semantics, dependency truth, or acceptance interpretation;
+- merging into `main`, changing shared schemas/interfaces consumed by the pending run, force/history rewriting, or otherwise invalidating its provenance escalates to GLOBAL/HARD STOP.
+
+Do not create parallel lanes merely because paths differ; dependency and evidence independence must both be established.
 
 After completion:
 
-- success permits the next planned mutation/acceptance step;
+- success releases the corresponding lock and permits the next planned acceptance/dependent step;
 - failure is classified by the actual failing validation layer under RM-08;
 - checker/harness false positives may be repaired without labeling the underlying physics as failed.
+
+### RM-12A — Validation-route liveness
+
+A required validation gate that was expected to launch but has **no exact-head run** is not an active run and is not a normal WAIT state. It does **not** release protection of the unvalidated evidence lineage.
+
+```text
+validation required
++ launch/trigger expected
++ exact-head run count = 0
+    -> MISSING_VALIDATION_ROUTE
+    -> keep SCOPED lock on the intended branch/head/evidence lineage
+    -> FIX orchestration/trigger route
+```
+
+Route repair may change PR/workflow metadata or another non-overlapping control surface that preserves the intended source head. Do not mutate or supersede the locked unvalidated head merely because no run exists. If a legitimate repair requires changing that source head, declare the new expected head explicitly and treat the prior validation obligation as superseded rather than silently preserving it.
+
+Do not spend later controller cycles waiting for a run that does not exist. Verify launch existence after opening, synchronizing, retargeting, or otherwise changing the validation route. Repair the route or use an explicitly supported dispatch mechanism; do not create meaningless/no-op commits solely to wake CI.
+
+Launch confirmation is distinct from polling. A later status read during the same bounded work burst is allowed when useful work occurred in between; do not sleep or busy-poll solely to await completion.
 
 ## RM-13 — Dependency/state synchronization
 
