@@ -161,3 +161,41 @@ def test_action_dependency_graph_is_explicit_and_validated() -> None:
     )
     with pytest.raises(SolRequestCompilationError, match="unknown action"):
         _compiler().compile(model, physics_capabilities=("steady_thermal",))
+
+def test_action_dependency_self_cycle_rejects() -> None:
+    model = replace(
+        _model(),
+        action_bindings=(
+            CanonicalActionBinding(
+                "self_cycle",
+                ("sol.entity.thermal_model",),
+                ("sol.scope.domain",),
+                ("self_cycle",),
+            ),
+        ),
+    )
+    with pytest.raises(SolRequestCompilationError, match="acyclic"):
+        _compiler().compile(model, physics_capabilities=("steady_thermal",))
+
+
+def test_action_dependency_indirect_cycle_rejects() -> None:
+    model = replace(
+        _model(),
+        action_bindings=(
+            CanonicalActionBinding(
+                "first",
+                ("sol.entity.thermal_model",),
+                ("sol.scope.domain",),
+                ("second",),
+            ),
+            CanonicalActionBinding(
+                "second",
+                ("sol.entity.thermal_model",),
+                ("sol.scope.domain",),
+                ("first",),
+            ),
+        ),
+    )
+    with pytest.raises(SolRequestCompilationError, match="acyclic"):
+        _compiler().compile(model, physics_capabilities=("steady_thermal",))
+
