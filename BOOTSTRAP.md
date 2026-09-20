@@ -1,130 +1,69 @@
 # MOOSE/Physics Cross-Chat Bootstrap
 
-**Status:** canonical entry point  
+**Status:** canonical consumer entry point  
 **Command:** `moose-test-init`  
-**Purpose:** restore the minimum safe operating context and the current operational evidence baseline in a fresh chat without relying on prior-chat memory or preloading the complete rule inventory.
+**OS:** Paul
 
-## Bootstrap contract
+## Contract
 
-When the user sends `moose-test-init`, treat this file as the repository boot entry point.
+Generic initialization mechanics are owned by the exact pinned Paul `session-bootstrap` skill.
 
-The bootstrap must reconstruct OS identity from the exact pinned central authority and reconstruct repository operating state/current process evidence from local canonical sources, not from remembered conversation text.
-
-A successful bootstrap restores two distinct layers:
-
-```text
-RULE CONTEXT
-  -> what procedure applies now
-
-METRICS CONTEXT
-  -> what the measured operating history currently says about efficiency, failure cost, and process hypotheses
-```
-
-Metrics observations inform operating decisions but do not override canonical rules, scientific validity, or closure-quality constraints.
+This file supplies MOOSE/Physics-specific sources, routing inputs, and report additions.
 
 ## Bootstrap sequence
 
 ```text
-1. resolve the current repository ref / working branch from explicit user or current-work evidence;
-   do not silently substitute the default branch when an active working ref is known
-2. read docs/operating_system/README.md as the local consumer binding and obtain the exact central OS repository/revision/index
-3. read the central OS index from that exact revision and identify the current named operating-system baseline
-4. read OPERATING_CORE.md
-5. recover the active issue / bounded-work STATE and immediate resume obligation when one exists
-6. read PROTOCOL_INDEX.md
-7. read docs/protocols/rule_working_set.md
-8. read docs/metrics/README.md and restore its required current METRICS CONTEXT
-9. classify the immediate primary phase: PLAN / RESEARCH / IMPLEMENT / VALIDATE / CLOSE
-10. activate only the selected phase owner(s)
-11. add MUTATE, SCIENTIFIC_EXECUTION, or temporary diagnostic material only when triggered
-12. consult docs/rules/INVENTORY.md only when the required dormant owner is unclear or expansion is triggered
-13. report the reconstructed operating state and material metrics context
+1. read docs/operating_system/README.md;
+2. read central_skills.json + CENTRAL_SKILLS.md;
+3. verify the exact central revision and OS = Paul;
+4. verify/read central ESSENTIAL_RULES.md;
+5. load session-bootstrap + state-refresh from that same revision;
+6. read OPERATING_CORE.md;
+7. recover the active issue/bounded-work STATE and immediate obligation;
+8. read PROTOCOL_INDEX.md and docs/protocols/rule_working_set.md;
+9. select one local primary semantic phase;
+10. load only its local owner(s) plus immediately triggered central skills/diagnostic evidence;
+11. report restored state, first real gate, and uncertainty;
+12. stop read-only.
 ```
 
-The named operating-system baseline and lifecycle are owned by the pinned central OS registry. They are descriptive/versioning state and must not replace or override this consumer repository's live domain-specific canonical operating documents.
+Initialization is incomplete if required Paul authority or required init contracts cannot be verified.
 
-### Scheduled-controller continuation
+## Scheduled-controller continuation
 
-The full bootstrap sequence is for a fresh/uncertain operating context. A scheduled controller continuing the same bounded campaign from a trustworthy durable checkpoint uses the fast-resume contract in `docs/protocols/rule_working_set.md` RWS-13 instead of replaying the full bootstrap every invocation.
+An ordinary interactive init does not preload controller skills.
 
-The exact minimal read set is computed by the pinned external `chatgpt-operation/state-refresh` evaluator. This repository provides the mutable surface identities, fingerprints, phase/rule/scope signals, immutable dependency pins, and planned mutation targets; it does not duplicate the generic delta-refresh algorithm locally.
-
-Fast resume does **not** waive RM-02 authoritative reads of mutable mutation targets. A `FULL_REFRESH_REQUIRED` result escalates to this full bootstrap.
-
-## Metrics bootstrap contract
-
-`docs/metrics/README.md` is the one entry point for metrics loading. Follow its current bootstrap list rather than duplicating metric-file selection rules here.
-
-At minimum, initialization must become aware of:
+When a scheduled-controller trigger is active, load from the same exact central revision:
 
 ```text
-current issue-efficiency baseline / latest monitored trend
-latest efficiency or batching observation when available
-latest incident/root-cause observation
-material current process bottleneck or improvement hypothesis
-important evidence limitations when values are reconstructed or unavailable
+state-refresh
+controller-throughput
+controller-lifecycle
 ```
 
-The purpose is data-driven operating-system improvement. Planning decisions such as Issue/work-batch sizing, validation consolidation, preflight investment, gate hardening, clarification reduction, and evidence reuse should use the available metrics rather than relying only on qualitative memory.
+Continue from a durable controller checkpoint and apply central state-refresh semantics. Physics dependency readiness and scientific gates remain local.
 
-Do not preload every historical metrics snapshot. `docs/metrics/README.md` defines the compact current set and when historical expansion is justified.
+## Minimum report
 
-## Minimum initialization report
-
-A successful bootstrap should report, when the information is available:
+Report:
 
 ```text
-Operating system version
-Repository / ref
-Active work item or issue
-Immediate resume obligation
-Primary phase
-Active core/phase packs
-Temporary or auxiliary packs
-Material unresolved hold/blocker
-Metrics context: current efficiency trend / latest relevant snapshot
-Metrics context: material incident or process bottleneck
-Metrics context: current process hypothesis to preserve/test when relevant
+OS = Paul
+exact central revision
+essential rules loaded
+init skills loaded
+repository / ref
+active work item / immediate obligation
+primary local phase
+triggered central skills
+first real gate / blocker
+evidence uncertainty
 ```
 
-Do not claim initialization is complete if the exact central OS binding/current OS identity, current work state, immediate resume obligation, or required metrics context is unresolved.
+No operating-process metrics context is required.
 
-## Working-set rule
+## Historical metrics
 
-`moose-test-init` is not a command to load every potentially useful protocol or every historical measurement.
+Calvin-era operating metrics are archived at `archive/operating_metrics/` and must not be loaded by initialization.
 
-The initial rule working set remains:
-
-```text
-CORE
-+ one primary PHASE PACK
-+ only immediately triggered auxiliary/temporary material
-```
-
-The METRICS CONTEXT is an observation layer, not an additional rule pack, and therefore does not justify permanent rule accumulation.
-
-After initialization, every new user turn is a rule-set re-evaluation event. Reassess the current phase, newly observed evidence, symptoms, unresolved obligations, and any material metrics signal; load newly triggered rule material and unload material that is no longer relevant according to `docs/protocols/rule_working_set.md`.
-
-## Cross-chat authority
-
-Fresh chats should not depend on another chat's private reasoning or historical wording to understand the operating system. Durable authority is:
-
-```text
-BOOTSTRAP.md                       -> cross-chat entry point
-docs/operating_system/README.md    -> exact central OS consumer binding
-chatgpt-operation@<pinned-sha>/docs/operating_system/README.md
-                                   -> named OS baseline / version lifecycle
-OPERATING_CORE.md                  -> always-active MOOSE/Physics invariants
-PROTOCOL_INDEX.md                  -> routing / phase selection
-docs/protocols/rule_working_set.md -> load / unload policy
-docs/metrics/README.md             -> current metrics-context entry point
-docs/rules/INVENTORY.md            -> dormant owner locator
-active issue/body                   -> current STATE
-phase protocol                      -> current technical procedure
-```
-
-OS version snapshots are centrally owned by the exact pinned `chatgpt-operation` revision. Local metrics snapshots under `docs/metrics/**/snapshots/` remain historical/comparative evidence. Conversation history may help locate the current work item, but neither history nor a snapshot overrides the applicable central OS binding or live local canonical sources.
-
-## Failure handling
-
-If bootstrap selects the wrong phase, misses a required rule owner, misses material current metrics evidence, or activates irrelevant material that contributes to an operating error, treat that as routing/working-set/bootstrap evidence. Record it through the incident-learning system when material rather than compensating by permanently loading more rules or every historical metrics file.
+Scientific/runtime/numerical/performance evidence required by the owning Physics claim remains live under its technical protocol.
