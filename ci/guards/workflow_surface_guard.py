@@ -19,6 +19,7 @@ FORBIDDEN_EVENTS = {
     "issue_comment", "issues", "discussion", "discussion_comment",
     "pull_request_review_comment",
 }
+REQUIRED_CI_PULL_REQUEST_TYPES = {"opened", "synchronize", "reopened", "edited"}
 TOP_KEY = re.compile(r"^[A-Za-z_][A-Za-z0-9_-]*:\s*(?:#.*)?$")
 EVENT_KEY = re.compile(r"^  ([A-Za-z_][A-Za-z0-9_-]*):")
 
@@ -38,6 +39,25 @@ def events(text: str) -> set[str]:
                     result.add(match.group(1))
             return result
     return set()
+
+def pull_request_types(text: str) -> set[str]:
+    lines = text.splitlines()
+    for i, line in enumerate(lines):
+        if line == "  pull_request:":
+            for child in lines[i + 1:]:
+                if child.startswith("  ") and not child.startswith("    "):
+                    break
+                stripped = child.strip()
+                if stripped.startswith("types: [") and stripped.endswith("]"):
+                    inner = stripped.split("[", 1)[1].rsplit("]", 1)[0]
+                    return {
+                        item.strip()
+                        for item in inner.split(",")
+                        if item.strip()
+                    }
+            return set()
+    return set()
+
 
 def check(root: Path) -> list[str]:
     workflow_dir = root / ".github" / "workflows"
@@ -66,6 +86,14 @@ def check(root: Path) -> list[str]:
             errors.append(
                 f"{name}: forbidden conversational events={sorted(forbidden)}"
             )
+        if name == "ci.yml":
+            pr_types = pull_request_types(path.read_text(encoding="utf-8"))
+            if pr_types != REQUIRED_CI_PULL_REQUEST_TYPES:
+                errors.append(
+                    "ci.yml: pull_request types="
+                    f"{sorted(pr_types)} expected="
+                    f"{sorted(REQUIRED_CI_PULL_REQUEST_TYPES)}"
+                )
     experiment = (
         (workflow_dir / "experiment.yml").read_text(encoding="utf-8")
         if (workflow_dir / "experiment.yml").is_file() else ""
@@ -91,9 +119,18 @@ def self_test() -> int:
                 body += "run-name: Issue_${{ inputs.issue }}_experiments${{ inputs.sequence }}\n"
             if name == "refactor.yml":
                 body += "run-name: Issue_${{ inputs.issue }}_refactor${{ inputs.sequence }}\n"
-            body += "on:\n" + "".join(
-                f"  {event}:\n" for event in sorted(allowed_events)
-            )
+            body += "on:\n"
+            for event in sorted(allowed_events):
+                if name == "ci.yml" and event == "pull_request":
+                    body += "  pull_request:\n"
+                    body += "    branches: [main]\n"
+                    body += (
+                        "    types: ["
+                        + ", ".join(sorted(REQUIRED_CI_PULL_REQUEST_TYPES))
+                        + "]\n"
+                    )
+                else:
+                    body += f"  {event}:\n"
             body += "jobs:\n  x:\n    runs-on: ubuntu-latest\n    steps: []\n"
             (workflow_dir / name).write_text(body)
         for name, allowed_events in REUSABLE.items():
@@ -102,6 +139,15 @@ def self_test() -> int:
             )
             body += "jobs: {}\n"
             (workflow_dir / name).write_text(body)
+        assert not check(root), check(root)
+        ci_path = workflow_dir / "ci.yml"
+        valid_ci = ci_path.read_text(encoding="utf-8")
+        ci_path.write_text(
+            valid_ci.replace("edited, ", ""),
+            encoding="utf-8",
+        )
+        assert any("pull_request types=" in error for error in check(root))
+        ci_path.write_text(valid_ci, encoding="utf-8")
         assert not check(root), check(root)
         (workflow_dir / "bad.yml").write_text(
             "name: bad\non:\n  issue_comment:\njobs: {}\n"
