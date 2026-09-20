@@ -12,7 +12,7 @@ import json
 from pathlib import Path
 import subprocess
 import tempfile
-from typing import Any, Mapping, Sequence
+from typing import Any, Mapping
 
 from .sol_request import SolRequest
 
@@ -51,7 +51,6 @@ def _classify_failure(stderr: str) -> SolRuntimeFailureKind:
     if "VALIDATION_REJECTED" in text: return SolRuntimeFailureKind.VALIDATION
     if "PROTOCOL_FAILURE" in text: return SolRuntimeFailureKind.PROTOCOL
     if "EXECUTION_NOT_COMPLETED" in text: return SolRuntimeFailureKind.EXECUTION
-    if "RESPONSE" in text and "REPLAY" in text: return SolRuntimeFailureKind.NO_REPLAY_AMBIGUITY
     return SolRuntimeFailureKind.RUNTIME
 
 def invoke_runtime_consumer(consumer: Path, adapter: Path, request: SolRequest, *, timeout_seconds: float = 120.0) -> SolRuntimeOutcome:
@@ -78,10 +77,10 @@ def invoke_runtime_consumer(consumer: Path, adapter: Path, request: SolRequest, 
                 try:
                     evidence = json.loads(proc.stdout)
                 except json.JSONDecodeError as exc:
-                    outcome = SolRuntimeOutcome(SolRuntimeFailureKind.PROTOCOL, {"returncode": proc.returncode, "decode_error": str(exc)})
+                    outcome = SolRuntimeOutcome(SolRuntimeFailureKind.NO_REPLAY_AMBIGUITY, {"returncode": proc.returncode, "decode_error": str(exc)})
                 else:
                     if not isinstance(evidence, dict) or evidence.get("status") != "completed":
-                        outcome = SolRuntimeOutcome(SolRuntimeFailureKind.PROTOCOL, {"payload": evidence})
+                        outcome = SolRuntimeOutcome(SolRuntimeFailureKind.NO_REPLAY_AMBIGUITY, {"payload": evidence})
                     elif evidence.get("execute_response_loss_replay") != "forbidden":
                         outcome = SolRuntimeOutcome(SolRuntimeFailureKind.NO_REPLAY_AMBIGUITY, evidence)
                     else:
