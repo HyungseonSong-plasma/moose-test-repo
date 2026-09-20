@@ -30,8 +30,9 @@ Metrics observations inform operating decisions but do not override canonical ru
 ```text
 1. resolve the current repository ref / working branch from explicit user or current-work evidence;
    do not silently substitute the default branch when an active working ref is known
-2. read docs/operating_system/CENTRAL_SKILLS.md
-3. fetch and read every ALWAYS central skill contract from its declared exact revision/path;
+2. read docs/operating_system/central_skills.json and docs/operating_system/CENTRAL_SKILLS.md;
+   use the JSON manifest as the machine-readable source of exact revisions/paths/blob identities
+3. fetch, verify expected blob SHA, and read every ALWAYS central skill contract from its declared exact revision/path;
    never substitute central main/latest or conversation memory
 4. read docs/operating_system/README.md to identify the current named operating-system baseline
 5. read OPERATING_CORE.md
@@ -48,7 +49,7 @@ Metrics observations inform operating decisions but do not override canonical ru
 15. report the reconstructed operating state, loaded central skills, and material metrics context
 ```
 
-Initialization is not complete merely because the local bootstrap documents were read. The ALWAYS central skill contracts must have been retrieved from their exact pinned revisions and read successfully. If any required central skill cannot be retrieved or its exact source identity cannot be established, follow `CENTRAL_SKILLS.md` failure semantics and report initialization as blocked.
+Initialization is not complete merely because the local bootstrap documents were read. The ALWAYS central skill contracts must have been retrieved from their exact pinned revisions, matched to their expected blob SHAs, and read successfully. If any required central skill cannot be retrieved or its exact source identity cannot be established, follow `CENTRAL_SKILLS.md` failure semantics and report initialization as blocked.
 
 The named operating-system baseline is descriptive/versioning state. Its historical log must not replace or override the live canonical operating documents.
 
@@ -123,7 +124,8 @@ Fresh chats should not depend on another chat's private reasoning or historical 
 
 ```text
 BOOTSTRAP.md                       -> cross-chat entry point
-docs/operating_system/CENTRAL_SKILLS.md -> exact external skill load manifest
+docs/operating_system/central_skills.json -> machine-readable exact skill identities
+docs/operating_system/CENTRAL_SKILLS.md -> external skill load semantics
 docs/operating_system/README.md    -> current named OS baseline / version-log index
 OPERATING_CORE.md                  -> always-active invariants
 PROTOCOL_INDEX.md                  -> routing / phase selection
