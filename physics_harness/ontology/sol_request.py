@@ -58,19 +58,23 @@ def _validate_acyclic_actions(bindings: Sequence["CanonicalActionBinding"]) -> N
     visiting: set[str] = set()
     visited: set[str] = set()
 
-    def visit(action_id: str) -> None:
-        if action_id in visiting:
-            raise SolRequestCompilationError("action dependency graph must be acyclic")
-        if action_id in visited:
-            return
-        visiting.add(action_id)
-        for dependency in graph[action_id]:
-            visit(dependency)
-        visiting.remove(action_id)
-        visited.add(action_id)
-
-    for action_id in graph:
-        visit(action_id)
+    for root_action_id in graph:
+        if root_action_id in visited:
+            continue
+        stack: list[tuple[str, bool]] = [(root_action_id, False)]
+        while stack:
+            action_id, exiting = stack.pop()
+            if exiting:
+                visiting.remove(action_id)
+                visited.add(action_id)
+                continue
+            if action_id in visited:
+                continue
+            if action_id in visiting:
+                raise SolRequestCompilationError("action dependency graph must be acyclic")
+            visiting.add(action_id)
+            stack.append((action_id, True))
+            stack.extend((dependency, False) for dependency in graph[action_id])
 
 
 @dataclass(frozen=True)
