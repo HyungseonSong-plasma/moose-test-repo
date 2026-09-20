@@ -75,7 +75,7 @@ Read `validation.md`. Add `IMPLEMENT` only while code/harness/checker implementa
 
 Primary phase: `CLOSE`.
 
-Closure uses the owning issue/milestone acceptance criteria and current validation evidence. No WCC/EVR or rule-effectiveness accounting is required.
+Closure uses the owning issue/milestone acceptance criteria and current validation evidence. No operating-process or rule-effectiveness accounting is required.
 
 When a material incident is worth preserving, record factual evidence under the attributable issue or `docs/incidents/`. A reusable deterministic mechanics defect should be fixed in the owning central skill/guard; a Physics semantic defect should be fixed in its local owner.
 
