@@ -258,15 +258,18 @@ After completion:
 
 ### RM-12A — Validation-route liveness
 
-A required validation gate that was expected to launch but has **no exact-head run** is not an active lock and is not a normal WAIT state.
+A required validation gate that was expected to launch but has **no exact-head run** is not an active run and is not a normal WAIT state. It does **not** release protection of the unvalidated evidence lineage.
 
 ```text
 validation required
 + launch/trigger expected
 + exact-head run count = 0
     -> MISSING_VALIDATION_ROUTE
+    -> keep SCOPED lock on the intended branch/head/evidence lineage
     -> FIX orchestration/trigger route
 ```
+
+Route repair may change PR/workflow metadata or another non-overlapping control surface that preserves the intended source head. Do not mutate or supersede the locked unvalidated head merely because no run exists. If a legitimate repair requires changing that source head, declare the new expected head explicitly and treat the prior validation obligation as superseded rather than silently preserving it.
 
 Do not spend later controller cycles waiting for a run that does not exist. Verify launch existence after opening, synchronizing, retargeting, or otherwise changing the validation route. Repair the route or use an explicitly supported dispatch mechanism; do not create meaningless/no-op commits solely to wake CI.
 
