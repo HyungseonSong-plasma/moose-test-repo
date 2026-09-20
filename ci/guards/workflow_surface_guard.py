@@ -190,18 +190,17 @@ def self_test() -> int:
         assert not check(root), check(root)
         ci_path.write_text(
             valid_ci.replace(
-                "      github.event.changes.base != null\n"
-                "    runs-on: ubuntu-latest\n"
-                "    steps: []\n"
-                "  runtime-smoke:",
-                "      true\n"
-                "    runs-on: ubuntu-latest\n"
-                "    steps: []\n"
-                "  runtime-smoke:",
+                "      github.event.changes.base != null\n",
+                "      true\n",
+                1,
             ),
             encoding="utf-8",
         )
-        assert any("validate missing base-change edit filter" in error for error in check(root))
+        filter_errors = [
+            error for error in check(root)
+            if "missing base-change edit filter" in error
+        ]
+        assert len(filter_errors) == 1, filter_errors
         ci_path.write_text(valid_ci, encoding="utf-8")
         assert not check(root), check(root)
         (workflow_dir / "bad.yml").write_text(
