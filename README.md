@@ -8,7 +8,7 @@ Use `OPERATING_CORE.md` for always-active invariants and `PROTOCOL_INDEX.md` for
 
 Named operating-system identity/version lifecycle is centrally owned by `HyungseonSong-plasma/chatgpt-operation`. The exact consumer pin is `docs/operating_system/README.md`; MOOSE/Physics domain rules, scientific meaning, and repository-specific acceptance remain locally owned.
 
-The current central generation model is **Calvin = Rule-Optimized**; the reserved successor is **Paul = Rule-Minimal / Skill-Optimized**. This does not authorize removing local semantic/scientific rules. Deterministic procedural rules are candidates for future skill delegation only after the central parity and promotion gates are satisfied.
+The active central operating system is **Paul = Rule-Minimal / Skill-Optimized**. Generic operating invariants and deterministic mechanics are loaded from the exact Paul pin; MOOSE/Physics scientific meaning, validation semantics, and repository-specific acceptance remain locally owned. Calvin operating metrics are historical archives only.
 
 For multi-issue capability delivery, use `docs/protocols/milestone_delivery.md`.
 
