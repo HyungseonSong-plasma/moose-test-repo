@@ -8,7 +8,7 @@
 
 When the user sends `moose-test-init`, treat this file as the repository boot entry point.
 
-The bootstrap must reconstruct operating state and current process evidence from canonical repository sources, not from remembered conversation text.
+The bootstrap must reconstruct OS identity from the exact pinned central authority and reconstruct repository operating state/current process evidence from local canonical sources, not from remembered conversation text.
 
 A successful bootstrap restores two distinct layers:
 
@@ -27,20 +27,21 @@ Metrics observations inform operating decisions but do not override canonical ru
 ```text
 1. resolve the current repository ref / working branch from explicit user or current-work evidence;
    do not silently substitute the default branch when an active working ref is known
-2. read docs/operating_system/README.md to identify the current named operating-system baseline
-3. read OPERATING_CORE.md
-4. recover the active issue / bounded-work STATE and immediate resume obligation when one exists
-5. read PROTOCOL_INDEX.md
-6. read docs/protocols/rule_working_set.md
-7. read docs/metrics/README.md and restore its required current METRICS CONTEXT
-8. classify the immediate primary phase: PLAN / RESEARCH / IMPLEMENT / VALIDATE / CLOSE
-9. activate only the selected phase owner(s)
-10. add MUTATE, SCIENTIFIC_EXECUTION, or temporary diagnostic material only when triggered
-11. consult docs/rules/INVENTORY.md only when the required dormant owner is unclear or expansion is triggered
-12. report the reconstructed operating state and material metrics context
+2. read docs/operating_system/README.md as the local consumer binding and obtain the exact central OS repository/revision/index
+3. read the central OS index from that exact revision and identify the current named operating-system baseline
+4. read OPERATING_CORE.md
+5. recover the active issue / bounded-work STATE and immediate resume obligation when one exists
+6. read PROTOCOL_INDEX.md
+7. read docs/protocols/rule_working_set.md
+8. read docs/metrics/README.md and restore its required current METRICS CONTEXT
+9. classify the immediate primary phase: PLAN / RESEARCH / IMPLEMENT / VALIDATE / CLOSE
+10. activate only the selected phase owner(s)
+11. add MUTATE, SCIENTIFIC_EXECUTION, or temporary diagnostic material only when triggered
+12. consult docs/rules/INVENTORY.md only when the required dormant owner is unclear or expansion is triggered
+13. report the reconstructed operating state and material metrics context
 ```
 
-The named operating-system baseline is descriptive/versioning state. Its historical log must not replace or override the live canonical operating documents.
+The named operating-system baseline and lifecycle are owned by the pinned central OS registry. They are descriptive/versioning state and must not replace or override this consumer repository's live domain-specific canonical operating documents.
 
 ### Scheduled-controller continuation
 
@@ -86,7 +87,7 @@ Metrics context: material incident or process bottleneck
 Metrics context: current process hypothesis to preserve/test when relevant
 ```
 
-Do not claim initialization is complete if the current work state, immediate resume obligation, or required metrics context is unresolved.
+Do not claim initialization is complete if the exact central OS binding/current OS identity, current work state, immediate resume obligation, or required metrics context is unresolved.
 
 ## Working-set rule
 
@@ -110,8 +111,10 @@ Fresh chats should not depend on another chat's private reasoning or historical 
 
 ```text
 BOOTSTRAP.md                       -> cross-chat entry point
-docs/operating_system/README.md    -> current named OS baseline / version-log index
-OPERATING_CORE.md                  -> always-active invariants
+docs/operating_system/README.md    -> exact central OS consumer binding
+chatgpt-operation@<pinned-sha>/docs/operating_system/README.md
+                                   -> named OS baseline / version lifecycle
+OPERATING_CORE.md                  -> always-active MOOSE/Physics invariants
 PROTOCOL_INDEX.md                  -> routing / phase selection
 docs/protocols/rule_working_set.md -> load / unload policy
 docs/metrics/README.md             -> current metrics-context entry point
@@ -120,7 +123,7 @@ active issue/body                   -> current STATE
 phase protocol                      -> current technical procedure
 ```
 
-Version snapshots under `docs/operating_system/versions/` and metrics snapshots under `docs/metrics/**/snapshots/` are historical/comparative evidence. Conversation history may help locate the current work item, but neither history nor a snapshot overrides the live canonical sources.
+OS version snapshots are centrally owned by the exact pinned `chatgpt-operation` revision. Local metrics snapshots under `docs/metrics/**/snapshots/` remain historical/comparative evidence. Conversation history may help locate the current work item, but neither history nor a snapshot overrides the applicable central OS binding or live local canonical sources.
 
 ## Failure handling
 
