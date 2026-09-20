@@ -1,16 +1,16 @@
-# Deprecated Compatibility Entry — Manager Role Routing
+# Manager Role Routing — Compatibility Entry
 
-**Status:** deprecated compatibility shim  
-**Canonical owner:** `PROTOCOL_INDEX.md` and `docs/protocols/problem_solving.md`
+**Status:** compatibility guide under Paul
 
-This file no longer defines independent operating rules. It is retained so historical issue/comment references do not break.
+Canonical owners:
 
-Use:
+- `OPERATING_CORE.md` for Physics-local always-active invariants;
+- `PROTOCOL_INDEX.md` for local semantic and central-skill trigger routing;
+- `docs/protocols/problem_solving.md` for Manager/Researcher/Validator technical reasoning;
+- `docs/protocols/validation.md` for validation sufficiency and P0-P3;
+- `docs/protocols/milestone_delivery.md` for milestone closure/integration;
+- Paul `ESSENTIAL_RULES.md` for generic authority, evidence, gate, interruption, and documentation invariants.
 
-- `OPERATING_CORE.md` for always-active invariants;
-- `PROTOCOL_INDEX.md` for deterministic request routing;
-- `docs/protocols/problem_solving.md` for Manager/Researcher/Validator orchestration and 3-EVR problem solving;
-- `docs/protocols/validation.md` for preflight/test sufficiency;
-- `docs/protocols/metrics_closure.md` for RVR/EVR and closure accounting.
+Calvin operating metrics and 3-EVR accounting are historical only under `archive/operating_metrics/`.
 
-Do not copy rule text back into this file. Update the canonical owner only.
+Do not copy canonical rule text into this compatibility guide.
