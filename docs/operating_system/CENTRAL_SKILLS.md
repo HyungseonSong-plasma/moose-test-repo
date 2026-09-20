@@ -4,7 +4,7 @@
 **Owner:** `moose-test-init` consumer policy  
 **Central source:** `HyungseonSong-plasma/chatgpt-operation`
 
-This file defines which reusable operational skill contracts a fresh MOOSE/Physics session must actually load from the central repository. It does not duplicate those contracts locally.
+This file defines the consumer-side loading semantics. The machine-readable source of truth for names, revisions, paths, triggers, and expected blob SHAs is `docs/operating_system/central_skills.json`. This file does not duplicate the central skill contracts locally.
 
 ## Core skill load set
 
@@ -31,12 +31,12 @@ The contract revision must match the executable central action revision used by 
 
 ## Deterministic load procedure
 
-For each required skill:
+Read `central_skills.json` first. For each required skill entry:
 
 ```text
 1. resolve the exact central repository revision from this manifest;
 2. fetch the declared contract path from that exact revision;
-3. verify that the fetched source is from the declared repository/ref/path;
+3. verify that the fetched source is from the declared repository/ref/path and that its blob SHA matches `expected_blob_sha`;
 4. read the contract before applying the skill;
 5. record the loaded skill name + exact revision in the initialization state;
 6. never substitute central main/latest for the exact pin;
