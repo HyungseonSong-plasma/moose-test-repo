@@ -165,12 +165,13 @@ each intended target is known before its write
 each write uses the correct resource/action/target
 writes are sequential where ordering matters
 each completed write is verified before a dependent write proceeds
-no exact-head CI/science mutation lock is active
+no GLOBAL exact-head CI/science mutation lock is active
+every active SCOPED lock is non-conflicting with every contemplated write under RM-12
 ```
 
 There is no general requirement to split file, ref, and issue synchronization across separate assistant responses.
 
-Use separate phases only when the operations are causally independent enough that separation improves safety or when an active CI/science lock requires it.
+Use separate phases only when causal separation improves safety, when a GLOBAL lock is active, or when a contemplated write conflicts with an active SCOPED lock. A non-conflicting SCOPED lock does not by itself require serialization.
 
 ## RM-10 — Git-object and snapshot operations
 
