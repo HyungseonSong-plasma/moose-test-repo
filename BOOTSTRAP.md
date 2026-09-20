@@ -10,11 +10,14 @@ When the user sends `moose-test-init`, treat this file as the repository boot en
 
 The bootstrap must reconstruct operating state and current process evidence from canonical repository sources, not from remembered conversation text.
 
-A successful bootstrap restores two distinct layers:
+A successful bootstrap restores three distinct layers:
 
 ```text
+CENTRAL SKILL CONTEXT
+  -> which pinned portable operational contracts are active
+
 RULE CONTEXT
-  -> what procedure applies now
+  -> what repository-local procedure applies now
 
 METRICS CONTEXT
   -> what the measured operating history currently says about efficiency, failure cost, and process hypotheses
@@ -27,18 +30,25 @@ Metrics observations inform operating decisions but do not override canonical ru
 ```text
 1. resolve the current repository ref / working branch from explicit user or current-work evidence;
    do not silently substitute the default branch when an active working ref is known
-2. read docs/operating_system/README.md to identify the current named operating-system baseline
-3. read OPERATING_CORE.md
-4. recover the active issue / bounded-work STATE and immediate resume obligation when one exists
-5. read PROTOCOL_INDEX.md
-6. read docs/protocols/rule_working_set.md
-7. read docs/metrics/README.md and restore its required current METRICS CONTEXT
-8. classify the immediate primary phase: PLAN / RESEARCH / IMPLEMENT / VALIDATE / CLOSE
-9. activate only the selected phase owner(s)
-10. add MUTATE, SCIENTIFIC_EXECUTION, or temporary diagnostic material only when triggered
-11. consult docs/rules/INVENTORY.md only when the required dormant owner is unclear or expansion is triggered
-12. report the reconstructed operating state and material metrics context
+2. read docs/operating_system/CENTRAL_SKILLS.md
+3. fetch and read every ALWAYS central skill contract from its declared exact revision/path;
+   never substitute central main/latest or conversation memory
+4. read docs/operating_system/README.md to identify the current named operating-system baseline
+5. read OPERATING_CORE.md
+6. recover the active issue / bounded-work STATE and immediate resume obligation when one exists
+7. read PROTOCOL_INDEX.md
+8. read docs/protocols/rule_working_set.md
+9. read docs/metrics/README.md and restore its required current METRICS CONTEXT
+10. classify the immediate primary phase: PLAN / RESEARCH / IMPLEMENT / VALIDATE / CLOSE
+11. activate only the selected phase owner(s)
+12. when MUTATE or governed-work is triggered, fetch/read its trigger-loaded central skill contract
+    from the exact revision declared in CENTRAL_SKILLS.md before performing that operation
+13. add SCIENTIFIC_EXECUTION or temporary diagnostic material only when triggered
+14. consult docs/rules/INVENTORY.md only when the required dormant owner is unclear or expansion is triggered
+15. report the reconstructed operating state, loaded central skills, and material metrics context
 ```
+
+Initialization is not complete merely because the local bootstrap documents were read. The ALWAYS central skill contracts must have been retrieved from their exact pinned revisions and read successfully. If any required central skill cannot be retrieved or its exact source identity cannot be established, follow `CENTRAL_SKILLS.md` failure semantics and report initialization as blocked.
 
 The named operating-system baseline is descriptive/versioning state. Its historical log must not replace or override the live canonical operating documents.
 
@@ -46,7 +56,7 @@ The named operating-system baseline is descriptive/versioning state. Its histori
 
 The full bootstrap sequence is for a fresh/uncertain operating context. A scheduled controller continuing the same bounded campaign from a trustworthy durable checkpoint uses the fast-resume contract in `docs/protocols/rule_working_set.md` RWS-13 instead of replaying the full bootstrap every invocation.
 
-The exact minimal read set is computed by the pinned external `chatgpt-operation/state-refresh` evaluator. This repository provides the mutable surface identities, fingerprints, phase/rule/scope signals, immutable dependency pins, and planned mutation targets; it does not duplicate the generic delta-refresh algorithm locally.
+The exact minimal read set is computed by the pinned external `chatgpt-operation/state-refresh` evaluator already loaded through `docs/operating_system/CENTRAL_SKILLS.md`. This repository provides the mutable surface identities, fingerprints, phase/rule/scope signals, immutable dependency pins, and planned mutation targets; it does not duplicate the generic delta-refresh algorithm locally.
 
 Fast resume does **not** waive RM-02 authoritative reads of mutable mutation targets. A `FULL_REFRESH_REQUIRED` result escalates to this full bootstrap.
 
@@ -78,6 +88,8 @@ Repository / ref
 Active work item or issue
 Immediate resume obligation
 Primary phase
+Loaded central skills + exact revisions
+Triggered central skills
 Active core/phase packs
 Temporary or auxiliary packs
 Material unresolved hold/blocker
@@ -95,9 +107,10 @@ Do not claim initialization is complete if the current work state, immediate res
 The initial rule working set remains:
 
 ```text
-CORE
+CENTRAL ALWAYS SKILLS
++ CORE
 + one primary PHASE PACK
-+ only immediately triggered auxiliary/temporary material
++ only immediately triggered central/local auxiliary material
 ```
 
 The METRICS CONTEXT is an observation layer, not an additional rule pack, and therefore does not justify permanent rule accumulation.
@@ -110,6 +123,7 @@ Fresh chats should not depend on another chat's private reasoning or historical 
 
 ```text
 BOOTSTRAP.md                       -> cross-chat entry point
+docs/operating_system/CENTRAL_SKILLS.md -> exact external skill load manifest
 docs/operating_system/README.md    -> current named OS baseline / version-log index
 OPERATING_CORE.md                  -> always-active invariants
 PROTOCOL_INDEX.md                  -> routing / phase selection
