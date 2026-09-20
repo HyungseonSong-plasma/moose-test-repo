@@ -21,6 +21,11 @@ FORBIDDEN_EVENTS = {
 }
 REQUIRED_CI_PULL_REQUEST_TYPES = {"opened", "synchronize", "reopened", "edited"}
 REQUIRED_CI_EDIT_FILTER_JOBS = {"validate", "runtime-smoke"}
+REQUIRED_CI_JOB_IF = (
+    "github.event_name != 'pull_request' || "
+    "github.event.action != 'edited' || "
+    "github.event.changes.base != null"
+)
 TOP_KEY = re.compile(r"^[A-Za-z_][A-Za-z0-9_-]*:\s*(?:#.*)?$")
 EVENT_KEY = re.compile(r"^  ([A-Za-z_][A-Za-z0-9_-]*):")
 
@@ -77,6 +82,28 @@ def job_block(text: str, name: str) -> str:
     return "\n".join(out)
 
 
+def job_if_condition(text: str, name: str) -> str:
+    block = job_block(text, name)
+    if not block:
+        return ""
+    lines = block.splitlines()
+    for i, line in enumerate(lines[1:], start=1):
+        if not line.startswith("    if:"):
+            continue
+        value = line.split("if:", 1)[1].strip()
+        if value not in {">", ">-", "|", "|-"}:
+            return " ".join(value.split())
+        parts: list[str] = []
+        for child in lines[i + 1:]:
+            if child.startswith("      "):
+                parts.append(child.strip())
+                continue
+            if child.strip():
+                break
+        return " ".join(" ".join(parts).split())
+    return ""
+
+
 def check(root: Path) -> list[str]:
     workflow_dir = root / ".github" / "workflows"
     actual = {p.name for p in workflow_dir.glob("*.yml")} | {
@@ -118,10 +145,12 @@ def check(root: Path) -> list[str]:
                 if not block:
                     errors.append(f"ci.yml: required job missing: {job}")
                     continue
-                if "github.event.action != 'edited'" not in block:
-                    errors.append(f"ci.yml: {job} missing edited-action filter")
-                if "github.event.changes.base != null" not in block:
-                    errors.append(f"ci.yml: {job} missing base-change edit filter")
+                condition = job_if_condition(workflow_text, job)
+                if condition != REQUIRED_CI_JOB_IF:
+                    errors.append(
+                        f"ci.yml: {job} job-level if={condition!r} "
+                        f"expected={REQUIRED_CI_JOB_IF!r}"
+                    )
     experiment = (
         (workflow_dir / "experiment.yml").read_text(encoding="utf-8")
         if (workflow_dir / "experiment.yml").is_file() else ""
@@ -188,17 +217,21 @@ def self_test() -> int:
         assert any("pull_request types=" in error for error in check(root))
         ci_path.write_text(valid_ci, encoding="utf-8")
         assert not check(root), check(root)
-        ci_path.write_text(
-            valid_ci.replace(
-                "      github.event.changes.base != null\n",
-                "      true\n",
-                1,
-            ),
-            encoding="utf-8",
+        invalid_filter_ci = valid_ci.replace(
+            "    if: >-\n"
+            "      github.event_name != 'pull_request' ||\n"
+            "      github.event.action != 'edited' ||\n"
+            "      github.event.changes.base != null\n",
+            "    if: true\n"
+            "    # github.event_name != 'pull_request' ||\n"
+            "    # github.event.action != 'edited' ||\n"
+            "    # github.event.changes.base != null\n",
+            1,
         )
+        ci_path.write_text(invalid_filter_ci, encoding="utf-8")
         filter_errors = [
             error for error in check(root)
-            if "missing base-change edit filter" in error
+            if "job-level if=" in error
         ]
         assert len(filter_errors) == 1, filter_errors
         ci_path.write_text(valid_ci, encoding="utf-8")
