@@ -318,29 +318,34 @@ Do not load all technical protocols during bootstrap. If the phase changes later
 
 A scheduled controller continuing the same bounded campaign should resume from a **durable controller checkpoint**, not replay full `moose-test-init` on every invocation.
 
-Minimum fast-resume read set:
+Portable checkpoint/probe/delta/prewrite planning is owned by the external `chatgpt-operation` `state-refresh` skill pinned at `ab9091e2eb2e1f186110a0afc5b1da4479349e1b` (post-merge CI `35535345477` PASS). Do not recreate that evaluator as repository-local prose or code.
+
+This repository supplies only the consumer-specific inputs needed by that evaluator:
 
 ```text
-durable controller checkpoint / authority state
-active work item
-current branch/head
-relevant exact-head CI/review state
-direct dependency surfaces that changed since the checkpoint
+durable checkpoint trust + authority
+current phase / rule-pin / scope-change signals
+decision-critical mutable surface identities and fingerprints
+repository-specific probe/detail/prewrite read mappings
+verified exact immutable dependency pins
+planned mutation targets
+phase-pack / auxiliary-pack triggers
 ```
 
-Fresh-read every mutable target immediately before acting on it under RM-02. However, do not re-read unchanged canonical rule documents merely to prove that they still exist.
-
-Escalate from fast resume to full bootstrap/rule-owner reload when any of these is true:
+Follow the central evaluator result:
 
 ```text
-no trustworthy durable checkpoint exists
-checkpoint authority conflicts with the scheduled intent
-primary phase changed
-a canonical rule-owner revision/pin changed
-current evidence contradicts checkpoint state
-a new trigger requires another phase/auxiliary pack
-the next action cannot be established from the compact state
+FULL_REFRESH_REQUIRED -> run the repository's full bootstrap / required rule-owner reload
+PROBE_REQUIRED        -> execute only the declared cheap identity probes, then re-evaluate
+PROBE_BLOCKED         -> HOLD or repair the probe; do not trust stale state
+DELTA_REFRESH         -> expand only the changed repository-specific surfaces
+PREWRITE_ONLY         -> perform RM-02 authoritative reads for the planned mutation targets
+CHECKPOINT_CURRENT    -> continue from the durable checkpoint
 ```
+
+RM-02 authoritative fresh reads of mutable mutation targets remain mandatory even when fingerprints are unchanged. Exact immutable pins may be skipped only after their identity has been verified and recorded as such.
+
+Repository-specific triggers remain local: a new phase or auxiliary pack maps to the corresponding central phase/scope-change signal; scientific or dependency contradictions map to evidence contradiction. The central skill does not decide scientific meaning or repository dependency readiness.
 
 A prompt-only ACTIVE/RESUME instruction must not silently override a durable PAUSED checkpoint. Synchronize the canonical authority state first.
 
@@ -361,5 +366,5 @@ Do not impose `one invocation = one mutation` or `one invocation = one causal mi
 
 A newly launched asynchronous gate does not require immediate session termination when useful independent work remains. It does require preserving the pending evidence scope and obeying RM-12. A natural later terminal-status recheck is allowed; busy polling is not.
 
-Portable scheduling/liveness mechanics belong in the external `chatgpt-operation` controller-lifecycle/controller-throughput skills pinned at `6857e641d0f45962d260ab21a885c5131311e5a2` (post-merge CI `35503489398` PASS). This repository owns only its domain dependency graph, scientific gates, resource identities, and local authorization.
+Portable scheduling/liveness/refresh mechanics belong in the external `chatgpt-operation` controller-lifecycle/controller-throughput/state-refresh skills pinned at `ab9091e2eb2e1f186110a0afc5b1da4479349e1b` (post-merge CI `35535345477` PASS). This repository owns only its domain dependency graph, scientific gates, resource identities, refresh-surface mappings, and local authorization.
 
