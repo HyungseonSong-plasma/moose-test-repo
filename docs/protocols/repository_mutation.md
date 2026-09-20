@@ -259,22 +259,17 @@ After completion:
 
 ### RM-12A — Validation-route liveness
 
-A required validation gate that was expected to launch but has **no exact-head run** is not an active run and is not a normal WAIT state. It does **not** release protection of the unvalidated evidence lineage.
+Generic exact-head route-liveness classification is owned by the pinned external `chatgpt-operation/controller-throughput` evaluator. This protocol owns only the repository-mutation consequence of that classification.
 
-```text
-validation required
-+ launch/trigger expected
-+ exact-head run count = 0
-    -> MISSING_VALIDATION_ROUTE
-    -> keep SCOPED lock on the intended branch/head/evidence lineage
-    -> FIX orchestration/trigger route
-```
+When the central evaluator returns `MISSING_VALIDATION_ROUTE` for a required exact-head gate:
 
-Route repair may change PR/workflow metadata or another non-overlapping control surface that preserves the intended source head. Do not mutate or supersede the locked unvalidated head merely because no run exists. If a legitimate repair requires changing that source head, declare the new expected head explicitly and treat the prior validation obligation as superseded rather than silently preserving it.
+- there is no active validation run, but the intended branch/head/evidence lineage remains **SCOPED-protected** under RM-12;
+- repair may mutate PR/workflow metadata or another non-overlapping control surface that preserves the intended source head;
+- if a legitimate repair changes the source head, explicitly supersede the prior validation obligation with the new expected head;
+- RM-14 still forbids empty/no-op commits or placeholder mutations used only to wake CI;
+- the condition is an orchestration defect, not a scientific FAIL and not permission to release the evidence lock.
 
-Do not spend later controller cycles waiting for a run that does not exist. Verify launch existence after opening, synchronizing, retargeting, or otherwise changing the validation route. Repair the route or use an explicitly supported dispatch mechanism; do not create meaningless/no-op commits solely to wake CI.
-
-Launch confirmation is distinct from polling. A later status read during the same bounded work burst is allowed when useful work occurred in between; do not sleep or busy-poll solely to await completion.
+The central throughput skill owns launch-existence and same-cycle no-busy-poll mechanics. This repository supplies the expected head, validation surface, evidence-lineage resource keys, and lock scope.
 
 ## RM-13 — Dependency/state synchronization
 

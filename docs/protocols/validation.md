@@ -519,38 +519,24 @@ This layer is intended to generalize across electron/Poisson microsteps, chemist
 
 ## VAL-22 — Validation-route liveness
 
-Validation readiness includes **route existence**, not only the semantics of a run after it starts.
+Generic route-existence classification is owned by the pinned external `chatgpt-operation/controller-throughput` evaluator. The validation protocol owns the interpretation of the resulting state.
 
-Whenever repository state is expected to launch required exact-head CI/review validation, confirm that the route materialized:
-
-```text
-expected head SHA
-expected event/dispatch
-required validation surface
-matching run/check existence
-```
-
-Classify:
+The consumer supplies the expected exact head, expected event/dispatch, required validation surface, and matching run/check counts. Interpret the central status as follows:
 
 ```text
-matching run queued/in_progress
-  -> VALIDATION_ACTIVE
+active matching validation
+  -> validation is pending; no scientific verdict
 
-matching run terminal
-  -> interpret the actual validation result
+terminal matching validation
+  -> interpret the actual P0-P3 / review / runtime evidence
 
-required/expected launch + matching run count = 0
-  -> MISSING_VALIDATION_ROUTE
-  -> orchestration FIX, not WAIT and not scientific FAIL
+MISSING_VALIDATION_ROUTE
+  -> orchestration defect
+  -> not WAIT, not scientific FAIL, and never scientific PASS
 ```
 
-Common route defects include PR base retargeting that is not covered by the workflow's configured pull-request event types, workflow/path filters that exclude the changed route, stale branch/workflow identity, and dispatch surfaces that are unavailable to the caller.
+Repository-specific route defects may still include uncovered PR base edits, workflow/path filters, stale branch/workflow identity, or unavailable dispatch surfaces. Repair must preserve the owning mutation/evidence rules in RM-12/RM-12A.
 
-A controller must repair or explicitly reroute `MISSING_VALIDATION_ROUTE` before spending another scheduled cycle on the same wait condition.
+Do not use empty commits or irrelevant canonical mutations solely to trigger validation. The central throughput evaluator owns same-cycle launch confirmation and no-busy-poll behavior; this protocol continues to own the scientific meaning of any terminal evidence.
 
-Do not use empty commits or irrelevant canonical mutations merely to trigger CI. Prefer a real synchronization/reconciliation change when required by the branch, a workflow event that correctly covers the state transition, or an explicitly supported dispatch surface.
-
-**Same-cycle rule:** after launch, confirm that a matching run exists. If later useful work naturally consumes enough time that the run may have become terminal, one additional status read is permitted. Do not sleep or busy-poll solely to await completion.
-
-This liveness rule does not weaken P0-P3, exact-head identity, review, runtime, or scientific acceptance requirements.
-
+This delegation does not weaken P0-P3, exact-head identity, review, runtime, or scientific acceptance requirements.

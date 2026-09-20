@@ -1,14 +1,16 @@
-# Issue #264 Review Copy
+# Issue #264 Historical Review Copy
 
-This RFC is reviewed and proven in `moose-test-repo` because CodeRabbit is enabled here. The intended production home for the generic package/workflows is `HyungseonSong-plasma/chatgpt-operation`.
+**Current disposition:** IMPLEMENTED / HISTORICAL — not an active operating authority.
 
-The review copy must remain architecture-only until reviewer findings are dispositioned. Implementation migration begins only after this review surface is accepted.
+This RFC was reviewed and proven in `moose-test-repo` because CodeRabbit was enabled here. The generic implementation has since moved to `HyungseonSong-plasma/chatgpt-operation`; current operational pins and consumer boundaries are owned by `docs/protocols/coding.md`, `docs/protocols/rule_working_set.md`, and the exact-SHA central skills/actions they reference.
+
+The original review proposal is retained below as architecture provenance. Statements such as “proposed”, “review”, or “migration begins after acceptance” describe the pre-migration review state and must not be interpreted as current repository state.
 
 ---
 
 # RFC-0001 — Portable ChatGPT Operation Skills
 
-**Status:** REVIEW  
+**Status:** HISTORICAL / IMPLEMENTED  
 **Scope:** central reusable skill architecture  
 **Initial consumer:** `HyungseonSong-plasma/moose-test-repo`
 
