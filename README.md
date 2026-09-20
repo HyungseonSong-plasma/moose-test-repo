@@ -6,6 +6,8 @@ This repository is the operating and regression workspace for MOOSE/Physics plas
 
 Use `OPERATING_CORE.md` for always-active invariants and `PROTOCOL_INDEX.md` for deterministic procedure routing. Current technical state is owned by the active GitHub issue or bounded work item; comments are historical evidence unless the canonical state says otherwise.
 
+Named operating-system identity/version lifecycle is centrally owned by `HyungseonSong-plasma/chatgpt-operation`. The exact consumer pin is `docs/operating_system/README.md`; MOOSE/Physics domain rules, scientific meaning, and repository-specific acceptance remain locally owned.
+
 For multi-issue capability delivery, use `docs/protocols/milestone_delivery.md`.
 
 ## Delivery model
