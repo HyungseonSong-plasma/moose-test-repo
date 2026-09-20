@@ -1,87 +1,72 @@
 # MOOSE/Physics Operating System Binding
 
-**Status:** consumer binding / compatibility entry point; not the canonical OS registry  
+**Status:** Paul consumer binding  
 **Consumer:** `HyungseonSong-plasma/moose-test-repo`  
 **Canonical OS repository:** `HyungseonSong-plasma/chatgpt-operation`  
-**Pinned central revision:** `a41481936daca8280936d8cc70517662b50cbcac`  
-**Canonical OS index:** `docs/operating_system/README.md`  
-**Current named OS at this pin:** Calvin — Rule-Optimized  
-**Reserved successor:** Paul — Rule-Minimal / Skill-Optimized
+**Pinned central revision:** `908d5b695b4640727b3c45d8044763c5fcca1d08`  
+**Expected OS:** Paul
 
-Named operating-system identity, version lifecycle, immutable baseline records, successor management, and the cross-generation optimization model are no longer owned by this repository.
+## Central authority
 
-The current generation interpretation is:
+Resolve exactly:
 
 ```text
-Calvin
-  = optimize the active prompt-visible rule working set
-
-Paul
-  = minimize prompt-visible procedural rules
-  + delegate reusable deterministic mechanics to tested/versioned skills
+repository       = HyungseonSong-plasma/chatgpt-operation
+revision         = 908d5b695b4640727b3c45d8044763c5fcca1d08
+OS index         = docs/operating_system/README.md
+essential rules  = docs/operating_system/ESSENTIAL_RULES.md
+session bootstrap= skills/session-bootstrap/README.md
 ```
 
-Skills may be used under Calvin; Paul remains RESERVED until the central promotion gate is explicitly passed.
-
-## Authority
-
-Resolve OS authority from exactly:
+Exact artifact identities and load triggers are in:
 
 ```text
-repository = HyungseonSong-plasma/chatgpt-operation
-revision   = a41481936daca8280936d8cc70517662b50cbcac
-path       = docs/operating_system/README.md
-evolution  = docs/operating_system/EVOLUTION.md
+docs/operating_system/central_skills.json
+docs/operating_system/CENTRAL_SKILLS.md
 ```
 
-Do not replace the exact revision with `main`, `latest`, or another floating ref during an active operating decision cycle.
+Do not substitute a floating central ref or mix central revisions inside one operating decision cycle.
 
-## Local ownership retained here
+## Local authority retained here
 
-This repository continues to own MOOSE/Physics-specific operating meaning:
+This repository remains authoritative for:
 
 ```text
-BOOTSTRAP.md
-OPERATING_CORE.md
-PROTOCOL_INDEX.md
-docs/protocols/**
-docs/metrics/**
-docs/rules/**
-active issue / bounded-work STATE
-scientific/runtime/validation semantics
+Physics scientific semantics
+production runtime evidence meaning
+P0/P1/P2/P3 validation meaning
+model/regime acceptance
+repository dependency readiness
+issue/milestone acceptance
+local role/mode semantics
+current durable work STATE
 ```
 
-Central OS ownership does not allow central documents to redefine Physics scientific validity, runtime evidence, repository-specific acceptance, or local work state.
+Central Paul rules/skills do not establish scientific PASS or redefine Physics meaning.
 
-## Bootstrap use
+## Initialization
 
 `moose-test-init` must:
 
 ```text
-1. read this binding;
-2. resolve the exact central revision;
-3. read the central OS index and evolution model at that revision;
-4. then load this repository's local operating core, state, routing, and metrics context.
+1. verify this exact Paul binding;
+2. verify/read the Paul OS index and ESSENTIAL_RULES;
+3. load session-bootstrap + state-refresh from the same revision;
+4. restore the Physics-local operating core and current STATE;
+5. load only the local semantic owner and central skills triggered by the immediate obligation;
+6. report the first real gate and stop read-only.
 ```
 
-If the exact central OS revision or index cannot be established, OS identity is unresolved and initialization must not claim completion.
+No operating-metrics context is required.
 
-## Migration provenance
+## Historical operating metrics
 
-The Calvin historical baseline and Paul successor contract were originally stored under this directory. Canonical ownership moved to `chatgpt-operation` under central issue #16 / PR #17 and consumer issue #297.
-
-The historical Calvin file was copied byte-for-byte before local removal; its git blob SHA remains:
+The former Calvin operating metrics and metrics-closure protocol are archived under:
 
 ```text
-2a13a112ca29f7eaee220e837611556786747fc5
+archive/operating_metrics/
 ```
 
-Canonical central locations:
+They are historical evidence only and are not live Paul routing, initialization, acceptance, or rule-quality authority.
 
-```text
-docs/operating_system/versions/2026-09-01_calvin.md
-docs/operating_system/PAUL_CANDIDATE.md
-docs/operating_system/EVOLUTION.md
-```
-
-Do not recreate local canonical copies. A future OS upgrade is adopted here by explicitly changing this exact central revision after consumer validation.
+Scientific/runtime/performance metrics used by Physics validation are unaffected.
