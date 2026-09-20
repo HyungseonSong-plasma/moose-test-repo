@@ -35,6 +35,16 @@ jobs:
           set -euo pipefail
           test ! -e skills
           test ! -e src/chatgpt_operation
+          test -f docs/operating_system/CENTRAL_SKILLS.md
+          grep -Fq 'skills/controller-lifecycle/README.md' docs/operating_system/CENTRAL_SKILLS.md
+          grep -Fq 'skills/controller-throughput/README.md' docs/operating_system/CENTRAL_SKILLS.md
+          grep -Fq 'skills/state-refresh/README.md' docs/operating_system/CENTRAL_SKILLS.md
+          grep -Fq 'ab9091e2eb2e1f186110a0afc5b1da4479349e1b' docs/operating_system/CENTRAL_SKILLS.md
+          grep -Fq '661ca7fe3b214e9ca8ac802d517fa1e40f65ecca' docs/operating_system/CENTRAL_SKILLS.md
+          grep -Fq '4d5683b12be31e28b44bbe34723b02ae3493b172' docs/operating_system/CENTRAL_SKILLS.md
+          grep -Fq 'fetch and read every ALWAYS central skill contract' BOOTSTRAP.md
+          grep -Fq 'CENTRAL_SKILLS.md + every ALWAYS central skill contract' docs/protocols/rule_working_set.md
+          grep -Fq 'pinned central `repository-mutation` contract' PROTOCOL_INDEX.md
           grep -Fq 'controller lifecycle/throughput/state-refresh evaluation is pinned at `ab9091e2eb2e1f186110a0afc5b1da4479349e1b`' docs/protocols/coding.md
           grep -Fq 'controller-lifecycle/controller-throughput/state-refresh skills pinned at `ab9091e2eb2e1f186110a0afc5b1da4479349e1b`' docs/protocols/rule_working_set.md
           grep -Fq 'chatgpt-operation/state-refresh' BOOTSTRAP.md
