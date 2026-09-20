@@ -110,6 +110,35 @@ jobs:
           assert policy["validation_gate"]["mode"] == "named_workflows"
           assert "Repository CI" in policy["validation_gate"]["workflows"]
           PY
+          central_dir="$(mktemp -d)"
+          git -C "$central_dir" init -q
+          git -C "$central_dir" remote add origin https://github.com/HyungseonSong-plasma/chatgpt-operation.git
+          for revision in \
+            ab9091e2eb2e1f186110a0afc5b1da4479349e1b \
+            661ca7fe3b214e9ca8ac802d517fa1e40f65ecca \
+            4d5683b12be31e28b44bbe34723b02ae3493b172
+          do
+            git -C "$central_dir" fetch --quiet --depth=1 origin "$revision"
+          done
+          CENTRAL_DIR="$central_dir" python3 - <<'PY'
+          import json
+          import os
+          import subprocess
+          from pathlib import Path
+
+          manifest=json.loads(Path("docs/operating_system/central_skills.json").read_text(encoding="utf-8"))
+          root=os.environ["CENTRAL_DIR"]
+          for item in manifest["skills"]:
+              actual=subprocess.check_output(
+                  ["git","-C",root,"rev-parse",f'{item["revision"]}:{item["path"]}'],
+                  text=True,
+              ).strip()
+              assert actual == item["expected_blob_sha"], (
+                  item["name"], item["revision"], item["path"],
+                  item["expected_blob_sha"], actual,
+              )
+          PY
+          rm -rf "$central_dir"
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
