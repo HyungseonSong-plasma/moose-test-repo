@@ -21,21 +21,18 @@ jobs:
     steps:
       - name: Checkout Physics consumer
         uses: actions/checkout@v4
-
       - name: Checkout pinned SOL runtime
         uses: actions/checkout@v4
         with:
           repository: HyungseonSong-plasma/simulation-ontology
           ref: ${{ env.SOL_RUNTIME_REVISION }}
           path: upstream/simulation-ontology
-
       - name: Checkout pinned MOOSE adapter
         uses: actions/checkout@v4
         with:
           repository: HyungseonSong-plasma/sol-adapter-moose
           ref: ${{ env.SOL_ADAPTER_MOOSE_REVISION }}
           path: upstream/sol-adapter-moose
-
       - name: Verify immutable provenance
         shell: bash
         run: |
@@ -46,20 +43,17 @@ jobs:
           grep -Fq 'ADAPTER_PROTOCOL_VERSION_0_2' upstream/sol-adapter-moose/src/main.rs
           grep -Fq 'PUBLIC_CONTRACT_VERSION_0_2' upstream/sol-adapter-moose/src/lib.rs
           grep -Fq 'thermal.steady_conduction' upstream/sol-adapter-moose/src/execution_v02.rs
-
       - name: Install pinned Rust toolchain
         shell: bash
         run: |
           rustup toolchain install 1.80.0 --profile minimal
           rustup override set 1.80.0
-
       - name: Build exact pinned consumer and adapter
         shell: bash
         run: |
           set -euo pipefail
           cargo build --locked --manifest-path upstream/simulation-ontology/examples/external-runtime-v02/Cargo.toml
           cargo build --locked --manifest-path upstream/sol-adapter-moose/Cargo.toml
-
       - name: Exercise live AP0.2 PC0.2 discovery and selection
         shell: bash
         run: |
@@ -68,25 +62,17 @@ jobs:
             --slurpfile plan upstream/sol-adapter-moose/tests/fixtures/sol/0.2/thermal-realization-request.json \
             '{target:"moose",required_capabilities:["thermal.steady_conduction"],plan_request:$plan[0]}' \
             > consumer-request.json
-
           consumer="$PWD/upstream/simulation-ontology/examples/external-runtime-v02/target/debug/sol-external-runtime-v02-consumer"
           adapter="$PWD/upstream/sol-adapter-moose/target/debug/sol-adaptor-moose"
           set +e
           "$consumer" run "$adapter" consumer-request.json >consumer.stdout 2>consumer.stderr
           status=$?
           set -e
-
-          # No MOOSE executable is intentionally configured in this portability gate.
-          # Reaching VALIDATION_REJECTED proves the exact pinned runtime launched the
-          # exact pinned adapter, completed mandatory describe_adapter bootstrap,
-          # projected AP0.2 + PC0.2 compatibility, matched target=moose and the
-          # thermal.steady_conduction capability, and dispatched validate_plan_v02.
           test "$status" -ne 0
           grep -Fq 'VALIDATION_REJECTED' consumer.stderr
-          ! grep -Fq 'NO_COMPATIBLE_CANDIDATE' consumer.stderr
-          ! grep -Fq 'AMBIGUOUS_CANDIDATES' consumer.stderr
-          ! grep -Fq 'PROTOCOL_FAILURE' consumer.stderr
-
+          ! grep -Fq 'NO_COMPATIBLE_CANDIDATE' consumer.stderr || exit 1
+          ! grep -Fq 'AMBIGUOUS_CANDIDATES' consumer.stderr || exit 1
+          ! grep -Fq 'PROTOCOL_FAILURE' consumer.stderr || exit 1
       - name: Verify downstream wrapper uses supported upstream CLI
         shell: bash
         run: |
