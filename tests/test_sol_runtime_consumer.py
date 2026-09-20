@@ -80,7 +80,7 @@ def test_missing_consumer_binary_is_typed_runtime_failure(tmp_path):
     assert result.evidence["exception_type"] == "FileNotFoundError"
 
 
-def test_consumer_timeout_is_typed_runtime_failure(tmp_path):
+def test_consumer_timeout_preserves_no_replay_ambiguity(tmp_path):
     consumer = _write_consumer(
         tmp_path,
         "import time\ntime.sleep(1)\n",
@@ -91,5 +91,5 @@ def test_consumer_timeout_is_typed_runtime_failure(tmp_path):
         _request(),
         timeout_seconds=0.01,
     )
-    assert result.kind is SolRuntimeFailureKind.RUNTIME
+    assert result.kind is SolRuntimeFailureKind.NO_REPLAY_AMBIGUITY
     assert result.evidence["exception_type"] == "TimeoutExpired"
