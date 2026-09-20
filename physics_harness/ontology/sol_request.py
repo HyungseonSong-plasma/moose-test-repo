@@ -53,6 +53,26 @@ def _stable_symbol(value: str, field: str) -> str:
     return value
 
 
+def _validate_acyclic_actions(bindings: Sequence["CanonicalActionBinding"]) -> None:
+    graph = {binding.action_id: tuple(binding.dependencies) for binding in bindings}
+    visiting: set[str] = set()
+    visited: set[str] = set()
+
+    def visit(action_id: str) -> None:
+        if action_id in visiting:
+            raise SolRequestCompilationError("action dependency graph must be acyclic")
+        if action_id in visited:
+            return
+        visiting.add(action_id)
+        for dependency in graph[action_id]:
+            visit(dependency)
+        visiting.remove(action_id)
+        visited.add(action_id)
+
+    for action_id in graph:
+        visit(action_id)
+
+
 @dataclass(frozen=True)
 class CanonicalEntity:
     id: str
@@ -187,12 +207,15 @@ class SolRequestCompiler:
         action_ids = {_symbol_shape(binding.action_id, "action id") for binding in model.action_bindings}
         if len(action_ids) != len(model.action_bindings):
             raise SolRequestCompilationError("duplicate action id")
-        actions: list[dict[str, object]] = []
-        bindings: list[dict[str, object]] = []
         for binding in model.action_bindings:
             for dependency in binding.dependencies:
                 if _symbol_shape(dependency, "action dependency") not in action_ids:
                     raise SolRequestCompilationError("action dependency references unknown action")
+        _validate_acyclic_actions(model.action_bindings)
+
+        actions: list[dict[str, object]] = []
+        bindings: list[dict[str, object]] = []
+        for binding in model.action_bindings:
             subjects = []
             for entity_id in binding.entity_ids:
                 if _canonical_ref(entity_id, "binding entity") not in entity_ids:
