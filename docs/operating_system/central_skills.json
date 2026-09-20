@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "source_repository": "HyungseonSong-plasma/chatgpt-operation",
+  "skills": [
+    {
+      "name": "controller-lifecycle",
+      "load_mode": "always",
+      "revision": "ab9091e2eb2e1f186110a0afc5b1da4479349e1b",
+      "path": "skills/controller-lifecycle/README.md",
+      "expected_blob_sha": "28f512d80d380ecd415bb4d8d60be4778d464c47"
+    },
+    {
+      "name": "controller-throughput",
+      "load_mode": "always",
+      "revision": "ab9091e2eb2e1f186110a0afc5b1da4479349e1b",
+      "path": "skills/controller-throughput/README.md",
+      "expected_blob_sha": "5bc67c38f224c9c02a84f676b69c0908e1df96bb"
+    },
+    {
+      "name": "state-refresh",
+      "load_mode": "always",
+      "revision": "ab9091e2eb2e1f186110a0afc5b1da4479349e1b",
+      "path": "skills/state-refresh/README.md",
+      "expected_blob_sha": "4efe6135b93456f2cc9da31786967f5f6ac80033"
+    },
+    {
+      "name": "repository-mutation",
+      "load_mode": "trigger",
+      "trigger": "MUTATE",
+      "revision": "661ca7fe3b214e9ca8ac802d517fa1e40f65ecca",
+      "path": "skills/repository-mutation/README.md",
+      "expected_blob_sha": "0229c6b7a440a9a624a0b773c62f536ca67a29b6"
+    },
+    {
+      "name": "governed-work",
+      "load_mode": "trigger",
+      "trigger": "GOVERNED_WORK",
+      "revision": "4d5683b12be31e28b44bbe34723b02ae3493b172",
+      "path": "skills/governed-work/README.md",
+      "expected_blob_sha": "5ba4d1be80a4c3019fd9c21fe017468b87315a71"
+    }
+  ]
+}
