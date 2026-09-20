@@ -46,7 +46,9 @@ The named operating-system baseline is descriptive/versioning state. Its histori
 
 The full bootstrap sequence is for a fresh/uncertain operating context. A scheduled controller continuing the same bounded campaign from a trustworthy durable checkpoint uses the fast-resume contract in `docs/protocols/rule_working_set.md` RWS-13 instead of replaying the full bootstrap every invocation.
 
-Fast resume does **not** waive RM-02 fresh reads of mutable targets. Escalate to the full bootstrap when authority, phase, rule revision, or checkpoint/current-state consistency is uncertain.
+The exact minimal read set is computed by the pinned external `chatgpt-operation/state-refresh` evaluator. This repository provides the mutable surface identities, fingerprints, phase/rule/scope signals, immutable dependency pins, and planned mutation targets; it does not duplicate the generic delta-refresh algorithm locally.
+
+Fast resume does **not** waive RM-02 authoritative reads of mutable mutation targets. A `FULL_REFRESH_REQUIRED` result escalates to this full bootstrap.
 
 ## Metrics bootstrap contract
 
