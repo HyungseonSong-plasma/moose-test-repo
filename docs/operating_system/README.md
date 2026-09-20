@@ -3,11 +3,25 @@
 **Status:** consumer binding / compatibility entry point; not the canonical OS registry  
 **Consumer:** `HyungseonSong-plasma/moose-test-repo`  
 **Canonical OS repository:** `HyungseonSong-plasma/chatgpt-operation`  
-**Pinned central revision:** `51763866518a58dc5a1b65e1e579e8f255442931`  
+**Pinned central revision:** `a41481936daca8280936d8cc70517662b50cbcac`  
 **Canonical OS index:** `docs/operating_system/README.md`  
-**Current named OS at this pin:** Calvin
+**Current named OS at this pin:** Calvin — Rule-Optimized  
+**Reserved successor:** Paul — Rule-Minimal / Skill-Optimized
 
-Named operating-system identity, version lifecycle, immutable baseline records, and successor management are no longer owned by this repository.
+Named operating-system identity, version lifecycle, immutable baseline records, successor management, and the cross-generation optimization model are no longer owned by this repository.
+
+The current generation interpretation is:
+
+```text
+Calvin
+  = optimize the active prompt-visible rule working set
+
+Paul
+  = minimize prompt-visible procedural rules
+  + delegate reusable deterministic mechanics to tested/versioned skills
+```
+
+Skills may be used under Calvin; Paul remains RESERVED until the central promotion gate is explicitly passed.
 
 ## Authority
 
@@ -15,8 +29,9 @@ Resolve OS authority from exactly:
 
 ```text
 repository = HyungseonSong-plasma/chatgpt-operation
-revision   = 51763866518a58dc5a1b65e1e579e8f255442931
+revision   = a41481936daca8280936d8cc70517662b50cbcac
 path       = docs/operating_system/README.md
+evolution  = docs/operating_system/EVOLUTION.md
 ```
 
 Do not replace the exact revision with `main`, `latest`, or another floating ref during an active operating decision cycle.
@@ -45,7 +60,7 @@ Central OS ownership does not allow central documents to redefine Physics scient
 ```text
 1. read this binding;
 2. resolve the exact central revision;
-3. read the central OS index at that revision;
+3. read the central OS index and evolution model at that revision;
 4. then load this repository's local operating core, state, routing, and metrics context.
 ```
 
@@ -66,6 +81,7 @@ Canonical central locations:
 ```text
 docs/operating_system/versions/2026-09-01_calvin.md
 docs/operating_system/PAUL_CANDIDATE.md
+docs/operating_system/EVOLUTION.md
 ```
 
 Do not recreate local canonical copies. A future OS upgrade is adopted here by explicitly changing this exact central revision after consumer validation.
