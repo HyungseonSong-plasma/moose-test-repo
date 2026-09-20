@@ -36,6 +36,7 @@ jobs:
           test ! -e skills
           test ! -e src/chatgpt_operation
           test -f docs/operating_system/CENTRAL_SKILLS.md
+          test -f docs/operating_system/central_skills.json
           grep -Fq 'skills/controller-lifecycle/README.md' docs/operating_system/CENTRAL_SKILLS.md
           grep -Fq 'skills/controller-throughput/README.md' docs/operating_system/CENTRAL_SKILLS.md
           grep -Fq 'skills/state-refresh/README.md' docs/operating_system/CENTRAL_SKILLS.md
@@ -56,6 +57,32 @@ jobs:
           python3 - <<'PY'
           import json
           from pathlib import Path
+
+          skills=json.loads(Path("docs/operating_system/central_skills.json").read_text(encoding="utf-8"))
+          assert skills["schema_version"] == 1
+          assert skills["source_repository"] == "HyungseonSong-plasma/chatgpt-operation"
+          entries={item["name"]: item for item in skills["skills"]}
+          assert set(entries) == {
+              "controller-lifecycle",
+              "controller-throughput",
+              "state-refresh",
+              "repository-mutation",
+              "governed-work",
+          }
+          for name in ("controller-lifecycle","controller-throughput","state-refresh"):
+              assert entries[name]["load_mode"] == "always"
+              assert entries[name]["revision"] == "ab9091e2eb2e1f186110a0afc5b1da4479349e1b"
+          assert entries["repository-mutation"]["load_mode"] == "trigger"
+          assert entries["repository-mutation"]["trigger"] == "MUTATE"
+          assert entries["repository-mutation"]["revision"] == "661ca7fe3b214e9ca8ac802d517fa1e40f65ecca"
+          assert entries["governed-work"]["load_mode"] == "trigger"
+          assert entries["governed-work"]["trigger"] == "GOVERNED_WORK"
+          assert entries["governed-work"]["revision"] == "4d5683b12be31e28b44bbe34723b02ae3493b172"
+          for item in entries.values():
+              assert len(item["revision"]) == 40
+              assert len(item["expected_blob_sha"]) == 40
+              assert item["path"].startswith("skills/") and item["path"].endswith("/README.md")
+
           policy=json.loads(Path(".chatgpt-operation.json").read_text(encoding="utf-8"))
           assert policy["schema_version"] == 1
           assert policy["repository"] == "HyungseonSong-plasma/moose-test-repo"
