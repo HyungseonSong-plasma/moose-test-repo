@@ -78,10 +78,31 @@ jobs:
           assert entries["governed-work"]["load_mode"] == "trigger"
           assert entries["governed-work"]["trigger"] == "GOVERNED_WORK"
           assert entries["governed-work"]["revision"] == "4d5683b12be31e28b44bbe34723b02ae3493b172"
-          for item in entries.values():
-              assert len(item["revision"]) == 40
-              assert len(item["expected_blob_sha"]) == 40
-              assert item["path"].startswith("skills/") and item["path"].endswith("/README.md")
+          expected_contracts={
+              "controller-lifecycle": (
+                  "skills/controller-lifecycle/README.md",
+                  "28f512d80d380ecd415bb4d8d60be4778d464c47",
+              ),
+              "controller-throughput": (
+                  "skills/controller-throughput/README.md",
+                  "5bc67c38f224c9c02a84f676b69c0908e1df96bb",
+              ),
+              "state-refresh": (
+                  "skills/state-refresh/README.md",
+                  "4efe6135b93456f2cc9da31786967f5f6ac80033",
+              ),
+              "repository-mutation": (
+                  "skills/repository-mutation/README.md",
+                  "0229c6b7a440a9a624a0b773c62f536ca67a29b6",
+              ),
+              "governed-work": (
+                  "skills/governed-work/README.md",
+                  "5ba4d1be80a4c3019fd9c21fe017468b87315a71",
+              ),
+          }
+          for name,(path,blob_sha) in expected_contracts.items():
+              assert entries[name]["path"] == path
+              assert entries[name]["expected_blob_sha"] == blob_sha
 
           policy=json.loads(Path(".chatgpt-operation.json").read_text(encoding="utf-8"))
           assert policy["schema_version"] == 1
