@@ -199,3 +199,22 @@ def test_action_dependency_indirect_cycle_rejects() -> None:
     with pytest.raises(SolRequestCompilationError, match="acyclic"):
         _compiler().compile(model, physics_capabilities=("steady_thermal",))
 
+def test_deep_action_dependency_chain_compiles_without_recursion_error() -> None:
+    depth = 1500
+    bindings = []
+    for index in range(depth):
+        dependencies = (f"action_{index + 1}",) if index + 1 < depth else ()
+        bindings.append(
+            CanonicalActionBinding(
+                f"action_{index}",
+                ("sol.entity.thermal_model",),
+                ("sol.scope.domain",),
+                dependencies,
+            )
+        )
+    model = replace(_model(), action_bindings=tuple(bindings))
+    request = _compiler().compile(model, physics_capabilities=("steady_thermal",))
+    assert len(request.mapping_plan["actions"]) == depth
+    assert request.mapping_plan["actions"][0]["dependencies"] == ["action_1"]
+    assert request.mapping_plan["actions"][-1]["dependencies"] == []
+
