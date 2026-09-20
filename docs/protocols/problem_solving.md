@@ -209,7 +209,7 @@ update this protocol only when the solving algorithm itself changes
 
 Minimize avoidable external execution and assistant-caused rework while preserving or improving closure quality.
 
-Do not maintain EVR/DBR/RWR/RVR counters as a Paul operating metric. Use current evidence to decide whether another run adds independent information or whether the plan should be redesigned.
+Do not maintain interaction-efficiency counters as a Paul operating metric. Use current evidence to decide whether another run adds independent information or whether the plan should be redesigned.
 
 ## PS-15 — Issue sizing and decomposition
 
@@ -243,7 +243,7 @@ A runtime batch may contain several such tests. Do not encode operating-round co
 
 ## PS-17 — No operating-round accounting
 
-Paul does not increment EVR/RWR or similar interaction-efficiency counters.
+Paul does not increment interaction-efficiency counters.
 
 After each attributable runtime result, update only the durable technical state that matters: established evidence, rejected hypotheses, unresolved class, next validation obligation, and any assistant-caused defect that needs correction.
 
