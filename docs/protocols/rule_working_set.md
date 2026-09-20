@@ -361,5 +361,5 @@ Do not impose `one invocation = one mutation` or `one invocation = one causal mi
 
 A newly launched asynchronous gate does not require immediate session termination when useful independent work remains. It does require preserving the pending evidence scope and obeying RM-12. A natural later terminal-status recheck is allowed; busy polling is not.
 
-Portable scheduling/liveness mechanics belong in the external `chatgpt-operation` controller-throughput skill. This repository owns only its domain dependency graph, scientific gates, resource identities, and local authorization.
+Portable scheduling/liveness mechanics belong in the external `chatgpt-operation` controller-lifecycle/controller-throughput skills pinned at `6857e641d0f45962d260ab21a885c5131311e5a2` (post-merge CI `35503489398` PASS). This repository owns only its domain dependency graph, scientific gates, resource identities, and local authorization.
 
