@@ -6,6 +6,7 @@ registry, transport, process/session lifecycle, validation, or execution.
 from __future__ import annotations
 
 from dataclasses import dataclass
+import math
 import re
 from typing import Mapping, Sequence
 
@@ -39,9 +40,14 @@ def _canonical_ref(value: str, field: str) -> str:
     return value
 
 
-def _stable_symbol(value: str, field: str) -> str:
+def _symbol_shape(value: str, field: str) -> str:
     if not isinstance(value, str) or not value or not _STABLE_SYMBOL.fullmatch(value):
         raise SolRequestCompilationError(f"{field} must be a stable SOL symbol")
+    return value
+
+
+def _stable_symbol(value: str, field: str) -> str:
+    value = _symbol_shape(value, field)
     if "moose" in value.casefold():
         raise SolRequestCompilationError(f"{field} must not contain MOOSE-native spelling")
     return value
@@ -98,7 +104,7 @@ class SolRequestCompiler:
 
     def __init__(self, capability_map: Mapping[str, str], *, backend_target: str) -> None:
         self._capability_map = dict(capability_map)
-        self._backend_target = _stable_symbol(backend_target, "backend target")
+        self._backend_target = _symbol_shape(backend_target, "backend target")
 
     def compile(
         self,
@@ -128,6 +134,10 @@ class SolRequestCompiler:
 
         entity_ids = {_canonical_ref(entity.id, "entity id") for entity in model.entities}
         scope_ids = {_canonical_ref(scope.id, "scope id") for scope in model.scopes}
+        if len(entity_ids) != len(model.entities):
+            raise SolRequestCompilationError("duplicate entity id")
+        if len(scope_ids) != len(model.scopes):
+            raise SolRequestCompilationError("duplicate scope id")
         entities: list[dict[str, object]] = []
         for entity in model.entities:
             if entity.kind not in _ALLOWED_ENTITY_KINDS:
@@ -137,8 +147,12 @@ class SolRequestCompiler:
             for quantity in entity.parameters:
                 semantic_parameter = _canonical_ref(quantity.spec.quantity_id, "semantic parameter")
                 unit = _canonical_ref(quantity.spec.unit, "quantity unit")
-                if not isinstance(quantity.value, (int, float)) or isinstance(quantity.value, bool):
-                    raise SolRequestCompilationError("realization quantity value must be numeric")
+                if (
+                    not isinstance(quantity.value, (int, float))
+                    or isinstance(quantity.value, bool)
+                    or not math.isfinite(quantity.value)
+                ):
+                    raise SolRequestCompilationError("realization quantity value must be finite numeric")
                 parameters.append({
                     "semantic_parameter": semantic_parameter,
                     "quantity": {"value": quantity.value, "unit": unit},
@@ -170,12 +184,14 @@ class SolRequestCompiler:
                 raise SolRequestCompilationError("relation target is not a canonical entity")
             relations.append({"kind": relation.kind, "source": relation.source, "target": relation.target})
 
-        action_ids = {_stable_symbol(binding.action_id, "action id") for binding in model.action_bindings}
+        action_ids = {_symbol_shape(binding.action_id, "action id") for binding in model.action_bindings}
+        if len(action_ids) != len(model.action_bindings):
+            raise SolRequestCompilationError("duplicate action id")
         actions: list[dict[str, object]] = []
         bindings: list[dict[str, object]] = []
         for binding in model.action_bindings:
             for dependency in binding.dependencies:
-                if _stable_symbol(dependency, "action dependency") not in action_ids:
+                if _symbol_shape(dependency, "action dependency") not in action_ids:
                     raise SolRequestCompilationError("action dependency references unknown action")
             subjects = []
             for entity_id in binding.entity_ids:
