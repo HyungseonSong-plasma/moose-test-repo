@@ -98,26 +98,22 @@ def _case_parameters(spec: dict[str, object]) -> dict[str, object]:
         raise RuntimeError(
             f"{spec['name']}: dt*steps={dt * steps:.17g} != end_time={end_time:.17g}"
         )
-    params = prepare.case_parameters(
-        {
-            "name": spec["name"],
-            "chi": chi,
-            "steps": int(round(prepare.FINAL_TAU / chi)),
-            "fp_min": spec["fp_min"],
-            "fp_max": spec["fp_max"],
-        }
-    )
-    params.update(
-        {
-            "dt_s": dt,
-            "end_time_s": end_time,
-            "steps": steps,
-            "fp_min": int(spec["fp_min"]),
-            "fp_max": int(spec["fp_max"]),
-            "relaxation_factor": float(spec["omega"]),
-        }
-    )
-    return params
+    log_ce = math.log(prepare.NE0 / prepare.NA)
+    w_o2p = prepare.NE0 * prepare.M_O2P / (prepare.RHO * prepare.NA)
+    return {
+        "name": str(spec["name"]),
+        "chi": chi,
+        "tau_epsilon_s": tau,
+        "dt_s": dt,
+        "end_time_s": end_time,
+        "steps": steps,
+        "fp_min": int(spec["fp_min"]),
+        "fp_max": int(spec["fp_max"]),
+        "log_ce0": log_ce,
+        "w_O2p0": w_o2p,
+        "ne0_m3": prepare.NE0,
+        "relaxation_factor": float(spec["omega"]),
+    }
 
 
 def _with_relaxed_poisson_multiapp(text: str, omega: float) -> str:
