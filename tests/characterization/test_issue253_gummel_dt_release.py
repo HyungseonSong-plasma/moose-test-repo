@@ -393,7 +393,11 @@ def test_issue253_g2_energy10_equal_time_joule_chi_sweep() -> None:
             "joule_chi10": (10.0, 10, 1.0 / 11.0),
             "joule_chi100": (100.0, 1, 1.0 / 101.0),
         }
-        assert summary["nonlinear_absolute_tolerance"] == 3.0e-7
+        assert summary["nonlinear_relative_tolerance"] == 1.0e-9
+        assert summary["nonlinear_absolute_tolerance"] == 1.0e-13
+        assert summary["automatic_scaling"] is True
+        assert summary["off_diagonals_in_auto_scaling"] is True
+        assert summary["compute_scaling_once"] is False
         assert summary["fixed_point_cap"] == "CASE_SPECIFIC"
         expected_fp = {"joule_chi1": 100, "joule_chi10": 300, "joule_chi100": 3000}
         for name, (chi, steps, omega) in expected.items():
@@ -414,3 +418,18 @@ def test_issue253_g2_energy10_equal_time_joule_chi_sweep() -> None:
 def test_issue253_g2_sequence10_routes_to_central_matrix() -> None:
     workflow = (energy10_control.REPO / ".github" / "workflows" / "experiment.yml").read_text(encoding="utf-8")
     assert "inputs.sequence == '07' || inputs.sequence == '08' || inputs.sequence == '09' || inputs.sequence == '10'" in workflow
+
+
+def test_issue253_g2_energy10_uses_dt_robust_automatic_scaling() -> None:
+    try:
+        energy10_control.static_contract()
+        for name in energy10_control.CASE_NAMES:
+            text = (
+                energy10_control.GENERATED / name / "input.i"
+            ).read_text(encoding="utf-8")
+            assert "automatic_scaling = true" in text
+            assert "off_diagonals_in_auto_scaling = true" in text
+            assert "compute_scaling_once = false" in text
+            assert "nl_abs_tol = 1.0e-13" in text
+    finally:
+        shutil.rmtree(energy10_control.GENERATED, ignore_errors=True)

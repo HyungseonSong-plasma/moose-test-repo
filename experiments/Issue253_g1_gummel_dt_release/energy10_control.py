@@ -165,7 +165,11 @@ def build(clean: bool = True) -> list[dict[str, object]]:
                 "energy_dependent_mobility_diffusion": True,
                 "heavy_evolution": False,
                 "relaxation_formula": "omega=1/(1+chi)",
-                "nonlinear_absolute_tolerance": 3.0e-7,
+                "nonlinear_relative_tolerance": 1.0e-9,
+                "nonlinear_absolute_tolerance": 1.0e-13,
+                "automatic_scaling": true,
+                "off_diagonals_in_auto_scaling": true,
+                "compute_scaling_once": false,
                 "fixed_point_cap": "CASE_SPECIFIC",
                 "cases": built,
             },
@@ -207,7 +211,10 @@ def static_contract() -> dict[str, object]:
         assert "expression = '0.0*source'" in text
         assert "expression = '0.5*exp(loge)*sqrt(16.0*" in text
         assert f"relaxation_factor = {float(p['relaxation_factor']):.17g}" in text
-        assert "nl_abs_tol = 3.0e-7" in text
+        assert "nl_abs_tol = 1.0e-13" in text
+        assert "automatic_scaling = true" in text
+        assert "off_diagonals_in_auto_scaling = true" in text
+        assert "compute_scaling_once = false" in text
         assert f"fixed_point_max_its = {fp_max}" in text
         assert "@@" not in text
         assert "[final_exodus]" in text
@@ -220,7 +227,11 @@ def static_contract() -> dict[str, object]:
         "joule_heating": "ON",
         "elastic_collision": "OFF",
         "wall_closure": "COMSOL_HALF_MAXWELLIAN_5_OVER_6",
-        "nonlinear_absolute_tolerance": 3.0e-7,
+        "nonlinear_relative_tolerance": 1.0e-9,
+        "nonlinear_absolute_tolerance": 1.0e-13,
+        "automatic_scaling": True,
+        "off_diagonals_in_auto_scaling": True,
+        "compute_scaling_once": False,
         "fixed_point_cap": "CASE_SPECIFIC",
         "cases": cases,
     }

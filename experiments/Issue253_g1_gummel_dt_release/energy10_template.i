@@ -468,12 +468,13 @@
   num_steps = @@STEPS@@
   timestep_tolerance = @@TIMESTEP_TOL@@
   nl_rel_tol = 1.0e-9
-  # Sequence-10 chi=1 reached a parent nonlinear residual floor of 2.024e-7.
-  # Keep physics, dt, and Gummel relaxation unchanged; accept that measured floor
-  # with modest margin so the equal-time timestep comparison can complete.
-  nl_abs_tol = 3.0e-7
+  # Use MOOSE variable/equation scaling so the nonlinear norm is not biased by
+  # the 1/dt magnitude of the transient terms when chi is changed.
+  nl_abs_tol = 1.0e-13
   nl_max_its = 80
-  automatic_scaling = false
+  automatic_scaling = true
+  off_diagonals_in_auto_scaling = true
+  compute_scaling_once = false
   auto_advance = true
   fixed_point_min_its = 2
   fixed_point_max_its = @@FP_MAX@@
