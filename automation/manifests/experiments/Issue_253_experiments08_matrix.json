@@ -1,0 +1,82 @@
+{
+  "schema_version": 1,
+  "issue": 253,
+  "sequence": 8,
+  "title": "G1 equal-time chi=10/100/1000 convergence comparison",
+  "prepare_manifest": "automation/manifests/experiments/Issue_253_experiments08_prep.json",
+  "bundle_paths": [
+    "physics_app/physics-opt",
+    "physics_app/lib/libphysics-opt.so.0",
+    "physics_app/test/lib/libphysics_test-opt.so.0",
+    "experiments/Issue253_g1_gummel_dt_release/generated_extreme08"
+  ],
+  "max_parallel": 3,
+  "cases": [
+    {
+      "id": "relaxed_chi10",
+      "name": "relaxed_chi10 equal-time case",
+      "command": [
+        "python3",
+        "experiments/Issue253_g1_gummel_dt_release/extreme08_control.py",
+        "--case",
+        "relaxed_chi10"
+      ],
+      "timeout_seconds": 3600,
+      "artifacts": [
+        "experiments/Issue253_g1_gummel_dt_release/results_extreme08/relaxed_chi10_runtime.log",
+        "experiments/Issue253_g1_gummel_dt_release/results_extreme08/relaxed_chi10_returncode.txt",
+        "experiments/Issue253_g1_gummel_dt_release/results_extreme08/relaxed_chi10_elapsed_seconds.txt",
+        "experiments/Issue253_g1_gummel_dt_release/results_extreme08/relaxed_chi10_result.json",
+        "experiments/Issue253_g1_gummel_dt_release/generated_extreme08/relaxed_chi10/input_out*.csv"
+      ]
+    },
+    {
+      "id": "relaxed_chi100",
+      "name": "relaxed_chi100 equal-time case",
+      "command": [
+        "python3",
+        "experiments/Issue253_g1_gummel_dt_release/extreme08_control.py",
+        "--case",
+        "relaxed_chi100"
+      ],
+      "timeout_seconds": 3600,
+      "artifacts": [
+        "experiments/Issue253_g1_gummel_dt_release/results_extreme08/relaxed_chi100_runtime.log",
+        "experiments/Issue253_g1_gummel_dt_release/results_extreme08/relaxed_chi100_returncode.txt",
+        "experiments/Issue253_g1_gummel_dt_release/results_extreme08/relaxed_chi100_elapsed_seconds.txt",
+        "experiments/Issue253_g1_gummel_dt_release/results_extreme08/relaxed_chi100_result.json",
+        "experiments/Issue253_g1_gummel_dt_release/generated_extreme08/relaxed_chi100/input_out*.csv"
+      ]
+    },
+    {
+      "id": "relaxed_chi1000",
+      "name": "relaxed_chi1000 equal-time case",
+      "command": [
+        "python3",
+        "experiments/Issue253_g1_gummel_dt_release/extreme08_control.py",
+        "--case",
+        "relaxed_chi1000"
+      ],
+      "timeout_seconds": 3600,
+      "artifacts": [
+        "experiments/Issue253_g1_gummel_dt_release/results_extreme08/relaxed_chi1000_runtime.log",
+        "experiments/Issue253_g1_gummel_dt_release/results_extreme08/relaxed_chi1000_returncode.txt",
+        "experiments/Issue253_g1_gummel_dt_release/results_extreme08/relaxed_chi1000_elapsed_seconds.txt",
+        "experiments/Issue253_g1_gummel_dt_release/results_extreme08/relaxed_chi1000_result.json",
+        "experiments/Issue253_g1_gummel_dt_release/generated_extreme08/relaxed_chi1000/input_out*.csv"
+      ]
+    }
+  ],
+  "aggregate": {
+    "name": "Aggregate chi=10/100/1000 equal-time comparison",
+    "command": [
+      "python3",
+      "experiments/Issue253_g1_gummel_dt_release/extreme08_control.py",
+      "--aggregate"
+    ],
+    "timeout_seconds": 300,
+    "artifacts": [
+      "experiments/Issue253_g1_gummel_dt_release/results_extreme08/extreme08_summary.json"
+    ]
+  }
+}

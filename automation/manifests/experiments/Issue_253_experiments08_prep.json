@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "issue": 253,
+  "kind": "experiments",
+  "sequence": 8,
+  "title": "G1 chi=10/100/1000 equal-time parallel prepare",
+  "stages": [
+    {
+      "id": "P0",
+      "name": "Validate chi=10/100/1000 equal-time matrix",
+      "command": [
+        "python3",
+        "experiments/Issue253_g1_gummel_dt_release/extreme08_control.py",
+        "--phase",
+        "p0"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "id": "P1",
+      "name": "Preflight chi=10/100/1000 inputs",
+      "command": [
+        "python3",
+        "experiments/Issue253_g1_gummel_dt_release/extreme08_control.py",
+        "--phase",
+        "p1"
+      ],
+      "timeout_seconds": 900
+    },
+    {
+      "id": "P2",
+      "name": "Build Physics once and check chi=10/100/1000 inputs",
+      "command": [
+        "python3",
+        "experiments/Issue253_g1_gummel_dt_release/extreme08_control.py",
+        "--phase",
+        "p2"
+      ],
+      "timeout_seconds": 3600
+    }
+  ],
+  "artifacts": [
+    "experiments/Issue253_g1_gummel_dt_release/generated_extreme08/**/*.i",
+    "experiments/Issue253_g1_gummel_dt_release/generated_extreme08/**/*.json",
+    "experiments/Issue253_g1_gummel_dt_release/results_extreme08/*_p2.log"
+  ]
+}

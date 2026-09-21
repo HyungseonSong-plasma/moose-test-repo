@@ -5,7 +5,7 @@ import shutil
 import subprocess
 import sys
 
-from experiments.Issue253_g1_gummel_dt_release import analyze, chi2_control, extended_control, final_control, ion_advance_control, parallel_control, prepare, relaxed_control
+from experiments.Issue253_g1_gummel_dt_release import analyze, chi2_control, extended_control, extreme08_control, final_control, ion_advance_control, parallel_control, prepare, relaxed_control
 
 
 def test_issue253_g1_case_matrix_preserves_single_model() -> None:
@@ -302,3 +302,29 @@ def test_issue253_g1_parallel_matrix_is_central_workflow_owned() -> None:
     assert "parallel-prepare:" not in workflow
     assert "parallel-run:" not in workflow
     assert "parallel-aggregate:" not in workflow
+
+
+def test_issue253_g1_extreme08_equal_time_matrix() -> None:
+    try:
+        summary = extreme08_control.static_contract()
+        assert summary["status"] == "PASS"
+        assert summary["total_time_tau_epsilon"] == 1000.0
+        cases = {str(item["name"]): item for item in summary["cases"]}
+        expected = {
+            "relaxed_chi10": (10.0, 100),
+            "relaxed_chi100": (100.0, 10),
+            "relaxed_chi1000": (1000.0, 1),
+        }
+        for name, (chi, steps) in expected.items():
+            item = cases[name]
+            assert item["chi"] == chi
+            assert item["steps"] == steps
+            assert math.isclose(item["dt_s"] * steps, item["end_time_s"], rel_tol=1e-14)
+            assert math.isclose(item["relaxation_factor"], 1.0 / (1.0 + chi), rel_tol=1e-14)
+    finally:
+        shutil.rmtree(extreme08_control.GENERATED, ignore_errors=True)
+
+
+def test_issue253_g1_experiment_workflow_routes_sequence08_to_central_matrix() -> None:
+    workflow = (extreme08_control.REPO / ".github" / "workflows" / "experiment.yml").read_text(encoding="utf-8")
+    assert "inputs.sequence == '07' || inputs.sequence == '08'" in workflow
