@@ -113,8 +113,6 @@
   nl_abs_tol = 1.0e-12
   nl_max_its = 20
   automatic_scaling = true
-  off_diagonals_in_auto_scaling = true
-  compute_scaling_once = true
   petsc_options_iname = '-pc_type -pc_factor_shift_type'
   petsc_options_value = 'lu NONZERO'
 []
