@@ -393,10 +393,14 @@ def test_issue253_g2_energy10_equal_time_joule_chi_sweep() -> None:
             "joule_chi10": (10.0, 10, 1.0 / 11.0),
             "joule_chi100": (100.0, 1, 1.0 / 101.0),
         }
+        assert summary["nonlinear_absolute_tolerance"] == 3.0e-7
+        assert summary["fixed_point_cap"] == "CASE_SPECIFIC"
+        expected_fp = {"joule_chi1": 100, "joule_chi10": 300, "joule_chi100": 3000}
         for name, (chi, steps, omega) in expected.items():
             item = cases[name]
             assert item["chi"] == chi
             assert item["steps"] == steps
+            assert item["fp_max"] == expected_fp[name]
             assert item["joule_heating"] is True
             assert item["elastic_collision"] is False
             assert math.isclose(item["relaxation_factor"], omega, rel_tol=1e-14)
