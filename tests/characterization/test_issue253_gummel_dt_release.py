@@ -5,7 +5,7 @@ import shutil
 import subprocess
 import sys
 
-from experiments.Issue253_g1_gummel_dt_release import analyze, chi2_control, final_control, prepare, relaxed_control
+from experiments.Issue253_g1_gummel_dt_release import analyze, chi2_control, extended_control, final_control, prepare, relaxed_control
 
 
 def test_issue253_g1_case_matrix_preserves_single_model() -> None:
@@ -176,8 +176,10 @@ def test_issue253_g1_final_matrix_fixed_total_time_and_cost_budget() -> None:
             cases["relaxed_chi100"]["relaxation_factor"], 1.0 / 101.0,
             rel_tol=0.0, abs_tol=1e-16
         )
-        assert cases["relaxed_chi10"]["steps"] * cases["relaxed_chi10"]["fp_max"] == 1000
-        assert cases["relaxed_chi100"]["steps"] * cases["relaxed_chi100"]["fp_max"] == 1000
+        assert cases["relaxed_chi10"]["fp_max"] == 70
+        assert cases["relaxed_chi100"]["fp_max"] == 700
+        assert cases["relaxed_chi10"]["steps"] * cases["relaxed_chi10"]["fp_max"] == 1400
+        assert cases["relaxed_chi100"]["steps"] * cases["relaxed_chi100"]["fp_max"] == 1400
     finally:
         shutil.rmtree(final_control.GENERATED, ignore_errors=True)
 
@@ -195,3 +197,43 @@ def test_issue253_g1_final_control_runs_standalone_p0() -> None:
         assert "ISSUE253_G1_FINAL_P0: PASS" in completed.stdout
     finally:
         shutil.rmtree(final_control.GENERATED, ignore_errors=True)
+
+
+def test_issue253_g1_extreme_matrix_fixed_total_time_and_budget() -> None:
+    try:
+        summary = extended_control.static_contract()
+        assert summary["status"] == "PASS"
+        assert summary["total_time_tau_epsilon"] == 20000.0
+        cases = {str(item["name"]): item for item in summary["cases"]}
+        assert cases["ref_chi0p1"]["steps"] == 200000
+        assert cases["relaxed_chi1000"]["steps"] == 20
+        assert cases["relaxed_chi10000"]["steps"] == 2
+        assert cases["relaxed_chi1000"]["fp_max"] == 7000
+        assert cases["relaxed_chi10000"]["fp_max"] == 70000
+        assert math.isclose(
+            cases["relaxed_chi1000"]["relaxation_factor"], 1.0 / 1001.0,
+            rel_tol=0.0, abs_tol=1e-16
+        )
+        assert math.isclose(
+            cases["relaxed_chi10000"]["relaxation_factor"], 1.0 / 10001.0,
+            rel_tol=0.0, abs_tol=1e-16
+        )
+        assert cases["relaxed_chi1000"]["steps"] * cases["relaxed_chi1000"]["fp_max"] == 140000
+        assert cases["relaxed_chi10000"]["steps"] * cases["relaxed_chi10000"]["fp_max"] == 140000
+    finally:
+        shutil.rmtree(extended_control.GENERATED, ignore_errors=True)
+
+
+def test_issue253_g1_extreme_control_runs_standalone_p0() -> None:
+    try:
+        completed = subprocess.run(
+            [sys.executable, str(extended_control.ROOT / "extended_control.py"), "--phase", "p0"],
+            cwd=extended_control.REPO,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        assert completed.returncode == 0, completed.stderr
+        assert "ISSUE253_G1_EXTREME_P0: PASS" in completed.stdout
+    finally:
+        shutil.rmtree(extended_control.GENERATED, ignore_errors=True)
