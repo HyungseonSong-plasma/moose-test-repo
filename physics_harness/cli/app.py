@@ -11,7 +11,7 @@ import sys
 
 from physics_harness.application import normalize_temporal_run_csv
 from physics_harness.adapters.moose.preflight import validate_input_preflight
-from physics_harness.application.gateway import compile_experiment, lower_experiment, plan_experiment
+from physics_harness.application.gateway import compile_experiment, plan_experiment
 from physics_harness.analysis.temporal import VALID_INITIAL_POLICIES
 from physics_harness.specification import ExperimentSpecError
 
@@ -20,8 +20,8 @@ ROOT = Path(__file__).resolve().parents[2]
 CANONICAL_COMMANDS = {
     "compile": "compile semantic experiment JSON into ExperimentIntent",
     "plan": "compile semantic intent and synthesize ScientificPolicy/ExecutionPlan",
-    "lower": "lower a solver-independent ExecutionPlan into MOOSE target IR",
-    "run": "prepare one canonical semantic experiment for target execution",
+    "lower": "retired: local target lowering is not a canonical Physics operation",
+    "run": "prepare Physics semantics for the canonical SOL request/runtime boundary",
     "preflight": "run static parser-symbol preflight on one MOOSE input",
     "temporal-csv": "normalize transient CSV rows under an explicit temporal policy",
 }
@@ -114,23 +114,22 @@ def semantic_plan_cli(argv: list[str]) -> int:
 def semantic_lower_cli(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(prog="physics lower")
     parser.add_argument("experiment")
-    args = parser.parse_args(argv)
-    try:
-        planned, target = lower_experiment(args.experiment)
-    except (OSError, ExperimentSpecError, ValueError, TypeError) as exc:
-        print(f"lowering error: {exc}", file=sys.stderr)
-        return 2
-    _json_print({"planned": asdict(planned), "target": asdict(target)})
-    return 0
+    parser.parse_args(argv)
+    print(
+        "LOWER_RETIRED: local MOOSE lowering is not a canonical Physics operation; "
+        "use the reviewed SOL realization/request boundary",
+        file=sys.stderr,
+    )
+    return 3
 
 
 def semantic_run_cli(argv: list[str]) -> int:
-    """Prepare only the canonical semantic pipeline; never dispatch a protocol runner."""
+    """Prepare Physics semantics only; never infer missing SOL realization owners."""
     parser = argparse.ArgumentParser(prog="physics run")
     parser.add_argument("experiment")
     args = parser.parse_args(argv)
     try:
-        planned, target = lower_experiment(args.experiment)
+        planned = plan_experiment(args.experiment)
     except (OSError, ExperimentSpecError, ValueError, TypeError) as exc:
         print(f"semantic run preparation error: {exc}", file=sys.stderr)
         return 2
@@ -138,10 +137,9 @@ def semantic_run_cli(argv: list[str]) -> int:
     print(f"EXPERIMENT={planned.semantic.intent.experiment_id}")
     print(f"POLICY={planned.policy.policy_id}")
     print(f"EXECUTION_PLAN={planned.execution_plan.plan_id}")
-    print(f"TARGET_CASES={len(target.cases)}")
     print(
-        "TARGET_EXECUTION: BLOCKED (generic semantic target IR has no approved "
-        "target executor; protocol/campaign fallback is forbidden)",
+        "SOL_REQUEST: BLOCKED (canonical realization model, reviewed capability mapping, "
+        "and runtime/adapter paths must be supplied explicitly; local MOOSE fallback is forbidden)",
         file=sys.stderr,
     )
     return 3
@@ -180,33 +178,25 @@ def temporal_csv_cli(argv: list[str]) -> int:
     return 0
 
 
-def _run_commands(commands: list[list[str]]) -> int:
-    for command in commands:
-        result = subprocess.run(command, cwd=ROOT, check=False)
-        if result.returncode != 0:
-            return int(result.returncode)
-    return 0
-
-
-def internal_cli(target: str) -> int:
-    if target not in INTERNAL_TARGETS:
-        known = ", ".join(INTERNAL_TARGETS)
-        print(f"unknown internal target: {target}; choose from {known}", file=sys.stderr)
-        return 2
-    return _run_commands([[sys.executable, "-m", "pytest", "-q"]])
+def _run_internal(target: str, args: list[str]) -> int:
+    if target == "regression":
+        return subprocess.call([sys.executable, "-m", "pytest", "-q", *args], cwd=ROOT)
+    print(f"unknown internal target: {target}", file=sys.stderr)
+    return 2
 
 
 def main(argv: list[str] | None = None) -> int:
-    args = list(sys.argv[1:] if argv is None else argv)
-    if not args or args[0] in {"-h", "--help", "help"}:
+    argv = list(sys.argv[1:] if argv is None else argv)
+    if not argv or argv[0] in {"-h", "--help"}:
         print_help()
         return 0
-    if args[0] == "-i":
-        if len(args) != 2:
-            print("usage: physics -i <regression>", file=sys.stderr)
+    if argv[0] == "-i":
+        if len(argv) < 2:
+            print("physics -i requires an internal target", file=sys.stderr)
             return 2
-        return internal_cli(args[1])
-    canonical_handlers = {
+        return _run_internal(argv[1], argv[2:])
+    command, args = argv[0], argv[1:]
+    canonical = {
         "compile": semantic_compile_cli,
         "plan": semantic_plan_cli,
         "lower": semantic_lower_cli,
@@ -214,14 +204,13 @@ def main(argv: list[str] | None = None) -> int:
         "preflight": preflight_cli,
         "temporal-csv": temporal_csv_cli,
     }
-    canonical = canonical_handlers.get(args[0])
-    if canonical is not None:
-        return canonical(args[1:])
-    handler = _resolve_legacy_handler(args[0])
+    handler = canonical.get(command)
     if handler is not None:
-        return handler(args[1:])
-    print(f"unknown command: {args[0]}", file=sys.stderr)
-    print_help()
+        return handler(args)
+    legacy = _resolve_legacy_handler(command)
+    if legacy is not None:
+        return legacy(args)
+    print(f"unknown physics command: {command}", file=sys.stderr)
     return 2
 
 
