@@ -1025,6 +1025,42 @@ def run_case(case_name: str) -> None:
         raise SystemExit(code)
 
 
+def p3() -> None:
+    build()
+    rel = ROOT.relative_to(REPO)
+    inner = "; ".join(
+        f"python3 /workspace/{rel}/control.py --inner-run {name}"
+        for name in CASE_NAMES
+    )
+    script = (
+        "set -euo pipefail; source /environment; "
+        "export MOOSE_DIR=/opt/physics_vendor/moose; export CRANE_DIR=/opt/physics_vendor/crane; "
+        "export SQUIRREL_DIR=/opt/physics_vendor/squirrel; export ZAPDOS_DIR=/opt/physics_vendor/zapdos; "
+        "export METHOD=opt; export PYTHONPATH=/workspace; "
+        + inner
+    )
+    _docker(script)
+
+    invalid: list[str] = []
+    for name in CASE_NAMES:
+        result, code = analyze_case(name)
+        (RESULTS / f"{name}_result.json").write_text(
+            json.dumps(result, indent=2, sort_keys=True) + "\n"
+        )
+        print("ISSUE306_HEAVY_RELEASE_CASE:", name, result["classification"])
+        if code:
+            invalid.append(name)
+
+    summary = aggregate(RESULTS)
+    (RESULTS / "issue306_summary.json").write_text(
+        json.dumps(summary, indent=2, sort_keys=True) + "\n"
+    )
+    print("ISSUE306_HEAVY_RELEASE_P3:", summary["classification"])
+    print(json.dumps(summary, indent=2, sort_keys=True))
+    if invalid or not bool(summary.get("evidence_valid")):
+        raise SystemExit(2)
+
+
 def _profile_error(a: list[dict[str, float]], b: list[dict[str, float]], key: str) -> float:
     scale = max(max(abs(x[key]) for x in a), 1.0e-30)
     return max(abs(x[key] - y[key]) for x, y in zip(a, b)) / scale
@@ -1107,7 +1143,7 @@ def aggregate(root: Path) -> dict[str, object]:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--phase", choices=("p0", "p1", "p2"))
+    parser.add_argument("--phase", choices=("p0", "p1", "p2", "p3"))
     parser.add_argument("--case", choices=CASE_NAMES)
     parser.add_argument("--inner-run", choices=CASE_NAMES)
     parser.add_argument("--aggregate", action="store_true")
@@ -1130,7 +1166,7 @@ def main() -> int:
         print(json.dumps(summary, indent=2, sort_keys=True))
         return 0 if bool(summary["evidence_valid"]) else 2
     if args.phase:
-        {"p0": p0, "p1": p1, "p2": p2}[args.phase]()
+        {"p0": p0, "p1": p1, "p2": p2, "p3": p3}[args.phase]()
         return 0
     parser.error("one action is required")
 
