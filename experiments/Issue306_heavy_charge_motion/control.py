@@ -47,7 +47,6 @@ FINAL_TAU = CHI_H * HEAVY_CYCLES
 ENERGY_REFERENCE_EV = 5.73276
 P_GAS_PA = 0.66661
 TG_K = 300.0
-TE_K = 44350.61153766496
 Q_SCCM = 20.0
 M_INLET = 0.032
 VM_STD = 0.0224136
@@ -619,8 +618,15 @@ def _released_parent(p: dict[str, object]) -> str:
 [FunctorMaterials]
   [constants]
     type = ADGenericFunctorMaterial
-    prop_names = 'T_g p_gas rho_const mu_flow electron_temperature_K'
-    prop_values = '{TG_K:.17g} {P_GAS_PA:.17g} {prepare.RHO:.17g} 2.0e-5 {TE_K:.17g}'
+    prop_names = 'T_g p_gas rho_const mu_flow'
+    prop_values = '{TG_K:.17g} {P_GAS_PA:.17g} {prepare.RHO:.17g} 2.0e-5'
+  []
+  [electron_temperature_state]
+    type = ADParsedFunctorMaterial
+    property_name = electron_temperature_K
+    functor_names = 'mean_energy_fast'
+    functor_symbols = 'mean_ev'
+    expression = '{(2.0 / 3.0) * E_OVER_KB:.17g}*mean_ev'
   []
   [O2_constraint]
     type = ADParsedFunctorMaterial
