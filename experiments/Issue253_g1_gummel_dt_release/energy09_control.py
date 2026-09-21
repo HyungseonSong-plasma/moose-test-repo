@@ -80,6 +80,7 @@ def _params(spec: dict[str, object]) -> dict[str, object]:
         "joule_heating": bool(spec["joule"]),
         "elastic_collision": bool(spec["elastic"]),
         "energy_wall_flux": True,
+        "wall_closure": "COMSOL_HALF_MAXWELLIAN_5_OVER_6",
         "chi": CHI,
         "tau_epsilon_initial_s": prepare.tau_epsilon(),
         "dt_s": DT,
@@ -147,6 +148,9 @@ def build(clean: bool = True) -> list[dict[str, object]]:
                     "2x2 Joule-heating and O2-elastic toggles"
                 ),
                 "energy_wall_flux": "ALWAYS_ON",
+                "wall_closure": "COMSOL_HALF_MAXWELLIAN_5_OVER_6",
+                "wall_particle_flux": "Gamma=(1/2)*n_e*v_th",
+                "wall_energy_flux": "q=(5/6)*n_epsilon*v_th",
                 "joule_heating_matrix": [False, True],
                 "elastic_collision_matrix": [False, True],
                 "energy_dependent_mobility_diffusion": True,
@@ -184,6 +188,7 @@ def static_contract() -> dict[str, object]:
         assert p["elastic_collision"] is elastic
         text = (GENERATED / name / "input.i").read_text(encoding="utf-8")
         assert "PhysicsFVElectronEnergyWallFluxBC" in text
+        assert "expression = '0.5*exp(loge)*sqrt(16.0*" in text
         assert "PhysicsFVElectronEnergyJouleHeating" in text
         assert "PhysicsElectronMeanEnergyMaterial" in text
         assert "PhysicsElectronTransportLookupMaterial" in text
@@ -206,6 +211,10 @@ def static_contract() -> dict[str, object]:
         "chi": CHI,
         "total_time_tau_epsilon_initial": FINAL_TAU,
         "energy_wall_flux": "ALWAYS_ON",
+        "wall_closure": "COMSOL_HALF_MAXWELLIAN_5_OVER_6",
+        "wall_particle_flux": "Gamma=(1/2)*n_e*v_th",
+        "wall_energy_flux": "q=(5/6)*n_epsilon*v_th",
+        "wall_energy_per_lost_electron": "(5/3)*mean_en=(5/2)*T_e",
         "cases": built,
     }
 
@@ -377,6 +386,16 @@ def analyze_case(case_name: str) -> tuple[dict[str, object], int]:
     final_energy = _f(final, "energy_inventory_J_m2")
     inferred_joule = final_energy - initial_energy + cumulative_wall + cumulative_elastic
 
+    final_profile = _profile(GENERATED / case_name)
+    wall_mean_energy_eV = final_profile[-1]["mean_energy_eV"]
+    particle_rate_mol = abs(_f(final, "wall_particle_rate_mol_m2_s"))
+    wall_energy_per_lost_electron_eV = (
+        abs(_f(final, "wall_energy_power_W_m2"))
+        / (particle_rate_mol * prepare.NA * prepare.E_CHARGE)
+        if particle_rate_mol > 0.0
+        else None
+    )
+
     result.update(
         {
             "classification": "CASE_CONVERGED",
@@ -390,6 +409,10 @@ def analyze_case(case_name: str) -> tuple[dict[str, object], int]:
             "cumulative_elastic_energy_loss_J_m2": cumulative_elastic,
             "cumulative_inferred_joule_input_J_m2": inferred_joule,
             "final_wall_energy_power_W_m2": abs(_f(final, "wall_energy_power_W_m2")),
+            "final_wall_particle_rate_mol_m2_s": particle_rate_mol,
+            "final_wall_mean_energy_eV": wall_mean_energy_eV,
+            "final_wall_energy_per_lost_electron_eV": wall_energy_per_lost_electron_eV,
+            "expected_wall_energy_per_lost_electron_eV": (5.0 / 3.0) * wall_mean_energy_eV,
             "final_elastic_loss_candidate_W_m2": max(
                 _f(final, "elastic_loss_candidate_W_m2"), 0.0
             ),
@@ -405,7 +428,7 @@ def analyze_case(case_name: str) -> tuple[dict[str, object], int]:
             "final_phi_max_V": _f(final, "phi_max"),
             "final_n_e_min_m3": _f(final, "n_e_min"),
             "final_n_e_max_m3": _f(final, "n_e_max"),
-            "final_profile": _profile(GENERATED / case_name),
+            "final_profile": final_profile,
         }
     )
     return result, 0

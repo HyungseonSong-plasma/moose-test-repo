@@ -10,8 +10,9 @@ PhysicsFVElectronEnergyWallFluxBC::validParams()
   auto params = FVFluxBC::validParams();
 
   params.addClassDescription(
-      "Applies the frozen #26 E4-E5 outward electron-energy wall flux: "
-      "(5/6) v_e,th n_eps_hat - (4 eV / epsilon_ref) Gamma_e,SEE_hat.");
+      "Applies the COMSOL-consistent outward electron-energy wall flux: "
+      "(5/6) v_e,th n_eps_hat - (4 eV / epsilon_ref) Gamma_e,SEE_hat, with "
+      "v_e,th = sqrt(8 k_B T_e/(pi m_e)).");
 
   params.addRequiredParam<MooseFunctorName>(
       "electron_energy_density",
@@ -58,10 +59,10 @@ PhysicsFVElectronEnergyWallFluxBC::computeQpResidual()
   constexpr Real pi = 3.141592653589793238462643383279502884;
   constexpr Real see_energy_eV = 4.0;
 
-  // This is the same thermal mean-speed definition used by the existing wall
-  // helper, but intentionally not its 0.25*n_e*v absorbingNumberFlux contract.
+  // mean_electron_energy = (3/2) k_B T_e / e [eV], so the COMSOL
+  // thermal mean speed sqrt(8 k_B T_e/(pi m_e)) is the expression below.
   const ADReal mean_speed =
-      sqrt(8.0 * elementary_charge * mean_electron_energy / (3.0 * pi * electron_mass));
+      sqrt(16.0 * elementary_charge * mean_electron_energy / (3.0 * pi * electron_mass));
 
   // Positive flux is outward loss.  The SEE term is inward, hence the minus.
   const ADReal thermal_energy_flux = (5.0 / 6.0) * mean_speed * electron_energy_density;

@@ -342,6 +342,10 @@ def test_issue253_g2_energy09_wall_always_on_joule_elastic_matrix() -> None:
         summary = energy09_control.static_contract()
         assert summary["status"] == "PASS"
         assert summary["energy_wall_flux"] == "ALWAYS_ON"
+        assert summary["wall_closure"] == "COMSOL_HALF_MAXWELLIAN_5_OVER_6"
+        assert summary["wall_particle_flux"] == "Gamma=(1/2)*n_e*v_th"
+        assert summary["wall_energy_flux"] == "q=(5/6)*n_epsilon*v_th"
+        assert summary["wall_energy_per_lost_electron"] == "(5/3)*mean_en=(5/2)*T_e"
         assert summary["chi"] == 10.0
         assert summary["total_time_tau_epsilon_initial"] == 1000.0
         cases = {str(item["name"]): item for item in summary["cases"]}

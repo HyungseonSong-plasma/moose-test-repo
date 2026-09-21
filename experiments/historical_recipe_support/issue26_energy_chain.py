@@ -565,7 +565,8 @@ def build_e4_e5_wall_input(
         "see_energy_enabled": see_energy_on,
         "thermal_energy_contract": (
             "Gamma_epsilon,out/(n_ref*epsilon_ref) = "
-            "(5/6)*v_th(mean_en_solved)*n_epsilon_hat"
+            "(5/6)*v_th(mean_en_solved)*n_epsilon_hat with "
+            "v_th=sqrt(8*kB*T_e/(pi*m_e))"
         ),
         "see_energy_contract": (
             "Gamma_epsilon,SEE,in/(n_ref*epsilon_ref) = "

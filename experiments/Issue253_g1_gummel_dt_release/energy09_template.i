@@ -133,7 +133,7 @@
     property_name = thermal_flux_molar_outward
     functor_names = 'log_e mean_en_solved'
     functor_symbols = 'loge mean_ev'
-    expression = '0.25*exp(loge)*sqrt(16.0*1.602176634e-19*mean_ev/(3.0*pi*9.1093837139e-31))'
+    expression = '0.5*exp(loge)*sqrt(16.0*1.602176634e-19*mean_ev/(3.0*pi*9.1093837139e-31))'
   []
 
   [electron_energy_density_physical]
@@ -393,6 +393,12 @@
   [elastic_loss_applied_W_m2]
     type = ADElementIntegralFunctorPostprocessor
     functor = elastic_loss_applied_W_m3
+    execute_on = 'INITIAL TIMESTEP_END'
+  []
+  [wall_particle_rate_mol_m2_s]
+    type = SideFVFluxBCIntegral
+    boundary = right
+    fvbcs = 'right_thermal_surface_loss'
     execute_on = 'INITIAL TIMESTEP_END'
   []
   [wall_energy_rate_hat]
