@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import math
 import shutil
 import subprocess
 import sys
 
-from experiments.Issue253_g1_gummel_dt_release import analyze, chi2_control, prepare
+from experiments.Issue253_g1_gummel_dt_release import analyze, chi2_control, prepare, relaxed_control
 
 
 def test_issue253_g1_case_matrix_preserves_single_model() -> None:
@@ -123,3 +124,36 @@ def test_issue253_g1_chi2_control_runs_standalone_p0() -> None:
         assert "ISSUE253_G1_CHI2_P0: PASS" in completed.stdout
     finally:
         shutil.rmtree(chi2_control.GENERATED, ignore_errors=True)
+
+
+def test_issue253_g1_relaxed_control_uses_physics_scaled_poisson_relaxation() -> None:
+    try:
+        summary = relaxed_control.static_contract()
+        assert summary["status"] == "PASS"
+        assert math.isclose(summary["omega"], 1.0 / 6.0, rel_tol=0.0, abs_tol=1e-16)
+        cases = {str(item["name"]): item for item in summary["cases"]}
+        assert cases["relaxed_gummel_chi5"]["chi"] == 5.0
+        assert cases["relaxed_gummel_chi5"]["fp_min"] == 2
+        assert cases["relaxed_gummel_chi5"]["fp_max"] == 30
+    finally:
+        shutil.rmtree(relaxed_control.GENERATED, ignore_errors=True)
+
+
+def test_issue253_g1_relaxed_control_runs_standalone_p0() -> None:
+    try:
+        completed = subprocess.run(
+            [sys.executable, str(relaxed_control.ROOT / "relaxed_control.py"), "--phase", "p0"],
+            cwd=relaxed_control.REPO,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        assert completed.returncode == 0, completed.stderr
+        assert "ISSUE253_G1_RELAXED_P0: PASS" in completed.stdout
+    finally:
+        shutil.rmtree(relaxed_control.GENERATED, ignore_errors=True)
+
+
+def test_issue253_g1_relaxed_picard_parser_handles_ansi() -> None:
+    text = "\x1b[35m 1 Picard |R| = 1.25e-03\x1b[0m"
+    assert relaxed_control._picard_residuals(text) == [1.25e-03]

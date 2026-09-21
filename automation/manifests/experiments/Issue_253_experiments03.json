@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "issue": 253,
+  "kind": "experiments",
+  "sequence": 3,
+  "title": "G1 chi=5 physically scaled relaxed Gummel dt-release discriminator",
+  "stages": [
+    {
+      "id": "P0",
+      "name": "Validate chi=5 relaxed-Gummel construction",
+      "command": [
+        "python3",
+        "experiments/Issue253_g1_gummel_dt_release/relaxed_control.py",
+        "--phase",
+        "p0"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "id": "P1",
+      "name": "Preflight relaxed Gummel matrix",
+      "command": [
+        "python3",
+        "experiments/Issue253_g1_gummel_dt_release/relaxed_control.py",
+        "--phase",
+        "p1"
+      ],
+      "timeout_seconds": 900
+    },
+    {
+      "id": "P2",
+      "name": "Build Physics and check relaxed inputs",
+      "command": [
+        "python3",
+        "experiments/Issue253_g1_gummel_dt_release/relaxed_control.py",
+        "--phase",
+        "p2"
+      ],
+      "timeout_seconds": 3600
+    },
+    {
+      "id": "P3",
+      "name": "Run chi=5 omega=1/6 relaxed Gummel discriminator",
+      "command": [
+        "python3",
+        "experiments/Issue253_g1_gummel_dt_release/relaxed_control.py",
+        "--phase",
+        "p3"
+      ],
+      "timeout_seconds": 1800
+    }
+  ],
+  "artifacts": [
+    "experiments/Issue253_g1_gummel_dt_release/generated_relaxed/**/*.i",
+    "experiments/Issue253_g1_gummel_dt_release/generated_relaxed/**/*.json",
+    "experiments/Issue253_g1_gummel_dt_release/generated_relaxed/**/*.csv",
+    "experiments/Issue253_g1_gummel_dt_release/generated_relaxed/**/*.e",
+    "experiments/Issue253_g1_gummel_dt_release/results_relaxed/**/*"
+  ]
+}
