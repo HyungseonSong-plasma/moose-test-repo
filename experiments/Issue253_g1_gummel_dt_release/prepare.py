@@ -155,6 +155,7 @@ def static_contract() -> dict[str, object]:
         assert "potential = potential_from_poisson" in text
         assert "FullSolveMultiApp" in text
         assert "execute_on = TIMESTEP_END" in text
+        assert "auto_advance = true" in text
         assert "c_epsilon" not in text
         assert "PhysicsFVLogMolarElectronEnergy" not in text
         assert "@@" not in text

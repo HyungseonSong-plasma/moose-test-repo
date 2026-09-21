@@ -220,6 +220,10 @@
   nl_abs_tol = 1.0e-13
   nl_max_its = 50
   automatic_scaling = false
+  # FullSolveMultiApp rejects the transient fixed-point default auto_advance=false.
+  # The Poisson subapp is steady, so re-solve it on every fixed-point iterate while
+  # the parent electron solve remains on the same physical timestep.
+  auto_advance = true
   fixed_point_min_its = @@FP_MIN@@
   fixed_point_max_its = @@FP_MAX@@
   fixed_point_rel_tol = 1.0e-8
