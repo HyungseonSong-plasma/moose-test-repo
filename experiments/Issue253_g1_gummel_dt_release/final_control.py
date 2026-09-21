@@ -170,7 +170,8 @@ def _make_output_light(text: str) -> str:
 def _silence_poisson_outputs(text: str) -> str:
     old = """[Outputs]
   csv = true
-  execute_on = 'INITIAL TIMESTEP_END'
+  exodus = true
+  execute_on = 'INITIAL FINAL'
 []
 """
     new = """[Outputs]
@@ -284,6 +285,12 @@ def static_contract() -> dict[str, object]:
         assert "execute_on = 'FINAL'" in text
         assert "exodus = true" not in text
         assert "PhysicsFVLogMolarElectronEnergy" not in text
+        poisson_text = (GENERATED / str(case["name"]) / "poisson_sub.i").read_text(
+            encoding="utf-8"
+        )
+        assert "[Outputs]\n  console = false\n[]" in poisson_text
+        assert "csv = true" not in poisson_text
+        assert "exodus = true" not in poisson_text
 
     for case in (c10, c100):
         text = (GENERATED / str(case["name"]) / "input.i").read_text(encoding="utf-8")
