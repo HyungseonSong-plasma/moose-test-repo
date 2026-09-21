@@ -504,3 +504,9 @@ def test_issue253_g2_elastic12_equal_time_chi_sweep() -> None:
 def test_issue253_g2_sequence12_routes_to_central_matrix() -> None:
     workflow = (elastic12_control.REPO / ".github" / "workflows" / "experiment.yml").read_text(encoding="utf-8")
     assert "inputs.sequence == '07' || inputs.sequence == '08' || inputs.sequence == '09' || inputs.sequence == '10' || inputs.sequence == '11' || inputs.sequence == '12'" in workflow
+
+
+def test_issue253_g2_elastic12_runtime_reenters_its_own_controller() -> None:
+    source = (elastic12_control.ROOT / "elastic12_control.py").read_text(encoding="utf-8")
+    assert "/elastic12_control.py --inner-run {case_name}" in source
+    assert "/energy10_control.py --inner-run {case_name}" not in source

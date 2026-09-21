@@ -459,7 +459,7 @@ def run_case(case_name: str) -> None:
         "export MOOSE_DIR=/opt/physics_vendor/moose; export CRANE_DIR=/opt/physics_vendor/crane; "
         "export SQUIRREL_DIR=/opt/physics_vendor/squirrel; export ZAPDOS_DIR=/opt/physics_vendor/zapdos; "
         "export METHOD=opt; export PYTHONPATH=/workspace; "
-        f"python3 /workspace/{ROOT.relative_to(REPO)}/energy10_control.py --inner-run {case_name}"
+        f"python3 /workspace/{ROOT.relative_to(REPO)}/elastic12_control.py --inner-run {case_name}"
     )
     _docker(script)
     result, code = analyze_case(case_name)
