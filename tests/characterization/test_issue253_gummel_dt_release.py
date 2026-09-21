@@ -5,7 +5,7 @@ import shutil
 import subprocess
 import sys
 
-from experiments.Issue253_g1_gummel_dt_release import analyze, chi2_control, extended_control, extreme08_control, final_control, ion_advance_control, parallel_control, prepare, relaxed_control
+from experiments.Issue253_g1_gummel_dt_release import analyze, chi2_control, energy09_control, extended_control, extreme08_control, final_control, ion_advance_control, parallel_control, prepare, relaxed_control
 
 
 def test_issue253_g1_case_matrix_preserves_single_model() -> None:
@@ -335,3 +335,30 @@ def test_issue253_g1_extreme08_equal_time_matrix() -> None:
 def test_issue253_g1_experiment_workflow_routes_sequence08_to_central_matrix() -> None:
     workflow = (extreme08_control.REPO / ".github" / "workflows" / "experiment.yml").read_text(encoding="utf-8")
     assert "inputs.sequence == '07' || inputs.sequence == '08'" in workflow
+
+
+def test_issue253_g2_energy09_wall_always_on_joule_elastic_matrix() -> None:
+    try:
+        summary = energy09_control.static_contract()
+        assert summary["status"] == "PASS"
+        assert summary["energy_wall_flux"] == "ALWAYS_ON"
+        assert summary["chi"] == 10.0
+        assert summary["total_time_tau_epsilon_initial"] == 1000.0
+        cases = {str(item["name"]): item for item in summary["cases"]}
+        assert set(cases) == {"wall_j0_e0", "wall_j1_e0", "wall_j0_e1", "wall_j1_e1"}
+        assert all(item["energy_wall_flux"] is True for item in cases.values())
+        assert cases["wall_j0_e0"]["joule_heating"] is False
+        assert cases["wall_j0_e0"]["elastic_collision"] is False
+        assert cases["wall_j1_e0"]["joule_heating"] is True
+        assert cases["wall_j1_e0"]["elastic_collision"] is False
+        assert cases["wall_j0_e1"]["joule_heating"] is False
+        assert cases["wall_j0_e1"]["elastic_collision"] is True
+        assert cases["wall_j1_e1"]["joule_heating"] is True
+        assert cases["wall_j1_e1"]["elastic_collision"] is True
+    finally:
+        shutil.rmtree(energy09_control.GENERATED, ignore_errors=True)
+
+
+def test_issue253_g2_sequence09_routes_to_central_matrix() -> None:
+    workflow = (energy09_control.REPO / ".github" / "workflows" / "experiment.yml").read_text(encoding="utf-8")
+    assert "inputs.sequence == '07' || inputs.sequence == '08' || inputs.sequence == '09'" in workflow

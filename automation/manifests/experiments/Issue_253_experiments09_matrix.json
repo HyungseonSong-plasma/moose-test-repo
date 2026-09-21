@@ -1,0 +1,108 @@
+{
+  "schema_version": 1,
+  "issue": 253,
+  "sequence": 9,
+  "title": "G2 wall-energy-always-on Joule x elastic 2x2 matrix",
+  "prepare_manifest": "automation/manifests/experiments/Issue_253_experiments09_prep.json",
+  "bundle_paths": [
+    "physics_app/physics-opt",
+    "physics_app/lib/libphysics-opt.so.0",
+    "physics_app/test/lib/libphysics_test-opt.so.0",
+    "experiments/Issue253_g1_gummel_dt_release/generated_energy09"
+  ],
+  "max_parallel": 4,
+  "cases": [
+    {
+      "id": "wall_j0_e0",
+      "name": "wall_j0_e0 energy feedback case",
+      "command": [
+        "python3",
+        "experiments/Issue253_g1_gummel_dt_release/energy09_control.py",
+        "--case",
+        "wall_j0_e0"
+      ],
+      "timeout_seconds": 3600,
+      "artifacts": [
+        "experiments/Issue253_g1_gummel_dt_release/results_energy09/wall_j0_e0_runtime.log",
+        "experiments/Issue253_g1_gummel_dt_release/results_energy09/wall_j0_e0_returncode.txt",
+        "experiments/Issue253_g1_gummel_dt_release/results_energy09/wall_j0_e0_elapsed_seconds.txt",
+        "experiments/Issue253_g1_gummel_dt_release/results_energy09/wall_j0_e0_result.json",
+        "experiments/Issue253_g1_gummel_dt_release/generated_energy09/wall_j0_e0/input_step_csv.csv",
+        "experiments/Issue253_g1_gummel_dt_release/generated_energy09/wall_j0_e0/input_final_csv*.csv",
+        "experiments/Issue253_g1_gummel_dt_release/generated_energy09/wall_j0_e0/input_final_exodus.e"
+      ]
+    },
+    {
+      "id": "wall_j1_e0",
+      "name": "wall_j1_e0 energy feedback case",
+      "command": [
+        "python3",
+        "experiments/Issue253_g1_gummel_dt_release/energy09_control.py",
+        "--case",
+        "wall_j1_e0"
+      ],
+      "timeout_seconds": 3600,
+      "artifacts": [
+        "experiments/Issue253_g1_gummel_dt_release/results_energy09/wall_j1_e0_runtime.log",
+        "experiments/Issue253_g1_gummel_dt_release/results_energy09/wall_j1_e0_returncode.txt",
+        "experiments/Issue253_g1_gummel_dt_release/results_energy09/wall_j1_e0_elapsed_seconds.txt",
+        "experiments/Issue253_g1_gummel_dt_release/results_energy09/wall_j1_e0_result.json",
+        "experiments/Issue253_g1_gummel_dt_release/generated_energy09/wall_j1_e0/input_step_csv.csv",
+        "experiments/Issue253_g1_gummel_dt_release/generated_energy09/wall_j1_e0/input_final_csv*.csv",
+        "experiments/Issue253_g1_gummel_dt_release/generated_energy09/wall_j1_e0/input_final_exodus.e"
+      ]
+    },
+    {
+      "id": "wall_j0_e1",
+      "name": "wall_j0_e1 energy feedback case",
+      "command": [
+        "python3",
+        "experiments/Issue253_g1_gummel_dt_release/energy09_control.py",
+        "--case",
+        "wall_j0_e1"
+      ],
+      "timeout_seconds": 3600,
+      "artifacts": [
+        "experiments/Issue253_g1_gummel_dt_release/results_energy09/wall_j0_e1_runtime.log",
+        "experiments/Issue253_g1_gummel_dt_release/results_energy09/wall_j0_e1_returncode.txt",
+        "experiments/Issue253_g1_gummel_dt_release/results_energy09/wall_j0_e1_elapsed_seconds.txt",
+        "experiments/Issue253_g1_gummel_dt_release/results_energy09/wall_j0_e1_result.json",
+        "experiments/Issue253_g1_gummel_dt_release/generated_energy09/wall_j0_e1/input_step_csv.csv",
+        "experiments/Issue253_g1_gummel_dt_release/generated_energy09/wall_j0_e1/input_final_csv*.csv",
+        "experiments/Issue253_g1_gummel_dt_release/generated_energy09/wall_j0_e1/input_final_exodus.e"
+      ]
+    },
+    {
+      "id": "wall_j1_e1",
+      "name": "wall_j1_e1 energy feedback case",
+      "command": [
+        "python3",
+        "experiments/Issue253_g1_gummel_dt_release/energy09_control.py",
+        "--case",
+        "wall_j1_e1"
+      ],
+      "timeout_seconds": 3600,
+      "artifacts": [
+        "experiments/Issue253_g1_gummel_dt_release/results_energy09/wall_j1_e1_runtime.log",
+        "experiments/Issue253_g1_gummel_dt_release/results_energy09/wall_j1_e1_returncode.txt",
+        "experiments/Issue253_g1_gummel_dt_release/results_energy09/wall_j1_e1_elapsed_seconds.txt",
+        "experiments/Issue253_g1_gummel_dt_release/results_energy09/wall_j1_e1_result.json",
+        "experiments/Issue253_g1_gummel_dt_release/generated_energy09/wall_j1_e1/input_step_csv.csv",
+        "experiments/Issue253_g1_gummel_dt_release/generated_energy09/wall_j1_e1/input_final_csv*.csv",
+        "experiments/Issue253_g1_gummel_dt_release/generated_energy09/wall_j1_e1/input_final_exodus.e"
+      ]
+    }
+  ],
+  "aggregate": {
+    "name": "Aggregate electron-energy Joule-elastic matrix",
+    "command": [
+      "python3",
+      "experiments/Issue253_g1_gummel_dt_release/energy09_control.py",
+      "--aggregate"
+    ],
+    "timeout_seconds": 300,
+    "artifacts": [
+      "experiments/Issue253_g1_gummel_dt_release/results_energy09/energy09_summary.json"
+    ]
+  }
+}

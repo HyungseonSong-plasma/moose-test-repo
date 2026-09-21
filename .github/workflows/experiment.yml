@@ -30,7 +30,7 @@ concurrency:
 
 jobs:
   execute:
-    if: inputs.sequence != '07' && inputs.sequence != '08'
+    if: inputs.sequence != '07' && inputs.sequence != '08' && inputs.sequence != '09'
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     env:
@@ -85,7 +85,7 @@ jobs:
 
 
   matrix-execute:
-    if: inputs.sequence == '07' || inputs.sequence == '08'
+    if: inputs.sequence == '07' || inputs.sequence == '08' || inputs.sequence == '09'
     uses: HyungseonSong-plasma/chatgpt-operation/.github/workflows/governed-matrix.yml@464e0fa0e60e904dba7b2dfc1c960f4337713309
     with:
       issue: ${{ inputs.issue }}
