@@ -5,7 +5,7 @@ import shutil
 import subprocess
 import sys
 
-from experiments.Issue253_g1_gummel_dt_release import analyze, chi2_control, energy09_control, extended_control, extreme08_control, final_control, ion_advance_control, parallel_control, prepare, relaxed_control
+from experiments.Issue253_g1_gummel_dt_release import analyze, chi2_control, energy09_control, energy10_control, extended_control, extreme08_control, final_control, ion_advance_control, parallel_control, prepare, relaxed_control
 
 
 def test_issue253_g1_case_matrix_preserves_single_model() -> None:
@@ -377,3 +377,36 @@ def test_issue253_g2_energy09_accepts_measured_nonlinear_floor() -> None:
         assert "nl_abs_tol = 2.0e-7" in text
     finally:
         shutil.rmtree(energy09_control.GENERATED, ignore_errors=True)
+
+
+def test_issue253_g2_energy10_equal_time_joule_chi_sweep() -> None:
+    try:
+        summary = energy10_control.static_contract()
+        assert summary["status"] == "PASS"
+        assert summary["total_time_tau_epsilon_initial"] == 100.0
+        assert summary["energy_equation"] == "ON"
+        assert summary["joule_heating"] == "ON"
+        assert summary["elastic_collision"] == "OFF"
+        cases = {str(item["name"]): item for item in summary["cases"]}
+        expected = {
+            "joule_chi1": (1.0, 100, 0.5),
+            "joule_chi10": (10.0, 10, 1.0 / 11.0),
+            "joule_chi100": (100.0, 1, 1.0 / 101.0),
+        }
+        for name, (chi, steps, omega) in expected.items():
+            item = cases[name]
+            assert item["chi"] == chi
+            assert item["steps"] == steps
+            assert item["joule_heating"] is True
+            assert item["elastic_collision"] is False
+            assert math.isclose(item["relaxation_factor"], omega, rel_tol=1e-14)
+            assert math.isclose(
+                item["dt_s"] * item["steps"], item["end_time_s"], rel_tol=1e-14
+            )
+    finally:
+        shutil.rmtree(energy10_control.GENERATED, ignore_errors=True)
+
+
+def test_issue253_g2_sequence10_routes_to_central_matrix() -> None:
+    workflow = (energy10_control.REPO / ".github" / "workflows" / "experiment.yml").read_text(encoding="utf-8")
+    assert "inputs.sequence == '07' || inputs.sequence == '08' || inputs.sequence == '09' || inputs.sequence == '10'" in workflow

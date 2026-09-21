@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "issue": 253,
+  "sequence": 10,
+  "title": "G2 solved-energy + Joule equal-time chi=1/10/100 sweep",
+  "prepare_manifest": "automation/manifests/experiments/Issue_253_experiments10_prep.json",
+  "bundle_paths": [
+    "physics_app/physics-opt",
+    "physics_app/lib/libphysics-opt.so.0",
+    "physics_app/test/lib/libphysics_test-opt.so.0",
+    "experiments/Issue253_g1_gummel_dt_release/generated_energy10"
+  ],
+  "max_parallel": 3,
+  "cases": [
+    {
+      "id": "joule_chi1",
+      "name": "joule_chi1 solved-energy Joule case",
+      "command": [
+        "python3",
+        "experiments/Issue253_g1_gummel_dt_release/energy10_control.py",
+        "--case",
+        "joule_chi1"
+      ],
+      "timeout_seconds": 3600,
+      "artifacts": [
+        "experiments/Issue253_g1_gummel_dt_release/results_energy10/joule_chi1_runtime.log",
+        "experiments/Issue253_g1_gummel_dt_release/results_energy10/joule_chi1_returncode.txt",
+        "experiments/Issue253_g1_gummel_dt_release/results_energy10/joule_chi1_elapsed_seconds.txt",
+        "experiments/Issue253_g1_gummel_dt_release/results_energy10/joule_chi1_result.json",
+        "experiments/Issue253_g1_gummel_dt_release/generated_energy10/joule_chi1/input_step_csv.csv",
+        "experiments/Issue253_g1_gummel_dt_release/generated_energy10/joule_chi1/input_final_csv*.csv",
+        "experiments/Issue253_g1_gummel_dt_release/generated_energy10/joule_chi1/input_final_exodus.e"
+      ]
+    },
+    {
+      "id": "joule_chi10",
+      "name": "joule_chi10 solved-energy Joule case",
+      "command": [
+        "python3",
+        "experiments/Issue253_g1_gummel_dt_release/energy10_control.py",
+        "--case",
+        "joule_chi10"
+      ],
+      "timeout_seconds": 3600,
+      "artifacts": [
+        "experiments/Issue253_g1_gummel_dt_release/results_energy10/joule_chi10_runtime.log",
+        "experiments/Issue253_g1_gummel_dt_release/results_energy10/joule_chi10_returncode.txt",
+        "experiments/Issue253_g1_gummel_dt_release/results_energy10/joule_chi10_elapsed_seconds.txt",
+        "experiments/Issue253_g1_gummel_dt_release/results_energy10/joule_chi10_result.json",
+        "experiments/Issue253_g1_gummel_dt_release/generated_energy10/joule_chi10/input_step_csv.csv",
+        "experiments/Issue253_g1_gummel_dt_release/generated_energy10/joule_chi10/input_final_csv*.csv",
+        "experiments/Issue253_g1_gummel_dt_release/generated_energy10/joule_chi10/input_final_exodus.e"
+      ]
+    },
+    {
+      "id": "joule_chi100",
+      "name": "joule_chi100 solved-energy Joule case",
+      "command": [
+        "python3",
+        "experiments/Issue253_g1_gummel_dt_release/energy10_control.py",
+        "--case",
+        "joule_chi100"
+      ],
+      "timeout_seconds": 3600,
+      "artifacts": [
+        "experiments/Issue253_g1_gummel_dt_release/results_energy10/joule_chi100_runtime.log",
+        "experiments/Issue253_g1_gummel_dt_release/results_energy10/joule_chi100_returncode.txt",
+        "experiments/Issue253_g1_gummel_dt_release/results_energy10/joule_chi100_elapsed_seconds.txt",
+        "experiments/Issue253_g1_gummel_dt_release/results_energy10/joule_chi100_result.json",
+        "experiments/Issue253_g1_gummel_dt_release/generated_energy10/joule_chi100/input_step_csv.csv",
+        "experiments/Issue253_g1_gummel_dt_release/generated_energy10/joule_chi100/input_final_csv*.csv",
+        "experiments/Issue253_g1_gummel_dt_release/generated_energy10/joule_chi100/input_final_exodus.e"
+      ]
+    }
+  ],
+  "aggregate": {
+    "name": "Aggregate solved-energy Joule chi sweep",
+    "command": [
+      "python3",
+      "experiments/Issue253_g1_gummel_dt_release/energy10_control.py",
+      "--aggregate"
+    ],
+    "timeout_seconds": 300,
+    "artifacts": [
+      "experiments/Issue253_g1_gummel_dt_release/results_energy10/energy10_summary.json"
+    ]
+  }
+}

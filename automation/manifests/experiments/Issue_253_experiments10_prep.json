@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "issue": 253,
+  "kind": "experiments",
+  "sequence": 10,
+  "title": "G2 solved-energy Joule chi sweep prepare",
+  "stages": [
+    {
+      "id": "P0",
+      "name": "Validate energy+Joule chi=1/10/100 equal-time contract",
+      "command": [
+        "python3",
+        "experiments/Issue253_g1_gummel_dt_release/energy10_control.py",
+        "--phase",
+        "p0"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "id": "P1",
+      "name": "Preflight solved-energy Joule chi sweep",
+      "command": [
+        "python3",
+        "experiments/Issue253_g1_gummel_dt_release/energy10_control.py",
+        "--phase",
+        "p1"
+      ],
+      "timeout_seconds": 900
+    },
+    {
+      "id": "P2",
+      "name": "Build Physics once and check chi sweep inputs",
+      "command": [
+        "python3",
+        "experiments/Issue253_g1_gummel_dt_release/energy10_control.py",
+        "--phase",
+        "p2"
+      ],
+      "timeout_seconds": 3600
+    }
+  ],
+  "artifacts": [
+    "experiments/Issue253_g1_gummel_dt_release/generated_energy10/**/*.i",
+    "experiments/Issue253_g1_gummel_dt_release/generated_energy10/**/*.json",
+    "experiments/Issue253_g1_gummel_dt_release/generated_energy10/**/*.txt",
+    "experiments/Issue253_g1_gummel_dt_release/results_energy10/*_p2.log"
+  ]
+}
