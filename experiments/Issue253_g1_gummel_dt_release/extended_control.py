@@ -566,7 +566,7 @@ def p2() -> None:
             "> /workspace/experiments/Issue253_g1_gummel_dt_release/"
             f"results_extreme/{name}_p2.log 2>&1"
         )
-        for name in ("ref_chi0p1", "relaxed_chi10", "relaxed_chi100")
+        for name in ("ref_chi0p1", "relaxed_chi1000", "relaxed_chi10000")
     )
     script = (
         "set -euo pipefail; "
@@ -603,7 +603,7 @@ def p3() -> None:
                 "python3 /workspace/experiments/Issue253_g1_gummel_dt_release/"
                 f"extended_control.py --inner-run {name}"
             )
-            for name in ("ref_chi0p1", "relaxed_chi10", "relaxed_chi100")
+            for name in ("ref_chi0p1", "relaxed_chi1000", "relaxed_chi10000")
         )
     )
     _docker(script)
@@ -621,7 +621,7 @@ def p3() -> None:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--phase", choices=("p0", "p1", "p2", "p3"))
-    parser.add_argument("--inner-run", choices=("ref_chi0p1", "relaxed_chi10", "relaxed_chi100"))
+    parser.add_argument("--inner-run", choices=("ref_chi0p1", "relaxed_chi1000", "relaxed_chi10000"))
     args = parser.parse_args()
     if args.inner_run:
         return inner_run(args.inner_run)
