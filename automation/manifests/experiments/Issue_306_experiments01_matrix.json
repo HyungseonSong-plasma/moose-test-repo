@@ -1,0 +1,160 @@
+{
+  "schema_version": 1,
+  "issue": 306,
+  "sequence": 1,
+  "title": "Heavy charge motion: frozen vs released, chi_h=40 x 2 cycles, chi_e=1/10/20",
+  "prepare_manifest": "automation/manifests/experiments/Issue_306_experiments01_prep.json",
+  "bundle_paths": [
+    "physics_app/physics-opt",
+    "physics_app/lib/libphysics-opt.so.0",
+    "physics_app/test/lib/libphysics_test-opt.so.0",
+    "experiments/Issue306_heavy_charge_motion/generated"
+  ],
+  "max_parallel": 3,
+  "cases": [
+    {
+      "id": "frozen_chi1",
+      "name": "frozen_chi1 heavy-charge motion discriminator",
+      "command": [
+        "python3",
+        "experiments/Issue306_heavy_charge_motion/control.py",
+        "--case",
+        "frozen_chi1"
+      ],
+      "timeout_seconds": 7200,
+      "artifacts": [
+        "experiments/Issue306_heavy_charge_motion/results/frozen_chi1_runtime.log",
+        "experiments/Issue306_heavy_charge_motion/results/frozen_chi1_returncode.txt",
+        "experiments/Issue306_heavy_charge_motion/results/frozen_chi1_elapsed_seconds.txt",
+        "experiments/Issue306_heavy_charge_motion/results/frozen_chi1_result.json",
+        "experiments/Issue306_heavy_charge_motion/generated/frozen_chi1/input_step_csv.csv",
+        "experiments/Issue306_heavy_charge_motion/generated/frozen_chi1/input_final_csv*.csv",
+        "experiments/Issue306_heavy_charge_motion/generated/frozen_chi1/input_final_exodus.e",
+        "experiments/Issue306_heavy_charge_motion/generated/frozen_chi1/fast_sub_step_csv.csv",
+        "experiments/Issue306_heavy_charge_motion/generated/frozen_chi1/fast_sub_final_csv*.csv"
+      ]
+    },
+    {
+      "id": "frozen_chi10",
+      "name": "frozen_chi10 heavy-charge motion discriminator",
+      "command": [
+        "python3",
+        "experiments/Issue306_heavy_charge_motion/control.py",
+        "--case",
+        "frozen_chi10"
+      ],
+      "timeout_seconds": 7200,
+      "artifacts": [
+        "experiments/Issue306_heavy_charge_motion/results/frozen_chi10_runtime.log",
+        "experiments/Issue306_heavy_charge_motion/results/frozen_chi10_returncode.txt",
+        "experiments/Issue306_heavy_charge_motion/results/frozen_chi10_elapsed_seconds.txt",
+        "experiments/Issue306_heavy_charge_motion/results/frozen_chi10_result.json",
+        "experiments/Issue306_heavy_charge_motion/generated/frozen_chi10/input_step_csv.csv",
+        "experiments/Issue306_heavy_charge_motion/generated/frozen_chi10/input_final_csv*.csv",
+        "experiments/Issue306_heavy_charge_motion/generated/frozen_chi10/input_final_exodus.e",
+        "experiments/Issue306_heavy_charge_motion/generated/frozen_chi10/fast_sub_step_csv.csv",
+        "experiments/Issue306_heavy_charge_motion/generated/frozen_chi10/fast_sub_final_csv*.csv"
+      ]
+    },
+    {
+      "id": "frozen_chi20",
+      "name": "frozen_chi20 heavy-charge motion discriminator",
+      "command": [
+        "python3",
+        "experiments/Issue306_heavy_charge_motion/control.py",
+        "--case",
+        "frozen_chi20"
+      ],
+      "timeout_seconds": 7200,
+      "artifacts": [
+        "experiments/Issue306_heavy_charge_motion/results/frozen_chi20_runtime.log",
+        "experiments/Issue306_heavy_charge_motion/results/frozen_chi20_returncode.txt",
+        "experiments/Issue306_heavy_charge_motion/results/frozen_chi20_elapsed_seconds.txt",
+        "experiments/Issue306_heavy_charge_motion/results/frozen_chi20_result.json",
+        "experiments/Issue306_heavy_charge_motion/generated/frozen_chi20/input_step_csv.csv",
+        "experiments/Issue306_heavy_charge_motion/generated/frozen_chi20/input_final_csv*.csv",
+        "experiments/Issue306_heavy_charge_motion/generated/frozen_chi20/input_final_exodus.e",
+        "experiments/Issue306_heavy_charge_motion/generated/frozen_chi20/fast_sub_step_csv.csv",
+        "experiments/Issue306_heavy_charge_motion/generated/frozen_chi20/fast_sub_final_csv*.csv"
+      ]
+    },
+    {
+      "id": "released_chi1",
+      "name": "released_chi1 heavy-charge motion discriminator",
+      "command": [
+        "python3",
+        "experiments/Issue306_heavy_charge_motion/control.py",
+        "--case",
+        "released_chi1"
+      ],
+      "timeout_seconds": 7200,
+      "artifacts": [
+        "experiments/Issue306_heavy_charge_motion/results/released_chi1_runtime.log",
+        "experiments/Issue306_heavy_charge_motion/results/released_chi1_returncode.txt",
+        "experiments/Issue306_heavy_charge_motion/results/released_chi1_elapsed_seconds.txt",
+        "experiments/Issue306_heavy_charge_motion/results/released_chi1_result.json",
+        "experiments/Issue306_heavy_charge_motion/generated/released_chi1/input_step_csv.csv",
+        "experiments/Issue306_heavy_charge_motion/generated/released_chi1/input_final_csv*.csv",
+        "experiments/Issue306_heavy_charge_motion/generated/released_chi1/input_final_exodus.e",
+        "experiments/Issue306_heavy_charge_motion/generated/released_chi1/fast_sub_step_csv.csv",
+        "experiments/Issue306_heavy_charge_motion/generated/released_chi1/fast_sub_final_csv*.csv"
+      ]
+    },
+    {
+      "id": "released_chi10",
+      "name": "released_chi10 heavy-charge motion discriminator",
+      "command": [
+        "python3",
+        "experiments/Issue306_heavy_charge_motion/control.py",
+        "--case",
+        "released_chi10"
+      ],
+      "timeout_seconds": 7200,
+      "artifacts": [
+        "experiments/Issue306_heavy_charge_motion/results/released_chi10_runtime.log",
+        "experiments/Issue306_heavy_charge_motion/results/released_chi10_returncode.txt",
+        "experiments/Issue306_heavy_charge_motion/results/released_chi10_elapsed_seconds.txt",
+        "experiments/Issue306_heavy_charge_motion/results/released_chi10_result.json",
+        "experiments/Issue306_heavy_charge_motion/generated/released_chi10/input_step_csv.csv",
+        "experiments/Issue306_heavy_charge_motion/generated/released_chi10/input_final_csv*.csv",
+        "experiments/Issue306_heavy_charge_motion/generated/released_chi10/input_final_exodus.e",
+        "experiments/Issue306_heavy_charge_motion/generated/released_chi10/fast_sub_step_csv.csv",
+        "experiments/Issue306_heavy_charge_motion/generated/released_chi10/fast_sub_final_csv*.csv"
+      ]
+    },
+    {
+      "id": "released_chi20",
+      "name": "released_chi20 heavy-charge motion discriminator",
+      "command": [
+        "python3",
+        "experiments/Issue306_heavy_charge_motion/control.py",
+        "--case",
+        "released_chi20"
+      ],
+      "timeout_seconds": 7200,
+      "artifacts": [
+        "experiments/Issue306_heavy_charge_motion/results/released_chi20_runtime.log",
+        "experiments/Issue306_heavy_charge_motion/results/released_chi20_returncode.txt",
+        "experiments/Issue306_heavy_charge_motion/results/released_chi20_elapsed_seconds.txt",
+        "experiments/Issue306_heavy_charge_motion/results/released_chi20_result.json",
+        "experiments/Issue306_heavy_charge_motion/generated/released_chi20/input_step_csv.csv",
+        "experiments/Issue306_heavy_charge_motion/generated/released_chi20/input_final_csv*.csv",
+        "experiments/Issue306_heavy_charge_motion/generated/released_chi20/input_final_exodus.e",
+        "experiments/Issue306_heavy_charge_motion/generated/released_chi20/fast_sub_step_csv.csv",
+        "experiments/Issue306_heavy_charge_motion/generated/released_chi20/fast_sub_final_csv*.csv"
+      ]
+    }
+  ],
+  "aggregate": {
+    "name": "Aggregate heavy frozen/released offset-collapse evidence",
+    "command": [
+      "python3",
+      "experiments/Issue306_heavy_charge_motion/control.py",
+      "--aggregate"
+    ],
+    "timeout_seconds": 300,
+    "artifacts": [
+      "experiments/Issue306_heavy_charge_motion/results/issue306_summary.json"
+    ]
+  }
+}
