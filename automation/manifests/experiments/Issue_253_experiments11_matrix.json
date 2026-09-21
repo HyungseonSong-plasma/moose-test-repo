@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "issue": 253,
+  "sequence": 11,
+  "title": "G2 fixed chi=100, total-time 1chi/10chi/100chi horizon sweep",
+  "prepare_manifest": "automation/manifests/experiments/Issue_253_experiments11_prep.json",
+  "bundle_paths": [
+    "physics_app/physics-opt",
+    "physics_app/lib/libphysics-opt.so.0",
+    "physics_app/test/lib/libphysics_test-opt.so.0",
+    "experiments/Issue253_g1_gummel_dt_release/generated_horizon11"
+  ],
+  "max_parallel": 3,
+  "cases": [
+    {
+      "id": "chi100_horizon_1chi",
+      "name": "chi100_horizon_1chi fixed-chi horizon case",
+      "command": [
+        "python3",
+        "experiments/Issue253_g1_gummel_dt_release/horizon11_control.py",
+        "--case",
+        "chi100_horizon_1chi"
+      ],
+      "timeout_seconds": 7200,
+      "artifacts": [
+        "experiments/Issue253_g1_gummel_dt_release/results_horizon11/chi100_horizon_1chi_runtime.log",
+        "experiments/Issue253_g1_gummel_dt_release/results_horizon11/chi100_horizon_1chi_returncode.txt",
+        "experiments/Issue253_g1_gummel_dt_release/results_horizon11/chi100_horizon_1chi_elapsed_seconds.txt",
+        "experiments/Issue253_g1_gummel_dt_release/results_horizon11/chi100_horizon_1chi_result.json",
+        "experiments/Issue253_g1_gummel_dt_release/generated_horizon11/chi100_horizon_1chi/input_step_csv.csv",
+        "experiments/Issue253_g1_gummel_dt_release/generated_horizon11/chi100_horizon_1chi/input_final_csv*.csv",
+        "experiments/Issue253_g1_gummel_dt_release/generated_horizon11/chi100_horizon_1chi/input_final_exodus.e"
+      ]
+    },
+    {
+      "id": "chi100_horizon_10chi",
+      "name": "chi100_horizon_10chi fixed-chi horizon case",
+      "command": [
+        "python3",
+        "experiments/Issue253_g1_gummel_dt_release/horizon11_control.py",
+        "--case",
+        "chi100_horizon_10chi"
+      ],
+      "timeout_seconds": 7200,
+      "artifacts": [
+        "experiments/Issue253_g1_gummel_dt_release/results_horizon11/chi100_horizon_10chi_runtime.log",
+        "experiments/Issue253_g1_gummel_dt_release/results_horizon11/chi100_horizon_10chi_returncode.txt",
+        "experiments/Issue253_g1_gummel_dt_release/results_horizon11/chi100_horizon_10chi_elapsed_seconds.txt",
+        "experiments/Issue253_g1_gummel_dt_release/results_horizon11/chi100_horizon_10chi_result.json",
+        "experiments/Issue253_g1_gummel_dt_release/generated_horizon11/chi100_horizon_10chi/input_step_csv.csv",
+        "experiments/Issue253_g1_gummel_dt_release/generated_horizon11/chi100_horizon_10chi/input_final_csv*.csv",
+        "experiments/Issue253_g1_gummel_dt_release/generated_horizon11/chi100_horizon_10chi/input_final_exodus.e"
+      ]
+    },
+    {
+      "id": "chi100_horizon_100chi",
+      "name": "chi100_horizon_100chi fixed-chi horizon case",
+      "command": [
+        "python3",
+        "experiments/Issue253_g1_gummel_dt_release/horizon11_control.py",
+        "--case",
+        "chi100_horizon_100chi"
+      ],
+      "timeout_seconds": 7200,
+      "artifacts": [
+        "experiments/Issue253_g1_gummel_dt_release/results_horizon11/chi100_horizon_100chi_runtime.log",
+        "experiments/Issue253_g1_gummel_dt_release/results_horizon11/chi100_horizon_100chi_returncode.txt",
+        "experiments/Issue253_g1_gummel_dt_release/results_horizon11/chi100_horizon_100chi_elapsed_seconds.txt",
+        "experiments/Issue253_g1_gummel_dt_release/results_horizon11/chi100_horizon_100chi_result.json",
+        "experiments/Issue253_g1_gummel_dt_release/generated_horizon11/chi100_horizon_100chi/input_step_csv.csv",
+        "experiments/Issue253_g1_gummel_dt_release/generated_horizon11/chi100_horizon_100chi/input_final_csv*.csv",
+        "experiments/Issue253_g1_gummel_dt_release/generated_horizon11/chi100_horizon_100chi/input_final_exodus.e"
+      ]
+    }
+  ],
+  "aggregate": {
+    "name": "Aggregate chi=100 horizon evolution",
+    "command": [
+      "python3",
+      "experiments/Issue253_g1_gummel_dt_release/horizon11_control.py",
+      "--aggregate"
+    ],
+    "timeout_seconds": 300,
+    "artifacts": [
+      "experiments/Issue253_g1_gummel_dt_release/results_horizon11/horizon11_summary.json"
+    ]
+  }
+}

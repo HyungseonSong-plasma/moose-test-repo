@@ -5,7 +5,7 @@ import shutil
 import subprocess
 import sys
 
-from experiments.Issue253_g1_gummel_dt_release import analyze, chi2_control, energy09_control, energy10_control, extended_control, extreme08_control, final_control, ion_advance_control, parallel_control, prepare, relaxed_control
+from experiments.Issue253_g1_gummel_dt_release import analyze, chi2_control, energy09_control, energy10_control, horizon11_control, extended_control, extreme08_control, final_control, ion_advance_control, parallel_control, prepare, relaxed_control
 
 
 def test_issue253_g1_case_matrix_preserves_single_model() -> None:
@@ -433,3 +433,37 @@ def test_issue253_g2_energy10_uses_dt_robust_automatic_scaling() -> None:
             assert "nl_abs_tol = 1.0e-13" in text
     finally:
         shutil.rmtree(energy10_control.GENERATED, ignore_errors=True)
+
+
+def test_issue253_g2_horizon11_fixed_chi100_time_horizons() -> None:
+    try:
+        summary = horizon11_control.static_contract()
+        assert summary["status"] == "PASS"
+        assert summary["fixed_chi"] == 100.0
+        assert summary["horizons_chi"] == [1.0, 10.0, 100.0]
+        assert summary["horizons_tau_epsilon_initial"] == [100.0, 1000.0, 10000.0]
+        assert summary["energy_equation"] == "ON"
+        assert summary["joule_heating"] == "ON"
+        assert summary["elastic_collision"] == "OFF"
+        cases = {str(item["name"]): item for item in summary["cases"]}
+        expected = {
+            "chi100_horizon_1chi": (1.0, 1),
+            "chi100_horizon_10chi": (10.0, 10),
+            "chi100_horizon_100chi": (100.0, 100),
+        }
+        for name, (horizon_chi, steps) in expected.items():
+            item = cases[name]
+            assert item["chi"] == 100.0
+            assert item["horizon_chi"] == horizon_chi
+            assert item["steps"] == steps
+            assert item["fp_max"] == 3000
+            assert math.isclose(item["dt_s"], summary["fixed_dt_s"], rel_tol=1e-14)
+            assert math.isclose(item["end_time_s"] / item["dt_s"], horizon_chi, rel_tol=1e-14)
+            assert math.isclose(item["relaxation_factor"], 1.0 / 101.0, rel_tol=1e-14)
+    finally:
+        shutil.rmtree(horizon11_control.GENERATED, ignore_errors=True)
+
+
+def test_issue253_g2_sequence11_routes_to_central_matrix() -> None:
+    workflow = (horizon11_control.REPO / ".github" / "workflows" / "experiment.yml").read_text(encoding="utf-8")
+    assert "inputs.sequence == '07' || inputs.sequence == '08' || inputs.sequence == '09' || inputs.sequence == '10' || inputs.sequence == '11'" in workflow
