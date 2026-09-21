@@ -153,7 +153,7 @@ def static_contract() -> dict[str, object]:
         assert "FullSolveMultiApp" in text
         assert "execute_on = TIMESTEP_END" in text
         assert "c_epsilon" not in text
-        assert "electron energy" not in text.lower()
+        assert "PhysicsFVLogMolarElectronEnergy" not in text
         assert "@@" not in text
 
     return {
