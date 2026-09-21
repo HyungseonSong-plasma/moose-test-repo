@@ -86,10 +86,10 @@ jobs:
 
   matrix-execute:
     if: inputs.sequence == '07'
-    uses: HyungseonSong-plasma/chatgpt-operation/.github/workflows/governed-matrix.yml@c8620843fb0044b004f343c796197b4b41df1b88
+    uses: HyungseonSong-plasma/chatgpt-operation/.github/workflows/governed-matrix.yml@464e0fa0e60e904dba7b2dfc1c960f4337713309
     with:
       issue: ${{ inputs.issue }}
       sequence: ${{ inputs.sequence }}
       manifest: ${{ inputs.manifest }}
       base_sha: ${{ inputs.base_sha }}
-      operation_sha: c8620843fb0044b004f343c796197b4b41df1b88
+      operation_sha: 464e0fa0e60e904dba7b2dfc1c960f4337713309

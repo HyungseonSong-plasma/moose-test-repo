@@ -298,7 +298,7 @@ def test_issue253_g1_parallel_control_runs_standalone_p0() -> None:
 
 def test_issue253_g1_parallel_matrix_is_central_workflow_owned() -> None:
     workflow = (parallel_control.REPO / ".github" / "workflows" / "experiment.yml").read_text(encoding="utf-8")
-    assert "governed-matrix.yml@c8620843fb0044b004f343c796197b4b41df1b88" in workflow
+    assert "governed-matrix.yml@464e0fa0e60e904dba7b2dfc1c960f4337713309" in workflow
     assert "parallel-prepare:" not in workflow
     assert "parallel-run:" not in workflow
     assert "parallel-aggregate:" not in workflow
