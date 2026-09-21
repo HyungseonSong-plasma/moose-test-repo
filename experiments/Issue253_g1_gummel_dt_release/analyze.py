@@ -11,8 +11,9 @@ ROOT = Path(__file__).resolve().parent
 GENERATED = ROOT / "generated"
 RESULTS = ROOT / "results"
 
-REFERENCE_FAMILY_PHI_EINF = 0.10
+REFERENCE_FAMILY_EINF = 0.10
 MATERIAL_IMPROVEMENT_FACTOR = 0.75
+PRIMARY_ERROR_METRICS = ("phi_einf", "ne_einf", "e_einf")
 
 
 def _rows(path: Path) -> list[dict[str, str]]:
@@ -119,6 +120,30 @@ def _profile_metrics(
     }
 
 
+def classify_result(
+    one_metrics: dict[str, float],
+    gum_metrics: dict[str, float],
+    *,
+    fixed_point_iterations: float,
+) -> tuple[str, bool, dict[str, float]]:
+    if one_metrics["phi_einf"] < 1.0:
+        return "BASELINE_NOT_REPRODUCED", False, {}
+    if fixed_point_iterations <= 1.0:
+        return "GUMMEL_NOT_EXERCISED", False, {}
+
+    ratios = {
+        key: gum_metrics[key] / max(one_metrics[key], 1.0e-30)
+        for key in PRIMARY_ERROR_METRICS
+    }
+    if all(gum_metrics[key] <= REFERENCE_FAMILY_EINF for key in PRIMARY_ERROR_METRICS):
+        return "DT_RELEASE_SUPPORTED", True, ratios
+    if all(ratios[key] <= MATERIAL_IMPROVEMENT_FACTOR for key in PRIMARY_ERROR_METRICS):
+        return "PARTIAL_RELEASE", True, ratios
+    if any(ratios[key] <= MATERIAL_IMPROVEMENT_FACTOR for key in PRIMARY_ERROR_METRICS):
+        return "MIXED_RESPONSE", True, ratios
+    return "NO_MATERIAL_BENEFIT", True, ratios
+
+
 def main() -> int:
     ref_dir = GENERATED / "ref_chi0p1"
     one_dir = GENERATED / "onepass_chi5"
@@ -136,33 +161,24 @@ def main() -> int:
         "gummel_chi5": _final_scalar(gum_dir),
     }
 
-    if one_metrics["phi_einf"] < 1.0:
-        classification = "BASELINE_NOT_REPRODUCED"
-        valid = False
-    elif scalar["gummel_chi5"].get("fixed_point_iterations", 0.0) <= 1.0:
-        classification = "GUMMEL_NOT_EXERCISED"
-        valid = False
-    elif (
-        gum_metrics["phi_einf"] <= REFERENCE_FAMILY_PHI_EINF
-        and gum_metrics["ne_einf"] <= REFERENCE_FAMILY_PHI_EINF
-    ):
-        classification = "DT_RELEASE_SUPPORTED"
-        valid = True
-    elif gum_metrics["phi_einf"] <= MATERIAL_IMPROVEMENT_FACTOR * one_metrics["phi_einf"]:
-        classification = "PARTIAL_RELEASE"
-        valid = True
-    else:
-        classification = "NO_MATERIAL_BENEFIT"
-        valid = True
+    classification, valid, improvement_ratios = classify_result(
+        one_metrics,
+        gum_metrics,
+        fixed_point_iterations=scalar["gummel_chi5"].get(
+            "fixed_point_iterations", 0.0
+        ),
+    )
 
     summary = {
         "issue": 253,
         "comparison": "chi=5 Gummel vs chi=5 one-pass against chi=0.1 reference",
         "equal_physical_time": True,
         "thresholds": {
-            "reference_family_phi_einf": REFERENCE_FAMILY_PHI_EINF,
-            "material_improvement_factor": MATERIAL_IMPROVEMENT_FACTOR,
+            "reference_family_einf_all_primary_profiles": REFERENCE_FAMILY_EINF,
+            "material_improvement_factor_all_primary_profiles": MATERIAL_IMPROVEMENT_FACTOR,
         },
+        "primary_error_metrics": list(PRIMARY_ERROR_METRICS),
+        "improvement_ratios_gummel_over_onepass": improvement_ratios,
         "onepass_chi5": one_metrics,
         "gummel_chi5": gum_metrics,
         "scalars": scalar,
