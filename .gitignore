@@ -1,0 +1,19 @@
+# Generated test results
+results/
+**/*_out.csv
+**/*_out.e
+**/*.log
+**/out/
+
+# Python
+__pycache__/
+*.pyc
+
+# Local executable/build products
+bin/qpx-dbg
+bin/qpx-devel
+
+# OS/editor
+.DS_Store
+.vscode/
+.idea/

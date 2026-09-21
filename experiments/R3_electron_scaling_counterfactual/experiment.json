@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "experiment_id": "r3-electron-scaling-counterfactual",
+  "protocol": "r3-electron-scaling-counterfactual",
+  "execution": {
+    "timeout_seconds": 120.0
+  },
+  "outputs": {
+    "provenance": true
+  }
+}

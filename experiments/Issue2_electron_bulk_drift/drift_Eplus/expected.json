@@ -1,0 +1,11 @@
+{
+  "mode": "drift",
+  "field_sign": 1,
+  "p": 101325.0,
+  "T": 600.0,
+  "mean_energy": 5.73276,
+  "muN": 1.57e+24,
+  "DN": 6.64e+24,
+  "n0": 1e+16,
+  "inventory_rel_tol": 1e-08
+}

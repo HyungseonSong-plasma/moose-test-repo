@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "experiment_id": "issue27-a8-finite-see-particle-energy-ledger",
+  "protocol": "issue27-surface-reaction-controlled-wall",
+  "execution": {
+    "timeout_seconds": 240.0
+  },
+  "parameters": {
+    "wall_model": "finite_see_control",
+    "wall_scope": "all_plasma_walls",
+    "electron_wall_migration": false,
+    "electron_energy_equation_coupled": false,
+    "O2p_secondary_emission_coefficient": 0.05,
+    "Op_secondary_emission_coefficient": 0.05,
+    "secondary_electron_mean_energy_eV": 4.0,
+    "O_sticking_coefficient": 0.2,
+    "O2s_sticking_coefficient": 1.0,
+    "Os_sticking_coefficient": 0.2,
+    "O2p_sticking_coefficient": 1.0,
+    "Om_sticking_coefficient": 1.0,
+    "Op_sticking_coefficient": 1.0
+  },
+  "outputs": {
+    "accepted_a7_thermal_electron_wall_loss": true,
+    "accepted_a6_heavy_wall_and_ion_migration": true,
+    "finite_see_particle_source": true,
+    "O2p_secondary_emission_coefficient": 0.05,
+    "Op_secondary_emission_coefficient": 0.05,
+    "secondary_electron_mean_energy_eV": 4.0,
+    "see_particle_inventory_closure": true,
+    "see_charge_gauss_closure": true,
+    "see_energy_flux_ledger": true,
+    "solved_electron_energy_state": false
+  }
+}

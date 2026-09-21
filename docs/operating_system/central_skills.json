@@ -1,0 +1,73 @@
+{
+  "schema_version": 2,
+  "source_repository": "HyungseonSong-plasma/chatgpt-operation",
+  "operating_system": {
+    "revision": "908d5b695b4640727b3c45d8044763c5fcca1d08",
+    "expected_version": "Paul",
+    "index": {
+      "path": "docs/operating_system/README.md",
+      "expected_blob_sha": "c5158404c680ad8393e1b88bdeb1a0a8e6145e62"
+    },
+    "essential_rules": {
+      "path": "docs/operating_system/ESSENTIAL_RULES.md",
+      "expected_blob_sha": "adfad6c7acc7b371b5aa840c6fb830ca696e60ac"
+    }
+  },
+  "skills": [
+    {
+      "name": "session-bootstrap",
+      "load_on": [
+        "INIT"
+      ],
+      "revision": "908d5b695b4640727b3c45d8044763c5fcca1d08",
+      "path": "skills/session-bootstrap/README.md",
+      "expected_blob_sha": "03d661d354dfba09033f184ddf11b9eb9e7e8404"
+    },
+    {
+      "name": "state-refresh",
+      "load_on": [
+        "INIT",
+        "SCHEDULED_CONTROLLER"
+      ],
+      "revision": "908d5b695b4640727b3c45d8044763c5fcca1d08",
+      "path": "skills/state-refresh/README.md",
+      "expected_blob_sha": "4efe6135b93456f2cc9da31786967f5f6ac80033"
+    },
+    {
+      "name": "repository-mutation",
+      "load_on": [
+        "MUTATE"
+      ],
+      "revision": "908d5b695b4640727b3c45d8044763c5fcca1d08",
+      "path": "skills/repository-mutation/README.md",
+      "expected_blob_sha": "0229c6b7a440a9a624a0b773c62f536ca67a29b6"
+    },
+    {
+      "name": "governed-work",
+      "load_on": [
+        "GOVERNED_WORK"
+      ],
+      "revision": "908d5b695b4640727b3c45d8044763c5fcca1d08",
+      "path": "skills/governed-work/README.md",
+      "expected_blob_sha": "5ba4d1be80a4c3019fd9c21fe017468b87315a71"
+    },
+    {
+      "name": "controller-throughput",
+      "load_on": [
+        "SCHEDULED_CONTROLLER"
+      ],
+      "revision": "908d5b695b4640727b3c45d8044763c5fcca1d08",
+      "path": "skills/controller-throughput/README.md",
+      "expected_blob_sha": "5bc67c38f224c9c02a84f676b69c0908e1df96bb"
+    },
+    {
+      "name": "controller-lifecycle",
+      "load_on": [
+        "SCHEDULED_CONTROLLER"
+      ],
+      "revision": "908d5b695b4640727b3c45d8044763c5fcca1d08",
+      "path": "skills/controller-lifecycle/README.md",
+      "expected_blob_sha": "28f512d80d380ecd415bb4d8d60be4778d464c47"
+    }
+  ]
+}

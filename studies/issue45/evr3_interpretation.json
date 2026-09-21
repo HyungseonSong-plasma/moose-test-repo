@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "issue": 45,
+  "work_issue": 88,
+  "science_stage": "S3_FINAL_EVR3_INTERPRETATION",
+  "evidence_source": "user-local studies/issue45/evr3_discriminator.py --run output",
+  "preflight": {
+    "p1": "PASS",
+    "p2": "PASS",
+    "status": "PASS"
+  },
+  "evr": {
+    "before": "2/3 consumed",
+    "evr3": "CONSUMED",
+    "after": "3/3 consumed",
+    "followup_runtime_authorized": false
+  },
+  "observations": {
+    "true_residual_rows": 30,
+    "residual_fidelity_loss_observed": false,
+    "max_residual_separation_ratio": 4.78030132112778,
+    "residual_fidelity_threshold": 1000000.0,
+    "singular_value_rows": 30,
+    "max_preconditioned_operator_conditioning_proxy": 4.200641331042e16,
+    "automatic_scaling_blocks": 1,
+    "pc_failure_reason": null,
+    "diagnostic_complete": true,
+    "restart_causality": "NOT_ESTABLISHED"
+  },
+  "hypothesis_decision": {
+    "H1_conditioning_scaling": {
+      "status": "FAVORED",
+      "mechanism_resolution": "SEVERE_CONDITIONING_SUPPORTED; SCALING_SUBCAUSE_NOT_ISOLATED",
+      "basis": "The preconditioned-operator singular-value proxy reaches 4.200641331042e16 while the measured reported-vs-true residual separation remains modest. This supports severe conditioning of the augmented solve. The presence of one automatic-scaling block confirms scaling observability, but the returned summary does not by itself isolate scaling policy as the specific source of the conditioning."
+    },
+    "H2_krylov_residual_fidelity": {
+      "status": "DISFAVORED_BY_EVR3",
+      "basis": "Thirty true-residual rows were observed, residual_fidelity_loss_observed is false, and the maximum residual separation ratio is 4.78030132112778, far below the predeclared 1e6 threshold."
+    },
+    "H3_formulation_defect": {
+      "status": "DISFAVORED_NOT_SUPPORTED",
+      "basis": "No new positive structural or closure evidence revives H3; prior inventory-closure and DS-reference augmented-Jacobian evidence remains controlling."
+    }
+  },
+  "scientific_outcome": {
+    "class": "B",
+    "name": "PHYSICAL_CLOSURE_VALID / NUMERICAL_BLOCKER_IDENTIFIED",
+    "numerical_blocker": "SEVERE_CONDITIONING_OF_PRECONDITIONED_AUGMENTED_SADDLE_POINT_SYSTEM",
+    "qualification": "The conditioning monitor is a preconditioned-operator proxy, not an exact global condition number. Its extreme magnitude is diagnostic evidence of numerical conditioning difficulty, but it does not by itself identify which block scaling or physical variable is the unique cause."
+  },
+  "governance": {
+    "restart_boundary": "CHRONOLOGY_ONLY",
+    "restart_causality": "NOT_ESTABLISHED",
+    "solver_tuning_authorized": false,
+    "additional_issue45_scientific_runtime_authorized": false,
+    "next_issue": 89,
+    "next_scope": "POST_SCIENCE_CANONICALIZATION_ONLY"
+  }
+}

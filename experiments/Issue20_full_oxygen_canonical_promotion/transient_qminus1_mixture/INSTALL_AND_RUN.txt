@@ -1,0 +1,16 @@
+R14 EVR1-D standalone case v4
+
+Activate the QPX/MOOSE conda environment:
+
+  conda activate moose
+
+From qpx/temp:
+
+  rm -rf test_workspace/heavy_transport/r14_transient_mixture_evr1d
+  tar -xzf R14_EVR1D_transient_mixture_standalone_v4.tar.gz
+
+Run:
+
+  ./run_test.sh heavy_transport/r14_transient_mixture_evr1d
+
+Complete standalone replacement; no earlier patching is required.

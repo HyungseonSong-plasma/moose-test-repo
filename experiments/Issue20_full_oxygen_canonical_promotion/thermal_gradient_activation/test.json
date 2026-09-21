@@ -1,0 +1,20 @@
+{
+  "name": "heavy_transport_thermal_gradient_activation",
+  "type": "canonical",
+  "input": "input.i",
+  "prepare": "prepare.py",
+  "checker": "check.py",
+  "checker_args": [
+    "input_out.csv",
+    "prepare_evidence.json"
+  ],
+  "claim": "The production QPXFVThermalDiffusion FV kernel produces a nonzero steady response when driven by a nonzero temperature gradient using the production seven-species D_T,O coefficient, while the same response is suppressed both when include_thermal_diffusion=false and when grad(T)=0.",
+  "fail_class": "thermal-flux kernel/gradient/functor/runtime localization; P0-P2 failures are construction/harness/source-data failures, not physics failures",
+  "stage": "R14_EVR1_C_THERMAL_GRADIENT_ACTIVATION",
+  "evr_credit": "NONE_UNTIL_PARENT_EVR1_ACCEPTANCE",
+  "transport_data_sha256": "2fa7988c79f6ea23ebdd50e6d1d7fc5018dc8854a27459511ec95c94ebe7ff3d",
+  "promoted_from": "test_workspace/heavy_transport/r14_thermal_flux_evr1c",
+  "promotion_issue": "#20",
+  "accepted_source_artifact": "R14_EVR1C_standalone_case_v2.tar.gz",
+  "accepted_source_artifact_sha256": "f069341d15935074c2baad5abc6dcc3cb21ca4f47c1528893dd84262b1564430"
+}

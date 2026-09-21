@@ -1,0 +1,83 @@
+{
+  "schema": "issue45_evr3_h1_h2_discriminator_v1",
+  "parent_issue": 45,
+  "work_issue": 88,
+  "depends_on": [86, 87],
+  "authorization_state": "AUTHORIZED_BY_SCIENTIFIC_GATE_NOT_EXECUTED",
+  "evr": {
+    "before": "2/3",
+    "this_protocol_maximum": 1,
+    "after_if_executed": "3/3"
+  },
+  "scientific_question": "Does the bounded C0 first-linear KSP breakdown primarily present as severe conditioning/scaling, as Krylov reported-vs-true residual-fidelity loss without matching conditioning deterioration, or as a coupled numerical failure?",
+  "baseline": {
+    "case": "C0 constrained steady inventory closure",
+    "target": 1e16,
+    "nonlinear_horizon": 1,
+    "ksp": "GMRES",
+    "restart": 30,
+    "pc": "LU",
+    "factor_shift_type": "NONZERO",
+    "physics": "UNCHANGED",
+    "closure": "UNCHANGED",
+    "boundary_conditions": "UNCHANGED",
+    "timestep": "NOT_APPLICABLE_STEADY_AND_UNCHANGED",
+    "tolerances": "UNCHANGED",
+    "scaling_policy": "UNCHANGED",
+    "preconditioner": "UNCHANGED"
+  },
+  "observability_only_delta": {
+    "ensure_flags": [
+      "-snes_converged_reason",
+      "-ksp_converged_reason",
+      "-ksp_view",
+      "-ksp_monitor_true_residual",
+      "-ksp_monitor_singular_value"
+    ],
+    "intentionally_absent": [
+      "-snes_test_jacobian"
+    ],
+    "reason_for_absent_jacobian_test": "Issue46 has already established the augmented Jacobian on the accepted DS reference; EVR3 should not spend observation budget re-running the historical WP-sensitive Jacobian comparator.",
+    "solver_algorithm_changed": false,
+    "physics_changed": false
+  },
+  "required_observables": [
+    "reported KSP residual at every observable iteration",
+    "true residual at every observable iteration",
+    "residual-separation ratio and first threshold crossing at ratio >= 1e6",
+    "GMRES restart-cycle position",
+    "preconditioned-operator extreme singular-value estimates and max/min proxy where PETSc reports them",
+    "MOOSE automatic scaling factors if emitted by the unchanged verbose/scaling configuration",
+    "KSP identity, PC identity, KSP termination, PC failure reason, nonlinear termination"
+  ],
+  "interpretation_rules": {
+    "restart": "chronology only; no causal attribution from iteration modulo restart",
+    "singular_values": "conditioning proxy only, not an exact global condition number; after a GMRES restart PETSc estimates reflect the current restart cycle, and the smallest estimate can be inaccurate before convergence",
+    "residual_fidelity_threshold": 1000000.0,
+    "H1_conditioning_favored": "conditioning proxy or scaling spread deteriorates substantially before or together with true-residual stagnation, and residual-fidelity loss is consistent with that deterioration",
+    "H2_krylov_fidelity_favored": "reported-vs-true residual separation crosses 1e6 while conditioning/scaling observables remain comparatively stable through the onset; restart coincidence alone is insufficient",
+    "H1_H2_coupled": "conditioning proxy/scaling deterioration and residual-fidelity loss emerge together such that neither is separable as the sole cause",
+    "H3_formulation": "do not promote unless new positive structural/closure evidence appears; this observability-only run is not designed to retest the already-trustworthy Jacobian"
+  },
+  "predeclared_outcomes": [
+    "H1_CONDITIONING_SCALING_FAVORED",
+    "H2_KRYLOV_RESIDUAL_FIDELITY_FAVORED",
+    "H1_H2_COUPLED_NUMERICAL_FAILURE",
+    "DIAGNOSTIC_INSUFFICIENT"
+  ],
+  "forbidden_changes": [
+    "target",
+    "KSP type",
+    "GMRES restart",
+    "KSP tolerances",
+    "pivot shift",
+    "preconditioner",
+    "automatic scaling policy",
+    "manual scaling factors",
+    "pseudo-time",
+    "boundary conditions",
+    "physics"
+  ],
+  "execution_policy": "one run maximum after P1/P2 preflight; no parameter sweep and no immediate follow-up tuning run",
+  "post_run_policy": "freeze raw log and summary under studies/results or the declared results root, interpret once against these predeclared outcomes, and close the scientific track even if the result remains partially ambiguous; do not authorize a fourth #45 EVR"
+}

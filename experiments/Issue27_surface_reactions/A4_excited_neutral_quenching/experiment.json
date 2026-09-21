@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "experiment_id": "issue27-a4-excited-neutral-quenching",
+  "protocol": "issue27-surface-reaction-controlled-wall",
+  "execution": {
+    "timeout_seconds": 180.0
+  },
+  "parameters": {
+    "wall_model": "excited_neutral_sticking_control",
+    "wall_scope": "all_plasma_walls",
+    "gas_temperature_functor": "T_g",
+    "motz_wise_correction": false,
+    "O2s_sticking_coefficient": 1.0,
+    "Os_sticking_coefficient": 0.2
+  },
+  "outputs": {
+    "provenance": true,
+    "r4_qf1_predecessor": true,
+    "all_plasma_wall_scope": true,
+    "O2s_to_constrained_O2_bookkeeping": true,
+    "Os_to_half_O2_bookkeeping": true,
+    "oxygen_atom_conservation": true,
+    "species_mass_bookkeeping": true,
+    "neutral_charge_invariance": true,
+    "nonnegative_state": true
+  }
+}

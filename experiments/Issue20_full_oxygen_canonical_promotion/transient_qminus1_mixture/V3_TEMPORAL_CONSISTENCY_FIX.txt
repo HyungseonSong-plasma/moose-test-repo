@@ -1,0 +1,38 @@
+R14 EVR1-D v3 temporal-consistency correction
+
+v2 production evidence:
+  PREPARE PASS
+  CHECK-INPUT PASS
+  SOLVE PASS
+  CHECK FAIL
+
+Healthy:
+  mass closure error        0
+  EOS relative error        2.339500103e-14
+  drho chain rel error      9.225321698e-15
+  max direct species dY/dt  7.250962087
+  max |dMn/dt|              1.307920730e-01
+  max |drho/dt|             3.495356116e-04
+
+Only v2 failure:
+  nonlinear Mn/rho backward secant differed from current-state continuous
+  chain-rule derivative by about 1.8%.
+
+Mathematical reason:
+  S = 1/Mn
+
+  continuous:
+    dMn/dt = -Mn^2 dS/dt
+
+  backward secant:
+    (Mn_n-Mn_{n-1})/dt
+      = -Mn_n*Mn_{n-1}*(S_n-S_{n-1})/dt
+
+The two expressions are not algebraically identical at finite dt.
+
+v3 canonical temporal gate:
+  S = 1/Mn is linear in the constrained mass fractions, so its backward finite
+  difference must match the BE derivative assembled from the six solved
+  variable derivatives to solver/output precision.
+
+No physics, transport coefficient, timestep, mesh, or solver tolerance changed.

@@ -1,0 +1,158 @@
+{
+  "schema_version": 1,
+  "issue": 82,
+  "baseline_commit": "e5d8c50df309a3bdff1d746af16cded41a68a452",
+  "scientific_semantic_impact": "NONE",
+  "candidate_top_level_owners_before": 5,
+  "candidate_top_level_owners_after": 0,
+  "listed_legacy_modules_before": 1,
+  "listed_legacy_modules_after": 0,
+  "surfaces": [
+    {
+      "path": "qpx_harness/performance_core.py",
+      "disposition": "RETIRED_AFTER_CONSUMER_MIGRATION",
+      "destination": "qpx_harness/performance/runner.py",
+      "production_consumers_before": ["qpx_harness/cli/app.py"],
+      "production_consumers_after": []
+    },
+    {
+      "path": "qpx_harness/performance_smoke.py",
+      "disposition": "RETIRED_AFTER_CONSUMER_MIGRATION",
+      "destination": "qpx_harness/performance/smoke.py",
+      "production_consumers_before": ["qpx_harness/cli/app.py"],
+      "production_consumers_after": []
+    },
+    {
+      "path": "qpx_harness/performance_investigation.py",
+      "disposition": "RETIRED_AFTER_CONSUMER_MIGRATION",
+      "destination": "qpx_harness/analysis/performance/investigation.py",
+      "production_consumers_before": [
+        "qpx_harness/cli/app.py",
+        "qpx_harness/coupling_evr1/orchestration.py"
+      ],
+      "production_consumers_after": []
+    },
+    {
+      "path": "qpx_harness/performance_transport_probe_direct.py",
+      "disposition": "RETIRED_AFTER_CONSUMER_MIGRATION",
+      "destination": "qpx_harness/performance/probes/transport.py",
+      "production_consumers_before": ["qpx_harness/cli/app.py"],
+      "production_consumers_after": []
+    },
+    {
+      "path": "qpx_harness/performance_cache_audit.py",
+      "disposition": "BEHAVIOR_SPLIT_THEN_RETIRED",
+      "destinations": [
+        "qpx_harness/cpp/functor_usage.py",
+        "qpx_harness/analysis/performance/cache.py",
+        "qpx_harness/cli/commands/performance.py"
+      ],
+      "production_consumers_before": ["qpx_harness/cli/app.py"],
+      "production_consumers_after": []
+    },
+    {
+      "path": "qpx_harness/analysis/performance/legacy.py",
+      "disposition": "PUBLIC_BEHAVIOR_PROMOTED_THEN_RETIRED",
+      "destination": "qpx_harness/analysis/performance/profile.py",
+      "production_consumers_before": [
+        "qpx_harness/analysis/performance/__init__.py"
+      ],
+      "production_consumers_after": []
+    }
+  ],
+  "legacy_public_symbol_disposition": [
+    {
+      "symbol": "analyze",
+      "disposition": "PROMOTE_TO_FOCUSED_CAPABILITY",
+      "destination": "qpx_harness.analysis.performance.profile.analyze"
+    },
+    {
+      "symbol": "load_petsc_events",
+      "disposition": "PROMOTE_TO_FOCUSED_CAPABILITY",
+      "destination": "qpx_harness.analysis.performance.profile.load_petsc_events"
+    },
+    {
+      "symbol": "perfgraph_jacobian_self",
+      "disposition": "PROMOTE_TO_FOCUSED_CAPABILITY",
+      "destination": "qpx_harness.analysis.performance.profile.perfgraph_jacobian_self"
+    },
+    {
+      "symbol": "event_time",
+      "disposition": "PROMOTE_TO_FOCUSED_CAPABILITY",
+      "destination": "qpx_harness.analysis.performance.profile.event_time"
+    }
+  ],
+  "consumer_edges_migrated": [
+    {
+      "consumer": "qpx_harness/cli/app.py",
+      "before": "five top-level performance modules",
+      "after": "qpx_harness/cli/commands/performance.py"
+    },
+    {
+      "consumer": "qpx_harness/coupling_evr1/orchestration.py",
+      "before": "qpx_harness.performance_investigation",
+      "after": "qpx_harness.analysis.performance.investigation"
+    },
+    {
+      "consumer": "active Issue48 performance characterizations",
+      "before": "top-level compatibility modules",
+      "after": "canonical performance, analysis, cpp, and cli owners"
+    }
+  ],
+  "cache_audit_split": {
+    "cpp_structure": "qpx_harness/cpp/functor_usage.py",
+    "performance_interpretation": "qpx_harness/analysis/performance/cache.py",
+    "cli_and_artifact_presentation": "qpx_harness/cli/commands/performance.py",
+    "observable_behavior": "PRESERVED"
+  },
+  "cli_commands_preserved": [
+    "measure",
+    "measure-smoke",
+    "investigate",
+    "transport-probe",
+    "cache-audit",
+    "analyze"
+  ],
+  "pf1_owners": [
+    "qpx_harness/performance/runner.py",
+    "qpx_harness/performance/smoke.py"
+  ],
+  "pf2": {
+    "implemented_slice_in_issue82": false,
+    "validation": "NOT_APPLICABLE_NO_NEW_PF2_FEATURE_SLICE",
+    "future_bindings": {
+      "execution": "qpx_harness/performance/repetition.py",
+      "decision_logic": "qpx_harness/analysis/performance/regression.py",
+      "baseline_provenance": "qpx_harness/evidence/performance/baseline.py",
+      "presentation": "qpx_harness/cli/commands/"
+    },
+    "issue40_status_claim": "UNCHANGED_OPEN_NOT_CLOSED_BY_REFACTOR"
+  },
+  "pf3_owners": [
+    "qpx_harness/analysis/performance/investigation.py",
+    "qpx_harness/performance/probes/transport.py",
+    "qpx_harness/performance/probes/runtime.py",
+    "qpx_harness/cpp/",
+    "qpx_harness/performance/runner.py",
+    "qpx_harness/performance/smoke.py"
+  ],
+  "deferred_outside_issue82": [
+    {
+      "path": "qpx_harness/performance_transport_probe_runtime.py",
+      "owner": 83,
+      "reason": "not listed in Issue82 candidate set; canonical runtime already owns behavior"
+    }
+  ],
+  "validation": {
+    "cache_behavior_characterization": "PASS",
+    "legacy_profile_behavior_characterization": "PASS",
+    "pf1_self_tests": "PASS",
+    "pf3_self_tests": "PASS",
+    "cli_inventory_and_help": "PASS",
+    "architecture_census": "PASS",
+    "issue66_76_integration": "PASS",
+    "issue48_generality": "PASS",
+    "full_qpx_harness_self_test": "PASS",
+    "scientific_p3": "NOT_RUN"
+  }
+}

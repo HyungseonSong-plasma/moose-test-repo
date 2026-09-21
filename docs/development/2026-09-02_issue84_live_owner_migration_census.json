@@ -1,0 +1,33 @@
+{
+  "issue": 84,
+  "baseline_commit": "df64534bf6ecc758c3b0a732c3a6e35b515e2907",
+  "scientific_semantic_impact": "NONE",
+  "live_noncanonical_owners_reviewed": 27,
+  "owners_migrated": 9,
+  "consumer_edges_migrated": 45,
+  "mixed_responsibility_owners_decomposed": 0,
+  "reusable_helpers_extracted_from_scientific_policy": 0,
+  "unresolved_ownership_blockers": 0,
+  "migrations": [
+    {"old_path":"qpx_harness/moose_input.py","destination":"qpx_harness/moose/input.py","disposition":"MIGRATE_TO_MOOSE","old_consumer_count_after":0},
+    {"old_path":"qpx_harness/output_observation_contract.py","destination":"qpx_harness/moose/output_observation.py","disposition":"MIGRATE_TO_MOOSE","old_consumer_count_after":0},
+    {"old_path":"qpx_harness/preflight.py","destination":"qpx_harness/moose/preflight.py","disposition":"MIGRATE_TO_MOOSE","old_consumer_count_after":0},
+    {"old_path":"qpx_harness/perfgraph.py","destination":"qpx_harness/analysis/performance/perfgraph.py","disposition":"MIGRATE_TO_ANALYSIS","old_consumer_count_after":0},
+    {"old_path":"qpx_harness/temporal.py","destination":"qpx_harness/analysis/temporal.py","disposition":"MIGRATE_TO_ANALYSIS","old_consumer_count_after":0},
+    {"old_path":"qpx_harness/status.py","destination":"qpx_harness/execution/status.py","disposition":"MIGRATE_TO_EXECUTION","old_consumer_count_after":0},
+    {"old_path":"qpx_harness/reporting.py","destination":"qpx_harness/execution/reporting.py","disposition":"MIGRATE_TO_EXECUTION","old_consumer_count_after":0},
+    {"old_path":"qpx_harness/regression.py","destination":"qpx_harness/execution/regression.py","disposition":"MIGRATE_TO_EXECUTION","old_consumer_count_after":0},
+    {"old_path":"qpx_harness/profiling.py","destination":"qpx_harness/performance/profiling.py","disposition":"MIGRATE_TO_PERFORMANCE","old_consumer_count_after":0}
+  ],
+  "retained": [
+    {"path":"qpx_harness/bundle.py","disposition":"KEEP_REPOSITORY_TOOL_WITH_JUSTIFICATION","contract":"standalone profiling bundle builder and qpx bundle command"},
+    {"path":"qpx_harness/execution_contract.py","disposition":"KEEP_EXTERNAL_CONTRACT_WITH_JUSTIFICATION","contract":"CORE-16 JSON schema/evaluation import and CLI contract"},
+    {"path":"qpx_harness/electron_inventory_nullspace.py","disposition":"KEEP_SCIENTIFIC_POLICY","contract":"active Issue45 inventory-nullspace command/import surface"},
+    {"path":"qpx_harness/scale_audit.py","disposition":"KEEP_SCIENTIFIC_POLICY","contract":"active QVT/Issue43 scale policy with recipe consumers"},
+    {"path":"qpx_harness/issue31+issue43+issue45+issue46 owners","disposition":"KEEP_SCIENTIFIC_POLICY","contract":"irreducible active experiment identity, thresholds, and branch interpretation"}
+  ],
+  "retirement_handoff": [
+    {"path":"qpx_harness/performance_transport_probe_runtime.py","consumer_count":0,"owner":83,"reason":"implementation-free compatibility surface after #82/#79"}
+  ],
+  "validation": {"scientific_p3":"NOT_RUN"}
+}

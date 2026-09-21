@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "parent_issue": 17,
+  "execution_issue": 176,
+  "controller_batch": "R2_O2_IONIZATION",
+  "controller_step": "STEP_1_LOOKUP_OWNERSHIP_CONTRACT",
+  "enabled_particle_subset": [
+    "EI01_O2_ATTACHMENT",
+    "EI16_O2_IONIZATION"
+  ],
+  "lookup_contract": {
+    "coordinate": "mean_en_solved = epsilon_ref * n_epsilon_hat / n_e_hat",
+    "epsilon_ref_eV": 5.73276,
+    "domain_eV": [1.40991, 22.1378],
+    "out_of_range_behavior": "FAIL_STRICTLY",
+    "silent_clamp": false,
+    "silent_floor": false,
+    "raw_table_unit": "m^3/(mol s)",
+    "qpx_molar_rate_coefficient": "k_raw",
+    "particle_rate_coefficient": "k_raw / N_A"
+  },
+  "reactions": {
+    "EI01_O2_ATTACHMENT": {
+      "formula": "e + O2 -> O + Om",
+      "state": "R1_PASS",
+      "shared_progress": "R_attachment",
+      "net_electron_stoich": -1
+    },
+    "EI16_O2_IONIZATION": {
+      "formula": "e + O2 -> 2e + O2p",
+      "state": "R2_READY_CONTRACT_FROZEN",
+      "reactants": {"e": 1, "O2": 1},
+      "products": {"e": 2, "O2p": 1},
+      "shared_progress": "R_ion_O2",
+      "shared_progress_rule": "compute one canonical R_ion_O2 and reuse it for constrained-O2 consumption, O2p production, and electron-particle production",
+      "net_electron_stoich": 1,
+      "expected_electron_source_sign": "positive",
+      "source_owners": {
+        "heavy": ["O2", "O2p"],
+        "electron_particle": ["n_e_hat"],
+        "electron_energy": "DEFERRED_TO_STAGE_4_ISSUE_26_E8"
+      },
+      "energy_loss_eV": 12.06,
+      "energy_coupling_enabled": false
+    }
+  },
+  "disabled_during_this_batch": [
+    "EI02_O2_ELASTIC",
+    "EI10_O2_TO_O2S",
+    "EI17_O_ELASTIC",
+    "EI18_O_TO_OS",
+    "EI19_O_EXCITATION_4P192",
+    "EI20_O_IONIZATION",
+    "all missing-rate species-changing electron-impact reactions",
+    "all heavy-ion reactions pending rate data"
+  ],
+  "retained_blockers": {
+    "O2s_constant_surrogate": "BLOCKED on exact coefficient + provenance; 9.97 eV excitation table remains forbidden as substitute",
+    "elastic_energy_transfer": "BLOCKED until audited law is frozen for #26 E8"
+  },
+  "pass_invariants": [
+    "heavy_mass",
+    "oxygen_atoms",
+    "charge_including_electron",
+    "positive_electron_production_sign",
+    "strict_lookup_range",
+    "rate_unit_basis",
+    "single_progress_ownership"
+  ]
+}

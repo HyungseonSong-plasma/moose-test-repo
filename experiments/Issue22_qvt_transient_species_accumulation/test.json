@@ -1,0 +1,45 @@
+{
+  "validation_schema": 2,
+  "name": "qvt_six_species_transient_inventory",
+  "type": "canonical",
+  "input": "input.i",
+  "prepare": "prepare.py",
+  "checker": "check.py",
+  "checker_args": [
+    "input_out.physical.csv",
+    "expected.json"
+  ],
+  "temporal_csv": [
+    {
+      "source": "input_out.csv",
+      "physical": "input_out.physical.csv",
+      "time_column": "time",
+      "initial_row_policy": "exclude_observation",
+      "initial_time": 0.0,
+      "time_tol": 1e-15,
+      "require_physical_rows": true
+    }
+  ],
+  "claim": "Real-qvt Q-1 transient heavy-species transport uses direct Backward-Euler product accumulation for six solved species, composition-dependent Mn/rho, transient mixture continuity, SCCM advection, and mixture-averaged diffusion with per-species and mixture inventory accounting.",
+  "known_good_dependency": "regression_workspace/tests/heavy_transport/qvt_six_species_bulk_advection",
+  "production_kernel": "QPXFVConservativeMassFractionTimeDerivative",
+  "time_integrator_contract": "implicit-euler",
+  "initialization_row_contract": "runner-owned exclude_observation; raw CSV retained",
+  "issue": "#22",
+  "promotion_issue": "#22",
+  "accepted_evr2_classification": "BATCH_PASS",
+  "accepted_evr2_artifact_sha256": "af663f87548ecf8ff0d9b1ff920c037977a940d0f20e7ac736a5fbbdc94c7d9a",
+  "accepted_evr1_source_artifact_sha256": "7fafb88ac449b98f0f2261fad51fab2338a1369bd168f544ac86086e9746ad13",
+  "temporal_validation_contract": "validation_schema=2; runner-owned raw->physical CSV; INITIAL row excluded only by declared policy",
+  "next_dependency": "#15",
+  "promotion_file_sha256": {
+    "qvt.msh": "a98521af2c106137f9635fe7e2c5ba9b0fd408e17c62eb7c6d3f7c1fff65a03e",
+    "mesh.i": "b31a8cbc41fd8eea60b6bc036b6a5841342c065152a91416063ff5afbec9137d",
+    "transport_data.txt": "2fa7988c79f6ea23ebdd50e6d1d7fc5018dc8854a27459511ec95c94ebe7ff3d",
+    "physics.i": "354c2701148a4c80860004ba7190f58cf6542dd6092f087dca83322339a0d442",
+    "input.i": "d2beeebcc36839e25a746846b0ad1909ad7c56b0bcb8927dfe6519335cd6ee58",
+    "expected.json": "48b67f5be80394c5a6ac2fb6a531560306c381595feebec38c30e58154106ae3",
+    "prepare.py": "fa20b2c00dc65488546ab6e4edfde5c08bffa03d3feb8aa1d9025bc1ed4d168f",
+    "check.py": "1f9e156153bf514c37262fe9109276863d03a63db5122031c00a8b3cda3f6a1d"
+  }
+}

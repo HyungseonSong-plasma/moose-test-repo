@@ -1,0 +1,92 @@
+{
+  "schema_version": 1,
+  "controller_issue": 176,
+  "child_issue": 192,
+  "channel": "EI16_O2_IONIZATION",
+  "status": "PRODUCTION_RATE_OWNER_RECOVERED",
+  "claim_boundary": {
+    "establishes": [
+      "canonical user-supplied EI16 O2-ionization mean-energy lookup artifact",
+      "concrete production progress owner for R_ion_O2",
+      "strict lookup domain, unit, and threshold binding"
+    ],
+    "does_not_establish": [
+      "S5-R representative assembly",
+      "physics-opt --check-input",
+      "representative runtime PASS",
+      "Stage-5 acceptance"
+    ]
+  },
+  "provenance": {
+    "source_identity": "user_supplied:o2_ionization",
+    "recovered_file_library_uploads": [
+      {
+        "created_at": "2026-09-07T16:12:40Z",
+        "role": "R2-era recovered source"
+      },
+      {
+        "created_at": "2026-08-25T12:12:12Z",
+        "role": "earlier identical recovered source"
+      }
+    ],
+    "canonical_path": "physics_app/data/electron_impact/o2_ionization.txt",
+    "sha256": "cfd9de394bdc7eee308679ab95b1d9bd64b7dc96be29093caee035147c5f7ece",
+    "recovery_finding": "Two independently retained File Library uploads named o2_ionization.txt are byte-equivalent by recovered content and reproduce the canonical 100-point mean-energy coordinate family used by the accepted electron-impact data set.",
+    "companion_identity_check": {
+      "canonical_companions": [
+        "physics_app/data/electron_impact/o_ionization.txt",
+        "physics_app/data/electron_impact/o2_elastic.txt"
+      ],
+      "finding": "Recovered o2_ionization.txt uses the same 100-point mean-energy coordinate grid as the canonical user-supplied companion tables."
+    }
+  },
+  "lookup_contract": {
+    "coordinate": "mean_en_solved",
+    "coordinate_unit": "eV",
+    "value_unit": "m^3/(mol s)",
+    "rows": 100,
+    "domain_eV": [
+      1.40991,
+      22.1378
+    ],
+    "anchors_m3_per_mol_s": {
+      "1.40991": 0.0,
+      "5.73276": 48900000.0,
+      "12.1629": 2750000000.0,
+      "22.1378": 12900000000.0
+    },
+    "bounds_policy": "error"
+  },
+  "progress_owner": {
+    "type": "PhysicsElectronImpactIonizationMaterial",
+    "rate_table_file": "physics_app/data/electron_impact/o2_ionization.txt",
+    "mean_energy": "mean_en_solved",
+    "electron_number_density": "canonical n_e_physical mapping",
+    "target_molar_concentration": "constrained O2 molar concentration from canonical heavy state",
+    "reaction_progress": "R_ion_O2",
+    "law": "R_ion_O2 = k_raw(mean_en_solved)*(n_e_physical/N_A)*c_O2"
+  },
+  "projection_contract": {
+    "heavy": [
+      "O2 loss",
+      "O2p production"
+    ],
+    "electron_particle": "PhysicsFVElectronReactionSource consumes the same R_ion_O2 with net electron stoich +1",
+    "electron_energy": "standard FVCoupledForce projection consumes the same R_ion_O2 with energy loss 12.06 eV",
+    "energy_loss_eV": 12.06,
+    "duplicate_kinetic_reevaluation": "FORBIDDEN"
+  },
+  "synthetic_fixture_boundary": {
+    "historical_fixture": "R2 controlled runtime synthetic three-point table",
+    "disposition": "DISCRIMINATOR_ONLY_NOT_PHYSICAL_PROVENANCE",
+    "production_use": "FORBIDDEN"
+  },
+  "source_contracts": [
+    "docs/development/2026-09-07_issue17_r0_reaction_ledger.json",
+    "docs/development/2026-09-08_issue17_r2_o2_ionization_contract.json",
+    "docs/development/2026-09-10_issue26_e8_ei16_energy_contract.json",
+    "docs/development/2026-09-10_issue26_e8_closure_surface_contract.json",
+    "docs/development/2026-09-11_issue192_stage5_s5r_representative_contract.json"
+  ],
+  "evidence_parent_head": "dd91f934eb8aad6a278cf7ee3eb07418fcf8113b"
+}

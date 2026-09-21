@@ -1,0 +1,10 @@
+{
+  "name": "reactor_o2plus_self_consistent_2d",
+  "type": "canonical",
+  "input": "self_consistent_2d.i",
+  "checker": "../check_reactor_o2plus.py",
+  "checker_args": [
+    "self_consistent_2d_out.csv",
+    "self_consistent"
+  ]
+}

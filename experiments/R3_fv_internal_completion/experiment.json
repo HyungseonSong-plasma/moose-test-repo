@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "experiment_id": "r3-fv-internal-completion",
+  "protocol": "r3-fv-internal-completion",
+  "execution": {
+    "timeout_seconds": 120.0,
+    "jacobian_timeout_seconds": 300.0
+  },
+  "parameters": {
+    "jacobian_tolerance": 1e-8
+  },
+  "outputs": {
+    "provenance": true,
+    "error_ledger": true
+  }
+}

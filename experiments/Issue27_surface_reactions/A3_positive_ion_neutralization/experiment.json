@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "experiment_id": "issue27-a3-positive-ion-neutralization",
+  "protocol": "issue27-surface-reaction-controlled-wall",
+  "execution": {
+    "timeout_seconds": 180.0
+  },
+  "parameters": {
+    "wall_model": "positive_ion_prescribed_control",
+    "wall_scope": "all_plasma_walls",
+    "secondary_emission_coefficient": 0.0,
+    "O2p_event_flux_mol_m2_s": 0.0001,
+    "Op_event_flux_mol_m2_s": 0.0001
+  },
+  "outputs": {
+    "provenance": true,
+    "r4_qf1_predecessor": true,
+    "all_plasma_wall_scope": true,
+    "O2p_to_constrained_O2_bookkeeping": true,
+    "Op_to_O_bookkeeping": true,
+    "negative_volume_charge_shift": true,
+    "gauss_law": true,
+    "secondary_emission": false,
+    "electron_compensation": false
+  }
+}

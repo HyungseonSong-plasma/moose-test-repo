@@ -1,0 +1,20 @@
+{
+  "name": "heavy_transport_dmix_oracle_ne_sensitivity",
+  "type": "canonical",
+  "input": "input.i",
+  "prepare": "prepare.py",
+  "checker": "check.py",
+  "checker_args": [
+    "input_out.csv",
+    "prepare_evidence.json"
+  ],
+  "claim": "For two electron-density states, production qpx-opt D_mix values for all seven oxygen heavy species agree with an independent mixture-averaged diffusion oracle within 2e-5 relative; neutral D_mix is ne-invariant and charged D_mix demonstrates dynamic Debye-Huckel ne sensitivity.",
+  "fail_class": "oracle/parity/resolver/dynamic-screening/runtime; pre-physics P0-P2 failures are construction/harness/data failures, not physics failures",
+  "stage": "R14_EVR1_B_DMIX_ORACLE_AND_NE_SENSITIVITY",
+  "evr_credit": "NONE_UNTIL_PARENT_EVR1_ACCEPTANCE",
+  "transport_data_sha256": "2fa7988c79f6ea23ebdd50e6d1d7fc5018dc8854a27459511ec95c94ebe7ff3d",
+  "promoted_from": "test_workspace/heavy_transport/r14_dmix_evr1b",
+  "promotion_issue": "#20",
+  "accepted_source_artifact": "R14_EVR1B_dmix_oracle_ne_sensitivity_overlay_v1.tar.gz",
+  "accepted_source_artifact_sha256": "023715ee394e143b3f073c07119ea2e2098d4923aa55235e8ab5ea076203e03a"
+}
