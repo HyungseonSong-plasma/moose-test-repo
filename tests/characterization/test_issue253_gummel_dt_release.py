@@ -5,7 +5,7 @@ import shutil
 import subprocess
 import sys
 
-from experiments.Issue253_g1_gummel_dt_release import analyze, chi2_control, extended_control, final_control, prepare, relaxed_control
+from experiments.Issue253_g1_gummel_dt_release import analyze, chi2_control, extended_control, final_control, ion_advance_control, prepare, relaxed_control
 
 
 def test_issue253_g1_case_matrix_preserves_single_model() -> None:
@@ -237,3 +237,30 @@ def test_issue253_g1_extreme_control_runs_standalone_p0() -> None:
         assert "ISSUE253_G1_EXTREME_P0: PASS" in completed.stdout
     finally:
         shutil.rmtree(extended_control.GENERATED, ignore_errors=True)
+
+
+def test_issue253_g1_ion_advance_contract_has_two_solved_ion_steps() -> None:
+    try:
+        summary = ion_advance_control.static_contract()
+        assert summary["status"] == "PASS"
+        assert summary["ion_species"] == "O2+"
+        assert summary["ion_steps"] == 2
+        assert math.isclose(summary["ion_dt_s"], 1.0e-4, rel_tol=0.0, abs_tol=0.0)
+        assert summary["expected_free_drift_shift_m"] > 0.0
+    finally:
+        shutil.rmtree(ion_advance_control.GENERATED, ignore_errors=True)
+
+
+def test_issue253_g1_ion_advance_control_runs_standalone_p0() -> None:
+    try:
+        completed = subprocess.run(
+            [sys.executable, str(ion_advance_control.ROOT / "ion_advance_control.py"), "--phase", "p0"],
+            cwd=ion_advance_control.REPO,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        assert completed.returncode == 0, completed.stderr
+        assert "ISSUE253_G1_ION_ADVANCE_P0: PASS" in completed.stdout
+    finally:
+        shutil.rmtree(ion_advance_control.GENERATED, ignore_errors=True)

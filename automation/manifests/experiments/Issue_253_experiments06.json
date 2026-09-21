@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "issue": 253,
+  "kind": "experiments",
+  "sequence": 6,
+  "title": "G1 two-step O2+ ion advance with one-way Poisson observer",
+  "stages": [
+    {
+      "id": "P0",
+      "name": "Validate ion-advance contract",
+      "command": [
+        "python3",
+        "experiments/Issue253_g1_gummel_dt_release/ion_advance_control.py",
+        "--phase",
+        "p0"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "id": "P1",
+      "name": "Preflight ion-advance input",
+      "command": [
+        "python3",
+        "experiments/Issue253_g1_gummel_dt_release/ion_advance_control.py",
+        "--phase",
+        "p1"
+      ],
+      "timeout_seconds": 900
+    },
+    {
+      "id": "P2",
+      "name": "Build Physics and check ion-advance input",
+      "command": [
+        "python3",
+        "experiments/Issue253_g1_gummel_dt_release/ion_advance_control.py",
+        "--phase",
+        "p2"
+      ],
+      "timeout_seconds": 3600
+    },
+    {
+      "id": "P3",
+      "name": "Run two ion physical advances and Poisson observer",
+      "command": [
+        "python3",
+        "experiments/Issue253_g1_gummel_dt_release/ion_advance_control.py",
+        "--phase",
+        "p3"
+      ],
+      "timeout_seconds": 900
+    }
+  ],
+  "artifacts": [
+    "experiments/Issue253_g1_gummel_dt_release/generated_ion_advance/**/*.i",
+    "experiments/Issue253_g1_gummel_dt_release/generated_ion_advance/**/*.json",
+    "experiments/Issue253_g1_gummel_dt_release/generated_ion_advance/**/*.csv",
+    "experiments/Issue253_g1_gummel_dt_release/results_ion_advance/**/*"
+  ]
+}
