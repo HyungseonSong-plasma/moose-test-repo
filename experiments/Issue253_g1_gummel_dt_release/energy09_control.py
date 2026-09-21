@@ -189,6 +189,7 @@ def static_contract() -> dict[str, object]:
         assert "PhysicsElectronTransportLookupMaterial" in text
         assert "PhysicsElectronImpactRateMaterial" in text
         assert "bounds_policy = error" in text
+        assert "nl_abs_tol = 1.0e-7" in text
         assert "[final_exodus]" in text
         assert "execute_on = 'FINAL'" in text
         assert "@@" not in text
@@ -338,11 +339,12 @@ def analyze_case(case_name: str) -> tuple[dict[str, object], int]:
     }
 
     if rc != 0:
-        result["classification"] = (
-            "STRICT_LOOKUP_BOUNDS_FAILURE"
-            if "outside" in log_text and "mean" in log_text.lower()
-            else "RUNTIME_FAILURE"
-        )
+        if "DIVERGED_LINE_SEARCH" in log_text:
+            result["classification"] = "NONLINEAR_LINE_SEARCH_FAILURE"
+        elif "outside" in log_text and "mean" in log_text.lower():
+            result["classification"] = "STRICT_LOOKUP_BOUNDS_FAILURE"
+        else:
+            result["classification"] = "RUNTIME_FAILURE"
         result["evidence_valid"] = False
         return result, 2
 
