@@ -321,6 +321,13 @@ def test_issue253_g1_extreme08_equal_time_matrix() -> None:
             assert item["steps"] == steps
             assert math.isclose(item["dt_s"] * steps, item["end_time_s"], rel_tol=1e-14)
             assert math.isclose(item["relaxation_factor"], 1.0 / (1.0 + chi), rel_tol=1e-14)
+            input_text = (
+                extreme08_control.GENERATED / name / "input.i"
+            ).read_text(encoding="utf-8")
+            assert "[final_exodus]" in input_text
+            assert "type = Exodus" in input_text
+            assert "[final_csv]" in input_text
+            assert input_text.count("execute_on = 'FINAL'") >= 3
     finally:
         shutil.rmtree(extreme08_control.GENERATED, ignore_errors=True)
 

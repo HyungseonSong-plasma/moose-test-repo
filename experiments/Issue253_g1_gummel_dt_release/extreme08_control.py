@@ -125,6 +125,25 @@ def _stepwise_outputs(text: str) -> str:
     if text.count(fp_old) != 1:
         raise RuntimeError("fixed-point postprocessor block changed")
     text = text.replace(fp_old, fp_new, 1)
+
+    profile_old = """  [electron_profile]
+    type = ElementValueSampler
+    variable = 'log_e electron_density_out potential_from_poisson'
+    sort_by = id
+    execute_on = 'INITIAL TIMESTEP_END'
+  []
+"""
+    profile_new = """  [electron_profile]
+    type = ElementValueSampler
+    variable = 'log_e electron_density_out potential_from_poisson'
+    sort_by = id
+    execute_on = 'FINAL'
+  []
+"""
+    if text.count(profile_old) != 1:
+        raise RuntimeError("electron profile block changed")
+    text = text.replace(profile_old, profile_new, 1)
+
     old = """[Outputs]
   csv = true
   exodus = true
@@ -136,6 +155,14 @@ def _stepwise_outputs(text: str) -> str:
     type = CSV
     execute_on = 'TIMESTEP_END'
     new_row_tolerance = 1.0e-30
+  []
+  [final_csv]
+    type = CSV
+    execute_on = 'FINAL'
+  []
+  [final_exodus]
+    type = Exodus
+    execute_on = 'FINAL'
   []
 []
 """
@@ -244,6 +271,10 @@ def static_contract() -> dict[str, object]:
         assert "PhysicsFVLogMolarElectronEnergy" not in text
         assert "new_row_tolerance = 1.0e-30" in text
         assert "cumulative_fixed_point_iterations" in text
+        assert "[final_csv]" in text
+        assert "[final_exodus]" in text
+        assert "type = Exodus" in text
+        assert text.count("execute_on = 'FINAL'") >= 3
     return {
         "status": "PASS",
         "tau_epsilon_s": prepare.tau_epsilon(),
@@ -306,7 +337,7 @@ def _rows(path: Path) -> list[dict[str, str]]:
 
 def _final_profile(case_dir: Path) -> list[tuple[float, float, float]]:
     candidates: list[tuple[int, Path]] = []
-    for path in case_dir.glob("input_out_electron_profile_*.csv"):
+    for path in case_dir.glob("input_final_csv_electron_profile_*.csv"):
         match = re.search(r"_([0-9]+)\.csv$", path.name)
         if match:
             candidates.append((int(match.group(1)), path))
@@ -353,7 +384,7 @@ def analyze_case(case_name: str) -> tuple[dict[str, object], int]:
     elapsed = float((RESULTS / f"{case_name}_elapsed_seconds.txt").read_text().strip())
     residuals = _picard_residuals(log_text)
     reasons = _convergence_reasons(log_text)
-    rows = _rows(GENERATED / case_name / "input_out.csv")
+    rows = _rows(GENERATED / case_name / "input_step_csv.csv")
     final_time = float(rows[-1]["time"]) if rows else None
     total_fp = int(round(float(rows[-1]["cumulative_fixed_point_iterations"]))) if rows else 0
     per_step = [int(round(float(row["fixed_point_iterations"]))) for row in rows]

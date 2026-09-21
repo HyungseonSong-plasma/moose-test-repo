@@ -27,7 +27,8 @@
         "experiments/Issue253_g1_gummel_dt_release/results_extreme08/relaxed_chi10_returncode.txt",
         "experiments/Issue253_g1_gummel_dt_release/results_extreme08/relaxed_chi10_elapsed_seconds.txt",
         "experiments/Issue253_g1_gummel_dt_release/results_extreme08/relaxed_chi10_result.json",
-        "experiments/Issue253_g1_gummel_dt_release/generated_extreme08/relaxed_chi10/input_out*.csv"
+        "experiments/Issue253_g1_gummel_dt_release/generated_extreme08/relaxed_chi10/input_final_exodus.e",
+        "experiments/Issue253_g1_gummel_dt_release/generated_extreme08/relaxed_chi10/input_final_csv*.csv"
       ]
     },
     {
@@ -45,7 +46,8 @@
         "experiments/Issue253_g1_gummel_dt_release/results_extreme08/relaxed_chi100_returncode.txt",
         "experiments/Issue253_g1_gummel_dt_release/results_extreme08/relaxed_chi100_elapsed_seconds.txt",
         "experiments/Issue253_g1_gummel_dt_release/results_extreme08/relaxed_chi100_result.json",
-        "experiments/Issue253_g1_gummel_dt_release/generated_extreme08/relaxed_chi100/input_out*.csv"
+        "experiments/Issue253_g1_gummel_dt_release/generated_extreme08/relaxed_chi100/input_final_exodus.e",
+        "experiments/Issue253_g1_gummel_dt_release/generated_extreme08/relaxed_chi100/input_final_csv*.csv"
       ]
     },
     {
@@ -63,7 +65,8 @@
         "experiments/Issue253_g1_gummel_dt_release/results_extreme08/relaxed_chi1000_returncode.txt",
         "experiments/Issue253_g1_gummel_dt_release/results_extreme08/relaxed_chi1000_elapsed_seconds.txt",
         "experiments/Issue253_g1_gummel_dt_release/results_extreme08/relaxed_chi1000_result.json",
-        "experiments/Issue253_g1_gummel_dt_release/generated_extreme08/relaxed_chi1000/input_out*.csv"
+        "experiments/Issue253_g1_gummel_dt_release/generated_extreme08/relaxed_chi1000/input_final_exodus.e",
+        "experiments/Issue253_g1_gummel_dt_release/generated_extreme08/relaxed_chi1000/input_final_csv*.csv"
       ]
     }
   ],
