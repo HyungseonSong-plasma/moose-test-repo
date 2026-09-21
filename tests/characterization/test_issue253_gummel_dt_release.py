@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import shutil
 
-from experiments.Issue253_g1_gummel_dt_release import analyze, prepare
+from experiments.Issue253_g1_gummel_dt_release import analyze, chi2_control, prepare
 
 
 def test_issue253_g1_case_matrix_preserves_single_model() -> None:
@@ -62,3 +62,47 @@ def test_issue253_g1_release_requires_joint_phi_density_field_recovery() -> None
     assert ratios["phi_einf"] <= 0.75
     assert ratios["ne_einf"] > 0.75
     assert ratios["e_einf"] > 0.75
+
+
+def test_issue253_g1_chi2_control_is_plain_gummel() -> None:
+    try:
+        summary = chi2_control.static_contract()
+        case = summary["case"]
+        assert summary["status"] == "PASS"
+        assert case["chi"] == 2.0
+        assert case["steps"] == 10
+        assert case["fp_min"] == 2
+        assert case["fp_max"] == 30
+    finally:
+        shutil.rmtree(chi2_control.GENERATED, ignore_errors=True)
+
+
+def test_issue253_g1_chi2_runtime_classifies_scientific_divergence_as_valid() -> None:
+    classification, valid = chi2_control.classify_runtime(
+        returncode=1,
+        log_text="Fixed point convergence reason: DIVERGED_MAX_ITS",
+        final_time=None,
+        expected_end_time=1.0,
+        fixed_point_iterations=None,
+    )
+    assert (classification, valid) == ("GUMMEL_DIVERGED", True)
+
+
+def test_issue253_g1_chi2_runtime_requires_complete_horizon_for_convergence() -> None:
+    classification, valid = chi2_control.classify_runtime(
+        returncode=0,
+        log_text="",
+        final_time=1.0,
+        expected_end_time=1.0,
+        fixed_point_iterations=4.0,
+    )
+    assert (classification, valid) == ("GUMMEL_CONVERGED", True)
+
+    classification, valid = chi2_control.classify_runtime(
+        returncode=0,
+        log_text="",
+        final_time=0.5,
+        expected_end_time=1.0,
+        fixed_point_iterations=4.0,
+    )
+    assert (classification, valid) == ("INCOMPLETE_PHYSICAL_HORIZON", False)
