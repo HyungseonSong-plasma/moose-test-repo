@@ -30,7 +30,7 @@ BUILD_BASE_REF = (
 FINAL_TAU = 200.0
 REFERENCE_CHI = 0.1
 REFERENCE_STEPS = 2000
-TARGET_TOTAL_COUPLING_BUDGET = 1000
+TARGET_TOTAL_COUPLING_BUDGET = 1400
 REFERENCE_FAMILY_EINF = 0.10
 
 CASES = (
@@ -47,7 +47,7 @@ CASES = (
         "chi": 10.0,
         "steps": 20,
         "fp_min": 2,
-        "fp_max": 50,
+        "fp_max": 70,
         "omega": 1.0 / 11.0,
     },
     {
@@ -55,7 +55,7 @@ CASES = (
         "chi": 100.0,
         "steps": 2,
         "fp_min": 2,
-        "fp_max": 500,
+        "fp_max": 700,
         "omega": 1.0 / 101.0,
     },
 )
@@ -132,7 +132,7 @@ def _with_relaxed_poisson_multiapp(text: str, omega: float) -> str:
     return text.replace(needle, replacement, 1)
 
 
-def _make_output_light(text: str) -> str:
+def _make_output_light(text: str, steps: int) -> str:
     vpp_old = """  [electron_profile]
     type = ElementValueSampler
     variable = 'log_e electron_density_out potential_from_poisson'
@@ -144,12 +144,31 @@ def _make_output_light(text: str) -> str:
     type = ElementValueSampler
     variable = 'log_e electron_density_out potential_from_poisson'
     sort_by = id
-    execute_on = 'FINAL'
+    execute_on = 'TIMESTEP_END'
   []
 """
     if text.count(vpp_old) != 1:
         raise RuntimeError("electron profile output block changed unexpectedly")
     text = text.replace(vpp_old, vpp_new, 1)
+
+    fp_old = """  [fixed_point_iterations]
+    type = NumFixedPointIterations
+    execute_on = 'TIMESTEP_END'
+  []
+"""
+    fp_new = """  [fixed_point_iterations]
+    type = NumFixedPointIterations
+    execute_on = 'TIMESTEP_END'
+  []
+  [cumulative_fixed_point_iterations]
+    type = CumulativeValuePostprocessor
+    postprocessor = fixed_point_iterations
+    execute_on = 'TIMESTEP_END'
+  []
+"""
+    if text.count(fp_old) != 1:
+        raise RuntimeError("fixed-point postprocessor block changed unexpectedly")
+    text = text.replace(fp_old, fp_new, 1)
 
     outputs_old = """[Outputs]
   csv = true
@@ -157,9 +176,14 @@ def _make_output_light(text: str) -> str:
   execute_on = 'INITIAL TIMESTEP_END'
 []
 """
-    outputs_new = """[Outputs]
-  csv = true
-  execute_on = 'INITIAL TIMESTEP_END FINAL'
+    outputs_new = f"""[Outputs]
+  console = false
+  [final_csv]
+    type = CSV
+    file_base = input_out
+    execute_on = 'TIMESTEP_END'
+    time_step_interval = {steps}
+  []
 []
 """
     if text.count(outputs_old) != 1:
@@ -217,7 +241,7 @@ def build(clean: bool = True) -> list[dict[str, object]]:
             electron = _with_relaxed_poisson_multiapp(
                 electron, float(params["relaxation_factor"])
             )
-        electron = _make_output_light(electron)
+        electron = _make_output_light(electron, int(params["steps"]))
 
         poisson = prepare._render(
             poisson_template,
@@ -244,8 +268,8 @@ def build(clean: bool = True) -> list[dict[str, object]]:
                 "total_time_tau_epsilon": FINAL_TAU,
                 "total_time_definition": "2 * dt(chi=100)",
                 "reference_steps": REFERENCE_STEPS,
-                "target_total_coupling_budget_per_candidate": TARGET_TOTAL_COUPLING_BUDGET,
-                "profile_output": "FINAL only",
+                "max_total_coupling_budget_per_candidate": TARGET_TOTAL_COUPLING_BUDGET,
+                "profile_output": "TIMESTEP_END sampled only on the final step",
                 "exodus_output": False,
                 "poisson_subapp_csv_output": False,
                 "scientific_scope": (
@@ -271,8 +295,8 @@ def static_contract() -> dict[str, object]:
     c100 = by_name["relaxed_chi100"]
 
     assert ref["chi"] == 0.1 and ref["steps"] == 2000 and ref["fp_max"] == 1
-    assert c10["chi"] == 10.0 and c10["steps"] == 20 and c10["fp_max"] == 50
-    assert c100["chi"] == 100.0 and c100["steps"] == 2 and c100["fp_max"] == 500
+    assert c10["chi"] == 10.0 and c10["steps"] == 20 and c10["fp_max"] == 70
+    assert c100["chi"] == 100.0 and c100["steps"] == 2 and c100["fp_max"] == 700
     assert math.isclose(float(c10["relaxation_factor"]), 1.0 / 11.0, rel_tol=0.0, abs_tol=1e-16)
     assert math.isclose(float(c100["relaxation_factor"]), 1.0 / 101.0, rel_tol=0.0, abs_tol=1e-16)
     assert c10["steps"] * c10["fp_max"] == TARGET_TOTAL_COUPLING_BUDGET
@@ -282,7 +306,9 @@ def static_contract() -> dict[str, object]:
     for case in (ref, c10, c100):
         assert math.isclose(float(case["end_time_s"]), expected_end, rel_tol=1e-14)
         text = (GENERATED / str(case["name"]) / "input.i").read_text(encoding="utf-8")
-        assert "execute_on = 'FINAL'" in text
+        assert "execute_on = 'TIMESTEP_END'" in text
+        assert f"time_step_interval = {case['steps']}" in text
+        assert "cumulative_fixed_point_iterations" in text
         assert "exodus = true" not in text
         assert "PhysicsFVLogMolarElectronEnergy" not in text
         poisson_text = (GENERATED / str(case["name"]) / "poisson_sub.i").read_text(
@@ -343,19 +369,14 @@ def _final_profile(case_dir: Path) -> list[tuple[float, float, float]]:
 
 def _fixed_point_stats(case_dir: Path) -> dict[str, object]:
     rows = _rows(case_dir / "input_out.csv")
-    by_time: dict[float, float] = {}
-    for row in rows:
-        t = float(row.get("time", "0") or 0.0)
-        v = row.get("fixed_point_iterations", "")
-        if t > 0.0 and v != "":
-            by_time[t] = float(v)
-    vals = [by_time[t] for t in sorted(by_time)]
+    if not rows:
+        raise RuntimeError(f"{case_dir.name}: missing final scalar CSV row")
+    row = rows[-1]
+    total = float(row.get("cumulative_fixed_point_iterations", "0") or 0.0)
+    last = float(row.get("fixed_point_iterations", "0") or 0.0)
     return {
-        "per_timestep": vals,
-        "physical_step_rows": len(vals),
-        "total_fixed_point_iterations": int(round(sum(vals))),
-        "mean_fixed_point_iterations": (sum(vals) / len(vals)) if vals else None,
-        "max_fixed_point_iterations": max(vals) if vals else None,
+        "total_fixed_point_iterations": int(round(total)),
+        "last_step_fixed_point_iterations": last,
     }
 
 
@@ -384,9 +405,6 @@ def inner_run(case_name: str) -> int:
         str(REPO / "physics_app" / "physics-opt"),
         "-i",
         "input.i",
-        "-snes_monitor",
-        "-snes_converged_reason",
-        "-ksp_converged_reason",
     ]
     start = time.perf_counter()
     with log_path.open("w", encoding="utf-8") as handle:
