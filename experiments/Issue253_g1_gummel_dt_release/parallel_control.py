@@ -5,6 +5,7 @@ import argparse
 import csv
 import json
 import math
+import os
 from pathlib import Path
 import re
 import shutil
@@ -573,6 +574,7 @@ def main() -> int:
     parser.add_argument("--case", choices=CASE_NAMES)
     parser.add_argument("--inner-run", choices=CASE_NAMES)
     parser.add_argument("--aggregate-root")
+    parser.add_argument("--aggregate", action="store_true")
     args = parser.parse_args()
     RESULTS.mkdir(parents=True, exist_ok=True)
 
@@ -581,9 +583,12 @@ def main() -> int:
     if args.case:
         run_case(args.case)
         return 0
-    if args.aggregate_root:
-        summary = aggregate(Path(args.aggregate_root))
-        out = Path(args.aggregate_root) / "parallel_summary.json"
+    if args.aggregate or args.aggregate_root:
+        root_value = args.aggregate_root or os.environ.get("CHATGPT_MATRIX_EVIDENCE_ROOT")
+        if not root_value:
+            raise SystemExit("CHATGPT_MATRIX_EVIDENCE_ROOT is required for --aggregate")
+        summary = aggregate(Path(root_value))
+        out = RESULTS / "parallel_summary.json"
         out.write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8")
         print("ISSUE253_G1_PARALLEL_CLASSIFICATION:", summary["classification"])
         print(json.dumps(summary, indent=2, sort_keys=True))
@@ -591,7 +596,7 @@ def main() -> int:
     if args.phase:
         {"p0": p0, "p1": p1, "p2": p2}[args.phase]()
         return 0
-    parser.error("one of --phase, --case, --inner-run, --aggregate-root is required")
+    parser.error("one of --phase, --case, --inner-run, --aggregate, --aggregate-root is required")
 
 
 if __name__ == "__main__":
