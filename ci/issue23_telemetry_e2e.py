@@ -55,12 +55,19 @@ def main() -> int:
     retry = event("2026-09-21T10:05:00Z")
     result = telemetry.aggregate([first, retry], known_skills=["state-refresh", "repository-mutation"])
 
-    assert result["event_count"] == 1
-    assert result["duplicate_count"] == 1
-    assert result["activations_by_skill_day"] == {"state-refresh|2026-09-21": 1}
-    assert result["activations_by_skill_consumer"] == {f"state-refresh|{CONSUMER}": 1}
-    assert result["activations_by_trigger"] == {"ISSUE23_E2E": 1}
-    assert result["skills_with_zero_observed_activation"] == ["repository-mutation"]
+    expected = {
+        "event_count": 1,
+        "duplicate_count": 1,
+        "activations_by_skill_day": {"state-refresh|2026-09-21": 1},
+        "activations_by_skill_consumer": {f"state-refresh|{CONSUMER}": 1},
+        "activations_by_trigger": {"ISSUE23_E2E": 1},
+        "skills_with_zero_observed_activation": ["repository-mutation"],
+    }
+    for key, expected_value in expected.items():
+        if result[key] != expected_value:
+            raise RuntimeError(
+                f"unexpected {key}: expected {expected_value!r}, got {result[key]!r}"
+            )
     print(json.dumps(result, sort_keys=True))
     return 0
 
