@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "issue": 253,
+  "kind": "experiments",
+  "sequence": 7,
+  "title": "G1 parallel fixed-T case ref_chi0p1",
+  "stages": [
+    {
+      "id": "P3",
+      "name": "Run ref_chi0p1 and record stepwise convergence",
+      "command": [
+        "python3",
+        "experiments/Issue253_g1_gummel_dt_release/parallel_control.py",
+        "--case",
+        "ref_chi0p1"
+      ],
+      "timeout_seconds": 1800
+    }
+  ],
+  "artifacts": [
+    "experiments/Issue253_g1_gummel_dt_release/results_parallel/ref_chi0p1_runtime.log",
+    "experiments/Issue253_g1_gummel_dt_release/results_parallel/ref_chi0p1_returncode.txt",
+    "experiments/Issue253_g1_gummel_dt_release/results_parallel/ref_chi0p1_elapsed_seconds.txt",
+    "experiments/Issue253_g1_gummel_dt_release/results_parallel/ref_chi0p1_result.json"
+  ]
+}

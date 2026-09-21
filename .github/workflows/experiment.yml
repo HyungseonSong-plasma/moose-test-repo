@@ -30,6 +30,7 @@ concurrency:
 
 jobs:
   execute:
+    if: inputs.sequence != '07'
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     env:
@@ -79,5 +80,166 @@ jobs:
         with:
           name: Issue_${{ inputs.issue }}_experiments${{ inputs.sequence }}-evidence
           path: workflow-results/**
+          if-no-files-found: warn
+          retention-days: 30
+
+  parallel-prepare:
+    if: inputs.sequence == '07'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      ISSUE: ${{ inputs.issue }}
+      SEQUENCE: ${{ inputs.sequence }}
+      MANIFEST_INPUT: ${{ inputs.manifest }}
+      BASE_SHA: ${{ inputs.base_sha }}
+    steps:
+      - name: Checkout control plane
+        uses: actions/checkout@v4
+        with:
+          path: control
+          fetch-depth: 1
+
+      - name: Checkout exact experiment source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.base_sha }}
+          path: target
+          fetch-depth: 1
+
+      - name: Validate parallel dispatch identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$ISSUE" == "253" ]]
+          [[ "$SEQUENCE" == "07" ]]
+          [[ "$MANIFEST_INPUT" == "automation/manifests/experiments/Issue_253_experiments07_prep.json" ]]
+          [[ "$BASE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          python3 control/ci/guards/workflow_surface_guard.py --check --root control
+
+      - name: Prepare and build once
+        uses: HyungseonSong-plasma/chatgpt-operation/.github/actions/governed-work@908d5b695b4640727b3c45d8044763c5fcca1d08
+        with:
+          kind: experiments
+          manifest: ${{ github.workspace }}/control/${{ inputs.manifest }}
+          control-root: ${{ github.workspace }}/control
+          workspace: ${{ github.workspace }}/target
+          base-sha: ${{ inputs.base_sha }}
+          issue: ${{ inputs.issue }}
+          sequence: ${{ inputs.sequence }}
+          results: ${{ github.workspace }}/workflow-results-prep
+
+      - name: Stage executable bit
+        shell: bash
+        run: chmod +x target/physics_app/physics-opt
+
+      - name: Upload shared build bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: Issue_253_experiments07-build
+          path: |
+            target/physics_app/physics-opt
+            target/experiments/Issue253_g1_gummel_dt_release/generated_parallel/**
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Upload prepare evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Issue_253_experiments07-prepare-evidence
+          path: workflow-results-prep/**
+          if-no-files-found: warn
+          retention-days: 30
+
+  parallel-run:
+    if: inputs.sequence == '07'
+    needs: parallel-prepare
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - case: ref_chi0p1
+            manifest: automation/manifests/experiments/Issue_253_experiments07_ref_chi0p1.json
+          - case: relaxed_chi1
+            manifest: automation/manifests/experiments/Issue_253_experiments07_relaxed_chi1.json
+          - case: relaxed_chi10
+            manifest: automation/manifests/experiments/Issue_253_experiments07_relaxed_chi10.json
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - name: Checkout control plane
+        uses: actions/checkout@v4
+        with:
+          path: control
+          fetch-depth: 1
+
+      - name: Checkout exact experiment source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.base_sha }}
+          path: target
+          fetch-depth: 1
+
+      - name: Download shared build bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: Issue_253_experiments07-build
+          path: target
+
+      - name: Restore executable bit
+        shell: bash
+        run: chmod +x target/physics_app/physics-opt
+
+      - name: Run governed case
+        uses: HyungseonSong-plasma/chatgpt-operation/.github/actions/governed-work@908d5b695b4640727b3c45d8044763c5fcca1d08
+        with:
+          kind: experiments
+          manifest: ${{ github.workspace }}/control/${{ matrix.manifest }}
+          control-root: ${{ github.workspace }}/control
+          workspace: ${{ github.workspace }}/target
+          base-sha: ${{ inputs.base_sha }}
+          issue: ${{ inputs.issue }}
+          sequence: ${{ inputs.sequence }}
+          results: ${{ github.workspace }}/workflow-results-${{ matrix.case }}
+
+      - name: Upload case evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Issue_253_experiments07-${{ matrix.case }}-evidence
+          path: workflow-results-${{ matrix.case }}/**
+          if-no-files-found: warn
+          retention-days: 30
+
+  parallel-aggregate:
+    if: inputs.sequence == '07' && always()
+    needs: parallel-run
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout control plane
+        uses: actions/checkout@v4
+        with:
+          path: control
+          fetch-depth: 1
+
+      - name: Download case evidence
+        uses: actions/download-artifact@v4
+        with:
+          pattern: Issue_253_experiments07-*-evidence
+          path: evidence
+          merge-multiple: true
+
+      - name: Aggregate step-count convergence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 control/experiments/Issue253_g1_gummel_dt_release/parallel_control.py --aggregate-root evidence
+
+      - name: Upload aggregate evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Issue_253_experiments07-summary
+          path: evidence/parallel_summary.json
           if-no-files-found: warn
           retention-days: 30

@@ -5,7 +5,7 @@ import shutil
 import subprocess
 import sys
 
-from experiments.Issue253_g1_gummel_dt_release import analyze, chi2_control, extended_control, final_control, ion_advance_control, prepare, relaxed_control
+from experiments.Issue253_g1_gummel_dt_release import analyze, chi2_control, extended_control, final_control, ion_advance_control, parallel_control, prepare, relaxed_control
 
 
 def test_issue253_g1_case_matrix_preserves_single_model() -> None:
@@ -264,3 +264,33 @@ def test_issue253_g1_ion_advance_control_runs_standalone_p0() -> None:
         assert "ISSUE253_G1_ION_ADVANCE_P0: PASS" in completed.stdout
     finally:
         shutil.rmtree(ion_advance_control.GENERATED, ignore_errors=True)
+
+
+def test_issue253_g1_parallel_matrix_fixed_T20_has_200_20_2_steps() -> None:
+    try:
+        summary = parallel_control.static_contract()
+        assert summary["status"] == "PASS"
+        assert summary["total_time_tau_epsilon"] == 20.0
+        cases = {str(item["name"]): item for item in summary["cases"]}
+        assert cases["ref_chi0p1"]["steps"] == 200
+        assert cases["relaxed_chi1"]["steps"] == 20
+        assert cases["relaxed_chi10"]["steps"] == 2
+        assert math.isclose(cases["relaxed_chi1"]["relaxation_factor"], 0.5)
+        assert math.isclose(cases["relaxed_chi10"]["relaxation_factor"], 1.0 / 11.0)
+    finally:
+        shutil.rmtree(parallel_control.GENERATED, ignore_errors=True)
+
+
+def test_issue253_g1_parallel_control_runs_standalone_p0() -> None:
+    try:
+        completed = subprocess.run(
+            [sys.executable, str(parallel_control.ROOT / "parallel_control.py"), "--phase", "p0"],
+            cwd=parallel_control.REPO,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        assert completed.returncode == 0, completed.stderr
+        assert "ISSUE253_G1_PARALLEL_P0: PASS" in completed.stdout
+    finally:
+        shutil.rmtree(parallel_control.GENERATED, ignore_errors=True)
