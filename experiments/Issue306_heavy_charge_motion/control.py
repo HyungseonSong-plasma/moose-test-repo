@@ -189,7 +189,7 @@ def _poisson_child() -> str:
     ))
 
 
-def _shared_parent_tail(p: dict[str, object]) -> str:
+def _shared_parent_tail(p: dict[str, object], extra_postprocessors: str = "") -> str:
     return f"""
 [MultiApps]
   [electron]
@@ -220,6 +220,7 @@ def _shared_parent_tail(p: dict[str, object]) -> str:
 []
 
 [Postprocessors]
+{extra_postprocessors}
   [heavy_charge_integral]
     type = ADElementIntegralFunctorPostprocessor
     functor = heavy_charge_density
@@ -507,6 +508,25 @@ def _released_parent(p: dict[str, object]) -> str:
 """
         for s in SOLVED_HEAVY
     )
+    flow_postprocessors = f"""
+  [inlet_area]
+    type = AreaPostprocessor
+    boundary = right
+    execute_on = INITIAL
+  []
+  [inlet_mdot]
+    type = Receiver
+    default = {MDOT:.17g}
+  []
+{receivers}
+  [outlet_p_avg]
+    type = SideAverageFunctorPostprocessor
+    boundary = left
+    functor = p
+    restrict_to_functors_domain = true
+    execute_on = 'INITIAL TIMESTEP_END'
+  []
+"""
 
     return f"""# Issue #306 released-heavy parent.
 # BC topology is inherited from the accepted #234 1D heavy-flow discriminator:
@@ -739,27 +759,7 @@ def _released_parent(p: dict[str, object]) -> str:
   []
 []
 
-[Postprocessors]
-  [inlet_area]
-    type = AreaPostprocessor
-    boundary = right
-    execute_on = INITIAL
-  []
-  [inlet_mdot]
-    type = Receiver
-    default = {MDOT:.17g}
-  []
-{receivers}
-  [outlet_p_avg]
-    type = SideAverageFunctorPostprocessor
-    boundary = left
-    functor = p
-    restrict_to_functors_domain = true
-    execute_on = 'INITIAL TIMESTEP_END'
-  []
-[]
-
-{_shared_parent_tail(p)}
+{_shared_parent_tail(p, flow_postprocessors)}
 """
 
 
