@@ -99,7 +99,10 @@ def build(clean: bool = True) -> list[dict[str, object]]:
                 "FP_MAX": str(params["fp_max"]),
             },
         )
-        poisson = _render(poisson_template, common)
+        poisson = _render(
+            poisson_template,
+            {"LOG_CE": common["LOG_CE"], "W_O2P": common["W_O2P"]},
+        )
         (case_dir / "input.i").write_text(electron, encoding="utf-8")
         (case_dir / "poisson_sub.i").write_text(poisson, encoding="utf-8")
         (case_dir / "case.json").write_text(
