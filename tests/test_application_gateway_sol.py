@@ -55,7 +55,7 @@ def test_run_sol_experiment_delegates_to_runtime_consumer_without_scientific_rel
         realization_spec={"public_contract_version": "0.2", "entities": []},
     )
     prepared = gateway.SolPreparedExperiment(planned=object(), request=request)
-    expected = SolRuntimeOutcome(completed=False, kind=None, evidence={"status": "runtime-only"})
+    expected = SolRuntimeOutcome(None, {"status": "runtime-only"})
     seen: dict[str, object] = {}
 
     def fake_invoke(consumer, adapter, supplied_request, *, timeout_seconds):
