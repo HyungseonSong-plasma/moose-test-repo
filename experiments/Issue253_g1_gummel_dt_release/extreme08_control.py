@@ -132,10 +132,11 @@ def _stepwise_outputs(text: str) -> str:
 []
 """
     new = """[Outputs]
-  csv = true
-  exodus = false
-  execute_on = 'TIMESTEP_END'
-  new_row_tolerance = 1.0e-30
+  [step_csv]
+    type = CSV
+    execute_on = 'TIMESTEP_END'
+    new_row_tolerance = 1.0e-30
+  []
 []
 """
     if text.count(old) != 1:
