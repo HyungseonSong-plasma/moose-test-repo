@@ -984,20 +984,33 @@ def analyze_case(case_name: str) -> tuple[dict[str, object], int]:
         result.update(classification="INCOMPLETE_HORIZON", evidence_valid=False)
         return result, 2
     profile = _profile(GENERATED / case_name)
+    if not profile:
+        result.update(classification="MISSING_FINAL_PROFILE", evidence_valid=False)
+        return result, 2
+    dx = 0.01 / len(profile)
+    phi_values = [row["potential"] for row in profile]
     result.update({
         "classification": "CASE_CONVERGED",
         "evidence_valid": True,
         "final_time_s": float(final["time"]),
-        "final_phi_avg_V": float(final["phi_avg"]),
-        "final_phi_min_V": float(final["phi_min"]),
-        "final_phi_max_V": float(final["phi_max"]),
-        "final_heavy_charge_integral_C_m2": float(final["heavy_charge_integral"]),
-        "final_net_charge_integral_C_m2": float(final["net_charge_integral"]),
-        "final_electron_density_avg_m3": float(final["electron_density_avg"]),
-        "final_mean_energy_avg_eV": float(final["mean_energy_avg"]),
-        "final_w_O2p_avg": float(final["w_O2p_avg"]),
-        "final_w_Om_avg": float(final["w_Om_avg"]),
-        "final_w_Op_avg": float(final["w_Op_avg"]),
+        "final_phi_avg_V": sum(phi_values) / len(phi_values),
+        "final_phi_min_V": min(phi_values),
+        "final_phi_max_V": max(phi_values),
+        "final_heavy_charge_integral_C_m2": sum(
+            row["heavy_charge_C_m3"] * dx for row in profile
+        ),
+        "final_net_charge_integral_C_m2": sum(
+            row["net_charge_C_m3"] * dx for row in profile
+        ),
+        "final_electron_density_avg_m3": sum(
+            row["electron_density"] for row in profile
+        ) / len(profile),
+        "final_mean_energy_avg_eV": sum(
+            row["mean_energy_eV"] for row in profile
+        ) / len(profile),
+        "final_w_O2p_avg": sum(row["w_O2p"] for row in profile) / len(profile),
+        "final_w_Om_avg": sum(row["w_Om"] for row in profile) / len(profile),
+        "final_w_Op_avg": sum(row["w_Op"] for row in profile) / len(profile),
         "final_profile": profile,
     })
     return result, 0
