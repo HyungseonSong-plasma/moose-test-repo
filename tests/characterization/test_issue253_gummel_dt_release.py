@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import shutil
+import subprocess
+import sys
 
 from experiments.Issue253_g1_gummel_dt_release import analyze, chi2_control, prepare
 
@@ -106,3 +108,18 @@ def test_issue253_g1_chi2_runtime_requires_complete_horizon_for_convergence() ->
         fixed_point_iterations=4.0,
     )
     assert (classification, valid) == ("INCOMPLETE_PHYSICAL_HORIZON", False)
+
+
+def test_issue253_g1_chi2_control_runs_standalone_p0() -> None:
+    try:
+        completed = subprocess.run(
+            [sys.executable, str(chi2_control.ROOT / "chi2_control.py"), "--phase", "p0"],
+            cwd=chi2_control.REPO,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        assert completed.returncode == 0, completed.stderr
+        assert "ISSUE253_G1_CHI2_P0: PASS" in completed.stdout
+    finally:
+        shutil.rmtree(chi2_control.GENERATED, ignore_errors=True)
