@@ -5,7 +5,7 @@ import shutil
 import subprocess
 import sys
 
-from experiments.Issue253_g1_gummel_dt_release import analyze, chi2_control, energy09_control, energy10_control, horizon11_control, extended_control, extreme08_control, final_control, ion_advance_control, parallel_control, prepare, relaxed_control
+from experiments.Issue253_g1_gummel_dt_release import analyze, chi2_control, energy09_control, energy10_control, elastic12_control, horizon11_control, extended_control, extreme08_control, final_control, ion_advance_control, parallel_control, prepare, relaxed_control
 
 
 def test_issue253_g1_case_matrix_preserves_single_model() -> None:
@@ -467,3 +467,40 @@ def test_issue253_g2_horizon11_fixed_chi100_time_horizons() -> None:
 def test_issue253_g2_sequence11_routes_to_central_matrix() -> None:
     workflow = (horizon11_control.REPO / ".github" / "workflows" / "experiment.yml").read_text(encoding="utf-8")
     assert "inputs.sequence == '07' || inputs.sequence == '08' || inputs.sequence == '09' || inputs.sequence == '10' || inputs.sequence == '11'" in workflow
+
+
+def test_issue253_g2_elastic12_equal_time_chi_sweep() -> None:
+    try:
+        summary = elastic12_control.static_contract()
+        assert summary["status"] == "PASS"
+        assert summary["total_time_tau_epsilon_initial"] == 100.0
+        assert summary["energy_equation"] == "ON"
+        assert summary["joule_heating"] == "ON"
+        assert summary["elastic_collision"] == "ON"
+        assert summary["automatic_scaling"] is True
+        cases = {str(item["name"]): item for item in summary["cases"]}
+        expected = {
+            "elastic_chi1": (1.0, 100, 100, 0.5),
+            "elastic_chi10": (10.0, 10, 300, 1.0 / 11.0),
+            "elastic_chi20": (20.0, 5, 600, 1.0 / 21.0),
+        }
+        for name, (chi, steps, fp_max, omega) in expected.items():
+            item = cases[name]
+            assert item["chi"] == chi
+            assert item["steps"] == steps
+            assert item["fp_max"] == fp_max
+            assert item["joule_heating"] is True
+            assert item["elastic_collision"] is True
+            assert math.isclose(item["relaxation_factor"], omega, rel_tol=1e-14)
+            assert math.isclose(item["dt_s"] * steps, item["end_time_s"], rel_tol=1e-14)
+            text = (
+                elastic12_control.GENERATED / name / "input.i"
+            ).read_text(encoding="utf-8")
+            assert "expression = '1.0*source'" in text
+    finally:
+        shutil.rmtree(elastic12_control.GENERATED, ignore_errors=True)
+
+
+def test_issue253_g2_sequence12_routes_to_central_matrix() -> None:
+    workflow = (elastic12_control.REPO / ".github" / "workflows" / "experiment.yml").read_text(encoding="utf-8")
+    assert "inputs.sequence == '07' || inputs.sequence == '08' || inputs.sequence == '09' || inputs.sequence == '10' || inputs.sequence == '11' || inputs.sequence == '12'" in workflow

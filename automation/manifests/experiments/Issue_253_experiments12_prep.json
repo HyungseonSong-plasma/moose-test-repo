@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "issue": 253,
+  "kind": "experiments",
+  "sequence": 12,
+  "title": "G2 energy+Joule+elastic chi=1/10/20 equal-time prepare",
+  "stages": [
+    {
+      "id": "P0",
+      "name": "Validate energy+Joule+elastic chi=1/10/20 contract",
+      "command": [
+        "python3",
+        "experiments/Issue253_g1_gummel_dt_release/elastic12_control.py",
+        "--phase",
+        "p0"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "id": "P1",
+      "name": "Preflight energy+Joule+elastic chi sweep",
+      "command": [
+        "python3",
+        "experiments/Issue253_g1_gummel_dt_release/elastic12_control.py",
+        "--phase",
+        "p1"
+      ],
+      "timeout_seconds": 900
+    },
+    {
+      "id": "P2",
+      "name": "Build Physics once and check elastic chi sweep inputs",
+      "command": [
+        "python3",
+        "experiments/Issue253_g1_gummel_dt_release/elastic12_control.py",
+        "--phase",
+        "p2"
+      ],
+      "timeout_seconds": 3600
+    }
+  ],
+  "artifacts": [
+    "experiments/Issue253_g1_gummel_dt_release/generated_elastic12/**/*.i",
+    "experiments/Issue253_g1_gummel_dt_release/generated_elastic12/**/*.json",
+    "experiments/Issue253_g1_gummel_dt_release/generated_elastic12/**/*.txt",
+    "experiments/Issue253_g1_gummel_dt_release/results_elastic12/*_p2.log"
+  ]
+}
