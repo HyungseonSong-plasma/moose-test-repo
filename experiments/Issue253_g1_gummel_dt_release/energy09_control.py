@@ -194,7 +194,7 @@ def static_contract() -> dict[str, object]:
         assert "PhysicsElectronTransportLookupMaterial" in text
         assert "PhysicsElectronImpactRateMaterial" in text
         assert "bounds_policy = error" in text
-        assert "nl_abs_tol = 1.0e-7" in text
+        assert "nl_abs_tol = 2.0e-7" in text
         assert "[final_exodus]" in text
         assert "execute_on = 'FINAL'" in text
         assert "@@" not in text

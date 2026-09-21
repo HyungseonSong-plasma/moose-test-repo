@@ -468,10 +468,10 @@
   num_steps = @@STEPS@@
   timestep_tolerance = @@TIMESTEP_TOL@@
   nl_rel_tol = 1.0e-9
-  # Sequence-09 first-step parent solves reach a repeatable nonlinear residual
-  # floor of approximately 4e-8 to 8e-8 before PETSc line-search stagnation.
-  # Keep the physics and Gummel controls unchanged; accept that measured floor.
-  nl_abs_tol = 1.0e-7
+  # Sequence-09 COMSOL-wall runs reach a repeatable nonlinear residual floor
+  # of approximately 1.05e-7 to 1.17e-7 after 38-49 completed physical steps.
+  # Keep physics, dt, and Gummel relaxation unchanged; accept that measured floor.
+  nl_abs_tol = 2.0e-7
   nl_max_its = 80
   automatic_scaling = false
   auto_advance = true

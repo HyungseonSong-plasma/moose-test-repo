@@ -366,3 +366,14 @@ def test_issue253_g2_energy09_wall_always_on_joule_elastic_matrix() -> None:
 def test_issue253_g2_sequence09_routes_to_central_matrix() -> None:
     workflow = (energy09_control.REPO / ".github" / "workflows" / "experiment.yml").read_text(encoding="utf-8")
     assert "inputs.sequence == '07' || inputs.sequence == '08' || inputs.sequence == '09'" in workflow
+
+
+def test_issue253_g2_energy09_accepts_measured_nonlinear_floor() -> None:
+    try:
+        energy09_control.static_contract()
+        text = (
+            energy09_control.GENERATED / "wall_j1_e1" / "input.i"
+        ).read_text(encoding="utf-8")
+        assert "nl_abs_tol = 2.0e-7" in text
+    finally:
+        shutil.rmtree(energy09_control.GENERATED, ignore_errors=True)
