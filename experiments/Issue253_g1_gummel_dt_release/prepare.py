@@ -159,11 +159,17 @@ def static_contract() -> dict[str, object]:
         assert "PhysicsFVLogMolarElectronEnergy" not in text
         assert "@@" not in text
 
+        poisson = (GENERATED / name / "poisson_sub.i").read_text(encoding="utf-8")
+        assert "automatic_scaling = true" in poisson
+        assert "off_diagonals_in_auto_scaling" not in poisson
+        assert "compute_scaling_once" not in poisson
+
     return {
         "status": "PASS",
         "tau_epsilon_s": tau_epsilon(),
         "cases": built,
-        "claim": "same particle-Poisson model; only dt and fixed-point coupling differ",
+        "historical_relaxation_anchor": "5ddb47e0a3bf0b22e50b78c31490361cd749309b",
+        "claim": "historical particle-Poisson model preserved; only dt and fixed-point coupling differ",
     }
 
 
