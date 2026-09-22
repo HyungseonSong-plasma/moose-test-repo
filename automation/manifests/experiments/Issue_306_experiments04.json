@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "issue": 306,
+  "sequence": 4,
+  "title": "Long heavy-relaxation convergence at fixed chi_e=20",
+  "prepare_manifest": "automation/manifests/experiments/Issue_306_experiments04_prep.json",
+  "bundle_paths": [
+    "physics_app/physics-opt",
+    "physics_app/lib/libphysics-opt.so.0",
+    "physics_app/test/lib/libphysics_test-opt.so.0",
+    "experiments/Issue306_heavy_charge_motion/generated_wall04"
+  ],
+  "max_parallel": 3,
+  "cases": [
+    {
+      "id": "comsol_cycles10",
+      "name": "comsol_cycles10 long-relaxation case",
+      "command": [
+        "python3",
+        "experiments/Issue306_heavy_charge_motion/wall04_control.py",
+        "--case",
+        "comsol_cycles10"
+      ],
+      "timeout_seconds": 7200,
+      "artifacts": [
+        "experiments/Issue306_heavy_charge_motion/results_wall04/comsol_cycles10_runtime.log",
+        "experiments/Issue306_heavy_charge_motion/results_wall04/comsol_cycles10_returncode.txt",
+        "experiments/Issue306_heavy_charge_motion/results_wall04/comsol_cycles10_elapsed_seconds.txt",
+        "experiments/Issue306_heavy_charge_motion/results_wall04/comsol_cycles10_result.json",
+        "experiments/Issue306_heavy_charge_motion/generated_wall04/comsol_cycles10/**/*.csv",
+        "experiments/Issue306_heavy_charge_motion/generated_wall04/comsol_cycles10/**/*.e"
+      ]
+    },
+    {
+      "id": "comsol_cycles20",
+      "name": "comsol_cycles20 long-relaxation case",
+      "command": [
+        "python3",
+        "experiments/Issue306_heavy_charge_motion/wall04_control.py",
+        "--case",
+        "comsol_cycles20"
+      ],
+      "timeout_seconds": 7200,
+      "artifacts": [
+        "experiments/Issue306_heavy_charge_motion/results_wall04/comsol_cycles20_runtime.log",
+        "experiments/Issue306_heavy_charge_motion/results_wall04/comsol_cycles20_returncode.txt",
+        "experiments/Issue306_heavy_charge_motion/results_wall04/comsol_cycles20_elapsed_seconds.txt",
+        "experiments/Issue306_heavy_charge_motion/results_wall04/comsol_cycles20_result.json",
+        "experiments/Issue306_heavy_charge_motion/generated_wall04/comsol_cycles20/**/*.csv",
+        "experiments/Issue306_heavy_charge_motion/generated_wall04/comsol_cycles20/**/*.e"
+      ]
+    },
+    {
+      "id": "comsol_cycles30",
+      "name": "comsol_cycles30 long-relaxation case",
+      "command": [
+        "python3",
+        "experiments/Issue306_heavy_charge_motion/wall04_control.py",
+        "--case",
+        "comsol_cycles30"
+      ],
+      "timeout_seconds": 7200,
+      "artifacts": [
+        "experiments/Issue306_heavy_charge_motion/results_wall04/comsol_cycles30_runtime.log",
+        "experiments/Issue306_heavy_charge_motion/results_wall04/comsol_cycles30_returncode.txt",
+        "experiments/Issue306_heavy_charge_motion/results_wall04/comsol_cycles30_elapsed_seconds.txt",
+        "experiments/Issue306_heavy_charge_motion/results_wall04/comsol_cycles30_result.json",
+        "experiments/Issue306_heavy_charge_motion/generated_wall04/comsol_cycles30/**/*.csv",
+        "experiments/Issue306_heavy_charge_motion/generated_wall04/comsol_cycles30/**/*.e"
+      ]
+    }
+  ],
+  "aggregate": {
+    "name": "Aggregate 10/20/30-cycle potential convergence",
+    "command": [
+      "python3",
+      "experiments/Issue306_heavy_charge_motion/wall04_control.py",
+      "--aggregate"
+    ],
+    "timeout_seconds": 300,
+    "artifacts": [
+      "experiments/Issue306_heavy_charge_motion/results_wall04/issue306_wall04_summary.json"
+    ]
+  }
+}
