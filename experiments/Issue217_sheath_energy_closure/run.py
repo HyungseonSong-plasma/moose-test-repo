@@ -53,7 +53,6 @@ PHI_MAX_PP = "issue217_phi_max"
 
 PARTICLE_CPP = ROOT / "physics_app/src/fvbcs/PhysicsFVElectronGroundedSheathCollectionBC.C"
 ENERGY_CPP = ROOT / "physics_app/src/fvbcs/PhysicsFVElectronGroundedSheathEnergyBC.C"
-SHARED_HELPER = ROOT / "physics_app/include/fvbcs/PhysicsGroundedElectronSheathFlux.h"
 
 
 class Issue217Error(RuntimeError):
@@ -284,23 +283,24 @@ def _construction_audit(text: str, *, predecessor_audit: Mapping[str, Any]) -> d
 def _cpp_contract_audit() -> dict[str, Any]:
     particle = PARTICLE_CPP.read_text(encoding="utf-8")
     energy_src = ENERGY_CPP.read_text(encoding="utf-8")
-    helper = SHARED_HELPER.read_text(encoding="utf-8")
     checks = {
-        "shared_helper_exists": SHARED_HELPER.is_file(),
-        "particle_consumes_shared_relation": 'PhysicsGroundedElectronSheath::primaryParticleFluxHat' in particle,
-        "energy_consumes_shared_relation": 'PhysicsGroundedElectronSheath::primaryEnergyFluxHat' in energy_src,
         "particle_plasma_cell_state": "elemArg()" in particle and "neighborArg()" in particle,
         "energy_plasma_cell_state": "elemArg()" in energy_src and "neighborArg()" in energy_src,
         "particle_face_state_not_used": "singleSidedFaceArg" not in particle,
         "energy_face_state_not_used": "singleSidedFaceArg" not in energy_src,
-        "shared_particle_suppression": "exp(-effective_drop_V / electron_temperature_eV)" in helper,
-        "shared_energy_per_collected_electron": "2.0 * electron_temperature_eV + effective_drop_V" in helper,
+        "particle_temperature_from_mean_energy": "(2.0 / 3.0) * mean_energy_eV" in particle,
+        "energy_temperature_from_mean_energy": "(2.0 / 3.0) * mean_energy_eV" in energy_src,
+        "particle_boltzmann_suppression": "exp(-effective_drop_V / electron_temperature_eV)" in particle,
+        "energy_boltzmann_suppression": "exp(-effective_drop_V / electron_temperature_eV)" in energy_src,
+        "particle_quarter_maxwellian": "0.25 * n_e_hat * mean_speed_m_s * suppression" in particle,
+        "energy_quarter_maxwellian": "0.25 * n_e_hat * mean_speed_m_s * suppression" in energy_src,
+        "energy_per_collected_electron": "2.0 * electron_temperature_eV + effective_drop_V" in energy_src,
         "energy_owner_has_no_see_term": "see_number_flux" not in energy_src,
         "same_negative_drop_tolerance": "negative_drop_tolerance_V" in particle and "negative_drop_tolerance_V" in energy_src,
+        "shared_helper_removed": "PhysicsGroundedElectronSheathFlux.h" not in particle and "PhysicsGroundedElectronSheathFlux.h" not in energy_src,
     }
     failed = sorted(name for name, ok in checks.items() if not ok)
     return {"status": "PASS" if not failed else "FAIL", "checks": checks, "failed_checks": failed}
-
 
 def _analytic_contract_audit() -> dict[str, Any]:
     mean_energy_eV = ENERGY_REFERENCE_EV
