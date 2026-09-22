@@ -19,3 +19,5 @@ jobs:
       manifest: automation/manifests/experiments/Issue_306_experiments06.json
       base_sha: 219385b3357006ef14e939d304f0025bdd7c9041
       operation_sha: 8d3ea7720549148a251a9e11f5733d543344fb2e
+
+# one-shot trigger: sequence-06 comparison
