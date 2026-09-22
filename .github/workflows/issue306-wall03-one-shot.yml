@@ -18,7 +18,7 @@ jobs:
       ISSUE: "306"
       SEQUENCE: "03"
       MANIFEST_INPUT: automation/manifests/experiments/Issue_306_experiments03.json
-      BASE_SHA: 3a33db28febe960b576226b204ebfe72bda937d6
+      BASE_SHA: 19b321993471022f9b77cba8417ac876e81e59fd
     steps:
       - name: Checkout control plane
         uses: actions/checkout@v4
