@@ -871,8 +871,9 @@ def static_contract() -> dict[str, object]:
 
 
 def p0() -> None:
+    summary = static_contract()
     print("ISSUE306_HEAVY_RELEASE_P0: PASS")
-    print(json.dumps(static_contract(), indent=2, sort_keys=True))
+    print(json.dumps(summary, indent=2, sort_keys=True))
 
 
 def p1() -> None:
@@ -1082,18 +1083,18 @@ def p3() -> None:
 
 def _profile_error(a: list[dict[str, float]], b: list[dict[str, float]], key: str) -> float:
     scale = max(max(abs(x[key]) for x in a), 1.0e-30)
-    return max(abs(x[key] - y[key]) for x, y in zip(a, b)) / scale
+    return max(abs(x[key] - y[key]) for x, y in zip(a, b, strict=True)) / scale
 
 
 def _offset_shape(a: list[dict[str, float]], b: list[dict[str, float]]) -> dict[str, float]:
-    delta = [y["potential"] - x["potential"] for x, y in zip(a, b)]
+    delta = [y["potential"] - x["potential"] for x, y in zip(a, b, strict=True)]
     mean_shift = sum(delta) / len(delta)
     centered = [d - mean_shift for d in delta]
     swing = max(x["potential"] for x in a) - min(x["potential"] for x in a)
     shape = max(abs(x) for x in centered) / max(abs(swing), 1.0e-30)
     ea = [-(a[i+1]["potential"]-a[i]["potential"])/(a[i+1]["x"]-a[i]["x"]) for i in range(len(a)-1)]
     eb = [-(b[i+1]["potential"]-b[i]["potential"])/(b[i+1]["x"]-b[i]["x"]) for i in range(len(b)-1)]
-    eerr = max(abs(x-y) for x,y in zip(ea,eb)) / max(max(abs(x) for x in ea), 1.0e-30)
+    eerr = max(abs(x-y) for x,y in zip(ea,eb, strict=True)) / max(max(abs(x) for x in ea), 1.0e-30)
     return {
         "mean_potential_shift_V": mean_shift,
         "offset_removed_shape_over_reference_swing": shape,
