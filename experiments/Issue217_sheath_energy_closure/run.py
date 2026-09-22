@@ -274,6 +274,8 @@ def _construction_audit(text: str, *, predecessor_audit: Mapping[str, Any]) -> d
     energy_path = f"FVBCs/{ENERGY_BC}"
     particle_present = mb.has_block(text, particle_path)
     energy_present = mb.has_block(text, energy_path)
+    particle_material_present = mb.has_block(text, f"FunctorMaterials/{PARTICLE_MATERIAL}")
+    energy_material_present = mb.has_block(text, f"FunctorMaterials/{ENERGY_MATERIAL}")
 
     checks: dict[str, bool] = {
         "predecessor_stage6_accepted_composition": predecessor_audit.get("status") == "PASS",
@@ -284,8 +286,8 @@ def _construction_audit(text: str, *, predecessor_audit: Mapping[str, Any]) -> d
         "historical_primary_energy_bc_absent": not mb.has_block(text, f"FVBCs/{energy.ENERGY_WALL_THERMAL_BC}"),
         "historical_primary_energy_rate_pp_absent": not mb.has_block(text, f"Postprocessors/{energy.ENERGY_WALL_THERMAL_RATE_PP}"),
         "historical_primary_energy_power_pp_absent": not mb.has_block(text, f"Postprocessors/{energy.ENERGY_WALL_THERMAL_POWER_PP}"),
-        "particle_material_present": mb.has_block(text, f"FunctorMaterials/{PARTICLE_MATERIAL}"),
-        "energy_material_present": mb.has_block(text, f"FunctorMaterials/{ENERGY_MATERIAL}"),
+        "particle_material_present": particle_material_present,
+        "energy_material_present": energy_material_present,
         "new_particle_owner_present": particle_present,
         "new_energy_owner_present": energy_present,
         "particle_owner_type": particle_present and mp.get_parameter(text, particle_path, "type") == "PhysicsFVCellFunctorNeumannBC",
@@ -296,9 +298,9 @@ def _construction_audit(text: str, *, predecessor_audit: Mapping[str, Any]) -> d
         "energy_flux_owner": energy_present and mp.get_parameter(text, energy_path, "functor") == ENERGY_FLUX,
         "particle_factor_outward": particle_present and float(mp.get_parameter(text, particle_path, "factor") or "nan") == -1.0,
         "energy_factor_outward": energy_present and float(mp.get_parameter(text, energy_path, "factor") or "nan") == -1.0,
-        "particle_uses_solved_state": _words(text, f"FunctorMaterials/{PARTICLE_MATERIAL}", "functor_names") == ("n_e", "mean_en_solved", "potential_plasma"),
-        "energy_reuses_particle_population": _words(text, f"FunctorMaterials/{ENERGY_MATERIAL}", "functor_names") == (PARTICLE_FLUX, "mean_en_solved", "potential_plasma"),
-        "energy_reference_frozen": f"/{ENERGY_REFERENCE_EV:.17g}" in (mp.get_parameter(text, f"FunctorMaterials/{ENERGY_MATERIAL}", "expression") or ""),
+        "particle_uses_solved_state": particle_material_present and _words(text, f"FunctorMaterials/{PARTICLE_MATERIAL}", "functor_names") == ("n_e", "mean_en_solved", "potential_plasma"),
+        "energy_reuses_particle_population": energy_material_present and _words(text, f"FunctorMaterials/{ENERGY_MATERIAL}", "functor_names") == (PARTICLE_FLUX, "mean_en_solved", "potential_plasma"),
+        "energy_reference_frozen": energy_material_present and f"/{ENERGY_REFERENCE_EV:.17g}" in (mp.get_parameter(text, f"FunctorMaterials/{ENERGY_MATERIAL}", "expression") or ""),
         "see_particle_owner_preserved": mb.has_block(text, f"FVBCs/{a8.SEE_BC}") and float(mp.get_parameter(text, f"FVBCs/{a8.SEE_BC}", "factor") or "nan") == 1.0,
         "see_energy_owner_preserved": mb.has_block(text, f"FVBCs/{energy.SEE_ENERGY_BC}") and float(mp.get_parameter(text, f"FVBCs/{energy.SEE_ENERGY_BC}", "factor") or "nan") == 1.0,
         "see_particle_wall_set_exact": set(_words(text, f"FVBCs/{a8.SEE_BC}", "boundary")) == wall_set,
