@@ -1,0 +1,62 @@
+name: Issue 306 one-shot governed execution
+
+on:
+  push:
+    branches:
+      - issue-306-heavy-charge-motion
+    paths:
+      - .github/workflows/issue306-one-shot.yml
+
+permissions:
+  contents: read
+
+jobs:
+  execute:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    env:
+      ISSUE: "306"
+      SEQUENCE: "01"
+      MANIFEST_INPUT: automation/manifests/experiments/Issue_306_experiments01.json
+      BASE_SHA: a45ab1d89b489c5125e2104a9fea26b321dbd72d
+    steps:
+      - name: Checkout control plane
+        uses: actions/checkout@v4
+        with:
+          path: control
+          fetch-depth: 1
+
+      - name: Checkout exact experiment source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.BASE_SHA }}
+          path: target
+          fetch-depth: 1
+
+      - name: Validate exact source
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C target rev-parse HEAD)" = "$BASE_SHA"
+          test -f "control/$MANIFEST_INPUT"
+
+      - name: Execute governed experiment
+        uses: HyungseonSong-plasma/chatgpt-operation/.github/actions/governed-work@908d5b695b4640727b3c45d8044763c5fcca1d08
+        with:
+          kind: experiments
+          manifest: ${{ github.workspace }}/control/${{ env.MANIFEST_INPUT }}
+          control-root: ${{ github.workspace }}/control
+          workspace: ${{ github.workspace }}/target
+          base-sha: ${{ env.BASE_SHA }}
+          issue: ${{ env.ISSUE }}
+          sequence: ${{ env.SEQUENCE }}
+          results: ${{ github.workspace }}/workflow-results
+
+      - name: Upload governed evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Issue_306_experiments01-one-shot-evidence
+          path: workflow-results/**
+          if-no-files-found: warn
+          retention-days: 30
