@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "issue": 306,
+  "kind": "experiments",
+  "sequence": 2,
+  "title": "COMSOL-style left charged-heavy wall-loss discriminator",
+  "stages": [
+    {
+      "id": "P0",
+      "name": "Validate left charged-wall construction contract",
+      "command": [
+        "python3",
+        "experiments/Issue306_heavy_charge_motion/wall02_control.py",
+        "--phase",
+        "p0"
+      ],
+      "timeout_seconds": 180
+    },
+    {
+      "id": "P1",
+      "name": "Preflight bulk and left-wall parent cases",
+      "command": [
+        "python3",
+        "experiments/Issue306_heavy_charge_motion/wall02_control.py",
+        "--phase",
+        "p1"
+      ],
+      "timeout_seconds": 1200
+    },
+    {
+      "id": "P2",
+      "name": "Build Physics and check wall-loss inputs",
+      "command": [
+        "python3",
+        "experiments/Issue306_heavy_charge_motion/wall02_control.py",
+        "--phase",
+        "p2"
+      ],
+      "timeout_seconds": 3600
+    },
+    {
+      "id": "P3",
+      "name": "Run bulk versus COMSOL-style left-wall chi sweep",
+      "command": [
+        "python3",
+        "experiments/Issue306_heavy_charge_motion/wall02_control.py",
+        "--phase",
+        "p3"
+      ],
+      "timeout_seconds": 7200
+    }
+  ],
+  "artifacts": [
+    "experiments/Issue306_heavy_charge_motion/generated_wall02/**/*.i",
+    "experiments/Issue306_heavy_charge_motion/generated_wall02/**/*.json",
+    "experiments/Issue306_heavy_charge_motion/generated_wall02/**/*.csv",
+    "experiments/Issue306_heavy_charge_motion/generated_wall02/**/*.e",
+    "experiments/Issue306_heavy_charge_motion/results_wall02/**/*"
+  ]
+}
