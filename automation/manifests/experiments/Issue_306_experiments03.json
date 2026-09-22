@@ -1,57 +1,142 @@
 {
   "schema_version": 1,
   "issue": 306,
-  "kind": "experiments",
   "sequence": 3,
   "title": "Right-wall COMSOL parity: electron half-thermal, positive-ion Bohm, signed ion migration",
-  "stages": [
+  "prepare_manifest": "automation/manifests/experiments/Issue_306_experiments03_prep.json",
+  "bundle_paths": [
+    "physics_app/physics-opt",
+    "physics_app/lib/libphysics-opt.so.0",
+    "physics_app/test/lib/libphysics_test-opt.so.0",
+    "experiments/Issue306_heavy_charge_motion/generated_wall03"
+  ],
+  "max_parallel": 3,
+  "cases": [
     {
-      "id": "P0",
-      "name": "Validate wall03 construction contract",
+      "id": "thermal_chi1",
+      "name": "thermal_chi1 right-wall case",
       "command": [
         "python3",
         "experiments/Issue306_heavy_charge_motion/wall03_control.py",
-        "--phase",
-        "p0"
+        "--case",
+        "thermal_chi1"
       ],
-      "timeout_seconds": 180
+      "timeout_seconds": 7200,
+      "artifacts": [
+        "experiments/Issue306_heavy_charge_motion/results_wall03/thermal_chi1_runtime.log",
+        "experiments/Issue306_heavy_charge_motion/results_wall03/thermal_chi1_returncode.txt",
+        "experiments/Issue306_heavy_charge_motion/results_wall03/thermal_chi1_elapsed_seconds.txt",
+        "experiments/Issue306_heavy_charge_motion/results_wall03/thermal_chi1_result.json",
+        "experiments/Issue306_heavy_charge_motion/generated_wall03/thermal_chi1/**/*.csv",
+        "experiments/Issue306_heavy_charge_motion/generated_wall03/thermal_chi1/**/*.e"
+      ]
     },
     {
-      "id": "P1",
-      "name": "Preflight wall03 parent cases",
+      "id": "thermal_chi10",
+      "name": "thermal_chi10 right-wall case",
       "command": [
         "python3",
         "experiments/Issue306_heavy_charge_motion/wall03_control.py",
-        "--phase",
-        "p1"
+        "--case",
+        "thermal_chi10"
       ],
-      "timeout_seconds": 1200
+      "timeout_seconds": 7200,
+      "artifacts": [
+        "experiments/Issue306_heavy_charge_motion/results_wall03/thermal_chi10_runtime.log",
+        "experiments/Issue306_heavy_charge_motion/results_wall03/thermal_chi10_returncode.txt",
+        "experiments/Issue306_heavy_charge_motion/results_wall03/thermal_chi10_elapsed_seconds.txt",
+        "experiments/Issue306_heavy_charge_motion/results_wall03/thermal_chi10_result.json",
+        "experiments/Issue306_heavy_charge_motion/generated_wall03/thermal_chi10/**/*.csv",
+        "experiments/Issue306_heavy_charge_motion/generated_wall03/thermal_chi10/**/*.e"
+      ]
     },
     {
-      "id": "P2",
-      "name": "Build Physics and check wall03 inputs",
+      "id": "thermal_chi20",
+      "name": "thermal_chi20 right-wall case",
       "command": [
         "python3",
         "experiments/Issue306_heavy_charge_motion/wall03_control.py",
-        "--phase",
-        "p2"
+        "--case",
+        "thermal_chi20"
       ],
-      "timeout_seconds": 3600
+      "timeout_seconds": 7200,
+      "artifacts": [
+        "experiments/Issue306_heavy_charge_motion/results_wall03/thermal_chi20_runtime.log",
+        "experiments/Issue306_heavy_charge_motion/results_wall03/thermal_chi20_returncode.txt",
+        "experiments/Issue306_heavy_charge_motion/results_wall03/thermal_chi20_elapsed_seconds.txt",
+        "experiments/Issue306_heavy_charge_motion/results_wall03/thermal_chi20_result.json",
+        "experiments/Issue306_heavy_charge_motion/generated_wall03/thermal_chi20/**/*.csv",
+        "experiments/Issue306_heavy_charge_motion/generated_wall03/thermal_chi20/**/*.e"
+      ]
     },
     {
-      "id": "P3",
-      "name": "Run thermal versus Bohm right-wall chi sweep",
+      "id": "comsol_chi1",
+      "name": "comsol_chi1 right-wall case",
       "command": [
         "python3",
         "experiments/Issue306_heavy_charge_motion/wall03_control.py",
-        "--phase",
-        "p3"
+        "--case",
+        "comsol_chi1"
       ],
-      "timeout_seconds": 7200
+      "timeout_seconds": 7200,
+      "artifacts": [
+        "experiments/Issue306_heavy_charge_motion/results_wall03/comsol_chi1_runtime.log",
+        "experiments/Issue306_heavy_charge_motion/results_wall03/comsol_chi1_returncode.txt",
+        "experiments/Issue306_heavy_charge_motion/results_wall03/comsol_chi1_elapsed_seconds.txt",
+        "experiments/Issue306_heavy_charge_motion/results_wall03/comsol_chi1_result.json",
+        "experiments/Issue306_heavy_charge_motion/generated_wall03/comsol_chi1/**/*.csv",
+        "experiments/Issue306_heavy_charge_motion/generated_wall03/comsol_chi1/**/*.e"
+      ]
+    },
+    {
+      "id": "comsol_chi10",
+      "name": "comsol_chi10 right-wall case",
+      "command": [
+        "python3",
+        "experiments/Issue306_heavy_charge_motion/wall03_control.py",
+        "--case",
+        "comsol_chi10"
+      ],
+      "timeout_seconds": 7200,
+      "artifacts": [
+        "experiments/Issue306_heavy_charge_motion/results_wall03/comsol_chi10_runtime.log",
+        "experiments/Issue306_heavy_charge_motion/results_wall03/comsol_chi10_returncode.txt",
+        "experiments/Issue306_heavy_charge_motion/results_wall03/comsol_chi10_elapsed_seconds.txt",
+        "experiments/Issue306_heavy_charge_motion/results_wall03/comsol_chi10_result.json",
+        "experiments/Issue306_heavy_charge_motion/generated_wall03/comsol_chi10/**/*.csv",
+        "experiments/Issue306_heavy_charge_motion/generated_wall03/comsol_chi10/**/*.e"
+      ]
+    },
+    {
+      "id": "comsol_chi20",
+      "name": "comsol_chi20 right-wall case",
+      "command": [
+        "python3",
+        "experiments/Issue306_heavy_charge_motion/wall03_control.py",
+        "--case",
+        "comsol_chi20"
+      ],
+      "timeout_seconds": 7200,
+      "artifacts": [
+        "experiments/Issue306_heavy_charge_motion/results_wall03/comsol_chi20_runtime.log",
+        "experiments/Issue306_heavy_charge_motion/results_wall03/comsol_chi20_returncode.txt",
+        "experiments/Issue306_heavy_charge_motion/results_wall03/comsol_chi20_elapsed_seconds.txt",
+        "experiments/Issue306_heavy_charge_motion/results_wall03/comsol_chi20_result.json",
+        "experiments/Issue306_heavy_charge_motion/generated_wall03/comsol_chi20/**/*.csv",
+        "experiments/Issue306_heavy_charge_motion/generated_wall03/comsol_chi20/**/*.e"
+      ]
     }
   ],
-  "artifacts": [
-    "experiments/Issue306_heavy_charge_motion/generated_wall03/**/*",
-    "experiments/Issue306_heavy_charge_motion/results_wall03/**/*"
-  ]
+  "aggregate": {
+    "name": "Aggregate thermal versus Bohm right-wall comparison",
+    "command": [
+      "python3",
+      "experiments/Issue306_heavy_charge_motion/wall03_control.py",
+      "--aggregate"
+    ],
+    "timeout_seconds": 300,
+    "artifacts": [
+      "experiments/Issue306_heavy_charge_motion/results_wall03/issue306_wall03_summary.json"
+    ]
+  }
 }
