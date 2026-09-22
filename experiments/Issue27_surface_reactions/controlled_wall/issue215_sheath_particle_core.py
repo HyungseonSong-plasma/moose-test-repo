@@ -28,6 +28,7 @@ AVOGADRO = 6.02214076e23
 ELECTRON_MASS_KG = 9.1093837139e-31
 BASELINE_DT = 1.0e-10
 REFINED_DT = 5.0e-11
+NEGATIVE_DROP_TOLERANCE_V = 1.0e-10
 TARGET_END = 2.0e-10
 DTS = (BASELINE_DT, REFINED_DT)
 WALLS = tuple(a6.PLASMA_WALLS)
@@ -630,6 +631,9 @@ def run() -> dict:
         and m["n_e_min_m3"] >= -1.0e-12
         for m in sheath_metrics
     )
+    electron_repelling_branch = bool(sheath_metrics) and all(
+        m["phi_min_V"] >= -NEGATIVE_DROP_TOLERANCE_V for m in sheath_metrics
+    )
 
     refined_consistency = False
     refinement = {}
@@ -671,6 +675,7 @@ def run() -> dict:
         and all_p2
         and runtime_complete
         and conservation_pass
+        and electron_repelling_branch
         and refined_consistency
         and causal_regulation
     )
@@ -680,8 +685,9 @@ def run() -> dict:
         "G02_all_check_input": all_p2,
         "G03_sheath_runtime_complete": runtime_complete,
         "G04_sheath_particle_charge_gauss_closure": conservation_pass,
-        "G05_timestep_refinement": refined_consistency,
-        "G06_causal_collection_regulation": causal_regulation,
+        "G05_electron_repelling_branch": electron_repelling_branch,
+        "G06_timestep_refinement": refined_consistency,
+        "G07_causal_collection_regulation": causal_regulation,
     }
     summary["scientific_hard_pass"] = hard_pass
     summary["scientific_disposition"] = (
