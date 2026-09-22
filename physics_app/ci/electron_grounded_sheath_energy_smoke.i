@@ -27,6 +27,34 @@
     prop_names = 'n_e_hat mean_en zero_phi zero_flux'
     prop_values = '1.0 5.73276 0.0 0.0'
   []
+  [zero_drop_particle]
+    type = ADParsedFunctorMaterial
+    property_name = zero_drop_particle_flux
+    functor_names = 'n_e_hat mean_en zero_phi'
+    functor_symbols = 'ne mean_ev phi'
+    expression = '0.25*ne*sqrt(8.0*1.602176634e-19*((2.0/3.0)*mean_ev)/(3.14159265358979323846*9.1093837139e-31))*exp(-(0.5*(phi+abs(phi)))/((2.0/3.0)*mean_ev))'
+  []
+  [cell_drop_particle]
+    type = ADParsedFunctorMaterial
+    property_name = cell_drop_particle_flux
+    functor_names = 'n_e_hat mean_en potential_cell'
+    functor_symbols = 'ne mean_ev phi'
+    expression = '0.25*ne*sqrt(8.0*1.602176634e-19*((2.0/3.0)*mean_ev)/(3.14159265358979323846*9.1093837139e-31))*exp(-(0.5*(phi+abs(phi)))/((2.0/3.0)*mean_ev))'
+  []
+  [zero_drop_energy]
+    type = ADParsedFunctorMaterial
+    property_name = zero_drop_energy_flux
+    functor_names = 'zero_drop_particle_flux mean_en zero_phi'
+    functor_symbols = 'gamma_p mean_ev phi'
+    expression = 'gamma_p*((4.0/3.0)*mean_ev+0.5*(phi+abs(phi)))/5.73276'
+  []
+  [cell_drop_energy]
+    type = ADParsedFunctorMaterial
+    property_name = cell_drop_energy_flux
+    functor_names = 'cell_drop_particle_flux mean_en potential_cell'
+    functor_symbols = 'gamma_p mean_ev phi'
+    expression = 'gamma_p*((4.0/3.0)*mean_ev+0.5*(phi+abs(phi)))/5.73276'
+  []
 []
 
 [FVKernels]
@@ -56,22 +84,18 @@
 
 [FVBCs]
   [zero_drop_energy_collection]
-    type = PhysicsFVElectronGroundedSheathEnergyBC
+    type = PhysicsFVCellFunctorNeumannBC
     variable = energy_zero_drop
     boundary = right
-    electron_density = n_e_hat
-    mean_electron_energy = mean_en
-    potential = zero_phi
-    energy_reference_eV = 5.73276
+    functor = zero_drop_energy_flux
+    factor = -1.0
   []
   [cell_drop_energy_collection]
-    type = PhysicsFVElectronGroundedSheathEnergyBC
+    type = PhysicsFVCellFunctorNeumannBC
     variable = energy_cell_drop
     boundary = right
-    electron_density = n_e_hat
-    mean_electron_energy = mean_en
-    potential = potential_cell
-    energy_reference_eV = 5.73276
+    functor = cell_drop_energy_flux
+    factor = -1.0
   []
   [potential_grounded_face]
     type = FVDirichletBC
