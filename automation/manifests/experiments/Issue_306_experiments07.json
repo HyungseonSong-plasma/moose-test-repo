@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "issue": 306,
+  "sequence": 7,
+  "title": "Thermal-wall heavy timestep ratio study at fixed chi_e=100",
+  "prepare_manifest": "automation/manifests/experiments/Issue_306_experiments07_prep.json",
+  "bundle_paths": [
+    "physics_app/physics-opt",
+    "physics_app/lib/libphysics-opt.so.0",
+    "physics_app/test/lib/libphysics_test-opt.so.0",
+    "experiments/Issue306_heavy_charge_motion/generated_wall07"
+  ],
+  "max_parallel": 3,
+  "cases": [
+    {
+      "id": "thermal_ratio2",
+      "name": "thermal_ratio2 equal-horizon case",
+      "command": [
+        "python3",
+        "experiments/Issue306_heavy_charge_motion/wall07_control.py",
+        "--case",
+        "thermal_ratio2"
+      ],
+      "timeout_seconds": 3600,
+      "artifacts": [
+        "experiments/Issue306_heavy_charge_motion/results_wall07/thermal_ratio2_runtime.log",
+        "experiments/Issue306_heavy_charge_motion/results_wall07/thermal_ratio2_returncode.txt",
+        "experiments/Issue306_heavy_charge_motion/results_wall07/thermal_ratio2_elapsed_seconds.txt",
+        "experiments/Issue306_heavy_charge_motion/results_wall07/thermal_ratio2_result.json",
+        "experiments/Issue306_heavy_charge_motion/generated_wall07/thermal_ratio2/**/*.csv",
+        "experiments/Issue306_heavy_charge_motion/generated_wall07/thermal_ratio2/**/*.e"
+      ]
+    },
+    {
+      "id": "thermal_ratio4",
+      "name": "thermal_ratio4 equal-horizon case",
+      "command": [
+        "python3",
+        "experiments/Issue306_heavy_charge_motion/wall07_control.py",
+        "--case",
+        "thermal_ratio4"
+      ],
+      "timeout_seconds": 3600,
+      "artifacts": [
+        "experiments/Issue306_heavy_charge_motion/results_wall07/thermal_ratio4_runtime.log",
+        "experiments/Issue306_heavy_charge_motion/results_wall07/thermal_ratio4_returncode.txt",
+        "experiments/Issue306_heavy_charge_motion/results_wall07/thermal_ratio4_elapsed_seconds.txt",
+        "experiments/Issue306_heavy_charge_motion/results_wall07/thermal_ratio4_result.json",
+        "experiments/Issue306_heavy_charge_motion/generated_wall07/thermal_ratio4/**/*.csv",
+        "experiments/Issue306_heavy_charge_motion/generated_wall07/thermal_ratio4/**/*.e"
+      ]
+    },
+    {
+      "id": "thermal_ratio8",
+      "name": "thermal_ratio8 equal-horizon case",
+      "command": [
+        "python3",
+        "experiments/Issue306_heavy_charge_motion/wall07_control.py",
+        "--case",
+        "thermal_ratio8"
+      ],
+      "timeout_seconds": 3600,
+      "artifacts": [
+        "experiments/Issue306_heavy_charge_motion/results_wall07/thermal_ratio8_runtime.log",
+        "experiments/Issue306_heavy_charge_motion/results_wall07/thermal_ratio8_returncode.txt",
+        "experiments/Issue306_heavy_charge_motion/results_wall07/thermal_ratio8_elapsed_seconds.txt",
+        "experiments/Issue306_heavy_charge_motion/results_wall07/thermal_ratio8_result.json",
+        "experiments/Issue306_heavy_charge_motion/generated_wall07/thermal_ratio8/**/*.csv",
+        "experiments/Issue306_heavy_charge_motion/generated_wall07/thermal_ratio8/**/*.e"
+      ]
+    }
+  ],
+  "aggregate": {
+    "name": "Aggregate thermal heavy-dt ratio evidence",
+    "command": [
+      "python3",
+      "experiments/Issue306_heavy_charge_motion/wall07_control.py",
+      "--aggregate"
+    ],
+    "timeout_seconds": 300,
+    "artifacts": [
+      "experiments/Issue306_heavy_charge_motion/results_wall07/issue306_wall07_summary.json"
+    ]
+  }
+}
