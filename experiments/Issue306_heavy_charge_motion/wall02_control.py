@@ -554,7 +554,8 @@ def aggregate(root: Path) -> dict[str, object]:
 
 def p3() -> None:
     """Run all six cases sequentially and aggregate the wall discriminator."""
-    build()
+    if not GENERATED.exists():
+        build()
     RESULTS.mkdir(parents=True, exist_ok=True)
     rel = ROOT.relative_to(REPO)
     inner = "; ".join(
