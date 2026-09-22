@@ -2,7 +2,7 @@
 
 **Status:** canonical consumer manifest guide  
 **OS:** Paul  
-**Central revision:** `908d5b695b4640727b3c45d8044763c5fcca1d08`
+**Central revision:** `0ed25494cead9dcfa6ec567790fbf7ca2c943c00`
 
 The machine-readable exact identities are in `central_skills.json`.
 
@@ -34,6 +34,9 @@ SCHEDULED_CONTROLLER
   -> skills/controller-throughput/README.md
   -> skills/controller-lifecycle/README.md
   -> state-refresh remains available
+
+GITHUB_ACTIONS_OBSERVATION
+  -> skills/github-actions-observation/README.md
 ```
 
 Do not preload controller skills during an ordinary interactive init.

@@ -29,6 +29,7 @@ Central skill triggers:
 MUTATE               -> repository-mutation
 GOVERNED_WORK        -> governed-work
 SCHEDULED_CONTROLLER -> state-refresh + controller-throughput + controller-lifecycle
+GITHUB_ACTIONS_OBSERVATION -> github-actions-observation
 ```
 
 All central skills come from `docs/operating_system/central_skills.json`.
@@ -118,6 +119,13 @@ Each issue remains an independent semantic/rollback boundary; milestone acceptan
 Trigger central state-refresh, controller-throughput, and controller-lifecycle from the exact Paul pin.
 
 The central skills decide generic liveness/lifecycle mechanics. This repository decides Physics dependency readiness, resource meaning, and scientific HOLD/PASS semantics.
+
+
+### ROUTE-14 — GitHub Actions observation
+
+Trigger central `github-actions-observation` when the immediate obligation requires dispatching or correlating a GitHub Actions run, checking eventual-consistency visibility, or distinguishing the exact run/attempt for current CI or governed execution evidence.
+
+The central skill owns dispatch/observation mechanics only. Physics acceptance, runtime/scientific meaning, dependency readiness, and PASS/HOLD decisions remain local.
 
 ## Paul rule-reuse gate
 
