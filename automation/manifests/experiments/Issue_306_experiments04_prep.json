@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "issue": 306,
+  "kind": "experiments",
+  "sequence": 4,
+  "title": "Prepare long heavy-relaxation convergence matrix",
+  "stages": [
+    {
+      "id": "P0",
+      "name": "Validate fixed-chi long-horizon contract",
+      "command": [
+        "python3",
+        "experiments/Issue306_heavy_charge_motion/wall04_control.py",
+        "--phase",
+        "p0"
+      ],
+      "timeout_seconds": 180
+    },
+    {
+      "id": "P1",
+      "name": "Preflight 10/20/30-cycle parent cases",
+      "command": [
+        "python3",
+        "experiments/Issue306_heavy_charge_motion/wall04_control.py",
+        "--phase",
+        "p1"
+      ],
+      "timeout_seconds": 1200
+    },
+    {
+      "id": "P2",
+      "name": "Build Physics and check long-horizon inputs",
+      "command": [
+        "python3",
+        "experiments/Issue306_heavy_charge_motion/wall04_control.py",
+        "--phase",
+        "p2"
+      ],
+      "timeout_seconds": 3600
+    }
+  ],
+  "artifacts": [
+    "experiments/Issue306_heavy_charge_motion/generated_wall04/**/*.i",
+    "experiments/Issue306_heavy_charge_motion/generated_wall04/**/*.json",
+    "experiments/Issue306_heavy_charge_motion/results_wall04/*_p2.log"
+  ]
+}
