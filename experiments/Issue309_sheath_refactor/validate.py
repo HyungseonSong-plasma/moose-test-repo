@@ -144,6 +144,7 @@ export SQUIRREL_DIR=/opt/physics_vendor/squirrel
 export ZAPDOS_DIR=/opt/physics_vendor/zapdos
 export METHOD=opt
 export PYTHONPATH=/workspace
+uv pip install --system --python "$(command -v python3)" -r /workspace/requirements-evidence-engine.txt
 make -C /workspace/physics_app -j2
 test -x /workspace/physics_app/physics-opt
 python3 /workspace/.github/scripts/issue215_sheath_particle.py --self-test
@@ -178,6 +179,7 @@ export SQUIRREL_DIR=/opt/physics_vendor/squirrel
 export ZAPDOS_DIR=/opt/physics_vendor/zapdos
 export METHOD=opt
 export PYTHONPATH=/workspace
+uv pip install --system --python "$(command -v python3)" -r /workspace/requirements-evidence-engine.txt
 test -x /workspace/physics_app/physics-opt
 rm -rf /workspace/issue215-sheath-particle-results
 rm -rf /workspace/issue217-sheath-energy-results
