@@ -330,6 +330,13 @@ def inner_run(case_name: str) -> int:
     (RESULTS / f"{case_name}_elapsed_seconds.txt").write_text(
         f"{elapsed:.9f}\n", encoding="utf-8"
     )
+    from collections import deque
+    with log.open("r", encoding="utf-8", errors="replace") as handle:
+        tail = deque(handle, maxlen=400)
+    (RESULTS / f"{case_name}_runtime_tail.log").write_text(
+        "".join(tail), encoding="utf-8"
+    )
+    log.unlink(missing_ok=True)
     return 0
 
 
@@ -356,6 +363,9 @@ def analyze(case_name: str) -> tuple[dict[str, object], int]:
         wall_boundary=p["wall_boundary"],
         positive_ion_surface_model=p["positive_ion_surface_model"],
         heavy_to_electron_dt_ratio=p["heavy_to_electron_dt_ratio"],
+        electron_wall_model="standard_moose_half_thermal_times_boltzmann_sheath_factor",
+        electron_particle_prefactor=0.5,
+        electron_energy_prefactor=5.0 / 6.0,
     )
     return result, code
 
@@ -411,7 +421,7 @@ def aggregate(root: Path) -> dict[str, object]:
             found[name] = item
     missing = [name for name in CASE_NAMES if name not in found]
     if missing:
-        raise RuntimeError(f"missing wall07 result(s): {missing}")
+        raise RuntimeError(f"missing wall08 result(s): {missing}")
 
     valid = all(bool(found[name].get("evidence_valid")) for name in CASE_NAMES)
     if not valid:
