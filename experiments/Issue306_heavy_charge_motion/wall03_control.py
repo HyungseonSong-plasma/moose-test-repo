@@ -581,6 +581,28 @@ def _analyze_case(case_name: str) -> tuple[dict[str, object], int]:
     return result, code
 
 
+def run_case(case_name: str) -> None:
+    """Run and analyze exactly one matrix case."""
+    if not (REPO / "physics_app/physics-opt").exists():
+        raise SystemExit("physics-opt missing")
+    rel = ROOT.relative_to(REPO)
+    script = (
+        "set -euo pipefail; source /environment; "
+        "export MOOSE_DIR=/opt/physics_vendor/moose; export CRANE_DIR=/opt/physics_vendor/crane; "
+        "export SQUIRREL_DIR=/opt/physics_vendor/squirrel; export ZAPDOS_DIR=/opt/physics_vendor/zapdos; "
+        "export METHOD=opt; export PYTHONPATH=/workspace; "
+        f"python3 /workspace/{rel}/wall03_control.py --inner-run {case_name}"
+    )
+    base._docker(script)
+    result, code = _analyze_case(case_name)
+    (RESULTS / f"{case_name}_result.json").write_text(
+        json.dumps(result, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    print("ISSUE306_WALL03_CASE:", case_name, result["classification"])
+    print(json.dumps(result, indent=2, sort_keys=True))
+    if code:
+        raise SystemExit(code)
+
 def _profile_metrics(
     anchor: dict[str, object], trial: dict[str, object]
 ) -> dict[str, float]:
@@ -701,7 +723,8 @@ def p3() -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--phase", choices=("p0", "p1", "p2", "p3"))
+    parser.add_argument("--phase", choices=("p0", "p1", "p2"))
+    parser.add_argument("--case", choices=CASE_NAMES)
     parser.add_argument("--inner-run", choices=CASE_NAMES)
     parser.add_argument("--aggregate", action="store_true")
     args = parser.parse_args()
@@ -709,6 +732,9 @@ def main() -> int:
 
     if args.inner_run:
         return inner_run(args.inner_run)
+    if args.case:
+        run_case(args.case)
+        return 0
     if args.aggregate:
         root = os.environ.get("CHATGPT_MATRIX_EVIDENCE_ROOT")
         if not root:
@@ -721,7 +747,7 @@ def main() -> int:
         print(json.dumps(summary, indent=2, sort_keys=True))
         return 0 if bool(summary["evidence_valid"]) else 2
     if args.phase:
-        {"p0": p0, "p1": p1, "p2": p2, "p3": p3}[args.phase]()
+        {"p0": p0, "p1": p1, "p2": p2}[args.phase]()
         return 0
     parser.error("one action is required")
 
