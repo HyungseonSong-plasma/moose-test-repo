@@ -4,7 +4,7 @@
 
 registerMooseObject("PhysicsApp", PhysicsFVElectronGroundedSheathCollectionBC);
 
-namespace
+namespace LegacySheathParticle
 {
 constexpr Real avogadro_per_mol = 6.02214076e23;
 constexpr Real negative_drop_tolerance_V = 1.0e-10;
@@ -75,16 +75,16 @@ PhysicsFVElectronGroundedSheathCollectionBC::computeQpResidual()
   if (raw_mean_energy_eV <= 0.0)
     mooseError("Grounded sheath collection requires mean electron energy > 0 eV; got ",
                raw_mean_energy_eV);
-  if (raw_phi_s_V < -negative_drop_tolerance_V)
+  if (raw_phi_s_V < -LegacySheathParticle::negative_drop_tolerance_V)
     mooseError("Grounded sheath collection is outside its accepted electron-repelling branch: phi_s = ",
                raw_phi_s_V);
 
   const ADReal effective_drop_V = raw_phi_s_V < 0.0 ? ADReal(0.0) : phi_s_V;
   if (!_log_molar_state)
-    return primaryParticleFluxHat(solved_state, mean_energy_eV, effective_drop_V);
+    return LegacySheathParticle::primaryParticleFluxHat(solved_state, mean_energy_eV, effective_drop_V);
 
   using std::exp;
-  const ADReal physical_density = avogadro_per_mol * exp(solved_state);
-  return primaryParticleFluxHat(physical_density, mean_energy_eV, effective_drop_V) /
-         avogadro_per_mol;
+  const ADReal physical_density = LegacySheathParticle::avogadro_per_mol * exp(solved_state);
+  return LegacySheathParticle::primaryParticleFluxHat(physical_density, mean_energy_eV, effective_drop_V) /
+         LegacySheathParticle::avogadro_per_mol;
 }
