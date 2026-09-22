@@ -65,7 +65,7 @@ jobs:
           assert os_meta["expected_version"] == "Paul"
           assert os_meta["index"] == {
               "path": "docs/operating_system/README.md",
-              "expected_blob_sha": "c5158404c680ad8393e1b88bdeb1a0a8e6145e62",
+              "expected_blob_sha": "60a5d69bde0713968cc37616fd1200db16c7864c",
           }
           assert os_meta["essential_rules"] == {
               "path": "docs/operating_system/ESSENTIAL_RULES.md",
