@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "issue": 306,
+  "kind": "experiments",
+  "sequence": 7,
+  "title": "Prepare thermal heavy-dt ratio matrix",
+  "stages": [
+    {
+      "id": "P0",
+      "name": "Validate thermal heavy-dt ratio contract",
+      "command": [
+        "python3",
+        "experiments/Issue306_heavy_charge_motion/wall07_control.py",
+        "--phase",
+        "p0"
+      ],
+      "timeout_seconds": 180
+    },
+    {
+      "id": "P1",
+      "name": "Preflight thermal ratio cases",
+      "command": [
+        "python3",
+        "experiments/Issue306_heavy_charge_motion/wall07_control.py",
+        "--phase",
+        "p1"
+      ],
+      "timeout_seconds": 1200
+    },
+    {
+      "id": "P2",
+      "name": "Build Physics and check ratio inputs",
+      "command": [
+        "python3",
+        "experiments/Issue306_heavy_charge_motion/wall07_control.py",
+        "--phase",
+        "p2"
+      ],
+      "timeout_seconds": 3600
+    }
+  ],
+  "artifacts": [
+    "experiments/Issue306_heavy_charge_motion/generated_wall07/**/*.i",
+    "experiments/Issue306_heavy_charge_motion/generated_wall07/**/*.json",
+    "experiments/Issue306_heavy_charge_motion/results_wall07/*_p2.log"
+  ]
+}
