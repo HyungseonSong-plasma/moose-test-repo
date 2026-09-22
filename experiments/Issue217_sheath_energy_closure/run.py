@@ -40,6 +40,7 @@ RUNTIME_REL_TOL = 1.0e-3
 ALGEBRAIC_REL_TOL = 1.0e-10
 COMPOSITION_ABS_TOL = 1.0e-8
 ELECTRON_DENSITY_FLOOR = -1.0e-12
+NEGATIVE_DROP_TOLERANCE_V = 1.0e-10
 
 PARTICLE_MATERIAL = "issue217_grounded_sheath_particle_flux_material"
 PARTICLE_FLUX = "issue217_grounded_sheath_particle_flux"
@@ -675,6 +676,7 @@ def _evaluate(meta: Mapping[str, Any], metrics: Mapping[str, Any], *, runtime_ok
             and metrics["composition_max_abs_error"] <= COMPOSITION_ABS_TOL
         ),
         "G10_primary_energy_owner_active": metrics["electron_energy"]["primary_wall_power_W"] > 0.0,
+        "G11_electron_repelling_branch": metrics["phi_min_V"] >= -NEGATIVE_DROP_TOLERANCE_V,
     }
     return {"gates": gates, "scientific_hard_pass": all(gates.values())}
 
