@@ -176,7 +176,7 @@ def _fast_child(p: dict[str, object]) -> str:
             "TIMESTEP_TOL": f"{max(float(p['dt_e_s']) * 1.0e-8, 1.0e-30):.17g}",
         },
     )
-    return _set_fast_file_base(text)
+    return text
 
 
 def _poisson_child() -> str:
