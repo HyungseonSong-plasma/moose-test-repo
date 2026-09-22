@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "issue": 306,
+  "kind": "experiments",
+  "sequence": 9,
+  "title": "Prepare standard-MOOSE Bohm-positive-ion sheath-factor heavy-dt matrix",
+  "stages": [
+    {
+      "id": "P0",
+      "name": "Validate Bohm-positive-ion sheath-factor heavy-dt contract",
+      "command": [
+        "python3",
+        "experiments/Issue306_heavy_charge_motion/wall09_control.py",
+        "--phase",
+        "p0"
+      ],
+      "timeout_seconds": 180
+    },
+    {
+      "id": "P1",
+      "name": "Preflight Bohm/sheath ratio cases",
+      "command": [
+        "python3",
+        "experiments/Issue306_heavy_charge_motion/wall09_control.py",
+        "--phase",
+        "p1"
+      ],
+      "timeout_seconds": 1200
+    },
+    {
+      "id": "P2",
+      "name": "Build Physics and check Bohm-positive-ion + standard-MOOSE sheath inputs",
+      "command": [
+        "python3",
+        "experiments/Issue306_heavy_charge_motion/wall09_control.py",
+        "--phase",
+        "p2"
+      ],
+      "timeout_seconds": 3600
+    }
+  ],
+  "artifacts": [
+    "experiments/Issue306_heavy_charge_motion/generated_wall09/**/*.i",
+    "experiments/Issue306_heavy_charge_motion/generated_wall09/**/*.json"
+  ]
+}
