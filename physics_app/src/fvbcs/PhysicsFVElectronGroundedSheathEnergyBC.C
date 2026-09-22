@@ -107,7 +107,7 @@ PhysicsFVElectronGroundedSheathEnergyBC::computeQpResidual()
                " V < 0 V. Electron-attracting/inverse sheath physics requires a separate owner.");
 
   const ADReal effective_drop_V = raw_phi_s_V < 0.0 ? ADReal(0.0) : phi_s_V;
-  const ADReal electron_temperature_eV = electronTemperatureEV(mean_energy_eV);
+  const ADReal electron_temperature_eV = LegacySheathEnergy::electronTemperatureEV(mean_energy_eV);
   const ADReal primary_particle_flux =
       LegacySheathEnergy::primaryParticleFluxHat(electron_density, mean_energy_eV, effective_drop_V);
   const ADReal energy_per_collected_electron_eV =
