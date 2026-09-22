@@ -1,5 +1,4 @@
 #include "PhysicsFVElectronGroundedSheathCollectionBC.h"
-#include "PhysicsGroundedElectronSheathFlux.h"
 
 #include <cmath>
 
@@ -8,6 +7,25 @@ registerMooseObject("PhysicsApp", PhysicsFVElectronGroundedSheathCollectionBC);
 namespace
 {
 constexpr Real avogadro_per_mol = 6.02214076e23;
+constexpr Real negative_drop_tolerance_V = 1.0e-10;
+constexpr Real elementary_charge_C = 1.602176634e-19;
+constexpr Real electron_mass_kg = 9.1093837139e-31;
+constexpr Real pi = 3.141592653589793238462643383279502884;
+
+ADReal
+primaryParticleFluxHat(const ADReal & n_e_hat,
+                       const ADReal & mean_energy_eV,
+                       const ADReal & effective_drop_V)
+{
+  using std::exp;
+  using std::sqrt;
+  const ADReal electron_temperature_eV = (2.0 / 3.0) * mean_energy_eV;
+  const ADReal mean_speed_m_s =
+      sqrt(8.0 * elementary_charge_C * electron_temperature_eV /
+           (pi * electron_mass_kg));
+  return 0.25 * n_e_hat * mean_speed_m_s *
+         exp(-effective_drop_V / electron_temperature_eV);
+}
 }
 
 InputParameters
@@ -15,8 +33,9 @@ PhysicsFVElectronGroundedSheathCollectionBC::validParams()
 {
   auto params = FVQpFluxBC::validParams();
   params.addClassDescription(
-      "Applies the accepted grounded-conductor primary-electron collection law using the "
-      "plasma-side FV state. T1 can reconstruct molar flux from a log-molar state.");
+      "Legacy compatibility owner for the accepted grounded-conductor primary-electron "
+      "collection law. New input decks should prefer ADParsedFunctorMaterial plus "
+      "FVFunctorNeumannBC so the closure stays in standard MOOSE input syntax.");
   params.addRequiredParam<MooseFunctorName>(
       "mean_electron_energy",
       "Plasma-side electron mean energy [eV]. The sheath temperature is (2/3) mean energy.");
@@ -54,18 +73,18 @@ PhysicsFVElectronGroundedSheathCollectionBC::computeQpResidual()
   if (!_log_molar_state && MetaPhysicL::raw_value(solved_state) < 0.0)
     mooseError("Grounded sheath collection requires normalized electron density >= 0.");
   if (raw_mean_energy_eV <= 0.0)
-    mooseError("Grounded sheath collection requires mean electron energy > 0 eV; got ", raw_mean_energy_eV);
-  if (raw_phi_s_V < -PhysicsGroundedElectronSheath::negative_drop_tolerance_V)
-    mooseError("Grounded sheath collection is outside its accepted electron-repelling branch: phi_s = ", raw_phi_s_V);
+    mooseError("Grounded sheath collection requires mean electron energy > 0 eV; got ",
+               raw_mean_energy_eV);
+  if (raw_phi_s_V < -negative_drop_tolerance_V)
+    mooseError("Grounded sheath collection is outside its accepted electron-repelling branch: phi_s = ",
+               raw_phi_s_V);
 
   const ADReal effective_drop_V = raw_phi_s_V < 0.0 ? ADReal(0.0) : phi_s_V;
   if (!_log_molar_state)
-    return PhysicsGroundedElectronSheath::primaryParticleFluxHat(
-        solved_state, mean_energy_eV, effective_drop_V);
+    return primaryParticleFluxHat(solved_state, mean_energy_eV, effective_drop_V);
 
   using std::exp;
   const ADReal physical_density = avogadro_per_mol * exp(solved_state);
-  return PhysicsGroundedElectronSheath::primaryParticleFluxHat(
-             physical_density, mean_energy_eV, effective_drop_V) /
+  return primaryParticleFluxHat(physical_density, mean_energy_eV, effective_drop_V) /
          avogadro_per_mol;
 }
