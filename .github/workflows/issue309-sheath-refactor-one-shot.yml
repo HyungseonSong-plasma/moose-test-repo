@@ -1,0 +1,51 @@
+name: Issue 309 sheath refactor one-shot
+
+on:
+  push:
+    branches:
+      - issue-309-standard-moose-sheath-refactor
+    paths:
+      - .github/workflows/issue309-sheath-refactor-one-shot.yml
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - name: Checkout control
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          path: control
+          fetch-depth: 1
+
+      - name: Checkout exact refactor source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: 2967fa478b2b1f888c5c4fff5e4fc14099109c24
+          path: target
+          fetch-depth: 1
+
+      - name: Execute governed refactor
+        uses: HyungseonSong-plasma/chatgpt-operation/.github/actions/governed-work@0ed25494cead9dcfa6ec567790fbf7ca2c943c00
+        with:
+          kind: refactor
+          manifest: ${{ github.workspace }}/control/automation/manifests/refactors/Issue_309_refactor01.json
+          control-root: ${{ github.workspace }}/control
+          workspace: ${{ github.workspace }}/target
+          base-sha: 2967fa478b2b1f888c5c4fff5e4fc14099109c24
+          issue: "309"
+          sequence: "01"
+          results: ${{ github.workspace }}/workflow-results
+
+      - name: Upload governed evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: Issue_309_refactor01-evidence
+          path: workflow-results/**
+          if-no-files-found: warn
+          retention-days: 30
