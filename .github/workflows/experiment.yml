@@ -29,8 +29,52 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  route:
+    runs-on: ubuntu-24.04
+    outputs:
+      mode: ${{ steps.route.outputs.mode }}
+      case_count: ${{ steps.route.outputs.case_count }}
+    env:
+      ISSUE: ${{ inputs.issue }}
+      SEQUENCE: ${{ inputs.sequence }}
+      MANIFEST_INPUT: ${{ inputs.manifest }}
+      BASE_SHA: ${{ inputs.base_sha }}
+      OPERATION_SHA: 8e5453bbb92f9e6a19ed3d9687f52c01155de4c0
+    steps:
+      - name: Checkout exact consumer control
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.base_sha }}
+          path: control
+          fetch-depth: 1
+
+      - name: Checkout exact operation source
+        uses: actions/checkout@v4
+        with:
+          repository: HyungseonSong-plasma/chatgpt-operation
+          ref: ${{ env.OPERATION_SHA }}
+          path: operation
+          fetch-depth: 1
+
+      - name: Validate dispatch and classify manifest
+        id: route
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$ISSUE" =~ ^[1-9][0-9]*$ ]]
+          [[ "$SEQUENCE" =~ ^[0-9]+$ ]]
+          [[ "$BASE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$MANIFEST_INPUT" =~ ^automation/manifests/experiments/[A-Za-z0-9_.-]+\.json$ ]]
+          test "$(git -C control rev-parse HEAD)" = "$BASE_SHA"
+          test "$(git -C operation rev-parse HEAD)" = "$OPERATION_SHA"
+          python3 control/ci/guards/workflow_surface_guard.py --check --root control
+          PYTHONPATH=operation/src python3 -m chatgpt_operation.cli matrix route \
+            --manifest "control/$MANIFEST_INPUT" \
+            --github-output "$GITHUB_OUTPUT"
+
   execute:
-    if: inputs.sequence != '07' && inputs.sequence != '08' && inputs.sequence != '09' && inputs.sequence != '10' && inputs.sequence != '11' && inputs.sequence != '12'
+    needs: route
+    if: needs.route.outputs.mode == 'serial'
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     env:
@@ -39,12 +83,6 @@ jobs:
       MANIFEST_INPUT: ${{ inputs.manifest }}
       BASE_SHA: ${{ inputs.base_sha }}
     steps:
-      - name: Checkout control plane
-        uses: actions/checkout@v4
-        with:
-          path: control
-          fetch-depth: 1
-
       - name: Checkout exact experiment source
         uses: actions/checkout@v4
         with:
@@ -52,22 +90,12 @@ jobs:
           path: target
           fetch-depth: 1
 
-      - name: Validate execution surface and dispatch identity
-        shell: bash
-        run: |
-          set -euo pipefail
-          [[ "$ISSUE" =~ ^[1-9][0-9]*$ ]]
-          [[ "$SEQUENCE" =~ ^[0-9]+$ ]]
-          [[ "$BASE_SHA" =~ ^[0-9a-f]{40}$ ]]
-          [[ "$MANIFEST_INPUT" =~ ^automation/manifests/experiments/[A-Za-z0-9_.-]+\.json$ ]]
-          python3 control/ci/guards/workflow_surface_guard.py --check --root control
-
-      - name: Execute central governed experiment
-        uses: HyungseonSong-plasma/chatgpt-operation/.github/actions/governed-work@908d5b695b4640727b3c45d8044763c5fcca1d08
+      - name: Execute central governed serial experiment
+        uses: HyungseonSong-plasma/chatgpt-operation/.github/actions/governed-work@8e5453bbb92f9e6a19ed3d9687f52c01155de4c0
         with:
           kind: experiments
-          manifest: ${{ github.workspace }}/control/${{ inputs.manifest }}
-          control-root: ${{ github.workspace }}/control
+          manifest: ${{ github.workspace }}/target/${{ inputs.manifest }}
+          control-root: ${{ github.workspace }}/target
           workspace: ${{ github.workspace }}/target
           base-sha: ${{ inputs.base_sha }}
           issue: ${{ inputs.issue }}
@@ -83,13 +111,13 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
 
-
   matrix-execute:
-    if: inputs.sequence == '07' || inputs.sequence == '08' || inputs.sequence == '09' || inputs.sequence == '10' || inputs.sequence == '11' || inputs.sequence == '12'
-    uses: HyungseonSong-plasma/chatgpt-operation/.github/workflows/governed-matrix.yml@464e0fa0e60e904dba7b2dfc1c960f4337713309
+    needs: route
+    if: needs.route.outputs.mode == 'matrix'
+    uses: HyungseonSong-plasma/chatgpt-operation/.github/workflows/governed-matrix.yml@8e5453bbb92f9e6a19ed3d9687f52c01155de4c0
     with:
       issue: ${{ inputs.issue }}
       sequence: ${{ inputs.sequence }}
       manifest: ${{ inputs.manifest }}
       base_sha: ${{ inputs.base_sha }}
-      operation_sha: 464e0fa0e60e904dba7b2dfc1c960f4337713309
+      operation_sha: 8e5453bbb92f9e6a19ed3d9687f52c01155de4c0
