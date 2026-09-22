@@ -2,7 +2,7 @@
 
 **Status:** canonical consumer manifest guide  
 **OS:** Paul  
-**Central revision:** `908d5b695b4640727b3c45d8044763c5fcca1d08`
+**Central revision:** `8d3ea7720549148a251a9e11f5733d543344fb2e`
 
 The machine-readable exact identities are in `central_skills.json`.
 
@@ -29,6 +29,9 @@ MUTATE
 
 GOVERNED_WORK
   -> skills/governed-work/README.md
+
+GOVERNED_MATRIX
+  -> skills/governed-matrix/README.md
 
 SCHEDULED_CONTROLLER
   -> skills/controller-throughput/README.md
