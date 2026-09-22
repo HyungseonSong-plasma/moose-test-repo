@@ -4,7 +4,7 @@
 
 registerMooseObject("PhysicsApp", PhysicsFVElectronGroundedSheathEnergyBC);
 
-namespace
+namespace LegacySheathEnergy
 {
 constexpr Real negative_drop_tolerance_V = 1.0e-10;
 constexpr Real elementary_charge_C = 1.602176634e-19;
@@ -24,7 +24,7 @@ primaryParticleFluxHat(const ADReal & n_e_hat,
 {
   using std::exp;
   using std::sqrt;
-  const ADReal electron_temperature_eV = electronTemperatureEV(mean_energy_eV);
+  const ADReal electron_temperature_eV = LegacySheathEnergy::electronTemperatureEV(mean_energy_eV);
   const ADReal mean_speed_m_s =
       sqrt(8.0 * elementary_charge_C * electron_temperature_eV /
            (pi * electron_mass_kg));
@@ -101,7 +101,7 @@ PhysicsFVElectronGroundedSheathEnergyBC::computeQpResidual()
   if (raw_mean_energy_eV <= 0.0)
     mooseError("Grounded sheath energy collection requires mean electron energy > 0 eV; got ",
                raw_mean_energy_eV);
-  if (raw_phi_s_V < -negative_drop_tolerance_V)
+  if (raw_phi_s_V < -LegacySheathEnergy::negative_drop_tolerance_V)
     mooseError("Grounded sheath energy collection is outside its W4.5 validity branch: phi_s = ",
                raw_phi_s_V,
                " V < 0 V. Electron-attracting/inverse sheath physics requires a separate owner.");
@@ -109,7 +109,7 @@ PhysicsFVElectronGroundedSheathEnergyBC::computeQpResidual()
   const ADReal effective_drop_V = raw_phi_s_V < 0.0 ? ADReal(0.0) : phi_s_V;
   const ADReal electron_temperature_eV = electronTemperatureEV(mean_energy_eV);
   const ADReal primary_particle_flux =
-      primaryParticleFluxHat(electron_density, mean_energy_eV, effective_drop_V);
+      LegacySheathEnergy::primaryParticleFluxHat(electron_density, mean_energy_eV, effective_drop_V);
   const ADReal energy_per_collected_electron_eV =
       2.0 * electron_temperature_eV + effective_drop_V;
 
