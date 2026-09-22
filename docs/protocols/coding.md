@@ -30,7 +30,7 @@ python3 bin/physics.py <command> [args]
 
 Command routing/presentation is owned by `physics_harness/cli/`; `bin/physics.py` is a thin process launcher only. Do not create an issue-specific top-level executable when an existing `physics` command and harness module can represent the operation as a mode or subcommand.
 
-Repository-specific developer/static validation belongs under `ci/guards/`. Reusable operational skills are centrally owned by `HyungseonSong-plasma/chatgpt-operation` and must not be vendored into this repository. Repository mutation is pinned at `908d5b695b4640727b3c45d8044763c5fcca1d08`; governed-work execution is pinned at `908d5b695b4640727b3c45d8044763c5fcca1d08`; controller lifecycle/throughput/state-refresh evaluation is pinned at `908d5b695b4640727b3c45d8044763c5fcca1d08`. Do not recreate a local `skills/`, loose root-level tool surface, or general `scripts/` dumping ground.
+Repository-specific developer/static validation belongs under `ci/guards/`. Reusable operational skills are centrally owned by `HyungseonSong-plasma/chatgpt-operation` and must not be vendored into this repository. Repository mutation is pinned at `0ed25494cead9dcfa6ec567790fbf7ca2c943c00`; governed-work execution is pinned at `0ed25494cead9dcfa6ec567790fbf7ca2c943c00`; controller lifecycle/throughput/state-refresh evaluation is pinned at `0ed25494cead9dcfa6ec567790fbf7ca2c943c00`. Do not recreate a local `skills/`, loose root-level tool surface, or general `scripts/` dumping ground.
 
 ## CODE-03 — File placement ownership
 
@@ -52,13 +52,13 @@ automation/
 .chatgpt-operation.json
   -> consumer-local authorization policy for the exact-SHA central repository-mutation skill
 
-chatgpt-operation@908d5b695b4640727b3c45d8044763c5fcca1d08
+chatgpt-operation@0ed25494cead9dcfa6ec567790fbf7ca2c943c00
   -> external reusable repository-mutation mechanics; no vendored implementation in this repository
 
-chatgpt-operation@908d5b695b4640727b3c45d8044763c5fcca1d08
+chatgpt-operation@0ed25494cead9dcfa6ec567790fbf7ca2c943c00
   -> external reusable governed-work manifest/runner mechanics; no vendored implementation in this repository
 
-chatgpt-operation@908d5b695b4640727b3c45d8044763c5fcca1d08
+chatgpt-operation@0ed25494cead9dcfa6ec567790fbf7ca2c943c00
   -> external reusable controller lifecycle/throughput/state-refresh evaluation; no vendored controller implementation in this repository
 
 physics_harness/
