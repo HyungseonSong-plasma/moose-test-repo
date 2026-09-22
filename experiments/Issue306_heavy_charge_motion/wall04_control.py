@@ -296,10 +296,15 @@ def _analyze_case(case_name: str) -> tuple[dict[str, object], int]:
         base.GENERATED = GENERATED
         base.RESULTS = RESULTS
         with _base_horizon(cycles):
-            result, code = wall03._analyze_case(case_name)
+            result, code = base.analyze_case(case_name)
     finally:
         base.GENERATED = old_generated
         base.RESULTS = old_results
+
+    result["mode"] = p["mode"]
+    result["flow_inlet"] = p["flow_inlet"]
+    result["wall_boundary"] = p["wall_boundary"]
+    result["positive_ion_surface_model"] = p["positive_ion_surface_model"]
 
     rows = base._rows(GENERATED / case_name / "input_step_csv.csv")
     history: list[dict[str, float]] = []
@@ -316,6 +321,16 @@ def _analyze_case(case_name: str) -> tuple[dict[str, object], int]:
             }
         )
     result["history"] = history
+
+    if code == 0 and rows:
+        final = rows[-1]
+        result["right_wall_rates"] = {
+            species: {
+                "surface_rate_signed": float(final[f"right_{species}_surface_rate"]),
+                "migration_rate_signed": float(final[f"right_{species}_migration_rate"]),
+            }
+            for species in wall03.ALL_CHARGED
+        }
 
     if code == 0:
         profile = result["final_profile"]
