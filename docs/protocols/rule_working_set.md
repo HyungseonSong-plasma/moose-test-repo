@@ -48,6 +48,9 @@ SCHEDULED_CONTROLLER
   -> state-refresh
   -> controller-throughput
   -> controller-lifecycle
+
+GITHUB_ACTIONS_OBSERVATION
+  -> github-actions-observation
 ```
 
 Skill presence does not imply permanent activation.
