@@ -424,7 +424,7 @@ def _negative_controls() -> dict[str, Any]:
 
     good, _ = build_issue217_input()
     forced = mp.upsert_parameter(good, "FVKernels/n_e_drift", "boundaries_to_avoid", "'inlet outlet'")
-    forced = mp.upsert_parameter(forced, "FVKernels/n_e_drift", "boundaries_to_force", wall_list)
+    forced = mp.upsert_parameter(forced, "FVKernels/n_e_drift", "boundaries_to_force", "'" + " ".join(WALLS) + "'")
     forced_audit = _construction_audit(forced, predecessor_audit=predecessor["predecessor_audit"])
 
     checks = {
