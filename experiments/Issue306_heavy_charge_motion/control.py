@@ -1046,7 +1046,8 @@ def run_case(case_name: str) -> None:
 
 
 def p3() -> None:
-    build()
+    if not GENERATED.exists():
+        build()
     rel = ROOT.relative_to(REPO)
     inner = "; ".join(
         f"python3 /workspace/{rel}/control.py --inner-run {name}"
