@@ -23,8 +23,8 @@ primaryParticleFluxHat(const ADReal & n_e_hat,
   const ADReal mean_speed_m_s =
       sqrt(8.0 * elementary_charge_C * electron_temperature_eV /
            (pi * electron_mass_kg));
-  return 0.25 * n_e_hat * mean_speed_m_s *
-         exp(-effective_drop_V / electron_temperature_eV);
+  const ADReal suppression = exp(-effective_drop_V / electron_temperature_eV);
+  return 0.25 * n_e_hat * mean_speed_m_s * suppression;
 }
 }
 
