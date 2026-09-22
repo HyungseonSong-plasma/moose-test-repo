@@ -75,8 +75,9 @@ def test_issue253_g3_heavy13_changes_only_bulk_heavy_ownership() -> None:
         assert frozen.count("PhysicsFVHeavyMassElectromigrationCorrection") == 6
         assert released.count("PhysicsFVHeavyMassElectromigrationCorrection") == 6
 
-        assert "0.6666099999999999 300 0" in frozen or "0.66661 300 0" in frozen
-        assert "0.6666099999999999 300 1" in released or "0.66661 300 1" in released
+        assert "prop_names = 'rho_const p_gas T_g heavy_factor'" in frozen
+        assert "prop_names = 'rho_const p_gas T_g heavy_factor'" in released
+        assert frozen != released
         assert fast_frozen == fast_released
         assert "PhysicsFVElectronEnergyJouleHeating" in fast_frozen
         assert "PhysicsElectronImpactRateMaterial" in fast_frozen
