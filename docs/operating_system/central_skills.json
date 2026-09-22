@@ -2,11 +2,11 @@
   "schema_version": 2,
   "source_repository": "HyungseonSong-plasma/chatgpt-operation",
   "operating_system": {
-    "revision": "908d5b695b4640727b3c45d8044763c5fcca1d08",
+    "revision": "8d3ea7720549148a251a9e11f5733d543344fb2e",
     "expected_version": "Paul",
     "index": {
       "path": "docs/operating_system/README.md",
-      "expected_blob_sha": "c5158404c680ad8393e1b88bdeb1a0a8e6145e62"
+      "expected_blob_sha": "60a5d69bde0713968cc37616fd1200db16c7864c"
     },
     "essential_rules": {
       "path": "docs/operating_system/ESSENTIAL_RULES.md",
@@ -19,7 +19,7 @@
       "load_on": [
         "INIT"
       ],
-      "revision": "908d5b695b4640727b3c45d8044763c5fcca1d08",
+      "revision": "8d3ea7720549148a251a9e11f5733d543344fb2e",
       "path": "skills/session-bootstrap/README.md",
       "expected_blob_sha": "03d661d354dfba09033f184ddf11b9eb9e7e8404"
     },
@@ -29,7 +29,7 @@
         "INIT",
         "SCHEDULED_CONTROLLER"
       ],
-      "revision": "908d5b695b4640727b3c45d8044763c5fcca1d08",
+      "revision": "8d3ea7720549148a251a9e11f5733d543344fb2e",
       "path": "skills/state-refresh/README.md",
       "expected_blob_sha": "4efe6135b93456f2cc9da31786967f5f6ac80033"
     },
@@ -38,7 +38,7 @@
       "load_on": [
         "MUTATE"
       ],
-      "revision": "908d5b695b4640727b3c45d8044763c5fcca1d08",
+      "revision": "8d3ea7720549148a251a9e11f5733d543344fb2e",
       "path": "skills/repository-mutation/README.md",
       "expected_blob_sha": "0229c6b7a440a9a624a0b773c62f536ca67a29b6"
     },
@@ -47,16 +47,25 @@
       "load_on": [
         "GOVERNED_WORK"
       ],
-      "revision": "908d5b695b4640727b3c45d8044763c5fcca1d08",
+      "revision": "8d3ea7720549148a251a9e11f5733d543344fb2e",
       "path": "skills/governed-work/README.md",
       "expected_blob_sha": "5ba4d1be80a4c3019fd9c21fe017468b87315a71"
+    },
+    {
+      "name": "governed-matrix",
+      "load_on": [
+        "GOVERNED_MATRIX"
+      ],
+      "revision": "8d3ea7720549148a251a9e11f5733d543344fb2e",
+      "path": "skills/governed-matrix/README.md",
+      "expected_blob_sha": "7d7e185a941340529935534189695b7fa402e78b"
     },
     {
       "name": "controller-throughput",
       "load_on": [
         "SCHEDULED_CONTROLLER"
       ],
-      "revision": "908d5b695b4640727b3c45d8044763c5fcca1d08",
+      "revision": "8d3ea7720549148a251a9e11f5733d543344fb2e",
       "path": "skills/controller-throughput/README.md",
       "expected_blob_sha": "5bc67c38f224c9c02a84f676b69c0908e1df96bb"
     },
@@ -65,7 +74,7 @@
       "load_on": [
         "SCHEDULED_CONTROLLER"
       ],
-      "revision": "908d5b695b4640727b3c45d8044763c5fcca1d08",
+      "revision": "8d3ea7720549148a251a9e11f5733d543344fb2e",
       "path": "skills/controller-lifecycle/README.md",
       "expected_blob_sha": "28f512d80d380ecd415bb4d8d60be4778d464c47"
     }
