@@ -14,7 +14,7 @@ Only the physical heavy-relaxation horizon changes:
   chi_e = 20
   chi_h = 40
   heavy cycles = 100 / 200 / 300
-  T_final/tau_epsilon(initial) = 400 / 800 / 1200
+  T_final/tau_epsilon(initial) = 4000 / 8000 / 12000
 
 Each horizon starts from the identical initial state.  The aggregate compares
 raw potential, offset-removed potential, E field, net charge, and charged-heavy
@@ -414,13 +414,13 @@ def aggregate(root: Path) -> dict[str, object]:
             "cases": found,
         }
 
-    c10 = found["comsol_cycles100"]
-    c20 = found["comsol_cycles200"]
-    c30 = found["comsol_cycles300"]
+    c100 = found["comsol_cycles100"]
+    c200 = found["comsol_cycles200"]
+    c300 = found["comsol_cycles300"]
     comparisons = {
-        "cycles200_vs_100": _comparison(c10, c20),
-        "cycles300_vs_200": _comparison(c20, c30),
-        "cycles300_vs_100": _comparison(c10, c30),
+        "cycles200_vs_100": _comparison(c100, c200),
+        "cycles300_vs_200": _comparison(c200, c300),
+        "cycles300_vs_100": _comparison(c100, c300),
     }
 
     d100_200 = abs(float(comparisons["cycles200_vs_100"]["phi_avg_change_V"]))
