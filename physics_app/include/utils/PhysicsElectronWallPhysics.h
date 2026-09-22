@@ -22,6 +22,6 @@ absorbingNumberFlux(const DensityType & electron_density,
                     const EnergyType & mean_energy_eV,
                     const Real sticking)
 {
-  return sticking * 0.25 * electron_density * meanSpeed(mean_energy_eV);
+  // COMSOL Drift-Diffusion wall convention for zero reflection:\n  //   Gamma_e,thermal = (1/2) * n_e * v_e,th.\n  return sticking * 0.5 * electron_density * meanSpeed(mean_energy_eV);
 }
 }
