@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "issue": 306,
+  "sequence": 6,
+  "title": "Thermal chi10 vs Bohm chi100 at 300 heavy cycles",
+  "prepare_manifest": "automation/manifests/experiments/Issue_306_experiments06_prep.json",
+  "bundle_paths": ["physics_app/physics-opt","physics_app/lib/libphysics-opt.so.0","physics_app/test/lib/libphysics_test-opt.so.0","experiments/Issue306_heavy_charge_motion/generated_wall06"],
+  "max_parallel": 2,
+  "cases": [
+    {"id":"thermal_chi10_cycles300","name":"thermal wall chi10 300 cycles","command":["python3","experiments/Issue306_heavy_charge_motion/wall06_control.py","--case","thermal_chi10_cycles300"],"timeout_seconds":14400,"artifacts":["experiments/Issue306_heavy_charge_motion/results_wall06/thermal_chi10_cycles300_*","experiments/Issue306_heavy_charge_motion/generated_wall06/thermal_chi10_cycles300/**/*.csv","experiments/Issue306_heavy_charge_motion/generated_wall06/thermal_chi10_cycles300/**/*.e"]},
+    {"id":"bohm_chi100_cycles300","name":"positive-ion Bohm chi100 300 cycles","command":["python3","experiments/Issue306_heavy_charge_motion/wall06_control.py","--case","bohm_chi100_cycles300"],"timeout_seconds":14400,"artifacts":["experiments/Issue306_heavy_charge_motion/results_wall06/bohm_chi100_cycles300_*","experiments/Issue306_heavy_charge_motion/generated_wall06/bohm_chi100_cycles300/**/*.csv","experiments/Issue306_heavy_charge_motion/generated_wall06/bohm_chi100_cycles300/**/*.e"]}
+  ],
+  "aggregate": {"name":"Compare thermal chi10 vs Bohm chi100","command":["python3","experiments/Issue306_heavy_charge_motion/wall06_control.py","--aggregate"],"timeout_seconds":300,"artifacts":["experiments/Issue306_heavy_charge_motion/results_wall06/issue306_wall06_summary.json"]}
+}
