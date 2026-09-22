@@ -43,3 +43,35 @@ The aggregate reports raw potential differences, offset-removed shape error,
 E-field error, electron-density and mean-energy errors, net-charge error, and
 the released/frozen potential-offset contraction ratio.  It does not assign a
 terminal physical interpretation automatically.
+
+
+## Sequence 02 — COMSOL-style left charged-heavy wall loss
+
+Sequence 01 demonstrated that two heavy cycles with bulk transport alone leave
+the charged-heavy state close to frozen.  Sequence 02 keeps the same clocks
+(`chi_h=40`, two heavy cycles, `chi_e=1/10/20`) and compares:
+
+- `bulk`: the successful Sequence-01 released-heavy topology;
+- `wall`: the same topology plus left-wall loss for O2+, O-, and O+.
+
+The wall case uses the current production `PhysicsIonWallFluxMaterial`:
+
+```text
+Gamma_surface   = s * 0.25 * n_i * v_th
+Gamma_migration = n_i * mu_i * max(z_i * E_n, 0)
+Gamma_wall      = Gamma_surface + Gamma_migration
+```
+
+with `sticking=1` for O2+, O-, and O+.  Bulk electrostatic drift and the
+heavy-mass electromigration correction continue to avoid both external
+boundaries, so the left migration flux has a single owner.
+
+The left `INSFVOutletPressureBC` remains only as the constant-density
+hydrodynamic pressure reference.  It is not the heavy-species boundary
+condition in the wall case.  This distinction is required because removing
+the only pressure anchor while retaining the right mass-flow inlet would make
+the present incompressible 1D flow closure ill-posed.
+
+Sequence-02 evidence must therefore be interpreted as a charged-heavy
+wall-loss discriminator, not as a fully resolved solid-wall hydrodynamic
+model.
