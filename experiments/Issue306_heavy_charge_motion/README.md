@@ -75,3 +75,75 @@ the present incompressible 1D flow closure ill-posed.
 Sequence-02 evidence must therefore be interpreted as a charged-heavy
 wall-loss discriminator, not as a fully resolved solid-wall hydrodynamic
 model.
+
+
+## Sequence 03 — left inlet / right COMSOL charged wall
+
+Sequence 03 fixes the boundary topology to:
+
+```text
+left:
+  20 sccm pure-O2 inlet
+  solved charged-heavy inlet fluxes = 0
+
+right:
+  hydrodynamic pressure reference
+  electron particle wall loss
+  electron energy wall loss
+  charged-heavy wall loss
+```
+
+Electron wall ownership remains **right-only**. The accepted fast child already
+uses the COMSOL drift-diffusion thermal particle coefficient,
+
+```text
+Gamma_e,wall = 0.5 * n_e * v_e,th
+```
+
+and the electron-energy BC uses the COMSOL coefficient `5/6`. The shared
+`PhysicsElectronWallPhysics::absorbingNumberFlux` helper was also aligned to
+the same `0.5` convention.
+
+For charged heavy species on the right wall:
+
+```text
+O2+, O+:
+  surface loss   = n_i * u_B
+  u_B            = sqrt(e * N_A * T_e[eV] / M_i)
+  migration loss = n_i * mu_i * max(z_i E_n, 0)
+
+O-:
+  surface loss   = 0.25 * n_i * v_th,i   (sticking = 1)
+  migration loss = n_i * mu_i * max(z_i E_n, 0)
+```
+
+Bulk electrostatic drift and heavy-mass electromigration correction continue to
+avoid both external boundaries, so the right-wall migration flux has a single
+owner.
+
+A same-topology thermal-ion control is retained, where O2+/O-/O+ all use
+thermal sticking plus migration. This isolates the positive-ion
+thermal-to-Bohm replacement.
+
+### Governed evidence
+
+```text
+workflow run = 35703377359 / SUCCESS
+exact source = 6a547da25ba4d33fcb455542e8972bbd722b443e
+manifest     = automation/manifests/experiments/Issue_306_experiments03.json
+
+P0 PASS
+P1 PASS
+P2 PASS
+P3 PASS
+```
+
+All six `thermal/comsol x chi_e={1,10,20}` cases converged at
+`chi_h=40`, two heavy cycles, and common `T=80 tau_epsilon(initial)`.
+
+The Bohm replacement materially changes the absolute potential level while
+leaving the offset-removed field/profile shape almost unchanged over this
+short horizon. For example, COMSOL-vs-thermal mean-potential shifts are about
+`-0.500 V` for all three electron chi values, while the corresponding
+electric-field relative differences are only O(`1e-6`). This is a wall-law
+effect and must not be confused with electron-timestep sensitivity.
