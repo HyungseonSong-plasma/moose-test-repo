@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Structural regression for the canonical T1/T2 electron molar representation."""
+"""Structural regression for canonical electron molar transport and sheath realization."""
 from __future__ import annotations
 
 import argparse
@@ -23,26 +23,45 @@ REQUIRED: dict[str, tuple[str, ...]] = {
         "const ADReal c_face = exp(_var(transported_face, state));",
         "return -physical_number_source / avogadro_per_mol;",
     ),
-    "physics_app/include/fvbcs/PhysicsFVElectronGroundedSheathCollectionBC.h": (
-        "const bool _log_molar_state;",
+    "physics_app/include/fvbcs/PhysicsFVCellFunctorNeumannBC.h": (
+        "class PhysicsFVCellFunctorNeumannBC",
+        "const Moose::Functor<ADReal> & _functor;",
+        "const Moose::Functor<ADReal> & _factor;",
     ),
-    "physics_app/src/fvbcs/PhysicsFVElectronGroundedSheathCollectionBC.C": (
-        '"log_molar_state", false',
-        "const ADReal physical_density = avogadro_per_mol * exp(solved_state);",
-        "physical_density, mean_energy_eV, effective_drop_V) /",
-        "avogadro_per_mol;",
-        "if (!_log_molar_state)",
+    "physics_app/src/fvbcs/PhysicsFVCellFunctorNeumannBC.C": (
+        'registerMooseObject("PhysicsApp", PhysicsFVCellFunctorNeumannBC);',
+        'getFunctor<ADReal>("functor")',
+        'getFunctor<ADReal>("factor")',
+        "elemArg()",
+        "neighborArg()",
+        "return -_factor(cell, state) * _functor(cell, state);",
     ),
-    "physics_app/include/fvbcs/PhysicsFVElectronGroundedSheathEnergyBC.h": (
-        "const bool _molar_energy_state;",
+    "physics_app/ci/electron_sheath_collection_smoke.i": (
+        "type = ADParsedFunctorMaterial",
+        "property_name = cell_drop_particle_flux",
+        "functor_names = 'n_cell_drop mean_en potential_cell'",
+        "type = PhysicsFVCellFunctorNeumannBC",
+        "functor = cell_drop_particle_flux",
+        "factor = -1.0",
     ),
-    "physics_app/src/fvbcs/PhysicsFVElectronGroundedSheathEnergyBC.C": (
-        '"molar_energy_state",',
-        "if (!_molar_energy_state && !parameters.isParamSetByUser",
-        "if (_molar_energy_state)",
-        "const ADReal primary_particle_flux_molar =",
-        "return primary_particle_flux_molar *",
-        "PhysicsGroundedElectronSheath::primaryEnergyFluxHat(",
+    "physics_app/ci/electron_grounded_sheath_energy_smoke.i": (
+        "property_name = cell_drop_particle_flux",
+        "property_name = cell_drop_energy_flux",
+        "functor_names = 'cell_drop_particle_flux mean_en potential_cell'",
+        "type = PhysicsFVCellFunctorNeumannBC",
+        "functor = cell_drop_energy_flux",
+        "factor = -1.0",
+    ),
+}
+
+
+FORBIDDEN: dict[str, tuple[str, ...]] = {
+    "physics_app/src/fvbcs/PhysicsFVCellFunctorNeumannBC.C": (
+        "singleSidedFaceArg",
+        "Boltzmann",
+        "electronTemperature",
+        "primaryParticleFlux",
+        "primaryEnergyFlux",
     ),
 }
 
@@ -57,6 +76,9 @@ def validate(contents: dict[str, str]) -> list[str]:
         for token in tokens:
             if token not in text:
                 failures.append(f"{relpath}: missing contract token: {token}")
+        for token in FORBIDDEN.get(relpath, ()):
+            if token in text:
+                failures.append(f"{relpath}: forbidden sheath-specific/face token: {token}")
     return failures
 
 
@@ -70,17 +92,19 @@ def load(root: Path) -> dict[str, str]:
 
 
 def self_test() -> int:
-    positive = {
-        relpath: "\n".join(tokens)
-        for relpath, tokens in REQUIRED.items()
-    }
+    positive = {relpath: "\n".join(tokens) for relpath, tokens in REQUIRED.items()}
     assert not validate(positive), validate(positive)
 
     mutated = dict(positive)
-    target = "physics_app/src/fvbcs/PhysicsFVElectronGroundedSheathEnergyBC.C"
-    mutated[target] = mutated[target].replace("if (_molar_energy_state)", "")
+    target = "physics_app/src/fvbcs/PhysicsFVCellFunctorNeumannBC.C"
+    mutated[target] = mutated[target].replace("elemArg()", "")
     failures = validate(mutated)
-    assert any("if (_molar_energy_state)" in item for item in failures), failures
+    assert any("elemArg()" in item for item in failures), failures
+
+    forbidden = dict(positive)
+    forbidden[target] += "\nsingleSidedFaceArg"
+    failures = validate(forbidden)
+    assert any("singleSidedFaceArg" in item for item in failures), failures
 
     missing = dict(positive)
     missing.pop("physics_app/include/fvkernels/PhysicsFVLogMolarElectronTransport.h")
