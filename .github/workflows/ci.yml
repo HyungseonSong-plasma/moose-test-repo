@@ -38,9 +38,9 @@ jobs:
           test -f docs/operating_system/README.md
           test -f docs/operating_system/CENTRAL_SKILLS.md
           test -f docs/operating_system/central_skills.json
-          grep -Fq '908d5b695b4640727b3c45d8044763c5fcca1d08' docs/operating_system/README.md
+          grep -Fq '8d3ea7720549148a251a9e11f5733d543344fb2e' docs/operating_system/README.md
           grep -Fq 'Expected OS:** Paul' docs/operating_system/README.md
-          grep -Fq '908d5b695b4640727b3c45d8044763c5fcca1d08' docs/operating_system/CENTRAL_SKILLS.md
+          grep -Fq '8d3ea7720549148a251a9e11f5733d543344fb2e' docs/operating_system/CENTRAL_SKILLS.md
 
           # Calvin operating metrics are archive-only under Paul.
           test ! -e docs/metrics
@@ -49,9 +49,10 @@ jobs:
           test -f archive/operating_metrics/calvin/metrics_closure.md
 
           # Executable central actions use the same exact Paul revision.
-          grep -Fq 'HyungseonSong-plasma/chatgpt-operation/.github/actions/repository-mutation@908d5b695b4640727b3c45d8044763c5fcca1d08' .github/workflows/refactor.yml
-          grep -Fq 'HyungseonSong-plasma/chatgpt-operation/.github/actions/governed-work@908d5b695b4640727b3c45d8044763c5fcca1d08' .github/workflows/refactor.yml
-          grep -Fq 'HyungseonSong-plasma/chatgpt-operation/.github/actions/governed-work@908d5b695b4640727b3c45d8044763c5fcca1d08' .github/workflows/experiment.yml
+          grep -Fq 'HyungseonSong-plasma/chatgpt-operation/.github/actions/repository-mutation@8d3ea7720549148a251a9e11f5733d543344fb2e' .github/workflows/refactor.yml
+          grep -Fq 'HyungseonSong-plasma/chatgpt-operation/.github/actions/governed-work@8d3ea7720549148a251a9e11f5733d543344fb2e' .github/workflows/refactor.yml
+          grep -Fq 'HyungseonSong-plasma/chatgpt-operation/.github/actions/governed-work@8d3ea7720549148a251a9e11f5733d543344fb2e' .github/workflows/experiment.yml
+          grep -Fq 'HyungseonSong-plasma/chatgpt-operation/.github/workflows/governed-matrix.yml@8d3ea7720549148a251a9e11f5733d543344fb2e' .github/workflows/experiment.yml
 
           python3 - <<'PY'
           import json
@@ -61,7 +62,7 @@ jobs:
           assert manifest["schema_version"] == 2
           assert manifest["source_repository"] == "HyungseonSong-plasma/chatgpt-operation"
           os_meta=manifest["operating_system"]
-          assert os_meta["revision"] == "908d5b695b4640727b3c45d8044763c5fcca1d08"
+          assert os_meta["revision"] == "8d3ea7720549148a251a9e11f5733d543344fb2e"
           assert os_meta["expected_version"] == "Paul"
           assert os_meta["index"] == {
               "path": "docs/operating_system/README.md",
@@ -78,15 +79,17 @@ jobs:
               "state-refresh",
               "repository-mutation",
               "governed-work",
+              "governed-matrix",
               "controller-throughput",
               "controller-lifecycle",
           }
           for item in entries.values():
-              assert item["revision"] == "908d5b695b4640727b3c45d8044763c5fcca1d08"
+              assert item["revision"] == "8d3ea7720549148a251a9e11f5733d543344fb2e"
           assert entries["session-bootstrap"]["load_on"] == ["INIT"]
           assert entries["state-refresh"]["load_on"] == ["INIT","SCHEDULED_CONTROLLER"]
           assert entries["repository-mutation"]["load_on"] == ["MUTATE"]
           assert entries["governed-work"]["load_on"] == ["GOVERNED_WORK"]
+          assert entries["governed-matrix"]["load_on"] == ["GOVERNED_MATRIX"]
           assert entries["controller-throughput"]["load_on"] == ["SCHEDULED_CONTROLLER"]
           assert entries["controller-lifecycle"]["load_on"] == ["SCHEDULED_CONTROLLER"]
 
@@ -100,7 +103,7 @@ jobs:
           central_dir="$(mktemp -d)"
           git -C "$central_dir" init -q
           git -C "$central_dir" remote add origin https://github.com/HyungseonSong-plasma/chatgpt-operation.git
-          git -C "$central_dir" fetch --quiet --depth=1 origin "908d5b695b4640727b3c45d8044763c5fcca1d08"
+          git -C "$central_dir" fetch --quiet --depth=1 origin "8d3ea7720549148a251a9e11f5733d543344fb2e"
           CENTRAL_DIR="$central_dir" python3 - <<'PY'
           import json
           import os
