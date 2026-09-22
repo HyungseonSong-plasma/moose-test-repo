@@ -659,22 +659,22 @@ def _released_parent(p: dict[str, object]) -> str:
     type = ADParsedFunctorMaterial
     property_name = mu_O2p
     functor_names = 'D_mix_O2p T_g'
-    functor_symbols = 'd t'
-    expression = '{E_OVER_KB:.17g}*d/t'
+    functor_symbols = 'd tg'
+    expression = '{E_OVER_KB:.17g}*d/tg'
   []
   [mobility_Om]
     type = ADParsedFunctorMaterial
     property_name = mu_Om
     functor_names = 'D_mix_Om T_g'
-    functor_symbols = 'd t'
-    expression = '{E_OVER_KB:.17g}*d/t'
+    functor_symbols = 'd tg'
+    expression = '{E_OVER_KB:.17g}*d/tg'
   []
   [mobility_Op]
     type = ADParsedFunctorMaterial
     property_name = mu_Op
     functor_names = 'D_mix_Op T_g'
-    functor_symbols = 'd t'
-    expression = '{E_OVER_KB:.17g}*d/t'
+    functor_symbols = 'd tg'
+    expression = '{E_OVER_KB:.17g}*d/tg'
   []
   [charge_state]
     type = ADParsedFunctorMaterial
