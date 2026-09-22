@@ -39,7 +39,7 @@ jobs:
       SEQUENCE: ${{ inputs.sequence }}
       MANIFEST_INPUT: ${{ inputs.manifest }}
       BASE_SHA: ${{ inputs.base_sha }}
-      OPERATION_SHA: 8e5453bbb92f9e6a19ed3d9687f52c01155de4c0
+      OPERATION_SHA: 8d3ea7720549148a251a9e11f5733d543344fb2e
     steps:
       - name: Checkout exact consumer control
         uses: actions/checkout@v4
@@ -91,7 +91,7 @@ jobs:
           fetch-depth: 1
 
       - name: Execute central governed serial experiment
-        uses: HyungseonSong-plasma/chatgpt-operation/.github/actions/governed-work@8e5453bbb92f9e6a19ed3d9687f52c01155de4c0
+        uses: HyungseonSong-plasma/chatgpt-operation/.github/actions/governed-work@8d3ea7720549148a251a9e11f5733d543344fb2e
         with:
           kind: experiments
           manifest: ${{ github.workspace }}/target/${{ inputs.manifest }}
@@ -114,10 +114,10 @@ jobs:
   matrix-execute:
     needs: route
     if: needs.route.outputs.mode == 'matrix'
-    uses: HyungseonSong-plasma/chatgpt-operation/.github/workflows/governed-matrix.yml@8e5453bbb92f9e6a19ed3d9687f52c01155de4c0
+    uses: HyungseonSong-plasma/chatgpt-operation/.github/workflows/governed-matrix.yml@8d3ea7720549148a251a9e11f5733d543344fb2e
     with:
       issue: ${{ inputs.issue }}
       sequence: ${{ inputs.sequence }}
       manifest: ${{ inputs.manifest }}
       base_sha: ${{ inputs.base_sha }}
-      operation_sha: 8e5453bbb92f9e6a19ed3d9687f52c01155de4c0
+      operation_sha: 8d3ea7720549148a251a9e11f5733d543344fb2e
