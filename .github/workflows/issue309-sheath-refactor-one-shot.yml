@@ -1,4 +1,5 @@
 name: Issue 309 sheath refactor one-shot
+# Exact source under test: 2967fa478b2b1f888c5c4fff5e4fc14099109c24
 
 on:
   push:
