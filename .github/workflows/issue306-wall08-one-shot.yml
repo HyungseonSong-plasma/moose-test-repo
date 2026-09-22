@@ -17,5 +17,5 @@ jobs:
       issue: "306"
       sequence: "08"
       manifest: automation/manifests/experiments/Issue_306_experiments08.json
-      base_sha: 9d8f8cd12d58961954cccea6ee7f1dcc81985ced
+      base_sha: 1b28a1bccbec4ccad5e597500142a7e7e06ef4a3
       operation_sha: 8d3ea7720549148a251a9e11f5733d543344fb2e
