@@ -1,0 +1,142 @@
+{
+  "schema_version": 1,
+  "issue": 253,
+  "sequence": 13,
+  "title": "G3 heavy-release A/B equal-time chi=1/10/20 sweep",
+  "prepare_manifest": "automation/manifests/experiments/Issue_253_experiments13_prep.json",
+  "bundle_paths": [
+    "physics_app/physics-opt",
+    "physics_app/lib/libphysics-opt.so.0",
+    "physics_app/test/lib/libphysics_test-opt.so.0",
+    "experiments/Issue253_g1_gummel_dt_release/generated_heavy13"
+  ],
+  "max_parallel": 3,
+  "cases": [
+    {
+      "id": "frozen_chi1",
+      "name": "frozen_chi1 heavy-release discriminator",
+      "command": [
+        "python3",
+        "experiments/Issue253_g1_gummel_dt_release/heavy13_control.py",
+        "--case",
+        "frozen_chi1"
+      ],
+      "timeout_seconds": 7200,
+      "artifacts": [
+        "experiments/Issue253_g1_gummel_dt_release/results_heavy13/frozen_chi1_runtime.log",
+        "experiments/Issue253_g1_gummel_dt_release/results_heavy13/frozen_chi1_returncode.txt",
+        "experiments/Issue253_g1_gummel_dt_release/results_heavy13/frozen_chi1_elapsed_seconds.txt",
+        "experiments/Issue253_g1_gummel_dt_release/results_heavy13/frozen_chi1_result.json",
+        "experiments/Issue253_g1_gummel_dt_release/generated_heavy13/frozen_chi1/**/*.csv",
+        "experiments/Issue253_g1_gummel_dt_release/generated_heavy13/frozen_chi1/**/*.e"
+      ]
+    },
+    {
+      "id": "frozen_chi10",
+      "name": "frozen_chi10 heavy-release discriminator",
+      "command": [
+        "python3",
+        "experiments/Issue253_g1_gummel_dt_release/heavy13_control.py",
+        "--case",
+        "frozen_chi10"
+      ],
+      "timeout_seconds": 7200,
+      "artifacts": [
+        "experiments/Issue253_g1_gummel_dt_release/results_heavy13/frozen_chi10_runtime.log",
+        "experiments/Issue253_g1_gummel_dt_release/results_heavy13/frozen_chi10_returncode.txt",
+        "experiments/Issue253_g1_gummel_dt_release/results_heavy13/frozen_chi10_elapsed_seconds.txt",
+        "experiments/Issue253_g1_gummel_dt_release/results_heavy13/frozen_chi10_result.json",
+        "experiments/Issue253_g1_gummel_dt_release/generated_heavy13/frozen_chi10/**/*.csv",
+        "experiments/Issue253_g1_gummel_dt_release/generated_heavy13/frozen_chi10/**/*.e"
+      ]
+    },
+    {
+      "id": "frozen_chi20",
+      "name": "frozen_chi20 heavy-release discriminator",
+      "command": [
+        "python3",
+        "experiments/Issue253_g1_gummel_dt_release/heavy13_control.py",
+        "--case",
+        "frozen_chi20"
+      ],
+      "timeout_seconds": 7200,
+      "artifacts": [
+        "experiments/Issue253_g1_gummel_dt_release/results_heavy13/frozen_chi20_runtime.log",
+        "experiments/Issue253_g1_gummel_dt_release/results_heavy13/frozen_chi20_returncode.txt",
+        "experiments/Issue253_g1_gummel_dt_release/results_heavy13/frozen_chi20_elapsed_seconds.txt",
+        "experiments/Issue253_g1_gummel_dt_release/results_heavy13/frozen_chi20_result.json",
+        "experiments/Issue253_g1_gummel_dt_release/generated_heavy13/frozen_chi20/**/*.csv",
+        "experiments/Issue253_g1_gummel_dt_release/generated_heavy13/frozen_chi20/**/*.e"
+      ]
+    },
+    {
+      "id": "heavy_chi1",
+      "name": "heavy_chi1 heavy-release discriminator",
+      "command": [
+        "python3",
+        "experiments/Issue253_g1_gummel_dt_release/heavy13_control.py",
+        "--case",
+        "heavy_chi1"
+      ],
+      "timeout_seconds": 7200,
+      "artifacts": [
+        "experiments/Issue253_g1_gummel_dt_release/results_heavy13/heavy_chi1_runtime.log",
+        "experiments/Issue253_g1_gummel_dt_release/results_heavy13/heavy_chi1_returncode.txt",
+        "experiments/Issue253_g1_gummel_dt_release/results_heavy13/heavy_chi1_elapsed_seconds.txt",
+        "experiments/Issue253_g1_gummel_dt_release/results_heavy13/heavy_chi1_result.json",
+        "experiments/Issue253_g1_gummel_dt_release/generated_heavy13/heavy_chi1/**/*.csv",
+        "experiments/Issue253_g1_gummel_dt_release/generated_heavy13/heavy_chi1/**/*.e"
+      ]
+    },
+    {
+      "id": "heavy_chi10",
+      "name": "heavy_chi10 heavy-release discriminator",
+      "command": [
+        "python3",
+        "experiments/Issue253_g1_gummel_dt_release/heavy13_control.py",
+        "--case",
+        "heavy_chi10"
+      ],
+      "timeout_seconds": 7200,
+      "artifacts": [
+        "experiments/Issue253_g1_gummel_dt_release/results_heavy13/heavy_chi10_runtime.log",
+        "experiments/Issue253_g1_gummel_dt_release/results_heavy13/heavy_chi10_returncode.txt",
+        "experiments/Issue253_g1_gummel_dt_release/results_heavy13/heavy_chi10_elapsed_seconds.txt",
+        "experiments/Issue253_g1_gummel_dt_release/results_heavy13/heavy_chi10_result.json",
+        "experiments/Issue253_g1_gummel_dt_release/generated_heavy13/heavy_chi10/**/*.csv",
+        "experiments/Issue253_g1_gummel_dt_release/generated_heavy13/heavy_chi10/**/*.e"
+      ]
+    },
+    {
+      "id": "heavy_chi20",
+      "name": "heavy_chi20 heavy-release discriminator",
+      "command": [
+        "python3",
+        "experiments/Issue253_g1_gummel_dt_release/heavy13_control.py",
+        "--case",
+        "heavy_chi20"
+      ],
+      "timeout_seconds": 7200,
+      "artifacts": [
+        "experiments/Issue253_g1_gummel_dt_release/results_heavy13/heavy_chi20_runtime.log",
+        "experiments/Issue253_g1_gummel_dt_release/results_heavy13/heavy_chi20_returncode.txt",
+        "experiments/Issue253_g1_gummel_dt_release/results_heavy13/heavy_chi20_elapsed_seconds.txt",
+        "experiments/Issue253_g1_gummel_dt_release/results_heavy13/heavy_chi20_result.json",
+        "experiments/Issue253_g1_gummel_dt_release/generated_heavy13/heavy_chi20/**/*.csv",
+        "experiments/Issue253_g1_gummel_dt_release/generated_heavy13/heavy_chi20/**/*.e"
+      ]
+    }
+  ],
+  "aggregate": {
+    "name": "Aggregate heavy-release A/B discriminator",
+    "command": [
+      "python3",
+      "experiments/Issue253_g1_gummel_dt_release/heavy13_control.py",
+      "--aggregate"
+    ],
+    "timeout_seconds": 300,
+    "artifacts": [
+      "experiments/Issue253_g1_gummel_dt_release/results_heavy13/heavy13_summary.json"
+    ]
+  }
+}
