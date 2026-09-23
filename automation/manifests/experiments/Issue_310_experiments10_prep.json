@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "issue": 310,
+  "kind": "experiments",
+  "sequence": 10,
+  "title": "Prepare patched secondary Secant history-seed discriminator",
+  "stages": [
+    {
+      "id": "P0",
+      "name": "Validate four-case patch discriminator and frozen physics",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq10.py",
+        "--phase",
+        "p0"
+      ],
+      "timeout_seconds": 180
+    },
+    {
+      "id": "P1",
+      "name": "Preflight patched-binary Picard/Secant discriminator inputs",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq10.py",
+        "--phase",
+        "p1"
+      ],
+      "timeout_seconds": 1200
+    },
+    {
+      "id": "P2",
+      "name": "Apply experimental MOOSE patch, rebuild Physics, stage patched libmoose, and check inputs",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq10.py",
+        "--phase",
+        "p2"
+      ],
+      "timeout_seconds": 3600
+    }
+  ],
+  "artifacts": [
+    "experiments/Issue310_fp_acceleration/generated_fp10/**/*.i",
+    "experiments/Issue310_fp_acceleration/generated_fp10/**/*.json",
+    "experiments/Issue310_fp_acceleration/patches/secondary_secant_history_seed.patch",
+    "experiments/Issue310_fp_acceleration/patched_runtime_fp10/PATCH_PROVENANCE.txt",
+    "experiments/Issue310_fp_acceleration/patched_runtime_fp10/LDD_PROOF.txt"
+  ]
+}
