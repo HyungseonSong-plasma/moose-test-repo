@@ -2,7 +2,7 @@
   "schema_version": 2,
   "source_repository": "HyungseonSong-plasma/chatgpt-operation",
   "operating_system": {
-    "revision": "a81ffc7af265a5d6be357483dbd39ca147224e2c",
+    "revision": "6474eb7b77f890b7cf9d7134ccebea31662bcdbe",
     "expected_version": "Paul",
     "index": {
       "path": "docs/operating_system/README.md",
@@ -19,7 +19,7 @@
       "load_on": [
         "INIT"
       ],
-      "revision": "a81ffc7af265a5d6be357483dbd39ca147224e2c",
+      "revision": "6474eb7b77f890b7cf9d7134ccebea31662bcdbe",
       "path": "skills/session-bootstrap/README.md",
       "expected_blob_sha": "3e82b30d3e28e89b869db3c9415e8c0ab365ed27"
     },
@@ -29,7 +29,7 @@
         "INIT",
         "SCHEDULED_CONTROLLER"
       ],
-      "revision": "a81ffc7af265a5d6be357483dbd39ca147224e2c",
+      "revision": "6474eb7b77f890b7cf9d7134ccebea31662bcdbe",
       "path": "skills/state-refresh/README.md",
       "expected_blob_sha": "4efe6135b93456f2cc9da31786967f5f6ac80033"
     },
@@ -38,7 +38,7 @@
       "load_on": [
         "MUTATE"
       ],
-      "revision": "a81ffc7af265a5d6be357483dbd39ca147224e2c",
+      "revision": "6474eb7b77f890b7cf9d7134ccebea31662bcdbe",
       "path": "skills/repository-mutation/README.md",
       "expected_blob_sha": "0229c6b7a440a9a624a0b773c62f536ca67a29b6"
     },
@@ -47,7 +47,7 @@
       "load_on": [
         "GOVERNED_WORK"
       ],
-      "revision": "a81ffc7af265a5d6be357483dbd39ca147224e2c",
+      "revision": "6474eb7b77f890b7cf9d7134ccebea31662bcdbe",
       "path": "skills/governed-work/README.md",
       "expected_blob_sha": "5ba4d1be80a4c3019fd9c21fe017468b87315a71"
     },
@@ -56,7 +56,7 @@
       "load_on": [
         "SCHEDULED_CONTROLLER"
       ],
-      "revision": "a81ffc7af265a5d6be357483dbd39ca147224e2c",
+      "revision": "6474eb7b77f890b7cf9d7134ccebea31662bcdbe",
       "path": "skills/controller-throughput/README.md",
       "expected_blob_sha": "bdfbdadddcdf833fd9c396b615a106bef36fa9fd"
     },
@@ -65,7 +65,7 @@
       "load_on": [
         "SCHEDULED_CONTROLLER"
       ],
-      "revision": "a81ffc7af265a5d6be357483dbd39ca147224e2c",
+      "revision": "6474eb7b77f890b7cf9d7134ccebea31662bcdbe",
       "path": "skills/controller-lifecycle/README.md",
       "expected_blob_sha": "28f512d80d380ecd415bb4d8d60be4778d464c47"
     },
@@ -74,7 +74,7 @@
       "load_on": [
         "GITHUB_ACTIONS_EXECUTION"
       ],
-      "revision": "a81ffc7af265a5d6be357483dbd39ca147224e2c",
+      "revision": "6474eb7b77f890b7cf9d7134ccebea31662bcdbe",
       "path": "skills/github-actions-execution/README.md",
       "expected_blob_sha": "73b067c2816af1311c2d47fec2faff4f3cc63923"
     },
@@ -83,7 +83,7 @@
       "load_on": [
         "GITHUB_ACTIONS_OBSERVATION"
       ],
-      "revision": "a81ffc7af265a5d6be357483dbd39ca147224e2c",
+      "revision": "6474eb7b77f890b7cf9d7134ccebea31662bcdbe",
       "path": "skills/github-actions-observation/README.md",
       "expected_blob_sha": "90f87fc4df84fe85ce04080b419896f8f060a23a"
     },
@@ -92,13 +92,22 @@
       "load_on": [
         "ARTIFACT_STAGING"
       ],
-      "revision": "a81ffc7af265a5d6be357483dbd39ca147224e2c",
+      "revision": "6474eb7b77f890b7cf9d7134ccebea31662bcdbe",
       "path": "skills/artifact-staging/README.md",
       "expected_blob_sha": "17c251379462d9251293e2fde6aabd45e527ee82"
+    },
+    {
+      "name": "scientific-discriminator-controller",
+      "load_on": [
+        "SCIENTIFIC_DISCRIMINATOR_CONTROLLER"
+      ],
+      "revision": "6474eb7b77f890b7cf9d7134ccebea31662bcdbe",
+      "path": "skills/scientific-discriminator-controller/README.md",
+      "expected_blob_sha": "e3e607f48ef70bf2d307f4a2f48dbee1352b080c"
     }
   ],
   "skill_catalog": {
     "path": "skills/catalog.json",
-    "expected_blob_sha": "b54306b7745377b18b623e1a7128245183cf6e8a"
+    "expected_blob_sha": "8e43eb8a4b8fa334cf6210a638ad25e782d27b90"
   }
 }

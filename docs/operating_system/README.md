@@ -3,7 +3,7 @@
 **Status:** Paul consumer binding  
 **Consumer:** `HyungseonSong-plasma/moose-test-repo`  
 **Canonical OS repository:** `HyungseonSong-plasma/chatgpt-operation`  
-**Pinned central revision:** `a81ffc7af265a5d6be357483dbd39ca147224e2c`  
+**Pinned central revision:** `6474eb7b77f890b7cf9d7134ccebea31662bcdbe`  
 **Expected OS:** Paul
 
 ## Central authority
@@ -12,7 +12,7 @@ Resolve exactly:
 
 ```text
 repository       = HyungseonSong-plasma/chatgpt-operation
-revision         = a81ffc7af265a5d6be357483dbd39ca147224e2c
+revision         = 6474eb7b77f890b7cf9d7134ccebea31662bcdbe
 OS index         = docs/operating_system/README.md
 essential rules  = docs/operating_system/ESSENTIAL_RULES.md
 session bootstrap= skills/session-bootstrap/README.md
