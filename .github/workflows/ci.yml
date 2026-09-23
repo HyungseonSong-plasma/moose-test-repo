@@ -38,9 +38,9 @@ jobs:
           test -f docs/operating_system/README.md
           test -f docs/operating_system/CENTRAL_SKILLS.md
           test -f docs/operating_system/central_skills.json
-          grep -Fq 'e6df2c89578ee7b5c23f043a0aa2f7fe9cbd9499' docs/operating_system/README.md
+          grep -Fq 'a81ffc7af265a5d6be357483dbd39ca147224e2c' docs/operating_system/README.md
           grep -Fq 'Expected OS:** Paul' docs/operating_system/README.md
-          grep -Fq 'e6df2c89578ee7b5c23f043a0aa2f7fe9cbd9499' docs/operating_system/CENTRAL_SKILLS.md
+          grep -Fq 'a81ffc7af265a5d6be357483dbd39ca147224e2c' docs/operating_system/CENTRAL_SKILLS.md
 
           # Calvin operating metrics are archive-only under Paul.
           test ! -e docs/metrics
@@ -49,9 +49,9 @@ jobs:
           test -f archive/operating_metrics/calvin/metrics_closure.md
 
           # Executable central actions use the same exact Paul revision.
-          grep -Fq 'HyungseonSong-plasma/chatgpt-operation/.github/actions/repository-mutation@e6df2c89578ee7b5c23f043a0aa2f7fe9cbd9499' .github/workflows/refactor.yml
-          grep -Fq 'HyungseonSong-plasma/chatgpt-operation/.github/actions/governed-work@e6df2c89578ee7b5c23f043a0aa2f7fe9cbd9499' .github/workflows/refactor.yml
-          grep -Fq 'HyungseonSong-plasma/chatgpt-operation/.github/actions/governed-work@e6df2c89578ee7b5c23f043a0aa2f7fe9cbd9499' .github/workflows/experiment.yml
+          grep -Fq 'HyungseonSong-plasma/chatgpt-operation/.github/actions/repository-mutation@a81ffc7af265a5d6be357483dbd39ca147224e2c' .github/workflows/refactor.yml
+          grep -Fq 'HyungseonSong-plasma/chatgpt-operation/.github/actions/governed-work@a81ffc7af265a5d6be357483dbd39ca147224e2c' .github/workflows/refactor.yml
+          grep -Fq 'HyungseonSong-plasma/chatgpt-operation/.github/actions/governed-work@a81ffc7af265a5d6be357483dbd39ca147224e2c' .github/workflows/experiment.yml
 
           python3 - <<'PY'
           import json
@@ -61,7 +61,7 @@ jobs:
           assert manifest["schema_version"] == 2
           assert manifest["source_repository"] == "HyungseonSong-plasma/chatgpt-operation"
           os_meta=manifest["operating_system"]
-          assert os_meta["revision"] == "e6df2c89578ee7b5c23f043a0aa2f7fe9cbd9499"
+          assert os_meta["revision"] == "a81ffc7af265a5d6be357483dbd39ca147224e2c"
           assert os_meta["expected_version"] == "Paul"
           assert os_meta["index"] == {
               "path": "docs/operating_system/README.md",
@@ -73,7 +73,7 @@ jobs:
           }
           assert manifest["skill_catalog"] == {
               "path": "skills/catalog.json",
-              "expected_blob_sha": "e6b767fcb3ef94717de0d03ee1cdf4367f7f2a9a",
+              "expected_blob_sha": "b54306b7745377b18b623e1a7128245183cf6e8a",
           }
 
           entries={item["name"]: item for item in manifest["skills"]}
@@ -86,9 +86,10 @@ jobs:
               "controller-lifecycle",
               "github-actions-execution",
               "github-actions-observation",
+              "artifact-staging",
           }
           for item in entries.values():
-              assert item["revision"] == "e6df2c89578ee7b5c23f043a0aa2f7fe9cbd9499"
+              assert item["revision"] == "a81ffc7af265a5d6be357483dbd39ca147224e2c"
           assert entries["session-bootstrap"]["load_on"] == ["INIT"]
           assert entries["state-refresh"]["load_on"] == ["INIT","SCHEDULED_CONTROLLER"]
           assert entries["repository-mutation"]["load_on"] == ["MUTATE"]
@@ -97,6 +98,7 @@ jobs:
           assert entries["controller-lifecycle"]["load_on"] == ["SCHEDULED_CONTROLLER"]
           assert entries["github-actions-execution"]["load_on"] == ["GITHUB_ACTIONS_EXECUTION"]
           assert entries["github-actions-observation"]["load_on"] == ["GITHUB_ACTIONS_OBSERVATION"]
+          assert entries["artifact-staging"]["load_on"] == ["ARTIFACT_STAGING"]
 
           policy=json.loads(Path(".chatgpt-operation.json").read_text(encoding="utf-8"))
           assert policy["schema_version"] == 1
@@ -108,7 +110,7 @@ jobs:
           central_dir="$(mktemp -d)"
           git -C "$central_dir" init -q
           git -C "$central_dir" remote add origin https://github.com/HyungseonSong-plasma/chatgpt-operation.git
-          git -C "$central_dir" fetch --quiet --depth=1 origin "e6df2c89578ee7b5c23f043a0aa2f7fe9cbd9499"
+          git -C "$central_dir" fetch --quiet --depth=1 origin "a81ffc7af265a5d6be357483dbd39ca147224e2c"
           CENTRAL_DIR="$central_dir" python3 - <<'PY'
           import json
           import os
