@@ -1,0 +1,188 @@
+{
+  "schema_version": 1,
+  "issue": 310,
+  "sequence": 5,
+  "title": "Sequence 08 eight-case damped Secant/Steffensen sweep",
+  "prepare_manifest": "automation/manifests/experiments/Issue_310_experiments05_prep.json",
+  "bundle_paths": [
+    "physics_app/physics-opt",
+    "physics_app/lib/libphysics-opt.so.0",
+    "physics_app/test/lib/libphysics_test-opt.so.0",
+    "experiments/Issue310_fp_acceleration/generated_fp05"
+  ],
+  "max_parallel": 8,
+  "cases": [
+    {
+      "id": "secant_0p02",
+      "name": "Secant damping 0.02; 12 electron steps / 3 heavy cycles",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq05.py",
+        "--case",
+        "secant_0p02"
+      ],
+      "timeout_seconds": 1800,
+      "artifacts": [
+        "experiments/Issue310_fp_acceleration/results_fp05/secant_0p02_returncode.txt",
+        "experiments/Issue310_fp_acceleration/results_fp05/secant_0p02_elapsed_seconds.txt",
+        "experiments/Issue310_fp_acceleration/results_fp05/secant_0p02_runtime_tail.log",
+        "experiments/Issue310_fp_acceleration/results_fp05/secant_0p02_result.json",
+        "experiments/Issue310_fp_acceleration/generated_fp05/secant_0p02/input_step_csv.csv",
+        "experiments/Issue310_fp_acceleration/generated_fp05/secant_0p02/input_out_electron0_step_csv.csv",
+        "experiments/Issue310_fp_acceleration/generated_fp05/secant_0p02/*profile_*.csv"
+      ]
+    },
+    {
+      "id": "secant_0p05",
+      "name": "Secant damping 0.05; 12 electron steps / 3 heavy cycles",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq05.py",
+        "--case",
+        "secant_0p05"
+      ],
+      "timeout_seconds": 1800,
+      "artifacts": [
+        "experiments/Issue310_fp_acceleration/results_fp05/secant_0p05_returncode.txt",
+        "experiments/Issue310_fp_acceleration/results_fp05/secant_0p05_elapsed_seconds.txt",
+        "experiments/Issue310_fp_acceleration/results_fp05/secant_0p05_runtime_tail.log",
+        "experiments/Issue310_fp_acceleration/results_fp05/secant_0p05_result.json",
+        "experiments/Issue310_fp_acceleration/generated_fp05/secant_0p05/input_step_csv.csv",
+        "experiments/Issue310_fp_acceleration/generated_fp05/secant_0p05/input_out_electron0_step_csv.csv",
+        "experiments/Issue310_fp_acceleration/generated_fp05/secant_0p05/*profile_*.csv"
+      ]
+    },
+    {
+      "id": "secant_0p10",
+      "name": "Secant damping 0.10; 12 electron steps / 3 heavy cycles",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq05.py",
+        "--case",
+        "secant_0p10"
+      ],
+      "timeout_seconds": 1800,
+      "artifacts": [
+        "experiments/Issue310_fp_acceleration/results_fp05/secant_0p10_returncode.txt",
+        "experiments/Issue310_fp_acceleration/results_fp05/secant_0p10_elapsed_seconds.txt",
+        "experiments/Issue310_fp_acceleration/results_fp05/secant_0p10_runtime_tail.log",
+        "experiments/Issue310_fp_acceleration/results_fp05/secant_0p10_result.json",
+        "experiments/Issue310_fp_acceleration/generated_fp05/secant_0p10/input_step_csv.csv",
+        "experiments/Issue310_fp_acceleration/generated_fp05/secant_0p10/input_out_electron0_step_csv.csv",
+        "experiments/Issue310_fp_acceleration/generated_fp05/secant_0p10/*profile_*.csv"
+      ]
+    },
+    {
+      "id": "secant_0p20",
+      "name": "Secant damping 0.20; 12 electron steps / 3 heavy cycles",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq05.py",
+        "--case",
+        "secant_0p20"
+      ],
+      "timeout_seconds": 1800,
+      "artifacts": [
+        "experiments/Issue310_fp_acceleration/results_fp05/secant_0p20_returncode.txt",
+        "experiments/Issue310_fp_acceleration/results_fp05/secant_0p20_elapsed_seconds.txt",
+        "experiments/Issue310_fp_acceleration/results_fp05/secant_0p20_runtime_tail.log",
+        "experiments/Issue310_fp_acceleration/results_fp05/secant_0p20_result.json",
+        "experiments/Issue310_fp_acceleration/generated_fp05/secant_0p20/input_step_csv.csv",
+        "experiments/Issue310_fp_acceleration/generated_fp05/secant_0p20/input_out_electron0_step_csv.csv",
+        "experiments/Issue310_fp_acceleration/generated_fp05/secant_0p20/*profile_*.csv"
+      ]
+    },
+    {
+      "id": "steffensen_0p02",
+      "name": "Steffensen damping 0.02; 12 electron steps / 3 heavy cycles",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq05.py",
+        "--case",
+        "steffensen_0p02"
+      ],
+      "timeout_seconds": 1800,
+      "artifacts": [
+        "experiments/Issue310_fp_acceleration/results_fp05/steffensen_0p02_returncode.txt",
+        "experiments/Issue310_fp_acceleration/results_fp05/steffensen_0p02_elapsed_seconds.txt",
+        "experiments/Issue310_fp_acceleration/results_fp05/steffensen_0p02_runtime_tail.log",
+        "experiments/Issue310_fp_acceleration/results_fp05/steffensen_0p02_result.json",
+        "experiments/Issue310_fp_acceleration/generated_fp05/steffensen_0p02/input_step_csv.csv",
+        "experiments/Issue310_fp_acceleration/generated_fp05/steffensen_0p02/input_out_electron0_step_csv.csv",
+        "experiments/Issue310_fp_acceleration/generated_fp05/steffensen_0p02/*profile_*.csv"
+      ]
+    },
+    {
+      "id": "steffensen_0p05",
+      "name": "Steffensen damping 0.05; 12 electron steps / 3 heavy cycles",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq05.py",
+        "--case",
+        "steffensen_0p05"
+      ],
+      "timeout_seconds": 1800,
+      "artifacts": [
+        "experiments/Issue310_fp_acceleration/results_fp05/steffensen_0p05_returncode.txt",
+        "experiments/Issue310_fp_acceleration/results_fp05/steffensen_0p05_elapsed_seconds.txt",
+        "experiments/Issue310_fp_acceleration/results_fp05/steffensen_0p05_runtime_tail.log",
+        "experiments/Issue310_fp_acceleration/results_fp05/steffensen_0p05_result.json",
+        "experiments/Issue310_fp_acceleration/generated_fp05/steffensen_0p05/input_step_csv.csv",
+        "experiments/Issue310_fp_acceleration/generated_fp05/steffensen_0p05/input_out_electron0_step_csv.csv",
+        "experiments/Issue310_fp_acceleration/generated_fp05/steffensen_0p05/*profile_*.csv"
+      ]
+    },
+    {
+      "id": "steffensen_0p10",
+      "name": "Steffensen damping 0.10; 12 electron steps / 3 heavy cycles",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq05.py",
+        "--case",
+        "steffensen_0p10"
+      ],
+      "timeout_seconds": 1800,
+      "artifacts": [
+        "experiments/Issue310_fp_acceleration/results_fp05/steffensen_0p10_returncode.txt",
+        "experiments/Issue310_fp_acceleration/results_fp05/steffensen_0p10_elapsed_seconds.txt",
+        "experiments/Issue310_fp_acceleration/results_fp05/steffensen_0p10_runtime_tail.log",
+        "experiments/Issue310_fp_acceleration/results_fp05/steffensen_0p10_result.json",
+        "experiments/Issue310_fp_acceleration/generated_fp05/steffensen_0p10/input_step_csv.csv",
+        "experiments/Issue310_fp_acceleration/generated_fp05/steffensen_0p10/input_out_electron0_step_csv.csv",
+        "experiments/Issue310_fp_acceleration/generated_fp05/steffensen_0p10/*profile_*.csv"
+      ]
+    },
+    {
+      "id": "steffensen_0p20",
+      "name": "Steffensen damping 0.20; 12 electron steps / 3 heavy cycles",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq05.py",
+        "--case",
+        "steffensen_0p20"
+      ],
+      "timeout_seconds": 1800,
+      "artifacts": [
+        "experiments/Issue310_fp_acceleration/results_fp05/steffensen_0p20_returncode.txt",
+        "experiments/Issue310_fp_acceleration/results_fp05/steffensen_0p20_elapsed_seconds.txt",
+        "experiments/Issue310_fp_acceleration/results_fp05/steffensen_0p20_runtime_tail.log",
+        "experiments/Issue310_fp_acceleration/results_fp05/steffensen_0p20_result.json",
+        "experiments/Issue310_fp_acceleration/generated_fp05/steffensen_0p20/input_step_csv.csv",
+        "experiments/Issue310_fp_acceleration/generated_fp05/steffensen_0p20/input_out_electron0_step_csv.csv",
+        "experiments/Issue310_fp_acceleration/generated_fp05/steffensen_0p20/*profile_*.csv"
+      ]
+    }
+  ],
+  "aggregate": {
+    "name": "Aggregate damped Secant/Steffensen evidence",
+    "command": [
+      "python3",
+      "experiments/Issue310_fp_acceleration/control_seq05.py",
+      "--aggregate"
+    ],
+    "timeout_seconds": 300,
+    "artifacts": [
+      "experiments/Issue310_fp_acceleration/results_fp05/issue310_fp05_summary.json"
+    ]
+  }
+}
