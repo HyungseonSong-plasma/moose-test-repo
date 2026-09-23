@@ -29,7 +29,7 @@ REQUIRED_CI_JOB_IF = (
 )
 TOP_KEY = re.compile(r"^[A-Za-z_][A-Za-z0-9_-]*:\s*(?:#.*)?$")
 EVENT_KEY = re.compile(r"^  ([A-Za-z_][A-Za-z0-9_-]*):")
-ONE_SHOT_NAME = re.compile(r"^issue[1-9][0-9]*-[a-z0-9][a-z0-9-]*-once\\.ya?ml$")
+ONE_SHOT_NAME = re.compile(r"^issue[1-9][0-9]*-[a-z0-9][a-z0-9-]*-once\.ya?ml$")
 
 def events(text: str) -> set[str]:
     lines = text.splitlines()
