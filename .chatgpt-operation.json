@@ -17,7 +17,6 @@
         "**"
       ],
       "deny": [
-        ".github/workflows/**",
         ".github/actions/**"
       ]
     },
