@@ -161,9 +161,16 @@ def build(clean: bool = True) -> list[dict[str, object]]:
 
 
 def _normalized_fast(text: str) -> str:
-    return re.sub(
+    text = re.sub(
         r"(^\s*relaxation_factor\s*=\s*).+$",
         r"\1<RELAXATION_FACTOR>",
+        text,
+        count=1,
+        flags=re.MULTILINE,
+    )
+    return re.sub(
+        r"(^\s*fixed_point_algorithm\s*=\s*).+$",
+        r"\1<FIXED_POINT_ALGORITHM>",
         text,
         count=1,
         flags=re.MULTILINE,
@@ -197,7 +204,7 @@ def static_contract() -> dict[str, object]:
         assert math.isclose(
             float(p["relaxation_factor"]), expected_relax, rel_tol=1e-15, abs_tol=0.0
         )
-        assert 0.0 < expected_relax < 1.0
+        assert 0.0 < expected_relax <= 1.0
         assert f"num_steps = {HEAVY_CYCLES}" in parent
         assert "fixed_point_max_its = 3000" in fast
         assert f"fixed_point_algorithm = '{spec['algorithm']}'" in fast
@@ -212,8 +219,9 @@ def static_contract() -> dict[str, object]:
         poisson_texts.append(poisson)
         normalized_fast.append(_normalized_fast(fast))
 
-    # Single-axis discriminator: generated parent/Poisson are byte-identical,
-    # and fast-child inputs become byte-identical after replacing only relaxation_factor.
+    # Algorithm discriminator: generated parent/Poisson are byte-identical, and
+    # fast-child inputs become byte-identical after normalizing only the algorithm
+    # selector and its algorithm damping/relaxation factor.
     assert len(set(parent_texts)) == 1
     assert len(set(poisson_texts)) == 1
     assert len(set(normalized_fast)) == 1
@@ -248,7 +256,7 @@ def p1() -> None:
     rel = ROOT.relative_to(REPO)
     commands = "; ".join(
         "python3 /workspace/bin/physics.py preflight "
-        f"/workspace/{rel}/generated_relaxation01/{name}/input.i"
+        f"/workspace/{rel}/generated_fp04/{name}/input.i"
         for name in CASE_NAMES
     )
     base._docker(
@@ -267,11 +275,11 @@ def p2() -> None:
     checks: list[str] = []
     for name in CASE_NAMES:
         checks.append(
-            f"cd /workspace/{rel}/generated_relaxation01/{name} && "
+            f"cd /workspace/{rel}/generated_fp04/{name} && "
             "/workspace/physics_app/physics-opt --check-input -i input.i"
         )
         checks.append(
-            f"cd /workspace/{rel}/generated_relaxation01/{name} && "
+            f"cd /workspace/{rel}/generated_fp04/{name} && "
             "/workspace/physics_app/physics-opt --check-input -i fast_sub.i"
         )
     base._docker(
