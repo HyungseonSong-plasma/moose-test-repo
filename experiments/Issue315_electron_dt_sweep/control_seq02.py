@@ -115,7 +115,7 @@ def build(clean: bool = True) -> list[dict[str, object]]:
                 "sequence": 2,
                 "objective": (
                     "reduce electron-step count by increasing electron dt while "
-                    "holding heavy dt, physical horizon, relaxation, and plasma physics fixed"
+                    "holding heavy dt, physical horizon, the alpha=1/(1+chi_e) stabilization law, and plasma physics fixed"
                 ),
                 "source_physics": "Issue306 wall09 Bohm-positive-ion + sheath-suppressed-electron model",
                 "chi_h": CHI_H,
@@ -208,7 +208,7 @@ def static_contract() -> dict[str, object]:
             }
             for spec in SPECS
         },
-        "single_axis_electron_dt": True,
+        "electron_dt_with_prescribed_relaxation_law": True,
     }
 
 
@@ -398,7 +398,7 @@ def run_case(case_name: str) -> None:
         "export MOOSE_DIR=/opt/physics_vendor/moose CRANE_DIR=/opt/physics_vendor/crane "
         "SQUIRREL_DIR=/opt/physics_vendor/squirrel ZAPDOS_DIR=/opt/physics_vendor/zapdos "
         "METHOD=opt PYTHONPATH=/workspace; "
-        f"python3 /workspace/{rel}/control.py --inner-run {case_name}"
+        f"python3 /workspace/{rel}/control_seq02.py --inner-run {case_name}"
     )
     result, code = analyze(case_name)
     (RESULTS / f"{case_name}_result.json").write_text(
