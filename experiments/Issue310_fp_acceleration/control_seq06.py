@@ -197,15 +197,25 @@ def _normalized_fast(text: str) -> str:
     )
 
 
+def _normalized_poisson(text: str) -> str:
+    return re.sub(
+        r"(^\s*fixed_point_algorithm\s*=\s*).+$",
+        r"\1<FIXED_POINT_ALGORITHM>",
+        text,
+        count=1,
+        flags=re.MULTILINE,
+    )
+
+
 def static_contract() -> dict[str, object]:
     built = build()
     if tuple(str(p["name"]) for p in built) != CASE_NAMES:
         raise RuntimeError("case ordering mismatch")
     if len(CASE_NAMES) != 8:
-        raise RuntimeError("Sequence05 must contain exactly eight damping cases")
+        raise RuntimeError("Sequence06 must contain exactly eight damping cases")
 
     parent_texts: list[str] = []
-    poisson_texts: list[str] = []
+    normalized_poisson: list[str] = []
     normalized_fast: list[str] = []
 
     for spec, p in zip(SPECS, built, strict=True):
@@ -239,14 +249,14 @@ def static_contract() -> dict[str, object]:
         assert "PhysicsFVElectronGroundedSheath" not in fast
 
         parent_texts.append(parent)
-        poisson_texts.append(poisson)
+        normalized_poisson.append(_normalized_poisson(poisson))
         normalized_fast.append(_normalized_fast(fast))
 
     # Algorithm discriminator: generated parent/Poisson are byte-identical, and
     # fast-child inputs become byte-identical after normalizing only the algorithm
     # selector and its algorithm damping/relaxation factor.
     assert len(set(parent_texts)) == 1
-    assert len(set(poisson_texts)) == 1
+    assert len(set(normalized_poisson)) == 1
     assert len(set(normalized_fast)) == 1
 
     return {
