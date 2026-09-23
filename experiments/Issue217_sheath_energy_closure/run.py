@@ -40,9 +40,14 @@ RUNTIME_REL_TOL = 1.0e-3
 ALGEBRAIC_REL_TOL = 1.0e-10
 COMPOSITION_ABS_TOL = 1.0e-8
 ELECTRON_DENSITY_FLOOR = -1.0e-12
+NEGATIVE_DROP_TOLERANCE_V = 1.0e-10
 
+PARTICLE_MATERIAL = "issue217_grounded_sheath_particle_flux_material"
+PARTICLE_FLUX = "issue217_grounded_sheath_particle_flux"
 PARTICLE_BC = "issue217_grounded_sheath_primary_particle"
 PARTICLE_PP = "issue217_grounded_sheath_primary_particle_rate"
+ENERGY_MATERIAL = "issue217_grounded_sheath_energy_flux_material"
+ENERGY_FLUX = "issue217_grounded_sheath_energy_flux"
 ENERGY_BC = "issue217_grounded_sheath_primary_energy"
 ENERGY_RATE_PP = "issue217_grounded_sheath_primary_energy_rate"
 ENERGY_POWER_PP = "issue217_grounded_sheath_primary_energy_power_W"
@@ -51,9 +56,7 @@ RHO_MAX_PP = "issue217_rho_q_max"
 PHI_MIN_PP = "issue217_phi_min"
 PHI_MAX_PP = "issue217_phi_max"
 
-PARTICLE_CPP = ROOT / "physics_app/src/fvbcs/PhysicsFVElectronGroundedSheathCollectionBC.C"
-ENERGY_CPP = ROOT / "physics_app/src/fvbcs/PhysicsFVElectronGroundedSheathEnergyBC.C"
-SHARED_HELPER = ROOT / "physics_app/include/fvbcs/PhysicsGroundedElectronSheathFlux.h"
+CELL_FLUX_CPP = ROOT / "physics_app/src/fvbcs/PhysicsFVCellFunctorNeumannBC.C"
 
 
 class Issue217Error(RuntimeError):
@@ -95,26 +98,29 @@ def _remove_historical_primary_owners(text: str) -> str:
     return text
 
 
-def _insert_sheath_primary_owners(text: str, *, n_ref: float) -> str:
+def _insert_sheath_particle_owner(text: str) -> str:
     wall_list = "'" + " ".join(WALLS) + "'"
-    for path in (
-        f"FVBCs/{PARTICLE_BC}",
-        f"Postprocessors/{PARTICLE_PP}",
-        f"FVBCs/{ENERGY_BC}",
-        f"Postprocessors/{ENERGY_RATE_PP}",
-        f"Postprocessors/{ENERGY_POWER_PP}",
-    ):
-        mb.require_absent(text, path)
-
+    text = mb.insert_child_block(
+        text,
+        "FunctorMaterials",
+        f"""  [{PARTICLE_MATERIAL}]
+    type = ADParsedFunctorMaterial
+    property_name = {PARTICLE_FLUX}
+    functor_names = 'n_e mean_en_solved potential_plasma'
+    functor_symbols = 'ne mean_ev phi'
+    expression = '0.25*ne*sqrt(8.0*1.602176634e-19*((2.0/3.0)*mean_ev)/(3.14159265358979323846*9.1093837139e-31))*exp(-(0.5*(phi+abs(phi)))/((2.0/3.0)*mean_ev))'
+    block = plasma
+  []""",
+    )
     text = mb.insert_child_block(
         text,
         "FVBCs",
         f"""  [{PARTICLE_BC}]
-    type = PhysicsFVElectronGroundedSheathCollectionBC
+    type = PhysicsFVCellFunctorNeumannBC
     variable = n_e
     boundary = {wall_list}
-    mean_electron_energy = mean_en_solved
-    potential = potential_plasma
+    functor = {PARTICLE_FLUX}
+    factor = -1.0
   []""",
     )
     text = mb.insert_child_block(
@@ -127,17 +133,44 @@ def _insert_sheath_primary_owners(text: str, *, n_ref: float) -> str:
     execute_on = 'INITIAL TIMESTEP_END'
   []""",
     )
+    return text
+
+
+def _insert_sheath_primary_owners(text: str, *, n_ref: float) -> str:
+    wall_list = "'" + " ".join(WALLS) + "'"
+    for path in (
+        f"FunctorMaterials/{PARTICLE_MATERIAL}",
+        f"FVBCs/{PARTICLE_BC}",
+        f"Postprocessors/{PARTICLE_PP}",
+        f"FunctorMaterials/{ENERGY_MATERIAL}",
+        f"FVBCs/{ENERGY_BC}",
+        f"Postprocessors/{ENERGY_RATE_PP}",
+        f"Postprocessors/{ENERGY_POWER_PP}",
+    ):
+        mb.require_absent(text, path)
+
+    text = _insert_sheath_particle_owner(text)
+    text = mb.insert_child_block(
+        text,
+        "FunctorMaterials",
+        f"""  [{ENERGY_MATERIAL}]
+    type = ADParsedFunctorMaterial
+    property_name = {ENERGY_FLUX}
+    functor_names = '{PARTICLE_FLUX} mean_en_solved potential_plasma'
+    functor_symbols = 'gamma_p mean_ev phi'
+    expression = 'gamma_p*((4.0/3.0)*mean_ev+0.5*(phi+abs(phi)))/{ENERGY_REFERENCE_EV:.17g}'
+    block = plasma
+  []""",
+    )
     text = mb.insert_child_block(
         text,
         "FVBCs",
         f"""  [{ENERGY_BC}]
-    type = PhysicsFVElectronGroundedSheathEnergyBC
+    type = PhysicsFVCellFunctorNeumannBC
     variable = n_epsilon
     boundary = {wall_list}
-    electron_density = n_e
-    mean_electron_energy = mean_en_solved
-    potential = potential_plasma
-    energy_reference_eV = {ENERGY_REFERENCE_EV:.17g}
+    functor = {ENERGY_FLUX}
+    factor = -1.0
   []""",
     )
     text = mb.insert_child_block(
@@ -241,6 +274,8 @@ def _construction_audit(text: str, *, predecessor_audit: Mapping[str, Any]) -> d
     energy_path = f"FVBCs/{ENERGY_BC}"
     particle_present = mb.has_block(text, particle_path)
     energy_present = mb.has_block(text, energy_path)
+    particle_material_present = mb.has_block(text, f"FunctorMaterials/{PARTICLE_MATERIAL}")
+    energy_material_present = mb.has_block(text, f"FunctorMaterials/{ENERGY_MATERIAL}")
 
     checks: dict[str, bool] = {
         "predecessor_stage6_accepted_composition": predecessor_audit.get("status") == "PASS",
@@ -251,18 +286,21 @@ def _construction_audit(text: str, *, predecessor_audit: Mapping[str, Any]) -> d
         "historical_primary_energy_bc_absent": not mb.has_block(text, f"FVBCs/{energy.ENERGY_WALL_THERMAL_BC}"),
         "historical_primary_energy_rate_pp_absent": not mb.has_block(text, f"Postprocessors/{energy.ENERGY_WALL_THERMAL_RATE_PP}"),
         "historical_primary_energy_power_pp_absent": not mb.has_block(text, f"Postprocessors/{energy.ENERGY_WALL_THERMAL_POWER_PP}"),
+        "particle_material_present": particle_material_present,
+        "energy_material_present": energy_material_present,
         "new_particle_owner_present": particle_present,
         "new_energy_owner_present": energy_present,
-        "particle_owner_type": particle_present and mp.get_parameter(text, particle_path, "type") == "PhysicsFVElectronGroundedSheathCollectionBC",
-        "energy_owner_type": energy_present and mp.get_parameter(text, energy_path, "type") == "PhysicsFVElectronGroundedSheathEnergyBC",
+        "particle_owner_type": particle_present and mp.get_parameter(text, particle_path, "type") == "PhysicsFVCellFunctorNeumannBC",
+        "energy_owner_type": energy_present and mp.get_parameter(text, energy_path, "type") == "PhysicsFVCellFunctorNeumannBC",
         "particle_wall_set_exact": particle_present and set(_words(text, particle_path, "boundary")) == wall_set,
         "energy_wall_set_exact": energy_present and set(_words(text, energy_path, "boundary")) == wall_set,
-        "particle_uses_solved_mean_energy": particle_present and mp.get_parameter(text, particle_path, "mean_electron_energy") == "mean_en_solved",
-        "particle_uses_plasma_potential": particle_present and mp.get_parameter(text, particle_path, "potential") == "potential_plasma",
-        "energy_uses_ne": energy_present and mp.get_parameter(text, energy_path, "electron_density") == "n_e",
-        "energy_uses_solved_mean_energy": energy_present and mp.get_parameter(text, energy_path, "mean_electron_energy") == "mean_en_solved",
-        "energy_uses_plasma_potential": energy_present and mp.get_parameter(text, energy_path, "potential") == "potential_plasma",
-        "energy_reference_frozen": energy_present and math.isclose(float(mp.get_parameter(text, energy_path, "energy_reference_eV") or "nan"), ENERGY_REFERENCE_EV, rel_tol=0.0, abs_tol=1.0e-12),
+        "particle_flux_owner": particle_present and mp.get_parameter(text, particle_path, "functor") == PARTICLE_FLUX,
+        "energy_flux_owner": energy_present and mp.get_parameter(text, energy_path, "functor") == ENERGY_FLUX,
+        "particle_factor_outward": particle_present and float(mp.get_parameter(text, particle_path, "factor") or "nan") == -1.0,
+        "energy_factor_outward": energy_present and float(mp.get_parameter(text, energy_path, "factor") or "nan") == -1.0,
+        "particle_uses_solved_state": particle_material_present and _words(text, f"FunctorMaterials/{PARTICLE_MATERIAL}", "functor_names") == ("n_e", "mean_en_solved", "potential_plasma"),
+        "energy_reuses_particle_population": energy_material_present and _words(text, f"FunctorMaterials/{ENERGY_MATERIAL}", "functor_names") == (PARTICLE_FLUX, "mean_en_solved", "potential_plasma"),
+        "energy_reference_frozen": energy_material_present and f"/{ENERGY_REFERENCE_EV:.17g}" in (mp.get_parameter(text, f"FunctorMaterials/{ENERGY_MATERIAL}", "expression") or ""),
         "see_particle_owner_preserved": mb.has_block(text, f"FVBCs/{a8.SEE_BC}") and float(mp.get_parameter(text, f"FVBCs/{a8.SEE_BC}", "factor") or "nan") == 1.0,
         "see_energy_owner_preserved": mb.has_block(text, f"FVBCs/{energy.SEE_ENERGY_BC}") and float(mp.get_parameter(text, f"FVBCs/{energy.SEE_ENERGY_BC}", "factor") or "nan") == 1.0,
         "see_particle_wall_set_exact": set(_words(text, f"FVBCs/{a8.SEE_BC}", "boundary")) == wall_set,
@@ -282,21 +320,17 @@ def _construction_audit(text: str, *, predecessor_audit: Mapping[str, Any]) -> d
 
 
 def _cpp_contract_audit() -> dict[str, Any]:
-    particle = PARTICLE_CPP.read_text(encoding="utf-8")
-    energy_src = ENERGY_CPP.read_text(encoding="utf-8")
-    helper = SHARED_HELPER.read_text(encoding="utf-8")
+    source = CELL_FLUX_CPP.read_text(encoding="utf-8")
     checks = {
-        "shared_helper_exists": SHARED_HELPER.is_file(),
-        "particle_consumes_shared_relation": 'PhysicsGroundedElectronSheath::primaryParticleFluxHat' in particle,
-        "energy_consumes_shared_relation": 'PhysicsGroundedElectronSheath::primaryEnergyFluxHat' in energy_src,
-        "particle_plasma_cell_state": "elemArg()" in particle and "neighborArg()" in particle,
-        "energy_plasma_cell_state": "elemArg()" in energy_src and "neighborArg()" in energy_src,
-        "particle_face_state_not_used": "singleSidedFaceArg" not in particle,
-        "energy_face_state_not_used": "singleSidedFaceArg" not in energy_src,
-        "shared_particle_suppression": "exp(-effective_drop_V / electron_temperature_eV)" in helper,
-        "shared_energy_per_collected_electron": "2.0 * electron_temperature_eV + effective_drop_V" in helper,
-        "energy_owner_has_no_see_term": "see_number_flux" not in energy_src,
-        "same_negative_drop_tolerance": "negative_drop_tolerance_V" in particle and "negative_drop_tolerance_V" in energy_src,
+        "registered_generic_adapter": 'registerMooseObject("PhysicsApp", PhysicsFVCellFunctorNeumannBC)' in source,
+        "cell_side_evaluation": "elemArg()" in source and "neighborArg()" in source,
+        "face_state_not_used": "singleSidedFaceArg" not in source,
+        "generic_functor_parameter": 'getFunctor<ADReal>("functor")' in source,
+        "generic_factor_parameter": 'getFunctor<ADReal>("factor")' in source,
+        "no_sheath_semantics_in_adapter": all(
+            token not in source.lower()
+            for token in ("sheath", "electron_temperature", "boltzmann", "mean_energy")
+        ),
     }
     failed = sorted(name for name, ok in checks.items() if not ok)
     return {"status": "PASS" if not failed else "FAIL", "checks": checks, "failed_checks": failed}
@@ -384,33 +418,13 @@ def _negative_controls() -> dict[str, Any]:
         f"Postprocessors/{a7.THERMAL_PP}",
     ):
         bad = mb.remove_block(bad, path)
-    wall_list = "'" + " ".join(WALLS) + "'"
-    bad = mb.insert_child_block(
-        bad,
-        "FVBCs",
-        f"""  [{PARTICLE_BC}]
-    type = PhysicsFVElectronGroundedSheathCollectionBC
-    variable = n_e
-    boundary = {wall_list}
-    mean_electron_energy = mean_en_solved
-    potential = potential_plasma
-  []""",
-    )
-    bad = mb.insert_child_block(
-        bad,
-        "Postprocessors",
-        f"""  [{PARTICLE_PP}]
-    type = SideFVFluxBCIntegral
-    boundary = {wall_list}
-    fvbcs = '{PARTICLE_BC}'
-    execute_on = 'INITIAL TIMESTEP_END'
-  []""",
-    )
+    bad = _insert_sheath_particle_owner(bad)
+
     bad_audit = _construction_audit(bad, predecessor_audit=predecessor["predecessor_audit"])
 
     good, _ = build_issue217_input()
     forced = mp.upsert_parameter(good, "FVKernels/n_e_drift", "boundaries_to_avoid", "'inlet outlet'")
-    forced = mp.upsert_parameter(forced, "FVKernels/n_e_drift", "boundaries_to_force", wall_list)
+    forced = mp.upsert_parameter(forced, "FVKernels/n_e_drift", "boundaries_to_force", "'" + " ".join(WALLS) + "'")
     forced_audit = _construction_audit(forced, predecessor_audit=predecessor["predecessor_audit"])
 
     checks = {
@@ -664,6 +678,7 @@ def _evaluate(meta: Mapping[str, Any], metrics: Mapping[str, Any], *, runtime_ok
             and metrics["composition_max_abs_error"] <= COMPOSITION_ABS_TOL
         ),
         "G10_primary_energy_owner_active": metrics["electron_energy"]["primary_wall_power_W"] > 0.0,
+        "G11_electron_repelling_branch": metrics["phi_min_V"] >= -NEGATIVE_DROP_TOLERANCE_V,
     }
     return {"gates": gates, "scientific_hard_pass": all(gates.values())}
 

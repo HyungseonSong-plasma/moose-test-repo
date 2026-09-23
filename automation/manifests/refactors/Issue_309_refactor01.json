@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "issue": 309,
+  "kind": "refactor",
+  "sequence": 1,
+  "title": "Migrate grounded electron sheath owners to parsed functors plus cell-side thin adapter",
+  "stages": [
+    {
+      "id": "STATIC",
+      "name": "Validate zero legacy callers and structural contracts",
+      "command": [
+        "python3",
+        "experiments/Issue309_sheath_refactor/validate.py",
+        "--phase",
+        "static"
+      ],
+      "timeout_seconds": 300
+    },
+    {
+      "id": "BUILD_CHECK",
+      "name": "Unity build and sheath input validation",
+      "command": [
+        "python3",
+        "experiments/Issue309_sheath_refactor/validate.py",
+        "--phase",
+        "build-check"
+      ],
+      "timeout_seconds": 3600
+    },
+    {
+      "id": "RUNTIME",
+      "name": "Re-run Issue 215 and 217 acceptance",
+      "command": [
+        "python3",
+        "experiments/Issue309_sheath_refactor/validate.py",
+        "--phase",
+        "runtime"
+      ],
+      "timeout_seconds": 3600
+    }
+  ],
+  "artifacts": [
+    "issue309-refactor-results/*.json",
+    "issue215-sheath-particle-results/summary.json",
+    "issue217-sheath-energy-results/summary.json",
+    "issue215-sheath-particle-results/logs/*.log",
+    "issue217-sheath-energy-results/logs/*.log"
+  ]
+}

@@ -21,17 +21,20 @@ CASES = OUT / "cases"
 LOGS = OUT / "logs"
 SOURCE = ROOT / "experiments/Issue91_real_qvt_r3/r3_e0"
 EXE = ROOT / "physics_app/physics-opt"
-CPP_SOURCE = ROOT / "physics_app/src/fvbcs/PhysicsFVElectronGroundedSheathCollectionBC.C"
+CELL_FLUX_CPP = ROOT / "physics_app/src/fvbcs/PhysicsFVCellFunctorNeumannBC.C"
 
 ELEMENTARY_CHARGE_C = 1.602176634e-19
 AVOGADRO = 6.02214076e23
 ELECTRON_MASS_KG = 9.1093837139e-31
 BASELINE_DT = 1.0e-10
 REFINED_DT = 5.0e-11
+NEGATIVE_DROP_TOLERANCE_V = 1.0e-10
 TARGET_END = 2.0e-10
 DTS = (BASELINE_DT, REFINED_DT)
 WALLS = tuple(a6.PLASMA_WALLS)
 ALL_BOUNDARIES = ("inlet", "outlet", *WALLS)
+SHEATH_MATERIAL = "issue215_electron_grounded_sheath_flux_material"
+SHEATH_FLUX = "issue215_electron_grounded_sheath_flux"
 SHEATH_BC = "issue215_electron_grounded_sheath_collection"
 SHEATH_PP = "issue215_electron_grounded_sheath_rate"
 SPEC = json.loads(
@@ -60,26 +63,29 @@ def add_pp(text: str, name: str, body: str) -> str:
     return mb.insert_child_block(text, "Postprocessors", f"  [{name}]\n{body}\n  []")
 
 
-def replace_primary_wall_owner(text: str) -> str:
-    for path in (
-        f"FunctorMaterials/{a7.THERMAL_MATERIAL}",
-        f"FVBCs/{a7.THERMAL_BC}",
-        f"Postprocessors/{a7.THERMAL_PP}",
-    ):
-        if not mb.has_block(text, path):
-            raise RuntimeError(f"missing historical primary electron owner: {path}")
-        text = mb.remove_block(text, path)
-
+def _insert_sheath_primary_owner(text: str) -> str:
     wall_list = "'" + " ".join(WALLS) + "'"
+    text = mb.insert_child_block(
+        text,
+        "FunctorMaterials",
+        f"""  [{SHEATH_MATERIAL}]
+    type = ADParsedFunctorMaterial
+    property_name = {SHEATH_FLUX}
+    functor_names = 'n_e mean_en potential_plasma'
+    functor_symbols = 'ne mean_ev phi'
+    expression = '0.25*ne*sqrt(8.0*1.602176634e-19*((2.0/3.0)*mean_ev)/(3.14159265358979323846*9.1093837139e-31))*exp(-(0.5*(phi+abs(phi)))/((2.0/3.0)*mean_ev))'
+    block = plasma
+  []""",
+    )
     text = mb.insert_child_block(
         text,
         "FVBCs",
         f"""  [{SHEATH_BC}]
-    type = PhysicsFVElectronGroundedSheathCollectionBC
+    type = PhysicsFVCellFunctorNeumannBC
     variable = n_e
     boundary = {wall_list}
-    mean_electron_energy = mean_en
-    potential = potential_plasma
+    functor = {SHEATH_FLUX}
+    factor = -1.0
   []""",
     )
     text = mb.insert_child_block(
@@ -93,6 +99,18 @@ def replace_primary_wall_owner(text: str) -> str:
   []""",
     )
     return text
+
+
+def replace_primary_wall_owner(text: str) -> str:
+    for path in (
+        f"FunctorMaterials/{a7.THERMAL_MATERIAL}",
+        f"FVBCs/{a7.THERMAL_BC}",
+        f"Postprocessors/{a7.THERMAL_PP}",
+    ):
+        if not mb.has_block(text, path):
+            raise RuntimeError(f"missing historical primary electron owner: {path}")
+        text = mb.remove_block(text, path)
+    return _insert_sheath_primary_owner(text)
 
 
 def instrument(text: str, *, dt: float, primary_pp: str) -> str:
@@ -178,11 +196,26 @@ def construction_audit(text: str, *, sheath: bool) -> dict:
                 "historical_thermal_pp_absent": not mb.has_block(
                     text, f"Postprocessors/{a7.THERMAL_PP}"
                 ),
+                "sheath_material_present": mb.has_block(
+                    text, f"FunctorMaterials/{SHEATH_MATERIAL}"
+                ),
+                "sheath_material_type": mp.get_parameter(
+                    text, f"FunctorMaterials/{SHEATH_MATERIAL}", "type"
+                )
+                == "ADParsedFunctorMaterial",
+                "sheath_flux_property": mp.get_parameter(
+                    text, f"FunctorMaterials/{SHEATH_MATERIAL}", "property_name"
+                )
+                == SHEATH_FLUX,
+                "sheath_flux_uses_ne_mean_energy_potential": words(
+                    text, f"FunctorMaterials/{SHEATH_MATERIAL}", "functor_names"
+                )
+                == ("n_e", "mean_en", "potential_plasma"),
                 "sheath_bc_present": mb.has_block(text, f"FVBCs/{SHEATH_BC}"),
                 "sheath_type_exact": mp.get_parameter(
                     text, f"FVBCs/{SHEATH_BC}", "type"
                 )
-                == "PhysicsFVElectronGroundedSheathCollectionBC",
+                == "PhysicsFVCellFunctorNeumannBC",
                 "sheath_variable_ne": mp.get_parameter(
                     text, f"FVBCs/{SHEATH_BC}", "variable"
                 )
@@ -191,14 +224,14 @@ def construction_audit(text: str, *, sheath: bool) -> dict:
                     text, f"FVBCs/{SHEATH_BC}", "boundary"
                 )
                 == WALLS,
-                "sheath_mean_energy_owner": mp.get_parameter(
-                    text, f"FVBCs/{SHEATH_BC}", "mean_electron_energy"
+                "sheath_flux_owner": mp.get_parameter(
+                    text, f"FVBCs/{SHEATH_BC}", "functor"
                 )
-                == "mean_en",
-                "sheath_potential_owner": mp.get_parameter(
-                    text, f"FVBCs/{SHEATH_BC}", "potential"
+                == SHEATH_FLUX,
+                "sheath_factor_outward": float(
+                    mp.get_parameter(text, f"FVBCs/{SHEATH_BC}", "factor") or "nan"
                 )
-                == "potential_plasma",
+                == -1.0,
                 "sheath_pp_present": mb.has_block(text, f"Postprocessors/{SHEATH_PP}"),
             }
         )
@@ -226,20 +259,17 @@ def construction_audit(text: str, *, sheath: bool) -> dict:
 
 
 def cpp_contract_audit() -> dict:
-    source = CPP_SOURCE.read_text()
+    source = CELL_FLUX_CPP.read_text()
     checks = {
-        "registered_object": "registerMooseObject(\"PhysicsApp\", PhysicsFVElectronGroundedSheathCollectionBC)"
-        in source,
+        "registered_generic_adapter": 'registerMooseObject("PhysicsApp", PhysicsFVCellFunctorNeumannBC)' in source,
         "plasma_cell_state": "elemArg()" in source and "neighborArg()" in source,
-        "face_arg_not_used_for_sheath_state": "singleSidedFaceArg" not in source,
-        "grounded_repelling_branch_guard": "raw_phi_s_V < -negative_drop_tolerance_V"
-        in source,
-        "temperature_from_mean_energy": "(2.0 / 3.0) * mean_energy_eV" in source,
-        "boltzmann_suppression": "exp(-effective_drop_V / electron_temperature_eV)"
-        in source,
-        "quarter_maxwellian_flux": "0.25 * n_e_hat * mean_speed_m_s * suppression"
-        in source,
-        "no_see_owner": "see_number_flux" not in source,
+        "face_arg_not_used_for_flux_state": "singleSidedFaceArg" not in source,
+        "generic_functor_parameter": 'getFunctor<ADReal>("functor")' in source,
+        "generic_factor_parameter": 'getFunctor<ADReal>("factor")' in source,
+        "no_sheath_semantics_in_adapter": all(
+            token not in source.lower()
+            for token in ("sheath", "electron_temperature", "boltzmann", "mean_energy")
+        ),
     }
     return {"status": "PASS" if all(checks.values()) else "FAIL", "checks": checks}
 
@@ -301,28 +331,7 @@ def negative_controls() -> dict:
     duplicate_text, _ = a7._build_a7_case_input(
         BASE_TEXT, parameters=PARAMS, mode="combined_thermal"
     )
-    wall_list = "'" + " ".join(WALLS) + "'"
-    duplicate_text = mb.insert_child_block(
-        duplicate_text,
-        "FVBCs",
-        f"""  [{SHEATH_BC}]
-    type = PhysicsFVElectronGroundedSheathCollectionBC
-    variable = n_e
-    boundary = {wall_list}
-    mean_electron_energy = mean_en
-    potential = potential_plasma
-  []""",
-    )
-    duplicate_text = mb.insert_child_block(
-        duplicate_text,
-        "Postprocessors",
-        f"""  [{SHEATH_PP}]
-    type = SideFVFluxBCIntegral
-    boundary = {wall_list}
-    fvbcs = '{SHEATH_BC}'
-    execute_on = 'INITIAL TIMESTEP_END'
-  []""",
-    )
+    duplicate_text = _insert_sheath_primary_owner(duplicate_text)
     duplicate_text, _ = _promote_current_acceptance_types(duplicate_text)
     duplicate_audit = construction_audit(duplicate_text, sheath=True)
 
@@ -622,6 +631,9 @@ def run() -> dict:
         and m["n_e_min_m3"] >= -1.0e-12
         for m in sheath_metrics
     )
+    electron_repelling_branch = bool(sheath_metrics) and all(
+        m["phi_min_V"] >= -NEGATIVE_DROP_TOLERANCE_V for m in sheath_metrics
+    )
 
     refined_consistency = False
     refinement = {}
@@ -663,6 +675,7 @@ def run() -> dict:
         and all_p2
         and runtime_complete
         and conservation_pass
+        and electron_repelling_branch
         and refined_consistency
         and causal_regulation
     )
@@ -672,8 +685,9 @@ def run() -> dict:
         "G02_all_check_input": all_p2,
         "G03_sheath_runtime_complete": runtime_complete,
         "G04_sheath_particle_charge_gauss_closure": conservation_pass,
-        "G05_timestep_refinement": refined_consistency,
-        "G06_causal_collection_regulation": causal_regulation,
+        "G05_electron_repelling_branch": electron_repelling_branch,
+        "G06_timestep_refinement": refined_consistency,
+        "G07_causal_collection_regulation": causal_regulation,
     }
     summary["scientific_hard_pass"] = hard_pass
     summary["scientific_disposition"] = (
