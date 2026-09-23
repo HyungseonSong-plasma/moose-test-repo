@@ -433,7 +433,7 @@ def run_case(case_name: str) -> None:
         "export MOOSE_DIR=/opt/physics_vendor/moose CRANE_DIR=/opt/physics_vendor/crane "
         "SQUIRREL_DIR=/opt/physics_vendor/squirrel ZAPDOS_DIR=/opt/physics_vendor/zapdos "
         "METHOD=opt PYTHONPATH=/workspace; "
-        f"python3 /workspace/{rel}/control.py --inner-run {case_name}"
+        f"python3 /workspace/{rel}/control_seq04.py --inner-run {case_name}"
     )
     result, code = analyze(case_name)
     (RESULTS / f"{case_name}_result.json").write_text(
