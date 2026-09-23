@@ -44,6 +44,8 @@
     "experiments/Issue310_fp_acceleration/generated_fp10/**/*.json",
     "experiments/Issue310_fp_acceleration/patches/secondary_secant_history_seed.patch",
     "experiments/Issue310_fp_acceleration/patched_runtime_fp10/PATCH_PROVENANCE.txt",
-    "experiments/Issue310_fp_acceleration/patched_runtime_fp10/LDD_PROOF.txt"
+    "experiments/Issue310_fp_acceleration/patched_runtime_fp10/LDD_PROOF.txt",
+    "experiments/Issue310_fp_acceleration/artifact_staging_seq10.json",
+    "experiments/Issue310_fp_acceleration/patched_runtime_fp10/STAGING_EVIDENCE.json"
   ]
 }
