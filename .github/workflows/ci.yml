@@ -87,6 +87,7 @@ jobs:
               "github-actions-execution",
               "github-actions-observation",
               "artifact-staging",
+              "scientific-discriminator-controller",
           }
           for item in entries.values():
               assert item["revision"] == "6474eb7b77f890b7cf9d7134ccebea31662bcdbe"
@@ -99,7 +100,7 @@ jobs:
           assert entries["github-actions-execution"]["load_on"] == ["GITHUB_ACTIONS_EXECUTION"]
           assert entries["github-actions-observation"]["load_on"] == ["GITHUB_ACTIONS_OBSERVATION"]
           assert entries["artifact-staging"]["load_on"] == ["ARTIFACT_STAGING"]
-assert entries["scientific-discriminator-controller"]["load_on"] == ["SCIENTIFIC_DISCRIMINATOR_CONTROLLER"]
+          assert entries["scientific-discriminator-controller"]["load_on"] == ["SCIENTIFIC_DISCRIMINATOR_CONTROLLER"]
 
           policy=json.loads(Path(".chatgpt-operation.json").read_text(encoding="utf-8"))
           assert policy["schema_version"] == 1
