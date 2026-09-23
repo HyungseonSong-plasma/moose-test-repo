@@ -1,0 +1,21 @@
+name: One-shot Issue 310 Sequence 06 corrected FP placement rerun
+
+on:
+  push:
+    branches:
+      - issue-310-fp-placement-corrected-seq08
+    paths:
+      - .github/workflows/issue310-fp-placement-seq06-rerun-once.yml
+
+permissions:
+  contents: read
+
+jobs:
+  run:
+    uses: HyungseonSong-plasma/chatgpt-operation/.github/workflows/governed-matrix.yml@8d3ea7720549148a251a9e11f5733d543344fb2e
+    with:
+      issue: "310"
+      sequence: "06"
+      manifest: automation/manifests/experiments/Issue_310_experiments06.json
+      base_sha: 4bc9e4f8fc35e782c18d47bd09f85476f3b3ceaa
+      operation_sha: 8d3ea7720549148a251a9e11f5733d543344fb2e
