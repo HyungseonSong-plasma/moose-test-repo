@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "issue": 310,
+  "kind": "experiments",
+  "sequence": 1,
+  "title": "Prepare fixed-clock relaxation-factor optimization matrix",
+  "stages": [
+    {
+      "id": "P0",
+      "name": "Validate relaxation-only discriminator contract",
+      "command": [
+        "python3",
+        "experiments/Issue310_relaxation_optimization/control.py",
+        "--phase",
+        "p0"
+      ],
+      "timeout_seconds": 180
+    },
+    {
+      "id": "P1",
+      "name": "Preflight fixed-clock relaxation cases",
+      "command": [
+        "python3",
+        "experiments/Issue310_relaxation_optimization/control.py",
+        "--phase",
+        "p1"
+      ],
+      "timeout_seconds": 1200
+    },
+    {
+      "id": "P2",
+      "name": "Build Physics and check relaxation sweep inputs",
+      "command": [
+        "python3",
+        "experiments/Issue310_relaxation_optimization/control.py",
+        "--phase",
+        "p2"
+      ],
+      "timeout_seconds": 3600
+    }
+  ],
+  "artifacts": [
+    "experiments/Issue310_relaxation_optimization/generated_relaxation01/**/*.i",
+    "experiments/Issue310_relaxation_optimization/generated_relaxation01/**/*.json"
+  ]
+}
