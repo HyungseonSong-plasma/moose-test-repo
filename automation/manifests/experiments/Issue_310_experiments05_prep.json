@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "issue": 310,
+  "kind": "experiments",
+  "sequence": 5,
+  "title": "Prepare Sequence 08 damped Secant/Steffensen eight-case benchmark",
+  "stages": [
+    {
+      "id": "P0",
+      "name": "Validate eight-case damping discriminator contract",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq05.py",
+        "--phase",
+        "p0"
+      ],
+      "timeout_seconds": 180
+    },
+    {
+      "id": "P1",
+      "name": "Preflight damped Secant/Steffensen cases",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq05.py",
+        "--phase",
+        "p1"
+      ],
+      "timeout_seconds": 1200
+    },
+    {
+      "id": "P2",
+      "name": "Build Physics and check damped acceleration inputs",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq05.py",
+        "--phase",
+        "p2"
+      ],
+      "timeout_seconds": 3600
+    }
+  ],
+  "artifacts": [
+    "experiments/Issue310_fp_acceleration/generated_fp05/**/*.i",
+    "experiments/Issue310_fp_acceleration/generated_fp05/**/*.json"
+  ]
+}
