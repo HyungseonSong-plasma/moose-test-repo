@@ -2,7 +2,7 @@
 
 **Status:** canonical consumer manifest guide  
 **OS:** Paul  
-**Central revision:** `e6df2c89578ee7b5c23f043a0aa2f7fe9cbd9499`
+**Central revision:** `a81ffc7af265a5d6be357483dbd39ca147224e2c`
 
 The machine-readable exact identities are in `central_skills.json`.
 
@@ -41,6 +41,9 @@ GITHUB_ACTIONS_EXECUTION
 
 GITHUB_ACTIONS_OBSERVATION
   -> skills/github-actions-observation/README.md
+
+ARTIFACT_STAGING
+  -> skills/artifact-staging/README.md
 ```
 
 Do not preload controller skills during an ordinary interactive init.
