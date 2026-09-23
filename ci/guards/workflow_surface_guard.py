@@ -29,6 +29,7 @@ REQUIRED_CI_JOB_IF = (
 )
 TOP_KEY = re.compile(r"^[A-Za-z_][A-Za-z0-9_-]*:\s*(?:#.*)?$")
 EVENT_KEY = re.compile(r"^  ([A-Za-z_][A-Za-z0-9_-]*):")
+ONE_SHOT_NAME = re.compile(r"^issue[1-9][0-9]*-[a-z0-9][a-z0-9-]*-once\.ya?ml$")
 
 def events(text: str) -> set[str]:
     lines = text.splitlines()
@@ -101,15 +102,36 @@ def job_if_condition(text: str, name: str) -> str:
     return ""
 
 
+def one_shot_errors(name: str, text: str) -> list[str]:
+    errors: list[str] = []
+    observed = events(text)
+    if observed != {"push"}:
+        errors.append(
+            f"{name}: one-shot events={sorted(observed)} expected=['push']"
+        )
+    if "branches: [main]" not in text:
+        errors.append(f"{name}: one-shot must target branches: [main]")
+    expected_path = f"paths: [.github/workflows/{name}]"
+    if expected_path not in text:
+        errors.append(
+            f"{name}: one-shot must be self-path-triggered as {expected_path!r}"
+        )
+    return errors
+
+
 def check(root: Path) -> list[str]:
     workflow_dir = root / ".github" / "workflows"
     actual = {p.name for p in workflow_dir.glob("*.yml")} | {p.name for p in workflow_dir.glob("*.yaml")}
     expected = set(ENTRYPOINTS) | set(REUSABLE)
     errors: list[str] = []
-    extra = sorted(actual - expected)
+    one_shots = sorted(name for name in actual if ONE_SHOT_NAME.fullmatch(name))
+    extra = sorted(actual - expected - set(one_shots))
     missing = sorted(expected - actual)
     if extra:
         errors.append(f"unauthorized workflow files: {extra}")
+    for name in one_shots:
+        path = workflow_dir / name
+        errors.extend(one_shot_errors(name, path.read_text(encoding="utf-8")))
     if missing:
         errors.append(f"missing canonical workflow files: {missing}")
     for name, expected_events in {**ENTRYPOINTS, **REUSABLE}.items():
@@ -181,6 +203,29 @@ def self_test() -> int:
         assert len(filter_errors) == 1, filter_errors
         ci_path.write_text(valid_ci, encoding="utf-8")
         assert not check(root), check(root)
+        one_shot_name = "issue310-example-once.yml"
+        (workflow_dir / one_shot_name).write_text(
+            "name: One-shot Issue 310 example\n"
+            "on:\n"
+            "  push:\n"
+            "    branches: [main]\n"
+            f"    paths: [.github/workflows/{one_shot_name}]\n"
+            "jobs: {}\n",
+            encoding="utf-8",
+        )
+        assert not check(root), check(root)
+        (workflow_dir / one_shot_name).write_text(
+            "name: unsafe\n"
+            "on:\n"
+            "  push:\n"
+            "    branches: [main]\n"
+            "    paths: [README.md]\n"
+            "jobs: {}\n",
+            encoding="utf-8",
+        )
+        assert any("self-path-triggered" in error for error in check(root))
+        (workflow_dir / one_shot_name).unlink()
+
         (workflow_dir / "bad.yml").write_text("name: bad\non:\n  issue_comment:\njobs: {}\n")
         assert check(root)
     print("WORKFLOW_SURFACE_GUARD_SELF_TEST=PASS")

@@ -2,7 +2,7 @@
 
 **Status:** canonical consumer manifest guide  
 **OS:** Paul  
-**Central revision:** `0ed25494cead9dcfa6ec567790fbf7ca2c943c00`
+**Central revision:** `d18ab01346e757271e699e0e288e22f9d5f6fe29`
 
 The machine-readable exact identities are in `central_skills.json`.
 
@@ -34,6 +34,9 @@ SCHEDULED_CONTROLLER
   -> skills/controller-throughput/README.md
   -> skills/controller-lifecycle/README.md
   -> state-refresh remains available
+
+GITHUB_ACTIONS_EXECUTION
+  -> skills/github-actions-execution/README.md
 
 GITHUB_ACTIONS_OBSERVATION
   -> skills/github-actions-observation/README.md
