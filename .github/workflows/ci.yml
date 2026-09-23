@@ -38,9 +38,9 @@ jobs:
           test -f docs/operating_system/README.md
           test -f docs/operating_system/CENTRAL_SKILLS.md
           test -f docs/operating_system/central_skills.json
-          grep -Fq 'd18ab01346e757271e699e0e288e22f9d5f6fe29' docs/operating_system/README.md
+          grep -Fq 'e6df2c89578ee7b5c23f043a0aa2f7fe9cbd9499' docs/operating_system/README.md
           grep -Fq 'Expected OS:** Paul' docs/operating_system/README.md
-          grep -Fq 'd18ab01346e757271e699e0e288e22f9d5f6fe29' docs/operating_system/CENTRAL_SKILLS.md
+          grep -Fq 'e6df2c89578ee7b5c23f043a0aa2f7fe9cbd9499' docs/operating_system/CENTRAL_SKILLS.md
 
           # Calvin operating metrics are archive-only under Paul.
           test ! -e docs/metrics
@@ -49,9 +49,9 @@ jobs:
           test -f archive/operating_metrics/calvin/metrics_closure.md
 
           # Executable central actions use the same exact Paul revision.
-          grep -Fq 'HyungseonSong-plasma/chatgpt-operation/.github/actions/repository-mutation@d18ab01346e757271e699e0e288e22f9d5f6fe29' .github/workflows/refactor.yml
-          grep -Fq 'HyungseonSong-plasma/chatgpt-operation/.github/actions/governed-work@d18ab01346e757271e699e0e288e22f9d5f6fe29' .github/workflows/refactor.yml
-          grep -Fq 'HyungseonSong-plasma/chatgpt-operation/.github/actions/governed-work@d18ab01346e757271e699e0e288e22f9d5f6fe29' .github/workflows/experiment.yml
+          grep -Fq 'HyungseonSong-plasma/chatgpt-operation/.github/actions/repository-mutation@e6df2c89578ee7b5c23f043a0aa2f7fe9cbd9499' .github/workflows/refactor.yml
+          grep -Fq 'HyungseonSong-plasma/chatgpt-operation/.github/actions/governed-work@e6df2c89578ee7b5c23f043a0aa2f7fe9cbd9499' .github/workflows/refactor.yml
+          grep -Fq 'HyungseonSong-plasma/chatgpt-operation/.github/actions/governed-work@e6df2c89578ee7b5c23f043a0aa2f7fe9cbd9499' .github/workflows/experiment.yml
 
           python3 - <<'PY'
           import json
@@ -61,15 +61,19 @@ jobs:
           assert manifest["schema_version"] == 2
           assert manifest["source_repository"] == "HyungseonSong-plasma/chatgpt-operation"
           os_meta=manifest["operating_system"]
-          assert os_meta["revision"] == "d18ab01346e757271e699e0e288e22f9d5f6fe29"
+          assert os_meta["revision"] == "e6df2c89578ee7b5c23f043a0aa2f7fe9cbd9499"
           assert os_meta["expected_version"] == "Paul"
           assert os_meta["index"] == {
               "path": "docs/operating_system/README.md",
-              "expected_blob_sha": "fcbb3e0332d972c189ac80e8e863b9caa9db9ec2",
+              "expected_blob_sha": "38e5ba53b1440abb7722def876c2a278bae30d9f",
           }
           assert os_meta["essential_rules"] == {
               "path": "docs/operating_system/ESSENTIAL_RULES.md",
               "expected_blob_sha": "adfad6c7acc7b371b5aa840c6fb830ca696e60ac",
+          }
+          assert manifest["skill_catalog"] == {
+              "path": "skills/catalog.json",
+              "expected_blob_sha": "e6b767fcb3ef94717de0d03ee1cdf4367f7f2a9a",
           }
 
           entries={item["name"]: item for item in manifest["skills"]}
@@ -84,7 +88,7 @@ jobs:
               "github-actions-observation",
           }
           for item in entries.values():
-              assert item["revision"] == "d18ab01346e757271e699e0e288e22f9d5f6fe29"
+              assert item["revision"] == "e6df2c89578ee7b5c23f043a0aa2f7fe9cbd9499"
           assert entries["session-bootstrap"]["load_on"] == ["INIT"]
           assert entries["state-refresh"]["load_on"] == ["INIT","SCHEDULED_CONTROLLER"]
           assert entries["repository-mutation"]["load_on"] == ["MUTATE"]
@@ -104,7 +108,7 @@ jobs:
           central_dir="$(mktemp -d)"
           git -C "$central_dir" init -q
           git -C "$central_dir" remote add origin https://github.com/HyungseonSong-plasma/chatgpt-operation.git
-          git -C "$central_dir" fetch --quiet --depth=1 origin "d18ab01346e757271e699e0e288e22f9d5f6fe29"
+          git -C "$central_dir" fetch --quiet --depth=1 origin "e6df2c89578ee7b5c23f043a0aa2f7fe9cbd9499"
           CENTRAL_DIR="$central_dir" python3 - <<'PY'
           import json
           import os
@@ -118,6 +122,7 @@ jobs:
           expected=[
               manifest["operating_system"]["index"],
               manifest["operating_system"]["essential_rules"],
+              manifest["skill_catalog"],
           ]
           expected += [
               {"path": item["path"], "expected_blob_sha": item["expected_blob_sha"]}

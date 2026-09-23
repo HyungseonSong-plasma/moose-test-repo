@@ -3,7 +3,7 @@
 **Status:** Paul consumer binding  
 **Consumer:** `HyungseonSong-plasma/moose-test-repo`  
 **Canonical OS repository:** `HyungseonSong-plasma/chatgpt-operation`  
-**Pinned central revision:** `d18ab01346e757271e699e0e288e22f9d5f6fe29`  
+**Pinned central revision:** `e6df2c89578ee7b5c23f043a0aa2f7fe9cbd9499`  
 **Expected OS:** Paul
 
 ## Central authority
@@ -12,10 +12,11 @@ Resolve exactly:
 
 ```text
 repository       = HyungseonSong-plasma/chatgpt-operation
-revision         = d18ab01346e757271e699e0e288e22f9d5f6fe29
+revision         = e6df2c89578ee7b5c23f043a0aa2f7fe9cbd9499
 OS index         = docs/operating_system/README.md
 essential rules  = docs/operating_system/ESSENTIAL_RULES.md
 session bootstrap= skills/session-bootstrap/README.md
+skill catalog     = skills/catalog.json
 ```
 
 Exact artifact identities and load triggers are in:
@@ -52,9 +53,10 @@ Central Paul rules/skills do not establish scientific PASS or redefine Physics m
 1. verify this exact Paul binding;
 2. verify/read the Paul OS index and ESSENTIAL_RULES;
 3. load session-bootstrap + state-refresh from the same revision;
-4. restore the Physics-local operating core and current STATE;
-5. load only the local semantic owner and central skills triggered by the immediate obligation;
-6. report the first real gate and stop read-only.
+4. verify/index skills/catalog.json trigger metadata;
+5. restore the Physics-local operating core and current STATE;
+6. resolve immediate-obligation trigger(s) and load only matching central skill contracts;
+7. report the first real gate and stop read-only.
 ```
 
 No operating-metrics context is required.

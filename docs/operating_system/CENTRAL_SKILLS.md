@@ -2,7 +2,7 @@
 
 **Status:** canonical consumer manifest guide  
 **OS:** Paul  
-**Central revision:** `d18ab01346e757271e699e0e288e22f9d5f6fe29`
+**Central revision:** `e6df2c89578ee7b5c23f043a0aa2f7fe9cbd9499`
 
 The machine-readable exact identities are in `central_skills.json`.
 
@@ -15,9 +15,10 @@ docs/operating_system/README.md
 docs/operating_system/ESSENTIAL_RULES.md
 skills/session-bootstrap/README.md
 skills/state-refresh/README.md
+skills/catalog.json  # metadata index only; does not preload all skill bodies
 ```
 
-The first two establish Paul OS/common-rule authority. The skills own generic bootstrap and refresh mechanics.
+The first two establish Paul OS/common-rule authority. The skills own generic bootstrap and refresh mechanics. `skills/catalog.json` is indexed during init so the immediate obligation can trigger-load the matching skill contract in the same read-only initialization cycle.
 
 ## Trigger-loaded contracts
 
