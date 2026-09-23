@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "issue": 310,
+  "kind": "experiments",
+  "sequence": 6,
+  "title": "Prepare corrected native Secant/Steffensen placement matrix",
+  "stages": [
+    {
+      "id": "P0",
+      "name": "Validate corrected fast+Poisson algorithm placement",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq06.py",
+        "--phase",
+        "p0"
+      ],
+      "timeout_seconds": 180
+    },
+    {
+      "id": "P1",
+      "name": "Preflight corrected native acceleration cases",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq06.py",
+        "--phase",
+        "p1"
+      ],
+      "timeout_seconds": 1200
+    },
+    {
+      "id": "P2",
+      "name": "Build Physics and check corrected acceleration inputs",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq06.py",
+        "--phase",
+        "p2"
+      ],
+      "timeout_seconds": 3600
+    }
+  ],
+  "artifacts": [
+    "experiments/Issue310_fp_acceleration/generated_fp06/**/*.i",
+    "experiments/Issue310_fp_acceleration/generated_fp06/**/*.json"
+  ]
+}
