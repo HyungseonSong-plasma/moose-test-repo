@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "issue": 315,
+  "sequence": 2,
+  "title": "Electron timestep sweep at chi_h=400 with alpha=1/(1+chi_e)",
+  "prepare_manifest": "automation/manifests/experiments/Issue_315_experiments02_prep.json",
+  "bundle_paths": [
+    "physics_app/physics-opt",
+    "physics_app/lib/libphysics-opt.so.0",
+    "physics_app/test/lib/libphysics_test-opt.so.0",
+    "experiments/Issue315_electron_dt_sweep/generated_dt02"
+  ],
+  "max_parallel": 3,
+  "cases": [
+    {
+      "id": "dt_e_100",
+      "name": "chi_e=100 baseline, ratio=4, 600 electron steps",
+      "command": [
+        "python3",
+        "experiments/Issue315_electron_dt_sweep/control_seq02.py",
+        "--case",
+        "dt_e_100"
+      ],
+      "timeout_seconds": 7200,
+      "artifacts": [
+        "experiments/Issue315_electron_dt_sweep/results_dt02/dt_e_100_returncode.txt",
+        "experiments/Issue315_electron_dt_sweep/results_dt02/dt_e_100_elapsed_seconds.txt",
+        "experiments/Issue315_electron_dt_sweep/results_dt02/dt_e_100_runtime_tail.log",
+        "experiments/Issue315_electron_dt_sweep/results_dt02/dt_e_100_result.json",
+        "experiments/Issue315_electron_dt_sweep/generated_dt02/dt_e_100/input_step_csv.csv",
+        "experiments/Issue315_electron_dt_sweep/generated_dt02/dt_e_100/input_out_electron0_step_csv.csv",
+        "experiments/Issue315_electron_dt_sweep/generated_dt02/dt_e_100/*profile_*.csv"
+      ]
+    },
+    {
+      "id": "dt_e_200",
+      "name": "chi_e=200 candidate, ratio=2, 300 electron steps",
+      "command": [
+        "python3",
+        "experiments/Issue315_electron_dt_sweep/control_seq02.py",
+        "--case",
+        "dt_e_200"
+      ],
+      "timeout_seconds": 7200,
+      "artifacts": [
+        "experiments/Issue315_electron_dt_sweep/results_dt02/dt_e_200_returncode.txt",
+        "experiments/Issue315_electron_dt_sweep/results_dt02/dt_e_200_elapsed_seconds.txt",
+        "experiments/Issue315_electron_dt_sweep/results_dt02/dt_e_200_runtime_tail.log",
+        "experiments/Issue315_electron_dt_sweep/results_dt02/dt_e_200_result.json",
+        "experiments/Issue315_electron_dt_sweep/generated_dt02/dt_e_200/input_step_csv.csv",
+        "experiments/Issue315_electron_dt_sweep/generated_dt02/dt_e_200/input_out_electron0_step_csv.csv",
+        "experiments/Issue315_electron_dt_sweep/generated_dt02/dt_e_200/*profile_*.csv"
+      ]
+    },
+    {
+      "id": "dt_e_400",
+      "name": "chi_e=400 candidate, ratio=1, 150 electron steps",
+      "command": [
+        "python3",
+        "experiments/Issue315_electron_dt_sweep/control_seq02.py",
+        "--case",
+        "dt_e_400"
+      ],
+      "timeout_seconds": 7200,
+      "artifacts": [
+        "experiments/Issue315_electron_dt_sweep/results_dt02/dt_e_400_returncode.txt",
+        "experiments/Issue315_electron_dt_sweep/results_dt02/dt_e_400_elapsed_seconds.txt",
+        "experiments/Issue315_electron_dt_sweep/results_dt02/dt_e_400_runtime_tail.log",
+        "experiments/Issue315_electron_dt_sweep/results_dt02/dt_e_400_result.json",
+        "experiments/Issue315_electron_dt_sweep/generated_dt02/dt_e_400/input_step_csv.csv",
+        "experiments/Issue315_electron_dt_sweep/generated_dt02/dt_e_400/input_out_electron0_step_csv.csv",
+        "experiments/Issue315_electron_dt_sweep/generated_dt02/dt_e_400/*profile_*.csv"
+      ]
+    }
+  ],
+  "aggregate": {
+    "name": "Aggregate timestep cost and numerical-parity evidence",
+    "command": [
+      "python3",
+      "experiments/Issue315_electron_dt_sweep/control_seq02.py",
+      "--aggregate"
+    ],
+    "timeout_seconds": 300,
+    "artifacts": [
+      "experiments/Issue315_electron_dt_sweep/results_dt02/issue315_dt02_summary.json"
+    ]
+  }
+}
