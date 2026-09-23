@@ -2,7 +2,7 @@
   "schema_version": 1,
   "issue": 315,
   "sequence": 2,
-  "title": "Electron timestep sweep at chi_h=400 with alpha=1/(1+chi_e)",
+  "title": "Sequence 08 six-case electron-dt and relaxation sweep",
   "prepare_manifest": "automation/manifests/experiments/Issue_315_experiments02_prep.json",
   "bundle_paths": [
     "physics_app/physics-opt",
@@ -10,7 +10,7 @@
     "physics_app/test/lib/libphysics_test-opt.so.0",
     "experiments/Issue315_electron_dt_sweep/generated_dt02"
   ],
-  "max_parallel": 3,
+  "max_parallel": 6,
   "cases": [
     {
       "id": "dt_e_100",
@@ -70,6 +70,66 @@
         "experiments/Issue315_electron_dt_sweep/generated_dt02/dt_e_400/input_step_csv.csv",
         "experiments/Issue315_electron_dt_sweep/generated_dt02/dt_e_400/input_out_electron0_step_csv.csv",
         "experiments/Issue315_electron_dt_sweep/generated_dt02/dt_e_400/*profile_*.csv"
+      ]
+    },
+    {
+      "id": "alpha_2x",
+      "name": "chi_e=100, alpha=2/101, 600 electron steps",
+      "command": [
+        "python3",
+        "experiments/Issue315_electron_dt_sweep/control_seq02.py",
+        "--case",
+        "alpha_2x"
+      ],
+      "timeout_seconds": 7200,
+      "artifacts": [
+        "experiments/Issue315_electron_dt_sweep/results_dt02/alpha_2x_returncode.txt",
+        "experiments/Issue315_electron_dt_sweep/results_dt02/alpha_2x_elapsed_seconds.txt",
+        "experiments/Issue315_electron_dt_sweep/results_dt02/alpha_2x_runtime_tail.log",
+        "experiments/Issue315_electron_dt_sweep/results_dt02/alpha_2x_result.json",
+        "experiments/Issue315_electron_dt_sweep/generated_dt02/alpha_2x/input_step_csv.csv",
+        "experiments/Issue315_electron_dt_sweep/generated_dt02/alpha_2x/input_out_electron0_step_csv.csv",
+        "experiments/Issue315_electron_dt_sweep/generated_dt02/alpha_2x/*profile_*.csv"
+      ]
+    },
+    {
+      "id": "alpha_5x",
+      "name": "chi_e=100, alpha=5/101, 600 electron steps",
+      "command": [
+        "python3",
+        "experiments/Issue315_electron_dt_sweep/control_seq02.py",
+        "--case",
+        "alpha_5x"
+      ],
+      "timeout_seconds": 7200,
+      "artifacts": [
+        "experiments/Issue315_electron_dt_sweep/results_dt02/alpha_5x_returncode.txt",
+        "experiments/Issue315_electron_dt_sweep/results_dt02/alpha_5x_elapsed_seconds.txt",
+        "experiments/Issue315_electron_dt_sweep/results_dt02/alpha_5x_runtime_tail.log",
+        "experiments/Issue315_electron_dt_sweep/results_dt02/alpha_5x_result.json",
+        "experiments/Issue315_electron_dt_sweep/generated_dt02/alpha_5x/input_step_csv.csv",
+        "experiments/Issue315_electron_dt_sweep/generated_dt02/alpha_5x/input_out_electron0_step_csv.csv",
+        "experiments/Issue315_electron_dt_sweep/generated_dt02/alpha_5x/*profile_*.csv"
+      ]
+    },
+    {
+      "id": "alpha_10x",
+      "name": "chi_e=100, alpha=10/101, 600 electron steps",
+      "command": [
+        "python3",
+        "experiments/Issue315_electron_dt_sweep/control_seq02.py",
+        "--case",
+        "alpha_10x"
+      ],
+      "timeout_seconds": 7200,
+      "artifacts": [
+        "experiments/Issue315_electron_dt_sweep/results_dt02/alpha_10x_returncode.txt",
+        "experiments/Issue315_electron_dt_sweep/results_dt02/alpha_10x_elapsed_seconds.txt",
+        "experiments/Issue315_electron_dt_sweep/results_dt02/alpha_10x_runtime_tail.log",
+        "experiments/Issue315_electron_dt_sweep/results_dt02/alpha_10x_result.json",
+        "experiments/Issue315_electron_dt_sweep/generated_dt02/alpha_10x/input_step_csv.csv",
+        "experiments/Issue315_electron_dt_sweep/generated_dt02/alpha_10x/input_out_electron0_step_csv.csv",
+        "experiments/Issue315_electron_dt_sweep/generated_dt02/alpha_10x/*profile_*.csv"
       ]
     }
   ],
