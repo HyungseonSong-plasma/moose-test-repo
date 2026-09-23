@@ -1,0 +1,21 @@
+name: One-shot Issue 315 electron dt sweep
+
+on:
+  push:
+    branches:
+      - issue-315-electron-dt-sweep
+    paths:
+      - .github/workflows/issue315-electron-dt-once.yml
+
+permissions:
+  contents: read
+
+jobs:
+  run:
+    uses: HyungseonSong-plasma/chatgpt-operation/.github/workflows/governed-matrix.yml@8d3ea7720549148a251a9e11f5733d543344fb2e
+    with:
+      issue: "315"
+      sequence: "01"
+      manifest: automation/manifests/experiments/Issue_315_experiments01.json
+      base_sha: 5e0a2c43bf7ed0d7f18a80f461468a5a738f1eeb
+      operation_sha: 8d3ea7720549148a251a9e11f5733d543344fb2e
