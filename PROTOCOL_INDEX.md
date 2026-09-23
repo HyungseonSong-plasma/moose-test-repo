@@ -29,6 +29,7 @@ Central skill triggers:
 MUTATE               -> repository-mutation
 GOVERNED_WORK        -> governed-work
 SCHEDULED_CONTROLLER -> state-refresh + controller-throughput + controller-lifecycle
+GITHUB_ACTIONS_EXECUTION -> github-actions-execution
 GITHUB_ACTIONS_OBSERVATION -> github-actions-observation
 ```
 
@@ -121,7 +122,13 @@ Trigger central state-refresh, controller-throughput, and controller-lifecycle f
 The central skills decide generic liveness/lifecycle mechanics. This repository decides Physics dependency readiness, resource meaning, and scientific HOLD/PASS semantics.
 
 
-### ROUTE-14 — GitHub Actions observation
+### ROUTE-14 — GitHub Actions execution
+
+Trigger central `github-actions-execution` when the immediate obligation is to launch or repair a GitHub Actions execution route. Supply current route capabilities and the required evidence claim; let the central skill select direct dispatch, an existing trigger, rerun, or a bounded one-shot route.
+
+The central skill owns route equivalence and handoff mechanics only. Workflow scientific/domain contents and acceptance remain local.
+
+### ROUTE-15 — GitHub Actions observation
 
 Trigger central `github-actions-observation` when the immediate obligation requires dispatching or correlating a GitHub Actions run, checking eventual-consistency visibility, or distinguishing the exact run/attempt for current CI or governed execution evidence.
 
