@@ -1,0 +1,128 @@
+{
+  "schema_version": 1,
+  "issue": 310,
+  "sequence": 9,
+  "title": "Sequence 09 time-aware Secant qualification",
+  "prepare_manifest": "automation/manifests/experiments/Issue_310_experiments09_prep.json",
+  "bundle_paths": [
+    "physics_app/physics-opt",
+    "physics_app/lib/libphysics-opt.so.0",
+    "physics_app/test/lib/libphysics_test-opt.so.0",
+    "experiments/Issue310_fp_acceleration/generated_fp09"
+  ],
+  "max_parallel": 5,
+  "cases": [
+    {
+      "id": "picard_2x_timeaware",
+      "name": "Time-aware Picard-2x reference; 12 electron steps / 3 heavy cycles",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq09.py",
+        "--case",
+        "picard_2x_timeaware"
+      ],
+      "timeout_seconds": 1800,
+      "artifacts": [
+        "experiments/Issue310_fp_acceleration/results_fp09/picard_2x_timeaware_returncode.txt",
+        "experiments/Issue310_fp_acceleration/results_fp09/picard_2x_timeaware_elapsed_seconds.txt",
+        "experiments/Issue310_fp_acceleration/results_fp09/picard_2x_timeaware_runtime_tail.log",
+        "experiments/Issue310_fp_acceleration/results_fp09/picard_2x_timeaware_result.json",
+        "experiments/Issue310_fp_acceleration/generated_fp09/picard_2x_timeaware/input_step_csv.csv",
+        "experiments/Issue310_fp_acceleration/generated_fp09/picard_2x_timeaware/input_out_electron0_step_csv.csv",
+        "experiments/Issue310_fp_acceleration/generated_fp09/picard_2x_timeaware/*profile_*.csv"
+      ]
+    },
+    {
+      "id": "secant_0p005",
+      "name": "Time-aware Secant damping 0.005; 12 electron steps / 3 heavy cycles",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq09.py",
+        "--case",
+        "secant_0p005"
+      ],
+      "timeout_seconds": 1800,
+      "artifacts": [
+        "experiments/Issue310_fp_acceleration/results_fp09/secant_0p005_returncode.txt",
+        "experiments/Issue310_fp_acceleration/results_fp09/secant_0p005_elapsed_seconds.txt",
+        "experiments/Issue310_fp_acceleration/results_fp09/secant_0p005_runtime_tail.log",
+        "experiments/Issue310_fp_acceleration/results_fp09/secant_0p005_result.json",
+        "experiments/Issue310_fp_acceleration/generated_fp09/secant_0p005/input_step_csv.csv",
+        "experiments/Issue310_fp_acceleration/generated_fp09/secant_0p005/input_out_electron0_step_csv.csv",
+        "experiments/Issue310_fp_acceleration/generated_fp09/secant_0p005/*profile_*.csv"
+      ]
+    },
+    {
+      "id": "secant_0p010",
+      "name": "Time-aware Secant damping 0.010; 12 electron steps / 3 heavy cycles",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq09.py",
+        "--case",
+        "secant_0p010"
+      ],
+      "timeout_seconds": 1800,
+      "artifacts": [
+        "experiments/Issue310_fp_acceleration/results_fp09/secant_0p010_returncode.txt",
+        "experiments/Issue310_fp_acceleration/results_fp09/secant_0p010_elapsed_seconds.txt",
+        "experiments/Issue310_fp_acceleration/results_fp09/secant_0p010_runtime_tail.log",
+        "experiments/Issue310_fp_acceleration/results_fp09/secant_0p010_result.json",
+        "experiments/Issue310_fp_acceleration/generated_fp09/secant_0p010/input_step_csv.csv",
+        "experiments/Issue310_fp_acceleration/generated_fp09/secant_0p010/input_out_electron0_step_csv.csv",
+        "experiments/Issue310_fp_acceleration/generated_fp09/secant_0p010/*profile_*.csv"
+      ]
+    },
+    {
+      "id": "secant_0p015",
+      "name": "Time-aware Secant damping 0.015; 12 electron steps / 3 heavy cycles",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq09.py",
+        "--case",
+        "secant_0p015"
+      ],
+      "timeout_seconds": 1800,
+      "artifacts": [
+        "experiments/Issue310_fp_acceleration/results_fp09/secant_0p015_returncode.txt",
+        "experiments/Issue310_fp_acceleration/results_fp09/secant_0p015_elapsed_seconds.txt",
+        "experiments/Issue310_fp_acceleration/results_fp09/secant_0p015_runtime_tail.log",
+        "experiments/Issue310_fp_acceleration/results_fp09/secant_0p015_result.json",
+        "experiments/Issue310_fp_acceleration/generated_fp09/secant_0p015/input_step_csv.csv",
+        "experiments/Issue310_fp_acceleration/generated_fp09/secant_0p015/input_out_electron0_step_csv.csv",
+        "experiments/Issue310_fp_acceleration/generated_fp09/secant_0p015/*profile_*.csv"
+      ]
+    },
+    {
+      "id": "secant_0p020",
+      "name": "Time-aware Secant damping 0.020; 12 electron steps / 3 heavy cycles",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq09.py",
+        "--case",
+        "secant_0p020"
+      ],
+      "timeout_seconds": 1800,
+      "artifacts": [
+        "experiments/Issue310_fp_acceleration/results_fp09/secant_0p020_returncode.txt",
+        "experiments/Issue310_fp_acceleration/results_fp09/secant_0p020_elapsed_seconds.txt",
+        "experiments/Issue310_fp_acceleration/results_fp09/secant_0p020_runtime_tail.log",
+        "experiments/Issue310_fp_acceleration/results_fp09/secant_0p020_result.json",
+        "experiments/Issue310_fp_acceleration/generated_fp09/secant_0p020/input_step_csv.csv",
+        "experiments/Issue310_fp_acceleration/generated_fp09/secant_0p020/input_out_electron0_step_csv.csv",
+        "experiments/Issue310_fp_acceleration/generated_fp09/secant_0p020/*profile_*.csv"
+      ]
+    }
+  ],
+  "aggregate": {
+    "name": "Aggregate time-aware Secant qualification evidence",
+    "command": [
+      "python3",
+      "experiments/Issue310_fp_acceleration/control_seq09.py",
+      "--aggregate"
+    ],
+    "timeout_seconds": 300,
+    "artifacts": [
+      "experiments/Issue310_fp_acceleration/results_fp09/issue310_fp09_summary.json"
+    ]
+  }
+}
