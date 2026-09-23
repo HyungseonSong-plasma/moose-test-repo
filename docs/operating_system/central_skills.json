@@ -2,11 +2,11 @@
   "schema_version": 2,
   "source_repository": "HyungseonSong-plasma/chatgpt-operation",
   "operating_system": {
-    "revision": "0ed25494cead9dcfa6ec567790fbf7ca2c943c00",
+    "revision": "d18ab01346e757271e699e0e288e22f9d5f6fe29",
     "expected_version": "Paul",
     "index": {
       "path": "docs/operating_system/README.md",
-      "expected_blob_sha": "60a5d69bde0713968cc37616fd1200db16c7864c"
+      "expected_blob_sha": "fcbb3e0332d972c189ac80e8e863b9caa9db9ec2"
     },
     "essential_rules": {
       "path": "docs/operating_system/ESSENTIAL_RULES.md",
@@ -19,7 +19,7 @@
       "load_on": [
         "INIT"
       ],
-      "revision": "0ed25494cead9dcfa6ec567790fbf7ca2c943c00",
+      "revision": "d18ab01346e757271e699e0e288e22f9d5f6fe29",
       "path": "skills/session-bootstrap/README.md",
       "expected_blob_sha": "03d661d354dfba09033f184ddf11b9eb9e7e8404"
     },
@@ -29,7 +29,7 @@
         "INIT",
         "SCHEDULED_CONTROLLER"
       ],
-      "revision": "0ed25494cead9dcfa6ec567790fbf7ca2c943c00",
+      "revision": "d18ab01346e757271e699e0e288e22f9d5f6fe29",
       "path": "skills/state-refresh/README.md",
       "expected_blob_sha": "4efe6135b93456f2cc9da31786967f5f6ac80033"
     },
@@ -38,7 +38,7 @@
       "load_on": [
         "MUTATE"
       ],
-      "revision": "0ed25494cead9dcfa6ec567790fbf7ca2c943c00",
+      "revision": "d18ab01346e757271e699e0e288e22f9d5f6fe29",
       "path": "skills/repository-mutation/README.md",
       "expected_blob_sha": "0229c6b7a440a9a624a0b773c62f536ca67a29b6"
     },
@@ -47,7 +47,7 @@
       "load_on": [
         "GOVERNED_WORK"
       ],
-      "revision": "0ed25494cead9dcfa6ec567790fbf7ca2c943c00",
+      "revision": "d18ab01346e757271e699e0e288e22f9d5f6fe29",
       "path": "skills/governed-work/README.md",
       "expected_blob_sha": "5ba4d1be80a4c3019fd9c21fe017468b87315a71"
     },
@@ -56,27 +56,36 @@
       "load_on": [
         "SCHEDULED_CONTROLLER"
       ],
-      "revision": "0ed25494cead9dcfa6ec567790fbf7ca2c943c00",
+      "revision": "d18ab01346e757271e699e0e288e22f9d5f6fe29",
       "path": "skills/controller-throughput/README.md",
-      "expected_blob_sha": "5bc67c38f224c9c02a84f676b69c0908e1df96bb"
+      "expected_blob_sha": "bdfbdadddcdf833fd9c396b615a106bef36fa9fd"
     },
     {
       "name": "controller-lifecycle",
       "load_on": [
         "SCHEDULED_CONTROLLER"
       ],
-      "revision": "0ed25494cead9dcfa6ec567790fbf7ca2c943c00",
+      "revision": "d18ab01346e757271e699e0e288e22f9d5f6fe29",
       "path": "skills/controller-lifecycle/README.md",
       "expected_blob_sha": "28f512d80d380ecd415bb4d8d60be4778d464c47"
+    },
+    {
+      "name": "github-actions-execution",
+      "load_on": [
+        "GITHUB_ACTIONS_EXECUTION"
+      ],
+      "revision": "d18ab01346e757271e699e0e288e22f9d5f6fe29",
+      "path": "skills/github-actions-execution/README.md",
+      "expected_blob_sha": "dda453b11018a207e8deea68c386d6cf21eea57a"
     },
     {
       "name": "github-actions-observation",
       "load_on": [
         "GITHUB_ACTIONS_OBSERVATION"
       ],
-      "revision": "0ed25494cead9dcfa6ec567790fbf7ca2c943c00",
+      "revision": "d18ab01346e757271e699e0e288e22f9d5f6fe29",
       "path": "skills/github-actions-observation/README.md",
-      "expected_blob_sha": "2e307e90b2c9b64e0b03a10ff6a71ca5d836da14"
+      "expected_blob_sha": "90f87fc4df84fe85ce04080b419896f8f060a23a"
     }
   ]
 }
