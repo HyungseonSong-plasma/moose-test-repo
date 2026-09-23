@@ -47,7 +47,9 @@ GENERATED = ROOT / "generated_fp10"
 RESULTS = ROOT / "results_fp10"
 PATCH_FILE = ROOT / "patches" / "secondary_secant_history_seed.patch"
 PATCHED_RUNTIME = ROOT / "patched_runtime_fp10"
+STAGING_SPEC = ROOT / "artifact_staging_seq10.json"
 MOOSE_SHA = "9f388366ccf38b9c34542ec5561198249fde0ac9"
+OPERATION_SHA = "a81ffc7af265a5d6be357483dbd39ca147224e2c"
 
 CHI_E = 100.0
 CHI_H = 400.0
@@ -284,6 +286,17 @@ def static_contract() -> dict[str, object]:
         raise RuntimeError(f"missing framework patch: {PATCH_FILE}")
 
     patch_text = PATCH_FILE.read_text(encoding="utf-8")
+    staging = json.loads(STAGING_SPEC.read_text(encoding="utf-8"))
+    assert staging["schema_version"] == 1
+    assert len(staging["entries"]) == 1
+    staging_entry = staging["entries"][0]
+    assert staging_entry["source"] == "/opt/physics_vendor/moose/framework/libmoose-opt.so.0"
+    assert "*" not in staging_entry["source"] and "?" not in staging_entry["source"]
+    assert staging_entry["destination"] == (
+        "experiments/Issue310_fp_acceleration/patched_runtime_fp10/libmoose-opt.so.0"
+    )
+    assert staging_entry["producer"]
+    assert staging_entry["location_evidence"]
     assert "_main_fixed_point_it = 0;" in patch_text
     assert "saveVariableValues(/*is parent app of this iteration=*/false);" in patch_text
     assert "!dynamic_cast<PicardSolve *>(this)" in patch_text
@@ -343,6 +356,8 @@ def static_contract() -> dict[str, object]:
         "architecture": "TransientMultiApp + Transient Poisson; no TimeDerivative; no_restore=true",
         "framework_patch": str(PATCH_FILE.relative_to(REPO)),
         "framework_base_sha": MOOSE_SHA,
+        "operation_sha": OPERATION_SHA,
+        "artifact_staging_spec": str(STAGING_SPEC.relative_to(REPO)),
         "patch_scope": "seed secondary accelerated history on new physical timestep; Picard no-op",
         "cases": built,
     }
@@ -370,6 +385,36 @@ def p1() -> None:
     print("ISSUE310_FP10_P1: PASS")
 
 
+def _docker_with_operation(script: str) -> None:
+    operation_root_raw = os.environ.get("CHATGPT_OPERATION_ROOT")
+    operation_sha = os.environ.get("CHATGPT_OPERATION_SHA")
+    if not operation_root_raw or not operation_sha:
+        raise RuntimeError("exact chatgpt-operation checkout is required for artifact staging")
+    if operation_sha != OPERATION_SHA:
+        raise RuntimeError(
+            f"operation SHA mismatch: workflow={operation_sha} expected={OPERATION_SHA}"
+        )
+    operation_root = Path(operation_root_raw).resolve()
+    if not operation_root.is_dir():
+        raise RuntimeError(f"operation checkout missing: {operation_root}")
+    actual_sha = subprocess.check_output(
+        ["git", "-C", str(operation_root), "rev-parse", "HEAD"], text=True
+    ).strip()
+    if actual_sha != OPERATION_SHA:
+        raise RuntimeError(
+            f"operation checkout mismatch: actual={actual_sha} expected={OPERATION_SHA}"
+        )
+    base._run(["docker", "pull", base.BUILD_BASE_REF])
+    base._run([
+        "docker", "run", "--rm", "--entrypoint", "/bin/bash", "--user", "0:0",
+        "--workdir", "/workspace",
+        "-v", f"{REPO}:/workspace",
+        "-v", f"{operation_root}:/chatgpt-operation:ro",
+        base.BUILD_BASE_REF,
+        "-lc", script,
+    ])
+
+
 def p2() -> None:
     if not GENERATED.exists():
         build()
@@ -390,6 +435,7 @@ def p2() -> None:
         )
 
     patch_rel = PATCH_FILE.relative_to(REPO)
+    staging_rel = STAGING_SPEC.relative_to(REPO)
     runtime_rel = PATCHED_RUNTIME.relative_to(REPO)
     script = (
         "set -euo pipefail; source /environment; "
@@ -404,14 +450,18 @@ def p2() -> None:
         "/opt/physics_vendor/moose/framework/src/executioners/FixedPointSolve.C; "
         "make -C /workspace/physics_app -j2; "
         f"rm -rf /workspace/{runtime_rel}; mkdir -p /workspace/{runtime_rel}; "
-        f"cp -a /opt/physics_vendor/moose/framework/lib/libmoose-opt.so* /workspace/{runtime_rel}/; "
-        f"test -n \"$(find /workspace/{runtime_rel} -maxdepth 1 -name 'libmoose-opt.so*' -print -quit)\"; "
-        f"printf 'MOOSE_BASE_SHA={MOOSE_SHA}\\nPATCH={patch_rel}\\n' > /workspace/{runtime_rel}/PATCH_PROVENANCE.txt; "
+        "PYTHONPATH=/chatgpt-operation/src python3 -m chatgpt_operation.artifact_staging stage "
+        f"--spec /workspace/{staging_rel} --workspace /workspace "
+        f"--evidence /workspace/{runtime_rel}/STAGING_EVIDENCE.json; "
+        f"test -f /workspace/{runtime_rel}/libmoose-opt.so.0; "
+        f"printf 'MOOSE_BASE_SHA={MOOSE_SHA}\\nPATCH={patch_rel}\\nOPERATION_SHA={OPERATION_SHA}\\n' "
+        f"> /workspace/{runtime_rel}/PATCH_PROVENANCE.txt; "
         f"export LD_LIBRARY_PATH=/workspace/{runtime_rel}:\$LD_LIBRARY_PATH; "
-        f"ldd /workspace/physics_app/physics-opt | grep '/workspace/{runtime_rel}/libmoose-opt' > /workspace/{runtime_rel}/LDD_PROOF.txt; "
+        f"ldd /workspace/physics_app/physics-opt | grep '/workspace/{runtime_rel}/libmoose-opt.so.0' "
+        f"> /workspace/{runtime_rel}/LDD_PROOF.txt; "
         + "; ".join(checks)
     )
-    base._docker(script)
+    _docker_with_operation(script)
     print("ISSUE310_FP10_P2: PASS")
 
 
