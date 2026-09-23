@@ -21,7 +21,7 @@
         "--case",
         "relax_1x"
       ],
-      "timeout_seconds": 14400,
+      "timeout_seconds": 7200,
       "artifacts": [
         "experiments/Issue310_relaxation_optimization/results_relaxation01/relax_1x_returncode.txt",
         "experiments/Issue310_relaxation_optimization/results_relaxation01/relax_1x_elapsed_seconds.txt",
@@ -41,7 +41,7 @@
         "--case",
         "relax_10x"
       ],
-      "timeout_seconds": 14400,
+      "timeout_seconds": 7200,
       "artifacts": [
         "experiments/Issue310_relaxation_optimization/results_relaxation01/relax_10x_returncode.txt",
         "experiments/Issue310_relaxation_optimization/results_relaxation01/relax_10x_elapsed_seconds.txt",
@@ -61,7 +61,7 @@
         "--case",
         "relax_50x"
       ],
-      "timeout_seconds": 14400,
+      "timeout_seconds": 7200,
       "artifacts": [
         "experiments/Issue310_relaxation_optimization/results_relaxation01/relax_50x_returncode.txt",
         "experiments/Issue310_relaxation_optimization/results_relaxation01/relax_50x_elapsed_seconds.txt",
