@@ -315,6 +315,10 @@ def p2() -> None:
             f"cd /workspace/{rel}/generated_fp07/{name} && "
             "/workspace/physics_app/physics-opt --check-input -i fast_sub.i"
         )
+        checks.append(
+            f"cd /workspace/{rel}/generated_fp07/{name} && "
+            "/workspace/physics_app/physics-opt --check-input -i poisson_sub.i"
+        )
     base._docker(
         "set -euo pipefail; source /environment; "
         "export MOOSE_DIR=/opt/physics_vendor/moose CRANE_DIR=/opt/physics_vendor/crane "
