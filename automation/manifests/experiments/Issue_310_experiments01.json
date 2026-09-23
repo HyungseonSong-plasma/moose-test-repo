@@ -33,43 +33,43 @@
       ]
     },
     {
-      "id": "relax_10x",
-      "name": "10/(1+chi) candidate",
+      "id": "relax_2x",
+      "name": "2/(1+chi) candidate",
       "command": [
         "python3",
         "experiments/Issue310_relaxation_optimization/control.py",
         "--case",
-        "relax_10x"
+        "relax_2x"
       ],
       "timeout_seconds": 7200,
       "artifacts": [
-        "experiments/Issue310_relaxation_optimization/results_relaxation01/relax_10x_returncode.txt",
-        "experiments/Issue310_relaxation_optimization/results_relaxation01/relax_10x_elapsed_seconds.txt",
-        "experiments/Issue310_relaxation_optimization/results_relaxation01/relax_10x_runtime_tail.log",
-        "experiments/Issue310_relaxation_optimization/results_relaxation01/relax_10x_result.json",
-        "experiments/Issue310_relaxation_optimization/generated_relaxation01/relax_10x/input_step_csv.csv",
-        "experiments/Issue310_relaxation_optimization/generated_relaxation01/relax_10x/input_out_electron0_step_csv.csv",
-        "experiments/Issue310_relaxation_optimization/generated_relaxation01/relax_10x/*profile_*.csv"
+        "experiments/Issue310_relaxation_optimization/results_relaxation01/relax_2x_returncode.txt",
+        "experiments/Issue310_relaxation_optimization/results_relaxation01/relax_2x_elapsed_seconds.txt",
+        "experiments/Issue310_relaxation_optimization/results_relaxation01/relax_2x_runtime_tail.log",
+        "experiments/Issue310_relaxation_optimization/results_relaxation01/relax_2x_result.json",
+        "experiments/Issue310_relaxation_optimization/generated_relaxation01/relax_2x/input_step_csv.csv",
+        "experiments/Issue310_relaxation_optimization/generated_relaxation01/relax_2x/input_out_electron0_step_csv.csv",
+        "experiments/Issue310_relaxation_optimization/generated_relaxation01/relax_2x/*profile_*.csv"
       ]
     },
     {
-      "id": "relax_50x",
-      "name": "50/(1+chi) candidate",
+      "id": "relax_5x",
+      "name": "5/(1+chi) candidate",
       "command": [
         "python3",
         "experiments/Issue310_relaxation_optimization/control.py",
         "--case",
-        "relax_50x"
+        "relax_5x"
       ],
       "timeout_seconds": 7200,
       "artifacts": [
-        "experiments/Issue310_relaxation_optimization/results_relaxation01/relax_50x_returncode.txt",
-        "experiments/Issue310_relaxation_optimization/results_relaxation01/relax_50x_elapsed_seconds.txt",
-        "experiments/Issue310_relaxation_optimization/results_relaxation01/relax_50x_runtime_tail.log",
-        "experiments/Issue310_relaxation_optimization/results_relaxation01/relax_50x_result.json",
-        "experiments/Issue310_relaxation_optimization/generated_relaxation01/relax_50x/input_step_csv.csv",
-        "experiments/Issue310_relaxation_optimization/generated_relaxation01/relax_50x/input_out_electron0_step_csv.csv",
-        "experiments/Issue310_relaxation_optimization/generated_relaxation01/relax_50x/*profile_*.csv"
+        "experiments/Issue310_relaxation_optimization/results_relaxation01/relax_5x_returncode.txt",
+        "experiments/Issue310_relaxation_optimization/results_relaxation01/relax_5x_elapsed_seconds.txt",
+        "experiments/Issue310_relaxation_optimization/results_relaxation01/relax_5x_runtime_tail.log",
+        "experiments/Issue310_relaxation_optimization/results_relaxation01/relax_5x_result.json",
+        "experiments/Issue310_relaxation_optimization/generated_relaxation01/relax_5x/input_step_csv.csv",
+        "experiments/Issue310_relaxation_optimization/generated_relaxation01/relax_5x/input_out_electron0_step_csv.csv",
+        "experiments/Issue310_relaxation_optimization/generated_relaxation01/relax_5x/*profile_*.csv"
       ]
     }
   ],
