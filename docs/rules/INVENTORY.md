@@ -37,6 +37,7 @@ Exact identities: `docs/operating_system/central_skills.json`.
 | MUTATE | repository-mutation |
 | GOVERNED_WORK | governed-work |
 | SCHEDULED_CONTROLLER | state-refresh, controller-throughput, controller-lifecycle |
+| GITHUB_ACTIONS_EXECUTION | github-actions-execution |
 | GITHUB_ACTIONS_OBSERVATION | github-actions-observation |
 
 ## Diagnostic evidence
