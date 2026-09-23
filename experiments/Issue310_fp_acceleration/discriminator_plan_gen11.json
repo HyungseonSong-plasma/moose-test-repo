@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "cycle_id": "issue310-gen11-20260923",
+  "baseline_sha": "d2f9d75f8bdf392e647165ad25f7c5808dfd2b40",
+  "baseline_evidence": [
+    "PR #324 / run 35880062788 qualified TransientMultiApp + Transient Poisson + no_restore=true with frozen-physics parity",
+    "Issue #310 Sequence10 run 35900431396 rejected the tested stale-history-seed patch; Sequence10 head is evidence only"
+  ],
+  "objective": {
+    "architecture_invariant": "retain the Gummel electron/energy <-> Poisson fixed-point architecture",
+    "metric": "average fixed-point loops per electron step",
+    "target": "O(10) or lower",
+    "success_condition": "O(10) or lower average FP loops with qualified trajectory/profile parity and long-horizon validation"
+  },
+  "frozen_invariants": [
+    "plasma equations and BC ownership at the converged fixed point",
+    "thermal charged-heavy wall plus sheath-suppressed electron wall model",
+    "chemistry/RF state",
+    "chi_e=100 and chi_h=400 with dt_h/dt_e=4",
+    "physical horizon for each matched control/trial",
+    "nonlinear and fixed-point convergence tolerances/stopping criteria",
+    "qualified scientific interpretation"
+  ],
+  "shared_inputs": [
+    {
+      "id": "qualified-timeaware-baseline",
+      "evidence": "d2f9d75f8bdf392e647165ad25f7c5808dfd2b40",
+      "access": "read_only"
+    }
+  ],
+  "hypotheses": [
+    {
+      "id": "H11-screened-poisson",
+      "statement": "The dominant Gummel contraction defect is the frozen-electron Poisson block; adding a consistent local electron potential sensitivity to the Poisson iteration operator will reduce outer FP work by at least an order of magnitude without changing the converged fixed-point equations.",
+      "mechanism": "Linearize the local Boltzmann response delta n_e ~= (n_e/T_e[eV]) delta phi. The Poisson subsolve gains a positive Debye-screening reaction term beta*(phi-phi_anchor), beta=e*n_e/(eps0*T_e[eV]); this term vanishes at fixed-point convergence, so it is a Gummel preconditioner rather than a changed converged plasma equation.",
+      "falsifier": "Reject if the screened trial does not materially reduce FP/step versus same-lane Picard-2x control, becomes unstable, or converges to a trajectory/profile outside qualified parity; O(10) is required for performance promotion, not merely improvement.",
+      "prior_evidence": [
+        "Current Poisson subapp freezes log_e and therefore omits electron potential sensitivity during each Poisson solve.",
+        "Picard relaxation saturated near 2/(1+chi_e) with hundreds of FP iterations/step; stronger scalar relaxation produced 2-cycles/runaway.",
+        "The current initial transport values give mu_e/D_e close to 1/T_e[eV], supporting the local-response scale as a bounded physics-informed Jacobian surrogate."
+      ]
+    }
+  ],
+  "experiments": [
+    {
+      "id": "E11-screened-poisson-short",
+      "hypothesis_id": "H11-screened-poisson",
+      "lane_id": "lane-screened-poisson",
+      "base_sha": "d2f9d75f8bdf392e647165ad25f7c5808dfd2b40",
+      "branch": "issue-310-gen11-nonlinear-poisson",
+      "workspace": "issue310-gen11-screened-poisson",
+      "artifact_namespace": "experiments/Issue310_fp_acceleration/results_fp11_screened",
+      "shared_input_ids": ["qualified-timeaware-baseline"],
+      "mutation_scope": [
+        "experiments/Issue310_fp_acceleration/control_seq11_screened.py",
+        "automation/manifests/experiments/Issue_310_experiments11_screened_prep.json",
+        "automation/manifests/experiments/Issue_310_experiments11_screened.json"
+      ],
+      "discriminating_observables": [
+        "per-electron-step and cumulative fixed-point iterations",
+        "first four electron-step residual behavior",
+        "elapsed seconds",
+        "potential trajectory",
+        "final electron density, mean energy, potential and charge profiles",
+        "screening correction norm approaching zero at fixed-point convergence"
+      ],
+      "controls": [
+        "same-lane unmodified qualified time-aware Picard-2x control",
+        "one heavy cycle / four electron steps / T=400 tau_epsilon(initial) for the first discriminator",
+        "identical physics, timestep, tolerances and stopping criteria between control and trial"
+      ],
+      "variants": [
+        {
+          "id": "thermal-slope",
+          "change": "Poisson iteration operator only: beta=e*n_e/(eps0*((2/3)*mean_energy_eV)); correction beta*(phi-phi_anchor) vanishes at the fixed point"
+        }
+      ]
+    }
+  ]
+}
