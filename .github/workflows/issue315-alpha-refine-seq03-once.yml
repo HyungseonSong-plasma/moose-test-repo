@@ -1,0 +1,21 @@
+name: One-shot Issue 315 Sequence 03 alpha refinement
+
+on:
+  push:
+    branches:
+      - issue-315-alpha-refinement-seq08
+    paths:
+      - .github/workflows/issue315-alpha-refine-seq03-once.yml
+
+permissions:
+  contents: read
+
+jobs:
+  run:
+    uses: HyungseonSong-plasma/chatgpt-operation/.github/workflows/governed-matrix.yml@8d3ea7720549148a251a9e11f5733d543344fb2e
+    with:
+      issue: "315"
+      sequence: "03"
+      manifest: automation/manifests/experiments/Issue_315_experiments03.json
+      base_sha: 7827800c350eb91840e7601f0e5995c56ddcff40
+      operation_sha: 8d3ea7720549148a251a9e11f5733d543344fb2e
