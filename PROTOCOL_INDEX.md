@@ -31,6 +31,7 @@ GOVERNED_WORK        -> governed-work
 SCHEDULED_CONTROLLER -> state-refresh + controller-throughput + controller-lifecycle
 GITHUB_ACTIONS_EXECUTION -> github-actions-execution
 GITHUB_ACTIONS_OBSERVATION -> github-actions-observation
+ARTIFACT_STAGING       -> artifact-staging
 ```
 
 All central skills come from `docs/operating_system/central_skills.json`.
@@ -133,6 +134,14 @@ The central skill owns route equivalence and handoff mechanics only. Workflow sc
 Trigger central `github-actions-observation` when the immediate obligation requires correlating an already-launched GitHub Actions run, checking eventual-consistency visibility, or distinguishing the exact run/attempt for current CI or governed execution evidence.
 
 The central skill owns dispatch/observation mechanics only. Physics acceptance, runtime/scientific meaning, dependency readiness, and PASS/HOLD decisions remain local.
+
+### ROUTE-16 — Build/runtime artifact staging
+
+Trigger central `artifact-staging` whenever a build/runtime artifact must be copied or materialized for a bundle, downstream runner, or runtime override.
+
+Before authoring the staging specification, establish from current build/runtime evidence one exact source path and one exact repository-relative destination for each artifact, plus its producer and location evidence. Do not use a conventional/guessed install path, wildcard source, recursive search, or basename-only selector as an accepted staging contract.
+
+If the exact source cannot be established, stop the affected path as `ARTIFACT_LOCATION_UNRESOLVED`. The central skill owns copy/materialization mechanics and evidence; Physics retains runtime, numerical, and scientific acceptance.
 
 ## Paul rule-reuse gate
 
