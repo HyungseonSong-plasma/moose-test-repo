@@ -1,0 +1,21 @@
+name: One-shot Issue 310 Sequence 04 fixed-point acceleration
+
+on:
+  push:
+    branches:
+      - issue-310-fp-acceleration-seq08
+    paths:
+      - .github/workflows/issue310-fp-accel-seq04-once.yml
+
+permissions:
+  contents: read
+
+jobs:
+  run:
+    uses: HyungseonSong-plasma/chatgpt-operation/.github/workflows/governed-matrix.yml@8d3ea7720549148a251a9e11f5733d543344fb2e
+    with:
+      issue: "310"
+      sequence: "04"
+      manifest: automation/manifests/experiments/Issue_310_experiments04.json
+      base_sha: 4e59185f40a5de4f72d85a56ca5b3167b0b8e4d8
+      operation_sha: 8d3ea7720549148a251a9e11f5733d543344fb2e
