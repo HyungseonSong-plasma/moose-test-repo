@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "issue": 315,
+  "kind": "experiments",
+  "sequence": 1,
+  "title": "Prepare fixed-heavy-dt electron-timestep matrix",
+  "stages": [
+    {
+      "id": "P0",
+      "name": "Validate electron-dt-only discriminator contract",
+      "command": [
+        "python3",
+        "experiments/Issue315_electron_dt_sweep/control.py",
+        "--phase",
+        "p0"
+      ],
+      "timeout_seconds": 180
+    },
+    {
+      "id": "P1",
+      "name": "Preflight electron timestep cases",
+      "command": [
+        "python3",
+        "experiments/Issue315_electron_dt_sweep/control.py",
+        "--phase",
+        "p1"
+      ],
+      "timeout_seconds": 1200
+    },
+    {
+      "id": "P2",
+      "name": "Build Physics and check electron timestep inputs",
+      "command": [
+        "python3",
+        "experiments/Issue315_electron_dt_sweep/control.py",
+        "--phase",
+        "p2"
+      ],
+      "timeout_seconds": 3600
+    }
+  ],
+  "artifacts": [
+    "experiments/Issue315_electron_dt_sweep/generated_dt01/**/*.i",
+    "experiments/Issue315_electron_dt_sweep/generated_dt01/**/*.json"
+  ]
+}
