@@ -1,0 +1,21 @@
+name: One-shot Issue 310 relaxation 1x-2x-5x sweep
+
+on:
+  push:
+    branches:
+      - issue-310-relaxation-factor-optimization
+    paths:
+      - .github/workflows/issue310-relaxation-125-once.yml
+
+permissions:
+  contents: read
+
+jobs:
+  run:
+    uses: HyungseonSong-plasma/chatgpt-operation/.github/workflows/governed-matrix.yml@8d3ea7720549148a251a9e11f5733d543344fb2e
+    with:
+      issue: "310"
+      sequence: "01"
+      manifest: automation/manifests/experiments/Issue_310_experiments01.json
+      base_sha: b22836541e21a51604b8e9fe73759a85e09ec5d9
+      operation_sha: 8d3ea7720549148a251a9e11f5733d543344fb2e
