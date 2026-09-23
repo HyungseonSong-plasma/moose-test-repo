@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "entries": [
+    {
+      "id": "moose-runtime",
+      "source": "/opt/physics_vendor/moose/framework/libmoose-opt.so.0",
+      "destination": "experiments/Issue310_fp_acceleration/patched_runtime_fp10/libmoose-opt.so.0",
+      "producer": "patched MOOSE rebuild via make -C /workspace/physics_app -j2",
+      "location_evidence": "MOOSE framework moose.mk defines moose_DYLIB directly in FRAMEWORK_DIR and Sequence10 build output links /opt/physics_vendor/moose/framework/libmoose-opt.la",
+      "source_type": "file",
+      "symlink_policy": "materialize",
+      "overwrite": true
+    }
+  ]
+}
