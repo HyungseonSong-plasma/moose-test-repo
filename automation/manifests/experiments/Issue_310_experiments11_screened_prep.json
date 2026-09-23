@@ -5,8 +5,8 @@
   "sequence": 11,
   "title": "Generation 11 screened-Poisson discriminator prepare",
   "stages": [
-    {"id": "P0", "command": ["python3", "experiments/Issue310_fp_acceleration/control_seq11_screened.py", "--p0"], "timeout_seconds": 120},
-    {"id": "P1", "command": ["python3", "experiments/Issue310_fp_acceleration/control_seq11_screened.py", "--p1"], "timeout_seconds": 600},
-    {"id": "P2", "command": ["python3", "experiments/Issue310_fp_acceleration/control_seq11_screened.py", "--p2"], "timeout_seconds": 1200}
+    {"id": "P0", "name": "Validate screened-Poisson discriminator inputs", "command": ["python3", "experiments/Issue310_fp_acceleration/control_seq11_screened.py", "--p0"], "timeout_seconds": 120},
+    {"id": "P1", "name": "Generate screened-Poisson short cases", "command": ["python3", "experiments/Issue310_fp_acceleration/control_seq11_screened.py", "--p1"], "timeout_seconds": 600},
+    {"id": "P2", "name": "Build and stage screened-Poisson runtime", "command": ["python3", "experiments/Issue310_fp_acceleration/control_seq11_screened.py", "--p2"], "timeout_seconds": 1200}
   ]
 }
