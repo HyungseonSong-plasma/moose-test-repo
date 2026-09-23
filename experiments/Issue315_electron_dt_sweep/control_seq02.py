@@ -1,22 +1,23 @@
 #!/usr/bin/env python3
-"""Issue #315 Sequence 02: electron timestep cost/parity sweep.
+"""Issue #315 Sequence 02: six-case performance matrix on Sequence 08 physics.
 
-Source physics is the accepted Issue #306 wall08 model.
+Source physics is the accepted Issue #306 Sequence 08 ratio4 baseline.
 
-Fixed:
+Common:
   chi_h = 400
-  heavy cycles = 200
+  heavy cycles = 150
   T_final = 60000 tau_epsilon(initial)
-  relaxation_factor = 1/(1+chi_e) per case
-  physics, wall ownership, mesh, nonlinear/fixed-point tolerances
+  physics, wall ownership, mesh, nonlinear/fixed-point tolerances unchanged
 
-Single discriminator:
-  chi_e = 100 / 200 / 400
+Group A -- electron timestep:
+  dt_e_100: chi_e=100, alpha=1/101, ratio=4, 600 electron steps
+  dt_e_200: chi_e=200, alpha=1/201, ratio=2, 300 electron steps
+  dt_e_400: chi_e=400, alpha=1/401, ratio=1, 150 electron steps
 
-Therefore:
-  dt_h/dt_e = 4 / 2 / 1
-  electron steps = 600 / 300 / 150
-  heavy steps = 150 for every case
+Group B -- fixed-dt relaxation at chi_e=100:
+  alpha_2x:  alpha=2/101,  600 electron steps
+  alpha_5x:  alpha=5/101,  600 electron steps
+  alpha_10x: alpha=10/101, 600 electron steps
 """
 from __future__ import annotations
 
@@ -50,17 +51,79 @@ HEAVY_CYCLES = 150
 FP_MAX = 3000
 ELECTRON_CHIS = (100.0, 200.0, 400.0)
 
-SPECS = tuple(
+SPECS = (
     {
-        "name": f"dt_e_{int(chi_e)}",
+        "name": "dt_e_100",
+        "group": "dt",
         "mode": "thermal",
-        "chi": chi_e,
+        "chi": 100.0,
         "chi_h": CHI_H,
         "heavy_cycles": HEAVY_CYCLES,
-        "ratio": int(CHI_H / chi_e),
+        "ratio": 4,
         "fp_max": FP_MAX,
-    }
-    for chi_e in ELECTRON_CHIS
+        "relaxation_multiplier": 1.0,
+        "relaxation_factor": 1.0 / 101.0,
+    },
+    {
+        "name": "dt_e_200",
+        "group": "dt",
+        "mode": "thermal",
+        "chi": 200.0,
+        "chi_h": CHI_H,
+        "heavy_cycles": HEAVY_CYCLES,
+        "ratio": 2,
+        "fp_max": FP_MAX,
+        "relaxation_multiplier": 1.0,
+        "relaxation_factor": 1.0 / 201.0,
+    },
+    {
+        "name": "dt_e_400",
+        "group": "dt",
+        "mode": "thermal",
+        "chi": 400.0,
+        "chi_h": CHI_H,
+        "heavy_cycles": HEAVY_CYCLES,
+        "ratio": 1,
+        "fp_max": FP_MAX,
+        "relaxation_multiplier": 1.0,
+        "relaxation_factor": 1.0 / 401.0,
+    },
+    {
+        "name": "alpha_2x",
+        "group": "alpha",
+        "mode": "thermal",
+        "chi": 100.0,
+        "chi_h": CHI_H,
+        "heavy_cycles": HEAVY_CYCLES,
+        "ratio": 4,
+        "fp_max": FP_MAX,
+        "relaxation_multiplier": 2.0,
+        "relaxation_factor": 2.0 / 101.0,
+    },
+    {
+        "name": "alpha_5x",
+        "group": "alpha",
+        "mode": "thermal",
+        "chi": 100.0,
+        "chi_h": CHI_H,
+        "heavy_cycles": HEAVY_CYCLES,
+        "ratio": 4,
+        "fp_max": FP_MAX,
+        "relaxation_multiplier": 5.0,
+        "relaxation_factor": 5.0 / 101.0,
+    },
+    {
+        "name": "alpha_10x",
+        "group": "alpha",
+        "mode": "thermal",
+        "chi": 100.0,
+        "chi_h": CHI_H,
+        "heavy_cycles": HEAVY_CYCLES,
+        "ratio": 4,
+        "fp_max": FP_MAX,
+        "relaxation_multiplier": 10.0,
+        "relaxation_factor": 10.0 / 101.0,
+    },
 )
 CASE_NAMES = tuple(str(spec["name"]) for spec in SPECS)
 
@@ -72,8 +135,8 @@ def _params(spec: dict[str, object]) -> dict[str, object]:
     with wall08._clock(spec):
         p = wall08.wall03._params(spec)
     p["heavy_to_electron_dt_ratio"] = int(spec["ratio"])
-    # Preserve the original stabilization law as electron dt changes.
-    p["relaxation_factor"] = 1.0 / (1.0 + float(spec["chi"]))
+    p["relaxation_multiplier"] = float(spec["relaxation_multiplier"])
+    p["relaxation_factor"] = float(spec["relaxation_factor"])
     return p
 
 
@@ -113,24 +176,20 @@ def build(clean: bool = True) -> list[dict[str, object]]:
             {
                 "issue": 315,
                 "sequence": 2,
-                "objective": (
-                    "reduce electron-step count by increasing electron dt while "
-                    "holding heavy dt, physical horizon, the alpha=1/(1+chi_e) stabilization law, and plasma physics fixed"
-                ),
-                "source_physics": "Issue306 wall08 Bohm-positive-ion + sheath-suppressed-electron model",
+                "objective": "six-case timestep and relaxation performance discriminator",
+                "source_physics": "Issue306 Sequence08 thermal-heavy-wall + sheath-suppressed-electron model",
                 "chi_h": CHI_H,
                 "heavy_cycles": HEAVY_CYCLES,
                 "final_tau": FINAL_TAU,
-                "relaxation_factors": {
-                    str(spec["name"]): 1.0 / (1.0 + float(spec["chi"]))
-                    for spec in SPECS
-                },
-                "electron_chi_cases": [
+                "case_matrix": [
                     {
                         "name": str(spec["name"]),
+                        "group": str(spec["group"]),
                         "chi_e": float(spec["chi"]),
                         "ratio": int(spec["ratio"]),
                         "electron_steps": int(FINAL_TAU / float(spec["chi"])),
+                        "relaxation_multiplier": float(spec["relaxation_multiplier"]),
+                        "relaxation_factor": float(spec["relaxation_factor"]),
                     }
                     for spec in SPECS
                 ],
@@ -170,7 +229,7 @@ def static_contract() -> dict[str, object]:
             rel_tol=0.0,
             abs_tol=1e-12,
         )
-        expected_relax = 1.0 / (1.0 + chi_e)
+        expected_relax = float(spec["relaxation_factor"])
         assert math.isclose(
             float(p["relaxation_factor"]),
             expected_relax,
@@ -196,19 +255,18 @@ def static_contract() -> dict[str, object]:
         "chi_h": CHI_H,
         "heavy_cycles": HEAVY_CYCLES,
         "final_tau": FINAL_TAU,
-        "relaxation_factors": {
-            str(spec["name"]): 1.0 / (1.0 + float(spec["chi"]))
-            for spec in SPECS
-        },
         "cases": {
             str(spec["name"]): {
+                "group": str(spec["group"]),
                 "chi_e": float(spec["chi"]),
                 "ratio": int(spec["ratio"]),
                 "electron_steps": int(FINAL_TAU / float(spec["chi"])),
+                "relaxation_multiplier": float(spec["relaxation_multiplier"]),
+                "relaxation_factor": float(spec["relaxation_factor"]),
             }
             for spec in SPECS
         },
-        "electron_dt_with_prescribed_relaxation_law": True,
+        "six_case_dt_and_alpha_matrix": True,
     }
 
 
@@ -383,6 +441,8 @@ def analyze(case_name: str) -> tuple[dict[str, object], int]:
         electron_chi=float(p["chi_e"]),
         heavy_chi=float(p["chi_h"]),
         heavy_to_electron_dt_ratio=int(p["heavy_to_electron_dt_ratio"]),
+        case_group=str(spec["group"]),
+        relaxation_multiplier=float(spec["relaxation_multiplier"]),
         relaxation_factor=float(p["relaxation_factor"]),
         **_time_series(case_name),
     )
@@ -445,7 +505,7 @@ def aggregate(root: Path) -> dict[str, object]:
     ref = found.get("dt_e_100")
     comparisons: dict[str, object] = {}
     if ref is not None:
-        for name in ("dt_e_200", "dt_e_400"):
+        for name in ("dt_e_200", "dt_e_400", "alpha_2x", "alpha_5x", "alpha_10x"):
             if name in found:
                 comparisons[f"{name}_vs_dt_e_100"] = _comparison(ref, found[name])
     if "dt_e_200" in found and "dt_e_400" in found:
@@ -457,25 +517,18 @@ def aggregate(root: Path) -> dict[str, object]:
     return {
         "issue": 315,
         "sequence": 2,
-        "classification": "ELECTRON_DT_SWEEP_COMPLETE" if complete else "ELECTRON_DT_SWEEP_PARTIAL",
+        "classification": "SIX_CASE_PERFORMANCE_MATRIX_COMPLETE" if complete else "SIX_CASE_PERFORMANCE_MATRIX_PARTIAL",
         "evidence_valid": complete,
         "chi_h": CHI_H,
         "heavy_cycles": HEAVY_CYCLES,
         "final_tau": FINAL_TAU,
-        "relaxation_factors": {
-            f"dt_e_{int(chi)}": 1.0 / (1.0 + chi) for chi in ELECTRON_CHIS
-        },
-        "electron_chi": list(ELECTRON_CHIS),
-        "electron_steps": {
-            f"dt_e_{int(chi)}": int(FINAL_TAU / chi) for chi in ELECTRON_CHIS
-        },
         "missing_cases": missing,
         "cases": found,
         "comparisons": comparisons,
         "interpretation_guard": (
-            "The heavy timestep, physical horizon, physics, wall ownership, and solver tolerances "
-            "are frozen. Electron timestep changes together with the established stabilization law "
-            "alpha=1/(1+chi_e). Runtime improvement is not proof of numerical parity."
+            "All cases use Issue306 Sequence08 thermal-heavy-wall physics. "
+            "The dt group changes chi_e with alpha=1/(1+chi_e); the alpha group fixes "
+            "chi_e=100 and changes only relaxation_factor. Runtime improvement is not proof of parity."
         ),
     }
 
