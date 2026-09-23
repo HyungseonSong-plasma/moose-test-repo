@@ -1,0 +1,22 @@
+diff --git a/framework/src/executioners/FixedPointSolve.C b/framework/src/executioners/FixedPointSolve.C
+--- a/framework/src/executioners/FixedPointSolve.C
++++ b/framework/src/executioners/FixedPointSolve.C
+@@ -431,8 +431,17 @@ FixedPointSolve::solve()
+       if (!_app.isUltimateMaster() && _transformed_sys)
+         saveVariableValues(/*is parent app of this iteration=*/false);
+     }
+-    else
++    else
++    {
+       _main_fixed_point_it = 0;
++
++      // A new physical timestep starts a new accelerated fixed-point history.
++      // Seed the entering state before the first solve so Secant/Steffensen
++      // do not combine the new timestep with stale vectors from the previous
++      // timestep. Picard does not require this history seed.
++      if (!_app.isUltimateMaster() && _transformed_sys && !dynamic_cast<PicardSolve *>(this))
++        saveVariableValues(/*is parent app of this iteration=*/false);
++    }
+   }
+ 
+   if (_has_fixed_point_its)

@@ -1,0 +1,109 @@
+{
+  "schema_version": 1,
+  "issue": 310,
+  "sequence": 10,
+  "title": "Sequence 10 patched secondary Secant history-seed discriminator",
+  "prepare_manifest": "automation/manifests/experiments/Issue_310_experiments10_prep.json",
+  "bundle_paths": [
+    "physics_app/physics-opt",
+    "physics_app/lib/libphysics-opt.so.0",
+    "physics_app/test/lib/libphysics_test-opt.so.0",
+    "experiments/Issue310_fp_acceleration/generated_fp10",
+    "experiments/Issue310_fp_acceleration/patched_runtime_fp10"
+  ],
+  "max_parallel": 4,
+  "cases": [
+    {
+      "id": "picard_2x_seedpatch",
+      "name": "Patched-binary Picard-2x reference; 4 electron steps / 1 heavy cycle",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq10.py",
+        "--case",
+        "picard_2x_seedpatch"
+      ],
+      "timeout_seconds": 1200,
+      "artifacts": [
+        "experiments/Issue310_fp_acceleration/results_fp10/picard_2x_seedpatch_returncode.txt",
+        "experiments/Issue310_fp_acceleration/results_fp10/picard_2x_seedpatch_elapsed_seconds.txt",
+        "experiments/Issue310_fp_acceleration/results_fp10/picard_2x_seedpatch_runtime_tail.log",
+        "experiments/Issue310_fp_acceleration/results_fp10/picard_2x_seedpatch_result.json",
+        "experiments/Issue310_fp_acceleration/generated_fp10/picard_2x_seedpatch/input_step_csv.csv",
+        "experiments/Issue310_fp_acceleration/generated_fp10/picard_2x_seedpatch/input_out_electron0_step_csv.csv",
+        "experiments/Issue310_fp_acceleration/generated_fp10/picard_2x_seedpatch/*profile_*.csv"
+      ]
+    },
+    {
+      "id": "secant_seed_0p005",
+      "name": "Patched Secant damping 0.005; 4 electron steps / 1 heavy cycle",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq10.py",
+        "--case",
+        "secant_seed_0p005"
+      ],
+      "timeout_seconds": 1200,
+      "artifacts": [
+        "experiments/Issue310_fp_acceleration/results_fp10/secant_seed_0p005_returncode.txt",
+        "experiments/Issue310_fp_acceleration/results_fp10/secant_seed_0p005_elapsed_seconds.txt",
+        "experiments/Issue310_fp_acceleration/results_fp10/secant_seed_0p005_runtime_tail.log",
+        "experiments/Issue310_fp_acceleration/results_fp10/secant_seed_0p005_result.json",
+        "experiments/Issue310_fp_acceleration/generated_fp10/secant_seed_0p005/input_step_csv.csv",
+        "experiments/Issue310_fp_acceleration/generated_fp10/secant_seed_0p005/input_out_electron0_step_csv.csv",
+        "experiments/Issue310_fp_acceleration/generated_fp10/secant_seed_0p005/*profile_*.csv"
+      ]
+    },
+    {
+      "id": "secant_seed_0p010",
+      "name": "Patched Secant damping 0.010; 4 electron steps / 1 heavy cycle",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq10.py",
+        "--case",
+        "secant_seed_0p010"
+      ],
+      "timeout_seconds": 1200,
+      "artifacts": [
+        "experiments/Issue310_fp_acceleration/results_fp10/secant_seed_0p010_returncode.txt",
+        "experiments/Issue310_fp_acceleration/results_fp10/secant_seed_0p010_elapsed_seconds.txt",
+        "experiments/Issue310_fp_acceleration/results_fp10/secant_seed_0p010_runtime_tail.log",
+        "experiments/Issue310_fp_acceleration/results_fp10/secant_seed_0p010_result.json",
+        "experiments/Issue310_fp_acceleration/generated_fp10/secant_seed_0p010/input_step_csv.csv",
+        "experiments/Issue310_fp_acceleration/generated_fp10/secant_seed_0p010/input_out_electron0_step_csv.csv",
+        "experiments/Issue310_fp_acceleration/generated_fp10/secant_seed_0p010/*profile_*.csv"
+      ]
+    },
+    {
+      "id": "secant_seed_0p020",
+      "name": "Patched Secant damping 0.020; 4 electron steps / 1 heavy cycle",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq10.py",
+        "--case",
+        "secant_seed_0p020"
+      ],
+      "timeout_seconds": 1200,
+      "artifacts": [
+        "experiments/Issue310_fp_acceleration/results_fp10/secant_seed_0p020_returncode.txt",
+        "experiments/Issue310_fp_acceleration/results_fp10/secant_seed_0p020_elapsed_seconds.txt",
+        "experiments/Issue310_fp_acceleration/results_fp10/secant_seed_0p020_runtime_tail.log",
+        "experiments/Issue310_fp_acceleration/results_fp10/secant_seed_0p020_result.json",
+        "experiments/Issue310_fp_acceleration/generated_fp10/secant_seed_0p020/input_step_csv.csv",
+        "experiments/Issue310_fp_acceleration/generated_fp10/secant_seed_0p020/input_out_electron0_step_csv.csv",
+        "experiments/Issue310_fp_acceleration/generated_fp10/secant_seed_0p020/*profile_*.csv"
+      ]
+    }
+  ],
+  "aggregate": {
+    "name": "Aggregate patched secondary Secant history-seed evidence",
+    "command": [
+      "python3",
+      "experiments/Issue310_fp_acceleration/control_seq10.py",
+      "--aggregate"
+    ],
+    "timeout_seconds": 300,
+    "artifacts": [
+      "experiments/Issue310_fp_acceleration/results_fp10/issue310_fp10_summary.json"
+    ]
+  }
+}
