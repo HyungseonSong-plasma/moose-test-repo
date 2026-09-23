@@ -49,6 +49,9 @@ SCHEDULED_CONTROLLER
   -> controller-throughput
   -> controller-lifecycle
 
+GITHUB_ACTIONS_EXECUTION
+  -> github-actions-execution
+
 GITHUB_ACTIONS_OBSERVATION
   -> github-actions-observation
 ```
