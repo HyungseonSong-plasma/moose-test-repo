@@ -1,0 +1,16 @@
+name: One-shot Issue310 Gen11 Screened Poisson
+on:
+  push:
+    branches: [issue-310-gen11-nonlinear-poisson]
+    paths: [.github/workflows/issue310-gen11-screened-once.yml]
+permissions:
+  contents: read
+jobs:
+  run:
+    uses: HyungseonSong-plasma/chatgpt-operation/.github/workflows/governed-matrix.yml@6474eb7b77f890b7cf9d7134ccebea31662bcdbe
+    with:
+      issue: "310"
+      sequence: "11"
+      manifest: automation/manifests/experiments/Issue_310_experiments11_screened.json
+      base_sha: ${{ github.sha }}
+      operation_sha: 6474eb7b77f890b7cf9d7134ccebea31662bcdbe
