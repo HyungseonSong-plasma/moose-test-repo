@@ -130,7 +130,7 @@ The central skill owns route equivalence and handoff mechanics only. Workflow sc
 
 ### ROUTE-15 — GitHub Actions observation
 
-Trigger central `github-actions-observation` when the immediate obligation requires dispatching or correlating a GitHub Actions run, checking eventual-consistency visibility, or distinguishing the exact run/attempt for current CI or governed execution evidence.
+Trigger central `github-actions-observation` when the immediate obligation requires correlating an already-launched GitHub Actions run, checking eventual-consistency visibility, or distinguishing the exact run/attempt for current CI or governed execution evidence.
 
 The central skill owns dispatch/observation mechanics only. Physics acceptance, runtime/scientific meaning, dependency readiness, and PASS/HOLD decisions remain local.
 
