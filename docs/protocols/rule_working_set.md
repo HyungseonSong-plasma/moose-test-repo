@@ -54,6 +54,9 @@ GITHUB_ACTIONS_EXECUTION
 
 GITHUB_ACTIONS_OBSERVATION
   -> github-actions-observation
+
+ARTIFACT_STAGING
+  -> artifact-staging
 ```
 
 Skill presence does not imply permanent activation.
