@@ -3,11 +3,11 @@
   "issue": 315,
   "kind": "experiments",
   "sequence": 2,
-  "title": "Prepare electron-timestep matrix with chi-scaled relaxation",
+  "title": "Prepare six-case Sequence 08 dt + relaxation matrix",
   "stages": [
     {
       "id": "P0",
-      "name": "Validate electron-dt-only discriminator contract",
+      "name": "Validate six-case Sequence 08 performance contract",
       "command": [
         "python3",
         "experiments/Issue315_electron_dt_sweep/control_seq02.py",
