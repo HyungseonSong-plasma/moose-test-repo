@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "issue": 310,
+  "kind": "experiments",
+  "sequence": 7,
+  "title": "Prepare Secant-only refinement with fast Picard ownership",
+  "stages": [
+    {
+      "id": "P0",
+      "name": "Validate five-case Secant ownership/refinement contract",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq07.py",
+        "--phase",
+        "p0"
+      ],
+      "timeout_seconds": 180
+    },
+    {
+      "id": "P1",
+      "name": "Preflight Picard reference and Secant refinement cases",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq07.py",
+        "--phase",
+        "p1"
+      ],
+      "timeout_seconds": 1200
+    },
+    {
+      "id": "P2",
+      "name": "Build Physics and check Picard/Secant inputs",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq07.py",
+        "--phase",
+        "p2"
+      ],
+      "timeout_seconds": 3600
+    }
+  ],
+  "artifacts": [
+    "experiments/Issue310_fp_acceleration/generated_fp07/**/*.i",
+    "experiments/Issue310_fp_acceleration/generated_fp07/**/*.json"
+  ]
+}
