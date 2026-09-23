@@ -2,7 +2,7 @@
 
 **Status:** canonical consumer manifest guide  
 **OS:** Paul  
-**Central revision:** `a81ffc7af265a5d6be357483dbd39ca147224e2c`
+**Central revision:** `6474eb7b77f890b7cf9d7134ccebea31662bcdbe`
 
 The machine-readable exact identities are in `central_skills.json`.
 
@@ -44,6 +44,9 @@ GITHUB_ACTIONS_OBSERVATION
 
 ARTIFACT_STAGING
   -> skills/artifact-staging/README.md
+
+SCIENTIFIC_DISCRIMINATOR_CONTROLLER
+  -> skills/scientific-discriminator-controller/README.md
 ```
 
 Do not preload controller skills during an ordinary interactive init.
