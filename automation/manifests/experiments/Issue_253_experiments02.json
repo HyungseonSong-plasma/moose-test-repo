@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "issue": 253,
+  "kind": "experiments",
+  "sequence": 2,
+  "title": "G1 chi=2 plain Gummel convergence control",
+  "stages": [
+    {
+      "id": "P0",
+      "name": "Validate chi=2 plain-Gummel construction",
+      "command": [
+        "python3",
+        "experiments/Issue253_g1_gummel_dt_release/chi2_control.py",
+        "--phase",
+        "p0"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "id": "P1",
+      "name": "Preflight chi=2 Gummel control",
+      "command": [
+        "python3",
+        "experiments/Issue253_g1_gummel_dt_release/chi2_control.py",
+        "--phase",
+        "p1"
+      ],
+      "timeout_seconds": 900
+    },
+    {
+      "id": "P2",
+      "name": "Build Physics and check chi=2 input",
+      "command": [
+        "python3",
+        "experiments/Issue253_g1_gummel_dt_release/chi2_control.py",
+        "--phase",
+        "p2"
+      ],
+      "timeout_seconds": 3600
+    },
+    {
+      "id": "P3",
+      "name": "Observe chi=2 plain-Gummel convergence",
+      "command": [
+        "python3",
+        "experiments/Issue253_g1_gummel_dt_release/chi2_control.py",
+        "--phase",
+        "p3"
+      ],
+      "timeout_seconds": 1800
+    }
+  ],
+  "artifacts": [
+    "experiments/Issue253_g1_gummel_dt_release/generated_chi2/**/*.i",
+    "experiments/Issue253_g1_gummel_dt_release/generated_chi2/**/*.json",
+    "experiments/Issue253_g1_gummel_dt_release/generated_chi2/**/*.csv",
+    "experiments/Issue253_g1_gummel_dt_release/generated_chi2/**/*.e",
+    "experiments/Issue253_g1_gummel_dt_release/results_chi2/**/*"
+  ]
+}

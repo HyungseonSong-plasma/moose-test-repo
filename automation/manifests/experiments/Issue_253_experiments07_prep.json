@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "issue": 253,
+  "kind": "experiments",
+  "sequence": 7,
+  "title": "G1 parallel fixed-T chi=0.1/1/10 prepare and build-once",
+  "stages": [
+    {
+      "id": "P0",
+      "name": "Validate fixed-T parallel matrix",
+      "command": [
+        "python3",
+        "experiments/Issue253_g1_gummel_dt_release/parallel_control.py",
+        "--phase",
+        "p0"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "id": "P1",
+      "name": "Preflight chi=0.1/1/10 inputs",
+      "command": [
+        "python3",
+        "experiments/Issue253_g1_gummel_dt_release/parallel_control.py",
+        "--phase",
+        "p1"
+      ],
+      "timeout_seconds": 900
+    },
+    {
+      "id": "P2",
+      "name": "Build Physics once and check all parallel inputs",
+      "command": [
+        "python3",
+        "experiments/Issue253_g1_gummel_dt_release/parallel_control.py",
+        "--phase",
+        "p2"
+      ],
+      "timeout_seconds": 3600
+    }
+  ],
+  "artifacts": [
+    "experiments/Issue253_g1_gummel_dt_release/generated_parallel/**/*.i",
+    "experiments/Issue253_g1_gummel_dt_release/generated_parallel/**/*.json",
+    "experiments/Issue253_g1_gummel_dt_release/results_parallel/*_p2.log"
+  ]
+}

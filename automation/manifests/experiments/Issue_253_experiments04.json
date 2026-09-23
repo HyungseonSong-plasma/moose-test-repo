@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "issue": 253,
+  "kind": "experiments",
+  "sequence": 4,
+  "title": "G1 fixed-total-time chi=10/100 relaxed Gummel final discriminator",
+  "stages": [
+    {
+      "id": "P0",
+      "name": "Validate fixed-total-time final matrix",
+      "command": [
+        "python3",
+        "experiments/Issue253_g1_gummel_dt_release/final_control.py",
+        "--phase",
+        "p0"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "id": "P1",
+      "name": "Preflight chi=0.1/10/100 final matrix",
+      "command": [
+        "python3",
+        "experiments/Issue253_g1_gummel_dt_release/final_control.py",
+        "--phase",
+        "p1"
+      ],
+      "timeout_seconds": 900
+    },
+    {
+      "id": "P2",
+      "name": "Build Physics and check final-matrix inputs",
+      "command": [
+        "python3",
+        "experiments/Issue253_g1_gummel_dt_release/final_control.py",
+        "--phase",
+        "p2"
+      ],
+      "timeout_seconds": 3600
+    },
+    {
+      "id": "P3",
+      "name": "Run fixed-total-time accuracy and runtime comparison",
+      "command": [
+        "python3",
+        "experiments/Issue253_g1_gummel_dt_release/final_control.py",
+        "--phase",
+        "p3"
+      ],
+      "timeout_seconds": 3600
+    }
+  ],
+  "artifacts": [
+    "experiments/Issue253_g1_gummel_dt_release/generated_final/**/*.i",
+    "experiments/Issue253_g1_gummel_dt_release/generated_final/**/*.json",
+    "experiments/Issue253_g1_gummel_dt_release/generated_final/**/*.csv",
+    "experiments/Issue253_g1_gummel_dt_release/results_final/**/*"
+  ]
+}

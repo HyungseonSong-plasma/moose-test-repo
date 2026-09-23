@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "issue": 253,
+  "kind": "experiments",
+  "sequence": 5,
+  "title": "G1 extreme chi=1000/10000 fixed-total-time stability and speed discriminator",
+  "stages": [
+    {
+      "id": "P0",
+      "name": "Validate extreme fixed-total-time matrix",
+      "command": [
+        "python3",
+        "experiments/Issue253_g1_gummel_dt_release/extended_control.py",
+        "--phase",
+        "p0"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "id": "P1",
+      "name": "Preflight chi=0.1/1000/10000 matrix",
+      "command": [
+        "python3",
+        "experiments/Issue253_g1_gummel_dt_release/extended_control.py",
+        "--phase",
+        "p1"
+      ],
+      "timeout_seconds": 900
+    },
+    {
+      "id": "P2",
+      "name": "Build Physics and check extreme-matrix inputs",
+      "command": [
+        "python3",
+        "experiments/Issue253_g1_gummel_dt_release/extended_control.py",
+        "--phase",
+        "p2"
+      ],
+      "timeout_seconds": 3600
+    },
+    {
+      "id": "P3",
+      "name": "Run extreme fixed-total-time accuracy and runtime comparison",
+      "command": [
+        "python3",
+        "experiments/Issue253_g1_gummel_dt_release/extended_control.py",
+        "--phase",
+        "p3"
+      ],
+      "timeout_seconds": 7200
+    }
+  ],
+  "artifacts": [
+    "experiments/Issue253_g1_gummel_dt_release/generated_extreme/**/*.i",
+    "experiments/Issue253_g1_gummel_dt_release/generated_extreme/**/*.json",
+    "experiments/Issue253_g1_gummel_dt_release/generated_extreme/**/*.csv",
+    "experiments/Issue253_g1_gummel_dt_release/results_extreme/**/*"
+  ]
+}

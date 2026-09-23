@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "issue": 253,
+  "kind": "experiments",
+  "sequence": 11,
+  "title": "G2 fixed-chi=100 energy+Joule horizon sweep prepare",
+  "stages": [
+    {
+      "id": "P0",
+      "name": "Validate fixed chi=100 horizon 1/10/100chi contract",
+      "command": [
+        "python3",
+        "experiments/Issue253_g1_gummel_dt_release/horizon11_control.py",
+        "--phase",
+        "p0"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "id": "P1",
+      "name": "Preflight fixed-chi horizon sweep",
+      "command": [
+        "python3",
+        "experiments/Issue253_g1_gummel_dt_release/horizon11_control.py",
+        "--phase",
+        "p1"
+      ],
+      "timeout_seconds": 900
+    },
+    {
+      "id": "P2",
+      "name": "Build Physics once and check horizon sweep inputs",
+      "command": [
+        "python3",
+        "experiments/Issue253_g1_gummel_dt_release/horizon11_control.py",
+        "--phase",
+        "p2"
+      ],
+      "timeout_seconds": 3600
+    }
+  ],
+  "artifacts": [
+    "experiments/Issue253_g1_gummel_dt_release/generated_horizon11/**/*.i",
+    "experiments/Issue253_g1_gummel_dt_release/generated_horizon11/**/*.json",
+    "experiments/Issue253_g1_gummel_dt_release/generated_horizon11/**/*.txt",
+    "experiments/Issue253_g1_gummel_dt_release/results_horizon11/*_p2.log"
+  ]
+}

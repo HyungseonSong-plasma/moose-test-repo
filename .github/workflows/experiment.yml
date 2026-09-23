@@ -30,6 +30,7 @@ concurrency:
 
 jobs:
   execute:
+    if: inputs.sequence != '07' && inputs.sequence != '08' && inputs.sequence != '09' && inputs.sequence != '10' && inputs.sequence != '11' && inputs.sequence != '12'
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     env:
@@ -81,3 +82,14 @@ jobs:
           path: workflow-results/**
           if-no-files-found: warn
           retention-days: 30
+
+
+  matrix-execute:
+    if: inputs.sequence == '07' || inputs.sequence == '08' || inputs.sequence == '09' || inputs.sequence == '10' || inputs.sequence == '11' || inputs.sequence == '12'
+    uses: HyungseonSong-plasma/chatgpt-operation/.github/workflows/governed-matrix.yml@464e0fa0e60e904dba7b2dfc1c960f4337713309
+    with:
+      issue: ${{ inputs.issue }}
+      sequence: ${{ inputs.sequence }}
+      manifest: ${{ inputs.manifest }}
+      base_sha: ${{ inputs.base_sha }}
+      operation_sha: 464e0fa0e60e904dba7b2dfc1c960f4337713309

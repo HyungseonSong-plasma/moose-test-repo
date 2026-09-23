@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "issue": 253,
+  "sequence": 12,
+  "title": "G2 energy + Joule + O2 elastic equal-time chi=1/10/20 sweep",
+  "prepare_manifest": "automation/manifests/experiments/Issue_253_experiments12_prep.json",
+  "bundle_paths": [
+    "physics_app/physics-opt",
+    "physics_app/lib/libphysics-opt.so.0",
+    "physics_app/test/lib/libphysics_test-opt.so.0",
+    "experiments/Issue253_g1_gummel_dt_release/generated_elastic12"
+  ],
+  "max_parallel": 3,
+  "cases": [
+    {
+      "id": "elastic_chi1",
+      "name": "elastic_chi1 energy+Joule+elastic case",
+      "command": [
+        "python3",
+        "experiments/Issue253_g1_gummel_dt_release/elastic12_control.py",
+        "--case",
+        "elastic_chi1"
+      ],
+      "timeout_seconds": 7200,
+      "artifacts": [
+        "experiments/Issue253_g1_gummel_dt_release/results_elastic12/elastic_chi1_runtime.log",
+        "experiments/Issue253_g1_gummel_dt_release/results_elastic12/elastic_chi1_returncode.txt",
+        "experiments/Issue253_g1_gummel_dt_release/results_elastic12/elastic_chi1_elapsed_seconds.txt",
+        "experiments/Issue253_g1_gummel_dt_release/results_elastic12/elastic_chi1_result.json",
+        "experiments/Issue253_g1_gummel_dt_release/generated_elastic12/elastic_chi1/input_step_csv.csv",
+        "experiments/Issue253_g1_gummel_dt_release/generated_elastic12/elastic_chi1/input_final_csv*.csv",
+        "experiments/Issue253_g1_gummel_dt_release/generated_elastic12/elastic_chi1/input_final_exodus.e"
+      ]
+    },
+    {
+      "id": "elastic_chi10",
+      "name": "elastic_chi10 energy+Joule+elastic case",
+      "command": [
+        "python3",
+        "experiments/Issue253_g1_gummel_dt_release/elastic12_control.py",
+        "--case",
+        "elastic_chi10"
+      ],
+      "timeout_seconds": 7200,
+      "artifacts": [
+        "experiments/Issue253_g1_gummel_dt_release/results_elastic12/elastic_chi10_runtime.log",
+        "experiments/Issue253_g1_gummel_dt_release/results_elastic12/elastic_chi10_returncode.txt",
+        "experiments/Issue253_g1_gummel_dt_release/results_elastic12/elastic_chi10_elapsed_seconds.txt",
+        "experiments/Issue253_g1_gummel_dt_release/results_elastic12/elastic_chi10_result.json",
+        "experiments/Issue253_g1_gummel_dt_release/generated_elastic12/elastic_chi10/input_step_csv.csv",
+        "experiments/Issue253_g1_gummel_dt_release/generated_elastic12/elastic_chi10/input_final_csv*.csv",
+        "experiments/Issue253_g1_gummel_dt_release/generated_elastic12/elastic_chi10/input_final_exodus.e"
+      ]
+    },
+    {
+      "id": "elastic_chi20",
+      "name": "elastic_chi20 energy+Joule+elastic case",
+      "command": [
+        "python3",
+        "experiments/Issue253_g1_gummel_dt_release/elastic12_control.py",
+        "--case",
+        "elastic_chi20"
+      ],
+      "timeout_seconds": 7200,
+      "artifacts": [
+        "experiments/Issue253_g1_gummel_dt_release/results_elastic12/elastic_chi20_runtime.log",
+        "experiments/Issue253_g1_gummel_dt_release/results_elastic12/elastic_chi20_returncode.txt",
+        "experiments/Issue253_g1_gummel_dt_release/results_elastic12/elastic_chi20_elapsed_seconds.txt",
+        "experiments/Issue253_g1_gummel_dt_release/results_elastic12/elastic_chi20_result.json",
+        "experiments/Issue253_g1_gummel_dt_release/generated_elastic12/elastic_chi20/input_step_csv.csv",
+        "experiments/Issue253_g1_gummel_dt_release/generated_elastic12/elastic_chi20/input_final_csv*.csv",
+        "experiments/Issue253_g1_gummel_dt_release/generated_elastic12/elastic_chi20/input_final_exodus.e"
+      ]
+    }
+  ],
+  "aggregate": {
+    "name": "Aggregate energy+Joule+elastic chi sweep",
+    "command": [
+      "python3",
+      "experiments/Issue253_g1_gummel_dt_release/elastic12_control.py",
+      "--aggregate"
+    ],
+    "timeout_seconds": 300,
+    "artifacts": [
+      "experiments/Issue253_g1_gummel_dt_release/results_elastic12/elastic12_summary.json"
+    ]
+  }
+}
