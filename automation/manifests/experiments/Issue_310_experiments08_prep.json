@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "issue": 310,
+  "kind": "experiments",
+  "sequence": 8,
+  "title": "Prepare Poisson architecture parity discriminator",
+  "stages": [
+    {
+      "id": "P0",
+      "name": "Validate FullSolve/Steady vs time-aware Transient architecture contract",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq08.py",
+        "--phase",
+        "p0"
+      ],
+      "timeout_seconds": 180
+    },
+    {
+      "id": "P1",
+      "name": "Preflight both Picard-2x architecture cases",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq08.py",
+        "--phase",
+        "p1"
+      ],
+      "timeout_seconds": 1200
+    },
+    {
+      "id": "P2",
+      "name": "Build Physics and check parent, fast and Poisson inputs",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq08.py",
+        "--phase",
+        "p2"
+      ],
+      "timeout_seconds": 3600
+    }
+  ],
+  "artifacts": [
+    "experiments/Issue310_fp_acceleration/generated_fp08/**/*.i",
+    "experiments/Issue310_fp_acceleration/generated_fp08/**/*.json"
+  ]
+}
