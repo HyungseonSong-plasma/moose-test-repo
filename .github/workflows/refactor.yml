@@ -85,7 +85,7 @@ jobs:
           python3 control/ci/guards/workflow_surface_guard.py --check --root control
 
       - name: Execute central governed refactor
-        uses: HyungseonSong-plasma/chatgpt-operation/.github/actions/governed-work@d18ab01346e757271e699e0e288e22f9d5f6fe29
+        uses: HyungseonSong-plasma/chatgpt-operation/.github/actions/governed-work@e6df2c89578ee7b5c23f043a0aa2f7fe9cbd9499
         with:
           kind: refactor
           manifest: ${{ github.workspace }}/control/${{ inputs.manifest }}
@@ -140,7 +140,7 @@ jobs:
 
       - name: Execute central repository mutation
         id: repository_mutation
-        uses: HyungseonSong-plasma/chatgpt-operation/.github/actions/repository-mutation@d18ab01346e757271e699e0e288e22f9d5f6fe29
+        uses: HyungseonSong-plasma/chatgpt-operation/.github/actions/repository-mutation@e6df2c89578ee7b5c23f043a0aa2f7fe9cbd9499
         with:
           manifest: ${{ github.workspace }}/control/${{ inputs.manifest }}
           policy: ${{ github.workspace }}/control/.chatgpt-operation.json
