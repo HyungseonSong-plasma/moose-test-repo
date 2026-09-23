@@ -6,6 +6,9 @@ on:
     types: [opened, synchronize, reopened]
   push:
     branches: [main]
+    paths:
+      - 'physics_harness/ontology/**'
+      - '.github/workflows/sol-runtime-integration.yml'
 
 permissions:
   contents: read
