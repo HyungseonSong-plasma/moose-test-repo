@@ -13,10 +13,10 @@ Fixed timing:
 
 Relaxation sweep:
   1/(1+chi_e)
-  10/(1+chi_e)
-  50/(1+chi_e)
+  2/(1+chi_e)
+  5/(1+chi_e)
 
-For chi_e=100 these are approximately 0.00990099, 0.0990099, 0.4950495.
+For chi_e=100 these are approximately 0.00990099, 0.0198020, 0.0495050.
 """
 from __future__ import annotations
 
@@ -54,8 +54,8 @@ FP_MAX = 3000
 
 RELAXATION_CASES = (
     ("relax_1x", 1.0),
-    ("relax_10x", 10.0),
-    ("relax_50x", 50.0),
+    ("relax_2x", 2.0),
+    ("relax_5x", 5.0),
 )
 
 SPECS = tuple(
@@ -455,7 +455,7 @@ def aggregate(root: Path) -> dict[str, object]:
     baseline = found.get("relax_1x")
     comparisons: dict[str, object] = {}
     if baseline is not None:
-        for name in ("relax_10x", "relax_50x"):
+        for name in ("relax_2x", "relax_5x"):
             if name in found:
                 comparisons[f"{name}_vs_relax_1x"] = _comparison(baseline, found[name])
 
