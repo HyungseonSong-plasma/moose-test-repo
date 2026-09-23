@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "issue": 310,
+  "sequence": 11,
+  "title": "Generation 11 Debye-screened Poisson Gummel discriminator",
+  "prepare_manifest": "automation/manifests/experiments/Issue_310_experiments11_screened_prep.json",
+  "bundle_paths": [
+    "physics_app/physics-opt",
+    "physics_app/lib/libphysics-opt.so.0",
+    "physics_app/test/lib/libphysics_test-opt.so.0",
+    "experiments/Issue310_fp_acceleration/generated_fp11_screened"
+  ],
+  "max_parallel": 2,
+  "cases": [
+    {
+      "id": "picard2x_control",
+      "name": "Qualified time-aware Picard-2x short control",
+      "command": ["python3", "experiments/Issue310_fp_acceleration/control_seq11_screened.py", "--case", "picard2x_control"],
+      "timeout_seconds": 1800,
+      "artifacts": ["experiments/Issue310_fp_acceleration/results_fp11_screened/picard2x_control_*", "experiments/Issue310_fp_acceleration/generated_fp11_screened/picard2x_control/*csv"]
+    },
+    {
+      "id": "screened_thermal_picard2x",
+      "name": "Thermal-slope screened Poisson Picard-2x",
+      "command": ["python3", "experiments/Issue310_fp_acceleration/control_seq11_screened.py", "--case", "screened_thermal_picard2x"],
+      "timeout_seconds": 1800,
+      "artifacts": ["experiments/Issue310_fp_acceleration/results_fp11_screened/screened_thermal_picard2x_*", "experiments/Issue310_fp_acceleration/generated_fp11_screened/screened_thermal_picard2x/*csv"]
+    }
+  ],
+  "aggregate": {
+    "name": "Aggregate screened-Poisson evidence",
+    "command": ["python3", "experiments/Issue310_fp_acceleration/control_seq11_screened.py", "--aggregate"],
+    "timeout_seconds": 300,
+    "artifacts": ["experiments/Issue310_fp_acceleration/results_fp11_screened/issue310_fp08_summary.json"]
+  }
+}
