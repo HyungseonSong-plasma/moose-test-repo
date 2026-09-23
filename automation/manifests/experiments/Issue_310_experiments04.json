@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "issue": 310,
+  "sequence": 4,
+  "title": "Sequence 08 native Picard/Secant/Steffensen benchmark",
+  "prepare_manifest": "automation/manifests/experiments/Issue_310_experiments04_prep.json",
+  "bundle_paths": [
+    "physics_app/physics-opt",
+    "physics_app/lib/libphysics-opt.so.0",
+    "physics_app/test/lib/libphysics_test-opt.so.0",
+    "experiments/Issue310_fp_acceleration/generated_fp04"
+  ],
+  "max_parallel": 3,
+  "cases": [
+    {
+      "id": "picard_2x",
+      "name": "Picard reference, alpha=2/101; 12 electron steps / 3 heavy cycles",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq04.py",
+        "--case",
+        "picard_2x"
+      ],
+      "timeout_seconds": 1800,
+      "artifacts": [
+        "experiments/Issue310_fp_acceleration/results_fp04/picard_2x_returncode.txt",
+        "experiments/Issue310_fp_acceleration/results_fp04/picard_2x_elapsed_seconds.txt",
+        "experiments/Issue310_fp_acceleration/results_fp04/picard_2x_runtime_tail.log",
+        "experiments/Issue310_fp_acceleration/results_fp04/picard_2x_result.json",
+        "experiments/Issue310_fp_acceleration/generated_fp04/picard_2x/input_step_csv.csv",
+        "experiments/Issue310_fp_acceleration/generated_fp04/picard_2x/input_out_electron0_step_csv.csv",
+        "experiments/Issue310_fp_acceleration/generated_fp04/picard_2x/*profile_*.csv"
+      ]
+    },
+    {
+      "id": "secant_full",
+      "name": "Secant, full update; 12 electron steps / 3 heavy cycles",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq04.py",
+        "--case",
+        "secant_full"
+      ],
+      "timeout_seconds": 1800,
+      "artifacts": [
+        "experiments/Issue310_fp_acceleration/results_fp04/secant_full_returncode.txt",
+        "experiments/Issue310_fp_acceleration/results_fp04/secant_full_elapsed_seconds.txt",
+        "experiments/Issue310_fp_acceleration/results_fp04/secant_full_runtime_tail.log",
+        "experiments/Issue310_fp_acceleration/results_fp04/secant_full_result.json",
+        "experiments/Issue310_fp_acceleration/generated_fp04/secant_full/input_step_csv.csv",
+        "experiments/Issue310_fp_acceleration/generated_fp04/secant_full/input_out_electron0_step_csv.csv",
+        "experiments/Issue310_fp_acceleration/generated_fp04/secant_full/*profile_*.csv"
+      ]
+    },
+    {
+      "id": "steffensen_full",
+      "name": "Steffensen, full update; 12 electron steps / 3 heavy cycles",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq04.py",
+        "--case",
+        "steffensen_full"
+      ],
+      "timeout_seconds": 1800,
+      "artifacts": [
+        "experiments/Issue310_fp_acceleration/results_fp04/steffensen_full_returncode.txt",
+        "experiments/Issue310_fp_acceleration/results_fp04/steffensen_full_elapsed_seconds.txt",
+        "experiments/Issue310_fp_acceleration/results_fp04/steffensen_full_runtime_tail.log",
+        "experiments/Issue310_fp_acceleration/results_fp04/steffensen_full_result.json",
+        "experiments/Issue310_fp_acceleration/generated_fp04/steffensen_full/input_step_csv.csv",
+        "experiments/Issue310_fp_acceleration/generated_fp04/steffensen_full/input_out_electron0_step_csv.csv",
+        "experiments/Issue310_fp_acceleration/generated_fp04/steffensen_full/*profile_*.csv"
+      ]
+    }
+  ],
+  "aggregate": {
+    "name": "Aggregate native fixed-point acceleration evidence",
+    "command": [
+      "python3",
+      "experiments/Issue310_fp_acceleration/control_seq04.py",
+      "--aggregate"
+    ],
+    "timeout_seconds": 300,
+    "artifacts": [
+      "experiments/Issue310_fp_acceleration/results_fp04/issue310_fp04_summary.json"
+    ]
+  }
+}
