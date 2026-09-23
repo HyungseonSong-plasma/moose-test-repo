@@ -15,21 +15,21 @@
     {
       "id": "picard2x_control",
       "name": "Qualified time-aware Picard-2x short control",
-      "command": ["python3", "experiments/Issue310_fp_acceleration/control_seq11_screened.py", "--case", "picard2x_control"],
+      "command": ["python3", "experiments/Issue310_fp_acceleration/control_seq11_screened_fix.py", "--case", "picard2x_control"],
       "timeout_seconds": 1800,
       "artifacts": ["experiments/Issue310_fp_acceleration/results_fp11_screened/picard2x_control_*", "experiments/Issue310_fp_acceleration/generated_fp11_screened/picard2x_control/*csv"]
     },
     {
       "id": "screened_thermal_picard2x",
       "name": "Thermal-slope screened Poisson Picard-2x",
-      "command": ["python3", "experiments/Issue310_fp_acceleration/control_seq11_screened.py", "--case", "screened_thermal_picard2x"],
+      "command": ["python3", "experiments/Issue310_fp_acceleration/control_seq11_screened_fix.py", "--case", "screened_thermal_picard2x"],
       "timeout_seconds": 1800,
       "artifacts": ["experiments/Issue310_fp_acceleration/results_fp11_screened/screened_thermal_picard2x_*", "experiments/Issue310_fp_acceleration/generated_fp11_screened/screened_thermal_picard2x/*csv"]
     }
   ],
   "aggregate": {
     "name": "Aggregate screened-Poisson evidence",
-    "command": ["python3", "experiments/Issue310_fp_acceleration/control_seq11_screened.py", "--aggregate"],
+    "command": ["python3", "experiments/Issue310_fp_acceleration/control_seq11_screened_fix.py", "--aggregate"],
     "timeout_seconds": 300,
     "artifacts": ["experiments/Issue310_fp_acceleration/results_fp11_screened/issue310_fp08_summary.json"]
   }
