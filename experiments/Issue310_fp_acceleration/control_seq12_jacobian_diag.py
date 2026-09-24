@@ -15,6 +15,7 @@ from __future__ import annotations
 import csv
 import json
 import math
+import os
 import sys
 from pathlib import Path
 
@@ -309,6 +310,22 @@ def run_case() -> None:
     print(json.dumps(summary["comparison"], sort_keys=True))
 
 
+
+def aggregate() -> None:
+    root = os.environ.get("CHATGPT_MATRIX_EVIDENCE_ROOT")
+    if not root:
+        raise SystemExit("CHATGPT_MATRIX_EVIDENCE_ROOT is required")
+    candidates = sorted(Path(root).rglob("jacobian_trajectory_summary.json"))
+    if len(candidates) != 1:
+        raise SystemExit(f"expected exactly one jacobian summary, found {len(candidates)}")
+    summary = json.loads(candidates[0].read_text(encoding="utf-8"))
+    RESULTS.mkdir(parents=True, exist_ok=True)
+    out = RESULTS / "issue310_gen12_jacobian_summary.json"
+    out.write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    print("ISSUE310_GEN12_AGGREGATE:", out)
+    print(json.dumps(summary.get("comparison", {}), sort_keys=True))
+
+
 def main() -> None:
     if "--p0" in sys.argv:
         p0(); return
@@ -320,6 +337,8 @@ def main() -> None:
         raise SystemExit(inner_run())
     if "--case" in sys.argv:
         run_case(); return
+    if "--aggregate" in sys.argv:
+        aggregate(); return
     raise SystemExit("choose --p0/--p1/--p2/--case")
 
 
