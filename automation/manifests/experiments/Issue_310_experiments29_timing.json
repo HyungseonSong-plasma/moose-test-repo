@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "issue": 310,
+  "sequence": 29,
+  "title": "Gen29 native MOOSE timing decomposition",
+  "prepare_manifest": "automation/manifests/experiments/Issue_310_experiments29_timing_prep.json",
+  "bundle_paths": [
+    "physics_app/physics-opt",
+    "physics_app/lib/libphysics-opt.so.0",
+    "physics_app/test/lib/libphysics_test-opt.so.0",
+    "experiments/Issue310_fp_acceleration/generated_fp29_timing"
+  ],
+  "max_parallel": 1,
+  "cases": [
+    {
+      "id": "timing_10hc",
+      "name": "timing_10hc",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq29_timing.py",
+        "--case",
+        "timing_10hc"
+      ],
+      "timeout_seconds": 1800,
+      "artifacts": [
+        "experiments/Issue310_fp_acceleration/results_fp29_timing/*",
+        "experiments/Issue310_fp_acceleration/generated_fp29_timing/timing_10hc/*csv"
+      ]
+    }
+  ],
+  "aggregate": {
+    "name": "Aggregate Gen29 native timing decomposition",
+    "command": [
+      "python3",
+      "experiments/Issue310_fp_acceleration/control_seq29_timing.py",
+      "--aggregate"
+    ],
+    "timeout_seconds": 300,
+    "artifacts": [
+      "experiments/Issue310_fp_acceleration/results_fp29_timing/*"
+    ]
+  }
+}
