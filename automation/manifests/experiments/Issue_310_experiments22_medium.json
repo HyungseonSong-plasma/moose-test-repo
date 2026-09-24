@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "issue": 310,
+  "sequence": 22,
+  "title": "Generation 22 10-heavy-cycle Picard vs Steffensen wall-time qualification",
+  "prepare_manifest": "automation/manifests/experiments/Issue_310_experiments22_medium_prep.json",
+  "bundle_paths": [
+    "physics_app/physics-opt",
+    "physics_app/lib/libphysics-opt.so.0",
+    "physics_app/test/lib/libphysics_test-opt.so.0",
+    "experiments/Issue310_fp_acceleration/generated_fp22_medium"
+  ],
+  "max_parallel": 2,
+  "cases": [
+    {
+      "id": "band5_a045_picard_10hc",
+      "name": "band5_a045_picard_10hc",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq22_medium.py",
+        "--case",
+        "band5_a045_picard_10hc"
+      ],
+      "timeout_seconds": 3600,
+      "artifacts": [
+        "experiments/Issue310_fp_acceleration/results_fp22_medium/band5_a045_picard_10hc_*",
+        "experiments/Issue310_fp_acceleration/generated_fp22_medium/band5_a045_picard_10hc/*csv"
+      ]
+    },
+    {
+      "id": "band5_a045_steffensen_10hc",
+      "name": "band5_a045_steffensen_10hc",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq22_medium.py",
+        "--case",
+        "band5_a045_steffensen_10hc"
+      ],
+      "timeout_seconds": 3600,
+      "artifacts": [
+        "experiments/Issue310_fp_acceleration/results_fp22_medium/band5_a045_steffensen_10hc_*",
+        "experiments/Issue310_fp_acceleration/generated_fp22_medium/band5_a045_steffensen_10hc/*csv"
+      ]
+    }
+  ],
+  "aggregate": {
+    "name": "Aggregate Gen22 medium evidence",
+    "command": [
+      "python3",
+      "experiments/Issue310_fp_acceleration/control_seq22_medium.py",
+      "--aggregate"
+    ],
+    "timeout_seconds": 300,
+    "artifacts": [
+      "experiments/Issue310_fp_acceleration/results_fp22_medium/issue310_gen22_medium_summary.json"
+    ]
+  }
+}
