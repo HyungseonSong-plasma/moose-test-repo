@@ -29,7 +29,7 @@ def bind():
     # Preserve the complete Gen18 runtime binding contract. seq08.analyze()
     # reads these module globals when validating heavy-step history, so only
     # rebinding generated/results/specs is insufficient for a 1-heavy-cycle
-    # Gen20 discriminator.
+    # Gen21 discriminator.
     g.seq08.GENERATED = GENERATED; g.seq08.RESULTS = RESULTS
     g.seq08.FINAL_TAU = g.FINAL_TAU; g.seq08.HEAVY_CYCLES = g.HEAVY_CYCLES
     g.seq08.CASE_NAMES = CASE_NAMES
@@ -94,7 +94,7 @@ def run_case(name):
     if not GENERATED.exists(): build()
     if not (REPO/"physics_app"/"physics-opt").exists(): raise SystemExit("physics-opt missing")
     rel=ROOT.relative_to(REPO)
-    g.base._docker("set -euo pipefail; source /environment; export MOOSE_DIR=/opt/physics_vendor/moose CRANE_DIR=/opt/physics_vendor/crane SQUIRREL_DIR=/opt/physics_vendor/squirrel ZAPDOS_DIR=/opt/physics_vendor/zapdos METHOD=opt PYTHONPATH=/workspace; "+f"python3 /workspace/{rel}/control_seq20_band5.py --inner-run {name}; chmod -R a+rwX /workspace/{rel}/results_fp21_native /workspace/{rel}/generated_fp21_native")
+    g.base._docker("set -euo pipefail; source /environment; export MOOSE_DIR=/opt/physics_vendor/moose CRANE_DIR=/opt/physics_vendor/crane SQUIRREL_DIR=/opt/physics_vendor/squirrel ZAPDOS_DIR=/opt/physics_vendor/zapdos METHOD=opt PYTHONPATH=/workspace; "+f"python3 /workspace/{rel}/control_seq21_native.py --inner-run {name}; chmod -R a+rwX /workspace/{rel}/results_fp21_native /workspace/{rel}/generated_fp21_native")
     result,code=g.seq08.analyze(name); raw=next(x for x in SPECS if x["name"]==name)
     result.update(sequence=21,banded_jacobian_width=5,outer_relaxation_factor=raw["relaxation_factor"],fixed_point_algorithm=raw["fp_algorithm"],custom_convergence=True,delta_phi_abs_tol=1e-6,gen19_reference_phi_avg_V=3.9792365725690155,**g._projection_metrics(5),**g._anchor_diagnostic(name))
     RESULTS.mkdir(parents=True,exist_ok=True); (RESULTS/f"{name}_result.json").write_text(json.dumps(result,indent=2,sort_keys=True)+"\n")
