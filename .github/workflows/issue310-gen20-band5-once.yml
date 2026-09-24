@@ -17,3 +17,4 @@ jobs:
 # Gen20 harness relaunch after direct-script PYTHONPATH fix
 # Gen20 relaunch after restoring frozen Gen18 helper dependency
 # Gen20 relaunch after restoring frozen Gen18 band5 kernel implementation
+# Gen20 relaunch after restoring complete Gen18 runtime binding
