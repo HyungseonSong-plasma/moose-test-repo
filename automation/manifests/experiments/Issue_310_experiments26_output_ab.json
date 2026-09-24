@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "issue": 310,
+  "sequence": 26,
+  "title": "Gen26 20ns output-overhead A/B",
+  "prepare_manifest": "automation/manifests/experiments/Issue_310_experiments26_output_ab_prep.json",
+  "bundle_paths": [
+    "physics_app/physics-opt",
+    "physics_app/lib/libphysics-opt.so.0",
+    "physics_app/test/lib/libphysics_test-opt.so.0",
+    "experiments/Issue310_fp_acceleration/generated_fp26_output_ab"
+  ],
+  "max_parallel": 2,
+  "cases": [
+    {
+      "id": "output_control_50hc",
+      "name": "output_control_50hc",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq26_output_ab.py",
+        "--case",
+        "output_control_50hc"
+      ],
+      "timeout_seconds": 3600,
+      "artifacts": [
+        "experiments/Issue310_fp_acceleration/results_fp26_output_ab/output_control_50hc_*",
+        "experiments/Issue310_fp_acceleration/generated_fp26_output_ab/output_control_50hc/*csv"
+      ]
+    },
+    {
+      "id": "output_suppressed_50hc",
+      "name": "output_suppressed_50hc",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq26_output_ab.py",
+        "--case",
+        "output_suppressed_50hc"
+      ],
+      "timeout_seconds": 3600,
+      "artifacts": [
+        "experiments/Issue310_fp_acceleration/results_fp26_output_ab/output_suppressed_50hc_*",
+        "experiments/Issue310_fp_acceleration/generated_fp26_output_ab/output_suppressed_50hc/*csv"
+      ]
+    }
+  ],
+  "aggregate": {
+    "name": "Aggregate Gen26 output A/B",
+    "command": [
+      "python3",
+      "experiments/Issue310_fp_acceleration/control_seq26_output_ab.py",
+      "--aggregate"
+    ],
+    "timeout_seconds": 300,
+    "artifacts": [
+      "experiments/Issue310_fp_acceleration/results_fp26_output_ab/issue310_gen26_output_ab_summary.json"
+    ]
+  }
+}
