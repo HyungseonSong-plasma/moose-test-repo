@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "issue": 310,
+  "kind": "experiments",
+  "sequence": 26,
+  "title": "Gen26 output A/B prepare",
+  "stages": [
+    {
+      "id": "P0",
+      "name": "Validate strict output-only A/B",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq26_output_ab.py",
+        "--p0"
+      ],
+      "timeout_seconds": 300
+    },
+    {
+      "id": "P1",
+      "name": "Preflight Gen26 A/B",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq26_output_ab.py",
+        "--p1"
+      ],
+      "timeout_seconds": 1500
+    },
+    {
+      "id": "P2",
+      "name": "Build/check Gen26 A/B",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq26_output_ab.py",
+        "--p2"
+      ],
+      "timeout_seconds": 3000
+    }
+  ]
+}
