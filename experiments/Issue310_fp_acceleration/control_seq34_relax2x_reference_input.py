@@ -41,14 +41,14 @@ GENERATED = ROOT / "generated_fp34_relax2x_reference"
 RESULTS = ROOT / "results_fp34_relax2x_reference"
 
 CHI_E = 100.0
-HEAVY_CYCLES = 10
+HEAVY_CYCLES = 88
 FINAL_TAU = 400.0 * HEAVY_CYCLES
 RELAX_2X = 2.0 / (1.0 + CHI_E)
 DELTA_PHI_TOL = 1.0e-6
 
 SPECS = (
     {
-        "name": "relax2x_reference_10hc",
+        "name": "relax2x_reference_20ns",
         "role": "reference",
         "bandwidth": 0,
         "relaxation_factor": RELAX_2X,
@@ -59,7 +59,7 @@ SPECS = (
         "suppress_fp_anchor_output": True,
     },
     {
-        "name": "optimized_endpoint_10hc",
+        "name": "optimized_endpoint_20ns",
         "role": "optimized",
         "bandwidth": 5,
         "relaxation_factor": 0.45,
@@ -240,6 +240,8 @@ def build(clean: bool = True) -> list[dict[str, object]]:
             "compute_scaling_once": True,
             "suppress_fp_anchor_output": True,
             "heavy_cycles": HEAVY_CYCLES,
+            "electron_steps": HEAVY_CYCLES * 4,
+            "nominal_target_time_ns": 20.0,
             "final_tau": FINAL_TAU,
         }
         (d / "case.json").write_text(json.dumps(meta, indent=2, sort_keys=True) + "\n")
@@ -257,7 +259,7 @@ def build(clean: bool = True) -> list[dict[str, object]]:
                     "note": "Historical engineering reference only; superseded wall09/Bohm lane and old stopping rule.",
                 },
                 "controlled_reference": {
-                    "name": "relax2x_reference_10hc",
+                    "name": "relax2x_reference_20ns",
                     "physics": "current canonical transient/time-aware thermal lane",
                     "fixed_point_algorithm": "picard",
                     "relaxation_factor": RELAX_2X,
@@ -267,7 +269,7 @@ def build(clean: bool = True) -> list[dict[str, object]]:
                     "fp_anchor_csv": False,
                 },
                 "optimized_endpoint": {
-                    "name": "optimized_endpoint_10hc",
+                    "name": "optimized_endpoint_20ns",
                     "fixed_point_algorithm": "steffensen",
                     "relaxation_factor": 0.45,
                     "banded_correction": "band5",
@@ -287,8 +289,8 @@ def p0() -> None:
     built = build()
     assert len(built) == 2
 
-    ref = GENERATED / "relax2x_reference_10hc"
-    opt = GENERATED / "optimized_endpoint_10hc"
+    ref = GENERATED / "relax2x_reference_20ns"
+    opt = GENERATED / "optimized_endpoint_20ns"
 
     ref_parent = (ref / "input.i").read_text()
     opt_parent = (opt / "input.i").read_text()
@@ -299,7 +301,7 @@ def p0() -> None:
 
     # Physics/clock parent input must be exactly identical.
     assert ref_parent == opt_parent
-    assert "num_steps = 10" in ref_parent
+    assert "num_steps = 88" in ref_parent
     assert "compute_scaling_once = true" in ref_parent
 
     # Common measurement/accuracy contract.
@@ -309,7 +311,7 @@ def p0() -> None:
         assert "delta_phi_abs_tol = 9.9999999999999995e-07" in fast
         assert "compute_scaling_once = true" in fast
         assert "  [fp_anchor_csv]\n    enable = false\n" in fast
-        assert "num_steps = 40" in fast
+        assert "num_steps = 352" in fast
 
     # Controlled reference = ordinary Poisson + Picard relax_2x.
     assert f"relaxation_factor = {RELAX_2X:.17g}" in ref_fast
