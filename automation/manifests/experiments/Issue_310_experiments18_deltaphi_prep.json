@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "issue": 310,
+  "kind": "experiments",
+  "sequence": 18,
+  "title": "Generation 18 delta-phi convergence and alpha sweep prepare",
+  "stages": [
+    {
+      "id": "P0",
+      "name": "Validate Gen18 coupling-aware construction",
+      "command": ["python3", "experiments/Issue310_fp_acceleration/control_seq18_deltaphi.py", "--p0"],
+      "timeout_seconds": 300
+    },
+    {
+      "id": "P1",
+      "name": "Preflight Gen18 cases",
+      "command": ["python3", "experiments/Issue310_fp_acceleration/control_seq18_deltaphi.py", "--p1"],
+      "timeout_seconds": 1500
+    },
+    {
+      "id": "P2",
+      "name": "Build custom convergence and check Gen18 inputs",
+      "command": ["python3", "experiments/Issue310_fp_acceleration/control_seq18_deltaphi.py", "--p2"],
+      "timeout_seconds": 3000
+    }
+  ]
+}
