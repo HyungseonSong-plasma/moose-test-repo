@@ -88,13 +88,26 @@ def p0():
 def p1():
     import subprocess
     # Read-only capability probe: consume the executable qualified by the prior
-    # prepare stage. Do not rebuild/regenerate/clean producer-owned outputs.
+    # prepare stage. The binary is linked against the pinned build-container
+    # runtime, so interrogate it in that same runtime instead of on the host
+    # GitHub runner, where missing MOOSE/libMesh libraries can masquerade as a
+    # missing timing capability.
     RESULTS.mkdir(parents=True,exist_ok=True)
     exe=REPO/"physics_app"/"physics-opt"
     if not exe.exists(): raise SystemExit("physics-opt missing before profiler qualification")
-    cp=subprocess.run([str(exe),"--help"],stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,check=False)
+    cmd=[
+        "docker","run","--rm","--entrypoint","/bin/bash","--user","0:0",
+        "--workdir","/workspace","-v",f"{REPO}:/workspace:ro",
+        g.base.BUILD_BASE_REF,
+        "-lc","set -euo pipefail; source /environment; /workspace/physics_app/physics-opt --help",
+    ]
+    cp=subprocess.run(cmd,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,check=False)
     (RESULTS/"physics_opt_help.txt").write_text(cp.stdout)
-    low=cp.stdout.lower()
+    if cp.returncode != 0:
+        raise SystemExit(
+            f"INFRASTRUCTURE_HARNESS_FAILURE: containerized physics-opt --help failed "
+            f"with return code {cp.returncode}"
+        )
     candidates=[line.strip() for line in cp.stdout.splitlines() if ("perf" in line.lower() or "timing" in line.lower())]
     (RESULTS/"native_perf_candidates.json").write_text(json.dumps(candidates,indent=2)+"\n")
     if not candidates: raise SystemExit("INFRASTRUCTURE_HARNESS_FAILURE: executable advertises no perf/timing option in --help")
