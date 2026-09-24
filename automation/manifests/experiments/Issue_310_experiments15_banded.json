@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "issue": 310,
+  "sequence": 15,
+  "title": "Generation 15 measured banded electron-Jacobian discriminator",
+  "prepare_manifest": "automation/manifests/experiments/Issue_310_experiments15_banded_prep.json",
+  "bundle_paths": [
+    "physics_app/physics-opt",
+    "physics_app/lib/libphysics-opt.so.0",
+    "physics_app/test/lib/libphysics_test-opt.so.0",
+    "experiments/Issue310_fp_acceleration/generated_fp15_banded"
+  ],
+  "max_parallel": 4,
+  "cases": [
+    {
+      "id": "picard2x_control",
+      "name": "Qualified time-aware Picard-2x short control",
+      "command": ["python3", "experiments/Issue310_fp_acceleration/control_seq15_banded.py", "--case", "picard2x_control"],
+      "timeout_seconds": 1800,
+      "artifacts": [
+        "experiments/Issue310_fp_acceleration/results_fp15_banded/picard2x_control_*",
+        "experiments/Issue310_fp_acceleration/generated_fp15_banded/picard2x_control/*csv"
+      ]
+    },
+    {
+      "id": "band1_jacobian",
+      "name": "Measured row-sum-preserving plus/minus-1 band Jacobian",
+      "command": ["python3", "experiments/Issue310_fp_acceleration/control_seq15_banded.py", "--case", "band1_jacobian"],
+      "timeout_seconds": 1800,
+      "artifacts": [
+        "experiments/Issue310_fp_acceleration/results_fp15_banded/band1_jacobian_*",
+        "experiments/Issue310_fp_acceleration/generated_fp15_banded/band1_jacobian/*csv"
+      ]
+    },
+    {
+      "id": "band3_jacobian",
+      "name": "Measured row-sum-preserving plus/minus-3 band Jacobian",
+      "command": ["python3", "experiments/Issue310_fp_acceleration/control_seq15_banded.py", "--case", "band3_jacobian"],
+      "timeout_seconds": 1800,
+      "artifacts": [
+        "experiments/Issue310_fp_acceleration/results_fp15_banded/band3_jacobian_*",
+        "experiments/Issue310_fp_acceleration/generated_fp15_banded/band3_jacobian/*csv"
+      ]
+    },
+    {
+      "id": "band5_jacobian",
+      "name": "Measured row-sum-preserving plus/minus-5 band Jacobian",
+      "command": ["python3", "experiments/Issue310_fp_acceleration/control_seq15_banded.py", "--case", "band5_jacobian"],
+      "timeout_seconds": 1800,
+      "artifacts": [
+        "experiments/Issue310_fp_acceleration/results_fp15_banded/band5_jacobian_*",
+        "experiments/Issue310_fp_acceleration/generated_fp15_banded/band5_jacobian/*csv"
+      ]
+    }
+  ],
+  "aggregate": {
+    "name": "Aggregate Gen15 banded Jacobian evidence",
+    "command": ["python3", "experiments/Issue310_fp_acceleration/control_seq15_banded.py", "--aggregate"],
+    "timeout_seconds": 300,
+    "artifacts": [
+      "experiments/Issue310_fp_acceleration/results_fp15_banded/issue310_gen15_banded_summary.json"
+    ]
+  }
+}
