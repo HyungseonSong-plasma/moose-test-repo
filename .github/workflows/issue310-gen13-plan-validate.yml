@@ -1,0 +1,18 @@
+name: Issue310 Gen13 Plan Validate
+on:
+  push:
+    branches: [issue-310-gen13-plan]
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: HyungseonSong-plasma/chatgpt-operation
+          ref: 6474eb7b77f890b7cf9d7134ccebea31662bcdbe
+          path: .chatgpt-operation
+      - name: Validate scientific discriminator plan
+        run: PYTHONPATH=.chatgpt-operation/src python3 -m chatgpt_operation.cli controller validate-discriminator-plan --input experiments/Issue310_fp_acceleration/discriminator_plan_gen13.json
