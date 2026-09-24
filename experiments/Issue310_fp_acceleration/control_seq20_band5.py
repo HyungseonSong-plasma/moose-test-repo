@@ -27,9 +27,15 @@ CASE_NAMES = tuple(x["name"] for x in SPECS)
 def bind():
     g.GENERATED = GENERATED; g.RESULTS = RESULTS
     g.SPECS = SPECS; g.CASE_NAMES = CASE_NAMES
+    # Preserve the complete Gen18 runtime binding contract. seq08.analyze()
+    # reads these module globals when validating heavy-step history, so only
+    # rebinding generated/results/specs is insufficient for a 1-heavy-cycle
+    # Gen20 discriminator.
     g.seq08.GENERATED = GENERATED; g.seq08.RESULTS = RESULTS
+    g.seq08.FINAL_TAU = g.FINAL_TAU; g.seq08.HEAVY_CYCLES = g.HEAVY_CYCLES
     g.seq08.CASE_NAMES = CASE_NAMES
     g.seq08.SPECS = tuple(g._spec(x) for x in SPECS)
+    g.wall08.FINAL_TAU = g.FINAL_TAU
 
 def build(clean=True):
     bind()
