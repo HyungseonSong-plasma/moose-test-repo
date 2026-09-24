@@ -1,0 +1,15 @@
+{
+  "schema_version":1,
+  "issue":310,
+  "sequence":20,
+  "title":"Generation 20 band5 alpha 0.45-0.55 corrected-reference requalification",
+  "prepare_manifest":"automation/manifests/experiments/Issue_310_experiments20_band5_prep.json",
+  "bundle_paths":["physics_app/physics-opt","physics_app/lib/libphysics-opt.so.0","physics_app/test/lib/libphysics_test-opt.so.0","experiments/Issue310_fp_acceleration/generated_fp20_band5"],
+  "max_parallel":3,
+  "cases":[
+    {"id":"band5_a045_dphi1e6","name":"band5_a045_dphi1e6","command":["python3","experiments/Issue310_fp_acceleration/control_seq20_band5.py","--case","band5_a045_dphi1e6"],"timeout_seconds":2400,"artifacts":["experiments/Issue310_fp_acceleration/results_fp20_band5/band5_a045_dphi1e6_*","experiments/Issue310_fp_acceleration/generated_fp20_band5/band5_a045_dphi1e6/*csv"]},
+    {"id":"band5_a050_dphi1e6","name":"band5_a050_dphi1e6","command":["python3","experiments/Issue310_fp_acceleration/control_seq20_band5.py","--case","band5_a050_dphi1e6"],"timeout_seconds":2400,"artifacts":["experiments/Issue310_fp_acceleration/results_fp20_band5/band5_a050_dphi1e6_*","experiments/Issue310_fp_acceleration/generated_fp20_band5/band5_a050_dphi1e6/*csv"]},
+    {"id":"band5_a055_dphi1e6","name":"band5_a055_dphi1e6","command":["python3","experiments/Issue310_fp_acceleration/control_seq20_band5.py","--case","band5_a055_dphi1e6"],"timeout_seconds":2400,"artifacts":["experiments/Issue310_fp_acceleration/results_fp20_band5/band5_a055_dphi1e6_*","experiments/Issue310_fp_acceleration/generated_fp20_band5/band5_a055_dphi1e6/*csv"]}
+  ],
+  "aggregate":{"name":"Aggregate Gen20 band5 evidence","command":["python3","experiments/Issue310_fp_acceleration/control_seq20_band5.py","--aggregate"],"timeout_seconds":300,"artifacts":["experiments/Issue310_fp_acceleration/results_fp20_band5/issue310_gen20_band5_summary.json"]}
+}
