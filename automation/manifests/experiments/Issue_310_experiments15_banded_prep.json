@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "issue": 310,
+  "kind": "experiments",
+  "sequence": 15,
+  "title": "Generation 15 measured banded Jacobian prepare",
+  "stages": [
+    {
+      "id": "P0",
+      "name": "Validate band projections and anchor instrumentation",
+      "command": ["python3", "experiments/Issue310_fp_acceleration/control_seq15_banded.py", "--p0"],
+      "timeout_seconds": 120
+    },
+    {
+      "id": "P1",
+      "name": "Preflight Gen15 banded cases",
+      "command": ["python3", "experiments/Issue310_fp_acceleration/control_seq15_banded.py", "--p1"],
+      "timeout_seconds": 600
+    },
+    {
+      "id": "P2",
+      "name": "Build nonlocal banded kernel and check all inputs",
+      "command": ["python3", "experiments/Issue310_fp_acceleration/control_seq15_banded.py", "--p2"],
+      "timeout_seconds": 1200
+    }
+  ]
+}
