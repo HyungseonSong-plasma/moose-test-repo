@@ -517,7 +517,7 @@ def run_case(name: str) -> None:
         "export MOOSE_DIR=/opt/physics_vendor/moose CRANE_DIR=/opt/physics_vendor/crane "
         "SQUIRREL_DIR=/opt/physics_vendor/squirrel ZAPDOS_DIR=/opt/physics_vendor/zapdos "
         "METHOD=opt PYTHONPATH=/workspace; "
-        f"python3 /workspace/{rel}/control_seq15_banded.py --inner-run {name}; "
+        f"python3 /workspace/{rel}/control_seq16_relax.py --inner-run {name}; "
         f"chmod -R a+rwX /workspace/{rel}/results_fp16_relax /workspace/{rel}/generated_fp16_relax"
     )
     result, code = seq08.analyze(name)
