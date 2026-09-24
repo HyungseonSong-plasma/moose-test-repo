@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "issue": 310,
+  "sequence": 32,
+  "title": "Gen32 automatic scaling policy A/B",
+  "prepare_manifest": "automation/manifests/experiments/Issue_310_experiments32_autoscaling_ab_prep.json",
+  "bundle_paths": [
+    "physics_app/physics-opt",
+    "physics_app/lib/libphysics-opt.so.0",
+    "physics_app/test/lib/libphysics_test-opt.so.0",
+    "experiments/Issue310_fp_acceleration/generated_fp32_autoscaling_ab"
+  ],
+  "max_parallel": 2,
+  "cases": [
+    {
+      "id": "scaling_refresh_10hc",
+      "name": "scaling_refresh_10hc",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq32_autoscaling_ab.py",
+        "--case",
+        "scaling_refresh_10hc"
+      ],
+      "timeout_seconds": 1800,
+      "artifacts": [
+        "experiments/Issue310_fp_acceleration/results_fp32_autoscaling_ab/*",
+        "experiments/Issue310_fp_acceleration/generated_fp32_autoscaling_ab/scaling_refresh_10hc/*csv"
+      ]
+    },
+    {
+      "id": "scaling_once_10hc",
+      "name": "scaling_once_10hc",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq32_autoscaling_ab.py",
+        "--case",
+        "scaling_once_10hc"
+      ],
+      "timeout_seconds": 1800,
+      "artifacts": [
+        "experiments/Issue310_fp_acceleration/results_fp32_autoscaling_ab/*",
+        "experiments/Issue310_fp_acceleration/generated_fp32_autoscaling_ab/scaling_once_10hc/*csv"
+      ]
+    }
+  ],
+  "aggregate": {
+    "name": "Aggregate Gen32 automatic scaling A/B",
+    "command": [
+      "python3",
+      "experiments/Issue310_fp_acceleration/control_seq32_autoscaling_ab.py",
+      "--aggregate"
+    ],
+    "timeout_seconds": 300,
+    "artifacts": [
+      "experiments/Issue310_fp_acceleration/results_fp32_autoscaling_ab/*"
+    ]
+  }
+}
