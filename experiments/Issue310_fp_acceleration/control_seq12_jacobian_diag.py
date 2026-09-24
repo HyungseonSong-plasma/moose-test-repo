@@ -25,24 +25,48 @@ from experiments.Issue310_fp_acceleration import control_seq11_screened as gen11
 GENERATED = ROOT / "generated_fp12_jacobian"
 RESULTS = ROOT / "results_fp12_jacobian"
 CASE = "picard2x_control"
+NCELL = 20
+XMIN = 0.0
+XMAX = 0.01
+POINT_FIELDS = (
+    ("log_e", "log_e"),
+    ("ne", "electron_density_out"),
+    ("phi", "potential_from_poisson"),
+    ("n_epsilon", "n_epsilon"),
+    ("mean_e", "mean_energy_out"),
+    ("mu", "mobility_out"),
+    ("D", "diffusion_out"),
+)
+
+
+def _cell_centers() -> list[float]:
+    dx = (XMAX - XMIN) / NCELL
+    return [XMIN + (i + 0.5) * dx for i in range(NCELL)]
 
 
 def _instrument_fast(text: str) -> str:
-    profile = """  [energy_profile]
-    type = ElementValueSampler
-    variable = 'electron_density_out potential_from_poisson n_epsilon mean_energy_out mobility_out diffusion_out elastic_loss_candidate_out'
-    sort_by = id
-    execute_on = 'FINAL'
+    fp_anchor = """  [fixed_point_iterations]
+    type = NumFixedPointIterations
+    execute_on = 'TIMESTEP_END'
   []
 """
-    if text.count(profile) != 1:
-        raise RuntimeError("fast energy_profile anchor changed")
-    instrumented_profile = profile.replace(
-        "variable = 'electron_density_out",
-        "variable = 'log_e electron_density_out",
-        1,
-    ).replace("execute_on = 'FINAL'", "execute_on = 'MULTIAPP_FIXED_POINT_CONVERGENCE'", 1)
-    text = text.replace(profile, instrumented_profile, 1)
+    if text.count(fp_anchor) != 1:
+        raise RuntimeError("fixed-point postprocessor anchor changed")
+
+    point_blocks: list[str] = []
+    for i, x in enumerate(_cell_centers()):
+        for key, variable in POINT_FIELDS:
+            point_blocks.append(
+                f"""  [fp_{key}_{i:02d}]
+    type = PointValue
+    variable = {variable}
+    point = '{x:.17g} 0 0'
+    execute_on = 'TIMESTEP_END'
+  []
+"""
+            )
+    text = text.replace(fp_anchor, "".join(point_blocks) + fp_anchor, 1)
+
     outputs = """[Outputs]
   [step_csv]
     type = CSV
@@ -52,7 +76,7 @@ def _instrument_fast(text: str) -> str:
 """
     extra = outputs + """  [fp_iter_csv]
     type = CSV
-    execute_on = 'MULTIAPP_FIXED_POINT_CONVERGENCE'
+    execute_on = 'MULTIAPP_FIXED_POINT_ITERATION_END'
     new_row_detection_columns = all
     new_row_tolerance = 1.0e-30
     precision = 17
@@ -88,10 +112,14 @@ def p0() -> None:
     build()
     d = GENERATED / CASE
     fast = (d / "fast_sub.i").read_text(encoding="utf-8")
-    assert fast.count("execute_on = 'MULTIAPP_FIXED_POINT_CONVERGENCE'") >= 2
-    assert "variable = 'log_e electron_density_out potential_from_poisson n_epsilon mean_energy_out mobility_out diffusion_out elastic_loss_candidate_out'" in fast
+    assert "execute_on = 'MULTIAPP_FIXED_POINT_ITERATION_END'" in fast
+    assert "MULTIAPP_FIXED_POINT_CONVERGENCE" not in fast
     assert "new_row_detection_columns = all" in fast
-    assert fast.count("[energy_profile]") == 1
+    assert fast.count("type = PointValue") == NCELL * len(POINT_FIELDS)
+    for key, variable in POINT_FIELDS:
+        assert f"[fp_{key}_00]" in fast
+        assert f"[fp_{key}_{NCELL - 1:02d}]" in fast
+        assert f"variable = {variable}" in fast
     assert "gummel_screen_beta" not in (d / "poisson_sub.i").read_text(encoding="utf-8")
     assert "no_restore = true" in fast
     print("ISSUE310_GEN12_JACOBIAN_P0: PASS")
@@ -139,15 +167,21 @@ def _read_csv(path: Path) -> list[dict[str, str]]:
         return list(csv.DictReader(f))
 
 
-def _profile(path: Path) -> dict[str, list[float]]:
-    rows = _read_csv(path)
-    rows.sort(key=lambda r: int(float(r["id"])))
-    def col(name: str) -> list[float]:
-        return [float(r[name]) for r in rows]
-    return {"id": col("id"), "x": col("x"), "log_e": col("log_e"),
-            "ne": col("electron_density_out"), "phi": col("potential_from_poisson"),
-            "n_epsilon": col("n_epsilon"), "mean_e": col("mean_energy_out"),
-            "mu": col("mobility_out"), "D": col("diffusion_out")}
+def _sample_from_row(row: dict[str, str]) -> dict[str, list[float]]:
+    def col(key: str) -> list[float]:
+        return [float(row[f"fp_{key}_{i:02d}"]) for i in range(NCELL)]
+
+    return {
+        "id": [float(i) for i in range(NCELL)],
+        "x": _cell_centers(),
+        "log_e": col("log_e"),
+        "ne": col("ne"),
+        "phi": col("phi"),
+        "n_epsilon": col("n_epsilon"),
+        "mean_e": col("mean_e"),
+        "mu": col("mu"),
+        "D": col("D"),
+    }
 
 
 def _stats(values: list[float]) -> dict[str, float | None]:
@@ -323,32 +357,55 @@ def _analyse_step(samples: list[dict[str, list[float]]], time_s: float) -> dict[
 def analyse() -> dict[str, object]:
     d = GENERATED / CASE
     scalar = d / "input_out_electron0_fp_iter_csv.csv"
-    profiles = sorted(d.glob("input_out_electron0_fp_iter_csv_energy_profile_*.csv"))
     if not scalar.is_file():
         raise RuntimeError(f"missing fixed-point scalar CSV: {scalar}")
     rows = _read_csv(scalar)
-    if len(rows) != len(profiles) or not rows:
-        raise RuntimeError(f"scalar/profile count mismatch or empty: {len(rows)} != {len(profiles)}")
-    records = [(float(row["time"]), _profile(path)) for row, path in zip(rows, profiles, strict=True)]
+    if not rows:
+        raise RuntimeError("fixed-point scalar CSV is empty")
+
+    expected = {f"fp_{key}_{i:02d}" for key, _ in POINT_FIELDS for i in range(NCELL)}
+    missing = sorted(expected.difference(rows[0]))
+    if missing:
+        raise RuntimeError(f"missing fixed-point point-sample columns: {missing[:8]}")
+
+    records = [(float(row["time"]), _sample_from_row(row)) for row in rows]
     times: list[float] = []
     for t, _ in records:
         if t > 0 and not any(math.isclose(t, q, rel_tol=0.0, abs_tol=1e-30) for q in times):
             times.append(t)
+
     steps = []
     for t in times[:2]:
         samples = [p for tr, p in records if math.isclose(tr, t, rel_tol=0.0, abs_tol=1e-30)]
         steps.append(_analyse_step(samples, t))
+
     comp = {}
     if len(steps) >= 2:
-        comp = {"step1_gamma_A1_median": steps[0]["gamma_A1_stats"]["median"],
-                "step2_gamma_A1_median": steps[1]["gamma_A1_stats"]["median"],
-                "step1_gamma_A2_median": steps[0]["gamma_A2_stats"]["median"],
-                "step2_gamma_A2_median": steps[1]["gamma_A2_stats"]["median"],
-                "step2_full_matrix_identified": steps[1]["full_matrix_identified"]}
-    return {"issue": 310, "generation": 12, "diagnostic": "trajectory discrete secant electron response to potential",
-            "case": CASE, "physics_changed": False, "fixed_point_output_rows": len(rows), "profile_files": len(profiles),
-            "physical_times_observed": times, "steps": steps, "comparison": comp,
-            "guard": "Observed Gummel-trajectory secant response only. A full-rank fit may be treated as a 20x20 discrete secant Jacobian; otherwise use directional/local estimates and run basis perturbations before claiming an exact Jacobian."}
+        comp = {
+            "step1_gamma_A1_median": steps[0]["gamma_A1_stats"]["median"],
+            "step2_gamma_A1_median": steps[1]["gamma_A1_stats"]["median"],
+            "step1_gamma_A2_median": steps[0]["gamma_A2_stats"]["median"],
+            "step2_gamma_A2_median": steps[1]["gamma_A2_stats"]["median"],
+            "step2_full_matrix_identified": steps[1]["full_matrix_identified"],
+        }
+
+    return {
+        "issue": 310,
+        "generation": 12,
+        "diagnostic": "trajectory discrete secant electron response to potential",
+        "case": CASE,
+        "physics_changed": False,
+        "fixed_point_output_rows": len(rows),
+        "cell_point_samples_per_row": NCELL * len(POINT_FIELDS),
+        "physical_times_observed": times,
+        "steps": steps,
+        "comparison": comp,
+        "guard": (
+            "Observed Gummel-trajectory secant response only. A full-rank fit may be treated "
+            "as a 20x20 discrete secant Jacobian; otherwise use directional/local estimates "
+            "and run basis perturbations before claiming an exact Jacobian."
+        ),
+    }
 
 
 def run_case() -> None:
