@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "issue": 310,
+  "sequence": 13,
+  "title": "Generation 13 direct basis-Jacobian diagnostic",
+  "prepare_manifest": "automation/manifests/experiments/Issue_310_experiments13_basis_prep.json",
+  "bundle_paths": [
+    "physics_app/physics-opt",
+    "physics_app/lib/libphysics-opt.so.0",
+    "physics_app/test/lib/libphysics_test-opt.so.0",
+    "experiments/Issue310_fp_acceleration/generated_fp13_basis"
+  ],
+  "max_parallel": 1,
+  "cases": [
+    {
+      "id": "basis_fd_matrix",
+      "name": "Reference plus 20 symmetric potential-basis perturbations",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq13_basis.py",
+        "--case"
+      ],
+      "timeout_seconds": 1800,
+      "artifacts": [
+        "experiments/Issue310_fp_acceleration/results_fp13_basis/*",
+        "experiments/Issue310_fp_acceleration/generated_fp13_basis/*/*energy_profile*.csv"
+      ]
+    }
+  ],
+  "aggregate": {
+    "name": "Aggregate Gen13 direct basis-Jacobian evidence",
+    "command": [
+      "python3",
+      "experiments/Issue310_fp_acceleration/control_seq13_basis.py",
+      "--aggregate"
+    ],
+    "timeout_seconds": 300,
+    "artifacts": [
+      "experiments/Issue310_fp_acceleration/results_fp13_basis/issue310_gen13_basis_summary.json"
+    ]
+  }
+}
