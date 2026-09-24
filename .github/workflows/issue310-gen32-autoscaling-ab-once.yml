@@ -1,0 +1,20 @@
+name: One-shot Issue310 Gen32 Autoscaling AB
+on:
+  push:
+    branches: [issue-310-gen32-autoscaling-ab]
+    paths:
+      - .github/workflows/issue310-gen32-autoscaling-ab-once.yml
+      - experiments/Issue310_fp_acceleration/control_seq32_autoscaling_ab.py
+      - automation/manifests/experiments/Issue_310_experiments32_autoscaling_ab.json
+      - automation/manifests/experiments/Issue_310_experiments32_autoscaling_ab_prep.json
+permissions:
+  contents: read
+jobs:
+  run:
+    uses: HyungseonSong-plasma/chatgpt-operation/.github/workflows/governed-matrix.yml@6474eb7b77f890b7cf9d7134ccebea31662bcdbe
+    with:
+      issue: "310"
+      sequence: "32"
+      manifest: automation/manifests/experiments/Issue_310_experiments32_autoscaling_ab.json
+      base_sha: ${{ github.sha }}
+      operation_sha: 6474eb7b77f890b7cf9d7134ccebea31662bcdbe
