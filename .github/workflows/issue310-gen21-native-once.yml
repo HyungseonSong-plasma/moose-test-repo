@@ -1,0 +1,16 @@
+name: One-shot Issue310 Gen21 Native FP Acceleration
+on:
+  push:
+    branches: [issue-310-gen21-native-fp-acceleration]
+    paths: [.github/workflows/issue310-gen21-native-once.yml]
+permissions:
+  contents: read
+jobs:
+  run:
+    uses: HyungseonSong-plasma/chatgpt-operation/.github/workflows/governed-matrix.yml@6474eb7b77f890b7cf9d7134ccebea31662bcdbe
+    with:
+      issue: "310"
+      sequence: "21"
+      manifest: automation/manifests/experiments/Issue_310_experiments21_native.json
+      base_sha: ${{ github.sha }}
+      operation_sha: 6474eb7b77f890b7cf9d7134ccebea31662bcdbe
