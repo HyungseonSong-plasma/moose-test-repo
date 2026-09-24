@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "issue": 310,
+  "sequence": 31,
+  "title": "Gen31 50HC output-off horizon discriminator",
+  "prepare_manifest": "automation/manifests/experiments/Issue_310_experiments31_50hc_output_off_prep.json",
+  "bundle_paths": [
+    "physics_app/physics-opt",
+    "physics_app/lib/libphysics-opt.so.0",
+    "physics_app/test/lib/libphysics_test-opt.so.0",
+    "experiments/Issue310_fp_acceleration/generated_fp31_50hc_output_off"
+  ],
+  "max_parallel": 1,
+  "cases": [
+    {
+      "id": "output_off_50hc",
+      "name": "output_off_50hc",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq31_50hc_output_off.py",
+        "--case",
+        "output_off_50hc"
+      ],
+      "timeout_seconds": 1800,
+      "artifacts": [
+        "experiments/Issue310_fp_acceleration/results_fp31_50hc_output_off/*",
+        "experiments/Issue310_fp_acceleration/generated_fp31_50hc_output_off/output_off_50hc/*csv"
+      ]
+    }
+  ],
+  "aggregate": {
+    "name": "Aggregate Gen31 50HC output-off horizon evidence",
+    "command": [
+      "python3",
+      "experiments/Issue310_fp_acceleration/control_seq31_50hc_output_off.py",
+      "--aggregate"
+    ],
+    "timeout_seconds": 300,
+    "artifacts": [
+      "experiments/Issue310_fp_acceleration/results_fp31_50hc_output_off/*"
+    ]
+  }
+}
