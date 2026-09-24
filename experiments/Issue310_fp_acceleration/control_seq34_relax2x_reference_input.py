@@ -57,6 +57,7 @@ SPECS = (
         "fp_algorithm": "picard",
         "compute_scaling_once": True,
         "suppress_fp_anchor_output": True,
+        "vector_profiles_final_only": True,
     },
     {
         "name": "optimized_endpoint_20ns",
@@ -68,6 +69,7 @@ SPECS = (
         "fp_algorithm": "steffensen",
         "compute_scaling_once": True,
         "suppress_fp_anchor_output": True,
+        "vector_profiles_final_only": True,
     },
 )
 CASE_NAMES = tuple(str(x["name"]) for x in SPECS)
@@ -105,6 +107,47 @@ def _disable_fp_anchor_csv(fast: str) -> str:
     if fast.count(anchor) != 1:
         raise RuntimeError("fp_anchor_csv output anchor changed")
     return fast.replace(anchor, anchor + "    enable = false\n", 1)
+
+
+def _final_only_vector_profiles(text: str) -> str:
+    """Keep scalar timestep CSV, but emit VectorPostprocessor profiles only at FINAL."""
+    step = """  [step_csv]
+    type = CSV
+    execute_on = 'INITIAL TIMESTEP_END'
+    new_row_tolerance = 1.0e-30
+  []
+"""
+    if text.count(step) != 1:
+        raise RuntimeError("step_csv output anchor changed")
+    text = text.replace(
+        step,
+        """  [step_csv]
+    type = CSV
+    execute_on = 'INITIAL TIMESTEP_END'
+    execute_vector_postprocessors_on = 'NONE'
+    new_row_tolerance = 1.0e-30
+  []
+""",
+        1,
+    )
+
+    final = """  [final_csv]
+    type = CSV
+    execute_on = 'FINAL'
+  []
+"""
+    if text.count(final) != 1:
+        raise RuntimeError("final_csv output anchor changed")
+    return text.replace(
+        final,
+        """  [final_csv]
+    type = CSV
+    execute_on = 'FINAL'
+    execute_vector_postprocessors_on = 'FINAL'
+  []
+""",
+        1,
+    )
 
 
 def _apply_anchor_only(fast: str, poisson: str) -> tuple[str, str]:
@@ -189,6 +232,8 @@ def _reference_inputs(raw: dict[str, object]) -> tuple[str, str, str, dict[str, 
     parent = _enable_scaling_once(parent)
     fast = _enable_scaling_once(fast)
     fast = _disable_fp_anchor_csv(fast)
+    parent = _final_only_vector_profiles(parent)
+    fast = _final_only_vector_profiles(fast)
     return parent, fast, poisson, p
 
 
@@ -199,6 +244,8 @@ def _optimized_inputs(raw: dict[str, object]) -> tuple[str, str, str, dict[str, 
     parent = _enable_scaling_once(parent)
     fast = _enable_scaling_once(fast)
     fast = _disable_fp_anchor_csv(fast)
+    parent = _final_only_vector_profiles(parent)
+    fast = _final_only_vector_profiles(fast)
     return parent, fast, poisson, p
 
 
@@ -239,6 +286,7 @@ def build(clean: bool = True) -> list[dict[str, object]]:
             "delta_phi_abs_tol": DELTA_PHI_TOL,
             "compute_scaling_once": True,
             "suppress_fp_anchor_output": True,
+        "vector_profiles_final_only": True,
             "heavy_cycles": HEAVY_CYCLES,
             "electron_steps": HEAVY_CYCLES * 4,
             "nominal_target_time_ns": 20.0,
@@ -303,6 +351,9 @@ def p0() -> None:
     assert ref_parent == opt_parent
     assert "num_steps = 88" in ref_parent
     assert "compute_scaling_once = true" in ref_parent
+    for parent in (ref_parent, opt_parent):
+        assert "execute_vector_postprocessors_on = 'NONE'" in parent
+        assert "execute_vector_postprocessors_on = 'FINAL'" in parent
 
     # Common measurement/accuracy contract.
     for fast in (ref_fast, opt_fast):
@@ -311,6 +362,8 @@ def p0() -> None:
         assert "delta_phi_abs_tol = 9.9999999999999995e-07" in fast
         assert "compute_scaling_once = true" in fast
         assert "  [fp_anchor_csv]\n    enable = false\n" in fast
+        assert "execute_vector_postprocessors_on = 'NONE'" in fast
+        assert "execute_vector_postprocessors_on = 'FINAL'" in fast
         assert "num_steps = 352" in fast
 
     # Controlled reference = ordinary Poisson + Picard relax_2x.
@@ -336,6 +389,8 @@ def p0() -> None:
         "common_delta_phi_abs_tol_V": DELTA_PHI_TOL,
         "common_compute_scaling_once": True,
         "common_fp_anchor_csv_enabled": False,
+        "step_csv_vector_postprocessors": "NONE",
+        "final_csv_vector_postprocessors": "FINAL",
         "reference": "Picard + ordinary Poisson",
         "optimized": "Steffensen + band5",
         "launch_status": "NOT_LAUNCHED",
