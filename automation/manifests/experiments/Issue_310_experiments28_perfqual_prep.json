@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "issue": 310,
+  "kind": "experiments",
+  "sequence": 28,
+  "title": "Gen28 profiler qualification",
+  "stages": [
+    {
+      "id": "P0",
+      "name": "Validate frozen short profiler qualification",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq28_perfqual.py",
+        "--p0"
+      ],
+      "timeout_seconds": 300
+    },
+    {
+      "id": "P1",
+      "name": "Interrogate executable native timing support",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq28_perfqual.py",
+        "--p1"
+      ],
+      "timeout_seconds": 300
+    },
+    {
+      "id": "P2",
+      "name": "Build/check Gen28 input",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq28_perfqual.py",
+        "--p2"
+      ],
+      "timeout_seconds": 3000
+    }
+  ]
+}
