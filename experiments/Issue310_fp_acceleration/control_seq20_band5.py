@@ -4,12 +4,15 @@ Reuses the Gen18 measured band5 iteration operator without changing physics.
 Gen19 established delta-phi 1e-6 as the corrected coupled-reference criterion.
 """
 from __future__ import annotations
-import argparse, json, os, shutil
+import argparse, json, os, shutil, sys
 from pathlib import Path
-from experiments.Issue310_fp_acceleration import control_seq18_deltaphi as g
 
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parents[1]
+if str(REPO) not in sys.path:
+    sys.path.insert(0, str(REPO))
+
+from experiments.Issue310_fp_acceleration import control_seq18_deltaphi as g
 GENERATED = ROOT / "generated_fp20_band5"
 RESULTS = ROOT / "results_fp20_band5"
 SPECS = tuple({
