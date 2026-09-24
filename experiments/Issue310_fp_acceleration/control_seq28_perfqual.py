@@ -87,7 +87,9 @@ def p0():
 
 def p1():
     import subprocess
-    build(); RESULTS.mkdir(parents=True,exist_ok=True)
+    # Read-only capability probe: consume the executable qualified by the prior
+    # prepare stage. Do not rebuild/regenerate/clean producer-owned outputs.
+    RESULTS.mkdir(parents=True,exist_ok=True)
     exe=REPO/"physics_app"/"physics-opt"
     if not exe.exists(): raise SystemExit("physics-opt missing before profiler qualification")
     cp=subprocess.run([str(exe),"--help"],stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,check=False)
