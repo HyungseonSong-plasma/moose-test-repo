@@ -14,3 +14,4 @@ jobs:
       manifest: automation/manifests/experiments/Issue_310_experiments20_band5.json
       base_sha: ${{ github.sha }}
       operation_sha: 6474eb7b77f890b7cf9d7134ccebea31662bcdbe
+# Gen20 harness relaunch after direct-script PYTHONPATH fix
