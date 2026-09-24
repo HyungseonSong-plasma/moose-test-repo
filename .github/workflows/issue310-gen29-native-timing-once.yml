@@ -1,0 +1,20 @@
+name: One-shot Issue310 Gen29 Native Timing
+on:
+  push:
+    branches: [issue-310-gen29-native-timing]
+    paths:
+      - .github/workflows/issue310-gen29-native-timing-once.yml
+      - experiments/Issue310_fp_acceleration/control_seq29_timing.py
+      - automation/manifests/experiments/Issue_310_experiments29_timing.json
+      - automation/manifests/experiments/Issue_310_experiments29_timing_prep.json
+permissions:
+  contents: read
+jobs:
+  run:
+    uses: HyungseonSong-plasma/chatgpt-operation/.github/workflows/governed-matrix.yml@6474eb7b77f890b7cf9d7134ccebea31662bcdbe
+    with:
+      issue: "310"
+      sequence: "29"
+      manifest: automation/manifests/experiments/Issue_310_experiments29_timing.json
+      base_sha: ${{ github.sha }}
+      operation_sha: 6474eb7b77f890b7cf9d7134ccebea31662bcdbe
