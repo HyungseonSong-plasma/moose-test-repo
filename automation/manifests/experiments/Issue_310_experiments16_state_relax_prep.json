@@ -7,39 +7,21 @@
   "stages": [
     {
       "id": "P0",
-      "name": "Validate state-sampling Jacobian harness",
-      "command": ["python3", "experiments/Issue310_fp_acceleration/control_seq16_state_jacobian.py", "--p0"],
-      "timeout_seconds": 180
+      "name": "Validate Gen16 construction",
+      "command": ["python3", "experiments/Issue310_fp_acceleration/control_seq16_prepare.py", "--p0"],
+      "timeout_seconds": 240
     },
     {
       "id": "P1",
-      "name": "Validate band5 relaxation matrix",
-      "command": ["python3", "experiments/Issue310_fp_acceleration/control_seq16_relax.py", "--p0"],
-      "timeout_seconds": 180
+      "name": "Preflight both Gen16 lanes",
+      "command": ["python3", "experiments/Issue310_fp_acceleration/control_seq16_prepare.py", "--p1"],
+      "timeout_seconds": 1200
     },
     {
       "id": "P2",
-      "name": "Preflight state-Jacobian control",
-      "command": ["python3", "experiments/Issue310_fp_acceleration/control_seq16_state_jacobian.py", "--p1"],
-      "timeout_seconds": 600
-    },
-    {
-      "id": "P3",
-      "name": "Preflight relaxation cases",
-      "command": ["python3", "experiments/Issue310_fp_acceleration/control_seq16_relax.py", "--p1"],
-      "timeout_seconds": 600
-    },
-    {
-      "id": "P4",
-      "name": "Build banded kernel and check relaxation inputs",
-      "command": ["python3", "experiments/Issue310_fp_acceleration/control_seq16_relax.py", "--p2"],
-      "timeout_seconds": 1200
-    },
-    {
-      "id": "P5",
-      "name": "Check state-Jacobian control inputs",
-      "command": ["python3", "experiments/Issue310_fp_acceleration/control_seq16_state_jacobian.py", "--p2"],
-      "timeout_seconds": 1200
+      "name": "Build and check both Gen16 lanes",
+      "command": ["python3", "experiments/Issue310_fp_acceleration/control_seq16_prepare.py", "--p2"],
+      "timeout_seconds": 2400
     }
   ]
 }
