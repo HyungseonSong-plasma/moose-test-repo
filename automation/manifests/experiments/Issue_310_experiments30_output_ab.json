@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "issue": 310,
+  "sequence": 30,
+  "title": "Gen30 fixed-point diagnostic output timing A/B",
+  "prepare_manifest": "automation/manifests/experiments/Issue_310_experiments30_output_ab_prep.json",
+  "bundle_paths": [
+    "physics_app/physics-opt",
+    "physics_app/lib/libphysics-opt.so.0",
+    "physics_app/test/lib/libphysics_test-opt.so.0",
+    "experiments/Issue310_fp_acceleration/generated_fp30_output_ab"
+  ],
+  "max_parallel": 2,
+  "cases": [
+    {
+      "id": "output_on_10hc",
+      "name": "output_on_10hc",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq30_output_ab.py",
+        "--case",
+        "output_on_10hc"
+      ],
+      "timeout_seconds": 1800,
+      "artifacts": [
+        "experiments/Issue310_fp_acceleration/results_fp30_output_ab/*",
+        "experiments/Issue310_fp_acceleration/generated_fp30_output_ab/output_on_10hc/*csv"
+      ]
+    },
+    {
+      "id": "output_off_10hc",
+      "name": "output_off_10hc",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq30_output_ab.py",
+        "--case",
+        "output_off_10hc"
+      ],
+      "timeout_seconds": 1800,
+      "artifacts": [
+        "experiments/Issue310_fp_acceleration/results_fp30_output_ab/*",
+        "experiments/Issue310_fp_acceleration/generated_fp30_output_ab/output_off_10hc/*csv"
+      ]
+    }
+  ],
+  "aggregate": {
+    "name": "Aggregate Gen30 output timing A/B",
+    "command": [
+      "python3",
+      "experiments/Issue310_fp_acceleration/control_seq30_output_ab.py",
+      "--aggregate"
+    ],
+    "timeout_seconds": 300,
+    "artifacts": [
+      "experiments/Issue310_fp_acceleration/results_fp30_output_ab/*"
+    ]
+  }
+}
