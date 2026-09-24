@@ -14,3 +14,4 @@ jobs:
       manifest: automation/manifests/experiments/Issue_310_experiments12_jacobian.json
       base_sha: ${{ github.sha }}
       operation_sha: 6474eb7b77f890b7cf9d7134ccebea31662bcdbe
+# relaunch after removing host numpy dependency
