@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "issue": 310,
+  "kind": "experiments",
+  "sequence": 13,
+  "title": "Generation 13 A1 small-gamma prepare",
+  "stages": [
+    {
+      "id": "P0",
+      "name": "Validate Gen13 A1 discriminator",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq13_a1.py",
+        "--p0"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "id": "P1",
+      "name": "Preflight Gen13 A1 cases",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq13_a1.py",
+        "--p1"
+      ],
+      "timeout_seconds": 600
+    },
+    {
+      "id": "P2",
+      "name": "Build and check Gen13 A1 runtime",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq13_a1.py",
+        "--p2"
+      ],
+      "timeout_seconds": 1200
+    }
+  ]
+}
