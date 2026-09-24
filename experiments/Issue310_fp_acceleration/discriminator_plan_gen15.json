@@ -1,0 +1,99 @@
+{
+  "schema_version": 1,
+  "cycle_id": "issue310-gen15-20260924",
+  "baseline_sha": "d2f9d75f8bdf392e647165ad25f7c5808dfd2b40",
+  "baseline_evidence": [
+    "PR #324 / run 35880062788 qualified the time-aware Gummel architecture.",
+    "Gen13 run 35978463311 directly identified a full-rank 20x20 electron-potential response matrix.",
+    "Gen14 run 35981452978 showed a scalar local-Laplacian projection is not sufficient: nearest-neighbor fit ran away and full projection completed with higher FP cost than control."
+  ],
+  "objective": {
+    "architecture_invariant": "retain the Gummel electron/energy <-> Poisson fixed-point architecture",
+    "metric": "average fixed-point loops per electron step",
+    "target": "O(10) or lower",
+    "success_condition": "stable four-step FP reduction with qualified trajectory/profile parity; O(10) remains the promotion target"
+  },
+  "frozen_invariants": [
+    "plasma equations and BC ownership at the converged fixed point",
+    "thermal charged-heavy wall plus sheath-suppressed electron wall model",
+    "chemistry/RF state",
+    "chi_e=100 and chi_h=400 with dt_h/dt_e=4",
+    "physical horizon",
+    "nonlinear and fixed-point convergence tolerances/stopping criteria"
+  ],
+  "shared_inputs": [
+    {
+      "id": "qualified-timeaware-baseline",
+      "evidence": "d2f9d75f8bdf392e647165ad25f7c5808dfd2b40",
+      "access": "read_only"
+    },
+    {
+      "id": "gen13-direct-basis-jacobian",
+      "evidence": "run 35978463311 / head 864fd4ed3a10bb1de3a25e5b8938a529fa85f8e0",
+      "access": "read_only"
+    }
+  ],
+  "hypotheses": [
+    {
+      "id": "H15-banded-electron-jacobian",
+      "statement": "The dominant Gummel response requires a finite-width nonlocal electron-potential Jacobian rather than a diagonal reaction or scalar Laplacian surrogate; retaining measured off-diagonal structure over a sufficiently wide band will improve contraction while preserving the uniform-potential near-null mode.",
+      "mechanism": "Use the Gen13 basis response normalized row-wise by n_e/VTe. Retain measured off-diagonal entries within half-bandwidth 1, 3 or 5, reset each diagonal to the negative retained off-diagonal row sum, and scale each row by the current n_e/VTe. Apply the resulting matrix to phi-phi_anchor inside the Poisson iteration operator.",
+      "falsifier": "Reject the tested banded approximation if all widths fail to reduce fixed-point work versus the same-lane control, become unstable, or violate same-time physical parity. Separately flag anchor/update semantics if returned phi_anchor does not match the preceding potential iterate.",
+      "prior_evidence": [
+        "The direct Gen13 Jacobian has positive diagonal and negative nonlocal off-diagonal entries with near-zero row sums.",
+        "The row-sum-preserving band-1, band-3 and band-5 projections have reference relative Frobenius errors about 0.698, 0.333 and 0.157 respectively.",
+        "Gen14 demonstrated that collapsing the measured matrix to a scalar Laplacian does not preserve enough operator structure."
+      ]
+    }
+  ],
+  "experiments": [
+    {
+      "id": "E15-banded-short",
+      "hypothesis_id": "H15-banded-electron-jacobian",
+      "lane_id": "lane-banded-jacobian",
+      "base_sha": "d2f9d75f8bdf392e647165ad25f7c5808dfd2b40",
+      "branch": "issue-310-gen15-banded-jacobian",
+      "workspace": "issue310-gen15-banded-jacobian",
+      "artifact_namespace": "experiments/Issue310_fp_acceleration/results_fp15_banded",
+      "shared_input_ids": [
+        "qualified-timeaware-baseline",
+        "gen13-direct-basis-jacobian"
+      ],
+      "mutation_scope": [
+        "physics_app/include/fvkernels/PhysicsFVGummelBandedCorrection.h",
+        "physics_app/src/fvkernels/PhysicsFVGummelBandedCorrection.C",
+        "experiments/Issue310_fp_acceleration/control_seq15_banded.py",
+        "automation/manifests/experiments/Issue_310_experiments15_banded_prep.json",
+        "automation/manifests/experiments/Issue_310_experiments15_banded.json"
+      ],
+      "discriminating_observables": [
+        "per-electron-step and cumulative fixed-point iterations",
+        "residual stability over four electron steps",
+        "elapsed seconds",
+        "potential trajectory and final profile parity",
+        "band projection error versus the Gen13 full response",
+        "phi_anchor versus preceding phi_current at every recorded fixed-point iteration"
+      ],
+      "controls": [
+        "same-lane unmodified qualified time-aware Picard-2x control",
+        "one heavy cycle / four electron steps / T=400 tau_epsilon(initial)",
+        "identical physics, timestep, wall model, nonlinear tolerance and fixed-point stopping criteria",
+        "every trial row is explicitly zero-sum and correction vanishes when phi equals phi_anchor"
+      ],
+      "variants": [
+        {
+          "id": "band1",
+          "change": "retain measured off-diagonal response for |i-j|<=1 and reconstruct diagonal from zero row sum"
+        },
+        {
+          "id": "band3",
+          "change": "retain measured off-diagonal response for |i-j|<=3 and reconstruct diagonal from zero row sum"
+        },
+        {
+          "id": "band5",
+          "change": "retain measured off-diagonal response for |i-j|<=5 and reconstruct diagonal from zero row sum"
+        }
+      ]
+    }
+  ]
+}
