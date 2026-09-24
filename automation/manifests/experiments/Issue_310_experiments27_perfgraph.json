@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "issue": 310,
+  "sequence": 27,
+  "title": "Gen27 native MOOSE PerfGraph",
+  "prepare_manifest": "automation/manifests/experiments/Issue_310_experiments27_perfgraph_prep.json",
+  "bundle_paths": [
+    "physics_app/physics-opt",
+    "physics_app/lib/libphysics-opt.so.0",
+    "physics_app/test/lib/libphysics_test-opt.so.0",
+    "experiments/Issue310_fp_acceleration/generated_fp27_perfgraph"
+  ],
+  "max_parallel": 1,
+  "cases": [
+    {
+      "id": "perfgraph_50hc",
+      "name": "perfgraph_50hc",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq27_perfgraph.py",
+        "--case",
+        "perfgraph_50hc"
+      ],
+      "timeout_seconds": 3600,
+      "artifacts": [
+        "experiments/Issue310_fp_acceleration/results_fp27_perfgraph/perfgraph_50hc_*",
+        "experiments/Issue310_fp_acceleration/generated_fp27_perfgraph/perfgraph_50hc/*csv"
+      ]
+    }
+  ],
+  "aggregate": {
+    "name": "Aggregate Gen27 PerfGraph",
+    "command": [
+      "python3",
+      "experiments/Issue310_fp_acceleration/control_seq27_perfgraph.py",
+      "--aggregate"
+    ],
+    "timeout_seconds": 300,
+    "artifacts": [
+      "experiments/Issue310_fp_acceleration/results_fp27_perfgraph/issue310_gen27_perfgraph_summary.json"
+    ]
+  }
+}
