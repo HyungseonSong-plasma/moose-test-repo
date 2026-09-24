@@ -1,0 +1,16 @@
+name: One-shot Issue310 Gen24 Cost Growth Profile
+on:
+  push:
+    branches: [issue-310-gen24-cost-growth-profile]
+    paths: [.github/workflows/issue310-gen24-profile-once.yml]
+permissions:
+  contents: read
+jobs:
+  run:
+    uses: HyungseonSong-plasma/chatgpt-operation/.github/workflows/governed-matrix.yml@6474eb7b77f890b7cf9d7134ccebea31662bcdbe
+    with:
+      issue: "310"
+      sequence: "24"
+      manifest: automation/manifests/experiments/Issue_310_experiments24_profile.json
+      base_sha: ${{ github.sha }}
+      operation_sha: 6474eb7b77f890b7cf9d7134ccebea31662bcdbe
