@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "issue": 310,
+  "sequence": 12,
+  "title": "Generation 12 trajectory electron-potential Jacobian diagnostic",
+  "prepare_manifest": "automation/manifests/experiments/Issue_310_experiments12_jacobian_prep.json",
+  "bundle_paths": [
+    "physics_app/physics-opt",
+    "physics_app/lib/libphysics-opt.so.0",
+    "physics_app/test/lib/libphysics_test-opt.so.0",
+    "experiments/Issue310_fp_acceleration/generated_fp12_jacobian"
+  ],
+  "max_parallel": 1,
+  "cases": [
+    {
+      "id": "picard2x_control_jacobian",
+      "name": "Qualified Picard-2x control with per-fixed-point state sampling",
+      "command": ["python3", "experiments/Issue310_fp_acceleration/control_seq12_jacobian_diag.py", "--case"],
+      "timeout_seconds": 1800,
+      "artifacts": [
+        "experiments/Issue310_fp_acceleration/results_fp12_jacobian/*",
+        "experiments/Issue310_fp_acceleration/generated_fp12_jacobian/picard2x_control/input_out_electron0_fp_iter_csv*"
+      ]
+    }
+  ],
+  "aggregate": {
+    "name": "Aggregate electron-potential Jacobian evidence",
+    "command": ["python3", "experiments/Issue310_fp_acceleration/control_seq12_jacobian_diag.py", "--aggregate"],
+    "timeout_seconds": 300,
+    "artifacts": ["experiments/Issue310_fp_acceleration/results_fp12_jacobian/issue310_gen12_jacobian_summary.json"]
+  }
+}
