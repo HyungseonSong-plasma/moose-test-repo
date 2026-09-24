@@ -14,4 +14,4 @@ jobs:
       manifest: automation/manifests/experiments/Issue_310_experiments11_screened.json
       base_sha: ${{ github.sha }}
       operation_sha: 6474eb7b77f890b7cf9d7134ccebea31662bcdbe
-# launch repaired functor-source realization
+# relaunch after lane-local inner-run dispatch repair
