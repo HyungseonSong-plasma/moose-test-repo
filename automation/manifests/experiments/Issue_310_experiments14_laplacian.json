@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "issue": 310,
+  "sequence": 14,
+  "title": "Generation 14 row-sum-preserving Laplacian electron-Jacobian discriminator",
+  "prepare_manifest": "automation/manifests/experiments/Issue_310_experiments14_laplacian_prep.json",
+  "bundle_paths": [
+    "physics_app/physics-opt",
+    "physics_app/lib/libphysics-opt.so.0",
+    "physics_app/test/lib/libphysics_test-opt.so.0",
+    "experiments/Issue310_fp_acceleration/generated_fp14_laplacian"
+  ],
+  "max_parallel": 3,
+  "cases": [
+    {
+      "id": "picard2x_control",
+      "name": "Qualified time-aware Picard-2x short control",
+      "command": ["python3", "experiments/Issue310_fp_acceleration/control_seq14_laplacian.py", "--case", "picard2x_control"],
+      "timeout_seconds": 1800,
+      "artifacts": [
+        "experiments/Issue310_fp_acceleration/results_fp14_laplacian/picard2x_control_*",
+        "experiments/Issue310_fp_acceleration/generated_fp14_laplacian/picard2x_control/*csv"
+      ]
+    },
+    {
+      "id": "laplacian_nnfit",
+      "name": "Nearest-neighbor-fit row-sum-preserving Laplacian correction",
+      "command": ["python3", "experiments/Issue310_fp_acceleration/control_seq14_laplacian.py", "--case", "laplacian_nnfit"],
+      "timeout_seconds": 1800,
+      "artifacts": [
+        "experiments/Issue310_fp_acceleration/results_fp14_laplacian/laplacian_nnfit_*",
+        "experiments/Issue310_fp_acceleration/generated_fp14_laplacian/laplacian_nnfit/*csv"
+      ]
+    },
+    {
+      "id": "laplacian_fullfit",
+      "name": "Full-Jacobian projected row-sum-preserving Laplacian correction",
+      "command": ["python3", "experiments/Issue310_fp_acceleration/control_seq14_laplacian.py", "--case", "laplacian_fullfit"],
+      "timeout_seconds": 1800,
+      "artifacts": [
+        "experiments/Issue310_fp_acceleration/results_fp14_laplacian/laplacian_fullfit_*",
+        "experiments/Issue310_fp_acceleration/generated_fp14_laplacian/laplacian_fullfit/*csv"
+      ]
+    }
+  ],
+  "aggregate": {
+    "name": "Aggregate Gen14 Laplacian Jacobian evidence",
+    "command": ["python3", "experiments/Issue310_fp_acceleration/control_seq14_laplacian.py", "--aggregate"],
+    "timeout_seconds": 300,
+    "artifacts": [
+      "experiments/Issue310_fp_acceleration/results_fp14_laplacian/issue310_gen14_laplacian_summary.json"
+    ]
+  }
+}
