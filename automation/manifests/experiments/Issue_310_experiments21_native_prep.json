@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "issue": 310,
+  "kind": "experiments",
+  "sequence": 21,
+  "title": "Generation 21 native fixed-point acceleration prepare",
+  "stages": [
+    {
+      "id": "P0",
+      "name": "Validate Gen21 construction",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq21_native.py",
+        "--p0"
+      ],
+      "timeout_seconds": 300
+    },
+    {
+      "id": "P1",
+      "name": "Preflight Gen21 cases",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq21_native.py",
+        "--p1"
+      ],
+      "timeout_seconds": 1500
+    },
+    {
+      "id": "P2",
+      "name": "Build and check Gen21 inputs",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq21_native.py",
+        "--p2"
+      ],
+      "timeout_seconds": 3000
+    }
+  ]
+}
