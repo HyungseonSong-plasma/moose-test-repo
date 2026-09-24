@@ -1,0 +1,16 @@
+name: One-shot Issue310 Gen13 A1 Small Gamma
+on:
+  push:
+    branches: [issue-310-gen13-a1-smallgamma]
+    paths: [.github/workflows/issue310-gen13-a1-once.yml]
+permissions:
+  contents: read
+jobs:
+  run:
+    uses: HyungseonSong-plasma/chatgpt-operation/.github/workflows/governed-matrix.yml@6474eb7b77f890b7cf9d7134ccebea31662bcdbe
+    with:
+      issue: "310"
+      sequence: "13"
+      manifest: automation/manifests/experiments/Issue_310_experiments13_a1.json
+      base_sha: ${{ github.sha }}
+      operation_sha: 6474eb7b77f890b7cf9d7134ccebea31662bcdbe
