@@ -15,3 +15,4 @@ jobs:
       base_sha: ${{ github.sha }}
       operation_sha: 6474eb7b77f890b7cf9d7134ccebea31662bcdbe
 # Gen20 harness relaunch after direct-script PYTHONPATH fix
+# Gen20 relaunch after restoring frozen Gen18 helper dependency
