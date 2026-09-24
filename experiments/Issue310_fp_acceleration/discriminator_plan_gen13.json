@@ -1,0 +1,186 @@
+{
+  "schema_version": 1,
+  "cycle_id": "issue310-gen13-20260924",
+  "baseline_sha": "d2f9d75f8bdf392e647165ad25f7c5808dfd2b40",
+  "baseline_evidence": [
+    "PR #324 / run 35880062788 qualified the frozen-physics TransientMultiApp + Transient Poisson + no_restore=true Picard-2x architecture.",
+    "Issue #310 Gen11 run 35945615747 showed full-strength A1 screening gamma=1 is unstable after a strong first-step improvement.",
+    "Issue #310 Gen12 run 35975788441 completed plan/prepare/case/aggregate successfully and measured current-state directional electron-potential sensitivity; step-2 median gamma_A1≈0.0503, gamma_A2≈0.0557, with trajectory rank 18/20 and strong off-diagonal response."
+  ],
+  "objective": {
+    "architecture_invariant": "retain the qualified Gummel electron/energy <-> Poisson fixed-point architecture for performance lanes; basis lane is diagnostic-only and does not alter the production architecture",
+    "metric": "average fixed-point loops per electron step plus discrete electron-response Jacobian identification",
+    "target": "O(10) or lower fixed-point loops and a directly measured 20x20 electron-response matrix with explicit finite-difference quality checks",
+    "success_condition": "identify a stable useful small-gamma A1 or A2 operating range while independently resolving the nonlocal electron-potential response structure; no promotion without equal-physics parity"
+  },
+  "frozen_invariants": [
+    "qualified plasma equations, chemistry, RF state, wall models and BC ownership",
+    "chi_e=100, chi_h=400, dt_h/dt_e=4 for screening performance lanes",
+    "Picard-2x relaxation, nonlinear tolerances, fixed-point tolerances and stopping criteria",
+    "one-heavy-cycle/four-electron-step short discriminator horizon for screening lanes",
+    "basis lane uses the Gen12 step-1 accepted state as a read-only prior-generation operating point and changes only prescribed diagnostic potential perturbations",
+    "no result from one Gen13 lane may alter another Gen13 lane while the generation is active"
+  ],
+  "shared_inputs": [
+    {
+      "id": "qualified-timeaware-baseline",
+      "evidence": "d2f9d75f8bdf392e647165ad25f7c5808dfd2b40",
+      "access": "read_only"
+    },
+    {
+      "id": "gen12-current-state-jacobian-evidence",
+      "evidence": "run 35975788441 at head 3024aaade8e476e2cd40fd1132fc79ae6123c735",
+      "access": "read_only"
+    }
+  ],
+  "hypotheses": [
+    {
+      "id": "H13-A1-small-gamma",
+      "statement": "The thermal-slope screened-Poisson mechanism is useful when scaled to the trajectory-measured response magnitude, approximately gamma=0.025-0.05, rather than gamma=1.",
+      "mechanism": "Use beta_eff=gamma*(e/eps0)*n_e/T_e[eV] only in the Poisson Gummel iteration operator. Gen12 current-state directional evidence places the effective local scale at O(0.05), so bounded small gamma should retain contraction benefit without the Gen11 over-stiff stall.",
+      "falsifier": "Reject this bounded A1 range if both gamma=0.025 and 0.05 fail to complete four electron steps stably, fail to reduce fixed-point work materially versus the same-lane Picard-2x control, or violate same-time physical parity.",
+      "prior_evidence": [
+        "Gen11 gamma=1 reduced the first step from 6 to 2 FP iterations but stalled above 3000 iterations on the next step.",
+        "Gen12 run 35975788441 found median gamma_A1≈0.0258 on step 1 and ≈0.0503 on step 2 using current-state sampling."
+      ]
+    },
+    {
+      "id": "H13-A2-small-gamma",
+      "statement": "The transport-ratio surrogate n_e*mu_e/D_e gives a similarly scaled but potentially better local Jacobian preconditioner than the thermal A1 surrogate when gamma is O(0.025-0.05).",
+      "mechanism": "Use beta_eff=gamma*(e/eps0)*n_e*mu_e/D_e in the Poisson Gummel iteration operator, with mobility and diffusion transferred from the current fast-plasma state. The correction vanishes at fixed-point convergence.",
+      "falsifier": "Reject this bounded A2 range if both gamma=0.025 and 0.05 fail stability/work/parity gates, or if A2 does not provide a reproducibly useful contraction improvement at the same frozen settings.",
+      "prior_evidence": [
+        "Gen12 run 35975788441 found median gamma_A2≈0.0286 on step 1 and ≈0.0557 on step 2.",
+        "A2 tracks A1 in local scale but derives the slope from the actual transport ratio mu_e/D_e."
+      ]
+    },
+    {
+      "id": "H13-basis-jacobian",
+      "statement": "The strong off-diagonal Gen12 response is a real property of the discrete electron map and can be resolved directly by basis perturbations rather than inferred from the rank-18 Gummel trajectory.",
+      "mechanism": "Freeze the prior-generation step-1 accepted electron state, prescribe the accepted potential profile, and evaluate one electron timestep for a reference plus symmetric +/-delta_phi perturbation in each of 20 cells. Central differences produce all 20 Jacobian columns; plus/minus symmetry measures local finite-difference nonlinearity.",
+      "falsifier": "Classify unresolved if any basis case fails, if the central-difference odd response is dominated by even/nonlinear error, or if the resulting response matrix cannot be numerically distinguished from a rank-deficient/noise-dominated matrix.",
+      "prior_evidence": [
+        "Gen12 step-2 trajectory contained 514 secant pairs but only rank 18/20.",
+        "Gen12 current-state least-squares response had off-diagonal Frobenius fraction about 0.966, indicating strong nonlocal coupling."
+      ]
+    }
+  ],
+  "experiments": [
+    {
+      "id": "E13-A1-small-gamma",
+      "hypothesis_id": "H13-A1-small-gamma",
+      "lane_id": "lane-a1-small-gamma",
+      "base_sha": "d2f9d75f8bdf392e647165ad25f7c5808dfd2b40",
+      "branch": "issue-310-gen13-a1-small-gamma",
+      "workspace": "issue310-gen13-a1-small-gamma",
+      "artifact_namespace": "experiments/Issue310_fp_acceleration/results_fp13_a1",
+      "shared_input_ids": [
+        "qualified-timeaware-baseline",
+        "gen12-current-state-jacobian-evidence"
+      ],
+      "mutation_scope": [
+        "experiments/Issue310_fp_acceleration/control_seq13_a1.py",
+        "automation/manifests/experiments/Issue_310_experiments13_a1_prep.json",
+        "automation/manifests/experiments/Issue_310_experiments13_a1.json",
+        ".github/workflows/issue310-gen13-a1-once.yml"
+      ],
+      "discriminating_observables": [
+        "fixed-point iterations per each of four electron steps and cumulative FP work",
+        "runtime completion and residual/convergence classification",
+        "same-time electron density, mean energy and potential profile parity",
+        "screening correction magnitude"
+      ],
+      "controls": [
+        "same-lane qualified Picard-2x short control",
+        "identical frozen physics/timestep/tolerances across control and variants"
+      ],
+      "variants": [
+        {
+          "id": "gamma-0.025",
+          "change": "A1 beta_eff=0.025*(e/eps0)*n_e/T_e[eV]"
+        },
+        {
+          "id": "gamma-0.05",
+          "change": "A1 beta_eff=0.05*(e/eps0)*n_e/T_e[eV]"
+        }
+      ]
+    },
+    {
+      "id": "E13-A2-small-gamma",
+      "hypothesis_id": "H13-A2-small-gamma",
+      "lane_id": "lane-a2-small-gamma",
+      "base_sha": "d2f9d75f8bdf392e647165ad25f7c5808dfd2b40",
+      "branch": "issue-310-gen13-a2-small-gamma",
+      "workspace": "issue310-gen13-a2-small-gamma",
+      "artifact_namespace": "experiments/Issue310_fp_acceleration/results_fp13_a2",
+      "shared_input_ids": [
+        "qualified-timeaware-baseline",
+        "gen12-current-state-jacobian-evidence"
+      ],
+      "mutation_scope": [
+        "experiments/Issue310_fp_acceleration/control_seq13_a2.py",
+        "automation/manifests/experiments/Issue_310_experiments13_a2_prep.json",
+        "automation/manifests/experiments/Issue_310_experiments13_a2.json",
+        ".github/workflows/issue310-gen13-a2-once.yml"
+      ],
+      "discriminating_observables": [
+        "fixed-point iterations per each of four electron steps and cumulative FP work",
+        "runtime completion and residual/convergence classification",
+        "same-time electron density, mean energy and potential profile parity",
+        "transport-ratio screening correction magnitude"
+      ],
+      "controls": [
+        "same-lane qualified Picard-2x short control",
+        "identical frozen physics/timestep/tolerances across control and variants"
+      ],
+      "variants": [
+        {
+          "id": "gamma-0.025",
+          "change": "A2 beta_eff=0.025*(e/eps0)*n_e*mu_e/D_e"
+        },
+        {
+          "id": "gamma-0.05",
+          "change": "A2 beta_eff=0.05*(e/eps0)*n_e*mu_e/D_e"
+        }
+      ]
+    },
+    {
+      "id": "E13-basis-jacobian",
+      "hypothesis_id": "H13-basis-jacobian",
+      "lane_id": "lane-basis-jacobian",
+      "base_sha": "d2f9d75f8bdf392e647165ad25f7c5808dfd2b40",
+      "branch": "issue-310-gen13-basis-jacobian",
+      "workspace": "issue310-gen13-basis-jacobian",
+      "artifact_namespace": "experiments/Issue310_fp_acceleration/results_fp13_basis",
+      "shared_input_ids": [
+        "qualified-timeaware-baseline",
+        "gen12-current-state-jacobian-evidence"
+      ],
+      "mutation_scope": [
+        "experiments/Issue310_fp_acceleration/control_seq13_basis.py",
+        "experiments/Issue310_fp_acceleration/gen13_step1_state.json",
+        "automation/manifests/experiments/Issue_310_experiments13_basis_prep.json",
+        "automation/manifests/experiments/Issue_310_experiments13_basis.json",
+        ".github/workflows/issue310-gen13-basis-once.yml"
+      ],
+      "discriminating_observables": [
+        "20x20 central-difference dn_e/dphi matrix",
+        "matrix rank and singular-direction proxy from deterministic elimination",
+        "off-diagonal Frobenius fraction",
+        "per-column even/nonlinear finite-difference error",
+        "comparison of matrix diagonal against A1 and A2 local surrogates"
+      ],
+      "controls": [
+        "unperturbed one-electron-step reference from the same frozen prior-generation state",
+        "symmetric +/- potential perturbation for every cell",
+        "identical electron timestep, transport, energy equation and wall model for all 41 solves"
+      ],
+      "variants": [
+        {
+          "id": "cell-basis-central-difference",
+          "change": "reference plus +/-1e-4 V perturbation for each of 20 cellwise potential basis directions"
+        }
+      ]
+    }
+  ]
+}
