@@ -30,12 +30,12 @@ XMIN = 0.0
 XMAX = 0.01
 POINT_FIELDS = (
     ("log_e", "log_e"),
-    ("ne", "electron_density_out"),
+    ("ne", "fp_ne_diag"),
     ("phi", "potential_from_poisson"),
     ("n_epsilon", "n_epsilon"),
-    ("mean_e", "mean_energy_out"),
-    ("mu", "mobility_out"),
-    ("D", "diffusion_out"),
+    ("mean_e", "fp_mean_e_diag"),
+    ("mu", "fp_mu_diag"),
+    ("D", "fp_D_diag"),
 )
 
 
@@ -45,6 +45,82 @@ def _cell_centers() -> list[float]:
 
 
 def _instrument_fast(text: str) -> str:
+    aux_var_anchor = """  [elastic_loss_candidate_out]
+    type = MooseVariableFVReal
+    initial_condition = 4.622905967454569
+  []
+[]
+"""
+    if text.count(aux_var_anchor) != 1:
+        raise RuntimeError("fast diagnostic AuxVariables anchor changed")
+    diag_aux_vars = """  [elastic_loss_candidate_out]
+    type = MooseVariableFVReal
+    initial_condition = 4.622905967454569
+  []
+  [fp_ne_diag]
+    type = MooseVariableFVReal
+    initial_condition = @@NE0@@
+  []
+  [fp_mean_e_diag]
+    type = MooseVariableFVReal
+    initial_condition = 5.73276
+  []
+  [fp_mu_diag]
+    type = MooseVariableFVReal
+    initial_condition = 9755.114369721427
+  []
+  [fp_D_diag]
+    type = MooseVariableFVReal
+    initial_condition = 41257.29899041419
+  []
+[]
+"""
+    text = text.replace(aux_var_anchor, diag_aux_vars, 1)
+
+    aux_kernel_anchor = """  [elastic_loss_candidate_copy]
+    type = FunctorAux
+    variable = elastic_loss_candidate_out
+    functor = elastic_loss_candidate_W_m3
+    execute_on = 'INITIAL TIMESTEP_END'
+  []
+[]
+"""
+    if text.count(aux_kernel_anchor) != 1:
+        raise RuntimeError("fast diagnostic AuxKernel anchor changed")
+    diag_aux_kernels = """  [elastic_loss_candidate_copy]
+    type = FunctorAux
+    variable = elastic_loss_candidate_out
+    functor = elastic_loss_candidate_W_m3
+    execute_on = 'INITIAL TIMESTEP_END'
+  []
+  [fp_ne_diag_copy]
+    type = FunctorAux
+    variable = fp_ne_diag
+    functor = electron_density_m3
+    execute_on = 'MULTIAPP_FIXED_POINT_CONVERGENCE'
+  []
+  [fp_mean_e_diag_copy]
+    type = FunctorAux
+    variable = fp_mean_e_diag
+    functor = mean_en_solved
+    execute_on = 'MULTIAPP_FIXED_POINT_CONVERGENCE'
+  []
+  [fp_mu_diag_copy]
+    type = FunctorAux
+    variable = fp_mu_diag
+    functor = electron_mobility
+    execute_on = 'MULTIAPP_FIXED_POINT_CONVERGENCE'
+  []
+  [fp_D_diag_copy]
+    type = FunctorAux
+    variable = fp_D_diag
+    functor = electron_diffusion
+    execute_on = 'MULTIAPP_FIXED_POINT_CONVERGENCE'
+  []
+[]
+"""
+    text = text.replace(aux_kernel_anchor, diag_aux_kernels, 1)
+
     fp_anchor = """  [fixed_point_iterations]
     type = NumFixedPointIterations
     execute_on = 'TIMESTEP_END'
@@ -61,7 +137,7 @@ def _instrument_fast(text: str) -> str:
     type = PointValue
     variable = {variable}
     point = '{x:.17g} 0 0'
-    execute_on = 'TIMESTEP_END'
+    execute_on = 'MULTIAPP_FIXED_POINT_CONVERGENCE'
   []
 """
             )
@@ -77,6 +153,7 @@ def _instrument_fast(text: str) -> str:
     extra = outputs + """  [fp_iter_csv]
     type = CSV
     execute_on = 'MULTIAPP_FIXED_POINT_ITERATION_END'
+    execute_postprocessors_on = 'MULTIAPP_FIXED_POINT_ITERATION_END'
     new_row_detection_columns = all
     new_row_tolerance = 1.0e-30
     precision = 17
@@ -86,7 +163,6 @@ def _instrument_fast(text: str) -> str:
     if text.count(outputs) != 1:
         raise RuntimeError("fast Outputs/step_csv anchor changed")
     return text.replace(outputs, extra, 1)
-
 
 def build(clean: bool = True) -> None:
     import shutil
@@ -113,9 +189,14 @@ def p0() -> None:
     d = GENERATED / CASE
     fast = (d / "fast_sub.i").read_text(encoding="utf-8")
     assert "execute_on = 'MULTIAPP_FIXED_POINT_ITERATION_END'" in fast
-    assert "MULTIAPP_FIXED_POINT_CONVERGENCE" not in fast
+    assert fast.count("execute_on = 'MULTIAPP_FIXED_POINT_CONVERGENCE'") >= NCELL * len(POINT_FIELDS) + 4
+    assert "execute_postprocessors_on = 'MULTIAPP_FIXED_POINT_ITERATION_END'" in fast
     assert "new_row_detection_columns = all" in fast
     assert fast.count("type = PointValue") == NCELL * len(POINT_FIELDS)
+    assert fast.count("variable = fp_ne_diag") >= 2
+    assert fast.count("variable = fp_mean_e_diag") >= 2
+    assert fast.count("variable = fp_mu_diag") >= 2
+    assert fast.count("variable = fp_D_diag") >= 2
     for key, variable in POINT_FIELDS:
         assert f"[fp_{key}_00]" in fast
         assert f"[fp_{key}_{NCELL - 1:02d}]" in fast
