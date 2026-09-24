@@ -30,7 +30,7 @@ CASE = "picard2x_control"
 def _instrument_fast(text: str) -> str:
     profile = """  [energy_profile]
     type = ElementValueSampler
-    variable = 'electron_density_out potential_from_poisson n_epsilon mean_energy_out mobility_out diffusion_out elastic_loss_candidate_out'
+    variable = 'log_e electron_density_out potential_from_poisson n_epsilon mean_energy_out mobility_out diffusion_out elastic_loss_candidate_out'
     sort_by = id
     execute_on = 'FINAL'
   []
@@ -138,8 +138,9 @@ def _profile(path: Path) -> dict[str, list[float]]:
     rows.sort(key=lambda r: int(float(r["id"])))
     def col(name: str) -> list[float]:
         return [float(r[name]) for r in rows]
-    return {"id": col("id"), "x": col("x"), "ne": col("electron_density_out"),
-            "phi": col("potential_from_poisson"), "mean_e": col("mean_energy_out"),
+    return {"id": col("id"), "x": col("x"), "log_e": col("log_e"),
+            "ne": col("electron_density_out"), "phi": col("potential_from_poisson"),
+            "n_epsilon": col("n_epsilon"), "mean_e": col("mean_energy_out"),
             "mu": col("mobility_out"), "D": col("diffusion_out")}
 
 
@@ -224,39 +225,94 @@ def _matrix_fit(x: list[list[float]], y: list[list[float]]) -> dict[str, object]
 
 
 def _analyse_step(samples: list[dict[str, list[float]]], time_s: float) -> dict[str, object]:
-    if len(samples) < 2:
+    # At fixed-point iteration end, n_k is the electron solve using the entering
+    # potential phi_{k-1}, while phi_k is the subsequently returned Poisson state.
+    # Therefore the direct electron-map secant uses lagged pairs:
+    #   Delta phi_k = phi_k - phi_{k-1}
+    #   Delta n_{k+1} = n_{k+1} - n_k.
+    # Same-index Delta n_k / Delta phi_k would mix electron and Poisson map stages.
+    if len(samples) < 3:
         return {"time_s": time_s, "profiles": len(samples), "status": "INSUFFICIENT_PROFILES"}
-    x = [[b["phi"][i] - a["phi"][i] for i in range(len(a["phi"]))] for a, b in zip(samples[:-1], samples[1:])]
-    y = [[b["ne"][i] - a["ne"][i] for i in range(len(a["ne"]))] for a, b in zip(samples[:-1], samples[1:])]
-    n = len(x[0])
-    local: list[float] = []
-    for i in range(n):
+
+    ncell = len(samples[0]["phi"])
+    x = []
+    y = []
+    a1_rows = []
+    a2_rows = []
+    for k in range(1, len(samples) - 1):
+        prev = samples[k - 1]
+        cur = samples[k]
+        nxt = samples[k + 1]
+        x.append([cur["phi"][i] - prev["phi"][i] for i in range(ncell)])
+        y.append([nxt["ne"][i] - cur["ne"][i] for i in range(ncell)])
+
+        # Compare the measured secant with the local surrogate at the electron
+        # state that was produced from the left endpoint of this potential secant.
+        a1_rows.append([
+            cur["ne"][i] / max((2.0 / 3.0) * cur["mean_e"][i], 1e-30)
+            for i in range(ncell)
+        ])
+        a2_rows.append([
+            cur["ne"][i] * cur["mu"][i] / max(cur["D"][i], 1e-300)
+            for i in range(ncell)
+        ])
+
+    local = []
+    a1 = []
+    a2 = []
+    for i in range(ncell):
         den = sum(row[i] ** 2 for row in x)
         num = sum(x[k][i] * y[k][i] for k in range(len(x)))
         local.append(num / den if den > 1e-40 else math.nan)
-    ref = samples[0]
-    a1 = [ref["ne"][i] / max((2.0 / 3.0) * ref["mean_e"][i], 1e-30) for i in range(n)]
-    a2 = [ref["ne"][i] * ref["mu"][i] / max(ref["D"][i], 1e-300) for i in range(n)]
-    g1 = [local[i] / a1[i] if math.isfinite(local[i]) and a1[i] != 0 else math.nan for i in range(n)]
-    g2 = [local[i] / a2[i] if math.isfinite(local[i]) and a2[i] != 0 else math.nan for i in range(n)]
+        w = [row[i] ** 2 for row in x]
+        sw = sum(w)
+        if sw > 0:
+            a1.append(sum(w[k] * a1_rows[k][i] for k in range(len(w))) / sw)
+            a2.append(sum(w[k] * a2_rows[k][i] for k in range(len(w))) / sw)
+        else:
+            a1.append(math.nan)
+            a2.append(math.nan)
+
+    g1 = [local[i] / a1[i] if math.isfinite(local[i]) and math.isfinite(a1[i]) and a1[i] != 0 else math.nan for i in range(ncell)]
+    g2 = [local[i] / a2[i] if math.isfinite(local[i]) and math.isfinite(a2[i]) and a2[i] != 0 else math.nan for i in range(ncell)]
     fit = _matrix_fit(x, y)
     bmat = fit.pop("B")
-    diag = [bmat[i][i] for i in range(n)]
-    return {"time_s": time_s, "profiles": len(samples), "increments": len(x), "cells": n,
-            "potential_update_rank": fit["rank"], "full_matrix_identified": fit["rank"] == n,
+    diag = [bmat[i][i] for i in range(ncell)]
+
+    # Primary-state reconstruction checks guard against stale AuxVariable copies.
+    ne_reconstructed = [6.02214076e23 * math.exp(v) for v in samples[-1]["log_e"]]
+    mean_e_reconstructed = [
+        5.73276 * samples[-1]["n_epsilon"][i] / max(ne_reconstructed[i] / 1.0e16, 1e-300)
+        for i in range(ncell)
+    ]
+    ne_aux_rel = max(
+        abs(samples[-1]["ne"][i] - ne_reconstructed[i]) / max(abs(ne_reconstructed[i]), 1.0)
+        for i in range(ncell)
+    )
+    mean_aux_rel = max(
+        abs(samples[-1]["mean_e"][i] - mean_e_reconstructed[i]) / max(abs(mean_e_reconstructed[i]), 1.0e-300)
+        for i in range(ncell)
+    )
+
+    return {"time_s": time_s, "profiles": len(samples), "lagged_secant_pairs": len(x), "cells": ncell,
+            "potential_update_rank": fit["rank"], "full_matrix_identified": fit["rank"] == ncell,
             "least_squares_relative_fit_error": fit["relative_fit_error"],
             "least_squares_offdiagonal_frobenius_fraction": fit["offdiag_fraction"],
             "rank_pivots": fit["rank_pivots"], "ridge": fit["ridge"],
             "directional_local_dn_dphi_m3_per_V": [None if not math.isfinite(v) else v for v in local],
-            "a1_ne_over_VTe_m3_per_V": a1, "a2_ne_mu_over_D_m3_per_V": a2,
+            "a1_ne_over_VTe_m3_per_V": [None if not math.isfinite(v) else v for v in a1],
+            "a2_ne_mu_over_D_m3_per_V": [None if not math.isfinite(v) else v for v in a2],
             "gamma_A1_directional": [None if not math.isfinite(v) else v for v in g1],
             "gamma_A2_directional": [None if not math.isfinite(v) else v for v in g2],
             "local_sensitivity_stats": _stats(local), "gamma_A1_stats": _stats(g1), "gamma_A2_stats": _stats(g2),
             "matrix_diagonal_m3_per_V": diag,
             "matrix_flat_row_major_m3_per_V": [v for row in bmat for v in row],
-            "interpretation": "FULL_RANK_TRAJECTORY_SECANT" if fit["rank"] == n else
-            "LOW_RANK_DIRECTIONAL_SECANT_ONLY; basis perturbations are required before calling this an exact 20x20 Jacobian"}
-
+            "aux_reconstruction_check": {
+                "electron_density_max_relative_error": ne_aux_rel,
+                "mean_energy_max_relative_error": mean_aux_rel,
+            },
+            "interpretation": "FULL_RANK_LAGGED_TRAJECTORY_SECANT" if fit["rank"] == ncell else
+            "LOW_RANK_LAGGED_DIRECTIONAL_SECANT_ONLY; basis perturbations are required before calling this an exact 20x20 Jacobian"}
 
 def analyse() -> dict[str, object]:
     d = GENERATED / CASE
