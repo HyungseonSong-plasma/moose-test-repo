@@ -59,7 +59,7 @@ def _instrument_fast(text: str) -> str:
   []
   [fp_ne_diag]
     type = MooseVariableFVReal
-    initial_condition = @@NE0@@
+    initial_condition = 1.0e16
   []
   [fp_mean_e_diag]
     type = MooseVariableFVReal
