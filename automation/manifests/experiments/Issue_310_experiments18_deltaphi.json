@@ -10,7 +10,7 @@
     "physics_app/test/lib/libphysics_test-opt.so.0",
     "experiments/Issue310_fp_acceleration/generated_fp18_deltaphi"
   ],
-  "max_parallel": 10,
+  "max_parallel": 8,
   "cases": [
     {
       "id": "picard2x_control",
