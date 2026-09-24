@@ -1,0 +1,20 @@
+name: One-shot Issue310 Gen33 Autoscaling Paired ABBA
+on:
+  push:
+    branches: [issue-310-gen33-autoscaling-paired-abba]
+    paths:
+      - .github/workflows/issue310-gen33-autoscaling-paired-abba-once.yml
+      - experiments/Issue310_fp_acceleration/control_seq33_autoscaling_paired.py
+      - automation/manifests/experiments/Issue_310_experiments33_autoscaling_paired.json
+      - automation/manifests/experiments/Issue_310_experiments33_autoscaling_paired_prep.json
+permissions:
+  contents: read
+jobs:
+  run:
+    uses: HyungseonSong-plasma/chatgpt-operation/.github/workflows/governed-matrix.yml@6474eb7b77f890b7cf9d7134ccebea31662bcdbe
+    with:
+      issue: "310"
+      sequence: "33"
+      manifest: automation/manifests/experiments/Issue_310_experiments33_autoscaling_paired.json
+      base_sha: ${{ github.sha }}
+      operation_sha: 6474eb7b77f890b7cf9d7134ccebea31662bcdbe
