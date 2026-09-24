@@ -30,14 +30,19 @@ CASE = "picard2x_control"
 def _instrument_fast(text: str) -> str:
     profile = """  [energy_profile]
     type = ElementValueSampler
-    variable = 'log_e electron_density_out potential_from_poisson n_epsilon mean_energy_out mobility_out diffusion_out elastic_loss_candidate_out'
+    variable = 'electron_density_out potential_from_poisson n_epsilon mean_energy_out mobility_out diffusion_out elastic_loss_candidate_out'
     sort_by = id
     execute_on = 'FINAL'
   []
 """
     if text.count(profile) != 1:
         raise RuntimeError("fast energy_profile anchor changed")
-    text = text.replace(profile, profile.replace("execute_on = 'FINAL'", "execute_on = 'TIMESTEP_END'"), 1)
+    instrumented_profile = profile.replace(
+        "variable = 'electron_density_out",
+        "variable = 'log_e electron_density_out",
+        1,
+    ).replace("execute_on = 'FINAL'", "execute_on = 'TIMESTEP_END'", 1)
+    text = text.replace(profile, instrumented_profile, 1)
     outputs = """[Outputs]
   [step_csv]
     type = CSV
