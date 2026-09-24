@@ -17,23 +17,23 @@
     },
     {
       "id": "P1",
-      "name": "Interrogate executable native timing support",
-      "command": [
-        "python3",
-        "experiments/Issue310_fp_acceleration/control_seq28_perfqual.py",
-        "--p1"
-      ],
-      "timeout_seconds": 300
-    },
-    {
-      "id": "P2",
-      "name": "Build/check Gen28 input",
+      "name": "Build/check executable before capability probe",
       "command": [
         "python3",
         "experiments/Issue310_fp_acceleration/control_seq28_perfqual.py",
         "--p2"
       ],
       "timeout_seconds": 3000
+    },
+    {
+      "id": "P2",
+      "name": "Probe executable native timing support after build",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq28_perfqual.py",
+        "--p1"
+      ],
+      "timeout_seconds": 300
     }
   ]
 }
