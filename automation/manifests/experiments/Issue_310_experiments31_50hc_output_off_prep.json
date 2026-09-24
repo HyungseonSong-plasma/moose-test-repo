@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "issue": 310,
+  "kind": "experiments",
+  "sequence": 31,
+  "title": "Gen31 50HC output-off prepare",
+  "stages": [
+    {
+      "id": "P0",
+      "name": "Validate frozen 50HC output-off discriminator",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq31_50hc_output_off.py",
+        "--p0"
+      ],
+      "timeout_seconds": 300
+    },
+    {
+      "id": "P1",
+      "name": "Build/check Gen31 input",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq31_50hc_output_off.py",
+        "--p2"
+      ],
+      "timeout_seconds": 3000
+    },
+    {
+      "id": "P2",
+      "name": "Verify native -t/--timing capability",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq31_50hc_output_off.py",
+        "--p1"
+      ],
+      "timeout_seconds": 300
+    }
+  ]
+}
