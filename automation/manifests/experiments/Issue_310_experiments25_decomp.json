@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "issue": 310,
+  "sequence": 25,
+  "title": "Gen25 20ns cost decomposition",
+  "prepare_manifest": "automation/manifests/experiments/Issue_310_experiments25_decomp_prep.json",
+  "bundle_paths": [
+    "physics_app/physics-opt",
+    "physics_app/lib/libphysics-opt.so.0",
+    "physics_app/test/lib/libphysics_test-opt.so.0",
+    "experiments/Issue310_fp_acceleration/generated_fp25_decomp"
+  ],
+  "max_parallel": 1,
+  "cases": [
+    {
+      "id": "steffensen_50hc_decomp",
+      "name": "steffensen_50hc_decomp",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq25_decomp.py",
+        "--case",
+        "steffensen_50hc_decomp"
+      ],
+      "timeout_seconds": 3600,
+      "artifacts": [
+        "experiments/Issue310_fp_acceleration/results_fp25_decomp/steffensen_50hc_decomp_*",
+        "experiments/Issue310_fp_acceleration/generated_fp25_decomp/steffensen_50hc_decomp/*csv"
+      ]
+    }
+  ],
+  "aggregate": {
+    "name": "Aggregate Gen25 decomposition",
+    "command": [
+      "python3",
+      "experiments/Issue310_fp_acceleration/control_seq25_decomp.py",
+      "--aggregate"
+    ],
+    "timeout_seconds": 300,
+    "artifacts": [
+      "experiments/Issue310_fp_acceleration/results_fp25_decomp/issue310_gen25_decomp_summary.json"
+    ]
+  }
+}
