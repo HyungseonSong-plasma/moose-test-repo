@@ -176,7 +176,26 @@ def run_case(name):
         **g._projection_metrics(5),
         **g._anchor_diagnostic(name),
     )
-    RESULTS.mkdir(parents=True,exist_ok=True); (RESULTS/f"{name}_result.json").write_text(json.dumps(result,indent=2,sort_keys=True)+"\n")
+    RESULTS.mkdir(parents=True,exist_ok=True)
+    (RESULTS/f"{name}_result.json").write_text(json.dumps(result,indent=2,sort_keys=True)+"\n")
+    timing_tail="\n".join(perf_text.splitlines()[-500:])
+    (RESULTS/f"{name}_timing_tail.txt").write_text(timing_tail+"\n")
+    print("ISSUE310_GEN29_RESULT", json.dumps({
+        "classification": result.get("classification"),
+        "evidence_valid": result.get("evidence_valid"),
+        "elapsed_seconds": result.get("elapsed_seconds"),
+        "cumulative_fixed_point_iterations": result.get("cumulative_fixed_point_iterations"),
+        "average_fixed_point_iterations_per_observed_step": result.get("average_fixed_point_iterations_per_observed_step"),
+        "final_phi_avg_V": result.get("final_phi_avg_V"),
+        "final_electron_density_avg": result.get("final_electron_density_avg"),
+        "final_mean_electron_energy_avg": result.get("final_mean_electron_energy_avg"),
+        "fast_fixed_point_algorithm": result.get("fast_fixed_point_algorithm"),
+        "poisson_fixed_point_algorithm": result.get("poisson_fixed_point_algorithm"),
+        "native_timing_requested": result.get("native_timing_requested")
+    }, sort_keys=True))
+    print("ISSUE310_GEN29_TIMING_BEGIN")
+    print(timing_tail)
+    print("ISSUE310_GEN29_TIMING_END")
     print("ISSUE310_GEN29_CASE",name,result["classification"])
     if code: raise SystemExit(code)
 
