@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "issue": 310,
+  "sequence": 19,
+  "title": "Generation 19 unaccelerated delta-phi coupled-reference discriminator",
+  "prepare_manifest": "automation/manifests/experiments/Issue_310_experiments19_reference_prep.json",
+  "bundle_paths": [
+    "physics_app/physics-opt",
+    "physics_app/lib/libphysics-opt.so.0",
+    "physics_app/test/lib/libphysics_test-opt.so.0",
+    "experiments/Issue310_fp_acceleration/generated_fp19_reference"
+  ],
+  "max_parallel": 3,
+  "cases": [
+    {
+      "id": "picard2x_legacy",
+      "name": "picard2x_legacy",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq19_reference.py",
+        "--case",
+        "picard2x_legacy"
+      ],
+      "timeout_seconds": 3600,
+      "artifacts": [
+        "experiments/Issue310_fp_acceleration/results_fp19_reference/picard2x_legacy_*",
+        "experiments/Issue310_fp_acceleration/generated_fp19_reference/picard2x_legacy/*csv"
+      ]
+    },
+    {
+      "id": "picard2x_dphi1e6",
+      "name": "picard2x_dphi1e6",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq19_reference.py",
+        "--case",
+        "picard2x_dphi1e6"
+      ],
+      "timeout_seconds": 3600,
+      "artifacts": [
+        "experiments/Issue310_fp_acceleration/results_fp19_reference/picard2x_dphi1e6_*",
+        "experiments/Issue310_fp_acceleration/generated_fp19_reference/picard2x_dphi1e6/*csv"
+      ]
+    },
+    {
+      "id": "picard2x_dphi1e8",
+      "name": "picard2x_dphi1e8",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq19_reference.py",
+        "--case",
+        "picard2x_dphi1e8"
+      ],
+      "timeout_seconds": 3600,
+      "artifacts": [
+        "experiments/Issue310_fp_acceleration/results_fp19_reference/picard2x_dphi1e8_*",
+        "experiments/Issue310_fp_acceleration/generated_fp19_reference/picard2x_dphi1e8/*csv"
+      ]
+    }
+  ],
+  "aggregate": {
+    "name": "Aggregate Gen19 coupled-reference evidence",
+    "command": [
+      "python3",
+      "experiments/Issue310_fp_acceleration/control_seq19_reference.py",
+      "--aggregate"
+    ],
+    "timeout_seconds": 300,
+    "artifacts": [
+      "experiments/Issue310_fp_acceleration/results_fp19_reference/issue310_gen19_reference_summary.json"
+    ]
+  }
+}
