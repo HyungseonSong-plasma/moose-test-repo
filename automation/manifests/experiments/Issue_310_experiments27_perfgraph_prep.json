@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "issue": 310,
+  "kind": "experiments",
+  "sequence": 27,
+  "title": "Gen27 native PerfGraph prepare",
+  "stages": [
+    {
+      "id": "P0",
+      "name": "Validate frozen PerfGraph case",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq27_perfgraph.py",
+        "--p0"
+      ],
+      "timeout_seconds": 300
+    },
+    {
+      "id": "P1",
+      "name": "Preflight Gen27 PerfGraph",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq27_perfgraph.py",
+        "--p1"
+      ],
+      "timeout_seconds": 1500
+    },
+    {
+      "id": "P2",
+      "name": "Build/check Gen27 PerfGraph",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq27_perfgraph.py",
+        "--p2"
+      ],
+      "timeout_seconds": 3000
+    }
+  ]
+}
