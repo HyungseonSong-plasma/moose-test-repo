@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "issue": 310,
+  "sequence": 33,
+  "title": "Gen33 same-run paired autoscaling AB/BA benchmark",
+  "prepare_manifest": "automation/manifests/experiments/Issue_310_experiments33_autoscaling_paired_prep.json",
+  "bundle_paths": [
+    "physics_app/physics-opt",
+    "physics_app/lib/libphysics-opt.so.0",
+    "physics_app/test/lib/libphysics_test-opt.so.0",
+    "experiments/Issue310_fp_acceleration/generated_fp33_autoscaling_paired"
+  ],
+  "max_parallel": 2,
+  "cases": [
+    {
+      "id": "pair_ab",
+      "name": "pair_ab",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq33_autoscaling_paired.py",
+        "--case",
+        "pair_ab"
+      ],
+      "timeout_seconds": 1800,
+      "artifacts": [
+        "experiments/Issue310_fp_acceleration/results_fp33_autoscaling_paired/*",
+        "experiments/Issue310_fp_acceleration/generated_fp33_autoscaling_paired/ab_refresh_10hc/*csv",
+        "experiments/Issue310_fp_acceleration/generated_fp33_autoscaling_paired/ab_once_10hc/*csv"
+      ]
+    },
+    {
+      "id": "pair_ba",
+      "name": "pair_ba",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq33_autoscaling_paired.py",
+        "--case",
+        "pair_ba"
+      ],
+      "timeout_seconds": 1800,
+      "artifacts": [
+        "experiments/Issue310_fp_acceleration/results_fp33_autoscaling_paired/*",
+        "experiments/Issue310_fp_acceleration/generated_fp33_autoscaling_paired/ba_once_10hc/*csv",
+        "experiments/Issue310_fp_acceleration/generated_fp33_autoscaling_paired/ba_refresh_10hc/*csv"
+      ]
+    }
+  ],
+  "aggregate": {
+    "name": "Aggregate Gen33 paired autoscaling benchmark",
+    "command": [
+      "python3",
+      "experiments/Issue310_fp_acceleration/control_seq33_autoscaling_paired.py",
+      "--aggregate"
+    ],
+    "timeout_seconds": 300,
+    "artifacts": [
+      "experiments/Issue310_fp_acceleration/results_fp33_autoscaling_paired/*"
+    ]
+  }
+}
