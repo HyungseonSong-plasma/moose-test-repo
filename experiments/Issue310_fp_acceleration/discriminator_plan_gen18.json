@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "cycle_id": "issue310-gen18-20260924",
+  "baseline_sha": "d2f9d75f8bdf392e647165ad25f7c5808dfd2b40",
+  "objective": {
+    "question": "Does enforcing potential-iterate convergence remove the Gen16/17 parity offset, and how far can outer relaxation be increased while retaining stability?",
+    "performance_target": "approach O(10) fixed-point iterations per electron step with qualified short-horizon trajectory/profile parity"
+  },
+  "frozen_invariants": [
+    "no_restore=true time-aware TransientMultiApp architecture",
+    "measured row-sum-preserving band-5 electron-Jacobian correction",
+    "chi_e=100, chi_h=400, dt_h/dt_e=4",
+    "plasma equations, wall/sheath physics, chemistry and RF state",
+    "nonlinear tolerances and four-electron-step physical horizon",
+    "default fixed-point residual tolerance 1e-8"
+  ],
+  "hypotheses": [
+    {
+      "id": "H18_COUPLING_AWARE_CONVERGENCE",
+      "statement": "The accelerated run's parity offset is materially caused by default residual convergence accepting a large potential iterate change, especially on the first electron step.",
+      "test": "At alpha=0.2 compare default convergence with residual AND max|phi-phi_anchor| <= 1e-6 V and <= 1e-8 V.",
+      "falsifier": "If delta-phi enforcement does not move trajectory/profile parity toward the qualified control, premature potential convergence is not the primary parity cause."
+    },
+    {
+      "id": "H18_ALPHA_STABILITY",
+      "statement": "A stable relaxation interval exists above alpha=0.2 but below alpha=1.0, allowing further FP reduction under coupling-aware convergence.",
+      "test": "With delta_phi_abs_tol=1e-8 V fixed, sweep alpha={0.3,0.4,0.5,0.6,0.7,0.8}.",
+      "falsifier": "Reject individual alpha values that diverge, leave transport validity, or fail trajectory/profile parity. The highest stable value is not automatically promotable."
+    }
+  ],
+  "decision_logic": [
+    "If alpha=0.2 delta-phi-aware cases restore parity while retaining substantial FP reduction, keep the AND convergence criterion.",
+    "If parity is insensitive to delta-phi enforcement, investigate the transient/electron state trajectory rather than tightening coupling convergence further.",
+    "Use the alpha sweep to identify the stable boundary; promotion requires both stability and parity, not FP count alone."
+  ]
+}
