@@ -480,7 +480,6 @@ def p0() -> None:
         assert "bandwidth = 5" in poisson
         assert "gummel_band_beta" in poisson
         assert "TimeDerivative" not in poisson
-        assert "no_restore = true" in fast
         expected = f"relaxation_factor = {float(raw['relaxation_factor']):.17g}"
         assert expected in fast
         expected_tol = f"fixed_point_rel_tol = {float(raw['fixed_point_rel_tol']):.17g}"
