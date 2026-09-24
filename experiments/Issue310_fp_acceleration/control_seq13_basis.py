@@ -38,6 +38,9 @@ CHI_E = 100.0
 CHI_H = 400.0
 RATIO = 4
 FP_MAX = 3000
+FINAL_TAU = 400.0
+HEAVY_CYCLES = 1
+wall08.FINAL_TAU = FINAL_TAU
 
 
 def _spec() -> dict[str, object]:
@@ -138,8 +141,8 @@ def _standalone_fast(base_fast: str, state: dict[str, object], cell: int | None,
     old_final = seq08.FINAL_TAU
     old_cycles = seq08.HEAVY_CYCLES
     try:
-        seq08.FINAL_TAU = 400.0
-        seq08.HEAVY_CYCLES = 1
+        seq08.FINAL_TAU = FINAL_TAU
+        seq08.HEAVY_CYCLES = HEAVY_CYCLES
         with wall08._clock(spec):
             p = seq08._params(spec)
     finally:
@@ -162,8 +165,8 @@ def _base_fast() -> str:
     old_final = seq08.FINAL_TAU
     old_cycles = seq08.HEAVY_CYCLES
     try:
-        seq08.FINAL_TAU = 400.0
-        seq08.HEAVY_CYCLES = 1
+        seq08.FINAL_TAU = FINAL_TAU
+        seq08.HEAVY_CYCLES = HEAVY_CYCLES
         with wall08._clock(spec):
             p = seq08._params(spec)
             _, fast, _ = seq08._render_case(spec, p)
