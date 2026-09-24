@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "issue": 310,
+  "sequence": 13,
+  "title": "Generation 13 A2 small-gamma screened-Poisson discriminator",
+  "prepare_manifest": "automation/manifests/experiments/Issue_310_experiments13_a2_prep.json",
+  "bundle_paths": [
+    "physics_app/physics-opt",
+    "physics_app/lib/libphysics-opt.so.0",
+    "physics_app/test/lib/libphysics_test-opt.so.0",
+    "experiments/Issue310_fp_acceleration/generated_fp13_a2"
+  ],
+  "max_parallel": 3,
+  "cases": [
+    {
+      "id": "picard2x_control",
+      "name": "Qualified time-aware Picard-2x short control",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq13_a2.py",
+        "--case",
+        "picard2x_control"
+      ],
+      "timeout_seconds": 1800,
+      "artifacts": [
+        "experiments/Issue310_fp_acceleration/results_fp13_a2/picard2x_control_*",
+        "experiments/Issue310_fp_acceleration/generated_fp13_a2/picard2x_control/*csv"
+      ]
+    },
+    {
+      "id": "a2_gamma0025",
+      "name": "A2 screened Poisson gamma=0.025",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq13_a2.py",
+        "--case",
+        "a2_gamma0025"
+      ],
+      "timeout_seconds": 1800,
+      "artifacts": [
+        "experiments/Issue310_fp_acceleration/results_fp13_a2/a2_gamma0025_*",
+        "experiments/Issue310_fp_acceleration/generated_fp13_a2/a2_gamma0025/*csv"
+      ]
+    },
+    {
+      "id": "a2_gamma0050",
+      "name": "A2 screened Poisson gamma=0.050",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq13_a2.py",
+        "--case",
+        "a2_gamma0050"
+      ],
+      "timeout_seconds": 1800,
+      "artifacts": [
+        "experiments/Issue310_fp_acceleration/results_fp13_a2/a2_gamma0050_*",
+        "experiments/Issue310_fp_acceleration/generated_fp13_a2/a2_gamma0050/*csv"
+      ]
+    }
+  ],
+  "aggregate": {
+    "name": "Aggregate Gen13 A2 small-gamma evidence",
+    "command": [
+      "python3",
+      "experiments/Issue310_fp_acceleration/control_seq13_a2.py",
+      "--aggregate"
+    ],
+    "timeout_seconds": 300,
+    "artifacts": [
+      "experiments/Issue310_fp_acceleration/results_fp13_a2/issue310_gen13_a2_summary.json"
+    ]
+  }
+}
