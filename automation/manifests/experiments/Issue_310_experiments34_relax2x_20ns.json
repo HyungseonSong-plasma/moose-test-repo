@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "issue": 310,
+  "sequence": 34,
+  "title": "Gen34 20 ns relax2x reference vs optimized endpoint AB/BA benchmark",
+  "prepare_manifest": "automation/manifests/experiments/Issue_310_experiments34_relax2x_20ns_prep.json",
+  "bundle_paths": [
+    "physics_app/physics-opt",
+    "physics_app/lib/libphysics-opt.so.0",
+    "physics_app/test/lib/libphysics_test-opt.so.0",
+    "experiments/Issue310_fp_acceleration/generated_fp34_relax2x_reference"
+  ],
+  "max_parallel": 2,
+  "cases": [
+    {
+      "id": "pair_ab",
+      "name": "pair_ab",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq34_relax2x_reference_benchmark.py",
+        "--case",
+        "pair_ab"
+      ],
+      "timeout_seconds": 7200,
+      "artifacts": [
+        "experiments/Issue310_fp_acceleration/results_fp34_relax2x_reference/*",
+        "experiments/Issue310_fp_acceleration/generated_fp34_relax2x_reference/relax2x_reference_20ns/*csv",
+        "experiments/Issue310_fp_acceleration/generated_fp34_relax2x_reference/optimized_endpoint_20ns/*csv"
+      ]
+    },
+    {
+      "id": "pair_ba",
+      "name": "pair_ba",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq34_relax2x_reference_benchmark.py",
+        "--case",
+        "pair_ba"
+      ],
+      "timeout_seconds": 7200,
+      "artifacts": [
+        "experiments/Issue310_fp_acceleration/results_fp34_relax2x_reference/*",
+        "experiments/Issue310_fp_acceleration/generated_fp34_relax2x_reference/relax2x_reference_20ns/*csv",
+        "experiments/Issue310_fp_acceleration/generated_fp34_relax2x_reference/optimized_endpoint_20ns/*csv"
+      ]
+    }
+  ],
+  "aggregate": {
+    "name": "Aggregate Gen34 20 ns relax2x benchmark",
+    "command": [
+      "python3",
+      "experiments/Issue310_fp_acceleration/control_seq34_relax2x_reference_benchmark.py",
+      "--aggregate"
+    ],
+    "timeout_seconds": 600,
+    "artifacts": [
+      "experiments/Issue310_fp_acceleration/results_fp34_relax2x_reference/*"
+    ]
+  }
+}
