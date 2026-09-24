@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "issue": 310,
+  "sequence": 30,
+  "title": "Gen30 strict output timing A/B",
+  "prepare_manifest": "automation/manifests/experiments/Issue_310_experiments30_output_timing_ab_prep.json",
+  "bundle_paths": [
+    "physics_app/physics-opt",
+    "physics_app/lib/libphysics-opt.so.0",
+    "physics_app/test/lib/libphysics_test-opt.so.0",
+    "experiments/Issue310_fp_acceleration/generated_fp30_output_timing_ab"
+  ],
+  "max_parallel": 1,
+  "cases": [
+    {
+      "id": "output_ab_10hc",
+      "name": "output_ab_10hc",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq30_output_timing_ab.py",
+        "--pair"
+      ],
+      "timeout_seconds": 2400,
+      "artifacts": [
+        "experiments/Issue310_fp_acceleration/results_fp30_output_timing_ab/*",
+        "experiments/Issue310_fp_acceleration/generated_fp30_output_timing_ab/output_on_10hc/*csv",
+        "experiments/Issue310_fp_acceleration/generated_fp30_output_timing_ab/output_off_10hc/*csv"
+      ]
+    }
+  ],
+  "aggregate": {
+    "name": "Aggregate Gen30 output timing A/B",
+    "command": [
+      "python3",
+      "experiments/Issue310_fp_acceleration/control_seq30_output_timing_ab.py",
+      "--aggregate"
+    ],
+    "timeout_seconds": 300,
+    "artifacts": [
+      "experiments/Issue310_fp_acceleration/results_fp30_output_timing_ab/*"
+    ]
+  }
+}
