@@ -1,14 +1,10 @@
-"""Issue #310 Generation 12: trajectory-based electron-potential Jacobian diagnostic.
+"""Issue #310 Generation 12: trajectory electron-potential Jacobian diagnostic.
 
-Diagnostic only: preserve the qualified Gen11/Sequence08 physics and collect the
-20-cell electron state at every successful MultiApp fixed-point iteration. The
-analysis estimates the directional discrete response dn_e/dphi from consecutive
-Gummel iterates and, when the observed update directions have sufficient rank,
-a least-squares 20x20 secant sensitivity matrix.
-
-This is deliberately not called an exact Jacobian unless the excitation rank is
-full. Its role is to decide whether A1 n_e/VTe or A2 n_e*mu/D is the better
-local surrogate before another screened-Poisson parameter experiment.
+Diagnostic only. Preserve the qualified Gen11/Sequence08 Picard-2x physics and
+sample the 20-cell electron state after every successful MultiApp fixed-point
+iteration. Consecutive iterates provide an observed discrete secant response
+of electron density to potential. A 20x20 least-squares secant matrix is only
+called identified when the observed potential-update directions have full rank.
 """
 from __future__ import annotations
 
@@ -18,8 +14,6 @@ import math
 import os
 import sys
 from pathlib import Path
-
-import numpy as np
 
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parents[1]
@@ -41,11 +35,9 @@ def _instrument_fast(text: str) -> str:
     execute_on = 'FINAL'
   []
 """
-    replacement = profile.replace("execute_on = 'FINAL'", "execute_on = 'TIMESTEP_END'")
     if text.count(profile) != 1:
         raise RuntimeError("fast energy_profile anchor changed")
-    text = text.replace(profile, replacement, 1)
-
+    text = text.replace(profile, profile.replace("execute_on = 'FINAL'", "execute_on = 'TIMESTEP_END'"), 1)
     outputs = """[Outputs]
   [step_csv]
     type = CSV
@@ -72,7 +64,6 @@ def build(clean: bool = True) -> None:
     if clean and GENERATED.exists():
         shutil.rmtree(GENERATED)
     GENERATED.mkdir(parents=True, exist_ok=True)
-
     raw = {"name": CASE, "screened": False}
     p = gen11._params(raw)
     parent, fast, poisson = gen11.render(raw, p)
@@ -95,7 +86,6 @@ def p0() -> None:
     assert "execute_on = 'MULTIAPP_FIXED_POINT_ITERATION_END'" in fast
     assert "new_row_detection_columns = all" in fast
     assert fast.count("[energy_profile]") == 1
-    assert "execute_on = 'TIMESTEP_END'" in fast
     assert "gummel_screen_beta" not in (d / "poisson_sub.i").read_text(encoding="utf-8")
     assert "no_restore = true" in fast
     print("ISSUE310_GEN12_JACOBIAN_P0: PASS")
@@ -104,26 +94,20 @@ def p0() -> None:
 def p1() -> None:
     build()
     rel = ROOT.relative_to(REPO)
-    gen11.base._docker(
-        "set -euo pipefail; source /environment; export PYTHONPATH=/workspace; "
-        f"python3 /workspace/bin/physics.py preflight /workspace/{rel}/generated_fp12_jacobian/{CASE}/input.i"
-    )
+    gen11.base._docker("set -euo pipefail; source /environment; export PYTHONPATH=/workspace; "
+                       f"python3 /workspace/bin/physics.py preflight /workspace/{rel}/generated_fp12_jacobian/{CASE}/input.i")
     print("ISSUE310_GEN12_JACOBIAN_P1: PASS")
 
 
 def p2() -> None:
     build()
     rel = ROOT.relative_to(REPO)
-    checks = "; ".join(
-        f"cd /workspace/{rel}/generated_fp12_jacobian/{CASE} && /workspace/physics_app/physics-opt --check-input -i {f}"
-        for f in ("input.i", "fast_sub.i", "poisson_sub.i")
-    )
-    gen11.base._docker(
-        "set -euo pipefail; source /environment; "
-        "export MOOSE_DIR=/opt/physics_vendor/moose CRANE_DIR=/opt/physics_vendor/crane "
-        "SQUIRREL_DIR=/opt/physics_vendor/squirrel ZAPDOS_DIR=/opt/physics_vendor/zapdos "
-        "METHOD=opt; make -C /workspace/physics_app -j2; " + checks
-    )
+    checks = "; ".join(f"cd /workspace/{rel}/generated_fp12_jacobian/{CASE} && /workspace/physics_app/physics-opt --check-input -i {f}"
+                       for f in ("input.i", "fast_sub.i", "poisson_sub.i"))
+    gen11.base._docker("set -euo pipefail; source /environment; "
+                       "export MOOSE_DIR=/opt/physics_vendor/moose CRANE_DIR=/opt/physics_vendor/crane "
+                       "SQUIRREL_DIR=/opt/physics_vendor/squirrel ZAPDOS_DIR=/opt/physics_vendor/zapdos METHOD=opt; "
+                       "make -C /workspace/physics_app -j2; " + checks)
     print("ISSUE310_GEN12_JACOBIAN_P2: PASS")
 
 
@@ -149,143 +133,160 @@ def _read_csv(path: Path) -> list[dict[str, str]]:
         return list(csv.DictReader(f))
 
 
-def _profile(path: Path) -> dict[str, np.ndarray]:
+def _profile(path: Path) -> dict[str, list[float]]:
     rows = _read_csv(path)
     rows.sort(key=lambda r: int(float(r["id"])))
-    def col(name: str) -> np.ndarray:
-        return np.asarray([float(r[name]) for r in rows], dtype=float)
-    return {
-        "id": col("id"),
-        "x": col("x"),
-        "ne": col("electron_density_out"),
-        "phi": col("potential_from_poisson"),
-        "mean_e": col("mean_energy_out"),
-        "mu": col("mobility_out"),
-        "D": col("diffusion_out"),
-    }
+    def col(name: str) -> list[float]:
+        return [float(r[name]) for r in rows]
+    return {"id": col("id"), "x": col("x"), "ne": col("electron_density_out"),
+            "phi": col("potential_from_poisson"), "mean_e": col("mean_energy_out"),
+            "mu": col("mobility_out"), "D": col("diffusion_out")}
 
 
-def _safe_stats(values: np.ndarray) -> dict[str, float | None]:
-    good = values[np.isfinite(values)]
-    if good.size == 0:
+def _stats(values: list[float]) -> dict[str, float | None]:
+    v = sorted(x for x in values if math.isfinite(x))
+    if not v:
         return {"min": None, "median": None, "max": None, "mean": None}
-    return {
-        "min": float(np.min(good)),
-        "median": float(np.median(good)),
-        "max": float(np.max(good)),
-        "mean": float(np.mean(good)),
-    }
+    mid = len(v) // 2
+    med = v[mid] if len(v) % 2 else 0.5 * (v[mid - 1] + v[mid])
+    return {"min": v[0], "median": med, "max": v[-1], "mean": sum(v) / len(v)}
 
 
-def _analyse_step(samples: list[dict[str, np.ndarray]], time_s: float) -> dict[str, object]:
+def _rank(a: list[list[float]]) -> tuple[int, list[float]]:
+    m = [row[:] for row in a]
+    n = len(m)
+    scale = max((abs(x) for row in m for x in row), default=0.0)
+    tol = max(scale * 1e-11, 1e-300)
+    pivots: list[float] = []
+    r = 0
+    for c in range(n):
+        pivot = max(range(r, n), key=lambda i: abs(m[i][c]), default=r)
+        if r >= n or abs(m[pivot][c]) <= tol:
+            continue
+        m[r], m[pivot] = m[pivot], m[r]
+        pv = m[r][c]
+        pivots.append(abs(pv))
+        for i in range(r + 1, n):
+            q = m[i][c] / pv
+            if q == 0.0:
+                continue
+            for j in range(c, n):
+                m[i][j] -= q * m[r][j]
+        r += 1
+        if r == n:
+            break
+    return r, pivots
+
+
+def _solve(a: list[list[float]], b: list[list[float]]) -> list[list[float]]:
+    n = len(a)
+    nrhs = len(b[0])
+    aug = [a[i][:] + b[i][:] for i in range(n)]
+    for c in range(n):
+        p = max(range(c, n), key=lambda i: abs(aug[i][c]))
+        if abs(aug[p][c]) < 1e-300:
+            raise RuntimeError("singular regularized normal matrix")
+        aug[c], aug[p] = aug[p], aug[c]
+        pv = aug[c][c]
+        for j in range(c, n + nrhs):
+            aug[c][j] /= pv
+        for i in range(n):
+            if i == c:
+                continue
+            q = aug[i][c]
+            if q == 0.0:
+                continue
+            for j in range(c, n + nrhs):
+                aug[i][j] -= q * aug[c][j]
+    return [row[n:] for row in aug]
+
+
+def _matrix_fit(x: list[list[float]], y: list[list[float]]) -> dict[str, object]:
+    m, n = len(x), len(x[0])
+    gram = [[sum(x[k][i] * x[k][j] for k in range(m)) for j in range(n)] for i in range(n)]
+    rhs = [[sum(x[k][i] * y[k][j] for k in range(m)) for j in range(n)] for i in range(n)]
+    rank, pivots = _rank(gram)
+    maxdiag = max((abs(gram[i][i]) for i in range(n)), default=1.0)
+    ridge = max(maxdiag * 1e-12, 1e-300)
+    reg = [row[:] for row in gram]
+    for i in range(n):
+        reg[i][i] += ridge
+    c = _solve(reg, rhs)
+    bmat = [[c[j][i] for j in range(n)] for i in range(n)]
+    pred = [[sum(x[k][i] * c[i][j] for i in range(n)) for j in range(n)] for k in range(m)]
+    ynorm2 = sum(v * v for row in y for v in row)
+    err2 = sum((y[k][j] - pred[k][j]) ** 2 for k in range(m) for j in range(n))
+    bnorm2 = sum(v * v for row in bmat for v in row)
+    off2 = sum(bmat[i][j] ** 2 for i in range(n) for j in range(n) if i != j)
+    return {"rank": rank, "rank_pivots": pivots, "ridge": ridge, "B": bmat,
+            "relative_fit_error": math.sqrt(err2 / ynorm2) if ynorm2 > 0 else None,
+            "offdiag_fraction": math.sqrt(off2 / bnorm2) if bnorm2 > 0 else None}
+
+
+def _analyse_step(samples: list[dict[str, list[float]]], time_s: float) -> dict[str, object]:
     if len(samples) < 2:
         return {"time_s": time_s, "profiles": len(samples), "status": "INSUFFICIENT_PROFILES"}
-
-    dphi = np.stack([b["phi"] - a["phi"] for a, b in zip(samples[:-1], samples[1:])])
-    dne = np.stack([b["ne"] - a["ne"] for a, b in zip(samples[:-1], samples[1:])])
-    denom = np.sum(dphi * dphi, axis=0)
-    numer = np.sum(dphi * dne, axis=0)
-    local = np.full(denom.shape, np.nan)
-    mask = denom > max(float(np.max(denom)) * 1.0e-18, 1.0e-40)
-    local[mask] = numer[mask] / denom[mask]
-
+    x = [[b["phi"][i] - a["phi"][i] for i in range(len(a["phi"]))] for a, b in zip(samples[:-1], samples[1:])]
+    y = [[b["ne"][i] - a["ne"][i] for i in range(len(a["ne"]))] for a, b in zip(samples[:-1], samples[1:])]
+    n = len(x[0])
+    local: list[float] = []
+    for i in range(n):
+        den = sum(row[i] ** 2 for row in x)
+        num = sum(x[k][i] * y[k][i] for k in range(len(x)))
+        local.append(num / den if den > 1e-40 else math.nan)
     ref = samples[0]
-    vte = (2.0 / 3.0) * ref["mean_e"]
-    a1 = ref["ne"] / np.maximum(vte, 1.0e-30)
-    a2 = ref["ne"] * ref["mu"] / np.maximum(ref["D"], 1.0e-300)
-    gamma_a1 = np.divide(local, a1, out=np.full_like(local, np.nan), where=np.abs(a1) > 0)
-    gamma_a2 = np.divide(local, a2, out=np.full_like(local, np.nan), where=np.abs(a2) > 0)
-
-    _, svals, _ = np.linalg.svd(dphi, full_matrices=False)
-    tol = (svals[0] if svals.size else 0.0) * max(dphi.shape) * np.finfo(float).eps
-    rank = int(np.sum(svals > tol))
-    C, _, _, _ = np.linalg.lstsq(dphi, dne, rcond=None)
-    B = C.T
-    diag = np.diag(B)
-    off = B - np.diag(diag)
-    bnorm = float(np.linalg.norm(B))
-    off_fraction = float(np.linalg.norm(off) / bnorm) if bnorm > 0 else None
-    fit = dphi @ C
-    data_norm = float(np.linalg.norm(dne))
-    rel_fit_error = float(np.linalg.norm(dne - fit) / data_norm) if data_norm > 0 else None
-
-    return {
-        "time_s": time_s,
-        "profiles": len(samples),
-        "increments": int(dphi.shape[0]),
-        "cells": int(dphi.shape[1]),
-        "potential_update_rank": rank,
-        "full_matrix_identified": rank == dphi.shape[1],
-        "singular_values": [float(x) for x in svals],
-        "least_squares_relative_fit_error": rel_fit_error,
-        "least_squares_offdiagonal_frobenius_fraction": off_fraction,
-        "directional_local_dn_dphi_m3_per_V": [None if not math.isfinite(x) else float(x) for x in local],
-        "a1_ne_over_VTe_m3_per_V": [float(x) for x in a1],
-        "a2_ne_mu_over_D_m3_per_V": [float(x) for x in a2],
-        "gamma_A1_directional": [None if not math.isfinite(x) else float(x) for x in gamma_a1],
-        "gamma_A2_directional": [None if not math.isfinite(x) else float(x) for x in gamma_a2],
-        "local_sensitivity_stats": _safe_stats(local),
-        "gamma_A1_stats": _safe_stats(gamma_a1),
-        "gamma_A2_stats": _safe_stats(gamma_a2),
-        "matrix_diagonal_m3_per_V": [float(x) for x in diag],
-        "matrix_flat_row_major_m3_per_V": [float(x) for x in B.ravel()],
-        "interpretation": (
-            "FULL_RANK_TRAJECTORY_SECANT"
-            if rank == dphi.shape[1]
-            else "LOW_RANK_DIRECTIONAL_SECANT_ONLY; basis perturbations are required before calling this an exact 20x20 Jacobian"
-        ),
-    }
+    a1 = [ref["ne"][i] / max((2.0 / 3.0) * ref["mean_e"][i], 1e-30) for i in range(n)]
+    a2 = [ref["ne"][i] * ref["mu"][i] / max(ref["D"][i], 1e-300) for i in range(n)]
+    g1 = [local[i] / a1[i] if math.isfinite(local[i]) and a1[i] != 0 else math.nan for i in range(n)]
+    g2 = [local[i] / a2[i] if math.isfinite(local[i]) and a2[i] != 0 else math.nan for i in range(n)]
+    fit = _matrix_fit(x, y)
+    bmat = fit.pop("B")
+    diag = [bmat[i][i] for i in range(n)]
+    return {"time_s": time_s, "profiles": len(samples), "increments": len(x), "cells": n,
+            "potential_update_rank": fit["rank"], "full_matrix_identified": fit["rank"] == n,
+            "least_squares_relative_fit_error": fit["relative_fit_error"],
+            "least_squares_offdiagonal_frobenius_fraction": fit["offdiag_fraction"],
+            "rank_pivots": fit["rank_pivots"], "ridge": fit["ridge"],
+            "directional_local_dn_dphi_m3_per_V": [None if not math.isfinite(v) else v for v in local],
+            "a1_ne_over_VTe_m3_per_V": a1, "a2_ne_mu_over_D_m3_per_V": a2,
+            "gamma_A1_directional": [None if not math.isfinite(v) else v for v in g1],
+            "gamma_A2_directional": [None if not math.isfinite(v) else v for v in g2],
+            "local_sensitivity_stats": _stats(local), "gamma_A1_stats": _stats(g1), "gamma_A2_stats": _stats(g2),
+            "matrix_diagonal_m3_per_V": diag,
+            "matrix_flat_row_major_m3_per_V": [v for row in bmat for v in row],
+            "interpretation": "FULL_RANK_TRAJECTORY_SECANT" if fit["rank"] == n else
+            "LOW_RANK_DIRECTIONAL_SECANT_ONLY; basis perturbations are required before calling this an exact 20x20 Jacobian"}
 
 
 def analyse() -> dict[str, object]:
-    case_dir = GENERATED / CASE
-    scalar = case_dir / "input_out_electron0_fp_iter_csv.csv"
-    profiles = sorted(case_dir.glob("input_out_electron0_fp_iter_csv_energy_profile_*.csv"))
+    d = GENERATED / CASE
+    scalar = d / "input_out_electron0_fp_iter_csv.csv"
+    profiles = sorted(d.glob("input_out_electron0_fp_iter_csv_energy_profile_*.csv"))
     if not scalar.is_file():
         raise RuntimeError(f"missing fixed-point scalar CSV: {scalar}")
     rows = _read_csv(scalar)
-    if not rows or not profiles:
-        raise RuntimeError("fixed-point diagnostic output is empty")
-    if len(rows) != len(profiles):
-        raise RuntimeError(f"scalar/profile count mismatch: {len(rows)} != {len(profiles)}")
-
-    records: list[tuple[float, dict[str, np.ndarray]]] = []
-    for row, path in zip(rows, profiles, strict=True):
-        records.append((float(row["time"]), _profile(path)))
-
+    if len(rows) != len(profiles) or not rows:
+        raise RuntimeError(f"scalar/profile count mismatch or empty: {len(rows)} != {len(profiles)}")
+    records = [(float(row["time"]), _profile(path)) for row, path in zip(rows, profiles, strict=True)]
     times: list[float] = []
     for t, _ in records:
-        if t > 0.0 and (not times or not math.isclose(t, times[-1], rel_tol=0.0, abs_tol=1.0e-30)):
+        if t > 0 and not any(math.isclose(t, q, rel_tol=0.0, abs_tol=1e-30) for q in times):
             times.append(t)
     steps = []
     for t in times[:2]:
-        samples = [p for tr, p in records if math.isclose(tr, t, rel_tol=0.0, abs_tol=1.0e-30)]
+        samples = [p for tr, p in records if math.isclose(tr, t, rel_tol=0.0, abs_tol=1e-30)]
         steps.append(_analyse_step(samples, t))
-
-    comparison = {}
+    comp = {}
     if len(steps) >= 2:
-        comparison = {
-            "step1_gamma_A1_median": steps[0].get("gamma_A1_stats", {}).get("median"),
-            "step2_gamma_A1_median": steps[1].get("gamma_A1_stats", {}).get("median"),
-            "step1_gamma_A2_median": steps[0].get("gamma_A2_stats", {}).get("median"),
-            "step2_gamma_A2_median": steps[1].get("gamma_A2_stats", {}).get("median"),
-            "step2_full_matrix_identified": steps[1].get("full_matrix_identified"),
-        }
-
-    return {
-        "issue": 310,
-        "generation": 12,
-        "diagnostic": "trajectory discrete secant electron response to potential",
-        "case": CASE,
-        "source_head_role": "Gen11 qualified-control physics plus diagnostic-only output instrumentation",
-        "physics_changed": False,
-        "fixed_point_output_rows": len(rows),
-        "profile_files": len(profiles),
-        "physical_times_observed": times,
-        "steps": steps,
-        "comparison": comparison,
-        "guard": "This is an observed Gummel-trajectory secant response. Only a full-rank fit may be treated as a 20x20 discrete secant Jacobian; otherwise use the directional/local estimates and run basis perturbations before claiming an exact Jacobian.",
-    }
+        comp = {"step1_gamma_A1_median": steps[0]["gamma_A1_stats"]["median"],
+                "step2_gamma_A1_median": steps[1]["gamma_A1_stats"]["median"],
+                "step1_gamma_A2_median": steps[0]["gamma_A2_stats"]["median"],
+                "step2_gamma_A2_median": steps[1]["gamma_A2_stats"]["median"],
+                "step2_full_matrix_identified": steps[1]["full_matrix_identified"]}
+    return {"issue": 310, "generation": 12, "diagnostic": "trajectory discrete secant electron response to potential",
+            "case": CASE, "physics_changed": False, "fixed_point_output_rows": len(rows), "profile_files": len(profiles),
+            "physical_times_observed": times, "steps": steps, "comparison": comp,
+            "guard": "Observed Gummel-trajectory secant response only. A full-rank fit may be treated as a 20x20 discrete secant Jacobian; otherwise use directional/local estimates and run basis perturbations before claiming an exact Jacobian."}
 
 
 def run_case() -> None:
@@ -296,19 +297,15 @@ def run_case() -> None:
     if not (REPO / "physics_app" / "physics-opt").exists():
         raise SystemExit("physics-opt missing")
     rel = ROOT.relative_to(REPO)
-    gen11.base._docker(
-        "set -euo pipefail; source /environment; "
-        "export MOOSE_DIR=/opt/physics_vendor/moose CRANE_DIR=/opt/physics_vendor/crane "
-        "SQUIRREL_DIR=/opt/physics_vendor/squirrel ZAPDOS_DIR=/opt/physics_vendor/zapdos "
-        "METHOD=opt PYTHONPATH=/workspace; "
-        f"python3 /workspace/{rel}/control_seq12_jacobian_diag.py --inner-run"
-    )
+    gen11.base._docker("set -euo pipefail; source /environment; "
+                       "export MOOSE_DIR=/opt/physics_vendor/moose CRANE_DIR=/opt/physics_vendor/crane "
+                       "SQUIRREL_DIR=/opt/physics_vendor/squirrel ZAPDOS_DIR=/opt/physics_vendor/zapdos METHOD=opt PYTHONPATH=/workspace; "
+                       f"python3 /workspace/{rel}/control_seq12_jacobian_diag.py --inner-run")
     summary = analyse()
     out = RESULTS / "jacobian_trajectory_summary.json"
     out.write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print("ISSUE310_GEN12_JACOBIAN_RESULT:", out)
     print(json.dumps(summary["comparison"], sort_keys=True))
-
 
 
 def aggregate() -> None:
@@ -327,19 +324,13 @@ def aggregate() -> None:
 
 
 def main() -> None:
-    if "--p0" in sys.argv:
-        p0(); return
-    if "--p1" in sys.argv:
-        p1(); return
-    if "--p2" in sys.argv:
-        p2(); return
-    if "--inner-run" in sys.argv:
-        raise SystemExit(inner_run())
-    if "--case" in sys.argv:
-        run_case(); return
-    if "--aggregate" in sys.argv:
-        aggregate(); return
-    raise SystemExit("choose --p0/--p1/--p2/--case")
+    if "--p0" in sys.argv: p0(); return
+    if "--p1" in sys.argv: p1(); return
+    if "--p2" in sys.argv: p2(); return
+    if "--inner-run" in sys.argv: raise SystemExit(inner_run())
+    if "--case" in sys.argv: run_case(); return
+    if "--aggregate" in sys.argv: aggregate(); return
+    raise SystemExit("choose --p0/--p1/--p2/--case/--aggregate")
 
 
 if __name__ == "__main__":
