@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "cycle_id": "issue310-gen19-20260924",
+  "baseline_sha": "d2f9d75f8bdf392e647165ad25f7c5808dfd2b40",
+  "baseline_evidence": {
+    "qualified_fp_per_step": [6, 516, 549, 601],
+    "qualified_cumulative_fp": 1672,
+    "gen18_run": 35993759618,
+    "gen18_delta_phi_root_phi_avg_V_approx": 3.979244
+  },
+  "objective": "Determine whether the historical qualified control is coupling-under-converged by applying the delta-phi AND criterion without any Jacobian correction.",
+  "frozen_invariants": [
+    "no banded or screened Poisson correction",
+    "qualified Picard relaxation 2/(1+chi_e)",
+    "chi_e=100 and chi_h=400",
+    "dt_h/dt_e=4",
+    "no_restore=true TransientMultiApp/Transient Poisson architecture",
+    "same plasma equations, wall/sheath physics, nonlinear tolerances and four-electron-step horizon"
+  ],
+  "hypotheses": [
+    {
+      "id": "H19_BASELINE_UNDERCONVERGED",
+      "statement": "The historical control is accepted before the potential coupling variable is converged; adding only delta-phi convergence moves the unaccelerated control to the Gen18 delta-phi-aware root."
+    },
+    {
+      "id": "H19_BANDED_ALTERS_ROOT",
+      "statement": "If the unaccelerated delta-phi-aware controls remain near the historical 3.8446 V state rather than the Gen18 3.97924 V state, the banded iteration operator is selecting a different root."
+    }
+  ],
+  "experiments": [
+    {
+      "id": "legacy",
+      "hypothesis": "H19_BASELINE_UNDERCONVERGED",
+      "lane": "reference",
+      "base_sha": "d2f9d75f8bdf392e647165ad25f7c5808dfd2b40",
+      "branch": "issue-310-gen19-reference-convergence",
+      "workspace": "experiments/Issue310_fp_acceleration/generated_fp19_reference/picard2x_legacy",
+      "artifact_namespace": "gen19/picard2x_legacy",
+      "mutation_scope": "none",
+      "discriminating_observables": ["FP/step", "final profiles", "potential trajectory"],
+      "controls": ["historical qualified stopping rule"]
+    },
+    {
+      "id": "dphi1e6",
+      "hypothesis": "H19_BASELINE_UNDERCONVERGED",
+      "lane": "reference",
+      "base_sha": "d2f9d75f8bdf392e647165ad25f7c5808dfd2b40",
+      "branch": "issue-310-gen19-reference-convergence",
+      "workspace": "experiments/Issue310_fp_acceleration/generated_fp19_reference/picard2x_dphi1e6",
+      "artifact_namespace": "gen19/picard2x_dphi1e6",
+      "mutation_scope": "convergence acceptance only",
+      "discriminating_observables": ["FP/step", "last delta_phi", "final profiles", "potential trajectory"],
+      "controls": ["legacy physics/relaxation/timestep unchanged"]
+    },
+    {
+      "id": "dphi1e8",
+      "hypothesis": "H19_BASELINE_UNDERCONVERGED",
+      "lane": "reference",
+      "base_sha": "d2f9d75f8bdf392e647165ad25f7c5808dfd2b40",
+      "branch": "issue-310-gen19-reference-convergence",
+      "workspace": "experiments/Issue310_fp_acceleration/generated_fp19_reference/picard2x_dphi1e8",
+      "artifact_namespace": "gen19/picard2x_dphi1e8",
+      "mutation_scope": "convergence acceptance only",
+      "discriminating_observables": ["FP/step", "last delta_phi", "final profiles", "potential trajectory"],
+      "controls": ["legacy physics/relaxation/timestep unchanged"]
+    }
+  ]
+}
