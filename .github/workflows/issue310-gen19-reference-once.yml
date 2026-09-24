@@ -1,0 +1,17 @@
+name: One-shot Issue310 Gen19 Reference Convergence
+on:
+  push:
+    branches: [issue-310-gen19-reference-convergence]
+    paths: [.github/workflows/issue310-gen19-reference-once.yml]
+permissions:
+  contents: read
+jobs:
+  run:
+    uses: HyungseonSong-plasma/chatgpt-operation/.github/workflows/governed-matrix.yml@6474eb7b77f890b7cf9d7134ccebea31662bcdbe
+    with:
+      issue: "310"
+      sequence: "19"
+      manifest: automation/manifests/experiments/Issue_310_experiments19_reference.json
+      base_sha: ${{ github.sha }}
+      operation_sha: 6474eb7b77f890b7cf9d7134ccebea31662bcdbe
+# initial Gen19 launch
