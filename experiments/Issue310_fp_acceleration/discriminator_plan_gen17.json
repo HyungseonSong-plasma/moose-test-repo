@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "cycle_id": "issue310-gen17-20260924",
+  "baseline_sha": "d2f9d75f8bdf392e647165ad25f7c5808dfd2b40",
+  "objective": {
+    "question": "Does the remaining parity offset come from Poisson MultiApp restore semantics or from terminating the accelerated fixed point too loosely?",
+    "performance_target": "O(10) fixed-point iterations per electron step while preserving qualified trajectory/profile parity"
+  },
+  "frozen_invariants": [
+    "same plasma equations and wall/sheath physics",
+    "same chi_e=100, chi_h=400, dt_h/dt_e=4",
+    "same measured row-sum-preserving band-5 Jacobian correction",
+    "same nonlinear tolerances and physical horizon",
+    "same correction placement and state scaling"
+  ],
+  "hypotheses": [
+    {
+      "id": "H17_RESTORE",
+      "statement": "Poisson-child no_restore semantics contribute materially to the parity offset.",
+      "test": "Compare no_restore=true versus no_restore=false at identical band5, alpha and fixed-point tolerance.",
+      "falsifier": "If same-alpha/same-tolerance restore and no-restore cases have nearly identical trajectory/profile parity and FP work, restore semantics are not the cause."
+    },
+    {
+      "id": "H17_STOPPING",
+      "statement": "The accelerated iteration is reaching a nearby approximate state because fixed_point_rel_tol=1e-8 is too loose for parity, despite the banded correction vanishing at the limit.",
+      "test": "At alpha=1.0 and no_restore=true, tighten fixed_point_rel_tol from 1e-8 to 1e-10 and 1e-12.",
+      "falsifier": "If tighter tolerance does not systematically move the solution toward the qualified control, the parity offset is not primarily a stopping-tolerance artifact."
+    },
+    {
+      "id": "H17_FULL_RELAXATION",
+      "statement": "With band5 preconditioning, alpha=1.0 can reach the O(10) FP/step target stably.",
+      "test": "Run alpha=1.0 at the qualified and tightened fixed-point tolerances under both restore modes where applicable.",
+      "falsifier": "Reject if alpha=1.0 becomes unstable, violates transport validity, or fails to materially reduce FP work."
+    }
+  ]
+}
