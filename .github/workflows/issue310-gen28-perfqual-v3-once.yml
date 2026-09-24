@@ -1,0 +1,16 @@
+name: One-shot Issue310 Gen28 Perf Qualify v3
+on:
+  push:
+    branches: [issue-310-gen28-perfgraph-qualify-v3]
+    paths: [.github/workflows/issue310-gen28-perfqual-v3-once.yml]
+permissions:
+  contents: read
+jobs:
+  run:
+    uses: HyungseonSong-plasma/chatgpt-operation/.github/workflows/governed-matrix.yml@6474eb7b77f890b7cf9d7134ccebea31662bcdbe
+    with:
+      issue: "310"
+      sequence: "28"
+      manifest: automation/manifests/experiments/Issue_310_experiments28_perfqual.json
+      base_sha: ${{ github.sha }}
+      operation_sha: 6474eb7b77f890b7cf9d7134ccebea31662bcdbe
