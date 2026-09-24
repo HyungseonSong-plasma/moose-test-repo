@@ -1,0 +1,148 @@
+{
+  "schema_version": 1,
+  "issue": 310,
+  "sequence": 17,
+  "title": "Generation 17 restore-semantics and stopping-tolerance discriminator",
+  "prepare_manifest": "automation/manifests/experiments/Issue_310_experiments17_restore_prep.json",
+  "bundle_paths": [
+    "physics_app/physics-opt",
+    "physics_app/lib/libphysics-opt.so.0",
+    "physics_app/test/lib/libphysics_test-opt.so.0",
+    "experiments/Issue310_fp_acceleration/generated_fp17_restore"
+  ],
+  "max_parallel": 8,
+  "cases": [
+    {
+      "id": "picard2x_control",
+      "name": "Qualified time-aware Picard-2x control",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq17_restore.py",
+        "--case",
+        "picard2x_control"
+      ],
+      "timeout_seconds": 2400,
+      "artifacts": [
+        "experiments/Issue310_fp_acceleration/results_fp17_restore/picard2x_control_*",
+        "experiments/Issue310_fp_acceleration/generated_fp17_restore/picard2x_control/*csv"
+      ]
+    },
+    {
+      "id": "band5_nr_a020_tol1e8",
+      "name": "Band5 no-restore alpha0.20 tol1e-8",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq17_restore.py",
+        "--case",
+        "band5_nr_a020_tol1e8"
+      ],
+      "timeout_seconds": 2400,
+      "artifacts": [
+        "experiments/Issue310_fp_acceleration/results_fp17_restore/band5_nr_a020_tol1e8_*",
+        "experiments/Issue310_fp_acceleration/generated_fp17_restore/band5_nr_a020_tol1e8/*csv"
+      ]
+    },
+    {
+      "id": "band5_restore_a020_tol1e8",
+      "name": "Band5 restore alpha0.20 tol1e-8",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq17_restore.py",
+        "--case",
+        "band5_restore_a020_tol1e8"
+      ],
+      "timeout_seconds": 2400,
+      "artifacts": [
+        "experiments/Issue310_fp_acceleration/results_fp17_restore/band5_restore_a020_tol1e8_*",
+        "experiments/Issue310_fp_acceleration/generated_fp17_restore/band5_restore_a020_tol1e8/*csv"
+      ]
+    },
+    {
+      "id": "band5_nr_a100_tol1e8",
+      "name": "Band5 no-restore alpha1.00 tol1e-8",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq17_restore.py",
+        "--case",
+        "band5_nr_a100_tol1e8"
+      ],
+      "timeout_seconds": 2400,
+      "artifacts": [
+        "experiments/Issue310_fp_acceleration/results_fp17_restore/band5_nr_a100_tol1e8_*",
+        "experiments/Issue310_fp_acceleration/generated_fp17_restore/band5_nr_a100_tol1e8/*csv"
+      ]
+    },
+    {
+      "id": "band5_restore_a100_tol1e8",
+      "name": "Band5 restore alpha1.00 tol1e-8",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq17_restore.py",
+        "--case",
+        "band5_restore_a100_tol1e8"
+      ],
+      "timeout_seconds": 2400,
+      "artifacts": [
+        "experiments/Issue310_fp_acceleration/results_fp17_restore/band5_restore_a100_tol1e8_*",
+        "experiments/Issue310_fp_acceleration/generated_fp17_restore/band5_restore_a100_tol1e8/*csv"
+      ]
+    },
+    {
+      "id": "band5_nr_a100_tol1e10",
+      "name": "Band5 no-restore alpha1.00 tol1e-10",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq17_restore.py",
+        "--case",
+        "band5_nr_a100_tol1e10"
+      ],
+      "timeout_seconds": 2400,
+      "artifacts": [
+        "experiments/Issue310_fp_acceleration/results_fp17_restore/band5_nr_a100_tol1e10_*",
+        "experiments/Issue310_fp_acceleration/generated_fp17_restore/band5_nr_a100_tol1e10/*csv"
+      ]
+    },
+    {
+      "id": "band5_restore_a100_tol1e10",
+      "name": "Band5 restore alpha1.00 tol1e-10",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq17_restore.py",
+        "--case",
+        "band5_restore_a100_tol1e10"
+      ],
+      "timeout_seconds": 2400,
+      "artifacts": [
+        "experiments/Issue310_fp_acceleration/results_fp17_restore/band5_restore_a100_tol1e10_*",
+        "experiments/Issue310_fp_acceleration/generated_fp17_restore/band5_restore_a100_tol1e10/*csv"
+      ]
+    },
+    {
+      "id": "band5_nr_a100_tol1e12",
+      "name": "Band5 no-restore alpha1.00 tol1e-12",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq17_restore.py",
+        "--case",
+        "band5_nr_a100_tol1e12"
+      ],
+      "timeout_seconds": 2400,
+      "artifacts": [
+        "experiments/Issue310_fp_acceleration/results_fp17_restore/band5_nr_a100_tol1e12_*",
+        "experiments/Issue310_fp_acceleration/generated_fp17_restore/band5_nr_a100_tol1e12/*csv"
+      ]
+    }
+  ],
+  "aggregate": {
+    "name": "Aggregate Gen17 restore and stopping evidence",
+    "command": [
+      "python3",
+      "experiments/Issue310_fp_acceleration/control_seq17_restore.py",
+      "--aggregate"
+    ],
+    "timeout_seconds": 300,
+    "artifacts": [
+      "experiments/Issue310_fp_acceleration/results_fp17_restore/issue310_gen17_restore_summary.json"
+    ]
+  }
+}
