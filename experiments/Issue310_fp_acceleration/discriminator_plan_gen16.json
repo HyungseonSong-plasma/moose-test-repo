@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "cycle_id": "issue310-gen16-20260924",
+  "baseline_sha": "d2f9d75f8bdf392e647165ad25f7c5808dfd2b40",
+  "objective": {
+    "question": "Why does the measured nonlocal banded Jacobian stabilize the first electron step but fail to reduce later-step Gummel work?",
+    "performance_metric": "fixed-point iterations per electron step",
+    "promotion_target": "O(10) average FP/step with short-horizon parity before long-horizon qualification"
+  },
+  "frozen_invariants": [
+    "plasma equations and converged fixed-point equations",
+    "chi_e=100 and chi_h=400",
+    "dt_h/dt_e=4",
+    "wall/sheath model",
+    "chemistry and RF state",
+    "nonlinear and outer convergence tolerances"
+  ],
+  "hypotheses": [
+    {
+      "id": "H16A_STATE_DEPENDENT_SHAPE",
+      "statement": "The normalized electron-potential Jacobian shape W=diag(VTe/ne) dn_e/dphi changes materially from electron step 1 to later steps, so a static Gen13 banded matrix becomes stale even after state rescaling.",
+      "test": "Direct 20x20 central-difference basis Jacobians at converged control states t1, t2 and t3, with identical delta_phi=1e-4 V.",
+      "observables": [
+        "relative Frobenius delta W(t1)->W(t2), W(t2)->W(t3), W(t1)->W(t3)",
+        "raw J relative deltas",
+        "rank",
+        "off-diagonal fraction",
+        "row-sum cancellation",
+        "band5 projection error",
+        "finite-difference even/odd nonlinearity"
+      ],
+      "guard": "This lane diagnoses the electron map only and does not modify Gummel relaxation."
+    },
+    {
+      "id": "H16B_RELAXATION_MISMATCH",
+      "statement": "The qualified outer Picard relaxation alpha=2/(1+chi_e) is too small for the Gen15 band5-preconditioned operator and masks possible acceleration.",
+      "test": "Keep the Gen15 band5 matrix, placement and state scaling fixed; vary only outer relaxation alpha in {0.02,0.05,0.10,0.20}.",
+      "observables": [
+        "per-step FP iterations",
+        "cumulative FP iterations",
+        "stability/transport-table validity",
+        "same-time final profile parity",
+        "potential trajectory parity"
+      ],
+      "guard": "A faster but parity-invalid or unstable setting is not promotable."
+    }
+  ],
+  "decision_logic": [
+    "Large W-shape drift with little relaxation benefit supports adaptive/recomputed Jacobian work.",
+    "Small W-shape drift with strong relaxation benefit supports retuning the outer iteration around the static banded operator.",
+    "Both effects present supports an adaptive Jacobian plus adaptive relaxation design.",
+    "Neither effect present falsifies both leading Gen16 explanations and requires iteration-matrix/placement analysis."
+  ]
+}
