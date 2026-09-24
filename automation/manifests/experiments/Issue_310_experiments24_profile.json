@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "issue": 310,
+  "sequence": 24,
+  "title": "Gen24 horizon cost-growth profile",
+  "prepare_manifest": "automation/manifests/experiments/Issue_310_experiments24_profile_prep.json",
+  "bundle_paths": [
+    "physics_app/physics-opt",
+    "physics_app/lib/libphysics-opt.so.0",
+    "physics_app/test/lib/libphysics_test-opt.so.0",
+    "experiments/Issue310_fp_acceleration/generated_fp24_profile"
+  ],
+  "max_parallel": 3,
+  "cases": [
+    {
+      "id": "steffensen_10hc",
+      "name": "steffensen_10hc",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq24_profile.py",
+        "--case",
+        "steffensen_10hc"
+      ],
+      "timeout_seconds": 3600,
+      "artifacts": [
+        "experiments/Issue310_fp_acceleration/results_fp24_profile/steffensen_10hc_*",
+        "experiments/Issue310_fp_acceleration/generated_fp24_profile/steffensen_10hc/*csv"
+      ]
+    },
+    {
+      "id": "steffensen_25hc",
+      "name": "steffensen_25hc",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq24_profile.py",
+        "--case",
+        "steffensen_25hc"
+      ],
+      "timeout_seconds": 3600,
+      "artifacts": [
+        "experiments/Issue310_fp_acceleration/results_fp24_profile/steffensen_25hc_*",
+        "experiments/Issue310_fp_acceleration/generated_fp24_profile/steffensen_25hc/*csv"
+      ]
+    },
+    {
+      "id": "steffensen_50hc",
+      "name": "steffensen_50hc",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq24_profile.py",
+        "--case",
+        "steffensen_50hc"
+      ],
+      "timeout_seconds": 3600,
+      "artifacts": [
+        "experiments/Issue310_fp_acceleration/results_fp24_profile/steffensen_50hc_*",
+        "experiments/Issue310_fp_acceleration/generated_fp24_profile/steffensen_50hc/*csv"
+      ]
+    }
+  ],
+  "aggregate": {
+    "name": "Aggregate Gen24 profile",
+    "command": [
+      "python3",
+      "experiments/Issue310_fp_acceleration/control_seq24_profile.py",
+      "--aggregate"
+    ],
+    "timeout_seconds": 300,
+    "artifacts": [
+      "experiments/Issue310_fp_acceleration/results_fp24_profile/issue310_gen24_profile_summary.json"
+    ]
+  }
+}
