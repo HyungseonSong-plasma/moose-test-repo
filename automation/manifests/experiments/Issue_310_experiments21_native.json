@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "issue": 310,
+  "sequence": 21,
+  "title": "Generation 21 native MOOSE fixed-point acceleration discriminator",
+  "prepare_manifest": "automation/manifests/experiments/Issue_310_experiments21_native_prep.json",
+  "bundle_paths": [
+    "physics_app/physics-opt",
+    "physics_app/lib/libphysics-opt.so.0",
+    "physics_app/test/lib/libphysics_test-opt.so.0",
+    "experiments/Issue310_fp_acceleration/generated_fp21_native"
+  ],
+  "max_parallel": 2,
+  "cases": [
+    {
+      "id": "band5_a045_secant_dphi1e6",
+      "name": "band5_a045_secant_dphi1e6",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq21_native.py",
+        "--case",
+        "band5_a045_secant_dphi1e6"
+      ],
+      "timeout_seconds": 2400,
+      "artifacts": [
+        "experiments/Issue310_fp_acceleration/results_fp21_native/band5_a045_secant_dphi1e6_*",
+        "experiments/Issue310_fp_acceleration/generated_fp21_native/band5_a045_secant_dphi1e6/*csv"
+      ]
+    },
+    {
+      "id": "band5_a045_steffensen_dphi1e6",
+      "name": "band5_a045_steffensen_dphi1e6",
+      "command": [
+        "python3",
+        "experiments/Issue310_fp_acceleration/control_seq21_native.py",
+        "--case",
+        "band5_a045_steffensen_dphi1e6"
+      ],
+      "timeout_seconds": 2400,
+      "artifacts": [
+        "experiments/Issue310_fp_acceleration/results_fp21_native/band5_a045_steffensen_dphi1e6_*",
+        "experiments/Issue310_fp_acceleration/generated_fp21_native/band5_a045_steffensen_dphi1e6/*csv"
+      ]
+    }
+  ],
+  "aggregate": {
+    "name": "Aggregate Gen21 native acceleration evidence",
+    "command": [
+      "python3",
+      "experiments/Issue310_fp_acceleration/control_seq21_native.py",
+      "--aggregate"
+    ],
+    "timeout_seconds": 300,
+    "artifacts": [
+      "experiments/Issue310_fp_acceleration/results_fp21_native/issue310_gen21_native_summary.json"
+    ]
+  }
+}
