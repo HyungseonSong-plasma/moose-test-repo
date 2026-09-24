@@ -1,0 +1,96 @@
+{
+  "schema_version": 1,
+  "cycle_id": "issue310-gen14-20260924",
+  "baseline_sha": "d2f9d75f8bdf392e647165ad25f7c5808dfd2b40",
+  "baseline_evidence": [
+    "PR #324 / run 35880062788 qualified the time-aware Gummel architecture.",
+    "Gen13 basis run 35978463311 directly identified a full-rank 20x20 electron-map Jacobian around the accepted step-1 state.",
+    "Gen13 A1/A2 small-gamma runs showed diagonal reaction screening slows the dominant Gummel mode rather than accelerating it."
+  ],
+  "objective": {
+    "architecture_invariant": "retain the Gummel electron/energy <-> Poisson fixed-point architecture",
+    "metric": "average fixed-point loops per electron step",
+    "target": "O(10) or lower",
+    "success_condition": "materially lower FP work with stable four-step completion and qualified trajectory/profile parity; O(10) remains the promotion target"
+  },
+  "frozen_invariants": [
+    "plasma equations and BC ownership at the converged fixed point",
+    "thermal charged-heavy wall plus sheath-suppressed electron wall model",
+    "chemistry/RF state",
+    "chi_e=100 and chi_h=400 with dt_h/dt_e=4",
+    "physical horizon",
+    "nonlinear and fixed-point tolerances/stopping criteria"
+  ],
+  "shared_inputs": [
+    {
+      "id": "qualified-timeaware-baseline",
+      "evidence": "d2f9d75f8bdf392e647165ad25f7c5808dfd2b40",
+      "access": "read_only"
+    },
+    {
+      "id": "gen13-basis-evidence",
+      "evidence": "run 35978463311, exact head 864fd4ed3a10bb1de3a25e5b8938a529fa85f8e0",
+      "access": "read_only"
+    }
+  ],
+  "hypotheses": [
+    {
+      "id": "H14-row-sum-preserving-electron-jacobian",
+      "statement": "The useful electron-potential Jacobian structure is primarily conservative/nonlocal rather than a local reaction term; a row-sum-preserving Laplacian-like correction can improve Gummel contraction without creating the artificial absolute-potential stiffness seen in Gen13 A1/A2.",
+      "mechanism": "Approximate the measured positive-diagonal/negative-off-diagonal electron response with -div(kappa_e grad(phi-phi_anchor)). The correction has graph-Laplacian structure, annihilates constant potential shifts, and vanishes at the converged Gummel fixed point.",
+      "falsifier": "Reject the tested Laplacian approximation if both calibrated variants fail to reduce FP work versus the same-lane control, become unstable, or violate same-time solution parity.",
+      "prior_evidence": [
+        "Gen13 basis Jacobian is full rank and has off-diagonal Frobenius fraction about 0.310.",
+        "All measured off-diagonal entries are negative while diagonal entries are positive.",
+        "Row sums are near zero relative to the diagonal, showing strong cancellation for smooth/constant potential modes.",
+        "Direct nearest-neighbor projection of the A1 susceptibility gives c_nn=0.11722721584956464; the best row-sum-preserving local-Laplacian projection of the full matrix gives c_full=0.28655741183724337."
+      ]
+    }
+  ],
+  "experiments": [
+    {
+      "id": "E14-laplacian-short",
+      "hypothesis_id": "H14-row-sum-preserving-electron-jacobian",
+      "lane_id": "lane-laplacian-jacobian",
+      "base_sha": "d2f9d75f8bdf392e647165ad25f7c5808dfd2b40",
+      "branch": "issue-310-gen14-laplacian-jacobian",
+      "workspace": "issue310-gen14-laplacian-jacobian",
+      "artifact_namespace": "experiments/Issue310_fp_acceleration/results_fp14_laplacian",
+      "shared_input_ids": [
+        "qualified-timeaware-baseline",
+        "gen13-basis-evidence"
+      ],
+      "mutation_scope": [
+        "physics_app/include/fvkernels/PhysicsFVGummelLaplacianCorrection.h",
+        "physics_app/src/fvkernels/PhysicsFVGummelLaplacianCorrection.C",
+        "experiments/Issue310_fp_acceleration/control_seq14_laplacian.py",
+        "automation/manifests/experiments/Issue_310_experiments14_laplacian_prep.json",
+        "automation/manifests/experiments/Issue_310_experiments14_laplacian.json"
+      ],
+      "discriminating_observables": [
+        "per-electron-step and cumulative fixed-point iterations",
+        "residual stability over four electron steps",
+        "elapsed seconds",
+        "potential trajectory",
+        "final electron density, mean energy, potential and charge profile parity",
+        "realized kappa_e range"
+      ],
+      "controls": [
+        "same-lane unmodified qualified time-aware Picard-2x control",
+        "one heavy cycle / four electron steps / T=400 tau_epsilon(initial)",
+        "identical physics, timestep, wall model, convergence tolerances and stopping criteria",
+        "correction acts on phi-phi_anchor and only on internal faces"
+      ],
+      "variants": [
+        {
+          "id": "nearest-neighbor-fit",
+          "change": "state-aware A1 Laplacian coefficient c=0.11722721584956464, fitted to the directly measured nearest-neighbor off-diagonal coupling"
+        },
+        {
+          "id": "full-jacobian-laplacian-projection",
+          "change": "state-aware A1 Laplacian coefficient c=0.28655741183724337, least-squares projection of the full Gen13 basis Jacobian onto a row-sum-preserving local Laplacian"
+        }
+      ]
+    }
+  ]
+}
