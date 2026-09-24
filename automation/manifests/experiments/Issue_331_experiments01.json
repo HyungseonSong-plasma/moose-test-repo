@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "issue": 331,
+  "kind": "experiments",
+  "sequence": 1,
+  "title": "Stage-B frozen-neutral advection adapter compile gate",
+  "stages": [
+    {
+      "id": "P0",
+      "name": "Compile PhysicsApp with Issue331 adapter",
+      "command": ["make", "-C", "physics_app", "-j2"],
+      "cwd": ".",
+      "timeout_seconds": 3600
+    }
+  ],
+  "artifacts": []
+}
