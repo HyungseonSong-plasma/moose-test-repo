@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "issue": 310,
+  "kind": "experiments",
+  "sequence": 12,
+  "title": "Generation 12 electron-potential Jacobian diagnostic prepare",
+  "stages": [
+    {"id": "P0", "name": "Validate Jacobian diagnostic instrumentation", "command": ["python3", "experiments/Issue310_fp_acceleration/control_seq12_jacobian_diag.py", "--p0"], "timeout_seconds": 120},
+    {"id": "P1", "name": "Generate trajectory diagnostic case", "command": ["python3", "experiments/Issue310_fp_acceleration/control_seq12_jacobian_diag.py", "--p1"], "timeout_seconds": 600},
+    {"id": "P2", "name": "Build and check trajectory diagnostic runtime", "command": ["python3", "experiments/Issue310_fp_acceleration/control_seq12_jacobian_diag.py", "--p2"], "timeout_seconds": 1200}
+  ]
+}
