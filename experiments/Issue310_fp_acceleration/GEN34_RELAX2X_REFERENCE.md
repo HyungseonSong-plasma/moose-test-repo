@@ -8,9 +8,9 @@ The historical `relax_2x` case (run `35837437816`) used the superseded Issue306 
 
 ## Controlled reference
 
-`relax2x_reference_10hc` uses the current canonical transient/time-aware thermal plasma model and current measurement policy:
+`relax2x_reference_20ns` uses the current canonical transient/time-aware thermal plasma model and current measurement policy:
 
-- 10 heavy cycles / 40 electron steps
+- 88 heavy cycles / 352 electron steps (~19.941 ns; nominal 20 ns target)
 - TransientMultiApp + Transient Poisson
 - `no_restore=true`
 - ordinary Poisson equation; no banded electron-response correction
@@ -25,7 +25,7 @@ The previous-potential anchor transfer is retained only so the same delta-phi co
 
 ## Optimized endpoint
 
-`optimized_endpoint_10hc` uses the same physics, horizon, convergence, output, and scaling policy, with:
+`optimized_endpoint_20ns` uses the same physics, horizon, convergence, output, and scaling policy, with:
 
 - band5 electron-response correction
 - outer alpha = 0.45
