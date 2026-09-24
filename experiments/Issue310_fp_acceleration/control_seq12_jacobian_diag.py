@@ -41,7 +41,7 @@ def _instrument_fast(text: str) -> str:
         "variable = 'electron_density_out",
         "variable = 'log_e electron_density_out",
         1,
-    ).replace("execute_on = 'FINAL'", "execute_on = 'TIMESTEP_END'", 1)
+    ).replace("execute_on = 'FINAL'", "execute_on = 'MULTIAPP_FIXED_POINT_ITERATION_END'", 1)
     text = text.replace(profile, instrumented_profile, 1)
     outputs = """[Outputs]
   [step_csv]
@@ -88,7 +88,8 @@ def p0() -> None:
     build()
     d = GENERATED / CASE
     fast = (d / "fast_sub.i").read_text(encoding="utf-8")
-    assert "execute_on = 'MULTIAPP_FIXED_POINT_ITERATION_END'" in fast
+    assert fast.count("execute_on = 'MULTIAPP_FIXED_POINT_ITERATION_END'") >= 2
+    assert "variable = 'log_e electron_density_out potential_from_poisson n_epsilon mean_energy_out mobility_out diffusion_out elastic_loss_candidate_out'" in fast
     assert "new_row_detection_columns = all" in fast
     assert fast.count("[energy_profile]") == 1
     assert "gummel_screen_beta" not in (d / "poisson_sub.i").read_text(encoding="utf-8")
