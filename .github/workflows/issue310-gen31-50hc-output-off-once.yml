@@ -1,0 +1,20 @@
+name: One-shot Issue310 Gen31 50HC Output Off
+on:
+  push:
+    branches: [issue-310-gen31-50hc-output-off]
+    paths:
+      - .github/workflows/issue310-gen31-50hc-output-off-once.yml
+      - experiments/Issue310_fp_acceleration/control_seq31_50hc_output_off.py
+      - automation/manifests/experiments/Issue_310_experiments31_50hc_output_off.json
+      - automation/manifests/experiments/Issue_310_experiments31_50hc_output_off_prep.json
+permissions:
+  contents: read
+jobs:
+  run:
+    uses: HyungseonSong-plasma/chatgpt-operation/.github/workflows/governed-matrix.yml@6474eb7b77f890b7cf9d7134ccebea31662bcdbe
+    with:
+      issue: "310"
+      sequence: "31"
+      manifest: automation/manifests/experiments/Issue_310_experiments31_50hc_output_off.json
+      base_sha: ${{ github.sha }}
+      operation_sha: 6474eb7b77f890b7cf9d7134ccebea31662bcdbe
