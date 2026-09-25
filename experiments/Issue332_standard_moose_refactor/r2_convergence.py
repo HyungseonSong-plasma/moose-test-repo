@@ -149,17 +149,14 @@ cd /workspace/{rel}/generated_r2/{CUSTOM}
 /workspace/physics_app/physics-opt --check-input -i input.i
 /workspace/physics_app/physics-opt --check-input -i fast_sub.i
 cd /workspace/{rel}/generated_r2/{PROBE}
-set +e
 /workspace/physics_app/physics-opt --check-input -i fast_sub.i > /workspace/{log_rel} 2>&1
+set +e
+timeout 60 /workspace/physics_app/physics-opt -i input.i >> /workspace/{log_rel} 2>&1
 rc=$?
-if [ "$rc" -eq 0 ]; then
-  timeout 60 /workspace/physics_app/physics-opt -i fast_sub.i >> /workspace/{log_rel} 2>&1
-  rc=$?
-fi
 set -e
+cat /workspace/{log_rel}
 if [ "$rc" -eq 0 ]; then
   echo "Expected Steffensen/ParsedConvergence incompatibility was not reproduced" >&2
-  cat /workspace/{log_rel} >&2
   exit 2
 fi
 grep -q "Only DefaultMultiAppFixedPointConvergence objects may be used" /workspace/{log_rel}
