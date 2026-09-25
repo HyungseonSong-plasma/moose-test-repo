@@ -46,6 +46,7 @@ PhysicsApp::registerAll(Factory & f, ActionFactory & af, Syntax & syntax)
   syntax.registerActionSyntax("AddPeriodicControllers", "PeriodicControllers/*");
   syntax.registerActionSyntax("AddDriftDiffusionAction", "DriftDiffusionAction/*");
   syntax.registerActionSyntax("AddPeriodicRelativeNodalDifference", "PeriodicRelativeNodalDifference/*");
+  syntax.registerActionSyntax("GummelIterationAction", "GummelIteration/*");
 }
 
 void
