@@ -1,0 +1,20 @@
+name: One-shot Issue333 R1 Standard Charge Short AB
+on:
+  push:
+    branches: [issue-333-standard-charge-density]
+    paths:
+      - .github/workflows/issue333-r1-charge-short.yml
+      - experiments/Issue333_standard_charge_density/control.py
+      - automation/manifests/experiments/Issue_333_r1_charge.json
+      - automation/manifests/experiments/Issue_333_r1_charge_prep.json
+permissions:
+  contents: read
+jobs:
+  run:
+    uses: HyungseonSong-plasma/chatgpt-operation/.github/workflows/governed-matrix.yml@6474eb7b77f890b7cf9d7134ccebea31662bcdbe
+    with:
+      issue: "333"
+      sequence: "1"
+      manifest: automation/manifests/experiments/Issue_333_r1_charge.json
+      base_sha: ${{ github.sha }}
+      operation_sha: 6474eb7b77f890b7cf9d7134ccebea31662bcdbe
