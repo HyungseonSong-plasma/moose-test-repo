@@ -218,7 +218,25 @@ def p0(horizon: str) -> None:
 
     fa = (a / "fast_sub.i").read_text()
     fb = (b / "fast_sub.i").read_text()
-    assert _normalize_wiring(fa) == _normalize_wiring(fb)
+
+    # Everything outside the explicit Gummel wiring/convergence ownership must
+    # remain byte-identical. Compare the electron-physics prefix, diagnostics,
+    # executioner (after removing only the manual convergence-owner line), and
+    # outputs independently so whitespace inside the replacement block is irrelevant.
+    assert fa[:fa.index("[MultiApps]\\n")] == fb[:fb.index("[GummelIteration]\\n")]
+
+    pp_a = fa[fa.index("[Postprocessors]\\n"):fa.index("[Executioner]\\n")]
+    pp_b = fb[fb.index("[Postprocessors]\\n"):fb.index("[Executioner]\\n")]
+    assert pp_a == pp_b
+
+    exec_a = re.search(r"\\[Executioner\\][\\s\\S]*?\\n\\[\\]\\n", fa)
+    exec_b = re.search(r"\\[Executioner\\][\\s\\S]*?\\n\\[\\]\\n", fb)
+    assert exec_a is not None and exec_b is not None
+    assert exec_a.group(0).replace(
+        "  multiapp_fixed_point_convergence = gummel_delta_phi\\n", ""
+    ) == exec_b.group(0)
+
+    assert fa[fa.index("[Outputs]\\n"):] == fb[fb.index("[Outputs]\\n"):]
 
     assert "[MultiApps]" in fa and "[Transfers]" in fa
     assert "type = DeltaPhiMultiAppConvergence" in fa
