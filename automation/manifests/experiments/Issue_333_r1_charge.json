@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "issue": 333,
+  "sequence": 1,
+  "title": "R1 custom vs standard charge short A/B",
+  "prepare_manifest": "automation/manifests/experiments/Issue_333_r1_charge_prep.json",
+  "bundle_paths": [
+    "physics_app/physics-opt",
+    "physics_app/lib/libphysics-opt.so.0",
+    "physics_app/test/lib/libphysics_test-opt.so.0",
+    "experiments/Issue333_standard_charge_density/generated_r1"
+  ],
+  "max_parallel": 1,
+  "cases": [
+    {
+      "id": "short_ab",
+      "name": "short_ab",
+      "command": [
+        "python3",
+        "experiments/Issue333_standard_charge_density/control.py",
+        "--case",
+        "short_ab"
+      ],
+      "timeout_seconds": 1800,
+      "artifacts": [
+        "experiments/Issue333_standard_charge_density/results_r1/*",
+        "experiments/Issue333_standard_charge_density/generated_r1/custom_charge/*csv",
+        "experiments/Issue333_standard_charge_density/generated_r1/standard_charge/*csv"
+      ]
+    }
+  ],
+  "aggregate": {
+    "name": "Aggregate R1 short discriminator",
+    "command": [
+      "python3",
+      "experiments/Issue333_standard_charge_density/control.py",
+      "--aggregate"
+    ],
+    "timeout_seconds": 300,
+    "artifacts": [
+      "r1_aggregate.json"
+    ]
+  }
+}
