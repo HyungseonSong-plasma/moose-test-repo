@@ -1,0 +1,49 @@
+{
+  "phase": "plasma_closures_migration",
+  "status": "QUALIFIED",
+  "classification": "PLASMA_CLOSURES_FULL_QUALIFIED",
+  "qualified_source_commit": "5ee447a88b65cd6aa784863b38b3510f470120db",
+  "workflow_run_id": 36161399034,
+  "artifact_id": 10876148568,
+  "full_horizon": {
+    "heavy_cycles": 88,
+    "electron_steps": 352,
+    "nominal_time_ns": 20.0,
+    "fp_total_legacy": 9102,
+    "fp_total_migrated": 9102,
+    "exact_fp_history_both_orders": true,
+    "max_profile_metric": 0.0,
+    "max_trajectory_abs_delta": 0.0,
+    "geometric_mean_runtime_ratio_migrated_over_legacy": 0.9936221566466865,
+    "runtime_regression_fraction": -0.006377843353313484
+  },
+  "short_horizon": {
+    "fp_history_legacy": [18, 27, 28, 28],
+    "fp_history_migrated": [18, 27, 28, 28],
+    "fp_total_legacy": 101,
+    "fp_total_migrated": 101,
+    "max_profile_metric": 0.0,
+    "max_trajectory_abs_delta": 0.0
+  },
+  "migration_scope": {
+    "fast_sub": [
+      "PhysicsElectronMeanEnergyMaterial -> PlasmaClosures/electron",
+      "PhysicsElectronTransportLookupMaterial -> PlasmaClosures/electron",
+      "PhysicsElectronImpactRateMaterial(elastic O2) -> PlasmaClosures/electron kinetics"
+    ],
+    "parent": [
+      "PhysicsThermalDiffusionMaterial -> PlasmaClosures/heavy"
+    ],
+    "poisson_sub": [
+      "PhysicsPlasmaChargeDensityMaterial -> PlasmaClosures/charge"
+    ],
+    "preserved": [
+      "GummelIterationAction",
+      "banded electron-response correction",
+      "all kernels and BCs",
+      "solver settings and tolerances",
+      "clock and timestepping",
+      "output policy"
+    ]
+  }
+}
