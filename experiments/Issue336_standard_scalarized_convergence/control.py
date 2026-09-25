@@ -186,7 +186,26 @@ def build(clean: bool = True) -> None:
     probe_template = """[Mesh]
   type = GeneratedMesh
   dim = 1
-  nx = 1
+  nx = 2
+[]
+
+[Variables]
+  [u]
+    order = FIRST
+    family = LAGRANGE
+    initial_condition = 0
+  []
+[]
+
+[Kernels]
+  [diff]
+    type = Diffusion
+    variable = u
+  []
+  [time]
+    type = TimeDerivative
+    variable = u
+  []
 []
 
 [Postprocessors]
@@ -194,7 +213,7 @@ def build(clean: bool = True) -> None:
     type = ParsedPostprocessor
     expression = '__BAD_EXPR__'
     evalerror_behavior = nan
-    execute_on = INITIAL
+    execute_on = TIMESTEP_END
   []
 []
 
@@ -202,7 +221,7 @@ def build(clean: bool = True) -> None:
   [catch_nonfinite]
     type = Terminator
     expression = 'bad-bad'
-    execute_on = INITIAL
+    execute_on = TIMESTEP_END
     fail_mode = HARD
     error_level = ERROR
     message = 'NONFINITE_GATE_CAUGHT'
@@ -210,7 +229,9 @@ def build(clean: bool = True) -> None:
 []
 
 [Executioner]
-  type = Steady
+  type = Transient
+  dt = 1
+  num_steps = 1
 []
 
 [Outputs]
@@ -271,6 +292,7 @@ def p2() -> None:
         f"cd {probe_dir}; "
         "for probe in nonfinite_nan_probe.i nonfinite_inf_probe.i; do "
         "set +e; /workspace/physics_app/physics-opt -i $probe > $probe.log 2>&1; rc=$?; set -e; "
+        "echo PROBE=$probe RC=$rc; tail -n 80 $probe.log; "
         "test $rc -ne 0; grep -q NONFINITE_GATE_CAUGHT $probe.log; "
         "done"
     )
