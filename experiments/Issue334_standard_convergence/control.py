@@ -107,7 +107,9 @@ def _standardize(fast: str) -> str:
         "  fixed_point_abs_tol = 1.0e-12\n",
         "  accept_on_max_fixed_point_iteration = false\n",
     ):
-        if fast.count(line) != 1:
+        # The same literal now also appears in gummel_default. The Executioner
+        # appears earlier in the file, so remove only the first occurrence.
+        if fast.count(line) < 1:
             raise RuntimeError(f"fixed-point parameter anchor changed: {line.strip()}")
         fast = fast.replace(line, "", 1)
     return fast
