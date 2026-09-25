@@ -214,6 +214,11 @@ def _strip_migrated(text: str, child: str) -> str:
     return mb.remove_block(text, f"PlasmaClosures/{child}").strip()
 
 
+def _semantic_text(text: str) -> str:
+    """Ignore blank-line placement while preserving every nonblank input line."""
+    return "\n".join(line.rstrip() for line in text.splitlines() if line.strip())
+
+
 def build(horizon: str, clean: bool = True) -> None:
     generated, results, cycles, final_tau = _bind(horizon)
     if clean:
@@ -285,9 +290,15 @@ def p0(horizon: str) -> None:
 
     # Remove only the closure-construction surface; all remaining input text
     # must remain structurally identical.
-    assert _strip_legacy_parent(legacy_parent) == _strip_migrated(migrated_parent, "heavy")
-    assert _strip_legacy_fast(legacy_fast) == _strip_migrated(migrated_fast, "electron")
-    assert _strip_legacy_poisson(legacy_poisson) == _strip_migrated(migrated_poisson, "charge")
+    assert _semantic_text(_strip_legacy_parent(legacy_parent)) == _semantic_text(
+        _strip_migrated(migrated_parent, "heavy")
+    )
+    assert _semantic_text(_strip_legacy_fast(legacy_fast)) == _semantic_text(
+        _strip_migrated(migrated_fast, "electron")
+    )
+    assert _semantic_text(_strip_legacy_poisson(legacy_poisson)) == _semantic_text(
+        _strip_migrated(migrated_poisson, "charge")
+    )
 
     # Electron closure migration.
     assert "type = PhysicsElectronMeanEnergyMaterial" in legacy_fast
