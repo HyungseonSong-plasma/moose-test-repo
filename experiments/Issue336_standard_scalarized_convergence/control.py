@@ -72,6 +72,19 @@ STANDARD_CONV = f"""[Convergence]
 []
 """
 
+STANDARD_TERMINATOR = """
+[UserObjects]
+  [fp_delta_phi_nonfinite_guard]
+    type = Terminator
+    expression = 'fp_delta_phi_max-fp_delta_phi_max'
+    execute_on = 'MULTIAPP_FIXED_POINT_CONVERGENCE'
+    fail_mode = HARD
+    error_level = ERROR
+    message = 'Non-finite delta-phi convergence metric'
+  []
+[]
+"""
+
 STANDARD_PP = f"""
   [fp_residual_initial]
     type = Residual
@@ -140,6 +153,11 @@ def _standardize(fast: str) -> str:
         # Executioner occurs before [Convergence], so first occurrence is the
         # Executioner copy.
         fast = fast.replace(line, "", 1)
+
+    outputs_anchor = "\n[Outputs]\n"
+    if fast.count(outputs_anchor) != 1:
+        raise RuntimeError("Outputs anchor changed for Terminator insertion")
+    fast = fast.replace(outputs_anchor, "\n" + STANDARD_TERMINATOR + outputs_anchor, 1)
     return fast
 
 def build(clean: bool = True) -> None:
@@ -164,6 +182,47 @@ def build(clean: bool = True) -> None:
         (d / "case.json").write_text(
             json.dumps({**params, "r2b_variant": name}, indent=2, sort_keys=True) + "\n"
         )
+
+    probe_template = """[Mesh]
+  type = GeneratedMesh
+  dim = 1
+  nx = 1
+[]
+
+[Postprocessors]
+  [bad]
+    type = ParsedPostprocessor
+    expression = '__BAD_EXPR__'
+    evalerror_behavior = nan
+    execute_on = INITIAL
+  []
+[]
+
+[UserObjects]
+  [catch_nonfinite]
+    type = Terminator
+    expression = 'bad-bad'
+    execute_on = INITIAL
+    fail_mode = HARD
+    error_level = ERROR
+    message = 'NONFINITE_GATE_CAUGHT'
+  []
+[]
+
+[Executioner]
+  type = Steady
+[]
+
+[Outputs]
+  console = true
+[]
+"""
+    (GENERATED / "nonfinite_nan_probe.i").write_text(
+        probe_template.replace("__BAD_EXPR__", "1/0")
+    )
+    (GENERATED / "nonfinite_inf_probe.i").write_text(
+        probe_template.replace("__BAD_EXPR__", "1e308*1e308")
+    )
 
 def p0() -> None:
     build()
@@ -190,6 +249,9 @@ def p0() -> None:
     assert "MULTIAPP_FIXED_POINT_BEGIN" in fb
     assert "MULTIAPP_FIXED_POINT_CONVERGENCE" in fb
     assert "functor = fp_delta_phi_abs" in fa and "functor = fp_delta_phi_abs" in fb
+    assert "type = Terminator" in fb
+    assert "expression = 'fp_delta_phi_max-fp_delta_phi_max'" in fb
+    assert "Non-finite delta-phi convergence metric" in fb
 
     print("ISSUE336_R2B_P0: PASS")
 
@@ -204,11 +266,19 @@ def p2() -> None:
                 f"/workspace/physics_app/physics-opt --check-input -i {fname}"
             )
 
+    probe_dir = f"/workspace/{rel}/generated_r2b"
+    probe_checks = (
+        f"cd {probe_dir}; "
+        "for probe in nonfinite_nan_probe.i nonfinite_inf_probe.i; do "
+        "set +e; /workspace/physics_app/physics-opt -i $probe > $probe.log 2>&1; rc=$?; set -e; "
+        "test $rc -ne 0; grep -q NONFINITE_GATE_CAUGHT $probe.log; "
+        "done"
+    )
     g.base._docker(
         "set -euo pipefail; source /environment; "
         "export MOOSE_DIR=/opt/physics_vendor/moose CRANE_DIR=/opt/physics_vendor/crane "
         "SQUIRREL_DIR=/opt/physics_vendor/squirrel ZAPDOS_DIR=/opt/physics_vendor/zapdos METHOD=opt; "
-        "make -C /workspace/physics_app -j2; " + "; ".join(checks)
+        "make -C /workspace/physics_app -j2; " + "; ".join(checks) + "; " + probe_checks
     )
     print("ISSUE336_R2B_P2: PASS")
 
