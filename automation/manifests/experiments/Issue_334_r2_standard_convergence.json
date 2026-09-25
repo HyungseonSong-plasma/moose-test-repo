@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "issue": 334,
+  "sequence": 1,
+  "title": "R2 standard convergence capability discriminator",
+  "prepare_manifest": "automation/manifests/experiments/Issue_334_r2_standard_convergence_prep.json",
+  "bundle_paths": [
+    "physics_app/physics-opt",
+    "physics_app/lib/libphysics-opt.so.0",
+    "physics_app/test/lib/libphysics_test-opt.so.0",
+    "experiments/Issue332_standard_moose_refactor/generated_r2",
+    "experiments/Issue332_standard_moose_refactor/results_r2"
+  ],
+  "max_parallel": 1,
+  "cases": [
+    {
+      "id": "capability",
+      "name": "capability",
+      "command": ["python3", "experiments/Issue332_standard_moose_refactor/r2_convergence.py", "--case"],
+      "timeout_seconds": 300,
+      "artifacts": ["experiments/Issue332_standard_moose_refactor/results_r2/*"]
+    }
+  ],
+  "aggregate": {
+    "name": "Aggregate R2 capability discriminator",
+    "command": ["python3", "experiments/Issue332_standard_moose_refactor/r2_convergence.py", "--aggregate"],
+    "timeout_seconds": 300,
+    "artifacts": ["experiments/Issue332_standard_moose_refactor/results_r2/*"]
+  }
+}
