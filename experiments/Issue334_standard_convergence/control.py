@@ -15,15 +15,19 @@ import os
 import shutil
 import subprocess
 import time
+import sys
 from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent
+REPO = ROOT.parents[1]
+if str(REPO) not in sys.path:
+    sys.path.insert(0, str(REPO))
 
 from experiments.Issue310_fp_acceleration import control_seq34_relax2x_reference_input as gen34
 from experiments.Issue310_fp_acceleration import control_seq18_deltaphi as g
 from experiments.Issue310_fp_acceleration import control_seq08 as seq08
 from experiments.Issue306_heavy_charge_motion import wall08_control as wall08
 
-ROOT = Path(__file__).resolve().parent
-REPO = ROOT.parents[1]
 GENERATED = ROOT / "generated_r2"
 RESULTS = ROOT / "results_r2"
 
