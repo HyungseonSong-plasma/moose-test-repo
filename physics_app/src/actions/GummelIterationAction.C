@@ -137,11 +137,17 @@ GummelIterationAction::act()
     // MultiApp fixed-point Convergence while the Executioner is constructed.
     // Inject the selected convergence into the pending Executioner Action
     // before setup_executioner so MOOSE does not create and select its default.
-    auto * executioner_action =
+    const auto * executioner_action_const =
         _awh.getActionByTask<CreateExecutionerAction>("setup_executioner");
-    if (!executioner_action)
+    if (!executioner_action_const)
       mooseError("GummelIterationAction requires an [Executioner] block.");
 
+    // ActionWarehouse exposes getActionByTask() as const even though the
+    // stored Action is mutable and MooseObjectAction provides a mutable
+    // getObjectParams() overload. We intentionally mutate the pending
+    // Executioner Action before its setup task executes.
+    auto * executioner_action =
+        const_cast<CreateExecutionerAction *>(executioner_action_const);
     InputParameters & executioner_params = executioner_action->getObjectParams();
     const auto & convergence_name = getParam<ConvergenceName>("convergence_name");
 
