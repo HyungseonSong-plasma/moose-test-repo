@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "issue": 334,
+  "kind": "experiments",
+  "sequence": 1,
+  "title": "R2 standard convergence capability discriminator prepare",
+  "stages": [
+    {
+      "id": "P0",
+      "name": "Construct exact standard AND probe",
+      "command": ["python3", "experiments/Issue332_standard_moose_refactor/r2_convergence.py", "--p0"],
+      "timeout_seconds": 300
+    },
+    {
+      "id": "P1",
+      "name": "Reproduce pinned Steffensen convergence-type constraint",
+      "command": ["python3", "experiments/Issue332_standard_moose_refactor/r2_convergence.py", "--probe"],
+      "timeout_seconds": 3000
+    }
+  ]
+}
