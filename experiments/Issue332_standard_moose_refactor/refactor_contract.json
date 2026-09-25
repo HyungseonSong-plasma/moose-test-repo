@@ -1,0 +1,74 @@
+{
+  "issue": 332,
+  "status": "ACTIVE",
+  "objective": "Standard MOOSE First reduction of qualified Gummel endpoint without changing physics, discrete semantics, convergence semantics, or qualified performance.",
+  "oracle": {
+    "issue": 310,
+    "branch": "qualified/issue310-gummel-optimized",
+    "sha": "cdba1cba025da3c8442c0ad2993aeccab0111732",
+    "run_id": 36051947264,
+    "case": "optimized_endpoint_20ns",
+    "horizon_ns": 19.94108,
+    "electron_steps": 352,
+    "heavy_steps": 88,
+    "fixed_point_total": 9102,
+    "fixed_point_per_electron_step": 25.85795,
+    "mean_runtime_min": 2.441,
+    "speedup_vs_relax2x": 12.4481
+  },
+  "invariants": {
+    "chemistry": false,
+    "rf_heating": false,
+    "architecture": "TransientMultiApp + Transient Poisson",
+    "no_restore": true,
+    "gummel_bandwidth": 5,
+    "relaxation_factor": 0.45,
+    "fixed_point_algorithm": "steffensen",
+    "transformed_variable": "potential_from_poisson",
+    "delta_phi_abs_tol_V": 0.000001,
+    "compute_scaling_once": true,
+    "fp_anchor_csv": false,
+    "vector_profiles": "FINAL_ONLY"
+  },
+  "acceptance": {
+    "final_profile_normalized_target": "1e-8 to 1e-7",
+    "runtime_regression_limit_fraction": 0.05,
+    "r2_primary_gate": "per-electron-step fixed-point termination parity",
+    "final_full_horizon_required": true,
+    "paired_abba_if_runtime_near_limit": true
+  },
+  "lanes": [
+    {
+      "phase": "R1",
+      "issue": 333,
+      "branch": "issue-333-standard-charge-density",
+      "object": "PhysicsPlasmaChargeDensityMaterial",
+      "candidate": "ADParsedFunctorMaterial / standard functor composition",
+      "inherits_other_lane_mutations": false
+    },
+    {
+      "phase": "R2",
+      "issue": 334,
+      "branch": "issue-334-standard-convergence",
+      "object": "PhysicsDeltaPhiMultiAppConvergence",
+      "candidate": "standard convergence composition",
+      "inherits_other_lane_mutations": false
+    }
+  ],
+  "deferred": [
+    "R3 mean-energy algebra audit",
+    "R4 heavy transport reduction audits",
+    "R5 integration cleanup",
+    "R6 full requalification"
+  ],
+  "custom_core_keep_by_default": [
+    "PhysicsFVGummelBandedCorrection",
+    "PhysicsFVLogMolarElectronTimeDerivative",
+    "PhysicsFVLogMolarElectronDiffusion",
+    "PhysicsFVLogMolarElectrostaticDrift",
+    "PhysicsFVHeavyMassElectromigrationCorrection",
+    "PhysicsIonWallFluxMaterial",
+    "PhysicsThermalDiffusionMaterial",
+    "PhysicsElectronTransportLookupMaterial"
+  ]
+}
