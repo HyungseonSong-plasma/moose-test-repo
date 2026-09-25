@@ -3,7 +3,7 @@
 #include "FVElementalKernel.h"
 
 /**
- * Nonlocal banded Gummel correction for the Poisson block.
+ * Nonlocal banded electron-response correction for the Poisson block.
  *
  * The kernel applies a row of a measured dimensionless electron-response
  * matrix W to delta_phi = phi - phi_anchor:
@@ -13,14 +13,14 @@
  * beta_i = (e/eps0) * n_e / VTe.
  *
  * The supplied W is row-sum preserving, so a uniform potential shift is in the
- * null space.  The correction also vanishes exactly at a converged Gummel
+ * null space.  The correction also vanishes exactly at a converged
  * fixed point where phi == phi_anchor.
  */
-class FVGummelBandedCorrection : public FVElementalKernel
+class FVElectronResponseBandedCorrection : public FVElementalKernel
 {
 public:
   static InputParameters validParams();
-  FVGummelBandedCorrection(const InputParameters & parameters);
+  FVElectronResponseBandedCorrection(const InputParameters & parameters);
 
 protected:
   ADReal computeQpResidual() override;

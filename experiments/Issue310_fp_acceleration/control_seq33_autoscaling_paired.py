@@ -151,7 +151,7 @@ def p0() -> None:
         assert "type = DeltaPhiMultiAppConvergence" in fast
         assert "delta_phi_abs_tol = 9.9999999999999995e-07" in fast
         assert "no_restore = true" in fast
-        assert "type = FVGummelBandedCorrection" in (d / "poisson_sub.i").read_text()
+        assert "type = FVElectronResponseBandedCorrection" in (d / "poisson_sub.i").read_text()
 
     # Same-policy replicas across AB/BA must be byte-identical.
     for fname in ("input.i", "fast_sub.i", "poisson_sub.i"):

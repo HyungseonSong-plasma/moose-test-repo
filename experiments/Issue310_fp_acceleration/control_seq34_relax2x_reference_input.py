@@ -154,7 +154,7 @@ def _apply_anchor_only(fast: str, poisson: str) -> tuple[str, str]:
     """Install only the previous-potential anchor path needed by delta-phi convergence.
 
     This deliberately excludes the n_epsilon transfer, beta material, and
-    FVGummelBandedCorrection used by the optimized endpoint.
+    FVElectronResponseBandedCorrection used by the optimized endpoint.
     """
     transfer_anchor = """  [log_e_to_poisson]
     type = MultiAppCopyTransfer
@@ -370,8 +370,8 @@ def p0() -> None:
     assert f"relaxation_factor = {RELAX_2X:.17g}" in ref_fast
     assert "fixed_point_algorithm = 'picard'" in ref_fast
     assert "transformed_variables = 'potential_from_poisson'" not in ref_fast
-    assert "FVGummelBandedCorrection" not in ref_poisson
-    assert "gummel_band_beta" not in ref_poisson
+    assert "FVElectronResponseBandedCorrection" not in ref_poisson
+    assert "electron_response_beta" not in ref_poisson
     assert "n_epsilon_frozen" not in ref_poisson
     assert "phi_anchor_frozen" in ref_poisson
 
@@ -379,7 +379,7 @@ def p0() -> None:
     assert "relaxation_factor = 0.45000000000000001" in opt_fast
     assert "fixed_point_algorithm = 'steffensen'" in opt_fast
     assert "transformed_variables = 'potential_from_poisson'" in opt_fast
-    assert "type = FVGummelBandedCorrection" in opt_poisson
+    assert "type = FVElectronResponseBandedCorrection" in opt_poisson
     assert "bandwidth = 5" in opt_poisson
 
     print("ISSUE310_GEN34_INPUT_P0: PASS")

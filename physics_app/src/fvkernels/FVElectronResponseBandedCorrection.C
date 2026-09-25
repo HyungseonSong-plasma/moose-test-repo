@@ -1,4 +1,4 @@
-#include "FVGummelBandedCorrection.h"
+#include "FVElectronResponseBandedCorrection.h"
 
 #include "libmesh/elem.h"
 
@@ -6,17 +6,17 @@
 #include <cmath>
 #include <limits>
 
-registerMooseObject("PhysicsApp", FVGummelBandedCorrection);
+registerMooseObject("PhysicsApp", FVElectronResponseBandedCorrection);
 
 InputParameters
-FVGummelBandedCorrection::validParams()
+FVElectronResponseBandedCorrection::validParams()
 {
   auto params = FVElementalKernel::validParams();
   params.addClassDescription(
       "Applies a nonlocal row-sum-preserving banded electron-potential Jacobian "
       "correction to the FV Poisson residual.");
   params.addRequiredParam<MooseFunctorName>(
-      "anchor", "Frozen entering-Gummel potential phi_anchor [V].");
+      "anchor", "Frozen reference potential phi_anchor [V].");
   params.addRequiredParam<MooseFunctorName>(
       "beta", "Local electron susceptibility scale (e/eps0)*n_e/VTe [1/m^2].");
   params.addRequiredParam<std::vector<Real>>(
@@ -29,7 +29,7 @@ FVGummelBandedCorrection::validParams()
   return params;
 }
 
-FVGummelBandedCorrection::FVGummelBandedCorrection(
+FVElectronResponseBandedCorrection::FVElectronResponseBandedCorrection(
     const InputParameters & parameters)
   : FVElementalKernel(parameters),
     _anchor(getFunctor<ADReal>("anchor")),
@@ -53,18 +53,18 @@ FVGummelBandedCorrection::FVGummelBandedCorrection(
 }
 
 unsigned int
-FVGummelBandedCorrection::rowIndex(const Elem * const elem) const
+FVElectronResponseBandedCorrection::rowIndex(const Elem * const elem) const
 {
   const Real x = elem->vertex_average()(0);
   const long idx = std::lround((x - _xmin) / _dx - 0.5);
   if (idx < 0 || idx >= static_cast<long>(_n_cells))
-    mooseError("FVGummelBandedCorrection: element centroid x=", x,
+    mooseError("FVElectronResponseBandedCorrection: element centroid x=", x,
                " is outside the configured 1D row map.");
   return static_cast<unsigned int>(idx);
 }
 
 const Elem *
-FVGummelBandedCorrection::offsetElem(const Elem * start, const int offset) const
+FVElectronResponseBandedCorrection::offsetElem(const Elem * start, const int offset) const
 {
   if (!offset)
     return start;
@@ -105,7 +105,7 @@ FVGummelBandedCorrection::offsetElem(const Elem * start, const int offset) const
 }
 
 ADReal
-FVGummelBandedCorrection::computeQpResidual()
+FVElectronResponseBandedCorrection::computeQpResidual()
 {
   const auto state = determineState();
   const unsigned int i = rowIndex(_current_elem);
@@ -125,7 +125,7 @@ FVGummelBandedCorrection::computeQpResidual()
 
     const Elem * elem_j = offsetElem(_current_elem, j - static_cast<int>(i));
     if (!elem_j)
-      mooseError("FVGummelBandedCorrection: missing ghosted element for row ",
+      mooseError("FVElectronResponseBandedCorrection: missing ghosted element for row ",
                  i, " column ", j, ".");
 
     const Moose::ElemArg arg_j{elem_j, false};

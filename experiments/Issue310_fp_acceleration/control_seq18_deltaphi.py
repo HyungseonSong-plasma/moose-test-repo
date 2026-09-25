@@ -392,9 +392,9 @@ def _apply_banded(fast: str, poisson: str, bandwidth: int) -> tuple[str, str]:
     functor_symbols = 'ne n_eps'
     expression = '{MEAN_E0_EV:.17g}*n_eps/max(ne/{NE0:.17g},1.0e-30)'
   []
-  [gummel_band_beta]
+  [electron_response_beta]
     type = ADParsedFunctorMaterial
-    property_name = gummel_band_beta
+    property_name = electron_response_beta
     functor_names = 'electron_density_m3 gummel_mean_energy_ev'
     functor_symbols = 'ne mean_ev'
     expression = '{E_OVER_EPS0:.17g}*ne/((2.0/3.0)*max(mean_ev,1.0e-6))'
@@ -414,11 +414,11 @@ def _apply_banded(fast: str, poisson: str, bandwidth: int) -> tuple[str, str]:
         raise RuntimeError("Poisson charge kernel anchor changed")
     poisson = poisson.replace(
         kernel_anchor,
-        kernel_anchor + f"""  [gummel_banded_correction]
-    type = FVGummelBandedCorrection
+        kernel_anchor + f"""  [electron_response_banded_correction]
+    type = FVElectronResponseBandedCorrection
     variable = potential_plasma
     anchor = phi_anchor_frozen
-    beta = gummel_band_beta
+    beta = electron_response_beta
     matrix = '{_matrix_literal(bandwidth)}'
     n_cells = {NCELL}
     bandwidth = {bandwidth}
@@ -533,7 +533,7 @@ def p0() -> None:
     assert len(built) == len(SPECS)
     control = GENERATED / "picard2x_control"
     control_parent = (control / "input.i").read_text(encoding="utf-8")
-    assert "gummel_banded_correction" not in (control / "poisson_sub.i").read_text(encoding="utf-8")
+    assert "electron_response_banded_correction" not in (control / "poisson_sub.i").read_text(encoding="utf-8")
     metrics = _projection_metrics(5)
     assert metrics["max_abs_row_sum"] < 1.0e-12
 
@@ -542,9 +542,9 @@ def p0() -> None:
         fast = (d / "fast_sub.i").read_text(encoding="utf-8")
         poisson = (d / "poisson_sub.i").read_text(encoding="utf-8")
         assert (d / "input.i").read_text(encoding="utf-8") == control_parent
-        assert "type = FVGummelBandedCorrection" in poisson
+        assert "type = FVElectronResponseBandedCorrection" in poisson
         assert "bandwidth = 5" in poisson
-        assert "gummel_band_beta" in poisson
+        assert "electron_response_beta" in poisson
         assert "TimeDerivative" not in poisson
         assert "no_restore = true" in fast
         assert f"relaxation_factor = {float(raw['relaxation_factor']):.17g}" in fast

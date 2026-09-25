@@ -326,15 +326,15 @@ def p0() -> None:
     legacy_fast = (legacy / "fast_sub.i").read_text(encoding="utf-8")
     legacy_poisson = (legacy / "poisson_sub.i").read_text(encoding="utf-8")
     assert "DeltaPhiMultiAppConvergence" not in legacy_fast
-    assert "gummel_banded_correction" not in legacy_poisson
+    assert "electron_response_banded_correction" not in legacy_poisson
 
     for raw in SPECS[1:]:
         d = GENERATED / str(raw["name"])
         fast = (d / "fast_sub.i").read_text(encoding="utf-8")
         poisson = (d / "poisson_sub.i").read_text(encoding="utf-8")
         assert (d / "input.i").read_text(encoding="utf-8") == legacy_parent
-        assert "gummel_banded_correction" not in poisson
-        assert "gummel_band_beta" not in poisson
+        assert "electron_response_banded_correction" not in poisson
+        assert "electron_response_beta" not in poisson
         assert "n_epsilon_frozen" not in poisson
         assert "TimeDerivative" not in poisson
         assert "no_restore = true" in fast
