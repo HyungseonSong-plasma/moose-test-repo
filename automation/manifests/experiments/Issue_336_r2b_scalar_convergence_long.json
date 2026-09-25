@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "issue": 336,
+  "sequence": 2,
+  "title": "R2b scalarized convergence full 20ns ABBA",
+  "prepare_manifest": "automation/manifests/experiments/Issue_336_r2b_scalar_convergence_long_prep.json",
+  "bundle_paths": [
+    "physics_app/physics-opt",
+    "physics_app/lib/libphysics-opt.so.0",
+    "physics_app/test/lib/libphysics_test-opt.so.0",
+    "experiments/Issue336_standard_scalarized_convergence/generated_r2b_long"
+  ],
+  "max_parallel": 2,
+  "cases": [
+    {
+      "id": "pair_ab",
+      "name": "pair_ab",
+      "command": [
+        "python3",
+        "experiments/Issue336_standard_scalarized_convergence/control_long.py",
+        "--case",
+        "pair_ab"
+      ],
+      "timeout_seconds": 2400,
+      "artifacts": [
+        "experiments/Issue336_standard_scalarized_convergence/results_r2b_long/*",
+        "experiments/Issue336_standard_scalarized_convergence/generated_r2b_long/custom_and_20ns/*csv",
+        "experiments/Issue336_standard_scalarized_convergence/generated_r2b_long/standard_scalar_and_20ns/*csv"
+      ]
+    },
+    {
+      "id": "pair_ba",
+      "name": "pair_ba",
+      "command": [
+        "python3",
+        "experiments/Issue336_standard_scalarized_convergence/control_long.py",
+        "--case",
+        "pair_ba"
+      ],
+      "timeout_seconds": 2400,
+      "artifacts": [
+        "experiments/Issue336_standard_scalarized_convergence/results_r2b_long/*",
+        "experiments/Issue336_standard_scalarized_convergence/generated_r2b_long/custom_and_20ns/*csv",
+        "experiments/Issue336_standard_scalarized_convergence/generated_r2b_long/standard_scalar_and_20ns/*csv"
+      ]
+    }
+  ],
+  "aggregate": {
+    "name": "Aggregate R2b full qualification",
+    "command": [
+      "python3",
+      "experiments/Issue336_standard_scalarized_convergence/control_long.py",
+      "--aggregate"
+    ],
+    "timeout_seconds": 300,
+    "artifacts": [
+      "r2b_long_summary.json"
+    ]
+  }
+}
