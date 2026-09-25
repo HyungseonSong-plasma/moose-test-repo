@@ -1,0 +1,20 @@
+name: One-shot Issue336 R2b Scalarized Convergence Short AB
+on:
+  push:
+    branches: [issue-336-standard-scalarized-convergence]
+    paths:
+      - .github/workflows/issue336-r2b-scalar-convergence-short.yml
+      - experiments/Issue336_standard_scalarized_convergence/control.py
+      - automation/manifests/experiments/Issue_336_r2b_scalar_convergence.json
+      - automation/manifests/experiments/Issue_336_r2b_scalar_convergence_prep.json
+permissions:
+  contents: read
+jobs:
+  run:
+    uses: HyungseonSong-plasma/chatgpt-operation/.github/workflows/governed-matrix.yml@6474eb7b77f890b7cf9d7134ccebea31662bcdbe
+    with:
+      issue: "336"
+      sequence: "1"
+      manifest: automation/manifests/experiments/Issue_336_r2b_scalar_convergence.json
+      base_sha: ${{ github.sha }}
+      operation_sha: 6474eb7b77f890b7cf9d7134ccebea31662bcdbe
