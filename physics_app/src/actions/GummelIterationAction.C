@@ -2,10 +2,12 @@
 
 #include "FEProblemBase.h"
 #include "Factory.h"
+#include "CreateExecutionerAction.h"
 
 #include <cstddef>
 #include <string>
 
+registerMooseAction("PhysicsApp", GummelIterationAction, "create_problem_complete");
 registerMooseAction("PhysicsApp", GummelIterationAction, "add_multi_app");
 registerMooseAction("PhysicsApp", GummelIterationAction, "add_transfer");
 registerMooseAction("PhysicsApp", GummelIterationAction, "add_convergence");
@@ -126,7 +128,34 @@ GummelIterationAction::act()
   const auto & multiapp_name = getParam<MultiAppName>("poisson_multiapp");
   const std::string object_prefix = std::string(multiapp_name) + "_gummel";
 
-  if (_current_task == "add_multi_app")
+  if (_current_task == "create_problem_complete")
+  {
+    if (!getParam<bool>("manage_convergence"))
+      return;
+
+    // FixedPointSolve decides whether to use a user-selected or default
+    // MultiApp fixed-point Convergence while the Executioner is constructed.
+    // Inject the selected convergence into the pending Executioner Action
+    // before setup_executioner so MOOSE does not create and select its default.
+    auto * executioner_action =
+        _awh.getActionByTask<CreateExecutionerAction>("setup_executioner");
+    if (!executioner_action)
+      mooseError("GummelIterationAction requires an [Executioner] block.");
+
+    InputParameters & executioner_params = executioner_action->getObjectParams();
+    const auto & convergence_name = getParam<ConvergenceName>("convergence_name");
+
+    if (executioner_params.isParamValid("multiapp_fixed_point_convergence") &&
+        executioner_params.get<ConvergenceName>("multiapp_fixed_point_convergence") !=
+            convergence_name)
+      paramError("convergence_name",
+                 "The Executioner already selects a different "
+                 "multiapp_fixed_point_convergence while manage_convergence=true.");
+
+    executioner_params.set<ConvergenceName>("multiapp_fixed_point_convergence") =
+        convergence_name;
+  }
+  else if (_current_task == "add_multi_app")
   {
     const auto & multiapp_type = getParam<std::string>("poisson_multiapp_type");
     auto params = _factory.getValidParams(multiapp_type);
