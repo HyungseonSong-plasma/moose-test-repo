@@ -1,0 +1,81 @@
+name: One-shot Issue336 Gummel Action Parity
+
+on:
+  push:
+    branches: [issue-336-standard-scalarized-convergence]
+    paths:
+      - .github/workflows/issue336-gummel-action-parity.yml
+      - experiments/Issue336_gummel_action_parity/control.py
+      - physics_app/include/actions/GummelIterationAction.h
+      - physics_app/src/actions/GummelIterationAction.C
+      - physics_app/src/base/PhysicsApp.C
+
+permissions:
+  contents: read
+  packages: read
+
+env:
+  BUILD_BASE: ghcr.io/hyungseonsong-plasma/physics-build-base:moose-9f388366-deps-ba26970-16a26d5-9eceffb-v1
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+
+      - name: Log in to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and validate short then full ABBA
+        shell: bash
+        run: |
+          set -euxo pipefail
+          docker pull "$BUILD_BASE"
+          docker run --rm \
+            --entrypoint /bin/bash \
+            --user 0:0 \
+            --workdir /workspace/physics_app \
+            -v "$PWD:/workspace" \
+            "$BUILD_BASE" \
+            -lc '
+              set -euxo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              git config --global --add safe.directory /opt/physics_vendor/moose
+              git config --global --add safe.directory /opt/physics_vendor/crane
+              git config --global --add safe.directory /opt/physics_vendor/squirrel
+              git config --global --add safe.directory /opt/physics_vendor/zapdos
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+              export PYTHONPATH=/workspace
+
+              make -j2
+
+              python3 /workspace/experiments/Issue336_gummel_action_parity/control.py --horizon short --p0
+              python3 /workspace/experiments/Issue336_gummel_action_parity/control.py --horizon short --p1
+              python3 /workspace/experiments/Issue336_gummel_action_parity/control.py --horizon short --run
+
+              python3 /workspace/experiments/Issue336_gummel_action_parity/control.py --horizon full --p0
+              python3 /workspace/experiments/Issue336_gummel_action_parity/control.py --horizon full --p1
+              python3 /workspace/experiments/Issue336_gummel_action_parity/control.py --horizon full --run
+
+              chmod -R a+rwX /workspace/experiments/Issue336_gummel_action_parity
+            '
+
+      - name: Upload validation evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: issue336-gummel-action-parity
+          path: |
+            experiments/Issue336_gummel_action_parity/results_short
+            experiments/Issue336_gummel_action_parity/results_full
+          if-no-files-found: warn
