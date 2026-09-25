@@ -211,7 +211,11 @@ def _strip_legacy_poisson(text: str) -> str:
 
 
 def _strip_migrated(text: str, child: str) -> str:
-    return mb.remove_block(text, f"PlasmaClosures/{child}").strip()
+    # Each migrated input owns exactly one top-level PlasmaClosures block.
+    # Remove the whole composition surface; removing only the named child
+    # would leave an empty [PlasmaClosures] parent and create a false diff.
+    _ = child
+    return mb.remove_block(text, "PlasmaClosures").strip()
 
 
 def _semantic_text(text: str) -> str:
