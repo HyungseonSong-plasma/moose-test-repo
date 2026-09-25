@@ -31,6 +31,11 @@ branch inside the Gummel implementation.
     delta_phi_abs_tol = 1e-6
   []
 []
+
+[Executioner]
+  # ... existing transient/fixed-point settings ...
+  multiapp_fixed_point_convergence = gummel_delta_phi
+[]
 ```
 
 The electron density and energy equations remain ordinary `[FVKernels]`,
@@ -62,6 +67,11 @@ Only the electron subsystem changes:
     delta_phi_abs_tol = 1e-6
   []
 []
+
+[Executioner]
+  # ... existing transient/fixed-point settings ...
+  multiapp_fixed_point_convergence = gummel_delta_phi
+[]
 ```
 
 No Gummel code changes are required. Momentum is part of the electron state,
@@ -71,7 +81,10 @@ needs it.
 ## Responsibility boundary
 
 The Action creates the Poisson MultiApp, the variable transfers, and the
-optional delta-potential convergence object. The current application owns the
+optional delta-potential convergence object. MOOSE constructs the fixed-point
+solve before `add_convergence` actions run, so the surrounding `[Executioner]`
+must select the generated object with
+`multiapp_fixed_point_convergence = gummel_delta_phi`. The current application owns the
 electron equations. The Poisson input owns the electrostatic equation and any
 optional electron-response approximation such as
 `FVElectronResponseBandedCorrection`.

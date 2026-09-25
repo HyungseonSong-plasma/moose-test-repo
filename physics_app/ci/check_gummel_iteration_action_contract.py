@@ -43,5 +43,6 @@ for forbidden in (
 # Electron response remains a Poisson-side optional object, not part of this Action.
 assert "FVElectronResponseBandedCorrection" not in src
 assert "bandwidth" not in src
+assert "setMultiAppFixedPointConvergenceName" not in src
 
 print("GUMMEL_ITERATION_ACTION_CONTRACT: PASS")

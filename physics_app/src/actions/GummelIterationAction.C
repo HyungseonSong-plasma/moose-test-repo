@@ -65,7 +65,9 @@ GummelIterationAction::validParams()
   params.addParam<bool>(
       "manage_convergence",
       true,
-      "Create and select a DeltaPhiMultiAppConvergence object for this Gummel iteration.");
+      "Create a DeltaPhiMultiAppConvergence object for this Gummel iteration. The Executioner "
+      "must select it with multiapp_fixed_point_convergence because MOOSE constructs the fixed-"
+      "point solve before add_convergence actions run.");
   params.addParam<PostprocessorName>(
       "delta_phi_postprocessor",
       "Postprocessor containing the maximum potential change for the current fixed-point iterate.");
@@ -181,6 +183,5 @@ GummelIterationAction::act()
     params.set<Real>("delta_phi_abs_tol") = getParam<Real>("delta_phi_abs_tol");
 
     _problem->addConvergence("DeltaPhiMultiAppConvergence", convergence_name, params);
-    _problem->setMultiAppFixedPointConvergenceName(convergence_name);
   }
 }

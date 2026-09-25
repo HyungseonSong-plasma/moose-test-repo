@@ -132,10 +132,6 @@ def _actionize(fast: str) -> str:
         raise RuntimeError("qualified convergence block changed")
     fast = fast.replace(conv, "", 1)
 
-    owner = "  multiapp_fixed_point_convergence = gummel_delta_phi\n"
-    if fast.count(owner) != 1:
-        raise RuntimeError("qualified convergence-owner line changed")
-    fast = fast.replace(owner, "", 1)
     return fast
 
 def _normalize_wiring(fast: str) -> str:
@@ -232,9 +228,7 @@ def p0(horizon: str) -> None:
     exec_a = re.search(r"\[Executioner\][\s\S]*?\n\[\]\n", fa)
     exec_b = re.search(r"\[Executioner\][\s\S]*?\n\[\]\n", fb)
     assert exec_a is not None and exec_b is not None
-    assert exec_a.group(0).replace(
-        "  multiapp_fixed_point_convergence = gummel_delta_phi\n", ""
-    ) == exec_b.group(0)
+    assert exec_a.group(0) == exec_b.group(0)
 
     assert fa[fa.index("[Outputs]\n"):] == fb[fb.index("[Outputs]\n"):]
 
@@ -246,7 +240,7 @@ def p0(horizon: str) -> None:
     assert "[MultiApps]" not in fb
     assert "[Transfers]" not in fb
     assert "[Convergence]" not in fb
-    assert "multiapp_fixed_point_convergence = gummel_delta_phi" not in fb
+    assert "multiapp_fixed_point_convergence = gummel_delta_phi" in fb
     assert "electron_state_variables = 'log_e n_epsilon'" in fb
     assert "potential_from_poisson w_O2p_h w_Om_h w_Op_h" in fb
     assert "potential_plasma phi_anchor_frozen" in fb
