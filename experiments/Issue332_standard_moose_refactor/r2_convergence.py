@@ -44,6 +44,11 @@ CUSTOM_BLOCK = """[Convergence]
 STANDARD_BLOCK = """[Convergence]
   [default_fp]
     type = DefaultMultiAppFixedPointConvergence
+    fixed_point_min_its = 2
+    fixed_point_max_its = 3000
+    fixed_point_rel_tol = 1.0e-8
+    fixed_point_abs_tol = 1.0e-12
+    accept_on_max_fixed_point_iteration = false
   []
   [delta_phi]
     type = PostprocessorConvergence
@@ -74,6 +79,21 @@ def _standardize_convergence(fast: str) -> str:
     if fast.count(old) != 1:
         raise RuntimeError("fixed-point convergence selector changed")
     fast = fast.replace(old, "  multiapp_fixed_point_convergence = gummel_standard_and\n", 1)
+
+    # Explicit standard convergence objects must own these parameters; leaving
+    # them on the Executioner is rejected as unused when ParsedConvergence is
+    # selected as the outer fixed-point convergence object.
+    for line in (
+        "  fixed_point_min_its = 2\n",
+        "  fixed_point_max_its = 3000\n",
+        "  fixed_point_rel_tol = 1.0e-8\n",
+        "  fixed_point_abs_tol = 1.0e-12\n",
+        "  accept_on_max_fixed_point_iteration = false\n",
+    ):
+        if fast.count(line) != 1:
+            raise RuntimeError(f"qualified fixed-point parameter anchor changed: {line.strip()}")
+        fast = fast.replace(line, "", 1)
+
     if "PhysicsDeltaPhiMultiAppConvergence" in fast:
         raise RuntimeError("custom convergence remained in standard probe")
     return fast
@@ -132,6 +152,9 @@ def p0() -> None:
     assert "convergence_expression = 'default_fp & delta_phi'" in sb
     assert "multiapp_fixed_point_convergence = gummel_standard_and" in sb
     assert "fixed_point_algorithm = 'steffensen'" in sb
+    assert "fixed_point_min_its = 2" in sb
+    exec_text = sb.split("[Executioner]", 1)[1].split("[Convergence]", 1)[0]
+    assert "fixed_point_min_its" not in exec_text
     print("ISSUE334_R2_P0: PASS")
 
 
