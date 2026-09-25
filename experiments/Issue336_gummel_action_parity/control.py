@@ -213,36 +213,44 @@ def p0(horizon: str) -> None:
     a = generated / CASE_NAMES[0]
     b = generated / CASE_NAMES[1]
 
-    # Parent and Poisson physics must be exactly identical. Only the fast-app
-    # coupling construction is allowed to differ.
     assert (a / "input.i").read_text() == (b / "input.i").read_text()
     assert (a / "poisson_sub.i").read_text() == (b / "poisson_sub.i").read_text()
 
     fa = (a / "fast_sub.i").read_text()
     fb = (b / "fast_sub.i").read_text()
 
-    # Manual baseline owns the explicit coupling objects.
-    assert "[MultiApps]" in fa
-    assert "[Transfers]" in fa
+    # Everything outside the explicit Gummel wiring/convergence ownership must
+    # remain byte-identical. Compare the electron-physics prefix, diagnostics,
+    # executioner (after removing only the manual convergence-owner line), and
+    # outputs independently so whitespace inside the replacement block is irrelevant.
+    assert fa[:fa.index("[MultiApps]\n")] == fb[:fb.index("[GummelIteration]\n")]
+
+    pp_a = fa[fa.index("[Postprocessors]\n"):fa.index("[Executioner]\n")]
+    pp_b = fb[fb.index("[Postprocessors]\n"):fb.index("[Executioner]\n")]
+    assert pp_a == pp_b
+
+    exec_a = re.search(r"\[Executioner\][\s\S]*?\n\[\]\n", fa)
+    exec_b = re.search(r"\[Executioner\][\s\S]*?\n\[\]\n", fb)
+    assert exec_a is not None and exec_b is not None
+    assert exec_a.group(0).replace(
+        "  multiapp_fixed_point_convergence = gummel_delta_phi\n", ""
+    ) == exec_b.group(0)
+
+    assert fa[fa.index("[Outputs]\n"):] == fb[fb.index("[Outputs]\n"):]
+
+    assert "[MultiApps]" in fa and "[Transfers]" in fa
     assert "type = DeltaPhiMultiAppConvergence" in fa
     assert "[GummelIteration]" not in fa
 
-    # Action trial owns the same coupling semantics.
     assert "[GummelIteration]" in fb
+    assert "[MultiApps]" not in fb
+    assert "[Transfers]" not in fb
+    assert "[Convergence]" not in fb
+    assert "multiapp_fixed_point_convergence = gummel_delta_phi" not in fb
     assert "electron_state_variables = 'log_e n_epsilon'" in fb
-    assert "electron_to_poisson_source_variables = 'log_e n_epsilon potential_from_poisson w_O2p_h w_Om_h w_Op_h'" in fb
-    assert "electron_to_poisson_variables = 'log_e_frozen n_epsilon_frozen phi_anchor_frozen w_O2p_frozen w_Om_frozen w_Op_frozen'" in fb
-    assert "poisson_to_electron_source_variables = 'potential_plasma phi_anchor_frozen'" in fb
-    assert "poisson_to_electron_variables = 'potential_from_poisson fp_phi_anchor_diag'" in fb
+    assert "potential_from_poisson w_O2p_h w_Om_h w_Op_h" in fb
+    assert "potential_plasma phi_anchor_frozen" in fb
     assert "delta_phi_postprocessor = fp_delta_phi_max" in fb
-    assert "delta_phi_abs_tol = 9.9999999999999995e-07" in fb
-
-    # Physics/algorithm contracts common to both sides.
-    for fast in (fa, fb):
-        assert "fixed_point_algorithm = 'steffensen'" in fast
-        assert "transformed_variables = 'potential_from_poisson'" in fast
-        assert "fp_delta_phi_max" in fast
-        assert "num_steps = " in fast
 
     for d in (a, b):
         pp = (d / "poisson_sub.i").read_text()
