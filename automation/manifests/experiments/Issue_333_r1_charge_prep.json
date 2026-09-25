@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "issue": 333,
+  "kind": "experiments",
+  "sequence": 1,
+  "title": "R1 standard charge short prepare",
+  "stages": [
+    {
+      "id": "P0",
+      "name": "Validate R1 static contract",
+      "command": [
+        "python3",
+        "experiments/Issue333_standard_charge_density/control.py",
+        "--p0"
+      ],
+      "timeout_seconds": 300
+    },
+    {
+      "id": "P1",
+      "name": "Build and check R1 inputs",
+      "command": [
+        "python3",
+        "experiments/Issue333_standard_charge_density/control.py",
+        "--p2"
+      ],
+      "timeout_seconds": 3000
+    }
+  ]
+}
