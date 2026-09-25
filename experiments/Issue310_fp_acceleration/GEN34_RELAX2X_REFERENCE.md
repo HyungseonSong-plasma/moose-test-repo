@@ -21,7 +21,7 @@ The historical `relax_2x` case (run `35837437816`) used the superseded Issue306 
 - `fp_anchor_csv enable=false`
 - compact step/final scientific outputs retained
 
-The previous-potential anchor transfer is retained only so the same delta-phi convergence criterion can be evaluated. No `gummel_band_beta`, `n_epsilon_frozen`, or `PhysicsFVGummelBandedCorrection` is present in the reference Poisson solve.
+The previous-potential anchor transfer is retained only so the same delta-phi convergence criterion can be evaluated. No `gummel_band_beta`, `n_epsilon_frozen`, or `FVGummelBandedCorrection` is present in the reference Poisson solve.
 
 ## Optimized endpoint
 

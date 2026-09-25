@@ -252,7 +252,7 @@ def _add_delta_phi_metric(fast: str, tol: float) -> str:
     conv = f"""
 [Convergence]
   [gummel_delta_phi]
-    type = PhysicsDeltaPhiMultiAppConvergence
+    type = DeltaPhiMultiAppConvergence
     delta_phi_pp = fp_delta_phi_max
     delta_phi_abs_tol = {tol:.17g}
   []
@@ -325,7 +325,7 @@ def p0() -> None:
     legacy_parent = (legacy / "input.i").read_text(encoding="utf-8")
     legacy_fast = (legacy / "fast_sub.i").read_text(encoding="utf-8")
     legacy_poisson = (legacy / "poisson_sub.i").read_text(encoding="utf-8")
-    assert "PhysicsDeltaPhiMultiAppConvergence" not in legacy_fast
+    assert "DeltaPhiMultiAppConvergence" not in legacy_fast
     assert "gummel_banded_correction" not in legacy_poisson
 
     for raw in SPECS[1:]:
@@ -339,7 +339,7 @@ def p0() -> None:
         assert "TimeDerivative" not in poisson
         assert "no_restore = true" in fast
         assert f"relaxation_factor = {BASE_ALPHA:.17g}" in fast
-        assert "type = PhysicsDeltaPhiMultiAppConvergence" in fast
+        assert "type = DeltaPhiMultiAppConvergence" in fast
         assert "multiapp_fixed_point_convergence = gummel_delta_phi" in fast
         assert f"delta_phi_abs_tol = {float(raw['delta_phi_abs_tol']):.17g}" in fast
         # The Poisson equation is unchanged; only a passive auxiliary copy is added.

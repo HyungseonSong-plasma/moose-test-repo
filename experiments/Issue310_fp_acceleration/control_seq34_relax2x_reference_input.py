@@ -154,7 +154,7 @@ def _apply_anchor_only(fast: str, poisson: str) -> tuple[str, str]:
     """Install only the previous-potential anchor path needed by delta-phi convergence.
 
     This deliberately excludes the n_epsilon transfer, beta material, and
-    PhysicsFVGummelBandedCorrection used by the optimized endpoint.
+    FVGummelBandedCorrection used by the optimized endpoint.
     """
     transfer_anchor = """  [log_e_to_poisson]
     type = MultiAppCopyTransfer
@@ -358,7 +358,7 @@ def p0() -> None:
     # Common measurement/accuracy contract.
     for fast in (ref_fast, opt_fast):
         assert "no_restore = true" in fast
-        assert "type = PhysicsDeltaPhiMultiAppConvergence" in fast
+        assert "type = DeltaPhiMultiAppConvergence" in fast
         assert "delta_phi_abs_tol = 9.9999999999999995e-07" in fast
         assert "compute_scaling_once = true" in fast
         assert "  [fp_anchor_csv]\n    enable = false\n" in fast
@@ -370,7 +370,7 @@ def p0() -> None:
     assert f"relaxation_factor = {RELAX_2X:.17g}" in ref_fast
     assert "fixed_point_algorithm = 'picard'" in ref_fast
     assert "transformed_variables = 'potential_from_poisson'" not in ref_fast
-    assert "PhysicsFVGummelBandedCorrection" not in ref_poisson
+    assert "FVGummelBandedCorrection" not in ref_poisson
     assert "gummel_band_beta" not in ref_poisson
     assert "n_epsilon_frozen" not in ref_poisson
     assert "phi_anchor_frozen" in ref_poisson
@@ -379,7 +379,7 @@ def p0() -> None:
     assert "relaxation_factor = 0.45000000000000001" in opt_fast
     assert "fixed_point_algorithm = 'steffensen'" in opt_fast
     assert "transformed_variables = 'potential_from_poisson'" in opt_fast
-    assert "type = PhysicsFVGummelBandedCorrection" in opt_poisson
+    assert "type = FVGummelBandedCorrection" in opt_poisson
     assert "bandwidth = 5" in opt_poisson
 
     print("ISSUE310_GEN34_INPUT_P0: PASS")

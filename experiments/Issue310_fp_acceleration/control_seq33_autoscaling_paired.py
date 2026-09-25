@@ -148,10 +148,10 @@ def p0() -> None:
         assert "  [fp_anchor_csv]\n    enable = false\n" in fast
         assert "fixed_point_algorithm = 'steffensen'" in fast
         assert "transformed_variables = 'potential_from_poisson'" in fast
-        assert "type = PhysicsDeltaPhiMultiAppConvergence" in fast
+        assert "type = DeltaPhiMultiAppConvergence" in fast
         assert "delta_phi_abs_tol = 9.9999999999999995e-07" in fast
         assert "no_restore = true" in fast
-        assert "type = PhysicsFVGummelBandedCorrection" in (d / "poisson_sub.i").read_text()
+        assert "type = FVGummelBandedCorrection" in (d / "poisson_sub.i").read_text()
 
     # Same-policy replicas across AB/BA must be byte-identical.
     for fname in ("input.i", "fast_sub.i", "poisson_sub.i"):

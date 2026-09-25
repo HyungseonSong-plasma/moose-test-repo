@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Issue #336 R2b: standard-only scalarized AND convergence discriminator.
 
-A: qualified PhysicsDeltaPhiMultiAppConvergence
+A: qualified DeltaPhiMultiAppConvergence
 B: DefaultMultiAppFixedPointConvergence + standard Residual/ParsedPostprocessor gate
 
 Short horizon: 1 heavy cycle / 4 electron steps.
@@ -50,7 +50,7 @@ _BASE_SPEC = {
 
 CUSTOM_CONV = f"""[Convergence]
   [gummel_delta_phi]
-    type = PhysicsDeltaPhiMultiAppConvergence
+    type = DeltaPhiMultiAppConvergence
     delta_phi_pp = fp_delta_phi_max
     delta_phi_abs_tol = {DPHI_TOL:.17g}
   []
@@ -256,8 +256,8 @@ def p0() -> None:
     fa = (a / "fast_sub.i").read_text()
     fb = (b / "fast_sub.i").read_text()
 
-    assert "type = PhysicsDeltaPhiMultiAppConvergence" in fa
-    assert "type = PhysicsDeltaPhiMultiAppConvergence" not in fb
+    assert "type = DeltaPhiMultiAppConvergence" in fa
+    assert "type = DeltaPhiMultiAppConvergence" not in fb
     assert "type = ParsedConvergence" not in fb
     assert "type = DefaultMultiAppFixedPointConvergence" in fb
     assert "multiapp_fixed_point_convergence = gummel_scalar_and" in fb

@@ -58,8 +58,8 @@ def p0():
     metrics=g._projection_metrics(5); assert metrics["max_abs_row_sum"] < 1e-12
     for raw in SPECS:
         d=GENERATED/raw["name"]; fast=(d/"fast_sub.i").read_text(); poisson=(d/"poisson_sub.i").read_text()
-        assert "type = PhysicsFVGummelBandedCorrection" in poisson
-        assert "type = PhysicsDeltaPhiMultiAppConvergence" in fast
+        assert "type = FVGummelBandedCorrection" in poisson
+        assert "type = DeltaPhiMultiAppConvergence" in fast
         assert "delta_phi_abs_tol = 9.9999999999999995e-07" in fast
         assert "no_restore = true" in fast
     print("ISSUE310_GEN20_P0: PASS", json.dumps({"cases":CASE_NAMES,"band5":metrics},sort_keys=True))

@@ -16,11 +16,11 @@
  * null space.  The correction also vanishes exactly at a converged Gummel
  * fixed point where phi == phi_anchor.
  */
-class PhysicsFVGummelBandedCorrection : public FVElementalKernel
+class FVGummelBandedCorrection : public FVElementalKernel
 {
 public:
   static InputParameters validParams();
-  PhysicsFVGummelBandedCorrection(const InputParameters & parameters);
+  FVGummelBandedCorrection(const InputParameters & parameters);
 
 protected:
   ADReal computeQpResidual() override;

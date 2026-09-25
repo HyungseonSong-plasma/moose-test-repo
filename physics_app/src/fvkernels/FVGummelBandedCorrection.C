@@ -1,4 +1,4 @@
-#include "PhysicsFVGummelBandedCorrection.h"
+#include "FVGummelBandedCorrection.h"
 
 #include "libmesh/elem.h"
 
@@ -6,10 +6,10 @@
 #include <cmath>
 #include <limits>
 
-registerMooseObject("PhysicsApp", PhysicsFVGummelBandedCorrection);
+registerMooseObject("PhysicsApp", FVGummelBandedCorrection);
 
 InputParameters
-PhysicsFVGummelBandedCorrection::validParams()
+FVGummelBandedCorrection::validParams()
 {
   auto params = FVElementalKernel::validParams();
   params.addClassDescription(
@@ -29,7 +29,7 @@ PhysicsFVGummelBandedCorrection::validParams()
   return params;
 }
 
-PhysicsFVGummelBandedCorrection::PhysicsFVGummelBandedCorrection(
+FVGummelBandedCorrection::FVGummelBandedCorrection(
     const InputParameters & parameters)
   : FVElementalKernel(parameters),
     _anchor(getFunctor<ADReal>("anchor")),
@@ -53,18 +53,18 @@ PhysicsFVGummelBandedCorrection::PhysicsFVGummelBandedCorrection(
 }
 
 unsigned int
-PhysicsFVGummelBandedCorrection::rowIndex(const Elem * const elem) const
+FVGummelBandedCorrection::rowIndex(const Elem * const elem) const
 {
   const Real x = elem->vertex_average()(0);
   const long idx = std::lround((x - _xmin) / _dx - 0.5);
   if (idx < 0 || idx >= static_cast<long>(_n_cells))
-    mooseError("PhysicsFVGummelBandedCorrection: element centroid x=", x,
+    mooseError("FVGummelBandedCorrection: element centroid x=", x,
                " is outside the configured 1D row map.");
   return static_cast<unsigned int>(idx);
 }
 
 const Elem *
-PhysicsFVGummelBandedCorrection::offsetElem(const Elem * start, const int offset) const
+FVGummelBandedCorrection::offsetElem(const Elem * start, const int offset) const
 {
   if (!offset)
     return start;
@@ -105,7 +105,7 @@ PhysicsFVGummelBandedCorrection::offsetElem(const Elem * start, const int offset
 }
 
 ADReal
-PhysicsFVGummelBandedCorrection::computeQpResidual()
+FVGummelBandedCorrection::computeQpResidual()
 {
   const auto state = determineState();
   const unsigned int i = rowIndex(_current_elem);
@@ -125,7 +125,7 @@ PhysicsFVGummelBandedCorrection::computeQpResidual()
 
     const Elem * elem_j = offsetElem(_current_elem, j - static_cast<int>(i));
     if (!elem_j)
-      mooseError("PhysicsFVGummelBandedCorrection: missing ghosted element for row ",
+      mooseError("FVGummelBandedCorrection: missing ghosted element for row ",
                  i, " column ", j, ".");
 
     const Moose::ElemArg arg_j{elem_j, false};

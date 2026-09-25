@@ -415,7 +415,7 @@ def _apply_banded(fast: str, poisson: str, bandwidth: int) -> tuple[str, str]:
     poisson = poisson.replace(
         kernel_anchor,
         kernel_anchor + f"""  [gummel_banded_correction]
-    type = PhysicsFVGummelBandedCorrection
+    type = FVGummelBandedCorrection
     variable = potential_plasma
     anchor = phi_anchor_frozen
     beta = gummel_band_beta
@@ -483,7 +483,7 @@ def _apply_delta_phi_convergence(fast: str, tol: float) -> str:
     conv = f"""
 [Convergence]
   [gummel_delta_phi]
-    type = PhysicsDeltaPhiMultiAppConvergence
+    type = DeltaPhiMultiAppConvergence
     delta_phi_pp = fp_delta_phi_max
     delta_phi_abs_tol = {tol:.17g}
   []
@@ -542,7 +542,7 @@ def p0() -> None:
         fast = (d / "fast_sub.i").read_text(encoding="utf-8")
         poisson = (d / "poisson_sub.i").read_text(encoding="utf-8")
         assert (d / "input.i").read_text(encoding="utf-8") == control_parent
-        assert "type = PhysicsFVGummelBandedCorrection" in poisson
+        assert "type = FVGummelBandedCorrection" in poisson
         assert "bandwidth = 5" in poisson
         assert "gummel_band_beta" in poisson
         assert "TimeDerivative" not in poisson
@@ -550,12 +550,12 @@ def p0() -> None:
         assert f"relaxation_factor = {float(raw['relaxation_factor']):.17g}" in fast
 
         if bool(raw["custom_convergence"]):
-            assert "type = PhysicsDeltaPhiMultiAppConvergence" in fast
+            assert "type = DeltaPhiMultiAppConvergence" in fast
             assert "multiapp_fixed_point_convergence = gummel_delta_phi" in fast
             assert "functor = fp_delta_phi_abs" in fast
             assert f"delta_phi_abs_tol = {float(raw['delta_phi_abs_tol']):.17g}" in fast
         else:
-            assert "PhysicsDeltaPhiMultiAppConvergence" not in fast
+            assert "DeltaPhiMultiAppConvergence" not in fast
 
     print("ISSUE310_GEN18_DELTAPHI_P0: PASS")
     print(json.dumps({

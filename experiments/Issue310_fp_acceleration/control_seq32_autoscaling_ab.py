@@ -91,10 +91,10 @@ def p0():
         assert "  [fp_anchor_csv]\n    enable = false\n" in fast
         assert "fixed_point_algorithm = 'steffensen'" in fast
         assert "transformed_variables = 'potential_from_poisson'" in fast
-        assert "type = PhysicsDeltaPhiMultiAppConvergence" in fast
+        assert "type = DeltaPhiMultiAppConvergence" in fast
         assert "delta_phi_abs_tol = 9.9999999999999995e-07" in fast
         assert "no_restore = true" in fast
-        assert "type = PhysicsFVGummelBandedCorrection" in (d/"poisson_sub.i").read_text()
+        assert "type = FVGummelBandedCorrection" in (d/"poisson_sub.i").read_text()
     parent_a=(a/"input.i").read_text(); parent_b=(b/"input.i").read_text()
     fast_a=(a/"fast_sub.i").read_text(); fast_b=(b/"fast_sub.i").read_text()
     poisson_a=(a/"poisson_sub.i").read_bytes(); poisson_b=(b/"poisson_sub.i").read_bytes()

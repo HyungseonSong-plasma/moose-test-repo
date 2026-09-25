@@ -96,8 +96,8 @@ def p0():
         poisson = (d/"poisson_sub.i").read_text()
         assert f"fixed_point_algorithm = '{raw['fp_algorithm']}'" in fast
         assert "transformed_variables = 'potential_from_poisson'" in fast
-        assert "type = PhysicsFVGummelBandedCorrection" in poisson
-        assert "type = PhysicsDeltaPhiMultiAppConvergence" in fast
+        assert "type = FVGummelBandedCorrection" in poisson
+        assert "type = DeltaPhiMultiAppConvergence" in fast
         assert "delta_phi_abs_tol = 9.9999999999999995e-07" in fast
         assert "no_restore = true" in fast
     print("ISSUE310_GEN30_P0: PASS", json.dumps({"cases":CASE_NAMES,"sole_fast_sub_diff":"fp_anchor_csv enable=false","band5":metrics}, sort_keys=True))

@@ -10,11 +10,11 @@
  * The delta-phi quantity is supplied by a postprocessor executed on
  * MULTIAPP_FIXED_POINT_CONVERGENCE.
  */
-class PhysicsDeltaPhiMultiAppConvergence : public DefaultMultiAppFixedPointConvergence
+class DeltaPhiMultiAppConvergence : public DefaultMultiAppFixedPointConvergence
 {
 public:
   static InputParameters validParams();
-  PhysicsDeltaPhiMultiAppConvergence(const InputParameters & parameters);
+  DeltaPhiMultiAppConvergence(const InputParameters & parameters);
 
   MooseConvergenceStatus checkConvergence(unsigned int n_iter) override;
 

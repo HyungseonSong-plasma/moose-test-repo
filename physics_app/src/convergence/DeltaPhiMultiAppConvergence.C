@@ -1,13 +1,13 @@
-#include "PhysicsDeltaPhiMultiAppConvergence.h"
+#include "DeltaPhiMultiAppConvergence.h"
 
 #include "FixedPointSolve.h"
 
 #include <cmath>
 
-registerMooseObject("PhysicsApp", PhysicsDeltaPhiMultiAppConvergence);
+registerMooseObject("PhysicsApp", DeltaPhiMultiAppConvergence);
 
 InputParameters
-PhysicsDeltaPhiMultiAppConvergence::validParams()
+DeltaPhiMultiAppConvergence::validParams()
 {
   auto params = DefaultMultiAppFixedPointConvergence::validParams();
   params.addClassDescription(
@@ -22,7 +22,7 @@ PhysicsDeltaPhiMultiAppConvergence::validParams()
   return params;
 }
 
-PhysicsDeltaPhiMultiAppConvergence::PhysicsDeltaPhiMultiAppConvergence(
+DeltaPhiMultiAppConvergence::DeltaPhiMultiAppConvergence(
     const InputParameters & parameters)
   : DefaultMultiAppFixedPointConvergence(parameters),
     _delta_phi(getPostprocessorValue("delta_phi_pp")),
@@ -31,7 +31,7 @@ PhysicsDeltaPhiMultiAppConvergence::PhysicsDeltaPhiMultiAppConvergence(
 }
 
 Convergence::MooseConvergenceStatus
-PhysicsDeltaPhiMultiAppConvergence::checkConvergence(unsigned int n_iter)
+DeltaPhiMultiAppConvergence::checkConvergence(unsigned int n_iter)
 {
   const auto standard = DefaultMultiAppFixedPointConvergence::checkConvergence(n_iter);
 

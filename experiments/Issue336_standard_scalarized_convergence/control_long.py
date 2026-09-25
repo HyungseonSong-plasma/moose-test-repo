@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Issue #336 R2b full qualification.
 
-Qualified custom PhysicsDeltaPhiMultiAppConvergence versus the standard-only
+Qualified custom DeltaPhiMultiAppConvergence versus the standard-only
 scalarized AND gate over the full Gen34 19.941 ns horizon.
 
 Two same-run orders are executed:
@@ -113,7 +113,7 @@ def build(clean: bool = True) -> None:
                     "electron_steps": HEAVY_CYCLES * 4,
                     "final_tau": FINAL_TAU,
                     "convergence_owner": (
-                        "PhysicsDeltaPhiMultiAppConvergence"
+                        "DeltaPhiMultiAppConvergence"
                         if raw["role"] == "custom"
                         else "DefaultMultiAppFixedPointConvergence+ParsedPostprocessor+Terminator"
                     ),
@@ -135,8 +135,8 @@ def p0() -> None:
     fa = (a / "fast_sub.i").read_text()
     fb = (b / "fast_sub.i").read_text()
 
-    assert "type = PhysicsDeltaPhiMultiAppConvergence" in fa
-    assert "type = PhysicsDeltaPhiMultiAppConvergence" not in fb
+    assert "type = DeltaPhiMultiAppConvergence" in fa
+    assert "type = DeltaPhiMultiAppConvergence" not in fb
     assert "type = DefaultMultiAppFixedPointConvergence" in fb
     assert "type = ParsedConvergence" not in fb
     assert "type = ParsedPostprocessor" in fb
