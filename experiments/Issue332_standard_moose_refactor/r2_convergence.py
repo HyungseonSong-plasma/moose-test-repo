@@ -80,9 +80,10 @@ def _standardize_convergence(fast: str) -> str:
         raise RuntimeError("fixed-point convergence selector changed")
     fast = fast.replace(old, "  multiapp_fixed_point_convergence = gummel_standard_and\n", 1)
 
-    # Explicit standard convergence objects must own these parameters; leaving
-    # them on the Executioner is rejected as unused when ParsedConvergence is
-    # selected as the outer fixed-point convergence object.
+    # Explicit standard convergence objects must own these parameters; remove
+    # only the Executioner copies while retaining the values inside default_fp.
+    exec_head, rest = fast.split("[Executioner]", 1)
+    exec_body, conv_tail = rest.split("[Convergence]", 1)
     for line in (
         "  fixed_point_min_its = 2\n",
         "  fixed_point_max_its = 3000\n",
@@ -90,9 +91,10 @@ def _standardize_convergence(fast: str) -> str:
         "  fixed_point_abs_tol = 1.0e-12\n",
         "  accept_on_max_fixed_point_iteration = false\n",
     ):
-        if fast.count(line) != 1:
-            raise RuntimeError(f"qualified fixed-point parameter anchor changed: {line.strip()}")
-        fast = fast.replace(line, "", 1)
+        if exec_body.count(line) != 1:
+            raise RuntimeError(f"qualified Executioner parameter anchor changed: {line.strip()}")
+        exec_body = exec_body.replace(line, "", 1)
+    fast = exec_head + "[Executioner]" + exec_body + "[Convergence]" + conv_tail
 
     if "PhysicsDeltaPhiMultiAppConvergence" in fast:
         raise RuntimeError("custom convergence remained in standard probe")
