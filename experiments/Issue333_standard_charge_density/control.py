@@ -120,8 +120,11 @@ def p0() -> None:
     assert "type = PhysicsPlasmaChargeDensityMaterial" in pa
     assert "type = PhysicsPlasmaChargeDensityMaterial" not in pb
     assert pb.count("type = ADParsedFunctorMaterial") >= pa.count("type = ADParsedFunctorMaterial") + 3
-    for token in ("charge_number_density", "charge_density", "poisson_charge_source"):
+    # The custom input only exposes charge_density/poisson_charge_source by name;
+    # charge_number_density is an internal functor property of the custom C++ object.
+    for token in ("charge_density", "poisson_charge_source"):
         assert token in pa and token in pb
+    assert "property_name = charge_number_density" in pb
     assert "type = PhysicsFVGummelBandedCorrection" in pa
     assert "type = PhysicsFVGummelBandedCorrection" in pb
     print("ISSUE333_R1_P0: PASS")
