@@ -1,0 +1,64 @@
+name: One-shot Plasma Closures Contract
+
+on:
+  push:
+    branches:
+      - issue-336-standard-scalarized-convergence
+    paths:
+      - 'physics_app/include/actions/PlasmaClosuresAction.h'
+      - 'physics_app/src/actions/PlasmaClosuresAction.C'
+      - 'physics_app/include/materials/PhysicsElectronClosureMaterial.h'
+      - 'physics_app/src/materials/PhysicsElectronClosureMaterial.C'
+      - 'physics_app/include/materials/PhysicsElectronKineticsMaterial.h'
+      - 'physics_app/src/materials/PhysicsElectronKineticsMaterial.C'
+      - 'physics_app/include/materials/PhysicsHeavyTransportMaterial.h'
+      - 'physics_app/src/materials/PhysicsHeavyTransportMaterial.C'
+      - 'physics_app/src/base/PhysicsApp.C'
+      - 'physics_app/ci/check_plasma_closures_contract.py'
+      - 'physics_app/ci/plasma_closures_smoke.i'
+      - 'physics_app/ci/plasma_closures_transport_table.txt'
+      - 'physics_app/ci/plasma_closures_rate_a.txt'
+      - 'physics_app/ci/plasma_closures_rate_b.txt'
+      - 'physics_app/ci/plasma_closures_heavy_transport.txt'
+      - '.github/workflows/plasma-closures-contract.yml'
+
+permissions:
+  contents: read
+  packages: read
+
+env:
+  BUILD_BASE: ghcr.io/hyungseonsong-plasma/physics-build-base:moose-9f388366-deps-ba26970-16a26d5-9eceffb-v1
+
+jobs:
+  build-and-check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+
+      - name: Log in to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and check PlasmaClosures
+        shell: bash
+        run: |
+          set -euxo pipefail
+          docker pull "$BUILD_BASE"
+          docker run --rm             --entrypoint /bin/bash             --user 0:0             --workdir /workspace/physics_app             -v "$PWD:/workspace"             "$BUILD_BASE"             -lc '
+              set -euxo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+              python3 ci/check_plasma_closures_contract.py
+              make -j2
+              ./physics-opt --check-input -i ci/plasma_closures_smoke.i
+              ./physics-opt -i ci/plasma_closures_smoke.i
+            '
