@@ -1,7 +1,7 @@
 name: One-shot Issue334 R2 Standard Convergence
 on:
   push:
-    branches: [issue-334-standard-convergence]
+    branches: [issue-334-r2-standard-convergence-probe-v2]
     paths:
       - .github/workflows/issue334-r2-standard-convergence-once.yml
       - experiments/Issue332_standard_moose_refactor/r2_convergence.py
