@@ -9,6 +9,10 @@ on:
       - physics_app/include/actions/GummelIterationAction.h
       - physics_app/src/actions/GummelIterationAction.C
       - physics_app/src/base/PhysicsApp.C
+      - physics_app/include/**
+      - physics_app/src/**
+      - physics_app/Makefile
+      - physics_app/dependencies.lock
 
 permissions:
   contents: read
