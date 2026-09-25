@@ -59,6 +59,11 @@ CUSTOM_CONV = f"""[Convergence]
 STANDARD_CONV = f"""[Convergence]
   [gummel_default]
     type = DefaultMultiAppFixedPointConvergence
+    fixed_point_min_its = 2
+    fixed_point_max_its = 3000
+    fixed_point_rel_tol = 1.0e-8
+    fixed_point_abs_tol = 1.0e-12
+    accept_on_max_fixed_point_iteration = false
   []
   [gummel_delta_phi_standard]
     type = ParsedConvergence
@@ -89,6 +94,22 @@ def _standardize(fast: str) -> str:
         "  multiapp_fixed_point_convergence = gummel_delta_phi_standard\n",
         1,
     )
+
+    # Once a non-default top-level ParsedConvergence is selected, MOOSE no
+    # longer forwards the Executioner fixed-point convergence parameters into
+    # the nested default object. Move those parameters explicitly to
+    # gummel_default above so the standard residual criterion remains identical
+    # and AddDefaultConvergenceAction does not reject unused Executioner fields.
+    for line in (
+        "  fixed_point_min_its = 2\n",
+        "  fixed_point_max_its = 3000\n",
+        "  fixed_point_rel_tol = 1.0e-8\n",
+        "  fixed_point_abs_tol = 1.0e-12\n",
+        "  accept_on_max_fixed_point_iteration = false\n",
+    ):
+        if fast.count(line) != 1:
+            raise RuntimeError(f"fixed-point parameter anchor changed: {line.strip()}")
+        fast = fast.replace(line, "", 1)
     return fast
 
 def build(clean: bool = True) -> None:
@@ -123,6 +144,11 @@ def p0() -> None:
     assert "PhysicsDeltaPhiMultiAppConvergence" not in fb
     assert "type = DefaultMultiAppFixedPointConvergence" in fb
     assert "type = ParsedConvergence" in fb
+    assert "fixed_point_min_its = 2" in fb
+    assert "fixed_point_max_its = 3000" in fb
+    assert "fixed_point_rel_tol = 1.0e-8" in fb
+    assert "fixed_point_abs_tol = 1.0e-12" in fb
+    assert "accept_on_max_fixed_point_iteration = false" in fb
     assert "convergence_expression = 'base & (dphi <= tol)'" in fb
     assert "symbol_values = 'gummel_default fp_delta_phi_max 9.9999999999999995e-07'" in fb
     assert "multiapp_fixed_point_convergence = gummel_delta_phi_standard" in fb
