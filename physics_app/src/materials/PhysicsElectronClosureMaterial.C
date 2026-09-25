@@ -176,7 +176,7 @@ PhysicsElectronClosureMaterial::PhysicsElectronClosureMaterial(
 
   addFunctorProperty<ADReal>(
       getParam<MooseFunctorName>("electron_energy_mobility_output"),
-      [this, mean_energy, neutral_density](const auto & r, const auto & state) -> ADReal
+      [this, mean_energy, neutral_density, energy_transport_factor](const auto & r, const auto & state) -> ADReal
       {
         return energy_transport_factor * interpolate(mean_energy(r, state), 0) /
                neutral_density(r, state);
@@ -184,7 +184,7 @@ PhysicsElectronClosureMaterial::PhysicsElectronClosureMaterial(
 
   addFunctorProperty<ADReal>(
       getParam<MooseFunctorName>("electron_energy_diffusion_output"),
-      [this, mean_energy, neutral_density](const auto & r, const auto & state) -> ADReal
+      [this, mean_energy, neutral_density, energy_transport_factor](const auto & r, const auto & state) -> ADReal
       {
         return energy_transport_factor * interpolate(mean_energy(r, state), 1) /
                neutral_density(r, state);
