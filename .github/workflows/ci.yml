@@ -29,6 +29,8 @@ jobs:
         run: |
           python3 ci/guards/workflow_surface_guard.py --self-test
           python3 ci/guards/workflow_surface_guard.py --check
+      - name: Regression-test central Skill manifest contract
+        run: python3 ci/guards/central_skill_contract_guard.py --self-test
       - name: Validate Paul central operating contracts
         shell: bash
         run: |
