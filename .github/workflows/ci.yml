@@ -29,6 +29,8 @@ jobs:
         run: |
           python3 ci/guards/workflow_surface_guard.py --self-test
           python3 ci/guards/workflow_surface_guard.py --check
+      - name: Regression-test central Skill manifest contract
+        run: python3 ci/guards/central_skill_contract_guard.py --self-test
       - name: Validate Paul central operating contracts
         shell: bash
         run: |
@@ -113,6 +115,11 @@ jobs:
           git -C "$central_dir" init -q
           git -C "$central_dir" remote add origin https://github.com/HyungseonSong-plasma/chatgpt-operation.git
           git -C "$central_dir" fetch --quiet --depth=1 origin "6474eb7b77f890b7cf9d7134ccebea31662bcdbe"
+          git -C "$central_dir" show "6474eb7b77f890b7cf9d7134ccebea31662bcdbe:skills/catalog.json" > "$central_dir/skill-catalog.json"
+          python3 ci/guards/central_skill_contract_guard.py \
+            --manifest docs/operating_system/central_skills.json \
+            --catalog "$central_dir/skill-catalog.json"
+
           CENTRAL_DIR="$central_dir" python3 - <<'PY'
           import json
           import os
