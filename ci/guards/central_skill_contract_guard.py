@@ -35,11 +35,10 @@ def validate(manifest: dict, catalog: dict) -> dict:
     if len(catalog_by_name) != len(catalog_entries):
         raise CentralSkillContractError("duplicate Skill name in central catalog")
 
-    if set(manifest_by_name) != set(catalog_by_name):
-        missing = sorted(set(catalog_by_name) - set(manifest_by_name))
-        extra = sorted(set(manifest_by_name) - set(catalog_by_name))
+    unknown = sorted(set(manifest_by_name) - set(catalog_by_name))
+    if unknown:
         raise CentralSkillContractError(
-            f"consumer/central Skill inventory drift: missing={missing}, extra={extra}"
+            f"consumer manifest adopts Skills absent from central catalog: {unknown}"
         )
 
     revision = manifest["operating_system"]["revision"]
@@ -70,8 +69,9 @@ def self_test() -> None:
     }
     validate(base_manifest, base_catalog)
 
-    # Regression for Repository CI #251: adding a Skill to both authoritative
-    # documents must not require editing a third hard-coded expected-name set.
+    # Regression for Repository CI #251: adopting a new central Skill must not
+    # require editing a third hard-coded expected-name set. Consumers may adopt
+    # a deliberate subset of the central catalog.
     expanded_manifest = json.loads(json.dumps(base_manifest))
     expanded_catalog = json.loads(json.dumps(base_catalog))
     expanded_manifest["skills"].append({
@@ -87,6 +87,14 @@ def self_test() -> None:
     })
     result = validate(expanded_manifest, expanded_catalog)
     assert result["count"] == 2
+
+    superset_catalog = json.loads(json.dumps(expanded_catalog))
+    superset_catalog["skills"].append({
+        "name": "central-only",
+        "path": "skills/central-only/README.md",
+        "load_on": ["OTHER"],
+    })
+    assert validate(expanded_manifest, superset_catalog)["count"] == 2
 
     broken = json.loads(json.dumps(expanded_manifest))
     broken["skills"][-1]["load_on"] = ["WRONG_TRIGGER"]
