@@ -1,0 +1,18 @@
+# Minimal two-neutral transport database for PlasmaClosures smoke testing.
+species A 0.032 A
+species B 0.028 B
+
+pair A A 1.0 1.0
+300.0 3.0 4.0
+1000.0 4.0 5.0
+endpair
+
+pair A B 1.0 1.0
+300.0 3.5 4.5
+1000.0 4.5 5.5
+endpair
+
+pair B B 1.0 1.0
+300.0 3.2 4.2
+1000.0 4.2 5.2
+endpair
