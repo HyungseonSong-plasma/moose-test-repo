@@ -32,6 +32,15 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Download qualified input package
+        uses: actions/download-artifact@v4
+        with:
+          name: qualified-plasma-closures-inputs
+          path: qualified_case
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: HyungseonSong-plasma/moose-test-repo
+          run-id: 36348903903
+
       - name: Build and validate migrated PhysicsApp surface
         shell: bash
         run: |
@@ -53,7 +62,19 @@ jobs:
               ./physics-opt --check-input -i ci/gummel_action_smoke.i
               ./physics-opt --check-input -i ci/plasma_closures_smoke.i
               ./physics-opt -i ci/plasma_closures_smoke.i
+
+              cd /workspace/qualified_case
+              /workspace/physics_app/physics-opt -t --check-input -i poisson_sub.i
+              /workspace/physics_app/physics-opt -t --check-input -i fast_sub.i
+              /workspace/physics_app/physics-opt -t --check-input -i input.i
             '
+
+      - name: Assemble qualified local example
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p physics_app/examples/qualified_plasma_closures
+          cp qualified_case/* physics_app/examples/qualified_plasma_closures/
 
       - name: Upload source package
         uses: actions/upload-artifact@v4
@@ -71,5 +92,6 @@ jobs:
             physics_app/ci
             physics_app/data
             physics_app/docs
+            physics_app/examples
             physics_app/test
           if-no-files-found: error
