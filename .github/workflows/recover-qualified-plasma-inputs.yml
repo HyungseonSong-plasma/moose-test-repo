@@ -1,0 +1,49 @@
+name: Recover Qualified Plasma Inputs
+
+on:
+  push:
+    branches:
+      - recover-qualified-plasma-inputs-20260927
+
+permissions:
+  contents: read
+  packages: read
+
+env:
+  BUILD_BASE: ghcr.io/hyungseonsong-plasma/physics-build-base:moose-9f388366-deps-ba26970-16a26d5-9eceffb-v1
+
+jobs:
+  generate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+
+      - name: Log in to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Regenerate qualified migrated inputs
+        shell: bash
+        run: |
+          set -euxo pipefail
+          docker pull "$BUILD_BASE"
+          docker run --rm             --entrypoint /bin/bash             --user 0:0             --workdir /workspace             -v "$PWD:/workspace"             "$BUILD_BASE"             -lc '
+              set -euxo pipefail
+              source /environment
+              export PYTHONPATH=/workspace
+              python3 experiments/Issue337_plasma_closures_migration/control.py --horizon full --p0
+              test -f experiments/Issue337_plasma_closures_migration/generated_full/plasma_closures/input.i
+              test -f experiments/Issue337_plasma_closures_migration/generated_full/plasma_closures/fast_sub.i
+              test -f experiments/Issue337_plasma_closures_migration/generated_full/plasma_closures/poisson_sub.i
+            '
+
+      - name: Upload qualified input package
+        uses: actions/upload-artifact@v4
+        with:
+          name: qualified-plasma-closures-inputs
+          path: experiments/Issue337_plasma_closures_migration/generated_full/plasma_closures
+          if-no-files-found: error
