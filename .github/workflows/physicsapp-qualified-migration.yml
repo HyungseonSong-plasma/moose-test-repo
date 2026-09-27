@@ -54,3 +54,22 @@ jobs:
               ./physics-opt --check-input -i ci/plasma_closures_smoke.i
               ./physics-opt -i ci/plasma_closures_smoke.i
             '
+
+      - name: Upload source package
+        uses: actions/upload-artifact@v4
+        with:
+          name: physicsapp-qualified-migration-source
+          path: |
+            physics_app/.clang-format
+            physics_app/Makefile
+            physics_app/LICENSE
+            physics_app/README.md
+            physics_app/SOURCE_PROVENANCE.md
+            physics_app/dependencies.lock
+            physics_app/include
+            physics_app/src
+            physics_app/ci
+            physics_app/data
+            physics_app/docs
+            physics_app/test
+          if-no-files-found: error
