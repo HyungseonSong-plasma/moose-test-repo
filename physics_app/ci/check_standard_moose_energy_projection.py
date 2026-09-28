@@ -11,8 +11,8 @@ import tempfile
 from pathlib import Path
 
 N_A = 6.02214076e23
-N_REF = 1.0e16
-EPSILON_REF_EV = 5.73276
+N_E0 = 1.0e16
+MEAN_E0_EV = 5.73276
 M_O2 = 31.998e-3
 RHO = 3.1998e-5
 DT = 1.0e-7
@@ -24,16 +24,16 @@ EI16_COEF = -(EI16_DELTA_E_EV * N_A)
 
 # Accepted governed vectors from b882211eb24a94bb645d0c13ecd96badc2c35095.
 EI10_ORACLE = {
-    "n_e_avg": 1.0 * N_REF,
-    "n_epsilon_avg": 0.99198106194124 * N_REF * EPSILON_REF_EV,
+    "n_e_avg": 1.0 * N_E0,
+    "n_epsilon_avg": 0.99198106194124 * N_E0 * MEAN_E0_EV,
     "mean_en_solved_avg": 5.6867893526543,
     "w_O2_avg": 0.99899921866882,
     "w_O2s_avg": 0.0010007813311756,
     "R_O2s_avg": 0.0078133117564827,
 }
 EI16_ORACLE = {
-    "n_e_avg": 1.1016960590289 * N_REF,
-    "n_epsilon_avg": 0.78606212855788 * N_REF * EPSILON_REF_EV,
+    "n_e_avg": 1.1016960590289 * N_E0,
+    "n_epsilon_avg": 0.78606212855788 * N_E0 * MEAN_E0_EV,
     "mean_en_solved_avg": 4.0903346174113,
     "w_O2_avg": 0.99899831129721,
     "w_O2p_avg": 0.00100168870279,
@@ -334,7 +334,7 @@ EI16_INPUT = f"""[Mesh]
 
 RATE_TABLE = (
     (1.40991, 8.0e8),
-    (EPSILON_REF_EV, 1.0e9),
+    (MEAN_E0_EV, 1.0e9),
     (22.1378, 1.2e9),
 )
 
