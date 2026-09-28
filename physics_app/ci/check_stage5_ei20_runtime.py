@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Governed Stage-5 S5-B discriminator for EI20 O ionization."""
+"""Governed Stage-5 S5-B discriminator for EI20 O ionization using physical electron state."""
 import argparse,csv,hashlib,json,math,shutil,subprocess,sys,tempfile
 from pathlib import Path
 
