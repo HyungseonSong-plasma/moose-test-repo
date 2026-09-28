@@ -85,7 +85,18 @@ PhysicsFVElectronGroundedSheathEnergyBC::computeQpResidual()
 
   const ADReal effective_drop_V = raw_phi_s_V < 0.0 ? ADReal(0.0) : phi_s_V;
 
-  if (_molar_energy_state || _physical_eV_state)
+  if (_molar_energy_state)
+  {
+    const ADReal electron_temperature_eV =
+        PhysicsGroundedElectronSheath::electronTemperatureEV(mean_energy_eV);
+    const ADReal primary_particle_flux_molar =
+        PhysicsGroundedElectronSheath::primaryParticleFluxHat(
+            electron_density, mean_energy_eV, effective_drop_V);
+    return primary_particle_flux_molar *
+           (2.0 * electron_temperature_eV + effective_drop_V);
+  }
+
+  if (_physical_eV_state)
   {
     const ADReal electron_temperature_eV =
         PhysicsGroundedElectronSheath::electronTemperatureEV(mean_energy_eV);
