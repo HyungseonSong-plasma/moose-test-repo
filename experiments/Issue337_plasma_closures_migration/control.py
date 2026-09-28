@@ -304,8 +304,15 @@ def p0(horizon: str) -> None:
     assert "[PlasmaClosures]" in migrated_fast
     assert "role = electron" in migrated_fast
     assert "create_electron_closure" not in migrated_fast
+    assert "electron_state_form = physical_eV" in migrated_fast
     assert "electron_mean_energy_output = mean_en" in migrated_fast
     assert "electron_impact_reaction_progress_names = 'R_elastic_O2'" in migrated_fast
+    assert "electron_number_density_hat" not in legacy_fast
+    assert "electron_number_density_hat" not in migrated_fast
+    assert "electron_energy_density_hat" not in legacy_fast
+    assert "electron_energy_density_hat" not in migrated_fast
+    assert "expression = 'ne/1.0e16'" not in legacy_fast
+    assert "electron_energy_reference_eV = 5.73276" not in legacy_fast
 
     # Heavy transport migration.
     assert "type = PhysicsThermalDiffusionMaterial" in legacy_parent
