@@ -147,7 +147,7 @@ def audit_stage6_final_input(text: str) -> dict[str, Any]:
     checks["runtime_energy_observables_present"] = all(
         mb.has_block(text, f"Postprocessors/{name}")
         for name in (
-            "s5r_mean_en_inventory",
+            "s5r_mean_en_state_inventory",
             "s5r_mean_en_avg",
             "s5r_ei02_elastic_energy_avg",
             "s5r_ei17_elastic_energy_avg",
