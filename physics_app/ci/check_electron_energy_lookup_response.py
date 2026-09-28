@@ -11,7 +11,7 @@ N_NEUTRAL = 101325.0 / (1.380649e-23 * 300.0)
 ENERGY_REFERENCE_EV = 5.73276
 
 values = []
-for name, n_epsilon_hat, path in FILES:
+for name, energy_scale, path in FILES:
     with open(path, newline="") as handle:
         row = list(csv.DictReader(handle))[-1]
 
@@ -19,7 +19,7 @@ for name, n_epsilon_hat, path in FILES:
     mobility = float(row["electron_mobility_avg"])
     diffusion = float(row["electron_diffusion_avg"])
 
-    expected_mean = ENERGY_REFERENCE_EV * n_epsilon_hat
+    expected_mean = ENERGY_REFERENCE_EV * energy_scale
     reduced_mobility = 1.0e24 + (expected_mean - 1.0) * (3.0e24 / 9.0)
     reduced_diffusion = 2.0e24 + (expected_mean - 1.0) * (6.0e24 / 9.0)
 

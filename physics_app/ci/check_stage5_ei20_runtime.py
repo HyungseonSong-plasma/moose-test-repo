@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Governed Stage-5 S5-B discriminator for EI20 O ionization."""
+"""Governed Stage-5 S5-B discriminator for EI20 O ionization using physical electron state."""
 import argparse,csv,hashlib,json,math,shutil,subprocess,sys,tempfile
 from pathlib import Path
 
@@ -7,7 +7,7 @@ ROOT=Path(__file__).resolve().parents[2]
 CONTRACT=ROOT/"docs/development/2026-09-10_issue176_stage5_reaction_ownership_contract.json"
 TABLE=ROOT/"physics_app/data/electron_impact/o_ionization.txt"
 NA=6.02214076e23
-NREF=1e16
+NE0=1e16
 EREF=5.73276
 MO=0.016
 RHO=3.1998e-5
@@ -18,7 +18,7 @@ XMIN,XMAX=1.40991,22.1378
 ANCHORS={XMIN:0.0,EREF:5.41e7,XMAX:1.19e10}
 EXPECTED_BLOB="43d73a4f8a70ea1fb262383e71164d8f18844ae8"
 PROGRESS="R_ion_O"
-ECOEF=-(LOSS*NA/(NREF*EREF))
+ECOEF=-(LOSS*NA)
 
 def close(a,b,rel=8e-6,abs_=1e-12,label="value"):
     if not math.isclose(a,b,rel_tol=rel,abs_tol=abs_):
@@ -59,7 +59,7 @@ def interp(table,x):
     raise AssertionError("strict interpolation bracket failure")
 
 def runtime_input(mean=EREF):
-    ep0=mean/EREF
+    ep0=NE0*mean
     return f"""[Mesh]
   [mesh]
     type = GeneratedMeshGenerator
@@ -78,9 +78,9 @@ def runtime_input(mean=EREF):
 [Variables]
   [n_e]
     type = MooseVariableFVReal
-    initial_condition = 1
+    initial_condition = {NE0:.17g}
   []
-  [n_epsilon]
+  [mean_en]
     type = MooseVariableFVReal
     initial_condition = {ep0:.17g}
   []
@@ -102,13 +102,6 @@ def runtime_input(mean=EREF):
     functor_symbols = 'wop'
     expression = '1-wop'
   []
-  [electron_number_density]
-    type = ADParsedFunctorMaterial
-    property_name = n_e_physical
-    functor_names = 'n_e'
-    functor_symbols = 'nehat'
-    expression = '{NREF:.17g}*nehat'
-  []
   [o_molar_concentration]
     type = ADParsedFunctorMaterial
     property_name = c_O
@@ -118,15 +111,15 @@ def runtime_input(mean=EREF):
   []
   [mean_energy_bridge]
     type = PhysicsElectronMeanEnergyMaterial
-    electron_energy_density = n_epsilon
+    electron_energy_density = mean_en
     electron_density = n_e
-    energy_reference_eV = {EREF:.17g}
+    state_form = physical_eV
   []
   [ei20_rate]
     type = PhysicsElectronImpactRateMaterial
     rate_table_file = o_ionization.txt
     mean_energy = mean_en_solved
-    electron_number_density = n_e_physical
+    electron_number_density = n_e
     target_molar_concentration = c_O
     reaction_progress = {PROGRESS}
   []
@@ -161,15 +154,15 @@ def runtime_input(mean=EREF):
     type = PhysicsFVElectronReactionSource
     variable = n_e
     number_source = electron_ei20_number_source
-    n_ref = {NREF:.17g}
+    state_form = physical
   []
-  [n_epsilon_time]
+  [mean_en_time]
     type = FVTimeKernel
-    variable = n_epsilon
+    variable = mean_en
   []
   [ei20_energy_loss]
     type = FVCoupledForce
-    variable = n_epsilon
+    variable = mean_en
     v = {PROGRESS}
     coef = {ECOEF:.17g}
   []
@@ -185,14 +178,14 @@ def runtime_input(mean=EREF):
   []
 []
 [Postprocessors]
-  [n_e_hat_avg]
+  [n_e_avg]
     type = ElementAverageFunctorPostprocessor
     functor = n_e
     execute_on = 'INITIAL TIMESTEP_END'
   []
-  [n_epsilon_hat_avg]
+  [mean_en_avg]
     type = ElementAverageFunctorPostprocessor
-    functor = n_epsilon
+    functor = mean_en
     execute_on = 'INITIAL TIMESTEP_END'
   []
   [w_Op_avg]
@@ -246,8 +239,8 @@ def runtime_input(mean=EREF):
 def validate(rows,table):
     if len(rows)<2: raise AssertionError("expected initial and final rows")
     i,f=rows[0],rows[-1]
-    ni,nf=num(i,"n_e_hat_avg"),num(f,"n_e_hat_avg")
-    ei,ef=num(i,"n_epsilon_hat_avg"),num(f,"n_epsilon_hat_avg")
+    ni,nf=num(i,"n_e_avg"),num(f,"n_e_avg")
+    ei,ef=num(i,"mean_en_avg"),num(f,"mean_en_avg")
     pi,pf=num(i,"w_Op_avg"),num(f,"w_Op_avg")
     oi,of=num(i,"w_O_avg"),num(f,"w_O_avg")
     mi,mf=num(i,"mean_en_solved_avg"),num(f,"mean_en_solved_avg")
@@ -258,37 +251,37 @@ def validate(rows,table):
     if not(XMIN<=mi<=XMAX and XMIN<=mf<=XMAX): raise AssertionError("strict lookup range")
     close(oi+pi,1,rel=0,abs_=2e-12,label="initial heavy sum")
     close(of+pf,1,rel=0,abs_=2e-12,label="final heavy sum")
-    close(mi,EREF*ei/ni,label="initial mean energy"); close(mf,EREF*ef/nf,label="final mean energy")
+    close(mi,ei/ni,label="initial mean energy"); close(mf,ef/nf,label="final mean energy")
     if not(r>0 and so<0<sp and se>0): raise AssertionError("EI20 source signs")
     close(-so/MO,r,label="O/shared progress"); close(sp/MO,r,label="Op/shared progress"); close(se/NA,r,label="electron/shared progress")
     close(so+sp,0,rel=0,abs_=1e-12,label="heavy source closure")
-    k=interp(table,mf); expected=k*(NREF*nf/NA)*(RHO*of/MO)
+    k=interp(table,mf); expected=k*(nf/NA)*(RHO*of/MO)
     close(r,expected,rel=8e-6,abs_=1e-14,label="strict lookup canonical progress")
-    close(NREF*(nf-ni)/DT,se,rel=9e-6,abs_=1,label="electron BE closure")
+    close((nf-ni)/DT,se,rel=9e-6,abs_=1,label="electron BE closure")
     close(RHO*(pf-pi)/DT,sp,rel=9e-6,abs_=1e-12,label="Op BE closure")
     close(RHO*(of-oi)/DT,so,rel=9e-6,abs_=1e-12,label="O BE closure")
     rhs=ECOEF*r; close((ef-ei)/DT,rhs,rel=9e-6,abs_=1e-8,label="EI20 energy BE closure")
-    de=NREF*(nf-ni); dp=NA*RHO*(pf-pi)/MO; close(de,dp,rel=9e-6,abs_=1,label="charge closure")
+    de=nf-ni; dp=NA*RHO*(pf-pi)/MO; close(de,dp,rel=9e-6,abs_=1,label="charge closure")
     oxy_i=RHO*(oi+pi)/MO; oxy_f=RHO*(of+pf)/MO; close(oxy_f,oxy_i,rel=2e-12,abs_=1e-14,label="oxygen inventory")
-    return {"initial":{"n_e_hat":ni,"n_epsilon_hat":ei,"w_O":oi,"w_Op":pi,"mean_en_solved_eV":mi},
-            "final":{"n_e_hat":nf,"n_epsilon_hat":ef,"w_O":of,"w_Op":pf,"mean_en_solved_eV":mf,"R_ion_O_mol_m3_s":r,"electron_source_m3_s":se},
+    return {"initial":{"n_e":ni,"mean_en":ei,"w_O":oi,"w_Op":pi,"mean_en_solved_eV":mi},
+            "final":{"n_e":nf,"mean_en":ef,"w_O":of,"w_Op":pf,"mean_en_solved_eV":mf,"R_ion_O_mol_m3_s":r,"electron_source_m3_s":se},
             "closure":{"heavy_mass_source_sum_kg_m3_s":so+sp,"oxygen_atom_molar_inventory_initial":oxy_i,
                        "oxygen_atom_molar_inventory_final":oxy_f,"electron_particle_delta":de,"positive_ion_particle_delta":dp,
                        "energy_loss_eV_per_event":LOSS,"standard_moose_object":"FVCoupledForce","energy_coef":ECOEF,
-                       "normalized_energy_rhs_per_s":rhs,"observed_dn_epsilon_hat_dt_per_s":(ef-ei)/DT,"lookup_k_m3_mol_s":k}}
+                       "physical_energy_rhs_eV_m3_s":rhs,"observed_dmean_en_dt_eV_m3_s":(ef-ei)/DT,"lookup_k_m3_mol_s":k}}
 
 def synthetic_rows(table):
-    r=interp(table,EREF)*(NREF/NA)*(RHO*(1-W0)/MO)
+    r=interp(table,EREF)*(NE0/NA)*(RHO*(1-W0)/MO)
     for _ in range(500):
-        ne=1+DT*NA*r/NREF; wp=W0+DT*MO*r/RHO; ep=1+DT*ECOEF*r; mean=EREF*ep/ne
-        new=interp(table,mean)*(NREF*ne/NA)*(RHO*(1-wp)/MO)
+        ne=NE0+DT*NA*r; wp=W0+DT*MO*r/RHO; ep=NE0*EREF+DT*ECOEF*r; mean=ep/ne
+        new=interp(table,mean)*(ne/NA)*(RHO*(1-wp)/MO)
         if math.isclose(new,r,rel_tol=1e-14,abs_tol=1e-18): r=new; break
         r=new
-    ne=1+DT*NA*r/NREF; wp=W0+DT*MO*r/RHO; ep=1+DT*ECOEF*r; mean=EREF*ep/ne
-    r0=interp(table,EREF)*(NREF/NA)*(RHO*(1-W0)/MO)
-    return [{"n_e_hat_avg":1,"n_epsilon_hat_avg":1,"w_Op_avg":W0,"w_O_avg":1-W0,"mean_en_solved_avg":EREF,
+    ne=NE0+DT*NA*r; wp=W0+DT*MO*r/RHO; ep=NE0*EREF+DT*ECOEF*r; mean=ep/ne
+    r0=interp(table,EREF)*(NE0/NA)*(RHO*(1-W0)/MO)
+    return [{"n_e_avg":NE0,"mean_en_avg":NE0*EREF,"w_Op_avg":W0,"w_O_avg":1-W0,"mean_en_solved_avg":EREF,
              "R_avg":r0,"O_source_avg":-MO*r0,"Op_source_avg":MO*r0,"electron_source_avg":NA*r0},
-            {"n_e_hat_avg":ne,"n_epsilon_hat_avg":ep,"w_Op_avg":wp,"w_O_avg":1-wp,"mean_en_solved_avg":mean,
+            {"n_e_avg":ne,"mean_en_avg":ep,"w_Op_avg":wp,"w_O_avg":1-wp,"mean_en_solved_avg":mean,
              "R_avg":r,"O_source_avg":-MO*r,"Op_source_avg":MO*r,"electron_source_avg":NA*r}]
 
 def expect_fail(fn,*args):
@@ -299,7 +292,7 @@ def expect_fail(fn,*args):
 def self_test():
     table=[(XMIN,ANCHORS[XMIN]),(EREF,ANCHORS[EREF]),(XMAX,ANCHORS[XMAX])]
     rows=synthetic_rows(table); validate(rows,table)
-    for key,mut in [("n_e_hat_avg",lambda x:1.0),("n_epsilon_hat_avg",lambda x:1+abs(x-1)),
+    for key,mut in [("n_e_avg",lambda x:NE0),("mean_en_avg",lambda x:NE0*EREF+abs(x-NE0*EREF)),
                     ("Op_source_avg",lambda x:x*1.01),("electron_source_avg",lambda x:x*2),
                     ("R_avg",lambda x:x*1.01),("w_Op_avg",lambda x:-1e-6)]:
         bad=[dict(r) for r in rows]; bad[-1][key]=mut(bad[-1][key]); expect_fail(validate,bad,table)
@@ -335,7 +328,7 @@ def static_gate():
     for token in ('addRequiredParam<std::string>("reaction_progress"',"return k_raw * (n_e / N_A) * c_target;","strict Stage-4 policy forbids clamp/floor"):
         if token not in owner: raise AssertionError(f"generic progress owner contract missing: {token}")
     ek=(ROOT/"physics_app/src/fvkernels/PhysicsFVElectronReactionSource.C").read_text()
-    if "return -physical_number_source / _n_ref;" not in ek: raise AssertionError("electron source projection semantics changed")
+    if 'return _physical_state ? -physical_number_source : -physical_number_source / _n_ref;' not in ek: raise AssertionError("electron source projection semantics changed")
     self_test(); print("STAGE5_EI20_IMPLEMENTATION_P0_PASS")
 
 def preflight(path):
@@ -372,7 +365,7 @@ def run(executable,evidence_out=None,repository_sha=None,build_base_ref=None):
                                   "rows":100,"lookup_domain_eV":[XMIN,XMAX],"anchors_m3_per_mol_s":{str(k):v for k,v in ANCHORS.items()}},
               "runtime":result,"strict_bounds_negative_controls":"PASS","upstream_regressions":"enforced by governed science workflow"}
     if evidence_out: Path(evidence_out).write_text(json.dumps(evidence,indent=2,sort_keys=True)+"\n")
-    print(f"STAGE5_EI20_LOCAL_RUNTIME_PASS R={result['final']['R_ion_O_mol_m3_s']:.12g} n_e_hat={result['final']['n_e_hat']:.12g} mean_en={result['final']['mean_en_solved_eV']:.12g}")
+    print(f"STAGE5_EI20_LOCAL_RUNTIME_PASS R={result['final']['R_ion_O_mol_m3_s']:.12g} n_e={result['final']['n_e']:.12g} mean_en={result['final']['mean_en_solved_eV']:.12g}")
 
 def main():
     p=argparse.ArgumentParser(); p.add_argument("--self-test",action="store_true"); p.add_argument("--static",action="store_true")

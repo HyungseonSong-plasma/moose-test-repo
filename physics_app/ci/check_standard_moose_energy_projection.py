@@ -11,29 +11,29 @@ import tempfile
 from pathlib import Path
 
 N_A = 6.02214076e23
-N_REF = 1.0e16
-EPSILON_REF_EV = 5.73276
+N_E0 = 1.0e16
+MEAN_E0_EV = 5.73276
 M_O2 = 31.998e-3
 RHO = 3.1998e-5
 DT = 1.0e-7
 
 EI10_DELTA_E_EV = 0.977
 EI16_DELTA_E_EV = 12.06
-EI10_COEF = -(EI10_DELTA_E_EV * N_A / (N_REF * EPSILON_REF_EV))
-EI16_COEF = -(EI16_DELTA_E_EV * N_A / (N_REF * EPSILON_REF_EV))
+EI10_COEF = -(EI10_DELTA_E_EV * N_A)
+EI16_COEF = -(EI16_DELTA_E_EV * N_A)
 
 # Accepted governed vectors from b882211eb24a94bb645d0c13ecd96badc2c35095.
 EI10_ORACLE = {
-    "n_e_hat_avg": 1.0,
-    "n_epsilon_hat_avg": 0.99198106194124,
+    "n_e_avg": 1.0 * N_E0,
+    "mean_en_avg": 0.99198106194124 * N_E0 * MEAN_E0_EV,
     "mean_en_solved_avg": 5.6867893526543,
     "w_O2_avg": 0.99899921866882,
     "w_O2s_avg": 0.0010007813311756,
     "R_O2s_avg": 0.0078133117564827,
 }
 EI16_ORACLE = {
-    "n_e_hat_avg": 1.1016960590289,
-    "n_epsilon_hat_avg": 0.78606212855788,
+    "n_e_avg": 1.1016960590289 * N_E0,
+    "mean_en_avg": 0.78606212855788 * N_E0 * MEAN_E0_EV,
     "mean_en_solved_avg": 4.0903346174113,
     "w_O2_avg": 0.99899831129721,
     "w_O2p_avg": 0.00100168870279,
@@ -59,11 +59,11 @@ EI10_INPUT = f"""[Mesh]
 [Variables]
   [n_e]
     type = MooseVariableFVReal
-    initial_condition = 1.0
+    initial_condition = 1.0e16
   []
-  [n_epsilon]
+  [mean_en]
     type = MooseVariableFVReal
-    initial_condition = 1.0
+    initial_condition = 5.73276e16
   []
   [w_O2s]
     type = MooseVariableFVReal
@@ -84,13 +84,6 @@ EI10_INPUT = f"""[Mesh]
     functor_symbols = 'ws'
     expression = '1.0-ws'
   []
-  [electron_number_density]
-    type = ADParsedFunctorMaterial
-    property_name = n_e_physical
-    functor_names = 'n_e'
-    functor_symbols = 'nehat'
-    expression = '1.0e16*nehat'
-  []
   [o2_molar_concentration]
     type = ADParsedFunctorMaterial
     property_name = c_O2
@@ -100,13 +93,13 @@ EI10_INPUT = f"""[Mesh]
   []
   [mean_energy_bridge]
     type = PhysicsElectronMeanEnergyMaterial
-    electron_energy_density = n_epsilon
+    electron_energy_density = mean_en
     electron_density = n_e
-    energy_reference_eV = 5.73276
+    state_form = physical_eV
   []
   [ei10_rate]
     type = PhysicsElectronImpactO2sExcitationMaterial
-    electron_number_density = n_e_physical
+    electron_number_density = n_e
     o2_molar_concentration = c_O2
   []
   [ei10_heavy_projection]
@@ -121,13 +114,13 @@ EI10_INPUT = f"""[Mesh]
     type = FVTimeKernel
     variable = n_e
   []
-  [n_epsilon_time]
+  [mean_en_time]
     type = FVTimeKernel
-    variable = n_epsilon
+    variable = mean_en
   []
   [ei10_energy_loss_standard]
     type = FVCoupledForce
-    variable = n_epsilon
+    variable = mean_en
     v = R_O2s
     coef = {EI10_COEF:.17g}
   []
@@ -144,14 +137,14 @@ EI10_INPUT = f"""[Mesh]
 []
 
 [Postprocessors]
-  [n_e_hat_avg]
+  [n_e_avg]
     type = ElementAverageFunctorPostprocessor
     functor = n_e
     execute_on = 'INITIAL TIMESTEP_END'
   []
-  [n_epsilon_hat_avg]
+  [mean_en_avg]
     type = ElementAverageFunctorPostprocessor
-    functor = n_epsilon
+    functor = mean_en
     execute_on = 'INITIAL TIMESTEP_END'
   []
   [w_O2s_avg]
@@ -208,11 +201,11 @@ EI16_INPUT = f"""[Mesh]
 [Variables]
   [n_e]
     type = MooseVariableFVReal
-    initial_condition = 1.0
+    initial_condition = 1.0e16
   []
-  [n_epsilon]
+  [mean_en]
     type = MooseVariableFVReal
-    initial_condition = 1.0
+    initial_condition = 5.73276e16
   []
   [w_O2p]
     type = MooseVariableFVReal
@@ -233,13 +226,6 @@ EI16_INPUT = f"""[Mesh]
     functor_symbols = 'wp'
     expression = '1.0-wp'
   []
-  [electron_number_density]
-    type = ADParsedFunctorMaterial
-    property_name = n_e_physical
-    functor_names = 'n_e'
-    functor_symbols = 'nehat'
-    expression = '1.0e16*nehat'
-  []
   [o2_molar_concentration]
     type = ADParsedFunctorMaterial
     property_name = c_O2
@@ -249,15 +235,15 @@ EI16_INPUT = f"""[Mesh]
   []
   [mean_energy_bridge]
     type = PhysicsElectronMeanEnergyMaterial
-    electron_energy_density = n_epsilon
+    electron_energy_density = mean_en
     electron_density = n_e
-    energy_reference_eV = 5.73276
+    state_form = physical_eV
   []
   [ei16_rate]
     type = PhysicsElectronImpactIonizationMaterial
     rate_table_file = standard_ei16_runtime_table.txt
     mean_energy = mean_en_solved
-    electron_number_density = n_e_physical
+    electron_number_density = n_e
     o2_molar_concentration = c_O2
   []
   [ei16_particle_projection]
@@ -272,13 +258,13 @@ EI16_INPUT = f"""[Mesh]
     type = FVTimeKernel
     variable = n_e
   []
-  [n_epsilon_time]
+  [mean_en_time]
     type = FVTimeKernel
-    variable = n_epsilon
+    variable = mean_en
   []
   [ei16_energy_loss_standard]
     type = FVCoupledForce
-    variable = n_epsilon
+    variable = mean_en
     v = R_ion_O2
     coef = {EI16_COEF:.17g}
   []
@@ -296,19 +282,19 @@ EI16_INPUT = f"""[Mesh]
     type = PhysicsFVElectronReactionSource
     variable = n_e
     number_source = electron_ionization_number_source
-    n_ref = 1.0e16
+    state_form = physical
   []
 []
 
 [Postprocessors]
-  [n_e_hat_avg]
+  [n_e_avg]
     type = ElementAverageFunctorPostprocessor
     functor = n_e
     execute_on = 'INITIAL TIMESTEP_END'
   []
-  [n_epsilon_hat_avg]
+  [mean_en_avg]
     type = ElementAverageFunctorPostprocessor
-    functor = n_epsilon
+    functor = mean_en
     execute_on = 'INITIAL TIMESTEP_END'
   []
   [w_O2p_avg]
@@ -348,7 +334,7 @@ EI16_INPUT = f"""[Mesh]
 
 RATE_TABLE = (
     (1.40991, 8.0e8),
-    (EPSILON_REF_EV, 1.0e9),
+    (MEAN_E0_EV, 1.0e9),
     (22.1378, 1.2e9),
 )
 
@@ -365,8 +351,8 @@ def _validate_input_contract():
     assert "v = R_ion_O2" in EI16_INPUT
     assert "PhysicsFVElectronReactionEnergySource" not in EI10_INPUT
     assert "PhysicsFVElectronReactionEnergySource" not in EI16_INPUT
-    _assert_close(-EI10_COEF, EI10_DELTA_E_EV * N_A / (N_REF * EPSILON_REF_EV), rel=1e-15)
-    _assert_close(-EI16_COEF, EI16_DELTA_E_EV * N_A / (N_REF * EPSILON_REF_EV), rel=1e-15)
+    _assert_close(-EI10_COEF, EI10_DELTA_E_EV * N_A, rel=1e-15)
+    _assert_close(-EI16_COEF, EI16_DELTA_E_EV * N_A, rel=1e-15)
 
 
 def _sha256_file(path):
@@ -420,7 +406,7 @@ def run(executable, evidence_out=None, repository_sha=None, build_base_ref=None)
         "claim": "standard-MOOSE FVCoupledForce is numerically equivalent to accepted custom E8 energy projection for bounded EI10/EI16 discriminators",
         "standard_moose_object": "FVCoupledForce",
         "custom_energy_projector_instantiated": False,
-        "coefficient_convention": "coef = -Delta_epsilon_eV*N_A/(n_ref*epsilon_ref_eV); FVCoupledForce residual = -coef*v",
+        "coefficient_convention": "coef = -Delta_epsilon_eV*N_A; FVCoupledForce residual = -coef*v",
         "ei10": {"coef": EI10_COEF, "final": ei10, "delta_from_accepted_oracle": ei10_delta},
         "ei16": {"coef": EI16_COEF, "final": ei16, "delta_from_accepted_oracle": ei16_delta},
         "runtime_executable": str(executable),
@@ -435,8 +421,8 @@ def run(executable, evidence_out=None, repository_sha=None, build_base_ref=None)
 
     print(
         "STANDARD_MOOSE_ENERGY_AB_VECTOR "
-        f"EI10_neps={ei10['n_epsilon_hat_avg']:.12g} "
-        f"EI16_neps={ei16['n_epsilon_hat_avg']:.12g}"
+        f"EI10_neps={ei10['mean_en_avg']:.12g} "
+        f"EI16_neps={ei16['mean_en_avg']:.12g}"
     )
     print("STANDARD_MOOSE_ENERGY_PROJECTION_AB_PASS")
 

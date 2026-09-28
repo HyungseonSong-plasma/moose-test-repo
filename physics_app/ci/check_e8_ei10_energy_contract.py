@@ -32,8 +32,9 @@ def main():
     assert own["energy_projection_must_not_recompute_rate"] is True
     assert own["shared_path_required"] is True
     assert std["type"] == "FVCoupledForce" and std["v"] == "R_O2s"
-    expected_coef = -0.977 * N_A / (1.0e16 * 5.73276)
-    assert math.isclose(std["coef_at_frozen_normalization"], expected_coef, rel_tol=1e-15)
+    historical_coef = -0.977 * N_A / (1.0e16 * 5.73276)
+    assert math.isclose(std["coef_at_frozen_normalization"], historical_coef, rel_tol=1e-15)
+    physical_coef = -0.977 * N_A
 
     rate = RATE_OWNER.read_text()
     runtime = RUNTIME.read_text()
@@ -41,15 +42,15 @@ def main():
     assert "K_O2S = 4.71e8" in rate
     assert "type = FVCoupledForce" in runtime
     assert "v = R_O2s" in runtime
-    assert "ENERGY_COEF = -(DELTA_E_EV * N_A / (N_REF * EPSILON_REF_EV))" in runtime
+    assert "ENERGY_COEF = -(DELTA_E_EV * N_A)" in runtime
     assert "type = PhysicsFVElectronReactionEnergySource" not in runtime
     assert not CUSTOM_H.exists() and not CUSTOM_C.exists()
 
     R = 7.8133117564827e-3
-    rhs = -0.977 * N_A * R / (1.0e16 * 5.73276)
+    rhs = -0.977 * N_A * R
     residual = -rhs
     assert rhs < 0 < residual
-    assert math.isclose(residual, -expected_coef * R, rel_tol=1e-15)
+    assert math.isclose(rhs, physical_coef * R, rel_tol=1e-15)
     assert c["nonnegative_progress_guard"]["independent_energy_only_use"] == "FORBIDDEN"
     assert c["identity_guards"]["forbidden_substitute"] == "user_supplied:o2_excitation_9p97"
     print("E8_EI10_INELASTIC_ENERGY_CONTRACT_PASS")

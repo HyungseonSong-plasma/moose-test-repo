@@ -132,7 +132,7 @@ def _insert_sheath_primary_owners(text: str, *, n_ref: float) -> str:
         "FVBCs",
         f"""  [{ENERGY_BC}]
     type = PhysicsFVElectronGroundedSheathEnergyBC
-    variable = n_epsilon
+    variable = mean_en
     boundary = {wall_list}
     electron_density = n_e
     mean_electron_energy = mean_en_solved
@@ -176,9 +176,9 @@ def _instrument(text: str) -> str:
         "r31_gauss_flux_charge",
         "sum_w_min",
         "sum_w_max",
-        "s5r_n_epsilon_inventory",
-        "s5r_n_epsilon_min",
-        "s5r_n_epsilon_max",
+        "s5r_mean_en_state_inventory",
+        "s5r_mean_en_min",
+        "s5r_mean_en_max",
         "s5r_mean_en_avg",
         "s5r_mean_en_min",
         "s5r_mean_en_max",
@@ -540,8 +540,8 @@ def _runtime_metrics(case_dir: Path, *, input_text: str, meta: Mapping[str, Any]
     coefficients = s5r._energy_coefficients(input_text)
     volumetric_energy_norm_rate = s5r._energy_source_density(final, coefficients) * volume
     energy_accum_norm_rate = (
-        s5r._num(final, "s5r_n_epsilon_inventory")
-        - s5r._num(initial, "s5r_n_epsilon_inventory")
+        s5r._num(final, "s5r_mean_en_state_inventory")
+        - s5r._num(initial, "s5r_mean_en_state_inventory")
     ) / dt
     energy_scale = n_ref * ENERGY_REFERENCE_EV * ELEMENTARY_CHARGE_C
     primary_power = _physical(s5r._num(final, ENERGY_POWER_PP))
@@ -635,7 +635,7 @@ def _runtime_metrics(case_dir: Path, *, input_text: str, meta: Mapping[str, Any]
         },
         "composition_max_abs_error": composition_error,
         "n_e_min": s5r._num(final, "n_e_min"),
-        "n_epsilon_min": s5r._num(final, "s5r_n_epsilon_min"),
+        "mean_en_state_min": s5r._num(final, "s5r_mean_en_state_min"),
         "mean_energy_avg_eV": s5r._num(final, "s5r_mean_en_avg"),
         "phi_min_V": s5r._num(final, PHI_MIN_PP),
         "phi_max_V": s5r._num(final, PHI_MAX_PP),
@@ -659,7 +659,7 @@ def _evaluate(meta: Mapping[str, Any], metrics: Mapping[str, Any], *, runtime_ok
         "G09_convergence_positivity": (
             runtime_ok
             and metrics["n_e_min"] >= ELECTRON_DENSITY_FLOOR
-            and metrics["n_epsilon_min"] > 0.0
+            and metrics["mean_en_min"] > 0.0
             and metrics["mean_energy_avg_eV"] > 0.0
             and metrics["composition_max_abs_error"] <= COMPOSITION_ABS_TOL
         ),

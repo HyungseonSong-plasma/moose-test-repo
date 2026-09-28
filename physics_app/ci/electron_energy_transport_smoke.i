@@ -9,11 +9,11 @@
 [Variables]
   [n_e]
     type = MooseVariableFVReal
-    initial_condition = 1.0
+    initial_condition = 1.0e16
   []
-  [n_epsilon]
+  [mean_en]
     type = MooseVariableFVReal
-    initial_condition = 1.0
+    initial_condition = 5.73276e16
   []
 []
 
@@ -32,9 +32,9 @@
   []
   [mean_energy_bridge]
     type = PhysicsElectronMeanEnergyMaterial
-    electron_energy_density = n_epsilon
+    electron_energy_density = mean_en
     electron_density = n_e
-    energy_reference_eV = 5.73276
+    state_form = physical_eV
   []
   [electron_transport]
     type = PhysicsElectronTransportLookupMaterial
@@ -53,16 +53,16 @@
   []
   [energy_time]
     type = FVTimeKernel
-    variable = n_epsilon
+    variable = mean_en
   []
   [energy_diffusion]
     type = FVDiffusion
-    variable = n_epsilon
+    variable = mean_en
     coeff = electron_energy_diffusion
   []
   [energy_drift]
     type = PhysicsFVElectrostaticDrift
-    variable = n_epsilon
+    variable = mean_en
     potential = phi_zero
     mobility = electron_energy_mobility
     carrier = carrier_one

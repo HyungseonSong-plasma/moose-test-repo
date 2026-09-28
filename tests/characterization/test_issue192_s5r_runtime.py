@@ -31,7 +31,7 @@ def test_s5r_runtime_surface_preserves_canonical_science_and_only_changes_dt() -
         baseline, "Postprocessors/r31_charge_integral", "execute_on"
     ) == "'INITIAL TIMESTEP_END'"
     for name in (
-        "s5r_n_epsilon_inventory",
+        "s5r_mean_en_state_inventory",
         "s5r_mean_en_avg",
         "s5r_ei02_elastic_energy_avg",
         "s5r_ei17_elastic_energy_avg",
@@ -88,7 +88,7 @@ def test_s5r_runtime_synthetic_balances_and_negative_controls() -> None:
     )
 
     broken_energy = copy.deepcopy(rows)
-    broken_energy[-1]["s5r_n_epsilon_inventory"] = "1.1"
+    broken_energy[-1]["s5r_mean_en_state_inventory"] = "1.1"
     assert (
         s5r_runtime._discrete_balances(
             broken_energy, energy_coefficients=coefficients

@@ -234,7 +234,7 @@ def check() -> None:
 
     electron = ELECTRON.read_text()
     _require(electron, "type = PhysicsElectronMeanEnergyMaterial", "electron-energy oracle")
-    _require(electron, "electron_energy_density = n_epsilon", "electron-energy oracle")
+    _require(electron, "electron_energy_density = mean_en", "electron-energy oracle")
     _require(electron, "electron_density = n_e", "electron-energy oracle")
     _require(electron, "type = PhysicsElectronTransportLookupMaterial", "electron transport")
     _require(electron, "mean_energy = mean_en_solved", "electron transport")
