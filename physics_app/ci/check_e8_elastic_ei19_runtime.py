@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Governed Stage-4 local runtime discriminators for EI02, EI17 and EI19."""
+"""Governed Stage-4 local runtime discriminators for EI02, EI17 and EI19 using physical electron-energy density."""
 
 import argparse
 import csv
