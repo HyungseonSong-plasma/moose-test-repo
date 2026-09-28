@@ -45,21 +45,26 @@ poisson_sub.i
 This is not duplicate closure work. Each block belongs to a different FEProblem /
 MultiApp instance and consumes local state.
 
-When the heavy-particle parent is combined with sibling electron and Poisson
-MultiApps, keep the same role ownership and use `[GummelIteration]` only for
-inter-application state mapping and ordering:
+For frozen-heavy Gummel coupling, keep role ownership local but add a dedicated
+orchestration level between the heavy parent and the two fast siblings:
 
 ```text
-MAIN
+OUTER_MAIN
   PlasmaClosures(role = heavy_transport)
-  |- SUB_ELECTRON : PlasmaClosures(role = electron)
-  '- SUB_POISSON  : PlasmaClosures(role = electrostatic_charge)
+  '- GUMMEL_DRIVER
+       |- SUB_ELECTRON : PlasmaClosures(role = electron)
+       '- SUB_POISSON  : PlasmaClosures(role = electrostatic_charge)
 ```
 
-Typical mapped state is `T_g/p_gas` from MAIN to electron, charged-heavy
-density/mass fractions from MAIN to Poisson, `n_e/T_e` back to MAIN from
-electron, and `phi` back to MAIN from Poisson. Material/functor outputs such
-as `electron_temperature_K` must be sampled into an AuxVariable before
+`OUTER_MAIN` copies one heavy-state snapshot into the driver before the driver
+executes. The driver does not own heavy equations; it stores that snapshot in
+AuxVariables and reuses it unchanged for every electron-Poisson fixed-point
+iteration. After convergence, the driver exports the final `n_e/T_e/phi`
+state back to the heavy parent.
+
+This avoids turning the inner Gummel solve into an electron-heavy-Poisson
+three-block iteration. Material/functor outputs such as
+`electron_temperature_K` must still be sampled into an AuxVariable before
 `MultiAppCopyTransfer` can export them.
 
 ## Electron example
