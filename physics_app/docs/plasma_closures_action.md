@@ -45,6 +45,23 @@ poisson_sub.i
 This is not duplicate closure work. Each block belongs to a different FEProblem /
 MultiApp instance and consumes local state.
 
+When the heavy-particle parent is combined with sibling electron and Poisson
+MultiApps, keep the same role ownership and use `[GummelIteration]` only for
+inter-application state mapping and ordering:
+
+```text
+MAIN
+  PlasmaClosures(role = heavy_transport)
+  |- SUB_ELECTRON : PlasmaClosures(role = electron)
+  '- SUB_POISSON  : PlasmaClosures(role = electrostatic_charge)
+```
+
+Typical mapped state is `T_g/p_gas` from MAIN to electron, charged-heavy
+density/mass fractions from MAIN to Poisson, `n_e/T_e` back to MAIN from
+electron, and `phi` back to MAIN from Poisson. Material/functor outputs such
+as `electron_temperature_K` must be sampled into an AuxVariable before
+`MultiAppCopyTransfer` can export them.
+
 ## Electron example
 
 ```text
