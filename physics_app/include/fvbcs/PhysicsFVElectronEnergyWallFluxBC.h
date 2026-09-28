@@ -25,6 +25,7 @@ public:
 protected:
   ADReal computeQpResidual() override;
 
+  const bool _physical_state;
   const Moose::Functor<ADReal> & _electron_energy_density;
   const Moose::Functor<ADReal> & _mean_electron_energy;
   const Moose::Functor<ADReal> & _see_number_flux;
