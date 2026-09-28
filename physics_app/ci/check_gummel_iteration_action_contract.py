@@ -125,6 +125,8 @@ for token in (
     "electron_to_parent_source_variables = 'n_e T_e_export'",
     "parent_to_poisson_source_variables = 'rho_frozen w_ion_frozen'",
     "poisson_to_parent_source_variables = 'phi'",
+    "fixed_point_algorithm = steffensen",
+    "fixed_point_max_its = 3000",
 ):
     assert token in driver, token
 
