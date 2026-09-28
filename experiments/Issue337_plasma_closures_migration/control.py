@@ -96,9 +96,9 @@ def _electron_closure_block() -> str:
   [electron]
     role = electron
 
-    normalized_electron_density = electron_number_density_hat
-    normalized_electron_energy_density = electron_energy_density_hat
-    electron_energy_reference_eV = 5.73276
+    electron_state_form = physical_eV
+    electron_number_density = electron_number_density
+    electron_energy_density = electron_energy_density
 
     gas_pressure = p_gas
     gas_temperature = T_g
@@ -115,7 +115,6 @@ def _electron_closure_block() -> str:
     electron_energy_mobility_output = electron_energy_mobility
     electron_energy_diffusion_output = electron_energy_diffusion
 
-    electron_number_density = electron_number_density
     electron_impact_rate_table_files = 'o2_elastic.txt'
     electron_impact_target_molar_concentrations = 'c_O2'
     electron_impact_reaction_progress_names = 'R_elastic_O2'

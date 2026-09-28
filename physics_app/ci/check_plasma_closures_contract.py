@@ -45,6 +45,10 @@ assert "role = electron" in role_smoke
 assert "role = heavy_transport" in role_smoke
 assert "role = electrostatic_charge" in role_smoke
 assert "create_electron_closure" not in role_smoke
+assert "electron_state_form = physical_eV" in role_smoke
+assert "electron_energy_density = electron_energy_density_physical" in role_smoke
+assert "normalized_electron_density" not in role_smoke
+assert "normalized_electron_energy_density" not in role_smoke
 assert "create_electron_closure = true" in legacy_smoke
 assert "create_heavy_transport = true" in legacy_smoke
 assert "create_charge_density = true" in legacy_smoke
@@ -59,6 +63,9 @@ for object_type in (
     assert object_type in action
 
 # Electron mean energy and transport are now owned by one material.
+assert "state_form" in electron
+assert "electron_number_density" in electron
+assert "electron_energy_density" in electron
 assert "electron_mean_energy_output" in electron
 assert "electron_mobility_output" in electron
 assert "electron_energy_diffusion_output" in electron

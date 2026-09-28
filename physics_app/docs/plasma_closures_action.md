@@ -52,9 +52,9 @@ MultiApp instance and consumes local state.
   [electron]
     role = electron
 
-    normalized_electron_density = electron_number_density_hat
-    normalized_electron_energy_density = electron_energy_density_hat
-    electron_energy_reference_eV = 5.73276
+    electron_state_form = physical_eV
+    electron_number_density = electron_number_density
+    electron_energy_density = electron_energy_density
 
     gas_pressure = p_gas
     gas_temperature = T_g
@@ -109,3 +109,18 @@ the electron state/transport closure.
 
 The C++ materials remain separate internally; the role API only simplifies
 user-facing composition.
+
+
+## Physical electron-energy state
+
+The preferred electron role uses physical state variables:
+
+```text
+electron_number_density  [1/m^3]
+electron_energy_density  [eV/m^3]
+mean_en = electron_energy_density / electron_number_density  [eV]
+```
+
+No reference density such as `1e16` participates in this formulation.
+Numerical conditioning is delegated to MOOSE scaling. Historical normalized inputs
+remain supported through `electron_state_form = normalized`.

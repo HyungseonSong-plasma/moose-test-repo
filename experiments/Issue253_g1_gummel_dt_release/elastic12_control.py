@@ -119,6 +119,7 @@ def build(clean: bool = True) -> list[dict[str, object]]:
                 "LOG_CE": f"{log_ce0:.17g}",
                 "W_O2P": f"{w_o2p0:.17g}",
                 "NE0": f"{prepare.NE0:.17g}",
+                "ENERGY_DENSITY0": f"{prepare.NE0 * ENERGY_REFERENCE_EV:.17g}",
                 "JOULE_FACTOR": "1.0",
                 "ELASTIC_FACTOR": "1.0",
                 "RELAXATION_FACTOR": f"{float(p['relaxation_factor']):.17g}",
@@ -205,6 +206,9 @@ def static_contract() -> dict[str, object]:
         assert "PhysicsFVElectronEnergyJouleHeating" in text
         assert "PhysicsFVElectronEnergyWallFluxBC" in text
         assert "PhysicsElectronMeanEnergyMaterial" in text
+        assert "state_form = physical_eV" in text
+        assert "electron_number_density_hat" not in text
+        assert "S_elastic_candidate_eV_m3_s" in text
         assert "PhysicsElectronTransportLookupMaterial" in text
         assert "expression = '1.0*mu'" in text
         assert "expression = '1.0*diff'" in text
@@ -304,7 +308,7 @@ def _profile(case_dir: Path) -> list[dict[str, float]]:
                 "x": float(row["x"]),
                 "electron_density": float(row["electron_density_out"]),
                 "potential": float(row["potential_from_poisson"]),
-                "n_epsilon": float(row["n_epsilon"]),
+                "electron_energy_density_eV_m3": float(row["electron_energy_density"]),
                 "mean_energy_eV": float(row["mean_energy_out"]),
                 "mobility_m2_V_s": float(row["mobility_out"]),
                 "diffusion_m2_s": float(row["diffusion_out"]),

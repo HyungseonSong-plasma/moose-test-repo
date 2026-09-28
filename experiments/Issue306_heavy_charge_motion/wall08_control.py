@@ -89,7 +89,7 @@ def _apply_electron_sheath_factor(text: str) -> str:
 
     Sequence 07 baseline:
       Gamma_e,out = 0.5*c_e*vbar
-      Gamma_eps,out = (5/6)*electron_energy_density_hat*vbar
+      Gamma_eps,out = (5/6)*electron_energy_density*vbar
 
     Sequence 08:
       both fluxes are multiplied by
@@ -124,7 +124,7 @@ def _apply_electron_sheath_factor(text: str) -> str:
   [sheath_energy_surface_flux]
     type = ADParsedFunctorMaterial
     property_name = sheath_energy_flux_outward
-    functor_names = 'electron_energy_density_hat mean_en electron_sheath_factor'
+    functor_names = 'electron_energy_density mean_en electron_sheath_factor'
     functor_symbols = 'eps_hat mean_ev sheath'
     expression = '0.83333333333333333*eps_hat*sqrt(16.0*1.602176634e-19*mean_ev/(3.0*pi*9.1093837139e-31))*sheath'
   []
@@ -135,9 +135,9 @@ def _apply_electron_sheath_factor(text: str) -> str:
 
     old_energy_bc = """  [right_energy_surface_loss]
     type = PhysicsFVElectronEnergyWallFluxBC
-    variable = electron_energy_density_hat
+    variable = electron_energy_density
     boundary = right
-    electron_energy_density = electron_energy_density_hat
+    electron_energy_density = electron_energy_density
     mean_electron_energy = mean_en
     see_number_flux = zero_flux
     energy_reference_eV = 5.73276
@@ -145,7 +145,7 @@ def _apply_electron_sheath_factor(text: str) -> str:
 """
     new_energy_bc = """  [right_energy_surface_loss]
     type = FVFunctorNeumannBC
-    variable = electron_energy_density_hat
+    variable = electron_energy_density
     boundary = right
     functor = sheath_energy_flux_outward
     factor = -1.0

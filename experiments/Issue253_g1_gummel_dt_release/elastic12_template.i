@@ -20,9 +20,10 @@
     type = MooseVariableFVReal
     initial_condition = @@LOG_CE@@
   []
-  [electron_energy_density_hat]
+  [electron_energy_density]
     type = MooseVariableFVReal
-    initial_condition = 1.0
+    # Physical electron energy density U_e = n_e * mean_en [eV/m^3].
+    initial_condition = @@ENERGY_DENSITY0@@
   []
 []
 
@@ -88,19 +89,11 @@
     expression = '6.02214076e23*exp(loge)'
   []
 
-  [electron_density_normalized]
-    type = ADParsedFunctorMaterial
-    property_name = electron_number_density_hat
-    functor_names = 'electron_number_density'
-    functor_symbols = 'ne'
-    expression = 'ne/1.0e16'
-  []
-
   [mean_energy_bridge]
     type = PhysicsElectronMeanEnergyMaterial
-    electron_energy_density = electron_energy_density_hat
-    electron_density = electron_number_density_hat
-    energy_reference_eV = 5.73276
+    state_form = physical_eV
+    electron_energy_density = electron_energy_density
+    electron_density = electron_number_density
     mean_energy_output = mean_en
   []
 
@@ -140,9 +133,9 @@
   [electron_energy_density_physical]
     type = ADParsedFunctorMaterial
     property_name = electron_energy_J_m3
-    functor_names = 'electron_energy_density_hat'
-    functor_symbols = 'eps_hat'
-    expression = '1.0e16*5.73276*1.602176634e-19*eps_hat'
+    functor_names = 'electron_energy_density'
+    functor_symbols = 'energy_eV'
+    expression = '1.602176634e-19*energy_eV'
   []
 
   [elastic_o2_rate]
@@ -156,16 +149,17 @@
 
   [elastic_energy_candidate]
     type = ADParsedFunctorMaterial
-    property_name = S_elastic_candidate_hat
+    property_name = S_elastic_candidate_eV_m3_s
     functor_names = 'mean_en T_g R_elastic_O2'
     functor_symbols = 'meanE tgas rprog'
-    expression = '-540.2881732575735*(0.66666666666666663*meanE-8.617333262145e-5*tgas)*rprog'
+    # 3*m_e*N_A^2/M_O2 converts molar elastic progress directly to eV/(m^3 s).
+    expression = '-3.0973424281240867e19*(0.66666666666666663*meanE-8.617333262145e-5*tgas)*rprog'
   []
 
   [elastic_energy_applied]
     type = ADParsedFunctorMaterial
-    property_name = S_elastic_applied_hat
-    functor_names = 'S_elastic_candidate_hat'
+    property_name = S_elastic_applied_eV_m3_s
+    functor_names = 'S_elastic_candidate_eV_m3_s'
     functor_symbols = 'source'
     expression = '@@ELASTIC_FACTOR@@*source'
   []
@@ -173,17 +167,17 @@
   [elastic_loss_candidate_physical]
     type = ADParsedFunctorMaterial
     property_name = elastic_loss_candidate_W_m3
-    functor_names = 'S_elastic_candidate_hat'
+    functor_names = 'S_elastic_candidate_eV_m3_s'
     functor_symbols = 'source'
-    expression = '-source*1.0e16*5.73276*1.602176634e-19'
+    expression = '-source*1.602176634e-19'
   []
 
   [elastic_loss_applied_physical]
     type = ADParsedFunctorMaterial
     property_name = elastic_loss_applied_W_m3
-    functor_names = 'S_elastic_applied_hat'
+    functor_names = 'S_elastic_applied_eV_m3_s'
     functor_symbols = 'source'
-    expression = '-source*1.0e16*5.73276*1.602176634e-19'
+    expression = '-source*1.602176634e-19'
   []
 []
 
@@ -211,16 +205,16 @@
 
   [energy_time]
     type = FVTimeKernel
-    variable = electron_energy_density_hat
+    variable = electron_energy_density
   []
   [energy_diffusion]
     type = FVDiffusion
-    variable = electron_energy_density_hat
+    variable = electron_energy_density
     coeff = electron_energy_diffusion
   []
   [energy_drift]
     type = PhysicsFVElectrostaticDrift
-    variable = electron_energy_density_hat
+    variable = electron_energy_density
     potential = potential_from_poisson
     mobility = electron_energy_mobility
     carrier = carrier_one
@@ -230,17 +224,17 @@
   []
   [energy_joule]
     type = PhysicsFVElectronEnergyJouleHeating
-    variable = electron_energy_density_hat
-    electron_density = electron_number_density_hat
+    variable = electron_energy_density
+    state_form = physical_eV
+    electron_density = electron_number_density
     potential = potential_from_poisson
     mobility = joule_mobility
     diffusion = joule_diffusion
-    energy_reference_eV = 5.73276
   []
   [energy_elastic_o2]
     type = FVCoupledForce
-    variable = electron_energy_density_hat
-    v = S_elastic_applied_hat
+    variable = electron_energy_density
+    v = S_elastic_applied_eV_m3_s
     coef = 1.0
   []
 []
@@ -256,12 +250,12 @@
 
   [right_energy_surface_loss]
     type = PhysicsFVElectronEnergyWallFluxBC
-    variable = electron_energy_density_hat
+    variable = electron_energy_density
     boundary = right
-    electron_energy_density = electron_energy_density_hat
+    state_form = physical_eV
+    electron_energy_density = electron_energy_density
     mean_electron_energy = mean_en
     see_number_flux = zero_flux
-    energy_reference_eV = 5.73276
   []
 []
 
@@ -402,7 +396,7 @@
     fvbcs = 'right_thermal_surface_loss'
     execute_on = 'INITIAL TIMESTEP_END'
   []
-  [wall_energy_rate_hat]
+  [wall_energy_rate_eV_m2_s]
     type = SideFVFluxBCIntegral
     boundary = right
     fvbcs = 'right_energy_surface_loss'
@@ -410,8 +404,8 @@
   []
   [wall_energy_power_W_m2]
     type = ScalePostprocessor
-    value = wall_energy_rate_hat
-    scaling_factor = 0.009184903764514185
+    value = wall_energy_rate_eV_m2_s
+    scaling_factor = 1.602176634e-19
     execute_on = 'INITIAL TIMESTEP_END'
   []
   [n_e_min]
@@ -452,7 +446,7 @@
 [VectorPostprocessors]
   [energy_profile]
     type = ElementValueSampler
-    variable = 'electron_density_out potential_from_poisson electron_energy_density_hat mean_energy_out mobility_out diffusion_out elastic_loss_candidate_out'
+    variable = 'electron_density_out potential_from_poisson electron_energy_density mean_energy_out mobility_out diffusion_out elastic_loss_candidate_out'
     sort_by = id
     execute_on = 'FINAL'
   []
