@@ -30,6 +30,7 @@ from experiments.Issue310_fp_acceleration import control_seq08 as seq08
 from experiments.Issue306_heavy_charge_motion import wall08_control as wall08
 from experiments.Issue337_plasma_closures_migration import control as migration
 from physics_harness.adapters.moose import blocks as mb
+from physics_harness.adapters.moose.input import MooseInput
 
 CASE_NAMES = ("compat_flux", "unified_flux")
 
@@ -82,11 +83,16 @@ def _qualified_migrated_inputs(horizon: str):
     )
 
 
+def _get_block(text: str, path: str) -> str:
+    span = MooseInput(text).unique(path)
+    return text[span.start:span.end].rstrip()
+
+
 def _unify_fast_input(text: str) -> str:
     text = mb.remove_block(text, "FunctorMaterials/joule_transport_switch")
     text = mb.remove_block(text, "FunctorMaterials/joule_diffusion_switch")
 
-    drift = mb.get_block(text, "FVKernels/electron_drift")
+    drift = _get_block(text, "FVKernels/electron_drift")
     assert "type = PhysicsFVLogMolarElectrostaticDrift" in drift
     drift = drift.replace(
         "type = PhysicsFVLogMolarElectrostaticDrift",
@@ -95,7 +101,7 @@ def _unify_fast_input(text: str) -> str:
     )
     text = mb.replace_block(text, "FVKernels/electron_drift", drift)
 
-    joule = mb.get_block(text, "FVKernels/energy_joule")
+    joule = _get_block(text, "FVKernels/energy_joule")
     assert "mobility = joule_mobility" in joule
     assert "diffusion = joule_diffusion" in joule
     joule = joule.replace("mobility = joule_mobility", "mobility = electron_mobility")
@@ -111,14 +117,14 @@ def _semantic(text: str) -> str:
 def _normalize_compat(text: str) -> str:
     text = mb.remove_block(text, "FunctorMaterials/joule_transport_switch")
     text = mb.remove_block(text, "FunctorMaterials/joule_diffusion_switch")
-    drift = mb.get_block(text, "FVKernels/electron_drift")
+    drift = _get_block(text, "FVKernels/electron_drift")
     drift = drift.replace(
         "type = PhysicsFVLogMolarElectrostaticDrift",
         "type = PhysicsFVElectrostaticDrift\n    transported_state = exponential",
         1,
     )
     text = mb.replace_block(text, "FVKernels/electron_drift", drift)
-    joule = mb.get_block(text, "FVKernels/energy_joule")
+    joule = _get_block(text, "FVKernels/energy_joule")
     joule = joule.replace("mobility = joule_mobility", "mobility = electron_mobility")
     joule = joule.replace("diffusion = joule_diffusion", "diffusion = electron_diffusion")
     return text
