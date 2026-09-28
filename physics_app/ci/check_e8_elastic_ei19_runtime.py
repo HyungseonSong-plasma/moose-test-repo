@@ -21,13 +21,13 @@ M_O2 = 31.998e-3
 M_O = 15.999e-3
 K_B_OVER_E_EV_PER_K = 8.617333262145e-5
 N_E0 = 1.0e16
-EPSILON_E0_EV = 5.73276
+MEAN_E0_EV = 5.73276
 C_TARGET = 0.1
 DT = 1.0e-8
 EI19_LOSS_EV = 4.192
 LOOKUP_MIN_EV = 1.40991
 LOOKUP_MAX_EV = 22.1378
-EI19_ENERGY_COEF = -(EI19_LOSS_EV * N_A / (N_E0 * EPSILON_E0_EV))
+EI19_ENERGY_COEF = -(EI19_LOSS_EV * N_A)
 
 ELASTIC = {
     "O2": {
@@ -103,9 +103,9 @@ def _elastic_expected(spec, tgas):
     rate = k_raw * (N_E0 / N_A) * C_TARGET
     particle_mass = spec["molar_mass"] / N_A
     delta_e = (3.0 * ELECTRON_MASS_KG / particle_mass) * (
-        (2.0 / 3.0) * EPSILON_E0_EV - K_B_OVER_E_EV_PER_K * tgas
+        (2.0 / 3.0) * MEAN_E0_EV - K_B_OVER_E_EV_PER_K * tgas
     )
-    source_hat = -delta_e * N_A * rate / (N_E0 * EPSILON_E0_EV)
+    source_physical = -delta_e * N_A * rate
     return rate, delta_e, source_physical
 
 
@@ -115,11 +115,9 @@ def _ei19_expected():
     return rate, rhs
 
 
-def _elastic_input(spec, tgas, mean_energy=EPSILON_E0_EV):
+def _elastic_input(spec, tgas, mean_energy=MEAN_E0_EV):
     particle_mass = spec["molar_mass"] / N_A
-    normalized_factor = (
-        (3.0 * ELECTRON_MASS_KG / particle_mass) * N_A / (N_E0 * EPSILON_E0_EV)
-    )
+    physical_factor = (3.0 * ELECTRON_MASS_KG / particle_mass) * N_A
     return f"""[Mesh]
   [mesh]
     type = GeneratedMeshGenerator
@@ -222,7 +220,7 @@ def _elastic_input(spec, tgas, mean_energy=EPSILON_E0_EV):
 """
 
 
-def _ei19_input(mean_energy=EPSILON_E0_EV):
+def _ei19_input(mean_energy=MEAN_E0_EV):
     return f"""[Mesh]
   [mesh]
     type = GeneratedMeshGenerator
@@ -323,8 +321,8 @@ def validate_elastic_rows(rows, species, regime_id, tgas):
     s_f = _num(final, "S_energy_avg")
 
     expected_r, delta_e, expected_s = _elastic_expected(spec, tgas)
-    _close(mean_i, EPSILON_E0_EV, rel=0, abs_=1e-12, label=f"{species}/{regime_id} mean initial")
-    _close(mean_f, EPSILON_E0_EV, rel=0, abs_=1e-12, label=f"{species}/{regime_id} mean final")
+    _close(mean_i, MEAN_E0_EV, rel=0, abs_=1e-12, label=f"{species}/{regime_id} mean initial")
+    _close(mean_f, MEAN_E0_EV, rel=0, abs_=1e-12, label=f"{species}/{regime_id} mean final")
     _close(t_i, tgas, rel=0, abs_=1e-9, label=f"{species}/{regime_id} Tgas initial")
     _close(t_f, tgas, rel=0, abs_=1e-9, label=f"{species}/{regime_id} Tgas final")
     _close(r_i, expected_r, rel=5e-7, abs_=1e-12, label=f"{species}/{regime_id} rate initial")
@@ -375,8 +373,8 @@ def validate_ei19_rows(rows):
     r_f = _num(final, "R_avg")
     expected_r, rhs = _ei19_expected()
 
-    _close(mean_i, EPSILON_E0_EV, rel=0, abs_=1e-12, label="EI19 mean initial")
-    _close(mean_f, EPSILON_E0_EV, rel=0, abs_=1e-12, label="EI19 mean final")
+    _close(mean_i, MEAN_E0_EV, rel=0, abs_=1e-12, label="EI19 mean initial")
+    _close(mean_f, MEAN_E0_EV, rel=0, abs_=1e-12, label="EI19 mean final")
     _close(r_i, expected_r, rel=5e-7, abs_=1e-12, label="EI19 rate initial")
     _close(r_f, expected_r, rel=5e-7, abs_=1e-12, label="EI19 rate final")
     _close((ep_f - ep_i) / DT, rhs, rel=7e-6, abs_=1e-6, label="EI19 energy BE closure")
@@ -391,8 +389,8 @@ def validate_ei19_rows(rows):
         "standard_moose_object": "FVCoupledForce",
         "coef": EI19_ENERGY_COEF,
         "physical_rhs_eV_m3_s": rhs,
-        "observed_dn_epsilon_hat_dt_per_s": (ep_f - ep_i) / DT,
-        "final_n_epsilon_hat": ep_f,
+        "observed_dn_epsilon_dt_eV_m3_s": (ep_f - ep_i) / DT,
+        "final_n_epsilon": ep_f,
         "particle_or_heavy_projection": "NONE",
     }
 
@@ -404,13 +402,13 @@ def _synthetic_elastic_rows(species, regime_id, tgas, *, rate_scale=1.0, source_
     source *= source_scale
     final_ep = N_E0 * MEAN_E0_EV + DT * source
     base = {
-        "mean_en_avg": EPSILON_E0_EV,
+        "mean_en_avg": MEAN_E0_EV,
         "T_gas_avg": tgas,
         "R_avg": rate,
         "S_energy_avg": source,
     }
-    initial = dict(base, n_epsilon_hat_avg=1.0)
-    final = dict(base, n_epsilon_hat_avg=final_ep)
+    initial = dict(base, n_epsilon_avg=N_E0 * MEAN_E0_EV)
+    final = dict(base, n_epsilon_avg=final_ep)
     return [initial, final]
 
 
@@ -418,10 +416,10 @@ def _synthetic_ei19_rows(*, rate_scale=1.0, rhs_scale=1.0):
     rate, rhs = _ei19_expected()
     rate *= rate_scale
     rhs *= rhs_scale
-    base = {"mean_en_avg": EPSILON_E0_EV, "R_avg": rate}
+    base = {"mean_en_avg": MEAN_E0_EV, "R_avg": rate}
     return [
-        dict(base, n_epsilon_hat_avg=1.0),
-        dict(base, n_epsilon_hat_avg=1.0 + DT * rhs),
+        dict(base, n_epsilon_avg=N_E0 * MEAN_E0_EV),
+        dict(base, n_epsilon_avg=N_E0 * MEAN_E0_EV + DT * rhs),
     ]
 
 
@@ -475,8 +473,8 @@ def runtime_checker_self_test():
     _expect_failure(validate_ei19_rows, _synthetic_ei19_rows(rhs_scale=4.0 / EI19_LOSS_EV))
     _expect_failure(validate_ei19_rows, _synthetic_ei19_rows(rate_scale=1.1))
 
-    sample_table = [(LOOKUP_MIN_EV, 1.0), (EPSILON_E0_EV, 2.0), (LOOKUP_MAX_EV, 3.0)]
-    _close(_interp_strict(sample_table, EPSILON_E0_EV), 2.0, rel=0, abs_=0, label="self-test lookup anchor")
+    sample_table = [(LOOKUP_MIN_EV, 1.0), (MEAN_E0_EV, 2.0), (LOOKUP_MAX_EV, 3.0)]
+    _close(_interp_strict(sample_table, MEAN_E0_EV), 2.0, rel=0, abs_=0, label="self-test lookup anchor")
     _expect_failure(_interp_strict, sample_table, LOOKUP_MIN_EV - 0.1)
     _expect_failure(_interp_strict, sample_table, LOOKUP_MAX_EV + 0.1)
 
@@ -484,7 +482,7 @@ def runtime_checker_self_test():
         text = _elastic_input(spec, 600.0)
         if "type = ADParsedFunctorMaterial" not in text or "type = FVCoupledForce" not in text:
             raise AssertionError(f"{species}: standard-MOOSE elastic composition missing")
-        if "v = S_elastic_hat" not in text or "coef = 1" not in text:
+        if "v = S_elastic_energy" not in text or "coef = 1" not in text:
             raise AssertionError(f"{species}: elastic projection wiring changed")
         if "meanE tgas rprog" not in text:
             raise AssertionError(f"{species}: parser aliases changed")
@@ -579,7 +577,7 @@ def run_controlled_executable(executable, evidence_out=None, repository_sha=None
 
     for filename in TABLE_BLOBS:
         table = _read_table(DATA_DIR / filename)
-        anchor = _interp_strict(table, EPSILON_E0_EV)
+        anchor = _interp_strict(table, MEAN_E0_EV)
         expected = (
             ELASTIC["O2"]["anchor_k"]
             if filename == "o2_elastic.txt"
@@ -642,7 +640,7 @@ def run_controlled_executable(executable, evidence_out=None, repository_sha=None
         "runtime_executable": str(executable),
         "runtime_executable_sha256": _sha256(executable),
         "source_table_git_blobs": TABLE_BLOBS,
-        "controlled_mean_energy_eV": EPSILON_E0_EV,
+        "controlled_mean_energy_eV": MEAN_E0_EV,
         "controlled_target_concentration_mol_m3": C_TARGET,
         "elastic": elastic_results,
         "ei19": ei19_result,
