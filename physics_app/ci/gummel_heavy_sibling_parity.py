@@ -12,7 +12,9 @@ identical to the qualified input.
 from __future__ import annotations
 
 import argparse
+import base64
 import csv
+import gzip
 import json
 import math
 import re
@@ -361,9 +363,20 @@ def _max_abs(a: list[dict[str, float]], b: list[dict[str, float]], key: str) -> 
     return max(abs(float(x[key]) - float(y[key])) for x, y in zip(a, b, strict=True))
 
 
+def _load_golden(path: Path) -> dict[str, object]:
+    if path.name.endswith(".gz.b64"):
+        raw = gzip.decompress(base64.b64decode(path.read_text().strip()))
+        return json.loads(raw.decode("utf-8"))
+    return json.loads(path.read_text())
+
+
 def compare(case: Path, golden_json: Path, output_json: Path | None) -> None:
-    golden_bundle = json.loads(golden_json.read_text())
-    golden = golden_bundle["runs"]["plasma_closures"]
+    golden_bundle = _load_golden(golden_json)
+    golden = (
+        golden_bundle["runs"]["plasma_closures"]
+        if "runs" in golden_bundle
+        else golden_bundle
+    )
 
     profile = _profile_from_csv(case)
     fp = _fp_series(case)
