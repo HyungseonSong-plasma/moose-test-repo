@@ -60,7 +60,7 @@ jobs:
             -e GITHUB_SHA="$GITHUB_SHA" \
             -e QUALIFIED_REPO=/qualified \
             -v "$PWD:/workspace" \
-            -v "/tmp/qualified:/qualified:ro" \
+            -v "/tmp/qualified:/qualified" \
             "$BUILD_BASE_REF" \
             -lc '
               set -euxo pipefail
