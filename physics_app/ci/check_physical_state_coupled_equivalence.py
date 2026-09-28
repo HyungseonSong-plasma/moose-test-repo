@@ -30,9 +30,9 @@ XMAX = 1.0
 
 FIELDS = (
     "n_e_state_aux",
-    "n_epsilon_state_aux",
+    "mean_en_state_aux",
     "n_e_physical_aux",
-    "n_epsilon_physical_aux",
+    "mean_en_physical_aux",
     "mean_energy_aux",
     "charge_density_aux",
     "poisson_source_aux",
@@ -76,7 +76,7 @@ def _input(*, physical: bool) -> str:
     order = CONSTANT
     family = MONOMIAL
   []
-  [n_epsilon_state_aux]
+  [mean_en_state_aux]
     order = CONSTANT
     family = MONOMIAL
   []
@@ -84,7 +84,7 @@ def _input(*, physical: bool) -> str:
     order = CONSTANT
     family = MONOMIAL
   []
-  [n_epsilon_physical_aux]
+  [mean_en_physical_aux]
     order = CONSTANT
     family = MONOMIAL
   []
@@ -110,7 +110,7 @@ def _input(*, physical: bool) -> str:
   []
   [electron_energy_state]
     type = ParsedFunctorMaterial
-    property_name = n_epsilon_state
+    property_name = mean_en_state
     expression = '{ee_expr}'
   []
   [electron_number_physical]
@@ -122,8 +122,8 @@ def _input(*, physical: bool) -> str:
   []
   [electron_energy_physical]
     type = ParsedFunctorMaterial
-    property_name = n_epsilon_physical
-    functor_names = 'n_epsilon_state'
+    property_name = mean_en_physical
+    functor_names = 'mean_en_state'
     functor_symbols = 'ee'
     expression = '{ee_bridge_expr}'
   []
@@ -135,7 +135,7 @@ def _input(*, physical: bool) -> str:
   [mean_energy]
     type = ParsedFunctorMaterial
     property_name = mean_energy_probe
-    functor_names = 'n_e_state n_epsilon_state'
+    functor_names = 'n_e_state mean_en_state'
     functor_symbols = 'ne ee'
     expression = '{mean_expr}'
   []
@@ -164,8 +164,8 @@ def _input(*, physical: bool) -> str:
   []
   [sample_ee_state]
     type = FunctorAux
-    variable = n_epsilon_state_aux
-    functor = n_epsilon_state
+    variable = mean_en_state_aux
+    functor = mean_en_state
     execute_on = 'TIMESTEP_END'
   []
   [sample_ne_physical]
@@ -176,8 +176,8 @@ def _input(*, physical: bool) -> str:
   []
   [sample_ee_physical]
     type = FunctorAux
-    variable = n_epsilon_physical_aux
-    functor = n_epsilon_physical
+    variable = mean_en_physical_aux
+    functor = mean_en_physical
     execute_on = 'TIMESTEP_END'
   []
   [sample_mean]
@@ -231,7 +231,7 @@ def _input(*, physical: bool) -> str:
 [VectorPostprocessors]
   [equivalence_samples]
     type = ElementValueSampler
-    variable = 'phi n_e_state_aux n_epsilon_state_aux n_e_physical_aux n_epsilon_physical_aux mean_energy_aux charge_density_aux poisson_source_aux'
+    variable = 'phi n_e_state_aux mean_en_state_aux n_e_physical_aux mean_en_physical_aux mean_energy_aux charge_density_aux poisson_source_aux'
     sort_by = id
     execute_on = 'TIMESTEP_END'
   []
@@ -321,8 +321,8 @@ def compare(root: Path):
             label=f"cell {i} raw electron density map",
         )
         _close(
-            N_E0 * MEAN_E0_EV * a["n_epsilon_state_aux"],
-            b["n_epsilon_state_aux"],
+            N_E0 * MEAN_E0_EV * a["mean_en_state_aux"],
+            b["mean_en_state_aux"],
             rel=2e-12,
             abs_=4.0,
             label=f"cell {i} raw electron energy map",
@@ -331,7 +331,7 @@ def compare(root: Path):
         # Physical observables that must not change.
         for key, rel, abs_ in (
             ("n_e_physical_aux", 2e-12, 2.0),
-            ("n_epsilon_physical_aux", 2e-12, 4.0),
+            ("mean_en_physical_aux", 2e-12, 4.0),
             ("mean_energy_aux", 2e-12, 1e-11),
             ("charge_density_aux", 5e-11, 1e-16),
             ("poisson_source_aux", 5e-11, 1e-3),

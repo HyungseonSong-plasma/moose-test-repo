@@ -212,17 +212,17 @@ def _promote_current_physics_object_types(text: str) -> str:
 
 def _insert_energy_state(text: str) -> str:
     for path in (
-        "Variables/n_epsilon",
+        "Variables/mean_en",
         "FunctorMaterials/s5r_mean_energy",
-        "FVKernels/s5r_n_epsilon_time",
-        "FVKernels/s5r_n_epsilon_diffusion",
+        "FVKernels/s5r_mean_en_time",
+        "FVKernels/s5r_mean_en_diffusion",
     ):
         mb.require_absent(text, path)
 
     text = mb.insert_child_block(
         text,
         "Variables",
-        """  [n_epsilon]
+        """  [mean_en]
     type = MooseVariableFVReal
     initial_condition = 1.0
     block = plasma
@@ -232,7 +232,7 @@ def _insert_energy_state(text: str) -> str:
         text,
         "s5r_mean_energy",
         f"""    type = PhysicsElectronMeanEnergyMaterial
-    electron_energy_density = n_epsilon
+    electron_energy_density = mean_en
     electron_density = n_e
     energy_reference_eV = {ENERGY_REFERENCE_EV:.17g}
     block = plasma""",
@@ -260,16 +260,16 @@ def _insert_energy_state(text: str) -> str:
     )
     text = _insert_kernel(
         text,
-        "s5r_n_epsilon_time",
+        "s5r_mean_en_time",
         """    type = FVTimeKernel
-    variable = n_epsilon
+    variable = mean_en
     block = plasma""",
     )
     text = _insert_kernel(
         text,
-        "s5r_n_epsilon_diffusion",
+        "s5r_mean_en_diffusion",
         """    type = FVDiffusion
-    variable = n_epsilon
+    variable = mean_en
     coeff = electron_energy_diffusion
     block = plasma""",
     )
@@ -551,7 +551,7 @@ def _insert_energy_sources(text: str, *, n_ref: float) -> str:
             text,
             f"s5r_{suffix}_elastic_energy",
             f"""    type = FVCoupledForce
-    variable = n_epsilon
+    variable = mean_en
     v = S_{suffix}_elastic_hat
     coef = 1
     block = plasma""",
@@ -570,7 +570,7 @@ def _insert_energy_sources(text: str, *, n_ref: float) -> str:
             text,
             f"s5r_energy_{channel.lower()}",
             f"""    type = FVCoupledForce
-    variable = n_epsilon
+    variable = mean_en
     v = {PROGRESS[channel]}
     coef = {coef:.17g}
     block = plasma""",
@@ -593,7 +593,7 @@ def _insert_observables(text: str) -> str:
   []""",
         )
     for name, functor in (
-        ("s5r_n_epsilon_min", "n_epsilon"),
+        ("s5r_mean_en_state_min", "mean_en"),
         ("s5r_mean_en_min", "mean_en_solved"),
         ("s5r_mean_en_max", "mean_en_solved"),
         ("s5r_O2_source_expected_avg", "S_O2_s5r_expected"),
@@ -650,14 +650,14 @@ def audit_s5r_input(text: str) -> dict[str, Any]:
             mp.get_parameter(text, path, "type") == type_name
         )
     checks["no_legacy_qpx_object_types"] = "type = QPX" not in text
-    checks["solved_energy_variable"] = mb.has_block(text, "Variables/n_epsilon")
+    checks["solved_energy_variable"] = mb.has_block(text, "Variables/mean_en")
     checks["mean_energy_bridge"] = (
         mp.get_parameter(text, "FunctorMaterials/s5r_mean_energy", "type")
         == "PhysicsElectronMeanEnergyMaterial"
         and mp.get_parameter(
             text, "FunctorMaterials/s5r_mean_energy", "electron_energy_density"
         )
-        == "n_epsilon"
+        == "mean_en"
         and mp.get_parameter(
             text, "FunctorMaterials/s5r_mean_energy", "electron_density"
         )

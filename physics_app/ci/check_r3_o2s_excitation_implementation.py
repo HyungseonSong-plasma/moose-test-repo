@@ -45,7 +45,7 @@ RUNTIME_INPUT = f"""[Mesh]
     type = MooseVariableFVReal
     initial_condition = {N_E0:.17g}
   []
-  [n_epsilon]
+  [mean_en]
     type = MooseVariableFVReal
     initial_condition = {N_E0 * EPSILON_E0_EV:.17g}
   []
@@ -77,7 +77,7 @@ RUNTIME_INPUT = f"""[Mesh]
   []
   [mean_energy_bridge]
     type = PhysicsElectronMeanEnergyMaterial
-    electron_energy_density = n_epsilon
+    electron_energy_density = mean_en
     electron_density = n_e
     state_form = physical_eV
   []
@@ -98,9 +98,9 @@ RUNTIME_INPUT = f"""[Mesh]
     type = FVTimeKernel
     variable = n_e
   []
-  [n_epsilon_time]
+  [mean_en_time]
     type = FVTimeKernel
-    variable = n_epsilon
+    variable = mean_en
   []
   [w_O2s_time]
     type = PhysicsFVMassFractionTimeDerivative
@@ -120,9 +120,9 @@ RUNTIME_INPUT = f"""[Mesh]
     functor = n_e
     execute_on = 'INITIAL TIMESTEP_END'
   []
-  [n_epsilon_avg]
+  [mean_en_avg]
     type = ElementAverageFunctorPostprocessor
-    functor = n_epsilon
+    functor = mean_en
     execute_on = 'INITIAL TIMESTEP_END'
   []
   [w_O2s_avg]
@@ -191,8 +191,8 @@ def validate_runtime_rows(rows):
 
     ne_i = _f(initial, "n_e_avg")
     ne_f = _f(final, "n_e_avg")
-    eps_i = _f(initial, "n_epsilon_avg")
-    eps_f = _f(final, "n_epsilon_avg")
+    eps_i = _f(initial, "mean_en_avg")
+    eps_f = _f(final, "mean_en_avg")
     ws_i = _f(initial, "w_O2s_avg")
     ws_f = _f(final, "w_O2s_avg")
     wo2_i = _f(initial, "w_O2_avg")
@@ -237,14 +237,14 @@ def validate_runtime_rows(rows):
     return {
         "initial": {
             "n_e": ne_i,
-            "n_epsilon": eps_i,
+            "mean_en": eps_i,
             "w_O2": wo2_i,
             "w_O2s": ws_i,
             "mean_en_solved_eV": mean_i,
         },
         "final": {
             "n_e": ne_f,
-            "n_epsilon": eps_f,
+            "mean_en": eps_f,
             "w_O2": wo2_f,
             "w_O2s": ws_f,
             "mean_en_solved_eV": mean_f,
@@ -272,7 +272,7 @@ def runtime_checker_self_test():
     rows = [
         {
             "n_e_avg": N_E0,
-            "n_epsilon_avg": N_E0 * EPSILON_E0_EV,
+            "mean_en_avg": N_E0 * EPSILON_E0_EV,
             "w_O2s_avg": WP0,
             "w_O2_avg": 1.0 - WP0,
             "mean_en_solved_avg": EPSILON_E0_EV,
@@ -282,7 +282,7 @@ def runtime_checker_self_test():
         },
         {
             "n_e_avg": N_E0,
-            "n_epsilon_avg": N_E0 * EPSILON_E0_EV,
+            "mean_en_avg": N_E0 * EPSILON_E0_EV,
             "w_O2s_avg": ws_f,
             "w_O2_avg": wo2_f,
             "mean_en_solved_avg": EPSILON_E0_EV,
@@ -298,7 +298,7 @@ def runtime_checker_self_test():
         if mutate == "electron_source":
             bad[-1]["n_e_avg"] *= 1.001
         elif mutate == "energy_source":
-            bad[-1]["n_epsilon_avg"] *= 0.999
+            bad[-1]["mean_en_avg"] *= 0.999
         elif mutate == "shared_rate":
             bad[-1]["O2s_source_avg"] *= 1.01
         else:
@@ -431,7 +431,7 @@ def run_controlled_executable(executable, evidence_out=None, repository_sha=None
     print(
         "R3_O2S_EXCITATION_RUNTIME_VECTOR "
         f"n_e={final['n_e']:.12g} "
-        f"n_epsilon={final['n_epsilon']:.12g} "
+        f"mean_en={final['mean_en']:.12g} "
         f"w_O2={final['w_O2']:.12g} "
         f"w_O2s={final['w_O2s']:.12g} "
         f"mean_en_eV={final['mean_en_solved_eV']:.12g} "

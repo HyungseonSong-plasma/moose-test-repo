@@ -27,7 +27,7 @@ def text():
   type=MooseVariableFVReal
   initial_condition={NE0}
  []
- [n_epsilon]
+ [mean_en]
   type=MooseVariableFVReal
   initial_condition={NE0*ER}
  []
@@ -65,7 +65,7 @@ def text():
  []
  [me]
   type=PhysicsElectronMeanEnergyMaterial
-  electron_energy_density=n_epsilon
+  electron_energy_density=mean_en
   electron_density=n_e
   state_form=physical_eV
  []
@@ -118,11 +118,11 @@ def text():
  []
  [et]
   type=FVTimeKernel
-  variable=n_epsilon
+  variable=mean_en
  []
  [es]
   type=FVCoupledForce
-  variable=n_epsilon
+  variable=mean_en
   v={P}
   coef={EC}
  []
@@ -145,7 +145,7 @@ def text():
  []
  [ee]
   type=ElementAverageFunctorPostprocessor
-  functor=n_epsilon
+  functor=mean_en
   execute_on='INITIAL TIMESTEP_END'
  []
  [wm]
@@ -208,7 +208,7 @@ def val(z):
  eq(o+w,1,r=0,a0=2e-12); eq(m,e/n); eq(t,(2/3)*m); eq(-sm/M,q); eq(so/M,q); eq(se/NA,q); eq(sm+so,0,r=0)
  eq(q,rate(n,e,w),r=9e-6,a0=1e-15); eq((n-n0)/DT,se,a0=1); eq(D*(w-w0)/DT,sm); eq(D*(o-o0)/DT,so); eq((e-e0)/DT,EC*q,a0=1e-8)
  de=n-n0; dm=NA*D*(w-w0)/M; eq(de+dm,0,r=0,a0=max(2,2e-5*abs(de)))
- return {"initial":{"n_e":n0,"n_epsilon":e0,"w_Om":w0},"final":{"n_e":n,"n_epsilon":e,"w_Om":w,"w_O":o,"mean_en_solved_eV":m,"Te_eV":t,"R_detach_Om_mol_m3_s":q},"closure":{"heavy_mass_source_sum":sm+so,"charge_delta_sum":de+dm,"energy_loss_eV_per_event":L}}
+ return {"initial":{"n_e":n0,"mean_en":e0,"w_Om":w0},"final":{"n_e":n,"mean_en":e,"w_Om":w,"w_O":o,"mean_en_solved_eV":m,"Te_eV":t,"R_detach_Om_mol_m3_s":q},"closure":{"heavy_mass_source_sum":sm+so,"charge_delta_sum":de+dm,"energy_loss_eV_per_event":L}}
 def syn():
  q=rate(NE0,NE0*ER,W)
  for _ in range(300):

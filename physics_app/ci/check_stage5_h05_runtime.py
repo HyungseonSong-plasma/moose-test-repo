@@ -60,7 +60,7 @@ def runtime_input():
     type = MooseVariableFVReal
     initial_condition = {NE0:.17g}
   []
-  [n_epsilon]
+  [mean_en]
     type = MooseVariableFVReal
     initial_condition = {NE0 * EREF:.17g}
   []
@@ -125,7 +125,7 @@ def runtime_input():
   []
   [mean_energy]
     type = PhysicsElectronMeanEnergyMaterial
-    electron_energy_density = n_epsilon
+    electron_energy_density = mean_en
     electron_density = n_e
     state_form = physical_eV
   []
@@ -141,9 +141,9 @@ def runtime_input():
     number_source = S_e_h05
     state_form = physical
   []
-  [n_epsilon_time]
+  [mean_en_time]
     type = FVTimeKernel
-    variable = n_epsilon
+    variable = mean_en
   []
   [w_O_time]
     type = PhysicsFVMassFractionTimeDerivative
@@ -172,9 +172,9 @@ def runtime_input():
     functor = n_e
     execute_on = 'INITIAL TIMESTEP_END'
   []
-  [n_epsilon_avg]
+  [mean_en_avg]
     type = ElementAverageFunctorPostprocessor
-    functor = n_epsilon
+    functor = mean_en
     execute_on = 'INITIAL TIMESTEP_END'
   []
   [mean_energy_avg]
@@ -241,7 +241,7 @@ def validate(rows):
         raise AssertionError("expected initial and final rows")
     i, f = rows[0], rows[-1]
     ni, nf = num(i, "n_e_avg"), num(f, "n_e_avg")
-    ei, ef = num(i, "n_epsilon_avg"), num(f, "n_epsilon_avg")
+    ei, ef = num(i, "mean_en_avg"), num(f, "mean_en_avg")
     mi, mf = num(i, "mean_energy_avg"), num(f, "mean_energy_avg")
     oi, of = num(i, "w_O_avg"), num(f, "w_O_avg")
     omi, omf = num(i, "w_Om_avg"), num(f, "w_Om_avg")
@@ -287,8 +287,8 @@ def validate(rows):
     close(charge_f, charge_i, rel=2e-12, abs_=2.0, label="electron-inclusive charge closure")
 
     return {
-        "initial": {"n_e": ni, "n_epsilon": ei, "mean_energy_eV": mi, "w_O": oi, "w_Om": omi, "w_O2": o2i},
-        "final": {"n_e": nf, "n_epsilon": ef, "mean_energy_eV": mf, "w_O": of, "w_Om": omf, "w_O2": o2f,
+        "initial": {"n_e": ni, "mean_en": ei, "mean_energy_eV": mi, "w_O": oi, "w_Om": omi, "w_O2": o2i},
+        "final": {"n_e": nf, "mean_en": ef, "mean_energy_eV": mf, "w_O": of, "w_Om": omf, "w_O2": o2f,
                   "R_H05_mol_m3_s": r, "electron_source_m3_s": se},
         "closure": {"heavy_mass_source_sum_kg_m3_s": so + som + so2,
                     "oxygen_inventory_initial_mol_O_m3": oxy_i, "oxygen_inventory_final_mol_O_m3": oxy_f,
@@ -315,11 +315,11 @@ def synthetic_rows():
     nf = NE0 + DT * NA * r
     ef = NE0 * EREF
     return [
-        {"n_e_avg": NE0, "n_epsilon_avg": NE0 * EREF, "mean_energy_avg": EREF,
+        {"n_e_avg": NE0, "mean_en_avg": NE0 * EREF, "mean_energy_avg": EREF,
          "w_O_avg": W_O0, "w_Om_avg": W_OM0, "w_O2_avg": o2i, "R_avg": molar_rate(W_O0, W_OM0),
          "O_source_avg": -M_O*molar_rate(W_O0, W_OM0), "Om_source_avg": -M_O*molar_rate(W_O0, W_OM0),
          "O2_source_avg": M_O2*molar_rate(W_O0, W_OM0), "electron_source_avg": NA*molar_rate(W_O0, W_OM0)},
-        {"n_e_avg": nf, "n_epsilon_avg": ef, "mean_energy_avg": ef / nf,
+        {"n_e_avg": nf, "mean_en_avg": ef, "mean_energy_avg": ef / nf,
          "w_O_avg": of, "w_Om_avg": omf, "w_O2_avg": o2f, "R_avg": r,
          "O_source_avg": -M_O*r, "Om_source_avg": -M_O*r, "O2_source_avg": M_O2*r,
          "electron_source_avg": NA*r},
@@ -341,7 +341,7 @@ def self_test():
         ("R_avg", lambda x: x * 0.5),
         ("electron_source_avg", lambda x: x * 2.0),
         ("O_source_avg", lambda x: -x),
-        ("n_epsilon_avg", lambda x: x * 0.99),
+        ("mean_en_avg", lambda x: x * 0.99),
         ("n_e_avg", lambda x: NE0),
     ]:
         bad = [dict(r) for r in rows]

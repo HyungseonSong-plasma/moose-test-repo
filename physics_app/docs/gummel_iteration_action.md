@@ -15,10 +15,10 @@ branch inside the Gummel implementation.
     poisson_multiapp = poisson
     poisson_input_file = poisson_sub.i
 
-    electron_state_variables = 'log_e n_epsilon'
+    electron_state_variables = 'log_e mean_en'
 
-    electron_to_poisson_source_variables = 'log_e n_epsilon'
-    electron_to_poisson_variables = 'log_e_frozen n_epsilon_frozen'
+    electron_to_poisson_source_variables = 'log_e mean_en'
+    electron_to_poisson_variables = 'log_e_frozen mean_en_frozen'
 
     poisson_to_electron_source_variables = 'potential_plasma'
     poisson_to_electron_variables = 'potential_from_poisson'
@@ -51,10 +51,10 @@ Only the electron subsystem changes:
     poisson_multiapp = poisson
     poisson_input_file = poisson_sub.i
 
-    electron_state_variables = 'log_e electron_momentum n_epsilon'
+    electron_state_variables = 'log_e electron_momentum mean_en'
 
-    electron_to_poisson_source_variables = 'log_e n_epsilon'
-    electron_to_poisson_variables = 'log_e_frozen n_epsilon_frozen'
+    electron_to_poisson_source_variables = 'log_e mean_en'
+    electron_to_poisson_variables = 'log_e_frozen mean_en_frozen'
 
     poisson_to_electron_source_variables = 'potential_plasma'
     poisson_to_electron_variables = 'potential_from_poisson'

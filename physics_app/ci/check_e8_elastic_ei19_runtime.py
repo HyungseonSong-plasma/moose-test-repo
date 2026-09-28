@@ -135,7 +135,7 @@ def _elastic_input(spec, tgas, mean_energy=MEAN_E0_EV):
 []
 
 [Variables]
-  [n_epsilon]
+  [mean_en]
     type = MooseVariableFVReal
     initial_condition = {N_E0 * mean_energy:.17g}
   []
@@ -167,20 +167,20 @@ def _elastic_input(spec, tgas, mean_energy=MEAN_E0_EV):
 [FVKernels]
   [energy_time]
     type = FVTimeKernel
-    variable = n_epsilon
+    variable = mean_en
   []
   [elastic_energy_transfer]
     type = FVCoupledForce
-    variable = n_epsilon
+    variable = mean_en
     v = S_elastic_energy
     coef = 1
   []
 []
 
 [Postprocessors]
-  [n_epsilon_avg]
+  [mean_en_avg]
     type = ElementAverageFunctorPostprocessor
-    functor = n_epsilon
+    functor = mean_en
     execute_on = 'INITIAL TIMESTEP_END'
   []
   [mean_en_avg]
@@ -238,7 +238,7 @@ def _ei19_input(mean_energy=MEAN_E0_EV):
 []
 
 [Variables]
-  [n_epsilon]
+  [mean_en]
     type = MooseVariableFVReal
     initial_condition = 1.0
   []
@@ -263,20 +263,20 @@ def _ei19_input(mean_energy=MEAN_E0_EV):
 [FVKernels]
   [energy_time]
     type = FVTimeKernel
-    variable = n_epsilon
+    variable = mean_en
   []
   [ei19_energy_loss]
     type = FVCoupledForce
-    variable = n_epsilon
+    variable = mean_en
     v = {EI19["progress"]}
     coef = {EI19_ENERGY_COEF:.17g}
   []
 []
 
 [Postprocessors]
-  [n_epsilon_avg]
+  [mean_en_avg]
     type = ElementAverageFunctorPostprocessor
-    functor = n_epsilon
+    functor = mean_en
     execute_on = 'INITIAL TIMESTEP_END'
   []
   [mean_en_avg]
@@ -310,8 +310,8 @@ def validate_elastic_rows(rows, species, regime_id, tgas):
         raise AssertionError("elastic case expected initial and final rows")
     spec = ELASTIC[species]
     initial, final = rows[0], rows[-1]
-    ep_i = _num(initial, "n_epsilon_avg")
-    ep_f = _num(final, "n_epsilon_avg")
+    ep_i = _num(initial, "mean_en_avg")
+    ep_f = _num(final, "mean_en_avg")
     mean_i = _num(initial, "mean_en_avg")
     mean_f = _num(final, "mean_en_avg")
     t_i = _num(initial, "T_gas_avg")
@@ -349,8 +349,8 @@ def validate_elastic_rows(rows, species, regime_id, tgas):
         "R_mol_m3_s": r_f,
         "delta_epsilon_eV_per_event": delta_e,
         "physical_source_eV_m3_s": expected_s,
-        "observed_dn_epsilon_dt_eV_m3_s": (ep_f - ep_i) / DT,
-        "final_n_epsilon": ep_f,
+        "observed_dmean_en_dt_eV_m3_s": (ep_f - ep_i) / DT,
+        "final_mean_en": ep_f,
     }
 
 
@@ -365,8 +365,8 @@ def validate_ei19_rows(rows):
     if len(rows) < 2:
         raise AssertionError("EI19 case expected initial and final rows")
     initial, final = rows[0], rows[-1]
-    ep_i = _num(initial, "n_epsilon_avg")
-    ep_f = _num(final, "n_epsilon_avg")
+    ep_i = _num(initial, "mean_en_avg")
+    ep_f = _num(final, "mean_en_avg")
     mean_i = _num(initial, "mean_en_avg")
     mean_f = _num(final, "mean_en_avg")
     r_i = _num(initial, "R_avg")
@@ -389,8 +389,8 @@ def validate_ei19_rows(rows):
         "standard_moose_object": "FVCoupledForce",
         "coef": EI19_ENERGY_COEF,
         "physical_rhs_eV_m3_s": rhs,
-        "observed_dn_epsilon_dt_eV_m3_s": (ep_f - ep_i) / DT,
-        "final_n_epsilon": ep_f,
+        "observed_dmean_en_dt_eV_m3_s": (ep_f - ep_i) / DT,
+        "final_mean_en": ep_f,
         "particle_or_heavy_projection": "NONE",
     }
 
@@ -407,8 +407,8 @@ def _synthetic_elastic_rows(species, regime_id, tgas, *, rate_scale=1.0, source_
         "R_avg": rate,
         "S_energy_avg": source,
     }
-    initial = dict(base, n_epsilon_avg=N_E0 * MEAN_E0_EV)
-    final = dict(base, n_epsilon_avg=final_ep)
+    initial = dict(base, mean_en_avg=N_E0 * MEAN_E0_EV)
+    final = dict(base, mean_en_avg=final_ep)
     return [initial, final]
 
 
@@ -418,8 +418,8 @@ def _synthetic_ei19_rows(*, rate_scale=1.0, rhs_scale=1.0):
     rhs *= rhs_scale
     base = {"mean_en_avg": MEAN_E0_EV, "R_avg": rate}
     return [
-        dict(base, n_epsilon_avg=N_E0 * MEAN_E0_EV),
-        dict(base, n_epsilon_avg=N_E0 * MEAN_E0_EV + DT * rhs),
+        dict(base, mean_en_avg=N_E0 * MEAN_E0_EV),
+        dict(base, mean_en_avg=N_E0 * MEAN_E0_EV + DT * rhs),
     ]
 
 
@@ -670,7 +670,7 @@ def run_controlled_executable(executable, evidence_out=None, repository_sha=None
     print(
         "E8_EI19_RUNTIME_VECTOR "
         f"R={ei19_result['R_mol_m3_s']:.12g} "
-        f"n_epsilon={ei19_result['final_n_epsilon']:.12g}"
+        f"mean_en={ei19_result['final_mean_en']:.12g}"
     )
     print("E8_ELASTIC_EI19_LOCAL_RUNTIME_PASS")
 
