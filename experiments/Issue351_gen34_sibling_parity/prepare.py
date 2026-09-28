@@ -9,6 +9,7 @@ only the MultiApp topology is refactored.
 from __future__ import annotations
 import argparse
 import shutil
+import re
 from pathlib import Path
 
 
@@ -105,8 +106,19 @@ def transform_poisson(src: str) -> str:
     return src
 
 
-def driver_input() -> str:
-    return """[Mesh]
+def _executioner_value(text: str, key: str) -> str:
+    m = re.search(rf"^  {re.escape(key)}\\s*=\\s*(.+?)\\s*$", text, re.MULTILINE)
+    if not m:
+        raise RuntimeError(f"missing Executioner parameter {key}")
+    return m.group(1)
+
+
+def driver_input(electron_src: str) -> str:
+    clock = {
+        key: _executioner_value(electron_src, key)
+        for key in ("dt", "dtmin", "dtmax", "end_time", "num_steps", "timestep_tolerance")
+    }
+    return f"""[Mesh]
   type = GeneratedMesh
   dim = 1
   nx = 20
@@ -167,30 +179,25 @@ def driver_input() -> str:
     poisson_multiapp = poisson
     poisson_input_file = poisson_sub.i
 
-    # Keep the qualified normalized electron state unchanged.
     electron_density_variable = log_e
     poisson_electron_density_variable = log_e_frozen
     electron_to_poisson_source_variables = 'n_epsilon'
     electron_to_poisson_variables = 'n_epsilon_frozen'
 
-    # Qualified Gen34 acceleration acts on the fast-parent potential.
     poisson_potential_variable = potential_plasma
     electron_potential_variable = potential_from_poisson
     potential_transfer_mode = through_parent
     parent_potential_variable = potential_from_poisson
 
-    # Frozen heavy snapshot feeds both fast siblings.
     parent_to_electron_source_variables = 'w_O2p_h w_Om_h w_Op_h'
     parent_to_electron_variables = 'w_O2p_h w_Om_h w_Op_h'
 
     parent_to_poisson_source_variables = 'w_O2p_h w_Om_h w_Op_h potential_from_poisson'
     parent_to_poisson_variables = 'w_O2p_frozen w_Om_frozen w_Op_frozen phi_anchor_frozen'
 
-    # Export electron moments to OUTER_MAIN after each electron solve.
     electron_to_parent_source_variables = 'electron_density_out mean_energy_out'
     electron_to_parent_variables = 'electron_density_out mean_energy_out'
 
-    # Recover the entering potential anchor for the same delta-phi metric.
     poisson_to_parent_source_variables = 'phi_anchor_frozen'
     poisson_to_parent_variables = 'fp_phi_anchor_diag'
 
@@ -221,12 +228,12 @@ def driver_input() -> str:
 [Executioner]
   type = Transient
   scheme = implicit-euler
-  dt = 5.6650790022617894e-11
-  dtmin = 5.6650790022617894e-11
-  dtmax = 5.6650790022617894e-11
-  end_time = 1.9941078087961498e-08
-  num_steps = 352
-  timestep_tolerance = 5.6650790022617894e-19
+  dt = {clock["dt"]}
+  dtmin = {clock["dtmin"]}
+  dtmax = {clock["dtmax"]}
+  end_time = {clock["end_time"]}
+  num_steps = {clock["num_steps"]}
+  timestep_tolerance = {clock["timestep_tolerance"]}
 
   fixed_point_algorithm = 'steffensen'
   transformed_variables = 'potential_from_poisson'
@@ -266,7 +273,7 @@ def main() -> None:
     (sibling / "input.i").write_text(transform_parent((src / "input.i").read_text()))
     (sibling / "electron_sub.i").write_text(transform_electron((src / "fast_sub.i").read_text()))
     (sibling / "poisson_sub.i").write_text(transform_poisson((src / "poisson_sub.i").read_text()))
-    (sibling / "gummel_driver.i").write_text(driver_input())
+    (sibling / "gummel_driver.i").write_text(driver_input((src / "fast_sub.i").read_text()))
     for data in ("electron_moments.txt", "o2_elastic.txt", "transport_data.txt", "case.json"):
         shutil.copy2(src / data, sibling / data)
 
