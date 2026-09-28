@@ -257,6 +257,25 @@ Production qualification should additionally select the driver-level
 `DeltaPhiMultiAppConvergence` object and retain the accepted
 `delta_phi_abs_tol = 1e-6 V` contract.
 
+A `solve=false` driver has an identically zero local nonlinear residual, so it
+must not use that residual as a substitute for the qualified electron residual.
+When `manage_convergence=true` and
+`potential_transfer_mode=through_parent`, the Action therefore delegates the
+standard fixed-point residual check to the electron MultiApp. At
+`MULTIAPP_FIXED_POINT_CONVERGENCE` it first copies the raw potential just
+returned by Poisson into the electron potential AuxVariable, then evaluates the
+electron FEProblem residual. The accepted convergence contract remains:
+
+```text
+(electron residual < fixed_point_abs_tol
+ OR electron residual / initial electron residual < fixed_point_rel_tol)
+AND
+max |phi^k - phi^(k-1)| <= delta_phi_abs_tol
+```
+
+This preserves the qualified fast-owner residual semantics while keeping the
+driver itself orchestration-only and the heavy state frozen.
+
 The driver snapshot variables are AuxVariables and are never advanced by a
 heavy equation. Therefore, for every inner fixed-point iteration `k` in outer
 heavy step `n`,
