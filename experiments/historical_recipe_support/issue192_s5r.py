@@ -593,7 +593,7 @@ def _insert_observables(text: str) -> str:
   []""",
         )
     for name, functor in (
-        ("s5r_mean_en_min", "mean_en"),
+        ("s5r_mean_en_state_min", "mean_en"),
         ("s5r_mean_en_min", "mean_en_solved"),
         ("s5r_mean_en_max", "mean_en_solved"),
         ("s5r_O2_source_expected_avg", "S_O2_s5r_expected"),
