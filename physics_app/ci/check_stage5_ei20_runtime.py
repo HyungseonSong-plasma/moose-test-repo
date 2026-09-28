@@ -80,7 +80,7 @@ def runtime_input(mean=EREF):
     type = MooseVariableFVReal
     initial_condition = {NE0:.17g}
   []
-  [n_epsilon]
+  [mean_en]
     type = MooseVariableFVReal
     initial_condition = {ep0:.17g}
   []
@@ -111,7 +111,7 @@ def runtime_input(mean=EREF):
   []
   [mean_energy_bridge]
     type = PhysicsElectronMeanEnergyMaterial
-    electron_energy_density = n_epsilon
+    electron_energy_density = mean_en
     electron_density = n_e
     state_form = physical_eV
   []
@@ -156,13 +156,13 @@ def runtime_input(mean=EREF):
     number_source = electron_ei20_number_source
     state_form = physical
   []
-  [n_epsilon_time]
+  [mean_en_time]
     type = FVTimeKernel
-    variable = n_epsilon
+    variable = mean_en
   []
   [ei20_energy_loss]
     type = FVCoupledForce
-    variable = n_epsilon
+    variable = mean_en
     v = {PROGRESS}
     coef = {ECOEF:.17g}
   []
@@ -183,9 +183,9 @@ def runtime_input(mean=EREF):
     functor = n_e
     execute_on = 'INITIAL TIMESTEP_END'
   []
-  [n_epsilon_avg]
+  [mean_en_avg]
     type = ElementAverageFunctorPostprocessor
-    functor = n_epsilon
+    functor = mean_en
     execute_on = 'INITIAL TIMESTEP_END'
   []
   [w_Op_avg]
@@ -240,7 +240,7 @@ def validate(rows,table):
     if len(rows)<2: raise AssertionError("expected initial and final rows")
     i,f=rows[0],rows[-1]
     ni,nf=num(i,"n_e_avg"),num(f,"n_e_avg")
-    ei,ef=num(i,"n_epsilon_avg"),num(f,"n_epsilon_avg")
+    ei,ef=num(i,"mean_en_avg"),num(f,"mean_en_avg")
     pi,pf=num(i,"w_Op_avg"),num(f,"w_Op_avg")
     oi,of=num(i,"w_O_avg"),num(f,"w_O_avg")
     mi,mf=num(i,"mean_en_solved_avg"),num(f,"mean_en_solved_avg")
@@ -263,12 +263,12 @@ def validate(rows,table):
     rhs=ECOEF*r; close((ef-ei)/DT,rhs,rel=9e-6,abs_=1e-8,label="EI20 energy BE closure")
     de=nf-ni; dp=NA*RHO*(pf-pi)/MO; close(de,dp,rel=9e-6,abs_=1,label="charge closure")
     oxy_i=RHO*(oi+pi)/MO; oxy_f=RHO*(of+pf)/MO; close(oxy_f,oxy_i,rel=2e-12,abs_=1e-14,label="oxygen inventory")
-    return {"initial":{"n_e":ni,"n_epsilon":ei,"w_O":oi,"w_Op":pi,"mean_en_solved_eV":mi},
-            "final":{"n_e":nf,"n_epsilon":ef,"w_O":of,"w_Op":pf,"mean_en_solved_eV":mf,"R_ion_O_mol_m3_s":r,"electron_source_m3_s":se},
+    return {"initial":{"n_e":ni,"mean_en":ei,"w_O":oi,"w_Op":pi,"mean_en_solved_eV":mi},
+            "final":{"n_e":nf,"mean_en":ef,"w_O":of,"w_Op":pf,"mean_en_solved_eV":mf,"R_ion_O_mol_m3_s":r,"electron_source_m3_s":se},
             "closure":{"heavy_mass_source_sum_kg_m3_s":so+sp,"oxygen_atom_molar_inventory_initial":oxy_i,
                        "oxygen_atom_molar_inventory_final":oxy_f,"electron_particle_delta":de,"positive_ion_particle_delta":dp,
                        "energy_loss_eV_per_event":LOSS,"standard_moose_object":"FVCoupledForce","energy_coef":ECOEF,
-                       "physical_energy_rhs_eV_m3_s":rhs,"observed_dn_epsilon_dt_eV_m3_s":(ef-ei)/DT,"lookup_k_m3_mol_s":k}}
+                       "physical_energy_rhs_eV_m3_s":rhs,"observed_dmean_en_dt_eV_m3_s":(ef-ei)/DT,"lookup_k_m3_mol_s":k}}
 
 def synthetic_rows(table):
     r=interp(table,EREF)*(NE0/NA)*(RHO*(1-W0)/MO)
@@ -279,9 +279,9 @@ def synthetic_rows(table):
         r=new
     ne=NE0+DT*NA*r; wp=W0+DT*MO*r/RHO; ep=NE0*EREF+DT*ECOEF*r; mean=ep/ne
     r0=interp(table,EREF)*(NE0/NA)*(RHO*(1-W0)/MO)
-    return [{"n_e_avg":NE0,"n_epsilon_avg":NE0*EREF,"w_Op_avg":W0,"w_O_avg":1-W0,"mean_en_solved_avg":EREF,
+    return [{"n_e_avg":NE0,"mean_en_avg":NE0*EREF,"w_Op_avg":W0,"w_O_avg":1-W0,"mean_en_solved_avg":EREF,
              "R_avg":r0,"O_source_avg":-MO*r0,"Op_source_avg":MO*r0,"electron_source_avg":NA*r0},
-            {"n_e_avg":ne,"n_epsilon_avg":ep,"w_Op_avg":wp,"w_O_avg":1-wp,"mean_en_solved_avg":mean,
+            {"n_e_avg":ne,"mean_en_avg":ep,"w_Op_avg":wp,"w_O_avg":1-wp,"mean_en_solved_avg":mean,
              "R_avg":r,"O_source_avg":-MO*r,"Op_source_avg":MO*r,"electron_source_avg":NA*r}]
 
 def expect_fail(fn,*args):
@@ -292,7 +292,7 @@ def expect_fail(fn,*args):
 def self_test():
     table=[(XMIN,ANCHORS[XMIN]),(EREF,ANCHORS[EREF]),(XMAX,ANCHORS[XMAX])]
     rows=synthetic_rows(table); validate(rows,table)
-    for key,mut in [("n_e_avg",lambda x:NE0),("n_epsilon_avg",lambda x:NE0*EREF+abs(x-NE0*EREF)),
+    for key,mut in [("n_e_avg",lambda x:NE0),("mean_en_avg",lambda x:NE0*EREF+abs(x-NE0*EREF)),
                     ("Op_source_avg",lambda x:x*1.01),("electron_source_avg",lambda x:x*2),
                     ("R_avg",lambda x:x*1.01),("w_Op_avg",lambda x:-1e-6)]:
         bad=[dict(r) for r in rows]; bad[-1][key]=mut(bad[-1][key]); expect_fail(validate,bad,table)
