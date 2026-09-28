@@ -56,10 +56,12 @@ DeltaPhiMultiAppConvergence::residualMultiAppNorm()
                multi_app->numGlobalApps(),
                ".");
 
-  if (!multi_app->hasLocalApp(0))
-    return 0.0;
+  Real residual = 0.0;
+  if (multi_app->hasLocalApp(0))
+    residual = multi_app->appProblemBase(0).computeResidualL2Norm();
 
-  return multi_app->appProblemBase(0).computeResidualL2Norm();
+  _communicator.max(residual);
+  return residual;
 }
 
 void
