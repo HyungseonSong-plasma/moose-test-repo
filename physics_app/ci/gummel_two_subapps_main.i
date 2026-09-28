@@ -5,6 +5,7 @@
 []
 
 [Problem]
+  solve = false
   kernel_coverage_check = false
 []
 
@@ -27,9 +28,6 @@
     # Optional additional electron state needed by Poisson closures.
     electron_to_poisson_source_variables = 'mean_en'
     electron_to_poisson_variables = 'mean_en'
-
-    electron_execution_order_group = 0
-    poisson_execution_order_group = 1
 
     poisson_transformed_variables = 'phi'
     relaxation_factor = 0.45
