@@ -89,7 +89,7 @@ def _apply_electron_sheath_factor(text: str) -> str:
 
     Sequence 07 baseline:
       Gamma_e,out = 0.5*c_e*vbar
-      Gamma_eps,out = (5/6)*n_epsilon*vbar
+      Gamma_eps,out = (5/6)*electron_energy_density_hat*vbar
 
     Sequence 08:
       both fluxes are multiplied by
@@ -102,7 +102,7 @@ def _apply_electron_sheath_factor(text: str) -> str:
     old_particle_material = """  [thermal_surface_flux]
     type = ADParsedFunctorMaterial
     property_name = thermal_flux_molar_outward
-    functor_names = 'log_e mean_en_solved'
+    functor_names = 'log_e mean_en'
     functor_symbols = 'loge mean_ev'
     expression = '0.5*exp(loge)*sqrt(16.0*1.602176634e-19*mean_ev/(3.0*pi*9.1093837139e-31))'
   []
@@ -110,21 +110,21 @@ def _apply_electron_sheath_factor(text: str) -> str:
     new_materials = """  [electron_sheath_factor]
     type = ADParsedFunctorMaterial
     property_name = electron_sheath_factor
-    functor_names = 'potential_from_poisson mean_en_solved'
+    functor_names = 'potential_from_poisson mean_en'
     functor_symbols = 'phi mean_ev'
     expression = 'exp(-(0.5*(phi+abs(phi)))/((2.0/3.0)*mean_ev))'
   []
   [thermal_surface_flux]
     type = ADParsedFunctorMaterial
     property_name = thermal_flux_molar_outward
-    functor_names = 'log_e mean_en_solved electron_sheath_factor'
+    functor_names = 'log_e mean_en electron_sheath_factor'
     functor_symbols = 'loge mean_ev sheath'
     expression = '0.5*exp(loge)*sqrt(16.0*1.602176634e-19*mean_ev/(3.0*pi*9.1093837139e-31))*sheath'
   []
   [sheath_energy_surface_flux]
     type = ADParsedFunctorMaterial
     property_name = sheath_energy_flux_outward
-    functor_names = 'n_epsilon mean_en_solved electron_sheath_factor'
+    functor_names = 'electron_energy_density_hat mean_en electron_sheath_factor'
     functor_symbols = 'eps_hat mean_ev sheath'
     expression = '0.83333333333333333*eps_hat*sqrt(16.0*1.602176634e-19*mean_ev/(3.0*pi*9.1093837139e-31))*sheath'
   []
@@ -135,17 +135,17 @@ def _apply_electron_sheath_factor(text: str) -> str:
 
     old_energy_bc = """  [right_energy_surface_loss]
     type = PhysicsFVElectronEnergyWallFluxBC
-    variable = n_epsilon
+    variable = electron_energy_density_hat
     boundary = right
-    electron_energy_density = n_epsilon
-    mean_electron_energy = mean_en_solved
+    electron_energy_density = electron_energy_density_hat
+    mean_electron_energy = mean_en
     see_number_flux = zero_flux
     energy_reference_eV = 5.73276
   []
 """
     new_energy_bc = """  [right_energy_surface_loss]
     type = FVFunctorNeumannBC
-    variable = n_epsilon
+    variable = electron_energy_density_hat
     boundary = right
     functor = sheath_energy_flux_outward
     factor = -1.0
