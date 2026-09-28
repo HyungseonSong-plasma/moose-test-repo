@@ -5,10 +5,16 @@ ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src/actions/GummelIterationAction.C"
 HDR = ROOT / "include/actions/GummelIterationAction.h"
 APP = ROOT / "src/base/PhysicsApp.C"
+MAIN = ROOT / "ci/gummel_two_subapps_main.i"
+ELECTRON = ROOT / "ci/gummel_two_subapps_electron.i"
+POISSON = ROOT / "ci/gummel_two_subapps_poisson.i"
 
 src = SRC.read_text(encoding="utf-8")
 hdr = HDR.read_text(encoding="utf-8")
 app = APP.read_text(encoding="utf-8")
+main = MAIN.read_text(encoding="utf-8")
+electron = ELECTRON.read_text(encoding="utf-8")
+poisson = POISSON.read_text(encoding="utf-8")
 
 required = (
     'registerMooseAction("PhysicsApp", GummelIterationAction, "add_multi_app")',
@@ -54,6 +60,25 @@ assert '"poisson_execution_order_group",
       1,' in src
 assert '"n_e"' in src
 assert '"phi"' in src
+
+# The preferred fixture is a parent orchestrator with two sibling input files.
+for token in (
+    "electron_input_file = gummel_two_subapps_electron.i",
+    "poisson_input_file = gummel_two_subapps_poisson.i",
+    "electron_density_variable = n_e",
+    "poisson_electron_density_variable = n_e",
+    "poisson_potential_variable = phi",
+    "electron_potential_variable = phi",
+    "electron_execution_order_group = 0",
+    "poisson_execution_order_group = 1",
+):
+    assert token in main, token
+
+assert "[n_e]" in electron
+assert "[mean_en]" in electron
+assert "[phi]" in electron
+assert "[phi]" in poisson
+assert "[n_e]" in poisson
 
 # Legacy mode remains available when electron_input_file is omitted.
 assert 'if (usesElectronSubApp())' in src
