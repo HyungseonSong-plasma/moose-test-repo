@@ -32,8 +32,8 @@ CASE_SPECS = (
 MATERIAL_KEYS = (
     "n_e_inventory",
     "n_e_min_m3",
-    "n_epsilon_inventory",
-    "n_epsilon_min",
+    "mean_en_inventory",
+    "mean_en_min",
     "mean_energy_avg_eV",
     "primary_electron_particle_rate_s-1",
     "primary_energy_power_W",
