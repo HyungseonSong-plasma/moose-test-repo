@@ -21,7 +21,7 @@ W0 = 1.0e-3
 K_O2S = 4.71e8
 ENERGY_COEF = -(DELTA_E_EV * N_A)
 
-RUNTIME_INPUT = """[Mesh]
+RUNTIME_INPUT = f"""[Mesh]
   [mesh]
     type = GeneratedMeshGenerator
     dim = 3
@@ -103,7 +103,7 @@ RUNTIME_INPUT = """[Mesh]
     type = FVCoupledForce
     variable = n_epsilon
     v = R_O2s
-    coef = -5.88323192252e23
+    coef = {ENERGY_COEF:.17g}
   []
   [w_O2s_time]
     type = PhysicsFVMassFractionTimeDerivative
