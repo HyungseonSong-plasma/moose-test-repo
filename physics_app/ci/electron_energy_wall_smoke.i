@@ -1,3 +1,4 @@
+# Physical electron-energy density smoke.
 [Mesh]
   type = GeneratedMesh
   dim = 1
