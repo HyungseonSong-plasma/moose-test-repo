@@ -8,12 +8,14 @@
  *
  * Preferred mode:
  *
- *   parent
+ *   parent : orchestration-only or local heavy-particle physics
  *     |- electron MultiApp : solves n_e / mean_en and receives phi
  *     '- Poisson MultiApp  : solves phi and receives n_e
  *
  * The sibling MultiApps exchange their coupling fields directly with
- * MultiAppCopyTransfer.  The Action does not construct either subsystem's
+ * MultiAppCopyTransfer. Optional parent-state mappings allow a heavy-particle
+ * parent to provide gas/heavy state to either sibling and receive electron or
+ * electrostatic state back. The Action does not construct any subsystem's
  * equations; each input file owns its local physics.
  *
  * Legacy mode, where the current application owns the electron equations and
