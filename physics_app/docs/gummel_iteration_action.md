@@ -32,10 +32,6 @@ owns its local kernels, materials, boundary conditions, and solver settings.
     poisson_potential_variable = phi
     electron_potential_variable = phi
 
-    # Electron executes before Poisson in each fixed-point sweep.
-    electron_execution_order_group = 0
-    poisson_execution_order_group = 1
-
     # Optional Poisson fixed-point transform / relaxation.
     poisson_transformed_variables = 'phi'
     relaxation_factor = 0.45
@@ -60,16 +56,28 @@ SUB_POISSON.phi   ---> SUB_ELECTRON.phi  (AuxVariable)
 Both sub-applications should use the same mesh when the default
 `MultiAppCopyTransfer` is used.
 
-The execution order is:
+The Action uses the pinned MOOSE execution schedule deliberately:
 
 ```text
-fixed-point k:
-  1. SUB_ELECTRON solves with phi^(k-1)
-  2. n_e^(k) is copied directly to SUB_POISSON
-  3. SUB_POISSON solves phi^(k)
-  4. phi^(k) is copied directly to SUB_ELECTRON
-  5. next fixed-point iteration begins
+fixed-point k, TIMESTEP_BEGIN:
+  1. phi^(k-1) is copied SUB_POISSON -> SUB_ELECTRON
+  2. SUB_ELECTRON solves n_e^(k), mean_en^(k)
+
+fixed-point k, TIMESTEP_END:
+  3. n_e^(k) is copied SUB_ELECTRON -> SUB_POISSON
+  4. optional extra electron fields (for example mean_en) are copied
+  5. SUB_POISSON solves phi^(k)
+
+fixed-point k+1:
+  6. phi^(k) is copied to SUB_ELECTRON before its next solve
 ```
+
+This staggering is important for the MOOSE revision pinned by this repository.
+That revision supports sibling `MultiAppCopyTransfer`, but sibling transfers
+on a single execution flag run before the sibling MultiApps. Splitting the two
+sub-solves across `TIMESTEP_BEGIN` and `TIMESTEP_END` therefore preserves
+the intended Gauss-Seidel/Gummel ordering without requiring a framework
+upgrade.
 
 Additional fields may be shared with the two generic mapping pairs:
 
