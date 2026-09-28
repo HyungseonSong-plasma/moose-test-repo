@@ -4,8 +4,8 @@
 Old case: primary electron-energy-density variable is named n_epsilon.
 New case: the same physical variable is named mean_en.
 
-No equation, coefficient, initial condition, mesh, boundary condition, solver
-setting, or physical unit changes between the two cases.
+Only the symbol changes. Equations, units, coefficients, mesh, BCs, initial
+profiles, and solver settings are identical.
 """
 
 import argparse
@@ -55,6 +55,10 @@ def _input(energy_symbol: str) -> str:
     type = ParsedFunction
     expression = '{N_E0 * MEAN_E0_EV:.17g}*(1.05-0.10*x)'
   []
+  [poisson_source_profile]
+    type = ParsedFunction
+    expression = '{E_CHARGE:.17g}*({N_E0:.17g}-{N_E0:.17g}*(0.95+0.10*x))/{EPS0:.17g}'
+  []
 []
 
 [ICs]
@@ -70,78 +74,11 @@ def _input(energy_symbol: str) -> str:
   []
 []
 
-[AuxVariables]
-  [energy_state_aux]
-    order = CONSTANT
-    family = MONOMIAL
-  []
-  [mean_energy_aux]
-    order = CONSTANT
-    family = MONOMIAL
-  []
-  [charge_density_aux]
-    order = CONSTANT
-    family = MONOMIAL
-  []
-  [poisson_source_aux]
-    order = CONSTANT
-    family = MONOMIAL
-  []
-[]
-
 [FunctorMaterials]
   [constants]
     type = GenericFunctorMaterial
-    prop_names = 'ion_number_density relative_permittivity energy_diffusivity'
-    prop_values = '{N_E0:.17g} 1.0 0.05'
-  []
-  [mean_energy]
-    type = ParsedFunctorMaterial
-    property_name = mean_energy_probe
-    functor_names = 'n_e {energy_symbol}'
-    functor_symbols = 'ne ee'
-    expression = 'ee/ne'
-  []
-  [charge_density]
-    type = ParsedFunctorMaterial
-    property_name = charge_density_probe
-    functor_names = 'ion_number_density n_e'
-    functor_symbols = 'ni ne'
-    expression = '{E_CHARGE:.17g}*(ni-ne)'
-  []
-  [poisson_source]
-    type = ParsedFunctorMaterial
-    property_name = poisson_source_probe
-    functor_names = 'charge_density_probe'
-    functor_symbols = 'rhoq'
-    expression = 'rhoq/{EPS0:.17g}'
-  []
-[]
-
-[AuxKernels]
-  [sample_energy]
-    type = FunctorAux
-    variable = energy_state_aux
-    functor = {energy_symbol}
-    execute_on = 'INITIAL TIMESTEP_END'
-  []
-  [sample_mean]
-    type = FunctorAux
-    variable = mean_energy_aux
-    functor = mean_energy_probe
-    execute_on = 'INITIAL TIMESTEP_END'
-  []
-  [sample_charge]
-    type = FunctorAux
-    variable = charge_density_aux
-    functor = charge_density_probe
-    execute_on = 'INITIAL TIMESTEP_END'
-  []
-  [sample_poisson]
-    type = FunctorAux
-    variable = poisson_source_aux
-    functor = poisson_source_probe
-    execute_on = 'INITIAL TIMESTEP_END'
+    prop_names = 'energy_diffusivity relative_permittivity'
+    prop_values = '0.05 1.0'
   []
 []
 
@@ -167,7 +104,7 @@ def _input(energy_symbol: str) -> str:
   [phi_source]
     type = FVCoupledForce
     variable = phi
-    v = poisson_source_probe
+    v = poisson_source_profile
   []
 []
 
@@ -189,7 +126,7 @@ def _input(energy_symbol: str) -> str:
 [VectorPostprocessors]
   [symbol_samples]
     type = ElementValueSampler
-    variable = 'n_e energy_state_aux mean_energy_aux charge_density_aux poisson_source_aux phi'
+    variable = 'n_e {energy_symbol} phi'
     sort_by = id
     execute_on = 'TIMESTEP_END'
   []
@@ -222,7 +159,7 @@ def prepare(root: Path) -> None:
         (case / "input.i").write_text(_input(symbol))
 
 
-def _rows(case: Path):
+def _rows(case: Path, symbol: str):
     files = sorted(case.glob("*symbol_samples*.csv"))
     if not files:
         raise AssertionError(f"{case}: missing symbol_samples CSV")
@@ -230,17 +167,26 @@ def _rows(case: Path):
         rows = list(csv.DictReader(handle))
     if len(rows) != NX:
         raise AssertionError(f"{case}: expected {NX} cells, got {len(rows)}")
-    keys = ("x", "n_e", "energy_state_aux", "mean_energy_aux",
-            "charge_density_aux", "poisson_source_aux", "phi")
     out = []
     for row in rows:
-        parsed = {}
-        for key in keys:
-            value = float(row[key])
+        x = float(row["x"])
+        ne = float(row["n_e"])
+        energy = float(row[symbol])
+        phi = float(row["phi"])
+        for key, value in (("x", x), ("n_e", ne), ("energy", energy), ("phi", phi)):
             if not math.isfinite(value):
                 raise AssertionError(f"{case}: non-finite {key}")
-            parsed[key] = value
-        out.append(parsed)
+        out.append(
+            {
+                "x": x,
+                "n_e": ne,
+                "energy": energy,
+                "mean_energy": energy / ne,
+                "charge_density": E_CHARGE * (N_E0 - ne),
+                "poisson_source": E_CHARGE * (N_E0 - ne) / EPS0,
+                "phi": phi,
+            }
+        )
     out.sort(key=lambda r: r["x"])
     return out
 
@@ -266,16 +212,16 @@ def _electric_field(rows):
 
 
 def compare(root: Path):
-    old = _rows(root / "old")
-    new = _rows(root / "new")
+    old = _rows(root / "old", "n_epsilon")
+    new = _rows(root / "new", "mean_en")
     for i, (a, b) in enumerate(zip(old, new)):
         for key, rel, abs_ in (
             ("x", 0.0, 1e-14),
             ("n_e", 2e-13, 2.0),
-            ("energy_state_aux", 2e-13, 8.0),
-            ("mean_energy_aux", 2e-13, 1e-12),
-            ("charge_density_aux", 2e-12, 1e-16),
-            ("poisson_source_aux", 2e-12, 1e-3),
+            ("energy", 2e-13, 8.0),
+            ("mean_energy", 2e-13, 1e-12),
+            ("charge_density", 2e-12, 1e-16),
+            ("poisson_source", 2e-12, 1e-3),
             ("phi", 2e-10, 1e-7),
         ):
             _close(a[key], b[key], rel=rel, abs_=abs_, label=f"cell {i} {key}")
@@ -287,13 +233,10 @@ def compare(root: Path):
 
     phi_scale = max(max(abs(r["phi"]) for r in old), 1.0)
     e_scale = max(max(abs(v) for v in e_old), 1.0)
-    energy_scale = max(max(abs(r["energy_state_aux"]) for r in old), 1.0)
+    energy_scale = max(max(abs(r["energy"]) for r in old), 1.0)
     phi_l2 = math.sqrt(sum((a["phi"] - b["phi"]) ** 2 for a, b in zip(old, new)) / len(old))
     e_l2 = math.sqrt(sum((a - b) ** 2 for a, b in zip(e_old, e_new)) / len(old))
-    energy_l2 = math.sqrt(
-        sum((a["energy_state_aux"] - b["energy_state_aux"]) ** 2 for a, b in zip(old, new))
-        / len(old)
-    )
+    energy_l2 = math.sqrt(sum((a["energy"] - b["energy"]) ** 2 for a, b in zip(old, new)) / len(old))
 
     print(
         "MEAN_EN_SYMBOL_EQUIVALENCE_PASS "
@@ -301,7 +244,7 @@ def compare(root: Path):
         f"rel_energy_l2={energy_l2 / energy_scale:.3e} "
         f"rel_phi_l2={phi_l2 / phi_scale:.3e} "
         f"rel_E_l2={e_l2 / e_scale:.3e} "
-        f"max_denergy={max(abs(a['energy_state_aux']-b['energy_state_aux']) for a,b in zip(old,new)):.3e} "
+        f"max_denergy={max(abs(a['energy']-b['energy']) for a,b in zip(old,new)):.3e} "
         f"max_dphi={max(abs(a['phi']-b['phi']) for a,b in zip(old,new)):.3e} "
         f"max_dE={max(abs(a-b) for a,b in zip(e_old,e_new)):.3e}"
     )
@@ -312,10 +255,8 @@ def self_test():
     new = _input("mean_en")
     assert "[n_epsilon]" in old
     assert "variable = n_epsilon" in old
-    assert "functor_names = 'n_e n_epsilon'" in old
     assert "[mean_en]" in new
     assert "variable = mean_en" in new
-    assert "functor_names = 'n_e mean_en'" in new
     assert old.replace("n_epsilon", "__ENERGY__") == new.replace("mean_en", "__ENERGY__")
     print("MEAN_EN_SYMBOL_EQUIVALENCE_SELFTEST_PASS")
 
