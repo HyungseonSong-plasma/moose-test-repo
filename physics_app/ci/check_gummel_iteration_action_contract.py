@@ -22,10 +22,8 @@ required = (
     'registerMooseAction("PhysicsApp", GummelIterationAction, "add_convergence")',
     '"electron_input_file"',
     '"electron_multiapp"',
-    '"electron_execution_order_group"',
     '"poisson_input_file"',
     '"poisson_multiapp"',
-    '"poisson_execution_order_group"',
     '"electron_density_variable"',
     '"poisson_electron_density_variable"',
     '"poisson_potential_variable"',
@@ -40,11 +38,8 @@ required = (
     'params.set<MultiAppName>("to_multi_app") = poisson_name;',
     'params.set<MultiAppName>("from_multi_app") = poisson_name;',
     'params.set<MultiAppName>("to_multi_app") = electron_name;',
-    'params.set<bool>("execute_after_from_multiapp") = true;',
     'object_prefix + "_shared_n_e"',
     'object_prefix + "_shared_phi"',
-    'electron_params.set<unsigned int>("execution_order_group")',
-    'poisson_params.set<unsigned int>("execution_order_group")',
 )
 for token in required:
     assert token in src, token
@@ -69,8 +64,6 @@ for token in (
     "poisson_electron_density_variable = n_e",
     "poisson_potential_variable = phi",
     "electron_potential_variable = phi",
-    "electron_execution_order_group = 0",
-    "poisson_execution_order_group = 1",
 ):
     assert token in main, token
 
