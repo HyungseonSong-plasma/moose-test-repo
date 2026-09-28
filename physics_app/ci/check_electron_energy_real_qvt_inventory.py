@@ -17,11 +17,11 @@ NONTRIVIAL_ABS_TOL = 1.0e-8
 
 REQUIRED = (
     "n_e_inventory",
-    "n_epsilon_inventory",
+    "mean_en_inventory",
     "n_e_min",
     "n_e_max",
-    "n_epsilon_min",
-    "n_epsilon_max",
+    "mean_en_min",
+    "mean_en_max",
     "mean_en_solved_min",
     "mean_en_solved_max",
     "electron_diffusion_avg",
@@ -54,14 +54,14 @@ def main() -> int:
 
     for index, row in enumerate(rows):
         ne_min = value(row, "n_e_min")
-        neps_min = value(row, "n_epsilon_min")
+        neps_min = value(row, "mean_en_min")
         mean_min = value(row, "mean_en_solved_min")
         mean_max = value(row, "mean_en_solved_max")
         d_particle = value(row, "electron_diffusion_avg")
         d_energy = value(row, "electron_energy_diffusion_avg")
 
         assert ne_min > 0.0, f"row {index}: physical n_e must stay > 0, got {ne_min}"
-        assert neps_min >= 0.0, f"row {index}: physical n_epsilon must stay >= 0, got {neps_min}"
+        assert neps_min >= 0.0, f"row {index}: physical mean_en must stay >= 0, got {neps_min}"
         assert mean_min >= TABLE_MIN_EV, (
             f"row {index}: mean_en_solved below real-QVT table: {mean_min} < {TABLE_MIN_EV}"
         )
@@ -78,7 +78,7 @@ def main() -> int:
         value(final, "n_e_inventory"), value(initial, "n_e_inventory")
     )
     energy_inventory_error = relative_error(
-        value(final, "n_epsilon_inventory"), value(initial, "n_epsilon_inventory")
+        value(final, "mean_en_inventory"), value(initial, "mean_en_inventory")
     )
     assert particle_inventory_error <= INVENTORY_REL_TOL, (
         f"particle inventory relative error {particle_inventory_error:.6e} exceeds {INVENTORY_REL_TOL:.6e}"
@@ -89,8 +89,8 @@ def main() -> int:
 
     particle_range_initial = value(initial, "n_e_max") - value(initial, "n_e_min")
     particle_range_final = value(final, "n_e_max") - value(final, "n_e_min")
-    energy_range_initial = value(initial, "n_epsilon_max") - value(initial, "n_epsilon_min")
-    energy_range_final = value(final, "n_epsilon_max") - value(final, "n_epsilon_min")
+    energy_range_initial = value(initial, "mean_en_max") - value(initial, "mean_en_min")
+    energy_range_final = value(final, "mean_en_max") - value(final, "mean_en_min")
 
     assert particle_range_initial > NONTRIVIAL_ABS_TOL
     assert energy_range_initial > NONTRIVIAL_ABS_TOL
