@@ -5,10 +5,12 @@ ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src/actions/GummelIterationAction.C"
 HDR = ROOT / "include/actions/GummelIterationAction.h"
 APP = ROOT / "src/base/PhysicsApp.C"
+CONV = ROOT / "src/convergence/DeltaPhiMultiAppConvergence.C"
 
 src = SRC.read_text(encoding="utf-8")
 hdr = HDR.read_text(encoding="utf-8")
 app = APP.read_text(encoding="utf-8")
+conv = CONV.read_text(encoding="utf-8")
 
 required = (
     'registerMooseAction("PhysicsApp", GummelIterationAction, "add_multi_app")',
@@ -44,5 +46,10 @@ for forbidden in (
 assert "FVElectronResponseBandedCorrection" not in src
 assert "bandwidth" not in src
 assert "setMultiAppFixedPointConvergenceName" not in src
+
+# Gummel convergence must be invariant to dimensional rescaling of electron equations.
+assert 'params.set<bool>("disable_fixed_point_residual_norm_check") = true' in conv
+assert "CONVERGED_OBJECT" in conv
+assert "Gummel max delta-phi" in conv
 
 print("GUMMEL_ITERATION_ACTION_CONTRACT: PASS")

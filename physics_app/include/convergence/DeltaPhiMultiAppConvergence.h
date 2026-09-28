@@ -3,12 +3,16 @@
 #include "DefaultMultiAppFixedPointConvergence.h"
 
 /**
- * MultiApp fixed-point convergence that requires BOTH:
- *   1. the standard MOOSE fixed-point residual criterion; and
- *   2. max |phi^(k)-phi^(k-1)| <= delta_phi_abs_tol.
+ * Gummel fixed-point convergence based on the electrostatic coupling variable:
  *
- * The delta-phi quantity is supplied by a postprocessor executed on
- * MULTIAPP_FIXED_POINT_CONVERGENCE.
+ *   max |phi^(k) - phi^(k-1)| <= delta_phi_abs_tol.
+ *
+ * The default MOOSE residual-norm check is disabled because its raw L2 norm mixes
+ * equation units and therefore changes when a physically equivalent variable is
+ * rescaled (for example, normalized electron energy -> eV/m^3).
+ *
+ * Legacy AND behavior can be restored explicitly by setting
+ * disable_fixed_point_residual_norm_check = false.
  */
 class DeltaPhiMultiAppConvergence : public DefaultMultiAppFixedPointConvergence
 {

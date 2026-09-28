@@ -96,3 +96,21 @@ This keeps these choices independent:
 - Gummel acceleration: configured with the parent Executioner's MOOSE
   fixed-point algorithm;
 - Poisson response approximation: none, local, or banded.
+
+
+## Convergence metric and physical units
+
+`DeltaPhiMultiAppConvergence` uses the electrostatic coupling metric
+
+```text
+max |phi^(k) - phi^(k-1)| <= delta_phi_abs_tol
+```
+
+as the default Gummel convergence criterion. The raw MOOSE fixed-point residual
+L2 norm is intentionally disabled because it combines dimensional equation
+residuals; changing an electron state from a normalized variable to physical
+`eV/m^3` changes that norm even when the physical solution is equivalent.
+
+The historical residual-AND-delta-phi behavior remains available by explicitly
+setting `disable_fixed_point_residual_norm_check = false` on the convergence
+object.
