@@ -19,4 +19,10 @@ public:
 
 private:
   void validateConfiguration() const;
+
+  bool usingRoleMode() const;
+  bool electronClosureEnabled() const;
+  bool electronKineticsEnabled() const;
+  bool heavyTransportEnabled() const;
+  bool chargeDensityEnabled() const;
 };

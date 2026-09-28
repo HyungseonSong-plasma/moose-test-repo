@@ -94,10 +94,7 @@ def _bind(horizon: str) -> tuple[Path, Path, int, float]:
 def _electron_closure_block() -> str:
     return """[PlasmaClosures]
   [electron]
-    create_electron_closure = true
-    create_electron_kinetics = true
-    create_heavy_transport = false
-    create_charge_density = false
+    role = electron
 
     normalized_electron_density = electron_density_hat
     normalized_electron_energy_density = n_epsilon
@@ -129,10 +126,7 @@ def _electron_closure_block() -> str:
 def _heavy_closure_block() -> str:
     return """[PlasmaClosures]
   [heavy]
-    create_electron_closure = false
-    create_electron_kinetics = false
-    create_heavy_transport = true
-    create_charge_density = false
+    role = heavy_transport
 
     heavy_species_temperature = T_g
     heavy_species_pressure = p_gas
@@ -156,10 +150,7 @@ def _heavy_closure_block() -> str:
 def _charge_closure_block() -> str:
     return """[PlasmaClosures]
   [charge]
-    create_electron_closure = false
-    create_electron_kinetics = false
-    create_heavy_transport = false
-    create_charge_density = true
+    role = electrostatic_charge
 
     mixture_density = rho_const
     electron_number_density = electron_density_m3
@@ -312,19 +303,23 @@ def p0(horizon: str) -> None:
     assert "type = PhysicsElectronTransportLookupMaterial" not in migrated_fast
     assert "type = PhysicsElectronImpactRateMaterial" not in migrated_fast
     assert "[PlasmaClosures]" in migrated_fast
+    assert "role = electron" in migrated_fast
+    assert "create_electron_closure" not in migrated_fast
     assert "electron_mean_energy_output = mean_en_solved" in migrated_fast
     assert "electron_impact_reaction_progress_names = 'R_elastic_O2'" in migrated_fast
 
     # Heavy transport migration.
     assert "type = PhysicsThermalDiffusionMaterial" in legacy_parent
     assert "type = PhysicsThermalDiffusionMaterial" not in migrated_parent
-    assert "create_heavy_transport = true" in migrated_parent
+    assert "role = heavy_transport" in migrated_parent
+    assert "create_heavy_transport" not in migrated_parent
     assert "heavy_species = 'O2 O2s O2p O Om Op Os'" in migrated_parent
 
     # Charge closure migration.
     assert "type = PhysicsPlasmaChargeDensityMaterial" in legacy_poisson
     assert "type = PhysicsPlasmaChargeDensityMaterial" not in migrated_poisson
-    assert "create_charge_density = true" in migrated_poisson
+    assert "role = electrostatic_charge" in migrated_poisson
+    assert "create_charge_density" not in migrated_poisson
     assert "charged_species_ids = 'O2p Om Op'" in migrated_poisson
 
     # Both lanes retain the same qualified Gummel coupling and banded Poisson response.

@@ -19,13 +19,35 @@ for path in required:
     assert path.is_file(), path
 
 action = (ROOT / "src/actions/PlasmaClosuresAction.C").read_text()
+header = (ROOT / "include/actions/PlasmaClosuresAction.h").read_text()
 app = (ROOT / "src/base/PhysicsApp.C").read_text()
+role_smoke = (ROOT / "ci/plasma_closures_smoke.i").read_text()
+legacy_smoke = (ROOT / "ci/plasma_closures_legacy_api_smoke.i").read_text()
 electron = (ROOT / "src/materials/PhysicsElectronClosureMaterial.C").read_text()
 kinetics = (ROOT / "src/materials/PhysicsElectronKineticsMaterial.C").read_text()
 heavy = (ROOT / "src/materials/PhysicsHeavyTransportMaterial.C").read_text()
 
 assert 'registerMooseAction("PhysicsApp", PlasmaClosuresAction, "add_functor_material")' in action
 assert 'syntax.registerActionSyntax("PlasmaClosuresAction", "PlasmaClosures/*")' in app
+
+# Role-based user API plus legacy custom/boolean compatibility.
+assert 'MooseEnum("custom electron heavy_transport electrostatic_charge", "custom")' in action
+for helper in (
+    "electronClosureEnabled",
+    "electronKineticsEnabled",
+    "heavyTransportEnabled",
+    "chargeDensityEnabled",
+):
+    assert helper in header
+    assert helper in action
+
+assert "role = electron" in role_smoke
+assert "role = heavy_transport" in role_smoke
+assert "role = electrostatic_charge" in role_smoke
+assert "create_electron_closure" not in role_smoke
+assert "create_electron_closure = true" in legacy_smoke
+assert "create_heavy_transport = true" in legacy_smoke
+assert "create_charge_density = true" in legacy_smoke
 
 # The user-facing action composes four closures; it does not implement their physics.
 for object_type in (

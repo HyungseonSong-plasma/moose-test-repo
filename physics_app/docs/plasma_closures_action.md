@@ -1,90 +1,111 @@
 # PlasmaClosures Action
 
 `[PlasmaClosures]` is the user-facing composition layer for PhysicsApp plasma closure
-materials. It intentionally does **not** merge all closure physics into one large C++
-class.
+materials. The preferred API is role-based: each MultiApp creates only the closure
+owned by its local physics state.
 
-The default architecture is:
-
-```text
-PlasmaClosuresAction
-├── PhysicsElectronClosureMaterial
-├── PhysicsElectronKineticsMaterial       (optional)
-├── PhysicsHeavyTransportMaterial         (optional)
-└── PhysicsPlasmaChargeDensityMaterial    (optional)
-```
-
-## Electron closure
-
-`PhysicsElectronClosureMaterial` owns both solved mean-energy reconstruction and
-electron transport lookup:
+## Roles
 
 ```text
-normalized electron density
-normalized electron energy density
-            │
-            ▼
-  electron_mean_energy_eV
-            │
-            ├── electron_temperature_K
-            ├── electron_mobility
-            ├── electron_diffusion
-            ├── electron_energy_mobility
-            └── electron_energy_diffusion
+role = electron
+  -> PhysicsElectronClosureMaterial
+  -> PhysicsElectronKineticsMaterial only when reaction-table inputs are supplied
+
+role = heavy_transport
+  -> PhysicsHeavyTransportMaterial
+
+role = electrostatic_charge
+  -> PhysicsPlasmaChargeDensityMaterial
 ```
 
-This replaces the need to configure separate mean-energy and transport-lookup
-materials in new inputs.
+The old `create_electron_closure`, `create_electron_kinetics`,
+`create_heavy_transport`, and `create_charge_density` switches remain available
+under the default `role = custom` for backward compatibility. Do not combine an
+explicit non-custom role with the legacy switches.
 
-## Electron kinetics
+## MultiApp placement
 
-`PhysicsElectronKineticsMaterial` accepts vectors of rate-table files, target
-molar concentrations, and output reaction-progress names. One material therefore
-owns all configured electron-impact lookup tables.
+```text
+input.i
+  [PlasmaClosures]
+    [heavy]
+      role = heavy_transport
 
-## Heavy transport
+fast_sub.i
+  [PlasmaClosures]
+    [electron]
+      role = electron
 
-`PhysicsHeavyTransportMaterial` is a semantic production wrapper around the
-already-qualified `PhysicsThermalDiffusionMaterial`. The underlying implementation
-continues to own mixture-averaged diffusion, thermal diffusion, and charged-charged
-collision transport.
+poisson_sub.i
+  [PlasmaClosures]
+    [charge]
+      role = electrostatic_charge
+```
 
-## Charge density
+This is not duplicate closure work. Each block belongs to a different FEProblem /
+MultiApp instance and consumes local state.
 
-`PhysicsPlasmaChargeDensityMaterial` remains separate because electrostatic charge
-closure is a distinct responsibility from transport closure.
-
-## Example
+## Electron example
 
 ```text
 [PlasmaClosures]
-  [plasma]
-    normalized_electron_density = electron_density_normalized
-    normalized_electron_energy_density = electron_energy_density_normalized
-    electron_energy_reference_eV = 1.0
+  [electron]
+    role = electron
+
+    normalized_electron_density = electron_density_hat
+    normalized_electron_energy_density = n_epsilon
+    electron_energy_reference_eV = 5.73276
+
     gas_pressure = p_gas
     gas_temperature = T_g
     electron_transport_table_file = electron_moments.txt
 
-    create_electron_kinetics = true
     electron_number_density = electron_density_m3
     electron_impact_rate_table_files = 'ionization.txt attachment.txt'
     electron_impact_target_molar_concentrations = 'c_O2 c_O2'
     electron_impact_reaction_progress_names = 'R_ionization R_attachment'
+  []
+[]
+```
 
-    create_heavy_transport = true
+If no electron-impact table parameters are supplied, `role = electron` creates only
+the electron state/transport closure.
+
+## Heavy transport example
+
+```text
+[PlasmaClosures]
+  [heavy]
+    role = heavy_transport
+
+    heavy_species_temperature = T_g
+    heavy_species_pressure = p_gas
+    electron_temperature = electron_temperature_K
+    electron_number_density = electron_density_fast
+
     heavy_transport_data_file = transport_data.txt
     heavy_species = 'O2 O2s O2p O Om Op Os'
     heavy_mass_fractions = 'w_O2 w_O2s w_O2p w_O w_Om w_Op w_Os'
+  []
+[]
+```
 
-    create_charge_density = true
-    mixture_density = rho
+## Electrostatic charge example
+
+```text
+[PlasmaClosures]
+  [charge]
+    role = electrostatic_charge
+
+    mixture_density = rho_const
+    electron_number_density = electron_density_m3
     charged_species_ids = 'O2p Om Op'
-    charged_species_mass_fractions = 'w_O2p w_Om w_Op'
+    charged_species_mass_fractions = 'w_O2p_frozen w_Om_frozen w_Op_frozen'
     charged_species_molar_masses = '0.032 0.016 0.016'
     charged_species_charge_numbers = '1 -1 1'
   []
 []
 ```
 
-Legacy material classes are retained while the new composition path is qualified.
+The C++ materials remain separate internally; the role API only simplifies
+user-facing composition.

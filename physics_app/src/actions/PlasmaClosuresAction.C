@@ -15,22 +15,30 @@ PlasmaClosuresAction::validParams()
       "Composes electron closure, electron-impact kinetics, heavy-particle transport, "
       "and plasma charge-density materials from one user-facing block.");
 
+  params.addParam<MooseEnum>(
+      "role",
+      MooseEnum("custom electron heavy_transport electrostatic_charge", "custom"),
+      "Closure role for this block. 'electron' creates the electron transport closure and "
+      "automatically creates electron kinetics when reaction-table parameters are supplied; "
+      "'heavy_transport' creates heavy-particle transport; 'electrostatic_charge' creates "
+      "the Poisson charge closure. 'custom' preserves the legacy create_* boolean API.");
+
   params.addParam<bool>(
       "create_electron_closure",
       true,
-      "Create PhysicsElectronClosureMaterial.");
+      "Legacy compatibility switch used when role=custom: create PhysicsElectronClosureMaterial.");
   params.addParam<bool>(
       "create_electron_kinetics",
       false,
-      "Create PhysicsElectronKineticsMaterial.");
+      "Legacy compatibility switch used when role=custom: create PhysicsElectronKineticsMaterial.");
   params.addParam<bool>(
       "create_heavy_transport",
       false,
-      "Create PhysicsHeavyTransportMaterial.");
+      "Legacy compatibility switch used when role=custom: create PhysicsHeavyTransportMaterial.");
   params.addParam<bool>(
       "create_charge_density",
       false,
-      "Create PhysicsPlasmaChargeDensityMaterial.");
+      "Legacy compatibility switch used when role=custom: create PhysicsPlasmaChargeDensityMaterial.");
 
   // Electron closure inputs.
   params.addParam<MooseFunctorName>(
@@ -164,16 +172,74 @@ PlasmaClosuresAction::PlasmaClosuresAction(const InputParameters & parameters)
   validateConfiguration();
 }
 
+bool
+PlasmaClosuresAction::usingRoleMode() const
+{
+  return getParam<MooseEnum>("role") != "custom";
+}
+
+bool
+PlasmaClosuresAction::electronClosureEnabled() const
+{
+  const auto & role = getParam<MooseEnum>("role");
+  return role == "custom" ? getParam<bool>("create_electron_closure") : role == "electron";
+}
+
+bool
+PlasmaClosuresAction::electronKineticsEnabled() const
+{
+  const auto & role = getParam<MooseEnum>("role");
+  if (role == "custom")
+    return getParam<bool>("create_electron_kinetics");
+
+  if (role != "electron")
+    return false;
+
+  // In electron role, kinetics is optional and is enabled by supplying any
+  // reaction-table configuration. Validation below then requires the complete set.
+  return isParamValid("electron_impact_rate_table_files") ||
+         isParamValid("electron_impact_target_molar_concentrations") ||
+         isParamValid("electron_impact_reaction_progress_names");
+}
+
+bool
+PlasmaClosuresAction::heavyTransportEnabled() const
+{
+  const auto & role = getParam<MooseEnum>("role");
+  return role == "custom" ? getParam<bool>("create_heavy_transport")
+                          : role == "heavy_transport";
+}
+
+bool
+PlasmaClosuresAction::chargeDensityEnabled() const
+{
+  const auto & role = getParam<MooseEnum>("role");
+  return role == "custom" ? getParam<bool>("create_charge_density")
+                          : role == "electrostatic_charge";
+}
+
 void
 PlasmaClosuresAction::validateConfiguration() const
 {
+  if (usingRoleMode())
+    for (const auto & legacy_switch :
+         {"create_electron_closure",
+          "create_electron_kinetics",
+          "create_heavy_transport",
+          "create_charge_density"})
+      if (isParamSetByUser(legacy_switch))
+        paramError(legacy_switch,
+                   "Do not combine role=",
+                   getParam<MooseEnum>("role"),
+                   " with legacy create_* switches. Use role alone.");
+
   auto require = [this](const std::string & parameter, const std::string & owner)
   {
     if (!isParamValid(parameter))
       paramError(parameter, parameter, " is required when ", owner, " is enabled.");
   };
 
-  if (getParam<bool>("create_electron_closure"))
+  if (electronClosureEnabled())
   {
     require("normalized_electron_density", "create_electron_closure");
     require("normalized_electron_energy_density", "create_electron_closure");
@@ -183,20 +249,20 @@ PlasmaClosuresAction::validateConfiguration() const
     require("electron_transport_table_file", "create_electron_closure");
   }
 
-  if (getParam<bool>("create_electron_kinetics"))
+  if (electronKineticsEnabled())
   {
     require("electron_number_density", "create_electron_kinetics");
     require("electron_impact_rate_table_files", "create_electron_kinetics");
     require("electron_impact_target_molar_concentrations", "create_electron_kinetics");
     require("electron_impact_reaction_progress_names", "create_electron_kinetics");
 
-    if (!getParam<bool>("create_electron_closure") && !isParamValid("electron_mean_energy"))
+    if (!electronClosureEnabled() && !isParamValid("electron_mean_energy"))
       paramError("electron_mean_energy",
                  "electron_mean_energy is required for electron kinetics when "
                  "create_electron_closure=false.");
   }
 
-  if (getParam<bool>("create_heavy_transport"))
+  if (heavyTransportEnabled())
   {
     require("heavy_transport_data_file", "create_heavy_transport");
     require("heavy_species", "create_heavy_transport");
@@ -213,7 +279,7 @@ PlasmaClosuresAction::validateConfiguration() const
                  "create_heavy_transport=true.");
   }
 
-  if (getParam<bool>("create_charge_density"))
+  if (chargeDensityEnabled())
   {
     require("mixture_density", "create_charge_density");
     require("electron_number_density", "create_charge_density");
@@ -229,7 +295,7 @@ PlasmaClosuresAction::act()
 {
   const std::string prefix = name();
 
-  if (getParam<bool>("create_electron_closure"))
+  if (electronClosureEnabled())
   {
     auto material_params = _factory.getValidParams("PhysicsElectronClosureMaterial");
 
@@ -265,7 +331,7 @@ PlasmaClosuresAction::act()
         "PhysicsElectronClosureMaterial", prefix + "_electron_closure", material_params);
   }
 
-  if (getParam<bool>("create_electron_kinetics"))
+  if (electronKineticsEnabled())
   {
     auto material_params = _factory.getValidParams("PhysicsElectronKineticsMaterial");
 
@@ -290,7 +356,7 @@ PlasmaClosuresAction::act()
         "PhysicsElectronKineticsMaterial", prefix + "_electron_kinetics", material_params);
   }
 
-  if (getParam<bool>("create_heavy_transport"))
+  if (heavyTransportEnabled())
   {
     auto material_params = _factory.getValidParams("PhysicsHeavyTransportMaterial");
 
@@ -314,7 +380,7 @@ PlasmaClosuresAction::act()
     if (isParamValid("electron_temperature"))
       material_params.set<MooseFunctorName>("electron_temperature") =
           getParam<MooseFunctorName>("electron_temperature");
-    else if (getParam<bool>("create_electron_closure"))
+    else if (electronClosureEnabled())
       material_params.set<MooseFunctorName>("electron_temperature") =
           getParam<MooseFunctorName>("electron_temperature_output");
 
@@ -339,7 +405,7 @@ PlasmaClosuresAction::act()
         "PhysicsHeavyTransportMaterial", prefix + "_heavy_transport", material_params);
   }
 
-  if (getParam<bool>("create_charge_density"))
+  if (chargeDensityEnabled())
   {
     auto material_params = _factory.getValidParams("PhysicsPlasmaChargeDensityMaterial");
 

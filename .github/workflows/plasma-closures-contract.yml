@@ -16,6 +16,7 @@ on:
       - 'physics_app/src/base/PhysicsApp.C'
       - 'physics_app/ci/check_plasma_closures_contract.py'
       - 'physics_app/ci/plasma_closures_smoke.i'
+      - 'physics_app/ci/plasma_closures_legacy_api_smoke.i'
       - 'physics_app/ci/plasma_closures_transport_table.txt'
       - 'physics_app/ci/plasma_closures_rate_a.txt'
       - 'physics_app/ci/plasma_closures_rate_b.txt'
@@ -60,5 +61,6 @@ jobs:
               python3 ci/check_plasma_closures_contract.py
               make -j2
               ./physics-opt --check-input -i ci/plasma_closures_smoke.i
+              ./physics-opt --check-input -i ci/plasma_closures_legacy_api_smoke.i
               ./physics-opt -i ci/plasma_closures_smoke.i
             '
