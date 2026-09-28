@@ -94,9 +94,9 @@ PhysicsElectronClosureMaterial::PhysicsElectronClosureMaterial(
     _electron_energy_density(nullptr),
     _gas_pressure(getFunctor<ADReal>("gas_pressure")),
     _gas_temperature(getFunctor<ADReal>("gas_temperature")),
-    _electron_energy_reference_eV(isParamValid("electron_energy_reference_eV")
-                                      ? getParam<Real>("electron_energy_reference_eV")
-                                      : 1.0),
+    _electron_energy_reference_eV(_physical_state
+                                      ? 1.0
+                                      : getParam<Real>("electron_energy_reference_eV")),
     _transport_table_file(getParam<FileName>("transport_table_file")),
     _table(_transport_table_file, 1, {2, 3}),
     _bounds_policy(parseBoundsPolicy(getParam<std::string>("lookup_bounds_policy")))
