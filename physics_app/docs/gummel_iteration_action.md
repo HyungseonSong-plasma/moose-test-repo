@@ -214,6 +214,33 @@ For example:
 []
 ```
 
+### Potential routing under parent-level acceleration
+
+When the Gummel driver applies Steffensen (or another parent-level fixed-point
+transformation) to the potential iterate, do not overwrite the transformed
+driver variable with a direct raw Poisson-to-electron sibling copy. Select:
+
+```text
+potential_transfer_mode = through_parent
+parent_potential_variable = potential_from_poisson
+```
+
+The Action then creates this path automatically:
+
+```text
+SUB_POISSON.phi
+    -> GUMMEL_DRIVER.potential_from_poisson
+    -> parent fixed-point transform
+    -> SUB_ELECTRON.potential_from_poisson
+```
+
+The Poisson-to-driver copy executes after the Poisson solve on
+`TIMESTEP_END`; the driver-to-electron copy executes before the next electron
+solve on `TIMESTEP_BEGIN`. This reproduces the qualified Gen34 semantics in
+which Steffensen transforms the fast-parent potential before the next electron
+solve. The default remains `direct_sibling` for backward compatibility and
+for configurations without parent-level potential acceleration.
+
 The driver Executioner must also enable more than the pinned-MOOSE default
 single fixed-point iteration. The qualified endpoint used Steffensen acceleration;
 the structural fixture therefore carries:
