@@ -2,13 +2,16 @@
 
 `GummelIterationAction` supports two orchestration modes.
 
-The preferred mode runs the electron and electrostatic systems as sibling MultiApps.
-The parent may be orchestration-only or may own local heavy-particle physics:
+The preferred mode runs the electron and electrostatic systems as sibling MultiApps
+inside a dedicated Gummel driver. When heavy particles are present, the heavy solve
+lives one level above the driver so its state can remain frozen throughout inner
+electron-Poisson convergence:
 
 ```text
-MAIN : orchestration-only or heavy-particle FEProblem
- |- SUB_ELECTRON : solves n_e, mean_en; receives phi and mapped heavy state
- '- SUB_POISSON  : solves phi; receives n_e and mapped heavy charge state
+OUTER_MAIN : heavy-particle FEProblem
+  '- GUMMEL_DRIVER : solve = false, frozen heavy snapshot
+       |- SUB_ELECTRON : solves n_e, mean_en; receives phi and frozen heavy state
+       '- SUB_POISSON  : solves phi; receives n_e and frozen charged-heavy state
 ```
 
 The Action does not construct either subsystem's equations. Each input file
@@ -89,35 +92,92 @@ Additional fields may be shared with the two generic mapping pairs:
 For example, `mean_en` may also be copied to Poisson when a Poisson-side
 response model needs electron energy.
 
-## Heavy parent with PlasmaClosures
+## Frozen-heavy outer coupling with PlasmaClosures
 
-A parent application that owns heavy-particle state can combine
-`[PlasmaClosures] role = heavy_transport` with the sibling Gummel topology.
-The Gummel Action still does not construct heavy equations or closures; it only
-maps parent variables to the two siblings and maps selected sibling state back
-to parent auxiliary variables.
+To keep the heavy state invariant during every inner Gummel iteration, place
+the heavy FEProblem outside the Gummel Action and introduce a dedicated
+`GUMMEL_DRIVER` MultiApp:
 
 ```text
-MAIN / heavy
+OUTER_MAIN / HEAVY
   PlasmaClosures(role = heavy_transport)
-  T_g, p_gas, rho, heavy mass fractions
-       |                         ^
-       | parent -> electron      | electron -> parent
-       v                         |
-SUB_ELECTRON --------------------
-  PlasmaClosures(role = electron)
-  solves n_e, mean_en; exports T_e
-
-MAIN / heavy
-       |                         ^
-       | parent -> Poisson       | Poisson -> parent
-       v                         |
-SUB_POISSON ---------------------
-  PlasmaClosures(role = electrostatic_charge)
-  solves phi
+  H^n = {T_g, p_gas, rho, w_k, ...}
+       |
+       | copy once before driver execution
+       v
+GUMMEL_DRIVER
+  solve = false
+  frozen snapshot H^n
+       |
+       +-- SUB_ELECTRON
+       |     PlasmaClosures(role = electron)
+       |     solves n_e, mean_en
+       |
+       '-- SUB_POISSON
+             PlasmaClosures(role = electrostatic_charge)
+             solves phi
 ```
 
-The four optional mapping pairs are:
+The outer parent uses ordinary `MultiAppCopyTransfer` objects to snapshot
+heavy state into the driver and to recover only the final fast state after the
+driver returns:
+
+```text
+OUTER_MAIN.H^n
+    -- TO_MULTIAPP before driver -->
+GUMMEL_DRIVER.H_frozen
+
+GUMMEL_DRIVER.{n_e,T_e,phi}_converged
+    -- FROM_MULTIAPP after driver -->
+OUTER_MAIN fast-state auxiliaries
+```
+
+A representative outer block is:
+
+```text
+[PlasmaClosures]
+  [heavy]
+    role = heavy_transport
+    heavy_species_temperature = T_g
+    heavy_species_pressure = p_gas
+    electron_temperature = T_e_from_gummel
+    electron_number_density = n_e_from_gummel
+    heavy_transport_data_file = transport_data.txt
+    heavy_species = 'O2 O2s O2p O Om Op Os'
+    heavy_mass_fractions = 'w_O2 w_O2s w_O2p w_O w_Om w_Op w_Os'
+  []
+[]
+
+[MultiApps]
+  [gummel_driver]
+    type = TransientMultiApp
+    input_files = 'gummel_driver.i'
+    execute_on = TIMESTEP_BEGIN
+    no_restore = true
+  []
+[]
+
+[Transfers]
+  [heavy_snapshot_to_gummel]
+    type = MultiAppCopyTransfer
+    to_multi_app = gummel_driver
+    source_variable = 'T_g p_gas rho w_O2p w_Om w_Op'
+    variable =
+      'T_g_frozen p_gas_frozen rho_frozen w_O2p_frozen w_Om_frozen w_Op_frozen'
+  []
+
+  [converged_gummel_to_heavy]
+    type = MultiAppCopyTransfer
+    from_multi_app = gummel_driver
+    source_variable = 'n_e_converged T_e_converged phi_converged'
+    variable = 'n_e_from_gummel T_e_from_gummel phi_from_gummel'
+  []
+[]
+```
+
+Inside `gummel_driver.i`, the `[GummelIteration]` Action owns only the
+electron/Poisson inner coupling. Its four parent mapping pairs now refer to
+the driver itself, not to the outer heavy solver:
 
 - `parent_to_electron_source_variables` /
   `parent_to_electron_variables`
@@ -128,65 +188,61 @@ The four optional mapping pairs are:
 - `poisson_to_parent_source_variables` /
   `poisson_to_parent_variables`
 
-A representative parent block is:
+For example:
 
 ```text
-[PlasmaClosures]
-  [heavy]
-    role = heavy_transport
-    heavy_species_temperature = T_g
-    heavy_species_pressure = p_gas
-    electron_temperature = T_e_from_electron
-    electron_number_density = n_e_from_electron
-    heavy_transport_data_file = transport_data.txt
-    heavy_species = 'O2 O2s O2p O Om Op Os'
-    heavy_mass_fractions = 'w_O2 w_O2s w_O2p w_O w_Om w_Op w_Os'
-  []
-[]
-
 [GummelIteration]
   [electron_poisson]
-    electron_input_file = sub_electron.i
+    electron_input_file = electron_sub.i
     poisson_multiapp = poisson
-    poisson_input_file = sub_poisson.i
+    poisson_input_file = poisson_sub.i
 
-    parent_to_electron_source_variables = 'T_g p_gas'
+    parent_to_electron_source_variables = 'T_g_frozen p_gas_frozen'
     parent_to_electron_variables = 'T_g_from_heavy p_gas_from_heavy'
 
     electron_to_parent_source_variables = 'n_e T_e_export'
-    electron_to_parent_variables = 'n_e_from_electron T_e_from_electron'
+    electron_to_parent_variables = 'n_e_converged T_e_converged'
 
-    parent_to_poisson_source_variables = 'rho w_O2p w_Om w_Op'
+    parent_to_poisson_source_variables =
+      'rho_frozen w_O2p_frozen w_Om_frozen w_Op_frozen'
     parent_to_poisson_variables =
       'rho_from_heavy w_O2p_from_heavy w_Om_from_heavy w_Op_from_heavy'
 
     poisson_to_parent_source_variables = 'phi'
-    poisson_to_parent_variables = 'phi_from_poisson'
+    poisson_to_parent_variables = 'phi_converged'
   []
 []
 ```
 
-Because `MultiAppCopyTransfer` writes into auxiliary variables, every receiving
-target in these parent-state mappings must be an AuxVariable. Derived
-FunctorMaterial outputs such as `electron_temperature_K` should first be
-sampled into an export AuxVariable (for example `T_e_export`) before a
-child-to-parent copy.
-
-On the pinned MOOSE revision, parent-to-child transfers use
-`SAME_AS_MULTIAPP` and occur before the associated child solve, while
-child-to-parent transfers occur after that child solve. With an actively solved
-heavy parent, the resulting fixed-point ordering is therefore a three-block
-coupling rather than a frozen-heavy inner Gummel:
+The driver snapshot variables are AuxVariables and are never advanced by a
+heavy equation. Therefore, for every inner fixed-point iteration `k` in outer
+heavy step `n`,
 
 ```text
-TIMESTEP_BEGIN : heavy(previous) -> electron -> electron solve -> electron -> heavy
-parent solve   : heavy update
-TIMESTEP_END   : heavy(updated)  -> Poisson  -> Poisson solve  -> Poisson -> heavy
+H^(n,k) = H^n
 ```
 
-If strict time-scale separation requires the heavy state to remain frozen until
-electron-Poisson convergence, keep the heavy solve outside this fixed-point
-cycle and use this mapping surface only at the outer coupling boundary.
+by construction.
+
+The resulting ordering is:
+
+```text
+outer step n:
+  1. copy H^n -> GUMMEL_DRIVER frozen snapshot
+  2. execute inner electron <-> Poisson fixed point until convergence
+  3. copy converged n_e / T_e / phi -> OUTER_MAIN
+  4. solve heavy equations once: H^n -> H^(n+1)
+```
+
+This preserves the slow/fast separation used by the qualified Gummel endpoint.
+If an application instead places active heavy equations in the same FEProblem
+that owns `[GummelIteration]`, it becomes a three-block fixed-point scheme and
+does not satisfy the frozen-heavy contract.
+
+Because `MultiAppCopyTransfer` writes into auxiliary variables, every receiving
+target must be an AuxVariable. Derived FunctorMaterial outputs such as
+`electron_temperature_K` should first be sampled into an export AuxVariable
+(for example `T_e_export`) before a child-to-parent copy.
 
 ## Required sub-application interface
 
@@ -268,11 +324,12 @@ electron-to-Poisson and Poisson-to-electron mapping lists are required.
 
 The preferred architecture separates ownership cleanly:
 
-- MAIN: fixed-point policy and optionally local heavy-particle physics;
-- SUB_ELECTRON: electron density/energy/momentum equations;
-- SUB_POISSON: electrostatic equation and optional electron-response
-  approximation.
+- OUTER_MAIN: heavy equations, slow-time integration, and heavy `PlasmaClosures`;
+- GUMMEL_DRIVER: frozen heavy snapshot plus inner fixed-point policy;
+- SUB_ELECTRON: electron equations and electron `PlasmaClosures`;
+- SUB_POISSON: electrostatic equation, charge `PlasmaClosures`, and optional
+  electron-response approximation.
 
-The Action owns only the MultiApps, sibling/parent field transfers, ordering,
-and optional convergence object. PlasmaClosures remains the local physics
-composition layer in each FEProblem.
+The Action owns only the two inner MultiApps, driver/sibling field transfers,
+ordering, and optional convergence object. The outer heavy coupling remains an
+ordinary MOOSE MultiApp/Transfer layer.
