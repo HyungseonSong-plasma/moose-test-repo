@@ -12,18 +12,28 @@ PhysicsElectronClosureMaterial::validParams()
   auto params = FunctorMaterial::validParams();
 
   params.addClassDescription(
-      "Unified electron mean-energy and transport closure for the normalized FV electron state.");
+      "Unified electron mean-energy and transport closure. Preferred physical mode "
+      "uses number density [1/m^3] and electron energy density [eV/m^3].");
 
-  params.addRequiredParam<MooseFunctorName>(
+  params.addParam<MooseEnum>(
+      "state_form",
+      MooseEnum("normalized physical_eV", "normalized"),
+      "Electron state convention.");
+  params.addParam<MooseFunctorName>(
+      "electron_number_density",
+      "Physical electron number density [1/m^3] for state_form=physical_eV.");
+  params.addParam<MooseFunctorName>(
+      "electron_energy_density",
+      "Physical electron energy density [eV/m^3] for state_form=physical_eV.");
+  params.addParam<MooseFunctorName>(
       "normalized_electron_density",
-      "Normalized electron number-density state n_e_hat.");
-  params.addRequiredParam<MooseFunctorName>(
+      "Historical normalized electron number-density state.");
+  params.addParam<MooseFunctorName>(
       "normalized_electron_energy_density",
-      "Normalized electron energy-density state n_epsilon_hat.");
-  params.addRequiredParam<Real>(
+      "Historical normalized electron energy-density state.");
+  params.addParam<Real>(
       "electron_energy_reference_eV",
-      "Positive normalization scale epsilon_ref used in mean_energy = "
-      "epsilon_ref*n_epsilon_hat/n_e_hat [eV].");
+      "Historical normalization energy epsilon_ref [eV], used only in normalized mode.");
   params.addRequiredParam<MooseFunctorName>(
       "gas_pressure", "Absolute neutral-gas pressure [Pa].");
   params.addRequiredParam<MooseFunctorName>(
@@ -79,9 +89,9 @@ PhysicsElectronClosureMaterial::validParams()
 PhysicsElectronClosureMaterial::PhysicsElectronClosureMaterial(
     const InputParameters & parameters)
   : FunctorMaterial(parameters),
-    _normalized_electron_density(getFunctor<ADReal>("normalized_electron_density")),
-    _normalized_electron_energy_density(
-        getFunctor<ADReal>("normalized_electron_energy_density")),
+    _physical_state(getParam<MooseEnum>("state_form") == "physical_eV"),
+    _electron_density(nullptr),
+    _electron_energy_density(nullptr),
     _gas_pressure(getFunctor<ADReal>("gas_pressure")),
     _gas_temperature(getFunctor<ADReal>("gas_temperature")),
     _electron_energy_reference_eV(getParam<Real>("electron_energy_reference_eV")),
@@ -89,28 +99,56 @@ PhysicsElectronClosureMaterial::PhysicsElectronClosureMaterial(
     _table(_transport_table_file, 1, {2, 3}),
     _bounds_policy(parseBoundsPolicy(getParam<std::string>("lookup_bounds_policy")))
 {
-  if (!std::isfinite(_electron_energy_reference_eV) ||
-      _electron_energy_reference_eV <= 0.0)
-    paramError("electron_energy_reference_eV",
-               "Electron-energy normalization scale must be finite and positive.");
+  if (_physical_state)
+  {
+    if (!isParamValid("electron_number_density"))
+      paramError("electron_number_density",
+                 "electron_number_density is required for state_form=physical_eV.");
+    if (!isParamValid("electron_energy_density"))
+      paramError("electron_energy_density",
+                 "electron_energy_density is required for state_form=physical_eV.");
+    _electron_density = &getFunctor<ADReal>("electron_number_density");
+    _electron_energy_density = &getFunctor<ADReal>("electron_energy_density");
+  }
+  else
+  {
+    if (!isParamValid("normalized_electron_density"))
+      paramError("normalized_electron_density",
+                 "normalized_electron_density is required for state_form=normalized.");
+    if (!isParamValid("normalized_electron_energy_density"))
+      paramError("normalized_electron_energy_density",
+                 "normalized_electron_energy_density is required for state_form=normalized.");
+    if (!isParamValid("electron_energy_reference_eV"))
+      paramError("electron_energy_reference_eV",
+                 "electron_energy_reference_eV is required for state_form=normalized.");
+    if (!std::isfinite(_electron_energy_reference_eV) ||
+        _electron_energy_reference_eV <= 0.0)
+      paramError("electron_energy_reference_eV",
+                 "Electron-energy normalization scale must be finite and positive.");
+    _electron_density = &getFunctor<ADReal>("normalized_electron_density");
+    _electron_energy_density = &getFunctor<ADReal>("normalized_electron_energy_density");
+  }
 
   const auto mean_energy = [this](const auto & r, const auto & state) -> ADReal
   {
-    const ADReal n_hat = _normalized_electron_density(r, state);
-    const ADReal eps_hat = _normalized_electron_energy_density(r, state);
+    const ADReal density = (*_electron_density)(r, state);
+    const ADReal energy_density = (*_electron_energy_density)(r, state);
 
-    if (!std::isfinite(n_hat.value()) || n_hat.value() <= 0.0)
-      mooseError("PhysicsElectronClosureMaterial requires normalized_electron_density > 0; got ",
-                 n_hat.value(),
+    if (!std::isfinite(density.value()) || density.value() <= 0.0)
+      mooseError("PhysicsElectronClosureMaterial requires electron density > 0; got ",
+                 density.value(),
                  ".");
 
-    if (!std::isfinite(eps_hat.value()) || eps_hat.value() < 0.0)
+    if (!std::isfinite(energy_density.value()) || energy_density.value() < 0.0)
       mooseError(
-          "PhysicsElectronClosureMaterial requires normalized_electron_energy_density >= 0; got ",
-          eps_hat.value(),
+          "PhysicsElectronClosureMaterial requires electron energy density >= 0; got ",
+          energy_density.value(),
           ".");
 
-    const ADReal value = _electron_energy_reference_eV * eps_hat / n_hat;
+    const ADReal value =
+        _physical_state
+            ? energy_density / density
+            : _electron_energy_reference_eV * energy_density / density;
 
     if (!std::isfinite(value.value()))
       mooseError("PhysicsElectronClosureMaterial produced non-finite mean electron energy.");
