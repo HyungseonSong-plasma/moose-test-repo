@@ -15,8 +15,11 @@
  * The sibling MultiApps exchange their coupling fields directly with
  * MultiAppCopyTransfer. Optional parent-state mappings let the driver provide
  * frozen gas/heavy state to either sibling and collect electron/electrostatic
- * state for export to an outer heavy solver. The Action does not construct any
- * subsystem equations; each input file owns its local physics.
+ * state for export to an outer heavy solver. The potential may be copied
+ * directly between siblings or routed through a driver variable so parent-level
+ * fixed-point acceleration is applied before the next electron solve. The
+ * Action does not construct any subsystem equations; each input file owns its
+ * local physics.
  *
  * Legacy mode, where the current application owns the electron equations and
  * only Poisson is a MultiApp, remains supported when electron_input_file is
