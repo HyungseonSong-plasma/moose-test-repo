@@ -1,4 +1,11 @@
 #!/usr/bin/env python3
+"""Transform the already-qualified PlasmaClosures Gen34 lane into frozen-heavy sibling Gummel.
+
+Baseline input must come from Issue337 plasma_closures full-horizon generation at
+qualification head c9726d45e912f2476958d580c88e3421b5d4868b. Closure construction,
+physics kernels, BCs, clocks, band-5 response and output policy remain unchanged;
+only the MultiApp topology is refactored.
+"""
 from __future__ import annotations
 import argparse
 import shutil
@@ -37,25 +44,6 @@ def insert_before(text: str, marker: str, payload: str) -> str:
 
 
 def transform_parent(src: str) -> str:
-    src = remove_subblock(src, "heavy_transport")
-    plasma = """[PlasmaClosures]
-  [heavy]
-    role = heavy_transport
-    heavy_species_temperature = T_g
-    heavy_species_pressure = p_gas
-    electron_temperature = electron_temperature_K
-    electron_number_density = electron_density_fast
-    heavy_transport_data_file = transport_data.txt
-    heavy_species = 'O2 O2s O2p O Om Op Os'
-    heavy_mass_fractions = 'w_O2 w_O2s w_O2p w_O w_Om w_Op w_Os'
-    heavy_mixture_diffusion_names = 'D_mix_O2 D_mix_O2s D_mix_O2p D_mix_O D_mix_Om D_mix_Op D_mix_Os'
-    heavy_thermal_diffusion_names = 'D_T_O2 D_T_O2s D_T_O2p D_T_O D_T_Om D_T_Op D_T_Os'
-    heavy_thermal_diffusion_ratio_names = 'kT_O2 kT_O2s kT_O2p kT_O kT_Om kT_Op kT_Os'
-  []
-[]
-"""
-    src = insert_before(src, "[FVKernels]", plasma)
-
     old_multi = """[MultiApps]
   [electron]
     type = TransientMultiApp
@@ -87,9 +75,9 @@ def transform_parent(src: str) -> str:
 
 
 def transform_electron(src: str) -> str:
-    src = remove_block(src, "[MultiApps]")
-    src = remove_block(src, "[Transfers]")
-    src = remove_block(src, "[Convergence]")
+    # The accepted migrated lane already owns electron PlasmaClosures.  Move
+    # only its Gummel orchestration into the dedicated driver.
+    src = remove_block(src, "[GummelIteration]")
 
     drop = {
         "fixed_point_algorithm",
@@ -112,20 +100,9 @@ def transform_electron(src: str) -> str:
 
 
 def transform_poisson(src: str) -> str:
-    src = remove_subblock(src, "plasma_charge")
-    plasma = """[PlasmaClosures]
-  [charge]
-    role = electrostatic_charge
-    mixture_density = rho_const
-    electron_number_density = electron_density_m3
-    charged_species_ids = 'O2p Om Op'
-    charged_species_mass_fractions = 'w_O2p_frozen w_Om_frozen w_Op_frozen'
-    charged_species_molar_masses = '0.032 0.016 0.016'
-    charged_species_charge_numbers = '1 -1 1'
-  []
-[]
-"""
-    return insert_before(src, "[FVKernels]", plasma)
+    # Charge PlasmaClosures and band-5 Poisson response were already qualified;
+    # topology migration must not alter them.
+    return src
 
 
 def driver_input() -> str:
@@ -298,15 +275,19 @@ def main() -> None:
     electron = (sibling / "electron_sub.i").read_text()
     poisson = (sibling / "poisson_sub.i").read_text()
 
-    assert "role = heavy_transport" in parent
+    assert "[PlasmaClosures]" in parent
+    assert "create_heavy_transport = true" in parent
     assert "input_files = 'gummel_driver.i'" in parent
     assert "sub_cycling = true" in parent
-    assert "[MultiApps]" not in electron
-    assert "[Transfers]" not in electron
+    assert "[PlasmaClosures]" in electron
+    assert "create_electron_closure = true" in electron
+    assert "[GummelIteration]" not in electron
     assert "potential_transfer_mode = through_parent" in driver
     assert "transformed_variables = 'potential_from_poisson'" in driver
     assert "delta_phi_abs_tol = 9.9999999999999995e-07" in driver
-    assert "role = electrostatic_charge" in poisson
+    assert "[PlasmaClosures]" in poisson
+    assert "create_charge_density = true" in poisson
+    assert "type = FVElectronResponseBandedCorrection" in poisson
     print("GEN34_SIBLING_PREPARE: PASS")
 
 
