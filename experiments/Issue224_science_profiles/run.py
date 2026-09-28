@@ -38,9 +38,9 @@ PARITY_TOL = 1.0e-4
 LEAN_KEEP = {
     "Postprocessors/domain_volume",
     "Postprocessors/n_e_inventory",
-    "Postprocessors/s5r_n_epsilon_inventory",
+    "Postprocessors/s5r_mean_en_inventory",
     "Postprocessors/n_e_min",
-    "Postprocessors/s5r_n_epsilon_min",
+    "Postprocessors/s5r_mean_en_min",
     "Postprocessors/n_e_avg",
     "Postprocessors/sum_w_min",
     "Postprocessors/sum_w_max",
@@ -65,8 +65,8 @@ MONITORED_EXTRA = {
 }
 MONITORED_KEEP = LEAN_KEEP | MONITORED_EXTRA
 FINGERPRINT_KEYS = (
-    "domain_volume", "n_e_inventory", "s5r_n_epsilon_inventory", "n_e_min",
-    "s5r_n_epsilon_min", "n_e_avg", "sum_w_min", "sum_w_max", "w_O2_avg",
+    "domain_volume", "n_e_inventory", "s5r_mean_en_inventory", "n_e_min",
+    "s5r_mean_en_min", "n_e_avg", "sum_w_min", "sum_w_max", "w_O2_avg",
     "w_O2s_avg", "w_O2p_avg", "w_O_avg", "w_Om_avg", "w_Op_avg", "w_Os_avg",
     "issue217_phi_min", "issue217_phi_max",
 )
@@ -165,7 +165,7 @@ def _compare(a: Mapping[str, float], b: Mapping[str, float]) -> dict[str, Any]:
     return {"values": values, "max_symmetric_relative_difference": mx, "tolerance": PARITY_TOL, "pass": bool(values) and mx <= PARITY_TOL}
 
 def _state_sanity(fp: Mapping[str, float]) -> dict[str, Any]:
-    checks = {"finite": all(math.isfinite(float(v)) for v in fp.values()), "electron_density_positive": float(fp["n_e_min"]) >= -1.0e-12, "electron_energy_positive": float(fp["s5r_n_epsilon_min"]) > 0.0, "composition_min": abs(float(fp["sum_w_min"]) - 1.0) <= 1.0e-8, "composition_max": abs(float(fp["sum_w_max"]) - 1.0) <= 1.0e-8, "domain_positive": float(fp["domain_volume"]) > 0.0}
+    checks = {"finite": all(math.isfinite(float(v)) for v in fp.values()), "electron_density_positive": float(fp["n_e_min"]) >= -1.0e-12, "electron_energy_positive": float(fp["s5r_mean_en_min"]) > 0.0, "composition_min": abs(float(fp["sum_w_min"]) - 1.0) <= 1.0e-8, "composition_max": abs(float(fp["sum_w_max"]) - 1.0) <= 1.0e-8, "domain_positive": float(fp["domain_volume"]) > 0.0}
     return {"checks": checks, "pass": all(checks.values())}
 
 def _execute_physical(exe: Path, out: Path, name: str, profile: str, *, timeout: float) -> dict[str, Any]:
