@@ -371,10 +371,12 @@ jobs:
           set -euxo pipefail
           docker pull "$EXPECTED_BUILD_BASE_REF"
           docker run --rm \
+            --entrypoint /bin/bash \
+            --user 0:0 \
             -v "$PWD:/workspace" \
             -w /workspace/physics_app \
             "$EXPECTED_BUILD_BASE_REF" \
-            bash -lc '
+            -lc '
               set -euxo pipefail
               source /environment
               export MOOSE_DIR=/opt/physics_vendor/moose
@@ -395,7 +397,7 @@ jobs:
               -v "$PWD:/workspace" \
               -w /workspace/.gummel-heavy-sibling-parity \
               "$EXPECTED_BUILD_BASE_REF" \
-              bash -lc "
+              -lc "
                 set -euxo pipefail
                 source /environment
                 export MOOSE_DIR=/opt/physics_vendor/moose
@@ -411,10 +413,12 @@ jobs:
         run: |
           set -euxo pipefail
           docker run --rm \
+            --entrypoint /bin/bash \
+            --user 0:0 \
             -v "$PWD:/workspace" \
             -w /workspace/.gummel-heavy-sibling-parity \
             "$EXPECTED_BUILD_BASE_REF" \
-            bash -lc '
+            -lc '
               set -euxo pipefail
               source /environment
               export MOOSE_DIR=/opt/physics_vendor/moose
