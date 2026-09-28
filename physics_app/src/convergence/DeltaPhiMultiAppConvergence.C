@@ -39,10 +39,10 @@ DeltaPhiMultiAppConvergence::DeltaPhiMultiAppConvergence(
     const InputParameters & parameters)
   : DefaultMultiAppFixedPointConvergence(parameters),
     _delta_phi(isParamValid("delta_phi_pp") ? &getPostprocessorValue("delta_phi_pp") : nullptr),
-    _delta_phi_multiapp(
+    _delta_phi_multiapp_name(
         isParamValid("delta_phi_multiapp")
-            ? _fe_problem.getMultiApp(getParam<MultiAppName>("delta_phi_multiapp"))
-            : nullptr),
+            ? std::string(getParam<MultiAppName>("delta_phi_multiapp"))
+            : std::string()),
     _delta_phi_subapp_pp(
         isParamValid("delta_phi_subapp_pp")
             ? std::string(getParam<PostprocessorName>("delta_phi_subapp_pp"))
@@ -71,19 +71,24 @@ DeltaPhiMultiAppConvergence::deltaPhi() const
   if (_delta_phi)
     return *_delta_phi;
 
-  if (!_delta_phi_multiapp)
+  if (_delta_phi_multiapp_name.empty())
     mooseError("DeltaPhiMultiAppConvergence has no delta-phi source.");
 
-  if (_delta_phi_multiapp->numGlobalApps() != 1)
+  // MultiApps created by an Action are not guaranteed to be retrievable while
+  // Convergence objects are being constructed. Resolve the named sibling only
+  // when fixed-point convergence is actually evaluated, after initial setup.
+  const auto multiapp = _fe_problem.getMultiApp(_delta_phi_multiapp_name);
+
+  if (multiapp->numGlobalApps() != 1)
     mooseError(
         "DeltaPhiMultiAppConvergence sibling mode currently requires exactly one "
         "delta-phi sub-application. Got ",
-        _delta_phi_multiapp->numGlobalApps(),
+        multiapp->numGlobalApps(),
         ".");
 
   Real value = -std::numeric_limits<Real>::max();
-  if (_delta_phi_multiapp->hasLocalApp(0))
-    value = _delta_phi_multiapp->appProblemBase(0).getPostprocessorValueByName(
+  if (multiapp->hasLocalApp(0))
+    value = multiapp->appProblemBase(0).getPostprocessorValueByName(
         _delta_phi_subapp_pp);
 
   _communicator.max(value);
@@ -93,7 +98,7 @@ DeltaPhiMultiAppConvergence::deltaPhi() const
         "DeltaPhiMultiAppConvergence could not read postprocessor '",
         _delta_phi_subapp_pp,
         "' from MultiApp '",
-        _delta_phi_multiapp->name(),
+        multiapp->name(),
         "'.");
 
   return value;
