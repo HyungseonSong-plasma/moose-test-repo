@@ -336,6 +336,22 @@ GummelIterationAction::act()
                               object_prefix + "_shared_phi_parent_to_electron",
                               to_electron);
 
+        if (getParam<bool>("manage_convergence"))
+        {
+          auto convergence_sync = _factory.getValidParams("MultiAppCopyTransfer");
+          convergence_sync.set<MultiAppName>("to_multi_app") = electron_name;
+          convergence_sync.set<std::vector<VariableName>>("source_variable") =
+              {VariableName(parent_potential)};
+          convergence_sync.set<std::vector<AuxVariableName>>("variable") =
+              {getParam<AuxVariableName>("electron_potential_variable")};
+          convergence_sync.set<ExecFlagEnum>("execute_on") =
+              EXEC_MULTIAPP_FIXED_POINT_CONVERGENCE;
+          convergence_sync.set<bool>("check_multiapp_execute_on") = false;
+          _problem->addTransfer("MultiAppCopyTransfer",
+                                object_prefix + "_convergence_phi_to_electron",
+                                convergence_sync);
+        }
+
         auto from_poisson = _factory.getValidParams("MultiAppCopyTransfer");
         from_poisson.set<MultiAppName>("from_multi_app") = poisson_name;
         from_poisson.set<std::vector<VariableName>>("source_variable") =
@@ -478,6 +494,11 @@ GummelIterationAction::act()
     params.set<PostprocessorName>("delta_phi_pp") =
         getParam<PostprocessorName>("delta_phi_postprocessor");
     params.set<Real>("delta_phi_abs_tol") = getParam<Real>("delta_phi_abs_tol");
+
+    if (usesElectronSubApp() &&
+        getParam<MooseEnum>("potential_transfer_mode") == "through_parent")
+      params.set<MultiAppName>("residual_multiapp") =
+          getParam<MultiAppName>("electron_multiapp");
 
     _problem->addConvergence("DeltaPhiMultiAppConvergence", convergence_name, params);
   }
