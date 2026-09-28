@@ -70,6 +70,18 @@ GummelIterationAction::validParams()
       "phi",
       "Electron-sub-application auxiliary potential receiving the Poisson solution.");
 
+  params.addParam<MooseEnum>(
+      "potential_transfer_mode",
+      MooseEnum("direct_sibling through_parent", "direct_sibling"),
+      "Potential coupling path. direct_sibling copies Poisson potential directly to the electron "
+      "sub-application. through_parent copies Poisson potential to a parent/driver auxiliary "
+      "variable and then from that driver variable to electron, so parent-level fixed-point "
+      "acceleration can transform the potential before the next electron solve.");
+  params.addParam<AuxVariableName>(
+      "parent_potential_variable",
+      "phi_from_poisson",
+      "Parent/driver auxiliary potential used when potential_transfer_mode=through_parent.");
+
   params.addParam<std::vector<VariableName>>(
       "electron_state_variables",
       {},
@@ -306,6 +318,34 @@ GummelIterationAction::act()
     if (usesElectronSubApp())
     {
       const auto & electron_name = getParam<MultiAppName>("electron_multiapp");
+      const bool potential_through_parent =
+          getParam<MooseEnum>("potential_transfer_mode") == "through_parent";
+
+      if (potential_through_parent)
+      {
+        const auto & parent_potential =
+            getParam<AuxVariableName>("parent_potential_variable");
+
+        auto to_electron = _factory.getValidParams("MultiAppCopyTransfer");
+        to_electron.set<MultiAppName>("to_multi_app") = electron_name;
+        to_electron.set<std::vector<VariableName>>("source_variable") =
+            {VariableName(parent_potential)};
+        to_electron.set<std::vector<AuxVariableName>>("variable") =
+            {getParam<AuxVariableName>("electron_potential_variable")};
+        _problem->addTransfer("MultiAppCopyTransfer",
+                              object_prefix + "_shared_phi_parent_to_electron",
+                              to_electron);
+
+        auto from_poisson = _factory.getValidParams("MultiAppCopyTransfer");
+        from_poisson.set<MultiAppName>("from_multi_app") = poisson_name;
+        from_poisson.set<std::vector<VariableName>>("source_variable") =
+            {getParam<VariableName>("poisson_potential_variable")};
+        from_poisson.set<std::vector<AuxVariableName>>("variable") =
+            {parent_potential};
+        _problem->addTransfer("MultiAppCopyTransfer",
+                              object_prefix + "_shared_phi_poisson_to_parent",
+                              from_poisson);
+      }
 
       for (std::size_t i = 0; i < parent_e_src.size(); ++i)
       {
@@ -377,6 +417,7 @@ GummelIterationAction::act()
                               params);
       }
 
+      if (!potential_through_parent)
       {
         auto params = _factory.getValidParams("MultiAppCopyTransfer");
         params.set<MultiAppName>("from_multi_app") = poisson_name;
