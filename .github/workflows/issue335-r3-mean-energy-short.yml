@@ -1,0 +1,20 @@
+name: One-shot Issue335 R3 Standard Mean Energy Short AB
+on:
+  push:
+    branches: [issue-335-standard-electron-mean-energy]
+    paths:
+      - .github/workflows/issue335-r3-mean-energy-short.yml
+      - experiments/Issue335_standard_electron_mean_energy/control.py
+      - automation/manifests/experiments/Issue_335_r3_mean_energy.json
+      - automation/manifests/experiments/Issue_335_r3_mean_energy_prep.json
+permissions:
+  contents: read
+jobs:
+  run:
+    uses: HyungseonSong-plasma/chatgpt-operation/.github/workflows/governed-matrix.yml@6474eb7b77f890b7cf9d7134ccebea31662bcdbe
+    with:
+      issue: "335"
+      sequence: "1"
+      manifest: automation/manifests/experiments/Issue_335_r3_mean_energy.json
+      base_sha: ${{ github.sha }}
+      operation_sha: 6474eb7b77f890b7cf9d7134ccebea31662bcdbe
