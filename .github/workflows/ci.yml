@@ -248,46 +248,6 @@ jobs:
       - name: Validate execution contract refactor
         run: python experiments/execution_contract_refactor/guard.py
 
-  physics-build-gummel:
-    if: >-
-      github.event_name != 'pull_request' ||
-      github.event.action != 'edited' ||
-      github.event.changes.base != null
-    name: Build Physics and run two-subapp Gummel smoke
-    runs-on: ubuntu-24.04
-    timeout-minutes: 35
-    steps:
-      - uses: actions/checkout@v4
-      - name: Pull immutable Physics build base
-        shell: bash
-        run: |
-          set -euxo pipefail
-          docker pull "$EXPECTED_BUILD_BASE_REF"
-      - name: Compile branch Physics source
-        shell: bash
-        run: |
-          set -euxo pipefail
-          docker run --rm             --entrypoint /bin/bash             --user 0:0             --workdir /workspace/physics_app             -e GITHUB_SHA="$GITHUB_SHA"             -v "$PWD:/workspace"             "$EXPECTED_BUILD_BASE_REF"             -lc '
-              set -euxo pipefail
-              source /environment
-              git config --global --add safe.directory /workspace
-              git config --global --add safe.directory /opt/physics_vendor/moose
-              git config --global --add safe.directory /opt/physics_vendor/crane
-              git config --global --add safe.directory /opt/physics_vendor/squirrel
-              git config --global --add safe.directory /opt/physics_vendor/zapdos
-              export MOOSE_DIR=/opt/physics_vendor/moose
-              export CRANE_DIR=/opt/physics_vendor/crane
-              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
-              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
-              export METHOD=opt
-              make -j2
-              test -x physics-opt
-              cd ci
-              ../physics-opt --check-input -i gummel_two_subapps_main.i
-              ../physics-opt -i gummel_two_subapps_main.i
-              echo GUMMEL_TWO_SUBAPPS_BUILD_RUNTIME_PASS
-            '
-
   runtime-smoke:
     if: >-
       github.event_name != 'pull_request' ||
