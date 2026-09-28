@@ -27,7 +27,7 @@ RATE_TABLE = (
     (LOOKUP_MAX_EV, 1.2e9),
 )
 
-RUNTIME_INPUT = """[Mesh]
+RUNTIME_INPUT = f"""[Mesh]
   [mesh]
     type = GeneratedMeshGenerator
     dim = 3
@@ -111,7 +111,7 @@ RUNTIME_INPUT = """[Mesh]
     type = FVCoupledForce
     variable = n_epsilon
     v = R_ion_O2
-    coef = -7.26389976256e24
+    coef = {ENERGY_COEF:.17g}
   []
   [w_O2p_time]
     type = PhysicsFVMassFractionTimeDerivative
