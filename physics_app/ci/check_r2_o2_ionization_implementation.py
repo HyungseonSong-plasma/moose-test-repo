@@ -54,7 +54,7 @@ RUNTIME_INPUT = f"""[Mesh]
     type = MooseVariableFVReal
     initial_condition = {N_E0:.17g}
   []
-  [n_epsilon]
+  [mean_en]
     type = MooseVariableFVReal
     initial_condition = {N_E0 * EPSILON_E0_EV:.17g}
   []
@@ -86,7 +86,7 @@ RUNTIME_INPUT = f"""[Mesh]
   []
   [mean_energy_bridge]
     type = PhysicsElectronMeanEnergyMaterial
-    electron_energy_density = n_epsilon
+    electron_energy_density = mean_en
     electron_density = n_e
     state_form = physical_eV
   []
@@ -109,9 +109,9 @@ RUNTIME_INPUT = f"""[Mesh]
     type = FVTimeKernel
     variable = n_e
   []
-  [n_epsilon_time]
+  [mean_en_time]
     type = FVTimeKernel
-    variable = n_epsilon
+    variable = mean_en
   []
   [w_O2p_time]
     type = PhysicsFVMassFractionTimeDerivative
@@ -137,9 +137,9 @@ RUNTIME_INPUT = f"""[Mesh]
     functor = n_e
     execute_on = 'INITIAL TIMESTEP_END'
   []
-  [n_epsilon_avg]
+  [mean_en_avg]
     type = ElementAverageFunctorPostprocessor
-    functor = n_epsilon
+    functor = mean_en
     execute_on = 'INITIAL TIMESTEP_END'
   []
   [w_O2p_avg]
@@ -222,8 +222,8 @@ def validate_runtime_rows(rows):
 
     ne_i = _f(initial, "n_e_avg")
     ne_f = _f(final, "n_e_avg")
-    eps_i = _f(initial, "n_epsilon_avg")
-    eps_f = _f(final, "n_epsilon_avg")
+    eps_i = _f(initial, "mean_en_avg")
+    eps_f = _f(final, "mean_en_avg")
     wp_i = _f(initial, "w_O2p_avg")
     wp_f = _f(final, "w_O2p_avg")
     wo2_i = _f(initial, "w_O2_avg")
@@ -274,14 +274,14 @@ def validate_runtime_rows(rows):
     return {
         "initial": {
             "n_e": ne_i,
-            "n_epsilon": eps_i,
+            "mean_en": eps_i,
             "w_O2": wo2_i,
             "w_O2p": wp_i,
             "mean_en_solved_eV": mean_i,
         },
         "final": {
             "n_e": ne_f,
-            "n_epsilon": eps_f,
+            "mean_en": eps_f,
             "w_O2": wo2_f,
             "w_O2p": wp_f,
             "mean_en_solved_eV": mean_f,
@@ -318,7 +318,7 @@ def runtime_checker_self_test():
     rows = [
         {
             "n_e_avg": N_E0,
-            "n_epsilon_avg": N_E0 * EPSILON_E0_EV,
+            "mean_en_avg": N_E0 * EPSILON_E0_EV,
             "w_O2p_avg": WP0,
             "w_O2_avg": 1.0 - WP0,
             "mean_en_solved_avg": EPSILON_E0_EV,
@@ -329,7 +329,7 @@ def runtime_checker_self_test():
         },
         {
             "n_e_avg": ne,
-            "n_epsilon_avg": N_E0 * EPSILON_E0_EV,
+            "mean_en_avg": N_E0 * EPSILON_E0_EV,
             "w_O2p_avg": wp,
             "w_O2_avg": 1.0 - wp,
             "mean_en_solved_avg": mean,
