@@ -1,0 +1,103 @@
+name: Frozen Heavy Gummel One Shot
+
+on:
+  push:
+    branches:
+      - issue-plasma-closures-gummel-heavy
+
+permissions:
+  contents: read
+  packages: read
+
+env:
+  BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+
+jobs:
+  validate-frozen-heavy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify exact source head
+        shell: bash
+        run: |
+          set -euxo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          python3 physics_app/ci/check_gummel_iteration_action_contract.py
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Physics from exact branch head
+        shell: bash
+        run: |
+          set -euxo pipefail
+          docker pull "$BUILD_BASE_REF"
+          docker run --rm \
+            --entrypoint /bin/bash \
+            --user 0:0 \
+            --workdir /workspace/physics_app \
+            -e GITHUB_SHA="$GITHUB_SHA" \
+            -v "$PWD:/workspace" \
+            "$BUILD_BASE_REF" \
+            -lc '
+              set -euxo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              git config --global --add safe.directory /opt/physics_vendor/moose
+              git config --global --add safe.directory /opt/physics_vendor/crane
+              git config --global --add safe.directory /opt/physics_vendor/squirrel
+              git config --global --add safe.directory /opt/physics_vendor/zapdos
+              test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+              make -j2
+              test -x physics-opt
+            '
+
+      - name: P2 check-input frozen-heavy topology
+        shell: bash
+        run: |
+          set -euxo pipefail
+          docker run --rm \
+            --entrypoint /bin/bash \
+            --user 0:0 \
+            --workdir /workspace/physics_app \
+            -v "$PWD:/workspace" \
+            "$BUILD_BASE_REF" \
+            -lc '
+              set -euxo pipefail
+              source /environment
+              export LD_LIBRARY_PATH="/workspace/physics_app/lib:${LD_LIBRARY_PATH:-}"
+              ./physics-opt --check-input -i ci/gummel_plasma_closures_heavy_electron.i
+              ./physics-opt --check-input -i ci/gummel_plasma_closures_heavy_poisson.i
+              ./physics-opt --check-input -i ci/gummel_plasma_closures_driver.i
+              ./physics-opt --check-input -i ci/gummel_plasma_closures_heavy_main.i
+              echo FROZEN_HEAVY_P2_CHECK_INPUT_PASS
+            '
+
+      - name: P3 bounded nested runtime
+        shell: bash
+        run: |
+          set -euxo pipefail
+          docker run --rm \
+            --entrypoint /bin/bash \
+            --user 0:0 \
+            --workdir /workspace/physics_app \
+            -v "$PWD:/workspace" \
+            "$BUILD_BASE_REF" \
+            -lc '
+              set -euxo pipefail
+              source /environment
+              export LD_LIBRARY_PATH="/workspace/physics_app/lib:${LD_LIBRARY_PATH:-}"
+              ./physics-opt -i ci/gummel_plasma_closures_heavy_main.i
+              echo FROZEN_HEAVY_P3_RUNTIME_PASS
+            '
