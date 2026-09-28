@@ -12,10 +12,10 @@ from pathlib import Path
 
 N_A = 6.02214076e23
 M_O2 = 31.998e-3
-N_REF = 1.0e16
+N_E0 = 1.0e16
 RHO = 3.1998e-5
 DT = 1.0e-7
-EPSILON_REF_EV = 5.73276
+MEAN_E0_EV = 5.73276
 DELTA_E_EV = 0.977
 W0 = 1.0e-3
 K_O2S = 4.71e8
@@ -232,15 +232,15 @@ def validate_runtime_rows(rows):
 
 
 def runtime_checker_self_test():
-    a = DT * K_O2S * N_REF / N_A
+    a = DT * K_O2S * N_E0 / N_A
     ws = (W0 + a) / (1 + a)
     wo = 1 - ws
-    r = K_O2S * (N_REF / N_A) * (RHO * wo / M_O2)
-    ep = N_REF * EPSILON_REF_EV - DT * DELTA_E_EV * N_A * r
-    r0 = K_O2S * (N_REF / N_A) * (RHO * (1 - W0) / M_O2)
+    r = K_O2S * (N_E0 / N_A) * (RHO * wo / M_O2)
+    ep = N_E0 * MEAN_E0_EV - DT * DELTA_E_EV * N_A * r
+    r0 = K_O2S * (N_E0 / N_A) * (RHO * (1 - W0) / M_O2)
     rows = [
-        {"n_e_avg": N_REF, "n_epsilon_avg": N_REF * EPSILON_REF_EV, "w_O2s_avg": W0, "w_O2_avg": 1 - W0, "mean_en_solved_avg": EPSILON_REF_EV, "R_O2s_avg": r0, "O2_source_avg": -M_O2 * r0, "O2s_source_avg": M_O2 * r0},
-        {"n_e_avg": N_REF, "n_epsilon_avg": ep, "w_O2s_avg": ws, "w_O2_avg": wo, "mean_en_solved_avg": ep / N_REF, "R_O2s_avg": r, "O2_source_avg": -M_O2 * r, "O2s_source_avg": M_O2 * r}
+        {"n_e_avg": N_E0, "n_epsilon_avg": N_E0 * MEAN_E0_EV, "w_O2s_avg": W0, "w_O2_avg": 1 - W0, "mean_en_solved_avg": MEAN_E0_EV, "R_O2s_avg": r0, "O2_source_avg": -M_O2 * r0, "O2s_source_avg": M_O2 * r0},
+        {"n_e_avg": N_E0, "n_epsilon_avg": ep, "w_O2s_avg": ws, "w_O2_avg": wo, "mean_en_solved_avg": ep / N_E0, "R_O2s_avg": r, "O2_source_avg": -M_O2 * r, "O2s_source_avg": M_O2 * r}
     ]
     validate_runtime_rows(rows)
     assert "type = FVCoupledForce" in RUNTIME_INPUT
