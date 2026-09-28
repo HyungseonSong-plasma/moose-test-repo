@@ -2,13 +2,13 @@
 
 `GummelIterationAction` supports two orchestration modes.
 
-The preferred mode keeps the parent application as an orchestrator and runs
-the electron and electrostatic systems as sibling MultiApps:
+The preferred mode runs the electron and electrostatic systems as sibling MultiApps.
+The parent may be orchestration-only or may own local heavy-particle physics:
 
 ```text
-MAIN
- |- SUB_ELECTRON : solves n_e, mean_en; receives phi
- '- SUB_POISSON  : solves phi; receives n_e
+MAIN : orchestration-only or heavy-particle FEProblem
+ |- SUB_ELECTRON : solves n_e, mean_en; receives phi and mapped heavy state
+ '- SUB_POISSON  : solves phi; receives n_e and mapped heavy charge state
 ```
 
 The Action does not construct either subsystem's equations. Each input file
@@ -88,6 +88,105 @@ Additional fields may be shared with the two generic mapping pairs:
 
 For example, `mean_en` may also be copied to Poisson when a Poisson-side
 response model needs electron energy.
+
+## Heavy parent with PlasmaClosures
+
+A parent application that owns heavy-particle state can combine
+`[PlasmaClosures] role = heavy_transport` with the sibling Gummel topology.
+The Gummel Action still does not construct heavy equations or closures; it only
+maps parent variables to the two siblings and maps selected sibling state back
+to parent auxiliary variables.
+
+```text
+MAIN / heavy
+  PlasmaClosures(role = heavy_transport)
+  T_g, p_gas, rho, heavy mass fractions
+       |                         ^
+       | parent -> electron      | electron -> parent
+       v                         |
+SUB_ELECTRON --------------------
+  PlasmaClosures(role = electron)
+  solves n_e, mean_en; exports T_e
+
+MAIN / heavy
+       |                         ^
+       | parent -> Poisson       | Poisson -> parent
+       v                         |
+SUB_POISSON ---------------------
+  PlasmaClosures(role = electrostatic_charge)
+  solves phi
+```
+
+The four optional mapping pairs are:
+
+- `parent_to_electron_source_variables` /
+  `parent_to_electron_variables`
+- `electron_to_parent_source_variables` /
+  `electron_to_parent_variables`
+- `parent_to_poisson_source_variables` /
+  `parent_to_poisson_variables`
+- `poisson_to_parent_source_variables` /
+  `poisson_to_parent_variables`
+
+A representative parent block is:
+
+```text
+[PlasmaClosures]
+  [heavy]
+    role = heavy_transport
+    heavy_species_temperature = T_g
+    heavy_species_pressure = p_gas
+    electron_temperature = T_e_from_electron
+    electron_number_density = n_e_from_electron
+    heavy_transport_data_file = transport_data.txt
+    heavy_species = 'O2 O2s O2p O Om Op Os'
+    heavy_mass_fractions = 'w_O2 w_O2s w_O2p w_O w_Om w_Op w_Os'
+  []
+[]
+
+[GummelIteration]
+  [electron_poisson]
+    electron_input_file = sub_electron.i
+    poisson_multiapp = poisson
+    poisson_input_file = sub_poisson.i
+
+    parent_to_electron_source_variables = 'T_g p_gas'
+    parent_to_electron_variables = 'T_g_from_heavy p_gas_from_heavy'
+
+    electron_to_parent_source_variables = 'n_e T_e_export'
+    electron_to_parent_variables = 'n_e_from_electron T_e_from_electron'
+
+    parent_to_poisson_source_variables = 'rho w_O2p w_Om w_Op'
+    parent_to_poisson_variables =
+      'rho_from_heavy w_O2p_from_heavy w_Om_from_heavy w_Op_from_heavy'
+
+    poisson_to_parent_source_variables = 'phi'
+    poisson_to_parent_variables = 'phi_from_poisson'
+  []
+[]
+```
+
+Because `MultiAppCopyTransfer` writes into auxiliary variables, every receiving
+target in these parent-state mappings must be an AuxVariable. Derived
+FunctorMaterial outputs such as `electron_temperature_K` should first be
+sampled into an export AuxVariable (for example `T_e_export`) before a
+child-to-parent copy.
+
+On the pinned MOOSE revision, parent-to-child transfers use
+`SAME_AS_MULTIAPP` and occur before the associated child solve, while
+child-to-parent transfers occur after that child solve. With an actively solved
+heavy parent, the resulting fixed-point ordering is therefore a three-block
+coupling rather than a frozen-heavy inner Gummel:
+
+```text
+TIMESTEP_BEGIN : heavy(previous) -> electron -> electron solve -> electron -> heavy
+parent solve   : heavy update
+TIMESTEP_END   : heavy(updated)  -> Poisson  -> Poisson solve  -> Poisson -> heavy
+```
+
+If strict time-scale separation requires the heavy state to remain frozen until
+electron-Poisson convergence, keep the heavy solve outside this fixed-point
+cycle and use this mapping surface only at the outer coupling boundary.
 
 ## Required sub-application interface
 
@@ -169,10 +268,11 @@ electron-to-Poisson and Poisson-to-electron mapping lists are required.
 
 The preferred architecture separates ownership cleanly:
 
-- MAIN: MultiApp orchestration and fixed-point policy;
+- MAIN: fixed-point policy and optionally local heavy-particle physics;
 - SUB_ELECTRON: electron density/energy/momentum equations;
 - SUB_POISSON: electrostatic equation and optional electron-response
   approximation.
 
-The Action owns only the MultiApps, direct sibling field transfers, ordering,
-and optional convergence object.
+The Action owns only the MultiApps, sibling/parent field transfers, ordering,
+and optional convergence object. PlasmaClosures remains the local physics
+composition layer in each FEProblem.
