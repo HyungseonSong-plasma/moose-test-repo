@@ -15,8 +15,24 @@ GummelIterationAction::validParams()
 {
   InputParameters params = Action::validParams();
   params.addClassDescription(
-      "Builds a model-agnostic Gummel coupling between the electron subsystem in the current "
-      "application and a Poisson sub-application. Electron equations are supplied independently.");
+      "Builds a model-agnostic Gummel coupling. In two-sub-application mode the parent "
+      "application owns orchestration only, while sibling electron and Poisson MultiApps exchange "
+      "n_e and phi directly. Legacy current-application electron coupling remains supported.");
+
+  params.addParam<FileName>(
+      "electron_input_file",
+      "Optional input file for an electron sub-application. When supplied, the Action creates "
+      "sibling electron and Poisson MultiApps and transfers directly between them.");
+  params.addParam<MultiAppName>(
+      "electron_multiapp", "electron", "Name of the electron MultiApp in two-sub-application mode.");
+  params.addParam<std::string>(
+      "electron_multiapp_type",
+      "TransientMultiApp",
+      "MOOSE MultiApp type used for the electron solve.");
+  params.addParam<unsigned int>(
+      "electron_execution_order_group",
+      0,
+      "Execution-order group for the electron MultiApp. It should precede Poisson.");
 
   params.addRequiredParam<FileName>(
       "poisson_input_file", "Input file for the Poisson sub-application.");
@@ -26,11 +42,16 @@ GummelIterationAction::validParams()
       "poisson_multiapp_type",
       "TransientMultiApp",
       "MOOSE MultiApp type used for the Poisson solve.");
+  params.addParam<unsigned int>(
+      "poisson_execution_order_group",
+      1,
+      "Execution-order group for the Poisson MultiApp. It should follow electron.");
+
   params.addParam<bool>(
       "no_restore",
       true,
-      "Disable restore between fixed-point iterations so the Poisson solve retains its current "
-      "iterate.");
+      "Disable restore between fixed-point iterations so sub-applications retain their current "
+      "iterates.");
   params.addRangeCheckedParam<Real>(
       "relaxation_factor",
       1.0,
@@ -41,36 +62,56 @@ GummelIterationAction::validParams()
       {},
       "Poisson sub-application variables transformed by the MOOSE fixed-point algorithm.");
 
+  params.addParam<VariableName>(
+      "electron_density_variable",
+      "n_e",
+      "Electron-sub-application solved density variable copied to Poisson.");
+  params.addParam<AuxVariableName>(
+      "poisson_electron_density_variable",
+      "n_e",
+      "Poisson-sub-application auxiliary density receiving the electron solution.");
+  params.addParam<VariableName>(
+      "poisson_potential_variable",
+      "phi",
+      "Poisson-sub-application solved potential copied to the electron application.");
+  params.addParam<AuxVariableName>(
+      "electron_potential_variable",
+      "phi",
+      "Electron-sub-application auxiliary potential receiving the Poisson solution.");
+
   params.addParam<std::vector<VariableName>>(
       "electron_state_variables",
       {},
-      "Electron state advanced by the current application. This declaration is descriptive: "
-      "the Action does not assume drift-diffusion, momentum, or energy equations.");
+      "Descriptive list of electron state variables. The Action does not construct their equations.");
 
-  params.addRequiredParam<std::vector<VariableName>>(
+  params.addParam<std::vector<VariableName>>(
       "electron_to_poisson_source_variables",
-      "Variables in the electron subsystem copied to the Poisson sub-application.");
-  params.addRequiredParam<std::vector<AuxVariableName>>(
+      {},
+      "Additional variables copied from the electron subsystem to Poisson.");
+  params.addParam<std::vector<AuxVariableName>>(
       "electron_to_poisson_variables",
-      "Target variables in the Poisson sub-application corresponding one-to-one with "
+      {},
+      "Additional Poisson auxiliary targets corresponding one-to-one with "
       "electron_to_poisson_source_variables.");
-  params.addRequiredParam<std::vector<VariableName>>(
+  params.addParam<std::vector<VariableName>>(
       "poisson_to_electron_source_variables",
-      "Variables in the Poisson sub-application copied back to the electron subsystem.");
-  params.addRequiredParam<std::vector<AuxVariableName>>(
+      {},
+      "Additional variables copied from Poisson back to the electron subsystem.");
+  params.addParam<std::vector<AuxVariableName>>(
       "poisson_to_electron_variables",
-      "Target variables in the electron subsystem corresponding one-to-one with "
+      {},
+      "Additional electron auxiliary targets corresponding one-to-one with "
       "poisson_to_electron_source_variables.");
 
   params.addParam<bool>(
       "manage_convergence",
       true,
-      "Create a DeltaPhiMultiAppConvergence object for this Gummel iteration. The Executioner "
-      "must select it with multiapp_fixed_point_convergence because MOOSE constructs the fixed-"
-      "point solve before add_convergence actions run.");
+      "Create a DeltaPhiMultiAppConvergence object for this Gummel iteration. The parent "
+      "Executioner must select it with multiapp_fixed_point_convergence.");
   params.addParam<PostprocessorName>(
       "delta_phi_postprocessor",
-      "Postprocessor containing the maximum potential change for the current fixed-point iterate.");
+      "Parent-application postprocessor containing the maximum potential change for the current "
+      "fixed-point iterate.");
   params.addRangeCheckedParam<Real>(
       "delta_phi_abs_tol",
       1.0e-6,
@@ -94,6 +135,12 @@ GummelIterationAction::GummelIterationAction(const InputParameters & parameters)
                "This parameter is required when manage_convergence=true.");
 }
 
+bool
+GummelIterationAction::usesElectronSubApp() const
+{
+  return isParamValid("electron_input_file");
+}
+
 void
 GummelIterationAction::checkVariableMaps() const
 {
@@ -106,38 +153,75 @@ GummelIterationAction::checkVariableMaps() const
   const auto & p_dst =
       getParam<std::vector<AuxVariableName>>("poisson_to_electron_variables");
 
-  if (e_src.empty())
-    paramError("electron_to_poisson_source_variables",
-               "At least one electron-to-Poisson variable mapping is required.");
-  if (p_src.empty())
-    paramError("poisson_to_electron_source_variables",
-               "At least one Poisson-to-electron variable mapping is required.");
   if (e_src.size() != e_dst.size())
     paramError("electron_to_poisson_variables",
                "The electron-to-Poisson source and target lists must have the same length.");
   if (p_src.size() != p_dst.size())
     paramError("poisson_to_electron_variables",
                "The Poisson-to-electron source and target lists must have the same length.");
+
+  if (usesElectronSubApp())
+  {
+    if (getParam<MultiAppName>("electron_multiapp") == getParam<MultiAppName>("poisson_multiapp"))
+      paramError("electron_multiapp",
+                 "electron_multiapp and poisson_multiapp must have different names.");
+
+    if (getParam<unsigned int>("electron_execution_order_group") >=
+        getParam<unsigned int>("poisson_execution_order_group"))
+      paramError("electron_execution_order_group",
+                 "electron_execution_order_group must be smaller than "
+                 "poisson_execution_order_group so n_e reaches Poisson in the same fixed-point "
+                 "iteration.");
+  }
+  else
+  {
+    if (e_src.empty())
+      paramError("electron_to_poisson_source_variables",
+                 "Legacy current-application electron mode requires at least one "
+                 "electron-to-Poisson mapping.");
+    if (p_src.empty())
+      paramError("poisson_to_electron_source_variables",
+                 "Legacy current-application electron mode requires at least one "
+                 "Poisson-to-electron mapping.");
+  }
 }
 
 void
 GummelIterationAction::act()
 {
-  const auto & multiapp_name = getParam<MultiAppName>("poisson_multiapp");
-  const std::string object_prefix = std::string(multiapp_name) + "_gummel";
+  const auto & poisson_name = getParam<MultiAppName>("poisson_multiapp");
+  const std::string object_prefix = std::string(poisson_name) + "_gummel";
 
   if (_current_task == "add_multi_app")
   {
-    const auto & multiapp_type = getParam<std::string>("poisson_multiapp_type");
-    auto params = _factory.getValidParams(multiapp_type);
-    params.set<std::vector<FileName>>("input_files") = {getParam<FileName>("poisson_input_file")};
-    params.set<ExecFlagEnum>("execute_on") = EXEC_TIMESTEP_END;
-    params.set<Real>("relaxation_factor") = getParam<Real>("relaxation_factor");
-    params.set<std::vector<std::string>>("transformed_variables") =
-        getParam<std::vector<std::string>>("poisson_transformed_variables");
-    params.set<bool>("no_restore") = getParam<bool>("no_restore");
+    if (usesElectronSubApp())
+    {
+      const auto & electron_name = getParam<MultiAppName>("electron_multiapp");
+      const auto & electron_type = getParam<std::string>("electron_multiapp_type");
+      auto electron_params = _factory.getValidParams(electron_type);
+      electron_params.set<std::vector<FileName>>("input_files") =
+          {getParam<FileName>("electron_input_file")};
+      electron_params.set<ExecFlagEnum>("execute_on") = EXEC_TIMESTEP_END;
+      electron_params.set<unsigned int>("execution_order_group") =
+          getParam<unsigned int>("electron_execution_order_group");
+      electron_params.set<bool>("no_restore") = getParam<bool>("no_restore");
 
-    _problem->addMultiApp(multiapp_type, multiapp_name, params);
+      _problem->addMultiApp(electron_type, electron_name, electron_params);
+    }
+
+    const auto & poisson_type = getParam<std::string>("poisson_multiapp_type");
+    auto poisson_params = _factory.getValidParams(poisson_type);
+    poisson_params.set<std::vector<FileName>>("input_files") =
+        {getParam<FileName>("poisson_input_file")};
+    poisson_params.set<ExecFlagEnum>("execute_on") = EXEC_TIMESTEP_END;
+    poisson_params.set<unsigned int>("execution_order_group") =
+        getParam<unsigned int>("poisson_execution_order_group");
+    poisson_params.set<Real>("relaxation_factor") = getParam<Real>("relaxation_factor");
+    poisson_params.set<std::vector<std::string>>("transformed_variables") =
+        getParam<std::vector<std::string>>("poisson_transformed_variables");
+    poisson_params.set<bool>("no_restore") = getParam<bool>("no_restore");
+
+    _problem->addMultiApp(poisson_type, poisson_name, poisson_params);
   }
   else if (_current_task == "add_transfer")
   {
@@ -150,28 +234,91 @@ GummelIterationAction::act()
     const auto & p_dst =
         getParam<std::vector<AuxVariableName>>("poisson_to_electron_variables");
 
-    for (std::size_t i = 0; i < e_src.size(); ++i)
+    if (usesElectronSubApp())
     {
-      auto params = _factory.getValidParams("MultiAppCopyTransfer");
-      params.set<MultiAppName>("to_multi_app") = multiapp_name;
-      params.set<std::vector<VariableName>>("source_variable") = {e_src[i]};
-      params.set<std::vector<AuxVariableName>>("variable") = {e_dst[i]};
+      const auto & electron_name = getParam<MultiAppName>("electron_multiapp");
 
-      _problem->addTransfer("MultiAppCopyTransfer",
-                            object_prefix + "_to_poisson_" + std::to_string(i),
-                            params);
+      {
+        auto params = _factory.getValidParams("MultiAppCopyTransfer");
+        params.set<MultiAppName>("from_multi_app") = electron_name;
+        params.set<MultiAppName>("to_multi_app") = poisson_name;
+        params.set<std::vector<VariableName>>("source_variable") =
+            {getParam<VariableName>("electron_density_variable")};
+        params.set<std::vector<AuxVariableName>>("variable") =
+            {getParam<AuxVariableName>("poisson_electron_density_variable")};
+        params.set<bool>("execute_after_from_multiapp") = true;
+
+        _problem->addTransfer(
+            "MultiAppCopyTransfer", object_prefix + "_shared_n_e", params);
+      }
+
+      for (std::size_t i = 0; i < e_src.size(); ++i)
+      {
+        auto params = _factory.getValidParams("MultiAppCopyTransfer");
+        params.set<MultiAppName>("from_multi_app") = electron_name;
+        params.set<MultiAppName>("to_multi_app") = poisson_name;
+        params.set<std::vector<VariableName>>("source_variable") = {e_src[i]};
+        params.set<std::vector<AuxVariableName>>("variable") = {e_dst[i]};
+        params.set<bool>("execute_after_from_multiapp") = true;
+
+        _problem->addTransfer("MultiAppCopyTransfer",
+                              object_prefix + "_electron_to_poisson_" + std::to_string(i),
+                              params);
+      }
+
+      {
+        auto params = _factory.getValidParams("MultiAppCopyTransfer");
+        params.set<MultiAppName>("from_multi_app") = poisson_name;
+        params.set<MultiAppName>("to_multi_app") = electron_name;
+        params.set<std::vector<VariableName>>("source_variable") =
+            {getParam<VariableName>("poisson_potential_variable")};
+        params.set<std::vector<AuxVariableName>>("variable") =
+            {getParam<AuxVariableName>("electron_potential_variable")};
+        params.set<bool>("execute_after_from_multiapp") = true;
+
+        _problem->addTransfer(
+            "MultiAppCopyTransfer", object_prefix + "_shared_phi", params);
+      }
+
+      for (std::size_t i = 0; i < p_src.size(); ++i)
+      {
+        auto params = _factory.getValidParams("MultiAppCopyTransfer");
+        params.set<MultiAppName>("from_multi_app") = poisson_name;
+        params.set<MultiAppName>("to_multi_app") = electron_name;
+        params.set<std::vector<VariableName>>("source_variable") = {p_src[i]};
+        params.set<std::vector<AuxVariableName>>("variable") = {p_dst[i]};
+        params.set<bool>("execute_after_from_multiapp") = true;
+
+        _problem->addTransfer("MultiAppCopyTransfer",
+                              object_prefix + "_poisson_to_electron_" + std::to_string(i),
+                              params);
+      }
     }
-
-    for (std::size_t i = 0; i < p_src.size(); ++i)
+    else
     {
-      auto params = _factory.getValidParams("MultiAppCopyTransfer");
-      params.set<MultiAppName>("from_multi_app") = multiapp_name;
-      params.set<std::vector<VariableName>>("source_variable") = {p_src[i]};
-      params.set<std::vector<AuxVariableName>>("variable") = {p_dst[i]};
+      for (std::size_t i = 0; i < e_src.size(); ++i)
+      {
+        auto params = _factory.getValidParams("MultiAppCopyTransfer");
+        params.set<MultiAppName>("to_multi_app") = poisson_name;
+        params.set<std::vector<VariableName>>("source_variable") = {e_src[i]};
+        params.set<std::vector<AuxVariableName>>("variable") = {e_dst[i]};
 
-      _problem->addTransfer("MultiAppCopyTransfer",
-                            object_prefix + "_from_poisson_" + std::to_string(i),
-                            params);
+        _problem->addTransfer("MultiAppCopyTransfer",
+                              object_prefix + "_to_poisson_" + std::to_string(i),
+                              params);
+      }
+
+      for (std::size_t i = 0; i < p_src.size(); ++i)
+      {
+        auto params = _factory.getValidParams("MultiAppCopyTransfer");
+        params.set<MultiAppName>("from_multi_app") = poisson_name;
+        params.set<std::vector<VariableName>>("source_variable") = {p_src[i]};
+        params.set<std::vector<AuxVariableName>>("variable") = {p_dst[i]};
+
+        _problem->addTransfer("MultiAppCopyTransfer",
+                              object_prefix + "_from_poisson_" + std::to_string(i),
+                              params);
+      }
     }
   }
   else if (_current_task == "add_convergence" && getParam<bool>("manage_convergence"))
