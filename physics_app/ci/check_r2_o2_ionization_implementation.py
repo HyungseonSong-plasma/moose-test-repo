@@ -385,7 +385,8 @@ def static_implementation_gate():
         assert forbidden not in proj
 
     assert '_number_source(getFunctor<ADReal>("number_source"))' in electron_kernel
-    assert 'return -physical_number_source / _n_ref;' in electron_kernel
+    assert '_physical_state(getParam<MooseEnum>("state_form") == "physical")' in electron_kernel
+    assert 'return _physical_state ? -physical_number_source : -physical_number_source / _n_ref;' in electron_kernel
 
     progress = 2.5
     s_o2 = -M_O2 * progress
