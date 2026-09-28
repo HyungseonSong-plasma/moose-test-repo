@@ -10,22 +10,25 @@ PhysicsFVElectronEnergyWallFluxBC::validParams()
   auto params = FVFluxBC::validParams();
 
   params.addClassDescription(
-      "Applies the COMSOL-consistent outward electron-energy wall flux: "
-      "(5/6) v_e,th n_eps_hat - (4 eV / epsilon_ref) Gamma_e,SEE_hat, with "
-      "v_e,th = sqrt(8 k_B T_e/(pi m_e)).");
+      "Applies the COMSOL-consistent outward electron-energy wall flux in either "
+      "physical_eV or legacy normalized state.");
+
+  params.addParam<MooseEnum>(
+      "state_form",
+      MooseEnum("normalized physical_eV", "normalized"),
+      "Electron-energy state convention.");
 
   params.addRequiredParam<MooseFunctorName>(
       "electron_energy_density",
-      "Normalized electron-energy density n_epsilon_hat used by the energy equation.");
+      "Electron energy density; use [eV/m^3] for state_form=physical_eV.");
   params.addRequiredParam<MooseFunctorName>(
       "mean_electron_energy", "Electron mean energy [eV] used for the thermal mean speed.");
   params.addRequiredParam<MooseFunctorName>(
       "see_number_flux",
-      "Normalized inward secondary-electron particle flux Gamma_e,SEE/n_ref [m/s]. "
-      "Gamma and ion-incidence semantics remain owned by the #27 A8 particle-wall path.");
-  params.addRequiredParam<Real>(
+      "Inward SEE particle-number flux; use [1/(m^2 s)] for state_form=physical_eV.");
+  params.addParam<Real>(
       "energy_reference_eV",
-      "Positive electron-energy normalization scale epsilon_ref [eV].");
+      "Historical normalization energy epsilon_ref [eV]; required in normalized mode.");
 
   return params;
 }
@@ -33,13 +36,22 @@ PhysicsFVElectronEnergyWallFluxBC::validParams()
 PhysicsFVElectronEnergyWallFluxBC::PhysicsFVElectronEnergyWallFluxBC(
     const InputParameters & parameters)
   : FVFluxBC(parameters),
+    _physical_state(getParam<MooseEnum>("state_form") == "physical_eV"),
     _electron_energy_density(getFunctor<ADReal>("electron_energy_density")),
     _mean_electron_energy(getFunctor<ADReal>("mean_electron_energy")),
     _see_number_flux(getFunctor<ADReal>("see_number_flux")),
-    _energy_reference_eV(getParam<Real>("energy_reference_eV"))
+    _energy_reference_eV(
+        isParamValid("energy_reference_eV") ? getParam<Real>("energy_reference_eV") : 1.0)
 {
-  if (_energy_reference_eV <= 0.0)
-    paramError("energy_reference_eV", "Electron-energy normalization scale must be positive.");
+  if (!_physical_state)
+  {
+    if (!isParamValid("energy_reference_eV"))
+      paramError("energy_reference_eV",
+                 "energy_reference_eV is required for state_form=normalized.");
+    if (_energy_reference_eV <= 0.0)
+      paramError("energy_reference_eV",
+                 "Electron-energy normalization scale must be positive.");
+  }
 }
 
 ADReal
@@ -66,7 +78,10 @@ PhysicsFVElectronEnergyWallFluxBC::computeQpResidual()
 
   // Positive flux is outward loss.  The SEE term is inward, hence the minus.
   const ADReal thermal_energy_flux = (5.0 / 6.0) * mean_speed * electron_energy_density;
-  const ADReal see_energy_flux = (see_energy_eV / _energy_reference_eV) * see_number_flux;
+  const ADReal see_energy_flux =
+      _physical_state
+          ? see_energy_eV * see_number_flux
+          : (see_energy_eV / _energy_reference_eV) * see_number_flux;
 
   return thermal_energy_flux - see_energy_flux;
 }

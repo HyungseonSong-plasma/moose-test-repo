@@ -3,7 +3,7 @@
 #include "FVElementalKernel.h"
 
 /**
- * Electron-energy electric-work source for the normalized FV energy equation.
+ * Electron-energy electric-work source for physical or legacy normalized energy state.
  *
  * The local constitutive electron particle flux is owned by the shared
  * PhysicsElectronFluxModel helper:
@@ -27,6 +27,7 @@ public:
 protected:
   ADReal computeQpResidual() override;
 
+  const bool _physical_state;
   const Moose::Functor<ADReal> & _electron_density;
   const Moose::Functor<ADReal> & _potential;
   const Moose::Functor<ADReal> & _mobility;

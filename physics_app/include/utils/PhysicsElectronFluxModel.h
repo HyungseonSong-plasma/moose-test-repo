@@ -50,16 +50,16 @@ orthogonalDiffusiveFlux(const ADReal & diffusion,
 }
 
 /**
- * Local normalized electron particle flux used by electron-energy work terms:
+ * Local electron particle flux used by electron-energy work terms:
  *
- *   Gamma_e / n_ref = -mu_e*n_hat*E - D_e*grad(n_hat)
+ *   Gamma_e = -mu_e*n_e*E - D_e*grad(n_e)
  *
  * This is the same constitutive drift-diffusion model used by the particle
  * equation; the FV face reconstruction itself remains owned by the flux
  * kernels.
  */
 inline ADRealVectorValue
-normalizedElectronParticleFlux(const ADReal & electron_density,
+electronParticleFlux(const ADReal & electron_density,
                                const ADRealVectorValue & grad_electron_density,
                                const ADRealVectorValue & electric_field,
                                const ADReal & mobility,
@@ -70,19 +70,19 @@ normalizedElectronParticleFlux(const ADReal & electron_density,
 }
 
 /**
- * Positive electric work deposited into the normalized electron population:
+ * Positive electric work deposited into the electron population:
  *
- *   -E . (Gamma_e / n_ref)
+ *   -E . Gamma_e
  */
 inline ADReal
-normalizedElectronElectricWork(const ADReal & electron_density,
+electronElectricWork(const ADReal & electron_density,
                                const ADRealVectorValue & grad_electron_density,
                                const ADRealVectorValue & electric_field,
                                const ADReal & mobility,
                                const ADReal & diffusion)
 {
   const auto particle_flux =
-      normalizedElectronParticleFlux(electron_density,
+      electronParticleFlux(electron_density,
                                      grad_electron_density,
                                      electric_field,
                                      mobility,

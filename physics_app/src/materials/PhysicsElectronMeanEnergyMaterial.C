@@ -10,20 +10,25 @@ PhysicsElectronMeanEnergyMaterial::validParams()
   auto params = FunctorMaterial::validParams();
 
   params.addClassDescription(
-      "Builds mean_energy = epsilon_ref*n_epsilon_hat/n_e_hat from the "
-      "normalized solved electron-energy and electron-density FV states.");
+      "Builds mean electron energy from either physical electron energy/number density "
+      "or the historical normalized electron states.");
+
+  params.addParam<MooseEnum>(
+      "state_form",
+      MooseEnum("normalized physical_eV", "normalized"),
+      "State convention. physical_eV uses electron_energy_density [eV/m^3] and "
+      "electron_density [1/m^3].");
 
   params.addRequiredParam<MooseFunctorName>(
       "electron_energy_density",
-      "Normalized conserved electron-energy density n_epsilon_hat.");
-
+      "Electron energy-density state; [eV/m^3] for state_form=physical_eV.");
   params.addRequiredParam<MooseFunctorName>(
       "electron_density",
-      "Normalized electron number density n_e_hat.");
+      "Electron density state; [1/m^3] for state_form=physical_eV.");
 
-  params.addRequiredParam<Real>(
+  params.addParam<Real>(
       "energy_reference_eV",
-      "Positive electron-energy normalization scale epsilon_ref [eV].");
+      "Historical normalization energy epsilon_ref [eV]; required for state_form=normalized.");
 
   params.addParam<MooseFunctorName>(
       "mean_energy_output",
@@ -36,46 +41,45 @@ PhysicsElectronMeanEnergyMaterial::validParams()
 PhysicsElectronMeanEnergyMaterial::PhysicsElectronMeanEnergyMaterial(
     const InputParameters & parameters)
   : FunctorMaterial(parameters),
+    _physical_state(getParam<MooseEnum>("state_form") == "physical_eV"),
     _electron_energy_density(getFunctor<ADReal>("electron_energy_density")),
     _electron_density(getFunctor<ADReal>("electron_density")),
-    _energy_reference_eV(getParam<Real>("energy_reference_eV"))
+    _energy_reference_eV(
+        isParamValid("energy_reference_eV") ? getParam<Real>("energy_reference_eV") : 1.0)
 {
-  if (!std::isfinite(_energy_reference_eV) || _energy_reference_eV <= 0.0)
-    paramError("energy_reference_eV", "Electron-energy normalization scale must be finite and positive.");
+  if (!_physical_state)
+  {
+    if (!isParamValid("energy_reference_eV"))
+      paramError("energy_reference_eV",
+                 "energy_reference_eV is required for state_form=normalized.");
+    if (!std::isfinite(_energy_reference_eV) || _energy_reference_eV <= 0.0)
+      paramError("energy_reference_eV",
+                 "Electron-energy normalization scale must be finite and positive.");
+  }
 
   addFunctorProperty<ADReal>(
       getParam<MooseFunctorName>("mean_energy_output"),
       [this](const auto & r, const auto & state) -> ADReal
       {
-        const ADReal n_epsilon_hat = _electron_energy_density(r, state);
-        const ADReal n_e_hat = _electron_density(r, state);
+        const ADReal energy_density = _electron_energy_density(r, state);
+        const ADReal electron_density = _electron_density(r, state);
 
-        if (!std::isfinite(n_e_hat.value()))
+        if (!std::isfinite(electron_density.value()) || electron_density.value() <= 0.0)
           mooseError(
-              "PhysicsElectronMeanEnergyMaterial requires finite n_e_hat; got ",
-              n_e_hat.value(),
+              "PhysicsElectronMeanEnergyMaterial requires finite electron_density > 0; got ",
+              electron_density.value(),
               ".");
 
-        if (n_e_hat.value() <= 0.0)
+        if (!std::isfinite(energy_density.value()) || energy_density.value() < 0.0)
           mooseError(
-              "PhysicsElectronMeanEnergyMaterial requires n_e_hat > 0; got ",
-              n_e_hat.value(),
-              ". No denominator floor is applied.");
-
-        if (!std::isfinite(n_epsilon_hat.value()))
-          mooseError(
-              "PhysicsElectronMeanEnergyMaterial requires finite n_epsilon_hat; got ",
-              n_epsilon_hat.value(),
-              ".");
-
-        if (n_epsilon_hat.value() < 0.0)
-          mooseError(
-              "PhysicsElectronMeanEnergyMaterial requires n_epsilon_hat >= 0; got ",
-              n_epsilon_hat.value(),
+              "PhysicsElectronMeanEnergyMaterial requires finite electron_energy_density >= 0; got ",
+              energy_density.value(),
               ".");
 
         const ADReal mean_energy =
-            _energy_reference_eV * n_epsilon_hat / n_e_hat;
+            _physical_state
+                ? energy_density / electron_density
+                : _energy_reference_eV * energy_density / electron_density;
 
         if (!std::isfinite(mean_energy.value()))
           mooseError(

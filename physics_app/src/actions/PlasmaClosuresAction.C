@@ -41,6 +41,14 @@ PlasmaClosuresAction::validParams()
       "Legacy compatibility switch used when role=custom: create PhysicsPlasmaChargeDensityMaterial.");
 
   // Electron closure inputs.
+  params.addParam<MooseEnum>(
+      "electron_state_form",
+      MooseEnum("auto physical_eV normalized", "auto"),
+      "Electron state convention. auto infers physical_eV from electron_energy_density, "
+      "otherwise preserves the historical normalized state.");
+  params.addParam<MooseFunctorName>(
+      "electron_energy_density",
+      "Physical electron energy density [eV/m^3].");
   params.addParam<MooseFunctorName>(
       "normalized_electron_density",
       "Normalized electron number-density state used by the electron closure.");
@@ -179,6 +187,24 @@ PlasmaClosuresAction::usingRoleMode() const
 }
 
 bool
+PlasmaClosuresAction::electronPhysicalState() const
+{
+  const auto & form = getParam<MooseEnum>("electron_state_form");
+  if (form == "physical_eV")
+    return true;
+  if (form == "normalized")
+    return false;
+
+  if (isParamValid("electron_energy_density"))
+    return true;
+  if (isParamValid("normalized_electron_density") ||
+      isParamValid("normalized_electron_energy_density"))
+    return false;
+
+  return false;
+}
+
+bool
 PlasmaClosuresAction::electronClosureEnabled() const
 {
   const auto & role = getParam<MooseEnum>("role");
@@ -241,9 +267,17 @@ PlasmaClosuresAction::validateConfiguration() const
 
   if (electronClosureEnabled())
   {
-    require("normalized_electron_density", "create_electron_closure");
-    require("normalized_electron_energy_density", "create_electron_closure");
-    require("electron_energy_reference_eV", "create_electron_closure");
+    if (electronPhysicalState())
+    {
+      require("electron_number_density", "electron closure");
+      require("electron_energy_density", "electron closure");
+    }
+    else
+    {
+      require("normalized_electron_density", "electron closure");
+      require("normalized_electron_energy_density", "electron closure");
+      require("electron_energy_reference_eV", "electron closure");
+    }
     require("gas_pressure", "create_electron_closure");
     require("gas_temperature", "create_electron_closure");
     require("electron_transport_table_file", "create_electron_closure");
@@ -299,12 +333,24 @@ PlasmaClosuresAction::act()
   {
     auto material_params = _factory.getValidParams("PhysicsElectronClosureMaterial");
 
-    material_params.set<MooseFunctorName>("normalized_electron_density") =
-        getParam<MooseFunctorName>("normalized_electron_density");
-    material_params.set<MooseFunctorName>("normalized_electron_energy_density") =
-        getParam<MooseFunctorName>("normalized_electron_energy_density");
-    material_params.set<Real>("electron_energy_reference_eV") =
-        getParam<Real>("electron_energy_reference_eV");
+    material_params.set<MooseEnum>("state_form") =
+        electronPhysicalState() ? "physical_eV" : "normalized";
+    if (electronPhysicalState())
+    {
+      material_params.set<MooseFunctorName>("electron_number_density") =
+          getParam<MooseFunctorName>("electron_number_density");
+      material_params.set<MooseFunctorName>("electron_energy_density") =
+          getParam<MooseFunctorName>("electron_energy_density");
+    }
+    else
+    {
+      material_params.set<MooseFunctorName>("normalized_electron_density") =
+          getParam<MooseFunctorName>("normalized_electron_density");
+      material_params.set<MooseFunctorName>("normalized_electron_energy_density") =
+          getParam<MooseFunctorName>("normalized_electron_energy_density");
+      material_params.set<Real>("electron_energy_reference_eV") =
+          getParam<Real>("electron_energy_reference_eV");
+    }
     material_params.set<MooseFunctorName>("gas_pressure") =
         getParam<MooseFunctorName>("gas_pressure");
     material_params.set<MooseFunctorName>("gas_temperature") =

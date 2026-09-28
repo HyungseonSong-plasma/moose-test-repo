@@ -13,8 +13,8 @@ joule_c = (ROOT / "src/fvkernels/PhysicsFVElectronEnergyJouleHeating.C").read_te
 assert "transportedState" in helper
 assert "driftNormal" in helper
 assert "orthogonalDiffusiveFlux" in helper
-assert "normalizedElectronParticleFlux" in helper
-assert "normalizedElectronElectricWork" in helper
+assert "electronParticleFlux" in helper
+assert "electronElectricWork" in helper
 
 assert "_exponential_state" in drift_h
 assert "transported_state" in drift_c
@@ -30,7 +30,7 @@ assert 'params.set<MooseEnum>("transported_state") = "exponential";' in log_c
 assert "PhysicsElectronFluxModel::orthogonalDiffusiveFlux" in log_c
 
 # Joule heating must consume the common constitutive flux helper.
-assert "PhysicsElectronFluxModel::normalizedElectronElectricWork" in joule_c
+assert "PhysicsElectronFluxModel::electronElectricWork" in joule_c
 assert "mobility * electron_density * (electric_field * electric_field)" not in joule_c
 
 print("ELECTRON_FLUX_UNIFICATION_CONTRACT: PASS")
