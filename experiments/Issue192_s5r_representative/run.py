@@ -841,7 +841,7 @@ def self_test() -> None:
         assert mp.get_parameter(
             text, "Postprocessors/r31_charge_integral", "execute_on"
         ) == "'INITIAL TIMESTEP_END'"
-        assert mb.has_block(text, "Postprocessors/s5r_mean_en_inventory")
+        assert mb.has_block(text, "Postprocessors/s5r_mean_en_state_inventory")
         assert mb.has_block(text, "Postprocessors/s5r_mean_en_avg")
         for token in DEFERRED_TOKENS:
             assert token not in text
