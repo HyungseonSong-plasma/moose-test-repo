@@ -153,8 +153,8 @@ def _runtime_metrics(case_dir: Path, *, input_text: str, meta: Mapping[str, Any]
     coefficients = s5r._energy_coefficients(input_text)
     volumetric_energy_norm_rate = s5r._energy_source_density(final, coefficients) * volume
     energy_accum_norm_rate = (
-        s5r._num(final, "s5r_n_epsilon_inventory")
-        - s5r._num(initial, "s5r_n_epsilon_inventory")
+        s5r._num(final, "s5r_mean_en_inventory")
+        - s5r._num(initial, "s5r_mean_en_inventory")
     ) / dt
     energy_scale = n_ref * energy.ENERGY_REFERENCE_EV * ELEMENTARY_CHARGE_C
     thermal_power = _physical(s5r._num(final, energy.ENERGY_WALL_THERMAL_POWER_PP))
@@ -251,7 +251,7 @@ def _runtime_metrics(case_dir: Path, *, input_text: str, meta: Mapping[str, Any]
         },
         "composition_max_abs_error": composition_error,
         "n_e_min": s5r._num(final, "n_e_min"),
-        "n_epsilon_min": s5r._num(final, "s5r_n_epsilon_min"),
+        "mean_en_min": s5r._num(final, "s5r_mean_en_min"),
     }
 
 
@@ -270,7 +270,7 @@ def _evaluate(construction: Mapping[str, Any], metrics: Mapping[str, Any], *, ru
         "F09_convergence_positivity": (
             runtime_ok
             and metrics["n_e_min"] >= ELECTRON_DENSITY_FLOOR
-            and metrics["n_epsilon_min"] > 0.0
+            and metrics["mean_en_min"] > 0.0
             and metrics["composition_max_abs_error"] <= COMPOSITION_ABS_TOL
         ),
     }
@@ -289,7 +289,7 @@ def _synthetic_decision() -> tuple[dict[str, Any], dict[str, Any]]:
         "charge": {"relative_defect_over_boundary_current_scale": 1.0e-6},
         "composition_max_abs_error": 1.0e-12,
         "n_e_min": 1.0,
-        "n_epsilon_min": 1.0,
+        "mean_en_min": 1.0,
     }
     return construction, metrics
 
