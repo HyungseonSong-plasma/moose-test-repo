@@ -176,7 +176,7 @@ def _instrument(text: str) -> str:
         "r31_gauss_flux_charge",
         "sum_w_min",
         "sum_w_max",
-        "s5r_mean_en_inventory",
+        "s5r_mean_en_state_inventory",
         "s5r_mean_en_min",
         "s5r_mean_en_max",
         "s5r_mean_en_avg",
@@ -540,8 +540,8 @@ def _runtime_metrics(case_dir: Path, *, input_text: str, meta: Mapping[str, Any]
     coefficients = s5r._energy_coefficients(input_text)
     volumetric_energy_norm_rate = s5r._energy_source_density(final, coefficients) * volume
     energy_accum_norm_rate = (
-        s5r._num(final, "s5r_mean_en_inventory")
-        - s5r._num(initial, "s5r_mean_en_inventory")
+        s5r._num(final, "s5r_mean_en_state_inventory")
+        - s5r._num(initial, "s5r_mean_en_state_inventory")
     ) / dt
     energy_scale = n_ref * ENERGY_REFERENCE_EV * ELEMENTARY_CHARGE_C
     primary_power = _physical(s5r._num(final, ENERGY_POWER_PP))
@@ -635,7 +635,7 @@ def _runtime_metrics(case_dir: Path, *, input_text: str, meta: Mapping[str, Any]
         },
         "composition_max_abs_error": composition_error,
         "n_e_min": s5r._num(final, "n_e_min"),
-        "mean_en_min": s5r._num(final, "s5r_mean_en_min"),
+        "mean_en_state_min": s5r._num(final, "s5r_mean_en_state_min"),
         "mean_energy_avg_eV": s5r._num(final, "s5r_mean_en_avg"),
         "phi_min_V": s5r._num(final, PHI_MIN_PP),
         "phi_max_V": s5r._num(final, PHI_MAX_PP),
