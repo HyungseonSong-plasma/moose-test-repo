@@ -67,7 +67,7 @@ def main():
     assert "independent electron-particle or electron-energy rate evaluation" in reaction["shared_progress_rule"]
 
     states = reaction["state_inputs"]
-    assert states["electron_number_density"] == "n_e_physical = n_ref * n_e_hat"
+    assert states["electron_number_density"] == "n_e [1/m^3] physical electron number density"
     assert states["constrained_o2_mass_fraction"].startswith("w_O2 = 1 - (w_O2s + w_O2p")
     assert states["o2_molar_concentration"] == "c_O2 = rho * w_O2 / M_O2"
 
