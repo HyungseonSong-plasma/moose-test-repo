@@ -107,7 +107,7 @@ def transform_poisson(src: str) -> str:
 
 
 def _executioner_value(text: str, key: str) -> str:
-    m = re.search(rf"^  {re.escape(key)}\\s*=\\s*(.+?)\\s*$", text, re.MULTILINE)
+    m = re.search(rf"^  {re.escape(key)}\s*=\s*(.+?)\s*$", text, re.MULTILINE)
     if not m:
         raise RuntimeError(f"missing Executioner parameter {key}")
     return m.group(1)
