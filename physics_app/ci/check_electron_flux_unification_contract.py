@@ -16,7 +16,7 @@ assert "orthogonalDiffusiveFlux" in helper
 assert "normalizedElectronParticleFlux" in helper
 assert "normalizedElectronElectricWork" in helper
 
-assert "transported_state" in drift_h
+assert "_exponential_state" in drift_h
 assert "transported_state" in drift_c
 assert "PhysicsElectronFluxModel::driftNormal" in drift_c
 assert "PhysicsElectronFluxModel::transportedState" in drift_c
