@@ -214,6 +214,22 @@ For example:
 []
 ```
 
+The driver Executioner must also enable more than the pinned-MOOSE default
+single fixed-point iteration. The qualified endpoint used Steffensen acceleration;
+the structural fixture therefore carries:
+
+```text
+[Executioner]
+  type = Transient
+  fixed_point_algorithm = steffensen
+  fixed_point_max_its = 3000
+[]
+```
+
+Production qualification should additionally select the driver-level
+`DeltaPhiMultiAppConvergence` object and retain the accepted
+`delta_phi_abs_tol = 1e-6 V` contract.
+
 The driver snapshot variables are AuxVariables and are never advanced by a
 heavy equation. Therefore, for every inner fixed-point iteration `k` in outer
 heavy step `n`,
