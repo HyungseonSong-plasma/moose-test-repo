@@ -171,6 +171,7 @@ def _fast_child(p: dict[str, object]) -> str:
             "W_O2P": f"{init['w_O2p0']:.17g}",
             "NE0": f"{prepare.NE0:.17g}",
             "ENERGY_DENSITY0": f"{prepare.NE0 * base_energy_reference_eV():.17g}",
+            "ENERGY_SOLVER_SCALING": f"{1.0 / (prepare.NE0 * base_energy_reference_eV()):.17g}",
             "JOULE_FACTOR": "1.0",
             "ELASTIC_FACTOR": "1.0",
             "RELAXATION_FACTOR": f"{float(p['relaxation_factor']):.17g}",

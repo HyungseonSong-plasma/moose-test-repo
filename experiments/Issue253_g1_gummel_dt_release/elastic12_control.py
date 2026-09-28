@@ -120,6 +120,7 @@ def build(clean: bool = True) -> list[dict[str, object]]:
                 "W_O2P": f"{w_o2p0:.17g}",
                 "NE0": f"{prepare.NE0:.17g}",
                 "ENERGY_DENSITY0": f"{prepare.NE0 * ENERGY_REFERENCE_EV:.17g}",
+                "ENERGY_SOLVER_SCALING": f"{1.0 / (prepare.NE0 * ENERGY_REFERENCE_EV):.17g}",
                 "JOULE_FACTOR": "1.0",
                 "ELASTIC_FACTOR": "1.0",
                 "RELAXATION_FACTOR": f"{float(p['relaxation_factor']):.17g}",
@@ -207,6 +208,7 @@ def static_contract() -> dict[str, object]:
         assert "PhysicsFVElectronEnergyWallFluxBC" in text
         assert "PhysicsElectronMeanEnergyMaterial" in text
         assert "state_form = physical_eV" in text
+        assert f"scaling = {1.0 / (prepare.NE0 * ENERGY_REFERENCE_EV):.17g}" in text
         assert "electron_number_density_hat" not in text
         assert "S_elastic_candidate_eV_m3_s" in text
         assert "PhysicsElectronTransportLookupMaterial" in text

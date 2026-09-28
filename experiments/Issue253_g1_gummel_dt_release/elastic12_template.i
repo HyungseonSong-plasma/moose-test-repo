@@ -22,8 +22,10 @@
   []
   [electron_energy_density]
     type = MooseVariableFVReal
-    # Physical electron energy density U_e = n_e * mean_en [eV/m^3].
+    # Physical state remains U_e [eV/m^3]. This factor only scales the nonlinear
+    # residual/Jacobian row and does not alter the physical variable definition.
     initial_condition = @@ENERGY_DENSITY0@@
+    scaling = @@ENERGY_SOLVER_SCALING@@
   []
 []
 
