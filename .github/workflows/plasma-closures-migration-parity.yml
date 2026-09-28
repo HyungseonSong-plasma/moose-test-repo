@@ -6,6 +6,9 @@ on:
       - issue-336-standard-scalarized-convergence
     paths:
       - 'experiments/Issue306_heavy_charge_motion/wall08_control.py'
+      - 'experiments/Issue253_g1_gummel_dt_release/elastic12_template.i'
+      - 'experiments/Issue253_g1_gummel_dt_release/elastic12_control.py'
+      - 'experiments/Issue306_heavy_charge_motion/control.py'
       - 'physics_app/include/**'
       - 'physics_app/src/**'
       - 'experiments/Issue337_plasma_closures_migration/**'
