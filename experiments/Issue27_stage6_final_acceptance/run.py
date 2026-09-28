@@ -153,8 +153,8 @@ def _runtime_metrics(case_dir: Path, *, input_text: str, meta: Mapping[str, Any]
     coefficients = s5r._energy_coefficients(input_text)
     volumetric_energy_norm_rate = s5r._energy_source_density(final, coefficients) * volume
     energy_accum_norm_rate = (
-        s5r._num(final, "s5r_mean_en_inventory")
-        - s5r._num(initial, "s5r_mean_en_inventory")
+        s5r._num(final, "s5r_mean_en_state_inventory")
+        - s5r._num(initial, "s5r_mean_en_state_inventory")
     ) / dt
     energy_scale = n_ref * energy.ENERGY_REFERENCE_EV * ELEMENTARY_CHARGE_C
     thermal_power = _physical(s5r._num(final, energy.ENERGY_WALL_THERMAL_POWER_PP))
@@ -251,7 +251,7 @@ def _runtime_metrics(case_dir: Path, *, input_text: str, meta: Mapping[str, Any]
         },
         "composition_max_abs_error": composition_error,
         "n_e_min": s5r._num(final, "n_e_min"),
-        "mean_en_min": s5r._num(final, "s5r_mean_en_min"),
+        "mean_en_state_min": s5r._num(final, "s5r_mean_en_state_min"),
     }
 
 
