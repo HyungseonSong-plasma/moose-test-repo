@@ -381,7 +381,7 @@ def self_test():
                 "property_name = charge_density_probe",
                 "property_name = poisson_source_probe",
                 "type = FVDiffusion",
-                "v = poisson_charge_source",
+                "v = poisson_source_probe",
                 "type = ElementValueSampler",
             ):
                 assert token in text
