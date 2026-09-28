@@ -111,7 +111,8 @@ def _unify_fast_input(text: str) -> str:
 
 
 def _semantic(text: str) -> str:
-    return "\n".join(line.rstrip() for line in text.splitlines() if line.strip())
+    # HIT indentation is not semantic; compare every nonblank token line.
+    return "\n".join(line.strip() for line in text.splitlines() if line.strip())
 
 
 def _normalize_compat(text: str) -> str:
