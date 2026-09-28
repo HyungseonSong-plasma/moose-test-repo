@@ -270,7 +270,7 @@ def _step_evidence(
         "state": {
             "n_e_min_m3": n_e_min,
             "n_e_inventory": s5r._num(current, "n_e_inventory"),
-            "mean_en_min": mean_en_state_min,
+            "mean_en_state_min": mean_en_state_min,
             "mean_en_state_inventory": s5r._num(current, "s5r_mean_en_state_inventory"),
             "mean_energy_min_eV": mean_energy_min,
             "mean_energy_avg_eV": mean_energy_avg,
