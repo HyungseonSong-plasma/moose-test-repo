@@ -56,12 +56,7 @@ from pathlib import Path
 p = Path("/workspace/experiments/Issue336_gummel_action_parity/generated_short/manual_wiring/fast_sub.i")
 s = p.read_text()
 if "[Debug]" not in s:
-    s += """
-[Debug]
-  show_var_residual_norms = true
-  show_top_residuals = 8
-[]
-"""
+    s += "\\n[Debug]\\n  show_var_residual_norms = true\\n  show_top_residuals = 8\\n[]\\n"
 p.write_text(s)
 PY
               set +e
