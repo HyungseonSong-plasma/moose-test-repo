@@ -104,24 +104,24 @@ def _input(*, physical: bool) -> str:
 
 [FunctorMaterials]
   [electron_number_state]
-    type = ADParsedFunctorMaterial
+    type = ParsedFunctorMaterial
     property_name = n_e_state
     expression = '{ne_expr}'
   []
   [electron_energy_state]
-    type = ADParsedFunctorMaterial
+    type = ParsedFunctorMaterial
     property_name = n_epsilon_state
     expression = '{ee_expr}'
   []
   [electron_number_physical]
-    type = ADParsedFunctorMaterial
+    type = ParsedFunctorMaterial
     property_name = n_e_physical
     functor_names = 'n_e_state'
     functor_symbols = 'ne'
     expression = '{ne_bridge_expr}'
   []
   [electron_energy_physical]
-    type = ADParsedFunctorMaterial
+    type = ParsedFunctorMaterial
     property_name = n_epsilon_physical
     functor_names = 'n_epsilon_state'
     functor_symbols = 'ee'
@@ -133,21 +133,21 @@ def _input(*, physical: bool) -> str:
     prop_values = '{ION_NUMBER_DENSITY:.17g} 1.0'
   []
   [mean_energy]
-    type = ADParsedFunctorMaterial
+    type = ParsedFunctorMaterial
     property_name = mean_energy_probe
     functor_names = 'n_e_state n_epsilon_state'
     functor_symbols = 'ne ee'
     expression = '{mean_expr}'
   []
   [charge_density]
-    type = ADParsedFunctorMaterial
+    type = ParsedFunctorMaterial
     property_name = charge_density_probe
     functor_names = 'ion_number_density n_e_physical'
     functor_symbols = 'ni ne'
     expression = '{E_CHARGE:.17g}*(ni-ne)'
   []
   [poisson_source]
-    type = ADParsedFunctorMaterial
+    type = ParsedFunctorMaterial
     property_name = poisson_source_probe
     functor_names = 'charge_density_probe'
     functor_symbols = 'rhoq'
