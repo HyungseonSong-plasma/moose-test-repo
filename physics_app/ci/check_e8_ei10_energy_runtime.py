@@ -42,7 +42,7 @@ RUNTIME_INPUT = f"""[Mesh]
     type = MooseVariableFVReal
     initial_condition = 1.0e16
   []
-  [n_epsilon]
+  [mean_en]
     type = MooseVariableFVReal
     initial_condition = 5.73276e16
   []
@@ -74,7 +74,7 @@ RUNTIME_INPUT = f"""[Mesh]
   []
   [mean_energy_bridge]
     type = PhysicsElectronMeanEnergyMaterial
-    electron_energy_density = n_epsilon
+    electron_energy_density = mean_en
     electron_density = n_e
     state_form = physical_eV
   []
@@ -95,13 +95,13 @@ RUNTIME_INPUT = f"""[Mesh]
     type = FVTimeKernel
     variable = n_e
   []
-  [n_epsilon_time]
+  [mean_en_time]
     type = FVTimeKernel
-    variable = n_epsilon
+    variable = mean_en
   []
   [ei10_energy_loss]
     type = FVCoupledForce
-    variable = n_epsilon
+    variable = mean_en
     v = R_O2s
     coef = {ENERGY_COEF:.17g}
   []
@@ -123,9 +123,9 @@ RUNTIME_INPUT = f"""[Mesh]
     functor = n_e
     execute_on = 'INITIAL TIMESTEP_END'
   []
-  [n_epsilon_avg]
+  [mean_en_avg]
     type = ElementAverageFunctorPostprocessor
-    functor = n_epsilon
+    functor = mean_en
     execute_on = 'INITIAL TIMESTEP_END'
   []
   [w_O2s_avg]
@@ -191,7 +191,7 @@ def validate_runtime_rows(rows):
         raise AssertionError("expected initial and final rows")
     i, f = rows[0], rows[-1]
     ne_i, ne_f = _num(i, "n_e_avg"), _num(f, "n_e_avg")
-    ep_i, ep_f = _num(i, "n_epsilon_avg"), _num(f, "n_epsilon_avg")
+    ep_i, ep_f = _num(i, "mean_en_avg"), _num(f, "mean_en_avg")
     ws_i, ws_f = _num(i, "w_O2s_avg"), _num(f, "w_O2s_avg")
     wo_i, wo_f = _num(i, "w_O2_avg"), _num(f, "w_O2_avg")
     me_i, me_f = _num(i, "mean_en_solved_avg"), _num(f, "mean_en_solved_avg")
@@ -224,9 +224,9 @@ def validate_runtime_rows(rows):
     _close(oxygen_f, oxygen_i, rel=2e-12, abs_=1e-14, label="oxygen inventory")
 
     return {
-        "initial": {"n_e": ne_i, "n_epsilon": ep_i, "w_O2": wo_i, "w_O2s": ws_i, "mean_en_solved_eV": me_i},
-        "final": {"n_e": ne_f, "n_epsilon": ep_f, "w_O2": wo_f, "w_O2s": ws_f, "mean_en_solved_eV": me_f, "R_O2s_mol_m3_s": r_f},
-        "energy_closure": {"energy_loss_eV_per_event": DELTA_E_EV, "standard_moose_object": "FVCoupledForce", "coef": ENERGY_COEF, "physical_rhs_eV_m3_s": rhs, "observed_dn_epsilon_dt_eV_m3_s": (ep_f - ep_i) / DT},
+        "initial": {"n_e": ne_i, "mean_en": ep_i, "w_O2": wo_i, "w_O2s": ws_i, "mean_en_solved_eV": me_i},
+        "final": {"n_e": ne_f, "mean_en": ep_f, "w_O2": wo_f, "w_O2s": ws_f, "mean_en_solved_eV": me_f, "R_O2s_mol_m3_s": r_f},
+        "energy_closure": {"energy_loss_eV_per_event": DELTA_E_EV, "standard_moose_object": "FVCoupledForce", "coef": ENERGY_COEF, "physical_rhs_eV_m3_s": rhs, "observed_dmean_en_dt_eV_m3_s": (ep_f - ep_i) / DT},
         "particle_heavy_closure": {"heavy_fraction_sum": wo_f + ws_f, "oxygen_atom_molar_inventory_initial": oxygen_i, "oxygen_atom_molar_inventory_final": oxygen_f}
     }
 
@@ -239,8 +239,8 @@ def runtime_checker_self_test():
     ep = N_E0 * MEAN_E0_EV - DT * DELTA_E_EV * N_A * r
     r0 = K_O2S * (N_E0 / N_A) * (RHO * (1 - W0) / M_O2)
     rows = [
-        {"n_e_avg": N_E0, "n_epsilon_avg": N_E0 * MEAN_E0_EV, "w_O2s_avg": W0, "w_O2_avg": 1 - W0, "mean_en_solved_avg": MEAN_E0_EV, "R_O2s_avg": r0, "O2_source_avg": -M_O2 * r0, "O2s_source_avg": M_O2 * r0},
-        {"n_e_avg": N_E0, "n_epsilon_avg": ep, "w_O2s_avg": ws, "w_O2_avg": wo, "mean_en_solved_avg": ep / N_E0, "R_O2s_avg": r, "O2_source_avg": -M_O2 * r, "O2s_source_avg": M_O2 * r}
+        {"n_e_avg": N_E0, "mean_en_avg": N_E0 * MEAN_E0_EV, "w_O2s_avg": W0, "w_O2_avg": 1 - W0, "mean_en_solved_avg": MEAN_E0_EV, "R_O2s_avg": r0, "O2_source_avg": -M_O2 * r0, "O2s_source_avg": M_O2 * r0},
+        {"n_e_avg": N_E0, "mean_en_avg": ep, "w_O2s_avg": ws, "w_O2_avg": wo, "mean_en_solved_avg": ep / N_E0, "R_O2s_avg": r, "O2_source_avg": -M_O2 * r, "O2s_source_avg": M_O2 * r}
     ]
     validate_runtime_rows(rows)
     assert "type = FVCoupledForce" in RUNTIME_INPUT
@@ -276,7 +276,7 @@ def run_controlled_executable(executable, evidence_out=None, repository_sha=None
         evidence["build_base_ref"] = build_base_ref
     if evidence_out:
         Path(evidence_out).write_text(json.dumps(evidence, indent=2, sort_keys=True) + "\n")
-    print(f"E8_EI10_INELASTIC_ENERGY_RUNTIME_VECTOR n_epsilon={evidence['final']['n_epsilon']:.12g} mean_en_eV={evidence['final']['mean_en_solved_eV']:.12g} R={evidence['final']['R_O2s_mol_m3_s']:.12g}")
+    print(f"E8_EI10_INELASTIC_ENERGY_RUNTIME_VECTOR mean_en={evidence['final']['mean_en']:.12g} mean_en_eV={evidence['final']['mean_en_solved_eV']:.12g} R={evidence['final']['R_O2s_mol_m3_s']:.12g}")
     print("E8_EI10_INELASTIC_ENERGY_LOCAL_RUNTIME_PASS")
 
 
