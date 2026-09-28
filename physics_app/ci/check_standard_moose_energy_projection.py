@@ -25,7 +25,7 @@ EI16_COEF = -(EI16_DELTA_E_EV * N_A)
 # Accepted governed vectors from b882211eb24a94bb645d0c13ecd96badc2c35095.
 EI10_ORACLE = {
     "n_e_avg": 1.0 * N_E0,
-    "n_epsilon_avg": 0.99198106194124 * N_E0 * MEAN_E0_EV,
+    "mean_en_avg": 0.99198106194124 * N_E0 * MEAN_E0_EV,
     "mean_en_solved_avg": 5.6867893526543,
     "w_O2_avg": 0.99899921866882,
     "w_O2s_avg": 0.0010007813311756,
@@ -33,7 +33,7 @@ EI10_ORACLE = {
 }
 EI16_ORACLE = {
     "n_e_avg": 1.1016960590289 * N_E0,
-    "n_epsilon_avg": 0.78606212855788 * N_E0 * MEAN_E0_EV,
+    "mean_en_avg": 0.78606212855788 * N_E0 * MEAN_E0_EV,
     "mean_en_solved_avg": 4.0903346174113,
     "w_O2_avg": 0.99899831129721,
     "w_O2p_avg": 0.00100168870279,
@@ -61,7 +61,7 @@ EI10_INPUT = f"""[Mesh]
     type = MooseVariableFVReal
     initial_condition = 1.0e16
   []
-  [n_epsilon]
+  [mean_en]
     type = MooseVariableFVReal
     initial_condition = 5.73276e16
   []
@@ -93,7 +93,7 @@ EI10_INPUT = f"""[Mesh]
   []
   [mean_energy_bridge]
     type = PhysicsElectronMeanEnergyMaterial
-    electron_energy_density = n_epsilon
+    electron_energy_density = mean_en
     electron_density = n_e
     state_form = physical_eV
   []
@@ -114,13 +114,13 @@ EI10_INPUT = f"""[Mesh]
     type = FVTimeKernel
     variable = n_e
   []
-  [n_epsilon_time]
+  [mean_en_time]
     type = FVTimeKernel
-    variable = n_epsilon
+    variable = mean_en
   []
   [ei10_energy_loss_standard]
     type = FVCoupledForce
-    variable = n_epsilon
+    variable = mean_en
     v = R_O2s
     coef = {EI10_COEF:.17g}
   []
@@ -142,9 +142,9 @@ EI10_INPUT = f"""[Mesh]
     functor = n_e
     execute_on = 'INITIAL TIMESTEP_END'
   []
-  [n_epsilon_avg]
+  [mean_en_avg]
     type = ElementAverageFunctorPostprocessor
-    functor = n_epsilon
+    functor = mean_en
     execute_on = 'INITIAL TIMESTEP_END'
   []
   [w_O2s_avg]
@@ -203,7 +203,7 @@ EI16_INPUT = f"""[Mesh]
     type = MooseVariableFVReal
     initial_condition = 1.0e16
   []
-  [n_epsilon]
+  [mean_en]
     type = MooseVariableFVReal
     initial_condition = 5.73276e16
   []
@@ -235,7 +235,7 @@ EI16_INPUT = f"""[Mesh]
   []
   [mean_energy_bridge]
     type = PhysicsElectronMeanEnergyMaterial
-    electron_energy_density = n_epsilon
+    electron_energy_density = mean_en
     electron_density = n_e
     state_form = physical_eV
   []
@@ -258,13 +258,13 @@ EI16_INPUT = f"""[Mesh]
     type = FVTimeKernel
     variable = n_e
   []
-  [n_epsilon_time]
+  [mean_en_time]
     type = FVTimeKernel
-    variable = n_epsilon
+    variable = mean_en
   []
   [ei16_energy_loss_standard]
     type = FVCoupledForce
-    variable = n_epsilon
+    variable = mean_en
     v = R_ion_O2
     coef = {EI16_COEF:.17g}
   []
@@ -292,9 +292,9 @@ EI16_INPUT = f"""[Mesh]
     functor = n_e
     execute_on = 'INITIAL TIMESTEP_END'
   []
-  [n_epsilon_avg]
+  [mean_en_avg]
     type = ElementAverageFunctorPostprocessor
-    functor = n_epsilon
+    functor = mean_en
     execute_on = 'INITIAL TIMESTEP_END'
   []
   [w_O2p_avg]
@@ -421,8 +421,8 @@ def run(executable, evidence_out=None, repository_sha=None, build_base_ref=None)
 
     print(
         "STANDARD_MOOSE_ENERGY_AB_VECTOR "
-        f"EI10_neps={ei10['n_epsilon_avg']:.12g} "
-        f"EI16_neps={ei16['n_epsilon_avg']:.12g}"
+        f"EI10_neps={ei10['mean_en_avg']:.12g} "
+        f"EI16_neps={ei16['mean_en_avg']:.12g}"
     )
     print("STANDARD_MOOSE_ENERGY_PROJECTION_AB_PASS")
 
