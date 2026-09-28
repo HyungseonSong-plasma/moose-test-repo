@@ -56,7 +56,7 @@ RUNTIME_INPUT = f"""[Mesh]
   []
   [n_epsilon]
     type = MooseVariableFVReal
-    initial_condition = {N_E0 * INITIAL_MEAN_ENERGY_EV:.17g}
+    initial_condition = {N_E0 * EPSILON_E0_EV:.17g}
   []
   [w_O2p]
     type = MooseVariableFVReal
@@ -256,8 +256,8 @@ def validate_runtime_rows(rows):
     _assert_close(se_f / N_A, progress_f, label="electron source / shared progress")
     _assert_close(so2_f + so2p_f, 0.0, rel=0.0, abs_=1.0e-11, label="heavy source closure")
 
-    _assert_close(mean_i, EPSILON_E0_EV * eps_i / ne_i, label="initial solved mean energy")
-    _assert_close(mean_f, EPSILON_E0_EV * eps_f / ne_f, label="final solved mean energy")
+    _assert_close(mean_i, eps_i / ne_i, label="initial solved mean energy")
+    _assert_close(mean_f, eps_f / ne_f, label="final solved mean energy")
     expected_k = _interp_rate(mean_f)
     expected_c_o2 = RHO * wo2_f / M_O2
     expected_progress = expected_k * (ne_f / N_A) * expected_c_o2
@@ -304,7 +304,7 @@ def runtime_checker_self_test():
     for _ in range(100):
         ne = N_E0 + DT * N_A * progress
         wp = WP0 + DT * M_O2 * progress / RHO
-        mean = EPSILON_E0_EV / ne
+        mean = (N_E0 * EPSILON_E0_EV) / ne
         k = _interp_rate(mean)
         new_progress = k * (ne / N_A) * (RHO * (1.0 - wp) / M_O2)
         if math.isclose(new_progress, progress, rel_tol=1.0e-14, abs_tol=1.0e-18):
@@ -313,12 +313,12 @@ def runtime_checker_self_test():
         progress = new_progress
     ne = N_E0 + DT * N_A * progress
     wp = WP0 + DT * M_O2 * progress / RHO
-    mean = EPSILON_E0_EV / ne
+    mean = (N_E0 * EPSILON_E0_EV) / ne
     r0 = _interp_rate(EPSILON_E0_EV) * (N_E0 / N_A) * (RHO * (1.0 - WP0) / M_O2)
     rows = [
         {
             "n_e_avg": N_E0,
-            "n_epsilon_avg": N_E0 * INITIAL_MEAN_ENERGY_EV,
+            "n_epsilon_avg": N_E0 * EPSILON_E0_EV,
             "w_O2p_avg": WP0,
             "w_O2_avg": 1.0 - WP0,
             "mean_en_solved_avg": EPSILON_E0_EV,
@@ -329,7 +329,7 @@ def runtime_checker_self_test():
         },
         {
             "n_e_avg": ne,
-            "n_epsilon_avg": N_E0 * INITIAL_MEAN_ENERGY_EV,
+            "n_epsilon_avg": N_E0 * EPSILON_E0_EV,
             "w_O2p_avg": wp,
             "w_O2_avg": 1.0 - wp,
             "mean_en_solved_avg": mean,
