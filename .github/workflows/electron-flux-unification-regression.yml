@@ -12,6 +12,8 @@ on:
       - 'physics_app/src/materials/PhysicsElectronClosureMaterial.C'
       - 'physics_app/include/materials/PhysicsElectronMeanEnergyMaterial.h'
       - 'physics_app/src/materials/PhysicsElectronMeanEnergyMaterial.C'
+      - 'physics_app/include/convergence/DeltaPhiMultiAppConvergence.h'
+      - 'physics_app/src/convergence/DeltaPhiMultiAppConvergence.C'
       - 'physics_app/include/utils/PhysicsElectronFluxModel.h'
       - 'physics_app/include/fvkernels/PhysicsFVElectrostaticDrift.h'
       - 'physics_app/src/fvkernels/PhysicsFVElectrostaticDrift.C'
