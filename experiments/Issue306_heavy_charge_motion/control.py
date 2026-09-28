@@ -148,6 +148,10 @@ def _params(spec: dict[str, object]) -> dict[str, object]:
     }
 
 
+def base_energy_reference_eV() -> float:
+    return 5.73276
+
+
 def _common_initial() -> dict[str, float]:
     return {
         "log_ce0": math.log(prepare.NE0 / prepare.NA),
@@ -166,6 +170,7 @@ def _fast_child(p: dict[str, object]) -> str:
             "LOG_CE": f"{init['log_ce0']:.17g}",
             "W_O2P": f"{init['w_O2p0']:.17g}",
             "NE0": f"{prepare.NE0:.17g}",
+            "ENERGY_DENSITY0": f"{prepare.NE0 * base_energy_reference_eV():.17g}",
             "JOULE_FACTOR": "1.0",
             "ELASTIC_FACTOR": "1.0",
             "RELAXATION_FACTOR": f"{float(p['relaxation_factor']):.17g}",
