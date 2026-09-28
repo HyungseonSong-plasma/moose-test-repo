@@ -178,8 +178,8 @@ def _step_evidence(
     coeff = s5r._energy_coefficients(input_text)
     energy_volume = s5r._energy_source_density(current, coeff) * volume
     energy_accum = (
-        s5r._num(current, "s5r_mean_en_inventory")
-        - s5r._num(previous, "s5r_mean_en_inventory")
+        s5r._num(current, "s5r_mean_en_state_inventory")
+        - s5r._num(previous, "s5r_mean_en_state_inventory")
     ) / dt
     energy_scale = n_ref * w45.ENERGY_REFERENCE_EV * ELEMENTARY_CHARGE_C
     primary_power = abs(s5r._num(current, w45.ENERGY_POWER_PP))
@@ -210,12 +210,12 @@ def _step_evidence(
         abs(s5r._num(current, "sum_w_max") - 1.0),
     )
     n_e_min = s5r._num(current, "n_e_min")
-    mean_en_min = s5r._num(current, "s5r_mean_en_min")
+    mean_en_state_min = s5r._num(current, "s5r_mean_en_state_min")
     mean_energy_min = s5r._num(current, "s5r_mean_en_min")
     mean_energy_avg = s5r._num(current, "s5r_mean_en_avg")
     finite_values = (
         n_e_min,
-        mean_en_min,
+        mean_en_state_min,
         mean_energy_min,
         mean_energy_avg,
         s5r._num(current, w45.PHI_MIN_PP),
@@ -270,8 +270,8 @@ def _step_evidence(
         "state": {
             "n_e_min_m3": n_e_min,
             "n_e_inventory": s5r._num(current, "n_e_inventory"),
-            "mean_en_min": mean_en_min,
-            "mean_en_inventory": s5r._num(current, "s5r_mean_en_inventory"),
+            "mean_en_min": mean_en_state_min,
+            "mean_en_state_inventory": s5r._num(current, "s5r_mean_en_state_inventory"),
             "mean_energy_min_eV": mean_energy_min,
             "mean_energy_avg_eV": mean_energy_avg,
             "rho_q_min_C_m3": s5r._num(current, w45.RHO_MIN_PP),
@@ -292,8 +292,8 @@ def _endpoint(rows: list[dict[str, str]], *, meta: Mapping[str, Any]) -> dict[st
     return {
         "n_e_min_m3": s5r._num(row, "n_e_min"),
         "n_e_inventory": s5r._num(row, "n_e_inventory"),
-        "mean_en_min": s5r._num(row, "s5r_mean_en_min"),
-        "mean_en_inventory": s5r._num(row, "s5r_mean_en_inventory"),
+        "mean_en_state_min": s5r._num(row, "s5r_mean_en_state_min"),
+        "mean_en_state_inventory": s5r._num(row, "s5r_mean_en_state_inventory"),
         "mean_energy_avg_eV": s5r._num(row, "s5r_mean_en_avg"),
         "volume_charge_C": s5r._num(row, "r31_charge_integral"),
         "phi_min_V": s5r._num(row, w45.PHI_MIN_PP),
