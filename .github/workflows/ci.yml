@@ -324,3 +324,137 @@ jobs:
             echo "ORDINARY_CI_REBUILDS_MOOSE_STACK=false"
             echo "ORDINARY_CI_COMPILES_PHYSICS_APPLICATION=false"
           }
+
+
+  gummel-heavy-sibling-parity:
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.head_ref == 'gummel-heavy-sibling-parity'
+    name: Qualified heavy to sibling-Gummel parity
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - name: Checkout candidate source
+        uses: actions/checkout@v4
+
+      - name: Checkout exact qualified generator source
+        uses: actions/checkout@v4
+        with:
+          ref: c9726d45e912f2476958d580c88e3421b5d4868b
+          path: oracle
+
+      - name: Generate exact qualified PlasmaClosures production input
+        shell: bash
+        run: |
+          set -euxo pipefail
+          PYTHONPATH="$PWD/oracle" \
+            python3 oracle/experiments/Issue337_plasma_closures_migration/control.py \
+              --horizon full --p0
+          test -f oracle/experiments/Issue337_plasma_closures_migration/generated_full/plasma_closures/input.i
+          test -f oracle/experiments/Issue337_plasma_closures_migration/generated_full/plasma_closures/fast_sub.i
+          test -f oracle/experiments/Issue337_plasma_closures_migration/generated_full/plasma_closures/poisson_sub.i
+
+      - name: Prepare heavy to Gummel sibling hierarchy
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python3 physics_app/ci/gummel_heavy_sibling_parity.py \
+            --prepare \
+            oracle/experiments/Issue337_plasma_closures_migration/generated_full/plasma_closures \
+            "$PWD/.gummel-heavy-sibling-parity"
+
+      - name: Log in to GHCR for build base
+        shell: bash
+        run: |
+          set -euxo pipefail
+          echo "\${{ secrets.GITHUB_TOKEN }}" | \
+            docker login ghcr.io -u "\${{ github.actor }}" --password-stdin
+
+      - name: Build candidate PhysicsApp from source
+        shell: bash
+        run: |
+          set -euxo pipefail
+          docker pull "$EXPECTED_BUILD_BASE_REF"
+          docker run --rm \
+            -v "$PWD:/workspace" \
+            -w /workspace/physics_app \
+            "$EXPECTED_BUILD_BASE_REF" \
+            bash -lc '
+              set -euxo pipefail
+              source /environment
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+              make -j2
+            '
+          test -x physics_app/physics-opt
+
+      - name: Check all four production inputs
+        shell: bash
+        run: |
+          set -euxo pipefail
+          for input in poisson.i electron.i gummel.i input.i; do
+            docker run --rm \
+              -v "$PWD:/workspace" \
+              -w /workspace/.gummel-heavy-sibling-parity \
+              "$EXPECTED_BUILD_BASE_REF" \
+              bash -lc "
+                set -euxo pipefail
+                source /environment
+                export MOOSE_DIR=/opt/physics_vendor/moose
+                export CRANE_DIR=/opt/physics_vendor/crane
+                export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+                export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+                /workspace/physics_app/physics-opt --check-input -i $input
+              "
+          done
+
+      - name: Run full 20 ns sibling-Gummel parity case
+        shell: bash
+        run: |
+          set -euxo pipefail
+          docker run --rm \
+            -v "$PWD:/workspace" \
+            -w /workspace/.gummel-heavy-sibling-parity \
+            "$EXPECTED_BUILD_BASE_REF" \
+            bash -lc '
+              set -euxo pipefail
+              source /environment
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              /workspace/physics_app/physics-opt -t -i input.i \
+                2>&1 | tee parity_runtime.log
+            '
+
+      - name: Compare with exact qualified endpoint
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python3 physics_app/ci/gummel_heavy_sibling_parity.py \
+            --compare \
+            "$PWD/.gummel-heavy-sibling-parity" \
+            physics_app/ci/gummel_heavy_sibling_golden.json.gz.b64 \
+            --output-json "$PWD/.gummel-heavy-sibling-parity/parity_result.json"
+          cat "$PWD/.gummel-heavy-sibling-parity/parity_result.json"
+
+      - name: Upload parity evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gummel-heavy-sibling-parity-evidence
+          path: |
+            .gummel-heavy-sibling-parity/parity_result.json
+            .gummel-heavy-sibling-parity/parity_runtime.log
+            .gummel-heavy-sibling-parity/input.i
+            .gummel-heavy-sibling-parity/gummel.i
+            .gummel-heavy-sibling-parity/electron.i
+            .gummel-heavy-sibling-parity/poisson.i
+          if-no-files-found: warn
+          retention-days: 30
