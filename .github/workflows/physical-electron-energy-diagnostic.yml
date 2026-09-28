@@ -1,0 +1,85 @@
+name: Physical Electron Energy Diagnostic
+
+on:
+  push:
+    branches:
+      - issue-336-standard-scalarized-convergence
+    paths:
+      - '.github/workflows/physical-electron-energy-diagnostic.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: read
+
+env:
+  BUILD_BASE: ghcr.io/hyungseonsong-plasma/physics-build-base:moose-9f388366-deps-ba26970-16a26d5-9eceffb-v1
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Log in to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and run diagnostic short case
+        shell: bash
+        run: |
+          set -euxo pipefail
+          docker pull "$BUILD_BASE"
+          docker run --rm \
+            --entrypoint /bin/bash \
+            --user 0:0 \
+            --workdir /workspace \
+            -v "$PWD:/workspace" \
+            "$BUILD_BASE" \
+            -lc '
+              set -euxo pipefail
+              source /environment
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+              export PYTHONPATH=/workspace
+              make -C /workspace/physics_app -j2
+              python3 /workspace/experiments/Issue336_gummel_action_parity/control.py --horizon short --p0
+
+              CASE=/workspace/experiments/Issue336_gummel_action_parity/generated_short/manual_wiring
+              python3 - <<"PY"
+from pathlib import Path
+p = Path("/workspace/experiments/Issue336_gummel_action_parity/generated_short/manual_wiring/fast_sub.i")
+s = p.read_text()
+if "[Debug]" not in s:
+    s += """
+[Debug]
+  show_var_residual_norms = true
+  show_top_residuals = 8
+[]
+"""
+p.write_text(s)
+PY
+              set +e
+              cd "$CASE"
+              /workspace/physics_app/physics-opt -t -i input.i > physical_energy_diagnostic.log 2>&1
+              rc=$?
+              echo "$rc" > physical_energy_diagnostic.returncode
+              set -e
+              grep -E "Beginning fixed point iteration|Gummel max delta-phi|Residual Norms|log_e|electron_energy_density|Top residual|DIVERGED|CONVERGED|Nonlinear" physical_energy_diagnostic.log > physical_energy_diagnostic.filtered.log || true
+              exit 0
+            '
+      - name: Upload diagnostic evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: physical-electron-energy-diagnostic
+          path: |
+            experiments/Issue336_gummel_action_parity/generated_short/manual_wiring/physical_energy_diagnostic.log
+            experiments/Issue336_gummel_action_parity/generated_short/manual_wiring/physical_energy_diagnostic.filtered.log
+            experiments/Issue336_gummel_action_parity/generated_short/manual_wiring/physical_energy_diagnostic.returncode
+          if-no-files-found: error
