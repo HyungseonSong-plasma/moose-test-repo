@@ -1,0 +1,65 @@
+name: Physical state coupled equivalence
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+env:
+  BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+
+jobs:
+  coupled-equivalence:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Static equivalence discriminator self-test
+        run: python3 physics_app/ci/check_physical_state_coupled_equivalence.py --self-test
+
+      - name: Prepare runner disk
+        shell: bash
+        run: |
+          set -euxo pipefail
+          sudo apt-get clean || true
+          docker system prune -af --volumes || true
+          df -h /
+
+      - name: Pull immutable Physics build base
+        shell: bash
+        run: docker pull "$BUILD_BASE_REF"
+
+      - name: Build current Physics source and run coupled A/B equivalence
+        shell: bash
+        run: |
+          set -euxo pipefail
+          docker run --rm             --entrypoint /bin/bash             --user 0:0             --workdir /workspace/physics_app             -e GITHUB_SHA="$GITHUB_SHA"             -v "$PWD:/workspace"             "$BUILD_BASE_REF"             -lc '
+              set -euxo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              git config --global --add safe.directory /opt/physics_vendor/moose
+              git config --global --add safe.directory /opt/physics_vendor/crane
+              git config --global --add safe.directory /opt/physics_vendor/squirrel
+              git config --global --add safe.directory /opt/physics_vendor/zapdos
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+              make -j2
+              test -x physics-opt
+              python3 ci/check_physical_state_coupled_equivalence.py                 --executable ./physics-opt                 --evidence-out /workspace/physical-state-coupled-equivalence.json
+            '
+
+      - name: Upload equivalence evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: physical-state-coupled-equivalence
+          path: physical-state-coupled-equivalence.json
+          if-no-files-found: warn
+          retention-days: 30
