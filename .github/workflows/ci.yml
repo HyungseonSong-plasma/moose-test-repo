@@ -213,6 +213,8 @@ jobs:
         run: python -m pytest -q
       - name: Validate normalized-to-physical coupled equivalence fixture
         run: python physics_app/ci/check_physical_state_coupled_equivalence.py --self-test
+      - name: Validate n_epsilon-to-mean_en symbol equivalence fixture
+        run: python physics_app/ci/check_mean_en_symbol_equivalence.py --self-test
       - name: Validate #17 R1 EI01 attachment source contract
         run: python physics_app/ci/check_ei01_attachment_source_contract.py
       - name: Validate #17 R2 O2 ionization lookup and ownership contract
@@ -295,6 +297,17 @@ jobs:
             docker run --rm -v "$work/$mode:/work" -w /work "$PHYSICS_RUNTIME_REF" -i input.i
           done
           python physics_app/ci/check_physical_state_coupled_equivalence.py --compare "$work"
+      - name: Run n_epsilon-to-mean_en symbol equivalence
+        shell: bash
+        run: |
+          set -euxo pipefail
+          work="$PWD/.mean-en-symbol-equivalence"
+          python physics_app/ci/check_mean_en_symbol_equivalence.py --prepare "$work"
+          for mode in old new; do
+            docker run --rm -v "$work/$mode:/work" -w /work "$PHYSICS_RUNTIME_REF" --check-input -i input.i
+            docker run --rm -v "$work/$mode:/work" -w /work "$PHYSICS_RUNTIME_REF" -i input.i
+          done
+          python physics_app/ci/check_mean_en_symbol_equivalence.py --compare "$work"
       - name: Record ordinary CI runtime evidence
         shell: bash
         run: |
