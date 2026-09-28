@@ -33,6 +33,14 @@ required = (
     '"electron_to_poisson_variables"',
     '"poisson_to_electron_source_variables"',
     '"poisson_to_electron_variables"',
+    '"coordinator_to_electron_source_variables"',
+    '"coordinator_to_electron_variables"',
+    '"coordinator_to_poisson_source_variables"',
+    '"coordinator_to_poisson_variables"',
+    '"electron_to_coordinator_source_variables"',
+    '"electron_to_coordinator_variables"',
+    '"poisson_to_coordinator_source_variables"',
+    '"poisson_to_coordinator_variables"',
     '"DeltaPhiMultiAppConvergence"',
     'params.set<MultiAppName>("from_multi_app") = electron_name;',
     'params.set<MultiAppName>("to_multi_app") = poisson_name;',
@@ -53,8 +61,23 @@ assert "bool usesElectronSubApp() const;" in hdr
 #   TIMESTEP_END:   n_e(new) -> Poisson, then Poisson solve
 assert 'electron_params.set<ExecFlagEnum>("execute_on") = EXEC_TIMESTEP_BEGIN;' in src
 assert 'poisson_params.set<ExecFlagEnum>("execute_on") = EXEC_TIMESTEP_END;' in src
+assert 'params.set<ExecFlagEnum>("execute_on") = EXEC_TIMESTEP_BEGIN;' in src
+assert 'params.set<ExecFlagEnum>("execute_on") = EXEC_TIMESTEP_END;' in src
+assert 'params.set<ExecFlagEnum>("execute_on") = EXEC_MULTIAPP_FIXED_POINT_END;' in src
+assert '"delta_phi_multiapp"' in src
+assert '"delta_phi_subapp_pp"' in src
 assert '"execute_after_from_multiapp"' not in src
 assert '"execution_order_group"' not in src
+
+# The convergence object must support reading the newest delta-phi metric
+# directly from the Poisson sibling, avoiding one-iteration transfer lag.
+conv_src = (ROOT / "src/convergence/DeltaPhiMultiAppConvergence.C").read_text(encoding="utf-8")
+for token in (
+    '"delta_phi_multiapp"',
+    '"delta_phi_subapp_pp"',
+    "appProblemBase(0).getPostprocessorValueByName",
+):
+    assert token in conv_src, token
 
 # Preferred fixture: parent orchestration + two sibling input files.
 for token in (

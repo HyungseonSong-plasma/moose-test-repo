@@ -93,6 +93,43 @@ GummelIterationAction::validParams()
       "Additional electron auxiliary targets corresponding one-to-one with "
       "poisson_to_electron_source_variables.");
 
+  params.addParam<std::vector<VariableName>>(
+      "coordinator_to_electron_source_variables",
+      {},
+      "Current coordinator variables copied into the electron sibling before its solve.");
+  params.addParam<std::vector<AuxVariableName>>(
+      "coordinator_to_electron_variables",
+      {},
+      "Electron auxiliary targets corresponding one-to-one with "
+      "coordinator_to_electron_source_variables.");
+  params.addParam<std::vector<VariableName>>(
+      "coordinator_to_poisson_source_variables",
+      {},
+      "Current coordinator variables copied into the Poisson sibling before its solve.");
+  params.addParam<std::vector<AuxVariableName>>(
+      "coordinator_to_poisson_variables",
+      {},
+      "Poisson auxiliary targets corresponding one-to-one with "
+      "coordinator_to_poisson_source_variables.");
+  params.addParam<std::vector<VariableName>>(
+      "electron_to_coordinator_source_variables",
+      {},
+      "Electron sibling variables copied back to the coordinator after fixed-point convergence.");
+  params.addParam<std::vector<AuxVariableName>>(
+      "electron_to_coordinator_variables",
+      {},
+      "Coordinator auxiliary targets corresponding one-to-one with "
+      "electron_to_coordinator_source_variables.");
+  params.addParam<std::vector<VariableName>>(
+      "poisson_to_coordinator_source_variables",
+      {},
+      "Poisson sibling variables copied back to the coordinator after fixed-point convergence.");
+  params.addParam<std::vector<AuxVariableName>>(
+      "poisson_to_coordinator_variables",
+      {},
+      "Coordinator auxiliary targets corresponding one-to-one with "
+      "poisson_to_coordinator_source_variables.");
+
   params.addParam<bool>(
       "manage_convergence",
       true,
@@ -100,8 +137,8 @@ GummelIterationAction::validParams()
       "Executioner must select it with multiapp_fixed_point_convergence.");
   params.addParam<PostprocessorName>(
       "delta_phi_postprocessor",
-      "Parent-application postprocessor containing the maximum potential change for the current "
-      "fixed-point iterate.");
+      "Maximum potential-change postprocessor. In legacy mode it lives in the current "
+      "application; in sibling mode it lives in the Poisson sub-application.");
   params.addRangeCheckedParam<Real>(
       "delta_phi_abs_tol",
       1.0e-6,
@@ -143,12 +180,42 @@ GummelIterationAction::checkVariableMaps() const
   const auto & p_dst =
       getParam<std::vector<AuxVariableName>>("poisson_to_electron_variables");
 
+  const auto & c2e_src =
+      getParam<std::vector<VariableName>>("coordinator_to_electron_source_variables");
+  const auto & c2e_dst =
+      getParam<std::vector<AuxVariableName>>("coordinator_to_electron_variables");
+  const auto & c2p_src =
+      getParam<std::vector<VariableName>>("coordinator_to_poisson_source_variables");
+  const auto & c2p_dst =
+      getParam<std::vector<AuxVariableName>>("coordinator_to_poisson_variables");
+  const auto & e2c_src =
+      getParam<std::vector<VariableName>>("electron_to_coordinator_source_variables");
+  const auto & e2c_dst =
+      getParam<std::vector<AuxVariableName>>("electron_to_coordinator_variables");
+  const auto & p2c_src =
+      getParam<std::vector<VariableName>>("poisson_to_coordinator_source_variables");
+  const auto & p2c_dst =
+      getParam<std::vector<AuxVariableName>>("poisson_to_coordinator_variables");
+
   if (e_src.size() != e_dst.size())
     paramError("electron_to_poisson_variables",
                "The electron-to-Poisson source and target lists must have the same length.");
   if (p_src.size() != p_dst.size())
     paramError("poisson_to_electron_variables",
                "The Poisson-to-electron source and target lists must have the same length.");
+
+  if (c2e_src.size() != c2e_dst.size())
+    paramError("coordinator_to_electron_variables",
+               "The coordinator-to-electron source and target lists must have the same length.");
+  if (c2p_src.size() != c2p_dst.size())
+    paramError("coordinator_to_poisson_variables",
+               "The coordinator-to-Poisson source and target lists must have the same length.");
+  if (e2c_src.size() != e2c_dst.size())
+    paramError("electron_to_coordinator_variables",
+               "The electron-to-coordinator source and target lists must have the same length.");
+  if (p2c_src.size() != p2c_dst.size())
+    paramError("poisson_to_coordinator_variables",
+               "The Poisson-to-coordinator source and target lists must have the same length.");
 
   if (usesElectronSubApp())
   {
@@ -217,6 +284,23 @@ GummelIterationAction::act()
     const auto & p_dst =
         getParam<std::vector<AuxVariableName>>("poisson_to_electron_variables");
 
+    const auto & c2e_src =
+        getParam<std::vector<VariableName>>("coordinator_to_electron_source_variables");
+    const auto & c2e_dst =
+        getParam<std::vector<AuxVariableName>>("coordinator_to_electron_variables");
+    const auto & c2p_src =
+        getParam<std::vector<VariableName>>("coordinator_to_poisson_source_variables");
+    const auto & c2p_dst =
+        getParam<std::vector<AuxVariableName>>("coordinator_to_poisson_variables");
+    const auto & e2c_src =
+        getParam<std::vector<VariableName>>("electron_to_coordinator_source_variables");
+    const auto & e2c_dst =
+        getParam<std::vector<AuxVariableName>>("electron_to_coordinator_variables");
+    const auto & p2c_src =
+        getParam<std::vector<VariableName>>("poisson_to_coordinator_source_variables");
+    const auto & p2c_dst =
+        getParam<std::vector<AuxVariableName>>("poisson_to_coordinator_variables");
+
     if (usesElectronSubApp())
     {
       const auto & electron_name = getParam<MultiAppName>("electron_multiapp");
@@ -229,6 +313,7 @@ GummelIterationAction::act()
             {getParam<VariableName>("electron_density_variable")};
         params.set<std::vector<AuxVariableName>>("variable") =
             {getParam<AuxVariableName>("poisson_electron_density_variable")};
+        params.set<ExecFlagEnum>("execute_on") = EXEC_TIMESTEP_END;
 
         _problem->addTransfer(
             "MultiAppCopyTransfer", object_prefix + "_shared_n_e", params);
@@ -241,6 +326,7 @@ GummelIterationAction::act()
         params.set<MultiAppName>("to_multi_app") = poisson_name;
         params.set<std::vector<VariableName>>("source_variable") = {e_src[i]};
         params.set<std::vector<AuxVariableName>>("variable") = {e_dst[i]};
+        params.set<ExecFlagEnum>("execute_on") = EXEC_TIMESTEP_END;
 
         _problem->addTransfer("MultiAppCopyTransfer",
                               object_prefix + "_electron_to_poisson_" + std::to_string(i),
@@ -255,6 +341,7 @@ GummelIterationAction::act()
             {getParam<VariableName>("poisson_potential_variable")};
         params.set<std::vector<AuxVariableName>>("variable") =
             {getParam<AuxVariableName>("electron_potential_variable")};
+        params.set<ExecFlagEnum>("execute_on") = EXEC_TIMESTEP_BEGIN;
 
         _problem->addTransfer(
             "MultiAppCopyTransfer", object_prefix + "_shared_phi", params);
@@ -267,10 +354,75 @@ GummelIterationAction::act()
         params.set<MultiAppName>("to_multi_app") = electron_name;
         params.set<std::vector<VariableName>>("source_variable") = {p_src[i]};
         params.set<std::vector<AuxVariableName>>("variable") = {p_dst[i]};
+        params.set<ExecFlagEnum>("execute_on") = EXEC_TIMESTEP_BEGIN;
 
         _problem->addTransfer("MultiAppCopyTransfer",
                               object_prefix + "_poisson_to_electron_" + std::to_string(i),
                               params);
+      }
+
+      for (std::size_t i = 0; i < c2e_src.size(); ++i)
+      {
+        auto params = _factory.getValidParams("MultiAppCopyTransfer");
+        params.set<MultiAppName>("to_multi_app") = electron_name;
+        params.set<std::vector<VariableName>>("source_variable") = {c2e_src[i]};
+        params.set<std::vector<AuxVariableName>>("variable") = {c2e_dst[i]};
+        params.set<ExecFlagEnum>("execute_on") = EXEC_TIMESTEP_BEGIN;
+
+        _problem->addTransfer("MultiAppCopyTransfer",
+                              object_prefix + "_coordinator_to_electron_" + std::to_string(i),
+                              params);
+      }
+
+      for (std::size_t i = 0; i < c2p_src.size(); ++i)
+      {
+        auto params = _factory.getValidParams("MultiAppCopyTransfer");
+        params.set<MultiAppName>("to_multi_app") = poisson_name;
+        params.set<std::vector<VariableName>>("source_variable") = {c2p_src[i]};
+        params.set<std::vector<AuxVariableName>>("variable") = {c2p_dst[i]};
+        params.set<ExecFlagEnum>("execute_on") = EXEC_TIMESTEP_END;
+
+        _problem->addTransfer("MultiAppCopyTransfer",
+                              object_prefix + "_coordinator_to_poisson_" + std::to_string(i),
+                              params);
+      }
+
+      for (std::size_t i = 0; i < e2c_src.size(); ++i)
+      {
+        auto params = _factory.getValidParams("MultiAppCopyTransfer");
+        params.set<MultiAppName>("from_multi_app") = electron_name;
+        params.set<std::vector<VariableName>>("source_variable") = {e2c_src[i]};
+        params.set<std::vector<AuxVariableName>>("variable") = {e2c_dst[i]};
+        params.set<ExecFlagEnum>("execute_on") = EXEC_MULTIAPP_FIXED_POINT_END;
+
+        _problem->addTransfer("MultiAppCopyTransfer",
+                              object_prefix + "_electron_to_coordinator_" + std::to_string(i),
+                              params);
+      }
+
+      for (std::size_t i = 0; i < p2c_src.size(); ++i)
+      {
+        auto begin_params = _factory.getValidParams("MultiAppCopyTransfer");
+        begin_params.set<MultiAppName>("from_multi_app") = poisson_name;
+        begin_params.set<std::vector<VariableName>>("source_variable") = {p2c_src[i]};
+        begin_params.set<std::vector<AuxVariableName>>("variable") = {p2c_dst[i]};
+        begin_params.set<ExecFlagEnum>("execute_on") = EXEC_TIMESTEP_BEGIN;
+
+        _problem->addTransfer(
+            "MultiAppCopyTransfer",
+            object_prefix + "_poisson_to_coordinator_begin_" + std::to_string(i),
+            begin_params);
+
+        auto final_params = _factory.getValidParams("MultiAppCopyTransfer");
+        final_params.set<MultiAppName>("from_multi_app") = poisson_name;
+        final_params.set<std::vector<VariableName>>("source_variable") = {p2c_src[i]};
+        final_params.set<std::vector<AuxVariableName>>("variable") = {p2c_dst[i]};
+        final_params.set<ExecFlagEnum>("execute_on") = EXEC_MULTIAPP_FIXED_POINT_END;
+
+        _problem->addTransfer(
+            "MultiAppCopyTransfer",
+            object_prefix + "_poisson_to_coordinator_final_" + std::to_string(i),
+            final_params);
       }
     }
     else
@@ -304,8 +456,16 @@ GummelIterationAction::act()
   {
     const auto & convergence_name = getParam<ConvergenceName>("convergence_name");
     auto params = _factory.getValidParams("DeltaPhiMultiAppConvergence");
-    params.set<PostprocessorName>("delta_phi_pp") =
-        getParam<PostprocessorName>("delta_phi_postprocessor");
+    if (usesElectronSubApp())
+    {
+      params.set<MultiAppName>("delta_phi_multiapp") = poisson_name;
+      params.set<PostprocessorName>("delta_phi_subapp_pp") =
+          getParam<PostprocessorName>("delta_phi_postprocessor");
+    }
+    else
+      params.set<PostprocessorName>("delta_phi_pp") =
+          getParam<PostprocessorName>("delta_phi_postprocessor");
+
     params.set<Real>("delta_phi_abs_tol") = getParam<Real>("delta_phi_abs_tol");
 
     _problem->addConvergence("DeltaPhiMultiAppConvergence", convergence_name, params);
