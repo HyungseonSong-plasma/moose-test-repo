@@ -16,8 +16,8 @@ GummelIterationAction::validParams()
   InputParameters params = Action::validParams();
   params.addClassDescription(
       "Builds a model-agnostic Gummel coupling. In two-sub-application mode sibling electron "
-      "and Poisson MultiApps exchange n_e and phi directly. The parent may remain orchestration-only "
-      "or own local heavy-particle physics and exchange explicitly mapped state with either sibling. "
+      "and Poisson MultiApps exchange n_e and phi directly. Optional parent mappings allow a "
+      "dedicated driver to hold a frozen heavy-state snapshot and collect converged fast state. "
       "Legacy current-application electron coupling remains supported.");
 
   params.addParam<FileName>(
