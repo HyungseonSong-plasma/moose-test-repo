@@ -128,7 +128,7 @@ def _input(*, physical: bool) -> str:
     expression = '{ee_bridge_expr}'
   []
   [constants]
-    type = ADGenericFunctorMaterial
+    type = GenericFunctorMaterial
     prop_names = 'ion_number_density relative_permittivity'
     prop_values = '{ION_NUMBER_DENSITY:.17g} 1.0'
   []
