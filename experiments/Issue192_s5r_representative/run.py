@@ -189,7 +189,7 @@ def _rel_defect(lhs: float, rhs: float, *scales: float) -> float:
 
 def _insert_runtime_observables(text: str) -> str:
     for name, typ, functor in (
-        ("s5r_mean_en_inventory", "ADElementIntegralFunctorPostprocessor", "mean_en"),
+        ("s5r_mean_en_state_inventory", "ADElementIntegralFunctorPostprocessor", "mean_en"),
         ("s5r_mean_en_avg", "ElementAverageFunctorPostprocessor", "mean_en_solved"),
         ("s5r_ei02_elastic_energy_avg", "ElementAverageFunctorPostprocessor", "S_ei02_elastic_hat"),
         ("s5r_ei17_elastic_energy_avg", "ElementAverageFunctorPostprocessor", "S_ei17_elastic_hat"),
@@ -405,7 +405,7 @@ def _state_evidence(rows: list[dict[str, str]]) -> dict[str, Any]:
 
         if _num(row, "n_e_min") < 0.0:
             failures.append(f"negative electron density at t={time:.6e}")
-        if _num(row, "s5r_mean_en_min") <= 0.0:
+        if _num(row, "s5r_mean_en_state_min") <= 0.0:
             failures.append(f"non-positive electron energy at t={time:.6e}")
         mean_low = _num(row, "s5r_mean_en_min")
         mean_high = _num(row, "s5r_mean_en_max")
@@ -496,8 +496,8 @@ def _discrete_balances(
         electron_max = max(electron_max, electron_defect)
 
         energy_accumulation = (
-            _num(current, "s5r_mean_en_inventory")
-            - _num(previous, "s5r_mean_en_inventory")
+            _num(current, "s5r_mean_en_state_inventory")
+            - _num(previous, "s5r_mean_en_state_inventory")
         ) / dt
         energy_rhs = _energy_source_density(current, energy_coefficients) * volume
         energy_defect = _rel_defect(energy_accumulation, energy_rhs)
@@ -667,7 +667,7 @@ def _endpoint(row: dict[str, str]) -> dict[str, float]:
         "n_e_inventory",
         "r31_charge_integral",
         "n_e_avg",
-        "s5r_mean_en_inventory",
+        "s5r_mean_en_state_inventory",
         "s5r_mean_en_avg",
     ]
     keys.extend(f"w_{species}_avg" for species in ALL_HEAVY)
@@ -804,8 +804,8 @@ def _synthetic_rows(dt_s: float) -> list[dict[str, str]]:
             "n_e_min": "1e16",
             "n_e_avg": "1e16",
             "n_e_inventory": "1e16",
-            "s5r_mean_en_min": "1",
-            "s5r_mean_en_inventory": "1",
+            "s5r_mean_en_state_min": "1",
+            "s5r_mean_en_state_inventory": "1",
             "s5r_mean_en_min": "5.73276",
             "s5r_mean_en_max": "5.73276",
             "s5r_mean_en_avg": "5.73276",
@@ -868,7 +868,7 @@ def self_test() -> None:
     )["hard_pass"]
 
     broken_energy = copy.deepcopy(rows)
-    broken_energy[-1]["s5r_mean_en_inventory"] = "1.1"
+    broken_energy[-1]["s5r_mean_en_state_inventory"] = "1.1"
     assert not _discrete_balances(
         broken_energy, energy_coefficients=coefficients
     )["hard_pass"]
