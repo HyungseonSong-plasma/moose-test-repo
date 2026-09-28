@@ -1,0 +1,145 @@
+name: Gen34 Sibling Short Parity
+
+on:
+  push:
+    branches:
+      - issue-gen34-parity-inspect
+
+permissions:
+  contents: read
+  packages: read
+
+env:
+  TARGET_SHA: 27e7f65974650ee29cc5f0bbfe0ca513d30e394f
+  BASELINE_SHA: c9726d45e912f2476958d580c88e3421b5d4868b
+  BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+
+jobs:
+  short-parity:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - name: Checkout parity harness
+        uses: actions/checkout@v4
+
+      - name: Checkout current target source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_SHA }}
+          path: target
+
+      - name: Checkout qualified PlasmaClosures baseline source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.BASELINE_SHA }}
+          path: baseline_repo
+
+      - name: Generate accepted short baseline and sibling transform
+        shell: bash
+        run: |
+          set -euxo pipefail
+          test "$(git -C target rev-parse HEAD)" = "$TARGET_SHA"
+          test "$(git -C baseline_repo rev-parse HEAD)" = "$BASELINE_SHA"
+          (
+            cd baseline_repo
+            python3 experiments/Issue337_plasma_closures_migration/control.py --horizon short --p0
+          )
+          python3 experiments/Issue351_gen34_sibling_parity/prepare.py \
+            --oracle-dir baseline_repo/experiments/Issue337_plasma_closures_migration/generated_short/plasma_closures \
+            --out target/experiments/Issue351_gen34_sibling_parity/generated_short
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build current Physics source
+        shell: bash
+        run: |
+          set -euxo pipefail
+          docker pull "$BUILD_BASE_REF"
+          docker run --rm --entrypoint /bin/bash --user 0:0 \
+            --workdir /workspace/physics_app -e TARGET_SHA="$TARGET_SHA" \
+            -v "$PWD/target:/workspace" "$BUILD_BASE_REF" -lc '
+              set -euxo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              git config --global --add safe.directory /opt/physics_vendor/moose
+              git config --global --add safe.directory /opt/physics_vendor/crane
+              git config --global --add safe.directory /opt/physics_vendor/squirrel
+              git config --global --add safe.directory /opt/physics_vendor/zapdos
+              test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+              make -j2
+              test -x physics-opt
+            '
+
+      - name: P2 check-input both topologies
+        shell: bash
+        run: |
+          set -euxo pipefail
+          docker run --rm --entrypoint /bin/bash --user 0:0 \
+            --workdir /workspace -v "$PWD/target:/workspace" "$BUILD_BASE_REF" -lc '
+              set -euxo pipefail
+              source /environment
+              export LD_LIBRARY_PATH="/workspace/physics_app/lib:${LD_LIBRARY_PATH:-}"
+              exe=/workspace/physics_app/physics-opt
+              base=/workspace/experiments/Issue351_gen34_sibling_parity/generated_short/legacy
+              sib=/workspace/experiments/Issue351_gen34_sibling_parity/generated_short/sibling
+              cd "$base"
+              "$exe" --check-input -i poisson_sub.i
+              "$exe" --check-input -i fast_sub.i
+              "$exe" --check-input -i input.i
+              cd "$sib"
+              "$exe" --check-input -i poisson_sub.i
+              "$exe" --check-input -i electron_sub.i
+              "$exe" --check-input -i gummel_driver.i
+              "$exe" --check-input -i input.i
+              echo GEN34_SIBLING_SHORT_P2_PASS
+            '
+
+      - name: P3 run accepted baseline and sibling topology
+        shell: bash
+        run: |
+          set -euxo pipefail
+          docker run --rm --entrypoint /bin/bash --user 0:0 \
+            --workdir /workspace -v "$PWD/target:/workspace" "$BUILD_BASE_REF" -lc '
+              set -euxo pipefail
+              source /environment
+              export LD_LIBRARY_PATH="/workspace/physics_app/lib:${LD_LIBRARY_PATH:-}"
+              exe=/workspace/physics_app/physics-opt
+              root=/workspace/experiments/Issue351_gen34_sibling_parity/generated_short
+              cd "$root/legacy"
+              "$exe" -i input.i > runtime.log 2>&1
+              cd "$root/sibling"
+              "$exe" -i input.i > runtime.log 2>&1
+              echo GEN34_SIBLING_SHORT_RUNTIME_PASS
+            '
+
+      - name: Compare short scientific evidence
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python3 experiments/Issue351_gen34_sibling_parity/compare.py \
+            --baseline target/experiments/Issue351_gen34_sibling_parity/generated_short/legacy \
+            --sibling target/experiments/Issue351_gen34_sibling_parity/generated_short/sibling \
+            --out target/experiments/Issue351_gen34_sibling_parity/short_parity.json
+
+      - name: Upload short parity evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gen34-sibling-short-parity
+          path: |
+            target/experiments/Issue351_gen34_sibling_parity/short_parity.json
+            target/experiments/Issue351_gen34_sibling_parity/generated_short/legacy/*.csv
+            target/experiments/Issue351_gen34_sibling_parity/generated_short/sibling/*.csv
+            target/experiments/Issue351_gen34_sibling_parity/generated_short/legacy/runtime.log
+            target/experiments/Issue351_gen34_sibling_parity/generated_short/sibling/runtime.log
+          retention-days: 7
