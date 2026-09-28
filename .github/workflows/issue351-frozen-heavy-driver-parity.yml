@@ -19,9 +19,9 @@ env:
   QUALIFIED_SOURCE: c9726d45e912f2476958d580c88e3421b5d4868b
 
 jobs:
-  short-parity:
+  full-parity:
     runs-on: ubuntu-24.04
-    timeout-minutes: 35
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
@@ -48,7 +48,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build current Physics and run short scientific parity
+      - name: Build current Physics and run full scientific parity
         shell: bash
         run: |
           set -euxo pipefail
@@ -82,17 +82,17 @@ jobs:
               make -C /workspace/physics_app -j2
               test -x /workspace/physics_app/physics-opt
 
-              python3 /workspace/experiments/Issue351_frozen_heavy_driver_parity/control.py --horizon short --p0
-              python3 /workspace/experiments/Issue351_frozen_heavy_driver_parity/control.py --horizon short --p1
-              python3 /workspace/experiments/Issue351_frozen_heavy_driver_parity/control.py --horizon short --run
+              python3 /workspace/experiments/Issue351_frozen_heavy_driver_parity/control.py --horizon full --p0
+              python3 /workspace/experiments/Issue351_frozen_heavy_driver_parity/control.py --horizon full --p1
+              python3 /workspace/experiments/Issue351_frozen_heavy_driver_parity/control.py --horizon full --run
             '
 
-      - name: Upload short parity evidence
+      - name: Upload full parity evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: issue351-frozen-heavy-driver-short
+          name: issue351-frozen-heavy-driver-full
           path: |
-            experiments/Issue351_frozen_heavy_driver_parity/results/short
-            experiments/Issue351_frozen_heavy_driver_parity/generated/short
+            experiments/Issue351_frozen_heavy_driver_parity/results/full
+            experiments/Issue351_frozen_heavy_driver_parity/generated/full
           if-no-files-found: ignore
