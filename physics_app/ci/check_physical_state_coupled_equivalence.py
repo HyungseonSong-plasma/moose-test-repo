@@ -22,15 +22,9 @@ M_ION = 0.032
 RHO = 1.0
 ION_NUMBER_DENSITY = N_E0
 ION_MASS_FRACTION = ION_NUMBER_DENSITY * M_ION / (RHO * N_A)
-TARGET_MOLAR = 0.025
 NX = 24
 XMIN = 0.0
 XMAX = 1.0
-
-RATE_TABLE = """1.0 1.0e8
-5.73276 5.0e8
-10.0 1.0e9
-"""
 
 FIELDS = (
     "n_e_state_aux",
@@ -38,7 +32,6 @@ FIELDS = (
     "n_e_physical_aux",
     "n_epsilon_physical_aux",
     "mean_energy_aux",
-    "reaction_aux",
     "charge_density_aux",
     "poisson_source_aux",
     "phi",
@@ -49,13 +42,13 @@ def _input(*, physical: bool) -> str:
     if physical:
         ne_expr = f"{N_E0:.17g}*(0.95+0.10*x)"
         ee_expr = f"{N_E0 * MEAN_E0_EV:.17g}*(1.05-0.10*x)"
-        mean_mode = "    state_form = physical_eV"
+        mean_expr = "ee/ne"
         ne_bridge_expr = "ne"
         ee_bridge_expr = "ee"
     else:
         ne_expr = "0.95+0.10*x"
         ee_expr = "1.05-0.10*x"
-        mean_mode = f"    state_form = normalized\n    energy_reference_eV = {MEAN_E0_EV:.17g}"
+        mean_expr = f"{MEAN_E0_EV:.17g}*ee/ne"
         ne_bridge_expr = f"{N_E0:.17g}*ne"
         ee_bridge_expr = f"{N_E0 * MEAN_E0_EV:.17g}*ee"
 
@@ -97,10 +90,6 @@ def _input(*, physical: bool) -> str:
     order = CONSTANT
     family = MONOMIAL
   []
-  [reaction_aux]
-    order = CONSTANT
-    family = MONOMIAL
-  []
   [charge_density_aux]
     order = CONSTANT
     family = MONOMIAL
@@ -138,26 +127,18 @@ def _input(*, physical: bool) -> str:
   []
   [constants]
     type = ADGenericFunctorMaterial
-    prop_names = 'rho_const w_ion_const target_molar relative_permittivity'
-    prop_values = '{RHO:.17g} {ION_MASS_FRACTION:.17g} {TARGET_MOLAR:.17g} 1.0'
+    prop_names = 'rho_const w_ion_const relative_permittivity'
+    prop_values = '{RHO:.17g} {ION_MASS_FRACTION:.17g} 1.0'
   []
   [mean_energy]
-    type = PhysicsElectronMeanEnergyMaterial
-    electron_energy_density = n_epsilon_state
-    electron_density = n_e_state
-{mean_mode}
-    mean_energy_output = mean_energy_probe
-  []
-  [reaction]
-    type = PhysicsElectronImpactRateMaterial
-    rate_table_file = rate_table.txt
-    mean_energy = mean_energy_probe
-    electron_number_density = n_e_physical
-    target_molar_concentration = target_molar
-    reaction_progress = R_probe
+    type = ADParsedFunctorMaterial
+    property_name = mean_energy_probe
+    functor_names = 'n_e_state n_epsilon_state'
+    functor_symbols = 'ne ee'
+    expression = '{mean_expr}'
   []
   [charge]
-    type = PhysicsPlasmaChargeDensityMaterial
+    type = QPXPlasmaChargeDensityMaterial
     density = rho_const
     electron_density = n_e_physical
     ion_ids = 'ion'
@@ -196,12 +177,6 @@ def _input(*, physical: bool) -> str:
     type = FunctorAux
     variable = mean_energy_aux
     functor = mean_energy_probe
-    execute_on = 'TIMESTEP_END'
-  []
-  [sample_reaction]
-    type = FunctorAux
-    variable = reaction_aux
-    functor = R_probe
     execute_on = 'TIMESTEP_END'
   []
   [sample_charge]
@@ -249,7 +224,7 @@ def _input(*, physical: bool) -> str:
 [VectorPostprocessors]
   [equivalence_samples]
     type = ElementValueSampler
-    variable = 'phi n_e_state_aux n_epsilon_state_aux n_e_physical_aux n_epsilon_physical_aux mean_energy_aux reaction_aux charge_density_aux poisson_source_aux'
+    variable = 'phi n_e_state_aux n_epsilon_state_aux n_e_physical_aux n_epsilon_physical_aux mean_energy_aux charge_density_aux poisson_source_aux'
     sort_by = id
     execute_on = 'TIMESTEP_END'
   []
@@ -278,7 +253,6 @@ def prepare(root: Path) -> None:
         case = root / name
         case.mkdir(parents=True)
         (case / "input.i").write_text(_input(physical=physical))
-        (case / "rate_table.txt").write_text(RATE_TABLE)
 
 
 def _sample_csv(case: Path) -> Path:
@@ -352,7 +326,6 @@ def compare(root: Path):
             ("n_e_physical_aux", 2e-12, 2.0),
             ("n_epsilon_physical_aux", 2e-12, 4.0),
             ("mean_energy_aux", 2e-12, 1e-11),
-            ("reaction_aux", 5e-11, 1e-15),
             ("charge_density_aux", 5e-11, 1e-16),
             ("poisson_source_aux", 5e-11, 1e-3),
             ("phi", 2e-9, 1e-6),
@@ -392,16 +365,13 @@ def self_test():
         prepare(root)
         normalized = (root / "normalized" / "input.i").read_text()
         physical = (root / "physical" / "input.i").read_text()
-        assert "state_form = normalized" in normalized
-        assert f"energy_reference_eV = {MEAN_E0_EV:.17g}" in normalized
+        assert f"expression = '{MEAN_E0_EV:.17g}*ee/ne'" in normalized
         assert f"expression = '{N_E0:.17g}*ne'" in normalized
-        assert "state_form = physical_eV" in physical
-        assert "energy_reference_eV" not in physical
+        assert "expression = 'ee/ne'" in physical
         assert "expression = 'ne'" in physical
         for text in (normalized, physical):
             for token in (
-                "type = PhysicsPlasmaChargeDensityMaterial",
-                "type = PhysicsElectronImpactRateMaterial",
+                "type = QPXPlasmaChargeDensityMaterial",
                 "type = FVDiffusion",
                 "v = poisson_charge_source",
                 "type = ElementValueSampler",
