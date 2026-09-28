@@ -30,6 +30,10 @@ PhysicsFVElectronGroundedSheathEnergyBC::validParams()
       "molar_energy_state",
       false,
       "If true, electron_density is c_e [mol/m^3] and the residual is returned in eV mol/(m^2 s) without an arbitrary normalization scale.");
+  params.addParam<bool>(
+      "physical_eV_state",
+      false,
+      "If true, electron_density is n_e [1/m^3] and the residual is returned in eV/(m^2 s) without an arbitrary normalization scale.");
 
   return params;
 }
@@ -41,12 +45,15 @@ PhysicsFVElectronGroundedSheathEnergyBC::PhysicsFVElectronGroundedSheathEnergyBC
     _mean_electron_energy(getFunctor<ADReal>("mean_electron_energy")),
     _potential(getFunctor<ADReal>("potential")),
     _energy_reference_eV(getParam<Real>("energy_reference_eV")),
-    _molar_energy_state(getParam<bool>("molar_energy_state"))
+    _molar_energy_state(getParam<bool>("molar_energy_state")),
+    _physical_eV_state(getParam<bool>("physical_eV_state"))
 {
-  if (!_molar_energy_state && !parameters.isParamSetByUser("energy_reference_eV"))
+  if (_molar_energy_state && _physical_eV_state)
+    paramError("physical_eV_state", "molar_energy_state and physical_eV_state are mutually exclusive.");
+  if (!_molar_energy_state && !_physical_eV_state && !parameters.isParamSetByUser("energy_reference_eV"))
     paramError("energy_reference_eV",
                "Legacy normalized-energy mode requires an explicit energy_reference_eV.");
-  if (!_molar_energy_state && _energy_reference_eV <= 0.0)
+  if (!_molar_energy_state && !_physical_eV_state && _energy_reference_eV <= 0.0)
     paramError("energy_reference_eV", "Electron-energy normalization scale must be positive.");
 }
 
@@ -86,6 +93,17 @@ PhysicsFVElectronGroundedSheathEnergyBC::computeQpResidual()
         PhysicsGroundedElectronSheath::primaryParticleFluxHat(
             electron_density, mean_energy_eV, effective_drop_V);
     return primary_particle_flux_molar *
+           (2.0 * electron_temperature_eV + effective_drop_V);
+  }
+
+  if (_physical_eV_state)
+  {
+    const ADReal electron_temperature_eV =
+        PhysicsGroundedElectronSheath::electronTemperatureEV(mean_energy_eV);
+    const ADReal primary_particle_flux =
+        PhysicsGroundedElectronSheath::primaryParticleFluxHat(
+            electron_density, mean_energy_eV, effective_drop_V);
+    return primary_particle_flux *
            (2.0 * electron_temperature_eV + effective_drop_V);
   }
 

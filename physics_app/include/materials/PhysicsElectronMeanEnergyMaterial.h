@@ -3,20 +3,14 @@
 #include "FunctorMaterial.h"
 
 /**
- * Canonical solved electron mean-energy bridge for the normalized FV system.
+ * Electron mean-energy bridge.
  *
- * The conserved normalized states are
+ * Preferred physical formulation:
+ *   mean_en = electron_energy_density / electron_density [eV],
+ * where electron_energy_density is [eV/m^3] and electron_density is [1/m^3].
  *
- *   n_e_phys       = n_ref * n_e_hat
- *   n_epsilon_phys = n_ref * epsilon_ref * n_epsilon_hat
- *
- * so the local solved mean energy is
- *
- *   mean_en_solved = epsilon_ref * n_epsilon_hat / n_e_hat [eV].
- *
- * epsilon_ref is a normalization scale only. This material deliberately does
- * not floor the denominator or clamp the resulting mean energy; invalid state
- * rejection and lookup bounds remain explicit numerical contracts.
+ * Historical normalized formulation remains available for compatibility:
+ *   mean_en = epsilon_ref * n_epsilon_hat / n_e_hat.
  */
 class PhysicsElectronMeanEnergyMaterial : public FunctorMaterial
 {
@@ -25,6 +19,7 @@ public:
   PhysicsElectronMeanEnergyMaterial(const InputParameters & parameters);
 
 protected:
+  const bool _physical_state;
   const Moose::Functor<ADReal> & _electron_energy_density;
   const Moose::Functor<ADReal> & _electron_density;
   const Real _energy_reference_eV;

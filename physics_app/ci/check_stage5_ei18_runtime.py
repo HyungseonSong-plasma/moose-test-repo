@@ -17,8 +17,8 @@ CONTRACT = ROOT / "docs/development/2026-09-10_issue176_stage5_reaction_ownershi
 TABLE = ROOT / "physics_app/data/electron_impact/o_excitation_1d.txt"
 
 N_A = 6.02214076e23
-N_REF = 1.0e16
-EPSILON_REF_EV = 5.73276
+N_E0 = 1.0e16
+EPSILON_E0_EV = 5.73276
 M_O = 0.016
 RHO = 3.1998e-5
 W_OS0 = 1.0e-3
@@ -29,7 +29,7 @@ LOOKUP_MAX_EV = 22.1378
 ANCHORS = {1.40991: 1.54e8, 5.73276: 1.57e9, 22.1378: 1.86e9}
 EXPECTED_GIT_BLOB = "c874552f6fa43aaf13456d3ee6804065652b4e65"
 PROGRESS = "R_excitation_O_1p968"
-ENERGY_COEF = -(DELTA_E_EV * N_A / (N_REF * EPSILON_REF_EV))
+ENERGY_COEF = -(DELTA_E_EV * N_A)
 
 
 def _close(a, b, *, rel=8e-6, abs_=1e-12, label="value"):
@@ -86,8 +86,8 @@ def _interp_strict(table, mean_energy):
     raise AssertionError("strict interpolation bracket failure")
 
 
-def _runtime_input(mean_energy=EPSILON_REF_EV):
-    n_epsilon0 = mean_energy / EPSILON_REF_EV
+def _runtime_input(mean_energy=EPSILON_E0_EV):
+    n_epsilon0 = N_E0 * mean_energy
     return f"""[Mesh]
   [mesh]
     type = GeneratedMeshGenerator
@@ -107,7 +107,7 @@ def _runtime_input(mean_energy=EPSILON_REF_EV):
 [Variables]
   [n_e]
     type = MooseVariableFVReal
-    initial_condition = 1.0
+    initial_condition = {N_E0:.17g}
   []
   [n_epsilon]
     type = MooseVariableFVReal
@@ -132,13 +132,6 @@ def _runtime_input(mean_energy=EPSILON_REF_EV):
     functor_symbols = 'wos'
     expression = '1.0-wos'
   []
-  [electron_number_density]
-    type = ADParsedFunctorMaterial
-    property_name = n_e_physical
-    functor_names = 'n_e'
-    functor_symbols = 'nehat'
-    expression = '{N_REF:.17g}*nehat'
-  []
   [o_molar_concentration]
     type = ADParsedFunctorMaterial
     property_name = c_O
@@ -150,13 +143,13 @@ def _runtime_input(mean_energy=EPSILON_REF_EV):
     type = PhysicsElectronMeanEnergyMaterial
     electron_energy_density = n_epsilon
     electron_density = n_e
-    energy_reference_eV = {EPSILON_REF_EV:.17g}
+    state_form = physical_eV
   []
   [ei18_rate]
     type = PhysicsElectronImpactRateMaterial
     rate_table_file = o_excitation_1d.txt
     mean_energy = mean_en_solved
-    electron_number_density = n_e_physical
+    electron_number_density = n_e
     target_molar_concentration = c_O
     reaction_progress = {PROGRESS}
   []
@@ -204,12 +197,12 @@ def _runtime_input(mean_energy=EPSILON_REF_EV):
 []
 
 [Postprocessors]
-  [n_e_hat_avg]
+  [n_e_avg]
     type = ElementAverageFunctorPostprocessor
     functor = n_e
     execute_on = 'INITIAL TIMESTEP_END'
   []
-  [n_epsilon_hat_avg]
+  [n_epsilon_avg]
     type = ElementAverageFunctorPostprocessor
     functor = n_epsilon
     execute_on = 'INITIAL TIMESTEP_END'
@@ -264,8 +257,8 @@ def validate_runtime_rows(rows, table):
     if len(rows) < 2:
         raise AssertionError("EI18 case expected INITIAL + TIMESTEP_END rows")
     i, f = rows[0], rows[-1]
-    ne_i, ne_f = _num(i, "n_e_hat_avg"), _num(f, "n_e_hat_avg")
-    ep_i, ep_f = _num(i, "n_epsilon_hat_avg"), _num(f, "n_epsilon_hat_avg")
+    ne_i, ne_f = _num(i, "n_e_avg"), _num(f, "n_e_avg")
+    ep_i, ep_f = _num(i, "n_epsilon_avg"), _num(f, "n_epsilon_avg")
     ws_i, ws_f = _num(i, "w_Os_avg"), _num(f, "w_Os_avg")
     wo_i, wo_f = _num(i, "w_O_avg"), _num(f, "w_O_avg")
     me_i, me_f = _num(i, "mean_en_solved_avg"), _num(f, "mean_en_solved_avg")
@@ -275,11 +268,11 @@ def validate_runtime_rows(rows, table):
 
     if not (ne_i > 0 and ep_i > 0 and 0 <= ws_i < ws_f < 1 and wo_i > wo_f > 0 and 0 < ep_f < ep_i):
         raise AssertionError("EI18 state direction/positivity failure")
-    _close(ne_f, ne_i, rel=0, abs_=1e-12, label="EI18 zero electron-particle source")
+    _close(ne_f, ne_i, rel=2e-12, abs_=1.0, label="EI18 zero electron-particle source")
     _close(wo_i + ws_i, 1.0, rel=0, abs_=2e-12, label="initial atomic heavy sum")
     _close(wo_f + ws_f, 1.0, rel=0, abs_=2e-12, label="final atomic heavy sum")
-    _close(me_i, EPSILON_REF_EV * ep_i / ne_i, label="initial solved mean energy")
-    _close(me_f, EPSILON_REF_EV * ep_f / ne_f, label="final solved mean energy")
+    _close(me_i, ep_i / ne_i, label="initial solved mean energy")
+    _close(me_f, ep_f / ne_f, label="final solved mean energy")
 
     if not (r_f > 0 and so_f < 0 < sos_f):
         raise AssertionError("EI18 progress/source signs")
@@ -287,28 +280,28 @@ def validate_runtime_rows(rows, table):
     _close(sos_f / M_O, r_f, label="Os source / shared EI18 progress")
     _close(so_f + sos_f, 0.0, rel=0, abs_=1e-12, label="EI18 heavy mass source closure")
 
-    expected_r = _interp_strict(table, me_f) * (N_REF * ne_f / N_A) * (RHO * wo_f / M_O)
+    expected_r = _interp_strict(table, me_f) * (ne_f / N_A) * (RHO * wo_f / M_O)
     _close(r_f, expected_r, rel=8e-6, abs_=1e-14, label="EI18 strict lookup progress")
     _close(RHO * (ws_f - ws_i) / DT, sos_f, rel=8e-6, abs_=1e-12, label="Os BE source closure")
     _close(RHO * (wo_f - wo_i) / DT, so_f, rel=8e-6, abs_=1e-12, label="constrained O BE source closure")
 
     rhs = ENERGY_COEF * r_f
-    _close((ep_f - ep_i) / DT, rhs, rel=8e-6, abs_=1e-7, label="EI18 energy BE closure")
+    _close((ep_f - ep_i) / DT, rhs, rel=8e-6, abs_=1.0e8, label="EI18 energy BE closure")
     oxygen_i = RHO * (wo_i + ws_i) / M_O
     oxygen_f = RHO * (wo_f + ws_f) / M_O
     _close(oxygen_f, oxygen_i, rel=2e-12, abs_=1e-14, label="oxygen atom inventory")
 
     return {
         "initial": {
-            "n_e_hat": ne_i,
-            "n_epsilon_hat": ep_i,
+            "n_e": ne_i,
+            "n_epsilon": ep_i,
             "w_O": wo_i,
             "w_Os": ws_i,
             "mean_en_solved_eV": me_i,
         },
         "final": {
-            "n_e_hat": ne_f,
-            "n_epsilon_hat": ep_f,
+            "n_e": ne_f,
+            "n_epsilon": ep_f,
             "w_O": wo_f,
             "w_Os": ws_f,
             "mean_en_solved_eV": me_f,
@@ -320,45 +313,45 @@ def validate_runtime_rows(rows, table):
             "heavy_mass_source_sum_kg_m3_s": so_f + sos_f,
             "oxygen_atom_molar_inventory_initial": oxygen_i,
             "oxygen_atom_molar_inventory_final": oxygen_f,
-            "electron_particle_delta_hat": ne_f - ne_i,
+            "electron_particle_delta_m3": ne_f - ne_i,
             "energy_loss_eV_per_event": DELTA_E_EV,
             "standard_moose_object": "FVCoupledForce",
             "energy_coef": ENERGY_COEF,
-            "normalized_energy_rhs_per_s": rhs,
-            "observed_dn_epsilon_hat_dt_per_s": (ep_f - ep_i) / DT,
+            "physical_energy_rhs_eV_m3_s": rhs,
+            "observed_dn_epsilon_dt_eV_m3_s": (ep_f - ep_i) / DT,
         },
     }
 
 
 def _fixed_point_rows(table):
-    r = _interp_strict(table, EPSILON_REF_EV) * (N_REF / N_A) * (RHO * (1 - W_OS0) / M_O)
+    r = _interp_strict(table, EPSILON_E0_EV) * (N_E0 / N_A) * (RHO * (1 - W_OS0) / M_O)
     for _ in range(500):
         ws = W_OS0 + DT * M_O * r / RHO
-        ep = 1.0 + DT * ENERGY_COEF * r
-        mean = EPSILON_REF_EV * ep
-        new = _interp_strict(table, mean) * (N_REF / N_A) * (RHO * (1 - ws) / M_O)
+        ep = N_E0 * EPSILON_E0_EV + DT * ENERGY_COEF * r
+        mean = ep / N_E0
+        new = _interp_strict(table, mean) * (N_E0 / N_A) * (RHO * (1 - ws) / M_O)
         if math.isclose(new, r, rel_tol=1e-14, abs_tol=1e-18):
             r = new
             break
         r = new
     ws = W_OS0 + DT * M_O * r / RHO
-    ep = 1.0 + DT * ENERGY_COEF * r
-    mean = EPSILON_REF_EV * ep
-    r0 = _interp_strict(table, EPSILON_REF_EV) * (N_REF / N_A) * (RHO * (1 - W_OS0) / M_O)
+    ep = N_E0 * EPSILON_E0_EV + DT * ENERGY_COEF * r
+    mean = ep / N_E0
+    r0 = _interp_strict(table, EPSILON_E0_EV) * (N_E0 / N_A) * (RHO * (1 - W_OS0) / M_O)
     rows = [
         {
-            "n_e_hat_avg": 1.0,
-            "n_epsilon_hat_avg": 1.0,
+            "n_e_avg": N_E0,
+            "n_epsilon_avg": N_E0 * EPSILON_E0_EV,
             "w_Os_avg": W_OS0,
             "w_O_avg": 1.0 - W_OS0,
-            "mean_en_solved_avg": EPSILON_REF_EV,
+            "mean_en_solved_avg": EPSILON_E0_EV,
             "R_avg": r0,
             "O_source_avg": -M_O * r0,
             "Os_source_avg": M_O * r0,
         },
         {
-            "n_e_hat_avg": 1.0,
-            "n_epsilon_hat_avg": ep,
+            "n_e_avg": N_E0,
+            "n_epsilon_avg": ep,
             "w_Os_avg": ws,
             "w_O_avg": 1.0 - ws,
             "mean_en_solved_avg": mean,
@@ -379,16 +372,16 @@ def _expect_failure(fn, *args):
 
 
 def checker_self_test():
-    table = [(LOOKUP_MIN_EV, ANCHORS[LOOKUP_MIN_EV]), (EPSILON_REF_EV, ANCHORS[EPSILON_REF_EV]), (LOOKUP_MAX_EV, ANCHORS[LOOKUP_MAX_EV])]
+    table = [(LOOKUP_MIN_EV, ANCHORS[LOOKUP_MIN_EV]), (EPSILON_E0_EV, ANCHORS[EPSILON_E0_EV]), (LOOKUP_MAX_EV, ANCHORS[LOOKUP_MAX_EV])]
     rows = _fixed_point_rows(table)
     validate_runtime_rows(rows, table)
 
     mutations = []
     bad = [dict(row) for row in rows]
-    bad[-1]["n_e_hat_avg"] *= 1.001
+    bad[-1]["n_e_avg"] *= 1.001
     mutations.append(bad)
     bad = [dict(row) for row in rows]
-    bad[-1]["n_epsilon_hat_avg"] = 1.0 + abs(bad[-1]["n_epsilon_hat_avg"] - 1.0)
+    bad[-1]["n_epsilon_avg"] = N_E0 * EPSILON_E0_EV + abs(bad[-1]["n_epsilon_avg"] - N_E0 * EPSILON_E0_EV)
     mutations.append(bad)
     bad = [dict(row) for row in rows]
     bad[-1]["Os_source_avg"] *= 1.01
@@ -502,7 +495,7 @@ def run_controlled_executable(executable, evidence_out=None, repository_sha=None
         raise SystemExit(f"Physics executable does not exist: {executable}")
     with tempfile.TemporaryDirectory(prefix="stage5-ei18-") as tmp:
         work = Path(tmp)
-        result = _execute_case(executable, work, "stage5_ei18_runtime", EPSILON_REF_EV)
+        result = _execute_case(executable, work, "stage5_ei18_runtime", EPSILON_E0_EV)
         _execute_case(executable, work, "stage5_ei18_below_lookup", LOOKUP_MIN_EV - 0.01, expect_strict_failure=True)
         _execute_case(executable, work, "stage5_ei18_above_lookup", LOOKUP_MAX_EV + 0.01, expect_strict_failure=True)
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Stage-5 S5-E bounded validation for H05 O- + O -> O2 + e-."""
+"""Stage-5 S5-E bounded validation for H05 O- + O -> O2 + e- using physical electron state."""
 from __future__ import annotations
 
 import argparse
@@ -21,7 +21,7 @@ A = 3.0e-16
 RHO = 3.1998e-5
 M_O = 0.016
 M_O2 = 0.032
-NREF = 1.0e16
+NE0 = 1.0e16
 EREF = 5.73276
 DT = 1.0e-7
 W_O0 = 0.10
@@ -58,11 +58,11 @@ def runtime_input():
 [Variables]
   [n_e]
     type = MooseVariableFVReal
-    initial_condition = 1
+    initial_condition = {NE0:.17g}
   []
   [n_epsilon]
     type = MooseVariableFVReal
-    initial_condition = 1
+    initial_condition = {NE0 * EREF:.17g}
   []
   [w_O]
     type = MooseVariableFVReal
@@ -127,7 +127,7 @@ def runtime_input():
     type = PhysicsElectronMeanEnergyMaterial
     electron_energy_density = n_epsilon
     electron_density = n_e
-    energy_reference_eV = {EREF:.17g}
+    state_form = physical_eV
   []
 []
 [FVKernels]
@@ -139,7 +139,7 @@ def runtime_input():
     type = PhysicsFVElectronReactionSource
     variable = n_e
     number_source = S_e_h05
-    n_ref = {NREF:.17g}
+    state_form = physical
   []
   [n_epsilon_time]
     type = FVTimeKernel
@@ -167,12 +167,12 @@ def runtime_input():
   []
 []
 [Postprocessors]
-  [n_e_hat_avg]
+  [n_e_avg]
     type = ElementAverageFunctorPostprocessor
     functor = n_e
     execute_on = 'INITIAL TIMESTEP_END'
   []
-  [n_epsilon_hat_avg]
+  [n_epsilon_avg]
     type = ElementAverageFunctorPostprocessor
     functor = n_epsilon
     execute_on = 'INITIAL TIMESTEP_END'
@@ -240,8 +240,8 @@ def validate(rows):
     if len(rows) < 2:
         raise AssertionError("expected initial and final rows")
     i, f = rows[0], rows[-1]
-    ni, nf = num(i, "n_e_hat_avg"), num(f, "n_e_hat_avg")
-    ei, ef = num(i, "n_epsilon_hat_avg"), num(f, "n_epsilon_hat_avg")
+    ni, nf = num(i, "n_e_avg"), num(f, "n_e_avg")
+    ei, ef = num(i, "n_epsilon_avg"), num(f, "n_epsilon_avg")
     mi, mf = num(i, "mean_energy_avg"), num(f, "mean_energy_avg")
     oi, of = num(i, "w_O_avg"), num(f, "w_O_avg")
     omi, omf = num(i, "w_Om_avg"), num(f, "w_Om_avg")
@@ -257,9 +257,9 @@ def validate(rows):
         raise AssertionError("H05 heavy-species direction/positivity")
     if not nf > ni > 0.0:
         raise AssertionError("H05 electron production")
-    close(ef, ei, rel=0.0, abs_=2e-10, label="zero explicit H05 energy source")
-    close(mi, EREF * ei / ni, label="initial mean energy")
-    close(mf, EREF * ef / nf, label="final mean energy")
+    close(ef, ei, rel=2e-12, abs_=1.0, label="zero explicit H05 energy source")
+    close(mi, ei / ni, label="initial mean energy")
+    close(mf, ef / nf, label="final mean energy")
     if not 0.0 < mf < mi:
         raise AssertionError("H05 zero-energy-source convention should dilute mean energy")
 
@@ -276,19 +276,19 @@ def validate(rows):
     close(RHO * (of - oi) / DT, so, rel=3e-5, abs_=5e-10, label="O BE closure")
     close(RHO * (omf - omi) / DT, som, rel=3e-5, abs_=5e-10, label="Om BE closure")
     close(RHO * (o2f - o2i) / DT, so2, rel=3e-5, abs_=5e-10, label="O2 constrained closure")
-    close(NREF * (nf - ni) / DT, se, rel=3e-5, abs_=2.0, label="electron BE closure")
+    close((nf - ni) / DT, se, rel=3e-5, abs_=2.0, label="electron BE closure")
 
     oxy_i = 2.0 * RHO * o2i / M_O2 + RHO * oi / M_O + RHO * omi / M_O
     oxy_f = 2.0 * RHO * o2f / M_O2 + RHO * of / M_O + RHO * omf / M_O
     close(oxy_f, oxy_i, rel=0.0, abs_=5e-10, label="oxygen nuclei closure")
 
-    charge_i = -NA * RHO * omi / M_O - NREF * ni
-    charge_f = -NA * RHO * omf / M_O - NREF * nf
+    charge_i = -NA * RHO * omi / M_O - ni
+    charge_f = -NA * RHO * omf / M_O - nf
     close(charge_f, charge_i, rel=2e-12, abs_=2.0, label="electron-inclusive charge closure")
 
     return {
-        "initial": {"n_e_hat": ni, "n_epsilon_hat": ei, "mean_energy_eV": mi, "w_O": oi, "w_Om": omi, "w_O2": o2i},
-        "final": {"n_e_hat": nf, "n_epsilon_hat": ef, "mean_energy_eV": mf, "w_O": of, "w_Om": omf, "w_O2": o2f,
+        "initial": {"n_e": ni, "n_epsilon": ei, "mean_energy_eV": mi, "w_O": oi, "w_Om": omi, "w_O2": o2i},
+        "final": {"n_e": nf, "n_epsilon": ef, "mean_energy_eV": mf, "w_O": of, "w_Om": omf, "w_O2": o2f,
                   "R_H05_mol_m3_s": r, "electron_source_m3_s": se},
         "closure": {"heavy_mass_source_sum_kg_m3_s": so + som + so2,
                     "oxygen_inventory_initial_mol_O_m3": oxy_i, "oxygen_inventory_final_mol_O_m3": oxy_f,
@@ -312,14 +312,14 @@ def synthetic_rows():
     omf = W_OM0 - DT * M_O * r / RHO
     o2i = 1.0 - W_O0 - W_OM0
     o2f = 1.0 - of - omf
-    nf = 1.0 + DT * NA * r / NREF
-    ef = 1.0
+    nf = NE0 + DT * NA * r
+    ef = NE0 * EREF
     return [
-        {"n_e_hat_avg": 1.0, "n_epsilon_hat_avg": 1.0, "mean_energy_avg": EREF,
+        {"n_e_avg": NE0, "n_epsilon_avg": NE0 * EREF, "mean_energy_avg": EREF,
          "w_O_avg": W_O0, "w_Om_avg": W_OM0, "w_O2_avg": o2i, "R_avg": molar_rate(W_O0, W_OM0),
          "O_source_avg": -M_O*molar_rate(W_O0, W_OM0), "Om_source_avg": -M_O*molar_rate(W_O0, W_OM0),
          "O2_source_avg": M_O2*molar_rate(W_O0, W_OM0), "electron_source_avg": NA*molar_rate(W_O0, W_OM0)},
-        {"n_e_hat_avg": nf, "n_epsilon_hat_avg": ef, "mean_energy_avg": EREF * ef / nf,
+        {"n_e_avg": nf, "n_epsilon_avg": ef, "mean_energy_avg": ef / nf,
          "w_O_avg": of, "w_Om_avg": omf, "w_O2_avg": o2f, "R_avg": r,
          "O_source_avg": -M_O*r, "Om_source_avg": -M_O*r, "O2_source_avg": M_O2*r,
          "electron_source_avg": NA*r},
@@ -341,8 +341,8 @@ def self_test():
         ("R_avg", lambda x: x * 0.5),
         ("electron_source_avg", lambda x: x * 2.0),
         ("O_source_avg", lambda x: -x),
-        ("n_epsilon_hat_avg", lambda x: x * 0.99),
-        ("n_e_hat_avg", lambda x: 1.0),
+        ("n_epsilon_avg", lambda x: x * 0.99),
+        ("n_e_avg", lambda x: NE0),
     ]:
         bad = [dict(r) for r in rows]
         bad[-1][key] = mutate(bad[-1][key])
@@ -398,8 +398,8 @@ def static_gate():
     if '"reaction_rate_" + reaction.name' not in owner or "addFunctorProperty<ADReal>" not in owner:
         raise AssertionError("canonical reaction-progress owner contract changed")
     eproj = (ROOT / "physics_app/src/fvkernels/PhysicsFVElectronReactionSource.C").read_text()
-    if "return -physical_number_source / _n_ref;" not in eproj:
-        raise AssertionError("normalized electron projection semantics changed")
+    if 'return _physical_state ? -physical_number_source : -physical_number_source / _n_ref;' not in eproj:
+        raise AssertionError("electron projection dual-state semantics changed")
     self_test()
     print("STAGE5_H05_IMPLEMENTATION_P0_PASS")
 
@@ -446,7 +446,7 @@ def run(executable, evidence_out=None, repository_sha=None, build_base_ref=None)
     if evidence_out:
         Path(evidence_out).write_text(json.dumps(evidence, indent=2, sort_keys=True) + "\n")
     print(f"STAGE5_H05_LOCAL_RUNTIME_PASS R={result['final']['R_H05_mol_m3_s']:.12g} "
-          f"n_e_hat={result['final']['n_e_hat']:.12g} mean_en={result['final']['mean_energy_eV']:.12g}")
+          f"n_e={result['final']['n_e']:.12g} mean_en={result['final']['mean_energy_eV']:.12g}")
 
 
 def main():

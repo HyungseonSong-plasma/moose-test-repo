@@ -12,16 +12,16 @@ from pathlib import Path
 
 N_A = 6.02214076e23
 M_O2 = 31.998e-3
-N_REF = 1.0e16
+N_E0 = 1.0e16
 RHO = 3.1998e-5
 DT = 1.0e-7
-EPSILON_REF_EV = 5.73276
+MEAN_E0_EV = 5.73276
 DELTA_E_EV = 0.977
 W0 = 1.0e-3
 K_O2S = 4.71e8
-ENERGY_COEF = -(DELTA_E_EV * N_A / (N_REF * EPSILON_REF_EV))
+ENERGY_COEF = -(DELTA_E_EV * N_A)
 
-RUNTIME_INPUT = """[Mesh]
+RUNTIME_INPUT = f"""[Mesh]
   [mesh]
     type = GeneratedMeshGenerator
     dim = 3
@@ -40,11 +40,11 @@ RUNTIME_INPUT = """[Mesh]
 [Variables]
   [n_e]
     type = MooseVariableFVReal
-    initial_condition = 1.0
+    initial_condition = 1.0e16
   []
   [n_epsilon]
     type = MooseVariableFVReal
-    initial_condition = 1.0
+    initial_condition = 5.73276e16
   []
   [w_O2s]
     type = MooseVariableFVReal
@@ -65,13 +65,6 @@ RUNTIME_INPUT = """[Mesh]
     functor_symbols = 'ws'
     expression = '1.0-ws'
   []
-  [electron_number_density]
-    type = ADParsedFunctorMaterial
-    property_name = n_e_physical
-    functor_names = 'n_e'
-    functor_symbols = 'nehat'
-    expression = '1.0e16*nehat'
-  []
   [o2_molar_concentration]
     type = ADParsedFunctorMaterial
     property_name = c_O2
@@ -83,11 +76,11 @@ RUNTIME_INPUT = """[Mesh]
     type = PhysicsElectronMeanEnergyMaterial
     electron_energy_density = n_epsilon
     electron_density = n_e
-    energy_reference_eV = 5.73276
+    state_form = physical_eV
   []
   [ei10_rate]
     type = PhysicsElectronImpactO2sExcitationMaterial
-    electron_number_density = n_e_physical
+    electron_number_density = n_e
     o2_molar_concentration = c_O2
   []
   [ei10_heavy_projection]
@@ -110,7 +103,7 @@ RUNTIME_INPUT = """[Mesh]
     type = FVCoupledForce
     variable = n_epsilon
     v = R_O2s
-    coef = -10263174.321827531
+    coef = {ENERGY_COEF:.17g}
   []
   [w_O2s_time]
     type = PhysicsFVMassFractionTimeDerivative
@@ -125,12 +118,12 @@ RUNTIME_INPUT = """[Mesh]
 []
 
 [Postprocessors]
-  [n_e_hat_avg]
+  [n_e_avg]
     type = ElementAverageFunctorPostprocessor
     functor = n_e
     execute_on = 'INITIAL TIMESTEP_END'
   []
-  [n_epsilon_hat_avg]
+  [n_epsilon_avg]
     type = ElementAverageFunctorPostprocessor
     functor = n_epsilon
     execute_on = 'INITIAL TIMESTEP_END'
@@ -197,8 +190,8 @@ def validate_runtime_rows(rows):
     if len(rows) < 2:
         raise AssertionError("expected initial and final rows")
     i, f = rows[0], rows[-1]
-    ne_i, ne_f = _num(i, "n_e_hat_avg"), _num(f, "n_e_hat_avg")
-    ep_i, ep_f = _num(i, "n_epsilon_hat_avg"), _num(f, "n_epsilon_hat_avg")
+    ne_i, ne_f = _num(i, "n_e_avg"), _num(f, "n_e_avg")
+    ep_i, ep_f = _num(i, "n_epsilon_avg"), _num(f, "n_epsilon_avg")
     ws_i, ws_f = _num(i, "w_O2s_avg"), _num(f, "w_O2s_avg")
     wo_i, wo_f = _num(i, "w_O2_avg"), _num(f, "w_O2_avg")
     me_i, me_f = _num(i, "mean_en_solved_avg"), _num(f, "mean_en_solved_avg")
@@ -210,8 +203,8 @@ def validate_runtime_rows(rows):
         raise AssertionError("EI10 positivity/direction failure")
     _close(wo_i + ws_i, 1.0, rel=0, abs_=2e-12, label="initial heavy sum")
     _close(wo_f + ws_f, 1.0, rel=0, abs_=2e-12, label="final heavy sum")
-    _close(me_i, EPSILON_REF_EV * ep_i / ne_i, label="initial mean energy")
-    _close(me_f, EPSILON_REF_EV * ep_f / ne_f, label="final mean energy")
+    _close(me_i, ep_i / ne_i, label="initial mean energy")
+    _close(me_f, ep_f / ne_f, label="final mean energy")
 
     if not (r_f > 0 and s_o2 < 0 < s_o2s):
         raise AssertionError("EI10 source signs")
@@ -219,35 +212,35 @@ def validate_runtime_rows(rows):
     _close(s_o2s / M_O2, r_f, label="O2s/shared progress")
     _close(s_o2 + s_o2s, 0, rel=0, abs_=1e-12, label="heavy source closure")
 
-    expected_r = K_O2S * (N_REF * ne_f / N_A) * (RHO * wo_f / M_O2)
+    expected_r = K_O2S * (ne_f / N_A) * (RHO * wo_f / M_O2)
     _close(r_f, expected_r, label="canonical R_O2s")
     _close(RHO * (ws_f - ws_i) / DT, s_o2s, label="O2s BE closure")
     _close(RHO * (wo_f - wo_i) / DT, s_o2, label="O2 BE closure")
 
-    rhs = -DELTA_E_EV * N_A * r_f / (N_REF * EPSILON_REF_EV)
+    rhs = -DELTA_E_EV * N_A * r_f
     _close((ep_f - ep_i) / DT, rhs, label="EI10 energy BE closure")
     oxygen_i = 2 * RHO * (wo_i + ws_i) / M_O2
     oxygen_f = 2 * RHO * (wo_f + ws_f) / M_O2
     _close(oxygen_f, oxygen_i, rel=2e-12, abs_=1e-14, label="oxygen inventory")
 
     return {
-        "initial": {"n_e_hat": ne_i, "n_epsilon_hat": ep_i, "w_O2": wo_i, "w_O2s": ws_i, "mean_en_solved_eV": me_i},
-        "final": {"n_e_hat": ne_f, "n_epsilon_hat": ep_f, "w_O2": wo_f, "w_O2s": ws_f, "mean_en_solved_eV": me_f, "R_O2s_mol_m3_s": r_f},
-        "energy_closure": {"energy_loss_eV_per_event": DELTA_E_EV, "standard_moose_object": "FVCoupledForce", "coef": ENERGY_COEF, "normalized_rhs_per_s": rhs, "observed_dn_epsilon_hat_dt_per_s": (ep_f - ep_i) / DT},
+        "initial": {"n_e": ne_i, "n_epsilon": ep_i, "w_O2": wo_i, "w_O2s": ws_i, "mean_en_solved_eV": me_i},
+        "final": {"n_e": ne_f, "n_epsilon": ep_f, "w_O2": wo_f, "w_O2s": ws_f, "mean_en_solved_eV": me_f, "R_O2s_mol_m3_s": r_f},
+        "energy_closure": {"energy_loss_eV_per_event": DELTA_E_EV, "standard_moose_object": "FVCoupledForce", "coef": ENERGY_COEF, "physical_rhs_eV_m3_s": rhs, "observed_dn_epsilon_dt_eV_m3_s": (ep_f - ep_i) / DT},
         "particle_heavy_closure": {"heavy_fraction_sum": wo_f + ws_f, "oxygen_atom_molar_inventory_initial": oxygen_i, "oxygen_atom_molar_inventory_final": oxygen_f}
     }
 
 
 def runtime_checker_self_test():
-    a = DT * K_O2S * N_REF / N_A
+    a = DT * K_O2S * N_E0 / N_A
     ws = (W0 + a) / (1 + a)
     wo = 1 - ws
-    r = K_O2S * (N_REF / N_A) * (RHO * wo / M_O2)
-    ep = 1 - DT * DELTA_E_EV * N_A * r / (N_REF * EPSILON_REF_EV)
-    r0 = K_O2S * (N_REF / N_A) * (RHO * (1 - W0) / M_O2)
+    r = K_O2S * (N_E0 / N_A) * (RHO * wo / M_O2)
+    ep = N_E0 * MEAN_E0_EV - DT * DELTA_E_EV * N_A * r
+    r0 = K_O2S * (N_E0 / N_A) * (RHO * (1 - W0) / M_O2)
     rows = [
-        {"n_e_hat_avg": 1, "n_epsilon_hat_avg": 1, "w_O2s_avg": W0, "w_O2_avg": 1 - W0, "mean_en_solved_avg": EPSILON_REF_EV, "R_O2s_avg": r0, "O2_source_avg": -M_O2 * r0, "O2s_source_avg": M_O2 * r0},
-        {"n_e_hat_avg": 1, "n_epsilon_hat_avg": ep, "w_O2s_avg": ws, "w_O2_avg": wo, "mean_en_solved_avg": EPSILON_REF_EV * ep, "R_O2s_avg": r, "O2_source_avg": -M_O2 * r, "O2s_source_avg": M_O2 * r}
+        {"n_e_avg": N_E0, "n_epsilon_avg": N_E0 * MEAN_E0_EV, "w_O2s_avg": W0, "w_O2_avg": 1 - W0, "mean_en_solved_avg": MEAN_E0_EV, "R_O2s_avg": r0, "O2_source_avg": -M_O2 * r0, "O2s_source_avg": M_O2 * r0},
+        {"n_e_avg": N_E0, "n_epsilon_avg": ep, "w_O2s_avg": ws, "w_O2_avg": wo, "mean_en_solved_avg": ep / N_E0, "R_O2s_avg": r, "O2_source_avg": -M_O2 * r, "O2s_source_avg": M_O2 * r}
     ]
     validate_runtime_rows(rows)
     assert "type = FVCoupledForce" in RUNTIME_INPUT
@@ -283,7 +276,7 @@ def run_controlled_executable(executable, evidence_out=None, repository_sha=None
         evidence["build_base_ref"] = build_base_ref
     if evidence_out:
         Path(evidence_out).write_text(json.dumps(evidence, indent=2, sort_keys=True) + "\n")
-    print(f"E8_EI10_INELASTIC_ENERGY_RUNTIME_VECTOR n_epsilon_hat={evidence['final']['n_epsilon_hat']:.12g} mean_en_eV={evidence['final']['mean_en_solved_eV']:.12g} R={evidence['final']['R_O2s_mol_m3_s']:.12g}")
+    print(f"E8_EI10_INELASTIC_ENERGY_RUNTIME_VECTOR n_epsilon={evidence['final']['n_epsilon']:.12g} mean_en_eV={evidence['final']['mean_en_solved_eV']:.12g} R={evidence['final']['R_O2s_mol_m3_s']:.12g}")
     print("E8_EI10_INELASTIC_ENERGY_LOCAL_RUNTIME_PASS")
 
 

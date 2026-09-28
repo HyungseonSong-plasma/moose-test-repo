@@ -9,7 +9,7 @@
 [Variables]
   [n_e]
     type = MooseVariableFVReal
-    initial_condition = 1.0
+    initial_condition = 1.0e16
   []
 []
 
@@ -30,12 +30,12 @@
     type = PhysicsFVElectronReactionSource
     variable = n_e
     number_source = ei01_electron_number_source
-    n_ref = 1.0e16
+    state_form = physical
   []
 []
 
 [Postprocessors]
-  [n_e_hat_avg]
+  [n_e_avg]
     type = ElementAverageFunctorPostprocessor
     functor = n_e
     execute_on = 'INITIAL TIMESTEP_END'

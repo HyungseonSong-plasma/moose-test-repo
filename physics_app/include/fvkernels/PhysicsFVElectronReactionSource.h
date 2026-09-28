@@ -3,8 +3,8 @@
 #include "FVElementalKernel.h"
 
 /**
- * Applies a signed physical electron number source to the normalized electron
- * continuity equation.
+ * Applies a signed physical electron number source to either the physical or
+ * historical normalized electron continuity equation.
  *
  * The electron state is n_e_phys = n_ref * n_e_hat.  If S_e is the signed
  * physical electron number source [1/(m^3 s)], the normalized equation uses
@@ -27,6 +27,7 @@ public:
 protected:
   ADReal computeQpResidual() override;
 
+  const bool _physical_state;
   const Moose::Functor<ADReal> & _number_source;
   const Real _n_ref;
 };

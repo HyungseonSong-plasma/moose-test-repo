@@ -1,3 +1,4 @@
+# Physical electron-energy density smoke.
 [Mesh]
   type = GeneratedMesh
   dim = 1
@@ -9,11 +10,11 @@
 [Variables]
   [energy_thermal]
     type = MooseVariableFVReal
-    initial_condition = 1.0
+    initial_condition = 5.0e16
   []
   [energy_see]
     type = MooseVariableFVReal
-    initial_condition = 1.0
+    initial_condition = 5.0e16
   []
 []
 
@@ -54,7 +55,7 @@
     electron_energy_density = energy_thermal
     mean_electron_energy = mean_en
     see_number_flux = zero_flux
-    energy_reference_eV = 5.0
+    state_form = physical_eV
   []
   [see_wall]
     type = PhysicsFVElectronEnergyWallFluxBC
@@ -63,7 +64,7 @@
     electron_energy_density = energy_see
     mean_electron_energy = mean_en
     see_number_flux = finite_see
-    energy_reference_eV = 5.0
+    state_form = physical_eV
   []
 []
 

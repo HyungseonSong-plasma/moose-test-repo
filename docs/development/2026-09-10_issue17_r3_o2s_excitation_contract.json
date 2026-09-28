@@ -39,7 +39,7 @@
     "shared_progress_rule": "compute one canonical R_O2s and reuse it for constrained-O2 consumption and O2s production; do not create an independent electron-particle or electron-energy rate evaluation",
     "molar_progress": "R_O2s = k_physics_const * (n_e_physical / N_A) * c_O2",
     "state_inputs": {
-      "electron_number_density": "n_e_physical = n_ref * n_e_hat",
+      "electron_number_density": "n_e [1/m^3] physical electron number density",
       "constrained_o2_mass_fraction": "w_O2 = 1 - (w_O2s + w_O2p + w_O + w_Om + w_Op + w_Os)",
       "o2_molar_concentration": "c_O2 = rho * w_O2 / M_O2"
     }

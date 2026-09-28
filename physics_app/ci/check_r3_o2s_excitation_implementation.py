@@ -13,10 +13,10 @@ from pathlib import Path
 
 N_A = 6.02214076e23
 M_O2 = 31.998e-3
-N_REF = 1.0e16
+N_E0 = 1.0e16
 RHO = 3.1998e-5
 DT = 1.0e-7
-EPSILON_REF_EV = 5.73276
+EPSILON_E0_EV = 5.73276
 WP0 = 1.0e-3
 K_O2S = 4.71e8
 
@@ -24,7 +24,7 @@ CONTRACT = Path("docs/development/2026-09-10_issue17_r3_o2s_excitation_contract.
 RATE = Path("physics_app/src/materials/PhysicsElectronImpactO2sExcitationMaterial.C")
 PROJ = Path("physics_app/src/materials/PhysicsO2sExcitationSourceMaterial.C")
 
-RUNTIME_INPUT = r"""[Mesh]
+RUNTIME_INPUT = f"""[Mesh]
   [mesh]
     type = GeneratedMeshGenerator
     dim = 3
@@ -43,11 +43,11 @@ RUNTIME_INPUT = r"""[Mesh]
 [Variables]
   [n_e]
     type = MooseVariableFVReal
-    initial_condition = 1.0
+    initial_condition = {N_E0:.17g}
   []
   [n_epsilon]
     type = MooseVariableFVReal
-    initial_condition = 1.0
+    initial_condition = {N_E0 * EPSILON_E0_EV:.17g}
   []
   [w_O2s]
     type = MooseVariableFVReal
@@ -68,13 +68,6 @@ RUNTIME_INPUT = r"""[Mesh]
     functor_symbols = 'ws'
     expression = '1.0-ws'
   []
-  [electron_number_density]
-    type = ADParsedFunctorMaterial
-    property_name = n_e_physical
-    functor_names = 'n_e'
-    functor_symbols = 'nehat'
-    expression = '1.0e16*nehat'
-  []
   [o2_molar_concentration]
     type = ADParsedFunctorMaterial
     property_name = c_O2
@@ -86,11 +79,11 @@ RUNTIME_INPUT = r"""[Mesh]
     type = PhysicsElectronMeanEnergyMaterial
     electron_energy_density = n_epsilon
     electron_density = n_e
-    energy_reference_eV = 5.73276
+    state_form = physical_eV
   []
   [r3_o2s_rate]
     type = PhysicsElectronImpactO2sExcitationMaterial
-    electron_number_density = n_e_physical
+    electron_number_density = n_e
     o2_molar_concentration = c_O2
   []
   [r3_o2s_projection]
@@ -122,12 +115,12 @@ RUNTIME_INPUT = r"""[Mesh]
 []
 
 [Postprocessors]
-  [n_e_hat_avg]
+  [n_e_avg]
     type = ElementAverageFunctorPostprocessor
     functor = n_e
     execute_on = 'INITIAL TIMESTEP_END'
   []
-  [n_epsilon_hat_avg]
+  [n_epsilon_avg]
     type = ElementAverageFunctorPostprocessor
     functor = n_epsilon
     execute_on = 'INITIAL TIMESTEP_END'
@@ -196,10 +189,10 @@ def validate_runtime_rows(rows):
     initial = rows[0]
     final = rows[-1]
 
-    ne_i = _f(initial, "n_e_hat_avg")
-    ne_f = _f(final, "n_e_hat_avg")
-    eps_i = _f(initial, "n_epsilon_hat_avg")
-    eps_f = _f(final, "n_epsilon_hat_avg")
+    ne_i = _f(initial, "n_e_avg")
+    ne_f = _f(final, "n_e_avg")
+    eps_i = _f(initial, "n_epsilon_avg")
+    eps_f = _f(final, "n_epsilon_avg")
     ws_i = _f(initial, "w_O2s_avg")
     ws_f = _f(final, "w_O2s_avg")
     wo2_i = _f(initial, "w_O2_avg")
@@ -212,8 +205,8 @@ def validate_runtime_rows(rows):
 
     if not (ne_i > 0.0 and eps_i >= 0.0):
         raise AssertionError((ne_i, eps_i))
-    _assert_close(ne_f, ne_i, rel=0.0, abs_=1.0e-12, label="zero EI10 electron-particle source")
-    _assert_close(eps_f, eps_i, rel=0.0, abs_=1.0e-12, label="Stage-3 zero electron-energy source")
+    _assert_close(ne_f, ne_i, rel=2.0e-12, abs_=1.0, label="zero EI10 electron-particle source")
+    _assert_close(eps_f, eps_i, rel=2.0e-12, abs_=1.0, label="Stage-3 zero electron-energy source")
     if not (0.0 <= ws_i < ws_f < 1.0 and wo2_i > wo2_f > 0.0):
         raise AssertionError((ws_i, ws_f, wo2_i, wo2_f))
 
@@ -223,9 +216,9 @@ def validate_runtime_rows(rows):
     oxygen_f = 2.0 * RHO * (wo2_f + ws_f) / M_O2
     _assert_close(oxygen_f, oxygen_i, rel=2.0e-12, abs_=1.0e-14, label="oxygen-atom molar inventory")
 
-    _assert_close(mean_i, EPSILON_REF_EV * eps_i / ne_i, label="initial solved mean energy")
-    _assert_close(mean_f, EPSILON_REF_EV * eps_f / ne_f, label="final solved mean energy")
-    _assert_close(mean_i, EPSILON_REF_EV, rel=0.0, abs_=1.0e-12, label="surrogate reference mean energy")
+    _assert_close(mean_i, eps_i / ne_i, label="initial solved mean energy")
+    _assert_close(mean_f, eps_f / ne_f, label="final solved mean energy")
+    _assert_close(mean_i, EPSILON_E0_EV, rel=0.0, abs_=1.0e-12, label="surrogate reference mean energy")
     _assert_close(mean_f, mean_i, rel=0.0, abs_=1.0e-12, label="unchanged mean energy")
 
     if not (progress_f > 0.0 and so2_f < 0.0 < so2s_f):
@@ -235,7 +228,7 @@ def validate_runtime_rows(rows):
     _assert_close(so2_f + so2s_f, 0.0, rel=0.0, abs_=1.0e-12, label="heavy source closure")
 
     expected_c_o2 = RHO * wo2_f / M_O2
-    expected_progress = K_O2S * (N_REF * ne_f / N_A) * expected_c_o2
+    expected_progress = K_O2S * (ne_f / N_A) * expected_c_o2
     _assert_close(progress_f, expected_progress, rel=3.0e-6, abs_=1.0e-14, label="constant-surrogate runtime progress")
 
     _assert_close(RHO * (ws_f - ws_i) / DT, so2s_f, rel=4.0e-6, abs_=1.0e-12, label="O2s BE source closure")
@@ -243,15 +236,15 @@ def validate_runtime_rows(rows):
 
     return {
         "initial": {
-            "n_e_hat": ne_i,
-            "n_epsilon_hat": eps_i,
+            "n_e": ne_i,
+            "n_epsilon": eps_i,
             "w_O2": wo2_i,
             "w_O2s": ws_i,
             "mean_en_solved_eV": mean_i,
         },
         "final": {
-            "n_e_hat": ne_f,
-            "n_epsilon_hat": eps_f,
+            "n_e": ne_f,
+            "n_epsilon": eps_f,
             "w_O2": wo2_f,
             "w_O2s": ws_f,
             "mean_en_solved_eV": mean_f,
@@ -263,36 +256,36 @@ def validate_runtime_rows(rows):
             "heavy_fraction_sum": wo2_f + ws_f,
             "oxygen_atom_molar_inventory_initial": oxygen_i,
             "oxygen_atom_molar_inventory_final": oxygen_f,
-            "electron_particle_delta_hat": ne_f - ne_i,
-            "electron_energy_delta_hat": eps_f - eps_i,
+            "electron_particle_delta_m3": ne_f - ne_i,
+            "electron_energy_delta_eV_m3": eps_f - eps_i,
             "k_O2s_m3_mol_s": K_O2S,
         },
     }
 
 
 def runtime_checker_self_test():
-    a = DT * K_O2S * N_REF / N_A
+    a = DT * K_O2S * N_E0 / N_A
     ws_f = (WP0 + a) / (1.0 + a)
     wo2_f = 1.0 - ws_f
-    r0 = K_O2S * (N_REF / N_A) * (RHO * (1.0 - WP0) / M_O2)
-    rf = K_O2S * (N_REF / N_A) * (RHO * wo2_f / M_O2)
+    r0 = K_O2S * (N_E0 / N_A) * (RHO * (1.0 - WP0) / M_O2)
+    rf = K_O2S * (N_E0 / N_A) * (RHO * wo2_f / M_O2)
     rows = [
         {
-            "n_e_hat_avg": 1.0,
-            "n_epsilon_hat_avg": 1.0,
+            "n_e_avg": N_E0,
+            "n_epsilon_avg": N_E0 * EPSILON_E0_EV,
             "w_O2s_avg": WP0,
             "w_O2_avg": 1.0 - WP0,
-            "mean_en_solved_avg": EPSILON_REF_EV,
+            "mean_en_solved_avg": EPSILON_E0_EV,
             "R_O2s_avg": r0,
             "O2_source_avg": -M_O2 * r0,
             "O2s_source_avg": M_O2 * r0,
         },
         {
-            "n_e_hat_avg": 1.0,
-            "n_epsilon_hat_avg": 1.0,
+            "n_e_avg": N_E0,
+            "n_epsilon_avg": N_E0 * EPSILON_E0_EV,
             "w_O2s_avg": ws_f,
             "w_O2_avg": wo2_f,
-            "mean_en_solved_avg": EPSILON_REF_EV,
+            "mean_en_solved_avg": EPSILON_E0_EV,
             "R_O2s_avg": rf,
             "O2_source_avg": -M_O2 * rf,
             "O2s_source_avg": M_O2 * rf,
@@ -303,9 +296,9 @@ def runtime_checker_self_test():
     for mutate in ("electron_source", "energy_source", "shared_rate", "positivity"):
         bad = [dict(row) for row in rows]
         if mutate == "electron_source":
-            bad[-1]["n_e_hat_avg"] *= 1.001
+            bad[-1]["n_e_avg"] *= 1.001
         elif mutate == "energy_source":
-            bad[-1]["n_epsilon_hat_avg"] *= 0.999
+            bad[-1]["n_epsilon_avg"] *= 0.999
         elif mutate == "shared_rate":
             bad[-1]["O2s_source_avg"] *= 1.01
         else:
@@ -368,7 +361,7 @@ def static_implementation_gate():
     ):
         assert forbidden not in proj
 
-    R = canonical_k * (N_REF / N_A) * (RHO * 0.999 / M_O2)
+    R = canonical_k * (N_E0 / N_A) * (RHO * 0.999 / M_O2)
     s_o2 = -M_O2 * R
     s_o2s = M_O2 * R
     assert R > 0.0 and s_o2 < 0.0 < s_o2s
@@ -437,8 +430,8 @@ def run_controlled_executable(executable, evidence_out=None, repository_sha=None
     closure = evidence["closure"]
     print(
         "R3_O2S_EXCITATION_RUNTIME_VECTOR "
-        f"n_e_hat={final['n_e_hat']:.12g} "
-        f"n_epsilon_hat={final['n_epsilon_hat']:.12g} "
+        f"n_e={final['n_e']:.12g} "
+        f"n_epsilon={final['n_epsilon']:.12g} "
         f"w_O2={final['w_O2']:.12g} "
         f"w_O2s={final['w_O2s']:.12g} "
         f"mean_en_eV={final['mean_en_solved_eV']:.12g} "
@@ -447,8 +440,8 @@ def run_controlled_executable(executable, evidence_out=None, repository_sha=None
     print(
         "R3_O2S_EXCITATION_CLOSURE_VECTOR "
         f"sum_w={closure['heavy_fraction_sum']:.12g} "
-        f"delta_ne={closure['electron_particle_delta_hat']:.12g} "
-        f"delta_nepsilon={closure['electron_energy_delta_hat']:.12g}"
+        f"delta_ne={closure['electron_particle_delta_m3']:.12g} "
+        f"delta_nepsilon={closure['electron_energy_delta_eV_m3']:.12g}"
     )
     print("R3_O2S_EXCITATION_LOCAL_RUNTIME_PASS")
 

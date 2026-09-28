@@ -32,11 +32,11 @@
 [Functions]
   [n_e_initial]
     type = ParsedFunction
-    expression = '0.9 + 0.2*x/0.2565'
+    expression = '1.0e16*(0.9 + 0.2*x/0.2565)'
   []
   [n_epsilon_initial]
     type = ParsedFunction
-    expression = '1.05 - 0.1*x/0.2565'
+    expression = '5.73276e16*(1.05 - 0.1*x/0.2565)'
   []
 []
 
@@ -67,7 +67,7 @@
     type = PhysicsElectronMeanEnergyMaterial
     electron_energy_density = n_epsilon
     electron_density = n_e
-    energy_reference_eV = 5.73276
+    state_form = physical_eV
     block = plasma
   []
 

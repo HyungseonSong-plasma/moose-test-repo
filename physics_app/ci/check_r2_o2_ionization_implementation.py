@@ -13,16 +13,16 @@ from pathlib import Path
 
 N_A = 6.02214076e23
 M_O2 = 31.998e-3
-N_REF = 1.0e16
+N_E0 = 1.0e16
 RHO = 3.1998e-5
 DT = 1.0e-7
-EPSILON_REF_EV = 5.73276
+EPSILON_E0_EV = 5.73276
 LOOKUP_MIN_EV = 1.40991
 LOOKUP_MAX_EV = 22.1378
 WP0 = 1.0e-3
 RATE_TABLE = (
     (LOOKUP_MIN_EV, 8.0e8),
-    (EPSILON_REF_EV, 1.0e9),
+    (EPSILON_E0_EV, 1.0e9),
     (LOOKUP_MAX_EV, 1.2e9),
 )
 RUNTIME_REF_RE = re.compile(
@@ -33,7 +33,7 @@ RATE = Path("physics_app/src/materials/PhysicsElectronImpactIonizationMaterial.C
 PROJ = Path("physics_app/src/materials/PhysicsO2IonizationSourceMaterial.C")
 EK = Path("physics_app/src/fvkernels/PhysicsFVElectronReactionSource.C")
 
-RUNTIME_INPUT = r"""[Mesh]
+RUNTIME_INPUT = f"""[Mesh]
   [mesh]
     type = GeneratedMeshGenerator
     dim = 3
@@ -52,11 +52,11 @@ RUNTIME_INPUT = r"""[Mesh]
 [Variables]
   [n_e]
     type = MooseVariableFVReal
-    initial_condition = 1.0
+    initial_condition = {N_E0:.17g}
   []
   [n_epsilon]
     type = MooseVariableFVReal
-    initial_condition = 1.0
+    initial_condition = {N_E0 * EPSILON_E0_EV:.17g}
   []
   [w_O2p]
     type = MooseVariableFVReal
@@ -77,13 +77,6 @@ RUNTIME_INPUT = r"""[Mesh]
     functor_symbols = 'wp'
     expression = '1.0-wp'
   []
-  [electron_number_density]
-    type = ADParsedFunctorMaterial
-    property_name = n_e_physical
-    functor_names = 'n_e'
-    functor_symbols = 'nehat'
-    expression = '1.0e16*nehat'
-  []
   [o2_molar_concentration]
     type = ADParsedFunctorMaterial
     property_name = c_O2
@@ -95,13 +88,13 @@ RUNTIME_INPUT = r"""[Mesh]
     type = PhysicsElectronMeanEnergyMaterial
     electron_energy_density = n_epsilon
     electron_density = n_e
-    energy_reference_eV = 5.73276
+    state_form = physical_eV
   []
   [r2_ionization_rate]
     type = PhysicsElectronImpactIonizationMaterial
     rate_table_file = r2_o2_ionization_runtime_table.txt
     mean_energy = mean_en_solved
-    electron_number_density = n_e_physical
+    electron_number_density = n_e
     o2_molar_concentration = c_O2
   []
   [r2_source_projection]
@@ -134,17 +127,17 @@ RUNTIME_INPUT = r"""[Mesh]
     type = PhysicsFVElectronReactionSource
     variable = n_e
     number_source = electron_ionization_number_source
-    n_ref = 1.0e16
+    state_form = physical
   []
 []
 
 [Postprocessors]
-  [n_e_hat_avg]
+  [n_e_avg]
     type = ElementAverageFunctorPostprocessor
     functor = n_e
     execute_on = 'INITIAL TIMESTEP_END'
   []
-  [n_epsilon_hat_avg]
+  [n_epsilon_avg]
     type = ElementAverageFunctorPostprocessor
     functor = n_epsilon
     execute_on = 'INITIAL TIMESTEP_END'
@@ -227,10 +220,10 @@ def validate_runtime_rows(rows):
     initial = rows[0]
     final = rows[-1]
 
-    ne_i = _f(initial, "n_e_hat_avg")
-    ne_f = _f(final, "n_e_hat_avg")
-    eps_i = _f(initial, "n_epsilon_hat_avg")
-    eps_f = _f(final, "n_epsilon_hat_avg")
+    ne_i = _f(initial, "n_e_avg")
+    ne_f = _f(final, "n_e_avg")
+    eps_i = _f(initial, "n_epsilon_avg")
+    eps_f = _f(final, "n_epsilon_avg")
     wp_i = _f(initial, "w_O2p_avg")
     wp_f = _f(final, "w_O2p_avg")
     wo2_i = _f(initial, "w_O2_avg")
@@ -248,7 +241,7 @@ def validate_runtime_rows(rows):
         raise AssertionError((wp_i, wp_f, wo2_i, wo2_f))
     if not (LOOKUP_MIN_EV <= mean_i <= LOOKUP_MAX_EV and LOOKUP_MIN_EV <= mean_f <= LOOKUP_MAX_EV):
         raise AssertionError((mean_i, mean_f))
-    _assert_close(eps_f, eps_i, rel=0.0, abs_=1.0e-12, label="Stage-3 energy state")
+    _assert_close(eps_f, eps_i, rel=2.0e-12, abs_=1.0, label="Stage-3 physical energy state")
 
     _assert_close(wo2_i + wp_i, 1.0, rel=0.0, abs_=2.0e-12, label="initial heavy fraction sum")
     _assert_close(wo2_f + wp_f, 1.0, rel=0.0, abs_=2.0e-12, label="final heavy fraction sum")
@@ -263,32 +256,32 @@ def validate_runtime_rows(rows):
     _assert_close(se_f / N_A, progress_f, label="electron source / shared progress")
     _assert_close(so2_f + so2p_f, 0.0, rel=0.0, abs_=1.0e-11, label="heavy source closure")
 
-    _assert_close(mean_i, EPSILON_REF_EV * eps_i / ne_i, label="initial solved mean energy")
-    _assert_close(mean_f, EPSILON_REF_EV * eps_f / ne_f, label="final solved mean energy")
+    _assert_close(mean_i, eps_i / ne_i, label="initial solved mean energy")
+    _assert_close(mean_f, eps_f / ne_f, label="final solved mean energy")
     expected_k = _interp_rate(mean_f)
     expected_c_o2 = RHO * wo2_f / M_O2
-    expected_progress = expected_k * (N_REF * ne_f / N_A) * expected_c_o2
+    expected_progress = expected_k * (ne_f / N_A) * expected_c_o2
     _assert_close(progress_f, expected_progress, rel=3.0e-6, abs_=1.0e-14, label="runtime lookup progress")
 
-    _assert_close(N_REF * (ne_f - ne_i) / DT, se_f, rel=4.0e-6, abs_=1.0, label="electron BE source closure")
+    _assert_close((ne_f - ne_i) / DT, se_f, rel=4.0e-6, abs_=1.0, label="electron BE source closure")
     _assert_close(RHO * (wp_f - wp_i) / DT, so2p_f, rel=4.0e-6, abs_=1.0e-12, label="O2p BE source closure")
     _assert_close(RHO * (wo2_f - wo2_i) / DT, so2_f, rel=4.0e-6, abs_=1.0e-12, label="constrained O2 BE source closure")
 
-    delta_e = N_REF * (ne_f - ne_i)
+    delta_e = ne_f - ne_i
     delta_o2p = N_A * RHO * (wp_f - wp_i) / M_O2
     _assert_close(delta_e, delta_o2p, rel=5.0e-6, abs_=1.0, label="electron-inclusive charge closure")
 
     return {
         "initial": {
-            "n_e_hat": ne_i,
-            "n_epsilon_hat": eps_i,
+            "n_e": ne_i,
+            "n_epsilon": eps_i,
             "w_O2": wo2_i,
             "w_O2p": wp_i,
             "mean_en_solved_eV": mean_i,
         },
         "final": {
-            "n_e_hat": ne_f,
-            "n_epsilon_hat": eps_f,
+            "n_e": ne_f,
+            "n_epsilon": eps_f,
             "w_O2": wo2_f,
             "w_O2p": wp_f,
             "mean_en_solved_eV": mean_f,
@@ -309,34 +302,34 @@ def validate_runtime_rows(rows):
 def runtime_checker_self_test():
     progress = 0.0
     for _ in range(100):
-        ne = 1.0 + DT * N_A * progress / N_REF
+        ne = N_E0 + DT * N_A * progress
         wp = WP0 + DT * M_O2 * progress / RHO
-        mean = EPSILON_REF_EV / ne
+        mean = (N_E0 * EPSILON_E0_EV) / ne
         k = _interp_rate(mean)
-        new_progress = k * (N_REF * ne / N_A) * (RHO * (1.0 - wp) / M_O2)
+        new_progress = k * (ne / N_A) * (RHO * (1.0 - wp) / M_O2)
         if math.isclose(new_progress, progress, rel_tol=1.0e-14, abs_tol=1.0e-18):
             progress = new_progress
             break
         progress = new_progress
-    ne = 1.0 + DT * N_A * progress / N_REF
+    ne = N_E0 + DT * N_A * progress
     wp = WP0 + DT * M_O2 * progress / RHO
-    mean = EPSILON_REF_EV / ne
-    r0 = _interp_rate(EPSILON_REF_EV) * (N_REF / N_A) * (RHO * (1.0 - WP0) / M_O2)
+    mean = (N_E0 * EPSILON_E0_EV) / ne
+    r0 = _interp_rate(EPSILON_E0_EV) * (N_E0 / N_A) * (RHO * (1.0 - WP0) / M_O2)
     rows = [
         {
-            "n_e_hat_avg": 1.0,
-            "n_epsilon_hat_avg": 1.0,
+            "n_e_avg": N_E0,
+            "n_epsilon_avg": N_E0 * EPSILON_E0_EV,
             "w_O2p_avg": WP0,
             "w_O2_avg": 1.0 - WP0,
-            "mean_en_solved_avg": EPSILON_REF_EV,
+            "mean_en_solved_avg": EPSILON_E0_EV,
             "R_ion_O2_avg": r0,
             "O2_source_avg": -M_O2 * r0,
             "O2p_source_avg": M_O2 * r0,
             "electron_source_avg": N_A * r0,
         },
         {
-            "n_e_hat_avg": ne,
-            "n_epsilon_hat_avg": 1.0,
+            "n_e_avg": ne,
+            "n_epsilon_avg": N_E0 * EPSILON_E0_EV,
             "w_O2p_avg": wp,
             "w_O2_avg": 1.0 - wp,
             "mean_en_solved_avg": mean,
@@ -385,7 +378,8 @@ def static_implementation_gate():
         assert forbidden not in proj
 
     assert '_number_source(getFunctor<ADReal>("number_source"))' in electron_kernel
-    assert 'return -physical_number_source / _n_ref;' in electron_kernel
+    assert '_physical_state(getParam<MooseEnum>("state_form") == "physical")' in electron_kernel
+    assert 'return _physical_state ? -physical_number_source : -physical_number_source / _n_ref;' in electron_kernel
 
     progress = 2.5
     s_o2 = -M_O2 * progress
@@ -432,7 +426,7 @@ def _print_runtime_acceptance(evidence):
     closure = evidence["closure"]
     print(
         "R2_O2_IONIZATION_RUNTIME_VECTOR "
-        f"n_e_hat={final['n_e_hat']:.12g} "
+        f"n_e={final['n_e']:.12g} "
         f"w_O2={final['w_O2']:.12g} "
         f"w_O2p={final['w_O2p']:.12g} "
         f"mean_en_eV={final['mean_en_solved_eV']:.12g} "

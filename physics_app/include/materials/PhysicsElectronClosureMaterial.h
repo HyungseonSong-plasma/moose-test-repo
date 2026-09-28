@@ -10,8 +10,8 @@
  * Unified local-mean-energy electron closure.
  *
  * Inputs:
- *   - normalized electron number-density state
- *   - normalized electron energy-density state
+ *   - physical electron number density [1/m^3] and energy density [eV/m^3]
+ *     in the preferred formulation
  *   - neutral-gas pressure and temperature
  *   - reduced electron transport table
  *
@@ -38,8 +38,9 @@ protected:
   ADReal interpolate(const ADReal & coordinate, std::size_t value_index) const;
   static BoundsPolicy parseBoundsPolicy(const std::string & value);
 
-  const Moose::Functor<ADReal> & _normalized_electron_density;
-  const Moose::Functor<ADReal> & _normalized_electron_energy_density;
+  const bool _physical_state;
+  const Moose::Functor<ADReal> * _electron_density;
+  const Moose::Functor<ADReal> * _electron_energy_density;
   const Moose::Functor<ADReal> & _gas_pressure;
   const Moose::Functor<ADReal> & _gas_temperature;
 

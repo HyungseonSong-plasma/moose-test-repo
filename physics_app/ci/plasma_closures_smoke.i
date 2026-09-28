@@ -10,17 +10,13 @@
 []
 
 [AuxVariables]
-  [electron_density_normalized]
-    type = MooseVariableFVReal
-    initial_condition = 1.0
-  []
-  [electron_energy_density_normalized]
-    type = MooseVariableFVReal
-    initial_condition = 3.0
-  []
   [electron_number_density_physical]
     type = MooseVariableFVReal
     initial_condition = 1.0e15
+  []
+  [electron_energy_density_physical]
+    type = MooseVariableFVReal
+    initial_condition = 3.0e15
   []
   [gas_pressure]
     type = MooseVariableFVReal
@@ -57,16 +53,14 @@
 []
 
 [PlasmaClosures]
-  [plasma]
-    create_electron_closure = true
-    normalized_electron_density = electron_density_normalized
-    normalized_electron_energy_density = electron_energy_density_normalized
-    electron_energy_reference_eV = 1.0
+  [electron]
+    role = electron
+    electron_state_form = physical_eV
+    electron_energy_density = electron_energy_density_physical
     gas_pressure = gas_pressure
     gas_temperature = gas_temperature
     electron_transport_table_file = plasma_closures_transport_table.txt
 
-    create_electron_kinetics = true
     electron_number_density = electron_number_density_physical
     electron_impact_rate_table_files =
       'plasma_closures_rate_a.txt plasma_closures_rate_b.txt'
@@ -74,14 +68,21 @@
       'target_A_molar_concentration target_B_molar_concentration'
     electron_impact_reaction_progress_names =
       'electron_reaction_A electron_reaction_B'
+  []
 
-    create_heavy_transport = true
+  [heavy]
+    role = heavy_transport
+    heavy_species_temperature = gas_temperature
+    heavy_species_pressure = gas_pressure
     heavy_transport_data_file = plasma_closures_heavy_transport.txt
     heavy_species = 'A B'
     heavy_mass_fractions = 'mass_fraction_A mass_fraction_B'
+  []
 
-    create_charge_density = true
+  [charge]
+    role = electrostatic_charge
     mixture_density = mixture_density
+    electron_number_density = electron_number_density_physical
     charged_species_ids = 'ion'
     charged_species_mass_fractions = 'charged_mass_fraction'
     charged_species_molar_masses = '0.032'
