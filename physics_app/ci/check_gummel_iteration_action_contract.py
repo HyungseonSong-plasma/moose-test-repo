@@ -9,6 +9,7 @@ MAIN = ROOT / "ci/gummel_two_subapps_main.i"
 ELECTRON = ROOT / "ci/gummel_two_subapps_electron.i"
 POISSON = ROOT / "ci/gummel_two_subapps_poisson.i"
 HEAVY_MAIN = ROOT / "ci/gummel_plasma_closures_heavy_main.i"
+DRIVER = ROOT / "ci/gummel_plasma_closures_driver.i"
 HEAVY_ELECTRON = ROOT / "ci/gummel_plasma_closures_heavy_electron.i"
 HEAVY_POISSON = ROOT / "ci/gummel_plasma_closures_heavy_poisson.i"
 
@@ -19,6 +20,7 @@ main = MAIN.read_text(encoding="utf-8")
 electron = ELECTRON.read_text(encoding="utf-8")
 poisson = POISSON.read_text(encoding="utf-8")
 heavy_main = HEAVY_MAIN.read_text(encoding="utf-8")
+driver = DRIVER.read_text(encoding="utf-8")
 heavy_electron = HEAVY_ELECTRON.read_text(encoding="utf-8")
 heavy_poisson = HEAVY_POISSON.read_text(encoding="utf-8")
 
@@ -92,15 +94,43 @@ assert "[phi]" in electron
 assert "[phi]" in poisson
 assert "[n_e]" in poisson
 
-# Heavy-parent PlasmaClosures composition fixture.
+# Frozen-heavy nested composition fixture.
 for token in (
     "role = heavy_transport",
-    "parent_to_electron_source_variables = 'T_g p_gas'",
-    "electron_to_parent_source_variables = 'n_e T_e_export'",
-    "parent_to_poisson_source_variables = 'rho w_ion'",
-    "poisson_to_parent_source_variables = 'phi'",
+    "input_files = 'gummel_plasma_closures_driver.i'",
+    "type = MultiAppCopyTransfer",
+    "to_multi_app = gummel_driver",
+    "source_variable = 'T_g p_gas rho w_ion'",
+    "variable = 'T_g_frozen p_gas_frozen rho_frozen w_ion_frozen'",
+    "from_multi_app = gummel_driver",
+    "source_variable = 'n_e_converged T_e_converged phi_converged'",
+    "variable = 'n_e_from_gummel T_e_from_gummel phi_from_gummel'",
 ):
     assert token in heavy_main, token
+
+# The Gummel Action now lives in a dedicated solve=false driver. Heavy state is
+# represented only by frozen snapshot AuxVariables inside this inner problem.
+for token in (
+    "solve = false",
+    "[T_g_frozen]",
+    "[p_gas_frozen]",
+    "[rho_frozen]",
+    "[w_ion_frozen]",
+    "[n_e_converged]",
+    "[T_e_converged]",
+    "[phi_converged]",
+    "electron_input_file = gummel_plasma_closures_heavy_electron.i",
+    "poisson_input_file = gummel_plasma_closures_heavy_poisson.i",
+    "parent_to_electron_source_variables = 'T_g_frozen p_gas_frozen'",
+    "electron_to_parent_source_variables = 'n_e T_e_export'",
+    "parent_to_poisson_source_variables = 'rho_frozen w_ion_frozen'",
+    "poisson_to_parent_source_variables = 'phi'",
+):
+    assert token in driver, token
+
+assert "[PlasmaClosures]" not in driver
+assert "role = heavy_transport" not in driver
+assert "[GummelIteration]" not in heavy_main
 
 for token in (
     "role = electron",
