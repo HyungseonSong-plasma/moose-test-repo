@@ -15,9 +15,10 @@ GummelIterationAction::validParams()
 {
   InputParameters params = Action::validParams();
   params.addClassDescription(
-      "Builds a model-agnostic Gummel coupling. In two-sub-application mode the parent "
-      "application owns orchestration only, while sibling electron and Poisson MultiApps exchange "
-      "n_e and phi directly. Legacy current-application electron coupling remains supported.");
+      "Builds a model-agnostic Gummel coupling. In two-sub-application mode sibling electron "
+      "and Poisson MultiApps exchange n_e and phi directly. The parent may remain orchestration-only "
+      "or own local heavy-particle physics and exchange explicitly mapped state with either sibling. "
+      "Legacy current-application electron coupling remains supported.");
 
   params.addParam<FileName>(
       "electron_input_file",
@@ -93,6 +94,43 @@ GummelIterationAction::validParams()
       "Additional electron auxiliary targets corresponding one-to-one with "
       "poisson_to_electron_source_variables.");
 
+  params.addParam<std::vector<VariableName>>(
+      "parent_to_electron_source_variables",
+      {},
+      "Parent-application variables copied to the electron sub-application before its solve.");
+  params.addParam<std::vector<AuxVariableName>>(
+      "parent_to_electron_variables",
+      {},
+      "Electron auxiliary targets corresponding one-to-one with "
+      "parent_to_electron_source_variables.");
+  params.addParam<std::vector<VariableName>>(
+      "electron_to_parent_source_variables",
+      {},
+      "Electron-sub-application variables copied back to parent auxiliary variables after its solve.");
+  params.addParam<std::vector<AuxVariableName>>(
+      "electron_to_parent_variables",
+      {},
+      "Parent auxiliary targets corresponding one-to-one with "
+      "electron_to_parent_source_variables.");
+  params.addParam<std::vector<VariableName>>(
+      "parent_to_poisson_source_variables",
+      {},
+      "Parent-application variables copied to the Poisson sub-application before its solve.");
+  params.addParam<std::vector<AuxVariableName>>(
+      "parent_to_poisson_variables",
+      {},
+      "Poisson auxiliary targets corresponding one-to-one with "
+      "parent_to_poisson_source_variables.");
+  params.addParam<std::vector<VariableName>>(
+      "poisson_to_parent_source_variables",
+      {},
+      "Poisson-sub-application variables copied back to parent auxiliary variables after its solve.");
+  params.addParam<std::vector<AuxVariableName>>(
+      "poisson_to_parent_variables",
+      {},
+      "Parent auxiliary targets corresponding one-to-one with "
+      "poisson_to_parent_source_variables.");
+
   params.addParam<bool>(
       "manage_convergence",
       true,
@@ -142,6 +180,22 @@ GummelIterationAction::checkVariableMaps() const
       getParam<std::vector<VariableName>>("poisson_to_electron_source_variables");
   const auto & p_dst =
       getParam<std::vector<AuxVariableName>>("poisson_to_electron_variables");
+  const auto & parent_e_src =
+      getParam<std::vector<VariableName>>("parent_to_electron_source_variables");
+  const auto & parent_e_dst =
+      getParam<std::vector<AuxVariableName>>("parent_to_electron_variables");
+  const auto & e_parent_src =
+      getParam<std::vector<VariableName>>("electron_to_parent_source_variables");
+  const auto & e_parent_dst =
+      getParam<std::vector<AuxVariableName>>("electron_to_parent_variables");
+  const auto & parent_p_src =
+      getParam<std::vector<VariableName>>("parent_to_poisson_source_variables");
+  const auto & parent_p_dst =
+      getParam<std::vector<AuxVariableName>>("parent_to_poisson_variables");
+  const auto & p_parent_src =
+      getParam<std::vector<VariableName>>("poisson_to_parent_source_variables");
+  const auto & p_parent_dst =
+      getParam<std::vector<AuxVariableName>>("poisson_to_parent_variables");
 
   if (e_src.size() != e_dst.size())
     paramError("electron_to_poisson_variables",
@@ -149,6 +203,18 @@ GummelIterationAction::checkVariableMaps() const
   if (p_src.size() != p_dst.size())
     paramError("poisson_to_electron_variables",
                "The Poisson-to-electron source and target lists must have the same length.");
+  if (parent_e_src.size() != parent_e_dst.size())
+    paramError("parent_to_electron_variables",
+               "The parent-to-electron source and target lists must have the same length.");
+  if (e_parent_src.size() != e_parent_dst.size())
+    paramError("electron_to_parent_variables",
+               "The electron-to-parent source and target lists must have the same length.");
+  if (parent_p_src.size() != parent_p_dst.size())
+    paramError("parent_to_poisson_variables",
+               "The parent-to-Poisson source and target lists must have the same length.");
+  if (p_parent_src.size() != p_parent_dst.size())
+    paramError("poisson_to_parent_variables",
+               "The Poisson-to-parent source and target lists must have the same length.");
 
   if (usesElectronSubApp())
   {
@@ -170,6 +236,10 @@ GummelIterationAction::checkVariableMaps() const
       paramError("poisson_to_electron_source_variables",
                  "Legacy current-application electron mode requires at least one "
                  "Poisson-to-electron mapping.");
+    if (!parent_e_src.empty() || !e_parent_src.empty() || !parent_p_src.empty() ||
+        !p_parent_src.empty())
+      paramError("electron_input_file",
+                 "Parent-state mappings are only valid in two-sub-application sibling mode.");
   }
 }
 
@@ -216,10 +286,70 @@ GummelIterationAction::act()
         getParam<std::vector<VariableName>>("poisson_to_electron_source_variables");
     const auto & p_dst =
         getParam<std::vector<AuxVariableName>>("poisson_to_electron_variables");
+    const auto & parent_e_src =
+        getParam<std::vector<VariableName>>("parent_to_electron_source_variables");
+    const auto & parent_e_dst =
+        getParam<std::vector<AuxVariableName>>("parent_to_electron_variables");
+    const auto & e_parent_src =
+        getParam<std::vector<VariableName>>("electron_to_parent_source_variables");
+    const auto & e_parent_dst =
+        getParam<std::vector<AuxVariableName>>("electron_to_parent_variables");
+    const auto & parent_p_src =
+        getParam<std::vector<VariableName>>("parent_to_poisson_source_variables");
+    const auto & parent_p_dst =
+        getParam<std::vector<AuxVariableName>>("parent_to_poisson_variables");
+    const auto & p_parent_src =
+        getParam<std::vector<VariableName>>("poisson_to_parent_source_variables");
+    const auto & p_parent_dst =
+        getParam<std::vector<AuxVariableName>>("poisson_to_parent_variables");
 
     if (usesElectronSubApp())
     {
       const auto & electron_name = getParam<MultiAppName>("electron_multiapp");
+
+      for (std::size_t i = 0; i < parent_e_src.size(); ++i)
+      {
+        auto params = _factory.getValidParams("MultiAppCopyTransfer");
+        params.set<MultiAppName>("to_multi_app") = electron_name;
+        params.set<std::vector<VariableName>>("source_variable") = {parent_e_src[i]};
+        params.set<std::vector<AuxVariableName>>("variable") = {parent_e_dst[i]};
+        _problem->addTransfer("MultiAppCopyTransfer",
+                              object_prefix + "_parent_to_electron_" + std::to_string(i),
+                              params);
+      }
+
+      for (std::size_t i = 0; i < e_parent_src.size(); ++i)
+      {
+        auto params = _factory.getValidParams("MultiAppCopyTransfer");
+        params.set<MultiAppName>("from_multi_app") = electron_name;
+        params.set<std::vector<VariableName>>("source_variable") = {e_parent_src[i]};
+        params.set<std::vector<AuxVariableName>>("variable") = {e_parent_dst[i]};
+        _problem->addTransfer("MultiAppCopyTransfer",
+                              object_prefix + "_electron_to_parent_" + std::to_string(i),
+                              params);
+      }
+
+      for (std::size_t i = 0; i < parent_p_src.size(); ++i)
+      {
+        auto params = _factory.getValidParams("MultiAppCopyTransfer");
+        params.set<MultiAppName>("to_multi_app") = poisson_name;
+        params.set<std::vector<VariableName>>("source_variable") = {parent_p_src[i]};
+        params.set<std::vector<AuxVariableName>>("variable") = {parent_p_dst[i]};
+        _problem->addTransfer("MultiAppCopyTransfer",
+                              object_prefix + "_parent_to_poisson_" + std::to_string(i),
+                              params);
+      }
+
+      for (std::size_t i = 0; i < p_parent_src.size(); ++i)
+      {
+        auto params = _factory.getValidParams("MultiAppCopyTransfer");
+        params.set<MultiAppName>("from_multi_app") = poisson_name;
+        params.set<std::vector<VariableName>>("source_variable") = {p_parent_src[i]};
+        params.set<std::vector<AuxVariableName>>("variable") = {p_parent_dst[i]};
+        _problem->addTransfer("MultiAppCopyTransfer",
+                              object_prefix + "_poisson_to_parent_" + std::to_string(i),
+                              params);
+      }
 
       {
         auto params = _factory.getValidParams("MultiAppCopyTransfer");
