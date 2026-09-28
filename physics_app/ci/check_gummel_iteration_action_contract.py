@@ -8,6 +8,9 @@ APP = ROOT / "src/base/PhysicsApp.C"
 MAIN = ROOT / "ci/gummel_two_subapps_main.i"
 ELECTRON = ROOT / "ci/gummel_two_subapps_electron.i"
 POISSON = ROOT / "ci/gummel_two_subapps_poisson.i"
+HEAVY_MAIN = ROOT / "ci/gummel_plasma_closures_heavy_main.i"
+HEAVY_ELECTRON = ROOT / "ci/gummel_plasma_closures_heavy_electron.i"
+HEAVY_POISSON = ROOT / "ci/gummel_plasma_closures_heavy_poisson.i"
 
 src = SRC.read_text(encoding="utf-8")
 hdr = HDR.read_text(encoding="utf-8")
@@ -15,6 +18,9 @@ app = APP.read_text(encoding="utf-8")
 main = MAIN.read_text(encoding="utf-8")
 electron = ELECTRON.read_text(encoding="utf-8")
 poisson = POISSON.read_text(encoding="utf-8")
+heavy_main = HEAVY_MAIN.read_text(encoding="utf-8")
+heavy_electron = HEAVY_ELECTRON.read_text(encoding="utf-8")
+heavy_poisson = HEAVY_POISSON.read_text(encoding="utf-8")
 
 required = (
     'registerMooseAction("PhysicsApp", GummelIterationAction, "add_multi_app")',
@@ -33,6 +39,14 @@ required = (
     '"electron_to_poisson_variables"',
     '"poisson_to_electron_source_variables"',
     '"poisson_to_electron_variables"',
+    '"parent_to_electron_source_variables"',
+    '"parent_to_electron_variables"',
+    '"electron_to_parent_source_variables"',
+    '"electron_to_parent_variables"',
+    '"parent_to_poisson_source_variables"',
+    '"parent_to_poisson_variables"',
+    '"poisson_to_parent_source_variables"',
+    '"poisson_to_parent_variables"',
     '"DeltaPhiMultiAppConvergence"',
     'params.set<MultiAppName>("from_multi_app") = electron_name;',
     'params.set<MultiAppName>("to_multi_app") = poisson_name;',
@@ -40,6 +54,10 @@ required = (
     'params.set<MultiAppName>("to_multi_app") = electron_name;',
     'object_prefix + "_shared_n_e"',
     'object_prefix + "_shared_phi"',
+    'object_prefix + "_parent_to_electron_"',
+    'object_prefix + "_electron_to_parent_"',
+    'object_prefix + "_parent_to_poisson_"',
+    'object_prefix + "_poisson_to_parent_"',
 )
 for token in required:
     assert token in src, token
@@ -73,6 +91,37 @@ assert "[mean_en]" in electron
 assert "[phi]" in electron
 assert "[phi]" in poisson
 assert "[n_e]" in poisson
+
+# Heavy-parent PlasmaClosures composition fixture.
+for token in (
+    "role = heavy_transport",
+    "parent_to_electron_source_variables = 'T_g p_gas'",
+    "electron_to_parent_source_variables = 'n_e T_e_export'",
+    "parent_to_poisson_source_variables = 'rho w_ion'",
+    "poisson_to_parent_source_variables = 'phi'",
+):
+    assert token in heavy_main, token
+
+for token in (
+    "role = electron",
+    "electron_number_density = n_e",
+    "electron_energy_density = mean_en",
+    "gas_pressure = p_gas_from_heavy",
+    "gas_temperature = T_g_from_heavy",
+    "functor = electron_temperature_K",
+):
+    assert token in heavy_electron, token
+
+for token in (
+    "role = electrostatic_charge",
+    "mixture_density = rho_from_heavy",
+    "electron_number_density = n_e",
+    "charged_species_mass_fractions = 'w_ion_from_heavy'",
+):
+    assert token in heavy_poisson, token
+
+# Parent-state maps are intentionally sibling-mode-only.
+assert "Parent-state mappings are only valid in two-sub-application sibling mode." in src
 
 # Legacy mode remains available when electron_input_file is omitted.
 assert "if (usesElectronSubApp())" in src
