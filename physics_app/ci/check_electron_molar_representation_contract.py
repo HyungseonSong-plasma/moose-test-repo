@@ -35,11 +35,15 @@ REQUIRED: dict[str, tuple[str, ...]] = {
     ),
     "physics_app/include/fvbcs/PhysicsFVElectronGroundedSheathEnergyBC.h": (
         "const bool _molar_energy_state;",
+        "const bool _physical_eV_state;",
     ),
     "physics_app/src/fvbcs/PhysicsFVElectronGroundedSheathEnergyBC.C": (
         '"molar_energy_state",',
-        "if (!_molar_energy_state && !parameters.isParamSetByUser",
+        '"physical_eV_state",',
+        "if (_molar_energy_state && _physical_eV_state)",
+        "if (!_molar_energy_state && !_physical_eV_state && !parameters.isParamSetByUser",
         "if (_molar_energy_state)",
+        "if (_physical_eV_state)",
         "const ADReal primary_particle_flux_molar =",
         "return primary_particle_flux_molar *",
         "PhysicsGroundedElectronSheath::primaryEnergyFluxHat(",

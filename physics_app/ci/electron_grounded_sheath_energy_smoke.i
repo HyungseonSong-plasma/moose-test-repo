@@ -9,11 +9,11 @@
 [Variables]
   [energy_zero_drop]
     type = MooseVariableFVReal
-    initial_condition = 1.0
+    initial_condition = 5.73276e16
   []
   [energy_cell_drop]
     type = MooseVariableFVReal
-    initial_condition = 1.0
+    initial_condition = 5.73276e16
   []
   [potential_cell]
     type = MooseVariableFVReal
@@ -24,8 +24,8 @@
 [FunctorMaterials]
   [constants]
     type = ADGenericFunctorMaterial
-    prop_names = 'n_e_hat mean_en zero_phi zero_flux'
-    prop_values = '1.0 5.73276 0.0 0.0'
+    prop_names = 'n_e mean_en zero_phi zero_flux'
+    prop_values = '1.0e16 5.73276 0.0 0.0'
   []
 []
 
@@ -59,19 +59,19 @@
     type = PhysicsFVElectronGroundedSheathEnergyBC
     variable = energy_zero_drop
     boundary = right
-    electron_density = n_e_hat
+    electron_density = n_e
     mean_electron_energy = mean_en
     potential = zero_phi
-    energy_reference_eV = 5.73276
+    physical_eV_state = true
   []
   [cell_drop_energy_collection]
     type = PhysicsFVElectronGroundedSheathEnergyBC
     variable = energy_cell_drop
     boundary = right
-    electron_density = n_e_hat
+    electron_density = n_e
     mean_electron_energy = mean_en
     potential = potential_cell
-    energy_reference_eV = 5.73276
+    physical_eV_state = true
   []
   [potential_grounded_face]
     type = FVDirichletBC

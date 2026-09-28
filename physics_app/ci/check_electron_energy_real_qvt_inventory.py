@@ -60,8 +60,8 @@ def main() -> int:
         d_particle = value(row, "electron_diffusion_avg")
         d_energy = value(row, "electron_energy_diffusion_avg")
 
-        assert ne_min > 0.0, f"row {index}: n_e_hat must stay > 0, got {ne_min}"
-        assert neps_min >= 0.0, f"row {index}: n_epsilon_hat must stay >= 0, got {neps_min}"
+        assert ne_min > 0.0, f"row {index}: physical n_e must stay > 0, got {ne_min}"
+        assert neps_min >= 0.0, f"row {index}: physical n_epsilon must stay >= 0, got {neps_min}"
         assert mean_min >= TABLE_MIN_EV, (
             f"row {index}: mean_en_solved below real-QVT table: {mean_min} < {TABLE_MIN_EV}"
         )

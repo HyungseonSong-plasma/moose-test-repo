@@ -9,22 +9,22 @@
 [Variables]
   [energy_drift]
     type = MooseVariableFVReal
-    initial_condition = 1.0
+    initial_condition = 5.0e16
   []
   [energy_plus]
     type = MooseVariableFVReal
-    initial_condition = 1.0
+    initial_condition = 5.0e16
   []
   [energy_minus]
     type = MooseVariableFVReal
-    initial_condition = 1.0
+    initial_condition = 5.0e16
   []
 []
 
 [Functions]
   [n_profile]
     type = ParsedFunction
-    expression = '1.0 + 0.5*x'
+    expression = '1.0e16*(1.0 + 0.5*x)'
   []
   [phi_plus]
     type = ParsedFunction
@@ -64,7 +64,7 @@
     potential = phi_plus
     mobility = electron_mobility
     diffusion = zero_diffusion
-    energy_reference_eV = 5.0
+    state_form = physical_eV
   []
 
   [energy_plus_time]
@@ -78,7 +78,7 @@
     potential = phi_plus
     mobility = electron_mobility
     diffusion = electron_diffusion
-    energy_reference_eV = 5.0
+    state_form = physical_eV
   []
 
   [energy_minus_time]
@@ -92,7 +92,7 @@
     potential = phi_minus
     mobility = electron_mobility
     diffusion = electron_diffusion
-    energy_reference_eV = 5.0
+    state_form = physical_eV
   []
 []
 
