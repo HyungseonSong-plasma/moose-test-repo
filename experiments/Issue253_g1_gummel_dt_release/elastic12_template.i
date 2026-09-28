@@ -479,7 +479,10 @@
   nl_abs_tol = 1.0e-13
   nl_max_its = 80
   automatic_scaling = true
-  off_diagonals_in_auto_scaling = true
+  # With physical U_e [eV/m^3], off-diagonal electron-density/energy couplings
+  # carry the physical energy-density scale. Use diagonal physics entries to
+  # determine row scaling so automatic scaling does not reintroduce that scale.
+  off_diagonals_in_auto_scaling = false
   compute_scaling_once = false
   auto_advance = true
   fixed_point_min_its = 2
