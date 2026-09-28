@@ -11,6 +11,9 @@ import sys
 from typing import Any
 
 EXPECTED_CENTRAL_REPOSITORY = "HyungseonSong-plasma/chatgpt-operation"
+CONSUMER_ROOT = Path(__file__).resolve().parents[2]
+if str(CONSUMER_ROOT) not in sys.path:
+    sys.path.insert(0, str(CONSUMER_ROOT))
 
 
 def _head(root: Path) -> str:
