@@ -183,7 +183,7 @@ def _csv_snapshot(case_dir: Path) -> dict[str, Any]:
         "s5r_mean_en_max",
         "s5r_mean_en_avg",
         "n_e_avg",
-        "s5r_mean_en_inventory",
+        "s5r_mean_en_state_inventory",
         "w_Om_avg",
         "s5r_progress_edetach_om",
     )
