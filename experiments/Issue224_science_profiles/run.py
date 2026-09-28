@@ -56,7 +56,7 @@ LEAN_KEEP = {
 }
 MONITORED_EXTRA = {
     "Postprocessors/s5r_mean_en_avg",
-    "Postprocessors/s5r_mean_en_state_min",
+    "Postprocessors/s5r_mean_en_min",
     "Postprocessors/s5r_mean_en_max",
     "Postprocessors/electron_mobility_avg",
     "Postprocessors/electron_diffusion_avg",
