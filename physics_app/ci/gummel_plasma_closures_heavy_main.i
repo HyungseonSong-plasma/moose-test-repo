@@ -10,6 +10,7 @@
 []
 
 [AuxVariables]
+  # Slow/heavy state owned by OUTER_MAIN.
   [T_g]
     type = MooseVariableFVReal
     initial_condition = 300.0
@@ -35,16 +36,16 @@
     initial_condition = 1.0e-6
   []
 
-  # State imported from the two Gummel siblings.
-  [n_e_from_electron]
+  # Final fast state imported only after the inner Gummel driver finishes.
+  [n_e_from_gummel]
     type = MooseVariableFVReal
     initial_condition = 1.0e16
   []
-  [T_e_from_electron]
+  [T_e_from_gummel]
     type = MooseVariableFVReal
     initial_condition = 30000.0
   []
-  [phi_from_poisson]
+  [phi_from_gummel]
     type = MooseVariableFVReal
     initial_condition = 0.0
   []
@@ -56,8 +57,8 @@
 
     heavy_species_temperature = T_g
     heavy_species_pressure = p_gas
-    electron_temperature = T_e_from_electron
-    electron_number_density = n_e_from_electron
+    electron_temperature = T_e_from_gummel
+    electron_number_density = n_e_from_gummel
 
     heavy_transport_data_file = plasma_closures_heavy_transport.txt
     heavy_species = 'A B'
@@ -65,43 +66,31 @@
   []
 []
 
-[GummelIteration]
-  [electron_poisson]
-    electron_multiapp = electron
-    electron_input_file = gummel_plasma_closures_heavy_electron.i
-
-    poisson_multiapp = poisson
-    poisson_input_file = gummel_plasma_closures_heavy_poisson.i
-
-    # Core sibling Gummel state.
-    electron_density_variable = n_e
-    poisson_electron_density_variable = n_e
-    poisson_potential_variable = phi
-    electron_potential_variable = phi
-
-    electron_to_poisson_source_variables = 'mean_en'
-    electron_to_poisson_variables = 'mean_en'
-
-    # Heavy parent -> electron closure state.
-    parent_to_electron_source_variables = 'T_g p_gas'
-    parent_to_electron_variables = 'T_g_from_heavy p_gas_from_heavy'
-
-    # Electron closure state -> heavy parent.
-    electron_to_parent_source_variables = 'n_e T_e_export'
-    electron_to_parent_variables = 'n_e_from_electron T_e_from_electron'
-
-    # Heavy charged state -> Poisson charge closure.
-    parent_to_poisson_source_variables = 'rho w_ion'
-    parent_to_poisson_variables = 'rho_from_heavy w_ion_from_heavy'
-
-    # Electrostatic state -> heavy parent.
-    poisson_to_parent_source_variables = 'phi'
-    poisson_to_parent_variables = 'phi_from_poisson'
-
-    poisson_transformed_variables = 'phi'
-    relaxation_factor = 0.45
+# OUTER coupling layer.  The heavy snapshot is copied into the driver once,
+# then the driver completes its nested electron-Poisson Gummel solve before
+# the final fast state is copied back to this parent.
+[MultiApps]
+  [gummel_driver]
+    type = TransientMultiApp
+    input_files = 'gummel_plasma_closures_driver.i'
+    execute_on = TIMESTEP_BEGIN
     no_restore = true
-    manage_convergence = false
+  []
+[]
+
+[Transfers]
+  [heavy_snapshot_to_gummel]
+    type = MultiAppCopyTransfer
+    to_multi_app = gummel_driver
+    source_variable = 'T_g p_gas rho w_ion'
+    variable = 'T_g_frozen p_gas_frozen rho_frozen w_ion_frozen'
+  []
+
+  [converged_gummel_to_heavy]
+    type = MultiAppCopyTransfer
+    from_multi_app = gummel_driver
+    source_variable = 'n_e_converged T_e_converged phi_converged'
+    variable = 'n_e_from_gummel T_e_from_gummel phi_from_gummel'
   []
 []
 
