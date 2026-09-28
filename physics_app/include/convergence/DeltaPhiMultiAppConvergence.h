@@ -2,10 +2,7 @@
 
 #include "DefaultMultiAppFixedPointConvergence.h"
 
-#include <memory>
 #include <string>
-
-class MultiApp;
 
 /**
  * MultiApp fixed-point convergence that requires BOTH:
@@ -28,7 +25,7 @@ protected:
   Real deltaPhi() const;
 
   const PostprocessorValue * const _delta_phi;
-  const std::shared_ptr<MultiApp> _delta_phi_multiapp;
+  const std::string _delta_phi_multiapp_name;
   const std::string _delta_phi_subapp_pp;
   const Real _delta_phi_abs_tol;
 };
