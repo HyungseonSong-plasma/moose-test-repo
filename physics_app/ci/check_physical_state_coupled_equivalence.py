@@ -16,6 +16,8 @@ import shutil
 from pathlib import Path
 
 N_A = 6.02214076e23
+E_CHARGE = 1.602176634e-19
+EPS0 = 8.8541878128e-12
 N_E0 = 1.0e16
 MEAN_E0_EV = 5.73276
 M_ION = 0.032
@@ -127,8 +129,8 @@ def _input(*, physical: bool) -> str:
   []
   [constants]
     type = ADGenericFunctorMaterial
-    prop_names = 'rho_const w_ion_const relative_permittivity'
-    prop_values = '{RHO:.17g} {ION_MASS_FRACTION:.17g} 1.0'
+    prop_names = 'ion_number_density relative_permittivity'
+    prop_values = '{ION_NUMBER_DENSITY:.17g} 1.0'
   []
   [mean_energy]
     type = ADParsedFunctorMaterial
@@ -137,14 +139,19 @@ def _input(*, physical: bool) -> str:
     functor_symbols = 'ne ee'
     expression = '{mean_expr}'
   []
-  [charge]
-    type = QPXPlasmaChargeDensityMaterial
-    density = rho_const
-    electron_density = n_e_physical
-    ion_ids = 'ion'
-    ion_mass_fractions = 'w_ion_const'
-    ion_molar_masses = '{M_ION:.17g}'
-    ion_charges = '1'
+  [charge_density]
+    type = ADParsedFunctorMaterial
+    property_name = charge_density_probe
+    functor_names = 'ion_number_density n_e_physical'
+    functor_symbols = 'ni ne'
+    expression = '{E_CHARGE:.17g}*(ni-ne)'
+  []
+  [poisson_source]
+    type = ADParsedFunctorMaterial
+    property_name = poisson_source_probe
+    functor_names = 'charge_density_probe'
+    functor_symbols = 'rhoq'
+    expression = 'rhoq/{EPS0:.17g}'
   []
 []
 
@@ -182,13 +189,13 @@ def _input(*, physical: bool) -> str:
   [sample_charge]
     type = FunctorAux
     variable = charge_density_aux
-    functor = charge_density
+    functor = charge_density_probe
     execute_on = 'TIMESTEP_END'
   []
   [sample_poisson]
     type = FunctorAux
     variable = poisson_source_aux
-    functor = poisson_charge_source
+    functor = poisson_source_probe
     execute_on = 'TIMESTEP_END'
   []
 []
@@ -202,7 +209,7 @@ def _input(*, physical: bool) -> str:
   [phi_charge_source]
     type = FVCoupledForce
     variable = phi
-    v = poisson_charge_source
+    v = poisson_source_probe
   []
 []
 
@@ -371,7 +378,8 @@ def self_test():
         assert "expression = 'ne'" in physical
         for text in (normalized, physical):
             for token in (
-                "type = QPXPlasmaChargeDensityMaterial",
+                "property_name = charge_density_probe",
+                "property_name = poisson_source_probe",
                 "type = FVDiffusion",
                 "v = poisson_charge_source",
                 "type = ElementValueSampler",
