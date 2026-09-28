@@ -10,17 +10,13 @@
 []
 
 [AuxVariables]
-  [electron_density_normalized]
-    type = MooseVariableFVReal
-    initial_condition = 1.0
-  []
-  [electron_energy_density_normalized]
-    type = MooseVariableFVReal
-    initial_condition = 3.0
-  []
   [electron_number_density_physical]
     type = MooseVariableFVReal
     initial_condition = 1.0e15
+  []
+  [electron_energy_density_physical]
+    type = MooseVariableFVReal
+    initial_condition = 3.0e15
   []
   [gas_pressure]
     type = MooseVariableFVReal
@@ -59,9 +55,8 @@
 [PlasmaClosures]
   [electron]
     role = electron
-    normalized_electron_density = electron_density_normalized
-    normalized_electron_energy_density = electron_energy_density_normalized
-    electron_energy_reference_eV = 1.0
+    electron_state_form = physical_eV
+    electron_energy_density = electron_energy_density_physical
     gas_pressure = gas_pressure
     gas_temperature = gas_temperature
     electron_transport_table_file = plasma_closures_transport_table.txt
