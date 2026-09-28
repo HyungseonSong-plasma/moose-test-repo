@@ -23,7 +23,7 @@
     type = MooseVariableFVReal
     block = plasma
   []
-  [n_epsilon]
+  [mean_en]
     type = MooseVariableFVReal
     block = plasma
   []
@@ -34,7 +34,7 @@
     type = ParsedFunction
     expression = '1.0e16*(0.9 + 0.2*x/0.2565)'
   []
-  [n_epsilon_initial]
+  [mean_en_initial]
     type = ParsedFunction
     expression = '5.73276e16*(1.05 - 0.1*x/0.2565)'
   []
@@ -47,10 +47,10 @@
     function = n_e_initial
     block = plasma
   []
-  [n_epsilon_ic]
+  [mean_en_ic]
     type = FunctionIC
-    variable = n_epsilon
-    function = n_epsilon_initial
+    variable = mean_en
+    function = mean_en_initial
     block = plasma
   []
 []
@@ -65,7 +65,7 @@
 
   [mean_energy_bridge]
     type = PhysicsElectronMeanEnergyMaterial
-    electron_energy_density = n_epsilon
+    electron_energy_density = mean_en
     electron_density = n_e
     state_form = physical_eV
     block = plasma
@@ -95,14 +95,14 @@
     block = plasma
   []
 
-  [n_epsilon_time]
+  [mean_en_time]
     type = FVTimeKernel
-    variable = n_epsilon
+    variable = mean_en
     block = plasma
   []
-  [n_epsilon_diffusion]
+  [mean_en_diffusion]
     type = FVDiffusion
-    variable = n_epsilon
+    variable = mean_en
     coeff = electron_energy_diffusion
     block = plasma
   []
@@ -115,9 +115,9 @@
     block = plasma
     execute_on = 'INITIAL TIMESTEP_END'
   []
-  [n_epsilon_inventory]
+  [mean_en_inventory]
     type = ADElementIntegralFunctorPostprocessor
-    functor = n_epsilon
+    functor = mean_en
     block = plasma
     execute_on = 'INITIAL TIMESTEP_END'
   []
@@ -136,16 +136,16 @@
     block = plasma
     execute_on = 'INITIAL TIMESTEP_END'
   []
-  [n_epsilon_min]
+  [mean_en_min]
     type = ADElementExtremeFunctorValue
-    functor = n_epsilon
+    functor = mean_en
     value_type = min
     block = plasma
     execute_on = 'INITIAL TIMESTEP_END'
   []
-  [n_epsilon_max]
+  [mean_en_max]
     type = ADElementExtremeFunctorValue
-    functor = n_epsilon
+    functor = mean_en
     value_type = max
     block = plasma
     execute_on = 'INITIAL TIMESTEP_END'
