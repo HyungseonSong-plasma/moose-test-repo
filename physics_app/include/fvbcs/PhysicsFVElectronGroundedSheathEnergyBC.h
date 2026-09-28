@@ -12,6 +12,9 @@
  *     = (Gamma_e,p,out / n_ref)
  *       * (2 T_e[eV] + Delta phi[V]) / epsilon_ref[eV].
  *
+ * Physical-eV mode interprets electron_density as n_e [1/m^3] and returns
+ * the conservative energy flux directly in [eV/(m^2 s)].
+ *
  * T2 molar-energy mode instead interprets electron_density as c_e [mol/m^3]
  * and returns the conservative energy flux directly in [eV mol/(m^2 s)]:
  *
@@ -35,4 +38,5 @@ protected:
   const Moose::Functor<ADReal> & _potential;
   const Real _energy_reference_eV;
   const bool _molar_energy_state;
+  const bool _physical_eV_state;
 };
