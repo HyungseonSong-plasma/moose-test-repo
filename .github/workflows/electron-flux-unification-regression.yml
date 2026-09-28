@@ -1,0 +1,78 @@
+name: One-shot Electron Flux Unification Regression
+
+on:
+  push:
+    branches:
+      - issue-336-standard-scalarized-convergence
+    paths:
+      - 'physics_app/include/utils/PhysicsElectronFluxModel.h'
+      - 'physics_app/include/fvkernels/PhysicsFVElectrostaticDrift.h'
+      - 'physics_app/src/fvkernels/PhysicsFVElectrostaticDrift.C'
+      - 'physics_app/include/fvkernels/PhysicsFVLogMolarElectronTransport.h'
+      - 'physics_app/src/fvkernels/PhysicsFVLogMolarElectronTransport.C'
+      - 'physics_app/include/fvkernels/PhysicsFVElectronEnergyJouleHeating.h'
+      - 'physics_app/src/fvkernels/PhysicsFVElectronEnergyJouleHeating.C'
+      - 'physics_app/ci/check_electron_flux_unification_contract.py'
+      - 'experiments/Issue338_electron_flux_unification/**'
+      - '.github/workflows/electron-flux-unification-regression.yml'
+
+permissions:
+  contents: read
+  packages: read
+
+env:
+  BUILD_BASE: ghcr.io/hyungseonsong-plasma/physics-build-base:moose-9f388366-deps-ba26970-16a26d5-9eceffb-v1
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Log in to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and regress unified electron flux
+        shell: bash
+        run: |
+          set -euxo pipefail
+          docker pull "$BUILD_BASE"
+          docker run --rm \
+            --entrypoint /bin/bash \
+            --user 0:0 \
+            --workdir /workspace \
+            -v "$PWD:/workspace" \
+            "$BUILD_BASE" \
+            -lc '
+              set -euxo pipefail
+              source /environment
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+              export PYTHONPATH=/workspace
+
+              python3 /workspace/physics_app/ci/check_electron_flux_unification_contract.py
+              make -C /workspace/physics_app -j2
+
+              python3 /workspace/experiments/Issue338_electron_flux_unification/control.py --horizon short --p0
+              python3 /workspace/experiments/Issue338_electron_flux_unification/control.py --horizon short --p1
+              python3 /workspace/experiments/Issue338_electron_flux_unification/control.py --horizon short --run
+
+              python3 /workspace/experiments/Issue338_electron_flux_unification/control.py --horizon full --p0
+              python3 /workspace/experiments/Issue338_electron_flux_unification/control.py --horizon full --p1
+              python3 /workspace/experiments/Issue338_electron_flux_unification/control.py --horizon full --run
+            '
+      - name: Upload regression evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: electron-flux-unification-regression
+          path: |
+            experiments/Issue338_electron_flux_unification/results_short
+            experiments/Issue338_electron_flux_unification/results_full
+          if-no-files-found: ignore
