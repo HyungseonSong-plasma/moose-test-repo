@@ -87,7 +87,7 @@ def _interp_strict(table, mean_energy):
 
 
 def _runtime_input(mean_energy=EPSILON_E0_EV):
-    n_epsilon0 = N_E0 * mean_energy
+    mean_en0 = N_E0 * mean_energy
     return f"""[Mesh]
   [mesh]
     type = GeneratedMeshGenerator
@@ -109,9 +109,9 @@ def _runtime_input(mean_energy=EPSILON_E0_EV):
     type = MooseVariableFVReal
     initial_condition = {N_E0:.17g}
   []
-  [n_epsilon]
+  [mean_en]
     type = MooseVariableFVReal
-    initial_condition = {n_epsilon0:.17g}
+    initial_condition = {mean_en0:.17g}
   []
   [w_Os]
     type = MooseVariableFVReal
@@ -141,7 +141,7 @@ def _runtime_input(mean_energy=EPSILON_E0_EV):
   []
   [mean_energy_bridge]
     type = PhysicsElectronMeanEnergyMaterial
-    electron_energy_density = n_epsilon
+    electron_energy_density = mean_en
     electron_density = n_e
     state_form = physical_eV
   []
@@ -174,13 +174,13 @@ def _runtime_input(mean_energy=EPSILON_E0_EV):
     type = FVTimeKernel
     variable = n_e
   []
-  [n_epsilon_time]
+  [mean_en_time]
     type = FVTimeKernel
-    variable = n_epsilon
+    variable = mean_en
   []
   [ei18_energy_loss]
     type = FVCoupledForce
-    variable = n_epsilon
+    variable = mean_en
     v = {PROGRESS}
     coef = {ENERGY_COEF:.17g}
   []
@@ -202,9 +202,9 @@ def _runtime_input(mean_energy=EPSILON_E0_EV):
     functor = n_e
     execute_on = 'INITIAL TIMESTEP_END'
   []
-  [n_epsilon_avg]
+  [mean_en_avg]
     type = ElementAverageFunctorPostprocessor
-    functor = n_epsilon
+    functor = mean_en
     execute_on = 'INITIAL TIMESTEP_END'
   []
   [w_Os_avg]
@@ -258,7 +258,7 @@ def validate_runtime_rows(rows, table):
         raise AssertionError("EI18 case expected INITIAL + TIMESTEP_END rows")
     i, f = rows[0], rows[-1]
     ne_i, ne_f = _num(i, "n_e_avg"), _num(f, "n_e_avg")
-    ep_i, ep_f = _num(i, "n_epsilon_avg"), _num(f, "n_epsilon_avg")
+    ep_i, ep_f = _num(i, "mean_en_avg"), _num(f, "mean_en_avg")
     ws_i, ws_f = _num(i, "w_Os_avg"), _num(f, "w_Os_avg")
     wo_i, wo_f = _num(i, "w_O_avg"), _num(f, "w_O_avg")
     me_i, me_f = _num(i, "mean_en_solved_avg"), _num(f, "mean_en_solved_avg")
@@ -294,14 +294,14 @@ def validate_runtime_rows(rows, table):
     return {
         "initial": {
             "n_e": ne_i,
-            "n_epsilon": ep_i,
+            "mean_en": ep_i,
             "w_O": wo_i,
             "w_Os": ws_i,
             "mean_en_solved_eV": me_i,
         },
         "final": {
             "n_e": ne_f,
-            "n_epsilon": ep_f,
+            "mean_en": ep_f,
             "w_O": wo_f,
             "w_Os": ws_f,
             "mean_en_solved_eV": me_f,
@@ -318,7 +318,7 @@ def validate_runtime_rows(rows, table):
             "standard_moose_object": "FVCoupledForce",
             "energy_coef": ENERGY_COEF,
             "physical_energy_rhs_eV_m3_s": rhs,
-            "observed_dn_epsilon_dt_eV_m3_s": (ep_f - ep_i) / DT,
+            "observed_dmean_en_dt_eV_m3_s": (ep_f - ep_i) / DT,
         },
     }
 
@@ -341,7 +341,7 @@ def _fixed_point_rows(table):
     rows = [
         {
             "n_e_avg": N_E0,
-            "n_epsilon_avg": N_E0 * EPSILON_E0_EV,
+            "mean_en_avg": N_E0 * EPSILON_E0_EV,
             "w_Os_avg": W_OS0,
             "w_O_avg": 1.0 - W_OS0,
             "mean_en_solved_avg": EPSILON_E0_EV,
@@ -351,7 +351,7 @@ def _fixed_point_rows(table):
         },
         {
             "n_e_avg": N_E0,
-            "n_epsilon_avg": ep,
+            "mean_en_avg": ep,
             "w_Os_avg": ws,
             "w_O_avg": 1.0 - ws,
             "mean_en_solved_avg": mean,
@@ -381,7 +381,7 @@ def checker_self_test():
     bad[-1]["n_e_avg"] *= 1.001
     mutations.append(bad)
     bad = [dict(row) for row in rows]
-    bad[-1]["n_epsilon_avg"] = N_E0 * EPSILON_E0_EV + abs(bad[-1]["n_epsilon_avg"] - N_E0 * EPSILON_E0_EV)
+    bad[-1]["mean_en_avg"] = N_E0 * EPSILON_E0_EV + abs(bad[-1]["mean_en_avg"] - N_E0 * EPSILON_E0_EV)
     mutations.append(bad)
     bad = [dict(row) for row in rows]
     bad[-1]["Os_source_avg"] *= 1.01
