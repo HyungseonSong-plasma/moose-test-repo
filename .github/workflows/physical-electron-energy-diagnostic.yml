@@ -50,15 +50,18 @@ jobs:
               make -C /workspace/physics_app -j2
               python3 /workspace/experiments/Issue336_gummel_action_parity/control.py --horizon short --p0
 
-              CASE=/workspace/experiments/Issue336_gummel_action_parity/generated_short/manual_wiring
+              BASE=/workspace/experiments/Issue336_gummel_action_parity/generated_short/manual_wiring
+              CASE=/workspace/experiments/Issue336_gummel_action_parity/generated_short/diagnostic_ignore_energy_autoscaling
+              cp -a "$BASE" "$CASE"
               printf "\\n[Debug]\\n  show_var_residual_norms = true\\n  show_top_residuals = 8\\n[]\\n" >> "$CASE/fast_sub.i"
+              sed -i "/automatic_scaling = true/a\\  ignore_variables_for_autoscaling = 'electron_energy_density'" "$CASE/fast_sub.i"
               set +e
               cd "$CASE"
               /workspace/physics_app/physics-opt -t -i input.i > physical_energy_diagnostic.log 2>&1
               rc=$?
               echo "$rc" > physical_energy_diagnostic.returncode
               set -e
-              grep -E "Beginning fixed point iteration|Gummel max delta-phi|Residual Norms|log_e|electron_energy_density|Top residual|DIVERGED|CONVERGED|Nonlinear" physical_energy_diagnostic.log > physical_energy_diagnostic.filtered.log || true
+              grep -E "Beginning fixed point iteration|Gummel max delta-phi|Residual Norms|log_e|electron_energy_density|Top residual|DIVERGED|CONVERGED|Nonlinear|Solve Converged" physical_energy_diagnostic.log > physical_energy_diagnostic.filtered.log || true
               exit 0
             '
       - name: Upload diagnostic evidence
@@ -67,7 +70,7 @@ jobs:
         with:
           name: physical-electron-energy-diagnostic
           path: |
-            experiments/Issue336_gummel_action_parity/generated_short/manual_wiring/physical_energy_diagnostic.log
-            experiments/Issue336_gummel_action_parity/generated_short/manual_wiring/physical_energy_diagnostic.filtered.log
-            experiments/Issue336_gummel_action_parity/generated_short/manual_wiring/physical_energy_diagnostic.returncode
+            experiments/Issue336_gummel_action_parity/generated_short/diagnostic_ignore_energy_autoscaling/physical_energy_diagnostic.log
+            experiments/Issue336_gummel_action_parity/generated_short/diagnostic_ignore_energy_autoscaling/physical_energy_diagnostic.filtered.log
+            experiments/Issue336_gummel_action_parity/generated_short/diagnostic_ignore_energy_autoscaling/physical_energy_diagnostic.returncode
           if-no-files-found: error
