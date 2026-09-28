@@ -79,6 +79,10 @@ DeltaPhiMultiAppConvergence::initialize()
   _fixed_point_timestep_end_norm.assign(_max_fixed_point_its, 0.0);
   _pp_history.str("");
 
+  // Match the qualified fast-owner initial residual state. The outer heavy
+  // snapshot is already present in this driver, but its child-directed
+  // TIMESTEP_BEGIN transfers have not run yet when convergence initializes.
+  _fe_problem.execMultiAppTransfers(EXEC_TIMESTEP_BEGIN, MultiAppTransfer::TO_MULTIAPP);
   _fixed_point_initial_norm = residualMultiAppNorm();
   _child_residual_previous = std::numeric_limits<Real>::max();
 
