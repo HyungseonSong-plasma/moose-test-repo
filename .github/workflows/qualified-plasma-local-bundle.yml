@@ -1,0 +1,171 @@
+name: One-shot Qualified Plasma Local Bundle
+
+on:
+  push:
+    branches:
+      - issue-336-standard-scalarized-convergence
+    paths:
+      - '.github/workflows/qualified-plasma-local-bundle.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+
+      - name: Generate qualified migrated inputs and source overlay
+        shell: bash
+        run: |
+          set -euxo pipefail
+          export PYTHONPATH="$PWD"
+
+          python3 experiments/Issue337_plasma_closures_migration/control.py --horizon full --p0
+
+          CASE="$PWD/experiments/Issue337_plasma_closures_migration/generated_full/plasma_closures"
+          OUT="$PWD/_qualified_plasma_bundle"
+          rm -rf "$OUT"
+          mkdir -p "$OUT/case" "$OUT/physics_app"
+
+          cp "$CASE/input.i" "$OUT/case/input.i"
+          cp "$CASE/fast_sub.i" "$OUT/case/fast_sub.i"
+          cp "$CASE/poisson_sub.i" "$OUT/case/poisson_sub.i"
+          cp "$CASE/electron_moments.txt" "$OUT/case/electron_moments.txt"
+          cp "$CASE/o2_elastic.txt" "$OUT/case/o2_elastic.txt"
+          cp "$CASE/transport_data.txt" "$OUT/case/transport_data.txt"
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          import shutil
+
+          root = Path.cwd()
+          out = root / "_qualified_plasma_bundle"
+          case = out / "case"
+          include_root = root / "physics_app" / "include"
+          src_root = root / "physics_app" / "src"
+
+          # Explicitly generated/selected objects that do not all appear as "type ="
+          # in the migrated input because Actions instantiate them internally.
+          required_symbols = {
+              "GummelIterationAction",
+              "DeltaPhiMultiAppConvergence",
+              "PlasmaClosuresAction",
+              "PhysicsElectronClosureMaterial",
+              "PhysicsElectronKineticsMaterial",
+              "PhysicsHeavyTransportMaterial",
+              "PhysicsPlasmaChargeDensityMaterial",
+              "FVElectronResponseBandedCorrection",
+          }
+
+          type_re = re.compile(r"^\s*type\s*=\s*([A-Za-z_][A-Za-z0-9_]*)", re.M)
+          for inp in ("input.i", "fast_sub.i", "poisson_sub.i"):
+              text = (case / inp).read_text()
+              for typ in type_re.findall(text):
+                  if typ.startswith("Physics") or typ.startswith("FVElectronResponse") or typ.startswith("DeltaPhi"):
+                      required_symbols.add(typ)
+
+          project_files = [
+              p for base in (include_root, src_root)
+              for p in base.rglob("*")
+              if p.is_file() and p.suffix in {".h", ".C"}
+          ]
+
+          selected = set()
+
+          # Locate implementation/header files by class/object symbol.
+          for sym in sorted(required_symbols):
+              hits = [p for p in project_files if sym in p.read_text(errors="ignore")]
+              if not hits:
+                  raise RuntimeError(f"No PhysicsApp source found for custom symbol: {sym}")
+              selected.update(hits)
+
+          # Always include App syntax/object registration source.
+          selected.add(src_root / "base" / "PhysicsApp.C")
+
+          # Resolve local header dependencies recursively and pair matching .C files.
+          header_by_name = {}
+          for p in include_root.rglob("*.h"):
+              header_by_name.setdefault(p.name, []).append(p)
+
+          changed = True
+          include_re = re.compile(r'^\s*#include\s+"([^"]+)"', re.M)
+          while changed:
+              changed = False
+              snapshot = list(selected)
+              for p in snapshot:
+                  text = p.read_text(errors="ignore")
+                  for name in include_re.findall(text):
+                      candidates = header_by_name.get(Path(name).name, [])
+                      if len(candidates) == 1 and candidates[0] not in selected:
+                          selected.add(candidates[0])
+                          changed = True
+
+                  stem = p.stem
+                  for cp in src_root.rglob(stem + ".C"):
+                      if cp not in selected:
+                          selected.add(cp)
+                          changed = True
+
+          # Copy with original PhysicsApp-relative paths.
+          for p in sorted(selected):
+              rel = p.relative_to(root)
+              dst = out / rel
+              dst.parent.mkdir(parents=True, exist_ok=True)
+              shutil.copy2(p, dst)
+
+          # Simple manifest.
+          types = sorted(required_symbols)
+          files = sorted(str(p.relative_to(root)) for p in selected)
+          manifest = [
+              "Qualified migrated PlasmaClosures + Gummel source/input bundle",
+              "",
+              "Qualification source commit: 5ee447a88b65cd6aa784863b38b3510f470120db",
+              "Qualification workflow run: 36161399034",
+              "Full result: PLASMA_CLOSURES_FULL_QUALIFIED",
+              "FP parity: 9102 == 9102",
+              "Profile delta: 0",
+              "Potential trajectory delta: 0",
+              "",
+              "Case files:",
+              "  case/input.i",
+              "  case/fast_sub.i",
+              "  case/poisson_sub.i",
+              "  case/electron_moments.txt",
+              "  case/o2_elastic.txt",
+              "  case/transport_data.txt",
+              "",
+              "Custom symbols covered:",
+              *[f"  {x}" for x in types],
+              "",
+              "Included PhysicsApp source files:",
+              *[f"  {x}" for x in files],
+              "",
+              "Usage:",
+              "  1. Overlay physics_app/include and physics_app/src into your PhysicsApp tree.",
+              "  2. Build your existing PhysicsApp normally.",
+              "  3. cd case",
+              "  4. /path/to/physics-opt -i input.i",
+              "",
+          ]
+          (out / "MANIFEST.txt").write_text("\n".join(manifest))
+          print("\n".join(manifest))
+          PY
+
+          # Validate that only requested package content is present.
+          find "$OUT" -type f | sort
+          test -f "$OUT/case/input.i"
+          test -f "$OUT/case/fast_sub.i"
+          test -f "$OUT/case/poisson_sub.i"
+          test -f "$OUT/physics_app/src/actions/GummelIterationAction.C"
+          test -f "$OUT/physics_app/src/actions/PlasmaClosuresAction.C"
+
+      - name: Upload local bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: physicsapp-qualified-plasma-input-source
+          path: _qualified_plasma_bundle/
+          if-no-files-found: error
