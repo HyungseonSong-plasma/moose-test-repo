@@ -12,10 +12,10 @@ from pathlib import Path
 
 N_A = 6.02214076e23
 M_O2 = 31.998e-3
-N_REF = 1.0e16
+N_E0 = 1.0e16
 RHO = 3.1998e-5
 DT = 1.0e-7
-EPSILON_REF_EV = 5.73276
+MEAN_E0_EV = 5.73276
 DELTA_E_EV = 12.06
 W0 = 1.0e-3
 LOOKUP_MIN_EV = 1.40991
@@ -23,7 +23,7 @@ LOOKUP_MAX_EV = 22.1378
 ENERGY_COEF = -(DELTA_E_EV * N_A)
 RATE_TABLE = (
     (LOOKUP_MIN_EV, 8.0e8),
-    (EPSILON_REF_EV, 1.0e9),
+    (MEAN_E0_EV, 1.0e9),
     (LOOKUP_MAX_EV, 1.2e9),
 )
 
@@ -261,9 +261,9 @@ def validate_runtime_rows(rows):
     _close(oxygen_f, oxygen_i, rel=2e-12, abs_=1e-14, label="oxygen inventory")
 
     return {
-        "initial": {"n_e_hat": ne_i, "n_epsilon_hat": ep_i, "w_O2": wo_i, "w_O2p": wp_i, "mean_en_solved_eV": me_i},
-        "final": {"n_e_hat": ne_f, "n_epsilon_hat": ep_f, "w_O2": wo_f, "w_O2p": wp_f, "mean_en_solved_eV": me_f, "R_ion_O2_mol_m3_s": r_f, "electron_source_m3_s": s_e},
-        "energy_closure": {"energy_loss_eV_per_event": DELTA_E_EV, "standard_moose_object": "FVCoupledForce", "coef": ENERGY_COEF, "normalized_rhs_per_s": rhs, "observed_dn_epsilon_hat_dt_per_s": (ep_f - ep_i) / DT},
+        "initial": {"n_e": ne_i, "n_epsilon": ep_i, "w_O2": wo_i, "w_O2p": wp_i, "mean_en_solved_eV": me_i},
+        "final": {"n_e": ne_f, "n_epsilon": ep_f, "w_O2": wo_f, "w_O2p": wp_f, "mean_en_solved_eV": me_f, "R_ion_O2_mol_m3_s": r_f, "electron_source_m3_s": s_e},
+        "energy_closure": {"energy_loss_eV_per_event": DELTA_E_EV, "standard_moose_object": "FVCoupledForce", "coef": ENERGY_COEF, "physical_rhs_eV_m3_s": rhs, "observed_dn_epsilon_dt_eV_m3_s": (ep_f - ep_i) / DT},
         "particle_heavy_charge_closure": {"heavy_fraction_sum": wo_f + wp_f, "charge_delta_e": delta_e, "charge_delta_o2p": delta_o2p, "oxygen_atom_molar_inventory_initial": oxygen_i, "oxygen_atom_molar_inventory_final": oxygen_f, "lookup_k_m3_mol_s": k}
     }
 
@@ -271,22 +271,22 @@ def validate_runtime_rows(rows):
 def runtime_checker_self_test():
     r = 0.0
     for _ in range(200):
-        ne = N_REF + DT * N_A * r
+        ne = N_E0 + DT * N_A * r
         wp = W0 + DT * M_O2 * r / RHO
-        ep = N_REF * EPSILON_REF_EV - DT * DELTA_E_EV * N_A * r
+        ep = N_E0 * MEAN_E0_EV - DT * DELTA_E_EV * N_A * r
         mean = ep / ne
         new = _interp(mean) * (ne / N_A) * (RHO * (1 - wp) / M_O2)
         if math.isclose(new, r, rel_tol=1e-14, abs_tol=1e-18):
             r = new
             break
         r = new
-    ne = N_REF + DT * N_A * r
+    ne = N_E0 + DT * N_A * r
     wp = W0 + DT * M_O2 * r / RHO
-    ep = N_REF * EPSILON_REF_EV - DT * DELTA_E_EV * N_A * r
+    ep = N_E0 * MEAN_E0_EV - DT * DELTA_E_EV * N_A * r
     mean = ep / ne
-    r0 = _interp(EPSILON_REF_EV) * (N_REF / N_A) * (RHO * (1 - W0) / M_O2)
+    r0 = _interp(MEAN_E0_EV) * (N_E0 / N_A) * (RHO * (1 - W0) / M_O2)
     rows = [
-        {"n_e_avg": N_REF, "n_epsilon_avg": N_REF * EPSILON_REF_EV, "w_O2p_avg": W0, "w_O2_avg": 1 - W0, "mean_en_solved_avg": EPSILON_REF_EV, "R_ion_O2_avg": r0, "O2_source_avg": -M_O2 * r0, "O2p_source_avg": M_O2 * r0, "electron_source_avg": N_A * r0},
+        {"n_e_avg": N_E0, "n_epsilon_avg": N_E0 * MEAN_E0_EV, "w_O2p_avg": W0, "w_O2_avg": 1 - W0, "mean_en_solved_avg": MEAN_E0_EV, "R_ion_O2_avg": r0, "O2_source_avg": -M_O2 * r0, "O2p_source_avg": M_O2 * r0, "electron_source_avg": N_A * r0},
         {"n_e_avg": ne, "n_epsilon_avg": ep, "w_O2p_avg": wp, "w_O2_avg": 1 - wp, "mean_en_solved_avg": mean, "R_ion_O2_avg": r, "O2_source_avg": -M_O2 * r, "O2p_source_avg": M_O2 * r, "electron_source_avg": N_A * r}
     ]
     validate_runtime_rows(rows)
@@ -324,7 +324,7 @@ def run_controlled_executable(executable, evidence_out=None, repository_sha=None
         evidence["build_base_ref"] = build_base_ref
     if evidence_out:
         Path(evidence_out).write_text(json.dumps(evidence, indent=2, sort_keys=True) + "\n")
-    print(f"E8_EI16_O2_IONIZATION_ENERGY_RUNTIME_VECTOR n_e_hat={evidence['final']['n_e_hat']:.12g} n_epsilon_hat={evidence['final']['n_epsilon_hat']:.12g} mean_en_eV={evidence['final']['mean_en_solved_eV']:.12g} R={evidence['final']['R_ion_O2_mol_m3_s']:.12g}")
+    print(f"E8_EI16_O2_IONIZATION_ENERGY_RUNTIME_VECTOR n_e={evidence['final']['n_e']:.12g} n_epsilon={evidence['final']['n_epsilon']:.12g} mean_en_eV={evidence['final']['mean_en_solved_eV']:.12g} R={evidence['final']['R_ion_O2_mol_m3_s']:.12g}")
     print("E8_EI16_O2_IONIZATION_ENERGY_LOCAL_RUNTIME_PASS")
 
 
