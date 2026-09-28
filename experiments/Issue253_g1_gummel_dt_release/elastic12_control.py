@@ -172,6 +172,8 @@ def build(clean: bool = True) -> list[dict[str, object]]:
                 "automatic_scaling": True,
                 "off_diagonals_in_auto_scaling": True,
                 "compute_scaling_once": False,
+                "nonlinear_line_search": "basic",
+                "newton_damping": 0.5,
                 "fixed_point_cap": "CASE_SPECIFIC",
                 "cases": built,
             },
@@ -221,6 +223,9 @@ def static_contract() -> dict[str, object]:
         assert "automatic_scaling = true" in text
         assert "off_diagonals_in_auto_scaling = true" in text
         assert "compute_scaling_once = false" in text
+        assert "line_search = basic" in text
+        assert "petsc_options_iname = '-pc_type -pc_factor_shift_type -snes_linesearch_damping'" in text
+        assert "petsc_options_value = 'lu NONZERO 0.5'" in text
         assert f"fixed_point_max_its = {fp_max}" in text
         assert "@@" not in text
         assert "[final_exodus]" in text
@@ -238,6 +243,8 @@ def static_contract() -> dict[str, object]:
         "automatic_scaling": True,
         "off_diagonals_in_auto_scaling": True,
         "compute_scaling_once": False,
+        "nonlinear_line_search": "basic",
+        "newton_damping": 0.5,
         "fixed_point_cap": "CASE_SPECIFIC",
         "cases": cases,
     }

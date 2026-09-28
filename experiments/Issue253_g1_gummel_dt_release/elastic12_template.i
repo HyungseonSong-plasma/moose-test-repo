@@ -458,6 +458,10 @@
   type = Transient
   scheme = implicit-euler
   solve_type = NEWTON
+  # The physical U_e variable can produce an out-of-table full Newton trial even
+  # when the converged mean energy is well inside the tabulated range. Damping
+  # limits the trial step without changing the physical residual.
+  line_search = basic
   dt = @@DT@@
   dtmin = @@DT@@
   dtmax = @@DT@@
@@ -478,8 +482,8 @@
   fixed_point_rel_tol = 1.0e-8
   fixed_point_abs_tol = 1.0e-12
   accept_on_max_fixed_point_iteration = false
-  petsc_options_iname = '-pc_type -pc_factor_shift_type'
-  petsc_options_value = 'lu NONZERO'
+  petsc_options_iname = '-pc_type -pc_factor_shift_type -snes_linesearch_damping'
+  petsc_options_value = 'lu NONZERO 0.5'
 []
 
 [Outputs]
