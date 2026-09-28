@@ -1,6 +1,7 @@
 #include "PhysicsFVElectrostaticDrift.h"
 
 #include "FEProblemBase.h"
+#include "PhysicsElectronFluxModel.h"
 #include "RelationshipManager.h"
 #include "metaphysicl/raw_type.h"
 
@@ -12,8 +13,9 @@ PhysicsFVElectrostaticDrift::validParams()
   auto params = FVFluxKernel::validParams();
 
   params.addClassDescription(
-      "Finite-volume electrostatic drift flux using E = -grad(phi) and "
-      "framework-consistent FV advection interpolation.");
+      "Finite-volume electrostatic drift flux using E = -grad(phi), "
+      "framework-consistent FV advection interpolation, and either identity "
+      "or exponential reconstruction of the solved state.");
 
   params.addRequiredParam<MooseFunctorName>(
       "potential", "Electrostatic potential phi [V].");
@@ -24,12 +26,17 @@ PhysicsFVElectrostaticDrift::validParams()
   params.addRequiredParam<MooseFunctorName>(
       "carrier",
       "Multiplicative carrier/conversion functor. Use rho for a heavy-species "
-      "mass-fraction equation and 1 for a number-density equation.");
+      "mass-fraction equation and 1 for a number-density or molar-density equation.");
 
   params.addRequiredParam<Real>(
       "charge_number", "Signed integer-like charge number z.");
 
-  // Match the framework FVAdvection interpolation contract.
+  params.addParam<MooseEnum>(
+      "transported_state",
+      MooseEnum("identity exponential", "identity"),
+      "How the physical transported scalar is reconstructed from the solved variable. "
+      "Use exponential for a solved log-density/log-concentration state.");
+
   params += Moose::FV::advectedInterpolationParameter();
 
   params.addRelationshipManager(
@@ -52,7 +59,8 @@ PhysicsFVElectrostaticDrift::PhysicsFVElectrostaticDrift(
     _potential(getFunctor<ADReal>("potential")),
     _mobility(getFunctor<ADReal>("mobility")),
     _carrier(getFunctor<ADReal>("carrier")),
-    _charge_number(getParam<Real>("charge_number"))
+    _charge_number(getParam<Real>("charge_number")),
+    _exponential_state(getParam<MooseEnum>("transported_state") == "exponential")
 {
   if (_charge_number == 0.0)
     paramError(
@@ -73,15 +81,11 @@ PhysicsFVElectrostaticDrift::computeQpResidual()
 {
   const auto state = determineState();
 
-  // This follows the framework FVAdvection convention: the limiter stencil
-  // for a transient solve is based on the previous time state instead of
-  // changing with the current nonlinear iterate.
   const auto & limiter_time =
       _subproblem.isTransient()
           ? Moose::StateArg(1, Moose::SolutionIterationType::Time)
           : Moose::StateArg(1, Moose::SolutionIterationType::Nonlinear);
 
-  // Smooth electrostatic quantities use a centered face evaluation.
   const auto centered_face =
       makeFace(*_face_info,
                Moose::FV::LimiterType::CentralDifference,
@@ -96,7 +100,8 @@ PhysicsFVElectrostaticDrift::computeQpResidual()
   const ADReal carrier_face = _carrier(centered_face, state);
 
   const ADReal drift_normal =
-      _charge_number * mobility_face * (electric_field * _normal);
+      PhysicsElectronFluxModel::driftNormal(
+          _charge_number, mobility_face, electric_field, _normal);
 
   const bool elem_is_upwind =
       MetaPhysicL::raw_value(drift_normal) >= 0.0;
@@ -108,7 +113,9 @@ PhysicsFVElectrostaticDrift::computeQpResidual()
                false,
                &limiter_time);
 
-  const ADReal transported_value = _var(transported_face, state);
+  const ADReal transported_value =
+      PhysicsElectronFluxModel::transportedState(
+          _var(transported_face, state), _exponential_state);
 
   return carrier_face * transported_value * drift_normal;
 }

@@ -13,10 +13,13 @@
  *
  *   E = -grad(phi)
  *
- * The transported scalar is interpolated with the same FV advection
- * machinery used by the framework FVAdvection kernel. In transient runs the
- * limiter state is taken from the previous time level, while the current AD
- * solution is retained for the transported value and electrostatic field.
+ * The solved variable may be transported directly (identity) or reconstructed
+ * through exp(variable), which is the canonical log-molar electron state.
+ *
+ * The transported scalar is interpolated with the same FV advection machinery
+ * used by the framework FVAdvection kernel. In transient runs the limiter state
+ * is taken from the previous time level, while the current AD solution is
+ * retained for the transported value and electrostatic field.
  */
 class PhysicsFVElectrostaticDrift : public FVFluxKernel
 {
@@ -31,6 +34,7 @@ protected:
   const Moose::Functor<ADReal> & _mobility;
   const Moose::Functor<ADReal> & _carrier;
   const Real _charge_number;
+  const bool _exponential_state;
 
   Moose::FV::InterpMethod _advected_interp_method;
 };

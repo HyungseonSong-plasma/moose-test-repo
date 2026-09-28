@@ -1,8 +1,7 @@
 #include "PhysicsFVLogMolarElectronTransport.h"
 
-#include "FEProblemBase.h"
+#include "PhysicsElectronFluxModel.h"
 #include "RelationshipManager.h"
-#include "metaphysicl/raw_type.h"
 
 #include <cmath>
 
@@ -99,83 +98,26 @@ PhysicsFVLogMolarElectronDiffusion::computeQpResidual()
 
   const ADReal c_elem = exp(_var(elemArg(), state));
   const ADReal c_neighbor = exp(_var(neighborArg(), state));
-  return -coeff_face * (c_neighbor - c_elem) / _face_info->dCNMag();
+
+  return PhysicsElectronFluxModel::orthogonalDiffusiveFlux(
+      coeff_face, c_elem, c_neighbor, _face_info->dCNMag());
 }
 
 InputParameters
 PhysicsFVLogMolarElectrostaticDrift::validParams()
 {
-  auto params = FVFluxKernel::validParams();
+  auto params = PhysicsFVElectrostaticDrift::validParams();
   params.addClassDescription(
-      "Electrostatic FV drift reconstructed from c_e=exp(log_e), preserving "
-      "PhysicsFVElectrostaticDrift face/upwind semantics and returning molar flux.");
-  params.addRequiredParam<MooseFunctorName>("potential", "Electrostatic potential phi [V].");
-  params.addRequiredParam<MooseFunctorName>("mobility", "Positive mobility magnitude [m^2/(V s)].");
-  params.addRequiredParam<MooseFunctorName>(
-      "carrier", "Multiplicative carrier functor; use 1 for electron molar concentration.");
-  params.addRequiredParam<Real>("charge_number", "Signed charge number z.");
-  params += Moose::FV::advectedInterpolationParameter();
-  params.addRelationshipManager(
-      "ElementSideNeighborLayers",
-      Moose::RelationshipManagerType::GEOMETRIC |
-          Moose::RelationshipManagerType::ALGEBRAIC |
-          Moose::RelationshipManagerType::COUPLING,
-      [](const InputParameters & obj_params, InputParameters & rm_params)
-      { FVRelationshipManagerInterface::setRMParamsAdvection(obj_params, rm_params, 2); });
+      "Compatibility alias for PhysicsFVElectrostaticDrift with "
+      "transported_state=exponential. New inputs should use the canonical object directly.");
+  params.set<MooseEnum>("transported_state") = "exponential";
   return params;
 }
 
 PhysicsFVLogMolarElectrostaticDrift::PhysicsFVLogMolarElectrostaticDrift(
     const InputParameters & parameters)
-  : FVFluxKernel(parameters),
-    _potential(getFunctor<ADReal>("potential")),
-    _mobility(getFunctor<ADReal>("mobility")),
-    _carrier(getFunctor<ADReal>("carrier")),
-    _charge_number(getParam<Real>("charge_number"))
+  : PhysicsFVElectrostaticDrift(parameters)
 {
-  if (_charge_number == 0.0)
-    paramError("charge_number", "Electrostatic drift requires nonzero charge_number.");
-
-  const bool need_more_ghosting =
-      Moose::FV::setInterpolationMethod(*this, _advected_interp_method, "advected_interp_method");
-  if (need_more_ghosting && _tid == 0)
-    getCheckedPointerParam<FEProblemBase *>("_fe_problem_base")
-        ->setErrorOnJacobianNonzeroReallocation(false);
-}
-
-ADReal
-PhysicsFVLogMolarElectrostaticDrift::computeQpResidual()
-{
-  using std::exp;
-  const auto state = determineState();
-  const auto & limiter_time =
-      _subproblem.isTransient()
-          ? Moose::StateArg(1, Moose::SolutionIterationType::Time)
-          : Moose::StateArg(1, Moose::SolutionIterationType::Nonlinear);
-
-  const auto centered_face =
-      makeFace(*_face_info,
-               Moose::FV::LimiterType::CentralDifference,
-               true,
-               false,
-               &limiter_time);
-
-  const ADRealVectorValue electric_field = -_potential.gradient(centered_face, state);
-  const ADReal mobility_face = _mobility(centered_face, state);
-  const ADReal carrier_face = _carrier(centered_face, state);
-  const ADReal drift_normal =
-      _charge_number * mobility_face * (electric_field * _normal);
-
-  const bool elem_is_upwind = MetaPhysicL::raw_value(drift_normal) >= 0.0;
-  const auto transported_face =
-      makeFace(*_face_info,
-               Moose::FV::limiterType(_advected_interp_method),
-               elem_is_upwind,
-               false,
-               &limiter_time);
-
-  const ADReal c_face = exp(_var(transported_face, state));
-  return carrier_face * c_face * drift_normal;
 }
 
 InputParameters

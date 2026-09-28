@@ -1,5 +1,7 @@
 #include "PhysicsFVElectronEnergyJouleHeating.h"
 
+#include "PhysicsElectronFluxModel.h"
+
 registerMooseObject("PhysicsApp", PhysicsFVElectronEnergyJouleHeating);
 
 InputParameters
@@ -8,9 +10,9 @@ PhysicsFVElectronEnergyJouleHeating::validParams()
   auto params = FVElementalKernel::validParams();
 
   params.addClassDescription(
-      "Applies the full local electron-flux electric-work source -E.Gamma_e to "
-      "the normalized electron-energy equation using the canonical particle "
-      "mobility and diffusion coefficients.");
+      "Applies the local electron-flux electric-work source -E.Gamma_e to "
+      "the normalized electron-energy equation through the shared "
+      "PhysicsElectronFluxModel constitutive helper.");
 
   params.addRequiredParam<MooseFunctorName>(
       "electron_density", "Normalized electron density n_hat used by the particle equation.");
@@ -52,11 +54,13 @@ PhysicsFVElectronEnergyJouleHeating::computeQpResidual()
   const ADReal mobility = _mobility(elem, state);
   const ADReal diffusion = _diffusion(elem, state);
 
-  // Gamma_e / n_ref = -mu_e*n_hat*E - D_e*grad(n_hat).
-  // Therefore -E.Gamma_e/(n_ref*epsilon_ref) is the positive RHS source below.
   const ADReal normalized_source =
-      (mobility * electron_density * (electric_field * electric_field) +
-       diffusion * (electric_field * grad_electron_density)) /
+      PhysicsElectronFluxModel::normalizedElectronElectricWork(
+          electron_density,
+          grad_electron_density,
+          electric_field,
+          mobility,
+          diffusion) /
       _energy_reference_eV;
 
   return -normalized_source;
