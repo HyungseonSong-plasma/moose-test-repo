@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Stage-5 S5-C bounded check: e + O- -> O + 2e."""
+"""Stage-5 S5-C bounded check: e + O- -> O + 2e with physical electron state."""
 import argparse,csv,hashlib,json,math,subprocess,sys,tempfile
 from pathlib import Path
 R=Path(__file__).resolve().parents[2]; C=R/"docs/development/2026-09-10_issue176_stage5_s5c_edetach_contract.json"
