@@ -335,7 +335,6 @@ jobs:
     timeout-minutes: 45
     permissions:
       contents: read
-      packages: read
     steps:
       - name: Checkout candidate source
         uses: actions/checkout@v4
@@ -365,13 +364,6 @@ jobs:
             --prepare \
             oracle/experiments/Issue337_plasma_closures_migration/generated_full/plasma_closures \
             "$PWD/.gummel-heavy-sibling-parity"
-
-      - name: Log in to GHCR for build base
-        shell: bash
-        run: |
-          set -euxo pipefail
-          echo "\${{ secrets.GITHUB_TOKEN }}" | \
-            docker login ghcr.io -u "\${{ github.actor }}" --password-stdin
 
       - name: Build candidate PhysicsApp from source
         shell: bash
