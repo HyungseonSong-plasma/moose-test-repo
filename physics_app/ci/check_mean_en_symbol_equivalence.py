@@ -36,9 +36,11 @@ def _input(energy_symbol: str) -> str:
 [Variables]
   [n_e]
     type = MooseVariableFVReal
+    scaling = 1e-16
   []
   [{energy_symbol}]
     type = MooseVariableFVReal
+    scaling = 1e-16
   []
   [phi]
     type = MooseVariableFVReal
@@ -137,6 +139,7 @@ def _input(energy_symbol: str) -> str:
   dt = {DT:.17g}
   end_time = {DT:.17g}
   solve_type = NEWTON
+  automatic_scaling = false
   nl_abs_tol = 1e-9
   nl_rel_tol = 1e-12
   nl_max_its = 20
