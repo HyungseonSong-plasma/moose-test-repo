@@ -161,6 +161,31 @@ jobs:
           'pytest>=8,<9'
           -r requirements-evidence-engine.txt
           -r requirements-ontology.txt
+
+      - name: Validate central scientific semantics compatibility
+        shell: bash
+        run: |
+          set -euo pipefail
+          central_revision="d7e5d16e1ed1b9d3561c25cc3b2f0d3533de4a87"
+          central_dir="$(mktemp -d)"
+          git -C "$central_dir" init -q
+          git -C "$central_dir" remote add origin https://github.com/HyungseonSong-plasma/chatgpt-operation.git
+          git -C "$central_dir" fetch --quiet --depth=1 origin "$central_revision"
+          git -C "$central_dir" checkout --quiet FETCH_HEAD
+          python3 ci/guards/scientific_centralization_guard.py \
+            --central-root "$central_dir" \
+            --central-revision "$central_revision" \
+            --json-out scientific-centralization-compatibility.json
+          rm -rf "$central_dir"
+
+      - name: Upload scientific centralization compatibility evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: scientific-centralization-compatibility
+          path: scientific-centralization-compatibility.json
+          if-no-files-found: error
+          retention-days: 30
+
       - name: Validate Evidence dependency direction
         run: python ci/guards/physics_dependency_guard.py --check evidence
       - name: Validate Analysis dependency direction
