@@ -125,8 +125,8 @@ def _apply_electron_sheath_factor(text: str) -> str:
     type = ADParsedFunctorMaterial
     property_name = sheath_energy_flux_outward
     functor_names = 'electron_energy_density mean_en electron_sheath_factor'
-    functor_symbols = 'eps_hat mean_ev sheath'
-    expression = '0.83333333333333333*eps_hat*sqrt(16.0*1.602176634e-19*mean_ev/(3.0*pi*9.1093837139e-31))*sheath'
+    functor_symbols = 'energy_eV mean_ev sheath'
+    expression = '0.83333333333333333*energy_eV*sqrt(16.0*1.602176634e-19*mean_ev/(3.0*pi*9.1093837139e-31))*sheath'
   []
 """
     if text.count(old_particle_material) != 1:
@@ -137,10 +137,10 @@ def _apply_electron_sheath_factor(text: str) -> str:
     type = PhysicsFVElectronEnergyWallFluxBC
     variable = electron_energy_density
     boundary = right
+    state_form = physical_eV
     electron_energy_density = electron_energy_density
     mean_electron_energy = mean_en
     see_number_flux = zero_flux
-    energy_reference_eV = 5.73276
   []
 """
     new_energy_bc = """  [right_energy_surface_loss]
@@ -244,7 +244,7 @@ def static_contract() -> dict[str, object]:
         assert "exp(-(0.5*(phi+abs(phi)))/((2.0/3.0)*mean_ev))" in fast
         assert "0.5*exp(loge)" in fast and "*sheath" in fast
         assert "[sheath_energy_surface_flux]" in fast
-        assert "0.83333333333333333*eps_hat" in fast
+        assert "0.83333333333333333*energy_eV" in fast
         assert "[right_thermal_surface_loss]" in fast
         assert "[right_energy_surface_loss]" in fast
         assert fast.count("type = FVFunctorNeumannBC") >= 2
