@@ -178,8 +178,8 @@ def _step_evidence(
     coeff = s5r._energy_coefficients(input_text)
     energy_volume = s5r._energy_source_density(current, coeff) * volume
     energy_accum = (
-        s5r._num(current, "s5r_n_epsilon_inventory")
-        - s5r._num(previous, "s5r_n_epsilon_inventory")
+        s5r._num(current, "s5r_mean_en_inventory")
+        - s5r._num(previous, "s5r_mean_en_inventory")
     ) / dt
     energy_scale = n_ref * w45.ENERGY_REFERENCE_EV * ELEMENTARY_CHARGE_C
     primary_power = abs(s5r._num(current, w45.ENERGY_POWER_PP))
@@ -210,12 +210,12 @@ def _step_evidence(
         abs(s5r._num(current, "sum_w_max") - 1.0),
     )
     n_e_min = s5r._num(current, "n_e_min")
-    n_epsilon_min = s5r._num(current, "s5r_n_epsilon_min")
+    mean_en_min = s5r._num(current, "s5r_mean_en_min")
     mean_energy_min = s5r._num(current, "s5r_mean_en_min")
     mean_energy_avg = s5r._num(current, "s5r_mean_en_avg")
     finite_values = (
         n_e_min,
-        n_epsilon_min,
+        mean_en_min,
         mean_energy_min,
         mean_energy_avg,
         s5r._num(current, w45.PHI_MIN_PP),
@@ -235,7 +235,7 @@ def _step_evidence(
         "current_charge_closure": charge_defect <= w45.RUNTIME_REL_TOL,
         "gauss_closure": gauss["relative_defect"] <= s5r.MAX_GAUSS_RELATIVE_DEFECT,
         "electron_density_positive": n_e_min >= w45.ELECTRON_DENSITY_FLOOR,
-        "electron_energy_positive": n_epsilon_min > 0.0 and mean_energy_min > 0.0,
+        "electron_energy_positive": mean_en_min > 0.0 and mean_energy_min > 0.0,
         "composition": composition_error <= w45.COMPOSITION_ABS_TOL,
         "primary_energy_owner_active": primary_power > 0.0,
     }
@@ -270,8 +270,8 @@ def _step_evidence(
         "state": {
             "n_e_min_m3": n_e_min,
             "n_e_inventory": s5r._num(current, "n_e_inventory"),
-            "n_epsilon_min": n_epsilon_min,
-            "n_epsilon_inventory": s5r._num(current, "s5r_n_epsilon_inventory"),
+            "mean_en_min": mean_en_min,
+            "mean_en_inventory": s5r._num(current, "s5r_mean_en_inventory"),
             "mean_energy_min_eV": mean_energy_min,
             "mean_energy_avg_eV": mean_energy_avg,
             "rho_q_min_C_m3": s5r._num(current, w45.RHO_MIN_PP),
@@ -292,8 +292,8 @@ def _endpoint(rows: list[dict[str, str]], *, meta: Mapping[str, Any]) -> dict[st
     return {
         "n_e_min_m3": s5r._num(row, "n_e_min"),
         "n_e_inventory": s5r._num(row, "n_e_inventory"),
-        "n_epsilon_min": s5r._num(row, "s5r_n_epsilon_min"),
-        "n_epsilon_inventory": s5r._num(row, "s5r_n_epsilon_inventory"),
+        "mean_en_min": s5r._num(row, "s5r_mean_en_min"),
+        "mean_en_inventory": s5r._num(row, "s5r_mean_en_inventory"),
         "mean_energy_avg_eV": s5r._num(row, "s5r_mean_en_avg"),
         "volume_charge_C": s5r._num(row, "r31_charge_integral"),
         "phi_min_V": s5r._num(row, w45.PHI_MIN_PP),
@@ -316,7 +316,7 @@ def _solver_evidence(log_path: Path, *, returncode: int) -> dict[str, Any]:
     facts = runtime_core_facts(
         text,
         returncode=returncode,
-        coupled_scaling_variables=("n_e", "n_epsilon"),
+        coupled_scaling_variables=("n_e", "mean_en"),
     )
     healthy = (
         returncode == 0
