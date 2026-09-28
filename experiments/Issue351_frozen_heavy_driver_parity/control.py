@@ -285,7 +285,6 @@ def _driver_input(fast: str) -> str:
   num_steps = {num_steps}
   timestep_tolerance = {timestep_tol}
 
-  auto_advance = true
   fixed_point_min_its = {fp_min}
   fixed_point_max_its = {fp_max}
   fixed_point_rel_tol = {fp_rel}
@@ -405,6 +404,7 @@ def p0(horizon: str) -> None:
     assert "fixed_point_algorithm = steffensen" in driver
     assert "transformed_variables = 'potential_from_poisson'" in driver
     assert "multiapp_fixed_point_convergence = gummel_delta_phi" in driver
+    assert "auto_advance = true" not in driver
     assert f"delta_phi_abs_tol = {DPHI_TOL:.17g}" in driver
 
     assert "[GummelIteration]" not in electron
