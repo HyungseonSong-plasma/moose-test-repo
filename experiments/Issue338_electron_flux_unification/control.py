@@ -240,6 +240,7 @@ def _run_one(horizon: str, name: str) -> int:
     (results / f"{name}_elapsed_seconds.txt").write_text(
         f"{time.perf_counter() - started:.9f}\n"
     )
+    (results / f"{name}_returncode.txt").write_text(f"{cp.returncode}\n")
     return cp.returncode
 
 
