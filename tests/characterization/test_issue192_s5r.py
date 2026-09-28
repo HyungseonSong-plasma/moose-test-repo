@@ -44,7 +44,7 @@ def test_s5r_preserves_solved_poisson_and_adds_solved_energy() -> None:
         mp.get_parameter(text, "FVKernels/O2p_electrostatic_drift", "potential")
         == "potential_plasma"
     )
-    assert mp.get_parameter(text, "Variables/n_epsilon", "type") == "MooseVariableFVReal"
+    assert mp.get_parameter(text, "Variables/mean_en", "type") == "MooseVariableFVReal"
     assert (
         mp.get_parameter(text, "FunctorMaterials/s5r_mean_energy", "type")
         == "PhysicsElectronMeanEnergyMaterial"
