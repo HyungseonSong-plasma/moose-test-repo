@@ -20,7 +20,7 @@ DELTA_E_EV = 12.06
 W0 = 1.0e-3
 LOOKUP_MIN_EV = 1.40991
 LOOKUP_MAX_EV = 22.1378
-ENERGY_COEF = -(DELTA_E_EV * N_A / (N_REF * EPSILON_REF_EV))
+ENERGY_COEF = -(DELTA_E_EV * N_A)
 RATE_TABLE = (
     (LOOKUP_MIN_EV, 8.0e8),
     (EPSILON_REF_EV, 1.0e9),
@@ -46,11 +46,11 @@ RUNTIME_INPUT = """[Mesh]
 [Variables]
   [n_e]
     type = MooseVariableFVReal
-    initial_condition = 1.0
+    initial_condition = 1.0e16
   []
   [n_epsilon]
     type = MooseVariableFVReal
-    initial_condition = 1.0
+    initial_condition = 5.73276e16
   []
   [w_O2p]
     type = MooseVariableFVReal
@@ -71,13 +71,6 @@ RUNTIME_INPUT = """[Mesh]
     functor_symbols = 'wp'
     expression = '1.0-wp'
   []
-  [electron_number_density]
-    type = ADParsedFunctorMaterial
-    property_name = n_e_physical
-    functor_names = 'n_e'
-    functor_symbols = 'nehat'
-    expression = '1.0e16*nehat'
-  []
   [o2_molar_concentration]
     type = ADParsedFunctorMaterial
     property_name = c_O2
@@ -89,13 +82,13 @@ RUNTIME_INPUT = """[Mesh]
     type = PhysicsElectronMeanEnergyMaterial
     electron_energy_density = n_epsilon
     electron_density = n_e
-    energy_reference_eV = 5.73276
+    state_form = physical_eV
   []
   [ei16_rate]
     type = PhysicsElectronImpactIonizationMaterial
     rate_table_file = e8_ei16_runtime_table.txt
     mean_energy = mean_en_solved
-    electron_number_density = n_e_physical
+    electron_number_density = n_e
     o2_molar_concentration = c_O2
   []
   [ei16_particle_projection]
@@ -118,7 +111,7 @@ RUNTIME_INPUT = """[Mesh]
     type = FVCoupledForce
     variable = n_epsilon
     v = R_ion_O2
-    coef = -126687699.40761518
+    coef = -7.26389976256e24
   []
   [w_O2p_time]
     type = PhysicsFVMassFractionTimeDerivative
@@ -134,17 +127,17 @@ RUNTIME_INPUT = """[Mesh]
     type = PhysicsFVElectronReactionSource
     variable = n_e
     number_source = electron_ionization_number_source
-    n_ref = 1.0e16
+    state_form = physical
   []
 []
 
 [Postprocessors]
-  [n_e_hat_avg]
+  [n_e_avg]
     type = ElementAverageFunctorPostprocessor
     functor = n_e
     execute_on = 'INITIAL TIMESTEP_END'
   []
-  [n_epsilon_hat_avg]
+  [n_epsilon_avg]
     type = ElementAverageFunctorPostprocessor
     functor = n_epsilon
     execute_on = 'INITIAL TIMESTEP_END'
@@ -225,8 +218,8 @@ def validate_runtime_rows(rows):
     if len(rows) < 2:
         raise AssertionError("expected initial and final rows")
     i, f = rows[0], rows[-1]
-    ne_i, ne_f = _num(i, "n_e_hat_avg"), _num(f, "n_e_hat_avg")
-    ep_i, ep_f = _num(i, "n_epsilon_hat_avg"), _num(f, "n_epsilon_hat_avg")
+    ne_i, ne_f = _num(i, "n_e_avg"), _num(f, "n_e_avg")
+    ep_i, ep_f = _num(i, "n_epsilon_avg"), _num(f, "n_epsilon_avg")
     wp_i, wp_f = _num(i, "w_O2p_avg"), _num(f, "w_O2p_avg")
     wo_i, wo_f = _num(i, "w_O2_avg"), _num(f, "w_O2_avg")
     me_i, me_f = _num(i, "mean_en_solved_avg"), _num(f, "mean_en_solved_avg")
@@ -241,8 +234,8 @@ def validate_runtime_rows(rows):
         raise AssertionError("strict lookup range")
     _close(wo_i + wp_i, 1, rel=0, abs_=2e-12, label="initial heavy sum")
     _close(wo_f + wp_f, 1, rel=0, abs_=2e-12, label="final heavy sum")
-    _close(me_i, EPSILON_REF_EV * ep_i / ne_i, label="initial mean energy")
-    _close(me_f, EPSILON_REF_EV * ep_f / ne_f, label="final mean energy")
+    _close(me_i, ep_i / ne_i, label="initial mean energy")
+    _close(me_f, ep_f / ne_f, label="final mean energy")
 
     if not (r_f > 0 and s_o2 < 0 < s_o2p and s_e > 0):
         raise AssertionError("EI16 source signs")
@@ -252,15 +245,15 @@ def validate_runtime_rows(rows):
     _close(s_o2 + s_o2p, 0, rel=0, abs_=1e-11, label="heavy source closure")
 
     k = _interp(me_f)
-    expected_r = k * (N_REF * ne_f / N_A) * (RHO * wo_f / M_O2)
+    expected_r = k * (ne_f / N_A) * (RHO * wo_f / M_O2)
     _close(r_f, expected_r, rel=7e-6, abs_=1e-14, label="strict lookup canonical progress")
-    _close(N_REF * (ne_f - ne_i) / DT, s_e, rel=8e-6, abs_=1, label="electron BE closure")
+    _close((ne_f - ne_i) / DT, s_e, rel=8e-6, abs_=1, label="electron BE closure")
     _close(RHO * (wp_f - wp_i) / DT, s_o2p, rel=8e-6, abs_=1e-12, label="O2p BE closure")
     _close(RHO * (wo_f - wo_i) / DT, s_o2, rel=8e-6, abs_=1e-12, label="O2 BE closure")
 
-    rhs = -DELTA_E_EV * N_A * r_f / (N_REF * EPSILON_REF_EV)
+    rhs = -DELTA_E_EV * N_A * r_f
     _close((ep_f - ep_i) / DT, rhs, rel=8e-6, abs_=1e-8, label="EI16 energy BE closure")
-    delta_e = N_REF * (ne_f - ne_i)
+    delta_e = ne_f - ne_i
     delta_o2p = N_A * RHO * (wp_f - wp_i) / M_O2
     _close(delta_e, delta_o2p, rel=8e-6, abs_=1, label="charge closure")
     oxygen_i = 2 * RHO * (wo_i + wp_i) / M_O2
@@ -278,23 +271,23 @@ def validate_runtime_rows(rows):
 def runtime_checker_self_test():
     r = 0.0
     for _ in range(200):
-        ne = 1 + DT * N_A * r / N_REF
+        ne = N_REF + DT * N_A * r
         wp = W0 + DT * M_O2 * r / RHO
-        ep = 1 - DT * DELTA_E_EV * N_A * r / (N_REF * EPSILON_REF_EV)
-        mean = EPSILON_REF_EV * ep / ne
-        new = _interp(mean) * (N_REF * ne / N_A) * (RHO * (1 - wp) / M_O2)
+        ep = N_REF * EPSILON_REF_EV - DT * DELTA_E_EV * N_A * r
+        mean = ep / ne
+        new = _interp(mean) * (ne / N_A) * (RHO * (1 - wp) / M_O2)
         if math.isclose(new, r, rel_tol=1e-14, abs_tol=1e-18):
             r = new
             break
         r = new
-    ne = 1 + DT * N_A * r / N_REF
+    ne = N_REF + DT * N_A * r
     wp = W0 + DT * M_O2 * r / RHO
-    ep = 1 - DT * DELTA_E_EV * N_A * r / (N_REF * EPSILON_REF_EV)
-    mean = EPSILON_REF_EV * ep / ne
+    ep = N_REF * EPSILON_REF_EV - DT * DELTA_E_EV * N_A * r
+    mean = ep / ne
     r0 = _interp(EPSILON_REF_EV) * (N_REF / N_A) * (RHO * (1 - W0) / M_O2)
     rows = [
-        {"n_e_hat_avg": 1, "n_epsilon_hat_avg": 1, "w_O2p_avg": W0, "w_O2_avg": 1 - W0, "mean_en_solved_avg": EPSILON_REF_EV, "R_ion_O2_avg": r0, "O2_source_avg": -M_O2 * r0, "O2p_source_avg": M_O2 * r0, "electron_source_avg": N_A * r0},
-        {"n_e_hat_avg": ne, "n_epsilon_hat_avg": ep, "w_O2p_avg": wp, "w_O2_avg": 1 - wp, "mean_en_solved_avg": mean, "R_ion_O2_avg": r, "O2_source_avg": -M_O2 * r, "O2p_source_avg": M_O2 * r, "electron_source_avg": N_A * r}
+        {"n_e_avg": N_REF, "n_epsilon_avg": N_REF * EPSILON_REF_EV, "w_O2p_avg": W0, "w_O2_avg": 1 - W0, "mean_en_solved_avg": EPSILON_REF_EV, "R_ion_O2_avg": r0, "O2_source_avg": -M_O2 * r0, "O2p_source_avg": M_O2 * r0, "electron_source_avg": N_A * r0},
+        {"n_e_avg": ne, "n_epsilon_avg": ep, "w_O2p_avg": wp, "w_O2_avg": 1 - wp, "mean_en_solved_avg": mean, "R_ion_O2_avg": r, "O2_source_avg": -M_O2 * r, "O2p_source_avg": M_O2 * r, "electron_source_avg": N_A * r}
     ]
     validate_runtime_rows(rows)
     assert "type = FVCoupledForce" in RUNTIME_INPUT
