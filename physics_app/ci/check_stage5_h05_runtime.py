@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Stage-5 S5-E bounded validation for H05 O- + O -> O2 + e-."""
+"""Stage-5 S5-E bounded validation for H05 O- + O -> O2 + e- using physical electron state."""
 from __future__ import annotations
 
 import argparse
