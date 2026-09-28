@@ -60,6 +60,10 @@ required = (
     'object_prefix + "_shared_phi"',
     'object_prefix + "_shared_phi_parent_to_electron"',
     'object_prefix + "_shared_phi_poisson_to_parent"',
+    'object_prefix + "_convergence_phi_to_electron"',
+    'EXEC_MULTIAPP_FIXED_POINT_CONVERGENCE',
+    '"check_multiapp_execute_on"',
+    '"residual_multiapp"',
     'object_prefix + "_parent_to_electron_"',
     'object_prefix + "_electron_to_parent_"',
     'object_prefix + "_parent_to_poisson_"',
@@ -180,5 +184,11 @@ for forbidden in (
 assert "FVElectronResponseBandedCorrection" not in src
 assert "bandwidth" not in src
 assert "setMultiAppFixedPointConvergenceName" not in src
+
+# A solve=false driver cannot use its own zero nonlinear residual as the
+# qualified fixed-point residual. Through-parent convergence delegates that
+# criterion to the electron child after syncing the latest raw Poisson phi.
+assert 'params.set<MultiAppName>("residual_multiapp")' in src
+assert 'getParam<MultiAppName>("electron_multiapp")' in src
 
 print("GUMMEL_ITERATION_ACTION_CONTRACT: PASS")
