@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "issue": 335,
+  "sequence": 1,
+  "title": "R3 custom vs guarded standard mean-energy short A/B",
+  "prepare_manifest": "automation/manifests/experiments/Issue_335_r3_mean_energy_prep.json",
+  "bundle_paths": [
+    "physics_app/physics-opt",
+    "physics_app/lib/libphysics-opt.so.0",
+    "physics_app/test/lib/libphysics_test-opt.so.0",
+    "experiments/Issue335_standard_electron_mean_energy/generated_r3"
+  ],
+  "max_parallel": 1,
+  "cases": [
+    {
+      "id": "short_ab",
+      "name": "short_ab",
+      "command": [
+        "python3",
+        "experiments/Issue335_standard_electron_mean_energy/control.py",
+        "--case",
+        "short_ab"
+      ],
+      "timeout_seconds": 1800,
+      "artifacts": [
+        "experiments/Issue335_standard_electron_mean_energy/results_r3/*",
+        "experiments/Issue335_standard_electron_mean_energy/generated_r3/probes/probe_matrix.tsv",
+        "experiments/Issue335_standard_electron_mean_energy/generated_r3/probes/*/runtime.log",
+        "experiments/Issue335_standard_electron_mean_energy/generated_r3/custom_mean_energy/*csv",
+        "experiments/Issue335_standard_electron_mean_energy/generated_r3/standard_mean_energy/*csv"
+      ]
+    }
+  ],
+  "aggregate": {
+    "name": "Aggregate R3 short discriminator",
+    "command": [
+      "python3",
+      "experiments/Issue335_standard_electron_mean_energy/control.py",
+      "--aggregate"
+    ],
+    "timeout_seconds": 300,
+    "artifacts": [
+      "r3_aggregate.json"
+    ]
+  }
+}
