@@ -256,20 +256,6 @@ def _driver_input(fast: str) -> str:
   []
 []
 
-[Transfers]
-  # The old fast-owner topology finishes each electron timestep with its
-  # potential_from_poisson Aux state already holding the final converged
-  # Poisson potential.  Synchronize that same final state into the nested
-  # electron child before its timestep is finalized/advanced.
-  [sync_final_phi_to_electron]
-    type = MultiAppCopyTransfer
-    to_multi_app = electron
-    source_variable = potential_from_poisson
-    variable = potential_from_poisson
-    execute_on = MULTIAPP_FIXED_POINT_END
-  []
-[]
-
 [Postprocessors]
   [fp_delta_phi_max]
     type = ADElementExtremeFunctorValue
@@ -418,8 +404,7 @@ def p0(horizon: str) -> None:
     assert "fixed_point_algorithm = steffensen" in driver
     assert "transformed_variables = 'potential_from_poisson'" in driver
     assert "multiapp_fixed_point_convergence = gummel_delta_phi" in driver
-    assert "[sync_final_phi_to_electron]" in driver
-    assert "execute_on = MULTIAPP_FIXED_POINT_END" in driver
+    assert "[sync_final_phi_to_electron]" not in driver
     assert "auto_advance = true" not in driver
     assert f"delta_phi_abs_tol = {DPHI_TOL:.17g}" in driver
 
