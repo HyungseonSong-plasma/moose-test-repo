@@ -1,0 +1,93 @@
+name: Validate Parent Routed Gummel Potential
+
+on:
+  push:
+    branches:
+      - issue-gen34-parity-inspect
+
+permissions:
+  contents: read
+  packages: read
+
+env:
+  TARGET_SHA: 27e7f65974650ee29cc5f0bbfe0ca513d30e394f
+  BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - name: Checkout target Physics branch head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_SHA }}
+
+      - name: Verify target and static contract
+        shell: bash
+        run: |
+          set -euxo pipefail
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          python3 physics_app/ci/check_gummel_iteration_action_contract.py
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build exact target Physics source
+        shell: bash
+        run: |
+          set -euxo pipefail
+          docker pull "$BUILD_BASE_REF"
+          docker run --rm --entrypoint /bin/bash --user 0:0 \
+            --workdir /workspace/physics_app -e TARGET_SHA="$TARGET_SHA" \
+            -v "$PWD:/workspace" "$BUILD_BASE_REF" -lc '
+              set -euxo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              git config --global --add safe.directory /opt/physics_vendor/moose
+              git config --global --add safe.directory /opt/physics_vendor/crane
+              git config --global --add safe.directory /opt/physics_vendor/squirrel
+              git config --global --add safe.directory /opt/physics_vendor/zapdos
+              test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+              make -j2
+              test -x physics-opt
+            '
+
+      - name: P2 check-input
+        shell: bash
+        run: |
+          set -euxo pipefail
+          docker run --rm --entrypoint /bin/bash --user 0:0 \
+            --workdir /workspace/physics_app -v "$PWD:/workspace" "$BUILD_BASE_REF" -lc '
+              set -euxo pipefail
+              source /environment
+              export LD_LIBRARY_PATH="/workspace/physics_app/lib:${LD_LIBRARY_PATH:-}"
+              ./physics-opt --check-input -i ci/gummel_two_subapps_main.i
+              ./physics-opt --check-input -i ci/gummel_plasma_closures_heavy_electron.i
+              ./physics-opt --check-input -i ci/gummel_plasma_closures_heavy_poisson.i
+              ./physics-opt --check-input -i ci/gummel_plasma_closures_driver.i
+              ./physics-opt --check-input -i ci/gummel_plasma_closures_heavy_main.i
+              echo PARENT_ROUTED_P2_PASS
+            '
+
+      - name: P3 bounded nested runtime
+        shell: bash
+        run: |
+          set -euxo pipefail
+          docker run --rm --entrypoint /bin/bash --user 0:0 \
+            --workdir /workspace/physics_app -v "$PWD:/workspace" "$BUILD_BASE_REF" -lc '
+              set -euxo pipefail
+              source /environment
+              export LD_LIBRARY_PATH="/workspace/physics_app/lib:${LD_LIBRARY_PATH:-}"
+              ./physics-opt -i ci/gummel_plasma_closures_heavy_main.i
+              echo PARENT_ROUTED_P3_PASS
+            '
