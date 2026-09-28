@@ -92,4 +92,10 @@
   type = Transient
   dt = 1
   num_steps = 1
+
+  # The pinned MOOSE default is one fixed-point iteration.  Explicitly enable
+  # the inner loop; production qualification supplies the delta-phi convergence
+  # object and tolerance on this driver.
+  fixed_point_algorithm = steffensen
+  fixed_point_max_its = 3000
 []
