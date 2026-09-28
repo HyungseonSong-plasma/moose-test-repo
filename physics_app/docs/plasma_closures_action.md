@@ -52,15 +52,15 @@ MultiApp instance and consumes local state.
   [electron]
     role = electron
 
-    normalized_electron_density = electron_density_hat
-    normalized_electron_energy_density = n_epsilon
+    normalized_electron_density = electron_number_density_hat
+    normalized_electron_energy_density = electron_energy_density_hat
     electron_energy_reference_eV = 5.73276
 
     gas_pressure = p_gas
     gas_temperature = T_g
     electron_transport_table_file = electron_moments.txt
 
-    electron_number_density = electron_density_m3
+    electron_number_density = electron_number_density
     electron_impact_rate_table_files = 'ionization.txt attachment.txt'
     electron_impact_target_molar_concentrations = 'c_O2 c_O2'
     electron_impact_reaction_progress_names = 'R_ionization R_attachment'
@@ -98,7 +98,7 @@ the electron state/transport closure.
     role = electrostatic_charge
 
     mixture_density = rho_const
-    electron_number_density = electron_density_m3
+    electron_number_density = electron_number_density
     charged_species_ids = 'O2p Om Op'
     charged_species_mass_fractions = 'w_O2p_frozen w_Om_frozen w_Op_frozen'
     charged_species_molar_masses = '0.032 0.016 0.016'

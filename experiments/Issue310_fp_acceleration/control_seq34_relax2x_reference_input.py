@@ -153,7 +153,7 @@ def _final_only_vector_profiles(text: str) -> str:
 def _apply_anchor_only(fast: str, poisson: str) -> tuple[str, str]:
     """Install only the previous-potential anchor path needed by delta-phi convergence.
 
-    This deliberately excludes the n_epsilon transfer, beta material, and
+    This deliberately excludes the electron_energy_density_hat transfer, beta material, and
     FVElectronResponseBandedCorrection used by the optimized endpoint.
     """
     transfer_anchor = """  [log_e_to_poisson]
@@ -372,7 +372,7 @@ def p0() -> None:
     assert "transformed_variables = 'potential_from_poisson'" not in ref_fast
     assert "FVElectronResponseBandedCorrection" not in ref_poisson
     assert "electron_response_beta" not in ref_poisson
-    assert "n_epsilon_frozen" not in ref_poisson
+    assert "electron_energy_density_hat_frozen" not in ref_poisson
     assert "phi_anchor_frozen" in ref_poisson
 
     # Qualified endpoint = band5 + alpha .45 + Steffensen.

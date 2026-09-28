@@ -13,6 +13,12 @@ on:
       - 'physics_app/include/fvkernels/PhysicsFVElectronEnergyJouleHeating.h'
       - 'physics_app/src/fvkernels/PhysicsFVElectronEnergyJouleHeating.C'
       - 'physics_app/ci/check_electron_flux_unification_contract.py'
+      - 'experiments/Issue253_g1_gummel_dt_release/elastic12_template.i'
+      - 'experiments/Issue253_g1_gummel_dt_release/poisson_template.i'
+      - 'experiments/Issue310_fp_acceleration/control_seq18_deltaphi.py'
+      - 'experiments/Issue310_fp_acceleration/control_seq34_relax2x_reference_input.py'
+      - 'experiments/Issue336_gummel_action_parity/control.py'
+      - 'experiments/Issue337_plasma_closures_migration/control.py'
       - 'experiments/Issue338_electron_flux_unification/**'
       - '.github/workflows/electron-flux-unification-regression.yml'
 

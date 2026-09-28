@@ -96,8 +96,8 @@ def _electron_closure_block() -> str:
   [electron]
     role = electron
 
-    normalized_electron_density = electron_density_hat
-    normalized_electron_energy_density = n_epsilon
+    normalized_electron_density = electron_number_density_hat
+    normalized_electron_energy_density = electron_energy_density_hat
     electron_energy_reference_eV = 5.73276
 
     gas_pressure = p_gas
@@ -105,7 +105,7 @@ def _electron_closure_block() -> str:
     electron_transport_table_file = electron_moments.txt
     electron_transport_bounds_policy = error
 
-    electron_mean_energy_output = mean_en_solved
+    electron_mean_energy_output = mean_en
     electron_temperature_output = electron_temperature_K
     neutral_number_density_output = neutral_number_density
     electron_reduced_mobility_output = electron_reduced_mobility
@@ -115,7 +115,7 @@ def _electron_closure_block() -> str:
     electron_energy_mobility_output = electron_energy_mobility
     electron_energy_diffusion_output = electron_energy_diffusion
 
-    electron_number_density = electron_density_m3
+    electron_number_density = electron_number_density
     electron_impact_rate_table_files = 'o2_elastic.txt'
     electron_impact_target_molar_concentrations = 'c_O2'
     electron_impact_reaction_progress_names = 'R_elastic_O2'
@@ -153,7 +153,7 @@ def _charge_closure_block() -> str:
     role = electrostatic_charge
 
     mixture_density = rho_const
-    electron_number_density = electron_density_m3
+    electron_number_density = electron_number_density
 
     charged_species_ids = 'O2p Om Op'
     charged_species_mass_fractions = 'w_O2p_frozen w_Om_frozen w_Op_frozen'
@@ -305,7 +305,7 @@ def p0(horizon: str) -> None:
     assert "[PlasmaClosures]" in migrated_fast
     assert "role = electron" in migrated_fast
     assert "create_electron_closure" not in migrated_fast
-    assert "electron_mean_energy_output = mean_en_solved" in migrated_fast
+    assert "electron_mean_energy_output = mean_en" in migrated_fast
     assert "electron_impact_reaction_progress_names = 'R_elastic_O2'" in migrated_fast
 
     # Heavy transport migration.

@@ -20,7 +20,7 @@
     type = MooseVariableFVReal
     initial_condition = @@LOG_CE@@
   []
-  [n_epsilon]
+  [electron_energy_density_hat]
     type = MooseVariableFVReal
     initial_condition = 1.0
   []
@@ -82,7 +82,7 @@
 
   [electron_number_density]
     type = ADParsedFunctorMaterial
-    property_name = electron_density_m3
+    property_name = electron_number_density
     functor_names = 'log_e'
     functor_symbols = 'loge'
     expression = '6.02214076e23*exp(loge)'
@@ -90,23 +90,24 @@
 
   [electron_density_normalized]
     type = ADParsedFunctorMaterial
-    property_name = electron_density_hat
-    functor_names = 'electron_density_m3'
+    property_name = electron_number_density_hat
+    functor_names = 'electron_number_density'
     functor_symbols = 'ne'
     expression = 'ne/1.0e16'
   []
 
   [mean_energy_bridge]
     type = PhysicsElectronMeanEnergyMaterial
-    electron_energy_density = n_epsilon
-    electron_density = electron_density_hat
+    electron_energy_density = electron_energy_density_hat
+    electron_density = electron_number_density_hat
     energy_reference_eV = 5.73276
+    mean_energy_output = mean_en
   []
 
   [electron_transport]
     type = PhysicsElectronTransportLookupMaterial
     property_table_file = electron_moments.txt
-    mean_energy = mean_en_solved
+    mean_energy = mean_en
     pressure = p_gas
     gas_temperature = T_g
     bounds_policy = error
@@ -131,7 +132,7 @@
   [thermal_surface_flux]
     type = ADParsedFunctorMaterial
     property_name = thermal_flux_molar_outward
-    functor_names = 'log_e mean_en_solved'
+    functor_names = 'log_e mean_en'
     functor_symbols = 'loge mean_ev'
     expression = '0.5*exp(loge)*sqrt(16.0*1.602176634e-19*mean_ev/(3.0*pi*9.1093837139e-31))'
   []
@@ -139,7 +140,7 @@
   [electron_energy_density_physical]
     type = ADParsedFunctorMaterial
     property_name = electron_energy_J_m3
-    functor_names = 'n_epsilon'
+    functor_names = 'electron_energy_density_hat'
     functor_symbols = 'eps_hat'
     expression = '1.0e16*5.73276*1.602176634e-19*eps_hat'
   []
@@ -147,8 +148,8 @@
   [elastic_o2_rate]
     type = PhysicsElectronImpactRateMaterial
     rate_table_file = o2_elastic.txt
-    mean_energy = mean_en_solved
-    electron_number_density = electron_density_m3
+    mean_energy = mean_en
+    electron_number_density = electron_number_density
     target_molar_concentration = c_O2
     reaction_progress = R_elastic_O2
   []
@@ -156,7 +157,7 @@
   [elastic_energy_candidate]
     type = ADParsedFunctorMaterial
     property_name = S_elastic_candidate_hat
-    functor_names = 'mean_en_solved T_g R_elastic_O2'
+    functor_names = 'mean_en T_g R_elastic_O2'
     functor_symbols = 'meanE tgas rprog'
     expression = '-540.2881732575735*(0.66666666666666663*meanE-8.617333262145e-5*tgas)*rprog'
   []
@@ -210,16 +211,16 @@
 
   [energy_time]
     type = FVTimeKernel
-    variable = n_epsilon
+    variable = electron_energy_density_hat
   []
   [energy_diffusion]
     type = FVDiffusion
-    variable = n_epsilon
+    variable = electron_energy_density_hat
     coeff = electron_energy_diffusion
   []
   [energy_drift]
     type = PhysicsFVElectrostaticDrift
-    variable = n_epsilon
+    variable = electron_energy_density_hat
     potential = potential_from_poisson
     mobility = electron_energy_mobility
     carrier = carrier_one
@@ -229,8 +230,8 @@
   []
   [energy_joule]
     type = PhysicsFVElectronEnergyJouleHeating
-    variable = n_epsilon
-    electron_density = electron_density_hat
+    variable = electron_energy_density_hat
+    electron_density = electron_number_density_hat
     potential = potential_from_poisson
     mobility = joule_mobility
     diffusion = joule_diffusion
@@ -238,7 +239,7 @@
   []
   [energy_elastic_o2]
     type = FVCoupledForce
-    variable = n_epsilon
+    variable = electron_energy_density_hat
     v = S_elastic_applied_hat
     coef = 1.0
   []
@@ -255,10 +256,10 @@
 
   [right_energy_surface_loss]
     type = PhysicsFVElectronEnergyWallFluxBC
-    variable = n_epsilon
+    variable = electron_energy_density_hat
     boundary = right
-    electron_energy_density = n_epsilon
-    mean_electron_energy = mean_en_solved
+    electron_energy_density = electron_energy_density_hat
+    mean_electron_energy = mean_en
     see_number_flux = zero_flux
     energy_reference_eV = 5.73276
   []
@@ -268,13 +269,13 @@
   [electron_density_copy]
     type = FunctorAux
     variable = electron_density_out
-    functor = electron_density_m3
+    functor = electron_number_density
     execute_on = 'INITIAL TIMESTEP_END'
   []
   [mean_energy_copy]
     type = FunctorAux
     variable = mean_energy_out
-    functor = mean_en_solved
+    functor = mean_en
     execute_on = 'INITIAL TIMESTEP_END'
   []
   [mobility_copy]
@@ -360,18 +361,18 @@
   []
   [mean_energy_avg_eV]
     type = ElementAverageFunctorPostprocessor
-    functor = mean_en_solved
+    functor = mean_en
     execute_on = 'INITIAL TIMESTEP_END'
   []
   [mean_energy_min_eV]
     type = ADElementExtremeFunctorValue
-    functor = mean_en_solved
+    functor = mean_en
     value_type = min
     execute_on = 'INITIAL TIMESTEP_END'
   []
   [mean_energy_max_eV]
     type = ADElementExtremeFunctorValue
-    functor = mean_en_solved
+    functor = mean_en
     value_type = max
     execute_on = 'INITIAL TIMESTEP_END'
   []
@@ -415,13 +416,13 @@
   []
   [n_e_min]
     type = ADElementExtremeFunctorValue
-    functor = electron_density_m3
+    functor = electron_number_density
     value_type = min
     execute_on = 'INITIAL TIMESTEP_END'
   []
   [n_e_max]
     type = ADElementExtremeFunctorValue
-    functor = electron_density_m3
+    functor = electron_number_density
     value_type = max
     execute_on = 'INITIAL TIMESTEP_END'
   []
@@ -451,7 +452,7 @@
 [VectorPostprocessors]
   [energy_profile]
     type = ElementValueSampler
-    variable = 'electron_density_out potential_from_poisson n_epsilon mean_energy_out mobility_out diffusion_out elastic_loss_candidate_out'
+    variable = 'electron_density_out potential_from_poisson electron_energy_density_hat mean_energy_out mobility_out diffusion_out elastic_loss_candidate_out'
     sort_by = id
     execute_on = 'FINAL'
   []

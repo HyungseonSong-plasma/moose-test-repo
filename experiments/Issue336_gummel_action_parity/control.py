@@ -94,10 +94,10 @@ def _action_block() -> str:
     poisson_input_file = poisson_sub.i
     poisson_multiapp_type = TransientMultiApp
 
-    electron_state_variables = 'log_e n_epsilon'
+    electron_state_variables = 'log_e electron_energy_density_hat'
 
-    electron_to_poisson_source_variables = 'log_e n_epsilon potential_from_poisson w_O2p_h w_Om_h w_Op_h'
-    electron_to_poisson_variables = 'log_e_frozen n_epsilon_frozen phi_anchor_frozen w_O2p_frozen w_Om_frozen w_Op_frozen'
+    electron_to_poisson_source_variables = 'log_e electron_energy_density_hat potential_from_poisson w_O2p_h w_Om_h w_Op_h'
+    electron_to_poisson_variables = 'log_e_frozen electron_energy_density_hat_frozen phi_anchor_frozen w_O2p_frozen w_Om_frozen w_Op_frozen'
 
     poisson_to_electron_source_variables = 'potential_plasma phi_anchor_frozen'
     poisson_to_electron_variables = 'potential_from_poisson fp_phi_anchor_diag'
@@ -241,7 +241,7 @@ def p0(horizon: str) -> None:
     assert "[Transfers]" not in fb
     assert "[Convergence]" not in fb
     assert "multiapp_fixed_point_convergence = gummel_delta_phi" in fb
-    assert "electron_state_variables = 'log_e n_epsilon'" in fb
+    assert "electron_state_variables = 'log_e electron_energy_density_hat'" in fb
     assert "potential_from_poisson w_O2p_h w_Om_h w_Op_h" in fb
     assert "potential_plasma phi_anchor_frozen" in fb
     assert "delta_phi_postprocessor = fp_delta_phi_max" in fb

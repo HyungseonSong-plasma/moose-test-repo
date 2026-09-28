@@ -318,11 +318,11 @@ def _apply_banded(fast: str, poisson: str, bandwidth: int) -> tuple[str, str]:
         raise RuntimeError("log_e transfer anchor changed")
     fast = fast.replace(
         transfer_anchor,
-        transfer_anchor + """  [n_epsilon_to_poisson]
+        transfer_anchor + """  [electron_energy_density_hat_to_poisson]
     type = MultiAppCopyTransfer
     to_multi_app = poisson
-    source_variable = n_epsilon
-    variable = n_epsilon_frozen
+    source_variable = electron_energy_density_hat
+    variable = electron_energy_density_hat_frozen
     execute_on = SAME_AS_MULTIAPP
   []
   [phi_anchor_to_poisson]
@@ -366,7 +366,7 @@ def _apply_banded(fast: str, poisson: str, bandwidth: int) -> tuple[str, str]:
         raise RuntimeError("Poisson AuxVariables anchor changed")
     poisson = poisson.replace(
         aux_anchor,
-        """  [n_epsilon_frozen]
+        """  [electron_energy_density_hat_frozen]
     type = MooseVariableFVReal
     initial_condition = 1.0
   []
@@ -388,14 +388,14 @@ def _apply_banded(fast: str, poisson: str, bandwidth: int) -> tuple[str, str]:
         f"""  [gummel_mean_energy]
     type = ADParsedFunctorMaterial
     property_name = gummel_mean_energy_ev
-    functor_names = 'electron_density_m3 n_epsilon_frozen'
-    functor_symbols = 'ne n_eps'
-    expression = '{MEAN_E0_EV:.17g}*n_eps/max(ne/{NE0:.17g},1.0e-30)'
+    functor_names = 'electron_number_density electron_energy_density_hat_frozen'
+    functor_symbols = 'ne energy_hat'
+    expression = '{MEAN_E0_EV:.17g}*energy_hat/max(ne/{NE0:.17g},1.0e-30)'
   []
   [electron_response_beta]
     type = ADParsedFunctorMaterial
     property_name = electron_response_beta
-    functor_names = 'electron_density_m3 gummel_mean_energy_ev'
+    functor_names = 'electron_number_density gummel_mean_energy_ev'
     functor_symbols = 'ne mean_ev'
     expression = '{E_OVER_EPS0:.17g}*ne/((2.0/3.0)*max(mean_ev,1.0e-6))'
   []

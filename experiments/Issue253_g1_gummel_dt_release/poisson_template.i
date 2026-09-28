@@ -47,7 +47,7 @@
   []
   [electron_density]
     type = ADParsedFunctorMaterial
-    property_name = electron_density_m3
+    property_name = electron_number_density
     functor_names = 'log_e_frozen'
     functor_symbols = 'loge'
     expression = '6.02214076e23*exp(loge)'
@@ -55,7 +55,7 @@
   [plasma_charge]
     type = PhysicsPlasmaChargeDensityMaterial
     density = rho_const
-    electron_density = electron_density_m3
+    electron_density = electron_number_density
     ion_ids = 'O2p Om Op'
     ion_mass_fractions = 'w_O2p_frozen w_Om_frozen w_Op_frozen'
     ion_molar_masses = '0.032 0.016 0.016'

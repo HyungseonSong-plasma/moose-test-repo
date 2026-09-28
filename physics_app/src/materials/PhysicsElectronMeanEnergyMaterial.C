@@ -10,7 +10,7 @@ PhysicsElectronMeanEnergyMaterial::validParams()
   auto params = FunctorMaterial::validParams();
 
   params.addClassDescription(
-      "Builds mean_en_solved = epsilon_ref*n_epsilon_hat/n_e_hat from the "
+      "Builds mean_energy = epsilon_ref*n_epsilon_hat/n_e_hat from the "
       "normalized solved electron-energy and electron-density FV states.");
 
   params.addRequiredParam<MooseFunctorName>(
@@ -24,6 +24,11 @@ PhysicsElectronMeanEnergyMaterial::validParams()
   params.addRequiredParam<Real>(
       "energy_reference_eV",
       "Positive electron-energy normalization scale epsilon_ref [eV].");
+
+  params.addParam<MooseFunctorName>(
+      "mean_energy_output",
+      "mean_en_solved",
+      "Published mean-electron-energy functor [eV]. The default preserves legacy inputs.");
 
   return params;
 }
@@ -39,7 +44,7 @@ PhysicsElectronMeanEnergyMaterial::PhysicsElectronMeanEnergyMaterial(
     paramError("energy_reference_eV", "Electron-energy normalization scale must be finite and positive.");
 
   addFunctorProperty<ADReal>(
-      "mean_en_solved",
+      getParam<MooseFunctorName>("mean_energy_output"),
       [this](const auto & r, const auto & state) -> ADReal
       {
         const ADReal n_epsilon_hat = _electron_energy_density(r, state);
@@ -69,15 +74,15 @@ PhysicsElectronMeanEnergyMaterial::PhysicsElectronMeanEnergyMaterial(
               n_epsilon_hat.value(),
               ".");
 
-        const ADReal mean_en_solved =
+        const ADReal mean_energy =
             _energy_reference_eV * n_epsilon_hat / n_e_hat;
 
-        if (!std::isfinite(mean_en_solved.value()))
+        if (!std::isfinite(mean_energy.value()))
           mooseError(
-              "PhysicsElectronMeanEnergyMaterial requires finite mean_en_solved; got ",
-              mean_en_solved.value(),
+              "PhysicsElectronMeanEnergyMaterial requires finite mean electron energy; got ",
+              mean_energy.value(),
               " eV. No clamp is applied.");
 
-        return mean_en_solved;
+        return mean_energy;
       });
 }
