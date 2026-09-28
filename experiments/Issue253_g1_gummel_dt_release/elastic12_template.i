@@ -105,7 +105,9 @@
     mean_energy = mean_en
     pressure = p_gas
     gas_temperature = T_g
-    bounds_policy = error
+    # Clamp is a nonlinear continuation only. Final mean_en is regression-checked
+    # to remain inside the table range.
+    bounds_policy = clamp
   []
 
   [joule_transport_switch]
@@ -147,6 +149,9 @@
     electron_number_density = electron_number_density
     target_molar_concentration = c_O2
     reaction_progress = R_elastic_O2
+    # Same continuation policy as the transport lookup; converged states must
+    # remain in-range.
+    bounds_policy = clamp
   []
 
   [elastic_energy_candidate]

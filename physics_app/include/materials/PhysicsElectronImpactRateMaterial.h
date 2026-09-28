@@ -6,7 +6,7 @@
 #include <string>
 
 /**
- * Reusable strict mean-energy electron-impact molar reaction-progress owner.
+ * Reusable mean-energy electron-impact molar reaction-progress owner.
  *
  * The supplied two-column table stores k_raw [m^3/(mol s)] versus solved mean
  * electron energy [eV]. This object evaluates kinetics exactly once and publishes
@@ -24,7 +24,14 @@ public:
   PhysicsElectronImpactRateMaterial(const InputParameters & parameters);
 
 protected:
-  ADReal interpolateStrict(const ADReal & mean_energy) const;
+  enum class BoundsPolicy
+  {
+    Error,
+    Clamp
+  };
+
+  ADReal interpolate(const ADReal & mean_energy) const;
+  static BoundsPolicy parseBoundsPolicy(const std::string & value);
 
   const Moose::Functor<ADReal> & _mean_energy;
   const Moose::Functor<ADReal> & _electron_number_density;
@@ -32,4 +39,5 @@ protected:
   const FileName _rate_table_file;
   const std::string _reaction_progress_name;
   PhysicsLookupTable1D _table;
+  const BoundsPolicy _bounds_policy;
 };

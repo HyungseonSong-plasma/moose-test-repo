@@ -103,7 +103,7 @@ def _electron_closure_block() -> str:
     gas_pressure = p_gas
     gas_temperature = T_g
     electron_transport_table_file = electron_moments.txt
-    electron_transport_bounds_policy = error
+    electron_transport_bounds_policy = clamp
 
     electron_mean_energy_output = mean_en
     electron_temperature_output = electron_temperature_K
@@ -118,6 +118,7 @@ def _electron_closure_block() -> str:
     electron_impact_rate_table_files = 'o2_elastic.txt'
     electron_impact_target_molar_concentrations = 'c_O2'
     electron_impact_reaction_progress_names = 'R_elastic_O2'
+    electron_kinetics_bounds_policy = clamp
   []
 []"""
 
@@ -307,6 +308,8 @@ def p0(horizon: str) -> None:
     assert "electron_state_form = physical_eV" in migrated_fast
     assert "electron_mean_energy_output = mean_en" in migrated_fast
     assert "electron_impact_reaction_progress_names = 'R_elastic_O2'" in migrated_fast
+    assert "electron_transport_bounds_policy = clamp" in migrated_fast
+    assert "electron_kinetics_bounds_policy = clamp" in migrated_fast
     assert "electron_number_density_hat" not in legacy_fast
     assert "electron_number_density_hat" not in migrated_fast
     assert "electron_energy_density_hat" not in legacy_fast

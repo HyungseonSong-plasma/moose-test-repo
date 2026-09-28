@@ -128,6 +128,11 @@ PlasmaClosuresAction::validParams()
   params.addParam<std::vector<std::string>>(
       "electron_impact_reaction_progress_names",
       "Published reaction-progress functor names, one per electron-impact reaction.");
+  params.addParam<std::string>(
+      "electron_kinetics_bounds_policy",
+      "error",
+      "Electron-impact lookup behavior outside tabulated mean-energy ranges: "
+      "'error' or 'clamp'. Clamp is intended for nonlinear trial-state continuation.");
 
   // Heavy-particle transport.
   params.addParam<MooseFunctorName>(
@@ -397,6 +402,8 @@ PlasmaClosuresAction::act()
     material_params.set<std::vector<std::string>>("reaction_progress_names") =
         getParam<std::vector<std::string>>(
             "electron_impact_reaction_progress_names");
+    material_params.set<std::string>("bounds_policy") =
+        getParam<std::string>("electron_kinetics_bounds_policy");
 
     _problem->addFunctorMaterial(
         "PhysicsElectronKineticsMaterial", prefix + "_electron_kinetics", material_params);

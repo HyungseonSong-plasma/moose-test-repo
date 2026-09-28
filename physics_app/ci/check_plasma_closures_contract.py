@@ -73,6 +73,8 @@ assert "electron_energy_diffusion_output" in electron
 # Kinetics owns a reaction vector rather than one object per reaction.
 assert "rate_table_files" in kinetics
 assert "reaction_progress_names" in kinetics
+assert "bounds_policy" in kinetics
+assert "electron_kinetics_bounds_policy" in action
 assert "std::vector<PhysicsLookupTable1D>" in (
     ROOT / "include/materials/PhysicsElectronKineticsMaterial.h"
 ).read_text()

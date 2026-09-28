@@ -25,7 +25,14 @@ public:
   PhysicsElectronKineticsMaterial(const InputParameters & parameters);
 
 protected:
-  ADReal interpolateStrict(const ADReal & coordinate, std::size_t reaction_index) const;
+  enum class BoundsPolicy
+  {
+    Error,
+    Clamp
+  };
+
+  ADReal interpolate(const ADReal & coordinate, std::size_t reaction_index) const;
+  static BoundsPolicy parseBoundsPolicy(const std::string & value);
 
   const Moose::Functor<ADReal> & _electron_mean_energy;
   const Moose::Functor<ADReal> & _electron_number_density;
@@ -36,4 +43,5 @@ protected:
 
   std::vector<const Moose::Functor<ADReal> *> _target_molar_concentrations;
   std::vector<PhysicsLookupTable1D> _tables;
+  const BoundsPolicy _bounds_policy;
 };

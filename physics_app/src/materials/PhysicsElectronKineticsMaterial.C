@@ -2,6 +2,7 @@
 #include "Physics.h"
 
 #include <set>
+#include <stdexcept>
 
 registerMooseObject("PhysicsApp", PhysicsElectronKineticsMaterial);
 
@@ -11,8 +12,9 @@ PhysicsElectronKineticsMaterial::validParams()
   auto params = FunctorMaterial::validParams();
 
   params.addClassDescription(
-      "Owns multiple strict mean-energy electron-impact rate tables and publishes one "
-      "molar reaction-progress functor per reaction.");
+      "Owns multiple mean-energy electron-impact rate tables and publishes one molar "
+      "reaction-progress functor per reaction. Clamp mode is a nonlinear-iteration "
+      "continuation; converged states should remain inside the physical table range.");
 
   params.addRequiredParam<MooseFunctorName>(
       "electron_mean_energy", "Mean electron energy [eV].");
@@ -27,6 +29,10 @@ PhysicsElectronKineticsMaterial::validParams()
   params.addRequiredParam<std::vector<std::string>>(
       "reaction_progress_names",
       "Published molar reaction-progress functor names, one per reaction.");
+  params.addParam<std::string>(
+      "bounds_policy",
+      "error",
+      "Lookup behavior outside each tabulated mean-energy range: 'error' or 'clamp'.");
 
   return params;
 }
@@ -39,7 +45,8 @@ PhysicsElectronKineticsMaterial::PhysicsElectronKineticsMaterial(
     _rate_table_files(getParam<std::vector<FileName>>("rate_table_files")),
     _target_molar_concentration_names(
         getParam<std::vector<MooseFunctorName>>("target_molar_concentrations")),
-    _reaction_progress_names(getParam<std::vector<std::string>>("reaction_progress_names"))
+    _reaction_progress_names(getParam<std::vector<std::string>>("reaction_progress_names")),
+    _bounds_policy(parseBoundsPolicy(getParam<std::string>("bounds_policy")))
 {
   const std::size_t n = _rate_table_files.size();
 
@@ -90,7 +97,7 @@ PhysicsElectronKineticsMaterial::PhysicsElectronKineticsMaterial(
                        _reaction_progress_names[i],
                        "'.");
 
-          const ADReal k_raw = interpolateStrict(_electron_mean_energy(r, state), i);
+          const ADReal k_raw = interpolate(_electron_mean_energy(r, state), i);
 
           if (k_raw.value() < 0.0)
             mooseError("PhysicsElectronKineticsMaterial encountered a negative tabulated rate "
@@ -103,25 +110,52 @@ PhysicsElectronKineticsMaterial::PhysicsElectronKineticsMaterial(
   }
 }
 
+PhysicsElectronKineticsMaterial::BoundsPolicy
+PhysicsElectronKineticsMaterial::parseBoundsPolicy(const std::string & value)
+{
+  if (value == "error")
+    return BoundsPolicy::Error;
+  if (value == "clamp")
+    return BoundsPolicy::Clamp;
+
+  throw std::runtime_error(
+      "PhysicsElectronKineticsMaterial bounds_policy must be 'error' or 'clamp'.");
+}
+
 ADReal
-PhysicsElectronKineticsMaterial::interpolateStrict(const ADReal & coordinate,
-                                                    std::size_t reaction_index) const
+PhysicsElectronKineticsMaterial::interpolate(const ADReal & coordinate,
+                                              std::size_t reaction_index) const
 {
   const auto & table = _tables.at(reaction_index);
   const auto & x = table.coordinate();
   const auto & y = table.values(0);
   const Real raw = coordinate.value();
 
-  if (raw < x.front() || raw > x.back())
-    mooseError("Electron-impact reaction '",
-               _reaction_progress_names.at(reaction_index),
-               "' mean electron energy ",
-               raw,
-               " eV is outside lookup range [",
-               x.front(),
-               ", ",
-               x.back(),
-               "] eV.");
+  if (raw < x.front())
+  {
+    if (_bounds_policy == BoundsPolicy::Error)
+      mooseError("Electron-impact reaction '",
+                 _reaction_progress_names.at(reaction_index),
+                 "' mean electron energy ",
+                 raw,
+                 " eV is below lookup minimum ",
+                 x.front(),
+                 " eV.");
+    return y.front();
+  }
+
+  if (raw > x.back())
+  {
+    if (_bounds_policy == BoundsPolicy::Error)
+      mooseError("Electron-impact reaction '",
+                 _reaction_progress_names.at(reaction_index),
+                 "' mean electron energy ",
+                 raw,
+                 " eV is above lookup maximum ",
+                 x.back(),
+                 " eV.");
+    return y.back();
+  }
 
   if (raw == x.front())
     return y.front();

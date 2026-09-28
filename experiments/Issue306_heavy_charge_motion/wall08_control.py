@@ -391,6 +391,12 @@ def run_case(case_name: str) -> None:
 
 
 def _comparison(reference: dict[str, object], trial: dict[str, object]) -> dict[str, float]:
+    if "final_profile" not in reference or "final_profile" not in trial:
+        raise RuntimeError(
+            "comparison requires successful runtime evidence: "
+            f"reference={reference.get('classification')} "
+            f"trial={trial.get('classification')}"
+        )
     a = reference["final_profile"]
     b = trial["final_profile"]
     return {
