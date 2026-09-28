@@ -281,8 +281,8 @@ def runtime_checker_self_test():
             "O2s_source_avg": M_O2 * r0,
         },
         {
-            "n_e_avg": 1.0,
-            "n_epsilon_avg": 1.0,
+            "n_e_avg": N_E0,
+            "n_epsilon_avg": N_E0 * EPSILON_E0_EV,
             "w_O2s_avg": ws_f,
             "w_O2_avg": wo2_f,
             "mean_en_solved_avg": EPSILON_E0_EV,
