@@ -48,15 +48,15 @@ assert 'syntax.registerActionSyntax("GummelIterationAction", "GummelIteration/*"
 assert "class GummelIterationAction : public Action" in hdr
 assert "bool usesElectronSubApp() const;" in hdr
 
-# Preferred two-subapp contract: electron first, Poisson second, direct siblings.
-assert '"electron_execution_order_group",
-      0,' in src
-assert '"poisson_execution_order_group",
-      1,' in src
-assert '"n_e"' in src
-assert '"phi"' in src
+# Pinned-MOOSE Gummel scheduling contract:
+#   TIMESTEP_BEGIN: phi(old) -> electron, then electron solve
+#   TIMESTEP_END:   n_e(new) -> Poisson, then Poisson solve
+assert 'electron_params.set<ExecFlagEnum>("execute_on") = EXEC_TIMESTEP_BEGIN;' in src
+assert 'poisson_params.set<ExecFlagEnum>("execute_on") = EXEC_TIMESTEP_END;' in src
+assert '"execute_after_from_multiapp"' not in src
+assert '"execution_order_group"' not in src
 
-# The preferred fixture is a parent orchestrator with two sibling input files.
+# Preferred fixture: parent orchestration + two sibling input files.
 for token in (
     "electron_input_file = gummel_two_subapps_electron.i",
     "poisson_input_file = gummel_two_subapps_poisson.i",
@@ -67,6 +67,7 @@ for token in (
 ):
     assert token in main, token
 
+assert "solve = false" in main
 assert "[n_e]" in electron
 assert "[mean_en]" in electron
 assert "[phi]" in electron
@@ -74,10 +75,8 @@ assert "[phi]" in poisson
 assert "[n_e]" in poisson
 
 # Legacy mode remains available when electron_input_file is omitted.
-assert 'if (usesElectronSubApp())' in src
-assert 'else
-    {' in src
-assert 'Legacy current-application electron mode requires' in src
+assert "if (usesElectronSubApp())" in src
+assert "Legacy current-application electron mode requires" in src
 
 # The orchestration layer must not select an electron closure/model.
 for forbidden in (
@@ -90,7 +89,7 @@ for forbidden in (
 ):
     assert forbidden not in src, forbidden
 
-# Electron response remains a Poisson-side optional object, not part of this Action.
+# Electron-response approximations remain Poisson-side optional objects.
 assert "FVElectronResponseBandedCorrection" not in src
 assert "bandwidth" not in src
 assert "setMultiAppFixedPointConvergenceName" not in src
