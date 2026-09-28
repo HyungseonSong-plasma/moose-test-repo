@@ -34,8 +34,9 @@ def main():
     assert own["all_source_paths_must_consume"] == "R_ion_O2"
     assert own["energy_projection_must_not_recompute_rate"] is True
     assert std["type"] == "FVCoupledForce" and std["v"] == "R_ion_O2"
-    coef = -12.06 * N_A / (1e16 * 5.73276)
-    assert math.isclose(std["coef_at_frozen_normalization"], coef, rel_tol=1e-15)
+    historical_coef = -12.06 * N_A / (1e16 * 5.73276)
+    assert math.isclose(std["coef_at_frozen_normalization"], historical_coef, rel_tol=1e-15)
+    physical_coef = -12.06 * N_A
 
     r2ion = r2["reactions"]["EI16_O2_IONIZATION"]
     assert r2ion["shared_progress"] == "R_ion_O2"
@@ -48,7 +49,7 @@ def main():
     assert '_reaction_progress(getFunctor<ADReal>("reaction_progress"))' in particle
     assert '"electron_ionization_number_source"' in particle
     assert "type = FVCoupledForce" in runtime and "v = R_ion_O2" in runtime
-    assert "ENERGY_COEF = -(DELTA_E_EV * N_A / (N_REF * EPSILON_REF_EV))" in runtime
+    assert "ENERGY_COEF = -(DELTA_E_EV * N_A)" in runtime
     assert "type = PhysicsFVElectronReactionEnergySource" not in runtime
     assert not CUSTOM_H.exists() and not CUSTOM_C.exists()
     assert c["lookup_policy"]["bounds_policy"] == "error"
@@ -56,9 +57,9 @@ def main():
     assert c["lookup_policy"]["silent_floor"] is False
     assert c["nonnegative_progress_guard"]["independent_energy_only_use"] == "FORBIDDEN"
     R = 0.016887027897333
-    rhs = -12.06 * N_A * R / (1e16 * 5.73276)
+    rhs = -12.06 * N_A * R
     assert rhs < 0 and -rhs > 0
-    assert math.isclose(-rhs, -coef * R, rel_tol=1e-15)
+    assert math.isclose(rhs, physical_coef * R, rel_tol=1e-15)
     print("E8_EI16_O2_IONIZATION_ENERGY_CONTRACT_PASS")
 
 
