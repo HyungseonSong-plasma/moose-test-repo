@@ -5,6 +5,7 @@ on:
     branches:
       - issue-336-standard-scalarized-convergence
     paths:
+      - 'experiments/Issue306_heavy_charge_motion/wall08_control.py'
       - 'physics_app/include/utils/PhysicsElectronFluxModel.h'
       - 'physics_app/include/fvkernels/PhysicsFVElectrostaticDrift.h'
       - 'physics_app/src/fvkernels/PhysicsFVElectrostaticDrift.C'
