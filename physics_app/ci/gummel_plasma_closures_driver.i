@@ -59,6 +59,11 @@
     poisson_potential_variable = phi
     electron_potential_variable = phi
 
+    # Route potential through the driver so driver-level Steffensen transforms
+    # the iterate before the next electron solve.
+    potential_transfer_mode = through_parent
+    parent_potential_variable = phi_converged
+
     electron_to_poisson_source_variables = 'mean_en'
     electron_to_poisson_variables = 'mean_en'
 
@@ -74,10 +79,7 @@
     parent_to_poisson_source_variables = 'rho_frozen w_ion_frozen'
     parent_to_poisson_variables = 'rho_from_heavy w_ion_from_heavy'
 
-    # Electrostatic state -> driver export state.
-    poisson_to_parent_source_variables = 'phi'
-    poisson_to_parent_variables = 'phi_converged'
-
+    # phi is returned automatically through parent_potential_variable.
     poisson_transformed_variables = 'phi'
     relaxation_factor = 0.45
     no_restore = true
@@ -97,5 +99,6 @@
   # the inner loop; production qualification supplies the delta-phi convergence
   # object and tolerance on this driver.
   fixed_point_algorithm = steffensen
+  transformed_variables = 'phi_converged'
   fixed_point_max_its = 3000
 []
