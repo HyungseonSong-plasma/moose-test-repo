@@ -49,6 +49,11 @@ jobs:
             -lc '
               set -euxo pipefail
               source /environment
+              git config --global --add safe.directory /workspace
+              git config --global --add safe.directory /opt/physics_vendor/moose
+              git config --global --add safe.directory /opt/physics_vendor/crane
+              git config --global --add safe.directory /opt/physics_vendor/squirrel
+              git config --global --add safe.directory /opt/physics_vendor/zapdos
               export MOOSE_DIR=/opt/physics_vendor/moose
               export CRANE_DIR=/opt/physics_vendor/crane
               export SQUIRREL_DIR=/opt/physics_vendor/squirrel
