@@ -23,7 +23,6 @@
     electron_to_poisson_source_variables = 'mean_en'
     electron_to_poisson_variables = 'mean_en'
 
-    poisson_transformed_variables = 'phi'
     relaxation_factor = 0.45
     manage_convergence = false
   []
