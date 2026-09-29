@@ -399,19 +399,7 @@ jobs:
               export QUALIFIED_REPO=/tmp/qualified
               make -C /workspace/physics_app -j2
               cd /workspace
-              python3 - <<"PY"
-from experiments.Issue351_frozen_heavy_driver_parity import control as c
-
-P_10_MTORR_PA = 1.333223684
-old = c.g337.wall08.base.P_GAS_PA
-print(f"ISSUE353_PRESSURE_OVERRIDE old={old:.17g} new={P_10_MTORR_PA:.17g}")
-c.g337.wall08.base.P_GAS_PA = P_10_MTORR_PA
-
-# Structural equivalence, exact-source input validation, then full 88-cycle parity.
-c.p0("full")
-c.p1("full")
-c.run("full")
-PY
+              python3 -c "from experiments.Issue351_frozen_heavy_driver_parity import control as c; P=1.333223684; old=c.g337.wall08.base.P_GAS_PA; print(f\"ISSUE353_PRESSURE_OVERRIDE old={old:.17g} new={P:.17g}\"); c.g337.wall08.base.P_GAS_PA=P; c.p0(\"full\"); c.p1(\"full\"); c.run(\"full\")"
             '
       - name: Upload 10mTorr full parity evidence
         if: always()
