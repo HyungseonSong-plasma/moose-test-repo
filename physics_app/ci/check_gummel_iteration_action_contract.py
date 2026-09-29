@@ -38,7 +38,6 @@ required = (
     '"electron_potential_variable"',
     '"potential_transfer_mode"',
     '"parent_potential_variable"',
-    '"electron_state_variables"',
     '"electron_to_poisson_source_variables"',
     '"electron_to_poisson_variables"',
     '"poisson_to_electron_source_variables"',
@@ -76,6 +75,18 @@ assert 'syntax.registerActionSyntax("GummelIterationAction", "GummelIteration/*"
 assert "class GummelIterationAction : public Action" in hdr
 assert "bool usesElectronSubApp() const;" in hdr
 
+# Dead descriptive/configuration-only API must stay retired. MultiApp type is a
+# qualified architectural invariant, not a user-selectable Gummel option.
+for forbidden in (
+    '"electron_state_variables"',
+    '"electron_multiapp_type"',
+    '"poisson_multiapp_type"',
+):
+    assert forbidden not in src, forbidden
+
+assert 'const std::string electron_type = "TransientMultiApp";' in src
+assert 'const std::string poisson_type = "TransientMultiApp";' in src
+
 # Pinned-MOOSE Gummel scheduling contract:
 #   TIMESTEP_BEGIN: phi(old) -> electron, then electron solve
 #   TIMESTEP_END:   n_e(new) -> Poisson, then Poisson solve
@@ -88,12 +99,19 @@ assert '"execution_order_group"' not in src
 for token in (
     "electron_input_file = gummel_two_subapps_electron.i",
     "poisson_input_file = gummel_two_subapps_poisson.i",
+):
+    assert token in main, token
+
+# The fixture intentionally relies on the qualified core-name/default contract.
+for redundant in (
+    "electron_multiapp = electron",
     "electron_density_variable = n_e",
     "poisson_electron_density_variable = n_e",
     "poisson_potential_variable = phi",
     "electron_potential_variable = phi",
+    "no_restore = true",
 ):
-    assert token in main, token
+    assert redundant not in main, redundant
 
 assert "solve = false" in main
 assert "[n_e]" in electron
@@ -114,8 +132,8 @@ for token in (
     "source_variable = 'T_g p_gas rho w_O2p w_Om w_Op'",
     "variable = 'T_g_frozen p_gas_frozen rho_frozen w_O2p_frozen w_Om_frozen w_Op_frozen'",
     "from_multi_app = gummel_driver",
-    "source_variable = 'n_e_converged T_e_converged phi_converged'",
-    "variable = 'n_e_from_gummel T_e_from_gummel phi_from_gummel'",
+    "source_variable = 'n_e_converged T_e_converged'",
+    "variable = 'n_e_from_gummel T_e_from_gummel'",
 ):
     assert token in heavy_main, token
 
@@ -148,6 +166,15 @@ for token in (
 assert "[PlasmaClosures]" not in driver
 assert "role = heavy_transport" not in driver
 assert "[GummelIteration]" not in heavy_main
+assert "[phi_from_gummel]" not in heavy_main
+assert "electron_multiapp = electron" not in driver
+assert "electron_density_variable = n_e" not in driver
+assert "poisson_electron_density_variable = n_e" not in driver
+assert "poisson_potential_variable = phi" not in driver
+assert "electron_potential_variable = phi" not in driver
+assert "electron_to_poisson_source_variables = 'mean_en'" not in driver
+assert "electron_to_poisson_variables = 'mean_en'" not in driver
+assert "no_restore = true" not in driver
 
 for token in (
     "role = electron",
@@ -158,6 +185,8 @@ for token in (
     "functor = electron_temperature_K",
 ):
     assert token in heavy_electron, token
+
+assert "[mean_en]" not in heavy_poisson
 
 for token in (
     "role = electrostatic_charge",
