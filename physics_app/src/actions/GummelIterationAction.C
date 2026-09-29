@@ -30,21 +30,11 @@ GummelIterationAction::validParams()
       "poisson_input_file", "Input file for the Poisson sub-application.");
   params.addRequiredParam<MultiAppName>(
       "poisson_multiapp", "Name of the Poisson MultiApp created by this Action.");
-  params.addParam<bool>(
-      "no_restore",
-      true,
-      "Disable restore between fixed-point iterations so sub-applications retain their current "
-      "iterates.");
   params.addRangeCheckedParam<Real>(
       "relaxation_factor",
       1.0,
       "relaxation_factor>0 & relaxation_factor<2",
       "Relaxation factor applied to the Poisson MultiApp transformed variables.");
-  params.addParam<std::vector<std::string>>(
-      "poisson_transformed_variables",
-      {},
-      "Poisson sub-application variables transformed by the MOOSE fixed-point algorithm.");
-
   params.addParam<VariableName>(
       "electron_density_variable",
       "n_e",
@@ -258,7 +248,7 @@ GummelIterationAction::act()
       electron_params.set<std::vector<FileName>>("input_files") =
           {getParam<FileName>("electron_input_file")};
       electron_params.set<ExecFlagEnum>("execute_on") = EXEC_TIMESTEP_BEGIN;
-      electron_params.set<bool>("no_restore") = getParam<bool>("no_restore");
+      electron_params.set<bool>("no_restore") = true;
 
       _problem->addMultiApp(electron_type, electron_name, electron_params);
     }
@@ -270,8 +260,8 @@ GummelIterationAction::act()
     poisson_params.set<ExecFlagEnum>("execute_on") = EXEC_TIMESTEP_END;
     poisson_params.set<Real>("relaxation_factor") = getParam<Real>("relaxation_factor");
     poisson_params.set<std::vector<std::string>>("transformed_variables") =
-        getParam<std::vector<std::string>>("poisson_transformed_variables");
-    poisson_params.set<bool>("no_restore") = getParam<bool>("no_restore");
+        {getParam<VariableName>("poisson_potential_variable")};
+    poisson_params.set<bool>("no_restore") = true;
 
     _problem->addMultiApp(poisson_type, poisson_name, poisson_params);
   }
