@@ -98,6 +98,22 @@ def _remove_exec_line(text: str, name: str) -> str:
     )
 
 
+def _canonicalize_retired_action_options(fast: str) -> str:
+    """Drop retired syntax that is semantics-preserving under the current Action.
+
+    The historical qualified fast-owner input carried:
+      * poisson_multiapp_type = TransientMultiApp, now a fixed Action invariant;
+      * electron_state_variables, which was descriptive and never consumed.
+
+    Removing these lines changes no equations, transfers, solver settings, or
+    fixed-point semantics and lets the historical physics run on the simplified
+    current Action API.
+    """
+    text = _remove_exec_line(fast, "poisson_multiapp_type")
+    text = _remove_exec_line(text, "electron_state_variables")
+    return text
+
+
 def _electron_only(fast: str) -> str:
     """Remove only fixed-point/Gummel ownership from the qualified fast app."""
     text = mb.remove_block(fast, "GummelIteration")
@@ -334,8 +350,16 @@ def build(horizon: str, clean: bool = True) -> None:
     _copy_case(src, baseline)
     _copy_case(src, trial)
 
-    baseline_fast = (baseline / "fast_sub.i").read_text(encoding="utf-8")
-    trial_fast = (trial / "fast_sub.i").read_text(encoding="utf-8")
+    baseline_fast = _canonicalize_retired_action_options(
+        (baseline / "fast_sub.i").read_text(encoding="utf-8")
+    )
+    trial_fast = _canonicalize_retired_action_options(
+        (trial / "fast_sub.i").read_text(encoding="utf-8")
+    )
+
+    # Canonicalize only retired/no-op Action syntax in the reference lane. The
+    # physical equations, transfers, solver settings, and qualified topology are unchanged.
+    (baseline / "fast_sub.i").write_text(baseline_fast, encoding="utf-8")
 
     # In the trial, fast_sub.i keeps the exact outer interface but becomes the driver.
     (trial / "electron_sub.i").write_text(_electron_only(trial_fast), encoding="utf-8")
@@ -385,6 +409,8 @@ def p0(horizon: str) -> None:
 
     assert "[GummelIteration]" in fast_a
     assert "electron_input_file" not in fast_a
+    assert "poisson_multiapp_type" not in fast_a
+    assert "electron_state_variables" not in fast_a
     assert "fixed_point_algorithm = 'steffensen'" in fast_a
     assert "transformed_variables = 'potential_from_poisson'" in fast_a
 
@@ -600,8 +626,11 @@ def run_pair(horizon: str, pair: str) -> dict[str, object]:
         "runs": runs,
         "guard": (
             "Heavy parent input and Poisson input are byte-identical. Both lanes use the "
-            "qualified PlasmaClosures composition. The controlled change is Gummel ownership: "
-            "fast/electron owner versus solve=false dedicated driver with sibling electron/Poisson."
+            "qualified PlasmaClosures composition. Historical fast-owner syntax is canonicalized "
+            "only by removing the no-op electron_state_variables line and the now-fixed "
+            "poisson_multiapp_type=TransientMultiApp line. The controlled physical change is "
+            "Gummel ownership: fast/electron owner versus solve=false dedicated driver with "
+            "sibling electron/Poisson."
         ),
     }
     results = _result_root(horizon)
