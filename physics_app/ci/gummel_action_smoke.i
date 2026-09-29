@@ -30,7 +30,6 @@
   [electron_poisson]
     poisson_multiapp = poisson
     poisson_input_file = gummel_action_poisson.i
-    electron_state_variables = 'electron_density electron_energy'
     electron_to_poisson_source_variables = 'electron_density electron_energy'
     electron_to_poisson_variables = 'electron_density_frozen electron_energy_frozen'
     poisson_to_electron_source_variables = 'potential_plasma'
