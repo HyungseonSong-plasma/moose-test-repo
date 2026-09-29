@@ -26,18 +26,10 @@ GummelIterationAction::validParams()
       "sibling electron and Poisson MultiApps and transfers directly between them.");
   params.addParam<MultiAppName>(
       "electron_multiapp", "electron", "Name of the electron MultiApp in two-sub-application mode.");
-  params.addParam<std::string>(
-      "electron_multiapp_type",
-      "TransientMultiApp",
-      "MOOSE MultiApp type used for the electron solve.");
   params.addRequiredParam<FileName>(
       "poisson_input_file", "Input file for the Poisson sub-application.");
   params.addRequiredParam<MultiAppName>(
       "poisson_multiapp", "Name of the Poisson MultiApp created by this Action.");
-  params.addParam<std::string>(
-      "poisson_multiapp_type",
-      "TransientMultiApp",
-      "MOOSE MultiApp type used for the Poisson solve.");
   params.addParam<bool>(
       "no_restore",
       true,
@@ -81,11 +73,6 @@ GummelIterationAction::validParams()
       "parent_potential_variable",
       "phi_from_poisson",
       "Parent/driver auxiliary potential used when potential_transfer_mode=through_parent.");
-
-  params.addParam<std::vector<VariableName>>(
-      "electron_state_variables",
-      {},
-      "Descriptive list of electron state variables. The Action does not construct their equations.");
 
   params.addParam<std::vector<VariableName>>(
       "electron_to_poisson_source_variables",
@@ -266,7 +253,7 @@ GummelIterationAction::act()
     if (usesElectronSubApp())
     {
       const auto & electron_name = getParam<MultiAppName>("electron_multiapp");
-      const auto & electron_type = getParam<std::string>("electron_multiapp_type");
+      const std::string electron_type = "TransientMultiApp";
       auto electron_params = _factory.getValidParams(electron_type);
       electron_params.set<std::vector<FileName>>("input_files") =
           {getParam<FileName>("electron_input_file")};
@@ -276,7 +263,7 @@ GummelIterationAction::act()
       _problem->addMultiApp(electron_type, electron_name, electron_params);
     }
 
-    const auto & poisson_type = getParam<std::string>("poisson_multiapp_type");
+    const std::string poisson_type = "TransientMultiApp";
     auto poisson_params = _factory.getValidParams(poisson_type);
     poisson_params.set<std::vector<FileName>>("input_files") =
         {getParam<FileName>("poisson_input_file")};
