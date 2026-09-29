@@ -360,13 +360,23 @@ def _poisson_input(src: str) -> str:
     text = mp.upsert_parameter(
         text, "FunctorMaterials/constants", "prop_values", "'1.0'"
     )
-    for path in (
-        "FunctorMaterials/gummel_mean_energy",
-        "FunctorMaterials/electron_response_beta",
-        "FVKernels/electron_response_banded_correction",
-    ):
-        if mb.has_block(text, path):
-            text = mb.remove_block(text, path)
+    # The qualified 1D response matrix is geometry-specific, but its local
+    # mean-energy and susceptibility materials are geometry-independent and are
+    # retained for the topology-aware ICP response correction.
+    if mb.has_block(text, "FVKernels/electron_response_banded_correction"):
+        text = mb.remove_block(text, "FVKernels/electron_response_banded_correction")
+
+    text = mb.insert_child_block(
+        text,
+        "FVKernels",
+        """  [issue359_electron_response_topology]
+    type = FVElectronResponseTopologyCorrection
+    variable = potential_plasma
+    anchor = phi_anchor_frozen
+    beta = electron_response_beta
+    strength = 1.0
+  []""",
+    )
 
     text = mb.insert_child_block(
         text,
@@ -722,6 +732,12 @@ def _construction_audit(
         "geometry_specific_1d_response_removed": (
             "FVElectronResponseBandedCorrection" not in poisson
         ),
+        "topology_aware_2d_response_present": (
+            "type = FVElectronResponseTopologyCorrection" in poisson
+            and "anchor = phi_anchor_frozen" in poisson
+            and "beta = electron_response_beta" in poisson
+            and "strength = 1.0" in poisson
+        ),
         "single_Te_ownership": (
             "T_e_value" not in outer
             and "T_e_from_gummel_K" in outer
@@ -813,6 +829,12 @@ def _stage(root: Path) -> dict[str, Any]:
         "electron_energy_bc": "PhysicsFVElectronGroundedSheathEnergyBC",
         "poisson_bc": "all eight plasma boundaries grounded at 0 V",
         "removed_geometry_specific_object": "FVElectronResponseBandedCorrection",
+        "icp_response_correction": {
+            "type": "FVElectronResponseTopologyCorrection",
+            "stencil": "one-ring face neighbors",
+            "row_sum_preserving": True,
+            "strength": 1.0,
+        },
         "construction_audit": audit,
     }
     (root / "prepare_evidence.json").write_text(
