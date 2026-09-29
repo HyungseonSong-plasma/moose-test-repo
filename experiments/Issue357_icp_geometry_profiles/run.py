@@ -164,6 +164,105 @@ def _add_full_electron_energy_transport(text: str) -> str:
     return text
 
 
+
+def _add_electron_boundary_closure(text: str) -> str:
+    """Own electron particle and energy loss on every plasma-facing boundary.
+
+    The bulk drift operators deliberately avoid these faces; the paired sheath
+    BCs therefore own the complete boundary-normal electron loss without
+    double-counting a bulk face flux.  Particle and energy losses use the same
+    solved mean-energy and plasma-potential state.
+    """
+    boundaries = "'" + " ".join(("inlet", "outlet") + WALL_BOUNDARIES) + "'"
+    particle = "issue357_electron_sheath_particle"
+    energy = "issue357_electron_sheath_energy"
+    for path in (f"FVBCs/{particle}", f"FVBCs/{energy}"):
+        mb.require_absent(text, path)
+
+    text = mb.insert_child_block(
+        text,
+        "FVBCs",
+        f"""  [{particle}]
+    type = PhysicsFVElectronGroundedSheathCollectionBC
+    variable = n_e
+    boundary = {boundaries}
+    mean_electron_energy = mean_en_solved
+    potential = potential_plasma
+  []""",
+    )
+    text = mb.insert_child_block(
+        text,
+        "FVBCs",
+        f"""  [{energy}]
+    type = PhysicsFVElectronGroundedSheathEnergyBC
+    variable = mean_en
+    boundary = {boundaries}
+    electron_density = n_e
+    mean_electron_energy = mean_en_solved
+    potential = potential_plasma
+    energy_reference_eV = {ENERGY_REFERENCE_EV:.17g}
+  []""",
+    )
+    return text
+
+
+def _audit_electron_boundary_closure(text: str) -> dict[str, Any]:
+    all_boundaries = ("inlet", "outlet") + WALL_BOUNDARIES
+    expected = set(all_boundaries)
+    particle = "FVBCs/issue357_electron_sheath_particle"
+    energy = "FVBCs/issue357_electron_sheath_energy"
+    particle_present = mb.has_block(text, particle)
+    energy_present = mb.has_block(text, energy)
+    n_drift_avoid = set(
+        mp.words(mp.get_parameter(text, "FVKernels/n_e_drift", "boundaries_to_avoid") or "")
+    )
+    e_drift_avoid = set(
+        mp.words(
+            mp.get_parameter(text, "FVKernels/issue357_energy_drift", "boundaries_to_avoid")
+            or ""
+        )
+    )
+    checks = {
+        "particle_sheath_bc_present": particle_present,
+        "energy_sheath_bc_present": energy_present,
+        "particle_boundary_set_exact": (
+            particle_present
+            and set(mp.words(mp.get_parameter(text, particle, "boundary") or "")) == expected
+        ),
+        "energy_boundary_set_exact": (
+            energy_present
+            and set(mp.words(mp.get_parameter(text, energy, "boundary") or "")) == expected
+        ),
+        "particle_uses_solved_mean_energy": (
+            particle_present
+            and mp.get_parameter(text, particle, "mean_electron_energy") == "mean_en_solved"
+        ),
+        "energy_uses_solved_mean_energy": (
+            energy_present
+            and mp.get_parameter(text, energy, "mean_electron_energy") == "mean_en_solved"
+        ),
+        "particle_and_energy_use_same_potential": (
+            particle_present
+            and energy_present
+            and mp.get_parameter(text, particle, "potential") == "potential_plasma"
+            and mp.get_parameter(text, energy, "potential") == "potential_plasma"
+        ),
+        "energy_uses_same_electron_state": (
+            energy_present and mp.get_parameter(text, energy, "electron_density") == "n_e"
+        ),
+        "particle_bulk_drift_avoids_bc_owned_faces": n_drift_avoid == expected,
+        "energy_bulk_drift_avoids_bc_owned_faces": e_drift_avoid == expected,
+    }
+    failed = sorted(name for name, passed in checks.items() if not passed)
+    return {
+        "status": "PASS" if not failed else "FAIL",
+        "checks": checks,
+        "failed_checks": failed,
+        "boundaries": list(all_boundaries),
+        "model": "paired sheath-factor particle collection + thermal/sheath energy loss",
+    }
+
+
 def _audit_solved_energy_transplant(text: str) -> dict[str, Any]:
     checks = {
         "energy_state_is_solver_variable": (
@@ -239,7 +338,7 @@ def _audit_solved_energy_transplant(text: str) -> dict[str, Any]:
             "heavy_gas": "T_g",
             "electron": "electron_temperature_solved_K(mean_en_solved)",
         },
-        "wall_energy_model": "closed electron-energy wall for first volume discriminator",
+        "wall_energy_model": "paired sheath particle/energy boundary closure",
     }
 
 
@@ -326,6 +425,7 @@ def _build_input() -> tuple[str, dict[str, Any]]:
     )
     text = _couple_solved_electron_temperature(text)
     text = _add_full_electron_energy_transport(text)
+    text = _add_electron_boundary_closure(text)
 
     # No fixed electron-temperature scalar remains after solved-Te coupling.
     text, removed_te = re.subn(
@@ -394,10 +494,17 @@ def _build_input() -> tuple[str, dict[str, Any]]:
         raise ICPProfileError(
             f"heavy-boundary audit failed: {boundary_audit['failed_checks']}"
         )
+    electron_boundary_audit = _audit_electron_boundary_closure(text)
+    if electron_boundary_audit["status"] != "PASS":
+        raise ICPProfileError(
+            "electron-boundary audit failed: "
+            f"{electron_boundary_audit['failed_checks']}"
+        )
 
     meta = dict(meta)
     meta["solved_energy_transplant_audit"] = energy_audit
     meta["heavy_boundary_audit"] = boundary_audit
+    meta["electron_boundary_audit"] = electron_boundary_audit
     meta["issue357"] = {
         "pressure_Pa": PRESSURE_PA,
         "T_g_K": TG_K,
@@ -415,7 +522,7 @@ def _build_input() -> tuple[str, dict[str, Any]]:
         "electron_energy_equation": (
             "time + diffusion + electrostatic drift + Joule + elastic/reaction sources"
         ),
-        "electron_energy_wall_model": "closed for first volume discriminator",
+        "electron_energy_wall_model": "paired sheath-factor particle/energy loss on inlet, outlet, and plasma walls",
         "nonlinear_globalization": {
             "line_search": "basic",
             "damping": 0.1,
@@ -726,9 +833,10 @@ def run(args: argparse.Namespace) -> int:
         "axial_profile": axial,
         "energy_equation": staged["construction"]["solved_energy_transplant_audit"],
         "heavy_boundaries": staged["construction"]["heavy_boundary_audit"],
+        "electron_boundaries": staged["construction"]["electron_boundary_audit"],
         "interpretation_scope": (
-            "solved-electron-energy volume profile sanity only; no ICP coil RF power "
-            "deposition and no final wall/sheath/SEE validation claim"
+            "solved-electron-energy profile sanity with paired sheath particle/energy "
+            "boundary closure; no ICP coil RF power deposition and no SEE validation claim"
         ),
     }
     if not summary["final_profile"]["hard_sanity_pass"]:
