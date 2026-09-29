@@ -420,6 +420,25 @@ def _poisson_input(src: str) -> str:
 def _driver_input(src: str) -> str:
     text = _canonicalize_qualified_driver(src)
     text = _replace_mesh(text)
+    for species in ("O2p", "Om", "Op"):
+        text = mp.upsert_parameter(
+            text,
+            f"AuxVariables/w_{species}_h",
+            "initial_condition",
+            f"{MASS_FRACTIONS[species]:.17g}",
+        )
+    text = mp.upsert_parameter(
+        text,
+        "AuxVariables/electron_density_out",
+        "initial_condition",
+        f"{INITIAL_ELECTRON_DENSITY_M3:.17g}",
+    )
+    text = mp.upsert_parameter(
+        text,
+        "AuxVariables/mean_energy_out",
+        "initial_condition",
+        f"{ENERGY_REF_EV:.17g}",
+    )
     text = _add_aux(text, "p_gas_h", PRESSURE_PA)
     text = _add_aux(text, "T_g_h", TG_K)
 
@@ -498,7 +517,9 @@ def _outer_input(src: str) -> str:
         "'${T_g_value} ${mu_const}'",
     )
     text = _add_aux(text, "T_g_snapshot", TG_K)
-    text = _add_aux(text, "electron_density_from_gummel", 1.0e16)
+    text = _add_aux(
+        text, "electron_density_from_gummel", INITIAL_ELECTRON_DENSITY_M3
+    )
     text = _add_aux(text, "mean_energy_from_gummel", ENERGY_REF_EV)
 
     text = mb.insert_child_block(
