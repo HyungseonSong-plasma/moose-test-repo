@@ -45,6 +45,28 @@ poisson_sub.i
 This is not duplicate closure work. Each block belongs to a different FEProblem /
 MultiApp instance and consumes local state.
 
+For frozen-heavy Gummel coupling, keep role ownership local but add a dedicated
+orchestration level between the heavy parent and the two fast siblings:
+
+```text
+OUTER_MAIN
+  PlasmaClosures(role = heavy_transport)
+  '- GUMMEL_DRIVER
+       |- SUB_ELECTRON : PlasmaClosures(role = electron)
+       '- SUB_POISSON  : PlasmaClosures(role = electrostatic_charge)
+```
+
+`OUTER_MAIN` copies one heavy-state snapshot into the driver before the driver
+executes. The driver does not own heavy equations; it stores that snapshot in
+AuxVariables and reuses it unchanged for every electron-Poisson fixed-point
+iteration. After convergence, the driver exports the final `n_e/T_e/phi`
+state back to the heavy parent.
+
+This avoids turning the inner Gummel solve into an electron-heavy-Poisson
+three-block iteration. Material/functor outputs such as
+`electron_temperature_K` must still be sampled into an AuxVariable before
+`MultiAppCopyTransfer` can export them.
+
 ## Electron example
 
 ```text

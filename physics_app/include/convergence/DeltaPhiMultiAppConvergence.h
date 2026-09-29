@@ -16,9 +16,16 @@ public:
   static InputParameters validParams();
   DeltaPhiMultiAppConvergence(const InputParameters & parameters);
 
+  void initialize() override;
+  void preExecute() override;
   MooseConvergenceStatus checkConvergence(unsigned int n_iter) override;
 
 protected:
+  Real residualMultiAppNorm();
+
   const PostprocessorValue & _delta_phi;
   const Real _delta_phi_abs_tol;
+  const bool _use_residual_multiapp;
+  const MultiAppName _residual_multiapp_name;
+  Real _child_residual_previous;
 };
