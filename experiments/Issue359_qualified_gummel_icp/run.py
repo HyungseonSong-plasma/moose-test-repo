@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import math
 import os
@@ -28,7 +29,8 @@ DT_S = 5.6650790022617894e-11
 AVOGADRO = 6.02214076e23
 R_GAS = 8.31446261815324
 ELECTRON_DENSITY_REF_M3 = 1.0e16
-TE_PER_MEAN_EV_K = (2.0 / 3.0) * 1.602176634e-19 / 1.380649e-23
+ELEMENTARY_CHARGE_C = 1.602176634e-19
+TE_PER_MEAN_EV_K = (2.0 / 3.0) * ELEMENTARY_CHARGE_C / 1.380649e-23
 ALL_ELECTRON_BOUNDARIES = (
     "inlet",
     "outlet",
@@ -452,6 +454,116 @@ def _driver_input(src: str) -> str:
     text = _add_aux(text, "p_gas_h", PRESSURE_PA)
     text = _add_aux(text, "T_g_h", TG_K)
 
+    # Promote final Gummel state diagnostics to the driver so they survive
+    # MultiApp teardown and are written into the driver's FINAL CSV.
+    text = mb.insert_child_block(
+        text,
+        "FunctorMaterials",
+        f"""  [issue359_Te_diag]
+    type = ADParsedFunctorMaterial
+    property_name = issue359_Te_K
+    functor_names = 'mean_energy_out'
+    functor_symbols = 'mean_ev'
+    expression = '{TE_PER_MEAN_EV_K:.17g}*mean_ev'
+  []
+  [issue359_charge_diag]
+    type = ADParsedFunctorMaterial
+    property_name = issue359_charge_density_C_m3
+    functor_names = 'p_gas_h T_g_h w_O2p_h w_Om_h w_Op_h electron_density_out'
+    functor_symbols = 'prs tmp wp wm wo ne'
+    expression = '{ELEMENTARY_CHARGE_C:.17g}*((prs*0.032/(8.31446261815324*tmp))*{AVOGADRO:.17g}*(wp/0.032-wm/0.016+wo/0.016)-ne)'
+  []""",
+    )
+
+    for block in (
+        """  [issue359_phi_min]
+    type = ADElementExtremeFunctorValue
+    functor = potential_from_poisson
+    value_type = min
+    execute_on = 'FINAL'
+  []""",
+        """  [issue359_phi_max]
+    type = ADElementExtremeFunctorValue
+    functor = potential_from_poisson
+    value_type = max
+    execute_on = 'FINAL'
+  []""",
+        """  [issue359_ne_min]
+    type = ADElementExtremeFunctorValue
+    functor = electron_density_out
+    value_type = min
+    execute_on = 'FINAL'
+  []""",
+        """  [issue359_ne_max]
+    type = ADElementExtremeFunctorValue
+    functor = electron_density_out
+    value_type = max
+    execute_on = 'FINAL'
+  []""",
+        """  [issue359_ne_avg]
+    type = ElementAverageFunctorPostprocessor
+    functor = electron_density_out
+    execute_on = 'FINAL'
+  []""",
+        """  [issue359_mean_energy_min]
+    type = ADElementExtremeFunctorValue
+    functor = mean_energy_out
+    value_type = min
+    execute_on = 'FINAL'
+  []""",
+        """  [issue359_mean_energy_max]
+    type = ADElementExtremeFunctorValue
+    functor = mean_energy_out
+    value_type = max
+    execute_on = 'FINAL'
+  []""",
+        """  [issue359_mean_energy_avg]
+    type = ElementAverageFunctorPostprocessor
+    functor = mean_energy_out
+    execute_on = 'FINAL'
+  []""",
+        """  [issue359_Te_min_K]
+    type = ADElementExtremeFunctorValue
+    functor = issue359_Te_K
+    value_type = min
+    execute_on = 'FINAL'
+  []""",
+        """  [issue359_Te_max_K]
+    type = ADElementExtremeFunctorValue
+    functor = issue359_Te_K
+    value_type = max
+    execute_on = 'FINAL'
+  []""",
+        """  [issue359_Te_avg_K]
+    type = ElementAverageFunctorPostprocessor
+    functor = issue359_Te_K
+    execute_on = 'FINAL'
+  []""",
+        """  [issue359_charge_min]
+    type = ADElementExtremeFunctorValue
+    functor = issue359_charge_density_C_m3
+    value_type = min
+    execute_on = 'FINAL'
+  []""",
+        """  [issue359_charge_max]
+    type = ADElementExtremeFunctorValue
+    functor = issue359_charge_density_C_m3
+    value_type = max
+    execute_on = 'FINAL'
+  []""",
+        """  [issue359_charge_avg]
+    type = ElementAverageFunctorPostprocessor
+    functor = issue359_charge_density_C_m3
+    execute_on = 'FINAL'
+  []""",
+        """  [issue359_charge_integral]
+    type = ADElementIntegralFunctorPostprocessor
+    functor = issue359_charge_density_C_m3
+    execute_on = 'FINAL'
+  []""",
+    ):
+        text = mb.insert_child_block(text, "Postprocessors", block)
+
     action = "GummelIteration/electron_poisson"
     text = mp.upsert_parameter(
         text, action, "parent_to_electron_source_variables", "'p_gas_h T_g_h'"
@@ -743,6 +855,24 @@ def _construction_audit(
             and "T_e_from_gummel_K" in outer
             and "mean_energy_from_gummel" in outer
         ),
+        "driver_final_diagnostics_present": all(
+            mb.has_block(driver, f"Postprocessors/{name}")
+            for name in (
+                "issue359_phi_min",
+                "issue359_phi_max",
+                "issue359_ne_min",
+                "issue359_ne_max",
+                "issue359_ne_avg",
+                "issue359_mean_energy_min",
+                "issue359_mean_energy_max",
+                "issue359_mean_energy_avg",
+                "issue359_Te_avg_K",
+                "issue359_charge_min",
+                "issue359_charge_max",
+                "issue359_charge_avg",
+                "issue359_charge_integral",
+            )
+        ),
         "quasi_neutral_electron_initial_condition": (
             math.isclose(
                 float(
@@ -843,6 +973,70 @@ def _stage(root: Path) -> dict[str, Any]:
     return meta
 
 
+def _read_final_diagnostics(case: Path) -> dict[str, float]:
+    paths = sorted(case.glob("*_gummel_driver0_final_csv.csv"))
+    if len(paths) != 1:
+        raise Issue359Error(
+            f"expected one Gummel driver FINAL CSV, found {len(paths)}: {paths}"
+        )
+    with paths[0].open(newline="") as handle:
+        rows = list(csv.DictReader(handle))
+    if len(rows) != 1:
+        raise Issue359Error(
+            f"expected one Gummel driver FINAL row, found {len(rows)} in {paths[0]}"
+        )
+    row = {key: float(value) for key, value in rows[0].items() if key and value}
+    required = (
+        "fixed_point_iterations",
+        "fp_delta_phi_max",
+        "issue359_phi_min",
+        "issue359_phi_max",
+        "issue359_ne_min",
+        "issue359_ne_max",
+        "issue359_ne_avg",
+        "issue359_mean_energy_min",
+        "issue359_mean_energy_max",
+        "issue359_mean_energy_avg",
+        "issue359_Te_min_K",
+        "issue359_Te_max_K",
+        "issue359_Te_avg_K",
+        "issue359_charge_min",
+        "issue359_charge_max",
+        "issue359_charge_avg",
+        "issue359_charge_integral",
+    )
+    missing = [key for key in required if key not in row]
+    if missing:
+        raise Issue359Error(f"FINAL diagnostic columns missing: {missing}")
+
+    charge_number_avg = row["issue359_charge_avg"] / ELEMENTARY_CHARGE_C
+    relative_charge_imbalance = abs(charge_number_avg) / max(
+        abs(row["issue359_ne_avg"]), 1.0
+    )
+    return {
+        "fixed_point_iterations": row["fixed_point_iterations"],
+        "delta_phi_max_V": row["fp_delta_phi_max"],
+        "phi_min_V": row["issue359_phi_min"],
+        "phi_max_V": row["issue359_phi_max"],
+        "phi_span_V": row["issue359_phi_max"] - row["issue359_phi_min"],
+        "electron_density_min_m3": row["issue359_ne_min"],
+        "electron_density_max_m3": row["issue359_ne_max"],
+        "electron_density_avg_m3": row["issue359_ne_avg"],
+        "mean_energy_min_eV": row["issue359_mean_energy_min"],
+        "mean_energy_max_eV": row["issue359_mean_energy_max"],
+        "mean_energy_avg_eV": row["issue359_mean_energy_avg"],
+        "electron_temperature_min_K": row["issue359_Te_min_K"],
+        "electron_temperature_max_K": row["issue359_Te_max_K"],
+        "electron_temperature_avg_K": row["issue359_Te_avg_K"],
+        "charge_density_min_C_m3": row["issue359_charge_min"],
+        "charge_density_max_C_m3": row["issue359_charge_max"],
+        "charge_density_avg_C_m3": row["issue359_charge_avg"],
+        "volume_charge_C": row["issue359_charge_integral"],
+        "charge_number_imbalance_avg_m3": charge_number_avg,
+        "relative_charge_imbalance_vs_ne": relative_charge_imbalance,
+    }
+
+
 def run(args: argparse.Namespace) -> int:
     exe = resolve_executable(args.physics)
     validate_executable(exe)
@@ -890,20 +1084,36 @@ def run(args: argparse.Namespace) -> int:
         extra_args=("-snes_converged_reason", "-ksp_converged_reason"),
         timeout_seconds=args.timeout,
     )
+    diagnostics: dict[str, float] | None = None
+    diagnostic_error: str | None = None
+    if runtime.returncode == 0:
+        try:
+            diagnostics = _read_final_diagnostics(case)
+        except Issue359Error as exc:
+            diagnostic_error = str(exc)
+
+    status = "RUNTIME_PASS" if runtime.returncode == 0 else "RUNTIME_FAIL"
+    if runtime.returncode == 0 and diagnostics is None:
+        status = "DIAGNOSTIC_FAIL"
+
     summary = {
-        "status": "RUNTIME_PASS" if runtime.returncode == 0 else "RUNTIME_FAIL",
+        "status": status,
         "checks": checks,
         "runtime": {
             "returncode": runtime.returncode,
             "wall_seconds": runtime.wall_seconds,
         },
+        "final_diagnostics": diagnostics,
+        "diagnostic_error": diagnostic_error,
         "construction": meta,
     }
     (root / "summary.json").write_text(
         json.dumps(summary, indent=2, sort_keys=True) + "\n"
     )
     print("ISSUE359_GUMMEL_ICP_SUMMARY " + json.dumps(summary, sort_keys=True))
-    return 0 if runtime.returncode == 0 else 3
+    if runtime.returncode != 0:
+        return 3
+    return 0 if diagnostics is not None else 4
 
 
 def main() -> int:
