@@ -209,6 +209,27 @@ def _canonicalize_qualified_driver(text: str) -> str:
 
 def _electron_input(src: str) -> str:
     text = _replace_mesh(src)
+    text = mp.upsert_parameter(
+        text, "Variables/log_e", "initial_condition", f"{INITIAL_LOG_E:.17g}"
+    )
+    text = mp.upsert_parameter(
+        text,
+        "Variables/n_epsilon",
+        "initial_condition",
+        f"{INITIAL_EPSILON_HAT:.17g}",
+    )
+    text = mp.upsert_parameter(
+        text,
+        "AuxVariables/electron_density_out",
+        "initial_condition",
+        f"{INITIAL_ELECTRON_DENSITY_M3:.17g}",
+    )
+    text = mp.upsert_parameter(
+        text,
+        "AuxVariables/mean_energy_out",
+        "initial_condition",
+        f"{ENERGY_REF_EV:.17g}",
+    )
     text = _add_aux(text, "p_gas_from_heavy", PRESSURE_PA)
     text = _add_aux(text, "T_g_from_heavy", TG_K)
 
@@ -311,6 +332,25 @@ def _electron_input(src: str) -> str:
 
 def _poisson_input(src: str) -> str:
     text = _replace_mesh(src)
+    text = mp.upsert_parameter(
+        text,
+        "AuxVariables/log_e_frozen",
+        "initial_condition",
+        f"{INITIAL_LOG_E:.17g}",
+    )
+    text = mp.upsert_parameter(
+        text,
+        "AuxVariables/n_epsilon_frozen",
+        "initial_condition",
+        f"{INITIAL_EPSILON_HAT:.17g}",
+    )
+    for species in ("O2p", "Om", "Op"):
+        text = mp.upsert_parameter(
+            text,
+            f"AuxVariables/w_{species}_frozen",
+            "initial_condition",
+            f"{MASS_FRACTIONS[species]:.17g}",
+        )
     text = _add_aux(text, "p_gas_from_heavy", PRESSURE_PA)
     text = _add_aux(text, "T_g_from_heavy", TG_K)
 
