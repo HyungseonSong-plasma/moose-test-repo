@@ -381,7 +381,7 @@ jobs:
             --user 0:0 \
             --workdir /workspace \
             -v "$PWD:/workspace" \
-            -v "$qualified:/tmp/qualified:ro" \
+            -v "$qualified:/tmp/qualified" \
             "$EXPECTED_BUILD_BASE_REF" \
             -lc '
               set -euxo pipefail
