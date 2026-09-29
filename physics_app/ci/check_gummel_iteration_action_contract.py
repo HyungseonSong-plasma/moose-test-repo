@@ -82,10 +82,13 @@ for forbidden in (
     '"electron_multiapp_type"',
     '"poisson_multiapp_type"',
     '"poisson_transformed_variables"',
-    '"no_restore"',
 ):
     assert forbidden not in src, forbidden
 
+# no_restore is retired as a user option but retained as a fixed orchestration
+# invariant on both transient sub-applications.
+assert 'params.addParam<bool>(\n      "no_restore"' not in src
+assert 'getParam<bool>("no_restore")' not in src
 assert 'const std::string electron_type = "TransientMultiApp";' in src
 assert 'const std::string poisson_type = "TransientMultiApp";' in src
 assert 'electron_params.set<bool>("no_restore") = true;' in src
