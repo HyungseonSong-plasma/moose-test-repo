@@ -349,3 +349,56 @@ jobs:
             echo "ORDINARY_CI_REBUILDS_MOOSE_STACK=false"
             echo "ORDINARY_CI_COMPILES_PHYSICS_APPLICATION=false"
           }
+
+
+  issue351-oxygen-10mtorr-runtime:
+    if: github.event_name == 'pull_request' && github.head_ref == 'issue-gummel-10mtorr-fixture'
+    name: Issue351 Oxygen 10mTorr runtime comparison
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Log in to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build exact branch Physics and validate Oxygen frozen-heavy fixture
+        shell: bash
+        run: |
+          set -euxo pipefail
+          docker pull "$EXPECTED_BUILD_BASE_REF"
+          docker run --rm \
+            --entrypoint /bin/bash \
+            --user 0:0 \
+            --workdir /workspace \
+            -v "$PWD:/workspace" \
+            "$EXPECTED_BUILD_BASE_REF" \
+            -lc '
+              set -euxo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              git config --global --add safe.directory /opt/physics_vendor/moose
+              git config --global --add safe.directory /opt/physics_vendor/crane
+              git config --global --add safe.directory /opt/physics_vendor/squirrel
+              git config --global --add safe.directory /opt/physics_vendor/zapdos
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+              make -C /workspace/physics_app -j2
+              python3 /workspace/experiments/Issue351_10mtorr_fixture/control.py \
+                --binary /workspace/physics_app/physics-opt
+            '
+      - name: Upload Oxygen 10 mTorr comparison evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue351-oxygen-10mtorr-comparison
+          path: experiments/Issue351_10mtorr_fixture/results
+          if-no-files-found: ignore
