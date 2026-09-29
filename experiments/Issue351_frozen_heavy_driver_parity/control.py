@@ -211,15 +211,10 @@ def _driver_input(fast: str) -> str:
 
 [GummelIteration]
   [electron_poisson]
-    electron_multiapp = electron
     electron_input_file = electron_sub.i
-    electron_multiapp_type = TransientMultiApp
 
     poisson_multiapp = poisson
     poisson_input_file = poisson_sub.i
-    poisson_multiapp_type = TransientMultiApp
-
-    electron_state_variables = 'log_e n_epsilon'
 
     electron_density_variable = log_e
     poisson_electron_density_variable = log_e_frozen
@@ -247,10 +242,7 @@ def _driver_input(fast: str) -> str:
 
     poisson_transformed_variables = 'potential_plasma'
     relaxation_factor = 0.45
-    no_restore = true
-
     manage_convergence = true
-    convergence_name = gummel_delta_phi
     delta_phi_postprocessor = fp_delta_phi_max
     delta_phi_abs_tol = {DPHI_TOL:.17g}
   []
