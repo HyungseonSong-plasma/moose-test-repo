@@ -349,3 +349,75 @@ jobs:
             echo "ORDINARY_CI_REBUILDS_MOOSE_STACK=false"
             echo "ORDINARY_CI_COMPILES_PHYSICS_APPLICATION=false"
           }
+
+
+  issue353-10mtorr-full-parity:
+    if: github.event_name == 'pull_request' && github.head_ref == 'issue-gummel-10mtorr-fixture'
+    name: Issue353 10mTorr full Oxygen parity
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Log in to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build exact branch Physics and run 10mTorr full parity
+        shell: bash
+        run: |
+          set -euxo pipefail
+          qualified=/tmp/qualified
+          rm -rf "$qualified"
+          git clone --filter=blob:none --no-checkout https://github.com/HyungseonSong-plasma/moose-test-repo.git "$qualified"
+          git -C "$qualified" checkout c9726d45e912f2476958d580c88e3421b5d4868b
+          docker pull "$EXPECTED_BUILD_BASE_REF"
+          docker run --rm \
+            --entrypoint /bin/bash \
+            --user 0:0 \
+            --workdir /workspace \
+            -v "$PWD:/workspace" \
+            -v "$qualified:/tmp/qualified:ro" \
+            "$EXPECTED_BUILD_BASE_REF" \
+            -lc '
+              set -euxo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              git config --global --add safe.directory /opt/physics_vendor/moose
+              git config --global --add safe.directory /opt/physics_vendor/crane
+              git config --global --add safe.directory /opt/physics_vendor/squirrel
+              git config --global --add safe.directory /opt/physics_vendor/zapdos
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+              export QUALIFIED_REPO=/tmp/qualified
+              make -C /workspace/physics_app -j2
+              cd /workspace
+              python3 - <<"PY"
+from experiments.Issue351_frozen_heavy_driver_parity import control as c
+
+P_10_MTORR_PA = 1.333223684
+old = c.g337.wall08.base.P_GAS_PA
+print(f"ISSUE353_PRESSURE_OVERRIDE old={old:.17g} new={P_10_MTORR_PA:.17g}")
+c.g337.wall08.base.P_GAS_PA = P_10_MTORR_PA
+
+# Structural equivalence, exact-source input validation, then full 88-cycle parity.
+c.p0("full")
+c.p1("full")
+c.run("full")
+PY
+            '
+      - name: Upload 10mTorr full parity evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue353-10mtorr-full-parity
+          path: experiments/Issue351_frozen_heavy_driver_parity/results/full
+          if-no-files-found: ignore
+          retention-days: 30
