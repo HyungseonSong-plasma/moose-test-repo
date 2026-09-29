@@ -727,6 +727,30 @@ def _construction_audit(
             and "T_e_from_gummel_K" in outer
             and "mean_energy_from_gummel" in outer
         ),
+        "quasi_neutral_electron_initial_condition": (
+            math.isclose(
+                float(
+                    mp.get_parameter(
+                        electron, "Variables/log_e", "initial_condition"
+                    )
+                    or "nan"
+                ),
+                INITIAL_LOG_E,
+                rel_tol=0.0,
+                abs_tol=1.0e-12,
+            )
+            and math.isclose(
+                float(
+                    mp.get_parameter(
+                        electron, "Variables/n_epsilon", "initial_condition"
+                    )
+                    or "nan"
+                ),
+                INITIAL_EPSILON_HAT,
+                rel_tol=0.0,
+                abs_tol=1.0e-12,
+            )
+        ),
     }
     failed = sorted(k for k, ok in checks.items() if not ok)
     return {
@@ -774,6 +798,16 @@ def _stage(root: Path) -> dict[str, Any]:
         "flow_sccm": FLOW_SCCM,
         "outlet_pressure_Pa": PRESSURE_PA,
         "gas_temperature_K": TG_K,
+        "initial_charge_balance": {
+            "mixture_density_kg_m3": INITIAL_MIXTURE_DENSITY_KG_M3,
+            "electron_density_m3": INITIAL_ELECTRON_DENSITY_M3,
+            "electron_molar_density_mol_m3": INITIAL_ELECTRON_MOLAR_M3,
+            "log_e_initial": INITIAL_LOG_E,
+            "n_epsilon_initial": INITIAL_EPSILON_HAT,
+            "mean_energy_initial_eV": ENERGY_REF_EV,
+            "formula": "ne = rho*NA*sum(z_i*w_i/M_i)",
+            "reference_density_m3": ELECTRON_DENSITY_REF_M3,
+        },
         "electron_boundary_set": list(ALL_ELECTRON_BOUNDARIES),
         "electron_particle_bc": "PhysicsFVElectronGroundedSheathCollectionBC",
         "electron_energy_bc": "PhysicsFVElectronGroundedSheathEnergyBC",
