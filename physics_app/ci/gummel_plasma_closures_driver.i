@@ -14,11 +14,13 @@
   # Heavy snapshot copied once from OUTER_MAIN before this driver executes.
   [T_g_frozen]
     type = MooseVariableFVReal
+    # Frozen heavy-gas temperature [K].
     initial_condition = 300.0
   []
   [p_gas_frozen]
     type = MooseVariableFVReal
-    initial_condition = 100.0
+    # Frozen absolute gas pressure [Pa]; 10 mTorr = 1.333223684 Pa.
+    initial_condition = 1.333223684
   []
   [rho_frozen]
     type = MooseVariableFVReal
