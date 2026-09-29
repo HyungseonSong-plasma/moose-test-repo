@@ -65,10 +65,6 @@
     type = MooseVariableFVReal
     initial_condition = 30000.0
   []
-  [phi_from_gummel]
-    type = MooseVariableFVReal
-    initial_condition = 0.0
-  []
 []
 
 [PlasmaClosures]
@@ -110,8 +106,8 @@
   [converged_gummel_to_heavy]
     type = MultiAppCopyTransfer
     from_multi_app = gummel_driver
-    source_variable = 'n_e_converged T_e_converged phi_converged'
-    variable = 'n_e_from_gummel T_e_from_gummel phi_from_gummel'
+    source_variable = 'n_e_converged T_e_converged'
+    variable = 'n_e_from_gummel T_e_from_gummel'
   []
 []
 

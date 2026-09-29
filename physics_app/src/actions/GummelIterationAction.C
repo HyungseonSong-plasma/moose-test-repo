@@ -26,33 +26,15 @@ GummelIterationAction::validParams()
       "sibling electron and Poisson MultiApps and transfers directly between them.");
   params.addParam<MultiAppName>(
       "electron_multiapp", "electron", "Name of the electron MultiApp in two-sub-application mode.");
-  params.addParam<std::string>(
-      "electron_multiapp_type",
-      "TransientMultiApp",
-      "MOOSE MultiApp type used for the electron solve.");
   params.addRequiredParam<FileName>(
       "poisson_input_file", "Input file for the Poisson sub-application.");
   params.addRequiredParam<MultiAppName>(
       "poisson_multiapp", "Name of the Poisson MultiApp created by this Action.");
-  params.addParam<std::string>(
-      "poisson_multiapp_type",
-      "TransientMultiApp",
-      "MOOSE MultiApp type used for the Poisson solve.");
-  params.addParam<bool>(
-      "no_restore",
-      true,
-      "Disable restore between fixed-point iterations so sub-applications retain their current "
-      "iterates.");
   params.addRangeCheckedParam<Real>(
       "relaxation_factor",
       1.0,
       "relaxation_factor>0 & relaxation_factor<2",
       "Relaxation factor applied to the Poisson MultiApp transformed variables.");
-  params.addParam<std::vector<std::string>>(
-      "poisson_transformed_variables",
-      {},
-      "Poisson sub-application variables transformed by the MOOSE fixed-point algorithm.");
-
   params.addParam<VariableName>(
       "electron_density_variable",
       "n_e",
@@ -81,11 +63,6 @@ GummelIterationAction::validParams()
       "parent_potential_variable",
       "phi_from_poisson",
       "Parent/driver auxiliary potential used when potential_transfer_mode=through_parent.");
-
-  params.addParam<std::vector<VariableName>>(
-      "electron_state_variables",
-      {},
-      "Descriptive list of electron state variables. The Action does not construct their equations.");
 
   params.addParam<std::vector<VariableName>>(
       "electron_to_poisson_source_variables",
@@ -266,25 +243,25 @@ GummelIterationAction::act()
     if (usesElectronSubApp())
     {
       const auto & electron_name = getParam<MultiAppName>("electron_multiapp");
-      const auto & electron_type = getParam<std::string>("electron_multiapp_type");
+      const std::string electron_type = "TransientMultiApp";
       auto electron_params = _factory.getValidParams(electron_type);
       electron_params.set<std::vector<FileName>>("input_files") =
           {getParam<FileName>("electron_input_file")};
       electron_params.set<ExecFlagEnum>("execute_on") = EXEC_TIMESTEP_BEGIN;
-      electron_params.set<bool>("no_restore") = getParam<bool>("no_restore");
+      electron_params.set<bool>("no_restore") = true;
 
       _problem->addMultiApp(electron_type, electron_name, electron_params);
     }
 
-    const auto & poisson_type = getParam<std::string>("poisson_multiapp_type");
+    const std::string poisson_type = "TransientMultiApp";
     auto poisson_params = _factory.getValidParams(poisson_type);
     poisson_params.set<std::vector<FileName>>("input_files") =
         {getParam<FileName>("poisson_input_file")};
     poisson_params.set<ExecFlagEnum>("execute_on") = EXEC_TIMESTEP_END;
     poisson_params.set<Real>("relaxation_factor") = getParam<Real>("relaxation_factor");
     poisson_params.set<std::vector<std::string>>("transformed_variables") =
-        getParam<std::vector<std::string>>("poisson_transformed_variables");
-    poisson_params.set<bool>("no_restore") = getParam<bool>("no_restore");
+        {getParam<VariableName>("poisson_potential_variable")};
+    poisson_params.set<bool>("no_restore") = true;
 
     _problem->addMultiApp(poisson_type, poisson_name, poisson_params);
   }
