@@ -84,7 +84,6 @@
     parent_to_poisson_variables = 'rho_from_heavy w_O2p_from_heavy w_Om_from_heavy w_Op_from_heavy'
 
     # phi is returned automatically through parent_potential_variable.
-    poisson_transformed_variables = 'phi'
     relaxation_factor = 0.45
 
     # Structural CI fixture. Production cases may enable DeltaPhi convergence
