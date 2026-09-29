@@ -339,7 +339,7 @@ def _build_input() -> tuple[str, dict[str, Any]]:
         text,
         "Executioner",
         "petsc_options_value",
-        "'lu NONZERO 0.5'",
+        "'lu NONZERO 0.25'",
     )
     text = _add_profile_sampler(text)
 
@@ -372,7 +372,7 @@ def _build_input() -> tuple[str, dict[str, Any]]:
         "electron_energy_wall_model": "closed for first volume discriminator",
         "nonlinear_globalization": {
             "line_search": "basic",
-            "damping": 0.5,
+            "damping": 0.25,
             "physics_residual_changed": False,
         },
         "geometry": "real-QVT RZ ICP reactor",
