@@ -29,7 +29,6 @@ SMOKE_ELECTRON = ROOT / "physics_app/ci/plasma_closures_transport_table.txt"
 
 PRESSURE_PA = 1.333223684
 TG_K = 300.0
-TE_K = 44350.611537665
 NREF_M3 = 1.0e16
 DT_S = 5.6650790022617894e-11
 NUM_STEPS = 8
@@ -56,107 +55,19 @@ MASS = {
     "Op": 0.016,
     "Os": 0.016,
 }
+WALL_BOUNDARIES = (
+    "plasma_electrode",
+    "plasma_metal",
+    "plasma_right",
+    "plasma_cover",
+    "plasma_wafer",
+    "plasma_focus_ring",
+)
+TE_REFERENCE_K = (2.0 / 3.0) * ENERGY_REFERENCE_EV * E_CHARGE / K_B
 
 
 class ICPProfileError(RuntimeError):
     pass
-
-
-def _freeze_mean_energy(text: str) -> str:
-    """Freeze the electron mean energy for the geometry-only profile baseline."""
-    for path in (
-        "Variables/mean_en",
-        "FunctorMaterials/s5r_mean_energy",
-        "FVKernels/s5r_mean_en_time",
-        "FVKernels/s5r_mean_en_diffusion",
-        "FVKernels/s5r_ei02_elastic_energy",
-        "FVKernels/s5r_ei17_elastic_energy",
-        "FVKernels/s5r_energy_ei10",
-        "FVKernels/s5r_energy_ei16",
-        "FVKernels/s5r_energy_ei19",
-        "FVKernels/s5r_energy_ei18_o_to_os",
-        "FVKernels/s5r_energy_ei20_o_ionization",
-        "FVKernels/s5r_energy_edetach_om",
-    ):
-        if mb.has_block(text, path):
-            text = mb.remove_block(text, path)
-
-    text = mp.upsert_parameter(
-        text,
-        "FunctorMaterials/electron_constants",
-        "prop_names",
-        "'mean_en_solved carrier_one'",
-    )
-    text = mp.upsert_parameter(
-        text,
-        "FunctorMaterials/electron_constants",
-        "prop_values",
-        f"'{ENERGY_REFERENCE_EV:.17g} 1.0'",
-    )
-    text = mp.upsert_parameter(
-        text,
-        "Postprocessors/s5r_mean_en_state_min",
-        "functor",
-        "mean_en_solved",
-    )
-    return text
-
-
-def _audit_geometry_baseline(text: str, source_meta: dict[str, Any]) -> dict[str, Any]:
-    energy_kernel_paths = (
-        "FVKernels/s5r_mean_en_time",
-        "FVKernels/s5r_mean_en_diffusion",
-        "FVKernels/s5r_ei02_elastic_energy",
-        "FVKernels/s5r_ei17_elastic_energy",
-        "FVKernels/s5r_energy_ei10",
-        "FVKernels/s5r_energy_ei16",
-        "FVKernels/s5r_energy_ei19",
-        "FVKernels/s5r_energy_ei18_o_to_os",
-        "FVKernels/s5r_energy_ei20_o_ionization",
-        "FVKernels/s5r_energy_edetach_om",
-    )
-    checks = {
-        "source_s5r_audit_pass": source_meta["audit"]["status"] == "PASS",
-        "solved_energy_variable_removed": not mb.has_block(text, "Variables/mean_en"),
-        "solved_energy_bridge_removed": not mb.has_block(
-            text, "FunctorMaterials/s5r_mean_energy"
-        ),
-        "energy_equation_removed": all(not mb.has_block(text, p) for p in energy_kernel_paths),
-        "transport_uses_frozen_mean_energy": (
-            mp.get_parameter(
-                text, "FunctorMaterials/electron_transport", "mean_energy"
-            )
-            == "mean_en_solved"
-        ),
-        "frozen_mean_energy_owner": (
-            mp.words(
-                mp.get_parameter(
-                    text, "FunctorMaterials/electron_constants", "prop_names"
-                )
-            )
-            == ["mean_en_solved", "carrier_one"]
-            and math.isclose(
-                float(
-                    mp.words(
-                        mp.get_parameter(
-                            text,
-                            "FunctorMaterials/electron_constants",
-                            "prop_values",
-                        )
-                    )[0]
-                ),
-                ENERGY_REFERENCE_EV,
-                rel_tol=0.0,
-                abs_tol=1.0e-12,
-            )
-        ),
-    }
-    failed = sorted(name for name, passed in checks.items() if not passed)
-    return {
-        "status": "PASS" if not failed else "FAIL",
-        "checks": checks,
-        "failed_checks": failed,
-    }
 
 
 def _replace_top_level(text: str, name: str, value: str) -> str:
@@ -167,10 +78,174 @@ def _replace_top_level(text: str, name: str, value: str) -> str:
     return replaced
 
 
+def _couple_solved_electron_temperature(text: str) -> str:
+    """Remove the historical fixed Te and make solved mean energy the sole electron thermal state."""
+    text = mp.upsert_parameter(
+        text,
+        "FunctorMaterials/state_constants",
+        "prop_names",
+        "'T_g mu_flow'",
+    )
+    text = mp.upsert_parameter(
+        text,
+        "FunctorMaterials/state_constants",
+        "prop_values",
+        "'${T_g_value} ${mu_const}'",
+    )
+
+    path = "FunctorMaterials/issue357_solved_electron_temperature"
+    mb.require_absent(text, path)
+    text = mb.insert_child_block(
+        text,
+        "FunctorMaterials",
+        f"""  [issue357_solved_electron_temperature]
+    type = ADParsedFunctorMaterial
+    property_name = electron_temperature_solved_K
+    functor_names = 'mean_en_solved'
+    functor_symbols = 'mean_ev'
+    expression = '{(2.0 / 3.0) * E_CHARGE / K_B:.17g}*mean_ev'
+    block = plasma
+  []""",
+    )
+    text = mp.upsert_parameter(
+        text,
+        "FunctorMaterials/heavy_transport",
+        "electron_temperature",
+        "electron_temperature_solved_K",
+    )
+    text = mp.upsert_parameter(
+        text,
+        "FunctorMaterials/heavy_transport",
+        "electron_number_density",
+        "n_e_physical",
+    )
+    return text
+
+
+def _add_full_electron_energy_transport(text: str) -> str:
+    """Add the qualified drift/Joule terms missing from the historical S5-R energy PDE."""
+    for path in (
+        "FVKernels/issue357_energy_drift",
+        "FVKernels/issue357_energy_joule",
+    ):
+        mb.require_absent(text, path)
+
+    boundaries = "'" + " ".join(("inlet", "outlet") + WALL_BOUNDARIES) + "'"
+    text = mb.insert_child_block(
+        text,
+        "FVKernels",
+        f"""  [issue357_energy_drift]
+    type = PhysicsFVElectrostaticDrift
+    variable = mean_en
+    potential = potential_plasma
+    mobility = electron_energy_mobility
+    carrier = carrier_one
+    charge_number = -1
+    advected_interp_method = upwind
+    boundaries_to_avoid = {boundaries}
+    block = plasma
+  []""",
+    )
+    text = mb.insert_child_block(
+        text,
+        "FVKernels",
+        f"""  [issue357_energy_joule]
+    type = PhysicsFVElectronEnergyJouleHeating
+    variable = mean_en
+    electron_density = n_e
+    potential = potential_plasma
+    mobility = electron_mobility
+    diffusion = electron_diffusion
+    energy_reference_eV = {ENERGY_REFERENCE_EV:.17g}
+    block = plasma
+  []""",
+    )
+    return text
+
+
+def _audit_solved_energy_transplant(text: str) -> dict[str, Any]:
+    checks = {
+        "energy_state_is_solver_variable": (
+            mp.get_parameter(text, "Variables/mean_en", "type") == "MooseVariableFVReal"
+        ),
+        "energy_accumulation": (
+            mp.get_parameter(text, "FVKernels/s5r_mean_en_time", "variable") == "mean_en"
+        ),
+        "energy_diffusion": (
+            mp.get_parameter(text, "FVKernels/s5r_mean_en_diffusion", "coeff")
+            == "electron_energy_diffusion"
+        ),
+        "energy_drift": (
+            mp.get_parameter(text, "FVKernels/issue357_energy_drift", "potential")
+            == "potential_plasma"
+            and mp.get_parameter(text, "FVKernels/issue357_energy_drift", "mobility")
+            == "electron_energy_mobility"
+        ),
+        "energy_joule": (
+            mp.get_parameter(text, "FVKernels/issue357_energy_joule", "type")
+            == "PhysicsFVElectronEnergyJouleHeating"
+            and mp.get_parameter(text, "FVKernels/issue357_energy_joule", "electron_density")
+            == "n_e"
+        ),
+        "reaction_energy_sources_present": all(
+            mb.has_block(text, path)
+            for path in (
+                "FVKernels/s5r_ei02_elastic_energy",
+                "FVKernels/s5r_ei17_elastic_energy",
+                "FVKernels/s5r_energy_ei10",
+                "FVKernels/s5r_energy_ei16",
+                "FVKernels/s5r_energy_ei19",
+                "FVKernels/s5r_energy_ei18_o_to_os",
+                "FVKernels/s5r_energy_ei20_o_ionization",
+                "FVKernels/s5r_energy_edetach_om",
+            )
+        ),
+        "transport_uses_solved_mean_energy": (
+            mp.get_parameter(text, "FunctorMaterials/electron_transport", "mean_energy")
+            == "mean_en_solved"
+        ),
+        "heavy_uses_solved_electron_temperature": (
+            mp.get_parameter(
+                text, "FunctorMaterials/heavy_transport", "electron_temperature"
+            )
+            == "electron_temperature_solved_K"
+        ),
+        "heavy_uses_physical_electron_density": (
+            mp.get_parameter(
+                text, "FunctorMaterials/heavy_transport", "electron_number_density"
+            )
+            == "n_e_physical"
+        ),
+        "fixed_Te_removed": (
+            "T_e" not in mp.words(
+                mp.get_parameter(text, "FunctorMaterials/state_constants", "prop_names")
+                or ""
+            )
+            and "electron_temperature = T_e" not in text
+        ),
+        "strict_lookup": (
+            mp.get_parameter(text, "FunctorMaterials/electron_transport", "bounds_policy")
+            == "error"
+        ),
+    }
+    failed = sorted(name for name, passed in checks.items() if not passed)
+    return {
+        "status": "PASS" if not failed else "FAIL",
+        "checks": checks,
+        "failed_checks": failed,
+        "electron_temperature_reference_K": TE_REFERENCE_K,
+        "temperature_ownership": {
+            "heavy_gas": "T_g",
+            "electron": "electron_temperature_solved_K(mean_en_solved)",
+        },
+        "wall_energy_model": "closed electron-energy wall for first volume discriminator",
+    }
+
+
 def _add_profile_sampler(text: str) -> str:
     profile_block = """  [profile_samples]
     type = ElementValueSampler
-    variable = 'p n_e mean_en_solved potential_plasma w_O2s w_O2p w_O w_Om w_Op w_Os'
+    variable = 'p n_e mean_en potential_plasma w_O2s w_O2p w_O w_Om w_Op w_Os'
     block = plasma
     sort_by = id
     execute_on = 'INITIAL TIMESTEP_END'
@@ -197,7 +272,23 @@ def _add_profile_sampler(text: str) -> str:
 def _build_input() -> tuple[str, dict[str, Any]]:
     base = (SOURCE / "heavy_base.i").read_text()
     text, meta = build_s5r_input(base)
-    text = _freeze_mean_energy(text)
+
+    # S5-R owns the normalized electron-energy state. Keep only the dimensionless
+    # carrier helper from the historical prescribed-energy layer.
+    text = mp.upsert_parameter(
+        text,
+        "FunctorMaterials/electron_constants",
+        "prop_names",
+        "'carrier_one'",
+    )
+    text = mp.upsert_parameter(
+        text,
+        "FunctorMaterials/electron_constants",
+        "prop_values",
+        "'1.0'",
+    )
+    text = _couple_solved_electron_temperature(text)
+    text = _add_full_electron_energy_transport(text)
 
     # R4-QF1/S5-R intentionally removed the historical Yin_O2 and Yin_O
     # aliases: O2 is the constrained remainder and O has a dedicated uniform
@@ -205,7 +296,6 @@ def _build_input() -> tuple[str, dict[str, Any]]:
     replacements = {
         "outlet_pressure": f"{PRESSURE_PA:.17g}",
         "T_g_value": f"{TG_K:.17g}",
-        "T_e_value": f"{TE_K:.17g}",
         "n_e_value": f"{NREF_M3:.17g}",
         "Yin_O2s": f"{CURRENT_MASS_FRACTIONS['O2s']:.17g}",
         "Yin_O2p": f"{CURRENT_MASS_FRACTIONS['O2p']:.17g}",
@@ -226,18 +316,22 @@ def _build_input() -> tuple[str, dict[str, Any]]:
     text = mp.upsert_parameter(text, "Executioner", "end_time", f"{END_TIME_S:.17g}")
     text = _add_profile_sampler(text)
 
-    audit = _audit_geometry_baseline(text, meta)
+    audit = audit_s5r_input(text)
     if audit["status"] != "PASS":
+        raise ICPProfileError(f"current real-QVT assembly audit failed: {audit['failed_checks']}")
+    energy_audit = _audit_solved_energy_transplant(text)
+    if energy_audit["status"] != "PASS":
         raise ICPProfileError(
-            f"frozen-energy geometry baseline audit failed: {audit['failed_checks']}"
+            f"solved-energy transplant audit failed: {energy_audit['failed_checks']}"
         )
 
     meta = dict(meta)
-    meta["geometry_baseline_audit"] = audit
+    meta["solved_energy_transplant_audit"] = energy_audit
     meta["issue357"] = {
         "pressure_Pa": PRESSURE_PA,
         "T_g_K": TG_K,
-        "T_e_reference_K": TE_K,
+        "electron_temperature_reference_K": TE_REFERENCE_K,
+        "electron_temperature_owner": "derived from solved mean_en_solved",
         "electron_reference_density_m3": NREF_M3,
         "electron_energy_reference_eV": ENERGY_REFERENCE_EV,
         "mass_fractions": CURRENT_MASS_FRACTIONS,
@@ -245,8 +339,12 @@ def _build_input() -> tuple[str, dict[str, Any]]:
         "num_steps": NUM_STEPS,
         "end_time_s": END_TIME_S,
         "flow_sccm": 20.0,
+        "electron_energy_equation": (
+            "time + diffusion + electrostatic drift + Joule + elastic/reaction sources"
+        ),
+        "electron_energy_wall_model": "closed for first volume discriminator",
         "geometry": "real-QVT RZ ICP reactor",
-        "claim": "bounded frozen-mean-energy geometry/profile sanity only",
+        "claim": "bounded geometry/profile sanity only",
     }
     return text, meta
 
@@ -338,7 +436,7 @@ def _derive(case_dir: Path, rows: list[dict[str, str]]) -> list[dict[str, float]
         "y",
         "p",
         "n_e",
-        "mean_en_solved",
+        "mean_en",
         "potential_plasma",
         "w_O2s",
         "w_O2p",
@@ -356,7 +454,11 @@ def _derive(case_dir: Path, rows: list[dict[str, str]]) -> list[dict[str, float]
         mean_molar_mass = 1.0 / sum(fractions[s] / MASS[s] for s in MASS)
         rho = vals["p"] * mean_molar_mass / (R_GAS * TG_K)
         ne = NREF_M3 * vals["n_e"]
-        mean_e = vals["mean_en_solved"]
+        mean_e = (
+            ENERGY_REFERENCE_EV * vals["mean_en"] / vals["n_e"]
+            if vals["n_e"] > 0.0
+            else float("nan")
+        )
         ion_number = (
             rho * fractions["O2p"] / MASS["O2p"] * AVOGADRO
             - rho * fractions["Om"] / MASS["Om"] * AVOGADRO
@@ -543,9 +645,10 @@ def run(args: argparse.Namespace) -> int:
         "final_profile": _summarize(derived),
         "radial_profile": radial,
         "axial_profile": axial,
+        "energy_equation": staged["construction"]["solved_energy_transplant_audit"],
         "interpretation_scope": (
-            "frozen-mean-energy geometry/profile sanity only; solved electron energy "
-            "requires ICP power deposition and remains a separate failed discriminator"
+            "solved-electron-energy volume profile sanity only; no ICP coil RF power "
+            "deposition and no final wall/sheath/SEE validation claim"
         ),
     }
     if not summary["final_profile"]["hard_sanity_pass"]:
