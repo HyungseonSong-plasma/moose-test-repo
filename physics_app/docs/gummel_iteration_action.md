@@ -17,28 +17,22 @@ OUTER_MAIN : heavy-particle FEProblem
 The Action does not construct either subsystem's equations. Each input file
 owns its local kernels, materials, boundary conditions, and solver settings.
 
-## Preferred two-sub-application mode
+## Qualified two-sub-application mode
 
 ```text
 [GummelIteration]
   [electron_poisson]
-    electron_multiapp = electron
     electron_input_file = sub_electron.i
 
     poisson_multiapp = poisson
     poisson_input_file = sub_poisson.i
 
-    # Direct sibling sharing. These are also the defaults.
-    electron_density_variable = n_e
-    poisson_electron_density_variable = n_e
-
-    poisson_potential_variable = phi
-    electron_potential_variable = phi
+    # Core names use the Action defaults:
+    # electron density n_e; Poisson potential phi.
 
     # Optional Poisson fixed-point transform / relaxation.
     poisson_transformed_variables = 'phi'
     relaxation_factor = 0.45
-    no_restore = true
 
     # Optional extra sibling mappings, e.g. mean_en -> mean_en.
     electron_to_poisson_source_variables = 'mean_en'
@@ -48,6 +42,12 @@ owns its local kernels, materials, boundary conditions, and solver settings.
   []
 []
 ```
+
+The Action fixes both inner applications to `TransientMultiApp`; this is part
+of the qualified timestep-identity/no-restore orchestration contract rather
+than a user-selectable model option. The Action also contains no descriptive
+electron-state list: solved electron variables are owned entirely by the
+electron input file and only transferred fields are declared here.
 
 The two core sibling transfers are created automatically:
 
@@ -127,9 +127,12 @@ OUTER_MAIN.H^n
     -- TO_MULTIAPP before driver -->
 GUMMEL_DRIVER.H_frozen
 
-GUMMEL_DRIVER.{n_e,T_e,phi}_converged
+GUMMEL_DRIVER.{n_e,T_e}_converged
     -- FROM_MULTIAPP after driver -->
 OUTER_MAIN fast-state auxiliaries
+
+The potential iterate remains owned by the driver unless the outer heavy
+problem explicitly consumes electrostatic potential.
 ```
 
 A representative outer block is:
@@ -169,8 +172,8 @@ A representative outer block is:
   [converged_gummel_to_heavy]
     type = MultiAppCopyTransfer
     from_multi_app = gummel_driver
-    source_variable = 'n_e_converged T_e_converged phi_converged'
-    variable = 'n_e_from_gummel T_e_from_gummel phi_from_gummel'
+    source_variable = 'n_e_converged T_e_converged'
+    variable = 'n_e_from_gummel T_e_from_gummel'
   []
 []
 ```
@@ -292,7 +295,8 @@ The resulting ordering is:
 outer step n:
   1. copy H^n -> GUMMEL_DRIVER frozen snapshot
   2. execute inner electron <-> Poisson fixed point until convergence
-  3. copy converged n_e / T_e / phi -> OUTER_MAIN
+  3. copy the converged fast state actually consumed by heavy physics
+     (qualified Oxygen example: n_e / T_e) -> OUTER_MAIN
   4. solve heavy equations once: H^n -> H^(n+1)
 ```
 
