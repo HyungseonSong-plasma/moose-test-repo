@@ -349,3 +349,67 @@ jobs:
             echo "ORDINARY_CI_REBUILDS_MOOSE_STACK=false"
             echo "ORDINARY_CI_COMPILES_PHYSICS_APPLICATION=false"
           }
+
+
+  issue357-icp-profile:
+    if: github.event_name == 'pull_request' && github.head_ref == 'issue-357-icp-profile-transplant'
+    name: Issue357 ICP geometry profile
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Log in to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build exact branch and run ICP profile transplant
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python3 -m py_compile experiments/Issue357_icp_geometry_profiles/run.py
+          docker pull "$EXPECTED_BUILD_BASE_REF"
+          docker run --rm \
+            --entrypoint /bin/bash \
+            --user 0:0 \
+            --workdir /workspace \
+            -v "$PWD:/workspace" \
+            "$EXPECTED_BUILD_BASE_REF" \
+            -lc '
+              set -euxo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              git config --global --add safe.directory /opt/physics_vendor/moose
+              git config --global --add safe.directory /opt/physics_vendor/crane
+              git config --global --add safe.directory /opt/physics_vendor/squirrel
+              git config --global --add safe.directory /opt/physics_vendor/zapdos
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+              make -C /workspace/physics_app -j2
+              cd /workspace
+              rm -rf issue357-icp-results
+              python3 -m experiments.Issue357_icp_geometry_profiles.run \
+                --physics physics_app/physics-opt \
+                --results-root issue357-icp-results \
+                --timeout 1200
+              cat issue357-icp-results/summary.json
+              echo "--- radial profile ---"
+              cat issue357-icp-results/radial_profile.csv
+              echo "--- axial profile ---"
+              cat issue357-icp-results/axial_profile.csv
+            '
+      - name: Upload ICP profile evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue357-icp-profile
+          path: issue357-icp-results
+          if-no-files-found: ignore
+          retention-days: 30
