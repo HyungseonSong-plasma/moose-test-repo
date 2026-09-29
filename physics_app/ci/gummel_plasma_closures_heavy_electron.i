@@ -26,11 +26,13 @@
   []
   [T_g_from_heavy]
     type = MooseVariableFVReal
+    # Heavy-gas temperature received from OUTER_MAIN [K].
     initial_condition = 300.0
   []
   [p_gas_from_heavy]
     type = MooseVariableFVReal
-    initial_condition = 100.0
+    # Absolute gas pressure received from OUTER_MAIN [Pa]; 10 mTorr = 1.333223684 Pa.
+    initial_condition = 1.333223684
   []
   [T_e_export]
     type = MooseVariableFVReal
