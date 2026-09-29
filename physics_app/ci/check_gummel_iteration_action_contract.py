@@ -81,11 +81,17 @@ for forbidden in (
     '"electron_state_variables"',
     '"electron_multiapp_type"',
     '"poisson_multiapp_type"',
+    '"poisson_transformed_variables"',
+    '"no_restore"',
 ):
     assert forbidden not in src, forbidden
 
 assert 'const std::string electron_type = "TransientMultiApp";' in src
 assert 'const std::string poisson_type = "TransientMultiApp";' in src
+assert 'electron_params.set<bool>("no_restore") = true;' in src
+assert 'poisson_params.set<bool>("no_restore") = true;' in src
+assert 'poisson_params.set<std::vector<std::string>>("transformed_variables") =' in src
+assert '{getParam<VariableName>("poisson_potential_variable")};' in src
 
 # Pinned-MOOSE Gummel scheduling contract:
 #   TIMESTEP_BEGIN: phi(old) -> electron, then electron solve
@@ -110,6 +116,7 @@ for redundant in (
     "poisson_potential_variable = phi",
     "electron_potential_variable = phi",
     "no_restore = true",
+    "poisson_transformed_variables",
 ):
     assert redundant not in main, redundant
 
@@ -175,6 +182,7 @@ assert "electron_potential_variable = phi" not in driver
 assert "electron_to_poisson_source_variables = 'mean_en'" not in driver
 assert "electron_to_poisson_variables = 'mean_en'" not in driver
 assert "no_restore = true" not in driver
+assert "poisson_transformed_variables" not in driver
 
 for token in (
     "role = electron",
