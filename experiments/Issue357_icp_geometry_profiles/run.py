@@ -324,6 +324,23 @@ def _build_input() -> tuple[str, dict[str, Any]]:
     )
     text = mp.upsert_parameter(text, "Executioner", "dt", f"{DT_S:.17g}")
     text = mp.upsert_parameter(text, "Executioner", "end_time", f"{END_TIME_S:.17g}")
+
+    # Numerical globalization only: keep the physical residual unchanged while
+    # preventing the first Newton full step from crossing the strict-positive
+    # electron-energy domain.
+    text = mp.upsert_parameter(text, "Executioner", "line_search", "basic")
+    text = mp.upsert_parameter(
+        text,
+        "Executioner",
+        "petsc_options_iname",
+        "'-pc_type -pc_factor_shift_type -snes_linesearch_damping'",
+    )
+    text = mp.upsert_parameter(
+        text,
+        "Executioner",
+        "petsc_options_value",
+        "'lu NONZERO 0.5'",
+    )
     text = _add_profile_sampler(text)
 
     audit = audit_s5r_input(text)
@@ -353,6 +370,11 @@ def _build_input() -> tuple[str, dict[str, Any]]:
             "time + diffusion + electrostatic drift + Joule + elastic/reaction sources"
         ),
         "electron_energy_wall_model": "closed for first volume discriminator",
+        "nonlinear_globalization": {
+            "line_search": "basic",
+            "damping": 0.5,
+            "physics_residual_changed": False,
+        },
         "geometry": "real-QVT RZ ICP reactor",
         "claim": "bounded geometry/profile sanity only",
     }
