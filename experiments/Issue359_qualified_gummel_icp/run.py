@@ -402,6 +402,17 @@ def _outer_input(src: str) -> str:
     text = _replace_mesh(src)
     if mb.has_block(text, "Materials"):
         text = mb.remove_block(text, "Materials")
+
+    # Promote the accepted #21 heavy FV operators to their current Physics
+    # registrations without changing their equations or parameters.
+    text = text.replace(
+        "type = QPXFVMassFractionAdvection",
+        "type = PhysicsFVMassFractionAdvection",
+    )
+    text = text.replace(
+        "type = QPXFVMixtureAveragedDiffusion",
+        "type = PhysicsFVMixtureAveragedDiffusion",
+    )
     for name, value in (
         ("Q_sccm", FLOW_SCCM),
         ("outlet_pressure", PRESSURE_PA),
@@ -554,6 +565,12 @@ def _construction_audit(
         and "block = plasma" in electron,
         "icp_mesh_poisson": "BlockDeletionGenerator" in poisson
         and "block = plasma" in poisson,
+        "current_heavy_operator_types": (
+            "QPXFVMassFractionAdvection" not in outer
+            and "QPXFVMixtureAveragedDiffusion" not in outer
+            and outer.count("type = PhysicsFVMassFractionAdvection") == 6
+            and outer.count("type = PhysicsFVMixtureAveragedDiffusion") == 6
+        ),
         "heavy_20_sccm": re.search(
             r"(?m)^Q_sccm\s*=\s*20(?:\.0+)?\s*$", outer
         )
