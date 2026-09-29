@@ -25,17 +25,35 @@
     type = MooseVariableFVReal
     initial_condition = 1.0
   []
-  [w_A]
+
+  # Canonical Oxygen heavy-species mass fractions.  These sum to one.
+  [w_O2]
     type = MooseVariableFVReal
-    initial_condition = 0.5
+    initial_condition = 0.99994
   []
-  [w_B]
+  [w_O2s]
     type = MooseVariableFVReal
-    initial_condition = 0.5
+    initial_condition = 1.0e-5
   []
-  [w_ion]
+  [w_O2p]
     type = MooseVariableFVReal
-    initial_condition = 1.0e-6
+    initial_condition = 1.0e-5
+  []
+  [w_O]
+    type = MooseVariableFVReal
+    initial_condition = 1.0e-5
+  []
+  [w_Om]
+    type = MooseVariableFVReal
+    initial_condition = 1.0e-5
+  []
+  [w_Op]
+    type = MooseVariableFVReal
+    initial_condition = 1.0e-5
+  []
+  [w_Os]
+    type = MooseVariableFVReal
+    initial_condition = 1.0e-5
   []
 
   # Final fast state imported only after the inner Gummel driver finishes.
@@ -62,15 +80,16 @@
     electron_temperature = T_e_from_gummel
     electron_number_density = n_e_from_gummel
 
-    heavy_transport_data_file = plasma_closures_heavy_transport.txt
-    heavy_species = 'A B'
-    heavy_mass_fractions = 'w_A w_B'
+    heavy_transport_data_file = plasma_closures_oxygen_transport.txt
+    heavy_species = 'O2 O2s O2p O Om Op Os'
+    heavy_mass_fractions = 'w_O2 w_O2s w_O2p w_O w_Om w_Op w_Os'
   []
 []
 
-# OUTER coupling layer.  The heavy snapshot is copied into the driver once,
-# then the driver completes its nested electron-Poisson Gummel solve before
-# the final fast state is copied back to this parent.
+# OUTER coupling layer. The complete Oxygen heavy state is owned here.
+# Only the heavy quantities consumed by the inner electron/Poisson solve are
+# snapshotted once before Gummel begins; they remain frozen for all inner
+# fixed-point iterations.
 [MultiApps]
   [gummel_driver]
     type = TransientMultiApp
@@ -84,8 +103,8 @@
   [heavy_snapshot_to_gummel]
     type = MultiAppCopyTransfer
     to_multi_app = gummel_driver
-    source_variable = 'T_g p_gas rho w_ion'
-    variable = 'T_g_frozen p_gas_frozen rho_frozen w_ion_frozen'
+    source_variable = 'T_g p_gas rho w_O2p w_Om w_Op'
+    variable = 'T_g_frozen p_gas_frozen rho_frozen w_O2p_frozen w_Om_frozen w_Op_frozen'
   []
 
   [converged_gummel_to_heavy]
