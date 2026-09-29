@@ -30,8 +30,8 @@ owns its local kernels, materials, boundary conditions, and solver settings.
     # Core names use the Action defaults:
     # electron density n_e; Poisson potential phi.
 
-    # Optional Poisson fixed-point transform / relaxation.
-    poisson_transformed_variables = 'phi'
+    # Relaxation remains configurable; the Action transforms the configured
+    # Poisson potential variable and always retains child iterates.
     relaxation_factor = 0.45
 
     # Optional extra sibling mappings, e.g. mean_en -> mean_en.
@@ -43,11 +43,13 @@ owns its local kernels, materials, boundary conditions, and solver settings.
 []
 ```
 
-The Action fixes both inner applications to `TransientMultiApp`; this is part
-of the qualified timestep-identity/no-restore orchestration contract rather
-than a user-selectable model option. The Action also contains no descriptive
-electron-state list: solved electron variables are owned entirely by the
-electron input file and only transferred fields are declared here.
+The Action fixes both inner applications to `TransientMultiApp` and
+`no_restore=true`; these are part of the qualified timestep-identity coupling
+contract rather than user-selectable model options. The Poisson fixed-point
+transform is likewise fixed to the configured `poisson_potential_variable`.
+The Action contains no descriptive electron-state list: solved electron
+variables are owned entirely by the electron input file and only transferred
+fields are declared here.
 
 The two core sibling transfers are created automatically:
 
