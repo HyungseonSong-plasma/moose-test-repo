@@ -5,12 +5,12 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import os
 import re
 import shutil
 from pathlib import Path
 from typing import Any
 
-from experiments.Issue351_frozen_heavy_driver_parity import control as g351
 from physics_harness.adapters.moose import blocks as mb
 from physics_harness.adapters.moose import parameters as mp
 from physics_harness.execution.runtime import resolve_executable, run_physics, validate_executable
@@ -158,15 +158,40 @@ def _add_aux(text: str, name: str, initial: float) -> str:
     return text + "\n[AuxVariables]\n" + block + "\n[]\n"
 
 
-def _qualified_short_case() -> Path:
-    g351.build("short")
-    case = (
-        ROOT
-        / "experiments/Issue351_frozen_heavy_driver_parity/generated/short/frozen_heavy_driver"
-    )
-    if not case.is_dir():
-        raise Issue359Error("qualified #351 short case was not generated")
+def _qualified_reference_case() -> Path:
+    """Resolve the immutable #351 full-qualified artifact staged by CI."""
+    raw = os.environ.get("ISSUE351_QUALIFIED_CASE", "")
+    if not raw:
+        raise Issue359Error(
+            "ISSUE351_QUALIFIED_CASE is required and must point to the extracted "
+            "#351 frozen-heavy qualified case"
+        )
+    case = Path(raw).resolve()
+    required = ("electron_sub.i", "poisson_sub.i", "fast_sub.i", "o2_elastic.txt")
+    missing = [name for name in required if not (case / name).is_file()]
+    if missing:
+        raise Issue359Error(
+            f"qualified #351 reference case missing files: {missing}; case={case}"
+        )
     return case
+
+
+def _canonicalize_qualified_driver(text: str) -> str:
+    """Remove only #355-retired Action syntax from the qualified #351 driver."""
+    for name in (
+        "electron_multiapp_type",
+        "poisson_multiapp_type",
+        "electron_state_variables",
+        "poisson_transformed_variables",
+        "no_restore",
+    ):
+        text = re.sub(
+            rf"(?m)^\s*{re.escape(name)}\s*=.*\n",
+            "",
+            text,
+            count=1,
+        )
+    return text
 
 
 def _electron_input(src: str) -> str:
@@ -334,7 +359,8 @@ def _poisson_input(src: str) -> str:
 
 
 def _driver_input(src: str) -> str:
-    text = _replace_mesh(src)
+    text = _canonicalize_qualified_driver(src)
+    text = _replace_mesh(text)
     text = _add_aux(text, "p_gas_h", PRESSURE_PA)
     text = _add_aux(text, "T_g_h", TG_K)
 
@@ -395,7 +421,7 @@ def _outer_input(src: str) -> str:
         text,
         "FunctorMaterials/state_constants",
         "prop_values",
-        "'\${T_g_value} \${mu_const}'",
+        "'${T_g_value} ${mu_const}'",
     )
     text = _add_aux(text, "T_g_snapshot", TG_K)
     text = _add_aux(text, "electron_density_from_gummel", 1.0e16)
@@ -532,7 +558,7 @@ def _construction_audit(
         "heavy_outlet_pressure_bc": (
             mp.get_parameter(outer, "FVBCs/outlet_p", "boundary") == "outlet"
             and mp.get_parameter(outer, "FVBCs/outlet_p", "function")
-            == "\${outlet_pressure}"
+            == "${outlet_pressure}"
         ),
         "electron_particle_bc_all_boundaries": (
             set(
@@ -603,7 +629,7 @@ def _stage(root: Path) -> dict[str, Any]:
         shutil.rmtree(root)
     root.mkdir(parents=True)
 
-    qualified = _qualified_short_case()
+    qualified = _qualified_reference_case()
     outer = _outer_input((HEAVY_SOURCE / "input.i").read_text())
     driver = _driver_input((qualified / "fast_sub.i").read_text())
     electron = _electron_input((qualified / "electron_sub.i").read_text())
