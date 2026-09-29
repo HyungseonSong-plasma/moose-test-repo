@@ -290,6 +290,16 @@ def _build_input() -> tuple[str, dict[str, Any]]:
     text = _couple_solved_electron_temperature(text)
     text = _add_full_electron_energy_transport(text)
 
+    # No fixed electron-temperature scalar remains after solved-Te coupling.
+    text, removed_te = re.subn(
+        r"(?m)^T_e_value\s*=\s*.*\n",
+        "",
+        text,
+        count=1,
+    )
+    if removed_te != 1:
+        raise ICPProfileError(f"expected one historical T_e_value assignment, removed {removed_te}")
+
     # R4-QF1/S5-R intentionally removed the historical Yin_O2 and Yin_O
     # aliases: O2 is the constrained remainder and O has a dedicated uniform
     # FunctionIC. Patch only the still-live initial-state aliases here.
