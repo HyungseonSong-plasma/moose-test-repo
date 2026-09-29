@@ -101,6 +101,22 @@ def _build_input() -> tuple[str, dict[str, Any]]:
     base = (SOURCE / "heavy_base.i").read_text()
     text, meta = build_s5r_input(base)
 
+    # The historical R3 layer supplied a constant mean_en for prescribed-energy
+    # transport. S5-R adds solved Variables/mean_en, so the constant provider is
+    # no longer an owner and must not coexist with the solved state.
+    text = mp.upsert_parameter(
+        text,
+        "FunctorMaterials/electron_constants",
+        "prop_names",
+        "'carrier_one'",
+    )
+    text = mp.upsert_parameter(
+        text,
+        "FunctorMaterials/electron_constants",
+        "prop_values",
+        "'1.0'",
+    )
+
     # R4-QF1/S5-R intentionally removed the historical Yin_O2 and Yin_O
     # aliases: O2 is the constrained remainder and O has a dedicated uniform
     # FunctionIC. Patch only the still-live initial-state aliases here.
