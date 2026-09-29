@@ -13,11 +13,13 @@
   # Slow/heavy state owned by OUTER_MAIN.
   [T_g]
     type = MooseVariableFVReal
+    # Heavy-gas temperature [K].
     initial_condition = 300.0
   []
   [p_gas]
     type = MooseVariableFVReal
-    initial_condition = 100.0
+    # Absolute gas pressure [Pa]; 10 mTorr = 1.333223684 Pa.
+    initial_condition = 1.333223684
   []
   [rho]
     type = MooseVariableFVReal
