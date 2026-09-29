@@ -62,6 +62,103 @@ class ICPProfileError(RuntimeError):
     pass
 
 
+def _freeze_mean_energy(text: str) -> str:
+    """Freeze the electron mean energy for the geometry-only profile baseline."""
+    for path in (
+        "Variables/mean_en",
+        "FunctorMaterials/s5r_mean_energy",
+        "FVKernels/s5r_mean_en_time",
+        "FVKernels/s5r_mean_en_diffusion",
+        "FVKernels/s5r_ei02_elastic_energy",
+        "FVKernels/s5r_ei17_elastic_energy",
+        "FVKernels/s5r_energy_ei10",
+        "FVKernels/s5r_energy_ei16",
+        "FVKernels/s5r_energy_ei19",
+        "FVKernels/s5r_energy_ei18_o_to_os",
+        "FVKernels/s5r_energy_ei20_o_ionization",
+        "FVKernels/s5r_energy_edetach_om",
+    ):
+        if mb.has_block(text, path):
+            text = mb.remove_block(text, path)
+
+    text = mp.upsert_parameter(
+        text,
+        "FunctorMaterials/electron_constants",
+        "prop_names",
+        "'mean_en_solved carrier_one'",
+    )
+    text = mp.upsert_parameter(
+        text,
+        "FunctorMaterials/electron_constants",
+        "prop_values",
+        f"'{ENERGY_REFERENCE_EV:.17g} 1.0'",
+    )
+    text = mp.upsert_parameter(
+        text,
+        "Postprocessors/s5r_mean_en_state_min",
+        "functor",
+        "mean_en_solved",
+    )
+    return text
+
+
+def _audit_geometry_baseline(text: str, source_meta: dict[str, Any]) -> dict[str, Any]:
+    energy_kernel_paths = (
+        "FVKernels/s5r_mean_en_time",
+        "FVKernels/s5r_mean_en_diffusion",
+        "FVKernels/s5r_ei02_elastic_energy",
+        "FVKernels/s5r_ei17_elastic_energy",
+        "FVKernels/s5r_energy_ei10",
+        "FVKernels/s5r_energy_ei16",
+        "FVKernels/s5r_energy_ei19",
+        "FVKernels/s5r_energy_ei18_o_to_os",
+        "FVKernels/s5r_energy_ei20_o_ionization",
+        "FVKernels/s5r_energy_edetach_om",
+    )
+    checks = {
+        "source_s5r_audit_pass": source_meta["audit"]["status"] == "PASS",
+        "solved_energy_variable_removed": not mb.has_block(text, "Variables/mean_en"),
+        "solved_energy_bridge_removed": not mb.has_block(
+            text, "FunctorMaterials/s5r_mean_energy"
+        ),
+        "energy_equation_removed": all(not mb.has_block(text, p) for p in energy_kernel_paths),
+        "transport_uses_frozen_mean_energy": (
+            mp.get_parameter(
+                text, "FunctorMaterials/electron_transport", "mean_energy"
+            )
+            == "mean_en_solved"
+        ),
+        "frozen_mean_energy_owner": (
+            mp.words(
+                mp.get_parameter(
+                    text, "FunctorMaterials/electron_constants", "prop_names"
+                )
+            )
+            == ["mean_en_solved", "carrier_one"]
+            and math.isclose(
+                float(
+                    mp.words(
+                        mp.get_parameter(
+                            text,
+                            "FunctorMaterials/electron_constants",
+                            "prop_values",
+                        )
+                    )[0]
+                ),
+                ENERGY_REFERENCE_EV,
+                rel_tol=0.0,
+                abs_tol=1.0e-12,
+            )
+        ),
+    }
+    failed = sorted(name for name, passed in checks.items() if not passed)
+    return {
+        "status": "PASS" if not failed else "FAIL",
+        "checks": checks,
+        "failed_checks": failed,
+    }
+
+
 def _replace_top_level(text: str, name: str, value: str) -> str:
     pattern = rf"(?m)^(?!\s){re.escape(name)}\s*=\s*.*$"
     replaced, count = re.subn(pattern, f"{name} = {value}", text, count=1)
@@ -73,7 +170,7 @@ def _replace_top_level(text: str, name: str, value: str) -> str:
 def _add_profile_sampler(text: str) -> str:
     profile_block = """  [profile_samples]
     type = ElementValueSampler
-    variable = 'p n_e mean_en potential_plasma w_O2s w_O2p w_O w_Om w_Op w_Os'
+    variable = 'p n_e mean_en_solved potential_plasma w_O2s w_O2p w_O w_Om w_Op w_Os'
     block = plasma
     sort_by = id
     execute_on = 'INITIAL TIMESTEP_END'
@@ -100,22 +197,7 @@ def _add_profile_sampler(text: str) -> str:
 def _build_input() -> tuple[str, dict[str, Any]]:
     base = (SOURCE / "heavy_base.i").read_text()
     text, meta = build_s5r_input(base)
-
-    # The historical R3 layer supplied a constant mean_en for prescribed-energy
-    # transport. S5-R adds solved Variables/mean_en, so the constant provider is
-    # no longer an owner and must not coexist with the solved state.
-    text = mp.upsert_parameter(
-        text,
-        "FunctorMaterials/electron_constants",
-        "prop_names",
-        "'carrier_one'",
-    )
-    text = mp.upsert_parameter(
-        text,
-        "FunctorMaterials/electron_constants",
-        "prop_values",
-        "'1.0'",
-    )
+    text = _freeze_mean_energy(text)
 
     # R4-QF1/S5-R intentionally removed the historical Yin_O2 and Yin_O
     # aliases: O2 is the constrained remainder and O has a dedicated uniform
@@ -144,11 +226,14 @@ def _build_input() -> tuple[str, dict[str, Any]]:
     text = mp.upsert_parameter(text, "Executioner", "end_time", f"{END_TIME_S:.17g}")
     text = _add_profile_sampler(text)
 
-    audit = audit_s5r_input(text)
+    audit = _audit_geometry_baseline(text, meta)
     if audit["status"] != "PASS":
-        raise ICPProfileError(f"current real-QVT assembly audit failed: {audit['failed_checks']}")
+        raise ICPProfileError(
+            f"frozen-energy geometry baseline audit failed: {audit['failed_checks']}"
+        )
 
     meta = dict(meta)
+    meta["geometry_baseline_audit"] = audit
     meta["issue357"] = {
         "pressure_Pa": PRESSURE_PA,
         "T_g_K": TG_K,
@@ -161,7 +246,7 @@ def _build_input() -> tuple[str, dict[str, Any]]:
         "end_time_s": END_TIME_S,
         "flow_sccm": 20.0,
         "geometry": "real-QVT RZ ICP reactor",
-        "claim": "bounded geometry/profile sanity only",
+        "claim": "bounded frozen-mean-energy geometry/profile sanity only",
     }
     return text, meta
 
@@ -253,7 +338,7 @@ def _derive(case_dir: Path, rows: list[dict[str, str]]) -> list[dict[str, float]
         "y",
         "p",
         "n_e",
-        "mean_en",
+        "mean_en_solved",
         "potential_plasma",
         "w_O2s",
         "w_O2p",
@@ -271,11 +356,7 @@ def _derive(case_dir: Path, rows: list[dict[str, str]]) -> list[dict[str, float]
         mean_molar_mass = 1.0 / sum(fractions[s] / MASS[s] for s in MASS)
         rho = vals["p"] * mean_molar_mass / (R_GAS * TG_K)
         ne = NREF_M3 * vals["n_e"]
-        mean_e = (
-            ENERGY_REFERENCE_EV * vals["mean_en"] / vals["n_e"]
-            if vals["n_e"] > 0.0
-            else float("nan")
-        )
+        mean_e = vals["mean_en_solved"]
         ion_number = (
             rho * fractions["O2p"] / MASS["O2p"] * AVOGADRO
             - rho * fractions["Om"] / MASS["Om"] * AVOGADRO
@@ -463,8 +544,8 @@ def run(args: argparse.Namespace) -> int:
         "radial_profile": radial,
         "axial_profile": axial,
         "interpretation_scope": (
-            "profile sanity only; no ICP coil power deposition and no final wall/SEE "
-            "validation claim"
+            "frozen-mean-energy geometry/profile sanity only; solved electron energy "
+            "requires ICP power deposition and remains a separate failed discriminator"
         ),
     }
     if not summary["final_profile"]["hard_sanity_pass"]:
