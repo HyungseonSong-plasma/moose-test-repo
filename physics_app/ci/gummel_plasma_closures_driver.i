@@ -4,7 +4,7 @@
   nx = 2
 []
 
-# Dedicated inner orchestration problem.  It never advances heavy physics.
+# Dedicated inner orchestration problem. It never advances heavy physics.
 [Problem]
   solve = false
   kernel_coverage_check = false
@@ -26,9 +26,19 @@
     type = MooseVariableFVReal
     initial_condition = 1.0
   []
-  [w_ion_frozen]
+
+  # Frozen charged Oxygen heavy species used by Poisson.
+  [w_O2p_frozen]
     type = MooseVariableFVReal
-    initial_condition = 1.0e-6
+    initial_condition = 1.0e-5
+  []
+  [w_Om_frozen]
+    type = MooseVariableFVReal
+    initial_condition = 1.0e-5
+  []
+  [w_Op_frozen]
+    type = MooseVariableFVReal
+    initial_condition = 1.0e-5
   []
 
   # Fast state accumulated during the inner solve and exported only after
@@ -69,7 +79,7 @@
     electron_to_poisson_source_variables = 'mean_en'
     electron_to_poisson_variables = 'mean_en'
 
-    # Frozen heavy snapshot -> electron closure.
+    # Frozen heavy thermodynamic snapshot -> electron closure.
     parent_to_electron_source_variables = 'T_g_frozen p_gas_frozen'
     parent_to_electron_variables = 'T_g_from_heavy p_gas_from_heavy'
 
@@ -77,9 +87,9 @@
     electron_to_parent_source_variables = 'n_e T_e_export'
     electron_to_parent_variables = 'n_e_converged T_e_converged'
 
-    # Frozen charged-heavy snapshot -> Poisson charge closure.
-    parent_to_poisson_source_variables = 'rho_frozen w_ion_frozen'
-    parent_to_poisson_variables = 'rho_from_heavy w_ion_from_heavy'
+    # Frozen charged-heavy Oxygen snapshot -> Poisson charge closure.
+    parent_to_poisson_source_variables = 'rho_frozen w_O2p_frozen w_Om_frozen w_Op_frozen'
+    parent_to_poisson_variables = 'rho_from_heavy w_O2p_from_heavy w_Om_from_heavy w_Op_from_heavy'
 
     # phi is returned automatically through parent_potential_variable.
     poisson_transformed_variables = 'phi'
@@ -97,7 +107,7 @@
   dt = 1
   num_steps = 1
 
-  # The pinned MOOSE default is one fixed-point iteration.  Explicitly enable
+  # The pinned MOOSE default is one fixed-point iteration. Explicitly enable
   # the inner loop; production qualification supplies the delta-phi convergence
   # object and tolerance on this driver.
   fixed_point_algorithm = steffensen
