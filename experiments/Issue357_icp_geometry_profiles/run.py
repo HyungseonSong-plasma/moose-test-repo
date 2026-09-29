@@ -28,6 +28,7 @@ CANONICAL_HEAVY = ROOT / "physics_app/ci/plasma_closures_oxygen_transport.txt"
 SMOKE_ELECTRON = ROOT / "physics_app/ci/plasma_closures_transport_table.txt"
 
 PRESSURE_PA = 1.333223684
+FLOW_SCCM = 20.0
 TG_K = 300.0
 NREF_M3 = 1.0e16
 DT_S = 5.6650790022617894e-11
@@ -242,6 +243,42 @@ def _audit_solved_energy_transplant(text: str) -> dict[str, Any]:
     }
 
 
+def _audit_heavy_boundaries(text: str) -> dict[str, Any]:
+    q_match = re.search(r"(?m)^Q_sccm\s*=\s*([^#\r\n]+)$", text)
+    p_match = re.search(r"(?m)^outlet_pressure\s*=\s*([^#\r\n]+)$", text)
+    q_value = float(q_match.group(1).strip()) if q_match else float("nan")
+    p_value = float(p_match.group(1).strip()) if p_match else float("nan")
+    checks = {
+        "inlet_flow_is_20_sccm": math.isclose(
+            q_value, FLOW_SCCM, rel_tol=0.0, abs_tol=1.0e-15
+        ),
+        "inlet_mass_bc_uses_mdot": (
+            mp.get_parameter(text, "FVBCs/inlet_mass", "boundary") == "inlet"
+            and mp.get_parameter(text, "FVBCs/inlet_mass", "mdot_pp") == "inlet_mdot"
+        ),
+        "inlet_mdot_is_sccm_derived": (
+            "Q_std = ${fparse Q_sccm * 1e-6 / 60.0}" in text
+            and "inlet_mdot_value = ${fparse Q_std * M_inlet / Vm_std}" in text
+        ),
+        "outlet_pressure_is_chamber_pressure": math.isclose(
+            p_value, PRESSURE_PA, rel_tol=0.0, abs_tol=1.0e-15
+        ),
+        "outlet_pressure_bc": (
+            mp.get_parameter(text, "FVBCs/outlet_p", "boundary") == "outlet"
+            and mp.get_parameter(text, "FVBCs/outlet_p", "function")
+            == "${outlet_pressure}"
+        ),
+    }
+    failed = sorted(name for name, passed in checks.items() if not passed)
+    return {
+        "status": "PASS" if not failed else "FAIL",
+        "checks": checks,
+        "failed_checks": failed,
+        "inlet_flow_sccm": q_value,
+        "outlet_pressure_Pa": p_value,
+    }
+
+
 def _add_profile_sampler(text: str) -> str:
     profile_block = """  [profile_samples]
     type = ElementValueSampler
@@ -304,6 +341,7 @@ def _build_input() -> tuple[str, dict[str, Any]]:
     # aliases: O2 is the constrained remainder and O has a dedicated uniform
     # FunctionIC. Patch only the still-live initial-state aliases here.
     replacements = {
+        "Q_sccm": f"{FLOW_SCCM:.17g}",
         "outlet_pressure": f"{PRESSURE_PA:.17g}",
         "T_g_value": f"{TG_K:.17g}",
         "n_e_value": f"{NREF_M3:.17g}",
@@ -351,9 +389,15 @@ def _build_input() -> tuple[str, dict[str, Any]]:
         raise ICPProfileError(
             f"solved-energy transplant audit failed: {energy_audit['failed_checks']}"
         )
+    boundary_audit = _audit_heavy_boundaries(text)
+    if boundary_audit["status"] != "PASS":
+        raise ICPProfileError(
+            f"heavy-boundary audit failed: {boundary_audit['failed_checks']}"
+        )
 
     meta = dict(meta)
     meta["solved_energy_transplant_audit"] = energy_audit
+    meta["heavy_boundary_audit"] = boundary_audit
     meta["issue357"] = {
         "pressure_Pa": PRESSURE_PA,
         "T_g_K": TG_K,
@@ -365,7 +409,9 @@ def _build_input() -> tuple[str, dict[str, Any]]:
         "dt_s": DT_S,
         "num_steps": NUM_STEPS,
         "end_time_s": END_TIME_S,
-        "flow_sccm": 20.0,
+        "flow_sccm": FLOW_SCCM,
+        "heavy_inlet_bc": "20 sccm mass-flow inlet",
+        "heavy_outlet_bc": "fixed chamber pressure at 1.333223684 Pa (10 mTorr)",
         "electron_energy_equation": (
             "time + diffusion + electrostatic drift + Joule + elastic/reaction sources"
         ),
@@ -678,6 +724,7 @@ def run(args: argparse.Namespace) -> int:
         "radial_profile": radial,
         "axial_profile": axial,
         "energy_equation": staged["construction"]["solved_energy_transplant_audit"],
+        "heavy_boundaries": staged["construction"]["heavy_boundary_audit"],
         "interpretation_scope": (
             "solved-electron-energy volume profile sanity only; no ICP coil RF power "
             "deposition and no final wall/sheath/SEE validation claim"
