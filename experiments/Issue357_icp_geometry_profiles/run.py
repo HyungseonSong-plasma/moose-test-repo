@@ -384,7 +384,6 @@ def run(args: argparse.Namespace) -> int:
     root = args.results_root
     root.mkdir(parents=True, exist_ok=True)
     case_dir = root / "case"
-    case_dir.mkdir(parents=True, exist_ok=True)
     logs = root / "logs"
     logs.mkdir(parents=True, exist_ok=True)
 
