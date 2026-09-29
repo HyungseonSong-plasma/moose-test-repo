@@ -397,7 +397,11 @@ def _driver_input(src: str) -> str:
 
 
 def _outer_input(src: str) -> str:
-    text = src
+    # Use the identical plasma-only real-QVT mesh in all four applications so
+    # MultiAppCopyTransfer remains an exact elementwise transfer.
+    text = _replace_mesh(src)
+    if mb.has_block(text, "Materials"):
+        text = mb.remove_block(text, "Materials")
     for name, value in (
         ("Q_sccm", FLOW_SCCM),
         ("outlet_pressure", PRESSURE_PA),
@@ -541,6 +545,9 @@ def _construction_audit(
                 abs_tol=1.0e-15,
             )
         ),
+        "icp_mesh_outer": "BlockDeletionGenerator" in outer
+        and "block = plasma" in outer
+        and not mb.has_block(outer, "Materials"),
         "icp_mesh_driver": "BlockDeletionGenerator" in driver
         and "block = plasma" in driver,
         "icp_mesh_electron": "BlockDeletionGenerator" in electron
