@@ -222,6 +222,12 @@ def _electron_input(src: str) -> str:
     text = mp.upsert_parameter(
         text, "PlasmaClosures/electron", "gas_temperature", "T_g_from_heavy"
     )
+    text = mp.upsert_parameter(
+        text,
+        "FunctorMaterials/elastic_energy_candidate",
+        "functor_names",
+        "'mean_en_solved T_g_from_heavy R_elastic_O2'",
+    )
 
     all_bcs = "'" + " ".join(ALL_ELECTRON_BOUNDARIES) + "'"
     for path in ("FVKernels/electron_drift", "FVKernels/energy_drift"):
@@ -608,6 +614,14 @@ def _construction_audit(
         ),
         "electron_bc_independent_of_heavy_flow": (
             "Q_sccm" not in electron and "outlet_pressure" not in electron
+        ),
+        "electron_heavy_state_symbols_frozen": (
+            "gas_pressure = p_gas_from_heavy" in electron
+            and "gas_temperature = T_g_from_heavy" in electron
+            and "functor_names = 'mean_en_solved T_g_from_heavy R_elastic_O2'"
+            in electron
+            and re.search(r"\bT_g\b", electron) is None
+            and re.search(r"\bp_gas\b", electron) is None
         ),
         "electron_energy_solved": all(
             mb.has_block(electron, p)
