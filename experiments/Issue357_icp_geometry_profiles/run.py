@@ -101,15 +101,16 @@ def _build_input() -> tuple[str, dict[str, Any]]:
     base = (SOURCE / "heavy_base.i").read_text()
     text, meta = build_s5r_input(base)
 
+    # R4-QF1/S5-R intentionally removed the historical Yin_O2 and Yin_O
+    # aliases: O2 is the constrained remainder and O has a dedicated uniform
+    # FunctionIC. Patch only the still-live initial-state aliases here.
     replacements = {
         "outlet_pressure": f"{PRESSURE_PA:.17g}",
         "T_g_value": f"{TG_K:.17g}",
         "T_e_value": f"{TE_K:.17g}",
         "n_e_value": f"{NREF_M3:.17g}",
-        "Yin_O2": f"{CURRENT_MASS_FRACTIONS['O2']:.17g}",
         "Yin_O2s": f"{CURRENT_MASS_FRACTIONS['O2s']:.17g}",
         "Yin_O2p": f"{CURRENT_MASS_FRACTIONS['O2p']:.17g}",
-        "Yin_O": f"{CURRENT_MASS_FRACTIONS['O']:.17g}",
         "Yin_Om": f"{CURRENT_MASS_FRACTIONS['Om']:.17g}",
         "Yin_Op": f"{CURRENT_MASS_FRACTIONS['Op']:.17g}",
         "Yin_Os": f"{CURRENT_MASS_FRACTIONS['Os']:.17g}",
@@ -121,7 +122,7 @@ def _build_input() -> tuple[str, dict[str, Any]]:
         text,
         "Functions/ic_w_O_transient",
         "expression",
-        "'${Yin_O}'",
+        f"'{CURRENT_MASS_FRACTIONS['O']:.17g}'",
     )
     text = mp.upsert_parameter(text, "Executioner", "dt", f"{DT_S:.17g}")
     text = mp.upsert_parameter(text, "Executioner", "end_time", f"{END_TIME_S:.17g}")
@@ -142,7 +143,7 @@ def _build_input() -> tuple[str, dict[str, Any]]:
         "dt_s": DT_S,
         "num_steps": NUM_STEPS,
         "end_time_s": END_TIME_S,
-        "flow_sccm": 100.0,
+        "flow_sccm": 20.0,
         "geometry": "real-QVT RZ ICP reactor",
         "claim": "bounded geometry/profile sanity only",
     }
