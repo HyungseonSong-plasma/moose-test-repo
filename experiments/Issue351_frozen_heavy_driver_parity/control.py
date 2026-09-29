@@ -111,6 +111,17 @@ def _canonicalize_retired_action_options(fast: str) -> str:
     """
     text = _remove_exec_line(fast, "poisson_multiapp_type")
     text = _remove_exec_line(text, "electron_state_variables")
+    text = _remove_exec_line(text, "poisson_transformed_variables")
+    text = _remove_exec_line(text, "no_restore")
+    if "poisson_potential_variable" not in text:
+        anchor = "    poisson_input_file = poisson_sub.i\n"
+        if text.count(anchor) != 1:
+            raise RuntimeError("historical Poisson input-file anchor changed")
+        text = text.replace(
+            anchor,
+            anchor + "    poisson_potential_variable = potential_plasma\n",
+            1,
+        )
     return text
 
 
@@ -256,7 +267,6 @@ def _driver_input(fast: str) -> str:
     electron_to_parent_variables =
       'electron_density_out mean_energy_out'
 
-    poisson_transformed_variables = 'potential_plasma'
     relaxation_factor = 0.45
     manage_convergence = true
     delta_phi_postprocessor = fp_delta_phi_max
@@ -411,6 +421,9 @@ def p0(horizon: str) -> None:
     assert "electron_input_file" not in fast_a
     assert "poisson_multiapp_type" not in fast_a
     assert "electron_state_variables" not in fast_a
+    assert "poisson_transformed_variables" not in fast_a
+    assert "no_restore" not in fast_a
+    assert "poisson_potential_variable = potential_plasma" in fast_a
     assert "fixed_point_algorithm = 'steffensen'" in fast_a
     assert "transformed_variables = 'potential_from_poisson'" in fast_a
 
@@ -627,8 +640,9 @@ def run_pair(horizon: str, pair: str) -> dict[str, object]:
         "guard": (
             "Heavy parent input and Poisson input are byte-identical. Both lanes use the "
             "qualified PlasmaClosures composition. Historical fast-owner syntax is canonicalized "
-            "only by removing the no-op electron_state_variables line and the now-fixed "
-            "poisson_multiapp_type=TransientMultiApp line. The controlled physical change is "
+            "only by removing the no-op electron_state_variables line and options now fixed by "
+            "the Action contract (TransientMultiApp, no_restore=true, and transforming the "
+            "configured Poisson potential). The controlled physical change is "
             "Gummel ownership: fast/electron owner versus solve=false dedicated driver with "
             "sibling electron/Poisson."
         ),
