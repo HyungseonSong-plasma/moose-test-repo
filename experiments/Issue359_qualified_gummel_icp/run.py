@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Issue #359: qualified frozen-heavy Gummel topology on the real-QVT ICP RZ mesh."""
+"""Issue #359: qualified frozen-heavy Gummel topology on the real-QVT ICP RZ mesh.
+
+Electron physical dt is fixed at the previously stable 56.650790 ps value.
+Heavy/ion dt is an integer multiple selected by --electron-substeps.
+"""
 from __future__ import annotations
 
 import argparse
@@ -25,7 +29,7 @@ FLOW_SCCM = 20.0
 PRESSURE_PA = 1.333223684
 TG_K = 300.0
 ENERGY_REF_EV = 5.73276
-HEAVY_DT_S = 1.0e-8
+ELECTRON_DT_S = 5.6650790022617894e-11
 ELECTRON_SUBSTEPS_DEFAULT = 4
 RELAXATION_FACTOR_DEFAULT = 0.45
 RESPONSE_STRENGTH_DEFAULT = 1.0
@@ -224,18 +228,18 @@ def _canonicalize_qualified_driver(text: str) -> str:
     return text
 
 
-def _electron_dt_s(electron_substeps: int) -> float:
+def _heavy_dt_s(electron_substeps: int) -> float:
     if electron_substeps <= 0:
         raise Issue359Error("electron_substeps must be positive")
-    return HEAVY_DT_S / float(electron_substeps)
+    return ELECTRON_DT_S * float(electron_substeps)
 
 
 def _configure_fast_executioner(text: str, electron_substeps: int) -> str:
-    electron_dt_s = _electron_dt_s(electron_substeps)
-    text = mp.upsert_parameter(text, "Executioner", "dt", f"{electron_dt_s:.17g}")
-    text = mp.upsert_parameter(text, "Executioner", "dtmin", f"{electron_dt_s:.17g}")
-    text = mp.upsert_parameter(text, "Executioner", "dtmax", f"{electron_dt_s:.17g}")
-    text = mp.upsert_parameter(text, "Executioner", "end_time", f"{HEAVY_DT_S:.17g}")
+    heavy_dt_s = _heavy_dt_s(electron_substeps)
+    text = mp.upsert_parameter(text, "Executioner", "dt", f"{ELECTRON_DT_S:.17g}")
+    text = mp.upsert_parameter(text, "Executioner", "dtmin", f"{ELECTRON_DT_S:.17g}")
+    text = mp.upsert_parameter(text, "Executioner", "dtmax", f"{ELECTRON_DT_S:.17g}")
+    text = mp.upsert_parameter(text, "Executioner", "end_time", f"{heavy_dt_s:.17g}")
     text = mp.upsert_parameter(text, "Executioner", "num_steps", str(electron_substeps))
     text = mp.upsert_parameter(text, "Executioner", "timestep_tolerance", "1.0e-18")
     return text
@@ -674,7 +678,9 @@ def _driver_input(
     return _configure_fast_executioner(text, electron_substeps)
 
 
-def _outer_input(src: str) -> str:
+def _outer_input(
+    src: str, *, electron_substeps: int = ELECTRON_SUBSTEPS_DEFAULT
+) -> str:
     # Use the identical plasma-only real-QVT mesh in all four applications so
     # MultiAppCopyTransfer remains an exact elementwise transfer.
     text = _replace_mesh(src)
@@ -780,8 +786,8 @@ def _outer_input(src: str) -> str:
   type = Transient
   scheme = implicit-euler
   solve_type = NEWTON
-  dt = {HEAVY_DT_S:.17g}
-  end_time = {HEAVY_DT_S:.17g}
+  dt = {_heavy_dt_s(electron_substeps):.17g}
+  end_time = {_heavy_dt_s(electron_substeps):.17g}
   num_steps = 1
   nl_rel_tol = 1.0e-9
   nl_abs_tol = 1.0e-11
@@ -993,7 +999,7 @@ def _construction_audit(
         "multirate_time_contract": (
             math.isclose(
                 float(mp.get_parameter(outer, "Executioner", "dt") or "nan"),
-                HEAVY_DT_S,
+                _heavy_dt_s(electron_substeps),
                 rel_tol=0.0,
                 abs_tol=1.0e-18,
             )
@@ -1001,13 +1007,13 @@ def _construction_audit(
             and all(
                 math.isclose(
                     float(mp.get_parameter(inp, "Executioner", "dt") or "nan"),
-                    _electron_dt_s(electron_substeps),
+                    ELECTRON_DT_S,
                     rel_tol=0.0,
                     abs_tol=1.0e-18,
                 )
                 and math.isclose(
                     float(mp.get_parameter(inp, "Executioner", "end_time") or "nan"),
-                    HEAVY_DT_S,
+                    _heavy_dt_s(electron_substeps),
                     rel_tol=0.0,
                     abs_tol=1.0e-18,
                 )
@@ -1086,7 +1092,10 @@ def _stage(
     root.mkdir(parents=True)
 
     qualified = _qualified_reference_case()
-    outer = _outer_input((HEAVY_SOURCE / "input.i").read_text())
+    outer = _outer_input(
+        (HEAVY_SOURCE / "input.i").read_text(),
+        electron_substeps=electron_substeps,
+    )
     driver = _driver_input(
         (qualified / "fast_sub.i").read_text(),
         relaxation_factor=relaxation_factor,
@@ -1157,10 +1166,10 @@ def _stage(
         "poisson_bc": "all eight plasma boundaries grounded at 0 V",
         "removed_geometry_specific_object": "FVElectronResponseBandedCorrection",
         "time_integration": {
-            "heavy_dt_s": HEAVY_DT_S,
+            "heavy_dt_s": _heavy_dt_s(electron_substeps),
             "heavy_steps": 1,
             "electron_substeps_per_heavy": electron_substeps,
-            "electron_dt_s": _electron_dt_s(electron_substeps),
+            "electron_dt_s": ELECTRON_DT_S,
             "electron_to_heavy_dt_ratio": 1.0 / float(electron_substeps),
             "frozen_heavy_during_electron_subcycling": True,
         },
