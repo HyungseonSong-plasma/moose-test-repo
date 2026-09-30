@@ -733,7 +733,13 @@ def _outer_input(src: str) -> str:
 
 
 def _construction_audit(
-    outer: str, driver: str, electron: str, poisson: str
+    outer: str,
+    driver: str,
+    electron: str,
+    poisson: str,
+    *,
+    relaxation_factor: float,
+    response_strength: float,
 ) -> dict[str, Any]:
     all_b = set(ALL_ELECTRON_BOUNDARIES)
     checks = {
@@ -753,6 +759,19 @@ def _construction_audit(
         "steffensen": (
             mp.get_parameter(driver, "Executioner", "fixed_point_algorithm")
             == "steffensen"
+        ),
+        "relaxation_factor_selected": math.isclose(
+            float(
+                mp.get_parameter(
+                    driver,
+                    "GummelIteration/electron_poisson",
+                    "relaxation_factor",
+                )
+                or "nan"
+            ),
+            relaxation_factor,
+            rel_tol=0.0,
+            abs_tol=1.0e-15,
         ),
         "delta_phi_contract": (
             mp.get_parameter(
@@ -863,7 +882,19 @@ def _construction_audit(
             "type = FVElectronResponseTopologyCorrection" in poisson
             and "anchor = phi_anchor_frozen" in poisson
             and "beta = electron_response_beta" in poisson
-            and "strength = 1.0" in poisson
+            and math.isclose(
+                float(
+                    mp.get_parameter(
+                        poisson,
+                        "FVKernels/issue359_electron_response_topology",
+                        "strength",
+                    )
+                    or "nan"
+                ),
+                response_strength,
+                rel_tol=0.0,
+                abs_tol=1.0e-15,
+            )
         ),
         "single_Te_ownership": (
             "T_e_value" not in outer
