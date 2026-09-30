@@ -441,17 +441,19 @@ jobs:
               cd /workspace
 
               variants="
-              r095_s100:0.95:1.00
-              r100_s100:1.00:1.00
-              r105_s100:1.05:1.00
-              r090_s075:0.90:0.75
-              r090_s050:0.90:0.50
+              r090_s100_R1:0.90:1.00:1
+              r090_s100_R2:0.90:1.00:2
+              r090_s100_R3:0.90:1.00:3
+              r090_s100_R5:0.90:1.00:5
+              r100_s100_R5:1.00:1.00:5
               "
               for spec in $variants; do
                 label="${spec%%:*}"
                 rest="${spec#*:}"
                 relax="${rest%%:*}"
-                strength="${rest#*:}"
+                rest="${rest#*:}"
+                strength="${rest%%:*}"
+                radius="${rest#*:}"
                 out="issue359-gummel-optimization/$label"
                 rm -rf "$out"
                 set +e
@@ -460,10 +462,11 @@ jobs:
                   --results-root "$out" \
                   --timeout 1200 \
                   --relaxation-factor "$relax" \
-                  --response-strength "$strength"
+                  --response-strength "$strength" \
+                  --response-radius "$radius"
                 rc=$?
                 set -e
-                printf "%s\t%s\t%s\t%s\n" "$label" "$relax" "$strength" "$rc" \
+                printf "%s\t%s\t%s\t%s\t%s\n" "$label" "$relax" "$strength" "$radius" "$rc" \
                   >> issue359-gummel-optimization/returncodes.tsv
               done
             '
@@ -490,6 +493,8 @@ jobs:
                   "status": s.get("status"),
                   "relaxation_factor": accel.get("relaxation_factor"),
                   "response_strength": response.get("strength"),
+                  "response_radius": response.get("graph_radius"),
+                  "shell_weights": response.get("shell_weights"),
                   "runtime_s": s.get("runtime", {}).get("wall_seconds"),
                   "fixed_point_iterations": d.get("fixed_point_iterations"),
                   "delta_phi_max_V": d.get("delta_phi_max_V"),
