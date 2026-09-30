@@ -442,11 +442,14 @@ jobs:
 
               variants="
               graph_R1_r090_s050:graph:0.90:0.50:1
+              graph_R1_r100_s050:graph:1.00:0.50:1
+              graph_R1_r105_s050:graph:1.05:0.50:1
+              dir_R2_r090_s035:directional:0.90:0.35:2
               dir_R2_r090_s050:directional:0.90:0.50:2
-              dir_R3_r090_s050:directional:0.90:0.50:3
-              dir_R5_r090_s050:directional:0.90:0.50:5
-              dir_R5_r100_s050:directional:1.00:0.50:5
-              dir_R5_r090_s025:directional:0.90:0.25:5
+              dir_R2_r100_s035:directional:1.00:0.35:2
+              dir_R2_r100_s050:directional:1.00:0.50:2
+              dir_R2_r105_s035:directional:1.05:0.35:2
+              dir_R2_r105_s050:directional:1.05:0.50:2
               "
               for spec in $variants; do
                 label="${spec%%:*}"
