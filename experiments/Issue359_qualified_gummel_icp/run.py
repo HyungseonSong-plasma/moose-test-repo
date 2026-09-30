@@ -25,7 +25,8 @@ FLOW_SCCM = 20.0
 PRESSURE_PA = 1.333223684
 TG_K = 300.0
 ENERGY_REF_EV = 5.73276
-DT_S = 5.6650790022617894e-11
+HEAVY_DT_S = 1.0e-8
+ELECTRON_SUBSTEPS_DEFAULT = 4
 RELAXATION_FACTOR_DEFAULT = 0.45
 RESPONSE_STRENGTH_DEFAULT = 1.0
 RESPONSE_RADIUS_DEFAULT = 1
@@ -223,7 +224,26 @@ def _canonicalize_qualified_driver(text: str) -> str:
     return text
 
 
-def _electron_input(src: str) -> str:
+def _electron_dt_s(electron_substeps: int) -> float:
+    if electron_substeps <= 0:
+        raise Issue359Error("electron_substeps must be positive")
+    return HEAVY_DT_S / float(electron_substeps)
+
+
+def _configure_fast_executioner(text: str, electron_substeps: int) -> str:
+    electron_dt_s = _electron_dt_s(electron_substeps)
+    text = mp.upsert_parameter(text, "Executioner", "dt", f"{electron_dt_s:.17g}")
+    text = mp.upsert_parameter(text, "Executioner", "dtmin", f"{electron_dt_s:.17g}")
+    text = mp.upsert_parameter(text, "Executioner", "dtmax", f"{electron_dt_s:.17g}")
+    text = mp.upsert_parameter(text, "Executioner", "end_time", f"{HEAVY_DT_S:.17g}")
+    text = mp.upsert_parameter(text, "Executioner", "num_steps", str(electron_substeps))
+    text = mp.upsert_parameter(text, "Executioner", "timestep_tolerance", "1.0e-18")
+    return text
+
+
+def _electron_input(
+    src: str, *, electron_substeps: int = ELECTRON_SUBSTEPS_DEFAULT
+) -> str:
     text = _replace_mesh(src)
     text = mp.upsert_parameter(
         text, "Variables/log_e", "initial_condition", f"{INITIAL_LOG_E:.17g}"
@@ -337,13 +357,7 @@ def _electron_input(src: str) -> str:
   []""",
     )
 
-    text = mp.upsert_parameter(text, "Executioner", "dt", f"{DT_S:.17g}")
-    text = mp.upsert_parameter(text, "Executioner", "dtmin", f"{DT_S:.17g}")
-    text = mp.upsert_parameter(text, "Executioner", "dtmax", f"{DT_S:.17g}")
-    text = mp.upsert_parameter(text, "Executioner", "end_time", f"{DT_S:.17g}")
-    text = mp.upsert_parameter(text, "Executioner", "num_steps", "1")
-    text = mp.upsert_parameter(text, "Executioner", "timestep_tolerance", "1.0e-18")
-    return text
+    return _configure_fast_executioner(text, electron_substeps)
 
 
 def _response_shell_weights(radius: int) -> tuple[float, ...]:
@@ -360,6 +374,7 @@ def _poisson_input(
     response_strength: float = RESPONSE_STRENGTH_DEFAULT,
     response_radius: int = RESPONSE_RADIUS_DEFAULT,
     response_mode: str = RESPONSE_MODE_DEFAULT,
+    electron_substeps: int = ELECTRON_SUBSTEPS_DEFAULT,
 ) -> str:
     text = _replace_mesh(src)
     text = mp.upsert_parameter(
@@ -487,17 +502,14 @@ def _poisson_input(
 []
 """
 
-    text = mp.upsert_parameter(text, "Executioner", "dt", f"{DT_S:.17g}")
-    text = mp.upsert_parameter(text, "Executioner", "dtmin", f"{DT_S:.17g}")
-    text = mp.upsert_parameter(text, "Executioner", "dtmax", f"{DT_S:.17g}")
-    text = mp.upsert_parameter(text, "Executioner", "end_time", f"{DT_S:.17g}")
-    text = mp.upsert_parameter(text, "Executioner", "num_steps", "1")
-    text = mp.upsert_parameter(text, "Executioner", "timestep_tolerance", "1.0e-18")
-    return text
+    return _configure_fast_executioner(text, electron_substeps)
 
 
 def _driver_input(
-    src: str, *, relaxation_factor: float = RELAXATION_FACTOR_DEFAULT
+    src: str,
+    *,
+    relaxation_factor: float = RELAXATION_FACTOR_DEFAULT,
+    electron_substeps: int = ELECTRON_SUBSTEPS_DEFAULT,
 ) -> str:
     text = _canonicalize_qualified_driver(src)
     text = _replace_mesh(text)
@@ -659,13 +671,7 @@ def _driver_input(
         "'phi_anchor_frozen p_gas_from_heavy T_g_from_heavy w_O2p_frozen w_Om_frozen w_Op_frozen'",
     )
 
-    text = mp.upsert_parameter(text, "Executioner", "dt", f"{DT_S:.17g}")
-    text = mp.upsert_parameter(text, "Executioner", "dtmin", f"{DT_S:.17g}")
-    text = mp.upsert_parameter(text, "Executioner", "dtmax", f"{DT_S:.17g}")
-    text = mp.upsert_parameter(text, "Executioner", "end_time", f"{DT_S:.17g}")
-    text = mp.upsert_parameter(text, "Executioner", "num_steps", "1")
-    text = mp.upsert_parameter(text, "Executioner", "timestep_tolerance", "1.0e-18")
-    return text
+    return _configure_fast_executioner(text, electron_substeps)
 
 
 def _outer_input(src: str) -> str:
@@ -774,8 +780,8 @@ def _outer_input(src: str) -> str:
   type = Transient
   scheme = implicit-euler
   solve_type = NEWTON
-  dt = {DT_S:.17g}
-  end_time = {DT_S:.17g}
+  dt = {HEAVY_DT_S:.17g}
+  end_time = {HEAVY_DT_S:.17g}
   num_steps = 1
   nl_rel_tol = 1.0e-9
   nl_abs_tol = 1.0e-11
@@ -799,6 +805,7 @@ def _construction_audit(
     response_strength: float,
     response_radius: int,
     response_mode: str,
+    electron_substeps: int,
 ) -> dict[str, Any]:
     all_b = set(ALL_ELECTRON_BOUNDARIES)
     checks = {
@@ -983,6 +990,32 @@ def _construction_audit(
             )
             == response_radius
         ),
+        "multirate_time_contract": (
+            math.isclose(
+                float(mp.get_parameter(outer, "Executioner", "dt") or "nan"),
+                HEAVY_DT_S,
+                rel_tol=0.0,
+                abs_tol=1.0e-18,
+            )
+            and int(mp.get_parameter(outer, "Executioner", "num_steps") or "0") == 1
+            and all(
+                math.isclose(
+                    float(mp.get_parameter(inp, "Executioner", "dt") or "nan"),
+                    _electron_dt_s(electron_substeps),
+                    rel_tol=0.0,
+                    abs_tol=1.0e-18,
+                )
+                and math.isclose(
+                    float(mp.get_parameter(inp, "Executioner", "end_time") or "nan"),
+                    HEAVY_DT_S,
+                    rel_tol=0.0,
+                    abs_tol=1.0e-18,
+                )
+                and int(mp.get_parameter(inp, "Executioner", "num_steps") or "0")
+                == electron_substeps
+                for inp in (driver, electron, poisson)
+            )
+        ),
         "single_Te_ownership": (
             "T_e_value" not in outer
             and "T_e_from_gummel_K" in outer
@@ -1046,6 +1079,7 @@ def _stage(
     response_strength: float = RESPONSE_STRENGTH_DEFAULT,
     response_radius: int = RESPONSE_RADIUS_DEFAULT,
     response_mode: str = RESPONSE_MODE_DEFAULT,
+    electron_substeps: int = ELECTRON_SUBSTEPS_DEFAULT,
 ) -> dict[str, Any]:
     if root.exists():
         shutil.rmtree(root)
@@ -1056,13 +1090,18 @@ def _stage(
     driver = _driver_input(
         (qualified / "fast_sub.i").read_text(),
         relaxation_factor=relaxation_factor,
+        electron_substeps=electron_substeps,
     )
-    electron = _electron_input((qualified / "electron_sub.i").read_text())
+    electron = _electron_input(
+        (qualified / "electron_sub.i").read_text(),
+        electron_substeps=electron_substeps,
+    )
     poisson = _poisson_input(
         (qualified / "poisson_sub.i").read_text(),
         response_strength=response_strength,
         response_radius=response_radius,
         response_mode=response_mode,
+        electron_substeps=electron_substeps,
     )
 
     audit = _construction_audit(
@@ -1074,6 +1113,7 @@ def _stage(
         response_strength=response_strength,
         response_radius=response_radius,
         response_mode=response_mode,
+        electron_substeps=electron_substeps,
     )
     if audit["status"] != "PASS":
         raise Issue359Error(f"construction audit failed: {audit['failed_checks']}")
@@ -1116,6 +1156,14 @@ def _stage(
         "electron_energy_bc": "PhysicsFVElectronGroundedSheathEnergyBC",
         "poisson_bc": "all eight plasma boundaries grounded at 0 V",
         "removed_geometry_specific_object": "FVElectronResponseBandedCorrection",
+        "time_integration": {
+            "heavy_dt_s": HEAVY_DT_S,
+            "heavy_steps": 1,
+            "electron_substeps_per_heavy": electron_substeps,
+            "electron_dt_s": _electron_dt_s(electron_substeps),
+            "electron_to_heavy_dt_ratio": 1.0 / float(electron_substeps),
+            "frozen_heavy_during_electron_subcycling": True,
+        },
         "gummel_acceleration": {
             "relaxation_factor": relaxation_factor,
             "fixed_point_algorithm": "steffensen",
@@ -1154,6 +1202,7 @@ def _read_final_diagnostics(case: Path) -> dict[str, float]:
     row = {key: float(value) for key, value in rows[0].items() if key and value}
     required = (
         "fixed_point_iterations",
+        "cumulative_fixed_point_iterations",
         "fp_delta_phi_max",
         "issue359_phi_min",
         "issue359_phi_max",
@@ -1181,6 +1230,7 @@ def _read_final_diagnostics(case: Path) -> dict[str, float]:
     )
     return {
         "fixed_point_iterations": row["fixed_point_iterations"],
+        "cumulative_fixed_point_iterations": row["cumulative_fixed_point_iterations"],
         "delta_phi_max_V": row["fp_delta_phi_max"],
         "phi_min_V": row["issue359_phi_min"],
         "phi_max_V": row["issue359_phi_max"],
@@ -1203,6 +1253,32 @@ def _read_final_diagnostics(case: Path) -> dict[str, float]:
     }
 
 
+def _read_step_iterations(case: Path) -> list[dict[str, float]]:
+    paths = sorted(case.glob("*_gummel_driver0_step_csv.csv"))
+    if len(paths) != 1:
+        raise Issue359Error(
+            f"expected one Gummel driver STEP CSV, found {len(paths)}: {paths}"
+        )
+    with paths[0].open(newline="") as handle:
+        rows = list(csv.DictReader(handle))
+    out: list[dict[str, float]] = []
+    for row in rows:
+        time_s = float(row.get("time") or 0.0)
+        if time_s <= 0.0:
+            continue
+        out.append(
+            {
+                "time_s": time_s,
+                "fixed_point_iterations": float(row["fixed_point_iterations"]),
+                "cumulative_fixed_point_iterations": float(
+                    row["cumulative_fixed_point_iterations"]
+                ),
+                "delta_phi_max_V": float(row["fp_delta_phi_max"]),
+            }
+        )
+    return out
+
+
 def run(args: argparse.Namespace) -> int:
     exe = resolve_executable(args.physics)
     validate_executable(exe)
@@ -1218,12 +1294,15 @@ def run(args: argparse.Namespace) -> int:
         raise Issue359Error("response radius must lie in [1, 5]")
     if args.response_mode not in ("graph", "directional"):
         raise Issue359Error("response mode must be graph or directional")
+    if args.electron_substeps not in (1, 2, 4, 8):
+        raise Issue359Error("electron substeps must be one of 1, 2, 4, 8")
     meta = _stage(
         case,
         relaxation_factor=args.relaxation_factor,
         response_strength=args.response_strength,
         response_radius=args.response_radius,
         response_mode=args.response_mode,
+        electron_substeps=args.electron_substeps,
     )
 
     checks: dict[str, Any] = {}
@@ -1265,10 +1344,17 @@ def run(args: argparse.Namespace) -> int:
         timeout_seconds=args.timeout,
     )
     diagnostics: dict[str, float] | None = None
+    step_iterations: list[dict[str, float]] | None = None
     diagnostic_error: str | None = None
     if runtime.returncode == 0:
         try:
             diagnostics = _read_final_diagnostics(case)
+            step_iterations = _read_step_iterations(case)
+            if len(step_iterations) != args.electron_substeps:
+                raise Issue359Error(
+                    f"expected {args.electron_substeps} electron physical steps, "
+                    f"found {len(step_iterations)} in driver STEP CSV"
+                )
         except Issue359Error as exc:
             diagnostic_error = str(exc)
 
@@ -1284,6 +1370,7 @@ def run(args: argparse.Namespace) -> int:
             "wall_seconds": runtime.wall_seconds,
         },
         "final_diagnostics": diagnostics,
+        "electron_step_iterations": step_iterations,
         "diagnostic_error": diagnostic_error,
         "construction": meta,
     }
@@ -1320,6 +1407,12 @@ def main() -> int:
         "--response-mode",
         choices=("graph", "directional"),
         default=RESPONSE_MODE_DEFAULT,
+    )
+    parser.add_argument(
+        "--electron-substeps",
+        type=int,
+        choices=(1, 2, 4, 8),
+        default=ELECTRON_SUBSTEPS_DEFAULT,
     )
     return run(parser.parse_args())
 
