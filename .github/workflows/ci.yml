@@ -441,15 +441,18 @@ jobs:
               cd /workspace
 
               variants="
-              r090_s100_R1:0.90:1.00:1
-              r090_s100_R2:0.90:1.00:2
-              r090_s100_R3:0.90:1.00:3
-              r090_s100_R5:0.90:1.00:5
-              r100_s100_R5:1.00:1.00:5
+              graph_R1_r090_s050:graph:0.90:0.50:1
+              dir_R2_r090_s050:directional:0.90:0.50:2
+              dir_R3_r090_s050:directional:0.90:0.50:3
+              dir_R5_r090_s050:directional:0.90:0.50:5
+              dir_R5_r100_s050:directional:1.00:0.50:5
+              dir_R5_r090_s025:directional:0.90:0.25:5
               "
               for spec in $variants; do
                 label="${spec%%:*}"
                 rest="${spec#*:}"
+                mode="${rest%%:*}"
+                rest="${rest#*:}"
                 relax="${rest%%:*}"
                 rest="${rest#*:}"
                 strength="${rest%%:*}"
@@ -463,10 +466,11 @@ jobs:
                   --timeout 1200 \
                   --relaxation-factor "$relax" \
                   --response-strength "$strength" \
-                  --response-radius "$radius"
+                  --response-radius "$radius" \
+                  --response-mode "$mode"
                 rc=$?
                 set -e
-                printf "%s\t%s\t%s\t%s\t%s\n" "$label" "$relax" "$strength" "$radius" "$rc" \
+                printf "%s\t%s\t%s\t%s\t%s\t%s\n" "$label" "$mode" "$relax" "$strength" "$radius" "$rc" \
                   >> issue359-gummel-optimization/returncodes.tsv
               done
             '
@@ -492,6 +496,7 @@ jobs:
                   "case": case.name,
                   "status": s.get("status"),
                   "relaxation_factor": accel.get("relaxation_factor"),
+                  "response_mode": response.get("mode"),
                   "response_strength": response.get("strength"),
                   "response_radius": response.get("graph_radius"),
                   "shell_weights": response.get("shell_weights"),
