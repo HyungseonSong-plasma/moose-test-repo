@@ -362,6 +362,13 @@ jobs:
       actions: read
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Verify immutable Issue359 base SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
       - name: Log in to GHCR
         uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9
         with:
@@ -416,137 +423,144 @@ jobs:
           path: issue359-gummel-icp-results
           if-no-files-found: ignore
           retention-days: 30
-      - name: Sweep Gummel acceleration parameters
-        if: success()
+
+  issue359-multirate-matrix:
+    if: github.event_name == 'pull_request' && github.head_ref == 'issue-359-qualified-gummel-icp'
+    name: Issue359 Multirate ${{ matrix.label }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    permissions:
+      contents: read
+      packages: read
+      actions: read
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        include:
+          - label: ratio_1to2
+            electron_substeps: 2
+            heavy_steps: 4
+          - label: ratio_1to4
+            electron_substeps: 4
+            heavy_steps: 2
+          - label: ratio_1to8
+            electron_substeps: 8
+            heavy_steps: 1
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Verify immutable matrix base SHA
         shell: bash
         run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run equal-final-time multirate discriminator
+        shell: bash
+        env:
+          CASE_LABEL: ${{ matrix.label }}
+          ELECTRON_SUBSTEPS: ${{ matrix.electron_substeps }}
+          HEAVY_STEPS: ${{ matrix.heavy_steps }}
+          BASE_SHA: ${{ github.event.pull_request.head.sha }}
+          WORKFLOW_EVENT_SHA: ${{ github.sha }}
+        run: |
           set -euxo pipefail
-          rm -rf issue359-gummel-optimization
-          mkdir -p issue359-gummel-optimization
+          python3 -m py_compile experiments/Issue359_qualified_gummel_icp/run.py
+          rm -rf "$PWD/.issue351-qualified" "issue359-multirate-$CASE_LABEL"
+          GH_TOKEN="${{ github.token }}" gh run download 36496470116 \
+            --repo "$GITHUB_REPOSITORY" \
+            --name issue351-frozen-heavy-driver-full \
+            --dir "$PWD/.issue351-qualified"
+          docker pull "$EXPECTED_BUILD_BASE_REF"
           docker run --rm \
             --entrypoint /bin/bash \
             --user 0:0 \
             --workdir /workspace \
+            -e CASE_LABEL \
+            -e ELECTRON_SUBSTEPS \
+            -e HEAVY_STEPS \
+            -e BASE_SHA \
+            -e WORKFLOW_EVENT_SHA \
             -v "$PWD:/workspace" \
             "$EXPECTED_BUILD_BASE_REF" \
             -lc '
-              set -u
+              set -euxo pipefail
               source /environment
+              git config --global --add safe.directory /workspace
+              git config --global --add safe.directory /opt/physics_vendor/moose
+              git config --global --add safe.directory /opt/physics_vendor/crane
+              git config --global --add safe.directory /opt/physics_vendor/squirrel
+              git config --global --add safe.directory /opt/physics_vendor/zapdos
               export MOOSE_DIR=/opt/physics_vendor/moose
               export CRANE_DIR=/opt/physics_vendor/crane
               export SQUIRREL_DIR=/opt/physics_vendor/squirrel
               export ZAPDOS_DIR=/opt/physics_vendor/zapdos
               export METHOD=opt
-              export ISSUE351_QUALIFIED_CASE=/workspace/.issue351-qualified/generated/full/frozen_heavy_driver
+              make -C /workspace/physics_app -j2
               cd /workspace
+              export ISSUE351_QUALIFIED_CASE=/workspace/.issue351-qualified/generated/full/frozen_heavy_driver
 
-              variants="
-              ratio_1to2:graph:0.90:0.50:1:2
-              ratio_1to4:graph:0.90:0.50:1:4
-              ratio_1to8:graph:0.90:0.50:1:8
-              "
-              for spec in $variants; do
-                label="${spec%%:*}"
-                rest="${spec#*:}"
-                mode="${rest%%:*}"
-                rest="${rest#*:}"
-                relax="${rest%%:*}"
-                rest="${rest#*:}"
-                strength="${rest%%:*}"
-                rest="${rest#*:}"
-                radius="${rest%%:*}"
-                substeps="${rest#*:}"
-                out="issue359-gummel-optimization/$label"
-                rm -rf "$out"
-                set +e
-                python3 -m experiments.Issue359_qualified_gummel_icp.run \
-                  --physics physics_app/physics-opt \
-                  --results-root "$out" \
-                  --timeout 1200 \
-                  --relaxation-factor "$relax" \
-                  --response-strength "$strength" \
-                  --response-radius "$radius" \
-                  --response-mode "$mode" \
-                  --electron-substeps "$substeps"
-                rc=$?
-                set -e
-                printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\n" "$label" "$mode" "$relax" "$strength" "$radius" "$substeps" "$rc" \
-                  >> issue359-gummel-optimization/returncodes.tsv
-              done
+              out="issue359-multirate-$CASE_LABEL"
+              python3 -m experiments.Issue359_qualified_gummel_icp.run \
+                --physics physics_app/physics-opt \
+                --results-root "$out" \
+                --timeout 1200 \
+                --relaxation-factor 0.90 \
+                --response-strength 0.50 \
+                --response-radius 1 \
+                --response-mode graph \
+                --electron-substeps "$ELECTRON_SUBSTEPS" \
+                --heavy-steps "$HEAVY_STEPS"
+
+              python3 - <<PY
+              import json
+              import os
+              from pathlib import Path
+
+              out = Path(f"issue359-multirate-{os.environ['CASE_LABEL']}")
+              summary = json.loads((out / "summary.json").read_text())
+              timing = summary["construction"]["time_integration"]
+              assert timing["electron_steps_total"] == 8
+              expected_final = 8 * 5.6650790022617894e-11
+              assert abs(timing["final_time_s"] - expected_final) <= 1.0e-18
+              evidence = {
+                  "schema_version": 1,
+                  "issue": 359,
+                  "hypothesis_id": f"heavy_cadence_{os.environ['CASE_LABEL']}",
+                  "base_sha": os.environ["BASE_SHA"],
+                  "workflow_event_sha": os.environ["WORKFLOW_EVENT_SHA"],
+                  "case": os.environ["CASE_LABEL"],
+                  "electron_substeps_per_heavy": int(os.environ["ELECTRON_SUBSTEPS"]),
+                  "heavy_steps": int(os.environ["HEAVY_STEPS"]),
+                  "electron_steps_total": timing["electron_steps_total"],
+                  "electron_dt_s": timing["electron_dt_s"],
+                  "heavy_dt_s": timing["heavy_dt_s"],
+                  "final_time_s": timing["final_time_s"],
+                  "summary": summary,
+                  "promotion_authorized": False,
+              }
+              (out / "matrix_evidence.json").write_text(
+                  json.dumps(evidence, indent=2, sort_keys=True) + "\n"
+              )
+              print(json.dumps(evidence, indent=2, sort_keys=True))
+              PY
             '
 
-          python3 - <<'PY'
-          import json
-          from pathlib import Path
-
-          root = Path("issue359-gummel-optimization")
-          baseline = json.loads(Path("issue359-gummel-icp-results/summary.json").read_text())
-          base_d = baseline.get("final_diagnostics") or {}
-          rows = []
-          for case in sorted(p for p in root.iterdir() if p.is_dir()):
-              summary_path = case / "summary.json"
-              if not summary_path.is_file():
-                  rows.append({"case": case.name, "status": "NO_SUMMARY"})
-                  continue
-              s = json.loads(summary_path.read_text())
-              d = s.get("final_diagnostics") or {}
-              accel = s.get("construction", {}).get("gummel_acceleration", {})
-              response = s.get("construction", {}).get("icp_response_correction", {})
-              row = {
-                  "case": case.name,
-                  "status": s.get("status"),
-                  "relaxation_factor": accel.get("relaxation_factor"),
-                  "response_mode": response.get("mode"),
-                  "response_strength": response.get("strength"),
-                  "response_radius": response.get("graph_radius"),
-                  "shell_weights": response.get("shell_weights"),
-                  "electron_substeps": s.get("construction", {}).get("time_integration", {}).get("electron_substeps_per_heavy"),
-                  "electron_dt_s": s.get("construction", {}).get("time_integration", {}).get("electron_dt_s"),
-                  "heavy_dt_s": s.get("construction", {}).get("time_integration", {}).get("heavy_dt_s"),
-                  "runtime_s": s.get("runtime", {}).get("wall_seconds"),
-                  "fixed_point_iterations": d.get("fixed_point_iterations"),
-                  "cumulative_fixed_point_iterations": d.get("cumulative_fixed_point_iterations"),
-                  "electron_step_iterations": s.get("electron_step_iterations"),
-                  "delta_phi_max_V": d.get("delta_phi_max_V"),
-                  "phi_min_V": d.get("phi_min_V"),
-                  "phi_max_V": d.get("phi_max_V"),
-                  "electron_density_avg_m3": d.get("electron_density_avg_m3"),
-                  "mean_energy_avg_eV": d.get("mean_energy_avg_eV"),
-              }
-              if d and base_d:
-                  row["vs_baseline"] = {
-                      "phi_min_delta_V": d["phi_min_V"] - base_d["phi_min_V"],
-                      "phi_max_delta_V": d["phi_max_V"] - base_d["phi_max_V"],
-                      "ne_avg_rel_delta": (
-                          d["electron_density_avg_m3"] / base_d["electron_density_avg_m3"] - 1.0
-                      ),
-                      "mean_energy_avg_delta_eV": (
-                          d["mean_energy_avg_eV"] - base_d["mean_energy_avg_eV"]
-                      ),
-                  }
-              rows.append(row)
-
-          evidence = {
-              "baseline": {
-                  "runtime_s": baseline.get("runtime", {}).get("wall_seconds"),
-                  "fixed_point_iterations": base_d.get("fixed_point_iterations"),
-                  "phi_min_V": base_d.get("phi_min_V"),
-                  "phi_max_V": base_d.get("phi_max_V"),
-                  "electron_density_avg_m3": base_d.get("electron_density_avg_m3"),
-                  "mean_energy_avg_eV": base_d.get("mean_energy_avg_eV"),
-              },
-              "cases": rows,
-          }
-          (root / "sweep_summary.json").write_text(
-              json.dumps(evidence, indent=2, sort_keys=True) + "\n"
-          )
-          print(json.dumps(evidence, indent=2, sort_keys=True))
-          PY
-      - name: Upload Gummel optimization sweep
+      - name: Upload multirate matrix evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: issue359-gummel-optimization
-          path: issue359-gummel-optimization
-          if-no-files-found: ignore
+          name: issue359-multirate-${{ matrix.label }}
+          path: issue359-multirate-${{ matrix.label }}
+          if-no-files-found: error
           retention-days: 30
+
