@@ -441,10 +441,9 @@ jobs:
               cd /workspace
 
               variants="
-              dt10ns_sub1:graph:0.90:0.50:1:1
-              dt5ns_sub2:graph:0.90:0.50:1:2
-              dt2p5ns_sub4:graph:0.90:0.50:1:4
-              dt1p25ns_sub8:graph:0.90:0.50:1:8
+              ratio_1to2:graph:0.90:0.50:1:2
+              ratio_1to4:graph:0.90:0.50:1:4
+              ratio_1to8:graph:0.90:0.50:1:8
               "
               for spec in $variants; do
                 label="${spec%%:*}"
