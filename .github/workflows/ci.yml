@@ -441,15 +441,10 @@ jobs:
               cd /workspace
 
               variants="
-              graph_R1_r090_s050:graph:0.90:0.50:1
-              graph_R1_r100_s050:graph:1.00:0.50:1
-              graph_R1_r105_s050:graph:1.05:0.50:1
-              dir_R2_r090_s035:directional:0.90:0.35:2
-              dir_R2_r090_s050:directional:0.90:0.50:2
-              dir_R2_r100_s035:directional:1.00:0.35:2
-              dir_R2_r100_s050:directional:1.00:0.50:2
-              dir_R2_r105_s035:directional:1.05:0.35:2
-              dir_R2_r105_s050:directional:1.05:0.50:2
+              dt10ns_sub1:graph:0.90:0.50:1:1
+              dt5ns_sub2:graph:0.90:0.50:1:2
+              dt2p5ns_sub4:graph:0.90:0.50:1:4
+              dt1p25ns_sub8:graph:0.90:0.50:1:8
               "
               for spec in $variants; do
                 label="${spec%%:*}"
@@ -459,7 +454,9 @@ jobs:
                 relax="${rest%%:*}"
                 rest="${rest#*:}"
                 strength="${rest%%:*}"
-                radius="${rest#*:}"
+                rest="${rest#*:}"
+                radius="${rest%%:*}"
+                substeps="${rest#*:}"
                 out="issue359-gummel-optimization/$label"
                 rm -rf "$out"
                 set +e
@@ -470,10 +467,11 @@ jobs:
                   --relaxation-factor "$relax" \
                   --response-strength "$strength" \
                   --response-radius "$radius" \
-                  --response-mode "$mode"
+                  --response-mode "$mode" \
+                  --electron-substeps "$substeps"
                 rc=$?
                 set -e
-                printf "%s\t%s\t%s\t%s\t%s\t%s\n" "$label" "$mode" "$relax" "$strength" "$radius" "$rc" \
+                printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\n" "$label" "$mode" "$relax" "$strength" "$radius" "$substeps" "$rc" \
                   >> issue359-gummel-optimization/returncodes.tsv
               done
             '
@@ -503,8 +501,13 @@ jobs:
                   "response_strength": response.get("strength"),
                   "response_radius": response.get("graph_radius"),
                   "shell_weights": response.get("shell_weights"),
+                  "electron_substeps": s.get("construction", {}).get("time_integration", {}).get("electron_substeps_per_heavy"),
+                  "electron_dt_s": s.get("construction", {}).get("time_integration", {}).get("electron_dt_s"),
+                  "heavy_dt_s": s.get("construction", {}).get("time_integration", {}).get("heavy_dt_s"),
                   "runtime_s": s.get("runtime", {}).get("wall_seconds"),
                   "fixed_point_iterations": d.get("fixed_point_iterations"),
+                  "cumulative_fixed_point_iterations": d.get("cumulative_fixed_point_iterations"),
+                  "electron_step_iterations": s.get("electron_step_iterations"),
                   "delta_phi_max_V": d.get("delta_phi_max_V"),
                   "phi_min_V": d.get("phi_min_V"),
                   "phi_max_V": d.get("phi_max_V"),
