@@ -441,11 +441,11 @@ jobs:
               cd /workspace
 
               variants="
-              r060_s100:0.60:1.00
-              r075_s100:0.75:1.00
-              r090_s100:0.90:1.00
-              r045_s150:0.45:1.50
-              r045_s200:0.45:2.00
+              r095_s100:0.95:1.00
+              r100_s100:1.00:1.00
+              r105_s100:1.05:1.00
+              r090_s075:0.90:0.75
+              r090_s050:0.90:0.50
               "
               for spec in $variants; do
                 label="${spec%%:*}"
@@ -466,67 +466,67 @@ jobs:
                 printf "%s\t%s\t%s\t%s\n" "$label" "$relax" "$strength" "$rc" \
                   >> issue359-gummel-optimization/returncodes.tsv
               done
-
-              python3 - <<"PY"
-              import json
-              from pathlib import Path
-
-              root = Path("issue359-gummel-optimization")
-              baseline = json.loads(Path("issue359-gummel-icp-results/summary.json").read_text())
-              base_d = baseline.get("final_diagnostics") or {}
-              rows = []
-              for case in sorted(p for p in root.iterdir() if p.is_dir()):
-                  summary_path = case / "summary.json"
-                  if not summary_path.is_file():
-                      rows.append({"case": case.name, "status": "NO_SUMMARY"})
-                      continue
-                  s = json.loads(summary_path.read_text())
-                  d = s.get("final_diagnostics") or {}
-                  accel = s.get("construction", {}).get("gummel_acceleration", {})
-                  response = s.get("construction", {}).get("icp_response_correction", {})
-                  row = {
-                      "case": case.name,
-                      "status": s.get("status"),
-                      "relaxation_factor": accel.get("relaxation_factor"),
-                      "response_strength": response.get("strength"),
-                      "runtime_s": s.get("runtime", {}).get("wall_seconds"),
-                      "fixed_point_iterations": d.get("fixed_point_iterations"),
-                      "delta_phi_max_V": d.get("delta_phi_max_V"),
-                      "phi_min_V": d.get("phi_min_V"),
-                      "phi_max_V": d.get("phi_max_V"),
-                      "electron_density_avg_m3": d.get("electron_density_avg_m3"),
-                      "mean_energy_avg_eV": d.get("mean_energy_avg_eV"),
-                  }
-                  if d and base_d:
-                      row["vs_baseline"] = {
-                          "phi_min_delta_V": d["phi_min_V"] - base_d["phi_min_V"],
-                          "phi_max_delta_V": d["phi_max_V"] - base_d["phi_max_V"],
-                          "ne_avg_rel_delta": (
-                              d["electron_density_avg_m3"] / base_d["electron_density_avg_m3"] - 1.0
-                          ),
-                          "mean_energy_avg_delta_eV": (
-                              d["mean_energy_avg_eV"] - base_d["mean_energy_avg_eV"]
-                          ),
-                      }
-                  rows.append(row)
-
-              evidence = {
-                  "baseline": {
-                      "runtime_s": baseline.get("runtime", {}).get("wall_seconds"),
-                      "fixed_point_iterations": base_d.get("fixed_point_iterations"),
-                      "phi_min_V": base_d.get("phi_min_V"),
-                      "phi_max_V": base_d.get("phi_max_V"),
-                      "electron_density_avg_m3": base_d.get("electron_density_avg_m3"),
-                      "mean_energy_avg_eV": base_d.get("mean_energy_avg_eV"),
-                  },
-                  "cases": rows,
-              }
-              (root / "sweep_summary.json").write_text(
-                  json.dumps(evidence, indent=2, sort_keys=True) + "\n"
-              )
-              print(json.dumps(evidence, indent=2, sort_keys=True))
-              PY
             '
+
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          root = Path("issue359-gummel-optimization")
+          baseline = json.loads(Path("issue359-gummel-icp-results/summary.json").read_text())
+          base_d = baseline.get("final_diagnostics") or {}
+          rows = []
+          for case in sorted(p for p in root.iterdir() if p.is_dir()):
+              summary_path = case / "summary.json"
+              if not summary_path.is_file():
+                  rows.append({"case": case.name, "status": "NO_SUMMARY"})
+                  continue
+              s = json.loads(summary_path.read_text())
+              d = s.get("final_diagnostics") or {}
+              accel = s.get("construction", {}).get("gummel_acceleration", {})
+              response = s.get("construction", {}).get("icp_response_correction", {})
+              row = {
+                  "case": case.name,
+                  "status": s.get("status"),
+                  "relaxation_factor": accel.get("relaxation_factor"),
+                  "response_strength": response.get("strength"),
+                  "runtime_s": s.get("runtime", {}).get("wall_seconds"),
+                  "fixed_point_iterations": d.get("fixed_point_iterations"),
+                  "delta_phi_max_V": d.get("delta_phi_max_V"),
+                  "phi_min_V": d.get("phi_min_V"),
+                  "phi_max_V": d.get("phi_max_V"),
+                  "electron_density_avg_m3": d.get("electron_density_avg_m3"),
+                  "mean_energy_avg_eV": d.get("mean_energy_avg_eV"),
+              }
+              if d and base_d:
+                  row["vs_baseline"] = {
+                      "phi_min_delta_V": d["phi_min_V"] - base_d["phi_min_V"],
+                      "phi_max_delta_V": d["phi_max_V"] - base_d["phi_max_V"],
+                      "ne_avg_rel_delta": (
+                          d["electron_density_avg_m3"] / base_d["electron_density_avg_m3"] - 1.0
+                      ),
+                      "mean_energy_avg_delta_eV": (
+                          d["mean_energy_avg_eV"] - base_d["mean_energy_avg_eV"]
+                      ),
+                  }
+              rows.append(row)
+
+          evidence = {
+              "baseline": {
+                  "runtime_s": baseline.get("runtime", {}).get("wall_seconds"),
+                  "fixed_point_iterations": base_d.get("fixed_point_iterations"),
+                  "phi_min_V": base_d.get("phi_min_V"),
+                  "phi_max_V": base_d.get("phi_max_V"),
+                  "electron_density_avg_m3": base_d.get("electron_density_avg_m3"),
+                  "mean_energy_avg_eV": base_d.get("mean_energy_avg_eV"),
+              },
+              "cases": rows,
+          }
+          (root / "sweep_summary.json").write_text(
+              json.dumps(evidence, indent=2, sort_keys=True) + "\n"
+          )
+          print(json.dumps(evidence, indent=2, sort_keys=True))
+          PY
       - name: Upload Gummel optimization sweep
         if: always()
         uses: actions/upload-artifact@v4
