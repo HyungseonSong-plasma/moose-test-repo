@@ -760,6 +760,7 @@ def _outer_input(
     input_files = 'gummel_driver.i'
     execute_on = TIMESTEP_BEGIN
     no_restore = true
+    sub_cycling = true
   []
 []
 
@@ -997,7 +998,8 @@ def _construction_audit(
             == response_radius
         ),
         "multirate_time_contract": (
-            math.isclose(
+            mp.get_parameter(outer, "MultiApps/gummel_driver", "sub_cycling") == "true"
+            and math.isclose(
                 float(mp.get_parameter(outer, "Executioner", "dt") or "nan"),
                 _heavy_dt_s(electron_substeps),
                 rel_tol=0.0,
@@ -1368,7 +1370,7 @@ def run(args: argparse.Namespace) -> int:
             diagnostic_error = str(exc)
 
     status = "RUNTIME_PASS" if runtime.returncode == 0 else "RUNTIME_FAIL"
-    if runtime.returncode == 0 and diagnostics is None:
+    if runtime.returncode == 0 and (diagnostics is None or diagnostic_error is not None):
         status = "DIAGNOSTIC_FAIL"
 
     summary = {
