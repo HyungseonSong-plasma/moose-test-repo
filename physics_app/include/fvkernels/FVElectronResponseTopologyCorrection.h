@@ -7,16 +7,19 @@
 /**
  * Topology-aware electron-response correction for multidimensional FV Poisson solves.
  *
- * Applies a row-sum-preserving graph-shell stencil to
- * delta_phi = phi - phi_anchor:
+ * Two row-sum-preserving support modes are available:
  *
+ * graph shell:
  *   R_corr,i = beta_i * strength
  *              * sum_d a_d (delta_phi_i - mean_{j in S_d(i)} delta_phi_j)
  *
- * where S_d(i) is the set of elements at exact face-graph distance d and the
- * shell weights a_d are normalized to sum to one.  Every shell term is
- * individually row-sum preserving, so a uniform potential shift remains in the
- * null space.  The correction also vanishes exactly at the Gummel fixed point.
+ * directional band:
+ *   the same shell weights are applied to at most four directed paths
+ *   (+radial, -radial, +axial, -axial), preserving the 1D +/- bandwidth
+ *   character without averaging over every cell in a 2D graph-radius shell.
+ *
+ * Every shell term vanishes for a uniform potential shift, and the complete
+ * correction vanishes exactly at the Gummel fixed point phi == phi_anchor.
  */
 class FVElectronResponseTopologyCorrection : public FVElementalKernel
 {
@@ -28,9 +31,15 @@ protected:
   ADReal computeQpResidual() override;
 
 private:
+  const Elem * directionalNeighbor(const Elem * elem, unsigned int component, int sign) const;
+
   const Moose::Functor<ADReal> & _anchor;
   const Moose::Functor<ADReal> & _beta;
   const Real _strength;
   const unsigned int _graph_radius;
   std::vector<Real> _shell_weights;
+  const bool _directional_band;
+  const unsigned int _radial_component;
+  const unsigned int _axial_component;
+  const Real _directional_cosine_min;
 };
