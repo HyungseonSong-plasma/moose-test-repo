@@ -31,6 +31,7 @@ TG_K = 300.0
 ENERGY_REF_EV = 5.73276
 ELECTRON_DT_S = 5.6650790022617894e-11
 ELECTRON_SUBSTEPS_DEFAULT = 4
+HEAVY_STEPS_DEFAULT = 1
 RELAXATION_FACTOR_DEFAULT = 0.45
 RESPONSE_STRENGTH_DEFAULT = 1.0
 RESPONSE_RADIUS_DEFAULT = 1
@@ -234,19 +235,25 @@ def _heavy_dt_s(electron_substeps: int) -> float:
     return ELECTRON_DT_S * float(electron_substeps)
 
 
-def _configure_fast_executioner(text: str, electron_substeps: int) -> str:
-    heavy_dt_s = _heavy_dt_s(electron_substeps)
+def _configure_fast_executioner(
+    text: str, electron_substeps: int, heavy_steps: int
+) -> str:
+    total_electron_steps = electron_substeps * heavy_steps
+    final_time_s = ELECTRON_DT_S * float(total_electron_steps)
     text = mp.upsert_parameter(text, "Executioner", "dt", f"{ELECTRON_DT_S:.17g}")
     text = mp.upsert_parameter(text, "Executioner", "dtmin", f"{ELECTRON_DT_S:.17g}")
     text = mp.upsert_parameter(text, "Executioner", "dtmax", f"{ELECTRON_DT_S:.17g}")
-    text = mp.upsert_parameter(text, "Executioner", "end_time", f"{heavy_dt_s:.17g}")
-    text = mp.upsert_parameter(text, "Executioner", "num_steps", str(electron_substeps))
+    text = mp.upsert_parameter(text, "Executioner", "end_time", f"{final_time_s:.17g}")
+    text = mp.upsert_parameter(text, "Executioner", "num_steps", str(total_electron_steps))
     text = mp.upsert_parameter(text, "Executioner", "timestep_tolerance", "1.0e-18")
     return text
 
 
 def _electron_input(
-    src: str, *, electron_substeps: int = ELECTRON_SUBSTEPS_DEFAULT
+    src: str,
+    *,
+    electron_substeps: int = ELECTRON_SUBSTEPS_DEFAULT,
+    heavy_steps: int = HEAVY_STEPS_DEFAULT,
 ) -> str:
     text = _replace_mesh(src)
     text = mp.upsert_parameter(
@@ -361,7 +368,7 @@ def _electron_input(
   []""",
     )
 
-    return _configure_fast_executioner(text, electron_substeps)
+    return _configure_fast_executioner(text, electron_substeps, heavy_steps)
 
 
 def _response_shell_weights(radius: int) -> tuple[float, ...]:
@@ -379,6 +386,7 @@ def _poisson_input(
     response_radius: int = RESPONSE_RADIUS_DEFAULT,
     response_mode: str = RESPONSE_MODE_DEFAULT,
     electron_substeps: int = ELECTRON_SUBSTEPS_DEFAULT,
+    heavy_steps: int = HEAVY_STEPS_DEFAULT,
 ) -> str:
     text = _replace_mesh(src)
     text = mp.upsert_parameter(
@@ -506,7 +514,7 @@ def _poisson_input(
 []
 """
 
-    return _configure_fast_executioner(text, electron_substeps)
+    return _configure_fast_executioner(text, electron_substeps, heavy_steps)
 
 
 def _driver_input(
@@ -514,6 +522,7 @@ def _driver_input(
     *,
     relaxation_factor: float = RELAXATION_FACTOR_DEFAULT,
     electron_substeps: int = ELECTRON_SUBSTEPS_DEFAULT,
+    heavy_steps: int = HEAVY_STEPS_DEFAULT,
 ) -> str:
     text = _canonicalize_qualified_driver(src)
     text = _replace_mesh(text)
@@ -675,11 +684,14 @@ def _driver_input(
         "'phi_anchor_frozen p_gas_from_heavy T_g_from_heavy w_O2p_frozen w_Om_frozen w_Op_frozen'",
     )
 
-    return _configure_fast_executioner(text, electron_substeps)
+    return _configure_fast_executioner(text, electron_substeps, heavy_steps)
 
 
 def _outer_input(
-    src: str, *, electron_substeps: int = ELECTRON_SUBSTEPS_DEFAULT
+    src: str,
+    *,
+    electron_substeps: int = ELECTRON_SUBSTEPS_DEFAULT,
+    heavy_steps: int = HEAVY_STEPS_DEFAULT,
 ) -> str:
     # Use the identical plasma-only real-QVT mesh in all four applications so
     # MultiAppCopyTransfer remains an exact elementwise transfer.
@@ -788,8 +800,8 @@ def _outer_input(
   scheme = implicit-euler
   solve_type = NEWTON
   dt = {_heavy_dt_s(electron_substeps):.17g}
-  end_time = {_heavy_dt_s(electron_substeps):.17g}
-  num_steps = 1
+  end_time = {_heavy_dt_s(electron_substeps) * heavy_steps:.17g}
+  num_steps = {heavy_steps}
   nl_rel_tol = 1.0e-9
   nl_abs_tol = 1.0e-11
   nl_max_its = 80
@@ -813,6 +825,7 @@ def _construction_audit(
     response_radius: int,
     response_mode: str,
     electron_substeps: int,
+    heavy_steps: int,
 ) -> dict[str, Any]:
     all_b = set(ALL_ELECTRON_BOUNDARIES)
     checks = {
@@ -1005,7 +1018,14 @@ def _construction_audit(
                 rel_tol=0.0,
                 abs_tol=1.0e-18,
             )
-            and int(mp.get_parameter(outer, "Executioner", "num_steps") or "0") == 1
+            and math.isclose(
+                float(mp.get_parameter(outer, "Executioner", "end_time") or "nan"),
+                _heavy_dt_s(electron_substeps) * heavy_steps,
+                rel_tol=0.0,
+                abs_tol=1.0e-18,
+            )
+            and int(mp.get_parameter(outer, "Executioner", "num_steps") or "0")
+            == heavy_steps
             and all(
                 math.isclose(
                     float(mp.get_parameter(inp, "Executioner", "dt") or "nan"),
@@ -1015,12 +1035,12 @@ def _construction_audit(
                 )
                 and math.isclose(
                     float(mp.get_parameter(inp, "Executioner", "end_time") or "nan"),
-                    _heavy_dt_s(electron_substeps),
+                    ELECTRON_DT_S * electron_substeps * heavy_steps,
                     rel_tol=0.0,
                     abs_tol=1.0e-18,
                 )
                 and int(mp.get_parameter(inp, "Executioner", "num_steps") or "0")
-                == electron_substeps
+                == electron_substeps * heavy_steps
                 for inp in (driver, electron, poisson)
             )
         ),
@@ -1088,6 +1108,7 @@ def _stage(
     response_radius: int = RESPONSE_RADIUS_DEFAULT,
     response_mode: str = RESPONSE_MODE_DEFAULT,
     electron_substeps: int = ELECTRON_SUBSTEPS_DEFAULT,
+    heavy_steps: int = HEAVY_STEPS_DEFAULT,
 ) -> dict[str, Any]:
     if root.exists():
         shutil.rmtree(root)
@@ -1097,15 +1118,18 @@ def _stage(
     outer = _outer_input(
         (HEAVY_SOURCE / "input.i").read_text(),
         electron_substeps=electron_substeps,
+        heavy_steps=heavy_steps,
     )
     driver = _driver_input(
         (qualified / "fast_sub.i").read_text(),
         relaxation_factor=relaxation_factor,
         electron_substeps=electron_substeps,
+        heavy_steps=heavy_steps,
     )
     electron = _electron_input(
         (qualified / "electron_sub.i").read_text(),
         electron_substeps=electron_substeps,
+        heavy_steps=heavy_steps,
     )
     poisson = _poisson_input(
         (qualified / "poisson_sub.i").read_text(),
@@ -1113,6 +1137,7 @@ def _stage(
         response_radius=response_radius,
         response_mode=response_mode,
         electron_substeps=electron_substeps,
+        heavy_steps=heavy_steps,
     )
 
     audit = _construction_audit(
@@ -1125,6 +1150,7 @@ def _stage(
         response_radius=response_radius,
         response_mode=response_mode,
         electron_substeps=electron_substeps,
+        heavy_steps=heavy_steps,
     )
     if audit["status"] != "PASS":
         raise Issue359Error(f"construction audit failed: {audit['failed_checks']}")
@@ -1169,9 +1195,11 @@ def _stage(
         "removed_geometry_specific_object": "FVElectronResponseBandedCorrection",
         "time_integration": {
             "heavy_dt_s": _heavy_dt_s(electron_substeps),
-            "heavy_steps": 1,
+            "heavy_steps": heavy_steps,
             "electron_substeps_per_heavy": electron_substeps,
+            "electron_steps_total": electron_substeps * heavy_steps,
             "electron_dt_s": ELECTRON_DT_S,
+            "final_time_s": ELECTRON_DT_S * electron_substeps * heavy_steps,
             "electron_to_heavy_dt_ratio": 1.0 / float(electron_substeps),
             "frozen_heavy_during_electron_subcycling": True,
         },
@@ -1322,6 +1350,8 @@ def run(args: argparse.Namespace) -> int:
         raise Issue359Error("response mode must be graph or directional")
     if args.electron_substeps not in (1, 2, 4, 8):
         raise Issue359Error("electron substeps must be one of 1, 2, 4, 8")
+    if args.heavy_steps <= 0:
+        raise Issue359Error("heavy_steps must be positive")
     meta = _stage(
         case,
         relaxation_factor=args.relaxation_factor,
@@ -1329,6 +1359,7 @@ def run(args: argparse.Namespace) -> int:
         response_radius=args.response_radius,
         response_mode=args.response_mode,
         electron_substeps=args.electron_substeps,
+        heavy_steps=args.heavy_steps,
     )
 
     checks: dict[str, Any] = {}
@@ -1376,9 +1407,10 @@ def run(args: argparse.Namespace) -> int:
         try:
             diagnostics = _read_final_diagnostics(case)
             step_iterations = _read_step_iterations(logs / "runtime.log")
-            if len(step_iterations) != args.electron_substeps:
+            expected_electron_steps = args.electron_substeps * args.heavy_steps
+            if len(step_iterations) != expected_electron_steps:
                 raise Issue359Error(
-                    f"expected {args.electron_substeps} electron physical steps, "
+                    f"expected {expected_electron_steps} electron physical steps, "
                     f"found {len(step_iterations)} in runtime log"
                 )
             if any(
@@ -1453,6 +1485,11 @@ def main() -> int:
         type=int,
         choices=(1, 2, 4, 8),
         default=ELECTRON_SUBSTEPS_DEFAULT,
+    )
+    parser.add_argument(
+        "--heavy-steps",
+        type=int,
+        default=HEAVY_STEPS_DEFAULT,
     )
     return run(parser.parse_args())
 
