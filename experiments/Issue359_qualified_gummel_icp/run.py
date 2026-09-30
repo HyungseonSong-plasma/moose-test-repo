@@ -539,8 +539,8 @@ def _driver_input(
     text = _add_aux(text, "p_gas_h", PRESSURE_PA)
     text = _add_aux(text, "T_g_h", TG_K)
 
-    # Promote final Gummel state diagnostics to the driver so they survive
-    # MultiApp teardown and are written into the driver's FINAL CSV.
+    # Evaluate Gummel-state diagnostics at each driver TIMESTEP_END so the
+    # final valid subcycled state is retained before MultiApp teardown.
     text = mb.insert_child_block(
         text,
         "FunctorMaterials",
@@ -565,86 +565,86 @@ def _driver_input(
     type = ADElementExtremeFunctorValue
     functor = potential_from_poisson
     value_type = min
-    execute_on = 'FINAL'
+    execute_on = 'TIMESTEP_END'
   []""",
         """  [issue359_phi_max]
     type = ADElementExtremeFunctorValue
     functor = potential_from_poisson
     value_type = max
-    execute_on = 'FINAL'
+    execute_on = 'TIMESTEP_END'
   []""",
         """  [issue359_ne_min]
     type = ADElementExtremeFunctorValue
     functor = electron_density_out
     value_type = min
-    execute_on = 'FINAL'
+    execute_on = 'TIMESTEP_END'
   []""",
         """  [issue359_ne_max]
     type = ADElementExtremeFunctorValue
     functor = electron_density_out
     value_type = max
-    execute_on = 'FINAL'
+    execute_on = 'TIMESTEP_END'
   []""",
         """  [issue359_ne_avg]
     type = ElementAverageFunctorPostprocessor
     functor = electron_density_out
-    execute_on = 'FINAL'
+    execute_on = 'TIMESTEP_END'
   []""",
         """  [issue359_mean_energy_min]
     type = ADElementExtremeFunctorValue
     functor = mean_energy_out
     value_type = min
-    execute_on = 'FINAL'
+    execute_on = 'TIMESTEP_END'
   []""",
         """  [issue359_mean_energy_max]
     type = ADElementExtremeFunctorValue
     functor = mean_energy_out
     value_type = max
-    execute_on = 'FINAL'
+    execute_on = 'TIMESTEP_END'
   []""",
         """  [issue359_mean_energy_avg]
     type = ElementAverageFunctorPostprocessor
     functor = mean_energy_out
-    execute_on = 'FINAL'
+    execute_on = 'TIMESTEP_END'
   []""",
         """  [issue359_Te_min_K]
     type = ADElementExtremeFunctorValue
     functor = issue359_Te_K
     value_type = min
-    execute_on = 'FINAL'
+    execute_on = 'TIMESTEP_END'
   []""",
         """  [issue359_Te_max_K]
     type = ADElementExtremeFunctorValue
     functor = issue359_Te_K
     value_type = max
-    execute_on = 'FINAL'
+    execute_on = 'TIMESTEP_END'
   []""",
         """  [issue359_Te_avg_K]
     type = ElementAverageFunctorPostprocessor
     functor = issue359_Te_K
-    execute_on = 'FINAL'
+    execute_on = 'TIMESTEP_END'
   []""",
         """  [issue359_charge_min]
     type = ADElementExtremeFunctorValue
     functor = issue359_charge_density_C_m3
     value_type = min
-    execute_on = 'FINAL'
+    execute_on = 'TIMESTEP_END'
   []""",
         """  [issue359_charge_max]
     type = ADElementExtremeFunctorValue
     functor = issue359_charge_density_C_m3
     value_type = max
-    execute_on = 'FINAL'
+    execute_on = 'TIMESTEP_END'
   []""",
         """  [issue359_charge_avg]
     type = ElementAverageFunctorPostprocessor
     functor = issue359_charge_density_C_m3
-    execute_on = 'FINAL'
+    execute_on = 'TIMESTEP_END'
   []""",
         """  [issue359_charge_integral]
     type = ADElementIntegralFunctorPostprocessor
     functor = issue359_charge_density_C_m3
-    execute_on = 'FINAL'
+    execute_on = 'TIMESTEP_END'
   []""",
     ):
         text = mb.insert_child_block(text, "Postprocessors", block)
@@ -1264,31 +1264,46 @@ def _read_final_diagnostics(case: Path) -> dict[str, float]:
     }
 
 
-def _read_step_iterations(case: Path) -> list[dict[str, float]]:
-    paths = sorted(case.glob("*_gummel_driver0_step_csv.csv"))
-    if len(paths) != 1:
-        raise Issue359Error(
-            f"expected one Gummel driver STEP CSV, found {len(paths)}: {paths}"
-        )
-    with paths[0].open(newline="") as handle:
-        rows = list(csv.DictReader(handle))
-    out: list[dict[str, float]] = []
-    for row in rows:
-        time_s = float(row.get("time") or 0.0)
-        if time_s <= 0.0:
-            continue
-        out.append(
+def _read_step_iterations(log_path: Path) -> list[dict[str, float]]:
+    text = log_path.read_text(errors="replace")
+    ansi = re.compile(r"\x1b\\[[0-9;]*m")
+    text = ansi.sub("", text)
+    pattern = re.compile(
+        r"gummel_driver0_electron0: Time Step (\\d+), "
+        r"time = ([0-9.eE+-]+), dt = ([0-9.eE+-]+)"
+    )
+    counts: dict[int, dict[str, float]] = {}
+    for match in pattern.finditer(text):
+        step = int(match.group(1))
+        time_s = float(match.group(2))
+        dt_s = float(match.group(3))
+        row = counts.setdefault(
+            step,
             {
                 "time_s": time_s,
-                "fixed_point_iterations": float(row["fixed_point_iterations"]),
-                "cumulative_fixed_point_iterations": float(
-                    row["cumulative_fixed_point_iterations"]
-                ),
-                "delta_phi_max_V": float(row["fp_delta_phi_max"]),
+                "electron_dt_s": dt_s,
+                "fixed_point_iterations": 0.0,
+            },
+        )
+        row["fixed_point_iterations"] += 1.0
+        row["time_s"] = time_s
+        row["electron_dt_s"] = dt_s
+
+    cumulative = 0.0
+    out: list[dict[str, float]] = []
+    for step in sorted(counts):
+        row = counts[step]
+        cumulative += row["fixed_point_iterations"]
+        out.append(
+            {
+                "step": float(step),
+                "time_s": row["time_s"],
+                "electron_dt_s": row["electron_dt_s"],
+                "fixed_point_iterations": row["fixed_point_iterations"],
+                "cumulative_fixed_point_iterations": cumulative,
             }
         )
     return out
-
 
 def run(args: argparse.Namespace) -> int:
     exe = resolve_executable(args.physics)
@@ -1360,12 +1375,26 @@ def run(args: argparse.Namespace) -> int:
     if runtime.returncode == 0:
         try:
             diagnostics = _read_final_diagnostics(case)
-            step_iterations = _read_step_iterations(case)
+            step_iterations = _read_step_iterations(logs / "runtime.log")
             if len(step_iterations) != args.electron_substeps:
                 raise Issue359Error(
                     f"expected {args.electron_substeps} electron physical steps, "
-                    f"found {len(step_iterations)} in driver STEP CSV"
+                    f"found {len(step_iterations)} in runtime log"
                 )
+            if any(
+                not math.isclose(
+                    row["electron_dt_s"], ELECTRON_DT_S, rel_tol=5.0e-6, abs_tol=1.0e-16
+                )
+                for row in step_iterations
+            ):
+                raise Issue359Error("runtime electron dt does not match fixed 56.650790 ps")
+            if not math.isclose(
+                step_iterations[-1]["cumulative_fixed_point_iterations"],
+                diagnostics["cumulative_fixed_point_iterations"],
+                rel_tol=0.0,
+                abs_tol=0.5,
+            ):
+                raise Issue359Error("runtime-log FP count disagrees with driver cumulative FP")
         except Issue359Error as exc:
             diagnostic_error = str(exc)
 
