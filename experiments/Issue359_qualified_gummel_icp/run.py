@@ -28,6 +28,17 @@ ENERGY_REF_EV = 5.73276
 DT_S = 5.6650790022617894e-11
 RELAXATION_FACTOR_DEFAULT = 0.45
 RESPONSE_STRENGTH_DEFAULT = 1.0
+RESPONSE_RADIUS_DEFAULT = 1
+# Interior-row shell magnitudes extracted from the qualified 1D bandwidth-5
+# response matrix.  Truncated radii are renormalized so each multidimensional
+# graph-shell correction remains row-sum preserving with unit total strength.
+QUALIFIED_1D_SHELL_WEIGHTS = (
+    0.33455674,
+    0.24453258,
+    0.18136180,
+    0.13695613,
+    0.10259275,
+)
 AVOGADRO = 6.02214076e23
 R_GAS = 8.31446261815324
 ELECTRON_DENSITY_REF_M3 = 1.0e16
@@ -334,8 +345,19 @@ def _electron_input(src: str) -> str:
     return text
 
 
+def _response_shell_weights(radius: int) -> tuple[float, ...]:
+    if radius < 1 or radius > len(QUALIFIED_1D_SHELL_WEIGHTS):
+        raise Issue359Error("response radius must lie in [1, 5]")
+    raw = QUALIFIED_1D_SHELL_WEIGHTS[:radius]
+    total = sum(raw)
+    return tuple(weight / total for weight in raw)
+
+
 def _poisson_input(
-    src: str, *, response_strength: float = RESPONSE_STRENGTH_DEFAULT
+    src: str,
+    *,
+    response_strength: float = RESPONSE_STRENGTH_DEFAULT,
+    response_radius: int = RESPONSE_RADIUS_DEFAULT,
 ) -> str:
     text = _replace_mesh(src)
     text = mp.upsert_parameter(
@@ -383,11 +405,24 @@ def _poisson_input(
     strength = 1.0
   []""",
     )
+    shell_weights = _response_shell_weights(response_radius)
     text = mp.upsert_parameter(
         text,
         "FVKernels/issue359_electron_response_topology",
         "strength",
         f"{response_strength:.17g}",
+    )
+    text = mp.upsert_parameter(
+        text,
+        "FVKernels/issue359_electron_response_topology",
+        "graph_radius",
+        str(response_radius),
+    )
+    text = mp.upsert_parameter(
+        text,
+        "FVKernels/issue359_electron_response_topology",
+        "shell_weights",
+        "'" + " ".join(f"{weight:.17g}" for weight in shell_weights) + "'",
     )
 
     text = mb.insert_child_block(
@@ -740,6 +775,7 @@ def _construction_audit(
     *,
     relaxation_factor: float,
     response_strength: float,
+    response_radius: int,
 ) -> dict[str, Any]:
     all_b = set(ALL_ELECTRON_BOUNDARIES)
     checks = {
@@ -895,6 +931,26 @@ def _construction_audit(
                 rel_tol=0.0,
                 abs_tol=1.0e-15,
             )
+            and int(
+                mp.get_parameter(
+                    poisson,
+                    "FVKernels/issue359_electron_response_topology",
+                    "graph_radius",
+                )
+                or "0"
+            )
+            == response_radius
+            and len(
+                mp.words(
+                    mp.get_parameter(
+                        poisson,
+                        "FVKernels/issue359_electron_response_topology",
+                        "shell_weights",
+                    )
+                    or ""
+                )
+            )
+            == response_radius
         ),
         "single_Te_ownership": (
             "T_e_value" not in outer
@@ -957,6 +1013,7 @@ def _stage(
     *,
     relaxation_factor: float = RELAXATION_FACTOR_DEFAULT,
     response_strength: float = RESPONSE_STRENGTH_DEFAULT,
+    response_radius: int = RESPONSE_RADIUS_DEFAULT,
 ) -> dict[str, Any]:
     if root.exists():
         shutil.rmtree(root)
@@ -972,6 +1029,7 @@ def _stage(
     poisson = _poisson_input(
         (qualified / "poisson_sub.i").read_text(),
         response_strength=response_strength,
+        response_radius=response_radius,
     )
 
     audit = _construction_audit(
@@ -981,6 +1039,7 @@ def _stage(
         poisson,
         relaxation_factor=relaxation_factor,
         response_strength=response_strength,
+        response_radius=response_radius,
     )
     if audit["status"] != "PASS":
         raise Issue359Error(f"construction audit failed: {audit['failed_checks']}")
@@ -1032,6 +1091,9 @@ def _stage(
             "stencil": "one-ring face neighbors",
             "row_sum_preserving": True,
             "strength": response_strength,
+            "graph_radius": response_radius,
+            "shell_weights": list(_response_shell_weights(response_radius)),
+            "weight_source": "qualified 1D bandwidth-5 interior-row shell totals",
         },
         "construction_audit": audit,
     }
@@ -1116,10 +1178,13 @@ def run(args: argparse.Namespace) -> int:
         raise Issue359Error("relaxation factor must be in (0, 2)")
     if args.response_strength <= 0.0:
         raise Issue359Error("response strength must be positive")
+    if args.response_radius < 1 or args.response_radius > 5:
+        raise Issue359Error("response radius must lie in [1, 5]")
     meta = _stage(
         case,
         relaxation_factor=args.relaxation_factor,
         response_strength=args.response_strength,
+        response_radius=args.response_radius,
     )
 
     checks: dict[str, Any] = {}
@@ -1206,6 +1271,11 @@ def main() -> int:
         "--response-strength",
         type=float,
         default=RESPONSE_STRENGTH_DEFAULT,
+    )
+    parser.add_argument(
+        "--response-radius",
+        type=int,
+        default=RESPONSE_RADIUS_DEFAULT,
     )
     return run(parser.parse_args())
 
