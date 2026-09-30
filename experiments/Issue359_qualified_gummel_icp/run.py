@@ -26,6 +26,8 @@ PRESSURE_PA = 1.333223684
 TG_K = 300.0
 ENERGY_REF_EV = 5.73276
 DT_S = 5.6650790022617894e-11
+RELAXATION_FACTOR_DEFAULT = 0.45
+RESPONSE_STRENGTH_DEFAULT = 1.0
 AVOGADRO = 6.02214076e23
 R_GAS = 8.31446261815324
 ELECTRON_DENSITY_REF_M3 = 1.0e16
@@ -332,7 +334,9 @@ def _electron_input(src: str) -> str:
     return text
 
 
-def _poisson_input(src: str) -> str:
+def _poisson_input(
+    src: str, *, response_strength: float = RESPONSE_STRENGTH_DEFAULT
+) -> str:
     text = _replace_mesh(src)
     text = mp.upsert_parameter(
         text,
@@ -378,6 +382,12 @@ def _poisson_input(src: str) -> str:
     beta = electron_response_beta
     strength = 1.0
   []""",
+    )
+    text = mp.upsert_parameter(
+        text,
+        "FVKernels/issue359_electron_response_topology",
+        "strength",
+        f"{response_strength:.17g}",
     )
 
     text = mb.insert_child_block(
@@ -429,7 +439,9 @@ def _poisson_input(src: str) -> str:
     return text
 
 
-def _driver_input(src: str) -> str:
+def _driver_input(
+    src: str, *, relaxation_factor: float = RELAXATION_FACTOR_DEFAULT
+) -> str:
     text = _canonicalize_qualified_driver(src)
     text = _replace_mesh(text)
     for species in ("O2p", "Om", "Op"):
@@ -565,6 +577,9 @@ def _driver_input(src: str) -> str:
         text = mb.insert_child_block(text, "Postprocessors", block)
 
     action = "GummelIteration/electron_poisson"
+    text = mp.upsert_parameter(
+        text, action, "relaxation_factor", f"{relaxation_factor:.17g}"
+    )
     text = mp.upsert_parameter(
         text, action, "parent_to_electron_source_variables", "'p_gas_h T_g_h'"
     )
