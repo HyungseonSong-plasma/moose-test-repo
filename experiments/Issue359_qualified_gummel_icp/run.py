@@ -952,18 +952,36 @@ def _construction_audit(
     }
 
 
-def _stage(root: Path) -> dict[str, Any]:
+def _stage(
+    root: Path,
+    *,
+    relaxation_factor: float = RELAXATION_FACTOR_DEFAULT,
+    response_strength: float = RESPONSE_STRENGTH_DEFAULT,
+) -> dict[str, Any]:
     if root.exists():
         shutil.rmtree(root)
     root.mkdir(parents=True)
 
     qualified = _qualified_reference_case()
     outer = _outer_input((HEAVY_SOURCE / "input.i").read_text())
-    driver = _driver_input((qualified / "fast_sub.i").read_text())
+    driver = _driver_input(
+        (qualified / "fast_sub.i").read_text(),
+        relaxation_factor=relaxation_factor,
+    )
     electron = _electron_input((qualified / "electron_sub.i").read_text())
-    poisson = _poisson_input((qualified / "poisson_sub.i").read_text())
+    poisson = _poisson_input(
+        (qualified / "poisson_sub.i").read_text(),
+        response_strength=response_strength,
+    )
 
-    audit = _construction_audit(outer, driver, electron, poisson)
+    audit = _construction_audit(
+        outer,
+        driver,
+        electron,
+        poisson,
+        relaxation_factor=relaxation_factor,
+        response_strength=response_strength,
+    )
     if audit["status"] != "PASS":
         raise Issue359Error(f"construction audit failed: {audit['failed_checks']}")
 
@@ -1005,11 +1023,15 @@ def _stage(root: Path) -> dict[str, Any]:
         "electron_energy_bc": "PhysicsFVElectronGroundedSheathEnergyBC",
         "poisson_bc": "all eight plasma boundaries grounded at 0 V",
         "removed_geometry_specific_object": "FVElectronResponseBandedCorrection",
+        "gummel_acceleration": {
+            "relaxation_factor": relaxation_factor,
+            "fixed_point_algorithm": "steffensen",
+        },
         "icp_response_correction": {
             "type": "FVElectronResponseTopologyCorrection",
             "stencil": "one-ring face neighbors",
             "row_sum_preserving": True,
-            "strength": 1.0,
+            "strength": response_strength,
         },
         "construction_audit": audit,
     }
@@ -1090,7 +1112,15 @@ def run(args: argparse.Namespace) -> int:
     case = root / "case"
     logs = root / "logs"
     logs.mkdir(parents=True, exist_ok=True)
-    meta = _stage(case)
+    if not (0.0 < args.relaxation_factor < 2.0):
+        raise Issue359Error("relaxation factor must be in (0, 2)")
+    if args.response_strength <= 0.0:
+        raise Issue359Error("response strength must be positive")
+    meta = _stage(
+        case,
+        relaxation_factor=args.relaxation_factor,
+        response_strength=args.response_strength,
+    )
 
     checks: dict[str, Any] = {}
     for name in ("electron_sub.i", "poisson_sub.i", "gummel_driver.i", "input.i"):
@@ -1167,6 +1197,16 @@ def main() -> int:
     parser.add_argument("--physics", required=True)
     parser.add_argument("--results-root", type=Path, required=True)
     parser.add_argument("--timeout", type=float, default=1200.0)
+    parser.add_argument(
+        "--relaxation-factor",
+        type=float,
+        default=RELAXATION_FACTOR_DEFAULT,
+    )
+    parser.add_argument(
+        "--response-strength",
+        type=float,
+        default=RESPONSE_STRENGTH_DEFAULT,
+    )
     return run(parser.parse_args())
 
 
