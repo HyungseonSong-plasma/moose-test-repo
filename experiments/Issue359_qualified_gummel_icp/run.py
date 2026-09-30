@@ -29,6 +29,7 @@ DT_S = 5.6650790022617894e-11
 RELAXATION_FACTOR_DEFAULT = 0.45
 RESPONSE_STRENGTH_DEFAULT = 1.0
 RESPONSE_RADIUS_DEFAULT = 1
+RESPONSE_MODE_DEFAULT = "graph"
 # Interior-row shell magnitudes extracted from the qualified 1D bandwidth-5
 # response matrix.  Truncated radii are renormalized so each multidimensional
 # graph-shell correction remains row-sum preserving with unit total strength.
@@ -358,6 +359,7 @@ def _poisson_input(
     *,
     response_strength: float = RESPONSE_STRENGTH_DEFAULT,
     response_radius: int = RESPONSE_RADIUS_DEFAULT,
+    response_mode: str = RESPONSE_MODE_DEFAULT,
 ) -> str:
     text = _replace_mesh(src)
     text = mp.upsert_parameter(
@@ -405,6 +407,8 @@ def _poisson_input(
     strength = 1.0
   []""",
     )
+    if response_mode not in ("graph", "directional"):
+        raise Issue359Error("response mode must be 'graph' or 'directional'")
     shell_weights = _response_shell_weights(response_radius)
     text = mp.upsert_parameter(
         text,
@@ -423,6 +427,24 @@ def _poisson_input(
         "FVKernels/issue359_electron_response_topology",
         "shell_weights",
         "'" + " ".join(f"{weight:.17g}" for weight in shell_weights) + "'",
+    )
+    text = mp.upsert_parameter(
+        text,
+        "FVKernels/issue359_electron_response_topology",
+        "directional_band",
+        "true" if response_mode == "directional" else "false",
+    )
+    text = mp.upsert_parameter(
+        text,
+        "FVKernels/issue359_electron_response_topology",
+        "radial_component",
+        "0",
+    )
+    text = mp.upsert_parameter(
+        text,
+        "FVKernels/issue359_electron_response_topology",
+        "axial_component",
+        "1",
     )
 
     text = mb.insert_child_block(
@@ -776,6 +798,7 @@ def _construction_audit(
     relaxation_factor: float,
     response_strength: float,
     response_radius: int,
+    response_mode: str,
 ) -> dict[str, Any]:
     all_b = set(ALL_ELECTRON_BOUNDARIES)
     checks = {
@@ -940,6 +963,14 @@ def _construction_audit(
                 or "0"
             )
             == response_radius
+            and (
+                mp.get_parameter(
+                    poisson,
+                    "FVKernels/issue359_electron_response_topology",
+                    "directional_band",
+                )
+                == ("true" if response_mode == "directional" else "false")
+            )
             and len(
                 mp.words(
                     mp.get_parameter(
@@ -1014,6 +1045,7 @@ def _stage(
     relaxation_factor: float = RELAXATION_FACTOR_DEFAULT,
     response_strength: float = RESPONSE_STRENGTH_DEFAULT,
     response_radius: int = RESPONSE_RADIUS_DEFAULT,
+    response_mode: str = RESPONSE_MODE_DEFAULT,
 ) -> dict[str, Any]:
     if root.exists():
         shutil.rmtree(root)
@@ -1030,6 +1062,7 @@ def _stage(
         (qualified / "poisson_sub.i").read_text(),
         response_strength=response_strength,
         response_radius=response_radius,
+        response_mode=response_mode,
     )
 
     audit = _construction_audit(
@@ -1040,6 +1073,7 @@ def _stage(
         relaxation_factor=relaxation_factor,
         response_strength=response_strength,
         response_radius=response_radius,
+        response_mode=response_mode,
     )
     if audit["status"] != "PASS":
         raise Issue359Error(f"construction audit failed: {audit['failed_checks']}")
@@ -1091,8 +1125,10 @@ def _stage(
             "stencil": "one-ring face neighbors",
             "row_sum_preserving": True,
             "strength": response_strength,
+            "mode": response_mode,
             "graph_radius": response_radius,
             "shell_weights": list(_response_shell_weights(response_radius)),
+            "directional_axes": {"radial_component": 0, "axial_component": 1},
             "weight_source": "qualified 1D bandwidth-5 interior-row shell totals",
         },
         "construction_audit": audit,
@@ -1180,11 +1216,14 @@ def run(args: argparse.Namespace) -> int:
         raise Issue359Error("response strength must be positive")
     if args.response_radius < 1 or args.response_radius > 5:
         raise Issue359Error("response radius must lie in [1, 5]")
+    if args.response_mode not in ("graph", "directional"):
+        raise Issue359Error("response mode must be graph or directional")
     meta = _stage(
         case,
         relaxation_factor=args.relaxation_factor,
         response_strength=args.response_strength,
         response_radius=args.response_radius,
+        response_mode=args.response_mode,
     )
 
     checks: dict[str, Any] = {}
@@ -1276,6 +1315,11 @@ def main() -> int:
         "--response-radius",
         type=int,
         default=RESPONSE_RADIUS_DEFAULT,
+    )
+    parser.add_argument(
+        "--response-mode",
+        choices=("graph", "directional"),
+        default=RESPONSE_MODE_DEFAULT,
     )
     return run(parser.parse_args())
 
