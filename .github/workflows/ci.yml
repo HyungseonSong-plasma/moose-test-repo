@@ -570,11 +570,11 @@ jobs:
 
 
 
-  issue359-32step-five-minute-screen:
+  issue359-32step-predictor-screen:
     if: github.event_name == 'pull_request' && github.head_ref == 'issue-359-qualified-gummel-icp'
-    name: Issue359 32step 5min ${{ matrix.label }}
+    name: Issue359 32step predictor ${{ matrix.label }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: 22
     permissions:
       contents: read
       packages: read
@@ -584,36 +584,36 @@ jobs:
       max-parallel: 4
       matrix:
         include:
-          - label: graph_rel1e2
+          - label: graph_a050
             mode: graph
             radius: 1
             relaxation: 0.90
             strength: 0.50
-            fp_rel_tol: 1.0e-2
-          - label: graph_rel3e3
+            predictor_alpha: 0.50
+          - label: graph_a100
             mode: graph
             radius: 1
             relaxation: 0.90
             strength: 0.50
-            fp_rel_tol: 3.0e-3
-          - label: graph_rel1e3
+            predictor_alpha: 1.00
+          - label: graph_a150
             mode: graph
             radius: 1
             relaxation: 0.90
             strength: 0.50
-            fp_rel_tol: 1.0e-3
-          - label: dirR2_rel3e3
+            predictor_alpha: 1.50
+          - label: dirR2_a100
             mode: directional
             radius: 2
             relaxation: 0.90
             strength: 0.35
-            fp_rel_tol: 3.0e-3
+            predictor_alpha: 1.00
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha }}
 
-      - name: Verify exact 32-step screen HEAD
+      - name: Verify exact predictor HEAD
         shell: bash
         run: |
           set -euo pipefail
@@ -626,7 +626,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Run 32-step five-minute target screen
+      - name: Run 32-step temporal predictor screen
         shell: bash
         env:
           LABEL: ${{ matrix.label }}
@@ -634,24 +634,22 @@ jobs:
           RADIUS: ${{ matrix.radius }}
           RELAXATION: ${{ matrix.relaxation }}
           STRENGTH: ${{ matrix.strength }}
-          FP_REL_TOL: ${{ matrix.fp_rel_tol }}
-          BASE_SHA: ${{ github.event.pull_request.head.sha }}
+          PREDICTOR_ALPHA: ${{ matrix.predictor_alpha }}
         run: |
           set -euxo pipefail
           python3 -m py_compile experiments/Issue359_qualified_gummel_icp/run.py
-          rm -rf "$PWD/.issue351-qualified" "issue359-32step-$LABEL"
+          rm -rf "$PWD/.issue351-qualified" "issue359-predictor-$LABEL"
           GH_TOKEN="${{ github.token }}" gh run download 36496470116 \
             --repo "$GITHUB_REPOSITORY" \
             --name issue351-frozen-heavy-driver-full \
             --dir "$PWD/.issue351-qualified"
 
           docker pull "$EXPECTED_BUILD_BASE_REF"
-          set +e
           docker run --rm \
             --entrypoint /bin/bash \
             --user 0:0 \
             --workdir /workspace \
-            -e LABEL -e MODE -e RADIUS -e RELAXATION -e STRENGTH -e FP_REL_TOL \
+            -e LABEL -e MODE -e RADIUS -e RELAXATION -e STRENGTH -e PREDICTOR_ALPHA \
             -v "$PWD:/workspace" \
             "$EXPECTED_BUILD_BASE_REF" \
             -lc '
@@ -672,10 +670,11 @@ jobs:
               export ISSUE351_QUALIFIED_CASE=/workspace/.issue351-qualified/generated/full/frozen_heavy_driver
               python3 -m experiments.Issue359_qualified_gummel_icp.run \
                 --physics physics_app/physics-opt \
-                --results-root "issue359-32step-$LABEL" \
-                --timeout 600 \
+                --results-root "issue359-predictor-$LABEL" \
+                --timeout 420 \
                 --fixed-point-algorithm steffensen \
-                --fixed-point-rel-tol "$FP_REL_TOL" \
+                --fixed-point-rel-tol 1.0e-2 \
+                --potential-predictor-alpha "$PREDICTOR_ALPHA" \
                 --relaxation-factor "$RELAXATION" \
                 --response-strength "$STRENGTH" \
                 --response-radius "$RADIUS" \
@@ -683,68 +682,12 @@ jobs:
                 --electron-substeps 4 \
                 --heavy-steps 8
             '
-          rc=$?
-          set -e
-          echo "physics_rc=$rc"
 
-          python3 - <<'PY'
-          import json, os
-          from pathlib import Path
-          out = Path("issue359-32step-" + os.environ["LABEL"])
-          summary_path = out / "summary.json"
-          evidence = {
-              "schema_version": 1,
-              "issue": 359,
-              "base_sha": os.environ["BASE_SHA"],
-              "case": os.environ["LABEL"],
-              "target_seconds": 300.0,
-              "reference": {
-                  "runtime_s": 1524.8,
-                  "phi_min_V": 10.704243,
-                  "phi_max_V": 12.636577,
-                  "electron_density_avg_m3": 3.215163e15,
-                  "mean_energy_avg_eV": 5.720540,
-                  "relative_charge_imbalance_vs_ne": 1.660185e-3,
-              },
-          }
-          if summary_path.exists():
-              s = json.loads(summary_path.read_text())
-              d = s.get("final_diagnostics") or {}
-              wall = s.get("runtime", {}).get("wall_seconds")
-              evidence["summary"] = s
-              evidence["target_met"] = bool(
-                  s.get("status") == "RUNTIME_PASS"
-                  and wall is not None
-                  and wall <= evidence["target_seconds"]
-              )
-              if d:
-                  ref = evidence["reference"]
-                  evidence["final_deltas_vs_reference"] = {
-                      "phi_min_V": d["phi_min_V"] - ref["phi_min_V"],
-                      "phi_max_V": d["phi_max_V"] - ref["phi_max_V"],
-                      "ne_avg_rel": (
-                          d["electron_density_avg_m3"] - ref["electron_density_avg_m3"]
-                      ) / ref["electron_density_avg_m3"],
-                      "mean_energy_eV": d["mean_energy_avg_eV"] - ref["mean_energy_avg_eV"],
-                      "charge_imbalance": (
-                          d["relative_charge_imbalance_vs_ne"]
-                          - ref["relative_charge_imbalance_vs_ne"]
-                      ),
-                  }
-          else:
-              evidence["target_met"] = False
-              evidence["summary_missing"] = True
-          (out / "five_minute_target_evidence.json").write_text(
-              json.dumps(evidence, indent=2, sort_keys=True) + "\n"
-          )
-          print(json.dumps(evidence, indent=2, sort_keys=True))
-          PY
-
-      - name: Upload 32-step target evidence
+      - name: Upload predictor evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: issue359-32step-${{ matrix.label }}
-          path: issue359-32step-${{ matrix.label }}
+          name: issue359-predictor-${{ matrix.label }}
+          path: issue359-predictor-${{ matrix.label }}
           if-no-files-found: warn
           retention-days: 30

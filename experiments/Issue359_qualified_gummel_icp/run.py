@@ -38,6 +38,7 @@ RESPONSE_RADIUS_DEFAULT = 1
 RESPONSE_MODE_DEFAULT = "graph"
 FIXED_POINT_ALGORITHM_DEFAULT = "steffensen"
 FIXED_POINT_REL_TOL_DEFAULT = 1.0e-8
+POTENTIAL_PREDICTOR_ALPHA_DEFAULT = 0.0
 # Interior-row shell magnitudes extracted from the qualified 1D bandwidth-5
 # response matrix.  Truncated radii are renormalized so each multidimensional
 # graph-shell correction remains row-sum preserving with unit total strength.
@@ -525,6 +526,7 @@ def _driver_input(
     relaxation_factor: float = RELAXATION_FACTOR_DEFAULT,
     fixed_point_algorithm: str = FIXED_POINT_ALGORITHM_DEFAULT,
     fixed_point_rel_tol: float = FIXED_POINT_REL_TOL_DEFAULT,
+    potential_predictor_alpha: float = POTENTIAL_PREDICTOR_ALPHA_DEFAULT,
     electron_substeps: int = ELECTRON_SUBSTEPS_DEFAULT,
     heavy_steps: int = HEAVY_STEPS_DEFAULT,
 ) -> str:
@@ -675,6 +677,18 @@ def _driver_input(
     text = mp.upsert_parameter(
         text, "Executioner", "fixed_point_rel_tol", f"{fixed_point_rel_tol:.17g}"
     )
+    if potential_predictor_alpha != 0.0:
+        predictor_block = f"""  [issue359_potential_predictor]
+    type = PhysicsTemporalPotentialPredictor
+    variable = potential_from_poisson
+    alpha = {potential_predictor_alpha:.17g}
+    start_step = 3
+    execute_on = 'TIMESTEP_BEGIN'
+  []"""
+        if mb.has_block(text, "AuxKernels"):
+            text = mb.insert_child_block(text, "AuxKernels", predictor_block)
+        else:
+            text += "\n[AuxKernels]\n" + predictor_block + "\n[]\n"
     text = mp.upsert_parameter(
         text, action, "parent_to_electron_source_variables", "'p_gas_h T_g_h'"
     )
@@ -836,6 +850,7 @@ def _construction_audit(
     relaxation_factor: float,
     fixed_point_algorithm: str,
     fixed_point_rel_tol: float,
+    potential_predictor_alpha: float,
     response_strength: float,
     response_radius: int,
     response_mode: str,
@@ -870,6 +885,29 @@ def _construction_audit(
             fixed_point_rel_tol,
             rel_tol=0.0,
             abs_tol=1.0e-15,
+        ),
+        "potential_predictor_selected": (
+            (
+                potential_predictor_alpha == 0.0
+                and not mb.has_block(driver, "AuxKernels/issue359_potential_predictor")
+            )
+            or (
+                potential_predictor_alpha != 0.0
+                and mb.has_block(driver, "AuxKernels/issue359_potential_predictor")
+                and math.isclose(
+                    float(
+                        mp.get_parameter(
+                            driver,
+                            "AuxKernels/issue359_potential_predictor",
+                            "alpha",
+                        )
+                        or "nan"
+                    ),
+                    potential_predictor_alpha,
+                    rel_tol=0.0,
+                    abs_tol=1.0e-15,
+                )
+            )
         ),
         "relaxation_factor_selected": math.isclose(
             float(
@@ -1131,6 +1169,7 @@ def _stage(
     relaxation_factor: float = RELAXATION_FACTOR_DEFAULT,
     fixed_point_algorithm: str = FIXED_POINT_ALGORITHM_DEFAULT,
     fixed_point_rel_tol: float = FIXED_POINT_REL_TOL_DEFAULT,
+    potential_predictor_alpha: float = POTENTIAL_PREDICTOR_ALPHA_DEFAULT,
     response_strength: float = RESPONSE_STRENGTH_DEFAULT,
     response_radius: int = RESPONSE_RADIUS_DEFAULT,
     response_mode: str = RESPONSE_MODE_DEFAULT,
@@ -1152,6 +1191,7 @@ def _stage(
         relaxation_factor=relaxation_factor,
         fixed_point_algorithm=fixed_point_algorithm,
         fixed_point_rel_tol=fixed_point_rel_tol,
+        potential_predictor_alpha=potential_predictor_alpha,
         electron_substeps=electron_substeps,
         heavy_steps=heavy_steps,
     )
@@ -1177,6 +1217,7 @@ def _stage(
         relaxation_factor=relaxation_factor,
         fixed_point_algorithm=fixed_point_algorithm,
         fixed_point_rel_tol=fixed_point_rel_tol,
+        potential_predictor_alpha=potential_predictor_alpha,
         response_strength=response_strength,
         response_radius=response_radius,
         response_mode=response_mode,
@@ -1238,6 +1279,7 @@ def _stage(
             "relaxation_factor": relaxation_factor,
             "fixed_point_algorithm": fixed_point_algorithm,
             "fixed_point_rel_tol": fixed_point_rel_tol,
+            "potential_predictor_alpha": potential_predictor_alpha,
         },
         "icp_response_correction": {
             "type": "FVElectronResponseTopologyCorrection",
@@ -1381,6 +1423,8 @@ def run(args: argparse.Namespace) -> int:
         raise Issue359Error("fixed-point algorithm must be steffensen or secant")
     if not (0.0 < args.fixed_point_rel_tol < 1.0):
         raise Issue359Error("fixed-point relative tolerance must lie in (0, 1)")
+    if not (0.0 <= args.potential_predictor_alpha <= 2.0):
+        raise Issue359Error("potential predictor alpha must lie in [0, 2]")
     if args.response_strength <= 0.0:
         raise Issue359Error("response strength must be positive")
     if args.response_radius < 1 or args.response_radius > 5:
@@ -1396,6 +1440,7 @@ def run(args: argparse.Namespace) -> int:
         relaxation_factor=args.relaxation_factor,
         fixed_point_algorithm=args.fixed_point_algorithm,
         fixed_point_rel_tol=args.fixed_point_rel_tol,
+        potential_predictor_alpha=args.potential_predictor_alpha,
         response_strength=args.response_strength,
         response_radius=args.response_radius,
         response_mode=args.response_mode,
@@ -1520,6 +1565,11 @@ def main() -> int:
         "--fixed-point-rel-tol",
         type=float,
         default=FIXED_POINT_REL_TOL_DEFAULT,
+    )
+    parser.add_argument(
+        "--potential-predictor-alpha",
+        type=float,
+        default=POTENTIAL_PREDICTOR_ALPHA_DEFAULT,
     )
     parser.add_argument(
         "--timing",
