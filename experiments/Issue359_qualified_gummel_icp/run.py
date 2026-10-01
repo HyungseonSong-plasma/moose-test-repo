@@ -36,6 +36,7 @@ RELAXATION_FACTOR_DEFAULT = 0.45
 RESPONSE_STRENGTH_DEFAULT = 1.0
 RESPONSE_RADIUS_DEFAULT = 1
 RESPONSE_MODE_DEFAULT = "graph"
+FIXED_POINT_ALGORITHM_DEFAULT = "steffensen"
 # Interior-row shell magnitudes extracted from the qualified 1D bandwidth-5
 # response matrix.  Truncated radii are renormalized so each multidimensional
 # graph-shell correction remains row-sum preserving with unit total strength.
@@ -521,6 +522,7 @@ def _driver_input(
     src: str,
     *,
     relaxation_factor: float = RELAXATION_FACTOR_DEFAULT,
+    fixed_point_algorithm: str = FIXED_POINT_ALGORITHM_DEFAULT,
     electron_substeps: int = ELECTRON_SUBSTEPS_DEFAULT,
     heavy_steps: int = HEAVY_STEPS_DEFAULT,
 ) -> str:
@@ -661,6 +663,12 @@ def _driver_input(
     action = "GummelIteration/electron_poisson"
     text = mp.upsert_parameter(
         text, action, "relaxation_factor", f"{relaxation_factor:.17g}"
+    )
+    text = mp.upsert_parameter(
+        text, "Executioner", "fixed_point_algorithm", fixed_point_algorithm
+    )
+    text = mp.upsert_parameter(
+        text, "Executioner", "transformed_variables", "'potential_from_poisson'"
     )
     text = mp.upsert_parameter(
         text, action, "parent_to_electron_source_variables", "'p_gas_h T_g_h'"
@@ -821,6 +829,7 @@ def _construction_audit(
     poisson: str,
     *,
     relaxation_factor: float,
+    fixed_point_algorithm: str,
     response_strength: float,
     response_radius: int,
     response_mode: str,
@@ -842,9 +851,13 @@ def _construction_audit(
             )
             == "through_parent"
         ),
-        "steffensen": (
+        "fixed_point_algorithm_selected": (
             mp.get_parameter(driver, "Executioner", "fixed_point_algorithm")
-            == "steffensen"
+            == fixed_point_algorithm
+        ),
+        "transformed_potential_selected": (
+            mp.get_parameter(driver, "Executioner", "transformed_variables")
+            == "'potential_from_poisson'"
         ),
         "relaxation_factor_selected": math.isclose(
             float(
@@ -1104,6 +1117,7 @@ def _stage(
     root: Path,
     *,
     relaxation_factor: float = RELAXATION_FACTOR_DEFAULT,
+    fixed_point_algorithm: str = FIXED_POINT_ALGORITHM_DEFAULT,
     response_strength: float = RESPONSE_STRENGTH_DEFAULT,
     response_radius: int = RESPONSE_RADIUS_DEFAULT,
     response_mode: str = RESPONSE_MODE_DEFAULT,
@@ -1123,6 +1137,7 @@ def _stage(
     driver = _driver_input(
         (qualified / "fast_sub.i").read_text(),
         relaxation_factor=relaxation_factor,
+        fixed_point_algorithm=fixed_point_algorithm,
         electron_substeps=electron_substeps,
         heavy_steps=heavy_steps,
     )
@@ -1146,6 +1161,7 @@ def _stage(
         electron,
         poisson,
         relaxation_factor=relaxation_factor,
+        fixed_point_algorithm=fixed_point_algorithm,
         response_strength=response_strength,
         response_radius=response_radius,
         response_mode=response_mode,
@@ -1205,7 +1221,7 @@ def _stage(
         },
         "gummel_acceleration": {
             "relaxation_factor": relaxation_factor,
-            "fixed_point_algorithm": "steffensen",
+            "fixed_point_algorithm": fixed_point_algorithm,
         },
         "icp_response_correction": {
             "type": "FVElectronResponseTopologyCorrection",
@@ -1345,6 +1361,8 @@ def run(args: argparse.Namespace) -> int:
     logs.mkdir(parents=True, exist_ok=True)
     if not (0.0 < args.relaxation_factor < 2.0):
         raise Issue359Error("relaxation factor must be in (0, 2)")
+    if args.fixed_point_algorithm not in ("steffensen", "secant"):
+        raise Issue359Error("fixed-point algorithm must be steffensen or secant")
     if args.response_strength <= 0.0:
         raise Issue359Error("response strength must be positive")
     if args.response_radius < 1 or args.response_radius > 5:
@@ -1358,6 +1376,7 @@ def run(args: argparse.Namespace) -> int:
     meta = _stage(
         case,
         relaxation_factor=args.relaxation_factor,
+        fixed_point_algorithm=args.fixed_point_algorithm,
         response_strength=args.response_strength,
         response_radius=args.response_radius,
         response_mode=args.response_mode,
@@ -1395,12 +1414,15 @@ def run(args: argparse.Namespace) -> int:
             )
             return 2
 
+    runtime_args = ["-snes_converged_reason", "-ksp_converged_reason"]
+    if args.timing:
+        runtime_args.append("--timing")
     runtime = run_physics(
         exe,
         cwd=case,
         input_name="input.i",
         log_path=logs / "runtime.log",
-        extra_args=("-snes_converged_reason", "-ksp_converged_reason"),
+        extra_args=tuple(runtime_args),
         timeout_seconds=args.timeout,
     )
     diagnostics: dict[str, float] | None = None
@@ -1469,6 +1491,16 @@ def main() -> int:
         "--relaxation-factor",
         type=float,
         default=RELAXATION_FACTOR_DEFAULT,
+    )
+    parser.add_argument(
+        "--fixed-point-algorithm",
+        choices=("steffensen", "secant"),
+        default=FIXED_POINT_ALGORITHM_DEFAULT,
+    )
+    parser.add_argument(
+        "--timing",
+        action="store_true",
+        help="Enable MOOSE PerfGraph timing in the runtime solve.",
     )
     parser.add_argument(
         "--response-strength",

@@ -1,0 +1,144 @@
+name: Issue359 Speed Screen
+
+on:
+  pull_request:
+    branches: [main]
+    types: [synchronize]
+    paths:
+      - 'experiments/Issue359_qualified_gummel_icp/run.py'
+      - '.github/workflows/issue359-speed-screen.yml'
+
+permissions:
+  contents: read
+
+env:
+  EXPECTED_BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+
+jobs:
+  speed-screen:
+    if: github.event.pull_request.number == 360 && github.head_ref == 'issue-359-qualified-gummel-icp'
+    name: Issue359 speed ${{ matrix.label }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: read
+      actions: read
+    strategy:
+      fail-fast: false
+      max-parallel: 5
+      matrix:
+        include:
+          - label: control_graph_steff_r090_s050
+            mode: graph
+            radius: 1
+            algorithm: steffensen
+            relaxation: 0.90
+            strength: 0.50
+          - label: dirR2_steff_r090_s035
+            mode: directional
+            radius: 2
+            algorithm: steffensen
+            relaxation: 0.90
+            strength: 0.35
+          - label: dirR2_steff_r100_s035
+            mode: directional
+            radius: 2
+            algorithm: steffensen
+            relaxation: 1.00
+            strength: 0.35
+          - label: dirR2_secant_r090_s035
+            mode: directional
+            radius: 2
+            algorithm: secant
+            relaxation: 0.90
+            strength: 0.35
+          - label: graphR1_secant_r090_s050
+            mode: graph
+            radius: 1
+            algorithm: secant
+            relaxation: 0.90
+            strength: 0.50
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Verify exact experiment HEAD
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run 8-step current-contract performance screen
+        shell: bash
+        env:
+          LABEL: ${{ matrix.label }}
+          MODE: ${{ matrix.mode }}
+          RADIUS: ${{ matrix.radius }}
+          ALGORITHM: ${{ matrix.algorithm }}
+          RELAXATION: ${{ matrix.relaxation }}
+          STRENGTH: ${{ matrix.strength }}
+        run: |
+          set -euxo pipefail
+          python3 -m py_compile experiments/Issue359_qualified_gummel_icp/run.py
+          rm -rf "$PWD/.issue351-qualified" "issue359-speed-$LABEL"
+          GH_TOKEN="${{ github.token }}" gh run download 36496470116 \
+            --repo "$GITHUB_REPOSITORY" \
+            --name issue351-frozen-heavy-driver-full \
+            --dir "$PWD/.issue351-qualified"
+
+          docker pull "$EXPECTED_BUILD_BASE_REF"
+          docker run --rm \
+            --entrypoint /bin/bash \
+            --user 0:0 \
+            --workdir /workspace \
+            -e LABEL -e MODE -e RADIUS -e ALGORITHM -e RELAXATION -e STRENGTH \
+            -v "$PWD:/workspace" \
+            "$EXPECTED_BUILD_BASE_REF" \
+            -lc '
+              set -euxo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              git config --global --add safe.directory /opt/physics_vendor/moose
+              git config --global --add safe.directory /opt/physics_vendor/crane
+              git config --global --add safe.directory /opt/physics_vendor/squirrel
+              git config --global --add safe.directory /opt/physics_vendor/zapdos
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+              make -C /workspace/physics_app -j2
+              cd /workspace
+              export ISSUE351_QUALIFIED_CASE=/workspace/.issue351-qualified/generated/full/frozen_heavy_driver
+
+              python3 -m experiments.Issue359_qualified_gummel_icp.run \
+                --physics physics_app/physics-opt \
+                --results-root "issue359-speed-$LABEL" \
+                --timeout 1200 \
+                --timing \
+                --fixed-point-algorithm "$ALGORITHM" \
+                --relaxation-factor "$RELAXATION" \
+                --response-strength "$STRENGTH" \
+                --response-radius "$RADIUS" \
+                --response-mode "$MODE" \
+                --electron-substeps 4 \
+                --heavy-steps 2
+            '
+
+      - name: Upload screen evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue359-speed-${{ matrix.label }}
+          path: issue359-speed-${{ matrix.label }}
+          if-no-files-found: error
+          retention-days: 30
