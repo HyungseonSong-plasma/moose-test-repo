@@ -570,9 +570,9 @@ jobs:
 
 
 
-  issue359-32step-predictor-screen:
+  issue359-32step-solver-reuse-screen:
     if: github.event_name == 'pull_request' && github.head_ref == 'issue-359-qualified-gummel-icp'
-    name: Issue359 32step predictor ${{ matrix.label }}
+    name: Issue359 32step reuse ${{ matrix.label }}
     runs-on: ubuntu-24.04
     timeout-minutes: 22
     permissions:
@@ -584,36 +584,40 @@ jobs:
       max-parallel: 4
       matrix:
         include:
-          - label: graph_a050
+          - label: graph_reuse4
             mode: graph
             radius: 1
             relaxation: 0.90
             strength: 0.50
             predictor_alpha: 0.50
-          - label: graph_a100
+            reuse_max: 4
+          - label: graph_reuse8
             mode: graph
             radius: 1
             relaxation: 0.90
             strength: 0.50
-            predictor_alpha: 1.00
-          - label: graph_a150
+            predictor_alpha: 0.50
+            reuse_max: 8
+          - label: graph_reuse20
             mode: graph
             radius: 1
             relaxation: 0.90
             strength: 0.50
-            predictor_alpha: 1.50
-          - label: dirR2_a100
+            predictor_alpha: 0.50
+            reuse_max: 20
+          - label: dirR2_reuse8
             mode: directional
             radius: 2
             relaxation: 0.90
             strength: 0.35
             predictor_alpha: 1.00
+            reuse_max: 8
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha }}
 
-      - name: Verify exact predictor HEAD
+      - name: Verify exact solver-reuse HEAD
         shell: bash
         run: |
           set -euo pipefail
@@ -626,7 +630,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Run 32-step temporal predictor screen
+      - name: Run 32-step reusable-LU screen
         shell: bash
         env:
           LABEL: ${{ matrix.label }}
@@ -635,10 +639,11 @@ jobs:
           RELAXATION: ${{ matrix.relaxation }}
           STRENGTH: ${{ matrix.strength }}
           PREDICTOR_ALPHA: ${{ matrix.predictor_alpha }}
+          REUSE_MAX: ${{ matrix.reuse_max }}
         run: |
           set -euxo pipefail
           python3 -m py_compile experiments/Issue359_qualified_gummel_icp/run.py
-          rm -rf "$PWD/.issue351-qualified" "issue359-predictor-$LABEL"
+          rm -rf "$PWD/.issue351-qualified" "issue359-reuse-$LABEL"
           GH_TOKEN="${{ github.token }}" gh run download 36496470116 \
             --repo "$GITHUB_REPOSITORY" \
             --name issue351-frozen-heavy-driver-full \
@@ -649,7 +654,7 @@ jobs:
             --entrypoint /bin/bash \
             --user 0:0 \
             --workdir /workspace \
-            -e LABEL -e MODE -e RADIUS -e RELAXATION -e STRENGTH -e PREDICTOR_ALPHA \
+            -e LABEL -e MODE -e RADIUS -e RELAXATION -e STRENGTH -e PREDICTOR_ALPHA -e REUSE_MAX \
             -v "$PWD:/workspace" \
             "$EXPECTED_BUILD_BASE_REF" \
             -lc '
@@ -670,11 +675,14 @@ jobs:
               export ISSUE351_QUALIFIED_CASE=/workspace/.issue351-qualified/generated/full/frozen_heavy_driver
               python3 -m experiments.Issue359_qualified_gummel_icp.run \
                 --physics physics_app/physics-opt \
-                --results-root "issue359-predictor-$LABEL" \
+                --results-root "issue359-reuse-$LABEL" \
                 --timeout 420 \
+                --timing \
                 --fixed-point-algorithm steffensen \
                 --fixed-point-rel-tol 1.0e-2 \
                 --potential-predictor-alpha "$PREDICTOR_ALPHA" \
+                --reuse-preconditioner \
+                --reuse-preconditioner-max-linear-its "$REUSE_MAX" \
                 --relaxation-factor "$RELAXATION" \
                 --response-strength "$STRENGTH" \
                 --response-radius "$RADIUS" \
@@ -683,11 +691,11 @@ jobs:
                 --heavy-steps 8
             '
 
-      - name: Upload predictor evidence
+      - name: Upload solver-reuse evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: issue359-predictor-${{ matrix.label }}
-          path: issue359-predictor-${{ matrix.label }}
+          name: issue359-reuse-${{ matrix.label }}
+          path: issue359-reuse-${{ matrix.label }}
           if-no-files-found: warn
           retention-days: 30

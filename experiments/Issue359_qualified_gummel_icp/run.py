@@ -252,9 +252,43 @@ def _configure_fast_executioner(
     return text
 
 
+def _configure_child_linear_solver(
+    text: str,
+    *,
+    reuse_preconditioner: bool,
+    reuse_preconditioner_max_linear_its: int,
+) -> str:
+    if not reuse_preconditioner:
+        return text
+    text = mp.upsert_parameter(text, "Executioner", "reuse_preconditioner", "true")
+    text = mp.upsert_parameter(
+        text,
+        "Executioner",
+        "reuse_preconditioner_max_linear_its",
+        str(reuse_preconditioner_max_linear_its),
+    )
+    text = mp.upsert_parameter(text, "Executioner", "l_tol", "1.0e-8")
+    text = mp.upsert_parameter(text, "Executioner", "l_max_its", "100")
+    text = mp.upsert_parameter(
+        text,
+        "Executioner",
+        "petsc_options_iname",
+        "'-pc_type -pc_factor_shift_type -ksp_type'",
+    )
+    text = mp.upsert_parameter(
+        text,
+        "Executioner",
+        "petsc_options_value",
+        "'lu NONZERO gmres'",
+    )
+    return text
+
+
 def _electron_input(
     src: str,
     *,
+    reuse_preconditioner: bool = False,
+    reuse_preconditioner_max_linear_its: int = 8,
     electron_substeps: int = ELECTRON_SUBSTEPS_DEFAULT,
     heavy_steps: int = HEAVY_STEPS_DEFAULT,
 ) -> str:
@@ -371,7 +405,12 @@ def _electron_input(
   []""",
     )
 
-    return _configure_fast_executioner(text, electron_substeps, heavy_steps)
+    text = _configure_fast_executioner(text, electron_substeps, heavy_steps)
+    return _configure_child_linear_solver(
+        text,
+        reuse_preconditioner=reuse_preconditioner,
+        reuse_preconditioner_max_linear_its=reuse_preconditioner_max_linear_its,
+    )
 
 
 def _response_shell_weights(radius: int) -> tuple[float, ...]:
@@ -385,6 +424,8 @@ def _response_shell_weights(radius: int) -> tuple[float, ...]:
 def _poisson_input(
     src: str,
     *,
+    reuse_preconditioner: bool = False,
+    reuse_preconditioner_max_linear_its: int = 8,
     response_strength: float = RESPONSE_STRENGTH_DEFAULT,
     response_radius: int = RESPONSE_RADIUS_DEFAULT,
     response_mode: str = RESPONSE_MODE_DEFAULT,
@@ -517,7 +558,12 @@ def _poisson_input(
 []
 """
 
-    return _configure_fast_executioner(text, electron_substeps, heavy_steps)
+    text = _configure_fast_executioner(text, electron_substeps, heavy_steps)
+    return _configure_child_linear_solver(
+        text,
+        reuse_preconditioner=reuse_preconditioner,
+        reuse_preconditioner_max_linear_its=reuse_preconditioner_max_linear_its,
+    )
 
 
 def _driver_input(
@@ -1130,6 +1176,18 @@ def _construction_audit(
                 "issue359_charge_integral",
             )
         ),
+        "child_solver_reuse_consistent": (
+            (
+                mp.get_parameter(electron, "Executioner", "reuse_preconditioner") == "true"
+                and mp.get_parameter(poisson, "Executioner", "reuse_preconditioner") == "true"
+                and mp.get_parameter(electron, "Executioner", "petsc_options_value") == "'lu NONZERO gmres'"
+                and mp.get_parameter(poisson, "Executioner", "petsc_options_value") == "'lu NONZERO gmres'"
+            )
+            or (
+                mp.get_parameter(electron, "Executioner", "reuse_preconditioner") != "true"
+                and mp.get_parameter(poisson, "Executioner", "reuse_preconditioner") != "true"
+            )
+        ),
         "quasi_neutral_electron_initial_condition": (
             math.isclose(
                 float(
@@ -1170,6 +1228,8 @@ def _stage(
     fixed_point_algorithm: str = FIXED_POINT_ALGORITHM_DEFAULT,
     fixed_point_rel_tol: float = FIXED_POINT_REL_TOL_DEFAULT,
     potential_predictor_alpha: float = POTENTIAL_PREDICTOR_ALPHA_DEFAULT,
+    reuse_preconditioner: bool = False,
+    reuse_preconditioner_max_linear_its: int = 8,
     response_strength: float = RESPONSE_STRENGTH_DEFAULT,
     response_radius: int = RESPONSE_RADIUS_DEFAULT,
     response_mode: str = RESPONSE_MODE_DEFAULT,
@@ -1197,11 +1257,15 @@ def _stage(
     )
     electron = _electron_input(
         (qualified / "electron_sub.i").read_text(),
+        reuse_preconditioner=reuse_preconditioner,
+        reuse_preconditioner_max_linear_its=reuse_preconditioner_max_linear_its,
         electron_substeps=electron_substeps,
         heavy_steps=heavy_steps,
     )
     poisson = _poisson_input(
         (qualified / "poisson_sub.i").read_text(),
+        reuse_preconditioner=reuse_preconditioner,
+        reuse_preconditioner_max_linear_its=reuse_preconditioner_max_linear_its,
         response_strength=response_strength,
         response_radius=response_radius,
         response_mode=response_mode,
@@ -1280,6 +1344,13 @@ def _stage(
             "fixed_point_algorithm": fixed_point_algorithm,
             "fixed_point_rel_tol": fixed_point_rel_tol,
             "potential_predictor_alpha": potential_predictor_alpha,
+        },
+        "linear_solver": {
+            "reuse_preconditioner": reuse_preconditioner,
+            "reuse_preconditioner_max_linear_its": reuse_preconditioner_max_linear_its,
+            "ksp_type": "gmres" if reuse_preconditioner else "qualified_default",
+            "pc_type": "lu",
+            "l_tol": 1.0e-8 if reuse_preconditioner else None,
         },
         "icp_response_correction": {
             "type": "FVElectronResponseTopologyCorrection",
@@ -1435,12 +1506,16 @@ def run(args: argparse.Namespace) -> int:
         raise Issue359Error("electron substeps must be one of 1, 2, 4, 8")
     if args.heavy_steps <= 0:
         raise Issue359Error("heavy_steps must be positive")
+    if args.reuse_preconditioner_max_linear_its <= 0:
+        raise Issue359Error("reuse_preconditioner_max_linear_its must be positive")
     meta = _stage(
         case,
         relaxation_factor=args.relaxation_factor,
         fixed_point_algorithm=args.fixed_point_algorithm,
         fixed_point_rel_tol=args.fixed_point_rel_tol,
         potential_predictor_alpha=args.potential_predictor_alpha,
+        reuse_preconditioner=args.reuse_preconditioner,
+        reuse_preconditioner_max_linear_its=args.reuse_preconditioner_max_linear_its,
         response_strength=args.response_strength,
         response_radius=args.response_radius,
         response_mode=args.response_mode,
@@ -1570,6 +1645,16 @@ def main() -> int:
         "--potential-predictor-alpha",
         type=float,
         default=POTENTIAL_PREDICTOR_ALPHA_DEFAULT,
+    )
+    parser.add_argument(
+        "--reuse-preconditioner",
+        action="store_true",
+        help="Reuse the child electron/Poisson LU preconditioner across solves using GMRES.",
+    )
+    parser.add_argument(
+        "--reuse-preconditioner-max-linear-its",
+        type=int,
+        default=8,
     )
     parser.add_argument(
         "--timing",
