@@ -37,6 +37,7 @@ RESPONSE_STRENGTH_DEFAULT = 1.0
 RESPONSE_RADIUS_DEFAULT = 1
 RESPONSE_MODE_DEFAULT = "graph"
 FIXED_POINT_ALGORITHM_DEFAULT = "steffensen"
+FIXED_POINT_REL_TOL_DEFAULT = 1.0e-8
 # Interior-row shell magnitudes extracted from the qualified 1D bandwidth-5
 # response matrix.  Truncated radii are renormalized so each multidimensional
 # graph-shell correction remains row-sum preserving with unit total strength.
@@ -523,6 +524,7 @@ def _driver_input(
     *,
     relaxation_factor: float = RELAXATION_FACTOR_DEFAULT,
     fixed_point_algorithm: str = FIXED_POINT_ALGORITHM_DEFAULT,
+    fixed_point_rel_tol: float = FIXED_POINT_REL_TOL_DEFAULT,
     electron_substeps: int = ELECTRON_SUBSTEPS_DEFAULT,
     heavy_steps: int = HEAVY_STEPS_DEFAULT,
 ) -> str:
@@ -669,6 +671,9 @@ def _driver_input(
     )
     text = mp.upsert_parameter(
         text, "Executioner", "transformed_variables", "'potential_from_poisson'"
+    )
+    text = mp.upsert_parameter(
+        text, "Executioner", "fixed_point_rel_tol", f"{fixed_point_rel_tol:.17g}"
     )
     text = mp.upsert_parameter(
         text, action, "parent_to_electron_source_variables", "'p_gas_h T_g_h'"
@@ -830,6 +835,7 @@ def _construction_audit(
     *,
     relaxation_factor: float,
     fixed_point_algorithm: str,
+    fixed_point_rel_tol: float,
     response_strength: float,
     response_radius: int,
     response_mode: str,
@@ -858,6 +864,12 @@ def _construction_audit(
         "transformed_potential_selected": (
             mp.get_parameter(driver, "Executioner", "transformed_variables")
             == "'potential_from_poisson'"
+        ),
+        "fixed_point_rel_tol_selected": math.isclose(
+            float(mp.get_parameter(driver, "Executioner", "fixed_point_rel_tol") or "nan"),
+            fixed_point_rel_tol,
+            rel_tol=0.0,
+            abs_tol=1.0e-15,
         ),
         "relaxation_factor_selected": math.isclose(
             float(
@@ -1118,6 +1130,7 @@ def _stage(
     *,
     relaxation_factor: float = RELAXATION_FACTOR_DEFAULT,
     fixed_point_algorithm: str = FIXED_POINT_ALGORITHM_DEFAULT,
+    fixed_point_rel_tol: float = FIXED_POINT_REL_TOL_DEFAULT,
     response_strength: float = RESPONSE_STRENGTH_DEFAULT,
     response_radius: int = RESPONSE_RADIUS_DEFAULT,
     response_mode: str = RESPONSE_MODE_DEFAULT,
@@ -1138,6 +1151,7 @@ def _stage(
         (qualified / "fast_sub.i").read_text(),
         relaxation_factor=relaxation_factor,
         fixed_point_algorithm=fixed_point_algorithm,
+        fixed_point_rel_tol=fixed_point_rel_tol,
         electron_substeps=electron_substeps,
         heavy_steps=heavy_steps,
     )
@@ -1162,6 +1176,7 @@ def _stage(
         poisson,
         relaxation_factor=relaxation_factor,
         fixed_point_algorithm=fixed_point_algorithm,
+        fixed_point_rel_tol=fixed_point_rel_tol,
         response_strength=response_strength,
         response_radius=response_radius,
         response_mode=response_mode,
@@ -1222,6 +1237,7 @@ def _stage(
         "gummel_acceleration": {
             "relaxation_factor": relaxation_factor,
             "fixed_point_algorithm": fixed_point_algorithm,
+            "fixed_point_rel_tol": fixed_point_rel_tol,
         },
         "icp_response_correction": {
             "type": "FVElectronResponseTopologyCorrection",
@@ -1363,6 +1379,8 @@ def run(args: argparse.Namespace) -> int:
         raise Issue359Error("relaxation factor must be in (0, 2)")
     if args.fixed_point_algorithm not in ("steffensen", "secant"):
         raise Issue359Error("fixed-point algorithm must be steffensen or secant")
+    if not (0.0 < args.fixed_point_rel_tol < 1.0):
+        raise Issue359Error("fixed-point relative tolerance must lie in (0, 1)")
     if args.response_strength <= 0.0:
         raise Issue359Error("response strength must be positive")
     if args.response_radius < 1 or args.response_radius > 5:
@@ -1377,6 +1395,7 @@ def run(args: argparse.Namespace) -> int:
         case,
         relaxation_factor=args.relaxation_factor,
         fixed_point_algorithm=args.fixed_point_algorithm,
+        fixed_point_rel_tol=args.fixed_point_rel_tol,
         response_strength=args.response_strength,
         response_radius=args.response_radius,
         response_mode=args.response_mode,
@@ -1496,6 +1515,11 @@ def main() -> int:
         "--fixed-point-algorithm",
         choices=("steffensen", "secant"),
         default=FIXED_POINT_ALGORITHM_DEFAULT,
+    )
+    parser.add_argument(
+        "--fixed-point-rel-tol",
+        type=float,
+        default=FIXED_POINT_REL_TOL_DEFAULT,
     )
     parser.add_argument(
         "--timing",
