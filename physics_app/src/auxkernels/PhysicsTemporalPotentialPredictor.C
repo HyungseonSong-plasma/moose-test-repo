@@ -1,5 +1,8 @@
 #include "PhysicsTemporalPotentialPredictor.h"
 
+#include "Executioner.h"
+#include "FixedPointSolve.h"
+
 registerMooseObject("PhysicsApp", PhysicsTemporalPotentialPredictor);
 
 InputParameters
@@ -29,8 +32,17 @@ PhysicsTemporalPotentialPredictor::PhysicsTemporalPotentialPredictor(
 Real
 PhysicsTemporalPotentialPredictor::computeValue()
 {
-  if (_t_step < static_cast<int>(_start_step))
-    return _u_old[_qp];
+  // TIMESTEP_BEGIN is revisited by every outer fixed-point iteration.
+  // Apply the temporal extrapolation only on the first iteration of the
+  // physical time step; afterwards preserve the current accelerated iterate.
+  auto * const executioner = _app.getExecutioner();
+  const bool first_fixed_point_iteration =
+      executioner && executioner->hasSolveObject<FixedPointSolve>() &&
+      executioner->fixedPointSolve().hasFixedPointIteration() &&
+      executioner->fixedPointSolve().numFixedPointIts() == 1;
+
+  if (_t_step < static_cast<int>(_start_step) || !first_fixed_point_iteration)
+    return _u[_qp];
 
   return _u_old[_qp] + _alpha * (_u_old[_qp] - _u_older[_qp]);
 }
