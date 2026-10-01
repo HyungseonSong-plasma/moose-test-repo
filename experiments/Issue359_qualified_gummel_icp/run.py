@@ -1508,6 +1508,8 @@ def run(args: argparse.Namespace) -> int:
         raise Issue359Error("heavy_steps must be positive")
     if args.reuse_preconditioner_max_linear_its <= 0:
         raise Issue359Error("reuse_preconditioner_max_linear_its must be positive")
+    if args.n_threads <= 0:
+        raise Issue359Error("n_threads must be positive")
     meta = _stage(
         case,
         relaxation_factor=args.relaxation_factor,
@@ -1553,9 +1555,13 @@ def run(args: argparse.Namespace) -> int:
             )
             return 2
 
-    runtime_args = ["-snes_converged_reason", "-ksp_converged_reason"]
+    runtime_args: list[str] = []
+    if args.solver_reasons:
+        runtime_args.extend(("-snes_converged_reason", "-ksp_converged_reason"))
     if args.timing:
         runtime_args.append("--timing")
+    if args.n_threads != 1:
+        runtime_args.extend(("--n-threads", str(args.n_threads)))
     runtime = run_physics(
         exe,
         cwd=case,
@@ -1606,6 +1612,9 @@ def run(args: argparse.Namespace) -> int:
         "runtime": {
             "returncode": runtime.returncode,
             "wall_seconds": runtime.wall_seconds,
+            "n_threads": args.n_threads,
+            "solver_reasons": args.solver_reasons,
+            "timing_enabled": args.timing,
         },
         "final_diagnostics": diagnostics,
         "electron_step_iterations": step_iterations,
@@ -1655,6 +1664,17 @@ def main() -> int:
         "--reuse-preconditioner-max-linear-its",
         type=int,
         default=8,
+    )
+    parser.add_argument(
+        "--solver-reasons",
+        action="store_true",
+        help="Emit PETSc SNES/KSP converged-reason diagnostics during runtime.",
+    )
+    parser.add_argument(
+        "--n-threads",
+        type=int,
+        default=1,
+        help="MOOSE/libMesh thread count for the runtime solve.",
     )
     parser.add_argument(
         "--timing",

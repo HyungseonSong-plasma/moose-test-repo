@@ -570,54 +570,30 @@ jobs:
 
 
 
-  issue359-32step-solver-reuse-screen:
+  issue359-32step-clean-thread-screen:
     if: github.event_name == 'pull_request' && github.head_ref == 'issue-359-qualified-gummel-icp'
-    name: Issue359 32step reuse ${{ matrix.label }}
+    name: Issue359 32step clean ${{ matrix.label }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 22
+    timeout-minutes: 24
     permissions:
       contents: read
       packages: read
       actions: read
     strategy:
       fail-fast: false
-      max-parallel: 4
+      max-parallel: 2
       matrix:
         include:
-          - label: graph_reuse4
-            mode: graph
-            radius: 1
-            relaxation: 0.90
-            strength: 0.50
-            predictor_alpha: 0.50
-            reuse_max: 4
-          - label: graph_reuse8
-            mode: graph
-            radius: 1
-            relaxation: 0.90
-            strength: 0.50
-            predictor_alpha: 0.50
-            reuse_max: 8
-          - label: graph_reuse20
-            mode: graph
-            radius: 1
-            relaxation: 0.90
-            strength: 0.50
-            predictor_alpha: 0.50
-            reuse_max: 20
-          - label: dirR2_reuse8
-            mode: directional
-            radius: 2
-            relaxation: 0.90
-            strength: 0.35
-            predictor_alpha: 1.00
-            reuse_max: 8
+          - label: reuse20_t1
+            n_threads: 1
+          - label: reuse20_t2
+            n_threads: 2
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha }}
 
-      - name: Verify exact solver-reuse HEAD
+      - name: Verify exact clean-thread HEAD
         shell: bash
         run: |
           set -euo pipefail
@@ -630,20 +606,15 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Run 32-step reusable-LU screen
+      - name: Run clean 32-step reuse20 thread benchmark
         shell: bash
         env:
           LABEL: ${{ matrix.label }}
-          MODE: ${{ matrix.mode }}
-          RADIUS: ${{ matrix.radius }}
-          RELAXATION: ${{ matrix.relaxation }}
-          STRENGTH: ${{ matrix.strength }}
-          PREDICTOR_ALPHA: ${{ matrix.predictor_alpha }}
-          REUSE_MAX: ${{ matrix.reuse_max }}
+          N_THREADS: ${{ matrix.n_threads }}
         run: |
           set -euxo pipefail
           python3 -m py_compile experiments/Issue359_qualified_gummel_icp/run.py
-          rm -rf "$PWD/.issue351-qualified" "issue359-reuse-$LABEL"
+          rm -rf "$PWD/.issue351-qualified" "issue359-clean-$LABEL"
           GH_TOKEN="${{ github.token }}" gh run download 36496470116 \
             --repo "$GITHUB_REPOSITORY" \
             --name issue351-frozen-heavy-driver-full \
@@ -654,7 +625,7 @@ jobs:
             --entrypoint /bin/bash \
             --user 0:0 \
             --workdir /workspace \
-            -e LABEL -e MODE -e RADIUS -e RELAXATION -e STRENGTH -e PREDICTOR_ALPHA -e REUSE_MAX \
+            -e LABEL -e N_THREADS \
             -v "$PWD:/workspace" \
             "$EXPECTED_BUILD_BASE_REF" \
             -lc '
@@ -675,27 +646,58 @@ jobs:
               export ISSUE351_QUALIFIED_CASE=/workspace/.issue351-qualified/generated/full/frozen_heavy_driver
               python3 -m experiments.Issue359_qualified_gummel_icp.run \
                 --physics physics_app/physics-opt \
-                --results-root "issue359-reuse-$LABEL" \
-                --timeout 420 \
-                --timing \
+                --results-root "issue359-clean-$LABEL" \
+                --timeout 520 \
+                --n-threads "$N_THREADS" \
                 --fixed-point-algorithm steffensen \
                 --fixed-point-rel-tol 1.0e-2 \
-                --potential-predictor-alpha "$PREDICTOR_ALPHA" \
+                --potential-predictor-alpha 0.50 \
                 --reuse-preconditioner \
-                --reuse-preconditioner-max-linear-its "$REUSE_MAX" \
-                --relaxation-factor "$RELAXATION" \
-                --response-strength "$STRENGTH" \
-                --response-radius "$RADIUS" \
-                --response-mode "$MODE" \
+                --reuse-preconditioner-max-linear-its 20 \
+                --relaxation-factor 0.90 \
+                --response-strength 0.50 \
+                --response-radius 1 \
+                --response-mode graph \
                 --electron-substeps 4 \
                 --heavy-steps 8
             '
 
-      - name: Upload solver-reuse evidence
+      - name: Assess five-minute target
+        if: always()
+        shell: bash
+        env:
+          LABEL: ${{ matrix.label }}
+        run: |
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          out = Path("issue359-clean-" + os.environ["LABEL"])
+          p = out / "summary.json"
+          if not p.exists():
+              print("summary missing")
+              raise SystemExit(0)
+          s = json.loads(p.read_text())
+          wall = s.get("runtime", {}).get("wall_seconds")
+          status = s.get("status")
+          target = bool(status == "RUNTIME_PASS" and wall is not None and wall <= 300.0)
+          evidence = {
+              "target_seconds": 300.0,
+              "target_met": target,
+              "status": status,
+              "runtime": s.get("runtime"),
+              "final_diagnostics": s.get("final_diagnostics"),
+          }
+          (out / "five_minute_target.json").write_text(
+              json.dumps(evidence, indent=2, sort_keys=True) + "\n"
+          )
+          print(json.dumps(evidence, indent=2, sort_keys=True))
+          PY
+
+      - name: Upload clean-thread evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: issue359-reuse-${{ matrix.label }}
-          path: issue359-reuse-${{ matrix.label }}
+          name: issue359-clean-${{ matrix.label }}
+          path: issue359-clean-${{ matrix.label }}
           if-no-files-found: warn
           retention-days: 30
