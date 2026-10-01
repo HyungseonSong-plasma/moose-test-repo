@@ -524,38 +524,38 @@ jobs:
                 --electron-substeps "$ELECTRON_SUBSTEPS" \
                 --heavy-steps "$HEAVY_STEPS"
 
-              python3 - <<PY
-import json
-import os
-from pathlib import Path
+          python3 - <<PY
+          import json
+          import os
+          from pathlib import Path
 
-out = Path(f"issue359-multirate-{os.environ['CASE_LABEL']}")
-summary = json.loads((out / "summary.json").read_text())
-timing = summary["construction"]["time_integration"]
-assert timing["electron_steps_total"] == 8
-expected_final = 8 * 5.6650790022617894e-11
-assert abs(timing["final_time_s"] - expected_final) <= 1.0e-18
-evidence = {
-    "schema_version": 1,
-    "issue": 359,
-    "hypothesis_id": f"heavy_cadence_{os.environ['CASE_LABEL']}",
-    "base_sha": os.environ["BASE_SHA"],
-    "workflow_event_sha": os.environ["WORKFLOW_EVENT_SHA"],
-    "case": os.environ["CASE_LABEL"],
-    "electron_substeps_per_heavy": int(os.environ["ELECTRON_SUBSTEPS"]),
-    "heavy_steps": int(os.environ["HEAVY_STEPS"]),
-    "electron_steps_total": timing["electron_steps_total"],
-    "electron_dt_s": timing["electron_dt_s"],
-    "heavy_dt_s": timing["heavy_dt_s"],
-    "final_time_s": timing["final_time_s"],
-    "summary": summary,
-    "promotion_authorized": False,
-}
-(out / "matrix_evidence.json").write_text(
-    json.dumps(evidence, indent=2, sort_keys=True) + "\n"
-)
-print(json.dumps(evidence, indent=2, sort_keys=True))
-PY
+          out = Path(f"issue359-multirate-{os.environ['CASE_LABEL']}")
+          summary = json.loads((out / "summary.json").read_text())
+          timing = summary["construction"]["time_integration"]
+          assert timing["electron_steps_total"] == 8
+          expected_final = 8 * 5.6650790022617894e-11
+          assert abs(timing["final_time_s"] - expected_final) <= 1.0e-18
+          evidence = {
+              "schema_version": 1,
+              "issue": 359,
+              "hypothesis_id": f"heavy_cadence_{os.environ['CASE_LABEL']}",
+              "base_sha": os.environ["BASE_SHA"],
+              "workflow_event_sha": os.environ["WORKFLOW_EVENT_SHA"],
+              "case": os.environ["CASE_LABEL"],
+              "electron_substeps_per_heavy": int(os.environ["ELECTRON_SUBSTEPS"]),
+              "heavy_steps": int(os.environ["HEAVY_STEPS"]),
+              "electron_steps_total": timing["electron_steps_total"],
+              "electron_dt_s": timing["electron_dt_s"],
+              "heavy_dt_s": timing["heavy_dt_s"],
+              "final_time_s": timing["final_time_s"],
+              "summary": summary,
+              "promotion_authorized": False,
+          }
+          (out / "matrix_evidence.json").write_text(
+              json.dumps(evidence, indent=2, sort_keys=True) + "\n"
+          )
+          print(json.dumps(evidence, indent=2, sort_keys=True))
+          PY
             '
 
       - name: Upload multirate matrix evidence
