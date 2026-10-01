@@ -1,0 +1,123 @@
+name: Issue359 1p81ns Cadence Discriminator
+
+on:
+  pull_request:
+    branches: [main]
+    types: [synchronize]
+    paths:
+      - '.github/workflows/issue359-2ns-one-shot.yml'
+
+permissions:
+  contents: read
+
+env:
+  EXPECTED_BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+
+jobs:
+  cadence-1p81ns:
+    if: github.event.pull_request.number == 360 && github.head_ref == 'issue-359-qualified-gummel-icp'
+    name: Issue359 1.81ns ${{ matrix.label }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    permissions:
+      contents: read
+      packages: read
+      actions: read
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        include:
+          - label: ratio_1to1
+            electron_substeps: 1
+            heavy_steps: 32
+          - label: ratio_1to2
+            electron_substeps: 2
+            heavy_steps: 16
+          - label: ratio_1to4
+            electron_substeps: 4
+            heavy_steps: 8
+          - label: ratio_1to8
+            electron_substeps: 8
+            heavy_steps: 4
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Verify exact experiment HEAD
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run 1.812825 ns common-final-time cadence discriminator
+        shell: bash
+        env:
+          CASE_LABEL: ${{ matrix.label }}
+          ELECTRON_SUBSTEPS: ${{ matrix.electron_substeps }}
+          HEAVY_STEPS: ${{ matrix.heavy_steps }}
+        run: |
+          set -euxo pipefail
+          python3 -m py_compile experiments/Issue359_qualified_gummel_icp/run.py
+          rm -rf "$PWD/.issue351-qualified" "issue359-1p81ns-$CASE_LABEL"
+          GH_TOKEN="${{ github.token }}" gh run download 36496470116 \
+            --repo "$GITHUB_REPOSITORY" \
+            --name issue351-frozen-heavy-driver-full \
+            --dir "$PWD/.issue351-qualified"
+
+          docker pull "$EXPECTED_BUILD_BASE_REF"
+          docker run --rm \
+            --entrypoint /bin/bash \
+            --user 0:0 \
+            --workdir /workspace \
+            -e CASE_LABEL \
+            -e ELECTRON_SUBSTEPS \
+            -e HEAVY_STEPS \
+            -v "$PWD:/workspace" \
+            "$EXPECTED_BUILD_BASE_REF" \
+            -lc '
+              set -euxo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              git config --global --add safe.directory /opt/physics_vendor/moose
+              git config --global --add safe.directory /opt/physics_vendor/crane
+              git config --global --add safe.directory /opt/physics_vendor/squirrel
+              git config --global --add safe.directory /opt/physics_vendor/zapdos
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+              make -C /workspace/physics_app -j2
+              cd /workspace
+              export ISSUE351_QUALIFIED_CASE=/workspace/.issue351-qualified/generated/full/frozen_heavy_driver
+
+              out="issue359-1p81ns-$CASE_LABEL"
+              python3 -m experiments.Issue359_qualified_gummel_icp.run \
+                --physics physics_app/physics-opt \
+                --results-root "$out" \
+                --timeout 3600 \
+                --relaxation-factor 0.90 \
+                --response-strength 0.50 \
+                --response-radius 1 \
+                --response-mode graph \
+                --electron-substeps "$ELECTRON_SUBSTEPS" \
+                --heavy-steps "$HEAVY_STEPS"
+            '
+
+      - name: Upload 1.81ns trajectory evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue359-1p81ns-${{ matrix.label }}
+          path: issue359-1p81ns-${{ matrix.label }}
+          if-no-files-found: error
+          retention-days: 30
