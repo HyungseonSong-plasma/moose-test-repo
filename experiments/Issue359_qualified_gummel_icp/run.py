@@ -1226,7 +1226,9 @@ def _stage(
     return meta
 
 
-def _read_final_diagnostics(case: Path) -> dict[str, float]:
+def _read_final_diagnostics(
+    case: Path, *, expected_heavy_steps: int
+) -> dict[str, float]:
     paths = sorted(case.glob("*_gummel_driver0_final_csv.csv"))
     if len(paths) != 1:
         raise Issue359Error(
@@ -1234,11 +1236,12 @@ def _read_final_diagnostics(case: Path) -> dict[str, float]:
         )
     with paths[0].open(newline="") as handle:
         rows = list(csv.DictReader(handle))
-    if len(rows) != 1:
+    if len(rows) != expected_heavy_steps:
         raise Issue359Error(
-            f"expected one Gummel driver FINAL row, found {len(rows)} in {paths[0]}"
+            f"expected {expected_heavy_steps} Gummel driver FINAL rows, "
+            f"found {len(rows)} in {paths[0]}"
         )
-    row = {key: float(value) for key, value in rows[0].items() if key and value}
+    row = {key: float(value) for key, value in rows[-1].items() if key and value}
     required = (
         "fixed_point_iterations",
         "cumulative_fixed_point_iterations",
@@ -1297,7 +1300,7 @@ def _read_step_iterations(log_path: Path) -> list[dict[str, float]]:
     ansi = re.compile(r"\x1b\\[[0-9;]*m")
     text = ansi.sub("", text)
     pattern = re.compile(
-        r"gummel_driver0_electron0: Time Step (\\d+), "
+        r"gummel_driver0_electron0: Time Step (\d+), "
         r"time = ([0-9.eE+-]+), dt = ([0-9.eE+-]+)"
     )
     counts: dict[int, dict[str, float]] = {}
@@ -1405,7 +1408,9 @@ def run(args: argparse.Namespace) -> int:
     diagnostic_error: str | None = None
     if runtime.returncode == 0:
         try:
-            diagnostics = _read_final_diagnostics(case)
+            diagnostics = _read_final_diagnostics(
+                case, expected_heavy_steps=args.heavy_steps
+            )
             step_iterations = _read_step_iterations(logs / "runtime.log")
             expected_electron_steps = args.electron_substeps * args.heavy_steps
             if len(step_iterations) != expected_electron_steps:
