@@ -529,7 +529,8 @@ jobs:
           import os
           from pathlib import Path
 
-          out = Path(f"issue359-multirate-{os.environ['CASE_LABEL']}")
+          case_label = os.environ["CASE_LABEL"]
+          out = Path("issue359-multirate-" + case_label)
           summary = json.loads((out / "summary.json").read_text())
           timing = summary["construction"]["time_integration"]
           assert timing["electron_steps_total"] == 8
@@ -538,7 +539,7 @@ jobs:
           evidence = {
               "schema_version": 1,
               "issue": 359,
-              "hypothesis_id": f"heavy_cadence_{os.environ['CASE_LABEL']}",
+              "hypothesis_id": "heavy_cadence_" + case_label,
               "base_sha": os.environ["BASE_SHA"],
               "workflow_event_sha": os.environ["WORKFLOW_EVENT_SHA"],
               "case": os.environ["CASE_LABEL"],
