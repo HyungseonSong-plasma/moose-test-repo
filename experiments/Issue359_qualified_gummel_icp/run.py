@@ -1297,7 +1297,7 @@ def _read_final_diagnostics(
 
 def _read_step_iterations(log_path: Path) -> list[dict[str, float]]:
     text = log_path.read_text(errors="replace")
-    ansi = re.compile(r"\x1b\\[[0-9;]*m")
+    ansi = re.compile(r"\x1b\[[0-9;]*m")
     text = ansi.sub("", text)
     pattern = re.compile(
         r"gummel_driver0_electron0: Time Step (\d+), "
