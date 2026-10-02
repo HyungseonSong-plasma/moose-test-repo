@@ -38,11 +38,19 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 1
 
-      - name: Validate configurable wall-flux contract
+      - name: Validate catalog and configurable wall-flux contract
         shell: bash
         run: |
           set -euxo pipefail
           test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          python3 bin/physics.py simple-case check
+          python3 bin/physics.py simple-case list
+          python3 bin/physics.py simple-case show electron-diffusion-experiment
+          python3 bin/physics.py simple-case show electron-diffusion-energy-experiment
+          if python3 bin/physics.py simple-case show 1; then
+            echo "numeric simple-case selector unexpectedly accepted" >&2
+            exit 1
+          fi
           python3 physics_app/ci/check_electron_molar_representation_contract.py --self-test
           python3 physics_app/ci/check_electron_molar_representation_contract.py
 
