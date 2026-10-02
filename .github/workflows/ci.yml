@@ -657,38 +657,37 @@ jobs:
 
   issue359-rz-response-jacobian:
     if: github.event_name == 'pull_request' && github.head_ref == 'issue-359-qualified-gummel-icp'
-    name: Issue359 RZ response Jacobian
+    name: Issue359 Build exact JIT-capable RZ runtime
     runs-on: ubuntu-24.04
-    timeout-minutes: 5
+    timeout-minutes: 45
     permissions:
       contents: read
-      packages: read
+      packages: write
       actions: read
     env:
-      RZ_RUNTIME_REF: ghcr.io/hyungseonsong-plasma/physics-runtime@sha256:0cf34d4ae00d4ea46fa5af661031f93b4edcfcac144a08ebe0f7700ed413f9cf
-      RZ_PHYSICS_MANIFEST_SHA256: a9654d344e9c60e48992165bc855b154707ecf2e659e4428117e8f6ae8fdba3b
+      BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+      IMAGE: ghcr.io/hyungseonsong-plasma/physics-jit-runtime
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
 
-      - name: Verify frozen inputs and runtime source identity
+      - name: Resolve exact Physics source identity
+        id: source
         shell: bash
         run: |
           set -euxo pipefail
           test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
-          test -f experiments/Issue359_qualified_gummel_icp/frozen_current/provenance.json
-          python3 -m py_compile \
-            experiments/Issue359_qualified_gummel_icp/run.py \
-            experiments/Issue359_rz_response_jacobian/control.py
+          source physics_app/dependencies.lock
           git ls-files -z physics_app \
             | sort -z \
             | xargs -0 sha256sum > /tmp/physics-source-file-hashes.txt
           manifest="$(sha256sum /tmp/physics-source-file-hashes.txt | awk '{print $1}')"
-          test "$manifest" = "$RZ_PHYSICS_MANIFEST_SHA256"
-          python3 -m experiments.Issue359_rz_response_jacobian.control \
-            --plan-only \
-            --max-radius 2
+          echo "manifest=$manifest" >> "$GITHUB_OUTPUT"
+          echo "PHYSICS_SOURCE_MANIFEST_SHA256=$manifest" >> "$GITHUB_ENV"
+          test "$manifest" = "a9654d344e9c60e48992165bc855b154707ecf2e659e4428117e8f6ae8fdba3b"
+          echo ISSUE359_JIT_RUNTIME_SOURCE_IDENTITY_PASS
 
       - name: Log in to GHCR
         uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9
@@ -697,50 +696,79 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Pull and verify immutable Physics runtime
+      - name: Pull immutable build base and compile exact Physics once
         shell: bash
         run: |
           set -euxo pipefail
-          docker pull "$RZ_RUNTIME_REF"
-          test "$(docker image inspect "$RZ_RUNTIME_REF" --format '{{ index .Config.Labels "io.physics.source.owner" }}')" = "moose-test-repo/physics_app"
-          test "$(docker image inspect "$RZ_RUNTIME_REF" --format '{{ index .Config.Labels "io.physics.source.manifest-sha256" }}')" = "$RZ_PHYSICS_MANIFEST_SHA256"
-          test "$(docker image inspect "$RZ_RUNTIME_REF" --format '{{ index .Config.Labels "io.physics.build-base.ref" }}')" = "$EXPECTED_BUILD_BASE_REF"
-
-      - name: Run build-free fresh-source R1/R2 response discriminator
-        shell: bash
-        run: |
-          set -euxo pipefail
-          rm -rf "$PWD/issue359-rz-jacobian" "$PWD/.ci-rz"
-          mkdir -p "$PWD/.ci-rz"
-          cat > "$PWD/.ci-rz/physics-opt-runtime" <<'SH'
-          #!/usr/bin/env bash
-          set -euo pipefail
-          : "${RZ_RUNTIME_REF:?RZ_RUNTIME_REF is required}"
+          docker pull "$BUILD_BASE_REF"
           docker run --rm \
-            --workdir /work \
-            -v "$PWD:/work" \
-            "$RZ_RUNTIME_REF" "$@"
-          SH
-          chmod +x "$PWD/.ci-rz/physics-opt-runtime"
-          export RZ_RUNTIME_REF
-          unset ISSUE351_QUALIFIED_CASE
+            --entrypoint /bin/bash \
+            --user 0:0 \
+            --workdir /workspace/physics_app \
+            -v "$PWD:/workspace" \
+            "$BUILD_BASE_REF" \
+            -lc '
+              set -euxo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              git config --global --add safe.directory /opt/physics_vendor/moose
+              git config --global --add safe.directory /opt/physics_vendor/crane
+              git config --global --add safe.directory /opt/physics_vendor/squirrel
+              git config --global --add safe.directory /opt/physics_vendor/zapdos
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+              make -j4
+              ./physics-opt --check-input -i ci/smoke.i
+            '
+          test -x physics_app/physics-opt
 
-          python3 -m experiments.Issue359_rz_response_jacobian.control \
-            --physics "$PWD/.ci-rz/physics-opt-runtime" \
-            --results-root issue359-rz-jacobian \
-            --source-timeout 150 \
-            --case-timeout 20 \
-            --workers 4 \
-            --max-radius 2 \
-            --delta-phi 1.0e-4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f
 
-      - name: Upload RZ response evidence
-        if: always()
+      - name: Publish JIT-capable immutable runtime
+        id: build
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8
+        with:
+          context: .
+          file: ci/physics-jit-runtime-image/Dockerfile
+          push: true
+          tags: ${{ env.IMAGE }}:git-${{ github.event.pull_request.head.sha }}
+          provenance: true
+          build-args: |
+            BUILD_BASE_REF=${{ env.BUILD_BASE_REF }}
+            REPOSITORY_SHA=${{ github.event.pull_request.head.sha }}
+            PHYSICS_SOURCE_MANIFEST_SHA256=${{ env.PHYSICS_SOURCE_MANIFEST_SHA256 }}
+
+      - name: Verify published JIT runtime
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ref="$IMAGE@${{ steps.build.outputs.digest }}"
+          docker pull "$ref"
+          test "$(docker image inspect "$ref" --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}')" = "${{ github.event.pull_request.head.sha }}"
+          test "$(docker image inspect "$ref" --format '{{ index .Config.Labels "io.physics.source.manifest-sha256" }}')" = "$PHYSICS_SOURCE_MANIFEST_SHA256"
+          docker run --rm "$ref" --check-input -i /opt/physics/ci/smoke.i
+          mkdir -p issue359-jit-runtime-evidence
+          cat > issue359-jit-runtime-evidence/runtime.txt <<EOF
+          RUNTIME_IMAGE=$ref
+          REPOSITORY_SHA=${{ github.event.pull_request.head.sha }}
+          PHYSICS_SOURCE_MANIFEST_SHA256=$PHYSICS_SOURCE_MANIFEST_SHA256
+          BUILD_BASE=$BUILD_BASE_REF
+          COMPILER_AND_JIT_ENVIRONMENT_RETAINED=true
+          BUILD_ONCE_CONSUME_WITHOUT_RECOMPILE=true
+          SMOKE_CHECK_INPUT=PASS
+          EOF
+          cat issue359-jit-runtime-evidence/runtime.txt
+
+      - name: Upload JIT runtime evidence
         uses: actions/upload-artifact@v4
         with:
-          name: issue359-rz-response-jacobian
-          path: issue359-rz-jacobian
-          if-no-files-found: warn
+          name: issue359-jit-runtime-evidence
+          path: issue359-jit-runtime-evidence/runtime.txt
+          if-no-files-found: error
           retention-days: 30
 
 
