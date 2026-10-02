@@ -90,15 +90,11 @@
     new_boundary = plasma_focus_ring
     input = plasma_wafer
   []
-  [plasma_all_ground]
-    type = SideSetsAroundSubdomainGenerator
-    input = plasma_focus_ring
-    block = plasma
-    new_boundary = plasma_all_ground
-  []
+  # x=0 is the RZ symmetry axis, not a physical boundary. Physical BC
+  # sidesets are constructed only from material interfaces/surfaces.
   [plasma_only]
     type = BlockDeletionGenerator
-    input = plasma_all_ground
+    input = plasma_focus_ring
     operation = keep
     block = plasma
   []
@@ -301,10 +297,10 @@
     molar_energy_state = true
   []
 
-  [phi_ground_all]
+  [phi_grounded_walls]
     type = FVDirichletBC
     variable = phi
-    boundary = plasma_all_ground
+    boundary = 'inlet outlet plasma_electrode plasma_metal plasma_right plasma_cover plasma_wafer plasma_focus_ring'
     value = 0.0
   []
 []
@@ -431,7 +427,7 @@
   [gauss_flux_reduced]
     type = SideDiffusiveFluxIntegral
     variable = phi
-    boundary = plasma_all_ground
+    boundary = 'inlet outlet plasma_electrode plasma_metal plasma_right plasma_cover plasma_wafer plasma_focus_ring'
     functor_diffusivity = relative_permittivity
     execute_on = 'INITIAL TIMESTEP_END'
   []
