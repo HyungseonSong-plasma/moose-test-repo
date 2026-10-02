@@ -3,10 +3,14 @@ name: Repository CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, issue-359-qualified-gummel-icp]
+    paths-ignore:
+      - '.github/workflows/probe-*.yml'
+      - '.github/workflows/probe-*.yaml'
+      - 'experiments/**/probes/**'
   pull_request:
     branches: [main]
-    types: [opened, synchronize, reopened, edited]
+    types: [opened, reopened, edited]
 
 permissions:
   contents: read
@@ -22,7 +26,7 @@ env:
 
 jobs:
   electron-energy-wall-flux-comparison:
-    if: github.event_name == 'pull_request' && github.head_ref == 'issue-359-qualified-gummel-icp'
+    if: ${{ (github.event_name == 'pull_request' && github.head_ref == 'issue-359-qualified-gummel-icp') || (github.event_name == 'push' && github.ref_name == 'issue-359-qualified-gummel-icp') }}
     name: Electron energy wall flux comparison
     runs-on: ubuntu-24.04
     timeout-minutes: 20
@@ -36,14 +40,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 1
 
       - name: Validate catalog and configurable wall-flux contract
         shell: bash
         run: |
           set -euxo pipefail
-          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha || github.sha }}"
           python3 bin/physics.py simple-case check
           python3 bin/physics.py simple-case list
           python3 bin/physics.py simple-case show electron-diffusion-experiment
@@ -476,7 +480,6 @@ jobs:
           if-no-files-found: error
           include-hidden-files: true
           retention-days: 30
-
 
       - name: Upload kinetic 2Te Exodus
         uses: actions/upload-artifact@v4
