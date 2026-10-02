@@ -21,6 +21,7 @@ import json
 import math
 import shutil
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from collections import defaultdict, deque
 from pathlib import Path
 from typing import Iterable
@@ -36,7 +37,7 @@ HERE = Path(__file__).resolve().parent
 DEFAULT_MESH = q359.ICP_SOURCE / "qvt.msh"
 MESH_SHA256 = "a98521af2c106137f9635fe7e2c5ba9b0fd408e17c62eb7c6d3f7c1fff65a03e"
 DELTA_PHI_V = 1.0e-4
-MAX_RADIUS = 3
+MAX_RADIUS = 2
 
 
 class RZResponseError(RuntimeError):
@@ -115,7 +116,7 @@ def _inject_source_state_output(driver: str) -> str:
     return driver
 
 
-def _source_case(exe: Path, root: Path, timeout: float) -> tuple[Path, Path, Path, float]:
+def _source_case(exe: Path, root: Path, timeout: float) -> tuple[Path, Path, float]:
     case = root / "source_case"
     logs = root / "logs"
     logs.mkdir(parents=True, exist_ok=True)
@@ -166,12 +167,52 @@ def _source_case(exe: Path, root: Path, timeout: float) -> tuple[Path, Path, Pat
         )
 
     exodus = sorted(case.glob("*gummel_driver0*state_exodus*.e"))
-    profiles = sorted(case.glob("*gummel_driver0*state_profile*.csv"))
     if len(exodus) != 1:
         raise RZResponseError(f"expected one state Exodus file, found {len(exodus)}")
-    if not profiles:
-        raise RZResponseError("missing driver state-profile CSV")
-    return case, exodus[0], profiles[-1], runtime.wall_seconds
+    return case, exodus[0], runtime.wall_seconds
+
+
+def _reuse_source_fixture(source_root: Path) -> tuple[Path, Path, float, dict[str, object]]:
+    source_case = source_root / "source_case"
+    state_exodus = source_root / "fixture" / "state.e"
+    required = (
+        source_case / "electron_sub.i",
+        source_case / "qvt.msh",
+        source_case / "electron_moments.txt",
+        source_case / "o2_elastic.txt",
+        source_case / "transport_data.txt",
+        source_case / "prepare_evidence.json",
+        source_case / "input_audit.json",
+        state_exodus,
+    )
+    missing = [str(path) for path in required if not path.is_file()]
+    if missing:
+        raise RZResponseError(f"reused source fixture is incomplete: {missing}")
+
+    audit = json.loads((source_case / "input_audit.json").read_text(encoding="utf-8"))
+    if audit.get("status") != "PASS":
+        raise RZResponseError("reused source fixture did not pass its input audit")
+    prepare = json.loads((source_case / "prepare_evidence.json").read_text(encoding="utf-8"))
+    checks = dict(prepare.get("construction_audit", {}).get("checks", {}))
+    for key in (
+        "electron_particle_log_molar_no_normalization",
+        "electron_energy_conservative_molar_no_normalization",
+        "heavy_continuity_term_audit",
+        "topology_aware_2d_response_present",
+    ):
+        if checks.get(key) is not True:
+            raise RZResponseError(f"reused source fixture missing accepted check: {key}")
+    timing = dict(prepare.get("time_integration", {}))
+    if timing.get("electron_steps_total") != 8:
+        raise RZResponseError("reused source fixture is not the accepted 8-electron-step state")
+    if hashlib.sha256((source_case / "qvt.msh").read_bytes()).hexdigest() != MESH_SHA256:
+        raise RZResponseError("reused source fixture mesh SHA changed")
+    return source_case, state_exodus, 0.0, {
+        "mode": "pinned_prior_exact_head_artifact",
+        "input_audit_status": audit.get("status"),
+        "electron_steps": timing.get("electron_steps_total"),
+        "physical_time_s": timing.get("final_time_s"),
+    }
 
 
 def _read_profile(path: Path) -> list[dict[str, float]]:
@@ -440,23 +481,57 @@ def _patterns(ids: list[int], coords: dict[int, tuple[float, float]]) -> dict[st
     return {"random": random, "smooth": smooth}
 
 
-def _prepare_cases(
+def _prepare_reference_fixture(
     root: Path,
     source_case: Path,
     state_exodus: Path,
-    state_profile: Path,
-    radius: int,
-    delta: float,
-) -> dict[str, object]:
+) -> None:
     fixture = root / "fixture"
     cases = root / "cases"
     fixture.mkdir(parents=True, exist_ok=True)
     cases.mkdir(parents=True, exist_ok=True)
     shutil.copy2(state_exodus, fixture / "state.e")
-    shutil.copy2(state_profile, fixture / "state_profile.csv")
     shutil.copy2(source_case / "qvt.msh", fixture / "qvt.msh")
+    base_input = (source_case / "electron_sub.i").read_text(encoding="utf-8")
+    _write_case(cases, source_case, base_input, "reference", None, None, 0.0)
 
-    state_rows = _read_profile(state_profile)
+
+def _run_reference(exe: Path, root: Path, timeout: float) -> float:
+    case = root / "cases" / "reference"
+    logs = root / "logs"
+    logs.mkdir(parents=True, exist_ok=True)
+    check = run_physics(
+        exe,
+        cwd=case,
+        input_name="input.i",
+        log_path=logs / "check_reference.log",
+        extra_args=("--check-input",),
+        timeout_seconds=timeout,
+    )
+    if check.returncode != 0:
+        raise RZResponseError("standalone reference check-input failed")
+    result = run_physics(
+        exe,
+        cwd=case,
+        input_name="input.i",
+        log_path=logs / "reference.log",
+        extra_args=(),
+        timeout_seconds=timeout,
+    )
+    if result.returncode != 0:
+        raise RZResponseError("standalone reference response case failed")
+    return result.wall_seconds
+
+
+def _prepare_cases_from_reference(
+    root: Path,
+    source_case: Path,
+    radius: int,
+    delta: float,
+    source_info: dict[str, object],
+) -> dict[str, object]:
+    cases = root / "cases"
+    state_rows = _energy_profile(cases / "reference")
     graph, coords = _mesh_graph(source_case / "qvt.msh", state_rows)
     colors, supports = _color_plan(graph, radius)
     ids = sorted(graph)
@@ -465,7 +540,6 @@ def _prepare_cases(
         groups[color].append(element_id)
 
     base_input = (source_case / "electron_sub.i").read_text(encoding="utf-8")
-    _write_case(cases, source_case, base_input, "reference", None, None, 0.0)
     for color in sorted(groups):
         color_ids = sorted(groups[color])
         for sign in (-1, 1):
@@ -517,6 +591,7 @@ def _prepare_cases(
             "max": max(len(value) for value in supports.values()),
             "mean": sum(len(value) for value in supports.values()) / len(supports),
         },
+        "source_fixture": source_info,
         "cases": sorted(path.name for path in cases.iterdir() if path.is_dir()),
     }
     (root / "coloring_plan.json").write_text(
@@ -526,27 +601,38 @@ def _prepare_cases(
     return plan
 
 
-def _run_cases(exe: Path, root: Path, timeout: float) -> tuple[dict[str, float], float]:
+def _run_cases(
+    exe: Path,
+    root: Path,
+    timeout: float,
+    workers: int,
+) -> tuple[dict[str, float], float]:
     cases = root / "cases"
     logs = root / "logs"
     logs.mkdir(parents=True, exist_ok=True)
-    names = sorted(path.name for path in cases.iterdir() if path.is_dir())
+    names = sorted(
+        path.name
+        for path in cases.iterdir()
+        if path.is_dir() and path.name != "reference"
+    )
+    first_color = next(
+        value for value in names if value.startswith("color") and value.endswith("_plus")
+    )
+    check = run_physics(
+        exe,
+        cwd=cases / first_color,
+        input_name="input.i",
+        log_path=logs / f"check_{first_color}.log",
+        extra_args=("--check-input",),
+        timeout_seconds=timeout,
+    )
+    if check.returncode != 0:
+        raise RZResponseError(f"standalone check-input failed for {first_color}")
 
-    for name in ("reference", next(value for value in names if value.startswith("color") and value.endswith("_plus"))):
-        check = run_physics(
-            exe,
-            cwd=cases / name,
-            input_name="input.i",
-            log_path=logs / f"check_{name}.log",
-            extra_args=("--check-input",),
-            timeout_seconds=timeout,
-        )
-        if check.returncode != 0:
-            raise RZResponseError(f"standalone check-input failed for {name}")
+    if workers < 1:
+        raise RZResponseError("workers must be positive")
 
-    elapsed: dict[str, float] = {}
-    started = time.perf_counter()
-    for index, name in enumerate(names, start=1):
+    def execute(name: str) -> tuple[str, float, int]:
         result = run_physics(
             exe,
             cwd=cases / name,
@@ -555,22 +641,34 @@ def _run_cases(exe: Path, root: Path, timeout: float) -> tuple[dict[str, float],
             extra_args=(),
             timeout_seconds=timeout,
         )
-        elapsed[name] = result.wall_seconds
-        print(
-            "ISSUE359_RZ_JACOBIAN_CASE "
-            + json.dumps(
-                {
-                    "index": index,
-                    "count": len(names),
-                    "case": name,
-                    "returncode": result.returncode,
-                    "wall_seconds": result.wall_seconds,
-                },
-                sort_keys=True,
+        return name, result.wall_seconds, result.returncode
+
+    elapsed: dict[str, float] = {}
+    started = time.perf_counter()
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        pending = {pool.submit(execute, name): name for name in names}
+        completed = 0
+        for future in as_completed(pending):
+            name, wall_seconds, returncode = future.result()
+            completed += 1
+            elapsed[name] = wall_seconds
+            print(
+                "ISSUE359_RZ_JACOBIAN_CASE "
+                + json.dumps(
+                    {
+                        "index": completed,
+                        "count": len(names),
+                        "case": name,
+                        "returncode": returncode,
+                        "wall_seconds": wall_seconds,
+                    },
+                    sort_keys=True,
+                )
             )
-        )
-        if result.returncode != 0:
-            raise RZResponseError(f"standalone response case failed: {name}")
+            if returncode != 0:
+                for other in pending:
+                    other.cancel()
+                raise RZResponseError(f"standalone response case failed: {name}")
     return elapsed, time.perf_counter() - started
 
 
@@ -696,6 +794,7 @@ def _analyse(root: Path, plan: dict[str, object], source_wall: float, case_elaps
             "electron_dt_s": q359.ELECTRON_DT_S,
             "physical_time_s": 8 * q359.ELECTRON_DT_S,
             "source_wall_seconds": source_wall,
+            "fixture": plan.get("source_fixture", {}),
             "fixed_point_rel_tol": 1.0e-2,
             "delta_phi_contract_V": 1.0e-6,
             "response_correction": "graph R1 strength 0.5 (iteration-only; vanishes at fixed point)",
@@ -719,7 +818,7 @@ def _analyse(root: Path, plan: dict[str, object], source_wall: float, case_elaps
         "holdout_relative_l2_error": holdout_errors,
         "constant_mode": {
             "eta_J1_over_JsqrtN": eta_constant_mode,
-            "radius_3_uniform_prediction_relative_error": _relative_error(
+            f"radius_{radius}_uniform_prediction_relative_error": _relative_error(
                 uniform_actual, uniform_pred
             ),
         },
@@ -745,7 +844,7 @@ def _analyse(root: Path, plan: dict[str, object], source_wall: float, case_elaps
         },
         "guard": (
             "Diagnostic evidence only. No sparse response kernel is promoted by this run. "
-            "R1/R2/R3 fidelity, constant-mode response, finite-difference linearity, and "
+            "R1/R2 fidelity, constant-mode response, finite-difference linearity, and "
             "time-stationarity must be inspected before production coupling changes."
         ),
     }
@@ -800,8 +899,8 @@ def plan_only(mesh_path: Path, radius: int) -> dict[str, object]:
 
 
 def run(args: argparse.Namespace) -> int:
-    if args.max_radius < 1 or args.max_radius > 3:
-        raise RZResponseError("max radius must lie in [1, 3]")
+    if args.max_radius < 1 or args.max_radius > 2:
+        raise RZResponseError("max radius must lie in [1, 2] for the fast discriminator")
     if args.delta_phi <= 0.0:
         raise RZResponseError("delta phi must be positive")
     if args.plan_only:
@@ -817,19 +916,42 @@ def run(args: argparse.Namespace) -> int:
         shutil.rmtree(root)
     root.mkdir(parents=True)
 
-    source_case, state_exodus, state_profile, source_wall = _source_case(
-        exe, root, args.source_timeout
-    )
-    plan = _prepare_cases(
+    if args.source_fixture_root is not None:
+        source_case, state_exodus, source_wall, source_info = _reuse_source_fixture(
+            args.source_fixture_root
+        )
+    else:
+        source_case, state_exodus, source_wall = _source_case(
+            exe, root, args.source_timeout
+        )
+        source_info = {
+            "mode": "fresh_coupled_source",
+            "electron_steps": 8,
+            "physical_time_s": 8 * q359.ELECTRON_DT_S,
+        }
+
+    _prepare_reference_fixture(root, source_case, state_exodus)
+    reference_wall = _run_reference(exe, root, args.case_timeout)
+    plan = _prepare_cases_from_reference(
         root,
         source_case,
-        state_exodus,
-        state_profile,
         args.max_radius,
         args.delta_phi,
+        source_info,
     )
-    case_elapsed, diagnostic_wall = _run_cases(exe, root, args.case_timeout)
-    _analyse(root, plan, source_wall, case_elapsed, diagnostic_wall)
+    case_elapsed, perturbation_wall = _run_cases(
+        exe,
+        root,
+        args.case_timeout,
+        args.workers,
+    )
+    _analyse(
+        root,
+        plan,
+        source_wall,
+        case_elapsed,
+        reference_wall + perturbation_wall,
+    )
     return 0
 
 
@@ -838,7 +960,9 @@ def main() -> int:
     parser.add_argument("--physics")
     parser.add_argument("--results-root", type=Path, default=Path("issue359-rz-jacobian"))
     parser.add_argument("--source-timeout", type=float, default=360.0)
-    parser.add_argument("--case-timeout", type=float, default=60.0)
+    parser.add_argument("--case-timeout", type=float, default=30.0)
+    parser.add_argument("--source-fixture-root", type=Path)
+    parser.add_argument("--workers", type=int, default=2)
     parser.add_argument("--max-radius", type=int, default=MAX_RADIUS)
     parser.add_argument("--delta-phi", type=float, default=DELTA_PHI_V)
     parser.add_argument("--plan-only", action="store_true")

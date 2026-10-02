@@ -650,10 +650,9 @@ jobs:
 
   issue359-rz-response-jacobian:
     if: github.event_name == 'pull_request' && github.head_ref == 'issue-359-qualified-gummel-icp'
-    needs: issue359-heavy-continuity-audit
     name: Issue359 RZ response Jacobian
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 5
     permissions:
       contents: read
       packages: read
@@ -669,7 +668,7 @@ jobs:
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
           python3 -m py_compile experiments/Issue359_rz_response_jacobian/control.py
-          python3 -m experiments.Issue359_rz_response_jacobian.control --plan-only --max-radius 3
+          python3 -m experiments.Issue359_rz_response_jacobian.control --plan-only --max-radius 2
 
       - name: Log in to GHCR
         uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9
@@ -680,13 +679,171 @@ jobs:
 
       - name: Measure compressed real-QVT electron response
         shell: bash
+        env:
+          RZ_SOURCE_RUN: 36996316885
+          RZ_SOURCE_SHA: 01123dea83e4a4eafe381e6885a1c471c1bc4f7d
         run: |
           set -euxo pipefail
-          rm -rf "$PWD/.issue351-qualified" "$PWD/issue359-rz-jacobian"
-          GH_TOKEN="${{ github.token }}" gh run download 36496470116 \
+          rm -rf "$PWD/.rz-source-fixture" "$PWD/issue359-rz-jacobian"
+          source_sha="$(GH_TOKEN="${{ github.token }}" gh run view "$RZ_SOURCE_RUN" --repo "$GITHUB_REPOSITORY" --json headSha --jq .headSha)"
+          test "$source_sha" = "$RZ_SOURCE_SHA"
+          unexpected="$(git diff --name-only "$RZ_SOURCE_SHA" HEAD | grep -vE '^(\.github/workflows/ci\.yml|experiments/Issue359_rz_response_jacobian/control\.py)
+      - name: Upload RZ response evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue359-rz-response-jacobian
+          path: issue359-rz-jacobian
+          if-no-files-found: warn
+          retention-days: 30
+
+
+
+  issue359-heavy4-exodus-replay:
+    if: github.event_name == 'pull_request' && github.head_ref == 'issue-359-qualified-gummel-icp'
+    name: Issue359 ICP heavy4 Exodus replay
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Verify exact replay HEAD
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Recover historical heavy4 state and write Exodus
+        shell: bash
+        run: |
+          set -euxo pipefail
+          rm -rf .heavy4-source .heavy4-artifact issue359-heavy4-exodus
+          mkdir -p .heavy4-source .heavy4-artifact
+          git archive 4065fabf0718e6eb17645db239a068de783a0f64 | tar -x -C .heavy4-source
+
+          GH_TOKEN="${{ github.token }}" gh run download 36780592967 \
             --repo "$GITHUB_REPOSITORY" \
-            --name issue351-frozen-heavy-driver-full \
-            --dir "$PWD/.issue351-qualified"
+            --name issue359-multirate-ratio_1to2 \
+            --dir "$PWD/.heavy4-artifact"
+
+          cp -a .heavy4-artifact/case issue359-heavy4-exodus
+
+          PYTHONPATH="$PWD" python3 - <<'PY'
+          from pathlib import Path
+          from physics_harness.adapters.moose import parameters as mp
+          p = Path("issue359-heavy4-exodus/input.i")
+          text = mp.upsert_parameter(p.read_text(), "Outputs", "exodus", "true")
+          if mp.get_parameter(text, "Outputs", "exodus") != "true":
+              raise SystemExit("failed to enable historical outer Exodus output")
+          p.write_text(text)
+          PY
+
+          docker pull "$EXPECTED_BUILD_BASE_REF"
+          docker run --rm \
+            --entrypoint /bin/bash \
+            --user 0:0 \
+            --workdir /workspace \
+            -v "$PWD:/workspace" \
+            "$EXPECTED_BUILD_BASE_REF" \
+            -lc '
+              set -euxo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace/.heavy4-source
+              git config --global --add safe.directory /opt/physics_vendor/moose
+              git config --global --add safe.directory /opt/physics_vendor/crane
+              git config --global --add safe.directory /opt/physics_vendor/squirrel
+              git config --global --add safe.directory /opt/physics_vendor/zapdos
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+              make -C /workspace/.heavy4-source/physics_app -j2
+              cd /workspace/issue359-heavy4-exodus
+              /workspace/.heavy4-source/physics_app/physics-opt -i input.i --recover > recovery.log 2>&1
+              chmod -R a+rwX /workspace/issue359-heavy4-exodus
+            '
+
+          python3 - <<'PY'
+          import hashlib
+          import json
+          import re
+          import shutil
+          from pathlib import Path
+
+          root = Path("issue359-heavy4-exodus")
+          log = (root / "recovery.log").read_text(errors="replace")
+          steps = re.findall(r"\bTime Step\s+\d+", log)
+          if steps:
+              raise SystemExit(f"recovery advanced physical time: {steps}")
+
+          candidates = sorted(
+              [p for p in root.iterdir() if p.is_file() and p.suffix.lower() in (".e", ".exo")],
+              key=lambda p: p.stat().st_size,
+              reverse=True,
+          )
+          if not candidates:
+              raise SystemExit("recovery produced no Exodus file")
+          source = next((p for p in candidates if p.name == "input_out.e"), candidates[0])
+          target = root / "issue359_icp_heavy4_recovered.e"
+          if source != target:
+              shutil.copy2(source, target)
+
+          evidence = {
+              "source_workflow_run": 36780592967,
+              "source_artifact": "issue359-multirate-ratio_1to2",
+              "source_commit": "4065fabf0718e6eb17645db239a068de783a0f64",
+              "heavy_steps": 4,
+              "electron_substeps": 2,
+              "electron_steps_total": 8,
+              "recovery_mode": "--recover",
+              "no_additional_physical_timestep": True,
+              "time_step_markers": steps,
+              "checkpoint": "input_out_cp/0005-restart-0.rd",
+              "exodus": target.name,
+              "exodus_bytes": target.stat().st_size,
+              "exodus_sha256": hashlib.sha256(target.read_bytes()).hexdigest(),
+          }
+          (root / "recovery_evidence.json").write_text(
+              json.dumps(evidence, indent=2, sort_keys=True) + "\n"
+          )
+          print(json.dumps(evidence, indent=2, sort_keys=True))
+          PY
+
+      - name: Upload recovered heavy4 Exodus
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue359-icp-heavy4-recovered-exodus
+          path: |
+            issue359-heavy4-exodus/issue359_icp_heavy4_recovered.e
+            issue359-heavy4-exodus/recovery_evidence.json
+            issue359-heavy4-exodus/recovery.log
+          if-no-files-found: error
+          retention-days: 30
+ || true)"
+          test -z "$unexpected"
+          GH_TOKEN="${{ github.token }}" gh run download "$RZ_SOURCE_RUN" \
+            --repo "$GITHUB_REPOSITORY" \
+            --name issue359-rz-response-jacobian \
+            --dir "$PWD/.rz-source-fixture"
+          test -s "$PWD/.rz-source-fixture/fixture/state.e"
+          test -s "$PWD/.rz-source-fixture/source_case/prepare_evidence.json"
+          test -s "$PWD/.rz-source-fixture/source_case/input_audit.json"
 
           docker pull "$EXPECTED_BUILD_BASE_REF"
           docker run --rm \
@@ -708,15 +865,15 @@ jobs:
               export SQUIRREL_DIR=/opt/physics_vendor/squirrel
               export ZAPDOS_DIR=/opt/physics_vendor/zapdos
               export METHOD=opt
-              export ISSUE351_QUALIFIED_CASE=/workspace/.issue351-qualified/generated/full/frozen_heavy_driver
-              make -C /workspace/physics_app -j2
+              make -C /workspace/physics_app -j4
               cd /workspace
               python3 -m experiments.Issue359_rz_response_jacobian.control \
                 --physics physics_app/physics-opt \
                 --results-root issue359-rz-jacobian \
-                --source-timeout 360 \
-                --case-timeout 60 \
-                --max-radius 3 \
+                --source-fixture-root /workspace/.rz-source-fixture \
+                --case-timeout 20 \
+                --workers 2 \
+                --max-radius 2 \
                 --delta-phi 1.0e-4
               chmod -R a+rwX /workspace/issue359-rz-jacobian
             '
