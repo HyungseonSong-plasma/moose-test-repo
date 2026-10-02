@@ -1,5 +1,8 @@
 """MOOSE target-system adapter."""
 from .input_contract import (
+    PRESENCE_FORBIDDEN,
+    PRESENCE_OPTIONAL,
+    PRESENCE_REQUIRED,
     MooseAssignmentContract,
     MooseInputAudit,
     MooseInputContract,
@@ -20,6 +23,7 @@ from .target import (
 )
 
 __all__ = [
+    "PRESENCE_FORBIDDEN", "PRESENCE_OPTIONAL", "PRESENCE_REQUIRED",
     "MooseAssignment", "MooseAssignmentContract", "MooseBlock", "MooseCaseIR",
     "MooseInputAudit", "MooseInputContract", "MooseInputContractError",
     "MooseLoweringError", "MooseObjectContract", "MooseTargetIR",
