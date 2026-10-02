@@ -22,6 +22,12 @@ PhysicsFVElectronGroundedSheathEnergyBC::validParams()
   params.addRequiredParam<MooseFunctorName>(
       "potential",
       "Plasma potential [V]. The plasma-side element value is used, not the grounded face value.");
+  params.addParam<MooseFunctorName>(
+      "energy_per_particle_te_factor",
+      "2.0",
+      "Dimensionless functor alpha in Gamma_epsilon = Gamma_e * (alpha*T_e + Delta phi). "
+      "The default alpha=2 preserves the kinetic half-Maxwellian sheath closure; "
+      "transport-matched diffusion experiments may supply alpha=5/2 explicitly.");
   params.addParam<Real>(
       "energy_reference_eV",
       1.0,
@@ -44,6 +50,7 @@ PhysicsFVElectronGroundedSheathEnergyBC::PhysicsFVElectronGroundedSheathEnergyBC
     _electron_density(getFunctor<ADReal>("electron_density")),
     _mean_electron_energy(getFunctor<ADReal>("mean_electron_energy")),
     _potential(getFunctor<ADReal>("potential")),
+    _energy_per_particle_te_factor(getFunctor<ADReal>("energy_per_particle_te_factor")),
     _energy_reference_eV(getParam<Real>("energy_reference_eV")),
     _molar_energy_state(getParam<bool>("molar_energy_state")),
     _physical_eV_state(getParam<bool>("physical_eV_state"))
@@ -67,10 +74,14 @@ PhysicsFVElectronGroundedSheathEnergyBC::computeQpResidual()
   const ADReal electron_density = _electron_density(cell, state);
   const ADReal mean_energy_eV = _mean_electron_energy(cell, state);
   const ADReal phi_s_V = _potential(cell, state);
+  const ADReal energy_per_particle_te_factor =
+      _energy_per_particle_te_factor(cell, state);
 
   const Real raw_electron_density = MetaPhysicL::raw_value(electron_density);
   const Real raw_mean_energy_eV = MetaPhysicL::raw_value(mean_energy_eV);
   const Real raw_phi_s_V = MetaPhysicL::raw_value(phi_s_V);
+  const Real raw_energy_per_particle_te_factor =
+      MetaPhysicL::raw_value(energy_per_particle_te_factor);
 
   if (raw_electron_density < 0.0)
     mooseError("Grounded sheath energy collection requires electron density >= 0; got ",
@@ -78,6 +89,10 @@ PhysicsFVElectronGroundedSheathEnergyBC::computeQpResidual()
   if (raw_mean_energy_eV <= 0.0)
     mooseError("Grounded sheath energy collection requires mean electron energy > 0 eV; got ",
                raw_mean_energy_eV);
+  if (!std::isfinite(raw_energy_per_particle_te_factor) ||
+      raw_energy_per_particle_te_factor <= 0.0)
+    mooseError("Grounded sheath energy collection requires energy_per_particle_te_factor > 0; got ",
+               raw_energy_per_particle_te_factor);
   if (raw_phi_s_V < -PhysicsGroundedElectronSheath::negative_drop_tolerance_V)
     mooseError("Grounded sheath energy collection is outside its W4.5 validity branch: phi_s = ",
                raw_phi_s_V,
@@ -93,7 +108,7 @@ PhysicsFVElectronGroundedSheathEnergyBC::computeQpResidual()
         PhysicsGroundedElectronSheath::primaryParticleFluxHat(
             electron_density, mean_energy_eV, effective_drop_V);
     return primary_particle_flux_molar *
-           (2.0 * electron_temperature_eV + effective_drop_V);
+           (energy_per_particle_te_factor * electron_temperature_eV + effective_drop_V);
   }
 
   if (_physical_eV_state)
@@ -104,10 +119,14 @@ PhysicsFVElectronGroundedSheathEnergyBC::computeQpResidual()
         PhysicsGroundedElectronSheath::primaryParticleFluxHat(
             electron_density, mean_energy_eV, effective_drop_V);
     return primary_particle_flux *
-           (2.0 * electron_temperature_eV + effective_drop_V);
+           (energy_per_particle_te_factor * electron_temperature_eV + effective_drop_V);
   }
 
   // Positive FVQpFluxBC residual is outward loss from the solved bulk energy.
   return PhysicsGroundedElectronSheath::primaryEnergyFluxHat(
-      electron_density, mean_energy_eV, effective_drop_V, _energy_reference_eV);
+      electron_density,
+      mean_energy_eV,
+      effective_drop_V,
+      energy_per_particle_te_factor,
+      _energy_reference_eV);
 }
