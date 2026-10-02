@@ -1,0 +1,203 @@
+name: Poisson No Wafer Focus Ground Replay
+
+on:
+  pull_request:
+    branches: [main]
+    types: [synchronize]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: poisson-no-wafer-focus-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frozen-source-no-wafer-focus:
+    if: github.event_name == 'pull_request' && github.head_ref == 'issue-359-qualified-gummel-icp'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: read
+    env:
+      POISSON_DIR: experiments/2d-icp-poisson-experiment
+      BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+
+      - name: Log in to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build exact-head Physics runtime
+        shell: bash
+        run: |
+          set -euxo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          docker pull "$BUILD_BASE_REF"
+          docker run --rm \
+            --entrypoint /bin/bash \
+            --user 0:0 \
+            --workdir /workspace \
+            -v "$PWD:/workspace" \
+            "$BUILD_BASE_REF" \
+            -lc '
+              set -euxo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              git config --global --add safe.directory /opt/physics_vendor/moose
+              git config --global --add safe.directory /opt/physics_vendor/crane
+              git config --global --add safe.directory /opt/physics_vendor/squirrel
+              git config --global --add safe.directory /opt/physics_vendor/zapdos
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+              make -C /workspace/physics_app -j2
+              chmod -R a+rwX /workspace/physics_app
+            '
+          test -x physics_app/physics-opt
+
+      - name: Run canonical 4 ns source-producing case
+        shell: bash
+        run: |
+          set -euxo pipefail
+          rm -rf .ci-no-wafer-focus
+          mkdir -p .ci-no-wafer-focus/canonical
+          cp -R "$POISSON_DIR"/. .ci-no-wafer-focus/canonical/
+
+          docker run --rm \
+            --entrypoint /bin/bash \
+            --user "$(id -u):$(id -g)" \
+            --workdir /workspace/.ci-no-wafer-focus/canonical \
+            -v "$PWD:/workspace" \
+            "$BUILD_BASE_REF" \
+            -lc '
+              set -euxo pipefail
+              source /environment
+              /workspace/physics_app/physics-opt --check-input -i input.i
+              /workspace/physics_app/physics-opt -i input.i > runtime.log 2>&1
+            '
+
+          test -f .ci-no-wafer-focus/canonical/poisson.e
+          ls .ci-no-wafer-focus/canonical/poisson_final_profile_*.csv
+
+      - name: Replay frozen source without wafer and focus-ring ground
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p .ci-no-wafer-focus/replay
+          cp "$POISSON_DIR/frozen_source_no_wafer_focus_poisson.i" .ci-no-wafer-focus/replay/input.i
+          cp "$POISSON_DIR/qvt.msh" .ci-no-wafer-focus/replay/qvt.msh
+          cp .ci-no-wafer-focus/canonical/poisson.e .ci-no-wafer-focus/replay/canonical_source.e
+
+          docker run --rm \
+            --entrypoint /bin/bash \
+            --user "$(id -u):$(id -g)" \
+            --workdir /workspace/.ci-no-wafer-focus/replay \
+            -v "$PWD:/workspace" \
+            "$BUILD_BASE_REF" \
+            -lc '
+              set -euxo pipefail
+              source /environment
+              /workspace/physics_app/physics-opt --check-input -i input.i
+              /workspace/physics_app/physics-opt -i input.i > runtime.log 2>&1
+            '
+
+          test -f .ci-no-wafer-focus/replay/frozen_source_no_wafer_focus.e
+          ls .ci-no-wafer-focus/replay/frozen_source_no_wafer_focus_final_profile_*.csv
+
+      - name: Compare morphology
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import csv, json, math
+
+          root = Path('.ci-no-wafer-focus')
+
+          def latest_rows(directory, pattern):
+              files = sorted((root / directory).glob(pattern))
+              if not files:
+                  raise SystemExit(f'missing profile: {directory}/{pattern}')
+              with files[-1].open(newline='') as handle:
+                  rows = list(csv.DictReader(handle))
+              rows.sort(key=lambda row: int(row['id']))
+              return rows
+
+          canonical = latest_rows('canonical', 'poisson_final_profile_*.csv')
+          replay = latest_rows('replay', 'frozen_source_no_wafer_focus_final_profile_*.csv')
+
+          if [int(r['id']) for r in canonical] != [int(r['id']) for r in replay]:
+              raise SystemExit('cell identity mismatch')
+
+          c_source = [float(r['poisson_source_out']) for r in canonical]
+          r_source = [float(r['frozen_poisson_source']) for r in replay]
+          source_scale = max(max(abs(v) for v in c_source), 1.0)
+          source_linf = max(abs(a-b) for a,b in zip(c_source, r_source))
+          if source_linf/source_scale > 1.0e-12:
+              raise SystemExit('frozen source mismatch')
+
+          def stats(rows, phi_key):
+              values = [(float(r['x']), float(r['y']), float(r[phi_key]), int(r['id'])) for r in rows]
+              imax = max(range(len(values)), key=lambda i: values[i][2])
+              imin = min(range(len(values)), key=lambda i: values[i][2])
+              axis = [v for v in values if v[0] < 0.01]
+              axis_max = max(axis, key=lambda v: v[2])
+              return {
+                  'phi_max_V': values[imax][2],
+                  'max_location': {'id': values[imax][3], 'r_m': values[imax][0], 'z_m': values[imax][1]},
+                  'phi_min_V': values[imin][2],
+                  'min_location': {'id': values[imin][3], 'r_m': values[imin][0], 'z_m': values[imin][1]},
+                  'axis_side_max_V': axis_max[2],
+                  'axis_side_max_location': {'id': axis_max[3], 'r_m': axis_max[0], 'z_m': axis_max[1]},
+                  'off_axis_excess_over_axis_V': values[imax][2] - axis_max[2],
+              }
+
+          c = stats(canonical, 'phi')
+          r = stats(replay, 'phi')
+          result = {
+              'changed_electrostatic_bcs': {
+                  'ungrounded': ['plasma_wafer', 'plasma_focus_ring'],
+                  'still_grounded': ['inlet', 'outlet', 'plasma_electrode', 'plasma_metal', 'plasma_right', 'plasma_cover'],
+              },
+              'cells': len(canonical),
+              'source_linf_relative_to_canonical_scale': source_linf/source_scale,
+              'canonical': c,
+              'no_wafer_focus_ground': r,
+              'delta_global_peak_V': r['phi_max_V'] - c['phi_max_V'],
+              'delta_peak_r_m': r['max_location']['r_m'] - c['max_location']['r_m'],
+              'delta_peak_z_m': r['max_location']['z_m'] - c['max_location']['z_m'],
+              'delta_off_axis_excess_V': r['off_axis_excess_over_axis_V'] - c['off_axis_excess_over_axis_V'],
+          }
+          (root / 'no_wafer_focus_ground_result.json').write_text(json.dumps(result, indent=2) + '\n')
+          print(json.dumps(result, indent=2))
+          PY
+
+      - name: Upload evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: poisson-no-wafer-focus-ground-replay
+          path: |
+            .ci-no-wafer-focus/no_wafer_focus_ground_result.json
+            .ci-no-wafer-focus/canonical/input.i
+            .ci-no-wafer-focus/canonical/runtime.log
+            .ci-no-wafer-focus/canonical/poisson.e
+            .ci-no-wafer-focus/canonical/poisson_final_profile_*.csv
+            .ci-no-wafer-focus/replay/input.i
+            .ci-no-wafer-focus/replay/runtime.log
+            .ci-no-wafer-focus/replay/frozen_source_no_wafer_focus.e
+            .ci-no-wafer-focus/replay/frozen_source_no_wafer_focus_final_profile_*.csv
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 30
