@@ -201,6 +201,7 @@ Current reusable catalog:
 ```text
 electron-diffusion-experiment         STABLE_REUSABLE_BASELINE
 electron-diffusion-energy-experiment  STABLE_REUSABLE_BASELINE
+poisson                               STABLE_REUSABLE_BASELINE
 ```
 
 Planned/future cases are intentionally absent from the inventory. A case is added only
