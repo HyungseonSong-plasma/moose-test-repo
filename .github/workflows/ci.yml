@@ -21,53 +21,30 @@ env:
   EXPECTED_RUNTIME_REVISION: 565b500722c00e4ff6e759a02bd7bae52f8b13f0
 
 jobs:
-  electron-energy-wall-flux-matrix:
+  electron-energy-wall-flux-comparison:
     if: github.event_name == 'pull_request' && github.head_ref == 'issue-359-qualified-gummel-icp'
-    name: Electron energy wall flux ${{ matrix.label }}
+    name: Electron energy wall flux comparison
     runs-on: ubuntu-24.04
-    timeout-minutes: 12
+    timeout-minutes: 20
     permissions:
       contents: read
       packages: read
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - label: native_4over3
-            mode: native
-            energy_per_particle_te_factor: '2.0'
-          - label: functor_4over3
-            mode: functor
-            energy_per_particle_te_factor: '2.0'
-          - label: matched_5over3
-            mode: functor
-            energy_per_particle_te_factor: '2.5'
     env:
-      BASELINE_RUNTIME_REF: ghcr.io/hyungseonsong-plasma/physics-jit-runtime@sha256:2460cf70922490b26412345a09a67364e8b32fbd5310cd25efa5415b12486cf3
-      BASELINE_PHYSICS_MANIFEST_SHA256: a9654d344e9c60e48992165bc855b154707ecf2e659e4428117e8f6ae8fdba3b
       CASE_DIR: experiments/2d-icp-electron-diffusion-energy-experiment
-      RUN_DIR: .ci-electron-energy-wall/${{ matrix.label }}
+      BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 1
 
-      - name: Prepare controlled wall-flux case
+      - name: Validate configurable wall-flux contract
         shell: bash
         run: |
           set -euxo pipefail
           test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
-          rm -rf "$RUN_DIR"
-          mkdir -p "$(dirname "$RUN_DIR")"
-          cp -a "$CASE_DIR" "$RUN_DIR"
-          python3 "$CASE_DIR/prepare_wall_flux_case.py"             "$RUN_DIR/input.i"             --mode "${{ matrix.mode }}"             --energy-factor "${{ matrix.energy_per_particle_te_factor }}"
-          grep -E '^  (dt|dtmin|dtmax|num_steps|end_time) = ' "$RUN_DIR/input.i"
-          grep -A7 '^  \[electron_energy_thermal_wall_loss\]' "$RUN_DIR/input.i"
-
-          git ls-files -z physics_app             | sort -z             | xargs -0 sha256sum > /tmp/physics-source-file-hashes.txt
-          manifest="$(sha256sum /tmp/physics-source-file-hashes.txt | awk '{print $1}')"
-          test "$manifest" = "$BASELINE_PHYSICS_MANIFEST_SHA256"
+          python3 physics_app/ci/check_electron_molar_representation_contract.py --self-test
+          python3 physics_app/ci/check_electron_molar_representation_contract.py
 
       - name: Log in to GHCR
         uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9
@@ -76,65 +53,122 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Pull and verify qualified Physics runtime
+      - name: Build exact-head Physics runtime
         shell: bash
         run: |
           set -euxo pipefail
-          docker pull "$BASELINE_RUNTIME_REF"
-          test "$(docker image inspect "$BASELINE_RUNTIME_REF" --format '{{ index .Config.Labels "io.physics.source.manifest-sha256" }}')" = "$BASELINE_PHYSICS_MANIFEST_SHA256"
+          docker pull "$BUILD_BASE_REF"
+          docker run --rm \
+            --entrypoint /bin/bash \
+            --user 0:0 \
+            --workdir /workspace \
+            -v "$PWD:/workspace" \
+            "$BUILD_BASE_REF" \
+            -lc '
+              set -euxo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              git config --global --add safe.directory /opt/physics_vendor/moose
+              git config --global --add safe.directory /opt/physics_vendor/crane
+              git config --global --add safe.directory /opt/physics_vendor/squirrel
+              git config --global --add safe.directory /opt/physics_vendor/zapdos
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+              make -C /workspace/physics_app -j2
+              chmod -R a+rwX /workspace/physics_app
+            '
+          test -x physics_app/physics-opt
 
-      - name: Check and run wall-flux case
+      - name: Prepare 2Te and 5over2Te cases
         shell: bash
         run: |
           set -euxo pipefail
-          docker run --rm             --user "$(id -u):$(id -g)"             --workdir "/workspace/$RUN_DIR"             -v "$PWD:/workspace"             "$BASELINE_RUNTIME_REF"             --check-input -i input.i
+          rm -rf .ci-electron-energy-wall wall-flux-artifacts
+          mkdir -p .ci-electron-energy-wall wall-flux-artifacts
 
-          docker run --rm             --user "$(id -u):$(id -g)"             --workdir "/workspace/$RUN_DIR"             -v "$PWD:/workspace"             "$BASELINE_RUNTIME_REF"             -i input.i > "$RUN_DIR/runtime.log" 2>&1
+          for spec in "kinetic_4over3 2.0" "matched_5over3 2.5"; do
+            set -- $spec
+            label="$1"
+            factor="$2"
+            run_dir=".ci-electron-energy-wall/$label"
+            cp -a "$CASE_DIR" "$run_dir"
+            python3 "$CASE_DIR/prepare_wall_flux_case.py" \
+              "$run_dir/input.i" \
+              --energy-factor "$factor"
+            mkdir -p "wall-flux-artifacts/electron-energy-wall-$label"
+          done
 
-          (
-            cd "$RUN_DIR"
-            EXPECTED_DT_S="1.0e-9"             EXPECTED_STEPS="4"             EXPECTED_END_TIME_S="4.0e-9"             EXPECTED_ENERGY_PER_PARTICLE_TE_FACTOR="${{ matrix.energy_per_particle_te_factor }}"               python3 check.py | tee checker.log
-          )
+      - name: Run exact-head wall-flux cases
+        shell: bash
+        run: |
+          set -euxo pipefail
+          for spec in "kinetic_4over3 2.0" "matched_5over3 2.5"; do
+            set -- $spec
+            label="$1"
+            factor="$2"
+            run_dir=".ci-electron-energy-wall/$label"
 
-      - name: Upload wall-flux case
-        if: always()
+            docker run --rm \
+              --entrypoint /bin/bash \
+              --user "$(id -u):$(id -g)" \
+              --workdir "/workspace/$run_dir" \
+              -v "$PWD:/workspace" \
+              "$BUILD_BASE_REF" \
+              -lc '
+                set -euxo pipefail
+                source /environment
+                /workspace/physics_app/physics-opt --check-input -i input.i
+                /workspace/physics_app/physics-opt -i input.i > runtime.log 2>&1
+              '
+
+            (
+              cd "$run_dir"
+              EXPECTED_DT_S="1.0e-9" \
+              EXPECTED_STEPS="4" \
+              EXPECTED_END_TIME_S="4.0e-9" \
+              EXPECTED_ENERGY_PER_PARTICLE_TE_FACTOR="$factor" \
+                python3 check.py | tee checker.log
+            )
+
+            cp -a "$run_dir"/. "wall-flux-artifacts/electron-energy-wall-$label/"
+          done
+
+      - name: Compare temperature profiles
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python3 "$CASE_DIR/check_wall_flux_matrix.py" wall-flux-artifacts
+
+      - name: Upload kinetic 2Te Exodus
         uses: actions/upload-artifact@v4
         with:
-          name: electron-energy-wall-${{ matrix.label }}
+          name: electron-energy-wall-kinetic_4over3
           path: |
-            .ci-electron-energy-wall/${{ matrix.label }}/input.i
-            .ci-electron-energy-wall/${{ matrix.label }}/runtime.log
-            .ci-electron-energy-wall/${{ matrix.label }}/checker.log
-            .ci-electron-energy-wall/${{ matrix.label }}/electron_diffusion.csv
-            .ci-electron-energy-wall/${{ matrix.label }}/electron_diffusion.e
-            .ci-electron-energy-wall/${{ matrix.label }}/electron_diffusion_final_profile_*.csv
+            .ci-electron-energy-wall/kinetic_4over3/input.i
+            .ci-electron-energy-wall/kinetic_4over3/runtime.log
+            .ci-electron-energy-wall/kinetic_4over3/checker.log
+            .ci-electron-energy-wall/kinetic_4over3/electron_diffusion.csv
+            .ci-electron-energy-wall/kinetic_4over3/electron_diffusion.e
+            .ci-electron-energy-wall/kinetic_4over3/electron_diffusion_final_profile_*.csv
           if-no-files-found: error
           retention-days: 30
 
-  electron-energy-wall-flux-comparison:
-    if: github.event_name == 'pull_request' && github.head_ref == 'issue-359-qualified-gummel-icp'
-    needs: electron-energy-wall-flux-matrix
-    name: Electron energy wall flux comparison
-    runs-on: ubuntu-24.04
-    permissions:
-      contents: read
-      actions: read
-    steps:
-      - uses: actions/checkout@v4
+      - name: Upload matched 5over3 Exodus
+        uses: actions/upload-artifact@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          fetch-depth: 1
-
-      - uses: actions/download-artifact@v4
-        with:
-          pattern: electron-energy-wall-*
-          path: wall-flux-artifacts
-
-      - name: Compare final temperature profiles
-        shell: bash
-        run: |
-          set -euxo pipefail
-          python3 experiments/2d-icp-electron-diffusion-energy-experiment/check_wall_flux_matrix.py             wall-flux-artifacts
+          name: electron-energy-wall-matched_5over3
+          path: |
+            .ci-electron-energy-wall/matched_5over3/input.i
+            .ci-electron-energy-wall/matched_5over3/runtime.log
+            .ci-electron-energy-wall/matched_5over3/checker.log
+            .ci-electron-energy-wall/matched_5over3/electron_diffusion.csv
+            .ci-electron-energy-wall/matched_5over3/electron_diffusion.e
+            .ci-electron-energy-wall/matched_5over3/electron_diffusion_final_profile_*.csv
+          if-no-files-found: error
+          retention-days: 30
 
       - name: Upload wall-flux comparison
         uses: actions/upload-artifact@v4
@@ -145,4 +179,3 @@ jobs:
             wall_flux_comparison.csv
           if-no-files-found: error
           retention-days: 30
-
