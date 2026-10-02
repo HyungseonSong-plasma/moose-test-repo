@@ -4,101 +4,76 @@ Reusable diagnostic baseline for the real-QVT 2-D ICP plasma geometry.
 
 ## Purpose
 
-This is the smallest 2-D ICP electron case that evolves both electron particles
-and electron energy.  It intentionally removes electrostatic drift, Poisson,
-reactions, Joule heating, volumetric energy sources, and heavy-species
-evolution so geometry, transport lookup, particle diffusion, energy diffusion,
-and thermal wall losses can be isolated together.
+Use this experiment when a more complete 2-D ICP electron/Poisson/coupled case develops an unexplained profile or fails to converge.  The baseline intentionally removes every electron coupling except particle diffusion and thermal wall loss.
 
-The solved conservative states are
+The solved equation is
 
 ```text
-d(c_e)/dt       - div(D_e(mean_en) grad(c_e))             = 0
-d(c_epsilon)/dt - div(D_epsilon(mean_en) grad(c_epsilon)) = 0
+d(c_e)/dt - div(D_e grad(c_e)) = 0
 ```
 
-with
+with a uniform initial electron density
 
 ```text
-n_e(t=0)    = 1.0e16 1/m^3
-mean_en(t=0)= 5.73276 eV
-c_epsilon   = c_e * mean_en
+n_e(t=0) = 1.0e16 1/m^3
 ```
 
-Here `c_e` is electron molar concentration and `c_epsilon` is conservative
-electron-energy density in eV mol/m^3.
-
-## Mean-energy and transport contract
-
-`mean_en` is no longer frozen.  The production closure receives
+and fixed mean electron energy
 
 ```text
-electron_number_density      = N_A * c_e
-electron_energy_density      = N_A * c_epsilon
-mean_en_solved               = electron_energy_density / electron_number_density
-                             = c_epsilon / c_e
+mean electron energy = 5.73276 eV
 ```
 
-and then performs the normal `electron_moments.txt` lookup:
+## Transport contract
+
+Electron energy is not a solved variable.  Instead,
 
 ```text
-mean_en_solved
-  -> interpolate D_e * N
+electron_energy_density_eV_m3 = electron_density_m3 * 5.73276 eV
+```
+
+is constructed as a derived functor and passed to `PhysicsElectronClosureMaterial`.
+
+Therefore the closure still executes the production path
+
+```text
+fixed mean energy
+  -> electron_moments.txt lookup
+  -> reduced diffusion D_e*N
   -> divide by neutral number density
-  -> electron_diffusion [m^2/s]
-
-mean_en_solved
-  -> interpolate D_e * N
-  -> (5/3) factor
-  -> electron_energy_diffusion [m^2/s]
+  -> physical electron_diffusion [m^2/s]
 ```
 
-The lookup uses `lookup_bounds_policy = error`; a solved mean energy outside
-the table range is therefore a hard runtime failure rather than a silent clamp.
+The diffusivity is constant for this baseline because pressure, gas temperature, and mean electron energy are fixed, but the lookup-table architecture is preserved exactly for later promotion.
 
 ## Boundary contract
 
-Every named plasma boundary uses the same grounded thermal/sheath branch for
-both conserved equations.
+All named plasma boundaries use `PhysicsFVElectronGroundedSheathCollectionBC`.
 
-Particle loss:
-
-```text
-PhysicsFVElectronGroundedSheathCollectionBC
-variable = log_e
-mean_electron_energy = mean_en_solved
-potential = zero_phi
-```
-
-Energy loss:
+The BC receives
 
 ```text
-PhysicsFVElectronGroundedSheathEnergyBC
-variable = c_epsilon
-electron_density = c_e_molar
-mean_electron_energy = mean_en_solved
-potential = zero_phi
-molar_energy_state = true
+potential = zero_phi = 0 V
 ```
 
-Because `zero_phi = 0 V`, sheath suppression is unity.  The particle BC is
-the thermal quarter-Maxwellian collection law and the energy BC removes the
-same collected primary population with energy `2 T_e = (4/3) mean_en`.
+so the sheath suppression factor is unity.  This is deliberately the pure thermal quarter-Maxwellian electron collection branch.  There is no Poisson solve and no volume electrostatic drift.
 
-The RZ symmetry axis is not assigned either wall-loss BC.
+The RZ symmetry axis is not assigned the wall-loss BC.
 
 ## Physics deliberately absent
 
 ```text
-electron electrostatic drift  OFF
-Poisson                       OFF
-electron reactions            OFF
-Joule heating                 OFF
-volumetric energy sources     OFF
-heavy-species equations       ABSENT
+Poisson                  OFF
+electron electrostatic drift OFF
+electron energy equation OFF
+electron reactions       OFF
+heavy-species equations  ABSENT
+volumetric sources       OFF
 ```
 
 ## Frozen reusable assets
+
+This directory contains frozen copies of the accepted real-QVT ICP mesh and electron transport table so the diagnostic can be executed independently.
 
 ```text
 qvt.msh
@@ -126,7 +101,27 @@ or directly from this directory:
 python3 check.py
 ```
 
-The bounded baseline uses
+The run produces `electron_diffusion.e`, `electron_diffusion.csv`, and a final element profile CSV.  The checker verifies only baseline invariants: fixed energy, positive table-derived diffusivity, positive density, nonzero thermal wall loss, and decreasing total electron inventory.
+
+## Escalation sequence
+
+When using this as a 2-D ICP troubleshooting inventory item, add physics back one layer at a time:
+
+```text
+1. this diffusion-only baseline
+2. + prescribed electrostatic drift
+3. + Poisson with frozen heavy charge
+4. + electron energy equation
+5. + electron reactions
+6. + heavy-species evolution / full coupling
+```
+
+A failure should be assigned to the first layer at which the accepted baseline changes unexpectedly.
+
+
+## Execution baseline
+
+The stabilization run uses:
 
 ```text
 dt        = 1.0e-9 s
@@ -134,42 +129,69 @@ num_steps = 4
 end_time  = 4.0e-9 s
 ```
 
-## Current qualification
+The input is first required to pass real `physics-opt --check-input`.  One subsequent runtime is then used to evaluate transport lookup, thermal wall loss, electron inventory balance, spatial profile, and Exodus output together.
 
-Repository CI **#538**, run `37032506883`, at exact physics/configuration head
-`e2070e36c8d26172dfbf4ec08afbb77ddf9d4cc9` establishes the solved-energy
-baseline.
+
+## Stabilization evidence
+
+Repository CI run `37024044297` at head
+`fe5e532317258f30873185783e9fcf7bddb276ec` establishes this experiment as
+`STABLE_REUSABLE_BASELINE` for the bounded diffusion-only physics scope.
 
 ```text
-static/simple-case inventory              PASS
-physics-opt --check-input                 PASS
-4-step real physics-opt runtime           PASS
-particle conservation                     PASS
-electron-energy conservation              PASS
-local mean_en -> D_e table lookup          PASS
-
-initial mean_en                            5.73276 eV
-final mean_en average                      5.691524637256 eV
-final mean_en range                        5.534551394882 .. 5.767975189409 eV
-
-initial D_e                                20628.592493561 m^2/s
-final average D_e                          20579.931928146 m^2/s
-final local D_e range                      20394.709196308 .. 20662.419063281 m^2/s
-max local lookup relative error            2.69e-14
-
-max particle balance relative error        3.46e-12
-max energy balance relative error          1.92e-12
+physics-opt --check-input       PASS
+dt                              1.0e-9 s
+physical steps                  4
+end time                        4.0e-9 s
+all nonlinear solves            PASS, 3 Newton updates per step
+fixed mean electron energy      5.73276 eV
+D_e from transport table        20628.592493561 m^2/s
+initial wall rate               4.900943951004e-3 mol/s
+initial electron inventory      8.3205870186091e-10 mol
+final electron inventory        8.1417261905889e-10 mol
+inventory loss over 4 ns        2.149617900998 %
+final n_e minimum               7.9505488461108e15 1/m^3
+final n_e maximum               9.9999999721474e15 1/m^3
+sqrt(D_e t) at 4 ns             9.083742 mm
 ```
 
-The important result is that diffusivity is no longer a fixed scalar: the
-solved mean-energy field produces a spatially varying `D_e`, and the checker
-recomputes the table interpolation independently for every sampled final cell.
+The 5.73276 eV transport-table row supplies `D_e*N=6.64e24`.  With
+`p=1.333223684 Pa` and `T_g=300 K`, the neutral density is
+`3.218833278166041e20 1/m^3`, so the runtime diffusivity exactly matches
+`(D_e*N)/N_g`.
+
+The zero-potential thermal wall BC is also quantitatively closed.  The frozen
+geometry has total named thermal-loss area `0.9023470915199818 m^2`; the
+quarter-Maxwellian law at the fixed mean energy predicts the observed initial
+wall particle rate to floating-point precision.
+
+At every physical timestep the backward-Euler particle balance
+
+```text
+(I_e[n] - I_e[n-1]) / dt + wall_particle_rate[n] = 0
+```
+
+closes with maximum relative imbalance `6.84e-12`.
+
+The final 2-D field is qualitatively correct for pure diffusion plus absorbing
+thermal boundaries: the bulk remains essentially at `1e16 1/m^3`, while the
+outer wall, wafer, cover, inlet/outlet, and other thermal-loss boundaries show
+smooth depletion over the expected diffusion penetration scale.  At
+`z ~= 0.20 m`, the radial profile is flat from the axis through the bulk and
+falls only near the outer radial wall.  No unphysical interior maximum or
+density overshoot appears.
+
+This qualification does not cover electrostatic drift, Poisson, electron
+energy evolution, reactions, or heavy-species coupling.
+
 
 ## Template contract
 
-The qualified runtime input is frozen byte-for-byte as `input.template.i`.
-The file `simple_case_template.json` declares the input template and frozen
-assets.
+The qualified runtime input is frozen byte-for-byte as
+`input.template.i`. The file `simple_case_template.json` declares the
+template input, generated input name, and reusable assets.
+
+To create a new experiment from this baseline:
 
 ```bash
 python3 bin/physics.py simple-case create \
@@ -177,23 +199,16 @@ python3 bin/physics.py simple-case create \
   experiments/my-derived-electron-case
 ```
 
-A generated case copies `qvt.msh`, `electron_moments.txt`, and the solved
-particle+energy input.  Its `template_origin.json` still sets
-`qualification_inherited=false`; changing the generated input requires
-independent validation.
+To scaffold the same baseline and then replace only the input:
 
-## Escalation sequence
-
-Starting from this baseline, add the remaining coupling layers one at a time:
-
-```text
-1. particle diffusion + solved energy diffusion          <- this baseline
-2. + prescribed electrostatic drift
-3. + Poisson with frozen heavy charge
-4. + electron-energy drift / Joule work
-5. + electron reactions / inelastic energy sources
-6. + heavy-species evolution / full coupling
+```bash
+python3 bin/physics.py simple-case create \
+  electron-diffusion-experiment \
+  experiments/my-derived-electron-case \
+  --input /path/to/new_input.i
 ```
 
-A failure should be assigned to the first added layer at which the accepted
-baseline changes unexpectedly.
+The new directory contains `qvt.msh`, `electron_moments.txt`,
+`input.i`, `test.json`, and `template_origin.json`. The origin record
+sets `qualification_inherited=false`; the derived input must be validated
+independently.
