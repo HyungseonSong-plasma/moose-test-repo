@@ -19,10 +19,13 @@
     "volumetric_energy_sources": "DISABLED",
     "electron_reactions": "DISABLED",
     "heavy_species": "ABSENT",
-    "wall_loss": "matched grounded-sheath thermal particle + electron-energy collection with potential fixed to 0 V",
+    "wall_loss": "PhysicsFVElectronGroundedSheathEnergyBC with zero potential and functor-configured energy_per_particle_te_factor=2.5; particle thermal collection is unchanged",
     "electron_dt_s": 1e-9,
     "electron_steps": 4,
-    "end_time_s": 4e-9
+    "end_time_s": 4e-9,
+    "energy_transport_factor": 1.6666666666666667,
+    "energy_per_particle_te_factor": 2.5,
+    "wall_loss_normalized_ratio": 1.6666666666666667
   },
   "dependencies": {
     "qvt_mesh": {
@@ -38,22 +41,24 @@
   },
   "reuse_trigger": "Use after electron-diffusion-experiment passes when the next question is whether solved electron energy and energy-dependent transport remain stable before adding electric-field coupling.",
   "stabilization_evidence": {
-    "qualification_basis": "Exact solved-energy input/checker were validated before inventory split; the split preserves those physics bytes except the input title comment.",
-    "repository_ci_run": "37033202803",
-    "repository_ci_number": 540,
-    "validated_head": "616a9efe1f694256307bbf5b01ee829e3dcda3ca",
-    "check_input": "PASS",
-    "runtime": "PASS",
-    "initial_mean_energy_eV": "5.73276",
-    "final_mean_energy_avg_eV": "5.6915246372560002",
-    "final_mean_energy_min_eV": "5.5345513948820004",
-    "final_mean_energy_max_eV": "5.7679751894087001",
-    "initial_diffusion_m2_s": "20628.592493560998",
-    "final_diffusion_avg_m2_s": "20579.931928146001",
-    "profile_diffusion_min_m2_s": "20394.709196307998",
-    "profile_diffusion_max_m2_s": "20662.419063280999",
-    "max_local_mean_energy_lookup_relative_error": "2.6857558001999065e-14",
-    "max_particle_balance_relative_error": "3.4591217522069244e-12",
-    "max_energy_balance_relative_error": "1.9151720994692419e-12"
+    "qualification_basis": "Exact-head source build and real runtime compared the same configurable PhysicsFVElectronGroundedSheathEnergyBC at alpha=2.0 and alpha=2.5 on the diffusion-only ICP RZ baseline.",
+    "repository_ci_run": "37043442222",
+    "repository_ci_number": 571,
+    "validated_head": "36000ea5498535598c92af113a7e46a40494fcec",
+    "source_build": "PASS",
+    "contract_self_test": "PASS",
+    "check_input": "PASS for alpha=2.0 and alpha=2.5",
+    "runtime": "PASS for alpha=2.0 and alpha=2.5",
+    "kinetic_2Te_profile_te_min_eV": "3.6897009299213002",
+    "kinetic_2Te_profile_te_max_eV": "3.8453167929391001",
+    "kinetic_2Te_overshoot_eV": "0.02347679293910021",
+    "matched_5over2Te_profile_te_min_eV": "3.5089408650343001",
+    "matched_5over2Te_profile_te_max_eV": "3.8218386527941002",
+    "matched_5over2Te_overshoot_eV": "-1.347205899726589e-06",
+    "profile_te_linf_difference_eV": "0.2129232999535997",
+    "profile_te_rms_difference_eV": "0.03888635790138286",
+    "kinetic_2Te_max_energy_balance_relative_error": "1.9151720994692419e-12",
+    "matched_5over2Te_max_energy_balance_relative_error": "1.7073011296552086e-12",
+    "conclusion": "The 5/3 transport-matched wall closure removes the wall-tip temperature overshoot while preserving the energy balance. The alpha functor keeps the 2Te kinetic closure directly testable."
   }
 }
