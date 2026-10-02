@@ -723,7 +723,7 @@ jobs:
           assert spec["schema_version"] == 2
           assert spec["experiment_id"] == "2d-icp-electron-diffusion-experiment"
           assert spec["parameters"]["initial_electron_density_m3"] == 1.0e16
-          assert spec["parameters"]["fixed_mean_electron_energy_eV"] == 5.73276
+          assert spec["parameters"]["initial_mean_electron_energy_eV"] == 5.73276
           assert spec["parameters"]["electron_dt_s"] == 1.0e-9
           assert spec["execution_bounds"]["end_time"] == 4.0e-9
           assert spec["execution_bounds"]["max_steps"] == 4
@@ -732,9 +732,15 @@ jobs:
           required_tokens = (
               "type = PhysicsFVLogMolarElectronTimeDerivative",
               "type = PhysicsFVLogMolarElectronDiffusion",
+              "[c_epsilon]",
+              "type = FVTimeKernel",
+              "coeff = electron_energy_diffusion",
               "type = PhysicsElectronClosureMaterial",
+              "electron_mean_energy_output = mean_en_solved",
               "transport_table_file = electron_moments.txt",
               "type = PhysicsFVElectronGroundedSheathCollectionBC",
+              "type = PhysicsFVElectronGroundedSheathEnergyBC",
+              "molar_energy_state = true",
               "potential = zero_phi",
           )
           absent_tokens = (
