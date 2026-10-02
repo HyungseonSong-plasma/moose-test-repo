@@ -35,4 +35,25 @@ Cross-Issue diagnostic baselines may use stable semantic names instead of Issue 
 | `electron-diffusion-experiment` | `experiments/2d-icp-electron-diffusion-experiment/` | **STABLE_REUSABLE_BASELINE.** Minimal real-QVT ICP electron diffusion + zero-potential thermal wall-loss baseline. Canonical backing experiment ID: `2d-icp-electron-diffusion-experiment`. |
 
 
-The ordered operator-facing simple-case choices are owned by `experiments/simple_case_inventory.json`; runnable entries delegate to the existing `physics test` execution path.
+The reusable simple-case catalog is owned by `experiments/simple_case_inventory.json`.
+It is consumed through the code-level `physics simple-case` CLI; generated cases
+delegate execution to the existing `physics test` path and never inherit scientific
+qualification from their source template.
+
+
+### Simple-case CLI
+
+```bash
+python3 bin/physics.py simple-case list
+python3 bin/physics.py simple-case show electron-diffusion-experiment
+python3 bin/physics.py simple-case template electron-diffusion-experiment --output /tmp/input.i
+python3 bin/physics.py simple-case create electron-diffusion-experiment experiments/my-new-case
+python3 bin/physics.py simple-case create electron-diffusion-experiment experiments/my-new-case --input /path/to/new_input.i
+python3 bin/physics.py simple-case check
+```
+
+`create` first scaffolds the qualified template and its declared assets. If
+`--input` is supplied, only the generated `input.i` is replaced afterward.
+The derived directory receives `test.json` and `template_origin.json`, so it
+can use the existing regression harness while remaining explicitly unqualified
+until independently validated.
