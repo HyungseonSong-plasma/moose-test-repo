@@ -74,10 +74,10 @@ def insert_surface_reactions(
     # O -> 0.5 O2, O2s -> O2, Os -> 0.5 O2.
     for species in NEUTRAL_WALL_SPECIES:
         cfg = wall27.NEUTRALS[species]
-        material = f"issue359_{species}_wall_flux_material"
-        functor = f"issue359_{species}_wall_flux_outward"
-        bc_name = f"issue359_{species}_wall_loss"
-        pp_name = f"issue359_{species}_wall_rate"
+        material = f"{species}_wall_flux_material"
+        functor = f"{species}_wall_flux_outward"
+        bc_name = f"{species}_wall_loss"
+        pp_name = f"{species}_wall_rate"
         symbol = species.lower()
         expression = wall27._neutral_flux_expression(
             WALL_STICKING[species], float(cfg["molar_mass"]), symbol
@@ -126,9 +126,9 @@ def insert_surface_reactions(
     # thermal surface neutralization + one-sided electric migration.
     for species in CHARGED_HEAVY:
         cfg = wall27.CHARGED[species]
-        density_property = f"issue359_n_{species}"
-        density_material = f"issue359_{species}_number_density"
-        flux_material = f"issue359_{species}_wall_flux"
+        density_property = f"number_density_{species}"
+        density_material = f"{species}_number_density"
+        flux_material = f"{species}_wall_flux"
         for path in (
             f"FunctorMaterials/{density_material}",
             f"FunctorMaterials/{flux_material}",
@@ -165,8 +165,8 @@ def insert_surface_reactions(
         )
 
         for wall in PLASMA_WALLS:
-            surface_bc = f"issue359_{species}_surface_{wall}"
-            migration_bc = f"issue359_{species}_migration_{wall}"
+            surface_bc = f"{species}_surface_{wall}"
+            migration_bc = f"{species}_migration_{wall}"
             surface_pp = f"{surface_bc}_rate"
             migration_pp = f"{migration_bc}_rate"
             for path in (
@@ -221,14 +221,14 @@ def insert_surface_reactions(
 
     # O+/O- neutralization returns equal mass as atomic O.
     # O2+ removal is returned through constrained O2 = 1 - sum(solved species).
-    mb.require_absent(text, "FunctorMaterials/issue359_O_return_material")
-    mb.require_absent(text, "FVBCs/issue359_O_return")
+    mb.require_absent(text, "FunctorMaterials/ion_neutralization_O_return_material")
+    mb.require_absent(text, "FVBCs/ion_neutralization_O_return")
     text = mb.insert_child_block(
         text,
         "FunctorMaterials",
-        """  [issue359_O_return_material]
+        """  [ion_neutralization_O_return_material]
     type = ADParsedFunctorMaterial
-    property_name = issue359_O_return_mass_flux_inward
+    property_name = ion_neutralization_O_return_mass_flux_inward
     functor_names = 'ion_surface_mass_flux_Op ion_migration_mass_flux_Op ion_surface_mass_flux_Om ion_migration_mass_flux_Om'
     functor_symbols = 'sop mop som mom'
     expression = 'sop+mop+som+mom'
@@ -238,11 +238,11 @@ def insert_surface_reactions(
     text = mb.insert_child_block(
         text,
         "FVBCs",
-        f"""  [issue359_O_return]
+        f"""  [ion_neutralization_O_return]
     type = FVFunctorNeumannBC
     variable = w_O
     boundary = {wall_list}
-    functor = issue359_O_return_mass_flux_inward
+    functor = ion_neutralization_O_return_mass_flux_inward
     factor = 1.0
   []""",
     )
@@ -352,7 +352,7 @@ def audit(text: str, potential: str = "potential_from_gummel") -> dict[str, Any]
 
     wall_report: dict[str, Any] = {}
     for species in NEUTRAL_WALL_SPECIES:
-        path = f"FVBCs/issue359_{species}_wall_loss"
+        path = f"FVBCs/{species}_wall_loss"
         exists = mb.has_block(text, path)
         boundaries = (
             set(mp.words(mp.get_parameter(text, path, "boundary") or ""))
@@ -382,7 +382,7 @@ def audit(text: str, potential: str = "potential_from_gummel") -> dict[str, Any]
 
     for species in CHARGED_HEAVY:
         cfg = wall27.CHARGED[species]
-        material = f"FunctorMaterials/issue359_{species}_wall_flux"
+        material = f"FunctorMaterials/{species}_wall_flux"
         material_ok = (
             mb.has_block(text, material)
             and mp.get_parameter(text, material, "type") == "PhysicsIonWallFluxMaterial"
@@ -399,8 +399,8 @@ def audit(text: str, potential: str = "potential_from_gummel") -> dict[str, Any]
         )
         side_checks: dict[str, bool] = {}
         for wall in PLASMA_WALLS:
-            surface = f"FVBCs/issue359_{species}_surface_{wall}"
-            migration = f"FVBCs/issue359_{species}_migration_{wall}"
+            surface = f"FVBCs/{species}_surface_{wall}"
+            migration = f"FVBCs/{species}_migration_{wall}"
             side_checks[wall] = (
                 mb.has_block(text, surface)
                 and mb.has_block(text, migration)
@@ -419,7 +419,7 @@ def audit(text: str, potential: str = "potential_from_gummel") -> dict[str, Any]
             "ok": ok,
         }
 
-    o_return = "FVBCs/issue359_O_return"
+    o_return = "FVBCs/ion_neutralization_O_return"
     o_return_ok = (
         mb.has_block(text, o_return)
         and mp.get_parameter(text, o_return, "variable") == "w_O"

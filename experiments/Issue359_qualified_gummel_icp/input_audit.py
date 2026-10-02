@@ -32,6 +32,7 @@ MEAN_EN_KERNEL_LABELS = {
     "mean_en_fvkernel_05": "elastic energy loss",
 }
 MATERIAL_LABELS = {
+    "scientific_object_names": "generated input object names are scientific and issue-agnostic",
     "heavy_material_01": "heavy multi-species transport closure",
     "electron_material_01": "electron mean-energy/transport closure",
     "electron_material_02": "electron elastic kinetics owner",
@@ -281,14 +282,14 @@ def audit(
         (
             "electron_material_01",
             electron,
-            "FunctorMaterials/issue359_electron_closure",
+            "FunctorMaterials/electron_transport_closure",
             "PhysicsElectronClosureMaterial",
             "electron subapp",
         ),
         (
             "electron_material_02",
             electron,
-            "FunctorMaterials/issue359_electron_kinetics",
+            "FunctorMaterials/electron_o2_elastic_kinetics",
             "PhysicsElectronKineticsMaterial",
             "electron subapp",
         ),
@@ -300,7 +301,7 @@ def audit(
             f"path={path}; type={mp.get_parameter(text, path, 'type') if mb.has_block(text, path) else None}",
         ))
 
-    ppath = "FunctorMaterials/issue359_charge_density"
+    ppath = "FunctorMaterials/plasma_charge_density"
     pok = (
         mb.has_block(poisson, ppath)
         and mp.get_parameter(poisson, ppath, "type") == "PhysicsPlasmaChargeDensityMaterial"
@@ -324,10 +325,10 @@ def audit(
     ))
 
     src = mp.words(
-        mp.get_parameter(outer, "Transfers/issue359_fast_to_heavy", "source_variable") or ""
+        mp.get_parameter(outer, "Transfers/gummel_state_to_heavy", "source_variable") or ""
     )
     dst = mp.words(
-        mp.get_parameter(outer, "Transfers/issue359_fast_to_heavy", "variable") or ""
+        mp.get_parameter(outer, "Transfers/gummel_state_to_heavy", "variable") or ""
     )
     mapped = dict(zip(src, dst)) if len(src) == len(dst) else {}
     ion_paths = [
@@ -335,7 +336,7 @@ def audit(
     ] + [
         f"FVKernels/{sp}_heavy_mass_em_correction" for sp in CHARGED
     ] + [
-        f"FunctorMaterials/issue359_{sp}_wall_flux" for sp in CHARGED
+        f"FunctorMaterials/{sp}_wall_flux" for sp in CHARGED
     ]
     ion_potential_ok = (
         mapped.get("potential_from_poisson") == "potential_from_gummel"
@@ -397,7 +398,19 @@ def audit(
         "ion_bc_04", "Boundary Condition", ION_BC_LABELS["ion_bc_04"],
         "O return", "explicit O return flux on all plasma walls",
         bool(continuity.get("charged_neutralization_O_return")),
-        "FVBCs/issue359_O_return",
+        "FVBCs/ion_neutralization_O_return",
+    ))
+
+    scientific_names_only = all(
+        "issue359_" not in text
+        for text in (outer, driver, electron, poisson)
+    )
+    rows.append(_row(
+        "scientific_object_names", "Architecture",
+        MATERIAL_LABELS["scientific_object_names"],
+        "all generated inputs", "no issue-local issue359_* object names",
+        scientific_names_only,
+        "outer/driver/electron/poisson scanned for issue359_ prefix",
     ))
 
     reaction_disabled = (

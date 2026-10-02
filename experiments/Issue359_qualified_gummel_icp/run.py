@@ -328,7 +328,7 @@ def _electron_input(
     text = mb.insert_child_block(
         text,
         "FunctorMaterials",
-        """  [issue359_o2_concentration]
+        """  [oxygen_molar_concentration]
     type = ADParsedFunctorMaterial
     property_name = c_O2
     functor_names = 'p_gas_from_heavy T_g_from_heavy'
@@ -341,7 +341,7 @@ def _electron_input(
     text = mb.insert_child_block(
         text,
         "FunctorMaterials",
-        f"""  [issue359_electron_closure]
+        f"""  [electron_transport_closure]
     type = PhysicsElectronClosureMaterial
     state_form = normalized
     normalized_electron_density = electron_density_hat
@@ -365,7 +365,7 @@ def _electron_input(
     text = mb.insert_child_block(
         text,
         "FunctorMaterials",
-        """  [issue359_electron_kinetics]
+        """  [electron_o2_elastic_kinetics]
     type = PhysicsElectronKineticsMaterial
     electron_mean_energy = mean_en_solved
     electron_number_density = electron_density_m3
@@ -389,7 +389,7 @@ def _electron_input(
         text = mb.remove_block(text, "FVBCs")
     text += f"""
 [FVBCs]
-  [issue359_electron_sheath]
+  [electron_wall_collection]
     type = PhysicsFVElectronGroundedSheathCollectionBC
     variable = log_e
     boundary = {all_bcs}
@@ -397,7 +397,7 @@ def _electron_input(
     potential = potential_from_poisson
     log_molar_state = true
   []
-  [issue359_energy_sheath]
+  [electron_energy_wall_loss]
     type = PhysicsFVElectronGroundedSheathEnergyBC
     variable = n_epsilon
     boundary = {all_bcs}
@@ -421,20 +421,20 @@ def _electron_input(
     text = mb.insert_child_block(
         text,
         "Postprocessors",
-        f"""  [issue359_electron_sheath_rate]
+        f"""  [electron_wall_particle_rate]
     type = SideFVFluxBCIntegral
     boundary = {all_bcs}
-    fvbcs = 'issue359_electron_sheath'
+    fvbcs = 'electron_wall_collection'
     execute_on = 'INITIAL TIMESTEP_END'
   []""",
     )
     text = mb.insert_child_block(
         text,
         "Postprocessors",
-        f"""  [issue359_energy_sheath_rate]
+        f"""  [electron_wall_energy_rate]
     type = SideFVFluxBCIntegral
     boundary = {all_bcs}
-    fvbcs = 'issue359_energy_sheath'
+    fvbcs = 'electron_energy_wall_loss'
     execute_on = 'INITIAL TIMESTEP_END'
   []""",
     )
@@ -504,7 +504,7 @@ def _poisson_input(
     text = mb.insert_child_block(
         text,
         "FVKernels",
-        """  [issue359_electron_response_topology]
+        """  [electron_response_topology_correction]
     type = FVElectronResponseTopologyCorrection
     variable = potential_plasma
     anchor = phi_anchor_frozen
@@ -517,37 +517,37 @@ def _poisson_input(
     shell_weights = _response_shell_weights(response_radius)
     text = mp.upsert_parameter(
         text,
-        "FVKernels/issue359_electron_response_topology",
+        "FVKernels/electron_response_topology_correction",
         "strength",
         f"{response_strength:.17g}",
     )
     text = mp.upsert_parameter(
         text,
-        "FVKernels/issue359_electron_response_topology",
+        "FVKernels/electron_response_topology_correction",
         "graph_radius",
         str(response_radius),
     )
     text = mp.upsert_parameter(
         text,
-        "FVKernels/issue359_electron_response_topology",
+        "FVKernels/electron_response_topology_correction",
         "shell_weights",
         "'" + " ".join(f"{weight:.17g}" for weight in shell_weights) + "'",
     )
     text = mp.upsert_parameter(
         text,
-        "FVKernels/issue359_electron_response_topology",
+        "FVKernels/electron_response_topology_correction",
         "directional_band",
         "true" if response_mode == "directional" else "false",
     )
     text = mp.upsert_parameter(
         text,
-        "FVKernels/issue359_electron_response_topology",
+        "FVKernels/electron_response_topology_correction",
         "radial_component",
         "0",
     )
     text = mp.upsert_parameter(
         text,
-        "FVKernels/issue359_electron_response_topology",
+        "FVKernels/electron_response_topology_correction",
         "axial_component",
         "1",
     )
@@ -555,7 +555,7 @@ def _poisson_input(
     text = mb.insert_child_block(
         text,
         "FunctorMaterials",
-        """  [issue359_mixture_density]
+        """  [gas_mixture_density]
     type = ADParsedFunctorMaterial
     property_name = rho_from_heavy
     functor_names = 'p_gas_from_heavy T_g_from_heavy'
@@ -568,7 +568,7 @@ def _poisson_input(
     text = mb.insert_child_block(
         text,
         "FunctorMaterials",
-        """  [issue359_charge_density]
+        """  [plasma_charge_density]
     type = PhysicsPlasmaChargeDensityMaterial
     density = rho_from_heavy
     electron_density = electron_density_m3
@@ -584,7 +584,7 @@ def _poisson_input(
         text = mb.remove_block(text, "FVBCs")
     text += f"""
 [FVBCs]
-  [issue359_ground_all]
+  [grounded_plasma_boundary]
     type = FVDirichletBC
     variable = potential_plasma
     boundary = {all_bcs}
@@ -651,16 +651,16 @@ def _driver_input(
     text = mb.insert_child_block(
         text,
         "FunctorMaterials",
-        f"""  [issue359_Te_diag]
+        f"""  [electron_temperature_diagnostic]
     type = ADParsedFunctorMaterial
-    property_name = issue359_Te_K
+    property_name = electron_temperature_diagnostic_K
     functor_names = 'mean_energy_out'
     functor_symbols = 'mean_ev'
     expression = '{TE_PER_MEAN_EV_K:.17g}*mean_ev'
   []
-  [issue359_charge_diag]
+  [charge_density_diagnostic]
     type = ADParsedFunctorMaterial
-    property_name = issue359_charge_density_C_m3
+    property_name = plasma_charge_density_C_m3
     functor_names = 'p_gas_h T_g_h w_O2p_h w_Om_h w_Op_h electron_density_out'
     functor_symbols = 'prs tmp wp wm wo ne'
     expression = '{ELEMENTARY_CHARGE_C:.17g}*((prs*0.032/(8.31446261815324*tmp))*{AVOGADRO:.17g}*(wp/0.032-wm/0.016+wo/0.016)-ne)'
@@ -668,89 +668,89 @@ def _driver_input(
     )
 
     for block in (
-        """  [issue359_phi_min]
+        """  [potential_min]
     type = ADElementExtremeFunctorValue
     functor = potential_from_poisson
     value_type = min
     execute_on = 'TIMESTEP_END'
   []""",
-        """  [issue359_phi_max]
+        """  [potential_max]
     type = ADElementExtremeFunctorValue
     functor = potential_from_poisson
     value_type = max
     execute_on = 'TIMESTEP_END'
   []""",
-        """  [issue359_ne_min]
+        """  [electron_density_min]
     type = ADElementExtremeFunctorValue
     functor = electron_density_out
     value_type = min
     execute_on = 'TIMESTEP_END'
   []""",
-        """  [issue359_ne_max]
+        """  [electron_density_max]
     type = ADElementExtremeFunctorValue
     functor = electron_density_out
     value_type = max
     execute_on = 'TIMESTEP_END'
   []""",
-        """  [issue359_ne_avg]
+        """  [electron_density_avg]
     type = ElementAverageFunctorPostprocessor
     functor = electron_density_out
     execute_on = 'TIMESTEP_END'
   []""",
-        """  [issue359_mean_energy_min]
+        """  [mean_energy_min]
     type = ADElementExtremeFunctorValue
     functor = mean_energy_out
     value_type = min
     execute_on = 'TIMESTEP_END'
   []""",
-        """  [issue359_mean_energy_max]
+        """  [mean_energy_max]
     type = ADElementExtremeFunctorValue
     functor = mean_energy_out
     value_type = max
     execute_on = 'TIMESTEP_END'
   []""",
-        """  [issue359_mean_energy_avg]
+        """  [mean_energy_avg]
     type = ElementAverageFunctorPostprocessor
     functor = mean_energy_out
     execute_on = 'TIMESTEP_END'
   []""",
-        """  [issue359_Te_min_K]
+        """  [electron_temperature_min_K]
     type = ADElementExtremeFunctorValue
-    functor = issue359_Te_K
+    functor = electron_temperature_diagnostic_K
     value_type = min
     execute_on = 'TIMESTEP_END'
   []""",
-        """  [issue359_Te_max_K]
+        """  [electron_temperature_max_K]
     type = ADElementExtremeFunctorValue
-    functor = issue359_Te_K
+    functor = electron_temperature_diagnostic_K
     value_type = max
     execute_on = 'TIMESTEP_END'
   []""",
-        """  [issue359_Te_avg_K]
+        """  [electron_temperature_avg_K]
     type = ElementAverageFunctorPostprocessor
-    functor = issue359_Te_K
+    functor = electron_temperature_diagnostic_K
     execute_on = 'TIMESTEP_END'
   []""",
-        """  [issue359_charge_min]
+        """  [charge_density_min]
     type = ADElementExtremeFunctorValue
-    functor = issue359_charge_density_C_m3
+    functor = plasma_charge_density_C_m3
     value_type = min
     execute_on = 'TIMESTEP_END'
   []""",
-        """  [issue359_charge_max]
+        """  [charge_density_max]
     type = ADElementExtremeFunctorValue
-    functor = issue359_charge_density_C_m3
+    functor = plasma_charge_density_C_m3
     value_type = max
     execute_on = 'TIMESTEP_END'
   []""",
-        """  [issue359_charge_avg]
+        """  [charge_density_avg]
     type = ElementAverageFunctorPostprocessor
-    functor = issue359_charge_density_C_m3
+    functor = plasma_charge_density_C_m3
     execute_on = 'TIMESTEP_END'
   []""",
-        """  [issue359_charge_integral]
+        """  [charge_integral]
     type = ADElementIntegralFunctorPostprocessor
-    functor = issue359_charge_density_C_m3
+    functor = plasma_charge_density_C_m3
     execute_on = 'TIMESTEP_END'
   []""",
     ):
@@ -770,7 +770,7 @@ def _driver_input(
         text, "Executioner", "fixed_point_rel_tol", f"{fixed_point_rel_tol:.17g}"
     )
     if potential_predictor_alpha != 0.0:
-        predictor_block = f"""  [issue359_potential_predictor]
+        predictor_block = f"""  [potential_linear_predictor]
     type = PhysicsTemporalPotentialPredictor
     variable = potential_from_poisson
     alpha = {potential_predictor_alpha:.17g}
@@ -872,7 +872,7 @@ def _outer_input(
     text = mb.insert_child_block(
         text,
         "FunctorMaterials",
-        f"""  [issue359_electron_temperature]
+        f"""  [electron_temperature_from_mean_energy]
     type = ADParsedFunctorMaterial
     property_name = T_e_from_gummel_K
     functor_names = 'mean_energy_from_gummel'
@@ -908,13 +908,13 @@ def _outer_input(
 []
 
 [Transfers]
-  [issue359_heavy_snapshot]
+  [heavy_state_to_gummel]
     type = MultiAppCopyTransfer
     to_multi_app = gummel_driver
     source_variable = 'p T_g_snapshot w_O2p w_Om w_Op'
     variable = 'p_gas_h T_g_h w_O2p_h w_Om_h w_Op_h'
   []
-  [issue359_fast_to_heavy]
+  [gummel_state_to_heavy]
     type = MultiAppCopyTransfer
     from_multi_app = gummel_driver
     source_variable = 'electron_density_out mean_energy_out potential_from_poisson'
@@ -1009,16 +1009,16 @@ def _construction_audit(
         "potential_predictor_selected": (
             (
                 potential_predictor_alpha == 0.0
-                and not mb.has_block(driver, "AuxKernels/issue359_potential_predictor")
+                and not mb.has_block(driver, "AuxKernels/potential_linear_predictor")
             )
             or (
                 potential_predictor_alpha != 0.0
-                and mb.has_block(driver, "AuxKernels/issue359_potential_predictor")
+                and mb.has_block(driver, "AuxKernels/potential_linear_predictor")
                 and math.isclose(
                     float(
                         mp.get_parameter(
                             driver,
-                            "AuxKernels/issue359_potential_predictor",
+                            "AuxKernels/potential_linear_predictor",
                             "alpha",
                         )
                         or "nan"
@@ -1105,7 +1105,7 @@ def _construction_audit(
             set(
                 mp.words(
                     mp.get_parameter(
-                        electron, "FVBCs/issue359_electron_sheath", "boundary"
+                        electron, "FVBCs/electron_wall_collection", "boundary"
                     )
                     or ""
                 )
@@ -1116,7 +1116,7 @@ def _construction_audit(
             set(
                 mp.words(
                     mp.get_parameter(
-                        electron, "FVBCs/issue359_energy_sheath", "boundary"
+                        electron, "FVBCs/electron_energy_wall_loss", "boundary"
                     )
                     or ""
                 )
@@ -1150,28 +1150,28 @@ def _construction_audit(
             for inp in (outer, driver, electron, poisson)
         ),
         "electron_closure_material_explicit": (
-            mb.has_block(electron, "FunctorMaterials/issue359_electron_closure")
+            mb.has_block(electron, "FunctorMaterials/electron_transport_closure")
             and mp.get_parameter(
                 electron,
-                "FunctorMaterials/issue359_electron_closure",
+                "FunctorMaterials/electron_transport_closure",
                 "type",
             )
             == "PhysicsElectronClosureMaterial"
         ),
         "electron_kinetics_material_explicit": (
-            mb.has_block(electron, "FunctorMaterials/issue359_electron_kinetics")
+            mb.has_block(electron, "FunctorMaterials/electron_o2_elastic_kinetics")
             and mp.get_parameter(
                 electron,
-                "FunctorMaterials/issue359_electron_kinetics",
+                "FunctorMaterials/electron_o2_elastic_kinetics",
                 "type",
             )
             == "PhysicsElectronKineticsMaterial"
         ),
         "poisson_charge_material_explicit": (
-            mb.has_block(poisson, "FunctorMaterials/issue359_charge_density")
+            mb.has_block(poisson, "FunctorMaterials/plasma_charge_density")
             and mp.get_parameter(
                 poisson,
-                "FunctorMaterials/issue359_charge_density",
+                "FunctorMaterials/plasma_charge_density",
                 "type",
             )
             == "PhysicsPlasmaChargeDensityMaterial"
@@ -1180,7 +1180,7 @@ def _construction_audit(
             set(
                 mp.words(
                     mp.get_parameter(
-                        poisson, "FVBCs/issue359_ground_all", "boundary"
+                        poisson, "FVBCs/grounded_plasma_boundary", "boundary"
                     )
                     or ""
                 )
@@ -1198,7 +1198,7 @@ def _construction_audit(
                 float(
                     mp.get_parameter(
                         poisson,
-                        "FVKernels/issue359_electron_response_topology",
+                        "FVKernels/electron_response_topology_correction",
                         "strength",
                     )
                     or "nan"
@@ -1210,7 +1210,7 @@ def _construction_audit(
             and int(
                 mp.get_parameter(
                     poisson,
-                    "FVKernels/issue359_electron_response_topology",
+                    "FVKernels/electron_response_topology_correction",
                     "graph_radius",
                 )
                 or "0"
@@ -1219,7 +1219,7 @@ def _construction_audit(
             and (
                 mp.get_parameter(
                     poisson,
-                    "FVKernels/issue359_electron_response_topology",
+                    "FVKernels/electron_response_topology_correction",
                     "directional_band",
                 )
                 == ("true" if response_mode == "directional" else "false")
@@ -1228,7 +1228,7 @@ def _construction_audit(
                 mp.words(
                     mp.get_parameter(
                         poisson,
-                        "FVKernels/issue359_electron_response_topology",
+                        "FVKernels/electron_response_topology_correction",
                         "shell_weights",
                     )
                     or ""
@@ -1278,19 +1278,19 @@ def _construction_audit(
         "driver_final_diagnostics_present": all(
             mb.has_block(driver, f"Postprocessors/{name}")
             for name in (
-                "issue359_phi_min",
-                "issue359_phi_max",
-                "issue359_ne_min",
-                "issue359_ne_max",
-                "issue359_ne_avg",
-                "issue359_mean_energy_min",
-                "issue359_mean_energy_max",
-                "issue359_mean_energy_avg",
-                "issue359_Te_avg_K",
-                "issue359_charge_min",
-                "issue359_charge_max",
-                "issue359_charge_avg",
-                "issue359_charge_integral",
+                "potential_min",
+                "potential_max",
+                "electron_density_min",
+                "electron_density_max",
+                "electron_density_avg",
+                "mean_energy_min",
+                "mean_energy_max",
+                "mean_energy_avg",
+                "electron_temperature_avg_K",
+                "charge_density_min",
+                "charge_density_max",
+                "charge_density_avg",
+                "charge_integral",
             )
         ),
         "child_solver_reuse_consistent": (
@@ -1540,50 +1540,50 @@ def _read_final_diagnostics(
         "fixed_point_iterations",
         "cumulative_fixed_point_iterations",
         "fp_delta_phi_max",
-        "issue359_phi_min",
-        "issue359_phi_max",
-        "issue359_ne_min",
-        "issue359_ne_max",
-        "issue359_ne_avg",
-        "issue359_mean_energy_min",
-        "issue359_mean_energy_max",
-        "issue359_mean_energy_avg",
-        "issue359_Te_min_K",
-        "issue359_Te_max_K",
-        "issue359_Te_avg_K",
-        "issue359_charge_min",
-        "issue359_charge_max",
-        "issue359_charge_avg",
-        "issue359_charge_integral",
+        "potential_min",
+        "potential_max",
+        "electron_density_min",
+        "electron_density_max",
+        "electron_density_avg",
+        "mean_energy_min",
+        "mean_energy_max",
+        "mean_energy_avg",
+        "electron_temperature_min_K",
+        "electron_temperature_max_K",
+        "electron_temperature_avg_K",
+        "charge_density_min",
+        "charge_density_max",
+        "charge_density_avg",
+        "charge_integral",
     )
     missing = [key for key in required if key not in row]
     if missing:
         raise Issue359Error(f"FINAL diagnostic columns missing: {missing}")
 
-    charge_number_avg = row["issue359_charge_avg"] / ELEMENTARY_CHARGE_C
+    charge_number_avg = row["charge_density_avg"] / ELEMENTARY_CHARGE_C
     relative_charge_imbalance = abs(charge_number_avg) / max(
-        abs(row["issue359_ne_avg"]), 1.0
+        abs(row["electron_density_avg"]), 1.0
     )
     return {
         "fixed_point_iterations": row["fixed_point_iterations"],
         "cumulative_fixed_point_iterations": row["cumulative_fixed_point_iterations"],
         "delta_phi_max_V": row["fp_delta_phi_max"],
-        "phi_min_V": row["issue359_phi_min"],
-        "phi_max_V": row["issue359_phi_max"],
-        "phi_span_V": row["issue359_phi_max"] - row["issue359_phi_min"],
-        "electron_density_min_m3": row["issue359_ne_min"],
-        "electron_density_max_m3": row["issue359_ne_max"],
-        "electron_density_avg_m3": row["issue359_ne_avg"],
-        "mean_energy_min_eV": row["issue359_mean_energy_min"],
-        "mean_energy_max_eV": row["issue359_mean_energy_max"],
-        "mean_energy_avg_eV": row["issue359_mean_energy_avg"],
-        "electron_temperature_min_K": row["issue359_Te_min_K"],
-        "electron_temperature_max_K": row["issue359_Te_max_K"],
-        "electron_temperature_avg_K": row["issue359_Te_avg_K"],
-        "charge_density_min_C_m3": row["issue359_charge_min"],
-        "charge_density_max_C_m3": row["issue359_charge_max"],
-        "charge_density_avg_C_m3": row["issue359_charge_avg"],
-        "volume_charge_C": row["issue359_charge_integral"],
+        "phi_min_V": row["potential_min"],
+        "phi_max_V": row["potential_max"],
+        "phi_span_V": row["potential_max"] - row["potential_min"],
+        "electron_density_min_m3": row["electron_density_min"],
+        "electron_density_max_m3": row["electron_density_max"],
+        "electron_density_avg_m3": row["electron_density_avg"],
+        "mean_energy_min_eV": row["mean_energy_min"],
+        "mean_energy_max_eV": row["mean_energy_max"],
+        "mean_energy_avg_eV": row["mean_energy_avg"],
+        "electron_temperature_min_K": row["electron_temperature_min_K"],
+        "electron_temperature_max_K": row["electron_temperature_max_K"],
+        "electron_temperature_avg_K": row["electron_temperature_avg_K"],
+        "charge_density_min_C_m3": row["charge_density_min"],
+        "charge_density_max_C_m3": row["charge_density_max"],
+        "charge_density_avg_C_m3": row["charge_density_avg"],
+        "volume_charge_C": row["charge_integral"],
         "charge_number_imbalance_avg_m3": charge_number_avg,
         "relative_charge_imbalance_vs_ne": relative_charge_imbalance,
     }
