@@ -48,6 +48,7 @@ jobs:
           python3 bin/physics.py simple-case list
           python3 bin/physics.py simple-case show electron-diffusion-experiment
           python3 bin/physics.py simple-case show electron-diffusion-energy-experiment
+          python3 bin/physics.py simple-case show poisson
           if python3 bin/physics.py simple-case show 1; then
             echo "numeric simple-case selector unexpectedly accepted" >&2
             exit 1
@@ -188,6 +189,7 @@ jobs:
             .ci-poisson/poisson.e
             .ci-poisson/poisson_final_profile_*.csv
           if-no-files-found: error
+          include-hidden-files: true
           retention-days: 30
 
       - name: Upload kinetic 2Te Exodus
@@ -202,6 +204,7 @@ jobs:
             .ci-electron-energy-wall/kinetic_4over3/electron_diffusion.e
             .ci-electron-energy-wall/kinetic_4over3/electron_diffusion_final_profile_*.csv
           if-no-files-found: error
+          include-hidden-files: true
           retention-days: 30
 
       - name: Upload matched 5over3 Exodus
@@ -216,6 +219,7 @@ jobs:
             .ci-electron-energy-wall/matched_5over3/electron_diffusion.e
             .ci-electron-energy-wall/matched_5over3/electron_diffusion_final_profile_*.csv
           if-no-files-found: error
+          include-hidden-files: true
           retention-days: 30
 
       - name: Upload wall-flux comparison
