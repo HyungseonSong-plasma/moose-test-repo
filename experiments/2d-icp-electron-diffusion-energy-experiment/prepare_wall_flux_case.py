@@ -33,9 +33,31 @@ def prepare(text: str, *, mode: str, energy_factor: float) -> str:
     ):
         text = rewrite_scalar(text, name, value)
 
+    if mode == "accepted":
+        if abs(energy_factor - 2.5) > 1.0e-15:
+            raise SystemExit("accepted case is defined only for 5/2 Te")
+        return text
+
     if mode == "native":
         if abs(energy_factor - 2.0) > 1.0e-15:
             raise SystemExit("native case is defined only for 2 Te")
+        pattern = re.compile(
+            r"(?ms)^  \\[electron_energy_thermal_wall_loss\\]\\n.*?^  \\[\\]\\n"
+        )
+        replacement = (
+            "  [electron_energy_thermal_wall_loss]\\n"
+            "    type = PhysicsFVElectronGroundedSheathEnergyBC\\n"
+            "    variable = c_epsilon\\n"
+            f"    boundary = '{BOUNDARIES}'\\n"
+            "    electron_density = c_e_molar\\n"
+            "    mean_electron_energy = mean_en_solved\\n"
+            "    potential = zero_phi\\n"
+            "    molar_energy_state = true\\n"
+            "  []\\n"
+        )
+        text, count = pattern.subn(replacement, text, count=1)
+        if count != 1:
+            raise SystemExit(f"failed to restore native energy BC: count={count}")
         return text
 
     if mode != "functor":
@@ -56,10 +78,12 @@ def prepare(text: str, *, mode: str, energy_factor: float) -> str:
         "    block = plasma\n"
         "  []\n"
     )
-    marker = "\n[]\n\n[FVKernels]"
-    if text.count(marker) != 1:
-        raise SystemExit("cannot locate unique FunctorMaterials terminator")
-    text = text.replace(marker, material + marker, 1)
+    existing_material = re.compile(
+        r"(?ms)^  \\[electron_energy_transport_matched_wall_flux\\]\\n.*?^  \\[\\]\\n"
+    )
+    text, count = existing_material.subn(material.lstrip("\n"), text, count=1)
+    if count != 1:
+        raise SystemExit(f"failed to replace wall energy material: count={count}")
 
     pattern = re.compile(
         r"(?ms)^  \[electron_energy_thermal_wall_loss\]\n.*?^  \[\]\n"
@@ -82,7 +106,7 @@ def prepare(text: str, *, mode: str, energy_factor: float) -> str:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("input", type=Path)
-    parser.add_argument("--mode", choices=("native", "functor"), required=True)
+    parser.add_argument("--mode", choices=("accepted", "native", "functor"), required=True)
     parser.add_argument("--energy-factor", type=float, required=True)
     args = parser.parse_args()
 
