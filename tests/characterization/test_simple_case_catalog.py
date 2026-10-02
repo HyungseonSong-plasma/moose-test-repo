@@ -21,20 +21,21 @@ ROOT = Path(__file__).resolve().parents[2]
 def test_simple_case_catalog_is_code_addressable_and_valid() -> None:
     assert validate_simple_case_catalog(ROOT) == ()
     cases = load_simple_case_catalog(ROOT / "experiments" / "simple_case_inventory.json")
-    assert [case.order for case in cases] == list(range(1, len(cases) + 1))
+    assert [case.simple_case_id for case in cases] == [
+        "electron-diffusion-experiment",
+        "electron-diffusion-energy-experiment",
+    ]
+    assert all(case.status == STABLE_STATUS for case in cases)
     first = cases[0]
     assert first.simple_case_id == "electron-diffusion-experiment"
     assert first.status == STABLE_STATUS
     assert first.template_source is True
-    assert resolve_simple_case("1") == first
     assert resolve_simple_case("electron diffusion") == first
     second = cases[1]
     assert second.simple_case_id == "electron-diffusion-energy-experiment"
     assert second.status == STABLE_STATUS
     assert second.template_source is True
-    assert resolve_simple_case("2") == second
     assert resolve_simple_case("electron diffusion energy") == second
-    assert all(not case.template_source for case in cases[2:])
 
 
 def test_materialize_template_is_qualified_input(tmp_path: Path) -> None:
@@ -76,7 +77,7 @@ def test_create_scaffolds_existing_harness_case(tmp_path: Path) -> None:
 
 def test_create_scaffolds_solved_energy_case(tmp_path: Path) -> None:
     destination = tmp_path / "derived-energy-case"
-    create_simple_case("2", destination)
+    create_simple_case("electron-diffusion-energy-experiment", destination)
 
     source = ROOT / "experiments/2d-icp-electron-diffusion-energy-experiment"
     assert (destination / "input.i").read_bytes() == (source / "input.template.i").read_bytes()
@@ -94,7 +95,7 @@ def test_create_applies_new_input_after_scaffold(tmp_path: Path) -> None:
     overlay.write_text("[Mesh]\n  type = GeneratedMesh\n[]\n")
     destination = tmp_path / "derived-overlay"
 
-    create_simple_case("1", destination, input_path=overlay)
+    create_simple_case("electron-diffusion-experiment", destination, input_path=overlay)
 
     assert (destination / "input.i").read_bytes() == overlay.read_bytes()
     origin = json.loads((destination / "template_origin.json").read_text())
@@ -103,6 +104,11 @@ def test_create_applies_new_input_after_scaffold(tmp_path: Path) -> None:
     assert origin["qualification_inherited"] is False
 
 
-def test_planned_case_cannot_be_template_source(tmp_path: Path) -> None:
+def test_numeric_selector_is_not_supported() -> None:
+    with pytest.raises(SimpleCaseCatalogError):
+        resolve_simple_case("1")
+
+
+def test_unregistered_future_case_is_not_supported(tmp_path: Path) -> None:
     with pytest.raises(SimpleCaseCatalogError):
         create_simple_case("electron-poisson-experiment", tmp_path / "bad")
