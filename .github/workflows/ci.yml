@@ -31,6 +31,7 @@ jobs:
       packages: read
     env:
       CASE_DIR: experiments/2d-icp-electron-diffusion-energy-experiment
+      POISSON_DIR: experiments/2d-icp-poisson-experiment
       BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
     steps:
       - uses: actions/checkout@v4
@@ -149,6 +150,45 @@ jobs:
         run: |
           set -euxo pipefail
           python3 "$CASE_DIR/check_wall_flux_matrix.py" wall-flux-artifacts
+
+      - name: Run all-ground Poisson candidate
+        shell: bash
+        run: |
+          set -euxo pipefail
+          rm -rf .ci-poisson
+          cp -a "$POISSON_DIR" .ci-poisson
+
+          docker run --rm \
+            --entrypoint /bin/bash \
+            --user "$(id -u):$(id -g)" \
+            --workdir /workspace/.ci-poisson \
+            -v "$PWD:/workspace" \
+            "$BUILD_BASE_REF" \
+            -lc '
+              set -euxo pipefail
+              source /environment
+              /workspace/physics_app/physics-opt --check-input -i input.i
+              /workspace/physics_app/physics-opt -i input.i > runtime.log 2>&1
+            '
+
+          (
+            cd .ci-poisson
+            python3 check.py | tee checker.log
+          )
+
+      - name: Upload Poisson candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: poisson-candidate
+          path: |
+            .ci-poisson/input.i
+            .ci-poisson/runtime.log
+            .ci-poisson/checker.log
+            .ci-poisson/poisson.csv
+            .ci-poisson/poisson.e
+            .ci-poisson/poisson_final_profile_*.csv
+          if-no-files-found: error
+          retention-days: 30
 
       - name: Upload kinetic 2Te Exodus
         uses: actions/upload-artifact@v4
