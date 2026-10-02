@@ -1380,7 +1380,7 @@ def _construction_audit(
             )
             == "PhysicsPlasmaChargeDensityMaterial"
         ),
-        "poisson_all_ground_explicit": (
+        "poisson_grounded_physical_boundaries_explicit": (
             set(
                 mp.words(
                     mp.get_parameter(
@@ -1390,6 +1390,12 @@ def _construction_audit(
                 )
             )
             == all_b
+        ),
+        "rz_axis_excluded_from_physical_bcs": (
+            "SideSetsAroundSubdomainGenerator" not in electron
+            and "SideSetsAroundSubdomainGenerator" not in poisson
+            and "plasma_all_ground" not in electron
+            and "plasma_all_ground" not in poisson
         ),
         "geometry_specific_1d_response_removed": (
             "FVElectronResponseBandedCorrection" not in poisson
