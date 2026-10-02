@@ -109,9 +109,14 @@
 []
 
 [AuxVariables]
-  [electron_density_out]
+  [electron_density]
     type = MooseVariableFVReal
     initial_condition = 1.0e16
+    block = plasma
+  []
+  [electron_temperature_eV]
+    type = MooseVariableFVReal
+    initial_condition = 3.82184
     block = plasma
   []
   [mean_energy_out]
@@ -181,6 +186,15 @@
     electron_energy_diffusion_output = electron_energy_diffusion
     block = plasma
   []
+
+  [electron_temperature_eV_material]
+    type = ADParsedFunctorMaterial
+    property_name = electron_temperature_eV_functor
+    functor_names = 'mean_en_solved'
+    functor_symbols = 'mean_en'
+    expression = '(2.0/3.0)*mean_en'
+    block = plasma
+  []
 []
 
 [FVKernels]
@@ -236,8 +250,14 @@
 [AuxKernels]
   [electron_density_copy]
     type = FunctorAux
-    variable = electron_density_out
+    variable = electron_density
     functor = electron_density_m3
+    execute_on = 'INITIAL TIMESTEP_END'
+  []
+  [electron_temperature_copy]
+    type = FunctorAux
+    variable = electron_temperature_eV
+    functor = electron_temperature_eV_functor
     execute_on = 'INITIAL TIMESTEP_END'
   []
   [mean_energy_copy]
@@ -330,7 +350,7 @@
 [VectorPostprocessors]
   [final_profile]
     type = ElementValueSampler
-    variable = 'electron_density_out c_epsilon mean_energy_out diffusion_out'
+    variable = 'electron_density c_epsilon mean_energy_out electron_temperature_eV diffusion_out'
     sort_by = id
     execute_on = 'FINAL'
   []
@@ -366,6 +386,7 @@
   [exodus]
     type = Exodus
     file_base = electron_diffusion
+    show = 'electron_density electron_temperature_eV'
     execute_on = 'INITIAL TIMESTEP_END'
   []
 []
