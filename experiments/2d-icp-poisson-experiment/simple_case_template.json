@@ -2,7 +2,7 @@
   "schema_version": 1,
   "template_id": "poisson",
   "source_experiment_id": "2d-icp-poisson-experiment",
-  "source_status": "CANDIDATE_REUSABLE_BASELINE",
+  "source_status": "STABLE_REUSABLE_BASELINE",
   "input_template": "input.template.i",
   "baseline_input": "input.i",
   "generated_input": "input.i",
@@ -13,5 +13,5 @@
   "generated_manifest": "test.json",
   "generated_provenance": "template_origin.json",
   "qualification_inherited": false,
-  "purpose": "Create a derived case from the all-ground one-way Poisson baseline after qualification."
+  "purpose": "Create a derived case from the qualified all-ground one-way Poisson baseline."
 }
