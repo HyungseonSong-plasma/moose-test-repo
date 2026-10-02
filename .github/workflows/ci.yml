@@ -225,6 +225,10 @@ jobs:
               "phi_solid_walls": (False, True),
               "both_solid_walls": (True, True),
           }
+          phi_boundary_cases = {
+              "phi_no_inlet_ground": "'outlet plasma_electrode plasma_metal plasma_right plasma_cover plasma_wafer plasma_focus_ring'",
+              "phi_no_outlet_ground": "'inlet plasma_electrode plasma_metal plasma_right plasma_cover plasma_wafer plasma_focus_ring'",
+          }
 
           for name, (solid_source, solid_phi) in cases.items():
               dst = root / name
@@ -249,9 +253,24 @@ jobs:
               assert "SideSetsAroundSubdomainGenerator" not in text
               assert "plasma_all_ground" not in text
               path.write_text(text)
+
+          for name, phi_b in phi_boundary_cases.items():
+              dst = root / name
+              shutil.copytree(source, dst)
+              path = dst / "input.i"
+              text = path.read_text()
+              for block_path in electro_paths:
+                  text = mp.upsert_parameter(text, block_path, "boundary", phi_b)
+              assert mp.get_parameter(text, "Executioner", "dt") == "1.0e-9"
+              assert mp.get_parameter(text, "Executioner", "num_steps") == "4"
+              assert set(mp.words(mp.get_parameter(text, "FVBCs/electron_thermal_wall_loss", "boundary") or "")) == set(all_b.strip("'").split())
+              assert set(mp.words(mp.get_parameter(text, "FVBCs/phi_grounded_walls", "boundary") or "")) == set(phi_b.strip("'").split())
+              assert "SideSetsAroundSubdomainGenerator" not in text
+              assert "plasma_all_ground" not in text
+              path.write_text(text)
           PY
 
-          for name in source_solid_walls phi_solid_walls both_solid_walls; do
+          for name in source_solid_walls phi_solid_walls both_solid_walls phi_no_inlet_ground phi_no_outlet_ground; do
             run_dir=".ci-poisson-profile/$name"
             docker run --rm \
               --entrypoint /bin/bash \
@@ -310,7 +329,13 @@ jobs:
           base_norm = normalized(base_phi)
           result = {"canonical": stats(baseline), "comparisons": {}}
 
-          for name in ("source_solid_walls", "phi_solid_walls", "both_solid_walls"):
+          for name in (
+              "source_solid_walls",
+              "phi_solid_walls",
+              "both_solid_walls",
+              "phi_no_inlet_ground",
+              "phi_no_outlet_ground",
+          ):
               rows = final_profile(f".ci-poisson-profile/{name}")
               if [int(r["id"]) for r in rows] != [int(r["id"]) for r in baseline]:
                   raise SystemExit(f"cell identity mismatch for {name}")
@@ -358,6 +383,16 @@ jobs:
             .ci-poisson-profile/both_solid_walls/poisson.csv
             .ci-poisson-profile/both_solid_walls/poisson.e
             .ci-poisson-profile/both_solid_walls/poisson_final_profile_*.csv
+            .ci-poisson-profile/phi_no_inlet_ground/input.i
+            .ci-poisson-profile/phi_no_inlet_ground/runtime.log
+            .ci-poisson-profile/phi_no_inlet_ground/poisson.csv
+            .ci-poisson-profile/phi_no_inlet_ground/poisson.e
+            .ci-poisson-profile/phi_no_inlet_ground/poisson_final_profile_*.csv
+            .ci-poisson-profile/phi_no_outlet_ground/input.i
+            .ci-poisson-profile/phi_no_outlet_ground/runtime.log
+            .ci-poisson-profile/phi_no_outlet_ground/poisson.csv
+            .ci-poisson-profile/phi_no_outlet_ground/poisson.e
+            .ci-poisson-profile/phi_no_outlet_ground/poisson_final_profile_*.csv
           if-no-files-found: error
           include-hidden-files: true
           retention-days: 30
