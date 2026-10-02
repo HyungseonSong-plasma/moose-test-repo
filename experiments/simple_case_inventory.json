@@ -76,6 +76,44 @@
         "input_template": "input.template.i",
         "generated_input": "input.i"
       }
+    },
+    {
+      "simple_case_id": "poisson",
+      "experiment_id": "2d-icp-poisson-experiment",
+      "status": "STABLE_REUSABLE_BASELINE",
+      "path": "experiments/2d-icp-poisson-experiment",
+      "test_manifest": "test.json",
+      "provenance": "provenance.json",
+      "description": "Real-QVT 2-D ICP electron particle + electron-energy diffusion with one-way Poisson, frozen positive background charge, and all-ground electrostatic boundary conditions.",
+      "physics_layers": [
+        "electron continuity",
+        "electron diffusion",
+        "electron energy diffusion",
+        "energy-dependent electron transport lookup",
+        "thermal particle and energy wall loss",
+        "one-way Poisson",
+        "frozen positive charge background",
+        "all-ground potential boundary"
+      ],
+      "deliberately_absent": [
+        "electrostatic drift",
+        "Poisson transport feedback",
+        "Poisson wall-loss feedback",
+        "electron reactions",
+        "Joule heating",
+        "volumetric electron-energy sources",
+        "heavy-species evolution"
+      ],
+      "aliases": [
+        "all-ground-poisson",
+        "electron poisson",
+        "electron energy poisson"
+      ],
+      "template": {
+        "manifest": "simple_case_template.json",
+        "input_template": "input.template.i",
+        "generated_input": "input.i"
+      }
     }
   ]
 }
