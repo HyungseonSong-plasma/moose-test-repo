@@ -727,6 +727,7 @@ jobs:
           docker pull "$ref"
           test "$(docker image inspect "$ref" --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}')" = "${{ github.event.pull_request.head.sha }}"
           test "$(docker image inspect "$ref" --format '{{ index .Config.Labels "io.physics.source.manifest-sha256" }}')" = "$PHYSICS_SOURCE_MANIFEST_SHA256"
+          docker run --rm --entrypoint /bin/bash "$ref" -lc 'source /environment; command -v g++; command -v mpicxx; g++ --version | head -1; mpicxx --showme:command'
           docker run --rm "$ref" --check-input -i /opt/physics/ci/smoke.i
 
           cat > /tmp/issue359-jit-physics-opt <<'SH'

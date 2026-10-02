@@ -38,5 +38,8 @@ ENV MOOSE_DIR=/opt/physics_vendor/moose \
     LD_LIBRARY_PATH="/opt/physics/test/lib:/opt/physics/lib" \
     PATH="/opt/openmpi/bin:${PATH}"
 
+COPY ci/physics-jit-runtime-image/entrypoint.sh /usr/local/bin/physics-jit-runtime-entrypoint
+RUN chmod 0755 /usr/local/bin/physics-jit-runtime-entrypoint
+
 WORKDIR /work
-ENTRYPOINT ["/opt/physics/physics-opt"]
+ENTRYPOINT ["/usr/local/bin/physics-jit-runtime-entrypoint"]
