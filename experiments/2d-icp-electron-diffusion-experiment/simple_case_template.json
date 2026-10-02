@@ -13,5 +13,5 @@
   "generated_manifest": "test.json",
   "generated_provenance": "template_origin.json",
   "qualification_inherited": false,
-  "purpose": "Create a new runnable development case from the qualified 2-D ICP electron-diffusion baseline without claiming that the derived input is qualified."
+  "purpose": "Create a new runnable development case from the qualified 2-D ICP electron particle + solved-energy diffusion baseline without claiming that the derived input is qualified."
 }
