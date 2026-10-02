@@ -16,17 +16,20 @@
       "path": "experiments/2d-icp-electron-diffusion-experiment",
       "test_manifest": "test.json",
       "provenance": "provenance.json",
-      "description": "Real-QVT 2-D ICP electron particle continuity with diffusion only, fixed mean energy, table-derived diffusivity, and zero-potential thermal wall loss.",
+      "description": "Real-QVT 2-D ICP electron particle + electron-energy diffusion with solved mean energy, energy-dependent table lookup, and matched zero-potential thermal wall losses.",
       "physics_layers": [
         "electron continuity",
         "electron diffusion",
-        "thermal wall loss"
+        "electron energy diffusion",
+        "energy-dependent electron transport lookup",
+        "thermal particle and energy wall loss"
       ],
       "deliberately_absent": [
         "electrostatic drift",
         "Poisson",
-        "electron energy evolution",
         "electron reactions",
+        "Joule heating",
+        "volumetric electron-energy sources",
         "heavy-species evolution"
       ],
       "aliases": [
@@ -106,7 +109,7 @@
       "path": null,
       "test_manifest": null,
       "provenance": null,
-      "description": "Electron transport plus solved electron energy and energy-dependent table lookup on the ICP geometry.",
+      "description": "Electron transport plus full electron-energy transport terms such as electrostatic drift/Joule coupling on the ICP geometry, after the diffusion+energy baseline is stable.",
       "physics_layers": [
         "electron continuity",
         "electron transport",
