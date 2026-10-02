@@ -28,7 +28,13 @@ def test_simple_case_catalog_is_code_addressable_and_valid() -> None:
     assert first.template_source is True
     assert resolve_simple_case("1") == first
     assert resolve_simple_case("electron diffusion") == first
-    assert all(not case.template_source for case in cases[1:])
+    second = cases[1]
+    assert second.simple_case_id == "electron-diffusion-energy-experiment"
+    assert second.status == STABLE_STATUS
+    assert second.template_source is True
+    assert resolve_simple_case("2") == second
+    assert resolve_simple_case("electron diffusion energy") == second
+    assert all(not case.template_source for case in cases[2:])
 
 
 def test_materialize_template_is_qualified_input(tmp_path: Path) -> None:
@@ -38,6 +44,15 @@ def test_materialize_template_is_qualified_input(tmp_path: Path) -> None:
     assert output.read_bytes() == qualified.read_bytes()
     with pytest.raises(SimpleCaseCatalogError):
         materialize_input_template("electron-diffusion-experiment", output)
+
+
+def test_second_template_materializes_solved_energy_baseline(tmp_path: Path) -> None:
+    output = tmp_path / "energy-input.i"
+    materialize_input_template("electron-diffusion-energy-experiment", output)
+    qualified = ROOT / "experiments/2d-icp-electron-diffusion-energy-experiment/input.i"
+    assert output.read_bytes() == qualified.read_bytes()
+    assert "[c_epsilon]" in output.read_text()
+    assert "coeff = electron_energy_diffusion" in output.read_text()
 
 
 def test_create_scaffolds_existing_harness_case(tmp_path: Path) -> None:
@@ -57,6 +72,21 @@ def test_create_scaffolds_existing_harness_case(tmp_path: Path) -> None:
     assert origin["source_status"] == STABLE_STATUS
     assert origin["qualification_inherited"] is False
     assert origin["overlay_input_sha256"] is None
+
+
+def test_create_scaffolds_solved_energy_case(tmp_path: Path) -> None:
+    destination = tmp_path / "derived-energy-case"
+    create_simple_case("2", destination)
+
+    source = ROOT / "experiments/2d-icp-electron-diffusion-energy-experiment"
+    assert (destination / "input.i").read_bytes() == (source / "input.template.i").read_bytes()
+    assert (destination / "qvt.msh").read_bytes() == (source / "qvt.msh").read_bytes()
+    assert (destination / "electron_moments.txt").read_bytes() == (source / "electron_moments.txt").read_bytes()
+
+    origin = json.loads((destination / "template_origin.json").read_text())
+    assert origin["template_id"] == "electron-diffusion-energy-experiment"
+    assert origin["source_status"] == STABLE_STATUS
+    assert origin["qualification_inherited"] is False
 
 
 def test_create_applies_new_input_after_scaffold(tmp_path: Path) -> None:
