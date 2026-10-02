@@ -548,6 +548,7 @@ def lower_execution_plan(
             lowered = _builtin_lowerer(case)(case, plan.model_ref, plan.execution_bounds)
         if lowered.case_id != case.case_id or lowered.action_id != case.action_id:
             raise MooseLoweringError("target lowerer changed case/action identity")
+        require_case_ir_contract(lowered)
         cases.append(lowered)
     return MooseTargetIR(
         source_plan_id=plan.plan_id,
