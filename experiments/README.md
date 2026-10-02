@@ -24,3 +24,12 @@ studies/      -> exploratory scientific analysis
 Do not place pytest suites in this directory merely because they validate scientific semantics. If no `physics-opt` execution is needed, the validation belongs under `tests/`.
 
 Historical experiment assets may retain `QPX` / `qpx-opt` in names, comments, logs, or archived instructions when that terminology is part of the original evidence. New experiment instructions and current execution contracts use `Physics` / `physics-opt`.
+
+
+## Reusable diagnostic inventory
+
+Cross-Issue diagnostic baselines may use stable semantic names instead of Issue numbers when their explicit purpose is repeated troubleshooting across later work.  Such entries must carry a runnable `test.json`, provenance, and bounded scientific scope.
+
+| Inventory ID | Path | Purpose |
+| --- | --- | --- |
+| `2d-icp-electron-diffusion-experiment` | `experiments/2d-icp-electron-diffusion-experiment/` | Minimal real-QVT ICP electron diffusion + zero-potential thermal wall-loss baseline for isolating 2-D electron-profile failures before reintroducing drift, Poisson, energy, reactions, or heavy coupling. |

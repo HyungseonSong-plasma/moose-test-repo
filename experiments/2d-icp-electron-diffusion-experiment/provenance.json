@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "experiment_id": "2d-icp-electron-diffusion-experiment",
+  "status": "REUSABLE_DIAGNOSTIC_BASELINE",
+  "scientific_scope": {
+    "solved_equation": "electron particle continuity with diffusion only",
+    "initial_electron_density_m3": 10000000000000000,
+    "fixed_mean_electron_energy_eV": 5.73276,
+    "gas_pressure_Pa": 1.333223684,
+    "gas_temperature_K": 300,
+    "poisson": "DISABLED",
+    "electrostatic_drift": "DISABLED",
+    "electron_energy_equation": "DISABLED",
+    "electron_reactions": "DISABLED",
+    "heavy_species": "ABSENT",
+    "wall_loss": "thermal grounded-sheath collection with potential fixed to 0 V"
+  },
+  "dependencies": {
+    "qvt_mesh": {
+      "source": "experiments/Issue91_real_qvt_r3/r3_e0/qvt.msh",
+      "sha256": "a98521af2c106137f9635fe7e2c5ba9b0fd408e17c62eb7c6d3f7c1fff65a03e",
+      "role": "frozen copy for self-contained diagnostic execution"
+    },
+    "electron_moments": {
+      "source": "experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt",
+      "sha256": "994f6b1deece3c53be7fb3e7f9526555d0f9314fd58749bea6346639f08aa387",
+      "role": "production reduced mobility/diffusion lookup table"
+    }
+  },
+  "reuse_trigger": "Use first when a 2-D ICP electron/Poisson or coupled-plasma case develops an unexplained spatial profile or fails to converge; re-establish this diffusion-only baseline before adding physics back incrementally."
+}
