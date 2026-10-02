@@ -192,6 +192,68 @@ jobs:
           include-hidden-files: true
           retention-days: 30
 
+      - name: Run dt-refined grounded-wall Poisson candidate
+        shell: bash
+        run: |
+          set -euxo pipefail
+          rm -rf .ci-poisson-dt025
+          cp -a "$POISSON_DIR" .ci-poisson-dt025
+
+          python3 - <<'PY'
+          from pathlib import Path
+          from physics_harness.moose import parameters as mp
+
+          path = Path(".ci-poisson-dt025/input.i")
+          text = path.read_text()
+          for name, value in (
+              ("dt", "2.5e-10"),
+              ("dtmin", "2.5e-10"),
+              ("dtmax", "2.5e-10"),
+              ("end_time", "4.0e-9"),
+              ("num_steps", "16"),
+              ("timestep_tolerance", "1.0e-18"),
+          ):
+              text = mp.upsert_parameter(text, "Executioner", name, value)
+          path.write_text(text)
+          PY
+
+          docker run --rm \
+            --entrypoint /bin/bash \
+            --user "$(id -u):$(id -g)" \
+            --workdir /workspace/.ci-poisson-dt025 \
+            -v "$PWD:/workspace" \
+            "$BUILD_BASE_REF" \
+            -lc '
+              set -euxo pipefail
+              source /environment
+              /workspace/physics_app/physics-opt --check-input -i input.i
+              /workspace/physics_app/physics-opt -i input.i > runtime.log 2>&1
+            '
+
+          (
+            cd .ci-poisson-dt025
+            EXPECTED_DT_S="2.5e-10" \
+            EXPECTED_STEPS="16" \
+            EXPECTED_END_TIME_S="4.0e-9" \
+              python3 check.py | tee checker.log
+          )
+
+      - name: Upload dt-refined Poisson candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: poisson-candidate-dt025ns
+          path: |
+            .ci-poisson-dt025/input.i
+            .ci-poisson-dt025/runtime.log
+            .ci-poisson-dt025/checker.log
+            .ci-poisson-dt025/poisson.csv
+            .ci-poisson-dt025/poisson.e
+            .ci-poisson-dt025/poisson_final_profile_*.csv
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 30
+
+
       - name: Upload kinetic 2Te Exodus
         uses: actions/upload-artifact@v4
         with:
