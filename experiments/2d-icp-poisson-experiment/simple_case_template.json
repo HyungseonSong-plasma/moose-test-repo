@@ -13,5 +13,5 @@
   "generated_manifest": "test.json",
   "generated_provenance": "template_origin.json",
   "qualification_inherited": false,
-  "purpose": "Create a derived case from the qualified all-ground one-way Poisson baseline."
+  "purpose": "Create a derived case from the qualified grounded-physical-wall one-way Poisson baseline; the RZ x=0 symmetry axis is excluded from physical BCs."
 }
