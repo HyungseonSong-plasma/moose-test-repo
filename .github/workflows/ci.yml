@@ -666,22 +666,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: \${{ github.event.pull_request.head.sha }}
+          ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
 
       - name: Verify exact bootstrap HEAD
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = "\${{ github.event.pull_request.head.sha }}"
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
           python3 -m py_compile experiments/Issue359_qualified_gummel_icp/run.py
 
       - name: Log in to GHCR
         uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9
         with:
           registry: ghcr.io
-          username: \${{ github.actor }}
-          password: \${{ secrets.GITHUB_TOKEN }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Generate and freeze audited current Issue359 inputs
         shell: bash
@@ -690,7 +690,7 @@ jobs:
           frozen="$PWD/experiments/Issue359_qualified_gummel_icp/frozen_current"
           test ! -e "$frozen"
           rm -rf "$PWD/.issue351-qualified" "$PWD/issue359-freeze-stage"
-          GH_TOKEN="\${{ github.token }}" gh run download 36496470116 \
+          GH_TOKEN="${{ github.token }}" gh run download 36496470116 \
             --repo "$GITHUB_REPOSITORY" \
             --name issue351-frozen-heavy-driver-full \
             --dir "$PWD/.issue351-qualified"
@@ -765,7 +765,7 @@ jobs:
               "issue": 359,
               "status": "FROZEN_CURRENT",
               "meaning": "Canonical construction input bundle; not a runtime restart state.",
-              "generator_commit": "\${{ github.event.pull_request.head.sha }}",
+              "generator_commit": "${{ github.event.pull_request.head.sha }}",
               "bootstrap_source": {
                   "issue": 351,
                   "workflow_run": 36496470116,
@@ -819,7 +819,7 @@ jobs:
           git add experiments/Issue359_qualified_gummel_icp/frozen_current
           git diff --cached --quiet && { echo "freeze produced no files"; exit 1; }
           git commit -m "Freeze current Issue359 canonical inputs"
-          git push origin "HEAD:\${{ github.head_ref }}"
+          git push origin "HEAD:${{ github.head_ref }}"
 
       - name: Upload freeze evidence
         if: always()
