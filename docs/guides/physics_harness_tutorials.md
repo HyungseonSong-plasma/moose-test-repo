@@ -155,3 +155,42 @@ python3 bin/physics.py -i all
 ```
 
 The durable rule is simple: **schema-v2 owns current semantic intent; historical schema-v1 fixtures own provenance only; closure-grade runtime must use an approved governed execution surface.**
+
+## Simple-case restart inventory
+
+When an operator wants to restart from a simpler physical problem, use the
+repository-owned simple-case catalog rather than inventing an Issue-specific
+recipe or reviving the retired protocol registry.
+
+Catalog: `experiments/simple_case_inventory.json`
+
+Harness owner: `physics_harness/specification/simple_cases.py`
+
+A conversational or other operator-facing layer can call
+`simple_case_menu_for_request(text)`. Phrases such as `simple case부터`,
+`최소 케이스부터`, or `처음부터 다시` return a numbered menu.
+
+Current inventory:
+
+```text
+1. electron-diffusion-experiment       STABLE_REUSABLE_BASELINE
+2. electron-drift-diffusion-experiment PLANNED
+3. electron-poisson-experiment         PLANNED
+4. electron-energy-experiment          PLANNED
+5. electron-reaction-experiment        PLANNED
+6. full-icp-coupled-experiment         PLANNED
+```
+
+Only a `STABLE_REUSABLE_BASELINE` entry is runnable. The catalog does not own
+execution: `reproduction_command(...)` delegates to the existing
+`python3 bin/physics.py test <case_dir> --qpx <physics-opt>` surface. Planned
+entries deliberately have no runnable path until their own physics scope is
+qualified.
+
+The catalog itself can be checked without target runtime dependencies:
+
+```bash
+python3 physics_harness/specification/simple_cases.py --check
+```
+
+This is selection metadata only; it is not a second experiment control plane.

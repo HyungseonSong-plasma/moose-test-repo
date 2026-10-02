@@ -680,6 +680,7 @@ jobs:
           set -euxo pipefail
           test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
           python3 -m py_compile "$CASE_DIR/check.py"
+          python3 physics_harness/specification/simple_cases.py --check --ready-only
           python3 - <<'PY'
           import json
           from pathlib import Path

@@ -1,0 +1,185 @@
+{
+  "schema_version": 1,
+  "catalog_id": "simple-physics-case-inventory",
+  "purpose": "Ordered reusable starting points for restarting 2-D ICP debugging from the simplest qualified physics layer.",
+  "conversation_triggers": [
+    "simple case",
+    "simple case부터",
+    "최소 case",
+    "최소 케이스",
+    "단순 case",
+    "단순 케이스",
+    "처음부터 다시",
+    "처음부터 단순하게",
+    "baseline부터"
+  ],
+  "selection_policy": {
+    "presentation": "numbered",
+    "order": "increasing physics coupling",
+    "stable_first": true,
+    "require_explicit_status": true,
+    "execution_rule": "Only STABLE_REUSABLE_BASELINE entries may produce a reproduction command."
+  },
+  "cases": [
+    {
+      "order": 1,
+      "simple_case_id": "electron-diffusion-experiment",
+      "experiment_id": "2d-icp-electron-diffusion-experiment",
+      "status": "STABLE_REUSABLE_BASELINE",
+      "path": "experiments/2d-icp-electron-diffusion-experiment",
+      "test_manifest": "test.json",
+      "provenance": "provenance.json",
+      "description": "Real-QVT 2-D ICP electron particle continuity with diffusion only, fixed mean energy, table-derived diffusivity, and zero-potential thermal wall loss.",
+      "physics_layers": [
+        "electron continuity",
+        "electron diffusion",
+        "thermal wall loss"
+      ],
+      "deliberately_absent": [
+        "electrostatic drift",
+        "Poisson",
+        "electron energy evolution",
+        "electron reactions",
+        "heavy-species evolution"
+      ],
+      "aliases": [
+        "1",
+        "diffusion",
+        "electron diffusion",
+        "electron-diffusion",
+        "2d icp electron diffusion"
+      ]
+    },
+    {
+      "order": 2,
+      "simple_case_id": "electron-drift-diffusion-experiment",
+      "experiment_id": null,
+      "status": "PLANNED",
+      "path": null,
+      "test_manifest": null,
+      "provenance": null,
+      "description": "Electron particle drift-diffusion on the same ICP geometry with prescribed electrostatic potential/field and no Poisson feedback.",
+      "physics_layers": [
+        "electron continuity",
+        "electron diffusion",
+        "prescribed electrostatic drift",
+        "thermal wall loss"
+      ],
+      "deliberately_absent": [
+        "Poisson",
+        "electron energy evolution",
+        "electron reactions",
+        "heavy-species evolution"
+      ],
+      "aliases": [
+        "2",
+        "drift diffusion",
+        "electron drift diffusion",
+        "electron-drift-diffusion"
+      ]
+    },
+    {
+      "order": 3,
+      "simple_case_id": "electron-poisson-experiment",
+      "experiment_id": null,
+      "status": "PLANNED",
+      "path": null,
+      "test_manifest": null,
+      "provenance": null,
+      "description": "Electron transport coupled to Poisson on the ICP geometry with frozen heavy charge.",
+      "physics_layers": [
+        "electron continuity",
+        "electron diffusion",
+        "electron electrostatic drift",
+        "Poisson",
+        "thermal wall loss"
+      ],
+      "deliberately_absent": [
+        "electron energy evolution",
+        "electron reactions",
+        "heavy-species evolution"
+      ],
+      "aliases": [
+        "3",
+        "electron poisson",
+        "poisson",
+        "electron-poisson"
+      ]
+    },
+    {
+      "order": 4,
+      "simple_case_id": "electron-energy-experiment",
+      "experiment_id": null,
+      "status": "PLANNED",
+      "path": null,
+      "test_manifest": null,
+      "provenance": null,
+      "description": "Electron transport plus solved electron energy and energy-dependent table lookup on the ICP geometry.",
+      "physics_layers": [
+        "electron continuity",
+        "electron transport",
+        "Poisson or prescribed field",
+        "electron energy"
+      ],
+      "deliberately_absent": [
+        "full reaction network",
+        "heavy-species evolution"
+      ],
+      "aliases": [
+        "4",
+        "electron energy",
+        "energy",
+        "electron-energy"
+      ]
+    },
+    {
+      "order": 5,
+      "simple_case_id": "electron-reaction-experiment",
+      "experiment_id": null,
+      "status": "PLANNED",
+      "path": null,
+      "test_manifest": null,
+      "provenance": null,
+      "description": "Electron transport/energy with bounded volumetric electron kinetics before heavy-species evolution is enabled.",
+      "physics_layers": [
+        "electron continuity",
+        "electron transport",
+        "electron energy",
+        "electron reactions"
+      ],
+      "deliberately_absent": [
+        "heavy-species evolution"
+      ],
+      "aliases": [
+        "5",
+        "electron reaction",
+        "reactions",
+        "electron-reaction"
+      ]
+    },
+    {
+      "order": 6,
+      "simple_case_id": "full-icp-coupled-experiment",
+      "experiment_id": null,
+      "status": "PLANNED",
+      "path": null,
+      "test_manifest": null,
+      "provenance": null,
+      "description": "Full coupled ICP problem after all simpler layers have been qualified.",
+      "physics_layers": [
+        "electron transport",
+        "Poisson",
+        "electron energy",
+        "reactions",
+        "heavy-species evolution"
+      ],
+      "deliberately_absent": [],
+      "aliases": [
+        "6",
+        "full icp",
+        "full coupled",
+        "full-icp"
+      ]
+    }
+  ]
+}

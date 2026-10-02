@@ -32,4 +32,7 @@ Cross-Issue diagnostic baselines may use stable semantic names instead of Issue 
 
 | Inventory ID | Path | Purpose |
 | --- | --- | --- |
-| `2d-icp-electron-diffusion-experiment` | `experiments/2d-icp-electron-diffusion-experiment/` | Minimal real-QVT ICP electron diffusion + zero-potential thermal wall-loss baseline for isolating 2-D electron-profile failures before reintroducing drift, Poisson, energy, reactions, or heavy coupling. |
+| `electron-diffusion-experiment` | `experiments/2d-icp-electron-diffusion-experiment/` | **STABLE_REUSABLE_BASELINE.** Minimal real-QVT ICP electron diffusion + zero-potential thermal wall-loss baseline. Canonical backing experiment ID: `2d-icp-electron-diffusion-experiment`. |
+
+
+The ordered operator-facing simple-case choices are owned by `experiments/simple_case_inventory.json`; runnable entries delegate to the existing `physics test` execution path.
