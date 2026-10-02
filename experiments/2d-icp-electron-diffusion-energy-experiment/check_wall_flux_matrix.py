@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compare native and controlled electron-energy wall-flux closures."""
+"""Compare 2 Te and 5/2 Te settings of the configurable sheath-energy BC."""
 from __future__ import annotations
 
 import csv
@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 
 INITIAL_TE_EV = (2.0 / 3.0) * 5.73276
-LABELS = ["native_4over3", "functor_4over3", "matched_5over3"]
+LABELS = ["kinetic_4over3", "matched_5over3"]
 
 
 def find_one(root: Path, label: str, pattern: str) -> Path:
@@ -97,9 +97,7 @@ def delta(a: str, b: str):
     }
 
 comparisons = [
-    delta("native_4over3", "functor_4over3"),
-    delta("native_4over3", "matched_5over3"),
-    delta("functor_4over3", "matched_5over3"),
+    delta("kinetic_4over3", "matched_5over3"),
 ]
 
 out = {
