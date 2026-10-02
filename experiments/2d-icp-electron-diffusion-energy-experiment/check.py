@@ -20,6 +20,9 @@ TOTAL_THERMAL_WALL_AREA_M2 = 0.9023470915199818
 EXPECTED_DT_S = float(os.environ.get("EXPECTED_DT_S", "1.0e-9"))
 EXPECTED_STEPS = int(os.environ.get("EXPECTED_STEPS", "4"))
 EXPECTED_END_TIME_S = float(os.environ.get("EXPECTED_END_TIME_S", "4.0e-9"))
+EXPECTED_ENERGY_PER_PARTICLE_TE_FACTOR = float(
+    os.environ.get("EXPECTED_ENERGY_PER_PARTICLE_TE_FACTOR", "2.0")
+)
 
 path = Path("electron_diffusion.csv")
 if not path.is_file():
@@ -195,8 +198,8 @@ if (
 
 expected_initial_energy_wall_rate = (
     expected_initial_particle_wall_rate
-    * (4.0 / 3.0)
-    * INITIAL_MEAN_ENERGY_EV
+    * EXPECTED_ENERGY_PER_PARTICLE_TE_FACTOR
+    * electron_temperature_eV
 )
 if relative_error(energy_wall_rates[0], expected_initial_energy_wall_rate) > 1.0e-10:
     raise SystemExit(
@@ -341,6 +344,7 @@ print(f"PROFILE_DIFFUSION_MAX_M2_S={max(profile_diffusivities):.17g}")
 print(f"MAX_LOCAL_LOOKUP_REL_ERROR={max(lookup_relative_errors):.17g}")
 print(f"INITIAL_PARTICLE_WALL_RATE_MOL_S={particle_wall_rates[0]:.17g}")
 print(f"INITIAL_ENERGY_WALL_RATE_EV_MOL_S={energy_wall_rates[0]:.17g}")
+print(f"ENERGY_PER_PARTICLE_TE_FACTOR={EXPECTED_ENERGY_PER_PARTICLE_TE_FACTOR:.17g}")
 print(
     "MAX_PARTICLE_BALANCE_REL_ERROR="
     f"{max(particle_balance_relative_errors):.17g}"
