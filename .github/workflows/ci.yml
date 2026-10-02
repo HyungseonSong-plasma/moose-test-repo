@@ -704,6 +704,9 @@ jobs:
           assert spec["experiment_id"] == "2d-icp-electron-diffusion-experiment"
           assert spec["parameters"]["initial_electron_density_m3"] == 1.0e16
           assert spec["parameters"]["fixed_mean_electron_energy_eV"] == 5.73276
+          assert spec["parameters"]["electron_dt_s"] == 1.0e-9
+          assert spec["execution_bounds"]["end_time"] == 4.0e-9
+          assert spec["execution_bounds"]["max_steps"] == 4
 
           text = (root / "input.i").read_text()
           required_tokens = (

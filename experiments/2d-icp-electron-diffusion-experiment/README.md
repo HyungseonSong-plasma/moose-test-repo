@@ -117,3 +117,16 @@ When using this as a 2-D ICP troubleshooting inventory item, add physics back on
 ```
 
 A failure should be assigned to the first layer at which the accepted baseline changes unexpectedly.
+
+
+## Execution baseline
+
+The stabilization run uses:
+
+```text
+dt        = 1.0e-9 s
+num_steps = 4
+end_time  = 4.0e-9 s
+```
+
+The input is first required to pass real `physics-opt --check-input`.  One subsequent runtime is then used to evaluate transport lookup, thermal wall loss, electron inventory balance, spatial profile, and Exodus output together.

@@ -13,7 +13,7 @@
     "fixed_mean_electron_energy_eV": 5.73276,
     "gas_pressure_Pa": 1.333223684,
     "gas_temperature_K": 300,
-    "electron_dt_s": 5.6650790022617894e-11,
+    "electron_dt_s": 1e-9,
     "electron_steps": 4
   },
   "constraints": [
@@ -36,8 +36,8 @@
     "Exodus transient field output"
   ],
   "execution_bounds": {
-    "dt": 5.6650790022617894e-11,
-    "end_time": 2.2660316009047157e-10,
+    "dt": 1e-9,
+    "end_time": 4e-9,
     "max_steps": 4
   },
   "cases": [

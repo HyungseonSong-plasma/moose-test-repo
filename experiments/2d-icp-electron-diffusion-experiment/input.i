@@ -285,10 +285,10 @@
   type = Transient
   scheme = implicit-euler
   solve_type = NEWTON
-  dt = 5.6650790022617894e-11
-  dtmin = 5.6650790022617894e-11
-  dtmax = 5.6650790022617894e-11
-  end_time = 2.2660316009047157e-10
+  dt = 1.0e-9
+  dtmin = 1.0e-9
+  dtmax = 1.0e-9
+  end_time = 4.0e-9
   num_steps = 4
   timestep_tolerance = 1.0e-18
   nl_rel_tol = 1.0e-9
