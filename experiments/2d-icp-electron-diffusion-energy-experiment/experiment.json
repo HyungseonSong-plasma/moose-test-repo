@@ -1,12 +1,13 @@
 {
   "schema_version": 2,
   "experiment_id": "2d-icp-electron-diffusion-energy-experiment",
-  "description": "Reusable minimal real-QVT 2-D ICP electron particle + electron-energy diffusion diagnostic with solved mean energy and energy-dependent transport lookup.",
+  "description": "Reusable minimal real-QVT 2-D ICP electron particle + electron-energy diffusion diagnostic with solved mean energy, energy-dependent transport lookup, and a configurable electron-energy wall-loss coefficient.",
   "objective": "Establish the next reusable layer after fixed-energy diffusion: solve conservative electron energy and use the resulting mean_en to look up electron transport.",
   "target_claims": [
     "electron particle and electron-energy diffusion run together on the real ICP RZ plasma geometry without electrostatic coupling",
     "solved mean electron energy drives local electron diffusivity through the production electron_moments.txt lookup",
-    "particle and electron-energy wall losses use the same zero-potential grounded thermal/sheath branch"
+    "the electron-energy wall BC accepts a functor coefficient alpha in Gamma_epsilon = Gamma_e*(alpha*T_e + Delta phi)",
+    "the diffusion-only baseline explicitly uses alpha=5/2 so its normalized wall-loss ratio matches D_epsilon/D_e=5/3"
   ],
   "parameters": {
     "initial_electron_density_m3": 10000000000000000,
@@ -14,7 +15,9 @@
     "gas_pressure_Pa": 1.333223684,
     "gas_temperature_K": 300,
     "electron_dt_s": 1e-9,
-    "electron_steps": 4
+    "electron_steps": 4,
+    "energy_per_particle_te_factor": 2.5,
+    "energy_transport_factor": 1.6666666666666667
   },
   "constraints": [
     "real-QVT ICP RZ plasma geometry",
@@ -27,7 +30,8 @@
     "electron reactions disabled",
     "Joule heating and volumetric electron-energy sources disabled",
     "heavy-species equations absent",
-    "all named plasma boundaries use matched grounded thermal particle/energy collection with sheath potential fixed to 0 V"
+    "all named plasma boundaries use zero-potential electron collection; the energy BC receives energy_wall_te_factor=2.5 as a functor",
+    "PhysicsFVElectronGroundedSheathEnergyBC retains alpha=2.0 as its default kinetic half-Maxwellian closure when the factor functor is not overridden"
   ],
   "observations": [
     "electron density profile",
