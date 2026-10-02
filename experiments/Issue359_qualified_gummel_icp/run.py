@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import json
 import math
 import os
@@ -26,6 +27,7 @@ ROOT = Path(__file__).resolve().parents[2]
 ICP_SOURCE = ROOT / "experiments/Issue91_real_qvt_r3/r3_e0"
 HEAVY_SOURCE = ICP_SOURCE / "heavy_base.i"
 CANONICAL_HEAVY = ROOT / "physics_app/ci/plasma_closures_oxygen_transport.txt"
+FROZEN_CURRENT = Path(__file__).resolve().parent / "frozen_current"
 
 FLOW_SCCM = 20.0
 PRESSURE_PA = 1.333223684
@@ -1542,6 +1544,137 @@ def _construction_audit(
     }
 
 
+
+def _sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _frozen_current_case() -> Path | None:
+    provenance_path = FROZEN_CURRENT / "provenance.json"
+    if not provenance_path.is_file():
+        return None
+    provenance = json.loads(provenance_path.read_text(encoding="utf-8"))
+    if provenance.get("status") != "FROZEN_CURRENT":
+        raise Issue359Error("frozen current provenance status is not FROZEN_CURRENT")
+    if provenance.get("input_audit_status") != "PASS":
+        raise Issue359Error("frozen current provenance does not record input audit PASS")
+
+    for name, expected in dict(provenance.get("files", {})).items():
+        path = FROZEN_CURRENT / name
+        if not path.is_file():
+            raise Issue359Error(f"frozen current file missing: {name}")
+        if _sha256(path) != expected:
+            raise Issue359Error(f"frozen current file SHA mismatch: {name}")
+
+    for label, spec in dict(provenance.get("repo_dependencies", {})).items():
+        path = ROOT / str(spec["path"])
+        if not path.is_file():
+            raise Issue359Error(f"frozen dependency missing: {label}: {path}")
+        if _sha256(path) != spec["sha256"]:
+            raise Issue359Error(f"frozen dependency SHA mismatch: {label}")
+
+    return FROZEN_CURRENT
+
+
+def _retune_frozen_inputs(
+    frozen: Path,
+    *,
+    relaxation_factor: float,
+    fixed_point_algorithm: str,
+    fixed_point_rel_tol: float,
+    potential_predictor_alpha: float,
+    reuse_preconditioner: bool,
+    reuse_preconditioner_max_linear_its: int,
+    response_strength: float,
+    response_radius: int,
+    response_mode: str,
+    electron_substeps: int,
+    heavy_steps: int,
+    write_exodus: bool,
+) -> tuple[str, str, str, str]:
+    outer = (frozen / "input.i").read_text(encoding="utf-8")
+    driver = (frozen / "gummel_driver.i").read_text(encoding="utf-8")
+    electron = (frozen / "electron_sub.i").read_text(encoding="utf-8")
+    poisson = (frozen / "poisson_sub.i").read_text(encoding="utf-8")
+
+    heavy_dt = _heavy_dt_s(electron_substeps)
+    outer = mp.upsert_parameter(outer, "Executioner", "dt", f"{heavy_dt:.17g}")
+    outer = mp.upsert_parameter(
+        outer, "Executioner", "end_time", f"{heavy_dt * heavy_steps:.17g}"
+    )
+    outer = mp.upsert_parameter(outer, "Executioner", "num_steps", str(heavy_steps))
+    outer = mp.upsert_parameter(
+        outer, "Outputs", "exodus", "true" if write_exodus else "false"
+    )
+
+    action = "GummelIteration/electron_poisson"
+    driver = mp.upsert_parameter(
+        driver, action, "relaxation_factor", f"{relaxation_factor:.17g}"
+    )
+    driver = mp.upsert_parameter(
+        driver, "Executioner", "fixed_point_algorithm", fixed_point_algorithm
+    )
+    driver = mp.upsert_parameter(
+        driver, "Executioner", "fixed_point_rel_tol", f"{fixed_point_rel_tol:.17g}"
+    )
+    predictor = "AuxKernels/potential_linear_predictor"
+    if potential_predictor_alpha == 0.0:
+        if mb.has_block(driver, predictor):
+            driver = mb.remove_block(driver, predictor)
+    elif mb.has_block(driver, predictor):
+        driver = mp.upsert_parameter(
+            driver, predictor, "alpha", f"{potential_predictor_alpha:.17g}"
+        )
+    else:
+        block = f"""  [potential_linear_predictor]
+    type = PhysicsTemporalPotentialPredictor
+    variable = potential_from_poisson
+    alpha = {potential_predictor_alpha:.17g}
+    start_step = 3
+    execute_on = 'TIMESTEP_BEGIN'
+  []"""
+        if mb.has_block(driver, "AuxKernels"):
+            driver = mb.insert_child_block(driver, "AuxKernels", block)
+        else:
+            driver += "\n[AuxKernels]\n" + block + "\n[]\n"
+    driver = _configure_fast_executioner(driver, electron_substeps, heavy_steps)
+
+    electron = _configure_fast_executioner(electron, electron_substeps, heavy_steps)
+    electron = _configure_child_linear_solver(
+        electron,
+        reuse_preconditioner=reuse_preconditioner,
+        reuse_preconditioner_max_linear_its=reuse_preconditioner_max_linear_its,
+    )
+
+    if response_mode not in ("graph", "directional"):
+        raise Issue359Error("response mode must be 'graph' or 'directional'")
+    shell_weights = _response_shell_weights(response_radius)
+    response = "FVKernels/electron_response_topology_correction"
+    poisson = mp.upsert_parameter(
+        poisson, response, "strength", f"{response_strength:.17g}"
+    )
+    poisson = mp.upsert_parameter(poisson, response, "graph_radius", str(response_radius))
+    poisson = mp.upsert_parameter(
+        poisson,
+        response,
+        "shell_weights",
+        "'" + " ".join(f"{weight:.17g}" for weight in shell_weights) + "'",
+    )
+    poisson = mp.upsert_parameter(
+        poisson,
+        response,
+        "directional_band",
+        "true" if response_mode == "directional" else "false",
+    )
+    poisson = _configure_fast_executioner(poisson, electron_substeps, heavy_steps)
+    poisson = _configure_child_linear_solver(
+        poisson,
+        reuse_preconditioner=reuse_preconditioner,
+        reuse_preconditioner_max_linear_its=reuse_preconditioner_max_linear_its,
+    )
+    return outer, driver, electron, poisson
+
+
 def _stage(
     root: Path,
     *,
@@ -1562,39 +1695,61 @@ def _stage(
         shutil.rmtree(root)
     root.mkdir(parents=True)
 
-    qualified = _qualified_reference_case()
-    outer = _outer_input(
-        HEAVY_SOURCE.read_text(),
-        electron_substeps=electron_substeps,
-        heavy_steps=heavy_steps,
-        write_exodus=write_exodus,
-    )
-    driver = _driver_input(
-        (qualified / "fast_sub.i").read_text(),
-        relaxation_factor=relaxation_factor,
-        fixed_point_algorithm=fixed_point_algorithm,
-        fixed_point_rel_tol=fixed_point_rel_tol,
-        potential_predictor_alpha=potential_predictor_alpha,
-        electron_substeps=electron_substeps,
-        heavy_steps=heavy_steps,
-    )
-    electron = _electron_input(
-        (qualified / "electron_sub.i").read_text(),
-        reuse_preconditioner=reuse_preconditioner,
-        reuse_preconditioner_max_linear_its=reuse_preconditioner_max_linear_its,
-        electron_substeps=electron_substeps,
-        heavy_steps=heavy_steps,
-    )
-    poisson = _poisson_input(
-        (qualified / "poisson_sub.i").read_text(),
-        reuse_preconditioner=reuse_preconditioner,
-        reuse_preconditioner_max_linear_its=reuse_preconditioner_max_linear_its,
-        response_strength=response_strength,
-        response_radius=response_radius,
-        response_mode=response_mode,
-        electron_substeps=electron_substeps,
-        heavy_steps=heavy_steps,
-    )
+    frozen = _frozen_current_case()
+    if frozen is None:
+        qualified = _qualified_reference_case()
+        outer = _outer_input(
+            HEAVY_SOURCE.read_text(),
+            electron_substeps=electron_substeps,
+            heavy_steps=heavy_steps,
+            write_exodus=write_exodus,
+        )
+        driver = _driver_input(
+            (qualified / "fast_sub.i").read_text(),
+            relaxation_factor=relaxation_factor,
+            fixed_point_algorithm=fixed_point_algorithm,
+            fixed_point_rel_tol=fixed_point_rel_tol,
+            potential_predictor_alpha=potential_predictor_alpha,
+            electron_substeps=electron_substeps,
+            heavy_steps=heavy_steps,
+        )
+        electron = _electron_input(
+            (qualified / "electron_sub.i").read_text(),
+            reuse_preconditioner=reuse_preconditioner,
+            reuse_preconditioner_max_linear_its=reuse_preconditioner_max_linear_its,
+            electron_substeps=electron_substeps,
+            heavy_steps=heavy_steps,
+        )
+        poisson = _poisson_input(
+            (qualified / "poisson_sub.i").read_text(),
+            reuse_preconditioner=reuse_preconditioner,
+            reuse_preconditioner_max_linear_its=reuse_preconditioner_max_linear_its,
+            response_strength=response_strength,
+            response_radius=response_radius,
+            response_mode=response_mode,
+            electron_substeps=electron_substeps,
+            heavy_steps=heavy_steps,
+        )
+        o2_elastic_source = qualified / "o2_elastic.txt"
+        construction_source = "#351 bootstrap -> current generator"
+    else:
+        outer, driver, electron, poisson = _retune_frozen_inputs(
+            frozen,
+            relaxation_factor=relaxation_factor,
+            fixed_point_algorithm=fixed_point_algorithm,
+            fixed_point_rel_tol=fixed_point_rel_tol,
+            potential_predictor_alpha=potential_predictor_alpha,
+            reuse_preconditioner=reuse_preconditioner,
+            reuse_preconditioner_max_linear_its=reuse_preconditioner_max_linear_its,
+            response_strength=response_strength,
+            response_radius=response_radius,
+            response_mode=response_mode,
+            electron_substeps=electron_substeps,
+            heavy_steps=heavy_steps,
+            write_exodus=write_exodus,
+        )
+        o2_elastic_source = frozen / "o2_elastic.txt"
+        construction_source = "repository frozen_current canonical bundle"
 
     audit = _construction_audit(
         outer,
@@ -1628,7 +1783,7 @@ def _stage(
     shutil.copy2(ICP_SOURCE / "qvt.msh", root / "qvt.msh")
     shutil.copy2(CANONICAL_HEAVY, root / "transport_data.txt")
     shutil.copy2(ICP_SOURCE / "electron_moments.txt", root / "electron_moments.txt")
-    shutil.copy2(qualified / "o2_elastic.txt", root / "o2_elastic.txt")
+    shutil.copy2(o2_elastic_source, root / "o2_elastic.txt")
 
     if (root / "transport_data.txt").read_bytes() != CANONICAL_HEAVY.read_bytes():
         raise Issue359Error("canonical heavy transport staging mismatch")
@@ -1638,7 +1793,8 @@ def _stage(
     meta = {
         "issue": 359,
         "qualified_parent_sha": "05fd063f98406892553e9f4929245097084c9289",
-        "qualified_source": "#351 frozen-heavy dedicated-driver full qualification",
+        "qualified_source": construction_source,
+        "frozen_current_active": frozen is not None,
         "geometry": "real-QVT ICP RZ plasma block",
         "heavy_continuity_source": "experiments/Issue91_real_qvt_r3/r3_e0/heavy_base.i",
         "volumetric_chemistry": "DISABLED in current continuity-audit stage",
