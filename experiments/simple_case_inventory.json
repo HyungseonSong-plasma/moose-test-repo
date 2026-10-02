@@ -16,20 +16,19 @@
       "path": "experiments/2d-icp-electron-diffusion-experiment",
       "test_manifest": "test.json",
       "provenance": "provenance.json",
-      "description": "Real-QVT 2-D ICP electron particle + electron-energy diffusion with solved mean energy, energy-dependent table lookup, and matched zero-potential thermal wall losses.",
+      "description": "Real-QVT 2-D ICP electron particle continuity with diffusion only, fixed mean energy, table-derived diffusivity, and zero-potential thermal wall loss.",
       "physics_layers": [
         "electron continuity",
         "electron diffusion",
-        "electron energy diffusion",
-        "energy-dependent electron transport lookup",
-        "thermal particle and energy wall loss"
+        "fixed mean-energy transport lookup",
+        "thermal particle wall loss"
       ],
       "deliberately_absent": [
         "electrostatic drift",
         "Poisson",
+        "electron energy evolution",
         "electron reactions",
         "Joule heating",
-        "volumetric electron-energy sources",
         "heavy-species evolution"
       ],
       "aliases": [
@@ -47,6 +46,43 @@
     },
     {
       "order": 2,
+      "simple_case_id": "electron-diffusion-energy-experiment",
+      "experiment_id": "2d-icp-electron-diffusion-energy-experiment",
+      "status": "STABLE_REUSABLE_BASELINE",
+      "path": "experiments/2d-icp-electron-diffusion-energy-experiment",
+      "test_manifest": "test.json",
+      "provenance": "provenance.json",
+      "description": "Real-QVT 2-D ICP electron particle + electron-energy diffusion with solved mean energy, energy-dependent table lookup, and matched zero-potential thermal particle/energy wall losses.",
+      "physics_layers": [
+        "electron continuity",
+        "electron diffusion",
+        "electron energy diffusion",
+        "energy-dependent electron transport lookup",
+        "thermal particle and energy wall loss"
+      ],
+      "deliberately_absent": [
+        "electrostatic drift",
+        "Poisson",
+        "electron reactions",
+        "Joule heating",
+        "volumetric electron-energy sources",
+        "heavy-species evolution"
+      ],
+      "aliases": [
+        "2",
+        "diffusion energy",
+        "electron diffusion energy",
+        "electron-diffusion-energy",
+        "2d icp electron diffusion energy"
+      ],
+      "template": {
+        "manifest": "simple_case_template.json",
+        "input_template": "input.template.i",
+        "generated_input": "input.i"
+      }
+    },
+    {
+      "order": 3,
       "simple_case_id": "electron-drift-diffusion-experiment",
       "experiment_id": null,
       "status": "PLANNED",
@@ -74,7 +110,7 @@
       ]
     },
     {
-      "order": 3,
+      "order": 4,
       "simple_case_id": "electron-poisson-experiment",
       "experiment_id": null,
       "status": "PLANNED",
@@ -102,7 +138,7 @@
       ]
     },
     {
-      "order": 4,
+      "order": 5,
       "simple_case_id": "electron-energy-experiment",
       "experiment_id": null,
       "status": "PLANNED",
@@ -128,7 +164,7 @@
       ]
     },
     {
-      "order": 5,
+      "order": 6,
       "simple_case_id": "electron-reaction-experiment",
       "experiment_id": null,
       "status": "PLANNED",
@@ -153,7 +189,7 @@
       ]
     },
     {
-      "order": 6,
+      "order": 7,
       "simple_case_id": "full-icp-coupled-experiment",
       "experiment_id": null,
       "status": "PLANNED",
