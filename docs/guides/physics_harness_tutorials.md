@@ -182,9 +182,9 @@ python3 bin/physics.py simple-case create <selector> <destination>
 python3 bin/physics.py simple-case create <selector> <destination> --input <new-input.i>
 ```
 
-The numeric selector is only a convenience alias; for example `1` resolves to
-`electron-diffusion-experiment`. The durable identity is the semantic
-`simple_case_id`.
+Simple-case selection is name-based. The durable identity is the semantic
+`simple_case_id`; optional aliases must also be semantic names. Numeric selectors are
+not supported, so catalog growth never changes the meaning of an existing selector.
 
 A stable source template may scaffold a new experiment directory. The operation
 copies the qualified input template and declared immutable assets first. When
@@ -196,16 +196,14 @@ Template qualification is never inherited. A generated case is runnable through
 the existing `physics test` command, but its new input must pass its own
 construction/runtime/scientific validation before promotion.
 
-Current catalog order is increasing physics coupling:
+Current reusable catalog:
 
 ```text
-1. electron-diffusion-experiment       STABLE_REUSABLE_BASELINE
-2. electron-drift-diffusion-experiment PLANNED
-3. electron-poisson-experiment         PLANNED
-4. electron-energy-experiment          PLANNED
-5. electron-reaction-experiment        PLANNED
-6. full-icp-coupled-experiment         PLANNED
+electron-diffusion-experiment         STABLE_REUSABLE_BASELINE
+electron-diffusion-energy-experiment  STABLE_REUSABLE_BASELINE
 ```
 
-Only entries carrying `STABLE_REUSABLE_BASELINE` and a template manifest are
-valid template sources.
+Planned/future cases are intentionally absent from the inventory. A case is added only
+after it becomes a qualified reusable baseline.
+
+Every inventory entry must carry `STABLE_REUSABLE_BASELINE` and a template manifest.
