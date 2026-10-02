@@ -655,8 +655,103 @@ jobs:
 
 
 
-  issue359-rz-response-jacobian:
+  two-d-icp-electron-diffusion:
     if: github.event_name == 'pull_request' && github.head_ref == 'issue-359-qualified-gummel-icp'
+    name: 2D ICP electron diffusion baseline
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      packages: read
+      actions: read
+    env:
+      BASELINE_RUNTIME_REF: ghcr.io/hyungseonsong-plasma/physics-jit-runtime@sha256:2460cf70922490b26412345a09a67364e8b32fbd5310cd25efa5415b12486cf3
+      BASELINE_PHYSICS_MANIFEST_SHA256: a9654d344e9c60e48992165bc855b154707ecf2e659e4428117e8f6ae8fdba3b
+      CASE_DIR: experiments/2d-icp-electron-diffusion-experiment
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+
+      - name: Verify reusable baseline inventory
+        shell: bash
+        run: |
+          set -euxo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          python3 -m py_compile "$CASE_DIR/check.py"
+          python3 bin/physics.py inventory "$CASE_DIR" --strict
+          python3 bin/physics.py preflight "$CASE_DIR/input.i"
+
+          test "$(sha256sum "$CASE_DIR/qvt.msh" | awk '{print $1}')" = "a98521af2c106137f9635fe7e2c5ba9b0fd408e17c62eb7c6d3f7c1fff65a03e"
+          test "$(sha256sum "$CASE_DIR/electron_moments.txt" | awk '{print $1}')" = "994f6b1deece3c53be7fb3e7f9526555d0f9314fd58749bea6346639f08aa387"
+
+          git ls-files -z physics_app \
+            | sort -z \
+            | xargs -0 sha256sum > /tmp/physics-source-file-hashes.txt
+          manifest="$(sha256sum /tmp/physics-source-file-hashes.txt | awk '{print $1}')"
+          test "$manifest" = "$BASELINE_PHYSICS_MANIFEST_SHA256"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull and verify qualified Physics runtime
+        shell: bash
+        run: |
+          set -euxo pipefail
+          docker pull "$BASELINE_RUNTIME_REF"
+          test "$(docker image inspect "$BASELINE_RUNTIME_REF" --format '{{ index .Config.Labels "io.physics.source.manifest-sha256" }}')" = "$BASELINE_PHYSICS_MANIFEST_SHA256"
+
+      - name: Check input
+        shell: bash
+        run: |
+          set -euxo pipefail
+          docker run --rm \
+            --user "$(id -u):$(id -g)" \
+            --workdir "/workspace/$CASE_DIR" \
+            -v "$PWD:/workspace" \
+            "$BASELINE_RUNTIME_REF" \
+            --check-input -i input.i
+
+      - name: Run diffusion-only baseline
+        shell: bash
+        run: |
+          set -euxo pipefail
+          rm -f "$CASE_DIR"/electron_diffusion.csv \
+                "$CASE_DIR"/electron_diffusion.e \
+                "$CASE_DIR"/electron_diffusion_*.csv \
+                "$CASE_DIR"/runtime.log
+          docker run --rm \
+            --user "$(id -u):$(id -g)" \
+            --workdir "/workspace/$CASE_DIR" \
+            -v "$PWD:/workspace" \
+            "$BASELINE_RUNTIME_REF" \
+            -i input.i > "$CASE_DIR/runtime.log" 2>&1
+          (
+            cd "$CASE_DIR"
+            python3 check.py
+          )
+
+      - name: Upload diffusion baseline evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: 2d-icp-electron-diffusion-experiment
+          path: |
+            experiments/2d-icp-electron-diffusion-experiment/runtime.log
+            experiments/2d-icp-electron-diffusion-experiment/electron_diffusion.csv
+            experiments/2d-icp-electron-diffusion-experiment/electron_diffusion.e
+            experiments/2d-icp-electron-diffusion-experiment/electron_diffusion_*.csv
+          if-no-files-found: warn
+          retention-days: 30
+
+
+  issue359-rz-response-jacobian:
+    if: false # superseded by the diffusion-only reset baseline; retain as historical diagnostic
     name: Issue359 RZ response Jacobian
     runs-on: ubuntu-24.04
     timeout-minutes: 15
