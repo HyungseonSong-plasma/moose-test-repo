@@ -201,7 +201,7 @@ jobs:
 
           python3 - <<'PY'
           from pathlib import Path
-          from physics_harness.moose import parameters as mp
+          from physics_harness.adapters.moose import parameters as mp
 
           path = Path(".ci-poisson-dt025/input.i")
           text = path.read_text()
