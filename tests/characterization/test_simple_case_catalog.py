@@ -41,7 +41,7 @@ def test_simple_case_catalog_is_code_addressable_and_valid() -> None:
     assert third.simple_case_id == "poisson"
     assert third.status == STABLE_STATUS
     assert third.template_source is True
-    assert resolve_simple_case("all-ground-poisson") == third
+    assert resolve_simple_case("grounded-wall-poisson") == third
 
 
 def test_materialize_template_is_qualified_input(tmp_path: Path) -> None:
@@ -96,15 +96,17 @@ def test_create_scaffolds_solved_energy_case(tmp_path: Path) -> None:
     assert origin["qualification_inherited"] is False
 
 
-def test_poisson_template_materializes_all_ground_one_way_case(tmp_path: Path) -> None:
+def test_poisson_template_excludes_rz_axis_from_physical_bcs(tmp_path: Path) -> None:
     output = tmp_path / "poisson-input.i"
     materialize_input_template("poisson", output)
     qualified = ROOT / "experiments/2d-icp-poisson-experiment/input.i"
     assert output.read_bytes() == qualified.read_bytes()
     text = output.read_text()
     assert "[phi]" in text
-    assert "[phi_ground_all]" in text
-    assert "boundary = plasma_all_ground" in text
+    assert "[phi_grounded_walls]" in text
+    assert "boundary = 'inlet outlet plasma_electrode plasma_metal plasma_right plasma_cover plasma_wafer plasma_focus_ring'" in text
+    assert "SideSetsAroundSubdomainGenerator" not in text
+    assert "plasma_all_ground" not in text
     assert "v = poisson_source_V_m2" in text
     assert "PhysicsFVLogMolarElectrostaticDrift" not in text
 
