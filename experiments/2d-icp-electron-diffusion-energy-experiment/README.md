@@ -19,11 +19,28 @@ d(c_e)/dt       - div(D_e(mean_en) grad(c_e))             = 0
 d(c_epsilon)/dt - div(D_epsilon(mean_en) grad(c_epsilon)) = 0
 ```
 
-Both particle and energy wall losses use the same zero-potential grounded
-thermal/sheath branch. Electrostatic drift, Poisson, reactions, Joule heating,
-volumetric energy sources, and heavy-species evolution remain disabled.
+The particle wall loss uses the zero-potential thermal collection law. The
+electron-energy wall loss is deliberately transport-matched to the bulk
+closure:
 
-The bounded qualification at Repository CI #540 established:
+```text
+D_epsilon / D_e = 5/3
+Gamma_epsilon = Gamma_e * (5/2) T_e
+(Gamma_epsilon/c_epsilon) / (Gamma_e/c_e) = 5/3
+```
+
+This choice is specific to this zero-potential diffusion-only baseline. The
+general kinetic grounded-sheath owner
+`PhysicsFVElectronGroundedSheathEnergyBC` retains the half-Maxwellian
+`Gamma_epsilon = Gamma_e (2 T_e + Delta phi)` law.
+
+Electrostatic drift, Poisson, reactions, Joule heating, volumetric energy
+sources, and heavy-species evolution remain disabled.
+
+The earlier bounded qualification at Repository CI #540 established the
+solved-energy transport chain. A later controlled wall-flux matrix showed that
+matching the normalized wall loss to the same 5/3 bulk transport closure removes
+the wall-tip temperature bump while preserving particle and energy balance.
 
 ```text
 physics-opt --check-input        PASS
