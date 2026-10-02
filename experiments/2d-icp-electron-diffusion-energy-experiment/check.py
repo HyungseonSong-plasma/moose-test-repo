@@ -234,19 +234,35 @@ if not profile:
     raise SystemExit("final element profile is empty")
 
 lookup_relative_errors = []
+temperature_relation_errors = []
 profile_energies = []
+profile_temperatures = []
 profile_diffusivities = []
 for row in profile:
     mean_energy = float(row["mean_energy_out"])
+    electron_temperature_eV = float(row["electron_temperature_eV"])
     diffusion = float(row["diffusion_out"])
     if not math.isfinite(mean_energy) or mean_energy <= 0.0:
         raise SystemExit(f"invalid profile mean energy: {mean_energy}")
+    if not math.isfinite(electron_temperature_eV) or electron_temperature_eV <= 0.0:
+        raise SystemExit(f"invalid profile electron temperature: {electron_temperature_eV}")
     if not math.isfinite(diffusion) or diffusion <= 0.0:
         raise SystemExit(f"invalid profile diffusivity: {diffusion}")
+    expected_temperature_eV = (2.0 / 3.0) * mean_energy
+    temperature_relation_errors.append(
+        relative_error(electron_temperature_eV, expected_temperature_eV)
+    )
     expected = interp_reduced_diffusion(mean_energy) / neutral_density
     lookup_relative_errors.append(relative_error(diffusion, expected))
     profile_energies.append(mean_energy)
+    profile_temperatures.append(electron_temperature_eV)
     profile_diffusivities.append(diffusion)
+
+if max(temperature_relation_errors) > 1.0e-12:
+    raise SystemExit(
+        "mean-energy -> electron-temperature conversion mismatch: "
+        f"max_relative_error={max(temperature_relation_errors)}"
+    )
 
 if max(lookup_relative_errors) > 1.0e-9:
     raise SystemExit(
@@ -272,7 +288,7 @@ def profile_values(predicate):
         r = float(row["x"])
         z = float(row["y"])
         if predicate(r, z):
-            values.append(float(row["electron_density_out"]))
+            values.append(float(row["electron_density"]))
     if not values:
         raise SystemExit("profile-region selection produced no elements")
     return values
@@ -303,6 +319,9 @@ print(f"FINAL_NE_MAX_M3={maxs[-1]:.17g}")
 print(f"FINAL_MEAN_ENERGY_AVG_EV={energies[-1]:.17g}")
 print(f"FINAL_MEAN_ENERGY_MIN_EV={energy_mins[-1]:.17g}")
 print(f"FINAL_MEAN_ENERGY_MAX_EV={energy_maxs[-1]:.17g}")
+print(f"PROFILE_TE_MIN_EV={min(profile_temperatures):.17g}")
+print(f"PROFILE_TE_MAX_EV={max(profile_temperatures):.17g}")
+print(f"MAX_MEAN_ENERGY_TO_TE_REL_ERROR={max(temperature_relation_errors):.17g}")
 print(f"INITIAL_DIFFUSION_M2_S={diffusivities[0]:.17g}")
 print(f"FINAL_DIFFUSION_AVG_M2_S={diffusivities[-1]:.17g}")
 print(f"PROFILE_DIFFUSION_MIN_M2_S={min(profile_diffusivities):.17g}")
