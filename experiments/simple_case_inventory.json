@@ -84,7 +84,7 @@
       "path": "experiments/2d-icp-poisson-experiment",
       "test_manifest": "test.json",
       "provenance": "provenance.json",
-      "description": "Real-QVT 2-D ICP electron particle + electron-energy diffusion with one-way Poisson, frozen positive background charge, and all-ground electrostatic boundary conditions.",
+      "description": "Real-QVT 2-D ICP electron particle + electron-energy diffusion with one-way Poisson, frozen positive background charge, grounded physical plasma surfaces, and the RZ x=0 symmetry axis excluded from BCs.",
       "physics_layers": [
         "electron continuity",
         "electron diffusion",
@@ -93,7 +93,7 @@
         "thermal particle and energy wall loss",
         "one-way Poisson",
         "frozen positive charge background",
-        "all-ground potential boundary"
+        "grounded physical-wall potential boundary with symmetry axis excluded"
       ],
       "deliberately_absent": [
         "electrostatic drift",
@@ -105,7 +105,7 @@
         "heavy-species evolution"
       ],
       "aliases": [
-        "all-ground-poisson",
+        "grounded-wall-poisson",
         "electron poisson",
         "electron energy poisson"
       ],
