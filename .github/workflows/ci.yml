@@ -657,86 +657,15 @@ jobs:
 
   issue359-rz-response-jacobian:
     if: github.event_name == 'pull_request' && github.head_ref == 'issue-359-qualified-gummel-icp'
-    name: Issue359 RZ response Jacobian
-    runs-on: ubuntu-24.04
-    timeout-minutes: 5
+    name: Issue359 Build exact RZ runtime
     permissions:
       contents: read
-      packages: read
+      packages: write
       actions: read
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-
-      - name: Verify exact frozen-input HEAD
-        shell: bash
-        run: |
-          set -euo pipefail
-          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
-          test -f experiments/Issue359_qualified_gummel_icp/frozen_current/provenance.json
-          python3 -m py_compile \
-            experiments/Issue359_qualified_gummel_icp/run.py \
-            experiments/Issue359_rz_response_jacobian/control.py
-          python3 -m experiments.Issue359_rz_response_jacobian.control \
-            --plan-only \
-            --max-radius 2
-
-      - name: Log in to GHCR
-        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Run fresh-source R1/R2 response discriminator
-        shell: bash
-        run: |
-          set -euxo pipefail
-          rm -rf "$PWD/issue359-rz-jacobian"
-
-          docker pull "$EXPECTED_BUILD_BASE_REF"
-          docker run --rm \
-            --entrypoint /bin/bash \
-            --user 0:0 \
-            --workdir /workspace \
-            -v "$PWD:/workspace" \
-            "$EXPECTED_BUILD_BASE_REF" \
-            -lc '
-              set -euxo pipefail
-              source /environment
-              git config --global --add safe.directory /workspace
-              git config --global --add safe.directory /opt/physics_vendor/moose
-              git config --global --add safe.directory /opt/physics_vendor/crane
-              git config --global --add safe.directory /opt/physics_vendor/squirrel
-              git config --global --add safe.directory /opt/physics_vendor/zapdos
-              export MOOSE_DIR=/opt/physics_vendor/moose
-              export CRANE_DIR=/opt/physics_vendor/crane
-              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
-              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
-              export METHOD=opt
-              unset ISSUE351_QUALIFIED_CASE
-              make -C /workspace/physics_app -j4
-              cd /workspace
-              python3 -m experiments.Issue359_rz_response_jacobian.control \
-                --physics physics_app/physics-opt \
-                --results-root issue359-rz-jacobian \
-                --source-timeout 120 \
-                --case-timeout 20 \
-                --workers 2 \
-                --max-radius 2 \
-                --delta-phi 1.0e-4
-              chmod -R a+rwX /workspace/issue359-rz-jacobian
-            '
-
-      - name: Upload RZ response evidence
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: issue359-rz-response-jacobian
-          path: issue359-rz-jacobian
-          if-no-files-found: warn
-          retention-days: 30
+    uses: ./.github/workflows/physics-runtime-producer.yml
+    with:
+      build_base_ref: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+    secrets: inherit
 
 
   issue359-heavy4-exodus-replay:
