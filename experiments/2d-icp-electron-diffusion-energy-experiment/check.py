@@ -21,7 +21,7 @@ EXPECTED_DT_S = float(os.environ.get("EXPECTED_DT_S", "1.0e-9"))
 EXPECTED_STEPS = int(os.environ.get("EXPECTED_STEPS", "4"))
 EXPECTED_END_TIME_S = float(os.environ.get("EXPECTED_END_TIME_S", "4.0e-9"))
 EXPECTED_ENERGY_PER_PARTICLE_TE_FACTOR = float(
-    os.environ.get("EXPECTED_ENERGY_PER_PARTICLE_TE_FACTOR", "2.0")
+    os.environ.get("EXPECTED_ENERGY_PER_PARTICLE_TE_FACTOR", "2.5")
 )
 
 path = Path("electron_diffusion.csv")
