@@ -1,0 +1,222 @@
+name: Poisson Spatial Source Probe
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, edited]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: poisson-spatial-source-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  spatial-source:
+    if: github.event_name == 'pull_request' && github.head_ref == 'issue-359-qualified-gummel-icp'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: read
+    env:
+      POISSON_DIR: experiments/2d-icp-poisson-experiment
+      BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+
+      - name: Log in to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build exact-head Physics runtime
+        shell: bash
+        run: |
+          set -euxo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          docker pull "$BUILD_BASE_REF"
+          docker run --rm \
+            --entrypoint /bin/bash \
+            --user 0:0 \
+            --workdir /workspace \
+            -v "$PWD:/workspace" \
+            "$BUILD_BASE_REF" \
+            -lc '
+              set -euxo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              git config --global --add safe.directory /opt/physics_vendor/moose
+              git config --global --add safe.directory /opt/physics_vendor/crane
+              git config --global --add safe.directory /opt/physics_vendor/squirrel
+              git config --global --add safe.directory /opt/physics_vendor/zapdos
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+              make -C /workspace/physics_app -j2
+              chmod -R a+rwX /workspace/physics_app
+            '
+          test -x physics_app/physics-opt
+
+      - name: Run spatial manufactured-source probe
+        shell: bash
+        run: |
+          set -euxo pipefail
+          rm -rf .ci-poisson-spatial-source
+          mkdir -p .ci-poisson-spatial-source
+          cp "$POISSON_DIR/rz_spatial_source_probe.i" .ci-poisson-spatial-source/input.i
+          cp "$POISSON_DIR/qvt.msh" .ci-poisson-spatial-source/qvt.msh
+
+          docker run --rm \
+            --entrypoint /bin/bash \
+            --user "$(id -u):$(id -g)" \
+            --workdir /workspace/.ci-poisson-spatial-source \
+            -v "$PWD:/workspace" \
+            "$BUILD_BASE_REF" \
+            -lc '
+              set -euxo pipefail
+              source /environment
+              /workspace/physics_app/physics-opt --check-input -i input.i
+              /workspace/physics_app/physics-opt -i input.i > runtime.log 2>&1
+            '
+
+      - name: Verify spatial source placement and phi profile
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import csv
+          import json
+          import math
+
+          root = Path('.ci-poisson-spatial-source')
+          matches = sorted(root.glob('rz_spatial_source_probe_final_profile_*.csv'))
+          if not matches:
+              raise SystemExit('missing spatial-source final profile')
+          with matches[-1].open(newline='') as handle:
+              rows = list(csv.DictReader(handle))
+          if not rows:
+              raise SystemExit('empty spatial-source final profile')
+
+          phi_error = []
+          source_error = []
+          phi_exact_values = []
+          phi_numerical_values = []
+          source_exact_values = []
+          source_saved_values = []
+
+          max_phi_error_row = None
+          max_phi_error_abs = -1.0
+          for row in rows:
+              x = float(row['x'])
+              y = float(row['y'])
+              phi = float(row['phi_probe'])
+              source = float(row['source_out'])
+              exact_phi = x*x*y*y
+              exact_source = -(4.0*y*y + 2.0*x*x)
+
+              pe = phi - exact_phi
+              se = source - exact_source
+              phi_error.append(pe)
+              source_error.append(se)
+              phi_exact_values.append(exact_phi)
+              phi_numerical_values.append(phi)
+              source_exact_values.append(exact_source)
+              source_saved_values.append(source)
+
+              if abs(pe) > max_phi_error_abs:
+                  max_phi_error_abs = abs(pe)
+                  max_phi_error_row = {
+                      'id': int(row['id']),
+                      'x_m': x,
+                      'y_m': y,
+                      'phi_numerical': phi,
+                      'phi_exact': exact_phi,
+                      'error': pe,
+                  }
+
+          phi_span = max(phi_exact_values) - min(phi_exact_values)
+          source_scale = max(max(abs(v) for v in source_exact_values), 1.0e-300)
+          phi_linf = max(abs(v) for v in phi_error)
+          phi_rms = math.sqrt(sum(v*v for v in phi_error) / len(phi_error))
+          source_linf = max(abs(v) for v in source_error)
+          source_rms = math.sqrt(sum(v*v for v in source_error) / len(source_error))
+
+          mean_exact = sum(phi_exact_values) / len(phi_exact_values)
+          mean_num = sum(phi_numerical_values) / len(phi_numerical_values)
+          cov = sum((a-mean_exact)*(b-mean_num) for a,b in zip(phi_exact_values,phi_numerical_values))
+          var_exact = sum((a-mean_exact)**2 for a in phi_exact_values)
+          var_num = sum((b-mean_num)**2 for b in phi_numerical_values)
+          corr = cov / math.sqrt(var_exact*var_num)
+
+          result = {
+              'manufactured_solution': 'phi=x^2*y^2',
+              'manufactured_source': '-(4*y^2+2*x^2)',
+              'source_path': 'ADParsedFunctorMaterial -> FVCoupledForce',
+              'cells': len(rows),
+              'source_saved_min': min(source_saved_values),
+              'source_saved_max': max(source_saved_values),
+              'source_linf': source_linf,
+              'source_rms': source_rms,
+              'source_linf_over_exact_scale': source_linf / source_scale,
+              'phi_exact_min': min(phi_exact_values),
+              'phi_exact_max': max(phi_exact_values),
+              'phi_numerical_min': min(phi_numerical_values),
+              'phi_numerical_max': max(phi_numerical_values),
+              'phi_linf': phi_linf,
+              'phi_rms': phi_rms,
+              'phi_linf_over_exact_span': phi_linf / max(phi_span, 1.0e-300),
+              'phi_correlation': corr,
+              'max_phi_error_location': max_phi_error_row,
+          }
+
+          # The saved functor source must be in the correct cells to near CSV precision.
+          if result['source_linf_over_exact_scale'] > 1.0e-10:
+              raise SystemExit(
+                  'spatial source functor is not mapped to expected cell locations: '
+                  f"{result['source_linf_over_exact_scale']}"
+              )
+
+          # The FV solve on this unstructured real mesh is discretized, so use a
+          # numerical-accuracy gate rather than machine precision. A mapping/sign
+          # failure would be O(1), while the previously qualified RZ operator is
+          # at the per-mille level on this mesh.
+          if result['phi_linf_over_exact_span'] > 2.0e-2:
+              raise SystemExit(
+                  'spatial source -> phi profile exceeds 2% exact-span error: '
+                  f"{result['phi_linf_over_exact_span']}"
+              )
+          if result['phi_correlation'] < 0.999:
+              raise SystemExit(
+                  'spatial source -> phi morphology correlation too low: '
+                  f"{result['phi_correlation']}"
+              )
+
+          out = root / 'spatial_source_result.json'
+          out.write_text(json.dumps(result, indent=2) + '\n')
+          print(json.dumps(result, indent=2))
+          PY
+
+      - name: Upload spatial-source probe
+        uses: actions/upload-artifact@v4
+        with:
+          name: poisson-spatial-source-probe
+          path: |
+            .ci-poisson-spatial-source/input.i
+            .ci-poisson-spatial-source/runtime.log
+            .ci-poisson-spatial-source/spatial_source_result.json
+            .ci-poisson-spatial-source/rz_spatial_source_probe.e
+            .ci-poisson-spatial-source/rz_spatial_source_probe_final_profile_*.csv
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 30
