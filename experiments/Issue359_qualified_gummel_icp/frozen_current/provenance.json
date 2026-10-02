@@ -43,14 +43,16 @@
   "schema_version": 1,
   "status": "FROZEN_CURRENT",
   "prebuilt_runtime": {
-    "workflow_run": 37005225258,
-    "image": "ghcr.io/hyungseonsong-plasma/physics-runtime@sha256:0cf34d4ae00d4ea46fa5af661031f93b4edcfcac144a08ebe0f7700ed413f9cf",
+    "workflow_run": 37009743163,
+    "image": "ghcr.io/hyungseonsong-plasma/physics-jit-runtime@sha256:2460cf70922490b26412345a09a67364e8b32fbd5310cd25efa5415b12486cf3",
+    "runtime_profile": "moose+mpi+ad_fparser_jit",
     "physics_source_manifest_sha256": "a9654d344e9c60e48992165bc855b154707ecf2e659e4428117e8f6ae8fdba3b",
-    "producer_repository_sha": "92f435d8584a9a16554169cbb1590fface533461",
-    "producer_repository_sha_kind": "pull_request_synthetic_merge",
-    "branch_physics_tree_verified_equivalent_to": "78705e666538395d960c53665773237d62dbf1b2",
+    "producer_repository_sha": "1bb470bc770c32694595605b4f27dc3a3a89ef46",
+    "build_base": "ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008",
+    "consumer_identity": "host_uid_gid",
     "check_input_smoke": "PASS",
-    "bounded_real_physics_smoke": "PASS",
+    "adparsed_jit_runtime_check": "PASS",
+    "build_once_consume_without_recompile": true,
     "scientific_semantics_changed": false
   }
 }
