@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Physics invariants for the all-ground one-way Poisson candidate."""
+"""Physics invariants for the grounded-physical-wall one-way Poisson candidate."""
 from __future__ import annotations
 
 import bisect
@@ -40,19 +40,24 @@ if len(rows) != expected_rows:
 
 input_text = Path("input.i").read_text()
 for token in (
-    "[plasma_all_ground]",
-    "type = SideSetsAroundSubdomainGenerator",
-    "new_boundary = plasma_all_ground",
+    "coord_type = RZ",
+    "rz_coord_axis = Y",
     "[phi]",
     "[phi_diffusion]",
     "[phi_charge_source]",
-    "[phi_ground_all]",
-    "boundary = plasma_all_ground",
+    "[phi_grounded_walls]",
+    "boundary = 'inlet outlet plasma_electrode plasma_metal plasma_right plasma_cover plasma_wafer plasma_focus_ring'",
     "value = 0.0",
     "frozen_ion_number_density_m3",
 ):
     if token not in input_text:
         raise SystemExit(f"missing Poisson construction token: {token}")
+for forbidden in ("SideSetsAroundSubdomainGenerator", "plasma_all_ground"):
+    if forbidden in input_text:
+        raise SystemExit(
+            "RZ symmetry axis x=0 must not be captured by a physical BC sideset: "
+            + forbidden
+        )
 if "PhysicsFVLogMolarElectrostaticDrift" in input_text:
     raise SystemExit("Poisson candidate must not enable electron electrostatic drift")
 if input_text.count("potential = zero_phi") < 2:
