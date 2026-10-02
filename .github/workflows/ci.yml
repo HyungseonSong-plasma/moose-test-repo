@@ -763,11 +763,15 @@ jobs:
               "[c_epsilon]",
               "coeff = electron_energy_diffusion",
               "electron_mean_energy_output = mean_en_solved",
+              "[electron_temperature_eV]",
+              "expression = '(2.0/3.0)*mean_en'",
+              "show = 'electron_density electron_temperature_eV'",
               "type = PhysicsFVElectronGroundedSheathCollectionBC",
               "type = PhysicsFVElectronGroundedSheathEnergyBC",
               "molar_energy_state = true",
           )
           energy_absent = (
+              "[electron_density_out]",
               "PhysicsFVLogMolarElectrostaticDrift",
               "PhysicsPlasmaChargeDensityMaterial",
               "PhysicsFVElectronEnergyJouleHeating",
