@@ -24,6 +24,7 @@ def test_simple_case_catalog_is_code_addressable_and_valid() -> None:
     assert [case.simple_case_id for case in cases] == [
         "electron-diffusion-experiment",
         "electron-diffusion-energy-experiment",
+        "poisson",
     ]
     assert all(case.status == STABLE_STATUS for case in cases)
     first = cases[0]
@@ -36,6 +37,11 @@ def test_simple_case_catalog_is_code_addressable_and_valid() -> None:
     assert second.status == STABLE_STATUS
     assert second.template_source is True
     assert resolve_simple_case("electron diffusion energy") == second
+    third = cases[2]
+    assert third.simple_case_id == "poisson"
+    assert third.status == STABLE_STATUS
+    assert third.template_source is True
+    assert resolve_simple_case("all-ground-poisson") == third
 
 
 def test_materialize_template_is_qualified_input(tmp_path: Path) -> None:
@@ -88,6 +94,19 @@ def test_create_scaffolds_solved_energy_case(tmp_path: Path) -> None:
     assert origin["template_id"] == "electron-diffusion-energy-experiment"
     assert origin["source_status"] == STABLE_STATUS
     assert origin["qualification_inherited"] is False
+
+
+def test_poisson_template_materializes_all_ground_one_way_case(tmp_path: Path) -> None:
+    output = tmp_path / "poisson-input.i"
+    materialize_input_template("poisson", output)
+    qualified = ROOT / "experiments/2d-icp-poisson-experiment/input.i"
+    assert output.read_bytes() == qualified.read_bytes()
+    text = output.read_text()
+    assert "[phi]" in text
+    assert "[phi_ground_all]" in text
+    assert "boundary = plasma_all_ground" in text
+    assert "v = poisson_source_V_m2" in text
+    assert "PhysicsFVLogMolarElectrostaticDrift" not in text
 
 
 def test_create_applies_new_input_after_scaffold(tmp_path: Path) -> None:
