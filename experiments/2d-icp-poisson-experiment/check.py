@@ -288,7 +288,7 @@ if max(energy_balance_relative_errors) > 1.0e-8:
         f"relative errors={energy_balance_relative_errors}"
     )
 
-profiles = sorted(Path(".").glob("electron_diffusion_final_profile_*.csv"))
+profiles = sorted(Path(".").glob("poisson_final_profile_*.csv"))
 if not profiles:
     raise SystemExit("missing final element profile CSV")
 with profiles[-1].open(newline="") as handle:
