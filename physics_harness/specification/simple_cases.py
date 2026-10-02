@@ -25,7 +25,6 @@ class SimpleCaseCatalogError(ValueError):
 
 @dataclass(frozen=True)
 class SimpleCase:
-    order: int
     simple_case_id: str
     experiment_id: str | None
     status: str
@@ -76,7 +75,6 @@ def load_simple_case_catalog(path: Path = DEFAULT_CATALOG) -> tuple[SimpleCase, 
         template = raw.get("template")
         cases.append(
             SimpleCase(
-                order=int(raw["order"]),
                 simple_case_id=str(raw["simple_case_id"]),
                 experiment_id=raw.get("experiment_id"),
                 status=str(raw["status"]),
@@ -95,22 +93,23 @@ def load_simple_case_catalog(path: Path = DEFAULT_CATALOG) -> tuple[SimpleCase, 
             )
         )
 
-    cases.sort(key=lambda case: case.order)
-    orders = [case.order for case in cases]
     ids = [case.simple_case_id for case in cases]
-    if orders != list(range(1, len(cases) + 1)):
-        raise SimpleCaseCatalogError(f"simple-case order must be contiguous from 1: {orders}")
     if len(ids) != len(set(ids)):
         raise SimpleCaseCatalogError("simple-case ids must be unique")
+    non_stable = [case.simple_case_id for case in cases if case.status != STABLE_STATUS]
+    if non_stable:
+        raise SimpleCaseCatalogError(
+            "simple-case catalog contains non-reusable entries: "
+            + ", ".join(non_stable)
+        )
     return tuple(cases)
 
 
-def resolve_simple_case(selector: str | int) -> SimpleCase:
+def resolve_simple_case(selector: str) -> SimpleCase:
     key = str(selector).strip().lower().replace("_", "-")
     for case in load_simple_case_catalog():
         candidates = {
             case.simple_case_id.lower(),
-            str(case.order),
             *(alias.strip().lower().replace("_", "-") for alias in case.aliases),
         }
         if key in candidates:
@@ -143,7 +142,7 @@ def _template_payload(case: SimpleCase, root: Path = ROOT) -> tuple[Path, dict]:
 
 
 def materialize_input_template(
-    selector: str | int,
+    selector: str,
     output: Path,
     *,
     root: Path = ROOT,
@@ -163,7 +162,7 @@ def materialize_input_template(
 
 
 def create_simple_case(
-    selector: str | int,
+    selector: str,
     destination: Path,
     *,
     input_path: Path | None = None,
@@ -324,7 +323,7 @@ def cli_main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="physics simple-case")
     sub = parser.add_subparsers(dest="action", required=True)
 
-    sub.add_parser("list", help="list known reusable and planned simple cases")
+    sub.add_parser("list", help="list reusable simple cases")
 
     show = sub.add_parser("show", help="show one catalog entry")
     show.add_argument("selector")
@@ -352,7 +351,7 @@ def cli_main(argv: list[str] | None = None) -> int:
         if args.action == "list":
             for case in load_simple_case_catalog():
                 print(
-                    f"{case.order}\t{case.simple_case_id}\t"
+                    f"{case.simple_case_id}\t"
                     f"{case.status}\t{case.path or '-'}"
                 )
             return 0
