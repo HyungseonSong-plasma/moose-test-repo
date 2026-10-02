@@ -821,7 +821,7 @@ def _analyse(root: Path, plan: dict[str, object], source_wall: float, case_elaps
         "max_fd_nonlinearity": summary["linearity"]["max_even_to_odd_ratio"],
         "holdout_errors": holdout_errors,
         "constant_mode_eta": eta_constant_mode,
-        "uniform_prediction_error": summary["constant_mode"]["radius_3_uniform_prediction_relative_error"],
+        "uniform_prediction_error": summary["constant_mode"][f"radius_{radius}_uniform_prediction_relative_error"],
         "shell_frobenius_fraction": summary["shell_frobenius_fraction"],
         "source_wall_seconds": source_wall,
         "standalone_wall_seconds": diagnostic_wall,
