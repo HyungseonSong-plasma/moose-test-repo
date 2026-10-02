@@ -4,6 +4,7 @@ from __future__ import annotations
 import pytest
 
 from physics_harness.adapters.moose.preflight import parser_symbol_self_test
+from physics_harness.adapters.moose.input_contract import self_test as input_contract_self_test
 from physics_harness.analysis.temporal import self_test as temporal_self_test
 from physics_harness.execution.workspace import self_test as workspace_self_test
 from physics_harness.analysis.scale_audit import self_test as scale_audit_self_test
@@ -13,6 +14,7 @@ from physics_harness.analysis.performance.profile import self_test as performanc
 
 ENTRYPOINTS = (
     ("moose.preflight.parser_symbols", parser_symbol_self_test),
+    ("moose.input_contract", input_contract_self_test),
     ("analysis.temporal", temporal_self_test),
     ("execution.workspace", workspace_self_test),
     ("analysis.scale_audit", scale_audit_self_test),
