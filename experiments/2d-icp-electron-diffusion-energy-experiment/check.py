@@ -5,6 +5,7 @@ from __future__ import annotations
 import bisect
 import csv
 import math
+import os
 from pathlib import Path
 
 INITIAL_MEAN_ENERGY_EV = 5.73276
@@ -16,7 +17,9 @@ ELEMENTARY_CHARGE_C = 1.602176634e-19
 ELECTRON_MASS_KG = 9.1093837139e-31
 AVOGADRO_PER_MOL = 6.02214076e23
 TOTAL_THERMAL_WALL_AREA_M2 = 0.9023470915199818
-EXPECTED_DT_S = 1.0e-9
+EXPECTED_DT_S = float(os.environ.get("EXPECTED_DT_S", "1.0e-9"))
+EXPECTED_STEPS = int(os.environ.get("EXPECTED_STEPS", "4"))
+EXPECTED_END_TIME_S = float(os.environ.get("EXPECTED_END_TIME_S", "4.0e-9"))
 
 path = Path("electron_diffusion.csv")
 if not path.is_file():
@@ -25,9 +28,11 @@ if not path.is_file():
 with path.open(newline="") as handle:
     rows = list(csv.DictReader(handle))
 
-if len(rows) != 5:
+expected_rows = EXPECTED_STEPS + 1
+if len(rows) != expected_rows:
     raise SystemExit(
-        f"expected initialization + four physical timesteps; got {len(rows)} rows"
+        f"expected initialization + {EXPECTED_STEPS} physical timesteps; "
+        f"got {len(rows)} rows"
     )
 
 required = {
@@ -61,9 +66,16 @@ def relative_error(actual, expected):
 
 
 times = [f(row, "time") for row in rows]
-expected_times = [0.0, 1.0e-9, 2.0e-9, 3.0e-9, 4.0e-9]
+expected_times = [index * EXPECTED_DT_S for index in range(expected_rows)]
+if abs(expected_times[-1] - EXPECTED_END_TIME_S) > 1.0e-15:
+    raise SystemExit(
+        "checker configuration is inconsistent: "
+        f"steps*dt={expected_times[-1]} end={EXPECTED_END_TIME_S}"
+    )
 if any(abs(a - b) > 1.0e-15 for a, b in zip(times, expected_times)):
-    raise SystemExit(f"unexpected runtime time grid: {times}")
+    raise SystemExit(
+        f"unexpected runtime time grid for dt={EXPECTED_DT_S}: {times}"
+    )
 
 energies = [f(row, "mean_energy_avg_eV") for row in rows]
 energy_mins = [f(row, "mean_energy_min_eV") for row in rows]
