@@ -1,0 +1,223 @@
+name: Poisson Frozen Source Replay
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, edited]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: poisson-frozen-source-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frozen-source-replay:
+    if: github.event_name == 'pull_request' && github.head_ref == 'issue-359-qualified-gummel-icp'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: read
+    env:
+      POISSON_DIR: experiments/2d-icp-poisson-experiment
+      BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+
+      - name: Log in to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build exact-head Physics runtime
+        shell: bash
+        run: |
+          set -euxo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          docker pull "$BUILD_BASE_REF"
+          docker run --rm \
+            --entrypoint /bin/bash \
+            --user 0:0 \
+            --workdir /workspace \
+            -v "$PWD:/workspace" \
+            "$BUILD_BASE_REF" \
+            -lc '
+              set -euxo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              git config --global --add safe.directory /opt/physics_vendor/moose
+              git config --global --add safe.directory /opt/physics_vendor/crane
+              git config --global --add safe.directory /opt/physics_vendor/squirrel
+              git config --global --add safe.directory /opt/physics_vendor/zapdos
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+              make -C /workspace/physics_app -j2
+              chmod -R a+rwX /workspace/physics_app
+            '
+          test -x physics_app/physics-opt
+
+      - name: Run canonical source-producing case
+        shell: bash
+        run: |
+          set -euxo pipefail
+          rm -rf .ci-frozen-source-replay
+          mkdir -p .ci-frozen-source-replay/canonical
+          cp -R "$POISSON_DIR"/. .ci-frozen-source-replay/canonical/
+
+          docker run --rm \
+            --entrypoint /bin/bash \
+            --user "$(id -u):$(id -g)" \
+            --workdir /workspace/.ci-frozen-source-replay/canonical \
+            -v "$PWD:/workspace" \
+            "$BUILD_BASE_REF" \
+            -lc '
+              set -euxo pipefail
+              source /environment
+              /workspace/physics_app/physics-opt --check-input -i input.i
+              /workspace/physics_app/physics-opt -i input.i > runtime.log 2>&1
+            '
+
+          test -f .ci-frozen-source-replay/canonical/poisson.e
+          ls .ci-frozen-source-replay/canonical/poisson_final_profile_*.csv
+
+      - name: Run standalone frozen-source Poisson replay
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p .ci-frozen-source-replay/replay
+          cp "$POISSON_DIR/frozen_source_poisson.i" .ci-frozen-source-replay/replay/input.i
+          cp "$POISSON_DIR/qvt.msh" .ci-frozen-source-replay/replay/qvt.msh
+          cp .ci-frozen-source-replay/canonical/poisson.e .ci-frozen-source-replay/replay/canonical_source.e
+
+          docker run --rm \
+            --entrypoint /bin/bash \
+            --user "$(id -u):$(id -g)" \
+            --workdir /workspace/.ci-frozen-source-replay/replay \
+            -v "$PWD:/workspace" \
+            "$BUILD_BASE_REF" \
+            -lc '
+              set -euxo pipefail
+              source /environment
+              /workspace/physics_app/physics-opt --check-input -i input.i
+              /workspace/physics_app/physics-opt -i input.i > runtime.log 2>&1
+            '
+
+          test -f .ci-frozen-source-replay/replay/frozen_source_poisson.e
+          ls .ci-frozen-source-replay/replay/frozen_source_poisson_final_profile_*.csv
+
+      - name: Compare canonical and frozen-source phi cell by cell
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import csv
+          import json
+          import math
+
+          root = Path('.ci-frozen-source-replay')
+
+          def latest_rows(directory, pattern):
+              files = sorted((root / directory).glob(pattern))
+              if not files:
+                  raise SystemExit(f'missing profile: {directory}/{pattern}')
+              with files[-1].open(newline='') as handle:
+                  rows = list(csv.DictReader(handle))
+              rows.sort(key=lambda row: int(row['id']))
+              return rows
+
+          canonical = latest_rows('canonical', 'poisson_final_profile_*.csv')
+          replay = latest_rows('replay', 'frozen_source_poisson_final_profile_*.csv')
+
+          canonical_ids = [int(row['id']) for row in canonical]
+          replay_ids = [int(row['id']) for row in replay]
+          if canonical_ids != replay_ids:
+              raise SystemExit('cell identity mismatch between canonical and replay')
+
+          c_phi = [float(row['phi']) for row in canonical]
+          c_source = [float(row['poisson_source_out']) for row in canonical]
+          r_phi = [float(row['phi']) for row in replay]
+          r_source = [float(row['frozen_poisson_source']) for row in replay]
+
+          source_scale = max(max(abs(v) for v in c_source), 1.0)
+          phi_scale = max(max(abs(v) for v in c_phi), 1.0)
+          source_errors = [rv-cv for rv,cv in zip(r_source,c_source)]
+          phi_errors = [rv-cv for rv,cv in zip(r_phi,c_phi)]
+
+          source_linf = max(abs(v) for v in source_errors)
+          phi_linf = max(abs(v) for v in phi_errors)
+          phi_rms = math.sqrt(sum(v*v for v in phi_errors)/len(phi_errors))
+
+          max_i = max(range(len(phi_errors)), key=lambda i: abs(phi_errors[i]))
+          result = {
+              'cells': len(canonical),
+              'canonical_phi_min_V': min(c_phi),
+              'canonical_phi_max_V': max(c_phi),
+              'replay_phi_min_V': min(r_phi),
+              'replay_phi_max_V': max(r_phi),
+              'canonical_source_min_V_m2': min(c_source),
+              'canonical_source_max_V_m2': max(c_source),
+              'replay_source_min_V_m2': min(r_source),
+              'replay_source_max_V_m2': max(r_source),
+              'source_linf': source_linf,
+              'source_linf_relative_to_canonical_scale': source_linf/source_scale,
+              'phi_linf_V': phi_linf,
+              'phi_rms_V': phi_rms,
+              'phi_linf_relative_to_canonical_scale': phi_linf/phi_scale,
+              'max_phi_error_location': {
+                  'id': canonical_ids[max_i],
+                  'x_m': float(canonical[max_i]['x']),
+                  'y_m': float(canonical[max_i]['y']),
+                  'canonical_phi_V': c_phi[max_i],
+                  'replay_phi_V': r_phi[max_i],
+                  'error_V': phi_errors[max_i],
+              },
+          }
+
+          # Direct SolutionAux on the same replicated mesh should recover the
+          # saved elemental source essentially exactly. The resulting standalone
+          # steady Poisson solution should then match the canonical final phi.
+          if result['source_linf_relative_to_canonical_scale'] > 1.0e-12:
+              raise SystemExit(
+                  'frozen source does not reproduce canonical saved source: '
+                  f"{result['source_linf_relative_to_canonical_scale']}"
+              )
+          if result['phi_linf_relative_to_canonical_scale'] > 1.0e-9:
+              raise SystemExit(
+                  'standalone frozen-source phi does not reproduce canonical phi: '
+                  f"{result['phi_linf_relative_to_canonical_scale']}"
+              )
+
+          out = root / 'frozen_source_replay_result.json'
+          out.write_text(json.dumps(result, indent=2) + '\n')
+          print(json.dumps(result, indent=2))
+          PY
+
+      - name: Upload frozen-source replay evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: poisson-frozen-source-replay
+          path: |
+            .ci-frozen-source-replay/frozen_source_replay_result.json
+            .ci-frozen-source-replay/canonical/input.i
+            .ci-frozen-source-replay/canonical/runtime.log
+            .ci-frozen-source-replay/canonical/poisson.e
+            .ci-frozen-source-replay/canonical/poisson_final_profile_*.csv
+            .ci-frozen-source-replay/replay/input.i
+            .ci-frozen-source-replay/replay/runtime.log
+            .ci-frozen-source-replay/replay/frozen_source_poisson.e
+            .ci-frozen-source-replay/replay/frozen_source_poisson_final_profile_*.csv
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 30
