@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "experiment_id": "2d-icp-poisson-experiment",
+  "status": "CANDIDATE_REUSABLE_BASELINE",
+  "parent_simple_case_id": "electron-diffusion-energy-experiment",
+  "scientific_scope": {
+    "solved_equations": [
+      "electron particle continuity with diffusion only",
+      "conservative electron-energy density with diffusion only",
+      "Poisson potential from frozen positive background and solved electron density"
+    ],
+    "poisson": "ENABLED_ONE_WAY",
+    "electrostatic_boundary": "phi=0 V on complete plasma-subdomain boundary",
+    "frozen_ion_number_density_m3": 10000000000000000,
+    "electrostatic_drift": "DISABLED",
+    "poisson_transport_feedback": "DISABLED",
+    "poisson_wall_feedback": "DISABLED",
+    "joule_heating": "DISABLED",
+    "electron_reactions": "DISABLED",
+    "heavy_species_evolution": "ABSENT",
+    "electron_dt_s": 1e-9,
+    "electron_steps": 4,
+    "end_time_s": 4e-9
+  },
+  "qualification": "PENDING_EXACT_HEAD_RUNTIME"
+}
