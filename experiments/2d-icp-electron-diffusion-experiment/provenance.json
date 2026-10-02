@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "experiment_id": "2d-icp-electron-diffusion-experiment",
-  "status": "REUSABLE_DIAGNOSTIC_BASELINE",
+  "status": "STABLE_REUSABLE_BASELINE",
   "scientific_scope": {
     "solved_equation": "electron particle continuity with diffusion only",
     "initial_electron_density_m3": 10000000000000000,
@@ -30,5 +30,33 @@
       "role": "production reduced mobility/diffusion lookup table"
     }
   },
-  "reuse_trigger": "Use first when a 2-D ICP electron/Poisson or coupled-plasma case develops an unexplained spatial profile or fails to converge; re-establish this diffusion-only baseline before adding physics back incrementally."
+  "reuse_trigger": "Use first when a 2-D ICP electron/Poisson or coupled-plasma case develops an unexplained spatial profile or fails to converge; re-establish this diffusion-only baseline before adding physics back incrementally.",
+  "stabilization_evidence": {
+    "repository_ci_run": "37024044297",
+    "repository_head": "fe5e532317258f30873185783e9fcf7bddb276ec",
+    "artifact_id": "11234735518",
+    "artifact_name": "2d-icp-electron-diffusion-experiment",
+    "artifact_zip_sha256": "52e2f3f21f8535b142e4531382df1be40ca90813d14f732ccc37d24c9469ebdc",
+    "check_input": "PASS",
+    "runtime": "PASS",
+    "nonlinear_convergence": "4/4 timesteps converged in 3 Newton updates each",
+    "dt_s": "1.0e-9",
+    "steps": "4",
+    "end_time_s": "4.0e-9",
+    "neutral_number_density_m3": "3.218833278166041e20",
+    "reduced_diffusion_table_value": "6.64e24",
+    "diffusion_m2_s": "20628.592493560998",
+    "fixed_mean_energy_eV": "5.73276",
+    "total_thermal_wall_area_m2": "0.9023470915199818",
+    "initial_wall_particle_rate_mol_s": "0.004900943951003977",
+    "thermal_wall_rate_formula_check": "PASS to floating-point precision",
+    "initial_electron_inventory_mol": "8.320587018609082e-10",
+    "final_electron_inventory_mol": "8.1417261905889e-10",
+    "inventory_loss_fraction": "0.021496179009980354",
+    "max_discrete_inventory_balance_relative_error": "6.831438878449253e-12",
+    "final_electron_density_min_m3": "7.950548846110771e15",
+    "final_electron_density_max_m3": "9.999999972147392e15",
+    "diffusion_length_at_4ns_m": "0.009083742068896684",
+    "spatial_profile": "interior remains approximately at initial density; depletion is localized near thermal-loss boundaries with smooth recovery toward the interior"
+  }
 }

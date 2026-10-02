@@ -130,3 +130,56 @@ end_time  = 4.0e-9 s
 ```
 
 The input is first required to pass real `physics-opt --check-input`.  One subsequent runtime is then used to evaluate transport lookup, thermal wall loss, electron inventory balance, spatial profile, and Exodus output together.
+
+
+## Stabilization evidence
+
+Repository CI run `37024044297` at head
+`fe5e532317258f30873185783e9fcf7bddb276ec` establishes this experiment as
+`STABLE_REUSABLE_BASELINE` for the bounded diffusion-only physics scope.
+
+```text
+physics-opt --check-input       PASS
+dt                              1.0e-9 s
+physical steps                  4
+end time                        4.0e-9 s
+all nonlinear solves            PASS, 3 Newton updates per step
+fixed mean electron energy      5.73276 eV
+D_e from transport table        20628.592493561 m^2/s
+initial wall rate               4.900943951004e-3 mol/s
+initial electron inventory      8.3205870186091e-10 mol
+final electron inventory        8.1417261905889e-10 mol
+inventory loss over 4 ns        2.149617900998 %
+final n_e minimum               7.9505488461108e15 1/m^3
+final n_e maximum               9.9999999721474e15 1/m^3
+sqrt(D_e t) at 4 ns             9.083742 mm
+```
+
+The 5.73276 eV transport-table row supplies `D_e*N=6.64e24`.  With
+`p=1.333223684 Pa` and `T_g=300 K`, the neutral density is
+`3.218833278166041e20 1/m^3`, so the runtime diffusivity exactly matches
+`(D_e*N)/N_g`.
+
+The zero-potential thermal wall BC is also quantitatively closed.  The frozen
+geometry has total named thermal-loss area `0.9023470915199818 m^2`; the
+quarter-Maxwellian law at the fixed mean energy predicts the observed initial
+wall particle rate to floating-point precision.
+
+At every physical timestep the backward-Euler particle balance
+
+```text
+(I_e[n] - I_e[n-1]) / dt + wall_particle_rate[n] = 0
+```
+
+closes with maximum relative imbalance `6.84e-12`.
+
+The final 2-D field is qualitatively correct for pure diffusion plus absorbing
+thermal boundaries: the bulk remains essentially at `1e16 1/m^3`, while the
+outer wall, wafer, cover, inlet/outlet, and other thermal-loss boundaries show
+smooth depletion over the expected diffusion penetration scale.  At
+`z ~= 0.20 m`, the radial profile is flat from the axis through the bulk and
+falls only near the outer radial wall.  No unphysical interior maximum or
+density overshoot appears.
+
+This qualification does not cover electrostatic drift, Poisson, electron
+energy evolution, reactions, or heavy-species coupling.
