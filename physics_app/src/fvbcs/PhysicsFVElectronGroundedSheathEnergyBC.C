@@ -9,9 +9,10 @@ PhysicsFVElectronGroundedSheathEnergyBC::validParams()
   auto params = FVQpFluxBC::validParams();
 
   params.addClassDescription(
-      "Applies the W4.5 grounded-conductor sheath-edge primary-electron energy loss "
-      "using the same collected primary population as PhysicsFVElectronGroundedSheathCollectionBC. "
-      "T2 can return the conservative molar-energy flux directly.");
+      "Applies grounded-conductor primary-electron energy loss using the same collected "
+      "primary population as PhysicsFVElectronGroundedSheathCollectionBC. The thermal "
+      "energy-per-particle coefficient is a functor: alpha=2 is the default kinetic "
+      "half-Maxwellian closure, while alternative closures must be supplied explicitly.");
 
   params.addRequiredParam<MooseFunctorName>(
       "electron_density",
