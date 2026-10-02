@@ -685,23 +685,9 @@ jobs:
 
       - name: Measure compressed real-QVT electron response
         shell: bash
-        env:
-          RZ_SOURCE_RUN: '36996316885'
-          RZ_SOURCE_SHA: '01123dea83e4a4eafe381e6885a1c471c1bc4f7d'
         run: |
           set -euxo pipefail
-          rm -rf "$PWD/.rz-source-fixture" "$PWD/issue359-rz-jacobian"
-          source_sha="$(GH_TOKEN="${{ github.token }}" gh run view "$RZ_SOURCE_RUN" --repo "$GITHUB_REPOSITORY" --json headSha --jq .headSha)"
-          test "$source_sha" = "$RZ_SOURCE_SHA"
-          unexpected="$(git diff --name-only "$RZ_SOURCE_SHA" HEAD | grep -vE '^(\.github/workflows/ci\.yml|experiments/Issue359_rz_response_jacobian/control\.py)$' || true)"
-          test -z "$unexpected"
-          GH_TOKEN="${{ github.token }}" gh run download "$RZ_SOURCE_RUN" \
-            --repo "$GITHUB_REPOSITORY" \
-            --name issue359-rz-response-jacobian \
-            --dir "$PWD/.rz-source-fixture"
-          test -s "$PWD/.rz-source-fixture/fixture/state.e"
-          test -s "$PWD/.rz-source-fixture/source_case/prepare_evidence.json"
-          test -s "$PWD/.rz-source-fixture/source_case/input_audit.json"
+          rm -rf "$PWD/issue359-rz-jacobian"
 
           docker pull "$EXPECTED_BUILD_BASE_REF"
           docker run --rm \
@@ -728,7 +714,7 @@ jobs:
               python3 -m experiments.Issue359_rz_response_jacobian.control \
                 --physics physics_app/physics-opt \
                 --results-root issue359-rz-jacobian \
-                --source-fixture-root /workspace/.rz-source-fixture \
+                --source-timeout 120 \
                 --case-timeout 20 \
                 --workers 2 \
                 --max-radius 2 \
