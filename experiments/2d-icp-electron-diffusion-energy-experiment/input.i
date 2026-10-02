@@ -17,8 +17,9 @@
 # The energy wall loss is transport-matched to D_epsilon=(5/3)D_e:
 #   Gamma_epsilon = Gamma_e * (5/2) T_e,
 # so the normalized energy/particle wall-loss ratio is 5/3.
-# This is a zero-potential diffusion closure, not the general kinetic sheath
-# energy-flux law used by PhysicsFVElectronGroundedSheathEnergyBC.
+# PhysicsFVElectronGroundedSheathEnergyBC receives the coefficient as a functor;
+# its default remains 2.0 for the kinetic half-Maxwellian closure, while this
+# diffusion-only baseline explicitly supplies 2.5 for transport matching.
 
 [Mesh]
   coord_type = RZ
@@ -138,8 +139,8 @@
 [FunctorMaterials]
   [constants]
     type = ADGenericFunctorMaterial
-    prop_names = 'gas_pressure_Pa gas_temperature_K zero_phi'
-    prop_values = '1.333223684 300.0 0.0'
+    prop_names = 'gas_pressure_Pa gas_temperature_K zero_phi energy_wall_te_factor'
+    prop_values = '1.333223684 300.0 0.0 2.5'
     block = plasma
   []
 
@@ -199,15 +200,6 @@
     expression = '(2.0/3.0)*mean_en'
     block = plasma
   []
-
-  [electron_energy_transport_matched_wall_flux]
-    type = ADParsedFunctorMaterial
-    property_name = electron_energy_transport_matched_wall_flux
-    functor_names = 'c_e_molar mean_en_solved'
-    functor_symbols = 'ce mean_en'
-    expression = '0.25*ce*sqrt(8.0*1.602176634e-19*((2.0/3.0)*mean_en)/(3.14159265358979323846*9.1093837139e-31))*(2.5*(2.0/3.0)*mean_en)'
-    block = plasma
-  []
 []
 
 [FVKernels]
@@ -250,11 +242,14 @@
   []
 
   [electron_energy_thermal_wall_loss]
-    type = FVFunctorNeumannBC
+    type = PhysicsFVElectronGroundedSheathEnergyBC
     variable = c_epsilon
     boundary = 'inlet outlet plasma_electrode plasma_metal plasma_right plasma_cover plasma_wafer plasma_focus_ring'
-    functor = electron_energy_transport_matched_wall_flux
-    factor = -1.0
+    electron_density = c_e_molar
+    mean_electron_energy = mean_en_solved
+    potential = zero_phi
+    energy_per_particle_te_factor = energy_wall_te_factor
+    molar_energy_state = true
   []
 []
 
