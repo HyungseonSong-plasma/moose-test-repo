@@ -34,6 +34,7 @@ Cross-Issue diagnostic baselines may use stable semantic names instead of Issue 
 | --- | --- | --- |
 | `electron-diffusion-experiment` | `experiments/2d-icp-electron-diffusion-experiment/` | **STABLE_REUSABLE_BASELINE.** Minimal real-QVT ICP electron diffusion + zero-potential thermal wall-loss baseline. Canonical backing experiment ID: `2d-icp-electron-diffusion-experiment`. |
 | `electron-diffusion-energy-experiment` | `experiments/2d-icp-electron-diffusion-energy-experiment/` | **STABLE_REUSABLE_BASELINE.** Electron particle + solved electron-energy diffusion with energy-dependent transport and configurable matched wall-energy loss. |
+| `poisson` | `experiments/2d-icp-poisson-experiment/` | **STABLE_REUSABLE_BASELINE.** Parent electron-energy baseline plus one-way Poisson from a frozen positive background, with the complete plasma boundary grounded at 0 V. |
 
 
 The reusable simple-case catalog is owned by `experiments/simple_case_inventory.json`.
