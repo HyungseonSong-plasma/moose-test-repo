@@ -48,6 +48,16 @@ REQUIRED: dict[str, tuple[str, ...]] = {
         "return primary_particle_flux_molar *",
         "PhysicsGroundedElectronSheath::primaryEnergyFluxHat(",
     ),
+    "physics_app/include/fvkernels/PhysicsFVElectronEnergyJouleHeating.h": (
+        "const bool _normalized_state;",
+        "molar_eV:",
+    ),
+    "physics_app/src/fvkernels/PhysicsFVElectronEnergyJouleHeating.C": (
+        'MooseEnum("normalized physical_eV molar_eV", "normalized")',
+        '_normalized_state(getParam<MooseEnum>("state_form") == "normalized")',
+        "if (_normalized_state)",
+        "molar_eV mode returns eV mol/(m^3 s)",
+    ),
 }
 
 
