@@ -33,12 +33,14 @@ Cross-Issue diagnostic baselines may use stable semantic names instead of Issue 
 | Inventory ID | Path | Purpose |
 | --- | --- | --- |
 | `electron-diffusion-experiment` | `experiments/2d-icp-electron-diffusion-experiment/` | **STABLE_REUSABLE_BASELINE.** Minimal real-QVT ICP electron diffusion + zero-potential thermal wall-loss baseline. Canonical backing experiment ID: `2d-icp-electron-diffusion-experiment`. |
+| `electron-diffusion-energy-experiment` | `experiments/2d-icp-electron-diffusion-energy-experiment/` | **STABLE_REUSABLE_BASELINE.** Electron particle + solved electron-energy diffusion with energy-dependent transport and configurable matched wall-energy loss. |
 
 
 The reusable simple-case catalog is owned by `experiments/simple_case_inventory.json`.
-It is consumed through the code-level `physics simple-case` CLI; generated cases
-delegate execution to the existing `physics test` path and never inherit scientific
-qualification from their source template.
+It contains only qualified reusable sources; future/planned cases are not catalog
+entries. Selection is by stable semantic `simple_case_id` or semantic alias, never by
+numeric position. Generated cases delegate execution to the existing `physics test`
+path and never inherit scientific qualification from their source template.
 
 
 ### Simple-case CLI
