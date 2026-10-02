@@ -1,24 +1,11 @@
 {
   "schema_version": 1,
   "catalog_id": "simple-physics-case-inventory",
-  "purpose": "Ordered reusable starting points for restarting 2-D ICP debugging from the simplest qualified physics layer.",
-  "conversation_triggers": [
-    "simple case",
-    "simple case부터",
-    "최소 case",
-    "최소 케이스",
-    "단순 case",
-    "단순 케이스",
-    "처음부터 다시",
-    "처음부터 단순하게",
-    "baseline부터"
-  ],
+  "purpose": "Code-addressable reusable starting points for constructing and reproducing 2-D ICP cases from qualified physics baselines.",
   "selection_policy": {
-    "presentation": "numbered",
     "order": "increasing physics coupling",
-    "stable_first": true,
     "require_explicit_status": true,
-    "execution_rule": "Only STABLE_REUSABLE_BASELINE entries may produce a reproduction command."
+    "execution_rule": "Only STABLE_REUSABLE_BASELINE entries may be used as a template source."
   },
   "cases": [
     {
@@ -48,7 +35,12 @@
         "electron diffusion",
         "electron-diffusion",
         "2d icp electron diffusion"
-      ]
+      ],
+      "template": {
+        "manifest": "simple_case_template.json",
+        "input_template": "input.template.i",
+        "generated_input": "input.i"
+      }
     },
     {
       "order": 2,
