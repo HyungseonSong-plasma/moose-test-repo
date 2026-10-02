@@ -696,7 +696,7 @@ jobs:
 
           cp -a .heavy4-artifact/case issue359-heavy4-exodus
 
-          python3 -c 'from pathlib import Path; p=Path("issue359-heavy4-exodus/input.i"); t=p.read_text(); old="[Outputs]\\n  csv = true\\n  execute_on = FINAL\\n[]"; new="[Outputs]\\n  csv = true\\n  exodus = true\\n  execute_on = FINAL\\n[]"; assert t.count(old) == 1, "historical Outputs block changed"; p.write_text(t.replace(old, new, 1))'
+          python3 -c 'from pathlib import Path; p=Path("issue359-heavy4-exodus/input.i"); t=p.read_text(); marker="[Outputs]"; assert t.count(marker) == 1, "historical Outputs block changed"; assert "exodus = true" not in t, "Exodus already enabled"; p.write_text(t.replace(marker, marker + "\\n  exodus = true", 1))'
 
           docker pull "$EXPECTED_BUILD_BASE_REF"
           docker run --rm \
