@@ -431,7 +431,7 @@ def input_contract_manifest(case: Any) -> dict[str, Any]:
         raise MooseInputContractError("case has no input contract")
     _validate_contract(contract)
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "case_id": getattr(case, "case_id", None),
         "action_id": getattr(case, "action_id", None),
         "contract": asdict(contract),
@@ -569,6 +569,47 @@ def self_test() -> int:
         )
         if audit_case_ir(disabled_case).status != "PASS":
             raise AssertionError("intentional FORBIDDEN absence did not pass")
+        disabled_rendered = emit_moose_input(disabled_case)
+        if audit_generated_input(disabled_case, disabled_rendered).status != "PASS":
+            raise AssertionError("intentional FORBIDDEN rendered absence did not pass")
+
+        forbidden_in_rendered = disabled_rendered + (
+            "[FVKernels]\n"
+            "  [u_diffusion]\n"
+            "    type = FVDiffusion\n"
+            "    variable = u\n"
+            "    coeff = D\n"
+            "    block = plasma\n"
+            "  []\n"
+            "[]\n"
+        )
+        forbidden_rendered_result = audit_generated_input(
+            disabled_case, forbidden_in_rendered
+        )
+        if (
+            forbidden_rendered_result.status != "FAIL"
+            or "forbidden:transport.u.diffusion"
+            not in forbidden_rendered_result.unexpected
+        ):
+            raise AssertionError("rendered FORBIDDEN object presence was not rejected")
+
+        optional_present = MooseCaseIR(
+            case_id="optional-selftest",
+            action_id="optional-selftest",
+            blocks=(
+                MooseBlock(
+                    object_id="diagnostic.optional",
+                    path="Postprocessors/optional_probe",
+                    type_name="ElementAverageValue",
+                    parameters=(),
+                ),
+            ),
+            assignments=(),
+            input_contract=disable_contract,
+        )
+        if audit_case_ir(optional_present).status != "PASS":
+            raise AssertionError("present OPTIONAL object was not accepted")
+        emit_moose_input(optional_present)
 
         forbidden_present = MooseCaseIR(
             case_id="disabled-selftest",
