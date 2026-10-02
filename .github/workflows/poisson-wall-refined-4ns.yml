@@ -80,7 +80,7 @@ jobs:
           path = Path('.ci-wall-refined-4ns/input.i')
           text = path.read_text()
           anchor = """  [plasma_only]\n    type = BlockDeletionGenerator\n    input = plasma_focus_ring\n    operation = keep\n    block = plasma\n  []\n"""
-          replacement = """  # Refine only the physical plasma-wall sidesets. The x=0 RZ axis is\n  # intentionally absent, so the axis/interior retain the baseline coarse mesh.\n  [wall_refined]\n    type = RefineSidesetGenerator\n    input = plasma_focus_ring\n    boundaries = 'inlet outlet plasma_electrode plasma_metal plasma_right plasma_cover plasma_wafer plasma_focus_ring'\n    refinement = '1 1 1 1 1 1 1 1'\n    boundary_side = primary\n    enable_neighbor_refinement = true\n  []\n  [plasma_only]\n    type = BlockDeletionGenerator\n    input = wall_refined\n    operation = keep\n    block = plasma\n  []\n"""
+          replacement = """  # Refine only the physical plasma-wall sidesets. The x=0 RZ axis is\n  # intentionally absent, so the axis/interior retain the baseline coarse mesh.\n  [wall_refined]\n    type = RefineSidesetGenerator\n    input = plasma_focus_ring\n    boundaries = 'inlet outlet plasma_electrode plasma_metal plasma_right plasma_cover plasma_wafer plasma_focus_ring'\n    refinement = '1 1 1 1 1 1 1 1'\n    boundary_side = 'primary primary primary primary primary primary primary primary'\n    enable_neighbor_refinement = true\n  []\n  [plasma_only]\n    type = BlockDeletionGenerator\n    input = wall_refined\n    operation = keep\n    block = plasma\n  []\n"""
           if anchor not in text:
               raise SystemExit('canonical plasma_only mesh block not found')
           text = text.replace(anchor, replacement, 1)
