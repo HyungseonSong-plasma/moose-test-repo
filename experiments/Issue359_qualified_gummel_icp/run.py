@@ -53,8 +53,10 @@ QUALIFIED_1D_SHELL_WEIGHTS = (
 )
 AVOGADRO = 6.02214076e23
 R_GAS = 8.31446261815324
-ELECTRON_DENSITY_REF_M3 = 1.0e16
 ELEMENTARY_CHARGE_C = 1.602176634e-19
+ELECTRON_MASS_KG = 9.1093837139e-31
+O2_MOLAR_MASS_KG_PER_MOL = 0.032
+K_B_OVER_E_EV_PER_K = 8.617333262145e-5
 TE_PER_MEAN_EV_K = (2.0 / 3.0) * ELEMENTARY_CHARGE_C / 1.380649e-23
 ALL_ELECTRON_BOUNDARIES = (
     "inlet",
@@ -84,7 +86,10 @@ INITIAL_ELECTRON_DENSITY_M3 = INITIAL_MIXTURE_DENSITY_KG_M3 * AVOGADRO * sum(
 )
 INITIAL_ELECTRON_MOLAR_M3 = INITIAL_ELECTRON_DENSITY_M3 / AVOGADRO
 INITIAL_LOG_E = math.log(INITIAL_ELECTRON_MOLAR_M3)
-INITIAL_EPSILON_HAT = INITIAL_ELECTRON_DENSITY_M3 / ELECTRON_DENSITY_REF_M3
+INITIAL_C_EPSILON_EV_MOL_M3 = INITIAL_ELECTRON_MOLAR_M3 * ENERGY_REF_EV
+ELASTIC_EXCHANGE_FACTOR_O2 = (
+    3.0 * ELECTRON_MASS_KG / (O2_MOLAR_MASS_KG_PER_MOL / AVOGADRO)
+)
 
 
 class Issue359Error(RuntimeError):
@@ -286,10 +291,10 @@ def _configure_child_linear_solver(
     return text
 
 
-def _rename_mean_energy_state(text: str) -> str:
-    """Rename the historical n_epsilon state without changing its equation."""
-    text = re.sub(r"\bn_epsilon_frozen\b", "mean_en_frozen", text)
-    text = re.sub(r"\bn_epsilon\b", "mean_en", text)
+def _rename_energy_state_to_molar(text: str) -> str:
+    """Map historical normalized n_epsilon names onto the accepted T2 molar state."""
+    text = re.sub(r"\bn_epsilon_frozen\b", "c_epsilon_frozen", text)
+    text = re.sub(r"\bn_epsilon\b", "c_epsilon", text)
     return text
 
 
@@ -301,15 +306,15 @@ def _electron_input(
     electron_substeps: int = ELECTRON_SUBSTEPS_DEFAULT,
     heavy_steps: int = HEAVY_STEPS_DEFAULT,
 ) -> str:
-    text = _rename_mean_energy_state(_replace_mesh(src))
+    text = _rename_energy_state_to_molar(_replace_mesh(src))
     text = mp.upsert_parameter(
         text, "Variables/log_e", "initial_condition", f"{INITIAL_LOG_E:.17g}"
     )
     text = mp.upsert_parameter(
         text,
-        "Variables/mean_en",
+        "Variables/c_epsilon",
         "initial_condition",
-        f"{INITIAL_EPSILON_HAT:.17g}",
+        f"{INITIAL_C_EPSILON_EV_MOL_M3:.17g}",
     )
     text = mp.upsert_parameter(
         text,
@@ -332,6 +337,52 @@ def _electron_input(
     text = mp.upsert_parameter(
         text, "FunctorMaterials/constants", "prop_values", "'1.0 0.0'"
     )
+
+    # Reuse the accepted T1 particle representation directly:
+    # c_e = exp(log_e) [mol/m^3], n_e = N_A*c_e [1/m^3].
+    for required in (
+        "FunctorMaterials/electron_molar_density",
+        "FunctorMaterials/electron_number_density",
+        "FunctorMaterials/electron_energy_density_physical",
+    ):
+        if not mb.has_block(text, required):
+            raise Issue359Error(f"qualified electron input missing T1/T2 bridge: {required}")
+    if mb.has_block(text, "FunctorMaterials/electron_density_normalized"):
+        text = mb.remove_block(text, "FunctorMaterials/electron_density_normalized")
+
+    # Preserve the physical J/m^3 diagnostic, but derive it directly from
+    # conservative c_epsilon instead of an arbitrary reference state.
+    text = mp.upsert_parameter(
+        text,
+        "FunctorMaterials/electron_energy_density_physical",
+        "functor_names",
+        "'c_epsilon'",
+    )
+    text = mp.upsert_parameter(
+        text,
+        "FunctorMaterials/electron_energy_density_physical",
+        "functor_symbols",
+        "'ceps'",
+    )
+    text = mp.upsert_parameter(
+        text,
+        "FunctorMaterials/electron_energy_density_physical",
+        "expression",
+        f"'{AVOGADRO * ELEMENTARY_CHARGE_C:.17g}*ceps'",
+    )
+    mb.require_absent(text, "FunctorMaterials/electron_energy_density_eV")
+    text = mb.insert_child_block(
+        text,
+        "FunctorMaterials",
+        f"""  [electron_energy_density_eV]
+    type = ADParsedFunctorMaterial
+    property_name = electron_energy_density_eV_m3
+    functor_names = 'c_epsilon'
+    functor_symbols = 'ceps'
+    expression = '{AVOGADRO:.17g}*ceps'
+  []""",
+    )
+
     text = mb.insert_child_block(
         text,
         "FunctorMaterials",
@@ -348,12 +399,11 @@ def _electron_input(
     text = mb.insert_child_block(
         text,
         "FunctorMaterials",
-        f"""  [electron_transport_closure]
+        """  [electron_transport_closure]
     type = PhysicsElectronClosureMaterial
-    state_form = normalized
-    normalized_electron_density = electron_density_hat
-    normalized_electron_energy_density = mean_en
-    electron_energy_reference_eV = {ENERGY_REF_EV:.17g}
+    state_form = physical_eV
+    electron_number_density = electron_density_m3
+    electron_energy_density = electron_energy_density_eV_m3
     gas_pressure = p_gas_from_heavy
     gas_temperature = T_g_from_heavy
     transport_table_file = electron_moments.txt
@@ -384,8 +434,72 @@ def _electron_input(
     text = mp.upsert_parameter(
         text,
         "FunctorMaterials/elastic_energy_candidate",
+        "property_name",
+        "S_elastic_candidate_molar",
+    )
+    text = mp.upsert_parameter(
+        text,
+        "FunctorMaterials/elastic_energy_candidate",
         "functor_names",
         "'mean_en_solved T_g_from_heavy R_elastic_O2'",
+    )
+    text = mp.upsert_parameter(
+        text,
+        "FunctorMaterials/elastic_energy_candidate",
+        "expression",
+        (
+            f"'-{ELASTIC_EXCHANGE_FACTOR_O2:.17g}*"
+            f"(0.66666666666666663*meanE-{K_B_OVER_E_EV_PER_K:.17g}*tgas)*rprog'"
+        ),
+    )
+    text = mp.upsert_parameter(
+        text,
+        "FunctorMaterials/elastic_energy_applied",
+        "property_name",
+        "S_elastic_applied_molar",
+    )
+    text = mp.upsert_parameter(
+        text,
+        "FunctorMaterials/elastic_energy_applied",
+        "functor_names",
+        "'S_elastic_candidate_molar'",
+    )
+    text = mp.upsert_parameter(
+        text,
+        "FunctorMaterials/elastic_energy_applied",
+        "expression",
+        "'1.0*source'",
+    )
+    for path, source_name in (
+        ("FunctorMaterials/elastic_loss_candidate_physical", "S_elastic_candidate_molar"),
+        ("FunctorMaterials/elastic_loss_applied_physical", "S_elastic_applied_molar"),
+    ):
+        if mb.has_block(text, path):
+            text = mp.upsert_parameter(text, path, "functor_names", f"'{source_name}'")
+            text = mp.upsert_parameter(
+                text,
+                path,
+                "expression",
+                f"'-source*{AVOGADRO * ELEMENTARY_CHARGE_C:.17g}'",
+            )
+
+    for path in (
+        "FVKernels/energy_time",
+        "FVKernels/energy_diffusion",
+        "FVKernels/energy_drift",
+        "FVKernels/energy_joule",
+        "FVKernels/energy_elastic_o2",
+    ):
+        text = mp.upsert_parameter(text, path, "variable", "c_epsilon")
+    text = mp.upsert_parameter(
+        text, "FVKernels/energy_joule", "electron_density", "c_e_molar"
+    )
+    text = mp.upsert_parameter(
+        text, "FVKernels/energy_joule", "state_form", "molar_eV"
+    )
+    text = mp.remove_parameter(text, "FVKernels/energy_joule", "energy_reference_eV")
+    text = mp.upsert_parameter(
+        text, "FVKernels/energy_elastic_o2", "v", "S_elastic_applied_molar"
     )
 
     all_bcs = "'" + " ".join(ALL_ELECTRON_BOUNDARIES) + "'"
@@ -406,12 +520,12 @@ def _electron_input(
   []
   [electron_energy_wall_loss]
     type = PhysicsFVElectronGroundedSheathEnergyBC
-    variable = mean_en
+    variable = c_epsilon
     boundary = {all_bcs}
-    electron_density = electron_density_hat
+    electron_density = c_e_molar
     mean_electron_energy = mean_en_solved
     potential = potential_from_poisson
-    energy_reference_eV = {ENERGY_REF_EV:.17g}
+    molar_energy_state = true
   []
 []
 """
@@ -473,7 +587,7 @@ def _poisson_input(
     electron_substeps: int = ELECTRON_SUBSTEPS_DEFAULT,
     heavy_steps: int = HEAVY_STEPS_DEFAULT,
 ) -> str:
-    text = _rename_mean_energy_state(_replace_mesh(src))
+    text = _rename_energy_state_to_molar(_replace_mesh(src))
     text = mp.upsert_parameter(
         text,
         "AuxVariables/log_e_frozen",
@@ -482,9 +596,9 @@ def _poisson_input(
     )
     text = mp.upsert_parameter(
         text,
-        "AuxVariables/mean_en_frozen",
+        "AuxVariables/c_epsilon_frozen",
         "initial_condition",
-        f"{INITIAL_EPSILON_HAT:.17g}",
+        f"{INITIAL_C_EPSILON_EV_MOL_M3:.17g}",
     )
     for species in ("O2p", "Om", "Op"):
         text = mp.upsert_parameter(
@@ -495,6 +609,27 @@ def _poisson_input(
         )
     text = _add_aux(text, "p_gas_from_heavy", PRESSURE_PA)
     text = _add_aux(text, "T_g_from_heavy", TG_K)
+
+    if not mb.has_block(text, "FunctorMaterials/gummel_mean_energy"):
+        raise Issue359Error("qualified Poisson input missing gummel_mean_energy")
+    text = mp.upsert_parameter(
+        text,
+        "FunctorMaterials/gummel_mean_energy",
+        "functor_names",
+        "'c_epsilon_frozen log_e_frozen'",
+    )
+    text = mp.upsert_parameter(
+        text,
+        "FunctorMaterials/gummel_mean_energy",
+        "functor_symbols",
+        "'ceps loge'",
+    )
+    text = mp.upsert_parameter(
+        text,
+        "FunctorMaterials/gummel_mean_energy",
+        "expression",
+        "'ceps/max(exp(loge),1.0e-300)'",
+    )
 
     text = mp.upsert_parameter(
         text, "FunctorMaterials/constants", "prop_names", "'relative_permittivity'"
@@ -629,7 +764,7 @@ def _driver_input(
     electron_substeps: int = ELECTRON_SUBSTEPS_DEFAULT,
     heavy_steps: int = HEAVY_STEPS_DEFAULT,
 ) -> str:
-    text = _rename_mean_energy_state(_canonicalize_qualified_driver(src))
+    text = _rename_energy_state_to_molar(_canonicalize_qualified_driver(src))
     text = _replace_mesh(text)
     for species in ("O2p", "Om", "Op"):
         text = mp.upsert_parameter(
@@ -1144,7 +1279,7 @@ def _construction_audit(
         "electron_energy_solved": all(
             mb.has_block(electron, p)
             for p in (
-                "Variables/mean_en",
+                "Variables/c_epsilon",
                 "FVKernels/energy_time",
                 "FVKernels/energy_diffusion",
                 "FVKernels/energy_drift",
@@ -1164,6 +1299,66 @@ def _construction_audit(
                 "type",
             )
             == "PhysicsElectronClosureMaterial"
+        ),
+        "electron_particle_log_molar_no_normalization": (
+            mb.has_block(electron, "Variables/log_e")
+            and mb.has_block(electron, "FunctorMaterials/electron_molar_density")
+            and mb.has_block(electron, "FunctorMaterials/electron_number_density")
+            and not mb.has_block(electron, "FunctorMaterials/electron_density_normalized")
+            and "electron_density_hat" not in electron
+        ),
+        "electron_energy_conservative_molar_no_normalization": (
+            mb.has_block(electron, "Variables/c_epsilon")
+            and mp.get_parameter(
+                electron,
+                "FunctorMaterials/electron_transport_closure",
+                "state_form",
+            )
+            == "physical_eV"
+            and mp.get_parameter(
+                electron,
+                "FunctorMaterials/electron_transport_closure",
+                "electron_number_density",
+            )
+            == "electron_density_m3"
+            and mp.get_parameter(
+                electron,
+                "FunctorMaterials/electron_transport_closure",
+                "electron_energy_density",
+            )
+            == "electron_energy_density_eV_m3"
+            and mp.get_parameter(
+                electron, "FVKernels/energy_joule", "state_form"
+            )
+            == "molar_eV"
+            and mp.get_parameter(
+                electron, "FVKernels/energy_joule", "electron_density"
+            )
+            == "c_e_molar"
+            and mp.get_parameter(
+                electron, "FVBCs/electron_energy_wall_loss", "molar_energy_state"
+            )
+            == "true"
+            and mp.get_parameter(
+                electron, "FVBCs/electron_energy_wall_loss", "electron_density"
+            )
+            == "c_e_molar"
+            and "energy_reference_eV" not in electron
+            and "electron_energy_reference_eV" not in electron
+            and "state_form = normalized" not in electron
+        ),
+        "poisson_molar_mean_energy_bridge": (
+            mp.words(
+                mp.get_parameter(
+                    poisson, "FunctorMaterials/gummel_mean_energy", "functor_names"
+                )
+                or ""
+            )
+            == ["c_epsilon_frozen", "log_e_frozen"]
+            and mp.get_parameter(
+                poisson, "FunctorMaterials/gummel_mean_energy", "expression"
+            )
+            == "'ceps/max(exp(loge),1.0e-300)'"
         ),
         "electron_kinetics_material_explicit": (
             mb.has_block(electron, "FunctorMaterials/electron_o2_elastic_kinetics")
@@ -1327,11 +1522,11 @@ def _construction_audit(
             and math.isclose(
                 float(
                     mp.get_parameter(
-                        electron, "Variables/mean_en", "initial_condition"
+                        electron, "Variables/c_epsilon", "initial_condition"
                     )
                     or "nan"
                 ),
-                INITIAL_EPSILON_HAT,
+                INITIAL_C_EPSILON_EV_MOL_M3,
                 rel_tol=0.0,
                 abs_tol=1.0e-12,
             )
@@ -1475,14 +1670,14 @@ def _stage(
             "electron_density_m3": INITIAL_ELECTRON_DENSITY_M3,
             "electron_molar_density_mol_m3": INITIAL_ELECTRON_MOLAR_M3,
             "log_e_initial": INITIAL_LOG_E,
-            "mean_en_initial_state": INITIAL_EPSILON_HAT,
+            "c_epsilon_initial_eV_mol_m3": INITIAL_C_EPSILON_EV_MOL_M3,
             "mean_energy_initial_eV": ENERGY_REF_EV,
             "formula": "ne = rho*NA*sum(z_i*w_i/M_i)",
-            "reference_density_m3": ELECTRON_DENSITY_REF_M3,
+            "electron_state": "log_e=ln(c_e), c_epsilon=c_e*mean_en",
         },
         "electron_boundary_set": list(ALL_ELECTRON_BOUNDARIES),
         "electron_particle_bc": "PhysicsFVElectronGroundedSheathCollectionBC",
-        "electron_energy_bc": "PhysicsFVElectronGroundedSheathEnergyBC",
+        "electron_energy_bc": "PhysicsFVElectronGroundedSheathEnergyBC(molar_energy_state=true)",
         "poisson_bc": "all eight plasma boundaries grounded at 0 V",
         "removed_geometry_specific_object": "FVElectronResponseBandedCorrection",
         "time_integration": {
