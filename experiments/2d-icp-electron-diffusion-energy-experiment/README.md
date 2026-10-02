@@ -19,20 +19,24 @@ d(c_e)/dt       - div(D_e(mean_en) grad(c_e))             = 0
 d(c_epsilon)/dt - div(D_epsilon(mean_en) grad(c_epsilon)) = 0
 ```
 
-The particle wall loss uses the zero-potential thermal collection law. The
-electron-energy wall loss is deliberately transport-matched to the bulk
-closure:
+The particle wall loss uses the zero-potential thermal collection law.
+`PhysicsFVElectronGroundedSheathEnergyBC` now takes the dimensionless
+`energy_per_particle_te_factor` as a functor and evaluates
+
+```text
+Gamma_epsilon = Gamma_e * (alpha*T_e + Delta_phi)
+```
+
+with `alpha=2.0` as the default kinetic half-Maxwellian closure. This
+diffusion-only baseline explicitly supplies `energy_wall_te_factor=2.5`, so
 
 ```text
 D_epsilon / D_e = 5/3
-Gamma_epsilon = Gamma_e * (5/2) T_e
 (Gamma_epsilon/c_epsilon) / (Gamma_e/c_e) = 5/3
 ```
 
-This choice is specific to this zero-potential diffusion-only baseline. The
-general kinetic grounded-sheath owner
-`PhysicsFVElectronGroundedSheathEnergyBC` retains the half-Maxwellian
-`Gamma_epsilon = Gamma_e (2 T_e + Delta phi)` law.
+The coefficient can therefore be switched back to `2.0` in the input without
+changing the BC implementation.
 
 Electrostatic drift, Poisson, reactions, Joule heating, volumetric energy
 sources, and heavy-species evolution remain disabled.
@@ -61,3 +65,19 @@ python3 bin/physics.py simple-case create \
 ```
 
 Generated cases do not inherit scientific qualification automatically.
+
+## Wall-flux discriminator
+
+Repository CI #571 built the exact source head and ran the same configurable
+BC at `alpha=2.0` and `alpha=2.5` with `dt=1 ns` to `4 ns`.
+
+```text
+alpha=2.0: T_e,max = 3.8453167929391 eV, overshoot = +0.0234767929391 eV
+alpha=2.5: T_e,max = 3.8218386527941 eV, overshoot = -1.3472059e-6 eV
+alpha=2.0 max energy-balance relative error = 1.9152e-12
+alpha=2.5 max energy-balance relative error = 1.7073e-12
+```
+
+The transport-matched `alpha=2.5` case removes the wall-tip temperature
+overshoot while retaining the conservative energy balance. The `alpha=2.0`
+case remains available as a controlled kinetic-closure discriminator.
