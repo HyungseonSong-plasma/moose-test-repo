@@ -213,6 +213,18 @@ if max(abs(phi_mins[-1]), abs(phi_maxs[-1])) <= 1.0e-6:
         "Poisson solve did not develop a resolvable potential response: "
         f"min={phi_mins[-1]} max={phi_maxs[-1]}"
     )
+
+gauss_balance_errors = []
+for charge, boundary_flux in zip(charge_integrals, gauss_flux_charge):
+    tolerance = max(1.0e-12, 1.0e-8 * abs(charge))
+    error = abs(boundary_flux - charge)
+    gauss_balance_errors.append(error)
+    if error > tolerance:
+        raise SystemExit(
+            "Poisson Gauss-law balance failed: "
+            f"charge={charge} boundary_flux={boundary_flux} "
+            f"abs_error={error} tolerance={tolerance}"
+        )
 if not any(abs(value) > 0.0 for value in particle_wall_rates[1:]):
     raise SystemExit(f"thermal particle wall-loss flux was zero: {particle_wall_rates}")
 if not any(abs(value) > 0.0 for value in energy_wall_rates[1:]):
@@ -424,6 +436,7 @@ print(f"FINAL_PHI_MAX_V={phi_maxs[-1]:.17g}")
 print(f"FINAL_GAUSS_FLUX_CHARGE_C={gauss_flux_charge[-1]:.17g}")
 print(f"PROFILE_PHI_MIN_V={min(profile_potentials):.17g}")
 print(f"PROFILE_PHI_MAX_V={max(profile_potentials):.17g}")
+print(f"MAX_GAUSS_BALANCE_ABS_ERROR_C={max(gauss_balance_errors):.17g}")
 print(
     "MAX_PARTICLE_BALANCE_REL_ERROR="
     f"{max(particle_balance_relative_errors):.17g}"
