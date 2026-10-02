@@ -146,6 +146,21 @@
     initial_condition = 0.0
     block = plasma
   []
+  [charge_density_out]
+    type = MooseVariableFVReal
+    initial_condition = 0.0
+    block = plasma
+  []
+  [poisson_source_out]
+    type = MooseVariableFVReal
+    initial_condition = 0.0
+    block = plasma
+  []
+  [frozen_ion_density_out]
+    type = MooseVariableFVReal
+    initial_condition = 1.0e16
+    block = plasma
+  []
 []
 
 [FunctorMaterials]
@@ -330,6 +345,24 @@
     functor = electron_diffusion
     execute_on = 'INITIAL TIMESTEP_END'
   []
+  [charge_density_copy]
+    type = FunctorAux
+    variable = charge_density_out
+    functor = charge_density_C_m3
+    execute_on = 'INITIAL TIMESTEP_END'
+  []
+  [poisson_source_copy]
+    type = FunctorAux
+    variable = poisson_source_out
+    functor = poisson_source_V_m2
+    execute_on = 'INITIAL TIMESTEP_END'
+  []
+  [frozen_ion_density_copy]
+    type = FunctorAux
+    variable = frozen_ion_density_out
+    functor = frozen_ion_number_density_m3
+    execute_on = 'INITIAL TIMESTEP_END'
+  []
 []
 
 [Postprocessors]
@@ -442,7 +475,7 @@
 [VectorPostprocessors]
   [final_profile]
     type = ElementValueSampler
-    variable = 'electron_density c_epsilon mean_energy_out electron_temperature_eV diffusion_out phi'
+    variable = 'electron_density c_epsilon mean_energy_out electron_temperature_eV diffusion_out charge_density_out poisson_source_out frozen_ion_density_out phi'
     sort_by = id
     execute_on = 'FINAL'
   []
@@ -478,7 +511,7 @@
   [exodus]
     type = Exodus
     file_base = poisson
-    show = 'electron_density electron_temperature_eV phi'
+    show = 'electron_density electron_temperature_eV charge_density_out poisson_source_out frozen_ion_density_out phi'
     execute_on = 'INITIAL TIMESTEP_END'
   []
 []
