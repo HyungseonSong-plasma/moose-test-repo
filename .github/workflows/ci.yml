@@ -727,18 +727,29 @@ jobs:
           set -euxo pipefail
           rm -rf "$PWD/issue359-rz-jacobian" "$PWD/.ci-rz"
           mkdir -p "$PWD/.ci-rz"
+          export RZ_HOST_ROOT="$PWD"
           cat > "$PWD/.ci-rz/physics-opt-runtime" <<'SH'
           #!/usr/bin/env bash
           set -euo pipefail
           : "${RZ_RUNTIME_REF:?RZ_RUNTIME_REF is required}"
+          : "${RZ_HOST_ROOT:?RZ_HOST_ROOT is required}"
+          case "$PWD" in
+            "$RZ_HOST_ROOT") rel="" ;;
+            "$RZ_HOST_ROOT"/*) rel="${PWD#"$RZ_HOST_ROOT"/}" ;;
+            *) echo "runtime cwd escaped repository root: $PWD" >&2; exit 2 ;;
+          esac
+          workdir="/workspace"
+          if [[ -n "$rel" ]]; then
+            workdir="/workspace/$rel"
+          fi
           docker run --rm \
             --user "$(id -u):$(id -g)" \
-            --workdir /work \
-            -v "$PWD:/work" \
+            --workdir "$workdir" \
+            -v "$RZ_HOST_ROOT:/workspace" \
             "$RZ_RUNTIME_REF" "$@"
           SH
           chmod +x "$PWD/.ci-rz/physics-opt-runtime"
-          export RZ_RUNTIME_REF
+          export RZ_RUNTIME_REF RZ_HOST_ROOT
           unset ISSUE351_QUALIFIED_CASE
 
           python3 -m experiments.Issue359_rz_response_jacobian.control \
