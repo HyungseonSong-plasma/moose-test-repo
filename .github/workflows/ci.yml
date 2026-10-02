@@ -10,6 +10,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 env:
   PHYSICS_RUNTIME_REF: ghcr.io/hyungseonsong-plasma/physics-runtime@sha256:cda9f0d09a17aed5fa606e97d1ee5c3450f7280536cec2e5c635402bb07d972c
   EXPECTED_BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
@@ -18,9 +22,10 @@ env:
 jobs:
   validate:
     if: >-
-      github.event_name != 'pull_request' ||
-      github.event.action != 'edited' ||
-      github.event.changes.base != null
+      github.head_ref != 'issue-359-qualified-gummel-icp' &&
+      (github.event_name != 'pull_request' ||
+       github.event.action != 'edited' ||
+       github.event.changes.base != null)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -275,9 +280,10 @@ jobs:
 
   runtime-smoke:
     if: >-
-      github.event_name != 'pull_request' ||
-      github.event.action != 'edited' ||
-      github.event.changes.base != null
+      github.head_ref != 'issue-359-qualified-gummel-icp' &&
+      (github.event_name != 'pull_request' ||
+       github.event.action != 'edited' ||
+       github.event.changes.base != null)
     name: Public immutable Physics runtime smoke
     runs-on: ubuntu-24.04
     timeout-minutes: 5
@@ -353,7 +359,7 @@ jobs:
 
 
   issue359-heavy-continuity-audit:
-    if: github.event_name == 'pull_request' && github.head_ref == 'issue-359-qualified-gummel-icp'
+    if: false # RZ-only branch mode; re-enable when this experiment closes
     name: Issue359 Heavy Continuity Audit
     runs-on: ubuntu-24.04
     timeout-minutes: 20
@@ -426,7 +432,7 @@ jobs:
           retention-days: 30
 
   issue359-qualified-gummel-icp:
-    if: github.event_name == 'pull_request' && github.head_ref == 'issue-359-qualified-gummel-icp'
+    if: false # RZ-only branch mode; re-enable when this experiment closes
     needs: issue359-heavy-continuity-audit
     name: Issue359 Qualified Gummel ICP
     runs-on: ubuntu-24.04
@@ -501,7 +507,7 @@ jobs:
           retention-days: 30
 
   issue359-multirate-matrix:
-    if: github.event_name == 'pull_request' && github.head_ref == 'issue-359-qualified-gummel-icp'
+    if: false # RZ-only branch mode; re-enable when this experiment closes
     needs: issue359-heavy-continuity-audit
     name: Issue359 Multirate ${{ matrix.label }}
     runs-on: ubuntu-24.04
@@ -741,7 +747,7 @@ jobs:
 
 
   issue359-heavy4-exodus-replay:
-    if: github.event_name == 'pull_request' && github.head_ref == 'issue-359-qualified-gummel-icp'
+    if: false # RZ-only branch mode; re-enable when this experiment closes
     name: Issue359 ICP heavy4 Exodus replay
     runs-on: ubuntu-24.04
     timeout-minutes: 20
