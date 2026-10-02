@@ -1,0 +1,6 @@
+{
+  "name": "2d-icp-poisson-experiment",
+  "type": "diagnostic",
+  "input": "input.i",
+  "checker": "check.py"
+}
