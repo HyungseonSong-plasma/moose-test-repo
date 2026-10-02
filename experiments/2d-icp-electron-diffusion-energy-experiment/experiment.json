@@ -1,0 +1,67 @@
+{
+  "schema_version": 2,
+  "experiment_id": "2d-icp-electron-diffusion-energy-experiment",
+  "description": "Reusable minimal real-QVT 2-D ICP electron particle + electron-energy diffusion diagnostic with solved mean energy and energy-dependent transport lookup.",
+  "objective": "Establish the next reusable layer after fixed-energy diffusion: solve conservative electron energy and use the resulting mean_en to look up electron transport.",
+  "target_claims": [
+    "electron particle and electron-energy diffusion run together on the real ICP RZ plasma geometry without electrostatic coupling",
+    "solved mean electron energy drives local electron diffusivity through the production electron_moments.txt lookup",
+    "particle and electron-energy wall losses use the same zero-potential grounded thermal/sheath branch"
+  ],
+  "parameters": {
+    "initial_electron_density_m3": 10000000000000000,
+    "initial_mean_electron_energy_eV": 5.73276,
+    "gas_pressure_Pa": 1.333223684,
+    "gas_temperature_K": 300,
+    "electron_dt_s": 1e-9,
+    "electron_steps": 4
+  },
+  "constraints": [
+    "real-QVT ICP RZ plasma geometry",
+    "electron particle continuity solved in log-molar form",
+    "electron energy density solved as c_epsilon in eV mol/m^3",
+    "mean electron energy derived dynamically as c_epsilon/c_e",
+    "electron particle and energy diffusivities obtained from electron_moments.txt through PhysicsElectronClosureMaterial",
+    "electrostatic drift disabled",
+    "Poisson disabled",
+    "electron reactions disabled",
+    "Joule heating and volumetric electron-energy sources disabled",
+    "heavy-species equations absent",
+    "all named plasma boundaries use matched grounded thermal particle/energy collection with sheath potential fixed to 0 V"
+  ],
+  "observations": [
+    "electron density profile",
+    "electron particle inventory",
+    "electron energy inventory",
+    "solved mean electron energy profile",
+    "energy-dependent electron diffusivity",
+    "thermal wall particle loss",
+    "thermal wall energy loss",
+    "Exodus transient field output"
+  ],
+  "execution_bounds": {
+    "dt": 1e-9,
+    "end_time": 4e-9,
+    "max_steps": 4
+  },
+  "cases": [
+    {
+      "case_id": "baseline",
+      "parameters": {
+        "initial_electron_density_m3": 10000000000000000,
+        "initial_mean_electron_energy_eV": 5.73276
+      },
+      "constraints": [
+        "no electric field or volumetric source"
+      ]
+    }
+  ],
+  "provenance": {
+    "purpose": "cross-issue reusable 2-D ICP troubleshooting baseline after fixed-energy diffusion",
+    "geometry_source": "experiments/Issue91_real_qvt_r3/r3_e0/qvt.msh",
+    "geometry_sha256": "a98521af2c106137f9635fe7e2c5ba9b0fd408e17c62eb7c6d3f7c1fff65a03e",
+    "transport_source": "experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt",
+    "transport_sha256": "994f6b1deece3c53be7fb3e7f9526555d0f9314fd58749bea6346639f08aa387"
+  },
+  "model_ref": "real_qvt_icp_electron_particle_energy_diffusion"
+}
