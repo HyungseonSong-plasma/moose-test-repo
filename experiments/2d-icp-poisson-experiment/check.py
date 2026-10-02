@@ -353,11 +353,19 @@ for row in profile:
         frozen_ion_density - electron_density
     )
     expected_poisson_source = charge_density / 8.8541878128e-12
+
+    # Do not normalize the charge-identity residual by the net charge itself:
+    # in quasi-neutral cells ni-ne approaches zero and makes a relative error
+    # ill-conditioned. Normalize by the full charged-particle density scale.
+    charge_scale = ELEMENTARY_CHARGE_C * max(
+        abs(frozen_ion_density), abs(electron_density), 1.0
+    )
+    source_scale = charge_scale / 8.8541878128e-12
     charge_identity_relative_errors.append(
-        relative_error(charge_density, expected_charge_density)
+        abs(charge_density - expected_charge_density) / charge_scale
     )
     source_identity_relative_errors.append(
-        relative_error(poisson_source, expected_poisson_source)
+        abs(poisson_source - expected_poisson_source) / source_scale
     )
     expected_temperature_eV = (2.0 / 3.0) * mean_energy
     temperature_relation_errors.append(
@@ -375,13 +383,15 @@ for row in profile:
 
 if max(charge_identity_relative_errors) > 1.0e-12:
     raise SystemExit(
-        "saved charge-density field does not match e*(ni-ne): "
-        f"max_relative_error={max(charge_identity_relative_errors)}"
+        "saved charge-density field does not match e*(ni-ne) on the "
+        "charged-particle density scale: "
+        f"max_scaled_error={max(charge_identity_relative_errors)}"
     )
 if max(source_identity_relative_errors) > 1.0e-12:
     raise SystemExit(
-        "saved Poisson source field does not match rho/epsilon0: "
-        f"max_relative_error={max(source_identity_relative_errors)}"
+        "saved Poisson source field does not match rho/epsilon0 on the "
+        "charged-particle source scale: "
+        f"max_scaled_error={max(source_identity_relative_errors)}"
     )
 if max(profile_frozen_ion_densities) - min(profile_frozen_ion_densities) > 1.0:
     raise SystemExit(
