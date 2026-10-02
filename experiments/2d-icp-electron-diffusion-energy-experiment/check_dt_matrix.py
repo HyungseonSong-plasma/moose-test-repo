@@ -19,7 +19,7 @@ DT_S = {
 
 
 def find_profile(root: Path, label: str) -> Path:
-    candidates = sorted((root / label).rglob("electron_diffusion_final_profile_*.csv"))
+    candidates = sorted((root / f"electron-energy-dt-{label}").rglob("electron_diffusion_final_profile_*.csv"))
     if len(candidates) != 1:
         raise SystemExit(
             f"{label}: expected exactly one final profile CSV; "
