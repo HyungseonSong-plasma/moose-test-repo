@@ -680,7 +680,26 @@ jobs:
           set -euxo pipefail
           test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
           python3 -m py_compile "$CASE_DIR/check.py"
-          python3 physics_harness/specification/simple_cases.py --check --ready-only
+          python3 bin/physics.py simple-case check
+          python3 bin/physics.py simple-case list
+          python3 bin/physics.py simple-case show 1 > /tmp/simple-case-show.json
+          tmp_case_root="$(mktemp -d)"
+          python3 bin/physics.py simple-case template 1 --output "$tmp_case_root/input.i"
+          cmp "$tmp_case_root/input.i" "$CASE_DIR/input.i"
+          python3 bin/physics.py simple-case create 1 "$tmp_case_root/derived"
+          cmp "$tmp_case_root/derived/input.i" "$CASE_DIR/input.i"
+          cmp "$tmp_case_root/derived/qvt.msh" "$CASE_DIR/qvt.msh"
+          cmp "$tmp_case_root/derived/electron_moments.txt" "$CASE_DIR/electron_moments.txt"
+          python3 - "$tmp_case_root/derived/template_origin.json" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+          data = json.loads(Path(sys.argv[1]).read_text())
+          assert data["template_id"] == "electron-diffusion-experiment"
+          assert data["source_status"] == "STABLE_REUSABLE_BASELINE"
+          assert data["qualification_inherited"] is False
+          PY
+          rm -rf "$tmp_case_root"
           python3 - <<'PY'
           import json
           from pathlib import Path
