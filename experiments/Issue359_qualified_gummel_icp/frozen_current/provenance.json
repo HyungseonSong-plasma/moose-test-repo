@@ -41,5 +41,16 @@
     }
   },
   "schema_version": 1,
-  "status": "FROZEN_CURRENT"
+  "status": "FROZEN_CURRENT",
+  "prebuilt_runtime": {
+    "workflow_run": 37005225258,
+    "image": "ghcr.io/hyungseonsong-plasma/physics-runtime@sha256:0cf34d4ae00d4ea46fa5af661031f93b4edcfcac144a08ebe0f7700ed413f9cf",
+    "physics_source_manifest_sha256": "a9654d344e9c60e48992165bc855b154707ecf2e659e4428117e8f6ae8fdba3b",
+    "producer_repository_sha": "92f435d8584a9a16554169cbb1590fface533461",
+    "producer_repository_sha_kind": "pull_request_synthetic_merge",
+    "branch_physics_tree_verified_equivalent_to": "78705e666538395d960c53665773237d62dbf1b2",
+    "check_input_smoke": "PASS",
+    "bounded_real_physics_smoke": "PASS",
+    "scientific_semantics_changed": false
+  }
 }

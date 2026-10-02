@@ -657,15 +657,92 @@ jobs:
 
   issue359-rz-response-jacobian:
     if: github.event_name == 'pull_request' && github.head_ref == 'issue-359-qualified-gummel-icp'
-    name: Issue359 Build exact RZ runtime
+    name: Issue359 RZ response Jacobian
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
     permissions:
       contents: read
-      packages: write
+      packages: read
       actions: read
-    uses: ./.github/workflows/physics-runtime-producer.yml
-    with:
-      build_base_ref: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
-    secrets: inherit
+    env:
+      RZ_RUNTIME_REF: ghcr.io/hyungseonsong-plasma/physics-runtime@sha256:0cf34d4ae00d4ea46fa5af661031f93b4edcfcac144a08ebe0f7700ed413f9cf
+      RZ_PHYSICS_MANIFEST_SHA256: a9654d344e9c60e48992165bc855b154707ecf2e659e4428117e8f6ae8fdba3b
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Verify frozen inputs and runtime source identity
+        shell: bash
+        run: |
+          set -euxo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          test -f experiments/Issue359_qualified_gummel_icp/frozen_current/provenance.json
+          python3 -m py_compile \
+            experiments/Issue359_qualified_gummel_icp/run.py \
+            experiments/Issue359_rz_response_jacobian/control.py
+          git ls-files -z physics_app \
+            | sort -z \
+            | xargs -0 sha256sum > /tmp/physics-source-file-hashes.txt
+          manifest="$(sha256sum /tmp/physics-source-file-hashes.txt | awk '{print $1}')"
+          test "$manifest" = "$RZ_PHYSICS_MANIFEST_SHA256"
+          python3 -m experiments.Issue359_rz_response_jacobian.control \
+            --plan-only \
+            --max-radius 2
+
+      - name: Log in to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull and verify immutable Physics runtime
+        shell: bash
+        run: |
+          set -euxo pipefail
+          docker pull "$RZ_RUNTIME_REF"
+          test "$(docker image inspect "$RZ_RUNTIME_REF" --format '{{ index .Config.Labels "io.physics.source.owner" }}')" = "moose-test-repo/physics_app"
+          test "$(docker image inspect "$RZ_RUNTIME_REF" --format '{{ index .Config.Labels "io.physics.source.manifest-sha256" }}')" = "$RZ_PHYSICS_MANIFEST_SHA256"
+          test "$(docker image inspect "$RZ_RUNTIME_REF" --format '{{ index .Config.Labels "io.physics.build-base.ref" }}')" = "$EXPECTED_BUILD_BASE_REF"
+
+      - name: Run build-free fresh-source R1/R2 response discriminator
+        shell: bash
+        run: |
+          set -euxo pipefail
+          rm -rf "$PWD/issue359-rz-jacobian" "$PWD/.ci-rz"
+          mkdir -p "$PWD/.ci-rz"
+          cat > "$PWD/.ci-rz/physics-opt-runtime" <<'SH'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          : "${RZ_RUNTIME_REF:?RZ_RUNTIME_REF is required}"
+          docker run --rm \
+            --user "$(id -u):$(id -g)" \
+            --workdir /work \
+            -v "$PWD:/work" \
+            "$RZ_RUNTIME_REF" "$@"
+          SH
+          chmod +x "$PWD/.ci-rz/physics-opt-runtime"
+          export RZ_RUNTIME_REF
+          unset ISSUE351_QUALIFIED_CASE
+
+          python3 -m experiments.Issue359_rz_response_jacobian.control \
+            --physics "$PWD/.ci-rz/physics-opt-runtime" \
+            --results-root issue359-rz-jacobian \
+            --source-timeout 150 \
+            --case-timeout 20 \
+            --workers 4 \
+            --max-radius 2 \
+            --delta-phi 1.0e-4
+
+      - name: Upload RZ response evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue359-rz-response-jacobian
+          path: issue359-rz-jacobian
+          if-no-files-found: warn
+          retention-days: 30
 
 
   issue359-heavy4-exodus-replay:
