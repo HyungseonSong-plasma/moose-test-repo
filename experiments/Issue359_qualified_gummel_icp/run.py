@@ -20,14 +20,12 @@ from physics_harness.adapters.moose import blocks as mb
 from physics_harness.adapters.moose import parameters as mp
 from physics_harness.execution.runtime import resolve_executable, run_physics, validate_executable
 from experiments.Issue359_qualified_gummel_icp import heavy_continuity as hc
-from experiments.historical_recipe_support import issue192_s5r as s5r
+from experiments.Issue359_qualified_gummel_icp import input_audit as ia
 
 ROOT = Path(__file__).resolve().parents[2]
 ICP_SOURCE = ROOT / "experiments/Issue91_real_qvt_r3/r3_e0"
 HEAVY_SOURCE = ICP_SOURCE / "heavy_base.i"
 CANONICAL_HEAVY = ROOT / "physics_app/ci/plasma_closures_oxygen_transport.txt"
-ELECTRON_REACTION_DATA = ROOT / "physics_app/data/electron_impact"
-HEAVY_REACTION_DATA = ROOT / "physics_app/data/heavy_reactions"
 
 FLOW_SCCM = 20.0
 PRESSURE_PA = 1.333223684
@@ -851,7 +849,7 @@ def _outer_input(
         "electron_number_density",
         "electron_density_from_gummel",
     )
-    text = hc.insert_volumetric_chemistry(text)
+    # Volumetric reaction sources are intentionally deferred at this stage.
     text = hc.insert_surface_reactions(text)
 
     text += """
@@ -933,7 +931,9 @@ def _construction_audit(
 ) -> dict[str, Any]:
     all_b = set(ALL_ELECTRON_BOUNDARIES)
     continuity = hc.audit(outer)
+    labelled = ia.audit(outer, driver, electron, continuity)
     checks = dict(continuity["checks"])
+    checks.update({row["label"]: row["status"] == "PASS" for row in labelled["rows"]})
     checks.update({
         "qualified_gummel_action_present": mb.has_block(
             driver, "GummelIteration/electron_poisson"
@@ -1033,7 +1033,7 @@ def _construction_audit(
             and outer.count("type = PhysicsFVMixtureAveragedDiffusion") == 6
             and outer.count("type = PhysicsFVElectrostaticDrift") == 3
             and outer.count("type = PhysicsFVHeavyMassElectromigrationCorrection") == 6
-            and outer.count("type = PhysicsFVSpeciesReactionSource") == 6
+            and "PhysicsFVSpeciesReactionSource" not in outer
         ),
         "heavy_continuity_term_audit": continuity["status"] == "PASS",
         "gummel_potential_transferred_to_heavy": (
@@ -1261,6 +1261,7 @@ def _construction_audit(
         "checks": checks,
         "failed_checks": failed,
         "continuity": continuity,
+        "input_audit": labelled,
     }
 
 
@@ -1333,24 +1334,24 @@ def _stage(
         electron_substeps=electron_substeps,
         heavy_steps=heavy_steps,
     )
-    if audit["status"] != "PASS":
-        raise Issue359Error(f"construction audit failed: {audit['failed_checks']}")
-
     (root / "input.i").write_text(outer)
     (root / "gummel_driver.i").write_text(driver)
     (root / "electron_sub.i").write_text(electron)
     (root / "poisson_sub.i").write_text(poisson)
+    (root / "input_audit.json").write_text(
+        json.dumps(audit["input_audit"], indent=2, sort_keys=True) + "\n"
+    )
+    (root / "input_audit.md").write_text(ia.to_markdown(audit["input_audit"]))
+    for line in ia.status_lines(audit["input_audit"]):
+        print(line)
+
+    if audit["status"] != "PASS":
+        raise Issue359Error(f"construction audit failed: {audit['failed_checks']}")
 
     shutil.copy2(ICP_SOURCE / "qvt.msh", root / "qvt.msh")
     shutil.copy2(CANONICAL_HEAVY, root / "transport_data.txt")
     shutil.copy2(ICP_SOURCE / "electron_moments.txt", root / "electron_moments.txt")
-    for name in sorted(set(s5r.RATE_TABLES.values())):
-        shutil.copy2(ELECTRON_REACTION_DATA / name, root / name)
-    for name in (
-        "stage5_s5d_oxygen_heavy.txt",
-        "stage5_s5e_h05_oxygen_heavy.txt",
-    ):
-        shutil.copy2(HEAVY_REACTION_DATA / name, root / name)
+    shutil.copy2(qualified / "o2_elastic.txt", root / "o2_elastic.txt")
 
     if (root / "transport_data.txt").read_bytes() != CANONICAL_HEAVY.read_bytes():
         raise Issue359Error("canonical heavy transport staging mismatch")
@@ -1363,7 +1364,7 @@ def _stage(
         "qualified_source": "#351 frozen-heavy dedicated-driver full qualification",
         "geometry": "real-QVT ICP RZ plasma block",
         "heavy_continuity_source": "experiments/Issue91_real_qvt_r3/r3_e0/heavy_base.i",
-        "volumetric_chemistry": "accepted Stage-5 S5-R-v1 heavy-species source ledger",
+        "volumetric_chemistry": "DISABLED in current continuity-audit stage",
         "surface_chemistry": {
             "source": "Issue27 accepted wall chemistry",
             "walls": list(hc.PLASMA_WALLS),

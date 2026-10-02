@@ -4,12 +4,11 @@ from __future__ import annotations
 import math
 from typing import Any
 
-from experiments.historical_recipe_support import issue192_s5r as s5r
 from experiments.Issue27_surface_reactions.controlled_wall import combined as wall27
 from physics_harness.adapters.moose import blocks as mb
 from physics_harness.adapters.moose import parameters as mp
 
-SOLVED_HEAVY = tuple(s5r.SOLVED_HEAVY)
+SOLVED_HEAVY = ("O2s", "O2p", "O", "Om", "Op", "Os")
 CHARGED_HEAVY = ("O2p", "Om", "Op")
 NEUTRAL_WALL_SPECIES = ("O", "O2s", "Os")
 PLASMA_WALLS = tuple(wall27.PLASMA_WALLS)
@@ -62,44 +61,6 @@ def bind_gummel_potential(text: str, potential: str = "potential_from_gummel") -
         if not mb.has_block(text, path):
             raise HeavyContinuityError(f"missing heavy EM-correction owner: {path}")
         text = mp.upsert_parameter(text, path, "potential", potential)
-    return text
-
-
-def insert_volumetric_chemistry(text: str) -> str:
-    """Reuse the accepted Stage-5 S5-R-v1 heavy reaction ledger."""
-    for path in (
-        "FunctorMaterials/issue359_n_e_physical",
-        "FunctorMaterials/issue359_mean_en_solved",
-    ):
-        mb.require_absent(text, path)
-
-    text = mb.insert_child_block(
-        text,
-        "FunctorMaterials",
-        """  [issue359_n_e_physical]
-    type = ADParsedFunctorMaterial
-    property_name = n_e_physical
-    functor_names = 'electron_density_from_gummel'
-    functor_symbols = 'ne'
-    expression = 'ne'
-    block = plasma
-  []""",
-    )
-    text = mb.insert_child_block(
-        text,
-        "FunctorMaterials",
-        """  [issue359_mean_en_solved]
-    type = ADParsedFunctorMaterial
-    property_name = mean_en_solved
-    functor_names = 'mean_energy_from_gummel'
-    functor_symbols = 'mean_ev'
-    expression = 'mean_ev'
-    block = plasma
-  []""",
-    )
-    text = s5r._insert_concentrations(text)
-    text = s5r._insert_kinetic_owners(text)
-    text = s5r._insert_species_sources(text)
     return text
 
 
@@ -356,14 +317,6 @@ def audit(text: str, potential: str = "potential_from_gummel") -> dict[str, Any]
             ion_mobilities="'mu_O2p mu_Om mu_Op'",
             ion_charges="'1 -1 1'",
         )
-        terms["reaction_source"] = _kernel_record(
-            text,
-            species,
-            f"FVKernels/s5r_source_{species}",
-            "PhysicsFVSpeciesReactionSource",
-            source=f"S_{species}_s5r",
-        )
-
         if species in CHARGED_HEAVY:
             cfg = wall27.CHARGED[species]
             terms["electrostatic_drift"] = _kernel_record(
