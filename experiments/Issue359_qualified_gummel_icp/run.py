@@ -336,11 +336,43 @@ def _electron_input(
     expression = '0.99994*prs/(8.31446261815324*tmp)'
   []""",
     )
-    text = mp.upsert_parameter(
-        text, "PlasmaClosures/electron", "gas_pressure", "p_gas_from_heavy"
+    if mb.has_block(text, "PlasmaClosures"):
+        text = mb.remove_block(text, "PlasmaClosures")
+    text = mb.insert_child_block(
+        text,
+        "FunctorMaterials",
+        f"""  [issue359_electron_closure]
+    type = PhysicsElectronClosureMaterial
+    state_form = normalized
+    normalized_electron_density = electron_density_hat
+    normalized_electron_energy_density = n_epsilon
+    electron_energy_reference_eV = {ENERGY_REF_EV:.17g}
+    gas_pressure = p_gas_from_heavy
+    gas_temperature = T_g_from_heavy
+    transport_table_file = electron_moments.txt
+    lookup_bounds_policy = error
+    electron_mean_energy_output = mean_en_solved
+    electron_temperature_output = electron_temperature_K
+    neutral_number_density_output = neutral_number_density
+    electron_reduced_mobility_output = electron_reduced_mobility
+    electron_reduced_diffusion_output = electron_reduced_diffusion
+    electron_mobility_output = electron_mobility
+    electron_diffusion_output = electron_diffusion
+    electron_energy_mobility_output = electron_energy_mobility
+    electron_energy_diffusion_output = electron_energy_diffusion
+  []""",
     )
-    text = mp.upsert_parameter(
-        text, "PlasmaClosures/electron", "gas_temperature", "T_g_from_heavy"
+    text = mb.insert_child_block(
+        text,
+        "FunctorMaterials",
+        """  [issue359_electron_kinetics]
+    type = PhysicsElectronKineticsMaterial
+    electron_mean_energy = mean_en_solved
+    electron_number_density = electron_density_m3
+    rate_table_files = 'o2_elastic.txt'
+    target_molar_concentrations = 'c_O2'
+    reaction_progress_names = 'R_elastic_O2'
+  []""",
     )
     text = mp.upsert_parameter(
         text,
@@ -531,8 +563,20 @@ def _poisson_input(
     expression = 'prs*0.032/(8.31446261815324*tmp)'
   []""",
     )
-    text = mp.upsert_parameter(
-        text, "PlasmaClosures/charge", "mixture_density", "rho_from_heavy"
+    if mb.has_block(text, "PlasmaClosures"):
+        text = mb.remove_block(text, "PlasmaClosures")
+    text = mb.insert_child_block(
+        text,
+        "FunctorMaterials",
+        """  [issue359_charge_density]
+    type = PhysicsPlasmaChargeDensityMaterial
+    density = rho_from_heavy
+    electron_density = electron_density_m3
+    ion_ids = 'O2p Om Op'
+    ion_mass_fractions = 'w_O2p_frozen w_Om_frozen w_Op_frozen'
+    ion_molar_masses = '0.032 0.016 0.016'
+    ion_charges = '1 -1 1'
+  []""",
     )
 
     all_bcs = "'" + " ".join(ALL_ELECTRON_BOUNDARIES) + "'"
@@ -931,7 +975,7 @@ def _construction_audit(
 ) -> dict[str, Any]:
     all_b = set(ALL_ELECTRON_BOUNDARIES)
     continuity = hc.audit(outer)
-    labelled = ia.audit(outer, driver, electron, continuity)
+    labelled = ia.audit(outer, driver, electron, poisson, continuity)
     checks = dict(continuity["checks"])
     checks.update({row["label"]: row["status"] == "PASS" for row in labelled["rows"]})
     checks.update({
@@ -1100,6 +1144,37 @@ def _construction_audit(
                 "FVKernels/energy_joule",
                 "FVKernels/energy_elastic_o2",
             )
+        ),
+        "plasma_closure_actions_absent": all(
+            not mb.has_block(inp, "PlasmaClosures")
+            for inp in (outer, driver, electron, poisson)
+        ),
+        "electron_closure_material_explicit": (
+            mb.has_block(electron, "FunctorMaterials/issue359_electron_closure")
+            and mp.get_parameter(
+                electron,
+                "FunctorMaterials/issue359_electron_closure",
+                "type",
+            )
+            == "PhysicsElectronClosureMaterial"
+        ),
+        "electron_kinetics_material_explicit": (
+            mb.has_block(electron, "FunctorMaterials/issue359_electron_kinetics")
+            and mp.get_parameter(
+                electron,
+                "FunctorMaterials/issue359_electron_kinetics",
+                "type",
+            )
+            == "PhysicsElectronKineticsMaterial"
+        ),
+        "poisson_charge_material_explicit": (
+            mb.has_block(poisson, "FunctorMaterials/issue359_charge_density")
+            and mp.get_parameter(
+                poisson,
+                "FunctorMaterials/issue359_charge_density",
+                "type",
+            )
+            == "PhysicsPlasmaChargeDensityMaterial"
         ),
         "poisson_all_ground_explicit": (
             set(
@@ -1365,6 +1440,15 @@ def _stage(
         "geometry": "real-QVT ICP RZ plasma block",
         "heavy_continuity_source": "experiments/Issue91_real_qvt_r3/r3_e0/heavy_base.i",
         "volumetric_chemistry": "DISABLED in current continuity-audit stage",
+        "plasma_closure_assembly": {
+            "mode": "atomic_materials",
+            "action_blocks_allowed": False,
+            "heavy_transport": "PhysicsThermalDiffusionMaterial",
+            "electron_closure": "PhysicsElectronClosureMaterial",
+            "electron_kinetics": "PhysicsElectronKineticsMaterial",
+            "poisson_charge": "PhysicsPlasmaChargeDensityMaterial",
+            "promotion_policy": "only wrap this working material-level input with Actions after qualification",
+        },
         "surface_chemistry": {
             "source": "Issue27 accepted wall chemistry",
             "walls": list(hc.PLASMA_WALLS),

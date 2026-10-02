@@ -31,6 +31,13 @@ MEAN_EN_KERNEL_LABELS = {
     "mean_en_fvkernel_04": "Joule heating",
     "mean_en_fvkernel_05": "elastic energy loss",
 }
+MATERIAL_LABELS = {
+    "heavy_material_01": "heavy multi-species transport closure",
+    "electron_material_01": "electron mean-energy/transport closure",
+    "electron_material_02": "electron elastic kinetics owner",
+    "poisson_material_01": "plasma charge-density closure",
+    "plasma_closure_action_absent": "PlasmaClosures Action is absent from all generated inputs",
+}
 COUPLED_VARIABLE_LABELS = {
     "ion_potential_poisson": "Poisson potential -> charged-heavy transport/wall flux",
     "electron_potential_poisson": "Poisson potential -> electron drift",
@@ -116,6 +123,7 @@ def audit(
     outer: str,
     driver: str,
     electron: str,
+    poisson: str,
     continuity: dict[str, Any],
 ) -> dict[str, Any]:
     rows: list[dict[str, Any]] = []
@@ -261,6 +269,59 @@ def audit(
             label, "FVKernel", MEAN_EN_KERNEL_LABELS[label],
             "electron energy/n_epsilon", typ, ok, ev,
         ))
+
+    material_specs = (
+        (
+            "heavy_material_01",
+            outer,
+            "FunctorMaterials/heavy_transport",
+            "PhysicsThermalDiffusionMaterial",
+            "outer heavy",
+        ),
+        (
+            "electron_material_01",
+            electron,
+            "FunctorMaterials/issue359_electron_closure",
+            "PhysicsElectronClosureMaterial",
+            "electron subapp",
+        ),
+        (
+            "electron_material_02",
+            electron,
+            "FunctorMaterials/issue359_electron_kinetics",
+            "PhysicsElectronKineticsMaterial",
+            "electron subapp",
+        ),
+    )
+    for label, text, path, typ, scope in material_specs:
+        ok = mb.has_block(text, path) and mp.get_parameter(text, path, "type") == typ
+        rows.append(_row(
+            label, "Material", MATERIAL_LABELS[label], scope, typ, ok,
+            f"path={path}; type={mp.get_parameter(text, path, 'type') if mb.has_block(text, path) else None}",
+        ))
+
+    ppath = "FunctorMaterials/issue359_charge_density"
+    pok = (
+        mb.has_block(poisson, ppath)
+        and mp.get_parameter(poisson, ppath, "type") == "PhysicsPlasmaChargeDensityMaterial"
+    )
+    rows.append(_row(
+        "poisson_material_01", "Material",
+        MATERIAL_LABELS["poisson_material_01"], "Poisson subapp",
+        "PhysicsPlasmaChargeDensityMaterial", pok,
+        f"path={ppath}; type={mp.get_parameter(poisson, ppath, 'type') if mb.has_block(poisson, ppath) else None}",
+    ))
+
+    action_absent = all(
+        not mb.has_block(text, "PlasmaClosures")
+        for text in (outer, driver, electron, poisson)
+    )
+    rows.append(_row(
+        "plasma_closure_action_absent", "Architecture",
+        MATERIAL_LABELS["plasma_closure_action_absent"], "all generated inputs",
+        "no [PlasmaClosures] blocks", action_absent,
+        "outer/driver/electron/poisson checked",
+    ))
 
     src = mp.words(
         mp.get_parameter(outer, "Transfers/issue359_fast_to_heavy", "source_variable") or ""
