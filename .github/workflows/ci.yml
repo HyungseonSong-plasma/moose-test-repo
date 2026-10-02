@@ -717,9 +717,6 @@ jobs:
           set -euo pipefail
           : "${RZ_RUNTIME_REF:?RZ_RUNTIME_REF is required}"
           docker run --rm \
-            --user "$(id -u):$(id -g)" \
-            --tmpfs /tmp:rw,exec,nosuid,mode=1777 \
-            --env TMPDIR=/tmp \
             --workdir /work \
             -v "$PWD:/work" \
             "$RZ_RUNTIME_REF" "$@"
