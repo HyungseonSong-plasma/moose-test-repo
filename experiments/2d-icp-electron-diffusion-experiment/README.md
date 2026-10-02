@@ -183,3 +183,32 @@ density overshoot appears.
 
 This qualification does not cover electrostatic drift, Poisson, electron
 energy evolution, reactions, or heavy-species coupling.
+
+
+## Template contract
+
+The qualified runtime input is frozen byte-for-byte as
+`input.template.i`. The file `simple_case_template.json` declares the
+template input, generated input name, and reusable assets.
+
+To create a new experiment from this baseline:
+
+```bash
+python3 bin/physics.py simple-case create \
+  electron-diffusion-experiment \
+  experiments/my-derived-electron-case
+```
+
+To scaffold the same baseline and then replace only the input:
+
+```bash
+python3 bin/physics.py simple-case create \
+  electron-diffusion-experiment \
+  experiments/my-derived-electron-case \
+  --input /path/to/new_input.i
+```
+
+The new directory contains `qvt.msh`, `electron_moments.txt`,
+`input.i`, `test.json`, and `template_origin.json`. The origin record
+sets `qualification_inherited=false`; the derived input must be validated
+independently.
