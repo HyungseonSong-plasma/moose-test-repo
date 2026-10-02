@@ -580,9 +580,9 @@ jobs:
 
 
 
-  electron-energy-dt-matrix:
+  electron-energy-wall-flux-matrix:
     if: github.event_name == 'pull_request' && github.head_ref == 'issue-359-qualified-gummel-icp'
-    name: Electron energy dt matrix ${{ matrix.label }}
+    name: Electron energy wall flux ${{ matrix.label }}
     runs-on: ubuntu-24.04
     timeout-minutes: 12
     permissions:
@@ -592,30 +592,27 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - label: dt1ns
-            dt: '1.0e-9'
-            steps: 4
-          - label: dt0p5ns
-            dt: '5.0e-10'
-            steps: 8
-          - label: dt0p25ns
-            dt: '2.5e-10'
-            steps: 16
-          - label: dt0p125ns
-            dt: '1.25e-10'
-            steps: 32
+          - label: native_4over3
+            mode: native
+            energy_per_particle_te_factor: '2.0'
+          - label: functor_4over3
+            mode: functor
+            energy_per_particle_te_factor: '2.0'
+          - label: matched_5over3
+            mode: functor
+            energy_per_particle_te_factor: '2.5'
     env:
       BASELINE_RUNTIME_REF: ghcr.io/hyungseonsong-plasma/physics-jit-runtime@sha256:2460cf70922490b26412345a09a67364e8b32fbd5310cd25efa5415b12486cf3
       BASELINE_PHYSICS_MANIFEST_SHA256: a9654d344e9c60e48992165bc855b154707ecf2e659e4428117e8f6ae8fdba3b
       CASE_DIR: experiments/2d-icp-electron-diffusion-energy-experiment
-      RUN_DIR: .ci-electron-energy-dt/${{ matrix.label }}
+      RUN_DIR: .ci-electron-energy-wall/${{ matrix.label }}
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 1
 
-      - name: Prepare timestep case
+      - name: Prepare controlled wall-flux case
         shell: bash
         run: |
           set -euxo pipefail
@@ -623,24 +620,72 @@ jobs:
           rm -rf "$RUN_DIR"
           mkdir -p "$(dirname "$RUN_DIR")"
           cp -a "$CASE_DIR" "$RUN_DIR"
-          python3 - "$RUN_DIR/input.i" "${{ matrix.dt }}" "${{ matrix.steps }}" <<'PY'
+          python3 - "$RUN_DIR/input.i" "${{ matrix.mode }}" "${{ matrix.energy_per_particle_te_factor }}" <<'PY'
           import re
           import sys
           from pathlib import Path
 
           path = Path(sys.argv[1])
-          dt = sys.argv[2]
-          steps = sys.argv[3]
+          mode = sys.argv[2]
+          energy_factor = float(sys.argv[3])
           text = path.read_text()
-          text, n1 = re.subn(r"(?m)^  dt = .*$", f"  dt = {dt}", text, count=1)
-          text, n2 = re.subn(r"(?m)^  dtmin = .*$", f"  dtmin = {dt}", text, count=1)
-          text, n3 = re.subn(r"(?m)^  dtmax = .*$", f"  dtmax = {dt}", text, count=1)
-          text, n4 = re.subn(r"(?m)^  num_steps = .*$", f"  num_steps = {steps}", text, count=1)
-          if (n1, n2, n3, n4) != (1, 1, 1, 1):
-              raise SystemExit(f"failed to rewrite timestep controls: {(n1, n2, n3, n4)}")
+
+          for name, value in (
+              ("dt", "1.25e-10"),
+              ("dtmin", "1.25e-10"),
+              ("dtmax", "1.25e-10"),
+              ("num_steps", "32"),
+          ):
+              text, count = re.subn(
+                  rf"(?m)^  {name} = .*$", f"  {name} = {value}", text, count=1
+              )
+              if count != 1:
+                  raise SystemExit(f"failed to rewrite {name}: count={count}")
+
+          if mode == "functor":
+              expression = (
+                  "0.25*ce*sqrt(8.0*1.602176634e-19*((2.0/3.0)*mean_en)/"
+                  "(3.14159265358979323846*9.1093837139e-31))*"
+                  f"({energy_factor:.17g}*(2.0/3.0)*mean_en)"
+              )
+              material = f'''
+
+  [wall_energy_flux_control]
+    type = ADParsedFunctorMaterial
+    property_name = wall_energy_flux_control
+    functor_names = 'c_e_molar mean_en_solved'
+    functor_symbols = 'ce mean_en'
+    expression = '{expression}'
+    block = plasma
+  []
+'''
+              marker = "\n[]\n\n[FVKernels]"
+              if text.count(marker) != 1:
+                  raise SystemExit("cannot locate unique FunctorMaterials terminator")
+              text = text.replace(marker, material + marker, 1)
+
+              bc_pattern = re.compile(
+                  r"(?ms)^  \[electron_energy_thermal_wall_loss\]\n.*?^  \[\]\n"
+              )
+              replacement = '''  [electron_energy_thermal_wall_loss]
+    type = FVFunctorNeumannBC
+    variable = c_epsilon
+    boundary = 'inlet outlet plasma_electrode plasma_metal plasma_right plasma_cover plasma_wafer plasma_focus_ring'
+    functor = wall_energy_flux_control
+    factor = -1.0
+  []
+'''
+              text, count = bc_pattern.subn(replacement, text, count=1)
+              if count != 1:
+                  raise SystemExit(f"failed to replace energy BC: count={count}")
+          elif mode != "native":
+              raise SystemExit(f"unknown wall flux mode: {mode}")
+
           path.write_text(text)
           PY
+
           grep -E '^  (dt|dtmin|dtmax|num_steps|end_time) = ' "$RUN_DIR/input.i"
+          grep -A7 '^  \[electron_energy_thermal_wall_loss\]' "$RUN_DIR/input.i"
 
           git ls-files -z physics_app \
             | sort -z \
@@ -662,7 +707,7 @@ jobs:
           docker pull "$BASELINE_RUNTIME_REF"
           test "$(docker image inspect "$BASELINE_RUNTIME_REF" --format '{{ index .Config.Labels "io.physics.source.manifest-sha256" }}')" = "$BASELINE_PHYSICS_MANIFEST_SHA256"
 
-      - name: Check and run timestep case
+      - name: Check and run wall-flux case
         shell: bash
         run: |
           set -euxo pipefail
@@ -682,30 +727,32 @@ jobs:
 
           (
             cd "$RUN_DIR"
-            EXPECTED_DT_S="${{ matrix.dt }}" \
-            EXPECTED_STEPS="${{ matrix.steps }}" \
+            EXPECTED_DT_S="1.25e-10" \
+            EXPECTED_STEPS="32" \
             EXPECTED_END_TIME_S="4.0e-9" \
+            EXPECTED_ENERGY_PER_PARTICLE_TE_FACTOR="${{ matrix.energy_per_particle_te_factor }}" \
               python3 check.py | tee checker.log
           )
 
-      - name: Upload timestep profile
+      - name: Upload wall-flux case
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: electron-energy-dt-${{ matrix.label }}
+          name: electron-energy-wall-${{ matrix.label }}
           path: |
-            .ci-electron-energy-dt/${{ matrix.label }}/runtime.log
-            .ci-electron-energy-dt/${{ matrix.label }}/checker.log
-            .ci-electron-energy-dt/${{ matrix.label }}/electron_diffusion.csv
-            .ci-electron-energy-dt/${{ matrix.label }}/electron_diffusion.e
-            .ci-electron-energy-dt/${{ matrix.label }}/electron_diffusion_final_profile_*.csv
+            .ci-electron-energy-wall/${{ matrix.label }}/input.i
+            .ci-electron-energy-wall/${{ matrix.label }}/runtime.log
+            .ci-electron-energy-wall/${{ matrix.label }}/checker.log
+            .ci-electron-energy-wall/${{ matrix.label }}/electron_diffusion.csv
+            .ci-electron-energy-wall/${{ matrix.label }}/electron_diffusion.e
+            .ci-electron-energy-wall/${{ matrix.label }}/electron_diffusion_final_profile_*.csv
           if-no-files-found: error
           retention-days: 30
 
-  electron-energy-dt-convergence:
+  electron-energy-wall-flux-comparison:
     if: github.event_name == 'pull_request' && github.head_ref == 'issue-359-qualified-gummel-icp'
-    needs: electron-energy-dt-matrix
-    name: Electron energy dt convergence
+    needs: electron-energy-wall-flux-matrix
+    name: Electron energy wall flux comparison
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -718,23 +765,23 @@ jobs:
 
       - uses: actions/download-artifact@v4
         with:
-          pattern: electron-energy-dt-*
-          path: dt-matrix-artifacts
+          pattern: electron-energy-wall-*
+          path: wall-flux-artifacts
 
       - name: Compare final temperature profiles
         shell: bash
         run: |
           set -euxo pipefail
-          python3 experiments/2d-icp-electron-diffusion-energy-experiment/check_dt_matrix.py \
-            dt-matrix-artifacts
+          python3 experiments/2d-icp-electron-diffusion-energy-experiment/check_wall_flux_matrix.py \
+            wall-flux-artifacts
 
-      - name: Upload convergence summary
+      - name: Upload wall-flux comparison
         uses: actions/upload-artifact@v4
         with:
-          name: electron-energy-dt-convergence
+          name: electron-energy-wall-flux-comparison
           path: |
-            dt_matrix_summary.json
-            dt_matrix_summary.csv
+            wall_flux_comparison.json
+            wall_flux_comparison.csv
           if-no-files-found: error
           retention-days: 30
 
