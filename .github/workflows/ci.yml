@@ -656,25 +656,30 @@ jobs:
 
   issue359-rz-response-jacobian:
     if: github.event_name == 'pull_request' && github.head_ref == 'issue-359-qualified-gummel-icp'
-    name: Issue359 Freeze canonical inputs
+    name: Issue359 RZ response Jacobian
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
-      contents: write
+      contents: read
       packages: read
       actions: read
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha }}
-          fetch-depth: 0
 
-      - name: Verify exact bootstrap HEAD
+      - name: Verify exact frozen-input HEAD
         shell: bash
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
-          python3 -m py_compile experiments/Issue359_qualified_gummel_icp/run.py
+          test -f experiments/Issue359_qualified_gummel_icp/frozen_current/provenance.json
+          python3 -m py_compile \
+            experiments/Issue359_qualified_gummel_icp/run.py \
+            experiments/Issue359_rz_response_jacobian/control.py
+          python3 -m experiments.Issue359_rz_response_jacobian.control \
+            --plan-only \
+            --max-radius 2
 
       - name: Log in to GHCR
         uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9
@@ -683,17 +688,11 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Generate and freeze audited current Issue359 inputs
+      - name: Run fresh-source R1/R2 response discriminator
         shell: bash
         run: |
           set -euxo pipefail
-          frozen="$PWD/experiments/Issue359_qualified_gummel_icp/frozen_current"
-          test ! -e "$frozen"
-          rm -rf "$PWD/.issue351-qualified" "$PWD/issue359-freeze-stage"
-          GH_TOKEN="${{ github.token }}" gh run download 36496470116 \
-            --repo "$GITHUB_REPOSITORY" \
-            --name issue351-frozen-heavy-driver-full \
-            --dir "$PWD/.issue351-qualified"
+          rm -rf "$PWD/issue359-rz-jacobian"
 
           docker pull "$EXPECTED_BUILD_BASE_REF"
           docker run --rm \
@@ -715,122 +714,26 @@ jobs:
               export SQUIRREL_DIR=/opt/physics_vendor/squirrel
               export ZAPDOS_DIR=/opt/physics_vendor/zapdos
               export METHOD=opt
-              export ISSUE351_QUALIFIED_CASE=/workspace/.issue351-qualified/generated/full/frozen_heavy_driver
+              unset ISSUE351_QUALIFIED_CASE
               make -C /workspace/physics_app -j4
               cd /workspace
-              python3 -m experiments.Issue359_qualified_gummel_icp.run \
+              python3 -m experiments.Issue359_rz_response_jacobian.control \
                 --physics physics_app/physics-opt \
-                --results-root issue359-freeze-stage \
-                --timeout 60 \
-                --electron-substeps 4 \
-                --heavy-steps 1 \
-                --audit-only
+                --results-root issue359-rz-jacobian \
+                --source-timeout 120 \
+                --case-timeout 20 \
+                --workers 2 \
+                --max-radius 2 \
+                --delta-phi 1.0e-4
+              chmod -R a+rwX /workspace/issue359-rz-jacobian
             '
 
-          mkdir -p "$frozen"
-          cp issue359-freeze-stage/case/input.i "$frozen/input.i"
-          cp issue359-freeze-stage/case/gummel_driver.i "$frozen/gummel_driver.i"
-          cp issue359-freeze-stage/case/electron_sub.i "$frozen/electron_sub.i"
-          cp issue359-freeze-stage/case/poisson_sub.i "$frozen/poisson_sub.i"
-          cp issue359-freeze-stage/case/o2_elastic.txt "$frozen/o2_elastic.txt"
-
-          python3 - <<'PY'
-          import hashlib
-          import json
-          from pathlib import Path
-
-          root = Path(".")
-          frozen = root / "experiments/Issue359_qualified_gummel_icp/frozen_current"
-          case = root / "issue359-freeze-stage/case"
-          audit = json.loads((case / "input_audit.json").read_text())
-          prepare = json.loads((case / "prepare_evidence.json").read_text())
-          checks = prepare["construction_audit"]["checks"]
-          assert audit["status"] == "PASS"
-          for key in (
-              "heavy_continuity_term_audit",
-              "electron_particle_log_molar_no_normalization",
-              "electron_energy_conservative_molar_no_normalization",
-              "electron_closure_material_explicit",
-              "electron_kinetics_material_explicit",
-              "poisson_charge_material_explicit",
-              "topology_aware_2d_response_present",
-          ):
-              assert checks[key] is True, key
-
-          def sha(path):
-              return hashlib.sha256(path.read_bytes()).hexdigest()
-
-          manifest = {
-              "schema_version": 1,
-              "issue": 359,
-              "status": "FROZEN_CURRENT",
-              "meaning": "Canonical construction input bundle; not a runtime restart state.",
-              "generator_commit": "${{ github.event.pull_request.head.sha }}",
-              "bootstrap_source": {
-                  "issue": 351,
-                  "workflow_run": 36496470116,
-                  "artifact": "issue351-frozen-heavy-driver-full",
-                  "role": "one-time construction seed only",
-              },
-              "input_audit_status": audit["status"],
-              "baseline": {
-                  "heavy_steps": 1,
-                  "electron_substeps": 4,
-                  "electron_steps_total": 4,
-                  "final_time_s": 2.2660316009047157e-10,
-                  "normalization_removed": True,
-                  "volumetric_chemistry": "DISABLED",
-                  "response_mode": "graph",
-                  "response_radius": 1,
-              },
-              "files": {
-                  name: sha(frozen / name)
-                  for name in (
-                      "input.i",
-                      "gummel_driver.i",
-                      "electron_sub.i",
-                      "poisson_sub.i",
-                      "o2_elastic.txt",
-                  )
-              },
-              "repo_dependencies": {
-                  "qvt_mesh": {
-                      "path": "experiments/Issue91_real_qvt_r3/r3_e0/qvt.msh",
-                      "sha256": sha(root / "experiments/Issue91_real_qvt_r3/r3_e0/qvt.msh"),
-                  },
-                  "electron_moments": {
-                      "path": "experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt",
-                      "sha256": sha(root / "experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt"),
-                  },
-                  "heavy_transport": {
-                      "path": "physics_app/ci/plasma_closures_oxygen_transport.txt",
-                      "sha256": sha(root / "physics_app/ci/plasma_closures_oxygen_transport.txt"),
-                  },
-              },
-          }
-          (frozen / "provenance.json").write_text(
-              json.dumps(manifest, indent=2, sort_keys=True) + "\n"
-          )
-          print(json.dumps(manifest, indent=2, sort_keys=True))
-          PY
-
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add experiments/Issue359_qualified_gummel_icp/frozen_current
-          git diff --cached --quiet && { echo "freeze produced no files"; exit 1; }
-          git commit -m "Freeze current Issue359 canonical inputs"
-          git push origin "HEAD:${{ github.head_ref }}"
-
-      - name: Upload freeze evidence
+      - name: Upload RZ response evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: issue359-frozen-current-bootstrap
-          path: |
-            experiments/Issue359_qualified_gummel_icp/frozen_current
-            issue359-freeze-stage/case/input_audit.json
-            issue359-freeze-stage/case/prepare_evidence.json
-            issue359-freeze-stage/summary.json
+          name: issue359-rz-response-jacobian
+          path: issue359-rz-jacobian
           if-no-files-found: warn
           retention-days: 30
 

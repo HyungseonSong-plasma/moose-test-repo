@@ -1697,59 +1697,27 @@ def _stage(
 
     frozen = _frozen_current_case()
     if frozen is None:
-        qualified = _qualified_reference_case()
-        outer = _outer_input(
-            HEAVY_SOURCE.read_text(),
-            electron_substeps=electron_substeps,
-            heavy_steps=heavy_steps,
-            write_exodus=write_exodus,
+        raise Issue359Error(
+            "repository frozen_current bundle is required; "
+            "#351 is provenance-only and is not a runtime construction dependency"
         )
-        driver = _driver_input(
-            (qualified / "fast_sub.i").read_text(),
-            relaxation_factor=relaxation_factor,
-            fixed_point_algorithm=fixed_point_algorithm,
-            fixed_point_rel_tol=fixed_point_rel_tol,
-            potential_predictor_alpha=potential_predictor_alpha,
-            electron_substeps=electron_substeps,
-            heavy_steps=heavy_steps,
-        )
-        electron = _electron_input(
-            (qualified / "electron_sub.i").read_text(),
-            reuse_preconditioner=reuse_preconditioner,
-            reuse_preconditioner_max_linear_its=reuse_preconditioner_max_linear_its,
-            electron_substeps=electron_substeps,
-            heavy_steps=heavy_steps,
-        )
-        poisson = _poisson_input(
-            (qualified / "poisson_sub.i").read_text(),
-            reuse_preconditioner=reuse_preconditioner,
-            reuse_preconditioner_max_linear_its=reuse_preconditioner_max_linear_its,
-            response_strength=response_strength,
-            response_radius=response_radius,
-            response_mode=response_mode,
-            electron_substeps=electron_substeps,
-            heavy_steps=heavy_steps,
-        )
-        o2_elastic_source = qualified / "o2_elastic.txt"
-        construction_source = "#351 bootstrap -> current generator"
-    else:
-        outer, driver, electron, poisson = _retune_frozen_inputs(
-            frozen,
-            relaxation_factor=relaxation_factor,
-            fixed_point_algorithm=fixed_point_algorithm,
-            fixed_point_rel_tol=fixed_point_rel_tol,
-            potential_predictor_alpha=potential_predictor_alpha,
-            reuse_preconditioner=reuse_preconditioner,
-            reuse_preconditioner_max_linear_its=reuse_preconditioner_max_linear_its,
-            response_strength=response_strength,
-            response_radius=response_radius,
-            response_mode=response_mode,
-            electron_substeps=electron_substeps,
-            heavy_steps=heavy_steps,
-            write_exodus=write_exodus,
-        )
-        o2_elastic_source = frozen / "o2_elastic.txt"
-        construction_source = "repository frozen_current canonical bundle"
+    outer, driver, electron, poisson = _retune_frozen_inputs(
+        frozen,
+        relaxation_factor=relaxation_factor,
+        fixed_point_algorithm=fixed_point_algorithm,
+        fixed_point_rel_tol=fixed_point_rel_tol,
+        potential_predictor_alpha=potential_predictor_alpha,
+        reuse_preconditioner=reuse_preconditioner,
+        reuse_preconditioner_max_linear_its=reuse_preconditioner_max_linear_its,
+        response_strength=response_strength,
+        response_radius=response_radius,
+        response_mode=response_mode,
+        electron_substeps=electron_substeps,
+        heavy_steps=heavy_steps,
+        write_exodus=write_exodus,
+    )
+    o2_elastic_source = frozen / "o2_elastic.txt"
+    construction_source = "repository frozen_current canonical bundle"
 
     audit = _construction_audit(
         outer,
