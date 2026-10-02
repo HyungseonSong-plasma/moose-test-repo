@@ -192,6 +192,177 @@ jobs:
           include-hidden-files: true
           retention-days: 30
 
+      - name: Run Poisson profile boundary discriminator
+        shell: bash
+        run: |
+          set -euxo pipefail
+          rm -rf .ci-poisson-profile
+          mkdir -p .ci-poisson-profile
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import shutil
+          from physics_harness.adapters.moose import parameters as mp
+
+          root = Path(".ci-poisson-profile")
+          source = Path("experiments/2d-icp-poisson-experiment")
+          all_b = "'inlet outlet plasma_electrode plasma_metal plasma_right plasma_cover plasma_wafer plasma_focus_ring'"
+          solid_b = "'plasma_electrode plasma_metal plasma_right plasma_cover plasma_wafer plasma_focus_ring'"
+
+          electron_paths = (
+              "FVBCs/electron_thermal_wall_loss",
+              "FVBCs/electron_energy_thermal_wall_loss",
+              "Postprocessors/electron_wall_particle_rate",
+              "Postprocessors/electron_wall_energy_rate_eV_mol_s",
+          )
+          electro_paths = (
+              "FVBCs/phi_grounded_walls",
+              "Postprocessors/gauss_flux_reduced",
+          )
+
+          cases = {
+              "source_solid_walls": (True, False),
+              "phi_solid_walls": (False, True),
+              "both_solid_walls": (True, True),
+          }
+
+          for name, (solid_source, solid_phi) in cases.items():
+              dst = root / name
+              shutil.copytree(source, dst)
+              path = dst / "input.i"
+              text = path.read_text()
+
+              if solid_source:
+                  for block_path in electron_paths:
+                      text = mp.upsert_parameter(text, block_path, "boundary", solid_b)
+              if solid_phi:
+                  for block_path in electro_paths:
+                      text = mp.upsert_parameter(text, block_path, "boundary", solid_b)
+
+              assert mp.get_parameter(text, "Executioner", "dt") == "1.0e-9"
+              assert mp.get_parameter(text, "Executioner", "num_steps") == "4"
+              expected_source = set(solid_b.strip("'").split() if solid_source else all_b.strip("'").split())
+              expected_phi = set(solid_b.strip("'").split() if solid_phi else all_b.strip("'").split())
+              assert set(mp.words(mp.get_parameter(text, "FVBCs/electron_thermal_wall_loss", "boundary") or "")) == expected_source
+              assert set(mp.words(mp.get_parameter(text, "FVBCs/electron_energy_thermal_wall_loss", "boundary") or "")) == expected_source
+              assert set(mp.words(mp.get_parameter(text, "FVBCs/phi_grounded_walls", "boundary") or "")) == expected_phi
+              assert "SideSetsAroundSubdomainGenerator" not in text
+              assert "plasma_all_ground" not in text
+              path.write_text(text)
+          PY
+
+          for name in source_solid_walls phi_solid_walls both_solid_walls; do
+            run_dir=".ci-poisson-profile/$name"
+            docker run --rm \
+              --entrypoint /bin/bash \
+              --user "$(id -u):$(id -g)" \
+              --workdir "/workspace/$run_dir" \
+              -v "$PWD:/workspace" \
+              "$BUILD_BASE_REF" \
+              -lc '
+                set -euxo pipefail
+                source /environment
+                /workspace/physics_app/physics-opt --check-input -i input.i
+                /workspace/physics_app/physics-opt -i input.i > runtime.log 2>&1
+              '
+          done
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import csv
+          import json
+          import math
+
+          def final_profile(case_dir):
+              matches = sorted(Path(case_dir).glob("poisson_final_profile_*.csv"))
+              if not matches:
+                  raise SystemExit(f"missing final profile in {case_dir}")
+              with matches[-1].open(newline="") as handle:
+                  rows = list(csv.DictReader(handle))
+              rows.sort(key=lambda row: int(row["id"]))
+              return rows
+
+          def stats(rows):
+              phi = [float(row["phi"]) for row in rows]
+              ne = [float(row["electron_density"]) for row in rows]
+              xs = [float(row["x"]) for row in rows]
+              ys = [float(row["y"]) for row in rows]
+              i_max = max(range(len(phi)), key=phi.__getitem__)
+              return {
+                  "phi_min_V": min(phi),
+                  "phi_max_V": max(phi),
+                  "phi_peak_x_m": xs[i_max],
+                  "phi_peak_y_m": ys[i_max],
+                  "ne_min_m3": min(ne),
+                  "ne_max_m3": max(ne),
+                  "ne_mean_m3": sum(ne) / len(ne),
+              }
+
+          def normalized(values):
+              lo, hi = min(values), max(values)
+              span = hi - lo
+              if span <= 0.0:
+                  return [0.0 for _ in values]
+              return [(value - lo) / span for value in values]
+
+          baseline = final_profile(".ci-poisson")
+          base_phi = [float(row["phi"]) for row in baseline]
+          base_norm = normalized(base_phi)
+          result = {"canonical": stats(baseline), "comparisons": {}}
+
+          for name in ("source_solid_walls", "phi_solid_walls", "both_solid_walls"):
+              rows = final_profile(f".ci-poisson-profile/{name}")
+              if [int(r["id"]) for r in rows] != [int(r["id"]) for r in baseline]:
+                  raise SystemExit(f"cell identity mismatch for {name}")
+              phi = [float(row["phi"]) for row in rows]
+              norm = normalized(phi)
+              delta = [a - b for a, b in zip(norm, base_norm)]
+              rms = math.sqrt(sum(v*v for v in delta) / len(delta))
+              max_abs = max(abs(v) for v in delta)
+              mean_a = sum(base_phi) / len(base_phi)
+              mean_b = sum(phi) / len(phi)
+              cov = sum((a-mean_a)*(b-mean_b) for a,b in zip(base_phi,phi))
+              va = sum((a-mean_a)**2 for a in base_phi)
+              vb = sum((b-mean_b)**2 for b in phi)
+              corr = cov / math.sqrt(va*vb)
+              result["comparisons"][name] = {
+                  **stats(rows),
+                  "normalized_phi_rms_vs_canonical": rms,
+                  "normalized_phi_linf_vs_canonical": max_abs,
+                  "phi_correlation_vs_canonical": corr,
+              }
+
+          out = Path(".ci-poisson-profile/profile_boundary_matrix.json")
+          out.write_text(json.dumps(result, indent=2) + "\n")
+          print(json.dumps(result, indent=2))
+          PY
+
+      - name: Upload Poisson profile boundary discriminator
+        uses: actions/upload-artifact@v4
+        with:
+          name: poisson-profile-boundary-matrix
+          path: |
+            .ci-poisson-profile/profile_boundary_matrix.json
+            .ci-poisson-profile/source_solid_walls/input.i
+            .ci-poisson-profile/source_solid_walls/runtime.log
+            .ci-poisson-profile/source_solid_walls/poisson.csv
+            .ci-poisson-profile/source_solid_walls/poisson.e
+            .ci-poisson-profile/source_solid_walls/poisson_final_profile_*.csv
+            .ci-poisson-profile/phi_solid_walls/input.i
+            .ci-poisson-profile/phi_solid_walls/runtime.log
+            .ci-poisson-profile/phi_solid_walls/poisson.csv
+            .ci-poisson-profile/phi_solid_walls/poisson.e
+            .ci-poisson-profile/phi_solid_walls/poisson_final_profile_*.csv
+            .ci-poisson-profile/both_solid_walls/input.i
+            .ci-poisson-profile/both_solid_walls/runtime.log
+            .ci-poisson-profile/both_solid_walls/poisson.csv
+            .ci-poisson-profile/both_solid_walls/poisson.e
+            .ci-poisson-profile/both_solid_walls/poisson_final_profile_*.csv
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 30
+
+
       - name: Upload kinetic 2Te Exodus
         uses: actions/upload-artifact@v4
         with:
