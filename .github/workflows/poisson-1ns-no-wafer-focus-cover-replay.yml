@@ -1,4 +1,4 @@
-name: Poisson 1ns No Wafer Focus Cover Ground Replay
+name: Poisson 1ns No Inlet Outlet Ground Replay
 
 on:
   pull_request:
@@ -9,11 +9,13 @@ permissions:
   contents: read
 
 concurrency:
+  # Keep the same one-off concurrency group so this revision supersedes/cancels
+  # the previous 1 ns BC variant if it is still running.
   group: poisson-1ns-no-wafer-focus-cover-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
-  frozen-source-1ns-no-wafer-focus-cover:
+  frozen-source-1ns-no-inlet-outlet:
     if: github.event_name == 'pull_request' && github.head_ref == 'issue-359-qualified-gummel-icp'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
@@ -65,12 +67,12 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
-          rm -rf .ci-1ns-no-wafer-focus-cover
-          mkdir -p .ci-1ns-no-wafer-focus-cover/canonical
-          cp -R "$POISSON_DIR"/. .ci-1ns-no-wafer-focus-cover/canonical/
+          rm -rf .ci-1ns-no-inlet-outlet
+          mkdir -p .ci-1ns-no-inlet-outlet/canonical
+          cp -R "$POISSON_DIR"/. .ci-1ns-no-inlet-outlet/canonical/
           python3 - <<'PY'
           from pathlib import Path
-          p = Path('.ci-1ns-no-wafer-focus-cover/canonical/input.i')
+          p = Path('.ci-1ns-no-inlet-outlet/canonical/input.i')
           s = p.read_text()
           replacements = {
               'end_time = 4.0e-9': 'end_time = 1.0e-9',
@@ -82,40 +84,41 @@ jobs:
               s = s.replace(old, new, 1)
           p.write_text(s)
           PY
-          docker run --rm --entrypoint /bin/bash --user "$(id -u):$(id -g)" --workdir /workspace/.ci-1ns-no-wafer-focus-cover/canonical -v "$PWD:/workspace" "$BUILD_BASE_REF" -lc '
+          docker run --rm --entrypoint /bin/bash --user "$(id -u):$(id -g)" --workdir /workspace/.ci-1ns-no-inlet-outlet/canonical -v "$PWD:/workspace" "$BUILD_BASE_REF" -lc '
             set -euxo pipefail
             source /environment
             /workspace/physics_app/physics-opt --check-input -i input.i
             /workspace/physics_app/physics-opt -i input.i > runtime.log 2>&1
           '
-          test -f .ci-1ns-no-wafer-focus-cover/canonical/poisson.e
-          ls .ci-1ns-no-wafer-focus-cover/canonical/poisson_final_profile_*.csv
+          test -f .ci-1ns-no-inlet-outlet/canonical/poisson.e
+          ls .ci-1ns-no-inlet-outlet/canonical/poisson_final_profile_*.csv
 
-      - name: Replay 1 ns frozen source without wafer focus-ring and cover ground
+      - name: Replay 1 ns frozen source with inlet and outlet ungrounded
         shell: bash
         run: |
           set -euxo pipefail
-          mkdir -p .ci-1ns-no-wafer-focus-cover/replay
-          cp "$POISSON_DIR/frozen_source_no_wafer_focus_poisson.i" .ci-1ns-no-wafer-focus-cover/replay/input.i
-          cp "$POISSON_DIR/qvt.msh" .ci-1ns-no-wafer-focus-cover/replay/qvt.msh
-          cp .ci-1ns-no-wafer-focus-cover/canonical/poisson.e .ci-1ns-no-wafer-focus-cover/replay/canonical_source.e
+          mkdir -p .ci-1ns-no-inlet-outlet/replay
+          cp "$POISSON_DIR/frozen_source_poisson.i" .ci-1ns-no-inlet-outlet/replay/input.i
+          cp "$POISSON_DIR/qvt.msh" .ci-1ns-no-inlet-outlet/replay/qvt.msh
+          cp .ci-1ns-no-inlet-outlet/canonical/poisson.e .ci-1ns-no-inlet-outlet/replay/canonical_source.e
           python3 - <<'PY'
           from pathlib import Path
-          p = Path('.ci-1ns-no-wafer-focus-cover/replay/input.i')
+          p = Path('.ci-1ns-no-inlet-outlet/replay/input.i')
           s = p.read_text()
-          old = "boundary = 'inlet outlet plasma_electrode plasma_metal plasma_right plasma_cover'"
-          new = "boundary = 'inlet outlet plasma_electrode plasma_metal plasma_right'"
+          old = "boundary = 'inlet outlet plasma_electrode plasma_metal plasma_right plasma_cover plasma_wafer plasma_focus_ring'"
+          new = "boundary = 'plasma_electrode plasma_metal plasma_right plasma_cover plasma_wafer plasma_focus_ring'"
           if old not in s:
-              raise SystemExit('expected grounded-boundary line not found')
+              raise SystemExit('expected all-ground boundary line not found')
           p.write_text(s.replace(old, new, 1))
           PY
-          docker run --rm --entrypoint /bin/bash --user "$(id -u):$(id -g)" --workdir /workspace/.ci-1ns-no-wafer-focus-cover/replay -v "$PWD:/workspace" "$BUILD_BASE_REF" -lc '
+          docker run --rm --entrypoint /bin/bash --user "$(id -u):$(id -g)" --workdir /workspace/.ci-1ns-no-inlet-outlet/replay -v "$PWD:/workspace" "$BUILD_BASE_REF" -lc '
             set -euxo pipefail
             source /environment
             /workspace/physics_app/physics-opt --check-input -i input.i
             /workspace/physics_app/physics-opt -i input.i > runtime.log 2>&1
           '
-          test -f .ci-1ns-no-wafer-focus-cover/replay/frozen_source_no_wafer_focus.e
+          test -f .ci-1ns-no-inlet-outlet/replay/frozen_source_poisson.e
+          ls .ci-1ns-no-inlet-outlet/replay/frozen_source_poisson_final_profile_*.csv
 
       - name: Verify 1 ns source and summarize morphology
         shell: bash
@@ -124,7 +127,7 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           import csv, json
-          root = Path('.ci-1ns-no-wafer-focus-cover')
+          root = Path('.ci-1ns-no-inlet-outlet')
 
           def latest_rows(directory, pattern):
               files = sorted((root / directory).glob(pattern))
@@ -136,7 +139,7 @@ jobs:
               return rows, files[-1].name
 
           canonical, canonical_profile = latest_rows('canonical', 'poisson_final_profile_*.csv')
-          replay, replay_profile = latest_rows('replay', 'frozen_source_no_wafer_focus_final_profile_*.csv')
+          replay, replay_profile = latest_rows('replay', 'frozen_source_poisson_final_profile_*.csv')
           if [int(r['id']) for r in canonical] != [int(r['id']) for r in replay]:
               raise SystemExit('cell identity mismatch')
 
@@ -166,32 +169,32 @@ jobs:
               'source_time_s': 1.0e-9,
               'canonical_dt_s': 1.0e-9,
               'canonical_num_steps': 1,
-              'ungrounded': ['plasma_wafer', 'plasma_focus_ring', 'plasma_cover'],
-              'still_grounded': ['inlet', 'outlet', 'plasma_electrode', 'plasma_metal', 'plasma_right'],
+              'ungrounded': ['inlet', 'outlet'],
+              'still_grounded': ['plasma_electrode', 'plasma_metal', 'plasma_right', 'plasma_cover', 'plasma_wafer', 'plasma_focus_ring'],
               'canonical_profile_file': canonical_profile,
               'replay_profile_file': replay_profile,
               'source_linf_relative_to_canonical_scale': source_linf/source_scale,
               'canonical': stats(canonical, 'phi'),
               'replay': stats(replay, 'phi'),
           }
-          (root / 'one_ns_no_wafer_focus_cover_result.json').write_text(json.dumps(result, indent=2) + '\n')
+          (root / 'one_ns_no_inlet_outlet_ground_result.json').write_text(json.dumps(result, indent=2) + '\n')
           print(json.dumps(result, indent=2))
           PY
 
       - name: Upload evidence
         uses: actions/upload-artifact@v4
         with:
-          name: poisson-1ns-no-wafer-focus-cover-ground-replay
+          name: poisson-1ns-no-inlet-outlet-ground-replay
           path: |
-            .ci-1ns-no-wafer-focus-cover/one_ns_no_wafer_focus_cover_result.json
-            .ci-1ns-no-wafer-focus-cover/canonical/input.i
-            .ci-1ns-no-wafer-focus-cover/canonical/runtime.log
-            .ci-1ns-no-wafer-focus-cover/canonical/poisson.e
-            .ci-1ns-no-wafer-focus-cover/canonical/poisson_final_profile_*.csv
-            .ci-1ns-no-wafer-focus-cover/replay/input.i
-            .ci-1ns-no-wafer-focus-cover/replay/runtime.log
-            .ci-1ns-no-wafer-focus-cover/replay/frozen_source_no_wafer_focus.e
-            .ci-1ns-no-wafer-focus-cover/replay/frozen_source_no_wafer_focus_final_profile_*.csv
+            .ci-1ns-no-inlet-outlet/one_ns_no_inlet_outlet_ground_result.json
+            .ci-1ns-no-inlet-outlet/canonical/input.i
+            .ci-1ns-no-inlet-outlet/canonical/runtime.log
+            .ci-1ns-no-inlet-outlet/canonical/poisson.e
+            .ci-1ns-no-inlet-outlet/canonical/poisson_final_profile_*.csv
+            .ci-1ns-no-inlet-outlet/replay/input.i
+            .ci-1ns-no-inlet-outlet/replay/runtime.log
+            .ci-1ns-no-inlet-outlet/replay/frozen_source_poisson.e
+            .ci-1ns-no-inlet-outlet/replay/frozen_source_poisson_final_profile_*.csv
           if-no-files-found: error
           include-hidden-files: true
           retention-days: 30
