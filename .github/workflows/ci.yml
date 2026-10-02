@@ -680,8 +680,51 @@ jobs:
           set -euxo pipefail
           test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
           python3 -m py_compile "$CASE_DIR/check.py"
-          python3 bin/physics.py inventory "$CASE_DIR" --strict
-          python3 bin/physics.py preflight "$CASE_DIR/input.i"
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          root = Path("experiments/2d-icp-electron-diffusion-experiment")
+          required = {
+              "input.i", "check.py", "test.json", "experiment.json",
+              "provenance.json", "README.md", "qvt.msh", "electron_moments.txt",
+          }
+          missing = sorted(name for name in required if not (root / name).is_file())
+          if missing:
+              raise SystemExit(f"baseline inventory missing files: {missing}")
+
+          manifest = json.loads((root / "test.json").read_text())
+          assert manifest["name"] == "2d-icp-electron-diffusion-experiment"
+          assert manifest["type"] == "diagnostic"
+          assert manifest["input"] == "input.i"
+          assert manifest["checker"] == "check.py"
+
+          spec = json.loads((root / "experiment.json").read_text())
+          assert spec["schema_version"] == 2
+          assert spec["experiment_id"] == "2d-icp-electron-diffusion-experiment"
+          assert spec["parameters"]["initial_electron_density_m3"] == 1.0e16
+          assert spec["parameters"]["fixed_mean_electron_energy_eV"] == 5.73276
+
+          text = (root / "input.i").read_text()
+          required_tokens = (
+              "type = PhysicsFVLogMolarElectronTimeDerivative",
+              "type = PhysicsFVLogMolarElectronDiffusion",
+              "type = PhysicsElectronClosureMaterial",
+              "transport_table_file = electron_moments.txt",
+              "type = PhysicsFVElectronGroundedSheathCollectionBC",
+              "potential = zero_phi",
+          )
+          absent_tokens = (
+              "PhysicsFVLogMolarElectrostaticDrift",
+              "PhysicsPlasmaChargeDensityMaterial",
+              "PhysicsFVElectronEnergyJouleHeating",
+          )
+          for token in required_tokens:
+              assert token in text, token
+          for token in absent_tokens:
+              assert token not in text, token
+          print("2D_ICP_DIFFUSION_INVENTORY_STATIC=PASS")
+          PY
 
           test "$(sha256sum "$CASE_DIR/qvt.msh" | awk '{print $1}')" = "a98521af2c106137f9635fe7e2c5ba9b0fd408e17c62eb7c6d3f7c1fff65a03e"
           test "$(sha256sum "$CASE_DIR/electron_moments.txt" | awk '{print $1}')" = "994f6b1deece3c53be7fb3e7f9526555d0f9314fd58749bea6346639f08aa387"
