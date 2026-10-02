@@ -319,10 +319,19 @@ profile_energies = []
 profile_temperatures = []
 profile_diffusivities = []
 profile_potentials = []
+profile_charge_densities = []
+profile_poisson_sources = []
+profile_frozen_ion_densities = []
+source_identity_relative_errors = []
+charge_identity_relative_errors = []
 for row in profile:
     mean_energy = float(row["mean_energy_out"])
     electron_temperature_eV = float(row["electron_temperature_eV"])
     diffusion = float(row["diffusion_out"])
+    electron_density = float(row["electron_density"])
+    charge_density = float(row["charge_density_out"])
+    poisson_source = float(row["poisson_source_out"])
+    frozen_ion_density = float(row["frozen_ion_density_out"])
     potential = float(row["phi"])
     if not math.isfinite(mean_energy) or mean_energy <= 0.0:
         raise SystemExit(f"invalid profile mean energy: {mean_energy}")
@@ -330,8 +339,26 @@ for row in profile:
         raise SystemExit(f"invalid profile electron temperature: {electron_temperature_eV}")
     if not math.isfinite(diffusion) or diffusion <= 0.0:
         raise SystemExit(f"invalid profile diffusivity: {diffusion}")
+    if not math.isfinite(electron_density) or electron_density <= 0.0:
+        raise SystemExit(f"invalid profile electron density: {electron_density}")
+    if not math.isfinite(charge_density):
+        raise SystemExit(f"invalid profile charge density: {charge_density}")
+    if not math.isfinite(poisson_source):
+        raise SystemExit(f"invalid profile Poisson source: {poisson_source}")
+    if not math.isfinite(frozen_ion_density) or frozen_ion_density <= 0.0:
+        raise SystemExit(f"invalid profile frozen ion density: {frozen_ion_density}")
     if not math.isfinite(potential):
         raise SystemExit(f"invalid profile potential: {potential}")
+    expected_charge_density = ELEMENTARY_CHARGE_C * (
+        frozen_ion_density - electron_density
+    )
+    expected_poisson_source = charge_density / 8.8541878128e-12
+    charge_identity_relative_errors.append(
+        relative_error(charge_density, expected_charge_density)
+    )
+    source_identity_relative_errors.append(
+        relative_error(poisson_source, expected_poisson_source)
+    )
     expected_temperature_eV = (2.0 / 3.0) * mean_energy
     temperature_relation_errors.append(
         relative_error(electron_temperature_eV, expected_temperature_eV)
@@ -341,7 +368,26 @@ for row in profile:
     profile_energies.append(mean_energy)
     profile_temperatures.append(electron_temperature_eV)
     profile_diffusivities.append(diffusion)
+    profile_charge_densities.append(charge_density)
+    profile_poisson_sources.append(poisson_source)
+    profile_frozen_ion_densities.append(frozen_ion_density)
     profile_potentials.append(potential)
+
+if max(charge_identity_relative_errors) > 1.0e-12:
+    raise SystemExit(
+        "saved charge-density field does not match e*(ni-ne): "
+        f"max_relative_error={max(charge_identity_relative_errors)}"
+    )
+if max(source_identity_relative_errors) > 1.0e-12:
+    raise SystemExit(
+        "saved Poisson source field does not match rho/epsilon0: "
+        f"max_relative_error={max(source_identity_relative_errors)}"
+    )
+if max(profile_frozen_ion_densities) - min(profile_frozen_ion_densities) > 1.0:
+    raise SystemExit(
+        "frozen ion density unexpectedly varies spatially: "
+        f"range=[{min(profile_frozen_ion_densities)}, {max(profile_frozen_ion_densities)}]"
+    )
 
 if max(temperature_relation_errors) > 1.0e-12:
     raise SystemExit(
@@ -359,6 +405,11 @@ if max(profile_energies) - min(profile_energies) <= 1.0e-8:
     raise SystemExit(
         "solved mean-energy field did not develop a resolvable spatial response: "
         f"range=[{min(profile_energies)}, {max(profile_energies)}]"
+    )
+if max(profile_poisson_sources) - min(profile_poisson_sources) <= 1.0e-6:
+    raise SystemExit(
+        "Poisson source profile did not develop a resolvable spatial response: "
+        f"range=[{min(profile_poisson_sources)}, {max(profile_poisson_sources)}]"
     )
 if max(profile_potentials) - min(profile_potentials) <= 1.0e-6:
     raise SystemExit(
