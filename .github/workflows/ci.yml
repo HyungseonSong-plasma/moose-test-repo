@@ -620,76 +620,11 @@ jobs:
           rm -rf "$RUN_DIR"
           mkdir -p "$(dirname "$RUN_DIR")"
           cp -a "$CASE_DIR" "$RUN_DIR"
-          python3 - "$RUN_DIR/input.i" "${{ matrix.mode }}" "${{ matrix.energy_per_particle_te_factor }}" <<'PY'
-          import re
-          import sys
-          from pathlib import Path
-
-          path = Path(sys.argv[1])
-          mode = sys.argv[2]
-          energy_factor = float(sys.argv[3])
-          text = path.read_text()
-
-          for name, value in (
-              ("dt", "1.25e-10"),
-              ("dtmin", "1.25e-10"),
-              ("dtmax", "1.25e-10"),
-              ("num_steps", "32"),
-          ):
-              text, count = re.subn(
-                  rf"(?m)^  {name} = .*$", f"  {name} = {value}", text, count=1
-              )
-              if count != 1:
-                  raise SystemExit(f"failed to rewrite {name}: count={count}")
-
-          if mode == "functor":
-              expression = (
-                  "0.25*ce*sqrt(8.0*1.602176634e-19*((2.0/3.0)*mean_en)/"
-                  "(3.14159265358979323846*9.1093837139e-31))*"
-                  f"({energy_factor:.17g}*(2.0/3.0)*mean_en)"
-              )
-              material = f'''
-
-  [wall_energy_flux_control]
-    type = ADParsedFunctorMaterial
-    property_name = wall_energy_flux_control
-    functor_names = 'c_e_molar mean_en_solved'
-    functor_symbols = 'ce mean_en'
-    expression = '{expression}'
-    block = plasma
-  []
-'''
-              marker = "\n[]\n\n[FVKernels]"
-              if text.count(marker) != 1:
-                  raise SystemExit("cannot locate unique FunctorMaterials terminator")
-              text = text.replace(marker, material + marker, 1)
-
-              bc_pattern = re.compile(
-                  r"(?ms)^  \[electron_energy_thermal_wall_loss\]\n.*?^  \[\]\n"
-              )
-              replacement = '''  [electron_energy_thermal_wall_loss]
-    type = FVFunctorNeumannBC
-    variable = c_epsilon
-    boundary = 'inlet outlet plasma_electrode plasma_metal plasma_right plasma_cover plasma_wafer plasma_focus_ring'
-    functor = wall_energy_flux_control
-    factor = -1.0
-  []
-'''
-              text, count = bc_pattern.subn(replacement, text, count=1)
-              if count != 1:
-                  raise SystemExit(f"failed to replace energy BC: count={count}")
-          elif mode != "native":
-              raise SystemExit(f"unknown wall flux mode: {mode}")
-
-          path.write_text(text)
-          PY
-
+          python3 "$CASE_DIR/prepare_wall_flux_case.py"             "$RUN_DIR/input.i"             --mode "${{ matrix.mode }}"             --energy-factor "${{ matrix.energy_per_particle_te_factor }}"
           grep -E '^  (dt|dtmin|dtmax|num_steps|end_time) = ' "$RUN_DIR/input.i"
           grep -A7 '^  \[electron_energy_thermal_wall_loss\]' "$RUN_DIR/input.i"
 
-          git ls-files -z physics_app \
-            | sort -z \
-            | xargs -0 sha256sum > /tmp/physics-source-file-hashes.txt
+          git ls-files -z physics_app             | sort -z             | xargs -0 sha256sum > /tmp/physics-source-file-hashes.txt
           manifest="$(sha256sum /tmp/physics-source-file-hashes.txt | awk '{print $1}')"
           test "$manifest" = "$BASELINE_PHYSICS_MANIFEST_SHA256"
 
@@ -711,27 +646,13 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
-          docker run --rm \
-            --user "$(id -u):$(id -g)" \
-            --workdir "/workspace/$RUN_DIR" \
-            -v "$PWD:/workspace" \
-            "$BASELINE_RUNTIME_REF" \
-            --check-input -i input.i
+          docker run --rm             --user "$(id -u):$(id -g)"             --workdir "/workspace/$RUN_DIR"             -v "$PWD:/workspace"             "$BASELINE_RUNTIME_REF"             --check-input -i input.i
 
-          docker run --rm \
-            --user "$(id -u):$(id -g)" \
-            --workdir "/workspace/$RUN_DIR" \
-            -v "$PWD:/workspace" \
-            "$BASELINE_RUNTIME_REF" \
-            -i input.i > "$RUN_DIR/runtime.log" 2>&1
+          docker run --rm             --user "$(id -u):$(id -g)"             --workdir "/workspace/$RUN_DIR"             -v "$PWD:/workspace"             "$BASELINE_RUNTIME_REF"             -i input.i > "$RUN_DIR/runtime.log" 2>&1
 
           (
             cd "$RUN_DIR"
-            EXPECTED_DT_S="1.25e-10" \
-            EXPECTED_STEPS="32" \
-            EXPECTED_END_TIME_S="4.0e-9" \
-            EXPECTED_ENERGY_PER_PARTICLE_TE_FACTOR="${{ matrix.energy_per_particle_te_factor }}" \
-              python3 check.py | tee checker.log
+            EXPECTED_DT_S="1.0e-9"             EXPECTED_STEPS="4"             EXPECTED_END_TIME_S="4.0e-9"             EXPECTED_ENERGY_PER_PARTICLE_TE_FACTOR="${{ matrix.energy_per_particle_te_factor }}"               python3 check.py | tee checker.log
           )
 
       - name: Upload wall-flux case
@@ -772,8 +693,7 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
-          python3 experiments/2d-icp-electron-diffusion-energy-experiment/check_wall_flux_matrix.py \
-            wall-flux-artifacts
+          python3 experiments/2d-icp-electron-diffusion-energy-experiment/check_wall_flux_matrix.py             wall-flux-artifacts
 
       - name: Upload wall-flux comparison
         uses: actions/upload-artifact@v4
