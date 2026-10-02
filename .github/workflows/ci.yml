@@ -861,6 +861,162 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
 
+  electron-energy-dt-matrix:
+    if: github.event_name == 'pull_request' && github.head_ref == 'issue-359-qualified-gummel-icp'
+    name: Electron energy dt matrix ${{ matrix.label }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    permissions:
+      contents: read
+      packages: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: dt1ns
+            dt: '1.0e-9'
+            steps: 4
+          - label: dt0p5ns
+            dt: '5.0e-10'
+            steps: 8
+          - label: dt0p25ns
+            dt: '2.5e-10'
+            steps: 16
+          - label: dt0p125ns
+            dt: '1.25e-10'
+            steps: 32
+    env:
+      BASELINE_RUNTIME_REF: ghcr.io/hyungseonsong-plasma/physics-jit-runtime@sha256:2460cf70922490b26412345a09a67364e8b32fbd5310cd25efa5415b12486cf3
+      BASELINE_PHYSICS_MANIFEST_SHA256: a9654d344e9c60e48992165bc855b154707ecf2e659e4428117e8f6ae8fdba3b
+      CASE_DIR: experiments/2d-icp-electron-diffusion-energy-experiment
+      RUN_DIR: .ci-electron-energy-dt/${{ matrix.label }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+
+      - name: Prepare timestep case
+        shell: bash
+        run: |
+          set -euxo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          rm -rf "$RUN_DIR"
+          mkdir -p "$(dirname "$RUN_DIR")"
+          cp -a "$CASE_DIR" "$RUN_DIR"
+          python3 - "$RUN_DIR/input.i" "${{ matrix.dt }}" "${{ matrix.steps }}" <<'PY'
+          import re
+          import sys
+          from pathlib import Path
+
+          path = Path(sys.argv[1])
+          dt = sys.argv[2]
+          steps = sys.argv[3]
+          text = path.read_text()
+          text, n1 = re.subn(r"(?m)^  dt = .*$", f"  dt = {dt}", text, count=1)
+          text, n2 = re.subn(r"(?m)^  dtmin = .*$", f"  dtmin = {dt}", text, count=1)
+          text, n3 = re.subn(r"(?m)^  dtmax = .*$", f"  dtmax = {dt}", text, count=1)
+          text, n4 = re.subn(r"(?m)^  num_steps = .*$", f"  num_steps = {steps}", text, count=1)
+          if (n1, n2, n3, n4) != (1, 1, 1, 1):
+              raise SystemExit(f"failed to rewrite timestep controls: {(n1, n2, n3, n4)}")
+          path.write_text(text)
+          PY
+          grep -E '^  (dt|dtmin|dtmax|num_steps|end_time) = ' "$RUN_DIR/input.i"
+
+          git ls-files -z physics_app \
+            | sort -z \
+            | xargs -0 sha256sum > /tmp/physics-source-file-hashes.txt
+          manifest="$(sha256sum /tmp/physics-source-file-hashes.txt | awk '{print $1}')"
+          test "$manifest" = "$BASELINE_PHYSICS_MANIFEST_SHA256"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull and verify qualified Physics runtime
+        shell: bash
+        run: |
+          set -euxo pipefail
+          docker pull "$BASELINE_RUNTIME_REF"
+          test "$(docker image inspect "$BASELINE_RUNTIME_REF" --format '{{ index .Config.Labels "io.physics.source.manifest-sha256" }}')" = "$BASELINE_PHYSICS_MANIFEST_SHA256"
+
+      - name: Check and run timestep case
+        shell: bash
+        run: |
+          set -euxo pipefail
+          docker run --rm \
+            --user "$(id -u):$(id -g)" \
+            --workdir "/workspace/$RUN_DIR" \
+            -v "$PWD:/workspace" \
+            "$BASELINE_RUNTIME_REF" \
+            --check-input -i input.i
+
+          docker run --rm \
+            --user "$(id -u):$(id -g)" \
+            --workdir "/workspace/$RUN_DIR" \
+            -v "$PWD:/workspace" \
+            "$BASELINE_RUNTIME_REF" \
+            -i input.i > "$RUN_DIR/runtime.log" 2>&1
+
+          (
+            cd "$RUN_DIR"
+            EXPECTED_DT_S="${{ matrix.dt }}" \
+            EXPECTED_STEPS="${{ matrix.steps }}" \
+            EXPECTED_END_TIME_S="4.0e-9" \
+              python3 check.py | tee checker.log
+          )
+
+      - name: Upload timestep profile
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: electron-energy-dt-${{ matrix.label }}
+          path: |
+            .ci-electron-energy-dt/${{ matrix.label }}/runtime.log
+            .ci-electron-energy-dt/${{ matrix.label }}/checker.log
+            .ci-electron-energy-dt/${{ matrix.label }}/electron_diffusion.csv
+            .ci-electron-energy-dt/${{ matrix.label }}/electron_diffusion_final_profile_*.csv
+          if-no-files-found: error
+          retention-days: 30
+
+  electron-energy-dt-convergence:
+    if: github.event_name == 'pull_request' && github.head_ref == 'issue-359-qualified-gummel-icp'
+    needs: electron-energy-dt-matrix
+    name: Electron energy dt convergence
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: electron-energy-dt-*
+          path: dt-matrix-artifacts
+
+      - name: Compare final temperature profiles
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python3 experiments/2d-icp-electron-diffusion-energy-experiment/check_dt_matrix.py \
+            dt-matrix-artifacts
+
+      - name: Upload convergence summary
+        uses: actions/upload-artifact@v4
+        with:
+          name: electron-energy-dt-convergence
+          path: |
+            dt_matrix_summary.json
+            dt_matrix_summary.csv
+          if-no-files-found: error
+          retention-days: 30
 
   issue359-rz-response-jacobian:
     if: false # superseded by the diffusion-only reset baseline; retain as historical diagnostic
