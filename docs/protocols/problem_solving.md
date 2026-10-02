@@ -406,3 +406,19 @@ stability-timescale diagnostics
 ```
 
 The objective is not to eliminate all iteration; it is to prevent the same uncertainty from being rediscovered manually in successive rounds.
+
+## PS-25 — RZ symmetry axis is not a physical BC
+
+For repository RZ models, the coordinate symmetry axis is a geometric
+regularity locus, not a material wall, electrode, inlet, outlet, sheath, or
+other physical boundary-condition surface.
+
+For the current convention `rz_coord_axis = Y`, the symmetry axis is
+`x=0`. Do not include it in explicit FV/FE boundary-condition lists or
+boundary-flux integrals. In particular, do not use an all-around-subdomain
+sideset as a shortcut for physical wall/electrode BCs when that sideset also
+captures the symmetry axis.
+
+Construct and enumerate physical boundary sidesets explicitly. Leave the
+symmetry axis without an explicit physical BC so the RZ regularity/natural
+zero-normal-flux semantics apply.
