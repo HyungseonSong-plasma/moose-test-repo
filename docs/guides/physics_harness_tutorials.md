@@ -156,21 +156,47 @@ python3 bin/physics.py -i all
 
 The durable rule is simple: **schema-v2 owns current semantic intent; historical schema-v1 fixtures own provenance only; closure-grade runtime must use an approved governed execution surface.**
 
-## Simple-case restart inventory
+## Simple-case template CLI
 
-When an operator wants to restart from a simpler physical problem, use the
-repository-owned simple-case catalog rather than inventing an Issue-specific
-recipe or reviving the retired protocol registry.
+Reusable simple cases are a code-level construction facility, not a
+conversation/menu protocol. The catalog is:
 
-Catalog: `experiments/simple_case_inventory.json`
+```text
+experiments/simple_case_inventory.json
+```
 
-Harness owner: `physics_harness/specification/simple_cases.py`
+and the implementation owner is:
 
-A conversational or other operator-facing layer can call
-`simple_case_menu_for_request(text)`. Phrases such as `simple case부터`,
-`최소 케이스부터`, or `처음부터 다시` return a numbered menu.
+```text
+physics_harness/specification/simple_cases.py
+```
 
-Current inventory:
+The canonical CLI is:
+
+```bash
+python3 bin/physics.py simple-case list
+python3 bin/physics.py simple-case show <selector>
+python3 bin/physics.py simple-case check
+python3 bin/physics.py simple-case template <selector> --output <input.i>
+python3 bin/physics.py simple-case create <selector> <destination>
+python3 bin/physics.py simple-case create <selector> <destination> --input <new-input.i>
+```
+
+The numeric selector is only a convenience alias; for example `1` resolves to
+`electron-diffusion-experiment`. The durable identity is the semantic
+`simple_case_id`.
+
+A stable source template may scaffold a new experiment directory. The operation
+copies the qualified input template and declared immutable assets first. When
+`--input` is provided, that new input replaces the generated `input.i`
+after scaffolding. The generated `template_origin.json` records both the
+source template and optional overlay hash.
+
+Template qualification is never inherited. A generated case is runnable through
+the existing `physics test` command, but its new input must pass its own
+construction/runtime/scientific validation before promotion.
+
+Current catalog order is increasing physics coupling:
 
 ```text
 1. electron-diffusion-experiment       STABLE_REUSABLE_BASELINE
@@ -181,16 +207,5 @@ Current inventory:
 6. full-icp-coupled-experiment         PLANNED
 ```
 
-Only a `STABLE_REUSABLE_BASELINE` entry is runnable. The catalog does not own
-execution: `reproduction_command(...)` delegates to the existing
-`python3 bin/physics.py test <case_dir> --qpx <physics-opt>` surface. Planned
-entries deliberately have no runnable path until their own physics scope is
-qualified.
-
-The catalog itself can be checked without target runtime dependencies:
-
-```bash
-python3 physics_harness/specification/simple_cases.py --check
-```
-
-This is selection metadata only; it is not a second experiment control plane.
+Only entries carrying `STABLE_REUSABLE_BASELINE` and a template manifest are
+valid template sources.
