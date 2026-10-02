@@ -113,6 +113,7 @@
     type = SolutionUserObject
     mesh = canonical_source.e
     system_variables = poisson_source_out
+    timestep = LATEST
     execute_on = INITIAL
   []
 []
