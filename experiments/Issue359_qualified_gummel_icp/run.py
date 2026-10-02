@@ -19,11 +19,15 @@ from typing import Any
 from physics_harness.adapters.moose import blocks as mb
 from physics_harness.adapters.moose import parameters as mp
 from physics_harness.execution.runtime import resolve_executable, run_physics, validate_executable
+from experiments.Issue359_qualified_gummel_icp import heavy_continuity as hc
+from experiments.historical_recipe_support import issue192_s5r as s5r
 
 ROOT = Path(__file__).resolve().parents[2]
-HEAVY_SOURCE = ROOT / "experiments/Issue21_qvt_six_species_bulk_advection"
 ICP_SOURCE = ROOT / "experiments/Issue91_real_qvt_r3/r3_e0"
+HEAVY_SOURCE = ICP_SOURCE / "heavy_base.i"
 CANONICAL_HEAVY = ROOT / "physics_app/ci/plasma_closures_oxygen_transport.txt"
+ELECTRON_REACTION_DATA = ROOT / "physics_app/data/electron_impact"
+HEAVY_REACTION_DATA = ROOT / "physics_app/data/heavy_reactions"
 
 FLOW_SCCM = 20.0
 PRESSURE_PA = 1.333223684
@@ -773,16 +777,9 @@ def _outer_input(
     if mb.has_block(text, "Materials"):
         text = mb.remove_block(text, "Materials")
 
-    # Promote the accepted #21 heavy FV operators to their current Physics
-    # registrations without changing their equations or parameters.
-    text = text.replace(
-        "type = QPXFVMassFractionAdvection",
-        "type = PhysicsFVMassFractionAdvection",
-    )
-    text = text.replace(
-        "type = QPXFVMixtureAveragedDiffusion",
-        "type = PhysicsFVMixtureAveragedDiffusion",
-    )
+    # Restore the accepted real-QVT transient heavy continuity topology and
+    # promote its live transport owners to current Physics registrations.
+    text = hc.promote_current_types(text)
     for name, value in (
         ("Q_sccm", FLOW_SCCM),
         ("outlet_pressure", PRESSURE_PA),
@@ -798,6 +795,20 @@ def _outer_input(
         text = _replace_top(text, name, f"{value:.17g}")
     text = _remove_top(text, "T_e_value")
     text = _remove_top(text, "n_e_value")
+    text = _remove_top(text, "E0_migration")
+    if mb.has_block(text, "Functions/phi_prescribed"):
+        text = mb.remove_block(text, "Functions/phi_prescribed")
+    if mb.has_block(text, "Functions/ic_w_O_transient"):
+        text = mb.remove_block(text, "Functions/ic_w_O_transient")
+    if mb.has_block(text, "ICs/ic_w_O"):
+        text = mb.remove_block(text, "ICs/ic_w_O")
+    for species in hc.SOLVED_HEAVY:
+        text = mp.upsert_parameter(
+            text,
+            f"Variables/w_{species}",
+            "initial_condition",
+            f"{MASS_FRACTIONS[species]:.17g}",
+        )
 
     text = mp.upsert_parameter(
         text, "FunctorMaterials/state_constants", "prop_names", "'T_g mu_flow'"
@@ -813,6 +824,8 @@ def _outer_input(
         text, "electron_density_from_gummel", INITIAL_ELECTRON_DENSITY_M3
     )
     text = _add_aux(text, "mean_energy_from_gummel", ENERGY_REF_EV)
+    text = _add_aux(text, "potential_from_gummel", 0.0)
+    text = hc.bind_gummel_potential(text)
 
     text = mb.insert_child_block(
         text,
@@ -838,6 +851,8 @@ def _outer_input(
         "electron_number_density",
         "electron_density_from_gummel",
     )
+    text = hc.insert_volumetric_chemistry(text)
+    text = hc.insert_surface_reactions(text)
 
     text += """
 [MultiApps]
@@ -860,8 +875,8 @@ def _outer_input(
   [issue359_fast_to_heavy]
     type = MultiAppCopyTransfer
     from_multi_app = gummel_driver
-    source_variable = 'electron_density_out mean_energy_out'
-    variable = 'electron_density_from_gummel mean_energy_from_gummel'
+    source_variable = 'electron_density_out mean_energy_out potential_from_poisson'
+    variable = 'electron_density_from_gummel mean_energy_from_gummel potential_from_gummel'
   []
 []
 """
@@ -917,7 +932,9 @@ def _construction_audit(
     heavy_steps: int,
 ) -> dict[str, Any]:
     all_b = set(ALL_ELECTRON_BOUNDARIES)
-    checks = {
+    continuity = hc.audit(outer)
+    checks = dict(continuity["checks"])
+    checks.update({
         "qualified_gummel_action_present": mb.has_block(
             driver, "GummelIteration/electron_poisson"
         ),
@@ -1010,10 +1027,22 @@ def _construction_audit(
         "icp_mesh_poisson": "BlockDeletionGenerator" in poisson
         and "block = plasma" in poisson,
         "current_heavy_operator_types": (
-            "QPXFVMassFractionAdvection" not in outer
-            and "QPXFVMixtureAveragedDiffusion" not in outer
+            "type = QPXFV" not in outer
+            and outer.count("type = PhysicsFVConservativeMassFractionTimeDerivative") == 6
             and outer.count("type = PhysicsFVMassFractionAdvection") == 6
             and outer.count("type = PhysicsFVMixtureAveragedDiffusion") == 6
+            and outer.count("type = PhysicsFVElectrostaticDrift") == 3
+            and outer.count("type = PhysicsFVHeavyMassElectromigrationCorrection") == 6
+            and outer.count("type = PhysicsFVSpeciesReactionSource") == 6
+        ),
+        "heavy_continuity_term_audit": continuity["status"] == "PASS",
+        "gummel_potential_transferred_to_heavy": (
+            "potential_from_poisson" in outer
+            and "potential_from_gummel" in outer
+            and mp.get_parameter(
+                outer, "FVKernels/O2p_electrostatic_drift", "potential"
+            )
+            == "potential_from_gummel"
         ),
         "heavy_20_sccm": re.search(
             r"(?m)^Q_sccm\s*=\s*20(?:\.0+)?\s*$", outer
@@ -1225,12 +1254,13 @@ def _construction_audit(
                 abs_tol=1.0e-12,
             )
         ),
-    }
+    })
     failed = sorted(k for k, ok in checks.items() if not ok)
     return {
         "status": "PASS" if not failed else "FAIL",
         "checks": checks,
         "failed_checks": failed,
+        "continuity": continuity,
     }
 
 
@@ -1256,7 +1286,7 @@ def _stage(
 
     qualified = _qualified_reference_case()
     outer = _outer_input(
-        (HEAVY_SOURCE / "input.i").read_text(),
+        HEAVY_SOURCE.read_text(),
         electron_substeps=electron_substeps,
         heavy_steps=heavy_steps,
         write_exodus=write_exodus,
@@ -1314,7 +1344,13 @@ def _stage(
     shutil.copy2(ICP_SOURCE / "qvt.msh", root / "qvt.msh")
     shutil.copy2(CANONICAL_HEAVY, root / "transport_data.txt")
     shutil.copy2(ICP_SOURCE / "electron_moments.txt", root / "electron_moments.txt")
-    shutil.copy2(qualified / "o2_elastic.txt", root / "o2_elastic.txt")
+    for name in sorted(set(s5r.RATE_TABLES.values())):
+        shutil.copy2(ELECTRON_REACTION_DATA / name, root / name)
+    for name in (
+        "stage5_s5d_oxygen_heavy.txt",
+        "stage5_s5e_h05_oxygen_heavy.txt",
+    ):
+        shutil.copy2(HEAVY_REACTION_DATA / name, root / name)
 
     if (root / "transport_data.txt").read_bytes() != CANONICAL_HEAVY.read_bytes():
         raise Issue359Error("canonical heavy transport staging mismatch")
@@ -1326,6 +1362,15 @@ def _stage(
         "qualified_parent_sha": "05fd063f98406892553e9f4929245097084c9289",
         "qualified_source": "#351 frozen-heavy dedicated-driver full qualification",
         "geometry": "real-QVT ICP RZ plasma block",
+        "heavy_continuity_source": "experiments/Issue91_real_qvt_r3/r3_e0/heavy_base.i",
+        "volumetric_chemistry": "accepted Stage-5 S5-R-v1 heavy-species source ledger",
+        "surface_chemistry": {
+            "source": "Issue27 accepted wall chemistry",
+            "walls": list(hc.PLASMA_WALLS),
+            "reactions": dict(hc.SURFACE_REACTIONS),
+            "sticking": dict(hc.WALL_STICKING),
+            "charged_wall_flux": "surface neutralization + one-sided electric migration",
+        },
         "flow_sccm": FLOW_SCCM,
         "outlet_pressure_Pa": PRESSURE_PA,
         "gas_temperature_K": TG_K,
@@ -1575,6 +1620,18 @@ def run(args: argparse.Namespace) -> int:
             )
             return 2
 
+    if args.audit_only:
+        summary = {
+            "status": "CONTINUITY_AUDIT_PASS",
+            "checks": checks,
+            "construction": meta,
+        }
+        (root / "summary.json").write_text(
+            json.dumps(summary, indent=2, sort_keys=True) + "\n"
+        )
+        print("ISSUE359_CONTINUITY_AUDIT " + json.dumps(summary, sort_keys=True))
+        return 0
+
     runtime_args: list[str] = []
     if args.solver_reasons:
         runtime_args.extend(("-snes_converged_reason", "-ksp_converged_reason"))
@@ -1677,6 +1734,11 @@ def main() -> int:
     parser.add_argument("--physics", required=True)
     parser.add_argument("--results-root", type=Path, required=True)
     parser.add_argument("--timeout", type=float, default=1200.0)
+    parser.add_argument(
+        "--audit-only",
+        action="store_true",
+        help="Stage/check all inputs and require the heavy continuity/wall audit without running physics.",
+    )
     parser.add_argument(
         "--relaxation-factor",
         type=float,
