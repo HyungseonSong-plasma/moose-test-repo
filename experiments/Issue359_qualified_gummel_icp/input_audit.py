@@ -1,62 +1,305 @@
-"""Stable label registry for Issue359 generated-input audits.
+"""Issue359 semantic generated-input audit.
 
-The labels are intentionally semantic and stable.  MOOSE block names may evolve,
-but CI reports these labels so comparisons remain readable across refactors.
+Canonical object/path/type/parameter binding checks are delegated to the central
+MOOSE input-contract harness. This module retains only Issue359-specific
+cross-object relations, representation invariants, wall-chemistry evidence, and
+policy checks that are not yet generic harness semantics.
 """
 from __future__ import annotations
 
 from typing import Any
 
-from experiments.Issue359_qualified_gummel_icp import heavy_continuity as hc
+from physics_harness.adapters.moose import (
+    PRESENCE_FORBIDDEN,
+    MooseInputContract,
+    MooseObjectContract,
+    audit_declared_input,
+)
 from physics_harness.adapters.moose import blocks as mb
 from physics_harness.adapters.moose import parameters as mp
 
 
-ION_KERNEL_LABELS = {
-    "ion_fvkernel_01": "time derivative",
-    "ion_fvkernel_02": "advection",
-    "ion_fvkernel_03": "diffusion",
-    "ion_fvkernel_04": "electrostatic drift",
-    "ion_fvkernel_05": "mixture electromigration correction",
-}
-ELECTRON_KERNEL_LABELS = {
-    "electron_fvkernel_01": "time derivative",
-    "electron_fvkernel_02": "diffusion",
-    "electron_fvkernel_03": "electrostatic drift",
-}
-MEAN_EN_KERNEL_LABELS = {
-    "mean_en_fvkernel_01": "time derivative",
-    "mean_en_fvkernel_02": "diffusion",
-    "mean_en_fvkernel_03": "electrostatic drift",
-    "mean_en_fvkernel_04": "Joule heating",
-    "mean_en_fvkernel_05": "elastic energy loss",
-}
-MATERIAL_LABELS = {
-    "scientific_object_names": "generated input object names are scientific and issue-agnostic",
-    "heavy_material_01": "heavy multi-species transport closure",
-    "electron_material_01": "electron mean-energy/transport closure",
-    "electron_material_02": "electron elastic kinetics owner",
-    "poisson_material_01": "plasma charge-density closure",
-    "plasma_closure_action_absent": "PlasmaClosures Action is absent from all generated inputs",
-}
-COUPLED_VARIABLE_LABELS = {
-    "ion_potential_poisson": "Poisson potential -> charged-heavy transport/wall flux",
-    "electron_potential_poisson": "Poisson potential -> electron drift",
-    "mean_en_potential_poisson": "Poisson potential -> energy drift/Joule heating",
-}
-ION_BC_LABELS = {
-    "ion_bc_01": "O2+ -> O2 surface neutralization + one-sided migration",
-    "ion_bc_02": "O- -> O surface neutralization + one-sided migration",
-    "ion_bc_03": "O+ -> O surface neutralization + one-sided migration",
-    "ion_bc_04": "O+/O- neutralization return flux -> O",
-}
-NEUTRAL_BC_LABELS = {
-    "neutral_bc_01": "O -> 0.5 O2",
-    "neutral_bc_02": "O2s -> O2",
-    "neutral_bc_03": "Os -> 0.5 O2",
-}
-
 CHARGED = ("O2p", "Om", "Op")
+
+
+def _obj(
+    object_id: str,
+    path: str,
+    type_name: str | None,
+    **bindings: str,
+) -> MooseObjectContract:
+    return MooseObjectContract(
+        object_id=object_id,
+        path=path,
+        type_name=type_name,
+        parameters=tuple(bindings),
+        parameter_values=tuple(bindings.items()),
+    )
+
+
+def _forbidden(object_id: str, path: str, reason: str) -> MooseObjectContract:
+    return MooseObjectContract(
+        object_id=object_id,
+        path=path,
+        type_name=None,
+        presence=PRESENCE_FORBIDDEN,
+        reason=reason,
+        source="Issue359 accepted construction policy",
+    )
+
+
+def _outer_contract() -> MooseInputContract:
+    objects: list[MooseObjectContract] = [
+        _obj(
+            "heavy.transport.closure",
+            "FunctorMaterials/heavy_transport",
+            "PhysicsThermalDiffusionMaterial",
+            electron_temperature="T_e_from_gummel_K",
+            electron_number_density="electron_density_from_gummel",
+        ),
+        _forbidden(
+            "architecture.plasma_closures.outer",
+            "PlasmaClosures",
+            "Issue359 uses explicit atomic materials after qualification",
+        ),
+    ]
+    charge = {"O2p": "1", "Om": "-1", "Op": "1"}
+    mobility = {"O2p": "mu_O2p", "Om": "mu_Om", "Op": "mu_Op"}
+    for sp in CHARGED:
+        objects.extend(
+            (
+                _obj(
+                    f"heavy.{sp}.time",
+                    f"FVKernels/{sp}_time",
+                    "PhysicsFVConservativeMassFractionTimeDerivative",
+                    variable=f"w_{sp}",
+                    rho="rho_mat",
+                ),
+                _obj(
+                    f"heavy.{sp}.advection",
+                    f"FVKernels/{sp}_advection",
+                    "PhysicsFVMassFractionAdvection",
+                    variable=f"w_{sp}",
+                    rho="rho_mat",
+                ),
+                _obj(
+                    f"heavy.{sp}.diffusion",
+                    f"FVKernels/{sp}_diffusion",
+                    "PhysicsFVMixtureAveragedDiffusion",
+                    variable=f"w_{sp}",
+                    rho="rho_mat",
+                    diffusivity=f"D_mix_{sp}",
+                    mean_molar_mass="Mn_mix",
+                    include_molar_mass_gradient="true",
+                ),
+                _obj(
+                    f"heavy.{sp}.electrostatic_drift",
+                    f"FVKernels/{sp}_electrostatic_drift",
+                    "PhysicsFVElectrostaticDrift",
+                    variable=f"w_{sp}",
+                    potential="potential_from_gummel",
+                    mobility=mobility[sp],
+                    carrier="rho_mat",
+                    charge_number=charge[sp],
+                ),
+                _obj(
+                    f"heavy.{sp}.mass_frame_em_correction",
+                    f"FVKernels/{sp}_heavy_mass_em_correction",
+                    "PhysicsFVHeavyMassElectromigrationCorrection",
+                    variable=f"w_{sp}",
+                    potential="potential_from_gummel",
+                    rho="rho_mat",
+                    ion_mass_fractions="'w_O2p w_Om w_Op'",
+                    ion_mobilities="'mu_O2p mu_Om mu_Op'",
+                    ion_charges="'1 -1 1'",
+                ),
+            )
+        )
+    return MooseInputContract("issue359.outer.v1", objects=tuple(objects))
+
+
+def _electron_contract() -> MooseInputContract:
+    all_b = "'inlet outlet plasma_electrode plasma_metal plasma_right plasma_cover plasma_wafer plasma_focus_ring'"
+    return MooseInputContract(
+        "issue359.electron.v1",
+        objects=(
+            _obj("electron.state.log_density", "Variables/log_e", None),
+            _obj("electron.state.energy_molar", "Variables/c_epsilon", None),
+            _obj(
+                "electron.particle.time",
+                "FVKernels/electron_time",
+                "PhysicsFVLogMolarElectronTimeDerivative",
+                variable="log_e",
+            ),
+            _obj(
+                "electron.particle.diffusion",
+                "FVKernels/electron_diffusion",
+                "PhysicsFVLogMolarElectronDiffusion",
+                variable="log_e",
+                coeff="electron_diffusion",
+                coeff_interp_method="harmonic",
+            ),
+            _obj(
+                "electron.particle.drift",
+                "FVKernels/electron_drift",
+                "PhysicsFVLogMolarElectrostaticDrift",
+                variable="log_e",
+                potential="potential_from_poisson",
+                mobility="electron_mobility",
+                carrier="carrier_one",
+                charge_number="-1",
+            ),
+            _obj(
+                "electron.energy.time",
+                "FVKernels/energy_time",
+                "FVTimeKernel",
+                variable="c_epsilon",
+            ),
+            _obj(
+                "electron.energy.diffusion",
+                "FVKernels/energy_diffusion",
+                "FVDiffusion",
+                variable="c_epsilon",
+                coeff="electron_energy_diffusion",
+            ),
+            _obj(
+                "electron.energy.drift",
+                "FVKernels/energy_drift",
+                "PhysicsFVElectrostaticDrift",
+                variable="c_epsilon",
+                potential="potential_from_poisson",
+                mobility="electron_energy_mobility",
+                carrier="carrier_one",
+                charge_number="-1",
+            ),
+            _obj(
+                "electron.energy.joule",
+                "FVKernels/energy_joule",
+                "PhysicsFVElectronEnergyJouleHeating",
+                variable="c_epsilon",
+                electron_density="c_e_molar",
+                potential="potential_from_poisson",
+                mobility="joule_mobility",
+                diffusion="joule_diffusion",
+                state_form="molar_eV",
+            ),
+            _obj(
+                "electron.energy.elastic_o2",
+                "FVKernels/energy_elastic_o2",
+                "FVCoupledForce",
+                variable="c_epsilon",
+                v="S_elastic_applied_molar",
+                coef="1.0",
+            ),
+            _obj(
+                "electron.transport.closure",
+                "FunctorMaterials/electron_transport_closure",
+                "PhysicsElectronClosureMaterial",
+                state_form="physical_eV",
+                electron_number_density="electron_density_m3",
+                electron_energy_density="electron_energy_density_eV_m3",
+            ),
+            _obj(
+                "electron.kinetics.o2_elastic",
+                "FunctorMaterials/electron_o2_elastic_kinetics",
+                "PhysicsElectronKineticsMaterial",
+                electron_mean_energy="mean_en_solved",
+                electron_number_density="electron_density_m3",
+            ),
+            _obj(
+                "electron.wall.particle",
+                "FVBCs/electron_wall_collection",
+                "PhysicsFVElectronGroundedSheathCollectionBC",
+                variable="log_e",
+                boundary=all_b,
+                potential="potential_from_poisson",
+                log_molar_state="true",
+            ),
+            _obj(
+                "electron.wall.energy",
+                "FVBCs/electron_energy_wall_loss",
+                "PhysicsFVElectronGroundedSheathEnergyBC",
+                variable="c_epsilon",
+                boundary=all_b,
+                electron_density="c_e_molar",
+                potential="potential_from_poisson",
+                molar_energy_state="true",
+            ),
+            _forbidden(
+                "electron.normalized_density.material",
+                "FunctorMaterials/electron_density_normalized",
+                "T1/T2 accepted representation uses log molar density directly",
+            ),
+            _forbidden(
+                "architecture.plasma_closures.electron",
+                "PlasmaClosures",
+                "Issue359 uses explicit atomic materials after qualification",
+            ),
+        ),
+    )
+
+
+def _driver_contract() -> MooseInputContract:
+    return MooseInputContract(
+        "issue359.driver.v1",
+        objects=(
+            _obj(
+                "gummel.siblings",
+                "GummelIteration/electron_poisson",
+                None,
+                electron_input_file="electron_sub.i",
+                poisson_input_file="poisson_sub.i",
+                potential_transfer_mode="through_parent",
+                parent_potential_variable="potential_from_poisson",
+            ),
+            _forbidden(
+                "architecture.plasma_closures.driver",
+                "PlasmaClosures",
+                "driver coordinates siblings and owns no plasma closure Action",
+            ),
+        ),
+    )
+
+
+def _poisson_contract() -> MooseInputContract:
+    return MooseInputContract(
+        "issue359.poisson.v1",
+        objects=(
+            _obj("poisson.state.log_density_frozen", "AuxVariables/log_e_frozen", None),
+            _obj("poisson.state.energy_molar_frozen", "AuxVariables/c_epsilon_frozen", None),
+            _obj(
+                "poisson.electron.mean_energy_bridge",
+                "FunctorMaterials/gummel_mean_energy",
+                "ADParsedFunctorMaterial",
+                functor_names="'c_epsilon_frozen log_e_frozen'",
+                functor_symbols="'ceps loge'",
+                expression="'ceps/max(exp(loge),1.0e-300)'",
+            ),
+            _obj(
+                "poisson.charge.closure",
+                "FunctorMaterials/plasma_charge_density",
+                "PhysicsPlasmaChargeDensityMaterial",
+            ),
+            _obj(
+                "poisson.electron_response.topology",
+                "FVKernels/electron_response_topology_correction",
+                "FVElectronResponseTopologyCorrection",
+                variable="potential_plasma",
+                anchor="phi_anchor_frozen",
+                beta="electron_response_beta",
+            ),
+            _forbidden(
+                "poisson.electron_response.banded_1d",
+                "FVKernels/electron_response_banded_correction",
+                "geometry-specific 1D banded response was retired for RZ topology",
+            ),
+            _forbidden(
+                "architecture.plasma_closures.poisson",
+                "PlasmaClosures",
+                "Issue359 uses explicit atomic materials after qualification",
+            ),
+        ),
+    )
 
 
 def _row(
@@ -79,45 +322,17 @@ def _row(
     }
 
 
-def _kernel_ok(
-    text: str,
-    path: str,
-    expected_type: str,
-    expected_variable: str,
-    expected: dict[str, str] | None = None,
-) -> tuple[bool, str]:
-    if not mb.has_block(text, path):
-        return False, f"{path}: missing"
-    actual_type = mp.get_parameter(text, path, "type")
-    variable = mp.get_parameter(text, path, "variable")
-    checks = [
-        actual_type == expected_type,
-        variable == expected_variable,
-    ]
-    details = [f"path={path}", f"type={actual_type}", f"variable={variable}"]
-    for name, value in (expected or {}).items():
-        actual = mp.get_parameter(text, path, name)
-        checks.append(actual == value)
-        details.append(f"{name}={actual}")
-    return all(checks), "; ".join(details)
-
-
-def _aggregate_kernel(
-    text: str,
-    species: tuple[str, ...],
-    path_suffix: str,
-    expected_type: str,
-    expected_params,
-) -> tuple[bool, str]:
-    evidence: list[str] = []
-    passed = True
-    for sp in species:
-        path = f"FVKernels/{sp}_{path_suffix}"
-        params = expected_params(sp)
-        ok, detail = _kernel_ok(text, path, expected_type, f"w_{sp}", params)
-        passed = passed and ok
-        evidence.append(f"{sp}: {'PASS' if ok else 'FAIL'} ({detail})")
-    return passed, " | ".join(evidence)
+def _contract_row(scope: str, text: str, contract: MooseInputContract) -> dict[str, Any]:
+    result = audit_declared_input(contract, text)
+    return _row(
+        f"contract.{scope}",
+        "Central Input Contract",
+        f"{scope} generated-input semantic object/binding contract",
+        scope,
+        contract.contract_id,
+        result.status == "PASS",
+        str(result.to_dict()),
+    )
 
 
 def audit(
@@ -127,212 +342,12 @@ def audit(
     poisson: str,
     continuity: dict[str, Any],
 ) -> dict[str, Any]:
-    rows: list[dict[str, Any]] = []
-
-    ok, ev = _aggregate_kernel(
-        outer,
-        CHARGED,
-        "time",
-        "PhysicsFVConservativeMassFractionTimeDerivative",
-        lambda _sp: {"rho": "rho_mat"},
-    )
-    rows.append(_row(
-        "ion_fvkernel_01", "FVKernel", ION_KERNEL_LABELS["ion_fvkernel_01"],
-        "O2p, Om, Op", "PhysicsFVConservativeMassFractionTimeDerivative(rho=rho_mat)", ok, ev,
-    ))
-
-    ok, ev = _aggregate_kernel(
-        outer,
-        CHARGED,
-        "advection",
-        "PhysicsFVMassFractionAdvection",
-        lambda _sp: {"rho": "rho_mat"},
-    )
-    rows.append(_row(
-        "ion_fvkernel_02", "FVKernel", ION_KERNEL_LABELS["ion_fvkernel_02"],
-        "O2p, Om, Op", "PhysicsFVMassFractionAdvection(rho=rho_mat)", ok, ev,
-    ))
-
-    ok, ev = _aggregate_kernel(
-        outer,
-        CHARGED,
-        "diffusion",
-        "PhysicsFVMixtureAveragedDiffusion",
-        lambda sp: {
-            "rho": "rho_mat",
-            "diffusivity": f"D_mix_{sp}",
-            "mean_molar_mass": "Mn_mix",
-            "include_molar_mass_gradient": "true",
-        },
-    )
-    rows.append(_row(
-        "ion_fvkernel_03", "FVKernel", ION_KERNEL_LABELS["ion_fvkernel_03"],
-        "O2p, Om, Op", "mixture-averaged diffusion with species D_mix", ok, ev,
-    ))
-
-    charge = {"O2p": "1", "Om": "-1", "Op": "1"}
-    mobility = {"O2p": "mu_O2p", "Om": "mu_Om", "Op": "mu_Op"}
-    ok, ev = _aggregate_kernel(
-        outer,
-        CHARGED,
-        "electrostatic_drift",
-        "PhysicsFVElectrostaticDrift",
-        lambda sp: {
-            "potential": "potential_from_gummel",
-            "mobility": mobility[sp],
-            "carrier": "rho_mat",
-            "charge_number": charge[sp],
-        },
-    )
-    rows.append(_row(
-        "ion_fvkernel_04", "FVKernel", ION_KERNEL_LABELS["ion_fvkernel_04"],
-        "O2p, Om, Op", "charged-heavy drift driven by potential_from_gummel", ok, ev,
-    ))
-
-    ok, ev = _aggregate_kernel(
-        outer,
-        CHARGED,
-        "heavy_mass_em_correction",
-        "PhysicsFVHeavyMassElectromigrationCorrection",
-        lambda _sp: {
-            "potential": "potential_from_gummel",
-            "rho": "rho_mat",
-            "ion_mass_fractions": "'w_O2p w_Om w_Op'",
-            "ion_mobilities": "'mu_O2p mu_Om mu_Op'",
-            "ion_charges": "'1 -1 1'",
-        },
-    )
-    rows.append(_row(
-        "ion_fvkernel_05", "FVKernel", ION_KERNEL_LABELS["ion_fvkernel_05"],
-        "O2p, Om, Op", "mixture electromigration correction driven by potential_from_gummel", ok, ev,
-    ))
-
-    electron_specs = (
-        (
-            "electron_fvkernel_01", "electron_time",
-            "PhysicsFVLogMolarElectronTimeDerivative", {},
-        ),
-        (
-            "electron_fvkernel_02", "electron_diffusion",
-            "PhysicsFVLogMolarElectronDiffusion",
-            {"coeff": "electron_diffusion", "coeff_interp_method": "harmonic"},
-        ),
-        (
-            "electron_fvkernel_03", "electron_drift",
-            "PhysicsFVLogMolarElectrostaticDrift",
-            {
-                "potential": "potential_from_poisson",
-                "mobility": "electron_mobility",
-                "carrier": "carrier_one",
-                "charge_number": "-1",
-            },
-        ),
-    )
-    for label, name, typ, params in electron_specs:
-        ok, ev = _kernel_ok(electron, f"FVKernels/{name}", typ, "log_e", params)
-        rows.append(_row(
-            label, "FVKernel", ELECTRON_KERNEL_LABELS[label],
-            "electron/log_e", f"{typ}", ok, ev,
-        ))
-
-    mean_specs = (
-        ("mean_en_fvkernel_01", "energy_time", "FVTimeKernel", {}),
-        (
-            "mean_en_fvkernel_02", "energy_diffusion", "FVDiffusion",
-            {"coeff": "electron_energy_diffusion"},
-        ),
-        (
-            "mean_en_fvkernel_03", "energy_drift", "PhysicsFVElectrostaticDrift",
-            {
-                "potential": "potential_from_poisson",
-                "mobility": "electron_energy_mobility",
-                "carrier": "carrier_one",
-                "charge_number": "-1",
-            },
-        ),
-        (
-            "mean_en_fvkernel_04", "energy_joule", "PhysicsFVElectronEnergyJouleHeating",
-            {
-                "electron_density": "c_e_molar",
-                "potential": "potential_from_poisson",
-                "mobility": "joule_mobility",
-                "diffusion": "joule_diffusion",
-                "state_form": "molar_eV",
-            },
-        ),
-        (
-            "mean_en_fvkernel_05", "energy_elastic_o2", "FVCoupledForce",
-            {"v": "S_elastic_applied_molar", "coef": "1.0"},
-        ),
-    )
-    for label, name, typ, params in mean_specs:
-        ok, ev = _kernel_ok(electron, f"FVKernels/{name}", typ, "c_epsilon", params)
-        rows.append(_row(
-            label, "FVKernel", MEAN_EN_KERNEL_LABELS[label],
-            "electron energy/c_epsilon", typ, ok, ev,
-        ))
-
-    material_specs = (
-        (
-            "heavy_material_01",
-            outer,
-            "FunctorMaterials/heavy_transport",
-            "PhysicsThermalDiffusionMaterial",
-            "outer heavy",
-        ),
-        (
-            "electron_material_01",
-            electron,
-            "FunctorMaterials/electron_transport_closure",
-            "PhysicsElectronClosureMaterial",
-            "electron subapp",
-        ),
-        (
-            "electron_material_02",
-            electron,
-            "FunctorMaterials/electron_o2_elastic_kinetics",
-            "PhysicsElectronKineticsMaterial",
-            "electron subapp",
-        ),
-    )
-    for label, text, path, typ, scope in material_specs:
-        ok = mb.has_block(text, path) and mp.get_parameter(text, path, "type") == typ
-        if label == "electron_material_01":
-            ok = (
-                ok
-                and mp.get_parameter(text, path, "state_form") == "physical_eV"
-                and mp.get_parameter(text, path, "electron_number_density")
-                == "electron_density_m3"
-                and mp.get_parameter(text, path, "electron_energy_density")
-                == "electron_energy_density_eV_m3"
-            )
-        rows.append(_row(
-            label, "Material", MATERIAL_LABELS[label], scope, typ, ok,
-            f"path={path}; type={mp.get_parameter(text, path, 'type') if mb.has_block(text, path) else None}",
-        ))
-
-    ppath = "FunctorMaterials/plasma_charge_density"
-    pok = (
-        mb.has_block(poisson, ppath)
-        and mp.get_parameter(poisson, ppath, "type") == "PhysicsPlasmaChargeDensityMaterial"
-    )
-    rows.append(_row(
-        "poisson_material_01", "Material",
-        MATERIAL_LABELS["poisson_material_01"], "Poisson subapp",
-        "PhysicsPlasmaChargeDensityMaterial", pok,
-        f"path={ppath}; type={mp.get_parameter(poisson, ppath, 'type') if mb.has_block(poisson, ppath) else None}",
-    ))
-
-    action_absent = all(
-        not mb.has_block(text, "PlasmaClosures")
-        for text in (outer, driver, electron, poisson)
-    )
-    rows.append(_row(
-        "plasma_closure_action_absent", "Architecture",
-        MATERIAL_LABELS["plasma_closure_action_absent"], "all generated inputs",
-        "no [PlasmaClosures] blocks", action_absent,
-        "outer/driver/electron/poisson checked",
-    ))
+    rows: list[dict[str, Any]] = [
+        _contract_row("outer", outer, _outer_contract()),
+        _contract_row("driver", driver, _driver_contract()),
+        _contract_row("electron", electron, _electron_contract()),
+        _contract_row("poisson", poisson, _poisson_contract()),
+    ]
 
     src = mp.words(
         mp.get_parameter(outer, "Transfers/gummel_state_to_heavy", "source_variable") or ""
@@ -357,73 +372,58 @@ def audit(
         )
     )
     rows.append(_row(
-        "ion_potential_poisson", "Coupled Variable",
-        COUPLED_VARIABLE_LABELS["ion_potential_poisson"],
-        "outer heavy", "potential_from_poisson -> potential_from_gummel", ion_potential_ok,
+        "coupling.heavy.potential",
+        "Coupled Variable",
+        "Poisson potential -> charged-heavy transport/wall flux",
+        "outer heavy",
+        "potential_from_poisson -> potential_from_gummel",
+        ion_potential_ok,
         f"transfer={mapped.get('potential_from_poisson')}; consumers={len(ion_paths)}",
     ))
 
-    electron_potential_ok = (
-        mp.get_parameter(electron, "FVKernels/electron_drift", "potential")
-        == "potential_from_poisson"
-    )
-    rows.append(_row(
-        "electron_potential_poisson", "Coupled Variable",
-        COUPLED_VARIABLE_LABELS["electron_potential_poisson"],
-        "electron/log_e", "potential_from_poisson", electron_potential_ok,
-        f"electron_drift.potential={mp.get_parameter(electron, 'FVKernels/electron_drift', 'potential')}",
-    ))
-
-    mean_potential_ok = all(
-        mp.get_parameter(electron, path, "potential") == "potential_from_poisson"
-        for path in ("FVKernels/energy_drift", "FVKernels/energy_joule")
-    )
-    rows.append(_row(
-        "mean_en_potential_poisson", "Coupled Variable",
-        COUPLED_VARIABLE_LABELS["mean_en_potential_poisson"],
-        "electron energy/mean_en", "potential_from_poisson", mean_potential_ok,
-        "energy_drift and energy_joule use potential_from_poisson",
-    ))
-
     wall_map = {
-        "neutral_bc_01": "O",
-        "neutral_bc_02": "O2s",
-        "neutral_bc_03": "Os",
-        "ion_bc_01": "O2p",
-        "ion_bc_02": "Om",
-        "ion_bc_03": "Op",
+        "wall.O.recombination": "O",
+        "wall.O2s.quench": "O2s",
+        "wall.Os.recombination": "Os",
+        "wall.O2p.neutralization": "O2p",
+        "wall.Om.neutralization": "Om",
+        "wall.Op.neutralization": "Op",
     }
-    for label, species in wall_map.items():
+    for object_id, species in wall_map.items():
         item = continuity["wall_reactions"].get(species, {})
-        description = (
-            NEUTRAL_BC_LABELS[label] if label.startswith("neutral_") else ION_BC_LABELS[label]
-        )
         rows.append(_row(
-            label, "Boundary Condition", description, species,
-            f"species-specific surface reaction on all plasma walls",
+            object_id,
+            "Boundary Condition",
+            item.get("reaction") or species,
+            species,
+            "species-specific surface reaction on all plasma walls",
             bool(item.get("ok")),
             f"reaction={item.get('reaction')}; sticking={item.get('sticking')}",
         ))
     rows.append(_row(
-        "ion_bc_04", "Boundary Condition", ION_BC_LABELS["ion_bc_04"],
-        "O return", "explicit O return flux on all plasma walls",
+        "wall.charged_neutralization.O_return",
+        "Boundary Condition",
+        "O+/O- neutralization return flux -> O",
+        "O return",
+        "explicit O return flux on all plasma walls",
         bool(continuity.get("charged_neutralization_O_return")),
         "FVBCs/ion_neutralization_O_return",
     ))
 
     scientific_names_only = all(
-        "issue359_" not in text
-        for text in (outer, driver, electron, poisson)
+        "issue359_" not in text for text in (outer, driver, electron, poisson)
     )
     rows.append(_row(
-        "scientific_object_names", "Architecture",
-        MATERIAL_LABELS["scientific_object_names"],
-        "all generated inputs", "no issue-local issue359_* object names",
+        "architecture.scientific_object_names",
+        "Architecture",
+        "generated input object names are scientific and issue-agnostic",
+        "all generated inputs",
+        "no issue-local issue359_* object names",
         scientific_names_only,
         "outer/driver/electron/poisson scanned for issue359_ prefix",
     ))
 
-    mean_en_state_name_ok = (
+    energy_state_ok = (
         "n_epsilon" not in electron
         and "n_epsilon" not in driver
         and "n_epsilon" not in poisson
@@ -431,73 +431,44 @@ def audit(
         and not mb.has_block(poisson, "AuxVariables/mean_en_frozen")
         and mb.has_block(electron, "Variables/c_epsilon")
         and mb.has_block(poisson, "AuxVariables/c_epsilon_frozen")
-        and mp.words(
-            mp.get_parameter(
-                poisson, "FunctorMaterials/gummel_mean_energy", "functor_names"
-            )
-            or ""
-        )
-        == ["c_epsilon_frozen", "log_e_frozen"]
-        and mp.get_parameter(
-            poisson, "FunctorMaterials/gummel_mean_energy", "expression"
-        )
-        == "'ceps/max(exp(loge),1.0e-300)'"
     )
     rows.append(_row(
-        "mean_en_state_name", "Variable Naming",
-        "electron energy solved state uses conservative c_epsilon; mean_en is derived",
+        "representation.electron.energy_state",
+        "Representation",
+        "electron energy solved state is conservative c_epsilon; mean energy is derived",
         "electron/driver/poisson",
-        "c_epsilon + c_epsilon_frozen; mean_en_solved=c_epsilon/c_e; legacy n_epsilon absent",
-        mean_en_state_name_ok,
+        "c_epsilon + c_epsilon_frozen; legacy n_epsilon absent",
+        energy_state_ok,
         "generated electron, driver and Poisson inputs scanned",
     ))
 
     normalization_absent = (
-        mb.has_block(electron, "Variables/log_e")
-        and mb.has_block(electron, "Variables/c_epsilon")
-        and not mb.has_block(electron, "FunctorMaterials/electron_density_normalized")
-        and mp.get_parameter(
-            electron, "FunctorMaterials/electron_transport_closure", "state_form"
-        )
-        == "physical_eV"
-        and mp.get_parameter(
-            electron, "FVKernels/energy_joule", "state_form"
-        )
-        == "molar_eV"
-        and mp.get_parameter(
-            electron, "FVKernels/energy_joule", "electron_density"
-        )
-        == "c_e_molar"
-        and mp.get_parameter(
-            electron, "FVBCs/electron_energy_wall_loss", "molar_energy_state"
-        )
-        == "true"
-        and mp.get_parameter(
-            electron, "FVBCs/electron_energy_wall_loss", "electron_density"
-        )
-        == "c_e_molar"
-        and "electron_density_hat" not in electron
+        "electron_density_hat" not in electron
         and "state_form = normalized" not in electron
         and "energy_reference_eV" not in electron
         and "electron_energy_reference_eV" not in electron
     )
     rows.append(_row(
-        "electron_normalization_absent", "Representation",
+        "representation.electron.normalization_absent",
+        "Representation",
         "T1/T2 electron particle/energy normalization is absent",
         "electron subapp",
-        "log_e + c_epsilon; physical closure bridge; molar Joule/wall-energy paths",
+        "log_e + c_epsilon; no reference-density/energy scaling",
         normalization_absent,
-        "active electron residual/BC/material surface scanned for legacy normalization",
+        "active electron input scanned for legacy normalization symbols",
     ))
 
     reaction_disabled = (
-        "PhysicsFVSpeciesReactionSource" not in outer
-        and "s5r_source_" not in outer
+        "PhysicsFVSpeciesReactionSource" not in outer and "s5r_source_" not in outer
     )
     rows.append(_row(
-        "policy_reaction_source_disabled", "Policy", "volumetric reaction source disabled",
-        "heavy species", "no PhysicsFVSpeciesReactionSource in current stage",
-        reaction_disabled, "reaction-source coupling intentionally deferred",
+        "policy.heavy.volumetric_chemistry_disabled",
+        "Policy",
+        "volumetric reaction source disabled",
+        "heavy species",
+        "no PhysicsFVSpeciesReactionSource in current stage",
+        reaction_disabled,
+        "reaction-source coupling intentionally deferred",
     ))
 
     failed = [row["label"] for row in rows if row["status"] != "PASS"]
@@ -512,17 +483,17 @@ def to_markdown(report: dict[str, Any]) -> str:
     lines = [
         "# Issue359 Input Audit",
         "",
-        "| Label | Group | Term | Scope | Status |",
+        "| Semantic ID | Group | Term | Scope | Status |",
         "|---|---|---|---|---|",
     ]
     for row in report["rows"]:
         lines.append(
-            f"| `{row['label']}` | {row['group']} | {row['term']} | "
+            f"| {row['label']} | {row['group']} | {row['term']} | "
             f"{row['scope']} | **{row['status']}** |"
         )
     lines.extend(["", "## Evidence", ""])
     for row in report["rows"]:
-        lines.append(f"- `{row['label']}` {row['status']}: {row['evidence']}")
+        lines.append(f"- {row['label']} {row['status']}: {row['evidence']}")
     return "\n".join(lines) + "\n"
 
 

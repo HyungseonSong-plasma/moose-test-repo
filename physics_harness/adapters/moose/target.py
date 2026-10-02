@@ -10,6 +10,14 @@ from typing import Any, Callable, Mapping
 
 from physics_harness.execution.plan import ExecutionCase, ExecutionPlan
 
+from .input_contract import (
+    MooseAssignmentContract,
+    MooseInputContract,
+    MooseObjectContract,
+    require_case_ir_contract,
+    require_generated_input_contract,
+)
+
 
 class MooseLoweringError(ValueError):
     pass
@@ -24,6 +32,7 @@ class MooseAssignment:
 
 @dataclass(frozen=True)
 class MooseBlock:
+    object_id: str
     path: str
     type_name: str | None = None
     parameters: tuple[tuple[str, str], ...] = ()
@@ -37,6 +46,7 @@ class MooseCaseIR:
     blocks: tuple[MooseBlock, ...] = ()
     assignments: tuple[MooseAssignment, ...] = ()
     required_observations: tuple[str, ...] = ()
+    input_contract: MooseInputContract | None = None
 
 
 @dataclass(frozen=True)
@@ -74,6 +84,162 @@ _LOCALIZED_BUMP_EXPRESSION = (
     "1.0 + 0.5*exp(-800.0*(x-0.12)^2 - 80.0*(y-0.22)^2)"
 )
 
+
+
+
+def _execution_assignment_contracts(
+    execution_bounds: tuple[tuple[str, Any], ...],
+) -> tuple[MooseAssignmentContract, ...]:
+    bounds = dict(execution_bounds)
+    result: list[MooseAssignmentContract] = []
+    if "max_steps" in bounds:
+        result.append(MooseAssignmentContract("Executioner", "num_steps"))
+    if "dt" in bounds:
+        result.append(MooseAssignmentContract("Executioner", "dt"))
+    if "end_time" in bounds:
+        result.append(MooseAssignmentContract("Executioner", "end_time"))
+    return tuple(result)
+
+
+def _observation_contracts(
+    observations: tuple[str, ...],
+) -> tuple[MooseObjectContract, ...]:
+    result: list[MooseObjectContract] = []
+    for observation in observations:
+        if observation == "energy_inventory":
+            result.append(
+                MooseObjectContract(
+                    object_id="observation.electron_energy.inventory",
+                    path=f"Postprocessors/{_ENERGY_INVENTORY_PP}",
+                    type_name="ADElementIntegralFunctorPostprocessor",
+                    parameters=("functor", "block", "execute_on"),
+                )
+            )
+        elif observation == "energy_profile":
+            result.extend(
+                (
+                    MooseObjectContract(
+                        object_id="observation.electron_energy.state.avg",
+                        path=f"Postprocessors/{_ENERGY_NORM_AVG_PP}",
+                        type_name="ElementAverageFunctorPostprocessor",
+                        parameters=("functor", "block", "execute_on"),
+                    ),
+                    MooseObjectContract(
+                        object_id="observation.electron_energy.state.min",
+                        path=f"Postprocessors/{_ENERGY_NORM_MIN_PP}",
+                        type_name="ADElementExtremeFunctorValue",
+                        parameters=("functor", "value_type", "block", "execute_on"),
+                    ),
+                    MooseObjectContract(
+                        object_id="observation.electron_energy.state.max",
+                        path=f"Postprocessors/{_ENERGY_NORM_MAX_PP}",
+                        type_name="ADElementExtremeFunctorValue",
+                        parameters=("functor", "value_type", "block", "execute_on"),
+                    ),
+                    MooseObjectContract(
+                        object_id="observation.electron_energy.mean.avg",
+                        path=f"Postprocessors/{_MEAN_EN_AVG_PP}",
+                        type_name="ElementAverageFunctorPostprocessor",
+                        parameters=("functor", "block", "execute_on"),
+                    ),
+                    MooseObjectContract(
+                        object_id="observation.electron_energy.mean.min",
+                        path=f"Postprocessors/{_MEAN_EN_MIN_PP}",
+                        type_name="ADElementExtremeFunctorValue",
+                        parameters=("functor", "value_type", "block", "execute_on"),
+                    ),
+                    MooseObjectContract(
+                        object_id="observation.electron_energy.mean.max",
+                        path=f"Postprocessors/{_MEAN_EN_MAX_PP}",
+                        type_name="ADElementExtremeFunctorValue",
+                        parameters=("functor", "value_type", "block", "execute_on"),
+                    ),
+                )
+            )
+        else:
+            raise MooseLoweringError(
+                f"no MOOSE observation contract for {observation!r}"
+            )
+    return tuple(result)
+
+
+def _energy_diffusion_input_contract(
+    execution_bounds: tuple[tuple[str, Any], ...],
+    observations: tuple[str, ...],
+) -> MooseInputContract:
+    return MooseInputContract(
+        contract_id="electron_energy_diffusion.v1",
+        objects=(
+            MooseObjectContract(
+                object_id="electron.energy.variable",
+                path=f"Variables/{_ENERGY_VARIABLE}",
+                type_name="MooseVariableFVReal",
+                parameters=("block",),
+            ),
+            MooseObjectContract(
+                object_id="electron.energy.initial_profile.function",
+                path=f"Functions/{_ENERGY_PROFILE_FUNCTION}",
+                type_name="ParsedFunction",
+                parameters=("expression",),
+            ),
+            MooseObjectContract(
+                object_id="electron.energy.initial_profile.ic",
+                path=f"ICs/{_ENERGY_PROFILE_IC}",
+                type_name="FunctionIC",
+                parameters=("variable", "function"),
+            ),
+            MooseObjectContract(
+                object_id="electron.energy.density.ev",
+                path=f"FunctorMaterials/{_ENERGY_DENSITY_EV_FUNCTOR}",
+                type_name="ADParsedFunctorMaterial",
+                parameters=("property_name", "functor_names", "functor_symbols", "expression", "block"),
+            ),
+            MooseObjectContract(
+                object_id="electron.energy.density.joule",
+                path=f"FunctorMaterials/{_ENERGY_DENSITY_J_FUNCTOR}",
+                type_name="ADParsedFunctorMaterial",
+                parameters=("property_name", "functor_names", "functor_symbols", "expression", "block"),
+            ),
+            MooseObjectContract(
+                object_id="electron.energy.mean",
+                path=f"FunctorMaterials/{_MEAN_EN_SOLVED_FUNCTOR}",
+                type_name="ADParsedFunctorMaterial",
+                parameters=("property_name", "functor_names", "functor_symbols", "expression", "block"),
+            ),
+            MooseObjectContract(
+                object_id="electron.energy.diffusivity.material",
+                path=f"FunctorMaterials/{_ENERGY_DIFFUSIVITY_MATERIAL}",
+                type_name="ADGenericFunctorMaterial",
+                parameters=("prop_names", "prop_values", "block"),
+            ),
+            MooseObjectContract(
+                object_id="electron.energy.time",
+                path=f"FVKernels/{_ENERGY_TIME_KERNEL}",
+                type_name="FVTimeKernel",
+                parameters=("variable", "block"),
+            ),
+            MooseObjectContract(
+                object_id="electron.energy.diffusion",
+                path=f"FVKernels/{_ENERGY_DIFFUSION_KERNEL}",
+                type_name="FVDiffusion",
+                parameters=("variable", "coeff", "block"),
+            ),
+            *_observation_contracts(observations),
+        ),
+        assignments=_execution_assignment_contracts(execution_bounds),
+    )
+
+
+def _quasi_neutral_input_contract(
+    execution_bounds: tuple[tuple[str, Any], ...],
+) -> MooseInputContract:
+    return MooseInputContract(
+        contract_id="quasi_neutral_initialization.v1",
+        assignments=(
+            MooseAssignmentContract("", "n_e_value"),
+            *_execution_assignment_contracts(execution_bounds),
+        ),
+    )
 
 def _parameter(case: ExecutionCase, name: str) -> Any:
     values = dict(case.parameters)
@@ -114,6 +280,7 @@ def _energy_bridge_blocks() -> tuple[MooseBlock, ...]:
     )
     return (
         MooseBlock(
+            object_id="electron.energy.density.ev",
             path=f"FunctorMaterials/{_ENERGY_DENSITY_EV_FUNCTOR}",
             type_name="ADParsedFunctorMaterial",
             parameters=(
@@ -125,6 +292,7 @@ def _energy_bridge_blocks() -> tuple[MooseBlock, ...]:
             ),
         ),
         MooseBlock(
+            object_id="electron.energy.density.joule",
             path=f"FunctorMaterials/{_ENERGY_DENSITY_J_FUNCTOR}",
             type_name="ADParsedFunctorMaterial",
             parameters=(
@@ -136,6 +304,7 @@ def _energy_bridge_blocks() -> tuple[MooseBlock, ...]:
             ),
         ),
         MooseBlock(
+            object_id="electron.energy.mean",
             path=f"FunctorMaterials/{_MEAN_EN_SOLVED_FUNCTOR}",
             type_name="ADParsedFunctorMaterial",
             parameters=(
@@ -155,6 +324,7 @@ def _observation_blocks(observations: tuple[str, ...]) -> tuple[MooseBlock, ...]
         if observation == "energy_inventory":
             blocks.append(
                 MooseBlock(
+                    object_id="observation.electron_energy.inventory",
                     path=f"Postprocessors/{_ENERGY_INVENTORY_PP}",
                     type_name="ADElementIntegralFunctorPostprocessor",
                     parameters=(
@@ -168,6 +338,7 @@ def _observation_blocks(observations: tuple[str, ...]) -> tuple[MooseBlock, ...]
             blocks.extend(
                 (
                     MooseBlock(
+                        object_id="observation.electron_energy.state.avg",
                         path=f"Postprocessors/{_ENERGY_NORM_AVG_PP}",
                         type_name="ElementAverageFunctorPostprocessor",
                         parameters=(
@@ -177,6 +348,7 @@ def _observation_blocks(observations: tuple[str, ...]) -> tuple[MooseBlock, ...]
                         ),
                     ),
                     MooseBlock(
+                        object_id="observation.electron_energy.state.min",
                         path=f"Postprocessors/{_ENERGY_NORM_MIN_PP}",
                         type_name="ADElementExtremeFunctorValue",
                         parameters=(
@@ -187,6 +359,7 @@ def _observation_blocks(observations: tuple[str, ...]) -> tuple[MooseBlock, ...]
                         ),
                     ),
                     MooseBlock(
+                        object_id="observation.electron_energy.state.max",
                         path=f"Postprocessors/{_ENERGY_NORM_MAX_PP}",
                         type_name="ADElementExtremeFunctorValue",
                         parameters=(
@@ -197,6 +370,7 @@ def _observation_blocks(observations: tuple[str, ...]) -> tuple[MooseBlock, ...]
                         ),
                     ),
                     MooseBlock(
+                        object_id="observation.electron_energy.mean.avg",
                         path=f"Postprocessors/{_MEAN_EN_AVG_PP}",
                         type_name="ElementAverageFunctorPostprocessor",
                         parameters=(
@@ -206,6 +380,7 @@ def _observation_blocks(observations: tuple[str, ...]) -> tuple[MooseBlock, ...]
                         ),
                     ),
                     MooseBlock(
+                        object_id="observation.electron_energy.mean.min",
                         path=f"Postprocessors/{_MEAN_EN_MIN_PP}",
                         type_name="ADElementExtremeFunctorValue",
                         parameters=(
@@ -216,6 +391,7 @@ def _observation_blocks(observations: tuple[str, ...]) -> tuple[MooseBlock, ...]
                         ),
                     ),
                     MooseBlock(
+                        object_id="observation.electron_energy.mean.max",
                         path=f"Postprocessors/{_MEAN_EN_MAX_PP}",
                         type_name="ADElementExtremeFunctorValue",
                         parameters=(
@@ -250,16 +426,19 @@ def _lower_electron_energy_diffusion(
 
     blocks = (
         MooseBlock(
+            object_id="electron.energy.variable",
             path=f"Variables/{_ENERGY_VARIABLE}",
             type_name="MooseVariableFVReal",
             parameters=(("block", "plasma"),),
         ),
         MooseBlock(
+            object_id="electron.energy.initial_profile.function",
             path=f"Functions/{_ENERGY_PROFILE_FUNCTION}",
             type_name="ParsedFunction",
             parameters=(("expression", f"'{_LOCALIZED_BUMP_EXPRESSION}'"),),
         ),
         MooseBlock(
+            object_id="electron.energy.initial_profile.ic",
             path=f"ICs/{_ENERGY_PROFILE_IC}",
             type_name="FunctionIC",
             parameters=(
@@ -269,6 +448,7 @@ def _lower_electron_energy_diffusion(
         ),
         *_energy_bridge_blocks(),
         MooseBlock(
+            object_id="electron.energy.diffusivity.material",
             path=f"FunctorMaterials/{_ENERGY_DIFFUSIVITY_MATERIAL}",
             type_name="ADGenericFunctorMaterial",
             parameters=(
@@ -278,6 +458,7 @@ def _lower_electron_energy_diffusion(
             ),
         ),
         MooseBlock(
+            object_id="electron.energy.time",
             path=f"FVKernels/{_ENERGY_TIME_KERNEL}",
             type_name="FVTimeKernel",
             parameters=(
@@ -286,6 +467,7 @@ def _lower_electron_energy_diffusion(
             ),
         ),
         MooseBlock(
+            object_id="electron.energy.diffusion",
             path=f"FVKernels/{_ENERGY_DIFFUSION_KERNEL}",
             type_name="FVDiffusion",
             parameters=(
@@ -303,6 +485,9 @@ def _lower_electron_energy_diffusion(
         blocks=tuple(blocks),
         assignments=_execution_assignments(execution_bounds),
         required_observations=case.required_observations,
+        input_contract=_energy_diffusion_input_contract(
+            execution_bounds, case.required_observations
+        ),
     )
 
 
@@ -323,6 +508,7 @@ def _lower_quasi_neutral_initialization(
             *_execution_assignments(execution_bounds),
         ),
         required_observations=case.required_observations,
+        input_contract=_quasi_neutral_input_contract(execution_bounds),
     )
 
 
@@ -362,6 +548,7 @@ def lower_execution_plan(
             lowered = _builtin_lowerer(case)(case, plan.model_ref, plan.execution_bounds)
         if lowered.case_id != case.case_id or lowered.action_id != case.action_id:
             raise MooseLoweringError("target lowerer changed case/action identity")
+        require_case_ir_contract(lowered)
         cases.append(lowered)
     return MooseTargetIR(
         source_plan_id=plan.plan_id,
@@ -411,6 +598,7 @@ def _render_tree_node(
 
 def emit_moose_input(case: MooseCaseIR) -> str:
     """Emit deterministic, hierarchical MOOSE input text from structured IR."""
+    require_case_ir_contract(case)
     lines: list[str] = [
         f"# QPX case_id: {case.case_id}",
         f"# QPX action_id: {case.action_id}",
@@ -476,7 +664,9 @@ def emit_moose_input(case: MooseCaseIR) -> str:
 
     for observation in sorted(case.required_observations):
         lines.append(f"# QPX observation: {observation}")
-    return "\n".join(lines) + "\n"
+    rendered = "\n".join(lines) + "\n"
+    require_generated_input_contract(case, rendered)
+    return rendered
 
 
 __all__ = [
