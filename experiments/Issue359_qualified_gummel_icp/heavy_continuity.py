@@ -4,15 +4,52 @@ from __future__ import annotations
 import math
 from typing import Any
 
-from experiments.Issue27_surface_reactions.controlled_wall import combined as wall27
 from physics_harness.adapters.moose import blocks as mb
 from physics_harness.adapters.moose import parameters as mp
 
 SOLVED_HEAVY = ("O2s", "O2p", "O", "Om", "Op", "Os")
 CHARGED_HEAVY = ("O2p", "Om", "Op")
 NEUTRAL_WALL_SPECIES = ("O", "O2s", "Os")
-PLASMA_WALLS = tuple(wall27.PLASMA_WALLS)
+PLASMA_WALLS = (
+    "plasma_electrode",
+    "plasma_metal",
+    "plasma_right",
+    "plasma_cover",
+    "plasma_wafer",
+    "plasma_focus_ring",
+)
 ALL_BOUNDARIES = ("inlet", "outlet", *PLASMA_WALLS)
+
+AVOGADRO = 6.02214076e23
+GAS_CONSTANT_J_PER_MOL_K = 8.31446
+M_O2_KG_PER_MOL = 0.032
+M_O_KG_PER_MOL = 0.016
+
+NEUTRAL_SPECIES = {
+    "O": {"variable": "w_O", "molar_mass": M_O_KG_PER_MOL},
+    "O2s": {"variable": "w_O2s", "molar_mass": M_O2_KG_PER_MOL},
+    "Os": {"variable": "w_Os", "molar_mass": M_O_KG_PER_MOL},
+}
+CHARGED_SPECIES = {
+    "O2p": {
+        "variable": "w_O2p",
+        "mobility": "mu_O2p",
+        "charge": 1,
+        "molar_mass": M_O2_KG_PER_MOL,
+    },
+    "Om": {
+        "variable": "w_Om",
+        "mobility": "mu_Om",
+        "charge": -1,
+        "molar_mass": M_O_KG_PER_MOL,
+    },
+    "Op": {
+        "variable": "w_Op",
+        "mobility": "mu_Op",
+        "charge": 1,
+        "molar_mass": M_O_KG_PER_MOL,
+    },
+}
 
 WALL_STICKING = {
     "O": 0.2,
@@ -44,6 +81,16 @@ class HeavyContinuityError(RuntimeError):
     pass
 
 
+def _neutral_flux_expression(
+    sticking: float, molar_mass: float, variable_symbol: str
+) -> str:
+    thermal = (
+        f"sqrt(8.0*{GAS_CONSTANT_J_PER_MOL_K:.17g}*tg/"
+        f"(3.14159265358979323846*{molar_mass:.17g}))"
+    )
+    return f"{sticking:.17g}*0.25*{thermal}*rho*{variable_symbol}"
+
+
 def promote_current_types(text: str) -> str:
     for old, new in CURRENT_TYPES.items():
         text = text.replace(f"type = {old}", f"type = {new}")
@@ -73,13 +120,13 @@ def insert_surface_reactions(
     # Neutral thermal-sticking reactions:
     # O -> 0.5 O2, O2s -> O2, Os -> 0.5 O2.
     for species in NEUTRAL_WALL_SPECIES:
-        cfg = wall27.NEUTRALS[species]
+        cfg = NEUTRAL_SPECIES[species]
         material = f"{species}_wall_flux_material"
         functor = f"{species}_wall_flux_outward"
         bc_name = f"{species}_wall_loss"
         pp_name = f"{species}_wall_rate"
         symbol = species.lower()
-        expression = wall27._neutral_flux_expression(
+        expression = _neutral_flux_expression(
             WALL_STICKING[species], float(cfg["molar_mass"]), symbol
         )
         for path in (
@@ -125,7 +172,7 @@ def insert_surface_reactions(
     # Charged species use the accepted COMSOL-style split:
     # thermal surface neutralization + one-sided electric migration.
     for species in CHARGED_HEAVY:
-        cfg = wall27.CHARGED[species]
+        cfg = CHARGED_SPECIES[species]
         density_property = f"number_density_{species}"
         density_material = f"{species}_number_density"
         flux_material = f"{species}_wall_flux"
@@ -143,7 +190,7 @@ def insert_surface_reactions(
     property_name = {density_property}
     functor_names = 'rho_mat {cfg['variable']}'
     functor_symbols = 'rho w'
-    expression = 'rho*w*{wall27.AVOGADRO:.17g}/{float(cfg['molar_mass']):.17g}'
+    expression = 'rho*w*{AVOGADRO:.17g}/{float(cfg['molar_mass']):.17g}'
     block = plasma
   []""",
         )
@@ -318,7 +365,7 @@ def audit(text: str, potential: str = "potential_from_gummel") -> dict[str, Any]
             ion_charges="'1 -1 1'",
         )
         if species in CHARGED_HEAVY:
-            cfg = wall27.CHARGED[species]
+            cfg = CHARGED_SPECIES[species]
             terms["electrostatic_drift"] = _kernel_record(
                 text,
                 species,
@@ -381,7 +428,7 @@ def audit(text: str, potential: str = "potential_from_gummel") -> dict[str, Any]
         }
 
     for species in CHARGED_HEAVY:
-        cfg = wall27.CHARGED[species]
+        cfg = CHARGED_SPECIES[species]
         material = f"FunctorMaterials/{species}_wall_flux"
         material_ok = (
             mb.has_block(text, material)
