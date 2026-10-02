@@ -657,7 +657,7 @@ jobs:
 
   two-d-icp-electron-diffusion:
     if: github.event_name == 'pull_request' && github.head_ref == 'issue-359-qualified-gummel-icp'
-    name: 2D ICP electron diffusion baseline
+    name: 2D ICP electron diffusion baselines
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
@@ -667,7 +667,8 @@ jobs:
     env:
       BASELINE_RUNTIME_REF: ghcr.io/hyungseonsong-plasma/physics-jit-runtime@sha256:2460cf70922490b26412345a09a67364e8b32fbd5310cd25efa5415b12486cf3
       BASELINE_PHYSICS_MANIFEST_SHA256: a9654d344e9c60e48992165bc855b154707ecf2e659e4428117e8f6ae8fdba3b
-      CASE_DIR: experiments/2d-icp-electron-diffusion-experiment
+      FIXED_CASE_DIR: experiments/2d-icp-electron-diffusion-experiment
+      ENERGY_CASE_DIR: experiments/2d-icp-electron-diffusion-energy-experiment
     steps:
       - uses: actions/checkout@v4
         with:
@@ -679,84 +680,111 @@ jobs:
         run: |
           set -euxo pipefail
           test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
-          python3 -m py_compile "$CASE_DIR/check.py"
+          python3 -m py_compile "$FIXED_CASE_DIR/check.py" "$ENERGY_CASE_DIR/check.py"
           python3 bin/physics.py simple-case check
           python3 bin/physics.py simple-case list
-          python3 bin/physics.py simple-case show 1 > /tmp/simple-case-show.json
+          python3 bin/physics.py simple-case show 1 > /tmp/simple-case-fixed.json
+          python3 bin/physics.py simple-case show 2 > /tmp/simple-case-energy.json
+
           tmp_case_root="$(mktemp -d)"
-          python3 bin/physics.py simple-case template 1 --output "$tmp_case_root/input.i"
-          cmp "$tmp_case_root/input.i" "$CASE_DIR/input.i"
-          python3 bin/physics.py simple-case create 1 "$tmp_case_root/derived"
-          cmp "$tmp_case_root/derived/input.i" "$CASE_DIR/input.i"
-          cmp "$tmp_case_root/derived/qvt.msh" "$CASE_DIR/qvt.msh"
-          cmp "$tmp_case_root/derived/electron_moments.txt" "$CASE_DIR/electron_moments.txt"
-          python3 - "$tmp_case_root/derived/template_origin.json" <<'PY'
+
+          python3 bin/physics.py simple-case template 1 --output "$tmp_case_root/fixed.i"
+          cmp "$tmp_case_root/fixed.i" "$FIXED_CASE_DIR/input.i"
+          python3 bin/physics.py simple-case create 1 "$tmp_case_root/fixed-derived"
+          cmp "$tmp_case_root/fixed-derived/input.i" "$FIXED_CASE_DIR/input.i"
+
+          python3 bin/physics.py simple-case template 2 --output "$tmp_case_root/energy.i"
+          cmp "$tmp_case_root/energy.i" "$ENERGY_CASE_DIR/input.i"
+          python3 bin/physics.py simple-case create 2 "$tmp_case_root/energy-derived"
+          cmp "$tmp_case_root/energy-derived/input.i" "$ENERGY_CASE_DIR/input.i"
+
+          for case_dir in "$FIXED_CASE_DIR" "$ENERGY_CASE_DIR"; do
+            test "$(sha256sum "$case_dir/qvt.msh" | awk '{print $1}')" = "a98521af2c106137f9635fe7e2c5ba9b0fd408e17c62eb7c6d3f7c1fff65a03e"
+            test "$(sha256sum "$case_dir/electron_moments.txt" | awk '{print $1}')" = "994f6b1deece3c53be7fb3e7f9526555d0f9314fd58749bea6346639f08aa387"
+          done
+
+          python3 - "$tmp_case_root" <<'PY'
           import json
           import sys
           from pathlib import Path
-          data = json.loads(Path(sys.argv[1]).read_text())
-          assert data["template_id"] == "electron-diffusion-experiment"
-          assert data["source_status"] == "STABLE_REUSABLE_BASELINE"
-          assert data["qualification_inherited"] is False
-          PY
-          rm -rf "$tmp_case_root"
-          python3 - <<'PY'
-          import json
-          from pathlib import Path
 
-          root = Path("experiments/2d-icp-electron-diffusion-experiment")
-          required = {
-              "input.i", "check.py", "test.json", "experiment.json",
-              "provenance.json", "README.md", "qvt.msh", "electron_moments.txt",
-          }
-          missing = sorted(name for name in required if not (root / name).is_file())
-          if missing:
-              raise SystemExit(f"baseline inventory missing files: {missing}")
+          tmp = Path(sys.argv[1])
+          fixed_origin = json.loads((tmp / "fixed-derived/template_origin.json").read_text())
+          energy_origin = json.loads((tmp / "energy-derived/template_origin.json").read_text())
 
-          manifest = json.loads((root / "test.json").read_text())
-          assert manifest["name"] == "2d-icp-electron-diffusion-experiment"
-          assert manifest["type"] == "diagnostic"
-          assert manifest["input"] == "input.i"
-          assert manifest["checker"] == "check.py"
+          assert fixed_origin["template_id"] == "electron-diffusion-experiment"
+          assert energy_origin["template_id"] == "electron-diffusion-energy-experiment"
+          assert fixed_origin["source_status"] == "STABLE_REUSABLE_BASELINE"
+          assert energy_origin["source_status"] == "STABLE_REUSABLE_BASELINE"
+          assert fixed_origin["qualification_inherited"] is False
+          assert energy_origin["qualification_inherited"] is False
 
-          spec = json.loads((root / "experiment.json").read_text())
-          assert spec["schema_version"] == 2
-          assert spec["experiment_id"] == "2d-icp-electron-diffusion-experiment"
-          assert spec["parameters"]["initial_electron_density_m3"] == 1.0e16
-          assert spec["parameters"]["initial_mean_electron_energy_eV"] == 5.73276
-          assert spec["parameters"]["electron_dt_s"] == 1.0e-9
-          assert spec["execution_bounds"]["end_time"] == 4.0e-9
-          assert spec["execution_bounds"]["max_steps"] == 4
+          fixed = Path("experiments/2d-icp-electron-diffusion-experiment")
+          energy = Path("experiments/2d-icp-electron-diffusion-energy-experiment")
 
-          text = (root / "input.i").read_text()
-          required_tokens = (
+          for root in (fixed, energy):
+              required = {
+                  "input.i", "input.template.i", "check.py", "test.json",
+                  "experiment.json", "provenance.json", "README.md",
+                  "simple_case_template.json", "qvt.msh", "electron_moments.txt",
+              }
+              missing = sorted(name for name in required if not (root / name).is_file())
+              if missing:
+                  raise SystemExit(f"{root}: missing files: {missing}")
+
+          fixed_spec = json.loads((fixed / "experiment.json").read_text())
+          energy_spec = json.loads((energy / "experiment.json").read_text())
+          assert fixed_spec["experiment_id"] == "2d-icp-electron-diffusion-experiment"
+          assert fixed_spec["parameters"]["fixed_mean_electron_energy_eV"] == 5.73276
+          assert energy_spec["experiment_id"] == "2d-icp-electron-diffusion-energy-experiment"
+          assert energy_spec["parameters"]["initial_mean_electron_energy_eV"] == 5.73276
+
+          fixed_text = (fixed / "input.i").read_text()
+          energy_text = (energy / "input.i").read_text()
+
+          fixed_required = (
               "type = PhysicsFVLogMolarElectronTimeDerivative",
               "type = PhysicsFVLogMolarElectronDiffusion",
-              "[c_epsilon]",
-              "type = FVTimeKernel",
-              "coeff = electron_energy_diffusion",
               "type = PhysicsElectronClosureMaterial",
-              "electron_mean_energy_output = mean_en_solved",
-              "transport_table_file = electron_moments.txt",
+              "fixed_mean_energy_eV",
               "type = PhysicsFVElectronGroundedSheathCollectionBC",
-              "type = PhysicsFVElectronGroundedSheathEnergyBC",
-              "molar_energy_state = true",
-              "potential = zero_phi",
           )
-          absent_tokens = (
+          fixed_absent = (
+              "[c_epsilon]",
+              "coeff = electron_energy_diffusion",
+              "PhysicsFVElectronGroundedSheathEnergyBC",
               "PhysicsFVLogMolarElectrostaticDrift",
               "PhysicsPlasmaChargeDensityMaterial",
               "PhysicsFVElectronEnergyJouleHeating",
           )
-          for token in required_tokens:
-              assert token in text, token
-          for token in absent_tokens:
-              assert token not in text, token
-          print("2D_ICP_DIFFUSION_INVENTORY_STATIC=PASS")
-          PY
+          energy_required = (
+              "type = PhysicsFVLogMolarElectronTimeDerivative",
+              "type = PhysicsFVLogMolarElectronDiffusion",
+              "[c_epsilon]",
+              "coeff = electron_energy_diffusion",
+              "electron_mean_energy_output = mean_en_solved",
+              "type = PhysicsFVElectronGroundedSheathCollectionBC",
+              "type = PhysicsFVElectronGroundedSheathEnergyBC",
+              "molar_energy_state = true",
+          )
+          energy_absent = (
+              "PhysicsFVLogMolarElectrostaticDrift",
+              "PhysicsPlasmaChargeDensityMaterial",
+              "PhysicsFVElectronEnergyJouleHeating",
+          )
 
-          test "$(sha256sum "$CASE_DIR/qvt.msh" | awk '{print $1}')" = "a98521af2c106137f9635fe7e2c5ba9b0fd408e17c62eb7c6d3f7c1fff65a03e"
-          test "$(sha256sum "$CASE_DIR/electron_moments.txt" | awk '{print $1}')" = "994f6b1deece3c53be7fb3e7f9526555d0f9314fd58749bea6346639f08aa387"
+          for token in fixed_required:
+              assert token in fixed_text, token
+          for token in fixed_absent:
+              assert token not in fixed_text, token
+          for token in energy_required:
+              assert token in energy_text, token
+          for token in energy_absent:
+              assert token not in energy_text, token
+
+          print("2D_ICP_DIFFUSION_SPLIT_INVENTORY_STATIC=PASS")
+          PY
+          rm -rf "$tmp_case_root"
 
           git ls-files -z physics_app \
             | sort -z \
@@ -778,46 +806,54 @@ jobs:
           docker pull "$BASELINE_RUNTIME_REF"
           test "$(docker image inspect "$BASELINE_RUNTIME_REF" --format '{{ index .Config.Labels "io.physics.source.manifest-sha256" }}')" = "$BASELINE_PHYSICS_MANIFEST_SHA256"
 
-      - name: Check input
+      - name: Check both inputs
         shell: bash
         run: |
           set -euxo pipefail
-          docker run --rm \
-            --user "$(id -u):$(id -g)" \
-            --workdir "/workspace/$CASE_DIR" \
-            -v "$PWD:/workspace" \
-            "$BASELINE_RUNTIME_REF" \
-            --check-input -i input.i
+          for case_dir in "$FIXED_CASE_DIR" "$ENERGY_CASE_DIR"; do
+            docker run --rm \
+              --user "$(id -u):$(id -g)" \
+              --workdir "/workspace/$case_dir" \
+              -v "$PWD:/workspace" \
+              "$BASELINE_RUNTIME_REF" \
+              --check-input -i input.i
+          done
 
-      - name: Run diffusion-only baseline
+      - name: Run fixed and solved-energy baselines
         shell: bash
         run: |
           set -euxo pipefail
-          rm -f "$CASE_DIR"/electron_diffusion.csv \
-                "$CASE_DIR"/electron_diffusion.e \
-                "$CASE_DIR"/electron_diffusion_*.csv \
-                "$CASE_DIR"/runtime.log
-          docker run --rm \
-            --user "$(id -u):$(id -g)" \
-            --workdir "/workspace/$CASE_DIR" \
-            -v "$PWD:/workspace" \
-            "$BASELINE_RUNTIME_REF" \
-            -i input.i > "$CASE_DIR/runtime.log" 2>&1
-          (
-            cd "$CASE_DIR"
-            python3 check.py
-          )
+          for case_dir in "$FIXED_CASE_DIR" "$ENERGY_CASE_DIR"; do
+            rm -f "$case_dir"/electron_diffusion.csv \
+                  "$case_dir"/electron_diffusion.e \
+                  "$case_dir"/electron_diffusion_*.csv \
+                  "$case_dir"/runtime.log
+            docker run --rm \
+              --user "$(id -u):$(id -g)" \
+              --workdir "/workspace/$case_dir" \
+              -v "$PWD:/workspace" \
+              "$BASELINE_RUNTIME_REF" \
+              -i input.i > "$case_dir/runtime.log" 2>&1
+            (
+              cd "$case_dir"
+              python3 check.py
+            )
+          done
 
       - name: Upload diffusion baseline evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: 2d-icp-electron-diffusion-experiment
+          name: 2d-icp-electron-diffusion-baselines
           path: |
             experiments/2d-icp-electron-diffusion-experiment/runtime.log
             experiments/2d-icp-electron-diffusion-experiment/electron_diffusion.csv
             experiments/2d-icp-electron-diffusion-experiment/electron_diffusion.e
             experiments/2d-icp-electron-diffusion-experiment/electron_diffusion_*.csv
+            experiments/2d-icp-electron-diffusion-energy-experiment/runtime.log
+            experiments/2d-icp-electron-diffusion-energy-experiment/electron_diffusion.csv
+            experiments/2d-icp-electron-diffusion-energy-experiment/electron_diffusion.e
+            experiments/2d-icp-electron-diffusion-energy-experiment/electron_diffusion_*.csv
           if-no-files-found: warn
           retention-days: 30
 
