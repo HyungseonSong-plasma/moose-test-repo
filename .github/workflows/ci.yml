@@ -696,34 +696,11 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Pull immutable build base and compile exact Physics once
+      - name: Pull immutable build base
         shell: bash
         run: |
           set -euxo pipefail
           docker pull "$BUILD_BASE_REF"
-          docker run --rm \
-            --entrypoint /bin/bash \
-            --user 0:0 \
-            --workdir /workspace/physics_app \
-            -v "$PWD:/workspace" \
-            "$BUILD_BASE_REF" \
-            -lc '
-              set -euxo pipefail
-              source /environment
-              git config --global --add safe.directory /workspace
-              git config --global --add safe.directory /opt/physics_vendor/moose
-              git config --global --add safe.directory /opt/physics_vendor/crane
-              git config --global --add safe.directory /opt/physics_vendor/squirrel
-              git config --global --add safe.directory /opt/physics_vendor/zapdos
-              export MOOSE_DIR=/opt/physics_vendor/moose
-              export CRANE_DIR=/opt/physics_vendor/crane
-              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
-              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
-              export METHOD=opt
-              make -j4
-              ./physics-opt --check-input -i ci/smoke.i
-            '
-          test -x physics_app/physics-opt
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f
@@ -751,6 +728,23 @@ jobs:
           test "$(docker image inspect "$ref" --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}')" = "${{ github.event.pull_request.head.sha }}"
           test "$(docker image inspect "$ref" --format '{{ index .Config.Labels "io.physics.source.manifest-sha256" }}')" = "$PHYSICS_SOURCE_MANIFEST_SHA256"
           docker run --rm "$ref" --check-input -i /opt/physics/ci/smoke.i
+
+          cat > /tmp/issue359-jit-physics-opt <<'SH'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          : "${ISSUE359_JIT_RUNTIME_REF:?ISSUE359_JIT_RUNTIME_REF is required}"
+          docker run --rm \
+            --workdir /work \
+            -v "$PWD:/work" \
+            "$ISSUE359_JIT_RUNTIME_REF" "$@"
+          SH
+          chmod +x /tmp/issue359-jit-physics-opt
+          export ISSUE359_JIT_RUNTIME_REF="$ref"
+          python3 physics_app/ci/check_stage5_edetach_runtime.py \
+            --executable /tmp/issue359-jit-physics-opt \
+            --repository-sha "${{ github.event.pull_request.head.sha }}" \
+            --build-base-ref "$BUILD_BASE_REF"
+
           mkdir -p issue359-jit-runtime-evidence
           cat > issue359-jit-runtime-evidence/runtime.txt <<EOF
           RUNTIME_IMAGE=$ref
@@ -760,6 +754,7 @@ jobs:
           COMPILER_AND_JIT_ENVIRONMENT_RETAINED=true
           BUILD_ONCE_CONSUME_WITHOUT_RECOMPILE=true
           SMOKE_CHECK_INPUT=PASS
+          ADPARSED_JIT_RUNTIME_CHECK=PASS
           EOF
           cat issue359-jit-runtime-evidence/runtime.txt
 

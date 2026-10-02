@@ -3,6 +3,7 @@ FROM ${BUILD_BASE_REF}
 
 ARG REPOSITORY_SHA
 ARG PHYSICS_SOURCE_MANIFEST_SHA256
+ARG BUILD_BASE_REF
 
 LABEL org.opencontainers.image.title="Physics JIT runtime" \
       org.opencontainers.image.description="Prebuilt Physics runtime retaining the build/JIT toolchain for AD FParser" \
@@ -15,11 +16,26 @@ LABEL org.opencontainers.image.title="Physics JIT runtime" \
 RUN rm -rf /opt/physics
 COPY physics_app /opt/physics
 
+RUN /bin/bash -lc 'set -euxo pipefail; \
+    source /environment; \
+    export MOOSE_DIR=/opt/physics_vendor/moose; \
+    export CRANE_DIR=/opt/physics_vendor/crane; \
+    export SQUIRREL_DIR=/opt/physics_vendor/squirrel; \
+    export ZAPDOS_DIR=/opt/physics_vendor/zapdos; \
+    export METHOD=opt; \
+    cd /opt/physics; \
+    make -j4; \
+    test -x physics-opt; \
+    test -e lib/libphysics-opt.so.0; \
+    test -e test/lib/libphysics_test-opt.so.0; \
+    ./physics-opt --check-input -i ci/smoke.i'
+
 ENV MOOSE_DIR=/opt/physics_vendor/moose \
     CRANE_DIR=/opt/physics_vendor/crane \
     SQUIRREL_DIR=/opt/physics_vendor/squirrel \
     ZAPDOS_DIR=/opt/physics_vendor/zapdos \
     METHOD=opt \
+    LD_LIBRARY_PATH="/opt/physics/test/lib:/opt/physics/lib" \
     PATH="/opt/openmpi/bin:${PATH}"
 
 WORKDIR /work
