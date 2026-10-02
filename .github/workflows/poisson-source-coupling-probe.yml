@@ -1,0 +1,236 @@
+name: Poisson Source Coupling Probe
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, edited]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: poisson-source-coupling-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  source-coupling:
+    if: github.event_name == 'pull_request' && github.head_ref == 'issue-359-qualified-gummel-icp'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: read
+    env:
+      POISSON_DIR: experiments/2d-icp-poisson-experiment
+      BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+
+      - name: Log in to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build exact-head Physics runtime
+        shell: bash
+        run: |
+          set -euxo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          docker pull "$BUILD_BASE_REF"
+          docker run --rm \
+            --entrypoint /bin/bash \
+            --user 0:0 \
+            --workdir /workspace \
+            -v "$PWD:/workspace" \
+            "$BUILD_BASE_REF" \
+            -lc '
+              set -euxo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              git config --global --add safe.directory /opt/physics_vendor/moose
+              git config --global --add safe.directory /opt/physics_vendor/crane
+              git config --global --add safe.directory /opt/physics_vendor/squirrel
+              git config --global --add safe.directory /opt/physics_vendor/zapdos
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+              make -C /workspace/physics_app -j2
+              chmod -R a+rwX /workspace/physics_app
+            '
+          test -x physics_app/physics-opt
+
+      - name: Prepare source-coupling cases
+        shell: bash
+        run: |
+          set -euxo pipefail
+          rm -rf .ci-poisson-source-coupling
+          mkdir -p .ci-poisson-source-coupling
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import shutil
+          from physics_harness.adapters.moose import parameters as mp
+
+          source = Path("experiments/2d-icp-poisson-experiment")
+          root = Path(".ci-poisson-source-coupling")
+          cases = {
+              "scale_1": "1.0",
+              "scale_half": "0.5",
+              "scale_double": "2.0",
+              "scale_negative": "-1.0",
+          }
+
+          for name, scale in cases.items():
+              dst = root / name
+              shutil.copytree(source, dst)
+              path = dst / "input.i"
+              text = path.read_text()
+              text = mp.upsert_parameter(
+                  text,
+                  "FVKernels/phi_charge_source",
+                  "coef",
+                  scale,
+              )
+              assert mp.get_parameter(text, "Executioner", "dt") == "1.0e-9"
+              assert mp.get_parameter(text, "Executioner", "num_steps") == "4"
+              assert mp.get_parameter(text, "FVKernels/phi_charge_source", "v") == "poisson_source_V_m2"
+              assert mp.get_parameter(text, "FVKernels/phi_charge_source", "coef") == scale
+              path.write_text(text)
+          PY
+
+      - name: Run source-coupling cases
+        shell: bash
+        run: |
+          set -euxo pipefail
+          for name in scale_1 scale_half scale_double scale_negative; do
+            run_dir=".ci-poisson-source-coupling/$name"
+            docker run --rm \
+              --entrypoint /bin/bash \
+              --user "$(id -u):$(id -g)" \
+              --workdir "/workspace/$run_dir" \
+              -v "$PWD:/workspace" \
+              "$BUILD_BASE_REF" \
+              -lc '
+                set -euxo pipefail
+                source /environment
+                /workspace/physics_app/physics-opt --check-input -i input.i
+                /workspace/physics_app/physics-opt -i input.i > runtime.log 2>&1
+              '
+          done
+
+      - name: Verify source-to-phi coupling
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import csv
+          import json
+          import math
+
+          root = Path(".ci-poisson-source-coupling")
+
+          def profile(name):
+              matches = sorted((root / name).glob("poisson_final_profile_*.csv"))
+              if not matches:
+                  raise SystemExit(f"missing final profile for {name}")
+              with matches[-1].open(newline="") as handle:
+                  rows = list(csv.DictReader(handle))
+              rows.sort(key=lambda row: int(row["id"]))
+              return rows
+
+          cases = {
+              "scale_1": 1.0,
+              "scale_half": 0.5,
+              "scale_double": 2.0,
+              "scale_negative": -1.0,
+          }
+          rows = {name: profile(name) for name in cases}
+          ids = [int(row["id"]) for row in rows["scale_1"]]
+          for name in cases:
+              if [int(row["id"]) for row in rows[name]] != ids:
+                  raise SystemExit(f"cell identity mismatch for {name}")
+
+          base = rows["scale_1"]
+          base_phi = [float(row["phi"]) for row in base]
+          base_source = [float(row["poisson_source_out"]) for row in base]
+          base_ne = [float(row["electron_density"]) for row in base]
+
+          result = {
+              "baseline_phi_min_V": min(base_phi),
+              "baseline_phi_max_V": max(base_phi),
+              "baseline_source_min_V_m2": min(base_source),
+              "baseline_source_max_V_m2": max(base_source),
+              "cases": {},
+          }
+
+          phi_scale_tol = 2.0e-10
+          state_tol = 2.0e-12
+
+          for name, scale in cases.items():
+              phi = [float(row["phi"]) for row in rows[name]]
+              source = [float(row["poisson_source_out"]) for row in rows[name]]
+              ne = [float(row["electron_density"]) for row in rows[name]]
+
+              phi_scale = max(max(abs(v) for v in base_phi), 1.0)
+              source_scale = max(max(abs(v) for v in base_source), 1.0)
+              ne_scale = max(max(abs(v) for v in base_ne), 1.0)
+
+              phi_error = max(abs(value - scale * ref) for value, ref in zip(phi, base_phi)) / phi_scale
+              source_error = max(abs(value - ref) for value, ref in zip(source, base_source)) / source_scale
+              ne_error = max(abs(value - ref) for value, ref in zip(ne, base_ne)) / ne_scale
+
+              result["cases"][name] = {
+                  "kernel_coef": scale,
+                  "phi_scaled_linf": phi_error,
+                  "source_invariance_linf": source_error,
+                  "electron_density_invariance_linf": ne_error,
+                  "phi_min_V": min(phi),
+                  "phi_max_V": max(phi),
+              }
+
+              if phi_error > phi_scale_tol:
+                  raise SystemExit(f"phi does not scale with source coefficient for {name}: {phi_error}")
+              if source_error > state_tol:
+                  raise SystemExit(f"saved Poisson source changed unexpectedly for {name}: {source_error}")
+              if ne_error > state_tol:
+                  raise SystemExit(f"electron state changed unexpectedly for {name}: {ne_error}")
+
+          out = root / "source_coupling_result.json"
+          out.write_text(json.dumps(result, indent=2) + "\n")
+          print(json.dumps(result, indent=2))
+          PY
+
+      - name: Upload source-coupling probe
+        uses: actions/upload-artifact@v4
+        with:
+          name: poisson-source-coupling-probe
+          path: |
+            .ci-poisson-source-coupling/source_coupling_result.json
+            .ci-poisson-source-coupling/scale_1/input.i
+            .ci-poisson-source-coupling/scale_1/runtime.log
+            .ci-poisson-source-coupling/scale_1/poisson.e
+            .ci-poisson-source-coupling/scale_1/poisson_final_profile_*.csv
+            .ci-poisson-source-coupling/scale_half/input.i
+            .ci-poisson-source-coupling/scale_half/runtime.log
+            .ci-poisson-source-coupling/scale_half/poisson.e
+            .ci-poisson-source-coupling/scale_half/poisson_final_profile_*.csv
+            .ci-poisson-source-coupling/scale_double/input.i
+            .ci-poisson-source-coupling/scale_double/runtime.log
+            .ci-poisson-source-coupling/scale_double/poisson.e
+            .ci-poisson-source-coupling/scale_double/poisson_final_profile_*.csv
+            .ci-poisson-source-coupling/scale_negative/input.i
+            .ci-poisson-source-coupling/scale_negative/runtime.log
+            .ci-poisson-source-coupling/scale_negative/poisson.e
+            .ci-poisson-source-coupling/scale_negative/poisson_final_profile_*.csv
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 30
