@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "experiment_id": "2d-icp-poisson-experiment",
-  "status": "CANDIDATE_REUSABLE_BASELINE",
+  "status": "STABLE_REUSABLE_BASELINE",
   "parent_simple_case_id": "electron-diffusion-energy-experiment",
   "scientific_scope": {
     "solved_equations": [
@@ -22,5 +22,20 @@
     "electron_steps": 4,
     "end_time_s": 4e-9
   },
-  "qualification": "PENDING_EXACT_HEAD_RUNTIME"
+  "qualification": {
+    "basis": "Repository CI #586 exact-head source build; physics-opt --check-input, 4-step runtime, Poisson checker all PASS. Overall workflow failure was only the hidden artifact upload path and did not affect physics execution.",
+    "repository_ci_number": 586,
+    "repository_ci_run": "37050106634",
+    "validated_head": "7623dfd7282a933e55fdca32706d2b2d6532e060",
+    "source_build": "PASS",
+    "check_input": "PASS",
+    "runtime": "PASS",
+    "checker": "PASS",
+    "initial_charge_integral_C": "6.4225168156111998e-20",
+    "final_charge_integral_C": "1.6984088569036e-06",
+    "final_phi_min_V": "141.64036396338",
+    "final_phi_max_V": "1758.3307368787",
+    "final_gauss_flux_charge_C": "1.6984088569036e-06",
+    "gauss_law": "PASS"
+  }
 }
