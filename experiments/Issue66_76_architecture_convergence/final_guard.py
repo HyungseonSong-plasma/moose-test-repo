@@ -41,7 +41,7 @@ HISTORICAL_COMMANDS = {
     "temporal-csv", "self-test",
 }
 CURRENT_COMPAT_COMMANDS = {"test", "test-all", "contract", "measure", "analyze", "inventory"}
-CURRENT_CANONICAL_COMMANDS = {"compile", "plan", "lower", "run", "preflight", "temporal-csv"}
+CURRENT_CANONICAL_COMMANDS = {"compile", "plan", "lower", "run", "preflight", "temporal-csv", "simple-case"}
 HISTORICAL_OWNERSHIP_MODELS = {
     "SPEC_OWNED_COMPAT_ADAPTER",
     "HYBRID_SPEC_PLUS_PYTHON_POLICY",
