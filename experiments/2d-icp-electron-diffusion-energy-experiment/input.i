@@ -13,8 +13,12 @@
 # Electrostatic drift, Poisson, electron reactions, Joule heating, and
 # volumetric energy sources are intentionally absent.
 #
-# Particle and energy wall losses use the same grounded thermal/sheath branch
-# with potential=0.  The sheath suppression factor is therefore unity.
+# Particle wall loss uses the zero-potential thermal collection branch.
+# The energy wall loss is transport-matched to D_epsilon=(5/3)D_e:
+#   Gamma_epsilon = Gamma_e * (5/2) T_e,
+# so the normalized energy/particle wall-loss ratio is 5/3.
+# This is a zero-potential diffusion closure, not the general kinetic sheath
+# energy-flux law used by PhysicsFVElectronGroundedSheathEnergyBC.
 
 [Mesh]
   coord_type = RZ
@@ -195,6 +199,15 @@
     expression = '(2.0/3.0)*mean_en'
     block = plasma
   []
+
+  [electron_energy_transport_matched_wall_flux]
+    type = ADParsedFunctorMaterial
+    property_name = electron_energy_transport_matched_wall_flux
+    functor_names = 'c_e_molar mean_en_solved'
+    functor_symbols = 'ce mean_en'
+    expression = '0.25*ce*sqrt(8.0*1.602176634e-19*((2.0/3.0)*mean_en)/(3.14159265358979323846*9.1093837139e-31))*(2.5*(2.0/3.0)*mean_en)'
+    block = plasma
+  []
 []
 
 [FVKernels]
@@ -237,13 +250,11 @@
   []
 
   [electron_energy_thermal_wall_loss]
-    type = PhysicsFVElectronGroundedSheathEnergyBC
+    type = FVFunctorNeumannBC
     variable = c_epsilon
     boundary = 'inlet outlet plasma_electrode plasma_metal plasma_right plasma_cover plasma_wafer plasma_focus_ring'
-    electron_density = c_e_molar
-    mean_electron_energy = mean_en_solved
-    potential = zero_phi
-    molar_energy_state = true
+    functor = electron_energy_transport_matched_wall_flux
+    factor = -1.0
   []
 []
 
