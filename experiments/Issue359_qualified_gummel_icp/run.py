@@ -765,6 +765,7 @@ def _outer_input(
     *,
     electron_substeps: int = ELECTRON_SUBSTEPS_DEFAULT,
     heavy_steps: int = HEAVY_STEPS_DEFAULT,
+    write_exodus: bool = False,
 ) -> str:
     # Use the identical plasma-only real-QVT mesh in all four applications so
     # MultiAppCopyTransfer remains an exact elementwise transfer.
@@ -884,6 +885,18 @@ def _outer_input(
   petsc_options_value = 'lu NONZERO'
 []
 """
+    if write_exodus:
+        if not mb.has_block(text, "Outputs"):
+            text += """
+[Outputs]
+  exodus = true
+  execute_on = FINAL
+[]
+"""
+        else:
+            text = mp.upsert_parameter(text, "Outputs", "exodus", "true")
+        if mp.get_parameter(text, "Outputs", "exodus") != "true":
+            raise Issue359Error("failed to enable outer Exodus output")
     return text
 
 
@@ -1235,6 +1248,7 @@ def _stage(
     response_mode: str = RESPONSE_MODE_DEFAULT,
     electron_substeps: int = ELECTRON_SUBSTEPS_DEFAULT,
     heavy_steps: int = HEAVY_STEPS_DEFAULT,
+    write_exodus: bool = False,
 ) -> dict[str, Any]:
     if root.exists():
         shutil.rmtree(root)
@@ -1245,6 +1259,7 @@ def _stage(
         (HEAVY_SOURCE / "input.i").read_text(),
         electron_substeps=electron_substeps,
         heavy_steps=heavy_steps,
+        write_exodus=write_exodus,
     )
     driver = _driver_input(
         (qualified / "fast_sub.i").read_text(),
@@ -1314,6 +1329,10 @@ def _stage(
         "flow_sccm": FLOW_SCCM,
         "outlet_pressure_Pa": PRESSURE_PA,
         "gas_temperature_K": TG_K,
+        "outputs": {
+            "outer_exodus_enabled": write_exodus,
+            "outer_exodus_execute_on": mp.get_parameter(outer, "Outputs", "execute_on"),
+        },
         "initial_charge_balance": {
             "mixture_density_kg_m3": INITIAL_MIXTURE_DENSITY_KG_M3,
             "electron_density_m3": INITIAL_ELECTRON_DENSITY_M3,
@@ -1523,6 +1542,7 @@ def run(args: argparse.Namespace) -> int:
         response_mode=args.response_mode,
         electron_substeps=args.electron_substeps,
         heavy_steps=args.heavy_steps,
+        write_exodus=args.write_exodus,
     )
 
     checks: dict[str, Any] = {}
@@ -1573,8 +1593,29 @@ def run(args: argparse.Namespace) -> int:
     diagnostics: dict[str, float] | None = None
     step_iterations: list[dict[str, float]] | None = None
     diagnostic_error: str | None = None
+    exodus_evidence: dict[str, Any] | None = None
     if runtime.returncode == 0:
         try:
+            if args.write_exodus:
+                candidates = sorted(
+                    [
+                        p
+                        for p in case.iterdir()
+                        if p.is_file() and p.suffix.lower() in (".e", ".exo")
+                    ],
+                    key=lambda p: p.stat().st_size,
+                    reverse=True,
+                )
+                if not candidates:
+                    raise Issue359Error("outer Exodus output requested but no .e/.exo file was produced")
+                source = next((p for p in candidates if p.name == "input_out.e"), candidates[0])
+                canonical = root / "issue359_outer_final.e"
+                shutil.copy2(source, canonical)
+                exodus_evidence = {
+                    "source_name": source.name,
+                    "canonical_name": canonical.name,
+                    "bytes": canonical.stat().st_size,
+                }
             diagnostics = _read_final_diagnostics(
                 case, expected_heavy_steps=args.heavy_steps
             )
@@ -1616,6 +1657,7 @@ def run(args: argparse.Namespace) -> int:
             "solver_reasons": args.solver_reasons,
             "timing_enabled": args.timing,
         },
+        "exodus": exodus_evidence,
         "final_diagnostics": diagnostics,
         "electron_step_iterations": step_iterations,
         "diagnostic_error": diagnostic_error,
@@ -1706,6 +1748,11 @@ def main() -> int:
         "--heavy-steps",
         type=int,
         default=HEAVY_STEPS_DEFAULT,
+    )
+    parser.add_argument(
+        "--write-exodus",
+        action="store_true",
+        help="Write the outer heavy state to Exodus at FINAL and retain a canonical issue359_outer_final.e artifact.",
     )
     return run(parser.parse_args())
 
