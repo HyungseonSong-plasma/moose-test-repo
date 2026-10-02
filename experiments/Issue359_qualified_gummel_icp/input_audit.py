@@ -253,22 +253,23 @@ def audit(
         (
             "mean_en_fvkernel_04", "energy_joule", "PhysicsFVElectronEnergyJouleHeating",
             {
-                "electron_density": "electron_density_hat",
+                "electron_density": "c_e_molar",
                 "potential": "potential_from_poisson",
                 "mobility": "joule_mobility",
                 "diffusion": "joule_diffusion",
+                "state_form": "molar_eV",
             },
         ),
         (
             "mean_en_fvkernel_05", "energy_elastic_o2", "FVCoupledForce",
-            {"v": "S_elastic_applied_hat", "coef": "1.0"},
+            {"v": "S_elastic_applied_molar", "coef": "1.0"},
         ),
     )
     for label, name, typ, params in mean_specs:
-        ok, ev = _kernel_ok(electron, f"FVKernels/{name}", typ, "mean_en", params)
+        ok, ev = _kernel_ok(electron, f"FVKernels/{name}", typ, "c_epsilon", params)
         rows.append(_row(
             label, "FVKernel", MEAN_EN_KERNEL_LABELS[label],
-            "electron energy/mean_en", typ, ok, ev,
+            "electron energy/c_epsilon", typ, ok, ev,
         ))
 
     material_specs = (
@@ -296,6 +297,15 @@ def audit(
     )
     for label, text, path, typ, scope in material_specs:
         ok = mb.has_block(text, path) and mp.get_parameter(text, path, "type") == typ
+        if label == "electron_material_01":
+            ok = (
+                ok
+                and mp.get_parameter(text, path, "state_form") == "physical_eV"
+                and mp.get_parameter(text, path, "electron_number_density")
+                == "electron_density_m3"
+                and mp.get_parameter(text, path, "electron_energy_density")
+                == "electron_energy_density_eV_m3"
+            )
         rows.append(_row(
             label, "Material", MATERIAL_LABELS[label], scope, typ, ok,
             f"path={path}; type={mp.get_parameter(text, path, 'type') if mb.has_block(text, path) else None}",
@@ -417,16 +427,67 @@ def audit(
         "n_epsilon" not in electron
         and "n_epsilon" not in driver
         and "n_epsilon" not in poisson
-        and mb.has_block(electron, "Variables/mean_en")
-        and mb.has_block(poisson, "AuxVariables/mean_en_frozen")
+        and not mb.has_block(electron, "Variables/mean_en")
+        and not mb.has_block(poisson, "AuxVariables/mean_en_frozen")
+        and mb.has_block(electron, "Variables/c_epsilon")
+        and mb.has_block(poisson, "AuxVariables/c_epsilon_frozen")
+        and mp.words(
+            mp.get_parameter(
+                poisson, "FunctorMaterials/gummel_mean_energy", "functor_names"
+            )
+            or ""
+        )
+        == ["c_epsilon_frozen", "log_e_frozen"]
+        and mp.get_parameter(
+            poisson, "FunctorMaterials/gummel_mean_energy", "expression"
+        )
+        == "'ceps/max(exp(loge),1.0e-300)'"
     )
     rows.append(_row(
         "mean_en_state_name", "Variable Naming",
-        "electron energy solved state uses mean_en",
+        "electron energy solved state uses conservative c_epsilon; mean_en is derived",
         "electron/driver/poisson",
-        "mean_en + mean_en_frozen; legacy n_epsilon absent",
+        "c_epsilon + c_epsilon_frozen; mean_en_solved=c_epsilon/c_e; legacy n_epsilon absent",
         mean_en_state_name_ok,
         "generated electron, driver and Poisson inputs scanned",
+    ))
+
+    normalization_absent = (
+        mb.has_block(electron, "Variables/log_e")
+        and mb.has_block(electron, "Variables/c_epsilon")
+        and not mb.has_block(electron, "FunctorMaterials/electron_density_normalized")
+        and mp.get_parameter(
+            electron, "FunctorMaterials/electron_transport_closure", "state_form"
+        )
+        == "physical_eV"
+        and mp.get_parameter(
+            electron, "FVKernels/energy_joule", "state_form"
+        )
+        == "molar_eV"
+        and mp.get_parameter(
+            electron, "FVKernels/energy_joule", "electron_density"
+        )
+        == "c_e_molar"
+        and mp.get_parameter(
+            electron, "FVBCs/electron_energy_wall_loss", "molar_energy_state"
+        )
+        == "true"
+        and mp.get_parameter(
+            electron, "FVBCs/electron_energy_wall_loss", "electron_density"
+        )
+        == "c_e_molar"
+        and "electron_density_hat" not in electron
+        and "state_form = normalized" not in electron
+        and "energy_reference_eV" not in electron
+        and "electron_energy_reference_eV" not in electron
+    )
+    rows.append(_row(
+        "electron_normalization_absent", "Representation",
+        "T1/T2 electron particle/energy normalization is absent",
+        "electron subapp",
+        "log_e + c_epsilon; physical closure bridge; molar Joule/wall-energy paths",
+        normalization_absent,
+        "active electron residual/BC/material surface scanned for legacy normalization",
     ))
 
     reaction_disabled = (
