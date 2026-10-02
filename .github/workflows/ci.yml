@@ -192,6 +192,86 @@ jobs:
           include-hidden-files: true
           retention-days: 30
 
+      - name: Run real-mesh RZ Poisson operator probe
+        shell: bash
+        run: |
+          set -euxo pipefail
+          rm -rf .ci-rz-operator-probe
+          mkdir -p .ci-rz-operator-probe
+          cp "$POISSON_DIR/rz_operator_probe.i" .ci-rz-operator-probe/input.i
+          cp "$POISSON_DIR/qvt.msh" .ci-rz-operator-probe/qvt.msh
+
+          docker run --rm \
+            --entrypoint /bin/bash \
+            --user "$(id -u):$(id -g)" \
+            --workdir /workspace/.ci-rz-operator-probe \
+            -v "$PWD:/workspace" \
+            "$BUILD_BASE_REF" \
+            -lc '
+              set -euxo pipefail
+              source /environment
+              /workspace/physics_app/physics-opt --check-input -i input.i
+              /workspace/physics_app/physics-opt -i input.i > runtime.log 2>&1
+            '
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import csv
+          import json
+          import math
+
+          files = sorted(Path(".ci-rz-operator-probe").glob("rz_operator_probe_final_profile_*.csv"))
+          if not files:
+              raise SystemExit("missing RZ operator-probe final profile")
+          with files[-1].open(newline="") as handle:
+              rows = list(csv.DictReader(handle))
+          if not rows:
+              raise SystemExit("empty RZ operator-probe profile")
+
+          errors = []
+          exact_values = []
+          numerical_values = []
+          for row in rows:
+              r = float(row["x"])
+              exact = r * r
+              numerical = float(row["phi_probe"])
+              if not math.isfinite(numerical):
+                  raise SystemExit("non-finite RZ operator-probe value")
+              errors.append(numerical - exact)
+              exact_values.append(exact)
+              numerical_values.append(numerical)
+
+          span = max(exact_values) - min(exact_values)
+          result = {
+              "manufactured_solution": "phi=r^2",
+              "expected_axisymmetric_laplacian": 4.0,
+              "cells": len(rows),
+              "phi_exact_min": min(exact_values),
+              "phi_exact_max": max(exact_values),
+              "phi_numerical_min": min(numerical_values),
+              "phi_numerical_max": max(numerical_values),
+              "error_linf": max(abs(v) for v in errors),
+              "error_rms": math.sqrt(sum(v*v for v in errors) / len(errors)),
+              "error_linf_over_exact_span": max(abs(v) for v in errors) / max(span, 1.0e-300),
+          }
+          Path(".ci-rz-operator-probe/result.json").write_text(json.dumps(result, indent=2) + "\n")
+          print(json.dumps(result, indent=2))
+          PY
+
+      - name: Upload real-mesh RZ Poisson operator probe
+        uses: actions/upload-artifact@v4
+        with:
+          name: rz-poisson-operator-probe
+          path: |
+            .ci-rz-operator-probe/input.i
+            .ci-rz-operator-probe/runtime.log
+            .ci-rz-operator-probe/result.json
+            .ci-rz-operator-probe/rz_operator_probe.e
+            .ci-rz-operator-probe/rz_operator_probe_final_profile_*.csv
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 30
+
       - name: Run Poisson profile boundary discriminator
         shell: bash
         run: |
