@@ -19,18 +19,32 @@ class MooseInputContractError(ValueError):
     """Raised when generated MOOSE input violates its declared contract."""
 
 
+PRESENCE_REQUIRED = "REQUIRED"
+PRESENCE_FORBIDDEN = "FORBIDDEN"
+PRESENCE_OPTIONAL = "OPTIONAL"
+_PRESENCE_POLICIES = frozenset(
+    {PRESENCE_REQUIRED, PRESENCE_FORBIDDEN, PRESENCE_OPTIONAL}
+)
+
+
 @dataclass(frozen=True)
 class MooseObjectContract:
     object_id: str
     path: str
     type_name: str | None
     parameters: tuple[str, ...] = ()
+    presence: str = PRESENCE_REQUIRED
+    reason: str | None = None
+    source: str | None = None
 
 
 @dataclass(frozen=True)
 class MooseAssignmentContract:
     path: str
     name: str
+    presence: str = PRESENCE_REQUIRED
+    reason: str | None = None
+    source: str | None = None
 
 
 @dataclass(frozen=True)
@@ -66,6 +80,22 @@ def _require_nonempty(value: str, field: str) -> str:
     return text
 
 
+def _validate_presence(
+    presence: str,
+    *,
+    identity: str,
+    reason: str | None,
+) -> None:
+    if presence not in _PRESENCE_POLICIES:
+        raise MooseInputContractError(
+            f"{identity} has unsupported presence policy {presence!r}"
+        )
+    if presence == PRESENCE_FORBIDDEN and not (reason or "").strip():
+        raise MooseInputContractError(
+            f"{identity} is FORBIDDEN but has no disable reason"
+        )
+
+
 def _validate_contract(contract: MooseInputContract) -> None:
     _require_nonempty(contract.contract_id, "contract_id")
     object_ids = [_require_nonempty(item.object_id, "object_id") for item in contract.objects]
@@ -82,6 +112,13 @@ def _validate_contract(contract: MooseInputContract) -> None:
             "multiple semantic IDs claim the same MOOSE path: " + ", ".join(duplicate_paths)
         )
 
+    for item in contract.objects:
+        _validate_presence(
+            item.presence,
+            identity=f"object {item.object_id}",
+            reason=item.reason,
+        )
+
     assignment_keys = [(item.path, item.name) for item in contract.assignments]
     duplicate_assignments = sorted(
         f"{path or '<root>'}/{name}"
@@ -91,6 +128,12 @@ def _validate_contract(contract: MooseInputContract) -> None:
     if duplicate_assignments:
         raise MooseInputContractError(
             "duplicate assignment contracts: " + ", ".join(duplicate_assignments)
+        )
+    for item in contract.assignments:
+        _validate_presence(
+            item.presence,
+            identity=f"assignment {item.path or '<root>'}/{item.name}",
+            reason=item.reason,
         )
 
 
@@ -125,16 +168,25 @@ def audit_case_ir(case: Any) -> MooseInputAudit:
     actual_by_id = {object_id: block for object_id, block in zip(block_ids, blocks)}
     expected_by_id = {item.object_id: item for item in contract.objects}
 
-    missing = sorted(set(expected_by_id) - set(actual_by_id))
+    missing: list[str] = []
     unexpected = sorted(set(actual_by_id) - set(expected_by_id))
     mutated: list[str] = []
 
     if duplicate_ids:
         mutated.extend(f"duplicate_id:{name}" for name in duplicate_ids)
 
-    for object_id in sorted(set(expected_by_id).intersection(actual_by_id)):
-        expected = expected_by_id[object_id]
-        actual = actual_by_id[object_id]
+    for object_id, expected in sorted(expected_by_id.items()):
+        actual = actual_by_id.get(object_id)
+        if expected.presence == PRESENCE_REQUIRED and actual is None:
+            missing.append(object_id)
+            continue
+        if expected.presence == PRESENCE_FORBIDDEN:
+            if actual is not None:
+                unexpected.append(f"forbidden:{object_id}")
+            continue
+        if actual is None:
+            continue
+
         if actual.path != expected.path:
             mutated.append(
                 f"{object_id}:path:{expected.path!r}->{actual.path!r}"
@@ -150,20 +202,38 @@ def audit_case_ir(case: Any) -> MooseInputAudit:
                 f"{object_id}:parameters:{expected_parameters!r}->{actual_parameters!r}"
             )
 
-    expected_assignments = {(item.path, item.name) for item in contract.assignments}
-    actual_assignments = {(item.path, item.name) for item in assignments}
-    for path, name in sorted(expected_assignments - actual_assignments):
-        missing.append(f"assignment:{path or '<root>'}/{name}")
-    for path, name in sorted(actual_assignments - expected_assignments):
-        unexpected.append(f"assignment:{path or '<root>'}/{name}")
+    expected_assignments = {
+        (item.path, item.name): item for item in contract.assignments
+    }
+    actual_assignment_keys = [
+        (item.path, item.name) for item in assignments
+    ]
+    actual_assignment_counts = Counter(actual_assignment_keys)
+    actual_assignment_set = set(actual_assignment_keys)
+
+    for key, count in sorted(actual_assignment_counts.items()):
+        if count > 1:
+            mutated.append(
+                f"duplicate_assignment:{key[0] or '<root>'}/{key[1]}:{count}"
+            )
+        if key not in expected_assignments:
+            unexpected.append(f"assignment:{key[0] or '<root>'}/{key[1]}")
+
+    for (path, name), expected in sorted(expected_assignments.items()):
+        present = (path, name) in actual_assignment_set
+        identity = f"assignment:{path or '<root>'}/{name}"
+        if expected.presence == PRESENCE_REQUIRED and not present:
+            missing.append(identity)
+        elif expected.presence == PRESENCE_FORBIDDEN and present:
+            unexpected.append(f"forbidden:{identity}")
 
     status = "PASS" if not (missing or unexpected or mutated) else "FAIL"
     return MooseInputAudit(
         status=status,
         stage="IR",
-        missing=tuple(missing),
-        unexpected=tuple(unexpected),
-        mutated=tuple(mutated),
+        missing=tuple(sorted(set(missing))),
+        unexpected=tuple(sorted(set(unexpected))),
+        mutated=tuple(sorted(set(mutated))),
     )
 
 
@@ -254,6 +324,16 @@ def audit_generated_input(case: Any, text: str) -> MooseInputAudit:
 
     missing = sorted(path for path in managed_paths if counts[path] == 0)
     unexpected = sorted(path for path in counts if path not in managed_paths)
+    contract = case.input_contract
+    forbidden_paths = {
+        item.path: item.object_id
+        for item in contract.objects
+        if item.presence == PRESENCE_FORBIDDEN
+    }
+    unexpected = [
+        f"forbidden:{forbidden_paths[path]}" if path in forbidden_paths else path
+        for path in unexpected
+    ]
     mutated: list[str] = [
         f"duplicate_path:{path}:{count}"
         for path, count in sorted(counts.items())
@@ -459,6 +539,80 @@ def self_test() -> int:
         result = audit_generated_input(case, unexpected)
         if result.status != "FAIL" or "FVKernels/unexpected" not in result.unexpected:
             raise AssertionError("unexpected generated object was not rejected")
+
+        disable_contract = MooseInputContract(
+            contract_id="selftest.intentional-disable",
+            objects=(
+                MooseObjectContract(
+                    object_id="transport.u.diffusion",
+                    path="FVKernels/u_diffusion",
+                    type_name="FVDiffusion",
+                    parameters=("block", "coeff", "variable"),
+                    presence=PRESENCE_FORBIDDEN,
+                    reason="diffusion disabled by semantic policy",
+                    source="selftest policy",
+                ),
+                MooseObjectContract(
+                    object_id="diagnostic.optional",
+                    path="Postprocessors/optional_probe",
+                    type_name="ElementAverageValue",
+                    presence=PRESENCE_OPTIONAL,
+                ),
+            ),
+        )
+        disabled_case = MooseCaseIR(
+            case_id="disabled-selftest",
+            action_id="disabled-selftest",
+            blocks=(),
+            assignments=(),
+            input_contract=disable_contract,
+        )
+        if audit_case_ir(disabled_case).status != "PASS":
+            raise AssertionError("intentional FORBIDDEN absence did not pass")
+
+        forbidden_present = MooseCaseIR(
+            case_id="disabled-selftest",
+            action_id="disabled-selftest",
+            blocks=(
+                MooseBlock(
+                    object_id="transport.u.diffusion",
+                    path="FVKernels/u_diffusion",
+                    type_name="FVDiffusion",
+                    parameters=(
+                        ("variable", "u"),
+                        ("coeff", "D"),
+                        ("block", "plasma"),
+                    ),
+                ),
+            ),
+            assignments=(),
+            input_contract=disable_contract,
+        )
+        forbidden_result = audit_case_ir(forbidden_present)
+        if (
+            forbidden_result.status != "FAIL"
+            or "forbidden:transport.u.diffusion" not in forbidden_result.unexpected
+        ):
+            raise AssertionError("FORBIDDEN object presence was not rejected")
+
+        try:
+            _validate_contract(
+                MooseInputContract(
+                    contract_id="selftest.missing-disable-reason",
+                    objects=(
+                        MooseObjectContract(
+                            object_id="transport.u.diffusion",
+                            path="FVKernels/u_diffusion",
+                            type_name="FVDiffusion",
+                            presence=PRESENCE_FORBIDDEN,
+                        ),
+                    ),
+                )
+            )
+        except MooseInputContractError:
+            pass
+        else:
+            raise AssertionError("FORBIDDEN object without reason was accepted")
     except Exception as exc:
         print(f"MOOSE_INPUT_CONTRACT_SELFTEST: FAIL ({exc})")
         return 1
@@ -468,6 +622,9 @@ def self_test() -> int:
 
 
 __all__ = [
+    "PRESENCE_FORBIDDEN",
+    "PRESENCE_OPTIONAL",
+    "PRESENCE_REQUIRED",
     "MooseAssignmentContract",
     "MooseInputAudit",
     "MooseInputContract",
