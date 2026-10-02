@@ -56,7 +56,7 @@ def _inject_source_state_output(driver: str) -> str:
         """  [issue359_log_e_state]
     type = MooseVariableFVReal
   []
-  [issue359_n_epsilon_state]
+  [issue359_c_epsilon_state]
     type = MooseVariableFVReal
   []""",
     )
@@ -70,12 +70,12 @@ def _inject_source_state_output(driver: str) -> str:
     functor_symbols = 'ne'
     expression = 'log(ne/{q359.AVOGADRO:.17g})'
   []
-  [issue359_n_epsilon_state_functor]
+  [issue359_c_epsilon_state_functor]
     type = ADParsedFunctorMaterial
-    property_name = issue359_n_epsilon_state_value
+    property_name = issue359_c_epsilon_state_value
     functor_names = 'electron_density_out mean_energy_out'
     functor_symbols = 'ne mean_ev'
-    expression = '(ne/{q359.ELECTRON_DENSITY_REF_M3:.17g})*(mean_ev/{q359.ENERGY_REF_EV:.17g})'
+    expression = '(ne/{q359.AVOGADRO:.17g})*mean_ev'
   []""",
     )
     driver = _insert(
@@ -87,10 +87,10 @@ def _inject_source_state_output(driver: str) -> str:
     functor = issue359_log_e_state_value
     execute_on = 'TIMESTEP_END'
   []
-  [issue359_n_epsilon_state_copy]
+  [issue359_c_epsilon_state_copy]
     type = FunctorAux
-    variable = issue359_n_epsilon_state
-    functor = issue359_n_epsilon_state_value
+    variable = issue359_c_epsilon_state
+    functor = issue359_c_epsilon_state_value
     execute_on = 'TIMESTEP_END'
   []""",
     )
@@ -99,7 +99,7 @@ def _inject_source_state_output(driver: str) -> str:
         "VectorPostprocessors",
         """  [issue359_state_profile]
     type = ElementValueSampler
-    variable = 'issue359_log_e_state issue359_n_epsilon_state potential_from_poisson electron_density_out mean_energy_out p_gas_h T_g_h'
+    variable = 'issue359_log_e_state issue359_c_epsilon_state potential_from_poisson electron_density_out mean_energy_out p_gas_h T_g_h'
     sort_by = id
     execute_on = 'FINAL'
   []""",
@@ -344,7 +344,7 @@ def _standalone_input(
 ) -> str:
     text = _simple_state_mesh(base)
     text = _from_file(text, "Variables/log_e", "issue359_log_e_state")
-    text = _from_file(text, "Variables/n_epsilon", "issue359_n_epsilon_state")
+    text = _from_file(text, "Variables/c_epsilon", "issue359_c_epsilon_state")
     text = _from_file(text, "AuxVariables/potential_from_poisson", "potential_from_poisson")
     text = _from_file(text, "AuxVariables/p_gas_from_heavy", "p_gas_h")
     text = _from_file(text, "AuxVariables/T_g_from_heavy", "T_g_h")
