@@ -286,6 +286,13 @@ def _configure_child_linear_solver(
     return text
 
 
+def _rename_mean_energy_state(text: str) -> str:
+    """Rename the historical n_epsilon state without changing its equation."""
+    text = re.sub(r"\bn_epsilon_frozen\b", "mean_en_frozen", text)
+    text = re.sub(r"\bn_epsilon\b", "mean_en", text)
+    return text
+
+
 def _electron_input(
     src: str,
     *,
@@ -294,13 +301,13 @@ def _electron_input(
     electron_substeps: int = ELECTRON_SUBSTEPS_DEFAULT,
     heavy_steps: int = HEAVY_STEPS_DEFAULT,
 ) -> str:
-    text = _replace_mesh(src)
+    text = _rename_mean_energy_state(_replace_mesh(src))
     text = mp.upsert_parameter(
         text, "Variables/log_e", "initial_condition", f"{INITIAL_LOG_E:.17g}"
     )
     text = mp.upsert_parameter(
         text,
-        "Variables/n_epsilon",
+        "Variables/mean_en",
         "initial_condition",
         f"{INITIAL_EPSILON_HAT:.17g}",
     )
@@ -345,7 +352,7 @@ def _electron_input(
     type = PhysicsElectronClosureMaterial
     state_form = normalized
     normalized_electron_density = electron_density_hat
-    normalized_electron_energy_density = n_epsilon
+    normalized_electron_energy_density = mean_en
     electron_energy_reference_eV = {ENERGY_REF_EV:.17g}
     gas_pressure = p_gas_from_heavy
     gas_temperature = T_g_from_heavy
@@ -399,7 +406,7 @@ def _electron_input(
   []
   [electron_energy_wall_loss]
     type = PhysicsFVElectronGroundedSheathEnergyBC
-    variable = n_epsilon
+    variable = mean_en
     boundary = {all_bcs}
     electron_density = electron_density_hat
     mean_electron_energy = mean_en_solved
@@ -466,7 +473,7 @@ def _poisson_input(
     electron_substeps: int = ELECTRON_SUBSTEPS_DEFAULT,
     heavy_steps: int = HEAVY_STEPS_DEFAULT,
 ) -> str:
-    text = _replace_mesh(src)
+    text = _rename_mean_energy_state(_replace_mesh(src))
     text = mp.upsert_parameter(
         text,
         "AuxVariables/log_e_frozen",
@@ -475,7 +482,7 @@ def _poisson_input(
     )
     text = mp.upsert_parameter(
         text,
-        "AuxVariables/n_epsilon_frozen",
+        "AuxVariables/mean_en_frozen",
         "initial_condition",
         f"{INITIAL_EPSILON_HAT:.17g}",
     )
@@ -622,7 +629,7 @@ def _driver_input(
     electron_substeps: int = ELECTRON_SUBSTEPS_DEFAULT,
     heavy_steps: int = HEAVY_STEPS_DEFAULT,
 ) -> str:
-    text = _canonicalize_qualified_driver(src)
+    text = _rename_mean_energy_state(_canonicalize_qualified_driver(src))
     text = _replace_mesh(text)
     for species in ("O2p", "Om", "Op"):
         text = mp.upsert_parameter(
@@ -1137,7 +1144,7 @@ def _construction_audit(
         "electron_energy_solved": all(
             mb.has_block(electron, p)
             for p in (
-                "Variables/n_epsilon",
+                "Variables/mean_en",
                 "FVKernels/energy_time",
                 "FVKernels/energy_diffusion",
                 "FVKernels/energy_drift",
@@ -1320,7 +1327,7 @@ def _construction_audit(
             and math.isclose(
                 float(
                     mp.get_parameter(
-                        electron, "Variables/n_epsilon", "initial_condition"
+                        electron, "Variables/mean_en", "initial_condition"
                     )
                     or "nan"
                 ),
@@ -1468,7 +1475,7 @@ def _stage(
             "electron_density_m3": INITIAL_ELECTRON_DENSITY_M3,
             "electron_molar_density_mol_m3": INITIAL_ELECTRON_MOLAR_M3,
             "log_e_initial": INITIAL_LOG_E,
-            "n_epsilon_initial": INITIAL_EPSILON_HAT,
+            "mean_en_initial_state": INITIAL_EPSILON_HAT,
             "mean_energy_initial_eV": ENERGY_REF_EV,
             "formula": "ne = rho*NA*sum(z_i*w_i/M_i)",
             "reference_density_m3": ELECTRON_DENSITY_REF_M3,

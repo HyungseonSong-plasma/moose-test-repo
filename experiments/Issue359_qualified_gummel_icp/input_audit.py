@@ -265,10 +265,10 @@ def audit(
         ),
     )
     for label, name, typ, params in mean_specs:
-        ok, ev = _kernel_ok(electron, f"FVKernels/{name}", typ, "n_epsilon", params)
+        ok, ev = _kernel_ok(electron, f"FVKernels/{name}", typ, "mean_en", params)
         rows.append(_row(
             label, "FVKernel", MEAN_EN_KERNEL_LABELS[label],
-            "electron energy/n_epsilon", typ, ok, ev,
+            "electron energy/mean_en", typ, ok, ev,
         ))
 
     material_specs = (
@@ -371,7 +371,7 @@ def audit(
     rows.append(_row(
         "mean_en_potential_poisson", "Coupled Variable",
         COUPLED_VARIABLE_LABELS["mean_en_potential_poisson"],
-        "electron energy/n_epsilon", "potential_from_poisson", mean_potential_ok,
+        "electron energy/mean_en", "potential_from_poisson", mean_potential_ok,
         "energy_drift and energy_joule use potential_from_poisson",
     ))
 
@@ -411,6 +411,22 @@ def audit(
         "all generated inputs", "no issue-local issue359_* object names",
         scientific_names_only,
         "outer/driver/electron/poisson scanned for issue359_ prefix",
+    ))
+
+    mean_en_state_name_ok = (
+        "n_epsilon" not in electron
+        and "n_epsilon" not in driver
+        and "n_epsilon" not in poisson
+        and mb.has_block(electron, "Variables/mean_en")
+        and mb.has_block(poisson, "AuxVariables/mean_en_frozen")
+    )
+    rows.append(_row(
+        "mean_en_state_name", "Variable Naming",
+        "electron energy solved state uses mean_en",
+        "electron/driver/poisson",
+        "mean_en + mean_en_frozen; legacy n_epsilon absent",
+        mean_en_state_name_ok,
+        "generated electron, driver and Poisson inputs scanned",
     ))
 
     reaction_disabled = (
