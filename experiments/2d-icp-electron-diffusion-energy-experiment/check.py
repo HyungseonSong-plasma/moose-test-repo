@@ -296,6 +296,15 @@ if max(profile_diffusivities) - min(profile_diffusivities) <= 1.0e-8:
         f"range=[{min(profile_diffusivities)}, {max(profile_diffusivities)}]"
     )
 
+if abs(EXPECTED_ENERGY_PER_PARTICLE_TE_FACTOR - 2.5) <= 1.0e-12:
+    initial_temperature_eV = (2.0 / 3.0) * INITIAL_MEAN_ENERGY_EV
+    matched_overshoot_eV = max(profile_temperatures) - initial_temperature_eV
+    if matched_overshoot_eV > 1.0e-5:
+        raise SystemExit(
+            "5/3 transport-matched wall closure reintroduced a temperature overshoot: "
+            f"overshoot_eV={matched_overshoot_eV}"
+        )
+
 
 def profile_values(predicate):
     values = []
@@ -336,6 +345,10 @@ print(f"FINAL_MEAN_ENERGY_MIN_EV={energy_mins[-1]:.17g}")
 print(f"FINAL_MEAN_ENERGY_MAX_EV={energy_maxs[-1]:.17g}")
 print(f"PROFILE_TE_MIN_EV={min(profile_temperatures):.17g}")
 print(f"PROFILE_TE_MAX_EV={max(profile_temperatures):.17g}")
+print(
+    "PROFILE_TE_OVERSHOOT_EV="
+    f"{max(profile_temperatures) - (2.0 / 3.0) * INITIAL_MEAN_ENERGY_EV:.17g}"
+)
 print(f"MAX_MEAN_ENERGY_TO_TE_REL_ERROR={max(temperature_relation_errors):.17g}")
 print(f"INITIAL_DIFFUSION_M2_S={diffusivities[0]:.17g}")
 print(f"FINAL_DIFFUSION_AVG_M2_S={diffusivities[-1]:.17g}")
