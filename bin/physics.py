@@ -10,6 +10,16 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 
+def _simple_case_fast_path(argv: list[str]) -> int | None:
+    """Run simple-case template operations without importing optional analysis dependencies."""
+    if not argv or argv[0] != "simple-case":
+        return None
+
+    from physics_harness.specification.simple_cases import cli_main
+
+    return cli_main(argv[1:])
+
+
 def _preflight_fast_path(argv: list[str]) -> int | None:
     """Run parser-symbol preflight without importing the full harness dependency graph."""
     if not argv or argv[0] != "preflight":
@@ -36,6 +46,9 @@ def _preflight_fast_path(argv: list[str]) -> int | None:
 
 def _main(argv: list[str] | None = None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
+    simple_case_result = _simple_case_fast_path(args)
+    if simple_case_result is not None:
+        return simple_case_result
     preflight_result = _preflight_fast_path(args)
     if preflight_result is not None:
         return preflight_result
