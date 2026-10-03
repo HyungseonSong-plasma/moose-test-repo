@@ -1,0 +1,6 @@
+{
+  "name": "2d-icp-electron-diffusion-experiment",
+  "type": "diagnostic",
+  "input": "input.i",
+  "checker": "check.py"
+}

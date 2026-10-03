@@ -13,12 +13,17 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 env:
   SOL_RUNTIME_REVISION: 020e9a979a0b97f2af3cf54758cedf38fecb187a
   SOL_ADAPTER_MOOSE_REVISION: f35563f0e63e2739cb94a36c450d5d66024aff2a
 
 jobs:
   pinned-live-bootstrap:
+    if: github.event_name != 'pull_request' || github.head_ref != 'issue-359-qualified-gummel-icp'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

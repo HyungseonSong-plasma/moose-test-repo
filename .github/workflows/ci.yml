@@ -1,14 +1,23 @@
+# Issue359 RZ-only rerun marker 2026-10-02
 name: Repository CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, issue-359-qualified-gummel-icp]
+    paths-ignore:
+      - '.github/workflows/probe-*.yml'
+      - '.github/workflows/probe-*.yaml'
+      - 'experiments/**/probes/**'
   pull_request:
     branches: [main]
-    types: [opened, synchronize, reopened, edited]
+    types: [opened, reopened, edited]
 
 permissions:
   contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 env:
   PHYSICS_RUNTIME_REF: ghcr.io/hyungseonsong-plasma/physics-runtime@sha256:cda9f0d09a17aed5fa606e97d1ee5c3450f7280536cec2e5c635402bb07d972c
@@ -16,336 +25,498 @@ env:
   EXPECTED_RUNTIME_REVISION: 565b500722c00e4ff6e759a02bd7bae52f8b13f0
 
 jobs:
-  validate:
-    if: >-
-      github.event_name != 'pull_request' ||
-      github.event.action != 'edited' ||
-      github.event.changes.base != null
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
+  electron-energy-wall-flux-comparison:
+    if: ${{ (github.event_name == 'pull_request' && github.head_ref == 'issue-359-qualified-gummel-icp') || (github.event_name == 'push' && github.ref_name == 'issue-359-qualified-gummel-icp') }}
+    name: Electron energy wall flux comparison
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: read
+    env:
+      CASE_DIR: experiments/2d-icp-electron-diffusion-energy-experiment
+      POISSON_DIR: experiments/2d-icp-poisson-experiment
+      BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
     steps:
       - uses: actions/checkout@v4
-      - name: Validate governed workflow surface
-        run: |
-          python3 ci/guards/workflow_surface_guard.py --self-test
-          python3 ci/guards/workflow_surface_guard.py --check
-      - name: Regression-test central Skill manifest contract
-        run: python3 ci/guards/central_skill_contract_guard.py --self-test
-      - name: Validate Paul central operating contracts
-        shell: bash
-        run: |
-          set -euo pipefail
-          test ! -e skills
-          test ! -e src/chatgpt_operation
-          test -f docs/operating_system/README.md
-          test -f docs/operating_system/CENTRAL_SKILLS.md
-          test -f docs/operating_system/central_skills.json
-          grep -Fq '6474eb7b77f890b7cf9d7134ccebea31662bcdbe' docs/operating_system/README.md
-          grep -Fq 'Expected OS:** Paul' docs/operating_system/README.md
-          grep -Fq '6474eb7b77f890b7cf9d7134ccebea31662bcdbe' docs/operating_system/CENTRAL_SKILLS.md
-
-          # Calvin operating metrics are archive-only under Paul.
-          test ! -e docs/metrics
-          test ! -e docs/protocols/metrics_closure.md
-          test -d archive/operating_metrics/calvin/docs_metrics
-          test -f archive/operating_metrics/calvin/metrics_closure.md
-
-          # Executable central actions use the same exact Paul revision.
-          grep -Fq 'HyungseonSong-plasma/chatgpt-operation/.github/actions/repository-mutation@6474eb7b77f890b7cf9d7134ccebea31662bcdbe' .github/workflows/refactor.yml
-          grep -Fq 'HyungseonSong-plasma/chatgpt-operation/.github/actions/governed-work@6474eb7b77f890b7cf9d7134ccebea31662bcdbe' .github/workflows/refactor.yml
-          grep -Fq 'HyungseonSong-plasma/chatgpt-operation/.github/actions/governed-work@6474eb7b77f890b7cf9d7134ccebea31662bcdbe' .github/workflows/experiment.yml
-
-          python3 - <<'PY'
-          import json
-          from pathlib import Path
-
-          manifest=json.loads(Path("docs/operating_system/central_skills.json").read_text(encoding="utf-8"))
-          assert manifest["schema_version"] == 2
-          assert manifest["source_repository"] == "HyungseonSong-plasma/chatgpt-operation"
-          os_meta=manifest["operating_system"]
-          assert os_meta["revision"] == "6474eb7b77f890b7cf9d7134ccebea31662bcdbe"
-          assert os_meta["expected_version"] == "Paul"
-          assert os_meta["index"] == {
-              "path": "docs/operating_system/README.md",
-              "expected_blob_sha": "38e5ba53b1440abb7722def876c2a278bae30d9f",
-          }
-          assert os_meta["essential_rules"] == {
-              "path": "docs/operating_system/ESSENTIAL_RULES.md",
-              "expected_blob_sha": "adfad6c7acc7b371b5aa840c6fb830ca696e60ac",
-          }
-          assert manifest["skill_catalog"] == {
-              "path": "skills/catalog.json",
-              "expected_blob_sha": "8e43eb8a4b8fa334cf6210a638ad25e782d27b90",
-          }
-
-          entries={item["name"]: item for item in manifest["skills"]}
-          assert set(entries) == {
-              "session-bootstrap",
-              "state-refresh",
-              "repository-mutation",
-              "governed-work",
-              "controller-throughput",
-              "controller-lifecycle",
-              "github-actions-execution",
-              "github-actions-observation",
-              "artifact-staging",
-              "scientific-discriminator-controller",
-          }
-          for item in entries.values():
-              assert item["revision"] == "6474eb7b77f890b7cf9d7134ccebea31662bcdbe"
-          assert entries["session-bootstrap"]["load_on"] == ["INIT"]
-          assert entries["state-refresh"]["load_on"] == ["INIT","SCHEDULED_CONTROLLER"]
-          assert entries["repository-mutation"]["load_on"] == ["MUTATE"]
-          assert entries["governed-work"]["load_on"] == ["GOVERNED_WORK"]
-          assert entries["controller-throughput"]["load_on"] == ["SCHEDULED_CONTROLLER"]
-          assert entries["controller-lifecycle"]["load_on"] == ["SCHEDULED_CONTROLLER"]
-          assert entries["github-actions-execution"]["load_on"] == ["GITHUB_ACTIONS_EXECUTION"]
-          assert entries["github-actions-observation"]["load_on"] == ["GITHUB_ACTIONS_OBSERVATION"]
-          assert entries["artifact-staging"]["load_on"] == ["ARTIFACT_STAGING"]
-          assert entries["scientific-discriminator-controller"]["load_on"] == ["SCIENTIFIC_DISCRIMINATOR_CONTROLLER"]
-
-          policy=json.loads(Path(".chatgpt-operation.json").read_text(encoding="utf-8"))
-          assert policy["schema_version"] == 1
-          assert policy["repository"] == "HyungseonSong-plasma/moose-test-repo"
-          assert policy["validation_gate"]["mode"] == "named_workflows"
-          assert "Repository CI" in policy["validation_gate"]["workflows"]
-          PY
-
-          central_dir="$(mktemp -d)"
-          git -C "$central_dir" init -q
-          git -C "$central_dir" remote add origin https://github.com/HyungseonSong-plasma/chatgpt-operation.git
-          git -C "$central_dir" fetch --quiet --depth=1 origin "6474eb7b77f890b7cf9d7134ccebea31662bcdbe"
-          git -C "$central_dir" show "6474eb7b77f890b7cf9d7134ccebea31662bcdbe:skills/catalog.json" > "$central_dir/skill-catalog.json"
-          python3 ci/guards/central_skill_contract_guard.py \
-            --manifest docs/operating_system/central_skills.json \
-            --catalog "$central_dir/skill-catalog.json"
-
-          CENTRAL_DIR="$central_dir" python3 - <<'PY'
-          import json
-          import os
-          import subprocess
-          from pathlib import Path
-
-          manifest=json.loads(Path("docs/operating_system/central_skills.json").read_text(encoding="utf-8"))
-          root=os.environ["CENTRAL_DIR"]
-          revision=manifest["operating_system"]["revision"]
-
-          expected=[
-              manifest["operating_system"]["index"],
-              manifest["operating_system"]["essential_rules"],
-              manifest["skill_catalog"],
-          ]
-          expected += [
-              {"path": item["path"], "expected_blob_sha": item["expected_blob_sha"]}
-              for item in manifest["skills"]
-          ]
-
-          for item in expected:
-              actual=subprocess.check_output(
-                  ["git","-C",root,"rev-parse",f'{revision}:{item["path"]}'],
-                  text=True,
-              ).strip()
-              assert actual == item["expected_blob_sha"], (
-                  item["path"], item["expected_blob_sha"], actual
-              )
-          PY
-          rm -rf "$central_dir"
-
-      - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
-      - name: Install validation dependencies
-        run: >-
-          python -m pip install
-          'pydantic>=2,<3'
-          'pytest>=8,<9'
-          -r requirements-evidence-engine.txt
-          -r requirements-ontology.txt
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 1
 
-      - name: Validate central scientific semantics compatibility
+      - name: Validate catalog and configurable wall-flux contract
         shell: bash
         run: |
-          set -euo pipefail
-          central_revision="d7e5d16e1ed1b9d3561c25cc3b2f0d3533de4a87"
-          central_dir="$(mktemp -d)"
-          git -C "$central_dir" init -q
-          git -C "$central_dir" remote add origin https://github.com/HyungseonSong-plasma/chatgpt-operation.git
-          git -C "$central_dir" fetch --quiet --depth=1 origin "$central_revision"
-          git -C "$central_dir" checkout --quiet FETCH_HEAD
-          python3 ci/guards/scientific_centralization_guard.py \
-            --central-root "$central_dir" \
-            --central-revision "$central_revision" \
-            --json-out scientific-centralization-compatibility.json
-          rm -rf "$central_dir"
+          set -euxo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha || github.sha }}"
+          python3 bin/physics.py simple-case check
+          python3 bin/physics.py simple-case list
+          python3 bin/physics.py simple-case show electron-diffusion-experiment
+          python3 bin/physics.py simple-case show electron-diffusion-energy-experiment
+          python3 bin/physics.py simple-case show poisson
+          if python3 bin/physics.py simple-case show 1; then
+            echo "numeric simple-case selector unexpectedly accepted" >&2
+            exit 1
+          fi
+          python3 physics_app/ci/check_electron_molar_representation_contract.py --self-test
+          python3 physics_app/ci/check_electron_molar_representation_contract.py
 
-      - name: Upload scientific centralization compatibility evidence
+      - name: Log in to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build exact-head Physics runtime
+        shell: bash
+        run: |
+          set -euxo pipefail
+          docker pull "$BUILD_BASE_REF"
+          docker run --rm \
+            --entrypoint /bin/bash \
+            --user 0:0 \
+            --workdir /workspace \
+            -v "$PWD:/workspace" \
+            "$BUILD_BASE_REF" \
+            -lc '
+              set -euxo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              git config --global --add safe.directory /opt/physics_vendor/moose
+              git config --global --add safe.directory /opt/physics_vendor/crane
+              git config --global --add safe.directory /opt/physics_vendor/squirrel
+              git config --global --add safe.directory /opt/physics_vendor/zapdos
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+              make -C /workspace/physics_app -j2
+              chmod -R a+rwX /workspace/physics_app
+            '
+          test -x physics_app/physics-opt
+
+      - name: Prepare 2Te and 5over2Te cases
+        shell: bash
+        run: |
+          set -euxo pipefail
+          rm -rf .ci-electron-energy-wall wall-flux-artifacts
+          mkdir -p .ci-electron-energy-wall wall-flux-artifacts
+
+          for spec in "kinetic_4over3 2.0" "matched_5over3 2.5"; do
+            set -- $spec
+            label="$1"
+            factor="$2"
+            run_dir=".ci-electron-energy-wall/$label"
+            cp -a "$CASE_DIR" "$run_dir"
+            python3 "$CASE_DIR/prepare_wall_flux_case.py" \
+              "$run_dir/input.i" \
+              --energy-factor "$factor"
+            mkdir -p "wall-flux-artifacts/electron-energy-wall-$label"
+          done
+
+      - name: Run exact-head wall-flux cases
+        shell: bash
+        run: |
+          set -euxo pipefail
+          for spec in "kinetic_4over3 2.0" "matched_5over3 2.5"; do
+            set -- $spec
+            label="$1"
+            factor="$2"
+            run_dir=".ci-electron-energy-wall/$label"
+
+            docker run --rm \
+              --entrypoint /bin/bash \
+              --user "$(id -u):$(id -g)" \
+              --workdir "/workspace/$run_dir" \
+              -v "$PWD:/workspace" \
+              "$BUILD_BASE_REF" \
+              -lc '
+                set -euxo pipefail
+                source /environment
+                /workspace/physics_app/physics-opt --check-input -i input.i
+                /workspace/physics_app/physics-opt -i input.i > runtime.log 2>&1
+              '
+
+            (
+              cd "$run_dir"
+              EXPECTED_DT_S="1.0e-9" \
+              EXPECTED_STEPS="4" \
+              EXPECTED_END_TIME_S="4.0e-9" \
+              EXPECTED_ENERGY_PER_PARTICLE_TE_FACTOR="$factor" \
+                python3 check.py | tee checker.log
+            )
+
+            cp -a "$run_dir"/. "wall-flux-artifacts/electron-energy-wall-$label/"
+          done
+
+      - name: Compare temperature profiles
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python3 "$CASE_DIR/check_wall_flux_matrix.py" wall-flux-artifacts
+
+      - name: Run grounded-wall Poisson candidate
+        shell: bash
+        run: |
+          set -euxo pipefail
+          rm -rf .ci-poisson
+          cp -a "$POISSON_DIR" .ci-poisson
+
+          docker run --rm \
+            --entrypoint /bin/bash \
+            --user "$(id -u):$(id -g)" \
+            --workdir /workspace/.ci-poisson \
+            -v "$PWD:/workspace" \
+            "$BUILD_BASE_REF" \
+            -lc '
+              set -euxo pipefail
+              source /environment
+              /workspace/physics_app/physics-opt --check-input -i input.i
+              /workspace/physics_app/physics-opt -i input.i > runtime.log 2>&1
+            '
+
+          (
+            cd .ci-poisson
+            python3 check.py | tee checker.log
+          )
+
+      - name: Upload Poisson candidate
         uses: actions/upload-artifact@v4
         with:
-          name: scientific-centralization-compatibility
-          path: scientific-centralization-compatibility.json
+          name: poisson-candidate
+          path: |
+            .ci-poisson/input.i
+            .ci-poisson/runtime.log
+            .ci-poisson/checker.log
+            .ci-poisson/poisson.csv
+            .ci-poisson/poisson.e
+            .ci-poisson/poisson_final_profile_*.csv
           if-no-files-found: error
+          include-hidden-files: true
           retention-days: 30
 
-      - name: Validate Evidence dependency direction
-        run: python ci/guards/physics_dependency_guard.py --check evidence
-      - name: Validate Analysis dependency direction
-        run: python ci/guards/physics_dependency_guard.py --check analysis
-      - name: Validate Execution dependency direction
-        run: python ci/guards/physics_dependency_guard.py --check execution
-      - name: Validate presentation dependency direction
-        run: python ci/guards/physics_dependency_guard.py --check presentation
-      - name: Validate repository-tool dependency direction
-        run: python ci/guards/physics_dependency_guard.py --check repository
-      - name: Validate canonical package cycles
-        run: python ci/guards/physics_dependency_guard.py --check cycle
-      - name: Validate declarative experiment gateway
-        run: python ci/guards/physics_experiment_gateway_guard.py
-      - name: Validate plasma semantic ownership
-        run: python ci/guards/physics_plasma_semantic_residue_guard.py
-      - name: Validate campaign/performance/scale ownership
-        run: python ci/guards/physics_campaign_residue_guard.py
-      - name: Validate numerical-method ownership
-        run: python ci/guards/physics_numerical_method_ownership_guard.py
-      - name: Validate model terminology and MOOSE boundary ownership
-        run: python ci/guards/physics_boundary_terminology_guard.py
-      - name: Validate Physics to SOL adapter boundary
+      - name: Run real-mesh RZ Poisson operator probe
+        shell: bash
         run: |
-          python ci/guards/physics_sol_adapter_boundary_guard.py --self-test
-          python ci/guards/physics_sol_adapter_boundary_guard.py --check
-      - name: Validate strict zero-legacy architecture census
-        run: |
-          python ci/guards/physics_architecture_census.py --json-out physics-architecture-census.json
-          python ci/guards/physics_architecture_census.py --require-no-legacy
-      - name: Validate zero-legacy active CI surface
-        run: python ci/guards/physics_public_artifact_residue_guard.py
-      - name: Upload architecture census
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: physics-architecture-census
-          path: physics-architecture-census.json
-      - name: Upload migration source snapshot
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: physics-migration-source
-          path: |
-            physics_harness/**/*.py
-            experiments/**/*.py
-            tests/**/*.py
-          retention-days: 1
-      - name: Run Physics pytest
-        run: python -m pytest -q
-      - name: Validate normalized-to-physical coupled equivalence fixture
-        run: python physics_app/ci/check_physical_state_coupled_equivalence.py --self-test
-      - name: Validate n_epsilon-to-mean_en symbol equivalence fixture
-        run: python physics_app/ci/check_mean_en_symbol_equivalence.py --self-test
-      - name: Validate two-subapp Gummel Action contract
-        run: python physics_app/ci/check_gummel_iteration_action_contract.py
-      - name: Validate #17 R1 EI01 attachment source contract
-        run: python physics_app/ci/check_ei01_attachment_source_contract.py
-      - name: Validate #17 R2 O2 ionization lookup and ownership contract
-        run: python physics_app/ci/check_r2_o2_ionization_contract.py
-      - name: Validate #176 R3 O2s excitation constant-surrogate ownership contract
-        run: python physics_app/ci/check_r3_o2s_excitation_contract.py
-      - name: Validate #26 E8 EI10 inelastic energy ownership contract
-        run: python physics_app/ci/check_e8_ei10_energy_contract.py
-      - name: Validate #26 E8 EI10 inelastic energy production implementation
-        run: python physics_app/ci/check_e8_ei10_energy_implementation.py
-      - name: Validate #26 E8 EI10 runtime discriminator logic
-        run: python physics_app/ci/check_e8_ei10_energy_runtime.py --self-test
-      - name: Validate #26 E8 EI16 ionization energy ownership contract
-        run: python physics_app/ci/check_e8_ei16_energy_contract.py
-      - name: Validate #26 E8 EI16 runtime discriminator logic
-        run: python physics_app/ci/check_e8_ei16_energy_runtime.py --self-test
-      - name: Validate #176 R3 O2s excitation production implementation
-        run: python physics_app/ci/check_r3_o2s_excitation_implementation.py
-      - name: Validate #17 R2 O2 ionization production implementation
-        run: python physics_app/ci/check_r2_o2_ionization_implementation.py
-      - name: Validate canonical electron molar representation contract
-        run: |
-          python physics_app/ci/check_electron_molar_representation_contract.py --self-test
-          python physics_app/ci/check_electron_molar_representation_contract.py
-      - name: Validate Issue 43/45 science refactor
-        run: python experiments/Issue43_45_science_refactor/final_guard.py
-      - name: Validate Issue 89 post-science canonicalization
-        run: python experiments/Issue89_post_science_canonicalization/final_guard.py
-      - name: Validate execution contract refactor
-        run: python experiments/execution_contract_refactor/guard.py
+          set -euxo pipefail
+          rm -rf .ci-rz-operator-probe
+          mkdir -p .ci-rz-operator-probe
+          cp "$POISSON_DIR/rz_operator_probe.i" .ci-rz-operator-probe/input.i
+          cp "$POISSON_DIR/qvt.msh" .ci-rz-operator-probe/qvt.msh
 
-  runtime-smoke:
-    if: >-
-      github.event_name != 'pull_request' ||
-      github.event.action != 'edited' ||
-      github.event.changes.base != null
-    name: Public immutable Physics runtime smoke
-    runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@v4
-      - name: Validate accepted immutable runtime ref
-        shell: bash
-        run: |
-          set -euxo pipefail
-          [[ "$PHYSICS_RUNTIME_REF" =~ ^ghcr\.io/hyungseonsong-plasma/physics-runtime@sha256:[0-9a-f]{64}$ ]]
-          [[ "$EXPECTED_BUILD_BASE_REF" =~ ^ghcr\.io/hyungseonsong-plasma/physics-build-base@sha256:[0-9a-f]{64}$ ]]
-          [[ "$EXPECTED_RUNTIME_REVISION" =~ ^[0-9a-f]{40}$ ]]
-      - name: Pull accepted public Physics runtime without package credentials
-        id: pull
-        shell: bash
-        run: |
-          set -euxo pipefail
-          start="$(date +%s)"
-          docker pull "$PHYSICS_RUNTIME_REF"
-          end="$(date +%s)"
-          echo "pull_seconds=$((end - start))" >> "$GITHUB_OUTPUT"
-          echo "size_bytes=$(docker image inspect "$PHYSICS_RUNTIME_REF" --format '{{.Size}}')" >> "$GITHUB_OUTPUT"
-      - name: Verify accepted runtime provenance
-        shell: bash
-        run: |
-          set -euxo pipefail
-          test "$(docker image inspect "$PHYSICS_RUNTIME_REF" --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}')" = "$EXPECTED_RUNTIME_REVISION"
-          test "$(docker image inspect "$PHYSICS_RUNTIME_REF" --format '{{ index .Config.Labels "io.physics.build-base.ref" }}')" = "$EXPECTED_BUILD_BASE_REF"
-          test "$(docker image inspect "$PHYSICS_RUNTIME_REF" --format '{{ index .Config.Labels "io.physics.source.owner" }}')" = "moose-test-repo/physics_app"
-      - name: Run Physics check-input smoke
-        shell: bash
-        run: docker run --rm "$PHYSICS_RUNTIME_REF" --check-input -i /opt/physics/ci/smoke.i
-      - name: Run bounded real Physics smoke
-        shell: bash
-        run: docker run --rm "$PHYSICS_RUNTIME_REF" -i /opt/physics/ci/smoke.i
-      - name: Run normalized-to-physical coupled field equivalence
-        shell: bash
-        run: |
-          set -euxo pipefail
-          work="$PWD/.physical-state-equivalence"
-          python physics_app/ci/check_physical_state_coupled_equivalence.py --prepare "$work"
-          for mode in normalized physical; do
-            docker run --rm -v "$work/$mode:/work" -w /work "$PHYSICS_RUNTIME_REF" --check-input -i input.i
-            docker run --rm -v "$work/$mode:/work" -w /work "$PHYSICS_RUNTIME_REF" -i input.i
-          done
-          python physics_app/ci/check_physical_state_coupled_equivalence.py --compare "$work"
-      - name: Run n_epsilon-to-mean_en symbol equivalence
-        shell: bash
-        run: |
-          set -euxo pipefail
-          work="$PWD/.mean-en-symbol-equivalence"
-          python physics_app/ci/check_mean_en_symbol_equivalence.py --prepare "$work"
-          for mode in old new; do
-            docker run --rm -v "$work/$mode:/work" -w /work "$PHYSICS_RUNTIME_REF" --check-input -i input.i
-            docker run --rm -v "$work/$mode:/work" -w /work "$PHYSICS_RUNTIME_REF" -i input.i
-          done
-          python physics_app/ci/check_mean_en_symbol_equivalence.py --compare "$work"
-      - name: Record ordinary CI runtime evidence
-        shell: bash
-        run: |
-          {
-            echo "PHYSICS_RUNTIME_REF=$PHYSICS_RUNTIME_REF"
-            echo "RUNTIME_PULL_SECONDS=${{ steps.pull.outputs.pull_seconds }}"
-            echo "RUNTIME_LOCAL_SIZE_BYTES=${{ steps.pull.outputs.size_bytes }}"
-            echo "ORDINARY_CI_USES_PHYSICS_RUNTIME=true"
-            echo "ORDINARY_CI_USES_RETIRED_RUNTIME=false"
-            echo "ORDINARY_CI_PULLS_MOOSE_DEV=false"
-            echo "ORDINARY_CI_PULLS_PHYSICS_BUILD_BASE=false"
-            echo "ORDINARY_CI_REBUILDS_MOOSE_STACK=false"
-            echo "ORDINARY_CI_COMPILES_PHYSICS_APPLICATION=false"
+          docker run --rm \
+            --entrypoint /bin/bash \
+            --user "$(id -u):$(id -g)" \
+            --workdir /workspace/.ci-rz-operator-probe \
+            -v "$PWD:/workspace" \
+            "$BUILD_BASE_REF" \
+            -lc '
+              set -euxo pipefail
+              source /environment
+              /workspace/physics_app/physics-opt --check-input -i input.i
+              /workspace/physics_app/physics-opt -i input.i > runtime.log 2>&1
+            '
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import csv
+          import json
+          import math
+
+          files = sorted(Path(".ci-rz-operator-probe").glob("rz_operator_probe_final_profile_*.csv"))
+          if not files:
+              raise SystemExit("missing RZ operator-probe final profile")
+          with files[-1].open(newline="") as handle:
+              rows = list(csv.DictReader(handle))
+          if not rows:
+              raise SystemExit("empty RZ operator-probe profile")
+
+          errors = []
+          exact_values = []
+          numerical_values = []
+          for row in rows:
+              r = float(row["x"])
+              exact = r * r
+              numerical = float(row["phi_probe"])
+              if not math.isfinite(numerical):
+                  raise SystemExit("non-finite RZ operator-probe value")
+              errors.append(numerical - exact)
+              exact_values.append(exact)
+              numerical_values.append(numerical)
+
+          span = max(exact_values) - min(exact_values)
+          result = {
+              "manufactured_solution": "phi=r^2",
+              "expected_axisymmetric_laplacian": 4.0,
+              "cells": len(rows),
+              "phi_exact_min": min(exact_values),
+              "phi_exact_max": max(exact_values),
+              "phi_numerical_min": min(numerical_values),
+              "phi_numerical_max": max(numerical_values),
+              "error_linf": max(abs(v) for v in errors),
+              "error_rms": math.sqrt(sum(v*v for v in errors) / len(errors)),
+              "error_linf_over_exact_span": max(abs(v) for v in errors) / max(span, 1.0e-300),
           }
+          Path(".ci-rz-operator-probe/result.json").write_text(json.dumps(result, indent=2) + "\n")
+          print(json.dumps(result, indent=2))
+          PY
+
+      - name: Upload real-mesh RZ Poisson operator probe
+        uses: actions/upload-artifact@v4
+        with:
+          name: rz-poisson-operator-probe
+          path: |
+            .ci-rz-operator-probe/input.i
+            .ci-rz-operator-probe/runtime.log
+            .ci-rz-operator-probe/result.json
+            .ci-rz-operator-probe/rz_operator_probe.e
+            .ci-rz-operator-probe/rz_operator_probe_final_profile_*.csv
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 30
+
+      - name: Run Poisson profile boundary discriminator
+        shell: bash
+        run: |
+          set -euxo pipefail
+          rm -rf .ci-poisson-profile
+          mkdir -p .ci-poisson-profile
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import shutil
+          from physics_harness.adapters.moose import parameters as mp
+
+          root = Path(".ci-poisson-profile")
+          source = Path("experiments/2d-icp-poisson-experiment")
+          all_b = "'inlet outlet plasma_electrode plasma_metal plasma_right plasma_cover plasma_wafer plasma_focus_ring'"
+          solid_b = "'plasma_electrode plasma_metal plasma_right plasma_cover plasma_wafer plasma_focus_ring'"
+
+          electron_paths = (
+              "FVBCs/electron_thermal_wall_loss",
+              "FVBCs/electron_energy_thermal_wall_loss",
+              "Postprocessors/electron_wall_particle_rate",
+              "Postprocessors/electron_wall_energy_rate_eV_mol_s",
+          )
+          electro_paths = (
+              "FVBCs/phi_grounded_walls",
+              "Postprocessors/gauss_flux_reduced",
+          )
+
+          cases = {
+              "source_solid_walls": (True, False),
+              "phi_solid_walls": (False, True),
+              "both_solid_walls": (True, True),
+          }
+          phi_boundary_cases = {
+              "phi_no_inlet_ground": "'outlet plasma_electrode plasma_metal plasma_right plasma_cover plasma_wafer plasma_focus_ring'",
+              "phi_no_outlet_ground": "'inlet plasma_electrode plasma_metal plasma_right plasma_cover plasma_wafer plasma_focus_ring'",
+          }
+
+          for name, (solid_source, solid_phi) in cases.items():
+              dst = root / name
+              shutil.copytree(source, dst)
+              path = dst / "input.i"
+              text = path.read_text()
+
+              if solid_source:
+                  for block_path in electron_paths:
+                      text = mp.upsert_parameter(text, block_path, "boundary", solid_b)
+              if solid_phi:
+                  for block_path in electro_paths:
+                      text = mp.upsert_parameter(text, block_path, "boundary", solid_b)
+
+              assert mp.get_parameter(text, "Executioner", "dt") == "1.0e-9"
+              assert mp.get_parameter(text, "Executioner", "num_steps") == "4"
+              expected_source = set(solid_b.strip("'").split() if solid_source else all_b.strip("'").split())
+              expected_phi = set(solid_b.strip("'").split() if solid_phi else all_b.strip("'").split())
+              assert set(mp.words(mp.get_parameter(text, "FVBCs/electron_thermal_wall_loss", "boundary") or "")) == expected_source
+              assert set(mp.words(mp.get_parameter(text, "FVBCs/electron_energy_thermal_wall_loss", "boundary") or "")) == expected_source
+              assert set(mp.words(mp.get_parameter(text, "FVBCs/phi_grounded_walls", "boundary") or "")) == expected_phi
+              assert "SideSetsAroundSubdomainGenerator" not in text
+              assert "plasma_all_ground" not in text
+              path.write_text(text)
+
+          for name, phi_b in phi_boundary_cases.items():
+              dst = root / name
+              shutil.copytree(source, dst)
+              path = dst / "input.i"
+              text = path.read_text()
+              for block_path in electro_paths:
+                  text = mp.upsert_parameter(text, block_path, "boundary", phi_b)
+              assert mp.get_parameter(text, "Executioner", "dt") == "1.0e-9"
+              assert mp.get_parameter(text, "Executioner", "num_steps") == "4"
+              assert set(mp.words(mp.get_parameter(text, "FVBCs/electron_thermal_wall_loss", "boundary") or "")) == set(all_b.strip("'").split())
+              assert set(mp.words(mp.get_parameter(text, "FVBCs/phi_grounded_walls", "boundary") or "")) == set(phi_b.strip("'").split())
+              assert "SideSetsAroundSubdomainGenerator" not in text
+              assert "plasma_all_ground" not in text
+              path.write_text(text)
+          PY
+
+          for name in source_solid_walls phi_solid_walls both_solid_walls phi_no_inlet_ground phi_no_outlet_ground; do
+            run_dir=".ci-poisson-profile/$name"
+            docker run --rm \
+              --entrypoint /bin/bash \
+              --user "$(id -u):$(id -g)" \
+              --workdir "/workspace/$run_dir" \
+              -v "$PWD:/workspace" \
+              "$BUILD_BASE_REF" \
+              -lc '
+                set -euxo pipefail
+                source /environment
+                /workspace/physics_app/physics-opt --check-input -i input.i
+                /workspace/physics_app/physics-opt -i input.i > runtime.log 2>&1
+              '
+          done
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import csv
+          import json
+          import math
+
+          def final_profile(case_dir):
+              matches = sorted(Path(case_dir).glob("poisson_final_profile_*.csv"))
+              if not matches:
+                  raise SystemExit(f"missing final profile in {case_dir}")
+              with matches[-1].open(newline="") as handle:
+                  rows = list(csv.DictReader(handle))
+              rows.sort(key=lambda row: int(row["id"]))
+              return rows
+
+          def stats(rows):
+              phi = [float(row["phi"]) for row in rows]
+              ne = [float(row["electron_density"]) for row in rows]
+              xs = [float(row["x"]) for row in rows]
+              ys = [float(row["y"]) for row in rows]
+              i_max = max(range(len(phi)), key=phi.__getitem__)
+              return {
+                  "phi_min_V": min(phi),
+                  "phi_max_V": max(phi),
+                  "phi_peak_x_m": xs[i_max],
+                  "phi_peak_y_m": ys[i_max],
+                  "ne_min_m3": min(ne),
+                  "ne_max_m3": max(ne),
+                  "ne_mean_m3": sum(ne) / len(ne),
+              }
+
+          def normalized(values):
+              lo, hi = min(values), max(values)
+              span = hi - lo
+              if span <= 0.0:
+                  return [0.0 for _ in values]
+              return [(value - lo) / span for value in values]
+
+          baseline = final_profile(".ci-poisson")
+          base_phi = [float(row["phi"]) for row in baseline]
+          base_norm = normalized(base_phi)
+          result = {"canonical": stats(baseline), "comparisons": {}}
+
+          for name in (
+              "source_solid_walls",
+              "phi_solid_walls",
+              "both_solid_walls",
+              "phi_no_inlet_ground",
+              "phi_no_outlet_ground",
+          ):
+              rows = final_profile(f".ci-poisson-profile/{name}")
+              if [int(r["id"]) for r in rows] != [int(r["id"]) for r in baseline]:
+                  raise SystemExit(f"cell identity mismatch for {name}")
+              phi = [float(row["phi"]) for row in rows]
+              norm = normalized(phi)
+              delta = [a - b for a, b in zip(norm, base_norm)]
+              rms = math.sqrt(sum(v*v for v in delta) / len(delta))
+              max_abs = max(abs(v) for v in delta)
+              mean_a = sum(base_phi) / len(base_phi)
+              mean_b = sum(phi) / len(phi)
+              cov = sum((a-mean_a)*(b-mean_b) for a,b in zip(base_phi,phi))
+              va = sum((a-mean_a)**2 for a in base_phi)
+              vb = sum((b-mean_b)**2 for b in phi)
+              corr = cov / math.sqrt(va*vb)
+              result["comparisons"][name] = {
+                  **stats(rows),
+                  "normalized_phi_rms_vs_canonical": rms,
+                  "normalized_phi_linf_vs_canonical": max_abs,
+                  "phi_correlation_vs_canonical": corr,
+              }
+
+          out = Path(".ci-poisson-profile/profile_boundary_matrix.json")
+          out.write_text(json.dumps(result, indent=2) + "\n")
+          print(json.dumps(result, indent=2))
+          PY
+
+      - name: Upload Poisson profile boundary discriminator
+        uses: actions/upload-artifact@v4
+        with:
+          name: poisson-profile-boundary-matrix
+          path: |
+            .ci-poisson-profile/profile_boundary_matrix.json
+            .ci-poisson-profile/source_solid_walls/input.i
+            .ci-poisson-profile/source_solid_walls/runtime.log
+            .ci-poisson-profile/source_solid_walls/poisson.csv
+            .ci-poisson-profile/source_solid_walls/poisson.e
+            .ci-poisson-profile/source_solid_walls/poisson_final_profile_*.csv
+            .ci-poisson-profile/phi_solid_walls/input.i
+            .ci-poisson-profile/phi_solid_walls/runtime.log
+            .ci-poisson-profile/phi_solid_walls/poisson.csv
+            .ci-poisson-profile/phi_solid_walls/poisson.e
+            .ci-poisson-profile/phi_solid_walls/poisson_final_profile_*.csv
+            .ci-poisson-profile/both_solid_walls/input.i
+            .ci-poisson-profile/both_solid_walls/runtime.log
+            .ci-poisson-profile/both_solid_walls/poisson.csv
+            .ci-poisson-profile/both_solid_walls/poisson.e
+            .ci-poisson-profile/both_solid_walls/poisson_final_profile_*.csv
+            .ci-poisson-profile/phi_no_inlet_ground/input.i
+            .ci-poisson-profile/phi_no_inlet_ground/runtime.log
+            .ci-poisson-profile/phi_no_inlet_ground/poisson.csv
+            .ci-poisson-profile/phi_no_inlet_ground/poisson.e
+            .ci-poisson-profile/phi_no_inlet_ground/poisson_final_profile_*.csv
+            .ci-poisson-profile/phi_no_outlet_ground/input.i
+            .ci-poisson-profile/phi_no_outlet_ground/runtime.log
+            .ci-poisson-profile/phi_no_outlet_ground/poisson.csv
+            .ci-poisson-profile/phi_no_outlet_ground/poisson.e
+            .ci-poisson-profile/phi_no_outlet_ground/poisson_final_profile_*.csv
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 30
+
+      - name: Upload kinetic 2Te Exodus
+        uses: actions/upload-artifact@v4
+        with:
+          name: electron-energy-wall-kinetic_4over3
+          path: |
+            .ci-electron-energy-wall/kinetic_4over3/input.i
+            .ci-electron-energy-wall/kinetic_4over3/runtime.log
+            .ci-electron-energy-wall/kinetic_4over3/checker.log
+            .ci-electron-energy-wall/kinetic_4over3/electron_diffusion.csv
+            .ci-electron-energy-wall/kinetic_4over3/electron_diffusion.e
+            .ci-electron-energy-wall/kinetic_4over3/electron_diffusion_final_profile_*.csv
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 30
+
+      - name: Upload matched 5over3 Exodus
+        uses: actions/upload-artifact@v4
+        with:
+          name: electron-energy-wall-matched_5over3
+          path: |
+            .ci-electron-energy-wall/matched_5over3/input.i
+            .ci-electron-energy-wall/matched_5over3/runtime.log
+            .ci-electron-energy-wall/matched_5over3/checker.log
+            .ci-electron-energy-wall/matched_5over3/electron_diffusion.csv
+            .ci-electron-energy-wall/matched_5over3/electron_diffusion.e
+            .ci-electron-energy-wall/matched_5over3/electron_diffusion_final_profile_*.csv
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 30
+
+      - name: Upload wall-flux comparison
+        uses: actions/upload-artifact@v4
+        with:
+          name: electron-energy-wall-flux-comparison
+          path: |
+            wall_flux_comparison.json
+            wall_flux_comparison.csv
+          if-no-files-found: error
+          retention-days: 30

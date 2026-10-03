@@ -34,10 +34,15 @@ REQUIRED: dict[str, tuple[str, ...]] = {
         "if (!_log_molar_state)",
     ),
     "physics_app/include/fvbcs/PhysicsFVElectronGroundedSheathEnergyBC.h": (
+        "const Moose::Functor<ADReal> & _energy_per_particle_te_factor;",
         "const bool _molar_energy_state;",
         "const bool _physical_eV_state;",
     ),
     "physics_app/src/fvbcs/PhysicsFVElectronGroundedSheathEnergyBC.C": (
+        '"energy_per_particle_te_factor",',
+        '"2.0",',
+        '_energy_per_particle_te_factor(getFunctor<ADReal>("energy_per_particle_te_factor"))',
+        "energy_per_particle_te_factor * electron_temperature_eV + effective_drop_V",
         '"molar_energy_state",',
         '"physical_eV_state",',
         "if (_molar_energy_state && _physical_eV_state)",
@@ -47,6 +52,20 @@ REQUIRED: dict[str, tuple[str, ...]] = {
         "const ADReal primary_particle_flux_molar =",
         "return primary_particle_flux_molar *",
         "PhysicsGroundedElectronSheath::primaryEnergyFluxHat(",
+    ),
+    "physics_app/include/fvbcs/PhysicsGroundedElectronSheathFlux.h": (
+        "const ADReal & energy_per_particle_te_factor",
+        "energy_per_particle_te_factor * electron_temperature_eV + effective_drop_V",
+    ),
+    "physics_app/include/fvkernels/PhysicsFVElectronEnergyJouleHeating.h": (
+        "const bool _normalized_state;",
+        "molar_eV:",
+    ),
+    "physics_app/src/fvkernels/PhysicsFVElectronEnergyJouleHeating.C": (
+        'MooseEnum("normalized physical_eV molar_eV", "normalized")',
+        '_normalized_state(getParam<MooseEnum>("state_form") == "normalized")',
+        "if (_normalized_state)",
+        "molar_eV mode returns eV mol/(m^3 s)",
     ),
 }
 

@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "experiment_id": "2d-icp-poisson-experiment",
+  "status": "STABLE_REUSABLE_BASELINE",
+  "parent_simple_case_id": "electron-diffusion-energy-experiment",
+  "scientific_scope": {
+    "solved_equations": [
+      "electron particle continuity with diffusion only",
+      "conservative electron-energy density with diffusion only",
+      "Poisson potential from frozen positive background and solved electron density"
+    ],
+    "poisson": "ENABLED_ONE_WAY",
+    "electrostatic_boundary": "phi=0 V on eight physical plasma surfaces; RZ x=0 symmetry axis excluded from explicit BCs",
+    "frozen_ion_number_density_m3": 10000000000000000,
+    "electrostatic_drift": "DISABLED",
+    "poisson_transport_feedback": "DISABLED",
+    "poisson_wall_feedback": "DISABLED",
+    "joule_heating": "DISABLED",
+    "electron_reactions": "DISABLED",
+    "heavy_species_evolution": "ABSENT",
+    "electron_dt_s": 1e-9,
+    "electron_steps": 4,
+    "end_time_s": 4e-9
+  },
+  "qualification": {
+    "basis": "Repository CI #596 exact-head source build; catalog/static axis-exclusion guard, physics-opt --check-input, 4-step grounded-physical-wall Poisson runtime, checker, and artifact upload all PASS.",
+    "repository_ci_number": 596,
+    "repository_ci_run": "37057351227",
+    "validated_head": "f5ce1cc40573ac0a23d7b18025de56078497f84b",
+    "source_build": "PASS",
+    "check_input": "PASS",
+    "runtime": "PASS",
+    "checker": "PASS",
+    "rz_axis_explicit_bc": "ABSENT",
+    "physical_ground_boundaries": [
+      "inlet",
+      "outlet",
+      "plasma_electrode",
+      "plasma_metal",
+      "plasma_right",
+      "plasma_cover",
+      "plasma_wafer",
+      "plasma_focus_ring"
+    ],
+    "initial_charge_integral_C": "6.4225168156111998e-20",
+    "final_charge_integral_C": "1.6984088569036e-06",
+    "final_phi_min_V": "141.64036396338",
+    "final_phi_max_V": "1758.3307368787",
+    "final_gauss_flux_charge_C": "1.6984088569036e-06",
+    "max_gauss_balance_abs_error_C": "2.2600427219520835e-18",
+    "gauss_law": "PASS"
+  }
+}

@@ -1,0 +1,119 @@
+{
+  "schema_version": 1,
+  "catalog_id": "simple-physics-case-inventory",
+  "purpose": "Code-addressable reusable starting points for constructing and reproducing 2-D ICP cases from qualified physics baselines.",
+  "selection_policy": {
+    "identity": "simple_case_id with optional semantic aliases",
+    "require_explicit_status": true,
+    "execution_rule": "Every catalog entry is a STABLE_REUSABLE_BASELINE approved as a template source."
+  },
+  "cases": [
+    {
+      "simple_case_id": "electron-diffusion-experiment",
+      "experiment_id": "2d-icp-electron-diffusion-experiment",
+      "status": "STABLE_REUSABLE_BASELINE",
+      "path": "experiments/2d-icp-electron-diffusion-experiment",
+      "test_manifest": "test.json",
+      "provenance": "provenance.json",
+      "description": "Real-QVT 2-D ICP electron particle continuity with diffusion only, fixed mean energy, table-derived diffusivity, and zero-potential thermal wall loss.",
+      "physics_layers": [
+        "electron continuity",
+        "electron diffusion",
+        "fixed mean-energy transport lookup",
+        "thermal particle wall loss"
+      ],
+      "deliberately_absent": [
+        "electrostatic drift",
+        "Poisson",
+        "electron energy evolution",
+        "electron reactions",
+        "Joule heating",
+        "heavy-species evolution"
+      ],
+      "aliases": [
+        "diffusion",
+        "electron diffusion",
+        "electron-diffusion",
+        "2d icp electron diffusion"
+      ],
+      "template": {
+        "manifest": "simple_case_template.json",
+        "input_template": "input.template.i",
+        "generated_input": "input.i"
+      }
+    },
+    {
+      "simple_case_id": "electron-diffusion-energy-experiment",
+      "experiment_id": "2d-icp-electron-diffusion-energy-experiment",
+      "status": "STABLE_REUSABLE_BASELINE",
+      "path": "experiments/2d-icp-electron-diffusion-energy-experiment",
+      "test_manifest": "test.json",
+      "provenance": "provenance.json",
+      "description": "Real-QVT 2-D ICP electron particle + electron-energy diffusion with solved mean energy, energy-dependent table lookup, and matched zero-potential thermal particle/energy wall losses.",
+      "physics_layers": [
+        "electron continuity",
+        "electron diffusion",
+        "electron energy diffusion",
+        "energy-dependent electron transport lookup",
+        "thermal particle and energy wall loss"
+      ],
+      "deliberately_absent": [
+        "electrostatic drift",
+        "Poisson",
+        "electron reactions",
+        "Joule heating",
+        "volumetric electron-energy sources",
+        "heavy-species evolution"
+      ],
+      "aliases": [
+        "diffusion energy",
+        "electron diffusion energy",
+        "electron-diffusion-energy",
+        "2d icp electron diffusion energy"
+      ],
+      "template": {
+        "manifest": "simple_case_template.json",
+        "input_template": "input.template.i",
+        "generated_input": "input.i"
+      }
+    },
+    {
+      "simple_case_id": "poisson",
+      "experiment_id": "2d-icp-poisson-experiment",
+      "status": "STABLE_REUSABLE_BASELINE",
+      "path": "experiments/2d-icp-poisson-experiment",
+      "test_manifest": "test.json",
+      "provenance": "provenance.json",
+      "description": "Real-QVT 2-D ICP electron particle + electron-energy diffusion with one-way Poisson, frozen positive background charge, grounded physical plasma surfaces, and the RZ x=0 symmetry axis excluded from BCs.",
+      "physics_layers": [
+        "electron continuity",
+        "electron diffusion",
+        "electron energy diffusion",
+        "energy-dependent electron transport lookup",
+        "thermal particle and energy wall loss",
+        "one-way Poisson",
+        "frozen positive charge background",
+        "grounded physical-wall potential boundary with symmetry axis excluded"
+      ],
+      "deliberately_absent": [
+        "electrostatic drift",
+        "Poisson transport feedback",
+        "Poisson wall-loss feedback",
+        "electron reactions",
+        "Joule heating",
+        "volumetric electron-energy sources",
+        "heavy-species evolution"
+      ],
+      "aliases": [
+        "grounded-wall-poisson",
+        "electron poisson",
+        "electron energy poisson"
+      ],
+      "template": {
+        "manifest": "simple_case_template.json",
+        "input_template": "input.template.i",
+        "generated_input": "input.i"
+      }
+    }
+  ]
+}

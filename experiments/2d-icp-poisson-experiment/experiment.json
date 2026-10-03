@@ -1,0 +1,67 @@
+{
+  "schema_version": 2,
+  "experiment_id": "2d-icp-poisson-experiment",
+  "description": "All-ground one-way Poisson layer built on the qualified electron particle + electron-energy diffusion baseline.",
+  "objective": "Add a solved electrostatic potential without yet feeding the electric field back into electron transport, so Poisson construction and charge response are isolated.",
+  "target_claims": [
+    "electron particle and electron-energy diffusion remain unchanged from the qualified energy baseline",
+    "Poisson solves from rho_q=e*(n_i,frozen-n_e) on the real ICP RZ plasma geometry",
+    "all boundaries of the plasma subdomain are grounded at phi=0 V",
+    "Poisson remains one-way: no electrostatic drift, Joule heating, or solved-potential sheath feedback"
+  ],
+  "requested_capabilities": [
+    "electron diffusion",
+    "electron energy diffusion",
+    "Poisson"
+  ],
+  "parameters": {
+    "initial_electron_density_m3": 10000000000000000,
+    "frozen_ion_number_density_m3": 10000000000000000,
+    "initial_mean_electron_energy_eV": 5.73276,
+    "relative_permittivity": 1,
+    "energy_per_particle_te_factor": 2.5,
+    "electron_dt_s": 1e-9,
+    "electron_steps": 4
+  },
+  "constraints": [
+    "real-QVT ICP RZ plasma geometry",
+    "electron particle continuity solved in log-molar form",
+    "electron energy density solved as c_epsilon in eV mol/m^3",
+    "electron particle and energy transport identical to electron-diffusion-energy-experiment",
+    "frozen positive number-density background is spatially uniform and not evolved",
+    "phi=0 V on the complete plasma-subdomain boundary",
+    "electrostatic drift disabled",
+    "Poisson-to-wall-collection feedback disabled; electron wall closures continue to use zero_phi",
+    "electron reactions disabled",
+    "Joule heating disabled",
+    "heavy-species evolution absent"
+  ],
+  "observations": [
+    "electron density profile",
+    "electron temperature profile",
+    "electron particle and energy inventories",
+    "space-charge integral",
+    "plasma potential min/max and final profile",
+    "Gauss boundary displacement-flux diagnostic",
+    "Exodus transient fields"
+  ],
+  "execution_bounds": {
+    "dt": 1e-9,
+    "end_time": 4e-9,
+    "max_steps": 4
+  },
+  "cases": [
+    {
+      "case_id": "all-ground",
+      "parameters": {
+        "ground_potential_V": 0
+      }
+    }
+  ],
+  "provenance": {
+    "parent_simple_case_id": "electron-diffusion-energy-experiment",
+    "geometry_source": "experiments/2d-icp-electron-diffusion-energy-experiment/qvt.msh",
+    "transport_source": "experiments/2d-icp-electron-diffusion-energy-experiment/electron_moments.txt"
+  },
+  "model_ref": "real_qvt_icp_electron_particle_energy_poisson"
+}

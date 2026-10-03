@@ -24,6 +24,7 @@ CANONICAL_COMMANDS = {
     "run": "prepare one canonical semantic experiment for target execution",
     "preflight": "run static parser-symbol preflight on one MOOSE input",
     "temporal-csv": "normalize transient CSV rows under an explicit temporal policy",
+    "simple-case": "inspect or create cases from qualified simple-case templates",
 }
 
 COMMANDS = {
@@ -180,6 +181,12 @@ def temporal_csv_cli(argv: list[str]) -> int:
     return 0
 
 
+def simple_case_cli(argv: list[str]) -> int:
+    from physics_harness.specification.simple_cases import cli_main
+
+    return cli_main(argv)
+
+
 def _run_commands(commands: list[list[str]]) -> int:
     for command in commands:
         result = subprocess.run(command, cwd=ROOT, check=False)
@@ -213,6 +220,7 @@ def main(argv: list[str] | None = None) -> int:
         "run": semantic_run_cli,
         "preflight": preflight_cli,
         "temporal-csv": temporal_csv_cli,
+        "simple-case": simple_case_cli,
     }
     canonical = canonical_handlers.get(args[0])
     if canonical is not None:

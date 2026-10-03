@@ -45,18 +45,20 @@ inline ADReal
 primaryEnergyFluxHat(const ADReal & n_e_hat,
                      const ADReal & mean_energy_eV,
                      const ADReal & effective_drop_V,
+                     const ADReal & energy_per_particle_te_factor,
                      const Real energy_reference_eV)
 {
   const ADReal electron_temperature_eV = electronTemperatureEV(mean_energy_eV);
   const ADReal primary_particle_flux_hat =
       primaryParticleFluxHat(n_e_hat, mean_energy_eV, effective_drop_V);
 
-  // Ahedo, Journal of Electric Propulsion 2, 2 (2023), Appendix Eqs. 73, 77, 78:
-  // for the accepted normal, electron-repelling, no-reflection branch with no
-  // electron-induced SEE or azimuthal kinetic-energy term, the sheath-edge
-  // primary-electron energy flux is Gamma_p * (2 T_e + e Delta phi).
-  // In eV per electron, e*Delta phi numerically equals Delta phi[V].
+  // The default BC functor value alpha=2 reproduces the accepted kinetic
+  // half-Maxwellian sheath-edge relation Gamma_p * (2 T_e + e Delta phi).
+  // A caller may explicitly supply another closure factor (for example 5/2
+  // in a diffusion-only transport-matched diagnostic). In eV per electron,
+  // e*Delta phi numerically equals Delta phi[V].
   return primary_particle_flux_hat *
-         (2.0 * electron_temperature_eV + effective_drop_V) / energy_reference_eV;
+         (energy_per_particle_te_factor * electron_temperature_eV + effective_drop_V) /
+         energy_reference_eV;
 }
 } // namespace PhysicsGroundedElectronSheath

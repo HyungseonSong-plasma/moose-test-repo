@@ -33,6 +33,7 @@ class MooseObjectContract:
     path: str
     type_name: str | None
     parameters: tuple[str, ...] = ()
+    parameter_values: tuple[tuple[str, str], ...] = ()
     presence: str = PRESENCE_REQUIRED
     reason: str | None = None
     source: str | None = None
@@ -42,6 +43,7 @@ class MooseObjectContract:
 class MooseAssignmentContract:
     path: str
     name: str
+    value: str | None = None
     presence: str = PRESENCE_REQUIRED
     reason: str | None = None
     source: str | None = None
@@ -118,6 +120,15 @@ def _validate_contract(contract: MooseInputContract) -> None:
             identity=f"object {item.object_id}",
             reason=item.reason,
         )
+        binding_names = [name for name, _ in item.parameter_values]
+        duplicate_bindings = sorted(
+            name for name, count in Counter(binding_names).items() if count > 1
+        )
+        if duplicate_bindings:
+            raise MooseInputContractError(
+                f"object {item.object_id} has duplicate parameter bindings: "
+                + ", ".join(duplicate_bindings)
+            )
 
     assignment_keys = [(item.path, item.name) for item in contract.assignments]
     duplicate_assignments = sorted(
@@ -201,6 +212,13 @@ def audit_case_ir(case: Any) -> MooseInputAudit:
             mutated.append(
                 f"{object_id}:parameters:{expected_parameters!r}->{actual_parameters!r}"
             )
+        actual_parameter_values = dict(actual.parameters)
+        for name, expected_value in expected.parameter_values:
+            actual_value = actual_parameter_values.get(name)
+            if actual_value != expected_value:
+                mutated.append(
+                    f"{object_id}:parameter:{name}:{expected_value!r}->{actual_value!r}"
+                )
 
     expected_assignments = {
         (item.path, item.name): item for item in contract.assignments
@@ -210,6 +228,9 @@ def audit_case_ir(case: Any) -> MooseInputAudit:
     ]
     actual_assignment_counts = Counter(actual_assignment_keys)
     actual_assignment_set = set(actual_assignment_keys)
+    actual_assignment_values = {
+        (item.path, item.name): item.value for item in assignments
+    }
 
     for key, count in sorted(actual_assignment_counts.items()):
         if count > 1:
@@ -226,6 +247,12 @@ def audit_case_ir(case: Any) -> MooseInputAudit:
             missing.append(identity)
         elif expected.presence == PRESENCE_FORBIDDEN and present:
             unexpected.append(f"forbidden:{identity}")
+        elif present and expected.value is not None:
+            actual_value = actual_assignment_values[(path, name)]
+            if actual_value != expected.value:
+                mutated.append(
+                    f"{identity}:{expected.value!r}->{actual_value!r}"
+                )
 
     status = "PASS" if not (missing or unexpected or mutated) else "FAIL"
     return MooseInputAudit(
@@ -411,6 +438,118 @@ def audit_generated_input(case: Any, text: str) -> MooseInputAudit:
     )
 
 
+
+def audit_declared_input(contract: MooseInputContract, text: str) -> MooseInputAudit:
+    """Audit existing rendered MOOSE input against a semantic contract.
+
+    This migration API does not require MooseCaseIR and does not reject
+    unmanaged paths. Declared semantic objects fail closed while unrelated
+    input remains outside the contract.
+    """
+    _validate_contract(contract)
+    try:
+        doc = MooseInput(text)
+    except MooseInputError as exc:
+        return MooseInputAudit(
+            status="FAIL",
+            stage="DECLARED_REPARSE",
+            mutated=(f"parse_error:{exc}",),
+        )
+
+    counts = Counter(block.path for block in doc.blocks)
+    missing: list[str] = []
+    unexpected: list[str] = []
+    mutated: list[str] = []
+
+    for item in contract.objects:
+        count = counts[item.path]
+        if item.presence == PRESENCE_FORBIDDEN:
+            if count:
+                unexpected.append(f"forbidden:{item.object_id}")
+            continue
+        if count == 0:
+            if item.presence == PRESENCE_REQUIRED:
+                missing.append(item.object_id)
+            continue
+        if count != 1:
+            mutated.append(f"{item.object_id}:duplicate_path:{count}")
+            continue
+
+        try:
+            actual_parameters = _direct_parameters(text, item.path)
+        except (MooseInputError, MooseInputContractError) as exc:
+            mutated.append(f"{item.object_id}:parameter_parse:{exc}")
+            continue
+        actual_type = actual_parameters.pop("type", None)
+        if item.type_name is not None and actual_type != item.type_name:
+            mutated.append(
+                f"{item.object_id}:type:{item.type_name!r}->{actual_type!r}"
+            )
+        for name in item.parameters:
+            if name not in actual_parameters:
+                missing.append(f"{item.object_id}:parameter:{name}")
+        for name, expected_value in item.parameter_values:
+            actual_value = actual_parameters.get(name)
+            if actual_value != expected_value:
+                mutated.append(
+                    f"{item.object_id}:parameter:{name}:"
+                    f"{expected_value!r}->{actual_value!r}"
+                )
+
+    root_parameters: dict[str, str] | None = None
+    for item in contract.assignments:
+        identity = f"assignment:{item.path or '<root>'}/{item.name}"
+        if item.path:
+            count = counts[item.path]
+            if count == 0:
+                present = False
+                actual_value = None
+            elif count != 1:
+                mutated.append(f"{identity}:duplicate_path:{count}")
+                continue
+            else:
+                try:
+                    params = _direct_parameters(text, item.path)
+                except (MooseInputError, MooseInputContractError) as exc:
+                    mutated.append(f"{identity}:parameter_parse:{exc}")
+                    continue
+                present = item.name in params
+                actual_value = params.get(item.name)
+        else:
+            if root_parameters is None:
+                try:
+                    root_parameters = _root_parameters(text)
+                except MooseInputContractError as exc:
+                    mutated.append(f"<root>:parameter_parse:{exc}")
+                    root_parameters = {}
+            present = item.name in root_parameters
+            actual_value = root_parameters.get(item.name)
+
+        if item.presence == PRESENCE_REQUIRED and not present:
+            missing.append(identity)
+        elif item.presence == PRESENCE_FORBIDDEN and present:
+            unexpected.append(f"forbidden:{identity}")
+        elif present and item.value is not None and actual_value != item.value:
+            mutated.append(f"{identity}:{item.value!r}->{actual_value!r}")
+
+    status = "PASS" if not (missing or unexpected or mutated) else "FAIL"
+    return MooseInputAudit(
+        status=status,
+        stage="DECLARED_REPARSE",
+        missing=tuple(sorted(set(missing))),
+        unexpected=tuple(sorted(set(unexpected))),
+        mutated=tuple(sorted(set(mutated))),
+    )
+
+
+def require_declared_input_contract(contract: MooseInputContract, text: str) -> None:
+    result = audit_declared_input(contract, text)
+    if result.status != "PASS":
+        raise MooseInputContractError(
+            f"declared input contract violation: {result.to_dict()}"
+        )
+
+
 def require_case_ir_contract(case: Any) -> None:
     result = audit_case_ir(case)
     if result.status != "PASS":
@@ -461,6 +600,7 @@ def self_test() -> int:
                 path="FVKernels/u_diffusion",
                 type_name="FVDiffusion",
                 parameters=("block", "coeff", "variable"),
+                parameter_values=(("variable", "u"), ("coeff", "D")),
             ),
         ),
         assignments=(
@@ -497,6 +637,12 @@ def self_test() -> int:
         rendered = emit_moose_input(case)
         if audit_generated_input(case, rendered).status != "PASS":
             raise AssertionError("positive generated-input control failed")
+        if audit_declared_input(contract, rendered).status != "PASS":
+            raise AssertionError("direct declared-input control failed")
+        rebound = rendered.replace("    coeff = D\n", "    coeff = WRONG\n", 1)
+        direct_rebound = audit_declared_input(contract, rebound)
+        if direct_rebound.status != "FAIL":
+            raise AssertionError("direct semantic parameter mutation was not rejected")
 
         dropped = MooseCaseIR(
             case_id=case.case_id,
@@ -672,9 +818,11 @@ __all__ = [
     "MooseInputContractError",
     "MooseObjectContract",
     "audit_case_ir",
+    "audit_declared_input",
     "audit_generated_input",
     "input_contract_manifest",
     "require_case_ir_contract",
+    "require_declared_input_contract",
     "require_generated_input_contract",
     "self_test",
 ]

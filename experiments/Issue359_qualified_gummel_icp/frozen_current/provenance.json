@@ -1,0 +1,58 @@
+{
+  "baseline": {
+    "electron_steps_total": 4,
+    "electron_substeps": 4,
+    "final_time_s": 2.2660316009047157e-10,
+    "heavy_steps": 1,
+    "normalization_removed": true,
+    "response_mode": "graph",
+    "response_radius": 1,
+    "volumetric_chemistry": "DISABLED"
+  },
+  "bootstrap_source": {
+    "artifact": "issue351-frozen-heavy-driver-full",
+    "issue": 351,
+    "role": "one-time construction seed only",
+    "workflow_run": 36496470116
+  },
+  "files": {
+    "electron_sub.i": "b34d9f4edfba8747abb77d00b8165f3c9e46fc05eaac2d62d3296e608bf894f0",
+    "gummel_driver.i": "3e8b1ebd8a501ba32990972b3e7321a9daaa40f029e04dbee423441287d17f83",
+    "input.i": "2fd4358c8c97ab270f69e771b4f275023a520e510ada774859fb605bf2f1e4a9",
+    "o2_elastic.txt": "1e258e59acbd7cafdaa6b6f5c0ac0ac9fb593db73064b3263c3a306c60a97492",
+    "poisson_sub.i": "0ec438a87c3f8bd8fe64ed8353de69f192f23df8487d7eb3c681fffbda56c390"
+  },
+  "generator_commit": "cd7da42696e15986134ea59779d19e91a0290792",
+  "input_audit_status": "PASS",
+  "issue": 359,
+  "meaning": "Canonical construction input bundle; not a runtime restart state.",
+  "repo_dependencies": {
+    "electron_moments": {
+      "path": "experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt",
+      "sha256": "994f6b1deece3c53be7fb3e7f9526555d0f9314fd58749bea6346639f08aa387"
+    },
+    "heavy_transport": {
+      "path": "physics_app/ci/plasma_closures_oxygen_transport.txt",
+      "sha256": "2fa7988c79f6ea23ebdd50e6d1d7fc5018dc8854a27459511ec95c94ebe7ff3d"
+    },
+    "qvt_mesh": {
+      "path": "experiments/Issue91_real_qvt_r3/r3_e0/qvt.msh",
+      "sha256": "a98521af2c106137f9635fe7e2c5ba9b0fd408e17c62eb7c6d3f7c1fff65a03e"
+    }
+  },
+  "schema_version": 1,
+  "status": "FROZEN_CURRENT",
+  "prebuilt_runtime": {
+    "workflow_run": 37009743163,
+    "image": "ghcr.io/hyungseonsong-plasma/physics-jit-runtime@sha256:2460cf70922490b26412345a09a67364e8b32fbd5310cd25efa5415b12486cf3",
+    "runtime_profile": "moose+mpi+ad_fparser_jit",
+    "physics_source_manifest_sha256": "a9654d344e9c60e48992165bc855b154707ecf2e659e4428117e8f6ae8fdba3b",
+    "producer_repository_sha": "1bb470bc770c32694595605b4f27dc3a3a89ef46",
+    "build_base": "ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008",
+    "consumer_identity": "host_uid_gid",
+    "check_input_smoke": "PASS",
+    "adparsed_jit_runtime_check": "PASS",
+    "build_once_consume_without_recompile": true,
+    "scientific_semantics_changed": false
+  }
+}

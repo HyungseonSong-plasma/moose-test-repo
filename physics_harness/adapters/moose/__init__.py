@@ -9,6 +9,7 @@ from .input_contract import (
     MooseInputContractError,
     MooseObjectContract,
     audit_case_ir,
+    audit_declared_input,
     audit_generated_input,
     input_contract_manifest,
 )
@@ -27,6 +28,6 @@ __all__ = [
     "MooseAssignment", "MooseAssignmentContract", "MooseBlock", "MooseCaseIR",
     "MooseInputAudit", "MooseInputContract", "MooseInputContractError",
     "MooseLoweringError", "MooseObjectContract", "MooseTargetIR",
-    "audit_case_ir", "audit_generated_input", "emit_moose_input",
+    "audit_case_ir", "audit_declared_input", "audit_generated_input", "emit_moose_input",
     "input_contract_manifest", "lower_execution_plan",
 ]

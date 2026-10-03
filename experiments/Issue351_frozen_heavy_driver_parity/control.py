@@ -98,6 +98,33 @@ def _remove_exec_line(text: str, name: str) -> str:
     )
 
 
+def _canonicalize_retired_action_options(fast: str) -> str:
+    """Drop retired syntax that is semantics-preserving under the current Action.
+
+    The historical qualified fast-owner input carried:
+      * poisson_multiapp_type = TransientMultiApp, now a fixed Action invariant;
+      * electron_state_variables, which was descriptive and never consumed.
+
+    Removing these lines changes no equations, transfers, solver settings, or
+    fixed-point semantics and lets the historical physics run on the simplified
+    current Action API.
+    """
+    text = _remove_exec_line(fast, "poisson_multiapp_type")
+    text = _remove_exec_line(text, "electron_state_variables")
+    text = _remove_exec_line(text, "poisson_transformed_variables")
+    text = _remove_exec_line(text, "no_restore")
+    if "poisson_potential_variable" not in text:
+        anchor = "    poisson_input_file = poisson_sub.i\n"
+        if text.count(anchor) != 1:
+            raise RuntimeError("historical Poisson input-file anchor changed")
+        text = text.replace(
+            anchor,
+            anchor + "    poisson_potential_variable = potential_plasma\n",
+            1,
+        )
+    return text
+
+
 def _electron_only(fast: str) -> str:
     """Remove only fixed-point/Gummel ownership from the qualified fast app."""
     text = mb.remove_block(fast, "GummelIteration")
@@ -211,15 +238,10 @@ def _driver_input(fast: str) -> str:
 
 [GummelIteration]
   [electron_poisson]
-    electron_multiapp = electron
     electron_input_file = electron_sub.i
-    electron_multiapp_type = TransientMultiApp
 
     poisson_multiapp = poisson
     poisson_input_file = poisson_sub.i
-    poisson_multiapp_type = TransientMultiApp
-
-    electron_state_variables = 'log_e n_epsilon'
 
     electron_density_variable = log_e
     poisson_electron_density_variable = log_e_frozen
@@ -245,12 +267,8 @@ def _driver_input(fast: str) -> str:
     electron_to_parent_variables =
       'electron_density_out mean_energy_out'
 
-    poisson_transformed_variables = 'potential_plasma'
     relaxation_factor = 0.45
-    no_restore = true
-
     manage_convergence = true
-    convergence_name = gummel_delta_phi
     delta_phi_postprocessor = fp_delta_phi_max
     delta_phi_abs_tol = {DPHI_TOL:.17g}
   []
@@ -342,8 +360,16 @@ def build(horizon: str, clean: bool = True) -> None:
     _copy_case(src, baseline)
     _copy_case(src, trial)
 
-    baseline_fast = (baseline / "fast_sub.i").read_text(encoding="utf-8")
-    trial_fast = (trial / "fast_sub.i").read_text(encoding="utf-8")
+    baseline_fast = _canonicalize_retired_action_options(
+        (baseline / "fast_sub.i").read_text(encoding="utf-8")
+    )
+    trial_fast = _canonicalize_retired_action_options(
+        (trial / "fast_sub.i").read_text(encoding="utf-8")
+    )
+
+    # Canonicalize only retired/no-op Action syntax in the reference lane. The
+    # physical equations, transfers, solver settings, and qualified topology are unchanged.
+    (baseline / "fast_sub.i").write_text(baseline_fast, encoding="utf-8")
 
     # In the trial, fast_sub.i keeps the exact outer interface but becomes the driver.
     (trial / "electron_sub.i").write_text(_electron_only(trial_fast), encoding="utf-8")
@@ -393,6 +419,11 @@ def p0(horizon: str) -> None:
 
     assert "[GummelIteration]" in fast_a
     assert "electron_input_file" not in fast_a
+    assert "poisson_multiapp_type" not in fast_a
+    assert "electron_state_variables" not in fast_a
+    assert "poisson_transformed_variables" not in fast_a
+    assert "no_restore" not in fast_a
+    assert "poisson_potential_variable = potential_plasma" in fast_a
     assert "fixed_point_algorithm = 'steffensen'" in fast_a
     assert "transformed_variables = 'potential_from_poisson'" in fast_a
 
@@ -608,8 +639,12 @@ def run_pair(horizon: str, pair: str) -> dict[str, object]:
         "runs": runs,
         "guard": (
             "Heavy parent input and Poisson input are byte-identical. Both lanes use the "
-            "qualified PlasmaClosures composition. The controlled change is Gummel ownership: "
-            "fast/electron owner versus solve=false dedicated driver with sibling electron/Poisson."
+            "qualified PlasmaClosures composition. Historical fast-owner syntax is canonicalized "
+            "only by removing the no-op electron_state_variables line and options now fixed by "
+            "the Action contract (TransientMultiApp, no_restore=true, and transforming the "
+            "configured Poisson potential). The controlled physical change is "
+            "Gummel ownership: fast/electron owner versus solve=false dedicated driver with "
+            "sibling electron/Poisson."
         ),
     }
     results = _result_root(horizon)

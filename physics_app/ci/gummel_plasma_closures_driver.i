@@ -59,25 +59,17 @@
 
 [GummelIteration]
   [electron_poisson]
-    electron_multiapp = electron
     electron_input_file = gummel_plasma_closures_heavy_electron.i
 
     poisson_multiapp = poisson
     poisson_input_file = gummel_plasma_closures_heavy_poisson.i
 
-    # Core sibling Gummel state.
-    electron_density_variable = n_e
-    poisson_electron_density_variable = n_e
-    poisson_potential_variable = phi
-    electron_potential_variable = phi
+    # Core sibling Gummel n_e/phi names use the Action defaults.
 
     # Route potential through the driver so driver-level Steffensen transforms
     # the iterate before the next electron solve.
     potential_transfer_mode = through_parent
     parent_potential_variable = phi_converged
-
-    electron_to_poisson_source_variables = 'mean_en'
-    electron_to_poisson_variables = 'mean_en'
 
     # Frozen heavy thermodynamic snapshot -> electron closure.
     parent_to_electron_source_variables = 'T_g_frozen p_gas_frozen'
@@ -92,9 +84,7 @@
     parent_to_poisson_variables = 'rho_from_heavy w_O2p_from_heavy w_Om_from_heavy w_Op_from_heavy'
 
     # phi is returned automatically through parent_potential_variable.
-    poisson_transformed_variables = 'phi'
     relaxation_factor = 0.45
-    no_restore = true
 
     # Structural CI fixture. Production cases may enable DeltaPhi convergence
     # once the driver-level delta-phi postprocessor is supplied.

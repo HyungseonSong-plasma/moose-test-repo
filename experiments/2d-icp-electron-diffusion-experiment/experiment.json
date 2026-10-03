@@ -1,0 +1,63 @@
+{
+  "schema_version": 2,
+  "experiment_id": "2d-icp-electron-diffusion-experiment",
+  "description": "Reusable minimal real-QVT 2-D ICP electron-particle diffusion diagnostic for isolating geometry, transport-table, and thermal wall-loss behavior before adding drift, Poisson, reactions, or electron-energy evolution.",
+  "objective": "Establish a reusable 2-D ICP electron-only diffusion baseline with fixed mean electron energy and table-derived transport.",
+  "target_claims": [
+    "electron particle diffusion runs on the real ICP RZ plasma geometry without electrostatic coupling",
+    "thermal wall loss at zero sheath potential depletes electron inventory",
+    "fixed mean electron energy drives a constant diffusivity through the production transport-table lookup path"
+  ],
+  "parameters": {
+    "initial_electron_density_m3": 10000000000000000,
+    "fixed_mean_electron_energy_eV": 5.73276,
+    "gas_pressure_Pa": 1.333223684,
+    "gas_temperature_K": 300,
+    "electron_dt_s": 1e-9,
+    "electron_steps": 4
+  },
+  "constraints": [
+    "real-QVT ICP RZ plasma geometry",
+    "electron energy equation disabled",
+    "electron mean energy fixed at 5.73276 eV",
+    "electron diffusivity obtained from electron_moments.txt through PhysicsElectronClosureMaterial",
+    "electrostatic drift disabled",
+    "Poisson disabled",
+    "electron reactions disabled",
+    "heavy-species equations absent",
+    "all named plasma boundaries use thermal electron collection with sheath potential fixed to 0 V"
+  ],
+  "observations": [
+    "electron density profile",
+    "electron inventory",
+    "table-derived electron diffusivity",
+    "fixed mean electron energy",
+    "thermal wall particle loss",
+    "Exodus transient field output"
+  ],
+  "execution_bounds": {
+    "dt": 1e-9,
+    "end_time": 4e-9,
+    "max_steps": 4
+  },
+  "cases": [
+    {
+      "case_id": "baseline",
+      "parameters": {
+        "initial_electron_density_m3": 10000000000000000,
+        "fixed_mean_electron_energy_eV": 5.73276
+      },
+      "constraints": [
+        "no electric field or volumetric source"
+      ]
+    }
+  ],
+  "provenance": {
+    "purpose": "cross-issue reusable 2-D ICP troubleshooting baseline",
+    "geometry_source": "experiments/Issue91_real_qvt_r3/r3_e0/qvt.msh",
+    "geometry_sha256": "a98521af2c106137f9635fe7e2c5ba9b0fd408e17c62eb7c6d3f7c1fff65a03e",
+    "transport_source": "experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt",
+    "transport_sha256": "994f6b1deece3c53be7fb3e7f9526555d0f9314fd58749bea6346639f08aa387"
+  },
+  "model_ref": "real_qvt_icp_electron_particle_diffusion"
+}

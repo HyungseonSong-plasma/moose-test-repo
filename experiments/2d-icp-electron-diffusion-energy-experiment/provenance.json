@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "experiment_id": "2d-icp-electron-diffusion-energy-experiment",
+  "status": "STABLE_REUSABLE_BASELINE",
+  "scientific_scope": {
+    "solved_equations": [
+      "electron particle continuity with diffusion only",
+      "conservative electron-energy density with diffusion only"
+    ],
+    "initial_electron_density_m3": 10000000000000000,
+    "initial_mean_electron_energy_eV": 5.73276,
+    "mean_energy_ownership": "derived dynamically as c_epsilon/c_e",
+    "gas_pressure_Pa": 1.333223684,
+    "gas_temperature_K": 300,
+    "poisson": "DISABLED",
+    "electrostatic_drift": "DISABLED",
+    "electron_energy_equation": "ENABLED_DIFFUSION_ONLY",
+    "joule_heating": "DISABLED",
+    "volumetric_energy_sources": "DISABLED",
+    "electron_reactions": "DISABLED",
+    "heavy_species": "ABSENT",
+    "wall_loss": "PhysicsFVElectronGroundedSheathEnergyBC with zero potential and functor-configured energy_per_particle_te_factor=2.5; particle thermal collection is unchanged",
+    "electron_dt_s": 1e-9,
+    "electron_steps": 4,
+    "end_time_s": 4e-9,
+    "energy_transport_factor": 1.6666666666666667,
+    "energy_per_particle_te_factor": 2.5,
+    "wall_loss_normalized_ratio": 1.6666666666666667
+  },
+  "dependencies": {
+    "qvt_mesh": {
+      "source": "experiments/Issue91_real_qvt_r3/r3_e0/qvt.msh",
+      "sha256": "a98521af2c106137f9635fe7e2c5ba9b0fd408e17c62eb7c6d3f7c1fff65a03e",
+      "role": "frozen copy for self-contained diagnostic execution"
+    },
+    "electron_moments": {
+      "source": "experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt",
+      "sha256": "994f6b1deece3c53be7fb3e7f9526555d0f9314fd58749bea6346639f08aa387",
+      "role": "production reduced mobility/diffusion lookup table"
+    }
+  },
+  "reuse_trigger": "Use after electron-diffusion-experiment passes when the next question is whether solved electron energy and energy-dependent transport remain stable before adding electric-field coupling.",
+  "stabilization_evidence": {
+    "qualification_basis": "Exact-head source build and real runtime compared the same configurable PhysicsFVElectronGroundedSheathEnergyBC at alpha=2.0 and alpha=2.5 on the diffusion-only ICP RZ baseline.",
+    "repository_ci_run": "37043442222",
+    "repository_ci_number": 571,
+    "validated_head": "36000ea5498535598c92af113a7e46a40494fcec",
+    "source_build": "PASS",
+    "contract_self_test": "PASS",
+    "check_input": "PASS for alpha=2.0 and alpha=2.5",
+    "runtime": "PASS for alpha=2.0 and alpha=2.5",
+    "kinetic_2Te_profile_te_min_eV": "3.6897009299213002",
+    "kinetic_2Te_profile_te_max_eV": "3.8453167929391001",
+    "kinetic_2Te_overshoot_eV": "0.02347679293910021",
+    "matched_5over2Te_profile_te_min_eV": "3.5089408650343001",
+    "matched_5over2Te_profile_te_max_eV": "3.8218386527941002",
+    "matched_5over2Te_overshoot_eV": "-1.347205899726589e-06",
+    "profile_te_linf_difference_eV": "0.2129232999535997",
+    "profile_te_rms_difference_eV": "0.03888635790138286",
+    "kinetic_2Te_max_energy_balance_relative_error": "1.9151720994692419e-12",
+    "matched_5over2Te_max_energy_balance_relative_error": "1.7073011296552086e-12",
+    "conclusion": "The 5/3 transport-matched wall closure removes the wall-tip temperature overshoot while preserving the energy balance. The alpha functor keeps the 2Te kinetic closure directly testable."
+  }
+}

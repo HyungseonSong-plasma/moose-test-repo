@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 EXPECTED_CANONICAL_COMMANDS = frozenset({
-    "compile", "plan", "lower", "run", "preflight", "temporal-csv",
+    "compile", "plan", "lower", "run", "preflight", "temporal-csv", "simple-case",
 })
 EXPECTED_LEGACY_COMMANDS = frozenset({
     "test", "test-all", "contract", "measure", "analyze", "inventory",

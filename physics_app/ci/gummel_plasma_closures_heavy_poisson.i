@@ -20,10 +20,6 @@
     type = MooseVariableFVReal
     initial_condition = 1.0e16
   []
-  [mean_en]
-    type = MooseVariableFVReal
-    initial_condition = 5.73276e16
-  []
   [rho_from_heavy]
     type = MooseVariableFVReal
     initial_condition = 1.0

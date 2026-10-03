@@ -1,0 +1,186 @@
+name: Probe Full Monolithic Plasma 1e-4 10step
+
+on:
+  pull_request:
+    branches: [main]
+    types: [synchronize]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: probe-full-monolithic-1e-4-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  full-monolithic-plasma:
+    if: github.event_name == 'pull_request' && github.head_ref == 'issue-359-qualified-gummel-icp'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    permissions:
+      contents: read
+      packages: read
+    env:
+      BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+      PROBE_DIR: experiments/2d-icp-poisson-experiment/probes/monolithic_heavy_flow_1ns
+      DT: 1e-4
+      NSTEPS: 10
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+
+      - name: Log in to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build exact-head Physics runtime
+        shell: bash
+        run: |
+          set -euxo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          docker pull "$BUILD_BASE_REF"
+          docker run --rm \
+            --entrypoint /bin/bash \
+            --user 0:0 \
+            --workdir /workspace \
+            -v "$PWD:/workspace" \
+            "$BUILD_BASE_REF" \
+            -lc '
+              set -euxo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              git config --global --add safe.directory /opt/physics_vendor/moose
+              git config --global --add safe.directory /opt/physics_vendor/crane
+              git config --global --add safe.directory /opt/physics_vendor/squirrel
+              git config --global --add safe.directory /opt/physics_vendor/zapdos
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+              make -C /workspace/physics_app -j2
+              chmod -R a+rwX /workspace/physics_app
+            '
+          test -x physics_app/physics-opt
+
+      - name: Prepare full monolithic input
+        shell: bash
+        run: |
+          set -euxo pipefail
+          rm -rf .ci-full-monolithic
+          PYTHONPATH="$PWD${PYTHONPATH:+:$PYTHONPATH}" \
+            python3 "$PROBE_DIR/prepare.py" .ci-full-monolithic/case
+          PYTHONPATH="$PWD${PYTHONPATH:+:$PYTHONPATH}" \
+            python3 "$PROBE_DIR/standardize_output.py" .ci-full-monolithic/case
+          PYTHONPATH="$PWD${PYTHONPATH:+:$PYTHONPATH}" \
+            python3 "$PROBE_DIR/enable_electric_feedback.py" .ci-full-monolithic/case
+
+          python3 - <<'PY'
+          import json
+          import os
+          import re
+          from pathlib import Path
+
+          case = Path('.ci-full-monolithic/case')
+          dt = float(os.environ['DT'])
+          nsteps = int(os.environ['NSTEPS'])
+          end_time = dt * nsteps
+
+          p = case / 'input.i'
+          text = p.read_text()
+          replacements = {
+              'dt': f'{dt:.17g}',
+              'dtmin': f'{dt:.17g}',
+              'dtmax': f'{dt:.17g}',
+              'end_time': f'{end_time:.17g}',
+              'num_steps': str(nsteps),
+          }
+          for key, value in replacements.items():
+              text, n = re.subn(
+                  rf'(?m)^\s*{re.escape(key)}\s*=\s*.*$',
+                  f'  {key} = {value}',
+                  text,
+                  count=1,
+              )
+              if n != 1:
+                  raise RuntimeError(f'failed to patch {key}: matches={n}')
+          p.write_text(text)
+
+          cp = case / 'probe_contract.json'
+          contract = json.loads(cp.read_text())
+          contract['probe'] = 'full-monolithic-live-E-10step-dt-1e-4'
+          contract['dt_s'] = dt
+          contract['num_steps'] = nsteps
+          contract['end_time_s'] = end_time
+          checks = contract.setdefault('checks', {})
+          checks['dt_1e-4_10steps'] = True
+          contract['failed_checks'] = sorted(k for k, v in checks.items() if not v)
+          contract['status'] = 'PASS' if not contract['failed_checks'] else 'FAIL'
+          cp.write_text(json.dumps(contract, indent=2, sort_keys=True) + '\n')
+          PY
+
+          test -f .ci-full-monolithic/case/input.i
+          test -f .ci-full-monolithic/case/probe_contract.json
+          test -f .ci-full-monolithic/case/electric_feedback_contract.json
+          grep -Eq '^[[:space:]]*\[log_e\][[:space:]]*$' .ci-full-monolithic/case/input.i
+          grep -Eq '^[[:space:]]*\[log_c_epsilon\][[:space:]]*$' .ci-full-monolithic/case/input.i
+          grep -Eq '^[[:space:]]*\[phi\][[:space:]]*$' .ci-full-monolithic/case/input.i
+          ! grep -Eq '^[[:space:]]*\[c_epsilon\][[:space:]]*$' .ci-full-monolithic/case/input.i
+
+      - name: Check full monolithic input
+        shell: bash
+        run: |
+          set -euxo pipefail
+          docker run --rm \
+            --entrypoint /bin/bash \
+            --user "$(id -u):$(id -g)" \
+            --workdir /workspace/.ci-full-monolithic/case \
+            -v "$PWD:/workspace" \
+            "$BUILD_BASE_REF" \
+            -lc 'source /environment && /workspace/physics_app/physics-opt --check-input -i input.i'
+
+      - name: Run 10 full monolithic steps
+        shell: bash
+        run: |
+          set -euxo pipefail
+          docker run --rm \
+            --entrypoint /bin/bash \
+            --user "$(id -u):$(id -g)" \
+            --workdir /workspace/.ci-full-monolithic/case \
+            -v "$PWD:/workspace" \
+            "$BUILD_BASE_REF" \
+            -lc '
+              set +e
+              source /environment
+              /workspace/physics_app/physics-opt -i input.i > runtime.log 2>&1
+              rc=$?
+              cat runtime.log
+              exit $rc
+            '
+          test -f .ci-full-monolithic/case/poisson.e
+          cp .ci-full-monolithic/case/poisson.e \
+             .ci-full-monolithic/full_monolithic_liveE_dt_1e-4_10step.e
+
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: full-monolithic-liveE-dt-1e-4-10step
+          path: |
+            .ci-full-monolithic/full_monolithic_liveE_dt_1e-4_10step.e
+            .ci-full-monolithic/case/probe_contract.json
+            .ci-full-monolithic/case/electric_feedback_contract.json
+            .ci-full-monolithic/case/output_schema.json
+            .ci-full-monolithic/case/input.i
+            .ci-full-monolithic/case/runtime.log
+            .ci-full-monolithic/case/poisson*.csv
+            .ci-full-monolithic/case/poisson*.e
+          if-no-files-found: warn
+          include-hidden-files: true
+          retention-days: 30

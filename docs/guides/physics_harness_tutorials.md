@@ -155,3 +155,56 @@ python3 bin/physics.py -i all
 ```
 
 The durable rule is simple: **schema-v2 owns current semantic intent; historical schema-v1 fixtures own provenance only; closure-grade runtime must use an approved governed execution surface.**
+
+## Simple-case template CLI
+
+Reusable simple cases are a code-level construction facility, not a
+conversation/menu protocol. The catalog is:
+
+```text
+experiments/simple_case_inventory.json
+```
+
+and the implementation owner is:
+
+```text
+physics_harness/specification/simple_cases.py
+```
+
+The canonical CLI is:
+
+```bash
+python3 bin/physics.py simple-case list
+python3 bin/physics.py simple-case show <selector>
+python3 bin/physics.py simple-case check
+python3 bin/physics.py simple-case template <selector> --output <input.i>
+python3 bin/physics.py simple-case create <selector> <destination>
+python3 bin/physics.py simple-case create <selector> <destination> --input <new-input.i>
+```
+
+Simple-case selection is name-based. The durable identity is the semantic
+`simple_case_id`; optional aliases must also be semantic names. Numeric selectors are
+not supported, so catalog growth never changes the meaning of an existing selector.
+
+A stable source template may scaffold a new experiment directory. The operation
+copies the qualified input template and declared immutable assets first. When
+`--input` is provided, that new input replaces the generated `input.i`
+after scaffolding. The generated `template_origin.json` records both the
+source template and optional overlay hash.
+
+Template qualification is never inherited. A generated case is runnable through
+the existing `physics test` command, but its new input must pass its own
+construction/runtime/scientific validation before promotion.
+
+Current reusable catalog:
+
+```text
+electron-diffusion-experiment         STABLE_REUSABLE_BASELINE
+electron-diffusion-energy-experiment  STABLE_REUSABLE_BASELINE
+poisson                               STABLE_REUSABLE_BASELINE
+```
+
+Planned/future cases are intentionally absent from the inventory. A case is added only
+after it becomes a qualified reusable baseline.
+
+Every inventory entry must carry `STABLE_REUSABLE_BASELINE` and a template manifest.

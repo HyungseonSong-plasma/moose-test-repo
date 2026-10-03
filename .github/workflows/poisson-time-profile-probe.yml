@@ -1,0 +1,193 @@
+name: Poisson Time Profile Probe
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: poisson-time-profile-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  time-profile:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    permissions:
+      contents: read
+      packages: read
+    env:
+      POISSON_DIR: experiments/2d-icp-poisson-experiment
+      BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Log in to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build exact-head Physics runtime
+        shell: bash
+        run: |
+          set -euxo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          docker pull "$BUILD_BASE_REF"
+          docker run --rm \
+            --entrypoint /bin/bash \
+            --user 0:0 \
+            --workdir /workspace \
+            -v "$PWD:/workspace" \
+            "$BUILD_BASE_REF" \
+            -lc '
+              set -euxo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              git config --global --add safe.directory /opt/physics_vendor/moose
+              git config --global --add safe.directory /opt/physics_vendor/crane
+              git config --global --add safe.directory /opt/physics_vendor/squirrel
+              git config --global --add safe.directory /opt/physics_vendor/zapdos
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+              make -C /workspace/physics_app -j2
+              chmod -R a+rwX /workspace/physics_app
+            '
+          test -x physics_app/physics-opt
+
+      - name: Prepare one 16 ns run with timestep profiles
+        shell: bash
+        run: |
+          set -euxo pipefail
+          rm -rf .ci-poisson-time-profile
+          cp -R "$POISSON_DIR" .ci-poisson-time-profile
+          python3 - <<'PY'
+          from pathlib import Path
+          from physics_harness.adapters.moose import parameters as mp
+
+          path = Path('.ci-poisson-time-profile/input.i')
+          text = path.read_text()
+          text = mp.upsert_parameter(text, 'Executioner', 'end_time', '16.0e-9')
+          text = mp.upsert_parameter(text, 'Executioner', 'num_steps', '16')
+          text = mp.upsert_parameter(text, 'VectorPostprocessors/final_profile', 'execute_on', "'TIMESTEP_END'")
+          text = mp.upsert_parameter(text, 'Outputs/csv', 'execute_vector_postprocessors_on', "'TIMESTEP_END'")
+          assert mp.get_parameter(text, 'Executioner', 'dt') == '1.0e-9'
+          assert mp.get_parameter(text, 'Executioner', 'dtmin') == '1.0e-9'
+          assert mp.get_parameter(text, 'Executioner', 'dtmax') == '1.0e-9'
+          assert mp.get_parameter(text, 'Executioner', 'end_time') == '16.0e-9'
+          assert mp.get_parameter(text, 'Executioner', 'num_steps') == '16'
+          path.write_text(text)
+          PY
+
+      - name: Run 16 ns profile history
+        shell: bash
+        run: |
+          set -euxo pipefail
+          docker run --rm \
+            --entrypoint /bin/bash \
+            --user "$(id -u):$(id -g)" \
+            --workdir /workspace/.ci-poisson-time-profile \
+            -v "$PWD:/workspace" \
+            "$BUILD_BASE_REF" \
+            -lc '
+              set -euxo pipefail
+              source /environment
+              /workspace/physics_app/physics-opt --check-input -i input.i
+              /workspace/physics_app/physics-opt -i input.i > runtime.log 2>&1
+            '
+          test -f .ci-poisson-time-profile/poisson.e
+
+      - name: Summarize 4 8 16 ns from the single run
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import csv
+          import json
+          import math
+
+          root = Path('.ci-poisson-time-profile')
+          files = sorted(root.glob('poisson_final_profile_*.csv'))
+          if len(files) < 16:
+              raise SystemExit(f'expected at least 16 timestep profiles, found {len(files)}')
+
+          selected = {'t4ns': files[3], 't8ns': files[7], 't16ns': files[15]}
+          result = {'profile_files': {k: v.name for k, v in selected.items()}}
+          profiles = {}
+
+          def extrema(rows, field, mode):
+              fn = max if mode == 'max' else min
+              i = fn(range(len(rows)), key=lambda j: float(rows[j][field]))
+              row = rows[i]
+              return {
+                  'value': float(row[field]),
+                  'id': int(row['id']),
+                  'x_m': float(row['x']),
+                  'y_m': float(row['y']),
+              }
+
+          for name, file in selected.items():
+              with file.open(newline='') as handle:
+                  rows = list(csv.DictReader(handle))
+              rows.sort(key=lambda row: int(row['id']))
+              profiles[name] = rows
+              result[name] = {
+                  'cells': len(rows),
+                  'phi_min': extrema(rows, 'phi', 'min'),
+                  'phi_max': extrema(rows, 'phi', 'max'),
+                  'source_max': extrema(rows, 'poisson_source_out', 'max'),
+                  'charge_max': extrema(rows, 'charge_density_out', 'max'),
+                  'electron_density_min': extrema(rows, 'electron_density', 'min'),
+              }
+
+          base_ids = [int(r['id']) for r in profiles['t4ns']]
+          base_phi = [float(r['phi']) for r in profiles['t4ns']]
+          bmin, bmax = min(base_phi), max(base_phi)
+          bspan = max(bmax-bmin, 1.0e-300)
+          bnorm = [(v-bmin)/bspan for v in base_phi]
+
+          for name in ('t8ns', 't16ns'):
+              rows = profiles[name]
+              if [int(r['id']) for r in rows] != base_ids:
+                  raise SystemExit(f'cell identity mismatch for {name}')
+              vals = [float(r['phi']) for r in rows]
+              vmin, vmax = min(vals), max(vals)
+              span = max(vmax-vmin, 1.0e-300)
+              norm = [(v-vmin)/span for v in vals]
+              diffs = [a-b for a,b in zip(norm,bnorm)]
+              p0 = result['t4ns']['phi_max']
+              p1 = result[name]['phi_max']
+              result[name]['shape_vs_4ns'] = {
+                  'normalized_linf': max(abs(v) for v in diffs),
+                  'normalized_rms': math.sqrt(sum(v*v for v in diffs)/len(diffs)),
+                  'phi_peak_displacement_m': math.hypot(p1['x_m']-p0['x_m'], p1['y_m']-p0['y_m']),
+              }
+
+          out = root / 'time_profile_result.json'
+          out.write_text(json.dumps(result, indent=2) + '\n')
+          print(json.dumps(result, indent=2))
+          PY
+
+      - name: Upload 16 ns time-profile evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: poisson-time-profile-16ns
+          path: |
+            .ci-poisson-time-profile/time_profile_result.json
+            .ci-poisson-time-profile/input.i
+            .ci-poisson-time-profile/runtime.log
+            .ci-poisson-time-profile/poisson.e
+            .ci-poisson-time-profile/poisson.csv
+            .ci-poisson-time-profile/poisson_final_profile_*.csv
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 30
