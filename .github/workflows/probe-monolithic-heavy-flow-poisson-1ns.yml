@@ -1,4 +1,4 @@
-name: Probe Heavy Ion Diffusion 10x10ns
+name: Probe Heavy Ion Diffusion Timestep Matrix
 
 on:
   pull_request:
@@ -13,16 +13,21 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  heavy-ion-diffusion-10x10ns:
+  heavy-ion-diffusion-matrix:
     if: github.event_name == 'pull_request' && github.head_ref == 'issue-359-qualified-gummel-icp'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        dt: ['1e-4', '1e-5', '1e-6', '1e-7']
     permissions:
       contents: read
       packages: read
     env:
       BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
       PROBE_DIR: experiments/2d-icp-poisson-experiment/probes/monolithic_heavy_flow_1ns
+      DT: ${{ matrix.dt }}
 
     steps:
       - uses: actions/checkout@v4
@@ -74,6 +79,52 @@ jobs:
           rm -rf .ci-heavy-ion-diffusion
           PYTHONPATH="$PWD${PYTHONPATH:+:$PYTHONPATH}" \
             python3 "$PROBE_DIR/prepare_ion_diffusion.py" .ci-heavy-ion-diffusion/case
+
+          python3 - <<'PY'
+          import json
+          import os
+          import re
+          from pathlib import Path
+
+          case = Path('.ci-heavy-ion-diffusion/case')
+          dt = float(os.environ['DT'])
+          nsteps = 10
+          end_time = dt * nsteps
+
+          p = case / 'input.i'
+          text = p.read_text()
+          replacements = {
+              'dt': f'{dt:.17g}',
+              'dtmin': f'{dt:.17g}',
+              'dtmax': f'{dt:.17g}',
+              'end_time': f'{end_time:.17g}',
+              'num_steps': str(nsteps),
+          }
+          for key, value in replacements.items():
+              text, n = re.subn(
+                  rf'(?m)^\s*{re.escape(key)}\s*=\s*.*$',
+                  f'  {key} = {value}',
+                  text,
+                  count=1,
+              )
+              if n != 1:
+                  raise RuntimeError(f'failed to patch {key}: matches={n}')
+          p.write_text(text)
+
+          cp = case / 'probe_contract.json'
+          contract = json.loads(cp.read_text())
+          contract['probe'] = f"heavy-ion-diffusion-10step-dt-{os.environ['DT']}"
+          contract['dt_s'] = dt
+          contract['num_steps'] = nsteps
+          contract['end_time_s'] = end_time
+          checks = contract.setdefault('checks', {})
+          checks.pop('dt_10ns_10steps', None)
+          checks['dt_matrix_10steps'] = True
+          contract['failed_checks'] = sorted(k for k, v in checks.items() if not v)
+          contract['status'] = 'PASS' if not contract['failed_checks'] else 'FAIL'
+          cp.write_text(json.dumps(contract, indent=2, sort_keys=True) + '\n')
+          PY
+
           test -f .ci-heavy-ion-diffusion/case/input.i
           test -f .ci-heavy-ion-diffusion/case/probe_contract.json
           ! grep -Eq '^[[:space:]]*\[(log_e|c_epsilon|log_c_epsilon|phi)\][[:space:]]*$' \
@@ -111,15 +162,15 @@ jobs:
             '
           test -f .ci-heavy-ion-diffusion/case/ion_diffusion.e
           cp .ci-heavy-ion-diffusion/case/ion_diffusion.e \
-             .ci-heavy-ion-diffusion/heavy_ion_diffusion_10x10ns.e
+             ".ci-heavy-ion-diffusion/heavy_ion_diffusion_dt_${DT}_10step.e"
 
       - name: Upload evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: heavy-ion-diffusion-10x10ns
+          name: heavy-ion-diffusion-dt-${{ matrix.dt }}-10step
           path: |
-            .ci-heavy-ion-diffusion/heavy_ion_diffusion_10x10ns.e
+            .ci-heavy-ion-diffusion/heavy_ion_diffusion_dt_${{ matrix.dt }}_10step.e
             .ci-heavy-ion-diffusion/case/probe_contract.json
             .ci-heavy-ion-diffusion/case/input.i
             .ci-heavy-ion-diffusion/case/runtime.log
