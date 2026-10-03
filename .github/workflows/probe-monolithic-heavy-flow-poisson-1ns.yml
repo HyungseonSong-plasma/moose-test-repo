@@ -74,8 +74,11 @@ jobs:
           rm -rf .ci-monolithic-heavy-flow-poisson
           PYTHONPATH="$PWD${PYTHONPATH:+:$PYTHONPATH}" \
             python3 "$PROBE_DIR/prepare.py" .ci-monolithic-heavy-flow-poisson/case
+          PYTHONPATH="$PWD${PYTHONPATH:+:$PYTHONPATH}" \
+            python3 "$PROBE_DIR/standardize_output.py" .ci-monolithic-heavy-flow-poisson/case
           test -f .ci-monolithic-heavy-flow-poisson/case/input.i
           test -f .ci-monolithic-heavy-flow-poisson/case/probe_contract.json
+          test -f .ci-monolithic-heavy-flow-poisson/case/output_schema.json
 
       - name: Check monolithic input
         shell: bash
@@ -119,6 +122,7 @@ jobs:
           path: |
             .ci-monolithic-heavy-flow-poisson/monolithic_heavy_flow_poisson_1ns.e
             .ci-monolithic-heavy-flow-poisson/case/probe_contract.json
+            .ci-monolithic-heavy-flow-poisson/case/output_schema.json
             .ci-monolithic-heavy-flow-poisson/case/input.i
             .ci-monolithic-heavy-flow-poisson/case/runtime.log
             .ci-monolithic-heavy-flow-poisson/case/poisson*.csv
