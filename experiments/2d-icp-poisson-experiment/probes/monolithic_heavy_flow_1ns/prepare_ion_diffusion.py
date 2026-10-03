@@ -65,10 +65,22 @@ def main() -> int:
     case.mkdir(parents=True)
 
     text = hc.promote_current_types(DONOR_INPUT.read_text())
-    # Legacy donor materials are irrelevant to the plasma-only heavy solve and
-    # BaseMaterial is not registered in the Physics app.
+    # Legacy donor materials are irrelevant to the heavy-only plasma solve.
     if mb.has_block(text, "Materials"):
         text = mb.remove_block(text, "Materials")
+
+    # Keep exactly the plasma domain, matching the monolithic probe geometry.
+    if not mb.has_block(text, "Mesh/plasma_only"):
+        text = mb.insert_child_block(
+            text,
+            "Mesh",
+            """  [plasma_only]
+    type = BlockDeletionGenerator
+    input = bottom_electrode
+    operation = keep
+    block = plasma
+  []""",
+        )
 
     for name, value in (
         ("Q_sccm", FLOW_SCCM),
@@ -241,6 +253,7 @@ def main() -> int:
 
     checks = {
         "legacy_materials_removed": not mb.has_block(text, "Materials"),
+        "plasma_only_mesh": mb.has_block(text, "Mesh/plasma_only"),
         "electron_particle_equation_absent": (
             not mb.has_block(text, "Variables/log_e")
             and not mb.has_block(text, "FVKernels/electron_time")
