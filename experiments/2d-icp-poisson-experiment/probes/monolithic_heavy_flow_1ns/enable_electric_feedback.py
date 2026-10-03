@@ -10,17 +10,10 @@ from physics_harness.adapters.moose import parameters as mp
 from experiments.Issue359_qualified_gummel_icp import heavy_continuity as hc
 
 ALL_BOUNDARIES = (
-    "inlet",
-    "outlet",
-    "plasma_electrode",
-    "plasma_metal",
-    "plasma_right",
-    "plasma_cover",
-    "plasma_wafer",
-    "plasma_focus_ring",
+    "inlet", "outlet", "plasma_electrode", "plasma_metal",
+    "plasma_right", "plasma_cover", "plasma_wafer", "plasma_focus_ring",
 )
 BOUNDARY_LIST = "'" + " ".join(ALL_BOUNDARIES) + "'"
-
 HEAVY_CHARGES = {"O2p": 1, "Om": -1, "Op": 1}
 HEAVY_MOBILITY = {"O2p": "mu_O2p", "Om": "mu_Om", "Op": "mu_Op"}
 
@@ -42,9 +35,8 @@ def main() -> int:
         raise RuntimeError(f"missing generated monolithic input: {path}")
     text = path.read_text()
 
-    # carrier_one is a dimensionless conversion functor used by electron
-    # particle/energy drift.  Mobility itself remains owned by the electron
-    # transport lookup table; no Einstein-relation reconstruction is used.
+    # Dimensionless carrier used by electron particle/energy drift. Mobility
+    # remains the live electron_moments.txt lookup output; no Einstein closure.
     names = mp.words(mp.get_parameter(text, "FunctorMaterials/constants", "prop_names") or "")
     values = mp.words(mp.get_parameter(text, "FunctorMaterials/constants", "prop_values") or "")
     if "carrier_one" in names:
@@ -52,25 +44,18 @@ def main() -> int:
     if len(names) != len(values):
         raise RuntimeError(f"constants prop_names/prop_values mismatch: {names} / {values}")
     text = mp.upsert_parameter(
-        text,
-        "FunctorMaterials/constants",
-        "prop_names",
+        text, "FunctorMaterials/constants", "prop_names",
         "'" + " ".join((*names, "carrier_one")) + "'",
     )
     text = mp.upsert_parameter(
-        text,
-        "FunctorMaterials/constants",
-        "prop_values",
+        text, "FunctorMaterials/constants", "prop_values",
         "'" + " ".join((*values, "1.0")) + "'",
     )
 
-    # Electron particle flux:
-    #   Gamma_e^E = -mu_e(table) * c_e * E
-    # where c_e=exp(log_e).  There is deliberately no n_e*u electron advection.
+    # Electron particle flux: Gamma_e = -mu_e(table)*c_e*E - D_e(table)*grad(c_e).
+    # No neutral-gas u/v advection is introduced in the electron equation.
     text = insert_absent(
-        text,
-        "FVKernels",
-        "electron_drift",
+        text, "FVKernels", "electron_drift",
         f"""  [electron_drift]
     type = PhysicsFVLogMolarElectrostaticDrift
     variable = log_e
@@ -84,12 +69,10 @@ def main() -> int:
   []""",
     )
 
-    # The conservative electron-energy state gets its own tabulated mobility.
-    # Joule heating remains intentionally OFF in this discriminator.
+    # Consistent two-moment energy transport: use the separately tabulated
+    # electron-energy mobility. Joule heating stays OFF in this discriminator.
     text = insert_absent(
-        text,
-        "FVKernels",
-        "energy_drift",
+        text, "FVKernels", "energy_drift",
         f"""  [energy_drift]
     type = PhysicsFVElectrostaticDrift
     variable = c_epsilon
@@ -103,34 +86,27 @@ def main() -> int:
   []""",
     )
 
-    # Re-enable charged-heavy bulk E drift with the live solved potential.
+    # Charged-heavy bulk electrostatic drift using the live solved phi.
     for species in hc.CHARGED_HEAVY:
-        charge = HEAVY_CHARGES[species]
-        mobility = HEAVY_MOBILITY[species]
         text = insert_absent(
-            text,
-            "FVKernels",
-            f"{species}_electrostatic_drift",
+            text, "FVKernels", f"{species}_electrostatic_drift",
             f"""  [{species}_electrostatic_drift]
     type = PhysicsFVElectrostaticDrift
     variable = w_{species}
     potential = phi
-    mobility = {mobility}
+    mobility = {HEAVY_MOBILITY[species]}
     carrier = rho_mat
-    charge_number = {charge}
+    charge_number = {HEAVY_CHARGES[species]}
     advected_interp_method = upwind
     boundaries_to_avoid = {BOUNDARY_LIST}
     block = plasma
   []""",
         )
 
-    # Preserve mixture mass closure when charged heavy
-    # species electromigrate.
+    # Heavy mixture-mass electromigration correction, also driven by live phi.
     for species in hc.SOLVED_HEAVY:
         text = insert_absent(
-            text,
-            "FVKernels",
-            f"{species}_heavy_mass_em_correction",
+            text, "FVKernels", f"{species}_heavy_mass_em_correction",
             f"""  [{species}_heavy_mass_em_correction]
     type = PhysicsFVHeavyMassElectromigrationCorrection
     variable = w_{species}
@@ -145,16 +121,13 @@ def main() -> int:
   []""",
         )
 
-    # Evidence that the electron mobilities come from the same live lookup
-    # material used for diffusion (electron_moments.txt via electron_transport).
+    # Runtime evidence for the lookup-provided mobilities.
     for name, functor in (
         ("electron_mobility_avg", "electron_mobility"),
         ("electron_energy_mobility_avg", "electron_energy_mobility"),
     ):
         text = insert_absent(
-            text,
-            "Postprocessors",
-            name,
+            text, "Postprocessors", name,
             f"""  [{name}]
     type = ElementAverageFunctorPostprocessor
     functor = {functor}
@@ -174,7 +147,7 @@ def main() -> int:
         "electron_energy_drift_on": (
             mp.get_parameter(text, "FVKernels/energy_drift", "type")
             == "PhysicsFVElectrostaticDrift"
-            and mp.get_parameter(text, "FVKernels/energy_drift", "mobility"
+            and mp.get_parameter(text, "FVKernels/energy_drift", "mobility")
             == "electron_energy_mobility"
             and mp.get_parameter(text, "FVKernels/energy_drift", "charge_number") == "-1"
         ),
