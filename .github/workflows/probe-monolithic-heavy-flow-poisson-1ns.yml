@@ -78,9 +78,12 @@ jobs:
             python3 "$PROBE_DIR/standardize_output.py" .ci-monolithic-electric-feedback/case
           PYTHONPATH="$PWD${PYTHONPATH:+:$PYTHONPATH}" \
             python3 "$PROBE_DIR/enable_electric_feedback.py" .ci-monolithic-electric-feedback/case
+          PYTHONPATH="$PWD${PYTHONPATH:+:$PYTHONPATH}" \
+            python3 "$PROBE_DIR/log_energy_state.py" .ci-monolithic-electric-feedback/case
           test -f .ci-monolithic-electric-feedback/case/input.i
           test -f .ci-monolithic-electric-feedback/case/output_schema.json
           test -f .ci-monolithic-electric-feedback/case/electric_feedback_contract.json
+          test -f .ci-monolithic-electric-feedback/case/log_energy_state_contract.json
 
       - name: Check feedback input
         shell: bash
@@ -125,6 +128,7 @@ jobs:
             .ci-monolithic-electric-feedback/monolithic_electric_feedback_1ns.e
             .ci-monolithic-electric-feedback/case/probe_contract.json
             .ci-monolithic-electric-feedback/case/electric_feedback_contract.json
+            .ci-monolithic-electric-feedback/case/log_energy_state_contract.json
             .ci-monolithic-electric-feedback/case/output_schema.json
             .ci-monolithic-electric-feedback/case/input.i
             .ci-monolithic-electric-feedback/case/runtime.log
