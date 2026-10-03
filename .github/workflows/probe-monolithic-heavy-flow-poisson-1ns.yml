@@ -1,4 +1,4 @@
-name: Probe Monolithic Heavy Flow Poisson 20ns
+name: Probe Monolithic Electric Feedback 1ns
 
 on:
   pull_request:
@@ -9,14 +9,14 @@ permissions:
   contents: read
 
 concurrency:
-  group: probe-monolithic-heavy-flow-poisson-${{ github.event.pull_request.number || github.ref }}
+  group: probe-monolithic-electric-feedback-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
-  monolithic-heavy-flow-poisson-20ns:
+  monolithic-electric-feedback-1ns:
     if: github.event_name == 'pull_request' && github.head_ref == 'issue-359-qualified-gummel-icp'
     runs-on: ubuntu-24.04
-    timeout-minutes: 50
+    timeout-minutes: 30
     permissions:
       contents: read
       packages: read
@@ -67,117 +67,41 @@ jobs:
             '
           test -x physics_app/physics-opt
 
-      - name: Prepare all-ground monolithic 20 ns input
+      - name: Prepare monolithic live-E feedback input
         shell: bash
         run: |
           set -euxo pipefail
-          rm -rf .ci-monolithic-heavy-flow-poisson
+          rm -rf .ci-monolithic-electric-feedback
           PYTHONPATH="$PWD${PYTHONPATH:+:$PYTHONPATH}" \
-            python3 "$PROBE_DIR/prepare.py" .ci-monolithic-heavy-flow-poisson/case
+            python3 "$PROBE_DIR/prepare.py" .ci-monolithic-electric-feedback/case
           PYTHONPATH="$PWD${PYTHONPATH:+:$PYTHONPATH}" \
-            python3 "$PROBE_DIR/standardize_output.py" .ci-monolithic-heavy-flow-poisson/case
+            python3 "$PROBE_DIR/standardize_output.py" .ci-monolithic-electric-feedback/case
+          PYTHONPATH="$PWD${PYTHONPATH:+:$PYTHONPATH}" \
+            python3 "$PROBE_DIR/enable_electric_feedback.py" .ci-monolithic-electric-feedback/case
+          test -f .ci-monolithic-electric-feedback/case/input.i
+          test -f .ci-monolithic-electric-feedback/case/output_schema.json
+          test -f .ci-monolithic-electric-feedback/case/electric_feedback_contract.json
 
-          python3 - <<'PY'
-          from pathlib import Path
-          import json, re
-
-          case = Path('.ci-monolithic-heavy-flow-poisson/case')
-          p = case / 'input.i'
-          s = p.read_text()
-
-          # Enforce all electrostatic boundaries grounded.
-          all_ground = (
-              'inlet outlet plasma_electrode plasma_metal plasma_right '
-              'plasma_cover plasma_wafer plasma_focus_ring'
-          )
-          pattern = (
-              r'(\[phi_grounded_walls\].*?\n\s*type\s*=\s*FVDirichletBC.*?'
-              r'\n\s*variable\s*=\s*phi.*?\n)\s*boundary\s*=.*?(\n\s*value\s*=\s*0(?:\.0+)?)'
-          )
-          s, n = re.subn(pattern, rf"\1    boundary = '{all_ground}'\2", s, count=1, flags=re.S)
-          if n != 1:
-              raise SystemExit('failed to enforce phi_grounded_walls boundary list')
-
-          # Keep dt=1 ns, extend only to 20 ns / 20 steps.
-          exec_match = re.search(r'(\[Executioner\].*?\n\[\])', s, re.S)
-          if not exec_match:
-              raise SystemExit('missing Executioner block')
-          block = exec_match.group(1)
-          replacements = {
-              'dt': '1.0e-9',
-              'dtmin': '1.0e-9',
-              'dtmax': '1.0e-9',
-              'end_time': '2.0e-8',
-              'num_steps': '20',
-          }
-          for key, value in replacements.items():
-              block2, count = re.subn(
-                  rf'(?m)^(\s*{key}\s*=\s*).+$',
-                  rf'\g<1>{value}',
-                  block,
-                  count=1,
-              )
-              if count != 1:
-                  raise SystemExit(f'failed to set Executioner/{key}')
-              block = block2
-          s = s[:exec_match.start()] + block + s[exec_match.end():]
-          p.write_text(s)
-
-          grounded_block = re.search(r'\[phi_grounded_walls\](.*?)\n\s*\[\]', s, re.S)
-          grounded = re.search(r"boundary\s*=\s*'([^']+)'", grounded_block.group(1)).group(1).split()
-          if grounded != all_ground.split():
-              raise SystemExit(f'grounding mismatch: {grounded}')
-
-          exec_block = re.search(r'\[Executioner\](.*?)\n\[\]', s, re.S).group(1)
-          def value(name):
-              m = re.search(rf'(?m)^\s*{name}\s*=\s*([^#\s]+)', exec_block)
-              if not m:
-                  raise SystemExit(f'missing Executioner/{name}')
-              return m.group(1)
-          contract = {
-              'dt_s': float(value('dt')),
-              'end_time_s': float(value('end_time')),
-              'num_steps': int(value('num_steps')),
-              'gas_temperature_K': 300.0,
-              'inlet_flow_sccm': 20.0,
-              'outlet_pressure_Pa': 1.333223684,
-              'outlet_pressure_mTorr': 10.0,
-              'grounded_boundaries': grounded,
-              'inlet_grounded': 'inlet' in grounded,
-              'outlet_grounded': 'outlet' in grounded,
-              'bulk_drift': False,
-              'electron_joule_heating': False,
-          }
-          if contract['dt_s'] != 1.0e-9 or contract['end_time_s'] != 2.0e-8 or contract['num_steps'] != 20:
-              raise SystemExit(f'time contract mismatch: {contract}')
-          (case / 'run_contract_20ns.json').write_text(json.dumps(contract, indent=2) + '\n')
-          print(json.dumps(contract, indent=2))
-          PY
-
-          test -f .ci-monolithic-heavy-flow-poisson/case/input.i
-          test -f .ci-monolithic-heavy-flow-poisson/case/output_schema.json
-          test -f .ci-monolithic-heavy-flow-poisson/case/run_contract_20ns.json
-
-      - name: Check monolithic 20 ns input
+      - name: Check feedback input
         shell: bash
         run: |
           set -euxo pipefail
           docker run --rm \
             --entrypoint /bin/bash \
             --user "$(id -u):$(id -g)" \
-            --workdir /workspace/.ci-monolithic-heavy-flow-poisson/case \
+            --workdir /workspace/.ci-monolithic-electric-feedback/case \
             -v "$PWD:/workspace" \
             "$BUILD_BASE_REF" \
             -lc 'source /environment && /workspace/physics_app/physics-opt --check-input -i input.i'
 
-      - name: Run 20 ns monolithic transient
+      - name: Run one 1 ns live-E feedback step
         shell: bash
         run: |
           set -euxo pipefail
           docker run --rm \
             --entrypoint /bin/bash \
             --user "$(id -u):$(id -g)" \
-            --workdir /workspace/.ci-monolithic-heavy-flow-poisson/case \
+            --workdir /workspace/.ci-monolithic-electric-feedback/case \
             -v "$PWD:/workspace" \
             "$BUILD_BASE_REF" \
             -lc '
@@ -188,24 +112,24 @@ jobs:
               cat runtime.log
               exit $rc
             '
-          test -f .ci-monolithic-heavy-flow-poisson/case/poisson.e
-          cp .ci-monolithic-heavy-flow-poisson/case/poisson.e \
-             .ci-monolithic-heavy-flow-poisson/monolithic_heavy_flow_poisson_20ns.e
+          test -f .ci-monolithic-electric-feedback/case/poisson.e
+          cp .ci-monolithic-electric-feedback/case/poisson.e \
+             .ci-monolithic-electric-feedback/monolithic_electric_feedback_1ns.e
 
       - name: Upload evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: monolithic-heavy-flow-poisson-20ns
+          name: monolithic-electric-feedback-1ns
           path: |
-            .ci-monolithic-heavy-flow-poisson/monolithic_heavy_flow_poisson_20ns.e
-            .ci-monolithic-heavy-flow-poisson/case/probe_contract.json
-            .ci-monolithic-heavy-flow-poisson/case/output_schema.json
-            .ci-monolithic-heavy-flow-poisson/case/run_contract_20ns.json
-            .ci-monolithic-heavy-flow-poisson/case/input.i
-            .ci-monolithic-heavy-flow-poisson/case/runtime.log
-            .ci-monolithic-heavy-flow-poisson/case/poisson*.csv
-            .ci-monolithic-heavy-flow-poisson/case/poisson*.e
+            .ci-monolithic-electric-feedback/monolithic_electric_feedback_1ns.e
+            .ci-monolithic-electric-feedback/case/probe_contract.json
+            .ci-monolithic-electric-feedback/case/electric_feedback_contract.json
+            .ci-monolithic-electric-feedback/case/output_schema.json
+            .ci-monolithic-electric-feedback/case/input.i
+            .ci-monolithic-electric-feedback/case/runtime.log
+            .ci-monolithic-electric-feedback/case/poisson*.csv
+            .ci-monolithic-electric-feedback/case/poisson*.e
           if-no-files-found: warn
           include-hidden-files: true
           retention-days: 30
