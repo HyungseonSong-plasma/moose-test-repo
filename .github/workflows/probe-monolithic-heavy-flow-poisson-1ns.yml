@@ -1,4 +1,4 @@
-name: Probe Heavy Flow No Bulk Drift 1ns
+name: Probe Monolithic Heavy Flow Poisson 1ns
 
 on:
   pull_request:
@@ -9,11 +9,11 @@ permissions:
   contents: read
 
 concurrency:
-  group: probe-heavy-flow-no-bulk-drift-${{ github.event.pull_request.number || github.ref }}
+  group: probe-monolithic-heavy-flow-poisson-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
-  heavy-flow-no-bulk-drift-1ns:
+  monolithic-heavy-flow-poisson-1ns:
     if: github.event_name == 'pull_request' && github.head_ref == 'issue-359-qualified-gummel-icp'
     runs-on: ubuntu-24.04
     timeout-minutes: 25
@@ -22,7 +22,7 @@ jobs:
       packages: read
     env:
       BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
-      PROBE_DIR: experiments/Issue359_qualified_gummel_icp/probes/heavy_flow_no_bulk_drift_1ns
+      PROBE_DIR: experiments/2d-icp-poisson-experiment/probes/monolithic_heavy_flow_1ns
 
     steps:
       - uses: actions/checkout@v4
@@ -67,37 +67,36 @@ jobs:
             '
           test -x physics_app/physics-opt
 
-      - name: Prepare 1 ns heavy-flow no-bulk-drift probe
+      - name: Prepare atomic monolithic input
         shell: bash
         run: |
           set -euxo pipefail
-          rm -rf .ci-heavy-flow-no-bulk-drift
+          rm -rf .ci-monolithic-heavy-flow-poisson
           PYTHONPATH="$PWD${PYTHONPATH:+:$PYTHONPATH}" \
-            python3 "$PROBE_DIR/prepare.py" .ci-heavy-flow-no-bulk-drift/case
-          test -f .ci-heavy-flow-no-bulk-drift/case/probe_contract.json
+            python3 "$PROBE_DIR/prepare.py" .ci-monolithic-heavy-flow-poisson/case
+          test -f .ci-monolithic-heavy-flow-poisson/case/input.i
+          test -f .ci-monolithic-heavy-flow-poisson/case/probe_contract.json
 
-      - name: Check all staged inputs
-        shell: bash
-        run: |
-          set -euxo pipefail
-          for input in electron_sub.i poisson_sub.i gummel_driver.i input.i; do
-            docker run --rm \
-              --entrypoint /bin/bash \
-              --user "$(id -u):$(id -g)" \
-              --workdir /workspace/.ci-heavy-flow-no-bulk-drift/case \
-              -v "$PWD:/workspace" \
-              "$BUILD_BASE_REF" \
-              -lc "source /environment && /workspace/physics_app/physics-opt --check-input -i $input"
-          done
-
-      - name: Run one 1 ns coupled step
+      - name: Check monolithic input
         shell: bash
         run: |
           set -euxo pipefail
           docker run --rm \
             --entrypoint /bin/bash \
             --user "$(id -u):$(id -g)" \
-            --workdir /workspace/.ci-heavy-flow-no-bulk-drift/case \
+            --workdir /workspace/.ci-monolithic-heavy-flow-poisson/case \
+            -v "$PWD:/workspace" \
+            "$BUILD_BASE_REF" \
+            -lc 'source /environment && /workspace/physics_app/physics-opt --check-input -i input.i'
+
+      - name: Run one 1 ns monolithic step
+        shell: bash
+        run: |
+          set -euxo pipefail
+          docker run --rm \
+            --entrypoint /bin/bash \
+            --user "$(id -u):$(id -g)" \
+            --workdir /workspace/.ci-monolithic-heavy-flow-poisson/case \
             -v "$PWD:/workspace" \
             "$BUILD_BASE_REF" \
             -lc '
@@ -108,25 +107,22 @@ jobs:
               cat runtime.log
               exit $rc
             '
-          test -f .ci-heavy-flow-no-bulk-drift/case/input_out.e
-          cp .ci-heavy-flow-no-bulk-drift/case/input_out.e \
-             .ci-heavy-flow-no-bulk-drift/heavy_flow_all_ground_no_bulk_drift_1ns.e
+          test -f .ci-monolithic-heavy-flow-poisson/case/poisson.e
+          cp .ci-monolithic-heavy-flow-poisson/case/poisson.e \
+             .ci-monolithic-heavy-flow-poisson/monolithic_heavy_flow_poisson_1ns.e
 
       - name: Upload evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: heavy-flow-all-ground-no-bulk-drift-1ns
+          name: monolithic-heavy-flow-poisson-1ns
           path: |
-            .ci-heavy-flow-no-bulk-drift/heavy_flow_all_ground_no_bulk_drift_1ns.e
-            .ci-heavy-flow-no-bulk-drift/case/probe_contract.json
-            .ci-heavy-flow-no-bulk-drift/case/input.i
-            .ci-heavy-flow-no-bulk-drift/case/gummel_driver.i
-            .ci-heavy-flow-no-bulk-drift/case/electron_sub.i
-            .ci-heavy-flow-no-bulk-drift/case/poisson_sub.i
-            .ci-heavy-flow-no-bulk-drift/case/runtime.log
-            .ci-heavy-flow-no-bulk-drift/case/*.csv
-            .ci-heavy-flow-no-bulk-drift/case/*.e
-          if-no-files-found: error
+            .ci-monolithic-heavy-flow-poisson/monolithic_heavy_flow_poisson_1ns.e
+            .ci-monolithic-heavy-flow-poisson/case/probe_contract.json
+            .ci-monolithic-heavy-flow-poisson/case/input.i
+            .ci-monolithic-heavy-flow-poisson/case/runtime.log
+            .ci-monolithic-heavy-flow-poisson/case/poisson*.csv
+            .ci-monolithic-heavy-flow-poisson/case/poisson*.e
+          if-no-files-found: warn
           include-hidden-files: true
           retention-days: 30
