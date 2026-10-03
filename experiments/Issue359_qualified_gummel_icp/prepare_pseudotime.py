@@ -37,7 +37,7 @@ def main() -> int:
     p = argparse.ArgumentParser(description="Stage Issue359 four-input Gummel with independent heavy physical time and electron pseudo-time.")
     p.add_argument("case", type=Path)
     p.add_argument("--heavy-dt", type=float, default=1.0e-4)
-    p.add_argument("--heavy-steps", type=int, default=10)
+    p.add_argument("--heavy-steps", type=int, default=5)
     p.add_argument("--pseudo-dt", type=float, default=5.6650790022617894e-11)
     p.add_argument("--pseudo-steps", type=int, default=20)
     args = p.parse_args()
@@ -58,9 +58,9 @@ def main() -> int:
     shutil.copy2(ICP_SOURCE / "electron_moments.txt", case / "electron_moments.txt")
     shutil.copy2(HEAVY_TRANSPORT, case / "transport_data.txt")
 
-    # OUTER_MAIN owns physical time.  FullSolveMultiApp deliberately removes
+    # OUTER_MAIN owns physical time. FullSolveMultiApp deliberately removes
     # the TransientMultiApp requirement that the Gummel driver catch up to the
-    # parent physical clock.  Each heavy step therefore runs one complete,
+    # parent physical clock. Each heavy step therefore runs one complete,
     # independent pseudo-transient Gummel solve.
     outer_path = case / "input.i"
     outer = outer_path.read_text()
@@ -68,10 +68,16 @@ def main() -> int:
     outer = _remove_parameter_line(outer, "no_restore")
     outer = _remove_parameter_line(outer, "sub_cycling")
     outer = _set_executioner(outer, dt=args.heavy_dt, steps=args.heavy_steps)
+
+    # Persist evidence at every completed heavy step. Exodus gives a directly
+    # inspectable field snapshot; checkpoint gives restart state if the solve
+    # step is terminated by the CI step-level timeout.
     outer = mp.upsert_parameter(outer, "Outputs", "exodus", "true")
+    outer = mp.upsert_parameter(outer, "Outputs", "checkpoint", "true")
+    outer = mp.upsert_parameter(outer, "Outputs", "execute_on", "'INITIAL TIMESTEP_END'")
     outer_path.write_text(outer)
 
-    # GUMMEL_DRIVER owns pseudo-time only.  Its local problem has solve=false;
+    # GUMMEL_DRIVER owns pseudo-time only. Its local problem has solve=false;
     # each pseudo step performs the electron <-> Poisson fixed-point loop.
     driver_path = case / "gummel_driver.i"
     driver = driver_path.read_text()
@@ -93,9 +99,12 @@ def main() -> int:
         "gummel_action_present": mb.has_block(driver, "GummelIteration/electron_poisson"),
         "physical_and_pseudo_dt_independent": args.heavy_dt != args.pseudo_dt,
         "heavy_dt_is_physical_1e_4": abs(args.heavy_dt - 1.0e-4) < 1.0e-18,
-        "heavy_steps_10": args.heavy_steps == 10,
+        "heavy_steps_5": args.heavy_steps == 5,
         "pseudo_dt_is_qualified_seed": abs(args.pseudo_dt - 5.6650790022617894e-11) < 1.0e-24,
         "pseudo_steps_20": args.pseudo_steps == 20,
+        "intermediate_exodus_enabled": mp.get_parameter(outer, "Outputs", "exodus") == "true",
+        "checkpoint_enabled": mp.get_parameter(outer, "Outputs", "checkpoint") == "true",
+        "heavy_step_output_schedule": mp.get_parameter(outer, "Outputs", "execute_on") == "'INITIAL TIMESTEP_END'",
     }
     failed = sorted(k for k, v in checks.items() if not v)
     contract = {
@@ -109,6 +118,7 @@ def main() -> int:
         "outer_multiapp_type": "FullSolveMultiApp",
         "fast_state_restart_policy": "fresh full pseudo solve from staged initial fast state each heavy step",
         "electron_seed_policy": "retain frozen_current seed for architecture isolation",
+        "timeout_evidence_policy": "outer Exodus and checkpoint at every completed heavy TIMESTEP_END",
         "checks": checks,
         "failed_checks": failed,
         "status": "PASS" if not failed else "FAIL",
