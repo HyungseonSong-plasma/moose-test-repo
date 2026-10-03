@@ -1,4 +1,4 @@
-name: Probe Monolithic Electric Feedback dt Matrix
+name: Probe Heavy Ion Diffusion 10x10ns
 
 on:
   pull_request:
@@ -9,31 +9,20 @@ permissions:
   contents: read
 
 concurrency:
-  group: probe-monolithic-electric-feedback-${{ github.event.pull_request.number || github.ref }}
+  group: probe-heavy-ion-diffusion-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
-  monolithic-electric-feedback-matrix:
+  heavy-ion-diffusion-10x10ns:
     if: github.event_name == 'pull_request' && github.head_ref == 'issue-359-qualified-gummel-icp'
     runs-on: ubuntu-24.04
-    timeout-minutes: 40
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - dt: '1.0e-11'
-            tag: '1e-11'
-          - dt: '1.0e-12'
-            tag: '1e-12'
-          - dt: '1.0e-13'
-            tag: '1e-13'
+    timeout-minutes: 30
     permissions:
       contents: read
       packages: read
     env:
       BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
       PROBE_DIR: experiments/2d-icp-poisson-experiment/probes/monolithic_heavy_flow_1ns
-      CASE_ROOT: .ci-monolithic-electric-feedback-${{ matrix.tag }}
 
     steps:
       - uses: actions/checkout@v4
@@ -78,72 +67,38 @@ jobs:
             '
           test -x physics_app/physics-opt
 
-      - name: Prepare canonical log-energy live-E input at dt=${{ matrix.dt }}
+      - name: Prepare heavy-only ion diffusion input
         shell: bash
         run: |
           set -euxo pipefail
-          rm -rf "$CASE_ROOT"
+          rm -rf .ci-heavy-ion-diffusion
           PYTHONPATH="$PWD${PYTHONPATH:+:$PYTHONPATH}" \
-            python3 "$PROBE_DIR/prepare.py" "$CASE_ROOT/case"
-          PYTHONPATH="$PWD${PYTHONPATH:+:$PYTHONPATH}" \
-            python3 "$PROBE_DIR/standardize_output.py" "$CASE_ROOT/case"
-          PYTHONPATH="$PWD${PYTHONPATH:+:$PYTHONPATH}" \
-            python3 "$PROBE_DIR/enable_electric_feedback.py" "$CASE_ROOT/case"
-          PYTHONPATH="$PWD${PYTHONPATH:+:$PYTHONPATH}" \
-            python3 - "$CASE_ROOT/case" "${{ matrix.dt }}" <<'PY'
-          import json
-          import sys
-          from pathlib import Path
-          from physics_harness.adapters.moose import parameters as mp
+            python3 "$PROBE_DIR/prepare_ion_diffusion.py" .ci-heavy-ion-diffusion/case
+          test -f .ci-heavy-ion-diffusion/case/input.i
+          test -f .ci-heavy-ion-diffusion/case/probe_contract.json
+          ! grep -Eq '^[[:space:]]*\[(log_e|c_epsilon|log_c_epsilon|phi)\][[:space:]]*$' \
+            .ci-heavy-ion-diffusion/case/input.i
 
-          case = Path(sys.argv[1])
-          dt = float(sys.argv[2])
-          path = case / "input.i"
-          text = path.read_text()
-          for key in ("dt", "dtmin", "dtmax", "end_time"):
-              text = mp.upsert_parameter(text, "Executioner", key, f"{dt:.17g}")
-          text = mp.upsert_parameter(text, "Executioner", "num_steps", "1")
-          path.write_text(text)
-
-          contract_path = case / "probe_contract.json"
-          contract = json.loads(contract_path.read_text())
-          contract["probe"] = "poisson-base-plus-heavy-flow-monolithic-live-E-dt-matrix"
-          contract["dt_s"] = dt
-          contract["num_steps"] = 1
-          contract["checks"].pop("dt_1ns_one_step", None)
-          contract["checks"]["dt_matrix_one_step"] = True
-          contract["failed_checks"] = sorted(k for k, v in contract["checks"].items() if not v)
-          contract["status"] = "PASS" if not contract["failed_checks"] else "FAIL"
-          contract_path.write_text(json.dumps(contract, indent=2, sort_keys=True) + "\n")
-          if contract["failed_checks"]:
-              raise SystemExit(f"matrix contract failed: {contract['failed_checks']}")
-          PY
-          test -f "$CASE_ROOT/case/input.i"
-          test -f "$CASE_ROOT/case/output_schema.json"
-          test -f "$CASE_ROOT/case/electric_feedback_contract.json"
-          ! grep -Eq '^[[:space:]]*\[c_epsilon\][[:space:]]*$' "$CASE_ROOT/case/input.i"
-          grep -Eq '^[[:space:]]*\[log_c_epsilon\][[:space:]]*$' "$CASE_ROOT/case/input.i"
-
-      - name: Check feedback input at dt=${{ matrix.dt }}
+      - name: Check heavy-only input
         shell: bash
         run: |
           set -euxo pipefail
           docker run --rm \
             --entrypoint /bin/bash \
             --user "$(id -u):$(id -g)" \
-            --workdir "/workspace/$CASE_ROOT/case" \
+            --workdir /workspace/.ci-heavy-ion-diffusion/case \
             -v "$PWD:/workspace" \
             "$BUILD_BASE_REF" \
             -lc 'source /environment && /workspace/physics_app/physics-opt --check-input -i input.i'
 
-      - name: Run one live-E step at dt=${{ matrix.dt }}
+      - name: Run 10 heavy-ion diffusion steps
         shell: bash
         run: |
           set -euxo pipefail
           docker run --rm \
             --entrypoint /bin/bash \
             --user "$(id -u):$(id -g)" \
-            --workdir "/workspace/$CASE_ROOT/case" \
+            --workdir /workspace/.ci-heavy-ion-diffusion/case \
             -v "$PWD:/workspace" \
             "$BUILD_BASE_REF" \
             -lc '
@@ -154,24 +109,22 @@ jobs:
               cat runtime.log
               exit $rc
             '
-          test -f "$CASE_ROOT/case/poisson.e"
-          cp "$CASE_ROOT/case/poisson.e" \
-             "$CASE_ROOT/monolithic_electric_feedback_${{ matrix.tag }}_1step.e"
+          test -f .ci-heavy-ion-diffusion/case/ion_diffusion.e
+          cp .ci-heavy-ion-diffusion/case/ion_diffusion.e \
+             .ci-heavy-ion-diffusion/heavy_ion_diffusion_10x10ns.e
 
-      - name: Upload evidence dt=${{ matrix.dt }}
+      - name: Upload evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: monolithic-electric-feedback-${{ matrix.tag }}-1step
+          name: heavy-ion-diffusion-10x10ns
           path: |
-            ${{ env.CASE_ROOT }}/monolithic_electric_feedback_${{ matrix.tag }}_1step.e
-            ${{ env.CASE_ROOT }}/case/probe_contract.json
-            ${{ env.CASE_ROOT }}/case/electric_feedback_contract.json
-            ${{ env.CASE_ROOT }}/case/output_schema.json
-            ${{ env.CASE_ROOT }}/case/input.i
-            ${{ env.CASE_ROOT }}/case/runtime.log
-            ${{ env.CASE_ROOT }}/case/poisson*.csv
-            ${{ env.CASE_ROOT }}/case/poisson*.e
+            .ci-heavy-ion-diffusion/heavy_ion_diffusion_10x10ns.e
+            .ci-heavy-ion-diffusion/case/probe_contract.json
+            .ci-heavy-ion-diffusion/case/input.i
+            .ci-heavy-ion-diffusion/case/runtime.log
+            .ci-heavy-ion-diffusion/case/ion_diffusion*.csv
+            .ci-heavy-ion-diffusion/case/ion_diffusion*.e
           if-no-files-found: warn
           include-hidden-files: true
           retention-days: 30
