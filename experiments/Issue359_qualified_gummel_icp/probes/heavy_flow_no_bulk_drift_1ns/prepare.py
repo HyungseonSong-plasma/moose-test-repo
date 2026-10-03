@@ -70,7 +70,16 @@ def main() -> int:
         text['outer'] = remove_block_if_present(
             text['outer'], f'FVKernels/{species}_heavy_mass_em_correction'
         )
-    for block in ('FVKernels/electron_drift', 'FVKernels/energy_drift'):
+
+    # With electron drift disabled, retaining e*n*mu*E^2 Joule heating would
+    # represent an electric-field power channel without the corresponding
+    # bulk drift current. Disable the matched particle, energy-drift, and
+    # Joule-heating bulk terms together for this discriminator.
+    for block in (
+        'FVKernels/electron_drift',
+        'FVKernels/energy_drift',
+        'FVKernels/energy_joule',
+    ):
         text['electron'] = remove_block_if_present(text['electron'], block)
 
     # Keep the accepted surface-reaction / wall-flux contract unchanged.
@@ -117,6 +126,9 @@ def main() -> int:
         not mb.has_block(electron, 'FVKernels/electron_drift')
         and not mb.has_block(electron, 'FVKernels/energy_drift')
     )
+    checks['electron_joule_heating_off'] = not mb.has_block(
+        electron, 'FVKernels/energy_joule'
+    )
 
     # Representative accepted surface-reaction owners must remain present.
     required_surface = [
@@ -151,12 +163,13 @@ def main() -> int:
         'bulk_drift': {
             'electron_particle': False,
             'electron_energy': False,
+            'electron_joule_heating': False,
             'charged_heavy': False,
             'heavy_mass_em_correction': False,
         },
         'surface_reactions': hc.SURFACE_REACTIONS,
         'surface_sticking': hc.WALL_STICKING,
-        'surface_contract_note': 'Issue359/Issue27 wall-reaction objects retained unchanged; only bulk drift kernels removed',
+        'surface_contract_note': 'Issue359/Issue27 wall-reaction objects retained unchanged; bulk drift and its matched electron Joule-heating channel removed',
         'checks': checks,
         'status': 'PASS' if not failed else 'FAIL',
         'failed_checks': failed,
