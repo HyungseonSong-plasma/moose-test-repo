@@ -1,0 +1,127 @@
+name: Probe Heavy Flow No Bulk Drift 1ns
+
+on:
+  pull_request:
+    branches: [main]
+    types: [synchronize]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: probe-heavy-flow-no-bulk-drift-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  heavy-flow-no-bulk-drift-1ns:
+    if: github.event_name == 'pull_request' && github.head_ref == 'issue-359-qualified-gummel-icp'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    permissions:
+      contents: read
+      packages: read
+    env:
+      BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+      PROBE_DIR: experiments/Issue359_qualified_gummel_icp/probes/heavy_flow_no_bulk_drift_1ns
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+
+      - name: Log in to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build exact-head Physics runtime
+        shell: bash
+        run: |
+          set -euxo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          docker pull "$BUILD_BASE_REF"
+          docker run --rm \
+            --entrypoint /bin/bash \
+            --user 0:0 \
+            --workdir /workspace \
+            -v "$PWD:/workspace" \
+            "$BUILD_BASE_REF" \
+            -lc '
+              set -euxo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              git config --global --add safe.directory /opt/physics_vendor/moose
+              git config --global --add safe.directory /opt/physics_vendor/crane
+              git config --global --add safe.directory /opt/physics_vendor/squirrel
+              git config --global --add safe.directory /opt/physics_vendor/zapdos
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+              make -C /workspace/physics_app -j2
+              chmod -R a+rwX /workspace/physics_app
+            '
+          test -x physics_app/physics-opt
+
+      - name: Prepare 1 ns heavy-flow no-bulk-drift probe
+        shell: bash
+        run: |
+          set -euxo pipefail
+          rm -rf .ci-heavy-flow-no-bulk-drift
+          python3 "$PROBE_DIR/prepare.py" .ci-heavy-flow-no-bulk-drift/case
+          test -f .ci-heavy-flow-no-bulk-drift/case/probe_contract.json
+
+      - name: Check all staged inputs
+        shell: bash
+        run: |
+          set -euxo pipefail
+          for input in electron_sub.i poisson_sub.i gummel_driver.i input.i; do
+            docker run --rm \
+              --entrypoint /bin/bash \
+              --user "$(id -u):$(id -g)" \
+              --workdir /workspace/.ci-heavy-flow-no-bulk-drift/case \
+              -v "$PWD:/workspace" \
+              "$BUILD_BASE_REF" \
+              -lc "source /environment && /workspace/physics_app/physics-opt --check-input -i $input"
+          done
+
+      - name: Run one 1 ns coupled step
+        shell: bash
+        run: |
+          set -euxo pipefail
+          docker run --rm \
+            --entrypoint /bin/bash \
+            --user "$(id -u):$(id -g)" \
+            --workdir /workspace/.ci-heavy-flow-no-bulk-drift/case \
+            -v "$PWD:/workspace" \
+            "$BUILD_BASE_REF" \
+            -lc '
+              set -euxo pipefail
+              source /environment
+              /workspace/physics_app/physics-opt -i input.i > runtime.log 2>&1
+            '
+          test -f .ci-heavy-flow-no-bulk-drift/case/input_out.e
+          cp .ci-heavy-flow-no-bulk-drift/case/input_out.e \
+             .ci-heavy-flow-no-bulk-drift/heavy_flow_all_ground_no_bulk_drift_1ns.e
+
+      - name: Upload evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: heavy-flow-all-ground-no-bulk-drift-1ns
+          path: |
+            .ci-heavy-flow-no-bulk-drift/heavy_flow_all_ground_no_bulk_drift_1ns.e
+            .ci-heavy-flow-no-bulk-drift/case/probe_contract.json
+            .ci-heavy-flow-no-bulk-drift/case/input.i
+            .ci-heavy-flow-no-bulk-drift/case/gummel_driver.i
+            .ci-heavy-flow-no-bulk-drift/case/electron_sub.i
+            .ci-heavy-flow-no-bulk-drift/case/poisson_sub.i
+            .ci-heavy-flow-no-bulk-drift/case/runtime.log
+            .ci-heavy-flow-no-bulk-drift/case/*.csv
+            .ci-heavy-flow-no-bulk-drift/case/*.e
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 30
