@@ -72,7 +72,8 @@ jobs:
         run: |
           set -euxo pipefail
           rm -rf .ci-heavy-flow-no-bulk-drift
-          python3 "$PROBE_DIR/prepare.py" .ci-heavy-flow-no-bulk-drift/case
+          PYTHONPATH="$PWD${PYTHONPATH:+:$PYTHONPATH}" \
+            python3 "$PROBE_DIR/prepare.py" .ci-heavy-flow-no-bulk-drift/case
           test -f .ci-heavy-flow-no-bulk-drift/case/probe_contract.json
 
       - name: Check all staged inputs
