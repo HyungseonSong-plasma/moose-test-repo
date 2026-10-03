@@ -76,9 +76,55 @@ jobs:
             python3 "$PROBE_DIR/prepare.py" .ci-monolithic-heavy-flow-poisson/case
           PYTHONPATH="$PWD${PYTHONPATH:+:$PYTHONPATH}" \
             python3 "$PROBE_DIR/standardize_output.py" .ci-monolithic-heavy-flow-poisson/case
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import json, re
+
+          p = Path('.ci-monolithic-heavy-flow-poisson/case/input.i')
+          s = p.read_text()
+          all_ground = (
+              'inlet outlet plasma_electrode plasma_metal plasma_right '
+              'plasma_cover plasma_wafer plasma_focus_ring'
+          )
+          pattern = (
+              r'(\[phi_grounded_walls\].*?\n\s*type\s*=\s*FVDirichletBC.*?'
+              r'\n\s*variable\s*=\s*phi.*?\n)\s*boundary\s*=.*?(\n\s*value\s*=\s*0(?:\.0+)?)'
+          )
+          repl = rf"\1    boundary = '{all_ground}'\2"
+          s2, n = re.subn(pattern, repl, s, count=1, flags=re.S)
+          if n != 1:
+              raise SystemExit('failed to enforce phi_grounded_walls boundary list')
+          p.write_text(s2)
+
+          block = re.search(r'\[phi_grounded_walls\](.*?)\n\s*\[\]', s2, re.S)
+          if not block:
+              raise SystemExit('missing phi_grounded_walls block after enforcement')
+          m = re.search(r"boundary\s*=\s*'([^']+)'", block.group(1))
+          if not m:
+              raise SystemExit('missing grounded boundary parameter')
+          grounded = m.group(1).split()
+          expected = all_ground.split()
+          if grounded != expected:
+              raise SystemExit(f'grounding mismatch: {grounded} != {expected}')
+          if 'inlet' not in grounded or 'outlet' not in grounded:
+              raise SystemExit('inlet/outlet are not grounded')
+
+          Path('.ci-monolithic-heavy-flow-poisson/case/grounding_contract.json').write_text(
+              json.dumps({
+                  'phi_dirichlet_value_V': 0.0,
+                  'grounded_boundaries': grounded,
+                  'inlet_grounded': True,
+                  'outlet_grounded': True,
+              }, indent=2) + '\n'
+          )
+          print('Poisson all-ground enforced:', ' '.join(grounded))
+          PY
+
           test -f .ci-monolithic-heavy-flow-poisson/case/input.i
           test -f .ci-monolithic-heavy-flow-poisson/case/probe_contract.json
           test -f .ci-monolithic-heavy-flow-poisson/case/output_schema.json
+          test -f .ci-monolithic-heavy-flow-poisson/case/grounding_contract.json
 
       - name: Check monolithic input
         shell: bash
@@ -123,6 +169,7 @@ jobs:
             .ci-monolithic-heavy-flow-poisson/monolithic_heavy_flow_poisson_1ns.e
             .ci-monolithic-heavy-flow-poisson/case/probe_contract.json
             .ci-monolithic-heavy-flow-poisson/case/output_schema.json
+            .ci-monolithic-heavy-flow-poisson/case/grounding_contract.json
             .ci-monolithic-heavy-flow-poisson/case/input.i
             .ci-monolithic-heavy-flow-poisson/case/runtime.log
             .ci-monolithic-heavy-flow-poisson/case/poisson*.csv
