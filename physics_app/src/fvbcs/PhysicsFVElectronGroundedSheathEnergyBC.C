@@ -12,7 +12,8 @@ PhysicsFVElectronGroundedSheathEnergyBC::validParams()
       "Applies grounded-conductor sheath-edge primary-electron energy loss using the same "
       "collected primary population as PhysicsFVElectronGroundedSheathCollectionBC. "
       "The collected-electron energy is (5/2) T_e + Delta phi on the accepted "
-      "electron-repelling branch.");
+      "electron-repelling branch. Negative trial potential is extended with zero "
+      "effective drop for nonlinear globalization.");
 
   params.addRequiredParam<MooseFunctorName>(
       "electron_density",
@@ -79,11 +80,9 @@ PhysicsFVElectronGroundedSheathEnergyBC::computeQpResidual()
   if (raw_mean_energy_eV <= 0.0)
     mooseError("Grounded sheath energy collection requires mean electron energy > 0 eV; got ",
                raw_mean_energy_eV);
-  if (raw_phi_s_V < -PhysicsGroundedElectronSheath::negative_drop_tolerance_V)
-    mooseError("Grounded sheath energy collection is outside its validity branch: phi_s = ",
-               raw_phi_s_V,
-               " V < 0 V. Electron-attracting/inverse sheath physics requires a separate owner.");
 
+  // Nonlinear globalization extension only. Converged accepted states are checked
+  // separately for phi_s >= 0.
   const ADReal effective_drop_V = raw_phi_s_V < 0.0 ? ADReal(0.0) : phi_s_V;
 
   if (_molar_energy_state)
