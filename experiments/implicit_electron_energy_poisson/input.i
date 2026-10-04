@@ -167,7 +167,6 @@
 []
 
 [FVKernels]
-  # Electron continuity
   [electron_time]
     type = FVTimeKernel
     variable = n_e
@@ -191,7 +190,6 @@
     block = plasma
   []
 
-  # Electron energy
   [energy_time]
     type = FVTimeKernel
     variable = electron_energy
@@ -225,7 +223,6 @@
     block = plasma
   []
 
-  # Poisson: no time kernel; algebraic constraint at t^(n+1).
   [phi_diffusion]
     type = FVDiffusion
     variable = potential
@@ -398,7 +395,6 @@
   scheme = implicit-euler
   solve_type = NEWTON
 
-  # Default matrix case. Workflow overrides dt/end_time for each one-step case.
   dt = 1.0e-9
   dtmin = 1.0e-9
   dtmax = 1.0e-9
@@ -412,8 +408,8 @@
   automatic_scaling = true
 
   petsc_options = '-snes_converged_reason'
-  petsc_options_iname = '-pc_type -pc_factor_shift_type -snes_linesearch_type'
-  petsc_options_value = 'lu NONZERO bt'
+  petsc_options_iname = '-ksp_type -pc_type -pc_factor_shift_type -snes_linesearch_type'
+  petsc_options_value = 'preonly lu NONZERO bt'
 []
 
 [Outputs]
