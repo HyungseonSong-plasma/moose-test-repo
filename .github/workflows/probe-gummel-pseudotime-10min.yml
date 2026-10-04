@@ -1,0 +1,151 @@
+name: Probe Gummel Pseudotime 10min Diagnostic
+
+on:
+  pull_request:
+    branches: [main]
+    types: [synchronize]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: probe-gummel-pseudotime-10min-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gummel-pseudotime-10min:
+    if: github.event_name == 'pull_request' && github.head_ref == 'issue-359-qualified-gummel-icp'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: read
+    env:
+      BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+      CASE_DIR: .ci-gummel-pseudotime-10min/case
+      HEAVY_DT: 1e-4
+      HEAVY_STEPS: 1
+      PSEUDO_DT: 5.6650790022617894e-11
+      PSEUDO_STEPS: 20
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+
+      - name: Log in to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build exact-head Physics runtime
+        shell: bash
+        run: |
+          set -euxo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          docker pull "$BUILD_BASE_REF"
+          docker run --rm \
+            --entrypoint /bin/bash \
+            --user 0:0 \
+            --workdir /workspace \
+            -v "$PWD:/workspace" \
+            "$BUILD_BASE_REF" \
+            -lc '
+              set -euxo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              git config --global --add safe.directory /opt/physics_vendor/moose
+              git config --global --add safe.directory /opt/physics_vendor/crane
+              git config --global --add safe.directory /opt/physics_vendor/squirrel
+              git config --global --add safe.directory /opt/physics_vendor/zapdos
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+              make -C /workspace/physics_app -j2
+              chmod -R a+rwX /workspace/physics_app
+            '
+          test -x physics_app/physics-opt
+
+      - name: Stage one-heavy-step pseudotime case
+        shell: bash
+        run: |
+          set -euxo pipefail
+          rm -rf .ci-gummel-pseudotime-10min
+          PYTHONPATH="$PWD${PYTHONPATH:+:$PYTHONPATH}" \
+            python3 experiments/Issue359_qualified_gummel_icp/prepare_pseudotime.py "$CASE_DIR" \
+              --heavy-dt "$HEAVY_DT" \
+              --heavy-steps "$HEAVY_STEPS" \
+              --pseudo-dt "$PSEUDO_DT" \
+              --pseudo-steps "$PSEUDO_STEPS"
+          test -f "$CASE_DIR/input.i"
+          test -f "$CASE_DIR/gummel_driver.i"
+          test -f "$CASE_DIR/electron_sub.i"
+          test -f "$CASE_DIR/poisson_sub.i"
+
+      - name: Check four-input Gummel case
+        shell: bash
+        run: |
+          set -euxo pipefail
+          for input in input.i gummel_driver.i electron_sub.i poisson_sub.i; do
+            docker run --rm \
+              --entrypoint /bin/bash \
+              --user "$(id -u):$(id -g)" \
+              --workdir "/workspace/$CASE_DIR" \
+              -v "$PWD:/workspace" \
+              "$BUILD_BASE_REF" \
+              -lc "source /environment && /workspace/physics_app/physics-opt --check-input -i $input"
+          done
+
+      - name: Run one heavy step with 10 minute cutoff
+        timeout-minutes: 10
+        shell: bash
+        run: |
+          set -euxo pipefail
+          docker run --rm \
+            --entrypoint /bin/bash \
+            --user "$(id -u):$(id -g)" \
+            --workdir "/workspace/$CASE_DIR" \
+            -v "$PWD:/workspace" \
+            "$BUILD_BASE_REF" \
+            -lc '
+              set -o pipefail
+              source /environment
+              /workspace/physics_app/physics-opt -i input.i 2>&1 | tee runtime.log
+            '
+
+      - name: Collect partial Exodus evidence
+        if: always()
+        shell: bash
+        run: |
+          set +e
+          mkdir -p .ci-gummel-pseudotime-10min/evidence
+          find "$CASE_DIR" -maxdepth 3 -type f \( -name '*.e' -o -name '*.exo' \) -print -exec cp -n {} .ci-gummel-pseudotime-10min/evidence/ \;
+          if [[ -f "$CASE_DIR/runtime.log" ]]; then
+            cp "$CASE_DIR/runtime.log" .ci-gummel-pseudotime-10min/evidence/runtime.log
+            tail -n 300 "$CASE_DIR/runtime.log" > .ci-gummel-pseudotime-10min/evidence/runtime_tail_300.log
+          fi
+
+      - name: Upload 10 minute diagnostic evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gummel-pseudotime-10min-diagnostic
+          path: |
+            .ci-gummel-pseudotime-10min/evidence/**
+            .ci-gummel-pseudotime-10min/case/pseudo_time_contract.json
+            .ci-gummel-pseudotime-10min/case/runtime.log
+            .ci-gummel-pseudotime-10min/case/*.i
+            .ci-gummel-pseudotime-10min/case/*.json
+            .ci-gummel-pseudotime-10min/case/*.csv
+            .ci-gummel-pseudotime-10min/case/*.e
+            .ci-gummel-pseudotime-10min/case/*.exo
+            .ci-gummel-pseudotime-10min/case/checkpoint/**
+            .ci-gummel-pseudotime-10min/case/checkpoints/**
+          if-no-files-found: warn
+          include-hidden-files: true
+          retention-days: 30
