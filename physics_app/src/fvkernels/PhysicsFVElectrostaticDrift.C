@@ -36,6 +36,14 @@ PhysicsFVElectrostaticDrift::validParams()
       "physical-time potential while retaining the current nonlinear potential in the "
       "drift flux magnitude. This prevents stencil switching between Newton iterates.");
 
+  params.addParam<bool>(
+      "lag_advected_variable_to_old_time",
+      false,
+      "For transient nonlinear diagnostics, evaluate the transported scalar in the drift "
+      "flux from the previous physical-time state while retaining the current nonlinear "
+      "potential in the electric-field factor. This removes the n^{n+1}*grad(phi^{n+1}) "
+      "bilinear product without making the electrostatic field explicit.");
+
   // Match the framework FVAdvection interpolation contract.
   params += Moose::FV::advectedInterpolationParameter();
 
@@ -61,7 +69,9 @@ PhysicsFVElectrostaticDrift::PhysicsFVElectrostaticDrift(
     _carrier(getFunctor<ADReal>("carrier")),
     _charge_number(getParam<Real>("charge_number")),
     _freeze_upwind_direction_to_old_potential(
-        getParam<bool>("freeze_upwind_direction_to_old_potential"))
+        getParam<bool>("freeze_upwind_direction_to_old_potential")),
+    _lag_advected_variable_to_old_time(
+        getParam<bool>("lag_advected_variable_to_old_time"))
 {
   if (_charge_number == 0.0)
     paramError(
@@ -98,8 +108,7 @@ PhysicsFVElectrostaticDrift::computeQpResidual()
                false,
                &limiter_time);
 
-  // The physical drift flux remains fully implicit: its magnitude always uses
-  // the current nonlinear potential and current transport coefficients.
+  // The electrostatic factor stays fully implicit in all diagnostic modes.
   const ADRealVectorValue electric_field =
       -_potential.gradient(centered_face, state);
 
@@ -112,9 +121,6 @@ PhysicsFVElectrostaticDrift::computeQpResidual()
   bool elem_is_upwind;
   if (_freeze_upwind_direction_to_old_potential && _subproblem.isTransient())
   {
-    // Diagnostic mode: hold the discrete upwind stencil fixed throughout the
-    // Newton solve by selecting its direction from E^n.  Only the selector is
-    // lagged; the residual still contains E^{n+1} through drift_normal above.
     const Moose::StateArg old_time_state(1, Moose::SolutionIterationType::Time);
     const ADRealVectorValue old_electric_field =
         -_potential.gradient(centered_face, old_time_state);
@@ -132,7 +138,14 @@ PhysicsFVElectrostaticDrift::computeQpResidual()
                false,
                &limiter_time);
 
-  const ADReal transported_value = _var(transported_face, state);
+  ADReal transported_value;
+  if (_lag_advected_variable_to_old_time && _subproblem.isTransient())
+  {
+    const Moose::StateArg old_time_state(1, Moose::SolutionIterationType::Time);
+    transported_value = _var(transported_face, old_time_state);
+  }
+  else
+    transported_value = _var(transported_face, state);
 
   return carrier_face * transported_value * drift_normal;
 }
