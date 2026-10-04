@@ -18,10 +18,10 @@
  * limiter state is taken from the previous time level, while the current AD
  * solution is retained for the transported value and electrostatic field.
  *
- * For nonlinear diagnostics, the upwind selector can optionally be frozen to
- * the previous physical-time potential. This keeps the current AD drift flux
- * fully implicit while preventing the discrete upwind stencil from switching
- * between Newton iterates.
+ * Two diagnostic switches are available for nonlinear-isolation tests:
+ * - freeze_upwind_direction_to_old_potential freezes only the discrete upwind selector to E^n;
+ * - lag_advected_variable_to_old_time evaluates the transported scalar from n^n while retaining
+ *   the current nonlinear electrostatic field in the drift magnitude.
  */
 class PhysicsFVElectrostaticDrift : public FVFluxKernel
 {
@@ -37,6 +37,7 @@ protected:
   const Moose::Functor<ADReal> & _carrier;
   const Real _charge_number;
   const bool _freeze_upwind_direction_to_old_potential;
+  const bool _lag_advected_variable_to_old_time;
 
   Moose::FV::InterpMethod _advected_interp_method;
 };
