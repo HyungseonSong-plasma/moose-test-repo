@@ -16,23 +16,14 @@ PhysicsFVElectronGroundedSheathCollectionBC::validParams()
   auto params = FVQpFluxBC::validParams();
   params.addClassDescription(
       "Applies the grounded-conductor primary-electron collection law using the "
-      "plasma-side FV state. During nonlinear globalization, negative trial plasma "
-      "potential is extended with zero effective sheath drop; accepted solutions "
-      "remain subject to external branch-validity diagnostics.");
-  params.addRequiredParam<MooseFunctorName>(
-      "mean_electron_energy",
-      "Plasma-side electron mean energy [eV]. The sheath temperature is (2/3) mean energy.");
-  params.addRequiredParam<MooseFunctorName>(
-      "potential",
-      "Plasma potential [V]. This object evaluates the plasma-side element value.");
-  params.addParam<bool>(
-      "log_molar_state", false,
-      "If true, interpret the solved variable as log(c_e/[1 mol/m^3]) and return molar particle flux.");
+      "plasma-side FV state with a differentiable Newton-globalization extension near phi=0.");
+  params.addRequiredParam<MooseFunctorName>("mean_electron_energy", "Plasma-side electron mean energy [eV].");
+  params.addRequiredParam<MooseFunctorName>("potential", "Plasma potential [V].");
+  params.addParam<bool>("log_molar_state", false, "Interpret solved variable as log molar density.");
   return params;
 }
 
-PhysicsFVElectronGroundedSheathCollectionBC::
-    PhysicsFVElectronGroundedSheathCollectionBC(const InputParameters & parameters)
+PhysicsFVElectronGroundedSheathCollectionBC::PhysicsFVElectronGroundedSheathCollectionBC(const InputParameters & parameters)
   : FVQpFluxBC(parameters),
     _mean_electron_energy(getFunctor<ADReal>("mean_electron_energy")),
     _potential(getFunctor<ADReal>("potential")),
@@ -43,31 +34,22 @@ PhysicsFVElectronGroundedSheathCollectionBC::
 ADReal
 PhysicsFVElectronGroundedSheathCollectionBC::computeQpResidual()
 {
-  const auto cell =
-      _face_type == FaceInfo::VarFaceNeighbors::ELEM ? elemArg() : neighborArg();
+  const auto cell = _face_type == FaceInfo::VarFaceNeighbors::ELEM ? elemArg() : neighborArg();
   const auto state = determineState();
-
   const ADReal solved_state = uOnUSub();
   const ADReal mean_energy_eV = _mean_electron_energy(cell, state);
   const ADReal phi_s_V = _potential(cell, state);
 
-  const Real raw_mean_energy_eV = MetaPhysicL::raw_value(mean_energy_eV);
-  const Real raw_phi_s_V = MetaPhysicL::raw_value(phi_s_V);
   if (!_log_molar_state && MetaPhysicL::raw_value(solved_state) < 0.0)
-    mooseError("Grounded sheath collection requires normalized electron density >= 0.");
-  if (raw_mean_energy_eV <= 0.0)
-    mooseError("Grounded sheath collection requires mean electron energy > 0 eV; got ", raw_mean_energy_eV);
+    mooseError("Grounded sheath collection requires electron density >= 0.");
+  if (MetaPhysicL::raw_value(mean_energy_eV) <= 0.0)
+    mooseError("Grounded sheath collection requires mean electron energy > 0 eV.");
 
-  // Nonlinear globalization extension only. The accepted electron-repelling branch
-  // is still phi_s >= 0 and is checked from the converged solution diagnostics.
-  const ADReal effective_drop_V = raw_phi_s_V < 0.0 ? ADReal(0.0) : phi_s_V;
+  const ADReal effective_drop_V = PhysicsGroundedElectronSheath::smoothPositiveDropV(phi_s_V);
   if (!_log_molar_state)
-    return PhysicsGroundedElectronSheath::primaryParticleFluxHat(
-        solved_state, mean_energy_eV, effective_drop_V);
+    return PhysicsGroundedElectronSheath::primaryParticleFluxHat(solved_state, mean_energy_eV, effective_drop_V);
 
   using std::exp;
   const ADReal physical_density = avogadro_per_mol * exp(solved_state);
-  return PhysicsGroundedElectronSheath::primaryParticleFluxHat(
-             physical_density, mean_energy_eV, effective_drop_V) /
-         avogadro_per_mol;
+  return PhysicsGroundedElectronSheath::primaryParticleFluxHat(physical_density, mean_energy_eV, effective_drop_V) / avogadro_per_mol;
 }
