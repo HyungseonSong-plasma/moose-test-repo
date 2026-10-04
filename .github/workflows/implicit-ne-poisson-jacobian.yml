@@ -1,0 +1,124 @@
+name: Implicit n_e-Poisson Jacobian diagnostics
+
+on:
+  push:
+    branches: [prototype-fully-implicit-electron-poisson]
+    paths:
+      - .github/workflows/implicit-ne-poisson-jacobian.yml
+      - experiments/implicit_ne_poisson_jacobian/**
+      - physics_app/src/fvkernels/PhysicsFVElectrostaticDrift.C
+      - physics_app/src/fvbcs/PhysicsFVElectronGroundedSheathCollectionBC.C
+      - physics_app/include/fvbcs/PhysicsGroundedElectronSheathFlux.h
+
+permissions:
+  contents: read
+
+env:
+  BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+
+jobs:
+  jacobian:
+    name: jacobian-${{ matrix.case }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        include:
+          - case: bulk
+            input: input_bulk.i
+            phi0: '1.0'
+          - case: sheath_positive
+            input: input_sheath.i
+            phi0: '1.0'
+          - case: sheath_zero
+            input: input_sheath.i
+            phi0: '0.0'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pull Physics build base
+        run: docker pull "$BUILD_BASE_REF"
+
+      - name: Build and run Jacobian diagnostic
+        shell: bash
+        env:
+          CASE_NAME: ${{ matrix.case }}
+          INPUT_FILE: ${{ matrix.input }}
+          PHI0: ${{ matrix.phi0 }}
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            --entrypoint /bin/bash \
+            --user 0:0 \
+            --workdir /workspace \
+            -e CASE_NAME \
+            -e INPUT_FILE \
+            -e PHI0 \
+            -v "$GITHUB_WORKSPACE:/workspace" \
+            "$BUILD_BASE_REF" \
+            -lc '
+              set -euo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              git config --global --add safe.directory /opt/physics_vendor/moose
+              git config --global --add safe.directory /opt/physics_vendor/crane
+              git config --global --add safe.directory /opt/physics_vendor/squirrel
+              git config --global --add safe.directory /opt/physics_vendor/zapdos
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+
+              make -C physics_app -j2
+              cd experiments/implicit_ne_poisson_jacobian
+              mkdir -p "results/$CASE_NAME"
+
+              ../../physics_app/physics-opt --check-input -i "$INPUT_FILE" \
+                "Variables/potential/initial_condition=$PHI0" \
+                > "results/$CASE_NAME/check-input.log" 2>&1
+
+              set +e
+              ../../physics_app/physics-opt -i "$INPUT_FILE" \
+                "Variables/potential/initial_condition=$PHI0" \
+                "Executioner/nl_max_its=1" \
+                "Outputs/file_base=results/$CASE_NAME/jacobian" \
+                -snes_test_jacobian \
+                > "results/$CASE_NAME/jacobian.log" 2>&1
+              jac_rc=$?
+
+              ../../physics_app/physics-opt -i "$INPUT_FILE" \
+                "Variables/potential/initial_condition=$PHI0" \
+                "Executioner/nl_max_its=20" \
+                "Outputs/file_base=results/$CASE_NAME/solve" \
+                > "results/$CASE_NAME/solve.log" 2>&1
+              solve_rc=$?
+              set -e
+
+              printf "case=%s\ninput=%s\nphi0=%s\njacobian_rc=%s\nsolve_rc=%s\n" \
+                "$CASE_NAME" "$INPUT_FILE" "$PHI0" "$jac_rc" "$solve_rc" \
+                > "results/$CASE_NAME/status.txt"
+
+              grep -E "J - Jfd|Jfd|SNES Function norm|CONVERGED|DIVERGED" \
+                "results/$CASE_NAME/jacobian.log" \
+                > "results/$CASE_NAME/jacobian_summary.txt" || true
+              grep -E "SNES Function norm|CONVERGED|DIVERGED|Solve Converged|Solve Did NOT Converge" \
+                "results/$CASE_NAME/solve.log" \
+                > "results/$CASE_NAME/solve_summary.txt" || true
+
+              cat "results/$CASE_NAME/status.txt"
+              cat "results/$CASE_NAME/jacobian_summary.txt" || true
+              tail -n 30 "results/$CASE_NAME/solve_summary.txt" || true
+            '
+
+      - name: Upload diagnostic output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: implicit-ne-poisson-${{ matrix.case }}
+          path: experiments/implicit_ne_poisson_jacobian/results/${{ matrix.case }}/**
+          if-no-files-found: warn
+          retention-days: 30
