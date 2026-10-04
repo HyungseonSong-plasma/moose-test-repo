@@ -11,6 +11,8 @@
 #   mean_en = exp(log_energy-log_ne) [eV]
 #
 # No sheath BC in this first 3x3 conditioning diagnostic.
+# Transport lookup uses clamp during Newton trial states so PETSc backtracking can
+# globalize the step; accepted-state mean-energy min/max remain explicit outputs.
 
 [Mesh]
   coord_type = RZ
@@ -185,7 +187,7 @@
     mean_energy = mean_en_solved
     pressure = p
     gas_temperature = T_g
-    bounds_policy = error
+    bounds_policy = clamp
     block = plasma
   []
 
