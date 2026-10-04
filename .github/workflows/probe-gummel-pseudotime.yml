@@ -24,7 +24,7 @@ jobs:
       BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
       CASE_DIR: .ci-gummel-pseudotime/case
       HEAVY_DT: 1e-4
-      HEAVY_STEPS: 5
+      HEAVY_STEPS: 1
       PSEUDO_DT: 5.6650790022617894e-11
       PSEUDO_STEPS: 20
 
@@ -127,16 +127,16 @@ jobs:
 
           exodus="$(find "$CASE_DIR" -maxdepth 2 -type f \( -name '*.e' -o -name '*.exo' \) | head -n 1 || true)"
           if [[ -n "$exodus" ]]; then
-            cp "$exodus" .ci-gummel-pseudotime/gummel_heavy_dt_1e-4_pseudotime_5step.e
+            cp "$exodus" .ci-gummel-pseudotime/gummel_heavy_dt_1e-4_pseudotime_1step.e
           fi
 
       - name: Upload evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: gummel-heavy-dt-1e-4-electron-pseudotime-5step
+          name: gummel-heavy-dt-1e-4-electron-pseudotime-1step
           path: |
-            .ci-gummel-pseudotime/gummel_heavy_dt_1e-4_pseudotime_5step.e
+            .ci-gummel-pseudotime/gummel_heavy_dt_1e-4_pseudotime_1step.e
             .ci-gummel-pseudotime/case/pseudo_time_contract.json
             .ci-gummel-pseudotime/case/runtime.log
             .ci-gummel-pseudotime/case/*.i
