@@ -126,12 +126,13 @@
     block = plasma
   []
 
+  # Grounded electron-repelling branch: Delta phi = phi >= 0.
   [electron_wall_particle_flux_material]
     type = ADParsedFunctorMaterial
     property_name = electron_wall_particle_flux_outward
     functor_names = 'n_e mean_en_solved potential_from_poisson'
     functor_symbols = 'ne mean_ev phi'
-    expression = '0.25*ne*sqrt(8.0*1.602176634e-19*(0.66666666666666663*mean_ev)/(3.14159265358979323846*9.1093837139e-31))*exp(-(0.5*(phi+abs(phi)))/(0.66666666666666663*mean_ev))'
+    expression = '0.25*ne*sqrt(8.0*1.602176634e-19*(0.66666666666666663*mean_ev)/(3.14159265358979323846*9.1093837139e-31))*exp(-phi/(0.66666666666666663*mean_ev))'
     block = plasma
   []
 
@@ -140,7 +141,7 @@
     property_name = electron_wall_energy_flux_outward
     functor_names = 'electron_wall_particle_flux_outward mean_en_solved potential_from_poisson'
     functor_symbols = 'gamma mean_ev phi'
-    expression = 'gamma*(1.3333333333333333*mean_ev + 0.5*(phi+abs(phi)))'
+    expression = 'gamma*(1.3333333333333333*mean_ev + phi)'
     block = plasma
   []
 []
