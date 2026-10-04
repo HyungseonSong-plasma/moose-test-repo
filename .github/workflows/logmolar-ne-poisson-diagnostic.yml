@@ -1,0 +1,103 @@
+name: log-molar electron Poisson diagnostic
+
+on:
+  push:
+    branches:
+      - prototype-fully-implicit-electron-poisson
+    paths:
+      - 'experiments/implicit_logmolar_ne_poisson/**'
+      - 'physics_app/**'
+      - '.github/workflows/logmolar-ne-poisson-diagnostic.yml'
+  workflow_dispatch:
+
+jobs:
+  logmolar:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - case_name: no_drift
+            input_file: input_no_drift.i
+          - case_name: full_drift
+            input_file: input_full_drift.i
+    name: logmolar-${{ matrix.case_name }}
+    runs-on: ubuntu-24.04
+    env:
+      BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pull Physics build base
+        run: docker pull "$BUILD_BASE_REF"
+
+      - name: Build and run log-molar diagnostic
+        env:
+          CASE_NAME: ${{ matrix.case_name }}
+          INPUT_FILE: ${{ matrix.input_file }}
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            --entrypoint /bin/bash \
+            --user 0:0 \
+            --workdir /workspace \
+            -e CASE_NAME \
+            -e INPUT_FILE \
+            -v "$GITHUB_WORKSPACE:/workspace" \
+            "$BUILD_BASE_REF" \
+            -lc '
+              set -euo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              git config --global --add safe.directory /opt/physics_vendor/moose
+              git config --global --add safe.directory /opt/physics_vendor/crane
+              git config --global --add safe.directory /opt/physics_vendor/squirrel
+              git config --global --add safe.directory /opt/physics_vendor/zapdos
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+
+              make -C physics_app -j2
+              cd experiments/implicit_logmolar_ne_poisson
+              mkdir -p "results/$CASE_NAME"
+
+              ../../physics_app/physics-opt --check-input -i "$INPUT_FILE" \
+                > "results/$CASE_NAME/check-input.log" 2>&1
+
+              set +e
+              ../../physics_app/physics-opt -i "$INPUT_FILE" \
+                "Executioner/nl_max_its=1" \
+                "Outputs/file_base=results/$CASE_NAME/jacobian" \
+                -snes_test_jacobian \
+                > "results/$CASE_NAME/jacobian.log" 2>&1
+              jac_rc=$?
+
+              ../../physics_app/physics-opt -i "$INPUT_FILE" \
+                "Outputs/file_base=results/$CASE_NAME/solve" \
+                > "results/$CASE_NAME/solve.log" 2>&1
+              solve_rc=$?
+              set -e
+
+              printf "case=%s\ninput=%s\njacobian_rc=%s\nsolve_rc=%s\n" \
+                "$CASE_NAME" "$INPUT_FILE" "$jac_rc" "$solve_rc" \
+                > "results/$CASE_NAME/status.txt"
+
+              grep -E "J - Jfd|Jfd|SNES Function norm|CONVERGED|DIVERGED" \
+                "results/$CASE_NAME/jacobian.log" \
+                > "results/$CASE_NAME/jacobian_summary.txt" || true
+              grep -E "SNES Function norm|CONVERGED|DIVERGED|Solve Converged|Solve Did NOT Converge" \
+                "results/$CASE_NAME/solve.log" \
+                > "results/$CASE_NAME/solve_summary.txt" || true
+
+              cat "results/$CASE_NAME/status.txt"
+              cat "results/$CASE_NAME/jacobian_summary.txt" || true
+              cat "results/$CASE_NAME/solve_summary.txt" || true
+            '
+
+      - name: Upload diagnostic output
+        uses: actions/upload-artifact@v4
+        with:
+          name: logmolar-ne-poisson-${{ matrix.case_name }}
+          path: experiments/implicit_logmolar_ne_poisson/results/${{ matrix.case_name }}/**
+          retention-days: 30
