@@ -1,6 +1,6 @@
 # Electron + electron-energy sibling.
 # Uniform electron IC; fixed-ion sibling starts from the same density.
-# Chemistry is OFF. Physical plasma boundaries use thermal/sheath electron loss.
+# Chemistry is OFF. Solid plasma walls use thermal/sheath electron loss.
 
 [Mesh]
   coord_type = RZ
@@ -124,6 +124,28 @@
     bounds_policy = error
     block = plasma
   []
+
+  # Grounded, electron-repelling sheath branch. Delta phi = max(phi, 0).
+  # Gamma_e = 1/4 n_e vbar exp(-Delta phi / T_e), T_e = 2/3 mean energy.
+  [electron_wall_particle_flux_material]
+    type = ADParsedFunctorMaterial
+    property_name = electron_wall_particle_flux_outward
+    functor_names = 'n_e mean_en_solved potential_from_poisson'
+    functor_symbols = 'ne mean_ev phi'
+    expression = '0.25*ne*sqrt(8.0*1.602176634e-19*(0.66666666666666663*mean_ev)/(3.14159265358979323846*9.1093837139e-31))*exp(-(0.5*(phi+abs(phi)))/(0.66666666666666663*mean_ev))'
+    block = plasma
+  []
+
+  # Energy carried by the same collected primary electrons:
+  # Gamma_eps = Gamma_e * (2*T_e + Delta phi), returned in eV/(m^2 s).
+  [electron_wall_energy_flux_material]
+    type = ADParsedFunctorMaterial
+    property_name = electron_wall_energy_flux_outward
+    functor_names = 'electron_wall_particle_flux_outward mean_en_solved potential_from_poisson'
+    functor_symbols = 'gamma mean_ev phi'
+    expression = 'gamma*(1.3333333333333333*mean_ev + 0.5*(phi+abs(phi)))'
+    block = plasma
+  []
 []
 
 [FVKernels]
@@ -185,23 +207,22 @@
 []
 
 [FVBCs]
+  # Positive functor is physical outward loss; accepted FVFunctorNeumannBC
+  # sign contract uses factor = -1 for outward species loss.
   [electron_thermal_sheath_loss]
-    type = PhysicsFVElectronGroundedSheathCollectionBC
+    type = FVFunctorNeumannBC
     variable = n_e
-    boundary = 'inlet outlet plasma_electrode plasma_metal plasma_right plasma_cover plasma_wafer plasma_focus_ring'
-    mean_electron_energy = mean_en_solved
-    potential = potential_from_poisson
-    log_molar_state = false
+    boundary = 'plasma_electrode plasma_metal plasma_right plasma_cover plasma_wafer plasma_focus_ring'
+    functor = electron_wall_particle_flux_outward
+    factor = -1.0
   []
 
   [electron_energy_sheath_loss]
-    type = PhysicsFVElectronGroundedSheathEnergyBC
+    type = FVFunctorNeumannBC
     variable = electron_energy
-    boundary = 'inlet outlet plasma_electrode plasma_metal plasma_right plasma_cover plasma_wafer plasma_focus_ring'
-    electron_density = n_e
-    mean_electron_energy = mean_en_solved
-    potential = potential_from_poisson
-    physical_eV_state = true
+    boundary = 'plasma_electrode plasma_metal plasma_right plasma_cover plasma_wafer plasma_focus_ring'
+    functor = electron_wall_energy_flux_outward
+    factor = -1.0
   []
 []
 
