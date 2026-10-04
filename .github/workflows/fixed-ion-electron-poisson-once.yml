@@ -5,45 +5,54 @@ on:
     branches: [prototype-fixed-ion-electron-poisson]
     paths:
       - .github/workflows/fixed-ion-electron-poisson-once.yml
-      - experiments/fixed_ion_electron_poisson/driver.i
-      - experiments/fixed_ion_electron_poisson/electron_energy.i
-      - experiments/fixed_ion_electron_poisson/poisson.i
+      - physics_app/**
+      - experiments/fixed_ion_electron_poisson/**
 
 permissions:
   contents: read
 
 env:
-  PHYSICS_RUNTIME_REF: ghcr.io/hyungseonsong-plasma/physics-runtime@sha256:cda9f0d09a17aed5fa606e97d1ee5c3450f7280536cec2e5c635402bb07d972c
+  BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
 
 jobs:
   run:
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
 
-      - name: Pull accepted Physics runtime
-        run: docker pull "$PHYSICS_RUNTIME_REF"
+      - name: Pull Physics build base
+        run: docker pull "$BUILD_BASE_REF"
 
-      - name: Check input
+      - name: Build current Physics and run ten pseudo cycles
         shell: bash
         run: |
           set -euo pipefail
           docker run --rm \
+            --entrypoint /bin/bash \
+            --user 0:0 \
+            --workdir /workspace \
+            -e GITHUB_SHA="$GITHUB_SHA" \
             -v "$GITHUB_WORKSPACE:/workspace" \
-            -w /workspace/experiments/fixed_ion_electron_poisson \
-            "$PHYSICS_RUNTIME_REF" \
-            --check-input -i driver.i | tee experiments/fixed_ion_electron_poisson/check-input.log
-
-      - name: Run ten pseudo cycles
-        shell: bash
-        run: |
-          set -euo pipefail
-          docker run --rm \
-            -v "$GITHUB_WORKSPACE:/workspace" \
-            -w /workspace/experiments/fixed_ion_electron_poisson \
-            "$PHYSICS_RUNTIME_REF" \
-            -i driver.i | tee experiments/fixed_ion_electron_poisson/run.log
+            "$BUILD_BASE_REF" \
+            -lc '
+              set -euo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              git config --global --add safe.directory /opt/physics_vendor/moose
+              git config --global --add safe.directory /opt/physics_vendor/crane
+              git config --global --add safe.directory /opt/physics_vendor/squirrel
+              git config --global --add safe.directory /opt/physics_vendor/zapdos
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+              make -C physics_app -j2
+              cd experiments/fixed_ion_electron_poisson
+              ../../physics_app/physics-opt --check-input -i driver.i | tee check-input.log
+              ../../physics_app/physics-opt -i driver.i | tee run.log
+            '
 
       - name: Upload prototype outputs
         if: always()
