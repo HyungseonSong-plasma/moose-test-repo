@@ -1,0 +1,97 @@
+name: Fully implicit electron-Poisson matrix
+
+on:
+  push:
+    branches: [prototype-fully-implicit-electron-poisson]
+    paths:
+      - .github/workflows/implicit-electron-poisson-matrix.yml
+      - experiments/implicit_electron_energy_poisson/**
+      - physics_app/include/fvbcs/PhysicsGroundedElectronSheathFlux.h
+      - physics_app/src/fvbcs/PhysicsFVElectronGroundedSheathEnergyBC.C
+      - physics_app/src/fvbcs/PhysicsFVElectronGroundedSheathCollectionBC.C
+      - physics_app/src/fvkernels/PhysicsFVElectrostaticDrift.C
+      - physics_app/src/fvkernels/PhysicsFVElectronEnergyJouleHeating.C
+
+permissions:
+  contents: read
+
+env:
+  BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+
+jobs:
+  matrix:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pull Physics build base
+        run: docker pull "$BUILD_BASE_REF"
+
+      - name: Build current Physics and run dt matrix
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            --entrypoint /bin/bash \
+            --user 0:0 \
+            --workdir /workspace \
+            -e GITHUB_SHA="$GITHUB_SHA" \
+            -v "$GITHUB_WORKSPACE:/workspace" \
+            "$BUILD_BASE_REF" \
+            -lc '
+              set -euo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              git config --global --add safe.directory /opt/physics_vendor/moose
+              git config --global --add safe.directory /opt/physics_vendor/crane
+              git config --global --add safe.directory /opt/physics_vendor/squirrel
+              git config --global --add safe.directory /opt/physics_vendor/zapdos
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+
+              make -C physics_app -j2 | tee experiments/implicit_electron_energy_poisson/build.log
+              cd experiments/implicit_electron_energy_poisson
+              ../../physics_app/physics-opt --check-input -i input.i | tee check-input.log
+
+              rm -rf results
+              mkdir -p results
+              printf "case,dt_s,return_code\n" > results/status.csv
+
+              set +e
+              for spec in "dt_1e-9 1e-9" "dt_1e-8 1e-8" "dt_1e-7 1e-7" "dt_1e-6 1e-6"; do
+                set -- $spec
+                label="$1"
+                dt="$2"
+                mkdir -p "results/$label"
+                echo "=== $label : dt=$dt s ==="
+                ../../physics_app/physics-opt -i input.i \
+                  "Executioner/dt=$dt" \
+                  "Executioner/dtmin=$dt" \
+                  "Executioner/dtmax=$dt" \
+                  "Executioner/end_time=$dt" \
+                  "Outputs/file_base=results/$label/out" \
+                  > "results/$label/run.log" 2>&1
+                rc=$?
+                printf "%s,%s,%s\n" "$label" "$dt" "$rc" >> results/status.csv
+                echo "return_code=$rc"
+              done
+              set -e
+
+              cat results/status.csv
+            '
+
+      - name: Upload matrix outputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fully-implicit-electron-poisson-dt-matrix
+          path: |
+            experiments/implicit_electron_energy_poisson/build.log
+            experiments/implicit_electron_energy_poisson/check-input.log
+            experiments/implicit_electron_energy_poisson/results/**
+          if-no-files-found: warn
+          retention-days: 30
