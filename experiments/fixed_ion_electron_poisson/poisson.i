@@ -231,11 +231,11 @@
   scheme = implicit-euler
   solve_type = NEWTON
 
-  dt = 5.0e-11
-  dtmin = 5.0e-11
-  dtmax = 5.0e-11
-  num_steps = 20
-  end_time = 1.0e-9
+  dt = 1.0e-9
+  dtmin = 1.0e-9
+  dtmax = 1.0e-9
+  num_steps = 10
+  end_time = 1.0e-8
   timestep_tolerance = 1.0e-18
 
   nl_rel_tol = 1.0e-10
