@@ -29,6 +29,13 @@ PhysicsFVElectrostaticDrift::validParams()
   params.addRequiredParam<Real>(
       "charge_number", "Signed integer-like charge number z.");
 
+  params.addParam<bool>(
+      "freeze_upwind_direction_to_old_potential",
+      false,
+      "For transient nonlinear diagnostics, choose the upwind side from the previous "
+      "physical-time potential while retaining the current nonlinear potential in the "
+      "drift flux magnitude. This prevents stencil switching between Newton iterates.");
+
   // Match the framework FVAdvection interpolation contract.
   params += Moose::FV::advectedInterpolationParameter();
 
@@ -52,7 +59,9 @@ PhysicsFVElectrostaticDrift::PhysicsFVElectrostaticDrift(
     _potential(getFunctor<ADReal>("potential")),
     _mobility(getFunctor<ADReal>("mobility")),
     _carrier(getFunctor<ADReal>("carrier")),
-    _charge_number(getParam<Real>("charge_number"))
+    _charge_number(getParam<Real>("charge_number")),
+    _freeze_upwind_direction_to_old_potential(
+        getParam<bool>("freeze_upwind_direction_to_old_potential"))
 {
   if (_charge_number == 0.0)
     paramError(
@@ -89,6 +98,8 @@ PhysicsFVElectrostaticDrift::computeQpResidual()
                false,
                &limiter_time);
 
+  // The physical drift flux remains fully implicit: its magnitude always uses
+  // the current nonlinear potential and current transport coefficients.
   const ADRealVectorValue electric_field =
       -_potential.gradient(centered_face, state);
 
@@ -98,8 +109,21 @@ PhysicsFVElectrostaticDrift::computeQpResidual()
   const ADReal drift_normal =
       _charge_number * mobility_face * (electric_field * _normal);
 
-  const bool elem_is_upwind =
-      MetaPhysicL::raw_value(drift_normal) >= 0.0;
+  bool elem_is_upwind;
+  if (_freeze_upwind_direction_to_old_potential && _subproblem.isTransient())
+  {
+    // Diagnostic mode: hold the discrete upwind stencil fixed throughout the
+    // Newton solve by selecting its direction from E^n.  Only the selector is
+    // lagged; the residual still contains E^{n+1} through drift_normal above.
+    const Moose::StateArg old_time_state(1, Moose::SolutionIterationType::Time);
+    const ADRealVectorValue old_electric_field =
+        -_potential.gradient(centered_face, old_time_state);
+    const Real old_drift_direction =
+        _charge_number * MetaPhysicL::raw_value(old_electric_field * _normal);
+    elem_is_upwind = old_drift_direction >= 0.0;
+  }
+  else
+    elem_is_upwind = MetaPhysicL::raw_value(drift_normal) >= 0.0;
 
   const auto transported_face =
       makeFace(*_face_info,
