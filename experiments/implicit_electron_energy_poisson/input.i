@@ -404,10 +404,10 @@
 
   nl_rel_tol = 1.0e-8
   nl_abs_tol = 1.0e-12
-  nl_max_its = 20
+  nl_max_its = 50
   automatic_scaling = true
 
-  petsc_options = '-snes_converged_reason'
+  petsc_options = '-snes_converged_reason -snes_monitor -snes_linesearch_monitor -ksp_converged_reason'
   petsc_options_iname = '-ksp_type -pc_type -pc_factor_shift_type -snes_linesearch_type'
   petsc_options_value = 'preonly lu NONZERO bt'
 []
