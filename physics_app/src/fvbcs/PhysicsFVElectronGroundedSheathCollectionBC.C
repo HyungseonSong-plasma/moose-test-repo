@@ -15,8 +15,10 @@ PhysicsFVElectronGroundedSheathCollectionBC::validParams()
 {
   auto params = FVQpFluxBC::validParams();
   params.addClassDescription(
-      "Applies the accepted grounded-conductor primary-electron collection law using the "
-      "plasma-side FV state. T1 can reconstruct molar flux from a log-molar state.");
+      "Applies the grounded-conductor primary-electron collection law using the "
+      "plasma-side FV state. During nonlinear globalization, negative trial plasma "
+      "potential is extended with zero effective sheath drop; accepted solutions "
+      "remain subject to external branch-validity diagnostics.");
   params.addRequiredParam<MooseFunctorName>(
       "mean_electron_energy",
       "Plasma-side electron mean energy [eV]. The sheath temperature is (2/3) mean energy.");
@@ -55,9 +57,9 @@ PhysicsFVElectronGroundedSheathCollectionBC::computeQpResidual()
     mooseError("Grounded sheath collection requires normalized electron density >= 0.");
   if (raw_mean_energy_eV <= 0.0)
     mooseError("Grounded sheath collection requires mean electron energy > 0 eV; got ", raw_mean_energy_eV);
-  if (raw_phi_s_V < -PhysicsGroundedElectronSheath::negative_drop_tolerance_V)
-    mooseError("Grounded sheath collection is outside its accepted electron-repelling branch: phi_s = ", raw_phi_s_V);
 
+  // Nonlinear globalization extension only. The accepted electron-repelling branch
+  // is still phi_s >= 0 and is checked from the converged solution diagnostics.
   const ADReal effective_drop_V = raw_phi_s_V < 0.0 ? ADReal(0.0) : phi_s_V;
   if (!_log_molar_state)
     return PhysicsGroundedElectronSheath::primaryParticleFluxHat(
