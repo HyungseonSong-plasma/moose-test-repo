@@ -3,7 +3,11 @@ name: Fixed-ion electron-Poisson one-shot
 on:
   push:
     branches: [prototype-fixed-ion-electron-poisson]
-    paths: [.github/workflows/fixed-ion-electron-poisson-once.yml]
+    paths:
+      - .github/workflows/fixed-ion-electron-poisson-once.yml
+      - experiments/fixed_ion_electron_poisson/driver.i
+      - experiments/fixed_ion_electron_poisson/electron_energy.i
+      - experiments/fixed_ion_electron_poisson/poisson.i
 
 permissions:
   contents: read
