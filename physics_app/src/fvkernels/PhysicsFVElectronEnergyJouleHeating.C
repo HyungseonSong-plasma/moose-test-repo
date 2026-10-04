@@ -10,9 +10,10 @@ PhysicsFVElectronEnergyJouleHeating::validParams()
   auto params = FVElementalKernel::validParams();
 
   params.addClassDescription(
-      "Applies local electron-flux electric work -E.Gamma_e. physical_eV mode "
-      "uses electron density [1/m^3] and returns eV/(m^3 s); molar_eV mode uses "
-      "electron concentration [mol/m^3] and returns eV mol/(m^3 s); normalized "
+      "Adds +E.Gamma_e to the electron-energy residual, corresponding to the physical "
+      "electron heating source -E.Gamma_e on the right-hand side. physical_eV mode "
+      "uses electron density [1/m^3] and residual units eV/(m^3 s); molar_eV mode uses "
+      "electron concentration [mol/m^3] and residual units eV mol/(m^3 s); normalized "
       "mode preserves the historical scaled equation.");
 
   params.addParam<MooseEnum>(
@@ -71,7 +72,7 @@ PhysicsFVElectronEnergyJouleHeating::computeQpResidual()
   const ADReal mobility = _mobility(elem, state);
   const ADReal diffusion = _diffusion(elem, state);
 
-  ADReal source =
+  ADReal residual_work =
       PhysicsElectronFluxModel::electronElectricWork(
           electron_density,
           grad_electron_density,
@@ -80,7 +81,9 @@ PhysicsFVElectronEnergyJouleHeating::computeQpResidual()
           diffusion);
 
   if (_normalized_state)
-    source /= _energy_reference_eV;
+    residual_work /= _energy_reference_eV;
 
-  return -source;
+  // Physical electron heating is Q_e = -E.Gamma_e on the RHS, so the residual
+  // contribution for d(w_e)/dt + div(Gamma_eps) - Q_e = 0 is +E.Gamma_e.
+  return residual_work;
 }
