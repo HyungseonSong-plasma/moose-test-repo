@@ -7,6 +7,7 @@
 namespace PhysicsGroundedElectronSheath
 {
 constexpr Real negative_drop_tolerance_V = 1.0e-10;
+constexpr Real effective_drop_smoothing_V = 1.0e-8;
 constexpr Real elementary_charge_C = 1.602176634e-19;
 constexpr Real electron_mass_kg = 9.1093837139e-31;
 constexpr Real pi = 3.141592653589793238462643383279502884;
@@ -22,6 +23,17 @@ meanSpeedMPerS(const ADReal & electron_temperature_eV)
 {
   using std::sqrt;
   return sqrt(8.0 * elementary_charge_C * electron_temperature_eV / (pi * electron_mass_kg));
+}
+
+inline ADReal
+smoothPositiveDropV(const ADReal & phi_s_V)
+{
+  // Smooth positive-part used only to globalize Newton around phi=0.  The
+  // O(1e-8 V) regularization is negligible on physical sheath voltage scales
+  // while retaining an AD derivative for negative trial states.
+  using std::sqrt;
+  const Real eps = effective_drop_smoothing_V;
+  return 0.5 * (phi_s_V + sqrt(phi_s_V * phi_s_V + eps * eps));
 }
 
 inline ADReal
@@ -53,7 +65,6 @@ primaryEnergyFluxHat(const ADReal & n_e_hat,
 
   // Accepted grounded, electron-repelling branch: each collected electron removes
   // (5/2) T_e of thermal/enthalpy energy plus the sheath potential-energy drop.
-  // In eV per electron, e*Delta phi numerically equals Delta phi[V].
   return primary_particle_flux_hat *
          (2.5 * electron_temperature_eV + effective_drop_V) / energy_reference_eV;
 }
