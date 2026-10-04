@@ -11,15 +11,19 @@ PhysicsFVElectronEnergyJouleHeating::validParams()
 
   params.addClassDescription(
       "Applies local electron-flux electric work -E.Gamma_e. physical_eV mode "
-      "returns eV/(m^3 s); normalized mode preserves the historical scaled equation.");
+      "uses electron density [1/m^3] and returns eV/(m^3 s); molar_eV mode uses "
+      "electron concentration [mol/m^3] and returns eV mol/(m^3 s); normalized "
+      "mode preserves the historical scaled equation.");
 
   params.addParam<MooseEnum>(
       "state_form",
-      MooseEnum("normalized physical_eV", "normalized"),
+      MooseEnum("normalized physical_eV molar_eV", "normalized"),
       "Electron-energy state convention.");
 
   params.addRequiredParam<MooseFunctorName>(
-      "electron_density", "Electron density; use [1/m^3] for state_form=physical_eV.");
+      "electron_density",
+      "Electron density/concentration. Use [1/m^3] for state_form=physical_eV and "
+      "[mol/m^3] for state_form=molar_eV.");
   params.addRequiredParam<MooseFunctorName>(
       "potential", "Electrostatic potential phi [V], with E = -grad(phi).");
   params.addRequiredParam<MooseFunctorName>(
@@ -36,7 +40,7 @@ PhysicsFVElectronEnergyJouleHeating::validParams()
 PhysicsFVElectronEnergyJouleHeating::PhysicsFVElectronEnergyJouleHeating(
     const InputParameters & parameters)
   : FVElementalKernel(parameters),
-    _physical_state(getParam<MooseEnum>("state_form") == "physical_eV"),
+    _normalized_state(getParam<MooseEnum>("state_form") == "normalized"),
     _electron_density(getFunctor<ADReal>("electron_density")),
     _potential(getFunctor<ADReal>("potential")),
     _mobility(getFunctor<ADReal>("mobility")),
@@ -44,7 +48,7 @@ PhysicsFVElectronEnergyJouleHeating::PhysicsFVElectronEnergyJouleHeating(
     _energy_reference_eV(
         isParamValid("energy_reference_eV") ? getParam<Real>("energy_reference_eV") : 1.0)
 {
-  if (!_physical_state)
+  if (_normalized_state)
   {
     if (!isParamValid("energy_reference_eV"))
       paramError("energy_reference_eV",
@@ -75,7 +79,7 @@ PhysicsFVElectronEnergyJouleHeating::computeQpResidual()
           mobility,
           diffusion);
 
-  if (!_physical_state)
+  if (_normalized_state)
     source /= _energy_reference_eV;
 
   return -source;
