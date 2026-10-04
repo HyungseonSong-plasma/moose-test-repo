@@ -1,6 +1,6 @@
 # Poisson sibling with temporally frozen positive ion density.
-# n_ion_fixed(x) is initialized to the same profile as n_e(x,0), giving local
-# quasi-neutrality at t=0. Only n_e evolves and is transferred from the sibling.
+# Uniform fixed ion density equals the initial uniform electron density, so the
+# prototype starts exactly quasi-neutral. Only n_e evolves and is transferred.
 
 [Mesh]
   coord_type = RZ
@@ -89,32 +89,12 @@
 [AuxVariables]
   [n_e_from_electron]
     type = MooseVariableFVReal
+    initial_condition = 1.0e16
     block = plasma
   []
   [n_ion_fixed]
     type = MooseVariableFVReal
-    block = plasma
-  []
-[]
-
-[Functions]
-  [quasi_neutral_initial_density]
-    type = ParsedFunction
-    expression = '1.0e16*(0.9 + 0.2*x/0.2565)'
-  []
-[]
-
-[ICs]
-  [electron_density_ic]
-    type = FunctionIC
-    variable = n_e_from_electron
-    function = quasi_neutral_initial_density
-    block = plasma
-  []
-  [fixed_ion_density_ic]
-    type = FunctionIC
-    variable = n_ion_fixed
-    function = quasi_neutral_initial_density
+    initial_condition = 1.0e16
     block = plasma
   []
 []
