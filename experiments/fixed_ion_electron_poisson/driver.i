@@ -1,6 +1,6 @@
 # Minimal fixed-ion electron-energy <-> Poisson prototype.
 # No Gummel Action, no heavy-ion evolution, no heavy electromigration correction.
-# Electron-energy advances at TIMESTEP_BEGIN; Poisson solves at TIMESTEP_END.
+# Electron-energy advances once at TIMESTEP_BEGIN; Poisson solves once at TIMESTEP_END.
 
 [Mesh]
   coord_type = RZ
@@ -63,11 +63,11 @@
   type = Transient
   scheme = implicit-euler
 
-  dt = 5.0e-11
-  dtmin = 5.0e-11
-  dtmax = 5.0e-11
-  num_steps = 20
-  end_time = 1.0e-9
+  dt = 1.0e-9
+  dtmin = 1.0e-9
+  dtmax = 1.0e-9
+  num_steps = 10
+  end_time = 1.0e-8
   timestep_tolerance = 1.0e-18
 []
 
