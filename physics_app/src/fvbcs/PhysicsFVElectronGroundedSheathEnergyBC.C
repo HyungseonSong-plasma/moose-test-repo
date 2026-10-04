@@ -7,41 +7,19 @@ InputParameters
 PhysicsFVElectronGroundedSheathEnergyBC::validParams()
 {
   auto params = FVQpFluxBC::validParams();
-
   params.addClassDescription(
-      "Applies grounded-conductor sheath-edge primary-electron energy loss using the same "
-      "collected primary population as PhysicsFVElectronGroundedSheathCollectionBC. "
-      "The collected-electron energy is (5/2) T_e + Delta phi on the accepted "
-      "electron-repelling branch. Negative trial potential is extended with zero "
-      "effective drop for nonlinear globalization.");
-
-  params.addRequiredParam<MooseFunctorName>(
-      "electron_density",
-      "Plasma-side electron density. Legacy mode expects n_e/n_ref; molar-energy mode expects c_e [mol/m^3].");
-  params.addRequiredParam<MooseFunctorName>(
-      "mean_electron_energy",
-      "Plasma-side electron mean energy [eV]. The sheath temperature is (2/3) mean energy.");
-  params.addRequiredParam<MooseFunctorName>(
-      "potential",
-      "Plasma potential [V]. The plasma-side element value is used, not the grounded face value.");
-  params.addParam<Real>(
-      "energy_reference_eV",
-      1.0,
-      "Positive legacy normalization energy epsilon_ref [eV]. Must be explicitly supplied in legacy mode and is ignored in molar-energy mode.");
-  params.addParam<bool>(
-      "molar_energy_state",
-      false,
-      "If true, electron_density is c_e [mol/m^3] and the residual is returned in eV mol/(m^2 s) without an arbitrary normalization scale.");
-  params.addParam<bool>(
-      "physical_eV_state",
-      false,
-      "If true, electron_density is n_e [1/m^3] and the residual is returned in eV/(m^2 s) without an arbitrary normalization scale.");
-
+      "Applies grounded-conductor sheath-edge electron energy loss with (5/2) T_e + Delta phi "
+      "and a differentiable Newton-globalization extension near phi=0.");
+  params.addRequiredParam<MooseFunctorName>("electron_density", "Plasma-side electron density.");
+  params.addRequiredParam<MooseFunctorName>("mean_electron_energy", "Plasma-side electron mean energy [eV].");
+  params.addRequiredParam<MooseFunctorName>("potential", "Plasma potential [V].");
+  params.addParam<Real>("energy_reference_eV", 1.0, "Legacy normalization energy [eV].");
+  params.addParam<bool>("molar_energy_state", false, "Return conservative molar-energy flux.");
+  params.addParam<bool>("physical_eV_state", false, "Return physical eV/(m^2 s) flux.");
   return params;
 }
 
-PhysicsFVElectronGroundedSheathEnergyBC::PhysicsFVElectronGroundedSheathEnergyBC(
-    const InputParameters & parameters)
+PhysicsFVElectronGroundedSheathEnergyBC::PhysicsFVElectronGroundedSheathEnergyBC(const InputParameters & parameters)
   : FVQpFluxBC(parameters),
     _electron_density(getFunctor<ADReal>("electron_density")),
     _mean_electron_energy(getFunctor<ADReal>("mean_electron_energy")),
@@ -53,8 +31,7 @@ PhysicsFVElectronGroundedSheathEnergyBC::PhysicsFVElectronGroundedSheathEnergyBC
   if (_molar_energy_state && _physical_eV_state)
     paramError("physical_eV_state", "molar_energy_state and physical_eV_state are mutually exclusive.");
   if (!_molar_energy_state && !_physical_eV_state && !parameters.isParamSetByUser("energy_reference_eV"))
-    paramError("energy_reference_eV",
-               "Legacy normalized-energy mode requires an explicit energy_reference_eV.");
+    paramError("energy_reference_eV", "Legacy normalized-energy mode requires energy_reference_eV.");
   if (!_molar_energy_state && !_physical_eV_state && _energy_reference_eV <= 0.0)
     paramError("energy_reference_eV", "Electron-energy normalization scale must be positive.");
 }
@@ -62,50 +39,24 @@ PhysicsFVElectronGroundedSheathEnergyBC::PhysicsFVElectronGroundedSheathEnergyBC
 ADReal
 PhysicsFVElectronGroundedSheathEnergyBC::computeQpResidual()
 {
-  const auto cell =
-      _face_type == FaceInfo::VarFaceNeighbors::ELEM ? elemArg() : neighborArg();
+  const auto cell = _face_type == FaceInfo::VarFaceNeighbors::ELEM ? elemArg() : neighborArg();
   const auto state = determineState();
-
   const ADReal electron_density = _electron_density(cell, state);
   const ADReal mean_energy_eV = _mean_electron_energy(cell, state);
   const ADReal phi_s_V = _potential(cell, state);
 
-  const Real raw_electron_density = MetaPhysicL::raw_value(electron_density);
-  const Real raw_mean_energy_eV = MetaPhysicL::raw_value(mean_energy_eV);
-  const Real raw_phi_s_V = MetaPhysicL::raw_value(phi_s_V);
+  if (MetaPhysicL::raw_value(electron_density) < 0.0)
+    mooseError("Grounded sheath energy collection requires electron density >= 0.");
+  if (MetaPhysicL::raw_value(mean_energy_eV) <= 0.0)
+    mooseError("Grounded sheath energy collection requires mean electron energy > 0 eV.");
 
-  if (raw_electron_density < 0.0)
-    mooseError("Grounded sheath energy collection requires electron density >= 0; got ",
-               raw_electron_density);
-  if (raw_mean_energy_eV <= 0.0)
-    mooseError("Grounded sheath energy collection requires mean electron energy > 0 eV; got ",
-               raw_mean_energy_eV);
+  const ADReal effective_drop_V = PhysicsGroundedElectronSheath::smoothPositiveDropV(phi_s_V);
+  const ADReal electron_temperature_eV = PhysicsGroundedElectronSheath::electronTemperatureEV(mean_energy_eV);
+  const ADReal primary_particle_flux = PhysicsGroundedElectronSheath::primaryParticleFluxHat(
+      electron_density, mean_energy_eV, effective_drop_V);
 
-  // Nonlinear globalization extension only. Converged accepted states are checked
-  // separately for phi_s >= 0.
-  const ADReal effective_drop_V = raw_phi_s_V < 0.0 ? ADReal(0.0) : phi_s_V;
-
-  if (_molar_energy_state)
-  {
-    const ADReal electron_temperature_eV =
-        PhysicsGroundedElectronSheath::electronTemperatureEV(mean_energy_eV);
-    const ADReal primary_particle_flux_molar =
-        PhysicsGroundedElectronSheath::primaryParticleFluxHat(
-            electron_density, mean_energy_eV, effective_drop_V);
-    return primary_particle_flux_molar *
-           (2.5 * electron_temperature_eV + effective_drop_V);
-  }
-
-  if (_physical_eV_state)
-  {
-    const ADReal electron_temperature_eV =
-        PhysicsGroundedElectronSheath::electronTemperatureEV(mean_energy_eV);
-    const ADReal primary_particle_flux =
-        PhysicsGroundedElectronSheath::primaryParticleFluxHat(
-            electron_density, mean_energy_eV, effective_drop_V);
-    return primary_particle_flux *
-           (2.5 * electron_temperature_eV + effective_drop_V);
-  }
+  if (_molar_energy_state || _physical_eV_state)
+    return primary_particle_flux * (2.5 * electron_temperature_eV + effective_drop_V);
 
   return PhysicsGroundedElectronSheath::primaryEnergyFluxHat(
       electron_density, mean_energy_eV, effective_drop_V, _energy_reference_eV);
