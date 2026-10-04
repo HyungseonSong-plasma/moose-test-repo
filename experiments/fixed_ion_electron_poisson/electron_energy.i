@@ -112,6 +112,7 @@
     electron_energy_density = electron_energy
     electron_density = n_e
     state_form = physical_eV
+    energy_reference_eV = 1.0
     block = plasma
   []
 
@@ -125,8 +126,6 @@
     block = plasma
   []
 
-  # Grounded, electron-repelling sheath branch. Delta phi = max(phi, 0).
-  # Gamma_e = 1/4 n_e vbar exp(-Delta phi / T_e), T_e = 2/3 mean energy.
   [electron_wall_particle_flux_material]
     type = ADParsedFunctorMaterial
     property_name = electron_wall_particle_flux_outward
@@ -136,8 +135,6 @@
     block = plasma
   []
 
-  # Energy carried by the same collected primary electrons:
-  # Gamma_eps = Gamma_e * (2*T_e + Delta phi), returned in eV/(m^2 s).
   [electron_wall_energy_flux_material]
     type = ADParsedFunctorMaterial
     property_name = electron_wall_energy_flux_outward
@@ -207,8 +204,6 @@
 []
 
 [FVBCs]
-  # Positive functor is physical outward loss; accepted FVFunctorNeumannBC
-  # sign contract uses factor = -1 for outward species loss.
   [electron_thermal_sheath_loss]
     type = FVFunctorNeumannBC
     variable = n_e
