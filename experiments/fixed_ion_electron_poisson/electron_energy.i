@@ -139,7 +139,7 @@
     block = plasma
   []
   [electron_drift]
-    type = QPXFVElectrostaticDrift
+    type = PhysicsFVElectrostaticDrift
     variable = n_e
     potential = potential_from_poisson
     mobility = electron_mobility
