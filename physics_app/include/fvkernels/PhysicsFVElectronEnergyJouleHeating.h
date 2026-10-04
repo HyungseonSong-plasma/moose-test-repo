@@ -3,20 +3,18 @@
 #include "FVElementalKernel.h"
 
 /**
- * Electron-energy electric-work source for physical or legacy normalized energy state.
+ * Electron-energy electric-work source for physical-number-density, molar-density,
+ * or legacy normalized electron states.
  *
  * The local constitutive electron particle flux is owned by the shared
- * PhysicsElectronFluxModel helper:
+ * PhysicsElectronFluxModel helper.  The numerical units follow the density functor:
  *
- *   Gamma_e / n_ref = -mu_e n_hat E - D_e grad(n_hat)
+ *   physical_eV : n_e [1/m^3]   -> source [eV/(m^3 s)]
+ *   molar_eV    : c_e [mol/m^3] -> source [eV mol/(m^3 s)]
+ *   normalized  : historical normalized density and epsilon_ref scaling.
  *
- * and the normalized electron-energy source is
- *
- *   S_hat = [-E . (Gamma_e / n_ref)] / epsilon_ref.
- *
- * The particle FV face reconstruction remains owned by the particle flux
- * kernels; this kernel reuses the same constitutive flux model rather than
- * duplicating its algebra.
+ * The particle FV face reconstruction remains owned by the particle flux kernels;
+ * this kernel reuses the same constitutive flux model rather than duplicating its algebra.
  */
 class PhysicsFVElectronEnergyJouleHeating : public FVElementalKernel
 {
@@ -27,7 +25,7 @@ public:
 protected:
   ADReal computeQpResidual() override;
 
-  const bool _physical_state;
+  const bool _normalized_state;
   const Moose::Functor<ADReal> & _electron_density;
   const Moose::Functor<ADReal> & _potential;
   const Moose::Functor<ADReal> & _mobility;
