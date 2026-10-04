@@ -4,7 +4,6 @@
 [Mesh]
   coord_type = RZ
   rz_coord_axis = Y
-
   [main]
     type = FileMeshGenerator
     file = '../Issue91_real_qvt_r3/r3_e0/qvt.msh'
@@ -108,7 +107,6 @@
     prop_values = '1.333223684 300.0 1.0 1.0 1.0e16 5.73276'
     block = plasma
   []
-
   [electron_transport]
     type = PhysicsElectronTransportLookupMaterial
     property_table_file = '../Issue91_real_qvt_r3/r3_e0/electron_moments.txt'
@@ -118,7 +116,6 @@
     bounds_policy = error
     block = plasma
   []
-
   [charge_number_density]
     type = ADParsedFunctorMaterial
     property_name = charge_number_density
@@ -168,7 +165,6 @@
     boundaries_to_avoid = 'inlet outlet plasma_electrode plasma_metal plasma_right plasma_cover plasma_wafer plasma_focus_ring'
     block = plasma
   []
-
   [phi_diffusion]
     type = FVDiffusion
     variable = potential
@@ -193,7 +189,6 @@
     potential = potential
     log_molar_state = false
   []
-
   [grounded_potential]
     type = FVDirichletBC
     variable = potential
@@ -283,22 +278,19 @@
   type = Transient
   scheme = implicit-euler
   solve_type = NEWTON
-
   dt = 1.0e-9
   dtmin = 1.0e-9
   dtmax = 1.0e-9
   num_steps = 1
   end_time = 1.0e-9
   timestep_tolerance = 1.0e-18
-
   nl_rel_tol = 1.0e-8
   nl_abs_tol = 1.0e-12
   nl_max_its = 50
   automatic_scaling = true
-
   petsc_options = '-snes_converged_reason -snes_monitor -snes_linesearch_monitor -ksp_converged_reason'
   petsc_options_iname = '-ksp_type -pc_type -pc_factor_shift_type -snes_linesearch_type'
-  petsc_options_value = 'preonly lu NONZERO bt'
+  petsc_options_value = 'preonly lu NONZERO basic'
 []
 
 [Outputs]
