@@ -185,7 +185,6 @@
 []
 
 [FVBCs]
-  # Thermal electron collection multiplied by the grounded-sheath suppression.
   [electron_thermal_sheath_loss]
     type = PhysicsFVElectronGroundedSheathCollectionBC
     variable = n_e
@@ -195,7 +194,6 @@
     log_molar_state = false
   []
 
-  # Energy carried by the same sheath-collected electron population.
   [electron_energy_sheath_loss]
     type = PhysicsFVElectronGroundedSheathEnergyBC
     variable = electron_energy
@@ -263,11 +261,11 @@
   scheme = implicit-euler
   solve_type = NEWTON
 
-  dt = 5.0e-11
-  dtmin = 5.0e-11
-  dtmax = 5.0e-11
-  num_steps = 20
-  end_time = 1.0e-9
+  dt = 1.0e-9
+  dtmin = 1.0e-9
+  dtmax = 1.0e-9
+  num_steps = 10
+  end_time = 1.0e-8
   timestep_tolerance = 1.0e-18
 
   nl_rel_tol = 1.0e-9
