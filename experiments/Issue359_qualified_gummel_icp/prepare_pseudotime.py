@@ -37,7 +37,7 @@ def main() -> int:
     p = argparse.ArgumentParser(description="Stage Issue359 four-input Gummel with independent heavy physical time and electron pseudo-time.")
     p.add_argument("case", type=Path)
     p.add_argument("--heavy-dt", type=float, default=1.0e-4)
-    p.add_argument("--heavy-steps", type=int, default=5)
+    p.add_argument("--heavy-steps", type=int, default=1)
     p.add_argument("--pseudo-dt", type=float, default=5.6650790022617894e-11)
     p.add_argument("--pseudo-steps", type=int, default=20)
     args = p.parse_args()
@@ -99,7 +99,7 @@ def main() -> int:
         "gummel_action_present": mb.has_block(driver, "GummelIteration/electron_poisson"),
         "physical_and_pseudo_dt_independent": args.heavy_dt != args.pseudo_dt,
         "heavy_dt_is_physical_1e_4": abs(args.heavy_dt - 1.0e-4) < 1.0e-18,
-        "heavy_steps_5": args.heavy_steps == 5,
+        "heavy_steps_1": args.heavy_steps == 1,
         "pseudo_dt_is_qualified_seed": abs(args.pseudo_dt - 5.6650790022617894e-11) < 1.0e-24,
         "pseudo_steps_20": args.pseudo_steps == 20,
         "intermediate_exodus_enabled": mp.get_parameter(outer, "Outputs", "exodus") == "true",
