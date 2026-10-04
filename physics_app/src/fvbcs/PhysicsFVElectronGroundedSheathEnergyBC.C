@@ -9,9 +9,10 @@ PhysicsFVElectronGroundedSheathEnergyBC::validParams()
   auto params = FVQpFluxBC::validParams();
 
   params.addClassDescription(
-      "Applies the W4.5 grounded-conductor sheath-edge primary-electron energy loss "
-      "using the same collected primary population as PhysicsFVElectronGroundedSheathCollectionBC. "
-      "T2 can return the conservative molar-energy flux directly.");
+      "Applies grounded-conductor sheath-edge primary-electron energy loss using the same "
+      "collected primary population as PhysicsFVElectronGroundedSheathCollectionBC. "
+      "The collected-electron energy is (5/2) T_e + Delta phi on the accepted "
+      "electron-repelling branch.");
 
   params.addRequiredParam<MooseFunctorName>(
       "electron_density",
@@ -79,7 +80,7 @@ PhysicsFVElectronGroundedSheathEnergyBC::computeQpResidual()
     mooseError("Grounded sheath energy collection requires mean electron energy > 0 eV; got ",
                raw_mean_energy_eV);
   if (raw_phi_s_V < -PhysicsGroundedElectronSheath::negative_drop_tolerance_V)
-    mooseError("Grounded sheath energy collection is outside its W4.5 validity branch: phi_s = ",
+    mooseError("Grounded sheath energy collection is outside its validity branch: phi_s = ",
                raw_phi_s_V,
                " V < 0 V. Electron-attracting/inverse sheath physics requires a separate owner.");
 
@@ -93,7 +94,7 @@ PhysicsFVElectronGroundedSheathEnergyBC::computeQpResidual()
         PhysicsGroundedElectronSheath::primaryParticleFluxHat(
             electron_density, mean_energy_eV, effective_drop_V);
     return primary_particle_flux_molar *
-           (2.0 * electron_temperature_eV + effective_drop_V);
+           (2.5 * electron_temperature_eV + effective_drop_V);
   }
 
   if (_physical_eV_state)
@@ -104,10 +105,9 @@ PhysicsFVElectronGroundedSheathEnergyBC::computeQpResidual()
         PhysicsGroundedElectronSheath::primaryParticleFluxHat(
             electron_density, mean_energy_eV, effective_drop_V);
     return primary_particle_flux *
-           (2.0 * electron_temperature_eV + effective_drop_V);
+           (2.5 * electron_temperature_eV + effective_drop_V);
   }
 
-  // Positive FVQpFluxBC residual is outward loss from the solved bulk energy.
   return PhysicsGroundedElectronSheath::primaryEnergyFluxHat(
       electron_density, mean_energy_eV, effective_drop_V, _energy_reference_eV);
 }
