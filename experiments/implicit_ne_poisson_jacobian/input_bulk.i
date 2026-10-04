@@ -1,5 +1,7 @@
 # Two-variable fully implicit Jacobian diagnostic: n_e + potential only.
-# Electron mean energy is frozen at 5.73276 eV; no electron-energy PDE is present.
+# Electron mean energy is frozen at the initial 5.73276 eV; no electron-energy PDE is present.
+# The drift flux remains fully implicit, but the upwind side is frozen from E^n
+# so the discrete stencil cannot switch between Newton iterations.
 
 [Mesh]
   coord_type = RZ
@@ -147,6 +149,7 @@
     carrier = carrier_one
     charge_number = -1
     advected_interp_method = upwind
+    freeze_upwind_direction_to_old_potential = true
     boundaries_to_avoid = 'inlet outlet plasma_electrode plasma_metal plasma_right plasma_cover plasma_wafer plasma_focus_ring'
     block = plasma
   []
