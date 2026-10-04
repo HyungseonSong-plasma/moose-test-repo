@@ -1,6 +1,6 @@
 # Electron + electron-energy sibling.
-# State is physical number density n_e [1/m^3] and electron energy density [eV/m^3].
-# Chemistry and wall collection are intentionally OFF in this first prototype.
+# Uniform electron IC; fixed-ion sibling starts from the same density.
+# Chemistry is OFF. Physical plasma boundaries use thermal/sheath electron loss.
 
 [Mesh]
   coord_type = RZ
@@ -81,10 +81,12 @@
 [Variables]
   [n_e]
     type = MooseVariableFVReal
+    initial_condition = 1.0e16
     block = plasma
   []
   [electron_energy]
     type = MooseVariableFVReal
+    initial_condition = 5.73276e16
     block = plasma
   []
 []
@@ -93,36 +95,6 @@
   [potential_from_poisson]
     type = MooseVariableFVReal
     initial_condition = 0.0
-    block = plasma
-  []
-[]
-
-[Functions]
-  # This same profile is used as the temporally frozen ion density in poisson.i,
-  # so the initial condition is locally quasi-neutral cell by cell.
-  [n_e_initial]
-    type = ParsedFunction
-    expression = '1.0e16*(0.9 + 0.2*x/0.2565)'
-  []
-
-  [electron_energy_initial]
-    type = ParsedFunction
-    expression = '5.73276e16*(1.05 - 0.1*x/0.2565)'
-  []
-[]
-
-[ICs]
-  [n_e_ic]
-    type = FunctionIC
-    variable = n_e
-    function = n_e_initial
-    block = plasma
-  []
-
-  [electron_energy_ic]
-    type = FunctionIC
-    variable = electron_energy
-    function = electron_energy_initial
     block = plasma
   []
 []
@@ -209,6 +181,29 @@
     diffusion = electron_diffusion
     state_form = physical_eV
     block = plasma
+  []
+[]
+
+[FVBCs]
+  # Thermal electron collection multiplied by the grounded-sheath suppression.
+  [electron_thermal_sheath_loss]
+    type = PhysicsFVElectronGroundedSheathCollectionBC
+    variable = n_e
+    boundary = 'inlet outlet plasma_electrode plasma_metal plasma_right plasma_cover plasma_wafer plasma_focus_ring'
+    mean_electron_energy = mean_en_solved
+    potential = potential_from_poisson
+    log_molar_state = false
+  []
+
+  # Energy carried by the same sheath-collected electron population.
+  [electron_energy_sheath_loss]
+    type = PhysicsFVElectronGroundedSheathEnergyBC
+    variable = electron_energy
+    boundary = 'inlet outlet plasma_electrode plasma_metal plasma_right plasma_cover plasma_wafer plasma_focus_ring'
+    electron_density = n_e
+    mean_electron_energy = mean_en_solved
+    potential = potential_from_poisson
+    physical_eV_state = true
   []
 []
 
