@@ -18,15 +18,30 @@ Poisson sibling:
 - `n_e_from_electron` : transferred electron density
 - `n_ion_fixed` : temporally frozen positive-ion number density
 
-The initial profiles satisfy
+The initial state is uniform and quasi-neutral:
 
 ```text
-n_ion_fixed(x) = n_e(x, t=0)
+n_e(t=0)     = 1.0e16 1/m^3
+n_ion_fixed  = 1.0e16 1/m^3
+electron mean energy = 5.73276 eV
+phi(t=0)     = 0 V
 ```
 
-so the initial charge density is locally zero. The ion profile remains fixed in
-time. Electron diffusion, electrostatic drift, energy transport, and Joule
-heating then create the nontrivial electron/Poisson feedback.
+The ion density remains fixed in time. Electron transport and wall losses create
+charge separation; Poisson returns the resulting electrostatic potential.
+
+## Electron boundary condition
+
+On the named physical plasma boundaries, the electron particle equation uses
+`PhysicsFVElectronGroundedSheathCollectionBC`: thermal electron collection with
+grounded-sheath suppression based on local plasma potential and mean electron
+energy.
+
+The electron-energy equation uses
+`PhysicsFVElectronGroundedSheathEnergyBC` in `physical_eV_state` mode, so the
+same collected electron population carries energy out through the sheath.
+
+The symmetry axis has no explicit boundary condition.
 
 ## Coupling order
 
@@ -51,18 +66,19 @@ sibling BETWEEN_MULTIAPP transfers before MultiApps on a given execution flag:
 
 ## Initial numerical scope
 
-- RZ real-QVT plasma mesh
+- real QVT/ICP RZ plasma geometry
+- uniform quasi-neutral electron/fixed-ion initial state
 - axis has no explicit boundary condition
 - all named physical plasma boundaries are grounded for Poisson
-- electron/energy external drift flux is disabled on the physical boundaries
+- electron particle BC = thermal collection + grounded sheath suppression
+- electron energy BC = sheath energy loss
 - chemistry is OFF
-- electron wall collection / sheath BC is OFF
 - gas pressure and temperature are fixed at 1.333223684 Pa and 300 K
 - pseudo timestep is fixed at 5e-11 s for 20 steps
 
-This first case is intended only to validate the new sibling architecture,
-charge sign, Poisson profile, and fast-state relaxation before adding chemistry,
-wall losses, adaptive pseudo-time, or evolving ions.
+This first case is intended to validate sibling execution, charge sign, Poisson
+profile, sheath-driven electron depletion, and fast-state relaxation before
+adding chemistry, adaptive pseudo-time, or evolving ions.
 
 ## Run
 
