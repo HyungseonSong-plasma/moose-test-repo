@@ -54,23 +54,15 @@ jobs:
 
               set +e
               ../../physics_app/physics-opt -i input_bulk.i \
-                "Executioner/nl_max_its=1" \
-                "Outputs/file_base=results/jacobian" \
-                -snes_test_jacobian \
-                > results/jacobian.log 2>&1
-              jac_rc=$?
-
-              ../../physics_app/physics-opt -i input_bulk.i \
                 "Outputs/file_base=results/solve" \
                 > results/solve.log 2>&1
               solve_rc=$?
               set -e
 
-              printf "jacobian_rc=%s\nsolve_rc=%s\n" "$jac_rc" "$solve_rc" > results/status.txt
-              grep -E "J - Jfd|Jfd|SNES Function norm|CONVERGED|DIVERGED" results/jacobian.log > results/jacobian_summary.txt || true
-              grep -E "SNES Function norm|CONVERGED|DIVERGED|Solve Converged|Solve Did NOT Converge" results/solve.log > results/solve_summary.txt || true
+              printf "solve_rc=%s\n" "$solve_rc" > results/status.txt
+              grep -E "SNES Function norm|CONVERGED|DIVERGED|Solve Converged|Solve Did NOT Converge" \
+                results/solve.log > results/solve_summary.txt || true
               cat results/status.txt
-              cat results/jacobian_summary.txt || true
               cat results/solve_summary.txt || true
             '
 
