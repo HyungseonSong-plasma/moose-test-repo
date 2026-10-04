@@ -1,0 +1,54 @@
+name: Fixed-ion electron-Poisson one-shot
+
+on:
+  push:
+    branches: [prototype-fixed-ion-electron-poisson]
+    paths: [.github/workflows/fixed-ion-electron-poisson-once.yml]
+
+permissions:
+  contents: read
+
+env:
+  PHYSICS_RUNTIME_REF: ghcr.io/hyungseonsong-plasma/physics-runtime@sha256:cda9f0d09a17aed5fa606e97d1ee5c3450f7280536cec2e5c635402bb07d972c
+
+jobs:
+  run:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pull accepted Physics runtime
+        run: docker pull "$PHYSICS_RUNTIME_REF"
+
+      - name: Check input
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            -v "$GITHUB_WORKSPACE:/workspace" \
+            -w /workspace/experiments/fixed_ion_electron_poisson \
+            "$PHYSICS_RUNTIME_REF" \
+            --check-input -i driver.i | tee experiments/fixed_ion_electron_poisson/check-input.log
+
+      - name: Run ten pseudo cycles
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            -v "$GITHUB_WORKSPACE:/workspace" \
+            -w /workspace/experiments/fixed_ion_electron_poisson \
+            "$PHYSICS_RUNTIME_REF" \
+            -i driver.i | tee experiments/fixed_ion_electron_poisson/run.log
+
+      - name: Upload prototype outputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fixed-ion-electron-poisson-10cycle
+          path: |
+            experiments/fixed_ion_electron_poisson/*.log
+            experiments/fixed_ion_electron_poisson/*.csv
+            experiments/fixed_ion_electron_poisson/*.e
+          if-no-files-found: warn
+          retention-days: 30
