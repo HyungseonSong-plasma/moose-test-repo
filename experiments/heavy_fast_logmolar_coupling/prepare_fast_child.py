@@ -68,16 +68,16 @@ heavy_materials = """
     type = ADParsedFunctorMaterial
     property_name = c_O2_heavy
     functor_names = 'rho_heavy_reconstructed w_O2_heavy'
-    functor_symbols = 'rho y'
-    expression = 'rho*y/0.032'
+    functor_symbols = 'rhv frac'
+    expression = 'rhv*frac/0.032'
     block = plasma
   []
   [heavy_O_concentration]
     type = ADParsedFunctorMaterial
     property_name = c_O_heavy
     functor_names = 'rho_heavy_reconstructed w_O_heavy'
-    functor_symbols = 'rho y'
-    expression = 'rho*y/0.016'
+    functor_symbols = 'rhv frac'
+    expression = 'rhv*frac/0.016'
     block = plasma
   []
   [rho_snapshot_check]
