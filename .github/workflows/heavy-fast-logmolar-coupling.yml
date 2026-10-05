@@ -36,17 +36,10 @@ jobs:
             python3 prepare_fast_child.py
             python3 prepare_heavy_parent.py
 
-            # The initial O2+ mass fraction was derived from the EOS density below.
-            # Do not round rho to 7.01e-6: that creates a uniform +2.61e-5 charge
-            # imbalance against n_e=1e16 before the first Poisson solve.
+            # Exact EOS density corresponding to the chosen quasi-neutral O2+ fraction.
             startup_rho=7.009816816733094e-6
             sed -i "s/initial_condition = 7.01e-6/initial_condition = ${startup_rho}/g" fast_child.i heavy_parent.i
-            cat >> fast_child.i <<"EOF"
-
-[Debug]
-  show_var_residual_norms = true
-[]
-EOF
+            printf "\n[Debug]\n  show_var_residual_norms = true\n[]\n" >> fast_child.i
 
             retired_prefix="QP""X"
             retired_issue="Issue #""27"
