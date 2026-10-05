@@ -1,0 +1,64 @@
+name: heavy energy electron poisson once
+
+on:
+  push:
+    branches: [ prototype-fully-implicit-electron-poisson ]
+    paths:
+      - 'experiments/heavy_fast_logmolar_coupling/prepare_heavy_energy_ep_once.py'
+      - 'experiments/heavy_fast_logmolar_coupling/prepare_fast_child.py'
+      - 'experiments/heavy_fast_logmolar_coupling/prepare_heavy_parent.py'
+      - '.github/workflows/heavy-energy-electron-poisson-once.yml'
+      - 'experiments/Issue91_real_qvt_r3/r3_e0/heavy_base.i'
+      - 'experiments/implicit_logmolar_surface_loss/input_10step.i'
+      - 'physics_app/**'
+  workflow_dispatch:
+
+jobs:
+  split-once:
+    runs-on: ubuntu-24.04
+    env:
+      BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker pull "$BUILD_BASE_REF"
+      - name: Heavy then energy then electron-Poisson
+        run: |
+          set -euo pipefail
+          docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace -v "$GITHUB_WORKSPACE:/workspace" "$BUILD_BASE_REF" -lc '
+            set -euo pipefail
+            source /environment
+            git config --global --add safe.directory /workspace
+            git config --global --add safe.directory /opt/physics_vendor/moose
+            git config --global --add safe.directory /opt/physics_vendor/crane
+            git config --global --add safe.directory /opt/physics_vendor/squirrel
+            git config --global --add safe.directory /opt/physics_vendor/zapdos
+            export MOOSE_DIR=/opt/physics_vendor/moose CRANE_DIR=/opt/physics_vendor/crane SQUIRREL_DIR=/opt/physics_vendor/squirrel ZAPDOS_DIR=/opt/physics_vendor/zapdos METHOD=opt
+            make -C physics_app -j2
+
+            cd experiments/heavy_fast_logmolar_coupling
+            export STARTUP_RHO=7.009816816733094e-6
+            python3 prepare_heavy_energy_ep_once.py
+
+            ../../physics_app/physics-opt -i electron_poisson_stage.i --check-input
+            ../../physics_app/physics-opt -i fast_child.i --check-input
+            ../../physics_app/physics-opt -i heavy_parent.i --check-input
+
+            rm -rf output_split && mkdir output_split
+            set +e
+            ../../physics_app/physics-opt -i heavy_parent.i > output_split/run.log 2>&1
+            rc=$?
+            set -e
+
+            echo "run_rc=$rc" | tee output_split/status.txt
+            cp heavy_parent.i fast_child.i electron_poisson_stage.i output_split/
+            grep -E "Time Step|Solve Converged|Solve Did NOT Converge|SNES Function norm|log_ne|log_energy|potential|O2p_migration|positive_ion|n_O2p|phi_max|phi_min|charge_|mean_energy|rho_snapshot_rel_error|ERROR|DIVERGED|CONVERGED" \
+              output_split/run.log > output_split/summary.txt || true
+            tail -n 1200 output_split/summary.txt || true
+            exit $rc
+          '
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: heavy-energy-electron-poisson-once
+          path: experiments/heavy_fast_logmolar_coupling/output_split/**
+          retention-days: 30
