@@ -16,6 +16,11 @@ PhysicsFVElectronGroundedSheathEnergyBC::validParams()
   params.addParam<Real>("energy_reference_eV", 1.0, "Legacy normalization energy [eV].");
   params.addParam<bool>("molar_energy_state", false, "Return conservative molar-energy flux.");
   params.addParam<bool>("physical_eV_state", false, "Return physical eV/(m^2 s) flux.");
+  params.addParam<bool>(
+      "apply_sheath_suppression",
+      true,
+      "Multiply the thermal primary-electron wall flux by exp(-Delta phi/T_e). Set false "
+      "only for diagnostic comparison without the sheath suppression factor.");
   return params;
 }
 
@@ -26,7 +31,8 @@ PhysicsFVElectronGroundedSheathEnergyBC::PhysicsFVElectronGroundedSheathEnergyBC
     _potential(getFunctor<ADReal>("potential")),
     _energy_reference_eV(getParam<Real>("energy_reference_eV")),
     _molar_energy_state(getParam<bool>("molar_energy_state")),
-    _physical_eV_state(getParam<bool>("physical_eV_state"))
+    _physical_eV_state(getParam<bool>("physical_eV_state")),
+    _apply_sheath_suppression(getParam<bool>("apply_sheath_suppression"))
 {
   if (_molar_energy_state && _physical_eV_state)
     paramError("physical_eV_state", "molar_energy_state and physical_eV_state are mutually exclusive.");
@@ -52,11 +58,19 @@ PhysicsFVElectronGroundedSheathEnergyBC::computeQpResidual()
 
   const ADReal effective_drop_V = PhysicsGroundedElectronSheath::smoothPositiveDropV(phi_s_V);
   const ADReal electron_temperature_eV = PhysicsGroundedElectronSheath::electronTemperatureEV(mean_energy_eV);
-  const ADReal primary_particle_flux = PhysicsGroundedElectronSheath::primaryParticleFluxHat(
-      electron_density, mean_energy_eV, effective_drop_V);
+  const ADReal primary_particle_flux =
+      _apply_sheath_suppression
+          ? PhysicsGroundedElectronSheath::primaryParticleFluxHat(
+                electron_density, mean_energy_eV, effective_drop_V)
+          : 0.25 * electron_density *
+                PhysicsGroundedElectronSheath::meanSpeedMPerS(electron_temperature_eV);
 
   if (_molar_energy_state || _physical_eV_state)
     return primary_particle_flux * (2.5 * electron_temperature_eV + effective_drop_V);
+
+  if (!_apply_sheath_suppression)
+    return primary_particle_flux *
+           (2.5 * electron_temperature_eV + effective_drop_V) / _energy_reference_eV;
 
   return PhysicsGroundedElectronSheath::primaryEnergyFluxHat(
       electron_density, mean_energy_eV, effective_drop_V, _energy_reference_eV);

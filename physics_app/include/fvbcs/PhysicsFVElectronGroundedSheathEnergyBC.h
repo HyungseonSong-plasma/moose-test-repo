@@ -39,4 +39,5 @@ protected:
   const Real _energy_reference_eV;
   const bool _molar_energy_state;
   const bool _physical_eV_state;
+  const bool _apply_sheath_suppression;
 };

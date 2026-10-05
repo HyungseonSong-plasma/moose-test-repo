@@ -23,4 +23,5 @@ protected:
   const Moose::Functor<ADReal> & _mean_electron_energy;
   const Moose::Functor<ADReal> & _potential;
   const bool _log_molar_state;
+  const bool _apply_sheath_suppression;
 };

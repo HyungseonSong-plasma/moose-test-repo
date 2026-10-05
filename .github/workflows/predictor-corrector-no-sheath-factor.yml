@@ -1,0 +1,153 @@
+name: predictor corrector no sheath factor
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - prototype-fully-implicit-electron-poisson
+    paths:
+      - '.ci_triggers/predictor-corrector-no-sheath-factor'
+
+permissions:
+  contents: read
+  packages: read
+
+env:
+  BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+
+jobs:
+  no-sheath-factor-25ns:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+
+    env:
+      END_TIME_NS: 25
+      OUTPUT_DIR: output_25ns_no_sheath_factor
+      MAX_CORRECTIONS: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pull build image
+        run: docker pull "$BUILD_BASE_REF"
+
+      - name: Build and run 25 ns without sheath suppression factor
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm --entrypoint /bin/bash --user 0:0 \
+            --workdir /workspace \
+            -v "$GITHUB_WORKSPACE:/workspace" \
+            -e END_TIME_NS="$END_TIME_NS" \
+            -e OUTPUT_DIR="$OUTPUT_DIR" \
+            -e MAX_CORRECTIONS="$MAX_CORRECTIONS" \
+            "$BUILD_BASE_REF" -lc '
+              set -euo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              git config --global --add safe.directory /opt/physics_vendor/moose
+              git config --global --add safe.directory /opt/physics_vendor/crane
+              git config --global --add safe.directory /opt/physics_vendor/squirrel
+              git config --global --add safe.directory /opt/physics_vendor/zapdos
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+
+              make -C physics_app -j2
+
+              cd experiments/heavy_fast_logmolar_coupling
+              python3 prepare_predictor_corrector_horizon.py
+
+              python3 - <<"PY"
+from pathlib import Path
+
+paths = [
+    Path("fast_child.i"),
+    Path("electron_poisson_stage.i"),
+    Path("fast_corrector.i"),
+    Path("electron_poisson_corrector_stage.i"),
+]
+particle = "    type = PhysicsFVElectronGroundedSheathCollectionBC\n"
+energy = "    type = PhysicsFVElectronGroundedSheathEnergyBC\n"
+particle_count = 0
+energy_count = 0
+for path in paths:
+    text = path.read_text(encoding="utf-8")
+    pc = text.count(particle)
+    ec = text.count(energy)
+    particle_count += pc
+    energy_count += ec
+    if pc:
+        text = text.replace(
+            particle,
+            particle + "    apply_sheath_suppression = false\n",
+        )
+    if ec:
+        text = text.replace(
+            energy,
+            energy + "    apply_sheath_suppression = false\n",
+        )
+    path.write_text(text, encoding="utf-8")
+
+if particle_count != 2:
+    raise RuntimeError(f"expected 2 particle sheath BCs, found {particle_count}")
+if energy_count != 2:
+    raise RuntimeError(f"expected 2 energy sheath BCs, found {energy_count}")
+print("disabled exp(-Delta phi/T_e) in predictor and corrector particle/energy BCs")
+PY
+
+              for input in \
+                electron_poisson_stage.i \
+                fast_child.i \
+                electron_poisson_corrector_stage.i \
+                fast_corrector.i \
+                heavy_parent.i
+              do
+                ../../physics_app/physics-opt -i "$input" --check-input
+              done
+
+              grep -R "apply_sheath_suppression = false" \
+                fast_child.i electron_poisson_stage.i fast_corrector.i electron_poisson_corrector_stage.i
+
+              rm -rf "$OUTPUT_DIR"
+              mkdir -p "$OUTPUT_DIR"
+
+              set +e
+              /usr/bin/time \
+                -f "wall_seconds=%e\nuser_seconds=%U\nsystem_seconds=%S\nmax_rss_kb=%M" \
+                -o "$OUTPUT_DIR/wall_time.txt" \
+                ../../physics_app/physics-opt -i heavy_parent.i \
+                > "$OUTPUT_DIR/run.log" 2>&1
+              rc=$?
+              set -e
+
+              echo "run_rc=$rc" | tee "$OUTPUT_DIR/status.txt"
+              cp \
+                heavy_parent.i \
+                fast_child.i \
+                electron_poisson_stage.i \
+                fast_corrector.i \
+                electron_poisson_corrector_stage.i \
+                prepare_predictor_corrector_adaptive_dt.py \
+                prepare_predictor_corrector_horizon.py \
+                "$OUTPUT_DIR/"
+
+              grep -E \
+                "Time Step|dt =|Fast fixed-point adaptive dt|Applying transferred-solution predictor|Fixed Point|fixed point|Solve Converged|Solve Did NOT Converge|DIVERGED|CONVERGED|cut|failed|ERROR|phi_max|phi_min|charge_|mean_energy|n_e_|O2p|predictor_fp_iterations|corrector_fp_iterations|dt_used" \
+                "$OUTPUT_DIR/run.log" \
+                > "$OUTPUT_DIR/summary.txt" || true
+
+              tail -n 1200 "$OUTPUT_DIR/summary.txt" || true
+              cat "$OUTPUT_DIR/wall_time.txt" || true
+              exit "$rc"
+            '
+
+      - name: Upload no-sheath-factor diagnostic
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: predictor-corrector-25ns-no-sheath-factor
+          path: experiments/heavy_fast_logmolar_coupling/output_25ns_no_sheath_factor/**
+          retention-days: 30
