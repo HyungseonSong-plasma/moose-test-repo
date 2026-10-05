@@ -1,0 +1,67 @@
+name: full surface loss staged 10ns
+
+on:
+  push:
+    branches:
+      - prototype-fully-implicit-electron-poisson
+    paths:
+      - '.github/workflows/full-surface-loss-staged-10ns.yml'
+  workflow_dispatch:
+
+jobs:
+  staged:
+    runs-on: ubuntu-24.04
+    env:
+      BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker pull "$BUILD_BASE_REF"
+      - name: Build and run staged full 3x3
+        run: |
+          set -euo pipefail
+          docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace -v "$GITHUB_WORKSPACE:/workspace" "$BUILD_BASE_REF" -lc '
+            set -euo pipefail
+            source /environment
+            git config --global --add safe.directory /workspace
+            git config --global --add safe.directory /opt/physics_vendor/moose
+            git config --global --add safe.directory /opt/physics_vendor/crane
+            git config --global --add safe.directory /opt/physics_vendor/squirrel
+            git config --global --add safe.directory /opt/physics_vendor/zapdos
+            export MOOSE_DIR=/opt/physics_vendor/moose CRANE_DIR=/opt/physics_vendor/crane SQUIRREL_DIR=/opt/physics_vendor/squirrel ZAPDOS_DIR=/opt/physics_vendor/zapdos METHOD=opt
+            make -C physics_app -j2
+            cd experiments/implicit_logmolar_surface_loss
+            rm -rf full_staged && mkdir full_staged
+
+            # Stage 1: resolve the stiff sheath-formation startup with 0.1 ns steps to t=1 ns.
+            ../../physics_app/physics-opt -i input_10step.i \
+              "Executioner/dt=1e-10" "Executioner/dtmin=1e-10" "Executioner/dtmax=1e-10" \
+              "Executioner/num_steps=10" "Executioner/end_time=1e-9" \
+              "Executioner/nl_abs_tol=1e-10" "Executioner/nl_rel_tol=1e-9" "Executioner/nl_max_its=60" \
+              "Outputs/checkpoint=true" "Outputs/file_base=full_staged/solve" \
+              > full_staged/stage1.log 2>&1
+
+            # Stage 2: recover the exact nonlinear state and continue with 1 ns physical steps to 10 ns.
+            set +e
+            ../../physics_app/physics-opt -i input_10step.i \
+              --recover full_staged/solve_cp/LATEST \
+              "Executioner/dt=1e-9" "Executioner/dtmin=1e-9" "Executioner/dtmax=1e-9" \
+              "Executioner/num_steps=19" "Executioner/end_time=1e-8" \
+              "Executioner/nl_abs_tol=1e-10" "Executioner/nl_rel_tol=1e-9" "Executioner/nl_max_its=60" \
+              "Outputs/checkpoint=true" "Outputs/file_base=full_staged/solve" \
+              > full_staged/stage2.log 2>&1
+            rc=$?
+            set -e
+            echo "stage2_rc=$rc" > full_staged/status.txt
+            grep -E "Time Step|SNES Function norm|CONVERGED|DIVERGED|Solve Converged|Solve Did NOT Converge" full_staged/stage1.log > full_staged/stage1_summary.txt || true
+            grep -E "Time Step|SNES Function norm|CONVERGED|DIVERGED|Solve Converged|Solve Did NOT Converge" full_staged/stage2.log > full_staged/stage2_summary.txt || true
+            cat full_staged/status.txt
+            echo "--- stage1 tail ---"
+            tail -n 80 full_staged/stage1_summary.txt || true
+            echo "--- stage2 tail ---"
+            tail -n 180 full_staged/stage2_summary.txt || true
+          '
+      - uses: actions/upload-artifact@v4
+        with:
+          name: full-surface-loss-staged-10ns
+          path: experiments/implicit_logmolar_surface_loss/full_staged/**
+          retention-days: 30
