@@ -78,7 +78,7 @@ for required in (
     "vars = 'log_ne log_energy potential'",
     "type = PhysicsFVElectronEnergyJouleHeating",
     "property_name = charge_number_density",
-    "dt = 1e-10",
+    "dt = 1.0e-10",
 ):
     if required not in text:
         raise RuntimeError(f"Level-1 contract missing: {required}")
