@@ -36,6 +36,18 @@ jobs:
             python3 prepare_fast_child.py
             python3 prepare_heavy_parent.py
 
+            # The initial O2+ mass fraction was derived from the EOS density below.
+            # Do not round rho to 7.01e-6: that creates a uniform +2.61e-5 charge
+            # imbalance against n_e=1e16 before the first Poisson solve.
+            startup_rho=7.009816816733094e-6
+            sed -i "s/initial_condition = 7.01e-6/initial_condition = ${startup_rho}/g" fast_child.i heavy_parent.i
+            cat >> fast_child.i <<"EOF"
+
+[Debug]
+  show_var_residual_norms = true
+[]
+EOF
+
             retired_prefix="QP""X"
             retired_issue="Issue #""27"
             if grep -REn "${retired_prefix}|${retired_issue}" prepare_fast_child.py prepare_heavy_parent.py fast_child.i heavy_parent.i; then
@@ -55,8 +67,8 @@ jobs:
             set -e
             echo "run_rc=$rc" | tee output/status.txt
             cp heavy_parent.i fast_child.i output/
-            grep -E "Time Step|Solve Converged|Solve Did NOT Converge|SNES Function norm|O2p_migration|positive_ion|n_O2p|phi_max|mean_energy|max|outside lookup range|ERROR" output/run.log > output/summary.txt || true
-            tail -n 420 output/summary.txt || true
+            grep -E "Time Step|Solve Converged|Solve Did NOT Converge|SNES Function norm|log_ne|log_energy|potential|O2p_migration|positive_ion|n_O2p|phi_max|mean_energy|rho_snapshot_rel_error|max|outside lookup range|ERROR" output/run.log > output/summary.txt || true
+            tail -n 520 output/summary.txt || true
             exit $rc
           '
       - uses: actions/upload-artifact@v4
