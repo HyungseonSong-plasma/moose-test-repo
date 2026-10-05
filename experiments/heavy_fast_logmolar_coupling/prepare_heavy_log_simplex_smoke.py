@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-import re
 import runpy
 
 HERE = Path(__file__).resolve().parent
@@ -24,11 +23,17 @@ STARTUP = {
 
 
 def child_block(text: str, name: str) -> str:
-    pat = re.compile(rf"(?ms)^  \\[{re.escape(name)}\\]\n.*?^  \\[\\]\n")
-    matches = list(pat.finditer(text))
-    if len(matches) != 1:
-        raise RuntimeError(f"expected exactly one block [{name}], found {len(matches)}")
-    return matches[0].group(0)
+    marker = f"  [{name}]\n"
+    start = text.find(marker)
+    if start < 0:
+        raise RuntimeError(f"missing block [{name}]")
+    if text.find(marker, start + len(marker)) >= 0:
+        raise RuntimeError(f"duplicate block [{name}]")
+    end_marker = "  []\n"
+    end = text.find(end_marker, start + len(marker))
+    if end < 0:
+        raise RuntimeError(f"unterminated block [{name}]")
+    return text[start : end + len(end_marker)]
 
 
 def replace_child_block(text: str, name: str, new: str) -> str:
@@ -43,20 +48,17 @@ def replace_line_in_child(text: str, name: str, old: str, new: str) -> str:
     return text.replace(body, body.replace(old, new, 1), 1)
 
 
-# Generate the production heavy parent first, then convert a private smoke copy.
 runpy.run_path(str(PARENT_GENERATOR), run_name="__main__")
 text = PARENT.read_text(encoding="utf-8")
 
-# This smoke case tests the heavy formulation only; keep potential_fast at its
-# zero initial value and remove the electron MultiApp/transfer coupling.
+# Heavy-only smoke: retain potential_fast=0 and remove fast-plasma MultiApp coupling.
 multi = text.find("[MultiApps]\n")
 executioner = text.find("[Executioner]\n", multi)
 if multi < 0 or executioner < 0:
     raise RuntimeError("generated parent coupling region not found")
 text = text[:multi] + text[executioner:]
 
-# eta_s = log[(Y_s/Y_O2)/(Y_s/Y_O2)_0].  All nonlinear composition coordinates
-# therefore start from zero.  Om and Op use an effectively-zero positive floor.
+# eta_s = log[(Y_s/Y_O2)/(Y_s/Y_O2)_0].
 for sp in SPECIES:
     old = child_block(text, f"w_{sp}")
     new = f"""  [eta_{sp}]
@@ -67,7 +69,7 @@ for sp in SPECIES:
 """
     text = text.replace(old, new, 1)
 
-# Time derivatives of the independent eta coordinates and pressure.
+# Pressure and log-ratio coordinate time derivatives.
 eta_props = " ".join(f"eta{sp}_state" for sp in SPECIES)
 eta_values = " ".join(f"eta_{sp}" for sp in SPECIES)
 aliases = f"""  [transient_state_dot_aliases]
@@ -80,9 +82,8 @@ aliases = f"""  [transient_state_dot_aliases]
 """
 text = replace_child_block(text, "transient_state_dot_aliases", aliases)
 
-# Softmax/simplex reconstruction with O2 as reference:
-#   Y_O2 = 1 / (1 + sum r_s0 exp(eta_s))
-#   Y_s  = r_s0 exp(eta_s) Y_O2
+# Exact simplex reconstruction, with an effectively-zero positive floor for
+# initially absent Om and Op.
 ratios = {sp: STARTUP[sp] / STARTUP["O2"] for sp in SPECIES}
 den_terms = [f"{ratios[sp]:.17g}*exp(e{i})" for i, sp in enumerate(SPECIES)]
 eta_names = " ".join(f"eta_{sp}" for sp in SPECIES)
@@ -116,8 +117,7 @@ for sp in SPECIES:
 """
 text = replace_child_block(text, "O2_constraint", simplex_blocks)
 
-# Sigma = sum_s Y_s deta_s/dt.  Then dY_s/dt = Y_s(deta_s/dt-Sigma)
-# and dY_O2/dt = -Y_O2 Sigma.
+# Sigma = sum_s Y_s * deta_s/dt.
 dot_names = " ".join(f"deta{sp}_state_dt" for sp in SPECIES)
 w_names = " ".join(f"w_{sp}" for sp in SPECIES)
 w_symbols = " ".join(f"y{i}" for i in range(len(SPECIES)))
@@ -136,9 +136,8 @@ if simplex_blocks not in text:
     raise RuntimeError("simplex insertion anchor missing")
 text = text.replace(simplex_blocks, simplex_blocks + sigma_block, 1)
 
-# For this O/O2 species set, Mn = 0.032/(1+A),
-# A=Y_O+Y_Om+Y_Op+Y_Os.  The chain rule in eta coordinates is
-# dA/dt=sum_atomic(Y_j deta_j/dt)-A*Sigma.
+# Mn = 0.032/(1+A), A=Y_O+Y_Om+Y_Op+Y_Os.
+# dA/dt = sum_atomic(Y_j*deta_j/dt) - A*Sigma.
 dMn = """  [mean_molar_mass_dot]
     type = ADParsedFunctorMaterial
     property_name = dMn_dt_model
@@ -149,23 +148,26 @@ dMn = """  [mean_molar_mass_dot]
   []
 """
 text = replace_child_block(text, "mean_molar_mass_dot", dMn)
-# The existing drho_dt_model = (Mn*dp/dt+p*dMn/dt)/(R*Tg) is already
-# coordinate invariant and is intentionally retained.
+# Existing drho_dt_model = (Mn*dp/dt + p*dMn/dt)/(R*Tg) is retained.
 
 
 def patch_transport(block_name: str, new_type: str, sp: str) -> None:
     global text
     body = child_block(text, block_name)
-    body2 = re.sub(r"(?m)^    type = \\S+\n", f"    type = {new_type}\n", body, count=1)
-    body2, n = re.subn(
-        rf"(?m)^    variable = w_{re.escape(sp)}\n",
-        f"    variable = eta_{sp}\n    mass_fraction = w_{sp}\n",
-        body2,
-        count=1,
-    )
-    if n != 1:
-        raise RuntimeError(f"[{block_name}] variable replacement failed")
-    text = text.replace(body, body2, 1)
+    lines = body.splitlines(keepends=True)
+    type_indices = [i for i, line in enumerate(lines) if line.startswith("    type = ")]
+    if len(type_indices) != 1:
+        raise RuntimeError(f"[{block_name}] expected one type line")
+    lines[type_indices[0]] = f"    type = {new_type}\n"
+    old_var = f"    variable = w_{sp}\n"
+    if lines.count(old_var) != 1:
+        raise RuntimeError(f"[{block_name}] expected one {old_var.strip()}")
+    i = lines.index(old_var)
+    lines[i : i + 1] = [
+        f"    variable = eta_{sp}\n",
+        f"    mass_fraction = w_{sp}\n",
+    ]
+    text = text.replace(body, "".join(lines), 1)
 
 
 for sp in SPECIES:
@@ -185,15 +187,13 @@ for sp in CHARGED:
         sp,
     )
 
-# WCNSFVScalarFluxBC accepts a separate passive-scalar functor.  Apply its
-# physical mass flux to the eta residual row while keeping reconstructed Y_s
-# as the passive scalar.
+# Inlet BC: residual row is eta_s but passive scalar remains physical Y_s.
 for sp in SPECIES:
     text = replace_line_in_child(
         text, f"inlet_{sp}", f"    variable = w_{sp}\n", f"    variable = eta_{sp}\n"
     )
 
-# O2+ wall loss is already expressed as a physical mass-flux functor.
+# O2+ wall-loss functor already has physical mass-flux units.
 text = replace_line_in_child(
     text,
     "O2p_migration_wall_loss",
@@ -201,7 +201,7 @@ text = replace_line_in_child(
     "    variable = eta_O2p\n",
 )
 
-# One short fixed physical step is enough for this formulation smoke test.
+# One short fixed physical step.
 old_exec = """  dt = 5.0e-9
   dtmin = 5.0e-9
   dtmax = 5.0e-9
@@ -216,18 +216,18 @@ if old_exec not in text:
     raise RuntimeError("heavy-parent executioner timing contract not found")
 text = text.replace(old_exec, new_exec, 1)
 
-# Strong formulation guards.
+# Formulation guards.
 for sp in SPECIES:
-    if re.search(rf"(?m)^  \\[w_{re.escape(sp)}\\]$", text):
+    if f"  [w_{sp}]\n" in text:
         raise RuntimeError(f"raw solved heavy variable survived: w_{sp}")
-    if f"variable = w_{sp}" in text:
+    if f"    variable = w_{sp}\n" in text:
         raise RuntimeError(f"raw heavy residual variable survived: w_{sp}")
-    if f"property_name = w_{sp}" not in text:
+    if f"property_name = w_{sp}\n" not in text:
         raise RuntimeError(f"physical simplex functor missing: w_{sp}")
-    if f"variable = eta_{sp}" not in text:
+    if f"    variable = eta_{sp}\n" not in text:
         raise RuntimeError(f"log-ratio residual variable missing: eta_{sp}")
 
-if "property_name = w_O2_constraint" not in text:
+if "property_name = w_O2_constraint\n" not in text:
     raise RuntimeError("simplex reference O2 functor missing")
 if "heavy_simplex_sigma_dot" not in text:
     raise RuntimeError("simplex time-chain-rule closure missing")
