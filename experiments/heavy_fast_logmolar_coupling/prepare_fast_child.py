@@ -12,22 +12,27 @@ if plasma_only not in text:
     raise RuntimeError("plasma_only mesh block not found")
 text = text.replace(plasma_only, "", 1)
 
+# Fast plasma now receives p, Tg, density and charged-heavy fractions from the
+# heavy parent. No fixed ion density remains in the Poisson closure.
 old_constants = """  [constants]\n    type = ADGenericFunctorMaterial\n    prop_names = 'p T_g carrier_one relative_permittivity n_ion_fixed'\n    prop_values = '1.333223684 300.0 1.0 1.0 1.0e16'\n    block = plasma\n  []\n"""
-new_constants = """  [constants]\n    type = ADGenericFunctorMaterial\n    prop_names = 'carrier_one relative_permittivity n_ion_fixed'\n    prop_values = '1.0 1.0 1.0e16'\n    block = plasma\n  []\n  [inactive_mesh_blocks]\n    type = ADGenericFunctorMaterial\n    prop_names = 'coupling_dummy'\n    prop_values = '0.0'\n    block = 'wafer cover focus_ring coil1 coil2 coil3 electrode top vacuum metal right bottom port'\n  []\n"""
+new_constants = """  [constants]\n    type = ADGenericFunctorMaterial\n    prop_names = 'carrier_one relative_permittivity'\n    prop_values = '1.0 1.0'\n    block = plasma\n  []\n  [inactive_mesh_blocks]\n    type = ADGenericFunctorMaterial\n    prop_names = 'coupling_dummy'\n    prop_values = '0.0'\n    block = 'wafer cover focus_ring coil1 coil2 coil3 electrode top vacuum metal right bottom port'\n  []\n"""
 if old_constants not in text:
     raise RuntimeError("fast constants block not found")
 text = text.replace(old_constants, new_constants, 1)
 
+# Initial values only seed the child before the first transfer. The parent owns
+# the live values from then on. O2+ is initialized close to 1e16 1/m3 and the
+# other charged-heavy species start from zero for a clean feedback diagnostic.
 heavy_vars = [
     ("p_heavy", "1.33322"),
     ("T_g_heavy", "600.0"),
-    ("rho_heavy_snapshot", "1.0e-5"),
-    ("w_O2_heavy_snapshot", "0.70"),
+    ("rho_heavy_snapshot", "7.01e-6"),
+    ("w_O2_heavy_snapshot", "0.7299241959504238"),
     ("w_O2s_heavy", "0.05"),
-    ("w_O2p_heavy", "0.01"),
+    ("w_O2p_heavy", "7.580404957618788e-5"),
     ("w_O_heavy", "0.10"),
-    ("w_Om_heavy", "0.01"),
-    ("w_Op_heavy", "0.01"),
+    ("w_Om_heavy", "0.0"),
+    ("w_Op_heavy", "0.0"),
     ("w_Os_heavy", "0.12"),
 ]
 aux = "[AuxVariables]\n"
@@ -39,7 +44,8 @@ if "[FunctorMaterials]\n" not in text:
 text = text.replace("[FunctorMaterials]\n", aux + "[FunctorMaterials]\n", 1)
 
 heavy_materials = """
-  # Heavy-flow snapshot reconstruction. Chemistry remains off in this coupling gate.
+  # Heavy-flow state reconstructed from transferred pressure, temperature,
+  # density, and species mass fractions. Chemistry remains disabled here.
   [heavy_O2_constraint]
     type = ADParsedFunctorMaterial
     property_name = w_O2_heavy
@@ -67,7 +73,7 @@ heavy_materials = """
   [heavy_O2_concentration]
     type = ADParsedFunctorMaterial
     property_name = c_O2_heavy
-    functor_names = 'rho_heavy_reconstructed w_O2_heavy'
+    functor_names = 'rho_heavy_snapshot w_O2_heavy'
     functor_symbols = 'rhv frac'
     expression = 'rhv*frac/0.032'
     block = plasma
@@ -75,9 +81,41 @@ heavy_materials = """
   [heavy_O_concentration]
     type = ADParsedFunctorMaterial
     property_name = c_O_heavy
-    functor_names = 'rho_heavy_reconstructed w_O_heavy'
+    functor_names = 'rho_heavy_snapshot w_O_heavy'
     functor_symbols = 'rhv frac'
     expression = 'rhv*frac/0.016'
+    block = plasma
+  []
+  [heavy_O2p_number_density]
+    type = ADParsedFunctorMaterial
+    property_name = n_O2p_heavy
+    functor_names = 'rho_heavy_snapshot w_O2p_heavy'
+    functor_symbols = 'rhv frac'
+    expression = '6.02214076e23*rhv*frac/0.032'
+    block = plasma
+  []
+  [heavy_Om_number_density]
+    type = ADParsedFunctorMaterial
+    property_name = n_Om_heavy
+    functor_names = 'rho_heavy_snapshot w_Om_heavy'
+    functor_symbols = 'rhv frac'
+    expression = '6.02214076e23*rhv*frac/0.016'
+    block = plasma
+  []
+  [heavy_Op_number_density]
+    type = ADParsedFunctorMaterial
+    property_name = n_Op_heavy
+    functor_names = 'rho_heavy_snapshot w_Op_heavy'
+    functor_symbols = 'rhv frac'
+    expression = '6.02214076e23*rhv*frac/0.016'
+    block = plasma
+  []
+  [heavy_positive_ion_density]
+    type = ADParsedFunctorMaterial
+    property_name = n_positive_heavy
+    functor_names = 'n_O2p_heavy n_Op_heavy'
+    functor_symbols = 'n1 n2'
+    expression = 'n1+n2'
     block = plasma
   []
   [rho_snapshot_check]
@@ -104,23 +142,41 @@ if marker not in text:
 text = text.replace(marker, heavy_materials + marker, 1)
 text = text.replace("    pressure = p\n    gas_temperature = T_g\n", "    pressure = p_heavy\n    gas_temperature = T_g_heavy\n", 1)
 
+old_charge = """  [charge_number_density]\n    type = ADParsedFunctorMaterial\n    property_name = charge_number_density\n    functor_names = 'n_ion_fixed n_e_physical'\n    functor_symbols = 'ni ne'\n    expression = 'ni-ne'\n    block = plasma\n  []\n"""
+new_charge = """  [charge_number_density]\n    type = ADParsedFunctorMaterial\n    property_name = charge_number_density\n    functor_names = 'n_O2p_heavy n_Op_heavy n_Om_heavy n_e_physical'\n    functor_symbols = 'nO2p nOp nOm ne'\n    expression = 'nO2p+nOp-nOm-ne'\n    block = plasma\n  []\n"""
+if old_charge not in text:
+    raise RuntimeError("fixed-ion charge closure not found")
+text = text.replace(old_charge, new_charge, 1)
+
 pps = [
     ("heavy_p_min", "p_heavy", "min"), ("heavy_p_max", "p_heavy", "max"),
     ("heavy_Tg_min", "T_g_heavy", "min"), ("heavy_Tg_max", "T_g_heavy", "max"),
-    ("heavy_rho_min", "rho_heavy_reconstructed", "min"), ("heavy_rho_max", "rho_heavy_reconstructed", "max"),
+    ("heavy_rho_min", "rho_heavy_snapshot", "min"), ("heavy_rho_max", "rho_heavy_snapshot", "max"),
     ("heavy_cO2_min", "c_O2_heavy", "min"), ("heavy_cO2_max", "c_O2_heavy", "max"),
     ("heavy_cO_min", "c_O_heavy", "min"), ("heavy_cO_max", "c_O_heavy", "max"),
+    ("n_O2p_min", "n_O2p_heavy", "min"), ("n_O2p_max", "n_O2p_heavy", "max"),
     ("rho_snapshot_rel_error_max", "rho_snapshot_rel_error", "max_abs"),
     ("w_O2_snapshot_error_max", "w_O2_snapshot_error", "max_abs"),
 ]
 pp = ""
 for name, functor, value_type in pps:
     pp += f"  [{name}]\n    type = ADElementExtremeFunctorValue\n    functor = {functor}\n    value_type = {value_type}\n    block = plasma\n    execute_on = 'INITIAL TIMESTEP_END'\n  []\n"
-pp += "\n"
+pp += """
+  [positive_ion_inventory]
+    type = ADElementIntegralFunctorPostprocessor
+    functor = n_positive_heavy
+    block = plasma
+    execute_on = 'INITIAL TIMESTEP_END'
+  []
+
+"""
 marker = "  [num_dofs]\n"
 if marker not in text:
     raise RuntimeError("Postprocessor marker not found")
 text = text.replace(marker, pp + marker, 1)
+
+if "n_ion_fixed" in text:
+    raise RuntimeError("fast child still contains fixed ion density")
 
 OUT.write_text(text, encoding="utf-8")
 print(f"wrote {OUT}")
