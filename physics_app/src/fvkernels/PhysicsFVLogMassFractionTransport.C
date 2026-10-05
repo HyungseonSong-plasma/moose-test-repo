@@ -4,8 +4,6 @@
 #include "RelationshipManager.h"
 #include "metaphysicl/raw_type.h"
 
-#include <cmath>
-
 registerMooseObject("PhysicsApp", PhysicsFVLogMassFractionTimeDerivative);
 registerMooseObject("PhysicsApp", PhysicsFVLogMassFractionAdvection);
 registerMooseObject("PhysicsApp", PhysicsFVLogMixtureAveragedDiffusion);
@@ -17,10 +15,13 @@ PhysicsFVLogMassFractionTimeDerivative::validParams()
 {
   auto params = FVElementalKernel::validParams();
   params.addClassDescription(
-      "Conservative backward-Euler heavy-species balance reconstructed from "
-      "Y=exp(log_Y): [rho*Y-rho_old*Y_old]/dt.");
+      "Conservative backward-Euler heavy-species balance using a physical "
+      "mass-fraction AD functor reconstructed from a logarithmic nonlinear coordinate.");
   params.addRequiredParam<MooseFunctorName>(
       "rho", "Mixture density rho [kg/m^3], evaluable at current and old states.");
+  params.addRequiredParam<MooseFunctorName>(
+      "mass_fraction",
+      "Physical species mass fraction Y_k reconstructed from the log coordinate(s).");
   params.set<MultiMooseEnum>("vector_tags") = "time";
   params.set<MultiMooseEnum>("matrix_tags") = "system time";
   return params;
@@ -28,7 +29,9 @@ PhysicsFVLogMassFractionTimeDerivative::validParams()
 
 PhysicsFVLogMassFractionTimeDerivative::PhysicsFVLogMassFractionTimeDerivative(
     const InputParameters & parameters)
-  : FVElementalKernel(parameters), _rho(getFunctor<ADReal>("rho"))
+  : FVElementalKernel(parameters),
+    _rho(getFunctor<ADReal>("rho")),
+    _mass_fraction(getFunctor<ADReal>("mass_fraction"))
 {
 }
 
@@ -40,14 +43,13 @@ PhysicsFVLogMassFractionTimeDerivative::computeQpResidual()
   if (_dt <= 0.0)
     mooseError("PhysicsFVLogMassFractionTimeDerivative requires dt > 0.");
 
-  using std::exp;
   const auto elem = makeElemArg(_current_elem);
   const auto state = determineState();
 
   const ADReal rho = _rho(elem, state);
   const ADReal rho_old = _rho(elem, Moose::oldState());
-  const ADReal Y = exp(_var(elem, state));
-  const ADReal Y_old = exp(_var(elem, Moose::oldState()));
+  const ADReal Y = _mass_fraction(elem, state);
+  const ADReal Y_old = _mass_fraction(elem, Moose::oldState());
 
   return (rho * Y - rho_old * Y_old) / _dt;
 }
@@ -57,23 +59,25 @@ PhysicsFVLogMassFractionAdvection::validParams()
 {
   auto params = INSFVScalarFieldAdvection::validParams();
   params.addClassDescription(
-      "Density-weighted finite-volume advection of a heavy species with "
-      "Y=exp(log_Y).");
+      "Density-weighted finite-volume advection of a reconstructed heavy-species "
+      "mass fraction for a logarithmic residual variable.");
   params.addRequiredParam<MooseFunctorName>("rho", "Mixture density rho [kg/m^3].");
+  params.addRequiredParam<MooseFunctorName>(
+      "mass_fraction", "Physical species mass fraction Y_k.");
   return params;
 }
 
 PhysicsFVLogMassFractionAdvection::PhysicsFVLogMassFractionAdvection(
     const InputParameters & parameters)
-  : INSFVScalarFieldAdvection(parameters), _rho(getFunctor<ADReal>("rho"))
+  : INSFVScalarFieldAdvection(parameters),
+    _rho(getFunctor<ADReal>("rho")),
+    _mass_fraction(getFunctor<ADReal>("mass_fraction"))
 {
 }
 
 ADReal
 PhysicsFVLogMassFractionAdvection::computeQpResidual()
 {
-  using std::exp;
-
   const auto state = determineState();
   const auto & limiter_time =
       _subproblem.isTransient()
@@ -119,7 +123,7 @@ PhysicsFVLogMassFractionAdvection::computeQpResidual()
                false,
                &limiter_time);
 
-  const ADReal Y_face = exp(_var(face_arg, state));
+  const ADReal Y_face = _mass_fraction(face_arg, state);
   const ADReal rho_face = _rho(face_arg, state);
 
   return rho_face * (_normal * advection_velocity) * Y_face;
@@ -131,9 +135,12 @@ PhysicsFVLogMixtureAveragedDiffusion::validParams()
   auto params = FVFluxKernel::validParams();
 
   params.addClassDescription(
-      "Mixture-averaged heavy-species diffusion reconstructed from Y=exp(log_Y).");
+      "Mixture-averaged heavy-species diffusion using a physical mass-fraction "
+      "AD functor reconstructed from logarithmic nonlinear coordinates.");
 
   params.addRequiredParam<MooseFunctorName>("rho", "Mixture density [kg/m^3].");
+  params.addRequiredParam<MooseFunctorName>(
+      "mass_fraction", "Physical species mass fraction Y_k.");
   params.addRequiredParam<MooseFunctorName>(
       "diffusivity", "Mixture-averaged species diffusion coefficient D_km [m^2/s].");
   params.addRequiredParam<MooseFunctorName>(
@@ -156,6 +163,7 @@ PhysicsFVLogMixtureAveragedDiffusion::PhysicsFVLogMixtureAveragedDiffusion(
     const InputParameters & parameters)
   : FVFluxKernel(parameters),
     _rho(getFunctor<ADReal>("rho")),
+    _mass_fraction(getFunctor<ADReal>("mass_fraction")),
     _diffusivity(getFunctor<ADReal>("diffusivity")),
     _mean_molar_mass(getFunctor<ADReal>("mean_molar_mass")),
     _coeff_interp_method(
@@ -168,7 +176,6 @@ ADReal
 PhysicsFVLogMixtureAveragedDiffusion::computeQpResidual()
 {
   using namespace Moose::FV;
-  using std::exp;
 
   const auto state = determineState();
 
@@ -198,8 +205,8 @@ PhysicsFVLogMixtureAveragedDiffusion::computeQpResidual()
                 *_face_info,
                 true);
 
-    const ADReal Y_elem = exp(_var(elemArg(), state));
-    const ADReal Y_neighbor = exp(_var(neighborArg(), state));
+    const ADReal Y_elem = _mass_fraction(elemArg(), state);
+    const ADReal Y_neighbor = _mass_fraction(neighborArg(), state);
 
     interpolate(InterpMethod::Average,
                 Y_face,
@@ -238,11 +245,8 @@ PhysicsFVLogMixtureAveragedDiffusion::computeQpResidual()
     const auto face = singleSidedFaceArg();
 
     coeff = _rho(face, state) * _diffusivity(face, state);
-    Y_face = exp(_var(face, state));
-
-    // Chain rule on a one-sided boundary reconstruction:
-    // grad(Y).n = Y * grad(log(Y)).n.
-    dYdn = Y_face * gradUDotNormal(state, false);
+    Y_face = _mass_fraction(face, state);
+    dYdn = _mass_fraction.gradient(face, state) * normal();
 
     Mn_face = _mean_molar_mass(face, state);
     dMndn = _mean_molar_mass.gradient(face, state) * normal();
@@ -260,8 +264,10 @@ PhysicsFVLogMassFractionElectrostaticDrift::validParams()
   auto params = FVFluxKernel::validParams();
 
   params.addClassDescription(
-      "Electrostatic heavy-species drift reconstructed from Y=exp(log_Y).");
+      "Electrostatic heavy-species drift using a reconstructed physical mass fraction.");
 
+  params.addRequiredParam<MooseFunctorName>(
+      "mass_fraction", "Physical species mass fraction Y_k.");
   params.addRequiredParam<MooseFunctorName>("potential", "Electrostatic potential phi [V].");
   params.addRequiredParam<MooseFunctorName>(
       "mobility", "Positive species mobility magnitude [m^2/(V s)].");
@@ -286,6 +292,7 @@ PhysicsFVLogMassFractionElectrostaticDrift::validParams()
 PhysicsFVLogMassFractionElectrostaticDrift::PhysicsFVLogMassFractionElectrostaticDrift(
     const InputParameters & parameters)
   : FVFluxKernel(parameters),
+    _mass_fraction(getFunctor<ADReal>("mass_fraction")),
     _potential(getFunctor<ADReal>("potential")),
     _mobility(getFunctor<ADReal>("mobility")),
     _carrier(getFunctor<ADReal>("carrier")),
@@ -305,8 +312,6 @@ PhysicsFVLogMassFractionElectrostaticDrift::PhysicsFVLogMassFractionElectrostati
 ADReal
 PhysicsFVLogMassFractionElectrostaticDrift::computeQpResidual()
 {
-  using std::exp;
-
   const auto state = determineState();
   const auto & limiter_time =
       _subproblem.isTransient()
@@ -336,7 +341,7 @@ PhysicsFVLogMassFractionElectrostaticDrift::computeQpResidual()
                false,
                &limiter_time);
 
-  const ADReal Y_face = exp(_var(transported_face, state));
+  const ADReal Y_face = _mass_fraction(transported_face, state);
 
   return carrier_face * Y_face * drift_normal;
 }
@@ -348,13 +353,13 @@ PhysicsFVLogHeavyMassElectromigrationCorrection::validParams()
 
   params.addClassDescription(
       "Conservative zero-net-heavy-mass electromigration correction for a "
-      "log-mass-fraction residual row.");
+      "log-coordinate residual row.");
 
   params.addRequiredParam<MooseFunctorName>("potential", "Electrostatic potential phi [V].");
   params.addRequiredParam<MooseFunctorName>("rho", "Heavy-mixture density rho [kg/m^3].");
   params.addRequiredParam<MooseFunctorName>(
       "mass_fraction",
-      "Physical mass fraction Y_k=exp(log_Y_k) for the species owning this residual row.");
+      "Physical mass fraction Y_k for the species owning this residual row.");
 
   params.addRequiredParam<std::vector<MooseFunctorName>>(
       "ion_mass_fractions",

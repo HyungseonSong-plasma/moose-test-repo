@@ -6,11 +6,11 @@
 
 /**
  * Conservative backward-Euler accumulation for a heavy-species mass fraction
- * represented by the nonlinear variable eta_k = log(Y_k).
+ * represented by a logarithmic nonlinear coordinate.
  *
- * The residual remains the physical conservative equation:
- *
- *   [rho^n exp(eta_k^n) - rho^(n-1) exp(eta_k^(n-1))] / dt.
+ * The nonlinear variable identifies the residual row. The physical mass fraction
+ * is supplied as an AD functor so the coordinate may be either a simple
+ * Y=Y_ref*exp(eta) map or a coupled log-ratio/simplex reconstruction.
  */
 class PhysicsFVLogMassFractionTimeDerivative : public FVElementalKernel
 {
@@ -22,11 +22,10 @@ protected:
   ADReal computeQpResidual() override;
 
   const Moose::Functor<ADReal> & _rho;
+  const Moose::Functor<ADReal> & _mass_fraction;
 };
 
-/**
- * Density-weighted advection of Y_k = exp(eta_k), with eta_k the solved FV variable.
- */
+/** Density-weighted advection of a reconstructed physical heavy mass fraction. */
 class PhysicsFVLogMassFractionAdvection : public INSFVScalarFieldAdvection
 {
 public:
@@ -37,12 +36,10 @@ protected:
   ADReal computeQpResidual() override;
 
   const Moose::Functor<ADReal> & _rho;
+  const Moose::Functor<ADReal> & _mass_fraction;
 };
 
-/**
- * Mixture-averaged diffusion of Y_k = exp(eta_k), preserving the physical
- * mass-fraction flux and optional mean-molar-mass-gradient correction.
- */
+/** Mixture-averaged diffusion of a reconstructed physical heavy mass fraction. */
 class PhysicsFVLogMixtureAveragedDiffusion : public FVFluxKernel
 {
 public:
@@ -53,17 +50,14 @@ protected:
   ADReal computeQpResidual() override;
 
   const Moose::Functor<ADReal> & _rho;
+  const Moose::Functor<ADReal> & _mass_fraction;
   const Moose::Functor<ADReal> & _diffusivity;
   const Moose::Functor<ADReal> & _mean_molar_mass;
   Moose::FV::InterpMethod _coeff_interp_method;
   const bool _include_molar_mass_gradient;
 };
 
-/**
- * Electrostatic drift of Y_k = exp(eta_k), with eta_k the solved FV variable.
- *
- * For a heavy mass-fraction equation use carrier=rho.
- */
+/** Electrostatic drift of a reconstructed physical heavy mass fraction. */
 class PhysicsFVLogMassFractionElectrostaticDrift : public FVFluxKernel
 {
 public:
@@ -73,6 +67,7 @@ public:
 protected:
   ADReal computeQpResidual() override;
 
+  const Moose::Functor<ADReal> & _mass_fraction;
   const Moose::Functor<ADReal> & _potential;
   const Moose::Functor<ADReal> & _mobility;
   const Moose::Functor<ADReal> & _carrier;
@@ -81,10 +76,10 @@ protected:
 };
 
 /**
- * Zero-net-heavy-mass electromigration correction for a log mass-fraction equation.
+ * Zero-net-heavy-mass electromigration correction for a log-coordinate equation.
  *
- * The solved variable identifies the residual row. Physical mass fractions are
- * supplied as AD functors, so the Jacobian retains the eta -> exp(eta) chain rule.
+ * All physical mass fractions are AD functors, preserving the full chain rule
+ * through a log-ratio/simplex reconstruction in a monolithic Jacobian.
  */
 class PhysicsFVLogHeavyMassElectromigrationCorrection : public FVFluxKernel
 {
