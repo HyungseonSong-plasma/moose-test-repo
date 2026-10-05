@@ -1,0 +1,88 @@
+name: fast energy nonlinear diagnostic
+
+on:
+  push:
+    branches: [ prototype-fully-implicit-electron-poisson ]
+    paths:
+      - '.github/workflows/fast-energy-nonlinear-diagnostic.yml'
+  workflow_dispatch:
+
+jobs:
+  diagnose:
+    strategy:
+      fail-fast: false
+      matrix:
+        case: [energy_central, all_central, no_joule, no_energy_sheath]
+    runs-on: ubuntu-24.04
+    env:
+      CASE: ${{ matrix.case }}
+      BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker pull "$BUILD_BASE_REF"
+      - name: Run one-step fast diagnostic
+        run: |
+          set -euo pipefail
+          docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace \
+            -e CASE="$CASE" -v "$GITHUB_WORKSPACE:/workspace" "$BUILD_BASE_REF" -lc '
+            set -euo pipefail
+            source /environment
+            git config --global --add safe.directory /workspace
+            git config --global --add safe.directory /opt/physics_vendor/moose
+            git config --global --add safe.directory /opt/physics_vendor/crane
+            git config --global --add safe.directory /opt/physics_vendor/squirrel
+            git config --global --add safe.directory /opt/physics_vendor/zapdos
+            export MOOSE_DIR=/opt/physics_vendor/moose CRANE_DIR=/opt/physics_vendor/crane SQUIRREL_DIR=/opt/physics_vendor/squirrel ZAPDOS_DIR=/opt/physics_vendor/zapdos METHOD=opt
+            make -C physics_app -j2
+            cd experiments/heavy_fast_logmolar_coupling
+            python3 prepare_fast_child.py
+
+            startup_rho=7.009816816733094e-6
+            sed -i "s/initial_condition = 7.01e-6/initial_condition = ${startup_rho}/g" fast_child.i
+
+            case "$CASE" in
+              energy_central)
+                sed -i "/^  \\[energy_drift\\]$/,/^  \\[\\]$/{s/advected_interp_method = upwind/advected_interp_method = average/}" fast_child.i
+                ;;
+              all_central)
+                sed -i "/^  \\[electron_drift\\]$/,/^  \\[\\]$/{s/advected_interp_method = upwind/advected_interp_method = average/}" fast_child.i
+                sed -i "/^  \\[energy_drift\\]$/,/^  \\[\\]$/{s/advected_interp_method = upwind/advected_interp_method = average/}" fast_child.i
+                ;;
+              no_joule)
+                sed -i "/^  \\[energy_joule\\]$/,/^  \\[\\]$/d" fast_child.i
+                ;;
+              no_energy_sheath)
+                sed -i "/^  \\[electron_energy_sheath_loss\\]$/,/^  \\[\\]$/d" fast_child.i
+                ;;
+              *)
+                echo "unknown case $CASE"
+                exit 2
+                ;;
+            esac
+
+            printf "\n[Debug]\n  show_var_residual_norms = true\n[]\n" >> fast_child.i
+            ../../physics_app/physics-opt -i fast_child.i --check-input
+
+            out="diag_${CASE}"
+            rm -rf "$out" && mkdir "$out"
+            set +e
+            ../../physics_app/physics-opt -i fast_child.i \
+              Executioner/dt=1e-9 Executioner/dtmin=1e-9 Executioner/dtmax=1e-9 \
+              Executioner/num_steps=1 Executioner/end_time=1e-9 \
+              Executioner/nl_abs_tol=1e-10 Executioner/nl_rel_tol=1e-9 Executioner/nl_max_its=80 \
+              Outputs/file_base="$out/fast" > "$out/run.log" 2>&1
+            rc=$?
+            set -e
+            echo "case=$CASE" > "$out/status.txt"
+            echo "run_rc=$rc" >> "$out/status.txt"
+            cp fast_child.i "$out/"
+            grep -E "Time Step|Solve Converged|Solve Did NOT Converge|SNES Function norm|log_ne|log_energy|potential|phi_max|mean_energy|ERROR|DIVERGED|CONVERGED" "$out/run.log" > "$out/summary.txt" || true
+            tail -n 360 "$out/summary.txt" || true
+            exit $rc
+          '
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: fast-energy-${{ matrix.case }}
+          path: experiments/heavy_fast_logmolar_coupling/diag_${{ matrix.case }}/**
+          retention-days: 30
