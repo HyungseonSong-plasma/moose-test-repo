@@ -96,5 +96,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: l4-fastopt-${{ matrix.variant }}
-          path: experiments/heavy_fast_logmolar_coupling/output_l4_fastopt_${{ matrix.variant }}/**
+          path: experiments/heavy_fast_logmolar_coupling/output_l4_fastopt_*/**
           retention-days: 30
