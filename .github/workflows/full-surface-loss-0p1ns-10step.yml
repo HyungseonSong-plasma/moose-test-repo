@@ -1,0 +1,52 @@
+name: full surface loss 0p1ns 10step
+
+on:
+  push:
+    branches:
+      - prototype-fully-implicit-electron-poisson
+    paths:
+      - '.github/workflows/full-surface-loss-0p1ns-10step.yml'
+  workflow_dispatch:
+
+jobs:
+  full-3x3:
+    runs-on: ubuntu-24.04
+    env:
+      BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker pull "$BUILD_BASE_REF"
+      - name: Build and run full 3x3
+        run: |
+          set -euo pipefail
+          docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace -v "$GITHUB_WORKSPACE:/workspace" "$BUILD_BASE_REF" -lc '
+            set -euo pipefail
+            source /environment
+            git config --global --add safe.directory /workspace
+            git config --global --add safe.directory /opt/physics_vendor/moose
+            git config --global --add safe.directory /opt/physics_vendor/crane
+            git config --global --add safe.directory /opt/physics_vendor/squirrel
+            git config --global --add safe.directory /opt/physics_vendor/zapdos
+            export MOOSE_DIR=/opt/physics_vendor/moose CRANE_DIR=/opt/physics_vendor/crane SQUIRREL_DIR=/opt/physics_vendor/squirrel ZAPDOS_DIR=/opt/physics_vendor/zapdos METHOD=opt
+            make -C physics_app -j2
+            cd experiments/implicit_logmolar_surface_loss
+            rm -rf full_0p1ns_10 && mkdir full_0p1ns_10
+            set +e
+            ../../physics_app/physics-opt -i input_10step.i \
+              "Executioner/dt=1e-10" "Executioner/dtmin=1e-10" "Executioner/dtmax=1e-10" \
+              "Executioner/num_steps=10" "Executioner/end_time=1e-9" \
+              "Executioner/nl_abs_tol=1e-10" "Executioner/nl_rel_tol=1e-9" "Executioner/nl_max_its=60" \
+              "Outputs/file_base=full_0p1ns_10/solve" \
+              > full_0p1ns_10/run.log 2>&1
+            rc=$?
+            set -e
+            echo "run_rc=$rc" > full_0p1ns_10/status.txt
+            grep -E "Time Step|SNES Function norm|CONVERGED|DIVERGED|Solve Converged|Solve Did NOT Converge" full_0p1ns_10/run.log > full_0p1ns_10/summary.txt || true
+            cat full_0p1ns_10/status.txt
+            tail -n 220 full_0p1ns_10/summary.txt || true
+          '
+      - uses: actions/upload-artifact@v4
+        with:
+          name: full-surface-loss-0p1ns-10step
+          path: experiments/implicit_logmolar_surface_loss/full_0p1ns_10/**
+          retention-days: 30
