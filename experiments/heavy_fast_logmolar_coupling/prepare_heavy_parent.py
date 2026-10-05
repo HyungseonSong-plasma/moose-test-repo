@@ -20,6 +20,23 @@ production_type_names = {
 for old_name, current_name in production_type_names.items():
     text = text.replace(old_name, current_name)
 
+# The accepted heavy fixture still contains the retired BaseMaterial provider.
+# Preserve only relative permittivity as current block-scoped functors, matching
+# the already accepted R4 migration policy. Conductivity/material_name are not
+# consumed by this heavy-flow gate. A coverage-only functor replaces the old
+# unrestricted plasma material on electrostatically inactive mesh blocks.
+materials_start = text.find("[Materials]\n")
+r15_marker = "# ==============================================================================\n# R15 EVR3"
+materials_end = text.find(r15_marker, materials_start)
+if materials_start < 0 or materials_end < 0:
+    raise RuntimeError("legacy Materials block not found")
+text = text[:materials_start] + text[materials_end:]
+
+current_materials = """[FunctorMaterials]\n  [permittivity_vacuum]\n    type = ADGenericFunctorMaterial\n    prop_names = 'relative_permittivity'\n    prop_values = '1.0'\n    block = vacuum\n  []\n  [permittivity_outer]\n    type = ADGenericFunctorMaterial\n    prop_names = 'relative_permittivity'\n    prop_values = '1.0'\n    block = 'top right bottom'\n  []\n  [permittivity_cover]\n    type = ADGenericFunctorMaterial\n    prop_names = 'relative_permittivity'\n    prop_values = '3.6'\n    block = cover\n  []\n  [permittivity_electrode]\n    type = ADGenericFunctorMaterial\n    prop_names = 'relative_permittivity'\n    prop_values = '1.0'\n    block = electrode\n  []\n  [permittivity_wafer]\n    type = ADGenericFunctorMaterial\n    prop_names = 'relative_permittivity'\n    prop_values = '12.5'\n    block = wafer\n  []\n  [permittivity_focus_ring]\n    type = ADGenericFunctorMaterial\n    prop_names = 'relative_permittivity'\n    prop_values = '8.0'\n    block = focus_ring\n  []\n  [permittivity_plasma]\n    type = ADGenericFunctorMaterial\n    prop_names = 'relative_permittivity'\n    prop_values = '1.0'\n    block = plasma\n  []\n  [material_coverage_only]\n    type = ADGenericFunctorMaterial\n    prop_names = 'heavy_coupling_material_coverage_only'\n    prop_values = '0.0'\n    block = 'coil1 coil2 coil3 metal port'\n  []\n"""
+if "[FunctorMaterials]\n" not in text:
+    raise RuntimeError("FunctorMaterials marker not found")
+text = text.replace("[FunctorMaterials]\n", current_materials, 1)
+
 # Rebase data paths because the generated parent lives in this experiment directory.
 text = text.replace("file = 'qvt.msh'", "file = '../Issue91_real_qvt_r3/r3_e0/qvt.msh'", 1)
 text = text.replace("transport_data_file = transport_data.txt", "transport_data_file = '../Issue91_real_qvt_r3/r3_e0/transport_data.txt'", 1)
@@ -107,6 +124,8 @@ text = text.replace("[Outputs]\n  csv = true\n", "[Outputs]\n  csv = true\n  exo
 
 if legacy_prefix in text:
     raise RuntimeError("active heavy parent still contains a retired object prefix")
+if "BaseMaterial" in text:
+    raise RuntimeError("active heavy parent still contains retired BaseMaterial")
 
 OUT.write_text(text, encoding="utf-8")
 print(f"wrote {OUT}")
