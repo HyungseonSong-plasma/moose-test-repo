@@ -59,27 +59,25 @@ jobs:
               cd experiments/heavy_fast_logmolar_coupling
               python3 prepare_predictor_corrector_horizon.py
 
-              cat >> fast_corrector.i <<EOF
+              printf "%s\n" \
+                "" \
+                "[UserObjects]" \
+                "  [state_audit_log_energy]" \
+                "    type = PhysicsVariableStateAudit" \
+                "    variable = log_energy" \
+                "    execute_on = TIMESTEP_END" \
+                "  []" \
+                "[]" >> fast_corrector.i
 
-[UserObjects]
-  [state_audit_log_energy]
-    type = PhysicsVariableStateAudit
-    variable = log_energy
-    execute_on = TIMESTEP_END
-  []
-[]
-EOF
-
-              cat >> electron_poisson_corrector_stage.i <<EOF
-
-[UserObjects]
-  [state_audit_log_ne]
-    type = PhysicsVariableStateAudit
-    variable = log_ne
-    execute_on = TIMESTEP_END
-  []
-[]
-EOF
+              printf "%s\n" \
+                "" \
+                "[UserObjects]" \
+                "  [state_audit_log_ne]" \
+                "    type = PhysicsVariableStateAudit" \
+                "    variable = log_ne" \
+                "    execute_on = TIMESTEP_END" \
+                "  []" \
+                "[]" >> electron_poisson_corrector_stage.i
 
               for input in \
                 electron_poisson_stage.i \
