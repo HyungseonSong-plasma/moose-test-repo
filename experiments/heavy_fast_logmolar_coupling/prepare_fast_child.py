@@ -13,7 +13,7 @@ if plasma_only not in text:
 text = text.replace(plasma_only, "", 1)
 
 old_constants = """  [constants]\n    type = ADGenericFunctorMaterial\n    prop_names = 'p T_g carrier_one relative_permittivity n_ion_fixed'\n    prop_values = '1.333223684 300.0 1.0 1.0 1.0e16'\n    block = plasma\n  []\n"""
-new_constants = """  [constants]\n    type = ADGenericFunctorMaterial\n    prop_names = 'carrier_one relative_permittivity n_ion_fixed'\n    prop_values = '1.0 1.0 1.0e16'\n    block = plasma\n  []\n"""
+new_constants = """  [constants]\n    type = ADGenericFunctorMaterial\n    prop_names = 'carrier_one relative_permittivity n_ion_fixed'\n    prop_values = '1.0 1.0 1.0e16'\n    block = plasma\n  []\n  [inactive_mesh_blocks]\n    type = ADGenericFunctorMaterial\n    prop_names = 'coupling_dummy'\n    prop_values = '0.0'\n    block = 'wafer cover focus_ring coil1 coil2 coil3 electrode top vacuum metal right bottom port'\n  []\n"""
 if old_constants not in text:
     raise RuntimeError("fast constants block not found")
 text = text.replace(old_constants, new_constants, 1)
