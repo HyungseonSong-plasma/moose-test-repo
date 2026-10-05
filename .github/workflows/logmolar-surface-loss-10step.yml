@@ -1,0 +1,75 @@
+name: log-molar surface-loss 10-step feedback
+
+on:
+  push:
+    branches:
+      - prototype-fully-implicit-electron-poisson
+    paths:
+      - 'experiments/implicit_logmolar_surface_loss/**'
+      - 'physics_app/**'
+      - '.github/workflows/logmolar-surface-loss-10step.yml'
+  workflow_dispatch:
+
+jobs:
+  surface-loss:
+    name: logmolar-surface-loss-10step
+    runs-on: ubuntu-24.04
+    env:
+      BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pull Physics build base
+        run: docker pull "$BUILD_BASE_REF"
+
+      - name: Build and run 10-step surface-loss feedback case
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            --entrypoint /bin/bash \
+            --user 0:0 \
+            --workdir /workspace \
+            -v "$GITHUB_WORKSPACE:/workspace" \
+            "$BUILD_BASE_REF" \
+            -lc '
+              set -euo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              git config --global --add safe.directory /opt/physics_vendor/moose
+              git config --global --add safe.directory /opt/physics_vendor/crane
+              git config --global --add safe.directory /opt/physics_vendor/squirrel
+              git config --global --add safe.directory /opt/physics_vendor/zapdos
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+
+              make -C physics_app -j2
+              cd experiments/implicit_logmolar_surface_loss
+              rm -rf results
+              mkdir -p results
+
+              ../../physics_app/physics-opt --check-input -i input_10step.i \
+                > results/check-input.log 2>&1
+
+              set +e
+              ../../physics_app/physics-opt -i input_10step.i \
+                "Outputs/file_base=results/surface_loss" \
+                > results/run.log 2>&1
+              run_rc=$?
+              set -e
+
+              printf "run_rc=%s\n" "$run_rc" > results/status.txt
+              grep -E "Time Step|SNES Function norm|CONVERGED|DIVERGED|Solve Converged|Solve Did NOT Converge" \
+                results/run.log > results/solve_summary.txt || true
+              cat results/status.txt
+              tail -n 120 results/solve_summary.txt || true
+            '
+
+      - name: Upload surface-loss outputs
+        uses: actions/upload-artifact@v4
+        with:
+          name: logmolar-surface-loss-10step
+          path: experiments/implicit_logmolar_surface_loss/results/**
+          retention-days: 30
