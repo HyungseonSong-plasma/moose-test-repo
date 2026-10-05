@@ -88,8 +88,9 @@ text = HEAVY_INPUT.read_text(encoding="utf-8")
 # -----------------------------------------------------------------------------
 # Discriminator physics:
 #   heavy flow + heavy log-simplex transport + electron continuity only.
-# All electrostatic drift/migration is explicitly removed. No electron-energy
-# equation and no Poisson equation are solved in this case.
+# Bulk electrostatic drift/migration is explicitly removed. No electron-energy
+# equation and no Poisson equation are solved.  The grounded electron sheath
+# collection BC remains active, evaluated against a frozen 0 V potential_fast.
 # -----------------------------------------------------------------------------
 for name in (
     "O2p_electrostatic_drift",
@@ -104,7 +105,8 @@ for name in (
 ):
     text = remove_child(text, name)
 
-# Remove the E-driven wall-loss path and the now-unused frozen potential field.
+# Remove the E-driven heavy-ion wall-loss path and its diagnostics. Keep
+# potential_fast itself as a frozen 0 V AuxVariable for the electron sheath BC.
 for name in (
     "O2p_wall_flux_feedback",
     "O2p_migration_wall_loss",
@@ -112,7 +114,6 @@ for name in (
     "O2p_migration_current",
     "potential_fast_min",
     "potential_fast_max",
-    "potential_fast",
 ):
     text = remove_child(text, name, required=False)
 
@@ -183,6 +184,21 @@ kernels = """
 """
 text = append_to_section(text, "FVKernels", kernels)
 
+# Preserve the physical electron wall loss while keeping bulk E-drift disabled.
+# potential_fast is frozen at its 0 V initial condition because the smoke parent
+# removes MultiApps/Transfers and this discriminator does not solve Poisson.
+bcs = """
+  [electron_sheath_loss]
+    type = PhysicsFVElectronGroundedSheathCollectionBC
+    variable = log_ne
+    boundary = 'plasma_electrode plasma_metal plasma_right plasma_cover plasma_wafer plasma_focus_ring'
+    mean_electron_energy = mean_en_fixed
+    potential = potential_fast
+    log_molar_state = true
+  []
+"""
+text = append_to_section(text, "FVBCs", bcs)
+
 pps = """
   [electron_n_min]
     type = ADElementExtremeFunctorValue
@@ -238,6 +254,9 @@ for required in (
     "[log_ne]",
     "type = PhysicsFVLogMolarElectronTimeDerivative",
     "type = PhysicsFVLogMolarElectronDiffusion",
+    "type = PhysicsFVElectronGroundedSheathCollectionBC",
+    "mean_electron_energy = mean_en_fixed",
+    "potential = potential_fast",
     "dt = 1.0e-9",
     "preonly lu NONZERO bt",
 ):
@@ -260,6 +279,7 @@ if "[Preconditioning]" in text:
 OUT.write_text(text, encoding="utf-8")
 print(f"wrote {OUT}")
 print("heavy + electron continuity-only global-LU discriminator")
-print("all electrostatic drift/migration disabled; electron energy and Poisson absent")
+print("bulk electrostatic drift/migration disabled; electron energy and Poisson absent")
+print("electron grounded-sheath collection BC active with frozen potential_fast = 0 V")
 print(f"startup n_e={ne0:.17g}; fixed mean energy={MEAN_E0:.17g} eV")
 print("physical dt = 1 ns; one step")
