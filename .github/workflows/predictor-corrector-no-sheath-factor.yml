@@ -60,43 +60,15 @@ jobs:
               cd experiments/heavy_fast_logmolar_coupling
               python3 prepare_predictor_corrector_horizon.py
 
-              python3 - <<"PY"
-from pathlib import Path
+              sed -i "/type = PhysicsFVElectronGroundedSheathCollectionBC/a\\    apply_sheath_suppression = false" \
+                electron_poisson_stage.i electron_poisson_corrector_stage.i
+              sed -i "/type = PhysicsFVElectronGroundedSheathEnergyBC/a\\    apply_sheath_suppression = false" \
+                fast_child.i fast_corrector.i
 
-paths = [
-    Path("fast_child.i"),
-    Path("electron_poisson_stage.i"),
-    Path("fast_corrector.i"),
-    Path("electron_poisson_corrector_stage.i"),
-]
-particle = "    type = PhysicsFVElectronGroundedSheathCollectionBC\n"
-energy = "    type = PhysicsFVElectronGroundedSheathEnergyBC\n"
-particle_count = 0
-energy_count = 0
-for path in paths:
-    text = path.read_text(encoding="utf-8")
-    pc = text.count(particle)
-    ec = text.count(energy)
-    particle_count += pc
-    energy_count += ec
-    if pc:
-        text = text.replace(
-            particle,
-            particle + "    apply_sheath_suppression = false\n",
-        )
-    if ec:
-        text = text.replace(
-            energy,
-            energy + "    apply_sheath_suppression = false\n",
-        )
-    path.write_text(text, encoding="utf-8")
-
-if particle_count != 2:
-    raise RuntimeError(f"expected 2 particle sheath BCs, found {particle_count}")
-if energy_count != 2:
-    raise RuntimeError(f"expected 2 energy sheath BCs, found {energy_count}")
-print("disabled exp(-Delta phi/T_e) in predictor and corrector particle/energy BCs")
-PY
+              grep -q "apply_sheath_suppression = false" electron_poisson_stage.i
+              grep -q "apply_sheath_suppression = false" electron_poisson_corrector_stage.i
+              grep -q "apply_sheath_suppression = false" fast_child.i
+              grep -q "apply_sheath_suppression = false" fast_corrector.i
 
               for input in \
                 electron_poisson_stage.i \
@@ -107,9 +79,6 @@ PY
               do
                 ../../physics_app/physics-opt -i "$input" --check-input
               done
-
-              grep -R "apply_sheath_suppression = false" \
-                fast_child.i electron_poisson_stage.i fast_corrector.i electron_poisson_corrector_stage.i
 
               rm -rf "$OUTPUT_DIR"
               mkdir -p "$OUTPUT_DIR"
