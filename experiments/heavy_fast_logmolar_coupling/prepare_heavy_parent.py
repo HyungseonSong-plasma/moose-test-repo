@@ -32,6 +32,68 @@ for old, new in replacements.items():
         raise RuntimeError(f"missing composition token: {old}")
     text = text.replace(old, new, 1)
 
+# Use a spatially uniform heavy-species startup for every solved species.
+# The base case used a Gaussian FunctionIC only for atomic oxygen; all other
+# solved species already used constant Yin_* initial conditions.  Replace that
+# special O IC with the same constant-composition convention.  O2 is the
+# constrained species, so its uniform initial value follows from the uniform
+# solved-species values and sum(w_k)=1.
+old_w_o = """  [w_O]
+    type = INSFVScalarFieldVariable
+    block = plasma
+  []
+"""
+new_w_o = """  [w_O]
+    type = INSFVScalarFieldVariable
+    initial_condition = ${Yin_O}
+    block = plasma
+  []
+"""
+if old_w_o not in text:
+    raise RuntimeError("base w_O variable block not found")
+text = text.replace(old_w_o, new_w_o, 1)
+
+old_o_function = """[Functions]
+  [ic_w_O_transient]
+    type = ParsedFunction
+    expression = '0.10 + 0.02*exp(-800.0*(x-0.12)^2 - 80.0*(y-0.22)^2)'
+  []
+
+  # Prescribed field only for #15 promotion. Poisson feedback belongs to #16.
+"""
+new_o_function = """[Functions]
+  # Prescribed field only for #15 promotion. Poisson feedback belongs to #16.
+"""
+if old_o_function not in text:
+    raise RuntimeError("nonuniform atomic-oxygen function block not found")
+text = text.replace(old_o_function, new_o_function, 1)
+
+old_o_ic = """[ICs]
+  [ic_w_O]
+    type = FunctionIC
+    variable = w_O
+    function = ic_w_O_transient
+  []
+[]
+
+"""
+if old_o_ic not in text:
+    raise RuntimeError("nonuniform atomic-oxygen IC block not found")
+text = text.replace(old_o_ic, "", 1)
+
+# Guard the intended uniform startup contract for all solved heavy species.
+for species in ("O2s", "O2p", "O", "Om", "Op", "Os"):
+    block = f"  [w_{species}]"
+    start = text.find(block)
+    end = text.find("  []", start)
+    if start < 0 or end < 0:
+        raise RuntimeError(f"heavy species variable block not found: w_{species}")
+    body = text[start:end]
+    if f"initial_condition = ${{Yin_{species}}}" not in body:
+        raise RuntimeError(f"heavy species startup is not uniform: w_{species}")
+if "ic_w_O_transient" in text or "FunctionIC\n    variable = w_O" in text:
+    raise RuntimeError("nonuniform w_O startup survived generation")
+
 # Preserve only relative permittivity from the retired material provider.
 materials_start = text.find("[Materials]\n")
 r15_marker = "# ==============================================================================\n# R15 EVR3"
