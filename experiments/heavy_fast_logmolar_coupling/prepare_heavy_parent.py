@@ -6,6 +6,19 @@ OUT = Path(__file__).with_name("heavy_parent.i")
 
 text = BASE.read_text(encoding="utf-8")
 
+# The active coupling path uses only current PhysicsApp production object names.
+# The source heavy fixture still contains legacy type names, so normalize them
+# while generating the active parent without changing the underlying equations.
+production_type_names = {
+    "QPXFVConservativeMassFractionTimeDerivative": "PhysicsFVConservativeMassFractionTimeDerivative",
+    "QPXFVMassFractionAdvection": "PhysicsFVMassFractionAdvection",
+    "QPXFVMixtureAveragedDiffusion": "PhysicsFVMixtureAveragedDiffusion",
+    "QPXFVElectrostaticDrift": "PhysicsFVElectrostaticDrift",
+    "QPXFVHeavyMassElectromigrationCorrection": "PhysicsFVHeavyMassElectromigrationCorrection",
+}
+for old_name, current_name in production_type_names.items():
+    text = text.replace(old_name, current_name)
+
 # Rebase data paths because the generated parent lives in this experiment directory.
 text = text.replace("file = 'qvt.msh'", "file = '../Issue91_real_qvt_r3/r3_e0/qvt.msh'", 1)
 text = text.replace("transport_data_file = transport_data.txt", "transport_data_file = '../Issue91_real_qvt_r3/r3_e0/transport_data.txt'", 1)
@@ -62,9 +75,8 @@ if marker not in text:
 text = text.replace(marker, aux + marker, 1)
 
 coupling = """
-# Heavy flow is the slow parent. After its 0.5-ms transient completes, one frozen
-# snapshot is copied to a FullSolveMultiApp that advances the monolithic fast plasma
-# independently on its ns time scale.
+# Heavy flow is the parent. A heavy-state snapshot is copied to the monolithic
+# fast plasma application; time-coupled subcycling is configured separately.
 [MultiApps]
   [fast_plasma]
     type = FullSolveMultiApp
@@ -91,6 +103,9 @@ text = text.replace(marker2, coupling + marker2, 1)
 
 # Keep the heavy flow solution for field-level validation.
 text = text.replace("[Outputs]\n  csv = true\n", "[Outputs]\n  csv = true\n  exodus = true\n", 1)
+
+if "QPX" in text:
+    raise RuntimeError("active heavy parent still contains a legacy QPX name")
 
 OUT.write_text(text, encoding="utf-8")
 print(f"wrote {OUT}")
