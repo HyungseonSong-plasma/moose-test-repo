@@ -1,0 +1,432 @@
+# Fully implicit log-molar electron density + electron energy + Poisson.
+# Uniform quasi-neutral startup; no artificial perturbation.
+# Surface electron/energy loss is the only mechanism that initially separates charge.
+#
+# States:
+#   log_ne     = ln[(n_e/N_A)/(1 mol/m^3)]
+#   log_energy = ln[(w_e/N_A)/(1 eV mol/m^3)]
+#   potential  = phi [V]
+#
+# IC:
+#   n_e = n_i = 1e16 1/m^3
+#   mean electron energy = 5.73276 eV
+#   phi = 0 V
+
+[Mesh]
+  coord_type = RZ
+  rz_coord_axis = Y
+  [main]
+    type = FileMeshGenerator
+    file = '../Issue91_real_qvt_r3/r3_e0/qvt.msh'
+  []
+  [inlet]
+    type = SideSetsBetweenSubdomainsGenerator
+    primary_block = plasma
+    paired_block = port
+    new_boundary = inlet
+    input = main
+  []
+  [outlet]
+    type = SideSetsBetweenSubdomainsGenerator
+    primary_block = plasma
+    paired_block = bottom
+    new_boundary = outlet
+    input = inlet
+  []
+  [plasma_electrode]
+    type = SideSetsBetweenSubdomainsGenerator
+    primary_block = plasma
+    paired_block = electrode
+    new_boundary = plasma_electrode
+    input = outlet
+  []
+  [plasma_metal]
+    type = SideSetsBetweenSubdomainsGenerator
+    primary_block = plasma
+    paired_block = metal
+    new_boundary = plasma_metal
+    input = plasma_electrode
+  []
+  [plasma_right]
+    type = SideSetsBetweenSubdomainsGenerator
+    primary_block = plasma
+    paired_block = right
+    new_boundary = plasma_right
+    input = plasma_metal
+  []
+  [plasma_cover]
+    type = SideSetsBetweenSubdomainsGenerator
+    primary_block = plasma
+    paired_block = cover
+    new_boundary = plasma_cover
+    input = plasma_right
+  []
+  [plasma_wafer]
+    type = SideSetsBetweenSubdomainsGenerator
+    primary_block = plasma
+    paired_block = wafer
+    new_boundary = plasma_wafer
+    input = plasma_cover
+  []
+  [plasma_focus_ring]
+    type = SideSetsBetweenSubdomainsGenerator
+    primary_block = plasma
+    paired_block = focus_ring
+    new_boundary = plasma_focus_ring
+    input = plasma_wafer
+  []
+  [plasma_only]
+    type = BlockDeletionGenerator
+    input = plasma_focus_ring
+    operation = keep
+    block = plasma
+  []
+[]
+
+[Problem]
+  kernel_coverage_check = false
+[]
+
+[Variables]
+  [log_ne]
+    type = MooseVariableFVReal
+    initial_condition = -17.91353845503591
+    block = plasma
+  []
+  [log_energy]
+    type = MooseVariableFVReal
+    initial_condition = -16.16734136488706
+    block = plasma
+  []
+  [potential]
+    type = MooseVariableFVReal
+    initial_condition = 0.0
+    block = plasma
+  []
+[]
+
+[FunctorMaterials]
+  [constants]
+    type = ADGenericFunctorMaterial
+    prop_names = 'p T_g carrier_one relative_permittivity n_ion_fixed'
+    prop_values = '1.333223684 300.0 1.0 1.0 1.0e16'
+    block = plasma
+  []
+
+  [electron_molar_density]
+    type = ADParsedFunctorMaterial
+    property_name = electron_molar_density
+    functor_names = 'log_ne'
+    functor_symbols = 'u'
+    expression = 'exp(u)'
+    block = plasma
+  []
+
+  [electron_physical_density]
+    type = ADParsedFunctorMaterial
+    property_name = n_e_physical
+    functor_names = 'electron_molar_density'
+    functor_symbols = 'ce'
+    expression = '6.02214076e23*ce'
+    block = plasma
+  []
+
+  [electron_molar_energy_density]
+    type = ADParsedFunctorMaterial
+    property_name = electron_molar_energy_density
+    functor_names = 'log_energy'
+    functor_symbols = 'ue'
+    expression = 'exp(ue)'
+    block = plasma
+  []
+
+  [electron_physical_energy_density]
+    type = ADParsedFunctorMaterial
+    property_name = electron_energy_density_eV_m3
+    functor_names = 'electron_molar_energy_density'
+    functor_symbols = 'we_mol'
+    expression = '6.02214076e23*we_mol'
+    block = plasma
+  []
+
+  [mean_energy]
+    type = PhysicsElectronMeanEnergyMaterial
+    electron_energy_density = log_energy
+    electron_density = log_ne
+    state_form = log_molar_eV
+    block = plasma
+  []
+
+  [electron_transport]
+    type = PhysicsElectronTransportLookupMaterial
+    property_table_file = '../Issue91_real_qvt_r3/r3_e0/electron_moments.txt'
+    mean_energy = mean_en_solved
+    pressure = p
+    gas_temperature = T_g
+    bounds_policy = clamp
+    block = plasma
+  []
+
+  [charge_number_density]
+    type = ADParsedFunctorMaterial
+    property_name = charge_number_density
+    functor_names = 'n_ion_fixed n_e_physical'
+    functor_symbols = 'ni ne'
+    expression = 'ni-ne'
+    block = plasma
+  []
+
+  [charge_density]
+    type = ADParsedFunctorMaterial
+    property_name = charge_density_C_m3
+    functor_names = 'charge_number_density'
+    functor_symbols = 'nq'
+    expression = '1.602176634e-19*nq'
+    block = plasma
+  []
+
+  [poisson_source]
+    type = ADParsedFunctorMaterial
+    property_name = poisson_charge_source
+    functor_names = 'charge_number_density'
+    functor_symbols = 'nq'
+    expression = '1.8095128179727827e-08*nq'
+    block = plasma
+  []
+[]
+
+[FVKernels]
+  [electron_time]
+    type = PhysicsFVLogMolarElectronTimeDerivative
+    variable = log_ne
+    block = plasma
+  []
+  [electron_diffusion]
+    type = PhysicsFVLogMolarElectronDiffusion
+    variable = log_ne
+    coeff = electron_diffusion
+    block = plasma
+  []
+  [electron_drift]
+    type = PhysicsFVLogMolarElectrostaticDrift
+    variable = log_ne
+    potential = potential
+    mobility = electron_mobility
+    carrier = carrier_one
+    charge_number = -1
+    advected_interp_method = upwind
+    boundaries_to_avoid = 'inlet outlet plasma_electrode plasma_metal plasma_right plasma_cover plasma_wafer plasma_focus_ring'
+    block = plasma
+  []
+
+  [energy_time]
+    type = PhysicsFVLogMolarElectronTimeDerivative
+    variable = log_energy
+    block = plasma
+  []
+  [energy_diffusion]
+    type = PhysicsFVLogMolarElectronDiffusion
+    variable = log_energy
+    coeff = electron_energy_diffusion
+    block = plasma
+  []
+  [energy_drift]
+    type = PhysicsFVLogMolarElectrostaticDrift
+    variable = log_energy
+    potential = potential
+    mobility = electron_energy_mobility
+    carrier = carrier_one
+    charge_number = -1
+    advected_interp_method = upwind
+    boundaries_to_avoid = 'inlet outlet plasma_electrode plasma_metal plasma_right plasma_cover plasma_wafer plasma_focus_ring'
+    block = plasma
+  []
+  [energy_joule]
+    type = PhysicsFVElectronEnergyJouleHeating
+    variable = log_energy
+    electron_density = electron_molar_density
+    potential = potential
+    mobility = electron_mobility
+    diffusion = electron_diffusion
+    state_form = molar_eV
+    block = plasma
+  []
+
+  [phi_diffusion]
+    type = FVDiffusion
+    variable = potential
+    coeff = relative_permittivity
+    block = plasma
+  []
+  [phi_charge_source]
+    type = FVCoupledForce
+    variable = potential
+    v = poisson_charge_source
+    coef = 1.0
+    block = plasma
+  []
+[]
+
+[FVBCs]
+  # Surface loss only on solid plasma-facing walls. No explicit axis BC.
+  [electron_sheath_loss]
+    type = PhysicsFVElectronGroundedSheathCollectionBC
+    variable = log_ne
+    boundary = 'plasma_electrode plasma_metal plasma_right plasma_cover plasma_wafer plasma_focus_ring'
+    mean_electron_energy = mean_en_solved
+    potential = potential
+    log_molar_state = true
+  []
+
+  [electron_energy_sheath_loss]
+    type = PhysicsFVElectronGroundedSheathEnergyBC
+    variable = log_energy
+    boundary = 'plasma_electrode plasma_metal plasma_right plasma_cover plasma_wafer plasma_focus_ring'
+    electron_density = electron_molar_density
+    mean_electron_energy = mean_en_solved
+    potential = potential
+    molar_energy_state = true
+  []
+
+  [grounded_potential]
+    type = FVDirichletBC
+    variable = potential
+    boundary = 'inlet outlet plasma_electrode plasma_metal plasma_right plasma_cover plasma_wafer plasma_focus_ring'
+    value = 0.0
+  []
+[]
+
+[Postprocessors]
+  [num_dofs]
+    type = NumDOFs
+    system = NL
+    execute_on = 'INITIAL TIMESTEP_END'
+  []
+  [nonlinear_iterations]
+    type = NumNonlinearIterations
+    execute_on = TIMESTEP_END
+  []
+  [linear_iterations]
+    type = NumLinearIterations
+    execute_on = TIMESTEP_END
+  []
+  [residual_evaluations]
+    type = NumResidualEvaluations
+    execute_on = TIMESTEP_END
+  []
+
+  [n_e_inventory]
+    type = ADElementIntegralFunctorPostprocessor
+    functor = n_e_physical
+    block = plasma
+    execute_on = 'INITIAL TIMESTEP_END'
+  []
+  [energy_inventory]
+    type = ADElementIntegralFunctorPostprocessor
+    functor = electron_energy_density_eV_m3
+    block = plasma
+    execute_on = 'INITIAL TIMESTEP_END'
+  []
+  [charge_integral]
+    type = ADElementIntegralFunctorPostprocessor
+    functor = charge_density_C_m3
+    block = plasma
+    execute_on = 'INITIAL TIMESTEP_END'
+  []
+
+  [n_e_min]
+    type = ADElementExtremeFunctorValue
+    functor = n_e_physical
+    value_type = min
+    block = plasma
+    execute_on = 'INITIAL TIMESTEP_END'
+  []
+  [n_e_max]
+    type = ADElementExtremeFunctorValue
+    functor = n_e_physical
+    value_type = max
+    block = plasma
+    execute_on = 'INITIAL TIMESTEP_END'
+  []
+  [energy_density_min]
+    type = ADElementExtremeFunctorValue
+    functor = electron_energy_density_eV_m3
+    value_type = min
+    block = plasma
+    execute_on = 'INITIAL TIMESTEP_END'
+  []
+  [energy_density_max]
+    type = ADElementExtremeFunctorValue
+    functor = electron_energy_density_eV_m3
+    value_type = max
+    block = plasma
+    execute_on = 'INITIAL TIMESTEP_END'
+  []
+  [mean_energy_min]
+    type = ADElementExtremeFunctorValue
+    functor = mean_en_solved
+    value_type = min
+    block = plasma
+    execute_on = 'INITIAL TIMESTEP_END'
+  []
+  [mean_energy_max]
+    type = ADElementExtremeFunctorValue
+    functor = mean_en_solved
+    value_type = max
+    block = plasma
+    execute_on = 'INITIAL TIMESTEP_END'
+  []
+  [charge_min]
+    type = ADElementExtremeFunctorValue
+    functor = charge_density_C_m3
+    value_type = min
+    block = plasma
+    execute_on = 'INITIAL TIMESTEP_END'
+  []
+  [charge_max]
+    type = ADElementExtremeFunctorValue
+    functor = charge_density_C_m3
+    value_type = max
+    block = plasma
+    execute_on = 'INITIAL TIMESTEP_END'
+  []
+  [phi_min]
+    type = ADElementExtremeFunctorValue
+    functor = potential
+    value_type = min
+    block = plasma
+    execute_on = 'INITIAL TIMESTEP_END'
+  []
+  [phi_max]
+    type = ADElementExtremeFunctorValue
+    functor = potential
+    value_type = max
+    block = plasma
+    execute_on = 'INITIAL TIMESTEP_END'
+  []
+[]
+
+[Executioner]
+  type = Transient
+  scheme = implicit-euler
+  solve_type = NEWTON
+  dt = 1.0e-9
+  dtmin = 1.0e-9
+  dtmax = 1.0e-9
+  num_steps = 10
+  end_time = 1.0e-8
+  timestep_tolerance = 1.0e-18
+  nl_rel_tol = 1.0e-10
+  nl_abs_tol = 1.0e-12
+  nl_max_its = 30
+  automatic_scaling = true
+  petsc_options = '-snes_converged_reason -snes_monitor -snes_linesearch_monitor -ksp_converged_reason'
+  petsc_options_iname = '-ksp_type -pc_type -pc_factor_shift_type -snes_linesearch_type'
+  petsc_options_value = 'preonly lu NONZERO bt'
+[]
+
+[Outputs]
+  exodus = true
+  csv = true
+  execute_on = 'INITIAL TIMESTEP_END'
+[]
