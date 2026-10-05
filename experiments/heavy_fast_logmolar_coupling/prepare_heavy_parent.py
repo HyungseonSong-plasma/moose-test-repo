@@ -160,7 +160,6 @@ coupling = """
     sub_cycling = true
     interpolate_transfers = false
     output_sub_cycles = true
-    catch_up = true
     execute_on = TIMESTEP_BEGIN
   []
 []
