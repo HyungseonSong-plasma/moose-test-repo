@@ -1,0 +1,127 @@
+name: predictor corrector fixed dt temporal convergence
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - prototype-fully-implicit-electron-poisson
+    paths:
+      - '.ci_triggers/predictor-corrector-time-refinement'
+
+permissions:
+  contents: read
+  packages: read
+
+env:
+  BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+  END_TIME_NS: 5
+  MAX_CORRECTIONS: 10
+
+jobs:
+  fixed-dt-refinement:
+    name: fixed-dt-${{ matrix.label }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: 1ns
+            fixed_dt_ns: '1'
+            output_dir: output_fixed_dt_1ns
+          - label: 0p5ns
+            fixed_dt_ns: '0.5'
+            output_dir: output_fixed_dt_0p5ns
+          - label: 0p25ns
+            fixed_dt_ns: '0.25'
+            output_dir: output_fixed_dt_0p25ns
+          - label: 0p125ns
+            fixed_dt_ns: '0.125'
+            output_dir: output_fixed_dt_0p125ns
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pull build image
+        run: docker pull "$BUILD_BASE_REF"
+
+      - name: Build and run fixed-dt case
+        shell: bash
+        env:
+          FIXED_DT_NS: ${{ matrix.fixed_dt_ns }}
+          OUTPUT_DIR: ${{ matrix.output_dir }}
+        run: |
+          set -euo pipefail
+          docker run --rm --entrypoint /bin/bash --user 0:0 \
+            --workdir /workspace \
+            -v "$GITHUB_WORKSPACE:/workspace" \
+            -e END_TIME_NS="$END_TIME_NS" \
+            -e FIXED_DT_NS="$FIXED_DT_NS" \
+            -e OUTPUT_DIR="$OUTPUT_DIR" \
+            -e MAX_CORRECTIONS="$MAX_CORRECTIONS" \
+            "$BUILD_BASE_REF" -lc '
+              set -euo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              git config --global --add safe.directory /opt/physics_vendor/moose
+              git config --global --add safe.directory /opt/physics_vendor/crane
+              git config --global --add safe.directory /opt/physics_vendor/squirrel
+              git config --global --add safe.directory /opt/physics_vendor/zapdos
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+
+              make -C physics_app -j2
+
+              cd experiments/heavy_fast_logmolar_coupling
+              python3 prepare_predictor_corrector_fixed_dt.py
+
+              for input in \
+                electron_poisson_stage.i \
+                fast_child.i \
+                electron_poisson_corrector_stage.i \
+                fast_corrector.i \
+                heavy_parent.i
+              do
+                ../../physics_app/physics-opt -i "$input" --check-input
+              done
+
+              rm -rf "$OUTPUT_DIR"
+              mkdir -p "$OUTPUT_DIR"
+
+              set +e
+              /usr/bin/time \
+                -f "wall_seconds=%e\nuser_seconds=%U\nsystem_seconds=%S\nmax_rss_kb=%M" \
+                -o "$OUTPUT_DIR/wall_time.txt" \
+                ../../physics_app/physics-opt -i heavy_parent.i \
+                > "$OUTPUT_DIR/run.log" 2>&1
+              rc=$?
+              set -e
+
+              echo "run_rc=$rc" | tee "$OUTPUT_DIR/status.txt"
+              cp \
+                heavy_parent.i \
+                fast_child.i \
+                electron_poisson_stage.i \
+                fast_corrector.i \
+                electron_poisson_corrector_stage.i \
+                prepare_predictor_corrector_adaptive_dt.py \
+                prepare_predictor_corrector_horizon.py \
+                prepare_predictor_corrector_fixed_dt.py \
+                "$OUTPUT_DIR/"
+
+              grep -E "Time Step|dt =|Beginning fixed point iteration|Fixed point convergence reason|Applying transferred-solution predictor" \
+                "$OUTPUT_DIR/run.log" > "$OUTPUT_DIR/summary.txt" || true
+              cat "$OUTPUT_DIR/wall_time.txt" || true
+              exit "$rc"
+            '
+
+      - name: Upload fixed-dt result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: predictor-corrector-fixed-dt-${{ matrix.label }}
+          path: experiments/heavy_fast_logmolar_coupling/${{ matrix.output_dir }}/**
+          retention-days: 30
