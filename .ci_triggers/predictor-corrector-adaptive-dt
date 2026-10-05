@@ -1,2 +1,2 @@
-trigger 2026-10-05 25ns no-sheath-factor diagnostic
-retry through validated adaptive workflow
+trigger 2026-10-05 corrector transient old-state audit
+1 ns state audit for log_ne and log_energy
