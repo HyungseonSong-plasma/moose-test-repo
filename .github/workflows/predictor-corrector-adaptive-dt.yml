@@ -1,4 +1,4 @@
-name: predictor corrector 25ns no sheath factor
+name: predictor corrector transient state audit
 
 on:
   workflow_dispatch:
@@ -14,15 +14,15 @@ permissions:
 
 env:
   BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
-  END_TIME_NS: 25
-  OUTPUT_DIR: output_25ns_no_sheath_factor
+  END_TIME_NS: 1
+  OUTPUT_DIR: output_transient_state_audit
   MAX_CORRECTIONS: 10
 
 jobs:
-  adaptive-horizon:
-    name: adaptive-25ns-no-sheath-factor
+  transient-state-audit:
+    name: audit-corrector-old-state-1ns
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
+    timeout-minutes: 30
 
     steps:
       - uses: actions/checkout@v4
@@ -30,7 +30,7 @@ jobs:
       - name: Pull build image
         run: docker pull "$BUILD_BASE_REF"
 
-      - name: Build and run 25 ns no-sheath-factor case
+      - name: Build and audit corrector transient old state
         shell: bash
         run: |
           set -euo pipefail
@@ -59,10 +59,27 @@ jobs:
               cd experiments/heavy_fast_logmolar_coupling
               python3 prepare_predictor_corrector_horizon.py
 
-              sed -i "/type = PhysicsFVElectronGroundedSheathCollectionBC/a\\    apply_sheath_suppression = false" \
-                electron_poisson_stage.i electron_poisson_corrector_stage.i
-              sed -i "/type = PhysicsFVElectronGroundedSheathEnergyBC/a\\    apply_sheath_suppression = false" \
-                fast_child.i fast_corrector.i
+              cat >> fast_corrector.i <<EOF
+
+[UserObjects]
+  [state_audit_log_energy]
+    type = PhysicsVariableStateAudit
+    variable = log_energy
+    execute_on = TIMESTEP_END
+  []
+[]
+EOF
+
+              cat >> electron_poisson_corrector_stage.i <<EOF
+
+[UserObjects]
+  [state_audit_log_ne]
+    type = PhysicsVariableStateAudit
+    variable = log_ne
+    execute_on = TIMESTEP_END
+  []
+[]
+EOF
 
               for input in \
                 electron_poisson_stage.i \
@@ -97,20 +114,19 @@ jobs:
                 prepare_predictor_corrector_horizon.py \
                 "$OUTPUT_DIR/"
 
-              grep -E \
-                "Time Step|dt =|Fast fixed-point adaptive dt|Applying transferred-solution predictor|Fixed Point|fixed point|Solve Converged|Solve Did NOT Converge|DIVERGED|CONVERGED|cut|failed|ERROR|phi_max|phi_min|charge_|mean_energy|n_e_|O2p|predictor_fp_iterations|corrector_fp_iterations|dt_used" \
-                "$OUTPUT_DIR/run.log" \
-                > "$OUTPUT_DIR/summary.txt" || true
+              grep "STATE_AUDIT" "$OUTPUT_DIR/run.log" > "$OUTPUT_DIR/state_audit.txt" || true
+              grep -E "Beginning fixed point iteration|Applying transferred-solution predictor|Fixed point convergence reason|Time Step|STATE_AUDIT" \
+                "$OUTPUT_DIR/run.log" > "$OUTPUT_DIR/summary.txt" || true
 
-              tail -n 1200 "$OUTPUT_DIR/summary.txt" || true
+              cat "$OUTPUT_DIR/state_audit.txt" || true
               cat "$OUTPUT_DIR/wall_time.txt" || true
               exit "$rc"
             '
 
-      - name: Upload no-sheath-factor diagnostic
+      - name: Upload transient state audit
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: predictor-corrector-25ns-no-sheath-factor
-          path: experiments/heavy_fast_logmolar_coupling/output_25ns_no_sheath_factor/**
+          name: predictor-corrector-transient-state-audit
+          path: experiments/heavy_fast_logmolar_coupling/output_transient_state_audit/**
           retention-days: 30
