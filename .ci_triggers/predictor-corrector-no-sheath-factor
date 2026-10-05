@@ -1,2 +1,3 @@
 trigger 2026-10-05 25 ns predictor-corrector without exp(-Delta phi/T_e) sheath suppression
 run after BC diagnostic switch setup
+rerun after workflow yaml fix
