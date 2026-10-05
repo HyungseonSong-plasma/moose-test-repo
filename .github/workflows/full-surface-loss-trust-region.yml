@@ -37,9 +37,9 @@ jobs:
             ../../physics_app/physics-opt -i input_tr_debug.i \
               "Executioner/num_steps=1" "Executioner/end_time=1e-9" \
               "Executioner/nl_max_its=100" "Executioner/nl_abs_tol=1e-10" \
-              "Executioner/petsc_options=-snes_converged_reason -snes_monitor -ksp_converged_reason -snes_type newtontr" \
-              "Executioner/petsc_options_iname=-ksp_type -pc_type -pc_factor_shift_type" \
-              "Executioner/petsc_options_value=preonly lu NONZERO" \
+              "Executioner/petsc_options=-snes_converged_reason -snes_monitor -ksp_converged_reason" \
+              "Executioner/petsc_options_iname=-ksp_type -pc_type -pc_factor_shift_type -snes_type" \
+              "Executioner/petsc_options_value=preonly lu NONZERO newtontr" \
               > diag_tr/run.log 2>&1
             rc=$?
             set -e
