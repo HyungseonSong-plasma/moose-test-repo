@@ -82,12 +82,10 @@ def build(variant: str) -> Path:
     desired_block = fast_block(variant)
     text = replace_once(text, baseline_block, desired_block, "fast-block replacement")
 
-    old_base = "file_base = full_monolithic_log_simplex_level4"
-    new_base = f"file_base = full_monolithic_log_simplex_l4_fastopt_{variant.replace('-', '_')}"
-    text = replace_once(text, old_base, new_base, "file_base replacement")
+    # Do not rewrite file_base here. Each matrix case runs on an isolated runner,
+    # so output-name collisions cannot occur. This also avoids coupling the
+    # optimization generator to the exact formatting chosen by the Level-4 base.
 
-    # Physics must be byte-for-byte inherited from the successful Level-4 case;
-    # only the fast block factorization/order changes.
     for token in (
         "dt = 1.0e-10",
         "type = PhysicsFVLogMolarElectrostaticDrift",
