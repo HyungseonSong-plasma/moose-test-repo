@@ -1,4 +1,4 @@
-name: predictor corrector adaptive dt
+name: predictor corrector adaptive horizon matrix
 
 on:
   workflow_dispatch:
@@ -16,9 +16,31 @@ env:
   BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
 
 jobs:
-  adaptive-predictor-corrector:
+  adaptive-horizon:
+    name: adaptive-${{ matrix.label }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 35
+    timeout-minutes: ${{ matrix.timeout_minutes }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: 25ns-1h
+            end_time_ns: 25
+            timeout_minutes: 60
+            output_dir: output_25ns_1h
+          - label: 50ns-1h
+            end_time_ns: 50
+            timeout_minutes: 60
+            output_dir: output_50ns_1h
+          - label: 50ns-2h
+            end_time_ns: 50
+            timeout_minutes: 120
+            output_dir: output_50ns_2h
+
+    env:
+      END_TIME_NS: ${{ matrix.end_time_ns }}
+      OUTPUT_DIR: ${{ matrix.output_dir }}
+      MAX_CORRECTIONS: 10
 
     steps:
       - uses: actions/checkout@v4
@@ -26,13 +48,16 @@ jobs:
       - name: Pull build image
         run: docker pull "$BUILD_BASE_REF"
 
-      - name: Build and run adaptive predictor-heavy-corrector
+      - name: Build and run independent adaptive predictor-heavy-corrector
         shell: bash
         run: |
           set -euo pipefail
           docker run --rm --entrypoint /bin/bash --user 0:0 \
             --workdir /workspace \
             -v "$GITHUB_WORKSPACE:/workspace" \
+            -e END_TIME_NS="$END_TIME_NS" \
+            -e OUTPUT_DIR="$OUTPUT_DIR" \
+            -e MAX_CORRECTIONS="$MAX_CORRECTIONS" \
             "$BUILD_BASE_REF" -lc '
               set -euo pipefail
               source /environment
@@ -50,8 +75,7 @@ jobs:
               make -C physics_app -j2
 
               cd experiments/heavy_fast_logmolar_coupling
-              export MAX_CORRECTIONS=10
-              python3 prepare_predictor_corrector_adaptive_dt.py
+              python3 prepare_predictor_corrector_horizon.py
 
               for input in \
                 electron_poisson_stage.i \
@@ -63,19 +87,19 @@ jobs:
                 ../../physics_app/physics-opt -i "$input" --check-input
               done
 
-              rm -rf output_adaptive_fp
-              mkdir -p output_adaptive_fp
+              rm -rf "$OUTPUT_DIR"
+              mkdir -p "$OUTPUT_DIR"
 
               set +e
               /usr/bin/time \
                 -f "wall_seconds=%e\nuser_seconds=%U\nsystem_seconds=%S\nmax_rss_kb=%M" \
-                -o output_adaptive_fp/wall_time.txt \
+                -o "$OUTPUT_DIR/wall_time.txt" \
                 ../../physics_app/physics-opt -i heavy_parent.i \
-                > output_adaptive_fp/run.log 2>&1
+                > "$OUTPUT_DIR/run.log" 2>&1
               rc=$?
               set -e
 
-              echo "run_rc=$rc" | tee output_adaptive_fp/status.txt
+              echo "run_rc=$rc" | tee "$OUTPUT_DIR/status.txt"
               cp \
                 heavy_parent.i \
                 fast_child.i \
@@ -83,22 +107,23 @@ jobs:
                 fast_corrector.i \
                 electron_poisson_corrector_stage.i \
                 prepare_predictor_corrector_adaptive_dt.py \
-                output_adaptive_fp/
+                prepare_predictor_corrector_horizon.py \
+                "$OUTPUT_DIR/"
 
               grep -E \
                 "Time Step|dt =|Fast fixed-point adaptive dt|Applying transferred-solution predictor|Fixed Point|fixed point|Solve Converged|Solve Did NOT Converge|DIVERGED|CONVERGED|cut|failed|ERROR|phi_max|phi_min|charge_|mean_energy|n_e_|O2p|predictor_fp_iterations|corrector_fp_iterations|dt_used" \
-                output_adaptive_fp/run.log \
-                > output_adaptive_fp/summary.txt || true
+                "$OUTPUT_DIR/run.log" \
+                > "$OUTPUT_DIR/summary.txt" || true
 
-              tail -n 1200 output_adaptive_fp/summary.txt || true
-              cat output_adaptive_fp/wall_time.txt || true
+              tail -n 1200 "$OUTPUT_DIR/summary.txt" || true
+              cat "$OUTPUT_DIR/wall_time.txt" || true
               exit "$rc"
             '
 
-      - name: Upload adaptive diagnostic
+      - name: Upload horizon diagnostic
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: predictor-corrector-adaptive-dt
-          path: experiments/heavy_fast_logmolar_coupling/output_adaptive_fp/**
+          name: predictor-corrector-${{ matrix.label }}
+          path: experiments/heavy_fast_logmolar_coupling/${{ matrix.output_dir }}/**
           retention-days: 30
