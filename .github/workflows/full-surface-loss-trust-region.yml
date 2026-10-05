@@ -1,0 +1,54 @@
+name: full surface loss trust region
+
+on:
+  push:
+    branches:
+      - prototype-fully-implicit-electron-poisson
+    paths:
+      - '.github/workflows/full-surface-loss-trust-region.yml'
+  workflow_dispatch:
+
+jobs:
+  newtontr:
+    runs-on: ubuntu-24.04
+    env:
+      BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker pull "$BUILD_BASE_REF"
+      - name: Build and test trust-region Newton
+        run: |
+          set -euo pipefail
+          docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace -v "$GITHUB_WORKSPACE:/workspace" "$BUILD_BASE_REF" -lc '
+            set -euo pipefail
+            source /environment
+            git config --global --add safe.directory /workspace
+            git config --global --add safe.directory /opt/physics_vendor/moose
+            git config --global --add safe.directory /opt/physics_vendor/crane
+            git config --global --add safe.directory /opt/physics_vendor/squirrel
+            git config --global --add safe.directory /opt/physics_vendor/zapdos
+            export MOOSE_DIR=/opt/physics_vendor/moose CRANE_DIR=/opt/physics_vendor/crane SQUIRREL_DIR=/opt/physics_vendor/squirrel ZAPDOS_DIR=/opt/physics_vendor/zapdos METHOD=opt
+            make -C physics_app -j2
+            cd experiments/implicit_logmolar_surface_loss
+            cp input_10step.i input_tr_debug.i
+            printf "\n[Debug]\n  show_var_residual_norms = true\n[]\n" >> input_tr_debug.i
+            rm -rf diag_tr && mkdir diag_tr
+            set +e
+            ../../physics_app/physics-opt -i input_tr_debug.i \
+              "Executioner/num_steps=1" "Executioner/end_time=1e-9" \
+              "Executioner/nl_max_its=100" "Executioner/nl_abs_tol=1e-10" \
+              "Executioner/petsc_options=-snes_converged_reason -snes_monitor -ksp_converged_reason -snes_type newtontr" \
+              "Executioner/petsc_options_iname=-ksp_type -pc_type -pc_factor_shift_type" \
+              "Executioner/petsc_options_value=preonly lu NONZERO" \
+              > diag_tr/run.log 2>&1
+            rc=$?
+            set -e
+            echo "run_rc=$rc" > diag_tr/status.txt
+            grep -E "SNES Function norm|CONVERGED|DIVERGED|Solve Converged|Solve Did NOT Converge|log_ne|log_energy|potential" diag_tr/run.log > diag_tr/summary.txt || true
+            cat diag_tr/status.txt
+            tail -n 200 diag_tr/summary.txt || true
+          '
+      - uses: actions/upload-artifact@v4
+        with:
+          name: full-surface-loss-newtontr
+          path: experiments/implicit_logmolar_surface_loss/diag_tr/**
