@@ -35,6 +35,14 @@ jobs:
             cd experiments/heavy_fast_logmolar_coupling
             python3 prepare_fast_child.py
             python3 prepare_heavy_parent.py
+
+            retired_prefix="QP""X"
+            retired_issue="Issue #""27"
+            if grep -REn "${retired_prefix}|${retired_issue}" prepare_fast_child.py prepare_heavy_parent.py fast_child.i heavy_parent.i; then
+              echo "retired nomenclature detected in active coupling path"
+              exit 1
+            fi
+
             ../../physics_app/physics-opt -i fast_child.i --check-input
             ../../physics_app/physics-opt -i heavy_parent.i --check-input
             rm -rf output && mkdir output
