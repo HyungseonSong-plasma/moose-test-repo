@@ -1,0 +1,83 @@
+name: heavy log simplex smoke
+
+on:
+  push:
+    branches:
+      - prototype-fully-implicit-electron-poisson
+    paths:
+      - '.ci_triggers/heavy-log-simplex-smoke'
+
+permissions:
+  contents: read
+  packages: read
+
+env:
+  BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+
+jobs:
+  heavy-log-simplex-smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pull build image
+        run: docker pull "$BUILD_BASE_REF"
+
+      - name: Build and run heavy log simplex smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm --entrypoint /bin/bash --user 0:0 \
+            --workdir /workspace \
+            -v "$GITHUB_WORKSPACE:/workspace" \
+            "$BUILD_BASE_REF" -lc '
+              set -euo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              git config --global --add safe.directory /opt/physics_vendor/moose
+              git config --global --add safe.directory /opt/physics_vendor/crane
+              git config --global --add safe.directory /opt/physics_vendor/squirrel
+              git config --global --add safe.directory /opt/physics_vendor/zapdos
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+
+              make -C physics_app -j2
+
+              cd experiments/heavy_fast_logmolar_coupling
+              python3 prepare_heavy_log_simplex_smoke.py
+              ../../physics_app/physics-opt -i heavy_log_simplex_smoke.i --check-input
+
+              rm -rf output_heavy_log_simplex_smoke
+              mkdir -p output_heavy_log_simplex_smoke
+              set +e
+              /usr/bin/time \
+                -f "wall_seconds=%e\nuser_seconds=%U\nsystem_seconds=%S\nmax_rss_kb=%M" \
+                -o output_heavy_log_simplex_smoke/wall_time.txt \
+                ../../physics_app/physics-opt -i heavy_log_simplex_smoke.i \
+                > output_heavy_log_simplex_smoke/run.log 2>&1
+              rc=$?
+              set -e
+
+              echo "run_rc=$rc" | tee output_heavy_log_simplex_smoke/status.txt
+              cp heavy_log_simplex_smoke.i prepare_heavy_log_simplex_smoke.py \
+                output_heavy_log_simplex_smoke/
+              cp heavy_log_simplex_smoke_out.csv output_heavy_log_simplex_smoke/ 2>/dev/null || true
+              cp heavy_log_simplex_smoke_out.e output_heavy_log_simplex_smoke/ 2>/dev/null || true
+              grep -E "Time Step|Nonlinear|w_O2|sum_w|rho|ERROR|Solve Did NOT Converge" \
+                output_heavy_log_simplex_smoke/run.log \
+                > output_heavy_log_simplex_smoke/summary.txt || true
+              tail -n 120 output_heavy_log_simplex_smoke/run.log || true
+              exit "$rc"
+            '
+
+      - name: Upload smoke result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: heavy-log-simplex-smoke
+          path: experiments/heavy_fast_logmolar_coupling/output_heavy_log_simplex_smoke/**
+          retention-days: 30
