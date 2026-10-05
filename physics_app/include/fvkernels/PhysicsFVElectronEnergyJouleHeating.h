@@ -26,6 +26,7 @@ protected:
   ADReal computeQpResidual() override;
 
   const bool _normalized_state;
+  const bool _lag_one_timestep;
   const Moose::Functor<ADReal> & _electron_density;
   const Moose::Functor<ADReal> & _potential;
   const Moose::Functor<ADReal> & _mobility;
