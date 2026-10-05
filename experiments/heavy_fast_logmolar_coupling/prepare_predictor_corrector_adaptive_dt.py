@@ -367,7 +367,7 @@ if corrector_fast.count("PhysicsTransferredSolutionPredictor") != 1:
     raise RuntimeError("energy corrector predictor missing")
 if corrector_ep.count("PhysicsTransferredSolutionPredictor") != 1:
     raise RuntimeError("electron-Poisson corrector predictor missing")
-if "variable = 'log_ne log_energy potential " in corrector_fast:
+if "\n    variable = 'log_ne log_energy potential p_heavy" in corrector_fast:
     raise RuntimeError("corrector EP still directly overwrites nonlinear guess variables")
 if "type = PhysicsFastFixedPointAdaptiveDT" not in parent:
     raise RuntimeError("parent adaptive TimeStepper missing")
