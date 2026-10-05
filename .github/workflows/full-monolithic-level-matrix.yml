@@ -1,0 +1,99 @@
+name: full monolithic Level 2-4 matrix
+
+on:
+  push:
+    branches:
+      - prototype-fully-implicit-electron-poisson
+    paths:
+      - '.ci_triggers/full-monolithic-level-matrix'
+
+permissions:
+  contents: read
+  packages: read
+
+env:
+  BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+
+jobs:
+  full-monolithic-level:
+    name: full-monolithic-L${{ matrix.level }}
+    strategy:
+      fail-fast: false
+      matrix:
+        level: [2, 3, 4]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pull build image
+        run: docker pull "$BUILD_BASE_REF"
+
+      - name: Build and run Level ${{ matrix.level }}
+        shell: bash
+        env:
+          LEVEL: ${{ matrix.level }}
+        run: |
+          set -euo pipefail
+          docker run --rm --entrypoint /bin/bash --user 0:0 \
+            -e LEVEL="$LEVEL" \
+            --workdir /workspace \
+            -v "$GITHUB_WORKSPACE:/workspace" \
+            "$BUILD_BASE_REF" -lc '
+              set -euo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              git config --global --add safe.directory /opt/physics_vendor/moose
+              git config --global --add safe.directory /opt/physics_vendor/crane
+              git config --global --add safe.directory /opt/physics_vendor/squirrel
+              git config --global --add safe.directory /opt/physics_vendor/zapdos
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+
+              make -C physics_app -j2
+              cd experiments/heavy_fast_logmolar_coupling
+
+              python3 prepare_full_monolithic_log_simplex_level_matrix.py --level "$LEVEL"
+              INPUT="full_monolithic_log_simplex_level${LEVEL}.i"
+              OUTDIR="output_full_monolithic_level${LEVEL}"
+
+              ../../physics_app/physics-opt -i "$INPUT" --check-input
+
+              rm -rf "$OUTDIR"
+              mkdir -p "$OUTDIR"
+              set +e
+              /usr/bin/time \
+                -f "wall_seconds=%e\nuser_seconds=%U\nsystem_seconds=%S\nmax_rss_kb=%M" \
+                -o "$OUTDIR/wall_time.txt" \
+                timeout --signal=TERM 12m stdbuf -oL -eL \
+                ../../physics_app/physics-opt -i "$INPUT" \
+                > "$OUTDIR/run.log" 2>&1
+              rc=$?
+              set -e
+
+              echo "run_rc=$rc" | tee "$OUTDIR/status.txt"
+              echo "level=$LEVEL" | tee "$OUTDIR/matrix.txt"
+              cp "$INPUT" prepare_full_monolithic_log_simplex_level_matrix.py \
+                 prepare_full_monolithic_log_simplex.py prepare_heavy_log_simplex_smoke.py \
+                 "$OUTDIR/"
+              cp full_monolithic_log_simplex_level${LEVEL}_out.csv "$OUTDIR/" 2>/dev/null || true
+              cp full_monolithic_log_simplex_level${LEVEL}_out.e "$OUTDIR/" 2>/dev/null || true
+              cp full_monolithic_log_simplex_out.csv "$OUTDIR/" 2>/dev/null || true
+              cp full_monolithic_log_simplex_out.e "$OUTDIR/" 2>/dev/null || true
+              grep -E "Time Step|SNES|KSP|Nonlinear|Linear|fieldsplit|CONVERGED|DIVERGED|Solve Did NOT Converge|log_ne|log_energy|potential|eta_|ERROR" \
+                "$OUTDIR/run.log" > "$OUTDIR/summary.txt" || true
+              tail -n 260 "$OUTDIR/run.log" || true
+              exit "$rc"
+            '
+
+      - name: Upload Level ${{ matrix.level }} result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: full-monolithic-level${{ matrix.level }}
+          path: experiments/heavy_fast_logmolar_coupling/output_full_monolithic_level${{ matrix.level }}/**
+          retention-days: 30
