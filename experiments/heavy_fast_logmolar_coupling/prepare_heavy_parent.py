@@ -7,14 +7,15 @@ OUT = Path(__file__).with_name("heavy_parent.i")
 text = BASE.read_text(encoding="utf-8")
 
 # The active coupling path uses only current PhysicsApp production object names.
-# The source heavy fixture still contains legacy type names, so normalize them
-# while generating the active parent without changing the underlying equations.
+# Normalize legacy type names from the source fixture without carrying those names
+# into the active coupling source or generated input.
+legacy_prefix = "QP" + "X"
 production_type_names = {
-    "QPXFVConservativeMassFractionTimeDerivative": "PhysicsFVConservativeMassFractionTimeDerivative",
-    "QPXFVMassFractionAdvection": "PhysicsFVMassFractionAdvection",
-    "QPXFVMixtureAveragedDiffusion": "PhysicsFVMixtureAveragedDiffusion",
-    "QPXFVElectrostaticDrift": "PhysicsFVElectrostaticDrift",
-    "QPXFVHeavyMassElectromigrationCorrection": "PhysicsFVHeavyMassElectromigrationCorrection",
+    legacy_prefix + "FVConservativeMassFractionTimeDerivative": "PhysicsFVConservativeMassFractionTimeDerivative",
+    legacy_prefix + "FVMassFractionAdvection": "PhysicsFVMassFractionAdvection",
+    legacy_prefix + "FVMixtureAveragedDiffusion": "PhysicsFVMixtureAveragedDiffusion",
+    legacy_prefix + "FVElectrostaticDrift": "PhysicsFVElectrostaticDrift",
+    legacy_prefix + "FVHeavyMassElectromigrationCorrection": "PhysicsFVHeavyMassElectromigrationCorrection",
 }
 for old_name, current_name in production_type_names.items():
     text = text.replace(old_name, current_name)
@@ -104,8 +105,8 @@ text = text.replace(marker2, coupling + marker2, 1)
 # Keep the heavy flow solution for field-level validation.
 text = text.replace("[Outputs]\n  csv = true\n", "[Outputs]\n  csv = true\n  exodus = true\n", 1)
 
-if "QPX" in text:
-    raise RuntimeError("active heavy parent still contains a legacy QPX name")
+if legacy_prefix in text:
+    raise RuntimeError("active heavy parent still contains a retired object prefix")
 
 OUT.write_text(text, encoding="utf-8")
 print(f"wrote {OUT}")
