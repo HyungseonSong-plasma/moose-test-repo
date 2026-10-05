@@ -1,0 +1,59 @@
+name: heavy fast logmolar coupling
+
+on:
+  push:
+    branches: [ prototype-fully-implicit-electron-poisson ]
+    paths:
+      - 'experiments/heavy_fast_logmolar_coupling/**'
+      - '.github/workflows/heavy-fast-logmolar-coupling.yml'
+      - 'experiments/Issue91_real_qvt_r3/r3_e0/heavy_base.i'
+      - 'experiments/implicit_logmolar_surface_loss/input_10step.i'
+      - 'physics_app/**'
+  workflow_dispatch:
+
+jobs:
+  heavy-to-fast:
+    runs-on: ubuntu-24.04
+    env:
+      BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker pull "$BUILD_BASE_REF"
+      - name: Build and run heavy parent with fast child
+        run: |
+          set -euo pipefail
+          docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace -v "$GITHUB_WORKSPACE:/workspace" "$BUILD_BASE_REF" -lc '
+            set -euo pipefail
+            source /environment
+            git config --global --add safe.directory /workspace
+            git config --global --add safe.directory /opt/physics_vendor/moose
+            git config --global --add safe.directory /opt/physics_vendor/crane
+            git config --global --add safe.directory /opt/physics_vendor/squirrel
+            git config --global --add safe.directory /opt/physics_vendor/zapdos
+            export MOOSE_DIR=/opt/physics_vendor/moose CRANE_DIR=/opt/physics_vendor/crane SQUIRREL_DIR=/opt/physics_vendor/squirrel ZAPDOS_DIR=/opt/physics_vendor/zapdos METHOD=opt
+            make -C physics_app -j2
+            cd experiments/heavy_fast_logmolar_coupling
+            python3 prepare_fast_child.py
+            python3 prepare_heavy_parent.py
+            ../../physics_app/physics-opt -i fast_child.i --check-input
+            ../../physics_app/physics-opt -i heavy_parent.i --check-input
+            rm -rf output && mkdir output
+            set +e
+            ../../physics_app/physics-opt -i heavy_parent.i \
+              "MultiApps/fast_plasma/cli_args=Executioner/dt=1e-10;Executioner/dtmin=1e-10;Executioner/dtmax=1e-10;Executioner/num_steps=10;Executioner/end_time=1e-9;Executioner/nl_abs_tol=1e-10;Executioner/nl_rel_tol=1e-9;Executioner/nl_max_its=60;Outputs/file_base=output/fast" \
+              "Outputs/file_base=output/heavy" \
+              > output/run.log 2>&1
+            rc=$?
+            set -e
+            echo "run_rc=$rc" | tee output/status.txt
+            cp heavy_parent.i fast_child.i output/
+            grep -E "Time Step|Solve Converged|Solve Did NOT Converge|SNES Function norm|heavy_cO|heavy_rho|outside lookup range|ERROR" output/run.log > output/summary.txt || true
+            tail -n 260 output/summary.txt || true
+            exit $rc
+          '
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: heavy-fast-logmolar-coupling
+          path: experiments/heavy_fast_logmolar_coupling/output/**
+          retention-days: 30
