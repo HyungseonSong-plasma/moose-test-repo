@@ -9,8 +9,10 @@ HERE = Path(__file__).resolve().parent
 BASE_GENERATOR = HERE / "prepare_full_monolithic_log_simplex.py"
 BASE_INPUT = HERE / "full_monolithic_log_simplex.i"
 
+FLOW_VARS = "u v p"
 HEAVY_VARS = "u v p eta_O2s eta_O2p eta_O eta_Om eta_Op eta_Os"
 SPECIES_VARS = "eta_O2s eta_O2p eta_O eta_Om eta_Op eta_Os"
+FAST_VARS = "log_ne log_energy potential"
 ELECTRON_VARS = "log_ne log_energy"
 
 
@@ -62,8 +64,8 @@ def common_top(inner: str) -> str:
 
 
 def level2() -> str:
-    # Heavy remains one exact block.  Fast is decomposed into the strongly
-    # coupled electron/energy pair and the electrostatic potential.
+    # Each child of a nested split must explicitly own its variable subset.
+    # Otherwise an intermediate Split without vars expands to the full system.
     inner = f"""
     [heavy]
       vars = '{HEAVY_VARS}'
@@ -73,6 +75,7 @@ def level2() -> str:
     []
 
     [fast]
+      vars = '{FAST_VARS}'
       splitting = 'electron poisson'
       splitting_type = multiplicative
       petsc_options = '-ksp_converged_reason -ksp_monitor'
@@ -98,10 +101,9 @@ def level2() -> str:
 
 
 def level3() -> str:
-    # Split the heavy block into flow and heavy-species transport while keeping
-    # exact LU leaf solves.  Fast retains the Level-2 electron|Poisson split.
     inner = f"""
     [heavy]
+      vars = '{HEAVY_VARS}'
       splitting = 'flow species'
       splitting_type = multiplicative
       petsc_options = '-ksp_converged_reason -ksp_monitor'
@@ -110,7 +112,7 @@ def level3() -> str:
     []
 
     [flow]
-      vars = 'u v p'
+      vars = '{FLOW_VARS}'
       petsc_options = '-ksp_converged_reason'
       petsc_options_iname = '-ksp_type -pc_type -pc_factor_shift_type'
       petsc_options_value = 'preonly lu NONZERO'
@@ -124,6 +126,7 @@ def level3() -> str:
     []
 
     [fast]
+      vars = '{FAST_VARS}'
       splitting = 'electron poisson'
       splitting_type = multiplicative
       petsc_options = '-ksp_converged_reason -ksp_monitor'
@@ -149,13 +152,11 @@ def level3() -> str:
 
 
 def level4() -> str:
-    # Preserve the Level-3 physics hierarchy, but remove direct LU from the leaf
-    # blocks.  Flow gets an inner velocity|pressure Schur split; transport-like
-    # blocks use GMRES+ASM(ILU); Poisson uses BoomerAMG.
     asm_iname = "-ksp_type -ksp_rtol -ksp_max_it -pc_type -pc_asm_overlap -sub_pc_type"
     asm_value = "gmres 1e-4 100 asm 1 ilu"
     inner = f"""
     [heavy]
+      vars = '{HEAVY_VARS}'
       splitting = 'flow species'
       splitting_type = multiplicative
       petsc_options = '-ksp_converged_reason -ksp_monitor'
@@ -164,6 +165,7 @@ def level4() -> str:
     []
 
     [flow]
+      vars = '{FLOW_VARS}'
       splitting = 'velocity pressure'
       splitting_type = schur
       schur_type = full
@@ -195,6 +197,7 @@ def level4() -> str:
     []
 
     [fast]
+      vars = '{FAST_VARS}'
       splitting = 'electron poisson'
       splitting_type = multiplicative
       petsc_options = '-ksp_converged_reason -ksp_monitor'
@@ -233,9 +236,6 @@ def build(level: int) -> Path:
         raise ValueError(level)
     text = insert_preconditioning(text, pre)
 
-    # Common physics contract: this is the exact full-monolithic discriminator,
-    # including electron continuity, electron energy, Poisson, drift, Joule and
-    # grounded sheath BCs.  Only preconditioning differs across matrix entries.
     for token in (
         "[log_ne]",
         "[log_energy]",
@@ -246,6 +246,7 @@ def build(level: int) -> Path:
         "property_name = charge_number_density",
         "dt = 1.0e-10",
         "splitting = 'heavy fast'",
+        f"vars = '{FAST_VARS}'",
     ):
         if token not in text:
             raise RuntimeError(f"Level-{level} full-physics contract missing: {token}")
@@ -254,15 +255,16 @@ def build(level: int) -> Path:
 
     if level >= 2 and "splitting = 'electron poisson'" not in text:
         raise RuntimeError("fast electron|Poisson split missing")
-    if level >= 3 and "splitting = 'flow species'" not in text:
-        raise RuntimeError("heavy flow|species split missing")
+    if level >= 3:
+        for token in ("splitting = 'flow species'", f"vars = '{HEAVY_VARS}'"):
+            if token not in text:
+                raise RuntimeError(f"Level-{level} heavy hierarchy token missing: {token}")
     if level == 4:
-        for token in ("splitting_type = schur", "pc_hypre_type", "boomeramg"):
+        for token in (f"vars = '{FLOW_VARS}'", "splitting_type = schur", "pc_hypre_type", "boomeramg"):
             if token not in text:
                 raise RuntimeError(f"Level-4 scalable solver token missing: {token}")
 
     out = HERE / f"full_monolithic_log_simplex_level{level}.i"
-    # Give every matrix entry a unique output base so artifacts cannot collide.
     text = text.replace("file_base = full_monolithic_log_simplex", f"file_base = full_monolithic_log_simplex_level{level}")
     out.write_text(text, encoding="utf-8")
     print(f"wrote {out}")
