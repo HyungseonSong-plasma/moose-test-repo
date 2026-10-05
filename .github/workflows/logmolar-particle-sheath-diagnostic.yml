@@ -1,0 +1,73 @@
+name: log-molar particle sheath diagnostic
+
+on:
+  push:
+    branches:
+      - prototype-fully-implicit-electron-poisson
+    paths:
+      - 'experiments/implicit_logmolar_surface_loss/input_particle_only_1step.i'
+      - '.github/workflows/logmolar-particle-sheath-diagnostic.yml'
+      - 'physics_app/**'
+  workflow_dispatch:
+
+jobs:
+  particle-sheath:
+    name: particle-sheath-1step
+    runs-on: ubuntu-24.04
+    env:
+      BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pull Physics build base
+        run: docker pull "$BUILD_BASE_REF"
+      - name: Build and diagnose particle sheath
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            --entrypoint /bin/bash \
+            --user 0:0 \
+            --workdir /workspace \
+            -v "$GITHUB_WORKSPACE:/workspace" \
+            "$BUILD_BASE_REF" \
+            -lc '
+              set -euo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              git config --global --add safe.directory /opt/physics_vendor/moose
+              git config --global --add safe.directory /opt/physics_vendor/crane
+              git config --global --add safe.directory /opt/physics_vendor/squirrel
+              git config --global --add safe.directory /opt/physics_vendor/zapdos
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+              make -C physics_app -j2
+              cd experiments/implicit_logmolar_surface_loss
+              rm -rf particle_results
+              mkdir -p particle_results
+              ../../physics_app/physics-opt --check-input -i input_particle_only_1step.i > particle_results/check-input.log 2>&1
+              set +e
+              ../../physics_app/physics-opt -i input_particle_only_1step.i \
+                "Executioner/nl_max_its=1" \
+                "Outputs/file_base=particle_results/jacobian" \
+                -snes_test_jacobian > particle_results/jacobian.log 2>&1
+              jac_rc=$?
+              ../../physics_app/physics-opt -i input_particle_only_1step.i \
+                "Outputs/file_base=particle_results/solve" \
+                > particle_results/solve.log 2>&1
+              solve_rc=$?
+              set -e
+              printf "jacobian_rc=%s\nsolve_rc=%s\n" "$jac_rc" "$solve_rc" > particle_results/status.txt
+              grep -E "J - Jfd|Jfd|SNES Function norm|CONVERGED|DIVERGED" particle_results/jacobian.log > particle_results/jacobian_summary.txt || true
+              grep -E "SNES Function norm|CONVERGED|DIVERGED|Solve Converged|Solve Did NOT Converge" particle_results/solve.log > particle_results/solve_summary.txt || true
+              cat particle_results/status.txt
+              cat particle_results/jacobian_summary.txt || true
+              cat particle_results/solve_summary.txt || true
+            '
+      - name: Upload diagnostic
+        uses: actions/upload-artifact@v4
+        with:
+          name: logmolar-particle-sheath-diagnostic
+          path: experiments/implicit_logmolar_surface_loss/particle_results/**
+          retention-days: 30
