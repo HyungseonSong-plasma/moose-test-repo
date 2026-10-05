@@ -1,0 +1,71 @@
+name: heavy first implicit once
+
+on:
+  push:
+    branches: [ prototype-fully-implicit-electron-poisson ]
+    paths:
+      - 'experiments/heavy_fast_logmolar_coupling/prepare_heavy_first_once.py'
+      - 'experiments/heavy_fast_logmolar_coupling/prepare_fast_child.py'
+      - 'experiments/heavy_fast_logmolar_coupling/prepare_heavy_parent.py'
+      - '.github/workflows/heavy-first-implicit-once.yml'
+      - 'experiments/Issue91_real_qvt_r3/r3_e0/heavy_base.i'
+      - 'experiments/implicit_logmolar_surface_loss/input_10step.i'
+      - 'physics_app/**'
+  workflow_dispatch:
+
+jobs:
+  heavy-first-implicit:
+    runs-on: ubuntu-24.04
+    env:
+      BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker pull "$BUILD_BASE_REF"
+      - name: Advance heavy 1 ns then solve fixed-heavy implicit plasma
+        run: |
+          set -euo pipefail
+          docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace -v "$GITHUB_WORKSPACE:/workspace" "$BUILD_BASE_REF" -lc '
+            set -euo pipefail
+            source /environment
+            git config --global --add safe.directory /workspace
+            git config --global --add safe.directory /opt/physics_vendor/moose
+            git config --global --add safe.directory /opt/physics_vendor/crane
+            git config --global --add safe.directory /opt/physics_vendor/squirrel
+            git config --global --add safe.directory /opt/physics_vendor/zapdos
+            export MOOSE_DIR=/opt/physics_vendor/moose CRANE_DIR=/opt/physics_vendor/crane SQUIRREL_DIR=/opt/physics_vendor/squirrel ZAPDOS_DIR=/opt/physics_vendor/zapdos METHOD=opt
+            make -C physics_app -j2
+
+            cd experiments/heavy_fast_logmolar_coupling
+            export STARTUP_RHO=7.009816816733094e-6
+            python3 prepare_heavy_first_once.py
+
+            # Keep the current fully implicit child unchanged: Joule ON, Newton solve,
+            # implicit Euler, 1 ns. The parent advances first and freezes its updated
+            # heavy state while the child performs exactly one implicit 1 ns solve.
+            printf "\n[Debug]\n  show_var_residual_norms = true\n[]\n" >> fast_child.i
+
+            ../../physics_app/physics-opt -i fast_child.i --check-input
+            ../../physics_app/physics-opt -i heavy_parent.i --check-input
+
+            rm -rf output_heavy_first && mkdir output_heavy_first
+            set +e
+            ../../physics_app/physics-opt -i heavy_parent.i \
+              "MultiApps/fast_plasma/cli_args=Executioner/dt=1e-9;Executioner/dtmin=1e-9;Executioner/dtmax=1e-9;Executioner/num_steps=1;Executioner/end_time=1e-9;Executioner/nl_abs_tol=1e-10;Executioner/nl_rel_tol=1e-9;Executioner/nl_max_its=80;Outputs/file_base=output_heavy_first/fast" \
+              "Outputs/file_base=output_heavy_first/heavy" \
+              > output_heavy_first/run.log 2>&1
+            rc=$?
+            set -e
+
+            echo "run_rc=$rc" | tee output_heavy_first/status.txt
+            cp heavy_parent.i fast_child.i output_heavy_first/
+            grep -E "Time Step|Solve Converged|Solve Did NOT Converge|SNES Function norm|log_ne|log_energy|potential|O2p_migration|positive_ion|n_O2p|phi_max|phi_min|charge_|mean_energy|rho_snapshot_rel_error|ERROR|DIVERGED|CONVERGED" \
+              output_heavy_first/run.log > output_heavy_first/summary.txt || true
+            tail -n 900 output_heavy_first/summary.txt || true
+            exit $rc
+          '
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: heavy-first-implicit-once
+          path: experiments/heavy_fast_logmolar_coupling/output_heavy_first/**
+          retention-days: 30
