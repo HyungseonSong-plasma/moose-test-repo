@@ -1,2 +1,4 @@
-trigger 2026-10-05 adaptive predictor-corrector dt diagnostic
-rerun after guard fix
+trigger 2026-10-05 adaptive predictor-corrector horizon matrix
+25 ns independent / 1h timeout
+50 ns independent / 1h timeout
+50 ns independent / 2h timeout
