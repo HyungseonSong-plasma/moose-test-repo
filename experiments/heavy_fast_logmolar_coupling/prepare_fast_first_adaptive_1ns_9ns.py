@@ -25,8 +25,11 @@ paths = [
 #   t0 = 0
 #   t1 = 1 ns    -> dt1 = 1 ns
 #   t2 = 10 ns   -> dt2 = 9 ns
-# The same sequence is imposed on heavy, energy, and electron+Poisson so there
-# is no hidden 1 ns subcycling during the second physical cycle.
+# The same sequence is retained on all three executioners, but the OUTER fast
+# MultiApp is not allowed to subcycle. The parent therefore supplies each
+# physical dt explicitly (1 ns, then 9 ns) to the fast child. This avoids the
+# child independently trying to rediscover its next target time and producing
+# dt=0 on the second parent call.
 TIME_SEQUENCE = "0 1.0e-9 1.0e-8"
 
 
@@ -87,9 +90,11 @@ for path in paths:
     text = text.replace("output_matrix/", "output_adaptive/")
     path.write_text(text, encoding="utf-8")
 
-# Guard the intended coupling order on the parent: each physical cycle must be
-# [fast corrections -> heavy advance] at TIMESTEP_BEGIN.
-parent = (HERE / "heavy_parent.i").read_text(encoding="utf-8")
+# Parent owns the adaptive physical timestep. Disable outer MultiApp subcycling
+# so TransientMultiApp advances the fast child by the parent's supplied dt rather
+# than asking the child's TimeStepper to march independently to the target time.
+parent_path = HERE / "heavy_parent.i"
+parent = parent_path.read_text(encoding="utf-8")
 ma_start = parent.find("[MultiApps]\n")
 exec_start = parent.find("[Executioner]\n", ma_start)
 if ma_start < 0 or exec_start < 0:
@@ -97,6 +102,11 @@ if ma_start < 0 or exec_start < 0:
 region = parent[ma_start:exec_start]
 if region.count("execute_on = TIMESTEP_BEGIN") != 3:
     raise RuntimeError("expected exactly three TIMESTEP_BEGIN outer coupling flags")
+if region.count("sub_cycling = true") != 1:
+    raise RuntimeError("expected exactly one outer fast MultiApp with sub_cycling = true")
+region = region.replace("sub_cycling = true", "sub_cycling = false", 1)
+parent = parent[:ma_start] + region + parent[exec_start:]
+parent_path.write_text(parent, encoding="utf-8")
 
 print("prepared adaptive fast-first two-cycle diagnostic")
 print(f"  fixed-point corrections per physical cycle: {CORRECTIONS}")
@@ -105,4 +115,5 @@ print("  cycle 2: t=1 -> 10 ns, dt=9 ns")
 print("  ordering each cycle: [energy -> electron+Poisson] x corrections -> heavy")
 print("  heavy state frozen during each fast correction block")
 print("  previous-cycle fast/heavy state is reused in cycle 2")
-print("  no hidden 1 ns physical subcycling in cycle 2")
+print("  outer fast MultiApp sub_cycling: false")
+print("  parent supplies physical dt directly: 1 ns, then 9 ns")
