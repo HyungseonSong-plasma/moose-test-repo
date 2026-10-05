@@ -22,7 +22,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Pull build image
         run: docker pull "$BUILD_BASE_REF"
-      - name: Build heavy-log and run monolithic one-step
+      - name: Build heavy-log and run Level-1 FieldSplit one-step
         shell: bash
         run: |
           set -euo pipefail
@@ -50,38 +50,39 @@ jobs:
               python3 prepare_heavy_log_simplex_smoke.py
               ../../physics_app/physics-opt -i heavy_log_simplex_smoke.i --check-input
 
-              # Full monolithic discriminator: heavy flow/transport + electron
-              # continuity/energy + Poisson/Joule in one Newton system.
-              python3 prepare_full_monolithic_log_simplex.py
-              ../../physics_app/physics-opt -i full_monolithic_log_simplex.i --check-input
+              # Same full-monolithic physics as the global-LU baseline, but linear
+              # solve = GMRES + multiplicative heavy|fast FieldSplit.
+              python3 prepare_full_monolithic_log_simplex_level1.py
+              ../../physics_app/physics-opt -i full_monolithic_log_simplex_level1.i --check-input
 
-              rm -rf output_full_monolithic_log_simplex
-              mkdir -p output_full_monolithic_log_simplex
+              rm -rf output_full_monolithic_log_simplex_level1
+              mkdir -p output_full_monolithic_log_simplex_level1
               set +e
               /usr/bin/time \
                 -f "wall_seconds=%e\nuser_seconds=%U\nsystem_seconds=%S\nmax_rss_kb=%M" \
-                -o output_full_monolithic_log_simplex/wall_time.txt \
-                ../../physics_app/physics-opt -i full_monolithic_log_simplex.i \
-                > output_full_monolithic_log_simplex/run.log 2>&1
+                -o output_full_monolithic_log_simplex_level1/wall_time.txt \
+                ../../physics_app/physics-opt -i full_monolithic_log_simplex_level1.i \
+                > output_full_monolithic_log_simplex_level1/run.log 2>&1
               rc=$?
               set -e
 
-              echo "run_rc=$rc" | tee output_full_monolithic_log_simplex/status.txt
-              cp full_monolithic_log_simplex.i prepare_full_monolithic_log_simplex.py \
-                 prepare_heavy_log_simplex_smoke.py output_full_monolithic_log_simplex/
-              cp full_monolithic_log_simplex_out.csv output_full_monolithic_log_simplex/ 2>/dev/null || true
-              cp full_monolithic_log_simplex_out.e output_full_monolithic_log_simplex/ 2>/dev/null || true
-              grep -E "Time Step|Nonlinear|Solve Did NOT Converge|CONVERGED|DIVERGED|log_ne|log_energy|potential|eta_|ERROR" \
-                output_full_monolithic_log_simplex/run.log \
-                > output_full_monolithic_log_simplex/summary.txt || true
-              tail -n 180 output_full_monolithic_log_simplex/run.log || true
+              echo "run_rc=$rc" | tee output_full_monolithic_log_simplex_level1/status.txt
+              cp full_monolithic_log_simplex_level1.i prepare_full_monolithic_log_simplex_level1.py \
+                 prepare_full_monolithic_log_simplex.py prepare_heavy_log_simplex_smoke.py \
+                 output_full_monolithic_log_simplex_level1/
+              cp full_monolithic_log_simplex_level1_out.csv output_full_monolithic_log_simplex_level1/ 2>/dev/null || true
+              cp full_monolithic_log_simplex_level1_out.e output_full_monolithic_log_simplex_level1/ 2>/dev/null || true
+              grep -E "Time Step|Nonlinear|Linear|KSP|Solve Did NOT Converge|CONVERGED|DIVERGED|log_ne|log_energy|potential|eta_|ERROR" \
+                output_full_monolithic_log_simplex_level1/run.log \
+                > output_full_monolithic_log_simplex_level1/summary.txt || true
+              tail -n 220 output_full_monolithic_log_simplex_level1/run.log || true
               exit "$rc"
             '
 
-      - name: Upload full monolithic log-simplex result
+      - name: Upload Level-1 FieldSplit monolithic result
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: full-monolithic-log-simplex-one-step
-          path: experiments/heavy_fast_logmolar_coupling/output_full_monolithic_log_simplex/**
+          name: full-monolithic-log-simplex-level1
+          path: experiments/heavy_fast_logmolar_coupling/output_full_monolithic_log_simplex_level1/**
           retention-days: 30
