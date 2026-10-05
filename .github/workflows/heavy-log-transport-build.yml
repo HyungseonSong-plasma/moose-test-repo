@@ -17,12 +17,12 @@ env:
 jobs:
   build-heavy-log-transport:
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
       - name: Pull build image
         run: docker pull "$BUILD_BASE_REF"
-      - name: Build and smoke heavy log transport
+      - name: Build heavy-log and run monolithic one-step
         shell: bash
         run: |
           set -euo pipefail
@@ -44,34 +44,44 @@ jobs:
               export METHOD=opt
 
               make -C physics_app -j2
-
               cd experiments/heavy_fast_logmolar_coupling
+
+              # Structural heavy-log/simplex qualification.
               python3 prepare_heavy_log_simplex_smoke.py
               ../../physics_app/physics-opt -i heavy_log_simplex_smoke.i --check-input
 
-              rm -rf output_heavy_log_simplex_smoke
-              mkdir -p output_heavy_log_simplex_smoke
+              # Full monolithic discriminator: heavy flow/transport + electron
+              # continuity/energy + Poisson/Joule in one Newton system.
+              python3 prepare_full_monolithic_log_simplex.py
+              ../../physics_app/physics-opt -i full_monolithic_log_simplex.i --check-input
+
+              rm -rf output_full_monolithic_log_simplex
+              mkdir -p output_full_monolithic_log_simplex
               set +e
               /usr/bin/time \
                 -f "wall_seconds=%e\nuser_seconds=%U\nsystem_seconds=%S\nmax_rss_kb=%M" \
-                -o output_heavy_log_simplex_smoke/wall_time.txt \
-                ../../physics_app/physics-opt -i heavy_log_simplex_smoke.i \
-                > output_heavy_log_simplex_smoke/run.log 2>&1
+                -o output_full_monolithic_log_simplex/wall_time.txt \
+                ../../physics_app/physics-opt -i full_monolithic_log_simplex.i \
+                > output_full_monolithic_log_simplex/run.log 2>&1
               rc=$?
               set -e
-              echo "run_rc=$rc" | tee output_heavy_log_simplex_smoke/status.txt
-              cp heavy_log_simplex_smoke.i prepare_heavy_log_simplex_smoke.py \
-                output_heavy_log_simplex_smoke/
-              cp heavy_log_simplex_smoke_out.csv output_heavy_log_simplex_smoke/ 2>/dev/null || true
-              cp heavy_log_simplex_smoke_out.e output_heavy_log_simplex_smoke/ 2>/dev/null || true
-              tail -n 120 output_heavy_log_simplex_smoke/run.log || true
+
+              echo "run_rc=$rc" | tee output_full_monolithic_log_simplex/status.txt
+              cp full_monolithic_log_simplex.i prepare_full_monolithic_log_simplex.py \
+                 prepare_heavy_log_simplex_smoke.py output_full_monolithic_log_simplex/
+              cp full_monolithic_log_simplex_out.csv output_full_monolithic_log_simplex/ 2>/dev/null || true
+              cp full_monolithic_log_simplex_out.e output_full_monolithic_log_simplex/ 2>/dev/null || true
+              grep -E "Time Step|Nonlinear|Solve Did NOT Converge|CONVERGED|DIVERGED|log_ne|log_energy|potential|eta_|ERROR" \
+                output_full_monolithic_log_simplex/run.log \
+                > output_full_monolithic_log_simplex/summary.txt || true
+              tail -n 180 output_full_monolithic_log_simplex/run.log || true
               exit "$rc"
             '
 
-      - name: Upload heavy log simplex smoke
+      - name: Upload full monolithic log-simplex result
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: heavy-log-simplex-smoke
-          path: experiments/heavy_fast_logmolar_coupling/output_heavy_log_simplex_smoke/**
+          name: full-monolithic-log-simplex-one-step
+          path: experiments/heavy_fast_logmolar_coupling/output_full_monolithic_log_simplex/**
           retention-days: 30
