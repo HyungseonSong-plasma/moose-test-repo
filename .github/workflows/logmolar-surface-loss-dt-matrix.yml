@@ -1,0 +1,83 @@
+name: log-molar surface-loss startup dt matrix
+
+on:
+  push:
+    branches:
+      - prototype-fully-implicit-electron-poisson
+    paths:
+      - 'experiments/implicit_logmolar_surface_loss/input_10step.i'
+      - '.github/workflows/logmolar-surface-loss-dt-matrix.yml'
+      - 'physics_app/**'
+  workflow_dispatch:
+
+jobs:
+  startup:
+    name: dt-${{ matrix.label }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: 1e-12
+            dt: '1.0e-12'
+          - label: 1e-11
+            dt: '1.0e-11'
+          - label: 1e-10
+            dt: '1.0e-10'
+          - label: 1e-9
+            dt: '1.0e-9'
+    runs-on: ubuntu-24.04
+    env:
+      BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pull Physics build base
+        run: docker pull "$BUILD_BASE_REF"
+      - name: Build and run one startup step
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            --entrypoint /bin/bash \
+            --user 0:0 \
+            --workdir /workspace \
+            -v "$GITHUB_WORKSPACE:/workspace" \
+            "$BUILD_BASE_REF" \
+            -lc '
+              set -euo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              git config --global --add safe.directory /opt/physics_vendor/moose
+              git config --global --add safe.directory /opt/physics_vendor/crane
+              git config --global --add safe.directory /opt/physics_vendor/squirrel
+              git config --global --add safe.directory /opt/physics_vendor/zapdos
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+              make -C physics_app -j2
+              cd experiments/implicit_logmolar_surface_loss
+              out="dt_${{ matrix.label }}"
+              rm -rf "$out"
+              mkdir -p "$out"
+              set +e
+              ../../physics_app/physics-opt -i input_10step.i \
+                "Executioner/dt=${{ matrix.dt }}" \
+                "Executioner/dtmin=${{ matrix.dt }}" \
+                "Executioner/dtmax=${{ matrix.dt }}" \
+                "Executioner/num_steps=1" \
+                "Executioner/end_time=${{ matrix.dt }}" \
+                "Outputs/file_base=$out/solve" \
+                > "$out/run.log" 2>&1
+              rc=$?
+              set -e
+              printf "dt=${{ matrix.dt }}\nrun_rc=%s\n" "$rc" > "$out/status.txt"
+              grep -E "SNES Function norm|CONVERGED|DIVERGED|Solve Converged|Solve Did NOT Converge" "$out/run.log" > "$out/summary.txt" || true
+              cat "$out/status.txt"
+              tail -n 80 "$out/summary.txt" || true
+            '
+      - name: Upload dt result
+        uses: actions/upload-artifact@v4
+        with:
+          name: surface-loss-${{ matrix.label }}
+          path: experiments/implicit_logmolar_surface_loss/dt_${{ matrix.label }}/**
+          retention-days: 30
