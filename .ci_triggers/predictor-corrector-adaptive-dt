@@ -1,4 +1,2 @@
-trigger 2026-10-05 adaptive predictor-corrector horizon matrix
-25 ns independent / 1h timeout
-50 ns independent / 1h timeout
-50 ns independent / 2h timeout
+trigger 2026-10-05 25ns no-sheath-factor diagnostic
+retry through validated adaptive workflow
