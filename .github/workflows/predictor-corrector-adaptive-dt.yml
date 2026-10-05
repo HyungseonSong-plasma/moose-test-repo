@@ -1,4 +1,4 @@
-name: predictor corrector adaptive horizon matrix
+name: predictor corrector 25ns no sheath factor
 
 on:
   workflow_dispatch:
@@ -14,33 +14,15 @@ permissions:
 
 env:
   BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+  END_TIME_NS: 25
+  OUTPUT_DIR: output_25ns_no_sheath_factor
+  MAX_CORRECTIONS: 10
 
 jobs:
   adaptive-horizon:
-    name: adaptive-${{ matrix.label }}
+    name: adaptive-25ns-no-sheath-factor
     runs-on: ubuntu-24.04
-    timeout-minutes: ${{ matrix.timeout_minutes }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - label: 25ns-1h
-            end_time_ns: 25
-            timeout_minutes: 60
-            output_dir: output_25ns_1h
-          - label: 50ns-1h
-            end_time_ns: 50
-            timeout_minutes: 60
-            output_dir: output_50ns_1h
-          - label: 50ns-2h
-            end_time_ns: 50
-            timeout_minutes: 120
-            output_dir: output_50ns_2h
-
-    env:
-      END_TIME_NS: ${{ matrix.end_time_ns }}
-      OUTPUT_DIR: ${{ matrix.output_dir }}
-      MAX_CORRECTIONS: 10
+    timeout-minutes: 60
 
     steps:
       - uses: actions/checkout@v4
@@ -48,7 +30,7 @@ jobs:
       - name: Pull build image
         run: docker pull "$BUILD_BASE_REF"
 
-      - name: Build and run independent adaptive predictor-heavy-corrector
+      - name: Build and run 25 ns no-sheath-factor case
         shell: bash
         run: |
           set -euo pipefail
@@ -76,6 +58,11 @@ jobs:
 
               cd experiments/heavy_fast_logmolar_coupling
               python3 prepare_predictor_corrector_horizon.py
+
+              sed -i "/type = PhysicsFVElectronGroundedSheathCollectionBC/a\\    apply_sheath_suppression = false" \
+                electron_poisson_stage.i electron_poisson_corrector_stage.i
+              sed -i "/type = PhysicsFVElectronGroundedSheathEnergyBC/a\\    apply_sheath_suppression = false" \
+                fast_child.i fast_corrector.i
 
               for input in \
                 electron_poisson_stage.i \
@@ -120,10 +107,10 @@ jobs:
               exit "$rc"
             '
 
-      - name: Upload horizon diagnostic
+      - name: Upload no-sheath-factor diagnostic
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: predictor-corrector-${{ matrix.label }}
-          path: experiments/heavy_fast_logmolar_coupling/${{ matrix.output_dir }}/**
+          name: predictor-corrector-25ns-no-sheath-factor
+          path: experiments/heavy_fast_logmolar_coupling/output_25ns_no_sheath_factor/**
           retention-days: 30
