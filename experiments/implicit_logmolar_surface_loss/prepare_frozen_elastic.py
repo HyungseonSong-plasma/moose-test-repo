@@ -61,7 +61,7 @@ if kernel_marker not in text:
 text = text.replace(kernel_marker, kernel_insert + kernel_marker, 1)
 
 pp_marker = "  [charge_integral]\n"
-pp_insert = f"""  [elastic_O2_rate_avg]\n    type = ADElementAverageFunctorPostprocessor\n    functor = R_elastic_O2\n    block = plasma\n    execute_on = 'INITIAL TIMESTEP_END'\n  []\n  [elastic_O_rate_avg]\n    type = ADElementAverageFunctorPostprocessor\n    functor = R_elastic_O\n    block = plasma\n    execute_on = 'INITIAL TIMESTEP_END'\n  []\n  [elastic_source_avg]\n    type = ADElementAverageFunctorPostprocessor\n    functor = S_elastic_total_molar\n    block = plasma\n    execute_on = 'INITIAL TIMESTEP_END'\n  []\n  [elastic_source_integral]\n    type = ADElementIntegralFunctorPostprocessor\n    functor = S_elastic_total_molar\n    block = plasma\n    execute_on = 'INITIAL TIMESTEP_END'\n  []\n\n"""
+pp_insert = """  [elastic_O2_rate_avg]\n    type = ElementAverageFunctorPostprocessor\n    functor = R_elastic_O2\n    block = plasma\n    execute_on = 'INITIAL TIMESTEP_END'\n  []\n  [elastic_O_rate_avg]\n    type = ElementAverageFunctorPostprocessor\n    functor = R_elastic_O\n    block = plasma\n    execute_on = 'INITIAL TIMESTEP_END'\n  []\n  [elastic_source_avg]\n    type = ElementAverageFunctorPostprocessor\n    functor = S_elastic_total_molar\n    block = plasma\n    execute_on = 'INITIAL TIMESTEP_END'\n  []\n  [elastic_source_integral]\n    type = ADElementIntegralFunctorPostprocessor\n    functor = S_elastic_total_molar\n    block = plasma\n    execute_on = 'INITIAL TIMESTEP_END'\n  []\n\n"""
 if pp_marker not in text:
     raise RuntimeError("Postprocessor insertion marker not found")
 text = text.replace(pp_marker, pp_insert + pp_marker, 1)
