@@ -1,0 +1,104 @@
+name: predictor corrector adaptive dt
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - prototype-fully-implicit-electron-poisson
+    paths:
+      - '.ci_triggers/predictor-corrector-adaptive-dt'
+
+permissions:
+  contents: read
+  packages: read
+
+env:
+  BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+
+jobs:
+  adaptive-predictor-corrector:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pull build image
+        run: docker pull "$BUILD_BASE_REF"
+
+      - name: Build and run adaptive predictor-heavy-corrector
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm --entrypoint /bin/bash --user 0:0 \
+            --workdir /workspace \
+            -v "$GITHUB_WORKSPACE:/workspace" \
+            "$BUILD_BASE_REF" -lc '
+              set -euo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              git config --global --add safe.directory /opt/physics_vendor/moose
+              git config --global --add safe.directory /opt/physics_vendor/crane
+              git config --global --add safe.directory /opt/physics_vendor/squirrel
+              git config --global --add safe.directory /opt/physics_vendor/zapdos
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+
+              make -C physics_app -j2
+
+              cd experiments/heavy_fast_logmolar_coupling
+              export MAX_CORRECTIONS=10
+              python3 prepare_predictor_corrector_adaptive_dt.py
+
+              for input in \
+                electron_poisson_stage.i \
+                fast_child.i \
+                electron_poisson_corrector_stage.i \
+                fast_corrector.i \
+                heavy_parent.i
+              do
+                ../../physics_app/physics-opt -i "$input" --check-input
+              done
+
+              rm -rf output_adaptive_fp
+              mkdir -p output_adaptive_fp
+
+              set +e
+              /usr/bin/time \
+                -f "wall_seconds=%e\nuser_seconds=%U\nsystem_seconds=%S\nmax_rss_kb=%M" \
+                -o output_adaptive_fp/wall_time.txt \
+                ../../physics_app/physics-opt -i heavy_parent.i \
+                > output_adaptive_fp/run.log 2>&1
+              rc=$?
+              set -e
+
+              echo "run_rc=$rc" | tee output_adaptive_fp/status.txt
+              cp \
+                heavy_parent.i \
+                fast_child.i \
+                electron_poisson_stage.i \
+                fast_corrector.i \
+                electron_poisson_corrector_stage.i \
+                prepare_predictor_corrector_adaptive_dt.py \
+                output_adaptive_fp/
+
+              grep -E \
+                "Time Step|dt =|Fast fixed-point adaptive dt|Applying transferred-solution predictor|Fixed Point|fixed point|Solve Converged|Solve Did NOT Converge|DIVERGED|CONVERGED|cut|failed|ERROR|phi_max|phi_min|charge_|mean_energy|n_e_|O2p|predictor_fp_iterations|corrector_fp_iterations|dt_used" \
+                output_adaptive_fp/run.log \
+                > output_adaptive_fp/summary.txt || true
+
+              tail -n 1200 output_adaptive_fp/summary.txt || true
+              cat output_adaptive_fp/wall_time.txt || true
+              exit "$rc"
+            '
+
+      - name: Upload adaptive diagnostic
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: predictor-corrector-adaptive-dt
+          path: experiments/heavy_fast_logmolar_coupling/output_adaptive_fp/**
+          retention-days: 30
