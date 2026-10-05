@@ -63,17 +63,13 @@ def child_block(text: str, name: str) -> str:
         raise RuntimeError(f"unterminated block [{name}]")
     return text[start:end + 5]
 
-
-# Start from the already runtime-qualified heavy log-ratio/simplex formulation.
 runpy.run_path(str(HEAVY_GENERATOR), run_name="__main__")
 text = HEAVY_INPUT.read_text(encoding="utf-8")
 
-# Promote the frozen heavy potential AuxVariable to the shared nonlinear Poisson variable.
 pot_aux = child_block(text, "potential_fast")
 text = text.replace(pot_aux, "", 1)
 text = text.replace("potential_fast", "potential")
 
-# Quasi-neutral electron startup from the exact simplex heavy state and ideal-gas rho.
 mn0 = 1.0 / sum(Y0[s] / M[s] for s in Y0)
 rho0 = P0 * mn0 / (R * TG0)
 n_o2p = NA * rho0 * Y0["O2p"] / M["O2p"]
@@ -161,24 +157,24 @@ materials = """
     type = ADParsedFunctorMaterial
     property_name = n_O2p_monolithic
     functor_names = 'rho_mat w_O2p'
-    functor_symbols = 'r y'
-    expression = '6.02214076e23*r*y/0.032'
+    functor_symbols = 'rhoh frac'
+    expression = '6.02214076e23*rhoh*frac/0.032'
     block = plasma
   []
   [Om_number_density_monolithic]
     type = ADParsedFunctorMaterial
     property_name = n_Om_monolithic
     functor_names = 'rho_mat w_Om'
-    functor_symbols = 'r y'
-    expression = '6.02214076e23*r*y/0.016'
+    functor_symbols = 'rhoh frac'
+    expression = '6.02214076e23*rhoh*frac/0.016'
     block = plasma
   []
   [Op_number_density_monolithic]
     type = ADParsedFunctorMaterial
     property_name = n_Op_monolithic
     functor_names = 'rho_mat w_Op'
-    functor_symbols = 'r y'
-    expression = '6.02214076e23*r*y/0.016'
+    functor_symbols = 'rhoh frac'
+    expression = '6.02214076e23*rhoh*frac/0.016'
     block = plasma
   []
   [charge_number_density_monolithic]
@@ -358,7 +354,6 @@ pps = """
 """
 text = append_to_section(text, "Postprocessors", pps)
 
-# Globalized full Newton. Keep physical dt at the already-qualified 0.1 ns smoke value.
 text = text.replace("  line_search = none\n", "  line_search = bt\n", 1)
 old_petsc = """  petsc_options_iname = '-pc_type -pc_factor_shift_type'
   petsc_options_value = 'lu NONZERO'
@@ -370,14 +365,12 @@ new_petsc = """  petsc_options = '-snes_converged_reason -snes_monitor -snes_lin
 if old_petsc not in text:
     raise RuntimeError("heavy smoke PETSc block not found")
 text = text.replace(old_petsc, new_petsc, 1)
-text = text.replace("  nl_rel_tol = 1e-8\n", "  nl_rel_tol = 1e-8\n", 1)
 text = text.replace("  nl_abs_tol = 1e-11\n", "  nl_abs_tol = 1e-10\n", 1)
 text = text.replace("  nl_max_its = 80\n", "  nl_max_its = 100\n", 1)
 
 if "[Debug]" not in text:
     text += "\n[Debug]\n  show_var_residual_norms = true\n[]\n"
 
-# Contract guards.
 for required in (
     "[eta_O2p]", "[log_ne]", "[log_energy]", "[potential]",
     "type = PhysicsFVLogMassFractionTimeDerivative",
