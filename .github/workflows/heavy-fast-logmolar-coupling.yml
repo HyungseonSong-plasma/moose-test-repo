@@ -19,7 +19,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: docker pull "$BUILD_BASE_REF"
-      - name: Build and run heavy parent with fast child
+      - name: Build and run dynamic-ion feedback coupling
         run: |
           set -euo pipefail
           docker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace -v "$GITHUB_WORKSPACE:/workspace" "$BUILD_BASE_REF" -lc '
@@ -48,15 +48,15 @@ jobs:
             rm -rf output && mkdir output
             set +e
             ../../physics_app/physics-opt -i heavy_parent.i \
-              "MultiApps/fast_plasma/cli_args=Executioner/dt=1e-10;Executioner/dtmin=1e-10;Executioner/dtmax=1e-10;Executioner/num_steps=10;Executioner/end_time=1e-9;Executioner/nl_abs_tol=1e-10;Executioner/nl_rel_tol=1e-9;Executioner/nl_max_its=60;Outputs/file_base=output/fast" \
+              "MultiApps/fast_plasma/cli_args=Executioner/dt=1e-9;Executioner/dtmin=1e-9;Executioner/dtmax=1e-9;Executioner/num_steps=20;Executioner/end_time=2e-8;Executioner/nl_abs_tol=1e-10;Executioner/nl_rel_tol=1e-9;Executioner/nl_max_its=80;Outputs/file_base=output/fast" \
               "Outputs/file_base=output/heavy" \
               > output/run.log 2>&1
             rc=$?
             set -e
             echo "run_rc=$rc" | tee output/status.txt
             cp heavy_parent.i fast_child.i output/
-            grep -E "Time Step|Solve Converged|Solve Did NOT Converge|SNES Function norm|heavy_cO|heavy_rho|outside lookup range|ERROR" output/run.log > output/summary.txt || true
-            tail -n 260 output/summary.txt || true
+            grep -E "Time Step|Solve Converged|Solve Did NOT Converge|SNES Function norm|O2p_migration|positive_ion|n_O2p|phi_max|mean_energy|max|outside lookup range|ERROR" output/run.log > output/summary.txt || true
+            tail -n 420 output/summary.txt || true
             exit $rc
           '
       - uses: actions/upload-artifact@v4
