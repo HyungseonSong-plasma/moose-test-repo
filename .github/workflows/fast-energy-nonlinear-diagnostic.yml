@@ -5,6 +5,7 @@ on:
     branches: [ prototype-fully-implicit-electron-poisson ]
     paths:
       - '.github/workflows/fast-energy-nonlinear-diagnostic.yml'
+      - 'experiments/heavy_fast_logmolar_coupling/prepare_fast_child.py'
   workflow_dispatch:
 
 jobs:
@@ -35,10 +36,9 @@ jobs:
             export MOOSE_DIR=/opt/physics_vendor/moose CRANE_DIR=/opt/physics_vendor/crane SQUIRREL_DIR=/opt/physics_vendor/squirrel ZAPDOS_DIR=/opt/physics_vendor/zapdos METHOD=opt
             make -C physics_app -j2
             cd experiments/heavy_fast_logmolar_coupling
-            python3 prepare_fast_child.py
 
             startup_rho=7.009816816733094e-6
-            sed -i "s/initial_condition = 7.01e-6/initial_condition = ${startup_rho}/g" fast_child.i
+            STARTUP_RHO="$startup_rho" python3 prepare_fast_child.py
 
             case "$CASE" in
               energy_central)
