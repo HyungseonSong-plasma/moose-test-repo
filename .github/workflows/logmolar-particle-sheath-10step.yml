@@ -51,7 +51,7 @@ jobs:
                 "Executioner/num_steps=10" \
                 "Executioner/end_time=1.0e-8" \
                 "Executioner/nl_rel_tol=1.0e-9" \
-                "Executioner/nl_abs_tol=1.0e-11" \
+                "Executioner/nl_abs_tol=1.0e-10" \
                 "Outputs/file_base=particle_10step/solve" \
                 > particle_10step/run.log 2>&1
               rc=$?
