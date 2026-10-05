@@ -1,2 +1,2 @@
-trigger 2026-10-05 corrector transient old-state audit
-1 ns state audit for log_ne and log_energy
+trigger 2026-10-05 corrector transient old-state audit rerun
+1 ns state audit for log_ne and log_energy after YAML fix
