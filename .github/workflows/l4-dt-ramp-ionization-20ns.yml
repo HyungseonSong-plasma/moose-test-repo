@@ -15,12 +15,12 @@ env:
   BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
 
 jobs:
-  ramp-20ns-compare:
+  ramp-20ns-temperature-compare:
     name: L4-${{ matrix.case }}
     strategy:
       fail-fast: false
       matrix:
-        case: [ramp_0p1x100_0p2x50, control_0p1x200]
+        case: [reference, ti_te_2eV, ti_te_4eV]
     runs-on: ubuntu-24.04
     timeout-minutes: 330
 
