@@ -10,7 +10,7 @@ import prepare_l4_dt_compare as base
 
 HERE = Path(__file__).resolve().parent
 NA = 6.02214076e23
-MEAN_E0 = 5.73276
+MEAN_E0 = 6.0  # Te = 4 eV for a Maxwellian: mean energy = (3/2) Te
 TARGET_NE = 1.0e15
 TOTAL_TIME = 1.0e-9  # 1 ns
 
@@ -153,6 +153,7 @@ def build(case: str) -> Path:
     print(f"wrote {out}")
     print(f"case={case} dt={dt:.17g} num_steps={num_steps} end_time={TOTAL_TIME:.17g}")
     print(f"initial ne={TARGET_NE:.17g} m^-3; initial nO2p={TARGET_NE:.17g} m^-3")
+    print(f"initial Te=4 eV; initial mean electron energy={MEAN_E0:.17g} eV")
     print(f"eta_O2p_initial={ETA_O2P_INITIAL:.17g}")
     print("total inlet flow=20 sccm pure O2; outlet pressure=10 mTorr")
     print(f"ion surface+migration boundaries={ION_COLLECTION_BOUNDARIES}")
