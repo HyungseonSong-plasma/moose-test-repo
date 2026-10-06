@@ -1,6 +1,7 @@
 #include "PhysicsFVElectronEnergyJouleHeating.h"
 
 #include "PhysicsElectronFluxModel.h"
+#include "MooseMeshUtils.h"
 
 registerMooseObject("PhysicsApp", PhysicsFVElectronEnergyJouleHeating);
 
@@ -16,7 +17,8 @@ PhysicsFVElectronEnergyJouleHeating::validParams()
       "electron concentration [mol/m^3] and residual units eV mol/(m^3 s); normalized "
       "mode preserves the historical scaled equation. The optional one-timestep lag "
       "evaluates the complete Joule constitutive state at the previous physical time "
-      "while retaining the Joule source in the transient energy balance.");
+      "while retaining the Joule source in the transient energy balance. For diagnostics, "
+      "the Joule residual can be suppressed only in cells directly touching selected boundaries.");
 
   params.addParam<MooseEnum>(
       "state_form",
@@ -41,6 +43,11 @@ PhysicsFVElectronEnergyJouleHeating::validParams()
       false,
       "Evaluate n_e, grad(n_e), phi, mobility and diffusion at the previous physical "
       "time state. This is a first-order semi-implicit stabilization of the Joule source.");
+  params.addParam<std::vector<BoundaryName>>(
+      "suppress_joule_on_boundaries",
+      {},
+      "Diagnostic only: set the Joule residual to zero in any cell directly touching one of "
+      "these boundaries. Poisson, electron transport, sheath BCs, and chemistry are unchanged.");
 
   return params;
 }
@@ -50,6 +57,8 @@ PhysicsFVElectronEnergyJouleHeating::PhysicsFVElectronEnergyJouleHeating(
   : FVElementalKernel(parameters),
     _normalized_state(getParam<MooseEnum>("state_form") == "normalized"),
     _lag_one_timestep(getParam<bool>("lag_one_timestep")),
+    _suppress_boundary_ids(MooseMeshUtils::getBoundaryIDSet(
+        _mesh, getParam<std::vector<BoundaryName>>("suppress_joule_on_boundaries"), false)),
     _electron_density(getFunctor<ADReal>("electron_density")),
     _potential(getFunctor<ADReal>("potential")),
     _mobility(getFunctor<ADReal>("mobility")),
@@ -71,9 +80,29 @@ PhysicsFVElectronEnergyJouleHeating::PhysicsFVElectronEnergyJouleHeating(
     paramError("lag_one_timestep", "One-timestep Joule lag requires a transient problem.");
 }
 
+bool
+PhysicsFVElectronEnergyJouleHeating::currentElemTouchesSuppressedBoundary() const
+{
+  if (_suppress_boundary_ids.empty())
+    return false;
+
+  const auto & sideset_map = _mesh.getMesh().get_boundary_info().get_sideset_map();
+  const auto range = sideset_map.equal_range(_current_elem);
+  for (auto it = range.first; it != range.second; ++it)
+    if (_suppress_boundary_ids.count(it->second.second))
+      return true;
+
+  return false;
+}
+
 ADReal
 PhysicsFVElectronEnergyJouleHeating::computeQpResidual()
 {
+  // Diagnostic discriminator: remove only the local Joule source in the first FV cell layer
+  // adjacent to selected boundaries. All other equations and constitutive evaluations are intact.
+  if (currentElemTouchesSuppressedBoundary())
+    return 0.0;
+
   const auto elem = makeElemArg(_current_elem);
   const auto state = _lag_one_timestep
                          ? Moose::StateArg(1, Moose::SolutionIterationType::Time)
