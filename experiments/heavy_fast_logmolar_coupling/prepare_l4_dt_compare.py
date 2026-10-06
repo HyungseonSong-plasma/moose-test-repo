@@ -78,8 +78,21 @@ def set_child_boundary(text: str, name: str, boundaries: str) -> str:
     return text[:start] + body + text[end:]
 
 
+def remove_unreferenced_parameter(text: str, name: str) -> str:
+    """Remove one top-level scalar definition only when no references remain."""
+    definition = re.compile(rf"(?m)^{re.escape(name)}\s*=.*\n")
+    matches = list(definition.finditer(text))
+    if len(matches) != 1:
+        raise RuntimeError(f"expected exactly one definition for {name}, found {len(matches)}")
+
+    candidate = definition.sub("", text, count=1)
+    if re.search(rf"\b{re.escape(name)}\b", candidate):
+        raise RuntimeError(f"refusing to remove still-referenced parameter {name}")
+    return candidate
+
+
 def set_pure_o2_inlet(text: str) -> str:
-    """Keep the plasma startup composition unchanged; alter only inlet feed fluxes."""
+    """Keep the plasma startup state unchanged; alter only the inlet feed fluxes."""
     molar_mass_pattern = re.compile(r"(?m)^M_inlet\s*=.*$")
     if len(molar_mass_pattern.findall(text)) != 1:
         raise RuntimeError("expected exactly one M_inlet definition")
@@ -90,6 +103,15 @@ def set_pure_o2_inlet(text: str) -> str:
         if len(pattern.findall(text)) != 1:
             raise RuntimeError(f"expected exactly one inlet mass-flux definition for {species}")
         text = pattern.sub(f"inlet_mdot_{species}_value = 0.0", text, count=1)
+
+    # In the generated monolithic input the startup values have already been
+    # folded into the actual variable initial conditions. Once the mixed-feed
+    # inlet expressions above are replaced, these six symbolic Yin_* scalars
+    # have no remaining consumers and MOOSE rejects them as unused parameters.
+    # Remove only parameters proven to have no remaining references. Yin_O2 is
+    # deliberately retained because it still has a downstream consumer.
+    for species in NON_O2_INLET_SPECIES:
+        text = remove_unreferenced_parameter(text, f"Yin_{species}")
 
     return text
 
@@ -103,7 +125,7 @@ def build(case: str) -> Path:
     base = module.build(4)
     text = base.read_text(encoding="utf-8")
 
-    # Pure molecular-oxygen feed: startup plasma composition remains the same,
+    # Pure molecular-oxygen feed: startup plasma state remains the same,
     # while all solved non-O2 species have zero inlet scalar mass flux.
     text = set_pure_o2_inlet(text)
 
@@ -144,6 +166,8 @@ def build(case: str) -> Path:
         expected = f"inlet_mdot_{species}_value = 0.0"
         if expected not in text:
             raise RuntimeError(f"pure-O2 inlet contract missing: {expected}")
+        if re.search(rf"(?m)^Yin_{re.escape(species)}\s*=", text):
+            raise RuntimeError(f"unused pure-O2 inlet parameter survived: Yin_{species}")
 
     start, end = executioner_bounds(text)
     exec_section = text[start:end]
@@ -171,6 +195,7 @@ def build(case: str) -> Path:
         f"num_steps={num_steps} total_time={TOTAL_TIME:.17g}"
     )
     print("inlet feed = pure O2; all non-O2 inlet scalar mass fluxes = 0")
+    print("unused non-O2 Yin_* inlet parameters removed after reference check")
     print(f"O2+ migration collection boundaries = {ION_COLLECTION_BOUNDARIES}")
     print("L4 baseline solver/physics unchanged; fixed timestep schedule verified")
     return out
