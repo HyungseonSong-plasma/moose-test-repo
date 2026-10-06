@@ -11,6 +11,7 @@ RATE_TABLE = "../../physics_app/data/electron_impact/o2_dissociation.txt"
 OUT = HERE / "full_monolithic_l4_dt_ramp_ionization_dissociation_20ns_ti_te_2eV.i"
 DISSOCIATION_ENERGY_LOSS_EV = 6.0
 O_ATOM_MOLAR_MASS = 0.016
+O2_MOLAR_MASS = 2.0 * O_ATOM_MOLAR_MASS
 
 
 def add_o2_dissociation(text: str) -> str:
@@ -30,7 +31,31 @@ def add_o2_dissociation(text: str) -> str:
     property_name = O_dissociation_mass_source
     functor_names = 'R_diss_O2'
     functor_symbols = 'R'
-    expression = '{2.0 * O_ATOM_MOLAR_MASS:.17g}*R'
+    expression = '{O2_MOLAR_MASS:.17g}*R'
+    block = plasma
+  []
+  [o2_dissociation_O2_mass_source]
+    type = ADParsedFunctorMaterial
+    property_name = O2_dissociation_mass_source
+    functor_names = 'R_diss_O2'
+    functor_symbols = 'R'
+    expression = '-{O2_MOLAR_MASS:.17g}*R'
+    block = plasma
+  []
+  [ionization_mass_balance_source]
+    type = ADParsedFunctorMaterial
+    property_name = ionization_mass_balance_source
+    functor_names = 'O2_ionization_mass_source O2p_ionization_mass_source'
+    functor_symbols = 'sO2 sO2p'
+    expression = 'sO2+sO2p'
+    block = plasma
+  []
+  [dissociation_mass_balance_source]
+    type = ADParsedFunctorMaterial
+    property_name = dissociation_mass_balance_source
+    functor_names = 'O2_dissociation_mass_source O_dissociation_mass_source'
+    functor_symbols = 'sO2 sO'
+    expression = 'sO2+sO'
     block = plasma
   []
 """
@@ -78,6 +103,36 @@ def add_o2_dissociation(text: str) -> str:
     block = plasma
     execute_on = 'INITIAL TIMESTEP_END'
   []
+  [O2_dissociation_mass_source_integral]
+    type = ADElementIntegralFunctorPostprocessor
+    functor = O2_dissociation_mass_source
+    block = plasma
+    execute_on = 'INITIAL TIMESTEP_END'
+  []
+  [dissociation_mass_balance_integral]
+    type = ADElementIntegralFunctorPostprocessor
+    functor = dissociation_mass_balance_source
+    block = plasma
+    execute_on = 'INITIAL TIMESTEP_END'
+  []
+  [O2_ionization_mass_source_integral_mb]
+    type = ADElementIntegralFunctorPostprocessor
+    functor = O2_ionization_mass_source
+    block = plasma
+    execute_on = 'INITIAL TIMESTEP_END'
+  []
+  [O2p_ionization_mass_source_integral_mb]
+    type = ADElementIntegralFunctorPostprocessor
+    functor = O2p_ionization_mass_source
+    block = plasma
+    execute_on = 'INITIAL TIMESTEP_END'
+  []
+  [ionization_mass_balance_integral]
+    type = ADElementIntegralFunctorPostprocessor
+    functor = ionization_mass_balance_source
+    block = plasma
+    execute_on = 'INITIAL TIMESTEP_END'
+  []
   [O_mass_fraction_avg_diss]
     type = ElementAverageFunctorPostprocessor
     functor = w_O
@@ -115,11 +170,18 @@ def build() -> Path:
         "type = PhysicsElectronImpactDissociationMaterial",
         f"rate_table_file = {RATE_TABLE}",
         "property_name = O_dissociation_mass_source",
+        "property_name = O2_dissociation_mass_source",
+        "property_name = ionization_mass_balance_source",
+        "property_name = dissociation_mass_balance_source",
         "variable = eta_O",
         "source = O_dissociation_mass_source",
         "v = R_diss_O2",
         f"coef = -{DISSOCIATION_ENERGY_LOSS_EV:.1f}",
         "functor = R_diss_O2",
+        "functor = O2_ionization_mass_source",
+        "functor = O2p_ionization_mass_source",
+        "functor = ionization_mass_balance_source",
+        "functor = dissociation_mass_balance_source",
         "functor = w_O",
         "functor = w_O2_constraint",
     )
@@ -141,7 +203,8 @@ def build() -> Path:
     print("case=ti_te_2eV + O2 ionization + O2 dissociation")
     print("Ti=2 eV; Te=2 eV; initial mean electron energy=3 eV")
     print("dissociation: e + O2 -> e + 2O")
-    print("O mass source=0.032*R_diss_O2 kg/(m^3 s); constrained O2 supplies equal mass loss")
+    print("O mass source=+0.032*R_diss_O2; constrained O2 implied source=-0.032*R_diss_O2")
+    print("mass diagnostics: ionization O2+O2p=0; dissociation O2+O=0")
     print("dissociation electron-energy loss=6.0 eV/event")
     print("electron number source from dissociation=0")
     print("ramp=0.1 ns x100 then 0.2 ns x50; end_time=20 ns")
