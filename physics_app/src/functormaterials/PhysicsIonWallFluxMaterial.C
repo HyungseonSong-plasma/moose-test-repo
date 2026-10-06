@@ -76,7 +76,8 @@ PhysicsIonWallFluxMaterial::validParams()
 
   params.addClassDescription(
       "Provides face-local ion surface, migration, and total wall-loss fluxes "
-      "from species density and electrostatic potential.");
+      "from species density and electrostatic potential. The thermal surface "
+      "speed may use either gas_temperature or a user-defined ion_temperature_eV.");
 
   params.addRequiredParam<MooseFunctorName>(
       "ion_number_density", "Ion number density n_i [1/m^3].");
@@ -88,7 +89,9 @@ PhysicsIonWallFluxMaterial::validParams()
       "mobility", "Positive ion mobility magnitude [m^2/(V s)].");
 
   params.addRequiredParam<MooseFunctorName>(
-      "gas_temperature", "Heavy-particle temperature T_g [K].");
+      "gas_temperature",
+      "Heavy-particle temperature T_g [K], used for the thermal wall speed when "
+      "ion_temperature_eV is zero.");
 
   params.addRequiredParam<Real>(
       "charge_number", "Signed charge number z_i.");
@@ -98,6 +101,12 @@ PhysicsIonWallFluxMaterial::validParams()
 
   params.addParam<Real>(
       "sticking", 1.0, "Surface sticking/neutralization probability.");
+
+  params.addParam<Real>(
+      "ion_temperature_eV",
+      0.0,
+      "User-defined ion temperature [eV] used only for the thermal surface velocity. "
+      "A value of zero preserves the existing behavior and uses gas_temperature.");
 
   params.addParam<Real>(
       "migration_gate_smoothing_width",
@@ -118,6 +127,7 @@ PhysicsIonWallFluxMaterial::PhysicsIonWallFluxMaterial(
     _charge_number(getParam<Real>("charge_number")),
     _molar_mass(getParam<Real>("molar_mass")),
     _sticking(getParam<Real>("sticking")),
+    _ion_temperature_eV(getParam<Real>("ion_temperature_eV")),
     _migration_gate_smoothing_width(
         getParam<Real>("migration_gate_smoothing_width"))
 {
@@ -129,6 +139,9 @@ PhysicsIonWallFluxMaterial::PhysicsIonWallFluxMaterial(
 
   if (_sticking < 0.0 || _sticking > 1.0)
     paramError("sticking", "sticking must lie in [0,1].");
+
+  if (_ion_temperature_eV < 0.0)
+    paramError("ion_temperature_eV", "ion_temperature_eV must be nonnegative.");
 
   if (_migration_gate_smoothing_width < 0.0)
     paramError(
@@ -148,13 +161,16 @@ PhysicsIonWallFluxMaterial::PhysicsIonWallFluxMaterial(
           using std::sqrt;
 
           const ADReal n_i = _ion_number_density(r, state);
-          const ADReal T_g = _gas_temperature(r, state);
+          const ADReal T_i =
+              _ion_temperature_eV > 0.0
+                  ? ADReal(_ion_temperature_eV / PHYSICS_CONSTANTS::k_boltzeV)
+                  : _gas_temperature(r, state);
 
-          if (MetaPhysicL::raw_value(T_g) <= 0.0)
-            mooseError("PhysicsIonWallFluxMaterial requires gas_temperature > 0 K.");
+          if (MetaPhysicL::raw_value(T_i) <= 0.0)
+            mooseError("PhysicsIonWallFluxMaterial requires ion thermal temperature > 0 K.");
 
           const ADReal v_th =
-              sqrt(8.0 * PHYSICS_CONSTANTS::R * T_g /
+              sqrt(8.0 * PHYSICS_CONSTANTS::R * T_i /
                    (PHYSICS_CONSTANTS::pi * _molar_mass));
 
           return _sticking * 0.25 * n_i * v_th;
@@ -200,13 +216,16 @@ PhysicsIonWallFluxMaterial::PhysicsIonWallFluxMaterial(
           using std::sqrt;
 
           const ADReal n_i = _ion_number_density(r, state);
-          const ADReal T_g = _gas_temperature(r, state);
+          const ADReal T_i =
+              _ion_temperature_eV > 0.0
+                  ? ADReal(_ion_temperature_eV / PHYSICS_CONSTANTS::k_boltzeV)
+                  : _gas_temperature(r, state);
 
-          if (MetaPhysicL::raw_value(T_g) <= 0.0)
-            mooseError("PhysicsIonWallFluxMaterial requires gas_temperature > 0 K.");
+          if (MetaPhysicL::raw_value(T_i) <= 0.0)
+            mooseError("PhysicsIonWallFluxMaterial requires ion thermal temperature > 0 K.");
 
           const ADReal v_th =
-              sqrt(8.0 * PHYSICS_CONSTANTS::R * T_g /
+              sqrt(8.0 * PHYSICS_CONSTANTS::R * T_i /
                    (PHYSICS_CONSTANTS::pi * _molar_mass));
 
           const ADReal surface =
@@ -241,9 +260,16 @@ PhysicsIonWallFluxMaterial::PhysicsIonWallFluxMaterial(
           using std::sqrt;
 
           const ADReal n_i = _ion_number_density(r, state);
-          const ADReal T_g = _gas_temperature(r, state);
+          const ADReal T_i =
+              _ion_temperature_eV > 0.0
+                  ? ADReal(_ion_temperature_eV / PHYSICS_CONSTANTS::k_boltzeV)
+                  : _gas_temperature(r, state);
+
+          if (MetaPhysicL::raw_value(T_i) <= 0.0)
+            mooseError("PhysicsIonWallFluxMaterial requires ion thermal temperature > 0 K.");
+
           const ADReal v_th =
-              sqrt(8.0 * PHYSICS_CONSTANTS::R * T_g /
+              sqrt(8.0 * PHYSICS_CONSTANTS::R * T_i /
                    (PHYSICS_CONSTANTS::pi * _molar_mass));
 
           return _sticking * 0.25 * n_i * v_th *
@@ -290,9 +316,16 @@ PhysicsIonWallFluxMaterial::PhysicsIonWallFluxMaterial(
           using std::sqrt;
 
           const ADReal n_i = _ion_number_density(r, state);
-          const ADReal T_g = _gas_temperature(r, state);
+          const ADReal T_i =
+              _ion_temperature_eV > 0.0
+                  ? ADReal(_ion_temperature_eV / PHYSICS_CONSTANTS::k_boltzeV)
+                  : _gas_temperature(r, state);
+
+          if (MetaPhysicL::raw_value(T_i) <= 0.0)
+            mooseError("PhysicsIonWallFluxMaterial requires ion thermal temperature > 0 K.");
+
           const ADReal v_th =
-              sqrt(8.0 * PHYSICS_CONSTANTS::R * T_g /
+              sqrt(8.0 * PHYSICS_CONSTANTS::R * T_i /
                    (PHYSICS_CONSTANTS::pi * _molar_mass));
 
           const ADReal surface =
