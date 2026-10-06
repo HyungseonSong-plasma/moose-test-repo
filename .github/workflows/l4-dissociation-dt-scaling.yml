@@ -1,0 +1,103 @@
+name: L4 dissociation timestep scaling
+
+on:
+  push:
+    branches:
+      - prototype-fully-implicit-electron-poisson
+    paths:
+      - '.ci_triggers/l4-dissociation-dt-scaling'
+
+permissions:
+  contents: read
+  packages: read
+
+env:
+  BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+
+jobs:
+  dt-scaling:
+    name: L4-dissociation-${{ matrix.case }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 330
+    strategy:
+      fail-fast: false
+      matrix:
+        case:
+          - dt0p1_0p2
+          - dt0p2_0p4
+          - dt0p4_0p8
+          - dt0p8_1p6
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pull build image
+        run: docker pull "$BUILD_BASE_REF"
+
+      - name: Build and run dissociation timestep scaling case
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm --entrypoint /bin/bash --user 0:0 \
+            --workdir /workspace \
+            -v "$GITHUB_WORKSPACE:/workspace" \
+            "$BUILD_BASE_REF" -lc '
+              set -euo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              git config --global --add safe.directory /opt/physics_vendor/moose
+              git config --global --add safe.directory /opt/physics_vendor/crane
+              git config --global --add safe.directory /opt/physics_vendor/squirrel
+              git config --global --add safe.directory /opt/physics_vendor/zapdos
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+
+              make -C physics_app -j2
+              cd experiments/heavy_fast_logmolar_coupling
+
+              CASE="${{ matrix.case }}"
+              python3 prepare_l4_dissociation_dt_scaling.py "$CASE"
+              INPUT="full_monolithic_l4_dissociation_joule_suppression_${CASE}.i"
+              OUTDIR="output_l4_dissociation_dt_scaling_${CASE}"
+
+              ../../physics_app/physics-opt -i "$INPUT" --check-input
+
+              rm -rf "$OUTDIR"
+              mkdir -p "$OUTDIR"
+              set +e
+              /usr/bin/time \
+                -f "wall_seconds=%e\nuser_seconds=%U\nsystem_seconds=%S\nmax_rss_kb=%M" \
+                -o "$OUTDIR/wall_time.txt" \
+                timeout --signal=TERM 320m stdbuf -oL -eL \
+                ../../physics_app/physics-opt -i "$INPUT" \
+                > "$OUTDIR/run.log" 2>&1
+              rc=$?
+              set -e
+
+              echo "run_rc=$rc" | tee "$OUTDIR/status.txt"
+              cp "$INPUT" \
+                 prepare_l4_dissociation_dt_scaling.py \
+                 prepare_l4_dt_ramp_dissociation_20ns.py \
+                 prepare_l4_dt_ramp_ionization_20ns_compare.py \
+                 "$OUTDIR/"
+              cp ../../physics_app/data/electron_impact/o2_ionization.txt "$OUTDIR/" 2>/dev/null || true
+              cp ../../physics_app/data/electron_impact/o2_dissociation.txt "$OUTDIR/" 2>/dev/null || true
+              cp ../../physics_app/data/electron_impact/o2_dissociation_provenance.md "$OUTDIR/" 2>/dev/null || true
+              cp "${INPUT%.i}_out.csv" "$OUTDIR/" 2>/dev/null || true
+              cp "${INPUT%.i}_out.e" "$OUTDIR/" 2>/dev/null || true
+              grep -E "Time Step|dt =|SNES|KSP|CONVERGED|DIVERGED|Solve Did NOT Converge|electron_n_|O2p_n_|charge_integral|potential_|mean_energy|R_ion_O2|R_diss_O2|electron_sheath|ERROR" \
+                "$OUTDIR/run.log" > "$OUTDIR/summary.txt" || true
+              tail -n 500 "$OUTDIR/run.log" || true
+              exit "$rc"
+            '
+
+      - name: Upload dissociation timestep scaling result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: l4-dissociation-dt-scaling-${{ matrix.case }}
+          path: experiments/heavy_fast_logmolar_coupling/output_l4_dissociation_dt_scaling_${{ matrix.case }}/**
+          retention-days: 30
