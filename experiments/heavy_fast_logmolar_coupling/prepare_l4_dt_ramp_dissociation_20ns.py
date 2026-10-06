@@ -195,7 +195,10 @@ def build() -> Path:
         raise RuntimeError("dissociation incorrectly changes electron number")
 
     # O2 is constrained and must not receive a separate residual kernel.
-    if "variable = w_O2_constraint" in text or "variable = eta_O2" in text:
+    # Use exact stripped-line matching so the legitimate eta_O2p variable does
+    # not trip an eta_O2 substring guard.
+    stripped_lines = {line.strip() for line in text.splitlines()}
+    if "variable = w_O2_constraint" in stripped_lines or "variable = eta_O2" in stripped_lines:
         raise RuntimeError("constrained O2 was given an explicit residual equation")
 
     OUT.write_text(text, encoding="utf-8")
