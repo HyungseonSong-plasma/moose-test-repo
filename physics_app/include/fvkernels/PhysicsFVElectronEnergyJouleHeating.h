@@ -2,6 +2,8 @@
 
 #include "FVElementalKernel.h"
 
+#include <set>
+
 /**
  * Electron-energy electric-work source for physical-number-density, molar-density,
  * or legacy normalized electron states.
@@ -24,9 +26,11 @@ public:
 
 protected:
   ADReal computeQpResidual() override;
+  bool currentElemTouchesSuppressedBoundary() const;
 
   const bool _normalized_state;
   const bool _lag_one_timestep;
+  const std::set<BoundaryID> _suppress_boundary_ids;
   const Moose::Functor<ADReal> & _electron_density;
   const Moose::Functor<ADReal> & _potential;
   const Moose::Functor<ADReal> & _mobility;
