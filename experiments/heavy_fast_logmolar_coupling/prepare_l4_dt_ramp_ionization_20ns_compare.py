@@ -10,6 +10,7 @@ import prepare_l4_dt_compare as core
 
 HERE = Path(__file__).resolve().parent
 TOTAL_TIME = 2.0e-8
+ION_TEMPERATURE_EV = 4.0
 CASES = ("ramp_0p1x100_0p2x50", "control_0p1x200")
 
 
@@ -68,6 +69,21 @@ def _set_time_sequence(text: str, case: str) -> str:
     return text[:start] + section + text[end:]
 
 
+def _set_ion_temperature(text: str) -> str:
+    for material in (
+        "O2p_wall_flux_feedback",
+        "Op_wall_flux_monolithic",
+        "Om_wall_flux_monolithic",
+    ):
+        text = core.set_child_parameter(
+            text,
+            material,
+            "ion_temperature_eV",
+            f"{ION_TEMPERATURE_EV:.1f}",
+        )
+    return text
+
+
 def build(case: str) -> Path:
     if case not in CASES:
         raise ValueError(case)
@@ -75,6 +91,7 @@ def build(case: str) -> Path:
     # Same physics as the successful O2-ionization-only monolithic case.
     baseline = chem.build("o2_ionization_on")
     text = baseline.read_text(encoding="utf-8")
+    text = _set_ion_temperature(text)
     text = _set_time_sequence(text, case)
 
     required = (
@@ -86,6 +103,7 @@ def build(case: str) -> Path:
         "source = O2p_ionization_mass_source",
         "v = R_ion_O2",
         "coef = -12.06",
+        f"ion_temperature_eV = {ION_TEMPERATURE_EV:.1f}",
         "type = TimeSequenceStepper",
         f"end_time = {TOTAL_TIME:.17g}",
     )
@@ -111,6 +129,7 @@ def build(case: str) -> Path:
     print(f"wrote {out}")
     print(f"case={case}; steps={EXPECTED_STEPS[case]}; end_time=20 ns")
     print("chemistry=e + O2 -> 2e + O2+ only; EI16 energy loss=12.06 eV/event")
+    print(f"ion wall thermal temperature={ION_TEMPERATURE_EV:.1f} eV")
     print("attachment=OFF; other volumetric chemistry=OFF")
     return out
 
