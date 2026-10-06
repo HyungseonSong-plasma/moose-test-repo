@@ -78,7 +78,7 @@ jobs:
               cp ../../physics_app/data/electron_impact/o2_dissociation_provenance.md "$OUTDIR/"
               cp *_out.csv "$OUTDIR/" 2>/dev/null || true
               cp *_out.e "$OUTDIR/" 2>/dev/null || true
-              grep -E "Time Step|dt =|SNES|KSP|CONVERGED|DIVERGED|Solve Did NOT Converge|electron_n_|O2p_n_|charge_integral|potential_|mean_energy|R_ion_O2|R_diss_O2|O_mass_fraction|O2_mass_fraction|electron_sheath|ERROR" \
+              grep -E "Time Step|dt =|SNES|KSP|CONVERGED|DIVERGED|Solve Did NOT Converge|electron_n_|O2p_n_|charge_integral|potential_|mean_energy|R_ion_O2|R_diss_O2|O_mass_fraction|O2_mass_fraction|mass_source|mass_balance|electron_sheath|ERROR" \
                 "$OUTDIR/run.log" > "$OUTDIR/summary.txt" || true
               tail -n 500 "$OUTDIR/run.log" || true
               exit "$rc"
