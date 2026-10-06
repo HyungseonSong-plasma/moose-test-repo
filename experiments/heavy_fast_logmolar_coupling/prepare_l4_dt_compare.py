@@ -13,6 +13,8 @@ ION_COLLECTION_BOUNDARIES = (
     "inlet outlet plasma_electrode plasma_metal plasma_right "
     "plasma_cover plasma_wafer plasma_focus_ring"
 )
+PURE_O2_MOLAR_MASS = 0.032
+NON_O2_INLET_SPECIES = ("O2s", "O2p", "O", "Om", "Op", "Os")
 
 CASES = {
     "dt0p1ns_1step": (1.0e-10, 1),
@@ -34,9 +36,6 @@ def executioner_bounds(text: str) -> tuple[int, int]:
     if start < 0:
         raise RuntimeError("missing [Executioner] section")
 
-    # Use the nearest following top-level section. The previous implementation
-    # preferred [Outputs] even when [Preconditioning] was inserted first, which
-    # caused num_steps to be written outside [Executioner].
     candidates = []
     for name in ("Preconditioning", "Outputs", "Debug"):
         pos = text.find(f"\n[{name}]\n", start + 1)
@@ -79,6 +78,22 @@ def set_child_boundary(text: str, name: str, boundaries: str) -> str:
     return text[:start] + body + text[end:]
 
 
+def set_pure_o2_inlet(text: str) -> str:
+    """Keep the plasma startup composition unchanged; alter only inlet feed fluxes."""
+    molar_mass_pattern = re.compile(r"(?m)^M_inlet\s*=.*$")
+    if len(molar_mass_pattern.findall(text)) != 1:
+        raise RuntimeError("expected exactly one M_inlet definition")
+    text = molar_mass_pattern.sub(f"M_inlet = {PURE_O2_MOLAR_MASS:.3f}", text, count=1)
+
+    for species in NON_O2_INLET_SPECIES:
+        pattern = re.compile(rf"(?m)^inlet_mdot_{re.escape(species)}_value\s*=.*$")
+        if len(pattern.findall(text)) != 1:
+            raise RuntimeError(f"expected exactly one inlet mass-flux definition for {species}")
+        text = pattern.sub(f"inlet_mdot_{species}_value = 0.0", text, count=1)
+
+    return text
+
+
 def build(case: str) -> Path:
     if case not in CASES:
         raise ValueError(case)
@@ -87,6 +102,10 @@ def build(case: str) -> Path:
     module = load_level_matrix_module()
     base = module.build(4)
     text = base.read_text(encoding="utf-8")
+
+    # Pure molecular-oxygen feed: startup plasma composition remains the same,
+    # while all solved non-O2 species have zero inlet scalar mass flux.
+    text = set_pure_o2_inlet(text)
 
     # Treat inlet/outlet as ion-collection boundaries for the O2+ migration
     # wall-loss diagnostic. Keep electron sheath and potential BCs unchanged.
@@ -105,8 +124,6 @@ def build(case: str) -> Path:
         section = set_top_level_parameter(section, name, value)
     text = text[:start] + section + text[end:]
 
-    # Solver hierarchy and plasma physics remain identical to the successful
-    # L4 baseline except for the explicitly requested O2+ collection boundaries.
     required = (
         "splitting = 'heavy fast'",
         "splitting = 'electron poisson'",
@@ -118,10 +135,15 @@ def build(case: str) -> Path:
         "pc_hypre_type",
         "boomeramg",
         f"boundary = '{ION_COLLECTION_BOUNDARIES}'",
+        f"M_inlet = {PURE_O2_MOLAR_MASS:.3f}",
     )
     for token in required:
         if token not in text:
             raise RuntimeError(f"L4 baseline contract missing: {token}")
+    for species in NON_O2_INLET_SPECIES:
+        expected = f"inlet_mdot_{species}_value = 0.0"
+        if expected not in text:
+            raise RuntimeError(f"pure-O2 inlet contract missing: {expected}")
 
     start, end = executioner_bounds(text)
     exec_section = text[start:end]
@@ -136,7 +158,6 @@ def build(case: str) -> Path:
         if expected not in exec_section:
             raise RuntimeError(f"time contract missing from [Executioner]: {expected}")
 
-    # Ensure the time-control parameters did not leak into preconditioning.
     if "[Preconditioning]" in text:
         pre = text[text.find("[Preconditioning]"):]
         if re.search(r"(?m)^  (dt|dtmin|dtmax|end_time|num_steps)\s*=", pre):
@@ -149,6 +170,7 @@ def build(case: str) -> Path:
         f"case={case} dt={dt:.17g} dtmin={dt:.17g} dtmax={dt:.17g} "
         f"num_steps={num_steps} total_time={TOTAL_TIME:.17g}"
     )
+    print("inlet feed = pure O2; all non-O2 inlet scalar mass fluxes = 0")
     print(f"O2+ migration collection boundaries = {ION_COLLECTION_BOUNDARIES}")
     print("L4 baseline solver/physics unchanged; fixed timestep schedule verified")
     return out
