@@ -58,7 +58,7 @@ PhysicsFVElectronEnergyJouleHeating::PhysicsFVElectronEnergyJouleHeating(
     _normalized_state(getParam<MooseEnum>("state_form") == "normalized"),
     _lag_one_timestep(getParam<bool>("lag_one_timestep")),
     _suppress_boundary_ids(MooseMeshUtils::getBoundaryIDSet(
-        _mesh, getParam<std::vector<BoundaryName>>("suppress_joule_on_boundaries"), false)),
+        _mesh.getMesh(), getParam<std::vector<BoundaryName>>("suppress_joule_on_boundaries"), false)),
     _electron_density(getFunctor<ADReal>("electron_density")),
     _potential(getFunctor<ADReal>("potential")),
     _mobility(getFunctor<ADReal>("mobility")),
