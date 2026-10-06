@@ -1,0 +1,99 @@
+name: L4 Joule suppression chemistry A-B
+
+on:
+  push:
+    branches:
+      - prototype-fully-implicit-electron-poisson
+    paths:
+      - '.ci_triggers/l4-joule-suppression-chemistry-ab'
+
+permissions:
+  contents: read
+  packages: read
+
+env:
+  BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+
+jobs:
+  chemistry-ab:
+    name: L4-suppressed-joule-${{ matrix.case }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 330
+    strategy:
+      fail-fast: false
+      matrix:
+        case:
+          - ionization_only
+          - chemistry_off
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pull build image
+        run: docker pull "$BUILD_BASE_REF"
+
+      - name: Build and run suppressed-Joule chemistry discriminator
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm --entrypoint /bin/bash --user 0:0 \
+            --workdir /workspace \
+            -v "$GITHUB_WORKSPACE:/workspace" \
+            "$BUILD_BASE_REF" -lc '
+              set -euo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              git config --global --add safe.directory /opt/physics_vendor/moose
+              git config --global --add safe.directory /opt/physics_vendor/crane
+              git config --global --add safe.directory /opt/physics_vendor/squirrel
+              git config --global --add safe.directory /opt/physics_vendor/zapdos
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+
+              make -C physics_app -j2
+              cd experiments/heavy_fast_logmolar_coupling
+
+              CASE="${{ matrix.case }}"
+              python3 prepare_l4_joule_suppression_chemistry_ab.py "$CASE"
+              INPUT="full_monolithic_l4_joule_suppression_${CASE}_ti_te_2eV.i"
+              OUTDIR="output_l4_joule_suppression_${CASE}_ti_te_2eV"
+
+              ../../physics_app/physics-opt -i "$INPUT" --check-input
+
+              rm -rf "$OUTDIR"
+              mkdir -p "$OUTDIR"
+              set +e
+              /usr/bin/time \
+                -f "wall_seconds=%e\nuser_seconds=%U\nsystem_seconds=%S\nmax_rss_kb=%M" \
+                -o "$OUTDIR/wall_time.txt" \
+                timeout --signal=TERM 320m stdbuf -oL -eL \
+                ../../physics_app/physics-opt -i "$INPUT" \
+                > "$OUTDIR/run.log" 2>&1
+              rc=$?
+              set -e
+
+              echo "run_rc=$rc" | tee "$OUTDIR/status.txt"
+              cp "$INPUT" \
+                 prepare_l4_joule_suppression_chemistry_ab.py \
+                 prepare_l4_dt_ramp_ionization_20ns_compare.py \
+                 prepare_l4_o2_ionization_ab.py \
+                 "$OUTDIR/"
+              cp ../../physics_app/data/electron_impact/o2_ionization.txt "$OUTDIR/" 2>/dev/null || true
+              cp "${INPUT%.i}_out.csv" "$OUTDIR/" 2>/dev/null || true
+              cp "${INPUT%.i}_out.e" "$OUTDIR/" 2>/dev/null || true
+              grep -E "Time Step|dt =|SNES|KSP|CONVERGED|DIVERGED|Solve Did NOT Converge|electron_n_|O2p_n_|charge_integral|potential_|mean_energy|R_ion_O2|electron_sheath|ERROR" \
+                "$OUTDIR/run.log" > "$OUTDIR/summary.txt" || true
+              tail -n 500 "$OUTDIR/run.log" || true
+              exit "$rc"
+            '
+
+      - name: Upload suppressed-Joule chemistry result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: l4-joule-suppression-${{ matrix.case }}-ti_te_2eV
+          path: experiments/heavy_fast_logmolar_coupling/output_l4_joule_suppression_${{ matrix.case }}_ti_te_2eV/**
+          retention-days: 30
