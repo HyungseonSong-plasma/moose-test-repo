@@ -12,7 +12,7 @@ permissions:
   packages: read
 
 env:
-  BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+  BUILD_BASE_REF: ghcr.io/hyungseon-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
 
 jobs:
   dt-compare:
@@ -20,7 +20,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        case: [dt1ns_10steps, dt10ns_1step]
+        case: [dt0p1ns_1step, dt0p01ns_10steps]
     runs-on: ubuntu-24.04
     timeout-minutes: 60
 
