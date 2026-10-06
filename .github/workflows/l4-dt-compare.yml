@@ -12,7 +12,7 @@ permissions:
   packages: read
 
 env:
-  BUILD_BASE_REF: ghcr.io/hyungseon-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+  BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
 
 jobs:
   dt-compare:
