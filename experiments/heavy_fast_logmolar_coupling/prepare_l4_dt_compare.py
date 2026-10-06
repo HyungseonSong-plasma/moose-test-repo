@@ -9,6 +9,10 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 LEVEL_MATRIX = HERE / "prepare_full_monolithic_log_simplex_level_matrix.py"
 TOTAL_TIME = 1.0e-10  # 0.1 ns
+ION_COLLECTION_BOUNDARIES = (
+    "inlet outlet plasma_electrode plasma_metal plasma_right "
+    "plasma_cover plasma_wafer plasma_focus_ring"
+)
 
 CASES = {
     "dt0p1ns_1step": (1.0e-10, 1),
@@ -57,6 +61,24 @@ def set_top_level_parameter(section: str, name: str, value: str) -> str:
     return section[:close] + line + "\n" + section[close:]
 
 
+def set_child_boundary(text: str, name: str, boundaries: str) -> str:
+    marker = f"  [{name}]\n"
+    start = text.find(marker)
+    if start < 0:
+        raise RuntimeError(f"missing child block [{name}]")
+    end = text.find("  []\n", start + len(marker))
+    if end < 0:
+        raise RuntimeError(f"unterminated child block [{name}]")
+    end += len("  []\n")
+    body = text[start:end]
+    pattern = re.compile(r"(?m)^    boundary\s*=.*$")
+    matches = list(pattern.finditer(body))
+    if len(matches) != 1:
+        raise RuntimeError(f"[{name}] expected exactly one boundary line, found {len(matches)}")
+    body = pattern.sub(f"    boundary = '{boundaries}'", body, count=1)
+    return text[:start] + body + text[end:]
+
+
 def build(case: str) -> Path:
     if case not in CASES:
         raise ValueError(case)
@@ -65,6 +87,11 @@ def build(case: str) -> Path:
     module = load_level_matrix_module()
     base = module.build(4)
     text = base.read_text(encoding="utf-8")
+
+    # Treat inlet/outlet as ion-collection boundaries for the O2+ migration
+    # wall-loss diagnostic. Keep electron sheath and potential BCs unchanged.
+    text = set_child_boundary(text, "O2p_migration_wall_loss", ION_COLLECTION_BOUNDARIES)
+    text = set_child_boundary(text, "O2p_migration_mass_loss_rate", ION_COLLECTION_BOUNDARIES)
 
     start, end = executioner_bounds(text)
     section = text[start:end]
@@ -79,7 +106,7 @@ def build(case: str) -> Path:
     text = text[:start] + section + text[end:]
 
     # Solver hierarchy and plasma physics remain identical to the successful
-    # L4 baseline. Only the fixed timestep schedule changes.
+    # L4 baseline except for the explicitly requested O2+ collection boundaries.
     required = (
         "splitting = 'heavy fast'",
         "splitting = 'electron poisson'",
@@ -90,6 +117,7 @@ def build(case: str) -> Path:
         "property_name = charge_number_density",
         "pc_hypre_type",
         "boomeramg",
+        f"boundary = '{ION_COLLECTION_BOUNDARIES}'",
     )
     for token in required:
         if token not in text:
@@ -121,6 +149,7 @@ def build(case: str) -> Path:
         f"case={case} dt={dt:.17g} dtmin={dt:.17g} dtmax={dt:.17g} "
         f"num_steps={num_steps} total_time={TOTAL_TIME:.17g}"
     )
+    print(f"O2+ migration collection boundaries = {ION_COLLECTION_BOUNDARIES}")
     print("L4 baseline solver/physics unchanged; fixed timestep schedule verified")
     return out
 
