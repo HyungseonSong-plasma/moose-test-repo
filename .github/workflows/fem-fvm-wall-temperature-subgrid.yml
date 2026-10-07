@@ -1,9 +1,9 @@
 name: FV wall-temperature subgrid 1 ns
 
 on:
-  push:
+  pull_request:
     branches:
-      - experiment-wall-temperature-subgrid-run
+      - experiment-wall-subcell-compare
   workflow_dispatch:
 
 jobs:
