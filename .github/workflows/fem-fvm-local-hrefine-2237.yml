@@ -1,0 +1,90 @@
+name: FV local h-refine element 2237 1 ns
+
+on:
+  push:
+    branches:
+      - experiment-local-h-refine-2237
+    paths:
+      - 'experiments/fem_fvm_plasma_discriminator/.run_local_hrefine_2237'
+  workflow_dispatch:
+
+jobs:
+  compare:
+    name: hybrid-baseline-vs-hrefine-2237
+    runs-on: ubuntu-24.04
+    env:
+      BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pull build image
+        run: docker pull "$BUILD_BASE_REF"
+      - name: Build once and run 1 ns comparison
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm --entrypoint /bin/bash --user 0:0 \
+            --workdir /workspace -v "$GITHUB_WORKSPACE:/workspace" \
+            "$BUILD_BASE_REF" -lc '
+              set -euo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              git config --global --add safe.directory /opt/physics_vendor/moose
+              git config --global --add safe.directory /opt/physics_vendor/crane
+              git config --global --add safe.directory /opt/physics_vendor/squirrel
+              git config --global --add safe.directory /opt/physics_vendor/zapdos
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+
+              make -C physics_app -j2
+              cd experiments/fem_fvm_plasma_discriminator
+              python3 prepare_hybrid_1ns.py
+              python3 prepare_local_hrefine_2237.py
+
+              BASE="hybrid_plasma_discriminator"
+              REF="hybrid_local_hrefine_2237"
+              ../../physics_app/physics-opt -i "${BASE}.i" --check-input
+              ../../physics_app/physics-opt -i "${REF}.i" --check-input
+
+              OUTDIR="output_local_hrefine_2237"
+              rm -rf "$OUTDIR"
+              mkdir -p "$OUTDIR/baseline" "$OUTDIR/refined"
+
+              run_case() {
+                stem="$1"; dest="$2"; set +e
+                /usr/bin/time -f "wall_seconds=%e\nuser_seconds=%U\nsystem_seconds=%S\nmax_rss_kb=%M" \
+                  -o "$dest/wall_time.txt" \
+                  timeout --signal=TERM 45m stdbuf -oL -eL \
+                  ../../physics_app/physics-opt -i "${stem}.i" > "$dest/run.log" 2>&1
+                rc=$?; set -e
+                echo "run_rc=$rc" > "$dest/status.txt"
+                cp "${stem}.i" "$dest/"
+                cp "${stem}_out.csv" "$dest/" 2>/dev/null || true
+                cp "${stem}_out.e" "$dest/" 2>/dev/null || true
+                tail -n 800 "$dest/run.log" > "$dest/tail.log" || true
+                return "$rc"
+              }
+
+              set +e
+              run_case "$BASE" "$OUTDIR/baseline" & pbase=$!
+              run_case "$REF" "$OUTDIR/refined" & pref=$!
+              wait "$pbase"; rcbase=$?
+              wait "$pref"; rcref=$?
+              set -e
+
+              printf "baseline_rc=%s\nrefined_rc=%s\n" "$rcbase" "$rcref" > "$OUTDIR/status.txt"
+              cp prepare_hybrid_1ns.py prepare_local_hrefine_2237.py "$OUTDIR/"
+              if [ "$rcbase" -ne 0 ] || [ "$rcref" -ne 0 ]; then
+                exit 1
+              fi
+            '
+      - name: Upload comparison result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fv-local-hrefine-2237-compare-dt1ns
+          path: experiments/fem_fvm_plasma_discriminator/output_local_hrefine_2237/**
+          retention-days: 30
