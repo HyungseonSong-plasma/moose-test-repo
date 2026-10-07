@@ -44,6 +44,7 @@ protected:
   const Moose::Functor<ADReal> & _mobility;
   const Moose::Functor<ADReal> & _carrier;
   const Real _charge_number;
+  const bool _use_element_gradient_for_potential;
   Moose::FV::InterpMethod _advected_interp_method;
 };
 
