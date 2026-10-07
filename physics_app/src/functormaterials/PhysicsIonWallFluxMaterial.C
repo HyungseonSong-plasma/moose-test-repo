@@ -26,13 +26,6 @@ outwardPositivePart(const ADReal & directed_field, const Real smoothing_width)
                ? directed_field
                : ADReal(0.0) * directed_field;
 
-  // Diagnostic regularization:
-  //   f(x) = 0.5*x*(1 + tanh(x/eps))
-  //
-  // f(0)=0 while df/dx|_0 = 0.5, so the initial zero-field state keeps
-  // physical zero migration flux but retains AD sensitivity to phi.
-  // For |x| >> eps it approaches max(x,0). Use only for diagnosis until
-  // the nonlinear wall closure is finalized.
   using std::tanh;
   return 0.5 * directed_field *
          (1.0 + tanh(directed_field / smoothing_width));
@@ -59,13 +52,47 @@ outwardNormal(const Moose::FaceArg & face)
         "match either FaceInfo side.");
   }
 
-  // A face without explicit sidedness is unambiguous only for an external
-  // boundary. Internal plasma-material interfaces must supply face_side.
   if (face.fi->neighborPtr())
     mooseError(
         "PhysicsIonWallFluxMaterial requires a sided FaceArg on internal boundaries.");
 
   return n;
+}
+
+ADRealVectorValue
+faceElectricField(const Moose::Functor<ADReal> & potential,
+                  const Moose::FaceArg & face,
+                  const Moose::StateArg & state,
+                  const bool use_element_gradient)
+{
+  if (!use_element_gradient)
+    return -potential.gradient(face, state);
+
+  if (!face.fi)
+    mooseError("PhysicsIonWallFluxMaterial received a FaceArg without FaceInfo.");
+
+  // Continuous FEM variables do not implement FaceArg gradients. Evaluate the
+  // gradient in the element that owns the sided wall face instead. For the
+  // unlikely unsided interior case, use the symmetric average of both element
+  // gradients, matching the FV drift hybrid bridge.
+  if (face.face_side)
+  {
+    if (face.face_side == &face.fi->elem())
+      return -potential.gradient(face.makeElem(), state);
+
+    if (face.fi->neighborPtr() && face.face_side == face.fi->neighborPtr())
+      return -potential.gradient(face.makeNeighbor(), state);
+
+    mooseError(
+        "PhysicsIonWallFluxMaterial received a FaceArg whose face_side does not "
+        "match either FaceInfo side.");
+  }
+
+  if (!face.fi->neighborPtr())
+    return -potential.gradient(face.makeElem(), state);
+
+  return -0.5 * (potential.gradient(face.makeElem(), state) +
+                 potential.gradient(face.makeNeighbor(), state));
 }
 }
 
@@ -114,6 +141,12 @@ PhysicsIonWallFluxMaterial::validParams()
       "Diagnostic smoothing width [V/m] for the outward migration gate. "
       "Zero preserves the existing hard active-set behavior.");
 
+  params.addParam<bool>(
+      "use_element_gradient_for_potential",
+      false,
+      "Evaluate E=-grad(phi) from the sided adjacent element instead of a FaceArg. "
+      "Enable this when potential is a continuous FEM variable.");
+
   return params;
 }
 
@@ -129,7 +162,9 @@ PhysicsIonWallFluxMaterial::PhysicsIonWallFluxMaterial(
     _sticking(getParam<Real>("sticking")),
     _ion_temperature_eV(getParam<Real>("ion_temperature_eV")),
     _migration_gate_smoothing_width(
-        getParam<Real>("migration_gate_smoothing_width"))
+        getParam<Real>("migration_gate_smoothing_width")),
+    _use_element_gradient_for_potential(
+        getParam<bool>("use_element_gradient_for_potential"))
 {
   if (_charge_number == 0.0)
     paramError("charge_number", "Ion wall migration requires nonzero charge_number.");
@@ -189,7 +224,7 @@ PhysicsIonWallFluxMaterial::PhysicsIonWallFluxMaterial(
         {
           const RealVectorValue n_out = outwardNormal(r);
           const ADRealVectorValue electric_field =
-              -_potential.gradient(r, state);
+              faceElectricField(_potential, r, state, _use_element_gradient_for_potential);
           const ADReal E_n = electric_field * n_out;
 
           const ADReal directed_field = _charge_number * E_n;
@@ -233,7 +268,7 @@ PhysicsIonWallFluxMaterial::PhysicsIonWallFluxMaterial(
 
           const RealVectorValue n_out = outwardNormal(r);
           const ADRealVectorValue electric_field =
-              -_potential.gradient(r, state);
+              faceElectricField(_potential, r, state, _use_element_gradient_for_potential);
           const ADReal directed_field =
               _charge_number * (electric_field * n_out);
           const ADReal outward_drift_field =
@@ -289,7 +324,7 @@ PhysicsIonWallFluxMaterial::PhysicsIonWallFluxMaterial(
         {
           const RealVectorValue n_out = outwardNormal(r);
           const ADRealVectorValue electric_field =
-              -_potential.gradient(r, state);
+              faceElectricField(_potential, r, state, _use_element_gradient_for_potential);
           const ADReal directed_field =
               _charge_number * (electric_field * n_out);
           const ADReal outward_drift_field =
@@ -297,8 +332,7 @@ PhysicsIonWallFluxMaterial::PhysicsIonWallFluxMaterial(
                   directed_field, _migration_gate_smoothing_width);
 
           return _ion_number_density(r, state) *
-                 _mobility(r, state) *
-                 outward_drift_field *
+                 _mobility(r, state) * outward_drift_field *
                  _molar_mass / PHYSICS_CONSTANTS::N_A;
         }
       });
@@ -333,7 +367,7 @@ PhysicsIonWallFluxMaterial::PhysicsIonWallFluxMaterial(
 
           const RealVectorValue n_out = outwardNormal(r);
           const ADRealVectorValue electric_field =
-              -_potential.gradient(r, state);
+              faceElectricField(_potential, r, state, _use_element_gradient_for_potential);
           const ADReal directed_field =
               _charge_number * (electric_field * n_out);
           const ADReal outward_drift_field =
