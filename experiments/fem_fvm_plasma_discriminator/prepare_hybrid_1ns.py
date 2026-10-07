@@ -27,6 +27,16 @@ def hybrid_1ns() -> str:
         "potential variable",
     )
 
+    # MOOSE FE functors do not implement FaceArg gradients. For the three FV drift
+    # kernels, evaluate grad(phi) in the two adjacent P1 elements and average it at
+    # the FV face. This preserves the FEM electric-field reconstruction instead of
+    # reverting to a cell-center potential difference.
+    old = "    advected_interp_method = upwind\n"
+    new = "    use_element_gradient_for_potential = true\n    advected_interp_method = upwind\n"
+    if text.count(old) != 3:
+        raise RuntimeError(f"expected three FV drift interpolation settings, found {text.count(old)}")
+    text = text.replace(old, new)
+
     # Remove the FV Poisson operator/source. The charge functor remains computed
     # directly from FV log_ne/log_ni and is consumed by the FEM weak source below.
     text = replace_once(
@@ -66,5 +76,6 @@ if __name__ == "__main__":
     print(f"wrote {out}")
     print("hybrid: FV log_ne/log_ni/log_energy + FEM P1 potential")
     print("Poisson RHS: charge functor evaluated directly from FV cell states")
+    print("FV drift field: average of adjacent FEM P1 element gradients")
     print(f"dt={base.DT} s; steps=1; end_time={base.DT} s")
     print("axis: natural RZ symmetry; no explicit r=0 potential BC")
