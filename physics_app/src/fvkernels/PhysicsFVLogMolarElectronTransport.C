@@ -108,12 +108,19 @@ PhysicsFVLogMolarElectrostaticDrift::validParams()
   auto params = FVFluxKernel::validParams();
   params.addClassDescription(
       "Electrostatic FV drift reconstructed from c_e=exp(log_e), preserving "
-      "PhysicsFVElectrostaticDrift face/upwind semantics and returning molar flux.");
+      "PhysicsFVElectrostaticDrift face/upwind semantics and returning molar flux. "
+      "For a continuous FEM potential, use_element_gradient_for_potential averages the two "
+      "adjacent element gradients at an interior FV face instead of requesting a FaceArg gradient.");
   params.addRequiredParam<MooseFunctorName>("potential", "Electrostatic potential phi [V].");
   params.addRequiredParam<MooseFunctorName>("mobility", "Positive mobility magnitude [m^2/(V s)].");
   params.addRequiredParam<MooseFunctorName>(
       "carrier", "Multiplicative carrier functor; use 1 for electron molar concentration.");
   params.addRequiredParam<Real>("charge_number", "Signed charge number z.");
+  params.addParam<bool>(
+      "use_element_gradient_for_potential",
+      false,
+      "Use -0.5*(grad(phi)_elem+grad(phi)_neighbor) as the face electric field. "
+      "Enable this when potential is a FEM variable because FEM functors do not provide FaceArg gradients.");
   params += Moose::FV::advectedInterpolationParameter();
   params.addRelationshipManager(
       "ElementSideNeighborLayers",
@@ -131,7 +138,8 @@ PhysicsFVLogMolarElectrostaticDrift::PhysicsFVLogMolarElectrostaticDrift(
     _potential(getFunctor<ADReal>("potential")),
     _mobility(getFunctor<ADReal>("mobility")),
     _carrier(getFunctor<ADReal>("carrier")),
-    _charge_number(getParam<Real>("charge_number"))
+    _charge_number(getParam<Real>("charge_number")),
+    _use_element_gradient_for_potential(getParam<bool>("use_element_gradient_for_potential"))
 {
   if (_charge_number == 0.0)
     paramError("charge_number", "Electrostatic drift requires nonzero charge_number.");
@@ -160,7 +168,21 @@ PhysicsFVLogMolarElectrostaticDrift::computeQpResidual()
                false,
                &limiter_time);
 
-  const ADRealVectorValue electric_field = -_potential.gradient(centered_face, state);
+  ADRealVectorValue electric_field;
+  if (_use_element_gradient_for_potential)
+  {
+    const ADRealVectorValue grad_elem = _potential.gradient(elemArg(), state);
+    if (_face_info->neighborPtr())
+    {
+      const ADRealVectorValue grad_neighbor = _potential.gradient(neighborArg(), state);
+      electric_field = -0.5 * (grad_elem + grad_neighbor);
+    }
+    else
+      electric_field = -grad_elem;
+  }
+  else
+    electric_field = -_potential.gradient(centered_face, state);
+
   const ADReal mobility_face = _mobility(centered_face, state);
   const ADReal carrier_face = _carrier(centered_face, state);
   const ADReal drift_normal =
