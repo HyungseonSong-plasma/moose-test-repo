@@ -6,6 +6,8 @@
 #include "libmesh/mesh_base.h"
 #include "libmesh/node.h"
 
+#include <utility>
+
 registerMooseObject("PhysicsApp", PhysicsCoarseP1ConstraintProblem);
 
 namespace
@@ -60,8 +62,9 @@ public:
 
       // Exact homogeneous algebraic constraint:
       //   phi_mid = 0.5 * phi_a + 0.5 * phi_b
-      // This is processed by libMesh in the same DofMap constraint machinery used
-      // for hanging nodes, before matrix/vector allocation and nonlinear solves.
+      // user_constrain() is called after libMesh's native hanging-node constraints
+      // are created and before process_constraints(), so dependencies are resolved
+      // in the same DofMap machinery used for AMR constraints.
       dof_map.add_constraint_row(secondary_dof, row, /*forbid_constraint_overwrite=*/true);
     }
   }
