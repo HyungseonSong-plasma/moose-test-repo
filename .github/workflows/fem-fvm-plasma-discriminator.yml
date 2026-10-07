@@ -48,7 +48,7 @@ jobs:
 
               make -C physics_app -j2
               cd experiments/fem_fvm_plasma_discriminator
-              python3 prepare_cases.py
+              python3 prepare_cases_plasma_only.py
 
               CASE="${{ matrix.case }}"
               INPUT="${CASE}_plasma_discriminator.i"
@@ -69,7 +69,7 @@ jobs:
               set -e
 
               echo "run_rc=$rc" | tee "$OUTDIR/status.txt"
-              cp "$INPUT" prepare_cases.py "$OUTDIR/"
+              cp "$INPUT" prepare_cases.py prepare_cases_plasma_only.py "$OUTDIR/"
               cp "${INPUT%.i}_out.csv" "$OUTDIR/" 2>/dev/null || true
               cp "${INPUT%.i}_out.e" "$OUTDIR/" 2>/dev/null || true
               tail -n 400 "$OUTDIR/run.log" > "$OUTDIR/tail.log" || true
