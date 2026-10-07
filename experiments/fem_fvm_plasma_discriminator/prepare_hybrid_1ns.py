@@ -14,8 +14,8 @@ def replace_once(text: str, old: str, new: str, label: str) -> str:
 
 
 def hybrid_1ns() -> str:
-    # Reuse the plasma-only mesh used by the existing discriminator.
-    base.MESH = plasma_only.plasma_only_mesh(base.MESH)
+    # Importing prepare_cases_plasma_only already mutates base.MESH to keep only
+    # the plasma block while preserving the plasma interface side sets.
     text = base.fvm()
 
     # Keep transport variables cell-centered FV, but solve electrostatic potential
