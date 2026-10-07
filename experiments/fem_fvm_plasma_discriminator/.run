@@ -1,0 +1,6 @@
+run=2026-10-07T08:00:00+01:00
+cases=fem,fvm
+dt_s=1e-9
+steps=100
+end_time_s=1e-7
+initial_mean_electron_energy_eV=4
