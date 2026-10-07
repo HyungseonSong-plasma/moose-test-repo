@@ -1,0 +1,7 @@
+run=2026-10-07T09:00:00+01:00
+case=fvm
+dt_s=1e-9
+steps=10
+end_time_s=1e-8
+compare_against=fem_10ns_from_run_37592399650
+state=log-molar-identical
