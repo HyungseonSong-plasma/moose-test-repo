@@ -1,16 +1,6 @@
 name: heavy first implicit once
 
 on:
-  push:
-    branches: [ prototype-fully-implicit-electron-poisson ]
-    paths:
-      - 'experiments/heavy_fast_logmolar_coupling/prepare_heavy_first_once.py'
-      - 'experiments/heavy_fast_logmolar_coupling/prepare_fast_child.py'
-      - 'experiments/heavy_fast_logmolar_coupling/prepare_heavy_parent.py'
-      - '.github/workflows/heavy-first-implicit-once.yml'
-      - 'experiments/Issue91_real_qvt_r3/r3_e0/heavy_base.i'
-      - 'experiments/implicit_logmolar_surface_loss/input_10step.i'
-      - 'physics_app/**'
   workflow_dispatch:
 
 jobs:
