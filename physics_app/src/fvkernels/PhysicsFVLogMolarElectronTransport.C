@@ -121,6 +121,11 @@ PhysicsFVLogMolarElectrostaticDrift::validParams()
       false,
       "Use -0.5*(grad(phi)_elem+grad(phi)_neighbor) as the face electric field. "
       "Enable this when potential is a FEM variable because FEM functors do not provide FaceArg gradients.");
+  params.addParam<bool>(
+      "use_limited_linear_reconstruction",
+      false,
+      "Reconstruct the upwind log-density linearly to the face and clip it to the two-cell "
+      "log-state bounds. This preserves the upwind direction while adding bounded subcell variation.");
   params += Moose::FV::advectedInterpolationParameter();
   params.addRelationshipManager(
       "ElementSideNeighborLayers",
@@ -139,7 +144,8 @@ PhysicsFVLogMolarElectrostaticDrift::PhysicsFVLogMolarElectrostaticDrift(
     _mobility(getFunctor<ADReal>("mobility")),
     _carrier(getFunctor<ADReal>("carrier")),
     _charge_number(getParam<Real>("charge_number")),
-    _use_element_gradient_for_potential(getParam<bool>("use_element_gradient_for_potential"))
+    _use_element_gradient_for_potential(getParam<bool>("use_element_gradient_for_potential")),
+    _use_limited_linear_reconstruction(getParam<bool>("use_limited_linear_reconstruction"))
 {
   if (_charge_number == 0.0)
     paramError("charge_number", "Electrostatic drift requires nonzero charge_number.");
@@ -189,14 +195,48 @@ PhysicsFVLogMolarElectrostaticDrift::computeQpResidual()
       _charge_number * mobility_face * (electric_field * _normal);
 
   const bool elem_is_upwind = MetaPhysicL::raw_value(drift_normal) >= 0.0;
-  const auto transported_face =
-      makeFace(*_face_info,
-               Moose::FV::limiterType(_advected_interp_method),
-               elem_is_upwind,
-               false,
-               &limiter_time);
 
-  const ADReal c_face = exp(_var(transported_face, state));
+  ADReal log_c_face;
+  if (_use_limited_linear_reconstruction && _face_info->neighborPtr())
+  {
+    const auto elem_arg = elemArg();
+    const auto neighbor_arg = neighborArg();
+    const ADReal u_elem = _var(elem_arg, state);
+    const ADReal u_neighbor = _var(neighbor_arg, state);
+
+    const auto upwind_arg = elem_is_upwind ? elem_arg : neighbor_arg;
+    const ADReal u_upwind = elem_is_upwind ? u_elem : u_neighbor;
+    const ADRealVectorValue grad_upwind = _var.gradient(upwind_arg, state);
+    const Point & center_upwind = elem_is_upwind ? _face_info->elemCentroid()
+                                                  : _face_info->neighborCentroid();
+    ADReal u_reconstructed =
+        u_upwind + grad_upwind * (_face_info->faceCentroid() - center_upwind);
+
+    const Real elem_raw = MetaPhysicL::raw_value(u_elem);
+    const Real neighbor_raw = MetaPhysicL::raw_value(u_neighbor);
+    const Real lower_raw = std::min(elem_raw, neighbor_raw);
+    const Real upper_raw = std::max(elem_raw, neighbor_raw);
+    const Real rec_raw = MetaPhysicL::raw_value(u_reconstructed);
+
+    if (rec_raw < lower_raw)
+      log_c_face = elem_raw <= neighbor_raw ? u_elem : u_neighbor;
+    else if (rec_raw > upper_raw)
+      log_c_face = elem_raw >= neighbor_raw ? u_elem : u_neighbor;
+    else
+      log_c_face = u_reconstructed;
+  }
+  else
+  {
+    const auto transported_face =
+        makeFace(*_face_info,
+                 Moose::FV::limiterType(_advected_interp_method),
+                 elem_is_upwind,
+                 false,
+                 &limiter_time);
+    log_c_face = _var(transported_face, state);
+  }
+
+  const ADReal c_face = exp(log_c_face);
   return carrier_face * c_face * drift_normal;
 }
 
