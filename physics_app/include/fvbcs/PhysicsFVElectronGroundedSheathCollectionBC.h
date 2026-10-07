@@ -22,6 +22,10 @@ protected:
 
   const Moose::Functor<ADReal> & _mean_electron_energy;
   const Moose::Functor<ADReal> & _potential;
+  const Moose::Functor<ADReal> * _mobility;
+  const Moose::Functor<ADReal> * _diffusion;
   const bool _log_molar_state;
   const bool _apply_sheath_suppression;
+  const bool _use_wall_subgrid_closure;
+  const Real _charge_number;
 };
