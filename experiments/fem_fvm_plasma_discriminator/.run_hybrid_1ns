@@ -1,1 +1,1 @@
-trigger 2026-10-07 rerun 3: FV transport + FEM Poisson with averaged FE element field
+trigger 2026-10-07 rerun 4: FV transport + FEM Poisson + FEM field bridges
