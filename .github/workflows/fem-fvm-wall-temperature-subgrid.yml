@@ -3,7 +3,7 @@ name: FV wall-temperature subgrid 1 ns
 on:
   push:
     branches:
-      - experiment-wall-subcell-compare
+      - experiment-wall-temperature-subgrid
     paths:
       - 'experiments/fem_fvm_plasma_discriminator/.run_wall_temperature_subgrid'
   workflow_dispatch:
