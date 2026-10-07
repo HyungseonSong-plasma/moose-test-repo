@@ -50,4 +50,5 @@ protected:
   const Real _sticking;
   const Real _ion_temperature_eV;
   const Real _migration_gate_smoothing_width;
+  const bool _use_element_gradient_for_potential;
 };
