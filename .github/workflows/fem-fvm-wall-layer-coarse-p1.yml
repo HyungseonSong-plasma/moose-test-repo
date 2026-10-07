@@ -19,7 +19,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Pull build image
         run: docker pull "$BUILD_BASE_REF"
-      - name: Build and run constrained 1 ns case
+      - name: Build and run exact DofMap-constrained 1 ns case
         shell: bash
         run: |
           set -euo pipefail
@@ -44,6 +44,15 @@ jobs:
               python3 prepare_wall_layer_coarse_p1.py
 
               CP1="hybrid_wall_layer_coarse_p1"
+
+              # Hard guard: this experiment must use exact libMesh DofMap elimination,
+              # never a MOOSE residual/penalty nodal constraint.
+              grep -q "type = PhysicsCoarseP1ConstraintProblem" "${CP1}.i"
+              if grep -q "LinearNodalConstraint\|\[Constraints\]" "${CP1}.i"; then
+                echo "ERROR: residual/penalty constraint found in exact coarse-P1 experiment" >&2
+                exit 2
+              fi
+
               ../../physics_app/physics-opt -i "${CP1}.i" --check-input
 
               OUTDIR="output_wall_layer_coarse_p1"
@@ -54,7 +63,7 @@ jobs:
               /usr/bin/time -f "wall_seconds=%e\nuser_seconds=%U\nsystem_seconds=%S\nmax_rss_kb=%M" \
                 -o "$OUTDIR/coarse_p1/wall_time.txt" \
                 timeout --signal=TERM 10m stdbuf -oL -eL \
-                ../../physics_app/physics-opt -i "${CP1}.i" > "$OUTDIR/coarse_p1/run.log" 2>&1
+                ../../physics_app/physics-opt --print-constraints -i "${CP1}.i" > "$OUTDIR/coarse_p1/run.log" 2>&1
               rc=$?
               set -e
               echo "run_rc=$rc" > "$OUTDIR/coarse_p1/status.txt"
@@ -62,7 +71,7 @@ jobs:
               cp "${CP1}.i" "$OUTDIR/coarse_p1/"
               cp "${CP1}_out.csv" "$OUTDIR/coarse_p1/" 2>/dev/null || true
               cp "${CP1}_out.e" "$OUTDIR/coarse_p1/" 2>/dev/null || true
-              tail -n 1200 "$OUTDIR/coarse_p1/run.log" > "$OUTDIR/coarse_p1/tail.log" || true
+              tail -n 1600 "$OUTDIR/coarse_p1/run.log" > "$OUTDIR/coarse_p1/tail.log" || true
               cp prepare_wall_layer_coarse_p1.py prepare_wall_layer_hrefine.py prepare_hybrid_1ns.py "$OUTDIR/"
               exit "$rc"
             '
@@ -70,6 +79,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: fv-wall-layer-coarse-p1-penalty-dt1ns
+          name: fv-wall-layer-coarse-p1-dofmap-dt1ns
           path: experiments/fem_fvm_plasma_discriminator/output_wall_layer_coarse_p1/**
           retention-days: 30
