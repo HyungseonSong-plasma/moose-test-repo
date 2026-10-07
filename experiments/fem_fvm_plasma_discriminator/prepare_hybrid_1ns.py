@@ -37,6 +37,15 @@ def hybrid_1ns() -> str:
         raise RuntimeError(f"expected three FV drift interpolation settings, found {text.count(old)}")
     text = text.replace(old, new)
 
+    # The ion-wall migration closure also receives a FaceArg. For an FE potential
+    # use the gradient of the plasma-side FE element instead of a FaceArg gradient.
+    text = replace_once(
+        text,
+        """  [ion_wall_flux]\n    type = PhysicsIonWallFluxMaterial\n    ion_number_density = n_i_physical\n    potential = potential\n    mobility = ion_mobility\n""",
+        """  [ion_wall_flux]\n    type = PhysicsIonWallFluxMaterial\n    ion_number_density = n_i_physical\n    potential = potential\n    mobility = ion_mobility\n    use_element_gradient_for_potential = true\n""",
+        "ion wall flux material",
+    )
+
     # Remove the FV Poisson operator/source. The charge functor remains computed
     # directly from FV log_ne/log_ni and is consumed by the FEM weak source below.
     text = replace_once(
@@ -77,5 +86,6 @@ if __name__ == "__main__":
     print("hybrid: FV log_ne/log_ni/log_energy + FEM P1 potential")
     print("Poisson RHS: charge functor evaluated directly from FV cell states")
     print("FV drift field: average of adjacent FEM P1 element gradients")
+    print("Ion wall migration field: plasma-side FEM P1 element gradient")
     print(f"dt={base.DT} s; steps=1; end_time={base.DT} s")
     print("axis: natural RZ symmetry; no explicit r=0 potential BC")
