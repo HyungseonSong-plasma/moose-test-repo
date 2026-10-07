@@ -1,19 +1,30 @@
 #!/usr/bin/env python3
 from pathlib import Path
+import math
 
 HERE = Path(__file__).resolve().parent
 
+NA = 6.02214076e23
 DT = 1.0e-9
 NSTEPS = 100
 END_TIME = DT * NSTEPS
+
 NE0 = 1.0e15
 NI0 = 1.0e15
 MEAN_E0 = 4.0
-WE0 = NE0 * MEAN_E0
+
+CE0 = NE0 / NA
+CI0 = NI0 / NA
+WE_MOLAR0 = CE0 * MEAN_E0
+LOG_NE0 = math.log(CE0)
+LOG_NI0 = math.log(CI0)
+LOG_ENERGY0 = math.log(WE_MOLAR0)
+
 PRESSURE = 1.333223684
 TG = 300.0
 ION_MU = 10.0
 ION_D = 0.25851999786435537
+INV_NA = 1.0 / NA
 
 GROUND = "inlet outlet plasma_electrode plasma_metal plasma_right plasma_cover plasma_wafer plasma_focus_ring"
 EWALL = "plasma_electrode plasma_metal plasma_right plasma_cover plasma_wafer plasma_focus_ring"
@@ -92,11 +103,59 @@ COMMON_MATERIALS = f'''[FunctorMaterials]
     prop_values = '{PRESSURE:.12g} {TG:.12g} {ION_MU:.12g} {ION_D:.17g} 1.0 1.0'
     block = plasma
   []
+  [electron_molar_density]
+    type = ADParsedFunctorMaterial
+    property_name = electron_molar_density
+    functor_names = 'log_ne'
+    functor_symbols = 'u'
+    expression = 'exp(u)'
+    block = plasma
+  []
+  [ion_molar_density]
+    type = ADParsedFunctorMaterial
+    property_name = ion_molar_density
+    functor_names = 'log_ni'
+    functor_symbols = 'u'
+    expression = 'exp(u)'
+    block = plasma
+  []
+  [electron_physical_density]
+    type = ADParsedFunctorMaterial
+    property_name = n_e_physical
+    functor_names = 'electron_molar_density'
+    functor_symbols = 'ce'
+    expression = '6.02214076e23*ce'
+    block = plasma
+  []
+  [ion_physical_density]
+    type = ADParsedFunctorMaterial
+    property_name = n_i_physical
+    functor_names = 'ion_molar_density'
+    functor_symbols = 'ci'
+    expression = '6.02214076e23*ci'
+    block = plasma
+  []
+  [electron_molar_energy_density]
+    type = ADParsedFunctorMaterial
+    property_name = electron_molar_energy_density
+    functor_names = 'log_energy'
+    functor_symbols = 'ue'
+    expression = 'exp(ue)'
+    block = plasma
+  []
+  [electron_physical_energy_density]
+    type = ADParsedFunctorMaterial
+    property_name = electron_energy_density_eV_m3
+    functor_names = 'electron_molar_energy_density'
+    functor_symbols = 'we'
+    expression = '6.02214076e23*we'
+    block = plasma
+  []
   [mean_energy]
     type = PhysicsElectronMeanEnergyMaterial
-    electron_energy_density = electron_energy
-    electron_density = n_e
-    state_form = physical_eV
+    electron_energy_density = log_energy
+    electron_density = log_ne
+    state_form = log_molar_eV
     block = plasma
   []
   [electron_transport]
@@ -111,9 +170,17 @@ COMMON_MATERIALS = f'''[FunctorMaterials]
   [charge_number_density]
     type = ADParsedFunctorMaterial
     property_name = charge_number_density
-    functor_names = 'n_i n_e'
+    functor_names = 'n_i_physical n_e_physical'
     functor_symbols = 'ni ne'
     expression = 'ni-ne'
+    block = plasma
+  []
+  [charge_density]
+    type = ADParsedFunctorMaterial
+    property_name = charge_density_C_m3
+    functor_names = 'charge_number_density'
+    functor_symbols = 'nq'
+    expression = '1.602176634e-19*nq'
     block = plasma
   []
   [poisson_source]
@@ -126,7 +193,7 @@ COMMON_MATERIALS = f'''[FunctorMaterials]
   []
   [ion_wall_flux]
     type = PhysicsIonWallFluxMaterial
-    ion_number_density = n_i
+    ion_number_density = n_i_physical
     potential = potential
     mobility = ion_mobility
     gas_temperature = T_g_fixed
@@ -142,64 +209,64 @@ COMMON_MATERIALS = f'''[FunctorMaterials]
 
 COMMON_PP = '''[Postprocessors]
   [ne_min]
-    type = ElementExtremeFunctorValue
-    functor = n_e
+    type = ADElementExtremeFunctorValue
+    functor = n_e_physical
     value_type = min
     block = plasma
     execute_on = 'INITIAL TIMESTEP_END'
   []
   [ne_max]
-    type = ElementExtremeFunctorValue
-    functor = n_e
+    type = ADElementExtremeFunctorValue
+    functor = n_e_physical
     value_type = max
     block = plasma
     execute_on = 'INITIAL TIMESTEP_END'
   []
   [ni_min]
-    type = ElementExtremeFunctorValue
-    functor = n_i
+    type = ADElementExtremeFunctorValue
+    functor = n_i_physical
     value_type = min
     block = plasma
     execute_on = 'INITIAL TIMESTEP_END'
   []
   [ni_max]
-    type = ElementExtremeFunctorValue
-    functor = n_i
+    type = ADElementExtremeFunctorValue
+    functor = n_i_physical
     value_type = max
     block = plasma
     execute_on = 'INITIAL TIMESTEP_END'
   []
   [mean_energy_min]
-    type = ElementExtremeFunctorValue
+    type = ADElementExtremeFunctorValue
     functor = mean_en_solved
     value_type = min
     block = plasma
     execute_on = 'INITIAL TIMESTEP_END'
   []
   [mean_energy_max]
-    type = ElementExtremeFunctorValue
+    type = ADElementExtremeFunctorValue
     functor = mean_en_solved
     value_type = max
     block = plasma
     execute_on = 'INITIAL TIMESTEP_END'
   []
   [potential_min]
-    type = ElementExtremeFunctorValue
+    type = ADElementExtremeFunctorValue
     functor = potential
     value_type = min
     block = plasma
     execute_on = 'INITIAL TIMESTEP_END'
   []
   [potential_max]
-    type = ElementExtremeFunctorValue
+    type = ADElementExtremeFunctorValue
     functor = potential
     value_type = max
     block = plasma
     execute_on = 'INITIAL TIMESTEP_END'
   []
   [charge_integral]
-    type = ElementIntegralFunctorPostprocessor
-    functor = charge_number_density
+    type = ADElementIntegralFunctorPostprocessor
+    functor = charge_density_C_m3
     block = plasma
     execute_on = 'INITIAL TIMESTEP_END'
   []
@@ -222,9 +289,9 @@ EXEC = f'''[Executioner]
   automatic_scaling = true
   off_diagonals_in_auto_scaling = true
   compute_scaling_once = false
-  petsc_options = '-snes_converged_reason'
-  petsc_options_iname = '-ksp_type -pc_type'
-  petsc_options_value = 'preonly lu'
+  petsc_options = '-snes_converged_reason -ksp_converged_reason'
+  petsc_options_iname = '-ksp_type -pc_type -pc_factor_shift_type'
+  petsc_options_value = 'preonly lu NONZERO'
 []
 
 [Preconditioning]
@@ -245,22 +312,22 @@ EXEC = f'''[Executioner]
 def fem():
     return MESH + f'''
 [Variables]
-  [n_e]
+  [log_ne]
     family = LAGRANGE
     order = FIRST
-    initial_condition = {NE0:.17g}
+    initial_condition = {LOG_NE0:.17g}
     block = plasma
   []
-  [n_i]
+  [log_ni]
     family = LAGRANGE
     order = FIRST
-    initial_condition = {NI0:.17g}
+    initial_condition = {LOG_NI0:.17g}
     block = plasma
   []
-  [electron_energy]
+  [log_energy]
     family = LAGRANGE
     order = FIRST
-    initial_condition = {WE0:.17g}
+    initial_condition = {LOG_ENERGY0:.17g}
     block = plasma
   []
   [potential]
@@ -274,13 +341,13 @@ def fem():
 ''' + COMMON_MATERIALS + f'''
 [Kernels]
   [ne_time]
-    type = ADTimeDerivative
-    variable = n_e
+    type = PhysicsFEMLogMolarTimeDerivative
+    variable = log_ne
     block = plasma
   []
   [ne_transport]
-    type = PhysicsFEMPlasmaDriftDiffusion
-    variable = n_e
+    type = PhysicsFEMLogMolarDriftDiffusion
+    variable = log_ne
     potential = potential
     mobility = electron_mobility
     diffusion = electron_diffusion
@@ -288,13 +355,13 @@ def fem():
     block = plasma
   []
   [ni_time]
-    type = ADTimeDerivative
-    variable = n_i
+    type = PhysicsFEMLogMolarTimeDerivative
+    variable = log_ni
     block = plasma
   []
   [ni_transport]
-    type = PhysicsFEMPlasmaDriftDiffusion
-    variable = n_i
+    type = PhysicsFEMLogMolarDriftDiffusion
+    variable = log_ni
     potential = potential
     mobility = ion_mobility
     diffusion = ion_diffusion
@@ -302,13 +369,13 @@ def fem():
     block = plasma
   []
   [energy_time]
-    type = ADTimeDerivative
-    variable = electron_energy
+    type = PhysicsFEMLogMolarTimeDerivative
+    variable = log_energy
     block = plasma
   []
   [energy_transport]
-    type = PhysicsFEMPlasmaDriftDiffusion
-    variable = electron_energy
+    type = PhysicsFEMLogMolarDriftDiffusion
+    variable = log_energy
     potential = potential
     mobility = electron_energy_mobility
     diffusion = electron_energy_diffusion
@@ -316,9 +383,9 @@ def fem():
     block = plasma
   []
   [energy_joule]
-    type = PhysicsFEMElectronJouleHeating
-    variable = electron_energy
-    electron_density = n_e
+    type = PhysicsFEMLogMolarElectronJouleHeating
+    variable = log_energy
+    electron_log_density = log_ne
     potential = potential
     mobility = electron_mobility
     diffusion = electron_diffusion
@@ -340,22 +407,22 @@ def fem():
 
 [BCs]
   [electron_sheath]
-    type = PhysicsFEMElectronGroundedSheathBC
-    variable = n_e
-    electron_energy_density = electron_energy
+    type = PhysicsFEMLogMolarElectronGroundedSheathBC
+    variable = log_ne
+    log_energy = log_energy
     potential = potential
     boundary = '{EWALL}'
   []
   [electron_energy_sheath]
-    type = PhysicsFEMElectronGroundedSheathEnergyBC
-    variable = electron_energy
-    electron_density = n_e
+    type = PhysicsFEMLogMolarElectronGroundedSheathEnergyBC
+    variable = log_energy
+    log_electron_density = log_ne
     potential = potential
     boundary = '{EWALL}'
   []
   [ion_wall]
-    type = PhysicsFEMIonWallBC
-    variable = n_i
+    type = PhysicsFEMLogMolarIonWallBC
+    variable = log_ni
     potential = potential
     mobility = {ION_MU:.17g}
     gas_temperature = {TG:.17g}
@@ -379,19 +446,19 @@ def fem():
 def fvm():
     return MESH + f'''
 [Variables]
-  [n_e]
+  [log_ne]
     type = MooseVariableFVReal
-    initial_condition = {NE0:.17g}
+    initial_condition = {LOG_NE0:.17g}
     block = plasma
   []
-  [n_i]
+  [log_ni]
     type = MooseVariableFVReal
-    initial_condition = {NI0:.17g}
+    initial_condition = {LOG_NI0:.17g}
     block = plasma
   []
-  [electron_energy]
+  [log_energy]
     type = MooseVariableFVReal
-    initial_condition = {WE0:.17g}
+    initial_condition = {LOG_ENERGY0:.17g}
     block = plasma
   []
   [potential]
@@ -404,19 +471,19 @@ def fvm():
 ''' + COMMON_MATERIALS + f'''
 [FVKernels]
   [ne_time]
-    type = FVTimeKernel
-    variable = n_e
+    type = PhysicsFVLogMolarElectronTimeDerivative
+    variable = log_ne
     block = plasma
   []
   [ne_diffusion]
-    type = FVDiffusion
-    variable = n_e
+    type = PhysicsFVLogMolarElectronDiffusion
+    variable = log_ne
     coeff = electron_diffusion
     block = plasma
   []
   [ne_drift]
-    type = PhysicsFVElectrostaticDrift
-    variable = n_e
+    type = PhysicsFVLogMolarElectrostaticDrift
+    variable = log_ne
     potential = potential
     mobility = electron_mobility
     carrier = carrier_one
@@ -426,19 +493,19 @@ def fvm():
     block = plasma
   []
   [ni_time]
-    type = FVTimeKernel
-    variable = n_i
+    type = PhysicsFVLogMolarElectronTimeDerivative
+    variable = log_ni
     block = plasma
   []
   [ni_diffusion]
-    type = FVDiffusion
-    variable = n_i
+    type = PhysicsFVLogMolarElectronDiffusion
+    variable = log_ni
     coeff = ion_diffusion
     block = plasma
   []
   [ni_drift]
-    type = PhysicsFVElectrostaticDrift
-    variable = n_i
+    type = PhysicsFVLogMolarElectrostaticDrift
+    variable = log_ni
     potential = potential
     mobility = ion_mobility
     carrier = carrier_one
@@ -448,19 +515,19 @@ def fvm():
     block = plasma
   []
   [energy_time]
-    type = FVTimeKernel
-    variable = electron_energy
+    type = PhysicsFVLogMolarElectronTimeDerivative
+    variable = log_energy
     block = plasma
   []
   [energy_diffusion]
-    type = FVDiffusion
-    variable = electron_energy
+    type = PhysicsFVLogMolarElectronDiffusion
+    variable = log_energy
     coeff = electron_energy_diffusion
     block = plasma
   []
   [energy_drift]
-    type = PhysicsFVElectrostaticDrift
-    variable = electron_energy
+    type = PhysicsFVLogMolarElectrostaticDrift
+    variable = log_energy
     potential = potential
     mobility = electron_energy_mobility
     carrier = carrier_one
@@ -471,12 +538,12 @@ def fvm():
   []
   [energy_joule]
     type = PhysicsFVElectronEnergyJouleHeating
-    variable = electron_energy
-    electron_density = n_e
+    variable = log_energy
+    electron_density = electron_molar_density
     potential = potential
     mobility = electron_mobility
     diffusion = electron_diffusion
-    state_form = physical_eV
+    state_form = molar_eV
     block = plasma
   []
   [phi_diffusion]
@@ -497,25 +564,26 @@ def fvm():
 [FVBCs]
   [electron_sheath]
     type = PhysicsFVElectronGroundedSheathCollectionBC
-    variable = n_e
+    variable = log_ne
     mean_electron_energy = mean_en_solved
     potential = potential
+    log_molar_state = true
     boundary = '{EWALL}'
   []
   [electron_energy_sheath]
     type = PhysicsFVElectronGroundedSheathEnergyBC
-    variable = electron_energy
-    electron_density = n_e
+    variable = log_energy
+    electron_density = electron_molar_density
     mean_electron_energy = mean_en_solved
     potential = potential
-    physical_eV_state = true
+    molar_energy_state = true
     boundary = '{EWALL}'
   []
   [ion_wall]
     type = FVFunctorNeumannBC
-    variable = n_i
+    variable = log_ni
     functor = ion_wall_number_flux
-    factor = -1.0
+    factor = {-INV_NA:.17g}
     boundary = '{GROUND}'
   []
   [grounded_potential]
@@ -538,7 +606,10 @@ if __name__ == '__main__':
         path = HERE / f'{name}_plasma_discriminator.i'
         path.write_text(text, encoding='utf-8')
         print(f'wrote {path}')
+
+    print('state representation: identical log-molar electron, O2+, and electron-energy states')
     print(f'dt={DT} s; steps={NSTEPS}; end_time={END_TIME} s')
     print(f'initial ne=ni={NE0} 1/m3; initial mean electron energy={MEAN_E0} eV')
+    print(f'initial log_ne={LOG_NE0:.17g}; log_ni={LOG_NI0:.17g}; log_energy={LOG_ENERGY0:.17g}')
     print(f'fixed ion mu={ION_MU} m2/(V s); fixed ion D={ION_D} m2/s at 300 K discriminator')
-    print('chemistry=OFF; heavy flow=OFF; wall-layer Joule suppression=OFF')
+    print('electron transport=energy-dependent lookup; chemistry=OFF; heavy flow=OFF; wall-layer Joule suppression=OFF')
