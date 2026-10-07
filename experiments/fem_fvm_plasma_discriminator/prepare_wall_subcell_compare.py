@@ -29,11 +29,19 @@ def method4_wall_subgrid() -> str:
     return replace_once(text, old, new, "electron sheath block")
 
 
+def method4_particle_energy_subgrid() -> str:
+    text = method4_wall_subgrid()
+    old = """  [electron_energy_sheath]\n    type = PhysicsFVElectronGroundedSheathEnergyBC\n    variable = log_energy\n    electron_density = electron_molar_density\n    mean_electron_energy = mean_en_solved\n    potential = potential\n    molar_energy_state = true\n    boundary = '{ewall}'\n  []\n""".format(ewall=base.EWALL)
+    new = """  [electron_energy_sheath]\n    type = PhysicsFVElectronGroundedSheathEnergyBC\n    variable = log_energy\n    electron_density = electron_molar_density\n    mean_electron_energy = mean_en_solved\n    potential = potential\n    mobility = electron_mobility\n    diffusion = electron_diffusion\n    charge_number = -1\n    molar_energy_state = true\n    use_wall_subgrid_closure = true\n    boundary = '{ewall}'\n  []\n""".format(ewall=base.EWALL)
+    return replace_once(text, old, new, "electron energy sheath block")
+
+
 if __name__ == "__main__":
     here = Path(base.HERE)
     cases = {
         "hybrid_method1_linear_reconstruction.i": method1_linear_reconstruction(),
         "hybrid_method4_wall_subgrid.i": method4_wall_subgrid(),
+        "hybrid_method4e_particle_energy_subgrid.i": method4_particle_energy_subgrid(),
     }
     for name, text in cases.items():
         path = here / name
@@ -42,5 +50,6 @@ if __name__ == "__main__":
 
     print("common baseline: reconstructed FV charge -> FEM P1 Poisson")
     print("method 1: bounded linear reconstruction of electron upwind face log-density")
-    print("method 4: analytic 1D wall-cell drift-diffusion/sheath subgrid closure")
+    print("method 4: analytic 1D wall-cell particle drift-diffusion/sheath subgrid closure")
+    print("method 4E: method 4 plus the same primary-particle subgrid flux in electron-energy wall loss")
     print(f"dt={base.DT} s; one step")
