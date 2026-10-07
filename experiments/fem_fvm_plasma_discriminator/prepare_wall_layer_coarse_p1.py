@@ -17,6 +17,7 @@ COARSE_P1_CONSTRAINTS = (
     (1317, (12, 1235)),
     (1324, (12, 1237)),
 )
+PENALTY = 1.0e6
 
 
 def coarse_p1_potential() -> str:
@@ -31,8 +32,8 @@ def coarse_p1_potential() -> str:
     primary = '{primary[0]} {primary[1]}'
     secondary_node_ids = '{secondary}'
     weights = '0.5 0.5'
-    formulation = kinematic
-    penalty = 1.0
+    formulation = penalty
+    penalty = {PENALTY:.17g}
   []"""
         )
     blocks.append("[]")
@@ -49,7 +50,8 @@ if __name__ == "__main__":
     out.write_text(coarse_p1_potential(), encoding="utf-8")
     print(f"wrote {out}")
     print("FV transport mesh: plasma_right + plasma_focus_ring wall layer h-refined one level")
-    print("FEM potential: independent refinement midpoint DOFs constrained to coarse-P1 interpolation")
+    print("FEM potential: two independent refinement midpoint DOFs penalty-constrained to coarse-P1 interpolation")
+    print(f"penalty={PENALTY:.6g}")
     for secondary, primary in COARSE_P1_CONSTRAINTS:
         print(f"  phi[{secondary}] = 0.5*phi[{primary[0]}] + 0.5*phi[{primary[1]}]")
     print(f"dt={base.DT} s; one step")
