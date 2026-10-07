@@ -32,6 +32,7 @@ def coarse_p1_potential() -> str:
     secondary_node_ids = '{secondary}'
     weights = '0.5 0.5'
     formulation = kinematic
+    penalty = 1.0
   []"""
         )
     blocks.append("[]")
