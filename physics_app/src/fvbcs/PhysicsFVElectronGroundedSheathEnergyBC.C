@@ -10,14 +10,16 @@ PhysicsFVElectronGroundedSheathEnergyBC::validParams()
 {
   auto params = FVQpFluxBC::validParams();
   params.addClassDescription(
-      "Applies grounded-conductor sheath-edge electron energy loss with (5/2) T_e + Delta phi. "
-      "Optional wall-subgrid mode uses the same unresolved 1D particle drift-diffusion closure "
-      "as the primary-electron collection BC before multiplying by the sheath energy per electron.");
+      "Applies grounded-conductor sheath-edge electron energy loss with optional unresolved "
+      "particle and energy drift-diffusion closures between the FV centroid and wall face.");
   params.addRequiredParam<MooseFunctorName>("electron_density", "Plasma-side electron density.");
   params.addRequiredParam<MooseFunctorName>("mean_electron_energy", "Plasma-side electron mean energy [eV].");
   params.addRequiredParam<MooseFunctorName>("potential", "Plasma potential [V].");
-  params.addParam<MooseFunctorName>("mobility", "Electron particle mobility for optional wall subgrid closure [m^2/(V s)].");
-  params.addParam<MooseFunctorName>("diffusion", "Electron particle diffusion for optional wall subgrid closure [m^2/s].");
+  params.addParam<MooseFunctorName>("mobility", "Electron particle mobility for optional particle wall subgrid closure [m^2/(V s)].");
+  params.addParam<MooseFunctorName>("diffusion", "Electron particle diffusion for optional particle wall subgrid closure [m^2/s].");
+  params.addParam<MooseFunctorName>("electron_energy_density", "Electron energy density for optional wall energy subgrid closure.");
+  params.addParam<MooseFunctorName>("energy_mobility", "Electron-energy mobility for optional wall energy subgrid closure [m^2/(V s)].");
+  params.addParam<MooseFunctorName>("energy_diffusion", "Electron-energy diffusion for optional wall energy subgrid closure [m^2/s].");
   params.addParam<Real>("energy_reference_eV", 1.0, "Legacy normalization energy [eV].");
   params.addParam<bool>("molar_energy_state", false, "Return conservative molar-energy flux.");
   params.addParam<bool>("physical_eV_state", false, "Return physical eV/(m^2 s) flux.");
@@ -29,9 +31,15 @@ PhysicsFVElectronGroundedSheathEnergyBC::validParams()
   params.addParam<bool>(
       "use_wall_subgrid_closure",
       false,
-      "Use the same analytic 1D constant-coefficient particle drift-diffusion closure as the "
-      "electron particle wall BC, then multiply that flux by the sheath energy per electron.");
-  params.addParam<Real>("charge_number", -1.0, "Signed electron charge number used by the wall subgrid drift velocity.");
+      "Use the analytic 1D constant-coefficient particle drift-diffusion closure as the "
+      "electron particle wall BC before evaluating the energy loss.");
+  params.addParam<bool>(
+      "use_wall_energy_subgrid_closure",
+      false,
+      "Additionally solve an analytic 1D constant-coefficient electron-energy drift-diffusion "
+      "closure. The boundary relation uses the particle-subgrid flux and a wall energy state, "
+      "rather than the coarse cell-center mean energy.");
+  params.addParam<Real>("charge_number", -1.0, "Signed electron charge number used by wall subgrid drift velocities.");
   return params;
 }
 
@@ -43,11 +51,21 @@ PhysicsFVElectronGroundedSheathEnergyBC::PhysicsFVElectronGroundedSheathEnergyBC
     _potential(getFunctor<ADReal>("potential")),
     _mobility(isParamValid("mobility") ? &getFunctor<ADReal>("mobility") : nullptr),
     _diffusion(isParamValid("diffusion") ? &getFunctor<ADReal>("diffusion") : nullptr),
+    _electron_energy_density(isParamValid("electron_energy_density")
+                                 ? &getFunctor<ADReal>("electron_energy_density")
+                                 : nullptr),
+    _energy_mobility(isParamValid("energy_mobility")
+                         ? &getFunctor<ADReal>("energy_mobility")
+                         : nullptr),
+    _energy_diffusion(isParamValid("energy_diffusion")
+                          ? &getFunctor<ADReal>("energy_diffusion")
+                          : nullptr),
     _energy_reference_eV(getParam<Real>("energy_reference_eV")),
     _molar_energy_state(getParam<bool>("molar_energy_state")),
     _physical_eV_state(getParam<bool>("physical_eV_state")),
     _apply_sheath_suppression(getParam<bool>("apply_sheath_suppression")),
     _use_wall_subgrid_closure(getParam<bool>("use_wall_subgrid_closure")),
+    _use_wall_energy_subgrid_closure(getParam<bool>("use_wall_energy_subgrid_closure")),
     _charge_number(getParam<Real>("charge_number"))
 {
   if (_molar_energy_state && _physical_eV_state)
@@ -66,11 +84,29 @@ PhysicsFVElectronGroundedSheathEnergyBC::PhysicsFVElectronGroundedSheathEnergyBC
     if (_charge_number == 0.0)
       paramError("charge_number", "wall subgrid closure requires nonzero charge_number.");
   }
+
+  if (_use_wall_energy_subgrid_closure)
+  {
+    if (!_use_wall_subgrid_closure)
+      paramError("use_wall_energy_subgrid_closure",
+                 "wall energy subgrid closure requires use_wall_subgrid_closure=true so particle and energy use one wall flux.");
+    if (!_molar_energy_state && !_physical_eV_state)
+      paramError("use_wall_energy_subgrid_closure",
+                 "wall energy subgrid closure requires a conservative molar_energy_state or physical_eV_state.");
+    if (!_electron_energy_density)
+      paramError("electron_energy_density", "electron_energy_density is required for wall energy subgrid closure.");
+    if (!_energy_mobility)
+      paramError("energy_mobility", "energy_mobility is required for wall energy subgrid closure.");
+    if (!_energy_diffusion)
+      paramError("energy_diffusion", "energy_diffusion is required for wall energy subgrid closure.");
+  }
 }
 
 ADReal
 PhysicsFVElectronGroundedSheathEnergyBC::computeQpResidual()
 {
+  using std::exp;
+
   const auto cell = _face_type == FaceInfo::VarFaceNeighbors::ELEM ? elemArg() : neighborArg();
   const auto state = determineState();
   const ADReal electron_density = _electron_density(cell, state);
@@ -83,7 +119,8 @@ PhysicsFVElectronGroundedSheathEnergyBC::computeQpResidual()
     mooseError("Grounded sheath energy collection requires mean electron energy > 0 eV.");
 
   const ADReal effective_drop_V = PhysicsGroundedElectronSheath::smoothPositiveDropV(phi_s_V);
-  const ADReal electron_temperature_eV = PhysicsGroundedElectronSheath::electronTemperatureEV(mean_energy_eV);
+  const ADReal electron_temperature_eV =
+      PhysicsGroundedElectronSheath::electronTemperatureEV(mean_energy_eV);
 
   const auto collection_speed = [&]() -> ADReal
   {
@@ -93,27 +130,26 @@ PhysicsFVElectronGroundedSheathEnergyBC::computeQpResidual()
     return alpha;
   };
 
+  const Point & center = _face_type == FaceInfo::VarFaceNeighbors::ELEM
+                             ? _face_info->elemCentroid()
+                             : _face_info->neighborCentroid();
+  const Real wall_distance = std::abs(MetaPhysicL::raw_value(
+      (_face_info->faceCentroid() - center) * _normal));
+  if ((_use_wall_subgrid_closure || _use_wall_energy_subgrid_closure) && wall_distance <= 0.0)
+    mooseError("Wall subgrid closure requires positive centroid-to-wall normal distance.");
+
+  const ADRealVectorValue electric_field = -_potential.gradient(cell, state);
+  const ADReal alpha = collection_speed();
+
   ADReal primary_particle_flux;
   if (_use_wall_subgrid_closure)
   {
-    using std::exp;
     const ADReal mu = (*_mobility)(cell, state);
     const ADReal D = (*_diffusion)(cell, state);
     if (MetaPhysicL::raw_value(D) <= 0.0)
-      mooseError("Energy wall subgrid closure requires diffusion > 0.");
+      mooseError("Energy wall particle-subgrid closure requires diffusion > 0.");
 
-    const ADRealVectorValue electric_field = -_potential.gradient(cell, state);
     const ADReal v_out = _charge_number * mu * (electric_field * _normal);
-
-    const Point & center = _face_type == FaceInfo::VarFaceNeighbors::ELEM
-                               ? _face_info->elemCentroid()
-                               : _face_info->neighborCentroid();
-    const Real wall_distance = std::abs(MetaPhysicL::raw_value(
-        (_face_info->faceCentroid() - center) * _normal));
-    if (wall_distance <= 0.0)
-      mooseError("Energy wall subgrid closure requires positive centroid-to-wall normal distance.");
-
-    const ADReal alpha = collection_speed();
     if (std::abs(MetaPhysicL::raw_value(v_out)) < 1.0e-12)
       primary_particle_flux = alpha * electron_density / (1.0 + alpha * wall_distance / D);
     else
@@ -130,7 +166,44 @@ PhysicsFVElectronGroundedSheathEnergyBC::computeQpResidual()
         _apply_sheath_suppression
             ? PhysicsGroundedElectronSheath::primaryParticleFluxHat(
                   electron_density, mean_energy_eV, effective_drop_V)
-            : collection_speed() * electron_density;
+            : alpha * electron_density;
+  }
+
+  if (_use_wall_energy_subgrid_closure)
+  {
+    const ADReal energy_density = (*_electron_energy_density)(cell, state);
+    const ADReal mu_energy = (*_energy_mobility)(cell, state);
+    const ADReal D_energy = (*_energy_diffusion)(cell, state);
+    if (MetaPhysicL::raw_value(energy_density) < 0.0)
+      mooseError("Wall energy subgrid closure requires electron energy density >= 0.");
+    if (MetaPhysicL::raw_value(D_energy) <= 0.0)
+      mooseError("Wall energy subgrid closure requires energy_diffusion > 0.");
+
+    const ADReal v_energy_out = _charge_number * mu_energy * (electric_field * _normal);
+
+    // At the wall, Gamma_eps = Gamma_e[(5/2)T_e,w + Delta phi].
+    // With mean energy epsilon_w=(3/2)T_e,w and Gamma_e=alpha*c_w,
+    // this is Gamma_eps = (5/3)alpha*w_w + Gamma_e*Delta phi.
+    const ADReal beta = (5.0 / 3.0) * alpha;
+    const ADReal potential_energy_flux = primary_particle_flux * effective_drop_V;
+
+    ADReal energy_flux;
+    if (std::abs(MetaPhysicL::raw_value(v_energy_out)) < 1.0e-12)
+      energy_flux = (beta * energy_density + potential_energy_flux) /
+                    (1.0 + beta * wall_distance / D_energy);
+    else
+    {
+      const ADReal Pe_energy = v_energy_out * wall_distance / D_energy;
+      const ADReal exp_Pe_energy = exp(Pe_energy);
+      const ADReal denominator =
+          1.0 + (beta / v_energy_out) * (exp_Pe_energy - 1.0);
+      if (std::abs(MetaPhysicL::raw_value(denominator)) < 1.0e-12)
+        mooseError("Wall energy subgrid closure encountered a singular local denominator.");
+      energy_flux =
+          (beta * energy_density * exp_Pe_energy + potential_energy_flux) / denominator;
+    }
+
+    return energy_flux;
   }
 
   const ADReal energy_per_collected_electron_eV =
