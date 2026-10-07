@@ -100,8 +100,8 @@ PhysicsFVElectronGroundedSheathCollectionBC::computeQpResidual()
     const Point & center = _face_type == FaceInfo::VarFaceNeighbors::ELEM
                                ? _face_info->elemCentroid()
                                : _face_info->neighborCentroid();
-    const Real wall_distance =
-        std::abs((_face_info->faceCentroid() - center) * _normal);
+    const Real wall_distance = std::abs(MetaPhysicL::raw_value(
+        (_face_info->faceCentroid() - center) * _normal));
     if (wall_distance <= 0.0)
       mooseError("Wall subgrid closure requires positive centroid-to-wall normal distance.");
 
