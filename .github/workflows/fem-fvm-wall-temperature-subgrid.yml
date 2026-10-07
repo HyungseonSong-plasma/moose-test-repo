@@ -1,0 +1,67 @@
+name: FV wall-temperature subgrid 1 ns
+
+on:
+  push:
+    branches:
+      - experiment-wall-subcell-compare
+    paths:
+      - 'experiments/fem_fvm_plasma_discriminator/.run_wall_temperature_subgrid'
+  workflow_dispatch:
+
+jobs:
+  compare:
+    name: method4e-vs-method4t
+    runs-on: ubuntu-24.04
+    env:
+      BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pull build image
+        run: docker pull "$BUILD_BASE_REF"
+      - name: Build once and run Method 4E vs 4T
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm --entrypoint /bin/bash --user 0:0 \
+            --workdir /workspace -v "$GITHUB_WORKSPACE:/workspace" \
+            "$BUILD_BASE_REF" -lc '
+              set -euo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              git config --global --add safe.directory /opt/physics_vendor/moose
+              git config --global --add safe.directory /opt/physics_vendor/crane
+              git config --global --add safe.directory /opt/physics_vendor/squirrel
+              git config --global --add safe.directory /opt/physics_vendor/zapdos
+              export MOOSE_DIR=/opt/physics_vendor/moose CRANE_DIR=/opt/physics_vendor/crane SQUIRREL_DIR=/opt/physics_vendor/squirrel ZAPDOS_DIR=/opt/physics_vendor/zapdos METHOD=opt
+              make -C physics_app -j2
+              cd experiments/fem_fvm_plasma_discriminator
+              python3 prepare_wall_subcell_compare.py
+              python3 prepare_wall_temperature_subgrid.py
+              CASE4E="hybrid_method4e_particle_energy_subgrid"
+              CASE4T="hybrid_method4t_wall_temperature_subgrid"
+              ../../physics_app/physics-opt -i "${CASE4E}.i" --check-input
+              ../../physics_app/physics-opt -i "${CASE4T}.i" --check-input
+              OUTDIR="output_wall_temperature_subgrid"
+              rm -rf "$OUTDIR" && mkdir -p "$OUTDIR/method4e" "$OUTDIR/method4t"
+              run_case() {
+                stem="$1"; dest="$2"; set +e
+                /usr/bin/time -f "wall_seconds=%e\nuser_seconds=%U\nsystem_seconds=%S\nmax_rss_kb=%M" -o "$dest/wall_time.txt" \
+                  timeout --signal=TERM 45m stdbuf -oL -eL ../../physics_app/physics-opt -i "${stem}.i" > "$dest/run.log" 2>&1
+                rc=$?; set -e; echo "run_rc=$rc" > "$dest/status.txt"
+                cp "${stem}.i" "$dest/"; cp "${stem}_out.csv" "$dest/" 2>/dev/null || true; cp "${stem}_out.e" "$dest/" 2>/dev/null || true
+                return "$rc"
+              }
+              set +e
+              run_case "$CASE4E" "$OUTDIR/method4e" & p4e=$!
+              run_case "$CASE4T" "$OUTDIR/method4t" & p4t=$!
+              wait "$p4e"; rc4e=$?; wait "$p4t"; rc4t=$?; set -e
+              printf "method4e_rc=%s\nmethod4t_rc=%s\n" "$rc4e" "$rc4t" > "$OUTDIR/status.txt"
+              if [ "$rc4e" -ne 0 ] || [ "$rc4t" -ne 0 ]; then exit 1; fi
+            '
+      - name: Upload comparison result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fv-wall-temperature-subgrid-compare-dt1ns
+          path: experiments/fem_fvm_plasma_discriminator/output_wall_temperature_subgrid/**
+          retention-days: 30
