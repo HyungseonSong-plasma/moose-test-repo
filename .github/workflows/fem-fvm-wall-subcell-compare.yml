@@ -46,14 +46,14 @@ jobs:
               cd experiments/fem_fvm_plasma_discriminator
               python3 prepare_wall_subcell_compare.py
 
-              CASE1="hybrid_method1_linear_reconstruction"
               CASE4="hybrid_method4_wall_subgrid"
-              ../../physics_app/physics-opt -i "${CASE1}.i" --check-input
+              CASE4E="hybrid_method4e_particle_energy_subgrid"
               ../../physics_app/physics-opt -i "${CASE4}.i" --check-input
+              ../../physics_app/physics-opt -i "${CASE4E}.i" --check-input
 
               OUTDIR="output_wall_subcell_compare"
               rm -rf "$OUTDIR"
-              mkdir -p "$OUTDIR/method1" "$OUTDIR/method4"
+              mkdir -p "$OUTDIR/method4" "$OUTDIR/method4e"
 
               run_case() {
                 stem="$1"
@@ -76,18 +76,18 @@ jobs:
               }
 
               set +e
-              run_case "$CASE1" "$OUTDIR/method1" & p1=$!
               run_case "$CASE4" "$OUTDIR/method4" & p4=$!
-              wait "$p1"; rc1=$?
+              run_case "$CASE4E" "$OUTDIR/method4e" & p4e=$!
               wait "$p4"; rc4=$?
+              wait "$p4e"; rc4e=$?
               set -e
 
               cp prepare_cases.py prepare_cases_plasma_only.py prepare_hybrid_1ns.py \
                  prepare_wall_subcell_compare.py "$OUTDIR/"
-              echo "method1_rc=$rc1" > "$OUTDIR/status.txt"
-              echo "method4_rc=$rc4" >> "$OUTDIR/status.txt"
+              echo "method4_rc=$rc4" > "$OUTDIR/status.txt"
+              echo "method4e_rc=$rc4e" >> "$OUTDIR/status.txt"
 
-              if [ "$rc1" -ne 0 ] || [ "$rc4" -ne 0 ]; then
+              if [ "$rc4" -ne 0 ] || [ "$rc4e" -ne 0 ]; then
                 exit 1
               fi
             '
@@ -96,6 +96,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: fv-wall-subcell-compare-dt1ns
+          name: fv-wall-subcell-particle-energy-compare-dt1ns
           path: experiments/fem_fvm_plasma_discriminator/output_wall_subcell_compare/**
           retention-days: 30
