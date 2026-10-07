@@ -13,36 +13,32 @@ import prepare_wall_layer_hrefine as wall
 # Exodus node map (1-based) -> libMesh id (0-based):
 #   midpoint 1318 of coarse edge (13,1236) -> 1317 of (12,1235)
 #   midpoint 1325 of coarse edge (13,1238) -> 1324 of (12,1237)
-COARSE_P1_CONSTRAINTS = (
-    (1317, (12, 1235)),
-    (1324, (12, 1237)),
-)
-PENALTY = 1.0e6
+SECONDARY = (1317, 1324)
+PRIMARY_A = (12, 12)
+PRIMARY_B = (1235, 1237)
+
+
+def ids(values):
+    return " ".join(str(v) for v in values)
 
 
 def coarse_p1_potential() -> str:
     text = wall.wall_layer_hrefine()
 
-    blocks = ["[Constraints]"]
-    for secondary, primary in COARSE_P1_CONSTRAINTS:
-        blocks.append(
-            f"""  [coarse_p1_phi_{secondary}]
-    type = LinearNodalConstraint
-    variable = potential
-    primary = '{primary[0]} {primary[1]}'
-    secondary_node_ids = '{secondary}'
-    weights = '0.5 0.5'
-    formulation = penalty
-    penalty = {PENALTY:.17g}
-  []"""
-        )
-    blocks.append("[]")
-    constraints = "\n".join(blocks) + "\n\n"
+    problem = f"""[Problem]
+  type = PhysicsCoarseP1ConstraintProblem
+  coarse_p1_variable = potential
+  coarse_p1_secondary_nodes = '{ids(SECONDARY)}'
+  coarse_p1_primary_nodes_a = '{ids(PRIMARY_A)}'
+  coarse_p1_primary_nodes_b = '{ids(PRIMARY_B)}'
+[]
 
-    marker = "[Postprocessors]\n"
+"""
+
+    marker = "[Mesh]\n"
     if text.count(marker) != 1:
-        raise RuntimeError(f"expected exactly one Postprocessors marker, found {text.count(marker)}")
-    return text.replace(marker, constraints + marker, 1)
+        raise RuntimeError(f"expected exactly one Mesh marker, found {text.count(marker)}")
+    return text.replace(marker, problem + marker, 1)
 
 
 if __name__ == "__main__":
@@ -50,8 +46,9 @@ if __name__ == "__main__":
     out.write_text(coarse_p1_potential(), encoding="utf-8")
     print(f"wrote {out}")
     print("FV transport mesh: plasma_right + plasma_focus_ring wall layer h-refined one level")
-    print("FEM potential: two independent refinement midpoint DOFs penalty-constrained to coarse-P1 interpolation")
-    print(f"penalty={PENALTY:.6g}")
-    for secondary, primary in COARSE_P1_CONSTRAINTS:
-        print(f"  phi[{secondary}] = 0.5*phi[{primary[0]}] + 0.5*phi[{primary[1]}]")
+    print("FEM potential: exact libMesh DofMap constraints retain coarse-P1 midpoint interpolation")
+    for s, a, b in zip(SECONDARY, PRIMARY_A, PRIMARY_B):
+        print(f"  phi[{s}] = 0.5*phi[{a}] + 0.5*phi[{b}]")
+    print("constraint mechanism: System::Constraint -> DofMap::add_constraint_row -> process_constraints")
+    print("no MOOSE LinearNodalConstraint and no penalty residual")
     print(f"dt={base.DT} s; one step")
