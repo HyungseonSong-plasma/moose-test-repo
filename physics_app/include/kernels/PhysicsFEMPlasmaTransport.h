@@ -1,18 +1,11 @@
 #pragma once
 
 #include "ADKernel.h"
+#include "ADTimeKernel.h"
 #include "MooseFunctor.h"
 
 /**
- * Continuous-Galerkin drift-diffusion kernel for a physical density-like state u:
- *
- *   Gamma = z mu u E - D grad(u),   E = -grad(phi)
- *
- * After integration by parts the volume contribution is
- *
- *   grad(test) . [D grad(u) + z mu u grad(phi)].
- *
- * Boundary fluxes are supplied separately through integrated BCs.
+ * Existing physical-state continuous-Galerkin drift-diffusion kernel.
  */
 class PhysicsFEMPlasmaDriftDiffusion : public ADKernel
 {
@@ -30,8 +23,7 @@ protected:
 };
 
 /**
- * Electron Joule-work term for a physical electron-energy density equation [eV/m^3].
- * Adds +E.Gamma_e to the residual, corresponding to Q_J=-E.Gamma_e on the RHS.
+ * Existing physical-state electron Joule-work kernel.
  */
 class PhysicsFEMElectronJouleHeating : public ADKernel
 {
@@ -44,6 +36,63 @@ protected:
 
   const ADVariableValue & _electron_density;
   const ADVariableGradient & _grad_electron_density;
+  const ADVariableGradient & _grad_potential;
+  const Moose::Functor<ADReal> & _mobility;
+  const Moose::Functor<ADReal> & _diffusion;
+};
+
+/**
+ * Conservative backward-Euler time derivative of c=exp(u), where u is a log-molar state.
+ */
+class PhysicsFEMLogMolarTimeDerivative : public ADTimeKernel
+{
+public:
+  static InputParameters validParams();
+  PhysicsFEMLogMolarTimeDerivative(const InputParameters & parameters);
+
+protected:
+  ADReal computeQpResidual() override;
+
+  const VariableValue & _u_old;
+};
+
+/**
+ * Continuous-Galerkin drift-diffusion for a log-molar state u=log(c):
+ *
+ *   Gamma = z mu c E - D grad(c),  c=exp(u), E=-grad(phi).
+ *
+ * The volume residual is grad(test).[D grad(c) + z mu c grad(phi)].
+ */
+class PhysicsFEMLogMolarDriftDiffusion : public ADKernel
+{
+public:
+  static InputParameters validParams();
+  PhysicsFEMLogMolarDriftDiffusion(const InputParameters & parameters);
+
+protected:
+  ADReal computeQpResidual() override;
+
+  const ADVariableGradient & _grad_potential;
+  const Moose::Functor<ADReal> & _mobility;
+  const Moose::Functor<ADReal> & _diffusion;
+  const Real _charge_number;
+};
+
+/**
+ * Electron Joule-work term for log-molar electron density and log-molar energy states.
+ * The residual units are eV mol/(m^3 s), matching exp(log_energy).
+ */
+class PhysicsFEMLogMolarElectronJouleHeating : public ADKernel
+{
+public:
+  static InputParameters validParams();
+  PhysicsFEMLogMolarElectronJouleHeating(const InputParameters & parameters);
+
+protected:
+  ADReal computeQpResidual() override;
+
+  const ADVariableValue & _log_electron_density;
+  const ADVariableGradient & _grad_log_electron_density;
   const ADVariableGradient & _grad_potential;
   const Moose::Functor<ADReal> & _mobility;
   const Moose::Functor<ADReal> & _diffusion;
