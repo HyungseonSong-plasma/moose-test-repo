@@ -1,1 +1,1 @@
-L4 fixed spatial discretization; compare exact time grids to 40 ns: 0.2nsx100+0.4nsx50, 0.4nsx100, 0.8nsx50.
+L4 fixed spatial discretization; compare exact time grids to 40 ns: 0.2nsx100+0.4nsx50, 0.4nsx100, 0.8nsx50. Rerun after validation fix.
