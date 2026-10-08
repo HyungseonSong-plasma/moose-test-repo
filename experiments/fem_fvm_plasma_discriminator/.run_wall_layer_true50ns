@@ -1,1 +1,1 @@
-Trigger L2 and L4 inward wall-layer comparison to physical end_time=50 ns with timestep cutbacks allowed.
+Trigger L2 and L4 inward wall-layer comparison to physical end_time=50 ns after correcting formatted end-time validation.
