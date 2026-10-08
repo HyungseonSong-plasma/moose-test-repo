@@ -90,10 +90,22 @@ jobs:
       - name: Run M2-G prescribed-material chamber in MOOSE
         shell: bash
         run: docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" -i "$CASE/chamber_materials.i" Outputs/file_base="$CASE/results_chamber/chamber_materials" 2>&1 | tee "$CASE/results_chamber/moose.log"
+      - name: Set up independent FEM reference Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install pinned independent FEM dependencies
+        shell: bash
+        run: |
+          python3 -m pip install --disable-pip-version-check --quiet numpy==2.1.2 scipy==1.14.1
+          {
+            python3 --version
+            python3 -c 'import numpy, scipy; print("numpy=" + numpy.__version__); print("scipy=" + scipy.__version__)'
+          } | tee "$CASE/results_chamber/reference_environment.log"
       - name: Run independent complex FEM chamber reference
         shell: bash
         run: |
-          docker run --rm --entrypoint python3 -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" "$CASE/reference_chamber_fem.py" --mesh experiments/Issue18_qvt_plasma_mapping/qvt.msh --output "$CASE/results_chamber/reference.json" 2>&1 | tee "$CASE/results_chamber/reference.log"
+          python3 "$CASE/reference_chamber_fem.py" --mesh experiments/Issue18_qvt_plasma_mapping/qvt.msh --output "$CASE/results_chamber/reference.json" 2>&1 | tee "$CASE/results_chamber/reference.log"
       - name: Analyze M2-G cross-solver chamber equivalence
         shell: bash
         run: python3 "$CASE/analyze_chamber_reference.py" --moose-csv "$CASE/results_chamber/chamber_materials.csv" --reference "$CASE/results_chamber/reference.json" --output "$CASE/results_chamber/analysis.json" | tee "$CASE/results_chamber/analyzer.log"
