@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "issue": 202,
+  "sequence": 1,
+  "title": "Scalar RZ FEM Maxwell three-turn vacuum current-source discriminator",
+  "bundle_paths": [
+    "experiments/Issue202_maxwell_scalar_fem_m0",
+    "experiments/Issue18_qvt_plasma_mapping/qvt.msh"
+  ],
+  "max_parallel": 1,
+  "cases": [
+    {
+      "id": "vacuum_three_coil",
+      "name": "13.56 MHz three-turn prescribed-current vacuum Maxwell baseline",
+      "command": [
+        "bash",
+        "-lc",
+        "set -euo pipefail; CASE=experiments/Issue202_maxwell_scalar_fem_m0; RESULTS=$CASE/results; IMAGE=ghcr.io/hyungseonsong-plasma/physics-runtime@sha256:cda9f0d09a17aed5fa606e97d1ee5c3450f7280536cec2e5c635402bb07d972c; mkdir -p $RESULTS; python3 $CASE/check_contract.py | tee $RESULTS/contract.log; docker pull $IMAGE; docker run --rm -v \"$PWD:/workspace\" -w /workspace $IMAGE --check-input -i $CASE/input.i 2>&1 | tee $RESULTS/check_input.log; docker run --rm -v \"$PWD:/workspace\" -w /workspace $IMAGE -i $CASE/input.i Outputs/file_base=$CASE/results/vacuum_three_coil 2>&1 | tee $RESULTS/runtime.log"
+      ],
+      "timeout_seconds": 1200,
+      "artifacts": [
+        "experiments/Issue202_maxwell_scalar_fem_m0/results/contract.log",
+        "experiments/Issue202_maxwell_scalar_fem_m0/results/check_input.log",
+        "experiments/Issue202_maxwell_scalar_fem_m0/results/runtime.log",
+        "experiments/Issue202_maxwell_scalar_fem_m0/results/vacuum_three_coil.e"
+      ]
+    }
+  ]
+}
