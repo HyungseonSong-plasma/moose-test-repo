@@ -164,6 +164,60 @@ Actions run: 37825300568
 
 Medium-to-fine `E_imag_l2` change is `0.04547%`; all four signed-probe changes are below `0.023%`. Observed L2 convergence order is about `1.86`. The committed chamber baseline remains `mesh_refine=0`; refinement levels are validation overrides.
 
+### M2-C conducting-cylinder / skin-depth analytical verification — PASS
+
+```text
+semantic head: c9ec4d6d3753701f557a88cf37a7ed7da4fba83f
+Actions run: 37829518687
+artifact: Issue_202_Maxwell_M2_validation
+```
+
+The independent axisymmetric conducting-cylinder case uses
+
+```text
+frequency = 13.56 MHz
+sigma_R   = 100 S/m
+R         = 0.05 m
+```
+
+with exact solution
+
+```text
+E(r) = J1(kappa r) / J1(kappa R)
+kappa^2 = omega^2 mu0 eps0 - i omega mu0 sigma
+```
+
+and classical skin depth
+
+```text
+delta = sqrt(2/(omega mu0 sigma)) = 0.0136675379005 m
+```
+
+The maximum complex relative error over five radial probes decreases from `4.8278e-4` on the base mesh to `1.2068e-4` on one global refinement (`0.0121%`). Refinement improves every probe. This independently validates the scalar-RZ `E_theta/r^2` term, `exp(+i omega t)` sign convention, and real/imaginary conductivity coupling for real positive conductivity.
+
+### M2-D dielectric/material-interface analytical verification — PASS
+
+```text
+semantic head: c9ec4d6d3753701f557a88cf37a7ed7da4fba83f
+Actions run: 37829518687
+artifact: Issue_202_Maxwell_M2_validation
+```
+
+An independent two-layer Helmholtz case isolates material coefficient placement and conformal-interface behavior:
+
+```text
+frequency       = 1 GHz
+epsilon_r,left  = 1
+epsilon_r,right = 4
+interface       = x = 0.025 m
+E(0)            = 0
+E(0.05)         = 1
+```
+
+No explicit interface BC is applied. The exact piecewise transfer-matrix solution has continuous `E` and, for constant `mu`, continuous `dE/dx`. The maximum probe relative error decreases from `1.8588e-5` to `4.6470e-6` (`0.000465%`) after one global refinement, and every probe improves. The interface value itself agrees to `4.5572e-6` relative error on the refined mesh.
+
+Together, M2-C and M2-D support the current standard-object realization of complex conductivity and discontinuous dielectric coefficients without a custom Maxwell kernel or custom interface BC.
+
 ## Correction: previous outer-domain stretch is NOT an M2-F failure
 
 A previous diagnostic stretched the existing top/right/bottom regions by factors up to 32 while retaining `E_theta=0` on the moved boundary. That diagnostic produced large internal-field changes, but the interpretation as a numerical outer-truncation sensitivity test was invalid.
@@ -182,22 +236,13 @@ The historical stretch data remain provenance only and are not used to accept or
 
 Open-space `EMRobinBC`, infinite-element, or free-space Green-function treatments may still be useful for separate standalone open-domain reference problems, but they are not replacement production BCs for this conducting-chamber model.
 
-## Next standalone material V&V
+## Next standalone gate
 
-The next gate is the M2 material ladder:
-
-```text
-M2-C prescribed conducting medium / skin-depth case
-M2-D dielectric/material-interface case
-```
-
-These tests must validate the real/imaginary conductivity coupling and material coefficient placement independently of plasma feedback before the chamber plasma is assigned a physical conductivity model.
+With source normalization, source phase, mesh convergence, prescribed conductivity/skin depth, and dielectric-interface coefficient placement now bounded by independent discriminators, the next high-value standalone gate is prescribed-material chamber equivalence against an independent external reference (M2-G), followed by the RF absorbed-power expression needed for M3 transfer work.
 
 ## Deferred work
 
 - plasma-state -> conductivity feedback;
-- dielectric/interface reference acceptance;
-- prescribed-conductivity / skin-depth acceptance;
 - copper skin/proximity in the physical coil conductor;
 - voltage/circuit/fixed-power drive;
 - conservative RF-power transfer into electron energy;
