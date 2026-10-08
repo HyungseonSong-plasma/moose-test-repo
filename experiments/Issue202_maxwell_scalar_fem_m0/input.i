@@ -35,7 +35,7 @@ wave_k2 = ${fparse omega*omega*mu0*eps0}
 
   [base]
     type = FileMeshGenerator
-    file = 'experiments/Issue18_qvt_plasma_mapping/qvt.msh'
+    file = '../Issue18_qvt_plasma_mapping/qvt.msh'
   []
 
   # r = x because the RZ symmetry axis is Y.  E_theta = 0 here is a
