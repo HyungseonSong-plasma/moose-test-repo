@@ -1,22 +1,22 @@
 # Issue #202 — scalar RZ FEM Maxwell M0/M1 baseline
 
-This directory is the first implementation surface for the canonical Maxwell / RF-ICP issue #202.
+This directory is the bounded standalone Maxwell implementation and V&V surface completed under issue #202.
 
-## Status
+## Final status
 
 ```text
-PHASE                    = M0/M1 candidate implementation + bounded M2 V&V
 REPRESENTATION           = scalar axisymmetric E_theta
 DISCRETIZATION           = continuous FEM
 PHASOR                    = exp(+i omega t), peak amplitude
 COIL DRIVE                = prescribed current
 CHAMBER WALL              = physical conductor, E_theta = 0 (PEC baseline)
 COPPER SKIN/PROXIMITY     = OFF in the chamber baseline
-PLASMA FEEDBACK           = OFF in standalone Maxwell V&V
-SCIENTIFIC ACCEPTANCE     = NOT CLAIMED
+PLASMA FEEDBACK           = OUT OF SCOPE HERE
+STANDALONE MAXWELL M2     = CLOSED / ACCEPTED FOR THIS BOUNDED SCOPE
+NEXT WORK                 = separate plasma-transfer issue
 ```
 
-Passing an input or CI job is not Maxwell scientific acceptance.
+The bounded scope completed here validates the scalar-RZ Maxwell realization, prescribed complex material response, and RF absorbed-power expression. It does **not** claim full coupled ICP scientific acceptance.
 
 ## Frozen equation
 
@@ -56,8 +56,6 @@ S_real = 0
 S_imag = -omega mu0 J_theta^e
 ```
 
-The first vacuum/source case sets `epsilon_r = 1`, `sigma = 0` everywhere and isolates geometry, axis regularity, coil normalization, source phase/sign, and the scalar-RZ operator.
-
 ## Canonical boundary semantics
 
 The current `qvt.msh` domain is the physical chamber, not an arbitrary far-field truncation.
@@ -75,41 +73,11 @@ internal conformal interfaces:
     no explicit BC
 ```
 
-For the scalar azimuthal RF field, `E_theta` is tangential to the conducting chamber wall. The PEC condition `n x E = 0` therefore gives `E_theta = 0` on the chamber boundary. This boundary is not moved in canonical chamber calculations.
+For the scalar azimuthal RF field, `E_theta` is tangential to the conducting chamber wall. The PEC condition `n x E = 0` therefore gives `E_theta = 0` on the chamber boundary.
 
-No custom Maxwell kernel or BC is introduced at this stage.
+## Coil normalization
 
-## MOOSE implementation map
-
-| Maxwell term | MOOSE route | Notes |
-| --- | --- | --- |
-| `-laplacian_RZ(E)` | `Diffusion` | RZ coordinate system supplies the axisymmetric measure/operator |
-| `a E` | `MatReaction` | supplied as `neg_a = -a` because `MatReaction` carries its documented minus sign |
-| real/imag `b` coupling | `MatCoupledForce` | standard composition for complex conductivity |
-| impressed coil current | `BodyForce` | three independent block-scoped sources |
-| axis regularity | `DirichletBC` | `E_theta=0` at `r=0`; not a wall model |
-| conducting chamber | `DirichletBC` | physical PEC baseline, `E_theta=0` |
-
-## Existing mesh and coil mapping
-
-The case reuses `experiments/Issue18_qvt_plasma_mapping/qvt.msh` with
-
-```text
-coord_type    = RZ
-rz_coord_axis = Y
-r = x
-z = y
-```
-
-The three coil physical blocks are separate ring-turn cross sections:
-
-| Block | radial interval [m] | axial interval [m] | cross-section [m^2] |
-| --- | ---: | ---: | ---: |
-| `coil1` | 0.0495–0.0585 | 0.342–0.360 | 1.62e-4 |
-| `coil2` | 0.1125–0.1215 | 0.342–0.360 | 1.62e-4 |
-| `coil3` | 0.1710–0.1800 | 0.342–0.360 | 1.62e-4 |
-
-They are interpreted as three physical turns of one series coil:
+The three named RZ coil blocks are interpreted as three physical turns of one series coil:
 
 ```text
 I1 = I2 = I3 = I_coil
@@ -119,18 +87,16 @@ integral_Ak J_theta,k dA = I_coil
 
 There is no additional factor of three in an individual turn and no division by `2*pi*r`.
 
-## Default source point
+Default source:
 
 ```text
 frequency = 13.56 MHz
 I_peak    = 10 A
 ```
 
-Peak phasors are used throughout. RMS experimental currents must be converted with `I_peak = sqrt(2) I_rms` before using the peak-phasor power convention.
+## Accepted bounded V&V evidence
 
-## Accepted bounded runtime evidence
-
-### Source normalization, phase, linearity, and superposition
+### Source normalization / phase / superposition
 
 ```text
 baseline semantic head: f568cec35b70dd1530e066df460e4451ab317af5
@@ -149,7 +115,7 @@ Actions run: 37824371343
 max signed-probe basis mismatch: ~5.0e-13 V/m
 ```
 
-### Global mesh convergence — PASS
+### Global chamber mesh convergence — PASS
 
 ```text
 semantic head: 33547b7cc4d2431eedceef5610c91c4fc64dca4c
@@ -162,135 +128,85 @@ Actions run: 37825300568
 | 1 | 15,804 | 16,100 | 48.108814494584 |
 | 2 | 63,216 | 63,806 | 48.130698802257 |
 
-Medium-to-fine `E_imag_l2` change is `0.04547%`; all four signed-probe changes are below `0.023%`. Observed L2 convergence order is about `1.86`. The committed chamber baseline remains `mesh_refine=0`; refinement levels are validation overrides.
+Medium-to-fine `E_imag_l2` change is `0.04547%`; all four signed-probe changes are below `0.023%`. Observed L2 convergence order is about `1.86`.
 
-### M2-C conducting-cylinder / skin-depth analytical verification — PASS
-
-```text
-semantic head: c9ec4d6d3753701f557a88cf37a7ed7da4fba83f
-Actions run: 37829518687
-artifact: Issue_202_Maxwell_M2_validation
-```
-
-The independent axisymmetric conducting-cylinder case uses
-
-```text
-frequency = 13.56 MHz
-sigma_R   = 100 S/m
-R         = 0.05 m
-```
-
-with exact solution
-
-```text
-E(r) = J1(kappa r) / J1(kappa R)
-kappa^2 = omega^2 mu0 eps0 - i omega mu0 sigma
-```
-
-and classical skin depth
-
-```text
-delta = sqrt(2/(omega mu0 sigma)) = 0.0136675379005 m
-```
-
-The maximum complex relative error over five radial probes decreases from `4.8278e-4` on the base mesh to `1.2068e-4` on one global refinement (`0.0121%`). Refinement improves every probe. This independently validates the scalar-RZ `E_theta/r^2` term, `exp(+i omega t)` sign convention, and real/imaginary conductivity coupling for real positive conductivity.
-
-### M2-D dielectric/material-interface analytical verification — PASS
+### M2-C conducting-cylinder / skin-depth — PASS
 
 ```text
 semantic head: c9ec4d6d3753701f557a88cf37a7ed7da4fba83f
 Actions run: 37829518687
-artifact: Issue_202_Maxwell_M2_validation
 ```
 
-An independent two-layer Helmholtz case isolates material coefficient placement and conformal-interface behavior:
+At 13.56 MHz with `sigma=100 S/m`, the exact Bessel `J1` solution is matched to `1.2068e-4` maximum complex relative error on the refined mesh (`0.0121%`). This validates the scalar-RZ geometric term, conductivity coupling, and phasor sign convention.
 
-```text
-frequency       = 1 GHz
-epsilon_r,left  = 1
-epsilon_r,right = 4
-interface       = x = 0.025 m
-E(0)            = 0
-E(0.05)         = 1
-```
+### M2-D dielectric/material interface — PASS
 
-No explicit interface BC is applied. The exact piecewise transfer-matrix solution has continuous `E` and, for constant `mu`, continuous `dE/dx`. The maximum probe relative error decreases from `1.8588e-5` to `4.6470e-6` (`0.000465%`) after one global refinement, and every probe improves. The interface value itself agrees to `4.5572e-6` relative error on the refined mesh.
-
-Together, M2-C and M2-D support the current standard-object realization of complex conductivity and discontinuous dielectric coefficients without a custom Maxwell kernel or custom interface BC.
+The independent two-layer Helmholtz case with `epsilon_r: 1 -> 4` and no explicit interface BC matches the transfer-matrix analytical solution to `4.6470e-6` maximum relative error on the refined mesh (`0.000465%`).
 
 ### M2-G prescribed-material chamber cross-solver equivalence — PASS
 
 ```text
-exact semantic head: 915c531d83eaf270f634ae9c73aaccf4f96e6390
-Actions run:        37832228877
-artifact ID:        11573438018
-artifact:           Issue_202_Maxwell_M2_validation
+semantic head: 915c531d83eaf270f634ae9c73aaccf4f96e6390
+Actions run: 37832228877
 ```
 
-This gate uses the physical `qvt.msh` chamber geometry and physical conducting-wall PEC semantics, but deliberately prescribed validation coefficients rather than a plasma-state constitutive model:
+Frozen chamber validation coefficients include plasma `sigma = 5 - 10 i S/m`, cover `epsilon_r=3.6`, wafer `12.5`, and focus ring `8`. MOOSE is compared against an independently assembled complex scalar-RZ H1 FEM solver on the same mesh.
+
+Maximum discrepancies:
 
 ```text
-frequency          = 13.56 MHz
-I_peak             = 10 A
-plasma epsilon_r   = 1
-plasma sigma       = 5 - 10 i S/m
-cover epsilon_r    = 3.6
-wafer epsilon_r    = 12.5
-focus_ring epsilon_r = 8
-other blocks       = epsilon_r 1, sigma 0
+complex field relative error = 4.1418e-6
+magnitude relative error     = 4.0054e-6
+phase error                  = 6.0408e-5 deg
 ```
 
-The MOOSE solution is compared at 14 fixed probes against an independently assembled complex scalar-RZ H1 FEM solver reading the same Gmsh mesh. The reference assembly uses its own sparse complex matrix path with Python 3.12.15, NumPy 2.1.2, and SciPy 1.14.1; it does not call MOOSE and is not presented as a COMSOL result.
+### RF absorbed-power gate — PASS
 
 ```text
-reference linear residual        = 6.0951714412e-15
-max complex relative error       = 4.1418336839e-6
-max magnitude relative error     = 4.0053960597e-6
-max phase error                  = 6.0407911150e-5 deg
-nonzero real probes              = 14 / 14
-nonzero imaginary probes         = 14 / 14
+semantic head: fb27e232924a0ee11010669eff287d9b953f1a31
+Actions run: 37836361274
+artifact ID: 11575123517
 ```
 
-All errors are far inside the predeclared M2-G gates (`0.5%` complex magnitude/field and `0.5 deg` phase). This validates, on the actual chamber mesh, the assembled scalar-RZ geometric term, piecewise dielectric coefficients, complex-conductivity real/imaginary coupling, source normalization/sign, PEC wall semantics, and conformal material interfaces against an independent solver path.
-
-This is a bounded cross-solver equivalence result. It does **not** establish that the prescribed `5 - 10 i S/m` conductivity is the final physical oxygen-plasma conductivity, does **not** validate copper skin/proximity physics, and does **not** substitute for future COMSOL/experimental chamber comparison.
-
-## Correction: previous outer-domain stretch is NOT an M2-F failure
-
-A previous diagnostic stretched the existing top/right/bottom regions by factors up to 32 while retaining `E_theta=0` on the moved boundary. That diagnostic produced large internal-field changes, but the interpretation as a numerical outer-truncation sensitivity test was invalid.
-
-The reason is physical: `outer_right`, `outer_bottom`, and `outer_top` represent the conducting chamber wall. Moving them changes the physical chamber geometry rather than merely moving an artificial far-field boundary.
-
-Therefore:
-
-```text
-previous classification FINITE_DIRICHLET_TAIL_NOT_CONVERGED = RETRACTED
-M2-F FAIL claim from chamber-wall movement                 = RETRACTED
-canonical chamber-wall E_theta=0                           = RETAINED
-```
-
-The historical stretch data remain provenance only and are not used to accept or reject the physical chamber BC.
-
-Open-space `EMRobinBC`, infinite-element, or free-space Green-function treatments may still be useful for separate standalone open-domain reference problems, but they are not replacement production BCs for this conducting-chamber model.
-
-## Next standalone gate
-
-With source normalization, source phase, mesh convergence, conducting-material skin depth, dielectric-interface placement, and prescribed-material chamber cross-solver equivalence bounded, the next gate is RF absorbed-power validation before M3 transfer work:
+Peak-phasor heating is
 
 ```text
 Q_RF = 0.5 * sigma_R * (E_real^2 + E_imag^2)
-P_abs = 2*pi * integral_plasma r * Q_RF dr dz
+P_abs = integral_plasma Q_RF dV
+      = 2*pi * integral_plasma r * Q_RF dr dz
 ```
 
-Required counterfactuals include `sigma_R -> 0 => P_abs -> 0`, `E_RF -> 0 => Q_RF -> 0`, and explicit verification that `sigma_I` is reactive rather than directly dissipative.
+For prescribed `sigma = 5 - 10 i S/m`, 13.56 MHz, and 10 A peak:
 
-## Deferred work
+```text
+MOOSE P_abs       = 175.81487393245 W
+independent P_abs = 175.81488589464578 W
+relative mismatch = 6.8039e-8
+```
 
-- plasma-state -> conductivity feedback;
-- copper skin/proximity in the physical coil conductor;
-- voltage/circuit/fixed-power drive;
-- conservative RF-power transfer into electron energy;
-- COMSOL / external-reference chamber field-profile equivalence;
-- closed-loop ICP coupling.
+Counterfactuals:
 
-These remain under issue #202 M1–M5 gates.
+```text
+sigma_R=sigma_I=0                 -> nonzero RF field, P_abs=0
+sigma_R=0, sigma_I=-10 S/m        -> nonzero RF field, P_abs=0
+source_scale=0                    -> E=0, P_abs=0
+```
+
+This confirms that `sigma_R` is dissipative while `sigma_I` is reactive in the adopted convention.
+
+## Historical chamber-wall stretch diagnostic
+
+A previous diagnostic moved the physical top/right/bottom chamber walls and was initially misclassified as an outer-truncation sensitivity test. That classification was retracted because moving those walls changes the physical chamber geometry. The historical data remain provenance only and do not invalidate the canonical PEC chamber BC.
+
+## Handoff boundary
+
+Issue #202 stops here. The following are intentionally deferred to a separate issue:
+
+- conservative Maxwell-FE `Q_RF` -> plasma electron-energy transfer;
+- FE/FV conservation invariant;
+- coupled `plasma state -> sigma -> Maxwell -> Q_RF -> electron energy` loop;
+- transfer-off / RF-off counterfactuals;
+- coupled timestep/fixed-point convergence;
+- full ICP power closure and representative oxygen-plasma validation.
+
+COMSOL chamber-profile equivalence may be added later as another independent reference, but is not required to close this bounded standalone Maxwell work package.
