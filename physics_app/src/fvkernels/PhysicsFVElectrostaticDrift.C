@@ -13,7 +13,8 @@ PhysicsFVElectrostaticDrift::validParams()
 
   params.addClassDescription(
       "Finite-volume electrostatic drift flux using E = -grad(phi) and "
-      "framework-consistent FV advection interpolation.");
+      "framework-consistent FV advection interpolation. Mixed FE/FV systems "
+      "may reconstruct the face electric field from adjacent element gradients.");
 
   params.addRequiredParam<MooseFunctorName>(
       "potential", "Electrostatic potential phi [V].");
@@ -44,6 +45,14 @@ PhysicsFVElectrostaticDrift::validParams()
       "potential in the electric-field factor. This removes the n^{n+1}*grad(phi^{n+1}) "
       "bilinear product without making the electrostatic field explicit.");
 
+  params.addParam<bool>(
+      "use_element_gradient_for_potential",
+      false,
+      "Reconstruct E=-grad(phi) at an internal FV face by averaging the adjacent "
+      "element gradients, and use the adjacent-element gradient at an external "
+      "boundary. Enable this when potential is a continuous FEM variable, because "
+      "continuous FEM functors do not implement FaceArg gradients.");
+
   // Match the framework FVAdvection interpolation contract.
   params += Moose::FV::advectedInterpolationParameter();
 
@@ -71,7 +80,9 @@ PhysicsFVElectrostaticDrift::PhysicsFVElectrostaticDrift(
     _freeze_upwind_direction_to_old_potential(
         getParam<bool>("freeze_upwind_direction_to_old_potential")),
     _lag_advected_variable_to_old_time(
-        getParam<bool>("lag_advected_variable_to_old_time"))
+        getParam<bool>("lag_advected_variable_to_old_time")),
+    _use_element_gradient_for_potential(
+        getParam<bool>("use_element_gradient_for_potential"))
 {
   if (_charge_number == 0.0)
     paramError(
@@ -92,15 +103,11 @@ PhysicsFVElectrostaticDrift::computeQpResidual()
 {
   const auto state = determineState();
 
-  // This follows the framework FVAdvection convention: the limiter stencil
-  // for a transient solve is based on the previous time state instead of
-  // changing with the current nonlinear iterate.
   const auto & limiter_time =
       _subproblem.isTransient()
           ? Moose::StateArg(1, Moose::SolutionIterationType::Time)
           : Moose::StateArg(1, Moose::SolutionIterationType::Nonlinear);
 
-  // Smooth electrostatic quantities use a centered face evaluation.
   const auto centered_face =
       makeFace(*_face_info,
                Moose::FV::LimiterType::CentralDifference,
@@ -108,9 +115,33 @@ PhysicsFVElectrostaticDrift::computeQpResidual()
                false,
                &limiter_time);
 
-  // The electrostatic factor stays fully implicit in all diagnostic modes.
-  const ADRealVectorValue electric_field =
-      -_potential.gradient(centered_face, state);
+  // FE functors do not implement FaceArg gradients.  For the mixed FE/FV
+  // bridge evaluate grad(phi) in adjacent elements and interpolate that vector
+  // to the face.  This keeps the field fully AD-coupled to the FEM potential.
+  const auto electricField = [this, &centered_face](const auto & eval_state)
+      -> ADRealVectorValue
+  {
+    if (!_use_element_gradient_for_potential)
+      return -_potential.gradient(centered_face, eval_state);
+
+    if (_var.isInternalFace(*_face_info))
+    {
+      const auto grad_elem = _potential.gradient(elemArg(), eval_state);
+      const auto grad_neighbor = _potential.gradient(neighborArg(), eval_state);
+      ADRealVectorValue grad_face;
+      Moose::FV::interpolate(Moose::FV::InterpMethod::Average,
+                             grad_face,
+                             grad_elem,
+                             grad_neighbor,
+                             *_face_info,
+                             true);
+      return -grad_face;
+    }
+
+    return -_potential.gradient(elemArg(), eval_state);
+  };
+
+  const ADRealVectorValue electric_field = electricField(state);
 
   const ADReal mobility_face = _mobility(centered_face, state);
   const ADReal carrier_face = _carrier(centered_face, state);
@@ -122,8 +153,7 @@ PhysicsFVElectrostaticDrift::computeQpResidual()
   if (_freeze_upwind_direction_to_old_potential && _subproblem.isTransient())
   {
     const Moose::StateArg old_time_state(1, Moose::SolutionIterationType::Time);
-    const ADRealVectorValue old_electric_field =
-        -_potential.gradient(centered_face, old_time_state);
+    const ADRealVectorValue old_electric_field = electricField(old_time_state);
     const Real old_drift_direction =
         _charge_number * MetaPhysicL::raw_value(old_electric_field * _normal);
     elem_is_upwind = old_drift_direction >= 0.0;
