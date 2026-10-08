@@ -1,8 +1,8 @@
 {
   "targets": [
     {
-      "branch": "ops/adopt-samuel-skill-first",
-      "expected_sha": "a4fc7ee36162a00122a75f0a9ce17fc2507a6da5"
+      "branch": "issue-331-governed-compile-manifest",
+      "expected_sha": "31baf25a9662453aa1b02dcc341535392f59a473"
     }
   ]
 }
