@@ -113,22 +113,21 @@ jobs:
           } | tee "$CASE/results_chamber/reference_environment.log"
       - name: Run independent complex FEM chamber reference
         shell: bash
-        run: python3 "$CASE/reference_chamber_fem.py" --mesh experiments/Issue18_qvt_plasma_mapping/qvt.msh --output "$CASE/results_chamber/reference.json" 2>&1 | tee "$CASE/results_chamber/reference.log"
+        run: |
+          python3 "$CASE/reference_chamber_fem.py" --mesh experiments/Issue18_qvt_plasma_mapping/qvt.msh --output "$CASE/results_chamber/reference.json" 2>&1 | tee "$CASE/results_chamber/reference.log"
       - name: Analyze M2-G cross-solver chamber equivalence
         shell: bash
         run: python3 "$CASE/analyze_chamber_reference.py" --moose-csv "$CASE/results_chamber/chamber_materials.csv" --reference "$CASE/results_chamber/reference.json" --output "$CASE/results_chamber/analysis.json" | tee "$CASE/results_chamber/analyzer.log"
       - name: Run independent RF absorbed-power references
         shell: bash
         run: |
-          set -euo pipefail
-          MESH=experiments/Issue18_qvt_plasma_mapping/qvt.msh
-          python3 "$CASE/reference_rf_power.py" --mesh "$MESH" --sigma-real 5 --sigma-imag -10 --source-scale 1 --output "$CASE/results_power/reference_baseline.json"
-          python3 "$CASE/reference_rf_power.py" --mesh "$MESH" --sigma-real 0 --sigma-imag 0 --source-scale 1 --output "$CASE/results_power/reference_lossless.json"
-          python3 "$CASE/reference_rf_power.py" --mesh "$MESH" --sigma-real 0 --sigma-imag -10 --source-scale 1 --output "$CASE/results_power/reference_reactive_only.json"
-          python3 "$CASE/reference_rf_power.py" --mesh "$MESH" --sigma-real 5 --sigma-imag -10 --source-scale 0 --output "$CASE/results_power/reference_field_off.json"
+          python3 "$CASE/reference_rf_power.py" --mesh experiments/Issue18_qvt_plasma_mapping/qvt.msh --sigma-real 5 --sigma-imag -10 --source-scale 1 --output "$CASE/results_power/reference_baseline.json"
+          python3 "$CASE/reference_rf_power.py" --mesh experiments/Issue18_qvt_plasma_mapping/qvt.msh --sigma-real 0 --sigma-imag 0 --source-scale 1 --output "$CASE/results_power/reference_lossless.json"
+          python3 "$CASE/reference_rf_power.py" --mesh experiments/Issue18_qvt_plasma_mapping/qvt.msh --sigma-real 0 --sigma-imag -10 --source-scale 1 --output "$CASE/results_power/reference_reactive_only.json"
+          python3 "$CASE/reference_rf_power.py" --mesh experiments/Issue18_qvt_plasma_mapping/qvt.msh --sigma-real 5 --sigma-imag -10 --source-scale 0 --output "$CASE/results_power/reference_field_off.json"
       - name: Analyze RF absorbed-power gate
         shell: bash
-        run: python3 "$CASE/analyze_rf_power.py" --dir "$CASE/results_power" --output "$CASE/results_power/analysis.json" | tee "$CASE/results_power/analyzer.log"
+        run: python3 "$CASE/analyze_rf_power.py" --results-dir "$CASE/results_power" --output "$CASE/results_power/analysis.json" | tee "$CASE/results_power/analyzer.log"
       - name: Upload Maxwell M2 evidence
         if: always()
         uses: actions/upload-artifact@v4
