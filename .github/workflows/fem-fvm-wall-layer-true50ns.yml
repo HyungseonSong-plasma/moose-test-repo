@@ -51,7 +51,7 @@ jobs:
               CASE="hybrid_wall_layer_L${WALL_LAYERS}_coarse_p1_50ns"
               grep -q "layers = ${WALL_LAYERS}" "${CASE}.i"
               grep -q "num_steps = 100" "${CASE}.i"
-              grep -q "end_time = 5.*e-08" "${CASE}.i"
+              grep -q "end_time = 4.9999999999999998e-08" "${CASE}.i"
               ../../physics_app/physics-opt -i "${CASE}.i" --check-input
 
               OUTDIR="output_wall_layer_true50ns/L${WALL_LAYERS}"
@@ -75,7 +75,7 @@ jobs:
                 final_time=$(tail -n 1 "${CASE}_out.csv" | cut -d, -f1)
                 echo "final_time=$final_time"
                 case "$final_time" in
-                  5e-08|5.0e-08|5.0000000000000e-08) ;;
+                  5e-08|5.0e-08|5.0000000000000e-08|4.9999999999999998e-08) ;;
                   *) echo "ERROR: successful run did not end at 50 ns: $final_time" >&2; exit 3 ;;
                 esac
               fi
