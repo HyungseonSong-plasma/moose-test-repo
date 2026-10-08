@@ -31,7 +31,7 @@ jobs:
           python3 ci/guards/workflow_surface_guard.py --check
       - name: Regression-test central Skill manifest contract
         run: python3 ci/guards/central_skill_contract_guard.py --self-test
-      - name: Validate Paul central operating contracts
+      - name: Validate Samuel central operating contracts
         shell: bash
         run: |
           set -euo pipefail
@@ -40,20 +40,20 @@ jobs:
           test -f docs/operating_system/README.md
           test -f docs/operating_system/CENTRAL_SKILLS.md
           test -f docs/operating_system/central_skills.json
-          grep -Fq '6474eb7b77f890b7cf9d7134ccebea31662bcdbe' docs/operating_system/README.md
-          grep -Fq 'Expected OS:** Paul' docs/operating_system/README.md
-          grep -Fq '6474eb7b77f890b7cf9d7134ccebea31662bcdbe' docs/operating_system/CENTRAL_SKILLS.md
+          grep -Fq '4599ce446ab8a9e56d872e93541b1215d1702ab0' docs/operating_system/README.md
+          grep -Fq 'Expected OS:** Samuel' docs/operating_system/README.md
+          grep -Fq '4599ce446ab8a9e56d872e93541b1215d1702ab0' docs/operating_system/CENTRAL_SKILLS.md
 
-          # Calvin operating metrics are archive-only under Paul.
+          # Calvin operating metrics remain archive-only under Samuel.
           test ! -e docs/metrics
           test ! -e docs/protocols/metrics_closure.md
           test -d archive/operating_metrics/calvin/docs_metrics
           test -f archive/operating_metrics/calvin/metrics_closure.md
 
-          # Executable central actions use the same exact Paul revision.
-          grep -Fq 'HyungseonSong-plasma/chatgpt-operation/.github/actions/repository-mutation@6474eb7b77f890b7cf9d7134ccebea31662bcdbe' .github/workflows/refactor.yml
-          grep -Fq 'HyungseonSong-plasma/chatgpt-operation/.github/actions/governed-work@6474eb7b77f890b7cf9d7134ccebea31662bcdbe' .github/workflows/refactor.yml
-          grep -Fq 'HyungseonSong-plasma/chatgpt-operation/.github/actions/governed-work@6474eb7b77f890b7cf9d7134ccebea31662bcdbe' .github/workflows/experiment.yml
+          # Executable central actions use the same exact Samuel revision.
+          grep -Fq 'HyungseonSong-plasma/chatgpt-operation/.github/actions/repository-mutation@4599ce446ab8a9e56d872e93541b1215d1702ab0' .github/workflows/refactor.yml
+          grep -Fq 'HyungseonSong-plasma/chatgpt-operation/.github/actions/governed-work@4599ce446ab8a9e56d872e93541b1215d1702ab0' .github/workflows/refactor.yml
+          grep -Fq 'HyungseonSong-plasma/chatgpt-operation/.github/actions/governed-work@4599ce446ab8a9e56d872e93541b1215d1702ab0' .github/workflows/experiment.yml
 
           python3 - <<'PY'
           import json
@@ -63,23 +63,28 @@ jobs:
           assert manifest["schema_version"] == 2
           assert manifest["source_repository"] == "HyungseonSong-plasma/chatgpt-operation"
           os_meta=manifest["operating_system"]
-          assert os_meta["revision"] == "6474eb7b77f890b7cf9d7134ccebea31662bcdbe"
-          assert os_meta["expected_version"] == "Paul"
+          revision="4599ce446ab8a9e56d872e93541b1215d1702ab0"
+          assert os_meta["revision"] == revision
+          assert os_meta["expected_version"] == "Samuel"
           assert os_meta["index"] == {
               "path": "docs/operating_system/README.md",
-              "expected_blob_sha": "38e5ba53b1440abb7722def876c2a278bae30d9f",
+              "expected_blob_sha": "77448ab850a06c141b16976c1c75353e7224973d",
           }
           assert os_meta["essential_rules"] == {
               "path": "docs/operating_system/ESSENTIAL_RULES.md",
-              "expected_blob_sha": "adfad6c7acc7b371b5aa840c6fb830ca696e60ac",
+              "expected_blob_sha": "9d11cb64007964a6c1fdea91779a3b25618a5098",
           }
           assert manifest["skill_catalog"] == {
               "path": "skills/catalog.json",
-              "expected_blob_sha": "8e43eb8a4b8fa334cf6210a638ad25e782d27b90",
+              "expected_blob_sha": "0116d5c33dc88cc2fedea3e5294e847b7bc2cbf5",
+          }
+          assert manifest["capability_registry"] == {
+              "path": "skills/capability-registry.json",
+              "expected_blob_sha": "b5ab05b358f47cdfaa9c9b7841581c519846b857",
           }
 
           entries={item["name"]: item for item in manifest["skills"]}
-          assert set(entries) == {
+          expected_names={
               "session-bootstrap",
               "state-refresh",
               "repository-mutation",
@@ -90,9 +95,12 @@ jobs:
               "github-actions-observation",
               "artifact-staging",
               "scientific-discriminator-controller",
+              "pull-request-merge",
+              "research-controller",
           }
+          assert set(entries) == expected_names
           for item in entries.values():
-              assert item["revision"] == "6474eb7b77f890b7cf9d7134ccebea31662bcdbe"
+              assert item["revision"] == revision
           assert entries["session-bootstrap"]["load_on"] == ["INIT"]
           assert entries["state-refresh"]["load_on"] == ["INIT","SCHEDULED_CONTROLLER"]
           assert entries["repository-mutation"]["load_on"] == ["MUTATE"]
@@ -103,6 +111,8 @@ jobs:
           assert entries["github-actions-observation"]["load_on"] == ["GITHUB_ACTIONS_OBSERVATION"]
           assert entries["artifact-staging"]["load_on"] == ["ARTIFACT_STAGING"]
           assert entries["scientific-discriminator-controller"]["load_on"] == ["SCIENTIFIC_DISCRIMINATOR_CONTROLLER"]
+          assert entries["pull-request-merge"]["load_on"] == ["GITHUB_PR_MERGE"]
+          assert entries["research-controller"]["load_on"] == ["RESEARCH_CONTROLLER"]
 
           policy=json.loads(Path(".chatgpt-operation.json").read_text(encoding="utf-8"))
           assert policy["schema_version"] == 1
@@ -111,11 +121,18 @@ jobs:
           assert "Repository CI" in policy["validation_gate"]["workflows"]
           PY
 
+          central_revision="$(python3 - <<'PY'
+          import json
+          from pathlib import Path
+          manifest=json.loads(Path('docs/operating_system/central_skills.json').read_text(encoding='utf-8'))
+          print(manifest['operating_system']['revision'])
+          PY
+          )"
           central_dir="$(mktemp -d)"
           git -C "$central_dir" init -q
           git -C "$central_dir" remote add origin https://github.com/HyungseonSong-plasma/chatgpt-operation.git
-          git -C "$central_dir" fetch --quiet --depth=1 origin "6474eb7b77f890b7cf9d7134ccebea31662bcdbe"
-          git -C "$central_dir" show "6474eb7b77f890b7cf9d7134ccebea31662bcdbe:skills/catalog.json" > "$central_dir/skill-catalog.json"
+          git -C "$central_dir" fetch --quiet --depth=1 origin "$central_revision"
+          git -C "$central_dir" show "$central_revision:skills/catalog.json" > "$central_dir/skill-catalog.json"
           python3 ci/guards/central_skill_contract_guard.py \
             --manifest docs/operating_system/central_skills.json \
             --catalog "$central_dir/skill-catalog.json"
@@ -134,6 +151,7 @@ jobs:
               manifest["operating_system"]["index"],
               manifest["operating_system"]["essential_rules"],
               manifest["skill_catalog"],
+              manifest["capability_registry"],
           ]
           expected += [
               {"path": item["path"], "expected_blob_sha": item["expected_blob_sha"]}
@@ -148,6 +166,17 @@ jobs:
               assert actual == item["expected_blob_sha"], (
                   item["path"], item["expected_blob_sha"], actual
               )
+
+          readme=subprocess.check_output(
+              ["git","-C",root,"show",f"{revision}:docs/operating_system/README.md"],
+              text=True,
+          )
+          assert "**Current version name:** Samuel" in readme
+          essential=subprocess.check_output(
+              ["git","-C",root,"show",f"{revision}:docs/operating_system/ESSENTIAL_RULES.md"],
+              text=True,
+          )
+          assert essential.startswith("# Samuel Essential Rules")
           PY
           rm -rf "$central_dir"
 
