@@ -10,7 +10,7 @@ on:
 
 jobs:
   run:
-    name: ion-FVM-hybrid-contour-dt1ns-100steps
+    name: ion-FVM-hybrid-contour-dt1ns-300steps
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     env:
@@ -43,8 +43,8 @@ jobs:
               make -C physics_app -j2
               cd experiments/fem_fvm_plasma_discriminator
 
-              CASE="ion_fvm_hybrid_contour_dt1ns_100steps"
-              OUTDIR="output_ion_fvm_hybrid_contour"
+              CASE="ion_fvm_hybrid_contour_dt1ns_300steps"
+              OUTDIR="output_ion_fvm_hybrid_contour_300steps"
               rm -rf "$OUTDIR"
               mkdir -p "$OUTDIR"
 
@@ -58,6 +58,7 @@ jobs:
               grep -q "FVFunctorNeumannBC" "${CASE}.i"
               grep -q "type = ADDiffusion" "${CASE}.i"
               grep -q "PhysicsFEMLogMolarDriftDiffusion" "${CASE}.i"
+              grep -q "num_steps = 300" "${CASE}.i"
 
               set +e
               ../../physics_app/physics-opt -i "${CASE}.i" --check-input > "$OUTDIR/check_input.log" 2>&1
@@ -87,6 +88,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ion-fvm-hybrid-contour-dt1ns-100steps
-          path: experiments/fem_fvm_plasma_discriminator/output_ion_fvm_hybrid_contour/**
+          name: ion-fvm-hybrid-contour-dt1ns-300steps
+          path: experiments/fem_fvm_plasma_discriminator/output_ion_fvm_hybrid_contour_300steps/**
           retention-days: 30
