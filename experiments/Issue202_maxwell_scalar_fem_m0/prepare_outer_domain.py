@@ -10,7 +10,7 @@ SOURCE_INPUT = CASE / "input.i"
 OUT = CASE / "results_outer"
 
 # The original qvt mesh already contains explicit top/right/bottom outer-buffer
-# blocks.  These coordinates are the *inner* interfaces of those buffers and
+# blocks. These coordinates are the *inner* interfaces of those buffers and
 # are frozen during this study.
 R_INNER = 0.243
 R_OUTER_0 = 0.2565
@@ -24,8 +24,8 @@ TOL = 1.0e-12
 
 def map_xyz(x: float, y: float, z: float, factor: float) -> tuple[float, float, float]:
     # Preserve all physical geometry at and inside the buffer interfaces.
-    # Only nodes in the existing outer buffer are stretched away from the
-    # device.  The corner naturally receives both radial and axial mappings.
+    # Only nodes/entities in the existing outer buffer are stretched away
+    # from the device. The corner naturally receives both mappings.
     if x > R_INNER + TOL:
         x = R_INNER + factor * (x - R_INNER)
     if y < Z_BOTTOM_INNER - TOL:
@@ -33,6 +33,66 @@ def map_xyz(x: float, y: float, z: float, factor: float) -> tuple[float, float, 
     elif y > Z_TOP_INNER + TOL:
         y = Z_TOP_INNER + factor * (y - Z_TOP_INNER)
     return x, y, z
+
+
+def transform_entities(text: str, factor: float) -> str:
+    """Transform Gmsh 4.1 entity coordinates/bounding boxes consistently.
+
+    libMesh checks element nodes against the physical entity bounding boxes.
+    Moving only $Nodes therefore produces a valid-looking file that libMesh
+    correctly rejects. This routine applies the same monotone mapping to the
+    point coordinates and curve/surface/volume bounding boxes in $Entities.
+    """
+    lines = text.splitlines()
+    try:
+        start = lines.index("$Entities")
+        end = lines.index("$EndEntities", start + 1)
+    except ValueError as exc:
+        raise SystemExit(f"invalid Gmsh file: missing Entities section: {exc}")
+
+    counts = list(map(int, lines[start + 1].split()))
+    if len(counts) != 4:
+        raise SystemExit(f"unexpected Gmsh 4.1 entity header: {lines[start + 1]!r}")
+
+    i = start + 2
+    for dim, count in enumerate(counts):
+        for _ in range(count):
+            vals = lines[i].split()
+            if dim == 0:
+                if len(vals) < 5:
+                    raise SystemExit(f"unexpected point entity record: {lines[i]!r}")
+                tag = vals[0]
+                x0, y0, z0 = map(float, vals[1:4])
+                x1, y1, z1 = map_xyz(x0, y0, z0, factor)
+                lines[i] = " ".join([tag, f"{x1:.17g}", f"{y1:.17g}", f"{z1:.17g}", *vals[4:]])
+            else:
+                if len(vals) < 8:
+                    raise SystemExit(f"unexpected dimension-{dim} entity record: {lines[i]!r}")
+                tag = vals[0]
+                min0 = tuple(map(float, vals[1:4]))
+                max0 = tuple(map(float, vals[4:7]))
+                min1 = map_xyz(*min0, factor)
+                max1 = map_xyz(*max0, factor)
+                xmin, xmax = sorted((min1[0], max1[0]))
+                ymin, ymax = sorted((min1[1], max1[1]))
+                zmin, zmax = sorted((min1[2], max1[2]))
+                lines[i] = " ".join(
+                    [
+                        tag,
+                        f"{xmin:.17g}",
+                        f"{ymin:.17g}",
+                        f"{zmin:.17g}",
+                        f"{xmax:.17g}",
+                        f"{ymax:.17g}",
+                        f"{zmax:.17g}",
+                        *vals[7:],
+                    ]
+                )
+            i += 1
+
+    if i != end:
+        raise SystemExit(f"entity parser ended at line {i}, expected $EndEntities at {end}")
+    return "\n".join(lines) + "\n"
 
 
 def transform_nodes(text: str, factor: float) -> tuple[str, dict[str, float | int]]:
@@ -79,9 +139,6 @@ def transform_nodes(text: str, factor: float) -> tuple[str, dict[str, float | in
             min_y, max_y = min(min_y, y1), max(max_y, y1)
             seen += 1
             i += 1
-
-            # Parametric coordinates, when present, are on the same record in
-            # this mesh family and are deliberately preserved in `rest`.
             _ = parametric
 
     if i != end:
@@ -146,13 +203,12 @@ def main() -> None:
     }
 
     for factor in FACTORS:
-        mesh_text, stats = transform_nodes(source_mesh, factor)
+        entity_text = transform_entities(source_mesh, factor)
+        mesh_text, stats = transform_nodes(entity_text, factor)
         rmax = R_INNER + factor * (R_OUTER_0 - R_INNER)
         zmin = Z_BOTTOM_INNER - factor * (Z_BOTTOM_INNER - Z_BOTTOM_0)
         zmax = Z_TOP_INNER + factor * (Z_TOP_0 - Z_TOP_INNER)
 
-        # These are strong guards against accidentally moving the device or
-        # interpreting the scale factor as a whole-domain scale.
         if abs(float(stats["r_max"]) - rmax) > 1e-10:
             raise SystemExit(f"factor {factor}: unexpected r_max {stats['r_max']} != {rmax}")
         if abs(float(stats["z_min"]) - zmin) > 1e-10:
