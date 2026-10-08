@@ -1,24 +1,25 @@
-# Paul Central Operating Contracts
+# Samuel Central Operating Contracts
 
 **Status:** canonical consumer manifest guide  
-**OS:** Paul  
-**Central revision:** `6474eb7b77f890b7cf9d7134ccebea31662bcdbe`
+**OS:** Samuel  
+**Central revision:** `4599ce446ab8a9e56d872e93541b1215d1702ab0`
 
 The machine-readable exact identities are in `central_skills.json`.
 
 ## Initialization load
 
-A successful `moose-test-init` loads from the same exact central revision:
+A successful `moose-test-init` loads/verifies from the same exact central revision:
 
 ```text
 docs/operating_system/README.md
 docs/operating_system/ESSENTIAL_RULES.md
 skills/session-bootstrap/README.md
 skills/state-refresh/README.md
-skills/catalog.json  # metadata index only; does not preload all skill bodies
+skills/catalog.json              # trigger metadata index
+skills/capability-registry.json  # capability provider metadata
 ```
 
-The first two establish Paul OS/common-rule authority. The skills own generic bootstrap and refresh mechanics. `skills/catalog.json` is indexed during init so the immediate obligation can trigger-load the matching skill contract in the same read-only initialization cycle.
+The first two establish Samuel OS/common-rule authority. `session-bootstrap` and `state-refresh` own generic bootstrap/refresh mechanics. Catalog and capability metadata are indexed during init, but mutation/controller execution is not activated merely by indexing them.
 
 ## Trigger-loaded contracts
 
@@ -36,11 +37,18 @@ SCHEDULED_CONTROLLER
   -> skills/controller-lifecycle/README.md
   -> state-refresh remains available
 
+RESEARCH_CONTROLLER
+  -> skills/research-controller/README.md
+
 GITHUB_ACTIONS_EXECUTION
   -> skills/github-actions-execution/README.md
 
 GITHUB_ACTIONS_OBSERVATION
   -> skills/github-actions-observation/README.md
+
+GITHUB_PR_MERGE
+  -> skills/pull-request-merge/README.md
+  -> resolve providers through skills/capability-registry.json
 
 ARTIFACT_STAGING
   -> skills/artifact-staging/README.md
@@ -49,7 +57,24 @@ SCIENTIFIC_DISCRIMINATOR_CONTROLLER
   -> skills/scientific-discriminator-controller/README.md
 ```
 
-Do not preload controller skills during an ordinary interactive init.
+Do not preload controller execution paths during an ordinary interactive init.
+
+## Samuel controller authority
+
+When triggered, Samuel central mechanics own generic durable execution behavior including:
+
+```text
+typed action lifecycle
+durable checkpoint/resume
+trusted exact-head validation
+read-before/write/read-after GitHub mutation
+postcondition verification
+registered capability fallback
+rejected-merge recovery
+diagnostic/corrective recovery
+```
+
+These mechanics do not own Physics scientific meaning or acceptance.
 
 ## Verification
 
@@ -62,12 +87,12 @@ For every required central artifact:
 
 If a required init artifact cannot be verified, initialization is incomplete and remains read-only.
 
-A trigger-loaded artifact failure blocks only the affected operation.
+A trigger-loaded artifact/capability failure blocks only the affected operation.
 
 ## Ownership
 
-Central Paul contracts own generic mechanics and essential cross-repository invariants.
+Central Samuel contracts own generic mechanics and essential cross-repository invariants.
 
 This repository retains Physics scientific semantics, P0-P3 meaning, production runtime evidence, numerical acceptance, repository-specific dependency readiness, and local authorization.
 
-Operating-process metrics are not part of the Paul initialization contract.
+Operating-process metrics are not part of the Samuel initialization contract.
