@@ -1,5 +1,6 @@
 name: One-shot branch cleanup 2026-10-08
 
+# One-shot trigger: merge this workflow change to main, then self-remove.
 on:
   push:
     branches: [main]
