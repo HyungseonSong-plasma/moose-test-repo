@@ -1,0 +1,90 @@
+name: Full FEM contour mesh 300 steps
+
+on:
+  push:
+    branches:
+      - experiment-full-fem-contour-mesh
+    paths:
+      - 'experiments/fem_fvm_plasma_discriminator/.run_full_fem_contour_mesh_300'
+  workflow_dispatch:
+
+jobs:
+  run:
+    name: full-FEM-contour-mesh-dt1ns-300steps
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pull build image
+        run: docker pull "$BUILD_BASE_REF"
+      - name: Build, generate mesh, and run 300-step full FEM case
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm --entrypoint /bin/bash --user 0:0 \
+            --workdir /workspace -v "$GITHUB_WORKSPACE:/workspace" \
+            "$BUILD_BASE_REF" -lc '
+              set -euo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              git config --global --add safe.directory /opt/physics_vendor/moose
+              git config --global --add safe.directory /opt/physics_vendor/crane
+              git config --global --add safe.directory /opt/physics_vendor/squirrel
+              git config --global --add safe.directory /opt/physics_vendor/zapdos
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+
+              make -C physics_app -j2
+              cd experiments/fem_fvm_plasma_discriminator
+
+              CASE="full_fem_contour_mesh_dt1ns_300steps"
+              OUTDIR="output_full_fem_contour_mesh_300steps"
+              rm -rf "$OUTDIR"
+              mkdir -p "$OUTDIR"
+
+              python3 generate_contour_mesh.py | tee "$OUTDIR/mesh_generation.log"
+              python3 prepare_full_fem_contour_mesh_300steps.py
+              cp plasma_contour_l3_4p5mm.msh "$OUTDIR/"
+              cp "${CASE}.i" "$OUTDIR/"
+
+              grep -q "plasma_contour_l3_4p5mm.msh" "${CASE}.i"
+              grep -q "num_steps = 300" "${CASE}.i"
+              grep -q "end_time = 3e-07" "${CASE}.i"
+
+              set +e
+              ../../physics_app/physics-opt -i "${CASE}.i" --check-input > "$OUTDIR/check_input.log" 2>&1
+              check_rc=$?
+              set -e
+              echo "check_rc=$check_rc" > "$OUTDIR/check_status.txt"
+              if [ "$check_rc" -ne 0 ]; then
+                cat "$OUTDIR/check_input.log"
+                exit "$check_rc"
+              fi
+
+              set +e
+              /usr/bin/time -f "wall_seconds=%e\nuser_seconds=%U\nsystem_seconds=%S\nmax_rss_kb=%M" \
+                -o "$OUTDIR/wall_time.txt" \
+                timeout --signal=TERM 35m stdbuf -oL -eL \
+                ../../physics_app/physics-opt -i "${CASE}.i" > "$OUTDIR/run.log" 2>&1
+              rc=$?
+              set -e
+
+              echo "run_rc=$rc" > "$OUTDIR/status.txt"
+              cp "${CASE}_out.csv" "$OUTDIR/" 2>/dev/null || true
+              cp "${CASE}_out.e" "$OUTDIR/" 2>/dev/null || true
+              tail -n 2600 "$OUTDIR/run.log" > "$OUTDIR/tail.log" || true
+              exit "$rc"
+            '
+      - name: Upload result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: full-fem-contour-mesh-dt1ns-300steps
+          path: experiments/fem_fvm_plasma_discriminator/output_full_fem_contour_mesh_300steps/**
+          retention-days: 30
