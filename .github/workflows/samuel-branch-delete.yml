@@ -1,0 +1,62 @@
+name: Samuel exact-SHA branch delete
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'automation/mutations/branch-delete-request.json'
+
+permissions:
+  contents: write
+
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      matrix: ${{ steps.request.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: request
+        name: Validate branch-delete request
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json, os, re
+          from pathlib import Path
+          request=json.loads(Path('automation/mutations/branch-delete-request.json').read_text(encoding='utf-8'))
+          if set(request) != {'targets'} or not isinstance(request['targets'],list) or not request['targets']:
+              raise SystemExit('branch-delete request must contain a non-empty targets list')
+          seen=set()
+          include=[]
+          for item in request['targets']:
+              if not isinstance(item,dict) or set(item) != {'branch','expected_sha'}:
+                  raise SystemExit('each target must contain exactly branch and expected_sha')
+              branch=item['branch']
+              sha=item['expected_sha']
+              if not isinstance(branch,str) or not branch or branch == 'main' or branch in seen:
+                  raise SystemExit(f'invalid or duplicate branch-delete target: {branch!r}')
+              if not isinstance(sha,str) or re.fullmatch(r'[0-9a-f]{40}',sha) is None:
+                  raise SystemExit(f'invalid expected_sha for {branch!r}')
+              seen.add(branch)
+              include.append({'branch':branch,'expected_sha':sha})
+          matrix=json.dumps({'include':include},separators=(',',':'))
+          with open(os.environ['GITHUB_OUTPUT'],'a',encoding='utf-8') as out:
+              out.write(f'matrix={matrix}\n')
+          PY
+
+  delete:
+    needs: prepare
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+    steps:
+      - name: Delete branch through Samuel lease-guarded capability
+        uses: HyungseonSong-plasma/chatgpt-operation/.github/actions/branch-delete@811cef397d467a2124ce7259e9128372f1efb8b5
+        with:
+          repository: HyungseonSong-plasma/moose-test-repo
+          branch: ${{ matrix.branch }}
+          expected-sha: ${{ matrix.expected_sha }}
+          github-token: ${{ github.token }}
