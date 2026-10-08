@@ -200,6 +200,37 @@ wave_k2 = ${fparse omega*omega*mu0*eps0}
   []
 []
 
+[Postprocessors]
+  [E_real_min]
+    type = ElementExtremeValue
+    variable = E_real
+    value_type = min
+  []
+  [E_real_max]
+    type = ElementExtremeValue
+    variable = E_real
+    value_type = max
+  []
+  [E_real_l2]
+    type = ElementL2Norm
+    variable = E_real
+  []
+  [E_imag_min]
+    type = ElementExtremeValue
+    variable = E_imag
+    value_type = min
+  []
+  [E_imag_max]
+    type = ElementExtremeValue
+    variable = E_imag
+    value_type = max
+  []
+  [E_imag_l2]
+    type = ElementL2Norm
+    variable = E_imag
+  []
+[]
+
 [Preconditioning]
   [smp]
     type = SMP
@@ -221,4 +252,5 @@ wave_k2 = ${fparse omega*omega*mu0*eps0}
 
 [Outputs]
   exodus = true
+  csv = true
 []
