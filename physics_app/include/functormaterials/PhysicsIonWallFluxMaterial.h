@@ -7,7 +7,11 @@
  *
  * Surface component:
  *
- *   Gamma_s = s * (1/4) * n_i * sqrt(8 R T_g / (pi M_i))
+ *   Gamma_s = s * (1/4) * n_i * sqrt(8 R T_i / (pi M_i))
+ *
+ * where T_i uses the optional user-defined ion_temperature_eV when it is
+ * positive, converted to kelvin through k_B [eV/K].  Otherwise the existing
+ * gas_temperature functor is used as the heavy-particle temperature.
  *
  * Migration component:
  *
@@ -44,5 +48,7 @@ protected:
   const Real _charge_number;
   const Real _molar_mass;
   const Real _sticking;
+  const Real _ion_temperature_eV;
   const Real _migration_gate_smoothing_width;
+  const bool _use_element_gradient_for_potential;
 };
