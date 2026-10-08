@@ -1,0 +1,26 @@
+name: One-shot Issue 202 Maxwell scalar FEM validation
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+    paths:
+      - experiments/Issue202_maxwell_scalar_fem_m0/**
+      - experiments/Issue18_qvt_plasma_mapping/qvt.msh
+      - automation/manifests/experiments/Issue_202_experiments01.json
+      - automation/manifests/experiments/Issue_202_experiments01_prep.json
+      - .github/workflows/issue202-maxwell-once.yml
+
+permissions:
+  contents: read
+
+jobs:
+  run:
+    if: github.head_ref == 'issue-202-maxwell-scalar-fem-m0'
+    uses: HyungseonSong-plasma/chatgpt-operation/.github/workflows/governed-matrix.yml@4599ce446ab8a9e56d872e93541b1215d1702ab0
+    with:
+      issue: "202"
+      sequence: "01"
+      manifest: automation/manifests/experiments/Issue_202_experiments01.json
+      base_sha: ${{ github.event.pull_request.head.sha }}
+      operation_sha: 4599ce446ab8a9e56d872e93541b1215d1702ab0
