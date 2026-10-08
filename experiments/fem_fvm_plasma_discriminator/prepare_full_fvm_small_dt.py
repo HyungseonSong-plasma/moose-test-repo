@@ -4,6 +4,7 @@ import re
 from pathlib import Path
 
 import prepare_cases as base
+import prepare_cases_plasma_only  # mutates base.MESH to retain only the plasma block
 
 CASES = {
     "dt001": 1.0e-11,
@@ -36,7 +37,7 @@ def build_case(case_id: str) -> str:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Generate full-FVM very-small-dt discriminator cases.")
+    parser = argparse.ArgumentParser(description="Generate plasma-only full-FVM very-small-dt discriminator cases.")
     parser.add_argument("--case", choices=CASES, required=True)
     args = parser.parse_args()
 
@@ -46,6 +47,7 @@ def main() -> None:
     out.write_text(build_case(args.case), encoding="utf-8")
 
     print(f"wrote {out}")
+    print("mesh: plasma block only")
     print("discretization: full FVM for log_ne, log_ni, log_energy, potential")
     print(f"dt={dt:.17g} s = {dt*1e9:g} ns")
     print(f"steps={NSTEPS}")
