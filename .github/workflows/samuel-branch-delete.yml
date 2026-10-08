@@ -1,16 +1,10 @@
 name: Samuel exact-SHA branch delete
 
 on:
-  workflow_dispatch:
-    inputs:
-      branch:
-        description: Exact non-default branch name to delete
-        required: true
-        type: string
-      expected_sha:
-        description: Exact lowercase 40-hex current branch head
-        required: true
-        type: string
+  push:
+    branches: [main]
+    paths:
+      - 'automation/mutations/branch-delete-request.json'
 
 permissions:
   contents: write
@@ -20,10 +14,30 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
+      - uses: actions/checkout@v4
+      - id: request
+        name: Validate branch-delete request
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json, os, re
+          from pathlib import Path
+          request=json.loads(Path('automation/mutations/branch-delete-request.json').read_text(encoding='utf-8'))
+          if set(request) != {'branch','expected_sha'}:
+              raise SystemExit('branch-delete request must contain exactly branch and expected_sha')
+          branch=request['branch']
+          sha=request['expected_sha']
+          if not isinstance(branch,str) or not branch or branch == 'main':
+              raise SystemExit('invalid branch-delete target')
+          if not isinstance(sha,str) or re.fullmatch(r'[0-9a-f]{40}',sha) is None:
+              raise SystemExit('invalid expected_sha')
+          with open(os.environ['GITHUB_OUTPUT'],'a',encoding='utf-8') as out:
+              out.write(f'branch={branch}\nexpected_sha={sha}\n')
+          PY
       - name: Delete branch through Samuel lease-guarded capability
         uses: HyungseonSong-plasma/chatgpt-operation/.github/actions/branch-delete@811cef397d467a2124ce7259e9128372f1efb8b5
         with:
           repository: HyungseonSong-plasma/moose-test-repo
-          branch: ${{ inputs.branch }}
-          expected-sha: ${{ inputs.expected_sha }}
+          branch: ${{ steps.request.outputs.branch }}
+          expected-sha: ${{ steps.request.outputs.expected_sha }}
           github-token: ${{ github.token }}
