@@ -1,9 +1,9 @@
 # MOOSE/Physics Protocol Index
 
-**Status:** canonical consumer-local router under Paul  
-**Purpose:** route only Physics/domain semantics and trigger the minimum required central skills.
+**Status:** canonical consumer-local router under Samuel  
+**Purpose:** route only Physics/domain semantics and trigger the minimum required central skills/capabilities.
 
-Paul essential rules are already active. Generic deterministic mechanics are not redefined here.
+Samuel essential rules are already active. Generic deterministic mechanics are not redefined here.
 
 ## Primary local phase
 
@@ -23,18 +23,21 @@ Auxiliary local semantic pack:
 SCIENTIFIC_EXECUTION
 ```
 
-Central skill triggers:
+Central skill/capability triggers:
 
 ```text
-MUTATE               -> repository-mutation
-GOVERNED_WORK        -> governed-work
-SCHEDULED_CONTROLLER -> state-refresh + controller-throughput + controller-lifecycle
-GITHUB_ACTIONS_EXECUTION -> github-actions-execution
-GITHUB_ACTIONS_OBSERVATION -> github-actions-observation
-ARTIFACT_STAGING       -> artifact-staging
+MUTATE                         -> repository-mutation
+GOVERNED_WORK                  -> governed-work
+SCHEDULED_CONTROLLER           -> state-refresh + controller-throughput + controller-lifecycle
+RESEARCH_CONTROLLER            -> research-controller
+GITHUB_ACTIONS_EXECUTION       -> github-actions-execution
+GITHUB_ACTIONS_OBSERVATION     -> github-actions-observation
+GITHUB_PR_MERGE                -> pull-request-merge -> Samuel capability registry
+ARTIFACT_STAGING               -> artifact-staging
+SCIENTIFIC_DISCRIMINATOR_CONTROLLER -> scientific-discriminator-controller
 ```
 
-All central skills come from `docs/operating_system/central_skills.json`.
+All adopted central skills come from `docs/operating_system/central_skills.json`. Capability provider order comes from the pinned central `skills/capability-registry.json`.
 
 ## Routes
 
@@ -80,7 +83,7 @@ Primary phase: `CLOSE`.
 
 Closure uses the owning issue/milestone acceptance criteria and current validation evidence. No operating-process or rule-effectiveness accounting is required.
 
-When a material incident is worth preserving, record factual evidence under the attributable issue or `docs/incidents/`. A reusable deterministic mechanics defect should be fixed in the owning central skill/guard; a Physics semantic defect should be fixed in its local owner.
+When a material incident is worth preserving, record factual evidence under the attributable issue or `docs/incidents/`. A reusable deterministic mechanics defect should be fixed in the owning central skill/controller/guard; a Physics semantic defect should be fixed in its local owner.
 
 ### ROUTE-07 — Imported transport / thermo / chemistry data
 
@@ -118,10 +121,9 @@ Each issue remains an independent semantic/rollback boundary; milestone acceptan
 
 ### ROUTE-13 — Scheduled controller
 
-Trigger central state-refresh, controller-throughput, and controller-lifecycle from the exact Paul pin.
+Trigger central `state-refresh`, `controller-throughput`, and `controller-lifecycle` from the exact Samuel pin.
 
-The central skills decide generic liveness/lifecycle mechanics. This repository decides Physics dependency readiness, resource meaning, and scientific HOLD/PASS semantics.
-
+When the durable generic controller itself owns the immediate obligation, trigger `research-controller`. Central controller mechanics decide generic liveness/lifecycle behavior. This repository decides Physics dependency readiness, resource meaning, and scientific HOLD/PASS semantics.
 
 ### ROUTE-14 — GitHub Actions execution
 
@@ -143,13 +145,19 @@ Before authoring the staging specification, establish from current build/runtime
 
 If the exact source cannot be established, stop the affected path as `ARTIFACT_LOCATION_UNRESOLVED`. The central skill owns copy/materialization mechanics and evidence; Physics retains runtime, numerical, and scientific acceptance.
 
-## Paul rule-reuse gate
+### ROUTE-17 — Pull-request merge
+
+Trigger `GITHUB_PR_MERGE` / central `pull-request-merge` when an accepted work item is ready for PR integration.
+
+Samuel capability routing and native merge safety own the generic merge mechanics: fresh PR state, exact expected head SHA, mergeability, CI success, mutation, read-back, and rejected-merge recovery. Physics acceptance and the decision that a change is scientifically ready remain local.
+
+## Samuel rule-reuse gate
 
 Before adding a repeated operating rule, classify it:
 
 ```text
-cross-repository authority/claim invariant -> propose Paul essential rule
-portable deterministic procedure          -> central skill
+cross-repository authority/claim invariant -> propose Samuel essential rule
+portable deterministic procedure          -> central skill/controller path
 Physics-specific semantic/acceptance rule -> existing/new local owner
 historical observation                    -> issue/incident/archive, not a rule
 ```
