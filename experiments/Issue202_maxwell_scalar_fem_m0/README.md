@@ -15,7 +15,7 @@ PLASMA FEEDBACK           = OFF in this first discriminator
 SCIENTIFIC ACCEPTANCE     = NOT CLAIMED
 ```
 
-The first runtime target is the M2-B vacuum/source discriminator.  Passing this input or CI is not Maxwell scientific acceptance.
+The first runtime target is the M2-B vacuum/source discriminator. Passing this input or CI is not Maxwell scientific acceptance.
 
 ## Frozen equation
 
@@ -54,14 +54,14 @@ L(E_real) + a E_real - b E_imag = S_real
 L(E_imag) + a E_imag + b E_real = S_imag
 ```
 
-with `L = -laplacian_RZ`.  For a real impressed-current reference phase,
+with `L = -laplacian_RZ`. For a real impressed-current reference phase,
 
 ```text
 S_real = 0
 S_imag = -omega mu0 J_theta^e
 ```
 
-The initial vacuum/source case sets `epsilon_r = 1`, `sigma = 0` everywhere.  This deliberately isolates geometry, axis regularity, coil normalization, source phase/sign, and the scalar-RZ operator.
+The initial vacuum/source case sets `epsilon_r = 1`, `sigma = 0` everywhere. This deliberately isolates geometry, axis regularity, coil normalization, source phase/sign, and the scalar-RZ operator.
 
 ## MOOSE implementation map
 
@@ -108,7 +108,7 @@ The three coil physical blocks are three separate ring-turn cross sections:
 | `coil2` | 0.1125–0.1215 | 0.342–0.360 | 1.62e-4 |
 | `coil3` | 0.1710–0.1800 | 0.342–0.360 | 1.62e-4 |
 
-They are interpreted as three physical turns of one series coil.  The same current phasor therefore flows through each turn:
+They are interpreted as three physical turns of one series coil. The same current phasor therefore flows through each turn:
 
 ```text
 I1 = I2 = I3 = I_coil
@@ -121,7 +121,7 @@ J_theta,k = I_coil / A_k
 integral_Ak J_theta,k dA = I_coil
 ```
 
-There is **no additional factor of three** in an individual turn and **no division by `2*pi*r`**.  The RZ FEM volume measure is a separate integration concern.
+There is **no additional factor of three** in an individual turn and **no division by `2*pi*r`**. The RZ FEM volume measure is a separate integration concern.
 
 The input intentionally keeps the three source objects separate:
 
@@ -131,7 +131,7 @@ coil2_current -> block coil2
 coil3_current -> block coil3
 ```
 
-This enables the later discriminators `coil1 only`, `coil2 only`, `coil3 only`, all-three, and a targeted sign-reversal negative mutation.
+This enables `coil1 only`, `coil2 only`, `coil3 only`, all-three, and targeted sign-reversal negative-mutation discriminators.
 
 ## Default source point
 
@@ -142,7 +142,7 @@ frequency = 13.56 MHz
 I_peak    = 10 A
 ```
 
-with peak phasors throughout.  If an experimental coil current is supplied as RMS, it must first be converted with
+with peak phasors throughout. If an experimental coil current is supplied as RMS, it must first be converted with
 
 ```text
 I_peak = sqrt(2) I_rms
@@ -169,16 +169,54 @@ physics_app/physics-opt \
   -i experiments/Issue202_maxwell_scalar_fem_m0/input.i
 ```
 
-The first runtime discriminator should verify at minimum:
+The bounded M2 vacuum/source validation now checks:
 
 ```text
 E_real ~ 0 for real coil current and sigma=0
 E_imag != 0
-E_theta -> 0 on the axis
-field scales linearly with I_peak
-reversing all coil-current signs reverses E_imag
+field scales linearly with I_peak at 5/10/20 A
 turn-by-turn superposition reproduces the all-three solution
+coil2 sign reversal (I,-I,I) reproduces E1-E2+E3
+coil2 sign reversal materially changes the spatial field
 ```
+
+### Accepted bounded runtime evidence
+
+Current linearity and positive-turn superposition:
+
+```text
+Actions run: 37823781035
+semantic head: 10a0b4b1cd23dc5cfde6fb103051c7d7fe06e07c
+max current-linearity relative error: ~3.8e-14
+max signed-probe superposition absolute error: ~5.0e-13 V/m
+```
+
+Coil2 sign-reversal negative mutation:
+
+```text
+Actions run: 37824371343
+semantic head: 55445e336eb63f8e8c4fa9a6bb007937b598ed28
+(I1,I2,I3) = (I,-I,I)
+E_imag_l2 = 17.14724390071
+E_real_l2 = 0
+```
+
+Signed probes for the sign-reversal case are
+
+| r [m] | all-positive [V/m] | coil2-negative [V/m] |
+| ---: | ---: | ---: |
+| 0.05 | -58.209951694552 | -7.3352426640216 |
+| 0.10 | -92.276646096118 | -12.996755373028 |
+| 0.15 | -90.485037974822 | -18.618129221516 |
+| 0.20 | -55.955177156375 | -15.657707747501 |
+
+All four probes change materially. The mutated solution also satisfies
+
+```text
+E_mut = E1 - E2 + E3
+```
+
+with maximum signed-probe absolute mismatch of about `5.0e-13 V/m`.
 
 ## Deferred work
 
@@ -190,6 +228,9 @@ Not admitted by this baseline:
 - copper conductivity, skin effect, or proximity effect;
 - voltage/circuit/fixed-power drive;
 - conservative RF-power transfer into electron energy;
+- mesh-convergence acceptance;
+- outer-domain sensitivity acceptance;
+- COMSOL / external-reference field-profile equivalence;
 - closed-loop ICP coupling.
 
 These remain under issue #202 M1–M5 gates.
