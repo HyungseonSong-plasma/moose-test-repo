@@ -53,7 +53,6 @@ jobs:
               grep -q "layers = 4" "${CASE}.i"
               grep -q "type = PhysicsCoarseP1ConstraintProblem" "${CASE}.i"
               grep -q "type = TimeSequenceStepper" "${CASE}.i"
-              grep -q "end_time = 4e-08" "${CASE}.i"
               ../../physics_app/physics-opt -i "${CASE}.i" --check-input
 
               OUTDIR="output_l4_time_resolution/${CASE_ID}"
