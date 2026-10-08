@@ -5,18 +5,18 @@ This directory is the first implementation surface for the canonical Maxwell / R
 ## Status
 
 ```text
-PHASE                    = M0/M1 candidate implementation
+PHASE                    = M0/M1 candidate implementation + bounded M2 V&V
 REPRESENTATION           = scalar axisymmetric E_theta
 DISCRETIZATION           = continuous FEM
 PHASOR                    = exp(+i omega t), peak amplitude
 COIL DRIVE                = prescribed current
-COPPER SKIN/PROXIMITY     = OFF
-PLASMA FEEDBACK           = OFF in this first discriminator
-OUTER E_THETA=0           = NOT ADMITTED at the committed compact boundary
+CHAMBER WALL              = physical conductor, E_theta = 0 (PEC baseline)
+COPPER SKIN/PROXIMITY     = OFF in the chamber baseline
+PLASMA FEEDBACK           = OFF in standalone Maxwell V&V
 SCIENTIFIC ACCEPTANCE     = NOT CLAIMED
 ```
 
-The first runtime target is the M2 vacuum/source validation family. Passing an input or CI job is not Maxwell scientific acceptance.
+Passing an input or CI job is not Maxwell scientific acceptance.
 
 ## Frozen equation
 
@@ -56,22 +56,39 @@ S_real = 0
 S_imag = -omega mu0 J_theta^e
 ```
 
-The initial vacuum/source case sets `epsilon_r = 1`, `sigma = 0` everywhere. This deliberately isolates geometry, axis regularity, coil normalization, source phase/sign, and the scalar-RZ operator.
+The first vacuum/source case sets `epsilon_r = 1`, `sigma = 0` everywhere and isolates geometry, axis regularity, coil normalization, source phase/sign, and the scalar-RZ operator.
+
+## Canonical boundary semantics
+
+The current `qvt.msh` domain is the physical chamber, not an arbitrary far-field truncation.
+
+```text
+axis r=0:
+    E_theta = 0
+    reason = azimuthal-field regularity, E_theta = O(r)
+
+outer_right / outer_bottom / outer_top:
+    E_theta = 0
+    reason = physical conducting chamber wall (PEC baseline)
+
+internal conformal interfaces:
+    no explicit BC
+```
+
+For the scalar azimuthal RF field, `E_theta` is tangential to the conducting chamber wall. The PEC condition `n x E = 0` therefore gives `E_theta = 0` on the chamber boundary. This boundary is not moved in canonical chamber calculations.
+
+No custom Maxwell kernel or BC is introduced at this stage.
 
 ## MOOSE implementation map
-
-The initial implementation uses standard scalar FEM objects only:
 
 | Maxwell term | MOOSE route | Notes |
 | --- | --- | --- |
 | `-laplacian_RZ(E)` | `Diffusion` | RZ coordinate system supplies the axisymmetric measure/operator |
 | `a E` | `MatReaction` | supplied as `neg_a = -a` because `MatReaction` carries its documented minus sign |
-| real/imag `b` coupling | `MatCoupledForce` | retained even though `b=0` in the first vacuum discriminator |
+| real/imag `b` coupling | `MatCoupledForce` | standard composition for complex conductivity |
 | impressed coil current | `BodyForce` | three independent block-scoped sources |
-| axis regularity | `DirichletBC` | `E_theta=0` at `r=0`; this is regularity, not a wall model |
-| outer truncation candidate | `DirichletBC` | compact zero-field boundary failed M2-F domain sensitivity; not admitted |
-
-No custom Maxwell kernel or BC is introduced at this stage.
+| axis regularity | `DirichletBC` | `E_theta=0` at `r=0`; not a wall model |
+| conducting chamber | `DirichletBC` | physical PEC baseline, `E_theta=0` |
 
 ## Existing mesh and coil mapping
 
@@ -92,7 +109,7 @@ The three coil physical blocks are separate ring-turn cross sections:
 | `coil2` | 0.1125–0.1215 | 0.342–0.360 | 1.62e-4 |
 | `coil3` | 0.1710–0.1800 | 0.342–0.360 | 1.62e-4 |
 
-They are interpreted as three physical turns of one series coil. The same current phasor flows through each turn:
+They are interpreted as three physical turns of one series coil:
 
 ```text
 I1 = I2 = I3 = I_coil
@@ -100,75 +117,43 @@ J_theta,k = I_coil / A_k
 integral_Ak J_theta,k dA = I_coil
 ```
 
-There is no additional factor of three in an individual turn and no division by `2*pi*r`. The input keeps the three source objects separate so single-turn, superposition, and sign-reversal discriminators remain possible.
+There is no additional factor of three in an individual turn and no division by `2*pi*r`.
 
 ## Default source point
-
-The committed baseline uses
 
 ```text
 frequency = 13.56 MHz
 I_peak    = 10 A
 ```
 
-with peak phasors throughout. If an experimental current is RMS, convert with `I_peak = sqrt(2) I_rms` before using the peak-phasor power convention.
+Peak phasors are used throughout. RMS experimental currents must be converted with `I_peak = sqrt(2) I_rms` before using the peak-phasor power convention.
 
-## Validation
+## Accepted bounded runtime evidence
 
-Static source/mesh contract:
-
-```bash
-python3 experiments/Issue202_maxwell_scalar_fem_m0/check_contract.py
-```
-
-Runtime/check-input, from repository root after `physics_app/physics-opt` is available:
-
-```bash
-physics_app/physics-opt -i experiments/Issue202_maxwell_scalar_fem_m0/input.i --check-input
-physics_app/physics-opt -i experiments/Issue202_maxwell_scalar_fem_m0/input.i
-```
-
-The bounded M2 vacuum/source validation now checks:
+### Source normalization, phase, linearity, and superposition
 
 ```text
-E_real ~ 0 for real coil current and sigma=0
-E_imag != 0
-field scales linearly with I_peak at 5/10/20 A
-turn-by-turn superposition reproduces the all-three solution
-coil2 sign reversal (I,-I,I) reproduces E1-E2+E3
-coil2 sign reversal materially changes the spatial field
-global h-refinement levels 0/1/2 converge for E_imag L2 and four signed probes
-outer-domain sensitivity challenges the compact E_theta=0 truncation
-```
-
-### Accepted bounded runtime evidence
-
-Current linearity and positive-turn superposition:
-
-```text
-Actions run: 37823781035
-semantic head: 10a0b4b1cd23dc5cfde6fb103051c7d7fe06e07c
-max current-linearity relative error: ~3.8e-14
-max signed-probe superposition absolute error: ~5.0e-13 V/m
-```
-
-Coil2 sign-reversal negative mutation:
-
-```text
-Actions run: 37824371343
-semantic head: 55445e336eb63f8e8c4fa9a6bb007937b598ed28
-(I1,I2,I3) = (I,-I,I)
-E_imag_l2 = 17.14724390071
+baseline semantic head: f568cec35b70dd1530e066df460e4451ab317af5
+baseline Actions run:   37822805237
 E_real_l2 = 0
+E_imag_l2 = 48.02961
+
+linearity/superposition semantic head: 10a0b4b1cd23dc5cfde6fb103051c7d7fe06e07c
+Actions run: 37823781035
+5/10/20 A current-linearity max relative error: ~3.8e-14
+E(all) = E1 + E2 + E3 max signed-probe mismatch: ~5.0e-13 V/m
+
+coil2 sign-reversal semantic head: 55445e336eb63f8e8c4fa9a6bb007937b598ed28
+Actions run: 37824371343
+(I1,I2,I3)=(I,-I,I) gives E_mut = E1-E2+E3
 max signed-probe basis mismatch: ~5.0e-13 V/m
 ```
 
-Global mesh-convergence discriminator:
+### Global mesh convergence — PASS
 
 ```text
-Actions run: 37825300568
 semantic head: 33547b7cc4d2431eedceef5610c91c4fc64dca4c
-acceptance gate: medium->fine relative change < 1% for E_imag_l2 and four signed probes
+Actions run: 37825300568
 ```
 
 | Level | Elements | DOFs | `E_imag_l2` |
@@ -177,88 +162,46 @@ acceptance gate: medium->fine relative change < 1% for E_imag_l2 and four signed
 | 1 | 15,804 | 16,100 | 48.108814494584 |
 | 2 | 63,216 | 63,806 | 48.130698802257 |
 
-For the global L2 observable, the relative change decreases from `0.1646%` at level 0->1 to `0.04547%` at level 1->2, with observed order about `1.86`.
+Medium-to-fine `E_imag_l2` change is `0.04547%`; all four signed-probe changes are below `0.023%`. Observed L2 convergence order is about `1.86`. The committed chamber baseline remains `mesh_refine=0`; refinement levels are validation overrides.
 
-Fine/medium signed-probe relative changes are:
+## Correction: previous outer-domain stretch is NOT an M2-F failure
 
-| Probe | level 1 -> 2 relative change |
-| --- | ---: |
-| `r=0.05 m` | 0.02229% |
-| `r=0.10 m` | 0.004128% |
-| `r=0.15 m` | 0.01360% |
-| `r=0.20 m` | 0.02068% |
+A previous diagnostic stretched the existing top/right/bottom regions by factors up to 32 while retaining `E_theta=0` on the moved boundary. That diagnostic produced large internal-field changes, but the interpretation as a numerical outer-truncation sensitivity test was invalid.
 
-`E_imag_min` also changes by only `0.778%` from medium to fine. `E_imag_max` is retained as diagnostic-only because it approaches zero and therefore has an ill-conditioned relative-error denominator; it is not used as a mesh-convergence acceptance observable.
+The reason is physical: `outer_right`, `outer_bottom`, and `outer_top` represent the conducting chamber wall. Moving them changes the physical chamber geometry rather than merely moving an artificial far-field boundary.
 
-The committed default remains `mesh_refine = 0`. Higher levels are validation overrides rather than a silent production-mesh change.
-
-### M2-F outer-domain sensitivity — FAIL for compact zero-field truncation
-
-The existing mesh contains top/right/bottom exterior-buffer blocks. The M2-F discriminator preserves all device, plasma, quartz, and coil geometry and stretches only those exterior buffers while retaining `E_theta=0` on the new far boundary.
-
-Frozen buffer/device interfaces:
+Therefore:
 
 ```text
-r_inner        = 0.243 m
-z_bottom_inner = 0.018 m
-z_top_inner    = 0.432 m
+previous classification FINITE_DIRICHLET_TAIL_NOT_CONVERGED = RETRACTED
+M2-F FAIL claim from chamber-wall movement                 = RETRACTED
+canonical chamber-wall E_theta=0                           = RETAINED
 ```
 
-The tested outer boundaries were:
+The historical stretch data remain provenance only and are not used to accept or reject the physical chamber BC.
 
-| factor | r_max [m] | z_min [m] | z_max [m] |
-| ---: | ---: | ---: | ---: |
-| 1 | 0.2565 | 0.000 | 0.450 |
-| 2 | 0.2700 | -0.018 | 0.468 |
-| 4 | 0.2970 | -0.054 | 0.504 |
-| 8 | 0.3510 | -0.126 | 0.576 |
-| 16 | 0.4590 | -0.270 | 0.720 |
-| 32 | 0.6750 | -0.558 | 1.008 |
+Open-space `EMRobinBC`, infinite-element, or free-space Green-function treatments may still be useful for separate standalone open-domain reference problems, but they are not replacement production BCs for this conducting-chamber model.
 
-Outer-domain acceptance uses signed field probes at fixed physical coordinates, not global `L2`, because the integration volume changes with the domain.
+## Next standalone material V&V
 
-Runtime evidence:
+The next gate is the M2 material ladder:
 
 ```text
-Actions run: 37827058065
-semantic head: 3d65abcab027d602bc2b52c70adfe058bd47692e
-classification: FINITE_DIRICHLET_TAIL_NOT_CONVERGED
+M2-C prescribed conducting medium / skin-depth case
+M2-D dielectric/material-interface case
 ```
 
-Key results:
+These tests must validate the real/imaginary conductivity coupling and material coefficient placement independently of plasma feedback before the chamber plasma is assigned a physical conductivity model.
 
-```text
-max fixed-probe relative change, factor 1 -> factor 32 = 60.12%
-max fixed-probe relative change, factor 16 -> factor 32 = 5.61%
-factor-32 coarse -> global h-refined cross-check      = 7.34%
-```
+## Deferred work
 
-Selected mid-plane values illustrate the size of the compact-boundary effect:
-
-| probe | factor 1 [V/m] | factor 16 [V/m] | factor 32 coarse [V/m] | factor 32 refined [V/m] |
-| --- | ---: | ---: | ---: | ---: |
-| `r=0.05,z=0.225` | -58.2100 | -80.3574 | -79.3927 | -82.4821 |
-| `r=0.10,z=0.225` | -92.2766 | -135.9565 | -134.3792 | -140.1872 |
-| `r=0.15,z=0.225` | -90.4850 | -154.9225 | -153.3767 | -161.0935 |
-| `r=0.20,z=0.225` | -55.9552 | -140.6816 | -140.3019 | -149.1702 |
-
-Therefore the committed compact `E_theta=0` outer boundary is **not admitted as a physically innocuous truncation**. It materially suppresses the internal inductive field. The factor-32 stretched mesh is itself under-resolved, so factor 32 is not adopted as a replacement production domain either.
-
-The next boundary gate is standard-capability-first: determine whether the current framework provides an appropriate open/infinite/Robin/absorbing exterior treatment, or build a properly resolved enlarged exterior mesh before reconsidering a finite zero-field boundary. No custom Maxwell BC is admitted until the standard capability census is exhausted.
-
-## Deferred / blocked work
-
-Not admitted by this baseline:
-
-- compact `E_theta=0` outer truncation as a validated far-field boundary;
-- replacement outer-boundary treatment, pending capability census and V&V;
-- plasma conductivity feedback;
-- complex `sigma` validation;
-- dielectric/interface reference case;
-- copper conductivity, skin effect, or proximity effect;
+- plasma-state -> conductivity feedback;
+- dielectric/interface reference acceptance;
+- prescribed-conductivity / skin-depth acceptance;
+- copper skin/proximity in the physical coil conductor;
 - voltage/circuit/fixed-power drive;
 - conservative RF-power transfer into electron energy;
-- COMSOL / external-reference field-profile equivalence;
+- COMSOL / external-reference chamber field-profile equivalence;
 - closed-loop ICP coupling.
 
 These remain under issue #202 M1–M5 gates.
