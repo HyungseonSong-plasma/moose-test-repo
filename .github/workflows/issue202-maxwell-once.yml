@@ -1,9 +1,7 @@
 name: One-shot Issue 202 Maxwell scalar FEM validation
 
 on:
-  push:
-    branches: [main]
-    paths: [.github/workflows/issue202-maxwell-once.yml]
+  pull_request:
 
 permissions:
   contents: read
@@ -11,18 +9,18 @@ permissions:
 jobs:
   run:
     runs-on: ubuntu-24.04
-    timeout-minutes: 40
+    timeout-minutes: 45
     env:
       PHYSICS_RUNTIME_REF: ghcr.io/hyungseonsong-plasma/physics-runtime@sha256:cda9f0d09a17aed5fa606e97d1ee5c3450f7280536cec2e5c635402bb07d972c
       CASE: experiments/Issue202_maxwell_scalar_fem_m0
     steps:
-      - name: Checkout exact pushed revision
+      - name: Checkout exact PR head
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ github.event.pull_request.head.sha }}
       - name: Verify exact source revision
         shell: bash
-        run: test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+        run: test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
       - name: Validate three-turn coil contract
         shell: bash
         run: python3 "$CASE/check_contract.py"
@@ -32,7 +30,7 @@ jobs:
       - name: Check Maxwell input
         shell: bash
         run: |
-          mkdir -p "$CASE/results_m2" "$CASE/results_mesh"
+          mkdir -p "$CASE/results_m2" "$CASE/results_mesh" "$CASE/results_outer"
           docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" \
             --check-input -i "$CASE/input.i" 2>&1 | tee "$CASE/results_m2/check_input.log"
       - name: Run current-linearity matrix
@@ -86,6 +84,25 @@ jobs:
       - name: Analyze global mesh convergence
         shell: bash
         run: python3 "$CASE/analyze_mesh_convergence.py" | tee "$CASE/results_mesh/analyzer.log"
+      - name: Prepare outer-domain variants
+        shell: bash
+        run: python3 "$CASE/prepare_outer_domain.py" | tee "$CASE/results_outer/prepare.log"
+      - name: Check and run outer-domain matrix
+        shell: bash
+        run: |
+          set -euo pipefail
+          for factor in 1 2 4 8; do
+            docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" \
+              --check-input -i "$CASE/results_outer/outer_${factor}.i" \
+              2>&1 | tee "$CASE/results_outer/outer_${factor}_check.log"
+            docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" \
+              -i "$CASE/results_outer/outer_${factor}.i" \
+              Outputs/file_base="$CASE/results_outer/outer_${factor}" \
+              2>&1 | tee "$CASE/results_outer/outer_${factor}.log"
+          done
+      - name: Analyze outer-domain sensitivity
+        shell: bash
+        run: python3 "$CASE/analyze_outer_domain.py" | tee "$CASE/results_outer/analyzer.log"
       - name: Upload Maxwell M2 evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -94,5 +111,6 @@ jobs:
           path: |
             experiments/Issue202_maxwell_scalar_fem_m0/results_m2/**
             experiments/Issue202_maxwell_scalar_fem_m0/results_mesh/**
+            experiments/Issue202_maxwell_scalar_fem_m0/results_outer/**
           if-no-files-found: warn
           retention-days: 30
