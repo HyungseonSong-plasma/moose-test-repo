@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "issue": 202,
+  "kind": "experiments",
+  "sequence": 1,
+  "title": "Prepare scalar RZ FEM Maxwell vacuum-source discriminator",
+  "stages": [
+    {
+      "id": "P0",
+      "name": "Validate three-turn mesh and source-normalization contract",
+      "command": [
+        "bash",
+        "-lc",
+        "set -euo pipefail; CASE=experiments/Issue202_maxwell_scalar_fem_m0; mkdir -p $CASE/results; python3 $CASE/check_contract.py | tee $CASE/results/contract.log"
+      ],
+      "timeout_seconds": 120
+    },
+    {
+      "id": "P1",
+      "name": "Run immutable Physics runtime check-input",
+      "command": [
+        "bash",
+        "-lc",
+        "set -euo pipefail; CASE=experiments/Issue202_maxwell_scalar_fem_m0; IMAGE=ghcr.io/hyungseonsong-plasma/physics-runtime@sha256:cda9f0d09a17aed5fa606e97d1ee5c3450f7280536cec2e5c635402bb07d972c; mkdir -p $CASE/results; docker pull $IMAGE; docker run --rm -v \"$PWD:/workspace\" -w /workspace $IMAGE --check-input -i $CASE/input.i 2>&1 | tee $CASE/results/check_input.log"
+      ],
+      "timeout_seconds": 600
+    }
+  ],
+  "artifacts": [
+    "experiments/Issue202_maxwell_scalar_fem_m0/results/contract.log",
+    "experiments/Issue202_maxwell_scalar_fem_m0/results/check_input.log"
+  ]
+}
