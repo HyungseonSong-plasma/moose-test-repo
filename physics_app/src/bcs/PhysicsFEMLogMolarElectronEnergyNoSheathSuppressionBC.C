@@ -13,7 +13,6 @@ protected:
   ADReal computeQpResidual() override;
 
   const ADVariableValue & _log_electron_density;
-  const ADVariableValue & _potential;
 };
 
 registerMooseObject("PhysicsApp", PhysicsFEMLogMolarElectronEnergyNoSheathSuppressionBC);
@@ -23,20 +22,19 @@ PhysicsFEMLogMolarElectronEnergyNoSheathSuppressionBC::validParams()
 {
   auto params = ADIntegratedBC::validParams();
   params.addClassDescription(
-      "FEM log-molar electron-energy wall loss with the multiplicative sheath suppression "
-      "exp(-Delta phi/T_e) disabled for the energy BC only. The electron particle BC is "
-      "unchanged, and the additive sheath energy Delta phi remains in the energy per lost electron.");
+      "FEM log-molar electron-energy wall loss with both the multiplicative sheath suppression "
+      "exp(-Delta phi/T_e) and the additive sheath-energy term Delta phi disabled for the energy "
+      "BC only. The electron particle BC is unchanged. Energy loss is purely thermal: "
+      "Gamma_eps = (1/4 c_e vbar_e) (5/2 T_e).");
   params.addRequiredCoupledVar(
       "log_electron_density", "Solved log-molar electron concentration.");
-  params.addRequiredCoupledVar("potential", "Plasma potential [V].");
   return params;
 }
 
 PhysicsFEMLogMolarElectronEnergyNoSheathSuppressionBC::
 PhysicsFEMLogMolarElectronEnergyNoSheathSuppressionBC(const InputParameters & parameters)
   : ADIntegratedBC(parameters),
-    _log_electron_density(adCoupledValue("log_electron_density")),
-    _potential(adCoupledValue("potential"))
+    _log_electron_density(adCoupledValue("log_electron_density"))
 {
 }
 
@@ -47,16 +45,15 @@ PhysicsFEMLogMolarElectronEnergyNoSheathSuppressionBC::computeQpResidual()
 
   const ADReal c_e = exp(_log_electron_density[_qp]);
   const ADReal mean_energy = exp(_u[_qp] - _log_electron_density[_qp]);
-  const ADReal drop = PhysicsGroundedElectronSheath::smoothPositiveDropV(_potential[_qp]);
   const ADReal Te = PhysicsGroundedElectronSheath::electronTemperatureEV(mean_energy);
 
-  // Deliberately omit the multiplicative exp(-Delta phi / T_e) sheath suppression
-  // from the ENERGY boundary condition. Keep the thermal collection prefactor and
-  // the additive sheath-energy loss (+Delta phi) per collected electron.
+  // Diagnostic energy-wall model:
+  //   1) no exp(-Delta phi / T_e) sheath suppression in the energy BC,
+  //   2) no +Delta phi sheath-energy contribution per collected electron.
+  // The electron particle wall BC remains the standard sheath-suppressed model.
   const ADReal alpha = 0.25 * PhysicsGroundedElectronSheath::meanSpeedMPerS(Te);
   const ADReal particle_molar_flux_for_energy_bc = alpha * c_e;
-  const ADReal energy_molar_flux =
-      particle_molar_flux_for_energy_bc * (2.5 * Te + drop);
+  const ADReal energy_molar_flux = particle_molar_flux_for_energy_bc * (2.5 * Te);
 
   return _test[_i][_qp] * energy_molar_flux;
 }
