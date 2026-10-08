@@ -1,9 +1,8 @@
 name: One-shot Issue 202 Maxwell scalar FEM validation
 
 on:
-  push:
+  pull_request:
     branches: [main]
-    paths: [.github/workflows/issue202-maxwell-once.yml]
 
 permissions:
   contents: read
@@ -11,18 +10,18 @@ permissions:
 jobs:
   run:
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: 40
     env:
       PHYSICS_RUNTIME_REF: ghcr.io/hyungseonsong-plasma/physics-runtime@sha256:cda9f0d09a17aed5fa606e97d1ee5c3450f7280536cec2e5c635402bb07d972c
       CASE: experiments/Issue202_maxwell_scalar_fem_m0
     steps:
-      - name: Checkout exact pushed revision
+      - name: Checkout exact PR head
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ github.event.pull_request.head.sha }}
       - name: Verify exact source revision
         shell: bash
-        run: test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+        run: test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
       - name: Validate three-turn coil contract
         shell: bash
         run: python3 "$CASE/check_contract.py"
@@ -32,7 +31,7 @@ jobs:
       - name: Check Maxwell input
         shell: bash
         run: |
-          mkdir -p "$CASE/results_m2"
+          mkdir -p "$CASE/results_m2" "$CASE/results_mesh"
           docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" \
             --check-input -i "$CASE/input.i" 2>&1 | tee "$CASE/results_m2/check_input.log"
       - name: Run current-linearity matrix
@@ -70,15 +69,29 @@ jobs:
             -i "$CASE/input.i" coil1_scale=1 coil2_scale=-1 coil3_scale=1 \
             Outputs/file_base="$CASE/results_m2/coil2_negative" \
             2>&1 | tee "$CASE/results_m2/coil2_negative.log"
-      - name: Analyze M2 discriminators
+      - name: Analyze M2 source discriminators
         shell: bash
         run: python3 "$CASE/analyze_m2_discriminators.py" | tee "$CASE/results_m2/analyzer.log"
+      - name: Run global mesh-convergence matrix
+        shell: bash
+        run: |
+          set -euo pipefail
+          for level in 0 1 2; do
+            docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" \
+              -i "$CASE/input.i" mesh_refine="$level" \
+              Outputs/file_base="$CASE/results_mesh/mesh_${level}" \
+              2>&1 | tee "$CASE/results_mesh/mesh_${level}.log"
+          done
+      - name: Analyze global mesh convergence
+        shell: bash
+        run: python3 "$CASE/analyze_mesh_convergence.py" | tee "$CASE/results_mesh/analyzer.log"
       - name: Upload Maxwell M2 evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Issue_202_Maxwell_M2_discriminators
+          name: Issue_202_Maxwell_M2_validation
           path: |
             experiments/Issue202_maxwell_scalar_fem_m0/results_m2/**
+            experiments/Issue202_maxwell_scalar_fem_m0/results_mesh/**
           if-no-files-found: warn
           retention-days: 30
