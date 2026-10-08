@@ -1,1 +1,1 @@
-Run full-FVM dt discriminator: 0.01 ns x 100, 0.02 ns x 100, 0.03 ns x 100.
+Run plasma-only full-FVM dt discriminator after mesh coverage fix: 0.01 ns x 100, 0.02 ns x 100, 0.03 ns x 100.
