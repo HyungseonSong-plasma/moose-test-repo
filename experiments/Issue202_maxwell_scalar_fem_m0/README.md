@@ -218,6 +218,43 @@ No explicit interface BC is applied. The exact piecewise transfer-matrix solutio
 
 Together, M2-C and M2-D support the current standard-object realization of complex conductivity and discontinuous dielectric coefficients without a custom Maxwell kernel or custom interface BC.
 
+### M2-G prescribed-material chamber cross-solver equivalence — PASS
+
+```text
+exact semantic head: 915c531d83eaf270f634ae9c73aaccf4f96e6390
+Actions run:        37832228877
+artifact ID:        11573438018
+artifact:           Issue_202_Maxwell_M2_validation
+```
+
+This gate uses the physical `qvt.msh` chamber geometry and physical conducting-wall PEC semantics, but deliberately prescribed validation coefficients rather than a plasma-state constitutive model:
+
+```text
+frequency          = 13.56 MHz
+I_peak             = 10 A
+plasma epsilon_r   = 1
+plasma sigma       = 5 - 10 i S/m
+cover epsilon_r    = 3.6
+wafer epsilon_r    = 12.5
+focus_ring epsilon_r = 8
+other blocks       = epsilon_r 1, sigma 0
+```
+
+The MOOSE solution is compared at 14 fixed probes against an independently assembled complex scalar-RZ H1 FEM solver reading the same Gmsh mesh. The reference assembly uses its own sparse complex matrix path with Python 3.12.15, NumPy 2.1.2, and SciPy 1.14.1; it does not call MOOSE and is not presented as a COMSOL result.
+
+```text
+reference linear residual        = 6.0951714412e-15
+max complex relative error       = 4.1418336839e-6
+max magnitude relative error     = 4.0053960597e-6
+max phase error                  = 6.0407911150e-5 deg
+nonzero real probes              = 14 / 14
+nonzero imaginary probes         = 14 / 14
+```
+
+All errors are far inside the predeclared M2-G gates (`0.5%` complex magnitude/field and `0.5 deg` phase). This validates, on the actual chamber mesh, the assembled scalar-RZ geometric term, piecewise dielectric coefficients, complex-conductivity real/imaginary coupling, source normalization/sign, PEC wall semantics, and conformal material interfaces against an independent solver path.
+
+This is a bounded cross-solver equivalence result. It does **not** establish that the prescribed `5 - 10 i S/m` conductivity is the final physical oxygen-plasma conductivity, does **not** validate copper skin/proximity physics, and does **not** substitute for future COMSOL/experimental chamber comparison.
+
 ## Correction: previous outer-domain stretch is NOT an M2-F failure
 
 A previous diagnostic stretched the existing top/right/bottom regions by factors up to 32 while retaining `E_theta=0` on the moved boundary. That diagnostic produced large internal-field changes, but the interpretation as a numerical outer-truncation sensitivity test was invalid.
@@ -238,7 +275,14 @@ Open-space `EMRobinBC`, infinite-element, or free-space Green-function treatment
 
 ## Next standalone gate
 
-With source normalization, source phase, mesh convergence, prescribed conductivity/skin depth, and dielectric-interface coefficient placement now bounded by independent discriminators, the next high-value standalone gate is prescribed-material chamber equivalence against an independent external reference (M2-G), followed by the RF absorbed-power expression needed for M3 transfer work.
+With source normalization, source phase, mesh convergence, conducting-material skin depth, dielectric-interface placement, and prescribed-material chamber cross-solver equivalence bounded, the next gate is RF absorbed-power validation before M3 transfer work:
+
+```text
+Q_RF = 0.5 * sigma_R * (E_real^2 + E_imag^2)
+P_abs = 2*pi * integral_plasma r * Q_RF dr dz
+```
+
+Required counterfactuals include `sigma_R -> 0 => P_abs -> 0`, `E_RF -> 0 => Q_RF -> 0`, and explicit verification that `sigma_I` is reactive rather than directly dissipative.
 
 ## Deferred work
 
