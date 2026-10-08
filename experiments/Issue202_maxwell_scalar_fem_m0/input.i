@@ -21,6 +21,9 @@ omega = ${fparse 2*3.141592653589793*frequency}
 
 # One physical turn per named RZ coil block.
 I_peak = 10.0
+coil1_scale = 1.0
+coil2_scale = 1.0
+coil3_scale = 1.0
 coil_dr = 0.009
 coil_dz = 0.018
 coil_area = ${fparse coil_dr*coil_dz}
@@ -149,25 +152,25 @@ wave_k2 = ${fparse omega*omega*mu0*eps0}
     material_properties = 'b'
   []
 
-  # Three separate impressed-current objects are intentional.  They share one
-  # series-coil current but remain independently switchable for discriminators.
+  # Three separate impressed-current objects are intentional.  The scale
+  # parameters default to one and exist only for bounded M2 discriminators.
   [coil1_current]
     type = BodyForce
     variable = E_imag
     block = coil1
-    value = ${source_imag}
+    value = ${fparse source_imag*coil1_scale}
   []
   [coil2_current]
     type = BodyForce
     variable = E_imag
     block = coil2
-    value = ${source_imag}
+    value = ${fparse source_imag*coil2_scale}
   []
   [coil3_current]
     type = BodyForce
     variable = E_imag
     block = coil3
-    value = ${source_imag}
+    value = ${fparse source_imag*coil3_scale}
   []
 []
 
@@ -227,6 +230,28 @@ wave_k2 = ${fparse omega*omega*mu0*eps0}
   [E_imag_l2]
     type = ElementL2Norm
     variable = E_imag
+  []
+
+  # Signed linear field probes used for turn-superposition discriminators.
+  [E_imag_probe_r05]
+    type = PointValue
+    variable = E_imag
+    point = '0.05 0.225 0'
+  []
+  [E_imag_probe_r10]
+    type = PointValue
+    variable = E_imag
+    point = '0.10 0.225 0'
+  []
+  [E_imag_probe_r15]
+    type = PointValue
+    variable = E_imag
+    point = '0.15 0.225 0'
+  []
+  [E_imag_probe_r20]
+    type = PointValue
+    variable = E_imag
+    point = '0.20 0.225 0'
   []
 []
 
