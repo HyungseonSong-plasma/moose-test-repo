@@ -1,1 +1,1 @@
-Run full-FEM dt=1 ns x 100 with thermal-only electron-energy wall BC: no exp(-Delta phi/T_e) suppression and no +Delta phi energy term.
+Run full-FEM dt=1 ns x 100 with thermal-only electron particle and energy wall BCs: no exp(-Delta phi/T_e) suppression in either BC and no +Delta phi energy term.
