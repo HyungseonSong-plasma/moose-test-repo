@@ -30,20 +30,16 @@ jobs:
       - name: Check Maxwell inputs
         shell: bash
         run: |
-          mkdir -p "$CASE/results_m2" "$CASE/results_mesh" "$CASE/results_skin"
-          docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" \
-            --check-input -i "$CASE/input.i" 2>&1 | tee "$CASE/results_m2/check_input.log"
-          docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" \
-            --check-input -i "$CASE/skin_depth.i" 2>&1 | tee "$CASE/results_skin/check_input.log"
+          mkdir -p "$CASE/results_m2" "$CASE/results_mesh" "$CASE/results_skin" "$CASE/results_dielectric"
+          docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" --check-input -i "$CASE/input.i" 2>&1 | tee "$CASE/results_m2/check_input.log"
+          docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" --check-input -i "$CASE/skin_depth.i" 2>&1 | tee "$CASE/results_skin/check_input.log"
+          docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" --check-input -i "$CASE/dielectric_interface.i" 2>&1 | tee "$CASE/results_dielectric/check_input.log"
       - name: Run current-linearity matrix
         shell: bash
         run: |
           set -euo pipefail
           for amps in 5 10 20; do
-            docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" \
-              -i "$CASE/input.i" I_peak="$amps" \
-              Outputs/file_base="$CASE/results_m2/current_${amps}" \
-              2>&1 | tee "$CASE/results_m2/current_${amps}.log"
+            docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" -i "$CASE/input.i" I_peak="$amps" Outputs/file_base="$CASE/results_m2/current_${amps}" 2>&1 | tee "$CASE/results_m2/current_${amps}.log"
           done
       - name: Run single-coil superposition basis
         shell: bash
@@ -73,14 +69,21 @@ jobs:
         run: |
           set -euo pipefail
           for level in 0 1; do
-            docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" \
-              -i "$CASE/skin_depth.i" mesh_refine="$level" \
-              Outputs/file_base="$CASE/results_skin/skin_${level}" \
-              2>&1 | tee "$CASE/results_skin/skin_${level}.log"
+            docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" -i "$CASE/skin_depth.i" mesh_refine="$level" Outputs/file_base="$CASE/results_skin/skin_${level}" 2>&1 | tee "$CASE/results_skin/skin_${level}.log"
           done
       - name: Analyze M2-C analytical skin-depth verification
         shell: bash
         run: python3 "$CASE/analyze_skin_depth.py" | tee "$CASE/results_skin/analyzer.log"
+      - name: Run M2-D dielectric-interface matrix
+        shell: bash
+        run: |
+          set -euo pipefail
+          for level in 0 1; do
+            docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" -i "$CASE/dielectric_interface.i" mesh_refine="$level" Outputs/file_base="$CASE/results_dielectric/dielectric_${level}" 2>&1 | tee "$CASE/results_dielectric/dielectric_${level}.log"
+          done
+      - name: Analyze M2-D analytical dielectric-interface verification
+        shell: bash
+        run: python3 "$CASE/analyze_dielectric_interface.py" | tee "$CASE/results_dielectric/analyzer.log"
       - name: Upload Maxwell M2 evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -90,5 +93,6 @@ jobs:
             experiments/Issue202_maxwell_scalar_fem_m0/results_m2/**
             experiments/Issue202_maxwell_scalar_fem_m0/results_mesh/**
             experiments/Issue202_maxwell_scalar_fem_m0/results_skin/**
+            experiments/Issue202_maxwell_scalar_fem_m0/results_dielectric/**
           if-no-files-found: warn
           retention-days: 30
