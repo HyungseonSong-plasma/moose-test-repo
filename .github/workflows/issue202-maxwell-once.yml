@@ -1,7 +1,9 @@
 name: One-shot Issue 202 Maxwell scalar FEM validation
 
 on:
-  pull_request:
+  push:
+    branches: [main]
+    paths: [.github/workflows/issue202-maxwell-once.yml]
 
 permissions:
   contents: read
@@ -14,13 +16,13 @@ jobs:
       PHYSICS_RUNTIME_REF: ghcr.io/hyungseonsong-plasma/physics-runtime@sha256:cda9f0d09a17aed5fa606e97d1ee5c3450f7280536cec2e5c635402bb07d972c
       CASE: experiments/Issue202_maxwell_scalar_fem_m0
     steps:
-      - name: Checkout exact PR head
+      - name: Checkout exact pushed revision
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ github.sha }}
       - name: Verify exact source revision
         shell: bash
-        run: test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+        run: test "$(git rev-parse HEAD)" = "${{ github.sha }}"
       - name: Validate three-turn coil contract
         shell: bash
         run: python3 "$CASE/check_contract.py"
@@ -77,7 +79,6 @@ jobs:
             docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" --check-input -i "$CASE/results_outer/outer_${factor}.i" 2>&1 | tee "$CASE/results_outer/outer_${factor}_check.log"
             docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" -i "$CASE/results_outer/outer_${factor}.i" Outputs/file_base="$CASE/results_outer/outer_${factor}" 2>&1 | tee "$CASE/results_outer/outer_${factor}.log"
           done
-          # Cross-check the most stretched domain with one global h-refinement.
           docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" -i "$CASE/results_outer/outer_32.i" mesh_refine=1 Outputs/file_base="$CASE/results_outer/outer_32_refined" 2>&1 | tee "$CASE/results_outer/outer_32_refined.log"
       - name: Analyze outer-domain sensitivity
         shell: bash
