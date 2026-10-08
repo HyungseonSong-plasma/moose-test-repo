@@ -34,13 +34,7 @@ and
 = -i omega mu0 J_theta^e
 ```
 
-For
-
-```text
-sigma = sigma_R + i sigma_I
-```
-
-define
+For `sigma = sigma_R + i sigma_I`, define
 
 ```text
 a = 1/r^2 - omega^2 mu0 epsilon - omega mu0 sigma_I
@@ -80,27 +74,16 @@ No custom Maxwell kernel or BC is introduced at this stage.
 
 ## Existing mesh and coil mapping
 
-The case reuses the existing ASCII Gmsh mesh
-
-```text
-experiments/Issue18_qvt_plasma_mapping/qvt.msh
-```
-
-with
+The case reuses `experiments/Issue18_qvt_plasma_mapping/qvt.msh` with
 
 ```text
 coord_type    = RZ
 rz_coord_axis = Y
-```
-
-therefore
-
-```text
 r = x
 z = y
 ```
 
-The three coil physical blocks are three separate ring-turn cross sections:
+The three coil physical blocks are separate ring-turn cross sections:
 
 | Block | radial interval [m] | axial interval [m] | cross-section [m^2] |
 | --- | ---: | ---: | ---: |
@@ -108,30 +91,15 @@ The three coil physical blocks are three separate ring-turn cross sections:
 | `coil2` | 0.1125–0.1215 | 0.342–0.360 | 1.62e-4 |
 | `coil3` | 0.1710–0.1800 | 0.342–0.360 | 1.62e-4 |
 
-They are interpreted as three physical turns of one series coil. The same current phasor therefore flows through each turn:
+They are interpreted as three physical turns of one series coil. The same current phasor flows through each turn:
 
 ```text
 I1 = I2 = I3 = I_coil
-```
-
-For each turn `k`, the impressed azimuthal current density is normalized by the RZ cross section, not by toroidal volume:
-
-```text
 J_theta,k = I_coil / A_k
 integral_Ak J_theta,k dA = I_coil
 ```
 
-There is **no additional factor of three** in an individual turn and **no division by `2*pi*r`**. The RZ FEM volume measure is a separate integration concern.
-
-The input intentionally keeps the three source objects separate:
-
-```text
-coil1_current -> block coil1
-coil2_current -> block coil2
-coil3_current -> block coil3
-```
-
-This enables `coil1 only`, `coil2 only`, `coil3 only`, all-three, and targeted sign-reversal negative-mutation discriminators.
+There is no additional factor of three in an individual turn and no division by `2*pi*r`. The input keeps the three source objects separate so single-turn, superposition, and sign-reversal discriminators remain possible.
 
 ## Default source point
 
@@ -142,13 +110,7 @@ frequency = 13.56 MHz
 I_peak    = 10 A
 ```
 
-with peak phasors throughout. If an experimental coil current is supplied as RMS, it must first be converted with
-
-```text
-I_peak = sqrt(2) I_rms
-```
-
-before using the peak-phasor power convention.
+with peak phasors throughout. If an experimental current is RMS, convert with `I_peak = sqrt(2) I_rms` before using the peak-phasor power convention.
 
 ## Validation
 
@@ -161,12 +123,8 @@ python3 experiments/Issue202_maxwell_scalar_fem_m0/check_contract.py
 Runtime/check-input, from repository root after `physics_app/physics-opt` is available:
 
 ```bash
-physics_app/physics-opt \
-  -i experiments/Issue202_maxwell_scalar_fem_m0/input.i \
-  --check-input
-
-physics_app/physics-opt \
-  -i experiments/Issue202_maxwell_scalar_fem_m0/input.i
+physics_app/physics-opt -i experiments/Issue202_maxwell_scalar_fem_m0/input.i --check-input
+physics_app/physics-opt -i experiments/Issue202_maxwell_scalar_fem_m0/input.i
 ```
 
 The bounded M2 vacuum/source validation now checks:
@@ -178,6 +136,7 @@ field scales linearly with I_peak at 5/10/20 A
 turn-by-turn superposition reproduces the all-three solution
 coil2 sign reversal (I,-I,I) reproduces E1-E2+E3
 coil2 sign reversal materially changes the spatial field
+global h-refinement levels 0/1/2 converge for E_imag L2 and four signed probes
 ```
 
 ### Accepted bounded runtime evidence
@@ -199,24 +158,37 @@ semantic head: 55445e336eb63f8e8c4fa9a6bb007937b598ed28
 (I1,I2,I3) = (I,-I,I)
 E_imag_l2 = 17.14724390071
 E_real_l2 = 0
+max signed-probe basis mismatch: ~5.0e-13 V/m
 ```
 
-Signed probes for the sign-reversal case are
-
-| r [m] | all-positive [V/m] | coil2-negative [V/m] |
-| ---: | ---: | ---: |
-| 0.05 | -58.209951694552 | -7.3352426640216 |
-| 0.10 | -92.276646096118 | -12.996755373028 |
-| 0.15 | -90.485037974822 | -18.618129221516 |
-| 0.20 | -55.955177156375 | -15.657707747501 |
-
-All four probes change materially. The mutated solution also satisfies
+Global mesh-convergence discriminator:
 
 ```text
-E_mut = E1 - E2 + E3
+Actions run: 37825300568
+semantic head: 33547b7cc4d2431eedceef5610c91c4fc64dca4c
+acceptance gate: medium->fine relative change < 1% for E_imag_l2 and four signed probes
 ```
 
-with maximum signed-probe absolute mismatch of about `5.0e-13 V/m`.
+| Level | Elements | DOFs | `E_imag_l2` |
+| ---: | ---: | ---: | ---: |
+| 0 | 3,951 | 4,100 | 48.029611050537 |
+| 1 | 15,804 | 16,100 | 48.108814494584 |
+| 2 | 63,216 | 63,806 | 48.130698802257 |
+
+For the global L2 observable, the relative change decreases from `0.1646%` at level 0->1 to `0.04547%` at level 1->2, with observed order about `1.86`.
+
+Fine/medium signed-probe relative changes are:
+
+| Probe | level 1 -> 2 relative change |
+| --- | ---: |
+| `r=0.05 m` | 0.02229% |
+| `r=0.10 m` | 0.004128% |
+| `r=0.15 m` | 0.01360% |
+| `r=0.20 m` | 0.02068% |
+
+`E_imag_min` also changes by only `0.778%` from medium to fine. `E_imag_max` is retained as diagnostic-only because it approaches zero and therefore has an ill-conditioned relative-error denominator; it is not used as a mesh-convergence acceptance observable.
+
+The committed default remains `mesh_refine = 0`. Higher levels are validation overrides rather than a silent production-mesh change.
 
 ## Deferred work
 
@@ -228,7 +200,6 @@ Not admitted by this baseline:
 - copper conductivity, skin effect, or proximity effect;
 - voltage/circuit/fixed-power drive;
 - conservative RF-power transfer into electron energy;
-- mesh-convergence acceptance;
 - outer-domain sensitivity acceptance;
 - COMSOL / external-reference field-profile equivalence;
 - closed-loop ICP coupling.
