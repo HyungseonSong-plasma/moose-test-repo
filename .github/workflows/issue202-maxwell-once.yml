@@ -1,8 +1,9 @@
 name: One-shot Issue 202 Maxwell scalar FEM validation
 
 on:
-  pull_request:
+  push:
     branches: [main]
+    paths: [.github/workflows/issue202-maxwell-once.yml]
 
 permissions:
   contents: read
@@ -15,13 +16,13 @@ jobs:
       PHYSICS_RUNTIME_REF: ghcr.io/hyungseonsong-plasma/physics-runtime@sha256:cda9f0d09a17aed5fa606e97d1ee5c3450f7280536cec2e5c635402bb07d972c
       CASE: experiments/Issue202_maxwell_scalar_fem_m0
     steps:
-      - name: Checkout exact PR head
+      - name: Checkout exact pushed revision
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ github.sha }}
       - name: Verify exact source revision
         shell: bash
-        run: test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+        run: test "$(git rev-parse HEAD)" = "${{ github.sha }}"
       - name: Validate three-turn coil contract
         shell: bash
         run: python3 "$CASE/check_contract.py"
