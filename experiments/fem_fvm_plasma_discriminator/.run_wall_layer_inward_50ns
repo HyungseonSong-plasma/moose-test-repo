@@ -1,1 +1,1 @@
-Run L2 and L4 inward wall-layer cases with dt=1 ns for 50 steps (50 ns total).
+Run L2 and L4 inward wall-layer cases with initial dt=1 ns and physical end_time=50 ns; allow timestep cutbacks without premature step-count termination.
