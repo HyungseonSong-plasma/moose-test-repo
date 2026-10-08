@@ -3,6 +3,9 @@ from pathlib import Path
 import prepare_cases as base
 import prepare_full_fem_contour_mesh as full_fem
 
+HYBRID_NSTEPS = 300
+HYBRID_END_TIME = base.DT * HYBRID_NSTEPS
+
 
 def replace_once(text: str, old: str, new: str, label: str) -> str:
     count = text.count(old)
@@ -71,11 +74,18 @@ def build_case() -> str:
 """
     text = replace_once(text, "\n[Postprocessors]\n", "\n" + fv_bc + "[Postprocessors]\n", "postprocessor insertion point")
 
+    # Extend the validated 1 ns case from 100 to 300 steps.  Keeping the
+    # trajectory in a single Exodus file makes the 100 ns / 300 ns comparison
+    # exact on the same mixed FE/FV discretization and mesh.
+    old_time = f"""  dt = {base.DT:.17g}\n  num_steps = {base.NSTEPS}\n  end_time = {base.END_TIME:.17g}\n"""
+    new_time = f"""  dt = {base.DT:.17g}\n  num_steps = {HYBRID_NSTEPS}\n  end_time = {HYBRID_END_TIME:.17g}\n"""
+    text = replace_once(text, old_time, new_time, "Executioner time settings")
+
     return text
 
 
 if __name__ == "__main__":
-    out = Path(base.HERE) / "ion_fvm_hybrid_contour_dt1ns_100steps.i"
+    out = Path(base.HERE) / "ion_fvm_hybrid_contour_dt1ns_300steps.i"
     out.write_text(build_case(), encoding="utf-8")
     print(f"wrote {out}")
     print("hybrid discretization: ne=FEM, O2+=FVM, electron energy=FEM, potential=FEM")
@@ -83,4 +93,4 @@ if __name__ == "__main__":
     print("FV ion density enters existing charge/Poisson functor chain directly")
     print("ion drift interpolation: upwind")
     print("electron particle/energy wall BCs: thermal-only, unchanged from contour FEM baseline")
-    print(f"dt={base.DT} s; steps={base.NSTEPS}; end_time={base.END_TIME} s")
+    print(f"dt={base.DT} s; steps={HYBRID_NSTEPS}; end_time={HYBRID_END_TIME} s")
