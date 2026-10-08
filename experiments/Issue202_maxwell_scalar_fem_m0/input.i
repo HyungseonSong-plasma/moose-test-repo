@@ -31,9 +31,15 @@ J_coil = ${fparse I_peak/coil_area}
 source_imag = ${fparse -omega*mu0*J_coil}
 wave_k2 = ${fparse omega*omega*mu0*eps0}
 
+# Global h-refinement level used only for the bounded M2 mesh-convergence study.
+# Level 0 is the committed production baseline; command-line overrides preserve
+# all geometry, material, source-normalization, and boundary semantics.
+mesh_refine = 0
+
 [Mesh]
   coord_type = RZ
   rz_coord_axis = Y
+  uniform_refine = ${mesh_refine}
 
   [base]
     type = FileMeshGenerator
@@ -232,7 +238,7 @@ wave_k2 = ${fparse omega*omega*mu0*eps0}
     variable = E_imag
   []
 
-  # Signed linear field probes used for turn-superposition discriminators.
+  # Signed linear field probes used for turn-superposition and convergence checks.
   [E_imag_probe_r05]
     type = PointValue
     variable = E_imag
