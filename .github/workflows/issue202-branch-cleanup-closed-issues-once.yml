@@ -1,0 +1,24 @@
+name: One-shot closed-issue branch cleanup
+
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/issue202-branch-cleanup-closed-issues-once.yml]
+
+permissions:
+  contents: write
+  pull-requests: read
+  issues: read
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Delete only closed-issue exact-SHA branches
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 tools/workflow/branch_cleanup_round3_20261008.py
