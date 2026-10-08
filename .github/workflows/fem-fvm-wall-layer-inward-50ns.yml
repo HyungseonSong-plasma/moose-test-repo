@@ -53,7 +53,7 @@ jobs:
               grep -q "layers = ${WALL_LAYERS}" "${CASE}.i"
               grep -q "type = PhysicsCoarseP1ConstraintProblem" "${CASE}.i"
               grep -q "coarse_p1_auto_detect_refinement_midpoints = true" "${CASE}.i"
-              grep -q "num_steps = 50" "${CASE}.i"
+              grep -q "num_steps = 100" "${CASE}.i"
               grep -q "end_time = 5.*e-08" "${CASE}.i"
               if grep -q "LinearNodalConstraint\|\[Constraints\]" "${CASE}.i"; then
                 echo "ERROR: residual/penalty constraint found in coarse-P1 experiment" >&2
@@ -79,6 +79,23 @@ jobs:
               cp "${CASE}_out.e" "$OUTDIR/" 2>/dev/null || true
               tail -n 2500 "$OUTDIR/run.log" > "$OUTDIR/tail.log" || true
               cp prepare_wall_layer_inward_50ns.py "$OUTDIR/"
+
+              if [ "$rc" -eq 0 ]; then
+                python3 - "$CASE" <<"PY"
+import csv
+import math
+import sys
+case = sys.argv[1]
+with open(case + "_out.csv", newline="") as f:
+    rows = list(csv.DictReader(f))
+if not rows:
+    raise SystemExit("empty CSV after successful run")
+t = float(rows[-1]["time"])
+if not math.isclose(t, 50.0e-9, rel_tol=0.0, abs_tol=1.0e-15):
+    raise SystemExit(f"successful run ended at {t:.17g} s, expected 5e-08 s")
+print(f"verified physical end_time={t:.17g} s")
+PY
+              fi
               exit "$rc"
             '
       - name: Upload L${{ matrix.layers }} 50 ns result
