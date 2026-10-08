@@ -11,6 +11,7 @@ RESULTS = CASE / "results_m2"
 
 CURRENT_CASES = {5.0: "current_5", 10.0: "current_10", 20.0: "current_20"}
 SINGLE_COIL_CASES = ("coil1_only", "coil2_only", "coil3_only")
+NEGATIVE_MUTATION_CASE = "coil2_negative"
 PROBES = (
     "E_imag_probe_r05",
     "E_imag_probe_r10",
@@ -62,6 +63,7 @@ def close(actual: float, expected: float, *, rel: float = 5e-7, abs_: float = 1e
 def main() -> None:
     current_rows = {amps: final_row(case) for amps, case in CURRENT_CASES.items()}
     single_rows = {case: final_row(case) for case in SINGLE_COIL_CASES}
+    mutation_row = final_row(NEGATIVE_MUTATION_CASE)
 
     required = ("E_real_l2", "E_imag_l2", "E_imag_min", "E_imag_max", *PROBES)
     for amps, case in CURRENT_CASES.items():
@@ -115,13 +117,60 @@ def main() -> None:
             "absolute_error": abs(actual - expected),
         }
 
+    require_keys(NEGATIVE_MUTATION_CASE, mutation_row, required)
+    if abs(mutation_row["E_real_l2"]) > 1e-12:
+        fail(
+            f"{NEGATIVE_MUTATION_CASE}: E_real_l2 must remain zero, "
+            f"got {mutation_row['E_real_l2']}"
+        )
+    if mutation_row["E_imag_l2"] <= 0.0:
+        fail(f"{NEGATIVE_MUTATION_CASE}: negative mutation produced no field")
+
+    negative_mutation: dict[str, dict[str, float]] = {}
+    changed_probe_count = 0
+    for key in PROBES:
+        expected = (
+            single_rows["coil1_only"][key]
+            - single_rows["coil2_only"][key]
+            + single_rows["coil3_only"][key]
+        )
+        actual = mutation_row[key]
+        if not close(actual, expected, rel=1e-6, abs_=1e-9):
+            fail(
+                f"coil2 sign-reversal failed for {key}: "
+                f"mutated={actual:.17g}, expected={expected:.17g}"
+            )
+        baseline = ref[key]
+        delta = actual - baseline
+        if abs(delta) > max(1e-6, 0.05 * abs(baseline)):
+            changed_probe_count += 1
+        negative_mutation[key] = {
+            "baseline_all_positive": baseline,
+            "mutated_coil2_negative": actual,
+            "expected_from_basis": expected,
+            "absolute_error": abs(actual - expected),
+            "delta_from_baseline": delta,
+        }
+
+    if changed_probe_count < 2:
+        fail(
+            "coil2 sign reversal did not materially change enough spatial probes: "
+            f"changed={changed_probe_count}/{len(PROBES)}"
+        )
+
     summary = {
         "status": "PASS",
         "issue": 202,
-        "scope": "M2 vacuum/source current-linearity and coil-superposition discriminators",
+        "scope": (
+            "M2 vacuum/source current-linearity, coil-superposition, "
+            "and coil2 sign-reversal discriminators"
+        ),
         "current_linearity": linearity,
         "coil_superposition": superposition,
+        "coil2_negative_mutation": negative_mutation,
+        "coil2_negative_changed_probe_count": changed_probe_count,
         "reference_10A": {key: ref[key] for key in required},
+        "negative_mutation_10A": {key: mutation_row[key] for key in required},
         "single_coil_l2": {case: row["E_imag_l2"] for case, row in single_rows.items()},
         "scientific_acceptance": False,
     }
@@ -129,7 +178,10 @@ def main() -> None:
     (RESULTS / "m2_summary.json").write_text(
         json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
-    print("PASS: Issue #202 M2 current-linearity and coil-superposition discriminators")
+    print(
+        "PASS: Issue #202 M2 current-linearity, coil-superposition, "
+        "and coil2 sign-reversal discriminators"
+    )
     print(json.dumps(summary, indent=2, sort_keys=True))
 
 
