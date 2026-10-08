@@ -81,20 +81,12 @@ jobs:
               cp prepare_wall_layer_inward_50ns.py "$OUTDIR/"
 
               if [ "$rc" -eq 0 ]; then
-                python3 - "$CASE" <<"PY"
-import csv
-import math
-import sys
-case = sys.argv[1]
-with open(case + "_out.csv", newline="") as f:
-    rows = list(csv.DictReader(f))
-if not rows:
-    raise SystemExit("empty CSV after successful run")
-t = float(rows[-1]["time"])
-if not math.isclose(t, 50.0e-9, rel_tol=0.0, abs_tol=1.0e-15):
-    raise SystemExit(f"successful run ended at {t:.17g} s, expected 5e-08 s")
-print(f"verified physical end_time={t:.17g} s")
-PY
+                final_time=$(tail -n 1 "${CASE}_out.csv" | cut -d, -f1)
+                echo "final_time=$final_time"
+                if [ "$final_time" != "5e-08" ] && [ "$final_time" != "5.0e-08" ] && [ "$final_time" != "5.0000000000000e-08" ]; then
+                  echo "ERROR: successful run did not end at 50 ns: $final_time" >&2
+                  exit 3
+                fi
               fi
               exit "$rc"
             '
