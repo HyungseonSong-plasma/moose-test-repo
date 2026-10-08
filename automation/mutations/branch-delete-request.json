@@ -39,6 +39,10 @@
     {
       "branch": "ops/branch-cleanup-round6-final-20261008",
       "expected_sha": "ad2400959ad82cd3f80362d0214e7299ce52aa68"
+    },
+    {
+      "branch": "ops/samuel-branch-delete-gateway-20261008",
+      "expected_sha": "b2633d8cdb0bb1de4f731d5d92e4bb4a5b8a5e2d"
     }
   ]
 }
