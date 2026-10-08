@@ -1,7 +1,7 @@
 # MOOSE/Physics Owner Inventory
 
-**Status:** canonical locator under Paul  
-**Purpose:** locate local semantic owners and trigger-loaded central skills without loading full documents.
+**Status:** canonical locator under Samuel  
+**Purpose:** locate local semantic owners and trigger-loaded central skills/capabilities without loading full documents.
 
 This file is an index, not a rulebook.
 
@@ -9,10 +9,10 @@ This file is an index, not a rulebook.
 
 | Owner | Trigger | Meaning |
 |---|---|---|
-| Paul `ESSENTIAL_RULES.md` | every initialized session | cross-repository authority/claim invariants |
+| Samuel `ESSENTIAL_RULES.md` | every initialized session | cross-repository authority/claim/mutation invariants |
 | `OPERATING_CORE.md` | every MOOSE/Physics work item | Physics-specific invariants |
 | active issue/body | when bounded work exists | current durable STATE |
-| `PROTOCOL_INDEX.md` | routed technical work | local semantic/skill trigger router |
+| `PROTOCOL_INDEX.md` | routed technical work | local semantic/skill/capability trigger router |
 
 ## Local semantic owners
 
@@ -27,18 +27,22 @@ This file is an index, not a rulebook.
 | MILESTONE | `docs/protocols/milestone_delivery.md` | multi-issue capability delivery |
 | MUTATION_POLICY | `docs/protocols/repository_mutation.md` | consumer-specific mutation policy |
 
-## Central skills
+## Central Samuel skills/capabilities
 
-Exact identities: `docs/operating_system/central_skills.json`.
+Exact adopted identities: `docs/operating_system/central_skills.json`.
 
-| Trigger | Central skill |
+| Trigger | Central owner |
 |---|---|
 | INIT | session-bootstrap, state-refresh |
 | MUTATE | repository-mutation |
 | GOVERNED_WORK | governed-work |
 | SCHEDULED_CONTROLLER | state-refresh, controller-throughput, controller-lifecycle |
+| RESEARCH_CONTROLLER | research-controller |
 | GITHUB_ACTIONS_EXECUTION | github-actions-execution |
 | GITHUB_ACTIONS_OBSERVATION | github-actions-observation |
+| GITHUB_PR_MERGE | pull-request-merge + capability registry |
+| ARTIFACT_STAGING | artifact-staging |
+| SCIENTIFIC_DISCRIMINATOR_CONTROLLER | scientific-discriminator-controller |
 
 ## Diagnostic evidence
 
@@ -51,4 +55,4 @@ Load only matching material.
 
 Calvin process/rule metrics are archived at `archive/operating_metrics/`.
 
-They are not a Paul owner, pack, routing input, or acceptance criterion.
+They are not a Samuel owner, pack, routing input, or acceptance criterion.

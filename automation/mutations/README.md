@@ -1,8 +1,8 @@
 # Governed repository mutation manifests
 
-Checked-in JSON files in this directory declare deterministic repository mutations executed by the central portable skill:
+Checked-in JSON files in this directory declare deterministic repository mutations executed by the central portable Samuel skill:
 
-`HyungseonSong-plasma/chatgpt-operation@6474eb7b77f890b7cf9d7134ccebea31662bcdbe`
+`HyungseonSong-plasma/chatgpt-operation@4599ce446ab8a9e56d872e93541b1215d1702ab0`
 
 Use the canonical `Governed refactor entrypoint` with task `repository_mutation`. The consumer policy is `.chatgpt-operation.json`.
 
@@ -11,7 +11,7 @@ Portable v1 supports:
 - file create / update / delete;
 - branch create.
 
-Branch move/delete and issue/PR mutation remain outside portable v1 and continue to use the canonical repository-mutation protocol plus an explicitly safe mutator.
+Operations outside portable v1 use the explicitly appropriate Samuel capability/native mutator. For example, PR merge is owned by `GITHUB_PR_MERGE` / `pull-request-merge`, not by this manifest format.
 
 Rules:
 

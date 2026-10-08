@@ -1,7 +1,7 @@
 # Repository Mutation Policy Overlay
 
-**Status:** consumer-local policy under Paul  
-**Purpose:** define MOOSE/Physics authorization and evidence-lineage meaning while delegating deterministic mutation mechanics to the central Paul `repository-mutation` skill.
+**Status:** consumer-local policy under Samuel  
+**Purpose:** define MOOSE/Physics authorization and evidence-lineage meaning while delegating deterministic mutation mechanics to the central Samuel `repository-mutation` skill/controller paths.
 
 ## Central mechanic
 
@@ -33,7 +33,7 @@ Do not recreate those mechanics here.
 - allowed portable actions;
 - local validation-gate workflow names.
 
-Paul ER-03/ER-05/ER-07/ER-08 remain applicable.
+Samuel ER-03/ER-05/ER-07/ER-08/ER-10 remain applicable.
 
 ## RM-L01 — Semantic intent
 
@@ -57,9 +57,9 @@ Generic controller liveness classification is delegated to central controller sk
 
 ## RM-L03 — Unsupported mutation surfaces
 
-Portable v1 does not own branch move/delete, issue/PR mutation, Git-object snapshot construction, or other unsupported resource classes.
+Portable repository-mutation v1 does not own every GitHub/Git resource class. Operations outside its declared resource/action contract require the explicitly appropriate Samuel capability/native mutator and current target evidence.
 
-Those actions require an explicitly appropriate safe mutator and current target evidence under Paul essential rules.
+For example, PR merge is owned by `GITHUB_PR_MERGE` / `pull-request-merge`, not by pretending it is a portable file/branch mutation.
 
 Do not emulate an unsupported action through a misleading supported manifest.
 
