@@ -1,0 +1,84 @@
+name: L4 temporal resolution comparison to 40 ns
+
+on:
+  push:
+    branches:
+      - experiment-l4-time-resolution
+    paths:
+      - 'experiments/fem_fvm_plasma_discriminator/.run_l4_time_resolution'
+  workflow_dispatch:
+
+jobs:
+  compare:
+    name: L4-${{ matrix.case_id }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        case_id: [dt02_then_04, dt04, dt08]
+    env:
+      BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pull build image
+        run: docker pull "$BUILD_BASE_REF"
+      - name: Build and run ${{ matrix.case_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm --entrypoint /bin/bash --user 0:0 \
+            -e CASE_ID="${{ matrix.case_id }}" \
+            --workdir /workspace -v "$GITHUB_WORKSPACE:/workspace" \
+            "$BUILD_BASE_REF" -lc '
+              set -euo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              git config --global --add safe.directory /opt/physics_vendor/moose
+              git config --global --add safe.directory /opt/physics_vendor/crane
+              git config --global --add safe.directory /opt/physics_vendor/squirrel
+              git config --global --add safe.directory /opt/physics_vendor/zapdos
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+
+              make -C physics_app -j2
+              cd experiments/fem_fvm_plasma_discriminator
+              python3 prepare_l4_time_resolution.py --case "$CASE_ID"
+
+              CASE="hybrid_L4_time_${CASE_ID}"
+              grep -q "layers = 4" "${CASE}.i"
+              grep -q "type = PhysicsCoarseP1ConstraintProblem" "${CASE}.i"
+              grep -q "type = TimeSequenceStepper" "${CASE}.i"
+              grep -q "end_time = 4e-08" "${CASE}.i"
+              ../../physics_app/physics-opt -i "${CASE}.i" --check-input
+
+              OUTDIR="output_l4_time_resolution/${CASE_ID}"
+              rm -rf "$OUTDIR"
+              mkdir -p "$OUTDIR"
+
+              set +e
+              /usr/bin/time -f "wall_seconds=%e\nuser_seconds=%U\nsystem_seconds=%S\nmax_rss_kb=%M" \
+                -o "$OUTDIR/wall_time.txt" \
+                timeout --signal=TERM 35m stdbuf -oL -eL \
+                ../../physics_app/physics-opt -i "${CASE}.i" > "$OUTDIR/run.log" 2>&1
+              rc=$?
+              set -e
+              echo "run_rc=$rc" > "$OUTDIR/status.txt"
+              cp "${CASE}.i" "$OUTDIR/"
+              cp "${CASE}_out.csv" "$OUTDIR/" 2>/dev/null || true
+              cp "${CASE}_out.e" "$OUTDIR/" 2>/dev/null || true
+              tail -n 2400 "$OUTDIR/run.log" > "$OUTDIR/tail.log" || true
+              cp prepare_l4_time_resolution.py "$OUTDIR/"
+              exit "$rc"
+            '
+      - name: Upload ${{ matrix.case_id }} result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: l4-time-resolution-${{ matrix.case_id }}-t40ns
+          path: experiments/fem_fvm_plasma_discriminator/output_l4_time_resolution/${{ matrix.case_id }}/**
+          retention-days: 30
