@@ -17,10 +17,44 @@ permissions:
 jobs:
   run:
     if: github.head_ref == 'issue-202-maxwell-scalar-fem-m0'
-    uses: HyungseonSong-plasma/chatgpt-operation/.github/workflows/governed-matrix.yml@4599ce446ab8a9e56d872e93541b1215d1702ab0
-    with:
-      issue: "202"
-      sequence: "01"
-      manifest: automation/manifests/experiments/Issue_202_experiments01.json
-      base_sha: ${{ github.event.pull_request.head.sha }}
-      operation_sha: 4599ce446ab8a9e56d872e93541b1215d1702ab0
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      PHYSICS_RUNTIME_REF: ghcr.io/hyungseonsong-plasma/physics-runtime@sha256:cda9f0d09a17aed5fa606e97d1ee5c3450f7280536cec2e5c635402bb07d972c
+      CASE: experiments/Issue202_maxwell_scalar_fem_m0
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Verify exact source revision
+        shell: bash
+        run: test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+      - name: Validate three-turn coil contract
+        shell: bash
+        run: python3 "$CASE/check_contract.py"
+      - name: Pull accepted immutable Physics runtime
+        shell: bash
+        run: docker pull "$PHYSICS_RUNTIME_REF"
+      - name: Check Maxwell input
+        shell: bash
+        run: |
+          mkdir -p "$CASE/results"
+          docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" \
+            --check-input -i "$CASE/input.i" 2>&1 | tee "$CASE/results/check_input.log"
+      - name: Run Maxwell vacuum-source discriminator
+        shell: bash
+        run: |
+          docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" \
+            -i "$CASE/input.i" \
+            Outputs/file_base="$CASE/results/vacuum_three_coil" \
+            2>&1 | tee "$CASE/results/runtime.log"
+      - name: Upload Maxwell runtime evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Issue_202_Maxwell_vacuum_three_coil
+          path: |
+            experiments/Issue202_maxwell_scalar_fem_m0/results/**
+          if-no-files-found: warn
+          retention-days: 30
