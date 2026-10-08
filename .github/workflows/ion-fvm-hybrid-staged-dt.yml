@@ -1,0 +1,151 @@
+name: Ion-FVM hybrid baseline regression
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/ion-fvm-hybrid-staged-dt.yml'
+      - 'experiments/fem_fvm_plasma_discriminator/generate_contour_mesh.py'
+      - 'experiments/fem_fvm_plasma_discriminator/prepare_cases.py'
+      - 'experiments/fem_fvm_plasma_discriminator/prepare_full_fem_contour_mesh.py'
+      - 'experiments/fem_fvm_plasma_discriminator/prepare_ion_fvm_hybrid_contour.py'
+      - 'experiments/fem_fvm_plasma_discriminator/prepare_ion_fvm_hybrid_staged_dt.py'
+      - 'experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt'
+      - 'physics_app/include/bcs/PhysicsFEMPlasmaWallBCs.h'
+      - 'physics_app/src/bcs/PhysicsFEMLogMolarElectronNoSheathSuppressionBC.C'
+      - 'physics_app/src/bcs/PhysicsFEMLogMolarElectronEnergyNoSheathSuppressionBC.C'
+      - 'physics_app/src/bcs/PhysicsFEMPlasmaWallBCs.C'
+      - 'physics_app/include/functormaterials/PhysicsIonWallFluxMaterial.h'
+      - 'physics_app/src/functormaterials/PhysicsIonWallFluxMaterial.C'
+      - 'physics_app/include/fvkernels/PhysicsFVLogMolarElectronTransport.h'
+      - 'physics_app/src/fvkernels/PhysicsFVLogMolarElectronTransport.C'
+      - 'physics_app/include/kernels/PhysicsFEMPlasmaTransport.h'
+      - 'physics_app/src/kernels/PhysicsFEMPlasmaTransport.C'
+      - 'physics_app/include/materials/PhysicsElectronMeanEnergyMaterial.h'
+      - 'physics_app/src/materials/PhysicsElectronMeanEnergyMaterial.C'
+      - 'physics_app/include/fvbcs/PhysicsGroundedElectronSheathFlux.h'
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/ion-fvm-hybrid-staged-dt.yml'
+      - 'experiments/fem_fvm_plasma_discriminator/generate_contour_mesh.py'
+      - 'experiments/fem_fvm_plasma_discriminator/prepare_cases.py'
+      - 'experiments/fem_fvm_plasma_discriminator/prepare_full_fem_contour_mesh.py'
+      - 'experiments/fem_fvm_plasma_discriminator/prepare_ion_fvm_hybrid_contour.py'
+      - 'experiments/fem_fvm_plasma_discriminator/prepare_ion_fvm_hybrid_staged_dt.py'
+      - 'experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt'
+      - 'physics_app/include/bcs/PhysicsFEMPlasmaWallBCs.h'
+      - 'physics_app/src/bcs/PhysicsFEMLogMolarElectronNoSheathSuppressionBC.C'
+      - 'physics_app/src/bcs/PhysicsFEMLogMolarElectronEnergyNoSheathSuppressionBC.C'
+      - 'physics_app/src/bcs/PhysicsFEMPlasmaWallBCs.C'
+      - 'physics_app/include/functormaterials/PhysicsIonWallFluxMaterial.h'
+      - 'physics_app/src/functormaterials/PhysicsIonWallFluxMaterial.C'
+      - 'physics_app/include/fvkernels/PhysicsFVLogMolarElectronTransport.h'
+      - 'physics_app/src/fvkernels/PhysicsFVLogMolarElectronTransport.C'
+      - 'physics_app/include/kernels/PhysicsFEMPlasmaTransport.h'
+      - 'physics_app/src/kernels/PhysicsFEMPlasmaTransport.C'
+      - 'physics_app/include/materials/PhysicsElectronMeanEnergyMaterial.h'
+      - 'physics_app/src/materials/PhysicsElectronMeanEnergyMaterial.C'
+      - 'physics_app/include/fvbcs/PhysicsGroundedElectronSheathFlux.h'
+
+jobs:
+  run:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - case: ion_fvm_hybrid_staged_1ns100_5ns100
+            label: 1ns100-5ns100
+            expected_steps: 200
+          - case: ion_fvm_hybrid_staged_1ns100_10ns50
+            label: 1ns100-10ns50
+            expected_steps: 150
+    name: ion-FVM-hybrid-${{ matrix.label }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pull build image
+        run: docker pull "$BUILD_BASE_REF"
+
+      - name: Build and run staged-dt baseline
+        shell: bash
+        env:
+          CASE: ${{ matrix.case }}
+          LABEL: ${{ matrix.label }}
+          EXPECTED_STEPS: ${{ matrix.expected_steps }}
+        run: |
+          set -euo pipefail
+          docker run --rm --entrypoint /bin/bash --user 0:0 \
+            --workdir /workspace -v "$GITHUB_WORKSPACE:/workspace" \
+            -e CASE="$CASE" -e LABEL="$LABEL" -e EXPECTED_STEPS="$EXPECTED_STEPS" \
+            "$BUILD_BASE_REF" -lc '
+              set -euo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              git config --global --add safe.directory /opt/physics_vendor/moose
+              git config --global --add safe.directory /opt/physics_vendor/crane
+              git config --global --add safe.directory /opt/physics_vendor/squirrel
+              git config --global --add safe.directory /opt/physics_vendor/zapdos
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+
+              make -C physics_app -j2
+              cd experiments/fem_fvm_plasma_discriminator
+
+              OUTDIR="output_${CASE}"
+              rm -rf "$OUTDIR"
+              mkdir -p "$OUTDIR"
+
+              python3 generate_contour_mesh.py | tee "$OUTDIR/mesh_generation.log"
+              python3 prepare_ion_fvm_hybrid_staged_dt.py | tee "$OUTDIR/prepare.log"
+              cp plasma_contour_l3_4p5mm.msh "$OUTDIR/"
+              cp "${CASE}.i" "$OUTDIR/"
+
+              grep -q "type = TimeSequenceStepper" "${CASE}.i"
+              grep -q "use_element_gradient_for_potential = true" "${CASE}.i"
+              grep -q "type = MooseVariableFVReal" "${CASE}.i"
+
+              set +e
+              ../../physics_app/physics-opt -i "${CASE}.i" --check-input > "$OUTDIR/check_input.log" 2>&1
+              check_rc=$?
+              set -e
+              echo "check_rc=$check_rc" > "$OUTDIR/check_status.txt"
+              if [ "$check_rc" -ne 0 ]; then
+                cat "$OUTDIR/check_input.log"
+                exit "$check_rc"
+              fi
+
+              set +e
+              /usr/bin/time -f "wall_seconds=%e\nuser_seconds=%U\nsystem_seconds=%S\nmax_rss_kb=%M" \
+                -o "$OUTDIR/wall_time.txt" \
+                timeout --signal=TERM 35m stdbuf -oL -eL \
+                ../../physics_app/physics-opt -i "${CASE}.i" > "$OUTDIR/run.log" 2>&1
+              rc=$?
+              set -e
+
+              echo "run_rc=$rc" > "$OUTDIR/status.txt"
+              echo "expected_steps=$EXPECTED_STEPS" >> "$OUTDIR/status.txt"
+              cp "${CASE}_out.csv" "$OUTDIR/" 2>/dev/null || true
+              cp "${CASE}_out.e" "$OUTDIR/" 2>/dev/null || true
+              tail -n 2600 "$OUTDIR/run.log" > "$OUTDIR/tail.log" || true
+              exit "$rc"
+            '
+
+      - name: Upload result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ion-fvm-hybrid-${{ matrix.label }}
+          path: experiments/fem_fvm_plasma_discriminator/output_${{ matrix.case }}/**
+          retention-days: 30
