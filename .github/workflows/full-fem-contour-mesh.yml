@@ -43,20 +43,29 @@ jobs:
               make -C physics_app -j2
               cd experiments/fem_fvm_plasma_discriminator
 
-              python3 generate_contour_mesh.py | tee mesh_generation.log
-              python3 prepare_full_fem_contour_mesh.py
-
               CASE="full_fem_contour_mesh_dt1ns_100steps"
-              grep -q "file = 'plasma_contour_l3_4p5mm.msh'" "${CASE}.i"
-              grep -q "type = PhysicsFEMLogMolarElectronNoSheathSuppressionBC" "${CASE}.i"
-              grep -q "type = PhysicsFEMLogMolarElectronEnergyNoSheathSuppressionBC" "${CASE}.i"
-              ../../physics_app/physics-opt -i "${CASE}.i" --check-input
-
               OUTDIR="output_full_fem_contour_mesh"
               rm -rf "$OUTDIR"
               mkdir -p "$OUTDIR"
+
+              python3 generate_contour_mesh.py | tee "$OUTDIR/mesh_generation.log"
+              python3 prepare_full_fem_contour_mesh.py
               cp plasma_contour_l3_4p5mm.msh "$OUTDIR/"
-              cp mesh_generation.log "$OUTDIR/"
+              cp "${CASE}.i" "$OUTDIR/"
+
+              grep -q "file = 'plasma_contour_l3_4p5mm.msh'" "${CASE}.i"
+              grep -q "type = PhysicsFEMLogMolarElectronNoSheathSuppressionBC" "${CASE}.i"
+              grep -q "type = PhysicsFEMLogMolarElectronEnergyNoSheathSuppressionBC" "${CASE}.i"
+
+              set +e
+              ../../physics_app/physics-opt -i "${CASE}.i" --check-input > "$OUTDIR/check_input.log" 2>&1
+              check_rc=$?
+              set -e
+              echo "check_rc=$check_rc" > "$OUTDIR/check_status.txt"
+              if [ "$check_rc" -ne 0 ]; then
+                cat "$OUTDIR/check_input.log"
+                exit "$check_rc"
+              fi
 
               set +e
               /usr/bin/time -f "wall_seconds=%e\nuser_seconds=%U\nsystem_seconds=%S\nmax_rss_kb=%M" \
@@ -67,7 +76,6 @@ jobs:
               set -e
 
               echo "run_rc=$rc" > "$OUTDIR/status.txt"
-              cp "${CASE}.i" "$OUTDIR/"
               cp "${CASE}_out.csv" "$OUTDIR/" 2>/dev/null || true
               cp "${CASE}_out.e" "$OUTDIR/" 2>/dev/null || true
               tail -n 2400 "$OUTDIR/run.log" > "$OUTDIR/tail.log" || true
