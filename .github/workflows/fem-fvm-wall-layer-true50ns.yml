@@ -1,0 +1,90 @@
+name: FV inward wall-layer L2/L4 true 50 ns
+
+on:
+  push:
+    branches:
+      - issue-wall-layer-inward-extension
+    paths:
+      - 'experiments/fem_fvm_plasma_discriminator/.run_wall_layer_true50ns'
+  workflow_dispatch:
+
+jobs:
+  compare:
+    name: true50ns-L${{ matrix.layers }}
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        layers: [2, 4]
+    env:
+      BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pull build image
+        run: docker pull "$BUILD_BASE_REF"
+      - name: Build and run L${{ matrix.layers }} to true 50 ns
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm --entrypoint /bin/bash --user 0:0 \
+            -e WALL_LAYERS="${{ matrix.layers }}" \
+            --workdir /workspace -v "$GITHUB_WORKSPACE:/workspace" \
+            "$BUILD_BASE_REF" -lc '
+              set -euo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              git config --global --add safe.directory /opt/physics_vendor/moose
+              git config --global --add safe.directory /opt/physics_vendor/crane
+              git config --global --add safe.directory /opt/physics_vendor/squirrel
+              git config --global --add safe.directory /opt/physics_vendor/zapdos
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+
+              make -C physics_app -j2
+              cd experiments/fem_fvm_plasma_discriminator
+              python3 prepare_wall_layer_inward_50ns.py --layers "$WALL_LAYERS"
+
+              CASE="hybrid_wall_layer_L${WALL_LAYERS}_coarse_p1_50ns"
+              grep -q "layers = ${WALL_LAYERS}" "${CASE}.i"
+              grep -q "num_steps = 100" "${CASE}.i"
+              grep -q "end_time = 5.*e-08" "${CASE}.i"
+              ../../physics_app/physics-opt -i "${CASE}.i" --check-input
+
+              OUTDIR="output_wall_layer_true50ns/L${WALL_LAYERS}"
+              rm -rf "$OUTDIR"
+              mkdir -p "$OUTDIR"
+
+              set +e
+              /usr/bin/time -f "wall_seconds=%e\nuser_seconds=%U\nsystem_seconds=%S\nmax_rss_kb=%M" \
+                -o "$OUTDIR/wall_time.txt" \
+                timeout --signal=TERM 30m stdbuf -oL -eL \
+                ../../physics_app/physics-opt --print-constraints -i "${CASE}.i" > "$OUTDIR/run.log" 2>&1
+              rc=$?
+              set -e
+              echo "run_rc=$rc" > "$OUTDIR/status.txt"
+              cp "${CASE}.i" "$OUTDIR/"
+              cp "${CASE}_out.csv" "$OUTDIR/" 2>/dev/null || true
+              cp "${CASE}_out.e" "$OUTDIR/" 2>/dev/null || true
+              tail -n 2500 "$OUTDIR/run.log" > "$OUTDIR/tail.log" || true
+
+              if [ "$rc" -eq 0 ]; then
+                final_time=$(tail -n 1 "${CASE}_out.csv" | cut -d, -f1)
+                echo "final_time=$final_time"
+                case "$final_time" in
+                  5e-08|5.0e-08|5.0000000000000e-08) ;;
+                  *) echo "ERROR: successful run did not end at 50 ns: $final_time" >&2; exit 3 ;;
+                esac
+              fi
+              exit "$rc"
+            '
+      - name: Upload L${{ matrix.layers }} true-50ns result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fv-wall-layer-true50ns-L${{ matrix.layers }}-coarse-p1
+          path: experiments/fem_fvm_plasma_discriminator/output_wall_layer_true50ns/L${{ matrix.layers }}/**
+          retention-days: 30
