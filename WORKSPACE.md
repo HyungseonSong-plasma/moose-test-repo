@@ -10,16 +10,19 @@ Use:
 moose-test-init
 ```
 
-`BOOTSTRAP.md` applies the exact pinned Paul OS and central `session-bootstrap` mechanics, then restores Physics-local authority/current state.
+`BOOTSTRAP.md` applies the exact pinned Samuel OS and central `session-bootstrap` mechanics, then restores Physics-local authority/current state.
 
-## Paul operating stack
+## Samuel operating stack
 
 ```text
 docs/operating_system/README.md
-  -> exact Paul binding
+  -> exact Samuel binding
 
 central ESSENTIAL_RULES + session-bootstrap/state-refresh
   -> generic authority/bootstrap mechanics
+
+central catalog + capability registry
+  -> trigger/capability routing into Samuel skills/controller paths
 
 OPERATING_CORE.md
   -> Physics-specific invariants
@@ -34,7 +37,7 @@ current protocol owner
   -> only the Physics semantics required now
 ```
 
-Central mutation/governed/controller skills are loaded only when their trigger applies.
+Central mutation/governed/controller/merge skills are loaded only when their trigger applies.
 
 ## Canonical technical owners
 
@@ -48,7 +51,7 @@ Central mutation/governed/controller skills are loaded only when their trigger a
 
 ## Metrics boundary
 
-Calvin operating-process/rule metrics are archived under `archive/operating_metrics/` and are not live Paul inputs.
+Calvin operating-process/rule metrics are archived under `archive/operating_metrics/` and are not live Samuel inputs.
 
 Scientific, numerical, runtime, convergence, accuracy, performance, and scalability metrics required by technical validation remain live and are not part of that archive policy.
 
