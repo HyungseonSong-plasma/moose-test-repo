@@ -40,9 +40,9 @@ jobs:
           test -f docs/operating_system/README.md
           test -f docs/operating_system/CENTRAL_SKILLS.md
           test -f docs/operating_system/central_skills.json
-          grep -Fq '4599ce446ab8a9e56d872e93541b1215d1702ab0' docs/operating_system/README.md
+          grep -Fq '125bae0358da93edd6726b013ebc4639ed2cff77' docs/operating_system/README.md
           grep -Fq 'Expected OS:** Samuel' docs/operating_system/README.md
-          grep -Fq '4599ce446ab8a9e56d872e93541b1215d1702ab0' docs/operating_system/CENTRAL_SKILLS.md
+          grep -Fq '125bae0358da93edd6726b013ebc4639ed2cff77' docs/operating_system/CENTRAL_SKILLS.md
 
           # Calvin operating metrics remain archive-only under Samuel.
           test ! -e docs/metrics
@@ -51,9 +51,9 @@ jobs:
           test -f archive/operating_metrics/calvin/metrics_closure.md
 
           # Executable central actions use the same exact Samuel revision.
-          grep -Fq 'HyungseonSong-plasma/chatgpt-operation/.github/actions/repository-mutation@4599ce446ab8a9e56d872e93541b1215d1702ab0' .github/workflows/refactor.yml
-          grep -Fq 'HyungseonSong-plasma/chatgpt-operation/.github/actions/governed-work@4599ce446ab8a9e56d872e93541b1215d1702ab0' .github/workflows/refactor.yml
-          grep -Fq 'HyungseonSong-plasma/chatgpt-operation/.github/actions/governed-work@4599ce446ab8a9e56d872e93541b1215d1702ab0' .github/workflows/experiment.yml
+          grep -Fq 'HyungseonSong-plasma/chatgpt-operation/.github/actions/repository-mutation@125bae0358da93edd6726b013ebc4639ed2cff77' .github/workflows/refactor.yml
+          grep -Fq 'HyungseonSong-plasma/chatgpt-operation/.github/actions/governed-work@125bae0358da93edd6726b013ebc4639ed2cff77' .github/workflows/refactor.yml
+          grep -Fq 'HyungseonSong-plasma/chatgpt-operation/.github/actions/governed-work@125bae0358da93edd6726b013ebc4639ed2cff77' .github/workflows/experiment.yml
 
           python3 - <<'PY'
           import json
@@ -63,7 +63,7 @@ jobs:
           assert manifest["schema_version"] == 2
           assert manifest["source_repository"] == "HyungseonSong-plasma/chatgpt-operation"
           os_meta=manifest["operating_system"]
-          revision="4599ce446ab8a9e56d872e93541b1215d1702ab0"
+          revision="125bae0358da93edd6726b013ebc4639ed2cff77"
           assert os_meta["revision"] == revision
           assert os_meta["expected_version"] == "Samuel"
           assert os_meta["index"] == {
@@ -76,11 +76,11 @@ jobs:
           }
           assert manifest["skill_catalog"] == {
               "path": "skills/catalog.json",
-              "expected_blob_sha": "0116d5c33dc88cc2fedea3e5294e847b7bc2cbf5",
+              "expected_blob_sha": "640a10680839b80cb7ef73ad70ac28961682231a",
           }
           assert manifest["capability_registry"] == {
               "path": "skills/capability-registry.json",
-              "expected_blob_sha": "b5ab05b358f47cdfaa9c9b7841581c519846b857",
+              "expected_blob_sha": "aa87d20fa68dc6e171ffd3240b4e4bc6d3bf28be",
           }
 
           entries={item["name"]: item for item in manifest["skills"]}
@@ -103,7 +103,7 @@ jobs:
               assert item["revision"] == revision
           assert entries["session-bootstrap"]["load_on"] == ["INIT"]
           assert entries["state-refresh"]["load_on"] == ["INIT","SCHEDULED_CONTROLLER"]
-          assert entries["repository-mutation"]["load_on"] == ["MUTATE"]
+          assert entries["repository-mutation"]["load_on"] == ["MUTATE","GITHUB_BRANCH_DELETE"]
           assert entries["governed-work"]["load_on"] == ["GOVERNED_WORK"]
           assert entries["controller-throughput"]["load_on"] == ["SCHEDULED_CONTROLLER"]
           assert entries["controller-lifecycle"]["load_on"] == ["SCHEDULED_CONTROLLER"]

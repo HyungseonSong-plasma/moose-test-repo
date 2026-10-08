@@ -4,7 +4,7 @@ New scientific experiments and refactor automation are data, not GitHub workflow
 
 The reusable manifest schema, skeleton generator, runner, and evidence mechanics are centrally owned by:
 
-`HyungseonSong-plasma/chatgpt-operation@4599ce446ab8a9e56d872e93541b1215d1702ab0`
+`HyungseonSong-plasma/chatgpt-operation@125bae0358da93edd6726b013ebc4639ed2cff77`
 
 From an exact checkout of that Samuel revision, create a fail-closed skeleton with:
 
