@@ -1,0 +1,23 @@
+name: One-shot branch cleanup round 2
+
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/issue202-branch-cleanup-once.yml]
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Delete only ancestry-qualified exact-SHA branches
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 tools/workflow/branch_cleanup_round2_20261008.py
