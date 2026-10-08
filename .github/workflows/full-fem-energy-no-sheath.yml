@@ -1,4 +1,4 @@
-name: Full FEM thermal-only electron-energy wall BC
+name: Full FEM thermal-only electron particle and energy wall BCs
 
 on:
   push:
@@ -10,7 +10,7 @@ on:
 
 jobs:
   run:
-    name: full-FEM-dt1ns-100steps-thermal-energy-wall
+    name: full-FEM-dt1ns-100steps-thermal-particle-energy-wall
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     env:
@@ -45,6 +45,7 @@ jobs:
               python3 prepare_full_fem_energy_no_sheath.py
 
               CASE="full_fem_energy_no_sheath_dt1ns_100steps"
+              grep -q "type = PhysicsFEMLogMolarElectronNoSheathSuppressionBC" "${CASE}.i"
               grep -q "type = PhysicsFEMLogMolarElectronEnergyNoSheathSuppressionBC" "${CASE}.i"
               grep -q "dt = 1e-09" "${CASE}.i" || grep -q "dt = 1.0000000000000001e-09" "${CASE}.i"
               ../../physics_app/physics-opt -i "${CASE}.i" --check-input
@@ -73,6 +74,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: full-fem-energy-no-sheath-dt1ns-100steps
+          name: full-fem-thermal-particle-energy-dt1ns-100steps
           path: experiments/fem_fvm_plasma_discriminator/output_full_fem_energy_no_sheath/**
           retention-days: 30
