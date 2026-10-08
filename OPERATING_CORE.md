@@ -1,9 +1,9 @@
 # MOOSE/Physics Operating Core
 
-**Status:** canonical consumer-local core under Paul  
-**Purpose:** retain only Physics-specific invariants that cannot be delegated to central Paul rules/skills.
+**Status:** canonical consumer-local core under Samuel  
+**Purpose:** retain only Physics-specific invariants that cannot be delegated to central Samuel rules/skills/controller mechanics.
 
-Paul `ESSENTIAL_RULES.md` is loaded before this file during initialization. Do not duplicate those generic rules here.
+Samuel `ESSENTIAL_RULES.md` is loaded before this file during initialization. Do not duplicate those generic rules here.
 
 ## Local always-active invariants
 
@@ -53,16 +53,17 @@ A milestone is a capability boundary; an issue is the semantic implementation/ro
 
 Detailed milestone semantics are owned by `docs/protocols/milestone_delivery.md`.
 
-## Paul composition
+## Samuel composition
 
 For technical work:
 
 ```text
-Paul essential rules
+Samuel essential rules
 + this Physics core
 + current issue/STATE
 + one current local semantic phase owner
-+ only central skills triggered by the immediate obligation
++ only central skills/capabilities triggered by the immediate obligation
++ durable Samuel controller state when the obligation requires it
 + temporary diagnostic evidence only when needed
 ```
 
@@ -70,4 +71,4 @@ No weighted rule-load threshold or operating metric is part of the live core.
 
 ## Initialization
 
-`moose-test-init` routes to `BOOTSTRAP.md`, which delegates generic bootstrap mechanics to the pinned central `session-bootstrap` skill.
+`moose-test-init` routes to `BOOTSTRAP.md`, which delegates generic bootstrap mechanics to the pinned central `session-bootstrap` skill and verifies the Samuel capability registry without authorizing mutation.
