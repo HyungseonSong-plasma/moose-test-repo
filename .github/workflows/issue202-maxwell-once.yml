@@ -1,28 +1,32 @@
 name: One-shot Issue 202 Maxwell scalar FEM validation
 
 on:
-  push:
+  pull_request:
     branches: [main]
-    paths: [.github/workflows/issue202-maxwell-once.yml]
+    types: [opened, synchronize, reopened]
+    paths:
+      - experiments/Issue202_maxwell_scalar_fem_m0/**
+      - .github/workflows/issue202-maxwell-once.yml
 
 permissions:
   contents: read
 
 jobs:
   run:
+    if: github.head_ref == 'issue-202-maxwell-scalar-fem-m0'
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     env:
       PHYSICS_RUNTIME_REF: ghcr.io/hyungseonsong-plasma/physics-runtime@sha256:cda9f0d09a17aed5fa606e97d1ee5c3450f7280536cec2e5c635402bb07d972c
       CASE: experiments/Issue202_maxwell_scalar_fem_m0
     steps:
-      - name: Checkout exact pushed revision
+      - name: Checkout exact PR head
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ github.event.pull_request.head.sha }}
       - name: Verify exact source revision
         shell: bash
-        run: test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+        run: test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
       - name: Validate three-turn coil contract
         shell: bash
         run: python3 "$CASE/check_contract.py"
@@ -62,6 +66,14 @@ jobs:
             -i "$CASE/input.i" coil1_scale=0 coil2_scale=0 coil3_scale=1 \
             Outputs/file_base="$CASE/results_m2/coil3_only" \
             2>&1 | tee "$CASE/results_m2/coil3_only.log"
+      - name: Run coil2 sign-reversal negative mutation
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" \
+            -i "$CASE/input.i" coil1_scale=1 coil2_scale=-1 coil3_scale=1 \
+            Outputs/file_base="$CASE/results_m2/coil2_negative" \
+            2>&1 | tee "$CASE/results_m2/coil2_negative.log"
       - name: Analyze M2 discriminators
         shell: bash
         run: python3 "$CASE/analyze_m2_discriminators.py" | tee "$CASE/results_m2/analyzer.log"
