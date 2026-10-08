@@ -14,11 +14,10 @@
 #   coil1/coil2/coil3 carry the same prescribed peak current phasor.
 # Copper skin/proximity physics and plasma feedback are intentionally OFF.
 
-pi = 3.141592653589793
-mu0 = ${fparse 4*pi*1e-7}
+mu0 = 1.2566370614359173e-6
 eps0 = 8.8541878128e-12
 frequency = 13.56e6
-omega = ${fparse 2*pi*frequency}
+omega = ${fparse 2*3.141592653589793*frequency}
 
 # One physical turn per named RZ coil block.
 I_peak = 10.0
