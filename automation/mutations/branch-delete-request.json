@@ -1,12 +1,8 @@
 {
   "targets": [
     {
-      "branch": "issue-202-maxwell-scalar-fem-m0",
-      "expected_sha": "0ba36e7a45242610ce4f4098e4f6557ced78fa46"
-    },
-    {
-      "branch": "tmp-unused",
-      "expected_sha": "0ba36e7a45242610ce4f4098e4f6557ced78fa46"
+      "branch": "ops/adopt-samuel-skill-first",
+      "expected_sha": "a4fc7ee36162a00122a75f0a9ce17fc2507a6da5"
     }
   ]
 }
