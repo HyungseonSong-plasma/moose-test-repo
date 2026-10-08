@@ -1,0 +1,144 @@
+name: One-shot Issue 202 Maxwell scalar FEM validation
+
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/issue202-maxwell-once.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  run:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+    env:
+      PHYSICS_RUNTIME_REF: ghcr.io/hyungseonsong-plasma/physics-runtime@sha256:cda9f0d09a17aed5fa606e97d1ee5c3450f7280536cec2e5c635402bb07d972c
+      CASE: experiments/Issue202_maxwell_scalar_fem_m0
+    steps:
+      - name: Checkout exact pushed revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - name: Verify exact source revision
+        shell: bash
+        run: test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+      - name: Validate three-turn coil contract
+        shell: bash
+        run: python3 "$CASE/check_contract.py"
+      - name: Pull accepted immutable Physics runtime
+        shell: bash
+        run: docker pull "$PHYSICS_RUNTIME_REF"
+      - name: Check Maxwell inputs
+        shell: bash
+        run: |
+          mkdir -p "$CASE/results_m2" "$CASE/results_mesh" "$CASE/results_skin" "$CASE/results_dielectric" "$CASE/results_chamber" "$CASE/results_power"
+          docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" --check-input -i "$CASE/input.i" 2>&1 | tee "$CASE/results_m2/check_input.log"
+          docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" --check-input -i "$CASE/skin_depth.i" 2>&1 | tee "$CASE/results_skin/check_input.log"
+          docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" --check-input -i "$CASE/dielectric_interface.i" 2>&1 | tee "$CASE/results_dielectric/check_input.log"
+          docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" --check-input -i "$CASE/chamber_materials.i" 2>&1 | tee "$CASE/results_chamber/check_input.log"
+          docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" --check-input -i "$CASE/rf_power.i" 2>&1 | tee "$CASE/results_power/check_input.log"
+      - name: Run current-linearity matrix
+        shell: bash
+        run: |
+          set -euo pipefail
+          for amps in 5 10 20; do
+            docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" -i "$CASE/input.i" I_peak="$amps" Outputs/file_base="$CASE/results_m2/current_${amps}" 2>&1 | tee "$CASE/results_m2/current_${amps}.log"
+          done
+      - name: Run single-coil superposition basis
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" -i "$CASE/input.i" coil1_scale=1 coil2_scale=0 coil3_scale=0 Outputs/file_base="$CASE/results_m2/coil1_only" 2>&1 | tee "$CASE/results_m2/coil1_only.log"
+          docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" -i "$CASE/input.i" coil1_scale=0 coil2_scale=1 coil3_scale=0 Outputs/file_base="$CASE/results_m2/coil2_only" 2>&1 | tee "$CASE/results_m2/coil2_only.log"
+          docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" -i "$CASE/input.i" coil1_scale=0 coil2_scale=0 coil3_scale=1 Outputs/file_base="$CASE/results_m2/coil3_only" 2>&1 | tee "$CASE/results_m2/coil3_only.log"
+      - name: Run coil2 sign-reversal negative mutation
+        shell: bash
+        run: docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" -i "$CASE/input.i" coil1_scale=1 coil2_scale=-1 coil3_scale=1 Outputs/file_base="$CASE/results_m2/coil2_negative" 2>&1 | tee "$CASE/results_m2/coil2_negative.log"
+      - name: Analyze M2 source discriminators
+        shell: bash
+        run: python3 "$CASE/analyze_m2_discriminators.py" | tee "$CASE/results_m2/analyzer.log"
+      - name: Run global mesh-convergence matrix
+        shell: bash
+        run: |
+          set -euo pipefail
+          for level in 0 1 2; do
+            docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" -i "$CASE/input.i" mesh_refine="$level" Outputs/file_base="$CASE/results_mesh/mesh_${level}" 2>&1 | tee "$CASE/results_mesh/mesh_${level}.log"
+          done
+      - name: Analyze global mesh convergence
+        shell: bash
+        run: python3 "$CASE/analyze_mesh_convergence.py" | tee "$CASE/results_mesh/analyzer.log"
+      - name: Run M2-C conducting-cylinder skin-depth matrix
+        shell: bash
+        run: |
+          set -euo pipefail
+          for level in 0 1; do
+            docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" -i "$CASE/skin_depth.i" mesh_refine="$level" Outputs/file_base="$CASE/results_skin/skin_${level}" 2>&1 | tee "$CASE/results_skin/skin_${level}.log"
+          done
+      - name: Analyze M2-C analytical skin-depth verification
+        shell: bash
+        run: python3 "$CASE/analyze_skin_depth.py" | tee "$CASE/results_skin/analyzer.log"
+      - name: Run M2-D dielectric-interface matrix
+        shell: bash
+        run: |
+          set -euo pipefail
+          for level in 0 1; do
+            docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" -i "$CASE/dielectric_interface.i" mesh_refine="$level" Outputs/file_base="$CASE/results_dielectric/dielectric_${level}" 2>&1 | tee "$CASE/results_dielectric/dielectric_${level}.log"
+          done
+      - name: Analyze M2-D analytical dielectric-interface verification
+        shell: bash
+        run: python3 "$CASE/analyze_dielectric_interface.py" | tee "$CASE/results_dielectric/analyzer.log"
+      - name: Run M2-G prescribed-material chamber in MOOSE
+        shell: bash
+        run: docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" -i "$CASE/chamber_materials.i" Outputs/file_base="$CASE/results_chamber/chamber_materials" 2>&1 | tee "$CASE/results_chamber/moose.log"
+      - name: Run RF absorbed-power counterfactual matrix in MOOSE
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" -i "$CASE/rf_power.i" Outputs/file_base="$CASE/results_power/baseline" 2>&1 | tee "$CASE/results_power/baseline.log"
+          docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" -i "$CASE/rf_power.i" plasma_sigma_real=0 plasma_sigma_imag=0 Outputs/file_base="$CASE/results_power/lossless" 2>&1 | tee "$CASE/results_power/lossless.log"
+          docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" -i "$CASE/rf_power.i" plasma_sigma_real=0 plasma_sigma_imag=-10 Outputs/file_base="$CASE/results_power/reactive_only" 2>&1 | tee "$CASE/results_power/reactive_only.log"
+          docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" -i "$CASE/rf_power.i" source_scale=0 Outputs/file_base="$CASE/results_power/field_off" 2>&1 | tee "$CASE/results_power/field_off.log"
+      - name: Set up independent FEM reference Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install pinned independent FEM dependencies
+        shell: bash
+        run: |
+          python3 -m pip install --disable-pip-version-check --quiet numpy==2.1.2 scipy==1.14.1
+          {
+            python3 --version
+            python3 -c 'import numpy, scipy; print("numpy=" + numpy.__version__); print("scipy=" + scipy.__version__)'
+          } | tee "$CASE/results_chamber/reference_environment.log"
+      - name: Run independent complex FEM chamber reference
+        shell: bash
+        run: |
+          python3 "$CASE/reference_chamber_fem.py" --mesh experiments/Issue18_qvt_plasma_mapping/qvt.msh --output "$CASE/results_chamber/reference.json" 2>&1 | tee "$CASE/results_chamber/reference.log"
+      - name: Analyze M2-G cross-solver chamber equivalence
+        shell: bash
+        run: python3 "$CASE/analyze_chamber_reference.py" --moose-csv "$CASE/results_chamber/chamber_materials.csv" --reference "$CASE/results_chamber/reference.json" --output "$CASE/results_chamber/analysis.json" | tee "$CASE/results_chamber/analyzer.log"
+      - name: Run independent RF absorbed-power references
+        shell: bash
+        run: |
+          python3 "$CASE/reference_rf_power.py" --mesh experiments/Issue18_qvt_plasma_mapping/qvt.msh --sigma-real 5 --sigma-imag -10 --source-scale 1 --output "$CASE/results_power/reference_baseline.json"
+          python3 "$CASE/reference_rf_power.py" --mesh experiments/Issue18_qvt_plasma_mapping/qvt.msh --sigma-real 0 --sigma-imag 0 --source-scale 1 --output "$CASE/results_power/reference_lossless.json"
+          python3 "$CASE/reference_rf_power.py" --mesh experiments/Issue18_qvt_plasma_mapping/qvt.msh --sigma-real 0 --sigma-imag -10 --source-scale 1 --output "$CASE/results_power/reference_reactive_only.json"
+          python3 "$CASE/reference_rf_power.py" --mesh experiments/Issue18_qvt_plasma_mapping/qvt.msh --sigma-real 5 --sigma-imag -10 --source-scale 0 --output "$CASE/results_power/reference_field_off.json"
+      - name: Analyze RF absorbed-power gate
+        shell: bash
+        run: python3 "$CASE/analyze_rf_power.py" --results-dir "$CASE/results_power" --output "$CASE/results_power/analysis.json" | tee "$CASE/results_power/analyzer.log"
+      - name: Upload Maxwell M2 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Issue_202_Maxwell_M2_validation
+          path: |
+            experiments/Issue202_maxwell_scalar_fem_m0/results_m2/**
+            experiments/Issue202_maxwell_scalar_fem_m0/results_mesh/**
+            experiments/Issue202_maxwell_scalar_fem_m0/results_skin/**
+            experiments/Issue202_maxwell_scalar_fem_m0/results_dielectric/**
+            experiments/Issue202_maxwell_scalar_fem_m0/results_chamber/**
+            experiments/Issue202_maxwell_scalar_fem_m0/results_power/**
+          if-no-files-found: warn
+          retention-days: 30
