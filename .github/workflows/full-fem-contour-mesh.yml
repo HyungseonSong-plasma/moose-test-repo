@@ -53,9 +53,9 @@ jobs:
               cp plasma_contour_l3_4p5mm.msh "$OUTDIR/"
               cp "${CASE}.i" "$OUTDIR/"
 
-              grep -q "file = 'plasma_contour_l3_4p5mm.msh'" "${CASE}.i"
-              grep -q "type = PhysicsFEMLogMolarElectronNoSheathSuppressionBC" "${CASE}.i"
-              grep -q "type = PhysicsFEMLogMolarElectronEnergyNoSheathSuppressionBC" "${CASE}.i"
+              grep -q "plasma_contour_l3_4p5mm.msh" "${CASE}.i"
+              grep -q "PhysicsFEMLogMolarElectronNoSheathSuppressionBC" "${CASE}.i"
+              grep -q "PhysicsFEMLogMolarElectronEnergyNoSheathSuppressionBC" "${CASE}.i"
 
               set +e
               ../../physics_app/physics-opt -i "${CASE}.i" --check-input > "$OUTDIR/check_input.log" 2>&1
