@@ -1,0 +1,29 @@
+name: Samuel exact-SHA branch delete
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: Exact non-default branch name to delete
+        required: true
+        type: string
+      expected_sha:
+        description: Exact lowercase 40-hex current branch head
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  delete:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Delete branch through Samuel lease-guarded capability
+        uses: HyungseonSong-plasma/chatgpt-operation/.github/actions/branch-delete@811cef397d467a2124ce7259e9128372f1efb8b5
+        with:
+          repository: HyungseonSong-plasma/moose-test-repo
+          branch: ${{ inputs.branch }}
+          expected-sha: ${{ inputs.expected_sha }}
+          github-token: ${{ github.token }}
