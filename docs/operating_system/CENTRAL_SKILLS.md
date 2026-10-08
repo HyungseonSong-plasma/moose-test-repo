@@ -2,7 +2,7 @@
 
 **Status:** canonical consumer manifest guide  
 **OS:** Samuel  
-**Central revision:** `4599ce446ab8a9e56d872e93541b1215d1702ab0`
+**Central revision:** `125bae0358da93edd6726b013ebc4639ed2cff77`
 
 The machine-readable exact identities are in `central_skills.json`.
 
@@ -28,6 +28,11 @@ Load only when triggered:
 ```text
 MUTATE
   -> skills/repository-mutation/README.md
+
+GITHUB_BRANCH_DELETE
+  -> skills/repository-mutation/README.md
+  -> resolve GITHUB_BRANCH_DELETE through skills/capability-registry.json
+  -> repository-native exact-SHA deletion is authoritative before connector fallback
 
 GOVERNED_WORK
   -> skills/governed-work/README.md
@@ -58,6 +63,8 @@ SCIENTIFIC_DISCRIMINATOR_CONTROLLER
 ```
 
 Do not preload controller execution paths during an ordinary interactive init.
+
+For GitHub state-changing work, provider visibility never bypasses the owning Samuel trigger/skill/capability resolution. A provider-specific missing operation is not a capability verdict until the registered provider chain is exhausted.
 
 ## Samuel controller authority
 

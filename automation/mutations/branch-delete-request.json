@@ -1,8 +1,12 @@
 {
   "targets": [
     {
-      "branch": "ops/fix-samuel-branch-delete-pin-20261008",
-      "expected_sha": "3ef04e1024705f436e617937bf6e9afb2aeb02f4"
+      "branch": "issue-202-maxwell-scalar-fem-m0",
+      "expected_sha": "0ba36e7a45242610ce4f4098e4f6557ced78fa46"
+    },
+    {
+      "branch": "tmp-unused",
+      "expected_sha": "0ba36e7a45242610ce4f4098e4f6557ced78fa46"
     }
   ]
 }

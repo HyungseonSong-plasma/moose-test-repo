@@ -62,7 +62,7 @@ jobs:
           python3 control/ci/guards/workflow_surface_guard.py --check --root control
 
       - name: Execute central governed experiment
-        uses: HyungseonSong-plasma/chatgpt-operation/.github/actions/governed-work@4599ce446ab8a9e56d872e93541b1215d1702ab0
+        uses: HyungseonSong-plasma/chatgpt-operation/.github/actions/governed-work@125bae0358da93edd6726b013ebc4639ed2cff77
         with:
           kind: experiments
           manifest: ${{ github.workspace }}/control/${{ inputs.manifest }}

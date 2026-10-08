@@ -54,7 +54,7 @@ jobs:
       matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
     steps:
       - name: Delete branch through Samuel lease-guarded capability
-        uses: HyungseonSong-plasma/chatgpt-operation/.github/actions/branch-delete@7705024f3b150c986d851be67bf36298be200e7e
+        uses: HyungseonSong-plasma/chatgpt-operation/.github/actions/branch-delete@125bae0358da93edd6726b013ebc4639ed2cff77
         with:
           repository: HyungseonSong-plasma/moose-test-repo
           branch: ${{ matrix.branch }}
