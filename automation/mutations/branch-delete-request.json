@@ -1,48 +1,8 @@
 {
   "targets": [
     {
-      "branch": "experiment-local-h-refine-2237",
-      "expected_sha": "67f7ce4e2eb565fbdb2c6228fa39dae38d003a7a"
-    },
-    {
-      "branch": "experiment-strict-fv-cell-charge",
-      "expected_sha": "5efacfebf0ff7075a398573c91fc3bd5ff041c03"
-    },
-    {
-      "branch": "experiment-wall-cell-average-subgrid-run",
-      "expected_sha": "9a3ec0a67a71661ddbf6e176819c8edad8695e70"
-    },
-    {
-      "branch": "experiment-wall-refinement-level-matrix",
-      "expected_sha": "6690e1733e2f6d3cd3eb69e354eacb819d853464"
-    },
-    {
-      "branch": "experiment-wall-temperature-subgrid",
-      "expected_sha": "020aab50dda3b5aab24016ebce8cf89de50c6443"
-    },
-    {
-      "branch": "experiment-wall-temperature-subgrid-run",
-      "expected_sha": "79c302eb9562730d75bd274fa8e7f1c23166b97b"
-    },
-    {
-      "branch": "issue-gen34-parity-inspect",
-      "expected_sha": "0b836a49de5df8ca77b8d75ac57806f03956a029"
-    },
-    {
-      "branch": "mean-energy-primary-state",
-      "expected_sha": "ac3b0311bd7acfdea0ad8d645076b17d41dd04fb"
-    },
-    {
-      "branch": "recover-qualified-plasma-inputs-20260927",
-      "expected_sha": "c27ff0d305d50adcdecd851c461589525302f489"
-    },
-    {
-      "branch": "ops/branch-cleanup-round6-final-20261008",
-      "expected_sha": "ad2400959ad82cd3f80362d0214e7299ce52aa68"
-    },
-    {
-      "branch": "ops/samuel-branch-delete-gateway-20261008",
-      "expected_sha": "b2633d8cdb0bb1de4f731d5d92e4bb4a5b8a5e2d"
+      "branch": "ops/fix-samuel-branch-delete-pin-20261008",
+      "expected_sha": "3ef04e1024705f436e617937bf6e9afb2aeb02f4"
     }
   ]
 }
