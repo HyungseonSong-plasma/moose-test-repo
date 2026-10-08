@@ -2,11 +2,11 @@
 
 **Status:** canonical consumer entry point  
 **Command:** `moose-test-init`  
-**OS:** Paul
+**OS:** Samuel
 
 ## Contract
 
-Generic initialization mechanics are owned by the exact pinned Paul `session-bootstrap` skill.
+Generic initialization mechanics are owned by the exact pinned Samuel `session-bootstrap` skill.
 
 This file supplies MOOSE/Physics-specific sources, routing inputs, and report additions.
 
@@ -15,23 +15,24 @@ This file supplies MOOSE/Physics-specific sources, routing inputs, and report ad
 ```text
 1. read docs/operating_system/README.md;
 2. read central_skills.json + CENTRAL_SKILLS.md;
-3. verify the exact central revision and OS = Paul;
+3. verify the exact central revision and OS = Samuel;
 4. verify/read central ESSENTIAL_RULES.md;
 5. load session-bootstrap + state-refresh from that same revision;
-6. read OPERATING_CORE.md;
-7. recover the active issue/bounded-work STATE and immediate obligation;
-8. read PROTOCOL_INDEX.md and docs/protocols/rule_working_set.md;
-9. select one local primary semantic phase;
-10. load only its local owner(s) plus immediately triggered central skills/diagnostic evidence;
-11. report restored state, first real gate, and uncertainty;
-12. stop read-only.
+6. verify/index skills/catalog.json and skills/capability-registry.json metadata;
+7. read OPERATING_CORE.md;
+8. recover the active issue/bounded-work STATE and immediate obligation;
+9. read PROTOCOL_INDEX.md and docs/protocols/rule_working_set.md;
+10. select one local primary semantic phase;
+11. load only its local owner(s) plus immediately triggered Samuel skills/capabilities/diagnostic evidence;
+12. report restored state, first real gate, and uncertainty;
+13. stop read-only.
 ```
 
-Initialization is incomplete if required Paul authority or required init contracts cannot be verified.
+Initialization is incomplete if required Samuel authority or required init contracts cannot be verified.
 
 ## Scheduled-controller continuation
 
-An ordinary interactive init does not preload controller skills.
+An ordinary interactive init does not preload controller execution paths.
 
 When a scheduled-controller trigger is active, load from the same exact central revision:
 
@@ -41,6 +42,8 @@ controller-throughput
 controller-lifecycle
 ```
 
+When the immediate obligation requires the durable generic controller, trigger `research-controller`; when it requires PR merge, trigger `pull-request-merge` / `GITHUB_PR_MERGE` and use Samuel capability routing.
+
 Continue from a durable controller checkpoint and apply central state-refresh semantics. Physics dependency readiness and scientific gates remain local.
 
 ## Minimum report
@@ -48,14 +51,15 @@ Continue from a durable controller checkpoint and apply central state-refresh se
 Report:
 
 ```text
-OS = Paul
+OS = Samuel
 exact central revision
 essential rules loaded
 init skills loaded
+capability registry verified
 repository / ref
 active work item / immediate obligation
 primary local phase
-triggered central skills
+triggered central skills/capabilities
 first real gate / blocker
 evidence uncertainty
 ```
