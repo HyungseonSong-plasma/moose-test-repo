@@ -1,28 +1,33 @@
 name: One-shot Issue 202 Maxwell scalar FEM validation
 
 on:
-  push:
+  pull_request:
     branches: [main]
-    paths: [.github/workflows/issue202-maxwell-once.yml]
+    types: [opened, synchronize, reopened]
+    paths:
+      - experiments/Issue202_maxwell_scalar_fem_m0/**
+      - experiments/Issue18_qvt_plasma_mapping/qvt.msh
+      - .github/workflows/issue202-maxwell-once.yml
 
 permissions:
   contents: read
 
 jobs:
   run:
+    if: github.head_ref == 'issue-202-maxwell-scalar-fem-m0'
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 25
     env:
       PHYSICS_RUNTIME_REF: ghcr.io/hyungseonsong-plasma/physics-runtime@sha256:cda9f0d09a17aed5fa606e97d1ee5c3450f7280536cec2e5c635402bb07d972c
       CASE: experiments/Issue202_maxwell_scalar_fem_m0
     steps:
-      - name: Checkout exact pushed revision
+      - name: Checkout exact PR head
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ github.event.pull_request.head.sha }}
       - name: Verify exact source revision
         shell: bash
-        run: test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+        run: test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
       - name: Validate three-turn coil contract
         shell: bash
         run: python3 "$CASE/check_contract.py"
@@ -32,22 +37,45 @@ jobs:
       - name: Check Maxwell input
         shell: bash
         run: |
-          mkdir -p "$CASE/results"
+          mkdir -p "$CASE/results_m2"
           docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" \
-            --check-input -i "$CASE/input.i" 2>&1 | tee "$CASE/results/check_input.log"
-      - name: Run Maxwell vacuum-source discriminator
+            --check-input -i "$CASE/input.i" 2>&1 | tee "$CASE/results_m2/check_input.log"
+      - name: Run current-linearity matrix
         shell: bash
         run: |
+          set -euo pipefail
+          for amps in 5 10 20; do
+            docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" \
+              -i "$CASE/input.i" \
+              I_peak="$amps" \
+              Outputs/file_base="$CASE/results_m2/current_${amps}" \
+              2>&1 | tee "$CASE/results_m2/current_${amps}.log"
+          done
+      - name: Run single-coil superposition basis
+        shell: bash
+        run: |
+          set -euo pipefail
           docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" \
-            -i "$CASE/input.i" \
-            Outputs/file_base="$CASE/results/vacuum_three_coil" \
-            2>&1 | tee "$CASE/results/runtime.log"
-      - name: Upload Maxwell runtime evidence
+            -i "$CASE/input.i" coil1_scale=1 coil2_scale=0 coil3_scale=0 \
+            Outputs/file_base="$CASE/results_m2/coil1_only" \
+            2>&1 | tee "$CASE/results_m2/coil1_only.log"
+          docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" \
+            -i "$CASE/input.i" coil1_scale=0 coil2_scale=1 coil3_scale=0 \
+            Outputs/file_base="$CASE/results_m2/coil2_only" \
+            2>&1 | tee "$CASE/results_m2/coil2_only.log"
+          docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" \
+            -i "$CASE/input.i" coil1_scale=0 coil2_scale=0 coil3_scale=1 \
+            Outputs/file_base="$CASE/results_m2/coil3_only" \
+            2>&1 | tee "$CASE/results_m2/coil3_only.log"
+      - name: Analyze M2 discriminators
+        shell: bash
+        run: python3 "$CASE/analyze_m2_discriminators.py" | tee "$CASE/results_m2/analyzer.log"
+      - name: Upload Maxwell M2 evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Issue_202_Maxwell_vacuum_three_coil
+          name: Issue_202_Maxwell_M2_discriminators
           path: |
-            experiments/Issue202_maxwell_scalar_fem_m0/results/**
+            experiments/Issue202_maxwell_scalar_fem_m0/results_m2/**
           if-no-files-found: warn
           retention-days: 30
