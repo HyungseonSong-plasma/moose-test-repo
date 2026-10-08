@@ -196,7 +196,6 @@ PhysicsFVLogMolarElectrostaticDrift::computeQpResidual()
 
   const bool elem_is_upwind = MetaPhysicL::raw_value(drift_normal) >= 0.0;
 
-  ADReal log_c_face;
   if (_use_limited_linear_reconstruction && _face_info->neighborPtr())
   {
     const auto elem_arg = elemArg();
@@ -218,25 +217,25 @@ PhysicsFVLogMolarElectrostaticDrift::computeQpResidual()
     const Real upper_raw = std::max(elem_raw, neighbor_raw);
     const Real rec_raw = MetaPhysicL::raw_value(u_reconstructed);
 
+    ADReal log_c_face;
     if (rec_raw < lower_raw)
       log_c_face = elem_raw <= neighbor_raw ? u_elem : u_neighbor;
     else if (rec_raw > upper_raw)
       log_c_face = elem_raw >= neighbor_raw ? u_elem : u_neighbor;
     else
       log_c_face = u_reconstructed;
-  }
-  else
-  {
-    const auto transported_face =
-        makeFace(*_face_info,
-                 Moose::FV::limiterType(_advected_interp_method),
-                 elem_is_upwind,
-                 false,
-                 &limiter_time);
-    log_c_face = _var(transported_face, state);
+
+    const ADReal c_face = exp(log_c_face);
+    return carrier_face * c_face * drift_normal;
   }
 
-  const ADReal c_face = exp(log_c_face);
+  const auto transported_face =
+      makeFace(*_face_info,
+               Moose::FV::limiterType(_advected_interp_method),
+               elem_is_upwind,
+               false,
+               &limiter_time);
+  const ADReal c_face = exp(_var(transported_face, state));
   return carrier_face * c_face * drift_normal;
 }
 
