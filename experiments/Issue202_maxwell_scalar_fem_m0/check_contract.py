@@ -113,9 +113,13 @@ def main() -> None:
         "type = MatReaction",
         "type = MatCoupledForce",
         "source_imag = ${fparse -omega*mu0*J_coil}",
+        "coil1_scale = 1.0",
+        "coil2_scale = 1.0",
+        "coil3_scale = 1.0",
         "block = coil1",
         "block = coil2",
         "block = coil3",
+        "type = PointValue",
     )
     for token in required_tokens:
         if token not in input_text:
@@ -132,8 +136,19 @@ def main() -> None:
         body = block.group(1)
         if "type = BodyForce" not in body or f"block = {name}" not in body:
             fail(f"{name}_current is not an independent BodyForce on {name}")
-        if "value = ${source_imag}" not in body:
-            fail(f"{name}_current does not share the canonical source_imag")
+        expected_value = f"value = ${{fparse source_imag*{name}_scale}}"
+        if expected_value not in body:
+            fail(f"{name}_current does not use independent {name}_scale")
+        scale = numeric_assignment(input_text, f"{name}_scale")
+        if not math.isclose(scale, 1.0, rel_tol=0.0, abs_tol=0.0):
+            fail(f"default {name}_scale must be 1.0, got {scale}")
+
+    probes = re.findall(r"\[E_imag_probe_[^\]]+\](.*?)\n\s*\[\]", input_text, flags=re.S)
+    if len(probes) < 4:
+        fail(f"expected at least four signed E_imag probes, got {len(probes)}")
+    for probe in probes:
+        if "type = PointValue" not in probe or "variable = E_imag" not in probe:
+            fail("all M2 probes must be signed PointValue measurements of E_imag")
 
     forbidden = (
         "sigma_copper",
@@ -152,10 +167,7 @@ def main() -> None:
     omega = 2.0 * math.pi * freq
     source_imag = -omega * MU0 * j_coil
 
-    centers = {
-        name: 0.5 * (boxes[name][0] + boxes[name][1])
-        for name in COILS
-    }
+    centers = {name: 0.5 * (boxes[name][0] + boxes[name][1]) for name in COILS}
 
     print("PASS: Issue #202 scalar-RZ FEM coil contract")
     print(f"  frequency_Hz={freq:.12g}")
@@ -165,6 +177,7 @@ def main() -> None:
     print(f"  source_imag_SI={source_imag:.12g}")
     for name in COILS:
         print(f"  {name}: r_center_m={centers[name]:.12g}, area_m2={areas[name]:.12g}")
+    print(f"  signed_probe_count={len(probes)}")
 
 
 if __name__ == "__main__":
