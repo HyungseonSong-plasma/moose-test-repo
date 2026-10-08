@@ -1,9 +1,8 @@
 name: One-shot Issue 202 Maxwell scalar FEM validation
 
 on:
-  push:
+  pull_request:
     branches: [main]
-    paths: [.github/workflows/issue202-maxwell-once.yml]
 
 permissions:
   contents: read
@@ -15,14 +14,15 @@ jobs:
     env:
       PHYSICS_RUNTIME_REF: ghcr.io/hyungseonsong-plasma/physics-runtime@sha256:cda9f0d09a17aed5fa606e97d1ee5c3450f7280536cec2e5c635402bb07d972c
       CASE: experiments/Issue202_maxwell_scalar_fem_m0
+      VALIDATION_REF: ${{ github.event.pull_request.head.sha }}
     steps:
-      - name: Checkout exact pushed revision
+      - name: Checkout exact PR head
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ env.VALIDATION_REF }}
       - name: Verify exact source revision
         shell: bash
-        run: test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+        run: test "$(git rev-parse HEAD)" = "$VALIDATION_REF"
       - name: Validate three-turn coil contract
         shell: bash
         run: python3 "$CASE/check_contract.py"
@@ -32,10 +32,11 @@ jobs:
       - name: Check Maxwell inputs
         shell: bash
         run: |
-          mkdir -p "$CASE/results_m2" "$CASE/results_mesh" "$CASE/results_skin" "$CASE/results_dielectric"
+          mkdir -p "$CASE/results_m2" "$CASE/results_mesh" "$CASE/results_skin" "$CASE/results_dielectric" "$CASE/results_chamber"
           docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" --check-input -i "$CASE/input.i" 2>&1 | tee "$CASE/results_m2/check_input.log"
           docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" --check-input -i "$CASE/skin_depth.i" 2>&1 | tee "$CASE/results_skin/check_input.log"
           docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" --check-input -i "$CASE/dielectric_interface.i" 2>&1 | tee "$CASE/results_dielectric/check_input.log"
+          docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" --check-input -i "$CASE/chamber_materials.i" 2>&1 | tee "$CASE/results_chamber/check_input.log"
       - name: Run current-linearity matrix
         shell: bash
         run: |
@@ -86,6 +87,16 @@ jobs:
       - name: Analyze M2-D analytical dielectric-interface verification
         shell: bash
         run: python3 "$CASE/analyze_dielectric_interface.py" | tee "$CASE/results_dielectric/analyzer.log"
+      - name: Run M2-G prescribed-material chamber in MOOSE
+        shell: bash
+        run: docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" -i "$CASE/chamber_materials.i" Outputs/file_base="$CASE/results_chamber/chamber_materials" 2>&1 | tee "$CASE/results_chamber/moose.log"
+      - name: Run independent complex FEM chamber reference
+        shell: bash
+        run: |
+          docker run --rm --entrypoint python3 -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" "$CASE/reference_chamber_fem.py" --mesh experiments/Issue18_qvt_plasma_mapping/qvt.msh --output "$CASE/results_chamber/reference.json" 2>&1 | tee "$CASE/results_chamber/reference.log"
+      - name: Analyze M2-G cross-solver chamber equivalence
+        shell: bash
+        run: python3 "$CASE/analyze_chamber_reference.py" --moose-csv "$CASE/results_chamber/chamber_materials.csv" --reference "$CASE/results_chamber/reference.json" --output "$CASE/results_chamber/analysis.json" | tee "$CASE/results_chamber/analyzer.log"
       - name: Upload Maxwell M2 evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -96,5 +107,6 @@ jobs:
             experiments/Issue202_maxwell_scalar_fem_m0/results_mesh/**
             experiments/Issue202_maxwell_scalar_fem_m0/results_skin/**
             experiments/Issue202_maxwell_scalar_fem_m0/results_dielectric/**
+            experiments/Issue202_maxwell_scalar_fem_m0/results_chamber/**
           if-no-files-found: warn
           retention-days: 30
