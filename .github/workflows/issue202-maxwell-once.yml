@@ -9,7 +9,7 @@ permissions:
 jobs:
   run:
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 55
     env:
       PHYSICS_RUNTIME_REF: ghcr.io/hyungseonsong-plasma/physics-runtime@sha256:cda9f0d09a17aed5fa606e97d1ee5c3450f7280536cec2e5c635402bb07d972c
       CASE: experiments/Issue202_maxwell_scalar_fem_m0
@@ -39,8 +39,7 @@ jobs:
           set -euo pipefail
           for amps in 5 10 20; do
             docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" \
-              -i "$CASE/input.i" \
-              I_peak="$amps" \
+              -i "$CASE/input.i" I_peak="$amps" \
               Outputs/file_base="$CASE/results_m2/current_${amps}" \
               2>&1 | tee "$CASE/results_m2/current_${amps}.log"
           done
@@ -48,26 +47,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" \
-            -i "$CASE/input.i" coil1_scale=1 coil2_scale=0 coil3_scale=0 \
-            Outputs/file_base="$CASE/results_m2/coil1_only" \
-            2>&1 | tee "$CASE/results_m2/coil1_only.log"
-          docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" \
-            -i "$CASE/input.i" coil1_scale=0 coil2_scale=1 coil3_scale=0 \
-            Outputs/file_base="$CASE/results_m2/coil2_only" \
-            2>&1 | tee "$CASE/results_m2/coil2_only.log"
-          docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" \
-            -i "$CASE/input.i" coil1_scale=0 coil2_scale=0 coil3_scale=1 \
-            Outputs/file_base="$CASE/results_m2/coil3_only" \
-            2>&1 | tee "$CASE/results_m2/coil3_only.log"
+          docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" -i "$CASE/input.i" coil1_scale=1 coil2_scale=0 coil3_scale=0 Outputs/file_base="$CASE/results_m2/coil1_only" 2>&1 | tee "$CASE/results_m2/coil1_only.log"
+          docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" -i "$CASE/input.i" coil1_scale=0 coil2_scale=1 coil3_scale=0 Outputs/file_base="$CASE/results_m2/coil2_only" 2>&1 | tee "$CASE/results_m2/coil2_only.log"
+          docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" -i "$CASE/input.i" coil1_scale=0 coil2_scale=0 coil3_scale=1 Outputs/file_base="$CASE/results_m2/coil3_only" 2>&1 | tee "$CASE/results_m2/coil3_only.log"
       - name: Run coil2 sign-reversal negative mutation
         shell: bash
-        run: |
-          set -euo pipefail
-          docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" \
-            -i "$CASE/input.i" coil1_scale=1 coil2_scale=-1 coil3_scale=1 \
-            Outputs/file_base="$CASE/results_m2/coil2_negative" \
-            2>&1 | tee "$CASE/results_m2/coil2_negative.log"
+        run: docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" -i "$CASE/input.i" coil1_scale=1 coil2_scale=-1 coil3_scale=1 Outputs/file_base="$CASE/results_m2/coil2_negative" 2>&1 | tee "$CASE/results_m2/coil2_negative.log"
       - name: Analyze M2 source discriminators
         shell: bash
         run: python3 "$CASE/analyze_m2_discriminators.py" | tee "$CASE/results_m2/analyzer.log"
@@ -76,10 +61,7 @@ jobs:
         run: |
           set -euo pipefail
           for level in 0 1 2; do
-            docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" \
-              -i "$CASE/input.i" mesh_refine="$level" \
-              Outputs/file_base="$CASE/results_mesh/mesh_${level}" \
-              2>&1 | tee "$CASE/results_mesh/mesh_${level}.log"
+            docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" -i "$CASE/input.i" mesh_refine="$level" Outputs/file_base="$CASE/results_mesh/mesh_${level}" 2>&1 | tee "$CASE/results_mesh/mesh_${level}.log"
           done
       - name: Analyze global mesh convergence
         shell: bash
@@ -91,15 +73,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for factor in 1 2 4 8; do
-            docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" \
-              --check-input -i "$CASE/results_outer/outer_${factor}.i" \
-              2>&1 | tee "$CASE/results_outer/outer_${factor}_check.log"
-            docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" \
-              -i "$CASE/results_outer/outer_${factor}.i" \
-              Outputs/file_base="$CASE/results_outer/outer_${factor}" \
-              2>&1 | tee "$CASE/results_outer/outer_${factor}.log"
+          for factor in 1 2 4 8 16 32; do
+            docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" --check-input -i "$CASE/results_outer/outer_${factor}.i" 2>&1 | tee "$CASE/results_outer/outer_${factor}_check.log"
+            docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" -i "$CASE/results_outer/outer_${factor}.i" Outputs/file_base="$CASE/results_outer/outer_${factor}" 2>&1 | tee "$CASE/results_outer/outer_${factor}.log"
           done
+          # Cross-check the most stretched domain with one global h-refinement.
+          docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" -i "$CASE/results_outer/outer_32.i" mesh_refine=1 Outputs/file_base="$CASE/results_outer/outer_32_refined" 2>&1 | tee "$CASE/results_outer/outer_32_refined.log"
       - name: Analyze outer-domain sensitivity
         shell: bash
         run: python3 "$CASE/analyze_outer_domain.py" | tee "$CASE/results_outer/analyzer.log"
