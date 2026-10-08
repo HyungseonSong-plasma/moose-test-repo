@@ -19,6 +19,7 @@ public:
 
 private:
   std::string _constrained_variable;
+  bool _auto_detect_refinement_midpoints;
   std::vector<dof_id_type> _secondary_nodes;
   std::vector<dof_id_type> _primary_nodes_a;
   std::vector<dof_id_type> _primary_nodes_b;
