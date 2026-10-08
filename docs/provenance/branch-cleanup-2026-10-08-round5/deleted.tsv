@@ -1,0 +1,11 @@
+experiment-full-fem-energy-no-sheath-suppression	3881816b4344c048e3edff581828cdee9ac1cbf4	ANCESTOR_OF_experiment-full-fem-contour-mesh
+experiment-full-fvm-small-dt	4a552ed1b0887c0a0ef4219e7346898a68000953	ANCESTOR_OF_experiment-full-fem-contour-mesh
+experiment-l4-time-resolution	7215a8c5f0d137a10d8ecd7033c729316723d12c	ANCESTOR_OF_experiment-full-fem-contour-mesh
+experiment-wall-cell-average-subgrid	e9a41572e35be2d495f76a8bb2c0383de3ea6baa	ANCESTOR_OF_experiment-full-fem-contour-mesh
+experiment-wall-layer-coarse-p1	6b4701d2647c265a7769dd1f0ed71e1df87e00f5	ANCESTOR_OF_experiment-full-fem-contour-mesh
+experiment-wall-layer-h-refine	002dbe1bfd377bb83d825ec1ef09f592c0c0a70f	ANCESTOR_OF_experiment-full-fem-contour-mesh
+experiment-wall-subcell-compare	e9a41572e35be2d495f76a8bb2c0383de3ea6baa	ANCESTOR_OF_experiment-full-fem-contour-mesh
+issue-wall-layer-inward-extension	d489d879b14de55890deb733ed3ae0d41b27c4d4	ANCESTOR_OF_experiment-full-fem-contour-mesh
+ops/branch-cleanup-round5-20261008	6e8570ec17273c2a155cd5e76b4c0b92a2a0a3f3	OBSOLETE_OPERATIONAL_BRANCH
+prototype-fixed-ion-electron-poisson	f9ce2f4c78b44b6481ed001dc5d0195d3815f2b0	ANCESTOR_OF_experiment-full-fem-contour-mesh
+prototype-fully-implicit-electron-poisson	d8f57aa8a66dfcd01afde02b0a629d032b52142f	ANCESTOR_OF_experiment-full-fem-contour-mesh
