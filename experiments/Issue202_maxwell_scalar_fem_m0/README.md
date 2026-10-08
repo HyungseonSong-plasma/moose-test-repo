@@ -12,10 +12,11 @@ PHASOR                    = exp(+i omega t), peak amplitude
 COIL DRIVE                = prescribed current
 COPPER SKIN/PROXIMITY     = OFF
 PLASMA FEEDBACK           = OFF in this first discriminator
+OUTER E_THETA=0           = NOT ADMITTED at the committed compact boundary
 SCIENTIFIC ACCEPTANCE     = NOT CLAIMED
 ```
 
-The first runtime target is the M2-B vacuum/source discriminator. Passing this input or CI is not Maxwell scientific acceptance.
+The first runtime target is the M2 vacuum/source validation family. Passing an input or CI job is not Maxwell scientific acceptance.
 
 ## Frozen equation
 
@@ -68,7 +69,7 @@ The initial implementation uses standard scalar FEM objects only:
 | real/imag `b` coupling | `MatCoupledForce` | retained even though `b=0` in the first vacuum discriminator |
 | impressed coil current | `BodyForce` | three independent block-scoped sources |
 | axis regularity | `DirichletBC` | `E_theta=0` at `r=0`; this is regularity, not a wall model |
-| outer truncation | `DirichletBC` | zero-field baseline; domain-size sensitivity remains mandatory |
+| outer truncation candidate | `DirichletBC` | compact zero-field boundary failed M2-F domain sensitivity; not admitted |
 
 No custom Maxwell kernel or BC is introduced at this stage.
 
@@ -137,6 +138,7 @@ turn-by-turn superposition reproduces the all-three solution
 coil2 sign reversal (I,-I,I) reproduces E1-E2+E3
 coil2 sign reversal materially changes the spatial field
 global h-refinement levels 0/1/2 converge for E_imag L2 and four signed probes
+outer-domain sensitivity challenges the compact E_theta=0 truncation
 ```
 
 ### Accepted bounded runtime evidence
@@ -190,17 +192,72 @@ Fine/medium signed-probe relative changes are:
 
 The committed default remains `mesh_refine = 0`. Higher levels are validation overrides rather than a silent production-mesh change.
 
-## Deferred work
+### M2-F outer-domain sensitivity — FAIL for compact zero-field truncation
+
+The existing mesh contains top/right/bottom exterior-buffer blocks. The M2-F discriminator preserves all device, plasma, quartz, and coil geometry and stretches only those exterior buffers while retaining `E_theta=0` on the new far boundary.
+
+Frozen buffer/device interfaces:
+
+```text
+r_inner        = 0.243 m
+z_bottom_inner = 0.018 m
+z_top_inner    = 0.432 m
+```
+
+The tested outer boundaries were:
+
+| factor | r_max [m] | z_min [m] | z_max [m] |
+| ---: | ---: | ---: | ---: |
+| 1 | 0.2565 | 0.000 | 0.450 |
+| 2 | 0.2700 | -0.018 | 0.468 |
+| 4 | 0.2970 | -0.054 | 0.504 |
+| 8 | 0.3510 | -0.126 | 0.576 |
+| 16 | 0.4590 | -0.270 | 0.720 |
+| 32 | 0.6750 | -0.558 | 1.008 |
+
+Outer-domain acceptance uses signed field probes at fixed physical coordinates, not global `L2`, because the integration volume changes with the domain.
+
+Runtime evidence:
+
+```text
+Actions run: 37827058065
+semantic head: 3d65abcab027d602bc2b52c70adfe058bd47692e
+classification: FINITE_DIRICHLET_TAIL_NOT_CONVERGED
+```
+
+Key results:
+
+```text
+max fixed-probe relative change, factor 1 -> factor 32 = 60.12%
+max fixed-probe relative change, factor 16 -> factor 32 = 5.61%
+factor-32 coarse -> global h-refined cross-check      = 7.34%
+```
+
+Selected mid-plane values illustrate the size of the compact-boundary effect:
+
+| probe | factor 1 [V/m] | factor 16 [V/m] | factor 32 coarse [V/m] | factor 32 refined [V/m] |
+| --- | ---: | ---: | ---: | ---: |
+| `r=0.05,z=0.225` | -58.2100 | -80.3574 | -79.3927 | -82.4821 |
+| `r=0.10,z=0.225` | -92.2766 | -135.9565 | -134.3792 | -140.1872 |
+| `r=0.15,z=0.225` | -90.4850 | -154.9225 | -153.3767 | -161.0935 |
+| `r=0.20,z=0.225` | -55.9552 | -140.6816 | -140.3019 | -149.1702 |
+
+Therefore the committed compact `E_theta=0` outer boundary is **not admitted as a physically innocuous truncation**. It materially suppresses the internal inductive field. The factor-32 stretched mesh is itself under-resolved, so factor 32 is not adopted as a replacement production domain either.
+
+The next boundary gate is standard-capability-first: determine whether the current framework provides an appropriate open/infinite/Robin/absorbing exterior treatment, or build a properly resolved enlarged exterior mesh before reconsidering a finite zero-field boundary. No custom Maxwell BC is admitted until the standard capability census is exhausted.
+
+## Deferred / blocked work
 
 Not admitted by this baseline:
 
+- compact `E_theta=0` outer truncation as a validated far-field boundary;
+- replacement outer-boundary treatment, pending capability census and V&V;
 - plasma conductivity feedback;
 - complex `sigma` validation;
 - dielectric/interface reference case;
 - copper conductivity, skin effect, or proximity effect;
 - voltage/circuit/fixed-power drive;
 - conservative RF-power transfer into electron energy;
-- outer-domain sensitivity acceptance;
 - COMSOL / external-reference field-profile equivalence;
 - closed-loop ICP coupling.
 
