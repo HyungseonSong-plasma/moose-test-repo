@@ -10,6 +10,7 @@ ENTRYPOINTS = {
     "refactor.yml": {"workflow_dispatch"},
     "sol-runtime-integration.yml": {"push", "pull_request"},
     "ion-fvm-hybrid-staged-dt.yml": {"push", "pull_request", "workflow_dispatch"},
+    "samuel-branch-delete.yml": {"workflow_dispatch"},
 }
 REUSABLE = {
     "physics-build-base.yml": {"workflow_call"},
