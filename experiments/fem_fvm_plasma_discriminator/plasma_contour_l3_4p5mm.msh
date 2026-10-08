@@ -1,0 +1,23 @@
+$MeshFormat
+2.2 0 8
+$EndMeshFormat
+$PhysicalNames
+10
+1 1 "axis"
+1 2 "inlet"
+1 3 "outlet"
+1 4 "plasma_electrode"
+1 5 "plasma_metal"
+1 6 "plasma_right"
+1 7 "plasma_cover"
+1 8 "plasma_wafer"
+1 9 "plasma_focus_ring"
+2 10 "plasma"
+$EndPhysicalNames
+$Nodes
+1
+1 0 0 0
+$EndNodes
+$Elements
+0
+$EndElements
