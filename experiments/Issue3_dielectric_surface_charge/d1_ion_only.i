@@ -17,6 +17,14 @@
   nx = 1
 []
 
+# An inert FV auxiliary variable intentionally requests MOOSE FaceInfo
+# construction. No residual or physical state depends on this variable.
+[AuxVariables]
+  [face_info_anchor]
+    type = MooseVariableFVReal
+  []
+[]
+
 [Functions]
   [zero_potential]
     type = ParsedFunction
