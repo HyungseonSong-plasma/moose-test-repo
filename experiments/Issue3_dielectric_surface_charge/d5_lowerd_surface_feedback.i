@@ -90,6 +90,14 @@
     prop_values = '4.0'
     block = 2
   []
+  # MOOSE requires every mesh block to own at least one active Material once
+  # any Material object is present.  sigma_s itself does not consume this.
+  [surface_material_anchor]
+    type = ADGenericConstantMaterial
+    prop_names = 'surface_material_anchor'
+    prop_values = '0.0'
+    block = 10
+  []
 []
 
 [Kernels]
