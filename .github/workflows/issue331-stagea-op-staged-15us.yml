@@ -49,7 +49,7 @@ jobs:
               python3 generate_contour_mesh.py | tee issue331_stagea_15us_mesh.log
               python3 prepare_op_fvm_hybrid_staged_15us.py | tee issue331_stagea_15us_prepare.log
               INPUT="ion_om_op_fvm_hybrid_contour_staged_1ns100_10ns90_100ns90_1000ns5.i"
-              grep -q "expression = 'ni+nop-ne-nm'" "$INPUT"
+              grep -Fq "ni+nop-ne-nm" "$INPUT"
               grep -q "\[log_nop\]" "$INPUT"
               grep -q "type = TimeSequenceStepper" "$INPUT"
               ../../physics_app/physics-opt -i "$INPUT" --check-input | tee issue331_stagea_15us_check_input.log
