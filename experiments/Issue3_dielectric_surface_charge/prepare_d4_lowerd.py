@@ -24,6 +24,9 @@ def build(gamma: float) -> str:
 # Electron signed outward flux = primary absorption - emitted SEE.
 # gamma={gamma:.17g} is a controlled mechanism/sign coefficient, not a
 # universal dielectric material value. SEE emission energy is 4 eV.
+# The dielectric-anchor FV reaction exists only to satisfy MOOSE kernel
+# coverage in this D4 mechanism test; D5 separately validates the real FEM
+# dielectric Poisson equation and sigma_s electrostatic feedback.
 
 [Mesh]
   [base]
@@ -66,6 +69,11 @@ def build(gamma: float) -> str:
     initial_condition = {ENERGY0:.17g}
     scaling = 1.0e-25
     block = 1
+  []
+  [dielectric_anchor]
+    type = MooseVariableFVReal
+    initial_condition = 0
+    block = 2
   []
   [sigma_s]
     family = MONOMIAL
@@ -227,6 +235,12 @@ def build(gamma: float) -> str:
     variable = electron_energy
     coeff = zero_diffusion
     block = 1
+  []
+  [dielectric_anchor_reaction]
+    type = FVReaction
+    variable = dielectric_anchor
+    rate = 1.0
+    block = 2
   []
 []
 
