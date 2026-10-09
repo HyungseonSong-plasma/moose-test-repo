@@ -55,7 +55,7 @@ jobs:
               python3 generate_contour_mesh.py | tee issue378_mesh.log
               python3 prepare_om_fvm_hybrid_staged_dt.py | tee issue378_prepare_1us.log
 
-              INPUT="ion_om_fvm_hybrid_contour_staged_1ns100_10ns90.i"
+              INPUT="ion_om_fvm_hybrid_contour_staged_1ns100_5ns100_10ns40.i"
               grep -q "type = TimeSequenceStepper" "$INPUT"
               ../../physics_app/physics-opt -i "$INPUT" --check-input | tee issue378_check_input_1us.log
 
@@ -71,7 +71,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: issue378-om-drift-diffusion-1us-staged-evidence
+          name: issue378-om-drift-diffusion-1us-staged-1ns5ns10ns-evidence
           path: |
             experiments/fem_fvm_plasma_discriminator/issue378_mesh.log
             experiments/fem_fvm_plasma_discriminator/issue378_prepare_1us.log
@@ -79,8 +79,8 @@ jobs:
             experiments/fem_fvm_plasma_discriminator/issue378_runtime_1us.log
             experiments/fem_fvm_plasma_discriminator/issue378_runtime_gate_1us.log
             experiments/fem_fvm_plasma_discriminator/plasma_contour_l3_4p5mm.msh
-            experiments/fem_fvm_plasma_discriminator/ion_om_fvm_hybrid_contour_staged_1ns100_10ns90.i
-            experiments/fem_fvm_plasma_discriminator/ion_om_fvm_hybrid_contour_staged_1ns100_10ns90_out.csv
-            experiments/fem_fvm_plasma_discriminator/ion_om_fvm_hybrid_contour_staged_1ns100_10ns90_out.e
+            experiments/fem_fvm_plasma_discriminator/ion_om_fvm_hybrid_contour_staged_1ns100_5ns100_10ns40.i
+            experiments/fem_fvm_plasma_discriminator/ion_om_fvm_hybrid_contour_staged_1ns100_5ns100_10ns40_out.csv
+            experiments/fem_fvm_plasma_discriminator/ion_om_fvm_hybrid_contour_staged_1ns100_5ns100_10ns40_out.e
           if-no-files-found: warn
           retention-days: 30

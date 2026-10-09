@@ -2,8 +2,9 @@
 """Build the Issue #378 O- case with a 1 us staged time grid.
 
 Schedule:
-  0 -> 100 ns : 1 ns x 100
-  100 ns -> 1 us: 10 ns x 90
+  0 -> 100 ns   : 1 ns x 100
+  100 -> 600 ns : 5 ns x 100
+  600 ns -> 1 us: 10 ns x 40
 """
 from pathlib import Path
 
@@ -13,9 +14,11 @@ import prepare_om_fvm_hybrid_contour as om
 
 FIRST_DT = 1.0e-9
 FIRST_STEPS = 100
-SECOND_DT = 10.0e-9
-SECOND_STEPS = 90
-CASE_NAME = "ion_om_fvm_hybrid_contour_staged_1ns100_10ns90"
+SECOND_DT = 5.0e-9
+SECOND_STEPS = 100
+THIRD_DT = 10.0e-9
+THIRD_STEPS = 40
+CASE_NAME = "ion_om_fvm_hybrid_contour_staged_1ns100_5ns100_10ns40"
 
 
 def replace_once(text: str, old: str, new: str, label: str) -> str:
@@ -27,10 +30,12 @@ def replace_once(text: str, old: str, new: str, label: str) -> str:
 
 def time_sequence() -> list[float]:
     first = [i * FIRST_DT for i in range(FIRST_STEPS + 1)]
-    t0 = FIRST_STEPS * FIRST_DT
-    second = [t0 + j * SECOND_DT for j in range(1, SECOND_STEPS + 1)]
-    seq = first + second
-    if len(seq) != FIRST_STEPS + SECOND_STEPS + 1:
+    t1 = FIRST_STEPS * FIRST_DT
+    second = [t1 + j * SECOND_DT for j in range(1, SECOND_STEPS + 1)]
+    t2 = t1 + SECOND_STEPS * SECOND_DT
+    third = [t2 + k * THIRD_DT for k in range(1, THIRD_STEPS + 1)]
+    seq = first + second + third
+    if len(seq) != FIRST_STEPS + SECOND_STEPS + THIRD_STEPS + 1:
         raise RuntimeError("staged time sequence length changed")
     if abs(seq[-1] - 1.0e-6) > 1.0e-18:
         raise RuntimeError(f"staged end time changed: {seq[-1]:.17g}")
@@ -57,13 +62,15 @@ def build_case() -> str:
 
 def main() -> None:
     seq = time_sequence()
+    second_switch = FIRST_STEPS + SECOND_STEPS
     out = Path(base.HERE) / f"{CASE_NAME}.i"
     out.write_text(build_case(), encoding="utf-8")
     print(f"wrote {out}")
-    print("schedule: 1 ns x 100 + 10 ns x 90")
+    print("schedule: 1 ns x 100 + 5 ns x 100 + 10 ns x 40")
     print(f"total_steps={len(seq)-1}")
     print(f"states={len(seq)}")
-    print(f"switch_time_ns={seq[FIRST_STEPS] * 1.0e9:.17g}")
+    print(f"switch1_time_ns={seq[FIRST_STEPS] * 1.0e9:.17g}")
+    print(f"switch2_time_ns={seq[second_switch] * 1.0e9:.17g}")
     print(f"end_time_us={seq[-1] * 1.0e6:.17g}")
 
 

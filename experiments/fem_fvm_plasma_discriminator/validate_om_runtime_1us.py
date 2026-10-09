@@ -6,16 +6,18 @@ import csv
 import math
 from pathlib import Path
 
-CSV_PATH = Path("ion_om_fvm_hybrid_contour_staged_1ns100_10ns90_out.csv")
+CSV_PATH = Path("ion_om_fvm_hybrid_contour_staged_1ns100_5ns100_10ns40_out.csv")
 FIRST_DT_S = 1.0e-9
 FIRST_STEPS = 100
-SECOND_DT_S = 10.0e-9
-SECOND_STEPS = 90
-EXPECTED_ROWS = FIRST_STEPS + SECOND_STEPS + 1
+SECOND_DT_S = 5.0e-9
+SECOND_STEPS = 100
+THIRD_DT_S = 10.0e-9
+THIRD_STEPS = 40
+EXPECTED_ROWS = FIRST_STEPS + SECOND_STEPS + THIRD_STEPS + 1
 END_TIME_S = 1.0e-6
 NEUTRALITY_SCALE = 2.0e15
 NEUTRALITY_REL_TOL = 1.0e-9
-SNAPSHOT_NS = (0, 5, 50, 100, 200, 300, 500, 1000)
+SNAPSHOT_NS = (0, 5, 50, 100, 200, 300, 500, 600, 800, 1000)
 
 REQUIRED = (
     "time",
@@ -37,9 +39,11 @@ REQUIRED = (
 
 def expected_times() -> list[float]:
     first = [i * FIRST_DT_S for i in range(FIRST_STEPS + 1)]
-    t0 = FIRST_STEPS * FIRST_DT_S
-    second = [t0 + j * SECOND_DT_S for j in range(1, SECOND_STEPS + 1)]
-    return first + second
+    t1 = FIRST_STEPS * FIRST_DT_S
+    second = [t1 + j * SECOND_DT_S for j in range(1, SECOND_STEPS + 1)]
+    t2 = t1 + SECOND_STEPS * SECOND_DT_S
+    third = [t2 + k * THIRD_DT_S for k in range(1, THIRD_STEPS + 1)]
+    return first + second + third
 
 
 def _finite(row: dict[str, str], key: str, index: int) -> float:
@@ -118,8 +122,11 @@ def main() -> None:
         )
         max_abs_charge_integral = max(max_abs_charge_integral, abs(values["charge_integral"]))
 
+    second_switch_index = FIRST_STEPS + SECOND_STEPS
     if not math.isclose(times[FIRST_STEPS], 100.0e-9, rel_tol=1.0e-12, abs_tol=1.0e-15):
-        raise SystemExit(f"dt switch time failed: {times[FIRST_STEPS]:.17g}")
+        raise SystemExit(f"first dt switch time failed: {times[FIRST_STEPS]:.17g}")
+    if not math.isclose(times[second_switch_index], 600.0e-9, rel_tol=1.0e-12, abs_tol=1.0e-15):
+        raise SystemExit(f"second dt switch time failed: {times[second_switch_index]:.17g}")
     if not math.isclose(times[-1], END_TIME_S, rel_tol=1.0e-12, abs_tol=1.0e-15):
         raise SystemExit(f"1 us final time failed: {times[-1]:.17g}")
 
@@ -132,8 +139,9 @@ def main() -> None:
 
     print("ISSUE378_1US_STAGED_GATE: PASS")
     print(f"rows={len(rows)}")
-    print("schedule=1nsx100+10nsx90")
-    print(f"switch_time_s={times[FIRST_STEPS]:.17g}")
+    print("schedule=1nsx100+5nsx100+10nsx40")
+    print(f"switch1_time_s={times[FIRST_STEPS]:.17g}")
+    print(f"switch2_time_s={times[second_switch_index]:.17g}")
     print(f"final_time_s={times[-1]:.17g}")
     print(f"initial_charge_abs_max_m-3={initial_charge:.17g}")
     print(f"trajectory_charge_abs_max_m-3={max_abs_charge_number:.17g}")
