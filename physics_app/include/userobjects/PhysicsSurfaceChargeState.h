@@ -6,20 +6,28 @@
 #include <map>
 
 /**
- * Owns converged local surface-charge state on FV faces.
+ * Owns converged local dielectric surface-charge state on mesh faces.
  *
- * State storage is deliberately separated from MaterialData. Each FV face is
+ * State storage is deliberately separated from MaterialData. Each face is
  * keyed by FaceInfo::id(), and the converged sigma_s is stored in restartable
  * data.
  *
+ * The canonical sign convention is:
+ *
+ *   n                  = outward from plasma toward the dielectric
+ *   j_to_surface > 0   = positive conventional charge current from plasma
+ *                        into the dielectric surface
+ *
  * At TIMESTEP_END:
  *
- *   sigma_s^(n+1) = sigma_s^n - e * Gamma_e,w^(n+1) * dt
+ *   sigma_s^(n+1) = sigma_s^n + j_to_surface^(n+1) * dt
  *
- * using the same wall-number-flux functor consumed by the electron FV BC.
+ * The supplied current-density functor must be assembled from the same
+ * canonical particle-wall flux functors used by the transport boundary
+ * residuals. This object does not re-evaluate ion, electron, or SEE physics.
  *
- * During the nonlinear solve, PhysicsFVSurfaceChargeInterface queries sigma_s^n
- * from this object and adds the current AD wall-flux increment itself.
+ * During a nonlinear electrostatic solve, an interface/boundary object may
+ * query sigma_s^n from this object and add the current AD increment itself.
  */
 class PhysicsSurfaceChargeState : public SideUserObject, public ADFunctorInterface
 {
@@ -32,7 +40,7 @@ public:
   void threadJoin(const UserObject & y) override;
   void finalize() override;
 
-  /// Converged surface charge on one FV face [C/m^2].
+  /// Converged surface charge on one face [C/m^2].
   Real surfaceCharge(dof_id_type face_id) const;
 
   /// Global diagnostics after finalize().
@@ -48,7 +56,8 @@ private:
       const Moose::Functor<ADReal> & functor,
       const FaceInfo & fi) const;
 
-  const Moose::Functor<ADReal> & _wall_number_flux;
+  /// Signed conventional charge-current density into the surface [A/m^2].
+  const Moose::Functor<ADReal> & _surface_current_density;
   const Real _initial_surface_charge;
 
   /// Converged, restartable face-local state.
