@@ -10,6 +10,10 @@
 # Therefore, with no SEE and no other open/current boundary,
 #
 #   Delta Q_volume + Delta Q_surface = 0.
+#
+# Zero-coefficient FV diffusion kernels intentionally activate the normal FV
+# face assembly path used by production transport without adding any physical
+# bulk transport. The dielectric loss remains owned only by the two FV BCs.
 
 [Mesh]
   type = GeneratedMesh
@@ -40,8 +44,8 @@
 [FunctorMaterials]
   [constants]
     type = ADGenericFunctorMaterial
-    prop_names = 'ion_mobility T_g mean_energy'
-    prop_values = '0.0 300.0 3.0'
+    prop_names = 'ion_mobility T_g mean_energy zero_diffusion'
+    prop_values = '0.0 300.0 3.0 0.0'
     block = 0
   []
 
@@ -127,9 +131,19 @@
     type = PhysicsFVLogMolarElectronTimeDerivative
     variable = log_ni
   []
+  [ion_zero_transport]
+    type = PhysicsFVLogMolarElectronDiffusion
+    variable = log_ni
+    coeff = zero_diffusion
+  []
   [electron_time]
     type = PhysicsFVLogMolarElectronTimeDerivative
     variable = log_ne
+  []
+  [electron_zero_transport]
+    type = PhysicsFVLogMolarElectronDiffusion
+    variable = log_ne
+    coeff = zero_diffusion
   []
 []
 
