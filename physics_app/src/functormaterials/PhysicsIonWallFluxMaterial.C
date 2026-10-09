@@ -5,6 +5,7 @@
 #include "MooseFunctorArguments.h"
 
 #include <cmath>
+#include <string>
 #include <type_traits>
 
 registerMooseObject("PhysicsApp", PhysicsIonWallFluxMaterial);
@@ -147,6 +148,12 @@ PhysicsIonWallFluxMaterial::validParams()
       "Evaluate E=-grad(phi) from the sided adjacent element instead of a FaceArg. "
       "Enable this when potential is a continuous FEM variable.");
 
+  params.addParam<std::string>(
+      "property_prefix",
+      "",
+      "Optional prefix prepended to all generated ion wall-flux functor names. "
+      "The empty default preserves the historical ion_* names.");
+
   return params;
 }
 
@@ -183,8 +190,10 @@ PhysicsIonWallFluxMaterial::PhysicsIonWallFluxMaterial(
         "migration_gate_smoothing_width",
         "migration_gate_smoothing_width must be nonnegative.");
 
+  const std::string property_prefix = getParam<std::string>("property_prefix");
+
   addFunctorProperty<ADReal>(
-      "ion_surface_number_flux",
+      property_prefix + "ion_surface_number_flux",
       [this](const auto & r, const auto & state) -> ADReal
       {
         using SpaceArg = decltype(r);
@@ -213,7 +222,7 @@ PhysicsIonWallFluxMaterial::PhysicsIonWallFluxMaterial(
       });
 
   addFunctorProperty<ADReal>(
-      "ion_migration_number_flux",
+      property_prefix + "ion_migration_number_flux",
       [this](const auto & r, const auto & state) -> ADReal
       {
         using SpaceArg = decltype(r);
@@ -239,7 +248,7 @@ PhysicsIonWallFluxMaterial::PhysicsIonWallFluxMaterial(
       });
 
   addFunctorProperty<ADReal>(
-      "ion_wall_number_flux",
+      property_prefix + "ion_wall_number_flux",
       [this](const auto & r, const auto & state) -> ADReal
       {
         using SpaceArg = decltype(r);
@@ -283,7 +292,7 @@ PhysicsIonWallFluxMaterial::PhysicsIonWallFluxMaterial(
       });
 
   addFunctorProperty<ADReal>(
-      "ion_surface_mass_flux",
+      property_prefix + "ion_surface_mass_flux",
       [this](const auto & r, const auto & state) -> ADReal
       {
         using SpaceArg = decltype(r);
@@ -313,7 +322,7 @@ PhysicsIonWallFluxMaterial::PhysicsIonWallFluxMaterial(
       });
 
   addFunctorProperty<ADReal>(
-      "ion_migration_mass_flux",
+      property_prefix + "ion_migration_mass_flux",
       [this](const auto & r, const auto & state) -> ADReal
       {
         using SpaceArg = decltype(r);
@@ -338,7 +347,7 @@ PhysicsIonWallFluxMaterial::PhysicsIonWallFluxMaterial(
       });
 
   addFunctorProperty<ADReal>(
-      "ion_wall_mass_flux",
+      property_prefix + "ion_wall_mass_flux",
       [this](const auto & r, const auto & state) -> ADReal
       {
         using SpaceArg = decltype(r);
