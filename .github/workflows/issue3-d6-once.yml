@@ -59,8 +59,10 @@ jobs:
               OUT=experiments/Issue3_dielectric_surface_charge/output_d6
 
               python3 -m py_compile "$ANALYZER"
-              python3 scripts/qpx.py preflight --self-test > "$OUT/preflight_selftest.log" 2>&1
-              python3 scripts/qpx.py preflight "$CASE" > "$OUT/preflight_input.log" 2>&1
+              python3 -c "from physics_harness.adapters.moose.preflight import parser_symbol_self_test; raise SystemExit(parser_symbol_self_test())" \
+                > "$OUT/preflight_selftest.log" 2>&1
+              python3 -c "from pathlib import Path; from physics_harness.adapters.moose.preflight import validate_input_preflight; validate_input_preflight(Path(\"$CASE\"))" \
+                > "$OUT/preflight_input.log" 2>&1
 
               make -C physics_app -j2
               physics_app/physics-opt -i "$CASE" --check-input > "$OUT/check.log" 2>&1
