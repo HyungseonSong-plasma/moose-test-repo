@@ -7,6 +7,7 @@ on:
     paths:
       - '.github/workflows/issue378-om-drift-diffusion.yml'
       - 'experiments/fem_fvm_plasma_discriminator/prepare_om_fvm_hybrid_contour.py'
+      - 'experiments/fem_fvm_plasma_discriminator/validate_om_runtime.py'
       - 'physics_app/src/functormaterials/PhysicsIonWallFluxMaterial.C'
   workflow_dispatch:
 
@@ -58,57 +59,7 @@ jobs:
 
       - name: Analyze bounded transient
         working-directory: experiments/fem_fvm_plasma_discriminator
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 - <<'PY'
-          import csv
-          import math
-          from pathlib import Path
-
-          csv_path = Path("ion_om_fvm_hybrid_contour_dt1ns_300steps_out.csv")
-          if not csv_path.exists():
-              raise SystemExit(f"missing runtime CSV: {csv_path}")
-          rows = list(csv.DictReader(csv_path.open(newline="")))
-          if len(rows) < 2:
-              raise SystemExit(f"expected INITIAL + transient rows, got {len(rows)}")
-
-          required = ("nm_min", "nm_max", "charge_number_min", "charge_number_max")
-          for key in required:
-              if key not in rows[0]:
-                  raise SystemExit(f"missing postprocessor column: {key}")
-              for i, row in enumerate(rows):
-                  value = float(row[key])
-                  if not math.isfinite(value):
-                      raise SystemExit(f"non-finite {key} at row {i}: {value}")
-
-          initial_charge = max(
-              abs(float(rows[0]["charge_number_min"])),
-              abs(float(rows[0]["charge_number_max"])),
-          )
-          neutrality_scale = 2.0e15
-          if initial_charge > 1.0e-9 * neutrality_scale:
-              raise SystemExit(
-                  f"initial neutrality gate failed: |nq|max={initial_charge:.17g} m^-3"
-              )
-
-          for i, row in enumerate(rows):
-              nmin = float(row["nm_min"])
-              nmax = float(row["nm_max"])
-              if nmin <= 0.0 or nmax <= 0.0 or nmin > nmax:
-                  raise SystemExit(
-                      f"O- positivity/order gate failed at row {i}: min={nmin}, max={nmax}"
-                  )
-
-          last = rows[-1]
-          print("ISSUE378_RUNTIME_GATE: PASS")
-          print(f"rows={len(rows)}")
-          print(f"initial_charge_abs_max_m-3={initial_charge:.17g}")
-          print(f"final_nm_min_m-3={float(last['nm_min']):.17g}")
-          print(f"final_nm_max_m-3={float(last['nm_max']):.17g}")
-          print(f"final_charge_min_m-3={float(last['charge_number_min']):.17g}")
-          print(f"final_charge_max_m-3={float(last['charge_number_max']):.17g}")
-          PY
+        run: python3 validate_om_runtime.py | tee issue378_runtime_gate.log
 
       - name: Upload Issue 378 evidence
         if: always()
@@ -119,6 +70,7 @@ jobs:
             experiments/fem_fvm_plasma_discriminator/issue378_prepare.log
             experiments/fem_fvm_plasma_discriminator/issue378_check_input.log
             experiments/fem_fvm_plasma_discriminator/issue378_runtime.log
+            experiments/fem_fvm_plasma_discriminator/issue378_runtime_gate.log
             experiments/fem_fvm_plasma_discriminator/ion_om_fvm_hybrid_contour_dt1ns_300steps.i
             experiments/fem_fvm_plasma_discriminator/ion_om_fvm_hybrid_contour_dt1ns_300steps_out.csv
             experiments/fem_fvm_plasma_discriminator/ion_om_fvm_hybrid_contour_dt1ns_300steps_out.e
