@@ -51,19 +51,17 @@ jobs:
 
               CASE_DIR=experiments/Issue3_dielectric_surface_charge
               OUT=$CASE_DIR/output_d6_canonical
-              RESULTS=/workspace/.d6_canonical_results
 
               python3 -m json.tool "$CASE_DIR/test.json" > "$OUT/test_manifest.json"
               python3 -c "from physics_harness.adapters.moose.preflight import parser_symbol_self_test; raise SystemExit(parser_symbol_self_test())" \
                 > "$OUT/preflight_selftest.log" 2>&1
 
               make -C physics_app -j2
-              python3 -c "from pathlib import Path; from physics_harness.adapters.moose.regression import run_case; raise SystemExit(run_case(Path(\"$CASE_DIR\"), results_root=Path(\"$RESULTS\"), executable=Path(\"/workspace/physics_app/physics-opt\"), heartbeat_seconds=5.0, stall_after_seconds=60.0))" \
+              python3 -c "from pathlib import Path; from physics_harness.adapters.moose.regression import run_case; raise SystemExit(run_case(Path(\"$CASE_DIR\"), executable=Path(\"/workspace/physics_app/physics-opt\"), heartbeat_seconds=5.0, stall_after_seconds=60.0))" \
                 > "$OUT/harness.log" 2>&1
 
               cp "$CASE_DIR/d6_2d_integrated_out.csv" "$OUT/"
               cp "$CASE_DIR/d6_2d_integrated_out.e" "$OUT/"
-              cp -R "$RESULTS" "$OUT/results"
             '
 
       - name: Upload canonical D6 evidence
