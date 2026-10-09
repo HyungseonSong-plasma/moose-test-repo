@@ -1,0 +1,87 @@
+name: Issue 3 D2 electron-only dielectric charging one-shot
+
+on:
+  push:
+    branches:
+      - issue3-d0-dielectric-surface-charge
+    paths:
+      - '.github/workflows/issue3-d2-once.yml'
+      - 'experiments/Issue3_dielectric_surface_charge/d2_electron_only.i'
+      - 'experiments/Issue3_dielectric_surface_charge/analyze_d2.py'
+
+permissions:
+  contents: read
+
+jobs:
+  d2:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pull build image
+        run: docker pull "$BUILD_BASE_REF"
+
+      - name: Build and run D2 electron-only discriminator
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p experiments/Issue3_dielectric_surface_charge/output_d2
+
+          docker run --rm --entrypoint /bin/bash --user 0:0 \
+            --workdir /workspace -v "$GITHUB_WORKSPACE:/workspace" \
+            "$BUILD_BASE_REF" -lc '
+              set -euo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              git config --global --add safe.directory /opt/physics_vendor/moose
+              git config --global --add safe.directory /opt/physics_vendor/crane
+              git config --global --add safe.directory /opt/physics_vendor/squirrel
+              git config --global --add safe.directory /opt/physics_vendor/zapdos
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+
+              python3 -m py_compile experiments/Issue3_dielectric_surface_charge/analyze_d2.py
+              make -C physics_app -j2
+
+              cd experiments/Issue3_dielectric_surface_charge
+              rm -f d2_electron_only_out.csv
+
+              set +e
+              ../../physics_app/physics-opt -i d2_electron_only.i --check-input > output_d2/check_input.log 2>&1
+              check_rc=$?
+              set -e
+              echo "check_rc=$check_rc" > output_d2/check_status.txt
+              if [ "$check_rc" -ne 0 ]; then
+                cat output_d2/check_input.log
+                exit "$check_rc"
+              fi
+
+              set +e
+              ../../physics_app/physics-opt -i d2_electron_only.i > output_d2/run.log 2>&1
+              run_rc=$?
+              set -e
+              echo "run_rc=$run_rc" > output_d2/run_status.txt
+              if [ "$run_rc" -ne 0 ]; then
+                cat output_d2/run.log
+                exit "$run_rc"
+              fi
+
+              cp d2_electron_only_out.csv output_d2/
+              python3 analyze_d2.py d2_electron_only_out.csv | tee output_d2/analysis.json
+            '
+
+      - name: Upload D2 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue3-d2-evidence
+          path: experiments/Issue3_dielectric_surface_charge/output_d2/**
+          if-no-files-found: warn
+          retention-days: 30
