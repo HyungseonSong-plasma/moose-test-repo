@@ -98,10 +98,12 @@ def build_case() -> str:
     )
 
     negative_pp = """  [nm_min]\n    type = ADElementExtremeFunctorValue\n    functor = n_m_physical\n    value_type = min\n    block = plasma\n    execute_on = 'INITIAL TIMESTEP_END'\n  []\n  [nm_max]\n    type = ADElementExtremeFunctorValue\n    functor = n_m_physical\n    value_type = max\n    block = plasma\n    execute_on = 'INITIAL TIMESTEP_END'\n  []\n  [charge_number_min]\n    type = ADElementExtremeFunctorValue\n    functor = charge_number_density\n    value_type = min\n    block = plasma\n    execute_on = 'INITIAL TIMESTEP_END'\n  []\n  [charge_number_max]\n    type = ADElementExtremeFunctorValue\n    functor = charge_number_density\n    value_type = max\n    block = plasma\n    execute_on = 'INITIAL TIMESTEP_END'\n  []\n"""
+    # COMMON_PP and EXEC are concatenated directly in prepare_cases.py, so the
+    # Postprocessors closing marker is followed by [Executioner] with one newline.
     text = replace_once(
         text,
-        "\n[]\n\n[Executioner]\n",
-        "\n" + negative_pp + "[]\n\n[Executioner]\n",
+        "\n[]\n[Executioner]\n",
+        "\n" + negative_pp + "[]\n[Executioner]\n",
         "Postprocessors closing block",
     )
 
