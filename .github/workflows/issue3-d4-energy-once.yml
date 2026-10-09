@@ -1,0 +1,80 @@
+name: Issue 3 isolated D4 SEE energy one-shot
+
+on:
+  push:
+    branches:
+      - issue3-d0-dielectric-surface-charge
+    paths:
+      - '.github/workflows/issue3-d4-energy-once.yml'
+      - 'experiments/Issue3_dielectric_surface_charge/prepare_d4_see_energy.py'
+      - 'experiments/Issue3_dielectric_surface_charge/analyze_d4_see_energy.py'
+      - 'physics_app/include/fvbcs/PhysicsFVElectronEnergyWallFluxBC.h'
+      - 'physics_app/src/fvbcs/PhysicsFVElectronEnergyWallFluxBC.C'
+
+permissions:
+  contents: read
+
+jobs:
+  d4-energy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pull build image
+        run: docker pull "$BUILD_BASE_REF"
+
+      - name: Build and run isolated SEE energy controls
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p experiments/Issue3_dielectric_surface_charge/output_d4_energy
+
+          docker run --rm --entrypoint /bin/bash --user 0:0 \
+            --workdir /workspace -v "$GITHUB_WORKSPACE:/workspace" \
+            "$BUILD_BASE_REF" -lc '
+              set -euo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              git config --global --add safe.directory /opt/physics_vendor/moose
+              git config --global --add safe.directory /opt/physics_vendor/crane
+              git config --global --add safe.directory /opt/physics_vendor/squirrel
+              git config --global --add safe.directory /opt/physics_vendor/zapdos
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+
+              python3 -m py_compile \
+                experiments/Issue3_dielectric_surface_charge/prepare_d4_see_energy.py \
+                experiments/Issue3_dielectric_surface_charge/analyze_d4_see_energy.py
+              python3 experiments/Issue3_dielectric_surface_charge/prepare_d4_see_energy.py
+              make -C physics_app -j2
+
+              cd experiments/Issue3_dielectric_surface_charge
+              for case in d4_see_energy_see_off d4_see_energy_see_on; do
+                rm -f "${case}_out.csv"
+                ../../physics_app/physics-opt -i "${case}.i" --check-input \
+                  > "output_d4_energy/${case}_check.log" 2>&1
+                ../../physics_app/physics-opt -i "${case}.i" \
+                  > "output_d4_energy/${case}_run.log" 2>&1
+                cp "${case}_out.csv" output_d4_energy/
+              done
+
+              python3 analyze_d4_see_energy.py \
+                d4_see_energy_see_off_out.csv d4_see_energy_see_on_out.csv \
+                | tee output_d4_energy/analysis.json
+            '
+
+      - name: Upload isolated SEE energy evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue3-d4-energy-evidence
+          path: experiments/Issue3_dielectric_surface_charge/output_d4_energy/**
+          if-no-files-found: warn
+          retention-days: 30
