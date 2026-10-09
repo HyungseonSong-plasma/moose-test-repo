@@ -90,7 +90,7 @@ def add_surface_coupling(text: str) -> str:
     expression = 'o2p+om+op'
     block = plasma
   []
-  [stageb4_ion_O_return]
+  [stageb4_ion_O_return_material]
     type = ADParsedFunctorMaterial
     property_name = stageb4_ion_O_return_mass_flux
     functor_names = 'negative_ion_wall_mass_flux atomic_positive_ion_wall_mass_flux'
