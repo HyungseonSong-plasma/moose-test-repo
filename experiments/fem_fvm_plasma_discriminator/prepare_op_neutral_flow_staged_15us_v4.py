@@ -50,8 +50,8 @@ def replace_once(text: str, old: str, new: str, label: str) -> str:
 
 def neutral_flux_expression(sticking: float, molar_mass: float, w: str) -> str:
     return (
-        f"{sticking:.17g}*0.25*sqrt(8.0*{R_GAS:.17g}*T_g_fixed/"
-        f"({PI:.17g}*{molar_mass:.17g}))*rho_neutral*{w}"
+        f"{sticking:.17g}*0.25*sqrt(8.0*{R_GAS:.17g}*tg/"
+        f"({PI:.17g}*{molar_mass:.17g}))*rho*{w}"
     )
 
 
