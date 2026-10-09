@@ -1,8 +1,8 @@
 {
   "targets": [
     {
-      "branch": "issue-331-governed-compile-manifest",
-      "expected_sha": "31baf25a9662453aa1b02dcc341535392f59a473"
+      "branch": "issue-378-om-drift-diffusion",
+      "expected_sha": "58ec8f01de62252e7520ba9008c81962f64032f4"
     }
   ]
 }
