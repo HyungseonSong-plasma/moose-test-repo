@@ -1,16 +1,8 @@
 {
   "targets": [
     {
-      "branch": "issue-331-stagea-op-drift-diffusion",
-      "expected_sha": "9c6099e77959a2fe6f9c97f2fce27af8ac13d9f5"
-    },
-    {
-      "branch": "issue-331-stageb-neutral-flow",
-      "expected_sha": "4e500489ed1221eb85d470be254428c5a2eb2d27"
-    },
-    {
-      "branch": "issue331-stageb-monolithic-charged",
-      "expected_sha": "6ee04f7e3ff5e8a1f809b6a98f70deba08504dd0"
+      "branch": "ops/issue331-branch-cleanup-20261009",
+      "expected_sha": "43283139d58a9c3ebf59a23a6ee9aed1478806b0"
     }
   ]
 }
