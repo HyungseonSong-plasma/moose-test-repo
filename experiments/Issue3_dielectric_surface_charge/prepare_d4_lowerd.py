@@ -24,9 +24,9 @@ def build(gamma: float) -> str:
 # Electron signed outward flux = primary absorption - emitted SEE.
 # gamma={gamma:.17g} is a controlled mechanism/sign coefficient, not a
 # universal dielectric material value. SEE emission energy is 4 eV.
-# The dielectric-anchor FV reaction exists only to satisfy MOOSE kernel
-# coverage in this D4 mechanism test; D5 separately validates the real FEM
-# dielectric Poisson equation and sigma_s electrostatic feedback.
+# The dielectric-anchor FV reaction and non-plasma material anchor exist only
+# to satisfy MOOSE coverage checks in this D4 mechanism test; D5 separately
+# validates the real FEM dielectric Poisson equation and sigma_s feedback.
 
 [Mesh]
   [base]
@@ -96,6 +96,12 @@ def build(gamma: float) -> str:
     prop_names = 'ion_mobility T_g mean_energy zero_diffusion see_gamma'
     prop_values = '0.0 300.0 {MEAN_E:.17g} 0.0 {gamma:.17g}'
     block = 1
+  []
+  [nonplasma_material_anchor]
+    type = ADGenericFunctorMaterial
+    prop_names = 'nonplasma_material_anchor'
+    prop_values = '0.0'
+    block = '2 10'
   []
   [ion_density]
     type = ADParsedFunctorMaterial
