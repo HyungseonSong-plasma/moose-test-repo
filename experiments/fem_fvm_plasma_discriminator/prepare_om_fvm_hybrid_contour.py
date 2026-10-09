@@ -69,10 +69,11 @@ def build_case() -> str:
     new_charge = """  [charge_number_density]\n    type = ADParsedFunctorMaterial\n    property_name = charge_number_density\n    functor_names = 'n_i_physical n_e_physical n_m_physical'\n    functor_symbols = 'ni ne nm'\n    expression = 'ni-ne-nm'\n    block = plasma\n  []\n"""
     text = replace_once(text, old_charge, new_charge, "Poisson charge with O-")
 
-    # Reuse the existing charged-wall implementation. Its surface contribution
-    # is gamma*(1/4)*n*v_th and its migration contribution is the outward
-    # positive part of z*E.n. There is deliberately no exponential wall factor.
-    negative_wall = f"""  [negative_ion_wall_flux]\n    type = PhysicsIonWallFluxMaterial\n    use_element_gradient_for_potential = true\n    ion_number_density = n_m_physical\n    potential = potential\n    mobility = negative_ion_mobility\n    gas_temperature = T_g_fixed\n    charge_number = -1\n    molar_mass = {OM_MOLAR_MASS:.17g}\n    sticking = 1.0\n    ion_temperature_eV = 0.0\n    migration_gate_smoothing_width = 1.0e-3\n    block = plasma\n  []\n"""
+    # Reuse the existing charged-wall implementation with a distinct namespace.
+    # The surface contribution is gamma*(1/4)*n*v_th and migration is the
+    # outward positive part of z*E.n. There is deliberately no exponential wall
+    # factor. The default empty prefix keeps the existing O2+ names unchanged.
+    negative_wall = f"""  [negative_ion_wall_flux]\n    type = PhysicsIonWallFluxMaterial\n    property_prefix = negative_\n    use_element_gradient_for_potential = true\n    ion_number_density = n_m_physical\n    potential = potential\n    mobility = negative_ion_mobility\n    gas_temperature = T_g_fixed\n    charge_number = -1\n    molar_mass = {OM_MOLAR_MASS:.17g}\n    sticking = 1.0\n    ion_temperature_eV = 0.0\n    migration_gate_smoothing_width = 1.0e-3\n    block = plasma\n  []\n"""
     text = replace_once(
         text,
         "\n[]\n\n[Kernels]\n",
@@ -88,13 +89,7 @@ def build_case() -> str:
         "FVKernels closing block",
     )
 
-    negative_bc = f"""  [negative_ion_wall]\n    type = FVFunctorNeumannBC\n    variable = log_nm\n    functor = ion_wall_number_flux\n    functor = negative_ion_wall_number_flux\n    factor = {-base.INV_NA:.17g}\n    boundary = '{base.GROUND}'\n  []\n"""
-    # Keep the block construction explicit and reject accidental duplicate
-    # functor assignment before emitting the final input.
-    negative_bc = negative_bc.replace(
-        "    functor = ion_wall_number_flux\n    functor = negative_ion_wall_number_flux\n",
-        "    functor = negative_ion_wall_number_flux\n",
-    )
+    negative_bc = f"""  [negative_ion_wall]\n    type = FVFunctorNeumannBC\n    variable = log_nm\n    functor = negative_ion_wall_number_flux\n    factor = {-base.INV_NA:.17g}\n    boundary = '{base.GROUND}'\n  []\n"""
     text = replace_once(
         text,
         "\n[]\n\n[Postprocessors]\n",
@@ -116,10 +111,23 @@ def build_case() -> str:
 def validate_contract(text: str) -> None:
     if NI0_NEUTRAL != base.NE0 + NM0:
         raise RuntimeError("initial neutrality arithmetic changed")
+
+    # Check the actual log-molar states that MOOSE reconstructs, not only the
+    # analytic constants used to form them.
+    ne_reconstructed = math.exp(base.LOG_NE0) * base.NA
+    nm_reconstructed = math.exp(LOG_NM0) * base.NA
+    ni_reconstructed = math.exp(LOG_NI0_NEUTRAL) * base.NA
+    neutrality_residual = ni_reconstructed - ne_reconstructed - nm_reconstructed
+    neutrality_scale = max(abs(ni_reconstructed), 1.0)
+    if abs(neutrality_residual) > 1.0e-12 * neutrality_scale:
+        raise RuntimeError(
+            f"reconstructed initial neutrality residual too large: {neutrality_residual:.17g} m^-3"
+        )
+
     required = [
         "[log_nm]",
-        "charge_number = -1",
         "expression = 'ni-ne-nm'",
+        "property_prefix = negative_",
         "functor = negative_ion_wall_number_flux",
         "type = PhysicsIonWallFluxMaterial",
         "molar_mass = 0.016",
@@ -127,7 +135,17 @@ def validate_contract(text: str) -> None:
     for token in required:
         if token not in text:
             raise RuntimeError(f"missing O- contract token: {token}")
+
+    positive_drift = text.split("[ni_drift]", 1)[1].split("  []", 1)[0]
+    negative_drift = text.split("[nm_drift]", 1)[1].split("  []", 1)[0]
+    if "charge_number = 1" not in positive_drift:
+        raise RuntimeError("O2+ drift charge sign changed")
+    if "charge_number = -1" not in negative_drift:
+        raise RuntimeError("O- drift must use charge_number=-1")
+
     wall = text.split("[negative_ion_wall_flux]", 1)[1].split("  []", 1)[0]
+    if "charge_number = -1" not in wall:
+        raise RuntimeError("O- wall migration must use charge_number=-1")
     if "exp(" in wall or "exponential" in wall.lower():
         raise RuntimeError("O- wall flux must remain exp-free")
     if text.count("variable = log_nm") < 4:
@@ -139,9 +157,13 @@ if __name__ == "__main__":
     validate_contract(text)
     out = Path(base.HERE) / "ion_om_fvm_hybrid_contour_dt1ns_300steps.i"
     out.write_text(text, encoding="utf-8")
+    ne_reconstructed = math.exp(base.LOG_NE0) * base.NA
+    nm_reconstructed = math.exp(LOG_NM0) * base.NA
+    ni_reconstructed = math.exp(LOG_NI0_NEUTRAL) * base.NA
+    residual = ni_reconstructed - ne_reconstructed - nm_reconstructed
     print(f"wrote {out}")
     print("hybrid discretization: ne=FEM, O2+=FVM, O-=FVM, electron energy=FEM, potential=FEM")
     print(f"initial densities [m^-3]: ne={base.NE0:.17g}, O-={NM0:.17g}, O2+={NI0_NEUTRAL:.17g}")
-    print("initial neutrality: n_O2+ - ne - n_O- = 0")
+    print(f"reconstructed initial neutrality residual [m^-3]: {residual:.17g}")
     print("O- drift charge_number=-1; O2+ drift charge_number=+1")
     print("O- wall: exp-free thermal sticking + outward signed migration")
