@@ -1,23 +1,25 @@
 #!/usr/bin/env python3
-"""1 us staged-time runtime acceptance gate for Issue #378 O- transport."""
+"""100 us staged-time runtime acceptance gate for Issue #378 O- transport."""
 from __future__ import annotations
 
 import csv
 import math
 from pathlib import Path
 
-CSV_PATH = Path("ion_om_fvm_hybrid_contour_staged_1ns100_5ns100_10ns40_out.csv")
+CSV_PATH = Path("ion_om_fvm_hybrid_contour_staged_1ns100_10ns90_100ns90_1000ns90_out.csv")
 FIRST_DT_S = 1.0e-9
 FIRST_STEPS = 100
-SECOND_DT_S = 5.0e-9
-SECOND_STEPS = 100
-THIRD_DT_S = 10.0e-9
-THIRD_STEPS = 40
-EXPECTED_ROWS = FIRST_STEPS + SECOND_STEPS + THIRD_STEPS + 1
-END_TIME_S = 1.0e-6
+SECOND_DT_S = 10.0e-9
+SECOND_STEPS = 90
+THIRD_DT_S = 100.0e-9
+THIRD_STEPS = 90
+FOURTH_DT_S = 1000.0e-9
+FOURTH_STEPS = 90
+EXPECTED_ROWS = FIRST_STEPS + SECOND_STEPS + THIRD_STEPS + FOURTH_STEPS + 1
+END_TIME_S = 100.0e-6
 NEUTRALITY_SCALE = 2.0e15
 NEUTRALITY_REL_TOL = 1.0e-9
-SNAPSHOT_NS = (0, 5, 50, 100, 200, 300, 500, 600, 800, 1000)
+SNAPSHOT_NS = (0, 5, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000, 100000)
 
 REQUIRED = (
     "time",
@@ -43,7 +45,9 @@ def expected_times() -> list[float]:
     second = [t1 + j * SECOND_DT_S for j in range(1, SECOND_STEPS + 1)]
     t2 = t1 + SECOND_STEPS * SECOND_DT_S
     third = [t2 + k * THIRD_DT_S for k in range(1, THIRD_STEPS + 1)]
-    return first + second + third
+    t3 = t2 + THIRD_STEPS * THIRD_DT_S
+    fourth = [t3 + m * FOURTH_DT_S for m in range(1, FOURTH_STEPS + 1)]
+    return first + second + third + fourth
 
 
 def _finite(row: dict[str, str], key: str, index: int) -> float:
@@ -65,7 +69,7 @@ def main() -> None:
 
     exp_times = expected_times()
     if len(rows) != EXPECTED_ROWS:
-        raise SystemExit(f"1 us row count failed: expected {EXPECTED_ROWS}, got {len(rows)}")
+        raise SystemExit(f"100 us row count failed: expected {EXPECTED_ROWS}, got {len(rows)}")
     if len(exp_times) != EXPECTED_ROWS:
         raise SystemExit("internal staged-time schedule length mismatch")
 
@@ -122,13 +126,16 @@ def main() -> None:
         )
         max_abs_charge_integral = max(max_abs_charge_integral, abs(values["charge_integral"]))
 
-    second_switch_index = FIRST_STEPS + SECOND_STEPS
+    switch2 = FIRST_STEPS + SECOND_STEPS
+    switch3 = switch2 + THIRD_STEPS
     if not math.isclose(times[FIRST_STEPS], 100.0e-9, rel_tol=1.0e-12, abs_tol=1.0e-15):
         raise SystemExit(f"first dt switch time failed: {times[FIRST_STEPS]:.17g}")
-    if not math.isclose(times[second_switch_index], 600.0e-9, rel_tol=1.0e-12, abs_tol=1.0e-15):
-        raise SystemExit(f"second dt switch time failed: {times[second_switch_index]:.17g}")
+    if not math.isclose(times[switch2], 1.0e-6, rel_tol=1.0e-12, abs_tol=1.0e-15):
+        raise SystemExit(f"second dt switch time failed: {times[switch2]:.17g}")
+    if not math.isclose(times[switch3], 10.0e-6, rel_tol=1.0e-12, abs_tol=1.0e-15):
+        raise SystemExit(f"third dt switch time failed: {times[switch3]:.17g}")
     if not math.isclose(times[-1], END_TIME_S, rel_tol=1.0e-12, abs_tol=1.0e-15):
-        raise SystemExit(f"1 us final time failed: {times[-1]:.17g}")
+        raise SystemExit(f"100 us final time failed: {times[-1]:.17g}")
 
     initial_charge = max(
         abs(float(rows[0]["charge_number_min"])),
@@ -137,11 +144,12 @@ def main() -> None:
     if initial_charge > NEUTRALITY_REL_TOL * NEUTRALITY_SCALE:
         raise SystemExit(f"initial neutrality gate failed: |nq|max={initial_charge:.17g} m^-3")
 
-    print("ISSUE378_1US_STAGED_GATE: PASS")
+    print("ISSUE378_100US_STAGED_GATE: PASS")
     print(f"rows={len(rows)}")
-    print("schedule=1nsx100+5nsx100+10nsx40")
+    print("schedule=1nsx100+10nsx90+100nsx90+1000nsx90")
     print(f"switch1_time_s={times[FIRST_STEPS]:.17g}")
-    print(f"switch2_time_s={times[second_switch_index]:.17g}")
+    print(f"switch2_time_s={times[switch2]:.17g}")
+    print(f"switch3_time_s={times[switch3]:.17g}")
     print(f"final_time_s={times[-1]:.17g}")
     print(f"initial_charge_abs_max_m-3={initial_charge:.17g}")
     print(f"trajectory_charge_abs_max_m-3={max_abs_charge_number:.17g}")
@@ -166,6 +174,10 @@ def main() -> None:
         )
 
     last = rows[-1]
+    print(f"final_ne_min_m-3={float(last['ne_min']):.17g}")
+    print(f"final_ne_max_m-3={float(last['ne_max']):.17g}")
+    print(f"final_ni_min_m-3={float(last['ni_min']):.17g}")
+    print(f"final_ni_max_m-3={float(last['ni_max']):.17g}")
     print(f"final_nm_min_m-3={float(last['nm_min']):.17g}")
     print(f"final_nm_max_m-3={float(last['nm_max']):.17g}")
     print(f"final_charge_min_m-3={float(last['charge_number_min']):.17g}")
