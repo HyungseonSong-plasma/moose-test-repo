@@ -6,6 +6,7 @@ on:
       - issue-378-om-drift-diffusion
     paths:
       - '.github/workflows/issue378-om-drift-diffusion.yml'
+      - 'experiments/fem_fvm_plasma_discriminator/generate_contour_mesh.py'
       - 'experiments/fem_fvm_plasma_discriminator/prepare_om_fvm_hybrid_contour.py'
       - 'experiments/fem_fvm_plasma_discriminator/validate_om_runtime.py'
       - 'physics_app/src/functormaterials/PhysicsIonWallFluxMaterial.C'
@@ -47,6 +48,11 @@ jobs:
 
               make -C physics_app -j2
               cd experiments/fem_fvm_plasma_discriminator
+
+              # The committed .msh is an LFS pointer on a normal checkout.
+              # Recreate the exact deterministic contour mesh just as the
+              # validated parent workflow does before invoking MOOSE.
+              python3 generate_contour_mesh.py | tee issue378_mesh.log
               python3 prepare_om_fvm_hybrid_contour.py | tee issue378_prepare.log
 
               INPUT="ion_om_fvm_hybrid_contour_dt1ns_300steps.i"
@@ -67,10 +73,12 @@ jobs:
         with:
           name: issue378-om-drift-diffusion-evidence
           path: |
+            experiments/fem_fvm_plasma_discriminator/issue378_mesh.log
             experiments/fem_fvm_plasma_discriminator/issue378_prepare.log
             experiments/fem_fvm_plasma_discriminator/issue378_check_input.log
             experiments/fem_fvm_plasma_discriminator/issue378_runtime.log
             experiments/fem_fvm_plasma_discriminator/issue378_runtime_gate.log
+            experiments/fem_fvm_plasma_discriminator/plasma_contour_l3_4p5mm.msh
             experiments/fem_fvm_plasma_discriminator/ion_om_fvm_hybrid_contour_dt1ns_300steps.i
             experiments/fem_fvm_plasma_discriminator/ion_om_fvm_hybrid_contour_dt1ns_300steps_out.csv
             experiments/fem_fvm_plasma_discriminator/ion_om_fvm_hybrid_contour_dt1ns_300steps_out.e
