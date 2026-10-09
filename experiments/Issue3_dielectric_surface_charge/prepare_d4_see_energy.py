@@ -22,8 +22,8 @@ def build(see_flux: float) -> str:
 # The internal plasma_dielectric sideset is therefore a boundary of the FV energy domain.
 # This discriminator isolates PhysicsFVElectronEnergyWallFluxBC from charge bookkeeping.
 # SEE number flux is controlled directly: {see_flux:.17g} 1/(m^2 s).
-# dielectric_anchor is an inert block-2 variable/kernel used only to satisfy the
-# MOOSE active-kernel integrity check; it is not coupled to electron_energy.
+# dielectric_anchor and dielectric_material_anchor exist only to satisfy MOOSE
+# whole-mesh integrity checks; neither is coupled to electron_energy.
 
 [Mesh]
   [base]
@@ -63,6 +63,12 @@ def build(see_flux: float) -> str:
     prop_names = 'mean_energy zero_diffusion see_number_flux'
     prop_values = '{MEAN_E:.17g} 0.0 {see_flux:.17g}'
     block = 1
+  []
+  [dielectric_material_anchor]
+    type = ADGenericFunctorMaterial
+    prop_names = 'dielectric_material_anchor'
+    prop_values = '0.0'
+    block = 2
   []
 []
 
