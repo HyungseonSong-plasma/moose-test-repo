@@ -1,4 +1,4 @@
-name: Issue 3 D6 2D dielectric integrated one-shot
+name: Issue 3 D6 canonical promotion one-shot
 
 on:
   push:
@@ -6,20 +6,15 @@ on:
       - issue3-d0-dielectric-surface-charge
     paths:
       - '.github/workflows/issue3-d6-once.yml'
+      - 'experiments/Issue3_dielectric_surface_charge/test.json'
       - 'experiments/Issue3_dielectric_surface_charge/d6_2d_integrated.i'
       - 'experiments/Issue3_dielectric_surface_charge/analyze_d6_2d.py'
-      - 'physics_app/include/fvbcs/PhysicsFVLogMolarDielectricFluxBC.h'
-      - 'physics_app/src/fvbcs/PhysicsFVLogMolarDielectricFluxBC.C'
-      - 'physics_app/include/kernels/PhysicsLowerDSurfaceCurrent.h'
-      - 'physics_app/src/kernels/PhysicsLowerDSurfaceCurrent.C'
-      - 'physics_app/include/bcs/PhysicsADSurfaceChargePoissonBC.h'
-      - 'physics_app/src/bcs/PhysicsADSurfaceChargePoissonBC.C'
 
 permissions:
   contents: read
 
 jobs:
-  d6-2d-integrated:
+  d6-canonical:
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     env:
@@ -31,11 +26,11 @@ jobs:
       - name: Pull build image
         run: docker pull "$BUILD_BASE_REF"
 
-      - name: Build and run D6 2D integrated acceptance
+      - name: Build and validate canonical D6 manifest
         shell: bash
         run: |
           set -euo pipefail
-          OUT=experiments/Issue3_dielectric_surface_charge/output_d6
+          OUT=experiments/Issue3_dielectric_surface_charge/output_d6_canonical
           mkdir -p "$OUT"
 
           docker run --rm --entrypoint /bin/bash --user 0:0 \
@@ -54,38 +49,32 @@ jobs:
               export ZAPDOS_DIR=/opt/physics_vendor/zapdos
               export METHOD=opt
 
-              CASE=experiments/Issue3_dielectric_surface_charge/d6_2d_integrated.i
-              ANALYZER=experiments/Issue3_dielectric_surface_charge/analyze_d6_2d.py
-              OUT=experiments/Issue3_dielectric_surface_charge/output_d6
+              CASE_DIR=experiments/Issue3_dielectric_surface_charge
+              OUT=$CASE_DIR/output_d6_canonical
+              RESULTS=/workspace/.d6_canonical_results
 
-              python3 -m py_compile "$ANALYZER"
+              python3 -m json.tool "$CASE_DIR/test.json" > "$OUT/test_manifest.json"
               python3 -c "from physics_harness.adapters.moose.preflight import parser_symbol_self_test; raise SystemExit(parser_symbol_self_test())" \
                 > "$OUT/preflight_selftest.log" 2>&1
-              python3 -c "from pathlib import Path; from physics_harness.adapters.moose.preflight import validate_input_preflight; validate_input_preflight(Path(\"$CASE\"))" \
-                > "$OUT/preflight_input.log" 2>&1
 
               make -C physics_app -j2
-              physics_app/physics-opt -i "$CASE" --check-input > "$OUT/check.log" 2>&1
-              physics_app/physics-opt -i "$CASE" > "$OUT/run.log" 2>&1
+              python3 bin/physics.py test "$CASE_DIR" \
+                --qpx /workspace/physics_app/physics-opt \
+                --results-root "$RESULTS" \
+                --heartbeat-seconds 5 \
+                --stall-seconds 60 \
+                > "$OUT/harness.log" 2>&1
 
-              cd experiments/Issue3_dielectric_surface_charge
-              python3 analyze_d6_2d.py d6_2d_integrated_out.csv d6_2d_integrated.i \
-                | tee output_d6/analysis.json
-
-              converged_count=$(grep -c "Solve Converged!" output_d6/run.log || true)
-              printf "{\"expected_minimum\":5,\"observed\":%s}\n" "$converged_count" \
-                | tee output_d6/convergence.json
-              test "$converged_count" -ge 5
-
-              cp d6_2d_integrated_out.csv output_d6/
-              cp d6_2d_integrated_out.e output_d6/
+              cp "$CASE_DIR/d6_2d_integrated_out.csv" "$OUT/"
+              cp "$CASE_DIR/d6_2d_integrated_out.e" "$OUT/"
+              cp -R "$RESULTS" "$OUT/results"
             '
 
-      - name: Upload D6 evidence
+      - name: Upload canonical D6 evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: issue3-d6-2d-evidence
-          path: experiments/Issue3_dielectric_surface_charge/output_d6/**
+          name: issue3-d6-canonical-evidence
+          path: experiments/Issue3_dielectric_surface_charge/output_d6_canonical/**
           if-no-files-found: warn
           retention-days: 30
