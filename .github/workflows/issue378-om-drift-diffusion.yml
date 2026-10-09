@@ -25,7 +25,7 @@ jobs:
       - name: Pull build image
         run: docker pull "$BUILD_BASE_REF"
 
-      - name: Build, generate, check input, and run 5 ns
+      - name: Build, generate, check input, and run 300 ns
         shell: bash
         run: |
           set -euo pipefail
@@ -59,11 +59,10 @@ jobs:
               ../../physics_app/physics-opt -i "$INPUT" --check-input | tee issue378_check_input.log
 
               rm -f "${INPUT%.i}_out.csv" "${INPUT%.i}_out.e"
-              ../../physics_app/physics-opt -i "$INPUT" Executioner/num_steps=5 \
-                | tee issue378_runtime.log
+              ../../physics_app/physics-opt -i "$INPUT" | tee issue378_runtime.log
             '
 
-      - name: Analyze bounded transient
+      - name: Analyze full 300 ns transient
         working-directory: experiments/fem_fvm_plasma_discriminator
         run: python3 validate_om_runtime.py | tee issue378_runtime_gate.log
 
@@ -71,7 +70,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: issue378-om-drift-diffusion-evidence
+          name: issue378-om-drift-diffusion-300ns-evidence
           path: |
             experiments/fem_fvm_plasma_discriminator/issue378_mesh.log
             experiments/fem_fvm_plasma_discriminator/issue378_prepare.log
