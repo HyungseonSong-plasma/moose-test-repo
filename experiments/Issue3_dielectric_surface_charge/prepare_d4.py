@@ -29,6 +29,8 @@ def build(gamma: float) -> str:
 # Therefore j_SEE,to_surface = +e*Gamma_SEE.
 # gamma={gamma:.17g}; this is a controlled mechanism/sign coefficient inherited
 # from the accepted oxygen-ICP SEE discriminator, not a universal dielectric value.
+# The physical electron-energy row is scaled so its O(1e19) raw residual does
+# not hide the O(1e-6) log-molar particle residuals from the global convergence norm.
 
 [Mesh]
   type = GeneratedMesh
@@ -50,6 +52,7 @@ def build(gamma: float) -> str:
   [electron_energy]
     type = MooseVariableFVReal
     initial_condition = {ENERGY0:.17g}
+    scaling = 1.0e-25
   []
 []
 
