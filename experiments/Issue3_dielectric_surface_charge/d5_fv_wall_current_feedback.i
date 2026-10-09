@@ -95,6 +95,7 @@
     sticking = 1.0
     ion_temperature_eV = 0.0
     migration_gate_smoothing_width = 0.0
+    use_element_gradient_for_potential = true
     block = 1
   []
   [electron_wall_flux]
