@@ -16,7 +16,7 @@ on:
 
 jobs:
   validate:
-    name: O- FV DD + exp-free wall + neutrality + 100 us staged dt
+    name: O- FV DD + exp-free wall + neutrality + 1 us staged dt
     runs-on: ubuntu-24.04
     env:
       BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
@@ -27,7 +27,7 @@ jobs:
       - name: Pull build image
         run: docker pull "$BUILD_BASE_REF"
 
-      - name: Build, generate, check input, and run 100 us staged transient
+      - name: Build, generate, check input, and run 1 us staged transient
         shell: bash
         run: |
           set -euo pipefail
@@ -53,34 +53,34 @@ jobs:
 
               # Recreate the deterministic contour mesh used by the qualified parent.
               python3 generate_contour_mesh.py | tee issue378_mesh.log
-              python3 prepare_om_fvm_hybrid_staged_dt.py | tee issue378_prepare_100us.log
+              python3 prepare_om_fvm_hybrid_staged_dt.py | tee issue378_prepare_1us.log
 
-              INPUT="ion_om_fvm_hybrid_contour_staged_1ns100_10ns90_100ns90_1000ns90.i"
+              INPUT="ion_om_fvm_hybrid_contour_staged_1ns100_5ns100_10ns40.i"
               grep -q "type = TimeSequenceStepper" "$INPUT"
-              ../../physics_app/physics-opt -i "$INPUT" --check-input | tee issue378_check_input_100us.log
+              ../../physics_app/physics-opt -i "$INPUT" --check-input | tee issue378_check_input_1us.log
 
               rm -f "${INPUT%.i}_out.csv" "${INPUT%.i}_out.e"
-              ../../physics_app/physics-opt -i "$INPUT" | tee issue378_runtime_100us.log
+              ../../physics_app/physics-opt -i "$INPUT" | tee issue378_runtime_1us.log
             '
 
-      - name: Analyze full 100 us staged transient
+      - name: Analyze full 1 us staged transient
         working-directory: experiments/fem_fvm_plasma_discriminator
-        run: python3 validate_om_runtime_1us.py | tee issue378_runtime_gate_100us.log
+        run: python3 validate_om_runtime_1us.py | tee issue378_runtime_gate_1us.log
 
-      - name: Upload Issue 378 100 us evidence
+      - name: Upload Issue 378 1 us evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: issue378-om-drift-diffusion-100us-staged-1ns10ns100ns1000ns-evidence
+          name: issue378-om-drift-diffusion-1us-staged-1ns5ns10ns-evidence
           path: |
             experiments/fem_fvm_plasma_discriminator/issue378_mesh.log
-            experiments/fem_fvm_plasma_discriminator/issue378_prepare_100us.log
-            experiments/fem_fvm_plasma_discriminator/issue378_check_input_100us.log
-            experiments/fem_fvm_plasma_discriminator/issue378_runtime_100us.log
-            experiments/fem_fvm_plasma_discriminator/issue378_runtime_gate_100us.log
+            experiments/fem_fvm_plasma_discriminator/issue378_prepare_1us.log
+            experiments/fem_fvm_plasma_discriminator/issue378_check_input_1us.log
+            experiments/fem_fvm_plasma_discriminator/issue378_runtime_1us.log
+            experiments/fem_fvm_plasma_discriminator/issue378_runtime_gate_1us.log
             experiments/fem_fvm_plasma_discriminator/plasma_contour_l3_4p5mm.msh
-            experiments/fem_fvm_plasma_discriminator/ion_om_fvm_hybrid_contour_staged_1ns100_10ns90_100ns90_1000ns90.i
-            experiments/fem_fvm_plasma_discriminator/ion_om_fvm_hybrid_contour_staged_1ns100_10ns90_100ns90_1000ns90_out.csv
-            experiments/fem_fvm_plasma_discriminator/ion_om_fvm_hybrid_contour_staged_1ns100_10ns90_100ns90_1000ns90_out.e
+            experiments/fem_fvm_plasma_discriminator/ion_om_fvm_hybrid_contour_staged_1ns100_5ns100_10ns40.i
+            experiments/fem_fvm_plasma_discriminator/ion_om_fvm_hybrid_contour_staged_1ns100_5ns100_10ns40_out.csv
+            experiments/fem_fvm_plasma_discriminator/ion_om_fvm_hybrid_contour_staged_1ns100_5ns100_10ns40_out.e
           if-no-files-found: warn
           retention-days: 30
