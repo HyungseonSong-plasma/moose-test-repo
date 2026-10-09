@@ -58,11 +58,7 @@ jobs:
                 > "$OUT/preflight_selftest.log" 2>&1
 
               make -C physics_app -j2
-              python3 bin/physics.py test "$CASE_DIR" \
-                --qpx /workspace/physics_app/physics-opt \
-                --results-root "$RESULTS" \
-                --heartbeat-seconds 5 \
-                --stall-seconds 60 \
+              python3 -c "from pathlib import Path; from physics_harness.adapters.moose.regression import run_case; raise SystemExit(run_case(Path(\"$CASE_DIR\"), results_root=Path(\"$RESULTS\"), executable=Path(\"/workspace/physics_app/physics-opt\"), heartbeat_seconds=5.0, stall_after_seconds=60.0))" \
                 > "$OUT/harness.log" 2>&1
 
               cp "$CASE_DIR/d6_2d_integrated_out.csv" "$OUT/"
