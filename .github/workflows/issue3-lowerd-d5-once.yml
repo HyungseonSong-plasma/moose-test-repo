@@ -1,0 +1,94 @@
+name: Issue 3 lower-D D5 one-shot
+
+on:
+  push:
+    branches:
+      - issue3-d0-dielectric-surface-charge
+    paths:
+      - '.github/workflows/issue3-lowerd-d5-once.yml'
+      - 'physics_app/include/kernels/PhysicsLowerDSurfaceCurrent.h'
+      - 'physics_app/src/kernels/PhysicsLowerDSurfaceCurrent.C'
+      - 'physics_app/include/bcs/PhysicsADSurfaceChargePoissonBC.h'
+      - 'physics_app/src/bcs/PhysicsADSurfaceChargePoissonBC.C'
+      - 'experiments/Issue3_dielectric_surface_charge/d5_lowerd_surface_feedback.i'
+      - 'experiments/Issue3_dielectric_surface_charge/analyze_d5_lowerd.py'
+
+permissions:
+  contents: read
+
+jobs:
+  d5-lowerd:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pull build image
+        run: docker pull "$BUILD_BASE_REF"
+
+      - name: Build and run lower-D surface feedback discriminator
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p experiments/Issue3_dielectric_surface_charge/output_d5_lowerd
+
+          docker run --rm --entrypoint /bin/bash --user 0:0 \
+            --workdir /workspace -v "$GITHUB_WORKSPACE:/workspace" \
+            "$BUILD_BASE_REF" -lc '
+              set -euo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              git config --global --add safe.directory /opt/physics_vendor/moose
+              git config --global --add safe.directory /opt/physics_vendor/crane
+              git config --global --add safe.directory /opt/physics_vendor/squirrel
+              git config --global --add safe.directory /opt/physics_vendor/zapdos
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+
+              python3 -m py_compile experiments/Issue3_dielectric_surface_charge/analyze_d5_lowerd.py
+              make -C physics_app -j2
+
+              cd experiments/Issue3_dielectric_surface_charge
+              rm -f d5_lowerd_surface_feedback_out.csv
+
+              set +e
+              ../../physics_app/physics-opt -i d5_lowerd_surface_feedback.i --check-input \
+                > output_d5_lowerd/check_input.log 2>&1
+              check_rc=$?
+              set -e
+              echo "check_rc=$check_rc" > output_d5_lowerd/check_status.txt
+              if [ "$check_rc" -ne 0 ]; then
+                cat output_d5_lowerd/check_input.log
+                exit "$check_rc"
+              fi
+
+              set +e
+              ../../physics_app/physics-opt -i d5_lowerd_surface_feedback.i \
+                > output_d5_lowerd/run.log 2>&1
+              run_rc=$?
+              set -e
+              echo "run_rc=$run_rc" > output_d5_lowerd/run_status.txt
+              if [ "$run_rc" -ne 0 ]; then
+                cat output_d5_lowerd/run.log
+                exit "$run_rc"
+              fi
+
+              cp d5_lowerd_surface_feedback_out.csv output_d5_lowerd/
+              python3 analyze_d5_lowerd.py d5_lowerd_surface_feedback_out.csv \
+                | tee output_d5_lowerd/analysis.json
+            '
+
+      - name: Upload lower-D D5 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue3-lowerd-d5-evidence
+          path: experiments/Issue3_dielectric_surface_charge/output_d5_lowerd/**
+          if-no-files-found: warn
+          retention-days: 30
