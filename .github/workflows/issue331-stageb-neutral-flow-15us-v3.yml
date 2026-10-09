@@ -1,0 +1,82 @@
+name: Issue 331 Stage B neutral flow 15 us discriminator v3
+
+on:
+  push:
+    branches:
+      - issue-331-stageb-neutral-flow
+    paths:
+      - '.github/workflows/issue331-stageb-neutral-flow-15us-v3.yml'
+      - 'experiments/fem_fvm_plasma_discriminator/generate_contour_mesh.py'
+      - 'experiments/fem_fvm_plasma_discriminator/prepare_op_fvm_hybrid_contour.py'
+      - 'experiments/fem_fvm_plasma_discriminator/prepare_op_fvm_hybrid_staged_15us.py'
+      - 'experiments/fem_fvm_plasma_discriminator/prepare_op_neutral_flow_staged_15us.py'
+      - 'experiments/fem_fvm_plasma_discriminator/prepare_op_neutral_flow_staged_15us_v3.py'
+      - 'experiments/fem_fvm_plasma_discriminator/validate_op_neutral_flow_runtime_15us.py'
+      - 'experiments/Issue21_qvt_six_species_bulk_advection/transport_data.txt'
+  workflow_dispatch:
+
+jobs:
+  validate:
+    name: charged DD + constrained neutral flow + staged 15 us v3
+    runs-on: ubuntu-24.04
+    env:
+      BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pull build image
+        run: docker pull "$BUILD_BASE_REF"
+      - name: Build, generate, check input, and run Stage B 15 us transient
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm --entrypoint /bin/bash --user 0:0 \
+            --workdir /workspace \
+            -v "$GITHUB_WORKSPACE:/workspace" \
+            "$BUILD_BASE_REF" -lc '
+              set -euo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              git config --global --add safe.directory /opt/physics_vendor/moose
+              git config --global --add safe.directory /opt/physics_vendor/crane
+              git config --global --add safe.directory /opt/physics_vendor/squirrel
+              git config --global --add safe.directory /opt/physics_vendor/zapdos
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+              make -C physics_app -j2
+              cd experiments/fem_fvm_plasma_discriminator
+              python3 generate_contour_mesh.py | tee issue331_stageb_mesh.log
+              python3 prepare_op_neutral_flow_staged_15us_v3.py | tee issue331_stageb_prepare.log
+              INPUT="ion_om_op_neutral_flow_contour_staged_1ns100_10ns90_100ns90_1000ns5.i"
+              grep -Fq "neutral_sum_w_functor" "$INPUT"
+              grep -Fq "WCNSFVMassTimeDerivative" "$INPUT"
+              grep -Fq "PhysicsFVMassFractionAdvection" "$INPUT"
+              grep -Fq "ni+nop-ne-nm" "$INPUT"
+              ../../physics_app/physics-opt -i "$INPUT" --check-input | tee issue331_stageb_check_input.log
+              rm -f "${INPUT%.i}_out.csv" "${INPUT%.i}_out.e"
+              ../../physics_app/physics-opt -i "$INPUT" | tee issue331_stageb_runtime.log
+            '
+      - name: Analyze Stage B constraints and 15 us trajectory
+        working-directory: experiments/fem_fvm_plasma_discriminator
+        run: python3 validate_op_neutral_flow_runtime_15us.py | tee issue331_stageb_runtime_gate.log
+      - name: Upload Issue 331 Stage-B evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue331-stageb-neutral-flow-15us-v3-evidence
+          path: |
+            experiments/fem_fvm_plasma_discriminator/issue331_stageb_mesh.log
+            experiments/fem_fvm_plasma_discriminator/issue331_stageb_prepare.log
+            experiments/fem_fvm_plasma_discriminator/issue331_stageb_check_input.log
+            experiments/fem_fvm_plasma_discriminator/issue331_stageb_runtime.log
+            experiments/fem_fvm_plasma_discriminator/issue331_stageb_runtime_gate.log
+            experiments/fem_fvm_plasma_discriminator/plasma_contour_l3_4p5mm.msh
+            experiments/fem_fvm_plasma_discriminator/ion_om_op_neutral_flow_contour_staged_1ns100_10ns90_100ns90_1000ns5.i
+            experiments/fem_fvm_plasma_discriminator/ion_om_op_neutral_flow_contour_staged_1ns100_10ns90_100ns90_1000ns5_out.csv
+            experiments/fem_fvm_plasma_discriminator/ion_om_op_neutral_flow_contour_staged_1ns100_10ns90_100ns90_1000ns5_out.e
+            experiments/Issue21_qvt_six_species_bulk_advection/transport_data.txt
+          if-no-files-found: warn
+          retention-days: 30
