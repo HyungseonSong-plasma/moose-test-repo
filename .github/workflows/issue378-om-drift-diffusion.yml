@@ -1,0 +1,115 @@
+name: Issue 378 O- drift-diffusion baseline
+
+on:
+  push:
+    branches:
+      - issue-378-om-drift-diffusion
+    paths:
+      - '.github/workflows/issue378-om-drift-diffusion.yml'
+      - 'experiments/fem_fvm_plasma_discriminator/prepare_om_fvm_hybrid_contour.py'
+      - 'physics_app/src/functormaterials/PhysicsIonWallFluxMaterial.C'
+  workflow_dispatch:
+
+jobs:
+  validate:
+    name: O- FV DD + exp-free wall + neutrality
+    runs-on: ubuntu-24.04
+    env:
+      BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pull build image
+        run: docker pull "$BUILD_BASE_REF"
+
+      - name: Build and validate O- baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm --entrypoint /bin/bash --user 0:0 \
+            --workdir /workspace \
+            -v "$GITHUB_WORKSPACE:/workspace" \
+            "$BUILD_BASE_REF" -lc '
+              set -euo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              git config --global --add safe.directory /opt/physics_vendor/moose
+              git config --global --add safe.directory /opt/physics_vendor/crane
+              git config --global --add safe.directory /opt/physics_vendor/squirrel
+              git config --global --add safe.directory /opt/physics_vendor/zapdos
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+
+              make -C physics_app -j2
+
+              cd experiments/fem_fvm_plasma_discriminator
+              python3 prepare_om_fvm_hybrid_contour.py | tee issue378_prepare.log
+
+              INPUT="ion_om_fvm_hybrid_contour_dt1ns_300steps.i"
+              ../../physics_app/physics-opt -i "$INPUT" --check-input | tee issue378_check_input.log
+
+              rm -f "${INPUT%.i}_out.csv" "${INPUT%.i}_out.e"
+              ../../physics_app/physics-opt -i "$INPUT" Executioner/num_steps=5 \
+                | tee issue378_runtime.log
+
+              python3 - <<'"'"'PY'"'"'
+import csv
+import math
+from pathlib import Path
+
+csv_path = Path("ion_om_fvm_hybrid_contour_dt1ns_300steps_out.csv")
+if not csv_path.exists():
+    raise SystemExit(f"missing runtime CSV: {csv_path}")
+rows = list(csv.DictReader(csv_path.open(newline="")))
+if len(rows) < 2:
+    raise SystemExit(f"expected INITIAL + transient rows, got {len(rows)}")
+
+required = ("nm_min", "nm_max", "charge_number_min", "charge_number_max")
+for key in required:
+    if key not in rows[0]:
+        raise SystemExit(f"missing postprocessor column: {key}")
+    for i, row in enumerate(rows):
+        value = float(row[key])
+        if not math.isfinite(value):
+            raise SystemExit(f"non-finite {key} at row {i}: {value}")
+
+initial_charge = max(abs(float(rows[0]["charge_number_min"])), abs(float(rows[0]["charge_number_max"])))
+neutrality_scale = 2.0e15
+if initial_charge > 1.0e-9 * neutrality_scale:
+    raise SystemExit(f"initial neutrality gate failed: |nq|max={initial_charge:.17g} m^-3")
+
+for i, row in enumerate(rows):
+    nmin = float(row["nm_min"])
+    nmax = float(row["nm_max"])
+    if nmin <= 0.0 or nmax <= 0.0 or nmin > nmax:
+        raise SystemExit(f"O- positivity/order gate failed at row {i}: min={nmin}, max={nmax}")
+
+last = rows[-1]
+print("ISSUE378_RUNTIME_GATE: PASS")
+print(f"rows={len(rows)}")
+print(f"initial_charge_abs_max_m-3={initial_charge:.17g}")
+print(f"final_nm_min_m-3={float(last['nm_min']):.17g}")
+print(f"final_nm_max_m-3={float(last['nm_max']):.17g}")
+print(f"final_charge_min_m-3={float(last['charge_number_min']):.17g}")
+print(f"final_charge_max_m-3={float(last['charge_number_max']):.17g}")
+PY
+            '
+
+      - name: Upload Issue 378 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue378-om-drift-diffusion-evidence
+          path: |
+            experiments/fem_fvm_plasma_discriminator/issue378_prepare.log
+            experiments/fem_fvm_plasma_discriminator/issue378_check_input.log
+            experiments/fem_fvm_plasma_discriminator/issue378_runtime.log
+            experiments/fem_fvm_plasma_discriminator/ion_om_fvm_hybrid_contour_dt1ns_300steps.i
+            experiments/fem_fvm_plasma_discriminator/ion_om_fvm_hybrid_contour_dt1ns_300steps_out.csv
+            experiments/fem_fvm_plasma_discriminator/ion_om_fvm_hybrid_contour_dt1ns_300steps_out.e
+          if-no-files-found: warn
+          retention-days: 30
