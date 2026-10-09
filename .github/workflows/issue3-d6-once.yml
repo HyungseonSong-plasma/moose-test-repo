@@ -1,0 +1,89 @@
+name: Issue 3 D6 2D dielectric integrated one-shot
+
+on:
+  push:
+    branches:
+      - issue3-d0-dielectric-surface-charge
+    paths:
+      - '.github/workflows/issue3-d6-once.yml'
+      - 'experiments/Issue3_dielectric_surface_charge/d6_2d_integrated.i'
+      - 'experiments/Issue3_dielectric_surface_charge/analyze_d6_2d.py'
+      - 'physics_app/include/fvbcs/PhysicsFVLogMolarDielectricFluxBC.h'
+      - 'physics_app/src/fvbcs/PhysicsFVLogMolarDielectricFluxBC.C'
+      - 'physics_app/include/kernels/PhysicsLowerDSurfaceCurrent.h'
+      - 'physics_app/src/kernels/PhysicsLowerDSurfaceCurrent.C'
+      - 'physics_app/include/bcs/PhysicsADSurfaceChargePoissonBC.h'
+      - 'physics_app/src/bcs/PhysicsADSurfaceChargePoissonBC.C'
+
+permissions:
+  contents: read
+
+jobs:
+  d6-2d-integrated:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pull build image
+        run: docker pull "$BUILD_BASE_REF"
+
+      - name: Build and run D6 2D integrated acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT=experiments/Issue3_dielectric_surface_charge/output_d6
+          mkdir -p "$OUT"
+
+          docker run --rm --entrypoint /bin/bash --user 0:0 \
+            --workdir /workspace -v "$GITHUB_WORKSPACE:/workspace" \
+            "$BUILD_BASE_REF" -lc '
+              set -euo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              git config --global --add safe.directory /opt/physics_vendor/moose
+              git config --global --add safe.directory /opt/physics_vendor/crane
+              git config --global --add safe.directory /opt/physics_vendor/squirrel
+              git config --global --add safe.directory /opt/physics_vendor/zapdos
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+
+              CASE=experiments/Issue3_dielectric_surface_charge/d6_2d_integrated.i
+              ANALYZER=experiments/Issue3_dielectric_surface_charge/analyze_d6_2d.py
+              OUT=experiments/Issue3_dielectric_surface_charge/output_d6
+
+              python3 -m py_compile "$ANALYZER"
+              python3 scripts/qpx.py preflight --self-test > "$OUT/preflight_selftest.log" 2>&1
+              python3 scripts/qpx.py preflight "$CASE" > "$OUT/preflight_input.log" 2>&1
+
+              make -C physics_app -j2
+              physics_app/physics-opt -i "$CASE" --check-input > "$OUT/check.log" 2>&1
+              physics_app/physics-opt -i "$CASE" > "$OUT/run.log" 2>&1
+
+              cd experiments/Issue3_dielectric_surface_charge
+              python3 analyze_d6_2d.py d6_2d_integrated_out.csv d6_2d_integrated.i \
+                | tee output_d6/analysis.json
+
+              converged_count=$(grep -c "Solve Converged!" output_d6/run.log || true)
+              printf "{\"expected_minimum\":5,\"observed\":%s}\n" "$converged_count" \
+                | tee output_d6/convergence.json
+              test "$converged_count" -ge 5
+
+              cp d6_2d_integrated_out.csv output_d6/
+              cp d6_2d_integrated_out.e output_d6/
+            '
+
+      - name: Upload D6 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue3-d6-2d-evidence
+          path: experiments/Issue3_dielectric_surface_charge/output_d6/**
+          if-no-files-found: warn
+          retention-days: 30
