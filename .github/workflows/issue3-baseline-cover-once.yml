@@ -7,9 +7,11 @@ on:
     paths:
       - '.github/workflows/issue3-baseline-cover-once.yml'
       - 'experiments/Issue3_dielectric_surface_charge/prepare_baseline_cover_pilot.py'
+      - 'experiments/Issue3_dielectric_surface_charge/finalize_baseline_cover_pilot.py'
       - 'experiments/Issue3_dielectric_surface_charge/extend_cover_mesh.py'
       - 'experiments/Issue3_dielectric_surface_charge/analyze_baseline_cover.py'
       - 'physics_app/src/bcs/PhysicsFEMLogMolarDielectricFluxBC.C'
+      - 'physics_app/src/bcs/PhysicsFEMLogMolarElectronEnergyDielectricBC.C'
       - 'physics_app/src/functormaterials/PhysicsIonWallTotalFluxMaterial.C'
       - 'physics_app/src/fvbcs/PhysicsFVLogMolarDielectricFluxBC.C'
       - 'physics_app/src/kernels/PhysicsLowerDSurfaceCurrent.C'
@@ -66,6 +68,8 @@ jobs:
                 > "$OUT/mesh_cover.log" 2>&1
               python3 "$CASEDIR/prepare_baseline_cover_pilot.py" "$CASE" \
                 > "$OUT/materialize.log" 2>&1
+              python3 "$CASEDIR/finalize_baseline_cover_pilot.py" "$CASE" \
+                > "$OUT/finalize.log" 2>&1
               python3 -m py_compile "$CASEDIR/analyze_baseline_cover.py"
 
               python3 -c "from physics_harness.adapters.moose.preflight import parser_symbol_self_test; raise SystemExit(parser_symbol_self_test())" \
