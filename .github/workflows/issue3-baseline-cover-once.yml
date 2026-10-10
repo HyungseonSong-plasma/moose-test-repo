@@ -1,0 +1,101 @@
+name: Issue 3 baseline cover dielectric one-shot
+
+on:
+  push:
+    branches:
+      - issue3-d0-dielectric-surface-charge
+    paths:
+      - '.github/workflows/issue3-baseline-cover-once.yml'
+      - 'experiments/Issue3_dielectric_surface_charge/prepare_baseline_cover_pilot.py'
+      - 'experiments/Issue3_dielectric_surface_charge/extend_cover_mesh.py'
+      - 'experiments/Issue3_dielectric_surface_charge/analyze_baseline_cover.py'
+      - 'physics_app/src/bcs/PhysicsFEMLogMolarDielectricFluxBC.C'
+      - 'physics_app/src/fvbcs/PhysicsFVLogMolarDielectricFluxBC.C'
+      - 'physics_app/src/kernels/PhysicsLowerDSurfaceCurrent.C'
+      - 'physics_app/src/bcs/PhysicsADSurfaceChargePoissonBC.C'
+
+permissions:
+  contents: read
+
+jobs:
+  baseline-cover-dielectric:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pull build image
+        run: docker pull "$BUILD_BASE_REF"
+
+      - name: Build and run practical cover dielectric pilot
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT=experiments/Issue3_dielectric_surface_charge/output_baseline_cover
+          mkdir -p "$OUT"
+
+          docker run --rm --entrypoint /bin/bash --user 0:0 \
+            --workdir /workspace -v "$GITHUB_WORKSPACE:/workspace" \
+            "$BUILD_BASE_REF" -lc '
+              set -euo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              git config --global --add safe.directory /opt/physics_vendor/moose
+              git config --global --add safe.directory /opt/physics_vendor/crane
+              git config --global --add safe.directory /opt/physics_vendor/squirrel
+              git config --global --add safe.directory /opt/physics_vendor/zapdos
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+
+              BASE=experiments/fem_fvm_plasma_discriminator
+              CASEDIR=experiments/Issue3_dielectric_surface_charge
+              CASE=$CASEDIR/baseline_cover_dielectric_100ns.i
+              MESH=$CASEDIR/baseline_cover_dielectric.msh
+              OUT=$CASEDIR/output_baseline_cover
+
+              python3 "$BASE/generate_contour_mesh.py" > "$OUT/mesh_plasma.log" 2>&1
+              python3 "$CASEDIR/extend_cover_mesh.py" \
+                "$BASE/plasma_contour_l3_4p5mm.msh" "$MESH" \
+                > "$OUT/mesh_cover.log" 2>&1
+              python3 "$CASEDIR/prepare_baseline_cover_pilot.py" "$CASE" \
+                > "$OUT/materialize.log" 2>&1
+              python3 -m py_compile "$CASEDIR/analyze_baseline_cover.py"
+
+              python3 -c "from physics_harness.adapters.moose.preflight import parser_symbol_self_test; raise SystemExit(parser_symbol_self_test())" \
+                > "$OUT/preflight_selftest.log" 2>&1
+              python3 -c "from pathlib import Path; from physics_harness.adapters.moose.preflight import validate_input_preflight; validate_input_preflight(Path(\"$CASE\"))" \
+                > "$OUT/preflight_input.log" 2>&1
+
+              make -C physics_app -j2
+              physics_app/physics-opt -i "$CASE" --check-input > "$OUT/check.log" 2>&1
+              physics_app/physics-opt -i "$CASE" > "$OUT/run.log" 2>&1
+
+              cd "$CASEDIR"
+              python3 analyze_baseline_cover.py baseline_cover_dielectric_100ns_out.csv baseline_cover_dielectric_100ns.i \
+                | tee output_baseline_cover/analysis.json
+
+              converged_count=$(grep -c "Solve Converged!" output_baseline_cover/run.log || true)
+              printf "{\"expected_minimum\":100,\"observed\":%s}\n" "$converged_count" \
+                | tee output_baseline_cover/convergence.json
+              test "$converged_count" -ge 100
+
+              cp baseline_cover_dielectric_100ns.i output_baseline_cover/
+              cp baseline_cover_dielectric.msh output_baseline_cover/
+              cp baseline_cover_dielectric_100ns_out.csv output_baseline_cover/
+              cp baseline_cover_dielectric_100ns_out.e output_baseline_cover/
+            '
+
+      - name: Upload practical cover dielectric evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue3-baseline-cover-dielectric-evidence
+          path: experiments/Issue3_dielectric_surface_charge/output_baseline_cover/**
+          if-no-files-found: warn
+          retention-days: 30
