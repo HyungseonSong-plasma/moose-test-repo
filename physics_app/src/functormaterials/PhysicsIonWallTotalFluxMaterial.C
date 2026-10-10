@@ -32,7 +32,7 @@ namespace
 {
 template <typename SpaceArg>
 constexpr bool
-isFaceArg()
+isTotalFluxFaceArg()
 {
   return std::is_same_v<std::decay_t<SpaceArg>, Moose::FaceArg>;
 }
@@ -153,7 +153,7 @@ PhysicsIonWallTotalFluxMaterial::PhysicsIonWallTotalFluxMaterial(const InputPara
       [this](const auto & r, const auto & state) -> ADReal
       {
         using SpaceArg = decltype(r);
-        if constexpr (!isFaceArg<SpaceArg>())
+        if constexpr (!isTotalFluxFaceArg<SpaceArg>())
           return ADReal(0.0);
         else
         {
@@ -182,7 +182,7 @@ PhysicsIonWallTotalFluxMaterial::PhysicsIonWallTotalFluxMaterial(const InputPara
       [this](const auto & r, const auto & state) -> ADReal
       {
         using SpaceArg = decltype(r);
-        if constexpr (!isFaceArg<SpaceArg>())
+        if constexpr (!isTotalFluxFaceArg<SpaceArg>())
           return ADReal(0.0);
         else
         {
