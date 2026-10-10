@@ -8,6 +8,11 @@ public:
   static InputParameters validParams();
   PhysicsFEMLogMolarDielectricFluxBC(const InputParameters & parameters);
 
+  // The plasma species is intentionally defined only on the plasma side of the
+  // internal plasma-dielectric sideset. IntegratedBC execution follows the
+  // variable domain; suppress only the generic whole-sideset coverage check.
+  bool checkVariableBoundaryIntegrity() const override { return false; }
+
 protected:
   ADReal computeQpResidual() override;
 
@@ -24,7 +29,7 @@ PhysicsFEMLogMolarDielectricFluxBC::validParams()
       "Applies a signed particle-number flux to a FEM log-molar plasma species on a "
       "plasma-dielectric interface. Positive flux is outward from the plasma/species domain. "
       "The supplied functor can therefore be shared exactly with the dielectric surface-current "
-      "ledger.");
+      "ledger. The species may be restricted to the plasma side of the internal sideset.");
   params.addRequiredParam<MooseFunctorName>(
       "signed_number_flux",
       "Signed particle-number flux [1/(m^2 s)]; positive outward from the plasma/species domain.");
