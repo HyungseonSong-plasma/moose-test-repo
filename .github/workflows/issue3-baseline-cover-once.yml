@@ -10,6 +10,7 @@ on:
       - 'experiments/Issue3_dielectric_surface_charge/extend_cover_mesh.py'
       - 'experiments/Issue3_dielectric_surface_charge/analyze_baseline_cover.py'
       - 'physics_app/src/bcs/PhysicsFEMLogMolarDielectricFluxBC.C'
+      - 'physics_app/src/functormaterials/PhysicsIonWallTotalFluxMaterial.C'
       - 'physics_app/src/fvbcs/PhysicsFVLogMolarDielectricFluxBC.C'
       - 'physics_app/src/kernels/PhysicsLowerDSurfaceCurrent.C'
       - 'physics_app/src/bcs/PhysicsADSurfaceChargePoissonBC.C'
