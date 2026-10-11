@@ -9,8 +9,9 @@ public:
   PhysicsFEMLogMolarDielectricFluxBC(const InputParameters & parameters);
 
   // The plasma species is intentionally defined only on the plasma side of the
-  // internal plasma-dielectric sideset. IntegratedBC execution follows the
-  // variable domain; suppress only the generic whole-sideset coverage check.
+  // internal plasma-dielectric sideset. The mesh may carry that sideset on both
+  // adjacent elements, so suppress the generic whole-sideset coverage check and
+  // explicitly skip non-plasma invocations in computeQpResidual().
   bool checkVariableBoundaryIntegrity() const override { return false; }
 
 protected:
@@ -46,6 +47,12 @@ PhysicsFEMLogMolarDielectricFluxBC::PhysicsFEMLogMolarDielectricFluxBC(
 ADReal
 PhysicsFEMLogMolarDielectricFluxBC::computeQpResidual()
 {
+  // An internal sideset can be present on both higher-dimensional neighbors.
+  // Only the plasma-side variable/functor owner is physical for this loss term.
+  const auto block = _current_elem->subdomain_id();
+  if (!_var.activeOnSubdomain(block) || !_signed_number_flux.hasBlocks(block))
+    return ADReal(0.0);
+
   const Moose::ElemQpArg qp_arg = {_current_elem, _qp, _qrule, _q_point[_qp]};
   const ADReal gamma_signed = _signed_number_flux(qp_arg, Moose::currentState());
   return _test[_i][_qp] * gamma_signed / PHYSICS_CONSTANTS::N_A;

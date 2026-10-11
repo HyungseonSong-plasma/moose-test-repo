@@ -10,7 +10,9 @@ public:
   PhysicsFEMLogMolarElectronEnergyDielectricBC(const InputParameters & parameters);
 
   // Both log_energy and log_electron_density intentionally live only in the
-  // plasma block while this sideset is internal to plasma|dielectric.
+  // plasma block while this sideset is internal to plasma|dielectric. The mesh
+  // may carry the internal sideset on both adjacent elements, so suppress the
+  // generic whole-sideset coverage check and skip non-plasma invocations below.
   bool checkVariableBoundaryIntegrity() const override { return false; }
 
 protected:
@@ -46,6 +48,12 @@ ADReal
 PhysicsFEMLogMolarElectronEnergyDielectricBC::computeQpResidual()
 {
   using std::exp;
+
+  // Internal sidesets may execute this BC from both adjacent higher-D elements.
+  // The energy variable is plasma-only, so the dielectric-side invocation carries
+  // no physical residual and must not evaluate plasma-only coupled values.
+  if (!_var.activeOnSubdomain(_current_elem->subdomain_id()))
+    return ADReal(0.0);
 
   const ADReal c_e = exp(_log_electron_density[_qp]);
   const ADReal mean_energy = exp(_u[_qp] - _log_electron_density[_qp]);
