@@ -65,12 +65,38 @@ PhysicsLowerDSurfaceCurrent::computeQpResidual()
                _current_elem->id(),
                " and its higher-D parent face.");
 
-  const bool parent_is_elem = fi->elemPtr() == parent;
-  if (!_surface_current_density.hasFaceSide(*fi, parent_is_elem))
+  // LowerDBlockFromSidesetGenerator preserves a higher-D parent, but that parent
+  // is not guaranteed to be the plasma element: its orientation depends on the
+  // source sideset/mesh. Infer the physical plasma owner from the current functor
+  // domain instead. A dielectric interface current must have exactly one such side.
+  const bool on_elem = _surface_current_density.hasFaceSide(*fi, true);
+  const bool on_neighbor = _surface_current_density.hasFaceSide(*fi, false);
+
+  if (on_elem == on_neighbor)
+  {
+    if (on_elem)
+      mooseError(name(),
+                 ": surface-current functor '",
+                 _surface_current_density.functorName(),
+                 "' is defined on both higher-dimensional sides of FV face ",
+                 fi->id(),
+                 ". Expected exactly one plasma-side owner for the dielectric interface.");
+    else
+      mooseError(name(),
+                 ": surface-current functor '",
+                 _surface_current_density.functorName(),
+                 "' is not defined on either higher-dimensional side of FV face ",
+                 fi->id(),
+                 ".");
+  }
+
+  const Elem * const current_side = on_elem ? fi->elemPtr() : fi->neighborPtr();
+  if (!current_side)
     mooseError(name(),
-               ": surface-current functor '",
+               ": could not recover the unique higher-dimensional owner for surface-current "
+               "functor '",
                _surface_current_density.functorName(),
-               "' is not defined on the interior-parent/plasma side of FV face ",
+               "' on FV face ",
                fi->id(),
                ".");
 
@@ -79,7 +105,7 @@ PhysicsLowerDSurfaceCurrent::computeQpResidual()
       Moose::FV::LimiterType::CentralDifference,
       /* elem_is_upwind = */ true,
       /* correct_skewness = */ false,
-      parent,
+      current_side,
       /* state_limiter = */ nullptr};
 
   const ADReal j_to_surface = _surface_current_density(face_arg, determineState());
