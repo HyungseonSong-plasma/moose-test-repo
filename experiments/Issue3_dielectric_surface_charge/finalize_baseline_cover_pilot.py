@@ -12,7 +12,13 @@ ENERGY_TARGET_SHA256 = "140c74f511b67157793a0ba392a8be4c3235e44a834049d6a74a721c
 OLD = """  [electron_energy_cover]\n    type = PhysicsFEMLogMolarElectronEnergyNoSheathSuppressionBC\n    variable = log_energy\n    log_electron_density = log_ne\n    boundary = plasma_cover\n  []"""
 NEW = """  [electron_energy_cover]\n    type = PhysicsFEMLogMolarElectronEnergyDielectricBC\n    variable = log_energy\n    log_electron_density = log_ne\n    boundary = plasma_cover\n  []"""
 
-DIAGNOSTIC_HEADER = "  [cover_net_surface_current]\n"
+PLASMA_SIDE_FUNCTOR_POSTPROCESSORS = (
+    "cover_net_surface_current",
+    "cover_electron_primary_flux",
+    "cover_O2p_flux",
+    "cover_Om_flux",
+    "cover_Op_flux",
+)
 DIAGNOSTIC_OPTION = "    restrict_to_functors_domain = true"
 
 
@@ -20,19 +26,20 @@ def digest(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
-def restrict_cover_current_diagnostic(text: str) -> str:
-    """Keep the current integral on the plasma-side functor domain only."""
-    if text.count(DIAGNOSTIC_HEADER) != 1:
-        raise RuntimeError("expected exactly one cover_net_surface_current postprocessor")
+def restrict_functor_diagnostic(text: str, name: str) -> str:
+    """Keep one internal-interface functor integral on its plasma-side domain only."""
+    header = f"  [{name}]\n"
+    if text.count(header) != 1:
+        raise RuntimeError(f"expected exactly one {name} postprocessor")
 
-    start = text.index(DIAGNOSTIC_HEADER)
+    start = text.index(header)
     end = text.find("\n  []", start)
     if end < 0:
-        raise RuntimeError("unterminated cover_net_surface_current postprocessor")
+        raise RuntimeError(f"unterminated {name} postprocessor")
 
     block = text[start:end]
     if "restrict_to_functors_domain" in block:
-        raise RuntimeError("cover_net_surface_current diagnostic scope already configured")
+        raise RuntimeError(f"{name} diagnostic scope already configured")
 
     return text[:end] + "\n" + DIAGNOSTIC_OPTION + text[end:]
 
@@ -61,7 +68,10 @@ def main() -> None:
             f"{energy_target_digest} != {ENERGY_TARGET_SHA256}"
         )
 
-    final_text = restrict_cover_current_diagnostic(energy_final.decode("utf-8"))
+    final_text = energy_final.decode("utf-8")
+    for name in PLASMA_SIDE_FUNCTOR_POSTPROCESSORS:
+        final_text = restrict_functor_diagnostic(final_text, name)
+
     final = final_text.encode("utf-8")
     final_digest = digest(final)
 
@@ -70,6 +80,7 @@ def main() -> None:
         "BASELINE_COVER_PILOT_FINALIZE_PASS "
         f"source_sha256={SOURCE_SHA256} "
         f"energy_target_sha256={ENERGY_TARGET_SHA256} "
+        f"scoped_functor_postprocessors={len(PLASMA_SIDE_FUNCTOR_POSTPROCESSORS)} "
         f"final_sha256={final_digest}"
     )
 
