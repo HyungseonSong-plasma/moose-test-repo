@@ -81,7 +81,13 @@ jobs:
               physics_app/physics-opt -i "$CASE" --check-input > "$OUT/check.log" 2>&1
               physics_app/physics-opt -i "$CASE" > "$OUT/run.log" 2>&1
 
+              # Preserve spatial outputs before any downstream analysis gate can fail.
               cd "$CASEDIR"
+              cp baseline_cover_dielectric_100ns.i output_baseline_cover/
+              cp baseline_cover_dielectric.msh output_baseline_cover/
+              cp baseline_cover_dielectric_100ns_out.csv output_baseline_cover/
+              cp baseline_cover_dielectric_100ns_out.e output_baseline_cover/
+
               python3 analyze_baseline_cover.py baseline_cover_dielectric_100ns_out.csv baseline_cover_dielectric_100ns.i \
                 | tee output_baseline_cover/analysis.json
 
@@ -89,11 +95,6 @@ jobs:
               printf "{\"expected_minimum\":100,\"observed\":%s}\n" "$converged_count" \
                 | tee output_baseline_cover/convergence.json
               test "$converged_count" -ge 100
-
-              cp baseline_cover_dielectric_100ns.i output_baseline_cover/
-              cp baseline_cover_dielectric.msh output_baseline_cover/
-              cp baseline_cover_dielectric_100ns_out.csv output_baseline_cover/
-              cp baseline_cover_dielectric_100ns_out.e output_baseline_cover/
             '
 
       - name: Upload practical cover dielectric evidence
