@@ -1,4 +1,4 @@
-name: Issue 3 cover wafer focus ring dielectric 15 us
+name: Issue 3 full dielectric vacuum coils 15 us
 
 on:
   push:
@@ -8,10 +8,12 @@ on:
       - '.github/workflows/issue3-cover-wafer-15us.yml'
       - 'experiments/Issue3_dielectric_surface_charge/build_unstructured_cover_wafer_mesh.py'
       - 'experiments/Issue3_dielectric_surface_charge/add_focus_ring_block.py'
+      - 'experiments/Issue3_dielectric_surface_charge/add_vacuum_coils_block.py'
       - 'experiments/Issue3_dielectric_surface_charge/promote_cover_wafer_15us.py'
       - 'experiments/Issue3_dielectric_surface_charge/promote_focus_ring_15us.py'
-      - 'experiments/Issue3_dielectric_surface_charge/analyze_cover_wafer_15us.py'
+      - 'experiments/Issue3_dielectric_surface_charge/promote_vacuum_coils_15us.py'
       - 'experiments/Issue3_dielectric_surface_charge/analyze_cover_wafer_focus_ring_15us.py'
+      - 'experiments/Issue3_dielectric_surface_charge/analyze_cover_wafer_focus_ring_vacuum_coils_15us.py'
       - 'experiments/Issue3_dielectric_surface_charge/prepare_baseline_cover_pilot.py'
       - 'experiments/Issue3_dielectric_surface_charge/finalize_baseline_cover_pilot.py'
       - 'experiments/Issue3_dielectric_surface_charge/promote_cover_15us.py'
@@ -27,7 +29,7 @@ permissions:
   contents: read
 
 jobs:
-  cover-wafer-focus-ring-dielectric-15us:
+  full-dielectric-vacuum-coils-15us:
     runs-on: ubuntu-24.04
     timeout-minutes: 240
     env:
@@ -39,11 +41,11 @@ jobs:
       - name: Pull build image
         run: docker pull "$BUILD_BASE_REF"
 
-      - name: Build and run 15 us cover wafer focus ring dielectric case
+      - name: Build and run full 15 us vacuum-coils case
         shell: bash
         run: |
           set -euo pipefail
-          OUT=experiments/Issue3_dielectric_surface_charge/output_cover_wafer_focus_ring_15us
+          OUT=experiments/Issue3_dielectric_surface_charge/output_full_vacuum_coils_15us
           mkdir -p "$OUT"
 
           docker run --rm --entrypoint /bin/bash --user 0:0 \
@@ -64,10 +66,10 @@ jobs:
 
               BASE=experiments/fem_fvm_plasma_discriminator
               CASEDIR=experiments/Issue3_dielectric_surface_charge
-              CASE=$CASEDIR/baseline_cover_wafer_focus_ring_dielectric_15us.i
+              CASE=$CASEDIR/baseline_full_vacuum_coils_dielectric_15us.i
               FINE=$CASEDIR/baseline_cover_fine_source.msh
               MESH=$CASEDIR/baseline_plasma_plus_unstructured_cover_plus_wafer.msh
-              OUT=$CASEDIR/output_cover_wafer_focus_ring_15us
+              OUT=$CASEDIR/output_full_vacuum_coils_15us
 
               python3 "$BASE/generate_contour_mesh.py" > "$OUT/mesh_plasma.log" 2>&1
               python3 "$CASEDIR/extend_cover_mesh.py" \
@@ -79,6 +81,9 @@ jobs:
               python3 "$CASEDIR/add_focus_ring_block.py" \
                 "$MESH" "$MESH" \
                 > "$OUT/mesh_focus_ring.log" 2>&1
+              python3 "$CASEDIR/add_vacuum_coils_block.py" \
+                "$MESH" "$MESH" \
+                > "$OUT/mesh_vacuum_coils.log" 2>&1
 
               python3 "$CASEDIR/prepare_baseline_cover_pilot.py" "$CASE" \
                 > "$OUT/materialize.log" 2>&1
@@ -90,13 +95,18 @@ jobs:
                 > "$OUT/promote_cover_wafer.log" 2>&1
               python3 "$CASEDIR/promote_focus_ring_15us.py" "$CASE" \
                 > "$OUT/promote_focus_ring.log" 2>&1
+              python3 "$CASEDIR/promote_vacuum_coils_15us.py" "$CASE" \
+                > "$OUT/promote_vacuum_coils.log" 2>&1
 
               python3 -m py_compile \
                 "$CASEDIR/build_unstructured_cover_wafer_mesh.py" \
                 "$CASEDIR/add_focus_ring_block.py" \
+                "$CASEDIR/add_vacuum_coils_block.py" \
                 "$CASEDIR/promote_cover_wafer_15us.py" \
                 "$CASEDIR/promote_focus_ring_15us.py" \
-                "$CASEDIR/analyze_cover_wafer_focus_ring_15us.py"
+                "$CASEDIR/promote_vacuum_coils_15us.py" \
+                "$CASEDIR/analyze_cover_wafer_focus_ring_15us.py" \
+                "$CASEDIR/analyze_cover_wafer_focus_ring_vacuum_coils_15us.py"
 
               python3 -c "from physics_harness.adapters.moose.preflight import parser_symbol_self_test; raise SystemExit(parser_symbol_self_test())" \
                 > "$OUT/preflight_selftest.log" 2>&1
@@ -115,32 +125,33 @@ jobs:
               simulation_wall_seconds=$((simulation_end_epoch - simulation_start_epoch))
 
               cd "$CASEDIR"
-              cp baseline_cover_wafer_focus_ring_dielectric_15us.i output_cover_wafer_focus_ring_15us/
-              cp baseline_plasma_plus_unstructured_cover_plus_wafer.msh output_cover_wafer_focus_ring_15us/
-              test -f baseline_cover_wafer_focus_ring_dielectric_15us_out.csv && cp baseline_cover_wafer_focus_ring_dielectric_15us_out.csv output_cover_wafer_focus_ring_15us/ || true
-              test -f baseline_cover_wafer_focus_ring_dielectric_15us_out.e && cp baseline_cover_wafer_focus_ring_dielectric_15us_out.e output_cover_wafer_focus_ring_15us/ || true
+              cp baseline_full_vacuum_coils_dielectric_15us.i output_full_vacuum_coils_15us/
+              cp baseline_plasma_plus_unstructured_cover_plus_wafer.msh output_full_vacuum_coils_15us/
+              test -f baseline_full_vacuum_coils_dielectric_15us_out.csv && cp baseline_full_vacuum_coils_dielectric_15us_out.csv output_full_vacuum_coils_15us/ || true
+              test -f baseline_full_vacuum_coils_dielectric_15us_out.e && cp baseline_full_vacuum_coils_dielectric_15us_out.e output_full_vacuum_coils_15us/ || true
 
-              converged_count=$(grep -c "Solve Converged!" output_cover_wafer_focus_ring_15us/run.log || true)
+              converged_count=$(grep -c "Solve Converged!" output_full_vacuum_coils_15us/run.log || true)
               printf "{\"expected\":285,\"observed\":%s,\"solve_rc\":%s,\"simulation_wall_seconds\":%s}\n" \
                 "$converged_count" "$solve_rc" "$simulation_wall_seconds" \
-                | tee output_cover_wafer_focus_ring_15us/convergence.json
+                | tee output_full_vacuum_coils_15us/convergence.json
 
               if [ "$solve_rc" -ne 0 ]; then
                 exit "$solve_rc"
               fi
 
               test "$converged_count" -ge 285
-              python3 analyze_cover_wafer_focus_ring_15us.py \
-                baseline_cover_wafer_focus_ring_dielectric_15us_out.csv \
-                baseline_cover_wafer_focus_ring_dielectric_15us.i \
-                | tee output_cover_wafer_focus_ring_15us/analysis.json
+              python3 analyze_cover_wafer_focus_ring_vacuum_coils_15us.py \
+                baseline_full_vacuum_coils_dielectric_15us_out.csv \
+                baseline_full_vacuum_coils_dielectric_15us.i \
+                baseline_plasma_plus_unstructured_cover_plus_wafer.msh \
+                | tee output_full_vacuum_coils_15us/analysis.json
             '
 
-      - name: Upload 15 us cover wafer focus ring evidence
+      - name: Upload full 15 us vacuum-coils evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: issue3-cover-wafer-focus-ring-dielectric-15us-evidence
-          path: experiments/Issue3_dielectric_surface_charge/output_cover_wafer_focus_ring_15us/**
+          name: issue3-full-vacuum-coils-dielectric-15us-evidence
+          path: experiments/Issue3_dielectric_surface_charge/output_full_vacuum_coils_15us/**
           if-no-files-found: warn
           retention-days: 30
