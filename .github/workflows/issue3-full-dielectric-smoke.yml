@@ -1,0 +1,102 @@
+name: Issue 3 full dielectric grounded-electrode smoke
+
+on:
+  push:
+    branches:
+      - issue3-d0-dielectric-surface-charge
+    paths:
+      - '.github/workflows/issue3-full-dielectric-smoke.yml'
+      - 'experiments/Issue3_dielectric_surface_charge/prepare_baseline_cover_pilot.py'
+      - 'experiments/Issue3_dielectric_surface_charge/finalize_baseline_cover_pilot.py'
+      - 'experiments/Issue3_dielectric_surface_charge/expand_full_dielectric_pilot.py'
+      - 'physics_app/src/bcs/PhysicsFEMLogMolarDielectricFluxBC.C'
+      - 'physics_app/src/bcs/PhysicsFEMLogMolarElectronEnergyDielectricBC.C'
+      - 'physics_app/src/fvbcs/PhysicsFVLogMolarDielectricFluxBC.C'
+      - 'physics_app/src/kernels/PhysicsLowerDSurfaceCurrent.C'
+      - 'physics_app/src/bcs/PhysicsADSurfaceChargePoissonBC.C'
+      - 'experiments/Issue19_sccm_pressure_boundary/qvt.msh'
+
+permissions:
+  contents: read
+
+jobs:
+  full-dielectric-smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pull build image
+        run: docker pull "$BUILD_BASE_REF"
+
+      - name: Build and run 5 ns full dielectric smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT=experiments/Issue3_dielectric_surface_charge/output_full_dielectric_smoke
+          mkdir -p "$OUT"
+
+          docker run --rm --entrypoint /bin/bash --user 0:0 \
+            --workdir /workspace -v "$GITHUB_WORKSPACE:/workspace" \
+            "$BUILD_BASE_REF" -lc '
+              set -euo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              git config --global --add safe.directory /opt/physics_vendor/moose
+              git config --global --add safe.directory /opt/physics_vendor/crane
+              git config --global --add safe.directory /opt/physics_vendor/squirrel
+              git config --global --add safe.directory /opt/physics_vendor/zapdos
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+
+              CASEDIR=experiments/Issue3_dielectric_surface_charge
+              FULL=$CASEDIR/full_dielectric_100ns.i
+              CASE=$CASEDIR/full_dielectric_smoke_5ns.i
+              OUT=$CASEDIR/output_full_dielectric_smoke
+
+              python3 "$CASEDIR/prepare_baseline_cover_pilot.py" "$FULL" > "$OUT/materialize.log" 2>&1
+              python3 "$CASEDIR/finalize_baseline_cover_pilot.py" "$FULL" > "$OUT/finalize.log" 2>&1
+              python3 "$CASEDIR/expand_full_dielectric_pilot.py" "$FULL" > "$OUT/expand.log" 2>&1
+              cp "$FULL" "$CASE"
+              sed -i "s/num_steps = 100/num_steps = 5/; s/end_time = 1.0e-7/end_time = 5.0e-9/" "$CASE"
+
+              python3 -c "from physics_harness.adapters.moose.preflight import parser_symbol_self_test; raise SystemExit(parser_symbol_self_test())" > "$OUT/preflight_selftest.log" 2>&1
+              python3 -c "from pathlib import Path; from physics_harness.adapters.moose.preflight import validate_input_preflight; validate_input_preflight(Path(\"$CASE\"))" > "$OUT/preflight_input.log" 2>&1
+
+              make -C physics_app -j2
+              physics_app/physics-opt -i "$CASE" --check-input > "$OUT/check.log" 2>&1
+
+              set +e
+              physics_app/physics-opt -i "$CASE" > "$OUT/run.log" 2>&1
+              solve_rc=$?
+              set -e
+
+              cp "$FULL" "$OUT/"
+              cp "$CASE" "$OUT/"
+              cp experiments/Issue19_sccm_pressure_boundary/qvt.msh "$OUT/qvt.msh"
+              test -f ${CASE%.i}_out.csv && cp ${CASE%.i}_out.csv "$OUT/" || true
+              test -f ${CASE%.i}_out.e && cp ${CASE%.i}_out.e "$OUT/" || true
+
+              if [ "$solve_rc" -ne 0 ]; then
+                exit "$solve_rc"
+              fi
+
+              converged_count=$(grep -c "Solve Converged!" "$OUT/run.log" || true)
+              printf "{\"expected_minimum\":5,\"observed\":%s}\n" "$converged_count" | tee "$OUT/convergence.json"
+              test "$converged_count" -ge 5
+            '
+
+      - name: Upload full dielectric smoke evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue3-full-dielectric-smoke-evidence
+          path: experiments/Issue3_dielectric_surface_charge/output_full_dielectric_smoke/**
+          if-no-files-found: warn
+          retention-days: 30
