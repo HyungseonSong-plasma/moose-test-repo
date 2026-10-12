@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """Finalize the full-geometry Issue #3 dielectric pilot.
 
-This step keeps the plasma/FV mesh unchanged while making the electrostatic
-potential quadratic so the narrow focus-ring plasma face has an interior edge
-DOF between grounded conductor corners. It also opts out of whole-mesh kernel
-and material coverage checks for passive QVT blocks that intentionally carry no
-nonlinear variables.
+The QVT mesh remains geometrically identical, but its linear elements are
+converted to second-order elements so the narrow focus-ring plasma face gains
+an interior edge DOF between grounded conductor corners. The electrostatic
+potential is then solved with quadratic Lagrange shape functions. Passive QVT
+blocks intentionally carrying no nonlinear variables are excluded from global
+kernel/material coverage checks.
 """
 from __future__ import annotations
 
@@ -32,6 +33,10 @@ def main() -> None:
 
     text = args.input.read_text()
 
+    focus_mesh_tail = """  [focus_surface_block]\n    type = LowerDBlockFromSidesetGenerator\n    input = wafer_surface_block\n    sidesets = plasma_focus_ring\n    new_block_id = 132\n    new_block_name = focus_surface\n  []\n[]"""
+    second_order_tail = """  [focus_surface_block]\n    type = LowerDBlockFromSidesetGenerator\n    input = wafer_surface_block\n    sidesets = plasma_focus_ring\n    new_block_id = 132\n    new_block_name = focus_surface\n  []\n  [second_order_mesh]\n    type = ElementOrderConversionGenerator\n    input = focus_surface_block\n    conversion_type = SECOND_ORDER_NONFULL\n  []\n[]"""
+    text = replace_once(text, focus_mesh_tail, second_order_tail, "second-order mesh conversion")
+
     potential_first = """  [potential]\n    family = LAGRANGE\n    order = FIRST\n    initial_condition = 0.0\n    block = 'plasma cover wafer focus_ring'\n  []"""
     potential_second = potential_first.replace("order = FIRST", "order = SECOND")
     text = replace_once(text, potential_first, potential_second, "potential order")
@@ -50,6 +55,7 @@ def main() -> None:
         "block = cover_surface",
         "block = wafer_surface",
         "block = focus_surface",
+        "conversion_type = SECOND_ORDER_NONFULL",
     )
     for token in required:
         if token not in text:
@@ -62,7 +68,10 @@ def main() -> None:
             raise RuntimeError(f"dielectric plasma face must not be grounded: {dielectric_face}")
 
     args.input.write_text(text)
-    print(f"FULL_DIELECTRIC_FINALIZE_PASS sha256={digest(text)} potential_order=SECOND")
+    print(
+        "FULL_DIELECTRIC_FINALIZE_PASS "
+        f"sha256={digest(text)} potential_order=SECOND mesh_order=SECOND_ORDER_NONFULL"
+    )
 
 
 if __name__ == "__main__":
