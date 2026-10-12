@@ -15,6 +15,9 @@ GROUND_COLUMNS = (
     "vacuum_coil_ground_potential",
 )
 
+ELECTROSTATIC_BLOCKS = "plasma cover wafer focus_ring vacuum coil1 coil2 coil3"
+BASE_BLOCKS = "plasma cover wafer focus_ring"
+
 
 def named_block(text: str, name: str) -> str:
     header = f"  [{name}]\n"
@@ -139,8 +142,8 @@ def main():
         raise SystemExit(f"missing CSV columns: {missing}")
 
     compat = text.replace(
-        "block = 'plasma cover wafer focus_ring vacuum'",
-        "block = 'plasma cover wafer focus_ring'",
+        f"block = '{ELECTROSTATIC_BLOCKS}'",
+        f"block = '{BASE_BLOCKS}'",
     )
     with tempfile.NamedTemporaryFile("w", suffix=".i", delete=False) as tmp:
         tmp.write(compat)
@@ -160,14 +163,20 @@ def main():
 
     checks = dict(base.get("checks", {}))
     checks["base_focus_ring_science_pass"] = proc.returncode == 0
-    checks["vacuum_eps_r_1"] = "prop_values = '1.0'" in named_block(text, "eps_vacuum")
-    checks["potential_spans_vacuum"] = (
-        "block = 'plasma cover wafer focus_ring vacuum'" in named_block(text, "potential")
-        and "block = 'plasma cover wafer focus_ring vacuum'" in named_block(text, "phi_diffusion")
+    eps = named_block(text, "eps_vacuum")
+    checks["vacuum_and_coils_eps_r_1"] = (
+        "prop_values = '1.0'" in eps
+        and "block = 'vacuum coil1 coil2 coil3'" in eps
+    )
+    expected = f"block = '{ELECTROSTATIC_BLOCKS}'"
+    checks["potential_spans_vacuum_and_coils"] = (
+        expected in named_block(text, "potential")
+        and expected in named_block(text, "phi_diffusion")
     )
     potential = named_block(text, "potential")
-    checks["coils_are_grounded_conductors_not_unknown_domain"] = all(
-        name not in potential for name in ("coil1","coil2","coil3")
+    checks["coils_have_laplace_kernel_coverage"] = all(
+        name in potential and name in named_block(text, "phi_diffusion")
+        for name in ("coil1","coil2","coil3")
     )
     ground = named_block(text, "grounded_potential")
     checks["vacuum_and_coil_ground_routing"] = all(
@@ -191,7 +200,8 @@ def main():
         ),
         "scope": (
             "15 us Issue #3 full electrostatic geometry: accepted plasma+cover+wafer+focus-ring science preserved; "
-            "single conforming unstructured vacuum block eps_r=1; three solid coil blocks represented as grounded conductor obstacles; "
+            "single conforming unstructured vacuum block eps_r=1; three solid coil blocks carry Laplace kernel coverage "
+            "with every coil perimeter grounded to 0 V, yielding the grounded-conductor zero-potential solution; "
             "vacuum outer top/right grounded; cover-vacuum continuity through shared Lagrange nodes; SEE=0."
         ),
         "checks": checks,
