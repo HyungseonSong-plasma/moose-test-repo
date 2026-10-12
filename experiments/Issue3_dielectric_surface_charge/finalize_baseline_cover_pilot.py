@@ -12,6 +12,45 @@ ENERGY_TARGET_SHA256 = "140c74f511b67157793a0ba392a8be4c3235e44a834049d6a74a721c
 OLD = """  [electron_energy_cover]\n    type = PhysicsFEMLogMolarElectronEnergyNoSheathSuppressionBC\n    variable = log_energy\n    log_electron_density = log_ne\n    boundary = plasma_cover\n  []"""
 NEW = """  [electron_energy_cover]\n    type = PhysicsFEMLogMolarElectronEnergyDielectricBC\n    variable = log_energy\n    log_electron_density = log_ne\n    boundary = plasma_cover\n  []"""
 
+OLD_MESH = """[Mesh]
+  coord_type = RZ
+  rz_coord_axis = Y
+  [main]
+    type = FileMeshGenerator
+    file = 'baseline_cover_dielectric.msh'
+  []
+  [cover_surface_block]
+    type = LowerDBlockFromSidesetGenerator
+    input = main
+    sidesets = plasma_cover
+    new_block_id = 30
+    new_block_name = cover_surface
+  []
+[]"""
+
+NEW_MESH = """[Mesh]
+  coord_type = RZ
+  rz_coord_axis = Y
+  [main]
+    type = FileMeshGenerator
+    file = 'baseline_cover_dielectric.msh'
+  []
+  [plasma_cover_owner]
+    type = SideSetsBetweenSubdomainsGenerator
+    primary_block = plasma
+    paired_block = cover
+    new_boundary = plasma_cover_owner
+    input = main
+  []
+  [cover_surface_block]
+    type = LowerDBlockFromSidesetGenerator
+    input = plasma_cover_owner
+    sidesets = plasma_cover_owner
+    new_block_id = 30
+    new_block_name = cover_surface
+  []
+[]"""
+
 PLASMA_SIDE_FUNCTOR_POSTPROCESSORS = (
     "cover_net_surface_current",
     "cover_electron_primary_flux",
@@ -72,6 +111,10 @@ def main() -> None:
     for name in PLASMA_SIDE_FUNCTOR_POSTPROCESSORS:
         final_text = restrict_functor_diagnostic(final_text, name)
 
+    if final_text.count(OLD_MESH) != 1:
+        raise RuntimeError("expected exactly one cover lower-D mesh block to finalize")
+    final_text = final_text.replace(OLD_MESH, NEW_MESH, 1)
+
     final = final_text.encode("utf-8")
     final_digest = digest(final)
 
@@ -81,6 +124,7 @@ def main() -> None:
         f"source_sha256={SOURCE_SHA256} "
         f"energy_target_sha256={ENERGY_TARGET_SHA256} "
         f"scoped_functor_postprocessors={len(PLASMA_SIDE_FUNCTOR_POSTPROCESSORS)} "
+        "one_sided_cover_owner=true "
         f"final_sha256={final_digest}"
     )
 
