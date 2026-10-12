@@ -75,38 +75,16 @@ jobs:
               if [ "$solve_rc" -ne 0 ]; then
                 exit "$solve_rc"
               fi
-
-              converged_count=$(grep -c "Solve Converged!" "$OUT/run.log" || true)
-              test "$converged_count" -ge 100
-              test -f ${CASE%.i}_out.csv
-              test -f ${CASE%.i}_out.e
-
-              python3 - "$CASE" "$OUT" "$converged_count" <<"PY"
-import csv, json, math, sys
-from pathlib import Path
-case = Path(sys.argv[1])
-out = Path(sys.argv[2])
-converged = int(sys.argv[3])
-csv_path = Path(str(case.with_suffix("")) + "_out.csv")
-with csv_path.open(newline="") as f:
-    rows = list(csv.DictReader(f))
-if len(rows) < 101:
-    raise SystemExit(f"expected at least 101 CSV rows, got {len(rows)}")
-final_time = float(rows[-1]["time"])
-if not math.isclose(final_time, 1.0e-7, rel_tol=0.0, abs_tol=1.0e-15):
-    raise SystemExit(f"unexpected final time {final_time}")
-summary = {
-    "classification": "FULL_DIELECTRIC_GROUNDED_ELECTRODE_100NS_SOLVE_PASS",
-    "expected_steps": 100,
-    "converged_solves": converged,
-    "csv_rows": len(rows),
-    "final_time_s": final_time,
-    "exodus_preserved": True,
-}
-(out / "acceptance.json").write_text(json.dumps(summary, indent=2) + "\n")
-print(json.dumps(summary, indent=2))
-PY
             '
+
+          CSV="$OUT/full_dielectric_100ns_out.csv"
+          EXODUS="$OUT/full_dielectric_100ns_out.e"
+          converged_count=$(grep -c "Solve Converged!" "$OUT/run.log" || true)
+          test "$converged_count" -ge 100
+          test -f "$CSV"
+          test -f "$EXODUS"
+          python3 -c 'import csv,math,sys; rows=list(csv.DictReader(open(sys.argv[1], newline=""))); assert len(rows) >= 101, len(rows); final=float(rows[-1]["time"]); assert math.isclose(final, 1.0e-7, rel_tol=0.0, abs_tol=1.0e-15), final' "$CSV"
+          printf '{"classification":"FULL_DIELECTRIC_GROUNDED_ELECTRODE_100NS_SOLVE_PASS","expected_steps":100,"converged_solves":%s,"exodus_preserved":true}\n' "$converged_count" | tee "$OUT/acceptance.json"
 
       - name: Upload full dielectric 100 ns evidence
         if: always()
