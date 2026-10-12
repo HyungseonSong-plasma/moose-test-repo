@@ -3,7 +3,7 @@ from __future__ import annotations
 import argparse, hashlib
 from pathlib import Path
 
-SOURCE_SHA256 = 'b267457a9d8e54290f9d20dd1d7c5e84bf7a4851a6831c6a0ef9b18693a25b1e'
+SOURCE_SHA256 = 'd09f79ebe36328f8fc0d9e40b07edc0dc7b6fc8a52494f76c9b2f4f23a93ef38'
 
 FULL_MESH = r'''[Mesh]
   coord_type = RZ
