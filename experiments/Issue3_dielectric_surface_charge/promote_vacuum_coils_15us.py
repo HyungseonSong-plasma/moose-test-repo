@@ -57,18 +57,19 @@ def main():
     args=ap.parse_args()
     text=args.input.read_text(encoding="utf-8")
 
+    electrostatic_blocks = "plasma cover wafer focus_ring vacuum coil1 coil2 coil3"
     for name in ("potential","phi_diffusion"):
         text=replace_in_block(
             text,name,
             "block = 'plasma cover wafer focus_ring'",
-            "block = 'plasma cover wafer focus_ring vacuum'",
+            f"block = '{electrostatic_blocks}'",
         )
 
     eps_vac="""  [eps_vacuum]
     type = ADGenericConstantMaterial
     prop_names = 'relative_permittivity'
     prop_values = '1.0'
-    block = vacuum
+    block = 'vacuum coil1 coil2 coil3'
   []"""
     text=append_after_block(text,"eps_focus_ring",eps_vac)
 
@@ -101,19 +102,22 @@ def main():
     pot=block(text,"potential")
     phi=block(text,"phi_diffusion")
     gnd=block(text,"grounded_potential")
-    if "block = 'plasma cover wafer focus_ring vacuum'" not in pot:
-        raise RuntimeError("potential does not span vacuum")
-    if "block = 'plasma cover wafer focus_ring vacuum'" not in phi:
-        raise RuntimeError("phi_diffusion does not span vacuum")
-    if "prop_values = '1.0'" not in block(text,"eps_vacuum"):
-        raise RuntimeError("vacuum relative permittivity is not 1.0")
+    expected = f"block = '{electrostatic_blocks}'"
+    if expected not in pot:
+        raise RuntimeError("potential does not span vacuum and coil blocks")
+    if expected not in phi:
+        raise RuntimeError("phi_diffusion does not span vacuum and coil blocks")
+    eps=block(text,"eps_vacuum")
+    if "prop_values = '1.0'" not in eps or "block = 'vacuum coil1 coil2 coil3'" not in eps:
+        raise RuntimeError("vacuum/coil relative permittivity routing is not 1.0")
     for token in ("vacuum_outer_ground","cover_coil_ground","vacuum_coil_ground","cover_outer_right"):
         if token not in gnd:
             raise RuntimeError(f"missing grounded potential boundary: {token}")
     if "cover_outer_ground" in gnd:
         raise RuntimeError("obsolete cover_outer_ground still routed as ground")
-    if "coil1" in pot or "coil2" in pot or "coil3" in pot:
-        raise RuntimeError("coil solid blocks must not carry the electrostatic unknown")
+    for coil in ("coil1","coil2","coil3"):
+        if coil not in pot or coil not in phi:
+            raise RuntimeError(f"{coil} lacks electrostatic kernel coverage")
 
     args.input.write_text(text,encoding="utf-8")
     print(
@@ -121,7 +125,7 @@ def main():
         "vacuum_block=true vacuum_eps_r=1.0 "
         "vacuum_outer_ground_V=0 coil_ground_V=0 "
         "cover_vacuum_continuity=conforming_shared_nodes "
-        "coils_electrostatic_unknown=false"
+        "coils_laplace_kernel=true coils_grounded_zero_solution=true"
     )
 
 if __name__=="__main__":
