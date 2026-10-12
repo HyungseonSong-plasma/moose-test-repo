@@ -9,6 +9,7 @@ on:
       - 'experiments/Issue3_dielectric_surface_charge/prepare_baseline_cover_pilot.py'
       - 'experiments/Issue3_dielectric_surface_charge/finalize_baseline_cover_pilot.py'
       - 'experiments/Issue3_dielectric_surface_charge/expand_full_dielectric_pilot.py'
+      - 'experiments/Issue3_dielectric_surface_charge/finalize_full_dielectric_pilot.py'
       - 'physics_app/src/bcs/PhysicsFEMLogMolarDielectricFluxBC.C'
       - 'physics_app/src/bcs/PhysicsFEMLogMolarElectronEnergyDielectricBC.C'
       - 'physics_app/src/fvbcs/PhysicsFVLogMolarDielectricFluxBC.C'
@@ -63,7 +64,7 @@ jobs:
               python3 "$CASEDIR/prepare_baseline_cover_pilot.py" "$FULL" > "$OUT/materialize.log" 2>&1
               python3 "$CASEDIR/finalize_baseline_cover_pilot.py" "$FULL" > "$OUT/finalize.log" 2>&1
               python3 "$CASEDIR/expand_full_dielectric_pilot.py" "$FULL" > "$OUT/expand.log" 2>&1
-              python3 -c "from pathlib import Path; p=Path(\"$FULL\"); s=p.read_text(); m=\"[GlobalParams]\\n\"; assert s.count(m)==1; p.write_text(s.replace(m, \"[Problem]\\n  kernel_coverage_check = false\\n  material_coverage_check = false\\n[]\\n\\n\"+m, 1))"
+              python3 "$CASEDIR/finalize_full_dielectric_pilot.py" "$FULL" > "$OUT/finalize_full.log" 2>&1
               cp "$FULL" "$CASE"
               sed -i "s/num_steps = 100/num_steps = 5/; s/end_time = 1.0e-7/end_time = 5.0e-9/" "$CASE"
 
