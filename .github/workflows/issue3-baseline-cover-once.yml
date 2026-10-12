@@ -16,6 +16,7 @@ on:
       - 'physics_app/src/fvbcs/PhysicsFVLogMolarDielectricFluxBC.C'
       - 'physics_app/src/kernels/PhysicsLowerDSurfaceCurrent.C'
       - 'physics_app/src/bcs/PhysicsADSurfaceChargePoissonBC.C'
+  workflow_dispatch:
 
 permissions:
   contents: read
