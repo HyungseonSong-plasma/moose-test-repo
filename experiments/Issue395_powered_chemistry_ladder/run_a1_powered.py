@@ -61,8 +61,15 @@ def chemistry_off_overrides() -> list[str]:
 
 def state_fields(path: Path) -> dict[str, np.ndarray]:
     st = base.exodus(path)
-    ne = np.exp(st["nodal"]["log_ne"][-1])
-    eps = np.exp(st["nodal"]["log_energy"][-1] - st["nodal"]["log_ne"][-1])
+    # log_ne/log_energy are block-restricted to plasma. Exodus stores zeros on
+    # nodes outside that block, which would appear as ne=1 mol/m^3 and
+    # mean-energy=1 eV after exponentiation and corrupt A0/A1 norms/range gates.
+    # Evaluate nodal diagnostics only on nodes actually referenced by plasma TRI3s.
+    plasma_nodes = np.unique(st["blocks"]["plasma"].reshape(-1))
+    log_ne = st["nodal"]["log_ne"][-1][plasma_nodes]
+    log_energy = st["nodal"]["log_energy"][-1][plasma_nodes]
+    ne = np.exp(log_ne)
+    eps = np.exp(log_energy - log_ne)
     ni = np.exp(st["elem"]["plasma"]["log_ni"][-1])
     p = st["elem"]["plasma"]["p"][-1]
     return {"ne_mol": ne, "mean_en_eV": eps, "o2p_mol": ni, "p_Pa": p}
