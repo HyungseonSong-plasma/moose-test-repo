@@ -39,6 +39,10 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Install host geometry dependencies
+        shell: bash
+        run: python3 -m pip install --disable-pip-version-check --quiet numpy==2.1.2 scipy==1.14.1
+
       - name: Validate Issue 395 activation contract
         shell: bash
         run: |
