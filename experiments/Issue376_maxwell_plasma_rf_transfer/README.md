@@ -115,11 +115,29 @@ maximum Picard budget to `12`, before rerunning; the `1e-7` residual tolerance,
 lookup-range, and timestep-refinement gates are unchanged.  A T4-v2 result is
 not a retroactive PASS of T4-v1.
 
+
+### T4-v2 calibration result
+
+The second exact-head T4 run (`38376764298`, head `a9a19c0af911ccc9c76c82214d85d277200fbaa9`)
+closed every unrelaxed Picard solve under the revised 12-iteration budget, but it
+failed the unchanged `< 0.5%` temporal-accuracy gate.  Over the same `2 us`
+horizon, final mean energies were `12.9072971852 eV` (`dt=2 us`),
+`12.2856179851 eV` (`dt=1 us`), and `11.8159929582 eV` (`dt=0.5 us`).
+The coarse-to-medium and medium-to-fine relative differences were `5.261337%`
+and `3.974486%`; their ratio was `0.755414`, so the sequence was contracting
+but not yet temporally resolved enough.  T4-v2 is therefore recorded as
+**FAIL**.
+
+T4-v3 keeps the physical horizon and every acceptance tolerance unchanged, but
+moves the three-level halving triplet into a finer asymptotic regime:
+`dt = 0.125 us, 0.0625 us, 0.03125 us`.  This is a resolution refinement, not
+a relaxation of the `< 0.5%` accuracy gate.
+
 ### Predeclared T4 acceptance gates
 
 The exact-head CI run must satisfy all of the following:
 
-- three refinements over the same `2 us` horizon: `dt = 2 us, 1 us, 0.5 us`;
+- three refinements over the same `2 us` horizon: `dt = 0.125 us, 0.0625 us, 0.03125 us`;
 - every physical step reaches Picard relative residual `<= 1e-7` in at most
   `12` iterations;
 - while above the convergence floor, Picard residual contraction ratio remains

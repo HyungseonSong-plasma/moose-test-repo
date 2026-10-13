@@ -197,6 +197,6 @@ maxwell_solution_file = 'results_t4/seed/maxwell.e'
 
 [Outputs]
   csv = true
-  exodus = true
+  exodus = false
   execute_on = 'INITIAL TIMESTEP_END'
 []
