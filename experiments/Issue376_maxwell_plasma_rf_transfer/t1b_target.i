@@ -12,6 +12,7 @@ source_enable = 0.0
 plasma_sigma_real = 5.0
 faraday_J_per_eV_mol = 96485.33212331001
 dt_t1b = 1.0e-8
+maxwell_solution_file = 'results_t1b/maxwell.e'
 
 [Mesh]
   coord_type = RZ
@@ -48,7 +49,7 @@ dt_t1b = 1.0e-8
 [UserObjects]
   [maxwell_solution]
     type = SolutionUserObject
-    mesh = 'results_t1b/maxwell.e'
+    mesh = '${maxwell_solution_file}'
     system_variables = 'E_real E_imag'
     timestep = LATEST
     execute_on = INITIAL
