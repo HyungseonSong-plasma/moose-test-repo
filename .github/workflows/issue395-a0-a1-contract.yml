@@ -1,0 +1,42 @@
+name: Issue 395 A0-A1 chemistry contract
+
+on:
+  push:
+    branches:
+      - issue395-powered-chemistry-ladder
+    paths:
+      - '.github/workflows/issue395-a0-a1-contract.yml'
+      - 'experiments/Issue395_powered_chemistry_ladder/**'
+      - 'docs/development/2026-09-11_issue192_stage5_s5r_representative_contract.json'
+      - 'physics_app/data/electron_impact/o2_elastic.txt'
+      - 'physics_app/data/electron_impact/o2_ionization.txt'
+
+permissions:
+  contents: read
+
+jobs:
+  chemistry-contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact pushed revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Verify exact source revision
+        shell: bash
+        run: test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Compile Issue 395 construction tools
+        shell: bash
+        run: python3 -m py_compile experiments/Issue395_powered_chemistry_ladder/check_chemistry_sets.py
+
+      - name: Validate staged chemistry activation/source contract
+        shell: bash
+        run: python3 experiments/Issue395_powered_chemistry_ladder/check_chemistry_sets.py
