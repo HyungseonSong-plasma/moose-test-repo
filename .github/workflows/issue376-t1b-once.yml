@@ -14,9 +14,9 @@ permissions:
 jobs:
   t1b-conservative-rf-injection:
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 60
     env:
-      PHYSICS_RUNTIME_REF: ghcr.io/hyungseonsong-plasma/physics-runtime@sha256:cda9f0d09a17aed5fa606e97d1ee5c3450f7280536cec2e5c635402bb07d972c
+      BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
       CASE: experiments/Issue376_maxwell_plasma_rf_transfer
       MAXWELL: experiments/Issue202_maxwell_scalar_fem_m0
       PLASMA_MESH: experiments/fem_fvm_plasma_discriminator/plasma_contour_l3_4p5mm.msh
@@ -47,36 +47,61 @@ jobs:
           python3 experiments/fem_fvm_plasma_discriminator/generate_contour_mesh.py | tee "$CASE/mesh.log"
           test -f "$PLASMA_MESH"
 
-      - name: Pull accepted immutable Physics runtime
+      - name: Pull pinned Physics build environment
         shell: bash
-        run: docker pull "$PHYSICS_RUNTIME_REF"
+        run: docker pull "$BUILD_BASE_REF"
+
+      - name: Build current exact-head Physics application
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm --entrypoint /bin/bash --user 0:0 \
+            --workdir /workspace -v "$GITHUB_WORKSPACE:/workspace" \
+            "$BUILD_BASE_REF" -lc '
+              set -euo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              git config --global --add safe.directory /opt/physics_vendor/moose
+              git config --global --add safe.directory /opt/physics_vendor/crane
+              git config --global --add safe.directory /opt/physics_vendor/squirrel
+              git config --global --add safe.directory /opt/physics_vendor/zapdos
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+              make -C physics_app -j2
+            '
+          test -x physics_app/physics-opt
 
       - name: Reproduce frozen Issue 202 Maxwell source field
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p "$CASE/results_t1b"
-          docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" \
-            -i "$MAXWELL/rf_power.i" \
-            Outputs/file_base="$CASE/results_t1b/maxwell" \
+          docker run --rm --entrypoint /bin/bash --user 0:0 \
+            --workdir /workspace -v "$GITHUB_WORKSPACE:/workspace" \
+            "$BUILD_BASE_REF" -lc "source /environment && physics_app/physics-opt -i '$MAXWELL/rf_power.i' Outputs/file_base='$CASE/results_t1b/maxwell'" \
             2>&1 | tee "$CASE/results_t1b/maxwell.log"
           test -f "$CASE/results_t1b/maxwell.e"
           test -f "$CASE/results_t1b/maxwell.csv"
 
-      - name: Check T1B target input against real physics-opt
+      - name: Check T1B target input against exact-head physics-opt
         shell: bash
         run: |
-          docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" \
-            --check-input -i "$CASE/t1b_target.i" \
+          set -euo pipefail
+          docker run --rm --entrypoint /bin/bash --user 0:0 \
+            --workdir /workspace -v "$GITHUB_WORKSPACE:/workspace" \
+            "$BUILD_BASE_REF" -lc "source /environment && physics_app/physics-opt --check-input -i '$CASE/t1b_target.i'" \
             2>&1 | tee "$CASE/results_t1b/check_target.log"
 
       - name: Measure raw cross-mesh RF-power mapping
         shell: bash
         run: |
           set -euo pipefail
-          docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" \
-            -i "$CASE/t1b_target.i" source_enable=0 rf_scale=1 \
-            Outputs/file_base="$CASE/results_t1b/raw" \
+          docker run --rm --entrypoint /bin/bash --user 0:0 \
+            --workdir /workspace -v "$GITHUB_WORKSPACE:/workspace" \
+            "$BUILD_BASE_REF" -lc "source /environment && physics_app/physics-opt -i '$CASE/t1b_target.i' source_enable=0 rf_scale=1 Outputs/file_base='$CASE/results_t1b/raw'" \
             2>&1 | tee "$CASE/results_t1b/raw.log"
 
       - name: Compute conservative power renormalization
@@ -106,14 +131,15 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" \
-            -i "$CASE/t1b_target.i" source_enable=1 rf_scale="${{ steps.scale.outputs.value }}" \
-            Outputs/file_base="$CASE/results_t1b/scaled" \
+          docker run --rm --entrypoint /bin/bash --user 0:0 \
+            --workdir /workspace -v "$GITHUB_WORKSPACE:/workspace" \
+            "$BUILD_BASE_REF" -lc "source /environment && physics_app/physics-opt -i '$CASE/t1b_target.i' source_enable=1 rf_scale='${{ steps.scale.outputs.value }}' Outputs/file_base='$CASE/results_t1b/scaled'" \
             2>&1 | tee "$CASE/results_t1b/scaled.log"
 
       - name: Analyze T1B transfer and electron-energy closure
         shell: bash
         run: |
+          set -euo pipefail
           python3 "$CASE/analyze_t1b.py" \
             --maxwell "$CASE/results_t1b/maxwell.csv" \
             --raw "$CASE/results_t1b/raw.csv" \
