@@ -3,6 +3,8 @@
 
 A0 is the merged #376 chemistry-off powered baseline. A1 starts from the exact
 same 100 ns checkpoint and enables only EI02 + EI16 for one 1 ns RF-heated step.
+The chemistry overlay is present in both branches so restart/output topology is
+identical; A0 disables only the chemistry source projections.
 """
 from __future__ import annotations
 
@@ -46,6 +48,17 @@ def rel_l2(a: np.ndarray, b: np.ndarray) -> float:
     return float(np.linalg.norm(a - b) / max(np.linalg.norm(b), 1e-300))
 
 
+def chemistry_off_overrides() -> list[str]:
+    """Keep A1 owners/diagnostics instantiated while zeroing all A1 projections."""
+    return [
+        "FunctorMaterials/a1_electron_source/expression=0",
+        "FunctorMaterials/a1_o2p_source/expression=0",
+        "FunctorMaterials/a1_neutral_mass_source/expression=0",
+        "FunctorMaterials/a1_o2p_mass_source/expression=0",
+        "FunctorMaterials/a1_energy_source/expression=0",
+    ]
+
+
 def state_fields(path: Path) -> dict[str, np.ndarray]:
     st = base.exodus(path)
     ne = np.exp(st["nodal"]["log_ne"][-1])
@@ -82,15 +95,19 @@ def main() -> int:
         mov = str(a.maxwell_overlay.resolve())
         tx, tm = base.table(a.transport_table)
 
-        # 100 ns full dielectric oxygen-plasma bootstrap, chemistry OFF and RF source OFF.
+        # Keep one fixed object/output topology from bootstrap through A0/A1.
+        # Chemistry rate owners and diagnostics exist throughout, while the A1
+        # source projections are identically zero during bootstrap/A0.
         seed = out / "seed" / "maxwell"
         base.run([physics, "-i", minp, f"Outputs/file_base={seed}"], out / "seed" / "maxwell.log")
         seed_e = seed.with_suffix(".e")
 
         pbase = out / "bootstrap" / "plasma"
-        common_a0 = [physics, "-i", pin, rfov]
+        common = [physics, "-i", pin, rfov, chemov]
         base.run(
-            common_a0 + [f"maxwell_solution_file_t6={seed_e}", "source_enable_t6=0", "rf_scale_t6=1", f"Outputs/file_base={pbase}"],
+            common
+            + chemistry_off_overrides()
+            + [f"maxwell_solution_file_t6={seed_e}", "source_enable_t6=0", "rf_scale_t6=1", f"Outputs/file_base={pbase}"],
             out / "bootstrap" / "run.log",
         )
         pe, pcsv = pbase.with_suffix(".e"), pbase.with_suffix(".csv")
@@ -126,7 +143,9 @@ def main() -> int:
         shutil.copy2(state100, pe)
         shutil.copy2(csv100, pcsv)
         base.run(
-            common_a0 + [
+            common
+            + chemistry_off_overrides()
+            + [
                 f"maxwell_solution_file_t6={m1e}", "source_enable_t6=0", "rf_scale_t6=1",
                 "Executioner/end_time=1.01e-7", "Executioner/num_steps=101", f"Outputs/file_base={pbase}", "--recover"
             ],
@@ -139,9 +158,9 @@ def main() -> int:
             v2.restore_checkpoint(checkpoint100, active_cp)
             shutil.copy2(state100, pe)
             shutil.copy2(csv100, pcsv)
-            cmd = [physics, "-i", pin, rfov]
-            if chemistry:
-                cmd.append(chemov)
+            cmd = list(common)
+            if not chemistry:
+                cmd += chemistry_off_overrides()
             cmd += [
                 f"maxwell_solution_file_t6={m1e}", "source_enable_t6=1", f"rf_scale_t6={rf_scale:.17g}",
                 "Executioner/end_time=1.01e-7", "Executioner/num_steps=101", f"Outputs/file_base={pbase}", "--recover"
@@ -183,6 +202,7 @@ def main() -> int:
             "A1_mean_energy_max_eV": float(np.max(s1["mean_en_eV"])),
             "A1_ne_min_mol_m3": float(np.min(s1["ne_mol"])),
             "A1_O2p_min_mol_m3": float(np.min(s1["o2p_mol"])),
+            "A0_chem_energy_source_integral_eV_mol_s": c_a0["a1_energy_source_integral"],
             "R_elastic_min": c_a1["a1_R_elastic_O2_min"],
             "R_elastic_max": c_a1["a1_R_elastic_O2_max"],
             "R_ion_min": c_a1["a1_R_ion_O2_min"],
@@ -204,6 +224,8 @@ def main() -> int:
         for key in ("A0_rf_source_unit_closure", "A1_rf_source_unit_closure"):
             if metrics[key] > base.SOURCE_UNIT_GATE:
                 failures.append(key)
+        if abs(metrics["A0_chem_energy_source_integral_eV_mol_s"]) > SOURCE_CLOSURE_GATE:
+            failures.append("A0 chemistry projection not zero")
         if metrics["R_elastic_max"] <= 0 or metrics["R_ion_max"] <= 0 or metrics["R_ion_integral_mol_s"] <= 0:
             failures.append("A1 reaction progress not positive")
         if abs(metrics["heavy_mass_source_closure_kg_s"]) > SOURCE_CLOSURE_GATE:
@@ -230,8 +252,10 @@ def main() -> int:
             "gate": "A0/A1 powered EI02+EI16",
             "status": "PASS" if not failures else "FAIL",
             "classification": "ISSUE395_A1_POWERED_EI02_EI16_PASS" if not failures else "ISSUE395_A1_POWERED_EI02_EI16_FAIL",
-            "scope": "common 100 ns chemistry-off bootstrap; common 1000 W Maxwell state; identical 1 ns RF-heated A0 and A1 branches; A1 enables only EI02+EI16",
+            "scope": "common 100 ns checkpoint and chemistry-overlay/output topology; A0 chemistry projections OFF; A1 enables only EI02+EI16 projections for the same 1 ns RF-heated step",
             "active_chemistry_A1": ["EI02", "EI16"],
+            "A0_chemistry_projection_enabled": False,
+            "A1_chemistry_projection_enabled": True,
             "custom_cpp_added": False,
             "standard_moose_source_projection": True,
             "drive_source_scale": drive,
