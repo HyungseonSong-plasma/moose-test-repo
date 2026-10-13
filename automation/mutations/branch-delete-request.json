@@ -1,8 +1,8 @@
 {
   "targets": [
     {
-      "branch": "ops/issue331-branch-cleanup-20261009",
-      "expected_sha": "43283139d58a9c3ebf59a23a6ee9aed1478806b0"
+      "branch": "issue3-d0-dielectric-surface-charge",
+      "expected_sha": "855ecac3321b8750ff1a65058b78a1b917fc7a18"
     }
   ]
 }
