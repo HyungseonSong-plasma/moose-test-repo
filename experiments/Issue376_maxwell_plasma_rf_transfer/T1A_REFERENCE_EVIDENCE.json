@@ -1,0 +1,68 @@
+{
+  "cases": {
+    "baseline": {
+      "centroid_negative_mutation_relative_mismatch": 0.004053985481232444,
+      "conservative_cell_sum_W": 175.81487393245106,
+      "conservative_relative_closure": 0.0,
+      "energy_source_reconstructed_W": 175.81487393245106,
+      "exact_fe_integral_W": 175.81487393245106,
+      "moose_P_abs_W": 175.81487393245,
+      "moose_relative_mismatch": 5.9813099165260934e-15,
+      "plasma_cells": 2348,
+      "sigma_r_S_m": 5.0,
+      "status": "PASS"
+    },
+    "field_off": {
+      "centroid_negative_mutation_relative_mismatch": 0.0,
+      "conservative_cell_sum_W": 0.0,
+      "conservative_relative_closure": 0.0,
+      "energy_source_reconstructed_W": 0.0,
+      "exact_fe_integral_W": 0.0,
+      "moose_P_abs_W": 0.0,
+      "moose_relative_mismatch": 0.0,
+      "plasma_cells": 2348,
+      "sigma_r_S_m": 5.0,
+      "status": "PASS"
+    },
+    "lossless": {
+      "centroid_negative_mutation_relative_mismatch": 0.0,
+      "conservative_cell_sum_W": 0.0,
+      "conservative_relative_closure": 0.0,
+      "energy_source_reconstructed_W": 0.0,
+      "exact_fe_integral_W": 0.0,
+      "moose_P_abs_W": 0.0,
+      "moose_relative_mismatch": 0.0,
+      "plasma_cells": 2348,
+      "sigma_r_S_m": 0.0,
+      "status": "PASS"
+    },
+    "reactive_only": {
+      "centroid_negative_mutation_relative_mismatch": 0.0,
+      "conservative_cell_sum_W": 0.0,
+      "conservative_relative_closure": 0.0,
+      "energy_source_reconstructed_W": 0.0,
+      "exact_fe_integral_W": 0.0,
+      "moose_P_abs_W": 0.0,
+      "moose_relative_mismatch": 0.0,
+      "plasma_cells": 2348,
+      "sigma_r_S_m": 0.0,
+      "status": "PASS"
+    }
+  },
+  "disposition": {
+    "T1A_reference_oracle": "PASS",
+    "note": "This establishes the independent conservative oracle and a centroid negative mutation on accepted upstream Maxwell output. Actual MOOSE electron-energy source injection remains T1B.",
+    "production_source_injection": "NOT_YET_RUN",
+    "scientific_acceptance_T1": false
+  },
+  "issue": 376,
+  "upstream": {
+    "actions_run": 37836361274,
+    "artifact_id": 11575123517,
+    "artifact_name": "Issue_202_Maxwell_M2_validation",
+    "issue": 202,
+    "science_head": "fb27e232924a0ee11010669eff287d9b953f1a31",
+    "upstream_moose_P_abs_W": 175.81487393245
+  },
+  "work_package": "T1A conservative RF power transfer oracle on frozen Issue #202 M2 artifact"
+}
