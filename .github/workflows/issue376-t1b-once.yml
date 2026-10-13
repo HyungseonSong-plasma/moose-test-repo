@@ -1,4 +1,4 @@
-name: Issue 376 T1B conservative Maxwell plasma RF transfer
+name: Issue 376 Maxwell plasma RF transfer T1-T3
 
 on:
   push:
@@ -12,7 +12,7 @@ permissions:
   contents: read
 
 jobs:
-  t1b-conservative-rf-injection:
+  transfer-t1-t3:
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     env:
@@ -31,12 +31,12 @@ jobs:
         shell: bash
         run: test "$(git rev-parse HEAD)" = "${{ github.sha }}"
 
-      - name: Set up deterministic mesh Python
+      - name: Set up deterministic Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
-      - name: Install pinned mesh dependencies
+      - name: Install pinned analysis dependencies
         shell: bash
         run: python3 -m pip install --disable-pip-version-check --quiet numpy==2.1.2 scipy==1.14.1
 
@@ -78,7 +78,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p "$CASE/results_t1b"
+          mkdir -p "$CASE/results_t1b" "$CASE/results_t3"
           docker run --rm --entrypoint /bin/bash --user 0:0 \
             --workdir /workspace -v "$GITHUB_WORKSPACE:/workspace" \
             "$BUILD_BASE_REF" -lc "source /environment && physics_app/physics-opt -i '$MAXWELL/rf_power.i' Outputs/file_base='$CASE/results_t1b/maxwell'" \
@@ -86,7 +86,7 @@ jobs:
           test -f "$CASE/results_t1b/maxwell.e"
           test -f "$CASE/results_t1b/maxwell.csv"
 
-      - name: Check T1B target input against exact-head physics-opt
+      - name: Check transfer target against exact-head physics-opt
         shell: bash
         run: |
           set -euo pipefail
@@ -95,7 +95,7 @@ jobs:
             "$BUILD_BASE_REF" -lc "source /environment && physics_app/physics-opt --check-input -i '$CASE/t1b_target.i'" \
             2>&1 | tee "$CASE/results_t1b/check_target.log"
 
-      - name: Measure raw cross-mesh RF-power mapping
+      - name: T1 transfer-disabled baseline mapping
         shell: bash
         run: |
           set -euo pipefail
@@ -127,7 +127,7 @@ jobs:
           echo "rf_scale=$scale" | tee "$CASE/results_t1b/scale.txt"
           echo "value=$scale" >> "$GITHUB_OUTPUT"
 
-      - name: Run conservative RF source injection into FEM log_energy
+      - name: T1 conservative RF source injection into FEM log_energy
         shell: bash
         run: |
           set -euo pipefail
@@ -136,7 +136,7 @@ jobs:
             "$BUILD_BASE_REF" -lc "source /environment && physics_app/physics-opt -i '$CASE/t1b_target.i' source_enable=1 rf_scale='${{ steps.scale.outputs.value }}' Outputs/file_base='$CASE/results_t1b/scaled'" \
             2>&1 | tee "$CASE/results_t1b/scaled.log"
 
-      - name: Analyze T1B transfer and electron-energy closure
+      - name: Analyze T1 transfer and electron-energy closure
         shell: bash
         run: |
           set -euo pipefail
@@ -162,13 +162,73 @@ jobs:
             --output "$CASE/results_t1b/t2_spatial_analysis.json" \
             | tee "$CASE/results_t1b/t2_spatial_analyzer.log"
 
-      - name: Upload T1/T2 evidence
+      - name: T3 frozen-state repeat Maxwell and transfer
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm --entrypoint /bin/bash --user 0:0 \
+            --workdir /workspace -v "$GITHUB_WORKSPACE:/workspace" \
+            "$BUILD_BASE_REF" -lc "source /environment && physics_app/physics-opt -i '$MAXWELL/rf_power.i' Outputs/file_base='$CASE/results_t3/baseline_repeat'" \
+            2>&1 | tee "$CASE/results_t3/baseline_repeat.log"
+          docker run --rm --entrypoint /bin/bash --user 0:0 \
+            --workdir /workspace -v "$GITHUB_WORKSPACE:/workspace" \
+            "$BUILD_BASE_REF" -lc "source /environment && physics_app/physics-opt -i '$CASE/t1b_target.i' maxwell_solution_file=results_t3/baseline_repeat.e source_enable=0 rf_scale=1 Outputs/file_base='$CASE/results_t3/baseline_transfer_repeat'" \
+            2>&1 | tee "$CASE/results_t3/baseline_transfer_repeat.log"
+
+      - name: T3 RF source-off counterfactual
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm --entrypoint /bin/bash --user 0:0 \
+            --workdir /workspace -v "$GITHUB_WORKSPACE:/workspace" \
+            "$BUILD_BASE_REF" -lc "source /environment && physics_app/physics-opt -i '$MAXWELL/rf_power.i' source_scale=0 Outputs/file_base='$CASE/results_t3/field_off_source'" \
+            2>&1 | tee "$CASE/results_t3/field_off_source.log"
+          docker run --rm --entrypoint /bin/bash --user 0:0 \
+            --workdir /workspace -v "$GITHUB_WORKSPACE:/workspace" \
+            "$BUILD_BASE_REF" -lc "source /environment && physics_app/physics-opt -i '$CASE/t1b_target.i' maxwell_solution_file=results_t3/field_off_source.e source_enable=1 rf_scale=1 plasma_sigma_real=5 Outputs/file_base='$CASE/results_t3/field_off_target'" \
+            2>&1 | tee "$CASE/results_t3/field_off_target.log"
+
+      - name: T3 sigma_R-zero reactive-only counterfactual
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm --entrypoint /bin/bash --user 0:0 \
+            --workdir /workspace -v "$GITHUB_WORKSPACE:/workspace" \
+            "$BUILD_BASE_REF" -lc "source /environment && physics_app/physics-opt -i '$MAXWELL/rf_power.i' plasma_sigma_real=0 plasma_sigma_imag=-10 Outputs/file_base='$CASE/results_t3/reactive_source'" \
+            2>&1 | tee "$CASE/results_t3/reactive_source.log"
+          docker run --rm --entrypoint /bin/bash --user 0:0 \
+            --workdir /workspace -v "$GITHUB_WORKSPACE:/workspace" \
+            "$BUILD_BASE_REF" -lc "source /environment && physics_app/physics-opt -i '$CASE/t1b_target.i' maxwell_solution_file=results_t3/reactive_source.e source_enable=1 rf_scale=1 plasma_sigma_real=0 Outputs/file_base='$CASE/results_t3/reactive_target'" \
+            2>&1 | tee "$CASE/results_t3/reactive_target.log"
+
+      - name: Analyze T3 counterfactuals
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 "$CASE/analyze_t3_counterfactuals.py" \
+            --baseline-source-csv "$CASE/results_t1b/maxwell.csv" \
+            --baseline-source-e "$CASE/results_t1b/maxwell.e" \
+            --baseline-target-csv "$CASE/results_t1b/raw.csv" \
+            --baseline-target-e "$CASE/results_t1b/raw.e" \
+            --repeat-source-csv "$CASE/results_t3/baseline_repeat.csv" \
+            --repeat-source-e "$CASE/results_t3/baseline_repeat.e" \
+            --repeat-target-csv "$CASE/results_t3/baseline_transfer_repeat.csv" \
+            --repeat-target-e "$CASE/results_t3/baseline_transfer_repeat.e" \
+            --field-off-source-csv "$CASE/results_t3/field_off_source.csv" \
+            --field-off-target-csv "$CASE/results_t3/field_off_target.csv" \
+            --reactive-source-csv "$CASE/results_t3/reactive_source.csv" \
+            --reactive-target-csv "$CASE/results_t3/reactive_target.csv" \
+            --output "$CASE/results_t3/analysis.json" \
+            | tee "$CASE/results_t3/analyzer.log"
+
+      - name: Upload T1-T3 evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: issue376-t1b-conservative-rf-injection
+          name: issue376-t1-t3-rf-transfer-evidence
           path: |
             experiments/Issue376_maxwell_plasma_rf_transfer/results_t1b/**
+            experiments/Issue376_maxwell_plasma_rf_transfer/results_t3/**
             experiments/Issue376_maxwell_plasma_rf_transfer/t1b_target.i
             experiments/fem_fvm_plasma_discriminator/plasma_contour_l3_4p5mm.msh
           if-no-files-found: warn
