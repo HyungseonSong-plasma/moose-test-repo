@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
-"""Build the Issue #395 A1 chemistry overlay (EI02 + EI16 only).
-
-The overlay is intentionally small and compositional. It reuses the accepted
-strict electron-impact progress owners and standard MOOSE residual projectors;
-it does not add custom C++.
-"""
+"""Build Issue #395 A1 overlay: EI02 elastic + EI16 O2 ionization only."""
 from __future__ import annotations
 
 import argparse
@@ -23,7 +18,8 @@ REQUIRED_BASE_TOKENS = (
     "[log_energy]",
     "[p]",
     "property_name = n_e_physical",
-    "property_name = mean_en_solved",
+    "type = PhysicsElectronMeanEnergyMaterial",
+    "mean_energy = mean_en_solved",
     "property_name = rho_neutral",
     "property_name = w_O2_constraint",
     "T_g_fixed",
@@ -32,7 +28,7 @@ REQUIRED_BASE_TOKENS = (
 )
 
 
-def parse_args() -> argparse.Namespace:
+def args() -> argparse.Namespace:
     p = argparse.ArgumentParser()
     p.add_argument("--base-input", type=Path, required=True)
     p.add_argument("--output", type=Path, required=True)
@@ -42,26 +38,16 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> int:
-    a = parse_args()
+    a = args()
     base = a.base_input.read_text(encoding="utf-8")
-    missing = [token for token in REQUIRED_BASE_TOKENS if token not in base]
+    missing = [x for x in REQUIRED_BASE_TOKENS if x not in base]
     if missing:
         raise RuntimeError(f"A1 base-input capability audit failed; missing {missing}")
-
-    # Protect against accidental chemistry inheritance in the powered baseline.
-    forbidden = ("R_elastic_O2", "R_ion_O2", "PhysicsElectronImpactIonizationMaterial")
-    inherited = [token for token in forbidden if token in base]
+    inherited = [x for x in ("R_elastic_O2", "R_ion_O2", "PhysicsElectronImpactIonizationMaterial") if x in base]
     if inherited:
         raise RuntimeError(f"A1 requires chemistry-off upstream baseline; found {inherited}")
 
-    text = f'''# Issue #395 A1 — minimum powered sustaining chemistry
-# Active reactions: EI02 + EI16 only.
-#
-# EI02: e + O2 -> e + O2  (elastic electron-heavy energy exchange)
-# EI16: e + O2 -> 2e + O2+ (ionization, +1 electron, 12.06 eV loss)
-#
-# All source projections consume one canonical upstream progress per reaction.
-
+    text = f'''# Issue #395 A1: EI02 + EI16 only
 [FunctorMaterials]
   [a1_o2_concentration]
     type = ADParsedFunctorMaterial
@@ -71,7 +57,6 @@ def main() -> int:
     expression = 'rho*w/{M_O2:.17g}'
     block = plasma
   []
-
   [a1_ei02_progress]
     type = PhysicsElectronImpactRateMaterial
     rate_table_file = {a.ei02_table}
@@ -81,7 +66,6 @@ def main() -> int:
     reaction_progress = R_elastic_O2
     block = plasma
   []
-
   [a1_ei16_progress]
     type = PhysicsElectronImpactIonizationMaterial
     rate_table_file = {a.ei16_table}
@@ -90,10 +74,7 @@ def main() -> int:
     o2_molar_concentration = c_O2_A1
     block = plasma
   []
-
-  # Delta_epsilon = (3 me / m_O2) * (Te[eV] - Tg[eV]),
-  # with Te=(2/3)*mean_en and Tg[eV]=(kB/e)*Tg[K].
-  [a1_ei02_elastic_energy_per_event]
+  [a1_ei02_delta_e]
     type = ADParsedFunctorMaterial
     property_name = delta_epsilon_EI02_eV
     functor_names = 'mean_en_solved T_g_fixed'
@@ -101,54 +82,46 @@ def main() -> int:
     expression = '{ELASTIC_FACTOR:.17g}*((2.0/3.0)*eps-{KB_OVER_E:.17g}*Tg)'
     block = plasma
   []
-
-  [a1_electron_molar_source]
+  [a1_electron_source]
     type = ADParsedFunctorMaterial
     property_name = S_electron_molar_A1
     functor_names = 'R_ion_O2'
-    functor_symbols = 'Rion'
-    expression = 'Rion'
+    functor_symbols = 'R'
+    expression = 'R'
     block = plasma
   []
-
-  [a1_o2p_molar_source]
+  [a1_o2p_source]
     type = ADParsedFunctorMaterial
     property_name = S_O2p_molar_A1
     functor_names = 'R_ion_O2'
-    functor_symbols = 'Rion'
-    expression = 'Rion'
+    functor_symbols = 'R'
+    expression = 'R'
     block = plasma
   []
-
   [a1_neutral_mass_source]
     type = ADParsedFunctorMaterial
     property_name = S_neutral_mass_A1
     functor_names = 'R_ion_O2'
-    functor_symbols = 'Rion'
-    expression = '-{M_O2:.17g}*Rion'
+    functor_symbols = 'R'
+    expression = '-{M_O2:.17g}*R'
     block = plasma
   []
-
   [a1_o2p_mass_source]
     type = ADParsedFunctorMaterial
     property_name = S_O2p_mass_A1
     functor_names = 'R_ion_O2'
-    functor_symbols = 'Rion'
-    expression = '{M_O2:.17g}*Rion'
+    functor_symbols = 'R'
+    expression = '{M_O2:.17g}*R'
     block = plasma
   []
-
-  # log_energy represents molar electron energy density [eV mol/m^3], so
-  # the event-energy coefficients multiply molar reaction progress directly.
-  [a1_electron_energy_source]
+  [a1_energy_source]
     type = ADParsedFunctorMaterial
     property_name = S_electron_energy_molar_A1
     functor_names = 'delta_epsilon_EI02_eV R_elastic_O2 R_ion_O2'
-    functor_symbols = 'del Rel Rion'
-    expression = '-del*Rel-{EI16_LOSS_EV:.17g}*Rion'
+    functor_symbols = 'de Rel Rion'
+    expression = '-de*Rel-{EI16_LOSS_EV:.17g}*Rion'
     block = plasma
   []
-
   [a1_heavy_mass_closure]
     type = ADParsedFunctorMaterial
     property_name = S_heavy_mass_closure_A1
@@ -157,8 +130,7 @@ def main() -> int:
     expression = 'Sn+Si'
     block = plasma
   []
-
-  [a1_charge_molar_closure]
+  [a1_charge_closure]
     type = ADParsedFunctorMaterial
     property_name = S_charge_molar_closure_A1
     functor_names = 'S_electron_molar_A1 S_O2p_molar_A1'
@@ -169,7 +141,6 @@ def main() -> int:
 []
 
 [Kernels]
-  # Conservative log-molar electron continuity source: +R_ion_O2.
   [a1_electron_particle_source]
     type = FunctorKernel
     variable = log_ne
@@ -177,8 +148,6 @@ def main() -> int:
     functor_on_rhs = true
     block = plasma
   []
-
-  # EI02 elastic exchange + EI16 ionization energy loss.
   [a1_electron_energy_source]
     type = FunctorKernel
     variable = log_energy
@@ -189,7 +158,6 @@ def main() -> int:
 []
 
 [FVKernels]
-  # Conservative log-molar O2+ source: +R_ion_O2.
   [a1_o2p_source]
     type = FVCoupledForce
     variable = log_ni
@@ -197,9 +165,6 @@ def main() -> int:
     coef = 1.0
     block = plasma
   []
-
-  # O2 ionization removes the corresponding O2 mass from the neutral mixture.
-  # O2 itself is constrained; the neutral total-mass equation owns this sink.
   [a1_neutral_mass_source]
     type = FVCoupledForce
     variable = p
@@ -267,7 +232,6 @@ def main() -> int:
     a.output.write_text(text, encoding="utf-8")
     print("ISSUE395_A1_OVERLAY_BUILD_PASS")
     print(f"elastic_factor={ELASTIC_FACTOR:.17g}")
-    print(f"EI16_energy_loss_eV={EI16_LOSS_EV:.17g}")
     print(f"output={a.output}")
     return 0
 
