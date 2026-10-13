@@ -1,115 +1,117 @@
 # Issue #376 — Maxwell → plasma RF power transfer
 
 Active development surface for conservative RF-power coupling from the frozen
-Issue #202 scalar-RZ Maxwell solution into the current plasma electron-energy
-equation.
+Issue #202 scalar-RZ Maxwell solution into the current FEM electron-energy
+representation and, after T1–T3, the first bounded segregated feedback loop.
 
-## Upstream contract
+## Frozen upstream contract
 
-Issue #202 is frozen. Its accepted peak-phasor heating law is
+Issue #202 remains the RF field owner. Its accepted peak-phasor convention is
 
 ```text
-Q_RF = 0.5 * sigma_R * (E_real^2 + E_imag^2)
+E(t) = Re{E_hat exp(+i omega t)}
+Q_RF = 0.5 * sigma_R * |E_hat|^2
 P_abs = integral_plasma Q_RF dV
 ```
 
-with accepted science head
-`fb27e232924a0ee11010669eff287d9b953f1a31`, Actions run `37836361274`,
-artifact `11575123517`, and `P_abs = 175.81487393245 W`.
+The frozen standalone reference has `P_abs = 175.81487393245 W`.  The reactive
+conductivity enters the Maxwell field but not the collisional heating term.
 
-## Representation synchronization
+## Current representation
 
-The original #376 wording assumed that the electron-energy destination would
-remain cell-centered FVM. The current promoted plasma line instead solves
-`log_energy` with continuous FEM/LAGRANGE, while selected heavy charged
-transport remains FVM.
-
-Therefore the production RF-heating path must not introduce an unnecessary
-FE -> FV -> FE projection. The preferred current architecture is:
+The promoted plasma line solves `log_energy` with continuous FEM/LAGRANGE.
+Production RF heating therefore uses
 
 ```text
-Maxwell E_real/E_imag : FEM
-Q_RF material         : quadrature-point material on plasma
-electron log_energy   : FEM
-source injection      : same-mesh FEM volume source
+Maxwell E_real/E_imag  : FEM on full QVT chamber mesh
+cross-mesh map         : SolutionUserObject + SolutionAux
+Q_RF                    : quadrature-point material on plasma
+electron log_energy    : FEM on accepted contour plasma mesh
+source injection       : MatBodyForce
 ```
 
-The conservative cell-average construction is retained as an independent
-oracle and as the required discriminator should an FV destination be used
-later.
+The nonmatching source/target mesh power defect is measured explicitly and the
+target source is globally renormalized so its integrated RF power equals the
+Maxwell absorbed power.  RF heating remains separate from electrostatic
+`PhysicsFEMLogMolarElectronJouleHeating` ownership.
 
-No custom C++ is authorized by this directory. Standard MOOSE
-`MatBodyForce`/`ADMatBodyForce` is the first production source-injection
-candidate.
-
-## T1A — independent conservative transfer oracle
-
-`conservative_rf_power_reference.py` reads the upstream Maxwell Exodus field
-and integrates each TRI3 plasma element exactly in RZ.
-
-For P1 fields,
+## Accepted gates
 
 ```text
-E_h = sum_i E_i lambda_i
-r   = sum_i r_i lambda_i
+T1 conservative transfer     PASS  Actions 38370381057
+T2 spatial transfer          PASS  Actions 38371674096
+T3 counterfactuals           PASS  Actions 38372574448
+T4 coupling convergence      ACTIVE
+T5 power closure             PENDING
+T6 representative oxygen ICP PENDING
 ```
 
-so `r * |E_h|^2` is a degree-3 polynomial. The script evaluates its element
-integral analytically from barycentric moments:
+T2 independently reconstructed the TRI3 interpolation and found approximately
+1.01% RZ complex-field L2 error, 0.68% RZ `Q_RF` L2 error, and 0.86% normalized
+power-shape error on the accepted contour mesh. T3 closed RF-off,
+transfer-off, `sigma_R = 0`, and frozen-state determinism discriminators.
+
+## T4 — reduced segregated feedback discriminator
+
+T4 intentionally precedes the complete oxygen ICP case.  It uses the canonical
+plasma discriminator state
 
 ```text
-P_K = 2*pi * integral_K r Q_RF dA
-V_K = 2*pi * integral_K r dA
-Q_K = P_K / V_K
+n_e = 1.0e15 m^-3          (held fixed in T4)
+mean electron energy = 4 eV initially
+p = 1.333223684 Pa
+T_g = 300 K
+f_RF = 13.56 MHz
 ```
 
-and independently verifies
+and closes the state-dependent conductivity with the canonical reduced electron
+mobility table `Issue91_real_qvt_r3/r3_e0/electron_moments.txt`:
 
 ```text
-sum_K Q_K V_K = integral_plasma Q_RF dV.
+N_n  = p / (k_B T_g)
+mu_e = (mu_e N_n)_table / N_n
+nu_m = e / (m_e mu_e)
+
+sigma_R = n_e e^2 nu_m / [m_e (nu_m^2 + omega^2)]
+sigma_I = -n_e e^2 omega / [m_e (nu_m^2 + omega^2)]
 ```
 
-It also converts the source into the canonical log-molar electron-energy
-units,
+The sign of `sigma_I` follows the accepted `exp(+i omega t)` convention.
+
+For each physical backward-Euler step, `run_t4_coupling.py` performs an
+**unrelaxed Picard iteration**:
 
 ```text
-S_RF [eV mol/(m^3 s)] = Q_RF [W/m^3] / F
-F = N_A e = 96485.33212331001 C/mol.
+volume-mean electron energy guess
+  -> mobility / collision frequency / complex sigma
+  -> frozen #202 Maxwell solve
+  -> cross-mesh RF transfer + conservative power renormalization
+  -> one 2-D FEM log_energy step from the fixed previous physical state
+  -> new volume-mean electron energy
+  -> repeat until converged
 ```
 
-### Evidence on the frozen #202 artifact
+Re-applying the same previous physical state on every Picard iteration is
+important: the iteration solves one implicit coupled timestep rather than
+accumulating pseudo-time heating.
 
-`T1A_REFERENCE_EVIDENCE.json` records:
+### Predeclared T4 acceptance gates
 
-```text
-plasma TRI3 cells                    = 2348
-exact independent FE integral        = 175.81487393245106 W
-MOOSE P_abs                          = 175.81487393245 W
-independent/MOOSE relative mismatch  = 5.9813e-15
+The exact-head CI run must satisfy all of the following:
 
-conservative cell sum                = 175.81487393245106 W
-cell-average closure                 = 0.0
-energy-unit reconstructed power      = 175.81487393245106 W
-energy-unit closure                  = 0.0
+- three refinements over the same `2 us` horizon: `dt = 2 us, 1 us, 0.5 us`;
+- every physical step reaches Picard relative residual `<= 1e-7` in at most
+  `8` iterations;
+- while above the convergence floor, Picard residual contraction ratio remains
+  `< 0.8` without under-relaxation;
+- every iteration keeps Maxwell ↔ deposited RF power relative closure
+  `<= 1e-10`;
+- raw cross-mesh power mismatch remains `< 2%` before conservative scaling;
+- electron-energy density remains finite and strictly positive;
+- the volume-mean energy remains inside the transport lookup range;
+- the medium→fine timestep difference in final mean energy is `< 0.5%` and
+  contracts relative to coarse→medium with ratio `< 0.8`.
 
-centroid-point negative mutation     = 175.1021229861442 W
-centroid relative power defect       = 4.053985e-3
-```
-
-The centroid mutation is intentionally non-conservative and is rejected by
-the oracle. The lossless, reactive-only, and RF-source-off upstream
-counterfactuals all reconstruct zero deposited power.
-
-## Status
-
-```text
-T1A independent conservative oracle     PASS
-T1B production MOOSE source injection   NEXT
-T1 full acceptance                      NOT YET CLAIMED
-T2 spatial transfer                     NOT YET STARTED
-T3+                                     NOT YET STARTED
-```
-
-T1B must use the current dielectric baseline and prove that the actual
-electron-energy RF source integrates back to the Maxwell absorbed power
-without modifying the electrostatic Joule-work path.
+The full spatially varying `n_e`, complex conductivity, oxygen chemistry,
+transport, electrostatic field, walls, and dielectric feedback are explicitly
+**not** claimed by T4. Those enter only after T4/T5, under T6.

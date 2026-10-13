@@ -1,0 +1,122 @@
+name: Issue 376 T4 segregated Maxwell plasma convergence
+
+on:
+  push:
+    branches:
+      - issue376-maxwell-plasma-rf-transfer
+    paths:
+      - '.github/workflows/issue376-t4-once.yml'
+      - 'experiments/Issue376_maxwell_plasma_rf_transfer/run_t4_coupling.py'
+      - 'experiments/Issue376_maxwell_plasma_rf_transfer/t4_target.i'
+      - 'experiments/Issue376_maxwell_plasma_rf_transfer/README.md'
+      - 'experiments/Issue202_maxwell_scalar_fem_m0/rf_power.i'
+      - 'experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt'
+      - 'experiments/fem_fvm_plasma_discriminator/generate_contour_mesh.py'
+      - 'physics_app/**'
+
+permissions:
+  contents: read
+
+jobs:
+  t4-coupled-convergence:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+      CASE: experiments/Issue376_maxwell_plasma_rf_transfer
+      MAXWELL: experiments/Issue202_maxwell_scalar_fem_m0
+      TRANSPORT_TABLE: experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt
+      PLASMA_MESH: experiments/fem_fvm_plasma_discriminator/plasma_contour_l3_4p5mm.msh
+
+    steps:
+      - name: Checkout exact pushed revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Verify exact source revision
+        shell: bash
+        run: test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+
+      - name: Set up deterministic mesh Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install pinned mesh dependencies
+        shell: bash
+        run: python3 -m pip install --disable-pip-version-check --quiet numpy==2.1.2 scipy==1.14.1
+
+      - name: Validate T4 orchestration source
+        shell: bash
+        run: python3 -m py_compile "$CASE/run_t4_coupling.py"
+
+      - name: Generate current accepted contour plasma mesh
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 experiments/fem_fvm_plasma_discriminator/generate_contour_mesh.py | tee "$CASE/t4_mesh.log"
+          test -f "$PLASMA_MESH"
+
+      - name: Pull pinned Physics build environment
+        shell: bash
+        run: docker pull "$BUILD_BASE_REF"
+
+      - name: Build current exact-head Physics application
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm --entrypoint /bin/bash --user 0:0 \
+            --workdir /workspace -v "$GITHUB_WORKSPACE:/workspace" \
+            "$BUILD_BASE_REF" -lc '
+              set -euo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              git config --global --add safe.directory /opt/physics_vendor/moose
+              git config --global --add safe.directory /opt/physics_vendor/crane
+              git config --global --add safe.directory /opt/physics_vendor/squirrel
+              git config --global --add safe.directory /opt/physics_vendor/zapdos
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+              make -C physics_app -j2
+            '
+          test -x physics_app/physics-opt
+
+      - name: Run T4 segregated fixed-point and timestep refinement
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$CASE/results_t4"
+          mkdir -p "$CASE/results_t4"
+          docker run --rm --entrypoint /bin/bash --user 0:0 \
+            --workdir /workspace -v "$GITHUB_WORKSPACE:/workspace" \
+            "$BUILD_BASE_REF" -lc "
+              set -euo pipefail
+              source /environment
+              python3 '$CASE/run_t4_coupling.py' \
+                --physics physics_app/physics-opt \
+                --maxwell '$MAXWELL/rf_power.i' \
+                --target '$CASE/t4_target.i' \
+                --table '$TRANSPORT_TABLE' \
+                --output-dir '$CASE/results_t4' \
+                --analysis '$CASE/results_t4/analysis.json'
+            " 2>&1 | tee "$CASE/results_t4/driver.log"
+
+      - name: Upload T4 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue376-t4-coupled-convergence-evidence
+          path: |
+            experiments/Issue376_maxwell_plasma_rf_transfer/results_t4/**
+            experiments/Issue376_maxwell_plasma_rf_transfer/run_t4_coupling.py
+            experiments/Issue376_maxwell_plasma_rf_transfer/t4_target.i
+            experiments/Issue376_maxwell_plasma_rf_transfer/README.md
+            experiments/Issue202_maxwell_scalar_fem_m0/rf_power.i
+            experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt
+            experiments/fem_fvm_plasma_discriminator/plasma_contour_l3_4p5mm.msh
+          if-no-files-found: warn
+          retention-days: 30
