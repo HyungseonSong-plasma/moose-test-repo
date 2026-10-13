@@ -1,8 +1,8 @@
 {
   "targets": [
     {
-      "branch": "issue3-d0-dielectric-surface-charge",
-      "expected_sha": "855ecac3321b8750ff1a65058b78a1b917fc7a18"
+      "branch": "issue376-maxwell-plasma-rf-transfer",
+      "expected_sha": "b4dda2a2d23175629b4478eb6a5231b3160664cc"
     }
   ]
 }
