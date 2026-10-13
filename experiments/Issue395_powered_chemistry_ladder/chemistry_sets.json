@@ -1,0 +1,104 @@
+{
+  "schema_version": 1,
+  "issue": 395,
+  "name": "powered_oxygen_icp_chemistry_activation_ladder",
+  "upstream": {
+    "powered_rf_issue": 376,
+    "powered_rf_pr": 394,
+    "chemistry_controller_issue": 176,
+    "canonical_contract": "docs/development/2026-09-11_issue192_stage5_s5r_representative_contract.json"
+  },
+  "initial_runtime_scope": ["A0", "A1"],
+  "sets": {
+    "A0": [],
+    "A1": ["EI02", "EI16"],
+    "A2": ["EI02", "EI16", "EI01"],
+    "A3": ["EI02", "EI16", "EI01", "EDETACH_OM"],
+    "A4": ["EI02", "EI16", "EI01", "EDETACH_OM", "EI10"],
+    "A5": [
+      "EI02",
+      "EI16",
+      "EI01",
+      "EDETACH_OM",
+      "EI10",
+      "EI17",
+      "EI19",
+      "EI18_O_TO_OS",
+      "EI20_O_IONIZATION"
+    ],
+    "A6": [
+      "EI02",
+      "EI16",
+      "EI01",
+      "EDETACH_OM",
+      "EI10",
+      "EI17",
+      "EI19",
+      "EI18_O_TO_OS",
+      "EI20_O_IONIZATION",
+      "H01_OP_O2_CHARGE_TRANSFER"
+    ],
+    "A7": [
+      "EI02",
+      "EI16",
+      "EI01",
+      "EDETACH_OM",
+      "EI10",
+      "EI17",
+      "EI19",
+      "EI18_O_TO_OS",
+      "EI20_O_IONIZATION",
+      "H01_OP_O2_CHARGE_TRANSFER",
+      "H02_OM_OP_NEUTRALIZATION",
+      "H03_OM_O2P_TO_3O",
+      "H04_OM_O2P_TO_O_O2"
+    ],
+    "A8": [
+      "EI01",
+      "EI02",
+      "EI10",
+      "EI16",
+      "EI17",
+      "EI19",
+      "EI18_O_TO_OS",
+      "EI20_O_IONIZATION",
+      "EDETACH_OM",
+      "H01_OP_O2_CHARGE_TRANSFER",
+      "H02_OM_OP_NEUTRALIZATION",
+      "H03_OM_O2P_TO_3O",
+      "H04_OM_O2P_TO_O_O2",
+      "H05_OM_O_DETACHMENT"
+    ]
+  },
+  "A1_contract": {
+    "EI02": {
+      "formula": "e + O2 -> e + O2",
+      "role": "elastic electron-heavy energy exchange only",
+      "rate_table": "physics_app/data/electron_impact/o2_elastic.txt",
+      "particle_stoichiometry_change": false,
+      "energy_projection_required": true
+    },
+    "EI16": {
+      "formula": "e + O2 -> 2e + O2+",
+      "role": "primary O2 ionization / sustaining charged-particle source",
+      "rate_table": "physics_app/data/electron_impact/o2_ionization.txt",
+      "net_electron_source_per_event": 1,
+      "energy_loss_eV_per_event": 12.06,
+      "energy_projection_required": true
+    }
+  },
+  "explicitly_blocked": [
+    "e + O2 -> e + O + O",
+    "e + O2 -> e + O + Os"
+  ],
+  "rules": {
+    "monotonic_activation": true,
+    "exactly_one_progress_owner": true,
+    "duplicate_kinetic_reevaluation_forbidden": true,
+    "strict_lookup_bounds": true,
+    "synthetic_rate_data_forbidden": true,
+    "physical_electron_density": "N_A * exp(log_ne)",
+    "physical_mean_energy_eV": "exp(log_energy - log_ne)",
+    "rf_and_electrostatic_heating_owners_separate": true
+  }
+}
