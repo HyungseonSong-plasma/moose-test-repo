@@ -18,15 +18,17 @@ class PhysicsSurfaceChargeState;
  * dynamic face state:
  *   use_surface_charge_state = true
  *   surface_charge_state = <PhysicsSurfaceChargeState>
- *   wall_number_flux = <electron wall flux functor>
+ *   surface_current_density = <signed conventional current functor>
  *
  * In dynamic mode the nonlinear residual uses
  *
  *   sigma_s^(n+1)
  *     = sigma_state^n(face)
- *       - e * Gamma_e,w^(n+1)(face) * dt
+ *       + j_to_surface^(n+1)(face) * dt
  *
  * while PhysicsSurfaceChargeState commits the converged value at TIMESTEP_END.
+ * Positive j_to_surface means positive conventional charge current flows from
+ * subdomain1/plasma into the dielectric surface.
  *
  * One FV potential variable spans both subdomains:
  *
@@ -63,5 +65,5 @@ private:
   const bool _use_surface_charge_state;
 
   const PhysicsSurfaceChargeState * _surface_charge_state;
-  const Moose::Functor<ADReal> * _wall_number_flux;
+  const Moose::Functor<ADReal> * _surface_current_density;
 };

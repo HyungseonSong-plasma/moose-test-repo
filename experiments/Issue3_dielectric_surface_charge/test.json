@@ -1,0 +1,31 @@
+{
+  "validation_schema": 2,
+  "name": "issue3_dielectric_surface_charge_2d_integrated",
+  "type": "canonical",
+  "input": "d6_2d_integrated.i",
+  "checker": "analyze_d6_2d.py",
+  "checker_args": [
+    "d6_2d_integrated_out.csv",
+    "d6_2d_integrated.i"
+  ],
+  "temporal_csv_policy": "include_initial_as_physics",
+  "claim": "Representative 2D plasma-dielectric coupling conserves charged-particle and global charge inventories while finite dielectric SEE drives a lower-dimensional nonlinear surface-charge state that feeds the continuous-FEM Poisson weak form and self-consistently activates ion wall-migration feedback.",
+  "production_mechanisms": [
+    "PhysicsIonWallFluxMaterial",
+    "PhysicsElectronWallFluxMaterial",
+    "PhysicsFVLogMolarDielectricFluxBC",
+    "PhysicsLowerDSurfaceCurrent",
+    "PhysicsADSurfaceChargePoissonBC",
+    "PhysicsFVElectronEnergyWallFluxBC"
+  ],
+  "issue": "#3",
+  "promotion_issue": "#3",
+  "accepted_d6_classification": "D6_2D_DIELECTRIC_INTEGRATED_PASS",
+  "accepted_d6_run_id": 37996887746,
+  "accepted_d6_commit": "0d8d7211cb99c018f62084a95cbf12e0a94626de",
+  "accepted_d6_artifact_id": 11648255176,
+  "accepted_d6_artifact_sha256": "9162eb51e7b494789aac7b8d7774700031f48994a1851c67f5c68850bdd9614d",
+  "accepted_moose_commit": "9f388366",
+  "verification_scope": "2D unit-out-of-plane-depth plasma/dielectric interface with four lower-D surface segments, five implicit-Euler steps, gamma_SEE=0.05 controlled verification coefficient, and ion mobility=1.0 m^2/(V s) controlled feedback coefficient",
+  "temporal_validation_contract": "validation_schema=2; INITIAL row is physical state used explicitly in conservation-ledger checks"
+}

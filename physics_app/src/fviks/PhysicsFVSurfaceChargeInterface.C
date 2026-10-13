@@ -16,7 +16,7 @@ PhysicsFVSurfaceChargeInterface::validParams()
 
   params.addClassDescription(
       "FV electrostatic interface flux with prescribed or restartable "
-      "face-local surface charge.");
+      "face-local dielectric surface charge.");
 
   params.addParam<MaterialPropertyName>(
       "surface_charge",
@@ -28,17 +28,19 @@ PhysicsFVSurfaceChargeInterface::validParams()
   params.addParam<bool>(
       "use_surface_charge_state",
       false,
-      "Use PhysicsSurfaceChargeState plus the current wall-number-flux functor "
-      "to construct the current implicit-Euler surface charge.");
+      "Use PhysicsSurfaceChargeState plus the current signed conventional "
+      "surface-current-density functor to construct the current implicit-Euler "
+      "surface charge.");
 
   params.addParam<UserObjectName>(
       "surface_charge_state",
       "PhysicsSurfaceChargeState that owns converged face-local sigma_s.");
 
   params.addParam<MooseFunctorName>(
-      "wall_number_flux",
-      "Current electron wall number-flux functor [1/(m^2 s)]. Required when "
-      "use_surface_charge_state=true.");
+      "surface_current_density",
+      "Signed conventional charge-current density j_to_surface [A/m^2]. Positive "
+      "means positive charge current flows from subdomain1/plasma into the "
+      "dielectric surface. Required when use_surface_charge_state=true.");
 
   params.addRequiredParam<MooseFunctorName>(
       "coeff1",
@@ -59,7 +61,7 @@ PhysicsFVSurfaceChargeInterface::PhysicsFVSurfaceChargeInterface(
     _surface_charge(getADMaterialProperty<Real>("surface_charge")),
     _use_surface_charge_state(getParam<bool>("use_surface_charge_state")),
     _surface_charge_state(nullptr),
-    _wall_number_flux(nullptr)
+    _surface_current_density(nullptr)
 {
   if (&var1() != &var2())
     paramError(
@@ -75,17 +77,17 @@ PhysicsFVSurfaceChargeInterface::PhysicsFVSurfaceChargeInterface(
           "surface_charge_state is required when "
           "use_surface_charge_state=true.");
 
-    if (!isParamValid("wall_number_flux"))
+    if (!isParamValid("surface_current_density"))
       paramError(
-          "wall_number_flux",
-          "wall_number_flux is required when "
+          "surface_current_density",
+          "surface_current_density is required when "
           "use_surface_charge_state=true.");
 
     _surface_charge_state =
         &getUserObject<PhysicsSurfaceChargeState>("surface_charge_state");
 
-    _wall_number_flux =
-        &getFunctor<ADReal>("wall_number_flux");
+    _surface_current_density =
+        &getFunctor<ADReal>("surface_current_density");
   }
 }
 
@@ -130,17 +132,16 @@ PhysicsFVSurfaceChargeInterface::currentSurfaceCharge() const
     return _surface_charge[_qp];
 
   mooseAssert(
-      _surface_charge_state && _wall_number_flux,
+      _surface_charge_state && _surface_current_density,
       "Dynamic surface-charge mode is missing required dependencies.");
 
   const Real sigma_old =
       _surface_charge_state->surfaceCharge(_face_info->id());
 
-  const ADReal gamma_e_wall =
-      evaluateFaceFunctor(*_wall_number_flux);
+  const ADReal current_density =
+      evaluateFaceFunctor(*_surface_current_density);
 
-  return sigma_old
-         - PHYSICS_CONSTANTS::e * gamma_e_wall * _dt;
+  return sigma_old + current_density * _dt;
 }
 
 std::pair<ADReal, ADReal>

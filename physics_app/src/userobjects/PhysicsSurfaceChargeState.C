@@ -1,6 +1,5 @@
 #include "PhysicsSurfaceChargeState.h"
 
-#include "Physics.h"
 #include "FaceInfo.h"
 
 registerMooseObject("PhysicsApp", PhysicsSurfaceChargeState);
@@ -12,13 +11,13 @@ PhysicsSurfaceChargeState::validParams()
   params += ADFunctorInterface::validParams();
 
   params.addClassDescription(
-      "Stores converged FV face-local surface charge in restartable data and "
-      "updates it from an electron wall-number-flux functor.");
+      "Stores converged face-local dielectric surface charge in restartable data and "
+      "updates it from a signed conventional charge-current-density functor.");
 
   params.addRequiredParam<MooseFunctorName>(
-      "wall_number_flux",
-      "Electron wall number-flux functor [1/(m^2 s)]. Positive means "
-      "electrons leave the plasma.");
+      "surface_current_density",
+      "Signed conventional charge-current density j_to_surface [A/m^2]. Positive "
+      "means positive charge current flows from the plasma into the dielectric surface.");
 
   params.addParam<Real>(
       "initial_surface_charge",
@@ -32,7 +31,7 @@ PhysicsSurfaceChargeState::PhysicsSurfaceChargeState(
     const InputParameters & parameters)
   : SideUserObject(parameters),
     ADFunctorInterface(this),
-    _wall_number_flux(getFunctor<ADReal>("wall_number_flux")),
+    _surface_current_density(getFunctor<ADReal>("surface_current_density")),
     _initial_surface_charge(getParam<Real>("initial_surface_charge")),
     _surface_charge(
         declareRestartableData<std::map<dof_id_type, Real>>("surface_charge")),
@@ -68,7 +67,7 @@ PhysicsSurfaceChargeState::evaluateFaceFunctor(
     mooseError(
         "Functor '",
         functor.functorName(),
-        "' is not defined on either side of FV face ",
+        "' is not defined on either side of face ",
         fi.id(),
         ".");
 
@@ -100,14 +99,16 @@ PhysicsSurfaceChargeState::execute()
 
   for (const FaceInfo * const fi : _face_infos)
   {
-    const ADReal gamma_ad = evaluateFaceFunctor(_wall_number_flux, *fi);
-    const Real gamma = MetaPhysicL::raw_value(gamma_ad);
+    const ADReal current_ad =
+        evaluateFaceFunctor(_surface_current_density, *fi);
+    const Real current_density = MetaPhysicL::raw_value(current_ad);
 
-    // Commit exactly the same implicit-Euler law used by the FV Poisson
-    // interface during the nonlinear solve.
+    // Canonical dielectric-current convention:
+    //
+    //   j_to_surface > 0  => positive charge is deposited on the surface
+    //   d(sigma_s)/dt     = j_to_surface
     const Real sigma_new =
-        surfaceCharge(fi->id())
-        - PHYSICS_CONSTANTS::e * gamma * _dt;
+        surfaceCharge(fi->id()) + current_density * _dt;
 
     _pending_surface_charge[fi->id()] = sigma_new;
     _pending_face_measure[fi->id()] =
@@ -145,7 +146,7 @@ PhysicsSurfaceChargeState::finalize()
     const auto it = _surface_charge.find(id);
     if (it == _surface_charge.end())
       mooseError(
-          "Surface-charge state was not committed for FV face ",
+          "Surface-charge state was not committed for face ",
           id,
           ".");
 
