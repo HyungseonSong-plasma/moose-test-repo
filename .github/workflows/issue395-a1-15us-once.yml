@@ -7,6 +7,8 @@ on:
     paths:
       - '.github/workflows/issue395-a1-15us-once.yml'
       - 'experiments/Issue395_powered_chemistry_ladder/run_a1_15us.py'
+      - 'experiments/Issue395_powered_chemistry_ladder/run_a1_15us_continuous.py'
+      - 'experiments/Issue395_powered_chemistry_ladder/add_a1_continuous_activation.py'
       - 'experiments/Issue395_powered_chemistry_ladder/run_a1_powered.py'
       - 'experiments/Issue395_powered_chemistry_ladder/build_a1_chemistry_overlay.py'
       - 'experiments/Issue395_powered_chemistry_ladder/chemistry_sets.json'
@@ -55,7 +57,7 @@ jobs:
         shell: bash
         run: python3 -m pip install --disable-pip-version-check --quiet numpy==2.1.2 scipy==1.14.1
 
-      - name: Build 100 ns bootstrap and 15 us A1 inputs
+      - name: Build 100 ns calibration and continuous 15 us A1 inputs
         shell: bash
         run: |
           set -euo pipefail
@@ -89,21 +91,6 @@ jobs:
           python3 "$DIEL/promote_cover_15us.py" "$CHEM/a1_15us_full_icp.i" \
             | tee "$CHEM/results_a1_15us/prep/timegrid_15us.log"
 
-          # Build the 100 ns bootstrap from the same TimeSequenceStepper topology.
-          # Only the Executioner end_time differs; the full staged time_sequence remains identical.
-          cp "$CHEM/a1_15us_full_icp.i" "$CHEM/a0_100ns_timeseq.i"
-          python3 - <<'PY'
-          from pathlib import Path
-          p = Path('experiments/Issue395_powered_chemistry_ladder/a0_100ns_timeseq.i')
-          text = p.read_text(encoding='utf-8')
-          old = '  end_time = 1.5e-5\n  [TimeStepper]\n    type = TimeSequenceStepper\n'
-          new = '  end_time = 1.0e-7\n  [TimeStepper]\n    type = TimeSequenceStepper\n'
-          if text.count(old) != 1:
-              raise SystemExit('expected exactly one 15 us TimeSequenceStepper Executioner block')
-          p.write_text(text.replace(old, new, 1), encoding='utf-8')
-          print('ISSUE395_A1_100NS_SAME_TIMESTEPPER_INPUT_PASS')
-          PY
-
           cp physics_app/data/electron_impact/o2_elastic.txt "$CHEM/o2_elastic.txt"
           cp physics_app/data/electron_impact/o2_ionization.txt "$CHEM/o2_ionization.txt"
           python3 "$CHEM/build_a1_chemistry_overlay.py" \
@@ -112,6 +99,9 @@ jobs:
             --ei02-table o2_elastic.txt \
             --ei16-table o2_ionization.txt \
             | tee "$CHEM/results_a1_15us/prep/chemistry_overlay.log"
+          python3 "$CHEM/add_a1_continuous_activation.py" \
+            "$CHEM/a1_chemistry_overlay.i" --start-time 1.05e-7 \
+            | tee "$CHEM/results_a1_15us/prep/continuous_activation.log"
 
           python3 "$T6/build_t6_overlays_v2.py" \
             --table "$TABLE" \
@@ -122,6 +112,8 @@ jobs:
           python3 -m py_compile \
             "$CHEM/run_a1_powered.py" \
             "$CHEM/run_a1_15us.py" \
+            "$CHEM/run_a1_15us_continuous.py" \
+            "$CHEM/add_a1_continuous_activation.py" \
             "$CHEM/build_a1_chemistry_overlay.py"
 
       - name: Pull pinned Physics build image
@@ -151,7 +143,7 @@ jobs:
             '
           test -x physics_app/physics-opt
 
-      - name: Run A1 EI02+EI16 from 100 ns to 15 us
+      - name: Run continuous A1 EI02+EI16 from 0 to 15 us
         shell: bash
         run: |
           set -euo pipefail
@@ -160,9 +152,9 @@ jobs:
             "$BUILD_BASE_REF" -lc "
               set -euo pipefail
               source /environment
-              python3 '$CHEM/run_a1_15us.py' \
+              python3 '$CHEM/run_a1_15us_continuous.py' \
                 --physics physics_app/physics-opt \
-                --plasma-input-100ns '$CHEM/a0_100ns_timeseq.i' \
+                --plasma-input-100ns '$CHEM/a0_full_icp.i' \
                 --plasma-input-15us '$CHEM/a1_15us_full_icp.i' \
                 --rf-plasma-overlay '$CHEM/a1_rf_plasma_overlay.i' \
                 --chemistry-overlay '$CHEM/a1_chemistry_overlay.i' \
@@ -181,12 +173,13 @@ jobs:
           path: |
             experiments/Issue395_powered_chemistry_ladder/results_a1_15us/**
             experiments/Issue395_powered_chemistry_ladder/a0_full_icp.i
-            experiments/Issue395_powered_chemistry_ladder/a0_100ns_timeseq.i
             experiments/Issue395_powered_chemistry_ladder/a1_15us_full_icp.i
             experiments/Issue395_powered_chemistry_ladder/a1_chemistry_overlay.i
             experiments/Issue395_powered_chemistry_ladder/a1_rf_plasma_overlay.i
             experiments/Issue395_powered_chemistry_ladder/a1_maxwell_overlay.i
             experiments/Issue395_powered_chemistry_ladder/run_a1_15us.py
+            experiments/Issue395_powered_chemistry_ladder/run_a1_15us_continuous.py
+            experiments/Issue395_powered_chemistry_ladder/add_a1_continuous_activation.py
             experiments/Issue395_powered_chemistry_ladder/run_a1_powered.py
             experiments/Issue395_powered_chemistry_ladder/build_a1_chemistry_overlay.py
             experiments/Issue395_powered_chemistry_ladder/chemistry_sets.json
