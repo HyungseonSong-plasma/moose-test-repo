@@ -1,0 +1,137 @@
+name: Issue 376 T1B conservative Maxwell plasma RF transfer
+
+on:
+  push:
+    branches:
+      - issue376-maxwell-plasma-rf-transfer
+    paths:
+      - '.github/workflows/issue376-t1b-once.yml'
+      - 'experiments/Issue376_maxwell_plasma_rf_transfer/**'
+
+permissions:
+  contents: read
+
+jobs:
+  t1b-conservative-rf-injection:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      PHYSICS_RUNTIME_REF: ghcr.io/hyungseonsong-plasma/physics-runtime@sha256:cda9f0d09a17aed5fa606e97d1ee5c3450f7280536cec2e5c635402bb07d972c
+      CASE: experiments/Issue376_maxwell_plasma_rf_transfer
+      MAXWELL: experiments/Issue202_maxwell_scalar_fem_m0
+      PLASMA_MESH: experiments/fem_fvm_plasma_discriminator/plasma_contour_l3_4p5mm.msh
+
+    steps:
+      - name: Checkout exact pushed revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Verify exact source revision
+        shell: bash
+        run: test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+
+      - name: Set up deterministic mesh Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install pinned mesh dependencies
+        shell: bash
+        run: python3 -m pip install --disable-pip-version-check --quiet numpy==2.1.2 scipy==1.14.1
+
+      - name: Generate current accepted contour plasma mesh
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 experiments/fem_fvm_plasma_discriminator/generate_contour_mesh.py | tee "$CASE/mesh.log"
+          test -f "$PLASMA_MESH"
+
+      - name: Pull accepted immutable Physics runtime
+        shell: bash
+        run: docker pull "$PHYSICS_RUNTIME_REF"
+
+      - name: Reproduce frozen Issue 202 Maxwell source field
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$CASE/results_t1b"
+          docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" \
+            -i "$MAXWELL/rf_power.i" \
+            Outputs/file_base="$CASE/results_t1b/maxwell" \
+            2>&1 | tee "$CASE/results_t1b/maxwell.log"
+          test -f "$CASE/results_t1b/maxwell.e"
+          test -f "$CASE/results_t1b/maxwell.csv"
+
+      - name: Check T1B target input against real physics-opt
+        shell: bash
+        run: |
+          docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" \
+            --check-input -i "$CASE/t1b_target.i" \
+            2>&1 | tee "$CASE/results_t1b/check_target.log"
+
+      - name: Measure raw cross-mesh RF-power mapping
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" \
+            -i "$CASE/t1b_target.i" source_enable=0 rf_scale=1 \
+            Outputs/file_base="$CASE/results_t1b/raw" \
+            2>&1 | tee "$CASE/results_t1b/raw.log"
+
+      - name: Compute conservative power renormalization
+        id: scale
+        shell: bash
+        run: |
+          set -euo pipefail
+          scale=$(python3 - <<'PY'
+          import csv
+          from pathlib import Path
+          case = Path('experiments/Issue376_maxwell_plasma_rf_transfer/results_t1b')
+          def last(path):
+              with path.open(newline='') as f:
+                  rows=list(csv.DictReader(f))
+              return rows[-1]
+          p_src=float(last(case/'maxwell.csv')['P_abs'])
+          p_raw=float(last(case/'raw.csv')['P_rf_raw_W'])
+          if not (p_src > 0 and p_raw > 0):
+              raise SystemExit('non-positive source/raw power')
+          print(f'{p_src/p_raw:.17g}')
+          PY
+          )
+          echo "rf_scale=$scale" | tee "$CASE/results_t1b/scale.txt"
+          echo "value=$scale" >> "$GITHUB_OUTPUT"
+
+      - name: Run conservative RF source injection into FEM log_energy
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm -v "$PWD:/workspace" -w /workspace "$PHYSICS_RUNTIME_REF" \
+            -i "$CASE/t1b_target.i" source_enable=1 rf_scale="${{ steps.scale.outputs.value }}" \
+            Outputs/file_base="$CASE/results_t1b/scaled" \
+            2>&1 | tee "$CASE/results_t1b/scaled.log"
+
+      - name: Analyze T1B transfer and electron-energy closure
+        shell: bash
+        run: |
+          python3 "$CASE/analyze_t1b.py" \
+            --maxwell "$CASE/results_t1b/maxwell.csv" \
+            --raw "$CASE/results_t1b/raw.csv" \
+            --scaled "$CASE/results_t1b/scaled.csv" \
+            --mesh "$PLASMA_MESH" \
+            --input "$CASE/t1b_target.i" \
+            --scale "${{ steps.scale.outputs.value }}" \
+            --output "$CASE/results_t1b/analysis.json" \
+            | tee "$CASE/results_t1b/analyzer.log"
+
+      - name: Upload T1B evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue376-t1b-conservative-rf-injection
+          path: |
+            experiments/Issue376_maxwell_plasma_rf_transfer/results_t1b/**
+            experiments/Issue376_maxwell_plasma_rf_transfer/t1b_target.i
+            experiments/fem_fvm_plasma_discriminator/plasma_contour_l3_4p5mm.msh
+          if-no-files-found: warn
+          retention-days: 30
