@@ -150,7 +150,19 @@ jobs:
             --output "$CASE/results_t1b/analysis.json" \
             | tee "$CASE/results_t1b/analyzer.log"
 
-      - name: Upload T1B evidence
+      - name: Analyze T2 independent spatial transfer
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 "$CASE/analyze_t2_spatial.py" \
+            --source "$CASE/results_t1b/maxwell.e" \
+            --target "$CASE/results_t1b/raw.e" \
+            --maxwell-csv "$CASE/results_t1b/maxwell.csv" \
+            --raw-csv "$CASE/results_t1b/raw.csv" \
+            --output "$CASE/results_t1b/t2_spatial_analysis.json" \
+            | tee "$CASE/results_t1b/t2_spatial_analyzer.log"
+
+      - name: Upload T1/T2 evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
