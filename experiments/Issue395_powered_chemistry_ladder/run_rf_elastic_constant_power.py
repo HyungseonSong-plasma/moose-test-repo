@@ -105,7 +105,9 @@ def main():
 
         common = [physics, "-i", pin, rfov, elasticov]
         init = out / "initial" / "plasma"
-        base.run(common + [f"maxwell_solution_file_t6={seed_e}", "source_enable_t6=0", "rf_scale_t6=1", "Executioner/num_steps=0", "Executioner/end_time=0", f"Outputs/file_base={init}"], out / "initial" / "run.log")
+        # Keep the positive TimeSequenceStepper sequence intact; num_steps=0
+        # requests only the t=0 state without creating a zero initial dt.
+        base.run(common + [f"maxwell_solution_file_t6={seed_e}", "source_enable_t6=0", "rf_scale_t6=1", "Executioner/num_steps=0", f"Outputs/file_base={init}"], out / "initial" / "run.log")
         current_state = init.with_suffix(".e")
         if not current_state.is_file():
             raise RuntimeError("t=0 state missing")
@@ -148,9 +150,11 @@ def main():
                 restore(pbase, snap)
             else:
                 for f in (pe, pcsv):
-                    if f.exists(): f.unlink()
+                    if f.exists():
+                        f.unlink()
                 cp = Path(str(pbase) + "_cp")
-                if cp.exists(): shutil.rmtree(cp)
+                if cp.exists():
+                    shutil.rmtree(cp)
 
             cmd = list(common) + [f"maxwell_solution_file_t6={mt_e}", "source_enable_t6=1", "rf_scale_t6=1", f"Executioner/end_time={target:.17g}", f"Outputs/file_base={pbase}"]
             if i > 1:
@@ -165,7 +169,7 @@ def main():
             row = {
                 "step": i,
                 "time_s": target,
-                "dt_s": target - times[i-1],
+                "dt_s": target - times[i - 1],
                 "plasma_absorbed_RF_W": prf,
                 "power_relative_error": perr,
                 "source_scale": scale,
@@ -251,6 +255,7 @@ def main():
         analysis.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
         print(json.dumps(report, indent=2, sort_keys=True))
         raise
+
 
 if __name__ == "__main__":
     raise SystemExit(main())
