@@ -1,0 +1,171 @@
+name: Issue 395 RF-only 100 to 110 ns discriminator
+
+on:
+  push:
+    branches:
+      - issue395-rf-only-110ns
+    paths:
+      - '.github/workflows/issue395-rf-only-110ns-once.yml'
+      - 'experiments/Issue395_powered_chemistry_ladder/run_rf_only_110ns.py'
+      - 'experiments/Issue395_powered_chemistry_ladder/run_a1_powered.py'
+      - 'experiments/Issue376_maxwell_plasma_rf_transfer/build_t6_overlays.py'
+      - 'experiments/Issue376_maxwell_plasma_rf_transfer/build_t6_overlays_v2.py'
+      - 'experiments/Issue376_maxwell_plasma_rf_transfer/run_t6_representative_icp.py'
+      - 'experiments/Issue376_maxwell_plasma_rf_transfer/run_t6_representative_icp_v2.py'
+      - 'experiments/Issue3_dielectric_surface_charge/**'
+      - 'experiments/Issue202_maxwell_scalar_fem_m0/**'
+      - 'experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt'
+      - 'experiments/fem_fvm_plasma_discriminator/generate_contour_mesh.py'
+      - 'physics_app/**'
+
+permissions:
+  contents: read
+
+jobs:
+  rf-only-110ns:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    env:
+      BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+      CHEM: experiments/Issue395_powered_chemistry_ladder
+      T6: experiments/Issue376_maxwell_plasma_rf_transfer
+      DIEL: experiments/Issue3_dielectric_surface_charge
+      BASE: experiments/fem_fvm_plasma_discriminator
+      MAXWELL: experiments/Issue202_maxwell_scalar_fem_m0
+      TABLE: experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt
+
+    steps:
+      - name: Checkout exact pushed revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Verify exact source revision
+        shell: bash
+        run: test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install host preparation dependencies
+        shell: bash
+        run: python3 -m pip install --disable-pip-version-check --quiet numpy==2.1.2 scipy==1.14.1
+
+      - name: Build 100 ns calibration and RF-only 110 ns inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$CHEM/results_rf_only_110ns"
+          mkdir -p "$CHEM/results_rf_only_110ns/prep"
+
+          python3 "$BASE/generate_contour_mesh.py" > "$CHEM/results_rf_only_110ns/prep/mesh_plasma.log" 2>&1
+          python3 "$DIEL/extend_cover_mesh.py" \
+            "$BASE/plasma_contour_l3_4p5mm.msh" "$DIEL/baseline_cover_fine_source.msh" \
+            > "$CHEM/results_rf_only_110ns/prep/mesh_cover.log" 2>&1
+          python3 "$DIEL/build_unstructured_cover_wafer_mesh.py" \
+            "$DIEL/baseline_cover_fine_source.msh" "$DIEL/baseline_plasma_plus_unstructured_cover_plus_wafer.msh" \
+            > "$CHEM/results_rf_only_110ns/prep/mesh_cover_wafer.log" 2>&1
+          python3 "$DIEL/add_focus_ring_block.py" \
+            "$DIEL/baseline_plasma_plus_unstructured_cover_plus_wafer.msh" "$DIEL/baseline_plasma_plus_unstructured_cover_plus_wafer.msh" \
+            > "$CHEM/results_rf_only_110ns/prep/mesh_focus.log" 2>&1
+          python3 "$DIEL/add_vacuum_coils_block.py" \
+            "$DIEL/baseline_plasma_plus_unstructured_cover_plus_wafer.msh" "$DIEL/baseline_plasma_plus_unstructured_cover_plus_wafer.msh" \
+            > "$CHEM/results_rf_only_110ns/prep/mesh_vacuum.log" 2>&1
+
+          cp "$DIEL/baseline_plasma_plus_unstructured_cover_plus_wafer.msh" \
+             "$CHEM/baseline_plasma_plus_unstructured_cover_plus_wafer.msh"
+          python3 "$DIEL/prepare_baseline_cover_pilot.py" "$CHEM/a0_full_icp.i" > "$CHEM/results_rf_only_110ns/prep/materialize.log" 2>&1
+          python3 "$DIEL/finalize_baseline_cover_pilot.py" "$CHEM/a0_full_icp.i" > "$CHEM/results_rf_only_110ns/prep/finalize.log" 2>&1
+          python3 "$DIEL/promote_cover_wafer_15us.py" "$CHEM/a0_full_icp.i" > "$CHEM/results_rf_only_110ns/prep/wafer.log" 2>&1
+          python3 "$DIEL/promote_focus_ring_15us.py" "$CHEM/a0_full_icp.i" > "$CHEM/results_rf_only_110ns/prep/focus.log" 2>&1
+          python3 "$DIEL/promote_vacuum_coils_15us.py" "$CHEM/a0_full_icp.i" > "$CHEM/results_rf_only_110ns/prep/vacuum.log" 2>&1
+
+          cp "$CHEM/a0_full_icp.i" "$CHEM/rf_only_15us_grid.i"
+          python3 "$DIEL/promote_cover_15us.py" "$CHEM/rf_only_15us_grid.i" \
+            | tee "$CHEM/results_rf_only_110ns/prep/timegrid.log"
+
+          python3 "$T6/build_t6_overlays_v2.py" \
+            --table "$TABLE" \
+            --maxwell-overlay "$CHEM/rf_only_maxwell_overlay.i" \
+            --plasma-overlay "$CHEM/rf_only_plasma_overlay.i" \
+            | tee "$CHEM/results_rf_only_110ns/prep/rf_overlays.log"
+
+          cat > "$CHEM/rf_only_control_overlay.i" <<'EOF'
+          [Controls]
+            [rf_only_activation]
+              type = TimePeriod
+              enable_objects = 'Kernel::rf_heating_t6'
+              start_time = 1.05e-7
+              execute_on = 'INITIAL TIMESTEP_BEGIN'
+            []
+          []
+          EOF
+
+          python3 -m py_compile "$CHEM/run_rf_only_110ns.py" "$CHEM/run_a1_powered.py"
+
+      - name: Pull pinned Physics build image
+        shell: bash
+        run: docker pull "$BUILD_BASE_REF"
+
+      - name: Build exact-head Physics application
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm --entrypoint /bin/bash --user 0:0 \
+            --workdir /workspace -v "$GITHUB_WORKSPACE:/workspace" \
+            "$BUILD_BASE_REF" -lc '
+              set -euo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              git config --global --add safe.directory /opt/physics_vendor/moose
+              git config --global --add safe.directory /opt/physics_vendor/crane
+              git config --global --add safe.directory /opt/physics_vendor/squirrel
+              git config --global --add safe.directory /opt/physics_vendor/zapdos
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+              make -C physics_app -j2
+            '
+          test -x physics_app/physics-opt
+
+      - name: Run RF-only 100 to 110 ns discriminator
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm --entrypoint /bin/bash --user 0:0 \
+            --workdir /workspace -v "$GITHUB_WORKSPACE:/workspace" \
+            "$BUILD_BASE_REF" -lc "
+              set -euo pipefail
+              source /environment
+              python3 '$CHEM/run_rf_only_110ns.py' \
+                --physics physics_app/physics-opt \
+                --plasma-input-100ns '$CHEM/a0_full_icp.i' \
+                --plasma-input-15us '$CHEM/rf_only_15us_grid.i' \
+                --rf-plasma-overlay '$CHEM/rf_only_plasma_overlay.i' \
+                --rf-only-control-overlay '$CHEM/rf_only_control_overlay.i' \
+                --maxwell-input '$MAXWELL/rf_power.i' \
+                --maxwell-overlay '$CHEM/rf_only_maxwell_overlay.i' \
+                --transport-table '$TABLE' \
+                --output-dir '$CHEM/results_rf_only_110ns/run' \
+                --analysis '$CHEM/results_rf_only_110ns/analysis.json'
+            " 2>&1 | tee "$CHEM/results_rf_only_110ns/driver.log"
+
+      - name: Upload RF-only evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue395-rf-only-110ns-evidence
+          path: |
+            experiments/Issue395_powered_chemistry_ladder/results_rf_only_110ns/**
+            experiments/Issue395_powered_chemistry_ladder/a0_full_icp.i
+            experiments/Issue395_powered_chemistry_ladder/rf_only_15us_grid.i
+            experiments/Issue395_powered_chemistry_ladder/rf_only_plasma_overlay.i
+            experiments/Issue395_powered_chemistry_ladder/rf_only_maxwell_overlay.i
+            experiments/Issue395_powered_chemistry_ladder/rf_only_control_overlay.i
+            experiments/Issue395_powered_chemistry_ladder/run_rf_only_110ns.py
+          if-no-files-found: warn
+          retention-days: 30
