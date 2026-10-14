@@ -100,6 +100,7 @@ def build_parent(x: list[float], mu_n: list[float], child_path: str, target_w: f
   [maxwell_t6]
     type = FullSolveMultiApp
     input_files = '{child_path}'
+    cli_args = 'Outputs/exodus=false Outputs/csv=false'
     execute_on = TIMESTEP_BEGIN
     no_restore = true
   []
@@ -243,11 +244,6 @@ def build_child(x: list[float], mu_n: list[float]) -> str:
   [coil3_current]
     postprocessor = rf_drive_scale_child
   []
-[]
-
-[Outputs]
-  exodus = false
-  csv = false
 []
 """
     text += child_patch
