@@ -4,10 +4,13 @@
 Parent: transient plasma + EI02 elastic.
 Child: fresh FullSolveMultiApp frequency-domain Maxwell solve at each TIMESTEP_BEGIN.
 No external probe, rollback, checkpoint/recover, or per-step process restart is used.
+RF starts at half of the validated 1000 W calibration (coil amplitude scaled by sqrt(0.5));
+accepted-step PID feedback then drives the parent plasma absorbed power toward 1000 W.
 """
 from __future__ import annotations
 
 import argparse
+import math
 import sys
 from pathlib import Path
 
@@ -16,7 +19,9 @@ T6 = ROOT / "experiments" / "Issue376_maxwell_plasma_rf_transfer"
 sys.path.insert(0, str(T6))
 import build_t6_overlays_v2 as v2  # noqa: E402
 
-INITIAL_DRIVE = 7.49559809637885
+BASELINE_1000W_DRIVE = 7.49559809637885
+SOFT_START_POWER_FRACTION = 0.5
+INITIAL_DRIVE = BASELINE_1000W_DRIVE * math.sqrt(SOFT_START_POWER_FRACTION)
 
 
 def remove_top_section(text: str, header: str) -> str:
@@ -172,7 +177,7 @@ def build_parent(x: list[float], mu_n: list[float], child_path: str, target_w: f
 [Controls]
   [rf_drive_pid_t6]
     type = PIDTransientControl
-    postprocessor = P_abs_maxwell_t6
+    postprocessor = P_rf_raw_W_t6
     target = {target_w:.17g}
     parameter_pp = rf_drive_scale_t6
     K_integral = 0
@@ -191,7 +196,7 @@ def build_parent(x: list[float], mu_n: list[float], child_path: str, target_w: f
     for token in forbidden:
         if token in text:
             raise RuntimeError(f"external-file coupling remains in parent: {token}")
-    for token in ("FullSolveMultiApp", "P_abs_from_maxwell_t6", "rf_drive_pid_t6"):
+    for token in ("FullSolveMultiApp", "P_abs_from_maxwell_t6", "rf_drive_pid_t6", "postprocessor = P_rf_raw_W_t6"):
         if token not in text:
             raise RuntimeError(f"parent MultiApp coupling missing {token}")
     return text
@@ -282,6 +287,7 @@ def main() -> None:
     print(
         "ISSUE395_RF_MULTIAPP_BUILD_PASS "
         f"target_W={a.target_w:.9g} Kp={a.kp:.9g} initial_drive={INITIAL_DRIVE:.15g} "
+        f"soft_start_power_fraction={SOFT_START_POWER_FRACTION:.9g} feedback_sensor=P_rf_raw_W_t6 "
         "parent=transient_plasma child=FullSolveMultiApp_Maxwell "
         "probe=false rollback=false recover=false external_solution_file=false"
     )
