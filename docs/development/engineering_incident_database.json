@@ -1,0 +1,202 @@
+{
+  "schema_version": "1.0",
+  "purpose": "Canonical machine-readable registry of recurring engineering failures and validated remediation patterns. Intended for Samuel/bootstrap retrieval before modifying MOOSE workflows, drivers, MultiApps, Controls, Transfers, restart/recover logic, or RF coupling.",
+  "record_types": [
+    "engineering_incident",
+    "physics_observation"
+  ],
+  "lookup_policy": {
+    "before_change": [
+      "match component",
+      "match error_signature",
+      "match execution_stage",
+      "review anti_pattern and prevention"
+    ],
+    "after_failure": [
+      "append or update incident",
+      "link exact head SHA and workflow run",
+      "record whether failure occurred at build, check-input, runtime, or science gate",
+      "do not promote a workaround to validated_fix until an exact-head run verifies it"
+    ],
+    "separation_rule": "Engineering failures and physics observations must remain distinct. Static/check-input evidence must never be promoted to runtime science evidence."
+  },
+  "required_fields": [
+    "id",
+    "record_type",
+    "issue",
+    "component",
+    "execution_stage",
+    "symptom",
+    "root_cause",
+    "resolution",
+    "prevention",
+    "status",
+    "evidence"
+  ],
+  "records": [
+    {
+      "id": "INC-395-001",
+      "record_type": "engineering_incident",
+      "issue": 395,
+      "component": "MOOSE TimeSequenceStepper initialization",
+      "execution_stage": "runtime_initialization",
+      "symptom": "Time stepper computed zero time step size on initial which is not allowed.",
+      "error_signature": "zero time step size on initial",
+      "root_cause": "Driver requested Executioner/num_steps=0 together with Executioner/end_time=0, collapsing the initial timestep to zero.",
+      "resolution": "Keep num_steps=0 for t=0 materialization but do not override end_time to zero; preserve the positive TimeSequenceStepper sequence.",
+      "anti_pattern": "Forcing end_time=0 to request an initial-only state when a TimeSequenceStepper is active.",
+      "prevention": "For initial-only MOOSE state generation, use num_steps=0 without creating a zero initial dt.",
+      "status": "validated_fix",
+      "evidence": {
+        "failed_run": 38547024003,
+        "fix_commit": "835198d51b5623ffe5b0016b57a9a167791c58be"
+      }
+    },
+    {
+      "id": "INC-395-002",
+      "record_type": "engineering_incident",
+      "issue": 395,
+      "component": "PID RF overlay wiring",
+      "execution_stage": "runtime_initialization",
+      "symptom": "unused parameter 'rf_scale_t6'",
+      "error_signature": "unused parameter 'rf_scale_t6'",
+      "root_cause": "PID overlay replaced the legacy scalar rf_scale_t6 with Receiver rf_pid_scale_t6, but the reused driver still passed rf_scale_t6 on the command line.",
+      "resolution": "Remove the legacy rf_scale_t6 declaration and filter all PID-run CLI overrides for rf_scale_t6; use only the Receiver-controlled path.",
+      "anti_pattern": "Leaving stale CLI overrides after replacing a scalar parameter with a MOOSE Receiver/Control path.",
+      "prevention": "When a control path is renamed or replaced, grep generated inputs and driver CLI arguments for the obsolete token before launching runtime.",
+      "status": "validated_fix",
+      "evidence": {
+        "fix_commit": "fb31709b44db6a1162628dd87588b93543934c7b"
+      }
+    },
+    {
+      "id": "INC-395-003",
+      "record_type": "engineering_incident",
+      "issue": 395,
+      "component": "per-timestep process restart",
+      "execution_stage": "runtime_transient",
+      "symptom": "TimeSequenceStepper recovery state produced a negative/invalid timestep while advancing to the next coupling step.",
+      "error_signature": "Negative time step detected",
+      "root_cause": "The plasma transient was repeatedly terminated and relaunched with --recover every 1 ns. TimeSequenceStepper/restart state was not robust under this process-per-timestep orchestration.",
+      "resolution": "Replace external process-per-timestep restart orchestration with one continuous parent transient execution.",
+      "anti_pattern": "Using --recover as the normal coupling mechanism between every accepted plasma timestep.",
+      "prevention": "Use MOOSE-native in-process coupling for repeated sub-solves; reserve recover for actual restart/recovery, not normal operator splitting cadence.",
+      "status": "design_rule",
+      "evidence": {
+        "affected_runs": [38552621103, 38554832592]
+      }
+    },
+    {
+      "id": "INC-395-004",
+      "record_type": "engineering_incident",
+      "issue": 395,
+      "component": "RF power control orchestration",
+      "execution_stage": "runtime_transient",
+      "symptom": "Controller architecture required RF-off probes, checkpoint snapshots, rollback and throw-away plasma steps, increasing complexity and causing restart interactions.",
+      "error_signature": "probe/rollback coupling complexity",
+      "root_cause": "Power regulation was implemented externally by repeated probe runs instead of using lagged accepted-step feedback inside the simulation orchestration.",
+      "resolution": "No trial/reject loop. Use accepted-step feedback: one Maxwell solve and one production plasma step per cadence, with next-step correction.",
+      "anti_pattern": "Adding probe, rollback or throw-away production steps unless a science contract explicitly requires an iterative nonlinear coupling solve.",
+      "prevention": "Default to forward-only accepted trajectories and MOOSE Controls for feedback.",
+      "status": "design_rule",
+      "evidence": {
+        "user_constraint": "small power error acceptable; positive error must cause a negative correction; avoid unnecessary probes"
+      }
+    },
+    {
+      "id": "INC-395-005",
+      "record_type": "engineering_incident",
+      "issue": 395,
+      "component": "Maxwell MultiApp child input merge",
+      "execution_stage": "check_input",
+      "symptom": "parameter 'Outputs/exodus' supplied multiple times; parameter 'Outputs/csv' supplied multiple times",
+      "error_signature": "parameter 'Outputs/exodus' supplied multiple times",
+      "root_cause": "The Maxwell base input rf_power.i already defined Outputs/exodus and Outputs/csv, while the child overlay defined the same parameters again.",
+      "resolution": "Do not redefine the base [Outputs] parameters in the child overlay. If child output suppression is needed, pass the override through the MultiApp child CLI argument path.",
+      "anti_pattern": "Repeating scalar parameters in included MOOSE input fragments where the base input already owns them.",
+      "prevention": "Before appending an overlay block, inspect included base inputs for ownership of singleton/scalar parameters such as Outputs, Executioner and Mesh settings.",
+      "status": "validated_fix",
+      "evidence": {
+        "failed_run": 38558179681,
+        "failed_head": "328c184ad5a1c1d02ccf7f51c01f4717f8456fb0",
+        "fix_commit": "5de7c254e4121d3e8781f92797d4696b4da40003"
+      }
+    },
+    {
+      "id": "INC-395-006",
+      "record_type": "engineering_incident",
+      "issue": 395,
+      "component": "FullSolveMultiApp cli_args",
+      "execution_stage": "check_input",
+      "symptom": "MultiApps/maxwell_t6/cli_args: The number of items supplied must be 1 or equal to the number of sub apps.",
+      "error_signature": "The number of items supplied must be 1 or equal to the number of sub apps",
+      "root_cause": "Two child overrides were space-separated inside cli_args, so MOOSE parsed them as multiple cli_args items for a single sub-app.",
+      "resolution": "Encode multiple overrides for one sub-app as one semicolon-separated cli_args item: Outputs/exodus=false;Outputs/csv=false.",
+      "anti_pattern": "Using whitespace-separated key=value pairs as separate cli_args entries for one child app.",
+      "prevention": "For a single MultiApp child with multiple CLI overrides, keep one cli_args item and separate internal overrides with semicolons.",
+      "status": "fix_committed_pending_runtime_validation",
+      "evidence": {
+        "failed_run": 38558917790,
+        "failed_head": "5de7c254e4121d3e8781f92797d4696b4da40003",
+        "fix_commit": "20c2614cad381301d0bf593cfec64b45dde38bda"
+      }
+    },
+    {
+      "id": "INC-395-007",
+      "record_type": "engineering_incident",
+      "issue": 395,
+      "component": "absorbed RF power control",
+      "execution_stage": "science_gate",
+      "symptom": "Fixed coil drive produced plasma absorbed power drift from about 1207 W to about 1535 W instead of maintaining 1000 W.",
+      "error_signature": "fixed drive != constant absorbed power",
+      "root_cause": "The RF drive was calibrated once against a prior plasma state and then held fixed while conductivity evolved. Absorbed power therefore changed with the plasma state.",
+      "resolution": "Control absorbed power itself. Use lagged feedback on the physical Maxwell drive: if P_abs > target, decrease next drive; if P_abs < target, increase it. Do not claim constant-power operation from one-time coil calibration.",
+      "anti_pattern": "Equating fixed coil/source amplitude with fixed plasma absorbed RF power.",
+      "prevention": "Every constant-power claim must report the measured plasma/Maxwell absorbed power at each accepted coupling step and the control action applied to the next step.",
+      "status": "validated_diagnosis",
+      "evidence": {
+        "failed_run": 38536907384,
+        "head": "5316f4b8f462f8828149a55e635de6a3f3250fa3",
+        "first_reported_power_W": 1207.3806676298,
+        "final_power_W": 1534.7214246368
+      }
+    },
+    {
+      "id": "OBS-395-001",
+      "record_type": "physics_observation",
+      "issue": 395,
+      "component": "EI02 O2 elastic electron-energy loss",
+      "execution_stage": "runtime_transient",
+      "symptom": "Pure elastic loss was extremely small relative to 1000 W RF heating during the first 2 ns.",
+      "root_cause": "Electron-to-O2 elastic energy transfer per collision is mass-ratio limited; the implemented delta-epsilon was approximately 1e-4 to 2.5e-4 eV per event.",
+      "resolution": "Treat EI02 elastic as one loss channel only; do not expect it to regulate the full electron-energy balance. Add other source-backed channels incrementally and verify provenance before activation.",
+      "prevention": "Do not interpret a numerically active elastic collision rate as a large electron-energy sink without converting the integrated energy source to watts.",
+      "status": "bounded_observation_requires_formula_provenance_check",
+      "evidence": {
+        "elastic_loss_W_step1_approx": -0.015459,
+        "elastic_loss_W_step2_approx": -0.016297,
+        "rf_target_W": 1000.0,
+        "mean_energy_max_eV_at_2ns": 7.302484203451638
+      }
+    },
+    {
+      "id": "OBS-395-002",
+      "record_type": "physics_observation",
+      "issue": 395,
+      "component": "O2 dissociation-only powered chemistry",
+      "execution_stage": "science_gate",
+      "symptom": "RF + O2 dissociation from t=0 reached 110 ns but final mean energy exceeded the qualified transport-table range, with max about 96.94 eV.",
+      "root_cause": "Dissociation loss alone was too small to balance RF heating, while the fixed drive also allowed absorbed RF power to rise. The run therefore mixed an incomplete loss model with non-constant absorbed power.",
+      "resolution": "Do not use this run as a constant-1000-W chemistry result. Separate power-control validation from chemistry-loss adequacy and activate additional source-backed channels incrementally.",
+      "prevention": "At every chemistry activation step, gate both transport-table validity and absorbed-power semantics before interpreting the plasma state scientifically.",
+      "status": "validated_observation",
+      "evidence": {
+        "run": 38536907384,
+        "head": "5316f4b8f462f8828149a55e635de6a3f3250fa3",
+        "final_mean_energy_max_eV": 96.9410196545502,
+        "qualified_transport_upper_eV": 22.1378,
+        "final_absorbed_RF_W": 1534.7214246368
+      }
+    }
+  ]
+}
