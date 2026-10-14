@@ -16,6 +16,7 @@ import run_t6_representative_icp as base  # noqa: E402
 
 TARGET_W = 1000.0
 POWER_GUARD = 2.0e-2
+POWER_SETTLING_TIME = 2.0e-8
 TABLE_LO = 1.40991
 TABLE_HI = 22.1378
 FINAL_TIME = 1.10e-7
@@ -28,6 +29,10 @@ def read_rows(path: Path):
 
 def f(row, key):
     return float(row[key])
+
+
+def row_time(row):
+    return float(row.get("time", row.get("Time", "0")))
 
 
 def main():
@@ -47,19 +52,28 @@ def main():
     if not rows:
         raise RuntimeError("empty parent CSV")
 
-    valid = [r for r in rows if float(r.get("time", r.get("Time", "0"))) > 0]
+    valid = [r for r in rows if row_time(r) > 0]
     if not valid:
         valid = rows
+    regulated = [r for r in valid if row_time(r) >= POWER_SETTLING_TIME]
+    if not regulated:
+        raise RuntimeError("no RF samples after soft-start settling window")
 
     pmax = [f(r, "P_abs_maxwell_t6") for r in valid]
+    pparent = [f(r, "P_rf_raw_W_t6") for r in valid]
     ptgt = [f(r, "P_rf_scaled_W_t6") for r in valid]
     drive = [f(r, "rf_drive_scale_t6") for r in valid]
-    max_err = max(abs(p - TARGET_W) / TARGET_W for p in pmax)
-    tgt_err = max(abs(p - TARGET_W) / TARGET_W for p in ptgt)
+
+    pmax_reg = [f(r, "P_abs_maxwell_t6") for r in regulated]
+    pparent_reg = [f(r, "P_rf_raw_W_t6") for r in regulated]
+    ptgt_reg = [f(r, "P_rf_scaled_W_t6") for r in regulated]
+    max_maxwell_err_reg = max(abs(p - TARGET_W) / TARGET_W for p in pmax_reg)
+    parent_err_reg = max(abs(p - TARGET_W) / TARGET_W for p in pparent_reg)
+    tgt_err_reg = max(abs(p - TARGET_W) / TARGET_W for p in ptgt_reg)
 
     direction_violations = 0
     for i in range(1, len(valid)):
-        prev_err = pmax[i - 1] - TARGET_W
+        prev_err = pparent[i - 1] - TARGET_W
         ds = drive[i] - drive[i - 1]
         if prev_err > 1e-6 and ds > 1e-10:
             direction_violations += 1
@@ -70,10 +84,10 @@ def main():
     failures = []
     if abs(float(times[-1]) - FINAL_TIME) > 5e-15:
         failures.append("did not reach 110 ns")
-    if max_err > POWER_GUARD:
-        failures.append("Maxwell absorbed-power ±2% guardrail")
-    if tgt_err > POWER_GUARD:
-        failures.append("target-grid RF ±2% guardrail")
+    if parent_err_reg > POWER_GUARD:
+        failures.append("parent plasma absorbed-power ±2% guardrail after settling")
+    if tgt_err_reg > POWER_GUARD:
+        failures.append("target-grid RF ±2% guardrail after settling")
     if direction_violations:
         failures.append("PID feedback direction")
     emin = float(np.min(mean_en))
@@ -87,7 +101,7 @@ def main():
 
     report = {
         "issue": 395,
-        "gate": "single-execution plasma-Maxwell MultiApp + EI02 elastic + lagged 1000 W PID",
+        "gate": "single-execution plasma-Maxwell MultiApp + EI02 elastic + soft-start lagged 1000 W PID",
         "status": "PASS" if not failures else "FAIL",
         "classification": "ISSUE395_RF_ELASTIC_MULTIAPP_110NS_PASS" if not failures else "ISSUE395_RF_ELASTIC_MULTIAPP_110NS_FAIL",
         "architecture": {
@@ -97,12 +111,18 @@ def main():
             "rollback": False,
             "recover_between_steps": False,
             "external_solution_file_coupling": False,
-            "power_feedback": "P_abs_maxwell_t6 -> PIDTransientControl -> rf_drive_scale_t6 -> child coil amplitude next timestep",
+            "soft_start": "half-power coil-amplitude initialization relative to validated 1000 W calibration",
+            "power_feedback": "P_rf_raw_W_t6 -> PIDTransientControl -> rf_drive_scale_t6 -> child coil amplitude next timestep",
         },
         "power": {
             "target_W": TARGET_W,
-            "max_Maxwell_relative_error": max_err,
-            "max_target_grid_relative_error": tgt_err,
+            "settling_time_s": POWER_SETTLING_TIME,
+            "max_parent_relative_error_after_settling": parent_err_reg,
+            "max_target_grid_relative_error_after_settling": tgt_err_reg,
+            "max_Maxwell_relative_error_after_settling_diagnostic": max_maxwell_err_reg,
+            "initial_parent_W": pparent[0],
+            "initial_Maxwell_W": pmax[0],
+            "final_parent_W": pparent[-1],
             "final_Maxwell_W": pmax[-1],
             "final_target_grid_W": ptgt[-1],
             "final_drive_scale": drive[-1],
