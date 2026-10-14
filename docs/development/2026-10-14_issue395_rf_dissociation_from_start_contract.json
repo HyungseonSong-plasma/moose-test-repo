@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "issue": 395,
+  "work_package": "RF_ON_O2_DISSOCIATION_FROM_INITIAL_STATE",
+  "production_trajectory": {
+    "start_time_s": 0.0,
+    "target_end_time_s": 1.1e-7,
+    "restart_or_recover": false,
+    "rf_heating_activation": "INITIAL",
+    "dissociation_activation": "INITIAL",
+    "reference_rf_source_scale": 7.49559809637885,
+    "reference_rf_deposition_scale": 0.9997443712965226,
+    "reference_rf_evidence_run": 38527872213
+  },
+  "dissociation": {
+    "reaction": "e + O2 -> e + O + O",
+    "rate_owner": "ADParsedFunctorMaterial:R_diss_O2",
+    "rate_particle_m3_per_s": "1.41e-15 * Te_eV^0.22 * exp(-12.62/Te_eV)",
+    "temperature_mapping": "Te_eV=(2/3)*mean_en_solved_eV",
+    "progress_mol_m3_s": "R_diss_O2 = k_particle * n_e_physical * c_O2",
+    "historical_csv_used": false,
+    "electron_particle_source": 0,
+    "electron_energy_loss_eV_per_event": 12.62,
+    "electron_energy_source_eV_mol_m3_s": "-12.62*R_diss_O2",
+    "atomic_O_mass_source_kg_m3_s": "+0.032*R_diss_O2",
+    "O2_mass_source": "implicit -0.032*R_diss_O2 through existing Q-1 w_O2_constraint",
+    "net_heavy_mass_source": 0
+  },
+  "reference_map_policy": {
+    "description": "A separate chemistry-free 100 ns trajectory may be used only to regenerate the previously accepted fixed Maxwell field map.",
+    "forbidden_use": "The 100 ns state/checkpoint must not initialize or recover the production RF+dissociation trajectory."
+  },
+  "acceptance": [
+    "exact-head physics-opt build succeeds",
+    "fresh production path contains no --recover",
+    "RF source is enabled from INITIAL",
+    "R_diss_O2 is positive from the first reported state",
+    "dissociation electron-energy projection is negative",
+    "atomic-O source is positive",
+    "implicit O2 plus explicit O heavy-mass source closes",
+    "plasma state remains finite and positive",
+    "trajectory reaches 110 ns"
+  ],
+  "claim_boundary": "A successful run is a bounded 0-to-110 ns RF+dissociation integration result, not long-time powered oxygen ICP validation."
+}
