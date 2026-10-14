@@ -1,0 +1,49 @@
+name: Issue 395 O2 dissociation readiness
+
+on:
+  push:
+    branches:
+      - issue395-o2-dissociation-readiness
+    paths:
+      - 'docs/development/2026-10-14_issue395_o2_dissociation_readiness_contract.json'
+      - 'experiments/Issue395_powered_chemistry_ladder/historical_provenance/O2_dissociation.csv'
+      - 'experiments/Issue395_powered_chemistry_ladder/check_o2_dissociation_readiness.py'
+      - '.github/workflows/issue395-o2-dissociation-readiness.yml'
+  workflow_dispatch:
+
+jobs:
+  readiness:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact pushed revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+
+      - name: Verify exact source revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Verify O2 dissociation static readiness
+        shell: bash
+        run: |
+          set -euo pipefail
+          python experiments/Issue395_powered_chemistry_ladder/check_o2_dissociation_readiness.py \
+            --table experiments/Issue395_powered_chemistry_ladder/historical_provenance/O2_dissociation.csv \
+            --contract docs/development/2026-10-14_issue395_o2_dissociation_readiness_contract.json \
+            --report issue395_o2_dissociation_readiness_report.json
+
+      - name: Upload readiness evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue395-o2-dissociation-readiness
+          path: issue395_o2_dissociation_readiness_report.json
+          if-no-files-found: error

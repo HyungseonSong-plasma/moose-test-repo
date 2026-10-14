@@ -1,0 +1,97 @@
+{
+  "alternative_historical_model": {
+    "disposition": "REFERENCE_ONLY_DO_NOT_BLEND_WITH_CSV",
+    "formula": "1.41e-9 * Te^0.22 * exp(-12.62/Te)",
+    "recorded_reaction": "e + O2 -> O + O + e"
+  },
+  "baseline_sha": "f17a95206d2402e0b66891f2566e85e734ffe8a3",
+  "claim_boundary": {
+    "does_not_establish": [
+      "rate-table scientific provenance beyond the recovered historical QPX artifact",
+      "final sub-threshold floor disposition",
+      "final electron-energy-loss value",
+      "production activation",
+      "runtime acceptance"
+    ],
+    "establishes": [
+      "exact-byte recovery of a historical O2 dissociation rate table",
+      "particle-to-molar unit conversion contract",
+      "single-progress stoichiometric projection contract",
+      "explicit readiness blockers before production activation"
+    ]
+  },
+  "energy_contract": {
+    "candidate_basis": "ground-state O2 bond dissociation threshold",
+    "candidate_loss_eV_per_event": 5.12,
+    "channel_identity_required": "O2 ground-state dissociation to O + O, distinct from O + O(1D)",
+    "freeze_requirement": "confirm the recovered rate table represents the ground-state O + O channel and attach an explicit source reference before production activation",
+    "status": "CANDIDATE_NOT_FROZEN"
+  },
+  "historical_rate_candidate": {
+    "coordinate": "mean electron energy [eV]",
+    "energy_range_eV": [
+      0.1,
+      50.0
+    ],
+    "floor_disposition": "UNRESOLVED_DO_NOT_SILENTLY_PROMOTE",
+    "floor_observed_through_eV": 5.1,
+    "historical_subthreshold_floor_m3_s": 1e-20,
+    "path": "experiments/Issue395_powered_chemistry_ladder/historical_provenance/O2_dissociation.csv",
+    "raw_rate_unit": "m^3/s",
+    "row_count": 16,
+    "sha256": "bcd0cc004ea8657c5b77d684065acfad4fce02a497efbc0e231d7d3cf3727568",
+    "source_path_recorded_in_audit": "/home/songhyeongseon/projects/qvt3d/qpx/examples/O2_channel_flow_noElectrostatic/cross_sections/O2_dissociation.csv"
+  },
+  "issue": 395,
+  "next_runtime_after_readiness": "RF-OFF dissociation-only discriminator before RF+dissociation coupling",
+  "projection_contract": {
+    "constrained_O2_response": "implicit through w_O2_constraint; no independent O2 solved source",
+    "downstream_kinetic_reevaluation_forbidden": true,
+    "electron_energy_projector": "standard MOOSE source projection",
+    "electron_energy_source": "-E_diss*R_diss_O2 [eV mol/(m^3 s)]",
+    "electron_particle_source": "NONE",
+    "heavy_species_projector": "PhysicsFVSpeciesReactionSource",
+    "mixture_heavy_mass_source": "0",
+    "progress_owner": "PhysicsElectronImpactRateMaterial",
+    "progress_symbol": "R_diss_O2",
+    "solved_O_mass_source": "+2*M_O*R_diss_O2 = +0.032*R_diss_O2 [kg/(m^3 s)]"
+  },
+  "reaction": {
+    "charge_change_per_event": 0.0,
+    "electron_stoich": 0,
+    "formula": "e + O2 -> e + O + O",
+    "heavy_mass_change_kg_per_mol_progress": 0.0,
+    "heavy_stoich_molar": {
+      "O": 2.0,
+      "O2": -1.0
+    },
+    "id": "EI_DISS_O2_TO_2O_CANDIDATE",
+    "oxygen_atom_change_per_event": 0.0
+  },
+  "readiness_gates": [
+    "exact historical SHA256 match",
+    "strictly increasing mean-energy grid",
+    "nonnegative finite raw rates",
+    "explicit raw m^3/s to molar m^3/(mol s) conversion",
+    "heavy-mass closure exactly zero",
+    "oxygen-nuclei closure exactly zero",
+    "charge closure exactly zero",
+    "electron particle stoichiometry exactly zero",
+    "sub-threshold floor disposition frozen",
+    "electron-energy-loss identity/value frozen",
+    "no duplicate progress owner",
+    "production lookup bounds remain strict"
+  ],
+  "schema_version": 1,
+  "status": "PROVENANCE_RECOVERED_NOT_PRODUCTION_ADMITTED",
+  "unit_contract": {
+    "O2_concentration": "c_O2 [mol/m^3]",
+    "avogadro_mol_inv": 6.02214076e+23,
+    "canonical_progress": "R_diss_O2 = k_mol * (n_e_physical/N_A) * c_O2 [mol/(m^3 s)]",
+    "conversion": "k_mol = N_A * k_particle",
+    "electron_density_for_kinetics": "n_e_physical = N_A * exp(log_ne) [1/m^3]",
+    "equivalent_progress": "R_diss_O2 = k_particle * n_e_physical * c_O2 [mol/(m^3 s)]",
+    "production_rate_coefficient_unit": "m^3/(mol s)"
+  },
+  "work_package": "O2_DISSOCIATION_READINESS"
+}
