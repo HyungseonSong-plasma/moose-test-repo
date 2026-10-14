@@ -1,0 +1,112 @@
+{
+  "schema_version": 2,
+  "issue": 395,
+  "work_package": "O2_DISSOCIATION_SOURCE_RESOLUTION",
+  "status": "SOURCE_MODEL_FROZEN_NOT_PRODUCTION_ADMITTED",
+  "historical_rate_artifact": {
+    "repository_path": "experiments/Issue395_powered_chemistry_ladder/historical_provenance/O2_dissociation.csv",
+    "recovered_from": "/home/songhyeongseon/projects/qvt3d/qpx/examples/O2_channel_flow_noElectrostatic/cross_sections/O2_dissociation.csv",
+    "sha256": "bcd0cc004ea8657c5b77d684065acfad4fce02a497efbc0e231d7d3cf3727568",
+    "coordinate": "mean_energy_eV",
+    "raw_rate_units": "m^3/s",
+    "scientific_source_status": "NO_DIRECT_SOURCE_ESTABLISHED",
+    "disposition": "HISTORICAL_PROVENANCE_ONLY_DO_NOT_USE_FOR_PRODUCTION",
+    "source_policy": "Do not attach Murakami 2013, Brisset 2023, Cosby 1993, or another literature citation to this recovered CSV without exact provenance evidence.",
+    "floor_signature": {
+      "value_m3_per_s": 1e-20,
+      "through_mean_energy_eV": 5.1,
+      "disposition": "HISTORICAL_NUMERICAL_SENTINEL_PROVENANCE_ONLY",
+      "production_semantics": "No physical threshold or low-energy rate is inferred from this floor; preserve exact bytes for provenance only."
+    }
+  },
+  "source_backed_replacement_candidate": {
+    "reaction": "e + O2 -> 2O + e",
+    "rate_coefficient_particle_m3_per_s": "1.41e-15 * Te_eV^0.22 * exp(-12.62/Te_eV)",
+    "equivalent_cm3_per_s": "1.41e-9 * Te_eV^0.22 * exp(-12.62/Te_eV)",
+    "temperature_coordinate": "Te_eV",
+    "canonical_temperature_mapping": "Te_eV=(2/3)*mean_en_solved_eV",
+    "mapping_precedent": "docs/development/2026-09-10_issue176_stage5_s5c_edetach_contract.json",
+    "domain_policy": "Evaluate only finite Te_eV > 0; no artificial rate floor or clamp.",
+    "primary_attribution": {
+      "authors": "T. Murakami, K. Niemi, T. Gans, D. O'Connell, W. G. Graham",
+      "title": "Interacting kinetics of neutral and ionic species in an atmospheric-pressure helium-oxygen plasma with humid air impurities",
+      "journal": "Plasma Sources Science and Technology",
+      "volume": 22,
+      "year": 2013,
+      "article": "045010",
+      "doi": "10.1088/0963-0252/22/4/045010"
+    },
+    "independent_reaction_set_verification": {
+      "source": "Brisset et al., Plasma Sources Sci. Technol. 32 (2023) 065004",
+      "doi": "10.1088/1361-6595/acd57f",
+      "reaction_id": "R44",
+      "reaction": "e + O2 -> 2O + e",
+      "rate_coefficient_m3_per_s": "1.41e-15 * Te^0.22 * exp(-12.62/Te)",
+      "energy_cost_eV": 12.62,
+      "reference_number": 65
+    },
+    "relationship_to_historical_csv": "REPLACEMENT_CANDIDATE_NOT_A_SOURCE_IDENTIFICATION_FOR_THE_CSV"
+  },
+  "channel_and_energy_resolution": {
+    "historical_csv_fragment_channel": "NOT_PROVABLE_FROM_RECOVERED_ARTIFACT",
+    "thermochemical_ground_state_threshold": {
+      "reaction_limit": "O2(X) -> O(3P) + O(3P)",
+      "dissociation_energy_cm^-1": 41260,
+      "dissociation_energy_uncertainty_cm^-1": 15,
+      "dissociation_energy_eV_approx": 5.1156,
+      "role": "THERMOCHEMICAL_THRESHOLD_ONLY_NOT_MODEL_ENERGY_COST",
+      "source": "NIST molecular oxygen spectroscopy"
+    },
+    "state_resolution_caveat": {
+      "O_1D_level_cm^-1": 15867.862,
+      "O_1D_level_eV_approx": 1.9674,
+      "mixed_O3P_O1D_limit_eV_approx": 7.0830,
+      "electron_impact_evidence": "Cosby 1993 reports both O(1D)+O(3P) and O(3P)+O(3P) fragment channels.",
+      "doi": "10.1063/1.464387"
+    },
+    "source_backed_lumped_model": {
+      "product_semantics": "2O maps to the existing lumped solved O species; this contract does not claim state-resolved fragment provenance.",
+      "effective_electron_energy_cost_eV_per_event": 12.62,
+      "energy_cost_status": "FROZEN_FOR_BOUNDED_IMPLEMENTATION",
+      "five_point_12_eV_disposition": "THERMOCHEMICAL_THRESHOLD_ONLY_NOT_ELECTRON_ENERGY_LOSS_FOR_THIS_MODEL"
+    }
+  },
+  "implementation_contract": {
+    "reaction_id": "EI_DISS_O2_TO_2O_SOURCE_BACKED",
+    "canonical_progress": "R_diss_O2",
+    "planned_progress_owner": "PhysicsElectronImpactRateMaterial",
+    "owner_rate_policy": "The canonical owner must evaluate the source-backed analytic rate; it must not interpolate the historical CSV.",
+    "progress_formula_particle_basis": "R_diss_O2 = k_particle(Te_eV) * n_e_physical * c_O2",
+    "progress_units": "mol/(m^3 s)",
+    "particle_to_molar_identity": "k_particle*n_e*c_O2 == (N_A*k_particle)*c_e*c_O2 with n_e=N_A*c_e",
+    "downstream_heavy_projection": "PhysicsFVSpeciesReactionSource",
+    "stoichiometry_per_event": {"O2": -1, "O": 2, "electron_particle": 0},
+    "electron_energy_projection": "-12.62 * N_A * R_diss_O2 [eV/(m^3 s)]",
+    "closures": {"heavy_mass": 0, "oxygen_nuclei": 0, "charge": 0},
+    "ownership_rule": "Exactly one rate/progress owner; heavy and electron-energy sources consume that same progress."
+  },
+  "resolved_items": {
+    "1_scientific_source": "Historical CSV remains uncited/provenance-only; source-backed production candidate is the Murakami-law reaction independently tabulated as Brisset R44.",
+    "2_low_energy_floor": "Historical 1e-20 m^3/s through 5.1 eV is a provenance-only numerical sentinel and is not promoted into the analytic model.",
+    "3_channel_and_energy": "Historical CSV cannot prove fragment state. 5.12 eV is retained only as a ground-state thermochemical threshold; the source-backed lumped model uses 12.62 eV/event."
+  },
+  "readiness_gates": [
+    "historical CSV excluded from production source truth",
+    "historical floor classified provenance-only",
+    "source-backed analytic rate and attribution frozen",
+    "canonical Te mapping frozen",
+    "12.62 eV model energy cost frozen",
+    "5.12 eV distinguished from model energy cost",
+    "mass/oxygen/charge stoichiometry closes",
+    "single progress owner contract frozen",
+    "no artificial rate floor or clamp"
+  ],
+  "next_obligation": "Implement the source-backed analytic dissociation-only owner on a bounded RF-OFF surface, pass exact-head static/construction checks, then run the RF-OFF dissociation-only runtime discriminator before any RF+dissociation coupling.",
+  "claim_boundary": [
+    "This contract resolves source/floor/channel-energy ambiguity sufficiently for a bounded implementation candidate.",
+    "It does not identify a scientific source for the historical CSV.",
+    "It does not establish a state-resolved electron-impact cross section.",
+    "It does not establish general applicability of the Murakami/Brisset Te-law to the powered oxygen ICP regime.",
+    "It does not establish production admission, physics-opt runtime PASS, RF coupling PASS, or long-time validation."
+  ]
+}
