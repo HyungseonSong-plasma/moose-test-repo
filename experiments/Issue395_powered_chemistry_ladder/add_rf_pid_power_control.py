@@ -36,6 +36,17 @@ def main() -> None:
 
     text = a.overlay.read_text(encoding="utf-8")
 
+    # The standard T6 overlay defines a scalar rf_scale_t6 root parameter.  The
+    # PID overlay replaces that path completely with a Receiver postprocessor;
+    # keeping the legacy root parameter would make strict MOOSE input checking
+    # reject it as unused.
+    text = replace_once(
+        text,
+        "rf_scale_t6 = 1.0\n",
+        "",
+        "obsolete scalar RF scale parameter",
+    )
+
     old_scaled = """  [q_rf_scaled_t6]\n    type = ParsedMaterial\n    property_name = q_rf_scaled_t6\n    coupled_variables = 'E_real_rf_t6 E_imag_rf_t6'\n    material_property_names = 'sigma_real_rf_t6'\n    constant_names = 'scale'\n    constant_expressions = '${rf_scale_t6}'\n    expression = 'scale*0.5*sigma_real_rf_t6*(E_real_rf_t6^2 + E_imag_rf_t6^2)'\n    block = plasma\n  []\n"""
     new_scaled = """  [q_rf_scaled_t6]\n    type = ParsedMaterial\n    property_name = q_rf_scaled_t6\n    coupled_variables = 'E_real_rf_t6 E_imag_rf_t6'\n    material_property_names = 'sigma_real_rf_t6'\n    postprocessor_names = 'rf_pid_scale_t6'\n    expression = 'rf_pid_scale_t6*0.5*sigma_real_rf_t6*(E_real_rf_t6^2 + E_imag_rf_t6^2)'\n    block = plasma\n  []\n"""
     text = replace_once(text, old_scaled, new_scaled, "scaled RF material")
@@ -60,13 +71,16 @@ def main() -> None:
     for token in required:
         if token not in text:
             raise RuntimeError(f"PID patch missing token: {token}")
+    if "rf_scale_t6" in text:
+        raise RuntimeError("obsolete rf_scale_t6 path remains in PID overlay")
 
     a.overlay.write_text(text, encoding="utf-8")
     print(
         "ISSUE395_RF_PID_OVERLAY_PATCH_PASS "
         f"target_W={a.target_w:.9g} Kp={a.kp:.9g} "
         f"bounds=[{a.minimum_scale:.9g},{a.maximum_scale:.9g}] "
-        "mode=accepted_timestep_lagged_feedback trial_repeat=false"
+        "mode=accepted_timestep_lagged_feedback trial_repeat=false "
+        "legacy_rf_scale_removed=true"
     )
 
 

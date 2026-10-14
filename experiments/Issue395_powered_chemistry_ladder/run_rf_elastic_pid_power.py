@@ -13,6 +13,24 @@ import run_rf_elastic_constant_power as driver
 # 2% guardrail still catches loss of control.
 driver.POWER_GATE = 2.0e-2
 
+# The legacy constant-power driver still appends rf_scale_t6=... CLI overrides.
+# The PID overlay removes that scalar parameter entirely and uses the
+# rf_pid_scale_t6 Receiver instead, so filter the obsolete CLI path only for
+# this PID wrapper.  The original constant-power workflow remains unchanged.
+_original_base_run = driver.base.run
+
+
+def _pid_base_run(cmd, log_path):
+    filtered = [
+        arg
+        for arg in cmd
+        if not (isinstance(arg, str) and arg.startswith("rf_scale_t6="))
+    ]
+    return _original_base_run(filtered, log_path)
+
+
+driver.base.run = _pid_base_run
+
 
 def analysis_path_from_argv() -> Path | None:
     try:
@@ -39,6 +57,7 @@ def main() -> int:
                 "hard_relative_power_guardrail": driver.POWER_GATE,
                 "error_definition": "P_absorbed - 1000 W",
                 "feedback_sign": "positive power error decreases next-step RF multiplier",
+                "legacy_rf_scale_cli_filtered": True,
             }
         )
         path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
