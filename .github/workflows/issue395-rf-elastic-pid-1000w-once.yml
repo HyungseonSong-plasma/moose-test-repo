@@ -106,7 +106,7 @@ jobs:
 
           grep -q 'type = FullSolveMultiApp' "$CHEM/rf_elastic_multiapp_parent_overlay.i"
           grep -q 'type = MultiAppGeneralFieldShapeEvaluationTransfer' "$CHEM/rf_elastic_multiapp_parent_overlay.i"
-          grep -q 'postprocessor = P_abs_maxwell_t6' "$CHEM/rf_elastic_multiapp_parent_overlay.i"
+          grep -q 'postprocessor = P_rf_raw_W_t6' "$CHEM/rf_elastic_multiapp_parent_overlay.i"
           grep -q 'postprocessor = rf_drive_scale_child' "$CHEM/rf_elastic_multiapp_maxwell_overlay.i"
           ! grep -q 'SolutionUserObject\|maxwell_solution_file_t6' "$CHEM/rf_elastic_multiapp_parent_overlay.i"
           ! grep -q 'SolutionUserObject\|plasma_solution_file_t6' "$CHEM/rf_elastic_multiapp_maxwell_overlay.i"
