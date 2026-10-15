@@ -1,4 +1,4 @@
-name: Issue 395 electron sheath factor 25 ns 10 us
+name: Issue 395 outlet grounded reactive 25 ns 10 us
 
 on:
   push:
@@ -6,14 +6,13 @@ on:
       - issue395-electron-sheath-factor-25ns
     paths:
       - '.github/workflows/issue395-electron-sheath-factor-25ns-10us-once.yml'
-      - 'physics_app/src/bcs/PhysicsFEMLogMolarElectronSheathFactorBC.C'
-      - 'experiments/Issue395_powered_chemistry_ladder/enable_electron_sheath_factor.py'
+      - 'experiments/Issue395_powered_chemistry_ladder/enable_outlet_grounded_surface_reactions.py'
 
 permissions:
   contents: read
 
 jobs:
-  electron-sheath-factor-25ns-10us:
+  outlet-grounded-reactive-25ns-10us:
     runs-on: ubuntu-24.04
     timeout-minutes: 360
     env:
@@ -22,8 +21,8 @@ jobs:
       DIEL: experiments/Issue3_dielectric_surface_charge
       BASE: experiments/fem_fvm_plasma_discriminator
       TABLE: experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt
-      RESULT: experiments/Issue395_powered_chemistry_ladder/results_electron_sheath_factor_25ns_10us
-      INPUT: experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_electron_sheath_factor_25ns_10us.i
+      RESULT: experiments/Issue395_powered_chemistry_ladder/results_outlet_grounded_reactive_25ns_10us
+      INPUT: experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_outlet_grounded_reactive_25ns_10us.i
 
     steps:
       - name: Checkout exact pushed revision
@@ -44,7 +43,7 @@ jobs:
         shell: bash
         run: python3 -m pip install --disable-pip-version-check --quiet numpy==2.1.2 scipy==1.14.1
 
-      - name: Build fresh outlet-open 25 ns input with electron sheath factor
+      - name: Build grounded reactive outlet 25 ns input
         shell: bash
         run: |
           set -euo pipefail
@@ -73,15 +72,12 @@ jobs:
           python3 "$DIEL/promote_focus_ring_15us.py" "$CHEM/a0_full_icp.i" > "$RESULT/prep/focus.log" 2>&1
           python3 "$DIEL/promote_vacuum_coils_15us.py" "$CHEM/a0_full_icp.i" > "$RESULT/prep/vacuum.log" 2>&1
 
-          python3 "$CHEM/set_outlet_poisson_neumann.py" "$CHEM/a0_full_icp.i" \
-            | tee "$RESULT/prep/outlet_open.log"
-
           cp "$CHEM/a0_full_icp.i" "$INPUT"
           python3 "$DIEL/promote_cover_15us.py" "$INPUT" | tee "$RESULT/prep/original_timegrid.log"
           python3 "$CHEM/set_timegrid_10us.py" "$INPUT" --dt-ns 25 \
             | tee "$RESULT/prep/timegrid_10us.log"
-          python3 "$CHEM/enable_electron_sheath_factor.py" "$INPUT" \
-            | tee "$RESULT/prep/electron_sheath_factor.log"
+          python3 "$CHEM/enable_outlet_grounded_surface_reactions.py" "$INPUT" \
+            | tee "$RESULT/prep/outlet_grounded_reactive.log"
 
           python3 "$CHEM/build_rf_multiapp_coupling_100w.py" \
             --table "$TABLE" \
@@ -109,20 +105,20 @@ jobs:
             | tee "$RESULT/prep/ionization_overlay.log"
 
           python3 -m py_compile \
-            "$CHEM/set_outlet_poisson_neumann.py" \
             "$CHEM/set_timegrid_10us.py" \
-            "$CHEM/enable_electron_sheath_factor.py" \
+            "$CHEM/enable_outlet_grounded_surface_reactions.py" \
             "$CHEM/build_rf_multiapp_coupling_100w.py" \
             "$CHEM/build_o2_dissociation_overlay.py" \
             "$CHEM/build_o2_ionization_overlay.py"
 
-          grep -q 'ISSUE395_OUTLET_CHARGED_NATURAL_BC_PASS' "$RESULT/prep/outlet_open.log"
+          grep -q 'ISSUE395_OUTLET_GROUNDED_REACTIVE_PASS' "$RESULT/prep/outlet_grounded_reactive.log"
           grep -q 'ISSUE395_TIMEGRID_10US_PASS' "$RESULT/prep/timegrid_10us.log"
           grep -q 'main_1_to_10us_dt_ns=25' "$RESULT/prep/timegrid_10us.log"
-          grep -q 'ISSUE395_ELECTRON_SHEATH_FACTOR_PASS' "$RESULT/prep/electron_sheath_factor.log"
-          grep -q 'sheath_factor=0.010378507280576906' "$RESULT/prep/electron_sheath_factor.log"
-          grep -q 'PhysicsFEMLogMolarElectronSheathFactorBC' "$INPUT"
-          grep -q 'PhysicsFEMLogMolarElectronEnergySheathFactorBC' "$INPUT"
+          grep -q 'PhysicsFEMLogMolarElectronNoSheathSuppressionBC' "$INPUT"
+          grep -q 'PhysicsFEMLogMolarElectronEnergyNoSheathSuppressionBC' "$INPUT"
+          ! grep -q 'PhysicsFEMLogMolarElectronSheathFactorBC' "$INPUT"
+          ! grep -q 'PhysicsFEMLogMolarElectronEnergySheathFactorBC' "$INPUT"
+          ! grep -q 'sheath_factor[[:space:]]*=' "$INPUT"
           grep -q 'end_time = 1e-5' "$INPUT"
           grep -q 'type = FullSolveMultiApp' "$CHEM/rf_elastic_diss_ion_multiapp_parent_100w_15us_overlay.i"
           grep -q 'target = 100' "$CHEM/rf_elastic_diss_ion_multiapp_parent_100w_15us_overlay.i"
@@ -157,7 +153,7 @@ jobs:
             '
           test -x physics_app/physics-opt
 
-      - name: Check sheath-factor input
+      - name: Check grounded reactive outlet input
         shell: bash
         run: |
           set -euo pipefail
@@ -174,7 +170,7 @@ jobs:
                 '$CHEM/o2_ionization_100w_15us_overlay.i'
             " 2>&1 | tee "$RESULT/check_input.log"
 
-      - name: Run sheath-factor 25 ns case to 10 us
+      - name: Run grounded reactive outlet 25 ns case to 10 us
         shell: bash
         run: |
           set -euo pipefail
@@ -192,14 +188,14 @@ jobs:
                 Outputs/file_base='$RESULT/run/plasma'
             " 2>&1 | tee "$RESULT/runtime.log"
 
-      - name: Upload sheath-factor evidence
+      - name: Upload grounded reactive outlet evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: issue395-electron-sheath-factor-25ns-10us-evidence
+          name: issue395-outlet-grounded-reactive-25ns-10us-evidence
           path: |
-            experiments/Issue395_powered_chemistry_ladder/results_electron_sheath_factor_25ns_10us/**
-            experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_electron_sheath_factor_25ns_10us.i
+            experiments/Issue395_powered_chemistry_ladder/results_outlet_grounded_reactive_25ns_10us/**
+            experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_outlet_grounded_reactive_25ns_10us.i
             experiments/Issue395_powered_chemistry_ladder/a0_full_icp.i
             experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_multiapp_parent_100w_15us_overlay.i
             experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_multiapp_maxwell_100w_15us_overlay.i
@@ -207,9 +203,7 @@ jobs:
             experiments/Issue395_powered_chemistry_ladder/o2_elastic_pid_100w_15us_overlay.i
             experiments/Issue395_powered_chemistry_ladder/o2_dissociation_100w_15us_overlay.i
             experiments/Issue395_powered_chemistry_ladder/o2_ionization_100w_15us_overlay.i
-            experiments/Issue395_powered_chemistry_ladder/set_outlet_poisson_neumann.py
             experiments/Issue395_powered_chemistry_ladder/set_timegrid_10us.py
-            experiments/Issue395_powered_chemistry_ladder/enable_electron_sheath_factor.py
-            physics_app/src/bcs/PhysicsFEMLogMolarElectronSheathFactorBC.C
+            experiments/Issue395_powered_chemistry_ladder/enable_outlet_grounded_surface_reactions.py
           if-no-files-found: warn
           retention-days: 30
