@@ -78,12 +78,7 @@ def transform(text: str) -> tuple[str, list[tuple[str, str, str, str]]]:
         body = match.group("body")
         variable = block_variable(body)
 
-        # Potential: remove outlet only from Dirichlet grounding.
         target = is_potential_dirichlet(body)
-
-        # Ions: remove outlet from every explicit BC acting on the ion state.
-        # In the current generated input these are the three FVFunctorNeumannBC
-        # wall-flux owners for O2+, O-, and O+.
         if variable in ION_VARIABLES and BOUNDARY_RE.search(body):
             target = True
 
@@ -148,6 +143,7 @@ def main() -> None:
 
     print("ISSUE395_OUTLET_POISSON_NEUMANN_PASS")
     print("ISSUE395_OUTLET_CHARGED_NATURAL_BC_PASS")
+    print("ISSUE395_OUTLET_CHARGED_OPEN_PASS")
     print("outlet potential: natural homogeneous Neumann (no explicit potential BC)")
     print("outlet electron density: no explicit BC (already true in baseline)")
     print("outlet electron energy: no explicit BC (already true in baseline)")
