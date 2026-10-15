@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Workflow trigger: outlet-open gate alignment.
 """Set the Issue #395 transient time grid to end at 10 us.
 
 The 0--1 us startup grid is kept unchanged in structure:
@@ -33,11 +34,8 @@ def build_times_ns(dt_ns: int) -> list[int]:
     if 9000 % dt_ns != 0:
         raise ValueError("dt_ns must exactly divide the 1--10 us interval (9000 ns)")
 
-    # 0--0.1 us: 1 ns
     times = list(range(0, 101, 1))
-    # 0.1--1 us: 10 ns; 100 ns already present
     times.extend(range(110, 1001, 10))
-    # 1--10 us: requested discriminator step; 1000 ns already present
     times.extend(range(1000 + dt_ns, 10001, dt_ns))
 
     if times[0] != 0 or times[-1] != 10000:
@@ -96,7 +94,6 @@ def verify(text: str, dt_ns: int, expected_steps: int) -> None:
     if abs(vals[-1] - 1.0e-5) > 1.0e-16:
         raise RuntimeError(f"serialized final time is {vals[-1]}, expected 1e-5")
 
-    # Spot-check the three intended spacings.
     def nearest_index(value: float) -> int:
         return min(range(len(vals)), key=lambda i: abs(vals[i] - value))
 
