@@ -10,16 +10,18 @@ PhysicsFVElectronEnergyJouleHeating::validParams()
   auto params = FVElementalKernel::validParams();
 
   params.addClassDescription(
-      "Applies local electron-flux electric work -E.Gamma_e. physical_eV mode "
-      "returns eV/(m^3 s); normalized mode preserves the historical scaled equation.");
+      "Applies local electron-flux electric work -E.Gamma_e. physical_eV and molar_eV "
+      "modes return the unscaled conservative source; normalized mode preserves the "
+      "historical scaled equation.");
 
   params.addParam<MooseEnum>(
       "state_form",
-      MooseEnum("normalized physical_eV", "normalized"),
+      MooseEnum("normalized physical_eV molar_eV", "normalized"),
       "Electron-energy state convention.");
 
   params.addRequiredParam<MooseFunctorName>(
-      "electron_density", "Electron density; use [1/m^3] for state_form=physical_eV.");
+      "electron_density",
+      "Electron density; use [1/m^3] for physical_eV or [mol/m^3] for molar_eV.");
   params.addRequiredParam<MooseFunctorName>(
       "potential", "Electrostatic potential phi [V], with E = -grad(phi).");
   params.addRequiredParam<MooseFunctorName>(
@@ -36,7 +38,7 @@ PhysicsFVElectronEnergyJouleHeating::validParams()
 PhysicsFVElectronEnergyJouleHeating::PhysicsFVElectronEnergyJouleHeating(
     const InputParameters & parameters)
   : FVElementalKernel(parameters),
-    _physical_state(getParam<MooseEnum>("state_form") == "physical_eV"),
+    _physical_state(getParam<MooseEnum>("state_form") != "normalized"),
     _electron_density(getFunctor<ADReal>("electron_density")),
     _potential(getFunctor<ADReal>("potential")),
     _mobility(getFunctor<ADReal>("mobility")),
