@@ -57,9 +57,13 @@ def inject(path: Path) -> None:
     see_bcs = f"""[BCs]\n  [secondary_electron_particle_source]\n    type = PhysicsFEMLogMolarDielectricFluxBC\n    variable = log_ne\n    signed_number_flux = see_signed_particle_flux\n    boundary = '{SOLID_BOUNDARIES}'\n  []\n  [secondary_electron_energy_source]\n    type = PhysicsFEMLogMolarDielectricFluxBC\n    variable = log_energy\n    signed_number_flux = see_signed_energy_flux_eV\n    boundary = '{SOLID_BOUNDARIES}'\n  []\n  [electron_sheath]\n"""
     text = replace_once(text, bcs_anchor, see_bcs, "BC section anchor")
 
-    pp_anchor = """[Postprocessors]\n"""
-    see_pp = f"""[Postprocessors]\n  [see_number_flux_integral]\n    type = ADSideIntegralFunctorPostprocessor\n    boundary = '{SOLID_BOUNDARIES}'\n    functor = see_number_flux\n    functor_argument = face\n    execute_on = 'INITIAL TIMESTEP_END'\n  []\n  [see_particle_source_integral]\n    type = ADSideIntegralFunctorPostprocessor\n    boundary = '{SOLID_BOUNDARIES}'\n    functor = see_signed_particle_flux\n    functor_argument = face\n    execute_on = 'INITIAL TIMESTEP_END'\n  []\n"""
-    text = replace_once(text, pp_anchor, see_pp, "postprocessor section anchor")
+    # Do not add generic ADSideIntegralFunctorPostprocessors for SEE here.
+    # Internal plasma|dielectric sidesets are carried on both adjacent blocks, while
+    # SEE functors intentionally exist only on the plasma block. The SEE BC itself
+    # is block-safe (PhysicsFEMLogMolarDielectricFluxBC skips non-plasma invocations),
+    # but a generic side-integral PP performs whole-sideset functor coverage checks
+    # and would reject the dielectric-side copy. Diagnose SEE from the shared ion-wall
+    # fluxes / dedicated surface-current ledgers instead of duplicating ownership.
 
     required = (
         "property_name = see_number_flux",
@@ -68,7 +72,6 @@ def inject(path: Path) -> None:
         "signed_number_flux = see_signed_particle_flux",
         "signed_number_flux = see_signed_energy_flux_eV",
         "expression = '1.602176634e-19*(gi+gop-gm-ge+gs)'",
-        "[see_number_flux_integral]",
     )
     missing = [token for token in required if token not in text]
     if missing:
@@ -80,6 +83,7 @@ def inject(path: Path) -> None:
     print(f"see_energy_eV={SEE_ENERGY_EV}")
     print("SEE drivers: O2+ + O+ wall fluxes")
     print(f"SEE boundaries: {SOLID_BOUNDARIES}")
+    print("SEE diagnostics: use ion-wall fluxes and surface-current ledgers; no generic internal-sideset PP")
 
 
 def main() -> None:
