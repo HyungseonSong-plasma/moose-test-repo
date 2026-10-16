@@ -13,13 +13,13 @@ namespace
 {
 template <typename SpaceArg>
 constexpr bool
-isFaceArg()
+isDriftDiffusionFaceArg()
 {
   return std::is_same_v<std::decay_t<SpaceArg>, Moose::FaceArg>;
 }
 
 ADReal
-positivePart(const ADReal & value, const Real smoothing_width)
+driftDiffusionPositivePart(const ADReal & value, const Real smoothing_width)
 {
   if (smoothing_width <= 0.0)
     return MetaPhysicL::raw_value(value) > 0.0 ? value : ADReal(0.0) * value;
@@ -29,7 +29,7 @@ positivePart(const ADReal & value, const Real smoothing_width)
 }
 
 RealVectorValue
-outwardNormal(const Moose::FaceArg & face)
+driftDiffusionOutwardNormal(const Moose::FaceArg & face)
 {
   if (!face.fi)
     mooseError("PhysicsElectronDriftDiffusionLimitedWallFluxMaterial received a FaceArg without FaceInfo.");
@@ -51,10 +51,10 @@ outwardNormal(const Moose::FaceArg & face)
 }
 
 ADRealVectorValue
-sidedGradient(const Moose::Functor<ADReal> & functor,
-              const Moose::FaceArg & face,
-              const Moose::StateArg & state,
-              const bool use_element_gradient)
+driftDiffusionSidedGradient(const Moose::Functor<ADReal> & functor,
+                            const Moose::FaceArg & face,
+                            const Moose::StateArg & state,
+                            const bool use_element_gradient)
 {
   if (!use_element_gradient)
     return functor.gradient(face, state);
@@ -150,15 +150,15 @@ PhysicsElectronDriftDiffusionLimitedWallFluxMaterial::PhysicsElectronDriftDiffus
         const ADReal thermal_speed = _sticking * 0.25 * vbar;
 
         using SpaceArg = decltype(r);
-        if constexpr (!isFaceArg<SpaceArg>())
+        if constexpr (!isDriftDiffusionFaceArg<SpaceArg>())
           return n_e * thermal_speed;
         else
         {
-          const RealVectorValue n_out = outwardNormal(r);
+          const RealVectorValue n_out = driftDiffusionOutwardNormal(r);
           const ADRealVectorValue grad_phi =
-              sidedGradient(_potential, r, state, _use_element_gradient_for_potential);
+              driftDiffusionSidedGradient(_potential, r, state, _use_element_gradient_for_potential);
           const ADRealVectorValue grad_log_n =
-              sidedGradient(_log_density, r, state, _use_element_gradient_for_log_density);
+              driftDiffusionSidedGradient(_log_density, r, state, _use_element_gradient_for_log_density);
 
           const ADReal E_n = (-grad_phi) * n_out;
           const ADReal grad_log_n_normal = grad_log_n * n_out;
@@ -169,7 +169,8 @@ PhysicsElectronDriftDiffusionLimitedWallFluxMaterial::PhysicsElectronDriftDiffus
           // Gamma_e.dd / n_e = -mu_e E_n - D_e grad(log n_e).n_out.
           const ADReal outward_speed =
               thermal_speed - mu_e * E_n - D_e * grad_log_n_normal;
-          return n_e * positivePart(outward_speed, _wall_velocity_gate_smoothing_width);
+          return n_e *
+                 driftDiffusionPositivePart(outward_speed, _wall_velocity_gate_smoothing_width);
         }
       });
 }
