@@ -1,4 +1,4 @@
-name: Issue 395 RF elastic only 10 W 25 ns 15 us
+name: Issue 395 RF elastic only 10 W 100 ns 15 us
 
 on:
   push:
@@ -11,7 +11,7 @@ permissions:
   contents: read
 
 jobs:
-  rf-elastic-10w-25ns-15us:
+  rf-elastic-10w-100ns-15us:
     runs-on: ubuntu-24.04
     timeout-minutes: 360
     env:
@@ -20,8 +20,8 @@ jobs:
       DIEL: experiments/Issue3_dielectric_surface_charge
       BASE: experiments/fem_fvm_plasma_discriminator
       TABLE: experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt
-      RESULT: experiments/Issue395_powered_chemistry_ladder/results_rf_elastic_10w_25ns_15us
-      INPUT: experiments/Issue395_powered_chemistry_ladder/rf_elastic_10w_grounded_reactive_25ns_15us.i
+      RESULT: experiments/Issue395_powered_chemistry_ladder/results_rf_elastic_10w_100ns_15us
+      INPUT: experiments/Issue395_powered_chemistry_ladder/rf_elastic_10w_grounded_reactive_100ns_15us.i
 
     steps:
       - name: Checkout exact pushed revision
@@ -73,7 +73,7 @@ jobs:
 
           cp "$CHEM/a0_full_icp.i" "$INPUT"
           python3 "$DIEL/promote_cover_15us.py" "$INPUT" | tee "$RESULT/prep/original_timegrid.log"
-          python3 "$CHEM/set_timegrid_15us.py" "$INPUT" --dt-ns 25 \
+          python3 "$CHEM/set_timegrid_15us.py" "$INPUT" --dt-ns 100 \
             | tee "$RESULT/prep/timegrid_15us.log"
           python3 "$CHEM/enable_outlet_grounded_surface_reactions.py" "$INPUT" \
             | tee "$RESULT/prep/outlet_grounded_reactive.log"
@@ -100,8 +100,8 @@ jobs:
 
           grep -q 'ISSUE395_OUTLET_GROUNDED_REACTIVE_PASS' "$RESULT/prep/outlet_grounded_reactive.log"
           grep -q 'ISSUE395_TIMEGRID_15US_PASS' "$RESULT/prep/timegrid_15us.log"
-          grep -q 'main_1_to_15us_dt_ns=25' "$RESULT/prep/timegrid_15us.log"
-          grep -q 'total_steps=750' "$RESULT/prep/timegrid_15us.log"
+          grep -q 'main_1_to_15us_dt_ns=100' "$RESULT/prep/timegrid_15us.log"
+          grep -q 'total_steps=330' "$RESULT/prep/timegrid_15us.log"
           grep -q 'end_time = 1.5e-5' "$INPUT"
           grep -q 'PhysicsFEMLogMolarElectronNoSheathSuppressionBC' "$INPUT"
           grep -q 'PhysicsFEMLogMolarElectronEnergyNoSheathSuppressionBC' "$INPUT"
@@ -176,10 +176,10 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: issue395-rf-elastic-10w-25ns-15us-evidence
+          name: issue395-rf-elastic-10w-100ns-15us-evidence
           path: |
-            experiments/Issue395_powered_chemistry_ladder/results_rf_elastic_10w_25ns_15us/**
-            experiments/Issue395_powered_chemistry_ladder/rf_elastic_10w_grounded_reactive_25ns_15us.i
+            experiments/Issue395_powered_chemistry_ladder/results_rf_elastic_10w_100ns_15us/**
+            experiments/Issue395_powered_chemistry_ladder/rf_elastic_10w_grounded_reactive_100ns_15us.i
             experiments/Issue395_powered_chemistry_ladder/a0_full_icp.i
             experiments/Issue395_powered_chemistry_ladder/rf_elastic_multiapp_parent_10w_15us_overlay.i
             experiments/Issue395_powered_chemistry_ladder/rf_elastic_multiapp_maxwell_10w_15us_overlay.i
