@@ -1,0 +1,192 @@
+name: Issue 395 RF elastic only 50 W outlet open 100 ns 15 us
+
+on:
+  push:
+    branches:
+      - issue395-rf-elastic-50w-outlet-open-15us
+    paths:
+      - '.github/workflows/issue395-rf-elastic-50w-outlet-open-15us-once.yml'
+      - 'experiments/Issue395_powered_chemistry_ladder/build_rf_multiapp_coupling_50w.py'
+
+permissions:
+  contents: read
+
+jobs:
+  rf-elastic-50w-outlet-open-100ns-15us:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    env:
+      BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+      CHEM: experiments/Issue395_powered_chemistry_ladder
+      DIEL: experiments/Issue3_dielectric_surface_charge
+      BASE: experiments/fem_fvm_plasma_discriminator
+      TABLE: experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt
+      RESULT: experiments/Issue395_powered_chemistry_ladder/results_rf_elastic_50w_outlet_open_100ns_15us
+      INPUT: experiments/Issue395_powered_chemistry_ladder/rf_elastic_50w_outlet_open_100ns_15us.i
+
+    steps:
+      - name: Checkout exact pushed revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Verify exact source revision
+        shell: bash
+        run: test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install host preparation dependencies
+        shell: bash
+        run: python3 -m pip install --disable-pip-version-check --quiet numpy==2.1.2 scipy==1.14.1
+
+      - name: Build outlet-open 50 W elastic-only 15 us input
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$RESULT"
+          mkdir -p "$RESULT/prep" "$RESULT/run"
+
+          python3 "$BASE/generate_contour_mesh.py" > "$RESULT/prep/mesh_plasma.log" 2>&1
+          python3 "$DIEL/extend_cover_mesh.py" \
+            "$BASE/plasma_contour_l3_4p5mm.msh" "$DIEL/baseline_cover_fine_source.msh" \
+            > "$RESULT/prep/mesh_cover.log" 2>&1
+          python3 "$DIEL/build_unstructured_cover_wafer_mesh.py" \
+            "$DIEL/baseline_cover_fine_source.msh" "$DIEL/baseline_plasma_plus_unstructured_cover_plus_wafer.msh" \
+            > "$RESULT/prep/mesh_cover_wafer.log" 2>&1
+          python3 "$DIEL/add_focus_ring_block.py" \
+            "$DIEL/baseline_plasma_plus_unstructured_cover_plus_wafer.msh" "$DIEL/baseline_plasma_plus_unstructured_cover_plus_wafer.msh" \
+            > "$RESULT/prep/mesh_focus.log" 2>&1
+          python3 "$DIEL/add_vacuum_coils_block.py" \
+            "$DIEL/baseline_plasma_plus_unstructured_cover_plus_wafer.msh" "$DIEL/baseline_plasma_plus_unstructured_cover_plus_wafer.msh" \
+            > "$RESULT/prep/mesh_vacuum.log" 2>&1
+
+          cp "$DIEL/baseline_plasma_plus_unstructured_cover_plus_wafer.msh" \
+             "$CHEM/baseline_plasma_plus_unstructured_cover_plus_wafer.msh"
+          python3 "$DIEL/prepare_baseline_cover_pilot.py" "$CHEM/a0_full_icp.i" > "$RESULT/prep/materialize.log" 2>&1
+          python3 "$DIEL/finalize_baseline_cover_pilot.py" "$CHEM/a0_full_icp.i" > "$RESULT/prep/finalize.log" 2>&1
+          python3 "$DIEL/promote_cover_wafer_15us.py" "$CHEM/a0_full_icp.i" > "$RESULT/prep/wafer.log" 2>&1
+          python3 "$DIEL/promote_focus_ring_15us.py" "$CHEM/a0_full_icp.i" > "$RESULT/prep/focus.log" 2>&1
+          python3 "$DIEL/promote_vacuum_coils_15us.py" "$CHEM/a0_full_icp.i" > "$RESULT/prep/vacuum.log" 2>&1
+
+          cp "$CHEM/a0_full_icp.i" "$INPUT"
+          python3 "$DIEL/promote_cover_15us.py" "$INPUT" | tee "$RESULT/prep/original_timegrid.log"
+          python3 "$CHEM/set_timegrid_15us.py" "$INPUT" --dt-ns 100 \
+            | tee "$RESULT/prep/timegrid_15us.log"
+          python3 "$CHEM/set_outlet_poisson_neumann.py" "$INPUT" \
+            | tee "$RESULT/prep/outlet_open.log"
+
+          python3 "$CHEM/build_rf_multiapp_coupling_50w.py" \
+            --table "$TABLE" \
+            --parent-overlay "$CHEM/rf_elastic_multiapp_parent_50w_15us_overlay.i" \
+            --child-overlay "$CHEM/rf_elastic_multiapp_maxwell_50w_15us_overlay.i" \
+            --child-input "$CHEM/rf_elastic_multiapp_maxwell_50w_15us_child.i" \
+            | tee "$RESULT/prep/multiapp_50w.log"
+
+          cp physics_app/data/electron_impact/o2_elastic.txt "$CHEM/o2_elastic.txt"
+          python3 "$CHEM/build_o2_elastic_overlay.py" \
+            --base-input "$CHEM/a0_full_icp.i" \
+            --output "$CHEM/o2_elastic_50w_15us_overlay.i" \
+            --elastic-table o2_elastic.txt \
+            | tee "$RESULT/prep/elastic_overlay.log"
+
+          python3 -m py_compile \
+            "$CHEM/set_timegrid_15us.py" \
+            "$CHEM/set_outlet_poisson_neumann.py" \
+            "$CHEM/build_rf_multiapp_coupling_50w.py" \
+            "$CHEM/build_o2_elastic_overlay.py"
+
+          grep -q 'ISSUE395_OUTLET_POISSON_NEUMANN_PASS' "$RESULT/prep/outlet_open.log"
+          grep -q 'ISSUE395_OUTLET_CHARGED_OPEN_PASS' "$RESULT/prep/outlet_open.log"
+          grep -q 'ISSUE395_TIMEGRID_15US_PASS' "$RESULT/prep/timegrid_15us.log"
+          grep -q 'main_1_to_15us_dt_ns=100' "$RESULT/prep/timegrid_15us.log"
+          grep -q 'total_steps=330' "$RESULT/prep/timegrid_15us.log"
+          grep -q 'end_time = 1.5e-5' "$INPUT"
+          grep -q 'PhysicsFEMLogMolarElectronNoSheathSuppressionBC' "$INPUT"
+          grep -q 'PhysicsFEMLogMolarElectronEnergyNoSheathSuppressionBC' "$INPUT"
+          ! grep -q 'boundary = .*outlet.*' "$INPUT" || true
+          grep -q 'type = FullSolveMultiApp' "$CHEM/rf_elastic_multiapp_parent_50w_15us_overlay.i"
+          grep -q 'target = 50' "$CHEM/rf_elastic_multiapp_parent_50w_15us_overlay.i"
+          grep -q 'ISSUE395_RF_MULTIAPP_50W_BUILD_PASS' "$RESULT/prep/multiapp_50w.log"
+          grep -q 'R_elastic_O2' "$CHEM/o2_elastic_50w_15us_overlay.i"
+          ! grep -q 'R_diss_O2' "$CHEM/o2_elastic_50w_15us_overlay.i"
+          ! grep -q 'R_ion_O2' "$CHEM/o2_elastic_50w_15us_overlay.i"
+
+      - name: Pull pinned Physics build image
+        shell: bash
+        run: docker pull "$BUILD_BASE_REF"
+
+      - name: Build exact-head Physics application
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm --entrypoint /bin/bash --user 0:0 \
+            --workdir /workspace -v "$GITHUB_WORKSPACE:/workspace" \
+            "$BUILD_BASE_REF" -lc '
+              set -euo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              git config --global --add safe.directory /opt/physics_vendor/moose
+              git config --global --add safe.directory /opt/physics_vendor/crane
+              git config --global --add safe.directory /opt/physics_vendor/squirrel
+              git config --global --add safe.directory /opt/physics_vendor/zapdos
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+              make -C physics_app -j2
+            '
+          test -x physics_app/physics-opt
+
+      - name: Check 50 W outlet-open elastic-only input
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm --entrypoint /bin/bash --user 0:0 \
+            --workdir /workspace -v "$GITHUB_WORKSPACE:/workspace" \
+            "$BUILD_BASE_REF" -lc "
+              set -euo pipefail
+              source /environment
+              physics_app/physics-opt --check-input \
+                -i '$INPUT' \
+                '$CHEM/rf_elastic_multiapp_parent_50w_15us_overlay.i' \
+                '$CHEM/o2_elastic_50w_15us_overlay.i'
+            " 2>&1 | tee "$RESULT/check_input.log"
+
+      - name: Run 50 W outlet-open elastic-only case to 15 us
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm --entrypoint /bin/bash --user 0:0 \
+            --workdir /workspace -v "$GITHUB_WORKSPACE:/workspace" \
+            "$BUILD_BASE_REF" -lc "
+              set -euo pipefail
+              source /environment
+              physics_app/physics-opt \
+                -i '$INPUT' \
+                '$CHEM/rf_elastic_multiapp_parent_50w_15us_overlay.i' \
+                '$CHEM/o2_elastic_50w_15us_overlay.i' \
+                Outputs/file_base='$RESULT/run/plasma'
+            " 2>&1 | tee "$RESULT/runtime.log"
+
+      - name: Upload 50 W outlet-open elastic-only evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue395-rf-elastic-50w-outlet-open-100ns-15us-evidence
+          path: |
+            experiments/Issue395_powered_chemistry_ladder/results_rf_elastic_50w_outlet_open_100ns_15us/**
+            experiments/Issue395_powered_chemistry_ladder/rf_elastic_50w_outlet_open_100ns_15us.i
+            experiments/Issue395_powered_chemistry_ladder/a0_full_icp.i
+            experiments/Issue395_powered_chemistry_ladder/rf_elastic_multiapp_parent_50w_15us_overlay.i
+            experiments/Issue395_powered_chemistry_ladder/rf_elastic_multiapp_maxwell_50w_15us_overlay.i
+            experiments/Issue395_powered_chemistry_ladder/rf_elastic_multiapp_maxwell_50w_15us_child.i
+            experiments/Issue395_powered_chemistry_ladder/o2_elastic_50w_15us_overlay.i
+            experiments/Issue395_powered_chemistry_ladder/build_rf_multiapp_coupling_50w.py
+            experiments/Issue395_powered_chemistry_ladder/set_outlet_poisson_neumann.py
+          if-no-files-found: warn
+          retention-days: 30
