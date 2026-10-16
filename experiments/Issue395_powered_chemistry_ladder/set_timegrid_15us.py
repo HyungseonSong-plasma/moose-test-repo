@@ -5,8 +5,8 @@ Startup staging is preserved:
   0--0.1 us : 1 ns
   0.1--1 us : 10 ns
 
-The 1--15 us segment is parameterized by --dt-ns.  Intended discriminator
-values are 50 ns and 25 ns.
+The 1--15 us segment is parameterized by --dt-ns. Intended discriminator
+values are 25 ns, 50 ns, and 100 ns.
 """
 
 from __future__ import annotations
@@ -112,7 +112,7 @@ def verify(text: str, dt_ns: int, expected_steps: int) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("input", type=Path)
-    parser.add_argument("--dt-ns", type=int, required=True, choices=(25, 50))
+    parser.add_argument("--dt-ns", type=int, required=True, choices=(25, 50, 100))
     args = parser.parse_args()
 
     text = args.input.read_text(encoding="utf-8")
