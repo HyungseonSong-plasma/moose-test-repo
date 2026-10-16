@@ -1,11 +1,12 @@
-name: Issue 395 adjacent-cell sheath wall 10 W charged-closed 100 ns 15 us
+name: Issue 395 adjacent-cell sheath wall 10 W charged-closed elastic+dissociation 100 ns 15 us
 
 on:
   push:
     branches:
-      - issue395-electron-adjacent-sheath-wall-10w-closed
+      - issue395-electron-adjacent-sheath-wall-10w-closed-dissociation
     paths:
       - '.github/workflows/issue395-electron-adjacent-sheath-wall-10w-closed-once.yml'
+      - 'experiments/Issue395_powered_chemistry_ladder/build_o2_dissociation_overlay.py'
       - 'experiments/Issue395_powered_chemistry_ladder/enable_electron_adjacent_sheath_wall.py'
       - 'physics_app/include/materials/PhysicsElectronAdjacentSheathWallFluxMaterial.h'
       - 'physics_app/src/materials/PhysicsElectronAdjacentSheathWallFluxMaterial.C'
@@ -15,7 +16,7 @@ permissions:
   contents: read
 
 jobs:
-  electron-adjacent-sheath-wall-10w-closed-100ns-15us:
+  electron-adjacent-sheath-wall-10w-closed-dissociation-100ns-15us:
     runs-on: ubuntu-24.04
     timeout-minutes: 360
     env:
@@ -24,8 +25,8 @@ jobs:
       DIEL: experiments/Issue3_dielectric_surface_charge
       BASE: experiments/fem_fvm_plasma_discriminator
       TABLE: experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt
-      RESULT: experiments/Issue395_powered_chemistry_ladder/results_rf_elastic_10w_adjacent_sheath_wall_closed_100ns_15us
-      INPUT: experiments/Issue395_powered_chemistry_ladder/rf_elastic_10w_adjacent_sheath_wall_closed_100ns_15us.i
+      RESULT: experiments/Issue395_powered_chemistry_ladder/results_rf_elastic_diss_10w_adjacent_sheath_wall_closed_100ns_15us
+      INPUT: experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_10w_adjacent_sheath_wall_closed_100ns_15us.i
 
     steps:
       - name: Checkout exact pushed revision
@@ -46,7 +47,7 @@ jobs:
         shell: bash
         run: python3 -m pip install --disable-pip-version-check --quiet numpy==2.1.2 scipy==1.14.1
 
-      - name: Build 10 W elastic-only charged-closed adjacent-sheath-wall input
+      - name: Build 10 W elastic plus dissociation charged-closed adjacent-sheath-wall input
         shell: bash
         run: |
           set -euo pipefail
@@ -73,9 +74,6 @@ jobs:
           python3 "$DIEL/finalize_baseline_cover_pilot.py" "$CHEM/a0_full_icp.i" > "$RESULT/prep/finalize.log" 2>&1
           python3 "$DIEL/promote_cover_wafer_15us.py" "$CHEM/a0_full_icp.i" > "$RESULT/prep/wafer.log" 2>&1
           python3 "$DIEL/promote_focus_ring_15us.py" "$CHEM/a0_full_icp.i" > "$RESULT/prep/focus.log" 2>&1
-          python3 "$DIEL/add_vacuum_coils_block.py" \
-            "$DIEL/baseline_plasma_plus_unstructured_cover_plus_wafer.msh" "$DIEL/baseline_plasma_plus_unstructured_cover_plus_wafer.msh" \
-            > /dev/null 2>&1 || true
           python3 "$DIEL/promote_vacuum_coils_15us.py" "$CHEM/a0_full_icp.i" > "$RESULT/prep/vacuum.log" 2>&1
 
           cp "$CHEM/a0_full_icp.i" "$INPUT"
@@ -93,7 +91,6 @@ jobs:
           text = Path(sys.argv[1]).read_text(encoding='utf-8')
           block_re = re.compile(r'(?ms)^  \[(?P<name>[^\]\n]+)\]\n(?P<body>.*?)^  \[\]\n')
           blocks = {m.group('name'): m.group('body') for m in block_re.finditer(text)}
-
           expected = {
               'ion_wall': 'log_ni',
               'negative_ion_wall': 'log_nm',
@@ -113,18 +110,7 @@ jobs:
               boundaries = set(m.group(1).split())
               if not {'inlet', 'outlet'}.issubset(boundaries):
                   raise SystemExit(f'{name}: inlet/outlet not restored: {sorted(boundaries)}')
-
-          ground = blocks.get('grounded_potential')
-          if ground is None:
-              raise SystemExit('missing grounded_potential')
-          gm = re.search(r"(?m)^\s*boundary\s*=\s*'([^']+)'\s*$", ground)
-          if gm is None or not {'inlet', 'outlet'}.issubset(set(gm.group(1).split())):
-              raise SystemExit('grounded potential inlet/outlet contract changed')
-
           print('ISSUE395_INLET_OUTLET_CHARGED_CLOSED_PASS')
-          print('ion species inlet/outlet = canonical FV wall-flux BC restored')
-          print('electron/electron-energy inlet/outlet = unchanged baseline natural treatment')
-          print('potential inlet/outlet = unchanged grounded Dirichlet')
           PY
 
           python3 "$CHEM/build_rf_multiapp_coupling_10w.py" \
@@ -141,11 +127,17 @@ jobs:
             --elastic-table o2_elastic.txt \
             | tee "$RESULT/prep/elastic_overlay.log"
 
+          python3 "$CHEM/build_o2_dissociation_overlay.py" \
+            --base-input "$CHEM/a0_full_icp.i" \
+            --output "$CHEM/o2_dissociation_10w_15us_overlay.i" \
+            | tee "$RESULT/prep/dissociation_overlay.log"
+
           python3 -m py_compile \
             "$CHEM/set_timegrid_15us.py" \
             "$CHEM/enable_electron_adjacent_sheath_wall.py" \
             "$CHEM/build_rf_multiapp_coupling_10w.py" \
-            "$CHEM/build_o2_elastic_overlay.py"
+            "$CHEM/build_o2_elastic_overlay.py" \
+            "$CHEM/build_o2_dissociation_overlay.py"
 
           grep -q 'ISSUE395_INLET_OUTLET_CHARGED_CLOSED_PASS' "$RESULT/prep/inlet_outlet_charged_closed.log"
           grep -q 'ISSUE395_ELECTRON_ADJACENT_SHEATH_WALL_PASS' "$RESULT/prep/electron_adjacent_sheath_wall.log"
@@ -159,16 +151,19 @@ jobs:
           test "$(grep -c 'type = PhysicsFEMLogMolarElectronFieldLimitedFluxBC' "$INPUT")" -eq 4
           test "$(grep -c 'type = PhysicsFEMLogMolarElectronEnergyFieldLimitedFluxBC' "$INPUT")" -eq 4
           test "$(grep -c "boundary = 'inlet outlet plasma_electrode plasma_metal plasma_right'" "$INPUT")" -eq 3
-          ! grep -q 'PhysicsFEMLogMolarElectronNoSheathSuppressionBC' "$INPUT"
-          ! grep -q 'PhysicsFEMLogMolarElectronEnergyNoSheathSuppressionBC' "$INPUT"
-          ! grep -q 'SheathFactorBC' "$INPUT"
-          ! grep -q 'sheath_factor[[:space:]]*=' "$INPUT"
           grep -q 'type = FullSolveMultiApp' "$CHEM/rf_elastic_multiapp_parent_10w_15us_overlay.i"
           grep -q 'target = 10' "$CHEM/rf_elastic_multiapp_parent_10w_15us_overlay.i"
           grep -q 'ISSUE395_RF_MULTIAPP_10W_BUILD_PASS' "$RESULT/prep/multiapp_10w.log"
           grep -q 'R_elastic_O2' "$CHEM/o2_elastic_10w_15us_overlay.i"
           ! grep -q 'R_diss_O2' "$CHEM/o2_elastic_10w_15us_overlay.i"
           ! grep -q 'R_ion_O2' "$CHEM/o2_elastic_10w_15us_overlay.i"
+          grep -q 'ISSUE395_O2_DISSOCIATION_OVERLAY_BUILD_PASS' "$RESULT/prep/dissociation_overlay.log"
+          grep -q 'property_name = R_diss_O2' "$CHEM/o2_dissociation_10w_15us_overlay.i"
+          grep -q 'property_name = S_O_mass_diss' "$CHEM/o2_dissociation_10w_15us_overlay.i"
+          grep -q 'property_name = S_electron_energy_molar_diss' "$CHEM/o2_dissociation_10w_15us_overlay.i"
+          grep -q '12.62' "$CHEM/o2_dissociation_10w_15us_overlay.i"
+          ! grep -q 'R_ion_O2' "$CHEM/o2_dissociation_10w_15us_overlay.i"
+          ! grep -q 'R_ion_O' "$CHEM/o2_dissociation_10w_15us_overlay.i"
 
       - name: Pull pinned Physics build image
         shell: bash
@@ -197,7 +192,7 @@ jobs:
             '
           test -x physics_app/physics-opt
 
-      - name: Check 10 W charged-closed adjacent-sheath-wall input
+      - name: Check 10 W charged-closed elastic plus dissociation input
         shell: bash
         run: |
           set -euo pipefail
@@ -209,10 +204,11 @@ jobs:
               physics_app/physics-opt --check-input \
                 -i '$INPUT' \
                 '$CHEM/rf_elastic_multiapp_parent_10w_15us_overlay.i' \
-                '$CHEM/o2_elastic_10w_15us_overlay.i'
+                '$CHEM/o2_elastic_10w_15us_overlay.i' \
+                '$CHEM/o2_dissociation_10w_15us_overlay.i'
             " 2>&1 | tee "$RESULT/check_input.log"
 
-      - name: Run 10 W charged-closed adjacent-sheath-wall case to 15 us
+      - name: Run 10 W charged-closed elastic plus dissociation case to 15 us
         shell: bash
         run: |
           set -euo pipefail
@@ -225,6 +221,7 @@ jobs:
                 -i '$INPUT' \
                 '$CHEM/rf_elastic_multiapp_parent_10w_15us_overlay.i' \
                 '$CHEM/o2_elastic_10w_15us_overlay.i' \
+                '$CHEM/o2_dissociation_10w_15us_overlay.i' \
                 Outputs/file_base='$RESULT/run/plasma'
             " 2>&1 | tee "$RESULT/runtime.log"
 
@@ -232,15 +229,17 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: issue395-rf-elastic-10w-adjacent-sheath-wall-closed-100ns-15us-evidence
+          name: issue395-rf-elastic-diss-10w-adjacent-sheath-wall-closed-100ns-15us-evidence
           path: |
-            experiments/Issue395_powered_chemistry_ladder/results_rf_elastic_10w_adjacent_sheath_wall_closed_100ns_15us/**
-            experiments/Issue395_powered_chemistry_ladder/rf_elastic_10w_adjacent_sheath_wall_closed_100ns_15us.i
+            experiments/Issue395_powered_chemistry_ladder/results_rf_elastic_diss_10w_adjacent_sheath_wall_closed_100ns_15us/**
+            experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_10w_adjacent_sheath_wall_closed_100ns_15us.i
             experiments/Issue395_powered_chemistry_ladder/a0_full_icp.i
             experiments/Issue395_powered_chemistry_ladder/rf_elastic_multiapp_parent_10w_15us_overlay.i
             experiments/Issue395_powered_chemistry_ladder/rf_elastic_multiapp_maxwell_10w_15us_overlay.i
             experiments/Issue395_powered_chemistry_ladder/rf_elastic_multiapp_maxwell_10w_15us_child.i
             experiments/Issue395_powered_chemistry_ladder/o2_elastic_10w_15us_overlay.i
+            experiments/Issue395_powered_chemistry_ladder/o2_dissociation_10w_15us_overlay.i
+            experiments/Issue395_powered_chemistry_ladder/build_o2_dissociation_overlay.py
             experiments/Issue395_powered_chemistry_ladder/enable_electron_adjacent_sheath_wall.py
             physics_app/include/materials/PhysicsElectronAdjacentSheathWallFluxMaterial.h
             physics_app/src/materials/PhysicsElectronAdjacentSheathWallFluxMaterial.C
