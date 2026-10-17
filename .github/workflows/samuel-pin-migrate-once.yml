@@ -31,7 +31,8 @@ jobs:
           from pathlib import Path
           import subprocess
 
-          request = json.loads(Path('automation/mutations/samuel-pin-migrate.request').read_text())
+          request_path = 'automation/mutations/samuel-pin-migrate.request'
+          request = json.loads(Path(request_path).read_text())
           if set(request) != {'old_sha', 'new_sha', 'expected_files'}:
               raise SystemExit('request must contain exactly old_sha, new_sha, expected_files')
           old = request['old_sha']
@@ -42,7 +43,7 @@ jobs:
           if not isinstance(expected, int) or expected <= 0:
               raise SystemExit('expected_files must be positive int')
 
-          proc = subprocess.run(['git', 'grep', '-l', old], text=True, capture_output=True)
+          proc = subprocess.run(['git', 'grep', '-l', old, '--', '.', f':!{request_path}'], text=True, capture_output=True)
           if proc.returncode not in (0, 1):
               raise SystemExit(proc.stderr)
           files = [line for line in proc.stdout.splitlines() if line]
@@ -57,7 +58,7 @@ jobs:
                   raise SystemExit(f'old pin disappeared from {name}')
               path.write_text(text.replace(old, new), encoding='utf-8')
 
-          verify = subprocess.run(['git', 'grep', '-n', old], text=True, capture_output=True)
+          verify = subprocess.run(['git', 'grep', '-n', old, '--', '.', f':!{request_path}'], text=True, capture_output=True)
           if verify.returncode == 0:
               raise SystemExit(f'old pin remains:\n{verify.stdout}')
           if verify.returncode != 1:
