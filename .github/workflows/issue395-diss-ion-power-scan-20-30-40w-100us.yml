@@ -1,0 +1,240 @@
+name: Issue 395 combined chemistry power scan 20 30 40 W to 100 us
+
+on:
+  push:
+    branches:
+      - issue395-diss-ion-power-scan-20-30-40w-100us
+    paths:
+      - '.github/workflows/issue395-diss-ion-power-scan-20-30-40w-100us.yml'
+      - 'experiments/Issue395_powered_chemistry_ladder/build_rf_multiapp_coupling_power.py'
+
+permissions:
+  contents: read
+
+jobs:
+  power-scan:
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        power_w: [20, 30, 40]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    env:
+      POWER_W: ${{ matrix.power_w }}
+      BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+      CHEM: experiments/Issue395_powered_chemistry_ladder
+      DIEL: experiments/Issue3_dielectric_surface_charge
+      BASE: experiments/fem_fvm_plasma_discriminator
+      TABLE: experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt
+
+    steps:
+      - name: Checkout exact pushed revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Verify exact source revision
+        shell: bash
+        run: test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+
+      - name: Set case paths
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "RESULT=$CHEM/results_rf_elastic_diss_ion_${POWER_W}w_adjacent_sheath_wall_closed_100us" >> "$GITHUB_ENV"
+          echo "INPUT=$CHEM/rf_elastic_diss_ion_${POWER_W}w_adjacent_sheath_wall_closed_100us.i" >> "$GITHUB_ENV"
+          echo "PARENT=$CHEM/rf_elastic_multiapp_parent_${POWER_W}w_100us_overlay.i" >> "$GITHUB_ENV"
+          echo "CHILD_OVERLAY=$CHEM/rf_elastic_multiapp_maxwell_${POWER_W}w_100us_overlay.i" >> "$GITHUB_ENV"
+          echo "CHILD_INPUT=$CHEM/rf_elastic_multiapp_maxwell_${POWER_W}w_100us_child.i" >> "$GITHUB_ENV"
+          echo "ELASTIC=$CHEM/o2_elastic_${POWER_W}w_100us_overlay.i" >> "$GITHUB_ENV"
+          echo "DISS=$CHEM/o2_dissociation_${POWER_W}w_100us_overlay.i" >> "$GITHUB_ENV"
+          echo "ION=$CHEM/o2_ionization_${POWER_W}w_100us_overlay.i" >> "$GITHUB_ENV"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install host preparation dependencies
+        shell: bash
+        run: python3 -m pip install --disable-pip-version-check --quiet numpy==2.1.2 scipy==1.14.1
+
+      - name: Build combined chemistry input for ${{ matrix.power_w }} W
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf "$RESULT"
+          mkdir -p "$RESULT/prep" "$RESULT/run"
+
+          python3 "$BASE/generate_contour_mesh.py" > "$RESULT/prep/mesh_plasma.log" 2>&1
+          python3 "$DIEL/extend_cover_mesh.py" \
+            "$BASE/plasma_contour_l3_4p5mm.msh" "$DIEL/baseline_cover_fine_source.msh" \
+            > "$RESULT/prep/mesh_cover.log" 2>&1
+          python3 "$DIEL/build_unstructured_cover_wafer_mesh.py" \
+            "$DIEL/baseline_cover_fine_source.msh" "$DIEL/baseline_plasma_plus_unstructured_cover_plus_wafer.msh" \
+            > "$RESULT/prep/mesh_cover_wafer.log" 2>&1
+          python3 "$DIEL/add_focus_ring_block.py" \
+            "$DIEL/baseline_plasma_plus_unstructured_cover_plus_wafer.msh" "$DIEL/baseline_plasma_plus_unstructured_cover_plus_wafer.msh" \
+            > "$RESULT/prep/mesh_focus.log" 2>&1
+          python3 "$DIEL/add_vacuum_coils_block.py" \
+            "$DIEL/baseline_plasma_plus_unstructured_cover_plus_wafer.msh" "$DIEL/baseline_plasma_plus_unstructured_cover_plus_wafer.msh" \
+            > "$RESULT/prep/mesh_vacuum.log" 2>&1
+
+          cp "$DIEL/baseline_plasma_plus_unstructured_cover_plus_wafer.msh" \
+             "$CHEM/baseline_plasma_plus_unstructured_cover_plus_wafer.msh"
+          python3 "$DIEL/prepare_baseline_cover_pilot.py" "$CHEM/a0_full_icp.i" > "$RESULT/prep/materialize.log" 2>&1
+          python3 "$DIEL/finalize_baseline_cover_pilot.py" "$CHEM/a0_full_icp.i" > "$RESULT/prep/finalize.log" 2>&1
+          python3 "$DIEL/promote_cover_wafer_15us.py" "$CHEM/a0_full_icp.i" > "$RESULT/prep/wafer.log" 2>&1
+          python3 "$DIEL/promote_focus_ring_15us.py" "$CHEM/a0_full_icp.i" > "$RESULT/prep/focus.log" 2>&1
+          python3 "$DIEL/promote_vacuum_coils_15us.py" "$CHEM/a0_full_icp.i" > "$RESULT/prep/vacuum.log" 2>&1
+
+          cp "$CHEM/a0_full_icp.i" "$INPUT"
+          python3 "$DIEL/promote_cover_15us.py" "$INPUT" > "$RESULT/prep/original_timegrid.log" 2>&1
+          python3 "$CHEM/set_timegrid_100us.py" "$INPUT" | tee "$RESULT/prep/timegrid_100us.log"
+          python3 "$CHEM/enable_electron_adjacent_sheath_wall.py" "$INPUT" \
+            | tee "$RESULT/prep/electron_adjacent_sheath_wall.log"
+
+          python3 - "$INPUT" <<'PY' | tee "$RESULT/prep/inlet_outlet_charged_closed.log"
+          import re, sys
+          from pathlib import Path
+          text = Path(sys.argv[1]).read_text(encoding='utf-8')
+          block_re = re.compile(r'(?ms)^  \[(?P<name>[^\]\n]+)\]\n(?P<body>.*?)^  \[\]\n')
+          blocks = {m.group('name'): m.group('body') for m in block_re.finditer(text)}
+          for name, variable in {'ion_wall':'log_ni','negative_ion_wall':'log_nm','atomic_positive_ion_wall':'log_nop'}.items():
+              body = blocks.get(name)
+              if body is None or 'type = FVFunctorNeumannBC' not in body or f'variable = {variable}' not in body:
+                  raise SystemExit(f'{name}: canonical wall BC contract missing')
+              m = re.search(r"(?m)^\s*boundary\s*=\s*'([^']+)'\s*$", body)
+              if m is None or not {'inlet','outlet'}.issubset(set(m.group(1).split())):
+                  raise SystemExit(f'{name}: inlet/outlet not closed')
+          print('ISSUE395_INLET_OUTLET_CHARGED_CLOSED_PASS')
+          PY
+
+          python3 "$CHEM/build_rf_multiapp_coupling_power.py" \
+            --target-w "$POWER_W" \
+            --table "$TABLE" \
+            --parent-overlay "$PARENT" \
+            --child-overlay "$CHILD_OVERLAY" \
+            --child-input "$CHILD_INPUT" \
+            | tee "$RESULT/prep/multiapp_power.log"
+
+          cp physics_app/data/electron_impact/o2_elastic.txt "$CHEM/o2_elastic.txt"
+          python3 "$CHEM/build_o2_elastic_overlay.py" \
+            --base-input "$CHEM/a0_full_icp.i" \
+            --output "$ELASTIC" \
+            --elastic-table o2_elastic.txt \
+            | tee "$RESULT/prep/elastic_overlay.log"
+
+          python3 "$CHEM/build_o2_dissociation_overlay.py" \
+            --base-input "$CHEM/a0_full_icp.i" \
+            --output "$DISS" \
+            | tee "$RESULT/prep/dissociation_overlay.log"
+
+          cp physics_app/data/electron_impact/o2_ionization.txt "$CHEM/o2_ionization.txt"
+          python3 "$CHEM/build_o2_ionization_overlay.py" \
+            --base-input "$CHEM/a0_full_icp.i" \
+            --output "$ION" \
+            --ei16-table o2_ionization.txt \
+            | tee "$RESULT/prep/ionization_overlay.log"
+
+          python3 -m py_compile \
+            "$CHEM/set_timegrid_100us.py" \
+            "$CHEM/enable_electron_adjacent_sheath_wall.py" \
+            "$CHEM/build_rf_multiapp_coupling_power.py" \
+            "$CHEM/build_o2_elastic_overlay.py" \
+            "$CHEM/build_o2_dissociation_overlay.py" \
+            "$CHEM/build_o2_ionization_overlay.py"
+
+          grep -q 'ISSUE395_TIMEGRID_100US_PASS' "$RESULT/prep/timegrid_100us.log"
+          grep -q 'segment_1_to_10us_dt_ns=100 steps=90' "$RESULT/prep/timegrid_100us.log"
+          grep -q 'segment_10_to_100us_dt_ns=1000 steps=90' "$RESULT/prep/timegrid_100us.log"
+          grep -q 'total_steps=370' "$RESULT/prep/timegrid_100us.log"
+          grep -q 'end_time = 1e-4' "$INPUT"
+          grep -q 'ISSUE395_INLET_OUTLET_CHARGED_CLOSED_PASS' "$RESULT/prep/inlet_outlet_charged_closed.log"
+          grep -q 'ISSUE395_ELECTRON_ADJACENT_SHEATH_WALL_PASS' "$RESULT/prep/electron_adjacent_sheath_wall.log"
+          grep -q 'ISSUE395_RF_MULTIAPP_POWER_BUILD_PASS' "$RESULT/prep/multiapp_power.log"
+          grep -q "target_W=${POWER_W}" "$RESULT/prep/multiapp_power.log"
+          grep -Eq "target = ${POWER_W}(\\.0+)?$" "$PARENT"
+          grep -q 'R_elastic_O2' "$ELASTIC"
+          grep -q 'R_diss_O2' "$DISS"
+          grep -q 'R_ion_O2' "$ION"
+
+      - name: Pull pinned Physics build image
+        shell: bash
+        run: docker pull "$BUILD_BASE_REF"
+
+      - name: Build exact-head Physics application
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm --entrypoint /bin/bash --user 0:0 \
+            --workdir /workspace -v "$GITHUB_WORKSPACE:/workspace" \
+            "$BUILD_BASE_REF" -lc '
+              set -euo pipefail
+              source /environment
+              git config --global --add safe.directory /workspace
+              git config --global --add safe.directory /opt/physics_vendor/moose
+              git config --global --add safe.directory /opt/physics_vendor/crane
+              git config --global --add safe.directory /opt/physics_vendor/squirrel
+              git config --global --add safe.directory /opt/physics_vendor/zapdos
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+              make -C physics_app -j2
+            '
+          test -x physics_app/physics-opt
+
+      - name: Check ${{ matrix.power_w }} W combined input
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm --entrypoint /bin/bash --user 0:0 \
+            --workdir /workspace -v "$GITHUB_WORKSPACE:/workspace" \
+            "$BUILD_BASE_REF" -lc "
+              set -euo pipefail
+              source /environment
+              physics_app/physics-opt --check-input \
+                -i '$INPUT' \
+                '$PARENT' \
+                '$ELASTIC' \
+                '$DISS' \
+                '$ION'
+            " 2>&1 | tee "$RESULT/check_input.log"
+
+      - name: Run ${{ matrix.power_w }} W combined case to 100 us
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm --entrypoint /bin/bash --user 0:0 \
+            --workdir /workspace -v "$GITHUB_WORKSPACE:/workspace" \
+            "$BUILD_BASE_REF" -lc "
+              set -euo pipefail
+              source /environment
+              physics_app/physics-opt \
+                -i '$INPUT' \
+                '$PARENT' \
+                '$ELASTIC' \
+                '$DISS' \
+                '$ION' \
+                Outputs/file_base='$RESULT/run/plasma'
+            " 2>&1 | tee "$RESULT/runtime.log"
+
+      - name: Upload ${{ matrix.power_w }} W evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue395-rf-elastic-diss-ion-${{ matrix.power_w }}w-adjacent-sheath-wall-closed-100us-evidence
+          path: |
+            experiments/Issue395_powered_chemistry_ladder/results_rf_elastic_diss_ion_${{ matrix.power_w }}w_adjacent_sheath_wall_closed_100us/**
+            experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_${{ matrix.power_w }}w_adjacent_sheath_wall_closed_100us.i
+            experiments/Issue395_powered_chemistry_ladder/rf_elastic_multiapp_parent_${{ matrix.power_w }}w_100us_overlay.i
+            experiments/Issue395_powered_chemistry_ladder/rf_elastic_multiapp_maxwell_${{ matrix.power_w }}w_100us_overlay.i
+            experiments/Issue395_powered_chemistry_ladder/rf_elastic_multiapp_maxwell_${{ matrix.power_w }}w_100us_child.i
+            experiments/Issue395_powered_chemistry_ladder/o2_elastic_${{ matrix.power_w }}w_100us_overlay.i
+            experiments/Issue395_powered_chemistry_ladder/o2_dissociation_${{ matrix.power_w }}w_100us_overlay.i
+            experiments/Issue395_powered_chemistry_ladder/o2_ionization_${{ matrix.power_w }}w_100us_overlay.i
+          if-no-files-found: warn
+          retention-days: 30
