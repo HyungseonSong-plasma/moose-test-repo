@@ -2,7 +2,7 @@
   "schema_version": 2,
   "source_repository": "HyungseonSong-plasma/chatgpt-operation",
   "operating_system": {
-    "revision": "125bae0358da93edd6726b013ebc4639ed2cff77",
+    "revision": "9b335e3fbb9c5e8e323e382daeec56fa25336822",
     "expected_version": "Samuel",
     "index": {
       "path": "docs/operating_system/README.md",
@@ -17,84 +17,84 @@
     {
       "name": "session-bootstrap",
       "load_on": ["INIT"],
-      "revision": "125bae0358da93edd6726b013ebc4639ed2cff77",
+      "revision": "9b335e3fbb9c5e8e323e382daeec56fa25336822",
       "path": "skills/session-bootstrap/README.md",
       "expected_blob_sha": "0683b360399181e1d350b286abfbd82c617a9a21"
     },
     {
       "name": "state-refresh",
       "load_on": ["INIT", "SCHEDULED_CONTROLLER"],
-      "revision": "125bae0358da93edd6726b013ebc4639ed2cff77",
+      "revision": "9b335e3fbb9c5e8e323e382daeec56fa25336822",
       "path": "skills/state-refresh/README.md",
       "expected_blob_sha": "4efe6135b93456f2cc9da31786967f5f6ac80033"
     },
     {
       "name": "repository-mutation",
       "load_on": ["MUTATE", "GITHUB_BRANCH_DELETE"],
-      "revision": "125bae0358da93edd6726b013ebc4639ed2cff77",
+      "revision": "9b335e3fbb9c5e8e323e382daeec56fa25336822",
       "path": "skills/repository-mutation/README.md",
       "expected_blob_sha": "e74724b78199dfb8af65500a7e7b6f4dc0e03268"
     },
     {
       "name": "governed-work",
       "load_on": ["GOVERNED_WORK"],
-      "revision": "125bae0358da93edd6726b013ebc4639ed2cff77",
+      "revision": "9b335e3fbb9c5e8e323e382daeec56fa25336822",
       "path": "skills/governed-work/README.md",
       "expected_blob_sha": "5ba4d1be80a4c3019fd9c21fe017468b87315a71"
     },
     {
       "name": "controller-throughput",
       "load_on": ["SCHEDULED_CONTROLLER"],
-      "revision": "125bae0358da93edd6726b013ebc4639ed2cff77",
+      "revision": "9b335e3fbb9c5e8e323e382daeec56fa25336822",
       "path": "skills/controller-throughput/README.md",
       "expected_blob_sha": "bdfbdadddcdf833fd9c396b615a106bef36fa9fd"
     },
     {
       "name": "controller-lifecycle",
       "load_on": ["SCHEDULED_CONTROLLER"],
-      "revision": "125bae0358da93edd6726b013ebc4639ed2cff77",
+      "revision": "9b335e3fbb9c5e8e323e382daeec56fa25336822",
       "path": "skills/controller-lifecycle/README.md",
       "expected_blob_sha": "28f512d80d380ecd415bb4d8d60be4778d464c47"
     },
     {
       "name": "github-actions-execution",
       "load_on": ["GITHUB_ACTIONS_EXECUTION"],
-      "revision": "125bae0358da93edd6726b013ebc4639ed2cff77",
+      "revision": "9b335e3fbb9c5e8e323e382daeec56fa25336822",
       "path": "skills/github-actions-execution/README.md",
       "expected_blob_sha": "73b067c2816af1311c2d47fec2faff4f3cc63923"
     },
     {
       "name": "github-actions-observation",
       "load_on": ["GITHUB_ACTIONS_OBSERVATION"],
-      "revision": "125bae0358da93edd6726b013ebc4639ed2cff77",
+      "revision": "9b335e3fbb9c5e8e323e382daeec56fa25336822",
       "path": "skills/github-actions-observation/README.md",
       "expected_blob_sha": "90f87fc4df84fe85ce04080b419896f8f060a23a"
     },
     {
       "name": "artifact-staging",
       "load_on": ["ARTIFACT_STAGING"],
-      "revision": "125bae0358da93edd6726b013ebc4639ed2cff77",
+      "revision": "9b335e3fbb9c5e8e323e382daeec56fa25336822",
       "path": "skills/artifact-staging/README.md",
       "expected_blob_sha": "17c251379462d9251293e2fde6aabd45e527ee82"
     },
     {
       "name": "scientific-discriminator-controller",
       "load_on": ["SCIENTIFIC_DISCRIMINATOR_CONTROLLER"],
-      "revision": "125bae0358da93edd6726b013ebc4639ed2cff77",
+      "revision": "9b335e3fbb9c5e8e323e382daeec56fa25336822",
       "path": "skills/scientific-discriminator-controller/README.md",
       "expected_blob_sha": "e3e607f48ef70bf2d307f4a2f48dbee1352b080c"
     },
     {
       "name": "pull-request-merge",
       "load_on": ["GITHUB_PR_MERGE"],
-      "revision": "125bae0358da93edd6726b013ebc4639ed2cff77",
+      "revision": "9b335e3fbb9c5e8e323e382daeec56fa25336822",
       "path": "skills/pull-request-merge/README.md",
       "expected_blob_sha": "8220e71ee5b7badc31690c50978180ddf521bfcc"
     },
     {
       "name": "research-controller",
       "load_on": ["RESEARCH_CONTROLLER"],
-      "revision": "125bae0358da93edd6726b013ebc4639ed2cff77",
+      "revision": "9b335e3fbb9c5e8e323e382daeec56fa25336822",
       "path": "skills/research-controller/README.md",
       "expected_blob_sha": "aa7e99bc7c7dab678e6a0e36a2d5bdfd546b22c5"
     }
