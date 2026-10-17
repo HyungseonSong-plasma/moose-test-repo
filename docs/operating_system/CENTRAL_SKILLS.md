@@ -2,7 +2,7 @@
 
 **Status:** canonical consumer manifest guide  
 **OS:** Samuel  
-**Central revision:** `125bae0358da93edd6726b013ebc4639ed2cff77`
+**Central revision:** `9b335e3fbb9c5e8e323e382daeec56fa25336822`
 
 The machine-readable exact identities are in `central_skills.json`.
 
