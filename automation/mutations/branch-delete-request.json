@@ -1,68 +1,12 @@
 {
   "targets": [
     {
-      "branch": "issue395-240w-100us-dt03-04-05us-wafer-defect-scan",
-      "expected_sha": "7298953726f9eb69c1fa1714b5ae236f7b5dd9c5"
+      "branch": "issue-397-moose-test-init-capability-routing",
+      "expected_sha": "672e9018365d2971aea84ff7d49467a8c9e2b414"
     },
     {
-      "branch": "issue395-edetach-240w-100us-dt500ns",
-      "expected_sha": "7298953726f9eb69c1fa1714b5ae236f7b5dd9c5"
-    },
-    {
-      "branch": "issue395-h01-charge-transfer-240w-100us-dt500ns",
-      "expected_sha": "7298953726f9eb69c1fa1714b5ae236f7b5dd9c5"
-    },
-    {
-      "branch": "issue395-40w-baseline-100us",
-      "expected_sha": "6cabb6584e31d7096bbde2f06af4c056ef6a96e0"
-    },
-    {
-      "branch": "issue395-ei01-1ms-power-scan-120-180-240w",
-      "expected_sha": "8cc83155e97091b29de75ef09a4fe25b0c3c975b"
-    },
-    {
-      "branch": "issue395-ei01-attachment-power-scan-120-240-360w-100us",
-      "expected_sha": "c96d9c89ac716aa6baabf508d01fd810ff330c45"
-    },
-    {
-      "branch": "issue395-ei17-o-elastic-200-300-400w-refined-mesh-100us",
-      "expected_sha": "d4e8ebf6d7683a6596603c085d0dff43e4f8a4b7"
-    },
-    {
-      "branch": "issue395-ei20-power-scan-40-80-120w-100us",
-      "expected_sha": "5ac277a62ff6f8448c4250bfbee3a1c77708f94a"
-    },
-    {
-      "branch": "issue395-wafer-charge-checkerboard-ab-diagnostics",
-      "expected_sha": "622ca5a30893fb89e4ba2b8b98d7c602dad7725f"
-    },
-    {
-      "branch": "issue-397-bohm-positive-ions-100us",
-      "expected_sha": "bd94398fe1e226a5f2e93b6bdea90f52d6f4e688"
-    },
-    {
-      "branch": "issue-397-d1-native-sheath",
-      "expected_sha": "7d2bb4b474e51f12eebfe4da7f49981ad6d330db"
-    },
-    {
-      "branch": "issue-397-o-minus-wafer-barrier-only",
-      "expected_sha": "32b3583f25d7bff7aa4828a0bd51e41607e30df3"
-    },
-    {
-      "branch": "issue-397-pre2x-original-mesh",
-      "expected_sha": "1e603e13700cfb93d927fc8ac1896cd19f99cc56"
-    },
-    {
-      "branch": "issue-397-pre2x-radial-graded-coarse",
-      "expected_sha": "501cdc643acc8b099db00cb2c4a348d50461f07d"
-    },
-    {
-      "branch": "ops/finalize-issue331-cleanup-20261009",
-      "expected_sha": "c1ca3f83348a6a94d56e1707424162eb460440d4"
-    },
-    {
-      "branch": "tmp-do-not-use",
-      "expected_sha": "35ab062eb9c24e59db173cef9f2e666ba8d640e1"
+      "branch": "issue395-ei17-refined-200w-dt200-300-400-500-600-900ns-100us",
+      "expected_sha": "2f5651b45acf33b96c480f9f3af01d6a3a83fccb"
     }
   ]
 }
