@@ -1,28 +1,68 @@
 {
   "targets": [
-    {"branch": "issue395-diss-ion-power-scan-20-30-40w-100us", "expected_sha": "6cabb6584e31d7096bbde2f06af4c056ef6a96e0"},
-    {"branch": "issue395-electron-adjacent-sheath-wall-10w", "expected_sha": "df5b0598838452991eba98ec48d92159f9225ebd"},
-    {"branch": "issue395-electron-adjacent-sheath-wall-10w-closed", "expected_sha": "5084c758c57eb3329bf0172d8480dbc519cbae7d"},
-    {"branch": "issue395-electron-adjacent-sheath-wall-10w-closed-diss-ion-100us", "expected_sha": "4fccf70399c02fa81d2e47e6e040a11f2912fae2"},
-    {"branch": "issue395-electron-adjacent-sheath-wall-10w-closed-dissociation", "expected_sha": "0a057c3b342362d7c5a0a969aa9c28fdb3282213"},
-    {"branch": "issue395-electron-adjacent-sheath-wall-10w-closed-ionization", "expected_sha": "01f351c6ccbed095d57dce0843541a77bf391d30"},
-    {"branch": "issue395-electron-drift-diffusion-wall-10w", "expected_sha": "7de5c3495788e7c38a782a6040e94d9a0a14e793"},
-    {"branch": "issue395-electron-field-limited-wall-10w", "expected_sha": "2a2317d1bb3dd08c8e82079aec7e1271ccdbfda2"},
-    {"branch": "issue395-electron-fvm-hybrid-25ns", "expected_sha": "5d82d10fcd041c7ea6715015d40b9f994c36aa34"},
-    {"branch": "issue395-electron-sheath-factor-25ns", "expected_sha": "0462b8513fe621cb71ab75e1e298d91748dc7576"},
-    {"branch": "issue395-o2-dissociation-readiness", "expected_sha": "54fa668661ebc8d7754b876cc12b8ca649d0a69b"},
-    {"branch": "issue395-outlet-poisson-neumann", "expected_sha": "c25209b514cabe7a191864fb350e5a27ea5b4810"},
-    {"branch": "issue395-powered-chemistry-ladder", "expected_sha": "f17a95206d2402e0b66891f2566e85e734ffe8a3"},
-    {"branch": "issue395-rf-dissociation-constant-1000w", "expected_sha": "bcb56f65616860399a9bebfcb68f0cd1f2ddb907"},
-    {"branch": "issue395-rf-dissociation-from-start", "expected_sha": "20e450aac52e2c6171b0eec755312db562cbf28b"},
-    {"branch": "issue395-rf-elastic-10w-15us", "expected_sha": "2e806261e27ce7980e427c309d2bf27b7f566393"},
-    {"branch": "issue395-rf-elastic-10w-inlet-outlet-open-15us", "expected_sha": "10a82edfb4ad108c55d84f92d717c54010d3be0e"},
-    {"branch": "issue395-rf-elastic-50w-outlet-open-15us", "expected_sha": "bcd446710c2be3ff2c41c87d9a1bb224bcf84ff3"},
-    {"branch": "issue395-rf-elastic-constant-1000w", "expected_sha": "23001640e97cd2c65bfdc7317c4b3911fa58e981"},
-    {"branch": "issue395-rf-elastic-diss-100w", "expected_sha": "a68963b45cca56bac1497b97e199f6b2c072f3d9"},
-    {"branch": "issue395-rf-elastic-diss-ion-100w-15us", "expected_sha": "c3e81dea1ec52eb4e276df9e9de00d6e96044c3c"},
-    {"branch": "issue395-rf-only-110ns", "expected_sha": "846c17e6f56137a79d3a6ef159af997201868645"},
-    {"branch": "issue395-see-test", "expected_sha": "28343ace00f15af84420bb22d96885a3919c8610"},
-    {"branch": "samuel-pin-negative-capability-guard", "expected_sha": "5c5f0712fdeac30716c55030c3aa218b4c770b0d"}
+    {
+      "branch": "issue395-240w-100us-dt03-04-05us-wafer-defect-scan",
+      "expected_sha": "7298953726f9eb69c1fa1714b5ae236f7b5dd9c5"
+    },
+    {
+      "branch": "issue395-edetach-240w-100us-dt500ns",
+      "expected_sha": "7298953726f9eb69c1fa1714b5ae236f7b5dd9c5"
+    },
+    {
+      "branch": "issue395-h01-charge-transfer-240w-100us-dt500ns",
+      "expected_sha": "7298953726f9eb69c1fa1714b5ae236f7b5dd9c5"
+    },
+    {
+      "branch": "issue395-40w-baseline-100us",
+      "expected_sha": "6cabb6584e31d7096bbde2f06af4c056ef6a96e0"
+    },
+    {
+      "branch": "issue395-ei01-1ms-power-scan-120-180-240w",
+      "expected_sha": "8cc83155e97091b29de75ef09a4fe25b0c3c975b"
+    },
+    {
+      "branch": "issue395-ei01-attachment-power-scan-120-240-360w-100us",
+      "expected_sha": "c96d9c89ac716aa6baabf508d01fd810ff330c45"
+    },
+    {
+      "branch": "issue395-ei17-o-elastic-200-300-400w-refined-mesh-100us",
+      "expected_sha": "d4e8ebf6d7683a6596603c085d0dff43e4f8a4b7"
+    },
+    {
+      "branch": "issue395-ei20-power-scan-40-80-120w-100us",
+      "expected_sha": "5ac277a62ff6f8448c4250bfbee3a1c77708f94a"
+    },
+    {
+      "branch": "issue395-wafer-charge-checkerboard-ab-diagnostics",
+      "expected_sha": "622ca5a30893fb89e4ba2b8b98d7c602dad7725f"
+    },
+    {
+      "branch": "issue-397-bohm-positive-ions-100us",
+      "expected_sha": "bd94398fe1e226a5f2e93b6bdea90f52d6f4e688"
+    },
+    {
+      "branch": "issue-397-d1-native-sheath",
+      "expected_sha": "7d2bb4b474e51f12eebfe4da7f49981ad6d330db"
+    },
+    {
+      "branch": "issue-397-o-minus-wafer-barrier-only",
+      "expected_sha": "32b3583f25d7bff7aa4828a0bd51e41607e30df3"
+    },
+    {
+      "branch": "issue-397-pre2x-original-mesh",
+      "expected_sha": "1e603e13700cfb93d927fc8ac1896cd19f99cc56"
+    },
+    {
+      "branch": "issue-397-pre2x-radial-graded-coarse",
+      "expected_sha": "501cdc643acc8b099db00cb2c4a348d50461f07d"
+    },
+    {
+      "branch": "ops/finalize-issue331-cleanup-20261009",
+      "expected_sha": "c1ca3f83348a6a94d56e1707424162eb460440d4"
+    },
+    {
+      "branch": "tmp-do-not-use",
+      "expected_sha": "35ab062eb9c24e59db173cef9f2e666ba8d640e1"
+    }
   ]
 }
