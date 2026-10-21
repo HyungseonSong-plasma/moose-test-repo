@@ -23,6 +23,10 @@ private:
   const Real _ion_temperature_eV;
   const Real _migration_gate_smoothing_width;
   const bool _use_element_gradient_for_potential;
+  const bool _use_negative_ion_sheath_barrier;
+  const bool _use_bohm_ion_collection;
+  const Moose::Functor<ADReal> * const _electron_mean_energy;
+  const Moose::Functor<ADReal> * const _sheath_barrier_drop;
   const std::string _output_prefix;
 };
 
@@ -117,6 +121,25 @@ PhysicsIonWallTotalFluxMaterial::validParams()
   params.addParam<Real>("migration_gate_smoothing_width", 0.0, "Outward migration gate smoothing width [V/m].");
   params.addParam<bool>("use_element_gradient_for_potential", false, "Use the sided adjacent element gradient for continuous FEM potential.");
   params.addParam<std::string>("output_prefix", "", "Prefix prepended to ion_wall_number_flux and ion_wall_mass_flux.");
+  params.addParam<bool>(
+      "use_bohm_ion_collection",
+      false,
+      "Exploratory positive-ion wafer-only Bohm collection n_i*sqrt(e*Te/m_i). "
+      "Uses the plasma-side density as a sheath-edge proxy; no E-field migration or thermal term.");
+  params.addParam<MooseFunctorName>(
+      "electron_mean_energy",
+      "mean_en_solved",
+      "Electron mean energy [eV] for the Bohm proxy, with Te=(2/3)*mean energy.");
+  params.addParam<bool>(
+      "use_negative_ion_sheath_barrier",
+      false,
+      "Attenuate the thermal collection of a repelled negative ion by exp(-Delta_phi/T_i,eV). "
+      "Eliminates migration entirely for this barrier-enabled species, retaining only " 
+      "thermal collection times exp(-Delta_phi/T_i,eV); requires negative charge.");
+  params.addParam<MooseFunctorName>(
+      "sheath_barrier_drop",
+      "electron_sheath_drop_V",
+      "Nonnegative, plasma-sided sheath barrier [V] shared with the electron wall closure.");
   return params;
 }
 
@@ -132,6 +155,14 @@ PhysicsIonWallTotalFluxMaterial::PhysicsIonWallTotalFluxMaterial(const InputPara
     _ion_temperature_eV(getParam<Real>("ion_temperature_eV")),
     _migration_gate_smoothing_width(getParam<Real>("migration_gate_smoothing_width")),
     _use_element_gradient_for_potential(getParam<bool>("use_element_gradient_for_potential")),
+    _use_negative_ion_sheath_barrier(getParam<bool>("use_negative_ion_sheath_barrier")),
+    _use_bohm_ion_collection(getParam<bool>("use_bohm_ion_collection")),
+    _electron_mean_energy(_use_bohm_ion_collection
+                              ? &getFunctor<ADReal>("electron_mean_energy")
+                              : nullptr),
+    _sheath_barrier_drop(_use_negative_ion_sheath_barrier
+                             ? &getFunctor<ADReal>("sheath_barrier_drop")
+                             : nullptr),
     _output_prefix(getParam<std::string>("output_prefix"))
 {
   if (_charge_number == 0.0)
@@ -144,6 +175,12 @@ PhysicsIonWallTotalFluxMaterial::PhysicsIonWallTotalFluxMaterial(const InputPara
     paramError("ion_temperature_eV", "ion_temperature_eV must be nonnegative.");
   if (_migration_gate_smoothing_width < 0.0)
     paramError("migration_gate_smoothing_width", "migration_gate_smoothing_width must be nonnegative.");
+  if (_use_negative_ion_sheath_barrier && _charge_number >= 0.0)
+    paramError("use_negative_ion_sheath_barrier", "Only negative ions can use sheath barrier suppression.");
+  if (_use_bohm_ion_collection && _charge_number <= 0.0)
+    paramError("use_bohm_ion_collection", "Bohm collection is only supported for positive ions.");
+  if (_use_bohm_ion_collection && _use_negative_ion_sheath_barrier)
+    paramError("use_bohm_ion_collection", "Bohm and negative-ion barrier models are mutually exclusive.");
 
   const auto number_name = _output_prefix + "ion_wall_number_flux";
   const auto mass_name = _output_prefix + "ion_wall_mass_flux";
@@ -159,6 +196,18 @@ PhysicsIonWallTotalFluxMaterial::PhysicsIonWallTotalFluxMaterial(const InputPara
         {
           using std::sqrt;
           const ADReal n_i = _ion_number_density(r, state);
+          if (_use_bohm_ion_collection)
+          {
+            using std::sqrt;
+            const ADReal mean_energy_eV = (*_electron_mean_energy)(r, state);
+            if (MetaPhysicL::raw_value(mean_energy_eV) <= 0.0)
+              mooseError("Bohm collection requires positive electron mean energy [eV].");
+            const ADReal electron_temperature_eV = (2.0 / 3.0) * mean_energy_eV;
+            const ADReal u_bohm =
+                sqrt(PHYSICS_CONSTANTS::e * electron_temperature_eV *
+                     PHYSICS_CONSTANTS::N_A / _molar_mass);
+            return _sticking * n_i * u_bohm;
+          }
           const ADReal T_i = _ion_temperature_eV > 0.0
                                  ? ADReal(_ion_temperature_eV / PHYSICS_CONSTANTS::k_boltzeV)
                                  : _gas_temperature(r, state);
@@ -166,7 +215,18 @@ PhysicsIonWallTotalFluxMaterial::PhysicsIonWallTotalFluxMaterial(const InputPara
             mooseError("PhysicsIonWallTotalFluxMaterial requires ion thermal temperature > 0 K.");
           const ADReal v_th = sqrt(8.0 * PHYSICS_CONSTANTS::R * T_i /
                                    (PHYSICS_CONSTANTS::pi * _molar_mass));
-          const ADReal surface = _sticking * 0.25 * n_i * v_th;
+          ADReal surface = _sticking * 0.25 * n_i * v_th;
+          if (_use_negative_ion_sheath_barrier)
+          {
+            const ADReal drop_V = (*_sheath_barrier_drop)(r, state);
+            if (MetaPhysicL::raw_value(drop_V) < -1e-12)
+              mooseError("Negative-ion sheath barrier functor must be nonnegative [V].");
+            using std::exp;
+            surface *= exp(-drop_V / (PHYSICS_CONSTANTS::k_boltzeV * T_i));
+            // Repelled O- is collected only through the attenuated thermal
+            // contribution.  Neither evaluate nor add drift/migration here.
+            return surface;
+          }
           const RealVectorValue n_out = outwardNormalTotal(r);
           const ADRealVectorValue electric_field = faceElectricFieldTotal(
               _potential, r, state, _use_element_gradient_for_potential);
@@ -188,6 +248,18 @@ PhysicsIonWallTotalFluxMaterial::PhysicsIonWallTotalFluxMaterial(const InputPara
         {
           using std::sqrt;
           const ADReal n_i = _ion_number_density(r, state);
+          if (_use_bohm_ion_collection)
+          {
+            using std::sqrt;
+            const ADReal mean_energy_eV = (*_electron_mean_energy)(r, state);
+            if (MetaPhysicL::raw_value(mean_energy_eV) <= 0.0)
+              mooseError("Bohm collection requires positive electron mean energy [eV].");
+            const ADReal electron_temperature_eV = (2.0 / 3.0) * mean_energy_eV;
+            const ADReal u_bohm =
+                sqrt(PHYSICS_CONSTANTS::e * electron_temperature_eV *
+                     PHYSICS_CONSTANTS::N_A / _molar_mass);
+            return _sticking * n_i * u_bohm * _molar_mass / PHYSICS_CONSTANTS::N_A;
+          }
           const ADReal T_i = _ion_temperature_eV > 0.0
                                  ? ADReal(_ion_temperature_eV / PHYSICS_CONSTANTS::k_boltzeV)
                                  : _gas_temperature(r, state);
@@ -195,7 +267,18 @@ PhysicsIonWallTotalFluxMaterial::PhysicsIonWallTotalFluxMaterial(const InputPara
             mooseError("PhysicsIonWallTotalFluxMaterial requires ion thermal temperature > 0 K.");
           const ADReal v_th = sqrt(8.0 * PHYSICS_CONSTANTS::R * T_i /
                                    (PHYSICS_CONSTANTS::pi * _molar_mass));
-          const ADReal surface = _sticking * 0.25 * n_i * v_th;
+          ADReal surface = _sticking * 0.25 * n_i * v_th;
+          if (_use_negative_ion_sheath_barrier)
+          {
+            const ADReal drop_V = (*_sheath_barrier_drop)(r, state);
+            if (MetaPhysicL::raw_value(drop_V) < -1e-12)
+              mooseError("Negative-ion sheath barrier functor must be nonnegative [V].");
+            using std::exp;
+            surface *= exp(-drop_V / (PHYSICS_CONSTANTS::k_boltzeV * T_i));
+            // The mass-return owner MUST use the identical number flux.
+            // No migration contribution is present in the barrier branch.
+            return surface * _molar_mass / PHYSICS_CONSTANTS::N_A;
+          }
           const RealVectorValue n_out = outwardNormalTotal(r);
           const ADRealVectorValue electric_field = faceElectricFieldTotal(
               _potential, r, state, _use_element_gradient_for_potential);
