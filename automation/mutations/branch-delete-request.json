@@ -1,16 +1,12 @@
 {
   "targets": [
     {
-      "branch": "issue395-wafer-interface-normal-current-sign-n1-s1",
-      "expected_sha": "51da598367452da50498251a4ae8d9405558da10"
+      "branch": "issue-306-sequence08-baseline",
+      "expected_sha": "1b28a1bccbec4ccad5e597500142a7e7e06ef4a3"
     },
     {
-      "branch": "issue-397-case2-wafer-r20mm-mesh-levels",
-      "expected_sha": "8a0c81f815e527283404fc82c461f2c408ba31a6"
-    },
-    {
-      "branch": "issue-397-case3-bohm-positive-thermal-minus-100us",
-      "expected_sha": "77f2d7b93f6328afc66255711bc60c629a146649"
+      "branch": "qualified/issue310-gummel-optimized",
+      "expected_sha": "cdba1cba025da3c8442c0ad2993aeccab0111732"
     }
   ]
 }
