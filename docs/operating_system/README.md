@@ -54,14 +54,16 @@ Central Samuel rules/skills/controller mechanics do not establish scientific PAS
 1. verify this exact Samuel binding;
 2. verify/read the Samuel OS index and ESSENTIAL_RULES;
 3. load session-bootstrap + state-refresh from the same revision;
-4. verify/index skills/catalog.json and skills/capability-registry.json metadata;
+4. verify/read skills/catalog.json and skills/capability-registry.json from the exact pinned revision; report GITHUB_CAPABILITY_ROUTING=READY|BLOCKED independently from provider visibility;
 5. restore the Physics-local operating core and current STATE;
-6. resolve immediate-obligation trigger(s) and load only matching central skill/capability contracts;
-7. report OS = Samuel, exact revision, restored state, and the first real gate;
+6. resolve immediate-obligation trigger(s) and load matching central skill plus registry-ordered providers, including GITHUB_BRANCH_DELETE and GITHUB_MUTATION_CAPABILITY_VERDICT when triggered;
+7. report OS = Samuel, exact revision, restored state, GITHUB_MUTATION_PREFLIGHT=TRIGGER_REQUIRED and the first real gate;
 8. stop read-only.
 ```
 
 Initialization does not itself authorize mutation, workflow execution, merge, or semantic acceptance.
+
+After init, any GitHub state-changing request re-enters **Samuel trigger → skill → capability registry → ordered providers → fresh evidence → mutation → read-back**. Rehydrate after context loss. A missing connector operation is not global capability exhaustion; evaluate the registered native provider and central negative-verdict guard first.
 
 ## Samuel controller continuation
 

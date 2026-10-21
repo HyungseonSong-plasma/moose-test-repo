@@ -10,7 +10,9 @@ Use:
 moose-test-init
 ```
 
-`BOOTSTRAP.md` applies the exact pinned Samuel OS and central `session-bootstrap` mechanics, then restores Physics-local authority/current state.
+ `BOOTSTRAP.md` applies the exact pinned Samuel OS and central `session-bootstrap` mechanics, then restores Physics-local authority/current state.
+
+**Cross-session GitHub gate:** `moose-test-init` must report `GITHUB_CAPABILITY_ROUTING=READY` only after reading and verifying the pinned Samuel catalog **and** capability registry. Before any GitHub state-changing operation, even after context reset, re-resolve the owning Samuel skill and ordered registry providers before choosing a connected tool. A missing connector operation is not global unavailability; evaluate the Samuel-native provider. `BOOTSTRAP.md` owns the `GITHUB_MUTATION_PREFLIGHT` gate. Initialization remains read-only.
 
 ## Samuel operating stack
 
