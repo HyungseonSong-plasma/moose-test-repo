@@ -29,6 +29,11 @@ jobs:
         run: |
           python3 ci/guards/workflow_surface_guard.py --self-test
           python3 ci/guards/workflow_surface_guard.py --check
+      - name: Regression-test moose-test-init capability restoration
+        shell: bash
+        run: |
+          python3 ci/guards/moose_test_init_capability_guard.py --self-test
+          python3 ci/guards/moose_test_init_capability_guard.py --check
       - name: Regression-test central Skill manifest contract
         run: python3 ci/guards/central_skill_contract_guard.py --self-test
       - name: Validate Samuel central operating contracts
