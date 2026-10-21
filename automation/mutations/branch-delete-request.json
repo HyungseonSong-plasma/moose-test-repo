@@ -1,12 +1,8 @@
 {
   "targets": [
     {
-      "branch": "issue-397-moose-test-init-capability-routing",
-      "expected_sha": "672e9018365d2971aea84ff7d49467a8c9e2b414"
-    },
-    {
-      "branch": "issue395-ei17-refined-200w-dt200-300-400-500-600-900ns-100us",
-      "expected_sha": "2f5651b45acf33b96c480f9f3af01d6a3a83fccb"
+      "branch": "issue-397-pre2x-radial-coarse-levels",
+      "expected_sha": "ce66d4771682d198a84e58ffda8bf6cccbf2d4e7"
     }
   ]
 }
