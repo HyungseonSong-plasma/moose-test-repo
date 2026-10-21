@@ -1,8 +1,16 @@
 {
   "targets": [
     {
-      "branch": "issue-397-pre2x-radial-coarse-levels",
-      "expected_sha": "ce66d4771682d198a84e58ffda8bf6cccbf2d4e7"
+      "branch": "issue395-wafer-interface-normal-current-sign-n1-s1",
+      "expected_sha": "51da598367452da50498251a4ae8d9405558da10"
+    },
+    {
+      "branch": "issue-397-case2-wafer-r20mm-mesh-levels",
+      "expected_sha": "8a0c81f815e527283404fc82c461f2c408ba31a6"
+    },
+    {
+      "branch": "issue-397-case3-bohm-positive-thermal-minus-100us",
+      "expected_sha": "77f2d7b93f6328afc66255711bc60c629a146649"
     }
   ]
 }
