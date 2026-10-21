@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "experiment": "issue397_pre_local2x_radial_wafer_mesh_coarsening",
+  "status": "PREPARED_GEOMETRY_AND_CONFORMITY_AUDITED_NOT_SOLVER_VALIDATED",
+  "reference": {
+    "mesh": "2026-10-21 archived Case2 pre-local-2x multi-material Gmsh v2.2",
+    "sha256": "91299b6fc16136dfc9c4426148113b07ddfd7e95839da7abf5f14c36a4eac9cf",
+    "nodes": 1762,
+    "triangles": 3201,
+    "wafer_faces": 31,
+    "wafer_r_m": [
+      0,
+      0.135
+    ],
+    "wafer_z_m": 0.099,
+    "physical_groups": 24
+  },
+  "change": "Wafer radial segment coarsening only. Re-triangulate adjacent plasma and solid wafer triangle fans conformingly; optimize internal triangulation via edge flips. Keep all 24 physical groups, material areas and boundary lengths.",
+  "levels": [
+    {
+      "level": 1,
+      "wafer_faces": 16,
+      "face_width_most_mm": 8.70967742,
+      "nodes": 1747,
+      "triangles": 3171,
+      "min_triangle_angle_deg": 4.80441025,
+      "sha256": "04c02763ac9bb22e7982320dd5a60f9b7d8658dcf1b6d226743e92bc67c4a87c"
+    },
+    {
+      "level": 2,
+      "wafer_faces": 8,
+      "face_width_most_mm": 17.41935484,
+      "nodes": 1739,
+      "triangles": 3155,
+      "min_triangle_angle_deg": 4.80441025,
+      "sha256": "23f72755ba41a29df7ee8600a0b0d2652b64301a82791ce815ca0fffc0995fd2"
+    },
+    {
+      "level": 3,
+      "wafer_faces": 4,
+      "face_width_most_mm": 34.83870968,
+      "nodes": 1735,
+      "triangles": 3147,
+      "min_triangle_angle_deg": 2.564732945,
+      "sha256": "16aaeb4152e5c1edec8c08644ff2b6db1e008c6ee0860bad61f304adb3355d38"
+    }
+  ],
+  "caveats": [
+    "Levels retain almost all bulk plasma degrees of freedom: mainly wafer face resolution, not substantial whole-domain speedup.",
+    "L3 min triangle angle 2.56 deg; numerical conditioning and convergence checks mandatory.",
+    "Native wafer current/sigma probes must accept variable number of faces.",
+    "Original all-ion thermal+migration and electron sheath selected for any future run unless explicitly changed.",
+    "No additional simulations launched; local downloadable mesh package contains the Gmsh files and reproducibility code, not yet checked in as GitHub source files."
+  ],
+  "validation": [
+    "Gmsh 2.2 ASCII re-read/roundtrip",
+    "all 24 physical groups maintained",
+    "plasma/wafer shared interface remains conforming",
+    "all physical boundary segments present on 2D mesh except pre-existing axis special case",
+    "material areas and boundary lengths preserved",
+    "no inverted/zero-area triangle",
+    "same 0-135mm physical wafer extent"
+  ]
+}
