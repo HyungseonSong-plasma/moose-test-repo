@@ -16,7 +16,9 @@ if [[ -n "${CHATGPT_WORK_BASE_SHA:-}" ]]; then
     echo "governed-work exact-source SHA mismatch" >&2; exit 2;
   }
 fi
-export GITHUB_WORKSPACE="${GITHUB_WORKSPACE:-$PWD}"
+# Canonical experiment.yml checks out control/ and target/ separately: mount the
+# actual pinned target Git root, never the parent Actions workspace.
+export GITHUB_WORKSPACE="$PWD"
 export MODE=B DT_NS=1000
 export BUILD_BASE_REF=ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
 export CHEM=experiments/Issue395_powered_chemistry_ladder
