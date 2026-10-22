@@ -1,0 +1,83 @@
+# GOVERNED ONE-SHOT TEMPLATE ONLY. This file is intentionally outside
+# .github/workflows and DOES NOT execute as part of any PR merge.
+#
+# For explicitly approved 100us replays only:
+#   1. At an exact approved main commit, materialize these bytes to
+#      .github/workflows/issue397-l1-final-replay-once.yml using Samuel's
+#      repository-mutation guard and exact-head lease.
+#   2. This guarded one-shot (self-path push) runs three independent cases.
+#   3. Observe jobs + artifacts, preserve failure evidence, then remove the
+#      one-shot workflow through the governed cleanup route.
+# Do not re-run the already-accepted 100us experiment merely to merge PR400.
+name: Issue 397 Graded L1 200 250 300W one-shot replay
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/issue397-l1-final-replay-once.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  replay:
+    name: Graded L1 EI17 ${{ matrix.power_w }} W
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        power_w: [200, 250, 300]
+    steps:
+      - name: Checkout exact replay source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - name: Verify source head
+        shell: bash
+        run: test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+      - name: Install pinned Python preparation dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m venv .issue397-governed-venv
+          .issue397-governed-venv/bin/python -m pip install --disable-pip-version-check --quiet numpy==2.1.2 scipy==1.14.1
+      - name: P0 generate exact L1 mesh and RF physics inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          source .issue397-governed-venv/bin/activate
+          bash experiments/Issue395_powered_chemistry_ladder/issue397_l1_power_scan_replay.sh prepare "${{ matrix.power_w }}"
+      - name: P1 compile pinned PhysicsApp
+        shell: bash
+        run: bash experiments/Issue395_powered_chemistry_ladder/issue397_l1_power_scan_replay.sh build "${{ matrix.power_w }}"
+      - name: P2 check exact physics inputs
+        shell: bash
+        run: bash experiments/Issue395_powered_chemistry_ladder/issue397_l1_power_scan_replay.sh check "${{ matrix.power_w }}"
+      - name: P3 100us MOOSE and Maxwell solver
+        id: p3
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout -s TERM -k 60s 19000s bash experiments/Issue395_powered_chemistry_ladder/issue397_l1_power_scan_replay.sh solve "${{ matrix.power_w }}"
+      - name: P4 native per-face wafer charge and current audit
+        if: steps.p3.outcome == 'success'
+        shell: bash
+        run: |
+          set -euo pipefail
+          source .issue397-governed-venv/bin/activate
+          bash experiments/Issue395_powered_chemistry_ladder/issue397_l1_power_scan_replay.sh audit "${{ matrix.power_w }}"
+      - name: Upload exact power-case evidence even if solver fails
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue397-governed-L1-EI17-${{ matrix.power_w }}W-100us
+          path: |
+            experiments/Issue395_powered_chemistry_ladder/results_rf_elastic_diss_ion_ei20_ei01_${{ matrix.power_w }}w_adjacent_sheath_wall_closed_100us_dt1000ns/**
+            experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_ei20_ei01_${{ matrix.power_w }}w_adjacent_sheath_wall_closed_100us_dt1000ns.i
+            experiments/Issue395_powered_chemistry_ladder/rf_elastic_multiapp_parent_${{ matrix.power_w }}w_100us_dt1000ns_overlay.i
+            experiments/Issue395_powered_chemistry_ladder/rf_elastic_multiapp_maxwell_${{ matrix.power_w }}w_100us_dt1000ns_overlay.i
+            experiments/Issue395_powered_chemistry_ladder/rf_elastic_multiapp_maxwell_${{ matrix.power_w }}w_100us_dt1000ns_child.i
+            experiments/Issue395_powered_chemistry_ladder/issue397_maxwell_steady_abs1e11.i
+          retention-days: 30
+          if-no-files-found: warn

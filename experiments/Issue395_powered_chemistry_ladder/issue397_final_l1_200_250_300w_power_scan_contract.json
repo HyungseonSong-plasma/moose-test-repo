@@ -1,0 +1,132 @@
+{
+  "schema_version": 1,
+  "experiment": "issue397_final_graded_coarse_l1_power_discriminator_200_250_300W",
+  "status": "HISTORICAL_EVIDENCE_COMPLETE_GOVERNED_REPLAY_READY_FOR_CI",
+  "intent": "Reproduce historical Graded L1 / EI17 200/250/300 W inputs with validated nl_abs_tol=1e-11; govern input build/check through existing Samuel manifest, and full 100us solve through an explicitly authorized bounded one-shot.",
+  "cases": [
+    {
+      "target_power_W": 200,
+      "job": "wafer-sigma-test (B, 200)"
+    },
+    {
+      "target_power_W": 250,
+      "job": "wafer-sigma-test (B, 250)"
+    },
+    {
+      "target_power_W": 300,
+      "job": "wafer-sigma-test (B, 300)"
+    }
+  ],
+  "controls": {
+    "mesh": "canonical 200W EI17 graded coarse L1",
+    "manifest": "issue397_baseline_mesh.json",
+    "canonical_mesh_sha256": "ac70642df75bf7b4bc4ec0d92511e545f0942f9e07a1361618fb9eb5696b83fc",
+    "original_source_sha256": "91299b6fc16136dfc9c4426148113b07ddfd7e95839da7abf5f14c36a4eac9cf",
+    "nodes": 1739,
+    "triangles_2d": 3155,
+    "wafer_faces": 27,
+    "geometry": "2D RZ original mixed plasma/wafer/cover/focus/vacuum/coil physical blocks, axis-centered L1 grading, 24 physical groups",
+    "chemistry": "EI02, O2 dissociation, EI16, EI20, EI01, EI17; same table files in all jobs",
+    "negative_ion_wall": "original thermal+migration",
+    "positive_ion_wall": "O2+ and O+ original thermal+migration",
+    "electron_wall": "original adjacent plasma-cell sheath-limited flux",
+    "surface_charge": "sigma_wafer lower-D DG0, original physical face current B",
+    "pressure_Pa": 1.333223684,
+    "gas_temperature_K": 300,
+    "time_grid": {
+      "end_time_us": 100,
+      "points": 461,
+      "steps": 460,
+      "segments": [
+        {
+          "from_us": 0,
+          "to_us": 0.1,
+          "dt_ns": 1,
+          "steps": 100
+        },
+        {
+          "from_us": 0.1,
+          "to_us": 2,
+          "dt_ns": 10,
+          "steps": 190
+        },
+        {
+          "from_us": 2,
+          "to_us": 10,
+          "dt_ns": 100,
+          "steps": 80
+        },
+        {
+          "from_us": 10,
+          "to_us": 100,
+          "dt_ns": 1000,
+          "steps": 90
+        }
+      ]
+    },
+    "physics_build_image": "ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008",
+    "maxwell_child": {
+      "baseline_abs_tol": 1e-12,
+      "selected_abs_tol": 1e-11,
+      "nl_rel_tol": 1e-10,
+      "nl_max_its": 20,
+      "immutable_source_single_tolerance_patch": true,
+      "tolerance_evidence": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/39740088502",
+      "implemented_in_replay_script": true
+    }
+  },
+  "safety_and_evidence": {
+    "only_delta": "Between 200, 250 and 300 W in any one governed replay, only the RF target varies. Maxwell nl_abs_tol=1e-11 is identical across all three cases.",
+    "mesh_must_pass_strict_source_and_generated_sha256": true,
+    "no_legacy_local2x_refinement": true,
+    "no_Bohm_or_negative_ion_barrier": true,
+    "check_input_before_simulation": true,
+    "native_D1_perface_current_and_charge_audit": true,
+    "p3_100us_simulation_required": true,
+    "max_runner_time_minutes": 360,
+    "evidence_artifact_prefix": "issue397-L1-EI17-",
+    "no_pass_claim_before_jobs_success": true,
+    "manual_only_workflow": false,
+    "unsanctioned_new_workflow_requires_governed_workflow_surface_admission": false,
+    "governed_preflight_timeout_minutes": 120,
+    "solver_replay_requires_explicit_one_shot_approval": true,
+    "never_claim_preflight_as_100us_solver_pass": true,
+    "one_shot_cleanup_required": true
+  },
+  "github_actions_run_id": 39617859962,
+  "github_actions_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/39617859962",
+  "launch_head_sha": "3165daeb387473fd51d20430d93672caa783770f",
+  "historical_outcomes": {
+    "original_run_39617859962": {
+      "power_200": "100us P3/P4 PASS",
+      "power_250": "100us P3/P4 PASS",
+      "power_300": "P3 cancelled near 58ns under nl_abs_tol=1e-12",
+      "archived_source_sha": "3165daeb387473fd51d20430d93672caa783770f"
+    },
+    "followup_run_39740088502": {
+      "power_300": "100us P3/P4/P5 PASS",
+      "power_400": "100us P3/P4/P5 PASS",
+      "numerical_change": "Maxwell nl_abs_tol 1e-12 -> 1e-11"
+    },
+    "issue_403": "Closed - completed for 300-1000W numerical convergence; 1000W P5 PID saturation separately recorded"
+  },
+  "workflow_status": "PROHIBITED_LEGACY_WORKFLOW_REMOVED; APPROVED_PREPARE_MANIFEST_READY_FOR_CI; LONG_SOLVER_REPLAY_NOT_DISPATCHED",
+  "execution": {
+    "supported_preflight_entrypoint": ".github/workflows/experiment.yml",
+    "samuel_manifest": "automation/manifests/experiments/Issue_397_experiments01.json",
+    "manifest_scope": "P0/P1/P2/P3: pinned dependency install, 200/250/300 W preparation, single PhysicsApp C++ build, all three check-input; NO 100us solve",
+    "full_solver_replay_script": "experiments/Issue395_powered_chemistry_ladder/issue397_l1_power_scan_replay.sh",
+    "full_solver_replay_template": "experiments/Issue395_powered_chemistry_ladder/issue397_l1_final_replay_once.template.yml.txt",
+    "template_activation": "requires separate explicitly governed one-shot deployment and exact-head verification; absent from .github/workflows on merge",
+    "full_replay_job_limit_minutes": 360,
+    "template_matrix_powers_W": [
+      200,
+      250,
+      300
+    ],
+    "p3_p4_physics_results": "not rerun as part of integration; historical runs are scientific evidence",
+    "historical_deprecated_workflow": ".github/workflows/issue397-graded-l1-power-scan-200-250-300w-100us.yml",
+    "historical_workflow_blob_sha": "228fffdf8dd265ceffda973e2319c6c30b450a66",
+    "retained_in_git_history": true
+  }
+}

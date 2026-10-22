@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "issue": 397,
+  "kind": "experiments",
+  "sequence": 1,
+  "title": "Graded coarse L1 EI17 200/250/300 W RF scan: Samuel-governed 100us input and solver preflight",
+  "stages": [
+    {
+      "id": "P0",
+      "name": "Check replay contract and install pinned host preparation libraries",
+      "command": [
+        "bash",
+        "-lc",
+        "set -euo pipefail; bash -n experiments/Issue395_powered_chemistry_ladder/issue397_l1_power_scan_replay.sh; python3 -m venv .issue397-governed-venv; .issue397-governed-venv/bin/python -m pip install --disable-pip-version-check --quiet numpy==2.1.2 scipy==1.14.1; python3 - <<'PY'\nimport json\nfrom pathlib import Path\np=json.loads(Path('experiments/Issue395_powered_chemistry_ladder/issue397_final_l1_200_250_300w_power_scan_contract.json').read_text()); assert [v['target_power_W'] for v in p['cases']]==[200,250,300]; assert p['controls']['time_grid']['steps']==460; assert p['controls']['maxwell_child']['selected_abs_tol']==1e-11; assert p['controls']['wafer_faces']==27; print('ISSUE397_GOVERNED_PREFLIGHT_CONTRACT_PASS')\nPY"
+      ],
+      "timeout_seconds": 900
+    },
+    {
+      "id": "P1",
+      "name": "Generate exact L1 mesh and original EI17 RF chemistry inputs per power",
+      "command": [
+        "bash",
+        "-lc",
+        "set -euo pipefail; source .issue397-governed-venv/bin/activate; for power in 200 250 300; do bash experiments/Issue395_powered_chemistry_ladder/issue397_l1_power_scan_replay.sh prepare \"$power\"; done"
+      ],
+      "timeout_seconds": 7200
+    },
+    {
+      "id": "P2",
+      "name": "Compile exact-source PhysicsApp against immutable MOOSE build image",
+      "command": [
+        "bash",
+        "-lc",
+        "set -euo pipefail; bash experiments/Issue395_powered_chemistry_ladder/issue397_l1_power_scan_replay.sh build 200"
+      ],
+      "timeout_seconds": 5400
+    },
+    {
+      "id": "P3",
+      "name": "PhysicsApp --check-input for all three Maxwell abs1e-11 target cases",
+      "command": [
+        "bash",
+        "-lc",
+        "set -euo pipefail; for power in 200 250 300; do bash experiments/Issue395_powered_chemistry_ladder/issue397_l1_power_scan_replay.sh check \"$power\"; done"
+      ],
+      "timeout_seconds": 2400
+    }
+  ],
+  "artifacts": [
+    "experiments/Issue395_powered_chemistry_ladder/results_rf_elastic_diss_ion_ei20_ei01_*w_adjacent_sheath_wall_closed_100us_dt1000ns/prep/**",
+    "experiments/Issue395_powered_chemistry_ladder/results_rf_elastic_diss_ion_ei20_ei01_*w_adjacent_sheath_wall_closed_100us_dt1000ns/check_input.log",
+    "experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_ei20_ei01_*w_adjacent_sheath_wall_closed_100us_dt1000ns.i",
+    "experiments/Issue395_powered_chemistry_ladder/rf_elastic_multiapp_*w_100us_dt1000ns_*.i",
+    "experiments/Issue395_powered_chemistry_ladder/issue397_maxwell_steady_abs1e11.i",
+    "experiments/Issue395_powered_chemistry_ladder/issue397_final_l1_200_250_300w_power_scan_contract.json"
+  ]
+}
