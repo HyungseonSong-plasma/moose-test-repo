@@ -11,6 +11,9 @@ CANONICAL_PACKAGES = {
     "evidence", "evaluation", "analysis", "execution", "application", "cli",
     "validation", "provenance",
 }
+# Recognize retired package identifiers in legacy forbidden-edge checks even
+# though they must never become canonical cycle-graph vertices.
+LEGACY_TARGET_PACKAGES = {"diagnose", "inventory", "dmix"}
 TRANSITIONAL_EXCEPTIONS: set[tuple[str, str]] = set()
 CHECKS = {"all", "evidence", "analysis", "execution", "presentation", "repository", "cycle"}
 
@@ -38,7 +41,7 @@ def top_package(module: str) -> str | None:
     parts = module.split(".")
     if len(parts) < 2 or parts[0] != "physics_harness":
         return None
-    return parts[1] if parts[1] in CANONICAL_PACKAGES else None
+    return parts[1] if parts[1] in (CANONICAL_PACKAGES | LEGACY_TARGET_PACKAGES) else None
 
 
 def violation(src: str, dst: str) -> tuple[str, str] | None:
