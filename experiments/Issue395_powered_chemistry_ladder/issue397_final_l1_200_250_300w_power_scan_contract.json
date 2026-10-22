@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "experiment": "issue397_final_graded_coarse_l1_power_discriminator_200_250_300W",
+  "status": "LAUNCHED_AWAITING_NUMERICAL_RESULTS",
+  "intent": "three independent production simulations, same mesh and all physics except RF PID target power",
+  "cases": [
+    {
+      "target_power_W": 200,
+      "job": "wafer-sigma-test (B, 200)"
+    },
+    {
+      "target_power_W": 250,
+      "job": "wafer-sigma-test (B, 250)"
+    },
+    {
+      "target_power_W": 300,
+      "job": "wafer-sigma-test (B, 300)"
+    }
+  ],
+  "controls": {
+    "mesh": "canonical 200W EI17 graded coarse L1",
+    "manifest": "issue397_baseline_mesh.json",
+    "canonical_mesh_sha256": "ac70642df75bf7b4bc4ec0d92511e545f0942f9e07a1361618fb9eb5696b83fc",
+    "original_source_sha256": "91299b6fc16136dfc9c4426148113b07ddfd7e95839da7abf5f14c36a4eac9cf",
+    "nodes": 1739,
+    "triangles_2d": 3155,
+    "wafer_faces": 27,
+    "geometry": "2D RZ original mixed plasma/wafer/cover/focus/vacuum/coil physical blocks, axis-centered L1 grading, 24 physical groups",
+    "chemistry": "EI02, O2 dissociation, EI16, EI20, EI01, EI17; same table files in all jobs",
+    "negative_ion_wall": "original thermal+migration",
+    "positive_ion_wall": "O2+ and O+ original thermal+migration",
+    "electron_wall": "original adjacent plasma-cell sheath-limited flux",
+    "surface_charge": "sigma_wafer lower-D DG0, original physical face current B",
+    "pressure_Pa": 1.333223684,
+    "gas_temperature_K": 300,
+    "time_grid": {
+      "end_time_us": 100,
+      "points": 461,
+      "steps": 460,
+      "segments": [
+        {
+          "from_us": 0,
+          "to_us": 0.1,
+          "dt_ns": 1,
+          "steps": 100
+        },
+        {
+          "from_us": 0.1,
+          "to_us": 2,
+          "dt_ns": 10,
+          "steps": 190
+        },
+        {
+          "from_us": 2,
+          "to_us": 10,
+          "dt_ns": 100,
+          "steps": 80
+        },
+        {
+          "from_us": 10,
+          "to_us": 100,
+          "dt_ns": 1000,
+          "steps": 90
+        }
+      ]
+    },
+    "physics_build_image": "ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008"
+  },
+  "safety_and_evidence": {
+    "only_delta": "--target-w at generated RF/MultiApp parent coupling and corresponding power-specific artifact/input paths",
+    "mesh_must_pass_strict_source_and_generated_sha256": true,
+    "no_legacy_local2x_refinement": true,
+    "no_Bohm_or_negative_ion_barrier": true,
+    "check_input_before_simulation": true,
+    "native_D1_perface_current_and_charge_audit": true,
+    "p3_100us_simulation_required": true,
+    "max_runner_time_minutes": 360,
+    "evidence_artifact_prefix": "issue397-L1-EI17-",
+    "no_pass_claim_before_jobs_success": true
+  },
+  "workflow": ".github/workflows/issue397-graded-l1-power-scan-200-250-300w-100us.yml",
+  "github_actions_run_id": 39617859962,
+  "github_actions_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/39617859962",
+  "launch_head_sha": "3165daeb387473fd51d20430d93672caa783770f"
+}
