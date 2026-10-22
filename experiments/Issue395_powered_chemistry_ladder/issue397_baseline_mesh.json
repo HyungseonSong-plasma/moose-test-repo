@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "id": "issue397-ei17-200w-graded-coarse-l1",
+  "role": "ACTIVE_EXPERIMENT_BASELINE_MESH",
+  "baseline_level": 1,
+  "labels": {
+    "mesh": "graded coarse L1",
+    "predecessor": "pre-local-2x original mesh 31 faces",
+    "others": "L2/L3 comparison only"
+  },
+  "source_mesh": {
+    "description": "Pre-local-2x canonical multi-material mesh from unmodified dielectric preparation path",
+    "sha256": "91299b6fc16136dfc9c4426148113b07ddfd7e95839da7abf5f14c36a4eac9cf",
+    "nodes": 1762,
+    "triangles_2d": 3201,
+    "wafer_faces": 31
+  },
+  "baseline_mesh": {
+    "description": "Canonical plasma-side-first Gmsh v2.2, axis-heavy graded coarse L1",
+    "sha256": "ac70642df75bf7b4bc4ec0d92511e545f0942f9e07a1361618fb9eb5696b83fc",
+    "nodes": 1739,
+    "triangles_2d": 3155,
+    "wafer_faces": 27,
+    "wafer_r_range_mm": [
+      0,
+      135
+    ],
+    "wafer_z_mm": 99,
+    "near_axis_wafer_face_width_mm": 8.70967742,
+    "far_field_original_face_width_mm": 4.35483871,
+    "r_taper_mm": 70,
+    "plasma_blend_depth_mm": 19,
+    "wafer_solid_blend_depth_mm": 9,
+    "geometry_min_triangle_angle_modified_region_deg": 14.10559,
+    "geometry_min_triangle_angle_domain_deg": 4.80441,
+    "physical_groups": 24,
+    "wafer_physical_id": 8,
+    "plasma_physical_id": 10,
+    "wafer_solid_physical_id": 21
+  },
+  "materializer": {
+    "script": "issue397_materialize_l1_baseline.py",
+    "generator": "issue397_build_graded_mesh.py",
+    "geometry_helpers": [
+      "issue397_graded_mesh_geometry.py",
+      "issue397_graded_mesh_quality.py"
+    ],
+    "output_basename": "baseline_plasma_plus_unstructured_cover_plus_wafer.msh",
+    "must_match_exact_source_sha": true,
+    "must_match_exact_output_sha": true,
+    "check_material_interface": true
+  },
+  "provenance": {
+    "github_run_id": 39575896519,
+    "github_run_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/39575896519",
+    "github_artifact_id": 12349847563,
+    "github_artifact_name": "issue397-pre2x-graded-coarse-L1-100us-evidence",
+    "generated_mesh_artifact_path": "results_rf_elastic_diss_ion_ei20_ei01_200w_adjacent_sheath_wall_closed_100us_dt1000ns/prep/graded_level_1.msh",
+    "reference_generation_commit": "b5eb714828218c93d22ddfbc982cc4cefbe5ad71"
+  },
+  "numerical_evidence": {
+    "physics": "EI17 200W original B all ions thermal+migration, original electron sheath",
+    "end_time_us": 100,
+    "steps": 460,
+    "points": 461,
+    "moose_input_validation": "PASS",
+    "moose_actual_solver": "PASS",
+    "native_D1_diagnostic_integrity": "PASS",
+    "current_species_sum_rel_rms": 2.324091989183834e-16,
+    "surface_charge_balance_rel_rms": 7.012795028322581e-11,
+    "total_RZ_charge_balance_rel_rms": 6.77062162787518e-11
+  },
+  "scientific_limitations": [
+    "Selection as working numerical-mesh baseline is not evidence that electron density spike or charge checkerboard are resolved",
+    "Original 240W non-EI17 simulation is a different physics baseline and must not be re-labelled",
+    "Do not change historical artifacts/runs or global main mesh without a separate explicit change",
+    "For future experiments change physics one variable at a time; do not conflate this baseline with refined L1 or R-only/Z-only meshes"
+  ]
+}

@@ -1,0 +1,119 @@
+{
+  "schema_version": 2,
+  "experiment": "issue397_pre2x_axis_graded_multilayer_radial_coarse_mesh",
+  "readiness": "L1_L2_L3_MOOSE_100US_AND_NATIVE_D1_DIAGNOSTIC_PASS",
+  "replaces": "issue397_pre_local2x_radial_wafer_mesh_coarsening_uniform_levels",
+  "source_mesh": {
+    "description": "original pre-local2x 200W EI17 multi-material Gmsh v2.2",
+    "sha256": "91299b6fc16136dfc9c4426148113b07ddfd7e95839da7abf5f14c36a4eac9cf",
+    "node_count": 1762,
+    "triangles_2d": 3201,
+    "wafer_faces": 31,
+    "wafer_extent_mm": [
+      0,
+      135
+    ],
+    "wafer_z_mm": 99,
+    "physical_groups": 24
+  },
+  "grading": {
+    "radial": "axis-centered cosine taper gradually restores original mesh toward outer wafer",
+    "depth": "cosine taper extends node-density adjustment into plasma AND wafer material layers",
+    "approach": "conforming wafer-interface vertex removal, deterministic graded multilevel interior coarsening, same-material edge flips",
+    "all_levels_independent": true,
+    "original_nominal_face_width_mm": 4.35483871,
+    "unchanged": "all physics/boundaries except discretization; all named physical IDs, material areas and boundary lengths",
+    "note": "graded radial faces are discrete multiples of the original 4.3548mm spacing; transition is through nonuniform intervals and interior multilevel thinning"
+  },
+  "levels": [
+    {
+      "level": 1,
+      "r_restore_original_mm": 70,
+      "plasma_blend_depth_mm": 19,
+      "wafer_blend_depth_mm": 9,
+      "wafer_faces": 27,
+      "axis_face_width_mm": 8.70967742,
+      "outer_face_width_mm": 4.35483871,
+      "nodes": 1739,
+      "triangles_2d": 3155,
+      "removed_plasma_interior_nodes": 12,
+      "removed_wafer_interior_nodes": 7,
+      "modified_region_min_angle_deg": 14.10559,
+      "whole_domain_min_angle_deg": 4.80441,
+      "mesh_sha256": "ac70642df75bf7b4bc4ec0d92511e545f0942f9e07a1361618fb9eb5696b83fc"
+    },
+    {
+      "level": 2,
+      "r_restore_original_mm": 85,
+      "plasma_blend_depth_mm": 24,
+      "wafer_blend_depth_mm": 9,
+      "wafer_faces": 25,
+      "axis_face_width_mm": 8.70967742,
+      "outer_face_width_mm": 4.35483871,
+      "nodes": 1728,
+      "triangles_2d": 3133,
+      "removed_plasma_interior_nodes": 19,
+      "removed_wafer_interior_nodes": 9,
+      "modified_region_min_angle_deg": 14.10559,
+      "whole_domain_min_angle_deg": 4.80441,
+      "mesh_sha256": "8ef865275192a297f8903e9f4abc53a74cfc2b97d49647a326f1c87496f25b9f"
+    },
+    {
+      "level": 3,
+      "r_restore_original_mm": 100,
+      "plasma_blend_depth_mm": 30,
+      "wafer_blend_depth_mm": 9,
+      "wafer_faces": 22,
+      "axis_face_width_mm": 13.06451613,
+      "outer_face_width_mm": 4.35483871,
+      "nodes": 1710,
+      "triangles_2d": 3097,
+      "removed_plasma_interior_nodes": 30,
+      "removed_wafer_interior_nodes": 13,
+      "modified_region_min_angle_deg": 12.77542,
+      "whole_domain_min_angle_deg": 4.80441,
+      "mesh_sha256": "a133ad1c7a56d4ee337bd54009155b17b4e994a164268230cdb9a884100e7434"
+    }
+  ],
+  "geometry_validation": [
+    "original named physical 1D/2D IDs and tags retained",
+    "per-material areas and boundary lengths preserved",
+    "all non-axis physical boundary edges conforming to triangles",
+    "Gmsh 2.2 read-write roundtrip verified",
+    "no inverted or collapsed 2D triangles",
+    "axis, outer geometry and wafer extent unchanged",
+    "modified-region min angle >=12deg",
+    "wafer outermost width restored to original"
+  ],
+  "limitations": [
+    "Whole-domain min angle 4.804deg existed in the unmodified reference mesh",
+    "Too few degrees of freedom removed to claim major wall-clock speedup",
+    "This is numerical mesh stabilization test; not a physical or mathematical substitute for resolved fine-mesh solution",
+    "Runtime convergence and native D1 ledgers passed for three cases, but no claim that electron density defects are physically solved or grid-converged"
+  ],
+  "provenance": "Source generator tracked in repository; canonical graded L1 runtime Gmsh .msh is archived as the immutable 100us Action artifact and locally downloadable, reproducible with issue397_materialize_l1_baseline.py. Historical evidence artifacts untouched.",
+  "launched_simulation": true,
+  "active_baseline_level": 1,
+  "active_baseline_manifest": "issue397_baseline_mesh.json",
+  "observed_run": {
+    "id": 39575896519,
+    "url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/39575896519",
+    "l1": {
+      "job_conclusion": "success",
+      "solver_100us": "PASS",
+      "native_d1_current_and_charge_integrity": "PASS",
+      "artifact_id": 12349847563
+    },
+    "l2": {
+      "job_conclusion": "success",
+      "solver_100us": "PASS",
+      "artifact_id": 12351556770
+    },
+    "l3": {
+      "job_conclusion": "success",
+      "solver_100us": "PASS",
+      "native_d1_current_and_charge_integrity": "PASS",
+      "artifact_id": 12349643469
+    }
+  }
+}
