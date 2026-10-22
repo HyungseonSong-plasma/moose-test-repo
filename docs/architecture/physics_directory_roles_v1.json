@@ -1,0 +1,116 @@
+{
+  "policy_id": "physics.directory-roles.v0.1",
+  "schema_version": 1,
+  "scope": "physics_harness",
+  "canonical_reference": "docs/architecture/qpx_harness_folder_contracts.md",
+  "roles": {
+    "specification": {
+      "responsibility": "User experiment schema and semantic compilation",
+      "forbidden_imports": [
+        "physics_harness.adapters.moose",
+        "physics_harness.adapters.petsc"
+      ]
+    },
+    "ontology": {
+      "responsibility": "Stable semantic state, identity and projections; no process execution or target lowering",
+      "forbidden_imports": [
+        "physics_harness.adapters.moose",
+        "physics_harness.adapters.petsc"
+      ]
+    },
+    "planning": {
+      "responsibility": "Solver-independent scientific policy synthesis",
+      "forbidden_imports": [
+        "physics_harness.adapters.moose",
+        "physics_harness.adapters.petsc"
+      ]
+    },
+    "execution": {
+      "responsibility": "Solver-independent plans and generic process mechanics",
+      "forbidden_imports": []
+    },
+    "adapters": {
+      "responsibility": "Solver-specific MOOSE/PETSc realization and decoding",
+      "forbidden_imports": []
+    },
+    "observation": {
+      "responsibility": "Source-faithful acquisition, extraction and normalization",
+      "forbidden_imports": []
+    },
+    "analysis": {
+      "responsibility": "Deterministic numerical derivation and aggregation",
+      "forbidden_imports": [
+        "physics_harness.cli",
+        "physics_harness.validation"
+      ]
+    },
+    "reasoning": {
+      "responsibility": "Backend-neutral diagnosis, with backend implementations in engines/",
+      "forbidden_imports": []
+    },
+    "validation": {
+      "responsibility": "Applicability and acceptance checks without acquisition or execution ownership",
+      "forbidden_imports": []
+    },
+    "provenance": {
+      "responsibility": "Source identity and lineage",
+      "forbidden_imports": []
+    },
+    "domains": {
+      "responsibility": "Scientific domain rules without target lowering or CLI",
+      "forbidden_imports": [
+        "physics_harness.adapters.moose",
+        "physics_harness.reasoning.engines.z3",
+        "physics_harness.cli"
+      ]
+    },
+    "application": {
+      "responsibility": "Thin orchestration of cross-domain capabilities",
+      "forbidden_imports": [
+        "physics_harness.adapters.moose"
+      ]
+    },
+    "cli": {
+      "responsibility": "Argument parsing, bounded routing, formatting and exit codes",
+      "forbidden_imports": []
+    },
+    "evidence": {
+      "responsibility": "Canonical evidence schemas, normalization, artifact tracking and storage",
+      "forbidden_imports": [
+        "physics_harness.analysis"
+      ]
+    },
+    "evaluation": {
+      "responsibility": "Normalized simulation statistical data records, without computing metrics",
+      "forbidden_imports": []
+    }
+  },
+  "import_exceptions": [
+    {
+      "source": "physics_harness/application/gateway.py",
+      "target": "physics_harness.adapters.moose",
+      "status": "TRANSITIONAL_REVIEW",
+      "rationale": "SOL adapter cutover RFC #274; explicitly frozen pre-cutover direct semantic gateway"
+    },
+    {
+      "source": "physics_harness/application/performance.py",
+      "target": "physics_harness.adapters.moose",
+      "status": "APPROVED_OPERATIONAL_BOUNDARY",
+      "rationale": "Explicit target-specific performance utility; distinct from generic semantic gateway"
+    }
+  ],
+  "forbidden_process_calls": [
+    {
+      "role": "ontology",
+      "callee": "subprocess.run"
+    }
+  ],
+  "process_exceptions": [
+    {
+      "source": "physics_harness/ontology/sol_runtime_consumer.py",
+      "callee": "subprocess.run",
+      "status": "TRANSITIONAL_REVIEW",
+      "rationale": "Thin SOL consumer process invocation currently in ontology; must assign orchestration owner before relocation"
+    }
+  ]
+}

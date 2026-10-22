@@ -246,6 +246,17 @@ jobs:
         run: |
           python ci/guards/physics_sol_adapter_boundary_guard.py --self-test
           python ci/guards/physics_sol_adapter_boundary_guard.py --check
+      - name: Validate declared Physics directory roles and exception boundaries
+        run: |
+          python ci/guards/physics_directory_role_guard.py --self-test
+          python ci/guards/physics_directory_role_guard.py --check --json-out physics-directory-role-audit.json
+      - name: Upload directory-role audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: physics-directory-role-audit
+          path: physics-directory-role-audit.json
+          if-no-files-found: warn
       - name: Validate strict zero-legacy architecture census
         run: |
           python ci/guards/physics_architecture_census.py --json-out physics-architecture-census.json
