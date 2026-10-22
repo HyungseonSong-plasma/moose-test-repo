@@ -20,7 +20,8 @@ def _policy():
 def test_all_current_directory_roles_have_a_declared_owner():
     policy = _policy()
     assert len(policy["roles"]) == 15
-    found = {p.name for p in (ROOT / "physics_harness").iterdir() if p.is_dir()}
+    found = {p.name for p in (ROOT / "physics_harness").iterdir()
+             if p.is_dir() and p.name != "__pycache__"}
     assert found == set(policy["roles"])
 
 
