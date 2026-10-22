@@ -96,7 +96,12 @@ def evaluate(
             raise ValueError("invalid source file input")
         if not path.startswith(root + "/") or not path.endswith(".py"):
             continue
-        role = path[len(root) + 1:].split("/")[0]
+        relative = path[len(root) + 1:]
+        # Package root's __init__.py belongs to the namespace itself and is
+        # not a subdirectory role.
+        if "/" not in relative:
+            continue
+        role = relative.split("/")[0]
         present.add(role)
         if role not in roles:
             found.append({"status":"NOT_EVALUATED","code":"UNCLASSIFIED_ROLE",
@@ -112,7 +117,8 @@ def evaluate(
                 if exc:
                     active_import_exceptions.add(key)
                 found.append({
-                    "status": exc["status"] if exc else "VIOLATION",
+                    "status": ("REVIEW_REQUIRED" if exc and exc["status"] == "TRANSITIONAL_REVIEW" else
+                               "APPROVED_OPERATIONAL_BOUNDARY" if exc else "VIOLATION"),
                     "code": "APPROVED_ROLE_EDGE" if exc and exc["status"] == "APPROVED_OPERATIONAL_BOUNDARY" else
                             "TRANSITIONAL_ROLE_EDGE" if exc else "FORBIDDEN_ROLE_EDGE",
                     "source": path, "target": module,
