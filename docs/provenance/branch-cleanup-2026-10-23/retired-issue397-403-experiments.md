@@ -34,9 +34,9 @@ The existing ZIP artifacts were checked **present and unexpired** on 2026-10-23.
 
 ## Selected historically unmerged files carried forward
 
-- [Issue #403 read-only four-gate diagnostic](../../../../experiments/Issue395_powered_chemistry_ladder/issue397_four_checks.py) preserved **verbatim** from historical Git blob `2666f9dcbc8fe73ef433ffd7254c1b2ce43f6bf9`. [Synthetic regression tests](../../../../tests/characterization/test_issue403_four_checks.py) verify that 1000 W PID-cap failure does not become a false Maxwell numerical failure/pass. Tests do not repeat an actual physics calculation.
+- [Issue #403 read-only four-gate diagnostic](../../../experiments/Issue395_powered_chemistry_ladder/issue397_four_checks.py) preserved **verbatim** from historical Git blob `2666f9dcbc8fe73ef433ffd7254c1b2ce43f6bf9`. [Synthetic regression tests](../../../tests/characterization/test_issue403_four_checks.py) verify that 1000 W PID-cap failure does not become a false Maxwell numerical failure/pass. Tests do not repeat an actual physics calculation.
 - [Historical oxygen reaction activation ladder](legacy-chemistry/chemistry_sets.json.txt), Git blob `8c05a476c201d13878c048280d56de35c4e6184c`; [static ladder checker](legacy-chemistry/check_chemistry_sets.py.txt), Git blob `442079c0e20dc64c7a6bdac214d13b175ffa71d1`; [original EI17 scan contract](legacy-chemistry/ei17_power_scan_execution_contract.json.txt), Git blob `9cf3faa7d65f4896d5010761815466113b0517de`. These are **archival only**. Their existence does not activate, validate or authorize the remaining oxygen chemistry channels.
-- Current accepted mainline [L1 mesh declaration](../../../../experiments/Issue395_powered_chemistry_ladder/issue397_baseline_mesh.json) and [Samuel governed scan replay](../../../../experiments/Issue395_powered_chemistry_ladder/issue397_l1_power_scan_replay.sh) remain the operational starting points.
+- Current accepted mainline [L1 mesh declaration](../../../experiments/Issue395_powered_chemistry_ladder/issue397_baseline_mesh.json) and [Samuel governed scan replay](../../../experiments/Issue395_powered_chemistry_ladder/issue397_l1_power_scan_replay.sh) remain the operational starting points.
 
 ## Explicit exclusions
 
