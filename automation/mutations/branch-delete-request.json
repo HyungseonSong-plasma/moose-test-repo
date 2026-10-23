@@ -1,24 +1,8 @@
 {
   "targets": [
     {
-      "branch": "issue-397-l1-graded-coarse-baseline",
-      "expected_sha": "048f8d6f39990a546257b1beee1112b7e0da5b23"
-    },
-    {
-      "branch": "issue-397-l1-graded-power-scan-200-250-300w",
-      "expected_sha": "60d4069756b315b9bd68cf56ae43f7bf5a2faea6"
-    },
-    {
-      "branch": "issue-397-maxwell-tolerance-300-400w-diagnostics",
-      "expected_sha": "93aec9dfa6d107f61425ad442562577f68c9ff3a"
-    },
-    {
-      "branch": "issue-403-graded-l1-500-600-700w-power-up",
-      "expected_sha": "3d78a7227757cae4307d89a64c5c59c62d8e4453"
-    },
-    {
-      "branch": "issue-403-graded-l1-800-900-1000w-final-scan",
-      "expected_sha": "b49c44183257941279a806783a1d1f4dea04e5ea"
+      "branch": "experiment-full-fem-contour-mesh",
+      "expected_sha": "acf4ad72eb3060d9cc5f3ecb5c9d763253926bbd"
     }
   ]
 }
