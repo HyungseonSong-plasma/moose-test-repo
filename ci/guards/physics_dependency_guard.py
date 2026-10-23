@@ -85,30 +85,38 @@ def repository_ci_references() -> list[str]:
     return failures
 
 
+def _dfs_cycle(
+    graph: dict[str, set[str]],
+    node: str,
+    visiting: set[str],
+    visited: set[str],
+    stack: list[str],
+) -> list[str] | None:
+    """Return a real, deterministic edge walk; do not infer runtime cycles."""
+    if node in visiting:
+        idx = stack.index(node)
+        return stack[idx:] + [node]
+    if node in visited:
+        return None
+    visiting.add(node)
+    stack.append(node)
+    for target in sorted(graph.get(node, ())):
+        cycle = _dfs_cycle(graph, target, visiting, visited, stack)
+        if cycle:
+            return cycle
+    stack.pop()
+    visiting.remove(node)
+    visited.add(node)
+    return None
+
+
 def find_cycle(graph: dict[str, set[str]]) -> list[str] | None:
+    """Search each package component once, retaining sorted cycle witnesses."""
     visiting: set[str] = set()
     visited: set[str] = set()
     stack: list[str] = []
-
-    def dfs(node: str) -> list[str] | None:
-        if node in visiting:
-            idx = stack.index(node)
-            return stack[idx:] + [node]
-        if node in visited:
-            return None
-        visiting.add(node)
-        stack.append(node)
-        for target in sorted(graph.get(node, ())):
-            cycle = dfs(target)
-            if cycle:
-                return cycle
-        stack.pop()
-        visiting.remove(node)
-        visited.add(node)
-        return None
-
     for node in sorted(graph):
-        cycle = dfs(node)
+        cycle = _dfs_cycle(graph, node, visiting, visited, stack)
         if cycle:
             return cycle
     return None
