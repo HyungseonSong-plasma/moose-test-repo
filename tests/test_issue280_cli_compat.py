@@ -14,8 +14,7 @@ def test_internal_architecture_regression_all_aliases(monkeypatch):
     monkeypatch.setattr(app, "_run_commands", fake_run)
     for target in ("architecture", "regression", "all"):
         assert app.main(["-i", target]) == 0
-    assert "physics_sol_adapter_boundary_guard.py" in " ".join(commands[0][0])
-    assert "--self-test" in commands[0][0]
+    assert commands[0] == [[app.sys.executable, "-m", "pytest", "-q", "tests/architecture"]]
     assert commands[1] == [[app.sys.executable, "-m", "pytest", "-q"]]
     assert commands[2] == commands[0] + commands[1]
 
