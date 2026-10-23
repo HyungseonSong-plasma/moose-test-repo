@@ -1,12 +1,16 @@
 {
   "targets": [
     {
-      "branch": "issue-306-sequence08-baseline",
-      "expected_sha": "1b28a1bccbec4ccad5e597500142a7e7e06ef4a3"
+      "branch": "integrate/issue397-01-runtime",
+      "expected_sha": "26294d08c05f99fa834c3fe29843ad48584f0151"
     },
     {
-      "branch": "qualified/issue310-gummel-optimized",
-      "expected_sha": "cdba1cba025da3c8442c0ad2993aeccab0111732"
+      "branch": "integrate/issue397-02-l1-baseline",
+      "expected_sha": "a584ec16451dd4f56a388978d3a8cdc5d68b7f64"
+    },
+    {
+      "branch": "integrate/issue397-03-power-scan",
+      "expected_sha": "472ccd1a0871d60281289f8a1e99fc7cd9f00c61"
     }
   ]
 }
