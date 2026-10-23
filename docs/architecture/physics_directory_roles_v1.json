@@ -87,12 +87,6 @@
   },
   "import_exceptions": [
     {
-      "source": "physics_harness/application/gateway.py",
-      "target": "physics_harness.adapters.moose",
-      "status": "TRANSITIONAL_REVIEW",
-      "rationale": "SOL adapter cutover RFC #274; explicitly frozen pre-cutover direct semantic gateway"
-    },
-    {
       "source": "physics_harness/application/performance.py",
       "target": "physics_harness.adapters.moose",
       "status": "APPROVED_OPERATIONAL_BOUNDARY",
