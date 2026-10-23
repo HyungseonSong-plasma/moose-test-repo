@@ -5,6 +5,12 @@ import math
 from collections.abc import Mapping
 
 
+def _require_finite_nonnegative_tolerance(value: float, label: str) -> None:
+    """Enforce the same explicit tolerance preconditions for both scales."""
+    if not math.isfinite(value) or value < 0.0:
+        raise ValueError(f"{label} must be finite and non-negative")
+
+
 def compare_named_scalars(
     candidate: Mapping[str, float],
     reference: Mapping[str, float],
@@ -17,10 +23,8 @@ def compare_named_scalars(
     This capability contains no D_mix, species, campaign, solver, or Issue
     semantics.  Callers retain provenance and scientific acceptance policy.
     """
-    if not math.isfinite(relative_tolerance) or relative_tolerance < 0.0:
-        raise ValueError("relative_tolerance must be finite and non-negative")
-    if not math.isfinite(absolute_tolerance) or absolute_tolerance < 0.0:
-        raise ValueError("absolute_tolerance must be finite and non-negative")
+    _require_finite_nonnegative_tolerance(relative_tolerance, "relative_tolerance")
+    _require_finite_nonnegative_tolerance(absolute_tolerance, "absolute_tolerance")
     candidate_keys = set(candidate)
     reference_keys = set(reference)
     if candidate_keys != reference_keys:
