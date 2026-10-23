@@ -3,11 +3,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Mapping, Sequence
 
-from physics_harness.adapters.moose import MooseTargetIR, lower_execution_plan
 from physics_harness.execution import ExecutionPlan, compile_execution_plan
 from physics_harness.ontology import OntologyService
 from physics_harness.ontology.records import DevelopmentState, ScientificPolicy
+from physics_harness.ontology.sol_request import CanonicalRealizationModel, SolRequest, SolRequestCompiler
+from physics_harness.ontology.sol_runtime_consumer import SolRuntimeOutcome, invoke_runtime_consumer
 from physics_harness.planning import default_capabilities, synthesize_policy
 from physics_harness.specification import SemanticCompilation, compile_experiment_intent, load_experiment_spec
 
@@ -18,6 +20,14 @@ class PlannedExperiment:
     state: DevelopmentState
     policy: ScientificPolicy
     execution_plan: ExecutionPlan
+
+
+@dataclass(frozen=True)
+class SolPreparedExperiment:
+    """Physics planning result plus the canonical request handed to SOL runtime."""
+
+    planned: PlannedExperiment
+    request: SolRequest
 
 
 def compile_experiment(path: str | Path, *, ontology: OntologyService | None = None) -> SemanticCompilation:
@@ -59,14 +69,51 @@ def plan_experiment(
     )
 
 
-def lower_experiment(
+def prepare_sol_experiment(
     path: str | Path,
     *,
+    realization_model: CanonicalRealizationModel,
+    physics_capabilities: Sequence[str],
+    capability_map: Mapping[str, str],
+    backend_target: str,
     state: DevelopmentState | None = None,
     ontology: OntologyService | None = None,
-) -> tuple[PlannedExperiment, MooseTargetIR]:
+) -> SolPreparedExperiment:
+    """Compile explicit canonical owners into a SOL request without target inference.
+
+    The caller must supply the reviewed realization model and capability mapping.
+    ExecutionPlan spelling, tuple order, and local solver objects are deliberately
+    not used to synthesize public-contract semantics.
+    """
     planned = plan_experiment(path, state=state, ontology=ontology)
-    return planned, lower_execution_plan(planned.execution_plan)
+    request = SolRequestCompiler(capability_map, backend_target=backend_target).compile(
+        realization_model,
+        physics_capabilities=physics_capabilities,
+    )
+    return SolPreparedExperiment(planned=planned, request=request)
 
 
-__all__ = ["PlannedExperiment", "compile_experiment", "plan_experiment", "lower_experiment"]
+def run_sol_experiment(
+    prepared: SolPreparedExperiment,
+    *,
+    consumer: Path,
+    adapter: Path,
+    timeout_seconds: float = 120.0,
+) -> SolRuntimeOutcome:
+    """Invoke the pinned SOL consumer; runtime completion is not scientific PASS."""
+    return invoke_runtime_consumer(
+        consumer,
+        adapter,
+        prepared.request,
+        timeout_seconds=timeout_seconds,
+    )
+
+
+__all__ = [
+    "PlannedExperiment",
+    "SolPreparedExperiment",
+    "compile_experiment",
+    "plan_experiment",
+    "prepare_sol_experiment",
+    "run_sol_experiment",
+]
