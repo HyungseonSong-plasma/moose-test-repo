@@ -32,7 +32,9 @@ def test_current_review_exceptions_are_exact_and_not_blanket_grants():
     violations = [x for x in findings if x["status"] in ("VIOLATION", "NOT_EVALUATED")]
     assert violations == [], violations
     named = {(f["source"], f["code"]) for f in findings}
-    assert ("physics_harness/application/gateway.py", "TRANSITIONAL_ROLE_EDGE") in named
+    assert ("physics_harness/application/gateway.py", "TRANSITIONAL_ROLE_EDGE") not in named
+    assert ("physics_harness/application/gateway.py", "OBSOLETE_IMPORT_EXCEPTION") not in named
+    assert len(_policy()["import_exceptions"]) == 1
     assert ("physics_harness/application/performance.py", "APPROVED_ROLE_EDGE") in named
     assert ("physics_harness/ontology/sol_runtime_consumer.py", "TRANSITIONAL_PROCESS_CALL") in named
 

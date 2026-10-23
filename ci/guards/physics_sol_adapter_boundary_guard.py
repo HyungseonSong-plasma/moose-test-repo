@@ -23,9 +23,7 @@ SEMANTIC_DIRS = (
     HARNESS / "ontology",
 )
 MOOSE_PREFIX = "physics_harness.adapters.moose"
-EXPECTED_TRANSITIONAL_MOOSE_EDGES = {
-    ("physics_harness/application/gateway.py", MOOSE_PREFIX),
-}
+EXPECTED_TRANSITIONAL_MOOSE_EDGES: set[tuple[str, str]] = set()
 FORBIDDEN_LOCAL_OWNER_TOKEN_GROUPS = (
     frozenset({"adapter", "runtime"}),
     frozenset({"adapter", "transport"}),
@@ -360,10 +358,8 @@ def _self_test() -> list[str]:
             errors.append(f"self-test failed local-owner category: {name}")
     if _is_forbidden_local_owner(Path("moose_performance_decoder.py")):
         errors.append("self-test falsely classified MOOSE-specific operational utility")
-    if ("physics_harness/application/gateway.py", MOOSE_PREFIX) not in EXPECTED_TRANSITIONAL_MOOSE_EDGES:
-        errors.append("self-test lost the declared transitional gateway edge")
-    if len(EXPECTED_TRANSITIONAL_MOOSE_EDGES) != 1:
-        errors.append("self-test expects exactly one transitional semantic MOOSE edge")
+    if EXPECTED_TRANSITIONAL_MOOSE_EDGES:
+        errors.append("self-test rejects retained transitional semantic MOOSE exemptions")
     synthetic_plan = ast.parse(
         "class ExecutionPlan(MappingPlan):\n"
         "    mapping_plan: int\n"
@@ -424,15 +420,8 @@ def _check() -> list[str]:
             f"{runtime_owners}"
         )
     actual_edges = _semantic_moose_edges()
-    missing = sorted(EXPECTED_TRANSITIONAL_MOOSE_EDGES - actual_edges)
-    extra = sorted(actual_edges - EXPECTED_TRANSITIONAL_MOOSE_EDGES)
-    if missing:
-        errors.append(
-            "declared transitional semantic MOOSE edge disappeared; tighten the guard to zero "
-            f"instead of silently changing the baseline: {missing}"
-        )
-    if extra:
-        errors.append(f"semantic control plane acquired new direct MOOSE dependencies: {extra}")
+    if actual_edges:
+        errors.append(f"semantic control plane must have zero direct MOOSE dependencies: {sorted(actual_edges)}")
     conflations = _execution_plan_conflations()
     if conflations:
         errors.append(

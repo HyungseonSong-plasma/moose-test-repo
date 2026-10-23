@@ -11,7 +11,7 @@ import sys
 
 from physics_harness.application import normalize_temporal_run_csv
 from physics_harness.adapters.moose.preflight import validate_input_preflight
-from physics_harness.application.gateway import compile_experiment, lower_experiment, plan_experiment
+from physics_harness.application.gateway import compile_experiment, plan_experiment
 from physics_harness.analysis.temporal import VALID_INITIAL_POLICIES
 from physics_harness.specification import ExperimentSpecError
 
@@ -20,7 +20,7 @@ ROOT = Path(__file__).resolve().parents[2]
 CANONICAL_COMMANDS = {
     "compile": "compile semantic experiment JSON into ExperimentIntent",
     "plan": "compile semantic intent and synthesize ScientificPolicy/ExecutionPlan",
-    "lower": "lower a solver-independent ExecutionPlan into MOOSE target IR",
+    "lower": "retired: direct local MOOSE lowering is forbidden",
     "run": "prepare one canonical semantic experiment for target execution",
     "preflight": "run static parser-symbol preflight on one MOOSE input",
     "temporal-csv": "normalize transient CSV rows under an explicit temporal policy",
@@ -36,7 +36,9 @@ COMMANDS = {
 }
 
 INTERNAL_TARGETS = {
-    "regression": "run the Physics Python regression/unit suite",
+    "architecture": "run SOL architecture guard and architecture tests",
+    "regression": "run Physics Python regression/unit tests",
+    "all": "run architecture checks and full Python regression",
 }
 
 _LEGACY_TARGETS = {
@@ -115,13 +117,8 @@ def semantic_lower_cli(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(prog="physics lower")
     parser.add_argument("experiment")
     args = parser.parse_args(argv)
-    try:
-        planned, target = lower_experiment(args.experiment)
-    except (OSError, ExperimentSpecError, ValueError, TypeError) as exc:
-        print(f"lowering error: {exc}", file=sys.stderr)
-        return 2
-    _json_print({"planned": asdict(planned), "target": asdict(target)})
-    return 0
+    print("LOWER_RETIRED: use the explicit SOL realization/request boundary; no local MOOSE lowering", file=sys.stderr)
+    return 3
 
 
 def semantic_run_cli(argv: list[str]) -> int:
@@ -130,7 +127,7 @@ def semantic_run_cli(argv: list[str]) -> int:
     parser.add_argument("experiment")
     args = parser.parse_args(argv)
     try:
-        planned, target = lower_experiment(args.experiment)
+        planned = plan_experiment(args.experiment)
     except (OSError, ExperimentSpecError, ValueError, TypeError) as exc:
         print(f"semantic run preparation error: {exc}", file=sys.stderr)
         return 2
@@ -138,10 +135,9 @@ def semantic_run_cli(argv: list[str]) -> int:
     print(f"EXPERIMENT={planned.semantic.intent.experiment_id}")
     print(f"POLICY={planned.policy.policy_id}")
     print(f"EXECUTION_PLAN={planned.execution_plan.plan_id}")
-    print(f"TARGET_CASES={len(target.cases)}")
     print(
-        "TARGET_EXECUTION: BLOCKED (generic semantic target IR has no approved "
-        "target executor; protocol/campaign fallback is forbidden)",
+        "SOL_REQUEST: BLOCKED (reviewed realization model, capabilities, and pinned runtime/adapter "
+        "must be supplied; local MOOSE fallback is forbidden)",
         file=sys.stderr,
     )
     return 3
@@ -193,7 +189,13 @@ def internal_cli(target: str) -> int:
         known = ", ".join(INTERNAL_TARGETS)
         print(f"unknown internal target: {target}; choose from {known}", file=sys.stderr)
         return 2
-    return _run_commands([[sys.executable, "-m", "pytest", "-q"]])
+    architecture = [[sys.executable, "-m", "pytest", "-q", "tests/architecture"]]
+    regression = [[sys.executable, "-m", "pytest", "-q"]]
+    if target == "architecture":
+        return _run_commands(architecture)
+    if target == "all":
+        return _run_commands(architecture + regression)
+    return _run_commands(regression)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -203,7 +205,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if args[0] == "-i":
         if len(args) != 2:
-            print("usage: physics -i <regression>", file=sys.stderr)
+            print("usage: physics -i <architecture|regression|all>", file=sys.stderr)
             return 2
         return internal_cli(args[1])
     canonical_handlers = {
