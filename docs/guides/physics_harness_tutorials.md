@@ -31,10 +31,12 @@ The current CLI `run` performs Physics planning and then stops with `SOL_REQUEST
 Repository/harness regression validation remains available through the compatibility/internal route:
 
 ```bash
+python3 bin/physics.py -i architecture
 python3 bin/physics.py -i regression
+python3 bin/physics.py -i all
 ```
 
-The former documented `architecture` and `all` aliases are retired rather than silently mapped to a different lifecycle. Internal validation is not scientific acceptance by itself.
+The `architecture`, `regression`, and `all` aliases remain supported: `architecture` runs the SOL boundary guard (including its mutation self-test) and architecture tests; `all` additionally runs the Python regression suite. These are code checks, never scientific acceptance.
 
 ## 2. Schema-v2 experiment model
 
