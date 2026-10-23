@@ -82,3 +82,40 @@ def test_run_sol_experiment_delegates_to_runtime_consumer_without_scientific_rel
         "request": request,
         "timeout_seconds": 17.0,
     }
+
+
+def test_sol_gateway_propagates_request_contract_errors(monkeypatch):
+    import pytest
+    monkeypatch.setattr(gateway, "plan_experiment", lambda *args, **kwargs: object())
+
+    class RejectingCompiler:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def compile(self, *args, **kwargs):
+            raise ValueError("missing canonical relation or unsupported capability")
+
+    monkeypatch.setattr(gateway, "SolRequestCompiler", RejectingCompiler)
+    with pytest.raises(ValueError, match="canonical relation"):
+        gateway.prepare_sol_experiment(
+            "ignored.json", realization_model=object(),
+            physics_capabilities=("missing",), capability_map={}, backend_target="moose"
+        )
+
+
+def test_runtime_response_loss_propagates_without_local_fallback(monkeypatch):
+    import pytest
+    prepared = gateway.SolPreparedExperiment(
+        planned=object(),
+        request=SolRequest(backend_target={"target": "moose"},
+            mapping_plan={"actions": []}, realization_spec={"entities": []}),
+    )
+
+    def ambiguous_loss(*args, **kwargs):
+        raise RuntimeError("ambiguous upstream response loss")
+
+    monkeypatch.setattr(gateway, "invoke_runtime_consumer", ambiguous_loss)
+    with pytest.raises(RuntimeError, match="ambiguous upstream"):
+        gateway.run_sol_experiment(
+            prepared, consumer=Path("/consumer"), adapter=Path("/adapter")
+        )
