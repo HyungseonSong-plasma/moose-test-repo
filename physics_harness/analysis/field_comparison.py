@@ -12,7 +12,9 @@ def _compare_scalar_row(
     relative_tolerance: float,
     absolute_tolerance: float,
 ) -> tuple[dict[str, float | bool], float, float, bool]:
-    """Calculate one field's observed numerical errors without changing policy."""
+    """Coerce and compare one field's numerical observations and policy."""
+    actual = float(actual)
+    expected = float(expected)
     if not math.isfinite(actual) or not math.isfinite(expected):
         row: dict[str, float | bool] = {
             "candidate": actual,
@@ -69,11 +71,9 @@ def compare_named_scalars(
     max_absolute_error = 0.0
     passed = True
     for key in sorted(candidate_keys):
-        actual = float(candidate[key])
-        expected = float(reference[key])
         row, absolute_error, relative_error, row_passed = _compare_scalar_row(
-            actual,
-            expected,
+            candidate[key],
+            reference[key],
             relative_tolerance=relative_tolerance,
             absolute_tolerance=absolute_tolerance,
         )
