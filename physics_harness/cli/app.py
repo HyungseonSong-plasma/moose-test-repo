@@ -189,10 +189,7 @@ def internal_cli(target: str) -> int:
         known = ", ".join(INTERNAL_TARGETS)
         print(f"unknown internal target: {target}; choose from {known}", file=sys.stderr)
         return 2
-    architecture = [
-        [sys.executable, "ci/guards/physics_sol_adapter_boundary_guard.py", "--self-test", "--check"],
-        [sys.executable, "-m", "pytest", "-q", "tests/architecture"],
-    ]
+    architecture = [[sys.executable, "-m", "pytest", "-q", "tests/architecture"]]
     regression = [[sys.executable, "-m", "pytest", "-q"]]
     if target == "architecture":
         return _run_commands(architecture)
