@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "experiment": "oxygen_icp_ei17_o_elastic_local_mesh_refinement_power_scan",
+  "power_setpoints_W": [
+    200,
+    300,
+    400
+  ],
+  "final_time_s": 0.0001,
+  "timegrid_segments": [
+    {
+      "start_ns": 0,
+      "end_ns": 100,
+      "dt_ns": 1,
+      "steps": 100
+    },
+    {
+      "start_ns": 100,
+      "end_ns": 2000,
+      "dt_ns": 10,
+      "steps": 190
+    },
+    {
+      "start_ns": 2000,
+      "end_ns": 10000,
+      "dt_ns": 100,
+      "steps": 80
+    },
+    {
+      "start_ns": 10000,
+      "end_ns": 100000,
+      "dt_ns": 1000,
+      "steps": 90
+    }
+  ],
+  "total_steps": 460,
+  "new_chemistry_channel": "EI17_O_ELASTIC",
+  "retained_chemistry": [
+    "EI02_O2_ELASTIC",
+    "O2_DISSOCIATION_ANALYTIC",
+    "EI16_O2_IONIZATION",
+    "EI20_O_IONIZATION",
+    "EI01_DISSOCIATIVE_ATTACHMENT"
+  ],
+  "mesh": {
+    "change": "locally_refined_twofold",
+    "r_range_m": [
+      0,
+      0.03
+    ],
+    "z_range_m": [
+      0.1,
+      0.12
+    ],
+    "mandatory_gate": "conforming_volume_and_boundary_mesh_with_exact_subdomain_and_boundary_id_preservation",
+    "status": "PREVIEW_ONLY_NOT_ADMITTED"
+  },
+  "requested_job_timeout_minutes": 360,
+  "requested_job_timeout_hours": 6,
+  "runtime_policy": {
+    "hosted_runner_job_limit_minutes": 360,
+    "permitted_execution": "github_hosted_ubuntu_24_04_at_most_360_minutes_per_job",
+    "preflight_guard": "HOSTED_RUNNER_360_MINUTES_OR_LESS",
+    "self_hosted_runner_availability": "NOT_REQUIRED",
+    "checkpoint_restart": "NOT_REQUIRED_WHEN_JOB_FINISHES_WITHIN_360_MINUTES",
+    "p0_static_status": "PASS",
+    "p2_check_input_status": "NOT_RUN",
+    "p3_full_run_status": "PENDING_MESH_AND_P2"
+  },
+  "notes": "User approved 6h hard job timeout; no guarantee that each case finishes before cap. Per-power matrix max-parallel 3; retained science conditions."
+}
