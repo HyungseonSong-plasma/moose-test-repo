@@ -1,16 +1,24 @@
 {
   "targets": [
     {
-      "branch": "integrate/issue397-01-runtime",
-      "expected_sha": "26294d08c05f99fa834c3fe29843ad48584f0151"
+      "branch": "issue-397-l1-graded-coarse-baseline",
+      "expected_sha": "048f8d6f39990a546257b1beee1112b7e0da5b23"
     },
     {
-      "branch": "integrate/issue397-02-l1-baseline",
-      "expected_sha": "a584ec16451dd4f56a388978d3a8cdc5d68b7f64"
+      "branch": "issue-397-l1-graded-power-scan-200-250-300w",
+      "expected_sha": "60d4069756b315b9bd68cf56ae43f7bf5a2faea6"
     },
     {
-      "branch": "integrate/issue397-03-power-scan",
-      "expected_sha": "472ccd1a0871d60281289f8a1e99fc7cd9f00c61"
+      "branch": "issue-397-maxwell-tolerance-300-400w-diagnostics",
+      "expected_sha": "93aec9dfa6d107f61425ad442562577f68c9ff3a"
+    },
+    {
+      "branch": "issue-403-graded-l1-500-600-700w-power-up",
+      "expected_sha": "3d78a7227757cae4307d89a64c5c59c62d8e4453"
+    },
+    {
+      "branch": "issue-403-graded-l1-800-900-1000w-final-scan",
+      "expected_sha": "b49c44183257941279a806783a1d1f4dea04e5ea"
     }
   ]
 }
