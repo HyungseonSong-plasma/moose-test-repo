@@ -26,15 +26,23 @@ def module_name(path: Path) -> str:
     return ".".join(parts)
 
 
-def imported_modules(path: Path) -> set[str]:
-    tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+def absolute_imports(tree: ast.AST) -> set[str]:
+    """Collect written absolute import modules, without resolving targets."""
     imports: set[str] = set()
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
             imports.update(alias.name for alias in node.names)
         elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
             imports.add(node.module)
-    return {name for name in imports if name.startswith("physics_harness")}
+    return imports
+
+
+def imported_modules(path: Path) -> set[str]:
+    tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    return {
+        name for name in absolute_imports(tree)
+        if name.startswith("physics_harness")
+    }
 
 
 def top_package(module: str) -> str | None:
@@ -69,14 +77,12 @@ def repository_ci_references() -> list[str]:
     failures: list[str] = []
     for path in sorted(PKG.rglob("*.py")):
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
-        refs: set[str] = set()
+        refs = {
+            name for name in absolute_imports(tree)
+            if name == "ci" or name.startswith("ci.")
+        }
         for node in ast.walk(tree):
-            if isinstance(node, ast.Import):
-                refs.update(alias.name for alias in node.names if alias.name == "ci" or alias.name.startswith("ci."))
-            elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
-                if node.module == "ci" or node.module.startswith("ci."):
-                    refs.add(node.module)
-            elif isinstance(node, ast.Constant) and isinstance(node.value, str):
+            if isinstance(node, ast.Constant) and isinstance(node.value, str):
                 if node.value == "ci" or node.value.startswith("ci/"):
                     refs.add(node.value)
         if refs:
