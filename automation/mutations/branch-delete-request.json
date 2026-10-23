@@ -1,8 +1,8 @@
 {
   "targets": [
     {
-      "branch": "experiment-full-fem-contour-mesh",
-      "expected_sha": "acf4ad72eb3060d9cc5f3ecb5c9d763253926bbd"
+      "branch": "issue-280-sol-gateway-cutover",
+      "expected_sha": "6e4e6edbecd5d6fe11e48d3f7aea40f06b5f6521"
     }
   ]
 }
