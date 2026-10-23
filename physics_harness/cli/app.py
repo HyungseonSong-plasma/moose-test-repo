@@ -36,7 +36,9 @@ COMMANDS = {
 }
 
 INTERNAL_TARGETS = {
-    "regression": "run the Physics Python regression/unit suite",
+    "architecture": "run SOL architecture guard and architecture tests",
+    "regression": "run Physics Python regression/unit tests",
+    "all": "run architecture checks and full Python regression",
 }
 
 _LEGACY_TARGETS = {
@@ -187,7 +189,16 @@ def internal_cli(target: str) -> int:
         known = ", ".join(INTERNAL_TARGETS)
         print(f"unknown internal target: {target}; choose from {known}", file=sys.stderr)
         return 2
-    return _run_commands([[sys.executable, "-m", "pytest", "-q"]])
+    architecture = [
+        [sys.executable, "ci/guards/physics_sol_adapter_boundary_guard.py", "--self-test", "--check"],
+        [sys.executable, "-m", "pytest", "-q", "tests/architecture"],
+    ]
+    regression = [[sys.executable, "-m", "pytest", "-q"]]
+    if target == "architecture":
+        return _run_commands(architecture)
+    if target == "all":
+        return _run_commands(architecture + regression)
+    return _run_commands(regression)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -197,7 +208,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if args[0] == "-i":
         if len(args) != 2:
-            print("usage: physics -i <regression>", file=sys.stderr)
+            print("usage: physics -i <architecture|regression|all>", file=sys.stderr)
             return 2
         return internal_cli(args[1])
     canonical_handlers = {
