@@ -5,6 +5,40 @@ import math
 from collections.abc import Mapping
 
 
+def _compare_scalar_row(
+    actual: float,
+    expected: float,
+    *,
+    relative_tolerance: float,
+    absolute_tolerance: float,
+) -> tuple[dict[str, float | bool], float, float, bool]:
+    """Calculate one field's observed numerical errors without changing policy."""
+    if not math.isfinite(actual) or not math.isfinite(expected):
+        row: dict[str, float | bool] = {
+            "candidate": actual,
+            "reference": expected,
+            "absolute_error": math.inf,
+            "relative_error": math.inf,
+            "passed": False,
+        }
+        return row, math.inf, math.inf, False
+    absolute_error = abs(actual - expected)
+    scale = max(abs(actual), abs(expected))
+    relative_error = absolute_error / scale if scale else 0.0
+    row_passed = (
+        absolute_error <= absolute_tolerance
+        or relative_error <= relative_tolerance
+    )
+    row = {
+        "candidate": actual,
+        "reference": expected,
+        "absolute_error": absolute_error,
+        "relative_error": relative_error,
+        "passed": row_passed,
+    }
+    return row, absolute_error, relative_error, row_passed
+
+
 def compare_named_scalars(
     candidate: Mapping[str, float],
     reference: Mapping[str, float],
@@ -37,32 +71,13 @@ def compare_named_scalars(
     for key in sorted(candidate_keys):
         actual = float(candidate[key])
         expected = float(reference[key])
-        if not math.isfinite(actual) or not math.isfinite(expected):
-            rows[key] = {
-                "candidate": actual,
-                "reference": expected,
-                "absolute_error": math.inf,
-                "relative_error": math.inf,
-                "passed": False,
-            }
-            passed = False
-            max_relative_error = math.inf
-            max_absolute_error = math.inf
-            continue
-        absolute_error = abs(actual - expected)
-        scale = max(abs(actual), abs(expected))
-        relative_error = absolute_error / scale if scale else 0.0
-        row_passed = (
-            absolute_error <= absolute_tolerance
-            or relative_error <= relative_tolerance
+        row, absolute_error, relative_error, row_passed = _compare_scalar_row(
+            actual,
+            expected,
+            relative_tolerance=relative_tolerance,
+            absolute_tolerance=absolute_tolerance,
         )
-        rows[key] = {
-            "candidate": actual,
-            "reference": expected,
-            "absolute_error": absolute_error,
-            "relative_error": relative_error,
-            "passed": row_passed,
-        }
+        rows[key] = row
         max_relative_error = max(max_relative_error, relative_error)
         max_absolute_error = max(max_absolute_error, absolute_error)
         passed = passed and row_passed
