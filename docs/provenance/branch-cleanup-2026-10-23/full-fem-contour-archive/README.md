@@ -44,4 +44,4 @@ These histories are diagnostic experiments on an older numerical configuration. 
 
 Only the remote branch ref `experiment-full-fem-contour-mesh` is authorized for deletion. Samuel's pre-existing `.github/workflows/samuel-branch-delete.yml` must receive the exact head SHA `acf4ad72eb3060d9cc5f3ecb5c9d763253926bbd` in `automation/mutations/branch-delete-request.json`. Verify the workflow's terminal matrix success and individual GitHub 404 for the deleted ref. Mainline physics, the active mesh, PID, chemistry, other branches and PR states must not change.
 
-Deletion verification: **PENDING**.
+Deletion verification: **SUCCESS — 2026-10-23**. [Samuel exact-SHA branch deletion run #39926893926](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/39926893926) completed SUCCESS (request validation and target deletion). Independent subsequent GitHub ref readback returned **404 / Branch not found** for `experiment-full-fem-contour-mesh`. The live repository now contains precisely **3 branches**: `main`, `feat/semantic-directory-role-guard`, `issue-280-sol-gateway-cutover` (open PR #303). All original archived source blobs remain committed on `main`.
