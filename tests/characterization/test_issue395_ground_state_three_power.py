@@ -88,3 +88,35 @@ def test_guarded_main_only_one_shot_and_replay_power_scope():
     assert "DISS_ENERGY_LOSS_EV = 6.0" in (
         CHEM / "build_o2_dissociation_overlay.py"
     ).read_text(encoding="utf-8")
+
+
+def test_corrected_fem_wall_owners_registered_and_share_plasma_sided_functor():
+    """P0 regression for P2 failure in the first 200/600/1000 W attempt.
+
+    Reject an unregistered BC and any implementation that evaluates the
+    adjacent-sheath functor through its thermal-only ElemQp fallback.
+    Actual C++ registration/parameter compatibility remains a P2 obligation.
+    """
+    bc = ROOT / "physics_app/src/bcs/PhysicsFEMLogMolarElectronFieldLimitedFluxBC.C"
+    content = bc.read_text(encoding="utf-8")
+    for name in (
+        "PhysicsFEMLogMolarElectronFieldLimitedFluxBC",
+        "PhysicsFEMLogMolarElectronEnergyFieldLimitedFluxBC",
+    ):
+        assert f'registerMooseObject("PhysicsApp", {name});' in content
+        assert f"{name}::validParams()" in content
+    assert "checkVariableBoundaryIntegrity() const override { return false; }" in content
+    assert "getFunctor<ADReal>(\"wall_number_flux\")" in content
+    assert "getFunctor<ADReal>(\"mean_energy\")" in content
+    assert "hasFaceSide(*fi, true)" in content
+    assert "hasFaceSide(*fi, false)" in content
+    assert "plasma_side != _current_elem" in content
+    assert "Moose::FaceArg face_arg" in content
+    assert "PHYSICS_CONSTANTS::N_A" in content
+    assert "(2.5 * Te)" in content
+    assert "Moose::ElemQpArg" not in content
+
+    generator = (CHEM / "enable_electron_adjacent_sheath_wall.py").read_text(encoding="utf-8")
+    assert "type = PhysicsFEMLogMolarElectronFieldLimitedFluxBC" in generator
+    assert "type = PhysicsFEMLogMolarElectronEnergyFieldLimitedFluxBC" in generator
+    assert "wall_number_flux = electron_wall_number_flux" in generator

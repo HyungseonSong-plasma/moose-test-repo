@@ -73,6 +73,34 @@ their recorded provenance.
   comparison against the previously pinned 100-us control. No historical
   run, mesh, solver, wall condition or study record is rewritten.
 
+## 2026-10-26 P2 construction repair / independent retry
+
+[Initial ground-state tri-power run #40295762963](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/40295762963)
+failed at real `physics-opt --check-input` for **all 200, 600 and 1000 W**:
+`PhysicsFEMLogMolarElectronFieldLimitedFluxBC` was not registered.
+The original `P0` Python generator and `P1` C++ build passed, but both
+electron particle/energy `FieldLimitedFluxBC` class names in the generated
+input had no PhysicsApp implementation. No time-integrated P3 physics result
+was produced; the P5 missing-data verdicts were downstream consequences.
+
+The repair introduces both **registered FEM log-molar BCs**, using
+`electron_wall_number_flux` from the existing
+`PhysicsElectronAdjacentSheathWallFluxMaterial` via a **plasma-sided FaceArg**.
+This is the same wall-flux functor/side policy used by the charge/current
+ledger. The particle residual converts number flux to molar flux via
+`N_A`; the energy residual consumes the same particle flux times
+`5/2 T_e` with `T_e=(2/3) mean_energy`. Both skip the non-plasma side of
+internal dielectric sidesets. It is deliberately **not** a thermal-only
+`ElemQpArg` evaluation, which would bypass the intended sheath suppression.
+No wall, mesh, RF, Maxwell, chemistry or PID target model is changed.
+
+The one-shot workflow self-path is touched only to launch an independent
+new SHA-locked 200/600/1000 W retry after PR checks. The new P0 regression
+requires both C++ registrations, one-sided face evaluation and shared-flux
+energy/particle ownership. A real `physics-opt` P2 is still mandatory before
+starting P3. Do not count the first attempt as scientific failure or reinterpret
+old accepted 100-us simulations.
+
 ## Original Issue #395 scope
 
 This experiment surface grafts the accepted Stage-5 S5-R oxygen chemistry onto the merged Issue #376 1000 W RF baseline **incrementally**.
