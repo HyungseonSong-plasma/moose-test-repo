@@ -1,8 +1,9 @@
-# One-shot scientific experiment, authorized 2026-10-26.
+# One-shot scientific experiment, retry authorized 2026-10-26 after first-run P2 unregistered FEM BC failure.
 # This self-path push trigger runs only on introduction to main.
 # Remove the workflow using Samuel repository mutation after terminal observation.
 # This is NOT an evergreen scheduled workflow, nor a CI scientific PASS shortcut.
 name: Issue 395 ground-state O2 three-power 100us one-shot
+run-name: Corrected electron-wall BC retry at main ${{ github.sha }}
 on:
   push:
     branches: [main]
@@ -37,6 +38,9 @@ jobs:
           grep -Fq "DISS_TE_EXPONENT = -0.22" experiments/Issue395_powered_chemistry_ladder/build_o2_dissociation_overlay.py
           grep -Fq "DISS_FIT_EXP_ENERGY_EV = 2.98" experiments/Issue395_powered_chemistry_ladder/build_o2_dissociation_overlay.py
           grep -Fq "DISS_ENERGY_LOSS_EV = 6.0" experiments/Issue395_powered_chemistry_ladder/build_o2_dissociation_overlay.py
+          test -f physics_app/src/bcs/PhysicsFEMLogMolarElectronFieldLimitedFluxBC.C
+          grep -Fq 'registerMooseObject("PhysicsApp", PhysicsFEMLogMolarElectronFieldLimitedFluxBC);' physics_app/src/bcs/PhysicsFEMLogMolarElectronFieldLimitedFluxBC.C
+          grep -Fq 'registerMooseObject("PhysicsApp", PhysicsFEMLogMolarElectronEnergyFieldLimitedFluxBC);' physics_app/src/bcs/PhysicsFEMLogMolarElectronFieldLimitedFluxBC.C
       - name: Install pinned preparation dependencies
         shell: bash
         run: |
