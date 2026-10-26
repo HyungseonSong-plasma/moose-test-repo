@@ -5,8 +5,8 @@
 # Maxwell exact-change audit, native D1 gates and archive provenance are retained.
 set -euo pipefail
 PHASE="${1:?usage: bash issue397_l1_power_scan_replay.sh prepare|build|check|solve|audit 200|250|300}"
-POWER_W="${2:?RF target 200, 250 or 300 W is required}"
-case "$POWER_W" in 200|250|300) ;; *) echo "unsupported RF target: $POWER_W" >&2; exit 2 ;; esac
+POWER_W="${2:?RF target 200, 250, 300, 600 or 1000 W is required}"
+case "$POWER_W" in 200|250|300|600|1000) ;; *) echo "unsupported RF target: $POWER_W" >&2; exit 2 ;; esac
 case "$PHASE" in prepare|build|check|solve|audit) ;; *) echo "unsupported phase: $PHASE" >&2; exit 2 ;; esac
 test "$(git rev-parse --show-toplevel)" = "$PWD" || {
   echo "run the replay from the exact repository checkout root" >&2; exit 2;

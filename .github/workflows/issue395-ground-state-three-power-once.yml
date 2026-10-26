@@ -1,0 +1,104 @@
+# One-shot scientific experiment, authorized 2026-10-26.
+# This self-path push trigger runs only on introduction to main.
+# Remove the workflow using Samuel repository mutation after terminal observation.
+# This is NOT an evergreen scheduled workflow, nor a CI scientific PASS shortcut.
+name: Issue 395 ground-state O2 three-power 100us one-shot
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/issue395-ground-state-three-power-once.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  corrected-oxygen-dissociation:
+    name: O2 ground-state ${{ matrix.power_w }} W
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        power_w: [200, 600, 1000]
+    steps:
+      - name: Checkout exact submitted revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - name: Verify source identity and pinned dissociation fit
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          python3 -m pip install --disable-pip-version-check --quiet 'pytest>=8,<9'
+          python3 -m pytest -q tests/test_o2_ground_state_dissociation_overlay.py
+          python3 -m pytest -q tests/characterization/test_issue395_ground_state_three_power.py
+          grep -Fq "DISS_TE_EXPONENT = -0.22" experiments/Issue395_powered_chemistry_ladder/build_o2_dissociation_overlay.py
+          grep -Fq "DISS_FIT_EXP_ENERGY_EV = 2.98" experiments/Issue395_powered_chemistry_ladder/build_o2_dissociation_overlay.py
+          grep -Fq "DISS_ENERGY_LOSS_EV = 6.0" experiments/Issue395_powered_chemistry_ladder/build_o2_dissociation_overlay.py
+      - name: Install pinned preparation dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m venv .issue395-ground-state-venv
+          .issue395-ground-state-venv/bin/python -m pip install --disable-pip-version-check --quiet numpy==2.1.2 scipy==1.14.1
+      - name: P0 generate Graded L1 mesh and chemistry case
+        shell: bash
+        run: |
+          set -euo pipefail
+          source .issue395-ground-state-venv/bin/activate
+          bash experiments/Issue395_powered_chemistry_ladder/issue397_l1_power_scan_replay.sh prepare "${{ matrix.power_w }}"
+          case_dir="experiments/Issue395_powered_chemistry_ladder"
+          overlay="$case_dir/o2_dissociation_${{ matrix.power_w }}w_100us_dt1000ns_overlay.i"
+          grep -Fq 'te^(-0.22)' "$overlay"
+          grep -Fq 'exp(-2.98/te)' "$overlay"
+          grep -Fq "expression = '-6*R'" "$overlay"
+          ! grep -Fq '12.62' "$overlay"
+      - name: P1 build exact PhysicsApp
+        shell: bash
+        run: bash experiments/Issue395_powered_chemistry_ladder/issue397_l1_power_scan_replay.sh build "${{ matrix.power_w }}"
+      - name: P2 check actual generated inputs
+        shell: bash
+        run: bash experiments/Issue395_powered_chemistry_ladder/issue397_l1_power_scan_replay.sh check "${{ matrix.power_w }}"
+      - name: P3 bounded 100us real physics-opt solve
+        id: p3
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout -s TERM -k 60s 19000s bash experiments/Issue395_powered_chemistry_ladder/issue397_l1_power_scan_replay.sh solve "${{ matrix.power_w }}"
+      - name: P4 native 27-wafer-face current and charge audit
+        id: p4
+        if: steps.p3.outcome == 'success'
+        shell: bash
+        run: |
+          set -euo pipefail
+          source .issue395-ground-state-venv/bin/activate
+          bash experiments/Issue395_powered_chemistry_ladder/issue397_l1_power_scan_replay.sh audit "${{ matrix.power_w }}"
+      - name: P5 classify reaction sources, power delivery, convergence, and D1 integrity
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          result="experiments/Issue395_powered_chemistry_ladder/results_rf_elastic_diss_ion_ei20_ei01_${{ matrix.power_w }}w_adjacent_sheath_wall_closed_100us_dt1000ns"
+          python3 experiments/Issue395_powered_chemistry_ladder/analyze_ground_state_power_scan.py \
+            --result "$result" \
+            --power-w "${{ matrix.power_w }}" \
+            --source-sha "${{ github.sha }}" \
+            --p3-outcome "${{ steps.p3.outcome }}" \
+            --p4-outcome "${{ steps.p4.outcome }}"
+      - name: Preserve complete per-power evidence even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue395-ground-state-${{ matrix.power_w }}W-100us
+          path: |
+            experiments/Issue395_powered_chemistry_ladder/results_rf_elastic_diss_ion_ei20_ei01_${{ matrix.power_w }}w_adjacent_sheath_wall_closed_100us_dt1000ns/**
+            experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_ei20_ei01_${{ matrix.power_w }}w_adjacent_sheath_wall_closed_100us_dt1000ns.i
+            experiments/Issue395_powered_chemistry_ladder/rf_elastic_multiapp_parent_${{ matrix.power_w }}w_100us_dt1000ns_overlay.i
+            experiments/Issue395_powered_chemistry_ladder/rf_elastic_multiapp_maxwell_${{ matrix.power_w }}w_100us_dt1000ns_overlay.i
+            experiments/Issue395_powered_chemistry_ladder/rf_elastic_multiapp_maxwell_${{ matrix.power_w }}w_100us_dt1000ns_child.i
+            experiments/Issue395_powered_chemistry_ladder/o2_dissociation_${{ matrix.power_w }}w_100us_dt1000ns_overlay.i
+            experiments/Issue395_powered_chemistry_ladder/issue397_maxwell_steady_abs1e11.i
+          if-no-files-found: warn
+          retention-days: 30

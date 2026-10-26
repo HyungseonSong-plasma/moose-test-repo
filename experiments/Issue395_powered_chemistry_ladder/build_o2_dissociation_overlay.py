@@ -14,9 +14,9 @@ from pathlib import Path
 M_O = 0.016
 M_O2 = 0.032
 DISS_RATE_PREF_M3_S = 1.41e-15
-DISS_ACTIVATION_EV = 12.62
-DISS_TE_EXPONENT = 0.22
-DISS_ENERGY_LOSS_EV = 12.62
+DISS_FIT_EXP_ENERGY_EV = 2.98
+DISS_TE_EXPONENT = -0.22
+DISS_ENERGY_LOSS_EV = 6.0
 
 REQUIRED_BASE_TOKENS = (
     "[w_O]",
@@ -53,9 +53,14 @@ def main() -> int:
 
     text = f'''# Issue #395: source-backed electron-impact O2 dissociation from t=0
 # Reaction: e + O2 -> e + O + O
-# k_particle = 1.41e-15 * Te^0.22 * exp(-12.62/Te) [m^3/s]
+# Ground-state O + O rate fit: Zhao et al., Phys. Plasmas 31, 083507 (2024), Table I (4).
+# https://doi.org/10.1063/5.0214357
+# k_particle = 1.41e-15 * Te^(-0.22) * exp(-2.98/Te) [m^3/s]
 # Te[eV] = (2/3) * mean_en_solved[eV]
-# Effective electron-energy loss = 12.62 eV per molar reaction event.
+# 2.98 eV is a Maxwellian rate-fit parameter, NOT the collision threshold.
+# Effective electron-energy loss = 6.0 eV/event: COMSOL Ar/O2 ICP, Table 2 (13).
+# https://doc.comsol.com/6.4/doc/com.comsol.help.models.plasma.icp_argon_oxygen/icp_argon_oxygen.html
+# The ground-state thermochemical limit is about 5.12 eV, not this effective loss.
 # Historical O2_dissociation.csv is intentionally not used here.
 
 [FunctorMaterials]
@@ -80,7 +85,7 @@ def main() -> int:
     property_name = R_diss_O2
     functor_names = 'n_e_physical c_O2_diss Te_diss_eV'
     functor_symbols = 'ne co2 te'
-    expression = '{DISS_RATE_PREF_M3_S:.17g}*ne*co2*(te^{DISS_TE_EXPONENT:.17g})*exp(-{DISS_ACTIVATION_EV:.17g}/te)'
+    expression = '{DISS_RATE_PREF_M3_S:.17g}*ne*co2*(te^({DISS_TE_EXPONENT:.17g}))*exp(-{DISS_FIT_EXP_ENERGY_EV:.17g}/te)'
     block = plasma
   []
   [diss_o_mass_source]
@@ -182,7 +187,9 @@ def main() -> int:
     print("ISSUE395_O2_DISSOCIATION_OVERLAY_BUILD_PASS")
     print(f"output={a.output}")
     print(f"rate_prefactor_m3_s={DISS_RATE_PREF_M3_S:.17g}")
-    print(f"energy_loss_eV={DISS_ENERGY_LOSS_EV:.17g}")
+    print(f"rate_Te_exponent={DISS_TE_EXPONENT:.17g}")
+    print(f"rate_fit_energy_eV={DISS_FIT_EXP_ENERGY_EV:.17g}")
+    print(f"effective_energy_loss_eV={DISS_ENERGY_LOSS_EV:.17g}")
     return 0
 
 
