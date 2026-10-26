@@ -14,7 +14,7 @@
 namespace
 {
 ADReal
-plasmaSideElectronWallNumberFlux(const MooseMesh & mesh,
+plasmaSideElectronWallNumberFlux(MooseMesh & mesh,
                                  const Elem * const elem,
                                  const unsigned int side,
                                  const Moose::Functor<ADReal> & flux)
