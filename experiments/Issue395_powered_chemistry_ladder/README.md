@@ -42,6 +42,37 @@ baseline. Validate an archived L1 `.msh` without regeneration using
 thermal+migration ion wall conditions and existing electron sheath for
 apples-to-apples experiments.
 
+## Ground-state O2 dissociation rate correction (bounded successor, 2026-10-26)
+
+The canonical generator `build_o2_dissociation_overlay.py` now targets **only**
+`e + O2(X) -> e + O(3P) + O(3P)`. This is a new source change, not a
+reinterpretation of the historical Issue #397/#403 graded-L1/EI17 results or
+their recorded provenance.
+
+- **Reaction-rate fit:** Zhao et al., *Physics of Plasmas* **31**, 083507
+  (2024), [Table I (4)](https://doi.org/10.1063/5.0214357),
+  `k_num = 1.41e-15 * Te^(-0.22) * exp(-2.98/Te) [m3/s]`;
+  `Te = (2/3) * mean_en_solved [eV]`. The `2.98` eV scale is an
+  **empirical rate-fit parameter, not an electron-collision threshold**.
+- **Electron energy loss:** `6.0 eV/event` is the explicitly selected
+  *effective* ground-state dissociation loss from the
+  [COMSOL Ar/O2 ICP example, Table 2 (13)](https://doc.comsol.com/6.4/doc/com.comsol.help.models.plasma.icp_argon_oxygen/icp_argon_oxygen.html).
+  It differs from the thermochemical ground-state O2 dissociation limit
+  (~5.12 eV) and must not be mislabeled as that limit. The fit and
+  energy-loss convention are separately sourced.
+- **Projections:** unchanged single molar progress `R_diss_O2`,
+  oxygen-mass gain `+0.032 R`, implicit O2 loss `-0.032 R`,
+  energy source `-6.0 R`, and zero net electron-particle source.
+  The electronic-excited O(1D) channel is **not activated**.
+- **Validation:** `tests/test_o2_ground_state_dissociation_overlay.py`
+  provides a generated-input regression and independent numeric rate anchors
+  at 2 and 4 eV, source/energy closure and fail-closed negative cases.
+  Repository CI is construction/static evidence only. Before promoting this
+  change into an accepted powered ICP baseline, require a separately scoped
+  real `physics-opt` P2/P3 and scientific source/energy/power/convergence
+  comparison against the previously pinned 100-us control. No historical
+  run, mesh, solver, wall condition or study record is rewritten.
+
 ## Original Issue #395 scope
 
 This experiment surface grafts the accepted Stage-5 S5-R oxygen chemistry onto the merged Issue #376 1000 W RF baseline **incrementally**.
