@@ -43,11 +43,15 @@ struct CollisionFile
 // verify raw-byte SHA-256, contributor rights and provenance.
 CollisionFile parseBolsigCrossSections(std::istream & input);
 
-// Project only the physics currently implemented by the two-term steady DC
-// elastic+excitation solver. EFFECTIVE/MOMENTUM, IONIZATION, ATTACHMENT,
-// ROTATION and reversible/superelastic channels fail closed; they are not
-// silently dropped. Target fractions must be specified for every elastic gas.
-// max_energy_eV is used only for strict interpolation-domain verification.
+// Project steady DC elastic+excitation physics. A source EFFECTIVE/MOMENTUM
+// record contains *total* elastic + inelastic momentum scattering. For this
+// excitation-only subset, derive the elastic residual on the union of source
+// energy knots before the solver adds excitation momentum once; reject a
+// negative residual or duplicate ELASTIC/EFFECTIVE target. This is not valid
+// for files containing IONIZATION, ATTACHMENT or ROTATION, which fail closed.
+// Reversible/superelastic channels still require explicit opt-in and states.
+// All active target fractions and full cross-section energy coverage are
+// mandatory; no source extrapolation or invented physical data is permitted.
 struct ImportedElasticExcitation
 {
   std::vector<ElasticTarget> targets;
