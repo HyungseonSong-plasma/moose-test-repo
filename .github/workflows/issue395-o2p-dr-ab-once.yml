@@ -1,0 +1,75 @@
+# USER-AUTHORIZED ONE-SHOT: source SHA-pinned experimental four-arm science HOLD.
+# Never interpret P3 runtime completion alone as a science PASS.
+name: Issue395 O2p DR four-arm 400 1000 W
+run-name: O2p DR four arms at ${{ github.sha }}
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/issue395-o2p-dr-ab-once.yml]
+permissions:
+  contents: read
+jobs:
+  o2p-dr-ab:
+    name: Oxygen ICP ${{ matrix.power_w }}W DR ${{ matrix.dr_mode }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        power_w: [400, 1000]
+        dr_mode: [off, on]
+    steps:
+      - name: Exact source checkout
+        uses: actions/checkout@v4
+        with:
+          ref: 6bff1c00e0da81f7385d9311d43dae63560df7f6
+      - name: P0 source, chemistry, and mesh
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "6bff1c00e0da81f7385d9311d43dae63560df7f6"
+          python3 -m pip install --quiet 'pytest>=8,<9'
+          python3 -m pytest -q tests/test_o2p_dr_oxygen_icp_ab.py
+          python3 -m venv .o2p-dr-venv
+          .o2p-dr-venv/bin/python -m pip install --quiet numpy==2.1.2 scipy==1.14.1
+          source .o2p-dr-venv/bin/activate
+          bash experiments/Issue395_powered_chemistry_ladder/run_o2p_dr_ab.sh prepare "${{ matrix.power_w }}" "${{ matrix.dr_mode }}"
+      - name: P1 compile PhysicsApp
+        shell: bash
+        run: bash experiments/Issue395_powered_chemistry_ladder/run_o2p_dr_ab.sh build "${{ matrix.power_w }}" "${{ matrix.dr_mode }}"
+      - name: P2 physics-opt check-input
+        shell: bash
+        run: bash experiments/Issue395_powered_chemistry_ladder/run_o2p_dr_ab.sh check "${{ matrix.power_w }}" "${{ matrix.dr_mode }}"
+      - name: P3 real 100us solve
+        id: p3
+        shell: bash
+        run: timeout -s TERM -k 60s 19000s bash experiments/Issue395_powered_chemistry_ladder/run_o2p_dr_ab.sh solve "${{ matrix.power_w }}" "${{ matrix.dr_mode }}"
+      - name: P4 27 wafer face charge/current audit
+        id: p4
+        if: steps.p3.outcome == 'success'
+        shell: bash
+        run: |
+          source .o2p-dr-venv/bin/activate
+          bash experiments/Issue395_powered_chemistry_ladder/run_o2p_dr_ab.sh audit "${{ matrix.power_w }}" "${{ matrix.dr_mode }}"
+      - name: P5 fail-closed chemistry and power verdict
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          source .o2p-dr-venv/bin/activate
+          result="experiments/Issue395_powered_chemistry_ladder/results_rf_elastic_diss_ion_ei20_ei01_${{ matrix.power_w }}w_adjacent_sheath_wall_closed_100us_dt1000ns"
+          python3 experiments/Issue395_powered_chemistry_ladder/analyze_o2p_dr_ab.py \
+            --result "$result" --power-w "${{ matrix.power_w }}" --dr-mode "${{ matrix.dr_mode }}" \
+            --source-sha "6bff1c00e0da81f7385d9311d43dae63560df7f6" --p3-outcome "${{ steps.p3.outcome }}" --p4-outcome "${{ steps.p4.outcome }}"
+      - name: Archive each arm independently
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue395-o2pdr-${{ matrix.power_w }}W-${{ matrix.dr_mode }}-100us
+          retention-days: 30
+          if-no-files-found: warn
+          path: |
+            experiments/Issue395_powered_chemistry_ladder/results_rf_elastic_diss_ion_ei20_ei01_${{ matrix.power_w }}w_adjacent_sheath_wall_closed_100us_dt1000ns/**
+            experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_ei20_ei01_${{ matrix.power_w }}w_adjacent_sheath_wall_closed_100us_dt1000ns.i
+            experiments/Issue395_powered_chemistry_ladder/o2p_dr_${{ matrix.power_w }}w_100us_dt1000ns_overlay.i
