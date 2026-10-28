@@ -243,18 +243,18 @@ Remaining external requirement: obtain the actual user-authorized cross-section 
 
 ## M9 reference preset: official multigas example, not an assumed Ar/O2 default
 
-The BOLSIG+ 07/2024 manual does NOT specify a universal binary Ar/O2 default mixture. Its first bolsigminus example loads Ar/N2 at fractions 0.70/0.30. Its fourth example loads **Ar 0.70, He 0.20, N2 0.08 and O2 0.02**, from LXCat-June2013.txt. This published fourth example is the **project-selected reference baseline**, not a claim about an intrinsic BOLSIG+ default or a binary Ar/O2 mixture.
+The BOLSIG+ 07/2024 manual does NOT specify a universal binary Ar/O2 default mixture. Its first bolsigminus example loads Ar/N2 at fractions 0.70/0.30. Its fourth example loads **Ar 0.70, He 0.20, N2 0.08 and O2 0.02**, from SigloDataBase-LXCat-04Jun2013.txt. This published fourth example is the **project-selected reference baseline**, not a claim about an intrinsic BOLSIG+ default or a binary Ar/O2 mixture.
 
 The developer script physics_app/ci/boltzmann_reference_preset.py supports:
 - official_example4: project-selected default; Ar/He/N2/O2 = 0.70/0.20/0.08/0.02;
 - official_example1: Ar/N2 = 0.70/0.30;
 - project_ar_o2_binary: requires an explicit Ar mole fraction and never pretends to be a BOLSIG+ supplied default.
 
-It creates a local *bolsigminus input script* and SHA-256 provenance manifest from a locally supplied collision source. It never downloads, copies or publishes third-party cross-section bytes. The script uses the published example 4 E/N=10 Td, Tg=300 K, N=3e22 m^-3, temporal growth, equal ionization-electron energy sharing, automatic energy grid and 200 grid points. Collision extrapolation follows the official manual setting (enabled); however, any extrapolated energy intervals must be independently identified before comparing with the stricter C++ importer, which does not silently extrapolate. Reverse-rate and energy-loss output columns are additionally requested to facilitate auditing. The generated script is a *documented derivative of example 4*, not a byte-identical official input.
+It creates a local *bolsigminus input script* and SHA-256 provenance manifest from a locally supplied collision source. It never downloads, copies or publishes third-party cross-section bytes. The script uses the published example 4 E/N=10 Td, Tg=300 K, N=1e18 m^-3, temporal growth, equal ionization-electron energy sharing, automatic energy grid and 200 grid points. Collision extrapolation follows the official manual setting (enabled); however, any extrapolated energy intervals must be independently identified before comparing with the stricter C++ importer, which does not silently extrapolate. Reverse-rate and energy-loss output columns are additionally requested to facilitate auditing. The generated script is a *documented derivative of example 4*, not a byte-identical official input.
 
 Invocation with an authorized local source that contains complete cross sections for all named species:
 
-    python3 physics_app/ci/boltzmann_reference_preset.py --cross-sections /private/path/LXCat-June2013.txt --out /private/path/reference_example4
+    python3 physics_app/ci/boltzmann_reference_preset.py --cross-sections /private/path/SigloDataBase-LXCat-04Jun2013.txt --out /private/path/reference_example4
 
 Run the generated official_example4_bolsigminus.txt with an independently obtained and version-pinned bolsigminus executable, retaining the original numerical run-by-run output. A generated input script and SHA alone are NOT physical or BOLSIG+ numerical parity. The current custom C++ reader may reject real EFFECTIVE or ROTATION data by design; do not remove real reactions to force apparent parity.
 
@@ -297,7 +297,7 @@ cross sections, unsupported reversible state, or energy-domain gaps.
 It never copies raw third-party cross-section tables into GitHub.
 Example invocation (a real locally authorized source is required):
 
-    python3 physics_app/ci/boltzmann_collision_coverage_audit.py --cross-sections /private/LXCat-June2013.txt --species Ar He N2 O2
+    python3 physics_app/ci/boltzmann_collision_coverage_audit.py --cross-sections /private/SigloDataBase-LXCat-04Jun2013.txt --species Ar He N2 O2
 
 The published Example 4 reference input generator additionally requires
 parseable source data containing all selected gases and records the
@@ -334,3 +334,86 @@ pinned real BOLSIG+ raw output, independently audited EEPF/rate/moment
 conversion, complete physics process matching, energy-grid and Emax
 convergence, and actual production PhysicsApp P2/P3. Ordinary Physics
 runtime smoke is not coupled Boltzmann execution.
+
+## S4 user-supplied BOLSIG+ 07/2024 native reference — actual example4.dat
+
+The user supplied native BOLSIG+ 07/2024 run results and the matching
+input-examples.dat command file, for each of examples 1–4. Example 4
+is the first real native **scalar** reference. The original source
+file named in the BOLSIG input and metadata is
+SigloDataBase-LXCat-04Jun2013.txt, NOT the earlier incorrectly cited
+LXCat-June2013.txt. This distinction is part of source provenance.
+
+Example 4 inputs: E/N=10 Td, Tg=300 K, N=1e18 m^-3, Ar/He/N2/O2
+=0.70/0.20/0.08/0.02, temporal growth=1, equal daughter energy
+sharing=1, 200 nominal energy grid points and automatic energy grid
+selection. The **actual BOLSIG maximum energy was 15.8367 eV**:
+the input 200 eV manual ceiling was NOT necessarily the solved
+auto-grid ceiling.
+
+The native result includes **47 process cross-section output blocks**
+and 47 process rate coefficients:
+- Ar: 1 EFFECTIVE, 1 EXCITATION, 1 IONIZATION;
+- He: 1 EFFECTIVE, 1 EXCITATION, 1 IONIZATION;
+- N2: 1 ELASTIC, 23 EXCITATION, 1 IONIZATION;
+- O2: 1 EFFECTIVE, 13 EXCITATION, 1 IONIZATION,
+  1 ATTACHMENT (density-normalized three-body process).
+
+User-supplied reference output SHA-256:
+51644f2c44cb3409199c6685937eb86c99577845c6fc4b7a1b1f8aa3524775c0
+
+User-supplied reference input SHA-256:
+0fca2174fa0a94d7a4ca5c20982031f0e680fffe8d4c3c51e4f26f163b94554b
+
+Reference numbers, derived from actual native R1 scalar values:
+- mean energy 1.35694 eV;
+- electron mobility*N 4.37845e24, diffusion*N 5.69399e24;
+- energy mobility*N 6.14584e24, energy diffusion*N 5.83169e24;
+- total ionization reduced frequency 4.33539e-24 m3/s;
+- total attachment reduced frequency 7.60531e-39 m3/s;
+- power input/N 4.37845e-16 eV m3/s;
+- inelastic power loss/N 4.32630e-16 eV m3/s.
+
+Independent scalar self-consistency audit:
+- mixture-weighted individual ionization rates sum to 4.33540408424e-24
+  m3/s (0.00032487% above total printed value);
+- mixture-weighted attachment rate is 7.6053e-39 m3/s
+  (0.00013149% below printed value);
+- mobility-based input power mu*N*(E/N)^2 equals printed power
+  within displayed precision;
+- ionization Townsend alpha/N reconstructed using ionization
+  total and drift (mu*N)*(E/N) differs by 0.0002713%;
+- summed reported elastic/inelastic/growth powers differs from
+  reported input power by about 0.007493%;
+- direct sum of mixture-weighted listed excitation/ionization
+  threshold times rate is **0.5280% larger** than reported
+  inelastic power; this difference needs physical-definition
+  investigation and must NOT be silently discarded.
+
+The actual reference source cross-section tables are present as
+output echoes in example4.dat, but the independent complete
+SigloDataBase-LXCat-04Jun2013.txt source file itself was not uploaded.
+A 47-process custom C++ reproduction is **not** yet possible because
+EFFECTIVE channels differ from the implemented ELASTIC momentum model,
+several process thresholds lie above the 15.8367 eV auto-grid ceiling,
+and O2 attachment is a density-normalized three-body process rather
+than the currently implemented simple binary electron attachment.
+The native output has **no EEPF**, because the actual Example 4
+SAVERESULTS distribution flag was 0. The other three outputs use
+combined tables/scans and also do not include a native cell-resolved
+EEPF trace. Do not invent a candidate comparison or numerical errors.
+
+A source-free, redistributable general-purpose scalar reference auditor
+has been implemented at
+physics_app/ci/bolsig_native_scalar_audit.py, with only artificial
+unit test examples committed. Run it locally with the user files:
+
+    python3 physics_app/ci/bolsig_native_scalar_audit.py --native-output /private/example4.dat --input-script /private/input-examples.dat
+
+This produces reduced transport, reaction and power consistency
+evidence, SHA hashes, source inventory and explicit P2/HOLD status.
+No original third-party cross-section tables have been committed.
+Actual candidate-to-reference EEPF, transport, rate and temporal
+growth parity STILL requires full supported physics and a native
+BOLSIG distribution output (set the existing script's SAVERESULTS
+distribution option to 1, then rerun under authorized local license).
