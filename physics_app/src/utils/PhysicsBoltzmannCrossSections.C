@@ -285,4 +285,68 @@ ImportedElasticExcitation prepareElasticExcitation(
   }
   return result;
 }
+
+ImportedGrowthPhysics prepareGrowthPhysics(
+    const CollisionFile & file,
+    const std::map<std::string, double> & target_fractions,
+    double max_energy_eV,
+    bool enable_reversible)
+{
+  if (file.records.empty())
+    throw std::invalid_argument("Boltzmann M6: collision file contains no processes");
+  CollisionFile existing;
+  existing.header = file.header;
+  for (const auto & record : file.records)
+  {
+    if (record.kind == CollisionKind::Elastic ||
+        record.kind == CollisionKind::Excitation)
+      existing.records.push_back(record);
+    else if (record.kind != CollisionKind::Ionization &&
+             record.kind != CollisionKind::Attachment)
+      throw std::invalid_argument(
+          "Boltzmann M6: unsupported effective, rotation or other collision type");
+  }
+
+  // Independent existing M5 projector validates elastic, excitation,
+  // reversible upper-state bookkeeping, complete elastic target inventory,
+  // mixture fractions and full [0,epsilon_max] source coverage.
+  const auto m5 = prepareElasticExcitation(
+      existing, target_fractions, max_energy_eV, enable_reversible);
+  ImportedGrowthPhysics result;
+  result.targets = m5.targets;
+  result.excitation_channels = m5.channels;
+  for (const auto & record : file.records)
+  {
+    if (record.kind != CollisionKind::Ionization &&
+        record.kind != CollisionKind::Attachment)
+      continue;
+    const auto target = target_fractions.find(record.target);
+    if (target == target_fractions.end())
+      throw std::invalid_argument("Boltzmann M6: process target absent from mixture");
+    if (record.energy_eV.front() > 0.0 ||
+        record.energy_eV.back() < max_energy_eV)
+      throw std::invalid_argument("Boltzmann M6: cross section lacks full energy coverage");
+    if (record.kind == CollisionKind::Ionization)
+    {
+      if (!(record.parameter > 0.0 && record.parameter < max_energy_eV))
+        throw std::invalid_argument("Boltzmann M6: ionization threshold outside energy domain");
+      const auto id = record.target + ":ionization:" +
+          std::to_string(result.ionization_channels.size() + 1);
+      result.ionization_channels.push_back(
+          {id, record.target, record.parameter,
+           record.energy_eV, record.cross_section_m2});
+    }
+    else
+    {
+      const auto id = record.target + ":attachment:" +
+          std::to_string(result.attachment_channels.size() + 1);
+      result.attachment_channels.push_back(
+          {id, record.target, record.energy_eV, record.cross_section_m2});
+    }
+  }
+  if (result.ionization_channels.empty() &&
+      result.attachment_channels.empty())
+    throw std::invalid_argument("Boltzmann M6: no particle-changing processes");
+  return result;
+}
 } // namespace PhysicsBoltzmann
