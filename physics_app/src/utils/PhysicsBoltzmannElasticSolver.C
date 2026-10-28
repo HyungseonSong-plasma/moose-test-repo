@@ -83,7 +83,8 @@ double bernoulli(double x)
 
 struct Coefficients { double W; double D; };
 
-Coefficients atFace(const ElasticInput & input, double energy)
+Coefficients atFace(const ElasticInput & input, double energy,
+                    const std::vector<ExcitationChannel> * channels = nullptr)
 {
   double sigma_m = 0.0;
   double sigma_e = 0.0;
@@ -93,6 +94,30 @@ Coefficients atFace(const ElasticInput & input, double energy)
     sigma_m += sigma;
     sigma_e += 2.0 * target.electron_mass_ratio * sigma;
   }
+  // Isotropic inelastic scattering also relaxes the first angular moment.
+  // sigma_m below is ELASTIC momentum-transfer plus all active excitation
+  // total cross sections (NOT an already-inclusive EFFECTIVE elastic sigma).
+  if (channels)
+    for (const auto & channel : *channels)
+    {
+      if (energy < channel.threshold_eV)
+        continue;
+      const auto upper = std::upper_bound(channel.energy_eV.begin(), channel.energy_eV.end(), energy);
+      const std::size_t right = upper == channel.energy_eV.end()
+                                    ? channel.energy_eV.size() - 1
+                                    : static_cast<std::size_t>(upper - channel.energy_eV.begin());
+      const std::size_t left = right == 0 ? 0 : right - 1;
+      const double xs = left == right ? channel.cross_section_m2[left]
+          : channel.cross_section_m2[left] +
+            (energy - channel.energy_eV[left]) *
+            (channel.cross_section_m2[right] - channel.cross_section_m2[left]) /
+            (channel.energy_eV[right] - channel.energy_eV[left]);
+      const auto target = std::find_if(input.targets.begin(), input.targets.end(),
+          [&channel](const ElasticTarget & t) { return t.name == channel.target_name; });
+      if (target == input.targets.end())
+        throw std::invalid_argument("Boltzmann: excitation momentum target is missing");
+      sigma_m += target->mole_fraction * xs;
+    }
   if (!finitePositive(sigma_m) || !finitePositive(sigma_e))
     throw std::invalid_argument("Boltzmann: total elastic momentum cross section vanishes at an interior face");
 
@@ -303,7 +328,7 @@ ExcitationResult solveExcitationSteadyState(const ElasticInput & input,
   // Divergence of the same conservative elastic SG interface flux as M1.
   for (std::size_t i = 1; i < n; ++i)
   {
-    const auto face = atFace(input, static_cast<double>(i) * h);
+    const auto face = atFace(input, static_cast<double>(i) * h, &channels);
     const double p = face.W * h / face.D;
     const double left = face.D / h * bernoulli(-p);
     const double right = face.D / h * bernoulli(p);
