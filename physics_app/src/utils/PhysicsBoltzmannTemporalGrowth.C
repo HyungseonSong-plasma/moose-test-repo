@@ -135,6 +135,8 @@ TemporalGrowthResult solveElasticTemporalGrowth(
   {
     if (target.energy_eV.size() < 2 ||
         target.momentum_transfer_m2.size() != target.energy_eV.size() ||
+        (!target.field_momentum_transfer_m2.empty() &&
+         target.field_momentum_transfer_m2.size() != target.energy_eV.size()) ||
         target.energy_eV.front() > 0.0 ||
         target.energy_eV.back() < input.max_energy_eV ||
         !(target.mole_fraction > 0.0 && target.electron_mass_ratio > 0.0))
@@ -143,7 +145,10 @@ TemporalGrowthResult solveElasticTemporalGrowth(
     for (std::size_t i = 0; i < target.energy_eV.size(); ++i)
       if (!(std::isfinite(target.energy_eV[i]) &&
             std::isfinite(target.momentum_transfer_m2[i]) &&
-            target.momentum_transfer_m2[i] >= 0.0) ||
+            target.momentum_transfer_m2[i] >= 0.0 &&
+            (target.field_momentum_transfer_m2.empty() ||
+             (std::isfinite(target.field_momentum_transfer_m2[i]) &&
+              target.field_momentum_transfer_m2[i] >= 0.0))) ||
           (i && target.energy_eV[i] <= target.energy_eV[i - 1]))
         throw std::invalid_argument("Boltzmann M6b: invalid elastic collision coordinates");
   }
@@ -160,7 +165,14 @@ TemporalGrowthResult solveElasticTemporalGrowth(
     for (const auto & t : input.targets)
     {
       const double xs = t.mole_fraction * interpolate(t, e);
-      sigma_m += xs;
+      if (t.field_momentum_transfer_m2.empty())
+        sigma_m += xs;
+      else
+      {
+        ElasticTarget total = t;
+        total.momentum_transfer_m2 = t.field_momentum_transfer_m2;
+        sigma_m += t.mole_fraction * interpolate(total, e);
+      }
       sigma_e += 2.0 * t.electron_mass_ratio * xs;
     }
     if (!(sigma_m > 0.0 && sigma_e > 0.0))
