@@ -151,6 +151,22 @@ int main()
   if (relativeError(inel2.rate_coefficients_m3_per_s[0], independent_rate) > 1e-12)
     throw std::runtime_error("excitation rate disagrees with independent moment");
 
+  // Off-grid transfer test: u/h is non-integral; recipients split between
+  // adjacent cells. Piecewise-linear excitation cross sections must preserve
+  // number even when the incoming/outgoing cells are not aligned.
+  auto offgrid_input = fixture(125, 0.2);
+  ExcitationChannel offgrid_channel = channel;
+  offgrid_channel.threshold_eV = 0.27;
+  offgrid_channel.energy_eV = {0.0, 1.0, 2.0};
+  offgrid_channel.cross_section_m2 = {0.0, 1.0e-20, 2.0e-20};
+  const auto shifted = solveExcitationSteadyState(offgrid_input, {offgrid_channel});
+  if (!(shifted.maximum_collision_number_balance_error < 1e-9 &&
+        shifted.maximum_normalized_equation_residual < 1e-8 &&
+        shifted.rate_coefficients_m3_per_s[0] > 0.0 &&
+        shifted.distribution.mean_energy_eV <
+            solveElasticSteadyState(offgrid_input).mean_energy_eV))
+    throw std::runtime_error("off-grid nonlocal excitation transfer failed conservation");
+
   // Zero-amplitude collision channel must recover the purely elastic M1
   // discrete equilibrium, not just the same qualitative trend.
   channel.cross_section_m2 = {0.0, 0.0};
