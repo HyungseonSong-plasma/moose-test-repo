@@ -62,7 +62,12 @@ int main()
   if (!(imported_result.distribution.mean_energy_eV > 0.0 &&
         imported_result.maximum_collision_number_balance_error < 1e-9 &&
         imported_result.maximum_normalized_equation_residual < 1e-8 &&
-        imported_result.rate_coefficients_m3_per_s[0] > 0.0))
+        imported_result.rate_coefficients_m3_per_s[0] > 0.0 &&
+        imported_result.superelastic_rate_coefficients_m3_per_s.size() == 1 &&
+        imported_result.superelastic_rate_coefficients_m3_per_s[0] == 0.0 &&
+        std::abs(imported_result.net_energy_loss_coefficients_eV_m3_per_s[0] -
+                 0.65 * 0.27 * imported_result.rate_coefficients_m3_per_s[0]) <
+            1e-13 * imported_result.rate_coefficients_m3_per_s[0]))
     throw std::runtime_error("BOLSIG import cannot feed conservative C++ energy solver");
 
   // Control: direct C++ objects must reproduce the imported-input state.
