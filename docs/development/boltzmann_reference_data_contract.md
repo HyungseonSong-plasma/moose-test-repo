@@ -240,3 +240,24 @@ Preflight verifies raw source SHA, a single gas mixture, fixed gas temperature a
 The independent reference checker also supports optional comparison of the four transport moments. When both candidate and BOLSIG+ reference contain the complete four-moment object, the case must predeclare a fifth tolerance transport_relative, and every individual mobility/diffusion/energy-mobility/energy-diffusion error is reported. Missing reference/candidate fields or missing tolerance triggers a preflight HOLD. Synthetic reference tests remain SELFTEST, not physical parity.
 
 Remaining external requirement: obtain the actual user-authorized cross-section source and complete provenance, run the exact-version independent BOLSIG+ case and audit raw export -> common-cell representation; verify emax/mesh convergence and PhysicsApp physics-opt P2/P3. Without a trusted external oracle and production executable test, neither comparator PASS nor a DEV table establishes scientific acceptance.
+
+## M9 reference preset: official multigas example, not an assumed Ar/O2 default
+
+The BOLSIG+ 07/2024 manual does NOT specify a universal binary Ar/O2 default mixture. Its first bolsigminus example loads Ar/N2 at fractions 0.70/0.30. Its fourth example loads **Ar 0.70, He 0.20, N2 0.08 and O2 0.02**, from LXCat-June2013.txt. This published fourth example is the **project-selected reference baseline**, not a claim about an intrinsic BOLSIG+ default or a binary Ar/O2 mixture.
+
+The developer script physics_app/ci/boltzmann_reference_preset.py supports:
+- official_example4: project-selected default; Ar/He/N2/O2 = 0.70/0.20/0.08/0.02;
+- official_example1: Ar/N2 = 0.70/0.30;
+- project_ar_o2_binary: requires an explicit Ar mole fraction and never pretends to be a BOLSIG+ supplied default.
+
+It creates a local *bolsigminus input script* and SHA-256 provenance manifest from a locally supplied collision source. It never downloads, copies or publishes third-party cross-section bytes. The script uses the published example 4 E/N=10 Td, Tg=300 K, N=3e22 m^-3, temporal growth, equal ionization-electron energy sharing, automatic energy grid and 200 grid points. For strict reference preparation, collision extrapolation is disabled (manual example uses enabled extrapolation), and reverse-rate and energy-loss outputs are requested. These deliberate alterations are documented in the manifest; the generated script is therefore a *documented derivative of example 4*, not a byte-identical official input.
+
+Invocation with an authorized local source that contains complete cross sections for all named species:
+
+    python3 physics_app/ci/boltzmann_reference_preset.py --cross-sections /private/path/LXCat-June2013.txt --out /private/path/reference_example4
+
+Run the generated official_example4_bolsigminus.txt with an independently obtained and version-pinned bolsigminus executable, retaining the original numerical run-by-run output. A generated input script and SHA alone are NOT physical or BOLSIG+ numerical parity. The current custom C++ reader may reject real EFFECTIVE or ROTATION data by design; do not remove real reactions to force apparent parity.
+
+Further gating: independently audited raw BOLSIG+ output to canonical-cell EEPF conversion, identical physical models including temporal growth and all collision channels, emax/grid convergence, and actual PhysicsApp physics-opt P2/P3. Existing Oxygen ICP production chemistry, materials and main branch remain unchanged.
+
+Reference: BOLSIG+ 07/2024 documentation https://www.bolsig.laplace.univ-tlse.fr/wp-content/uploads/2024/07/bolsigdoc0724.pdf (examples 1 and 4).
