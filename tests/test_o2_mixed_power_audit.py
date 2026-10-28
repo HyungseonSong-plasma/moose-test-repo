@@ -65,3 +65,46 @@ def test_missing_mixed_observation_is_not_pass(tmp_path: Path):
 def test_wrong_ground_channel_cannot_masquerade_as_mixed(tmp_path: Path):
     report = analyzer.audit(fixture(tmp_path), 400, "exact", "success", "success", "ground")
     assert report["status"] == "NOT_PASS"
+
+
+def test_zero_initial_required_in_new_experiment(tmp_path: Path):
+    result = fixture(tmp_path)
+    # A legitimate 100us result without t=0 evidence must fail closed.
+    report = analyzer.audit(result, 400, "exact", "success", "success", "mixed", True)
+    assert report["status"] == "NOT_PASS"
+    assert report["checks"]["initial_O3P_zero"]["status"] == "FAIL"
+
+
+def test_zero_initial_observation_distinguishes_O1D_from_O3P(tmp_path: Path):
+    result = fixture(tmp_path)
+    input_csv = result / "run" / "plasma.csv"
+    with input_csv.open(newline="") as src:
+        fieldnames = list(csv.DictReader(src).fieldnames or [])
+    fields = fieldnames + ["neutral_mass_O", "neutral_mass_Os", "neutral_mass_O2"]
+    final = {name: 0.0 for name in fields}
+    final.update({"time": 1e-4, "mixed_R_integral": 2.0, "mixed_energy_sink_integral": -16.8,
+                  "mixed_o3p_mass_integral": 0.032, "mixed_o1d_mass_integral": 0.032,
+                  "mixed_oxygen_molecular_sink_integral": -0.064,
+                  "mixed_heavy_mass_closure_integral": 0.0,
+                  "rf_drive_scale_t6": 1.3, "P_rf_scaled_W_t6": 400.0,
+                  "P_abs_maxwell_t6": 400.0})
+    initial = {name: 0.0 for name in fields}
+    initial.update({"time": 0.0, "neutral_mass_O": 0.0,
+                    "neutral_mass_Os": 8.64e-8, "neutral_mass_O2": 5.75e-7})
+    with input_csv.open("w", newline="") as out:
+        writer = csv.DictWriter(out, fieldnames=fields)
+        writer.writeheader()
+        writer.writerow(initial)
+        writer.writerow(final)
+    report = analyzer.audit(result, 400, "exact", "success", "success", "mixed", True)
+    assert report["status"] == "PASS"
+    assert report["checks"]["initial_O3P_zero"]["status"] == "PASS"
+    initial["neutral_mass_O"] = 7.2e-8
+    with input_csv.open("w", newline="") as out:
+        writer = csv.DictWriter(out, fieldnames=fields)
+        writer.writeheader()
+        writer.writerow(initial)
+        writer.writerow(final)
+    report = analyzer.audit(result, 400, "exact", "success", "success", "mixed", True)
+    assert report["checks"]["initial_O3P_zero"]["status"] == "FAIL"
+    assert report["status"] == "NOT_PASS"
