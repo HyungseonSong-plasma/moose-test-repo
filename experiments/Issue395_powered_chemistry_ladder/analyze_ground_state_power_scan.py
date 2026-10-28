@@ -19,13 +19,30 @@ RATE_TOL = 2e-5
 SOURCE_TOL = 2e-5
 
 
-def audit(result: Path, power_w: int, source_sha: str, p3: str, p4: str, diss_channel: str = "ground") -> dict:
+def audit(result: Path, power_w: int, source_sha: str, p3: str, p4: str, diss_channel: str = "ground", require_initial_zero: bool = False) -> dict:
     csv_file = result / "run" / "plasma.csv"
     rows = []
     if csv_file.is_file():
         with csv_file.open(encoding="utf-8", newline="") as handle:
             rows = list(csv.DictReader(handle))
     last = rows[-1] if rows else {}
+    initial_O = None
+    initial_Os = None
+    initial_O2 = None
+    if rows:
+        try:
+            if float(rows[0]["time"]) == 0.0:
+                initial_O = float(rows[0]["neutral_mass_O"])
+                initial_Os = float(rows[0]["neutral_mass_Os"])
+                initial_O2 = float(rows[0]["neutral_mass_O2"])
+        except (ValueError, TypeError, KeyError):
+            pass
+    initial_O_scale = max(abs(initial_Os or 0.0), abs(initial_O2 or 0.0), 1e-30)
+    initial_O_zero_pass = (
+        initial_O is not None and initial_Os is not None and initial_O2 is not None
+        and all(math.isfinite(v) for v in (initial_O, initial_Os, initial_O2))
+        and abs(initial_O) <= 1e-14 * initial_O_scale
+    )
     if diss_channel == "mixed":
         required = (
             "mixed_R_integral", "mixed_energy_sink_integral",
@@ -149,6 +166,14 @@ def audit(result: Path, power_w: int, source_sha: str, p3: str, p4: str, diss_ch
             },
         },
     }
+    if require_initial_zero:
+        state["checks"]["initial_O3P_zero"] = {
+            "status": "PASS" if initial_O_zero_pass else "FAIL",
+            "observed_initial_O_kg": initial_O,
+            "initial_O1D_kg": initial_Os,
+            "initial_O2_kg": initial_O2,
+            "normalization_scale_kg": initial_O_scale,
+        }
     state["status"] = ("PASS" if all(c["status"] == "PASS" for c in state["checks"].values())
                        else "NOT_PASS")
     return state
@@ -162,9 +187,10 @@ def main() -> int:
     p.add_argument("--p3-outcome", required=True)
     p.add_argument("--p4-outcome", required=True)
     p.add_argument("--channel", choices=("ground", "mixed"), default="ground")
+    p.add_argument("--require-initial-zero", action="store_true")
     args = p.parse_args()
-    report = audit(args.result, args.power_w, args.source_sha, args.p3_outcome, args.p4_outcome, args.channel)
-    dest = args.result / "diagnostics" / ("mixed_o3p_o1d_two_power.json" if args.channel == "mixed" else "ground_state_three_power.json")
+    report = audit(args.result, args.power_w, args.source_sha, args.p3_outcome, args.p4_outcome, args.channel, args.require_initial_zero)
+    dest = args.result / "diagnostics" / ("mixed_o3p_o1d_zero_initial_two_power.json" if args.require_initial_zero else "mixed_o3p_o1d_two_power.json" if args.channel == "mixed" else "ground_state_three_power.json")
     dest.parent.mkdir(parents=True, exist_ok=True)
     dest.write_text(json.dumps(report, indent=2, allow_nan=False) + "\n", encoding="utf-8")
     print(json.dumps(report, indent=2, allow_nan=False))
