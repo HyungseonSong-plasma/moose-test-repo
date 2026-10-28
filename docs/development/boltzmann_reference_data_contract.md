@@ -1,6 +1,6 @@
 # Boltzmann reference data and BOLSIG+ comparison contract
 
-**Status: SPECIFICATION / HOLD — NOT yet an implemented loader or validated real-gas dataset.**
+**Status: M1–M9 numerical C++ development implemented; S1 manufactured science oracle completed; genuine BOLSIG+ reference parity and Physics P2/P3 still HOLD.**
 
 ## Data origin, ownership and redistribution
 
@@ -103,7 +103,7 @@ Both JSON distribution payloads must be independently normalized to the same **e
 
 The values above are **illustrative only**, not a valid published reference and not necessarily a numerically self-consistent input to the checker. Use full-precision canonical values and exact source IDs.
 
-The comparator requires identical physical conditions, source SHA and cell edges; rejects mismatched or unnormalized EEPF, inconsistent energy moments, nonmatching reaction inventories and missing input provenance. Given a complete predeclared tolerance set, it reports weighted EEPF L1, mean-energy relative error and per-reaction relative/zero-rate absolute error. It returns `BOLSIG_REFERENCE_PREFLIGHT_HOLD` for a construction/provenance error; `BOLSIG_REFERENCE_NUMERIC_FAIL` for a quantitatively valid but different reference; and `BOLSIG_REFERENCE_NUMERIC_PASS` only when all declared metrics pass.
+The comparator requires identical physical conditions, source SHA and cell edges; rejects mismatched or unnormalized EEPF, inconsistent energy moments, nonmatching reaction inventories and missing input provenance. Given a complete predeclared tolerance set, it reports weighted EEPF L1, mean-energy relative error and per-reaction relative/zero-rate absolute error. It returns BOLSIG_REFERENCE_PREFLIGHT_HOLD for construction/provenance errors. Synthetic fixtures are labelled BOLSIG_REFERENCE_SELFTEST_PASS/FAIL; non-synthetic comparisons are reported as BOLSIG_REFERENCE_UNVERIFIED_MATCH/MISMATCH and remain scientific HOLD even with numerical agreement, because no independent native raw-output conversion has yet been audited.
 
 **Important limitation:** The existing checker does **not** convert original native BOLSIG+ run-by-run output to the canonical cell-average JSON, and the existing implementation does **not** automatically generate candidate JSON from arbitrary imported production inputs. Those two independent, auditable export stages and a genuine BOLSIG+ reference dataset are still required before external physics parity can be claimed. The checker tests its correctness using manufactured synthetic files and mutation controls, not a genuine BOLSIG+ run. Regridding must be explicit and independently validated; the checker does not silently interpolate mismatched energy grids.
 
