@@ -17,18 +17,22 @@ constexpr double me = 9.1093837139e-31;
 constexpr double kB = 1.380649e-23;
 const double gamma = std::sqrt(2.0 * qe / me);
 
+double interpolate(const std::vector<double> & energy,
+                   const std::vector<double> & sigma, double e)
+{
+  const auto upper = std::upper_bound(energy.begin(), energy.end(), e);
+  if (upper == energy.begin())
+    return sigma.front();
+  if (upper == energy.end())
+    return sigma.back();
+  const auto k = static_cast<std::size_t>(upper - energy.begin());
+  const double t = (e - energy[k - 1]) / (energy[k] - energy[k - 1]);
+  return (1.0 - t) * sigma[k - 1] + t * sigma[k];
+}
+
 double interpolate(const ElasticTarget & target, double e)
 {
-  const auto upper = std::upper_bound(target.energy_eV.begin(), target.energy_eV.end(), e);
-  if (upper == target.energy_eV.begin())
-    return target.momentum_transfer_m2.front();
-  if (upper == target.energy_eV.end())
-    return target.momentum_transfer_m2.back();
-  const auto k = static_cast<std::size_t>(upper - target.energy_eV.begin());
-  const double t = (e - target.energy_eV[k - 1]) /
-                   (target.energy_eV[k] - target.energy_eV[k - 1]);
-  return (1.0 - t) * target.momentum_transfer_m2[k - 1] +
-         t * target.momentum_transfer_m2[k];
+  return interpolate(target.energy_eV, target.momentum_transfer_m2, e);
 }
 
 double bernoulli(double x)
@@ -169,9 +173,8 @@ TemporalGrowthResult solveElasticTemporalGrowth(
         sigma_m += xs;
       else
       {
-        ElasticTarget total = t;
-        total.momentum_transfer_m2 = t.field_momentum_transfer_m2;
-        sigma_m += t.mole_fraction * interpolate(total, e);
+        sigma_m += t.mole_fraction *
+                   interpolate(t.energy_eV, t.field_momentum_transfer_m2, e);
       }
       sigma_e += 2.0 * t.electron_mass_ratio * xs;
     }
