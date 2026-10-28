@@ -98,6 +98,86 @@ int main()
   if (relativeError(result_high.mean_energy_eV, expanded_result.mean_energy_eV) > 0.01)
     throw std::runtime_error("elastic EEPF failed epsilon_max refinement");
 
+
+  // M2: one-way nonlocal excitation. This test deliberately uses an analytic
+  // constant cross section, not a claimed real-gas data set.
+  auto base = fixture(80, 0.2);
+  ExcitationChannel channel;
+  channel.name = "synthetic-excitation";
+  channel.target_name = "synthetic-argon-like";
+  channel.threshold_eV = 0.25;
+  channel.energy_eV = {0.0, 2.0};
+  channel.cross_section_m2 = {1.0e-20, 1.0e-20};
+
+  const auto inel0 = solveExcitationSteadyState(base, {channel});
+  base.cells = 160;
+  const auto inel1 = solveExcitationSteadyState(base, {channel});
+  base.cells = 320;
+  const auto inel2 = solveExcitationSteadyState(base, {channel});
+  const auto base_elastic = solveElasticSteadyState(base);
+  if (!(inel0.distribution.mean_energy_eV > inel1.distribution.mean_energy_eV &&
+        inel1.distribution.mean_energy_eV > inel2.distribution.mean_energy_eV &&
+        inel2.distribution.mean_energy_eV < base_elastic.mean_energy_eV))
+    throw std::runtime_error("nonlocal excitation energy-loss/refinement invariant failed");
+
+  for (const auto & result : {inel0, inel1, inel2})
+  {
+    if (!(std::abs(result.distribution.normalization - 1.0) < 1e-12 &&
+          result.maximum_normalized_equation_residual < 1e-8 &&
+          result.maximum_collision_number_balance_error < 1e-9))
+      throw std::runtime_error("excitation particle-number or residual invariant failed");
+    if (!(result.rate_coefficients_m3_per_s.size() == 1 &&
+          result.rate_coefficients_m3_per_s[0] > 0.0 &&
+          relativeError(result.energy_loss_coefficients_eV_m3_per_s[0],
+                        channel.threshold_eV * result.rate_coefficients_m3_per_s[0]) < 1e-14))
+      throw std::runtime_error("excitation channel rate/energy-loss invariant failed");
+    if (!std::isnan(result.distribution.maximum_normalized_flux_residual))
+      throw std::runtime_error("inelastic energy flux must not be reported as zero residual");
+  }
+
+  // Independent channel-rate oracle: integral of epsilon * constant sigma
+  // over every source cell above threshold, using *returned* normalized EEPF.
+  double independent_rate = 0.0;
+  const double h2 = 2.0 / static_cast<double>(base.cells);
+  const double gamma = std::sqrt(2.0 * 1.602176634e-19 / 9.1093837139e-31);
+  for (std::size_t i = 0; i < base.cells; ++i)
+  {
+    const double lo = std::max(static_cast<double>(i) * h2, channel.threshold_eV);
+    const double hi = static_cast<double>(i + 1) * h2;
+    if (hi > lo)
+      independent_rate += gamma * 1e-20 * 0.5 * (hi * hi - lo * lo) *
+                          inel2.distribution.eepf_eV_minus_3_halves[i];
+  }
+  if (relativeError(inel2.rate_coefficients_m3_per_s[0], independent_rate) > 1e-12)
+    throw std::runtime_error("excitation rate disagrees with independent moment");
+
+  // Zero-amplitude collision channel must recover the purely elastic M1
+  // discrete equilibrium, not just the same qualitative trend.
+  channel.cross_section_m2 = {0.0, 0.0};
+  base.cells = 100;
+  const auto no_excitation = solveExcitationSteadyState(base, {channel});
+  const auto elastic_control = solveElasticSteadyState(base);
+  if (relativeError(no_excitation.distribution.mean_energy_eV,
+                    elastic_control.mean_energy_eV) > 1e-10)
+    throw std::runtime_error("zero-excitation baseline parity failed");
+
+  // P0 negative controls cover missing target, duplicate channel identity,
+  // nonphysical threshold, insufficient energy domain and unsupported sizes.
+  channel.cross_section_m2 = {1.0e-20, 1.0e-20};
+  channel.target_name = "missing-target";
+  reject([&] { (void)solveExcitationSteadyState(base, {channel}); });
+  channel.target_name = "synthetic-argon-like";
+  reject([&] { (void)solveExcitationSteadyState(base, {channel, channel}); });
+  channel.threshold_eV = 2.0;
+  reject([&] { (void)solveExcitationSteadyState(base, {channel}); });
+  channel.threshold_eV = 0.25;
+  channel.cross_section_m2[1] = -1.0;
+  reject([&] { (void)solveExcitationSteadyState(base, {channel}); });
+  channel.cross_section_m2[1] = 1.0e-20;
+  reject([&] { (void)solveExcitationSteadyState(base, {}); });
+  base.cells = 513;
+  reject([&] { (void)solveExcitationSteadyState(base, {channel}); });
+
   // P0 negative controls: reject malformed units, coverages, fractions,
   // sign errors, nonmonotone energies and absent physical collision operators.
   auto bad = fixture(100, 1.0);
@@ -118,7 +198,7 @@ int main()
   bad = fixture(100, -1.0);
   reject([&] { (void)solveElasticSteadyState(bad); });
 
-  std::cout << "BOLTZMANN_ELASTIC_P0_P1_PASS\n"
+  std::cout << "BOLTZMANN_EXCITATION_M2_P0_P1_PASS\n" << "BOLTZMANN_ELASTIC_P0_P1_PASS\n"
             << "MAXWELL_REFINEMENT_ERRORS=" << err_c << ',' << err_f << ',' << err_ff << '\n'
             << "FIELD_MEAN_ENERGIES_EV=" << fine.mean_energy_eV << ','
             << result_low.mean_energy_eV << ',' << result_high.mean_energy_eV << '\n'
