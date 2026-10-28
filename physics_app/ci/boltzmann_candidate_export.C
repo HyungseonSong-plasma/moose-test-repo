@@ -2,6 +2,7 @@
 // candidate EEPF/rate JSON. No MOOSE app objects, no third-party data bundled.
 // Actual source hash/rights must be verified by independent case preflight.
 #include "PhysicsBoltzmannCrossSections.h"
+#include "PhysicsBoltzmannEnergyMesh.h"
 #include "PhysicsBoltzmannTemporalGrowth.h"
 #include "PhysicsBoltzmannTransport.h"
 
@@ -64,7 +65,7 @@ int main(int argc, char ** argv)
     if (argc < 8)
       throw std::invalid_argument(
           "usage: boltzmann_candidate_export SOURCE_TXT SHA256 EoverN_Td Tg_K "
-          "emax_eV CELLS species=fraction [species=fraction ...] [--enable-superelastic] [--diagnose-frozen-growth] [--solve-elastic-temporal-growth] [--solve-coupled-temporal-growth] [--report-elastic-transport] [--report-inelastic-transport] [--bolsig-2024-boundaries] [--report-coupled-growth-transport]");
+          "emax_eV CELLS species=fraction [species=fraction ...] [--enable-superelastic] [--diagnose-frozen-growth] [--solve-elastic-temporal-growth] [--solve-coupled-temporal-growth] [--report-elastic-transport] [--report-inelastic-transport] [--bolsig-2024-boundaries] [--report-coupled-growth-transport] [--omega-over-N=M3_S] [--energy-grid-power=P]");
 
     const std::string source_path = argv[1], source_sha = argv[2];
     requireSourceHash(source_sha);
@@ -82,9 +83,31 @@ int main(int argc, char ** argv)
     bool inelastic_transport = false;
     bool coupled_growth_transport = false;
     bool bols_2024_boundaries = false;
+    double reduced_angular_frequency = 0.0;
+    double grid_power = 1.0;
+    bool frequency_specified = false;
+    bool grid_specified = false;
     for (int i = 7; i < argc; ++i)
     {
       const std::string pair = argv[i];
+      const std::string omega_prefix = "--omega-over-N=";
+      if (pair.compare(0, omega_prefix.size(), omega_prefix) == 0)
+      {
+        if (frequency_specified)
+          throw std::invalid_argument("duplicate reduced AC angular frequency");
+        frequency_specified = true;
+        reduced_angular_frequency = parseNumber(pair.substr(omega_prefix.size()));
+        continue;
+      }
+      const std::string grid_prefix = "--energy-grid-power=";
+      if (pair.compare(0, grid_prefix.size(), grid_prefix) == 0)
+      {
+        if (grid_specified)
+          throw std::invalid_argument("duplicate nonuniform grid power");
+        grid_specified = true;
+        grid_power = parseNumber(pair.substr(grid_prefix.size()));
+        continue;
+      }
       if (pair == "--bolsig-2024-boundaries")
       {
         if (bols_2024_boundaries)
@@ -148,7 +171,9 @@ int main(int argc, char ** argv)
       if (!fraction.emplace(species, parseNumber(pair.substr(pos + 1))).second)
         throw std::invalid_argument("duplicate target fraction");
     }
-    if (!std::isfinite(EN) || EN < 0 || !(Tg > 0) || !(emax > 0))
+    if (!std::isfinite(EN) || EN < 0 || !(Tg > 0) || !(emax > 0) ||
+        !std::isfinite(reduced_angular_frequency) ||
+        reduced_angular_frequency < 0.0)
       throw std::invalid_argument("invalid gas temperature, energy ceiling or E/N");
 
     if ((elastic_transport && inelastic_transport) ||
@@ -210,6 +235,9 @@ int main(int argc, char ** argv)
     conditions.max_energy_eV = emax;
     conditions.gas_temperature_K = Tg;
     conditions.reduced_field_Td = EN;
+    conditions.reduced_angular_frequency_m3_per_s = reduced_angular_frequency;
+    if (grid_specified)
+      conditions.energy_cell_edges_eV = powerLawEnergyMesh(cells, emax, grid_power);
     conditions.targets = std::move(targets);
     auto result = excitation.empty() ?
         ExcitationResult{} : solveExcitationSteadyState(
@@ -275,12 +303,15 @@ int main(int argc, char ** argv)
         (enable_superelastic ? "elastic_excitation_superelastic_steady_dc" :
                                "elastic_excitation_steady_dc");
     std::cout << "},\"model\":\"" << model << "\","
-              << "\"collision_source_sha256\":\"" << source_sha << "\"},"
+              << "\"collision_source_sha256\":\"" << source_sha
+              << "\",\"reduced_angular_frequency_m3_per_s\":" << reduced_angular_frequency
+              << ",\"energy_grid_power\":" << grid_power << "},"
               << "\"energy_cell_edges_eV\":[";
+    const auto edges = energyMeshEdges(conditions);
     for (std::size_t i = 0; i <= cells; ++i)
     {
       if (i) std::cout << ',';
-      std::cout << emax * static_cast<double>(i) / static_cast<double>(cells);
+      std::cout << edges[i];
     }
     std::cout << "],\"eepf_eV_minus_3_halves\":[";
     for (std::size_t i = 0; i < cells; ++i)
