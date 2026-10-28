@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <map>
+#include <utility>
 #include <numeric>
 #include <stdexcept>
 
@@ -269,17 +271,169 @@ std::vector<double> pivotedSolve(std::vector<std::vector<double>> a,
   }
   return result;
 }
+
+// Stationary conservation operator with one row pinned to f[0]=1. Its
+// tridiagonal backbone is an M-matrix. A tridiagonal preconditioner is
+// exact for zero excitation and cheap for nonlocal upper-energy transfers.
+// We use left-preconditioned BiCGSTAB; any failure is reported, not silently
+// replaced by a lower-resolution or Maxwellian approximation.
+std::pair<std::vector<double>, std::size_t>
+sparseBicgstabSolve(const std::vector<std::map<std::size_t, double>> & rows)
+{
+  const std::size_t n = rows.size();
+  using Entry = std::pair<std::size_t, double>;
+  std::vector<std::vector<Entry>> normalized(n);
+  std::vector<double> lower(n, 0.0), upper(n, 0.0), pivot(n, 0.0), cp(n, 0.0);
+  normalized[0].push_back({0, 1.0});
+  for (std::size_t i = 1; i < n; ++i)
+  {
+    const auto diagonal = rows[i].find(i);
+    if (diagonal == rows[i].end() || !(diagonal->second > 0.0) ||
+        !std::isfinite(diagonal->second))
+      throw std::runtime_error("Boltzmann: sparse stationary operator has invalid diagonal");
+    for (const auto & item : rows[i])
+    {
+      const double value = item.second / diagonal->second;
+      if (!std::isfinite(value))
+        throw std::runtime_error("Boltzmann: sparse stationary row scaling failed");
+      if (value == 0.0)
+        continue;
+      normalized[i].push_back({item.first, value});
+      if (item.first + 1 == i)
+        lower[i] = value;
+      else if (item.first == i + 1)
+        upper[i] = value;
+    }
+  }
+
+  // Factor the tridiagonal (elastic transport + local collision loss) once.
+  pivot[0] = 1.0;
+  cp[0] = 0.0;
+  for (std::size_t i = 1; i < n; ++i)
+  {
+    pivot[i] = 1.0 - lower[i] * cp[i - 1];
+    if (!(pivot[i] > 0.0) || !std::isfinite(pivot[i]))
+      throw std::runtime_error("Boltzmann: tridiagonal preconditioner breakdown");
+    cp[i] = upper[i] / pivot[i];
+  }
+
+  const auto triSolve = [&](const std::vector<double> & b)
+  {
+    std::vector<double> x(n);
+    x[0] = b[0];
+    for (std::size_t i = 1; i < n; ++i)
+      x[i] = (b[i] - lower[i] * x[i - 1]) / pivot[i];
+    for (std::size_t i = n - 1; i-- > 0;)
+      x[i] -= cp[i] * x[i + 1];
+    return x;
+  };
+  const auto preconditionedApply = [&](const std::vector<double> & x)
+  {
+    std::vector<double> y(n, 0.0);
+    for (std::size_t i = 0; i < n; ++i)
+      for (const auto & [j, value] : normalized[i])
+        y[i] += value * x[j];
+    return triSolve(y);
+  };
+  const auto dot = [&](const std::vector<double> & a, const std::vector<double> & b)
+  {
+    double result = 0.0;
+    for (std::size_t i = 0; i < n; ++i)
+      result += a[i] * b[i];
+    return result;
+  };
+  std::vector<double> source(n, 0.0);
+  source[0] = 1.0;
+  const auto b = triSolve(source);
+  const double norm_b = std::sqrt(dot(b, b));
+  if (!(norm_b > 0.0) || !std::isfinite(norm_b))
+    throw std::runtime_error("Boltzmann: invalid preconditioned sparse source");
+
+  std::vector<double> x(n, 0.0), r = b, shadow = b;
+  std::vector<double> p(n, 0.0), v(n, 0.0);
+  double rho_prev = 1.0, alpha = 1.0, omega = 1.0;
+  constexpr std::size_t max_iterations = 400;
+  constexpr double tolerance = 1e-11;
+  std::size_t iterations = 0;
+  bool converged = false;
+
+  for (std::size_t iter = 0; iter < max_iterations; ++iter)
+  {
+    const double rho = dot(shadow, r);
+    if (!std::isfinite(rho) || std::abs(rho) < 1e-30)
+      throw std::runtime_error("Boltzmann: sparse BiCGSTAB rho breakdown");
+    if (iter == 0)
+      p = r;
+    else
+    {
+      if (std::abs(omega) < 1e-30)
+        throw std::runtime_error("Boltzmann: sparse BiCGSTAB omega breakdown");
+      const double beta = (rho / rho_prev) * (alpha / omega);
+      for (std::size_t i = 0; i < n; ++i)
+        p[i] = r[i] + beta * (p[i] - omega * v[i]);
+    }
+    v = preconditionedApply(p);
+    const double denominator = dot(shadow, v);
+    if (!std::isfinite(denominator) || std::abs(denominator) < 1e-30)
+      throw std::runtime_error("Boltzmann: sparse BiCGSTAB alpha breakdown");
+    alpha = rho / denominator;
+    std::vector<double> intermediate(n);
+    for (std::size_t i = 0; i < n; ++i)
+      intermediate[i] = r[i] - alpha * v[i];
+
+    if (std::sqrt(dot(intermediate, intermediate)) <= tolerance * norm_b)
+    {
+      for (std::size_t i = 0; i < n; ++i)
+        x[i] += alpha * p[i];
+      iterations = iter + 1;
+      converged = true;
+      break;
+    }
+    auto t = preconditionedApply(intermediate);
+    const double t2 = dot(t, t);
+    if (!std::isfinite(t2) || t2 < 1e-30)
+      throw std::runtime_error("Boltzmann: sparse BiCGSTAB t breakdown");
+    omega = dot(t, intermediate) / t2;
+    for (std::size_t i = 0; i < n; ++i)
+    {
+      x[i] += alpha * p[i] + omega * intermediate[i];
+      r[i] = intermediate[i] - omega * t[i];
+    }
+    iterations = iter + 1;
+    if (std::sqrt(dot(r, r)) <= tolerance * norm_b)
+    {
+      converged = true;
+      break;
+    }
+    rho_prev = rho;
+  }
+  if (!converged)
+    throw std::runtime_error("Boltzmann: sparse BiCGSTAB failed to converge in 400 iterations");
+
+  // Validate an explicit residual; recursively updated Krylov residuals
+  // alone are not authoritative on an ill-conditioned energy grid.
+  const auto ax = preconditionedApply(x);
+  std::vector<double> error(n);
+  for (std::size_t i = 0; i < n; ++i)
+    error[i] = b[i] - ax[i];
+  if (!(std::sqrt(dot(error, error)) <= 1e-9 * norm_b))
+    throw std::runtime_error("Boltzmann: sparse BiCGSTAB true residual failed");
+  if (!std::all_of(x.begin(), x.end(), [](double z) { return std::isfinite(z); }))
+    throw std::runtime_error("Boltzmann: non-finite sparse solution");
+  return {x, iterations};
+}
 } // namespace
 
 ExcitationResult solveExcitationSteadyState(const ElasticInput & input,
-                                            const std::vector<ExcitationChannel> & channels)
+                                            const std::vector<ExcitationChannel> & channels,
+                                            ExcitationLinearMethod method)
 {
   validate(input);
   if (channels.empty())
     throw std::invalid_argument("Boltzmann: at least one excitation channel is required");
-  // An intentionally bounded correctness-first reference implementation.
-  if (input.cells > 512)
-    throw std::invalid_argument("Boltzmann: dense excitation solver is limited to 512 cells");
+  if (input.cells > 16384 ||
+      (method == ExcitationLinearMethod::DenseReference && input.cells > 512))
+    throw std::invalid_argument("Boltzmann: requested solver exceeds supported energy cell limit");
 
   std::vector<double> fractions;
   fractions.reserve(channels.size());
@@ -316,7 +470,7 @@ ExcitationResult solveExcitationSteadyState(const ElasticInput & input,
   const std::size_t n = input.cells;
   const double h = input.max_energy_eV / static_cast<double>(n);
   const double gamma = std::sqrt(2.0 * electron_charge_C / electron_mass_kg);
-  std::vector<std::vector<double>> a(n, std::vector<double>(n, 0.0));
+  std::vector<std::map<std::size_t, double>> a(n);
   std::vector<double> weight(n, 0.0);
   for (std::size_t i = 0; i < n; ++i)
   {
@@ -381,22 +535,46 @@ ExcitationResult solveExcitationSteadyState(const ElasticInput & input,
   if (maximum_balance_error > 1e-9)
     throw std::runtime_error("Boltzmann: nonlocal excitation transfer does not conserve particle number");
 
-  // Sum of all rows is zero by construction. Replace one redundant row
-  // by exact piecewise-constant EEPF normalization and solve the nullspace.
+  // Dense reference is retained for an independent solver-parity oracle.
+  // The sparse path pins one f0 cell, then normalizes the nullspace solution.
+  // Neither path changes the underlying conservative energy operator.
   double scale = 0.0;
+  std::size_t nonzeros = 0;
   for (const auto & row : a)
-    for (const double v : row)
-      scale = std::max(scale, std::abs(v));
+    for (const auto & [j, value] : row)
+    {
+      (void)j;
+      if (value != 0.0)
+        ++nonzeros;
+      scale = std::max(scale, std::abs(value));
+    }
   if (!finitePositive(scale))
     throw std::runtime_error("Boltzmann: empty excitation operator");
-  auto normalized_matrix = a;
-  for (std::size_t i = 0; i + 1 < n; ++i)
-    for (auto & v : normalized_matrix[i])
-      v /= scale;
-  normalized_matrix[n - 1] = weight;
-  std::vector<double> rhs(n, 0.0);
-  rhs[n - 1] = 1.0;
-  auto f = pivotedSolve(std::move(normalized_matrix), std::move(rhs));
+
+  const auto selected = method == ExcitationLinearMethod::Auto ?
+      (n <= 512 ? ExcitationLinearMethod::DenseReference :
+                  ExcitationLinearMethod::SparseBiCGSTAB) : method;
+  std::vector<double> f;
+  std::size_t iterations = 0;
+  if (selected == ExcitationLinearMethod::DenseReference)
+  {
+    std::vector<std::vector<double>> dense(n, std::vector<double>(n, 0.0));
+    for (std::size_t i = 0; i + 1 < n; ++i)
+      for (const auto & [j, value] : a[i])
+        dense[i][j] = value / scale;
+    dense[n - 1] = weight;
+    std::vector<double> rhs(n, 0.0);
+    rhs[n - 1] = 1.0;
+    f = pivotedSolve(std::move(dense), std::move(rhs));
+  }
+  else if (selected == ExcitationLinearMethod::SparseBiCGSTAB)
+  {
+    auto solved = sparseBicgstabSolve(a);
+    f = std::move(solved.first);
+    iterations = solved.second;
+  }
+  else
+    throw std::invalid_argument("Boltzmann: unknown excitation linear method");
 
   const double max_f = *std::max_element(f.begin(), f.end());
   if (!finitePositive(max_f))
@@ -439,9 +617,9 @@ ExcitationResult solveExcitationSteadyState(const ElasticInput & input,
   for (std::size_t i = 0; i < n; ++i)
   {
     double ri = 0.0, absrow = 0.0;
-    for (std::size_t j = 0; j < n; ++j)
+    for (const auto & [j, coefficient] : a[i])
     {
-      const double t = a[i][j] * f[j];
+      const double t = coefficient * f[j];
       ri += t;
       absrow += std::abs(t);
     }
@@ -451,6 +629,9 @@ ExcitationResult solveExcitationSteadyState(const ElasticInput & input,
   result.maximum_normalized_equation_residual =
       magnitude > 0.0 ? residual / magnitude : 0.0;
   result.maximum_collision_number_balance_error = maximum_balance_error;
+  result.assembled_nonzero_entries = nonzeros;
+  result.linear_iterations = iterations;
+  result.linear_method_used = selected;
   if (!(result.maximum_normalized_equation_residual <= 1e-8))
     throw std::runtime_error("Boltzmann: excitation stationary residual exceeds 1e-8");
 
