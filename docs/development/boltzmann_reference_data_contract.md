@@ -129,3 +129,25 @@ Invocation requires external `SOURCE_TXT SHA256 EoverN_Td Tg_K emax_eV CELLS spe
 The C++ executable and importer are compiled by dedicated pytest cases. For a fully documented external reference case, source `process_ids` lists all relevant source reaction identifiers, and `rate_process_ids` specifically enumerates which process coefficients the reference and candidate are required to report. Distinct lists are needed because elastic momentum-transfer processes generally do not have an excitation rate coefficient. A missing or silently renamed rate process causes a preflight HOLD.
 
 Synthetic fixtures use the decision statuses `BOLSIG_REFERENCE_SELFTEST_PASS` / `_FAIL`, **never** `BOLSIG_REFERENCE_NUMERIC_PASS`. A genuine external reference still requires a trusted raw BOLSIG+ run-by-run export and independently audited conversion to the exact comparison-cell representation. The checker verifies the raw reference export's file hash, but does not yet establish that the normalized reference JSON was faithfully transcribed from it.
+
+## M5 development slice — reversible excitation / superelastic collisions
+
+**Physics convention:** a reversible BOLSIG+ `EXCITATION` record can use `Ar <-> Ar*` and a third line `u g_upper/g_lower`. The parser preserves both parameters and explicitly requires the caller to opt in to reverse-channel projection. A separate excited target with an **explicit mole fraction and elastic cross-section table** is mandatory in the current implementation. This intentionally stricter convention avoids inventing excited-state momentum transport or population densities. This is not yet a complete real Ar*/O2* population model.
+
+For a lower-to-upper excitation with energy threshold `u`, detailed balancing constructs the inverse cross section at electron energy `epsilon`:
+
+```text
+sigma_superelastic(epsilon)
+ = (g_lower/g_upper) * (epsilon+u)/epsilon
+   * sigma_excitation(epsilon+u)
+```
+
+The implementation never divides by zero at the origin in the collision source: its energy-space nonlocal transfer integrates `(epsilon+u) sigma_excitation(epsilon+u)` exactly against each piecewise-constant EEPF donor cell. An electron is deposited at `epsilon+u`, with the destination-cell overlap integrated using the forward cross section. The upper-state number fraction multiplies the reverse source operator; the lower-state fraction multiplies excitation. Both are included in the total momentum-scattering cross section for the two-term field-driven energy transport. Exact per-channel conservation and full residuals apply equally to both directions. Superelastic donors whose shifted energy would lie beyond `epsilon_max` are omitted as an explicit bounded-grid truncation; sensitivity to the energy ceiling remains a mandatory physics gate.
+
+Returned output includes (1) excitation rate per lower-state molecule, (2) superelastic rate per upper-state molecule, and (3) the **mixture-weighted net energy loss** `u * (x_lower*k_excitation - x_upper*k_superelastic)` in `eV m^3/s`. The forward-only loss field is retained for backwards compatibility; consumers must not mistake it for net energy loss in reversible cases.
+
+The development-only candidate exporter accepts `--enable-superelastic` and emits separate reverse-rate keys `<upper_state>:superelastic:<index>`; the model tag is `elastic_excitation_superelastic_steady_dc`. With no opt-in, existing reversible input remains a hard preflight HOLD. The synthetic reference validation compares zero-field Maxwellian mean energy, forward-versus-inverse event-rate detailed balance under a Boltzmann excited-state population, dense/sparse EEPF parity and rejects invalid upper-state metadata. These controls are **not** BOLSIG+ quantitative parity or evidence of actual Ar metastable chemistry.
+
+Current remaining gates: physical cross-section/target-state provenance, excited-state elastic assumptions, upper-energy cutoff convergence for reverse rates, detailed-balance error under grid refinement, genuine BOLSIG+ reference output conversion, particle-changing ionization and attachment source/growth formulation, and real PhysicsApp P2/P3. In particular, M5 must not cause any existing Oxygen ICP coefficient/energy source to change without accepted new physics validation.
+
+Scientific background: Hagelaar & Pitchford, Plasma Sources Science Technology 14 (2005) 722–733; BOLSIG+ official 07/2024 documentation.
