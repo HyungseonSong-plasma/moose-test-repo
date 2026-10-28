@@ -220,8 +220,9 @@ ImportedElasticExcitation prepareElasticExcitation(
   // Validate the *whole* input before projecting any model state.
   for (const auto & rec : file.records)
   {
-    if (rec.kind != CollisionKind::Elastic && rec.kind != CollisionKind::Excitation)
-      throw std::invalid_argument("Boltzmann cross sections: unsupported EFFECTIVE/MOMENTUM, ionization, attachment or rotation channel");
+    if (rec.kind != CollisionKind::Elastic && rec.kind != CollisionKind::Effective &&
+        rec.kind != CollisionKind::Excitation)
+      throw std::invalid_argument("Boltzmann cross sections: ionization, attachment or rotation unsupported in steady excitation projection");
     if (rec.reversible && !enable_reversible)
       throw std::invalid_argument("Boltzmann cross sections: reversible excitation requires explicit opt-in");
     if (rec.energy_eV.front() > 0.0 || rec.energy_eV.back() < max_energy_eV)
@@ -232,15 +233,72 @@ ImportedElasticExcitation prepareElasticExcitation(
   std::map<std::string, std::size_t> elastic_counts;
   for (const auto & rec : file.records)
   {
-    if (rec.kind == CollisionKind::Elastic)
+    if (rec.kind == CollisionKind::Elastic || rec.kind == CollisionKind::Effective)
     {
       auto it = fractions.find(rec.target);
       if (it == fractions.end())
         throw std::invalid_argument("Boltzmann cross sections: missing active target number fraction");
       if (++elastic_counts[rec.target] != 1)
         throw std::invalid_argument("Boltzmann cross sections: duplicate elastic target");
+      // EFFECTIVE already includes the momentum contribution of all inelastic
+      // channels for this target. Recover the ELASTIC residual on the
+      // piecewise-linear knot union, then let atFace() add excitation once.
+      // Full files containing ionization/attachment remain rejected above:
+      // their momentum contributions cannot be silently ignored.
+      std::vector<double> energy = rec.energy_eV;
+      std::vector<double> momentum = rec.cross_section_m2;
+      if (rec.kind == CollisionKind::Effective)
+      {
+        energy = {0.0, max_energy_eV};
+        for (const double e : rec.energy_eV)
+          if (e <= max_energy_eV)
+            energy.push_back(e);
+        for (const auto & inelastic : file.records)
+          if (inelastic.kind == CollisionKind::Excitation &&
+              inelastic.target == rec.target)
+          {
+            energy.push_back(inelastic.parameter);
+            for (const double e : inelastic.energy_eV)
+              if (e <= max_energy_eV)
+                energy.push_back(e);
+          }
+        std::sort(energy.begin(), energy.end());
+        energy.erase(std::unique(energy.begin(), energy.end()), energy.end());
+        const auto sample = [](const CollisionRecord & record, double e)
+        {
+          const auto upper =
+              std::upper_bound(record.energy_eV.begin(), record.energy_eV.end(), e);
+          if (upper == record.energy_eV.begin())
+            return record.cross_section_m2.front();
+          if (upper == record.energy_eV.end())
+            return record.cross_section_m2.back();
+          const std::size_t right = static_cast<std::size_t>(
+              upper - record.energy_eV.begin());
+          const std::size_t left = right - 1;
+          const double weight = (e - record.energy_eV[left]) /
+                                (record.energy_eV[right] - record.energy_eV[left]);
+          return (1.0 - weight) * record.cross_section_m2[left] +
+                 weight * record.cross_section_m2[right];
+        };
+        momentum.clear();
+        for (const double e : energy)
+        {
+          const double effective = sample(rec, e);
+          double inelastic = 0.0;
+          for (const auto & channel : file.records)
+            if (channel.kind == CollisionKind::Excitation &&
+                channel.target == rec.target && e >= channel.parameter)
+              inelastic += sample(channel, e);
+          const double remainder = effective - inelastic;
+          const double tolerance = 1e-10 * std::max(effective, inelastic);
+          if (remainder < -tolerance)
+            throw std::invalid_argument(
+                "Boltzmann cross sections: EFFECTIVE momentum smaller than summed excitation; cannot recover physical elastic residual");
+          momentum.push_back(std::max(0.0, remainder));
+        }
+      }
       result.targets.push_back({rec.target, it->second, rec.parameter,
-                                rec.energy_eV, rec.cross_section_m2});
+                                std::move(energy), std::move(momentum)});
     }
   }
   for (const auto & [target, fraction] : fractions)
