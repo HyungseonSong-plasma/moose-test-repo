@@ -357,3 +357,47 @@ Local actual 47-process preflight (source identity SHA
 S11 synthetic regression includes native C++ threshold, extrapolation
 knot, no-opt-in, inactive-channel and candidate CLI zero-rate/unchanged
 EEPF controls. No third-party cross-section rows are committed.
+
+
+## S11: local actual 47-process candidate EEPF execution
+
+The new `physics_app/ci/bolsig_example4_local_comparison.py` runs a
+reproducible, strictly **user-local** end-to-end case. It verifies both
+original source/output SHA-256 values, reconstructs the user-reviewed
+47-process source in a temporary private directory, executes the compiled
+actual C++ temporal-growth solver at 10 Td / 300 K / 200 uniform cells /
+Emax=15.8367 eV, and independently compares candidate/printed native EEPF.
+It outputs mean-energy relative error and number-mass-weighted EEPF
+L1 over the printed reference energy interval, plus the two inactive He
+processes and eigen residual. A failed solver never produces fake
+comparison values; `HOLD_CANDIDATE_SOLVER` is emitted instead.
+
+Example invocation **from a local checkout**, with the two original
+user-supplied files in a private location:
+
+```sh
+g++ -std=c++17 -O2 -Wall -Wextra -Werror -pedantic \
+  -Iphysics_app/include/utils \
+  physics_app/src/utils/PhysicsBoltzmannElasticSolver.C \
+  physics_app/src/utils/PhysicsBoltzmannGrowth.C \
+  physics_app/src/utils/PhysicsBoltzmannTemporalGrowth.C \
+  physics_app/src/utils/PhysicsBoltzmannTransport.C \
+  physics_app/src/utils/PhysicsBoltzmannCrossSections.C \
+  physics_app/ci/boltzmann_candidate_export.C \
+  -o /tmp/boltzmann-candidate-private
+python3 physics_app/ci/bolsig_example4_local_comparison.py \
+  --cross-sections "$PRIVATE_LXCAT_SOURCE" \
+  --native-output "$PRIVATE_BOLSIG_OUTPUT" \
+  --candidate-binary /tmp/boltzmann-candidate-private \
+  --report-json /tmp/example4-local-comparison.json
+```
+
+The harness is intentionally separate from public GitHub CI, which
+cannot access these rights-controlled source bytes. It is **not**
+evidence of a successful actual-run parity test until executed with
+the native binary and the exact private files. Synthetic P0 tests
+only establish numeric comparison integrity and fail-closed behavior.
+Native BOLSIG's automatic grid is not the same as the fixed 200-cell
+C++ reference. Even if scalar errors happen to be small, the script
+always retains the scientific acceptance HOLD pending complete physics
+convention, transport, grid and rate matching.
