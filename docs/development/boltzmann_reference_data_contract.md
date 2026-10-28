@@ -194,9 +194,9 @@ with elastic two-term Scharfetter–Gummel flux matrix T, M6a ionization/attachm
 
 A bounded dense shifted-inverse iteration first factors (T-Q+s M) using partial-pivoted LU and then applies the inverse repeatedly. The initial shift s exceeds an a priori maximum ionization source per mass; subsequent shifts are reduced toward the current growth estimate only after a candidate shifted solve is checked for a positive eigenvector. Each epoch recomputes the original generalized-eigen residual. Iterations normalize f0 and reject non-convergence rather than silently accepting an approximate eigenpair. After solving, the code independently recomputes the actual growth from reaction rate moments and validates the *original generalized eigen-equation residual*, including the mass term; a normalized distribution without a correct eigen residual does not count as success. Numerically positive electron growth, negative attachment growth, mixed signed growth and the weak-growth elastic-only limit are acceptance controls.
 
-**Severe limitations:** maximum 128 cells, O(N^3) dense factorization and O(N^2) inverse iterations; no extrapolation, sparse growth eigensolver, excitation/superelastic coupling, e-e collisions, field frequency, diffusion-gradient growth, or real Ar/O2 collision set. This implementation is not the production BOLSIG+ temporal growth mode and does NOT supersede the M6a explicit frozen-growth diagnostic. No PhysicsApp coefficient material is changed. This path needs independent boundary/energy-ceiling sensitivity and pinned BOLSIG+ reference-case parity.
+**Historical M6b1 limitations (superseded by M6b4 for cell bound only):** original maximum 128 cells, O(N^3) dense factorization and O(N^2) inverse iterations; no extrapolation, sparse growth eigensolver, excitation/superelastic coupling, e-e collisions, field frequency, diffusion-gradient growth, or real Ar/O2 collision set. This implementation is not the production BOLSIG+ temporal growth mode and does NOT supersede the M6a explicit frozen-growth diagnostic. No PhysicsApp coefficient material is changed. This path needs independent boundary/energy-ceiling sensitivity and pinned BOLSIG+ reference-case parity.
 
-The developer-only candidate exporter accepts --solve-elastic-temporal-growth on collision files that have **no excitation or superelastic processes** and at most 128 cells. It labels output elastic_ionization_attachment_temporal_growth_eigen_dense and includes the generalized eigen-residual and inverse-iteration count. A frozen-growth diagnostic remains a separate explicitly requested output and cannot be used simultaneously with this eigensolver mode.
+The developer-only candidate exporter accepts --solve-elastic-temporal-growth on collision files that have **no excitation or superelastic processes** and at most 256 cells as of M6b4 (with an independently regression-tested 200-cell synthetic control). It labels output elastic_ionization_attachment_temporal_growth_eigen_dense and includes the generalized eigen-residual and inverse-iteration count. A frozen-growth diagnostic remains a separate explicitly requested output and cannot be used simultaneously with this eigensolver mode.
 
 ## M7a: EEPF-derived electron/energy reduced transport (development-only)
 
@@ -221,7 +221,7 @@ M7a developer-only file output: invoking the candidate exporter with --report-el
 
 ## M6b2 + M7b — conservative inelastic coupling and moment diagnostics
 
-**M6b2** extends the bounded dense temporal-growth generalized eigenproblem to electron excitation and reversible superelastic channels. It reuses the same assembly function assembleExcitationConservativeOperator as the M5 steady solver, adds the M6a ionization/attachment source matrix, and calculates a normalized eigen-EEPF and signed growth eigenvalue. All four processes contribute to the energy-space dynamics. The original generalized eigenpair residual must pass. M6b2 remains limited to 128 cells and cannot yet provide a scalable production sparse eigenvalue solver.
+**M6b2** extends the bounded dense temporal-growth generalized eigenproblem to electron excitation and reversible superelastic channels. It reuses the same assembly function assembleExcitationConservativeOperator as the M5 steady solver, adds the M6a ionization/attachment source matrix, and calculates a normalized eigen-EEPF and signed growth eigenvalue. All four processes contribute to the energy-space dynamics. The original generalized eigenpair residual must pass. M6b2 originally used the 128-cell development cap; M6b4 raises the bounded dense reference to 256 cells and adds a 200-cell synthetic eigenpair and weak-growth check. It still cannot provide a scalable production sparse eigenvalue solver.
 
 The candidate exporter now supports --solve-coupled-temporal-growth, with mandatory opt-in for reversible collisions, and recomputes every excitation and superelastic rate on the converged growth EEPF rather than reusing the M5 stationary seed rate. Dense-only solver and physics model are encoded in the JSON model tag. All comparison fixtures are synthetic, not physical Ar/O2 validation.
 
@@ -417,3 +417,31 @@ Actual candidate-to-reference EEPF, transport, rate and temporal
 growth parity STILL requires full supported physics and a native
 BOLSIG distribution output (set the existing script's SAVERESULTS
 distribution option to 1, then rerun under authorized local license).
+
+
+## S10/M6b3-M6b4: full-scattering growth import and 200-cell bounded eigen reference
+
+M6b3 accepts a complete declared *synthetic* EFFECTIVE+EXCITATION+
+IONIZATION+ATTACHMENT set in the growth importer. The first-harmonic
+field-heating coefficient uses the source total effective scattering,
+but recoil uses only the remaining elastic part, obtained by subtracting
+all known explicit inelastic process cross sections. ELASTIC inputs
+instead add all explicit inelastic cross sections into a separate field-
+scattering table. This prevents double counting in the M5/M6 operators.
+The importer still refuses missing source coverage and physically
+negative elastic residues, and it never silently drops an unsupported
+process. Synthetic full-operator EEPF/rate parity tests cover the change.
+This does NOT establish actual real-gas BOLSIG+ EEPF parity.
+
+M6b4 permits up to 256 dense-reference cells, specifically to enable a
+200-cell synthetic temporal-growth eigenpair control at the BOLSIG+
+Example4 requested resolution. Dense O(N^3) and the absence of real
+collision/source extrapolation and e-e physics remain limitations.
+The O2 three-body attachment source-unit convention remains unresolved.
+
+The S10 user-local process selector is
+`python3 physics_app/ci/bolsig_local_matched_source.py --cross-sections SOURCE --native-output NATIVE --output USER_LOCAL_OUTPUT --source-sha256 ORIGINAL_SHA --native-sha256 ORIGINAL_SHA --exclude-source-line 5279 --three-body-convention as-tabulated-unscaled`.
+It requires independent raw-file hashes and verified native rate evidence;
+the explicit omission is never automatic. Keep derived LXCat tables private
+and observe contributor permissions. The selected 47-process source remains
+a preparation artifact, NOT verified physics input for the C++ solver.
