@@ -162,11 +162,36 @@ def compare_case(directory: Path) -> dict[str, Any]:
     if set(rates_r) != set(source["rate_process_ids"]):
         raise ReferenceContractError("numeric rate inventory does not match source process ledger")
 
+    # Optional independent BOLSIG+ four-moment transport comparison.
+    # These are genuinely independent output fields, not the same 5/3
+    # Maxwellian energy-closure proxy used by existing production materials.
+    transport_keys = {
+        "mobility_times_N_per_m_V_s",
+        "diffusion_times_N_per_m_s",
+        "energy_mobility_times_N_per_m_V_s",
+        "energy_diffusion_times_N_per_m_s",
+    }
+    ref_transport = ref_obj.get("elastic_transport")
+    cand_transport = cand_obj.get("elastic_transport")
+    compare_transport = ref_transport is not None or cand_transport is not None
+    if compare_transport:
+        if not isinstance(ref_transport, dict) or not isinstance(cand_transport, dict):
+            raise ReferenceContractError("both reference and candidate need transport moments")
+        if not transport_keys.issubset(ref_transport) or not transport_keys.issubset(cand_transport):
+            raise ReferenceContractError("incomplete reference/candidate transport inventory")
+        for key in transport_keys:
+            _finite_float(ref_transport[key], f"reference {key}")
+            _finite_float(cand_transport[key], f"candidate {key}")
+
     tol = case.get("tolerances")
-    if not isinstance(tol, dict) or set(tol) != {
-        "mean_energy_relative", "eepf_weighted_l1", "rate_relative", "zero_rate_absolute_m3_per_s"
-    }:
-        raise ReferenceContractError("all four explicit tolerances are required")
+    required_tol = {
+        "mean_energy_relative", "eepf_weighted_l1", "rate_relative",
+        "zero_rate_absolute_m3_per_s"
+    }
+    if compare_transport:
+        required_tol.add("transport_relative")
+    if not isinstance(tol, dict) or set(tol) != required_tol:
+        raise ReferenceContractError("predeclared comparison tolerances incomplete or inconsistent")
     thresholds = {k: _finite_float(v, k, zero_ok=True) for k, v in tol.items()}
     mean_r = ref_obj["mean_energy_eV"]
     mean_c = cand_obj["mean_energy_eV"]
@@ -187,6 +212,14 @@ def compare_case(directory: Path) -> dict[str, Any]:
         if error > bound:
             failures.append("rate:" + key)
 
+    transport_errors = {}
+    if compare_transport:
+        for key in sorted(transport_keys):
+            error = abs(cand_transport[key] - ref_transport[key]) / ref_transport[key]
+            transport_errors[key] = error
+            if error > thresholds["transport_relative"]:
+                failures.append("transport:" + key)
+
     synthetic = source["database"] == "AUTHOR-SYNTHETIC"
     prefix = "BOLSIG_REFERENCE_SELFTEST" if synthetic else "BOLSIG_REFERENCE_NUMERIC"
     return {
@@ -195,6 +228,7 @@ def compare_case(directory: Path) -> dict[str, Any]:
         "mean_energy_relative_error": mean_error,
         "eepf_weighted_l1_error": eepf_error,
         "rate_errors": rate_errors,
+        "transport_relative_errors": transport_errors,
         "collision_file_sha256": source["sha256"],
         "reference_file_sha256": reference["sha256"],
         "candidate_file_sha256": candidate["sha256"],
