@@ -15,7 +15,7 @@ from pathlib import Path
 ORIGINAL_W_O = 0.10309278350515465
 O_MASS_FRACTION = 0.0
 IC_BLOCK = re.compile(r"(?ms)^  \[w_O\]\n(?P<body>.*?)^  \[\]\n")
-IC_VALUE = re.compile(r"(?m)^(?P<indent>\s*)initial_condition\s*=\s*(?P<value>[^\n#]+)(?P<end>\n)")
+IC_VALUE = re.compile(r"(?m)^(?P<indent>[ \t]*)initial_condition[ \t]*=[ \t]*(?P<value>[^\n#]+)(?P<end>\n)")
 CONSTRAINT = (
     "property_name = w_O2_constraint",
     "functor_names = 'w_O2s w_O w_Os'",
@@ -30,6 +30,8 @@ def change_generated_input(original: str) -> str:
         if token not in original:
             raise ValueError(f"required baseline input token missing: {token}")
 
+    if len(re.findall(r"(?m)^  \[w_O\][ \t]*$", original)) != 1:
+        raise ValueError("duplicate or absent w_O block headings")
     blocks = list(IC_BLOCK.finditer(original))
     if len(blocks) != 1:
         raise ValueError(f"expected exactly one top-level w_O variable block; got {len(blocks)}")
@@ -58,6 +60,8 @@ def change_generated_input(original: str) -> str:
 def verify_generated_input(text: str) -> None:
     if any(token not in text for token in (*CONSTRAINT, *REQUIRED)):
         raise ValueError("zero-O input lost baseline chemistry or state")
+    if len(re.findall(r"(?m)^  \[w_O\][ \t]*$", text)) != 1:
+        raise ValueError("zero-O input has duplicate or absent w_O block headings")
     blocks = list(IC_BLOCK.finditer(text))
     if len(blocks) != 1:
         raise ValueError("zero-O input must have exactly one w_O block")
