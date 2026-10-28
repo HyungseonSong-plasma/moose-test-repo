@@ -197,3 +197,22 @@ A bounded dense shifted-inverse iteration first factors (T-Q+s M) using partial-
 **Severe limitations:** maximum 128 cells, O(N^3) dense factorization and O(N^2) inverse iterations; no extrapolation, sparse growth eigensolver, excitation/superelastic coupling, e-e collisions, field frequency, diffusion-gradient growth, or real Ar/O2 collision set. This implementation is not the production BOLSIG+ temporal growth mode and does NOT supersede the M6a explicit frozen-growth diagnostic. No PhysicsApp coefficient material is changed. This path needs independent boundary/energy-ceiling sensitivity and pinned BOLSIG+ reference-case parity.
 
 The developer-only candidate exporter accepts --solve-elastic-temporal-growth on collision files that have **no excitation or superelastic processes** and at most 128 cells. It labels output elastic_ionization_attachment_temporal_growth_eigen_dense and includes the generalized eigen-residual and inverse-iteration count. A frozen-growth diagnostic remains a separate explicitly requested output and cannot be used simultaneously with this eigensolver mode.
+
+## M7a: EEPF-derived electron/energy reduced transport (development-only)
+
+The independent C++ PhysicsBoltzmannTransport utility evaluates electron particle mobility, particle diffusion, energy mobility and energy diffusion using the *actual supplied* isotropic EEPF f0, rather than substituting Einstein or the usual 5/3 electron-energy transport closure.
+
+With gamma = sqrt(2e/m_e), positive elastic momentum-transfer sigma_m and electron mean energy bar_epsilon, the reduced coefficients are the Hagelaar/Pitchford 2005 two-term formulas (equations 55,56,61,62):
+
+    mu*N = -gamma/3 * integral (epsilon/sigma_m) df0/d(epsilon) d(epsilon)
+    D*N  =  gamma/3 * integral (epsilon/sigma_m) f0 d(epsilon)
+    mu_energy*N = -gamma/(3*bar_epsilon)
+                  * integral (epsilon^2/sigma_m) df0/d(epsilon) d(epsilon)
+    D_energy*N  = gamma/(3*bar_epsilon)
+                  * integral (epsilon^2/sigma_m) f0 d(epsilon)
+
+For piecewise-constant cell-wise f0 the derivative is a sum of interface jumps. The upper-bound jump to zero is explicitly included, and the high-energy EEPF tail-to-maximum ratio must be <= 1e-3 (otherwise the user must increase the energy ceiling). Diffusion integrals use four-point Gauss-Legendre quadrature per energy cell; positivity, normalization and independently recomputed mean-energy moments are mandatory.
+
+**M7a is ELASTIC MOMENTUM-ONLY.** No excitation/superelastic momentum contribution, effective growth momentum correction or physical gas cross-section provenance is included in this implementation. It is suitable for validating analytic limits but not for promoting coefficients for the existing PhysicsApp oxygen chemistry. The specific synthetic constant-cross-section Maxwellian test gives D/mu approximately k_B*T_g/e and mu_energy/mu and D_energy/D approximately 4/3, **not** the common 5/3 approximation (which assumes a different momentum-frequency model). The test also uses an independently reweighted non-Maxwellian EEPF and corrupted input controls.
+
+This is a first extraction slice toward replacing the hardcoded 5/3 coefficient approximation in the development Physics closure. Full collision-inclusive EEPF moments, source-law consistency, real gas data, E/N and mean-energy tabulation, validation across energy bounds and production Physics P2/P3 are still required.
