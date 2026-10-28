@@ -16,8 +16,16 @@ from physics_app.ci.boltzmann_reference_preset import (
 
 def _source(root: Path) -> Path:
     source = root / "private_mixture_cross_sections.txt"
-    # An original, nonphysical placeholder. No LXCat content is redistributed.
-    source.write_bytes(b"ORIGINAL ARTIFICIAL INPUT ONLY\n")
+    # Fully authored synthetic collision set with all four requested gas
+    # names. The preset must reject arbitrary gibberish or missing species;
+    # no real LXCat bytes are included in tests or repository.
+    blocks = ["SYNTHETIC REFERENCE SOURCE, NOT LXCAT"]
+    for gas in ("Ar", "He", "N2", "O2"):
+        blocks.extend([
+            "ELASTIC", gas, "1.37e-5", "self-authored artificial",
+            "------", "0 5e-20", "10 5e-20", "------",
+        ])
+    source.write_text("\n".join(blocks) + "\n", encoding="utf-8")
     return source
 
 
@@ -35,6 +43,8 @@ def test_official_example4_default_is_four_gas_not_binary(tmp_path: Path) -> Non
     assert manifest["conditions"]["gas_temperature_K"] == 300.0
     assert manifest["conditions"]["growth_model"] == "temporal"
     assert manifest["status"] == "REFERENCE_INPUT_ONLY_NOT_EXECUTED"
+    assert manifest["collision_process_counts"]["O2"]["ELASTIC"] == 1
+    assert manifest["custom_solver_model_gaps"] == []
     script_path = out / manifest["script_file"]
     script = script_path.read_text(encoding="utf-8")
     assert "READCOLLISIONS\n" in script
@@ -82,6 +92,24 @@ def test_binary_aro2_is_project_defined_and_requires_explicit_fraction(
         make_reference_preset(source, tmp_path / "bad",
                               preset="project_ar_o2_binary", ar_fraction=1.0)
 
+
+
+
+def test_reference_generation_requires_real_gas_inventory(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "incomplete.txt"
+    source.write_text(
+        "SYNTHETIC ONLY\n"
+        "ELASTIC\nAr\n1.37e-5\nartificial\n------\n"
+        "0 5e-20\n10 5e-20\n------\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(ReferencePresetError, match="lacks a requested gas"):
+        make_reference_preset(source, tmp_path / "missing_species")
+    source.write_text("INVALID NON-BOLSIG PAYLOAD\n")
+    with pytest.raises(ReferencePresetError, match="cannot be audited"):
+        make_reference_preset(source, tmp_path / "invalid_source")
 
 def test_missing_or_unsafe_reference_source_is_rejected(tmp_path: Path) -> None:
     with pytest.raises(ReferencePresetError, match="does not exist"):
