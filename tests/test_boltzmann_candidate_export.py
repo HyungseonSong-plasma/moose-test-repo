@@ -68,7 +68,34 @@ def test_bolsig_candidate_export_from_external_text_file(tmp_path: Path) -> None
     assert 0 < output["mean_energy_eV"] < 2
     assert output["rates_m3_per_s"]["Ar:excitation:1"] > 0
 
-    malformed = SYNTHETIC_CROSS_SECTIONS.replace("ELASTIC", "EFFECTIVE", 1)
+    # A complete EFFECTIVE record includes excitation momentum once. This
+    # deliberately constructed source is mathematically equivalent to the
+    # original ELASTIC + EXCITATION source; it must not be rejected solely
+    # because its momentum provider is typed EFFECTIVE.
+    equivalent = SYNTHETIC_CROSS_SECTIONS.replace("ELASTIC", "EFFECTIVE", 1)
+    equivalent = equivalent.replace(
+        "0.0 5e-20\n1.0 5e-20\n2.0 5e-20\n",
+        "0.0 5e-20\n1.0 6e-20\n2.0 7e-20\n", 1,
+    )
+    source.write_text(equivalent, encoding="utf-8")
+    digest = hashlib.sha256(source.read_bytes()).hexdigest()
+    accepted = subprocess.run(
+        [str(binary), str(source), digest, "0.2", "300", "2", "125", "Ar=1"],
+        capture_output=True, text=True,
+    )
+    assert accepted.returncode == 0, accepted.stdout + accepted.stderr
+    effective_output = json.loads(accepted.stdout)
+    assert abs(effective_output["mean_energy_eV"] - output["mean_energy_eV"]) < 1e-10
+    for a, b in zip(effective_output["eepf_eV_minus_3_halves"], eepf):
+        assert abs(a - b) <= 1e-9 * max(1.0, abs(b))
+    assert abs(
+        effective_output["rates_m3_per_s"]["Ar:excitation:1"] -
+        output["rates_m3_per_s"]["Ar:excitation:1"]
+    ) < 1e-9 * output["rates_m3_per_s"]["Ar:excitation:1"]
+
+    # Instead of blanket-rejecting EFFECTIVE, fail on impossible physics:
+    # the summed inelastic cross sections exceed total effective momentum.
+    malformed = equivalent.replace("2.0 7e-20", "2.0 1e-21", 1)
     source.write_text(malformed, encoding="utf-8")
     digest = hashlib.sha256(source.read_bytes()).hexdigest()
     rejected = subprocess.run(
@@ -78,7 +105,7 @@ def test_bolsig_candidate_export_from_external_text_file(tmp_path: Path) -> None
     assert rejected.returncode == 2
     assert rejected.stdout == ""
     assert "BOLTZMANN_CANDIDATE_PREFLIGHT_HOLD" in rejected.stderr
-    assert "unsupported" in rejected.stderr
+    assert "EFFECTIVE momentum smaller" in rejected.stderr
 
 
 def test_reversible_candidate_requires_opt_in_and_explicit_upper_population(tmp_path: Path) -> None:
