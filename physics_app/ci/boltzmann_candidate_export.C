@@ -2,6 +2,7 @@
 // candidate EEPF/rate JSON. No MOOSE app objects, no third-party data bundled.
 // Actual source hash/rights must be verified by independent case preflight.
 #include "PhysicsBoltzmannCrossSections.h"
+#include "PhysicsBoltzmannTemporalGrowth.h"
 
 #include <cmath>
 #include <fstream>
@@ -62,7 +63,7 @@ int main(int argc, char ** argv)
     if (argc < 8)
       throw std::invalid_argument(
           "usage: boltzmann_candidate_export SOURCE_TXT SHA256 EoverN_Td Tg_K "
-          "emax_eV CELLS species=fraction [species=fraction ...] [--enable-superelastic] [--diagnose-frozen-growth]");
+          "emax_eV CELLS species=fraction [species=fraction ...] [--enable-superelastic] [--diagnose-frozen-growth] [--solve-elastic-temporal-growth]");
 
     const std::string source_path = argv[1], source_sha = argv[2];
     requireSourceHash(source_sha);
@@ -74,6 +75,7 @@ int main(int argc, char ** argv)
     std::map<std::string, double> fraction;
     bool enable_superelastic = false;
     bool frozen_growth = false;
+    bool temporal_growth = false;
     for (int i = 7; i < argc; ++i)
     {
       const std::string pair = argv[i];
@@ -91,6 +93,13 @@ int main(int argc, char ** argv)
         frozen_growth = true;
         continue;
       }
+      if (pair == "--solve-elastic-temporal-growth")
+      {
+        if (temporal_growth)
+          throw std::invalid_argument("duplicate temporal growth solver option");
+        temporal_growth = true;
+        continue;
+      }
       const auto pos = pair.find('=');
       if (pos == std::string::npos || pos == 0 || pos + 1 >= pair.size())
         throw std::invalid_argument("gas composition requires species=fraction");
@@ -101,6 +110,8 @@ int main(int argc, char ** argv)
     if (!std::isfinite(EN) || EN < 0 || !(Tg > 0) || !(emax > 0))
       throw std::invalid_argument("invalid gas temperature, energy ceiling or E/N");
 
+    if (temporal_growth && (frozen_growth || enable_superelastic))
+      throw std::invalid_argument("temporal elastic-growth solver is incompatible with frozen growth/superelastic");
     std::ifstream stream(source_path);
     if (!stream.good())
       throw std::invalid_argument("cannot open collision source file");
@@ -109,9 +120,11 @@ int main(int argc, char ** argv)
     std::vector<ExcitationChannel> excitation;
     std::vector<IonizationChannel> ionizations;
     std::vector<AttachmentChannel> attachments;
-    if (frozen_growth)
+    if (frozen_growth || temporal_growth)
     {
       auto projected = prepareGrowthPhysics(file, fraction, emax, enable_superelastic);
+      if (temporal_growth && !projected.excitation_channels.empty())
+        throw std::invalid_argument("elastic temporal-growth eigen solver does not include excitation");
       targets = std::move(projected.targets);
       excitation = std::move(projected.excitation_channels);
       ionizations = std::move(projected.ionization_channels);
@@ -137,12 +150,20 @@ int main(int argc, char ** argv)
     // excitation/superelastic physics, with M6 source applied afterward.
     ElasticResult distribution = excitation.empty() ?
         solveElasticSteadyState(conditions) : result.distribution;
+    TemporalGrowthResult temporal;
+    if (temporal_growth)
+    {
+      temporal = solveElasticTemporalGrowth(conditions, ionizations, attachments);
+      distribution = temporal.distribution;
+    }
     if (frozen_growth && ionizations.empty() && attachments.empty())
       throw std::invalid_argument("frozen growth requested without ionization/attachment");
     GrowthDiagnostics growth;
     if (frozen_growth)
       growth = evaluateGrowthOnFrozenEepf(
           conditions, distribution, ionizations, attachments);
+    if (temporal_growth)
+      growth = temporal.growth;
     if (!excitation.empty() &&
         (result.maximum_normalized_equation_residual > 1e-8 ||
          result.maximum_collision_number_balance_error > 1e-9))
@@ -161,7 +182,9 @@ int main(int argc, char ** argv)
       escapeJsonString(std::cout, name);
       std::cout << ':' << part;
     }
-    const std::string model = frozen_growth ?
+    const std::string model = temporal_growth ?
+        "elastic_ionization_attachment_temporal_growth_eigen_dense" :
+        frozen_growth ?
         (enable_superelastic ? "elastic_superelastic_frozen_growth_diagnostic" :
                                "elastic_excitation_frozen_growth_diagnostic") :
         (enable_superelastic ? "elastic_excitation_superelastic_steady_dc" :
@@ -217,6 +240,13 @@ int main(int argc, char ** argv)
                 << growth.reduced_temporal_growth_m3_per_s
                 << ",\"frozen_eepf_ionization_energy_loss_eV_m3_per_s\":"
                 << growth.reduced_ionization_energy_loss_eV_m3_per_s;
+    if (temporal_growth)
+      std::cout << ",\"reduced_temporal_growth_eigenvalue_m3_per_s\":"
+                << temporal.reduced_growth_eigenvalue_m3_per_s
+                << ",\"generalized_eigen_residual\":"
+                << temporal.maximum_normalized_eigen_residual
+                << ",\"eigen_inverse_iterations\":"
+                << temporal.inverse_iterations;
     std::cout << "}\n";
     return 0;
   }
