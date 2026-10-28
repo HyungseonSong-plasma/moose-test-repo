@@ -24,6 +24,7 @@ struct CollisionRecord
   std::string product;               // optional post-arrow state label
   bool reversible = false;           // <-> requires superelastic physics
   double parameter = 0.0;            // elastic m_e/M or excitation threshold [eV]
+  double upper_to_lower_weight_ratio = 1.0; // g_upper/g_lower on reversible excitation
   std::vector<double> energy_eV;
   std::vector<double> cross_section_m2;
   std::vector<std::string> comments; // original per-process citations/notes
@@ -55,5 +56,6 @@ struct ImportedElasticExcitation
 ImportedElasticExcitation prepareElasticExcitation(
     const CollisionFile & file,
     const std::map<std::string, double> & target_fractions,
-    double max_energy_eV);
+    double max_energy_eV,
+    bool enable_reversible = false);
 }
