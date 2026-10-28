@@ -35,5 +35,6 @@ def test_standalone_elastic_boltzmann_core(tmp_path: Path) -> None:
     assert "BOLTZMANN_ELASTIC_P0_P1_PASS" in executed.stdout
     assert "MAXWELL_REFINEMENT_ERRORS=" in executed.stdout
     assert "BOLTZMANN_EXCITATION_M2_P0_P1_PASS" in executed.stdout
+    assert "BOLTZMANN_SPARSE_M3_P0_P1_PASS" in executed.stdout
     assert "EXCITATION_ENERGY_BALANCE_ERRORS=" in executed.stdout
     assert "MAX_NORMALIZED_FLUX_RESIDUAL=" in executed.stdout
