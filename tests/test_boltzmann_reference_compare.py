@@ -61,6 +61,7 @@ def _fixture(root: Path) -> tuple[dict, dict, dict]:
             "source_url": "https://example.invalid/independent-synthetic",
             "retrieved_utc": "2026-10-28T00:00:00Z",
             "process_ids": ["Ar:excitation:1", "Ar:inactive:2"],
+            "rate_process_ids": ["Ar:excitation:1", "Ar:inactive:2"],
         },
         "reference": {
             "path": "reference.json",
@@ -94,7 +95,7 @@ def _candidate(root: Path, case: dict, state: dict) -> None:
 def test_manufactured_reference_pass_and_controls(tmp_path: Path) -> None:
     case, reference, candidate = _fixture(tmp_path)
     passed = compare_case(tmp_path)
-    assert passed["decision"] == "BOLSIG_REFERENCE_NUMERIC_PASS"
+    assert passed["decision"] == "BOLSIG_REFERENCE_SELFTEST_PASS"
     assert passed["mean_energy_relative_error"] < 1e-14
 
     # Negative scientific discrimination: same provenance with a different
@@ -112,7 +113,7 @@ def test_manufactured_reference_pass_and_controls(tmp_path: Path) -> None:
     )
     _candidate(tmp_path, case, candidate)
     decision = compare_case(tmp_path)
-    assert decision["decision"] == "BOLSIG_REFERENCE_NUMERIC_FAIL"
+    assert decision["decision"] == "BOLSIG_REFERENCE_SELFTEST_FAIL"
     assert "eepf" in decision["failures"]
 
     # Rate mismatch independently fails even when the EEPF is identical.
@@ -151,6 +152,14 @@ def test_manufactured_reference_pass_and_controls(tmp_path: Path) -> None:
     (tmp_path / "raw-bolsig-output.txt").write_bytes(b"CORRUPTED REFERENCE\n")
     with pytest.raises(ReferenceContractError, match="SHA256 mismatch"):
         compare_case(tmp_path)
+
+    # An altered source-to-rate ledger cannot silently omit a reaction.
+    case["source"]["rate_process_ids"] = ["Ar:excitation:1"]
+    _write_json(tmp_path, "case.json", case)
+    with pytest.raises(ReferenceContractError, match="numeric rate inventory"):
+        compare_case(tmp_path)
+    case["source"]["rate_process_ids"] = ["Ar:excitation:1", "Ar:inactive:2"]
+    _write_json(tmp_path, "case.json", case)
 
     # Tampered raw collision source must also fail before any numeric decision.
     _write_bytes(tmp_path, "raw-bolsig-output.txt",
