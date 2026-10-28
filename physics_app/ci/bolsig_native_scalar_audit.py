@@ -287,11 +287,13 @@ def compare_native_collision_ledger(
         gas: {type_map[kind]: count for kind, count in kinds.items()}
         for gas, kinds in native["process_census"].items()
     }
-    source_census = {
-        gas: {("EFFECTIVE" if k == "MOMENTUM" else k): v
-              for k, v in kinds.items()}
-        for gas, kinds in source["process_counts"].items()
-    }
+    source_census: dict[str, dict[str, int]] = {}
+    for gas, kinds in source["process_counts"].items():
+        mapped: dict[str, int] = {}
+        for kind, count in kinds.items():
+            normalized = "EFFECTIVE" if kind == "MOMENTUM" else kind
+            mapped[normalized] = mapped.get(normalized, 0) + count
+        source_census[gas] = mapped
     missing: dict[str, dict[str, int]] = {}
     excess: dict[str, dict[str, int]] = {}
     for gas in fractions:
@@ -352,6 +354,8 @@ def main() -> int:
         print("BOLSIG_NATIVE_REFERENCE_PREFLIGHT_HOLD:", exc)
         return 2
     print(json.dumps(report, indent=2, sort_keys=True))
+    if args.cross_sections and report["external_collision_ledger"]["status"].startswith("HOLD_"):
+        return 2
     return 0 if report["status"].endswith("_PASS") else 1
 
 
