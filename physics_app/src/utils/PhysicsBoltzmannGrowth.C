@@ -83,11 +83,16 @@ void validateInput(const ElasticInput & input,
   if (ionizations.empty() && attachments.empty())
     throw std::invalid_argument("Boltzmann M6: at least one growth process is needed");
   std::set<std::string> seen;
+  double fraction_sum = 0.0;
   for (const auto & target : input.targets)
   {
-    if (target.name.empty() || !seen.insert(target.name).second)
-      throw std::invalid_argument("Boltzmann M6: ambiguous gas mixture names");
+    if (target.name.empty() || !seen.insert(target.name).second ||
+        !std::isfinite(target.mole_fraction) || !(target.mole_fraction > 0.0))
+      throw std::invalid_argument("Boltzmann M6: invalid gas species or fraction");
+    fraction_sum += target.mole_fraction;
   }
+  if (std::abs(fraction_sum - 1.0) > 1e-12)
+    throw std::invalid_argument("Boltzmann M6: mixture fractions must sum to one");
   std::set<std::string> channels;
   for (const auto & c : ionizations)
   {
