@@ -14,6 +14,11 @@ struct ElasticTransportMoments
   double reduced_energy_mobility_N_per_m_V_s = 0.0; // mu_epsilon * N
   double reduced_energy_diffusion_N_per_m_s = 0.0; // D_epsilon * N
   double high_energy_tail_ratio = 0.0;
+  // AC only (q=omega/N > 0): Re/Im first-harmonic mobility components.
+  // The pre-existing mobility above remains the DC transport diagnostic
+  // of the AC-heated EEPF, as in BOLSIG+ documentation.
+  double ac_real_mobility_N_per_m_V_s = 0.0;
+  double ac_imag_mobility_N_per_m_V_s = 0.0;
 };
 
 // Published Hagelaar/Pitchford 2005, equations 55,56,61,62. This standalone
