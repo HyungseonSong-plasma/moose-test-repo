@@ -1,4 +1,5 @@
 #include "PhysicsBoltzmannTransport.h"
+#include "PhysicsBoltzmannEnergyMesh.h"
 
 #include <algorithm>
 #include <cmath>
@@ -146,16 +147,17 @@ ElasticTransportMoments evaluateExcitationTransportMoments(
       throw std::invalid_argument("Boltzmann M7: total momentum-transfer cross section must be positive");
     return value;
   };
-  const double h = input.max_energy_eV / n;
+  const auto edges = energyMeshEdges(input);
+  const auto centers = energyMeshCenters(edges);
   const auto & f = distribution.eepf_eV_minus_3_halves;
   double normalization = 0.0, mean_energy = 0.0;
   double max_f = 0.0;
   for (std::size_t i = 0; i < n; ++i)
   {
-    const double lo = i * h, hi = (i + 1) * h;
+    const double lo = edges[i], hi = edges[i+1];
     if (!std::isfinite(f[i]) || f[i] < 0.0 ||
         !std::isfinite(distribution.energy_eV[i]) ||
-        std::abs(distribution.energy_eV[i] - (i + 0.5) * h) > 1e-9 * h)
+        std::abs(distribution.energy_eV[i] - centers[i]) > 1e-9 * (hi - lo))
       throw std::invalid_argument("Boltzmann M7: invalid EEPF/energy centers");
     normalization += f[i] * (2.0 / 3.0) *
                      (std::pow(hi, 1.5) - std::pow(lo, 1.5));
@@ -186,11 +188,12 @@ ElasticTransportMoments evaluateExcitationTransportMoments(
   double diff_moment = 0.0, diff_energy_moment = 0.0;
   for (std::size_t i = 0; i < n; ++i)
   {
-    const double mid = (i + 0.5) * h;
+    const double width = edges[i+1]-edges[i];
+    const double mid = centers[i];
     for (std::size_t q = 0; q < 4; ++q)
     {
-      const double e = mid + 0.5 * h * nodes[q];
-      const double contribution = 0.5 * h * weights[q] * f[i] * e / sigma_m(e);
+      const double e = mid + 0.5 * width * nodes[q];
+      const double contribution = 0.5 * width * weights[q] * f[i] * e / sigma_m(e);
       diff_moment += contribution;
       diff_energy_moment += contribution * e;
     }
@@ -202,7 +205,7 @@ ElasticTransportMoments evaluateExcitationTransportMoments(
   double mobility_moment = 0.0, energy_mobility_moment = 0.0;
   for (std::size_t i = 1; i < n; ++i)
   {
-    const double e = i * h;
+    const double e = edges[i];
     const double jump = (f[i - 1] - f[i]) / sigma_m(e);
     mobility_moment += e * jump;
     energy_mobility_moment += e * e * jump;
