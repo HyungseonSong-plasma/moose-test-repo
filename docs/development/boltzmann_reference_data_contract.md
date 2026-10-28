@@ -151,3 +151,34 @@ The development-only candidate exporter accepts `--enable-superelastic` and emit
 Current remaining gates: physical cross-section/target-state provenance, excited-state elastic assumptions, upper-energy cutoff convergence for reverse rates, detailed-balance error under grid refinement, genuine BOLSIG+ reference output conversion, particle-changing ionization and attachment source/growth formulation, and real PhysicsApp P2/P3. In particular, M5 must not cause any existing Oxygen ICP coefficient/energy source to change without accepted new physics validation.
 
 Scientific background: Hagelaar & Pitchford, Plasma Sources Science Technology 14 (2005) 722–733; BOLSIG+ official 07/2024 documentation.
+
+## M6a particle-changing electron collisions and growth — DEVELOPMENT/HOLD
+
+The independent C++ PhysicsBoltzmannGrowth utility now assembles binary ionization and electron attachment source operators Q on a uniform electron-energy finite-volume grid. This is a **frozen-EEPF growth diagnostic**, NOT the self-consistent temporal-growth electron Boltzmann eigenproblem.
+
+The discrete collision contribution is
+
+    M_i d(n_e f0_i)/d(Nt) = sum_j Q_ij n_e f0_j
+    M_i = integral_cell_i sqrt(epsilon) d(epsilon)
+
+Ionization (e + A -> 2e + A+) with threshold u removes one incident electron at epsilon and deposits exactly two electrons at (epsilon-u)/2: equal sharing, per the explicitly selected BOLSIG+ option. Each ionization event has net electron number +1. Electron attachment removes one electron (net -1) and has no product electron deposited. Off-grid donor/recipient overlaps integrate epsilon*sigma(epsilon) with exact piecewise-linear cross-section quadrature.
+
+The acceptance invariant is columnwise:
+
+    sum_i Q_ij = ionization_event_column_j - attachment_event_column_j
+
+Rate coefficients per target molecule have units m^3/s and use sqrt(2e/m_e)*integral(epsilon*sigma_j(epsilon)*f0(epsilon) d(epsilon)). The **reduced temporal-growth diagnostic** from the pre-existing M5 EEPF is
+
+    (1/(N*n_e)) dn_e/dt = sum(x_k*k_ion,k) - sum(x_k*k_attachment,k)
+
+with units m^3/s. The mixture-weighted ionization threshold energy loss per electron and neutral is sum(x_k*u_k*k_ion,k) [eV m^3/s]. This is NOT the complete electron-energy balance: electron birth/dilution, attachment energy removal, and other collision power terms are not included.
+
+The new explicit prepareGrowthPhysics import mode retains ionization and attachment records rather than silently dropping them to pass the excitation-only filter. Unsupported EFFECTIVE/MOMENTUM, ROTATION, missing targets, incomplete energy coverage and unsupported model variants fail closed. All Ar/O2-named fixtures are **synthetic values authored for tests**, not real LXCat cross sections.
+
+The developer candidate exporter now supports --diagnose-frozen-growth to emit M5 EEPF, process-resolved ionization and attachment rates, and a clearly distinct frozen_eepf_reduced_temporal_growth_m3_per_s field. The source file and SHA-256 are supplied by the caller; independent raw-byte verification remains the external reference checker responsibility. Without the explicit opt-in, a full particle-changing collision file remains rejected by the M5-only path.
+
+M6a regression covers +1/-1 electron events, independent analytical constant-cross-section moments, number/threshold energy transfer at grid resolution, 100/250/800-cell audit, invalid input mutation, complete typed importer and explicit developer CLI opt-in. This is numerical P0/P1 evidence only.
+
+**M6b mandatory remaining gate:** self-consistently solve the full energy-space elastic+excitation+superelastic+ionization+attachment temporal-growth generalized eigenvalue problem with the mass metric M, independent eigenpair residual and growth-rate convergence, and independently captured BOLSIG+ temporal-growth parity. BOLSIG+ spatial growth (SST) is a separate model; never label frozen-EEDF rates as SST or temporal-growth EEPF validation. Do not merge or promote production Oxygen ICP coefficients until real source provenance and P2/P3 physics acceptance.
+
+References: Hagelaar & Pitchford (2005), DOI:10.1088/0963-0252/14/4/011; BOLSIG+ documentation 07/2024, growth and ionization energy-sharing options: https://www.bolsig.laplace.univ-tlse.fr/wp-content/uploads/2024/07/bolsigdoc0724.pdf .
