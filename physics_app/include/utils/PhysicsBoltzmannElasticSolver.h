@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <map>
 #include <string>
+#include <utility>
 #include <vector>
 
 // Standalone (MOOSE-independent) zero-dimensional, steady, two-term electron
@@ -22,6 +23,17 @@ struct ElasticTarget
   // elastic+excitation+ionization+attachment scattering at each face.
   // Elastic recoil STILL uses momentum_transfer_m2. Empty preserves M1/M5.
   std::vector<double> field_momentum_transfer_m2;
+
+  ElasticTarget() = default;
+  ElasticTarget(std::string target, double fraction, double mass_ratio,
+                std::vector<double> energy, std::vector<double> recoil,
+                std::vector<double> field = {})
+    : name(std::move(target)), mole_fraction(fraction),
+      electron_mass_ratio(mass_ratio), energy_eV(std::move(energy)),
+      momentum_transfer_m2(std::move(recoil)),
+      field_momentum_transfer_m2(std::move(field))
+  {
+  }
 };
 
 struct ElasticInput
