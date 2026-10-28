@@ -175,4 +175,276 @@ ElasticResult solveElasticSteadyState(const ElasticInput & input)
     throw std::runtime_error("Boltzmann: non-finite solution diagnostic");
   return result;
 }
+
+namespace
+{
+// Exact integral of epsilon * sigma(epsilon) for a piecewise-linear cross section.
+// The threshold is treated as a hard physical gate, not a smooth extrapolation.
+double weightedExcitationIntegral(const ExcitationChannel & channel, double a, double b)
+{
+  a = std::max(a, channel.threshold_eV);
+  if (b <= a)
+    return 0.0;
+  const auto & x = channel.energy_eV;
+  const auto & y = channel.cross_section_m2;
+  double total = 0.0;
+  while (a < b)
+  {
+    const auto upper = std::upper_bound(x.begin(), x.end(), a);
+    std::size_t k = upper == x.begin() ? 0 : static_cast<std::size_t>(upper - x.begin() - 1);
+    k = std::min(k, x.size() - 2);
+    const double right = std::min(b, x[k + 1]);
+    if (!(right > a))
+      throw std::runtime_error("Boltzmann: excitation integration segment did not advance");
+    const double slope = (y[k + 1] - y[k]) / (x[k + 1] - x[k]);
+    const double at_left = y[k] + slope * (a - x[k]);
+    const double delta2 = right * right - a * a;
+    const double delta3 = right * right * right - a * a * a;
+    total += 0.5 * at_left * delta2 +
+             slope * (delta3 / 3.0 - 0.5 * a * delta2);
+    a = right;
+  }
+  return std::max(0.0, total);
+}
+
+// Simple reproducible pivoted dense reference solve. The generic nonlocal
+// problem needs a scalable sparse solver in a later, separately validated cut.
+std::vector<double> pivotedSolve(std::vector<std::vector<double>> a,
+                                 std::vector<double> rhs)
+{
+  const std::size_t n = rhs.size();
+  for (std::size_t k = 0; k < n; ++k)
+  {
+    std::size_t pivot = k;
+    for (std::size_t i = k + 1; i < n; ++i)
+      if (std::abs(a[i][k]) > std::abs(a[pivot][k]))
+        pivot = i;
+    if (!(std::abs(a[pivot][k]) > 1e-14))
+      throw std::runtime_error("Boltzmann: singular or ill-conditioned excitation system");
+    std::swap(a[pivot], a[k]);
+    std::swap(rhs[pivot], rhs[k]);
+    for (std::size_t i = k + 1; i < n; ++i)
+    {
+      const double factor = a[i][k] / a[k][k];
+      a[i][k] = 0.0;
+      for (std::size_t j = k + 1; j < n; ++j)
+        a[i][j] -= factor * a[k][j];
+      rhs[i] -= factor * rhs[k];
+    }
+  }
+  std::vector<double> result(n, 0.0);
+  for (std::size_t k = n; k-- > 0;)
+  {
+    double value = rhs[k];
+    for (std::size_t j = k + 1; j < n; ++j)
+      value -= a[k][j] * result[j];
+    result[k] = value / a[k][k];
+    if (!std::isfinite(result[k]))
+      throw std::runtime_error("Boltzmann: excitation solution contains non-finite values");
+  }
+  return result;
+}
+} // namespace
+
+ExcitationResult solveExcitationSteadyState(const ElasticInput & input,
+                                            const std::vector<ExcitationChannel> & channels)
+{
+  validate(input);
+  if (channels.empty())
+    throw std::invalid_argument("Boltzmann: at least one excitation channel is required");
+  // An intentionally bounded correctness-first reference implementation.
+  if (input.cells > 512)
+    throw std::invalid_argument("Boltzmann: dense excitation solver is limited to 512 cells");
+
+  std::vector<double> fractions;
+  fractions.reserve(channels.size());
+  std::vector<std::string> channel_names;
+  for (const auto & channel : channels)
+  {
+    if (channel.name.empty() || channel.target_name.empty() ||
+        !finitePositive(channel.threshold_eV) ||
+        !(channel.threshold_eV < input.max_energy_eV))
+      throw std::invalid_argument("Boltzmann: invalid excitation name/threshold");
+    if (std::find(channel_names.begin(), channel_names.end(), channel.name) !=
+        channel_names.end())
+      throw std::invalid_argument("Boltzmann: duplicate excitation channel name");
+    channel_names.push_back(channel.name);
+    const auto n = channel.energy_eV.size();
+    if (n < 2 || n != channel.cross_section_m2.size() ||
+        channel.energy_eV.front() > 0.0 ||
+        channel.energy_eV.back() < input.max_energy_eV)
+      throw std::invalid_argument("Boltzmann: excitation cross section lacks full energy coverage");
+    for (std::size_t k = 0; k < n; ++k)
+    {
+      if (!finiteNonnegative(channel.energy_eV[k]) ||
+          !finiteNonnegative(channel.cross_section_m2[k]) ||
+          (k && !(channel.energy_eV[k] > channel.energy_eV[k - 1])))
+        throw std::invalid_argument("Boltzmann: invalid excitation cross section table");
+    }
+    const auto target = std::find_if(input.targets.begin(), input.targets.end(),
+        [&channel](const ElasticTarget & t) { return t.name == channel.target_name; });
+    if (target == input.targets.end())
+      throw std::invalid_argument("Boltzmann: excitation target is not in elastic mixture");
+    fractions.push_back(target->mole_fraction);
+  }
+
+  const std::size_t n = input.cells;
+  const double h = input.max_energy_eV / static_cast<double>(n);
+  const double gamma = std::sqrt(2.0 * electron_charge_C / electron_mass_kg);
+  std::vector<std::vector<double>> a(n, std::vector<double>(n, 0.0));
+  std::vector<double> weight(n, 0.0);
+  for (std::size_t i = 0; i < n; ++i)
+  {
+    const double left = static_cast<double>(i) * h;
+    const double right = left + h;
+    weight[i] = (2.0 / 3.0) * (std::pow(right, 1.5) - std::pow(left, 1.5));
+  }
+
+  // Divergence of the same conservative elastic SG interface flux as M1.
+  for (std::size_t i = 1; i < n; ++i)
+  {
+    const auto face = atFace(input, static_cast<double>(i) * h);
+    const double p = face.W * h / face.D;
+    const double left = face.D / h * bernoulli(-p);
+    const double right = face.D / h * bernoulli(p);
+    a[i - 1][i - 1] += left;
+    a[i - 1][i] -= right;
+    a[i][i - 1] -= left;
+    a[i][i] += right;
+  }
+
+  double maximum_balance_error = 0.0;
+  // A = div(J) - S, where S = gain - loss. Each excitation donor
+  // transfers epsilon -> epsilon-u; overlap integrals are deposited into
+  // the correct destination energy cells (no nearest-cell shortcut).
+  for (std::size_t c = 0; c < channels.size(); ++c)
+  {
+    const auto & channel = channels[c];
+    const double u = channel.threshold_eV;
+    const double coefficient = gamma * fractions[c];
+    for (std::size_t donor = 0; donor < n; ++donor)
+    {
+      const double lo = std::max(static_cast<double>(donor) * h, u);
+      const double hi = static_cast<double>(donor + 1) * h;
+      if (hi <= lo)
+        continue;
+      const double total = coefficient * weightedExcitationIntegral(channel, lo, hi);
+      double gains = 0.0;
+      // A shifted interval of width <= h intersects at most two target cells.
+      const auto first = static_cast<std::size_t>(
+          std::max(0.0, std::floor((lo - u) / h)));
+      const auto last = static_cast<std::size_t>(
+          std::min(static_cast<double>(n - 1),
+                   std::floor(std::nextafter((hi - u) / h,
+                                             -std::numeric_limits<double>::infinity()))));
+      for (std::size_t dest = first; dest <= last && dest < n; ++dest)
+      {
+        const double xlo = std::max(lo, u + static_cast<double>(dest) * h);
+        const double xhi = std::min(hi, u + static_cast<double>(dest + 1) * h);
+        if (xhi <= xlo)
+          continue;
+        const double gain = coefficient * weightedExcitationIntegral(channel, xlo, xhi);
+        a[dest][donor] -= gain;
+        gains += gain;
+      }
+      a[donor][donor] += total;
+      if (total > 0.0)
+        maximum_balance_error = std::max(
+            maximum_balance_error, std::abs(total - gains) / total);
+    }
+  }
+  if (maximum_balance_error > 1e-9)
+    throw std::runtime_error("Boltzmann: nonlocal excitation transfer does not conserve particle number");
+
+  // Sum of all rows is zero by construction. Replace one redundant row
+  // by exact piecewise-constant EEPF normalization and solve the nullspace.
+  double scale = 0.0;
+  for (const auto & row : a)
+    for (const double v : row)
+      scale = std::max(scale, std::abs(v));
+  if (!finitePositive(scale))
+    throw std::runtime_error("Boltzmann: empty excitation operator");
+  auto normalized_matrix = a;
+  for (std::size_t i = 0; i + 1 < n; ++i)
+    for (auto & v : normalized_matrix[i])
+      v /= scale;
+  normalized_matrix[n - 1] = weight;
+  std::vector<double> rhs(n, 0.0);
+  rhs[n - 1] = 1.0;
+  auto f = pivotedSolve(std::move(normalized_matrix), std::move(rhs));
+
+  const double max_f = *std::max_element(f.begin(), f.end());
+  if (!finitePositive(max_f))
+    throw std::runtime_error("Boltzmann: excitation state has nonpositive distribution");
+  for (auto & v : f)
+  {
+    if (v < -1e-10 * max_f)
+      throw std::runtime_error("Boltzmann: excitation EEPF has negative cell population");
+    v = std::max(0.0, v);
+  }
+  double norm = 0.0;
+  double energy_moment = 0.0;
+  for (std::size_t i = 0; i < n; ++i)
+  {
+    norm += weight[i] * f[i];
+    const double lo = static_cast<double>(i) * h;
+    const double hi = lo + h;
+    energy_moment += f[i] * (2.0 / 5.0) *
+                     (std::pow(hi, 2.5) - std::pow(lo, 2.5));
+  }
+  if (!finitePositive(norm))
+    throw std::runtime_error("Boltzmann: excitation EEPF normalization failed");
+  for (auto & v : f)
+    v /= norm;
+
+  ExcitationResult result;
+  result.distribution.energy_eV.resize(n);
+  for (std::size_t i = 0; i < n; ++i)
+    result.distribution.energy_eV[i] = (i + 0.5) * h;
+  result.distribution.eepf_eV_minus_3_halves = f;
+  result.distribution.mean_energy_eV = energy_moment / norm;
+  result.distribution.normalization = 1.0;
+  // Interface fluxes are physically nonzero when excitation is active.
+  result.distribution.maximum_normalized_flux_residual =
+      std::numeric_limits<double>::quiet_NaN();
+
+  // Evaluate the original, unmodified conservative balance, including the
+  // omitted nullspace row, not merely the normalization-constrained solve.
+  double residual = 0.0, magnitude = 0.0;
+  for (std::size_t i = 0; i < n; ++i)
+  {
+    double ri = 0.0, absrow = 0.0;
+    for (std::size_t j = 0; j < n; ++j)
+    {
+      const double t = a[i][j] * f[j];
+      ri += t;
+      absrow += std::abs(t);
+    }
+    residual = std::max(residual, std::abs(ri));
+    magnitude = std::max(magnitude, absrow);
+  }
+  result.maximum_normalized_equation_residual =
+      magnitude > 0.0 ? residual / magnitude : 0.0;
+  result.maximum_collision_number_balance_error = maximum_balance_error;
+  if (!(result.maximum_normalized_equation_residual <= 1e-8))
+    throw std::runtime_error("Boltzmann: excitation stationary residual exceeds 1e-8");
+
+  for (std::size_t c = 0; c < channels.size(); ++c)
+  {
+    const auto & channel = channels[c];
+    double rate = 0.0;
+    for (std::size_t i = 0; i < n; ++i)
+    {
+      const double lo = static_cast<double>(i) * h;
+      const double hi = lo + h;
+      rate += gamma * f[i] * weightedExcitationIntegral(channel, lo, hi);
+    }
+    // Per-target rate coefficient: gas mole fraction does not belong in k.
+    result.rate_coefficients_m3_per_s.push_back(rate);
+    result.energy_loss_coefficients_eV_m3_per_s.push_back(
+        channel.threshold_eV * rate);
+  }
+  return result;
+}
+
 } // namespace PhysicsBoltzmann
