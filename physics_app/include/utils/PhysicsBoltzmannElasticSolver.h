@@ -50,6 +50,11 @@ struct ExcitationChannel
   double threshold_eV = 0.0;  // energy lost per excitation event
   std::vector<double> energy_eV;
   std::vector<double> cross_section_m2;
+  // Optional inverse superelastic channel. Both lower and upper target
+  // populations must have explicitly defined ELASTIC collision records
+  // and number fractions in ElasticInput.targets.
+  std::string upper_state_target_name;
+  double upper_to_lower_weight_ratio = 1.0; // g_upper/g_lower (>0)
 };
 
 enum class ExcitationLinearMethod
@@ -63,7 +68,11 @@ struct ExcitationResult
 {
   ElasticResult distribution;
   std::vector<double> rate_coefficients_m3_per_s; // per channel / target molecule
-  std::vector<double> energy_loss_coefficients_eV_m3_per_s; // threshold * rate
+  std::vector<double> energy_loss_coefficients_eV_m3_per_s; // forward u * k
+  // Per-excited-target superelastic rate and net *mixture-weighted* loss;
+  // reverse rate is zero for unidirectional excitation channels.
+  std::vector<double> superelastic_rate_coefficients_m3_per_s;
+  std::vector<double> net_energy_loss_coefficients_eV_m3_per_s;
   double maximum_normalized_equation_residual = 0.0;
   double maximum_collision_number_balance_error = 0.0;
   std::size_t assembled_nonzero_entries = 0;
