@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <memory>
 #include <stdexcept>
 #include <utility>
 #include <vector>
@@ -171,55 +172,126 @@ TemporalGrowthResult solveElasticTemporalGrowth(
   for (std::size_t i = 0; i < n; ++i)
     upper_bound = std::max(upper_bound,
         growth_op.ionization_event_columns[i] / growth_op.electron_number_mass[i]);
-  const double shift = std::max(1e-20, upper_bound * 1.05);
-  auto shifted = a;
-  for (std::size_t i = 0; i < n; ++i)
-    shifted[i][i] += shift * growth_op.electron_number_mass[i];
-  const DenseLU lu(std::move(shifted));
-
-  // Use the M1 validated elastic EEPF as an initial positive iterate.
+  // Begin with a provably safe ionization-source upper bound, then
+  // reduce the shift toward the current Rayleigh growth estimate. A fixed
+  // overconservative shift makes pure-ionization inverse iteration orders of
+  // magnitude slower than necessary. Each smaller shift is accepted ONLY
+  // if the independently solved resolvent retains a positive iterate.
+  double shift = std::max(1e-20, upper_bound * 1.05);
   const auto seed = solveElasticSteadyState(input);
   std::vector<double> f = seed.eepf_eV_minus_3_halves;
   double growth_lambda = 0.0;
   std::size_t iterations = 0;
   bool converged = false;
-  constexpr std::size_t max_iterations = 8000;
-  for (std::size_t iteration = 0; iteration < max_iterations; ++iteration)
+  constexpr std::size_t max_epochs = 12;
+  constexpr std::size_t max_per_epoch = 200;
+  const auto growthEstimate = [&](const std::vector<double> & state)
   {
-    std::vector<double> rhs(n);
+    double value = 0.0;
     for (std::size_t i = 0; i < n; ++i)
-      rhs[i] = f[i] * growth_op.electron_number_mass[i];
-    auto next = lu.solve(std::move(rhs));
-    const double max_next = *std::max_element(next.begin(), next.end());
-    if (!(max_next > 0.0))
-      throw std::runtime_error("Boltzmann M6b: nonpositive dominant growth eigenvector");
-    for (auto & value : next)
-    {
-      if (!std::isfinite(value) || value < -max_next * 1e-11)
-        throw std::runtime_error("Boltzmann M6b: lost Perron eigenvector positivity");
-      value = std::max(0.0, value);
-    }
-    double normalizer = 0.0;
-    for (std::size_t i = 0; i < n; ++i)
-      normalizer += next[i] * growth_op.electron_number_mass[i];
-    if (!(normalizer > 0.0 && std::isfinite(normalizer)))
-      throw std::runtime_error("Boltzmann M6b: growth normalization failed");
-    double delta = 0.0;
+      value += state[i] * (growth_op.ionization_event_columns[i] -
+                           growth_op.attachment_event_columns[i]);
+    return value;
+  };
+  const auto relativeEigenResidual = [&](const std::vector<double> & state)
+  {
+    const double lambda = growthEstimate(state);
+    double numerator = 0.0, denominator = 0.0;
     for (std::size_t i = 0; i < n; ++i)
     {
-      next[i] /= normalizer;
-      delta += growth_op.electron_number_mass[i] * std::abs(next[i] - f[i]);
+      double ri = lambda * growth_op.electron_number_mass[i] * state[i];
+      double magnitude = std::abs(ri);
+      for (std::size_t j = 0; j < n; ++j)
+      {
+        const double term = a[i][j] * state[j];
+        ri += term;
+        magnitude += std::abs(term);
+      }
+      numerator += std::abs(ri);
+      denominator += magnitude;
     }
-    f = std::move(next);
-    iterations = iteration + 1;
-    if (delta < 5e-11)
+    return denominator > 0.0 ? numerator / denominator : 0.0;
+  };
+
+  for (std::size_t epoch = 0; epoch < max_epochs; ++epoch)
+  {
+    const double estimated = growthEstimate(f);
+    double candidate_shift = epoch == 0 ? shift :
+        std::min(shift, std::max(1e-20, estimated +
+                               std::max(1e-19, 0.02 * std::abs(estimated))));
+    std::unique_ptr<DenseLU> factor;
+    for (std::size_t attempt = 0; attempt < 20; ++attempt)
+    {
+      auto shifted = a;
+      for (std::size_t i = 0; i < n; ++i)
+        shifted[i][i] += candidate_shift * growth_op.electron_number_mass[i];
+      try
+      {
+        auto trial = std::make_unique<DenseLU>(std::move(shifted));
+        std::vector<double> rhs(n);
+        for (std::size_t i = 0; i < n; ++i)
+          rhs[i] = f[i] * growth_op.electron_number_mass[i];
+        const auto probe = trial->solve(std::move(rhs));
+        const auto extrema = std::minmax_element(probe.begin(), probe.end());
+        if (*extrema.second > 0.0 &&
+            *extrema.first >= -1e-11 * *extrema.second)
+        {
+          factor = std::move(trial);
+          shift = candidate_shift;
+          break;
+        }
+      }
+      catch (const std::runtime_error &)
+      {
+        // Shift-invert breakdown is retryable; it never authorizes an
+        // unvalidated eigenstate or suppressed final residual.
+      }
+      if (candidate_shift >= shift)
+        break;
+      candidate_shift = 0.5 * (candidate_shift + shift);
+    }
+    if (!factor)
+      throw std::runtime_error("Boltzmann M6b: no positive shifted inverse resolvent");
+
+    for (std::size_t iteration = 0; iteration < max_per_epoch; ++iteration)
+    {
+      std::vector<double> rhs(n);
+      for (std::size_t i = 0; i < n; ++i)
+        rhs[i] = f[i] * growth_op.electron_number_mass[i];
+      auto next = factor->solve(std::move(rhs));
+      const double max_next = *std::max_element(next.begin(), next.end());
+      if (!(max_next > 0.0))
+        throw std::runtime_error("Boltzmann M6b: nonpositive dominant growth eigenvector");
+      for (auto & value : next)
+      {
+        if (!std::isfinite(value) || value < -max_next * 1e-11)
+          throw std::runtime_error("Boltzmann M6b: lost Perron eigenvector positivity");
+        value = std::max(0.0, value);
+      }
+      double normalizer = 0.0;
+      for (std::size_t i = 0; i < n; ++i)
+        normalizer += next[i] * growth_op.electron_number_mass[i];
+      if (!(normalizer > 0.0 && std::isfinite(normalizer)))
+        throw std::runtime_error("Boltzmann M6b: growth normalization failed");
+      double delta = 0.0;
+      for (std::size_t i = 0; i < n; ++i)
+      {
+        next[i] /= normalizer;
+        delta += growth_op.electron_number_mass[i] * std::abs(next[i] - f[i]);
+      }
+      f = std::move(next);
+      ++iterations;
+      if (delta < 5e-11)
+        break;
+    }
+    if (relativeEigenResidual(f) < 1e-8)
     {
       converged = true;
       break;
     }
   }
   if (!converged)
-    throw std::runtime_error("Boltzmann M6b: shifted temporal-growth eigenvector not converged");
+    throw std::runtime_error("Boltzmann M6b: temporal-growth eigenpair failed true residual");
 
   TemporalGrowthResult out;
   out.distribution.energy_eV.resize(n);
