@@ -4,6 +4,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <vector>
+#include <utility>
 
 using namespace PhysicsBoltzmann;
 
@@ -13,7 +14,6 @@ constexpr double qe = 1.602176634e-19;
 constexpr double me = 9.1093837139e-31;
 constexpr double kb = 1.380649e-23;
 constexpr double pi = 3.14159265358979323846264338327950288;
-constexpr double gamma = 592969.320;
 const double theta = kb * 3000.0 / qe;
 
 // Independently normalized continuous Maxwellian EEPF at finite Emax:
