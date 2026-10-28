@@ -54,3 +54,11 @@ New native tests cover nontrivial energy cooling, energy-grid convergence, nonne
 ### M2 independent energy audit
 
 The C++ native test now evaluates an independent energy-moment identity on off-grid excitation transfers. For steady zero-boundary-flux kinetic balance, integrating the energy flux over the energy domain should approach the sum of excitation energy losses, `sum(x_target * u_channel * k_channel)`. The test reconstructs the SG energy flux independently of the solved matrix for an analytic linearly varying synthetic excitation cross section, and checks **decreasing relative error under energy-grid refinement**. This is a discretization-consistency test, not an assertion of exact discrete energy equality at finite cell width, nor a validated real-gas energy-closure claim.
+
+## M3: sparse nonlocal excitation linear algebra
+
+The exact same conservative M2 collision operator is now assembled as a sparse row map (the nonlocal excitation transfers connect only physically involved donor/receiver cells). The original dense partial-pivot reference is still selectable for 2–512 energy cells. A separate sparse solver covers 2–16384 cells and is automatically selected above 512.
+
+Sparse solve uses a positive first-cell EEPF gauge `f[0]=1`, then renormalizes by exact cell `integral(sqrt(e) f de)=1`. Row-scaled BiCGSTAB is left-preconditioned with the tridiagonal M-matrix backbone (elastic SG interface transport and local excitation loss); this preconditioner is factored once per solve. It is an algebraic accelerator, not a change to any electron physics. Every solve checks explicit Krylov, original conservative balance, nonnegative EEPF, number conservation and normalization residuals. Nonconvergence is a hard failure rather than any silent surrogate or grid coarsening.
+
+The native M3 regression compares the **entire weighted EEPF** in addition to mean energy and electron-impact rate between dense reference and sparse solver for identical input at 125/250/400 energy cells, tests automatic sparse selection at 2048 cells, checks linear iteration and assembled nonzero counts, and rejects explicit dense selection above 512. The regression does not replace physical-data comparisons: independent BOLSIG+ cross-section provenance, high-energy tail resolution, RF, growth and complex reaction models remain HOLD.
