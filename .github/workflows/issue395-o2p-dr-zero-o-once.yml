@@ -1,4 +1,4 @@
-# USER-AUTHORIZED ONE-SHOT RETRY: original run 40781425789 stopped at P0 test-only failures; same physical model and four arms, fixed source SHA. Science HOLD.
+# USER-AUTHORIZED ONE-SHOT RETRY: runs 40781425789 and 40781588521 stopped at P0 guard/test failures; same physical model and four arms, fixed source SHA. Science HOLD.
 # Never interpret P3 runtime completion alone as a science PASS.
 name: Issue395 O2p DR zero initial atomic O 400 1000 W
 run-name: O2p DR initial O zero four arms at ${{ github.sha }}
@@ -23,12 +23,12 @@ jobs:
       - name: Exact source checkout
         uses: actions/checkout@v4
         with:
-          ref: ec8102c9129ed18cd8bc54707e6e1cec3cef8f4e
+          ref: 4a0562da693006ba416254073cf0f4425cf996db
       - name: P0 source, chemistry, and mesh
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = "ec8102c9129ed18cd8bc54707e6e1cec3cef8f4e"
+          test "$(git rev-parse HEAD)" = "4a0562da693006ba416254073cf0f4425cf996db"
           python3 -m pip install --quiet 'pytest>=8,<9'
           python3 -m pytest -q tests/test_o2p_dr_oxygen_icp_ab.py tests/test_zero_initial_o_oxygen_icp_ab.py
           python3 -m venv .o2p-dr-venv
@@ -61,7 +61,7 @@ jobs:
           result="experiments/Issue395_powered_chemistry_ladder/results_rf_elastic_diss_ion_ei20_ei01_${{ matrix.power_w }}w_adjacent_sheath_wall_closed_100us_dt1000ns"
           python3 experiments/Issue395_powered_chemistry_ladder/analyze_o2p_dr_ab.py \
             --result "$result" --power-w "${{ matrix.power_w }}" --dr-mode "${{ matrix.dr_mode }}" \
-            --source-sha "ec8102c9129ed18cd8bc54707e6e1cec3cef8f4e" --p3-outcome "${{ steps.p3.outcome }}" --p4-outcome "${{ steps.p4.outcome }}"
+            --source-sha "4a0562da693006ba416254073cf0f4425cf996db" --p3-outcome "${{ steps.p3.outcome }}" --p4-outcome "${{ steps.p4.outcome }}"
       - name: Archive each arm independently
         if: always()
         uses: actions/upload-artifact@v4
