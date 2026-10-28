@@ -153,6 +153,10 @@ def test_manufactured_reference_pass_and_controls(tmp_path: Path) -> None:
     with pytest.raises(ReferenceContractError, match="SHA256 mismatch"):
         compare_case(tmp_path)
 
+    # Restore authentic bytes before testing the independent rate ledger.
+    _write_bytes(tmp_path, "raw-bolsig-output.txt",
+                 b"SYNTHETIC GOLDEN ORACLE, NOT FROM BOLSIG+\n")
+
     # An altered source-to-rate ledger cannot silently omit a reaction.
     case["source"]["rate_process_ids"] = ["Ar:excitation:1"]
     _write_json(tmp_path, "case.json", case)
