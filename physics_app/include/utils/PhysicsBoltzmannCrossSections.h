@@ -64,10 +64,16 @@ ImportedElasticExcitation prepareElasticExcitation(
     const CollisionFile & file,
     const std::map<std::string, double> & target_fractions,
     double max_energy_eV,
-    bool enable_reversible = false);
+    bool enable_reversible = false,
+    const std::vector<CollisionRecord> & additional_scattering = {});
 
 // Explicit whole-set import for M6 particle-changing physics. This function
 // must not discard IONIZATION or ATTACHMENT to satisfy the M5-only projector.
+// In M6b3 all channels contribute to sigma_m exactly once: an EFFECTIVE
+// record supplies total field scattering while its elastic recoil residual
+// subtracts excitation + ionization + attachment; an ELASTIC record gets
+// those channels added to an independent field-scattering table.
+// The source must explicitly include every physical process used.
 struct ImportedGrowthPhysics
 {
   std::vector<ElasticTarget> targets;
