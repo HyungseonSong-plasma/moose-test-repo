@@ -43,11 +43,18 @@ struct ElasticInput
   double max_energy_eV = 10.0;
   std::size_t cells = 400;
   std::vector<ElasticTarget> targets;
+  // Zero is DC. Nonzero is the BOLSIG+ reduced AC angular frequency omega/N
+  // in rad m^3/s; reduced field is RMS for AC, DC-compatible as q -> 0.
+  double reduced_angular_frequency_m3_per_s = 0.0;
+  // Optional conservative non-uniform cell boundaries [0,...,Emax] eV.
+  // Empty keeps the historical uniform grid exactly. Length = cells+1.
+  std::vector<double> energy_cell_edges_eV;
 };
 
 struct ElasticResult
 {
   std::vector<double> energy_eV; // energy cell centers
+  std::vector<double> energy_cell_edges_eV; // actual finite-volume edges
   std::vector<double> eepf_eV_minus_3_halves; // f0: integral(sqrt(e)*f0 de)=1
   double mean_energy_eV = 0.0;
   double normalization = 0.0;
