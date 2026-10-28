@@ -20,6 +20,7 @@ EXPECTED = {
     "example3_R33", "example3_R35", "example4_R1",
     "example4_R1_Emax2x", "example4_R1_Emax4x", "example4_R1_Emax8x",
     "example4_R1_SYNTHETIC_N2_1x", "example4_R1_SYNTHETIC_N2_2x",
+    "example4_R1_SYNTHETIC_N2_1x_GRID2x",
 }
 
 
@@ -133,6 +134,36 @@ def create_ci_eepf(out: Path) -> dict:
     cooling_2x = manifest["runs"]["example4_R1_SYNTHETIC_N2_2x"]["mean_energy_eV"]
     if not (0 < cooling_1x < base and 0 < cooling_2x < twice):
         raise RuntimeError("native Boltzmann N2 inelastic cooling discriminator failed")
+    # Conservative remap from the 400-cell EEPF onto the 200-cell grid.
+    # Both grids span the identical energy interval. Since the exported f0
+    # is piecewise constant, each coarse value equals the number-mass
+    # weighted average of the two child cells (not their arithmetic mean).
+    fine_run_id = "example4_R1_SYNTHETIC_N2_1x_GRID2x"
+    coarse_run_id = "example4_R1_SYNTHETIC_N2_1x"
+    fine = next(run for run in runs if run["id"] == fine_run_id)
+    coarse = next(run for run in runs if run["id"] == coarse_run_id)
+    if fine["cells"] != 2 * coarse["cells"] or fine["max_energy_eV"] != coarse["max_energy_eV"]:
+        raise RuntimeError("synthetic N2 grid-refinement identity mismatch")
+    fine_h = fine["max_energy_eV"] / fine["cells"]
+    coarse_h = coarse["max_energy_eV"] / coarse["cells"]
+    weighted_l1 = 0.0
+    for i, coarse_f in enumerate(coarse["eepf_eV_minus_3_halves"]):
+        for k in (2 * i, 2 * i + 1):
+            left, right = k * fine_h, (k + 1) * fine_h
+            mass = (2.0 / 3.0) * (right**1.5 - left**1.5)
+            weighted_l1 += mass * abs(fine["eepf_eV_minus_3_halves"][k] - coarse_f)
+    refined_mean = fine["mean_energy_eV"]
+    mean_relative = abs(refined_mean - cooling_1x) / refined_mean
+    if not (math.isfinite(weighted_l1) and math.isfinite(mean_relative)
+            and weighted_l1 >= 0 and mean_relative >= 0):
+        raise RuntimeError("nonfinite N2 energy-grid convergence metric")
+    # These tolerances are declared scientific diagnostics; crossing either
+    # reports HOLD, rather than changing the collision operator or pretending
+    # an accurate solution. Regression always preserves the measured numbers.
+    mean_limit, l1_limit = 0.02, 0.05
+    grid_status = ("SYNTHETIC_N2_GRID_REFINEMENT_PASS"
+                   if mean_relative < mean_limit and weighted_l1 < l1_limit
+                   else "SYNTHETIC_N2_GRID_REFINEMENT_HOLD")
     manifest["synthetic_n2_excitation_diagnostic"] = {
         "model": COOLING_MODEL,
         "channels": ["invented vibration threshold 0.3 eV, sigma 5e-20 m2",
@@ -142,6 +173,17 @@ def create_ci_eepf(out: Path) -> dict:
         "elastic_only_2x_mean_energy_eV": twice,
         "cooling_2x_mean_energy_eV": cooling_2x,
         "classification": "SYNTHETIC_COOLING_OPERATOR_TEST_NOT_BOLSIG_PARITY",
+        "grid_refinement": {
+            "fixed_max_energy_eV": coarse["max_energy_eV"],
+            "coarse_cells": coarse["cells"],
+            "fine_cells": fine["cells"],
+            "refined_mean_energy_eV": refined_mean,
+            "mean_relative_error": mean_relative,
+            "eepf_weighted_l1_error": weighted_l1,
+            "mean_relative_tolerance": mean_limit,
+            "eepf_weighted_l1_tolerance": l1_limit,
+            "classification": grid_status,
+        },
     }
     (out / "manifest.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
     return manifest
