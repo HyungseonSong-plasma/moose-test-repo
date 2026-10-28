@@ -8,6 +8,7 @@ import pytest
 from physics_app.ci.bolsig_native_scalar_audit import (
     NativeBolsigError,
     parse_native_scalar_reference,
+    compare_native_collision_ledger,
 )
 
 
@@ -102,3 +103,37 @@ def test_corrupted_native_data_or_missing_input_controls_rejected(tmp_path: Path
     script.write_text("SAVERESULTS\nunrelated.dat\n1\n1\n1\n1\n0\n0\n0\n0\n1\nEND\n")
     with pytest.raises(NativeBolsigError, match="not found"):
         parse_native_scalar_reference(native, script)
+
+
+def test_external_collision_process_ledger_matches_native_census_not_parity(tmp_path: Path) -> None:
+    native, _ = _native(tmp_path)
+    source = tmp_path / "SYNTHETIC-NOT-LXCAT.txt"
+    content = (
+        "SYNTHETIC AUTHOR-OWNED COLLISION SOURCE, NO REAL GAS DATA\n"
+        "EFFECTIVE\nAr\n1.37e-5\ninvented\n------\n0 6e-20\n20 6e-20\n------\n"
+        "ELASTIC\nHe\n1.37e-4\ninvented\n------\n0 5e-20\n20 5e-20\n------\n"
+        "EXCITATION\nN2 -> N2-test\n0.2\ninvented\n------\n"
+        "0 0\n0.2 0\n20 1e-20\n------\n"
+        "IONIZATION\nO2 -> O2+\n12.06\ninvented\n------\n"
+        "0 0\n12.06 0\n20 2e-20\n------\n"
+        "ATTACHMENT\nO2 -> O2-\ninvented\n------\n0 0\n20 1e-20\n------\n"
+    )
+    source.write_text(content, encoding="utf-8")
+    ledger = compare_native_collision_ledger(native, source)
+    assert ledger["status"] == "PROCESS_CENSUS_MATCH_PHYSICAL_PARITY_NOT_ESTABLISHED"
+    assert ledger["native_process_count"] == ledger["source_process_count"] == 5
+    assert ledger["scientific_acceptance"].startswith("HOLD_")
+    assert ledger["source_model_gaps"]  # No complete physical operator claimed.
+
+    source.write_text(content.split("ATTACHMENT\nO2 -> O2-")[0], encoding="utf-8")
+    missing = compare_native_collision_ledger(native, source)
+    assert missing["status"] == "HOLD_SOURCE_NATIVE_PROCESS_CENSUS_MISMATCH"
+    assert missing["missing_source_processes_by_type"] == {"O2": {"ATTACHMENT": 1}}
+
+    source.write_text(content + (
+        "EXCITATION\nN2 -> extra\n1\ninvented\n------\n"
+        "0 0\n20 1e-20\n------\n"
+    ), encoding="utf-8")
+    extra = compare_native_collision_ledger(native, source)
+    assert extra["status"] == "HOLD_SOURCE_NATIVE_PROCESS_CENSUS_MISMATCH"
+    assert extra["extra_source_processes_by_type"] == {"N2": {"EXCITATION": 1}}
