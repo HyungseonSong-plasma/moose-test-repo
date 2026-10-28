@@ -148,14 +148,27 @@ def audit_local_collision_file(
     reasons: list[str] = []
     if not processes:
         reasons.append("NO_RELEVANT_PROCESSES")
+    any_particle_changing = any(
+        r["kind"] in {"IONIZATION", "ATTACHMENT"} for r in processes
+    )
     for gas in species:
-        kinds = {r["kind"] for r in processes if r["target"] == gas}
-        if not kinds:
+        local = [r for r in processes if r["target"] == gas]
+        providers = [r for r in local
+                     if r["kind"] in {"ELASTIC", "EFFECTIVE", "MOMENTUM"}]
+        if not local:
             reasons.append(f"MISSING_SPECIES:{gas}")
-        if "ELASTIC" not in kinds:
-            reasons.append(f"MISSING_ELASTIC_MOMENTUM:{gas}")
-        if "EFFECTIVE" in kinds or "MOMENTUM" in kinds:
-            reasons.append(f"EFFECTIVE_MOMENTUM_NOT_SUPPORTED:{gas}")
+        if not providers:
+            reasons.append(f"MISSING_MOMENTUM_PROVIDER:{gas}")
+        elif len(providers) != 1:
+            reasons.append(f"DUPLICATE_MOMENTUM_PROVIDER:{gas}")
+        if (any(r["kind"] in {"EFFECTIVE", "MOMENTUM"} for r in providers)
+                and any_particle_changing):
+            # S7's EFFECTIVE-to-elastic reconstruction only applies when
+            # excitation is the full nonelastic process inventory. The
+            # M6b temporal-growth importer still rejects EFFECTIVE alongside
+            # ionization or attachment. This is not a statement that the
+            # user's source data are physically incorrect.
+            reasons.append(f"EFFECTIVE_GROWTH_COUPLING_UNSUPPORTED:{gas}")
     for record in processes:
         line = record["source_line"]
         kind = record["kind"]
@@ -168,6 +181,10 @@ def audit_local_collision_file(
             record["max_energy_eV"] < required_energy_eV
         ):
             reasons.append(f"CROSS_SECTION_COVERAGE_GAP:line{line}")
+        if (required_energy_eV is not None
+                and record["threshold_eV"] is not None
+                and record["threshold_eV"] >= required_energy_eV):
+            reasons.append(f"INELASTIC_THRESHOLD_OUTSIDE_GRID:line{line}")
         if record["reversible"]:
             reasons.append(f"REVERSE_POPULATION_MODEL_REVIEW:line{line}")
     # Preserve only metadata, never raw table entries in the result.
