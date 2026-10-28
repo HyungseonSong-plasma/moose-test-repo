@@ -220,10 +220,20 @@ def compare_case(directory: Path) -> dict[str, Any]:
             if error > thresholds["transport_relative"]:
                 failures.append("transport:" + key)
 
+    # Mere SHA256 matching proves file identity, NOT that someone faithfully
+    # transcribed the raw BOLSIG+ output into canonical cell-average EEPF
+    # and its reaction/transport coefficients. Until a tested independent
+    # native-output converter exists, never issue a scientific NUMERIC_PASS.
     synthetic = source["database"] == "AUTHOR-SYNTHETIC"
-    prefix = "BOLSIG_REFERENCE_SELFTEST" if synthetic else "BOLSIG_REFERENCE_NUMERIC"
+    decision = ("BOLSIG_REFERENCE_SELFTEST_" + ("PASS" if not failures else "FAIL")
+                if synthetic else
+                "BOLSIG_REFERENCE_UNVERIFIED_" +
+                ("MATCH" if not failures else "MISMATCH"))
     return {
-        "decision": prefix + ("_PASS" if not failures else "_FAIL"),
+        "decision": decision,
+        "scientific_acceptance": ("SELFTEST_ONLY" if synthetic else
+                                  "HOLD_UNVERIFIED_RAW_TO_CANONICAL_CONVERSION"),
+        "raw_to_canonical_audit_performed": False,
         "failures": failures,
         "mean_energy_relative_error": mean_error,
         "eepf_weighted_l1_error": eepf_error,
@@ -247,7 +257,8 @@ def main() -> int:
         print("BOLSIG_REFERENCE_PREFLIGHT_HOLD: " + str(exc))
         return 2
     print(json.dumps(result, sort_keys=True))
-    return 0 if result["decision"].endswith("_PASS") else 1
+    return (2 if result["scientific_acceptance"].startswith("HOLD_") else
+            0 if result["decision"].endswith("_PASS") else 1)
 
 
 if __name__ == "__main__":
