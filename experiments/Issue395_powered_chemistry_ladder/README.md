@@ -84,6 +84,49 @@ No P2 physics-opt or P3 100-us production-path result has been asserted.
 The model's volumetric O(1D) quenching/return-to-O(3P) coverage must be
 audited before claiming credible O(1D) density or O(3P) response.
 
+### 400/1000 W mixed-only DISS replacement (independent two-arm experiment)
+
+User-selected controlled comparison: at 400 W and 1000 W, **switch the
+single active electron-impact O2 dissociation slot from**
+`e + O2 -> e + 2O(3P)` **to**
+`e + O2 -> e + O(3P) + O(1D)`. Do not enable both.
+
+The canonical `issue397_l1_power_scan_replay.sh` now accepts
+`DISS_CHANNEL=ground` (default, unchanged) or
+`DISS_CHANNEL=mixed` (new). Examples:
+
+```bash
+export DISS_CHANNEL=mixed
+bash experiments/Issue395_powered_chemistry_ladder/issue397_l1_power_scan_replay.sh prepare 400
+bash experiments/Issue395_powered_chemistry_ladder/issue397_l1_power_scan_replay.sh build 400
+bash experiments/Issue395_powered_chemistry_ladder/issue397_l1_power_scan_replay.sh check 400
+bash experiments/Issue395_powered_chemistry_ladder/issue397_l1_power_scan_replay.sh solve 400
+bash experiments/Issue395_powered_chemistry_ladder/issue397_l1_power_scan_replay.sh audit 400
+```
+
+Repeat for 1000 W from a separate independent checkout. Source inputs use the
+successful **nonzero initial O** composition, untouched sheath/walls, identical
+Graded L1/27 wafer-face mesh, PID and 460-step 100-us time grid; only the
+chosen dissociation overlay changes. The output directory gets the suffix
+`_mixed_o3p_o1d` to prevent confusion with historical ground-state data.
+
+For new channels the generated DISS overlay owns one and only one
+`R_diss_O2_mixed` with `+0.016R` O(3P),
+`+0.016R` O(1D), `-0.032R` constrained O2 mass, and
+`-8.4R` electron energy. The generated base input must
+not define a second ground-state dissociation owner.
+P0 guards check exact owner names (not substring matching),
+the two independently solved product variables, numeric rates, and
+mass/oxygen/electron-energy invariants.
+P5 reuses `analyze_ground_state_power_scan.py --channel mixed` for
+O/Os creation/consumption, RF power and native D1.
+
+**Science HOLD:** This is a model-regime change, not a power-only comparison.
+The O(1D) quenching and electronic-state kinetics are not yet source-complete;
+the Maxwellian rate fit is not independently cross-section/EEDF validated.
+The numerical result must not be promoted to a chemically validated
+prediction solely because the job succeeds.
+
 ## Ground-state O2 dissociation rate correction (bounded successor, 2026-10-26)
 
 The canonical generator `build_o2_dissociation_overlay.py` now targets **only**
