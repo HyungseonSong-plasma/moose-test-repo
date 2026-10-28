@@ -12,19 +12,23 @@ constexpr double qe = 1.602176634e-19;
 constexpr double me = 9.1093837139e-31;
 const double prefactor = std::sqrt(2.0 * qe / me) / 3.0;
 
+double interpolate(const std::vector<double> & energy,
+                   const std::vector<double> & sigma, double e)
+{
+  const auto it = std::upper_bound(energy.begin(), energy.end(), e);
+  if (it == energy.begin())
+    return sigma.front();
+  if (it == energy.end())
+    return sigma.back();
+  const std::size_t right = static_cast<std::size_t>(it - energy.begin());
+  const std::size_t left = right - 1;
+  const double alpha = (e - energy[left]) / (energy[right] - energy[left]);
+  return (1.0 - alpha) * sigma[left] + alpha * sigma[right];
+}
+
 double interpolate(const ElasticTarget & t, double e)
 {
-  const auto it = std::upper_bound(t.energy_eV.begin(), t.energy_eV.end(), e);
-  if (it == t.energy_eV.begin())
-    return t.momentum_transfer_m2.front();
-  if (it == t.energy_eV.end())
-    return t.momentum_transfer_m2.back();
-  const std::size_t right = static_cast<std::size_t>(it - t.energy_eV.begin());
-  const std::size_t left = right - 1;
-  const double alpha = (e - t.energy_eV[left]) /
-                       (t.energy_eV[right] - t.energy_eV[left]);
-  return (1.0 - alpha) * t.momentum_transfer_m2[left] +
-         alpha * t.momentum_transfer_m2[right];
+  return interpolate(t.energy_eV, t.momentum_transfer_m2, e);
 }
 
 double excitationAt(const ExcitationChannel & channel, double e)
@@ -58,12 +62,17 @@ ElasticTransportMoments evaluateExcitationTransportMoments(
   {
     if (!(std::isfinite(t.mole_fraction) && t.mole_fraction > 0.0) ||
         t.energy_eV.size() < 2 || t.momentum_transfer_m2.size() != t.energy_eV.size() ||
+        (!t.field_momentum_transfer_m2.empty() &&
+         t.field_momentum_transfer_m2.size() != t.energy_eV.size()) ||
         t.energy_eV.front() > 0.0 || t.energy_eV.back() < input.max_energy_eV)
       throw std::invalid_argument("Boltzmann M7: invalid elastic collision table");
     fractions += t.mole_fraction;
     for (std::size_t i = 0; i < t.energy_eV.size(); ++i)
       if (!std::isfinite(t.energy_eV[i]) || !std::isfinite(t.momentum_transfer_m2[i]) ||
           t.momentum_transfer_m2[i] < 0.0 ||
+          (!t.field_momentum_transfer_m2.empty() &&
+           (!std::isfinite(t.field_momentum_transfer_m2[i]) ||
+            t.field_momentum_transfer_m2[i] < 0.0)) ||
           (i && !(t.energy_eV[i] > t.energy_eV[i - 1])))
         throw std::invalid_argument("Boltzmann M7: invalid momentum cross-section interpolation");
   }
@@ -108,12 +117,20 @@ ElasticTransportMoments evaluateExcitationTransportMoments(
   {
     double value = 0.0;
     for (const auto & target : input.targets)
-      value += target.mole_fraction * interpolate(target, energy);
+      value += target.mole_fraction *
+          (target.field_momentum_transfer_m2.empty() ?
+           interpolate(target, energy) :
+           interpolate(target.energy_eV,
+                       target.field_momentum_transfer_m2, energy));
     for (const auto & ch : excitations)
     {
       const auto lower = std::find_if(input.targets.begin(), input.targets.end(),
           [&ch](const ElasticTarget & t) { return t.name == ch.target_name; });
-      if (energy >= ch.threshold_eV)
+      // When full source scattering is already in field_momentum, never
+      // add this excitation again. This preserves M7b behavior for classic
+      // ELASTIC inputs with no supplied complete first-harmonic table.
+      if (energy >= ch.threshold_eV &&
+          lower->field_momentum_transfer_m2.empty())
         value += lower->mole_fraction * excitationAt(ch, energy);
       if (!ch.upper_state_target_name.empty() &&
           energy > 0.0 && energy + ch.threshold_eV <= input.max_energy_eV)
