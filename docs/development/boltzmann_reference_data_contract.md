@@ -182,3 +182,16 @@ M6a regression covers +1/-1 electron events, independent analytical constant-cro
 **M6b mandatory remaining gate:** self-consistently solve the full energy-space elastic+excitation+superelastic+ionization+attachment temporal-growth generalized eigenvalue problem with the mass metric M, independent eigenpair residual and growth-rate convergence, and independently captured BOLSIG+ temporal-growth parity. BOLSIG+ spatial growth (SST) is a separate model; never label frozen-EEDF rates as SST or temporal-growth EEPF validation. Do not merge or promote production Oxygen ICP coefficients until real source provenance and P2/P3 physics acceptance.
 
 References: Hagelaar & Pitchford (2005), DOI:10.1088/0963-0252/14/4/011; BOLSIG+ documentation 07/2024, growth and ionization energy-sharing options: https://www.bolsig.laplace.univ-tlse.fr/wp-content/uploads/2024/07/bolsigdoc0724.pdf .
+
+## M6b1: bounded temporal-growth generalized eigenproblem (experimental)
+
+Unlike M6a, the independent PhysicsBoltzmannTemporalGrowth C++ module changes the EEPF self-consistently for **elastic-only** DC momentum/energy transport and ionization/attachment (no excitation or superelastic channels). It solves:
+
+    (T - Q) f0 = -lambda M f0
+    sum_i M_i f0_i = 1
+
+with elastic two-term Scharfetter–Gummel flux matrix T, M6a ionization/attachment gain/loss matrix Q and cell mass M_i = integral sqrt(epsilon) d(epsilon). The growth eigenvalue lambda has reduced units m^3/s (physical temporal electron density growth per time = N * lambda). The ionization energy sharing remains the explicit equal sharing option.
+
+A bounded dense shifted-inverse iteration first factors (T-Q+s M) using partial-pivoted LU and then applies the inverse repeatedly. Shift s exceeds an a priori maximum ionization source per mass to keep a positive resolvent. Iterations normalize f0 and check convergence. After solving, the code independently recomputes the actual growth from reaction rate moments and validates the *original generalized eigen-equation residual*, including the mass term; a normalized distribution without a correct eigen residual does not count as success. Numerically positive electron growth, negative attachment growth, mixed signed growth and the weak-growth elastic-only limit are acceptance controls.
+
+**Severe limitations:** maximum 128 cells, O(N^3) dense factorization and O(N^2) inverse iterations; no extrapolation, sparse growth eigensolver, excitation/superelastic coupling, e-e collisions, field frequency, diffusion-gradient growth, or real Ar/O2 collision set. This implementation is not the production BOLSIG+ temporal growth mode and does NOT supersede the M6a explicit frozen-growth diagnostic. No PhysicsApp coefficient material is changed. This path needs independent boundary/energy-ceiling sensitivity and pinned BOLSIG+ reference-case parity.
