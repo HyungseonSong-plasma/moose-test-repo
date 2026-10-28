@@ -408,7 +408,13 @@ int main(int argc, char ** argv)
                 << ",\"energy_diffusion_times_N_per_m_s\":"
                 << transport.reduced_energy_diffusion_N_per_m_s
                 << ",\"tail_ratio\":"
-                << transport.high_energy_tail_ratio << '}';
+                << transport.high_energy_tail_ratio;
+      if (reduced_angular_frequency > 0.0)
+        std::cout << ",\"ac_real_mobility_times_N_per_m_V_s\":"
+                  << transport.ac_real_mobility_N_per_m_V_s
+                  << ",\"ac_imag_mobility_times_N_per_m_V_s\":"
+                  << transport.ac_imag_mobility_N_per_m_V_s;
+      std::cout << '}';
       if (coupled_growth_transport)
         std::cout << ",\"transport_scattering_source\":"
                      "\"FULL_EFFECTIVE_OR_ELASTIC_PLUS_ALL_INELASTIC\"";
