@@ -1,0 +1,117 @@
+"""Run the actual development Boltzmann C++ solver in CI and retain its EEPF.
+
+These are *manufactured elastic-only controls*, NOT real-gas BOLSIG parity.
+Only source-free numerical vectors and metadata are uploaded as CI artifacts.
+"""
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import math
+from pathlib import Path
+import shutil
+import subprocess
+
+MODEL = "SYNTHETIC_ELASTIC_ONLY_NOT_BOLSIG_PARITY"
+EXPECTED = {
+    "example1_R21", "example2_R1_DC", "example3_R31",
+    "example3_R33", "example3_R35", "example4_R1",
+}
+
+
+def create_ci_eepf(out: Path) -> dict:
+    if out.exists() and any(out.iterdir()):
+        raise RuntimeError("refusing to overwrite nonempty EEPF output directory")
+    compiler = shutil.which("g++")
+    if not compiler:
+        raise RuntimeError("g++ required to run native Boltzmann in CI")
+    root = Path(__file__).resolve().parents[2]
+    build_dir = out.parent / (out.name + "_bin")
+    build_dir.mkdir(parents=True, exist_ok=True)
+    binary = build_dir / "boltzmann_ci_eepf"
+    cmd = [
+        compiler, "-std=c++17", "-O2", "-Wall", "-Wextra", "-Werror",
+        "-pedantic", f"-I{root / 'physics_app/include/utils'}",
+        str(root / "physics_app/src/utils/PhysicsBoltzmannElasticSolver.C"),
+        str(root / "physics_app/ci/boltzmann_ci_eepf_controls.C"),
+        "-o", str(binary),
+    ]
+    built = subprocess.run(cmd, capture_output=True, text=True)
+    if built.returncode:
+        raise RuntimeError("native solver CI compile failed\n" + built.stderr)
+    executed = subprocess.run([str(binary)], capture_output=True, text=True)
+    if executed.returncode:
+        raise RuntimeError("native solver CI execution failed\n" + executed.stderr)
+    try:
+        runs = [json.loads(line) for line in executed.stdout.splitlines() if line.strip()]
+    except json.JSONDecodeError as exc:
+        raise RuntimeError("native C++ solver output is not valid JSON") from exc
+    if len(runs) != len(EXPECTED) or {r["id"] for r in runs} != EXPECTED:
+        raise RuntimeError("native solver EEPF case inventory incomplete")
+    out.mkdir(parents=True, exist_ok=True)
+    manifest = {
+        "status": "CI_NATIVE_SOLVER_EXECUTED_DEVELOPMENT_ONLY",
+        "scientific_acceptance": "HOLD_REAL_COLLISION_PROCESS_EQUIVALENCE",
+        "model": MODEL,
+        "source": "first-party, invented constant elastic cross sections",
+        "process_limitations": [
+            "EFFECTIVE momentum cross sections unsupported",
+            "no EXCITATION/IONIZATION/ATTACHMENT in these diagnostic runs",
+            "RF reduced angular frequency (Example 2 runs 2+) unsupported",
+            "four-component example4 is NOT a validated physical match",
+        ],
+        "runs": {},
+    }
+    for run in runs:
+        if run["model"] != MODEL:
+            raise RuntimeError("native solver attempted to relabel physics model")
+        n = run["cells"]
+        eps = run["energy_eV"]
+        f = run["eepf_eV_minus_3_halves"]
+        if not (len(eps) == len(f) == n and n > 10 and
+                all(math.isfinite(v) and v >= 0.0 for v in f)):
+            raise RuntimeError(f"invalid EEPF vector for {run['id']}")
+        h = run["max_energy_eV"] / n
+        if any(abs(eps[i] - (i + 0.5) * h) > 1e-10
+               for i in range(n)):
+            raise RuntimeError(f"EEPF coordinate mismatch for {run['id']}")
+        integral = sum(f[i] * (2 / 3) *
+                       (((i + 1) * h)**1.5 - (i * h)**1.5)
+                       for i in range(n))
+        if abs(integral - 1.0) > 1e-10:
+            raise RuntimeError(f"CI EEPF not normalized for {run['id']}: {integral}")
+        if not (math.isfinite(run["mean_energy_eV"]) and
+                0 < run["mean_energy_eV"] < run["max_energy_eV"]):
+            raise RuntimeError("native solver reported nonphysical mean energy")
+        if abs(sum(run["mixture"].values()) - 1) > 1e-12:
+            raise RuntimeError("native solver returned nonunit gas mixture")
+        filename = run["id"] + "_native_eepf.json"
+        raw = (json.dumps(run, separators=(",", ":"), sort_keys=True) + "\n").encode()
+        (out / filename).write_bytes(raw)
+        manifest["runs"][run["id"]] = {
+            "file": filename,
+            "sha256": hashlib.sha256(raw).hexdigest(),
+            "mean_energy_eV": run["mean_energy_eV"],
+            "reduced_field_Td": run["reduced_field_Td"],
+            "model": MODEL,
+            "normalization_integral": integral,
+        }
+    (out / "manifest.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
+    return manifest
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--out", type=Path, required=True)
+    args = parser.parse_args()
+    manifest = create_ci_eepf(args.out)
+    print("BOLTZMANN_CI_NATIVE_SOLVER_EXPORTED=" + str(len(manifest["runs"])))
+    print("BOLTZMANN_CI_SCIENCE_STATUS=" + manifest["scientific_acceptance"])
+    for run, evidence in sorted(manifest["runs"].items()):
+        print(f"BOLTZMANN_CI_NATIVE_MEAN_E_EV {run} {evidence['mean_energy_eV']:.8g}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
