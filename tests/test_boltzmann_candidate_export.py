@@ -39,6 +39,7 @@ def test_bolsig_candidate_export_from_external_text_file(tmp_path: Path) -> None
         compiler, "-std=c++17", "-O2", "-Wall", "-Wextra", "-Werror", "-pedantic",
         f"-I{root / 'physics_app/include/utils'}",
         str(root / "physics_app/src/utils/PhysicsBoltzmannElasticSolver.C"),
+        str(root / "physics_app/src/utils/PhysicsBoltzmannGrowth.C"),
         str(root / "physics_app/src/utils/PhysicsBoltzmannCrossSections.C"),
         str(root / "physics_app/ci/boltzmann_candidate_export.C"),
         "-o", str(binary),
@@ -90,6 +91,7 @@ def test_reversible_candidate_requires_opt_in_and_explicit_upper_population(tmp_
         compiler, "-std=c++17", "-O2", "-Wall", "-Wextra", "-Werror", "-pedantic",
         f"-I{root / 'physics_app/include/utils'}",
         str(root / "physics_app/src/utils/PhysicsBoltzmannElasticSolver.C"),
+        str(root / "physics_app/src/utils/PhysicsBoltzmannGrowth.C"),
         str(root / "physics_app/src/utils/PhysicsBoltzmannCrossSections.C"),
         str(root / "physics_app/ci/boltzmann_candidate_export.C"),
         "-o", str(binary),
@@ -131,3 +133,54 @@ def test_reversible_candidate_requires_opt_in_and_explicit_upper_population(tmp_
                               capture_output=True, text=True)
     assert no_upper.returncode == 2
     assert "PREFLIGHT_HOLD" in no_upper.stderr
+
+
+def test_frozen_particle_growth_diagnostic_does_not_claim_selfconsistent_eepf(tmp_path: Path) -> None:
+    compiler = shutil.which("g++")
+    assert compiler
+    root = Path(__file__).resolve().parents[1]
+    binary = tmp_path / "candidate_growth"
+    build = subprocess.run([
+        compiler, "-std=c++17", "-O2", "-Wall", "-Wextra", "-Werror", "-pedantic",
+        f"-I{root / 'physics_app/include/utils'}",
+        str(root / "physics_app/src/utils/PhysicsBoltzmannElasticSolver.C"),
+        str(root / "physics_app/src/utils/PhysicsBoltzmannGrowth.C"),
+        str(root / "physics_app/src/utils/PhysicsBoltzmannCrossSections.C"),
+        str(root / "physics_app/ci/boltzmann_candidate_export.C"),
+        "-o", str(binary),
+    ], capture_output=True, text=True)
+    assert build.returncode == 0, build.stdout + build.stderr
+
+    source = tmp_path / "synthetic_growth.txt"
+    source.write_text(
+        "SYNTHETIC ONLY\n"
+        "ELASTIC\nAr\n1.37e-5\ninvented, not LXCat\n------\n0 5e-20\n2 5e-20\n------\n"
+        "ELASTIC\nO2\n3.4e-5\ninvented, not LXCat\n------\n0 6e-20\n2 6e-20\n------\n"
+        "EXCITATION\nAr -> Ar_exc\n0.25\ninvented\n------\n"
+        "0 0\n0.25 0\n2 1e-20\n------\n"
+        "IONIZATION\nAr -> Ar_plus\n0.65\ninvented\n------\n"
+        "0 0\n0.65 0\n2 1e-20\n------\n"
+        "ATTACHMENT\nO2 -> O2_minus\ninvented\n------\n"
+        "0 0.2e-20\n2 0.2e-20\n------\n",
+        encoding="utf-8",
+    )
+    digest = hashlib.sha256(source.read_bytes()).hexdigest()
+    args = [str(binary), str(source), digest, "0.1", "3000", "2", "100",
+            "Ar=0.7", "O2=0.3"]
+    denied = subprocess.run(args, capture_output=True, text=True)
+    assert denied.returncode == 2
+    assert "unsupported" in denied.stderr
+
+    permitted = subprocess.run(args + ["--diagnose-frozen-growth"],
+                               capture_output=True, text=True)
+    assert permitted.returncode == 0, permitted.stdout + permitted.stderr
+    obj = json.loads(permitted.stdout)
+    assert obj["conditions"]["model"] == "elastic_excitation_frozen_growth_diagnostic"
+    assert "frozen_eepf_reduced_temporal_growth_m3_per_s" in obj
+    assert obj["rates_m3_per_s"]["Ar:ionization:1"] > 0
+    assert obj["rates_m3_per_s"]["O2:attachment:1"] > 0
+    expected = (0.7 * obj["rates_m3_per_s"]["Ar:ionization:1"] -
+                0.3 * obj["rates_m3_per_s"]["O2:attachment:1"])
+    assert abs(expected - obj["frozen_eepf_reduced_temporal_growth_m3_per_s"]) < (
+        1e-12 * (abs(expected) + 1e-30)
+    )
