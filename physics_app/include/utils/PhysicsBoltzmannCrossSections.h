@@ -1,6 +1,7 @@
 #pragma once
 
 #include "PhysicsBoltzmannElasticSolver.h"
+#include "PhysicsBoltzmannGrowth.h"
 
 #include <cstddef>
 #include <istream>
@@ -54,6 +55,22 @@ struct ImportedElasticExcitation
 };
 
 ImportedElasticExcitation prepareElasticExcitation(
+    const CollisionFile & file,
+    const std::map<std::string, double> & target_fractions,
+    double max_energy_eV,
+    bool enable_reversible = false);
+
+// Explicit whole-set import for M6 particle-changing physics. This function
+// must not discard IONIZATION or ATTACHMENT to satisfy the M5-only projector.
+struct ImportedGrowthPhysics
+{
+  std::vector<ElasticTarget> targets;
+  std::vector<ExcitationChannel> excitation_channels;
+  std::vector<IonizationChannel> ionization_channels;
+  std::vector<AttachmentChannel> attachment_channels;
+};
+
+ImportedGrowthPhysics prepareGrowthPhysics(
     const CollisionFile & file,
     const std::map<std::string, double> & target_fractions,
     double max_energy_eV,
