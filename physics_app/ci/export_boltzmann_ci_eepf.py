@@ -17,6 +17,7 @@ MODEL = "SYNTHETIC_ELASTIC_ONLY_NOT_BOLSIG_PARITY"
 EXPECTED = {
     "example1_R21", "example2_R1_DC", "example3_R31",
     "example3_R33", "example3_R35", "example4_R1",
+    "example4_R1_Emax2x", "example4_R1_Emax4x", "example4_R1_Emax8x",
 }
 
 
@@ -97,6 +98,29 @@ def create_ci_eepf(out: Path) -> dict:
             "model": MODEL,
             "normalization_integral": integral,
         }
+    # Domain truncation is a separate numerical gate. BOLSIG+ selected an
+    # energy ceiling where its tail had decayed; our purely elastic synthetic
+    # EEPF can remain large at the same ceiling. Never hide this in a plot.
+    base = manifest["runs"]["example4_R1"]["mean_energy_eV"]
+    twice = manifest["runs"]["example4_R1_Emax2x"]["mean_energy_eV"]
+    four = manifest["runs"]["example4_R1_Emax4x"]["mean_energy_eV"]
+    eight = manifest["runs"]["example4_R1_Emax8x"]["mean_energy_eV"]
+    increase_1x_to_2x = abs(twice - base) / twice
+    increase_4x_to_8x = abs(eight - four) / eight
+    if not (twice > base and four > twice and eight > four and
+            increase_1x_to_2x > 0.05 and increase_4x_to_8x < 1e-3):
+        raise RuntimeError(
+            "native Boltzmann Example4 cutoff ablation changed unexpectedly")
+    manifest["energy_cutoff_diagnostics"] = {
+        "example4_1x_mean_energy_eV": base,
+        "example4_2x_mean_energy_eV": twice,
+        "example4_4x_mean_energy_eV": four,
+        "example4_8x_mean_energy_eV": eight,
+        "relative_change_1x_to_2x": increase_1x_to_2x,
+        "relative_change_4x_to_8x": increase_4x_to_8x,
+        "classification": "1X_ENERGY_DOMAIN_TRUNCATION_HOLD",
+        "note": "fixed h, identical synthetic collision physics; NOT BOLSIG+ parity",
+    }
     (out / "manifest.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
     return manifest
 
