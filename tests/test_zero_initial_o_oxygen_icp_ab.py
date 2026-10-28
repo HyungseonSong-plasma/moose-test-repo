@@ -75,7 +75,7 @@ def test_preexisting_zero_initial_conditions_do_not_confuse_one_line_patch() -> 
         "    initial_condition = 0.10309278350515465\n",
         "    initial_condition = 0.0\n",
     )
-    assert updated.count("initial_condition = 0.0") == 3
+    assert updated.splitlines().count("    initial_condition = 0.0") == 3
 
 
 def test_o2_closure_reallocates_initial_mass_without_other_species_change() -> None:
