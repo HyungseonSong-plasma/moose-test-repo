@@ -61,6 +61,23 @@ def test_exactly_one_w_o_initial_line() -> None:
     assert "initial_condition = 0.051546391752577324" in modified
 
 
+def test_preexisting_zero_initial_conditions_do_not_confuse_one_line_patch() -> None:
+    # Actual generated ICP input contains many unrelated zero-valued ICs.
+    original = BASE.replace(
+        "  [w_O2s]\n",
+        "  [u]\n    initial_condition = 0.0\n  []\n"
+        "  [v]\n    initial_condition = 0.0\n  []\n"
+        "  [w_O2s]\n",
+    )
+    updated = module.change_generated_input(original)
+    module.verify_generated_input(updated)
+    assert updated == original.replace(
+        "    initial_condition = 0.10309278350515465\n",
+        "    initial_condition = 0.0\n",
+    )
+    assert updated.count("initial_condition = 0.0") == 3
+
+
 def test_o2_closure_reallocates_initial_mass_without_other_species_change() -> None:
     o2s = 0.051546391752577324
     os = 0.12371134020618557
