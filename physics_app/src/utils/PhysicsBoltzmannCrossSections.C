@@ -484,14 +484,37 @@ ImportedGrowthPhysics prepareGrowthPhysics(
     const CollisionFile & file,
     const std::map<std::string, double> & target_fractions,
     double max_energy_eV,
-    bool enable_reversible)
+    bool enable_reversible,
+    bool record_inactive_above_energy_ceiling)
 {
   if (file.records.empty())
     throw std::invalid_argument("Boltzmann M6: collision file contains no processes");
+  ImportedGrowthPhysics result;
+  const auto inactive = [&](const CollisionRecord & record)
+  {
+    return record_inactive_above_energy_ceiling &&
+           (record.kind == CollisionKind::Excitation ||
+            record.kind == CollisionKind::Ionization) &&
+           record.parameter >= max_energy_eV;
+  };
+  // Preserve the identity of all processes whose event thresholds cannot
+  // be reached inside the finite-domain Boltzmann equation. They have zero
+  // rate by physics, NOT because an unsupported process was silently deleted.
+  for (const auto & record : file.records)
+    if (inactive(record))
+    {
+      if (target_fractions.count(record.target) == 0)
+        throw std::invalid_argument(
+            "Boltzmann M6: inactive process target absent from mixture");
+      result.inactive_above_energy_ceiling.push_back(
+          {record.kind, record.target, record.source_line, record.parameter});
+    }
   CollisionFile existing;
   existing.header = file.header;
   for (const auto & record : file.records)
   {
+    if (inactive(record))
+      continue;
     if (record.kind == CollisionKind::Elastic ||
         record.kind == CollisionKind::Effective ||
         record.kind == CollisionKind::Excitation)
@@ -507,18 +530,19 @@ ImportedGrowthPhysics prepareGrowthPhysics(
   // mixture fractions and full [0,epsilon_max] source coverage.
   std::vector<CollisionRecord> changing;
   for (const auto & record : file.records)
-    if (record.kind == CollisionKind::Ionization ||
-        record.kind == CollisionKind::Attachment)
+    if (!inactive(record) &&
+        (record.kind == CollisionKind::Ionization ||
+         record.kind == CollisionKind::Attachment))
       changing.push_back(record);
   const auto m5 = prepareElasticExcitation(
       existing, target_fractions, max_energy_eV, enable_reversible, changing);
-  ImportedGrowthPhysics result;
   result.targets = m5.targets;
   result.excitation_channels = m5.channels;
   for (const auto & record : file.records)
   {
-    if (record.kind != CollisionKind::Ionization &&
-        record.kind != CollisionKind::Attachment)
+    if (inactive(record) ||
+        (record.kind != CollisionKind::Ionization &&
+         record.kind != CollisionKind::Attachment))
       continue;
     const auto target = target_fractions.find(record.target);
     if (target == target_fractions.end())
