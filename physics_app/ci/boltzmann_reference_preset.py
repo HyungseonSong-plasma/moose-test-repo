@@ -97,8 +97,8 @@ def make_reference_preset(
     # Numerical/physical defaults are *reference scenario settings*, not
     # assumptions silently made by the independent C++ solver.
     conditions = [
-        "10.", "0.", "0.", "300.", "300.", "0.", "0.", "3e22",
-        "1.", "1.", "1", "1", "1", "0.", "200", "0",
+        "10.", "0.", "0.", "300.", "300.", "0.", "0.", "1e18",
+        "1.", "1.", "3", "1", "1", "0.", "200", "0",
         "200.", "1e-10", "1e-4", "1000",
         " ".join(f"{frac:.17g}" for _, frac in mixture), "1"
     ]
@@ -127,7 +127,7 @@ def make_reference_preset(
         "SAVERESULTS",
         str(out_resolved / results_name),
         "1",  # Run by run: needed for independent EEDF/EEPF oracle extraction.
-        "1", "1", "1", "1", "1", "1", "0",
+        "1", "1", "1", "1", "1", "1", "0", "1",
         "END",
         "",
     ])
@@ -162,7 +162,7 @@ def make_reference_preset(
             "gas_temperature_K": 300.0,
             "excitation_temperature_K": 300.0,
             "electron_to_neutral_ratio": 0.0,
-            "neutral_number_density_m3": 3e22,
+            "neutral_number_density_m3": 1e18,
             "energy_sharing": "equal",
             "growth_model": "temporal",
             "number_of_grid_points": 200,
