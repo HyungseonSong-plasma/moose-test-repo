@@ -42,6 +42,48 @@ baseline. Validate an archived L1 `.msh` without regeneration using
 thermal+migration ion wall conditions and existing electron sheath for
 apples-to-apples experiments.
 
+
+## Experimental mixed-state O2 dissociation (O(3P) + O(1D))
+
+**Status: experimental / source-EEDF parity HOLD; not enabled by default.**
+
+Add a *separate* O2 product-state channel to the existing canonical generator:
+
+`python3 experiments/Issue395_powered_chemistry_ladder/build_o2_dissociation_overlay.py --base-input <generated_base.i> --output <mixed_overlay.i> --channel mixed`
+
+Reaction: `e + O2(X) -> e + O(3P) + O(1D)`.
+The existing `w_O` is O(3P), the existing `w_Os` is O(1D).
+**No new species or initial-condition default is introduced.** The old
+`--channel ground` (default) remains unchanged and generates only
+`e + O2 -> e + 2O(3P)`.
+
+Single progress `R_diss_O2_mixed` [mol/(m3 s)] owns:
+- `+0.016 R` [kg/(m3 s)] for O(3P) solved FV variable;
+- `+0.016 R` for O(1D) solved FV variable;
+- `-0.032 R` implicit constrained molecular O2 mass loss;
+- `-8.4 R` electron-energy sink, 8.4 eV/event COMSOL ICP Table 2 (14);
+- zero net electron particle source and identically zero heavy/oxygen mass defect.
+
+The provisional Maxwellian fit is
+`k_num = 3.49e-14 exp(-5.92/Te[eV]) m3/s`;
+`Te[eV] = (2/3) mean_en_solved[eV]`.
+It is the fit used for an EEPF/temperature-model comparison in
+[Excitation Kinetics of Oxygen O(1D) State in Low-Pressure Oxygen Plasma (2017)](https://doi.org/10.1515/jaots-2017-0002).
+Do not misattribute the fit or call the fit scale a collision threshold.
+The electron loss 8.4 eV/event comes from the
+[COMSOL ICP oxygen reaction table](https://doc.comsol.com/6.4/doc/com.comsol.help.models.plasma.icp_argon_oxygen/icp_argon_oxygen.html).
+**A fitted rate coefficient is not a source-verified independent
+state-resolved cross section.** A separate source/cross-section/EEPF audit is
+needed before interpreting the mixed and ground channels as exclusive.
+
+`tests/test_o2_mixed_state_dissociation_overlay.py`
+checks independent numeric anchors, exact 1:1 O(3P)/O(1D)
+product stoichiometry, constrained O2 and electron energy,
+no new species, and negative mutation controls.
+No P2 physics-opt or P3 100-us production-path result has been asserted.
+The model's volumetric O(1D) quenching/return-to-O(3P) coverage must be
+audited before claiming credible O(1D) density or O(3P) response.
+
 ## Ground-state O2 dissociation rate correction (bounded successor, 2026-10-26)
 
 The canonical generator `build_o2_dissociation_overlay.py` now targets **only**
