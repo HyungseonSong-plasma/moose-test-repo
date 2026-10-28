@@ -41,6 +41,7 @@ def test_official_example4_default_is_four_gas_not_binary(tmp_path: Path) -> Non
     assert sum(manifest["mixture"].values()) == pytest.approx(1.0)
     assert manifest["conditions"]["E_over_N_Td"] == 10.0
     assert manifest["conditions"]["gas_temperature_K"] == 300.0
+    assert manifest["conditions"]["neutral_number_density_m3"] == 1e18
     assert manifest["conditions"]["growth_model"] == "temporal"
     assert manifest["status"] == "REFERENCE_INPUT_ONLY_NOT_EXECUTED"
     assert manifest["collision_process_counts"]["O2"]["ELASTIC"] == 1
@@ -48,6 +49,9 @@ def test_official_example4_default_is_four_gas_not_binary(tmp_path: Path) -> Non
     script_path = out / manifest["script_file"]
     script = script_path.read_text(encoding="utf-8")
     assert "READCOLLISIONS\n" in script
+    assert "\n1e18\n" in script
+    assert "\n3\n1\n1\n" in script  # Coulomb option, equal sharing, temporal growth
+    assert "\n1\n1\n1\n1\n1\n1\n0\n1\nEND\n" in script
     assert "\nAr  He  N2  O2\n" in script
     assert f"READCOLLISIONS\n{source.resolve()}" in script
     assert f"{source.resolve()}" in script
