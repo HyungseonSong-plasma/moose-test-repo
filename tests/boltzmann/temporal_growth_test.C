@@ -98,12 +98,26 @@ int main()
           1e-12 * (std::abs(expected) + 1e-30))
     throw std::runtime_error("Boltzmann M6b: net growth rate does not close");
 
-  auto large = fixture(129);
+  // The 200-cell native Example 4 resolution is now admissible on the
+  // development-only dense reference path. Recheck normalized eigenpair
+  // residual, signed growth and the weak-growth elastic limit at 200 cells.
+  const auto native_grid = fixture(200);
+  const auto refined_growth =
+      solveElasticTemporalGrowth(native_grid, {ion(1e-25)}, {});
+  audit(refined_growth, native_grid);
+  const auto refined_elastic = solveElasticSteadyState(native_grid);
+  if (!(refined_growth.reduced_growth_eigenvalue_m3_per_s > 0.0 &&
+        std::abs(refined_growth.distribution.mean_energy_eV -
+                 refined_elastic.mean_energy_eV) < 0.03))
+    throw std::runtime_error("Boltzmann M6b4: 200-cell weak-growth parity failed");
+
+  auto large = fixture(257);
   reject([&] { (void)solveElasticTemporalGrowth(large, {ion(1e-20)}, {}); });
   auto bad = fixture(100);
   bad.targets[0].mole_fraction = 0.8;
   reject([&] { (void)solveElasticTemporalGrowth(bad, {ion(1e-20)}, {}); });
 
+  std::cout << "BOLTZMANN_M6B4_200_CELL_TEMPORAL_GROWTH_P0_P1_PASS\n";
   std::cout << "BOLTZMANN_TEMPORAL_GROWTH_M6B1_P0_P1_PASS\n"
             << "M6B_MIXED_REDUCED_GROWTH=" <<
                mixed.reduced_growth_eigenvalue_m3_per_s << '\n'
