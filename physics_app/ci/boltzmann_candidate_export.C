@@ -64,7 +64,7 @@ int main(int argc, char ** argv)
     if (argc < 8)
       throw std::invalid_argument(
           "usage: boltzmann_candidate_export SOURCE_TXT SHA256 EoverN_Td Tg_K "
-          "emax_eV CELLS species=fraction [species=fraction ...] [--enable-superelastic] [--diagnose-frozen-growth] [--solve-elastic-temporal-growth] [--solve-coupled-temporal-growth] [--report-elastic-transport]");
+          "emax_eV CELLS species=fraction [species=fraction ...] [--enable-superelastic] [--diagnose-frozen-growth] [--solve-elastic-temporal-growth] [--solve-coupled-temporal-growth] [--report-elastic-transport] [--report-inelastic-transport]");
 
     const std::string source_path = argv[1], source_sha = argv[2];
     requireSourceHash(source_sha);
@@ -79,6 +79,7 @@ int main(int argc, char ** argv)
     bool temporal_growth = false;
     bool coupled_growth = false;
     bool elastic_transport = false;
+    bool inelastic_transport = false;
     for (int i = 7; i < argc; ++i)
     {
       const std::string pair = argv[i];
@@ -110,6 +111,13 @@ int main(int argc, char ** argv)
         coupled_growth = true;
         continue;
       }
+      if (pair == "--report-inelastic-transport")
+      {
+        if (inelastic_transport)
+          throw std::invalid_argument("duplicate inelastic-transport moment option");
+        inelastic_transport = true;
+        continue;
+      }
       if (pair == "--report-elastic-transport")
       {
         if (elastic_transport)
@@ -127,6 +135,10 @@ int main(int argc, char ** argv)
     if (!std::isfinite(EN) || EN < 0 || !(Tg > 0) || !(emax > 0))
       throw std::invalid_argument("invalid gas temperature, energy ceiling or E/N");
 
+    if (elastic_transport && inelastic_transport)
+      throw std::invalid_argument("choose only one transport moment model");
+    if (inelastic_transport && (temporal_growth || coupled_growth || frozen_growth))
+      throw std::invalid_argument("inelastic-transport moments cannot use growth correction");
     if (temporal_growth && coupled_growth)
       throw std::invalid_argument("choose only one temporal growth model");
     if (elastic_transport && (temporal_growth || coupled_growth || frozen_growth || enable_superelastic))
@@ -162,6 +174,8 @@ int main(int argc, char ** argv)
       excitation = std::move(projected.channels);
     }
 
+    if (inelastic_transport && excitation.empty())
+      throw std::invalid_argument("inelastic transport requires excitation channels");
     if (elastic_transport && (!excitation.empty() || !ionizations.empty() ||
                               !attachments.empty()))
       throw std::invalid_argument("M7a requires elastic-only scattering and no inelastic channels");
@@ -204,6 +218,8 @@ int main(int argc, char ** argv)
     ElasticTransportMoments transport;
     if (elastic_transport)
       transport = evaluateElasticTransportMoments(conditions, distribution);
+    if (inelastic_transport)
+      transport = evaluateExcitationTransportMoments(conditions, distribution, excitation);
     if (!excitation.empty() &&
         (result.maximum_normalized_equation_residual > 1e-8 ||
          result.maximum_collision_number_balance_error > 1e-9))
@@ -222,7 +238,9 @@ int main(int argc, char ** argv)
       escapeJsonString(std::cout, name);
       std::cout << ':' << part;
     }
-    const std::string model = elastic_transport ? "elastic_dc_transport_moments" :
+    const std::string model = inelastic_transport ?
+        "elastic_excitation_superelastic_transport_moments" :
+        elastic_transport ? "elastic_dc_transport_moments" :
         coupled_growth ? "elastic_excitation_superelastic_temporal_growth_eigen_dense" :
         temporal_growth ?
         "elastic_ionization_attachment_temporal_growth_eigen_dense" :
@@ -289,7 +307,7 @@ int main(int argc, char ** argv)
                 << temporal.maximum_normalized_eigen_residual
                 << ",\"eigen_inverse_iterations\":"
                 << temporal.inverse_iterations;
-    if (elastic_transport)
+    if (elastic_transport || inelastic_transport)
       std::cout << ",\"elastic_transport\":{"
                 << "\"mobility_times_N_per_m_V_s\":"
                 << transport.reduced_mobility_N_per_m_V_s
