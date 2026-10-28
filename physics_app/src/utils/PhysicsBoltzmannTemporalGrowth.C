@@ -1,4 +1,5 @@
 #include "PhysicsBoltzmannTemporalGrowth.h"
+#include "PhysicsBoltzmannEnergyMesh.h"
 
 #include <algorithm>
 #include <cmath>
@@ -109,6 +110,8 @@ TemporalGrowthResult solveElasticTemporalGrowth(
   if (input.cells > 256 || input.cells < 2)
     throw std::invalid_argument("Boltzmann M6b: dense eigen reference limited to [2,256] cells");
   if (!std::isfinite(input.reduced_field_Td) || input.reduced_field_Td < 0.0 ||
+      !std::isfinite(input.reduced_angular_frequency_m3_per_s) ||
+      input.reduced_angular_frequency_m3_per_s < 0.0 ||
       !std::isfinite(input.gas_temperature_K) || input.gas_temperature_K <= 0.0)
     throw std::invalid_argument("Boltzmann M6b: invalid E/N or gas temperature");
 
@@ -116,7 +119,8 @@ TemporalGrowthResult solveElasticTemporalGrowth(
   // transfer coefficients; do not reimplement its equal-sharing rule here.
   const auto growth_op = assembleGrowthCollisions(input, ionizations, attachments);
   const std::size_t n = input.cells;
-  const double h = input.max_energy_eV / n;
+  const auto edges = energyMeshEdges(input);
+  const auto centers = energyMeshCenters(edges);
   std::vector<std::vector<double>> a(n, std::vector<double>(n, 0.0));
 
   for (const auto & entry : growth_op.entries)
@@ -168,7 +172,8 @@ TemporalGrowthResult solveElasticTemporalGrowth(
   if (excitations.empty())
   for (std::size_t i = 1; i < n; ++i)
   {
-    const double e = i * h;
+    const double e = edges[i];
+    const double delta = centers[i]-centers[i-1];
     double sigma_m = 0.0, sigma_e = 0.0;
     for (const auto & t : input.targets)
     {
@@ -185,13 +190,17 @@ TemporalGrowthResult solveElasticTemporalGrowth(
     if (!(sigma_m > 0.0 && sigma_e > 0.0))
       throw std::invalid_argument("Boltzmann M6b: vanishing elastic collision frequency");
     const double W = -gamma * e * e * sigma_e;
-    const double D = gamma * ((EN * EN / 3.0) * e / sigma_m +
+    const double q = input.reduced_angular_frequency_m3_per_s;
+    const double Q = gamma * std::sqrt(e) * sigma_m;
+    const double suppression = q == 0.0 ? 1.0 :
+        1.0 / (1.0 + (q/Q)*(q/Q));
+    const double D = gamma * ((EN * EN / 3.0) * e / sigma_m * suppression +
                               theta * e * e * sigma_e);
     if (!(D > 0.0 && std::isfinite(D)))
       throw std::runtime_error("Boltzmann M6b: elastic SG coefficient invalid");
-    const double P = W * h / D;
-    const double left = D / h * bernoulli(-P);
-    const double right = D / h * bernoulli(P);
+    const double P = W * delta / D;
+    const double left = D / delta * bernoulli(-P);
+    const double right = D / delta * bernoulli(P);
     a[i - 1][i - 1] += left;
     a[i - 1][i] -= right;
     a[i][i - 1] -= left;
@@ -331,7 +340,8 @@ TemporalGrowthResult solveElasticTemporalGrowth(
     throw std::runtime_error("Boltzmann M6b: temporal-growth eigenpair failed true residual");
 
   TemporalGrowthResult out;
-  out.distribution.energy_eV.resize(n);
+  out.distribution.energy_eV = centers;
+  out.distribution.energy_cell_edges_eV = edges;
   out.distribution.eepf_eV_minus_3_halves = f;
   out.distribution.normalization = 1.0;
   out.distribution.maximum_normalized_flux_residual =
@@ -339,8 +349,7 @@ TemporalGrowthResult solveElasticTemporalGrowth(
   double energy = 0.0;
   for (std::size_t i = 0; i < n; ++i)
   {
-    const double lo = i * h, hi = (i + 1) * h;
-    out.distribution.energy_eV[i] = (i + 0.5) * h;
+    const double lo = edges[i], hi = edges[i+1];
     energy += f[i] * (2.0 / 5.0) * (std::pow(hi, 2.5) - std::pow(lo, 2.5));
   }
   out.distribution.mean_energy_eV = energy;
