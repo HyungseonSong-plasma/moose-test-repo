@@ -281,6 +281,16 @@ jobs:
           retention-days: 1
       - name: Run Physics pytest
         run: python -m pytest -q
+      - name: Export independent Boltzmann C++ EEPF development controls
+        run: python3 physics_app/ci/export_boltzmann_ci_eepf.py --out boltzmann-ci-eepf
+      - name: Upload independent Boltzmann C++ EEPF development controls
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: boltzmann-native-eepf-synthetic-controls
+          path: boltzmann-ci-eepf/*.json
+          if-no-files-found: warn
+          retention-days: 30
       - name: Validate normalized-to-physical coupled equivalence fixture
         run: python physics_app/ci/check_physical_state_coupled_equivalence.py --self-test
       - name: Validate n_epsilon-to-mean_en symbol equivalence fixture
