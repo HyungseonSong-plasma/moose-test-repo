@@ -102,8 +102,12 @@ TemporalGrowthResult solveElasticTemporalGrowth(
     const std::vector<AttachmentChannel> & attachments,
     const std::vector<ExcitationChannel> & excitations)
 {
-  if (input.cells > 128 || input.cells < 2)
-    throw std::invalid_argument("Boltzmann M6b: dense eigen reference limited to [2,128] cells");
+  // The 07/2024 BOLSIG+ Example 4 reference uses 200 automatic-grid
+  // cells. Raise the *development-only* dense eigen reference bound to
+  // 256, covered by 200-cell eigenpair/rate and weak-growth controls.
+  // A sparse scalable production eigensolver remains a separate gate.
+  if (input.cells > 256 || input.cells < 2)
+    throw std::invalid_argument("Boltzmann M6b: dense eigen reference limited to [2,256] cells");
   if (!std::isfinite(input.reduced_field_Td) || input.reduced_field_Td < 0.0 ||
       !std::isfinite(input.gas_temperature_K) || input.gas_temperature_K <= 0.0)
     throw std::invalid_argument("Boltzmann M6b: invalid E/N or gas temperature");
