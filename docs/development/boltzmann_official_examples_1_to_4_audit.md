@@ -1,5 +1,19 @@
 # BOLSIG+ official Examples 1–4: 151-run scope and honest reference coverage
 
+**LATEST STATUS (supersedes historical snapshot below):** Original 07/2024
+native EEPF outputs for Examples **1, 2 and 4** have now been supplied and
+compared against genuinely compiled C++ candidates. Example 2's nine nonzero
+AC cases have been solved with the M8 reduced-frequency two-term RF heating
+operator and conservative power-law nonuniform energy mesh; **10/10 runs**
+numerically completed. Example 2 median mean-energy relative error is
+**0.00902%**, maximum **0.41524%** at 100 Td / omega/N=1e-10; AC real and
+imag mobility were separately implemented and benchmarked against native
+output. The old 1/10 AC availability statement and native-reference-missing
+labels below are the **prior S13 baseline**, not the current capability.
+Example 3's original native EEPF remains unavailable. See
+[dedicated Example 2 M8 verification](boltzmann_example2_ac_nonuniform_validation.md).
+Science approval is still HOLD, main and production closures unchanged.
+
 **2026-10-28 correction:** The four official examples are distinct physical
 sweeps, NOT four resolutions of BOLSIG+ Example 4. Source of truth:
 user-provided 240-line input-examples-with-example4-eepf.dat.
