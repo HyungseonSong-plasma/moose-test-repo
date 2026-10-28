@@ -103,3 +103,52 @@ where applicable, plus independent raw reference EEPF export. Then require
 cutoff/cell-size convergence and independent EEPF, rates and four transport
 moments comparisons. The imported third-party source must not be redistributed
 without authorization. Keep PR #408 in DRAFT / SCIENCE HOLD.
+
+
+## S8: independent energy-grid refinement and external source/native process ledger
+
+The S7 energy-domain 1x/2x/4x/8x ablation held the energy-cell width
+constant while extending the domain. S8 independently holds Emax fixed at
+15.8367 eV and doubles the number of cells (200 -> 400) for the SAME
+invented N2 two-excitation operator. Its normalized EEPF comparison uses
+the exact cell-number mass integral `(2/3)*(upper**1.5-lower**1.5)`,
+not a simple arithmetic average of cell-center values. This checks
+discretization separately from energy-domain truncation.
+
+Native C++ output observed in the dedicated CI job on
+[run 40685556551](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/40685556551):
+
+- 200 cells at 15.8367 eV: 0.5383772 eV mean;
+- 400 cells at 15.8367 eV: 0.53819462 eV mean;
+- relative mean change: 0.000339234455 (0.0339234%);
+- number-mass-weighted EEPF L1 difference: 0.0485320284;
+- predeclared synthetic-grid thresholds: mean <0.02 and L1 <0.05;
+- result `SYNTHETIC_N2_GRID_REFINEMENT_PASS`.
+
+This remains entirely synthetic development verification. Its grid-PASS
+does NOT mean an equivalent physical BOLSIG+ collision operator has
+been implemented; changing synthetic model/cross sections changes the EEPF.
+
+`physics_app/ci/boltzmann_collision_coverage_audit.py` now recognizes
+EFFECTIVE+EXCITATION as a bounded steady-state supported form instead of
+categorically rejecting EFFECTIVE; it still reports
+`EFFECTIVE_GROWTH_COUPLING_UNSUPPORTED` for EFFECTIVE with
+ionization/attachment, and explicitly flags duplicate momentum providers,
+missing momentum records, out-of-domain inelastic thresholds, unsupported
+rotation and one-point/power-law source types. Structural support is
+never a physical validation claim.
+
+`bolsig_native_scalar_audit.py --native-output <native-output> --cross-sections <user-local-collision-file>`
+now cross-checks native run-by-run process census with independently parsed
+source gas/kind counts, records both raw-byte SHA-256 values, and reports
+missing/excess counts. Mismatches are a fail-closed exit status 2; count
+equality means `PROCESS_CENSUS_MATCH_PHYSICAL_PARITY_NOT_ESTABLISHED`.
+The check cannot establish individual threshold/table equivalence,
+density-normalized three-body attachment, Coulomb/e-e effects, superelastic
+populations, or full growth/transport parity.
+
+These are practical controls that can be applied once the user-local,
+rights-controlled BOLSIG+/LXCat original collision file and the native
+output are accessible in the SAME environment. No third-party table bytes
+have been committed to the repository. Keep PR #408 Draft and preserve
+production Oxygen ICP coefficients.
