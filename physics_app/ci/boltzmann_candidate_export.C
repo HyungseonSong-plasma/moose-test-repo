@@ -62,7 +62,7 @@ int main(int argc, char ** argv)
     if (argc < 8)
       throw std::invalid_argument(
           "usage: boltzmann_candidate_export SOURCE_TXT SHA256 EoverN_Td Tg_K "
-          "emax_eV CELLS species=fraction [species=fraction ...]");
+          "emax_eV CELLS species=fraction [species=fraction ...] [--enable-superelastic]");
 
     const std::string source_path = argv[1], source_sha = argv[2];
     requireSourceHash(source_sha);
@@ -72,9 +72,17 @@ int main(int argc, char ** argv)
     const auto cells = parseCells(argv[6]);
 
     std::map<std::string, double> fraction;
+    bool enable_superelastic = false;
     for (int i = 7; i < argc; ++i)
     {
       const std::string pair = argv[i];
+      if (pair == "--enable-superelastic")
+      {
+        if (enable_superelastic)
+          throw std::invalid_argument("duplicate superelastic opt-in");
+        enable_superelastic = true;
+        continue;
+      }
       const auto pos = pair.find('=');
       if (pos == std::string::npos || pos == 0 || pos + 1 >= pair.size())
         throw std::invalid_argument("gas composition requires species=fraction");
@@ -89,7 +97,7 @@ int main(int argc, char ** argv)
     if (!stream.good())
       throw std::invalid_argument("cannot open collision source file");
     auto file = parseBolsigCrossSections(stream);
-    auto input = prepareElasticExcitation(file, fraction, emax);
+    auto input = prepareElasticExcitation(file, fraction, emax, enable_superelastic);
 
     ElasticInput conditions;
     conditions.cells = cells;
@@ -116,7 +124,9 @@ int main(int argc, char ** argv)
       escapeJsonString(std::cout, name);
       std::cout << ':' << part;
     }
-    std::cout << "},\"model\":\"elastic_excitation_steady_dc\","
+    std::cout << "},\"model\":\"" << (enable_superelastic ?
+                  "elastic_excitation_superelastic_steady_dc" :
+                  "elastic_excitation_steady_dc") << "\","
               << "\"collision_source_sha256\":\"" << source_sha << "\"},"
               << "\"energy_cell_edges_eV\":[";
     for (std::size_t i = 0; i <= cells; ++i)
@@ -137,6 +147,13 @@ int main(int argc, char ** argv)
       if (i) std::cout << ',';
       escapeJsonString(std::cout, input.channels[i].name);
       std::cout << ':' << result.rate_coefficients_m3_per_s[i];
+      if (!input.channels[i].upper_state_target_name.empty())
+      {
+        std::cout << ',';
+        escapeJsonString(std::cout, input.channels[i].upper_state_target_name +
+                                    ":superelastic:" + std::to_string(i + 1));
+        std::cout << ':' << result.superelastic_rate_coefficients_m3_per_s[i];
+      }
     }
     std::cout << "}}\n";
     return 0;
