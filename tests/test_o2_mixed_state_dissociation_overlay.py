@@ -75,7 +75,7 @@ def test_exact_source_owners_and_existing_species_reuse(tmp_path: Path):
     assert "functor_names = 'rho_neutral w_O2_constraint'" in s
     assert "functor_names = 'n_e_physical c_O2_diss_mixed Te_diss_mixed_eV'" in s
     assert "electron_particle_source" not in s
-    assert s.count("functor = S_electron_energy_mol_diss_mixed") == 1
+    assert s.count("functor = S_electron_energy_mol_diss_mixed") == 2  # kernel and audit PP
     assert "O(3P)=w_O, O(1D)=w_Os" in s
 
 
