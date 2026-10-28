@@ -152,3 +152,69 @@ rights-controlled BOLSIG+/LXCat original collision file and the native
 output are accessible in the SAME environment. No third-party table bytes
 have been committed to the repository. Keep PR #408 Draft and preserve
 production Oxygen ICP coefficients.
+
+
+## S9: uploaded genuine collision source and native 07/2024 output, first real-input reconciliation
+
+The user supplied BOTH original local files for analysis, and neither raw
+file is redistributed or committed:
+
+- `SigloDataBase-LXCat-04Jun2013.txt`: 166491 bytes; SHA256
+  `b8b1ff807d0586795dcabf4511a2a44b8b04828626b45e0fd95a319817c01063`.
+- `example4-eepf(1).dat`: 20252 bytes; SHA256
+  `aa6c7c0ce00c61095934defa70f40e415474562b5e3e53374766c1ab7d6912d3`.
+- Native header confirms BOLSIG+ 07/2024, 10 Td, 300 K,
+  0.70 Ar/0.20 He/0.08 N2/0.02 O2, temporal-growth model,
+  200 requested automatic grid points, **actual Emax 15.8367 eV**,
+  mean energy 1.35694 eV.
+- The native `Energy (eV) EEDF (eV-3/2) Anisotropy` section contains
+  195 printed positive-energy f0/EEPF nodes from 0.0002477092 to
+  14.97833 eV. Printed-interval trapezoid normalization is 0.9998661043.
+  The requested manual max 200 eV in CONDITIONS is NOT the actual
+  automatic solver max: use the latter for any numeric comparison.
+
+**New discrepancy identified using original raw bytes:** the source contains
+48 relevant process blocks (Ar 3, He 3, N2 25, O2 17), but the native
+rate ledger has **47** (Ar 3, He 3, N2 25, O2 16). The source contains
+two O2 ATTACHMENT blocks: line 5235 (a density-normalized three-body
+attachment, target `O2`) and line 5279 (dissociative two-body
+`O2 -> O^-+O`). The native output has only `C32 O2 Attachment`,
+`3.80265e-37 m3/s`.
+
+An independently integrated source-to-native rate comparison, using
+`k = sqrt(2e/m_e) * integral(epsilon * sigma(epsilon) * f0(epsilon) d epsilon)`,
+piecewise-linear source/printed f0 and cubic-exact per-interval Simpson
+quadrature, evaluated both candidate O2 attachment blocks WITHOUT
+silently applying unverified three-body density conversion:
+
+- line 5235 raw three-body table: 3.8025568983e-37 m3/s, matching C32
+  within ~0.00245%;
+- line 5279 two-body: 2.5899679684e-18 m3/s, not remotely compatible
+  with the native C32 rate.
+
+Thus numerical rate evidence strongly identifies the **second O2 two-body
+attachment block (line 5279) as omitted from the native 47-process run**.
+The first, three-body-labelled record was apparently used as **unscaled
+tabulated input** for C32. The LXCat source header, however, explicitly
+says its three-body attachment tables require multiplication by neutral
+gas density in cm^-3 before use. The reference number density is
+1e18 m^-3 = 1e12 cm^-3; whether/how BOLSIG+ intends that correction
+requires an explicit physical convention check. **Do not claim full
+collision-model parity or silently add/remove/scale either channel.**
+
+Across the 47 aligned processes, 43 positive native rates were
+independently reconstructed over the printed EEPF interval;
+the relative-error median was ~0.1938%, the maximum ~1.19%.
+This is strong evidence that original cross-section records and printed
+EEPF are coherently paired with the native process ledger, NOT evidence
+that the independent C++ solver produces the same EEPF. Four zero/native
+out-of-range cases are not falsely scored as positive-rate agreement.
+
+Mandatory follow-ups: preserve both hashes in local case metadata;
+make BOLSIG's exact 47/48 process selection and three-body convention
+an explicit reproducible input, implement the full EFFECTIVE/inelastic/
+ionization/attachment momentum and temporal-growth operator without
+silent dropped reactions, lift the dense 128-cell limit or validate a
+separate high-resolution solver, and independently compare full EEPF and
+transport. PR remains science HOLD/DRAFT; no third-party source raw
+tables or native original output are committed.
