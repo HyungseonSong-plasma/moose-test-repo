@@ -261,3 +261,76 @@ Run the generated official_example4_bolsigminus.txt with an independently obtain
 Further gating: independently audited raw BOLSIG+ output to canonical-cell EEPF conversion, identical physical models including temporal growth and all collision channels, emax/grid convergence, and actual PhysicsApp physics-opt P2/P3. Existing Oxygen ICP production chemistry, materials and main branch remain unchanged.
 
 Reference: BOLSIG+ 07/2024 documentation https://www.bolsig.laplace.univ-tlse.fr/wp-content/uploads/2024/07/bolsigdoc0724.pdf (examples 1 and 4).
+
+## S1–S3 scientific evidence gate and acceptance boundary
+
+### S1 independent manufactured Maxwellian oracle
+
+The new native C++ physical_maxwellian_rate_oracle_test.C benchmark uses a manufactured continuous Maxwellian f0(e)=C exp(-e/theta) at T=3000 K with Emax=4 eV. Gas fractions equal the published Example 4 mixture Ar=0.70, He=0.20, N2=0.08, O2=0.02, but **all cross-section values are invented**, so this is not physical Ar/He/N2/O2 data and not a BOLSIG+ benchmark. The continuous normalization and rate integrals are evaluated independently of the C++ collision integrator:
+
+    Z = theta^(3/2) * [sqrt(pi)/2 erf(sqrt(Emax/theta))
+                       -sqrt(Emax/theta) exp(-Emax/theta)]
+    k(sigma,u) = sqrt(2e/m_e)*sigma*theta/Z *
+                 [(u+theta) exp(-u/theta)
+                  -(Emax+theta) exp(-Emax/theta)]
+
+For invented ionization of Ar (threshold 0.35 eV, sigma=2e-20 m2) and
+attachment of O2 (sigma=4e-21 m2), independent analytical rates are
+4.13678117245348e-15 and 1.36108997127882e-15 m3/s, respectively.
+The reduced net growth of the mixture equals 0.70*k_ion-0.02*k_att =
+2.868525021291859e-15 m3/s, and ionization threshold-energy loss is
+0.70*0.35*k_ion = 1.0135113872511023e-15 eV m3/s.
+
+The native regression checks 50/100/200/400 energy-cell refinement,
+strictly decreasing independent ionization and attachment relative errors,
+<1e-4 error at 400 cells, <1% 4-species growth/energy differences, and
+columnwise particle-number source consistency <1e-10.
+
+### S2 explicit external process-inventory audit
+
+The new local, read-only Python script
+physics_app/ci/boltzmann_collision_coverage_audit.py
+accepts a user-supplied BOLSIG-format file and chosen species.
+It produces only raw SHA-256, process *counts*, and structural/model gaps:
+missing gas/ELASTIC momentum, EFFECTIVE/MOMENTUM, ROTATION, power-law
+cross sections, unsupported reversible state, or energy-domain gaps.
+It never copies raw third-party cross-section tables into GitHub.
+Example invocation (a real locally authorized source is required):
+
+    python3 physics_app/ci/boltzmann_collision_coverage_audit.py --cross-sections /private/LXCat-June2013.txt --species Ar He N2 O2
+
+The published Example 4 reference input generator additionally requires
+parseable source data containing all selected gases and records the
+process census in its manifest. Other BOLSIG-supported process types
+may be recorded as unsupported by the C++ model while the BOLSIG
+reference input can still be prepared. The census status
+STRUCTURALLY_SUPPORTED_NOT_BOLSIG_VALIDATED is NOT scientific parity.
+
+### S3 unverified oracle must NEVER be a physical PASS
+
+The comparison tool previously accepted JSON whose reference version
+was self-declared BOLSIG+ and whose raw export had a matching SHA-256,
+without independently checking that the canonical numeric JSON had
+actually been extracted from the raw run-by-run output.
+
+Such self-declared real-data comparisons now return
+BOLSIG_REFERENCE_UNVERIFIED_MATCH or
+BOLSIG_REFERENCE_UNVERIFIED_MISMATCH and always set
+scientific_acceptance=HOLD_UNVERIFIED_RAW_TO_CANONICAL_CONVERSION with
+exit code 2. Numerical differences are still reported but these labels
+cannot release the P2/P3 physics validation gate. Independently
+manufactured fixtures remain explicitly tagged SELFTEST_ONLY.
+
+Official software and collision files are licensed for use but not
+third-party redistribution or commercial use. The official Linux 07/2024
+download is referenced at https://www.bolsig.laplace.univ-tlse.fr/download.html
+and terms at https://www.bolsig.laplace.univ-tlse.fr/copyright.html.
+The executable and genuine 4-gas cross-section archive were not
+accessible to execute in the current validation runtime. No genuine
+BOLSIG+ run or real-gas quantitative parity has occurred.
+
+Acceptance remains HOLD pending an authorized local real-source file,
+pinned real BOLSIG+ raw output, independently audited EEPF/rate/moment
+conversion, complete physics process matching, energy-grid and Emax
+convergence, and actual production PhysicsApp P2/P3. Ordinary Physics
+runtime smoke is not coupled Boltzmann execution.
