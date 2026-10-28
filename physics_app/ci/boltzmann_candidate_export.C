@@ -64,7 +64,7 @@ int main(int argc, char ** argv)
     if (argc < 8)
       throw std::invalid_argument(
           "usage: boltzmann_candidate_export SOURCE_TXT SHA256 EoverN_Td Tg_K "
-          "emax_eV CELLS species=fraction [species=fraction ...] [--enable-superelastic] [--diagnose-frozen-growth] [--solve-elastic-temporal-growth] [--solve-coupled-temporal-growth] [--report-elastic-transport] [--report-inelastic-transport]");
+          "emax_eV CELLS species=fraction [species=fraction ...] [--enable-superelastic] [--diagnose-frozen-growth] [--solve-elastic-temporal-growth] [--solve-coupled-temporal-growth] [--report-elastic-transport] [--report-inelastic-transport] [--bolsig-2024-boundaries]");
 
     const std::string source_path = argv[1], source_sha = argv[2];
     requireSourceHash(source_sha);
@@ -80,9 +80,17 @@ int main(int argc, char ** argv)
     bool coupled_growth = false;
     bool elastic_transport = false;
     bool inelastic_transport = false;
+    bool bols_2024_boundaries = false;
     for (int i = 7; i < argc; ++i)
     {
       const std::string pair = argv[i];
+      if (pair == "--bolsig-2024-boundaries")
+      {
+        if (bols_2024_boundaries)
+          throw std::invalid_argument("duplicate BOLSIG+ 2024 boundary opt-in");
+        bols_2024_boundaries = true;
+        continue;
+      }
       if (pair == "--enable-superelastic")
       {
         if (enable_superelastic)
@@ -151,13 +159,18 @@ int main(int argc, char ** argv)
     if (!stream.good())
       throw std::invalid_argument("cannot open collision source file");
     auto file = parseBolsigCrossSections(stream);
+    if (bols_2024_boundaries)
+      file = normalizeBolsig2024CollisionFile(file, emax, true);
+    std::vector<InactiveCollisionProcess> inactive;
     std::vector<ElasticTarget> targets;
     std::vector<ExcitationChannel> excitation;
     std::vector<IonizationChannel> ionizations;
     std::vector<AttachmentChannel> attachments;
     if (frozen_growth || temporal_growth || coupled_growth)
     {
-      auto projected = prepareGrowthPhysics(file, fraction, emax, enable_superelastic);
+      auto projected = prepareGrowthPhysics(
+          file, fraction, emax, enable_superelastic, bols_2024_boundaries);
+      inactive = std::move(projected.inactive_above_energy_ceiling);
       if (temporal_growth && !projected.excitation_channels.empty())
         throw std::invalid_argument("elastic temporal-growth eigen solver does not include excitation");
       if (coupled_growth && projected.excitation_channels.empty())
@@ -294,7 +307,38 @@ int main(int argc, char ** argv)
       escapeJsonString(std::cout, attachments[i].name);
       std::cout << ':' << growth.attachment_rates_m3_per_s[i];
     }
+    // Explicit 0-rate audit entries for inelastic source channels that
+    // cannot fire below the chosen energy ceiling. These are counted and
+    // labeled, not silently omitted or falsely modeled at threshold.
+    for (std::size_t i = 0; i < inactive.size(); ++i)
+    {
+      if (any_rate) std::cout << ',';
+      any_rate = true;
+      const auto & channel = inactive[i];
+      escapeJsonString(std::cout, channel.target + ":inactive_above_emax:" +
+                                  std::to_string(channel.selected_source_line));
+      std::cout << ":0";
+    }
     std::cout << '}';
+    if (bols_2024_boundaries)
+    {
+      std::cout << ",\"collision_boundary_model\":\"BOLSIG_07_2024_OPT_IN_EXTRAPOLATE_1\""
+                << ",\"source_process_count\":" << file.records.size()
+                << ",\"scientific_acceptance\":\"HOLD_REAL_COLLISION_PROCESS_EQUIVALENCE\""
+                << ",\"inactive_above_energy_ceiling\":[";
+      for (std::size_t i = 0; i < inactive.size(); ++i)
+      {
+        if (i) std::cout << ',';
+        std::cout << "{\"target\":";
+        escapeJsonString(std::cout, inactive[i].target);
+        std::cout << ",\"source_line\":" << inactive[i].selected_source_line
+                  << ",\"threshold_eV\":" << inactive[i].threshold_eV
+                  << ",\"kind\":\""
+                  << (inactive[i].kind == CollisionKind::Ionization ?
+                      "IONIZATION" : "EXCITATION") << "\"}";
+      }
+      std::cout << ']';
+    }
     if (frozen_growth)
       std::cout << ",\"frozen_eepf_reduced_temporal_growth_m3_per_s\":"
                 << growth.reduced_temporal_growth_m3_per_s
