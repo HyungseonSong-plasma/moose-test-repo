@@ -55,13 +55,30 @@ def change_generated_input(original: str) -> str:
     return result
 
 
+def verify_generated_input(text: str) -> None:
+    if any(token not in text for token in (*CONSTRAINT, *REQUIRED)):
+        raise ValueError("zero-O input lost baseline chemistry or state")
+    blocks = list(IC_BLOCK.finditer(text))
+    if len(blocks) != 1:
+        raise ValueError("zero-O input must have exactly one w_O block")
+    values = list(IC_VALUE.finditer(blocks[0].group("body")))
+    if len(values) != 1 or values[0].group("value").strip() != "0.0":
+        raise ValueError("zero-O input must have exact initial_condition = 0.0")
+
+
 def main() -> int:
     p = argparse.ArgumentParser()
     p.add_argument("--input", type=Path, required=True)
     p.add_argument("--out", type=Path, help="Defaults to same generated input")
+    p.add_argument("--verify", action="store_true", help="Read-only zero-state check")
     args = p.parse_args()
     old = args.input.read_text(encoding="utf-8")
+    if args.verify:
+        verify_generated_input(old)
+        print("INITIAL_O_ZERO_VERIFICATION_PASS")
+        return 0
     new = change_generated_input(old)
+    verify_generated_input(new)
     dest = args.out or args.input
     dest.write_text(new, encoding="utf-8")
     print("INITIAL_O_ZERO_EXACT_ONE_LINE_PASS")
