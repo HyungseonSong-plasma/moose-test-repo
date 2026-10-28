@@ -26,11 +26,26 @@ double interpolate(const ElasticTarget & t, double e)
   return (1.0 - alpha) * t.momentum_transfer_m2[left] +
          alpha * t.momentum_transfer_m2[right];
 }
+
+double excitationAt(const ExcitationChannel & channel, double e)
+{
+  const auto & energy = channel.energy_eV;
+  const auto & sigma = channel.cross_section_m2;
+  const auto upper = std::upper_bound(energy.begin(), energy.end(), e);
+  if (upper == energy.begin())
+    return sigma.front();
+  if (upper == energy.end())
+    return sigma.back();
+  const auto j = static_cast<std::size_t>(upper - energy.begin());
+  const double alpha = (e - energy[j - 1]) / (energy[j] - energy[j - 1]);
+  return (1.0 - alpha) * sigma[j - 1] + alpha * sigma[j];
+}
 } // namespace
 
-ElasticTransportMoments evaluateElasticTransportMoments(
+ElasticTransportMoments evaluateExcitationTransportMoments(
     const ElasticInput & input,
-    const ElasticResult & distribution)
+    const ElasticResult & distribution,
+    const std::vector<ExcitationChannel> & excitations)
 {
   const std::size_t n = input.cells;
   if (n < 2 || n > 16384 || !(std::isfinite(input.max_energy_eV) &&
@@ -54,11 +69,62 @@ ElasticTransportMoments evaluateElasticTransportMoments(
   }
   if (std::abs(fractions - 1.0) > 1e-12)
     throw std::invalid_argument("Boltzmann M7: target fractions must sum to one");
+  // Validate all represented excitation channels before adding their
+  // total scattering cross sections to the first-angular-moment collision
+  // frequency. ELASTIC momentum cross sections must exclude these channels.
+  for (const auto & ch : excitations)
+  {
+    if (ch.name.empty() || ch.target_name.empty() ||
+        !(std::isfinite(ch.threshold_eV) && ch.threshold_eV > 0.0 &&
+          ch.threshold_eV < input.max_energy_eV) ||
+        ch.energy_eV.size() < 2 ||
+        ch.cross_section_m2.size() != ch.energy_eV.size() ||
+        ch.energy_eV.front() > 0.0 ||
+        ch.energy_eV.back() < input.max_energy_eV)
+      throw std::invalid_argument("Boltzmann M7b: incomplete excitation threshold or table");
+    for (std::size_t j = 0; j < ch.energy_eV.size(); ++j)
+      if (!std::isfinite(ch.energy_eV[j]) ||
+          !std::isfinite(ch.cross_section_m2[j]) ||
+          ch.energy_eV[j] < 0.0 || ch.cross_section_m2[j] < 0.0 ||
+          (j && !(ch.energy_eV[j] > ch.energy_eV[j - 1])))
+        throw std::invalid_argument("Boltzmann M7b: invalid inelastic cross section");
+    const auto lower = std::find_if(input.targets.begin(), input.targets.end(),
+        [&ch](const ElasticTarget & t) { return t.name == ch.target_name; });
+    if (lower == input.targets.end())
+      throw std::invalid_argument("Boltzmann M7b: excitation target missing");
+    if (!ch.upper_state_target_name.empty())
+    {
+      const auto upper = std::find_if(input.targets.begin(), input.targets.end(),
+          [&ch](const ElasticTarget & t) { return t.name == ch.upper_state_target_name; });
+      if (upper == input.targets.end() || ch.upper_state_target_name == ch.target_name ||
+          !(std::isfinite(ch.upper_to_lower_weight_ratio) &&
+            ch.upper_to_lower_weight_ratio > 0.0))
+        throw std::invalid_argument("Boltzmann M7b: superelastic state or degeneracy invalid");
+    }
+    else if (ch.upper_to_lower_weight_ratio != 1.0)
+      throw std::invalid_argument("Boltzmann M7b: reverse ratio without upper target");
+  }
   const auto sigma_m = [&](double energy)
   {
     double value = 0.0;
     for (const auto & target : input.targets)
       value += target.mole_fraction * interpolate(target, energy);
+    for (const auto & ch : excitations)
+    {
+      const auto lower = std::find_if(input.targets.begin(), input.targets.end(),
+          [&ch](const ElasticTarget & t) { return t.name == ch.target_name; });
+      if (energy >= ch.threshold_eV)
+        value += lower->mole_fraction * excitationAt(ch, energy);
+      if (!ch.upper_state_target_name.empty() &&
+          energy > 0.0 && energy + ch.threshold_eV <= input.max_energy_eV)
+      {
+        const auto upper = std::find_if(input.targets.begin(), input.targets.end(),
+            [&ch](const ElasticTarget & t) { return t.name == ch.upper_state_target_name; });
+        value += upper->mole_fraction / ch.upper_to_lower_weight_ratio *
+                 ((energy + ch.threshold_eV) / energy) *
+                 excitationAt(ch, energy + ch.threshold_eV);
+      }
+    }
     if (!(std::isfinite(value) && value > 0.0))
       throw std::invalid_argument("Boltzmann M7: total momentum-transfer cross section must be positive");
     return value;
@@ -146,5 +212,10 @@ ElasticTransportMoments evaluateElasticTransportMoments(
         out.reduced_energy_diffusion_N_per_m_s > 0.0))
     throw std::runtime_error("Boltzmann M7: nonphysical reduced electron/energy transport moment");
   return out;
+}
+ElasticTransportMoments evaluateElasticTransportMoments(
+    const ElasticInput & input, const ElasticResult & distribution)
+{
+  return evaluateExcitationTransportMoments(input, distribution, {});
 }
 } // namespace PhysicsBoltzmann
