@@ -358,3 +358,44 @@ def test_coupled_excitation_superelastic_ionization_eigen_cli(tmp_path: Path) ->
     assert abs(result["reduced_temporal_growth_eigenvalue_m3_per_s"] - expected) < (
         1e-10 * abs(expected)
     )
+
+
+def test_inelastic_transport_cli_and_superelastic_opt_in(tmp_path: Path) -> None:
+    compiler = shutil.which("g++")
+    assert compiler
+    root = Path(__file__).resolve().parents[1]
+    binary = tmp_path / "inelastic_transport"
+    built = subprocess.run([
+        compiler, "-std=c++17", "-O2", "-Wall", "-Wextra", "-Werror", "-pedantic",
+        f"-I{root / 'physics_app/include/utils'}",
+        str(root / "physics_app/src/utils/PhysicsBoltzmannElasticSolver.C"),
+        str(root / "physics_app/src/utils/PhysicsBoltzmannGrowth.C"),
+        str(root / "physics_app/src/utils/PhysicsBoltzmannTemporalGrowth.C"),
+        str(root / "physics_app/src/utils/PhysicsBoltzmannTransport.C"),
+        str(root / "physics_app/src/utils/PhysicsBoltzmannCrossSections.C"),
+        str(root / "physics_app/ci/boltzmann_candidate_export.C"),
+        "-o", str(binary),
+    ], capture_output=True, text=True)
+    assert built.returncode == 0, built.stdout + built.stderr
+    source = tmp_path / "excitation_only.txt"
+    source.write_text(
+        "SYNTHETIC INELASTIC TRANSPORT ONLY\n"
+        "ELASTIC\nlower\n1.37e-5\ninvented\n------\n"
+        "0 5e-20\n4 5e-20\n------\n"
+        "EXCITATION\nlower -> lower_excited\n0.4\ninvented\n------\n"
+        "0 0\n0.4 0\n0.41 2e-20\n4 2e-20\n------\n",
+        encoding="utf-8",
+    )
+    digest = hashlib.sha256(source.read_bytes()).hexdigest()
+    args = [str(binary), str(source), digest, "0", "3000", "4", "200", "lower=1"]
+    denied = subprocess.run(args + ["--report-elastic-transport"],
+                            capture_output=True, text=True)
+    assert denied.returncode == 2 and "elastic-only" in denied.stderr
+    accepted = subprocess.run(args + ["--report-inelastic-transport"],
+                              capture_output=True, text=True)
+    assert accepted.returncode == 0, accepted.stdout + accepted.stderr
+    obj = json.loads(accepted.stdout)
+    assert obj["conditions"]["model"] == "elastic_excitation_superelastic_transport_moments"
+    assert obj["elastic_transport"]["mobility_times_N_per_m_V_s"] > 0
+    assert obj["elastic_transport"]["diffusion_times_N_per_m_s"] > 0
+    assert obj["rates_m3_per_s"]["lower:excitation:1"] > 0
