@@ -102,23 +102,38 @@ Coefficients atFace(const ElasticInput & input, double energy,
   if (channels)
     for (const auto & channel : *channels)
     {
-      if (energy < channel.threshold_eV)
-        continue;
-      const auto upper = std::upper_bound(channel.energy_eV.begin(), channel.energy_eV.end(), energy);
-      const std::size_t right = upper == channel.energy_eV.end()
-                                    ? channel.energy_eV.size() - 1
-                                    : static_cast<std::size_t>(upper - channel.energy_eV.begin());
-      const std::size_t left = right == 0 ? 0 : right - 1;
-      const double xs = left == right ? channel.cross_section_m2[left]
-          : channel.cross_section_m2[left] +
-            (energy - channel.energy_eV[left]) *
-            (channel.cross_section_m2[right] - channel.cross_section_m2[left]) /
-            (channel.energy_eV[right] - channel.energy_eV[left]);
-      const auto target = std::find_if(input.targets.begin(), input.targets.end(),
+      const auto xsAt = [&channel](double e)
+      {
+        const auto upper = std::upper_bound(channel.energy_eV.begin(), channel.energy_eV.end(), e);
+        const std::size_t right = upper == channel.energy_eV.end()
+                                      ? channel.energy_eV.size() - 1
+                                      : static_cast<std::size_t>(upper - channel.energy_eV.begin());
+        const std::size_t left = right == 0 ? 0 : right - 1;
+        return left == right ? channel.cross_section_m2[left]
+            : channel.cross_section_m2[left] +
+              (e - channel.energy_eV[left]) *
+              (channel.cross_section_m2[right] - channel.cross_section_m2[left]) /
+              (channel.energy_eV[right] - channel.energy_eV[left]);
+      };
+      const auto lower = std::find_if(input.targets.begin(), input.targets.end(),
           [&channel](const ElasticTarget & t) { return t.name == channel.target_name; });
-      if (target == input.targets.end())
+      if (lower == input.targets.end())
         throw std::invalid_argument("Boltzmann: excitation momentum target is missing");
-      sigma_m += target->mole_fraction * xs;
+      if (energy >= channel.threshold_eV)
+        sigma_m += lower->mole_fraction * xsAt(energy);
+      if (!channel.upper_state_target_name.empty() &&
+          energy + channel.threshold_eV <= input.max_energy_eV)
+      {
+        const auto upper = std::find_if(input.targets.begin(), input.targets.end(),
+            [&channel](const ElasticTarget & t) { return t.name == channel.upper_state_target_name; });
+        if (upper == input.targets.end())
+          throw std::invalid_argument("Boltzmann: superelastic momentum target is missing");
+        // Klein-Rosseland microreversibility:
+        // sigma_inverse(e) = (g_lower/g_upper)*(e+u)/e*sigma_forward(e+u).
+        sigma_m += upper->mole_fraction / channel.upper_to_lower_weight_ratio *
+                   ((energy + channel.threshold_eV) / energy) *
+                   xsAt(energy + channel.threshold_eV);
+      }
     }
   if (!finitePositive(sigma_m) || !finitePositive(sigma_e))
     throw std::invalid_argument("Boltzmann: total elastic momentum cross section vanishes at an interior face");
@@ -465,6 +480,18 @@ ExcitationResult solveExcitationSteadyState(const ElasticInput & input,
     if (target == input.targets.end())
       throw std::invalid_argument("Boltzmann: excitation target is not in elastic mixture");
     fractions.push_back(target->mole_fraction);
+    if (!channel.upper_state_target_name.empty())
+    {
+      if (channel.upper_state_target_name == channel.target_name ||
+          !finitePositive(channel.upper_to_lower_weight_ratio))
+        throw std::invalid_argument("Boltzmann: invalid superelastic upper state or degeneracy ratio");
+      const auto upper = std::find_if(input.targets.begin(), input.targets.end(),
+          [&channel](const ElasticTarget & t) { return t.name == channel.upper_state_target_name; });
+      if (upper == input.targets.end())
+        throw std::invalid_argument("Boltzmann: superelastic target requires explicit elastic data and population");
+    }
+    else if (channel.upper_to_lower_weight_ratio != 1.0)
+      throw std::invalid_argument("Boltzmann: degeneracy ratio without a superelastic target");
   }
 
   const std::size_t n = input.cells;
@@ -520,6 +547,51 @@ ExcitationResult solveExcitationSteadyState(const ElasticInput & input,
       {
         const double xlo = std::max(lo, u + static_cast<double>(dest) * h);
         const double xhi = std::min(hi, u + static_cast<double>(dest + 1) * h);
+        if (xhi <= xlo)
+          continue;
+        const double gain = coefficient * weightedExcitationIntegral(channel, xlo, xhi);
+        a[dest][donor] -= gain;
+        gains += gain;
+      }
+      a[donor][donor] += total;
+      if (total > 0.0)
+        maximum_balance_error = std::max(
+            maximum_balance_error, std::abs(total - gains) / total);
+    }
+  }
+  // Excited-state collisions add energy: e -> e+u. Detailed balancing
+  // evaluates the forward excitation cross section at (e+u), multiplied
+  // by (g_lower/g_upper). The electron energy factor (e+u) is integrated
+  // exactly with the same piecewise-linear quadrature as the forward term.
+  // Only donors with e+u <= emax are admitted so no electron is deposited
+  // outside the bounded energy interval; emax sensitivity is a physics gate.
+  for (std::size_t c = 0; c < channels.size(); ++c)
+  {
+    const auto & channel = channels[c];
+    if (channel.upper_state_target_name.empty())
+      continue;
+    const auto upper = std::find_if(input.targets.begin(), input.targets.end(),
+        [&channel](const ElasticTarget & t) { return t.name == channel.upper_state_target_name; });
+    const double u = channel.threshold_eV;
+    const double coefficient = gamma * upper->mole_fraction /
+                               channel.upper_to_lower_weight_ratio;
+    for (std::size_t donor = 0; donor < n; ++donor)
+    {
+      const double lo = static_cast<double>(donor) * h;
+      const double hi = std::min(static_cast<double>(donor + 1) * h, input.max_energy_eV - u);
+      if (hi <= lo)
+        continue;
+      const double total = coefficient * weightedExcitationIntegral(channel, lo + u, hi + u);
+      double gains = 0.0;
+      const auto first = static_cast<std::size_t>(std::floor((lo + u) / h));
+      const auto last = static_cast<std::size_t>(
+          std::min(static_cast<double>(n - 1),
+                   std::floor(std::nextafter((hi + u) / h,
+                                             -std::numeric_limits<double>::infinity()))));
+      for (std::size_t dest = first; dest <= last && dest < n; ++dest)
+      {
+        const double xlo = std::max(lo + u, static_cast<double>(dest) * h);
+        const double xhi = std::min(hi + u, static_cast<double>(dest + 1) * h);
         if (xhi <= xlo)
           continue;
         const double gain = coefficient * weightedExcitationIntegral(channel, xlo, xhi);
@@ -649,6 +721,26 @@ ExcitationResult solveExcitationSteadyState(const ElasticInput & input,
     result.rate_coefficients_m3_per_s.push_back(rate);
     result.energy_loss_coefficients_eV_m3_per_s.push_back(
         channel.threshold_eV * rate);
+    double reverse_rate = 0.0;
+    double upper_fraction = 0.0;
+    if (!channel.upper_state_target_name.empty())
+    {
+      const auto upper = std::find_if(input.targets.begin(), input.targets.end(),
+          [&channel](const ElasticTarget & t) { return t.name == channel.upper_state_target_name; });
+      upper_fraction = upper->mole_fraction;
+      for (std::size_t i = 0; i < n; ++i)
+      {
+        const double lo = static_cast<double>(i) * h;
+        const double hi = std::min(lo + h, input.max_energy_eV - channel.threshold_eV);
+        if (hi > lo)
+          reverse_rate += gamma / channel.upper_to_lower_weight_ratio * f[i] *
+              weightedExcitationIntegral(channel, lo + channel.threshold_eV,
+                                         hi + channel.threshold_eV);
+      }
+    }
+    result.superelastic_rate_coefficients_m3_per_s.push_back(reverse_rate);
+    result.net_energy_loss_coefficients_eV_m3_per_s.push_back(
+        channel.threshold_eV * (fractions[c] * rate - upper_fraction * reverse_rate));
   }
   return result;
 }
