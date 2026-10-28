@@ -302,3 +302,59 @@ def test_elastic_mobility_diffusion_json_cli_is_separate_from_inelastic(tmp_path
     wrong = subprocess.run(args + ["--diagnose-frozen-growth"],
                            capture_output=True, text=True)
     assert wrong.returncode == 2 and "incompatible" in wrong.stderr
+
+
+def test_coupled_excitation_superelastic_ionization_eigen_cli(tmp_path: Path) -> None:
+    compiler = shutil.which("g++")
+    assert compiler
+    root = Path(__file__).resolve().parents[1]
+    binary = tmp_path / "coupled_growth"
+    built = subprocess.run([
+        compiler, "-std=c++17", "-O2", "-Wall", "-Wextra", "-Werror", "-pedantic",
+        f"-I{root / 'physics_app/include/utils'}",
+        str(root / "physics_app/src/utils/PhysicsBoltzmannElasticSolver.C"),
+        str(root / "physics_app/src/utils/PhysicsBoltzmannGrowth.C"),
+        str(root / "physics_app/src/utils/PhysicsBoltzmannTemporalGrowth.C"),
+        str(root / "physics_app/src/utils/PhysicsBoltzmannTransport.C"),
+        str(root / "physics_app/src/utils/PhysicsBoltzmannCrossSections.C"),
+        str(root / "physics_app/ci/boltzmann_candidate_export.C"),
+        "-o", str(binary),
+    ], capture_output=True, text=True)
+    assert built.returncode == 0, built.stdout + built.stderr
+    source = tmp_path / "synthetic_full.txt"
+    source.write_text(
+        "SYNTHETIC ONLY; NEVER LXCAT\n"
+        "ELASTIC\nlower\n1.37e-5\nsynthetic\n------\n0 5e-20\n3 5e-20\n------\n"
+        "ELASTIC\nupper\n1.37e-5\nsynthetic\n------\n0 5e-20\n3 5e-20\n------\n"
+        "EXCITATION\nlower <-> upper\n0.4 2.0\nsynthetic\n------\n"
+        "0 0\n0.4 0\n0.41 9e-21\n3 9e-21\n------\n"
+        "IONIZATION\nlower -> ion\n0.7\nsynthetic\n------\n"
+        "0 0\n0.7 0\n0.71 2e-20\n3 2e-20\n------\n"
+        "ATTACHMENT\nlower -> negative\nsynthetic\n------\n"
+        "0 1e-22\n3 1e-22\n------\n",
+        encoding="utf-8",
+    )
+    digest = hashlib.sha256(source.read_bytes()).hexdigest()
+    args = [str(binary), str(source), digest, "0.2", "3000", "3", "50",
+            "lower=0.96", "upper=0.04"]
+    reject = subprocess.run(args + ["--solve-coupled-temporal-growth"],
+                            capture_output=True, text=True)
+    assert reject.returncode == 2 and "opt-in" in reject.stderr
+    run = subprocess.run(args + ["--enable-superelastic",
+                                 "--solve-coupled-temporal-growth"],
+                         capture_output=True, text=True)
+    assert run.returncode == 0, run.stdout + run.stderr
+    result = json.loads(run.stdout)
+    assert result["conditions"]["model"] == "elastic_excitation_superelastic_temporal_growth_eigen_dense"
+    assert result["generalized_eigen_residual"] < 1e-8
+    assert result["reduced_temporal_growth_eigenvalue_m3_per_s"] > 0
+    rates = result["rates_m3_per_s"]
+    assert rates["lower:excitation:1"] > 0
+    assert rates["upper:superelastic:1"] > 0
+    assert rates["lower:ionization:1"] > 0
+    assert rates["lower:attachment:1"] > 0
+    expected = 0.96 * (rates["lower:ionization:1"] -
+                       rates["lower:attachment:1"])
+    assert abs(result["reduced_temporal_growth_eigenvalue_m3_per_s"] - expected) < (
+        1e-10 * abs(expected)
+    )
