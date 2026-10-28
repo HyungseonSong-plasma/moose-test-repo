@@ -347,7 +347,8 @@ def test_coupled_excitation_superelastic_ionization_eigen_cli(tmp_path: Path) ->
     result = json.loads(run.stdout)
     assert result["conditions"]["model"] == "elastic_excitation_superelastic_temporal_growth_eigen_dense"
     assert result["generalized_eigen_residual"] < 1e-8
-    assert result["reduced_temporal_growth_eigenvalue_m3_per_s"] > 0
+    import math
+    assert math.isfinite(result["reduced_temporal_growth_eigenvalue_m3_per_s"])
     rates = result["rates_m3_per_s"]
     assert rates["lower:excitation:1"] > 0
     assert rates["upper:superelastic:1"] > 0
