@@ -83,6 +83,21 @@ void splitTarget(CollisionRecord & record, const std::string & line)
     throw std::invalid_argument("Boltzmann cross sections: reversible process is missing upper state");
 }
 
+double sampleCrossSection(const CollisionRecord & record, double e)
+{
+  const auto upper = std::upper_bound(record.energy_eV.begin(), record.energy_eV.end(), e);
+  if (upper == record.energy_eV.begin())
+    return record.cross_section_m2.front();
+  if (upper == record.energy_eV.end())
+    return record.cross_section_m2.back();
+  const std::size_t right = static_cast<std::size_t>(upper - record.energy_eV.begin());
+  const std::size_t left = right - 1;
+  const double weight = (e - record.energy_eV[left]) /
+                        (record.energy_eV[right] - record.energy_eV[left]);
+  return (1.0 - weight) * record.cross_section_m2[left] +
+         weight * record.cross_section_m2[right];
+}
+
 std::string nextNonempty(std::istream & input, std::size_t & line_no)
 {
   std::string line;
@@ -212,7 +227,8 @@ ImportedElasticExcitation prepareElasticExcitation(
     const CollisionFile & file,
     const std::map<std::string, double> & fractions,
     double max_energy_eV,
-    bool enable_reversible)
+    bool enable_reversible,
+    const std::vector<CollisionRecord> & additional_scattering)
 {
   if (!std::isfinite(max_energy_eV) || max_energy_eV <= 0.0 || fractions.empty())
     throw std::invalid_argument("Boltzmann cross sections: invalid projection inputs");
@@ -229,6 +245,19 @@ ImportedElasticExcitation prepareElasticExcitation(
       throw std::invalid_argument("Boltzmann cross sections: source does not cover [0,max_energy_eV]; no silent extrapolation");
   }
 
+  // M6 growth contributes additional isotropic momentum scattering.
+  // It must be explicitly enumerated, never inferred or silently omitted.
+  for (const auto & rec : additional_scattering)
+  {
+    if (rec.kind != CollisionKind::Ionization &&
+        rec.kind != CollisionKind::Attachment)
+      throw std::invalid_argument(
+          "Boltzmann: additional first-harmonic scattering requires ionization/attachment");
+    if (rec.energy_eV.front() > 0.0 || rec.energy_eV.back() < max_energy_eV)
+      throw std::invalid_argument(
+          "Boltzmann: added ionization/attachment cross section lacks full energy coverage");
+  }
+
   ImportedElasticExcitation result;
   std::map<std::string, std::size_t> elastic_counts;
   for (const auto & rec : file.records)
@@ -240,75 +269,83 @@ ImportedElasticExcitation prepareElasticExcitation(
         throw std::invalid_argument("Boltzmann cross sections: missing active target number fraction");
       if (++elastic_counts[rec.target] != 1)
         throw std::invalid_argument("Boltzmann cross sections: duplicate elastic target");
-      // EFFECTIVE already includes the momentum contribution of all inelastic
-      // channels for this target. Recover the ELASTIC residual on the
-      // piecewise-linear knot union, then let atFace() add excitation once.
-      // Full files containing ionization/attachment remain rejected above:
-      // their momentum contributions cannot be silently ignored.
+      // Two separate physical quantities are required:
+      // (1) ELASTIC-only recoil for energy-space thermal relaxation;
+      // (2) TOTAL scattering for the first angular moment / field heating.
+      // A source EFFECTIVE already supplies (2), and is decomposed only
+      // after *all* active inelastic source channels are enumerated.
+      // With ELASTIC input, (2) is built independently by adding every
+      // explicit inelastic collision once.
+      const bool full_growth = !additional_scattering.empty();
       std::vector<double> energy = rec.energy_eV;
       std::vector<double> momentum = rec.cross_section_m2;
-      if (rec.kind == CollisionKind::Effective)
+      std::vector<double> field_momentum;
+      if (rec.kind == CollisionKind::Effective || full_growth)
       {
-        // A reversible upper-state EFFECTIVE record may already include
-        // superelastic momentum. Subtracting only the forward excitations
-        // would then double-count the reverse channel in atFace(). Until
-        // an independently validated upper-state inverse-momentum
-        // reconstruction exists, never accept this combination.
-        for (const auto & channel : file.records)
-          if (channel.kind == CollisionKind::Excitation &&
-              channel.reversible && channel.product == rec.target)
-            throw std::invalid_argument(
-                "Boltzmann cross sections: EFFECTIVE upper-state momentum with reversible superelastic channel unsupported");
+        if (rec.kind == CollisionKind::Effective)
+          for (const auto & channel : file.records)
+            if (channel.kind == CollisionKind::Excitation &&
+                channel.reversible && channel.product == rec.target)
+              throw std::invalid_argument(
+                  "Boltzmann cross sections: EFFECTIVE upper-state momentum with reversible superelastic channel unsupported");
         energy = {0.0, max_energy_eV};
         for (const double e : rec.energy_eV)
           if (e <= max_energy_eV)
             energy.push_back(e);
-        for (const auto & inelastic : file.records)
-          if (inelastic.kind == CollisionKind::Excitation &&
-              inelastic.target == rec.target)
-          {
-            energy.push_back(inelastic.parameter);
-            for (const double e : inelastic.energy_eV)
-              if (e <= max_energy_eV)
-                energy.push_back(e);
-          }
+        const auto add_knots = [&](const CollisionRecord & channel)
+        {
+          if (channel.target != rec.target)
+            return;
+          if (channel.kind == CollisionKind::Excitation ||
+              channel.kind == CollisionKind::Ionization)
+            if (channel.parameter <= max_energy_eV)
+              energy.push_back(channel.parameter);
+          for (const double e : channel.energy_eV)
+            if (e <= max_energy_eV)
+              energy.push_back(e);
+        };
+        for (const auto & channel : file.records)
+          if (channel.kind == CollisionKind::Excitation)
+            add_knots(channel);
+        for (const auto & channel : additional_scattering)
+          add_knots(channel);
         std::sort(energy.begin(), energy.end());
         energy.erase(std::unique(energy.begin(), energy.end()), energy.end());
-        const auto sample = [](const CollisionRecord & record, double e)
-        {
-          const auto upper =
-              std::upper_bound(record.energy_eV.begin(), record.energy_eV.end(), e);
-          if (upper == record.energy_eV.begin())
-            return record.cross_section_m2.front();
-          if (upper == record.energy_eV.end())
-            return record.cross_section_m2.back();
-          const std::size_t right = static_cast<std::size_t>(
-              upper - record.energy_eV.begin());
-          const std::size_t left = right - 1;
-          const double weight = (e - record.energy_eV[left]) /
-                                (record.energy_eV[right] - record.energy_eV[left]);
-          return (1.0 - weight) * record.cross_section_m2[left] +
-                 weight * record.cross_section_m2[right];
-        };
         momentum.clear();
         for (const double e : energy)
         {
-          const double effective = sample(rec, e);
+          const double primary = sampleCrossSection(rec, e);
           double inelastic = 0.0;
+          const auto accumulate = [&](const CollisionRecord & channel)
+          {
+            if (channel.target != rec.target)
+              return;
+            if ((channel.kind == CollisionKind::Excitation ||
+                 channel.kind == CollisionKind::Ionization) &&
+                e < channel.parameter)
+              return;
+            inelastic += sampleCrossSection(channel, e);
+          };
           for (const auto & channel : file.records)
-            if (channel.kind == CollisionKind::Excitation &&
-                channel.target == rec.target && e >= channel.parameter)
-              inelastic += sample(channel, e);
-          const double remainder = effective - inelastic;
-          const double tolerance = 1e-10 * std::max(effective, inelastic);
+            if (channel.kind == CollisionKind::Excitation)
+              accumulate(channel);
+          for (const auto & channel : additional_scattering)
+            accumulate(channel);
+          const double remainder = rec.kind == CollisionKind::Effective ?
+              primary - inelastic : primary;
+          const double tolerance = 1e-10 * std::max(primary, inelastic);
           if (remainder < -tolerance)
             throw std::invalid_argument(
-                "Boltzmann cross sections: EFFECTIVE momentum smaller than summed excitation; cannot recover physical elastic residual");
+                "Boltzmann cross sections: EFFECTIVE momentum smaller than summed inelastic scattering; cannot recover physical elastic residual");
           momentum.push_back(std::max(0.0, remainder));
+          if (full_growth)
+            field_momentum.push_back(
+                rec.kind == CollisionKind::Effective ? primary : primary + inelastic);
         }
       }
       result.targets.push_back({rec.target, it->second, rec.parameter,
-                                std::move(energy), std::move(momentum)});
+                                std::move(energy), std::move(momentum),
+                                std::move(field_momentum)});
     }
   }
   for (const auto & [target, fraction] : fractions)
@@ -367,6 +404,7 @@ ImportedGrowthPhysics prepareGrowthPhysics(
   for (const auto & record : file.records)
   {
     if (record.kind == CollisionKind::Elastic ||
+        record.kind == CollisionKind::Effective ||
         record.kind == CollisionKind::Excitation)
       existing.records.push_back(record);
     else if (record.kind != CollisionKind::Ionization &&
@@ -378,8 +416,13 @@ ImportedGrowthPhysics prepareGrowthPhysics(
   // Independent existing M5 projector validates elastic, excitation,
   // reversible upper-state bookkeeping, complete elastic target inventory,
   // mixture fractions and full [0,epsilon_max] source coverage.
+  std::vector<CollisionRecord> changing;
+  for (const auto & record : file.records)
+    if (record.kind == CollisionKind::Ionization ||
+        record.kind == CollisionKind::Attachment)
+      changing.push_back(record);
   const auto m5 = prepareElasticExcitation(
-      existing, target_fractions, max_energy_eV, enable_reversible);
+      existing, target_fractions, max_energy_eV, enable_reversible, changing);
   ImportedGrowthPhysics result;
   result.targets = m5.targets;
   result.excitation_channels = m5.channels;
