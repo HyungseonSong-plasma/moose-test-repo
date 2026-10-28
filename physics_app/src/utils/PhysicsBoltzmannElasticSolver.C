@@ -38,12 +38,16 @@ void validate(const ElasticInput & input)
         !finitePositive(target.electron_mass_ratio) || target.electron_mass_ratio >= 1.0)
       throw std::invalid_argument("Boltzmann: invalid target name, fraction or electron/mass ratio");
     const auto n = target.energy_eV.size();
-    if (n < 2 || target.momentum_transfer_m2.size() != n)
+    if (n < 2 || target.momentum_transfer_m2.size() != n ||
+        (!target.field_momentum_transfer_m2.empty() &&
+         target.field_momentum_transfer_m2.size() != n))
       throw std::invalid_argument("Boltzmann: cross-section table lengths mismatch");
     for (std::size_t k = 0; k < n; ++k)
     {
       if (!finiteNonnegative(target.energy_eV[k]) ||
-          !finiteNonnegative(target.momentum_transfer_m2[k]))
+          !finiteNonnegative(target.momentum_transfer_m2[k]) ||
+          (!target.field_momentum_transfer_m2.empty() &&
+           !finiteNonnegative(target.field_momentum_transfer_m2[k])))
         throw std::invalid_argument("Boltzmann: non-finite/negative cross-section datum");
       if (k && !(target.energy_eV[k] > target.energy_eV[k - 1]))
         throw std::invalid_argument("Boltzmann: cross-section energies must increase strictly");
@@ -93,7 +97,25 @@ Coefficients atFace(const ElasticInput & input, double energy,
   for (const auto & target : input.targets)
   {
     const double sigma = target.mole_fraction * interpolate(target, energy);
-    sigma_m += sigma;
+    if (target.field_momentum_transfer_m2.empty())
+      sigma_m += sigma;
+    else
+    {
+      // A complete EFFECTIVE input already contains ALL inelastic
+      // first-harmonic scattering. Keep that distinct from elastic recoil.
+      const auto upper = std::upper_bound(
+          target.energy_eV.begin(), target.energy_eV.end(), energy);
+      const std::size_t right = upper == target.energy_eV.end() ?
+          target.energy_eV.size() - 1 :
+          static_cast<std::size_t>(upper - target.energy_eV.begin());
+      const std::size_t left = right == 0 ? 0 : right - 1;
+      const double t = left == right ? 0.0 :
+          (energy - target.energy_eV[left]) /
+          (target.energy_eV[right] - target.energy_eV[left]);
+      sigma_m += target.mole_fraction *
+          ((1.0 - t) * target.field_momentum_transfer_m2[left] +
+           t * target.field_momentum_transfer_m2[right]);
+    }
     sigma_e += 2.0 * target.electron_mass_ratio * sigma;
   }
   // Isotropic inelastic scattering also relaxes the first angular moment.
@@ -119,7 +141,8 @@ Coefficients atFace(const ElasticInput & input, double energy,
           [&channel](const ElasticTarget & t) { return t.name == channel.target_name; });
       if (lower == input.targets.end())
         throw std::invalid_argument("Boltzmann: excitation momentum target is missing");
-      if (energy >= channel.threshold_eV)
+      if (energy >= channel.threshold_eV &&
+          lower->field_momentum_transfer_m2.empty())
         sigma_m += lower->mole_fraction * xsAt(energy);
       if (!channel.upper_state_target_name.empty() &&
           energy + channel.threshold_eV <= input.max_energy_eV)
