@@ -223,6 +223,95 @@ CollisionFile parseBolsigCrossSections(std::istream & input)
   return out;
 }
 
+CollisionFile normalizeBolsig2024CollisionFile(
+    const CollisionFile & source, double max_energy_eV,
+    bool extrapolate_high_energy)
+{
+  if (!(std::isfinite(max_energy_eV) && max_energy_eV > 0.0))
+    throw std::invalid_argument("Boltzmann 2024: invalid maximum energy");
+  CollisionFile normalized = source; // identities, ordering, provenance retained
+  for (auto & record : normalized.records)
+  {
+    if (record.energy_eV.size() < 2 ||
+        record.energy_eV.size() != record.cross_section_m2.size())
+      throw std::invalid_argument("Boltzmann 2024: incomplete source table");
+    const bool thresholded = record.kind == CollisionKind::Excitation ||
+                             record.kind == CollisionKind::Ionization;
+    const bool rotation = record.kind == CollisionKind::Rotation;
+    if (rotation)
+      throw std::invalid_argument(
+          "Boltzmann 2024: ROTATION populations and threshold model unsupported");
+    const double threshold = record.parameter;
+    if (thresholded && !(std::isfinite(threshold) && threshold > 0.0))
+      throw std::invalid_argument("Boltzmann 2024: invalid inelastic threshold");
+
+    std::vector<double> energies, sigmas;
+    if (thresholded)
+    {
+      // BOLSIG+ inserts a zero cross-section threshold knot and deletes
+      // nonzero cross sections below threshold. Keep any postthreshold
+      // knots and preserve a zero tail for processes above Emax.
+      if (threshold > 0.0)
+      {
+        energies.push_back(0.0);
+        sigmas.push_back(0.0);
+      }
+      energies.push_back(threshold);
+      sigmas.push_back(0.0);
+      for (std::size_t i = 0; i < record.energy_eV.size(); ++i)
+      {
+        const double e = record.energy_eV[i];
+        if (e > threshold)
+        {
+          energies.push_back(e);
+          sigmas.push_back(record.cross_section_m2[i]);
+        }
+      }
+    }
+    else
+    {
+      if (record.energy_eV.front() > 0.0)
+      {
+        energies.push_back(0.0);
+        sigmas.push_back(record.cross_section_m2.front());
+      }
+      energies.insert(energies.end(), record.energy_eV.begin(), record.energy_eV.end());
+      sigmas.insert(sigmas.end(), record.cross_section_m2.begin(),
+                    record.cross_section_m2.end());
+    }
+
+    // BOLSIG+ 07/2024 Extrapolate=1: generate additional source knots
+    // by multiplying energy by 1.5. Values at those NEW knots follow
+    // log(E)/E; evaluation BETWEEN knots remains piecewise linear.
+    // Generate the first knot beyond Emax to retain its interpolation.
+    if (energies.back() < max_energy_eV && extrapolate_high_energy &&
+        !(thresholded && threshold >= max_energy_eV))
+    {
+      const double last = energies.back(), sigma_last = sigmas.back();
+      if (!(last > 1.0))
+        throw std::invalid_argument(
+            "Boltzmann 2024: log(E)/E high-energy extrapolation is ill-defined at E<=1 eV");
+      const double anchor = std::log(last) / last;
+      while (energies.back() < max_energy_eV)
+      {
+        const double e = energies.back() * 1.5;
+        if (!(std::isfinite(e) && e > energies.back()))
+          throw std::invalid_argument("Boltzmann 2024: extrapolation energy overflow");
+        const double sigma = sigma_last * (std::log(e) / e) / anchor;
+        if (!(std::isfinite(sigma) && sigma >= 0.0))
+          throw std::invalid_argument("Boltzmann 2024: nonphysical continuation");
+        energies.push_back(e);
+        sigmas.push_back(sigma);
+      }
+    }
+    if (energies.size() < 2)
+      throw std::invalid_argument("Boltzmann 2024: normalized table too short");
+    record.energy_eV = std::move(energies);
+    record.cross_section_m2 = std::move(sigmas);
+  }
+  return normalized;
+}
+
 ImportedElasticExcitation prepareElasticExcitation(
     const CollisionFile & file,
     const std::map<std::string, double> & fractions,
