@@ -132,7 +132,20 @@ CollisionFile parseBolsigCrossSections(std::istream & input)
     {
       // ROTATION follows a model-specific convention. Parse its metadata
       // but refuse its use for the M4 elastic+excitation projection.
-      rec.parameter = firstParameter(nextNonempty(input, line_no));
+      const std::string parameter_line = nextNonempty(input, line_no);
+      rec.parameter = firstParameter(parameter_line);
+      if (rec.reversible)
+      {
+        if (kind != CollisionKind::Excitation)
+          throw std::invalid_argument("Boltzmann cross sections: reversible syntax is excitation-only");
+        std::istringstream stream(parameter_line);
+        std::string threshold_token, ratio_token, extra;
+        if (!(stream >> threshold_token >> ratio_token) || (stream >> extra))
+          throw std::invalid_argument("Boltzmann cross sections: reversible excitation needs threshold and g_upper/g_lower");
+        rec.upper_to_lower_weight_ratio = strictNumber(ratio_token);
+        if (!(rec.upper_to_lower_weight_ratio > 0.0))
+          throw std::invalid_argument("Boltzmann cross sections: invalid reversible statistical-weight ratio");
+      }
       if (!std::isfinite(rec.parameter))
         throw std::invalid_argument("Boltzmann cross sections: invalid process parameter");
       if ((kind == CollisionKind::Elastic || kind == CollisionKind::Effective) &&
@@ -198,7 +211,8 @@ CollisionFile parseBolsigCrossSections(std::istream & input)
 ImportedElasticExcitation prepareElasticExcitation(
     const CollisionFile & file,
     const std::map<std::string, double> & fractions,
-    double max_energy_eV)
+    double max_energy_eV,
+    bool enable_reversible)
 {
   if (!std::isfinite(max_energy_eV) || max_energy_eV <= 0.0 || fractions.empty())
     throw std::invalid_argument("Boltzmann cross sections: invalid projection inputs");
@@ -208,8 +222,8 @@ ImportedElasticExcitation prepareElasticExcitation(
   {
     if (rec.kind != CollisionKind::Elastic && rec.kind != CollisionKind::Excitation)
       throw std::invalid_argument("Boltzmann cross sections: unsupported EFFECTIVE/MOMENTUM, ionization, attachment or rotation channel");
-    if (rec.reversible)
-      throw std::invalid_argument("Boltzmann cross sections: superelastic reversible excitation is not implemented");
+    if (rec.reversible && !enable_reversible)
+      throw std::invalid_argument("Boltzmann cross sections: reversible excitation requires explicit opt-in");
     if (rec.energy_eV.front() > 0.0 || rec.energy_eV.back() < max_energy_eV)
       throw std::invalid_argument("Boltzmann cross sections: source does not cover [0,max_energy_eV]; no silent extrapolation");
   }
@@ -253,8 +267,20 @@ ImportedElasticExcitation prepareElasticExcitation(
       if (rec.parameter >= max_energy_eV)
         throw std::invalid_argument("Boltzmann cross sections: excitation threshold exceeds energy domain");
       const std::string id = rec.target + ":excitation:" + std::to_string(result.channels.size() + 1);
-      result.channels.push_back({id, rec.target, rec.parameter,
-                                 rec.energy_eV, rec.cross_section_m2});
+      ExcitationChannel channel{id, rec.target, rec.parameter,
+                                rec.energy_eV, rec.cross_section_m2};
+      if (rec.reversible)
+      {
+        // Fail closed if excited state has no explicit mole fraction and
+        // ELASTIC collision data. Do not invent Ar* transport or population.
+        if (rec.product.empty() || rec.product == rec.target ||
+            elastic_counts.find(rec.product) == elastic_counts.end() ||
+            fractions.find(rec.product) == fractions.end())
+          throw std::invalid_argument("Boltzmann cross sections: reversible upper state requires explicit elastic target and fraction");
+        channel.upper_state_target_name = rec.product;
+        channel.upper_to_lower_weight_ratio = rec.upper_to_lower_weight_ratio;
+      }
+      result.channels.push_back(std::move(channel));
     }
   }
   return result;
