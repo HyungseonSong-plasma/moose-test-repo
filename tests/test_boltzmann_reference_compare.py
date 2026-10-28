@@ -171,3 +171,39 @@ def test_manufactured_reference_pass_and_controls(tmp_path: Path) -> None:
     (tmp_path / "input.txt").write_text("ALTERED SOURCE\n")
     with pytest.raises(ReferenceContractError, match="SHA256 mismatch"):
         compare_case(tmp_path)
+
+
+def test_transport_reference_uses_four_independent_predeclared_moments(tmp_path: Path) -> None:
+    case, reference, candidate = _fixture(tmp_path)
+    moments = {
+        "mobility_times_N_per_m_V_s": 2e24,
+        "diffusion_times_N_per_m_s": 1e24,
+        "energy_mobility_times_N_per_m_V_s": 2.2e24,
+        "energy_diffusion_times_N_per_m_s": 0.8e24,
+        "tail_ratio": 1e-5,
+    }
+    reference["elastic_transport"] = moments.copy()
+    candidate["elastic_transport"] = moments.copy()
+    case["reference"]["sha256"] = _write_json(tmp_path, "reference.json", reference)
+    case["tolerances"]["transport_relative"] = 0.05
+    _candidate(tmp_path, case, candidate)
+    passed = compare_case(tmp_path)
+    assert passed["decision"] == "BOLSIG_REFERENCE_SELFTEST_PASS"
+    assert all(value == 0 for value in passed["transport_relative_errors"].values())
+
+    candidate["elastic_transport"]["energy_diffusion_times_N_per_m_s"] = 1.2e24
+    _candidate(tmp_path, case, candidate)
+    failed = compare_case(tmp_path)
+    assert failed["decision"] == "BOLSIG_REFERENCE_SELFTEST_FAIL"
+    assert "transport:energy_diffusion_times_N_per_m_s" in failed["failures"]
+
+    del candidate["elastic_transport"]
+    _candidate(tmp_path, case, candidate)
+    with pytest.raises(ReferenceContractError, match="both reference and candidate"):
+        compare_case(tmp_path)
+
+    candidate["elastic_transport"] = moments.copy()
+    del case["tolerances"]["transport_relative"]
+    _candidate(tmp_path, case, candidate)
+    with pytest.raises(ReferenceContractError, match="tolerances"):
+        compare_case(tmp_path)
