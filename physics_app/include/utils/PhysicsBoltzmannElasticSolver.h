@@ -97,6 +97,20 @@ ConservativeExcitationOperator assembleExcitationConservativeOperator(
     const ElasticInput & input,
     const std::vector<ExcitationChannel> & channels);
 
+// Rates evaluated on any independently normalized cell EEPF, including a
+// growing eigenvector. This avoids reusing M5 stationary rates for M6b2.
+struct ExcitationRateMoments
+{
+  std::vector<double> forward_rates_m3_per_s;
+  std::vector<double> reverse_rates_m3_per_s;
+  std::vector<double> mixture_net_energy_losses_eV_m3_per_s;
+};
+
+ExcitationRateMoments evaluateExcitationRatesOnEepf(
+    const ElasticInput & input,
+    const ElasticResult & distribution,
+    const std::vector<ExcitationChannel> & excitations);
+
 // DEVELOPMENT: steady excitation-only collision operator + elastic SG flux.
 // Dense reference <=512 cells or sparse preconditioned BiCGSTAB up to 16384
 // cells. Not coupled to production Physics.
