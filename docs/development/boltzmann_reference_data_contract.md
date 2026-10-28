@@ -110,3 +110,22 @@ The comparator requires identical physical conditions, source SHA and cell edges
 ### Current evidence gate
 
 `pytest -q tests/test_boltzmann_cross_section_import.py tests/test_boltzmann_reference_compare.py` validates the import and science-checker structure. It is **P0/P1 only**. The existing Physics runtime CI container smoke does not prove that a production MOOSE input uses this new importer. Keep PR #408 in DRAFT/HOLD pending real source process coverage, reference provenance, energy-grid equivalence, versioned physics-model comparison, and production P2/P3.
+
+### M4 candidate-export developer tool (implemented)
+
+The MOOSE-independent development runner `physics_app/ci/boltzmann_candidate_export.C` now connects the actual text-file reader to the accepted M3 EEPF solver and emits the canonical candidate JSON used by the comparison checker. It reads a user-local, externally supplied BOLSIG-format source file; **it does not fetch or redistribute LXCat content**. The separate comparison checker validates the user-declared source SHA-256 against the raw file bytes. Candidate export accepts a SHA-256 argument solely to preserve the declared source identity; it does not independently hash the file at this stage, so its output is **not** verified evidence unless case preflight succeeds.
+
+Build the development runner (not a production Physics command):
+
+```sh
+g++ -std=c++17 -O2 -Iphysics_app/include/utils \
+  physics_app/src/utils/PhysicsBoltzmannElasticSolver.C \
+  physics_app/src/utils/PhysicsBoltzmannCrossSections.C \
+  physics_app/ci/boltzmann_candidate_export.C -o /tmp/boltzmann_candidate_export
+```
+
+Invocation requires external `SOURCE_TXT SHA256 EoverN_Td Tg_K emax_eV CELLS species=fraction [species=fraction...]`; its stdout is JSON and errors return exit 2 with `BOLTZMANN_CANDIDATE_PREFLIGHT_HOLD`. The initial solver supports only elastic and one-way excitation: unsupported source reactions **will not** be discarded to force a result. When a complete real gas collision set includes ionization, attachment and reversible excitation, the current exporter must HOLD until those operators are implemented.
+
+The C++ executable and importer are compiled by dedicated pytest cases. For a fully documented external reference case, source `process_ids` lists all relevant source reaction identifiers, and `rate_process_ids` specifically enumerates which process coefficients the reference and candidate are required to report. Distinct lists are needed because elastic momentum-transfer processes generally do not have an excitation rate coefficient. A missing or silently renamed rate process causes a preflight HOLD.
+
+Synthetic fixtures use the decision statuses `BOLSIG_REFERENCE_SELFTEST_PASS` / `_FAIL`, **never** `BOLSIG_REFERENCE_NUMERIC_PASS`. A genuine external reference still requires a trusted raw BOLSIG+ run-by-run export and independently audited conversion to the exact comparison-cell representation. The checker verifies the raw reference export's file hash, but does not yet establish that the normalized reference JSON was faithfully transcribed from it.
