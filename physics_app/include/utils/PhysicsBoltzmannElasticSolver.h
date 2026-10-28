@@ -42,4 +42,28 @@ struct ElasticResult
 // No ionization, excitation, attachment, superelastic, electron-electron,
 // electron-density growth, or RF/harmonic collision model is included.
 ElasticResult solveElasticSteadyState(const ElasticInput & input);
+
+struct ExcitationChannel
+{
+  std::string name;
+  std::string target_name;     // identifier for an existing ElasticTarget
+  double threshold_eV = 0.0;  // energy lost per excitation event
+  std::vector<double> energy_eV;
+  std::vector<double> cross_section_m2;
+};
+
+struct ExcitationResult
+{
+  ElasticResult distribution;
+  std::vector<double> rate_coefficients_m3_per_s; // per channel / target molecule
+  std::vector<double> energy_loss_coefficients_eV_m3_per_s; // threshold * rate
+  double maximum_normalized_equation_residual = 0.0;
+  double maximum_collision_number_balance_error = 0.0;
+};
+
+// DEVELOPMENT: steady excitation-only collision operator + elastic SG flux.
+// Limited pivoted dense solve (<= 512 cells); not coupled to production Physics.
+ExcitationResult solveExcitationSteadyState(
+    const ElasticInput & input,
+    const std::vector<ExcitationChannel> & channels);
 }
