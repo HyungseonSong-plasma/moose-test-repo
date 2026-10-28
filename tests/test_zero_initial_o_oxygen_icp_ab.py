@@ -56,7 +56,7 @@ def test_exactly_one_w_o_initial_line() -> None:
     old = "    initial_condition = 0.10309278350515465\n"
     new = "    initial_condition = 0.0\n"
     assert BASE.replace(old, new) == modified
-    assert modified.count("initial_condition = 0.0") == 1
+    assert modified.splitlines().count("    initial_condition = 0.0") == 1
     assert "initial_condition = 0.12371134020618557" in modified
     assert "initial_condition = 0.051546391752577324" in modified
 
