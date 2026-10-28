@@ -577,3 +577,75 @@ def test_coupled_growth_transport_complete_effective_momentum_cli(tmp_path: Path
     ], capture_output=True, text=True, timeout=30)
     assert unpaired.returncode == 2
     assert "requires --solve-coupled-temporal-growth" in unpaired.stderr
+
+
+
+def test_reduced_ac_and_nonuniform_growth_conservation(tmp_path: Path) -> None:
+    """M8 P0/P1: DC limit, frequency suppression, nonuniform mass and rates."""
+    import math
+    compiler = shutil.which("g++")
+    assert compiler
+    root = Path(__file__).resolve().parents[1]
+    binary = tmp_path / "candidate_ac_nonuniform"
+    cmd = [compiler, "-std=c++17", "-O2", "-Wall", "-Wextra",
+           "-Werror", "-pedantic", f"-I{root / 'physics_app/include/utils'}",
+           *[str(root / "physics_app/src/utils" / f)
+             for f in ("PhysicsBoltzmannElasticSolver.C", "PhysicsBoltzmannGrowth.C",
+                       "PhysicsBoltzmannTemporalGrowth.C", "PhysicsBoltzmannTransport.C",
+                       "PhysicsBoltzmannCrossSections.C")],
+           str(root / "physics_app/ci/boltzmann_candidate_export.C"),
+           "-o", str(binary)]
+    proc = subprocess.run(cmd, capture_output=True, text=True)
+    assert proc.returncode == 0, proc.stderr
+    table = tmp_path / "private_synthetic_ac.txt"
+    table.write_text(
+        "AUTHOR GENERATED; NOT LXCAT\n"
+        "ELASTIC\nAr\n1.37e-5\nsynthetic\n------\n"
+        "0 5e-20\n12 5e-20\n------\n"
+        "EXCITATION\nAr -> test\n1\nsynthetic\n------\n"
+        "0 0\n1 0\n12 1e-20\n------\n"
+        "IONIZATION\nAr -> Ar+\n5\nsynthetic\n------\n"
+        "0 0\n5 0\n12 1e-21\n------\n"
+        "ATTACHMENT\nAr -> Ar-\nsynthetic\n------\n"
+        "0 1e-24\n12 1e-24\n------\n",
+        encoding="utf-8",
+    )
+    digest = hashlib.sha256(table.read_bytes()).hexdigest()
+    args = [str(binary), str(table), digest, "5", "300", "12", "120",
+            "Ar=1", "--solve-coupled-temporal-growth"]
+    def run(*flags: str) -> dict:
+        result = subprocess.run(args + list(flags),
+                                capture_output=True, text=True, timeout=55)
+        assert result.returncode == 0, result.stdout + result.stderr
+        return json.loads(result.stdout)
+
+    dc = run()
+    zero_frequency = run("--omega-over-N=0")
+    for k in ("mean_energy_eV", "generalized_eigen_residual"):
+        assert abs(dc[k] - zero_frequency[k]) <= 1e-12 * max(1., abs(dc[k]))
+    assert dc["eepf_eV_minus_3_halves"] == zero_frequency["eepf_eV_minus_3_halves"]
+    uniform_explicit = run("--energy-grid-power=1")
+    assert abs(uniform_explicit["mean_energy_eV"] - dc["mean_energy_eV"]) < 1e-10
+    assert len(dc["energy_cell_edges_eV"]) == 121
+    refined = run("--energy-grid-power=2")
+    ac = run("--omega-over-N=1e-12", "--energy-grid-power=2")
+    strong_ac = run("--omega-over-N=1e-10", "--energy-grid-power=2")
+    assert refined["energy_cell_edges_eV"][1] < dc["energy_cell_edges_eV"][1]/10.
+    assert ac["mean_energy_eV"] < refined["mean_energy_eV"]
+    assert strong_ac["mean_energy_eV"] < ac["mean_energy_eV"]
+    assert strong_ac["mean_energy_eV"] > 0
+    for result in (refined, ac, strong_ac):
+        edges = result["energy_cell_edges_eV"]
+        f = result["eepf_eV_minus_3_halves"]
+        mass = sum(f[i] * (2./3.)*(edges[i+1]**1.5 - edges[i]**1.5)
+                   for i in range(len(f)))
+        assert abs(mass - 1.) < 1e-8
+        assert result["generalized_eigen_residual"] < 1e-8
+        assert all(math.isfinite(v) and v >= 0 for v in f)
+        assert result["rates_m3_per_s"]["Ar:ionization:1"] >= 0
+    bad = subprocess.run(args + ["--omega-over-N=-1e-12"],
+                         capture_output=True, text=True)
+    assert bad.returncode == 2
+    bad = subprocess.run(args + ["--energy-grid-power=0.5"],
+                         capture_output=True, text=True)
+    assert bad.returncode == 2
