@@ -207,3 +207,27 @@ def test_transport_reference_uses_four_independent_predeclared_moments(tmp_path:
     _candidate(tmp_path, case, candidate)
     with pytest.raises(ReferenceContractError, match="tolerances"):
         compare_case(tmp_path)
+
+
+def test_self_declared_real_bolsig_reference_cannot_fake_acceptance(tmp_path: Path) -> None:
+    """Even perfect JSON equality is not an independent raw BOLSIG+ audit."""
+    case, reference, candidate = _fixture(tmp_path)
+    case["source"]["database"] = "LXCat-Unverified-External"
+    case["source"]["source_url"] = "https://example.invalid/declared-external"
+    case["reference"]["version"] = "07/2024"
+    # Raw export bytes remain deliberately synthetic and opaque; the checker
+    # currently has no independent native run-by-run output decoder.
+    _write_json(tmp_path, "case.json", case)
+    result = compare_case(tmp_path)
+    assert result["mean_energy_relative_error"] == 0
+    assert result["eepf_weighted_l1_error"] == 0
+    assert result["decision"] == "BOLSIG_REFERENCE_UNVERIFIED_MATCH"
+    assert result["scientific_acceptance"] == (
+        "HOLD_UNVERIFIED_RAW_TO_CANONICAL_CONVERSION")
+    assert result["raw_to_canonical_audit_performed"] is False
+
+    candidate["mean_energy_eV"] *= 1.25
+    # A corrupted moment must be a preflight error, not a science mismatch.
+    _candidate(tmp_path, case, candidate)
+    with pytest.raises(ReferenceContractError, match="moment disagrees"):
+        compare_case(tmp_path)
