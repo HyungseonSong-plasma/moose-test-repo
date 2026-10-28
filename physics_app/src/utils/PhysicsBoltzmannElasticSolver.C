@@ -439,16 +439,14 @@ sparseBicgstabSolve(const std::vector<std::map<std::size_t, double>> & rows)
 }
 } // namespace
 
-ExcitationResult solveExcitationSteadyState(const ElasticInput & input,
-                                            const std::vector<ExcitationChannel> & channels,
-                                            ExcitationLinearMethod method)
+ConservativeExcitationOperator assembleExcitationConservativeOperator(
+    const ElasticInput & input, const std::vector<ExcitationChannel> & channels)
 {
   validate(input);
   if (channels.empty())
     throw std::invalid_argument("Boltzmann: at least one excitation channel is required");
-  if (input.cells > 16384 ||
-      (method == ExcitationLinearMethod::DenseReference && input.cells > 512))
-    throw std::invalid_argument("Boltzmann: requested solver exceeds supported energy cell limit");
+  if (input.cells > 16384)
+    throw std::invalid_argument("Boltzmann: excitation operator exceeds supported energy cell limit");
 
   std::vector<double> fractions;
   fractions.reserve(channels.size());
@@ -606,6 +604,34 @@ ExcitationResult solveExcitationSteadyState(const ElasticInput & input,
   }
   if (maximum_balance_error > 1e-9)
     throw std::runtime_error("Boltzmann: nonlocal excitation transfer does not conserve particle number");
+
+  ConservativeExcitationOperator result;
+  result.rows = std::move(a);
+  result.cell_number_mass = std::move(weight);
+  result.maximum_collision_number_balance_error = maximum_balance_error;
+  return result;
+}
+
+ExcitationResult solveExcitationSteadyState(const ElasticInput & input,
+                                            const std::vector<ExcitationChannel> & channels,
+                                            ExcitationLinearMethod method)
+{
+  if (method == ExcitationLinearMethod::DenseReference && input.cells > 512)
+    throw std::invalid_argument("Boltzmann: dense excitation solver limited to 512 cells");
+  auto assembled = assembleExcitationConservativeOperator(input, channels);
+  const std::size_t n = input.cells;
+  const double h = input.max_energy_eV / static_cast<double>(n);
+  const double gamma = std::sqrt(2.0 * electron_charge_C / electron_mass_kg);
+  std::vector<double> fractions;
+  for (const auto & channel : channels)
+  {
+    const auto target = std::find_if(input.targets.begin(), input.targets.end(),
+        [&channel](const ElasticTarget & t) { return t.name == channel.target_name; });
+    fractions.push_back(target->mole_fraction);
+  }
+  auto & a = assembled.rows;
+  const auto & weight = assembled.cell_number_mass;
+  const double maximum_balance_error = assembled.maximum_collision_number_balance_error;
 
   // Dense reference is retained for an independent solver-parity oracle.
   // The sparse path pins one f0 cell, then normalizes the nullspace solution.
