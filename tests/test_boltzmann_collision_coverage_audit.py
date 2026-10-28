@@ -59,8 +59,7 @@ def test_effective_rotation_and_power_law_fail_closed(tmp_path: Path) -> None:
     source = _source(tmp_path, fixture)
     result = audit_local_collision_file(source)
     assert result["status"] == "PHYSICS_MODEL_HOLD"
-    assert any(x.startswith("EFFECTIVE_MOMENTUM_NOT_SUPPORTED:O2")
-               for x in result["model_gaps"])
+    assert "DUPLICATE_MOMENTUM_PROVIDER:O2" in result["model_gaps"]
     assert any(x.startswith("ROTATION_UNSUPPORTED:") for x in result["model_gaps"])
     assert any(x.startswith("POWER_LAW_UNSUPPORTED:") for x in result["model_gaps"])
     assert result["total_processes"] == 7
@@ -85,3 +84,45 @@ def test_malformed_cross_sections_cannot_be_classified_compatible(tmp_path: Path
             tmp_path, _elastic("Ar").replace("10 5e-20", "10 -5e-20")))
     with pytest.raises(CollisionAuditError, match="no collision processes"):
         audit_local_collision_file(_source(tmp_path, "empty nonphysical text"))
+
+
+def test_effective_momentum_excitation_only_is_structurally_supported(tmp_path: Path) -> None:
+    # This reflects S7's bounded steady collision projector; it does not
+    # establish real Ar/N2 source provenance or BOLSIG+ EEPF agreement.
+    source = _source(tmp_path, (
+        "SYNTHETIC EFFECTIVE WITH NO GROWTH REACTIONS\n" +
+        "EFFECTIVE\nAr\n1.37e-5\nsource: invented\n------\n"
+        "0 7e-20\n10 7e-20\n------\n" +
+        "".join(_elastic(gas) for gas in ("He", "N2", "O2")) +
+        "EXCITATION\nAr -> test_level\n0.5\nsource: invented\n------\n"
+        "0 0\n0.5 0\n10 1e-20\n------\n"
+    ))
+    report = audit_local_collision_file(source, required_energy_eV=10)
+    assert report["status"] == "STRUCTURALLY_SUPPORTED_NOT_BOLSIG_VALIDATED"
+    assert not report["model_gaps"]
+
+    # Adding even one particle-changing channel makes the EFFECTIVE
+    # reconstruction an unsupported full-physics coupling, not PASS.
+    added = source.read_text() + (
+        "IONIZATION\nAr -> Ar+\n1\nsource: invented\n------\n"
+        "0 0\n10 1e-20\n------\n"
+    )
+    source.write_text(added)
+    held = audit_local_collision_file(source, required_energy_eV=10)
+    assert held["status"] == "PHYSICS_MODEL_HOLD"
+    assert "EFFECTIVE_GROWTH_COUPLING_UNSUPPORTED:Ar" in held["model_gaps"]
+
+
+def test_duplicate_provider_and_threshold_outside_grid_hold(tmp_path: Path) -> None:
+    source = _source(tmp_path, (
+        "".join(_elastic(gas) for gas in ("Ar", "He", "N2", "O2")) +
+        "EFFECTIVE\nAr\n1.37e-5\ninvented\n------\n"
+        "0 8e-20\n10 8e-20\n------\n"
+        "EXCITATION\nN2 -> v1\n12\ninvented\n------\n"
+        "0 0\n10 0\n------\n"
+    ))
+    report = audit_local_collision_file(source, required_energy_eV=10)
+    assert "DUPLICATE_MOMENTUM_PROVIDER:Ar" in report["model_gaps"]
+    assert any(gap.startswith("INELASTIC_THRESHOLD_OUTSIDE_GRID:")
+               for gap in report["model_gaps"])
+    assert report["status"] == "PHYSICS_MODEL_HOLD"
