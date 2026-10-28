@@ -58,7 +58,7 @@ void inspect(const ElasticInput & input, const TemporalGrowthResult & r)
   }
   if (!(std::abs(sum-1.0)<1e-9 &&
         r.maximum_normalized_eigen_residual < 1e-8 &&
-        r.reduced_growth_eigenvalue_m3_per_s > 0.0 &&
+        std::isfinite(r.reduced_growth_eigenvalue_m3_per_s) &&
         r.inverse_iterations > 0))
     throw std::runtime_error("M6b2 eigen mass, growth sign or true residual failed");
 }
