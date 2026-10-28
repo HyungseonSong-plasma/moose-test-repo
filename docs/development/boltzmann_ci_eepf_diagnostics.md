@@ -304,3 +304,56 @@ third-party cross-section rows. **Scientific gate remains HOLD.**
 
 Source: BOLSIG+ 07/2024 manual,
 https://www.bolsig.laplace.univ-tlse.fr/wp-content/uploads/2024/07/bolsigdoc0724.pdf
+
+
+## S11: BOLSIG+ 07/2024 source-boundary normalization, explicit opt-in
+
+Independent documentation basis: Hagelaar, *Brief documentation of
+BOLSIG+ version 07/2024*, 18 July 2024, pp. 9–10,
+https://www.bolsig.laplace.univ-tlse.fr/wp-content/uploads/2024/07/bolsigdoc0724.pdf.
+This manual specifies (1) linear interpolation between source points;
+(2) constant cross section below the first point; (3) at `Extrapolate=1`,
+extra high-energy source points at energies multiplied by 1.5, following
+`ln(E)/E`, with LINEAR interpolation between the newly generated points;
+and (4) threshold-zero insertion and removal of nonzero entries below
+excitation/ionization threshold.
+
+The new standalone `normalizeBolsig2024CollisionFile` is **opt-in** and
+does not mutate raw collision records or their ordered identities. It
+prepares coverage through the first high-end 1.5x knot strictly ABOVE
+the selected energy ceiling (this preserves last-segment interpolation),
+and clamps lower-energy scattering. For excitation/ionization it inserts
+zero at the threshold and leaves out-of-range channels in the source
+ledger, with a separate zero-rate inactive-channel inventory. Because
+the `ln(E)/E` continuation cannot be safely anchored with a source
+last energy <=1 eV, that case explicitly rejects rather than assuming
+an unreferenced physical law. The default unmodified strict import
+remains unchanged.
+
+The developer-only exporter accepts `--bolsig-2024-boundaries`, and
+outputs explicit `source_process_count`,
+`inactive_above_energy_ceiling` and `scientific_acceptance=HOLD...`.
+Only opt-in growth import can treat an excitation/ionization whose
+threshold exceeds Emax as an audited zero-rate process. It never
+drops the source record without a ledger, silently repairs omitted
+source processes, or alters O2 three-body attachment densities.
+
+Local actual 47-process preflight (source identity SHA
+`daf82ef4927fabec32bed5b5b19214b432f580931518d21e1aa6d3a438751bac`):
+- At Emax=15.8367 eV, physical inactive He excitation threshold 19.8 eV
+  and He ionization threshold 24.58 eV are explicitly retained.
+- Independent first-harmonic EFFECTIVE-minus-all-inelastic residual
+  scan on the actual ordered 47-process source knot union found
+  **no negative elastic residual** for Ar, He or O2. This is necessary
+  input compatibility evidence, NOT evidence that the C++ solver
+  generated the actual BOLSIG+ EEPF.
+- Raw original source SHA `b8b1ff807d0586795dcabf4511a2a44b8b04828626b45e0fd95a319817c01063`,
+  native reference SHA `aa6c7c0ce00c61095934defa70f40e415474562b5e3e53374766c1ab7d6912d3`.
+- BOLSIG's automatic energy grid is not thereby reproduced by
+  a uniform-cell C++ solver. Actual 47-process EEPF, scalar transport,
+  e-e, superelastic and temporal-growth parity still require direct
+  independent 200-cell native C++ comparison and source-unit review.
+
+S11 synthetic regression includes native C++ threshold, extrapolation
+knot, no-opt-in, inactive-channel and candidate CLI zero-rate/unchanged
+EEPF controls. No third-party cross-section rows are committed.
