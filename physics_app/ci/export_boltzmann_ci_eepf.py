@@ -14,10 +14,12 @@ import shutil
 import subprocess
 
 MODEL = "SYNTHETIC_ELASTIC_ONLY_NOT_BOLSIG_PARITY"
+COOLING_MODEL = "SYNTHETIC_ELASTIC_N2_EXCITATION_NOT_BOLSIG_PARITY"
 EXPECTED = {
     "example1_R21", "example2_R1_DC", "example3_R31",
     "example3_R33", "example3_R35", "example4_R1",
     "example4_R1_Emax2x", "example4_R1_Emax4x", "example4_R1_Emax8x",
+    "example4_R1_SYNTHETIC_N2_1x", "example4_R1_SYNTHETIC_N2_2x",
 }
 
 
@@ -54,18 +56,21 @@ def create_ci_eepf(out: Path) -> dict:
     manifest = {
         "status": "CI_NATIVE_SOLVER_EXECUTED_DEVELOPMENT_ONLY",
         "scientific_acceptance": "HOLD_REAL_COLLISION_PROCESS_EQUIVALENCE",
-        "model": MODEL,
-        "source": "first-party, invented constant elastic cross sections",
+        "model": "MIXED_MANUFACTURED_ELASTIC_AND_N2_EXCITATION_NOT_BOLSIG_PARITY",
+        "source": "first-party invented elastic and N2-vibration cross sections",
         "process_limitations": [
             "EFFECTIVE momentum cross sections unsupported",
-            "no EXCITATION/IONIZATION/ATTACHMENT in these diagnostic runs",
+            "two N2 excitation processes only in explicitly marked synthetic cooling controls",
+            "no real EXCITATION/IONIZATION/ATTACHMENT source data in any run",
             "RF reduced angular frequency (Example 2 runs 2+) unsupported",
             "four-component example4 is NOT a validated physical match",
         ],
         "runs": {},
     }
     for run in runs:
-        if run["model"] != MODEL:
+        expected_model = (COOLING_MODEL if run["id"].startswith("example4_R1_SYNTHETIC_N2_")
+                          else MODEL)
+        if run["model"] != expected_model:
             raise RuntimeError("native solver attempted to relabel physics model")
         n = run["cells"]
         eps = run["energy_eV"]
@@ -95,7 +100,7 @@ def create_ci_eepf(out: Path) -> dict:
             "sha256": hashlib.sha256(raw).hexdigest(),
             "mean_energy_eV": run["mean_energy_eV"],
             "reduced_field_Td": run["reduced_field_Td"],
-            "model": MODEL,
+            "model": expected_model,
             "normalization_integral": integral,
         }
     # Domain truncation is a separate numerical gate. BOLSIG+ selected an
@@ -120,6 +125,23 @@ def create_ci_eepf(out: Path) -> dict:
         "relative_change_4x_to_8x": increase_4x_to_8x,
         "classification": "1X_ENERGY_DOMAIN_TRUNCATION_HOLD",
         "note": "fixed h, identical synthetic collision physics; NOT BOLSIG+ parity",
+    }
+    # Both experiments use the same input conditions, 200/400 cells and
+    # invented constant elastic scattering. Only the two invented vibrational
+    # energy-loss channels differ; this is a mechanism check, not a fit to BOLSIG.
+    cooling_1x = manifest["runs"]["example4_R1_SYNTHETIC_N2_1x"]["mean_energy_eV"]
+    cooling_2x = manifest["runs"]["example4_R1_SYNTHETIC_N2_2x"]["mean_energy_eV"]
+    if not (0 < cooling_1x < base and 0 < cooling_2x < twice):
+        raise RuntimeError("native Boltzmann N2 inelastic cooling discriminator failed")
+    manifest["synthetic_n2_excitation_diagnostic"] = {
+        "model": COOLING_MODEL,
+        "channels": ["invented vibration threshold 0.3 eV, sigma 5e-20 m2",
+                     "invented vibration threshold 1.0 eV, sigma 4e-20 m2"],
+        "elastic_only_1x_mean_energy_eV": base,
+        "cooling_1x_mean_energy_eV": cooling_1x,
+        "elastic_only_2x_mean_energy_eV": twice,
+        "cooling_2x_mean_energy_eV": cooling_2x,
+        "classification": "SYNTHETIC_COOLING_OPERATOR_TEST_NOT_BOLSIG_PARITY",
     }
     (out / "manifest.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
     return manifest
