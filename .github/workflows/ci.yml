@@ -281,16 +281,6 @@ jobs:
           retention-days: 1
       - name: Run Physics pytest
         run: python -m pytest -q
-      - name: Export independent Boltzmann C++ EEPF development controls
-        run: python3 physics_app/ci/export_boltzmann_ci_eepf.py --out boltzmann-ci-eepf
-      - name: Upload independent Boltzmann C++ EEPF development controls
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: boltzmann-native-eepf-synthetic-controls
-          path: boltzmann-ci-eepf/*.json
-          if-no-files-found: warn
-          retention-days: 30
       - name: Validate normalized-to-physical coupled equivalence fixture
         run: python physics_app/ci/check_physical_state_coupled_equivalence.py --self-test
       - name: Validate n_epsilon-to-mean_en symbol equivalence fixture
@@ -404,3 +394,26 @@ jobs:
             echo "ORDINARY_CI_REBUILDS_MOOSE_STACK=false"
             echo "ORDINARY_CI_COMPILES_PHYSICS_APPLICATION=false"
           }
+
+  boltzmann-eepf-controls:
+    name: Native Boltzmann EEPF development controls
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.action != 'edited' ||
+      github.event.changes.base != null
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile and run actual C++ Boltzmann solver on invented elastic controls
+        run: python3 physics_app/ci/export_boltzmann_ci_eepf.py --out boltzmann-ci-eepf
+      - name: Upload C++ EEPF data, explicitly marked not real-gas parity
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: boltzmann-native-eepf-synthetic-controls
+          path: boltzmann-ci-eepf/*.json
+          if-no-files-found: warn
+          retention-days: 30
