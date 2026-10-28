@@ -249,6 +249,16 @@ ImportedElasticExcitation prepareElasticExcitation(
       std::vector<double> momentum = rec.cross_section_m2;
       if (rec.kind == CollisionKind::Effective)
       {
+        // A reversible upper-state EFFECTIVE record may already include
+        // superelastic momentum. Subtracting only the forward excitations
+        // would then double-count the reverse channel in atFace(). Until
+        // an independently validated upper-state inverse-momentum
+        // reconstruction exists, never accept this combination.
+        for (const auto & channel : file.records)
+          if (channel.kind == CollisionKind::Excitation &&
+              channel.reversible && channel.product == rec.target)
+            throw std::invalid_argument(
+                "Boltzmann cross sections: EFFECTIVE upper-state momentum with reversible superelastic channel unsupported");
         energy = {0.0, max_energy_eV};
         for (const double e : rec.energy_eV)
           if (e <= max_energy_eV)
