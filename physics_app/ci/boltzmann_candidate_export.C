@@ -64,7 +64,7 @@ int main(int argc, char ** argv)
     if (argc < 8)
       throw std::invalid_argument(
           "usage: boltzmann_candidate_export SOURCE_TXT SHA256 EoverN_Td Tg_K "
-          "emax_eV CELLS species=fraction [species=fraction ...] [--enable-superelastic] [--diagnose-frozen-growth] [--solve-elastic-temporal-growth] [--report-elastic-transport]");
+          "emax_eV CELLS species=fraction [species=fraction ...] [--enable-superelastic] [--diagnose-frozen-growth] [--solve-elastic-temporal-growth] [--solve-coupled-temporal-growth] [--report-elastic-transport]");
 
     const std::string source_path = argv[1], source_sha = argv[2];
     requireSourceHash(source_sha);
@@ -77,6 +77,7 @@ int main(int argc, char ** argv)
     bool enable_superelastic = false;
     bool frozen_growth = false;
     bool temporal_growth = false;
+    bool coupled_growth = false;
     bool elastic_transport = false;
     for (int i = 7; i < argc; ++i)
     {
@@ -102,6 +103,13 @@ int main(int argc, char ** argv)
         temporal_growth = true;
         continue;
       }
+      if (pair == "--solve-coupled-temporal-growth")
+      {
+        if (coupled_growth)
+          throw std::invalid_argument("duplicate coupled temporal growth option");
+        coupled_growth = true;
+        continue;
+      }
       if (pair == "--report-elastic-transport")
       {
         if (elastic_transport)
@@ -119,8 +127,12 @@ int main(int argc, char ** argv)
     if (!std::isfinite(EN) || EN < 0 || !(Tg > 0) || !(emax > 0))
       throw std::invalid_argument("invalid gas temperature, energy ceiling or E/N");
 
-    if (elastic_transport && (temporal_growth || frozen_growth || enable_superelastic))
+    if (temporal_growth && coupled_growth)
+      throw std::invalid_argument("choose only one temporal growth model");
+    if (elastic_transport && (temporal_growth || coupled_growth || frozen_growth || enable_superelastic))
       throw std::invalid_argument("elastic transport-only moments incompatible with particle growth or superelastic");
+    if (coupled_growth && frozen_growth)
+      throw std::invalid_argument("coupled temporal growth incompatible with frozen diagnostics");
     if (temporal_growth && (frozen_growth || enable_superelastic))
       throw std::invalid_argument("temporal elastic-growth solver is incompatible with frozen growth/superelastic");
     std::ifstream stream(source_path);
@@ -131,11 +143,13 @@ int main(int argc, char ** argv)
     std::vector<ExcitationChannel> excitation;
     std::vector<IonizationChannel> ionizations;
     std::vector<AttachmentChannel> attachments;
-    if (frozen_growth || temporal_growth)
+    if (frozen_growth || temporal_growth || coupled_growth)
     {
       auto projected = prepareGrowthPhysics(file, fraction, emax, enable_superelastic);
       if (temporal_growth && !projected.excitation_channels.empty())
         throw std::invalid_argument("elastic temporal-growth eigen solver does not include excitation");
+      if (coupled_growth && projected.excitation_channels.empty())
+        throw std::invalid_argument("coupled temporal growth requires excitation channels");
       targets = std::move(projected.targets);
       excitation = std::move(projected.excitation_channels);
       ionizations = std::move(projected.ionization_channels);
@@ -158,7 +172,7 @@ int main(int argc, char ** argv)
     conditions.gas_temperature_K = Tg;
     conditions.reduced_field_Td = EN;
     conditions.targets = std::move(targets);
-    const auto result = excitation.empty() ?
+    auto result = excitation.empty() ?
         ExcitationResult{} : solveExcitationSteadyState(
             conditions, excitation, ExcitationLinearMethod::Auto);
     // Growth-only datasets use the elastic EEPF; otherwise solve M5's
@@ -166,10 +180,18 @@ int main(int argc, char ** argv)
     ElasticResult distribution = excitation.empty() ?
         solveElasticSteadyState(conditions) : result.distribution;
     TemporalGrowthResult temporal;
-    if (temporal_growth)
+    if (temporal_growth || coupled_growth)
     {
-      temporal = solveElasticTemporalGrowth(conditions, ionizations, attachments);
+      temporal = solveElasticTemporalGrowth(
+          conditions, ionizations, attachments,
+          coupled_growth ? excitation : std::vector<ExcitationChannel>{});
       distribution = temporal.distribution;
+      if (coupled_growth)
+      {
+        const auto rates = evaluateExcitationRatesOnEepf(conditions, distribution, excitation);
+        result.rate_coefficients_m3_per_s = rates.forward_rates_m3_per_s;
+        result.superelastic_rate_coefficients_m3_per_s = rates.reverse_rates_m3_per_s;
+      }
     }
     if (frozen_growth && ionizations.empty() && attachments.empty())
       throw std::invalid_argument("frozen growth requested without ionization/attachment");
@@ -177,7 +199,7 @@ int main(int argc, char ** argv)
     if (frozen_growth)
       growth = evaluateGrowthOnFrozenEepf(
           conditions, distribution, ionizations, attachments);
-    if (temporal_growth)
+    if (temporal_growth || coupled_growth)
       growth = temporal.growth;
     ElasticTransportMoments transport;
     if (elastic_transport)
@@ -201,6 +223,7 @@ int main(int argc, char ** argv)
       std::cout << ':' << part;
     }
     const std::string model = elastic_transport ? "elastic_dc_transport_moments" :
+        coupled_growth ? "elastic_excitation_superelastic_temporal_growth_eigen_dense" :
         temporal_growth ?
         "elastic_ionization_attachment_temporal_growth_eigen_dense" :
         frozen_growth ?
@@ -259,7 +282,7 @@ int main(int argc, char ** argv)
                 << growth.reduced_temporal_growth_m3_per_s
                 << ",\"frozen_eepf_ionization_energy_loss_eV_m3_per_s\":"
                 << growth.reduced_ionization_energy_loss_eV_m3_per_s;
-    if (temporal_growth)
+    if (temporal_growth || coupled_growth)
       std::cout << ",\"reduced_temporal_growth_eigenvalue_m3_per_s\":"
                 << temporal.reduced_growth_eigenvalue_m3_per_s
                 << ",\"generalized_eigen_residual\":"
