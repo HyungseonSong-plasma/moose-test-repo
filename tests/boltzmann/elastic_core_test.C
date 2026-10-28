@@ -78,6 +78,26 @@ int main()
   if (result_high.maximum_normalized_flux_residual > 1e-12)
     throw std::runtime_error("SG exponential flux balance failed");
 
+  // Identical cross-section targets must be mixture partition invariant.
+  auto split = fixture(1000, 0.05);
+  split.targets[0].mole_fraction = 0.3;
+  auto duplicate = split.targets[0];
+  duplicate.name = "synthetic-second-target";
+  duplicate.mole_fraction = 0.7;
+  split.targets.push_back(duplicate);
+  const auto split_result = solveElasticSteadyState(split);
+  if (relativeError(split_result.mean_energy_eV, result_low.mean_energy_eV) > 1e-12)
+    throw std::runtime_error("identical-target mixture partition changed the EEPF");
+
+  // Domain truncation control: extending epsilon_max should not materially
+  // change a sufficiently decayed elastic distribution at the chosen E/N.
+  auto expanded = fixture(2000, 0.2);
+  expanded.max_energy_eV = 4.0;
+  expanded.targets[0].energy_eV.back() = 4.0;
+  const auto expanded_result = solveElasticSteadyState(expanded);
+  if (relativeError(result_high.mean_energy_eV, expanded_result.mean_energy_eV) > 0.01)
+    throw std::runtime_error("elastic EEPF failed epsilon_max refinement");
+
   // P0 negative controls: reject malformed units, coverages, fractions,
   // sign errors, nonmonotone energies and absent physical collision operators.
   auto bad = fixture(100, 1.0);
