@@ -50,6 +50,8 @@ CollisionFile parseBolsigCrossSections(std::istream & input);
 // negative residual or duplicate ELASTIC/EFFECTIVE target. This is not valid
 // for files containing IONIZATION, ATTACHMENT or ROTATION, which fail closed.
 // Reversible/superelastic channels still require explicit opt-in and states.
+// An EFFECTIVE momentum record for the excited upper state is rejected
+// because its included inverse scattering is not separately reconstructed.
 // All active target fractions and full cross-section energy coverage are
 // mandatory; no source extrapolation or invented physical data is permitted.
 struct ImportedElasticExcitation
