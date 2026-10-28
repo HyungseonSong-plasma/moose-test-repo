@@ -543,24 +543,25 @@ ConservativeExcitationOperator assembleExcitationConservativeOperator(
   }
 
   const std::size_t n = input.cells;
-  const double h = input.max_energy_eV / static_cast<double>(n);
+  const auto edges = energyMeshEdges(input);
+  const auto centers = energyMeshCenters(edges);
   const double gamma = std::sqrt(2.0 * electron_charge_C / electron_mass_kg);
   std::vector<std::map<std::size_t, double>> a(n);
   std::vector<double> weight(n, 0.0);
   for (std::size_t i = 0; i < n; ++i)
   {
-    const double left = static_cast<double>(i) * h;
-    const double right = left + h;
+    const double left = edges[i], right = edges[i+1];
     weight[i] = (2.0 / 3.0) * (std::pow(right, 1.5) - std::pow(left, 1.5));
   }
 
   // Divergence of the same conservative elastic SG interface flux as M1.
   for (std::size_t i = 1; i < n; ++i)
   {
-    const auto face = atFace(input, static_cast<double>(i) * h, &channels);
-    const double p = face.W * h / face.D;
-    const double left = face.D / h * bernoulli(-p);
-    const double right = face.D / h * bernoulli(p);
+    const double delta = centers[i] - centers[i-1];
+    const auto face = atFace(input, edges[i], &channels);
+    const double p = face.W * delta / face.D;
+    const double left = face.D / delta * bernoulli(-p);
+    const double right = face.D / delta * bernoulli(p);
     a[i - 1][i - 1] += left;
     a[i - 1][i] -= right;
     a[i][i - 1] -= left;
@@ -578,23 +579,21 @@ ConservativeExcitationOperator assembleExcitationConservativeOperator(
     const double coefficient = gamma * fractions[c];
     for (std::size_t donor = 0; donor < n; ++donor)
     {
-      const double lo = std::max(static_cast<double>(donor) * h, u);
-      const double hi = static_cast<double>(donor + 1) * h;
+      const double lo = std::max(edges[donor], u);
+      const double hi = edges[donor + 1];
       if (hi <= lo)
         continue;
       const double total = coefficient * weightedExcitationIntegral(channel, lo, hi);
       double gains = 0.0;
-      // A shifted interval of width <= h intersects at most two target cells.
-      const auto first = static_cast<std::size_t>(
-          std::max(0.0, std::floor((lo - u) / h)));
-      const auto last = static_cast<std::size_t>(
-          std::min(static_cast<double>(n - 1),
-                   std::floor(std::nextafter((hi - u) / h,
-                                             -std::numeric_limits<double>::infinity()))));
+      // The shifted donor may overlap MANY nonuniform destination cells:
+      // never assume the uniform-grid two-cell shortcut.
+      const auto first = energyMeshCell(edges, std::max(0.0, lo-u));
+      const auto last = energyMeshCell(
+          edges, std::max(0.0, std::nextafter(hi-u, 0.0)));
       for (std::size_t dest = first; dest <= last && dest < n; ++dest)
       {
-        const double xlo = std::max(lo, u + static_cast<double>(dest) * h);
-        const double xhi = std::min(hi, u + static_cast<double>(dest + 1) * h);
+        const double xlo = std::max(lo, u + edges[dest]);
+        const double xhi = std::min(hi, u + edges[dest + 1]);
         if (xhi <= xlo)
           continue;
         const double gain = coefficient * weightedExcitationIntegral(channel, xlo, xhi);
@@ -625,21 +624,19 @@ ConservativeExcitationOperator assembleExcitationConservativeOperator(
                                channel.upper_to_lower_weight_ratio;
     for (std::size_t donor = 0; donor < n; ++donor)
     {
-      const double lo = static_cast<double>(donor) * h;
-      const double hi = std::min(static_cast<double>(donor + 1) * h, input.max_energy_eV - u);
+      const double lo = edges[donor];
+      const double hi = std::min(edges[donor+1], input.max_energy_eV-u);
       if (hi <= lo)
         continue;
       const double total = coefficient * weightedExcitationIntegral(channel, lo + u, hi + u);
       double gains = 0.0;
-      const auto first = static_cast<std::size_t>(std::floor((lo + u) / h));
-      const auto last = static_cast<std::size_t>(
-          std::min(static_cast<double>(n - 1),
-                   std::floor(std::nextafter((hi + u) / h,
-                                             -std::numeric_limits<double>::infinity()))));
+      const auto first = energyMeshCell(edges, lo+u);
+      const auto last = energyMeshCell(
+          edges, std::nextafter(hi+u, 0.0));
       for (std::size_t dest = first; dest <= last && dest < n; ++dest)
       {
-        const double xlo = std::max(lo + u, static_cast<double>(dest) * h);
-        const double xhi = std::min(hi + u, static_cast<double>(dest + 1) * h);
+        const double xlo = std::max(lo + u, edges[dest]);
+        const double xhi = std::min(hi + u, edges[dest+1]);
         if (xhi <= xlo)
           continue;
         const double gain = coefficient * weightedExcitationIntegral(channel, xlo, xhi);
@@ -670,7 +667,8 @@ ExcitationResult solveExcitationSteadyState(const ElasticInput & input,
     throw std::invalid_argument("Boltzmann: dense excitation solver limited to 512 cells");
   auto assembled = assembleExcitationConservativeOperator(input, channels);
   const std::size_t n = input.cells;
-  const double h = input.max_energy_eV / static_cast<double>(n);
+  const auto edges = energyMeshEdges(input);
+  const auto centers = energyMeshCenters(edges);
 
   auto & a = assembled.rows;
   const auto & weight = assembled.cell_number_mass;
@@ -731,8 +729,7 @@ ExcitationResult solveExcitationSteadyState(const ElasticInput & input,
   for (std::size_t i = 0; i < n; ++i)
   {
     norm += weight[i] * f[i];
-    const double lo = static_cast<double>(i) * h;
-    const double hi = lo + h;
+    const double lo = edges[i], hi = edges[i+1];
     energy_moment += f[i] * (2.0 / 5.0) *
                      (std::pow(hi, 2.5) - std::pow(lo, 2.5));
   }
@@ -742,9 +739,8 @@ ExcitationResult solveExcitationSteadyState(const ElasticInput & input,
     v /= norm;
 
   ExcitationResult result;
-  result.distribution.energy_eV.resize(n);
-  for (std::size_t i = 0; i < n; ++i)
-    result.distribution.energy_eV[i] = (i + 0.5) * h;
+  result.distribution.energy_eV = centers;
+  result.distribution.energy_cell_edges_eV = edges;
   result.distribution.eepf_eV_minus_3_halves = f;
   result.distribution.mean_energy_eV = energy_moment / norm;
   result.distribution.normalization = 1.0;
@@ -797,7 +793,8 @@ ExcitationRateMoments evaluateExcitationRatesOnEepf(
   if (distribution.energy_eV.size() != n ||
       distribution.eepf_eV_minus_3_halves.size() != n)
     throw std::invalid_argument("Boltzmann: rate evaluation EEPF grid differs from input");
-  const double h = input.max_energy_eV / static_cast<double>(n);
+  const auto edges = energyMeshEdges(input);
+  const auto centers = energyMeshCenters(edges);
   const double gamma = std::sqrt(2.0 * electron_charge_C / electron_mass_kg);
   const auto & f = distribution.eepf_eV_minus_3_halves;
   double norm = 0.0;
@@ -805,10 +802,11 @@ ExcitationRateMoments evaluateExcitationRatesOnEepf(
   {
     if (!std::isfinite(f[i]) || f[i] < 0.0 ||
         !std::isfinite(distribution.energy_eV[i]) ||
-        std::abs(distribution.energy_eV[i] - (i+0.5)*h) > 1e-9*h)
+        std::abs(distribution.energy_eV[i] - centers[i]) >
+            1e-9*(edges[i+1]-edges[i]))
       throw std::invalid_argument("Boltzmann: rate input EEPF invalid");
     norm += f[i] * (2.0 / 3.0) *
-            (std::pow((i+1)*h, 1.5) - std::pow(i*h, 1.5));
+            (std::pow(edges[i+1], 1.5) - std::pow(edges[i], 1.5));
   }
   if (!(std::abs(norm-1.0) < 1e-8))
     throw std::invalid_argument("Boltzmann: rate EEPF normalization invalid");
@@ -835,8 +833,8 @@ ExcitationRateMoments evaluateExcitationRatesOnEepf(
     double rate = 0.0;
     for (std::size_t i = 0; i < n; ++i)
     {
-      const double lo = static_cast<double>(i) * h;
-      rate += gamma * f[i] * weightedExcitationIntegral(channel, lo, lo+h);
+      rate += gamma * f[i] *
+          weightedExcitationIntegral(channel, edges[i], edges[i+1]);
     }
     double reverse_rate = 0.0;
     double upper_fraction = 0.0;
@@ -850,8 +848,8 @@ ExcitationRateMoments evaluateExcitationRatesOnEepf(
       upper_fraction = upper->mole_fraction;
       for (std::size_t i = 0; i < n; ++i)
       {
-        const double lo = i*h;
-        const double hi = std::min(lo+h, input.max_energy_eV-channel.threshold_eV);
+        const double lo = edges[i];
+        const double hi = std::min(edges[i+1], input.max_energy_eV-channel.threshold_eV);
         if (hi > lo)
           reverse_rate += gamma / channel.upper_to_lower_weight_ratio * f[i] *
               weightedExcitationIntegral(channel, lo+channel.threshold_eV,
