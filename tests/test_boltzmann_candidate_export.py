@@ -490,3 +490,90 @@ def test_inelastic_transport_cli_and_superelastic_opt_in(tmp_path: Path) -> None
     assert obj["elastic_transport"]["mobility_times_N_per_m_V_s"] > 0
     assert obj["elastic_transport"]["diffusion_times_N_per_m_s"] > 0
     assert obj["rates_m3_per_s"]["lower:excitation:1"] > 0
+
+
+
+def test_coupled_growth_transport_complete_effective_momentum_cli(tmp_path: Path) -> None:
+    """Synthetic P0/P1: full momentum, no excitation/ionization double-count."""
+    compiler = shutil.which("g++")
+    assert compiler
+    root = Path(__file__).resolve().parents[1]
+    binary = tmp_path / "coupled_transport_candidate"
+    build = subprocess.run([
+        compiler, "-std=c++17", "-O2", "-Wall", "-Wextra", "-Werror", "-pedantic",
+        f"-I{root / 'physics_app/include/utils'}",
+        str(root / "physics_app/src/utils/PhysicsBoltzmannElasticSolver.C"),
+        str(root / "physics_app/src/utils/PhysicsBoltzmannGrowth.C"),
+        str(root / "physics_app/src/utils/PhysicsBoltzmannTemporalGrowth.C"),
+        str(root / "physics_app/src/utils/PhysicsBoltzmannTransport.C"),
+        str(root / "physics_app/src/utils/PhysicsBoltzmannCrossSections.C"),
+        str(root / "physics_app/ci/boltzmann_candidate_export.C"),
+        "-o", str(binary),
+    ], capture_output=True, text=True)
+    assert build.returncode == 0, build.stdout + build.stderr
+
+    changing = (
+        "EXCITATION\nAr -> Ar_test\n0.4\nsynthetic\n------\n"
+        "0 0\n0.4 0\n10 1e-20\n------\n"
+        "IONIZATION\nAr -> Ar+\n4.0\nsynthetic\n------\n"
+        "0 0\n4 0\n10 1e-21\n------\n"
+        "ATTACHMENT\nAr -> Ar-\nsynthetic\n------\n"
+        "0 1e-23\n10 1e-23\n------\n"
+    )
+    elastic = (
+        "AUTHOR-OWNED SYNTHETIC ONLY; NEVER LXCAT\n"
+        "ELASTIC\nAr\n1.37e-5\nsynthetic\n------\n"
+        "0 5e-20\n10 5e-20\n------\n" + changing
+    )
+    # Complete, inclusive first-harmonic scattering at the union of every
+    # explicit elastic, excitation, ionization and attachment source knot.
+    effective = (
+        "AUTHOR-OWNED SYNTHETIC ONLY; NEVER LXCAT\n"
+        "EFFECTIVE\nAr\n1.37e-5\nsynthetic\n------\n"
+        "0 5.001e-20\n0.4 5.001e-20\n4 5.376e-20\n"
+        "10 6.101e-20\n------\n" + changing
+    )
+
+    def invoke(text: str, *, extra_flags: tuple[str, ...] = ()) -> subprocess.CompletedProcess:
+        source = tmp_path / "local_synthetic_collision.txt"
+        source.write_text(text, encoding="utf-8")
+        digest = hashlib.sha256(source.read_bytes()).hexdigest()
+        args = [str(binary), str(source), digest, "0.5", "300", "10", "100",
+                "Ar=1", "--solve-coupled-temporal-growth",
+                "--report-coupled-growth-transport", *extra_flags]
+        return subprocess.run(args, capture_output=True, text=True, timeout=30)
+
+    first = invoke(elastic)
+    second = invoke(effective)
+    assert first.returncode == second.returncode == 0, (
+        first.stdout + first.stderr + second.stdout + second.stderr)
+    a, b = (json.loads(x.stdout) for x in (first, second))
+    assert a["conditions"]["model"] == b["conditions"]["model"]
+    assert a["generalized_eigen_residual"] < 1e-8
+    assert b["generalized_eigen_residual"] < 1e-8
+    assert "elastic_transport" not in a
+    assert a["transport_scattering_source"] == (
+        "FULL_EFFECTIVE_OR_ELASTIC_PLUS_ALL_INELASTIC")
+    assert abs(a["mean_energy_eV"] - b["mean_energy_eV"]) < 1e-9
+    for name, value in a["growth_eepf_transport_diagnostic"].items():
+        assert name in b["growth_eepf_transport_diagnostic"]
+        other = b["growth_eepf_transport_diagnostic"][name]
+        assert abs(value - other) <= 1e-8 * max(1.0, abs(value))
+    moment = a["growth_eepf_transport_diagnostic"]
+    assert moment["mobility_times_N_per_m_V_s"] > 0.0
+    assert moment["diffusion_times_N_per_m_s"] > 0.0
+    assert moment["energy_mobility_times_N_per_m_V_s"] > 0.0
+    assert moment["energy_diffusion_times_N_per_m_s"] > 0.0
+    assert 0 <= moment["tail_ratio"] < 1e-3
+
+    # No silent mixing with the steady elastic-only or frozen-growth paths.
+    invalid = invoke(elastic, extra_flags=("--report-elastic-transport",))
+    assert invalid.returncode == 2 and "only one transport" in invalid.stderr
+    source = tmp_path / "local_synthetic_collision.txt"
+    digest = hashlib.sha256(source.read_bytes()).hexdigest()
+    unpaired = subprocess.run([
+        str(binary), str(source), digest, "0.5", "300", "10", "100",
+        "Ar=1", "--report-coupled-growth-transport"
+    ], capture_output=True, text=True, timeout=30)
+    assert unpaired.returncode == 2
+    assert "requires --solve-coupled-temporal-growth" in unpaired.stderr
