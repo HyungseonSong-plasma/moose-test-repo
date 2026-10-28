@@ -212,6 +212,53 @@ int main()
   if (!(energy_err_fine < energy_err_coarse && energy_err_fine < 0.02))
     throw std::runtime_error("inelastic energy balance did not converge under grid refinement");
 
+  // Dense-reference vs sparse iterative solver on the *same* matrix:
+  // compare a true distribution, not just one summary scalar. Conservation,
+  // nonnegativity, rates and moments must agree before scalable use.
+  for (const std::size_t cells : {125u, 250u, 400u})
+  {
+    auto comparison = fixture(cells, 0.2);
+    auto dense = solveExcitationSteadyState(
+        comparison, {offgrid_channel}, ExcitationLinearMethod::DenseReference);
+    auto sparse = solveExcitationSteadyState(
+        comparison, {offgrid_channel}, ExcitationLinearMethod::SparseBiCGSTAB);
+    if (!(sparse.linear_method_used == ExcitationLinearMethod::SparseBiCGSTAB &&
+          sparse.linear_iterations > 0 &&
+          sparse.linear_iterations <= 400 &&
+          sparse.maximum_normalized_equation_residual < 1e-8 &&
+          sparse.assembled_nonzero_entries < 12 * cells))
+      throw std::runtime_error("sparse excitation diagnostics failed");
+    if (relativeError(sparse.distribution.mean_energy_eV,
+                      dense.distribution.mean_energy_eV) > 1e-8 ||
+        relativeError(sparse.rate_coefficients_m3_per_s[0],
+                      dense.rate_coefficients_m3_per_s[0]) > 1e-8)
+      throw std::runtime_error("sparse/dense excitation scalar parity failed");
+    const double h_parity = 2.0 / static_cast<double>(cells);
+    double weighted_l1 = 0.0;
+    for (std::size_t i = 0; i < cells; ++i)
+    {
+      const double a = i * h_parity, b = (i + 1) * h_parity;
+      const double weight = (2.0 / 3.0) * (std::pow(b, 1.5) - std::pow(a, 1.5));
+      weighted_l1 += weight * std::abs(
+          sparse.distribution.eepf_eV_minus_3_halves[i] -
+          dense.distribution.eepf_eV_minus_3_halves[i]);
+    }
+    if (!(weighted_l1 < 1e-8))
+      throw std::runtime_error("sparse/dense excitation distribution parity failed");
+  }
+
+  // Scalability gate: >512 cells must select sparse automatically. Recheck
+  // energy-grid refinement and operator storage. No unbounded dense fallback.
+  auto scalable = fixture(2048, 0.2);
+  const auto large = solveExcitationSteadyState(scalable, {offgrid_channel});
+  if (!(large.linear_method_used == ExcitationLinearMethod::SparseBiCGSTAB &&
+        large.linear_iterations > 0 && large.linear_iterations <= 400 &&
+        large.assembled_nonzero_entries < 12 * scalable.cells &&
+        large.maximum_collision_number_balance_error < 1e-9 &&
+        large.maximum_normalized_equation_residual < 1e-8 &&
+        large.distribution.mean_energy_eV < base_elastic.mean_energy_eV))
+    throw std::runtime_error("sparse 2048-cell excitation verification failed");
+
   // Zero-amplitude collision channel must recover the purely elastic M1
   // discrete equilibrium, not just the same qualitative trend.
   channel.cross_section_m2 = {0.0, 0.0};
@@ -237,6 +284,9 @@ int main()
   channel.cross_section_m2[1] = 1.0e-20;
   reject([&] { (void)solveExcitationSteadyState(base, {}); });
   base.cells = 513;
+  reject([&] { (void)solveExcitationSteadyState(
+      base, {channel}, ExcitationLinearMethod::DenseReference); });
+  base.cells = 16385;
   reject([&] { (void)solveExcitationSteadyState(base, {channel}); });
 
   // P0 negative controls: reject malformed units, coverages, fractions,
@@ -259,7 +309,7 @@ int main()
   bad = fixture(100, -1.0);
   reject([&] { (void)solveElasticSteadyState(bad); });
 
-  std::cout << "BOLTZMANN_EXCITATION_M2_P0_P1_PASS\n" << "BOLTZMANN_ELASTIC_P0_P1_PASS\n"
+  std::cout << "BOLTZMANN_EXCITATION_M2_P0_P1_PASS\n" << "BOLTZMANN_ELASTIC_P0_P1_PASS\n" << "BOLTZMANN_SPARSE_M3_P0_P1_PASS\n"
             << "MAXWELL_REFINEMENT_ERRORS=" << err_c << ',' << err_f << ',' << err_ff << '\n'
             << "FIELD_MEAN_ENERGIES_EV=" << fine.mean_energy_eV << ','
             << result_low.mean_energy_eV << ',' << result_high.mean_energy_eV << '\n'
