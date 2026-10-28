@@ -222,6 +222,20 @@ int main()
         thermal_sparse.maximum_normalized_equation_residual < 1e-8))
     throw std::runtime_error("M5 superelastic dense/sparse parity failed");
 
+  // Negative control: an EFFECTIVE momentum record for the upper state
+  // may already include superelastic scattering, and cannot be converted
+  // into an elastic record by subtracting only forward excitation.
+  rejects([&] {
+    std::string invalid = reversible_text;
+    const auto upper = invalid.find("ELASTIC\nAr*\n");
+    if (upper == std::string::npos)
+      throw std::runtime_error("missing excited target fixture anchor");
+    invalid.replace(upper, std::string("ELASTIC").size(), "EFFECTIVE");
+    std::istringstream f(invalid);
+    (void)prepareElasticExcitation(
+        parseBolsigCrossSections(f), reverse_fractions, 10.0, true);
+  });
+
   // Negative controls: no excited-state elastic record, absent upper target,
   // nonphysical degeneracy, and missing explicit upper-state composition.
   rejects([&] {
