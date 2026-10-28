@@ -93,8 +93,55 @@ int main()
     text.replace(pos, from.size(), to);
     return text;
   };
-  rejects([&] { std::istringstream f(mutate("ELASTIC\nAr", "EFFECTIVE\nAr"));
-                 (void)prepareElasticExcitation(parseBolsigCrossSections(f), fractions, 2.0); });
+  // EFFECTIVE includes excitation momentum. This synthetic table is
+  // exactly elastic + excitation, so both representations must yield the
+  // same EEPF, rates, and conservative balance.
+  std::string effective_text = mutate("ELASTIC\nAr", "EFFECTIVE\nAr");
+  const std::string original_table =
+      "0.0 5e-20\n1.0 5e-20\n2.0 5e-20\n";
+  const auto table_at = effective_text.find(original_table);
+  if (table_at == std::string::npos)
+    throw std::runtime_error("effective momentum fixture anchor missing");
+  effective_text.replace(table_at, original_table.size(),
+                         "0.0 5e-20\n1.0 6e-20\n2.0 7e-20\n");
+  std::istringstream effective_stream(effective_text);
+  const auto effective_input = prepareElasticExcitation(
+      parseBolsigCrossSections(effective_stream), fractions, 2.0);
+  if (effective_input.targets.size() != 2 ||
+      effective_input.channels.size() != 1)
+    throw std::runtime_error("EFFECTIVE target projection missing");
+  ElasticInput effective_conditions = input;
+  effective_conditions.targets = effective_input.targets;
+  const auto effective_result = solveExcitationSteadyState(
+      effective_conditions, effective_input.channels,
+      ExcitationLinearMethod::SparseBiCGSTAB);
+  if (!(std::abs(imported_result.distribution.mean_energy_eV -
+                 effective_result.distribution.mean_energy_eV) < 1e-10 &&
+        std::abs(imported_result.rate_coefficients_m3_per_s[0] -
+                 effective_result.rate_coefficients_m3_per_s[0]) <
+                 1e-9 * imported_result.rate_coefficients_m3_per_s[0] &&
+        effective_result.maximum_normalized_equation_residual < 1e-8 &&
+        effective_result.maximum_collision_number_balance_error < 1e-9))
+    throw std::runtime_error(
+        "EFFECTIVE reconstruction double-counted excitation momentum");
+  // Reject an impossible negative elastic remainder.
+  rejects([&] {
+    std::string invalid = effective_text;
+    const auto bad = invalid.find("2.0 7e-20");
+    if (bad == std::string::npos)
+      throw std::runtime_error("bad effective mutation anchor");
+    invalid.replace(bad, std::string("2.0 7e-20").size(), "2.0 1e-21");
+    std::istringstream f(invalid);
+    (void)prepareElasticExcitation(parseBolsigCrossSections(f), fractions, 2.0);
+  });
+  // Two momentum providers for one target must never be combined.
+  rejects([&] {
+    std::string invalid = effective_text +
+        "ELASTIC\nAr\n1.3700e-5\n------\n"
+        "0.0 5e-20\n2.0 5e-20\n------\n";
+    std::istringstream f(invalid);
+    (void)prepareElasticExcitation(parseBolsigCrossSections(f), fractions, 2.0);
+  });
   rejects([&] { std::istringstream f(mutate("EXCITATION\n", "IONIZATION\n"));
                  (void)prepareElasticExcitation(parseBolsigCrossSections(f), fractions, 2.0); });
   rejects([&] { std::istringstream f(mutate("Ar -> Ar_test_excited", "Ar <-> Ar_test_excited"));
