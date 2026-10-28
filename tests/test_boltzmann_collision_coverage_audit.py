@@ -70,7 +70,7 @@ def test_missing_species_and_coverage_gaps_trigger_science_hold(tmp_path: Path) 
     result = audit_local_collision_file(source, required_energy_eV=12)
     assert result["status"] == "PHYSICS_MODEL_HOLD"
     assert "MISSING_SPECIES:He" in result["model_gaps"]
-    assert "MISSING_ELASTIC_MOMENTUM:N2" in result["model_gaps"]
+    assert "MISSING_MOMENTUM_PROVIDER:N2" in result["model_gaps"]
     assert any(x.startswith("CROSS_SECTION_COVERAGE_GAP:")
                for x in result["model_gaps"])
 
