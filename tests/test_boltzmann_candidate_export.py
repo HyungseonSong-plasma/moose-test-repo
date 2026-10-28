@@ -306,11 +306,11 @@ def test_elastic_selfconsistent_growth_cli_is_different_from_frozen_rates(tmp_pa
     assert "incompatible" in rejected.stderr
 
     high_n = subprocess.run(
-        args[:6] + ["129", "Ar=1", "--solve-elastic-temporal-growth"],
+        args[:6] + ["257", "Ar=1", "--solve-elastic-temporal-growth"],
         capture_output=True, text=True,
     )
     assert high_n.returncode == 2
-    assert "128" in high_n.stderr
+    assert "256" in high_n.stderr
 
 
 def test_elastic_mobility_diffusion_json_cli_is_separate_from_inelastic(tmp_path: Path) -> None:
