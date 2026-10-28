@@ -167,6 +167,51 @@ int main()
             solveElasticSteadyState(offgrid_input).mean_energy_eV))
     throw std::runtime_error("off-grid nonlocal excitation transfer failed conservation");
 
+  // Independent kinetic energy-accounting oracle: the integrated SG
+  // heating flux must approach threshold * excitation rate per target.
+  // The collision operator uses exact overlap integrals, while cell-center
+  // energy moments incur a controlled grid error (not an exact identity).
+  const auto energyError = [](std::size_t ncells) -> double
+  {
+    auto test = fixture(ncells, 0.2);
+    ExcitationChannel xc;
+    xc.name = "energy-balance-oracle";
+    xc.target_name = "synthetic-argon-like";
+    xc.threshold_eV = 0.27;
+    xc.energy_eV = {0.0, 1.0, 2.0};
+    xc.cross_section_m2 = {0.0, 1e-20, 2e-20};
+    const auto s = solveExcitationSteadyState(test, {xc});
+    const auto & f = s.distribution.eepf_eV_minus_3_halves;
+    const double h = 2.0 / static_cast<double>(ncells);
+    const double gamma = std::sqrt(2.0 * 1.602176634e-19 / 9.1093837139e-31);
+    const double theta = 1.380649e-23 * 300.0 / 1.602176634e-19;
+    const double sigma_el = 5e-20;
+    const double sigma_e = 2 * 1.37e-5 * sigma_el;
+    double integrated_flux = 0.0;
+    for (std::size_t i = 1; i < ncells; ++i)
+    {
+      const double e = static_cast<double>(i) * h;
+      const double sigma_total = sigma_el + (e >= xc.threshold_eV ? 1e-20 * e : 0.0);
+      const double W = -gamma * e * e * sigma_e;
+      const double D = gamma * (0.2e-21 * 0.2e-21 * e / (3.0 * sigma_total) +
+                                 theta * e * e * sigma_e);
+      const double p = W * h / D;
+      const auto bern = [](double z) {
+        return std::abs(z) < 1e-4 ? 1.0 - z / 2.0 + z * z / 12.0 : z / std::expm1(z);
+      };
+      integrated_flux += D * (bern(-p) * f[i - 1] - bern(p) * f[i]);
+    }
+    const double excitation_loss =
+        xc.threshold_eV * s.rate_coefficients_m3_per_s[0];
+    if (!(excitation_loss > 0.0))
+      throw std::runtime_error("zero inelastic energy loss in independent oracle");
+    return std::abs(integrated_flux - excitation_loss) / excitation_loss;
+  };
+  const double energy_err_coarse = energyError(125);
+  const double energy_err_fine = energyError(250);
+  if (!(energy_err_fine < energy_err_coarse && energy_err_fine < 0.02))
+    throw std::runtime_error("inelastic energy balance did not converge under grid refinement");
+
   // Zero-amplitude collision channel must recover the purely elastic M1
   // discrete equilibrium, not just the same qualitative trend.
   channel.cross_section_m2 = {0.0, 0.0};
@@ -218,6 +263,7 @@ int main()
             << "MAXWELL_REFINEMENT_ERRORS=" << err_c << ',' << err_f << ',' << err_ff << '\n'
             << "FIELD_MEAN_ENERGIES_EV=" << fine.mean_energy_eV << ','
             << result_low.mean_energy_eV << ',' << result_high.mean_energy_eV << '\n'
+            << "EXCITATION_ENERGY_BALANCE_ERRORS=" << energy_err_coarse << ',' << energy_err_fine << '\n'
             << "MAX_NORMALIZED_FLUX_RESIDUAL=" << result_high.maximum_normalized_flux_residual
             << '\n';
 }
