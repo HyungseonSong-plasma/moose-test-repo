@@ -43,6 +43,18 @@ struct CollisionFile
 // verify raw-byte SHA-256, contributor rights and provenance.
 CollisionFile parseBolsigCrossSections(std::istream & input);
 
+// Explicit opt-in 07/2024 collision-table boundary preprocessing for a
+// user-local source whose READCOLLISIONS instruction used Extrapolate=1.
+// This preserves every process and its original source_line/identity;
+// high-energy continuation uses 1.5x knot growth and log(E)/E at those
+// new knots, with linear interpolation between knots (not analytic
+// evaluation between them). Any ill-defined continuation fails closed.
+// Ionization/excitation thresholds are enforced without deleting the
+// corresponding source process when it lies beyond the solver Emax.
+CollisionFile normalizeBolsig2024CollisionFile(
+    const CollisionFile & source, double max_energy_eV,
+    bool extrapolate_high_energy);
+
 // Project steady DC elastic+excitation physics. A source EFFECTIVE/MOMENTUM
 // record contains *total* elastic + inelastic momentum scattering. For this
 // excitation-only subset, derive the elastic residual on the union of source
