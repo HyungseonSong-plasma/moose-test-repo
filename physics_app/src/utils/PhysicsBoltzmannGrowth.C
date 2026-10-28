@@ -187,15 +187,13 @@ GrowthOperator assembleGrowthCollisions(
   }
 
   // Independently check assembled column sums, not the bookkeeping sources.
+  std::vector<double> assembled_column_sums(n, 0.0);
+  for (const auto & row : rows)
+    for (const auto & [donor, coefficient] : row)
+      assembled_column_sums[donor] += coefficient;
   for (std::size_t donor = 0; donor < n; ++donor)
   {
-    double matrix_sum = 0.0;
-    for (std::size_t dest = 0; dest < n; ++dest)
-    {
-      auto it = rows[dest].find(donor);
-      if (it != rows[dest].end())
-        matrix_sum += it->second;
-    }
+    const double matrix_sum = assembled_column_sums[donor];
     const double expected = op.ionization_event_columns[donor] -
                             op.attachment_event_columns[donor];
     const double scale = op.ionization_event_columns[donor] +
