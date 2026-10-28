@@ -1,5 +1,6 @@
 #include "PhysicsBoltzmannCrossSections.h"
 
+#include <algorithm>
 #include <cmath>
 #include <functional>
 #include <iostream>
@@ -328,6 +329,59 @@ int main()
     std::istringstream stream(invalid);
     (void)prepareGrowthPhysics(parseBolsigCrossSections(stream), {{"Ar", 1.0}}, 2.0);
   });
+  // S11 BOLSIG+ 07/2024 manual boundary semantics (invented values).
+  // The 1.5x continuation MUST be represented as linear knot segments:
+  // analytic log(E)/E evaluation between nodes is not equivalent.
+  const std::string boundary_source =
+      "ELASTIC\nAr\n1.37e-5\nsynthetic\n------\n"
+      "0.5 5e-20\n5 5e-20\n------\n"
+      "EXCITATION\nAr -> test\n0.4\nsynthetic\n------\n"
+      "0.3 1e-20\n0.6 3e-20\n5 3e-20\n------\n"
+      "IONIZATION\nAr -> Ar+\n19.8\nsynthetic\n------\n"
+      "19.9 3e-20\n25 3e-20\n------\n"
+      "ATTACHMENT\nAr -> Ar-\nsynthetic\n------\n"
+      "0.2 2e-21\n5 2e-21\n------\n";
+  std::istringstream boundary_stream(boundary_source);
+  const auto raw_boundary = parseBolsigCrossSections(boundary_stream);
+  const auto manual = normalizeBolsig2024CollisionFile(raw_boundary, 10.0, true);
+  if (manual.records.size() != 4)
+    throw std::runtime_error("BOLSIG 2024 normalization silently dropped processes");
+  const auto & elastic = manual.records[0];
+  const auto & exc = manual.records[1];
+  const auto & inactive_ion = manual.records[2];
+  const auto & att = manual.records[3];
+  const auto close = [](double a, double b)
+  { return std::abs(a - b) < 1e-11 * std::max({std::abs(a), std::abs(b), 1e-30}); };
+  if (!(elastic.energy_eV.front() == 0.0 &&
+        close(elastic.cross_section_m2.front(), 5e-20) &&
+        exc.energy_eV[0] == 0.0 && exc.energy_eV[1] == 0.4 &&
+        exc.cross_section_m2[0] == 0.0 && exc.cross_section_m2[1] == 0.0 &&
+        exc.energy_eV[2] == 0.6 && close(exc.cross_section_m2[2], 3e-20) &&
+        inactive_ion.parameter == 19.8 &&
+        inactive_ion.cross_section_m2.front() == 0.0 &&
+        att.energy_eV.front() == 0.0 &&
+        close(att.cross_section_m2.front(), 2e-21)))
+    throw std::runtime_error("BOLSIG 2024 threshold or lower-bound preprocessing incorrect");
+  const auto & e = exc.energy_eV;
+  const auto & sigma = exc.cross_section_m2;
+  if (!(e[e.size()-2] == 7.5 && e.back() == 11.25 &&
+        close(sigma[sigma.size()-2],
+              3e-20 * (std::log(7.5)/7.5) / (std::log(5.0)/5.0)) &&
+        close(sigma.back(),
+              3e-20 * (std::log(11.25)/11.25) / (std::log(5.0)/5.0))))
+    throw std::runtime_error("BOLSIG 2024 log(E)/E 1.5x knot extension incorrect");
+  const auto unchanged = normalizeBolsig2024CollisionFile(raw_boundary, 10.0, false);
+  if (!(unchanged.records[1].energy_eV.back() == 5.0 &&
+        raw_boundary.records[1].energy_eV.front() == 0.3 &&
+        raw_boundary.records[1].cross_section_m2.front() == 1e-20))
+    throw std::runtime_error("BOLSIG 2024 no-extrapolate / original-source immutability failed");
+  rejects([&] {
+    auto invalid = raw_boundary;
+    invalid.records[0].energy_eV = {0.5, 0.9};
+    invalid.records[0].cross_section_m2 = {5e-20, 5e-20};
+    (void)normalizeBolsig2024CollisionFile(invalid, 10.0, true);
+  });
+  std::cout << "BOLTZMANN_2024_BOUNDARY_THRESHOLD_EXTRAPOLATION_P0_P1_PASS\n";
   std::cout << "BOLTZMANN_M6B3_FULL_MOMENTUM_SYNTHETIC_P0_P1_PASS\n";
 
   std::cout << "BOLTZMANN_SUPERELASTIC_M5_P0_P1_PASS\n"
