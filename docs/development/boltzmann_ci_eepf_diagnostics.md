@@ -218,3 +218,28 @@ silent dropped reactions, lift the dense 128-cell limit or validate a
 separate high-resolution solver, and independently compare full EEPF and
 transport. PR remains science HOLD/DRAFT; no third-party source raw
 tables or native original output are committed.
+
+
+### S9 reproducible source/native evidence (user-local; no raw uploads to GitHub)
+
+Run the now-implemented `physics_app/ci/bolsig_native_full_process_audit.py`
+against an original source file and its run-by-run numerical output:
+
+```sh
+python3 physics_app/ci/bolsig_native_full_process_audit.py \
+  --cross-sections "/private/local/SigloDataBase-LXCat-04Jun2013.txt" \
+  --native-output "/private/local/example4-eepf.dat"
+```
+
+For the two user-supplied files identified above, the deterministic
+JSON preflight has `status=HOLD_NATIVE_OMITTED_PROCESS` (exit code 2),
+not a fake physics PASS. It identifies the extra line-5279 O2
+dissociative attachment after independent source/native rate integration.
+The rate diagnostic compares the observed native output against the
+raw cross-section INPUT; it is not a new C++ kinetic prediction.
+
+The check is regression-tested with **synthetic, author-generated**
+ELASTIC+two-ATTACHMENT fixtures, native process omission, extra
+native process and original-source SHA mutation tests in
+`tests/test_bolsig_native_full_process_audit.py`. Reference bytes,
+collision tables and real EEPF rows are intentionally absent from Git.
