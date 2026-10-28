@@ -149,6 +149,10 @@ int main()
   reject([&] { (void)assembleGrowthCollisions(in, {ion()}, {bad_att}); });
   reject([&] { (void)assembleGrowthCollisions(in, {}, {}); });
 
+  auto bad_mix = in;
+  bad_mix.targets[0].mole_fraction = 0.8;
+  reject([&] { (void)assembleGrowthCollisions(bad_mix, {ion()}, {}); });
+
   auto broken = f;
   broken.eepf_eV_minus_3_halves[0] *= 2.0;
   reject([&] { (void)evaluateGrowthOnFrozenEepf(in, broken, {ion()}, {}); });
