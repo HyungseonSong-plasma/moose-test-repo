@@ -253,6 +253,83 @@ int main()
     std::istringstream f(source);
     (void)prepareElasticExcitation(parseBolsigCrossSections(f), fractions, 2.0, true);
   });
+  // M6b3: complete ELASTIC and EFFECTIVE descriptions of the SAME
+  // invented excitation + ionization + attachment mixture. For ELASTIC
+  // source, the field momentum must include all three inelastic channels;
+  // for EFFECTIVE source, their sum must be subtracted from recoil ONCE.
+  // This is synthetic operator equivalence, NOT BOLSIG+ reference parity.
+  const std::string changing =
+      "EXCITATION\nAr -> Ar_exc\n0.4\nsynthetic\n------\n"
+      "0 0\n0.4 0\n1 1e-20\n1.2 1e-20\n2 1e-20\n------\n"
+      "IONIZATION\nAr -> Ar+\n1.2\nsynthetic\n------\n"
+      "0 0\n1.2 0\n2 5e-21\n------\n"
+      "ATTACHMENT\nAr -> Ar-\nsynthetic\n------\n"
+      "0 2e-21\n2 2e-21\n------\n";
+  const std::string elastic_growth =
+      "ELASTIC\nAr\n1.37e-5\nsynthetic\n------\n"
+      "0 5e-20\n2 5e-20\n------\n" + changing;
+  const std::string effective_growth =
+      "EFFECTIVE\nAr\n1.37e-5\nsynthetic\n------\n"
+      "0 5.2e-20\n0.4 5.2e-20\n1 6.2e-20\n"
+      "1.2 6.2e-20\n2 6.7e-20\n------\n" + changing;
+  std::istringstream elastic_growth_stream(elastic_growth);
+  std::istringstream effective_growth_stream(effective_growth);
+  const auto whole_elastic = prepareGrowthPhysics(
+      parseBolsigCrossSections(elastic_growth_stream), {{"Ar", 1.0}}, 2.0);
+  const auto whole_effective = prepareGrowthPhysics(
+      parseBolsigCrossSections(effective_growth_stream), {{"Ar", 1.0}}, 2.0);
+  if (!(whole_elastic.targets.size() == 1 && whole_effective.targets.size() == 1 &&
+        whole_effective.excitation_channels.size() == 1 &&
+        whole_effective.ionization_channels.size() == 1 &&
+        whole_effective.attachment_channels.size() == 1 &&
+        !whole_elastic.targets[0].field_momentum_transfer_m2.empty() &&
+        !whole_effective.targets[0].field_momentum_transfer_m2.empty()))
+    throw std::runtime_error("M6b3 full scattering inventory not retained");
+  const auto & a_target = whole_elastic.targets[0];
+  const auto & b_target = whole_effective.targets[0];
+  if (a_target.energy_eV != b_target.energy_eV)
+    throw std::runtime_error("M6b3 knot unions differ");
+  for (std::size_t k = 0; k < a_target.energy_eV.size(); ++k)
+  {
+    const double rebound = a_target.momentum_transfer_m2[k];
+    const double converted = b_target.momentum_transfer_m2[k];
+    const double total_a = a_target.field_momentum_transfer_m2[k];
+    const double total_b = b_target.field_momentum_transfer_m2[k];
+    if (!(std::abs(rebound - converted) < 1e-30 &&
+          std::abs(total_a - total_b) < 1e-30))
+      throw std::runtime_error("M6b3 recoil or first-harmonic scattering double counted");
+  }
+  ElasticInput growth_a, growth_b;
+  growth_a.reduced_field_Td = 0.2;
+  growth_a.gas_temperature_K = 300.0;
+  growth_a.max_energy_eV = 2.0;
+  growth_a.cells = 80;
+  growth_a.targets = whole_elastic.targets;
+  growth_b = growth_a;
+  growth_b.targets = whole_effective.targets;
+  const auto elastic_operator = solveExcitationSteadyState(
+      growth_a, whole_elastic.excitation_channels, ExcitationLinearMethod::DenseReference);
+  const auto effective_operator = solveExcitationSteadyState(
+      growth_b, whole_effective.excitation_channels, ExcitationLinearMethod::DenseReference);
+  if (!(std::abs(elastic_operator.distribution.mean_energy_eV -
+                 effective_operator.distribution.mean_energy_eV) < 1e-9 &&
+        elastic_operator.maximum_normalized_equation_residual < 1e-8 &&
+        effective_operator.maximum_normalized_equation_residual < 1e-8))
+    throw std::runtime_error("M6b3 ELASTIC/EFFECTIVE EEPF equivalence failed");
+
+  // All nonelastic momentum contributors must be present: removing the
+  // ionization source from EFFECTIVE input must change recoil, never match.
+  rejects([&] {
+    std::string invalid = effective_growth;
+    const auto at = invalid.find("2 6.7e-20");
+    if (at == std::string::npos)
+      throw std::runtime_error("M6b3 invalid fixture anchor");
+    invalid.replace(at, std::string("2 6.7e-20").size(), "2 5e-21");
+    std::istringstream stream(invalid);
+    (void)prepareGrowthPhysics(parseBolsigCrossSections(stream), {{"Ar", 1.0}}, 2.0);
+  });
+  std::cout << "BOLTZMANN_M6B3_FULL_MOMENTUM_SYNTHETIC_P0_P1_PASS\n";
+
   std::cout << "BOLTZMANN_SUPERELASTIC_M5_P0_P1_PASS\n"
             << "M5_MAXWELL_RELATIVE_MEAN_ERROR=" << relative_mean_error << '\n'
             << "M5_DETAILED_BALANCE_RELATIVE_ERROR=" << rate_balance << '\n';
