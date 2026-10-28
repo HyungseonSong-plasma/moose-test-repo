@@ -66,7 +66,7 @@ def test_one_state_only_positivity_and_retained_strict_interpolation() -> None:
     assert updated.count("bound_value = 0.0") == 1
     assert updated.count("bounded_variable = w_O") == 1
     assert updated.count("vinewtonrsls") == 1
-    assert updated.count("initial_condition = 0.0") == 1
+    assert updated.splitlines().count("    initial_condition = 0.0") == 1
     assert "  line_search = bt\n" in updated
     assert "  scheme = implicit-euler\n" in updated
     assert "  solve_type = NEWTON\n" in updated
