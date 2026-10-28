@@ -64,7 +64,7 @@ int main(int argc, char ** argv)
     if (argc < 8)
       throw std::invalid_argument(
           "usage: boltzmann_candidate_export SOURCE_TXT SHA256 EoverN_Td Tg_K "
-          "emax_eV CELLS species=fraction [species=fraction ...] [--enable-superelastic] [--diagnose-frozen-growth] [--solve-elastic-temporal-growth] [--solve-coupled-temporal-growth] [--report-elastic-transport] [--report-inelastic-transport] [--bolsig-2024-boundaries]");
+          "emax_eV CELLS species=fraction [species=fraction ...] [--enable-superelastic] [--diagnose-frozen-growth] [--solve-elastic-temporal-growth] [--solve-coupled-temporal-growth] [--report-elastic-transport] [--report-inelastic-transport] [--bolsig-2024-boundaries] [--report-coupled-growth-transport]");
 
     const std::string source_path = argv[1], source_sha = argv[2];
     requireSourceHash(source_sha);
@@ -80,6 +80,7 @@ int main(int argc, char ** argv)
     bool coupled_growth = false;
     bool elastic_transport = false;
     bool inelastic_transport = false;
+    bool coupled_growth_transport = false;
     bool bols_2024_boundaries = false;
     for (int i = 7; i < argc; ++i)
     {
@@ -119,6 +120,13 @@ int main(int argc, char ** argv)
         coupled_growth = true;
         continue;
       }
+      if (pair == "--report-coupled-growth-transport")
+      {
+        if (coupled_growth_transport)
+          throw std::invalid_argument("duplicate coupled-growth transport diagnostic");
+        coupled_growth_transport = true;
+        continue;
+      }
       if (pair == "--report-inelastic-transport")
       {
         if (inelastic_transport)
@@ -143,8 +151,12 @@ int main(int argc, char ** argv)
     if (!std::isfinite(EN) || EN < 0 || !(Tg > 0) || !(emax > 0))
       throw std::invalid_argument("invalid gas temperature, energy ceiling or E/N");
 
-    if (elastic_transport && inelastic_transport)
+    if ((elastic_transport && inelastic_transport) ||
+        (coupled_growth_transport && (elastic_transport || inelastic_transport)))
       throw std::invalid_argument("choose only one transport moment model");
+    if (coupled_growth_transport && !coupled_growth)
+      throw std::invalid_argument(
+          "coupled-growth transport diagnostic requires --solve-coupled-temporal-growth");
     if (inelastic_transport && (temporal_growth || coupled_growth || frozen_growth))
       throw std::invalid_argument("inelastic-transport moments cannot use growth correction");
     if (temporal_growth && coupled_growth)
@@ -231,7 +243,7 @@ int main(int argc, char ** argv)
     ElasticTransportMoments transport;
     if (elastic_transport)
       transport = evaluateElasticTransportMoments(conditions, distribution);
-    if (inelastic_transport)
+    if (inelastic_transport || coupled_growth_transport)
       transport = evaluateExcitationTransportMoments(conditions, distribution, excitation);
     if (!excitation.empty() &&
         (result.maximum_normalized_equation_residual > 1e-8 ||
@@ -351,8 +363,11 @@ int main(int argc, char ** argv)
                 << temporal.maximum_normalized_eigen_residual
                 << ",\"eigen_inverse_iterations\":"
                 << temporal.inverse_iterations;
-    if (elastic_transport || inelastic_transport)
-      std::cout << ",\"elastic_transport\":{"
+    if (elastic_transport || inelastic_transport || coupled_growth_transport)
+    {
+      std::cout << (coupled_growth_transport ?
+                      ",\"growth_eepf_transport_diagnostic\":{" :
+                      ",\"elastic_transport\":{")
                 << "\"mobility_times_N_per_m_V_s\":"
                 << transport.reduced_mobility_N_per_m_V_s
                 << ",\"diffusion_times_N_per_m_s\":"
@@ -363,6 +378,10 @@ int main(int argc, char ** argv)
                 << transport.reduced_energy_diffusion_N_per_m_s
                 << ",\"tail_ratio\":"
                 << transport.high_energy_tail_ratio << '}';
+      if (coupled_growth_transport)
+        std::cout << ",\"transport_scattering_source\":"
+                     "\"FULL_EFFECTIVE_OR_ELASTIC_PLUS_ALL_INELASTIC\"";
+    }
     std::cout << "}\n";
     return 0;
   }
