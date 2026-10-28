@@ -239,6 +239,42 @@ def test_frozen_particle_growth_diagnostic_does_not_claim_selfconsistent_eepf(tm
     assert matched.returncode == 0, matched.stdout + matched.stderr
     eff_obj = json.loads(matched.stdout)
     assert abs(eff_obj["mean_energy_eV"] - obj["mean_energy_eV"]) < 1e-8
+
+    # 07/2024 boundary opt-in: preserve a pair of inaccessible, well-
+    # defined positive-threshold source records rather than deleting them.
+    # The active EEPF and rate diagnostics remain unchanged by zero-rate
+    # processes above the finite energy ceiling.
+    high_source = tmp_path / "synthetic_high_threshold_2024.txt"
+    high_source.write_text(
+        source.read_text()
+        + "EXCITATION\nAr -> high\n19.8\ninvented\n------\n"
+          "19.8 0\n24 2e-20\n------\n"
+        + "IONIZATION\nAr -> high+\n24.58\ninvented\n------\n"
+          "24.58 0\n30 2e-20\n------\n",
+        encoding="utf-8",
+    )
+    high_sha = hashlib.sha256(high_source.read_bytes()).hexdigest()
+    high_args = [str(binary), str(high_source), high_sha, "0.1", "3000",
+                 "2", "100", "Ar=0.7", "O2=0.3"]
+    no_opt_in = subprocess.run(high_args + ["--diagnose-frozen-growth"],
+                               capture_output=True, text=True)
+    assert no_opt_in.returncode == 2
+    high = subprocess.run(
+        high_args + ["--diagnose-frozen-growth", "--bolsig-2024-boundaries"],
+        capture_output=True, text=True,
+    )
+    assert high.returncode == 0, high.stdout + high.stderr
+    audited = json.loads(high.stdout)
+    assert audited["source_process_count"] == 7
+    assert audited["scientific_acceptance"].startswith("HOLD_")
+    assert len(audited["inactive_above_energy_ceiling"]) == 2
+    assert [entry["kind"] for entry in audited["inactive_above_energy_ceiling"]] == [
+        "EXCITATION", "IONIZATION",
+    ]
+    assert sum(":inactive_above_emax:" in key for key in
+               audited["rates_m3_per_s"]) == 2
+    assert abs(audited["mean_energy_eV"] - obj["mean_energy_eV"]) < 1e-8
+
     for key in obj["rates_m3_per_s"]:
         assert abs(eff_obj["rates_m3_per_s"][key] - obj["rates_m3_per_s"][key]) < (
             1e-7 * max(obj["rates_m3_per_s"][key], 1e-40)
