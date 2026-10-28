@@ -17,6 +17,11 @@ struct ElasticTarget
   double electron_mass_ratio = 0.0; // m_e/M_target, dimensionless
   std::vector<double> energy_eV;     // tabulated collision energy, eV
   std::vector<double> momentum_transfer_m2; // elastic momentum transfer cross section, m^2
+  // Optional total first-harmonic scattering on the SAME energy knots.
+  // When present, field heating uses this instead of reconstructing
+  // elastic+excitation+ionization+attachment scattering at each face.
+  // Elastic recoil STILL uses momentum_transfer_m2. Empty preserves M1/M5.
+  std::vector<double> field_momentum_transfer_m2;
 };
 
 struct ElasticInput
