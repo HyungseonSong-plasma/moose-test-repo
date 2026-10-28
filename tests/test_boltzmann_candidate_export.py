@@ -218,6 +218,33 @@ def test_frozen_particle_growth_diagnostic_does_not_claim_selfconsistent_eepf(tm
         1e-12 * (abs(expected) + 1e-30)
     )
 
+    # Bounded full-process EFFECTIVE equivalence: synthetic Ar effective
+    # momentum = elastic + excitation + ionization. O2 has ELASTIC +
+    # attachment. All source processes are retained, none silently dropped.
+    effective_text = source.read_text().replace(
+        "ELASTIC\nAr\n1.37e-5\ninvented, not LXCat\n------\n0 5e-20\n2 5e-20\n------\n",
+        "EFFECTIVE\nAr\n1.37e-5\ninvented total momentum\n------\n"
+        "0 5e-20\n0.25 5e-20\n0.65 5.228571428571429e-20\n"
+        "2 7e-20\n------\n",
+        1,
+    )
+    assert effective_text != source.read_text()
+    eff_source = tmp_path / "synthetic_effective_full.txt"
+    eff_source.write_text(effective_text, encoding="utf-8")
+    eff_digest = hashlib.sha256(eff_source.read_bytes()).hexdigest()
+    eff_args = [str(binary), str(eff_source), eff_digest, "0.1", "3000",
+                "2", "100", "Ar=0.7", "O2=0.3"]
+    matched = subprocess.run(eff_args + ["--diagnose-frozen-growth"],
+                             capture_output=True, text=True)
+    assert matched.returncode == 0, matched.stdout + matched.stderr
+    eff_obj = json.loads(matched.stdout)
+    assert abs(eff_obj["mean_energy_eV"] - obj["mean_energy_eV"]) < 1e-8
+    for key in obj["rates_m3_per_s"]:
+        assert abs(eff_obj["rates_m3_per_s"][key] - obj["rates_m3_per_s"][key]) < (
+            1e-7 * max(obj["rates_m3_per_s"][key], 1e-40)
+        )
+
+
 
 def test_elastic_selfconsistent_growth_cli_is_different_from_frozen_rates(tmp_path: Path) -> None:
     compiler = shutil.which("g++")
