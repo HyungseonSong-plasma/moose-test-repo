@@ -86,8 +86,17 @@ ImportedElasticExcitation prepareElasticExcitation(
 // subtracts excitation + ionization + attachment; an ELASTIC record gets
 // those channels added to an independent field-scattering table.
 // The source must explicitly include every physical process used.
+struct InactiveCollisionProcess
+{
+  CollisionKind kind = CollisionKind::Excitation;
+  std::string target;
+  std::size_t selected_source_line = 0;
+  double threshold_eV = 0.0;
+};
+
 struct ImportedGrowthPhysics
 {
+  std::vector<InactiveCollisionProcess> inactive_above_energy_ceiling;
   std::vector<ElasticTarget> targets;
   std::vector<ExcitationChannel> excitation_channels;
   std::vector<IonizationChannel> ionization_channels;
@@ -98,5 +107,6 @@ ImportedGrowthPhysics prepareGrowthPhysics(
     const CollisionFile & file,
     const std::map<std::string, double> & target_fractions,
     double max_energy_eV,
-    bool enable_reversible = false);
+    bool enable_reversible = false,
+    bool record_inactive_above_energy_ceiling = false);
 }
