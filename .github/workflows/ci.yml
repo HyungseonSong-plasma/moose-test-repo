@@ -407,6 +407,15 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
+      - name: Check BOLSIG-format EFFECTIVE momentum / excitation contracts (synthetic P0/P1)
+        run: |
+          g++ -std=c++17 -O2 -Wall -Wextra -Werror -pedantic \
+            -Iphysics_app/include/utils \
+            physics_app/src/utils/PhysicsBoltzmannElasticSolver.C \
+            physics_app/src/utils/PhysicsBoltzmannCrossSections.C \
+            tests/boltzmann/cross_section_import_test.C \
+            -o /tmp/boltzmann-cross-section-import-test
+          /tmp/boltzmann-cross-section-import-test
       - name: Compile and run actual C++ Boltzmann solver on invented elastic controls
         run: python3 physics_app/ci/export_boltzmann_ci_eepf.py --out boltzmann-ci-eepf
       - name: Upload C++ EEPF data, explicitly marked not real-gas parity
