@@ -53,7 +53,7 @@ struct ExcitationChannel
   // Optional inverse superelastic channel. Both lower and upper target
   // populations must have explicitly defined ELASTIC collision records
   // and number fractions in ElasticInput.targets.
-  std::string upper_state_target_name;
+  std::string upper_state_target_name = "";
   double upper_to_lower_weight_ratio = 1.0; // g_upper/g_lower (>0)
 };
 
