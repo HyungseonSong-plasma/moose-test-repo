@@ -29,7 +29,12 @@ int main()
     {"example3_R31", 10.0623, 18.3760, 100, {1.00, 0.00}},
     {"example3_R33", 10.0623, 20.4016, 100, {0.50, 0.50}},
     {"example3_R35", 10.0623, 39.7141, 100, {0.00, 1.00}},
-    {"example4_R1", 10.0, 15.8367, 200, {0.70, 0.20, 0.08, 0.02}}
+    {"example4_R1", 10.0, 15.8367, 200, {0.70, 0.20, 0.08, 0.02}},
+    // True C++ cutoff sensitivity on the exact same cell width and input
+    // physics. This is diagnostic evidence, never real-gas acceptance.
+    {"example4_R1_Emax2x", 10.0, 31.6734, 400, {0.70, 0.20, 0.08, 0.02}},
+    {"example4_R1_Emax4x", 10.0, 63.3468, 800, {0.70, 0.20, 0.08, 0.02}},
+    {"example4_R1_Emax8x", 10.0, 126.6936, 1600, {0.70, 0.20, 0.08, 0.02}}
   };
   const std::vector<const char *> names = {"Ar", "He", "N2", "O2"};
   // Source-free independent synthesis: not fitted to BOLSIG+.
