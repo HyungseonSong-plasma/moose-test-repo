@@ -215,6 +215,44 @@ ElasticTransportMoments evaluateExcitationTransportMoments(
   mobility_moment += upper * boundary;
   energy_mobility_moment += upper * upper * boundary;
 
+  // BOLSIG+ 07/2024 f1^Re and f1^Im, using RMS E/N. q is the
+  // reduced angular frequency (omega/N) and Q is total scattering m².
+  // f1^Re = EN * Q/(Q²+q_e²) * df0/de
+  // f1^Im = EN * q_e/(Q²+q_e²) * df0/de,
+  // where q_e = (omega/N)/(gamma*sqrt(e)) in m².
+  // Keep AC real/imag coefficients DISTINCT from the DC mobility.
+  const double reduced_omega = input.reduced_angular_frequency_m3_per_s;
+  if (!(std::isfinite(reduced_omega) && reduced_omega >= 0.0))
+    throw std::invalid_argument("Boltzmann M8: invalid reduced AC frequency");
+  if (reduced_omega > 0.0)
+  {
+    const double gamma = 3.0 * prefactor;
+    double real_moment = 0.0, imag_moment = 0.0;
+    for (std::size_t i = 1; i < n; ++i)
+    {
+      const double e = edges[i];
+      const double Q = sigma_m(e);
+      const double qe_ac = reduced_omega / (gamma * std::sqrt(e));
+      const double denom = Q*Q + qe_ac*qe_ac;
+      const double delta = e * (f[i-1]-f[i]);
+      real_moment += delta * Q / denom;
+      imag_moment += delta * qe_ac / denom;
+    }
+    const double e = edges.back();
+    const double Q = sigma_m(e);
+    const double qe_ac = reduced_omega / (gamma * std::sqrt(e));
+    const double denom = Q*Q + qe_ac*qe_ac;
+    real_moment += e * f.back() * Q / denom;
+    imag_moment += e * f.back() * qe_ac / denom;
+    out.ac_real_mobility_N_per_m_V_s = prefactor * real_moment;
+    out.ac_imag_mobility_N_per_m_V_s = prefactor * imag_moment;
+    if (!(std::isfinite(out.ac_real_mobility_N_per_m_V_s) &&
+          out.ac_real_mobility_N_per_m_V_s >= 0.0 &&
+          std::isfinite(out.ac_imag_mobility_N_per_m_V_s) &&
+          out.ac_imag_mobility_N_per_m_V_s >= 0.0))
+      throw std::runtime_error("Boltzmann M8: nonphysical AC mobility components");
+  }
+
   out.reduced_mobility_N_per_m_V_s = prefactor * mobility_moment;
   out.reduced_diffusion_N_per_m_s = prefactor * diff_moment;
   out.reduced_energy_mobility_N_per_m_V_s =
