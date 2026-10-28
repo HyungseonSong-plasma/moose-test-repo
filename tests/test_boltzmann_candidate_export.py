@@ -612,7 +612,8 @@ def test_reduced_ac_and_nonuniform_growth_conservation(tmp_path: Path) -> None:
     )
     digest = hashlib.sha256(table.read_bytes()).hexdigest()
     args = [str(binary), str(table), digest, "5", "300", "12", "120",
-            "Ar=1", "--solve-coupled-temporal-growth"]
+            "Ar=1", "--solve-coupled-temporal-growth",
+            "--report-coupled-growth-transport"]
     def run(*flags: str) -> dict:
         result = subprocess.run(args + list(flags),
                                 capture_output=True, text=True, timeout=55)
@@ -634,6 +635,11 @@ def test_reduced_ac_and_nonuniform_growth_conservation(tmp_path: Path) -> None:
     assert ac["mean_energy_eV"] < refined["mean_energy_eV"]
     assert strong_ac["mean_energy_eV"] < ac["mean_energy_eV"]
     assert strong_ac["mean_energy_eV"] > 0
+    assert "ac_real_mobility_times_N_per_m_V_s" not in dc["growth_eepf_transport_diagnostic"]
+    for result in (ac, strong_ac):
+        transport = result["growth_eepf_transport_diagnostic"]
+        assert transport["ac_real_mobility_times_N_per_m_V_s"] > 0
+        assert transport["ac_imag_mobility_times_N_per_m_V_s"] > 0
     for result in (refined, ac, strong_ac):
         edges = result["energy_cell_edges_eV"]
         f = result["eepf_eV_minus_3_halves"]
