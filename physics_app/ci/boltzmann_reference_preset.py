@@ -99,7 +99,7 @@ def make_reference_preset(
         "READCOLLISIONS",
         str(actual),
         "  ".join(species for species, _ in mixture),
-        "0",  # Never permit undocumented source-energy extrapolation.
+        "1",  # Match manual Example 4; audit source extrapolation before parity.
         "CONDITIONS",
         *conditions,
         "RUN",
@@ -142,7 +142,8 @@ def make_reference_preset(
         },
         "important_overrides_from_manual": {
             "collision_extrapolation": (
-                "0 (strict: off); manual example 4 uses 1 (on)"
+                "1 (on) as in manual example 4; independently audit "
+                "any extrapolated energy intervals before physics parity"
             )
         },
         "requirements": [
