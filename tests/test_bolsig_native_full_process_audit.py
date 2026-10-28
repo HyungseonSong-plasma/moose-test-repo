@@ -1,9 +1,13 @@
 """Synthetic native-to-source process reconciliation P0 controls; no LXCat data."""
 from pathlib import Path
 
+import hashlib
+import pytest
+
 from physics_app.ci.bolsig_native_full_process_audit import (
-    audit_case, integrate_rate, parse_source,
+    NativeProcessAuditHold, audit_case, integrate_rate, parse_source,
 )
+from physics_app.ci.bolsig_local_matched_source import prepare_matched_source
 
 
 def _fixture(tmp_path: Path) -> tuple[Path, Path]:
@@ -67,3 +71,32 @@ def test_source_hash_changes_without_changing_missing_process(tmp_path: Path) ->
     assert original["source_sha256"] != modified["source_sha256"]
     assert modified["status"] == "HOLD_NATIVE_OMITTED_PROCESS"
     assert modified["inferred_omitted_source_process"]["target"] == "O2 -> O-"
+
+
+
+def test_local_explicit_omission_preserves_only_native_matched_source(tmp_path: Path) -> None:
+    source, native = _fixture(tmp_path)
+    audited = audit_case(source, native)
+    omitted = audited["inferred_omitted_source_process"]["line"]
+    out = tmp_path / "PRIVATE_NOT_FOR_REDISRIBUTION.txt"
+    kwargs = dict(
+        source_sha256=hashlib.sha256(source.read_bytes()).hexdigest(),
+        native_sha256=hashlib.sha256(native.read_bytes()).hexdigest(),
+        excluded_source_line=omitted,
+        three_body_convention="as-tabulated-unscaled",
+    )
+    result = prepare_matched_source(source, native, out, **kwargs)
+    assert result["status"] == "LOCAL_MATCHED_INPUT_PREPARED_SCIENCE_HOLD"
+    assert result["selected_process_count"] == 2
+    assert result["scientific_acceptance"].startswith("HOLD_")
+    assert [r.kind for r in parse_source(out)] == ["ELASTIC", "ATTACHMENT"]
+    assert result["local_output_sha256"] == hashlib.sha256(out.read_bytes()).hexdigest()
+    with pytest.raises(NativeProcessAuditHold, match="caller-specified"):
+        prepare_matched_source(source, native, out, **{**kwargs, "excluded_source_line": 1})
+    with pytest.raises(NativeProcessAuditHold, match="SHA256"):
+        prepare_matched_source(source, native, out, **{**kwargs, "source_sha256": "0"*64})
+    with pytest.raises(NativeProcessAuditHold, match="three-body"):
+        prepare_matched_source(source, native, out,
+                               **{**kwargs, "three_body_convention": "density-corrected"})
+    with pytest.raises(NativeProcessAuditHold, match="overwrite"):
+        prepare_matched_source(source, native, source, **kwargs)
