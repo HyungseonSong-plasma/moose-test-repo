@@ -224,11 +224,23 @@ namespace
 // The threshold is treated as a hard physical gate, not a smooth extrapolation.
 double weightedExcitationIntegral(const ExcitationChannel & channel, double a, double b)
 {
-  a = std::max(a, channel.threshold_eV);
-  if (b <= a)
-    return 0.0;
   const auto & x = channel.energy_eV;
   const auto & y = channel.cross_section_m2;
+  if (x.size() < 2)
+    throw std::invalid_argument("Boltzmann: excitation integral needs cross-section samples");
+  // Shifted superelastic intervals can reach epsilon_max through different
+  // addition orders. Allow IEEE roundoff ONLY, never a physical extrapolation
+  // past the externally supplied cross-section support.
+  const double top = x.back();
+  const double tolerance = 32.0 * std::numeric_limits<double>::epsilon() *
+                           std::max(1.0, std::abs(top));
+  if (!std::isfinite(a) || !std::isfinite(b) || a < -tolerance ||
+      b > top + tolerance)
+    throw std::invalid_argument("Boltzmann: excitation rate integral outside source domain");
+  a = std::max(a, channel.threshold_eV);
+  b = std::min(b, top);
+  if (b <= a)
+    return 0.0;
   double total = 0.0;
   while (a < b)
   {
