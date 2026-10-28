@@ -1,5 +1,19 @@
 # BOLSIG+ official Examples 1–4: 151-run scope and honest reference coverage
 
+**EXAMPLE 3 DATA RECOVERY / CORRECTION (2026-10-28):**
+The original user's Library **example3-eepf.dat** was located and
+contains all 100 independent native EEPF RUNs. Original
+**example3.dat** RUN2D table was also located. Native mole fractions
+are **Ar/He=1/0, 0.75/0.25, 0.50/0.50, 0.25/0.75, 0/1**.
+This explicitly **retracts** the previously claimed maximum
+He fraction of 50% and all old C++ 100-run results based on it.
+A corrected, real C++ 100/100 comparison was performed with
+mean-energy median relative error **0.008748%** and maximum
+**0.243796%**; EEPF weighted L1 median **0.00021995**.
+See [actual Example 3 native validation](boltzmann_example3_m8_actual_native_100run_validation.md).
+The historical baseline tables below are **superseded** for Example 3.
+Independent automatic Emax and production physics acceptance remain HOLD.
+
 **LATEST STATUS (supersedes historical snapshot below):** Original 07/2024
 native EEPF outputs for Examples **1, 2 and 4** have now been supplied and
 compared against genuinely compiled C++ candidates. Example 2's nine nonzero
