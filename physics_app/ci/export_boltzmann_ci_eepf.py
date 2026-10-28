@@ -198,6 +198,10 @@ def main() -> int:
     print("BOLTZMANN_CI_SCIENCE_STATUS=" + manifest["scientific_acceptance"])
     for run, evidence in sorted(manifest["runs"].items()):
         print(f"BOLTZMANN_CI_NATIVE_MEAN_E_EV {run} {evidence['mean_energy_eV']:.8g}")
+    grid = manifest["synthetic_n2_excitation_diagnostic"]["grid_refinement"]
+    print("BOLTZMANN_CI_N2_GRID_CLASSIFICATION=" + grid["classification"])
+    print(f"BOLTZMANN_CI_N2_GRID_MEAN_RELATIVE={grid['mean_relative_error']:.9g}")
+    print(f"BOLTZMANN_CI_N2_GRID_WEIGHTED_L1={grid['eepf_weighted_l1_error']:.9g}")
     return 0
 
 
