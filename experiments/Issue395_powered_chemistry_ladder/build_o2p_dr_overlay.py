@@ -2,7 +2,7 @@
 """Non-production O2+ dissociative recombination sensitivity overlay.
 
 O2+ + e -> 2 O (coarse-grained O-equivalent product).
-Peverall et al., JCP 114, 6679 (2001), DOI: 10.1063/1.1355319:
+Peverall et al., JCP 114, 6679 (2001), DOI: 10.1063/1.1349079:
 k = 2.4e-13 (300 K / T_e[K])**0.70 m3/s.
 
 The fit is for predominantly ground-vibrational O2+ and is extrapolated
