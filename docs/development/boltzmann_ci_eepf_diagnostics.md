@@ -243,3 +243,64 @@ ELASTIC+two-ATTACHMENT fixtures, native process omission, extra
 native process and original-source SHA mutation tests in
 `tests/test_bolsig_native_full_process_audit.py`. Reference bytes,
 collision tables and real EEPF rows are intentionally absent from Git.
+
+
+## S10/M6b3: complete first-harmonic collision-scattering separation
+
+The independent developer M6 importer now admits EFFECTIVE with explicitly
+enumerated excitation, ionization and attachment instead of categorically
+rejecting this combination. The projection distinguishes *elastic recoil*
+(energy relaxation) and *total first-harmonic momentum scattering* (electric
+field heating). For EFFECTIVE, elastic recoil is constructed as the
+nonnegative remainder after subtracting **all** included inelastic channels
+at the piecewise-linear knot union; the field-scattering table is the
+original effective value. For ELASTIC, elastic recoil is unchanged and the
+field-scattering table adds each included inelastic channel once. M5's
+first-harmonic excitation term is skipped when a complete field-scattering
+table is already supplied, preventing double-counting. The temporal-growth
+SG flux also uses the total field-scattering data while retaining elastic
+recoil. Existing five-argument ElasticTarget construction is preserved.
+
+This is a bounded *operator integration* improvement, not real BOLSIG+
+Example4 EEPF parity. Native C++ synthetic ELASTIC/EFFECTIVE+excitation+
+ionization+attachment equivalent records test both recoil and momentum
+equality as well as conservative EEPF behavior. The developer candidate
+CLI additionally tests an independent synthetic full-set effective/elastic
+frozen-growth EEPF and process-rate comparison. Invalid negative effective
+residuals remain rejected and the MOOSE production closure is unchanged.
+
+`physics_app/ci/bolsig_local_matched_source.py` prepares a **USER-LOCAL
+ONLY** derived 47-process collision file from the independently audited
+48-process original source: it requires both original hashes, the
+explicit native-identified omitted source line 5279, and an explicit
+`as-tabulated-unscaled` three-body convention. It never silently drops
+the omitted process: it records the exclusion and source identity.
+This native-output convention is not a validated physical three-body
+normalization. Generated third-party table bytes MUST remain local.
+
+### Additional actual source blockers found from raw process metadata
+
+For the 47 explicitly selected source records at native Emax=15.8367 eV:
+
+- **37/47** tabulated cross sections start above 0 eV.
+- **12/47** terminate below the solver's actual energy ceiling;
+  N2 contributes 9 such short-range records and O2 contributes 3.
+- Native BOLSIG+ input sets `READCOLLISIONS Extrapolate=1`.
+  The 07/2024 BOLSIG+ documentation describes piecewise-linear
+  interpolation and controlled high-energy continuation. Exact
+  prethreshold zero behavior and high-end continuation must be
+  implemented/tested against the native output before running all 47.
+  The current strict C++ projector correctly continues to HOLD rather
+  than invent cross sections outside the tabulated range.
+- Some ionization/excitation thresholds are above the selected Emax and
+  require process-preserving zero-rate handling, not deletion.
+- Full 200-cell temporal-growth still needs numerical qualification;
+  current dense implementation caps at 128 cells. Physical
+  three-body attachment density normalization remains unresolved.
+
+The source preflight machine report is generated locally and only
+contains source hashes, source line/target identifiers and counts, not
+third-party cross-section rows. **Scientific gate remains HOLD.**
+
+Source: BOLSIG+ 07/2024 manual,
+https://www.bolsig.laplace.univ-tlse.fr/wp-content/uploads/2024/07/bolsigdoc0724.pdf
