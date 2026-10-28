@@ -1,4 +1,5 @@
 #include "PhysicsBoltzmannElasticSolver.h"
+#include "PhysicsBoltzmannEnergyMesh.h"
 
 #include <algorithm>
 #include <cmath>
@@ -22,14 +23,17 @@ bool finitePositive(double v) { return std::isfinite(v) && v > 0.0; }
 
 void validate(const ElasticInput & input)
 {
-  if (!finiteNonnegative(input.reduced_field_Td))
-    throw std::invalid_argument("Boltzmann: reduced field must be finite and nonnegative");
+  if (!finiteNonnegative(input.reduced_field_Td) ||
+      !finiteNonnegative(input.reduced_angular_frequency_m3_per_s))
+    throw std::invalid_argument(
+        "Boltzmann: reduced field/frequency must be finite and nonnegative");
   if (!finitePositive(input.gas_temperature_K) || !finitePositive(input.max_energy_eV))
     throw std::invalid_argument("Boltzmann: gas temperature and max energy must be positive");
   if (input.cells < 2 || input.cells > 1000000)
     throw std::invalid_argument("Boltzmann: energy cell count outside [2, 1000000]");
   if (input.targets.empty())
     throw std::invalid_argument("Boltzmann: at least one elastic target is required");
+  (void)energyMeshEdges(input);
 
   double sum = 0.0;
   for (const auto & target : input.targets)
@@ -167,7 +171,15 @@ Coefficients atFace(const ElasticInput & input, double energy,
   const double theta = boltzmann_J_per_K * input.gas_temperature_K / electron_charge_C;
   const double EN = input.reduced_field_Td * townsend_V_m2;
   const double W = -gamma * energy * energy * sigma_e;
-  const double D = gamma * ((EN * EN / 3.0) * energy / sigma_m +
+  // BOLSIG+ 07/2024 AC input E/N is RMS. Q=nu_m/N=gamma*sqrt(e)*sigma_m.
+  // The dissipative heating term is Re[1/(Q+i*q)] with q=omega/N.
+  // q=0 is EXACTLY the legacy DC heating; no spurious 1/2 factor.
+  const double q = input.reduced_angular_frequency_m3_per_s;
+  const double Q = gamma * std::sqrt(energy) * sigma_m;
+  const double suppression = q == 0.0 ? 1.0 :
+      1.0 / (1.0 + (q / Q) * (q / Q));
+  const double D = gamma * ((EN * EN / 3.0) *
+                            energy / sigma_m * suppression +
                             theta * energy * energy * sigma_e);
   if (!finitePositive(D) || !std::isfinite(W))
     throw std::invalid_argument("Boltzmann: invalid energy-space transport coefficient");
@@ -180,7 +192,9 @@ ElasticResult solveElasticSteadyState(const ElasticInput & input)
   validate(input);
   ElasticResult result;
   const std::size_t n = input.cells;
-  const double h = input.max_energy_eV / static_cast<double>(n);
+  const auto edges = energyMeshEdges(input);
+  const auto centers = energyMeshCenters(edges);
+  result.energy_cell_edges_eV = edges;
   result.energy_eV.resize(n);
   result.eepf_eV_minus_3_halves.resize(n);
 
@@ -191,11 +205,12 @@ ElasticResult solveElasticSteadyState(const ElasticInput & input)
   std::vector<double> log_f(n, 0.0);
   double maximum_log = 0.0;
   for (std::size_t i = 0; i < n; ++i)
-    result.energy_eV[i] = (static_cast<double>(i) + 0.5) * h;
+    result.energy_eV[i] = centers[i];
   for (std::size_t i = 1; i < n; ++i)
   {
-    const auto c = atFace(input, static_cast<double>(i) * h);
-    log_f[i] = log_f[i - 1] + c.W * h / c.D;
+    const auto c = atFace(input, edges[i]);
+    const double delta = centers[i] - centers[i - 1];
+    log_f[i] = log_f[i - 1] + c.W * delta / c.D;
     maximum_log = std::max(maximum_log, log_f[i]);
   }
   for (std::size_t i = 0; i < n; ++i)
@@ -207,7 +222,7 @@ ElasticResult solveElasticSteadyState(const ElasticInput & input)
   double moment1 = 0.0;
   for (std::size_t i = 0; i < n; ++i)
   {
-    const double left = i * h, right = (i + 1) * h;
+    const double left = edges[i], right = edges[i+1];
     const double zeroth = (2.0 / 3.0) * (std::pow(right, 1.5) - std::pow(left, 1.5));
     const double first = (2.0 / 5.0) * (std::pow(right, 2.5) - std::pow(left, 2.5));
     total += result.eepf_eV_minus_3_halves[i] * zeroth;
@@ -225,8 +240,8 @@ ElasticResult solveElasticSteadyState(const ElasticInput & input)
   // requirement means all interfaces must satisfy the conservative stencil.
   for (std::size_t i = 1; i < n; ++i)
   {
-    const auto c = atFace(input, static_cast<double>(i) * h);
-    const double p = c.W * h / c.D;
+    const auto c = atFace(input, edges[i]);
+    const double p = c.W * (centers[i] - centers[i-1]) / c.D;
     const double left = bernoulli(-p) * result.eepf_eV_minus_3_halves[i - 1];
     const double right = bernoulli(p) * result.eepf_eV_minus_3_halves[i];
     const double denominator = std::abs(left) + std::abs(right);
