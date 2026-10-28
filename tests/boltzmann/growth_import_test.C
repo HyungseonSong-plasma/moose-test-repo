@@ -88,6 +88,32 @@ int main()
   wrong.records[4].energy_eV.back() = 1.0;
   reject([&] { (void)prepareGrowthPhysics(wrong, fractions, 2.0); });
 
+  // S11: a finite Emax must keep, but not activate, true 19.8/24.58 eV
+  // threshold-style processes when Emax is 2 eV. Both records and their
+  // source locations survive; the 5 original active channels remain.
+  const std::string beyond =
+      fixture() +
+      "EXCITATION\nAr -> beyond-grid\n19.8\nsynthetic\n------\n"
+      "19.8 0\n25 5e-20\n------\n"
+      "IONIZATION\nAr -> beyond-grid-plus\n24.58\nsynthetic\n------\n"
+      "24.58 0\n30 5e-20\n------\n";
+  std::istringstream beyond_stream(beyond);
+  const auto complete = parseBolsigCrossSections(beyond_stream);
+  reject([&] { (void)prepareGrowthPhysics(complete, fractions, 2.0); });
+  const auto selected = normalizeBolsig2024CollisionFile(complete, 2.0, true);
+  const auto restricted = prepareGrowthPhysics(selected, fractions, 2.0, false, true);
+  if (!(complete.records.size() == 7 &&
+        selected.records.size() == 7 &&
+        restricted.inactive_above_energy_ceiling.size() == 2 &&
+        restricted.inactive_above_energy_ceiling[0].kind == CollisionKind::Excitation &&
+        restricted.inactive_above_energy_ceiling[1].kind == CollisionKind::Ionization &&
+        restricted.inactive_above_energy_ceiling[0].threshold_eV == 19.8 &&
+        restricted.inactive_above_energy_ceiling[1].threshold_eV == 24.58 &&
+        restricted.excitation_channels.size() == 1 &&
+        restricted.ionization_channels.size() == 1 &&
+        restricted.attachment_channels.size() == 1))
+    throw std::runtime_error("BOLSIG S11 zero-rate inactive channel audit failed");
+  std::cout << "BOLTZMANN_S11_INACTIVE_HIGH_THRESHOLD_P0_P1_PASS\n";
   std::cout << "BOLTZMANN_GROWTH_M6_IMPORT_P0_P1_PASS\n"
             << "M6_IMPORTED_ION_RATE=" << growth.ionization_rates_m3_per_s[0]
             << "\nM6_IMPORTED_ATTACHMENT_RATE=" << growth.attachment_rates_m3_per_s[0]
