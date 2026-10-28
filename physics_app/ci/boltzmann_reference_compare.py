@@ -99,7 +99,7 @@ def compare_case(directory: Path) -> dict[str, Any]:
     if any(not isinstance(obj, dict) for obj in (source, reference, candidate)):
         raise ReferenceContractError("source/reference/candidate records are required")
 
-    for required in ("database", "source_url", "retrieved_utc", "process_ids"):
+    for required in ("database", "source_url", "retrieved_utc", "process_ids", "rate_process_ids"):
         if not source.get(required):
             raise ReferenceContractError(f"missing collision provenance: {required}")
     if not isinstance(source["process_ids"], list) or not all(
@@ -108,6 +108,14 @@ def compare_case(directory: Path) -> dict[str, Any]:
         raise ReferenceContractError("source process_ids must be nonempty strings")
     if len(source["process_ids"]) != len(set(source["process_ids"])):
         raise ReferenceContractError("duplicate source process identifiers")
+    if not isinstance(source["rate_process_ids"], list) or not source["rate_process_ids"] or (
+        any(not isinstance(x, str) or not x for x in source["rate_process_ids"])
+    ):
+        raise ReferenceContractError("source rate_process_ids must be nonempty strings")
+    if len(source["rate_process_ids"]) != len(set(source["rate_process_ids"])) or (
+        not set(source["rate_process_ids"]).issubset(source["process_ids"])
+    ):
+        raise ReferenceContractError("rate process identifiers must be unique and sourced")
     if reference.get("solver") != "BOLSIG+" or not reference.get("version") or (
         not reference.get("raw_export_sha256")
     ):
@@ -151,6 +159,8 @@ def compare_case(directory: Path) -> dict[str, Any]:
         raise ReferenceContractError("energy cell edges differ: explicit separately audited regridding required")
     if rates_r.keys() != rates_c.keys():
         raise ReferenceContractError("candidate and oracle reaction inventories differ")
+    if set(rates_r) != set(source["rate_process_ids"]):
+        raise ReferenceContractError("numeric rate inventory does not match source process ledger")
 
     tol = case.get("tolerances")
     if not isinstance(tol, dict) or set(tol) != {
@@ -177,8 +187,10 @@ def compare_case(directory: Path) -> dict[str, Any]:
         if error > bound:
             failures.append("rate:" + key)
 
+    synthetic = source["database"] == "AUTHOR-SYNTHETIC"
+    prefix = "BOLSIG_REFERENCE_SELFTEST" if synthetic else "BOLSIG_REFERENCE_NUMERIC"
     return {
-        "decision": "BOLSIG_REFERENCE_NUMERIC_PASS" if not failures else "BOLSIG_REFERENCE_NUMERIC_FAIL",
+        "decision": prefix + ("_PASS" if not failures else "_FAIL"),
         "failures": failures,
         "mean_energy_relative_error": mean_error,
         "eepf_weighted_l1_error": eepf_error,
@@ -201,7 +213,7 @@ def main() -> int:
         print("BOLSIG_REFERENCE_PREFLIGHT_HOLD: " + str(exc))
         return 2
     print(json.dumps(result, sort_keys=True))
-    return 0 if result["decision"] == "BOLSIG_REFERENCE_NUMERIC_PASS" else 1
+    return 0 if result["decision"].endswith("_PASS") else 1
 
 
 if __name__ == "__main__":
