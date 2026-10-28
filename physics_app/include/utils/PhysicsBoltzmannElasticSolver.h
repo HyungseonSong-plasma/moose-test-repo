@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -79,6 +80,22 @@ struct ExcitationResult
   std::size_t linear_iterations = 0;
   ExcitationLinearMethod linear_method_used = ExcitationLinearMethod::DenseReference;
 };
+
+// Conservative M2/M5 operator exposed so the temporal-growth eigenproblem
+// uses the EXACT SAME elastic/excitation/superelastic discretization as the
+// accepted steady solver (no second, divergent assembly implementation).
+// Rows represent A = div(J) - S_exc - S_super for the cell EEPF f0.
+// Sum over destination rows of every donor column is zero.
+struct ConservativeExcitationOperator
+{
+  std::vector<std::map<std::size_t, double>> rows;
+  std::vector<double> cell_number_mass;
+  double maximum_collision_number_balance_error = 0.0;
+};
+
+ConservativeExcitationOperator assembleExcitationConservativeOperator(
+    const ElasticInput & input,
+    const std::vector<ExcitationChannel> & channels);
 
 // DEVELOPMENT: steady excitation-only collision operator + elastic SG flux.
 // Dense reference <=512 cells or sparse preconditioned BiCGSTAB up to 16384
