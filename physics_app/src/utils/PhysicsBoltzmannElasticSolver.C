@@ -621,14 +621,7 @@ ExcitationResult solveExcitationSteadyState(const ElasticInput & input,
   auto assembled = assembleExcitationConservativeOperator(input, channels);
   const std::size_t n = input.cells;
   const double h = input.max_energy_eV / static_cast<double>(n);
-  const double gamma = std::sqrt(2.0 * electron_charge_C / electron_mass_kg);
-  std::vector<double> fractions;
-  for (const auto & channel : channels)
-  {
-    const auto target = std::find_if(input.targets.begin(), input.targets.end(),
-        [&channel](const ElasticTarget & t) { return t.name == channel.target_name; });
-    fractions.push_back(target->mole_fraction);
-  }
+
   auto & a = assembled.rows;
   const auto & weight = assembled.cell_number_mass;
   const double maximum_balance_error = assembled.maximum_collision_number_balance_error;
@@ -733,40 +726,95 @@ ExcitationResult solveExcitationSteadyState(const ElasticInput & input,
   if (!(result.maximum_normalized_equation_residual <= 1e-8))
     throw std::runtime_error("Boltzmann: excitation stationary residual exceeds 1e-8");
 
-  for (std::size_t c = 0; c < channels.size(); ++c)
+  const auto moments = evaluateExcitationRatesOnEepf(input, result.distribution, channels);
+  result.rate_coefficients_m3_per_s = moments.forward_rates_m3_per_s;
+  result.superelastic_rate_coefficients_m3_per_s = moments.reverse_rates_m3_per_s;
+  result.net_energy_loss_coefficients_eV_m3_per_s =
+      moments.mixture_net_energy_losses_eV_m3_per_s;
+  for (std::size_t i = 0; i < channels.size(); ++i)
+    result.energy_loss_coefficients_eV_m3_per_s.push_back(
+        channels[i].threshold_eV * moments.forward_rates_m3_per_s[i]);
+  return result;
+}
+
+ExcitationRateMoments evaluateExcitationRatesOnEepf(
+    const ElasticInput & input,
+    const ElasticResult & distribution,
+    const std::vector<ExcitationChannel> & channels)
+{
+  validate(input);
+  const auto n = input.cells;
+  if (distribution.energy_eV.size() != n ||
+      distribution.eepf_eV_minus_3_halves.size() != n)
+    throw std::invalid_argument("Boltzmann: rate evaluation EEPF grid differs from input");
+  const double h = input.max_energy_eV / static_cast<double>(n);
+  const double gamma = std::sqrt(2.0 * electron_charge_C / electron_mass_kg);
+  const auto & f = distribution.eepf_eV_minus_3_halves;
+  double norm = 0.0;
+  for (std::size_t i = 0; i < n; ++i)
   {
-    const auto & channel = channels[c];
+    if (!std::isfinite(f[i]) || f[i] < 0.0 ||
+        !std::isfinite(distribution.energy_eV[i]) ||
+        std::abs(distribution.energy_eV[i] - (i+0.5)*h) > 1e-9*h)
+      throw std::invalid_argument("Boltzmann: rate input EEPF invalid");
+    norm += f[i] * (2.0 / 3.0) *
+            (std::pow((i+1)*h, 1.5) - std::pow(i*h, 1.5));
+  }
+  if (!(std::abs(norm-1.0) < 1e-8))
+    throw std::invalid_argument("Boltzmann: rate EEPF normalization invalid");
+
+  ExcitationRateMoments result;
+  for (const auto & channel : channels)
+  {
+    if (!(finitePositive(channel.threshold_eV) &&
+          channel.threshold_eV < input.max_energy_eV) ||
+        channel.energy_eV.size() < 2 ||
+        channel.energy_eV.size() != channel.cross_section_m2.size() ||
+        channel.energy_eV.front() > 0.0 ||
+        channel.energy_eV.back() < input.max_energy_eV)
+      throw std::invalid_argument("Boltzmann: rate channel threshold/coverage invalid");
+    for (std::size_t j = 0; j < channel.energy_eV.size(); ++j)
+      if (!finiteNonnegative(channel.energy_eV[j]) ||
+          !finiteNonnegative(channel.cross_section_m2[j]) ||
+          (j && !(channel.energy_eV[j] > channel.energy_eV[j-1])))
+        throw std::invalid_argument("Boltzmann: invalid excitation rate cross section");
+    const auto lower = std::find_if(input.targets.begin(), input.targets.end(),
+        [&channel](const ElasticTarget & t){ return t.name == channel.target_name; });
+    if (lower == input.targets.end())
+      throw std::invalid_argument("Boltzmann: rate excitation target missing");
     double rate = 0.0;
     for (std::size_t i = 0; i < n; ++i)
     {
       const double lo = static_cast<double>(i) * h;
-      const double hi = lo + h;
-      rate += gamma * f[i] * weightedExcitationIntegral(channel, lo, hi);
+      rate += gamma * f[i] * weightedExcitationIntegral(channel, lo, lo+h);
     }
-    // Per-target rate coefficient: gas mole fraction does not belong in k.
-    result.rate_coefficients_m3_per_s.push_back(rate);
-    result.energy_loss_coefficients_eV_m3_per_s.push_back(
-        channel.threshold_eV * rate);
     double reverse_rate = 0.0;
     double upper_fraction = 0.0;
     if (!channel.upper_state_target_name.empty())
     {
       const auto upper = std::find_if(input.targets.begin(), input.targets.end(),
-          [&channel](const ElasticTarget & t) { return t.name == channel.upper_state_target_name; });
+          [&channel](const ElasticTarget & t){return t.name == channel.upper_state_target_name;});
+      if (upper == input.targets.end() ||
+          !finitePositive(channel.upper_to_lower_weight_ratio))
+        throw std::invalid_argument("Boltzmann: missing reverse target or invalid degeneracy");
       upper_fraction = upper->mole_fraction;
       for (std::size_t i = 0; i < n; ++i)
       {
-        const double lo = static_cast<double>(i) * h;
-        const double hi = std::min(lo + h, input.max_energy_eV - channel.threshold_eV);
+        const double lo = i*h;
+        const double hi = std::min(lo+h, input.max_energy_eV-channel.threshold_eV);
         if (hi > lo)
           reverse_rate += gamma / channel.upper_to_lower_weight_ratio * f[i] *
-              weightedExcitationIntegral(channel, lo + channel.threshold_eV,
-                                         hi + channel.threshold_eV);
+              weightedExcitationIntegral(channel, lo+channel.threshold_eV,
+                                         hi+channel.threshold_eV);
       }
     }
-    result.superelastic_rate_coefficients_m3_per_s.push_back(reverse_rate);
-    result.net_energy_loss_coefficients_eV_m3_per_s.push_back(
-        channel.threshold_eV * (fractions[c] * rate - upper_fraction * reverse_rate));
+    else if (channel.upper_to_lower_weight_ratio != 1.0)
+      throw std::invalid_argument("Boltzmann: degeneracy without reverse target");
+    result.forward_rates_m3_per_s.push_back(rate);
+    result.reverse_rates_m3_per_s.push_back(reverse_rate);
+    result.mixture_net_energy_losses_eV_m3_per_s.push_back(
+        channel.threshold_eV * (lower->mole_fraction*rate -
+                                 upper_fraction*reverse_rate));
   }
   return result;
 }
