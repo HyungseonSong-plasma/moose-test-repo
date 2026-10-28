@@ -426,3 +426,28 @@ jobs:
           path: boltzmann-ci-eepf/*.json
           if-no-files-found: warn
           retention-days: 30
+      # Developer binary only: no LXCat rows, no native BOLSIG+ reference
+      # and no selected third-party collision files are copied to CI.
+      # Download the binary and run it with privately held files locally.
+      - name: Build standalone native Boltzmann candidate for private-source local comparison
+        run: |
+          g++ -std=c++17 -O2 -Wall -Wextra -Werror -pedantic \
+            -Iphysics_app/include/utils \
+            physics_app/src/utils/PhysicsBoltzmannElasticSolver.C \
+            physics_app/src/utils/PhysicsBoltzmannGrowth.C \
+            physics_app/src/utils/PhysicsBoltzmannTemporalGrowth.C \
+            physics_app/src/utils/PhysicsBoltzmannTransport.C \
+            physics_app/src/utils/PhysicsBoltzmannCrossSections.C \
+            physics_app/ci/boltzmann_candidate_export.C \
+            -o /tmp/boltzmann-candidate-example4
+          mkdir -p boltzmann-candidate-bin
+          cp /tmp/boltzmann-candidate-example4 boltzmann-candidate-bin/boltzmann-candidate-example4
+          (cd boltzmann-candidate-bin && sha256sum boltzmann-candidate-example4 > SHA256SUMS)
+          echo 'PRIVATE INPUT REQUIRED; THIS ARTIFACT CONTAINS NO LXCat/BOLSIG+ INPUT OR OUTPUT DATA' > boltzmann-candidate-bin/README.txt
+      - name: Upload development-only C++ candidate binary without collision data
+        uses: actions/upload-artifact@v4
+        with:
+          name: boltzmann-candidate-local-private-input
+          path: boltzmann-candidate-bin/*
+          if-no-files-found: error
+          retention-days: 1
