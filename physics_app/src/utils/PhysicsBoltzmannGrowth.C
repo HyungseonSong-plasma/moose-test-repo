@@ -1,4 +1,5 @@
 #include "PhysicsBoltzmannGrowth.h"
+#include "PhysicsBoltzmannEnergyMesh.h"
 
 #include <algorithm>
 #include <cmath>
@@ -120,7 +121,7 @@ GrowthOperator assembleGrowthCollisions(
 {
   validateInput(input, ionizations, attachments);
   const std::size_t n = input.cells;
-  const double h = input.max_energy_eV / static_cast<double>(n);
+  const auto edges = energyMeshEdges(input);
   std::vector<std::map<std::size_t, double>> rows(n);
   GrowthOperator op;
   op.energy_cells = n;
@@ -129,7 +130,7 @@ GrowthOperator assembleGrowthCollisions(
   op.electron_number_mass.resize(n);
   for (std::size_t d = 0; d < n; ++d)
   {
-    const double lo = d * h, hi = (d + 1) * h;
+    const double lo = edges[d], hi = edges[d+1];
     op.electron_number_mass[d] = (2.0 / 3.0) *
         (std::pow(hi, 1.5) - std::pow(lo, 1.5));
   }
@@ -140,8 +141,8 @@ GrowthOperator assembleGrowthCollisions(
     const double u = channel.threshold_eV;
     for (std::size_t donor = 0; donor < n; ++donor)
     {
-      const double lo = std::max(donor * h, u);
-      const double hi = (donor + 1) * h;
+      const double lo = std::max(edges[donor], u);
+      const double hi = edges[donor+1];
       if (hi <= lo)
         continue;
       const double collisions = gamma * x *
@@ -150,21 +151,18 @@ GrowthOperator assembleGrowthCollisions(
       rows[donor][donor] -= collisions; // one incident electron removed
 
       // Equal sharing: 2 product electrons with epsilon_out=(epsilon_in-u)/2.
-      // The donor energy interval maps into at most 2 receiving cells,
-      // respecting off-grid thresholds with exact overlap integrals.
-      const double mapped_lo = (lo - u) / 2.0;
-      const double mapped_hi = (hi - u) / 2.0;
-      const std::size_t first = static_cast<std::size_t>(
-          std::max(0.0, std::floor(mapped_lo / h)));
-      const std::size_t last = static_cast<std::size_t>(
-          std::min(static_cast<double>(n - 1),
-                   std::floor(std::nextafter(mapped_hi / h,
-                                              -std::numeric_limits<double>::infinity()))));
+      // Equal sharing maps a donor interval onto arbitrarily many
+      // destination cells when their widths are nonuniform.
+      const double mapped_lo = (lo-u)/2.0;
+      const double mapped_hi = (hi-u)/2.0;
+      const std::size_t first = energyMeshCell(edges, mapped_lo);
+      const std::size_t last = energyMeshCell(
+          edges, std::nextafter(mapped_hi, 0.0));
       double gains = 0.0;
       for (std::size_t dest = first; dest <= last && dest < n; ++dest)
       {
-        const double xlo = std::max(lo, u + 2.0 * dest * h);
-        const double xhi = std::min(hi, u + 2.0 * (dest + 1) * h);
+        const double xlo = std::max(lo, u + 2.0 * edges[dest]);
+        const double xhi = std::min(hi, u + 2.0 * edges[dest+1]);
         if (xhi <= xlo)
           continue;
         const double contribution = 2.0 * gamma * x *
@@ -183,7 +181,7 @@ GrowthOperator assembleGrowthCollisions(
     const double x = targetFraction(input, channel.target_name);
     for (std::size_t donor = 0; donor < n; ++donor)
     {
-      const double lo = donor * h, hi = (donor + 1) * h;
+      const double lo = edges[donor], hi = edges[donor+1];
       const double collisions = gamma * x *
           integralEnergyCrossSection(channel.energy_eV, channel.cross_section_m2, lo, hi);
       rows[donor][donor] -= collisions; // electron lost by attachment
@@ -225,7 +223,8 @@ GrowthDiagnostics evaluateGrowthOnFrozenEepf(
 {
   const auto op = assembleGrowthCollisions(input, ionizations, attachments);
   const std::size_t n = input.cells;
-  const double h = input.max_energy_eV / static_cast<double>(n);
+  const auto edges = energyMeshEdges(input);
+  const auto centers = energyMeshCenters(edges);
   if (distribution.energy_eV.size() != n ||
       distribution.eepf_eV_minus_3_halves.size() != n)
     throw std::invalid_argument("Boltzmann M6: EEPF size does not match collision grid");
@@ -234,7 +233,8 @@ GrowthDiagnostics evaluateGrowthOnFrozenEepf(
   {
     if (!nonnegative(distribution.eepf_eV_minus_3_halves[i]) ||
         !std::isfinite(distribution.energy_eV[i]) ||
-        std::abs(distribution.energy_eV[i] - (i + 0.5) * h) > 1e-9 * h)
+        std::abs(distribution.energy_eV[i] - centers[i]) >
+            1e-9 * (edges[i+1]-edges[i]))
       throw std::invalid_argument("Boltzmann M6: EEPF values or energy centers invalid");
     norm += distribution.eepf_eV_minus_3_halves[i] * op.electron_number_mass[i];
   }
@@ -249,8 +249,8 @@ GrowthDiagnostics evaluateGrowthOnFrozenEepf(
     for (std::size_t d = 0; d < n; ++d)
       k += gamma * distribution.eepf_eV_minus_3_halves[d] *
            integralEnergyCrossSection(channel.energy_eV, channel.cross_section_m2,
-                                      std::max(d * h, channel.threshold_eV),
-                                      (d + 1) * h);
+                                      std::max(edges[d], channel.threshold_eV),
+                                      edges[d+1]);
     result.ionization_rates_m3_per_s.push_back(k);
     const double contribution = targetFraction(input, channel.target_name) * k;
     result.reduced_temporal_growth_m3_per_s += contribution;
@@ -263,7 +263,7 @@ GrowthDiagnostics evaluateGrowthOnFrozenEepf(
     for (std::size_t d = 0; d < n; ++d)
       k += gamma * distribution.eepf_eV_minus_3_halves[d] *
            integralEnergyCrossSection(channel.energy_eV, channel.cross_section_m2,
-                                      d * h, (d + 1) * h);
+                                      edges[d], edges[d+1]);
     result.attachment_rates_m3_per_s.push_back(k);
     result.reduced_temporal_growth_m3_per_s -=
         targetFraction(input, channel.target_name) * k;
