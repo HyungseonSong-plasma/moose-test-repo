@@ -52,6 +52,13 @@ struct ExcitationChannel
   std::vector<double> cross_section_m2;
 };
 
+enum class ExcitationLinearMethod
+{
+  Auto,             // dense reference for <=512 cells, sparse above
+  DenseReference,   // O(N^3), <=512 only: independent parity oracle
+  SparseBiCGSTAB    // sparse O(N) storage with tridiagonal preconditioner
+};
+
 struct ExcitationResult
 {
   ElasticResult distribution;
@@ -59,11 +66,16 @@ struct ExcitationResult
   std::vector<double> energy_loss_coefficients_eV_m3_per_s; // threshold * rate
   double maximum_normalized_equation_residual = 0.0;
   double maximum_collision_number_balance_error = 0.0;
+  std::size_t assembled_nonzero_entries = 0;
+  std::size_t linear_iterations = 0;
+  ExcitationLinearMethod linear_method_used = ExcitationLinearMethod::DenseReference;
 };
 
 // DEVELOPMENT: steady excitation-only collision operator + elastic SG flux.
-// Limited pivoted dense solve (<= 512 cells); not coupled to production Physics.
+// Dense reference <=512 cells or sparse preconditioned BiCGSTAB up to 16384
+// cells. Not coupled to production Physics.
 ExcitationResult solveExcitationSteadyState(
     const ElasticInput & input,
-    const std::vector<ExcitationChannel> & channels);
+    const std::vector<ExcitationChannel> & channels,
+    ExcitationLinearMethod method = ExcitationLinearMethod::Auto);
 }
