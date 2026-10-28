@@ -95,7 +95,8 @@ struct DenseLU
 TemporalGrowthResult solveElasticTemporalGrowth(
     const ElasticInput & input,
     const std::vector<IonizationChannel> & ionizations,
-    const std::vector<AttachmentChannel> & attachments)
+    const std::vector<AttachmentChannel> & attachments,
+    const std::vector<ExcitationChannel> & excitations)
 {
   if (input.cells > 128 || input.cells < 2)
     throw std::invalid_argument("Boltzmann M6b: dense eigen reference limited to [2,128] cells");
@@ -113,9 +114,22 @@ TemporalGrowthResult solveElasticTemporalGrowth(
   for (const auto & entry : growth_op.entries)
     a[entry.destination][entry.donor] -= entry.coefficient_m3_per_s;
 
-  // Elastic-only two-term DC Scharfetter-Gummel transport. The inverse
-  // iteration remains separately bounded until excitation/superelastic
-  // scattering and sparse growth eigensolvers are incorporated.
+  // Both steady M5 and growing M6b2 must use exactly the same
+  // two-term field-heating and shifted excitation/superelastic collision
+  // discretization. The M5 assembly is conserved and shares this operator.
+  // This avoids independently rederiving nonlocal inelastic gain/loss.
+  if (!excitations.empty())
+  {
+    const auto excited = assembleExcitationConservativeOperator(input, excitations);
+    if (!(excited.maximum_collision_number_balance_error < 1e-9))
+      throw std::runtime_error("Boltzmann M6b2: excitation operator conservation failed");
+    for (std::size_t i = 0; i < n; ++i)
+      for (const auto & [j, value] : excited.rows[i])
+        a[i][j] += value;
+  }
+
+  // Elastic-only SG branch preserves independently validated M6b1
+  // assembly and provides a known-good zero-excitation control.
   double fraction_sum = 0.0;
   for (const auto & target : input.targets)
   {
@@ -138,6 +152,7 @@ TemporalGrowthResult solveElasticTemporalGrowth(
 
   const double EN = input.reduced_field_Td * 1e-21;
   const double theta = kB * input.gas_temperature_K / qe;
+  if (excitations.empty())
   for (std::size_t i = 1; i < n; ++i)
   {
     const double e = i * h;
@@ -178,8 +193,11 @@ TemporalGrowthResult solveElasticTemporalGrowth(
   // magnitude slower than necessary. Each smaller shift is accepted ONLY
   // if the independently solved resolvent retains a positive iterate.
   double shift = std::max(1e-20, upper_bound * 1.05);
-  const auto seed = solveElasticSteadyState(input);
-  std::vector<double> f = seed.eepf_eV_minus_3_halves;
+  std::vector<double> f;
+  if (excitations.empty())
+    f = solveElasticSteadyState(input).eepf_eV_minus_3_halves;
+  else
+    f = solveExcitationSteadyState(input, excitations).distribution.eepf_eV_minus_3_halves;
   double growth_lambda = 0.0;
   std::size_t iterations = 0;
   bool converged = false;
