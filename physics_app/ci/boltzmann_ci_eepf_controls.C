@@ -41,6 +41,10 @@ int main()
     {"example4_R1_SYNTHETIC_N2_1x", 10.0, 15.8367, 200,
      {0.70, 0.20, 0.08, 0.02}, true},
     {"example4_R1_SYNTHETIC_N2_2x", 10.0, 31.6734, 400,
+     {0.70, 0.20, 0.08, 0.02}, true},
+    // Independent 2x energy-grid refinement at FIXED cutoff, as distinct
+    // from extending the cutoff at fixed cell width.
+    {"example4_R1_SYNTHETIC_N2_1x_GRID2x", 10.0, 15.8367, 400,
      {0.70, 0.20, 0.08, 0.02}, true}
   };
   const std::vector<const char *> names = {"Ar", "He", "N2", "O2"};
