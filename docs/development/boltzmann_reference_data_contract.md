@@ -46,3 +46,67 @@ Current M1/M2/M3 synthetic results are independent analytic/numerical invariants
 7. Real PhysicsApp `physics-opt` preflight and coupled P3 numerical/physical acceptance with the accepted imported data; no production coefficient promotion beforehand.
 
 Reference theory: G. J. M. Hagelaar and L. C. Pitchford, Plasma Sources Science and Technology 14 (2005), 722–733, DOI:10.1088/0963-0252/14/4/011.
+
+## M4 actual implementation — ingestion and oracle contract
+
+### Source ingestion
+
+The MOOSE-independent C++ utility `PhysicsBoltzmannCrossSections` reads text collision blocks per the BOLSIG+ published input convention:
+
+```text
+ELASTIC
+Ar
+1.37e-5
+Reference: synthetic example only, not measured data
+------
+0.0 5.0e-20
+2.0 5.0e-20
+------
+EXCITATION
+Ar -> Ar_test_excited
+0.27
+Reference: synthetic example only, not measured data
+------
+0.0 0.0
+2.0 2.0e-20
+------
+```
+
+All numbers in this example are **invented synthetic test inputs**, not LXCat Argon cross sections. The parser retains comments/citations and source line, creates typed collision records and refuses malformed columns, nonfinite/negative cross sections, nonascending energy axes and incomplete blocks. It records unsupported types rather than silently filtering them. The explicit `prepareElasticExcitation` step rejects EFFECTIVE/MOMENTUM, IONIZATION, ATTACHMENT, ROTATION and reversible/superelastic excitation, unsupported target/thresholds and coverage gaps. These rejections are **physics-model HOLD**, not assertions that real Ar/O2 data are invalid. Accepting a complex dataset will require implementing the missing collision operators, not deleting their records.
+
+The existing native C++ regression uses a **synthetic Ar/O2-labeled mixture**, compares imported input to independent direct C++ construction, and mutation-tests the fail-closed boundaries. Source/target nomenclature is realistic, but its cross section values do **not** represent either gas. No externally obtained LXCat bytes are committed.
+
+### External BOLSIG+ numeric comparison
+
+`python3 physics_app/ci/boltzmann_reference_compare.py --case /path/to/local/case_directory`
+
+The directory must contain `case.json` and external source, raw BOLSIG+ export, reference JSON and candidate JSON. The case references the **SHA-256 of each of those four files**. Source metadata includes database, URL, retrieval UTC timestamp and unique process IDs. The reference metadata includes `solver=BOLSIG+`, exact version and raw export path/hash; the candidate identifies its code revision. All four declared hashes are verified against the bytes before numerical comparison.
+
+Both JSON distribution payloads must be independently normalized to the same **energy-cell representation**:
+
+```json
+{
+  "schema_version": 1,
+  "conditions": {
+    "reduced_field_Td": 10,
+    "gas_temperature_K": 300,
+    "mixture": {"Ar": 1.0},
+    "model": "exactly-matched-dc-two-term-physics",
+    "collision_source_sha256": "<verified-64-char-hex>"
+  },
+  "energy_cell_edges_eV": [0.0, 1.0, 2.0],
+  "eepf_eV_minus_3_halves": [0.53033, 0.53033],
+  "mean_energy_eV": 1.2,
+  "rates_m3_per_s": {"Ar:excitation:1": 1e-14}
+}
+```
+
+The values above are **illustrative only**, not a valid published reference and not necessarily a numerically self-consistent input to the checker. Use full-precision canonical values and exact source IDs.
+
+The comparator requires identical physical conditions, source SHA and cell edges; rejects mismatched or unnormalized EEPF, inconsistent energy moments, nonmatching reaction inventories and missing input provenance. Given a complete predeclared tolerance set, it reports weighted EEPF L1, mean-energy relative error and per-reaction relative/zero-rate absolute error. It returns `BOLSIG_REFERENCE_PREFLIGHT_HOLD` for a construction/provenance error; `BOLSIG_REFERENCE_NUMERIC_FAIL` for a quantitatively valid but different reference; and `BOLSIG_REFERENCE_NUMERIC_PASS` only when all declared metrics pass.
+
+**Important limitation:** The existing checker does **not** convert original native BOLSIG+ run-by-run output to the canonical cell-average JSON, and the existing implementation does **not** automatically generate candidate JSON from arbitrary imported production inputs. Those two independent, auditable export stages and a genuine BOLSIG+ reference dataset are still required before external physics parity can be claimed. The checker tests its correctness using manufactured synthetic files and mutation controls, not a genuine BOLSIG+ run. Regridding must be explicit and independently validated; the checker does not silently interpolate mismatched energy grids.
+
+### Current evidence gate
+
+`pytest -q tests/test_boltzmann_cross_section_import.py tests/test_boltzmann_reference_compare.py` validates the import and science-checker structure. It is **P0/P1 only**. The existing Physics runtime CI container smoke does not prove that a production MOOSE input uses this new importer. Keep PR #408 in DRAFT/HOLD pending real source process coverage, reference provenance, energy-grid equivalence, versioned physics-model comparison, and production P2/P3.
