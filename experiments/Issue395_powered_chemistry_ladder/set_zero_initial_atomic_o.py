@@ -52,7 +52,10 @@ def change_generated_input(original: str) -> str:
     new_line = f"{ic.group('indent')}initial_condition = {O_MASS_FRACTION:.1f}\n"
     new_body = body[:ic.start()] + new_line + body[ic.end():]
     result = original[:block.start("body")] + new_body + original[block.end("body"):]
-    if result.replace(new_line, old_line, 1) != original:
+    # Verify the inverse at the exact w_O line offset: other species may
+    # legitimately contain identical initial_condition = 0.0 text earlier.
+    at = block.start("body") + ic.start()
+    if result[:at] + old_line + result[at + len(new_line):] != original:
         raise ValueError("nonlocal input mutation detected")
     return result
 
