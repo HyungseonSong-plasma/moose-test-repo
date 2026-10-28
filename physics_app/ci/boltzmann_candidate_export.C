@@ -3,6 +3,7 @@
 // Actual source hash/rights must be verified by independent case preflight.
 #include "PhysicsBoltzmannCrossSections.h"
 #include "PhysicsBoltzmannTemporalGrowth.h"
+#include "PhysicsBoltzmannTransport.h"
 
 #include <cmath>
 #include <fstream>
@@ -63,7 +64,7 @@ int main(int argc, char ** argv)
     if (argc < 8)
       throw std::invalid_argument(
           "usage: boltzmann_candidate_export SOURCE_TXT SHA256 EoverN_Td Tg_K "
-          "emax_eV CELLS species=fraction [species=fraction ...] [--enable-superelastic] [--diagnose-frozen-growth] [--solve-elastic-temporal-growth]");
+          "emax_eV CELLS species=fraction [species=fraction ...] [--enable-superelastic] [--diagnose-frozen-growth] [--solve-elastic-temporal-growth] [--report-elastic-transport]");
 
     const std::string source_path = argv[1], source_sha = argv[2];
     requireSourceHash(source_sha);
@@ -76,6 +77,7 @@ int main(int argc, char ** argv)
     bool enable_superelastic = false;
     bool frozen_growth = false;
     bool temporal_growth = false;
+    bool elastic_transport = false;
     for (int i = 7; i < argc; ++i)
     {
       const std::string pair = argv[i];
@@ -100,6 +102,13 @@ int main(int argc, char ** argv)
         temporal_growth = true;
         continue;
       }
+      if (pair == "--report-elastic-transport")
+      {
+        if (elastic_transport)
+          throw std::invalid_argument("duplicate elastic-transport moment option");
+        elastic_transport = true;
+        continue;
+      }
       const auto pos = pair.find('=');
       if (pos == std::string::npos || pos == 0 || pos + 1 >= pair.size())
         throw std::invalid_argument("gas composition requires species=fraction");
@@ -110,6 +119,8 @@ int main(int argc, char ** argv)
     if (!std::isfinite(EN) || EN < 0 || !(Tg > 0) || !(emax > 0))
       throw std::invalid_argument("invalid gas temperature, energy ceiling or E/N");
 
+    if (elastic_transport && (temporal_growth || frozen_growth || enable_superelastic))
+      throw std::invalid_argument("elastic transport-only moments incompatible with particle growth or superelastic");
     if (temporal_growth && (frozen_growth || enable_superelastic))
       throw std::invalid_argument("temporal elastic-growth solver is incompatible with frozen growth/superelastic");
     std::ifstream stream(source_path);
@@ -136,6 +147,10 @@ int main(int argc, char ** argv)
       targets = std::move(projected.targets);
       excitation = std::move(projected.channels);
     }
+
+    if (elastic_transport && (!excitation.empty() || !ionizations.empty() ||
+                              !attachments.empty()))
+      throw std::invalid_argument("M7a requires elastic-only scattering and no inelastic channels");
 
     ElasticInput conditions;
     conditions.cells = cells;
@@ -164,6 +179,9 @@ int main(int argc, char ** argv)
           conditions, distribution, ionizations, attachments);
     if (temporal_growth)
       growth = temporal.growth;
+    ElasticTransportMoments transport;
+    if (elastic_transport)
+      transport = evaluateElasticTransportMoments(conditions, distribution);
     if (!excitation.empty() &&
         (result.maximum_normalized_equation_residual > 1e-8 ||
          result.maximum_collision_number_balance_error > 1e-9))
@@ -182,7 +200,8 @@ int main(int argc, char ** argv)
       escapeJsonString(std::cout, name);
       std::cout << ':' << part;
     }
-    const std::string model = temporal_growth ?
+    const std::string model = elastic_transport ? "elastic_dc_transport_moments" :
+        temporal_growth ?
         "elastic_ionization_attachment_temporal_growth_eigen_dense" :
         frozen_growth ?
         (enable_superelastic ? "elastic_superelastic_frozen_growth_diagnostic" :
@@ -247,6 +266,18 @@ int main(int argc, char ** argv)
                 << temporal.maximum_normalized_eigen_residual
                 << ",\"eigen_inverse_iterations\":"
                 << temporal.inverse_iterations;
+    if (elastic_transport)
+      std::cout << ",\"elastic_transport\":{"
+                << "\"mobility_times_N_per_m_V_s\":"
+                << transport.reduced_mobility_N_per_m_V_s
+                << ",\"diffusion_times_N_per_m_s\":"
+                << transport.reduced_diffusion_N_per_m_s
+                << ",\"energy_mobility_times_N_per_m_V_s\":"
+                << transport.reduced_energy_mobility_N_per_m_V_s
+                << ",\"energy_diffusion_times_N_per_m_s\":"
+                << transport.reduced_energy_diffusion_N_per_m_s
+                << ",\"tail_ratio\":"
+                << transport.high_energy_tail_ratio << '}';
     std::cout << "}\n";
     return 0;
   }
