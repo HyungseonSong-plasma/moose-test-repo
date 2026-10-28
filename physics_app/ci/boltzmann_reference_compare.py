@@ -116,6 +116,8 @@ def compare_case(directory: Path) -> dict[str, Any]:
         raise ReferenceContractError("candidate must identify source code revision")
 
     source_bytes = _read_hashed(directory, source)
+    _read_hashed(directory, {"path": reference.get("raw_export_path"),
+                             "sha256": reference.get("raw_export_sha256")})
     reference_bytes = _read_hashed(directory, reference)
     candidate_bytes = _read_hashed(directory, candidate)
     if len(source_bytes) < 1:
