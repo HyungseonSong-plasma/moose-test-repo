@@ -62,7 +62,7 @@ int main(int argc, char ** argv)
     if (argc < 8)
       throw std::invalid_argument(
           "usage: boltzmann_candidate_export SOURCE_TXT SHA256 EoverN_Td Tg_K "
-          "emax_eV CELLS species=fraction [species=fraction ...] [--enable-superelastic]");
+          "emax_eV CELLS species=fraction [species=fraction ...] [--enable-superelastic] [--diagnose-frozen-growth]");
 
     const std::string source_path = argv[1], source_sha = argv[2];
     requireSourceHash(source_sha);
@@ -73,6 +73,7 @@ int main(int argc, char ** argv)
 
     std::map<std::string, double> fraction;
     bool enable_superelastic = false;
+    bool frozen_growth = false;
     for (int i = 7; i < argc; ++i)
     {
       const std::string pair = argv[i];
@@ -81,6 +82,13 @@ int main(int argc, char ** argv)
         if (enable_superelastic)
           throw std::invalid_argument("duplicate superelastic opt-in");
         enable_superelastic = true;
+        continue;
+      }
+      if (pair == "--diagnose-frozen-growth")
+      {
+        if (frozen_growth)
+          throw std::invalid_argument("duplicate frozen-growth diagnostic opt-in");
+        frozen_growth = true;
         continue;
       }
       const auto pos = pair.find('=');
@@ -97,18 +105,47 @@ int main(int argc, char ** argv)
     if (!stream.good())
       throw std::invalid_argument("cannot open collision source file");
     auto file = parseBolsigCrossSections(stream);
-    auto input = prepareElasticExcitation(file, fraction, emax, enable_superelastic);
+    std::vector<ElasticTarget> targets;
+    std::vector<ExcitationChannel> excitation;
+    std::vector<IonizationChannel> ionizations;
+    std::vector<AttachmentChannel> attachments;
+    if (frozen_growth)
+    {
+      auto projected = prepareGrowthPhysics(file, fraction, emax, enable_superelastic);
+      targets = std::move(projected.targets);
+      excitation = std::move(projected.excitation_channels);
+      ionizations = std::move(projected.ionization_channels);
+      attachments = std::move(projected.attachment_channels);
+    }
+    else
+    {
+      auto projected = prepareElasticExcitation(file, fraction, emax, enable_superelastic);
+      targets = std::move(projected.targets);
+      excitation = std::move(projected.channels);
+    }
 
     ElasticInput conditions;
     conditions.cells = cells;
     conditions.max_energy_eV = emax;
     conditions.gas_temperature_K = Tg;
     conditions.reduced_field_Td = EN;
-    conditions.targets = std::move(input.targets);
-    const auto result = solveExcitationSteadyState(
-        conditions, input.channels, ExcitationLinearMethod::Auto);
-    if (result.maximum_normalized_equation_residual > 1e-8 ||
-        result.maximum_collision_number_balance_error > 1e-9)
+    conditions.targets = std::move(targets);
+    const auto result = excitation.empty() ?
+        ExcitationResult{} : solveExcitationSteadyState(
+            conditions, excitation, ExcitationLinearMethod::Auto);
+    // Growth-only datasets use the elastic EEPF; otherwise solve M5's
+    // excitation/superelastic physics, with M6 source applied afterward.
+    ElasticResult distribution = excitation.empty() ?
+        solveElasticSteadyState(conditions) : result.distribution;
+    if (frozen_growth && ionizations.empty() && attachments.empty())
+      throw std::invalid_argument("frozen growth requested without ionization/attachment");
+    GrowthDiagnostics growth;
+    if (frozen_growth)
+      growth = evaluateGrowthOnFrozenEepf(
+          conditions, distribution, ionizations, attachments);
+    if (!excitation.empty() &&
+        (result.maximum_normalized_equation_residual > 1e-8 ||
+         result.maximum_collision_number_balance_error > 1e-9))
       throw std::runtime_error("candidate failed Boltzmann conservation gate");
 
     std::cout << std::setprecision(std::numeric_limits<double>::max_digits10);
@@ -124,9 +161,12 @@ int main(int argc, char ** argv)
       escapeJsonString(std::cout, name);
       std::cout << ':' << part;
     }
-    std::cout << "},\"model\":\"" << (enable_superelastic ?
-                  "elastic_excitation_superelastic_steady_dc" :
-                  "elastic_excitation_steady_dc") << "\","
+    const std::string model = frozen_growth ?
+        (enable_superelastic ? "elastic_superelastic_frozen_growth_diagnostic" :
+                               "elastic_excitation_frozen_growth_diagnostic") :
+        (enable_superelastic ? "elastic_excitation_superelastic_steady_dc" :
+                               "elastic_excitation_steady_dc");
+    std::cout << "},\"model\":\"" << model << "\","
               << "\"collision_source_sha256\":\"" << source_sha << "\"},"
               << "\"energy_cell_edges_eV\":[";
     for (std::size_t i = 0; i <= cells; ++i)
@@ -138,24 +178,46 @@ int main(int argc, char ** argv)
     for (std::size_t i = 0; i < cells; ++i)
     {
       if (i) std::cout << ',';
-      std::cout << result.distribution.eepf_eV_minus_3_halves[i];
+      std::cout << distribution.eepf_eV_minus_3_halves[i];
     }
-    std::cout << "],\"mean_energy_eV\":" << result.distribution.mean_energy_eV
+    std::cout << "],\"mean_energy_eV\":" << distribution.mean_energy_eV
               << ",\"rates_m3_per_s\":{";
-    for (std::size_t i = 0; i < input.channels.size(); ++i)
+    bool any_rate = false;
+    for (std::size_t i = 0; i < excitation.size(); ++i)
     {
-      if (i) std::cout << ',';
-      escapeJsonString(std::cout, input.channels[i].name);
+      if (any_rate) std::cout << ',';
+      any_rate = true;
+      escapeJsonString(std::cout, excitation[i].name);
       std::cout << ':' << result.rate_coefficients_m3_per_s[i];
-      if (!input.channels[i].upper_state_target_name.empty())
+      if (!excitation[i].upper_state_target_name.empty())
       {
         std::cout << ',';
-        escapeJsonString(std::cout, input.channels[i].upper_state_target_name +
+        escapeJsonString(std::cout, excitation[i].upper_state_target_name +
                                     ":superelastic:" + std::to_string(i + 1));
         std::cout << ':' << result.superelastic_rate_coefficients_m3_per_s[i];
       }
     }
-    std::cout << "}}\n";
+    for (std::size_t i = 0; i < ionizations.size(); ++i)
+    {
+      if (any_rate) std::cout << ',';
+      any_rate = true;
+      escapeJsonString(std::cout, ionizations[i].name);
+      std::cout << ':' << growth.ionization_rates_m3_per_s[i];
+    }
+    for (std::size_t i = 0; i < attachments.size(); ++i)
+    {
+      if (any_rate) std::cout << ',';
+      any_rate = true;
+      escapeJsonString(std::cout, attachments[i].name);
+      std::cout << ':' << growth.attachment_rates_m3_per_s[i];
+    }
+    std::cout << '}';
+    if (frozen_growth)
+      std::cout << ",\"frozen_eepf_reduced_temporal_growth_m3_per_s\":"
+                << growth.reduced_temporal_growth_m3_per_s
+                << ",\"frozen_eepf_ionization_energy_loss_eV_m3_per_s\":"
+                << growth.reduced_ionization_energy_loss_eV_m3_per_s;
+    std::cout << "}\n";
     return 0;
   }
   catch (const std::exception & e)
