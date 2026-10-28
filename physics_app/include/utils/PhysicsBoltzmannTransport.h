@@ -25,4 +25,14 @@ struct ElasticTransportMoments
 ElasticTransportMoments evaluateElasticTransportMoments(
     const ElasticInput & input,
     const ElasticResult & distribution);
+
+// M7b: include the isotropic first-angular-moment relaxation from all
+// represented excitation and Klein-Rosseland superelastic channels. Requires
+// elastic-only momentum-transfer cross sections (not EFFECTIVE, which already
+// includes inelastic scattering) and a supplied, independently validated EEPF.
+// Ionization, attachment and electron-growth correction are not yet included.
+ElasticTransportMoments evaluateExcitationTransportMoments(
+    const ElasticInput & input,
+    const ElasticResult & distribution,
+    const std::vector<ExcitationChannel> & excitations);
 }
