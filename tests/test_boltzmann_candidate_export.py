@@ -41,6 +41,7 @@ def test_bolsig_candidate_export_from_external_text_file(tmp_path: Path) -> None
         str(root / "physics_app/src/utils/PhysicsBoltzmannElasticSolver.C"),
         str(root / "physics_app/src/utils/PhysicsBoltzmannGrowth.C"),
         str(root / "physics_app/src/utils/PhysicsBoltzmannTemporalGrowth.C"),
+        str(root / "physics_app/src/utils/PhysicsBoltzmannTransport.C"),
         str(root / "physics_app/src/utils/PhysicsBoltzmannCrossSections.C"),
         str(root / "physics_app/ci/boltzmann_candidate_export.C"),
         "-o", str(binary),
@@ -94,6 +95,7 @@ def test_reversible_candidate_requires_opt_in_and_explicit_upper_population(tmp_
         str(root / "physics_app/src/utils/PhysicsBoltzmannElasticSolver.C"),
         str(root / "physics_app/src/utils/PhysicsBoltzmannGrowth.C"),
         str(root / "physics_app/src/utils/PhysicsBoltzmannTemporalGrowth.C"),
+        str(root / "physics_app/src/utils/PhysicsBoltzmannTransport.C"),
         str(root / "physics_app/src/utils/PhysicsBoltzmannCrossSections.C"),
         str(root / "physics_app/ci/boltzmann_candidate_export.C"),
         "-o", str(binary),
@@ -148,6 +150,7 @@ def test_frozen_particle_growth_diagnostic_does_not_claim_selfconsistent_eepf(tm
         str(root / "physics_app/src/utils/PhysicsBoltzmannElasticSolver.C"),
         str(root / "physics_app/src/utils/PhysicsBoltzmannGrowth.C"),
         str(root / "physics_app/src/utils/PhysicsBoltzmannTemporalGrowth.C"),
+        str(root / "physics_app/src/utils/PhysicsBoltzmannTransport.C"),
         str(root / "physics_app/src/utils/PhysicsBoltzmannCrossSections.C"),
         str(root / "physics_app/ci/boltzmann_candidate_export.C"),
         "-o", str(binary),
@@ -200,6 +203,7 @@ def test_elastic_selfconsistent_growth_cli_is_different_from_frozen_rates(tmp_pa
         str(root / "physics_app/src/utils/PhysicsBoltzmannElasticSolver.C"),
         str(root / "physics_app/src/utils/PhysicsBoltzmannGrowth.C"),
         str(root / "physics_app/src/utils/PhysicsBoltzmannTemporalGrowth.C"),
+        str(root / "physics_app/src/utils/PhysicsBoltzmannTransport.C"),
         str(root / "physics_app/src/utils/PhysicsBoltzmannCrossSections.C"),
         str(root / "physics_app/ci/boltzmann_candidate_export.C"),
         "-o", str(binary),
@@ -253,3 +257,48 @@ def test_elastic_selfconsistent_growth_cli_is_different_from_frozen_rates(tmp_pa
     )
     assert high_n.returncode == 2
     assert "128" in high_n.stderr
+
+
+def test_elastic_mobility_diffusion_json_cli_is_separate_from_inelastic(tmp_path: Path) -> None:
+    compiler = shutil.which("g++")
+    assert compiler
+    root = Path(__file__).resolve().parents[1]
+    binary = tmp_path / "elastic_transport"
+    build = subprocess.run([
+        compiler, "-std=c++17", "-O2", "-Wall", "-Wextra", "-Werror", "-pedantic",
+        f"-I{root / 'physics_app/include/utils'}",
+        str(root / "physics_app/src/utils/PhysicsBoltzmannElasticSolver.C"),
+        str(root / "physics_app/src/utils/PhysicsBoltzmannGrowth.C"),
+        str(root / "physics_app/src/utils/PhysicsBoltzmannTemporalGrowth.C"),
+        str(root / "physics_app/src/utils/PhysicsBoltzmannTransport.C"),
+        str(root / "physics_app/src/utils/PhysicsBoltzmannCrossSections.C"),
+        str(root / "physics_app/ci/boltzmann_candidate_export.C"),
+        "-o", str(binary),
+    ], capture_output=True, text=True)
+    assert build.returncode == 0, build.stdout + build.stderr
+
+    source = tmp_path / "synthetic_elastic.txt"
+    source.write_text(
+        "SYNTHETIC NOT LXCAT\n"
+        "ELASTIC\nAr\n1.37e-5\noriginal artificial datum\n------\n"
+        "0 5e-20\n3 5e-20\n------\n",
+        encoding="utf-8",
+    )
+    digest = hashlib.sha256(source.read_bytes()).hexdigest()
+    args = [str(binary), str(source), digest, "0", "3000", "3", "200",
+            "Ar=1", "--report-elastic-transport"]
+    run = subprocess.run(args, capture_output=True, text=True)
+    assert run.returncode == 0, run.stdout + run.stderr
+    payload = json.loads(run.stdout)
+    assert payload["conditions"]["model"] == "elastic_dc_transport_moments"
+    trans = payload["elastic_transport"]
+    assert trans["mobility_times_N_per_m_V_s"] > 0
+    assert trans["diffusion_times_N_per_m_s"] > 0
+    assert trans["energy_diffusion_times_N_per_m_s"] > 0
+    assert trans["tail_ratio"] < 1e-3
+    theta = 1.380649e-23 * 3000 / 1.602176634e-19
+    assert abs(trans["diffusion_times_N_per_m_s"] /
+               trans["mobility_times_N_per_m_V_s"] - theta) < 0.01 * theta
+    wrong = subprocess.run(args + ["--diagnose-frozen-growth"],
+                           capture_output=True, text=True)
+    assert wrong.returncode == 2 and "incompatible" in wrong.stderr
