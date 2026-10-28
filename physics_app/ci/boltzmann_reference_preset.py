@@ -19,6 +19,18 @@ import math
 from pathlib import Path
 import re
 
+try:
+    from .boltzmann_collision_coverage_audit import (
+        audit_local_collision_file,
+        CollisionAuditError,
+    )
+except ImportError:
+    # Also support direct: python3 physics_app/ci/boltzmann_reference_preset.py
+    from boltzmann_collision_coverage_audit import (
+        audit_local_collision_file,
+        CollisionAuditError,
+    )
+
 DOCUMENTATION_URL = (
     "https://www.bolsig.laplace.univ-tlse.fr/wp-content/uploads/"
     "2024/07/bolsigdoc0724.pdf"
@@ -37,6 +49,8 @@ class ReferencePresetError(ValueError):
 
 
 def _validate_input_file(source: Path) -> tuple[Path, str]:
+    if source.is_symlink():
+        raise ReferencePresetError("cross-section source must not be a symlink")
     try:
         actual = source.resolve(strict=True)
     except OSError as exc:
@@ -69,6 +83,13 @@ def make_reference_preset(
 ) -> dict:
     actual, digest = _validate_input_file(source)
     mixture = _mixture(preset, ar_fraction)
+    try:
+        collision_census = audit_local_collision_file(
+            actual, tuple(species for species, _ in mixture))
+    except CollisionAuditError as exc:
+        raise ReferencePresetError(f"collision source cannot be audited: {exc}") from exc
+    if any(item.startswith("MISSING_SPECIES:") for item in collision_census["model_gaps"]):
+        raise ReferencePresetError("reference cross-section source lacks a requested gas species")
     if abs(sum(frac for _, frac in mixture) - 1.0) > 1e-12:
         raise ReferencePresetError("gas fractions do not sum to one")
     # BOLSIG+ text syntax: one READCOLLISIONS block loads all gas species.
@@ -126,6 +147,13 @@ def make_reference_preset(
         "mixture": dict(mixture),
         "collision_source_path": str(actual),
         "collision_source_sha256": digest,
+        "collision_process_counts": collision_census["process_counts"],
+        "custom_solver_model_gaps": collision_census["model_gaps"],
+        "custom_solver_model_status": collision_census["status"],
+        "source_compatibility_note": (
+            "BOLSIG+ may run source reactions unsupported by the custom C++ solver; "
+            "this input script is reference-only, not a parity guarantee"
+        ),
         "script_file": script_name,
         "script_sha256": sha_script,
         "expected_raw_output": str(out_resolved / results_name),
