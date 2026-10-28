@@ -6,9 +6,10 @@
 
 namespace PhysicsBoltzmann
 {
-// M6b1 — self-consistent, *elastic-only* DC energy-space transport coupled to
-// binary ionization/attachment. Dense shifted inverse iteration reference;
-// no excitation/superelastic collisions or real BOLSIG+ parity.
+// M6b1/M6b2 — self-consistent DC energy-space transport coupled to
+// binary ionization/attachment. Optional excitation/superelastic channels use
+// the exact same SG+nonlocal conservative assembly as M5; dense shifted inverse
+// iteration remains a bounded reference. No real BOLSIG+ parity.
 // The normalized stationary temporal-growth generalized eigenproblem is
 //
 //   (T - Q) f = -lambda M f
@@ -30,5 +31,6 @@ struct TemporalGrowthResult
 TemporalGrowthResult solveElasticTemporalGrowth(
     const ElasticInput & input,
     const std::vector<IonizationChannel> & ionizations,
-    const std::vector<AttachmentChannel> & attachments);
+    const std::vector<AttachmentChannel> & attachments,
+    const std::vector<ExcitationChannel> & excitations = {});
 }
