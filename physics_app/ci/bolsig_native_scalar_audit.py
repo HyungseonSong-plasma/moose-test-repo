@@ -249,13 +249,105 @@ def parse_native_scalar_reference(
     }
 
 
+
+def compare_native_collision_ledger(
+    native_output: Path,
+    collision_source: Path,
+) -> dict[str, Any]:
+    """Cross-check the *whole* raw collision census against a native BOLSIG+ run.
+
+    This checks source-process provenance, not EEPF/operator equivalence.
+    Only counts and SHA-256 are emitted; no LXCat cross-section rows are
+    copied into an artifact or a repository.
+    """
+    try:
+        from .boltzmann_collision_coverage_audit import (
+            CollisionAuditError, audit_local_collision_file,
+        )
+    except ImportError:
+        from boltzmann_collision_coverage_audit import (
+            CollisionAuditError, audit_local_collision_file,
+        )
+
+    native = parse_native_scalar_reference(native_output)
+    fractions = native["conditions"]["mixture"]
+    try:
+        source = audit_local_collision_file(collision_source, tuple(fractions))
+    except (OSError, UnicodeError, CollisionAuditError) as exc:
+        raise NativeBolsigError("invalid independently supplied collision source") from exc
+
+    type_map = {
+        "Elastic": "ELASTIC",
+        "Effective (momentum)": "EFFECTIVE",
+        "Excitation": "EXCITATION",
+        "Ionization": "IONIZATION",
+        "Attachment": "ATTACHMENT",
+    }
+    native_census = {
+        gas: {type_map[kind]: count for kind, count in kinds.items()}
+        for gas, kinds in native["process_census"].items()
+    }
+    source_census = {
+        gas: {("EFFECTIVE" if k == "MOMENTUM" else k): v
+              for k, v in kinds.items()}
+        for gas, kinds in source["process_counts"].items()
+    }
+    missing: dict[str, dict[str, int]] = {}
+    excess: dict[str, dict[str, int]] = {}
+    for gas in fractions:
+        a = native_census.get(gas, {})
+        b = source_census.get(gas, {})
+        for kind in sorted(set(a) | set(b)):
+            gap = a.get(kind, 0) - b.get(kind, 0)
+            if gap > 0:
+                missing.setdefault(gas, {})[kind] = gap
+            elif gap < 0:
+                excess.setdefault(gas, {})[kind] = -gap
+
+    count_equal = native["number_of_collision_processes"] == source["total_processes"]
+    census_equal = count_equal and not missing and not excess
+    # The census is necessary but not sufficient for matched collision
+    # physics: threshold/tabulation, units, target states, superelastic
+    # populations, third-body attachment and growth must still be audited.
+    status = (
+        "HOLD_NATIVE_REFERENCE_SELFCONSISTENCY"
+        if not native["status"].endswith("_PASS") else
+        "HOLD_SOURCE_NATIVE_PROCESS_CENSUS_MISMATCH"
+        if not census_equal else
+        "PROCESS_CENSUS_MATCH_PHYSICAL_PARITY_NOT_ESTABLISHED"
+    )
+    return {
+        "status": status,
+        "scientific_acceptance": "HOLD_COMPLETE_COLLISION_OPERATOR_AND_EEPF",
+        "native_bolsig_version": native["bolsig_version"],
+        "native_output_sha256": native["native_output_sha256"],
+        "collision_source_sha256": source["source_sha256"],
+        "native_process_count": native["number_of_collision_processes"],
+        "source_process_count": source["total_processes"],
+        "native_process_census": native_census,
+        "source_process_census": source_census,
+        "missing_source_processes_by_type": missing,
+        "extra_source_processes_by_type": excess,
+        "source_model_gaps": source["model_gaps"],
+        "limitations": [
+            "Does not establish threshold or cross-section table equivalence",
+            "Does not establish energy-grid/growth/three-body/e-e model parity",
+            "Does not establish numerical EEPF, rate or transport agreement",
+        ],
+    }
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--native-output", type=Path, required=True)
     parser.add_argument("--input-script", type=Path)
+    parser.add_argument("--cross-sections", type=Path)
     args = parser.parse_args()
     try:
         report = parse_native_scalar_reference(args.native_output, args.input_script)
+        if args.cross_sections:
+            report["external_collision_ledger"] = compare_native_collision_ledger(
+                args.native_output, args.cross_sections)
     except (OSError, UnicodeError, NativeBolsigError) as exc:
         print("BOLSIG_NATIVE_REFERENCE_PREFLIGHT_HOLD:", exc)
         return 2
