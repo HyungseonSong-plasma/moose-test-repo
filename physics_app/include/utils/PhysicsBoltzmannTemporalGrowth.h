@@ -32,5 +32,8 @@ TemporalGrowthResult solveElasticTemporalGrowth(
     const ElasticInput & input,
     const std::vector<IonizationChannel> & ionizations,
     const std::vector<AttachmentChannel> & attachments,
-    const std::vector<ExcitationChannel> & excitations = {});
+    const std::vector<ExcitationChannel> & excitations = {},
+    // Empty = legacy constant-cell operator. Nonempty = Picard-frozen
+    // positive reconstructed shape; only converged outer Picard is self-consistent.
+    const std::vector<double> & reference_eepf = {});
 }
