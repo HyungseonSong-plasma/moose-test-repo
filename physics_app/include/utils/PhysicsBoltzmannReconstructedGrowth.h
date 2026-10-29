@@ -22,6 +22,7 @@ struct ReconstructedGrowthControls
   std::size_t required_stable_updates = 2;
   double distribution_l1_limit = 1e-5;
   double rate_relative_limit = 1e-5;
+  double mean_energy_relative_limit = 1e-5;
 };
 
 struct ReconstructedGrowthStep
@@ -30,6 +31,7 @@ struct ReconstructedGrowthStep
   double distribution_l1_change = 0.0;
   double maximum_rate_relative_change = 0.0;
   double eigen_residual = 0.0;
+  double mean_energy_relative_change = 0.0;
   bool stable = false;
 };
 
@@ -56,7 +58,10 @@ inline ReconstructedGrowthResult solveTemporalGrowthWithSubcellPicard(
         controls.distribution_l1_limit < 1.0) ||
       !(std::isfinite(controls.rate_relative_limit) &&
         controls.rate_relative_limit > 0.0 &&
-        controls.rate_relative_limit < 1.0))
+        controls.rate_relative_limit < 1.0) ||
+      !(std::isfinite(controls.mean_energy_relative_limit) &&
+        controls.mean_energy_relative_limit > 0.0 &&
+        controls.mean_energy_relative_limit < 1.0))
     throw std::invalid_argument("Boltzmann P0-3: invalid Picard controls");
   ReconstructedGrowthResult out;
   out.solution = solveElasticTemporalGrowth(input, ions, attachments, excitations);
@@ -90,12 +95,20 @@ inline ReconstructedGrowthResult solveTemporalGrowthWithSubcellPicard(
     };
     compare(old.growth.ionization_rates_m3_per_s, next.growth.ionization_rates_m3_per_s);
     compare(old.growth.attachment_rates_m3_per_s, next.growth.attachment_rates_m3_per_s);
+    const double energy_scale = std::max(1e-30,
+        std::max(std::abs(old.distribution.mean_energy_eV),
+                 std::abs(next.distribution.mean_energy_eV)));
+    const double energy_change = std::abs(next.distribution.mean_energy_eV -
+                                           old.distribution.mean_energy_eV) /
+                                 energy_scale;
     const bool stable = l1 <= controls.distribution_l1_limit &&
                         rate_change <= controls.rate_relative_limit &&
+                        energy_change <= controls.mean_energy_relative_limit &&
                         next.maximum_normalized_eigen_residual < 1e-8 &&
                         next.growth.operator_number_balance_relative_error < 1e-9;
     out.history.push_back({iteration + 1, l1, rate_change,
-                           next.maximum_normalized_eigen_residual, stable});
+                           next.maximum_normalized_eigen_residual,
+                           energy_change, stable});
     out.solution = std::move(next);
     stable_updates = stable ? stable_updates + 1 : 0;
     if (stable_updates >= controls.required_stable_updates)
