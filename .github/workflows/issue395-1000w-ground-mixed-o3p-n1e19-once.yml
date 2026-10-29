@@ -1,0 +1,156 @@
+# BOUNDED science-HOLD experiment, mutually exclusive DISS channels.
+# 1000W, pure O2(X) inlet, O(3P) initial 1e19 m^-3 via mixture EOS.
+# One-shot in isolated issue branch; do not modify main or promote scientific PASS.
+name: Issue395 1000W ground vs mixed initial O3P 1e19 once
+run-name: Ground vs mixed DISS 1000W nO0=1e19 @ ${{ github.sha }}
+on:
+  push:
+    branches: [issue395-1000w-ground-mixed-o3p-n1e19-20261029]
+    paths: [.github/workflows/issue395-1000w-ground-mixed-o3p-n1e19-once.yml]
+permissions:
+  contents: read
+concurrency:
+  group: issue395-o3p-n1e19-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  chemistry:
+    name: 1000W O3P n0=1e19 ${{ matrix.channel }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        channel: [ground, mixed]
+    env:
+      DISS_CHANNEL: ${{ matrix.channel }}
+      PURE_O2_INLET: "1"
+      CHATGPT_WORK_BASE_SHA: ${{ github.sha }}
+    steps:
+      - name: Checkout exact experimental source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: P0 source regressions and exact O3P EOS initial state
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$CHATGPT_WORK_BASE_SHA"
+          test "$PURE_O2_INLET" = 1
+          python3 -m pip install --disable-pip-version-check --quiet 'pytest>=8,<9'
+          python3 -m pytest -q \
+            tests/test_o2_ground_state_dissociation_overlay.py \
+            tests/test_o2_mixed_state_dissociation_overlay.py \
+            tests/test_o2_mixed_dissociation_power_replay.py \
+            tests/test_o2_mixed_power_audit.py \
+            tests/test_issue395_step0_diss_off_control.py \
+            tests/test_issue395_pure_o2_inlet.py \
+            tests/test_issue395_step1_diss_off_pure_o2.py
+          python3 -m venv .o3p-n1e19-venv
+          .o3p-n1e19-venv/bin/python -m pip install --disable-pip-version-check --quiet numpy==2.1.2 scipy==1.14.1
+          source .o3p-n1e19-venv/bin/activate
+          bash experiments/Issue395_powered_chemistry_ladder/issue397_l1_power_scan_replay.sh prepare 1000
+          CHEM=experiments/Issue395_powered_chemistry_ladder
+          INPUT="$CHEM/rf_elastic_diss_ion_ei20_ei01_1000w_adjacent_sheath_wall_closed_100us_dt1000ns.i"
+          DISS="$CHEM/o2_dissociation_1000w_100us_dt1000ns_overlay.i"
+          RESULT="$CHEM/results_rf_elastic_diss_ion_ei20_ei01_1000w_adjacent_sheath_wall_closed_100us_dt1000ns"
+          if [ "$DISS_CHANNEL" = mixed ]; then RESULT="$RESULT""_mixed_o3p_o1d"; fi
+          test -s "$INPUT" && test -s "$DISS"
+          test -f "$RESULT/prep/pure_o2_inlet.log"
+          python3 "$CHEM/set_pure_o2_inlet.py" --input "$INPUT" --verify
+          cp "$INPUT" "$RESULT/prep/before_o3p_n1e19.i"
+          python3 "$CHEM/set_o3p_initial_density_experiment.py" \
+            --input "$INPUT" --target-number-density 1e19 \
+            | tee "$RESULT/prep/initial_o3p_n1e19.log"
+          python3 "$CHEM/set_o3p_initial_density_experiment.py" \
+            --input "$INPUT" --target-number-density 1e19 --verify
+          python3 - "$INPUT" "$RESULT/prep/before_o3p_n1e19.i" <<'PY'
+          from pathlib import Path
+          import importlib.util,re,sys
+          before=Path(sys.argv[2]).read_text()
+          after=Path(sys.argv[1]).read_text()
+          block=re.compile(r'(?ms)^  \[w_O\]\n(.*?)^  \[\]\n')
+          a=block.findall(before);b=block.findall(after)
+          assert len(a)==len(b)==1
+          old=re.findall(r'(?m)^\s*initial_condition\s*=\s*([^\s#]+)',a[0])
+          new=re.findall(r'(?m)^\s*initial_condition\s*=\s*([^\s#]+)',b[0])
+          assert len(old)==len(new)==1
+          assert float(old[0])==0.10309278350515465
+          assert 0<float(new[0])<float(old[0])
+          assert after.replace("initial_condition = "+new[0],"initial_condition = "+old[0],1)==before
+          src=Path("experiments/Issue395_powered_chemistry_ladder/set_o3p_initial_density_experiment.py")
+          spec=importlib.util.spec_from_file_location('o3p_eos_guard',src)
+          mod=importlib.util.module_from_spec(spec);spec.loader.exec_module(mod)
+          mod.verify_target_number_density(after,1e19)
+          changed=after.replace("initial_condition = "+new[0],
+                                "initial_condition = "+format(float(new[0])*1.01,'.17g'),1)
+          try: mod.verify_target_number_density(changed,1e19)
+          except ValueError: pass
+          else: raise AssertionError("negative density mutation was not rejected")
+          print("EXACT_O3P_1E19_EOS_SINGLE_LINE_NEGATIVE_CONTROL_PASS")
+          PY
+          if [ "$DISS_CHANNEL" = ground ]; then
+            grep -Fqx '    property_name = R_diss_O2' "$DISS"
+            ! grep -Fqx '    property_name = R_diss_O2_mixed' "$DISS"
+            grep -q 'ISSUE395_O2_DISSOCIATION_OVERLAY_BUILD_PASS' "$RESULT/prep/dissociation_overlay.log"
+          elif [ "$DISS_CHANNEL" = mixed ]; then
+            grep -Fqx '    property_name = R_diss_O2_mixed' "$DISS"
+            ! grep -Fqx '    property_name = R_diss_O2' "$DISS"
+            grep -Fq '    variable = w_Os' "$DISS"
+            grep -q 'ISSUE395_O2_MIXED_DISSOCIATION_OVERLAY_BUILD_PASS' "$RESULT/prep/dissociation_overlay.log"
+          else
+            exit 9
+          fi
+          echo "O3P_1E19_EXCLUSIVE_DISS_PASS: $DISS_CHANNEL"
+      - name: P1 exact PhysicsApp build
+        shell: bash
+        run: bash experiments/Issue395_powered_chemistry_ladder/issue397_l1_power_scan_replay.sh build 1000
+      - name: P2 real physics-opt --check-input
+        shell: bash
+        run: bash experiments/Issue395_powered_chemistry_ladder/issue397_l1_power_scan_replay.sh check 1000
+      - name: P3 bounded 100us real physics-opt solve
+        id: p3
+        shell: bash
+        run: timeout -s TERM -k 60s 19000s bash experiments/Issue395_powered_chemistry_ladder/issue397_l1_power_scan_replay.sh solve 1000
+      - name: P4 27-face native D1 audit
+        id: p4
+        if: steps.p3.outcome == 'success'
+        shell: bash
+        run: |
+          set -euo pipefail
+          source .o3p-n1e19-venv/bin/activate
+          bash experiments/Issue395_powered_chemistry_ladder/issue397_l1_power_scan_replay.sh audit 1000
+      - name: P5 exact initial O, chemistry, pure inlet, RF, time and D1
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          CHEM=experiments/Issue395_powered_chemistry_ladder
+          INPUT="$CHEM/rf_elastic_diss_ion_ei20_ei01_1000w_adjacent_sheath_wall_closed_100us_dt1000ns.i"
+          RESULT="$CHEM/results_rf_elastic_diss_ion_ei20_ei01_1000w_adjacent_sheath_wall_closed_100us_dt1000ns"
+          if [ "$DISS_CHANNEL" = mixed ]; then RESULT="$RESULT""_mixed_o3p_o1d"; fi
+          python3 "$CHEM/set_o3p_initial_density_experiment.py" \
+            --input "$INPUT" --target-number-density 1e19 --verify
+          python3 "$CHEM/set_pure_o2_inlet.py" --input "$INPUT" --verify
+          python3 "$CHEM/analyze_ground_state_power_scan.py" \
+            --channel "$DISS_CHANNEL" --require-pure-o2-inlet \
+            --result "$RESULT" --power-w 1000 \
+            --source-sha "$CHATGPT_WORK_BASE_SHA" \
+            --p3-outcome "${{ steps.p3.outcome }}" \
+            --p4-outcome "${{ steps.p4.outcome }}"
+      - name: Preserve full results on each arm even if P5 fails
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue395-1000w-${{ matrix.channel }}-o3p-n1e19-pure-o2-100us
+          retention-days: 30
+          if-no-files-found: warn
+          path: |
+            experiments/Issue395_powered_chemistry_ladder/results_rf_elastic_diss_ion_ei20_ei01_1000w_adjacent_sheath_wall_closed_100us_dt1000ns/**
+            experiments/Issue395_powered_chemistry_ladder/results_rf_elastic_diss_ion_ei20_ei01_1000w_adjacent_sheath_wall_closed_100us_dt1000ns_mixed_o3p_o1d/**
+            experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_ei20_ei01_1000w_adjacent_sheath_wall_closed_100us_dt1000ns.i
+            experiments/Issue395_powered_chemistry_ladder/o2_dissociation_1000w_100us_dt1000ns_overlay.i
+            experiments/Issue395_powered_chemistry_ladder/rf_elastic_multiapp_parent_1000w_100us_dt1000ns_overlay.i
+            experiments/Issue395_powered_chemistry_ladder/rf_elastic_multiapp_maxwell_1000w_100us_dt1000ns_child.i
+            experiments/Issue395_powered_chemistry_ladder/issue397_maxwell_steady_abs1e11.i
