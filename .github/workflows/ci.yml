@@ -464,6 +464,16 @@ jobs:
             tests/boltzmann/fixed_emax_mesh_convergence_test.C \
             -o /tmp/boltzmann-fixed-emax-mesh-test
           /tmp/boltzmann-fixed-emax-mesh-test
+      - name: P0-1/P0-2 joint Emax and independent mesh convergence gate (synthetic M6b)
+        run: |
+          g++ -std=c++17 -O2 -Wall -Wextra -Werror -pedantic \\
+            -Iphysics_app/include/utils \\
+            physics_app/src/utils/PhysicsBoltzmannElasticSolver.C \\
+            physics_app/src/utils/PhysicsBoltzmannGrowth.C \\
+            physics_app/src/utils/PhysicsBoltzmannTemporalGrowth.C \\
+            tests/boltzmann/joint_emax_mesh_convergence_test.C \\
+            -o /tmp/boltzmann-joint-emax-mesh-test
+          /tmp/boltzmann-joint-emax-mesh-test
       - name: Compile and run actual C++ Boltzmann solver on invented elastic controls
         run: python3 physics_app/ci/export_boltzmann_ci_eepf.py --out boltzmann-ci-eepf
       - name: Upload C++ EEPF data, explicitly marked not real-gas parity
