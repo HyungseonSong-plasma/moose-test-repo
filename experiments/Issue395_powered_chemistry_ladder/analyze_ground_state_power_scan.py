@@ -19,7 +19,7 @@ RATE_TOL = 2e-5
 SOURCE_TOL = 2e-5
 
 
-def audit(result: Path, power_w: int, source_sha: str, p3: str, p4: str, diss_channel: str = "ground", require_initial_zero: bool = False) -> dict:
+def audit(result: Path, power_w: int, source_sha: str, p3: str, p4: str, diss_channel: str = "ground", require_initial_zero: bool = False, initial_number_density_m3: float | None = None) -> dict:
     csv_file = result / "run" / "plasma.csv"
     rows = []
     if csv_file.is_file():
@@ -174,6 +174,33 @@ def audit(result: Path, power_w: int, source_sha: str, p3: str, p4: str, diss_ch
             "initial_O2_kg": initial_O2,
             "normalization_scale_kg": initial_O_scale,
         }
+    if initial_number_density_m3 is not None:
+        def first(name):
+            if not rows:
+                return None
+            try:
+                v = float(rows[0][name])
+                return v if math.isfinite(v) else None
+            except (KeyError, TypeError, ValueError):
+                return None
+        rho_lo, rho_hi = first("neutral_rho_min"), first("neutral_rho_max")
+        w_lo, w_hi = first("w_O_min"), first("w_O_max")
+        t0 = first("time")
+        NA, M_O = 6.02214076e23, 0.016
+        n_lo = (rho_lo * w_lo * NA / M_O if rho_lo is not None and w_lo is not None else None)
+        n_hi = (rho_hi * w_hi * NA / M_O if rho_hi is not None and w_hi is not None else None)
+        numbers = (n_lo, n_hi)
+        valid = (t0 == 0.0 and all(v is not None and math.isfinite(v) for v in numbers)
+                 and initial_number_density_m3 > 0
+                 and all(abs(v-initial_number_density_m3) <= 1e-8*initial_number_density_m3
+                         for v in numbers))
+        state["checks"]["initial_O3P_number_density"] = {
+            "status": "PASS" if valid else "FAIL",
+            "expected_m3": initial_number_density_m3,
+            "observed_min_m3": n_lo,
+            "observed_max_m3": n_hi,
+            "evidence": "t=0 solved w_O extrema and neutral_rho extrema",
+        }
     state["status"] = ("PASS" if all(c["status"] == "PASS" for c in state["checks"].values())
                        else "NOT_PASS")
     return state
@@ -188,9 +215,10 @@ def main() -> int:
     p.add_argument("--p4-outcome", required=True)
     p.add_argument("--channel", choices=("ground", "mixed"), default="ground")
     p.add_argument("--require-initial-zero", action="store_true")
+    p.add_argument("--initial-number-density-m3", type=float, default=None)
     args = p.parse_args()
-    report = audit(args.result, args.power_w, args.source_sha, args.p3_outcome, args.p4_outcome, args.channel, args.require_initial_zero)
-    dest = args.result / "diagnostics" / ("mixed_o3p_o1d_zero_initial_two_power.json" if args.require_initial_zero else "mixed_o3p_o1d_two_power.json" if args.channel == "mixed" else "ground_state_three_power.json")
+    report = audit(args.result, args.power_w, args.source_sha, args.p3_outcome, args.p4_outcome, args.channel, args.require_initial_zero, args.initial_number_density_m3)
+    dest = args.result / "diagnostics" / ("mixed_o3p_o1d_target_density_two_power.json" if args.initial_number_density_m3 is not None else "mixed_o3p_o1d_zero_initial_two_power.json" if args.require_initial_zero else "mixed_o3p_o1d_two_power.json" if args.channel == "mixed" else "ground_state_three_power.json")
     dest.parent.mkdir(parents=True, exist_ok=True)
     dest.write_text(json.dumps(report, indent=2, allow_nan=False) + "\n", encoding="utf-8")
     print(json.dumps(report, indent=2, allow_nan=False))
