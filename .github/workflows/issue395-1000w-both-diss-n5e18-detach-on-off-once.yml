@@ -80,7 +80,7 @@ jobs:
           assert m.count("    variable = w_O\n")==1
           assert m.count("    variable = w_Os\n")==1
           def energy(t):
-              return float(re.search(r"property_name = S_electron_energy_mol_diss(?:_mixed)?\n.*?expression = '(-[0-9.eE+]+)\*R'",t,re.S).group(1))
+              return float(re.search(r"property_name = S_electron_energy_mol(?:ar)?_diss(?:_mixed)?\n.*?expression = '(-[0-9.eE+]+)\*R'",t,re.S).group(1))
           assert math.isclose(energy(g),-6.0,rel_tol=1e-14)
           assert math.isclose(energy(m),-8.4,rel_tol=1e-14)
           if mode=="on":
