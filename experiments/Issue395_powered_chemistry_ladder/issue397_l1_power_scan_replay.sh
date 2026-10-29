@@ -9,7 +9,7 @@ POWER_W="${2:?RF target 200, 250, 300, 400, 600 or 1000 W is required}"
 case "$POWER_W" in 200|250|300|400|600|1000) ;; *) echo "unsupported RF target: $POWER_W" >&2; exit 2 ;; esac
 case "$PHASE" in prepare|build|check|solve|audit) ;; *) echo "unsupported phase: $PHASE" >&2; exit 2 ;; esac
 DISS_CHANNEL="${DISS_CHANNEL:-ground}"
-case "$DISS_CHANNEL" in ground|mixed) ;; *) echo "unsupported O2 dissociation channel: $DISS_CHANNEL" >&2; exit 2 ;; esac
+case "$DISS_CHANNEL" in ground|mixed|off) ;; *) echo "unsupported O2 dissociation channel: $DISS_CHANNEL" >&2; exit 2 ;; esac
 test "$(git rev-parse --show-toplevel)" = "$PWD" || {
   echo "run the replay from the exact repository checkout root" >&2; exit 2;
 }
@@ -30,6 +30,8 @@ export TABLE=experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt
 export RESULT="$CHEM/results_rf_elastic_diss_ion_ei20_ei01_${POWER_W}w_adjacent_sheath_wall_closed_100us_dt${DT_NS}ns"
 if [[ "$DISS_CHANNEL" == "mixed" ]]; then
   export RESULT="${RESULT}_mixed_o3p_o1d"
+elif [[ "$DISS_CHANNEL" == "off" ]]; then
+  export RESULT="${RESULT}_both_diss_off_step0_control"
 fi
 export INPUT="$CHEM/rf_elastic_diss_ion_ei20_ei01_${POWER_W}w_adjacent_sheath_wall_closed_100us_dt${DT_NS}ns.i"
 export PARENT="$CHEM/rf_elastic_multiapp_parent_${POWER_W}w_100us_dt${DT_NS}ns_overlay.i"
@@ -265,6 +267,12 @@ if [[ "$DISS_CHANNEL" == mixed ]]; then
   ! grep -Fqx '    property_name = R_diss_O2' "$DISS"
   ! grep -Fqx '    property_name = S_O_mass_diss' "$DISS"
   grep -Fq 'ISSUE395_O2_MIXED_DISSOCIATION_OVERLAY_BUILD_PASS' "$RESULT/prep/dissociation_overlay.log"
+elif [[ "$DISS_CHANNEL" == off ]]; then
+  grep -Fqx '# Controlled Step0 knockout: ground and mixed O2 dissociation OFF.' "$DISS"
+  test "$(wc -l < "$DISS")" -eq 1
+  grep -Fqx 'ISSUE395_O2_DISSOCIATION_BOTH_OFF_PASS' "$RESULT/prep/dissociation_overlay.log"
+  ! grep -Eq 'R_diss_O2|S_O_mass_diss|\[FVKernels\]|\[Kernels\]|\[FunctorMaterials\]|\[Postprocessors\]' "$DISS"
+  ! grep -Eq 'R_diss_O2|S_O_mass_diss|mixed_o2_progress' "$INPUT"
 else
   grep -Fqx '    property_name = R_diss_O2' "$DISS"
   ! grep -Fq 'R_diss_O2_mixed' "$DISS"
