@@ -162,6 +162,21 @@ int main()
           coupled.solution.growth.operator_number_balance_relative_error < 1e-9,
           "P0-3: actual synthetic reconstructed eigen re-solve failed");
 
+  // Realistic numerical tolerances are tested separately from the
+  // deliberately permissive state-machine control. Report the actual result,
+  // whether converged or HOLD, rather than re-labeling it as physical parity.
+  ReconstructedGrowthControls nominal;
+  const auto nominal_result = solveTemporalGrowthWithSubcellPicard(
+      input, ions, attaches, excitations, nominal);
+  require(!nominal_result.history.empty() &&
+          nominal_result.solution.maximum_normalized_eigen_residual < 1e-8 &&
+          nominal_result.solution.growth.operator_number_balance_relative_error < 1e-9 &&
+          (nominal_result.converged ?
+             (nominal_result.history.back().stable &&
+              nominal_result.status == "CONVERGED_PICARD_GROWTH_ONLY_SCIENCE_HOLD") :
+             (nominal_result.status == "HOLD_PICARD_MAX_UPDATES")),
+          "P0-3: nominal-tolerance Picard did not report a valid outcome");
+
   ReconstructedGrowthControls strict;
   strict.maximum_updates = 1;
   strict.required_stable_updates = 1;
@@ -182,5 +197,9 @@ int main()
             << ", collision_balance=" << op.maximum_number_balance_relative_error
             << ", eigen_residual=" << coupled.solution.maximum_normalized_eigen_residual
             << ", first_Picard_L1=" << coupled.history.front().distribution_l1_change
+            << ", nominal_Picard=" << nominal_result.status
+            << ", nominal_updates=" << nominal_result.history.size()
+            << ", nominal_final_L1=" << nominal_result.history.back().distribution_l1_change
+            << ", nominal_final_rate_change=" << nominal_result.history.back().maximum_rate_relative_change
             << ", strict_HOLD=PASS; NOT BOLSIG+ PARITY\\n";
 }
