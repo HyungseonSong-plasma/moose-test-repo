@@ -474,6 +474,16 @@ jobs:
             tests/boltzmann/joint_emax_mesh_convergence_test.C \
             -o /tmp/boltzmann-joint-emax-mesh-test
           /tmp/boltzmann-joint-emax-mesh-test
+      - name: P0-3 conservative reconstructed growth operator and actual M6b Picard eigen re-solves (synthetic)
+        run: |
+          g++ -std=c++17 -O2 -Wall -Wextra -Werror -pedantic \
+            -Iphysics_app/include/utils \
+            physics_app/src/utils/PhysicsBoltzmannElasticSolver.C \
+            physics_app/src/utils/PhysicsBoltzmannGrowth.C \
+            physics_app/src/utils/PhysicsBoltzmannTemporalGrowth.C \
+            tests/boltzmann/reconstructed_growth_picard_test.C \
+            -o /tmp/boltzmann-reconstructed-growth-picard-test
+          /tmp/boltzmann-reconstructed-growth-picard-test
       - name: Compile and run actual C++ Boltzmann solver on invented elastic controls
         run: python3 physics_app/ci/export_boltzmann_ci_eepf.py --out boltzmann-ci-eepf
       - name: Upload C++ EEPF data, explicitly marked not real-gas parity
