@@ -424,6 +424,16 @@ jobs:
             tests/boltzmann/energy_ceiling_controller_test.C \
             -o /tmp/boltzmann-energy-ceiling-test
           /tmp/boltzmann-energy-ceiling-test
+      - name: P0-1 actual C++ coupled temporal-growth Emax re-solves (synthetic cross sections)
+        run: |
+          g++ -std=c++17 -O2 -Wall -Wextra -Werror -pedantic \
+            -Iphysics_app/include/utils \
+            physics_app/src/utils/PhysicsBoltzmannElasticSolver.C \
+            physics_app/src/utils/PhysicsBoltzmannGrowth.C \
+            physics_app/src/utils/PhysicsBoltzmannTemporalGrowth.C \
+            tests/boltzmann/growth_energy_ceiling_test.C \
+            -o /tmp/boltzmann-growth-energy-ceiling-test
+          /tmp/boltzmann-growth-energy-ceiling-test
       - name: Compile and run actual C++ Boltzmann solver on invented elastic controls
         run: python3 physics_app/ci/export_boltzmann_ci_eepf.py --out boltzmann-ci-eepf
       - name: Upload C++ EEPF data, explicitly marked not real-gas parity
