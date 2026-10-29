@@ -142,7 +142,7 @@ int main()
   // A tight cell budget must return an explicit HOLD and retain any
   // successful earlier Emax samples; it must not coarsen to force PASS.
   auto capped_mesh = mesh;
-  capped_mesh.maximum_cells = 100;
+  capped_mesh.maximum_cells = 75; // 2.0/3.0 eV trials fit; 4.5 eV does not
   const auto capped = solveTemporalGrowthWithAdaptiveMesh(
       initial, ions, attaches, excitations, c, capped_mesh);
   require(!capped.converged &&
