@@ -101,7 +101,8 @@ TemporalGrowthResult solveElasticTemporalGrowth(
     const ElasticInput & input,
     const std::vector<IonizationChannel> & ionizations,
     const std::vector<AttachmentChannel> & attachments,
-    const std::vector<ExcitationChannel> & excitations)
+    const std::vector<ExcitationChannel> & excitations,
+    const std::vector<double> & reference_eepf)
 {
   // The 07/2024 BOLSIG+ Example 4 reference uses 200 automatic-grid
   // cells. Raise the *development-only* dense eigen reference bound to
@@ -117,7 +118,8 @@ TemporalGrowthResult solveElasticTemporalGrowth(
 
   // Use the validated M6 operator as the one source of number-changing
   // transfer coefficients; do not reimplement its equal-sharing rule here.
-  const auto growth_op = assembleGrowthCollisions(input, ionizations, attachments);
+  const auto growth_op = assembleGrowthCollisions(
+      input, ionizations, attachments, reference_eepf);
   const std::size_t n = input.cells;
   const auto edges = energyMeshEdges(input);
   const auto centers = energyMeshCenters(edges);
@@ -354,7 +356,7 @@ TemporalGrowthResult solveElasticTemporalGrowth(
   }
   out.distribution.mean_energy_eV = energy;
   out.growth = evaluateGrowthOnFrozenEepf(input, out.distribution,
-                                          ionizations, attachments);
+                                          ionizations, attachments, reference_eepf);
   growth_lambda = out.growth.reduced_temporal_growth_m3_per_s;
   out.reduced_growth_eigenvalue_m3_per_s = growth_lambda;
   out.inverse_iterations = iterations;
