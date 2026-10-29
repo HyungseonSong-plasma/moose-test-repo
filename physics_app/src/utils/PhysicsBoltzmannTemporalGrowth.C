@@ -1,5 +1,6 @@
 #include "PhysicsBoltzmannTemporalGrowth.h"
 #include "PhysicsBoltzmannEnergyMesh.h"
+#include "PhysicsBoltzmannSubcellReconstruction.h"
 
 #include <algorithm>
 #include <cmath>
