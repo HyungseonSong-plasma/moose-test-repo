@@ -34,16 +34,203 @@ FORBIDDEN_BASE_TOKENS = (
 )
 
 
+# New *separate* product-state channel, not a replacement for the accepted
+# ground-state 2O(3P) channel.  This exploratory fit was used as a Maxwellian
+# comparison in Excitation Kinetics of Oxygen O(1D) State in Low-Pressure
+# Oxygen Plasma (2017), doi:10.1515/jaots-2017-0002.
+# k=3.49e-8*exp(-5.92/Te[eV]) cm3/s = 3.49e-14 ... m3/s.
+# COMSOL Ar/O2 ICP electron-impact table, reaction 14: 8.4 eV/event.
+MIXED_RATE_PREF_M3_S = 3.49e-14
+MIXED_FIT_ENERGY_EV = 5.92
+MIXED_ENERGY_LOSS_EV = 8.4
+
+
+def build_mixed_dissociation_overlay(base: str) -> str:
+    """One O(3P) + one O(1D) per O2; no new species or electron source."""
+    needed = REQUIRED_BASE_TOKENS + (
+        "[w_Os]",
+        "property_name = rho_neutral",
+    )
+    missing = [token for token in needed if token not in base]
+    if missing:
+        raise RuntimeError(f"mixed O(3P)/O(1D) capability audit failed: {missing}")
+    owner = ("R_diss_O2_mixed", "S_Os_mass_diss_mixed", "mixed_o2_progress")
+    inherited = [token for token in owner if token in base]
+    if inherited:
+        raise RuntimeError(f"mixed O2 dissociation owner already present: {inherited}")
+
+    return f"""# EXPERIMENTAL: e + O2(X) -> e + O(3P) + O(1D)
+# Existing independent states: O(3P)=w_O, O(1D)=w_Os.
+# 2017 empirical Maxwellian comparison: doi:10.1515/jaots-2017-0002
+# k_num=3.49e-14 * exp(-5.92 / Te[eV]) m3/s, Te=(2/3)*mean_en_solved.
+# COMSOL Ar/O2 ICP reaction 14: 8.4 eV electron energy loss per event.
+# Science HOLD: cross-section/EEPF parity, excited-state quenching and
+# overlap independence from existing ground-state dissociation unproven.
+# R_mixed [mol/(m3 s)]; n_e [1/m3], c_O2 [mol/m3], both mass sources [kg/(m3 s)].
+
+[FunctorMaterials]
+  [mixed_o2_concentration]
+    type = ADParsedFunctorMaterial
+    property_name = c_O2_diss_mixed
+    functor_names = 'rho_neutral w_O2_constraint'
+    functor_symbols = 'rho w'
+    expression = 'rho*w/{M_O2:.17g}'
+    block = plasma
+  []
+  [mixed_electron_temperature]
+    type = ADParsedFunctorMaterial
+    property_name = Te_diss_mixed_eV
+    functor_names = 'mean_en_solved'
+    functor_symbols = 'eps'
+    expression = '(2.0/3.0)*eps'
+    block = plasma
+  []
+  [mixed_o2_progress]
+    type = ADParsedFunctorMaterial
+    property_name = R_diss_O2_mixed
+    functor_names = 'n_e_physical c_O2_diss_mixed Te_diss_mixed_eV'
+    functor_symbols = 'ne co2 te'
+    expression = '{MIXED_RATE_PREF_M3_S:.17g}*ne*co2*exp(-{MIXED_FIT_ENERGY_EV:.17g}/te)'
+    block = plasma
+  []
+  [mixed_o3p_mass_source]
+    type = ADParsedFunctorMaterial
+    property_name = S_O_mass_diss_mixed
+    functor_names = 'R_diss_O2_mixed'
+    functor_symbols = 'R'
+    expression = '{M_O:.17g}*R'
+    block = plasma
+  []
+  [mixed_o1d_mass_source]
+    type = ADParsedFunctorMaterial
+    property_name = S_Os_mass_diss_mixed
+    functor_names = 'R_diss_O2_mixed'
+    functor_symbols = 'R'
+    expression = '{M_O:.17g}*R'
+    block = plasma
+  []
+  [mixed_o2_mass_sink_implicit]
+    type = ADParsedFunctorMaterial
+    property_name = S_O2_mass_diss_mixed_implicit
+    functor_names = 'R_diss_O2_mixed'
+    functor_symbols = 'R'
+    expression = '-{M_O2:.17g}*R'
+    block = plasma
+  []
+  [mixed_heavy_mass_closure]
+    type = ADParsedFunctorMaterial
+    property_name = S_heavy_mass_closure_diss_mixed
+    functor_names = 'S_O_mass_diss_mixed S_Os_mass_diss_mixed S_O2_mass_diss_mixed_implicit'
+    functor_symbols = 'So Sos So2'
+    expression = 'So+Sos+So2'
+    block = plasma
+  []
+  [mixed_electron_energy_sink]
+    type = ADParsedFunctorMaterial
+    property_name = S_electron_energy_mol_diss_mixed
+    functor_names = 'R_diss_O2_mixed'
+    functor_symbols = 'R'
+    expression = '-{MIXED_ENERGY_LOSS_EV:.17g}*R'
+    block = plasma
+  []
+[]
+
+[Kernels]
+  [mixed_electron_energy]
+    type = FunctorKernel
+    variable = log_energy
+    functor = S_electron_energy_mol_diss_mixed
+    functor_on_rhs = true
+    block = plasma
+  []
+[]
+
+[FVKernels]
+  [mixed_o3p_source]
+    type = PhysicsFVSpeciesReactionSource
+    variable = w_O
+    source = S_O_mass_diss_mixed
+    block = plasma
+  []
+  [mixed_o1d_source]
+    type = PhysicsFVSpeciesReactionSource
+    variable = w_Os
+    source = S_Os_mass_diss_mixed
+    block = plasma
+  []
+[]
+
+[Postprocessors]
+  [mixed_R_integral]
+    type = ADElementIntegralFunctorPostprocessor
+    functor = R_diss_O2_mixed
+    block = plasma
+    execute_on = 'INITIAL TIMESTEP_END'
+  []
+  [mixed_o3p_mass_integral]
+    type = ADElementIntegralFunctorPostprocessor
+    functor = S_O_mass_diss_mixed
+    block = plasma
+    execute_on = 'INITIAL TIMESTEP_END'
+  []
+  [mixed_o1d_mass_integral]
+    type = ADElementIntegralFunctorPostprocessor
+    functor = S_Os_mass_diss_mixed
+    block = plasma
+    execute_on = 'INITIAL TIMESTEP_END'
+  []
+  [mixed_oxygen_molecular_sink_integral]
+    type = ADElementIntegralFunctorPostprocessor
+    functor = S_O2_mass_diss_mixed_implicit
+    block = plasma
+    execute_on = 'INITIAL TIMESTEP_END'
+  []
+  [mixed_heavy_mass_closure_integral]
+    type = ADElementIntegralFunctorPostprocessor
+    functor = S_heavy_mass_closure_diss_mixed
+    block = plasma
+    execute_on = 'INITIAL TIMESTEP_END'
+  []
+  [mixed_energy_sink_integral]
+    type = ADElementIntegralFunctorPostprocessor
+    functor = S_electron_energy_mol_diss_mixed
+    block = plasma
+    execute_on = 'INITIAL TIMESTEP_END'
+  []
+[]
+"""
+
+
 def args() -> argparse.Namespace:
     p = argparse.ArgumentParser()
     p.add_argument("--base-input", type=Path, required=True)
     p.add_argument("--output", type=Path, required=True)
+    p.add_argument("--channel", choices=("ground", "mixed", "off"), default="ground")
     return p.parse_args()
 
 
 def main() -> int:
     a = args()
     base = a.base_input.read_text(encoding="utf-8")
+    if a.channel == "off":
+        # Exact chemistry knockout: this overlay contributes no owners, kernels
+        # or source terms. All other case inputs and overlays remain unchanged.
+        if any(token in base for token in ("R_diss_O2_mixed", "R_diss_O2",
+                                          "S_O_mass_diss", "mixed_o2_progress")):
+            raise RuntimeError("OFF dissociation requires no inherited dissociation owner")
+        a.output.write_text("# Controlled Step0 knockout: ground and mixed O2 dissociation OFF.\n",
+                            encoding="utf-8")
+        print("ISSUE395_O2_DISSOCIATION_BOTH_OFF_PASS")
+        print("chemistry_knockout=only_dissociation_overlay")
+        print(f"output={a.output}")
+        return 0
+    if a.channel == "mixed":
+        overlay = build_mixed_dissociation_overlay(base)
+        a.output.write_text(overlay, encoding="utf-8")
+        print("ISSUE395_O2_MIXED_DISSOCIATION_OVERLAY_BUILD_PASS")
+        print("science_status=HOLD_CROSS_SECTION_EEPF_QUENCHING")
+        print(f"output={a.output}")
+        return 0
     missing = [token for token in REQUIRED_BASE_TOKENS if token not in base]
     if missing:
         raise RuntimeError(f"dissociation base-input capability audit failed; missing {missing}")
