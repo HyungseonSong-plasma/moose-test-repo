@@ -12,6 +12,11 @@ DISS_CHANNEL="${DISS_CHANNEL:-ground}"
 case "$DISS_CHANNEL" in ground|mixed) ;; *) echo "unsupported O2 dissociation channel: $DISS_CHANNEL" >&2; exit 2 ;; esac
 O_INITIAL_ZERO="${O_INITIAL_ZERO:-0}"
 case "$O_INITIAL_ZERO" in 0|1) ;; *) echo "unsupported O(3P) initial state flag: $O_INITIAL_ZERO" >&2; exit 2 ;; esac
+O_INITIAL_NUMBER_DENSITY="${O_INITIAL_NUMBER_DENSITY:-}"
+case "$O_INITIAL_NUMBER_DENSITY" in ""|1e15) ;; *) echo "unsupported initial O(3P) number density: $O_INITIAL_NUMBER_DENSITY" >&2; exit 2 ;; esac
+if [[ "$O_INITIAL_ZERO" == 1 && -n "$O_INITIAL_NUMBER_DENSITY" ]]; then
+  echo "O_INITIAL_ZERO and O_INITIAL_NUMBER_DENSITY are mutually exclusive" >&2; exit 2
+fi
 test "$(git rev-parse --show-toplevel)" = "$PWD" || {
   echo "run the replay from the exact repository checkout root" >&2; exit 2;
 }
@@ -36,6 +41,9 @@ fi
 if [[ "$O_INITIAL_ZERO" == 1 ]]; then
   export RESULT="${RESULT}_initial_o3p_zero"
 fi
+if [[ -n "$O_INITIAL_NUMBER_DENSITY" ]]; then
+  export RESULT="${RESULT}_initial_o3p_n1e15_m3"
+fi
 export INPUT="$CHEM/rf_elastic_diss_ion_ei20_ei01_${POWER_W}w_adjacent_sheath_wall_closed_100us_dt${DT_NS}ns.i"
 export PARENT="$CHEM/rf_elastic_multiapp_parent_${POWER_W}w_100us_dt${DT_NS}ns_overlay.i"
 export CHILD_OVERLAY="$CHEM/rf_elastic_multiapp_maxwell_${POWER_W}w_100us_dt${DT_NS}ns_overlay.i"
@@ -46,7 +54,7 @@ export ION="$CHEM/o2_ionization_${POWER_W}w_100us_dt${DT_NS}ns_overlay.i"
 export ION_O="$CHEM/o_ionization_ei20_${POWER_W}w_100us_dt${DT_NS}ns_overlay.i"
 export ATTACH="$CHEM/o2_attachment_ei01_${POWER_W}w_100us_dt${DT_NS}ns_overlay.i"
 export OELASTIC="$CHEM/o_elastic_ei17_${POWER_W}w_100us_dt${DT_NS}ns_overlay.i"
-echo "ISSUE397_REPLAY_PHASE=$PHASE TARGET_W=$POWER_W DISS_CHANNEL=$DISS_CHANNEL O_INITIAL_ZERO=$O_INITIAL_ZERO SOURCE_SHA=$(git rev-parse HEAD)"
+echo "ISSUE397_REPLAY_PHASE=$PHASE TARGET_W=$POWER_W DISS_CHANNEL=$DISS_CHANNEL O_INITIAL_ZERO=$O_INITIAL_ZERO O_INITIAL_NUMBER_DENSITY=$O_INITIAL_NUMBER_DENSITY SOURCE_SHA=$(git rev-parse HEAD)"
 case "$PHASE" in
   prepare)
 set -euo pipefail
@@ -204,6 +212,13 @@ if [[ "$O_INITIAL_ZERO" == 1 ]]; then
     | tee "$RESULT/prep/zero_initial_o3p_exact_line.log"
   python3 "$CHEM/set_zero_initial_atomic_o.py" --input "$INPUT" --verify
 fi
+if [[ -n "$O_INITIAL_NUMBER_DENSITY" ]]; then
+  python3 "$CHEM/set_zero_initial_atomic_o.py" --input "$INPUT" \
+    --target-number-density "$O_INITIAL_NUMBER_DENSITY" \
+    | tee "$RESULT/prep/initial_o3p_number_density_exact_line.log"
+  python3 "$CHEM/set_zero_initial_atomic_o.py" --input "$INPUT" \
+    --target-number-density "$O_INITIAL_NUMBER_DENSITY" --verify
+fi
 # Exact archived L1 mesh identity and baseline manifest must agree.
 grep -q "ISSUE397_BASELINE_L1_MESH_PASS" "$RESULT/prep/graded_L1_baseline_mesh.log"
 python3 "$CHEM/issue397_materialize_l1_baseline.py" \
@@ -323,6 +338,10 @@ set -euo pipefail
 if [[ "$O_INITIAL_ZERO" == 1 ]]; then
   python3 "$CHEM/set_zero_initial_atomic_o.py" --input "$INPUT" --verify
 fi
+if [[ -n "$O_INITIAL_NUMBER_DENSITY" ]]; then
+  python3 "$CHEM/set_zero_initial_atomic_o.py" --input "$INPUT" \
+    --target-number-density "$O_INITIAL_NUMBER_DENSITY" --verify
+fi
 docker run --rm --entrypoint /bin/bash --user 0:0 \
   --workdir /workspace -v "$GITHUB_WORKSPACE:/workspace" \
   "$BUILD_BASE_REF" -lc "
@@ -343,6 +362,10 @@ docker run --rm --entrypoint /bin/bash --user 0:0 \
 set -euo pipefail
 if [[ "$O_INITIAL_ZERO" == 1 ]]; then
   python3 "$CHEM/set_zero_initial_atomic_o.py" --input "$INPUT" --verify
+fi
+if [[ -n "$O_INITIAL_NUMBER_DENSITY" ]]; then
+  python3 "$CHEM/set_zero_initial_atomic_o.py" --input "$INPUT" \
+    --target-number-density "$O_INITIAL_NUMBER_DENSITY" --verify
 fi
 docker run --rm --entrypoint /bin/bash --user 0:0 \
   --workdir /workspace -v "$GITHUB_WORKSPACE:/workspace" \
@@ -370,4 +393,4 @@ python3 "$CHEM/issue397_d1_analyze.py" \
 grep -q "D1_NATIVE_DIAGNOSTIC_INTEGRITY_PASS" "$RESULT/d1_native_analysis.log"
     ;;
 esac
-echo "ISSUE397_REPLAY_PHASE_PASS=$PHASE TARGET_W=$POWER_W DISS_CHANNEL=$DISS_CHANNEL O_INITIAL_ZERO=$O_INITIAL_ZERO"
+echo "ISSUE397_REPLAY_PHASE_PASS=$PHASE TARGET_W=$POWER_W DISS_CHANNEL=$DISS_CHANNEL O_INITIAL_ZERO=$O_INITIAL_ZERO O_INITIAL_NUMBER_DENSITY=$O_INITIAL_NUMBER_DENSITY"
