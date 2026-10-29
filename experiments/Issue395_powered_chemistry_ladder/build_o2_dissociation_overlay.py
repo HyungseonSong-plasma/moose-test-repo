@@ -205,13 +205,25 @@ def args() -> argparse.Namespace:
     p = argparse.ArgumentParser()
     p.add_argument("--base-input", type=Path, required=True)
     p.add_argument("--output", type=Path, required=True)
-    p.add_argument("--channel", choices=("ground", "mixed"), default="ground")
+    p.add_argument("--channel", choices=("ground", "mixed", "off"), default="ground")
     return p.parse_args()
 
 
 def main() -> int:
     a = args()
     base = a.base_input.read_text(encoding="utf-8")
+    if a.channel == "off":
+        # Exact chemistry knockout: this overlay contributes no owners, kernels
+        # or source terms. All other case inputs and overlays remain unchanged.
+        if any(token in base for token in ("R_diss_O2_mixed", "R_diss_O2",
+                                          "S_O_mass_diss", "mixed_o2_progress")):
+            raise RuntimeError("OFF dissociation requires no inherited dissociation owner")
+        a.output.write_text("# Controlled Step0 knockout: ground and mixed O2 dissociation OFF.\n",
+                            encoding="utf-8")
+        print("ISSUE395_O2_DISSOCIATION_BOTH_OFF_PASS")
+        print("chemistry_knockout=only_dissociation_overlay")
+        print(f"output={a.output}")
+        return 0
     if a.channel == "mixed":
         overlay = build_mixed_dissociation_overlay(base)
         a.output.write_text(overlay, encoding="utf-8")
