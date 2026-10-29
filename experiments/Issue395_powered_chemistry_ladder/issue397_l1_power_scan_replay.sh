@@ -5,9 +5,20 @@
 # Maxwell exact-change audit, native D1 gates and archive provenance are retained.
 set -euo pipefail
 PHASE="${1:?usage: bash issue397_l1_power_scan_replay.sh prepare|build|check|solve|audit 200|250|300}"
-POWER_W="${2:?RF target 200, 250, 300, 600 or 1000 W is required}"
-case "$POWER_W" in 200|250|300|600|1000) ;; *) echo "unsupported RF target: $POWER_W" >&2; exit 2 ;; esac
+POWER_W="${2:?RF target 200, 250, 300, 400, 600 or 1000 W is required}"
+case "$POWER_W" in 200|250|300|400|600|1000) ;; *) echo "unsupported RF target: $POWER_W" >&2; exit 2 ;; esac
 case "$PHASE" in prepare|build|check|solve|audit) ;; *) echo "unsupported phase: $PHASE" >&2; exit 2 ;; esac
+DISS_CHANNEL="${DISS_CHANNEL:-ground}"
+case "$DISS_CHANNEL" in ground|mixed) ;; *) echo "unsupported O2 dissociation channel: $DISS_CHANNEL" >&2; exit 2 ;; esac
+O_INITIAL_ZERO="${O_INITIAL_ZERO:-0}"
+case "$O_INITIAL_ZERO" in 0|1) ;; *) echo "unsupported O(3P) initial state flag: $O_INITIAL_ZERO" >&2; exit 2 ;; esac
+O_INITIAL_NUMBER_DENSITY="${O_INITIAL_NUMBER_DENSITY:-}"
+case "$O_INITIAL_NUMBER_DENSITY" in ""|1e15) ;; *) echo "unsupported initial O(3P) number density: $O_INITIAL_NUMBER_DENSITY" >&2; exit 2 ;; esac
+PURE_O2_INLET="${PURE_O2_INLET:-0}"
+case "$PURE_O2_INLET" in 0|1) ;; *) echo "unsupported pure-O2 inlet selector: $PURE_O2_INLET" >&2; exit 2 ;; esac
+if [[ "$O_INITIAL_ZERO" == 1 && -n "$O_INITIAL_NUMBER_DENSITY" ]]; then
+  echo "O_INITIAL_ZERO and O_INITIAL_NUMBER_DENSITY are mutually exclusive" >&2; exit 2
+fi
 test "$(git rev-parse --show-toplevel)" = "$PWD" || {
   echo "run the replay from the exact repository checkout root" >&2; exit 2;
 }
@@ -26,6 +37,18 @@ export DIEL=experiments/Issue3_dielectric_surface_charge
 export BASE=experiments/fem_fvm_plasma_discriminator
 export TABLE=experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt
 export RESULT="$CHEM/results_rf_elastic_diss_ion_ei20_ei01_${POWER_W}w_adjacent_sheath_wall_closed_100us_dt${DT_NS}ns"
+if [[ "$DISS_CHANNEL" == "mixed" ]]; then
+  export RESULT="${RESULT}_mixed_o3p_o1d"
+fi
+if [[ "$O_INITIAL_ZERO" == 1 ]]; then
+  export RESULT="${RESULT}_initial_o3p_zero"
+fi
+if [[ -n "$O_INITIAL_NUMBER_DENSITY" ]]; then
+  export RESULT="${RESULT}_initial_o3p_n1e15_m3"
+fi
+if [[ "$PURE_O2_INLET" == 1 ]]; then
+  export RESULT="${RESULT}_inlet_o2_100pct"
+fi
 export INPUT="$CHEM/rf_elastic_diss_ion_ei20_ei01_${POWER_W}w_adjacent_sheath_wall_closed_100us_dt${DT_NS}ns.i"
 export PARENT="$CHEM/rf_elastic_multiapp_parent_${POWER_W}w_100us_dt${DT_NS}ns_overlay.i"
 export CHILD_OVERLAY="$CHEM/rf_elastic_multiapp_maxwell_${POWER_W}w_100us_dt${DT_NS}ns_overlay.i"
@@ -36,7 +59,7 @@ export ION="$CHEM/o2_ionization_${POWER_W}w_100us_dt${DT_NS}ns_overlay.i"
 export ION_O="$CHEM/o_ionization_ei20_${POWER_W}w_100us_dt${DT_NS}ns_overlay.i"
 export ATTACH="$CHEM/o2_attachment_ei01_${POWER_W}w_100us_dt${DT_NS}ns_overlay.i"
 export OELASTIC="$CHEM/o_elastic_ei17_${POWER_W}w_100us_dt${DT_NS}ns_overlay.i"
-echo "ISSUE397_REPLAY_PHASE=$PHASE TARGET_W=$POWER_W SOURCE_SHA=$(git rev-parse HEAD)"
+echo "ISSUE397_REPLAY_PHASE=$PHASE TARGET_W=$POWER_W DISS_CHANNEL=$DISS_CHANNEL O_INITIAL_ZERO=$O_INITIAL_ZERO O_INITIAL_NUMBER_DENSITY=$O_INITIAL_NUMBER_DENSITY PURE_O2_INLET=$PURE_O2_INLET SOURCE_SHA=$(git rev-parse HEAD)"
 case "$PHASE" in
   prepare)
 set -euo pipefail
@@ -143,6 +166,7 @@ python3 "$CHEM/build_o2_elastic_overlay.py" \
 
 python3 "$CHEM/build_o2_dissociation_overlay.py" \
   --base-input "$CHEM/a0_full_icp.i" \
+  --channel "$DISS_CHANNEL" \
   --output "$DISS" \
   | tee "$RESULT/prep/dissociation_overlay.log"
 
@@ -188,6 +212,23 @@ python3 "$CHEM/set_timegrid_100us_460steps.py" "$INPUT" \
   | tee "$RESULT/prep/final_100us_timegrid.log"
 grep -q "ISSUE395_TIMEGRID_100US_460STEPS_PASS" "$RESULT/prep/final_100us_timegrid.log"
 grep -q "total_steps=460" "$RESULT/prep/final_100us_timegrid.log"
+if [[ "$O_INITIAL_ZERO" == 1 ]]; then
+  python3 "$CHEM/set_zero_initial_atomic_o.py" --input "$INPUT" \
+    | tee "$RESULT/prep/zero_initial_o3p_exact_line.log"
+  python3 "$CHEM/set_zero_initial_atomic_o.py" --input "$INPUT" --verify
+fi
+if [[ -n "$O_INITIAL_NUMBER_DENSITY" ]]; then
+  python3 "$CHEM/set_zero_initial_atomic_o.py" --input "$INPUT" \
+    --target-number-density "$O_INITIAL_NUMBER_DENSITY" \
+    | tee "$RESULT/prep/initial_o3p_number_density_exact_line.log"
+  python3 "$CHEM/set_zero_initial_atomic_o.py" --input "$INPUT" \
+    --target-number-density "$O_INITIAL_NUMBER_DENSITY" --verify
+fi
+if [[ "$PURE_O2_INLET" == 1 ]]; then
+  python3 "$CHEM/set_pure_o2_inlet.py" --input "$INPUT" \
+    | tee "$RESULT/prep/pure_o2_inlet.log"
+  python3 "$CHEM/set_pure_o2_inlet.py" --input "$INPUT" --verify
+fi
 # Exact archived L1 mesh identity and baseline manifest must agree.
 grep -q "ISSUE397_BASELINE_L1_MESH_PASS" "$RESULT/prep/graded_L1_baseline_mesh.log"
 python3 "$CHEM/issue397_materialize_l1_baseline.py" \
@@ -250,7 +291,20 @@ grep -q '^!include issue397_maxwell_steady_abs1e11[.]i$' "$CHILD_INPUT"
 grep -q "target_W=${POWER_W}" "$RESULT/prep/multiapp_power.log"
 grep -Eq "target = ${POWER_W}(\\.0+)?$" "$PARENT"
 grep -q 'R_elastic_O2' "$ELASTIC"
-grep -q 'R_diss_O2' "$DISS"
+# Fail-closed owner exclusivity: substring matches cannot distinguish owners.
+if [[ "$DISS_CHANNEL" == mixed ]]; then
+  grep -Fqx '    property_name = R_diss_O2_mixed' "$DISS"
+  grep -Fqx '    variable = w_Os' "$DISS"
+  grep -Fqx '    variable = w_O' "$DISS"
+  grep -Fq '8.4' "$DISS"
+  ! grep -Fqx '    property_name = R_diss_O2' "$DISS"
+  ! grep -Fqx '    property_name = S_O_mass_diss' "$DISS"
+  grep -Fq 'ISSUE395_O2_MIXED_DISSOCIATION_OVERLAY_BUILD_PASS' "$RESULT/prep/dissociation_overlay.log"
+else
+  grep -Fqx '    property_name = R_diss_O2' "$DISS"
+  ! grep -Fq 'R_diss_O2_mixed' "$DISS"
+  ! grep -Fqx '    variable = w_Os' "$DISS"
+fi
 grep -q 'R_ion_O2' "$ION"
 grep -q 'R_ion_O' "$ION_O"
 grep -q 'rate_table_file = o_ionization.txt' "$ION_O"
@@ -291,6 +345,16 @@ test -x physics_app/physics-opt
     ;;
   check)
 set -euo pipefail
+if [[ "$PURE_O2_INLET" == 1 ]]; then
+  python3 "$CHEM/set_pure_o2_inlet.py" --input "$INPUT" --verify
+fi
+if [[ "$O_INITIAL_ZERO" == 1 ]]; then
+  python3 "$CHEM/set_zero_initial_atomic_o.py" --input "$INPUT" --verify
+fi
+if [[ -n "$O_INITIAL_NUMBER_DENSITY" ]]; then
+  python3 "$CHEM/set_zero_initial_atomic_o.py" --input "$INPUT" \
+    --target-number-density "$O_INITIAL_NUMBER_DENSITY" --verify
+fi
 docker run --rm --entrypoint /bin/bash --user 0:0 \
   --workdir /workspace -v "$GITHUB_WORKSPACE:/workspace" \
   "$BUILD_BASE_REF" -lc "
@@ -309,6 +373,16 @@ docker run --rm --entrypoint /bin/bash --user 0:0 \
     ;;
   solve)
 set -euo pipefail
+if [[ "$PURE_O2_INLET" == 1 ]]; then
+  python3 "$CHEM/set_pure_o2_inlet.py" --input "$INPUT" --verify
+fi
+if [[ "$O_INITIAL_ZERO" == 1 ]]; then
+  python3 "$CHEM/set_zero_initial_atomic_o.py" --input "$INPUT" --verify
+fi
+if [[ -n "$O_INITIAL_NUMBER_DENSITY" ]]; then
+  python3 "$CHEM/set_zero_initial_atomic_o.py" --input "$INPUT" \
+    --target-number-density "$O_INITIAL_NUMBER_DENSITY" --verify
+fi
 docker run --rm --entrypoint /bin/bash --user 0:0 \
   --workdir /workspace -v "$GITHUB_WORKSPACE:/workspace" \
   "$BUILD_BASE_REF" -lc "
@@ -335,4 +409,4 @@ python3 "$CHEM/issue397_d1_analyze.py" \
 grep -q "D1_NATIVE_DIAGNOSTIC_INTEGRITY_PASS" "$RESULT/d1_native_analysis.log"
     ;;
 esac
-echo "ISSUE397_REPLAY_PHASE_PASS=$PHASE TARGET_W=$POWER_W"
+echo "ISSUE397_REPLAY_PHASE_PASS=$PHASE TARGET_W=$POWER_W DISS_CHANNEL=$DISS_CHANNEL O_INITIAL_ZERO=$O_INITIAL_ZERO O_INITIAL_NUMBER_DENSITY=$O_INITIAL_NUMBER_DENSITY PURE_O2_INLET=$PURE_O2_INLET"

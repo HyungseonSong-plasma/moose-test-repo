@@ -1,3 +1,51 @@
+## Oxygen ICP: pure-O2(X) inlet with finite initial O(3P)
+
+This controlled 400/1000 W experiment changes the **inlet only** from the
+historical four-species inlet composition to **100% O2(X) by mass**.
+It retains the solved initial O(3P) number density `1e15 m^-3` (exact
+mixture-EOS input conversion), the previous nonzero O(1D) and O2(a1Delta)
+*initial* composition, the mixed-state DISS channel
+`e + O2 -> e + O(3P) + O(1D)`, EI01/EI02/EI16/EI17/EI20,
+mesh, walls, RF control and 100-us/460-step grid.
+
+The physically imposed total inlet flow stays
+`1.9395986970295842e-06 kg/s`; the O2(X) **residual**
+species receives all of it. The three explicit inlet FV scalar-flux
+postprocessors (`neutral_inlet_mdot_O2s`, `_O`, `_Os`) are set to
+zero. `neutral_inlet_mdot_O2` is a bookkeeping receiver set equal to
+the total. The independent source patcher
+`set_pure_o2_inlet.py` checks the exact BC owners, receivers,
+inlet mass closure and preserves every non-inlet input value.
+
+Run each power in a separate checkout with:
+
+```bash
+export DISS_CHANNEL=mixed
+export O_INITIAL_NUMBER_DENSITY=1e15
+export PURE_O2_INLET=1
+bash experiments/Issue395_powered_chemistry_ladder/issue397_l1_power_scan_replay.sh prepare 400
+bash experiments/Issue395_powered_chemistry_ladder/issue397_l1_power_scan_replay.sh build 400
+bash experiments/Issue395_powered_chemistry_ladder/issue397_l1_power_scan_replay.sh check 400
+bash experiments/Issue395_powered_chemistry_ladder/issue397_l1_power_scan_replay.sh solve 400
+bash experiments/Issue395_powered_chemistry_ladder/issue397_l1_power_scan_replay.sh audit 400
+```
+
+Repeat with `1000`. Result directory suffix
+`_mixed_o3p_o1d_initial_o3p_n1e15_m3_inlet_o2_100pct`
+isolates this case from historical high-inlet-O runs.
+
+P0 checks exact byte-local receiver mutation and negative controls;
+P2 checks actual `physics-opt` effective inputs;
+P5 uses `analyze_ground_state_power_scan.py --channel mixed
+--initial-number-density-m3 1e15 --require-pure-o2-inlet` to check
+*every actual output CSV row* for all four mass fluxes, including
+zero O/O1D/O2(a) and O2(X)=total. Solver completion and 27-wafer-face
+D1 are separate gates.
+
+**Science HOLD:** this inlet perturbation is a model condition change
+and does not prove positivity resolution at 35 ns, mixed-channel
+cross-section/EEDF fidelity or O(1D) quenching completeness.
+
 # Issue #395 — powered oxygen ICP chemistry activation ladder
 
 ## Issue #397 200 W EI17 mesh baseline (2026-10-21)
@@ -41,6 +89,91 @@ baseline. Validate an archived L1 `.msh` without regeneration using
 `--verify-existing path/to/file.msh`. Keep original 200W EI17
 thermal+migration ion wall conditions and existing electron sheath for
 apples-to-apples experiments.
+
+
+## Experimental mixed-state O2 dissociation (O(3P) + O(1D))
+
+**Status: experimental / source-EEDF parity HOLD; not enabled by default.**
+
+Add a *separate* O2 product-state channel to the existing canonical generator:
+
+`python3 experiments/Issue395_powered_chemistry_ladder/build_o2_dissociation_overlay.py --base-input <generated_base.i> --output <mixed_overlay.i> --channel mixed`
+
+Reaction: `e + O2(X) -> e + O(3P) + O(1D)`.
+The existing `w_O` is O(3P), the existing `w_Os` is O(1D).
+**No new species or initial-condition default is introduced.** The old
+`--channel ground` (default) remains unchanged and generates only
+`e + O2 -> e + 2O(3P)`.
+
+Single progress `R_diss_O2_mixed` [mol/(m3 s)] owns:
+- `+0.016 R` [kg/(m3 s)] for O(3P) solved FV variable;
+- `+0.016 R` for O(1D) solved FV variable;
+- `-0.032 R` implicit constrained molecular O2 mass loss;
+- `-8.4 R` electron-energy sink, 8.4 eV/event COMSOL ICP Table 2 (14);
+- zero net electron particle source and identically zero heavy/oxygen mass defect.
+
+The provisional Maxwellian fit is
+`k_num = 3.49e-14 exp(-5.92/Te[eV]) m3/s`;
+`Te[eV] = (2/3) mean_en_solved[eV]`.
+It is the fit used for an EEPF/temperature-model comparison in
+[Excitation Kinetics of Oxygen O(1D) State in Low-Pressure Oxygen Plasma (2017)](https://doi.org/10.1515/jaots-2017-0002).
+Do not misattribute the fit or call the fit scale a collision threshold.
+The electron loss 8.4 eV/event comes from the
+[COMSOL ICP oxygen reaction table](https://doc.comsol.com/6.4/doc/com.comsol.help.models.plasma.icp_argon_oxygen/icp_argon_oxygen.html).
+**A fitted rate coefficient is not a source-verified independent
+state-resolved cross section.** A separate source/cross-section/EEPF audit is
+needed before interpreting the mixed and ground channels as exclusive.
+
+`tests/test_o2_mixed_state_dissociation_overlay.py`
+checks independent numeric anchors, exact 1:1 O(3P)/O(1D)
+product stoichiometry, constrained O2 and electron energy,
+no new species, and negative mutation controls.
+No P2 physics-opt or P3 100-us production-path result has been asserted.
+The model's volumetric O(1D) quenching/return-to-O(3P) coverage must be
+audited before claiming credible O(1D) density or O(3P) response.
+
+### 400/1000 W mixed-only DISS replacement (independent two-arm experiment)
+
+User-selected controlled comparison: at 400 W and 1000 W, **switch the
+single active electron-impact O2 dissociation slot from**
+`e + O2 -> e + 2O(3P)` **to**
+`e + O2 -> e + O(3P) + O(1D)`. Do not enable both.
+
+The canonical `issue397_l1_power_scan_replay.sh` now accepts
+`DISS_CHANNEL=ground` (default, unchanged) or
+`DISS_CHANNEL=mixed` (new). Examples:
+
+```bash
+export DISS_CHANNEL=mixed
+bash experiments/Issue395_powered_chemistry_ladder/issue397_l1_power_scan_replay.sh prepare 400
+bash experiments/Issue395_powered_chemistry_ladder/issue397_l1_power_scan_replay.sh build 400
+bash experiments/Issue395_powered_chemistry_ladder/issue397_l1_power_scan_replay.sh check 400
+bash experiments/Issue395_powered_chemistry_ladder/issue397_l1_power_scan_replay.sh solve 400
+bash experiments/Issue395_powered_chemistry_ladder/issue397_l1_power_scan_replay.sh audit 400
+```
+
+Repeat for 1000 W from a separate independent checkout. Source inputs use the
+successful **nonzero initial O** composition, untouched sheath/walls, identical
+Graded L1/27 wafer-face mesh, PID and 460-step 100-us time grid; only the
+chosen dissociation overlay changes. The output directory gets the suffix
+`_mixed_o3p_o1d` to prevent confusion with historical ground-state data.
+
+For new channels the generated DISS overlay owns one and only one
+`R_diss_O2_mixed` with `+0.016R` O(3P),
+`+0.016R` O(1D), `-0.032R` constrained O2 mass, and
+`-8.4R` electron energy. The generated base input must
+not define a second ground-state dissociation owner.
+P0 guards check exact owner names (not substring matching),
+the two independently solved product variables, numeric rates, and
+mass/oxygen/electron-energy invariants.
+P5 reuses `analyze_ground_state_power_scan.py --channel mixed` for
+O/Os creation/consumption, RF power and native D1.
+
+**Science HOLD:** This is a model-regime change, not a power-only comparison.
+The O(1D) quenching and electronic-state kinetics are not yet source-complete;
+the Maxwellian rate fit is not independently cross-section/EEDF validated.
+The numerical result must not be promoted to a chemically validated
+prediction solely because the job succeeds.
 
 ## Ground-state O2 dissociation rate correction (bounded successor, 2026-10-26)
 
