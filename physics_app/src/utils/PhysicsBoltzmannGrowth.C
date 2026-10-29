@@ -131,6 +131,10 @@ GrowthOperator assembleGrowthCollisions(
                                   const std::vector<double> & sigma,
                                   std::size_t donor, double lo, double hi)
   {
+    // Rate evaluation visits donors below the ionization threshold; retain
+    // the legacy empty-interval = zero convention before shape validation.
+    if (hi <= lo)
+      return 0.0;
     if (reference_eepf.empty())
       return integralEnergyCrossSection(energy, sigma, lo, hi);
     return integrateSubcellEnergyCrossSection(
@@ -249,6 +253,10 @@ GrowthDiagnostics evaluateGrowthOnFrozenEepf(
                                   const std::vector<double> & sigma,
                                   std::size_t donor, double lo, double hi)
   {
+    // Rate evaluation visits donors below the ionization threshold; retain
+    // the legacy empty-interval = zero convention before shape validation.
+    if (hi <= lo)
+      return 0.0;
     if (reference_eepf.empty())
       return integralEnergyCrossSection(energy, sigma, lo, hi);
     return integrateSubcellEnergyCrossSection(
