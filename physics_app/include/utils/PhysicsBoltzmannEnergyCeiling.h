@@ -34,6 +34,13 @@ struct EnergyCeilingControls
   double threshold_guard_cells = 2.0;
 };
 
+// Expected, fail-closed resource/geometry stop from a real solve callback.
+// Unexpected numerical exceptions are NOT converted into convergence HOLDs.
+struct EnergyCeilingHold : public std::runtime_error
+{
+  using std::runtime_error::runtime_error;
+};
+
 struct EnergyCeilingSample
 {
   ElasticResult distribution;
@@ -168,7 +175,18 @@ EnergyCeilingSelection selectEnergyCeiling(double initial,
   std::size_t stable_count = 0;
   for (std::size_t iteration = 0; iteration <= controls.max_expansions; ++iteration)
   {
-    EnergyCeilingSample current = solve_at_energy(emax);
+    EnergyCeilingSample current;
+    try
+    {
+      current = solve_at_energy(emax);
+    }
+    catch (const EnergyCeilingHold & stop)
+    {
+      // Preserve all successful preceding samples and never mark a resource
+      // exhaustion as a numerically converged energy ceiling.
+      selected.status = stop.what();
+      return selected;
+    }
     EnergyCeilingIteration step = inspectEnergyCeilingSample(current, emax, controls);
     if (has_previous)
     {
