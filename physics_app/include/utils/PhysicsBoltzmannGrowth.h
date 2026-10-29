@@ -64,7 +64,10 @@ struct GrowthDiagnostics
 GrowthOperator assembleGrowthCollisions(
     const ElasticInput & input,
     const std::vector<IonizationChannel> & ionizations,
-    const std::vector<AttachmentChannel> & attachments);
+    const std::vector<AttachmentChannel> & attachments,
+    // Empty preserves the validated piecewise-constant FV collision operator.
+    // Nonempty freezes a positivity-limited, mass-conservative subcell shape.
+    const std::vector<double> & reference_eepf = {});
 
 // Evaluate against an EXPLICIT supplied, normalized and piecewise-constant
 // EEPF (e.g. M5); no claim of growth-corrected EEPF or BOLSIG+ parity.
@@ -72,5 +75,8 @@ GrowthDiagnostics evaluateGrowthOnFrozenEepf(
     const ElasticInput & input,
     const ElasticResult & distribution,
     const std::vector<IonizationChannel> & ionizations,
-    const std::vector<AttachmentChannel> & attachments);
+    const std::vector<AttachmentChannel> & attachments,
+    // Empty preserves the validated piecewise-constant FV collision operator.
+    // Nonempty freezes a positivity-limited, mass-conservative subcell shape.
+    const std::vector<double> & reference_eepf = {});
 }
