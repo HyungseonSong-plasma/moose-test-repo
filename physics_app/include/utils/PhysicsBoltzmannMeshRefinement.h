@@ -49,6 +49,10 @@ struct MeshRefinementResult
   bool converged = false;
   std::string status = "HOLD_NOT_RUN";
   ElasticResult distribution;
+  // Rates corresponding to the last actually re-solved EEPF, in the same
+  // ionization/attachment/forward/reverse inventory as each refinement.
+  // This allows the outer Emax gate to compare genuinely mesh-refined rates.
+  std::vector<double> rates_m3_per_s;
   std::vector<MeshRefinementStep> history;
 };
 
@@ -229,6 +233,7 @@ inline MeshRefinementResult solveTemporalGrowthWithMeshRefinement(
     }
     out.history.push_back(step);
     out.distribution = eigen.distribution;
+    out.rates_m3_per_s = rates;
     if (stable_count >= c.required_stable_refinements)
     {
       out.converged = true;
