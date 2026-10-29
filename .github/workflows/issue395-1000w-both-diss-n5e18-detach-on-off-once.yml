@@ -1,0 +1,141 @@
+# SCIENCE HOLD. Pinned prior validated source; isolate both ON versus both ON + EDETACH.
+name: Issue395 1000W dual diss nO3P 5e18 detachment OFF ON
+run-name: Dual diss 1000W nO3P 5e18 EDETACH OFF vs ON @ ${{ github.sha }}
+on:
+  push:
+    branches: [issue395-1000w-both-diss-detach-o3p-n5e18-20261029]
+    paths: [.github/workflows/issue395-1000w-both-diss-n5e18-detach-on-off-once.yml]
+permissions:
+  contents: read
+concurrency:
+  group: issue395-dual-diss-n5e18-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  chemistry:
+    name: 1000W dual diss O3P 5e18 EDETACH ${{ matrix.detachment }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        detachment: [off, on]
+    env:
+      EDETACH_OM: ${{ matrix.detachment }}
+      DISS_CHANNEL: ground
+      PURE_O2_INLET: "1"
+      CHATGPT_WORK_BASE_SHA: aa81c1ca1d52e9431b56682b227fe96aa3a305cd
+    steps:
+      - name: Checkout exact Step1 source
+        uses: actions/checkout@v4
+        with:
+          ref: aa81c1ca1d52e9431b56682b227fe96aa3a305cd
+          persist-credentials: false
+      - name: Checkout experiment driver only
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: experiment-driver
+          persist-credentials: false
+      - name: P0 exact EOS and chemistry composition tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$CHATGPT_WORK_BASE_SHA"
+          python3 -m pip install --disable-pip-version-check --quiet 'pytest>=8,<9'
+          python3 -m pytest -q \
+            tests/test_o2_ground_state_dissociation_overlay.py \
+            tests/test_o2_mixed_state_dissociation_overlay.py \
+            tests/test_o2_mixed_dissociation_power_replay.py \
+            tests/test_o2_mixed_power_audit.py \
+            tests/test_issue395_step0_diss_off_control.py \
+            tests/test_issue395_pure_o2_inlet.py \
+            tests/test_issue395_step1_diss_off_pure_o2.py
+          python3 -m venv .o3p-n5e18-venv
+          .o3p-n5e18-venv/bin/python -m pip install --disable-pip-version-check --quiet numpy==2.1.2 scipy==1.14.1
+          source .o3p-n5e18-venv/bin/activate
+          CHEM=experiments/Issue395_powered_chemistry_ladder
+          DRIVER=experiment-driver/$CHEM
+          python3 -m py_compile "$DRIVER/build_edetach_om_experiment.py" "$DRIVER/prepare_both_diss_n5e18.py" "$DRIVER/audit_both_diss_n5e18.py"
+          bash "$CHEM/issue397_l1_power_scan_replay.sh" prepare 1000
+          python3 "$DRIVER/prepare_both_diss_n5e18.py" \
+            --detachment "$EDETACH_OM" --helper "$DRIVER/set_o3p_initial_density_experiment.py" \
+            --detachment-builder "$DRIVER/build_edetach_om_experiment.py"
+          INPUT="$CHEM/rf_elastic_diss_ion_ei20_ei01_1000w_adjacent_sheath_wall_closed_100us_dt1000ns.i"
+          python3 "$DRIVER/set_o3p_initial_density_experiment.py" --input "$INPUT" --target-number-density 5e18 --verify
+          python3 "$CHEM/set_pure_o2_inlet.py" --input "$INPUT" --verify
+          python3 - "$CHEM" "$EDETACH_OM" <<'PY'
+          from pathlib import Path
+          import math,re,sys
+          p=Path(sys.argv[1])
+          mode=sys.argv[2]
+          g=(p/"o2_dissociation_1000w_100us_dt1000ns_overlay.i").read_text()
+          m=(p/"o2_dissociation_mixed_1000w_100us_dt1000ns_overlay.i").read_text()
+          d=(p/"o_minus_e_detachment_1000w_100us_dt1000ns_overlay.i").read_text()
+          assert g.count("    property_name = R_diss_O2\n")==1
+          assert m.count("    property_name = R_diss_O2_mixed\n")==1
+          assert "R_diss_O2_mixed" not in g
+          assert "    property_name = R_diss_O2\n" not in m
+          assert g.count("    variable = w_O\n")==1
+          assert m.count("    variable = w_O\n")==1
+          assert m.count("    variable = w_Os\n")==1
+          def energy(t):
+              return float(re.search(r"property_name = S_electron_energy_mol_diss(?:_mixed)?\n.*?expression = '(-[0-9.eE+]+)\*R'",t,re.S).group(1))
+          assert math.isclose(energy(g),-6.0,rel_tol=1e-14)
+          assert math.isclose(energy(m),-8.4,rel_tol=1e-14)
+          if mode=="on":
+              assert d.count("    property_name = R_detach_Om\n")==1
+              assert d.count("    variable = log_ne\n")==1
+              assert d.count("    variable = log_nm\n")==1
+              assert d.count("    variable = w_O\n")==1
+              e=float(re.search(r"property_name = S_electron_energy_molar_EDETACH\n.*?expression = '(-[0-9.eE+]+)\*R'",d,re.S).group(1))
+              assert math.isclose(e,-1.4611,rel_tol=1e-14)
+          else: assert "R_detach_Om" not in d
+          print("ISSUE395_1000W_BOTH_DISS_N5E18_DETACH_"+mode.upper()+"_P0_PASS")
+          PY
+      - name: P1 pinned PhysicsApp build
+        shell: bash
+        run: bash experiments/Issue395_powered_chemistry_ladder/issue397_l1_power_scan_replay.sh build 1000
+      - name: P2 both channels real check-input
+        shell: bash
+        run: bash experiment-driver/experiments/Issue395_powered_chemistry_ladder/run_both_diss_n5e18.sh check
+      - name: P3 bounded 100us real solve
+        id: p3
+        shell: bash
+        run: timeout -s TERM -k 60s 19000s bash experiment-driver/experiments/Issue395_powered_chemistry_ladder/run_both_diss_n5e18.sh solve
+      - name: P4 native 27-face D1 audit
+        id: p4
+        if: steps.p3.outcome == 'success'
+        shell: bash
+        run: |
+          set -euo pipefail
+          source .o3p-n5e18-venv/bin/activate
+          bash experiments/Issue395_powered_chemistry_ladder/issue397_l1_power_scan_replay.sh audit 1000
+      - name: P5 independent chemistry and 1000W science HOLD audit
+        if: steps.p3.outcome == 'success' && steps.p4.outcome == 'success'
+        shell: bash
+        run: |
+          set -euo pipefail
+          CHEM=experiments/Issue395_powered_chemistry_ladder
+          INPUT="$CHEM/rf_elastic_diss_ion_ei20_ei01_1000w_adjacent_sheath_wall_closed_100us_dt1000ns.i"
+          RESULT="$CHEM/results_rf_elastic_diss_ion_ei20_ei01_1000w_adjacent_sheath_wall_closed_100us_dt1000ns_pure_o2_inlet_step1"
+          python3 "experiment-driver/$CHEM/set_o3p_initial_density_experiment.py" --input "$INPUT" --target-number-density 5e18 --verify
+          python3 "$CHEM/set_pure_o2_inlet.py" --input "$INPUT" --verify
+          python3 "experiment-driver/$CHEM/audit_both_diss_n5e18.py" \
+            --result "$RESULT" --detachment "$EDETACH_OM" --p3 "${{ steps.p3.outcome }}" --p4 "${{ steps.p4.outcome }}"
+      - name: Archive full output for this case even if failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue395-1000w-dual-diss-o3p-n5e18-detach-${{ matrix.detachment }}-100us
+          retention-days: 30
+          if-no-files-found: warn
+          path: |
+            experiments/Issue395_powered_chemistry_ladder/results_rf_elastic_diss_ion_ei20_ei01_1000w_adjacent_sheath_wall_closed_100us_dt1000ns_pure_o2_inlet_step1/**
+            experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_ei20_ei01_1000w_adjacent_sheath_wall_closed_100us_dt1000ns.i
+            experiments/Issue395_powered_chemistry_ladder/o2_dissociation_1000w_100us_dt1000ns_overlay.i
+            experiments/Issue395_powered_chemistry_ladder/o2_dissociation_mixed_1000w_100us_dt1000ns_overlay.i
+            experiments/Issue395_powered_chemistry_ladder/o_minus_e_detachment_1000w_100us_dt1000ns_overlay.i
+            experiments/Issue395_powered_chemistry_ladder/rf_elastic_multiapp_parent_1000w_100us_dt1000ns_overlay.i
+            experiments/Issue395_powered_chemistry_ladder/rf_elastic_multiapp_maxwell_1000w_100us_dt1000ns_child.i
+            experiments/Issue395_powered_chemistry_ladder/issue397_maxwell_steady_abs1e11.i
