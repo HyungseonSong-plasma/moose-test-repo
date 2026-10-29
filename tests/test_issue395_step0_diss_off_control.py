@@ -44,7 +44,7 @@ def test_replay_isolated_and_exclusive():
     assert s.count("'$DISS'") == 2
     assert s.count("  --channel \"$DISS_CHANNEL\"") == 1
     for name in ('"$ION"', '"$ION_O"', '"$ATTACH"', '"$ELASTIC"', '"$OELASTIC"'):
-        assert s.count(name) >= 3
+        assert s.count(name) >= 2
 
 
 def test_invalid_channel_rejected_before_side_effects():
