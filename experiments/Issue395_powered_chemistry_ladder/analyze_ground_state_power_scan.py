@@ -19,7 +19,7 @@ RATE_TOL = 2e-5
 SOURCE_TOL = 2e-5
 
 
-def audit(result: Path, power_w: int, source_sha: str, p3: str, p4: str, diss_channel: str = "ground") -> dict:
+def audit(result: Path, power_w: int, source_sha: str, p3: str, p4: str, diss_channel: str = "ground", require_pure_o2_inlet: bool = False) -> dict:
     csv_file = result / "run" / "plasma.csv"
     rows = []
     if csv_file.is_file():
@@ -169,6 +169,35 @@ def audit(result: Path, power_w: int, source_sha: str, p3: str, p4: str, diss_ch
             },
         },
     }
+    if require_pure_o2_inlet:
+        columns = ("neutral_inlet_mdot", "neutral_inlet_mdot_O2",
+                   "neutral_inlet_mdot_O2s", "neutral_inlet_mdot_O", "neutral_inlet_mdot_Os")
+        expected_total = 1.9395986970295842e-06
+        samples = []
+        for row in rows:
+            try:
+                samples.append(tuple(float(row[k]) for k in columns))
+            except (ValueError, TypeError, KeyError):
+                samples.append(())
+        flux_ok = (
+            len(samples) >= 1 and all(
+                len(v) == len(columns) and
+                all(math.isfinite(x) for x in v) and
+                math.isclose(v[0], expected_total, rel_tol=2e-8) and
+                math.isclose(v[1], v[0], rel_tol=2e-8) and
+                all(abs(x) <= 1e-20 for x in v[2:])
+                for v in samples
+            )
+        )
+        state["checks"]["inlet_pure_O2_X"] = {
+            "status": "PASS" if flux_ok else "FAIL",
+            "total_mass_inflow_kg_s": samples[-1][0] if samples and samples[-1] else None,
+            "O2_X_inflow_kg_s": samples[-1][1] if samples and samples[-1] else None,
+            "O2_a_inflow_kg_s": samples[-1][2] if samples and samples[-1] else None,
+            "O3P_inflow_kg_s": samples[-1][3] if samples and samples[-1] else None,
+            "O1D_inflow_kg_s": samples[-1][4] if samples and samples[-1] else None,
+            "checked_csv_rows": len(samples)
+        }
     state["status"] = ("PASS" if all(c["status"] == "PASS" for c in state["checks"].values())
                        else "NOT_PASS")
     return state
@@ -182,9 +211,10 @@ def main() -> int:
     p.add_argument("--p3-outcome", required=True)
     p.add_argument("--p4-outcome", required=True)
     p.add_argument("--channel", choices=("ground", "mixed", "off"), default="ground")
+    p.add_argument("--require-pure-o2-inlet", action="store_true")
     args = p.parse_args()
-    report = audit(args.result, args.power_w, args.source_sha, args.p3_outcome, args.p4_outcome, args.channel)
-    dest = args.result / "diagnostics" / ("step0_both_diss_off_two_power.json" if args.channel == "off" else "mixed_o3p_o1d_two_power.json" if args.channel == "mixed" else "ground_state_three_power.json")
+    report = audit(args.result, args.power_w, args.source_sha, args.p3_outcome, args.p4_outcome, args.channel, args.require_pure_o2_inlet)
+    dest = args.result / "diagnostics" / ("step1_both_diss_off_pure_o2_inlet.json" if args.channel == "off" and args.require_pure_o2_inlet else "step0_both_diss_off_two_power.json" if args.channel == "off" else "mixed_o3p_o1d_two_power.json" if args.channel == "mixed" else "ground_state_three_power.json")
     dest.parent.mkdir(parents=True, exist_ok=True)
     dest.write_text(json.dumps(report, indent=2, allow_nan=False) + "\n", encoding="utf-8")
     print(json.dumps(report, indent=2, allow_nan=False))
