@@ -58,6 +58,35 @@ int main()
   require(std::abs(reconstructed_mass - 1.0) < 1e-12,
           "P0-3: sqrt(E)-weighted mass not conserved");
 
+  // Independent midpoint oracle for the exact reconstructed first energy
+  // moment. In contrast to the number moment, a nonzero slope changes
+  // the mean energy; a constant-cell moment would silently miss this.
+  const double reconstructed_mean = reconstructedMeanEnergyEV(edges, f, f);
+  double midpoint_number = 0.0, midpoint_energy = 0.0, constant_mean = 0.0;
+  constexpr std::size_t moment_quadrature = 50000;
+  for (std::size_t i = 0; i < f.size(); ++i)
+  {
+    const double lo = edges[i], hi = edges[i + 1];
+    const double mu_i = shape.mass_centroids_eV[i];
+    const double slope_i = shape.relative_slopes_per_eV[i];
+    constant_mean += f[i] * (2.0 / 5.0) *
+        (std::pow(hi, 2.5) - std::pow(lo, 2.5));
+    for (std::size_t j = 0; j < moment_quadrature; ++j)
+    {
+      const double e = lo + (static_cast<double>(j) + 0.5) *
+          (hi - lo) / static_cast<double>(moment_quadrature);
+      const double weight = f[i] * (1.0 + slope_i * (e - mu_i)) *
+          std::sqrt(e) * (hi - lo) / static_cast<double>(moment_quadrature);
+      midpoint_number += weight;
+      midpoint_energy += e * weight;
+    }
+  }
+  require(std::abs(reconstructed_mean - midpoint_energy / midpoint_number) <
+              1e-6 * std::max(1.0, reconstructed_mean) &&
+          std::abs(reconstructed_mean - constant_mean) > 1e-6 &&
+          reconstructed_mean > 0.0 && reconstructed_mean < edges.back(),
+          "P0-3: reconstructed mean energy disagrees with independent quadrature");
+
   const std::vector<double> energy = {0.0, 15.8, 16.0};
   const std::vector<double> sigma = {0.0, 0.0, 2e-22};
   const double a = 15.8, b = 15.8367;
@@ -126,6 +155,10 @@ int main()
                  (void)reconstructConservativeSubcells(edges, bad); });
   rejects([&] { auto bad = f; bad.front() *= 2.0;
                  (void)reconstructConservativeSubcells(edges, bad); });
+  rejects([&] { auto bad = f; bad.front() *= 2.0;
+                 (void)reconstructedMeanEnergyEV(edges, bad, f); });
+  rejects([&] { auto bad = f; bad.back() = -1.0;
+                 (void)reconstructedMeanEnergyEV(edges, bad, f); });
   rejects([&] { (void)integrateSubcellEnergyCrossSection(
                     energy, sigma, a, b, mu, -1e6); });
 
@@ -177,6 +210,34 @@ int main()
              (nominal_result.status == "HOLD_PICARD_MAX_UPDATES")),
           "P0-3: nominal-tolerance Picard did not report a valid outcome");
 
+  if (nominal_result.converged)
+  {
+    const auto & final_f = nominal_result.solution.distribution.eepf_eV_minus_3_halves;
+    const double self_consistent_mean = reconstructedMeanEnergyEV(
+        energyMeshEdges(input), final_f, final_f);
+    require(std::abs(self_consistent_mean -
+                     nominal_result.solution.distribution.mean_energy_eV) <
+                1e-6 * self_consistent_mean &&
+            nominal_result.history.back().mean_energy_relative_change <=
+                nominal.mean_energy_relative_limit,
+            "P0-3: converged Picard mean energy is not self-consistent");
+  }
+
+  ReconstructedGrowthControls energy_strict;
+  energy_strict.maximum_updates = 1;
+  energy_strict.required_stable_updates = 1;
+  energy_strict.distribution_l1_limit = 0.99;
+  energy_strict.rate_relative_limit = 0.99;
+  energy_strict.mean_energy_relative_limit = 1e-12;
+  const auto energy_held = solveTemporalGrowthWithSubcellPicard(
+      input, ions, attaches, excitations, energy_strict);
+  require(!energy_held.converged &&
+          energy_held.status == "HOLD_PICARD_MAX_UPDATES" &&
+          energy_held.history.size() == 1 &&
+          energy_held.history.front().mean_energy_relative_change >
+              energy_strict.mean_energy_relative_limit,
+          "P0-3: strict energy-moment convergence gate failed open");
+
   ReconstructedGrowthControls strict;
   strict.maximum_updates = 1;
   strict.required_stable_updates = 1;
@@ -194,6 +255,8 @@ int main()
   std::cout << "P0-3 actual C++ SYNTHETIC growth-only Picard: "
             << "manufactured_threshold_ratio=" << reconstructed / constant
             << ", reconstructed_mass=" << reconstructed_mass
+            << ", reconstructed_mean_eV=" << reconstructed_mean
+            << ", constant_mean_eV=" << constant_mean
             << ", collision_balance=" << op.maximum_number_balance_relative_error
             << ", eigen_residual=" << coupled.solution.maximum_normalized_eigen_residual
             << ", first_Picard_L1=" << coupled.history.front().distribution_l1_change
@@ -201,5 +264,7 @@ int main()
             << ", nominal_updates=" << nominal_result.history.size()
             << ", nominal_final_L1=" << nominal_result.history.back().distribution_l1_change
             << ", nominal_final_rate_change=" << nominal_result.history.back().maximum_rate_relative_change
+            << ", nominal_final_energy_change=" << nominal_result.history.back().mean_energy_relative_change
+            << ", energy_gate_HOLD=PASS"
             << ", strict_HOLD=PASS; NOT BOLSIG+ PARITY\\n";
 }
