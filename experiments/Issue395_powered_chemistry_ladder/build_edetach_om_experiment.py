@@ -2,8 +2,8 @@
 """Bounded EDETACH_OM overlay for Issue395 oxygen ICP 1000W discriminator.
 
 Source: docs/development/2026-09-10_issue176_stage5_s5c_edetach_contract.json
-e + O- -> O + 2e. Net one e produced; the explicit 12 eV/event sink
-is the frozen chemistry model convention, not claimed cross-section parity.
+e + O- -> O + 2e. Net one e produced; the explicit 1.4611 eV/event sink
+is an electron-affinity-based hypothesis (historical COMSOL loss: 12 eV/event).
 """
 from __future__ import annotations
 import argparse
@@ -12,7 +12,7 @@ import pathlib
 K0 = 5.47e-14  # m^3/s
 EA = 2.98      # eV, fit parameter
 TE_EXP = 0.324
-LOSS = 12.0    # eV/event
+LOSS = 1.4611  # eV/event; O- ground-state electron affinity, exploratory assumption
 MO = 0.016     # kg/mol
 
 def build(base: str) -> str:
