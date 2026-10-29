@@ -61,7 +61,8 @@ jobs:
           INPUT="$CHEM/rf_elastic_diss_ion_ei20_ei01_1000w_adjacent_sheath_wall_closed_100us_dt1000ns.i"
           DISS="$CHEM/o2_dissociation_1000w_100us_dt1000ns_overlay.i"
           RESULT="$CHEM/results_rf_elastic_diss_ion_ei20_ei01_1000w_adjacent_sheath_wall_closed_100us_dt1000ns"
-          if [ "$DISS_CHANNEL" = mixed ]; then RESULT="$RESULT""_mixed_o3p_o1d"; fi
+          if [ "$DISS_CHANNEL" = mixed ]; then RESULT="${RESULT}_mixed_o3p_o1d"; fi
+          RESULT="${RESULT}_pure_o2_inlet_step1"
           test -s "$INPUT" && test -s "$DISS"
           test -f "$RESULT/prep/pure_o2_inlet.log"
           python3 "$CHEM/set_pure_o2_inlet.py" --input "$INPUT" --verify
@@ -135,7 +136,8 @@ jobs:
           CHEM=experiments/Issue395_powered_chemistry_ladder
           INPUT="$CHEM/rf_elastic_diss_ion_ei20_ei01_1000w_adjacent_sheath_wall_closed_100us_dt1000ns.i"
           RESULT="$CHEM/results_rf_elastic_diss_ion_ei20_ei01_1000w_adjacent_sheath_wall_closed_100us_dt1000ns"
-          if [ "$DISS_CHANNEL" = mixed ]; then RESULT="$RESULT""_mixed_o3p_o1d"; fi
+          if [ "$DISS_CHANNEL" = mixed ]; then RESULT="${RESULT}_mixed_o3p_o1d"; fi
+          RESULT="${RESULT}_pure_o2_inlet_step1"
           python3 "experiment-driver/$CHEM/set_o3p_initial_density_experiment.py" \
             --input "$INPUT" --target-number-density 1e19 --verify
           python3 "$CHEM/set_pure_o2_inlet.py" --input "$INPUT" --verify
@@ -153,8 +155,8 @@ jobs:
           retention-days: 30
           if-no-files-found: warn
           path: |
-            experiments/Issue395_powered_chemistry_ladder/results_rf_elastic_diss_ion_ei20_ei01_1000w_adjacent_sheath_wall_closed_100us_dt1000ns/**
-            experiments/Issue395_powered_chemistry_ladder/results_rf_elastic_diss_ion_ei20_ei01_1000w_adjacent_sheath_wall_closed_100us_dt1000ns_mixed_o3p_o1d/**
+            experiments/Issue395_powered_chemistry_ladder/results_rf_elastic_diss_ion_ei20_ei01_1000w_adjacent_sheath_wall_closed_100us_dt1000ns_pure_o2_inlet_step1/**
+            experiments/Issue395_powered_chemistry_ladder/results_rf_elastic_diss_ion_ei20_ei01_1000w_adjacent_sheath_wall_closed_100us_dt1000ns_mixed_o3p_o1d_pure_o2_inlet_step1/**
             experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_ei20_ei01_1000w_adjacent_sheath_wall_closed_100us_dt1000ns.i
             experiments/Issue395_powered_chemistry_ladder/o2_dissociation_1000w_100us_dt1000ns_overlay.i
             experiments/Issue395_powered_chemistry_ladder/rf_elastic_multiapp_parent_1000w_100us_dt1000ns_overlay.i
