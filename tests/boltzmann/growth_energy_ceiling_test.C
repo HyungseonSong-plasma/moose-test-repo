@@ -160,5 +160,5 @@ int main()
             << " eV, max_rate_change=" << last.maximum_rate_relative_change
             << ", eigen_residual="
             << independently_recomputed.maximum_normalized_eigen_residual
-            << "; dense budget HOLD verified; NOT BOLSIG+ PARITY\\n";
+            << "; dense budget HOLD verified; NOT BOLSIG+ PARITY\n";
 }
