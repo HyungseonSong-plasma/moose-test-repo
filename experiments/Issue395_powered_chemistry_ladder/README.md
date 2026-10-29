@@ -1,3 +1,51 @@
+## Oxygen ICP: pure-O2(X) inlet with finite initial O(3P)
+
+This controlled 400/1000 W experiment changes the **inlet only** from the
+historical four-species inlet composition to **100% O2(X) by mass**.
+It retains the solved initial O(3P) number density `1e15 m^-3` (exact
+mixture-EOS input conversion), the previous nonzero O(1D) and O2(a1Delta)
+*initial* composition, the mixed-state DISS channel
+`e + O2 -> e + O(3P) + O(1D)`, EI01/EI02/EI16/EI17/EI20,
+mesh, walls, RF control and 100-us/460-step grid.
+
+The physically imposed total inlet flow stays
+`1.9395986970295842e-06 kg/s`; the O2(X) **residual**
+species receives all of it. The three explicit inlet FV scalar-flux
+postprocessors (`neutral_inlet_mdot_O2s`, `_O`, `_Os`) are set to
+zero. `neutral_inlet_mdot_O2` is a bookkeeping receiver set equal to
+the total. The independent source patcher
+`set_pure_o2_inlet.py` checks the exact BC owners, receivers,
+inlet mass closure and preserves every non-inlet input value.
+
+Run each power in a separate checkout with:
+
+```bash
+export DISS_CHANNEL=mixed
+export O_INITIAL_NUMBER_DENSITY=1e15
+export PURE_O2_INLET=1
+bash experiments/Issue395_powered_chemistry_ladder/issue397_l1_power_scan_replay.sh prepare 400
+bash experiments/Issue395_powered_chemistry_ladder/issue397_l1_power_scan_replay.sh build 400
+bash experiments/Issue395_powered_chemistry_ladder/issue397_l1_power_scan_replay.sh check 400
+bash experiments/Issue395_powered_chemistry_ladder/issue397_l1_power_scan_replay.sh solve 400
+bash experiments/Issue395_powered_chemistry_ladder/issue397_l1_power_scan_replay.sh audit 400
+```
+
+Repeat with `1000`. Result directory suffix
+`_mixed_o3p_o1d_initial_o3p_n1e15_m3_inlet_o2_100pct`
+isolates this case from historical high-inlet-O runs.
+
+P0 checks exact byte-local receiver mutation and negative controls;
+P2 checks actual `physics-opt` effective inputs;
+P5 uses `analyze_ground_state_power_scan.py --channel mixed
+--initial-number-density-m3 1e15 --require-pure-o2-inlet` to check
+*every actual output CSV row* for all four mass fluxes, including
+zero O/O1D/O2(a) and O2(X)=total. Solver completion and 27-wafer-face
+D1 are separate gates.
+
+**Science HOLD:** this inlet perturbation is a model condition change
+and does not prove positivity resolution at 35 ns, mixed-channel
+cross-section/EEDF fidelity or O(1D) quenching completeness.
+
 # Issue #395 — powered oxygen ICP chemistry activation ladder
 
 ## Issue #397 200 W EI17 mesh baseline (2026-10-21)
