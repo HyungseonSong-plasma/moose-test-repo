@@ -1,5 +1,6 @@
 #include "PhysicsBoltzmannGrowth.h"
 #include "PhysicsBoltzmannEnergyMesh.h"
+#include "PhysicsBoltzmannSubcellReconstruction.h"
 
 #include <algorithm>
 #include <cmath>
@@ -117,11 +118,26 @@ void validateInput(const ElasticInput & input,
 GrowthOperator assembleGrowthCollisions(
     const ElasticInput & input,
     const std::vector<IonizationChannel> & ionizations,
-    const std::vector<AttachmentChannel> & attachments)
+    const std::vector<AttachmentChannel> & attachments,
+    const std::vector<double> & reference_eepf)
 {
   validateInput(input, ionizations, attachments);
   const std::size_t n = input.cells;
   const auto edges = energyMeshEdges(input);
+  const auto reconstructed = reference_eepf.empty() ?
+      SubcellReconstruction{} :
+      reconstructConservativeSubcells(edges, reference_eepf);
+  const auto integrateDonor = [&](const std::vector<double> & energy,
+                                  const std::vector<double> & sigma,
+                                  std::size_t donor, double lo, double hi)
+  {
+    if (reference_eepf.empty())
+      return integralEnergyCrossSection(energy, sigma, lo, hi);
+    return integrateSubcellEnergyCrossSection(
+        energy, sigma, lo, hi,
+        reconstructed.mass_centroids_eV[donor],
+        reconstructed.relative_slopes_per_eV[donor]);
+  };
   std::vector<std::map<std::size_t, double>> rows(n);
   GrowthOperator op;
   op.energy_cells = n;
@@ -146,7 +162,7 @@ GrowthOperator assembleGrowthCollisions(
       if (hi <= lo)
         continue;
       const double collisions = gamma * x *
-          integralEnergyCrossSection(channel.energy_eV, channel.cross_section_m2, lo, hi);
+          integrateDonor(channel.energy_eV, channel.cross_section_m2, donor, lo, hi);
       op.ionization_event_columns[donor] += collisions;
       rows[donor][donor] -= collisions; // one incident electron removed
 
@@ -166,8 +182,7 @@ GrowthOperator assembleGrowthCollisions(
         if (xhi <= xlo)
           continue;
         const double contribution = 2.0 * gamma * x *
-            integralEnergyCrossSection(channel.energy_eV, channel.cross_section_m2,
-                                       xlo, xhi);
+            integrateDonor(channel.energy_eV, channel.cross_section_m2, donor, xlo, xhi);
         rows[dest][donor] += contribution;
         gains += contribution;
       }
@@ -183,7 +198,7 @@ GrowthOperator assembleGrowthCollisions(
     {
       const double lo = edges[donor], hi = edges[donor+1];
       const double collisions = gamma * x *
-          integralEnergyCrossSection(channel.energy_eV, channel.cross_section_m2, lo, hi);
+          integrateDonor(channel.energy_eV, channel.cross_section_m2, donor, lo, hi);
       rows[donor][donor] -= collisions; // electron lost by attachment
       op.attachment_event_columns[donor] += collisions;
     }
@@ -219,12 +234,28 @@ GrowthDiagnostics evaluateGrowthOnFrozenEepf(
     const ElasticInput & input,
     const ElasticResult & distribution,
     const std::vector<IonizationChannel> & ionizations,
-    const std::vector<AttachmentChannel> & attachments)
+    const std::vector<AttachmentChannel> & attachments,
+    const std::vector<double> & reference_eepf)
 {
-  const auto op = assembleGrowthCollisions(input, ionizations, attachments);
+  const auto op = assembleGrowthCollisions(
+      input, ionizations, attachments, reference_eepf);
   const std::size_t n = input.cells;
   const auto edges = energyMeshEdges(input);
   const auto centers = energyMeshCenters(edges);
+  const auto reconstructed = reference_eepf.empty() ?
+      SubcellReconstruction{} :
+      reconstructConservativeSubcells(edges, reference_eepf);
+  const auto integrateDonor = [&](const std::vector<double> & energy,
+                                  const std::vector<double> & sigma,
+                                  std::size_t donor, double lo, double hi)
+  {
+    if (reference_eepf.empty())
+      return integralEnergyCrossSection(energy, sigma, lo, hi);
+    return integrateSubcellEnergyCrossSection(
+        energy, sigma, lo, hi,
+        reconstructed.mass_centroids_eV[donor],
+        reconstructed.relative_slopes_per_eV[donor]);
+  };
   if (distribution.energy_eV.size() != n ||
       distribution.eepf_eV_minus_3_halves.size() != n)
     throw std::invalid_argument("Boltzmann M6: EEPF size does not match collision grid");
@@ -248,9 +279,8 @@ GrowthDiagnostics evaluateGrowthOnFrozenEepf(
     double k = 0.0;
     for (std::size_t d = 0; d < n; ++d)
       k += gamma * distribution.eepf_eV_minus_3_halves[d] *
-           integralEnergyCrossSection(channel.energy_eV, channel.cross_section_m2,
-                                      std::max(edges[d], channel.threshold_eV),
-                                      edges[d+1]);
+           integrateDonor(channel.energy_eV, channel.cross_section_m2,
+                          d, std::max(edges[d], channel.threshold_eV), edges[d+1]);
     result.ionization_rates_m3_per_s.push_back(k);
     const double contribution = targetFraction(input, channel.target_name) * k;
     result.reduced_temporal_growth_m3_per_s += contribution;
@@ -262,8 +292,8 @@ GrowthDiagnostics evaluateGrowthOnFrozenEepf(
     double k = 0.0;
     for (std::size_t d = 0; d < n; ++d)
       k += gamma * distribution.eepf_eV_minus_3_halves[d] *
-           integralEnergyCrossSection(channel.energy_eV, channel.cross_section_m2,
-                                      edges[d], edges[d+1]);
+           integrateDonor(channel.energy_eV, channel.cross_section_m2,
+                          d, edges[d], edges[d+1]);
     result.attachment_rates_m3_per_s.push_back(k);
     result.reduced_temporal_growth_m3_per_s -=
         targetFraction(input, channel.target_name) * k;
