@@ -14,45 +14,88 @@ import math
 import sys
 from pathlib import Path
 
-POWER_CASES = (200, 600, 1000)
+POWER_CASES = (200, 400, 600, 1000)
 RATE_TOL = 2e-5
 SOURCE_TOL = 2e-5
 
 
-def audit(result: Path, power_w: int, source_sha: str, p3: str, p4: str) -> dict:
+def audit(result: Path, power_w: int, source_sha: str, p3: str, p4: str, diss_channel: str = "ground", require_initial_zero: bool = False, initial_number_density_m3: float | None = None) -> dict:
     csv_file = result / "run" / "plasma.csv"
     rows = []
     if csv_file.is_file():
         with csv_file.open(encoding="utf-8", newline="") as handle:
             rows = list(csv.DictReader(handle))
     last = rows[-1] if rows else {}
-    required = (
-        "diss_R_integral",
-        "diss_energy_source_integral",
-        "diss_O_mass_source_integral",
-        "diss_heavy_mass_closure_integral",
+    initial_O = None
+    initial_Os = None
+    initial_O2 = None
+    if rows:
+        try:
+            if float(rows[0]["time"]) == 0.0:
+                initial_O = float(rows[0]["neutral_mass_O"])
+                initial_Os = float(rows[0]["neutral_mass_Os"])
+                initial_O2 = float(rows[0]["neutral_mass_O2"])
+        except (ValueError, TypeError, KeyError):
+            pass
+    initial_O_scale = max(abs(initial_Os or 0.0), abs(initial_O2 or 0.0), 1e-30)
+    initial_O_zero_pass = (
+        initial_O is not None and initial_Os is not None and initial_O2 is not None
+        and all(math.isfinite(v) for v in (initial_O, initial_Os, initial_O2))
+        and abs(initial_O) <= 1e-14 * initial_O_scale
     )
+    if diss_channel == "mixed":
+        required = (
+            "mixed_R_integral", "mixed_energy_sink_integral",
+            "mixed_o3p_mass_integral", "mixed_o1d_mass_integral",
+            "mixed_oxygen_molecular_sink_integral", "mixed_heavy_mass_closure_integral",
+        )
+        energy_per_event, o3p_mass_per_event = 8.4, 0.016
+    else:
+        required = (
+            "diss_R_integral", "diss_energy_source_integral",
+            "diss_O_mass_source_integral", "diss_heavy_mass_closure_integral",
+        )
+        energy_per_event, o3p_mass_per_event = 6.0, 0.032
     chemistry: dict[str, object] = {"status": "INCOMPLETE", "required_columns": list(required)}
     missing = [field for field in required if field not in last]
     if not missing:
         try:
-            rate, energy, oxygen, closure = (float(last[name]) for name in required)
-            finite = all(map(math.isfinite, (rate, energy, oxygen, closure)))
-            tolerance_energy = SOURCE_TOL * max(abs(energy), abs(-6.0 * rate), 1e-20)
-            tolerance_oxygen = SOURCE_TOL * max(abs(oxygen), abs(0.032 * rate), 1e-20)
+            observations = [float(last[name]) for name in required]
+            finite = all(map(math.isfinite, observations))
+            rate, energy, oxygen = observations[:3]
+            closure = observations[-1]
+            energy_tol = SOURCE_TOL * max(abs(energy), abs(energy_per_event * rate), 1e-20)
+            oxygen_tol = SOURCE_TOL * max(abs(oxygen), abs(o3p_mass_per_event * rate), 1e-20)
+            close_tol = SOURCE_TOL * max(abs(oxygen), 1e-20)
+            valid = (finite and rate >= 0 and
+                     abs(energy + energy_per_event * rate) <= energy_tol and
+                     abs(oxygen - o3p_mass_per_event * rate) <= oxygen_tol and
+                     abs(closure) <= close_tol)
             chemistry = {
-                "status": ("PASS" if finite and rate >= 0
-                    and abs(energy + 6.0 * rate) <= tolerance_energy
-                    and abs(oxygen - 0.032 * rate) <= tolerance_oxygen
-                    and abs(closure) <= tolerance_oxygen else "FAIL"),
-                "reaction_progress_mol_m3_s_integral": rate,
-                "electron_energy_sink_eV_mol_m3_s_integral": energy,
-                "atomic_oxygen_mass_source_kg_m3_s_integral": oxygen,
+                "status": "PASS" if valid else "FAIL",
+                "reaction_progress_mol_s_integral": rate,
+                "electron_energy_sink_eV_mol_s_integral": energy,
+                "atomic_O3P_mass_source_kg_s_integral": oxygen,
                 "heavy_mass_closure_integral": closure,
-                "energy_ratio_expected": -6.0,
-                "oxygen_mass_ratio_expected": 0.032,
+                "energy_ratio_expected": -energy_per_event,
+                "O3P_mass_ratio_expected": o3p_mass_per_event,
                 "all_finite": finite,
             }
+            if diss_channel == "mixed":
+                excited, o2_sink = observations[3:5]
+                extra_ok = (
+                    abs(excited - 0.016 * rate) <= SOURCE_TOL * max(abs(excited), 1e-20)
+                    and abs(o2_sink + 0.032 * rate) <= SOURCE_TOL * max(abs(o2_sink), 1e-20)
+                    and abs(oxygen + excited + o2_sink) <= SOURCE_TOL * max(
+                        abs(oxygen), abs(excited), abs(o2_sink), 1e-20
+                    )
+                )
+                if not extra_ok:
+                    chemistry["status"] = "FAIL"
+                chemistry["atomic_O1D_mass_source_kg_s_integral"] = excited
+                chemistry["implicit_O2_mass_sink_kg_s_integral"] = o2_sink
+                chemistry["O1D_mass_ratio_expected"] = 0.016
+                chemistry["O2_mass_ratio_expected"] = -0.032
         except (ValueError, TypeError):
             chemistry = {"status": "FAIL", "reason": "nonnumeric reaction observations"}
     else:
@@ -92,9 +135,12 @@ def audit(result: Path, power_w: int, source_sha: str, p3: str, p4: str) -> dict
     state = {
         "target_power_W": power_w,
         "source_sha": source_sha,
-        "model": "O2_ground_state_O3P_plus_O3P",
-        "reaction_fit": "1.41e-15*Te^-0.22*exp(-2.98/Te)",
-        "effective_electron_energy_loss_eV": 6.0,
+        "model": ("O2_ground_state_O3P_plus_O3P" if diss_channel == "ground"
+                  else "O2_mixed_O3P_plus_O1D"),
+        "reaction_fit": ("1.41e-15*Te^-0.22*exp(-2.98/Te)" if diss_channel == "ground"
+                         else "3.49e-14*exp(-5.92/Te)"),
+        "effective_electron_energy_loss_eV": energy_per_event,
+        "science_status": "HOLD_CROSS_SECTION_EEPF_QUENCHING" if diss_channel == "mixed" else "HOLD_SOURCE_PARITY",
         "p3_outcome": p3,
         "p4_outcome": p4,
         "last_accepted_time_us": final_time_s * 1e6 if math.isfinite(final_time_s) else None,
@@ -120,6 +166,41 @@ def audit(result: Path, power_w: int, source_sha: str, p3: str, p4: str) -> dict
             },
         },
     }
+    if require_initial_zero:
+        state["checks"]["initial_O3P_zero"] = {
+            "status": "PASS" if initial_O_zero_pass else "FAIL",
+            "observed_initial_O_kg": initial_O,
+            "initial_O1D_kg": initial_Os,
+            "initial_O2_kg": initial_O2,
+            "normalization_scale_kg": initial_O_scale,
+        }
+    if initial_number_density_m3 is not None:
+        def first(name):
+            if not rows:
+                return None
+            try:
+                v = float(rows[0][name])
+                return v if math.isfinite(v) else None
+            except (KeyError, TypeError, ValueError):
+                return None
+        rho_lo, rho_hi = first("neutral_rho_min"), first("neutral_rho_max")
+        w_lo, w_hi = first("w_O_min"), first("w_O_max")
+        t0 = first("time")
+        NA, M_O = 6.02214076e23, 0.016
+        n_lo = (rho_lo * w_lo * NA / M_O if rho_lo is not None and w_lo is not None else None)
+        n_hi = (rho_hi * w_hi * NA / M_O if rho_hi is not None and w_hi is not None else None)
+        numbers = (n_lo, n_hi)
+        valid = (t0 == 0.0 and all(v is not None and math.isfinite(v) for v in numbers)
+                 and initial_number_density_m3 > 0
+                 and all(abs(v-initial_number_density_m3) <= 1e-8*initial_number_density_m3
+                         for v in numbers))
+        state["checks"]["initial_O3P_number_density"] = {
+            "status": "PASS" if valid else "FAIL",
+            "expected_m3": initial_number_density_m3,
+            "observed_min_m3": n_lo,
+            "observed_max_m3": n_hi,
+            "evidence": "t=0 solved w_O extrema and neutral_rho extrema",
+        }
     state["status"] = ("PASS" if all(c["status"] == "PASS" for c in state["checks"].values())
                        else "NOT_PASS")
     return state
@@ -132,9 +213,12 @@ def main() -> int:
     p.add_argument("--source-sha", required=True)
     p.add_argument("--p3-outcome", required=True)
     p.add_argument("--p4-outcome", required=True)
+    p.add_argument("--channel", choices=("ground", "mixed"), default="ground")
+    p.add_argument("--require-initial-zero", action="store_true")
+    p.add_argument("--initial-number-density-m3", type=float, default=None)
     args = p.parse_args()
-    report = audit(args.result, args.power_w, args.source_sha, args.p3_outcome, args.p4_outcome)
-    dest = args.result / "diagnostics" / "ground_state_three_power.json"
+    report = audit(args.result, args.power_w, args.source_sha, args.p3_outcome, args.p4_outcome, args.channel, args.require_initial_zero, args.initial_number_density_m3)
+    dest = args.result / "diagnostics" / ("mixed_o3p_o1d_target_density_two_power.json" if args.initial_number_density_m3 is not None else "mixed_o3p_o1d_zero_initial_two_power.json" if args.require_initial_zero else "mixed_o3p_o1d_two_power.json" if args.channel == "mixed" else "ground_state_three_power.json")
     dest.parent.mkdir(parents=True, exist_ok=True)
     dest.write_text(json.dumps(report, indent=2, allow_nan=False) + "\n", encoding="utf-8")
     print(json.dumps(report, indent=2, allow_nan=False))
