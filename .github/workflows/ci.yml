@@ -446,12 +446,12 @@ jobs:
           /tmp/boltzmann-threshold-mesh-growth-test
       - name: P0-1/P0-2 integrated adaptive Emax + threshold mesh M6b eigen/rates (synthetic)
         run: |
-          g++ -std=c++17 -O2 -Wall -Wextra -Werror -pedantic \\
-            -Iphysics_app/include/utils \\
-            physics_app/src/utils/PhysicsBoltzmannElasticSolver.C \\
-            physics_app/src/utils/PhysicsBoltzmannGrowth.C \\
-            physics_app/src/utils/PhysicsBoltzmannTemporalGrowth.C \\
-            tests/boltzmann/adaptive_growth_ceiling_test.C \\
+          g++ -std=c++17 -O2 -Wall -Wextra -Werror -pedantic \
+            -Iphysics_app/include/utils \
+            physics_app/src/utils/PhysicsBoltzmannElasticSolver.C \
+            physics_app/src/utils/PhysicsBoltzmannGrowth.C \
+            physics_app/src/utils/PhysicsBoltzmannTemporalGrowth.C \
+            tests/boltzmann/adaptive_growth_ceiling_test.C \
             -o /tmp/boltzmann-adaptive-growth-ceiling-test
           /tmp/boltzmann-adaptive-growth-ceiling-test
       - name: Compile and run actual C++ Boltzmann solver on invented elastic controls
