@@ -132,4 +132,43 @@ inline double integrateSubcellEnergyCrossSection(
     throw std::runtime_error("Boltzmann P0-3: invalid reconstructed rate integral");
   return std::max(0.0, result);
 }
+
+// Exact sqrt(E)-weighted first energy moment of a *current* cell-mean
+// EEPF with a Picard-frozen, positive, number-conservative subcell shape.
+// The current f_i multiplies [1+s_ref(E-mu_i)]; this is the SAME shape
+// used in the growth collision Q. No point-sampled center approximation.
+inline double reconstructedMeanEnergyEV(
+    const std::vector<double> & edges,
+    const std::vector<double> & cell_eepf,
+    const std::vector<double> & reference_eepf)
+{
+  if (cell_eepf.size() != reference_eepf.size())
+    throw std::invalid_argument("Boltzmann P0-3: energy moment shape mismatch");
+  const auto shape = reconstructConservativeSubcells(edges, reference_eepf);
+  double number = 0.0;
+  double energy = 0.0;
+  for (std::size_t i = 0; i < cell_eepf.size(); ++i)
+  {
+    const double fi = cell_eepf[i];
+    if (!(std::isfinite(fi) && fi >= 0.0))
+      throw std::invalid_argument("Boltzmann P0-3: invalid current EEPF energy moment");
+    const double a = edges[i], b = edges[i + 1];
+    const double mu = shape.mass_centroids_eV[i];
+    const double slope = shape.relative_slopes_per_eV[i];
+    const double first = (2.0 / 5.0) *
+        (std::pow(b, 2.5) - std::pow(a, 2.5));
+    const double second = (2.0 / 7.0) *
+        (std::pow(b, 3.5) - std::pow(a, 3.5));
+    const double moment = first + slope * (second - mu * first);
+    if (!(std::isfinite(moment) && moment >= -1e-12 * b * shape.cell_number_masses[i]))
+      throw std::runtime_error("Boltzmann P0-3: invalid reconstructed energy moment");
+    number += fi * shape.cell_number_masses[i];
+    energy += fi * std::max(0.0, moment);
+  }
+  if (!(std::isfinite(number) && std::abs(number - 1.0) < 1e-8 &&
+        std::isfinite(energy) && energy >= 0.0 &&
+        energy <= edges.back() * number * (1.0 + 1e-10)))
+    throw std::invalid_argument("Boltzmann P0-3: unnormalized or invalid reconstructed energy");
+  return energy / number;
+}
 } // namespace PhysicsBoltzmann
