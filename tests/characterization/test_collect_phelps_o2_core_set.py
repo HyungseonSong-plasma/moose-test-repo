@@ -23,15 +23,11 @@ def make_channel(ch):
     )
     energy.append(float(anchor))
     energy += [anchor + .1 * (i - 1) for i in range(2, ch.count)]
-    if ch.name == "rotation_300K":
-        # An intentionally synthetic nonstrict knot, echoing the SOURCE hazard.
-        energy[33] = energy[32]
     sigmas = [(.35 if ch.name == "momentum_effective" else 0.)]
     sigmas += [0.] + [i*.001 for i in range(2, ch.count)]
     marker = ("ENERGY Effective Qm - Defined in introduction"
               if ch.name == "momentum_effective" else
-              "ENERGY CROSS SECTION ENERGY CROSS SECTION"
-              if ch.name == "rotation_300K" else "ENERGY CROSS SECTION")
+              "ENERGY CROSS SECTION")
     meta = ("" if ch.name == "momentum_effective" else
             f"ENERGY LOSS = {ch.loss:.3f}, LOWER LIMIT = 0, UPPER LIMIT = 100,\n"
             f"QSCALE = {ch.qscale:.6f}\n")
@@ -46,27 +42,31 @@ def synthetic():
     )
 
 
-def test_17_selected_sections_and_manifest(tmp_path):
+def test_14_selected_sections_and_manifest(tmp_path):
     text = synthetic()
-    assert len(m.CHANNELS) == 17
+    assert len(m.CHANNELS) == 14
+    assert {ch.name for ch in m.CHANNELS}.isdisjoint(m.EXCLUDED_SOURCE_CHANNELS)
     assert "attachment_three_body" not in {ch.name for ch in m.CHANNELS}
     for ch in m.CHANNELS:
         points, duplicates = m.extract(text, ch)
         assert len(points) == ch.count
         assert all(e >= 0 and sigma >= 0 for e, sigma in points)
-        assert len(duplicates) == (1 if ch.name == "rotation_300K" else 0)
+        assert not duplicates
     input_path = tmp_path / "test_synthetic.txt"
     input_path.write_text(text, encoding="utf-8")
     output = tmp_path / "private" / "extracted"
     result = m.collect(input_path, output, "2026-10-30")
     assert result["status"] == "EXTRACTED_SOURCE_ONLY_NOT_BOLTZMANN_READY"
-    assert len(result["channels"]) == 17
+    assert len(result["channels"]) == 14
+    assert result["excluded_source_channels"] == sorted(m.EXCLUDED_SOURCE_CHANNELS)
     assert result["excluded_unregistered_source_channels"] == ["attachment_three_body"]
     assert result["channels"]["momentum_effective"]["use_as_elastic_momentum"] is False
-    assert result["channels"]["rotation_300K"]["duplicate_knots"]
     assert "attachment_three_body" not in result["channels"]
     assert result["channels"]["v1_low"]["source_qscale"] == 2.5
-    assert len(list(output.glob("*.csv"))) == 17
+    assert len(list(output.glob("*.csv"))) == 14
+    assert not list(output.glob("*rotation*"))
+    assert not list(output.glob("*b1sigma*"))
+    assert not list(output.glob("*130nm*"))
     assert not list(output.glob("*three_body*"))
     assert (output / "phelps_o2_core_manifest.json").exists()
     with pytest.raises(FileExistsError, match="overwrite"):
@@ -81,8 +81,8 @@ def test_changed_source_qscale_fails_closed():
 
 
 def test_lost_section_fails_closed():
-    src = synthetic().replace("O2 130 NM LINE MUMMA-ZIPF", "LOST SECTION")
-    ch = next(c for c in m.CHANNELS if c.name == "line_130nm")
+    src = synthetic().replace("O2 IONIZATION", "LOST SECTION")
+    ch = next(c for c in m.CHANNELS if c.name == "ionization")
     with pytest.raises(ValueError, match="exact heading"):
         m.extract(src, ch)
 
@@ -100,15 +100,12 @@ def test_duplicate_knot_in_nonrotation_fails_closed():
         m.extract(src, ch)
 
 
-def test_missing_rotation_duplicate_fails_review():
-    src = synthetic()
-    ch = next(c for c in m.CHANNELS if c.name == "rotation_300K")
-    orig = make_channel(ch)
-    # Supply strictly increasing synthetic energies, contrary to this original.
-    src = src.replace(orig, orig.replace("34 3.120000", "34 3.220000"))
-    with pytest.raises(ValueError, match="source duplicate knot disappeared"):
-        m.extract(src, ch)
-
+def test_excluded_low_priority_collisions_not_selected():
+    names = {c.name for c in m.CHANNELS}
+    assert not names & {"rotation_300K", "b1sigma", "line_130nm"}
+    assert m.EXCLUDED_SOURCE_CHANNELS == frozenset(
+        {"attachment_three_body", "rotation_300K", "b1sigma", "line_130nm"}
+    )
 
 def test_unregistered_three_body_not_generated(tmp_path):
     source = tmp_path / "source.txt"
@@ -121,7 +118,7 @@ def test_unregistered_three_body_not_generated(tmp_path):
     )
     output = tmp_path / "converted"
     manifest = m.collect(source, output, "2026-10-30")
-    assert len(manifest["channels"]) == 17
+    assert len(manifest["channels"]) == 14
     assert "attachment_three_body" not in manifest["channels"]
     assert not list(output.glob("*three_body*"))
 
@@ -134,6 +131,17 @@ def test_registering_unapproved_attachment_is_rejected(monkeypatch, tmp_path):
     monkeypatch.setattr(m, "CHANNELS", m.CHANNELS + (channel,))
     source = tmp_path / "input.txt"
     source.write_text(synthetic(), encoding="utf-8")
-    with pytest.raises(ValueError, match="UNREGISTERED_CHEMISTRY"):
+    with pytest.raises(ValueError, match="OUT_OF_SCOPE_COLLISION"):
         m.collect(source, tmp_path / "out", "2026-10-30")
+    assert not (tmp_path / "out").exists()
+
+
+@pytest.mark.parametrize("key", ["rotation_300K", "b1sigma", "line_130nm"])
+def test_reinsertion_of_excluded_source_fails_closed(monkeypatch, tmp_path, key):
+    ch = m.Channel(key, "EXCLUDED TEST", 2, 0., 1., "EXCLUDED")
+    monkeypatch.setattr(m, "CHANNELS", m.CHANNELS + (ch,))
+    original = tmp_path / "source.txt"
+    original.write_text(synthetic(), encoding="utf-8")
+    with pytest.raises(ValueError, match="OUT_OF_SCOPE_COLLISION"):
+        m.collect(original, tmp_path / "out", "2026-10-30")
     assert not (tmp_path / "out").exists()
