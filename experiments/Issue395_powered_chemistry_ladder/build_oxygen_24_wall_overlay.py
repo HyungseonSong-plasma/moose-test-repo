@@ -58,13 +58,34 @@ def inspect(base:str)->dict:
                                   "atomic_positive_ion_wall_number_flux",
                                   "electron_wall_number_flux")):
         raise ValueError("missing charged/electron wall flux, cannot claim uniform wall law")
-    # Charged surface coefficients are user-approved at 1.0 in source builder,
-    # but their exact blocks must be verified on the materialized powered input.
-    # We intentionally do not claim that this check proves all three coefficients.
+    # The three inherited charged species may use distinct material names.
+    # Resolve them instead by signed charge and molar mass, not by name.
+    ion_types=("PhysicsIonWallFluxMaterial","PhysicsIonWallTotalFluxMaterial")
+    charged_expected={(1,0.032),(-1,0.016),(1,0.016)}
+    charged_found={}
+    for name,bodies in blocks.items():
+        for body in bodies:
+            if not any(f"type = {t}" in body for t in ion_types):
+                continue
+            def value(param):
+                m=re.search(rf"(?m)^[ \\t]*{param}[ \\t]*=[ \\t]*([+-]?[0-9.eE+-]+)", body)
+                if not m:raise ValueError(f"{name}: missing explicit numeric {param}")
+                return float(m.group(1))
+            charge=value("charge_number")
+            mass=value("molar_mass")
+            gamma=value("sticking")
+            key=(round(charge),round(mass,3))
+            if key not in charged_expected:
+                continue
+            if key in charged_found:raise ValueError(f"duplicate charged wall material for {key}")
+            if gamma!=1.0:raise ValueError(f"{name}: sticking={gamma} is not 1.0")
+            charged_found[key]=name
+    if set(charged_found)!=charged_expected:
+        raise ValueError(f"cannot verify all charged sticking=1.0: found {charged_found}")
     return {"neutral_walls":list(WALLS),
             "neutral_species":list(SPECIES),
             "charged_existing_fluxes":"present_not_overwritten",
-            "charged_gamma_individual_audit":"REQUIRED_BEFORE_FULL_POWER_RUN"}
+            "charged_gamma_1_verified":sorted(charged_found.values())}
 
 def apply(base:str)->str:
     inspect(base)
@@ -101,7 +122,7 @@ def main()->None:
     args.output.parent.mkdir(parents=True,exist_ok=True)
     args.output.write_text(updated)
     print("OXYGEN_24_NEUTRAL_EXISTING_WALL_GAMMA1_APPLIED")
-    print("NO_NEW_WALL_BCS; CHARGED_STICKING_REQUIRES_RUNTIME_AUDIT")
+    print("NO_NEW_WALL_BCS; 3 CHARGED STICKING=1.0 VERIFIED IN POWERED INPUT")
 
 if __name__=="__main__":
     main()
