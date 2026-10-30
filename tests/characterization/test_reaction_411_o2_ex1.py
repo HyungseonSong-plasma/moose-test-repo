@@ -96,3 +96,18 @@ def test_411_cpp_owner_guard_and_mutations() -> None:
         src.replace("T_e.value() > 7.0", "T_e.value() > 70.0"),
     ):
         assert not all(x in faulty for x in required), "mutation must be detected"
+
+
+def test_411_powered_replay_is_opt_in_and_keeps_baseline_off() -> None:
+    replay = (
+        ROOT
+        / "experiments/Issue395_powered_chemistry_ladder/issue397_l1_power_scan_replay.sh"
+    ).read_text()
+    assert 'export EI411_CHANNEL="${EI411_CHANNEL:-off}"' in replay
+    assert 'case "$EI411_CHANNEL" in on|off)' in replay
+    assert 'if [[ "$EI411_CHANNEL" == on ]]; then' in replay
+    assert 'export RESULT="${RESULT}_plus_411_ex1"' in replay
+    assert 'build_o2_ex1_411_overlay.py' in replay
+    assert replay.count("'$OELASTIC' $EI411_CLI") == 2
+    assert 'EI411_CLI=""' in replay
+    assert '''EI411_CLI="'$EI411'"''' in replay
