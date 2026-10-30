@@ -102,6 +102,6 @@ def test_missing_rotation_duplicate_fails_review():
     ch = next(c for c in m.CHANNELS if c.name == "rotation_300K")
     orig = make_channel(ch)
     # Supply strictly increasing synthetic energies, contrary to this original.
-    src = src.replace(orig, orig.replace("34 3.250000", "34 3.350000"))
+    src = src.replace(orig, orig.replace("34 3.120000", "34 3.220000"))
     with pytest.raises(ValueError, match="source duplicate knot disappeared"):
         m.extract(src, ch)
