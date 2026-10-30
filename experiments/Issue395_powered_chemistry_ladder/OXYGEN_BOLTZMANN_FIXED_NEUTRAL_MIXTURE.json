@@ -1,0 +1,36 @@
+{
+  "schema": "oxygen-boltzmann-neutral-mixture-v1",
+  "basis": "total neutral gas density, N_gas",
+  "interpretation": "Each minor neutral-state density is 1e-5*N_gas; O2(X) takes remainder",
+  "neutral_mole_fractions": {
+    "O2(X3Sigma_g_minus)": 0.99996,
+    "O2(a1Delta_g)": 0.00001,
+    "O(3P)": 0.00001,
+    "O(1D)": 0.00001,
+    "O(1S)": 0.00001
+  },
+  "boltzmann_target_aliases": {
+    "O2": "O2(X3Sigma_g_minus)",
+    "O2a": "O2(a1Delta_g)",
+    "O": "O(3P)",
+    "O1D": "O(1D)"
+  },
+  "species_with_fraction_but_no_collision_target": [
+    "O(1S)"
+  ],
+  "excluded_from_neutral_normalization": [
+    "electron",
+    "O-",
+    "O+",
+    "O2+"
+  ],
+  "gas_number_density_m3": null,
+  "reduced_electric_field_Td": null,
+  "gas_temperature_K": null,
+  "notes": [
+    "Neutral composition only: no electron/ion density assumed",
+    "O(1S) counts toward neutral gas inventory but has no dedicated target collision in frozen 33",
+    "No EEDF solver run or chemistry runtime activation is authorized from this config",
+    "Do not claim 400W/1000W mapping without a discharge field/plasma model"
+  ]
+}
