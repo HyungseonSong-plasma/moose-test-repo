@@ -70,7 +70,8 @@ REQUIRED = (
     "[log_ne]", "[log_ni]", "[log_nm]", "[log_nop]",
     "[log_energy]", "[w_O2s]", "[w_O]", "[w_Os]", "[p]",
     "property_name = w_O2_constraint", "property_name = rho_neutral",
-    "property_name = n_e_physical", "mean_energy = mean_en_solved"
+    "property_name = n_e_physical", "mean_energy = mean_en_solved",
+    "T_g_fixed"
 )
 FORBIDDEN = (
     "R_attachment", "R_diss_O2", "R_ion_O2", "R_ion_O", "R_O2s",
@@ -196,7 +197,7 @@ def make_overlay(paths: dict[int,str], baseline: str) -> str:
             [f"c_chem24_{sp}" for sp in reactants],["a","b"],
             f"{a*N_A:.17g}*a*b"))
     material_blocks.append(parsed("chem24_rate_H25","R_H25",
-        ["c_chem24_Op","c_chem24_O2","T_g"],["a","b","tempK"],
+        ["c_chem24_Op","c_chem24_O2","T_g_fixed"],["a","b","tempK"],
         f"{2e-17*N_A:.17g}*(300.0/tempK)^0.4*a*b"))
     net={sp:[] for sp in ("e",)+HEAVY}
     for rid,sto in CHEM.items():
