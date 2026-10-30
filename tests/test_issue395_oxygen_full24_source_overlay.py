@@ -46,6 +46,9 @@ def test_source_projection_one_source_per_variable_and_heavy_units():
     assert "2.0e-13*exp(-5.5/te)*ne*c" in overlay
     assert f"{1e-13*m.N_A:.17g}*a*b" in overlay
     assert f"{2e-17*m.N_A:.17g}*(300.0/tempK)^0.4*a*b" in overlay
+    # H25 must resolve the same gas-temperature owner as the validated EI17 overlay.
+    assert "functor_names = 'c_chem24_Op c_chem24_O2 T_g_fixed'" in overlay
+    assert "functor_names = 'c_chem24_Op c_chem24_O2 T_g'" not in overlay
     for name in ("w_O","w_Os","w_O2s","log_ni","log_nm","log_nop",
                  "log_ne","log_energy","p"):
         assert overlay.count(f"variable = {name}\n")==1
@@ -125,6 +128,9 @@ def test_fail_closed_legacy_duplicate_and_missing_rate_owners():
         m.make_overlay({i:f"r{i}" for i in m.LOOKUP_IDS},_base(m)+"\nR_ion_O2\n")
     with pytest.raises(ValueError, match="all 19"):
         m.make_overlay({407:"r"},_base(m))
+    with pytest.raises(ValueError, match="T_g_fixed"):
+        m.make_overlay({i:f"r{i}" for i in m.LOOKUP_IDS},
+                       _base(m).replace("T_g_fixed\\n", ""))
 
 def test_power_replay_research_mode_must_skip_legacy_chemistry():
     s=(DIR/"issue397_l1_power_scan_replay.sh").read_text()
