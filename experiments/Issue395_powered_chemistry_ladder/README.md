@@ -42,6 +42,42 @@ baseline. Validate an archived L1 `.msh` without regeneration using
 thermal+migration ion wall conditions and existing electron sheath for
 apples-to-apples experiments.
 
+## Reaction 411 — O2(ex1) 4.5 eV formula, opt-in
+
+The separate 4.5 eV O2 electronic-excitation channel is **not** the 6.0 eV
+dissociative-excitation channel, and is **not** the 0.977 eV O2(a1Delta_g)
+metastable excitation (EI10/407). Reaction 411 uses:
+
+```text
+e + O2(X3Sigma_g-) -> e + O2(ex1)
+k_particle(Te) = 1.07e-15 exp(-3.43/Te) [m3/s]
+Te [eV] = (2/3)*mean_en_solved [eV], valid 1 <= Te <= 7 eV
+R_O2_ex1_411 = (N_A*k_particle)*(n_e_physical/N_A)*c_O2 [mol/(m3 s)]
+c_O2 = rho_neutral*w_O2_constraint/0.032 [mol/m3]
+S_electron_energy_molar_411 = -4.5*R_O2_ex1_411 [eV mol/(m3 s)]
+```
+
+The current powered model does not transport O2(ex1); the 411 projection
+therefore affects **electron energy only**, not O2 mass, O atom production,
+electrons, or ions. The loss is connected to `log_energy` through the same
+`FunctorKernel` /`functor_on_rhs = true` convention as existing EI20.
+
+**Source:** Gudmundsson et al. (2000), *On the plasma parameters of a planar
+inductive oxygen discharge*, J. Phys. D: Appl. Phys. 33, 1323–1331,
+**Table 3**, DOI https://doi.org/10.1088/0022-3727/33/11/311.
+The fitted rate assumes a Maxwellian EEDF, Te 1–7 eV; this is not a
+cross-section lookup or a direct non-Maxwellian EEDF evaluation. The model
+rejects invalid/out-of-range Te rather than silently extrapolating.
+
+The existing powered replay defaults to **411 OFF**. To opt in for a
+supported power, export `EI411_CHANNEL=on` for **every** replay phase
+(`prepare`, `build`, `check`, `solve`, `audit`).
+This creates a separate `_plus_411_ex1` result directory and adds the
+`o2_ex1_excitation_411_..._overlay.i` only when enabled. The historical
+power-scan baseline is unchanged when `EI411_CHANNEL` is unset.
+This wiring requires exact-head `physics-opt` P2/P3 validation before
+any scientific activation PASS can be claimed.
+
 ## Ground-state O2 dissociation rate correction (bounded successor, 2026-10-26)
 
 The canonical generator `build_o2_dissociation_overlay.py` now targets **only**
