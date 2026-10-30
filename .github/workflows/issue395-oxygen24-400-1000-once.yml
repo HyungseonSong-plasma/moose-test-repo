@@ -2,7 +2,7 @@
 # User-authorized research run. Input tables enter only through repository Secret.
 # Self-path-triggered on main; remove after terminal evidence and review.
 name: Issue395 Oxygen24 400 1000 W once
-run-name: Oxygen24 400/1000 W SHA b975dcd985f1
+run-name: Oxygen24 400/1000 W SHA 47a86d857089
 on:
   push:
     branches: [main]
@@ -46,7 +46,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 360
     env:
-      CHATGPT_WORK_BASE_SHA: b975dcd903279ab2ccef9254aea79f5b0aba405c
+      CHATGPT_WORK_BASE_SHA: 47a86d85708923a6a05c2c0eefb09a4ed0e4cadc
       OXYGEN_RESEARCH_400: '1'
       OXYGEN_RESEARCH_FULL24: '1'
       OXYGEN_RESEARCH_RATE_DIR: /tmp/oxygen24/private_rates
@@ -55,7 +55,7 @@ jobs:
       - name: Checkout exact reviewed 24-reaction experiment source
         uses: actions/checkout@v4
         with:
-          ref: b975dcd903279ab2ccef9254aea79f5b0aba405c
+          ref: 47a86d85708923a6a05c2c0eefb09a4ed0e4cadc
           fetch-depth: 1
 
       - name: Verify source and avoid publishing user rate tables
@@ -139,7 +139,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: issue395-oxygen24-${{ matrix.power_w }}W-100us-exact-b975dcd9
+          name: issue395-oxygen24-${{ matrix.power_w }}W-100us-exact-47a86d85
           if-no-files-found: warn
           retention-days: 30
           path: |
