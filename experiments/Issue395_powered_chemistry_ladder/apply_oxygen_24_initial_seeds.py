@@ -13,8 +13,8 @@ from pathlib import Path
 
 N_A = 6.02214076e23
 SEEDS_M3 = {"log_ne":1e15,"log_ni":1e15,"log_nop":1e12,"log_nm":1e12}
-BLOCK=re.compile(r"(?ms)^  \[(?P<name>log_ne|log_ni|log_nop|log_nm)\]\s*\n(?P<body>.*?)^  \[\]\s*$")
-INITIAL=re.compile(r"(?m)^(?P<indent>\s*)initial_condition\s*=\s*[^\r\n#]+(?P<comment>\s*(?:#[^\r\n]*)?)$")
+BLOCK=re.compile(r"(?ms)^  \[(?P<name>log_ne|log_ni|log_nop|log_nm)\][ \t]*\n(?P<body>.*?)^  \[\][ \t]*(?=\r?$)")
+INITIAL=re.compile(r"(?m)^(?P<indent>[ \t]*)initial_condition[ \t]*=[ \t]*[^\r\n#]+(?P<comment>\s*(?:#[^\r\n]*)?)$")
 
 def apply(text: str) -> str:
     matches=list(BLOCK.finditer(text))
