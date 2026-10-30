@@ -335,8 +335,7 @@ docker run --rm --entrypoint /bin/bash --user 0:0 \
       '$ION' \
       '$ION_O' \
       '$ATTACH' \
-      '$OELASTIC' \
-      ${O2A_EXTRA_INPUT}
+      '$OELASTIC' ${O2A_EXTRA_INPUT}
   " 2>&1 | tee "$RESULT/check_input.log"
     ;;
   solve)
@@ -358,8 +357,7 @@ docker run --rm --entrypoint /bin/bash --user 0:0 \
       '$ION_O' \
       '$ATTACH' \
       '$OELASTIC' \
-      ${O2A_EXTRA_INPUT} \
-      Outputs/file_base='$RESULT/run/plasma'
+      Outputs/file_base='$RESULT/run/plasma' ${O2A_EXTRA_INPUT}
   " 2>&1 | tee "$RESULT/runtime.log"
     ;;
   audit)
