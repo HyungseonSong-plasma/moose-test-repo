@@ -46,6 +46,11 @@ export OELASTIC="$CHEM/o_elastic_ei17_${POWER_W}w_100us_dt${DT_NS}ns_overlay.i"
 # Off by default. Historical validated 200/250/300/600/1000W replays unchanged.
 export O2A_LUMPED="$CHEM/o2a_lumped_ei407_413_414_${POWER_W}w_100us_dt${DT_NS}ns_overlay.i"
 export O2A_EXTRA_INPUT=''
+export EI2738_OVERLAY="$CHEM/ei2738_detachment_formula_${POWER_W}w_100us_dt${DT_NS}ns_overlay.i"
+export EI2738_EXTRA_INPUT=''
+if [[ "${OXYGEN_RESEARCH_EI2738_FORMULA:-0}" = 1 ]]; then
+  EI2738_EXTRA_INPUT="'$EI2738_OVERLAY'"
+fi
 if [[ "${OXYGEN_RESEARCH_LUMPED_O2A:-0}" = 1 ]]; then
   test -n "${OXYGEN_RESEARCH_RATE_DIR:-}" || {
     echo "OXYGEN_RESEARCH_RATE_DIR with three 100-point lookups is required" >&2; exit 2;
@@ -294,6 +299,14 @@ if [[ "${OXYGEN_RESEARCH_LUMPED_O2A:-0}" = 1 ]]; then
     test -s "$CHEM/private_rates/EI-$rid"_O2_X.txt
   done
 fi
+if [[ "${OXYGEN_RESEARCH_EI2738_FORMULA:-0}" = 1 ]]; then
+  python3 "$CHEM/build_ei2738_detachment_formula_overlay.py" \
+    --base-input "$INPUT" \
+    --output "$EI2738_OVERLAY" \
+    | tee "$RESULT/prep/ei2738_detachment_formula.log"
+  test -s "$EI2738_OVERLAY" || { echo "EI2738 Formula overlay missing" >&2; exit 2; }
+  grep -q 'property_name = R_EI2738' "$EI2738_OVERLAY"
+fi
     ;;
   build)
 docker pull "$BUILD_BASE_REF"
@@ -335,7 +348,7 @@ docker run --rm --entrypoint /bin/bash --user 0:0 \
       '$ION' \
       '$ION_O' \
       '$ATTACH' \
-      '$OELASTIC' ${O2A_EXTRA_INPUT}
+      '$OELASTIC' ${O2A_EXTRA_INPUT} ${EI2738_EXTRA_INPUT}
   " 2>&1 | tee "$RESULT/check_input.log"
     ;;
   solve)
@@ -357,7 +370,7 @@ docker run --rm --entrypoint /bin/bash --user 0:0 \
       '$ION_O' \
       '$ATTACH' \
       '$OELASTIC' \
-      Outputs/file_base='$RESULT/run/plasma' ${O2A_EXTRA_INPUT}
+      Outputs/file_base='$RESULT/run/plasma' ${O2A_EXTRA_INPUT} ${EI2738_EXTRA_INPUT}
   " 2>&1 | tee "$RESULT/runtime.log"
     ;;
   audit)
