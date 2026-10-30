@@ -130,7 +130,7 @@ def test_fail_closed_legacy_duplicate_and_missing_rate_owners():
         m.make_overlay({407:"r"},_base(m))
     with pytest.raises(ValueError, match="T_g_fixed"):
         m.make_overlay({i:f"r{i}" for i in m.LOOKUP_IDS},
-                       _base(m).replace("T_g_fixed\\n", ""))
+                       _base(m).replace("T_g_fixed", ""))
 
 def test_power_replay_research_mode_must_skip_legacy_chemistry():
     s=(DIR/"issue397_l1_power_scan_replay.sh").read_text()
