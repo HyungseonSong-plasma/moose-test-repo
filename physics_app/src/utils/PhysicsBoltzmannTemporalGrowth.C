@@ -1,5 +1,6 @@
 #include "PhysicsBoltzmannTemporalGrowth.h"
 #include "PhysicsBoltzmannEnergyMesh.h"
+#include "PhysicsBoltzmannSubcellReconstruction.h"
 
 #include <algorithm>
 #include <cmath>
@@ -101,7 +102,8 @@ TemporalGrowthResult solveElasticTemporalGrowth(
     const ElasticInput & input,
     const std::vector<IonizationChannel> & ionizations,
     const std::vector<AttachmentChannel> & attachments,
-    const std::vector<ExcitationChannel> & excitations)
+    const std::vector<ExcitationChannel> & excitations,
+    const std::vector<double> & reference_eepf)
 {
   // The 07/2024 BOLSIG+ Example 4 reference uses 200 automatic-grid
   // cells. Raise the *development-only* dense eigen reference bound to
@@ -117,7 +119,8 @@ TemporalGrowthResult solveElasticTemporalGrowth(
 
   // Use the validated M6 operator as the one source of number-changing
   // transfer coefficients; do not reimplement its equal-sharing rule here.
-  const auto growth_op = assembleGrowthCollisions(input, ionizations, attachments);
+  const auto growth_op = assembleGrowthCollisions(
+      input, ionizations, attachments, reference_eepf);
   const std::size_t n = input.cells;
   const auto edges = energyMeshEdges(input);
   const auto centers = energyMeshCenters(edges);
@@ -346,15 +349,25 @@ TemporalGrowthResult solveElasticTemporalGrowth(
   out.distribution.normalization = 1.0;
   out.distribution.maximum_normalized_flux_residual =
       std::numeric_limits<double>::quiet_NaN();
-  double energy = 0.0;
-  for (std::size_t i = 0; i < n; ++i)
+  // The optional Picard-frozen reconstruction changes the first energy
+  // moment even though it preserves the sqrt(E)-weighted electron number.
+  // Use the same subcell shape as Q; keep the legacy constant-cell moment
+  // exactly when reconstruction is disabled.
+  if (!reference_eepf.empty())
+    out.distribution.mean_energy_eV =
+        reconstructedMeanEnergyEV(edges, f, reference_eepf);
+  else
   {
-    const double lo = edges[i], hi = edges[i+1];
-    energy += f[i] * (2.0 / 5.0) * (std::pow(hi, 2.5) - std::pow(lo, 2.5));
+    double energy = 0.0;
+    for (std::size_t i = 0; i < n; ++i)
+    {
+      const double lo = edges[i], hi = edges[i+1];
+      energy += f[i] * (2.0 / 5.0) * (std::pow(hi, 2.5) - std::pow(lo, 2.5));
+    }
+    out.distribution.mean_energy_eV = energy;
   }
-  out.distribution.mean_energy_eV = energy;
   out.growth = evaluateGrowthOnFrozenEepf(input, out.distribution,
-                                          ionizations, attachments);
+                                          ionizations, attachments, reference_eepf);
   growth_lambda = out.growth.reduced_temporal_growth_m3_per_s;
   out.reduced_growth_eigenvalue_m3_per_s = growth_lambda;
   out.inverse_iterations = iterations;

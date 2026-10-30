@@ -416,6 +416,74 @@ jobs:
             tests/boltzmann/cross_section_import_test.C \
             -o /tmp/boltzmann-cross-section-import-test
           /tmp/boltzmann-cross-section-import-test
+      - name: P0-1 independent energy-ceiling convergence, threshold and actual C++ elastic re-solves
+        run: |
+          g++ -std=c++17 -O2 -Wall -Wextra -Werror -pedantic \
+            -Iphysics_app/include/utils \
+            physics_app/src/utils/PhysicsBoltzmannElasticSolver.C \
+            tests/boltzmann/energy_ceiling_controller_test.C \
+            -o /tmp/boltzmann-energy-ceiling-test
+          /tmp/boltzmann-energy-ceiling-test
+      - name: P0-1 actual C++ coupled temporal-growth Emax re-solves (synthetic cross sections)
+        run: |
+          g++ -std=c++17 -O2 -Wall -Wextra -Werror -pedantic \
+            -Iphysics_app/include/utils \
+            physics_app/src/utils/PhysicsBoltzmannElasticSolver.C \
+            physics_app/src/utils/PhysicsBoltzmannGrowth.C \
+            physics_app/src/utils/PhysicsBoltzmannTemporalGrowth.C \
+            tests/boltzmann/growth_energy_ceiling_test.C \
+            -o /tmp/boltzmann-growth-energy-ceiling-test
+          /tmp/boltzmann-growth-energy-ceiling-test
+      - name: P0-2 threshold-aware nonuniform FV mesh and actual C++ M6b eigen/rates (synthetic)
+        run: |
+          g++ -std=c++17 -O2 -Wall -Wextra -Werror -pedantic \
+            -Iphysics_app/include/utils \
+            physics_app/src/utils/PhysicsBoltzmannElasticSolver.C \
+            physics_app/src/utils/PhysicsBoltzmannGrowth.C \
+            physics_app/src/utils/PhysicsBoltzmannTemporalGrowth.C \
+            tests/boltzmann/threshold_mesh_growth_test.C \
+            -o /tmp/boltzmann-threshold-mesh-growth-test
+          /tmp/boltzmann-threshold-mesh-growth-test
+      - name: P0-1/P0-2 integrated adaptive Emax + threshold mesh M6b eigen/rates (synthetic)
+        run: |
+          g++ -std=c++17 -O2 -Wall -Wextra -Werror -pedantic \
+            -Iphysics_app/include/utils \
+            physics_app/src/utils/PhysicsBoltzmannElasticSolver.C \
+            physics_app/src/utils/PhysicsBoltzmannGrowth.C \
+            physics_app/src/utils/PhysicsBoltzmannTemporalGrowth.C \
+            tests/boltzmann/adaptive_growth_ceiling_test.C \
+            -o /tmp/boltzmann-adaptive-growth-ceiling-test
+          /tmp/boltzmann-adaptive-growth-ceiling-test
+      - name: P0-2 fixed-Emax independent M6b mesh refinement, EEPF L1 and rate convergence (synthetic)
+        run: |
+          g++ -std=c++17 -O2 -Wall -Wextra -Werror -pedantic \
+            -Iphysics_app/include/utils \
+            physics_app/src/utils/PhysicsBoltzmannElasticSolver.C \
+            physics_app/src/utils/PhysicsBoltzmannGrowth.C \
+            physics_app/src/utils/PhysicsBoltzmannTemporalGrowth.C \
+            tests/boltzmann/fixed_emax_mesh_convergence_test.C \
+            -o /tmp/boltzmann-fixed-emax-mesh-test
+          /tmp/boltzmann-fixed-emax-mesh-test
+      - name: P0-1/P0-2 joint Emax and independent mesh convergence gate (synthetic M6b)
+        run: |
+          g++ -std=c++17 -O2 -Wall -Wextra -Werror -pedantic \
+            -Iphysics_app/include/utils \
+            physics_app/src/utils/PhysicsBoltzmannElasticSolver.C \
+            physics_app/src/utils/PhysicsBoltzmannGrowth.C \
+            physics_app/src/utils/PhysicsBoltzmannTemporalGrowth.C \
+            tests/boltzmann/joint_emax_mesh_convergence_test.C \
+            -o /tmp/boltzmann-joint-emax-mesh-test
+          /tmp/boltzmann-joint-emax-mesh-test
+      - name: P0-3 conservative reconstructed growth operator and actual M6b Picard eigen re-solves (synthetic)
+        run: |
+          g++ -std=c++17 -O2 -Wall -Wextra -Werror -pedantic \
+            -Iphysics_app/include/utils \
+            physics_app/src/utils/PhysicsBoltzmannElasticSolver.C \
+            physics_app/src/utils/PhysicsBoltzmannGrowth.C \
+            physics_app/src/utils/PhysicsBoltzmannTemporalGrowth.C \
+            tests/boltzmann/reconstructed_growth_picard_test.C \
+            -o /tmp/boltzmann-reconstructed-growth-picard-test
+          /tmp/boltzmann-reconstructed-growth-picard-test
       - name: Compile and run actual C++ Boltzmann solver on invented elastic controls
         run: python3 physics_app/ci/export_boltzmann_ci_eepf.py --out boltzmann-ci-eepf
       - name: Upload C++ EEPF data, explicitly marked not real-gas parity
