@@ -1,0 +1,14 @@
+# Research seed for 400 W / 1000 W oxygen ICP. Do NOT overwrite qualified baseline.
+# From discriminator reference: n_e = n_O2+ = 1e15 m^-3.
+# Proposed, NOT source-verified: n_O+ = n_O- = 1e12 m^-3.
+# Charge balance: n_O2+ + n_O+ = n_e + n_O- = 1.001e15 m^-3.
+# Existing MOOSE states are log(molar_concentration) = ln(n / 6.02214076e23).
+# For EXISTING variable blocks, set:
+#  [log_ne]  initial_condition = -20.216123548032986     (electron)
+#  [log_ni]  initial_condition = -20.216123548032986     (O2+)
+#  [log_nop] initial_condition = -27.123878827015126     (O+)
+#  [log_nm]  initial_condition = -27.123878827015126     (O-)
+# Do not create duplicate variables; preserve actual powered input if different.
+# Temperature, inlet, pressure, wall and RF power use the qualified powered baseline.
+# H23/H24 may be enabled in a staged research case after provider/source checks;
+# H25 remains disabled pending validation of QDB T_ref.

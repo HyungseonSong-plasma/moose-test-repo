@@ -6,7 +6,13 @@
 set -euo pipefail
 PHASE="${1:?usage: bash issue397_l1_power_scan_replay.sh prepare|build|check|solve|audit 200|250|300}"
 POWER_W="${2:?RF target 200, 250, 300, 600 or 1000 W is required}"
-case "$POWER_W" in 200|250|300|600|1000) ;; *) echo "unsupported RF target: $POWER_W" >&2; exit 2 ;; esac
+# The fixed historical power allowlist remains byte-identical in its control
+# branch. Only the opt-in 400 W research case bypasses that allowlist.
+if [[ "$POWER_W" = 400 && "${OXYGEN_RESEARCH_400:-0}" = 1 ]]; then
+  :
+else
+  case "$POWER_W" in 200|250|300|600|1000) ;; *) echo "unsupported RF target: $POWER_W" >&2; exit 2 ;; esac
+fi
 case "$PHASE" in prepare|build|check|solve|audit) ;; *) echo "unsupported phase: $PHASE" >&2; exit 2 ;; esac
 test "$(git rev-parse --show-toplevel)" = "$PWD" || {
   echo "run the replay from the exact repository checkout root" >&2; exit 2;
@@ -36,6 +42,37 @@ export ION="$CHEM/o2_ionization_${POWER_W}w_100us_dt${DT_NS}ns_overlay.i"
 export ION_O="$CHEM/o_ionization_ei20_${POWER_W}w_100us_dt${DT_NS}ns_overlay.i"
 export ATTACH="$CHEM/o2_attachment_ei01_${POWER_W}w_100us_dt${DT_NS}ns_overlay.i"
 export OELASTIC="$CHEM/o_elastic_ei17_${POWER_W}w_100us_dt${DT_NS}ns_overlay.i"
+# Optional NEW research-only EI407/413/414 -> O2(a) lumped source.
+# Off by default. Historical validated 200/250/300/600/1000W replays unchanged.
+export O2A_LUMPED="$CHEM/o2a_lumped_ei407_413_414_${POWER_W}w_100us_dt${DT_NS}ns_overlay.i"
+export O2A_EXTRA_INPUT=''
+export EI2738_OVERLAY="$CHEM/ei2738_detachment_formula_${POWER_W}w_100us_dt${DT_NS}ns_overlay.i"
+export EI2738_EXTRA_INPUT=''
+if [[ "${OXYGEN_RESEARCH_EI2738_FORMULA:-0}" = 1 ]]; then
+  EI2738_EXTRA_INPUT="'$EI2738_OVERLAY'"
+fi
+# Full 24-channel experimental case: exactly ONE chemistry overlay owns
+# all 19 electron lookup, two formula and three heavy reaction progress rates.
+export FULL24_OVERLAY="$CHEM/full24_${POWER_W}w_100us_dt${DT_NS}ns_overlay.i"
+export CHEM_SOURCE_INPUTS="'$DISS' '$ION' '$ION_O' '$ATTACH'"
+export FULL24_EXTRA_INPUT=''
+if [[ "${OXYGEN_RESEARCH_FULL24:-0}" = 1 ]]; then
+  test -n "${OXYGEN_RESEARCH_RATE_DIR:-}" || {
+    echo "OXYGEN_RESEARCH_FULL24 needs private 19 lookup files" >&2; exit 2;
+  }
+  test "${OXYGEN_RESEARCH_LUMPED_O2A:-0}" != 1 && \
+  test "${OXYGEN_RESEARCH_EI2738_FORMULA:-0}" != 1 || {
+    echo "FULL24 cannot run simultaneously with prior partial EI overlays" >&2; exit 2;
+  }
+  # Full24 subsumes partial 401/415/dissociation/O2a/2738 owners.
+  CHEM_SOURCE_INPUTS="'$FULL24_OVERLAY'"
+fi
+if [[ "${OXYGEN_RESEARCH_LUMPED_O2A:-0}" = 1 ]]; then
+  test -n "${OXYGEN_RESEARCH_RATE_DIR:-}" || {
+    echo "OXYGEN_RESEARCH_RATE_DIR with three 100-point lookups is required" >&2; exit 2;
+  }
+  O2A_EXTRA_INPUT="'$O2A_LUMPED'"
+fi
 echo "ISSUE397_REPLAY_PHASE=$PHASE TARGET_W=$POWER_W SOURCE_SHA=$(git rev-parse HEAD)"
 case "$PHASE" in
   prepare)
@@ -266,6 +303,47 @@ grep -q 'variable = w_O' "$ATTACH"
 grep -q 'S_heavy_mass_closure_EI01' "$ATTACH"
 grep -q 'S_charge_molar_closure_EI01' "$ATTACH"
 test "$(grep -c 'reaction_progress = R_attachment' "$ATTACH")" -eq 1
+if [[ "${OXYGEN_RESEARCH_LUMPED_O2A:-0}" = 1 ]]; then
+  python3 "$CHEM/build_lumped_o2a_ei407_413_414.py" \
+    --base-input "$INPUT" \
+    --rate-dir "$OXYGEN_RESEARCH_RATE_DIR" \
+    --output "$O2A_LUMPED" \
+    | tee "$RESULT/prep/o2a_lumped_EI407_413_414.log"
+  test -s "$O2A_LUMPED" || { echo "missing O2a lumped overlay" >&2; exit 2; }
+  for rid in 407 413 414; do
+    grep -q "reaction_progress = R_EI$rid" "$O2A_LUMPED"
+    test -s "$CHEM/private_rates/EI-$rid"_O2_X.txt
+  done
+fi
+if [[ "${OXYGEN_RESEARCH_EI2738_FORMULA:-0}" = 1 ]]; then
+  python3 "$CHEM/build_ei2738_detachment_formula_overlay.py" \
+    --base-input "$INPUT" \
+    --output "$EI2738_OVERLAY" \
+    | tee "$RESULT/prep/ei2738_detachment_formula.log"
+  test -s "$EI2738_OVERLAY" || { echo "EI2738 Formula overlay missing" >&2; exit 2; }
+  grep -q 'property_name = R_EI2738' "$EI2738_OVERLAY"
+fi
+if [[ "${OXYGEN_RESEARCH_FULL24:-0}" = 1 ]]; then
+  # The 200sccm inlet is a research modification, never overwrite old baseline.
+  python3 "$CHEM/build_oxygen_icp_200sccm_inlet.py" \
+    --base-input "$INPUT" --output "$INPUT.full24_tmp"
+  mv "$INPUT.full24_tmp" "$INPUT"
+  python3 "$CHEM/apply_oxygen_24_initial_seeds.py" \
+    --base-input "$INPUT" --output "$INPUT.seed_tmp"
+  mv "$INPUT.seed_tmp" "$INPUT"
+  python3 "$CHEM/build_oxygen_24_wall_overlay.py" \
+    --base-input "$INPUT" --output "$INPUT.wall_tmp" \
+    | tee "$RESULT/prep/full24_wall_sticking1.log"
+  mv "$INPUT.wall_tmp" "$INPUT"
+  python3 "$CHEM/build_oxygen_24_source_overlay.py" \
+    --base-input "$INPUT" \
+    --rate-dir "$OXYGEN_RESEARCH_RATE_DIR" \
+    --root "$PWD" --output "$FULL24_OVERLAY" \
+    | tee "$RESULT/prep/full24_source_overlay.log"
+  grep -q 'OXYGEN_24_CHEMISTRY_OVERLAY_PREPARED_NOT_RUN' \
+    "$RESULT/prep/full24_source_overlay.log"
+  test -s "$FULL24_OVERLAY"
+fi
     ;;
   build)
 docker pull "$BUILD_BASE_REF"
@@ -291,6 +369,9 @@ test -x physics_app/physics-opt
     ;;
   check)
 set -euo pipefail
+if [[ "${OXYGEN_RESEARCH_LUMPED_O2A:-0}" = 1 ]]; then
+  test -s "$O2A_LUMPED" || { echo "O2a overlay not prepared" >&2; exit 2; }
+fi
 docker run --rm --entrypoint /bin/bash --user 0:0 \
   --workdir /workspace -v "$GITHUB_WORKSPACE:/workspace" \
   "$BUILD_BASE_REF" -lc "
@@ -300,15 +381,15 @@ docker run --rm --entrypoint /bin/bash --user 0:0 \
       -i '$INPUT' \
       '$PARENT' \
       '$ELASTIC' \
-      '$DISS' \
-      '$ION' \
-      '$ION_O' \
-      '$ATTACH' \
-      '$OELASTIC'
+      ${CHEM_SOURCE_INPUTS} \
+      '$OELASTIC' ${O2A_EXTRA_INPUT} ${EI2738_EXTRA_INPUT}
   " 2>&1 | tee "$RESULT/check_input.log"
     ;;
   solve)
 set -euo pipefail
+if [[ "${OXYGEN_RESEARCH_LUMPED_O2A:-0}" = 1 ]]; then
+  test -s "$O2A_LUMPED" || { echo "O2a overlay not prepared" >&2; exit 2; }
+fi
 docker run --rm --entrypoint /bin/bash --user 0:0 \
   --workdir /workspace -v "$GITHUB_WORKSPACE:/workspace" \
   "$BUILD_BASE_REF" -lc "
@@ -318,12 +399,9 @@ docker run --rm --entrypoint /bin/bash --user 0:0 \
       -i '$INPUT' \
       '$PARENT' \
       '$ELASTIC' \
-      '$DISS' \
-      '$ION' \
-      '$ION_O' \
-      '$ATTACH' \
+      ${CHEM_SOURCE_INPUTS} \
       '$OELASTIC' \
-      Outputs/file_base='$RESULT/run/plasma'
+      Outputs/file_base='$RESULT/run/plasma' ${O2A_EXTRA_INPUT} ${EI2738_EXTRA_INPUT}
   " 2>&1 | tee "$RESULT/runtime.log"
     ;;
   audit)

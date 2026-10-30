@@ -104,10 +104,15 @@ def _validated_parameters(parameters: Mapping[str, Any]) -> dict[str, Any]:
             "A6 electron wall mode is frozen to matched_signed_charge_ledger"
         )
 
+    # Explicit research-only override for the 200-sccm oxygen ICP variant.
+    # Frozen Issue-27 wall coefficients remain the default for historical cases.
+    research_uniform = parameters.get("research_uniform_sticking", False)
+    if type(research_uniform) is not bool:
+        raise Issue27CombinedWallError("research_uniform_sticking must be a boolean")
     expected = {
-        "O_sticking_coefficient": 0.2,
+        "O_sticking_coefficient": 1.0 if research_uniform else 0.2,
         "O2s_sticking_coefficient": 1.0,
-        "Os_sticking_coefficient": 0.2,
+        "Os_sticking_coefficient": 1.0 if research_uniform else 0.2,
         "O2p_sticking_coefficient": 1.0,
         "Om_sticking_coefficient": 1.0,
         "Op_sticking_coefficient": 1.0,
@@ -122,6 +127,8 @@ def _validated_parameters(parameters: Mapping[str, Any]) -> dict[str, Any]:
         "motz_wise_correction": False,
         "electron_wall_mode": "matched_signed_charge_ledger",
     }
+    if research_uniform:
+        frozen["research_uniform_sticking"] = True
     for name, target in expected.items():
         value = _float_parameter(parameters, name, target)
         if not math.isclose(value, target, rel_tol=0.0, abs_tol=0.0):

@@ -103,3 +103,39 @@ def test_historical_coefficient_mixup_fails_independent_oracle(wrong_rate: str) 
         2.7283101303374e-16,
         rel_tol=1e-3,
     )
+
+
+def test_opt_in_native_two_channel_rate_tables(tmp_path: Path) -> None:
+    base = tmp_path / "base.i"
+    output = tmp_path / "native_diss.i"
+    base.write_text(BASE, encoding="utf-8")
+    sources = []
+    for rid in (411, 412):
+        path = tmp_path / f"EI-{rid}.txt"
+        path.write_text(
+            "# mean_energy_eV k_raw_m3_per_mol_s\n"
+            + "".join(f"{1.5 + 0.36*i:.17g} {float(rid)*1e-12:.17g}\n"
+                      for i in range(100)),
+            encoding="utf-8",
+        )
+        sources.append(path)
+    cmd = [
+        sys.executable, str(GENERATOR),
+        "--base-input", str(base), "--output", str(output),
+        "--rate-411-file", str(sources[0]), "--rate-412-file", str(sources[1]),
+    ]
+    run = subprocess.run(cmd, text=True, capture_output=True, check=False)
+    assert run.returncode == 0, run.stderr
+    generated = output.read_text(encoding="utf-8")
+    assert "ISSUE395_TWO_CHANNEL_NATIVE_LOOKUP_MODE_PASS" in run.stdout
+    assert generated.count("type = PhysicsElectronImpactRateMaterial") == 2
+    assert generated.count("property_name = R_diss_O2") == 1
+    assert expression(generated, "diss_total_progress") == "R411+R412"
+    energy = expression(generated, "diss_electron_energy_source")
+    assert evaluate(energy, R411=2, R412=3) == -27.0
+    assert evaluate(expression(generated, "diss_o_mass_source"), R=5.0) == 0.16
+    assert "te^(-0.22)" not in generated
+    assert "electron_particle_source" not in generated
+    wrong = subprocess.run(cmd[:-2], text=True, capture_output=True, check=False)
+    assert wrong.returncode != 0
+    assert "both rate-411-file and rate-412-file" in wrong.stderr

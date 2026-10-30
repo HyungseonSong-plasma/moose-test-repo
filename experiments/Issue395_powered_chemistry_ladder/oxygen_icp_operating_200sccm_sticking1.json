@@ -1,0 +1,222 @@
+{
+  "schema_version": 1,
+  "scope": "research_only_O2_ICP_400W_1000W",
+  "rf_targets_w": [
+    400,
+    1000
+  ],
+  "inlet": {
+    "Q_sccm": 200,
+    "Vm_std_m3_per_mol": 0.0224136,
+    "standard_volumetric_flow_m3_s": 0.0000033333333333333333,
+    "source": "Boltzmann 100-point EEDF neutral mixture; mole fractions preserved, translated to MOOSE mass fractions",
+    "mole_fractions": {
+      "O2_X": 0.99997,
+      "O2_a1Delta": 0.00001,
+      "O_3P": 0.00001,
+      "O_1D": 0.00001
+    },
+    "molar_masses_kg_per_mol": {
+      "O2_X": 0.032,
+      "O2_a1Delta": 0.032,
+      "O_3P": 0.016,
+      "O_1D": 0.016
+    },
+    "mean_molar_mass_kg_per_mol": 0.031999679999999996,
+    "mass_fractions": {
+      "Yin_O2": 0.9999799997999981,
+      "Yin_O2s": 0.000010000100001000012,
+      "Yin_O": 0.000005000050000500006,
+      "Yin_Os": 0.000005000050000500006,
+      "Yin_O2p": 0,
+      "Yin_Om": 0,
+      "Yin_Op": 0
+    },
+    "total_mass_flow_kg_s": 0.000004758967769568476
+  },
+  "wall": {
+    "research_uniform_sticking": true,
+    "wall_model": "combined_comsol_wall_control",
+    "wall_scope": "all_plasma_walls",
+    "gas_temperature_functor": "T_g",
+    "motz_wise_correction": false,
+    "electron_wall_mode": "matched_signed_charge_ledger",
+    "O_sticking_coefficient": 1,
+    "O2s_sticking_coefficient": 1,
+    "Os_sticking_coefficient": 1,
+    "O2p_sticking_coefficient": 1,
+    "Om_sticking_coefficient": 1,
+    "Op_sticking_coefficient": 1,
+    "secondary_emission_coefficient": 0,
+    "exclude_boundaries": [
+      "inlet",
+      "outlet"
+    ]
+  },
+  "warning": "Research-only oxygen ICP reduced-chemistry: EI412 Lookup, EI2259 and EI2738 literature thermal Formula, EI2074 provisional option, EI936 disabled, EI413/414 O2a lump, user-selected dissociation channels and H23-H25. Full powered transient not run.",
+  "initial_conditions": {
+    "charged_species_number_density_m3": {
+      "electron": 1000000000000000,
+      "O2_plus": 1000000000000000,
+      "O_plus": 1000000000000,
+      "O_minus": 1000000000000
+    },
+    "charged_seed_policy": "preserve previously specified research seed; charge-neutral",
+    "neutral_bulk_initialization_policy": "preserve inherited ICP bulk initial densities; inlet neutral composition changed only"
+  },
+  "chemistry": {
+    "source_inventory_count": 25,
+    "active_reaction_count": 24,
+    "active_lookup_rate_count": 19,
+    "formula_rate_count": 2,
+    "heavy_rate_count": 3,
+    "excluded_reactions": [
+      "936"
+    ],
+    "disabled_reaction_progress": [
+      "R_EI936"
+    ],
+    "disabled_species_and_energy_sources": [
+      "S_EI936_O_3P",
+      "S_EI936_O_1S",
+      "S_EI936_electron_energy"
+    ],
+    "keep_reactions": [
+      "935",
+      "943"
+    ],
+    "solver_species_identity": {
+      "O(3P)": "O",
+      "O(1D)": "Os",
+      "O2(a1Delta_g)": "O2s"
+    },
+    "convention": "Original 25-reaction source inventory preserved. Experimental 400/1000 W model excludes EI-936; must never map O(1S) to Os.",
+    "lumped_O2a_source": {
+      "status": "USER_SELECTED_LUMPED_EFFECTIVE_PRODUCT",
+      "reaction_ids": [
+        "407",
+        "413",
+        "414"
+      ],
+      "reactant": "e + O2(X)",
+      "product": "e + O2(a1Delta_g)",
+      "solver_product": "O2s",
+      "solved_mass_fraction": "w_O2s",
+      "combined_molar_progress": "R_EI407 + R_EI413 + R_EI414",
+      "source_mass_kg_m3_s": "0.032 * (R_EI407 + R_EI413 + R_EI414)",
+      "implicit_o2_mass_loss_kg_m3_s": "-0.032 * (R_EI407 + R_EI413 + R_EI414)",
+      "energy_losses_eV": {
+        "407": 0.977,
+        "413": 8.4,
+        "414": 10
+      },
+      "energy_source_eV_mol_m3_s": "-0.977*R_EI407 -8.4*R_EI413 -10.0*R_EI414",
+      "electron_particle_source": "zero",
+      "canonical_inventory_unchanged": true,
+      "microscopic_branching_validated": false,
+      "implementation": "build_lumped_o2a_ei407_413_414.py",
+      "requires_private_100point_rates": [
+        "EI-407_O2_X.txt",
+        "EI-413_O2_X.txt",
+        "EI-414_O2_X.txt"
+      ]
+    },
+    "effective_dissociation_choices": {
+      "identity": "user_selected_reduced_complexity_Oxygen_ICP_400_1000W",
+      "reaction_ids": [
+        "411",
+        "2068",
+        "2073"
+      ],
+      "products_by_reaction": {
+        "411": {
+          "O": 2
+        },
+        "2068": {
+          "O": 2
+        },
+        "2073": {
+          "O": 2
+        }
+      },
+      "solver_product": "O(3P) mapped to O/w_O",
+      "meaning": "Treat each as e+parent -> e+2O(3P); separate rates, no double use of same progress",
+      "electron_energy_policy": "Preserve each channel-specific tabulated/model loss; 411/2068 are effective, not exact dissociation thermochemistry",
+      "scientific_verification": "not required as gate for this exploratory run"
+    },
+    "dissociation_double_count_guard": {
+      "mode": "lookup_only_for_EI411_EI412",
+      "required_progress": "R_EI411 + R_EI412, independent sources",
+      "legacy_Zhao_DISS_G": "disable in this research case when the 411+412 lookup projections are connected",
+      "caveat": "The two independent source terms are not intrinsically duplicate; only parallel legacy formula for same channels would double count"
+    },
+    "heavy_research_activation": {
+      "active_reaction_ids": [
+        "H23",
+        "H24",
+        "H25"
+      ],
+      "all_three_enabled_in_selected_research_network": true,
+      "source_file": "oxygen_heavy_H23_H24_H25_SI_research.txt",
+      "source_risk": "provisional screenshot/QDB parameters, not independently verified",
+      "H25_temperature_model": "k_particle = 2e-17*(T_g/300K)^(-0.4) m^3/s",
+      "unit_basis": "particle m^3/s before internal reaction database conversion",
+      "implementation_state": "selection only; full 24-reaction MOOSE solver connection still pending"
+    },
+    "ei2259": {
+      "reaction": "e+O2+ -> 2O(3P)",
+      "adopted_provisional_rate_basis": "thermal_formula_not_EEDF_lookup",
+      "formula": "k=2.4e-13*(300/Te_K)^0.70 [m^3/s], Te_K>200",
+      "observation": "formula-vs-EEDF mismatch is methodological, not a chemical reaction inconsistency",
+      "implementation_state": "source coupling pending",
+      "rate_mode": "formula",
+      "formula_source": "Peverall et al. (2001), J Chem Phys 114, 6679",
+      "measurement_reality": "Absolute cross sections published from 0.001 to 3 eV; numeric input has not been obtained for this repository",
+      "reason": "Use compact thermal rate formula instead of requiring numerical sigma(E) and EEDF integration for this exploratory model",
+      "source_coupling_status": "not yet full ICP integrated"
+    },
+    "ei2738": {
+      "reaction": "e+O- -> O(3P)+2e",
+      "rate_mode": "formula",
+      "formula": "k=2.0e-13*exp(-5.5/Te_eV) [m^3/s]",
+      "electron_temperature_eV": "(2/3)*mean_en_solved_eV",
+      "source": "oxygen ICP fluid model: Chinese Physics B 24 (2015) 095203, Table 1, reaction e+O- ->2e+O; Plasma Science Technology 26 (2024) 125401 Table 1",
+      "temperature_exponent_5p5_eV_is": "Maxwellian fit parameter; NOT the previous HPEM 2.70 eV electron loss value",
+      "modeled_energy_loss_eV": 2.7,
+      "progress_functor": "R_EI2738",
+      "formula_implementation": "build_ei2738_detachment_formula_overlay.py",
+      "rate_regime": "approximation subject to source assumptions",
+      "source_coupling_status": "standalone overlay available; not yet full ICP integrated"
+    },
+    "ei2074": {
+      "reaction": "e+O2(a1Delta_g) -> 2e + O+ + O(3P)",
+      "rate_mode": "lookup",
+      "process_index": 2074,
+      "special_number": 2074,
+      "parent_species": "O2_a1Delta_g",
+      "source_file_private": "O2ex.dat",
+      "source_process_label": "O2* > O^ + O + E + E",
+      "source_cross_section_points": 1001,
+      "source_threshold_eV": 16.023,
+      "source_x_unit": "electron impact energy eV",
+      "source_sigma_unit": "cm2",
+      "source_file_sha256": "90a44f145e92f435bfc3d895bb92d2f901e71d6d93719e79e2d0bd508aaff09d",
+      "rate_file_private": "EI-2074_O2_a1Delta.txt",
+      "rate_points": 100,
+      "rate_file_sha256": "156239a4b3771d9bb5f9e41287671e8f3b40e8f7651682ad7ccdf75f595124e6",
+      "rate_y_unit": "m3/(mol s)",
+      "source_provenance": "HPEM reaction-specific, user-supplied O2ex.dat, locally verified numeric block",
+      "validation_distinction": "HPEM per-channel numerical cross section exists; not proof of an independent experimental measurement",
+      "physics_policy": "Use process-specific HPEM rate table, not shifted-EI417 heuristic",
+      "implementation_state": "select lookup, full 24-reaction species/energy source coupling pending"
+    },
+    "ei412": {
+      "reaction": "e+O2(X) -> e+2O(3P)",
+      "rate_mode": "lookup",
+      "progress": "R_EI412",
+      "table_source": "user-provided 100-point rate table for EI-412",
+      "old_Zhao_empirical_fit_in_24_reaction_run": "disabled",
+      "status": "approved mode; private numeric lookup must be mounted at runtime"
+    }
+  }
+}
