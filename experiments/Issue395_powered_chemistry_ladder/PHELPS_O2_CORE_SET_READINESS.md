@@ -37,6 +37,27 @@ Solver science issue: https://github.com/HyungseonSong-plasma/moose-test-repo/is
 
 **Outside original 1978 set:** P. C. Cosby (1993), `O2 DISSOCIATION - BASED ON TABLE I OF`, 15 points, is a *separate source/model choice* already prepared by `collect_phelps_o2_channels.py` in this PR. Do NOT simply append that collision energy sink to all other 1978 channels; Phelps explicitly discusses non-perturbative rate-diagnostic use to avoid double-counting the dissociation energy loss.
 
+## Canonical reaction table + 10 additional Boltzmann-only collision entries
+
+The canonical Issue #419 **25-row Chemistry Table remains unchanged** (22 electron-impact + 3 heavy-particle reactions). Exactly 17 of the Phelps source's original 18 sections are selected; **7** correspond to already-listed Chemistry IDs `401, 407, 411, 412, 413, 414, 415` and are not duplicated. **10** have explicit `KIN-*` IDs in the supplemental Issue #419 Boltzmann collision table:
+
+| Internal ID | Source channel | Class | Selected-state policy |
+|---|---|---|---|
+| KIN-M01 | `momentum_effective` | Effective momentum | Required; physics convention HOLD |
+| KIN-R01 | `rotation_300K` | Rotation 300 K | Required when applicable; duplicate-knot HOLD |
+| KIN-V01 | `v1_low` | Vibrational | Required for complete Phelps O2 base |
+| KIN-V02 | `v2_low` | Vibrational | Required for complete Phelps O2 base |
+| KIN-V03 | `v3_low` | Vibrational | Required for complete Phelps O2 base |
+| KIN-V04 | `v4_low` | Vibrational | Required for complete Phelps O2 base |
+| KIN-V01R | `v1_9eV` | 9-eV vibrational resonance | Requires overlap/branch accounting |
+| KIN-V02R | `v2_9eV` | 9-eV vibrational resonance | Requires overlap/branch accounting |
+| KIN-E01 | `b1sigma` | O2(b1Sigma) electronic excitation | **Optional; no unregistered species or Chemistry source** |
+| KIN-E02 | `line_130nm` | Ground-O2 130nm effective excitation | **Optional; not HPEM #2073 / no Chemistry source** |
+
+Full 17-row source CSV: [OXYGEN_BOLTZMANN_COLLISION_INVENTORY.csv](OXYGEN_BOLTZMANN_COLLISION_INVENTORY.csv). Provenance: Phelps 2008 compilation, original headings and sample counts. Every entry is `NUMERIC_CROSS_SECTION_NOT_VERIFIED`. Note the diagnostic/support-only status of kinetic processes: selection for potential EEDF input **does not mean chemical production/loss source activation**. No HPEM Special Numbers have been assigned to the invented internal KIN IDs.
+
+**Never import/compute `attachment_three_body`:** It is the one excluded Phelps source section, absent from the 25 allowed chemistry reactions. The original publication contains it, but neither local extraction nor the C++ Boltzmann source selection may activate it. Reaction 2058 is a permitted, distinct two-body excited-O2 attachment requiring its own source; it is not part of this original ground-O2 17-section Phelps subset.
+
 ## Local extraction — only after obtaining the PDF under source conditions
 
 ```bash
