@@ -63,6 +63,29 @@ def test_source_projection_one_source_per_variable_and_heavy_units():
     # These are separate progress owners but only one species source per
     # field, preventing accidental repetition of earlier single-EI overlays.
 
+def test_parsed_functor_symbols_avoid_moose_reserved_names():
+    m=_load()
+    overlay=m.make_overlay({i:f"private_rates/r{i}.txt" for i in m.LOOKUP_IDS},_base(m))
+    # MOOSE ParsedFunctorMaterial appends x,y,z,t and defines pi/e.
+    assert "functor_symbols = 'a b tempK'" in overlay
+    assert "(300.0/tempK)^0.4*a*b" in overlay
+    assert "functor_symbols = 'el o2p op om'" in overlay
+    assert "expression = '-el+o2p+op-om'" in overlay
+    import re
+    reserved={"x","y","z","t","pi","e"}
+    for aliases in re.findall(r"functor_symbols = '([^']+)'", overlay):
+        names=aliases.split()
+        assert not reserved.intersection(names)
+        assert len(names)==len(set(names))
+    for name in sorted(reserved):
+        with pytest.raises(ValueError, match="reserved parsed functor symbol"):
+            m.parsed("bad","S_bad",["T_g"],[name],name)
+    with pytest.raises(ValueError, match="duplicate parsed functor symbol"):
+        m.parsed("bad","S_bad",["T_g","rho_neutral"],["v","v"],"v")
+    with pytest.raises(ValueError, match="invalid parsed functor symbol"):
+        m.parsed("bad","S_bad",["T_g"],["bad-name"],"bad-name")
+
+
 def test_strict_lookup_100point_all19_and_private_stage(tmp_path):
     m=_load()
     private=tmp_path/"incoming"
