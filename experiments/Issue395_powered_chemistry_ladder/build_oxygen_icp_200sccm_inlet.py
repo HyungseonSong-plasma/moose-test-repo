@@ -58,7 +58,7 @@ def validated_mass_fractions(config: dict) -> dict[str, float]:
 
 def _replace_existing_receiver_default(text: str, name: str, value: float) -> str:
     """Patch one named Stage-B4 Receiver without introducing duplicate flow owners."""
-    pat = rf"(?ms)^(  \\[{re.escape(name)}\\][ \\t]*\\n)(?P<body>.*?)(^  \\[\\][ \\t]*$)"
+    pat = rf"(?ms)^(  \[{re.escape(name)}\][ \t]*\n)(?P<body>.*?)(^  \[\][ \t]*$)"
     matches = list(re.finditer(pat, text))
     if len(matches) != 1:
         raise ValueError(f"require exactly one existing Stage-B4 Receiver {name}, found {len(matches)}")
@@ -66,7 +66,7 @@ def _replace_existing_receiver_default(text: str, name: str, value: float) -> st
     body = match.group("body")
     if "type = Receiver" not in body:
         raise ValueError(f"{name}: expected Receiver")
-    default = re.compile(r"(?m)^([ \\t]*default[ \\t]*=[ \\t]*)[^#\\r\\n]+$")
+    default = re.compile(r"(?m)^([ \t]*default[ \t]*=[ \t]*)[^#\r\n]+$")
     if len(default.findall(body)) != 1:
         raise ValueError(f"{name}: need exactly one default")
     new = default.sub(lambda m: m.group(1) + format(value, ".17g"), body)
