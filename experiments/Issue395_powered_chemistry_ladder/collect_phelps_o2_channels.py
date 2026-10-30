@@ -2,8 +2,8 @@
 """Prepare source-verified O2 collision cross sections for #419, without redistribution.
 
 This tool never downloads or publishes Phelps data. Read a user-obtained
-original Phelps PDF or faithful text conversion, extract SIX collision
-sections mapped to FIVE reaction IDs, and retain source hash/provenance.
+original Phelps PDF or faithful text conversion, extract SEVEN collision
+sections mapped to SIX reaction IDs, and retain source hash/provenance.
 These are cross sections, NOT electron-energy rate tables.
 """
 from __future__ import annotations
@@ -55,6 +55,8 @@ SECTIONS = (
             "unindexed"),
     Section("413", 413, "O2 8.4 LOSS HAYASHI ABOVE 20EV - CHANTRY BELOW",
             18, 8.4, 1., 8.4, "O2_effective_excitation_loss"),
+    Section("414", 414, "O2 9.97 LOSS TRAJMAR",
+            24, 10.0, 1., 10.0, "O2_10eV_effective_excitation_loss"),
 )
 
 
