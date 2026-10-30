@@ -227,7 +227,16 @@ def make_overlay(paths: dict[int,str], baseline: str) -> str:
             ("variable",var),("v",f"S_mol_{sp}"),("coef","1.0")))
     fv.append(material("chem24_neutral_pressure","FVCoupledForce",
         ("variable","p"),("v","S_neutral_mass_chem24"),("coef","1.0")))
+    # Four tracked neutral species, number density [1/m3] from c [mol/m3].
+    for sp,label in (("O2","n_O2_X_avg"),("O2a","n_O2_a_avg"),
+                     ("O","n_O_3P_avg"),("Os","n_O_1D_avg")):
+        material_blocks.append(parsed(f"chem24_density_{sp}",f"n_chem24_{sp}",
+            [f"c_chem24_{sp}"],["c"],f"{N_A:.17g}*c"))
     pp=[]
+    for sp,label in (("O2","n_O2_X_avg"),("O2a","n_O2_a_avg"),
+                     ("O","n_O_3P_avg"),("Os","n_O_1D_avg")):
+        pp.append(material(label,"ElementAverageFunctorPostprocessor",
+            ("functor",f"n_chem24_{sp}"),("execute_on","'INITIAL TIMESTEP_END'")))
     for label in [f"R_{rid}" for rid in CHEM]+[
         "S_mass_closure_chem24","S_charge_closure_chem24",
         "S_energy_chem24","S_mol_O","S_mol_O2a","S_mol_Os"]:
@@ -239,7 +248,8 @@ def make_overlay(paths: dict[int,str], baseline: str) -> str:
             "[FunctorMaterials]\n"+"\n".join(material_blocks)+"\n[]\n"
             "[Kernels]\n"+"\n".join(kernels)+"\n[]\n"
             "[FVKernels]\n"+"\n".join(fv)+"\n[]\n"
-            "[Postprocessors]\n"+"\n".join(pp)+"\n[]\n")
+            "[Postprocessors]\n"+"\n".join(pp)+"\n[]\n"
+            "[Outputs]\n  csv = true\n[]\n")
 
 def stage(base:Path, rate_dir:Path, output:Path, root:Path) -> dict:
     root=root.resolve()
