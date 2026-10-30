@@ -9,9 +9,9 @@ PhysicsElectronImpactO2sExcitationMaterial::validParams()
 {
   auto params = FunctorMaterial::validParams();
   params.addClassDescription(
-      "Computes the single frozen-surrogate molar reaction progress R_O2s for "
-      "e + O2 -> e + O2(a1Delta_g). Source projection consumes this functor; "
-      "electron-energy coupling remains deferred to #26 E8.");
+      "Publishes one canonical EI10 molar progress R_O2s for O2(a1Delta_g) excitation. "
+      "The powered Stage-5 owner selects the 1-7 eV Maxwellian Te-dependent rate; "
+      "a legacy constant mode preserves historical bounded test vectors.");
   params.addRequiredParam<MooseFunctorName>("electron_number_density",
                                             "Physical electron number density [1/m^3].");
   params.addRequiredParam<MooseFunctorName>("o2_molar_concentration",
