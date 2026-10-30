@@ -134,3 +134,5 @@ def test_power_replay_research_mode_must_skip_legacy_chemistry():
     assert "FULL24_EXTRA_INPUT" in s
     assert "OXYGEN_RESEARCH_LUMPED_O2A" in s
     assert "OXYGEN_RESEARCH_EI2738_FORMULA" in s
+    assert 'python3 bin/physics.py preflight --self-test' in s
+    assert 'python3 bin/physics.py preflight "$FULL24_OVERLAY"' in s
