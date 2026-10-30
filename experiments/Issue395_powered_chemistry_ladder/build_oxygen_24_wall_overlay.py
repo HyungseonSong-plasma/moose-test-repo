@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Add research-only gamma=1 neutral loss on six plasma solid walls.
+"""Set gamma=1 in EXISTING Stage-B4 plasma wall materials (no duplicate BC).
 
-This follows the Issue27 combined O/O2s/Os thermal-flux formulation.
-DO NOT duplicate existing charged-ion or electron sheath wall laws.
-The powered input must independently certify charged wall coefficients.
+The powered Issue397 base is materialized from the accepted Stage-B4
+cover-pilot payload, which already has three neutral wall loss BCs.
+Do not add a second overlapping surface sink. Preserve ion/electron
+sheath BCs. Fail closed if the inherited wall layout has changed.
 """
 from __future__ import annotations
 import argparse
@@ -12,99 +13,95 @@ from pathlib import Path
 
 WALLS=("plasma_electrode","plasma_metal","plasma_right",
        "plasma_cover","plasma_wafer","plasma_focus_ring")
-SPECIES={"O":("w_O",0.016),"O2s":("w_O2s",0.032),"Os":("w_Os",0.016)}
-GAMMA=1.0
-R_GAS=8.31446
-PI=3.141592653589793
-REQUIRED=("[w_O]","[w_O2s]","[w_Os]","property_name = rho_neutral","T_g")
-# Check explicit charged coefficients in the prepared powered input.
-# Existing ion wall source must NOT be replaced by a second, parallel source.
-ION_MATERIAL_NAMES=("ion_wall_flux","negative_ion_wall_flux",
-                    "atomic_positive_ion_wall_flux")
-BLOCK=re.compile(r"(?ms)^  \[(?P<name>[^\]\n]+)\][ \t]*\n(?P<body>.*?)^  \[\][ \t]*(?=\r?$)")
-GAMMA_RE=re.compile(r"(?m)^[ \t]*sticking[ \t]*=[ \t]*([^\s#]+)")
+SPECIES={"O":"w_O","O2s":"w_O2s","Os":"w_Os"}
+NAME={s:f"stageb4_{s}_surface_flux" for s in SPECIES}
+BC={s:f"stageb4_{s}_surface_loss" for s in SPECIES}
+MATERIAL=re.compile(r"(?ms)^  \[(?P<name>[^\]\n]+)\][ \t]*\n(?P<body>.*?)^  \[\][ \t]*(?=\r?$)")
+EXPRESSION=re.compile(r"(?m)^(?P<indent>[ \t]*expression[ \t]*=[ \t]*')(?P<gamma>[+0-9.eE-]+)(?P<tail>\*0\.25\*sqrt\([^\n']+'\s*)$")
+WALL_BOUNDARY="'"+' '.join(WALLS)+"'"
 
+def _wall_items(text:str)->dict[str,list[str]]:
+    out={}
+    for match in MATERIAL.finditer(text):
+        out.setdefault(match.group("name"),[]).append(match.group("body"))
+    return out
 
-def charged_wall_audit(input_text: str) -> dict[str,float]:
-    blocks={}
-    for match in BLOCK.finditer(input_text):
-        blocks.setdefault(match.group("name"),[]).append(match.group("body"))
-    verified={}
-    for name in ION_MATERIAL_NAMES:
-        found=blocks.get(name,[])
-        if len(found)!=1:
-            raise ValueError(f"charged wall flux {name} must occur exactly once, found {len(found)}")
-        body=found[0]
-        if "type = PhysicsIonWallFluxMaterial" not in body and \
-           "type = PhysicsIonWallTotalFluxMaterial" not in body:
-            raise ValueError(f"{name}: unexpected charged wall material type")
-        gamma=GAMMA_RE.search(body)
-        if gamma is None or float(gamma.group(1))!=1.0:
-            raise ValueError(f"{name}: existing charged sticking must be exactly 1.0")
-        verified[name]=float(gamma.group(1))
-    # The electron sheath is a separate wall law; not a neutral sticking source.
-    if "electron_wall_number_flux" not in input_text:
-        raise ValueError("missing powered electron sheath wall closure")
-    return verified
+def inspect(base:str)->dict:
+    blocks=_wall_items(base)
+    for species,var in SPECIES.items():
+        material=NAME[species]
+        bc=BC[species]
+        if len(blocks.get(material,[]))!=1 or len(blocks.get(bc,[]))!=1:
+            raise ValueError(f"required existing Stage-B4 neutral wall pair missing/duplicated: {material}, {bc}")
+        body=blocks[material][0]
+        if f"property_name = stageb4_{species}_surface_mass_flux" not in body:
+            raise ValueError(f"unexpected material owner for {material}")
+        if f"{var}" not in body:
+            raise ValueError(f"wrong neutral species {var} in {material}")
+        if len(EXPRESSION.findall(body))!=1:
+            raise ValueError(f"{material}: cannot uniquely locate existing sticking factor")
+        bc_body=blocks[bc][0]
+        if f"variable = {var}" not in bc_body:
+            raise ValueError(f"{bc}: wrong species variable")
+        if "type = FVFunctorNeumannBC" not in bc_body or "factor = -1.0" not in bc_body:
+            raise ValueError(f"{bc}: unrecognized wall loss or sign")
+        # No inlet/outlet allowed in the existing wall loss.
+        if "inlet" in bc_body or "outlet" in bc_body:
+            raise ValueError(f"{bc}: non-wall boundary included")
+        for boundary in WALLS:
+            if boundary not in bc_body:
+                raise ValueError(f"{bc}: missing wall {boundary}")
+    # Existing charged wall handling is independent; do not create second
+    # ion BCs. Verify three charged wall flux owners and existing electron law.
+    if not all(f in base for f in ("ion_wall_number_flux",
+                                  "negative_ion_wall_number_flux",
+                                  "atomic_positive_ion_wall_number_flux",
+                                  "electron_wall_number_flux")):
+        raise ValueError("missing charged/electron wall flux, cannot claim uniform wall law")
+    # Charged surface coefficients are user-approved at 1.0 in source builder,
+    # but their exact blocks must be verified on the materialized powered input.
+    # We intentionally do not claim that this check proves all three coefficients.
+    return {"neutral_walls":list(WALLS),
+            "neutral_species":list(SPECIES),
+            "charged_existing_fluxes":"present_not_overwritten",
+            "charged_gamma_individual_audit":"REQUIRED_BEFORE_FULL_POWER_RUN"}
 
+def apply(base:str)->str:
+    inspect(base)
+    # Replace coefficient only inside each exact Stage-B4 material block.
+    def sub(match:re.Match)->str:
+        name=match.group("name")
+        body=match.group("body")
+        if name not in NAME.values():
+            return match.group(0)
+        new,n=EXPRESSION.subn(lambda m:m.group("indent")+"1.0"+m.group("tail"),body,count=1)
+        if n!=1:raise ValueError(f"cannot patch gamma for {name}")
+        return f"  [{name}]\n{new}  []"
+    updated=MATERIAL.sub(sub,base)
+    inspected=_wall_items(updated)
+    for s in SPECIES:
+        body=inspected[NAME[s]][0]
+        m=EXPRESSION.search(body)
+        if not m or float(m.group("gamma"))!=1.0:
+            raise ValueError(f"{s} sticking has not been set to 1")
+    if any(new not in updated for new in ("stageb4_O_surface_loss",
+                                         "stageb4_O2s_surface_loss","stageb4_Os_surface_loss")):
+        raise ValueError("neutral wall sink lost")
+    return updated
 
-def build(base: str, *, require_charged_wall_audit:bool=True) -> str:
-    for token in REQUIRED:
-        if token not in base:
-            raise ValueError(f"prepared powered input missing {token}")
-    for forbidden in ("chem24_wall_O","chem24_wall_O2s","chem24_wall_Os"):
-        if forbidden in base:
-            raise ValueError(f"existing duplicate research wall object: {forbidden}")
-    if require_charged_wall_audit:
-        charged_wall_audit(base)
-    boundaries="'"+' '.join(WALLS)+"'"
-    materials=[]; bcs=[]; monitors=[]
-    for name,(variable,molar_mass) in SPECIES.items():
-        functor=f"chem24_wall_{name}_mass_flux"
-        mats=f"""  [chem24_wall_{name}_material]
-    type = ADParsedFunctorMaterial
-    property_name = {functor}
-    functor_names = 'rho_neutral {variable} T_g'
-    functor_symbols = 'rho y tg'
-    expression = '0.25*sqrt(8.0*{R_GAS:.17g}*tg/({PI:.17g}*{molar_mass:.17g}))*rho*y'
-    block = plasma
-  []"""
-        bc=f"""  [chem24_wall_{name}_sink]
-    type = FVFunctorNeumannBC
-    variable = {variable}
-    boundary = {boundaries}
-    functor = {functor}
-    factor = -1.0
-  []"""
-        pp=f"""  [chem24_wall_{name}_mass_loss]
-    type = SideFVFluxBCIntegral
-    boundary = {boundaries}
-    fvbcs = 'chem24_wall_{name}_sink'
-    execute_on = 'INITIAL TIMESTEP_END'
-  []"""
-        materials.append(mats);bcs.append(bc);monitors.append(pp)
-    return ("# Research wall model: neutral O, O2(a), O(1D) gamma=1, Motz-Wise off.\n"
-            "# No additional ion or electron wall flux; use existing powered laws.\n"
-            "[FunctorMaterials]\n"+"\n".join(materials)+"\n[]\n"
-            "[FVBCs]\n"+"\n".join(bcs)+"\n[]\n"
-            "[Postprocessors]\n"+"\n".join(monitors)+"\n[]\n")
-
-
-def main():
-    ap=argparse.ArgumentParser()
-    ap.add_argument("--base-input",required=True,type=Path)
-    ap.add_argument("--output",required=True,type=Path)
-    a=ap.parse_args()
-    if a.output.resolve()==a.base_input.resolve():
-        raise ValueError("cannot overwrite source input")
-    text=a.base_input.read_text()
-    audit=charged_wall_audit(text)
-    wall=build(text,require_charged_wall_audit=False)
-    a.output.parent.mkdir(parents=True,exist_ok=True)
-    a.output.write_text(wall)
-    print("OXYGEN_24_SIX_WALL_STICKING1_PREPARED_NOT_RUN")
-    print("charged_wall_coefficients",audit)
-
+def main()->None:
+    p=argparse.ArgumentParser()
+    p.add_argument("--base-input",required=True,type=Path)
+    p.add_argument("--output",required=True,type=Path)
+    args=p.parse_args()
+    if args.output.resolve()==args.base_input.resolve():
+        raise ValueError("do not overwrite input")
+    src=args.base_input.read_text()
+    updated=apply(src)
+    args.output.parent.mkdir(parents=True,exist_ok=True)
+    args.output.write_text(updated)
+    print("OXYGEN_24_NEUTRAL_EXISTING_WALL_GAMMA1_APPLIED")
+    print("NO_NEW_WALL_BCS; CHARGED_STICKING_REQUIRES_RUNTIME_AUDIT")
 
 if __name__=="__main__":
     main()
