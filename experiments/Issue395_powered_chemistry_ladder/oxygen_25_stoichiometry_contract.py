@@ -57,7 +57,15 @@ SOLVER_SPECIES_IDENTITY = {
     "O(1D)": "Os",
     "O2(a1Delta_g)": "O2s",
 }
-ACTIVE_REACTIONS = tuple(r for r in REACTIONS if r[0] not in ACTIVE_EXCLUDED_REACTION_IDS)
+# EI-413 and EI-414 are deliberately assigned to the tracked O2(a) lump.
+# The original 25-row table remains unmodified scientific provenance.
+ACTIVE_REACTIONS = tuple(
+    (rid, reactants, "e O2a", model)
+    if rid in {"413", "414"}
+    else (rid, reactants, products, model)
+    for rid, reactants, products, model in REACTIONS
+    if rid not in ACTIVE_EXCLUDED_REACTION_IDS
+)
 
 
 def active_audit():
@@ -74,7 +82,10 @@ def active_audit():
         assert sum(v * SPECIES[s][0] for s, v in delta.items()) == 0, reaction[0]
         assert sum(v * SPECIES[s][1] for s, v in delta.items()) == 0, reaction[0]
     active_ids = {r[0] for r in ACTIVE_REACTIONS}
-    assert {"935", "943"}.issubset(active_ids)
+    assert {"935", "943", "407", "413", "414"}.issubset(active_ids)
+    for rid in ("407", "413", "414"):
+        reaction = next(r for r in ACTIVE_REACTIONS if r[0] == rid)
+        assert stoich(reaction) == {"O2": -1, "O2a": 1}, rid
     return {
         "scope": "400W_1000W_research_active_chemistry",
         "canonical_inventory": 25,
@@ -84,9 +95,13 @@ def active_audit():
         "heavy_reactions": 3,
         "excluded_reactions": sorted(ACTIVE_EXCLUDED_REACTION_IDS),
         "source_species_mapping": SOLVER_SPECIES_IDENTITY,
-        "missing_transport_species": ["O2star"],
-        "science_holds": {k: v for k, v in KNOWN_SCIENCE_HOLDS.items()
-                          if k in active_ids},
+        "missing_transport_species": [],
+        "lumped_O2a_production_reaction_ids": ["407", "413", "414"],
+        "lumped_O2a_source_model": "user_selected_surrogate_not_state_resolved_branching",
+        "lumped_energy_losses_eV": {"407": 0.977, "413": 8.4, "414": 10.0},
+        "science_holds": {k: ("User-selected O2(a) effective lumping; physical branching not validated"
+                             if k in {"413", "414"} else v)
+                          for k, v in KNOWN_SCIENCE_HOLDS.items() if k in active_ids},
         "ei936_species_source_enabled": False,
         "ei936_energy_sink_enabled": False,
         "power_run": "NOT_RUN",
