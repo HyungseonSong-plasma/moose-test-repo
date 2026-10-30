@@ -9,10 +9,30 @@
     "Q_sccm": 200,
     "Vm_std_m3_per_mol": 0.0224136,
     "standard_volumetric_flow_m3_s": 0.0000033333333333333333,
-    "inlet_O2_mass_fraction": 1,
-    "inlet_other_species_mass_fraction": 0,
-    "O2_molar_mass_kg_per_mol": 0.032,
-    "total_mass_flow_kg_s": 0.0000047590153597220736
+    "source": "Boltzmann 100-point EEDF neutral mixture; mole fractions preserved, translated to MOOSE mass fractions",
+    "mole_fractions": {
+      "O2_X": 0.99997,
+      "O2_a1Delta": 0.00001,
+      "O_3P": 0.00001,
+      "O_1D": 0.00001
+    },
+    "molar_masses_kg_per_mol": {
+      "O2_X": 0.032,
+      "O2_a1Delta": 0.032,
+      "O_3P": 0.016,
+      "O_1D": 0.016
+    },
+    "mean_molar_mass_kg_per_mol": 0.031999679999999996,
+    "mass_fractions": {
+      "Yin_O2": 0.9999799997999981,
+      "Yin_O2s": 0.000010000100001000012,
+      "Yin_O": 0.000005000050000500006,
+      "Yin_Os": 0.000005000050000500006,
+      "Yin_O2p": 0,
+      "Yin_Om": 0,
+      "Yin_Op": 0
+    },
+    "total_mass_flow_kg_s": 0.000004758967769568476
   },
   "wall": {
     "research_uniform_sticking": true,
@@ -33,5 +53,15 @@
       "outlet"
     ]
   },
-  "warning": "Research variant: legacy Issue27 default sticking 0.2 for O and Os is intentionally unchanged. Actual coupled ICP transient is not validated."
+  "warning": "Research-only mixture-matched inlet, not a validated live EEDF-composition-dependent solve. Historical baseline and previous neutral bulk initialization unchanged; RF transient not validated.",
+  "initial_conditions": {
+    "charged_species_number_density_m3": {
+      "electron": 1000000000000000,
+      "O2_plus": 1000000000000000,
+      "O_plus": 1000000000000,
+      "O_minus": 1000000000000
+    },
+    "charged_seed_policy": "preserve previously specified research seed; charge-neutral",
+    "neutral_bulk_initialization_policy": "preserve inherited ICP bulk initial densities; inlet neutral composition changed only"
+  }
 }
