@@ -356,6 +356,8 @@ def _insert_kinetic_owners(text: str) -> str:
         text,
         "s5r_ei10_rate",
         """    type = PhysicsElectronImpactO2sExcitationMaterial
+    rate_model = temperature_dependent
+    mean_energy = mean_en_solved
     electron_number_density = n_e_physical
     o2_molar_concentration = c_O2
     block = plasma""",

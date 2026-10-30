@@ -79,6 +79,8 @@ def test_s5r_has_exact_canonical_progress_owner_surface() -> None:
         mp.get_parameter(text, OWNER_BLOCKS["EI10"], "type")
         == "PhysicsElectronImpactO2sExcitationMaterial"
     )
+    assert mp.get_parameter(text, OWNER_BLOCKS["EI10"], "rate_model") == "temperature_dependent"
+    assert mp.get_parameter(text, OWNER_BLOCKS["EI10"], "mean_energy") == "mean_en_solved"
     assert (
         mp.get_parameter(text, OWNER_BLOCKS["EI16"], "type")
         == "PhysicsElectronImpactIonizationMaterial"
