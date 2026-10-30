@@ -5,10 +5,14 @@
 # Maxwell exact-change audit, native D1 gates and archive provenance are retained.
 set -euo pipefail
 PHASE="${1:?usage: bash issue397_l1_power_scan_replay.sh prepare|build|check|solve|audit 200|250|300}"
-POWER_W="${2:?RF target 200, 250, 300, 400, 600 or 1000 W is required}"
-# 400 W is enabled only for the new research comparison; the existing
-# baseline 200/250/300/600/1000 paths are unchanged.
-case "$POWER_W" in 200|250|300|400|600|1000) ;; *) echo "unsupported RF target: $POWER_W" >&2; exit 2 ;; esac
+POWER_W="${2:?RF target 200, 250, 300, 600 or 1000 W is required}"
+# The fixed historical power allowlist remains byte-identical in its control
+# branch. Only the opt-in 400 W research case bypasses that allowlist.
+if [[ "$POWER_W" = 400 && "${OXYGEN_RESEARCH_400:-0}" = 1 ]]; then
+  :
+else
+  case "$POWER_W" in 200|250|300|600|1000) ;; *) echo "unsupported RF target: $POWER_W" >&2; exit 2 ;; esac
+fi
 case "$PHASE" in prepare|build|check|solve|audit) ;; *) echo "unsupported phase: $PHASE" >&2; exit 2 ;; esac
 test "$(git rev-parse --show-toplevel)" = "$PWD" || {
   echo "run the replay from the exact repository checkout root" >&2; exit 2;
