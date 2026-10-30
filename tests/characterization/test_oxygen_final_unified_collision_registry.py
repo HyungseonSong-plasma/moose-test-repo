@@ -36,8 +36,8 @@ def test_explicit_elastic_sources_are_independent_of_effective_qm():
     assert r["KIN-EL-O2"]["numeric"] == "NOT_VERIFIED"
     assert r["KIN-EL-O"]["numeric"] == "NOT_VERIFIED"
     assert "EFFECTIVE" in r["KIN-M01"]["role"]
-    assert "not elastic" in r["KIN-M01"]["guard"].lower()
-    assert "Do NOT double count" in r["KIN-EL-O2"]["guard"]
+    assert "NOT_ELASTIC" in r["KIN-M01"]["guard"]
+    assert "do NOT double count" in r["KIN-EL-O2"]["guard"]
 
 
 def test_no_unregistered_three_body_attachment():
