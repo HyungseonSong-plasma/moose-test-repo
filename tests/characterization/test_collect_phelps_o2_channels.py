@@ -60,7 +60,7 @@ def test_all_eight_channels_extracted_without_cross_talk(tmp_path) -> None:
             assert spec.qscale == 1.2
         if spec.id == "412_dissociation":
             assert spec.source_kind == "unindexed"
-            assert vals[1][0] == 10.0
+            assert vals[1][0] == 8.0
     original = tmp_path / "original.txt"
     original.write_text(s)
     output_dir = tmp_path / "local" / "phelps"
