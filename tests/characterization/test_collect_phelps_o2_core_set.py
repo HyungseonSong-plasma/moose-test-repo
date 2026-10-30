@@ -46,9 +46,10 @@ def synthetic():
     )
 
 
-def test_18_sections_individually_and_manifest(tmp_path):
+def test_17_selected_sections_and_manifest(tmp_path):
     text = synthetic()
-    assert len(m.CHANNELS) == 18
+    assert len(m.CHANNELS) == 17
+    assert "attachment_three_body" not in {ch.name for ch in m.CHANNELS}
     for ch in m.CHANNELS:
         points, duplicates = m.extract(text, ch)
         assert len(points) == ch.count
@@ -59,12 +60,14 @@ def test_18_sections_individually_and_manifest(tmp_path):
     output = tmp_path / "private" / "extracted"
     result = m.collect(input_path, output, "2026-10-30")
     assert result["status"] == "EXTRACTED_SOURCE_ONLY_NOT_BOLTZMANN_READY"
-    assert len(result["channels"]) == 18
+    assert len(result["channels"]) == 17
+    assert result["excluded_unregistered_source_channels"] == ["attachment_three_body"]
     assert result["channels"]["momentum_effective"]["use_as_elastic_momentum"] is False
     assert result["channels"]["rotation_300K"]["duplicate_knots"]
-    assert result["channels"]["attachment_three_body"]["requires_density_normalization"]
+    assert "attachment_three_body" not in result["channels"]
     assert result["channels"]["v1_low"]["source_qscale"] == 2.5
-    assert len(list(output.glob("*.csv"))) == 18
+    assert len(list(output.glob("*.csv"))) == 17
+    assert not list(output.glob("*three_body*"))
     assert (output / "phelps_o2_core_manifest.json").exists()
     with pytest.raises(FileExistsError, match="overwrite"):
         m.collect(input_path, output, "2026-10-30")
