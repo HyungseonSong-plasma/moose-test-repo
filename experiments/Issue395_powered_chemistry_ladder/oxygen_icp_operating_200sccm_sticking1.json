@@ -53,7 +53,7 @@
       "outlet"
     ]
   },
-  "warning": "Research-only mixture-matched inlet, not a validated live EEDF-composition-dependent solve. Historical baseline and previous neutral bulk initialization unchanged; RF transient not validated.",
+  "warning": "User-chosen EI413/414 effective O2(a) lump is a modeling assumption, not verified electronic-state branching. Historical reactions unchanged; no powered ICP simulation yet.",
   "initial_conditions": {
     "charged_species_number_density_m3": {
       "electron": 1000000000000000,
@@ -90,6 +90,36 @@
       "O(1D)": "Os",
       "O2(a1Delta_g)": "O2s"
     },
-    "convention": "Original 25-reaction source inventory preserved. Experimental 400/1000 W model excludes EI-936; must never map O(1S) to Os."
+    "convention": "Original 25-reaction source inventory preserved. Experimental 400/1000 W model excludes EI-936; must never map O(1S) to Os.",
+    "lumped_O2a_source": {
+      "status": "USER_SELECTED_LUMPED_EFFECTIVE_PRODUCT",
+      "reaction_ids": [
+        "407",
+        "413",
+        "414"
+      ],
+      "reactant": "e + O2(X)",
+      "product": "e + O2(a1Delta_g)",
+      "solver_product": "O2s",
+      "solved_mass_fraction": "w_O2s",
+      "combined_molar_progress": "R_EI407 + R_EI413 + R_EI414",
+      "source_mass_kg_m3_s": "0.032 * (R_EI407 + R_EI413 + R_EI414)",
+      "implicit_o2_mass_loss_kg_m3_s": "-0.032 * (R_EI407 + R_EI413 + R_EI414)",
+      "energy_losses_eV": {
+        "407": 0.977,
+        "413": 8.4,
+        "414": 10
+      },
+      "energy_source_eV_mol_m3_s": "-0.977*R_EI407 -8.4*R_EI413 -10.0*R_EI414",
+      "electron_particle_source": "zero",
+      "canonical_inventory_unchanged": true,
+      "microscopic_branching_validated": false,
+      "implementation": "build_lumped_o2a_ei407_413_414.py",
+      "requires_private_100point_rates": [
+        "EI-407_O2_X.txt",
+        "EI-413_O2_X.txt",
+        "EI-414_O2_X.txt"
+      ]
+    }
   }
 }
