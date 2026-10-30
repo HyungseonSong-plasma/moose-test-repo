@@ -49,7 +49,7 @@ jobs:
       CHATGPT_WORK_BASE_SHA: 13694ca685f14c4b00205f04cf52b2d1afb8a0eb
       OXYGEN_RESEARCH_400: '1'
       OXYGEN_RESEARCH_FULL24: '1'
-      OXYGEN_RESEARCH_RATE_DIR: ${{ runner.temp }}/oxygen24/private_rates
+      OXYGEN_RESEARCH_RATE_DIR: /tmp/oxygen24/private_rates
       PWD_IN_RUNNER: ${{ github.workspace }}
     steps:
       - name: Checkout exact reviewed 24-reaction experiment source
