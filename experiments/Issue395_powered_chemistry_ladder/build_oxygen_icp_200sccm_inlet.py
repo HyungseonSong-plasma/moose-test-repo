@@ -56,16 +56,50 @@ def validated_mass_fractions(config: dict) -> dict[str, float]:
     return mass
 
 
+def _replace_existing_receiver_default(text: str, name: str, value: float) -> str:
+    """Patch one named Stage-B4 Receiver without introducing duplicate flow owners."""
+    pat = rf"(?ms)^(  \\[{re.escape(name)}\\][ \\t]*\\n)(?P<body>.*?)(^  \\[\\][ \\t]*$)"
+    matches = list(re.finditer(pat, text))
+    if len(matches) != 1:
+        raise ValueError(f"require exactly one existing Stage-B4 Receiver {name}, found {len(matches)}")
+    match = matches[0]
+    body = match.group("body")
+    if "type = Receiver" not in body:
+        raise ValueError(f"{name}: expected Receiver")
+    default = re.compile(r"(?m)^([ \\t]*default[ \\t]*=[ \\t]*)[^#\\r\\n]+$")
+    if len(default.findall(body)) != 1:
+        raise ValueError(f"{name}: need exactly one default")
+    new = default.sub(lambda m: m.group(1) + format(value, ".17g"), body)
+    return text[:match.start("body")] + new + text[match.end("body"):]
+
+
 def apply(text: str) -> str:
-    if "inlet_mdot_value" not in text or "Vm_std" not in text or "Q_std" not in text:
-        raise ValueError("canonical inlet mass-flow conversion not present")
     config = json.loads(CONFIG.read_text(encoding="utf-8"))
     if config["inlet"]["Q_sccm"] != 200:
         raise ValueError("only the approved 200 sccm research case is allowed")
     mass = validated_mass_fractions(config)
-    text = replace_unique(text, "Q_sccm", str(config["inlet"]["Q_sccm"]))
-    for name, value in mass.items():
-        text = replace_unique(text, name, format(value, ".17g"))
+    if all(v in text for v in ("inlet_mdot_value", "Vm_std", "Q_std")):
+        # Historical parametric flow-rate source.
+        text = replace_unique(text, "Q_sccm", str(config["inlet"]["Q_sccm"]))
+        for name, value in mass.items():
+            text = replace_unique(text, name, format(value, ".17g"))
+        return text
+    # Stage-B4 powered plasma source is a materialized MOOSE input whose inlet
+    # is already converted into Receiver default values. No Q_sccm / Vm_std
+    # symbols survive. Its matching receiver defaults MUST be revised together.
+    receivers = {
+        "neutral_inlet_mdot": config["inlet"]["total_mass_flow_kg_s"],
+        "neutral_inlet_mdot_O2": config["inlet"]["total_mass_flow_kg_s"] * mass["Yin_O2"],
+        "neutral_inlet_mdot_O2s": config["inlet"]["total_mass_flow_kg_s"] * mass["Yin_O2s"],
+        "neutral_inlet_mdot_O": config["inlet"]["total_mass_flow_kg_s"] * mass["Yin_O"],
+        "neutral_inlet_mdot_Os": config["inlet"]["total_mass_flow_kg_s"] * mass["Yin_Os"],
+    }
+    if not all("[" + name + "]" in text for name in receivers):
+        raise ValueError("neither historical parametric inlet nor Stage-B4 receiver inlet exists")
+    for name, value in receivers.items():
+        text = _replace_existing_receiver_default(text, name, value)
+    if not math.isclose(sum(receivers[name] for name in receivers if name != "neutral_inlet_mdot"), receivers["neutral_inlet_mdot"], rel_tol=1e-12):
+        raise ValueError("Stage-B4 inlet species mass flows do not close")
     return text
 
 
@@ -80,7 +114,7 @@ def main() -> None:
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(result, encoding="utf-8")
     print("OXYGEN_ICP_200SCCM_BOLTZMANN_MIXTURE_INLET_CONSTRUCTED")
-    print("Existing ion and neutral bulk initial densities are unchanged.")
+    print("Stage-B4 inlet Receiver defaults updated when the parametric input symbols are absent.")
     print("Sticking=1 must be enabled via the separate research_uniform_sticking option.")
 
 
