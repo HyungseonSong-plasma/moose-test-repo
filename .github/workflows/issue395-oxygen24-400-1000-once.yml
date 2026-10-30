@@ -2,7 +2,7 @@
 # User-authorized research run. Input tables enter only through repository Secret.
 # Self-path-triggered on main; remove after terminal evidence and review.
 name: Issue395 Oxygen24 400 1000 W once
-run-name: Oxygen24 400/1000 W SHA 13694ca685f1
+run-name: Oxygen24 400/1000 W SHA ce45ac5885f1
 on:
   push:
     branches: [main]
@@ -46,7 +46,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 360
     env:
-      CHATGPT_WORK_BASE_SHA: 13694ca685f14c4b00205f04cf52b2d1afb8a0eb
+      CHATGPT_WORK_BASE_SHA: ce45ac58e4c63b76337f5cf6d4984ae06b16a6aa
       OXYGEN_RESEARCH_400: '1'
       OXYGEN_RESEARCH_FULL24: '1'
       OXYGEN_RESEARCH_RATE_DIR: /tmp/oxygen24/private_rates
@@ -55,7 +55,7 @@ jobs:
       - name: Checkout exact reviewed 24-reaction experiment source
         uses: actions/checkout@v4
         with:
-          ref: 13694ca685f14c4b00205f04cf52b2d1afb8a0eb
+          ref: ce45ac58e4c63b76337f5cf6d4984ae06b16a6aa
           fetch-depth: 1
 
       - name: Verify source and avoid publishing user rate tables
@@ -98,7 +98,7 @@ jobs:
           set -euo pipefail
           python3 -m venv .issue395-oxygen24-venv
           .issue395-oxygen24-venv/bin/python -m pip install --disable-pip-version-check --quiet 'pytest>=8,<9' numpy==2.1.2 scipy==1.14.1
-          .issue395-oxygen24-venv/bin/python -m pytest -q tests/test_issue395_oxygen_full24_source_overlay.py tests/test_issue395_oxygen_full24_seeds.py tests/test_issue395_oxygen_full24_wall_sticking.py
+          .issue395-oxygen24-venv/bin/python -m pytest -q tests/test_issue395_oxygen_full24_source_overlay.py tests/test_issue395_oxygen_full24_seeds.py tests/test_issue395_oxygen_full24_wall_sticking.py tests/test_issue395_receiver_200sccm_inlet.py
           bash -n experiments/Issue395_powered_chemistry_ladder/issue397_l1_power_scan_replay.sh
 
       - name: P0 materialize exact 400 or 1000 W input
@@ -139,7 +139,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: issue395-oxygen24-${{ matrix.power_w }}W-100us-exact-13694ca6
+          name: issue395-oxygen24-${{ matrix.power_w }}W-100us-exact-ce45ac58
           if-no-files-found: warn
           retention-days: 30
           path: |
