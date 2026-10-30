@@ -20,6 +20,7 @@ published sigma values a second time.
 | 412 (physical) | same | `O2 DISSOCIATION - BASED ON TABLE I OF` (Cosby 1993) | 8–9 | 15 | N/A | Explicit dissociation cross section, separate from the 1978 set |
 | 413 | `e+O2 -> e+O2*` | `O2 8.4 LOSS HAYASHI ABOVE 20EV - CHANTRY BELOW` | 7–8 | 18 | 1.0 | Effective electronic excitation; branching unresolved |
 | 414 | `e+O2 -> e+O2*` | `O2 9.97 LOSS TRAJMAR` | 8 | 24 | 1.0 | **10.0 eV energy loss** in source, not 9.97 eV; branching unresolved |
+| 415 | `e+O2 -> O2+ + 2e` | `O2 IONIZATION` | 8 | 24 | 1.0 | **12.06 eV energy loss**, electron and ion number sources require separate closure |
 
 **Primary dataset warning:** The Cosby dissociation data are an *additional* set outside the
 Phelps 1978 swarm-inversion set. Phelps says that using 8.4-eV loss as a dissociation
@@ -59,6 +60,7 @@ o2_412_loss_sigma.csv
 o2_412_dissociation_sigma.csv
 o2_413_sigma.csv
 o2_414_sigma.csv
+o2_415_sigma.csv
 phelps_o2_channels_provenance.json
 ```
 
