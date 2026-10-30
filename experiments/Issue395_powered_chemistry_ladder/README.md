@@ -42,6 +42,29 @@ baseline. Validate an archived L1 `.msh` without regeneration using
 thermal+migration ion wall conditions and existing electron sheath for
 apples-to-apples experiments.
 
+## Oxygen chemistry Lookup transition plan (Issue #419, 2026-10-30)
+
+The chemistry registry now selects **cross-section -> Boltzmann -> Lookup**
+as the *target calculation* for all current oxygen reactions (401, 407,
+411, 412, 413, 414, 415). This is a target-method change, **not** a
+retroactive redefinition of the existing physics_app runtime. Existing
+formula coefficients remain in code until traceable Boltzmann lookup
+tables are available and separately validated.
+
+- **Primary Phelps source and local collection:** see
+  `PHELPS_O2_LOOKUP_PLAN.md` and
+  `collect_phelps_o2_channels.py`. Eight source sections cover seven
+  reaction IDs, with distinct `412_loss` and `412_dissociation`.
+  These original cross-section pairs are not committed.
+- **Future Boltzmann comparison:** see
+  `compare_o2_lookup_formula.py`. The historical 407 Gudmundsson and
+  412 Zhao formulas are independent numerical benchmarks, not lookup
+  generators. The old 411 O2(ex1) fit cannot validate the user-defined
+  411 O-atom-generating dissociation.
+- **Activation gate:** use the real `physics-opt` source/runtime
+  evidence. This PR does not supply a computed EEDF, k(Te), or an
+  accepted 400/1000 W chemistry result.
+
 ## Ground-state O2 dissociation rate correction (bounded successor, 2026-10-26)
 
 The canonical generator `build_o2_dissociation_overlay.py` now targets **only**
