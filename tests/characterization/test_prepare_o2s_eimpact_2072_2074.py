@@ -89,10 +89,9 @@ def test_provenance_protected_shifted_cross_sections(tmp_path, rid) -> None:
     assert not out["boltzmann_rate_computed"]
     path = dest / out["output_file"]
     rows = list(csv.DictReader(path.open(newline="", encoding="utf-8")))
-    assert rows[0]["electron_energy_eV"] == pytest.approx("9.023") if False else True
     assert float(rows[0]["electron_energy_eV"]) == pytest.approx(9.023)
-    assert float(rows[2]["cross_section_m2"]) == pytest.approx(0.)
-    assert float(rows[3]["cross_section_m2"]) == pytest.approx(1e-21)
+    assert float(rows[1]["cross_section_m2"]) == 0.0
+    assert float(rows[2]["cross_section_m2"]) == pytest.approx(1e-21, rel=1e-12)
     assert len(rows) == 8
     with pytest.raises(FileExistsError):
         m.build(rid, parent, manifest, dest, "2026-10-30", accept_model=True)
