@@ -70,6 +70,14 @@ python3 "$CHEM/collect_phelps_o2_core_set.py" \
 
 This program performs **all-or-nothing source validation** of headings, source loss, QSCALE, sample count, sequential indices, energy ordering and known threshold anchors before writing any CSV. It writes 17 **local** CSVs and `phelps_o2_core_manifest.json` with per-file SHA-256. **No three-body attachment CSV is generated**, even if that section exists in the source PDF. Outputs are source-extraction artifacts and are never automatically approved solver inputs.
 
+## Final effective-momentum selection — 36-row canonical registry (2026-10-30)
+
+The consolidated 36-entry scope in Issue #419 is **25 Chemistry + 10 kinetic-only supports + 1 atomic-O elastic**. Phelps O2 `KIN-M01` effective (Q_m) is the **single selected O2 momentum-transfer input**. The formerly proposed `KIN-EL-O2` has been removed as redundant for this **effective-scattering model choice**. Its Itikawa O2 elastic source can remain a scientific alternate/reference in the literature, but is **not** a second active collision, registry row, or automatically added scattering term. `KIN-EL-O` e + O(3P) → e + O(3P) remains selected when atomic oxygen is present. Three-body attachment stays excluded.
+
+**Necessary solver gate:** effective O2 `Q_m` represents elastic plus inelastic *momentum* transfer. It does **not** authorize substituting effective (Q_m) for the **pure elastic recoil-energy coefficient**. Existing developmental C++ `ElasticTarget.momentum_transfer_m2` expects elastic recoil while `field_momentum_transfer_m2` can represent full first-harmonic field scattering. If a physically valid pure O2 elastic recoil cross-section cannot be reconstructed from the effective and process-resolved inelastic datasets or obtained as internal solver data, stop and do not claim physical EEDF acceptance. Inelastic scattering and effective (Q_m) also must not be counted twice. Source-specific nonnegative reconstruction and energy-closure checks are required before running real-data Oxygen cases.
+
+**Canonical CSV:** [OXYGEN_FINAL_UNIFIED_COLLISION_REGISTRY_36.csv](OXYGEN_FINAL_UNIFIED_COLLISION_REGISTRY_36.csv). The earlier 37-entry inventory is superseded by this selection decision. `KIN-M01` remains source-numeric **NOT_VERIFIED**.
+
 ## Mandatory physical preflight before any C++ EEDF run
 
 1. **Effective momentum:** `Qm,eff` includes nonelastic scattering per Phelps introductory notes. The solver's `ElasticTarget.momentum_transfer_m2` controls elastic recoil; its optional `field_momentum_transfer_m2` controls first-harmonic field heating. Do not feed `Qm,eff` into the recoil parameter or add inelastic momentum twice. A independently verified elastic-recoil cross section or conservative, nonnegative momentum decomposition is required first. The repository's existing collision-coverage preflight rejects unqualified EFFECTIVE+growth combinations.
