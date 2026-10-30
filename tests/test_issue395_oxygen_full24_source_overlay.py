@@ -45,7 +45,7 @@ def test_source_projection_one_source_per_variable_and_heavy_units():
     assert "2.4e-13*(300.0/(te*11604.51812155))^0.70*ne*c" in overlay
     assert "2.0e-13*exp(-5.5/te)*ne*c" in overlay
     assert f"{1e-13*m.N_A:.17g}*a*b" in overlay
-    assert f"{2e-17*m.N_A:.17g}*(300.0/t)^0.4*a*b" in overlay
+    assert f"{2e-17*m.N_A:.17g}*(300.0/tempK)^0.4*a*b" in overlay
     for name in ("w_O","w_Os","w_O2s","log_ni","log_nm","log_nop",
                  "log_ne","log_energy","p"):
         assert overlay.count(f"variable = {name}\n")==1
