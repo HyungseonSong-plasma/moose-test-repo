@@ -149,7 +149,7 @@ def extract(source: Path, dest: Path, retrieved_on: str) -> dict:
             "source_kind": b["kind"], "source_threshold_eV": b["threshold_eV"],
             "points": len(b["energy_eV"]), "energy_min_eV": b["energy_eV"][0],
             "energy_max_eV": b["energy_eV"][-1], "sha256": hashlib.sha256(payload).hexdigest(),
-            "local_path": f.name, "solver_accepted": False, "hpep_equivalence": False,
+            "local_path": f.name, "solver_accepted": False, "hpem_equivalence": False,
         }
     manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
     return manifest
