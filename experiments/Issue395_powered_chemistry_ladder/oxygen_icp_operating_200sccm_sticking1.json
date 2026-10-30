@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "scope": "research_only_O2_ICP_400W_1000W",
+  "rf_targets_w": [
+    400,
+    1000
+  ],
+  "inlet": {
+    "Q_sccm": 200,
+    "Vm_std_m3_per_mol": 0.0224136,
+    "standard_volumetric_flow_m3_s": 0.0000033333333333333333,
+    "inlet_O2_mass_fraction": 1,
+    "inlet_other_species_mass_fraction": 0,
+    "O2_molar_mass_kg_per_mol": 0.032,
+    "total_mass_flow_kg_s": 0.0000047590153597220736
+  },
+  "wall": {
+    "research_uniform_sticking": true,
+    "wall_model": "combined_comsol_wall_control",
+    "wall_scope": "all_plasma_walls",
+    "gas_temperature_functor": "T_g",
+    "motz_wise_correction": false,
+    "electron_wall_mode": "matched_signed_charge_ledger",
+    "O_sticking_coefficient": 1,
+    "O2s_sticking_coefficient": 1,
+    "Os_sticking_coefficient": 1,
+    "O2p_sticking_coefficient": 1,
+    "Om_sticking_coefficient": 1,
+    "Op_sticking_coefficient": 1,
+    "secondary_emission_coefficient": 0,
+    "exclude_boundaries": [
+      "inlet",
+      "outlet"
+    ]
+  },
+  "warning": "Research variant: legacy Issue27 default sticking 0.2 for O and Os is intentionally unchanged. Actual coupled ICP transient is not validated."
+}
