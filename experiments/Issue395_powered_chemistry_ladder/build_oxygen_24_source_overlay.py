@@ -134,6 +134,14 @@ def material(name, ptype, *parameters):
 def parsed(name, output, functors, symbols, expression):
     if not functors or len(functors)!=len(symbols):
         raise ValueError("bad parsed expression")
+    if len(set(symbols)) != len(symbols):
+        raise ValueError("duplicate parsed functor symbol")
+    reserved = set(symbols) & {"x", "y", "z", "t", "pi", "e"}
+    if reserved:
+        raise ValueError(f"reserved parsed functor symbol: {sorted(reserved)}")
+    if any(re.fullmatch(r"[A-Za-z_][A-Za-z_0-9]*", symbol) is None
+           for symbol in symbols):
+        raise ValueError("invalid parsed functor symbol")
     return material(name,"ADParsedFunctorMaterial",
         ("property_name",output),
         ("functor_names","'"+' '.join(functors)+"'"),
@@ -188,8 +196,8 @@ def make_overlay(paths: dict[int,str], baseline: str) -> str:
             [f"c_chem24_{sp}" for sp in reactants],["a","b"],
             f"{a*N_A:.17g}*a*b"))
     material_blocks.append(parsed("chem24_rate_H25","R_H25",
-        ["c_chem24_Op","c_chem24_O2","T_g"],["a","b","t"],
-        f"{2e-17*N_A:.17g}*(300.0/t)^0.4*a*b"))
+        ["c_chem24_Op","c_chem24_O2","T_g"],["a","b","tempK"],
+        f"{2e-17*N_A:.17g}*(300.0/tempK)^0.4*a*b"))
     net={sp:[] for sp in ("e",)+HEAVY}
     for rid,sto in CHEM.items():
         for sp,coef in sto.items():
@@ -213,7 +221,7 @@ def make_overlay(paths: dict[int,str], baseline: str) -> str:
         "+".join(f"x{i}" for i in range(len(HEAVY)))))
     material_blocks.append(parsed("chem24_charge_closure","S_charge_closure_chem24",
         ["S_mol_e","S_mol_O2p","S_mol_Op","S_mol_Om"],
-        ["e","o2p","op","om"],"-e+o2p+op-om"))
+        ["el","o2p","op","om"],"-el+o2p+op-om"))
     kernels=[]
     for var,src in (("log_ne","S_mol_e"),("log_energy","S_energy_chem24")):
         kernels.append(material(f"chem24_source_{var}","FunctorKernel",
