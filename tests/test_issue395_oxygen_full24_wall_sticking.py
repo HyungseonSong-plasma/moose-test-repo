@@ -36,6 +36,16 @@ def _sample():
     functor = stageb4_{sp}_surface_mass_flux
     factor = -1.0
   []""")
+    for name,charge,mass in (("ion_wall_flux",1,.032),
+                             ("negative_ion_wall_flux",-1,.016),
+                             ("atomic_positive_ion_wall_flux",1,.016)):
+        blocks.append(f"""  [{name}]
+    type = PhysicsIonWallFluxMaterial
+    charge_number = {charge}
+    molar_mass = {mass}
+    sticking = 1.0
+    block = plasma
+  []""")
     return "\n[FunctorMaterials]\n" + "\n".join(blocks) + "\n[]\n" + \
            "[FVBCs]\n" + "\n".join(bcs) + "\n[]\n" + \
            "# ion_wall_number_flux negative_ion_wall_number_flux\n" + \
@@ -65,3 +75,10 @@ def test_inlet_and_outlet_excluded():
     m=_load()
     with pytest.raises(ValueError,match="non-wall"):
         m.apply(_sample().replace("plasma_focus_ring'","plasma_focus_ring inlet'"))
+
+
+def test_charged_sticking_must_be_unity_for_three_ion_species():
+    m=_load()
+    assert len(m.inspect(_sample())["charged_gamma_1_verified"])==3
+    with pytest.raises(ValueError,match="sticking"):
+        m.apply(_sample().replace("sticking = 1.0","sticking = 0.2",1))
