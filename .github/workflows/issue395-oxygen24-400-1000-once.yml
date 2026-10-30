@@ -1,0 +1,151 @@
+# One-shot, bounded real powered O2 ICP 24-chemistry experiment.
+# User-authorized research run. Input tables enter only through repository Secret.
+# Self-path-triggered on main; remove after terminal evidence and review.
+name: Issue395 Oxygen24 400 1000 W once
+run-name: Oxygen24 400/1000 W SHA 13694ca685f1
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/issue395-oxygen24-400-1000-once.yml]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: issue395-oxygen24-400-1000-once
+  cancel-in-progress: false
+
+jobs:
+  private-rate-gate:
+    name: Private 19-table secure-rate admission
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Require exact private 19-table archive as Actions Secret
+        shell: bash
+        env:
+          PRIVATE_RATES_B64: ${{ secrets.OXYGEN24_RATES_TAR_XZ_B64 }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$PRIVATE_RATES_B64" ]]; then
+            echo "::error::OXYGEN24_RATES_TAR_XZ_B64 repository Actions Secret is not set. Refusing to publish or synthesize private 100-point reaction rates."
+            echo "Configure Settings > Secrets and variables > Actions > New repository secret."
+            exit 22
+          fi
+          # Never echo secret or write its contents into the public repository.
+          echo "OXYGEN24_PRIVATE_RATE_SECRET_PRESENT=YES"
+
+  powered-icp:
+    needs: private-rate-gate
+    name: Real PhysicsApp ${{ matrix.power_w }}W 24-chemistry
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        power_w: [400, 1000]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    env:
+      CHATGPT_WORK_BASE_SHA: 13694ca685f14c4b00205f04cf52b2d1afb8a0eb
+      OXYGEN_RESEARCH_400: '1'
+      OXYGEN_RESEARCH_FULL24: '1'
+      OXYGEN_RESEARCH_RATE_DIR: ${{ runner.temp }}/oxygen24/private_rates
+      PWD_IN_RUNNER: ${{ github.workspace }}
+    steps:
+      - name: Checkout exact reviewed 24-reaction experiment source
+        uses: actions/checkout@v4
+        with:
+          ref: 13694ca685f14c4b00205f04cf52b2d1afb8a0eb
+          fetch-depth: 1
+
+      - name: Verify source and avoid publishing user rate tables
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$CHATGPT_WORK_BASE_SHA"
+          test "$OXYGEN_RESEARCH_FULL24" = 1
+          test ! -e experiments/Issue395_powered_chemistry_ladder/private_rates
+          echo "EXACT_24_CHEMISTRY_SOURCE_SHA=$CHATGPT_WORK_BASE_SHA"
+
+      - name: Restore and validate private numeric lookup tables
+        shell: bash
+        env:
+          PRIVATE_RATES_B64: ${{ secrets.OXYGEN24_RATES_TAR_XZ_B64 }}
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p "$OXYGEN_RESEARCH_RATE_DIR"
+          printf '%s' "$PRIVATE_RATES_B64" | base64 --decode | tar -xJ -C "$OXYGEN_RESEARCH_RATE_DIR" --no-same-owner
+          # Explicitly fail on extraneous legacy EI-936 or missing data.
+          python3 - <<'PY'
+          import importlib.util, os
+          from pathlib import Path
+          folder=Path(os.environ["OXYGEN_RESEARCH_RATE_DIR"])
+          src=Path("experiments/Issue395_powered_chemistry_ladder/build_oxygen_24_source_overlay.py")
+          spec=importlib.util.spec_from_file_location("chem24",src)
+          m=importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(m)
+          assert not list(folder.glob("*936*"))
+          paths=m.validate_files(folder)
+          assert len(paths)==19 and set(paths)==set(m.LOOKUP_IDS)
+          assert m.validate_network()["atoms_charge_mass"]=="PASS"
+          print("USER_RATE_TABLES_19x100_PRIVATE_VALIDATED=PASS")
+          PY
+
+      - name: Install host mesh and preparation dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install --disable-pip-version-check --quiet 'pytest>=8,<9'
+          python3 -m venv .issue395-oxygen24-venv
+          .issue395-oxygen24-venv/bin/python -m pip install --disable-pip-version-check --quiet numpy==2.1.2 scipy==1.14.1
+          .issue395-oxygen24-venv/bin/python -m pytest -q tests/test_issue395_oxygen_full24_source_overlay.py tests/test_issue395_oxygen_full24_seeds.py tests/test_issue395_oxygen_full24_wall_sticking.py
+          bash -n experiments/Issue395_powered_chemistry_ladder/issue397_l1_power_scan_replay.sh
+
+      - name: P0 materialize exact 400 or 1000 W input
+        shell: bash
+        run: |
+          set -euo pipefail
+          source .issue395-oxygen24-venv/bin/activate
+          bash experiments/Issue395_powered_chemistry_ladder/issue397_l1_power_scan_replay.sh prepare ${{ matrix.power_w }}
+
+      - name: P1 build real exact-source physics-opt
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash experiments/Issue395_powered_chemistry_ladder/issue397_l1_power_scan_replay.sh build ${{ matrix.power_w }}
+
+      - name: P2 real physics-opt --check-input
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash experiments/Issue395_powered_chemistry_ladder/issue397_l1_power_scan_replay.sh check ${{ matrix.power_w }}
+
+      - name: P3 bounded 100 us real powered ICP transient
+        id: solve
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout -s TERM -k 60s 19000s bash experiments/Issue395_powered_chemistry_ladder/issue397_l1_power_scan_replay.sh solve ${{ matrix.power_w }}
+
+      - name: P4 native sheath and charge audit
+        if: steps.solve.outcome == 'success'
+        shell: bash
+        run: |
+          set -euo pipefail
+          source .issue395-oxygen24-venv/bin/activate
+          bash experiments/Issue395_powered_chemistry_ladder/issue397_l1_power_scan_replay.sh audit ${{ matrix.power_w }}
+
+      - name: Archive generated input, checks, transient output, rate hashes only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue395-oxygen24-${{ matrix.power_w }}W-100us-exact-13694ca6
+          if-no-files-found: warn
+          retention-days: 30
+          path: |
+            experiments/Issue395_powered_chemistry_ladder/results_rf_elastic_diss_ion_ei20_ei01_${{ matrix.power_w }}w_adjacent_sheath_wall_closed_100us_dt1000ns/**
+            experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_ei20_ei01_${{ matrix.power_w }}w_adjacent_sheath_wall_closed_100us_dt1000ns.i
+            experiments/Issue395_powered_chemistry_ladder/full24_${{ matrix.power_w }}w_100us_dt1000ns_overlay.i
+            experiments/Issue395_powered_chemistry_ladder/chem24_manifest.json
+          # Never upload private_rates/ or a source bundle containing rates.
