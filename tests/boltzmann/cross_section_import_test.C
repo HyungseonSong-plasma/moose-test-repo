@@ -223,19 +223,36 @@ int main()
         thermal_sparse.maximum_normalized_equation_residual < 1e-8))
     throw std::runtime_error("M5 superelastic dense/sparse parity failed");
 
-  // Negative control: an EFFECTIVE momentum record for the upper state
-  // may already include superelastic scattering, and cannot be converted
-  // into an elastic record by subtracting only forward excitation.
-  rejects([&] {
-    std::string invalid = reversible_text;
-    const auto upper = invalid.find("ELASTIC\nAr*\n");
+  // EFFECTIVE upper-state momentum must be decomposed into nonnegative
+  // elastic recoil and detailed-balance inverse scattering, not rejected.
+  {
+    std::string complete = reversible_text;
+    const auto upper = complete.find("ELASTIC\nAr*\n");
     if (upper == std::string::npos)
       throw std::runtime_error("missing excited target fixture anchor");
-    invalid.replace(upper, std::string("ELASTIC").size(), "EFFECTIVE");
-    std::istringstream f(invalid);
-    (void)prepareElasticExcitation(
+    complete.replace(upper, std::string("ELASTIC").size(), "EFFECTIVE");
+    const auto begin = complete.find("0 5e-20\n10 5e-20\n------\n", upper);
+    if (begin == std::string::npos)
+      throw std::runtime_error("missing synthetic upper-scattering fixture");
+    complete.replace(begin, std::string("0 5e-20\n10 5e-20\n------\n").size(),
+                     "0 5e-18\n10 5e-18\n------\n");
+    std::istringstream f(complete);
+    const auto combined = prepareElasticExcitation(
         parseBolsigCrossSections(f), reverse_fractions, 10.0, true);
-  });
+    if (combined.targets.size() != 2 || combined.channels.size() != 1 ||
+        combined.targets[1].momentum_transfer_m2.empty())
+      throw std::runtime_error("EFFECTIVE upper-state reversible projection missing");
+    for (double recoil : combined.targets[1].momentum_transfer_m2)
+      if (!(recoil >= 0.0 && std::isfinite(recoil)))
+        throw std::runtime_error("EFFECTIVE upper-state negative recoil");
+    ElasticInput combined_conditions = equilibrium_input;
+    combined_conditions.targets = combined.targets;
+    const auto combined_solution = solveExcitationSteadyState(
+        combined_conditions, combined.channels, ExcitationLinearMethod::DenseReference);
+    if (!(combined_solution.distribution.mean_energy_eV > 0.0 &&
+          combined_solution.superelastic_rate_coefficients_m3_per_s[0] > 0.0))
+      throw std::runtime_error("EFFECTIVE + superelastic operator failed");
+  }
 
   // Negative controls: no excited-state elastic record, absent upper target,
   // nonphysical degeneracy, and missing explicit upper-state composition.
