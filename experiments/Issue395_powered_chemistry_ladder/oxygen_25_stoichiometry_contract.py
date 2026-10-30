@@ -86,6 +86,10 @@ def active_audit():
     for rid in ("407", "413", "414"):
         reaction = next(r for r in ACTIVE_REACTIONS if r[0] == rid)
         assert stoich(reaction) == {"O2": -1, "O2a": 1}, rid
+    for rid in ("411", "2068", "2073"):
+        reaction = next(r for r in ACTIVE_REACTIONS if r[0] == rid)
+        assert stoich(reaction) == {"O2": -1, "O": 2} if rid == "411" else stoich(reaction) == {"O2a": -1, "O": 2}
+    assert {"H23", "H24", "H25"}.issubset(active_ids)
     return {
         "scope": "400W_1000W_research_active_chemistry",
         "canonical_inventory": 25,
@@ -97,6 +101,9 @@ def active_audit():
         "source_species_mapping": SOLVER_SPECIES_IDENTITY,
         "missing_transport_species": [],
         "lumped_O2a_production_reaction_ids": ["407", "413", "414"],
+        "user_selected_O3P_dissociation_reaction_ids": ["411", "2068", "2073"],
+        "heavy_research_reaction_ids": ["H23", "H24", "H25"],
+        "legacy_Zhao_dissociation_parallel_activation_allowed": False,
         "lumped_O2a_source_model": "user_selected_surrogate_not_state_resolved_branching",
         "lumped_energy_losses_eV": {"407": 0.977, "413": 8.4, "414": 10.0},
         "science_holds": {k: ("User-selected O2(a) effective lumping; physical branching not validated"

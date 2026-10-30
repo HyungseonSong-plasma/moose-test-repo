@@ -47,3 +47,37 @@ Selection, stoichiometry, and standalone overlay tests do not make a complete
 24-source ICP case. Coupling other chemistry channels and real 400/1000 W
 `physics-opt` --check-input/transient runs remain pending. Do not claim
 density trends from this gate.
+
+## User-selected approximate dissociation (2026-10-30)
+
+The purpose is a consistent reduced chemistry, not state-resolved scientific
+validation. Keep the 24-channel active count.
+
+- EI-411: e + O2(X) -> e + 2 O(3P) = source +0.032 R411 to `w_O`
+- EI-2068: e + O2(a) -> e + 2 O(3P) = source +0.032 R2068 to `w_O`
+- EI-2073: e + O2(a) -> e + 2 O(3P) = source +0.032 R2073 to `w_O`
+
+O(3P)=`O`, O(1D)=`Os`, O2(a)=`O2s`; no new species.
+These are explicit *effective reaction assumptions*, not exact threshold/
+branching assignments. EI-411's 4.5 eV and EI-2068's 3.52 eV loss models
+are not thermochemically consistent with producing two ground-state O atoms.
+Retain channel-specific losses as explicitly chosen modeling parameters.
+
+**EI-412 is not intrinsically duplicate of EI-411.** Existing Zhao DISS-G
+empirical fit is a potential second owner of the *same total dissociation
+source*. In the new research run, activate individual R411+R412 lookup
+progress and DISABLE the legacy Zhao fit instead of summing all three.
+
+**EI-2259:** select provisional thermal formula k=2.4e-13
+(300/Te[K])^0.70 m3/s (Te>200 K), not an EEDF lookup.
+**EI-2738:** allow a provisional rate model, but its concrete numeric
+coefficient/table is still required before running; never fabricate it.
+**EI-2074:** provisional partial ionization rate can be used if an explicit
+source table/model is present; a shifted EI-417 curve is not a verified
+state-specific EI-2074 measurement.
+
+**H23, H24, H25** are selected for the exploratory model. Retain the
+existing research coefficients and H25's assumed k=2e-17*(Tg/300K)^(-0.4)
+m3/s; science source verification is not a prerequisite for this preliminary
+run. This marks *selection only*; it does not imply the heavy source kernels
+are connected or that the 400/1000 W transient has run.

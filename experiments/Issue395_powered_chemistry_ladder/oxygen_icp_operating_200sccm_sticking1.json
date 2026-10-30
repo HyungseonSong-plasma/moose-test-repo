@@ -53,7 +53,7 @@
       "outlet"
     ]
   },
-  "warning": "User-chosen EI413/414 effective O2(a) lump is a modeling assumption, not verified electronic-state branching. Historical reactions unchanged; no powered ICP simulation yet.",
+  "warning": "Research-only 24-chemistry, user-specified effective dissociation products for 411/2068/2073, EI413/414→O2a, provisional H23–H25. Source coupling and 400/1000 W physics-opt transient not yet completed.",
   "initial_conditions": {
     "charged_species_number_density_m3": {
       "electron": 1000000000000000,
@@ -120,6 +120,67 @@
         "EI-413_O2_X.txt",
         "EI-414_O2_X.txt"
       ]
+    },
+    "effective_dissociation_choices": {
+      "identity": "user_selected_reduced_complexity_Oxygen_ICP_400_1000W",
+      "reaction_ids": [
+        "411",
+        "2068",
+        "2073"
+      ],
+      "products_by_reaction": {
+        "411": {
+          "O": 2
+        },
+        "2068": {
+          "O": 2
+        },
+        "2073": {
+          "O": 2
+        }
+      },
+      "solver_product": "O(3P) mapped to O/w_O",
+      "meaning": "Treat each as e+parent -> e+2O(3P); separate rates, no double use of same progress",
+      "electron_energy_policy": "Preserve each channel-specific tabulated/model loss; 411/2068 are effective, not exact dissociation thermochemistry",
+      "scientific_verification": "not required as gate for this exploratory run"
+    },
+    "dissociation_double_count_guard": {
+      "mode": "lookup_only_for_EI411_EI412",
+      "required_progress": "R_EI411 + R_EI412, independent sources",
+      "legacy_Zhao_DISS_G": "disable in this research case when the 411+412 lookup projections are connected",
+      "caveat": "The two independent source terms are not intrinsically duplicate; only parallel legacy formula for same channels would double count"
+    },
+    "heavy_research_activation": {
+      "active_reaction_ids": [
+        "H23",
+        "H24",
+        "H25"
+      ],
+      "all_three_enabled_in_selected_research_network": true,
+      "source_file": "oxygen_heavy_H23_H24_H25_SI_research.txt",
+      "source_risk": "provisional screenshot/QDB parameters, not independently verified",
+      "H25_temperature_model": "k_particle = 2e-17*(T_g/300K)^(-0.4) m^3/s",
+      "unit_basis": "particle m^3/s before internal reaction database conversion",
+      "implementation_state": "selection only; full 24-reaction MOOSE solver connection still pending"
+    },
+    "ei2259": {
+      "reaction": "e+O2+ -> 2O(3P)",
+      "adopted_provisional_rate_basis": "thermal_formula_not_EEDF_lookup",
+      "formula": "k=2.4e-13*(300/Te_K)^0.70 [m^3/s], Te_K>200",
+      "observation": "formula-vs-EEDF mismatch is methodological, not a chemical reaction inconsistency",
+      "implementation_state": "source coupling pending"
+    },
+    "ei2738": {
+      "reaction": "e+O- -> O(3P)+2e",
+      "approved_for_reduced_model": "allow provisional rate, no requirement for source-verified energy-dependent sigma(E)",
+      "coefficient_status": "requires an explicit provided or adopted numeric rate formula/lookup; no numeric value may be fabricated",
+      "implementation_state": "source coupling pending"
+    },
+    "ei2074": {
+      "reaction": "e+O2(a) -> O+ + O(3P) + 2e",
+      "proposed_rate": "existing provisional model if a defined table/formula is available",
+      "reason_for_validation_flag": "state-specific partial dissociative-ionization curve not proven equal to an energy-shifted ground-state EI417 curve",
+      "implementation_state": "source coupling and numeric rate selection pending"
     }
   }
 }

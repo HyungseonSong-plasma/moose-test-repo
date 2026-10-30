@@ -1,6 +1,7 @@
 # RESEARCH-ONLY: source parameters from QDB screenshot, not independently verified.
 # SI particle-basis A in m^3/s; PhysicsReactionDatabase converts to molar units.
-# H25 is HOLD until source temperature reference/convention checked.
+# User-approved exploratory 400/1000 W model: activate H23, H24, H25 together.
+# H25 temperature reference remains an explicitly provisional assumption; do not claim source verification.
 species O2 O2 0.032 0 heavy
 species O2p O2p 0.032 1 heavy
 species O O 0.016 0 heavy
