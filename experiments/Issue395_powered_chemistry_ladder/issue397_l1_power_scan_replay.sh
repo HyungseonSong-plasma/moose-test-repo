@@ -343,6 +343,12 @@ if [[ "${OXYGEN_RESEARCH_FULL24:-0}" = 1 ]]; then
   grep -q 'OXYGEN_24_CHEMISTRY_OVERLAY_PREPARED_NOT_RUN' \
     "$RESULT/prep/full24_source_overlay.log"
   test -s "$FULL24_OVERLAY"
+  # P0: MOOSE Parser reserves x,y,z,t,pi,e. Reject invalid generated
+  # ParsedFunctorMaterial aliases before Docker build or physics-opt P2.
+  python3 bin/physics.py preflight --self-test \
+    | tee "$RESULT/prep/full24_parser_preflight_selftest.log"
+  python3 bin/physics.py preflight "$FULL24_OVERLAY" \
+    | tee "$RESULT/prep/full24_parser_preflight.log"
 fi
     ;;
   build)
