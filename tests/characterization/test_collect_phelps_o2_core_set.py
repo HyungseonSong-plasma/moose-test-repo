@@ -108,3 +108,32 @@ def test_missing_rotation_duplicate_fails_review():
     src = src.replace(orig, orig.replace("34 3.120000", "34 3.220000"))
     with pytest.raises(ValueError, match="source duplicate knot disappeared"):
         m.extract(src, ch)
+
+
+def test_unregistered_three_body_not_generated(tmp_path):
+    source = tmp_path / "source.txt"
+    source.write_text(
+        synthetic()
+        + "\nO2 THREE-BODY ATTACHMENT\n"
+        + "ENERGY LOSS = 0\nQSCALE = 1\nENERGY CROSS SECTION\n"
+        + "1 0 0\n2 1 0.1\n",
+        encoding="utf-8",
+    )
+    output = tmp_path / "converted"
+    manifest = m.collect(source, output, "2026-10-30")
+    assert len(manifest["channels"]) == 17
+    assert "attachment_three_body" not in manifest["channels"]
+    assert not list(output.glob("*three_body*"))
+
+
+def test_registering_unapproved_attachment_is_rejected(monkeypatch, tmp_path):
+    channel = m.Channel(
+        "attachment_three_body", "O2 THREE-BODY ATTACHMENT",
+        36, 0., 1., "DENSITY_NORMALIZED_THREE_BODY"
+    )
+    monkeypatch.setattr(m, "CHANNELS", m.CHANNELS + (channel,))
+    source = tmp_path / "input.txt"
+    source.write_text(synthetic(), encoding="utf-8")
+    with pytest.raises(ValueError, match="UNREGISTERED_CHEMISTRY"):
+        m.collect(source, tmp_path / "out", "2026-10-30")
+    assert not (tmp_path / "out").exists()
