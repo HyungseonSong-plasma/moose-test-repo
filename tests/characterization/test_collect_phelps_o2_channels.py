@@ -49,7 +49,7 @@ def source_text() -> str:
     )
 
 
-def test_full_six_channels_extracted_without_cross_talk(tmp_path) -> None:
+def test_all_seven_channels_extracted_without_cross_talk(tmp_path) -> None:
     s = source_text()
     for spec in m.SECTIONS:
         vals = m.section_data(s, spec)
@@ -67,7 +67,7 @@ def test_full_six_channels_extracted_without_cross_talk(tmp_path) -> None:
     meta = m.collect(original, output_dir, "2026-10-30")
     assert meta["source_sha256"] == hashlib.sha256(original.read_bytes()).hexdigest()
     assert set(meta["channels"]) == {
-        "401", "407", "411", "412_loss", "412_dissociation", "413"
+        "401", "407", "411", "412_loss", "412_dissociation", "413", "414"
     }
     assert meta["channels"]["411"]["species_source_accepted"] is False
     assert meta["channels"]["412_loss"]["species_source_accepted"] is False
@@ -88,6 +88,7 @@ def test_full_six_channels_extracted_without_cross_talk(tmp_path) -> None:
     ("412_loss", "O2 6.0 LOSS"),
     ("412_dissociation", "P. C. Cosby"),
     ("413", "O2 8.4 LOSS HAYASHI ABOVE 20EV - CHANTRY BELOW"),
+    ("414", "O2 9.97 LOSS TRAJMAR"),
 ])
 def test_source_mutations_detected(section_id, broken) -> None:
     source = source_text()
