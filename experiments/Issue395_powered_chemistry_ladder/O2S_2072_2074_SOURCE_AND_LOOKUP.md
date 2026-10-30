@@ -16,6 +16,29 @@ Sungjin Kim (2006), UCB/EECS-2006-56, Table 2.1 and Appendix A, https://www2.eec
 
 Phelps original source https://us.lxcat.net/notes/index.php?download=phelps5 ; 2072 parent source section: O2 IONIZATION. For 2073 use the **separate** O2 DISSOCIATION - BASED ON TABLE I OF section (P. C. Cosby, J. Chem. Phys. 98, 9560, 1993). The O2 6.0 LOSS section is NOT automatically a dissociation cross section. For 2074 use Krishnakumar & Srivastava (1992), DOI https://doi.org/10.1016/0168-1176(92)87037-F , **partial O+ fragment** channel; never use the ground-state molecular O2+ parent-ion or total ionization curve.
 
+### Additional state-resolved theoretical cross-section research (not numeric acquisition)
+
+For **2072**, a more directly state-aware theoretical source was located:
+A. V. Kosarim, B. M. Smirnov, M. Capitelli, A. Laricchiuta and F. Paniccia
+(2006), *Electron impact ionization cross sections of vibrationally and
+electronically excited oxygen molecules*, Chemical Physics Letters **422**,
+513–517, DOI https://doi.org/10.1016/j.cplett.2006.02.098 .
+This explicitly treats O2 ionization from low-lying singlet states and
+reports both threshold lowering and changes in cross-section maxima. **No
+verified numeric state-resolved sigma(E) from this paper was obtained**.
+When available, a source-validated state-resolved cross section should
+be preferred or independently compared with Kim's mere energy-shift model.
+
+V. Guerra, A. Tejero-del-Caz, C. D. Pintassilgo and L. L. Alves, *Modelling
+N2–O2 plasmas: volume and surface kinetics* (review), states that
+excited O2(a1Delta_g) ionization is represented with separately sourced
+cross sections, whereas O2(a1Delta_g) dissociation and dissociative
+ionization are often approximated by shifting ground-state thresholds.
+Review PDF: https://helvia.uco.es/bitstream/handle/10396/31705/N2-O2%20Review_total.pdf?isAllowed=y&sequence=1 .
+This supports the **model-vs-state-resolved-data distinction**. The
+numbers stored by the converter remain a **derived** approximation until
+independent experimental/theoretical source validation.
+
 ## Proposed model energy accounting — not physical acceptance
 
 Under the chosen approximate 0.977-eV initial state offset:
