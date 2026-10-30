@@ -63,7 +63,7 @@ def test_three_owners_one_mass_source_and_individual_energy():
     assert overlay.count("variable = w_O2s") == 1
     assert "variable = w_O2_constraint" not in overlay
     assert "variable = log_ne" not in overlay
-    assert "variable = w_O" not in overlay
+    assert re.search(r"(?m)^\s*variable\s*=\s*w_O\s*$", overlay) is None
     assert "expression = 'a+b+c'" in overlay
     assert "expression = '-0.977*a-8.4*b-10.0*c'" in overlay
     assert "expression = '-0.032*R'" in overlay
