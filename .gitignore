@@ -17,3 +17,6 @@ bin/qpx-devel
 .DS_Store
 .vscode/
 .idea/
+
+# Original/licensed Phelps and other local cross-section sources / extracts
+experiments/Issue395_powered_chemistry_ladder/.local_cross_sections/
