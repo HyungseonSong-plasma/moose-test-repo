@@ -42,6 +42,16 @@ export ION="$CHEM/o2_ionization_${POWER_W}w_100us_dt${DT_NS}ns_overlay.i"
 export ION_O="$CHEM/o_ionization_ei20_${POWER_W}w_100us_dt${DT_NS}ns_overlay.i"
 export ATTACH="$CHEM/o2_attachment_ei01_${POWER_W}w_100us_dt${DT_NS}ns_overlay.i"
 export OELASTIC="$CHEM/o_elastic_ei17_${POWER_W}w_100us_dt${DT_NS}ns_overlay.i"
+# Optional NEW research-only EI407/413/414 -> O2(a) lumped source.
+# Off by default. Historical validated 200/250/300/600/1000W replays unchanged.
+export O2A_LUMPED="$CHEM/o2a_lumped_ei407_413_414_${POWER_W}w_100us_dt${DT_NS}ns_overlay.i"
+export O2A_EXTRA_INPUT=''
+if [[ "${OXYGEN_RESEARCH_LUMPED_O2A:-0}" = 1 ]]; then
+  test -n "${OXYGEN_RESEARCH_RATE_DIR:-}" || {
+    echo "OXYGEN_RESEARCH_RATE_DIR with three 100-point lookups is required" >&2; exit 2;
+  }
+  O2A_EXTRA_INPUT="'$O2A_LUMPED'"
+fi
 echo "ISSUE397_REPLAY_PHASE=$PHASE TARGET_W=$POWER_W SOURCE_SHA=$(git rev-parse HEAD)"
 case "$PHASE" in
   prepare)
@@ -272,6 +282,18 @@ grep -q 'variable = w_O' "$ATTACH"
 grep -q 'S_heavy_mass_closure_EI01' "$ATTACH"
 grep -q 'S_charge_molar_closure_EI01' "$ATTACH"
 test "$(grep -c 'reaction_progress = R_attachment' "$ATTACH")" -eq 1
+if [[ "${OXYGEN_RESEARCH_LUMPED_O2A:-0}" = 1 ]]; then
+  python3 "$CHEM/build_lumped_o2a_ei407_413_414.py" \
+    --base-input "$INPUT" \
+    --rate-dir "$OXYGEN_RESEARCH_RATE_DIR" \
+    --output "$O2A_LUMPED" \
+    | tee "$RESULT/prep/o2a_lumped_EI407_413_414.log"
+  test -s "$O2A_LUMPED" || { echo "missing O2a lumped overlay" >&2; exit 2; }
+  for rid in 407 413 414; do
+    grep -q "reaction_progress = R_EI$rid" "$O2A_LUMPED"
+    test -s "$CHEM/private_rates/EI-$rid"_O2_X.txt
+  done
+fi
     ;;
   build)
 docker pull "$BUILD_BASE_REF"
@@ -297,6 +319,9 @@ test -x physics_app/physics-opt
     ;;
   check)
 set -euo pipefail
+if [[ "${OXYGEN_RESEARCH_LUMPED_O2A:-0}" = 1 ]]; then
+  test -s "$O2A_LUMPED" || { echo "O2a overlay not prepared" >&2; exit 2; }
+fi
 docker run --rm --entrypoint /bin/bash --user 0:0 \
   --workdir /workspace -v "$GITHUB_WORKSPACE:/workspace" \
   "$BUILD_BASE_REF" -lc "
@@ -310,11 +335,15 @@ docker run --rm --entrypoint /bin/bash --user 0:0 \
       '$ION' \
       '$ION_O' \
       '$ATTACH' \
-      '$OELASTIC'
+      '$OELASTIC' \
+      ${O2A_EXTRA_INPUT}
   " 2>&1 | tee "$RESULT/check_input.log"
     ;;
   solve)
 set -euo pipefail
+if [[ "${OXYGEN_RESEARCH_LUMPED_O2A:-0}" = 1 ]]; then
+  test -s "$O2A_LUMPED" || { echo "O2a overlay not prepared" >&2; exit 2; }
+fi
 docker run --rm --entrypoint /bin/bash --user 0:0 \
   --workdir /workspace -v "$GITHUB_WORKSPACE:/workspace" \
   "$BUILD_BASE_REF" -lc "
@@ -329,6 +358,7 @@ docker run --rm --entrypoint /bin/bash --user 0:0 \
       '$ION_O' \
       '$ATTACH' \
       '$OELASTIC' \
+      ${O2A_EXTRA_INPUT} \
       Outputs/file_base='$RESULT/run/plasma'
   " 2>&1 | tee "$RESULT/runtime.log"
     ;;
