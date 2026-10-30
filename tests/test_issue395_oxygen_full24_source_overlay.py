@@ -79,6 +79,17 @@ def test_strict_lookup_100point_all19_and_private_stage(tmp_path):
     assert report["active"]==24 and report["lookups"]==19
     assert out.is_file()
     assert len(list((out.parent/"private_rates").glob("EI-*.txt")))==19
+    overlay = out.read_text()
+    # MOOSE resolves relative lookup paths against the overlay input folder.
+    # A path prefixed with experiment/ here would point to a nonexistent
+    # experiment/experiment/private_rates directory.
+    for rid, parent in m.PARENT.items():
+        suffix = {"O2":"O2_X","O2a":"O2_a1Delta",
+                  "O":"O_3P","Os":"O_1D"}[parent]
+        relative = f"private_rates/EI-{rid}_{suffix}.txt"
+        assert f"rate_table_file = '{relative}'" in overlay
+        assert (out.parent / relative).is_file()
+    assert "rate_table_file = 'experiment/private_rates/" not in overlay
     assert len(json.loads((out.parent/"chem24_manifest.json").read_text())["lookup_sha256"])==19
     broken=private/"EI-2074_O2_a1Delta.txt"
     broken.write_text("1.5 1\n")

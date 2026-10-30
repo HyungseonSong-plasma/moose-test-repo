@@ -268,7 +268,10 @@ def stage(base:Path, rate_dir:Path, output:Path, root:Path) -> dict:
         if target.exists() and hashlib.sha256(target.read_bytes()).digest()!=hashlib.sha256(src.read_bytes()).digest():
             raise ValueError(f"conflicting private lookup {target}")
         if src.resolve()!=target.resolve(): shutil.copyfile(src,target)
-        mapping[rid]=target.relative_to(root).as_posix()
+        # MOOSE resolves rate_table_file relative to the overlay .i location,
+        # not the process working directory. Using a repo-root-relative value
+        # duplicates the experiment path and fails physics-opt --check-input.
+        mapping[rid]=target.relative_to(output.parent).as_posix()
         hashes[str(rid)]=hashlib.sha256(target.read_bytes()).hexdigest()
     result=make_overlay(mapping, base.read_text(encoding="utf-8"))
     output.parent.mkdir(parents=True, exist_ok=True)
