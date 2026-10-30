@@ -101,6 +101,9 @@ def section_data(source: str, spec: Section) -> list[tuple[float, float]]:
     points: list[tuple[float, float]] = []
     started = False
     for line in tail.splitlines():
+        # pdftotext may preserve the PDF page footer inside a numeric section.
+        if re.fullmatch(r"\s*Page\s+\d+\s+of\s+\d+\s*", line):
+            continue
         m = (PAIR if spec.source_kind == "indexed" else DOUBLE).fullmatch(line)
         if m:
             if spec.source_kind == "indexed":
