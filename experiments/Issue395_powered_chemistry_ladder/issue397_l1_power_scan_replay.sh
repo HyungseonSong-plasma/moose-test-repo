@@ -328,6 +328,9 @@ if [[ "${OXYGEN_RESEARCH_FULL24:-0}" = 1 ]]; then
   python3 "$CHEM/build_oxygen_icp_200sccm_inlet.py" \
     --base-input "$INPUT" --output "$INPUT.full24_tmp"
   mv "$INPUT.full24_tmp" "$INPUT"
+  python3 "$CHEM/apply_oxygen_24_initial_seeds.py" \
+    --base-input "$INPUT" --output "$INPUT.seed_tmp"
+  mv "$INPUT.seed_tmp" "$INPUT"
   python3 "$CHEM/build_oxygen_24_source_overlay.py" \
     --base-input "$INPUT" \
     --rate-dir "$OXYGEN_RESEARCH_RATE_DIR" \
