@@ -371,12 +371,11 @@ ImportedElasticExcitation prepareElasticExcitation(
       std::vector<double> field_momentum;
       if (rec.kind == CollisionKind::Effective || full_growth)
       {
-        if (rec.kind == CollisionKind::Effective)
-          for (const auto & channel : file.records)
-            if (channel.kind == CollisionKind::Excitation &&
-                channel.reversible && channel.product == rec.target)
-              throw std::invalid_argument(
-                  "Boltzmann cross sections: EFFECTIVE upper-state momentum with reversible superelastic channel unsupported");
+        // An EFFECTIVE upper-state momentum cross section includes backward
+        // superelastic first-harmonic scattering under the selected source
+        // convention. Reconstruct the elastic recoil by subtracting the
+        // detailed-balance inverse as well as the forward inelastic channels.
+        // A negative remainder fails closed below; never double count it.
         energy = {0.0, max_energy_eV};
         for (const double e : rec.energy_eV)
           if (e <= max_energy_eV)
@@ -398,6 +397,18 @@ ImportedElasticExcitation prepareElasticExcitation(
             add_knots(channel);
         for (const auto & channel : additional_scattering)
           add_knots(channel);
+        // Inverse superelastic knots are shifted into upper-target energy:
+        // epsilon_reverse = epsilon_forward - excitation_threshold.
+        if (rec.kind == CollisionKind::Effective)
+          for (const auto & channel : file.records)
+            if (channel.kind == CollisionKind::Excitation &&
+                channel.reversible && channel.product == rec.target)
+              for (const double forward_e : channel.energy_eV)
+              {
+                const double reverse_e = forward_e - channel.parameter;
+                if (reverse_e > 0.0 && reverse_e <= max_energy_eV)
+                  energy.push_back(reverse_e);
+              }
         std::sort(energy.begin(), energy.end());
         energy.erase(std::unique(energy.begin(), energy.end()), energy.end());
         momentum.clear();
@@ -420,6 +431,17 @@ ImportedElasticExcitation prepareElasticExcitation(
               accumulate(channel);
           for (const auto & channel : additional_scattering)
             accumulate(channel);
+          // Only upper-target EFFECTIVE inputs require removal of backward
+          // superelastic scattering from elastic recoil. The inverse rate
+          // and energy gain remain in the conservative excitation operator.
+          if (rec.kind == CollisionKind::Effective && e > 0.0)
+            for (const auto & channel : file.records)
+              if (channel.kind == CollisionKind::Excitation &&
+                  channel.reversible && channel.product == rec.target &&
+                  e + channel.parameter <= max_energy_eV)
+                inelastic += (e + channel.parameter) / e /
+                             channel.upper_to_lower_weight_ratio *
+                             sampleCrossSection(channel, e + channel.parameter);
           const double remainder = rec.kind == CollisionKind::Effective ?
               primary - inelastic : primary;
           const double tolerance = 1e-10 * std::max(primary, inelastic);
