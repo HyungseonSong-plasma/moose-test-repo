@@ -55,7 +55,7 @@ def test_existing_chemistry_and_kinetic_support_are_one_to_one():
     final = {r["id"]: r for r in load(SOURCE)}
     source = load(PHELPS)
     for record in source:
-        rid = record["table_id"]
+        rid = ("EI-" + record["table_id"] if record["inventory_role"] == "CHEMISTRY_MATCHED" else record["table_id"])
         assert rid in final
         if record["inventory_role"] == "CHEMISTRY_MATCHED":
             assert final[rid]["scope"] == "CHEMISTRY_ELECTRON"
