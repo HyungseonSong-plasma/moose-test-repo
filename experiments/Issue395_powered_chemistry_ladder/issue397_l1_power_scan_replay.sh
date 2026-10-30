@@ -26,6 +26,12 @@ export DIEL=experiments/Issue3_dielectric_surface_charge
 export BASE=experiments/fem_fvm_plasma_discriminator
 export TABLE=experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt
 export RESULT="$CHEM/results_rf_elastic_diss_ion_ei20_ei01_${POWER_W}w_adjacent_sheath_wall_closed_100us_dt${DT_NS}ns"
+# Reaction 411 is deliberately opt-in; do not alter historical 400/1000 W baselines.
+export EI411_CHANNEL="${EI411_CHANNEL:-off}"
+case "$EI411_CHANNEL" in on|off) ;; *) echo "EI411_CHANNEL must be on or off" >&2; exit 2 ;; esac
+if [[ "$EI411_CHANNEL" == on ]]; then
+  export RESULT="${RESULT}_plus_411_ex1"
+fi
 export INPUT="$CHEM/rf_elastic_diss_ion_ei20_ei01_${POWER_W}w_adjacent_sheath_wall_closed_100us_dt${DT_NS}ns.i"
 export PARENT="$CHEM/rf_elastic_multiapp_parent_${POWER_W}w_100us_dt${DT_NS}ns_overlay.i"
 export CHILD_OVERLAY="$CHEM/rf_elastic_multiapp_maxwell_${POWER_W}w_100us_dt${DT_NS}ns_overlay.i"
@@ -36,6 +42,11 @@ export ION="$CHEM/o2_ionization_${POWER_W}w_100us_dt${DT_NS}ns_overlay.i"
 export ION_O="$CHEM/o_ionization_ei20_${POWER_W}w_100us_dt${DT_NS}ns_overlay.i"
 export ATTACH="$CHEM/o2_attachment_ei01_${POWER_W}w_100us_dt${DT_NS}ns_overlay.i"
 export OELASTIC="$CHEM/o_elastic_ei17_${POWER_W}w_100us_dt${DT_NS}ns_overlay.i"
+export EI411="$CHEM/o2_ex1_excitation_411_${POWER_W}w_100us_dt${DT_NS}ns_overlay.i"
+EI411_CLI=""
+if [[ "$EI411_CHANNEL" == on ]]; then
+  EI411_CLI="'$EI411'"
+fi
 echo "ISSUE397_REPLAY_PHASE=$PHASE TARGET_W=$POWER_W SOURCE_SHA=$(git rev-parse HEAD)"
 case "$PHASE" in
   prepare)
@@ -175,6 +186,17 @@ python3 "$CHEM/build_o_elastic_overlay.py" \
   --source-table physics_app/data/electron_impact/o_elastic.txt \
   | tee "$RESULT/prep/o_elastic_ei17_overlay.log"
 
+if [[ "$EI411_CHANNEL" == on ]]; then
+  python3 "$CHEM/build_o2_ex1_411_overlay.py" \
+    --base-input "$CHEM/a0_full_icp.i" \
+    --output "$EI411" \
+    | tee "$RESULT/prep/o2_ex1_411_overlay.log"
+  grep -q 'REACTION_411_O2_EX1_FORMULA_OVERLAY_BUILD_PASS' "$RESULT/prep/o2_ex1_411_overlay.log"
+  grep -q 'type = PhysicsElectronImpactO2Ex1ExcitationMaterial' "$EI411"
+  grep -q 'variable = log_energy' "$EI411"
+  test "$(grep -c 'type = PhysicsElectronImpactO2Ex1ExcitationMaterial' "$EI411")" -eq 1
+fi
+
 python3 "$CHEM/check_wafer_checkerboard_ab.py" "$INPUT" --mode "$MODE" \
   | tee "$RESULT/prep/wafer_checkerboard_AB.log"
 python3 "$CHEM/issue397_d1_instrument.py" --self-test | tee "$RESULT/prep/d1_instrument_selftest.log"
@@ -219,7 +241,8 @@ python3 -m py_compile \
   "$CHEM/build_o2_dissociation_overlay.py" \
   "$CHEM/build_o2_ionization_overlay.py" \
   "$CHEM/build_o_ionization_overlay.py" \
-  "$CHEM/build_o2_attachment_overlay.py"
+  "$CHEM/build_o2_attachment_overlay.py" \
+  "$CHEM/build_o2_ex1_411_overlay.py"
 
 EXPECTED_STEPS=460
 grep -q 'ISSUE395_TIMEGRID_100US_460STEPS_PASS' "$RESULT/prep/timegrid_460.log"
@@ -304,7 +327,7 @@ docker run --rm --entrypoint /bin/bash --user 0:0 \
       '$ION' \
       '$ION_O' \
       '$ATTACH' \
-      '$OELASTIC'
+      '$OELASTIC' $EI411_CLI
   " 2>&1 | tee "$RESULT/check_input.log"
     ;;
   solve)
@@ -322,7 +345,7 @@ docker run --rm --entrypoint /bin/bash --user 0:0 \
       '$ION' \
       '$ION_O' \
       '$ATTACH' \
-      '$OELASTIC' \
+      '$OELASTIC' $EI411_CLI \
       Outputs/file_base='$RESULT/run/plasma'
   " 2>&1 | tee "$RESULT/runtime.log"
     ;;
