@@ -22,7 +22,7 @@ def test_gate_matrix_matches_the_33_final_collision_records():
     assert len({g["key"] for g in gate}) == 33
     for r, g in zip(reg, gate):
         assert r["scope"] == g["scope"]
-        assert r["numeric"] == g["numeric_cross_section"]
+        assert g["numeric_cross_section"] == ("NOT_APPLICABLE_FORMULA" if r["scope"] == "CHEMISTRY_HEAVY" else r["numeric"])
         assert g["source_sha256"] == ""
         assert g["solver_rate_output"] == "NOT_RUN"
     assert sum(r["scope"] == "CHEMISTRY_ELECTRON" for r in reg) == 22
