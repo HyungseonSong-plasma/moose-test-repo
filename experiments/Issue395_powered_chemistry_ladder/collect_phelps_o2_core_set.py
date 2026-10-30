@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Fail-closed, local-only extraction of Phelps 1978 O2 Boltzmann collision inventory.
+"""Fail-closed, local-only extraction of SELECTED Phelps O2 collision channels.
 
 No Phelps numeric data or protected tables are bundled.  This program accepts
 a locally obtained source PDF (or faithful pdftotext -layout text) and writes
-local-only, source-hashed SI tables.  It does NOT claim solver readiness.
+local-only, source-hashed SI tables. Three-body attachment is excluded by the
+canonical 25-reaction Chemistry Registry. It does NOT claim solver readiness.
 """
 from __future__ import annotations
 
@@ -36,13 +37,17 @@ class Channel:
     threshold_anchor: float | None = None
 
 
-# Exactly 18 sections in the Phelps O2 1978 collection (PDF pp. 2–8).
-# Cosby (1993) O2 DISSOCIATION, outside the collection, is NOT counted here.
+# Select 17 of the 18 sections in the original Phelps O2 1978 collection.
+# Explicit user decision: Three-body attachment is NOT in canonical 25-row
+# Chemistry Registry, therefore no source extraction, no output CSV, no
+# Boltzmann active channel, no rate calculation or O2- species addition.
+# Other kinetic-only diagnostics are data candidates, NOT authorized chemistry
+# reactions; no new chemistry reaction is activated by this extractor.
+# Cosby (1993) O2 DISSOCIATION remains a separate, non-additive alternative.
+FORBIDDEN_CHEMISTRY_CHANNELS = frozenset({"attachment_three_body"})
 CHANNELS = (
     Channel("momentum_effective", "O2 MOMENTUM-TRANSFER CROSS SECTION",
             66, None, None, "EFFECTIVE_MOMENTUM"),
-    Channel("attachment_three_body", "O2 THREE-BODY ATTACHMENT",
-            36, 0., 1., "DENSITY_NORMALIZED_THREE_BODY"),
     Channel("attachment_two_body", "O2 TWO-BODY ATTACHMENT",
             20, 0., 1.2, "ATTACHMENT_TWO_BODY", 4.4),
     Channel("rotation_300K", "O2 SINGL LEVEL ROT PKQ FOR 300K",
@@ -74,7 +79,8 @@ CHANNELS = (
     Channel("line_130nm", "O2 130 NM LINE MUMMA-ZIPF",
             12, 14.7, 1., "EMISSION_LINE_EFFECTIVE", 14.7),
 )
-assert len(CHANNELS) == 18
+assert len(CHANNELS) == 17
+assert not {ch.name for ch in CHANNELS} & FORBIDDEN_CHEMISTRY_CHANNELS
 
 
 def load_source(path: Path) -> str:
@@ -164,6 +170,9 @@ def collect(source: Path, out: Path, retrieved_on: str) -> dict:
         raise ValueError("original input/output directory overlap")
     text = load_source(source)
     # All-or-nothing parse BEFORE writing any output.
+    selected = {ch.name for ch in CHANNELS}
+    if selected & FORBIDDEN_CHEMISTRY_CHANNELS:
+        raise ValueError("UNREGISTERED_CHEMISTRY: three-body attachment forbidden")
     processed = {ch.name: extract(text, ch) for ch in CHANNELS}
     paths = [out / f"o2_{ch.name}_sigma.csv" for ch in CHANNELS]
     manifest_path = out / "phelps_o2_core_manifest.json"
@@ -181,12 +190,16 @@ def collect(source: Path, out: Path, retrieved_on: str) -> dict:
         "conversion_to_m2": SCALE,
         "published_qscale_already_applied": True,
         "interpolation": "linear only on strictly increasing energy segments",
-        "1978_set_channels": len(CHANNELS),
+        "1978_original_source_sections": 18,
+        "selected_source_sections": len(CHANNELS),
+        "canonical_chemistry_table_reactions": 25,
+        "excluded_unregistered_source_channels": sorted(FORBIDDEN_CHEMISTRY_CHANNELS),
+        "chemistry_eligibility_policy": "ONLY_25_REGISTERED_REACTIONS; nonchemistry support is not chemistry activation",
         "excluded_outside_1978": "Cosby 1993 dissociation, available as separate alternative in PR #420",
         "scientific_gates": [
             "effective momentum includes inelastic scattering; do not use as elastic recoil",
             "rotation 300 K source duplicate energy must be adjudicated before interpolation",
-            "three-body attachment is density normalized; not an ordinary two-body sigma",
+            "three-body attachment excluded: not in canonical 25-reaction Chemistry Table",
             "v1/v2 low and 9eV resonance channels have the same product; audit combined accounting",
             "4.5-eV loss not established as 2O(3P) dissociation",
             "6-eV loss and Cosby dissociation are not additive without source reconciliation",
@@ -199,9 +212,7 @@ def collect(source: Path, out: Path, retrieved_on: str) -> dict:
         points, duplicate = processed[ch.name]
         buf = io.StringIO()
         writer = csv.writer(buf, lineterminator="\n")
-        column = ("equivalent_cross_section_m2_at_1_molecule_per_cm3"
-                  if ch.kind == "DENSITY_NORMALIZED_THREE_BODY" else
-                  "cross_section_m2")
+        column = "cross_section_m2"
         writer.writerow(("electron_energy_eV", column))
         for e, sigma in points:
             writer.writerow((f"{e:.17g}", f"{sigma:.17g}"))
@@ -212,7 +223,8 @@ def collect(source: Path, out: Path, retrieved_on: str) -> dict:
             "source_qscale": ch.qscale, "energy_loss_eV": ch.loss,
             "path": path.name, "sha256": hashlib.sha256(raw).hexdigest(),
             "duplicate_knots": duplicate,
-            "requires_density_normalization": ch.kind == "DENSITY_NORMALIZED_THREE_BODY",
+            "registry_chemistry_activation": False,
+            "unregistered_attachment": False,
             "use_as_elastic_momentum": False,
             "solver_accepted": False,
         }
@@ -229,6 +241,7 @@ def main() -> None:
     r = collect(args.source, args.output_dir, args.retrieved_on)
     print(f"PHELPS_O2_SOURCE_EXTRACTED_ONLY count={len(r['channels'])}")
     print(f"source_sha256={r['source_sha256']}")
+    print("UNREGISTERED_THREE_BODY_ATTACHMENT_EXCLUDED=true")
     print("SOLVER_READY=false (momentum, rotation, and chemistry gates remain)")
 
 
