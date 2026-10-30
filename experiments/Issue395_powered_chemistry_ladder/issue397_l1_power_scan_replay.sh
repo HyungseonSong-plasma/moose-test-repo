@@ -51,6 +51,22 @@ export EI2738_EXTRA_INPUT=''
 if [[ "${OXYGEN_RESEARCH_EI2738_FORMULA:-0}" = 1 ]]; then
   EI2738_EXTRA_INPUT="'$EI2738_OVERLAY'"
 fi
+# Full 24-channel experimental case: exactly ONE chemistry overlay owns
+# all 19 electron lookup, two formula and three heavy reaction progress rates.
+export FULL24_OVERLAY="$CHEM/full24_${POWER_W}w_100us_dt${DT_NS}ns_overlay.i"
+export CHEM_SOURCE_INPUTS="'$DISS' '$ION' '$ION_O' '$ATTACH'"
+export FULL24_EXTRA_INPUT=''
+if [[ "${OXYGEN_RESEARCH_FULL24:-0}" = 1 ]]; then
+  test -n "${OXYGEN_RESEARCH_RATE_DIR:-}" || {
+    echo "OXYGEN_RESEARCH_FULL24 needs private 19 lookup files" >&2; exit 2;
+  }
+  test "${OXYGEN_RESEARCH_LUMPED_O2A:-0}" != 1 && \
+  test "${OXYGEN_RESEARCH_EI2738_FORMULA:-0}" != 1 || {
+    echo "FULL24 cannot run simultaneously with prior partial EI overlays" >&2; exit 2;
+  }
+  # Full24 subsumes partial 401/415/dissociation/O2a/2738 owners.
+  CHEM_SOURCE_INPUTS="'$FULL24_OVERLAY'"
+fi
 if [[ "${OXYGEN_RESEARCH_LUMPED_O2A:-0}" = 1 ]]; then
   test -n "${OXYGEN_RESEARCH_RATE_DIR:-}" || {
     echo "OXYGEN_RESEARCH_RATE_DIR with three 100-point lookups is required" >&2; exit 2;
@@ -307,6 +323,20 @@ if [[ "${OXYGEN_RESEARCH_EI2738_FORMULA:-0}" = 1 ]]; then
   test -s "$EI2738_OVERLAY" || { echo "EI2738 Formula overlay missing" >&2; exit 2; }
   grep -q 'property_name = R_EI2738' "$EI2738_OVERLAY"
 fi
+if [[ "${OXYGEN_RESEARCH_FULL24:-0}" = 1 ]]; then
+  # The 200sccm inlet is a research modification, never overwrite old baseline.
+  python3 "$CHEM/build_oxygen_icp_200sccm_inlet.py" \
+    --base-input "$INPUT" --output "$INPUT.full24_tmp"
+  mv "$INPUT.full24_tmp" "$INPUT"
+  python3 "$CHEM/build_oxygen_24_source_overlay.py" \
+    --base-input "$INPUT" \
+    --rate-dir "$OXYGEN_RESEARCH_RATE_DIR" \
+    --root "$PWD" --output "$FULL24_OVERLAY" \
+    | tee "$RESULT/prep/full24_source_overlay.log"
+  grep -q 'OXYGEN_24_CHEMISTRY_OVERLAY_PREPARED_NOT_RUN' \
+    "$RESULT/prep/full24_source_overlay.log"
+  test -s "$FULL24_OVERLAY"
+fi
     ;;
   build)
 docker pull "$BUILD_BASE_REF"
@@ -344,10 +374,7 @@ docker run --rm --entrypoint /bin/bash --user 0:0 \
       -i '$INPUT' \
       '$PARENT' \
       '$ELASTIC' \
-      '$DISS' \
-      '$ION' \
-      '$ION_O' \
-      '$ATTACH' \
+      ${CHEM_SOURCE_INPUTS} \
       '$OELASTIC' ${O2A_EXTRA_INPUT} ${EI2738_EXTRA_INPUT}
   " 2>&1 | tee "$RESULT/check_input.log"
     ;;
@@ -365,10 +392,7 @@ docker run --rm --entrypoint /bin/bash --user 0:0 \
       -i '$INPUT' \
       '$PARENT' \
       '$ELASTIC' \
-      '$DISS' \
-      '$ION' \
-      '$ION_O' \
-      '$ATTACH' \
+      ${CHEM_SOURCE_INPUTS} \
       '$OELASTIC' \
       Outputs/file_base='$RESULT/run/plasma' ${O2A_EXTRA_INPUT} ${EI2738_EXTRA_INPUT}
   " 2>&1 | tee "$RESULT/runtime.log"
