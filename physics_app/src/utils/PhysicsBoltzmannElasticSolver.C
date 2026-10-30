@@ -155,11 +155,14 @@ Coefficients atFace(const ElasticInput & input, double energy,
             [&channel](const ElasticTarget & t) { return t.name == channel.upper_state_target_name; });
         if (upper == input.targets.end())
           throw std::invalid_argument("Boltzmann: superelastic momentum target is missing");
-        // Klein-Rosseland microreversibility:
-        // sigma_inverse(e) = (g_lower/g_upper)*(e+u)/e*sigma_forward(e+u).
-        sigma_m += upper->mole_fraction / channel.upper_to_lower_weight_ratio *
-                   ((energy + channel.threshold_eV) / energy) *
-                   xsAt(energy + channel.threshold_eV);
+        // Klein-Rosseland inverse scattering is added only for an ELASTIC
+        // upper target. An EFFECTIVE upper-target field sigma already
+        // includes it (by selected source convention), so adding it here
+        // would double count momentum relaxation.
+        if (upper->field_momentum_transfer_m2.empty())
+          sigma_m += upper->mole_fraction / channel.upper_to_lower_weight_ratio *
+                     ((energy + channel.threshold_eV) / energy) *
+                     xsAt(energy + channel.threshold_eV);
       }
     }
   if (!finitePositive(sigma_m) || !finitePositive(sigma_e))
