@@ -29,12 +29,12 @@ def test_inventory_is_exact_extractor_selection_and_not_new_chemistry():
         rows = list(csv.DictReader(inp))
     expected_names = {ch.name for ch in m.CHANNELS}
     actual_names = [r["source_key"] for r in rows]
-    assert len(rows) == 17
-    assert len(set(actual_names)) == 17
+    assert len(rows) == 14
+    assert len(set(actual_names)) == 14
     assert set(actual_names) == expected_names
     assert "attachment_three_body" not in expected_names
     assert "attachment_three_body" not in actual_names
-    assert len([r for r in rows if r["inventory_role"] == "KINETIC_SUPPORT"]) == 10
+    assert len([r for r in rows if r["inventory_role"] == "KINETIC_SUPPORT"]) == 7
     assert len([r for r in rows if r["inventory_role"] == "CHEMISTRY_MATCHED"]) == 7
     assert {r["existing_chemistry_id"] for r in rows if r["inventory_role"] == "CHEMISTRY_MATCHED"} == {
         "401", "407", "411", "412", "413", "414", "415"
@@ -54,12 +54,10 @@ def test_inventory_is_exact_extractor_selection_and_not_new_chemistry():
     assert all("O2-" not in r["process"] for r in rows if r["inventory_role"] == "KINETIC_SUPPORT")
 
 
-def test_optional_channels_are_held_and_not_mapped_to_hpep_2073():
+def test_excluded_optional_channels_are_not_imported():
     with INVENTORY.open(encoding="utf-8", newline="") as inp:
         rows = {r["source_key"]: r for r in csv.DictReader(inp)}
-    for key in ("b1sigma", "line_130nm"):
-        assert rows[key]["selection_policy"].startswith("OPTIONAL_HOLD")
-        assert not rows[key]["existing_chemistry_id"]
-    assert "2073" in rows["line_130nm"]["scientific_gate"]
+    assert {"rotation_300K", "b1sigma", "line_130nm"}.isdisjoint(rows)
+    assert "attachment_three_body" not in rows
     assert rows["loss_4p5"]["selection_policy"] == "SOURCE_MAPPING_HOLD"
     assert rows["loss_6"]["selection_policy"] == "SOURCE_MAPPING_HOLD"
