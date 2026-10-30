@@ -46,6 +46,54 @@ KNOWN_SCIENCE_HOLDS={
  "H25":"reference temperature convention unverified"
 }
 
+# The original 25-reaction inventory is immutable provenance.
+# The 400/1000 W research case explicitly excludes EI-936 to avoid
+# pretending that the currently untracked O(1S) product is represented by Os.
+# Stable solver identities come from the canonical Issue17 R0 species ledger:
+# O = O(3P), Os = O(1D), O2s = O2(a1Delta_g).
+ACTIVE_EXCLUDED_REACTION_IDS = frozenset({"936"})
+SOLVER_SPECIES_IDENTITY = {
+    "O(3P)": "O",
+    "O(1D)": "Os",
+    "O2(a1Delta_g)": "O2s",
+}
+ACTIVE_REACTIONS = tuple(r for r in REACTIONS if r[0] not in ACTIVE_EXCLUDED_REACTION_IDS)
+
+
+def active_audit():
+    """Audit the opt-in 24-reaction model, not its 25-row source catalog."""
+    canonical = audit()
+    assert canonical["reaction_count"] == 25
+    assert len(ACTIVE_REACTIONS) == 24
+    assert {r[0] for r in REACTIONS} - {r[0] for r in ACTIVE_REACTIONS} == {"936"}
+    assert sum(r[3] == "lookup" for r in ACTIVE_REACTIONS) == 19
+    assert sum(r[3] == "formula" for r in ACTIVE_REACTIONS) == 2
+    assert sum(r[3] == "heavy" for r in ACTIVE_REACTIONS) == 3
+    for reaction in ACTIVE_REACTIONS:
+        delta = stoich(reaction)
+        assert sum(v * SPECIES[s][0] for s, v in delta.items()) == 0, reaction[0]
+        assert sum(v * SPECIES[s][1] for s, v in delta.items()) == 0, reaction[0]
+    active_ids = {r[0] for r in ACTIVE_REACTIONS}
+    assert {"935", "943"}.issubset(active_ids)
+    return {
+        "scope": "400W_1000W_research_active_chemistry",
+        "canonical_inventory": 25,
+        "active_reactions": 24,
+        "active_lookup_tables": 19,
+        "formula_reactions": 2,
+        "heavy_reactions": 3,
+        "excluded_reactions": sorted(ACTIVE_EXCLUDED_REACTION_IDS),
+        "source_species_mapping": SOLVER_SPECIES_IDENTITY,
+        "missing_transport_species": ["O2star"],
+        "science_holds": {k: v for k, v in KNOWN_SCIENCE_HOLDS.items()
+                          if k in active_ids},
+        "ei936_species_source_enabled": False,
+        "ei936_energy_sink_enabled": False,
+        "power_run": "NOT_RUN",
+        "status": "STOICHIOMETRY_ONLY_PASS",
+    }
+
+
 def stoich(reaction):
     _, reactants, products, _ = reaction
     diff={s:products.split().count(s)-reactants.split().count(s) for s in SPECIES}

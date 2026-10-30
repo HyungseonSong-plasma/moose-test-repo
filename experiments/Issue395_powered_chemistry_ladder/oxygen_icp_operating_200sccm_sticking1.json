@@ -63,5 +63,33 @@
     },
     "charged_seed_policy": "preserve previously specified research seed; charge-neutral",
     "neutral_bulk_initialization_policy": "preserve inherited ICP bulk initial densities; inlet neutral composition changed only"
+  },
+  "chemistry": {
+    "source_inventory_count": 25,
+    "active_reaction_count": 24,
+    "active_lookup_rate_count": 19,
+    "formula_rate_count": 2,
+    "heavy_rate_count": 3,
+    "excluded_reactions": [
+      "936"
+    ],
+    "disabled_reaction_progress": [
+      "R_EI936"
+    ],
+    "disabled_species_and_energy_sources": [
+      "S_EI936_O_3P",
+      "S_EI936_O_1S",
+      "S_EI936_electron_energy"
+    ],
+    "keep_reactions": [
+      "935",
+      "943"
+    ],
+    "solver_species_identity": {
+      "O(3P)": "O",
+      "O(1D)": "Os",
+      "O2(a1Delta_g)": "O2s"
+    },
+    "convention": "Original 25-reaction source inventory preserved. Experimental 400/1000 W model excludes EI-936; must never map O(1S) to Os."
   }
 }
