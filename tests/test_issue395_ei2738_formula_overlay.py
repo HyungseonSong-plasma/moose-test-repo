@@ -19,7 +19,12 @@ def test_selected_rate_modes_and_2259_sigma_distinction():
     assert x["ei2259"]["rate_mode"]=="formula"
     assert x["ei2259"]["measurement_reality"].startswith("Absolute cross sections published")
     assert x["ei2738"]["rate_mode"]=="formula"
-    assert x["ei2074"]["independent_experimental_state_resolved_partial_sigma"]=="not verified available"
+    assert x["ei2074"]["rate_mode"]=="lookup"
+    assert x["ei2074"]["special_number"] == 2074
+    assert x["ei2074"]["source_cross_section_points"]==1001
+    assert x["ei2074"]["source_threshold_eV"] == 16.023
+    assert x["ei2074"]["rate_points"] == 100
+    assert len(x["ei2074"]["source_file_sha256"])==64
     assert x["active_reaction_count"]==24
     assert x["excluded_reactions"]==["936"]
 

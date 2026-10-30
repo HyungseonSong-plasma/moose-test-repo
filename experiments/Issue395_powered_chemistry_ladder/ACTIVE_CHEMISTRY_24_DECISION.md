@@ -106,3 +106,26 @@ are connected or that the 400/1000 W transient has run.
   Not yet proven in a 24-channel powered transient.
 
 Do not confuse `physics-opt` smoke CI with an executed 400/1000 W ICP transient.
+
+## EI-2074 original HPEM numeric evidence recovered (2026-10-30)
+
+**Correction to prior 'no independent cross section' claim.**
+The user-supplied private HPEM `O2ex.dat` includes
+`Process: 18; CROSS SECTION=O2* > O^ + O + E + E;`
+`SPECIAL NUMBER=2074; THRESHOLD=16.023eV; NUMBER POINTS=1001`,
+with energy in eV and sigma in cm2.
+This is **a separate numeric HPEM reaction channel**, not a
+threshold-shifted EI-417 rate. The locally prepared
+`private_rates/EI-2074_O2_a1Delta.txt` has **100 mean-energy/rate rows**,
+in eV and m3/(mol s). Use EI-2074 **Lookup** in this experimental case.
+
+HPEM numeric *existence* does NOT establish an independent
+state-resolved laboratory measurement or full scientific validation.
+Private raw numeric sources remain outside public GitHub. The
+model-specific 100-point lookup is not yet connected to the powered ICP
+source kernels.
+
+Source sha256:
+`90a44f145e92f435bfc3d895bb92d2f901e71d6d93719e79e2d0bd508aaff09d`.
+Rate table sha256:
+`156239a4b3771d9bb5f9e41287671e8f3b40e8f7651682ad7ccdf75f595124e6`.
