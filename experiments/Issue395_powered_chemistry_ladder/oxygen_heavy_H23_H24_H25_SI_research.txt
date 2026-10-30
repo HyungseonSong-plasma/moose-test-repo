@@ -1,0 +1,38 @@
+# RESEARCH-ONLY: source parameters from QDB screenshot, not independently verified.
+# SI particle-basis A in m^3/s; PhysicsReactionDatabase converts to molar units.
+# H25 is HOLD until source temperature reference/convention checked.
+species O2 O2 0.032 0 heavy
+species O2p O2p 0.032 1 heavy
+species O O 0.016 0 heavy
+species Om Om 0.016 -1 heavy
+species Op Op 0.016 1 heavy
+
+reaction H23_Op_Om_to_2O volume constant
+reactant Op 1
+reactant Om 1
+product O 2
+A 1e-13
+basis particle
+end
+
+reaction H24_Om_O2p_to_O2_O volume constant
+reactant Om 1
+reactant O2p 1
+product O2 1
+product O 1
+A 1e-13
+basis particle
+end
+
+# Provisional: QDB exponent -0.4 interpreted as k=A*(T_g/300K)^(-0.4).
+# C++ implementation uses (T_ref/T_g)^exponent, so exponent=+0.4.
+reaction H25_Op_O2_to_O_O2p volume power_law
+reactant Op 1
+reactant O2 1
+product O 1
+product O2p 1
+A 2e-17
+basis particle
+T_ref 300
+exponent 0.4
+end
