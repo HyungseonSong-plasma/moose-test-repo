@@ -22,6 +22,21 @@
 - **Heavy-particle 3-row exception:** QDB-API dataset IDs 1377/1378/1115 remain the source; `Special Number=1` is generic heavy-particle coefficient format, not HPEM electron-impact library identity. QDB HPEM-format export is not evidence of HPEM database authorship.
 - **Acquisition procedure:** Request all 22 Special Numbers from https://cpseg.eecs.umich.edu/data.html with energy range/resolution/energy-space grid; preserve HPEM version, original curve sample count, source hashes, units, source attribution and explicit any extrapolation. Do not publish raw data without rights. Original Phelps converter in PR #420 remains a distinct controlled dataset and can be used only as an independently labeled comparison.
 
+## Numeric cross-section fallback to existing references — accepted 2026-10-30
+
+**This supersedes the earlier HPEM-exclusive acquisition preference.** Use HPEM `RFXSECS_NEW.FOR` when exact source-matched numerical σ(E) is available. If it is not available, select a **scientifically equivalent original-reference dataset** (Phelps, Cosby, Krishnakumar–Srivastava, Peverall, Jaffke, Laher–Gilmore, etc.) with process/target/product identities, threshold/loss distinctions, energy range, σ units, interpolation and source provenance checked. Preserve HPEM Special Number as the identifier and original experiment/theory attribution as the provenance; never call reference-origin σ(E) "HPEM-measured" without curve-level parity proof.
+
+**Machine-readable selection inventory:** [OXYGEN_SOURCE_FALLBACK_MATRIX.csv](OXYGEN_SOURCE_FALLBACK_MATRIX.csv): all 22 electron channels plus 3 QDB-only heavy-particle rows, with candidate alternative, provisional qualification class, scientific caution and explicit `numerical_sigma_acquired=NOT_VERIFIED` (or `NOT_APPLICABLE` for heavy reaction). A matched source publication is **not** an acquired numerical grid or accepted rate lookup.
+
+**Reference categories / gating:**
+- `SOURCE_IDENTIFIED` and `PUBLISHED_SOURCE_NUMERIC_PENDING` authorize **source acquisition and matching**, not replacing pending rates or claiming that measured sigma(E) arrays are available locally. Original Phelps local extractor in PR #420 covers 401/407/411/412/413/414/415; Cosby explicit dissociation and Phelps 6.0-eV loss are **different channels**.
+- `DERIVED_MODEL_PARENT_NUMERIC_PENDING` (2067/943), `MODEL_ONLY_CONDITIONAL` (2069/2072), `SOURCE_IDENTIFIED_EFFECTIVE` (413/414) require explicit physical assumption and appropriate parent/state identity; label output `MODEL_DERIVED`, not `MEASURED`.
+- `NO_MATCHED_FALLBACK_HOLD` (2073/2074/2738), `HOLD_PROCESS_IDENTITY` (411) and `HOLD_PROCESS_ENERGETICS` (2068) **do not** authorize invented cross sections. 944 has an atomic-O(1D) literature *candidate*, not an independently verified equivalent numeric curve.
+- Existing Maxwellian formula fits are independent/reference **benchmarks** or explicitly labeled **provisional formula models**, **never** replacements for an uncomputed Boltzmann-derived Lookup without separate evidence and acceptance.
+- QDB heavy-particle reactions H23/H24/H25 remain QDB Arrhenius inputs; do not search for electron-impact sigma(E) or treat HPEM Special Number `1` as unique.
+
+**Immediate next gate:** retrieve an original source under permitted terms, check precise process identity and original units and hash, convert the actual energy–sigma table to SI locally, then solve the consistent EEDF/rate grid, compare fits and qualify `physics-opt`. Neither HPEM catalog coverage (22/22) nor PR parser CI constitutes actual numeric σ(E) acquisition.
+
 ## Source inventory, reaction-level lookup and formula comparison
 
 | Image row | HPEM ID / unique key | Reaction | HPEM threshold eV | HPEM database mapping and underlying source provenance | Actual sigma acquisition status | Rate formula reference, not primary | Validation caution |
