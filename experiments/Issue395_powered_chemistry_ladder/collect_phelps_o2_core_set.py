@@ -37,21 +37,21 @@ class Channel:
     threshold_anchor: float | None = None
 
 
-# Select 17 of the 18 sections in the original Phelps O2 1978 collection.
+# Select 14 of the 18 sections in the original Phelps O2 1978 collection.
 # Explicit user decision: Three-body attachment is NOT in canonical 25-row
 # Chemistry Registry, therefore no source extraction, no output CSV, no
 # Boltzmann active channel, no rate calculation or O2- species addition.
 # Other kinetic-only diagnostics are data candidates, NOT authorized chemistry
 # reactions; no new chemistry reaction is activated by this extractor.
 # Cosby (1993) O2 DISSOCIATION remains a separate, non-additive alternative.
-FORBIDDEN_CHEMISTRY_CHANNELS = frozenset({"attachment_three_body"})
+EXCLUDED_SOURCE_CHANNELS = frozenset({
+    "attachment_three_body", "rotation_300K", "b1sigma", "line_130nm"
+})
 CHANNELS = (
     Channel("momentum_effective", "O2 MOMENTUM-TRANSFER CROSS SECTION",
             66, None, None, "EFFECTIVE_MOMENTUM"),
     Channel("attachment_two_body", "O2 TWO-BODY ATTACHMENT",
             20, 0., 1.2, "ATTACHMENT_TWO_BODY", 4.4),
-    Channel("rotation_300K", "O2 SINGL LEVEL ROT PKQ FOR 300K",
-            48, .020, 1., "ROTATION_WITH_SOURCE_DUPLICATE_KNOT"),
     Channel("v1_low", "O2 V=1 LINDER AND SCHMIDT WITH SPLIT PK",
             48, .190, 2.5, "VIBRATION"),
     Channel("v2_low", "O2 V=2 LINDER AND SCHMIDT X2",
@@ -66,8 +66,6 @@ CHANNELS = (
             16, .380, 1., "VIBRATION_HIGH_ENERGY_CONTRIBUTION", 4.0),
     Channel("a1delta", "O2 SING DELTA FROM LINDER-SCHMIDT AND TRAJMAR ET AL",
             26, .977, 1., "ELECTRONIC_O2_a1Delta", .977),
-    Channel("b1sigma", "O2 B SINGLET SIGMA FROM LINDER-SCHMIDT AND TRAJMAR ET AL",
-            26, 1.627, 1., "ELECTRONIC_O2_b1Sigma", 1.627),
     Channel("loss_4p5", "O2 4.5 LOSS", 16, 4.5, 1., "ENERGY_LOSS_ONLY", 4.5),
     Channel("loss_6", "O2 6.0 LOSS", 12, 6., 1., "ENERGY_LOSS_ONLY", 6.),
     Channel("loss_8p4", "O2 8.4 LOSS HAYASHI ABOVE 20EV - CHANTRY BELOW",
@@ -76,11 +74,9 @@ CHANNELS = (
             24, 10., 1., "EFFECTIVE_EXCITATION", 10.),
     Channel("ionization", "O2 IONIZATION",
             24, 12.06, 1., "IONIZATION", 12.06),
-    Channel("line_130nm", "O2 130 NM LINE MUMMA-ZIPF",
-            12, 14.7, 1., "EMISSION_LINE_EFFECTIVE", 14.7),
 )
-assert len(CHANNELS) == 17
-assert not {ch.name for ch in CHANNELS} & FORBIDDEN_CHEMISTRY_CHANNELS
+assert len(CHANNELS) == 14
+assert not {ch.name for ch in CHANNELS} & EXCLUDED_SOURCE_CHANNELS
 
 
 def load_source(path: Path) -> str:
@@ -151,12 +147,7 @@ def extract(text: str, channel: Channel) -> tuple[list[tuple[float, float]], lis
         if points[j][0] < points[j - 1][0]:
             raise ValueError(f"{channel.name}: descending energies")
         if points[j][0] == points[j - 1][0]:
-            if channel.kind != "ROTATION_WITH_SOURCE_DUPLICATE_KNOT":
-                raise ValueError(f"{channel.name}: duplicate energy unsupported")
-            duplicate_knots.append({"indices_1_based": [j, j + 1],
-                                    "energy_eV": points[j][0]})
-    if channel.kind == "ROTATION_WITH_SOURCE_DUPLICATE_KNOT" and not duplicate_knots:
-        raise ValueError("rotation_300K: source duplicate knot disappeared, review required")
+            raise ValueError(f"{channel.name}: duplicate energy unsupported")
     return points, duplicate_knots
 
 
@@ -171,8 +162,8 @@ def collect(source: Path, out: Path, retrieved_on: str) -> dict:
     text = load_source(source)
     # All-or-nothing parse BEFORE writing any output.
     selected = {ch.name for ch in CHANNELS}
-    if selected & FORBIDDEN_CHEMISTRY_CHANNELS:
-        raise ValueError("UNREGISTERED_CHEMISTRY: three-body attachment forbidden")
+    if selected & EXCLUDED_SOURCE_CHANNELS:
+        raise ValueError("OUT_OF_SCOPE_COLLISION: nonselected Phelps process forbidden")
     processed = {ch.name: extract(text, ch) for ch in CHANNELS}
     paths = [out / f"o2_{ch.name}_sigma.csv" for ch in CHANNELS]
     manifest_path = out / "phelps_o2_core_manifest.json"
@@ -193,17 +184,20 @@ def collect(source: Path, out: Path, retrieved_on: str) -> dict:
         "1978_original_source_sections": 18,
         "selected_source_sections": len(CHANNELS),
         "canonical_chemistry_table_reactions": 25,
-        "excluded_unregistered_source_channels": sorted(FORBIDDEN_CHEMISTRY_CHANNELS),
+        "excluded_source_channels": sorted(EXCLUDED_SOURCE_CHANNELS),
+        "excluded_unregistered_source_channels": ["attachment_three_body"],
+        "simplification_policy": "OMIT_ROTATIONAL_B1SIGMA_130NM_FOR_REDUCED_COMPLEXITY",
         "chemistry_eligibility_policy": "ONLY_25_REGISTERED_REACTIONS; nonchemistry support is not chemistry activation",
         "excluded_outside_1978": "Cosby 1993 dissociation, available as separate alternative in PR #420",
         "scientific_gates": [
             "effective momentum includes inelastic scattering; do not use as elastic recoil",
-            "rotation 300 K source duplicate energy must be adjudicated before interpolation",
+            "rotation_300K excluded by reduced-precision scope; no interpolation performed",
             "three-body attachment excluded: not in canonical 25-reaction Chemistry Table",
             "v1/v2 low and 9eV resonance channels have the same product; audit combined accounting",
             "4.5-eV loss not established as 2O(3P) dissociation",
             "6-eV loss and Cosby dissociation are not additive without source reconciliation",
-            "state/fragment branching in 8.4/10 eV and 130 nm effective channels unresolved",
+            "state/fragment branching in 8.4/10 eV effective channels remains unresolved",
+            "excluded b1sigma and 130nm effective channels may affect high-energy EEPF and power loss",
             "full energy-domain/EEDF Boltzmann and production Physics validation not performed",
         ],
         "channels": {},
@@ -241,7 +235,7 @@ def main() -> None:
     r = collect(args.source, args.output_dir, args.retrieved_on)
     print(f"PHELPS_O2_SOURCE_EXTRACTED_ONLY count={len(r['channels'])}")
     print(f"source_sha256={r['source_sha256']}")
-    print("UNREGISTERED_THREE_BODY_ATTACHMENT_EXCLUDED=true")
+    print("EXCLUDED_PHELPS_CHANNELS=attachment_three_body,rotation_300K,b1sigma,line_130nm")
     print("SOLVER_READY=false (momentum, rotation, and chemistry gates remain)")
 
 
