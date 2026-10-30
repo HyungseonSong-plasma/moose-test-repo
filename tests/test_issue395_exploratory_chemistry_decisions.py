@@ -30,6 +30,9 @@ def test_heavy_3_and_old_zhao_double_count_prevention():
     assert heavy["all_three_enabled_in_selected_research_network"] is True
     assert "2e-17" in heavy["H25_temperature_model"]
     assert decisions["ei2259"]["adopted_provisional_rate_basis"] == "thermal_formula_not_EEDF_lookup"
-    assert "requires" in decisions["ei2738"]["coefficient_status"]
+    assert decisions["ei2738"]["rate_mode"] == "formula"
+    assert "2.0e-13" in decisions["ei2738"]["formula"]
+    assert decisions["ei412"]["rate_mode"] == "lookup"
+    assert decisions["ei2259"]["rate_mode"] == "formula"
     assert set(active_audit()["user_selected_O3P_dissociation_reaction_ids"]) == {"411", "2068", "2073"}
     assert active_audit()["legacy_Zhao_dissociation_parallel_activation_allowed"] is False

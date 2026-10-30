@@ -81,3 +81,28 @@ existing research coefficients and H25's assumed k=2e-17*(Tg/300K)^(-0.4)
 m3/s; science source verification is not a prerequisite for this preliminary
 run. This marks *selection only*; it does not imply the heavy source kernels
 are connected or that the 400/1000 W transient has run.
+
+## Electron-rate policy resolution (2026-10-30)
+
+- **EI-412**: `Lookup` from the original 100-point mean-electron-energy table.
+  Disable the parallel legacy Zhao fitted DISS-G source in the selected 24-channel run.
+- **EI-2074**: independent measured `e+O2(a) -> O+ + O + 2e` partial
+  cross-section NOT verified in available evidence. Kim (Berkeley, 2006),
+  Appendix A, explicitly used a **0.98 eV shifted threshold** from the
+  ground-state O2 partial channel, i.e. a model, NOT an independent
+  state-specific measurement. No automatic method switch in this step.
+- **EI-2259**: adopt thermal `Formula`,
+  `k=2.4e-13*(300/Te_K)^0.70 [m3/s]` for `Te_K > 200`, from Peverall
+  2001. Actual DR cross sections **were measured** at 0.001-3 eV;
+  the local numeric table/EEDF integral is simply unavailable.
+- **EI-2738**: adopt `Formula`,
+  `k=2.0e-13*exp(-5.5/Te_eV) [m3/s]`, where
+  `Te_eV=(2/3)*mean_en_solved_eV`. This is the `e+O- -> 2e+O`
+  model in Chinese Physics B 24 (2015) 095203 and Plasma Science
+  Technology 26 (2024) 125401, with `2.0e-7 cm3/s` converted
+  to `2.0e-13 m3/s`. The **5.5 eV** Arrhenius-like fit parameter
+  is distinct from the old **2.70 eV** model electron energy loss.
+  Standalone source-coupled overlay: `build_ei2738_detachment_formula_overlay.py`.
+  Not yet proven in a 24-channel powered transient.
+
+Do not confuse `physics-opt` smoke CI with an executed 400/1000 W ICP transient.

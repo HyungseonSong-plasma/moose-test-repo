@@ -53,7 +53,7 @@
       "outlet"
     ]
   },
-  "warning": "Research-only 24-chemistry, user-specified effective dissociation products for 411/2068/2073, EI413/414→O2a, provisional H23–H25. Source coupling and 400/1000 W physics-opt transient not yet completed.",
+  "warning": "Research-only oxygen ICP reduced-chemistry: EI412 Lookup, EI2259 and EI2738 literature thermal Formula, EI2074 provisional option, EI936 disabled, EI413/414 O2a lump, user-selected dissociation channels and H23-H25. Full powered transient not run.",
   "initial_conditions": {
     "charged_species_number_density_m3": {
       "electron": 1000000000000000,
@@ -168,19 +168,44 @@
       "adopted_provisional_rate_basis": "thermal_formula_not_EEDF_lookup",
       "formula": "k=2.4e-13*(300/Te_K)^0.70 [m^3/s], Te_K>200",
       "observation": "formula-vs-EEDF mismatch is methodological, not a chemical reaction inconsistency",
-      "implementation_state": "source coupling pending"
+      "implementation_state": "source coupling pending",
+      "rate_mode": "formula",
+      "formula_source": "Peverall et al. (2001), J Chem Phys 114, 6679",
+      "measurement_reality": "Absolute cross sections published from 0.001 to 3 eV; numeric input has not been obtained for this repository",
+      "reason": "Use compact thermal rate formula instead of requiring numerical sigma(E) and EEDF integration for this exploratory model",
+      "source_coupling_status": "not yet full ICP integrated"
     },
     "ei2738": {
       "reaction": "e+O- -> O(3P)+2e",
-      "approved_for_reduced_model": "allow provisional rate, no requirement for source-verified energy-dependent sigma(E)",
-      "coefficient_status": "requires an explicit provided or adopted numeric rate formula/lookup; no numeric value may be fabricated",
-      "implementation_state": "source coupling pending"
+      "rate_mode": "formula",
+      "formula": "k=2.0e-13*exp(-5.5/Te_eV) [m^3/s]",
+      "electron_temperature_eV": "(2/3)*mean_en_solved_eV",
+      "source": "oxygen ICP fluid model: Chinese Physics B 24 (2015) 095203, Table 1, reaction e+O- ->2e+O; Plasma Science Technology 26 (2024) 125401 Table 1",
+      "temperature_exponent_5p5_eV_is": "Maxwellian fit parameter; NOT the previous HPEM 2.70 eV electron loss value",
+      "modeled_energy_loss_eV": 2.7,
+      "progress_functor": "R_EI2738",
+      "formula_implementation": "build_ei2738_detachment_formula_overlay.py",
+      "rate_regime": "approximation subject to source assumptions",
+      "source_coupling_status": "standalone overlay available; not yet full ICP integrated"
     },
     "ei2074": {
       "reaction": "e+O2(a) -> O+ + O(3P) + 2e",
       "proposed_rate": "existing provisional model if a defined table/formula is available",
       "reason_for_validation_flag": "state-specific partial dissociative-ionization curve not proven equal to an energy-shifted ground-state EI417 curve",
-      "implementation_state": "source coupling and numeric rate selection pending"
+      "implementation_state": "source coupling and numeric rate selection pending",
+      "independent_experimental_state_resolved_partial_sigma": "not verified available",
+      "research_evidence": "Sungjin Kim, UC Berkeley PhD (2006), App A assumes ground-state O2 partial dissociative-ionization rate shifted 0.98 eV for O2(a1Delta_g)",
+      "model_option": "threshold-shifted EI-417 provisional approximation, not an independent O2(a) sigma(E)",
+      "exact_numeric_rate": "not selected by user in this turn",
+      "status": "model option available; numeric lookup/formula mapping not yet wired"
+    },
+    "ei412": {
+      "reaction": "e+O2(X) -> e+2O(3P)",
+      "rate_mode": "lookup",
+      "progress": "R_EI412",
+      "table_source": "user-provided 100-point rate table for EI-412",
+      "old_Zhao_empirical_fit_in_24_reaction_run": "disabled",
+      "status": "approved mode; private numeric lookup must be mounted at runtime"
     }
   }
 }
