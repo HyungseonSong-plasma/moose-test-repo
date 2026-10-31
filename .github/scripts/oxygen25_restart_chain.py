@@ -69,6 +69,60 @@ NS_S = Decimal("1e-9")
 MAX_TIME_NS = 100000  # 100 us safety horizon; change only after explicit validation
 MAX_SEQUENCE_EVENTS = 20001
 
+# The legacy 2 ns --recover native checkpoint retained a corrupted
+# TimeSequenceStepper sequence (P3: 1.1907e-321 s), inconsistent with
+# current_step=4. Preserve full native fields but replace only timestep
+# policy for advanced restart. MOOSE IterationAdaptiveDT is restart safe.
+RESTART_TIME_STEPPER_RE = re.compile(
+    r"(?ms)^  \[TimeStepper\]\n(?P<body>.*?)^  \[\][ \t]*$"
+)
+
+def stage_adaptive_stepper(text: str, interval_ns: str,
+                           already_staged: bool = False) -> str:
+    requested = Decimal(str(interval_ns))
+    if not requested.is_finite() or requested <= 0:
+        raise ValueError("invalid timestep interval")
+    dt_cap = min(requested, Decimal("1"))
+    dt_initial = min(dt_cap, Decimal("0.001"))
+    if dt_initial < Decimal("0.001"):
+        raise ValueError("requested timestep below verified 1 ps floor")
+    matches = list(EXEC_RE.finditer(text))
+    if len(matches) != 1:
+        raise ValueError("missing Executioner")
+    exec_block = matches[0]
+    body = exec_block.group("body")
+    steps = list(RESTART_TIME_STEPPER_RE.finditer(body))
+    if len(steps) != 1:
+        raise ValueError("missing/nonunique TimeStepper")
+    m = steps[0]
+    old = m.group("body")
+    expected_type = "IterationAdaptiveDT" if already_staged else "TimeSequenceStepper"
+    if len(re.findall(r"(?m)^[ \t]*type[ \t]*=[ \t]*" + expected_type + r"[ \t]*$", old)) != 1:
+        raise ValueError("unreviewed checkpoint TimeStepper type")
+    if not already_staged and len(SEQ_RE.findall(old)) != 1:
+        raise ValueError("missing legacy TimeSequenceStepper sequence")
+    if already_staged and "reset_dt = true" not in old:
+        raise ValueError("continued restart missing reset_dt")
+    fmt = lambda n: format(n * NS_S, ".17g")
+    step = ("  [TimeStepper]\n"
+            "    type = IterationAdaptiveDT\n"
+            "    dt = " + fmt(dt_initial) + "\n"
+            "    growth_factor = 2\n"
+            "    reset_dt = true\n  []")
+    body = body[:m.start()] + step + body[m.end():]
+    for name, num in (("dtmin", dt_initial), ("dtmax", dt_cap)):
+        exp = re.compile(r"(?m)^  " + name + r"[ \t]*=[^\n]*$")
+        if len(exp.findall(body)) > 1:
+            raise ValueError("duplicate Executioner " + name)
+        if exp.search(body):
+            body = exp.sub("  " + name + " = " + fmt(num), body)
+        else:
+            body = body.rstrip() + "\n  " + name + " = " + fmt(num) + "\n"
+    result = text[:exec_block.start("body")] + body + text[exec_block.end("body"):]
+    if "type = TimeSequenceStepper" in result or "time_sequence =" in result:
+        raise ValueError("legacy time stepper survived advanced restart")
+    return result
+
 def time_grid(text: str) -> tuple[int, list[Decimal]]:
     """Parse actual MOOSE time sequence without rounding sub-ns targets."""
     matches = list(EXEC_RE.finditer(text))
