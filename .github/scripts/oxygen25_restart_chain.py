@@ -137,6 +137,62 @@ def extend_input(text: str, start: int, end: int,
     return result
 
 
+
+# MOOSE 9f388366 TimeSequenceStepperBase::setupSequence validates input
+# times[j] against serialized saved_time_sequence[j] through _current_step
+# inclusive. The genuine 1ns recover to 2ns checkpoint at native step 4 has
+# a repeated 1ns event in its serialized prefix, while native CSV only
+# records accepted distinct times [0,1,1.001,1.002,2]ns. A microscopic
+# strictly increasing proxy of the repeated 1ns event is allowed by MOOSE
+# absoluteFuzzyEqual, without modifying the genuine checkpoint.
+LEGACY_2NS_HISTORY_NS = tuple(map(Decimal, (
+    "0", "1", "1.001", "1.002", "2"
+)))
+LEGACY_DUPLICATE_PROXY_NS = Decimal("1.00000001")
+LEGACY_SAVED_PREFIX_NS = tuple(map(Decimal, (
+    "0", "1", "1", "1.001", "1.002"
+)))
+CHECKPOINT_PREFIX_ABS_TOL_NS = Decimal("0.00000002")
+
+def compatible_upstream_2ns_sequence(text: str, manifest: dict,
+                                     csv_rows: list[dict[str, str]]) -> str:
+    """Stage the exact known 2ns legacy checkpoint time-history overlay.
+
+    Old source input [0,1,2]ns differs from stored TimeSequenceStepper
+    current_step=4: [0,1,1,1.001,1.002]ns (native restart error + two
+    independently verified cross-CI time traces). Never guess other histories.
+    """
+    if (manifest.get("schema") != 2 or
+            manifest.get("actual_moose_step") != 4 or
+            manifest.get("source_sha") !=
+            "8e2fe042dbc204b5fda22d346f1ad8d2e32db3ab" or
+            manifest.get("restart_mode") == "advanced_restart_not_recover" or
+            time_grid(text) != (2, [Decimal(0), Decimal(1), Decimal(2)])):
+        raise ValueError("unverified 2ns legacy checkpoint TimeStepper identity")
+    history = [Decimal(r["time"]) / NS_S for r in csv_rows]
+    if len(history) != 5 or any(abs(x - y) > CHECKPOINT_PREFIX_ABS_TOL_NS
+                                for x, y in zip(history, LEGACY_2NS_HISTORY_NS)):
+        raise ValueError("2ns native accepted time history differs from evidenced checkpoint")
+    # Native new time targets must be strictly increasing, although the
+    # serialized sequence has an exact duplicate at 1ns. The 1e-17s proxy
+    # is far below MooseUtils::absoluteFuzzyEqual default 1e-12s tolerance.
+    # Real MOOSE P3 remains authoritative for this compatibility claim.
+    candidate = [Decimal(0), Decimal(1), LEGACY_DUPLICATE_PROXY_NS,
+                 Decimal("1.001"), Decimal("1.002"), Decimal(2)]
+    if not all(a < b for a, b in zip(candidate, candidate[1:])):
+        raise ValueError("nonmonotonic checkpoint-compatible prefix")
+    for offered, saved in zip(candidate, LEGACY_SAVED_PREFIX_NS):
+        if abs(offered - saved) > CHECKPOINT_PREFIX_ABS_TOL_NS:
+            raise ValueError("checkpoint stored prefix not fuzzy-compatible")
+    match = next(EXEC_RE.finditer(text))
+    body = match.group("body")
+    raw = " ".join(format(x * NS_S, ".17g") for x in candidate)
+    body = SEQ_RE.sub(lambda m: m.group(1) + "'" + raw + "'", body, count=1)
+    staged = text[:match.start("body")] + body + text[match.end("body"):]
+    if time_grid(staged) != (2, candidate):
+        raise ValueError("checkpoint-compatible 2ns staged sequence did not round-trip")
+    return staged
+
 # Restart seeding is never permitted to overwrite the archived 2 ns plasma fields.
 # Verified against both 400W/1000W source-input tarballs (15 parent variables).
 EXPECTED_IC_VARIABLES = frozenset((
@@ -360,8 +416,8 @@ def restore(root: Path, artifact: Path, power: int, start: int, end: int,
                         manifest["run_files" if kind == "run" else "input_files"], root)
     result = result_path(power)
     run = root / result / "run"
-    verify_csv(run / "plasma.csv", start, exact_rows=True,
-               expected_times=manifest["time_sequence_s"])
+    rows_before = verify_csv(run / "plasma.csv", start, exact_rows=True,
+                             expected_times=manifest["time_sequence_s"])
     # Checkpoint prefixes are native MOOSE step IDs, not physical nanoseconds.
     # A recovered 2 ns run may end at step 7 after 1 ps substeps.
     actual_step = manifest.get("actual_moose_step")
@@ -388,9 +444,31 @@ def restore(root: Path, artifact: Path, power: int, start: int, end: int,
     prior_source = manifest.get("restart_source_prefix") if previous_mode else None
     if previous_mode and not isinstance(prior_source, str):
         raise ValueError("missing prior-stage restart source prefix")
+    prior_input = inp.read_text()
+    if start == 2 and not previous_mode:
+        prior_input = compatible_upstream_2ns_sequence(
+            prior_input, manifest, rows_before)
+    elif not previous_mode:
+        # Arbitrary old recover checkpoints need a source-specific proven
+        # TimeStepper history. Source input alone cannot attest cutback events.
+        raise ValueError("uncharacterized legacy checkpoint TimeStepper history")
+    staged_time = extend_input(prior_input, start, end, interval_ns)
     inp.write_text(advanced_restart_input(
-        extend_input(inp.read_text(), start, end, interval_ns),
-        expected_prefix, prior_restart_prefix=prior_source))
+        staged_time, expected_prefix, prior_restart_prefix=prior_source))
+    (root / result / "restart_time_sequence_overlay.json").write_text(
+        json.dumps({
+            "schema": 1, "from_checkpoint": expected_prefix,
+            "upstream_actual_moose_step": actual_step,
+            "upstream_source_sha": source_sha,
+            "start_ns": start, "end_ns": end,
+            "requested_interval_ns": interval_ns,
+            "staged_time_sequence_ns": [str(t) for t in time_grid(staged_time)[1]],
+            "legacy_duplicate_checkpoint_boundary_proxy": (
+                "1.00000001 ns; represents native serialized 1ns duplicate; "
+                "P3 native proof required" if
+                start == 2 and not previous_mode else None),
+            "state_source": "verified native checkpoint, never CSV reconstruction",
+        }, indent=2, sort_keys=True) + "\n")
     parent_overlay = root / CHEM / f"rf_elastic_multiapp_parent_{power}w_100us_dt1000ns_overlay.i"
     parent_overlay.write_text(stage_parent_multiapp_restart_overlay(
         parent_overlay.read_text(), already_staged=previous_mode))
@@ -552,6 +630,44 @@ def self_test() -> None:
               "[Outputs]\n  checkpoint = true\n[]\n")
     assert time_grid(extend_input(sample, 1, 2)) == (2, [0, 1, 2])
     assert time_grid(extend_input(sample, 1, 100)) == (100, list(range(101)))
+    legacy_input = extend_input(sample, 1, 2)
+    legacy_manifest = {
+        "schema": 2, "actual_moose_step": 4,
+        "source_sha": "8e2fe042dbc204b5fda22d346f1ad8d2e32db3ab",
+    }
+    accepted_rows = [
+        {"time": format(t * NS_S, ".17g")}
+        for t in LEGACY_2NS_HISTORY_NS
+    ]
+    aligned = compatible_upstream_2ns_sequence(
+        legacy_input, legacy_manifest, accepted_rows)
+    assert time_grid(aligned)[1][:6] == [
+        Decimal(0), Decimal(1), LEGACY_DUPLICATE_PROXY_NS,
+        Decimal("1.001"), Decimal("1.002"), Decimal(2)
+    ]
+    extended = extend_input(aligned, 2, 100, "1")
+    assert time_grid(extended)[1][2:6] == [
+        LEGACY_DUPLICATE_PROXY_NS, Decimal("1.001"), Decimal("1.002"), Decimal(2)
+    ]
+    assert time_grid(extended)[1][-1] == 100
+    for corrupt in (dict(legacy_manifest, actual_moose_step=3),
+                    dict(legacy_manifest, source_sha="0"*40)):
+        try:
+            compatible_upstream_2ns_sequence(
+                legacy_input, corrupt, accepted_rows)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("unknown checkpoint sequence accepted")
+    mutated_rows = [dict(row) for row in accepted_rows]
+    mutated_rows[3]["time"] = "1.5e-9"
+    try:
+        compatible_upstream_2ns_sequence(
+            legacy_input, legacy_manifest, mutated_rows)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("mismatched native history accepted")
     variable = extend_input(sample, 1, 100, "2.5")
     assert time_grid(variable)[1][-3:] == [Decimal("96"), Decimal("98.5"), Decimal("100")]
     for invalid in ("0", "-1", "NaN", "1e-30"):
