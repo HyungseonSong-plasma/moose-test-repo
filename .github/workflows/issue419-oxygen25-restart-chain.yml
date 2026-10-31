@@ -1,6 +1,6 @@
 # Genuine cross-CI MOOSE recovery, pinned 25-reaction EI936 O(ex) source.
 name: Issue419 Oxygen25 EI936 genuine cross-run restart
-run-name: Oxygen25 EI936 native 2-to-4ns recovery ${{ github.sha }}
+run-name: Oxygen25 EI936 native 2-to-100ns advanced restart ${{ github.sha }}
 on:
   push:
     branches: [issue-419-ei936-1to100ns-controller-20261031]
@@ -9,13 +9,13 @@ permissions:
   contents: read
   actions: read
 concurrency:
-  group: issue419-oxygen25-ei936-2to4ns
+  group: issue419-oxygen25-ei936-2to100ns
   cancel-in-progress: false
 jobs:
   recover:
-    name: Genuine 2-to-4ns PhysicsApp recovery ${{ matrix.power_w }}W
+    name: Genuine 2-to-100ns PhysicsApp advanced restart ${{ matrix.power_w }}W
     runs-on: ubuntu-24.04
-    timeout-minutes: 65
+    timeout-minutes: 360
     strategy:
       fail-fast: false
       max-parallel: 2
@@ -25,7 +25,7 @@ jobs:
       POWER_W: ${{ matrix.power_w }}
       SOURCE_SHA: 8e2fe042dbc204b5fda22d346f1ad8d2e32db3ab
       START_NS: '2'
-      END_NS: '4'
+      END_NS: '100'
       PARENT_RUN_ID: '41208644597'
       OXYGEN_RESEARCH_400: '1'
       OXYGEN_RESEARCH_FULL24: '1'
@@ -95,18 +95,18 @@ jobs:
           set -euo pipefail
           bash "$CHEM/issue397_l1_power_scan_replay.sh" build "$POWER_W"
           test -x physics_app/physics-opt
-      - name: P2 real physics-opt check-input for 4ns
+      - name: P2 real physics-opt check-input for 100ns advanced restart
         run: |
           set -euo pipefail
           bash "$CHEM/issue397_l1_power_scan_replay.sh" check "$POWER_W"
-      - name: P3 native MultiApp recovery from upstream native step checkpoint
+      - name: P3 native MultiApp advanced restart from upstream 2ns checkpoint
         run: |
           set -euo pipefail
           RECOVER_PREFIX="$(cat "$RESULT/recovery_prefix.txt")"
           test -s "$RECOVER_PREFIX-restart-0.rd/data"
           started="$(date +%s)"
           set +e
-          timeout -s TERM -k 60s 1800s docker run --rm --entrypoint /bin/bash --user 0:0 \
+          timeout -s TERM -k 60s 19800s docker run --rm --entrypoint /bin/bash --user 0:0 \
             --workdir /workspace -v "$PWD:/workspace" "$BUILD_BASE_REF" -lc "
               set -euo pipefail
               source /environment
@@ -116,50 +116,52 @@ jobs:
                 '$CHEM/o2_elastic_$POWER_W""w_100us_dt1000ns_overlay.i' \
                 '$CHEM/full24_$POWER_W""w_100us_dt1000ns_overlay.i' \
                 '$CHEM/o_elastic_ei17_$POWER_W""w_100us_dt1000ns_overlay.i' \
-                Outputs/file_base='$RESULT/run/plasma' \
+                Outputs/file_base='$RESULT/run/plasma_restart_2to100' \
                 MultiApps/maxwell_t6/no_restore=false \
-                --recover '$RECOVER_PREFIX'
+                Problem/restart_file_base='$RECOVER_PREFIX'
             " 2>&1 | tee "$RESULT/recovery_runtime.log"
           code="${PIPESTATUS[0]}"
           set -e
           printf 'source_sha=%s\npower_w=%s\nupstream_run=%s\nstart_ns=%s\nend_ns=%s\nwall_seconds=%s\nexit_code=%s\n' \
             "$SOURCE_SHA" "$POWER_W" "$PARENT_RUN_ID" "$START_NS" "$END_NS" \
             "$(( $(date +%s) - started ))" "$code" > "$RESULT/recovery_status.txt"
-          echo "OXYGEN25_NATIVE_RECOVERY_EXIT_CODE=$code"
+          echo "OXYGEN25_NATIVE_ADVANCED_RESTART_EXIT_CODE=$code"
           test "$code" -eq 0
-      - name: P4 native continuity and next-stage archive proof
+      - name: P4 advanced restart state continuity and next-stage archive proof
         run: |
           set -euo pipefail
-          find "$RESULT/run/plasma_cp" -type f | sort | tee "$RESULT/recovery_checkpoint_listing.txt"
+          find "$RESULT/run/plasma_restart_2to100_cp" -type f | sort | tee "$RESULT/recovery_checkpoint_listing.txt"
           python3 "$CHAIN" --verify-recovery \
             --root "$PWD" --power-w "$POWER_W" --start-ns "$START_NS" \
             --end-ns "$END_NS" --source-sha "$SOURCE_SHA"
-          test -s "$RESULT/restart_run_4ns.tar.gz"
-          test -s "$RESULT/restart_inputs_4ns.tar.gz"
-          test -s "$RESULT/restart_4ns_manifest.json"
-          echo "OXYGEN25_CROSS_CI_2_TO_4NS_CHECKPOINT_PASS=$POWER_W"
-      - name: Upload verified 4ns restart bundle for next CI
+          test -s "$RESULT/restart_run_100ns.tar.gz"
+          test -s "$RESULT/restart_inputs_100ns.tar.gz"
+          test -s "$RESULT/restart_100ns_manifest.json"
+          echo "OXYGEN25_CROSS_CI_2_TO_100NS_CHECKPOINT_PASS=$POWER_W"
+      - name: Upload verified 100ns restart bundle for 1us CI
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: oxygen25-ei936-4ns-restart-complete-${{ matrix.power_w }}W
+          name: oxygen25-ei936-100ns-restart-complete-${{ matrix.power_w }}W
           retention-days: 90
           if-no-files-found: error
           path: |
-            ${{ env.RESULT }}/restart_run_4ns.tar.gz
-            ${{ env.RESULT }}/restart_inputs_4ns.tar.gz
-            ${{ env.RESULT }}/restart_4ns_manifest.json
+            ${{ env.RESULT }}/restart_run_100ns.tar.gz
+            ${{ env.RESULT }}/restart_inputs_100ns.tar.gz
+            ${{ env.RESULT }}/restart_100ns_manifest.json
             ${{ env.RESULT }}/recovery_prefix.txt
             ${{ env.RESULT }}/recovery_checkpoint_listing.txt
             ${{ env.RESULT }}/recovery_status.txt
             ${{ env.RESULT }}/recovery_runtime.log
             ${{ env.RESULT }}/run/plasma.csv
+            ${{ env.RESULT }}/run/plasma_restart_2to100.csv
+            ${{ env.RESULT }}/run/plasma_restart_2to100.e
             ${{ env.RESULT }}/upstream_manifest.json
-      - name: Preserve failure diagnostics without protected rates
+      - name: Preserve 2to100ns failure diagnostics without protected rates
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: oxygen25-ei936-2to4ns-diagnostics-${{ matrix.power_w }}W
+          name: oxygen25-ei936-2to100ns-diagnostics-${{ matrix.power_w }}W
           retention-days: 21
           if-no-files-found: warn
           path: |
@@ -169,5 +171,7 @@ jobs:
             ${{ env.RESULT }}/recovery_runtime.log
             ${{ env.RESULT }}/check_input.log
             ${{ env.RESULT }}/run/plasma.csv
+            ${{ env.RESULT }}/run/plasma_restart_2to100.csv
+            ${{ env.RESULT }}/run/plasma_restart_2to100_cp/**
             ${{ env.RESULT }}/upstream_manifest.json
-            ${{ env.RESULT }}/restart_4ns_manifest.json
+            ${{ env.RESULT }}/restart_100ns_manifest.json
