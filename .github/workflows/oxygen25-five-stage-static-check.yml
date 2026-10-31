@@ -1,0 +1,30 @@
+name: Oxygen25 500us five-stage static CI
+on:
+  workflow_dispatch:
+  push:
+    branches: [feature/oxygen25-five-stage-500us-20261031]
+    paths: [.github/workflows/oxygen25-five-stage-static-check.yml]
+permissions:
+  contents: read
+jobs:
+  static-check:
+    name: Native restart five-stage plan, workflow and archive regression
+    runs-on: ubuntu-24.04
+    timeout-minutes: 14
+    steps:
+      - name: Checkout exact implementation revision
+        uses: actions/checkout@v4
+      - name: Compile changed scripts and install minimum test dependencies
+        run: |
+          set -euo pipefail
+          python3 -m venv .five-stage-venv
+          .five-stage-venv/bin/python -m pip install --disable-pip-version-check --quiet 'pytest>=8,<9' 'PyYAML>=6,<7'
+          .five-stage-venv/bin/python -m py_compile .github/scripts/oxygen25_five_stage_plan.py .github/scripts/oxygen25_restart_chain.py physics_harness/adapters/moose/initial_checkpoint.py
+      - name: Static 500us grid and native first/restart handoff regressions
+        run: |
+          set -euo pipefail
+          .five-stage-venv/bin/python .github/scripts/oxygen25_five_stage_plan.py --self-test
+          .five-stage-venv/bin/python .github/scripts/oxygen25_restart_chain.py --self-test
+          .five-stage-venv/bin/python physics_harness/adapters/moose/initial_checkpoint.py --self-test
+          .five-stage-venv/bin/python -m pytest -q tests/test_oxygen25_five_stage_chain.py tests/test_oxygen25_parameterized_first_checkpoint.py
+          echo OXYGEN25_FIVE_STAGE_GRID_STATIC_AND_CHECKPOINT_HANDOFF_PASS
