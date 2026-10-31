@@ -66,7 +66,7 @@ def extract_checked(tar_path: Path, expected_sha: str, rows: list[dict], root: P
     print("OXYGEN25_RESTART_ARCHIVE_ROUNDTRIP_PASS", tar_path.name, len(rows))
 
 NS_S = Decimal("1e-9")
-MAX_TIME_NS = 100000  # 100 us safety horizon; change only after explicit validation
+MAX_TIME_NS = 500000  # Five separately verified stages: 500 us terminal horizon
 MAX_SEQUENCE_EVENTS = 20001
 
 # The legacy 2 ns --recover native checkpoint retained a corrupted
@@ -82,7 +82,13 @@ def stage_adaptive_stepper(text: str, interval_ns: str,
     requested = Decimal(str(interval_ns))
     if not requested.is_finite() or requested <= 0:
         raise ValueError("invalid timestep interval")
-    dt_cap = min(requested, Decimal("1"))
+    # Five-stage mode uses the requested stage spacing as an adaptive upper
+    # bound; MOOSE may take smaller steps or cut back. This is NOT a claim
+    # that 10us is stable for the plasma/RF model; acceptance requires
+    # per-stage P3 numerical and P4 continuity evidence.
+    if requested > Decimal("10000"):
+        raise ValueError("stage dt cap exceeds verified schedule upper bound")
+    dt_cap = requested
     dt_initial = min(dt_cap, Decimal("0.001"))
     if dt_initial < Decimal("0.001"):
         raise ValueError("requested timestep below verified 1 ps floor")
@@ -525,14 +531,17 @@ def restore(root: Path, artifact: Path, power: int, start: int, end: int,
     # Legacy schema2 had native sequence targets; schema4 adaptive stages
     # record requested monitor targets, not guaranteed exact solver steps.
     required_native_times = (
-        manifest["time_sequence_s"] if manifest.get("schema") == 2
+        manifest["time_sequence_s"] if manifest.get("schema") in (2, 5)
         else [0.0, start * 1e-9])
     rows_before = verify_csv(run / "plasma.csv", start, exact_rows=True,
                              expected_times=required_native_times)
     # Checkpoint prefixes are native MOOSE step IDs, not physical nanoseconds.
     # A recovered 2 ns run may end at step 7 after 1 ps substeps.
     actual_step = manifest.get("actual_moose_step")
-    if type(actual_step) is not int or actual_step < start:
+    # Actual MOOSE timestep numbers must never be equated with nanoseconds:
+    # later stages request 10/100/1000/10000ns targets and may have far
+    # fewer actual native steps than the numeric start_ns value.
+    if type(actual_step) is not int or actual_step < 1:
         raise ValueError("upstream actual MOOSE step missing or invalid")
     expected_prefix = manifest.get("recovery_requirements", {}).get("native_recover_prefix")
     if not isinstance(expected_prefix, str):
@@ -559,11 +568,22 @@ def restore(root: Path, artifact: Path, power: int, start: int, end: int,
     if start == 2 and not previous_mode:
         prior_input = compatible_upstream_2ns_sequence(
             prior_input, manifest, rows_before)
+    elif start == 100 and manifest.get("schema") == 5 and not previous_mode:
+        # The proven initial-run schema5 checkpoint is native and fresh
+        # (not recover); stage2 is the first advanced restart and will
+        # replace TimeSequenceStepper only in the staged input.
+        grid_end, grid = time_grid(prior_input)
+        if grid_end != 100 or len(grid) != 101 or grid != list(map(Decimal, range(101))):
+            raise ValueError("first-stage 100ns native grid is not the 100 exact 1ns targets")
+        if manifest.get("five_stage_chain", {}).get("stage") != 1:
+            raise ValueError("first-stage provenance not attested")
     elif not previous_mode:
-        # Arbitrary old recover checkpoints need a source-specific proven
-        # TimeStepper history. Source input alone cannot attest cutback events.
-        raise ValueError("uncharacterized legacy checkpoint TimeStepper history")
+        raise ValueError("unknown native checkpoint TimeStepper history")
     staged_time = extend_input(prior_input, start, end, interval_ns)
+    if start == 100 and manifest.get("schema") == 5:
+        requested_targets = extend_requested_event_targets(
+            [Decimal(str(v)) / NS_S for v in manifest["time_sequence_s"]],
+            start, end, interval_ns)
     if previous_mode:
         previous_overlay_path = root / result / "restart_time_sequence_overlay.json"
         if not previous_overlay_path.is_file():
@@ -578,7 +598,7 @@ def restore(root: Path, artifact: Path, power: int, start: int, end: int,
                            previous_overlay["staged_time_sequence_ns"]]
         requested_targets = extend_requested_event_targets(
             prior_requested, start, end, interval_ns)
-    else:
+    elif not (start == 100 and manifest.get("schema") == 5):
         requested_targets = time_grid(staged_time)[1]
     staged_native = stage_adaptive_stepper(
         staged_time, interval_ns, already_staged=previous_mode)
@@ -595,7 +615,7 @@ def restore(root: Path, artifact: Path, power: int, start: int, end: int,
             "native_timestepper": "IterationAdaptiveDT",
             "native_timestepper_reset_dt": True,
             "native_dt_initial_s": 1e-12,
-            "native_dtmax_s": float(min(Decimal(str(interval_ns)), Decimal("1")) * NS_S),
+            "native_dtmax_s": float(Decimal(str(interval_ns)) * NS_S),
             "legacy_duplicate_checkpoint_boundary_proxy": (
                 "1.00000001 ns; represents native serialized 1ns duplicate; "
                 "P3 native proof required" if
@@ -883,7 +903,7 @@ def self_test() -> None:
     assert "end_time = 0.000001" in chain_stage
     chained = stage_adaptive_stepper(chain_stage, "10", already_staged=True)
     assert "    reset_dt = true" in chained
-    assert "  dtmax = 1e-9" in chained
+    assert "  dtmax = 1e-8" in chained
     proposed = extend_requested_event_targets(
         time_grid(extended)[1], 100, 1000, "10")
     assert proposed[-1] == 1000
