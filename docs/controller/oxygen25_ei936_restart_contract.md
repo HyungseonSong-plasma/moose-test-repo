@@ -44,6 +44,18 @@ Example (when upstream 100 ns becomes independently verified): `start_ns=100`, `
 | `41222771191` | Maxwell child `electron_density_state_t6_moose` `ConstantIC` collided with checkpoint | Exact 3 child AuxVariable seeds suppressed and P0 mutated inventory checks |
 | `41223958574` | Time-grid refactor accidentally omitted explicit `checkpoint=true` gate, caught by self-test | Checkpoint-enabled P0 negative mutation restored |
 
+
+### Legacy 2 ns checkpoint TimeStepper prefix reconciliation (2026-10-31)
+
+The independently verified 1→2 ns native recovery completed at actual step **4** in both 400 W and 1000 W, with accepted CSV history `[0, 1, 1.001, 1.002, 2]` ns. MOOSE 9f388366 serializes a restarted `TimeSequenceStepper::_time_sequence` and `_current_step`; `setupSequence` checks all indices `j <= _current_step` on advanced restart. Previous failed native CI **41224078027** reported at entry 3: staged value **2 ns**, restored value **1 ns** (required prefix length **5**). This is *not* a P2 syntax/IC issue; both powers passed P2.
+
+For this **specific** original SHA `8e2fe042...`, stage schema 2, native step 4, and exact source 2 ns CSV, the helper constructs a checkpoint-compatible **staged input time-sequence overlay**:
+`[0, 1, 1.00000001, 1.001, 1.002, 2, 3, ..., 100]` ns.
+
+The small extra `1.00000001` ns entry is a **strictly increasing proxy** for the historically serialized duplicate **1 ns** index; its difference is `1e-17` seconds, within the `MooseUtils::absoluteFuzzyEqual` default tolerance. This is **not** an extra physical solver timestep and does not alter any checkpoint binary or chemistry. The saved vector is the native authority, the accepted CSV only attests the case-specific history; **P3 is still the required test** that this proxy aligns all `_current_step` entries. Unknown step/CSV/SHA histories fail closed rather than synthesizing a prefix. Future stages preserve the full already-staged prefix and append user-selected interval and endpoint; new cutback insertions require independent re-characterization.
+
+The helper writes `restart_time_sequence_overlay.json` with the exact upstream checkpoint and staged time-sequence, which P4 SHA-includes in the next restart inputs archive. It does not replace a genuine native MOOSE field restart. Current active exact-head CI run: [41225167309](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/41225167309), commit `2b2cb59c1dd9a844f82f8f26aca56e79c1ae04f8`. Both P0 / 19 private SHA **PASS**, P1 build **in progress** at 17:34 UTC. P2/P3/P4 are not yet accepted; both valid endpoints remain **2 ns**.
+
 ## Acceptance and continuation
 
 A green workflow does not substitute for numerical final-time proof, CSV and Exodus continuity, parent plus child restored fields, RF power/convergence checks, and immutable manifest SHA evidence. Each power advances independently. If a stage fails, keep its previous valid upstream checkpoint and diagnose the first failed gate before retrying. Only after a real both-power 100 ns PASS should 100ns→1µs→10µs→100µs be launched with new specified interval and provenance-bound artifact ID/run ID. Do not stop the hourly Controller until the two-observation terminal protocol completes.
