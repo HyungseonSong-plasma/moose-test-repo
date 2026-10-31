@@ -107,16 +107,16 @@ def advanced_restart_input(text: str, prefix: str) -> str:
     which checks the saved sequence prefix and appends new future times.
     Keep the original deterministic mesh generator and all MultiApps.
     """
-    if re.search(r"(?m)^\\[Problem\\]\\s*$", text):
+    if re.search(r"(?m)^\[Problem\]\s*$", text):
         raise ValueError("unexpected existing Problem block")
     if not re.fullmatch(
         r"experiments/Issue395_powered_chemistry_ladder/"
         r"results_rf_elastic_diss_ion_ei20_ei01_(400|1000)w_"
         r"adjacent_sheath_wall_closed_100us_dt1000ns/run/"
-        r"plasma(?:_restart_\\d+to\\d+)?_cp/\\d{4,}", prefix
+        r"plasma(?:_restart_\d+to\d+)?_cp/\d{4,}", prefix
     ):
         raise ValueError("invalid exact restart checkpoint prefix")
-    return text.rstrip() + "\\n\\n[Problem]\\n  restart_file_base = '" + prefix + "'\\n[]\\n"
+    return text.rstrip() + "\n\n[Problem]\n  restart_file_base = '" + prefix + "'\n[]\n"
 
 
 def stage_base(start: int, end: int) -> str:
@@ -292,7 +292,7 @@ def verify_recovery(root: Path, power: int, start: int, end: int, source_sha: st
         writer.writerows(before + after[1:])
     verify_csv(original_csv, end, exact_rows=False)
     log = (root / result / "recovery_runtime.log").read_text(errors="replace")
-    if not re.search(r"(?i)\\brestart(?:ing|ed)?\\b", log):
+    if not re.search(r"(?i)\brestart(?:ing|ed)?\b", log):
         raise ValueError("no native advanced restart log evidence")
     last_step = native_final_step(log, end, upstream["actual_moose_step"])
     cp = run / (stage + "_cp")
@@ -345,7 +345,7 @@ def verify_recovery(root: Path, power: int, start: int, end: int, source_sha: st
         "scientific_acceptance": "HOLD",
     }
     (root / result / f"restart_{end}ns_manifest.json").write_text(
-        json.dumps(manifest, indent=2, sort_keys=True)+"\\n")
+        json.dumps(manifest, indent=2, sort_keys=True)+"\n")
     print("OXYGEN25_GENUINE_CROSS_RUN_ADVANCED_RESTART_PASS", power, start, end, len(after))
 
 
