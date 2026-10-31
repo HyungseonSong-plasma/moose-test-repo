@@ -133,8 +133,10 @@ def checkpoint_manifest(directory: Path) -> dict[str, object]:
     if not files:
         raise ValueError("checkpoint directory empty")
     # Both mesh and state must be present. Checkpoint output is version-dependent.
-    if not any(".cpr" in x.name or ".cp" in x.suffix for x in files):
-        raise ValueError("checkpoint restartable state (.cpr/.cp) absent")
+    # Current MOOSE writes serialized restartable state with .rd; older
+    # versions used .cpr/.cp. Never accept a mesh-only checkpoint.
+    if not any(x.suffix in (".rd", ".cpr", ".cp") for x in files):
+        raise ValueError("checkpoint restartable state (.rd/.cpr/.cp) absent")
     if not any("mesh" in x.name for x in files):
         raise ValueError("checkpoint mesh absent")
     return {"checkpoint_directory": str(directory),
