@@ -152,11 +152,10 @@ jobs:
           test -s "$RESULT/run/plasma.e"
           test -s "$RESULT/run/plasma_cp/0001-restart-0.rd/data"
           test -s "$RESULT/run/plasma_cp/0001-mesh.cpa.gz/1/header.gz"
-          # Do not use tar | grep -q under pipefail: the grep early exit can
-          # send SIGPIPE to tar even when the full archive is valid.
-          tar -tzf "$RESULT/restart_run_1ns.tar.gz" \
-            > "$RESULT/restart_run_1ns_listing.txt"
-          grep -q '/run/plasma.e
+          # Avoid SIGPIPE from a tar | grep -q pipeline under pipefail.
+          tar -tzf "$RESULT/restart_run_1ns.tar.gz" > "$RESULT/restart_run_1ns_listing.txt"
+          grep -q "/run/plasma.e$" "$RESULT/restart_run_1ns_listing.txt"
+          grep -q "/run/plasma_cp/0001-restart-0.rd/data$" "$RESULT/restart_run_1ns_listing.txt"
           echo "OXYGEN25_1NS_COMPLETE_NATIVE_RESTART_ARTIFACT_PASS=$POWER_W"
 
       - name: Preserve restart-ready archives and SHA256 manifest (without rates)
