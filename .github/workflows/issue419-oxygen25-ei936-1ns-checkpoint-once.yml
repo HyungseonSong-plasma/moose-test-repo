@@ -1,0 +1,190 @@
+# Separate research run: 25 effective O(ex) channels incl. EI936, 400/1000W, 0->1ns.
+# Full native MOOSE restart checkpoint, Exodus outputs and input/mesh snapshots.
+name: Issue419 Oxygen25 EI936 1ns checkpoint once
+run-name: Oxygen25 EI936 1ns full checkpoint ${{ github.sha }
+on:
+  push:
+    branches: [issue-419-ei936-effective-oex-20261031]
+    paths: [.github/workflows/issue419-oxygen25-ei936-1ns-checkpoint-once.yml]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: issue419-oxygen25-ei936-1ns-checkpoint-once
+  cancel-in-progress: false
+
+jobs:
+  private-rate-gate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Require original 19 numerical rate tables
+        env:
+          PRIVATE_RATES_B64: ${{ secrets.OXYGEN24_RATES_TAR_XZ_B64 }
+        run: |
+          test -n "$PRIVATE_RATES_B64" || { echo "::error::Missing private rates"; exit 22; }
+          echo "OXYGEN25_RATE_SECRET_PRESENT"
+
+  checkpoint:
+    needs: private-rate-gate
+    name: Real PhysicsApp ${{ matrix.power_w }W 25-reaction 1ns
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        power_w: [400, 1000]
+    env:
+      CHATGPT_WORK_BASE_SHA: ${{ github.sha }
+      POWER_W: ${{ matrix.power_w }
+      OXYGEN_RESEARCH_400: '1'
+      OXYGEN_RESEARCH_FULL24: '1'
+      OXYGEN_RESEARCH_QUICK_5MIN: '1'
+      OXYGEN_RESEARCH_RATE_DIR: /tmp/oxygen25/private_rates
+      PWD_IN_RUNNER: ${{ github.workspace }
+    steps:
+      - name: Checkout exact 25-channel physics commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }
+          fetch-depth: 1
+
+      - name: Verify exact source and declare output paths
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$CHATGPT_WORK_BASE_SHA"
+          test ! -e experiments/Issue395_powered_chemistry_ladder/private_rates
+          echo 'CHEM=experiments/Issue395_powered_chemistry_ladder' >> "$GITHUB_ENV"
+          echo "RESULT=experiments/Issue395_powered_chemistry_ladder/results_rf_elastic_diss_ion_ei20_ei01_$POWER_W""w_adjacent_sheath_wall_closed_100us_dt1000ns" >> "$GITHUB_ENV"
+          echo "INPUT=experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_ei20_ei01_$POWER_W""w_adjacent_sheath_wall_closed_100us_dt1000ns.i" >> "$GITHUB_ENV"
+
+      - name: Restore 19 private lookup tables and optional EI936
+        env:
+          PRIVATE_RATES_B64: ${{ secrets.OXYGEN24_RATES_TAR_XZ_B64 }
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p "$OXYGEN_RESEARCH_RATE_DIR"
+          printf '%s' "$PRIVATE_RATES_B64" | base64 --decode | tar -xJ -C "$OXYGEN_RESEARCH_RATE_DIR" --no-same-owner
+          python3 - <<'PY'
+          import importlib.util, os
+          from pathlib import Path
+          src=Path("experiments/Issue395_powered_chemistry_ladder/build_oxygen_24_source_overlay.py")
+          spec=importlib.util.spec_from_file_location("oxygen25",src)
+          m=importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(m)
+          files=m.validate_files(Path(os.environ["OXYGEN_RESEARCH_RATE_DIR"]))
+          assert set(files) in (set(m.LOOKUP_IDS),set(m.LOOKUP_IDS)|{936})
+          model=m.validate_network(936 in files)
+          assert model["active"]==25 and model["atoms_charge_mass"]=="PASS"
+          print("OXYGEN25_PRIVATE_RATES_PASS",model["ei936_rate_mode"])
+          PY
+
+      - name: P0 regressions and restart archive self-test
+        run: |
+          set -euo pipefail
+          python3 -m venv .issue419-25-venv
+          .issue419-25-venv/bin/python -m pip install --disable-pip-version-check --quiet 'pytest>=8,<9' numpy==2.1.2 scipy==1.14.1
+          .issue419-25-venv/bin/python -m pytest -q \
+            tests/test_issue395_oxygen_full24_source_overlay.py \
+            tests/test_oxygen_24_active_chemistry.py \
+            tests/test_issue395_exploratory_chemistry_decisions.py \
+            tests/test_issue395_oxygen_full24_seeds.py \
+            tests/test_issue395_oxygen_full24_smoke_timegrid.py \
+            tests/test_issue395_oxygen_full24_wall_sticking.py \
+            tests/test_issue395_receiver_200sccm_inlet.py
+          python3 "$CHEM/oxygen25_1ns_restart_bundle.py" --self-test
+          bash -n "$CHEM/issue397_l1_power_scan_replay.sh"
+
+      - name: P0 prepare exact chemistry, mesh, overlays and one-ns checkpoint
+        run: |
+          set -euo pipefail
+          source .issue419-25-venv/bin/activate
+          bash "$CHEM/issue397_l1_power_scan_replay.sh" prepare "$POWER_W"
+          python3 "$CHEM/oxygen25_1ns_restart_bundle.py" --set-1ns "$INPUT"
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          c=Path(os.environ["CHEM"])
+          m=json.loads((c/"chem24_manifest.json").read_text())
+          assert m["active"]==25 and m["ei936_solver_product"]=="Os/O(ex)"
+          overlay=(c/f'full24_{os.environ["POWER_W"]}w_100us_dt1000ns_overlay.i').read_text()
+          assert "property_name = R_936" in overlay or "reaction_progress = R_936" in overlay
+          assert "n_O_ex_avg" in overlay and "S_energy_chem24" in overlay
+          print("OXYGEN25_EI936_EXACT_PREPARED_NETWORK_PASS",m["ei936_rate_mode"])
+          PY
+
+      - name: P1 build native PhysicsApp
+        run: |
+          set -euo pipefail
+          bash "$CHEM/issue397_l1_power_scan_replay.sh" build "$POWER_W"
+
+      - name: P2 check exact 1ns input with native solver
+        run: |
+          set -euo pipefail
+          bash "$CHEM/issue397_l1_power_scan_replay.sh" check "$POWER_W"
+
+      - name: P3 real native PhysicsApp 0 to 1ns with 30-minute wall cap
+        run: |
+          set -euo pipefail
+          started="$(date +%s)"
+          set +e
+          timeout -s TERM -k 60s 1800s bash "$CHEM/issue397_l1_power_scan_replay.sh" solve "$POWER_W"
+          code="$?"
+          set -e
+          elapsed=$(( $(date +%s) - started ))
+          printf 'source_sha=%s\npower_w=%s\nseconds=%s\nexit_code=%s\n' \
+            "$CHATGPT_WORK_BASE_SHA" "$POWER_W" "$elapsed" "$code" \
+            > "$RESULT/one_ns_runtime_status.txt"
+          echo "OXYGEN25_1NS_SOLVER_WALL_SECONDS=$elapsed EXIT_CODE=$code"
+          test "$code" -eq 0
+
+      - name: P4 verify genuine 0001 MOOSE state and package full run plus inputs
+        run: |
+          set -euo pipefail
+          python3 "$CHEM/oxygen25_1ns_restart_bundle.py" \
+            --verify-and-archive "$RESULT" --root "$GITHUB_WORKSPACE" \
+            --power-w "$POWER_W" --source-sha "$CHATGPT_WORK_BASE_SHA"
+          sha256sum "$RESULT/restart_run_1ns.tar.gz" "$RESULT/restart_inputs_1ns.tar.gz" \
+            | tee "$RESULT/restart_archives_1ns.sha256"
+          test -s "$RESULT/run/plasma.e"
+          test -s "$RESULT/run/plasma_cp/0001-restart-0.rd/data"
+          test -s "$RESULT/run/plasma_cp/0001-mesh.cpa.gz/1/header.gz"
+          tar -tzf "$RESULT/restart_run_1ns.tar.gz" | grep -q '/run/plasma.e$'
+          tar -tzf "$RESULT/restart_run_1ns.tar.gz" | grep -q '/run/plasma_cp/0001-restart-0.rd/data$'
+          echo "OXYGEN25_1NS_COMPLETE_NATIVE_RESTART_ARTIFACT_PASS=$POWER_W"
+
+      - name: Preserve restart-ready archives and SHA256 manifest (without rates)
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: oxygen25-ei936-1ns-restart-complete-${{ matrix.power_w }W
+          if-no-files-found: error
+          retention-days: 90
+          path: |
+            ${{ env.RESULT }}/restart_run_1ns.tar.gz
+            ${{ env.RESULT }}/restart_inputs_1ns.tar.gz
+            ${{ env.RESULT }}/restart_archives_1ns.sha256
+            ${{ env.RESULT }}/restart_1ns_manifest.json
+            ${{ env.RESULT }}/one_ns_runtime_status.txt
+            ${{ env.RESULT }}/check_input.log
+            ${{ env.RESULT }}/runtime.log
+            ${{ env.RESULT }}/run/plasma.csv
+            ${{ env.CHEM }}/chem24_manifest.json
+
+      - name: Preserve failure diagnostics even when full checkpoint is unavailable
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: oxygen25-ei936-1ns-diagnostics-${{ matrix.power_w }W
+          if-no-files-found: warn
+          retention-days: 21
+          path: |
+            ${{ env.RESULT }}/one_ns_runtime_status.txt
+            ${{ env.RESULT }}/check_input.log
+            ${{ env.RESULT }}/runtime.log
+            ${{ env.RESULT }}/run/plasma.csv
+            ${{ env.RESULT }}/restart_1ns_manifest.json
+            ${{ env.RESULT }}/prep/full24_source_overlay.log
