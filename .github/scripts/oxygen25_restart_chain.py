@@ -577,7 +577,20 @@ def verify_recovery(root: Path, power: int, start: int, end: int, source_sha: st
             raise ValueError(
                 f"new native checkpoint absent: {p}; native step={last_step}; "
                 f"available prefixes={available}")
+    time_overlay_path = root / result / "restart_time_sequence_overlay.json"
+    if not time_overlay_path.is_file() or not time_overlay_path.stat().st_size:
+        raise ValueError("missing staged TimeStepper checkpoint compatibility evidence")
+    time_overlay = json.loads(time_overlay_path.read_text())
+    if (time_overlay["from_checkpoint"] != old_prefix or
+            time_overlay["start_ns"] != start or
+            time_overlay["end_ns"] != end or
+            time_overlay["upstream_actual_moose_step"] != upstream["actual_moose_step"] or
+            time_overlay["staged_time_sequence_ns"] != [
+                str(t) for t in time_grid(inp)[1]]):
+        raise ValueError("staged TimeStepper compatibility evidence changed")
     input_files = [root / row["path"] for row in upstream["input_files"]]
+    if time_overlay_path not in input_files:
+        input_files.append(time_overlay_path)
     run_files = sorted(p for p in run.rglob("*") if p.is_file())
     def inventory(paths):
         return sorted([{"path": p.relative_to(root).as_posix(),
@@ -598,6 +611,7 @@ def verify_recovery(root: Path, power: int, start: int, end: int, source_sha: st
         "final_time_s": end * 1e-9,
         "time_sequence_s": [float(t * NS_S) for t in time_grid(inp)[1]],
         "restart_source_prefix": old_prefix,
+        "staged_time_sequence_overlay_sha256": sha(time_overlay_path),
         "actual_moose_step": last_step,
         "checkpoint_prefix": checkpoint_prefix.relative_to(root).as_posix(),
         "latest_exodus_file": stage_exodus.relative_to(root).as_posix(),
