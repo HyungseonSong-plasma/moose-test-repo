@@ -100,6 +100,31 @@ def extend_input(text: str, start: int, end: int) -> str:
         raise ValueError("extended time grid did not round-trip")
     return result
 
+def advanced_restart_input(text: str, prefix: str) -> str:
+    """MOOSE 9f388366: recover ignores an extended TimeSequenceStepper sequence.
+    
+    Problem/restart_file_base activates the genuine advanced *restart* path,
+    which checks the saved sequence prefix and appends new future times.
+    Keep the original deterministic mesh generator and all MultiApps.
+    """
+    if re.search(r"(?m)^\\[Problem\\]\\s*$", text):
+        raise ValueError("unexpected existing Problem block")
+    if not re.fullmatch(
+        r"experiments/Issue395_powered_chemistry_ladder/"
+        r"results_rf_elastic_diss_ion_ei20_ei01_(400|1000)w_"
+        r"adjacent_sheath_wall_closed_100us_dt1000ns/run/"
+        r"plasma(?:_restart_\\d+to\\d+)?_cp/\\d{4,}", prefix
+    ):
+        raise ValueError("invalid exact restart checkpoint prefix")
+    return text.rstrip() + "\\n\\n[Problem]\\n  restart_file_base = '" + prefix + "'\\n[]\\n"
+
+
+def stage_base(start: int, end: int) -> str:
+    if not 1 <= start < end <= 100:
+        raise ValueError("invalid bounded stage")
+    return f"plasma_restart_{start}to{end}"
+
+
 def read_csv(path: Path) -> list[dict[str, str]]:
     with path.open(newline="", encoding="utf-8") as stream:
         return list(csv.DictReader(stream))
@@ -160,19 +185,24 @@ def restore(root: Path, artifact: Path, power: int, start: int, end: int, source
     actual_step = manifest.get("actual_moose_step")
     if type(actual_step) is not int or actual_step < start:
         raise ValueError("upstream actual MOOSE step missing or invalid")
-    prefix = run / "plasma_cp" / f"{actual_step:04d}"
-    expected_prefix = prefix.relative_to(root).as_posix()
-    if manifest.get("recovery_requirements", {}).get("native_recover_prefix") != expected_prefix:
-        raise ValueError("upstream recovery prefix does not match actual native step")
+    expected_prefix = manifest.get("recovery_requirements", {}).get("native_recover_prefix")
+    if not isinstance(expected_prefix, str):
+        raise ValueError("upstream native recovery prefix missing")
+    prefix = root / expected_prefix
+    if not prefix.resolve().is_relative_to(run.resolve()):
+        raise ValueError("upstream checkpoint outside restored run directory")
+    if not expected_prefix.endswith(f"/{actual_step:04d}"):
+        raise ValueError("upstream checkpoint prefix does not match native step")
+    latest_exodus = manifest.get("latest_exodus_file", (run / "plasma.e").relative_to(root).as_posix())
     for p in (Path(str(prefix) + "-restart-0.rd/data"),
               Path(str(prefix) + "-restart-0.rd/header"),
               Path(str(prefix) + "-mesh.cpa.gz/1/header.gz"),
-              run / "plasma.e"):
+              root / latest_exodus):
         if not p.is_file() or not p.stat().st_size:
             raise ValueError(f"genuine upstream checkpoint/Exodus missing: {p}")
     (root / result / "recovery_prefix.txt").write_text(expected_prefix + "\n")
     inp = root / CHEM / f"rf_elastic_diss_ion_ei20_ei01_{power}w_adjacent_sheath_wall_closed_100us_dt1000ns.i"
-    inp.write_text(extend_input(inp.read_text(), start, end))
+    inp.write_text(advanced_restart_input(extend_input(inp.read_text(), start, end), expected_prefix))
     (root / result / "upstream_manifest.json").write_text(json.dumps(manifest, indent=2, sort_keys=True)+"\n")
     (root / result / "upstream_plasma.csv").write_bytes((run / "plasma.csv").read_bytes())
     print("OXYGEN25_EXACT_SOURCE_RESTORED_AND_INPUT_EXTENDED_PASS", power, start, end)
@@ -225,18 +255,47 @@ def verify_recovery(root: Path, power: int, start: int, end: int, source_sha: st
     run = root / result / "run"
     upstream = json.loads((root / result / "upstream_manifest.json").read_text())
     before = read_csv(root / result / "upstream_plasma.csv")
-    after = verify_csv(run / "plasma.csv", end, exact_rows=False)
-    if not any(float(row["time"]) > start * 1e-9 + 1e-16 for row in after):
-        raise ValueError("no post-checkpoint time advancement")
-    if len(after) < len(before) or any(row != after[i] for i, row in enumerate(before)):
-        raise ValueError("upstream CSV history lost or changed")
+    # Restart is NOT --recover: MOOSE 9f388366 preserves the old sequence on
+    # recover, causing an out-of-bounds next time at a completed checkpoint.
+    # Advanced restart updates the future sequence while restoring saved state.
+    input_path = root / CHEM / f"rf_elastic_diss_ion_ei20_ei01_{power}w_adjacent_sheath_wall_closed_100us_dt1000ns.i"
+    inp = input_path.read_text()
+    old_prefix = upstream["recovery_requirements"]["native_recover_prefix"]
+    if f"restart_file_base = '{old_prefix}'" not in inp:
+        raise ValueError("advanced restart source is not the verified checkpoint")
+    stage = stage_base(start, end)
+    stage_csv = run / (stage + ".csv")
+    stage_exodus = run / (stage + ".e")
+    if not stage_exodus.is_file() or not stage_exodus.stat().st_size:
+        raise ValueError("new-stage native Exodus missing")
+    after = verify_csv(stage_csv, end, exact_rows=False)
+    times = [float(r["time"]) for r in after]
+    if not math.isclose(times[0], start * 1e-9, rel_tol=1e-12, abs_tol=1e-16):
+        raise ValueError("advanced restart did not output initial checkpoint boundary")
+    if any(b <= a for a, b in zip(times, times[1:])) or times[-1] <= times[0]:
+        raise ValueError("advanced restart time not strictly increasing")
+    if list(after[0]) != list(before[-1]):
+        raise ValueError("upstream/restarted CSV monitor schema changed")
+    for key in before[-1]:
+        a, b = float(before[-1][key]), float(after[0][key])
+        if not (math.isfinite(a) and math.isfinite(b) and
+                math.isclose(a, b, rel_tol=1e-8, abs_tol=1e-12)):
+            raise ValueError(f"restart boundary state discontinuity: {key} {a} -> {b}")
+    # Canonical CSV history is stitched only after validating the actual new
+    # native stage. The stage-specific native CSV and Exodus remain untouched.
+    original_csv = run / "plasma.csv"
+    if read_csv(original_csv) != before:
+        raise ValueError("upstream original CSV modified before validation")
+    with original_csv.open("w", newline="", encoding="utf-8") as stream:
+        writer = csv.DictWriter(stream, fieldnames=list(before[0]))
+        writer.writeheader()
+        writer.writerows(before + after[1:])
+    verify_csv(original_csv, end, exact_rows=False)
     log = (root / result / "recovery_runtime.log").read_text(errors="replace")
-    if not re.search(r"(?i)\brecover(?:y|ing|ed)?\b", log):
-        raise ValueError("no native recovery log evidence")
-    if not re.search(r"Time Step\s+\d+,\s*time\s*=", log):
-        raise ValueError("no native recovered time step evidence")
+    if not re.search(r"(?i)\\brestart(?:ing|ed)?\\b", log):
+        raise ValueError("no native advanced restart log evidence")
     last_step = native_final_step(log, end, upstream["actual_moose_step"])
-    cp = run / "plasma_cp"
+    cp = run / (stage + "_cp")
     checkpoint_prefix = cp / f"{last_step:04d}"
     for p in (Path(str(checkpoint_prefix) + "-restart-0.rd/data"),
               Path(str(checkpoint_prefix) + "-restart-0.rd/header"),
@@ -263,10 +322,13 @@ def verify_recovery(root: Path, power: int, start: int, end: int, source_sha: st
                 tar.add(path, arcname=path.relative_to(root).as_posix(), recursive=False)
         archives[filename] = {"bytes": destination.stat().st_size, "sha256": sha(destination)}
     manifest = {
-        "schema": 2, "power_w": power, "source_sha": source_sha,
+        "schema": 3, "power_w": power, "source_sha": source_sha,
         "final_time_s": end * 1e-9, "time_sequence_s": [i*1e-9 for i in range(end+1)],
         "actual_moose_step": last_step,
         "checkpoint_prefix": checkpoint_prefix.relative_to(root).as_posix(),
+        "latest_exodus_file": stage_exodus.relative_to(root).as_posix(),
+        "stage_csv_file": stage_csv.relative_to(root).as_posix(),
+        "restart_mode": "advanced_restart_not_recover",
         "chemistry": "25-effective-O(ex)-EI936",
         "ei936_mode": upstream["ei936_mode"], "ei936_energy_loss_eV": 4.19,
         "rate_sha256_private_rehydrate_required": upstream["rate_sha256_private_rehydrate_required"],
@@ -283,8 +345,9 @@ def verify_recovery(root: Path, power: int, start: int, end: int, source_sha: st
         "scientific_acceptance": "HOLD",
     }
     (root / result / f"restart_{end}ns_manifest.json").write_text(
-        json.dumps(manifest, indent=2, sort_keys=True)+"\n")
-    print("OXYGEN25_GENUINE_CROSS_RUN_RECOVERY_PASS", power, start, end, len(after))
+        json.dumps(manifest, indent=2, sort_keys=True)+"\\n")
+    print("OXYGEN25_GENUINE_CROSS_RUN_ADVANCED_RESTART_PASS", power, start, end, len(after))
+
 
 def self_test() -> None:
     sample = ("[Executioner]\n  type = Transient\n  end_time = 1e-9\n"
@@ -292,6 +355,19 @@ def self_test() -> None:
               "    time_sequence = '0 1e-9'\n  []\n[]\n"
               "[Outputs]\n  checkpoint = true\n[]\n")
     assert time_grid(extend_input(sample, 1, 2)) == (2, [0, 1, 2])
+    assert time_grid(extend_input(sample, 1, 100)) == (100, list(range(101)))
+    prefix = ("experiments/Issue395_powered_chemistry_ladder/"
+              "results_rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns/"
+              "run/plasma_cp/0004")
+    advanced = advanced_restart_input(extend_input(sample, 1, 100), prefix)
+    assert "restart_file_base = '" + prefix + "'" in advanced
+    assert "[Problem]" in advanced
+    try:
+        advanced_restart_input(advanced, prefix)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("duplicate advanced restart block accepted")
     for bad in (sample.replace("checkpoint = true", "checkpoint = false"),
                 sample.replace("1e-9'", "2e-9'")):
         try:
