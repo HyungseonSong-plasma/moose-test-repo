@@ -135,7 +135,7 @@ jobs:
           test "$code" -eq 0
           printf 'first_2ns_wall_seconds=%s\nfirst_2ns_exit_code=%s\n' "$elapsed" "$code" > checkpoint-restart-${{ matrix.power_w }}W.status
 
-      - name: P4 audit true 2ns checkpoint and freeze first-stage evidence
+      - name: P4 audit nested .rd and .cpa.gz 2ns checkpoint and freeze evidence
         env:
           MATRIX_POWER: ${{ matrix.power_w }}
         run: |
