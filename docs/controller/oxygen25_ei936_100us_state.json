@@ -5,17 +5,17 @@
   "scope": "Oxygen ICP 25-reaction EI936 effective O(ex) native restart",
   "os": "Samuel",
   "samuel_revision": "9b335e3fbb9c5e8e323e382daeec56fa25336822",
-  "observed_at_lower_bound": "2026-10-31T17:34:13Z",
+  "observed_at_lower_bound": "2026-10-31T17:45:36Z",
   "campaign": "1ns→2ns→100ns→1us→10us→100us",
   "numerical_goal_us": 100,
   "run_success_vs_scientific_acceptance": "separate; SCIENCE_HOLD until independently qualified",
   "current_run": {
-    "id": 41225167309,
+    "id": 41226074449,
     "attempt": 1,
     "event": "push",
-    "workflow_sha": "2b2cb59c1dd9a844f82f8f26aca56e79c1ae04f8",
-    "status": "ACTIVE_NATIVE_BUILD_P1",
-    "url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/41225167309"
+    "workflow_sha": "07c799c7f7326fbf9e077dadd93ab49e3f07eaa4",
+    "status": "ACTIVE_P1",
+    "url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/41226074449"
   },
   "failure_root_cause": {
     "run_id": 41212837874,
@@ -31,7 +31,7 @@
   "powers": {
     "400": {
       "artifact_id": 13045668207,
-      "job_id": 124607691133,
+      "job_id": 124610378245,
       "upstream_run_id": 41208644597,
       "checkpoint_step": 4,
       "manifest_sha256": "e850495af85fd4615429066dedea29630533ee70c3488cfac20ecd856bb08c27",
@@ -53,17 +53,17 @@
       "ei936_mode": "analytic_maxwellian_fallback",
       "private_rate_count": 19,
       "science": "SCIENCE_HOLD",
-      "active_run_id": 41225167309,
+      "active_run_id": 41226074449,
       "active_run_attempt": 1,
-      "active_workflow_sha": "2b2cb59c1dd9a844f82f8f26aca56e79c1ae04f8",
-      "next_action": "Await native P2/P3 for exact run 41225167309; accept 100ns only after P4 and manifest/native checkpoint archive SHA readback.",
-      "last_failed_run_id": 41224078027,
-      "last_failed_stage": "P3_TIME_SEQUENCE_PREFIX",
-      "last_failed_reason": "MOOSE saved current_step=4 expects 5 historic entries including duplicate 1ns; supplied sequence entry3 2ns vs saved 1ns"
+      "active_workflow_sha": "07c799c7f7326fbf9e077dadd93ab49e3f07eaa4",
+      "next_action": "Inspect exact CI 41226074449 P2/P3 and adaptive timestep; repair first failed gate and require real P4 checkpoint SHA before 100ns acceptance.",
+      "last_failed_run_id": 41225167309,
+      "last_failed_stage": "P3_TIME_SEQUENCE_SAVED_VECTOR",
+      "last_failed_reason": "MOOSE saved TimeSequenceStepper current_step=4 references invalid 1.1907e-321 s history entry; proxy overlay inadequate"
     },
     "1000": {
       "artifact_id": 13045289286,
-      "job_id": 124607690920,
+      "job_id": 124610378124,
       "upstream_run_id": 41208644597,
       "checkpoint_step": 4,
       "manifest_sha256": "4d7be8b8efeba89b100c40abb7723b8c60f4f99b8db7287e4db37418cacd9c1f",
@@ -85,35 +85,36 @@
       "ei936_mode": "analytic_maxwellian_fallback",
       "private_rate_count": 19,
       "science": "SCIENCE_HOLD",
-      "active_run_id": 41225167309,
+      "active_run_id": 41226074449,
       "active_run_attempt": 1,
-      "active_workflow_sha": "2b2cb59c1dd9a844f82f8f26aca56e79c1ae04f8",
-      "next_action": "Await native P2/P3 for exact run 41225167309; accept 100ns only after P4 and manifest/native checkpoint archive SHA readback.",
-      "last_failed_run_id": 41224078027,
-      "last_failed_stage": "P3_TIME_SEQUENCE_PREFIX",
-      "last_failed_reason": "MOOSE saved current_step=4 expects 5 historic entries including duplicate 1ns; supplied sequence entry3 2ns vs saved 1ns"
+      "active_workflow_sha": "07c799c7f7326fbf9e077dadd93ab49e3f07eaa4",
+      "next_action": "Inspect exact CI 41226074449 P2/P3 and adaptive timestep; repair first failed gate and require real P4 checkpoint SHA before 100ns acceptance.",
+      "last_failed_run_id": 41225167309,
+      "last_failed_stage": "P3_TIME_SEQUENCE_SAVED_VECTOR",
+      "last_failed_reason": "MOOSE saved TimeSequenceStepper current_step=4 references invalid 1.1907e-321 s history entry; proxy overlay inadequate"
     }
   },
   "terminal_policy": "Never mark 100ns/1us/10us/100us PASS without actual native time and cross-CI checkpoint archive SHA proof; 2-cycle terminal confirmation.",
   "separate_oxygen24_branch": "experiment/oxygen24-restart-2ns-to-4ns-20261031",
   "latest_repair": {
-    "failure_run": 41224078027,
-    "gate": "P3_TIME_SEQUENCE_PREFIX",
-    "cause": "native TimeSequenceStepper::_current_step=4 requires five saved entries [0,1,1,1.001,1.002]ns; simplified staged sequence [0,1,2...] lost historical duplicate",
-    "fix": "Stage exact-source 2ns compatible strict increasing proxy at 1.00000001ns followed by native accepted 1.001/1.002ns; extend only future requested interval/endtime, keep original 0004 checkpoint and all chemistry unchanged; P0 reject other native time histories",
+    "previous_failure_run": 41225167309,
+    "first_failed_gate": "P3",
+    "root_cause": "Native saved TimeSequenceStepper index 4 is 1.1907e-321 s despite current_step=4; input overlay cannot reconstruct",
+    "repair": "Keep native plasma/Maxwell state and stage IterationAdaptiveDT reset_dt=true, 1ps initial, growth factor2, dtmax capped at 1ns; verify native solver state continuity",
     "helper_commits": [
-      "d3945da0cdfe7cd2090caf08d1ed741bd628d63b",
-      "cb26c9c92a35b91e93a521f88072e89aee7b1df4"
+      "9e712655203c2660903b08db2f9024fc5eea9148",
+      "4e341a068e4136ad117b10c8b6d7218d84a26ffe"
     ],
-    "workflow_commit": "2b2cb59c1dd9a844f82f8f26aca56e79c1ae04f8",
-    "run": 41225167309,
-    "time_inputs": {
-      "start_ns": 2,
-      "end_ns": 100,
-      "interval_ns": "1"
+    "follow_on_helper_commit": "5003a4120b1094a1954bda8cb53b919c08ca91b7",
+    "invalid_workflow_run": {
+      "id": 41225988988,
+      "cause": "Invalid YAML: JS replacement substitution appended suffix and duplicated jobs",
+      "resolution": "Restored known-good YAML and used safe callback replacement"
     },
+    "workflow_commit": "07c799c7f7326fbf9e077dadd93ab49e3f07eaa4",
+    "active_run_id": 41226074449,
     "p0": "PASS_BOTH",
-    "private_rates": "19_SHA256_PASS_BOTH",
+    "rates": "19_SHA256_PASS_BOTH",
     "p1": "IN_PROGRESS",
     "p2": "PENDING",
     "p3": "PENDING",
