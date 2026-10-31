@@ -26,6 +26,8 @@ done
 test -s "$RESULT/run/plasma_cp/0002-restart-0.rd/data" || { echo "missing exact 2ns restart state" >&2; exit 2; }
 test -s "$RESULT/run/plasma_cp/0002-mesh.cpa.gz/1/header.gz" || { echo "missing exact 2ns mesh checkpoint" >&2; exit 2; }
 
+# FullSolveMultiApp no_restore=true is rejected while recovering; override it
+# only in recovery so the parent can reconstruct the saved child state.
 # Output basename must remain identical: --recover resolves its source
 # checkpoint from the same parent output path, including MultiApp backups.
 # Do not call 'prepare' between checkpoint and recovery.
@@ -37,6 +39,7 @@ docker run --rm --entrypoint /bin/bash --user 0:0 \
       -i '$INPUT' \
       '$PARENT' '$ELASTIC' '$FULL24' '$OELASTIC' \
       Outputs/file_base='$RESULT/run/plasma' \
+      MultiApps/maxwell_t6/no_restore=false \
       --recover '$RESULT/run/plasma_cp/0002'
   " 2>&1 | tee "$RESULT/recovery_runtime.log"
 
