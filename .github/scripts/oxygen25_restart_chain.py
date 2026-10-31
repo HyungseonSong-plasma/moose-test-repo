@@ -79,8 +79,11 @@ def time_grid(text: str) -> tuple[int, list[Decimal]]:
     if len(ends) != 1 or len(grids) != 1:
         raise ValueError("nonunique time grid")
     try:
-        end_ns = Decimal(ends[0].group().split("=", 1)[1].strip()) / NS_S
-        seq_ns = [Decimal(x) / NS_S for x in
+        # Prior 2ns files used float .17g (2.0000000000000001e-9).
+        # Normalize only representation noise at 1e-17 s resolution.
+        quant = Decimal("0.00000001")
+        end_ns = (Decimal(ends[0].group().split("=", 1)[1].strip()) / NS_S).quantize(quant)
+        seq_ns = [(Decimal(x) / NS_S).quantize(quant) for x in
                   grids[0].group().split("'", 2)[1].split()]
     except Exception as exc:
         raise ValueError("invalid time sequence decimals") from exc
@@ -269,7 +272,7 @@ def advanced_restart_input(text: str, prefix: str,
     which checks the saved sequence prefix and appends new future times.
     Keep the original deterministic mesh generator and all MultiApps.
     """
-    if re.search(r"(?m)^\[Problem\]\s*$", text):
+    if prior_restart_prefix is None and re.search(r"(?m)^\[Problem\]\s*$", text):
         raise ValueError("unexpected existing Problem block")
     if not re.fullmatch(
         r"experiments/Issue395_powered_chemistry_ladder/"
