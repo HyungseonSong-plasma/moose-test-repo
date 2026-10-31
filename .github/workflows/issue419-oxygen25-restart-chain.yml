@@ -88,7 +88,7 @@ jobs:
           name: oxygen25-ei936-${{ env.START_NS }}ns-restart-complete-${{ matrix.power_w }}W
           github-token: ${{ github.token }}
           path: _upstream_artifact/${{ matrix.power_w }}W
-      - name: P0 checkpoint output, time-grid, parent/child seed and exact archive round-trip
+      - name: P0 checkpoint-native time prefix, parent-child restart state and archive round-trip
         run: |
           set -euo pipefail
           python3 "$CHAIN" --self-test
@@ -108,6 +108,15 @@ jobs:
             exit 32
           fi
           echo OXYGEN25_MAXWELL_CHILD_SEED_ICS_SUPPRESSED_PASS
+          test -s "$RESULT/restart_time_sequence_overlay.json"
+          python3 - "$RESULT/restart_time_sequence_overlay.json" <<'PY'
+          import json, sys
+          d=json.load(open(sys.argv[1]))
+          assert d['start_ns']==int("2") and d['end_ns']==int("100")
+          assert d['legacy_duplicate_checkpoint_boundary_proxy']
+          assert d['staged_time_sequence_ns'][2]=='1.00000001'
+          print("OXYGEN25_2NS_NATIVE_TIME_PREFIX_ALIGNED_PASS")
+          PY
           test -s "$RESULT/upstream_manifest.json"
           test -s "$RESULT/recovery_prefix.txt"
           test -s "$RESULT/run/plasma.e"
@@ -191,6 +200,7 @@ jobs:
             ${{ env.RESULT }}/restart_run_${{ env.END_NS }}ns.tar.gz
             ${{ env.RESULT }}/restart_inputs_${{ env.END_NS }}ns.tar.gz
             ${{ env.RESULT }}/restart_${{ env.END_NS }}ns_manifest.json
+            ${{ env.RESULT }}/restart_time_sequence_overlay.json
             ${{ env.RESULT }}/recovery_prefix.txt
             ${{ env.RESULT }}/recovery_checkpoint_listing.txt
             ${{ env.RESULT }}/recovery_status.txt
@@ -208,6 +218,7 @@ jobs:
           if-no-files-found: warn
           path: |
             ${{ env.RESULT }}/recovery_status.txt
+            ${{ env.RESULT }}/restart_time_sequence_overlay.json
             ${{ env.RESULT }}/recovery_prefix.txt
             ${{ env.RESULT }}/recovery_checkpoint_listing.txt
             ${{ env.RESULT }}/recovery_runtime.log
