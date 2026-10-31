@@ -640,6 +640,52 @@ def verify_rates(root: Path, power: int, rate_dir: Path) -> None:
             raise ValueError(f"staged private rate hash mismatch {rid}")
     print("OXYGEN25_PRIVATE_RATE_REHYDRATION_SHA256_PASS", len(files), upstream["ei936_mode"])
 
+# Source-backed temporal semantics: build_t6_overlays.py freezes plasma
+# RF auxiliary state on INITIAL/TIMESTEP_BEGIN, while these five RF
+# postprocessors execute on INITIAL/TIMESTEP_END. The preceding END row
+# reflects the preceding step's frozen state; advanced restart INITIAL
+# re-freezes the restored parent at the checkpoint time. These are
+# re-evaluated diagnostics, not serialized state continuity monitors.
+RF_REINITIALIZED_MONITORS = frozenset((
+    "P_rf_raw_W_t6", "P_rf_scaled_W_t6", "S_rf_eV_mol_s_t6",
+    "mean_energy_rf_state_min_t6", "mean_energy_rf_state_max_t6",
+))
+
+def verify_boundary_monitors(old: dict, new: dict) -> dict:
+    """Preserve every checkpointed monitor; audit reinitialized RF separately.
+
+    Never skip a new/unknown monitor, a plasma/Maxwell continuity failure,
+    a nonfinite diagnostic, or a changed RF source/scale identity.
+    """
+    if list(old) != list(new) or not RF_REINITIALIZED_MONITORS.issubset(old):
+        raise ValueError("restart monitor schema or known RF diagnostic inventory changed")
+    changed = {}
+    for key in old:
+        a, b = float(old[key]), float(new[key])
+        if not (math.isfinite(a) and math.isfinite(b)):
+            raise ValueError(f"nonfinite restart boundary monitor: {key}")
+        if key in RF_REINITIALIZED_MONITORS:
+            if not math.isclose(a, b, rel_tol=1e-8, abs_tol=1e-12):
+                changed[key] = {"upstream": a, "reinitialized": b}
+        elif not math.isclose(a, b, rel_tol=1e-8, abs_tol=1e-12):
+            raise ValueError(f"restart boundary state discontinuity: {key} {a} -> {b}")
+    for row in (old, new):
+        raw = float(row["P_rf_raw_W_t6"])
+        scaled = float(row["P_rf_scaled_W_t6"])
+        source = float(row["S_rf_eV_mol_s_t6"])
+        e_min = float(row["mean_energy_rf_state_min_t6"])
+        e_max = float(row["mean_energy_rf_state_max_t6"])
+        if not (raw > 0 and scaled > 0 and source > 0 and
+                0 < e_min <= e_max):
+            raise ValueError("nonphysical restart RF diagnostic sign or energy extrema")
+    for num, den in (("P_rf_scaled_W_t6", "P_rf_raw_W_t6"),
+                     ("S_rf_eV_mol_s_t6", "P_rf_scaled_W_t6")):
+        old_ratio = float(old[num]) / float(old[den])
+        new_ratio = float(new[num]) / float(new[den])
+        if not math.isclose(old_ratio, new_ratio, rel_tol=1e-8, abs_tol=1e-12):
+            raise ValueError(f"RF source/scale identity changed at restart: {num}/{den}")
+    return changed
+
 def native_final_step(log: str, end: int, previous_step: int) -> int:
     """Bind checkpoint numbering to the actual native final step and time."""
     matches = re.findall(
@@ -681,11 +727,10 @@ def verify_recovery(root: Path, power: int, start: int, end: int, source_sha: st
         raise ValueError("advanced restart time not strictly increasing")
     if list(after[0]) != list(before[-1]):
         raise ValueError("upstream/restarted CSV monitor schema changed")
-    for key in before[-1]:
-        a, b = float(before[-1][key]), float(after[0][key])
-        if not (math.isfinite(a) and math.isfinite(b) and
-                math.isclose(a, b, rel_tol=1e-8, abs_tol=1e-12)):
-            raise ValueError(f"restart boundary state discontinuity: {key} {a} -> {b}")
+    boundary_rf_reinitialized = verify_boundary_monitors(before[-1], after[0])
+    print("OXYGEN25_RESTART_BOUNDARY_STATE_MONITORS_PASS",
+          len(before[-1]) - len(RF_REINITIALIZED_MONITORS),
+          "RF_REINITIALIZED", sorted(boundary_rf_reinitialized))
     # Canonical CSV history is stitched only after validating the actual new
     # native stage. The stage-specific native CSV and Exodus remain untouched.
     original_csv = run / "plasma.csv"
@@ -765,6 +810,9 @@ def verify_recovery(root: Path, power: int, start: int, end: int, source_sha: st
         "upstream_time_ns": start, "recovered_time_ns": end,
         "last_monitors": {key: float(after[-1][key]) for key in
                           ("n_O_ex_avg", "n_O_3P_avg", "chem24_monitor_R_936", "P_rf_raw_W_t6")},
+        "restart_boundary_preserved_monitor_count":
+            len(before[-1]) - len(RF_REINITIALIZED_MONITORS),
+        "restart_boundary_rf_diagnostics_reinitialized": boundary_rf_reinitialized,
         "scientific_acceptance": "HOLD",
     }
     (root / result / f"restart_{end}ns_manifest.json").write_text(
@@ -773,6 +821,35 @@ def verify_recovery(root: Path, power: int, start: int, end: int, source_sha: st
 
 
 def self_test() -> None:
+    # Source-backed RF freeze/END epoch mismatch: exact 145-state-monitor
+    # continuity is mandatory, but the five INITIAL-refreshed RF diagnostics
+    # are compared by source/scale identity rather than stale END equality.
+    old_boundary = {
+        "time": "2e-9", "n_O_3P_avg": "3.22e15",
+        "P_abs_maxwell_t6": "198.5",
+        "P_rf_raw_W_t6": "201", "P_rf_scaled_W_t6": "201",
+        "S_rf_eV_mol_s_t6": str(201 / 96485.33212),
+        "mean_energy_rf_state_min_t6": "3.86",
+        "mean_energy_rf_state_max_t6": "4.73",
+    }
+    new_boundary = dict(old_boundary,
+        P_rf_raw_W_t6="203", P_rf_scaled_W_t6="203",
+        S_rf_eV_mol_s_t6=str(203 / 96485.33212),
+        mean_energy_rf_state_min_t6="3.82",
+        mean_energy_rf_state_max_t6="4.96")
+    assert set(verify_boundary_monitors(old_boundary, new_boundary)) == RF_REINITIALIZED_MONITORS
+    for key, bad_value in (
+            ("n_O_3P_avg", "4e15"),
+            ("P_abs_maxwell_t6", "250"),
+            ("P_rf_scaled_W_t6", "250"),
+            ("mean_energy_rf_state_min_t6", "-1")):
+        corrupted = dict(new_boundary, **{key: bad_value})
+        try:
+            verify_boundary_monitors(old_boundary, corrupted)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError(f"invalid restart boundary monitor accepted: {key}")
     sample = ("[Executioner]\n  type = Transient\n  end_time = 1e-9\n"
               "  [TimeStepper]\n    type = TimeSequenceStepper\n"
               "    time_sequence = '0 1e-9'\n  []\n[]\n"
