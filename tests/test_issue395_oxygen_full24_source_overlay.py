@@ -69,7 +69,7 @@ def test_source_projection_one_source_per_variable_and_heavy_units():
     assert "S_mass_closure_chem24" in overlay
     assert "S_charge_closure_chem24" in overlay
     assert "R_2074" in overlay
-    for monitor in ("n_O2_X_avg","n_O2_a_avg","n_O_3P_avg","n_O_1D_avg"):
+    for monitor in ("n_O2_X_avg","n_O2_a_avg","n_O_3P_avg","n_O_1D_avg","n_O_ex_avg"):
         assert f"[{monitor}]" in overlay
     assert "csv = true" in overlay
     # These are separate progress owners but only one species source per
