@@ -357,6 +357,20 @@ if [[ "${OXYGEN_RESEARCH_FULL24:-0}" = 1 ]]; then
   python3 bin/physics.py preflight "$FULL24_OVERLAY" \
     | tee "$RESULT/prep/full24_parser_preflight.log"
 fi
+# Opt-in 2-ns, 2-step P3 smoke; canonical 100us/460-step preflight remains above.
+# Only full24 research. This verifies short-run construction, not 100us chemistry.
+if [[ "${OXYGEN_RESEARCH_QUICK_5MIN:-0}" = 1 ]]; then
+  test "${OXYGEN_RESEARCH_FULL24:-0}" = 1 || { echo "quick mode requires full24" >&2; exit 2; }
+  python3 "$CHEM/set_timegrid_oxygen24_2ns_smoke.py" --self-test \
+    | tee "$RESULT/prep/full24_smoke_timegrid_selftest.log"
+  python3 "$CHEM/set_timegrid_oxygen24_2ns_smoke.py" "$INPUT" \
+    | tee "$RESULT/prep/full24_smoke_timegrid.log"
+  python3 "$CHEM/set_timegrid_oxygen24_2ns_smoke.py" --verify "$INPUT" \
+    | tee "$RESULT/prep/full24_smoke_timegrid_verified.log"
+  grep -q OXYGEN24_SMOKE_2NS_TIMEGRID_PASS "$RESULT/prep/full24_smoke_timegrid_verified.log"
+  python3 "$CHEM/apply_oxygen_24_initial_seeds.py" --check-input "$INPUT" \
+    | tee "$RESULT/prep/full24_neutral_seed_after_smoke.log"
+fi
     ;;
   build)
 docker pull "$BUILD_BASE_REF"
