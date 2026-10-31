@@ -149,10 +149,10 @@ def suppress_parent_restart_ics(text: str) -> str:
 # MOOSE rejects this when its parent is in advanced restart mode; only the
 # *staged restart overlay* is changed, preserving the upstream source archive.
 PARENT_MAXWELL_BLOCK_RE = re.compile(
-    r"(?ms)^  \\[maxwell_t6\\][ \\t]*\\n(?P<body>.*?)^  \\[\\][ \\t]*$"
+    r"(?ms)^  \[maxwell_t6\][ \t]*\n(?P<body>.*?)^  \[\][ \t]*$"
 )
-NO_RESTORE_TRUE_RE = re.compile(r"(?m)^(?P<indent>[ \\t]+)no_restore[ \\t]*=[ \\t]*true[ \\t]*$")
-NO_RESTORE_ANY_RE = re.compile(r"(?m)^[ \\t]+no_restore[ \\t]*=[^\\n]*$")
+NO_RESTORE_TRUE_RE = re.compile(r"(?m)^(?P<indent>[ \t]+)no_restore[ \t]*=[ \t]*true[ \t]*$")
+NO_RESTORE_ANY_RE = re.compile(r"(?m)^[ \t]+no_restore[ \t]*=[^\n]*$")
 
 def stage_parent_multiapp_restart_overlay(text: str) -> str:
     """Switch exactly the known Maxwell MultiApp to required restart restoration.
