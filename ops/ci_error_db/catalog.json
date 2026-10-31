@@ -4,9 +4,9 @@
   "repo": "HyungseonSong-plasma/moose-test-repo",
   "scope": {
     "start_utc": "2026-10-30T21:33:33Z",
-    "end_utc": "2026-10-31T10:46:33Z",
+    "end_utc": "2026-10-31T10:56:00Z",
     "includes": "verified Oxygen24 restart and latest earlier Oxygen24 CI failures only, not 3462 historical repo runs",
-    "last_refresh_note": "41193613390 running when catalog created; in-progress jobs are not recorded as failures"
+    "last_refresh_note": "41193613390 1000W P6/P7 success verified; 400W still in progress at snapshot. No new failure was fabricated."
   },
   "provenance": "GitHub Actions per-job logs and job failure steps; evidence_excerpt manually normalized to omit filesystem private values and noise",
   "record_semantics": {
@@ -64,10 +64,10 @@
       "title": "FullSolveMultiApp no_restore=true conflicts with recovering parent",
       "root_cause": "MOOSE rejects no_restore=true when the parent application is restarting or recovering.",
       "confidence": "confirmed",
-      "status": "fix_pending_verification",
+      "status": "verified_fixed",
       "fix_commit": "55365e65699060e85892448ad2da58006700fe23",
       "verification_run": 41193613390,
-      "notes": "Restart wrapper sets no_restore=false; native P6/P7 result not yet confirmed when catalog seeded."
+      "notes": "1000W CI run 41193613390 passed P4 checkpoint verification, P5 4ns input, P6 native --recover and P7 4ns output checks. 400W job was still running when status updated; success of the specifically failed MultiApp restore stage is verified at 1000W."
     },
     {
       "id": "OXY-ERR-005",
