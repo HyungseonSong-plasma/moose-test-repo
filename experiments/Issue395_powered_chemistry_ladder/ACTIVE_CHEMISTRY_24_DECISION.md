@@ -1,28 +1,74 @@
-# Oxygen ICP 400/1000 W: active chemistry decision
+# Oxygen ICP 400/1000 W: effective 25-reaction O(ex) chemistry
 
-2026-10-30 user decision: **exclude EI-936** from the current powered ICP
-research chemistry, and keep the original 25-row registry untouched as
-scientific provenance. Do not mistake reactant O(3P) for product O(1S).
+**Current user decision: 2026-10-31.** Restore EI-936 to the powered ICP
+chemistry. Keep the physical HPEM identity `e + O(3P) -> e + O(1S)` in
+the original 25-reaction registry, but map its product to the single effective
+atomic excitation species **O(ex)**, represented by the existing `Os` /
+`w_Os` variable. EI-935 independently also produces that effective state.
+No separate O(1S) PDE, transport, wall species or O(1S) level is introduced.
 
-## Species identity (existing MOOSE variables)
-- O(3P) = O, `w_O`
-- O(1D) = Os, `w_Os`
-- O2(a1Delta_g) = O2s, `w_O2s`
-- O2(X) = O2, `w_O2_constraint`
+## Current effective-state reaction owners
 
-The corresponding registry reactions EI-935 (e+O -> e+Os) and EI-943
-(e+Os -> e+O) remain selected.
+- EI-935: `e + O(3P) -> e + O(ex)`, independent lookup `R_935`,
+  electron energy loss **1.97 eV**.
+- EI-936: `e + O(3P) -> e + O(ex)`, separate `R_936`,
+  electron energy loss **4.19 eV**. Never reuse `R_935` as `R_936`.
+- Both reactions contribute `-R` to O(3P), `+R` to O(ex), and no net
+  electron particle source. Their individual 1.97/4.19-eV losses are
+  separately included in the electron-energy source.
+- EI-943/944 continue to act on the combined `Os` pool using the
+  pre-existing O(1D)-derived rates. This is a **model approximation**, not
+  state-resolved O(1S) kinetics. The 4.19 vs 1.97 eV excitation energies
+  imply a 2.22 eV unresolved internal-energy distinction per EI-936 event.
+- `n_O_ex_avg` is the preferred diagnostic; legacy `n_O_1D_avg`
+  is an alias for the **same effective Os density**, not a genuine
+  state-resolved O(1D) density in this revised model.
 
-## Reaction counts
-- Original registry: 25 reactions (22 electron-impact, 3 heavy)
-- Active experimental selection: **24 reactions**
-- Active electron-impact rate lookups: **19**
-- Formula rates: 2, heavy reactions: 3
-- EI-936 is disabled, including all species progress and electron-energy loss.
+## EI-936 rate selection
 
-**Safety:** DO NOT rewrite EI-936 as e + O -> e + Os, and DO NOT add its
-rate to EI-935 or assign O(1S) to the Os variable. Original 25-row
-scientific inventory remains available for provenance.
+The input generator first looks for a genuine, validated
+`EI-936_O_3P.txt` private 100-point rate lookup. If it exists, its own
+`PhysicsElectronImpactRateMaterial` owns `R_936`, independent of 935.
+Its grid and nonnegative finite rate values must pass the same checks as
+the 19 mandatory original rate tables. No missing table is synthesized.
+
+If absent, the generator uses an **analytic rate expression**:
+
+```text
+Te_eV = (2/3) * mean_en_solved_eV
+k936 = 4.54e-15 * exp(-4.49 / Te_eV)      [m3/s]
+R936 = k936 * n_e_physical * c_chem24_O   [mol/(m3 s)]
+```
+
+Reference: J. T. Gudmundsson et al., *On the plasma parameters of a planar
+inductive oxygen discharge*, J. Phys. D: Appl. Phys. 33 (2000) 1323–1331,
+**Table 3**, https://cden.ucsd.edu/internal/Publications/Archive/SFR/Plasma/PlanarIndOxyDisch.pdf.
+
+**Validity:** literature fit uses a Maxwellian electron distribution over
+approximately **1–7 eV**; using `(2/3) mean_en_solved` to represent Te
+does not reproduce the actual non-Maxwellian EEDF-integrated rate. Retain
+scientific HOLD for the numeric source and effective-state approximation.
+
+## Chemistry census and restart lineage
+
+The original provenance registry remains **25 physical reactions**.
+The selected active approximation is **25 effective reactions**:
+19 mandatory lookup channels, optional 20th lookup for 936; two other
+electron formulas (2259, 2738), plus 936 analytic when its table is absent;
+three heavy-particle formulas (H23, H24, H25).
+
+**Do not inject this changed network into the pre-existing 2 ns or 4 ns
+MOOSE checkpoint.** Checkpoint recovery requires physics/network identity.
+The 2026-10-31 cross-run 2→4 ns workflow uses its original 24-reaction
+input and separate immutable SHA. A future EI-936 simulation must create a
+new 0→2 ns checkpoint and progress from it before any 4→100 ns continuation.
+
+## Historical 2026-10-30 notes (superseded where conflicting)
+
+The subsequent original 24-channel discussion is retained as background
+for the earlier decision. All statements below excluding EI-936,
+disallowing O(1S) mapping, or counting 24 active reactions have been
+**superseded by the user decision above**.
 
 ## User-selected EI-407/413/414 effective O2(a) lump
 
