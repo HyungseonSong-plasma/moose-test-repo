@@ -20,7 +20,7 @@ jobs:
           python3 -m venv .five-stage-venv
           .five-stage-venv/bin/python -m pip install --disable-pip-version-check --quiet 'pytest>=8,<9' 'PyYAML>=6,<7'
           .five-stage-venv/bin/python -m py_compile .github/scripts/oxygen25_five_stage_plan.py .github/scripts/oxygen25_restart_chain.py physics_harness/adapters/moose/initial_checkpoint.py
-      - name: Static five-stage target grid, adaptive dt and full native checkpoint regression
+      - name: Static five-stage target grid, native dt and verified checkpoint regression
         run: |
           set -euo pipefail
           .five-stage-venv/bin/python .github/scripts/oxygen25_five_stage_plan.py --self-test
