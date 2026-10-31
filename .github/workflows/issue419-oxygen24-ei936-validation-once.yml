@@ -1,0 +1,61 @@
+# One-shot validation of the user-selected effective O(ex) / EI936 model.
+# Does not run physics-opt and makes no scientific validity claim.
+name: Issue419 Oxygen EI936 Oex source validation once
+run-name: EI936 Oex regression ${{ github.sha }}
+on:
+  push:
+    branches: [issue-419-ei936-effective-oex-20261031]
+    paths: [.github/workflows/issue419-oxygen24-ei936-validation-once.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  ei936-regression:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile modified oxygen source and regression tests
+        run: |
+          python3 -m py_compile \
+            experiments/Issue395_powered_chemistry_ladder/build_oxygen_24_source_overlay.py \
+            experiments/Issue395_powered_chemistry_ladder/oxygen_25_stoichiometry_contract.py \
+            tests/test_issue395_oxygen_full24_source_overlay.py \
+            tests/test_oxygen_24_active_chemistry.py \
+            tests/test_issue395_exploratory_chemistry_decisions.py
+      - name: Regression tests - 19 lookup + EI936 analytic or optional lookup
+        run: |
+          set -euo pipefail
+          python3 -m pip install --disable-pip-version-check 'pytest>=8,<9'
+          python3 -m pytest -q \
+            tests/test_issue395_oxygen_full24_source_overlay.py \
+            tests/test_oxygen_24_active_chemistry.py \
+            tests/test_issue395_exploratory_chemistry_decisions.py
+      - name: Verify user-selection and no private-rate publication
+        run: |
+          python3 - <<'PY'
+          import importlib.util, json
+          from pathlib import Path
+          base=Path('experiments/Issue395_powered_chemistry_ladder')
+          src=base/'build_oxygen_24_source_overlay.py'
+          spec=importlib.util.spec_from_file_location('chem936',src)
+          module=importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(module)
+          assert module.validate_network()=={
+              'active':25,'lookups':19,'formula':3,'heavy':3,
+              'ei936_rate_mode':'analytic_maxwellian_fallback',
+              'ei936_solver_product':'Os/O(ex)',
+              'atoms_charge_mass':'PASS','original_25_registry':'UNCHANGED'
+          }
+          cfg=json.loads((base/'oxygen_icp_operating_200sccm_sticking1.json').read_text())
+          assert cfg['chemistry']['ei936']['electron_energy_loss_eV']==4.19
+          assert cfg['chemistry']['ei936']['independent_from_ei935'] is True
+          assert not (base/'private_rates').exists()
+          print('EI936_25_REACTION_EFFECTIVE_OEX_STATIC_GATE_PASS')
+          PY
