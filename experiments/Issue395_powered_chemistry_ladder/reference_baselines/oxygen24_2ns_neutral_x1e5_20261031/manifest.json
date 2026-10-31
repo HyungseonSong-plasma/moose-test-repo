@@ -1,0 +1,172 @@
+{
+  "schema_version": 1,
+  "baseline_id": "oxygen24-neutral-x1e-5-400-1000W-2ns-20261031",
+  "status": "BOUNDED_2NS_REFERENCE_CANDIDATE_NOT_CANONICAL_SCIENTIFIC_BASELINE",
+  "scope": "Oxygen24 full24 chemistry / Graded L1 / 400W and 1000W / corrected neutral seeds / 2ns native smoke",
+  "owner_issue": 419,
+  "source_repository": "HyungseonSong-plasma/moose-test-repo",
+  "exact_executed_source_sha": "0fe03c1e5f6bf14385f51130a43dc4732f2608dc",
+  "source_branch": "issue-419-oxygen24-neutral-seed-p0-20261031",
+  "verified_workflow_run_id": 41188685410,
+  "verified_workflow_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/41188685410",
+  "verification_date_utc": "2026-10-31",
+  "stable_source_files": [
+    "experiments/Issue395_powered_chemistry_ladder/issue397_l1_power_scan_replay.sh",
+    "experiments/Issue395_powered_chemistry_ladder/apply_oxygen_24_initial_seeds.py",
+    "experiments/Issue395_powered_chemistry_ladder/build_oxygen_icp_200sccm_inlet.py",
+    "experiments/Issue395_powered_chemistry_ladder/oxygen_icp_operating_200sccm_sticking1.json",
+    "experiments/Issue395_powered_chemistry_ladder/set_timegrid_oxygen24_2ns_smoke.py",
+    "experiments/Issue395_powered_chemistry_ladder/build_rf_multiapp_coupling_power.py",
+    "experiments/Issue395_powered_chemistry_ladder/build_oxygen_24_source_overlay.py"
+  ],
+  "reconstruction": {
+    "private_19_numeric_rate_tables_required": true,
+    "private_rate_env": "OXYGEN_RESEARCH_RATE_DIR",
+    "never_commit_private_tables": true,
+    "runtime": "real physics_app/physics-opt (not parser-only)",
+    "time_grid_s": [
+      0,
+      1e-9,
+      2e-9
+    ],
+    "time_steps": 2,
+    "end_time_s": 2e-9,
+    "mode_environment": {
+      "OXYGEN_RESEARCH_400": "1",
+      "OXYGEN_RESEARCH_FULL24": "1",
+      "OXYGEN_RESEARCH_QUICK_5MIN": "1"
+    },
+    "per_case_replay_script": "experiments/Issue395_powered_chemistry_ladder/issue397_l1_power_scan_replay.sh",
+    "stages": [
+      "prepare",
+      "build",
+      "check",
+      "solve"
+    ],
+    "build_container_digest": "sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008",
+    "note": "Generated main .i alone is NOT a standalone runnable input: power-specific multiapp/Maxwell and chemistry overlays, mesh, lookup tables and real Physics executable are required. The source commit and workflow define reconstruction."
+  },
+  "inlet": {
+    "Q_sccm": 200,
+    "total_mass_flow_kg_s": 0.000004758967769568476,
+    "molar_masses_kg_mol": {
+      "O2_X": 0.032,
+      "O2_a1Delta": 0.032,
+      "O_3P": 0.016,
+      "O_1D": 0.016
+    },
+    "mole_fractions": {
+      "O2_X": 0.99997,
+      "O2_a1Delta": 0.00001,
+      "O_3P": 0.00001,
+      "O_1D": 0.00001
+    },
+    "mass_fractions": {
+      "O2_X": 0.9999799997999981,
+      "O2_a1Delta": 0.000010000100001000012,
+      "O_3P": 0.000005000050000500006,
+      "O_1D": 0.000005000050000500006
+    },
+    "charged_inlet_fractions_zero": [
+      "O2_plus",
+      "O_plus",
+      "O_minus"
+    ],
+    "receiver_defaults_kg_s": {
+      "neutral_inlet_mdot": 0.000004758967769568476,
+      "neutral_inlet_mdot_O2": 0.000004758872589261281,
+      "neutral_inlet_mdot_O2s": 4.759015359722073e-11,
+      "neutral_inlet_mdot_O": 2.3795076798610365e-11,
+      "neutral_inlet_mdot_Os": 2.3795076798610365e-11
+    }
+  },
+  "initial_state": {
+    "neutral_mole_fractions": {
+      "O2_X": 0.99997,
+      "O2_a1Delta": 0.00001,
+      "O_3P": 0.00001,
+      "O_1D": 0.00001
+    },
+    "neutral_mass_fractions": {
+      "w_O2s": 0.00001000010000100001,
+      "w_O": 0.000005000050000500005,
+      "w_Os": 0.000005000050000500005
+    },
+    "charged_number_densities_m3": {
+      "electron": 1000000000000000,
+      "O2_plus": 1000000000000000,
+      "O_plus": 1000000000000,
+      "O_minus": 1000000000000
+    },
+    "observed_initial_number_density_m3": {
+      "O2_X": 321873772672070000000,
+      "O2_a1Delta": 3218834291749500,
+      "O_3P": 3218834291749500,
+      "O_1D": 3218834291749500
+    }
+  },
+  "chemistry": {
+    "inventory_count": 25,
+    "activated_count": 24,
+    "excluded_EI_special_numbers": [
+      936
+    ],
+    "private_lookup_table_count": 19
+  },
+  "common_generated_main_input_sha256": "07056e7d61089f85cc6fdf340a6fdeef462bf989843b254d59982b03759aa531",
+  "main_input_shared_across_powers": true,
+  "power_control_note": "The generated main inputs are byte-identical; RF target W is encoded by each power-specific build_rf_multiapp_coupling_power.py generated parent/Maxwell overlays. Never treat either main .i alone as evidence of RF power.",
+  "cases": {
+    "400W": {
+      "rf_target_w": 400,
+      "generated_main_input": "experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns.i",
+      "parent_overlay": "experiments/Issue395_powered_chemistry_ladder/rf_elastic_multiapp_parent_400w_100us_dt1000ns_overlay.i",
+      "child_overlay": "experiments/Issue395_powered_chemistry_ladder/rf_elastic_multiapp_maxwell_400w_100us_dt1000ns_overlay.i",
+      "reference_input_sha256": "07056e7d61089f85cc6fdf340a6fdeef462bf989843b254d59982b03759aa531",
+      "result_artifact_id": 13037947569,
+      "result_artifact_name": "oxygen24-2ns-neutral-400W",
+      "artifact_retention_days": 14,
+      "output_csv_sha256": "7c8ddfcc973ef919a8ec0d0800cd1e470bc94f75ffcb0b167be887983bb3cc7a",
+      "p3_wall_seconds": 152,
+      "actual_final_time_s": 2e-9,
+      "p0": "PASS",
+      "p1": "PASS",
+      "p2": "PASS",
+      "p3": "PASS",
+      "p4": "PASS"
+    },
+    "1000W": {
+      "rf_target_w": 1000,
+      "generated_main_input": "experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_ei20_ei01_1000w_adjacent_sheath_wall_closed_100us_dt1000ns.i",
+      "parent_overlay": "experiments/Issue395_powered_chemistry_ladder/rf_elastic_multiapp_parent_1000w_100us_dt1000ns_overlay.i",
+      "child_overlay": "experiments/Issue395_powered_chemistry_ladder/rf_elastic_multiapp_maxwell_1000w_100us_dt1000ns_overlay.i",
+      "reference_input_sha256": "07056e7d61089f85cc6fdf340a6fdeef462bf989843b254d59982b03759aa531",
+      "result_artifact_id": 13037727736,
+      "result_artifact_name": "oxygen24-2ns-neutral-1000W",
+      "artifact_retention_days": 14,
+      "output_csv_sha256": "54cd83197b6215676734c3a663d048ef338524242ac549a7a2959bb66d9e485b",
+      "p3_wall_seconds": 156,
+      "actual_final_time_s": 2e-9,
+      "p0": "PASS",
+      "p1": "PASS",
+      "p2": "PASS",
+      "p3": "PASS",
+      "p4": "PASS"
+    }
+  },
+  "acceptance_boundary": {
+    "accepted": [
+      "corrected neutral seed mass-to-number conversion",
+      "inlet 200 sccm and composition",
+      "P0/P1/P2/P3/P4 for exact 2ns 2-step smoke on both powers",
+      "P3 execution time under 285 seconds per power"
+    ],
+    "not_accepted": [
+      "100 us powered O2 chemistry stability",
+      "converged steady-state or time-dependent atomic O prediction",
+      "cross-section scientific provenance of all 24 reactions",
+      "fully self-contained generated input or independent portability",
+      "complete pipeline including build finished in 5 minutes"
+    ]
+  }
+}
