@@ -100,6 +100,51 @@ def extend_input(text: str, start: int, end: int) -> str:
         raise ValueError("extended time grid did not round-trip")
     return result
 
+
+# Restart seeding is never permitted to overwrite the archived 2 ns plasma fields.
+# Verified against both 400W/1000W source-input tarballs (15 parent variables).
+EXPECTED_IC_VARIABLES = frozenset((
+    "u", "v", "p", "w_O2s", "w_O", "w_Os", "log_ne", "log_ni",
+    "log_nm", "log_nop", "log_energy", "potential", "sigma_s",
+    "sigma_wafer", "sigma_focus_ring",
+))
+VARIABLE_BLOCK_RE = re.compile(r"(?ms)^\[Variables\][ \t]*\n(?P<body>.*?)^\[\][ \t]*$")
+VARIABLE_CHILD_RE = re.compile(r"(?ms)^  \[(?P<name>[A-Za-z_][A-Za-z_0-9]*)\][ \t]*\n(?P<body>.*?)^  \[\][ \t]*$")
+INLINE_IC_RE = re.compile(r"(?m)^[ \t]+initial_condition[ \t]*=[^\n]*(?:\n|$)")
+
+def suppress_parent_restart_ics(text: str) -> str:
+    """Only discard 15 declared parent variable seeds in an advanced restart.
+
+    Advanced restart obtains field state from the full native checkpoint; keeping
+    [Variables] initial_condition creates MOOSE ConstantIC objects that fail P2.
+    Never turn on allow_initial_conditions_with_restart: that risks clobbering
+    checkpointed plasma state. The original input remains in the upstream bundle.
+    """
+    if re.search(r"(?m)^\[ICs\][ \t]*$", text):
+        raise ValueError("unreviewed explicit ICs block in parent restart input")
+    blocks = list(VARIABLE_BLOCK_RE.finditer(text))
+    if len(blocks) != 1:
+        raise ValueError("missing/nonunique parent Variables block")
+    block = blocks[0]
+    body = block.group("body")
+    configured = []
+    for child in VARIABLE_CHILD_RE.finditer(body):
+        count = len(INLINE_IC_RE.findall(child.group("body")))
+        if count > 1:
+            raise ValueError("duplicate variable IC: " + child.group("name"))
+        if count:
+            configured.append(child.group("name"))
+    if (set(configured) != EXPECTED_IC_VARIABLES or
+            len(configured) != len(EXPECTED_IC_VARIABLES)):
+        raise ValueError("unexpected parent IC inventory: " + repr(sorted(configured)))
+    cleaned, removed = INLINE_IC_RE.subn("", body)
+    if removed != len(EXPECTED_IC_VARIABLES):
+        raise ValueError("unmapped parent initial conditions: " + str(removed))
+    result = text[:block.start("body")] + cleaned + text[block.end("body"):]
+    if INLINE_IC_RE.search(result):
+        raise ValueError("inline IC survived outside parent Variables block")
+    return result
+
 def advanced_restart_input(text: str, prefix: str) -> str:
     """MOOSE 9f388366: recover ignores an extended TimeSequenceStepper sequence.
     
@@ -116,7 +161,8 @@ def advanced_restart_input(text: str, prefix: str) -> str:
         r"plasma(?:_restart_\d+to\d+)?_cp/\d{4,}", prefix
     ):
         raise ValueError("invalid exact restart checkpoint prefix")
-    return text.rstrip() + "\n\n[Problem]\n  restart_file_base = '" + prefix + "'\n[]\n"
+    cleaned = suppress_parent_restart_ics(text)
+    return cleaned.rstrip() + "\n\n[Problem]\n  restart_file_base = '" + prefix + "'\n[]\n"
 
 
 def stage_base(start: int, end: int) -> str:
@@ -359,7 +405,27 @@ def self_test() -> None:
     prefix = ("experiments/Issue395_powered_chemistry_ladder/"
               "results_rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns/"
               "run/plasma_cp/0004")
-    advanced = advanced_restart_input(extend_input(sample, 1, 100), prefix)
+    seeded = ("[Variables]\n" +
+              "".join("  [" + name + "]\n    initial_condition = 0.0\n  []\n"
+                      for name in sorted(EXPECTED_IC_VARIABLES)) +
+              "[]\n" + sample)
+    advanced = advanced_restart_input(extend_input(seeded, 1, 100), prefix)
+    assert "initial_condition =" not in advanced
+    assert "[Variables]" in advanced and "end_time = " in advanced
+    # Mutation controls: an unreviewed/new seed must fail closed, not silently
+    # overwrite a restored charged/heavy field.
+    try:
+        suppress_parent_restart_ics(seeded.replace("    initial_condition = 0.0\n", "", 1))
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("missing required parent seed was accepted")
+    try:
+        suppress_parent_restart_ics(seeded + "\n[ICs]\n  [bad]\n    type = ConstantIC\n  []\n[]\n")
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("unexpected explicit ICs block was accepted")
     assert "restart_file_base = '" + prefix + "'" in advanced
     assert "[Problem]" in advanced
     try:
