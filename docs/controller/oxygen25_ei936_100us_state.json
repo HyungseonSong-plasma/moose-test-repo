@@ -5,17 +5,17 @@
   "scope": "Oxygen ICP 25-reaction EI936 effective O(ex) native restart",
   "os": "Samuel",
   "samuel_revision": "9b335e3fbb9c5e8e323e382daeec56fa25336822",
-  "observed_at_lower_bound": "2026-10-31T17:05:02Z",
+  "observed_at_lower_bound": "2026-10-31T17:20:45Z",
   "campaign": "1ns→2ns→100ns→1us→10us→100us",
   "numerical_goal_us": 100,
   "run_success_vs_scientific_acceptance": "separate; SCIENCE_HOLD until independently qualified",
   "current_run": {
-    "id": 41222771191,
+    "id": 41224078027,
     "attempt": 1,
     "event": "push",
-    "workflow_sha": "fdbc6a6c36f7a88fd838e49890f5fb3a67460689",
-    "status": "IN_PROGRESS_P1",
-    "url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/41222771191"
+    "workflow_sha": "4b7fc8ee3efa3dce5da818b05e26ee2dbee5d62a",
+    "status": "IN_PROGRESS",
+    "url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/41224078027"
   },
   "failure_root_cause": {
     "run_id": 41212837874,
@@ -31,7 +31,7 @@
   "powers": {
     "400": {
       "artifact_id": 13045668207,
-      "job_id": 124600595359,
+      "job_id": 124604448926,
       "upstream_run_id": 41208644597,
       "checkpoint_step": 4,
       "manifest_sha256": "e850495af85fd4615429066dedea29630533ee70c3488cfac20ecd856bb08c27",
@@ -44,7 +44,7 @@
       "power_w": 400,
       "numerical_last_pass_ns": 2,
       "target_ns": 100,
-      "stage": "P1_BUILD_ACTIVE",
+      "stage": "P1 rebuild native physics-opt at original source SHA",
       "stage_acceptance": "NOT_YET_VERIFIED",
       "checkpoint_prefix": "experiments/Issue395_powered_chemistry_ladder/results_rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns/run/plasma_cp/0004",
       "checkpoint_source_sha": "8e2fe042dbc204b5fda22d346f1ad8d2e32db3ab",
@@ -53,17 +53,17 @@
       "ei936_mode": "analytic_maxwellian_fallback",
       "private_rate_count": 19,
       "science": "SCIENCE_HOLD",
-      "active_run_id": 41222771191,
+      "active_run_id": 41224078027,
       "active_run_attempt": 1,
-      "active_workflow_sha": "fdbc6a6c36f7a88fd838e49890f5fb3a67460689",
-      "next_action": "Inspect 41222771191 P2/P3/P4. If native P3 succeeds, independently download per-power 100ns artifact and verify full checkpoint/CSV/Exodus/manifest SHA256 before promotion; otherwise repair first native failure.",
-      "last_failed_run_id": 41222090939,
+      "active_workflow_sha": "4b7fc8ee3efa3dce5da818b05e26ee2dbee5d62a",
+      "next_action": "Inspect CI 41224078027 P2/P3/P4, native continuity, verified 100ns artifact SHA256 per power; on failure isolate first gate without chemistry changes.",
+      "last_failed_run_id": 41222771191,
       "last_failed_stage": "P2_CHECK_INPUT",
-      "last_failed_reason": "MOOSE: MultiApps/maxwell_t6/no_restore cannot be true when parent is restarting; advanced restart base also required absolute path"
+      "last_failed_reason": "Maxwell child AuxVariables seed ConstantIC(electron_density_state_t6_moose) conflicts with native advanced restart"
     },
     "1000": {
       "artifact_id": 13045289286,
-      "job_id": 124600595692,
+      "job_id": 124604448879,
       "upstream_run_id": 41208644597,
       "checkpoint_step": 4,
       "manifest_sha256": "4d7be8b8efeba89b100c40abb7723b8c60f4f99b8db7287e4db37418cacd9c1f",
@@ -76,7 +76,7 @@
       "power_w": 1000,
       "numerical_last_pass_ns": 2,
       "target_ns": 100,
-      "stage": "P1_BUILD_ACTIVE",
+      "stage": "P1 rebuild native physics-opt at original source SHA",
       "stage_acceptance": "NOT_YET_VERIFIED",
       "checkpoint_prefix": "experiments/Issue395_powered_chemistry_ladder/results_rf_elastic_diss_ion_ei20_ei01_1000w_adjacent_sheath_wall_closed_100us_dt1000ns/run/plasma_cp/0004",
       "checkpoint_source_sha": "8e2fe042dbc204b5fda22d346f1ad8d2e32db3ab",
@@ -85,35 +85,36 @@
       "ei936_mode": "analytic_maxwellian_fallback",
       "private_rate_count": 19,
       "science": "SCIENCE_HOLD",
-      "active_run_id": 41222771191,
+      "active_run_id": 41224078027,
       "active_run_attempt": 1,
-      "active_workflow_sha": "fdbc6a6c36f7a88fd838e49890f5fb3a67460689",
-      "next_action": "Inspect 41222771191 P2/P3/P4. If native P3 succeeds, independently download per-power 100ns artifact and verify full checkpoint/CSV/Exodus/manifest SHA256 before promotion; otherwise repair first native failure.",
-      "last_failed_run_id": 41222090939,
+      "active_workflow_sha": "4b7fc8ee3efa3dce5da818b05e26ee2dbee5d62a",
+      "next_action": "Inspect CI 41224078027 P2/P3/P4, native continuity, verified 100ns artifact SHA256 per power; on failure isolate first gate without chemistry changes.",
+      "last_failed_run_id": 41222771191,
       "last_failed_stage": "P2_CHECK_INPUT",
-      "last_failed_reason": "MOOSE: MultiApps/maxwell_t6/no_restore cannot be true when parent is restarting; advanced restart base also required absolute path"
+      "last_failed_reason": "Maxwell child AuxVariables seed ConstantIC(electron_density_state_t6_moose) conflicts with native advanced restart"
     }
   },
   "terminal_policy": "Never mark 100ns/1us/10us/100us PASS without actual native time and cross-CI checkpoint archive SHA proof; 2-cycle terminal confirmation.",
   "separate_oxygen24_branch": "experiment/oxygen24-restart-2ns-to-4ns-20261031",
   "latest_repair": {
-    "failure_run": 41222090939,
-    "failed_stage": "P2",
-    "failed_400W_diagnostics_artifact_id": 13049689058,
-    "failed_1000W_diagnostics_artifact_id": 13050173510,
-    "root_cause": "Original parent FullSolveMultiApp overlay no_restore=true is forbidden by MOOSE during advanced parent restart; both P2 jobs fail before native P3",
-    "repair": "Stage only exact Maxwell parent overlay no_restore=false (original upstream tar preserved), make restart_file_base absolute /workspace/<verified checkpoint> to prevent input-folder prefix duplication; keep parent seed IC removal; P0 rejects unreviewed/no_restore inventory",
+    "failed_run": 41222771191,
+    "failed_stage": "P2 Maxwell MultiApp child ConstantIC",
+    "repair": "Stage 15 parent and 3 Maxwell child seeds away only in advanced restart inputs; preserve archived source; no_restore=false and absolute native restart_file_base; fail closed for changed seed inventory",
     "helper_commits": [
-      "3cb5b52b450e23d3df8f7f27013092a7190efaca",
-      "a137866e33b9517acc0f29c155f5ba9dbfbee88d"
+      "1f1df1e0810408e089fa779bb2918e364b3d0c4f",
+      "7dbe5eba674163e8ace56fbbfdac39169d153c27",
+      "263b5a2034004a63cb7ed898bc5e870f9e305aca"
     ],
-    "workflow_commit": "fdbc6a6c36f7a88fd838e49890f5fb3a67460689",
-    "invalid_workflow_run": {
-      "id": 41222709336,
-      "sha": "b4f09d794799e3abbe72fc6ba87c6dbe48625a7b",
-      "failure": "malformed workflow generated no jobs; corrected from prior known-good YAML before rerun"
+    "workflow_commit": "4b7fc8ee3efa3dce5da818b05e26ee2dbee5d62a",
+    "previous_attempt_failed_P0": 41223958574,
+    "process_contract": "docs/controller/oxygen25_ei936_restart_contract.md",
+    "time_inputs": {
+      "start_ns": "2",
+      "end_ns": "100",
+      "interval_ns": "1",
+      "upstream_run_id": "41208644597"
     },
-    "active_run_id": 41222771191,
+    "active_run_id": 41224078027,
     "p0": "PASS_BOTH",
     "private_rates": "19_SHA256_PASS_BOTH",
     "p1": "IN_PROGRESS_BOTH",
