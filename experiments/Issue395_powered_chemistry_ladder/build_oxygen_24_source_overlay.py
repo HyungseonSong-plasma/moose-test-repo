@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """Create ONE research-only 24-reaction oxygen ICP source overlay.
 
-Inventory: 19 independently tabulated electron-impact reactions (EI-936 OUT),
-2 electron-rate formulae (EI-2259, EI-2738), 3 heavy-rate formulae (H23-H25).
+Inventory: 19 mandatory electron-impact lookup reactions and EI-936 optional lookup,
+EI-936 analytic Maxwellian fallback if its independent table is unavailable,
+2 other electron-rate formulae (EI-2259, EI-2738), 3 heavy-rate formulae (H23-H25).
+O(1S) and O(1D) products are deliberately represented as one effective O(ex)/Os.
 Produces a .i fragment; never represents a successful MOOSE time integration.
 Run this instead of the old individual chemistry overlays, not alongside them.
 """
@@ -35,8 +37,9 @@ PARENT = {
 LOSS = {401:0.,407:.977,411:4.5,412:6.,413:8.4,414:10.,
         415:12.06,417:17.,2058:3.5,2067:-.977,2068:3.52,
         2069:5.02,2072:11.08,2073:13.72,2074:16.023,
-        935:1.97,941:13.62,943:-1.97,944:11.65,2738:2.70}
-# Net stoichiometry includes electrons; O2a maps to MOOSE O2s, Os maps O(1D).
+        935:1.97,936:4.19,941:13.62,943:-1.97,944:11.65,2738:2.70}
+# Net stoichiometry includes electrons; O2a maps to MOOSE O2s.
+# Os is the sole effective O(ex) bin: O(1D) and O(1S) are intentionally lumped.
 CHEM = {
     401:{"e":-1,"O2":-1,"Om":1,"O":1},
     407:{"O2":-1,"O2a":1},
@@ -54,6 +57,7 @@ CHEM = {
     2073:{"O2a":-1,"O":2},
     2074:{"e":1,"O2a":-1,"Op":1,"O":1},
     935:{"O":-1,"Os":1},
+    936:{"O":-1,"Os":1},
     941:{"e":1,"O":-1,"Op":1},
     943:{"Os":-1,"O":1},
     944:{"e":1,"Os":-1,"Op":1},
@@ -64,6 +68,8 @@ CHEM = {
     "H25":{"Op":-1,"O2":-1,"O":1,"O2p":1},
 }
 LOOKUP_IDS = tuple(PARENT)
+OPTIONAL_LOOKUP_ID = 936
+OPTIONAL_LOOKUP_FILE = "EI-936_O_3P.txt"
 FORMULA_IDS = (2259,2738)
 HEAVY_IDS = ("H23","H24","H25")
 REQUIRED = (
@@ -79,10 +85,10 @@ FORBIDDEN = (
 )
 ROWS = 100
 
-def validate_network() -> dict:
-    if len(CHEM) != 24 or len(LOOKUP_IDS) != 19:
-        raise ValueError("incorrect 24=19+2+3 reaction census")
-    if set(CHEM) != set(LOOKUP_IDS) | set(FORMULA_IDS) | set(HEAVY_IDS):
+def validate_network(ei936_lookup: bool = False) -> dict:
+    if len(CHEM) != 25 or len(LOOKUP_IDS) != 19:
+        raise ValueError("incorrect 25-channel reaction census")
+    if set(CHEM) != set(LOOKUP_IDS) | set(FORMULA_IDS) | set(HEAVY_IDS) | {936}:
         raise ValueError("rate owner and stoichiometry mismatch")
     for rid, delta in CHEM.items():
         if sum(n*ATOMS.get(sp, 0) for sp,n in delta.items()) != 0:
@@ -91,9 +97,14 @@ def validate_network() -> dict:
             raise ValueError(f"{rid}: charge not conserved")
         if sum(n*M.get(sp, 0) for sp,n in delta.items()) != 0:
             raise ValueError(f"{rid}: heavy mass not conserved")
-    if 936 in CHEM:
-        raise ValueError("EI-936 explicitly excluded")
-    return {"active":24, "lookups":19, "formula":2, "heavy":3,
+    if CHEM[935] != CHEM[936] or CHEM[936] != {"O":-1,"Os":1}:
+        raise ValueError("EI-935/936 must share O(ex) products but not rate owners")
+    if LOSS[935] == LOSS[936] or LOSS[936] != 4.19:
+        raise ValueError("EI-936 must retain distinct 4.19 eV electron energy loss")
+    return {"active":25, "lookups":20 if ei936_lookup else 19,
+            "formula":2 if ei936_lookup else 3, "heavy":3,
+            "ei936_rate_mode":"lookup" if ei936_lookup else "analytic_maxwellian_fallback",
+            "ei936_solver_product":"Os/O(ex)",
             "atoms_charge_mass":"PASS", "original_25_registry":"UNCHANGED"}
 
 def validate_table(path: Path) -> list[tuple[float,float]]:
@@ -126,6 +137,14 @@ def validate_files(folder: Path) -> dict[int,Path]:
                for a,p in zip(grid,points)):
             raise ValueError(f"{rid}: rate mean-energy grid mismatch")
         paths[rid]=file
+    # Optional private numeric table, if actually available: do not invent one.
+    extra=folder/OPTIONAL_LOOKUP_FILE
+    if extra.exists():
+        points=validate_table(extra)
+        if any(not math.isclose(a,p[0],rel_tol=1e-10,abs_tol=1e-10)
+               for a,p in zip(grid,points)):
+            raise ValueError("936: rate mean-energy grid mismatch")
+        paths[936]=extra
     return paths
 
 def material(name, ptype, *parameters):
@@ -157,13 +176,13 @@ def sum_functor(name, terms):
                   symbols, "+".join(f"({v:.17g})*{s}" for s,(_,v) in zip(symbols,terms)))
 
 def make_overlay(paths: dict[int,str], baseline: str) -> str:
-    validate_network()
+    validate_network(936 in paths)
     missing=[v for v in REQUIRED if v not in baseline]
     inherited=[v for v in FORBIDDEN if v in baseline]
     if missing or inherited:
         raise ValueError(f"refuse invalid baseline missing={missing} inherited={inherited}")
-    if set(paths)!=set(LOOKUP_IDS):
-        raise ValueError("all 19 unique electron-impact tables required")
+    if not set(LOOKUP_IDS).issubset(paths) or set(paths)-set(LOOKUP_IDS)!={936} and set(paths)!=set(LOOKUP_IDS):
+        raise ValueError("all 19 mandatory electron-impact tables plus only optional 936 required")
     material_blocks=[]
     for sp in NEUTRALS:
         material_blocks.append(parsed(f"chem24_target_{sp}",f"c_chem24_{sp}",
@@ -183,6 +202,25 @@ def make_overlay(paths: dict[int,str], baseline: str) -> str:
             ("electron_number_density","n_e_physical"),
             ("target_molar_concentration",f"c_chem24_{parent}"),
             ("reaction_progress",f"R_{rid}")))
+    # EI-936 is a separate physical 4.19 eV O(1S) excitation channel.
+    # Its product is *only* an effective Os/O(ex) solver lump, not a claim of
+    # state-resolved O(1S) kinetics. If a validated table exists use it;
+    # otherwise adopt Gudmundsson et al. (2000), J. Phys. D 33, Table 3:
+    # k=4.54e-15 exp(-4.49/Te_eV) m3/s, Maxwellian fit Te=1-7 eV.
+    # ne[1/m3] * c_O[mol/m3] * k[m3/s] => mol/(m3 s).
+    if 936 in paths:
+        filename=paths[936]
+        if "\x27" in filename or "\n" in filename: raise ValueError("unsafe 936 rate path")
+        material_blocks.append(material("chem24_rate_936","PhysicsElectronImpactRateMaterial",
+            ("rate_table_file",f"\x27{filename}\x27"),
+            ("mean_energy","mean_en_solved"),
+            ("electron_number_density","n_e_physical"),
+            ("target_molar_concentration","c_chem24_O"),
+            ("reaction_progress","R_936")))
+    else:
+        material_blocks.append(parsed("chem24_rate_936","R_936",
+            ["n_e_physical","c_chem24_O","Te_chem24_eV"],["ne","c","te"],
+            "4.54e-15*exp(-4.49/te)*ne*c"))
     # Formula molar progress: n_e[1/m3]*c_target[mol/m3]*k[m3/s].
     material_blocks.append(parsed("chem24_rate_2259","R_2259",
         ["n_e_physical","c_chem24_O2p","Te_chem24_eV"],["ne","c","te"],
@@ -251,7 +289,7 @@ def make_overlay(paths: dict[int,str], baseline: str) -> str:
         "S_energy_chem24","S_mol_O","S_mol_O2a","S_mol_Os"]:
         pp.append(material("chem24_monitor_"+label,"ElementAverageFunctorPostprocessor",
                            ("functor",label),("execute_on","'INITIAL TIMESTEP_END'")))
-    return ("\n# SCIENTIFIC STATUS: user-selected reduced 24-channel reaction model.\n"
+    return ("\n# SCIENTIFIC STATUS: user-selected effective 25-channel O(ex) reaction model; EI-936 is a distinct 4.19 eV channel.\n"
             "# Exclude all old separate chemistry overlays to avoid rate double counting.\n"
             "# Only O2(X) is a constrained mass fraction, no direct O2 kernel.\n"
             "[FunctorMaterials]\n"+"\n".join(material_blocks)+"\n[]\n"
@@ -285,7 +323,7 @@ def stage(base:Path, rate_dir:Path, output:Path, root:Path) -> dict:
     result=make_overlay(mapping, base.read_text(encoding="utf-8"))
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(result, encoding="utf-8")
-    report=validate_network()
+    report=validate_network(936 in files)
     report.update({"lookup_sha256":hashes,"overlay":str(output),"run_status":"NOT_RUN",
                    "note":"overlay only; verify physics-opt --check-input and bounded time integration"})
     (output.parent/"chem24_manifest.json").write_text(json.dumps(report,indent=2)+"\n")
@@ -299,7 +337,7 @@ def main():
     p.add_argument("--root",required=True,type=Path)
     a=p.parse_args()
     report=stage(a.base_input,a.rate_dir,a.output,a.root)
-    print("OXYGEN_24_CHEMISTRY_OVERLAY_PREPARED_NOT_RUN",json.dumps(report,sort_keys=True))
+    print("OXYGEN_25_OEX_CHEMISTRY_OVERLAY_PREPARED_NOT_RUN",json.dumps(report,sort_keys=True))
 
 if __name__=="__main__":
     main()
