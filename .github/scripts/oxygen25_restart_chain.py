@@ -14,6 +14,7 @@ import re
 import shutil
 import tarfile
 from pathlib import Path
+from decimal import Decimal, ROUND_CEILING
 
 CHEM = Path("experiments/Issue395_powered_chemistry_ladder")
 BUILD_REF = ("ghcr.io/hyungseonsong-plasma/physics-build-base@"
@@ -64,7 +65,12 @@ def extract_checked(tar_path: Path, expected_sha: str, rows: list[dict], root: P
             target.write_bytes(data)
     print("OXYGEN25_RESTART_ARCHIVE_ROUNDTRIP_PASS", tar_path.name, len(rows))
 
-def time_grid(text: str) -> tuple[int, list[int]]:
+NS_S = Decimal("1e-9")
+MAX_TIME_NS = 100000  # 100 us safety horizon; change only after explicit validation
+MAX_SEQUENCE_EVENTS = 20001
+
+def time_grid(text: str) -> tuple[int, list[Decimal]]:
+    """Parse actual MOOSE time sequence without rounding sub-ns targets."""
     matches = list(EXEC_RE.finditer(text))
     if len(matches) != 1:
         raise ValueError("nonunique Executioner")
@@ -72,31 +78,53 @@ def time_grid(text: str) -> tuple[int, list[int]]:
     ends, grids = list(END_RE.finditer(body)), list(SEQ_RE.finditer(body))
     if len(ends) != 1 or len(grids) != 1:
         raise ValueError("nonunique time grid")
-    values = [float(ends[0].group().split("=", 1)[1])]
-    values += [float(x) for x in grids[0].group().split("'", 2)[1].split()]
-    def ns(value):
-        if not math.isfinite(value):
-            raise ValueError("nonfinite time")
-        n = round(value / 1e-9)
-        if not math.isclose(value, n * 1e-9, rel_tol=1e-12, abs_tol=1e-16):
-            raise ValueError("time is not an integer ns")
-        return n
-    return ns(values[0]), [ns(v) for v in values[1:]]
+    try:
+        end_ns = Decimal(ends[0].group().split("=", 1)[1].strip()) / NS_S
+        seq_ns = [Decimal(x) / NS_S for x in
+                  grids[0].group().split("'", 2)[1].split()]
+    except Exception as exc:
+        raise ValueError("invalid time sequence decimals") from exc
+    if (not end_ns.is_finite() or end_ns != end_ns.to_integral_value()
+            or end_ns < 1 or end_ns > MAX_TIME_NS or len(seq_ns) < 2
+            or seq_ns[0] != 0 or seq_ns[-1] != end_ns
+            or any(not t.is_finite() for t in seq_ns)
+            or any(b <= a for a, b in zip(seq_ns, seq_ns[1:]))):
+        raise ValueError("invalid time grid, endpoint or time ordering")
+    return int(end_ns), seq_ns
 
-def extend_input(text: str, start: int, end: int) -> str:
-    if not 1 <= start < end <= 100 or time_grid(text) != (start, list(range(start + 1))):
-        raise ValueError("wrong start checkpoint or time grid")
-    outputs = list(OUTPUT_RE.finditer(text))
-    if len(outputs) != 1 or len(re.findall(
-            r"(?m)^\s*checkpoint\s*=\s*true\s*$", outputs[0].group("body"))) != 1:
-        raise ValueError("missing/duplicate checkpoint output")
+
+def extend_input(text: str, start: int, end: int,
+                 interval_ns: str = "1") -> str:
+    """Append configurable physical output/event times; NEVER change past grid."""
+    original_end, prior = time_grid(text)
+    if not 1 <= start < end <= MAX_TIME_NS or original_end != start:
+        raise ValueError("wrong start checkpoint or end time")
+    try:
+        step = Decimal(str(interval_ns))
+    except Exception as exc:
+        raise ValueError("unparseable interval_ns") from exc
+    if not step.is_finite() or step <= 0:
+        raise ValueError("interval_ns must be finite and strictly positive")
+    count = int((Decimal(end - start) / step).to_integral_value(
+        rounding=ROUND_CEILING))
+    if count < 1 or count + len(prior) > MAX_SEQUENCE_EVENTS:
+        raise ValueError("time sequence exceeds bounded event budget")
+    sequence = list(prior)
+    for i in range(1, count + 1):
+        current = min(Decimal(start) + i * step, Decimal(end))
+        if current > sequence[-1]:
+            sequence.append(current)
+    if sequence[-1] != end:
+        raise ValueError("time grid did not reach requested end")
     match = next(EXEC_RE.finditer(text))
     body = match.group("body")
-    body = END_RE.sub(lambda m: m.group(1) + format(end * 1e-9, ".17g"), body, count=1)
-    grid = " ".join("0" if t == 0 else format(t * 1e-9, ".17g") for t in range(end + 1))
+    def seconds(t):
+        return format(t * NS_S, ".17g")
+    body = END_RE.sub(lambda m: m.group(1) + seconds(Decimal(end)), body, count=1)
+    grid = " ".join(seconds(t) for t in sequence)
     body = SEQ_RE.sub(lambda m: m.group(1) + "'" + grid + "'", body, count=1)
     result = text[:match.start("body")] + body + text[match.end("body"):]
-    if time_grid(result) != (end, list(range(end + 1))):
+    if time_grid(result) != (end, sequence):
         raise ValueError("extended time grid did not round-trip")
     return result
 
@@ -112,7 +140,7 @@ VARIABLE_BLOCK_RE = re.compile(r"(?ms)^\[Variables\][ \t]*\n(?P<body>.*?)^\[\][ 
 VARIABLE_CHILD_RE = re.compile(r"(?ms)^  \[(?P<name>[A-Za-z_][A-Za-z_0-9]*)\][ \t]*\n(?P<body>.*?)^  \[\][ \t]*$")
 INLINE_IC_RE = re.compile(r"(?m)^[ \t]+initial_condition[ \t]*=[^\n]*(?:\n|$)")
 
-def suppress_parent_restart_ics(text: str) -> str:
+def suppress_parent_restart_ics(text: str, already_staged: bool = False) -> str:
     """Only discard 15 declared parent variable seeds in an advanced restart.
 
     Advanced restart obtains field state from the full native checkpoint; keeping
@@ -134,9 +162,13 @@ def suppress_parent_restart_ics(text: str) -> str:
             raise ValueError("duplicate variable IC: " + child.group("name"))
         if count:
             configured.append(child.group("name"))
-    if (set(configured) != EXPECTED_IC_VARIABLES or
-            len(configured) != len(EXPECTED_IC_VARIABLES)):
+    if (not already_staged and (set(configured) != EXPECTED_IC_VARIABLES or
+            len(configured) != len(EXPECTED_IC_VARIABLES))):
         raise ValueError("unexpected parent IC inventory: " + repr(sorted(configured)))
+    if already_staged:
+        if configured or INLINE_IC_RE.search(text):
+            raise ValueError("a continued restart input unexpectedly acquired initial conditions")
+        return text
     cleaned, removed = INLINE_IC_RE.subn("", body)
     if removed != len(EXPECTED_IC_VARIABLES):
         raise ValueError("unmapped parent initial conditions: " + str(removed))
@@ -154,7 +186,7 @@ PARENT_MAXWELL_BLOCK_RE = re.compile(
 NO_RESTORE_TRUE_RE = re.compile(r"(?m)^(?P<indent>[ \t]+)no_restore[ \t]*=[ \t]*true[ \t]*$")
 NO_RESTORE_ANY_RE = re.compile(r"(?m)^[ \t]+no_restore[ \t]*=[^\n]*$")
 
-def stage_parent_multiapp_restart_overlay(text: str) -> str:
+def stage_parent_multiapp_restart_overlay(text: str, already_staged: bool = False) -> str:
     """Switch exactly the known Maxwell MultiApp to required restart restoration.
 
     A parent advanced restart must not disable MultiApp restoration. Reject
@@ -169,6 +201,10 @@ def stage_parent_multiapp_restart_overlay(text: str) -> str:
         raise ValueError("unexpected Maxwell MultiApp type")
     if len(NO_RESTORE_ANY_RE.findall(text)) != 1:
         raise ValueError("unexpected parent no_restore inventory")
+    if already_staged:
+        if len(re.findall(r"(?m)^[ \t]+no_restore[ \t]*=[ \t]*false[ \t]*$", body)) != 1:
+            raise ValueError("continued advanced restart has no_restore mismatch")
+        return text
     changed, count = NO_RESTORE_TRUE_RE.subn(
         lambda m: m.group("indent") + "no_restore = false", body)
     if count != 1:
@@ -176,7 +212,57 @@ def stage_parent_multiapp_restart_overlay(text: str) -> str:
     return text[:b.start("body")] + changed + text[b.end("body"):]
 
 
-def advanced_restart_input(text: str, prefix: str) -> str:
+
+# Both archived 400W/1000W Maxwell child overlays contain exactly these
+# three AuxVariables seed defaults, which advanced MultiApp restart must NOT run.
+CHILD_RESTART_SEEDS = frozenset((
+    "electron_density_state_t6", "mean_energy_state_t6", "pressure_state_t6"
+))
+CHILD_AUX_RE = re.compile(r"(?ms)^\[AuxVariables\][ \t]*\n(?P<body>.*?)^\[\][ \t]*$")
+CHILD_AUX_VAR_RE = re.compile(
+    r"(?ms)^  \[(?P<name>[A-Za-z_][A-Za-z_0-9]*)\][ \t]*\n(?P<body>.*?)^  \[\][ \t]*$"
+)
+
+def stage_child_maxwell_restart_overlay(text: str,
+                                        already_staged: bool = False) -> str:
+    """Restore native Maxwell AuxVariables state without re-applying 3 seeds."""
+    if re.search(r"(?m)^\[ICs\][ \t]*$", text):
+        raise ValueError("unreviewed explicit child ICs")
+    blocks = list(CHILD_AUX_RE.finditer(text))
+    if len(blocks) != 1:
+        raise ValueError("missing/nonunique Maxwell child AuxVariables block")
+    block = blocks[0]
+    body = block.group("body")
+    names = []
+    for var in CHILD_AUX_VAR_RE.finditer(body):
+        count = len(INLINE_IC_RE.findall(var.group("body")))
+        if count > 1:
+            raise ValueError("duplicate child seed")
+        if count:
+            names.append(var.group("name"))
+    if already_staged:
+        if names or INLINE_IC_RE.search(text):
+            raise ValueError("continued Maxwell restart retained seed ICs")
+        return text
+    if set(names) != CHILD_RESTART_SEEDS or len(names) != 3:
+        raise ValueError("unrecognized Maxwell child initial state inventory")
+    cleaned, removed = INLINE_IC_RE.subn("", body)
+    if removed != 3:
+        raise ValueError("unmapped Maxwell child seed")
+    result = text[:block.start("body")] + cleaned + text[block.end("body"):]
+    if INLINE_IC_RE.search(result):
+        raise ValueError("unreviewed extra Maxwell initial_condition")
+    return result
+
+def strip_previous_restart_problem(text: str, previous_prefix: str) -> str:
+    """Validated removal of the previous stage's restart binding only."""
+    marker = "\n[Problem]\n  restart_file_base = '/workspace/" + previous_prefix + "'\n[]"
+    if text.rstrip().count(marker) != 1 or not text.rstrip().endswith(marker):
+        raise ValueError("previous-stage restart base changed or ambiguous")
+    return text.rstrip()[:-len(marker)].rstrip() + "\n"
+
+def advanced_restart_input(text: str, prefix: str,
+                           prior_restart_prefix: str | None = None) -> str:
     """MOOSE 9f388366: recover ignores an extended TimeSequenceStepper sequence.
     
     Problem/restart_file_base activates the genuine advanced *restart* path,
@@ -192,7 +278,9 @@ def advanced_restart_input(text: str, prefix: str) -> str:
         r"plasma(?:_restart_\d+to\d+)?_cp/\d{4,}", prefix
     ):
         raise ValueError("invalid exact restart checkpoint prefix")
-    cleaned = suppress_parent_restart_ics(text)
+    if prior_restart_prefix is not None:
+        text = strip_previous_restart_problem(text, prior_restart_prefix)
+    cleaned = suppress_parent_restart_ics(text, already_staged=prior_restart_prefix is not None)
     # MOOSE resolves a relative restart base against the *input file folder*;
     # the manifest prefix is repository-root-relative. Use the fixed container
     # workspace root to avoid duplicating experiments/Issue395 in the path.
@@ -200,7 +288,7 @@ def advanced_restart_input(text: str, prefix: str) -> str:
 
 
 def stage_base(start: int, end: int) -> str:
-    if not 1 <= start < end <= 100:
+    if not 1 <= start < end <= MAX_TIME_NS:
         raise ValueError("invalid bounded stage")
     return f"plasma_restart_{start}to{end}"
 
@@ -209,7 +297,8 @@ def read_csv(path: Path) -> list[dict[str, str]]:
     with path.open(newline="", encoding="utf-8") as stream:
         return list(csv.DictReader(stream))
 
-def verify_csv(path: Path, end: int, exact_rows: bool) -> list[dict[str, str]]:
+def verify_csv(path: Path, end: int, exact_rows: bool,
+               expected_times: list[float] | None = None) -> list[dict[str, str]]:
     rows = read_csv(path)
     if not rows:
         raise ValueError("empty native CSV")
@@ -219,16 +308,19 @@ def verify_csv(path: Path, end: int, exact_rows: bool) -> list[dict[str, str]]:
     if not math.isclose(times[-1], end * 1e-9, rel_tol=1e-12, abs_tol=1e-16):
         raise ValueError(f"wrong endpoint {times[-1]} vs {end} ns")
     if exact_rows:
-        # Native recovery may introduce sub-nanosecond steps while preserving
-        # every requested ns boundary.  Never equate CSV row index with ns.
-        if (len(rows) < end + 1 or
-                not math.isclose(times[0], 0.0, rel_tol=0, abs_tol=1e-16) or
-                any(b <= a for a, b in zip(times, times[1:]))):
-            raise ValueError("upstream CSV history not strictly time-ordered")
-        for ns in range(end + 1):
-            if not any(math.isclose(t, ns * 1e-9, rel_tol=1e-12, abs_tol=1e-16)
-                       for t in times):
-                raise ValueError(f"upstream CSV missing {ns} ns boundary")
+        if not math.isclose(times[0], 0, rel_tol=0, abs_tol=1e-16) or any(
+                b <= a for a, b in zip(times, times[1:])):
+            raise ValueError("upstream native CSV history not time ordered")
+        boundary = expected_times if expected_times is not None else [
+            i * 1e-9 for i in range(end + 1)]
+        k = 0
+        for target in boundary:
+            while k < len(times) and times[k] < target and not math.isclose(
+                    times[k], target, rel_tol=1e-12, abs_tol=1e-16):
+                k += 1
+            if k == len(times) or not math.isclose(
+                    times[k], target, rel_tol=1e-12, abs_tol=1e-16):
+                raise ValueError(f"upstream CSV missing time-grid boundary {target}")
     for key in ("n_O_ex_avg", "n_O_3P_avg", "chem24_monitor_R_936",
                 "P_rf_raw_W_t6", "chem24_monitor_S_charge_closure_chem24",
                 "chem24_monitor_S_mass_closure_chem24"):
@@ -239,7 +331,8 @@ def verify_csv(path: Path, end: int, exact_rows: bool) -> list[dict[str, str]]:
 def result_path(power: int) -> Path:
     return CHEM / f"results_rf_elastic_diss_ion_ei20_ei01_{power}w_adjacent_sheath_wall_closed_100us_dt1000ns"
 
-def restore(root: Path, artifact: Path, power: int, start: int, end: int, source_sha: str) -> None:
+def restore(root: Path, artifact: Path, power: int, start: int, end: int,
+            source_sha: str, interval_ns: str = "1") -> None:
     matches = list(artifact.rglob(f"restart_{start}ns_manifest.json"))
     if len(matches) != 1:
         raise ValueError("missing/ambiguous exact upstream manifest")
@@ -259,7 +352,8 @@ def restore(root: Path, artifact: Path, power: int, start: int, end: int, source
                         manifest["run_files" if kind == "run" else "input_files"], root)
     result = result_path(power)
     run = root / result / "run"
-    verify_csv(run / "plasma.csv", start, exact_rows=True)
+    verify_csv(run / "plasma.csv", start, exact_rows=True,
+               expected_times=manifest["time_sequence_s"])
     # Checkpoint prefixes are native MOOSE step IDs, not physical nanoseconds.
     # A recovered 2 ns run may end at step 7 after 1 ps substeps.
     actual_step = manifest.get("actual_moose_step")
@@ -282,9 +376,19 @@ def restore(root: Path, artifact: Path, power: int, start: int, end: int, source
             raise ValueError(f"genuine upstream checkpoint/Exodus missing: {p}")
     (root / result / "recovery_prefix.txt").write_text(expected_prefix + "\n")
     inp = root / CHEM / f"rf_elastic_diss_ion_ei20_ei01_{power}w_adjacent_sheath_wall_closed_100us_dt1000ns.i"
-    inp.write_text(advanced_restart_input(extend_input(inp.read_text(), start, end), expected_prefix))
+    previous_mode = manifest.get("restart_mode") == "advanced_restart_not_recover"
+    prior_source = manifest.get("restart_source_prefix") if previous_mode else None
+    if previous_mode and not isinstance(prior_source, str):
+        raise ValueError("missing prior-stage restart source prefix")
+    inp.write_text(advanced_restart_input(
+        extend_input(inp.read_text(), start, end, interval_ns),
+        expected_prefix, prior_restart_prefix=prior_source))
     parent_overlay = root / CHEM / f"rf_elastic_multiapp_parent_{power}w_100us_dt1000ns_overlay.i"
-    parent_overlay.write_text(stage_parent_multiapp_restart_overlay(parent_overlay.read_text()))
+    parent_overlay.write_text(stage_parent_multiapp_restart_overlay(
+        parent_overlay.read_text(), already_staged=previous_mode))
+    child_overlay = root / CHEM / f"rf_elastic_multiapp_maxwell_{power}w_100us_dt1000ns_overlay.i"
+    child_overlay.write_text(stage_child_maxwell_restart_overlay(
+        child_overlay.read_text(), already_staged=previous_mode))
     (root / result / "upstream_manifest.json").write_text(json.dumps(manifest, indent=2, sort_keys=True)+"\n")
     (root / result / "upstream_plasma.csv").write_bytes((run / "plasma.csv").read_bytes())
     print("OXYGEN25_EXACT_SOURCE_RESTORED_AND_INPUT_EXTENDED_PASS", power, start, end)
@@ -404,8 +508,10 @@ def verify_recovery(root: Path, power: int, start: int, end: int, source_sha: st
                 tar.add(path, arcname=path.relative_to(root).as_posix(), recursive=False)
         archives[filename] = {"bytes": destination.stat().st_size, "sha256": sha(destination)}
     manifest = {
-        "schema": 3, "power_w": power, "source_sha": source_sha,
-        "final_time_s": end * 1e-9, "time_sequence_s": [i*1e-9 for i in range(end+1)],
+        "schema": 4, "power_w": power, "source_sha": source_sha,
+        "final_time_s": end * 1e-9,
+        "time_sequence_s": [float(t * NS_S) for t in time_grid(inp)[1]],
+        "restart_source_prefix": old_prefix,
         "actual_moose_step": last_step,
         "checkpoint_prefix": checkpoint_prefix.relative_to(root).as_posix(),
         "latest_exodus_file": stage_exodus.relative_to(root).as_posix(),
@@ -438,6 +544,15 @@ def self_test() -> None:
               "[Outputs]\n  checkpoint = true\n[]\n")
     assert time_grid(extend_input(sample, 1, 2)) == (2, [0, 1, 2])
     assert time_grid(extend_input(sample, 1, 100)) == (100, list(range(101)))
+    variable = extend_input(sample, 1, 100, "2.5")
+    assert time_grid(variable)[1][-3:] == [Decimal("96"), Decimal("98.5"), Decimal("100")]
+    for invalid in ("0", "-1", "NaN", "1e-30"):
+        try:
+            extend_input(sample, 1, 100, invalid)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("invalid time interval accepted")
     prefix = ("experiments/Issue395_powered_chemistry_ladder/"
               "results_rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns/"
               "run/plasma_cp/0004")
@@ -469,6 +584,26 @@ def self_test() -> None:
     staged = stage_parent_multiapp_restart_overlay(overlay)
     assert "no_restore = false" in staged
     assert "no_restore = true" not in staged
+    assert stage_parent_multiapp_restart_overlay(staged, already_staged=True) == staged
+    child = ("[AuxVariables]\n" +
+             "".join("  [" + name + "]\n    initial_condition = 1\n  []\n"
+                     for name in sorted(CHILD_RESTART_SEEDS)) + "[]\n")
+    clean_child = stage_child_maxwell_restart_overlay(child)
+    assert "initial_condition" not in clean_child
+    assert stage_child_maxwell_restart_overlay(clean_child, already_staged=True) == clean_child
+    for bad in (child.replace("pressure_state_t6", "unreviewed_state", 1),
+                child.replace("initial_condition = 1", "initial_condition = 1\n    initial_condition = 2", 1)):
+        try:
+            stage_child_maxwell_restart_overlay(bad)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("invalid Maxwell child IC inventory accepted")
+    old_staged = advanced_restart_input(extend_input(seeded, 1, 2), prefix)
+    again = advanced_restart_input(extend_input(old_staged, 2, 100), prefix,
+                                   prior_restart_prefix=prefix)
+    assert again.count("[Problem]") == 1
+    assert time_grid(again) == (100, list(range(101)))
     for bad in (overlay.replace("no_restore = true", "no_restore = false"),
                 overlay.replace("no_restore = true", "no_restore = true\n    no_restore = true"),
                 overlay.replace("FullSolveMultiApp", "TransientMultiApp")):
@@ -527,6 +662,7 @@ def main() -> None:
     parser.add_argument("--power-w", type=int, choices=(400, 1000))
     parser.add_argument("--start-ns", type=int)
     parser.add_argument("--end-ns", type=int)
+    parser.add_argument("--interval-ns", default="1", help="positive decimal ns spacing of requested time_sequence targets")
     parser.add_argument("--source-sha")
     args = parser.parse_args()
     if args.self_test:
@@ -536,7 +672,7 @@ def main() -> None:
         parser.error("--power-w, --start-ns, --end-ns, --source-sha required")
     root = args.root.resolve()
     if args.restore:
-        restore(root, args.restore, args.power_w, args.start_ns, args.end_ns, args.source_sha)
+        restore(root, args.restore, args.power_w, args.start_ns, args.end_ns, args.source_sha, args.interval_ns)
     elif args.verify_rates:
         verify_rates(root, args.power_w, args.verify_rates)
     else:
