@@ -99,6 +99,11 @@ def time_grid(text: str) -> tuple[int, list[Decimal]]:
 def extend_input(text: str, start: int, end: int,
                  interval_ns: str = "1") -> str:
     """Append configurable physical output/event times; NEVER change past grid."""
+    outputs = list(OUTPUT_RE.finditer(text))
+    if len(outputs) != 1 or len(re.findall(
+            r"(?m)^[ \t]*checkpoint[ \t]*=[ \t]*true[ \t]*$",
+            outputs[0].group("body"))) != 1:
+        raise ValueError("missing, disabled or ambiguous native checkpoint output")
     original_end, prior = time_grid(text)
     if not 1 <= start < end <= MAX_TIME_NS or original_end != start:
         raise ValueError("wrong start checkpoint or end time")
