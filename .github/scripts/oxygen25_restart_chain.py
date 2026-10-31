@@ -148,12 +148,22 @@ def restore(root: Path, artifact: Path, power: int, start: int, end: int, source
     result = result_path(power)
     run = root / result / "run"
     verify_csv(run / "plasma.csv", start, exact_rows=True)
-    for p in (run / f"plasma_cp/{start:04d}-restart-0.rd/data",
-              run / f"plasma_cp/{start:04d}-restart-0.rd/header",
-              run / f"plasma_cp/{start:04d}-mesh.cpa.gz/1/header.gz",
+    # Checkpoint prefixes are native MOOSE step IDs, not physical nanoseconds.
+    # A recovered 2 ns run may end at step 7 after 1 ps substeps.
+    actual_step = manifest.get("actual_moose_step")
+    if type(actual_step) is not int or actual_step < start:
+        raise ValueError("upstream actual MOOSE step missing or invalid")
+    prefix = run / "plasma_cp" / f"{actual_step:04d}"
+    expected_prefix = prefix.relative_to(root).as_posix()
+    if manifest.get("recovery_requirements", {}).get("native_recover_prefix") != expected_prefix:
+        raise ValueError("upstream recovery prefix does not match actual native step")
+    for p in (Path(str(prefix) + "-restart-0.rd/data"),
+              Path(str(prefix) + "-restart-0.rd/header"),
+              Path(str(prefix) + "-mesh.cpa.gz/1/header.gz"),
               run / "plasma.e"):
         if not p.is_file() or not p.stat().st_size:
             raise ValueError(f"genuine upstream checkpoint/Exodus missing: {p}")
+    (root / result / "recovery_prefix.txt").write_text(expected_prefix + "\n")
     inp = root / CHEM / f"rf_elastic_diss_ion_ei20_ei01_{power}w_adjacent_sheath_wall_closed_100us_dt1000ns.i"
     inp.write_text(extend_input(inp.read_text(), start, end))
     (root / result / "upstream_manifest.json").write_text(json.dumps(manifest, indent=2, sort_keys=True)+"\n")
@@ -188,6 +198,21 @@ def verify_rates(root: Path, power: int, rate_dir: Path) -> None:
             raise ValueError(f"staged private rate hash mismatch {rid}")
     print("OXYGEN25_PRIVATE_RATE_REHYDRATION_SHA256_PASS", len(files), upstream["ei936_mode"])
 
+def native_final_step(log: str, end: int, previous_step: int) -> int:
+    """Bind checkpoint numbering to the actual native final step and time."""
+    matches = re.findall(
+        r"(?m)^Time Step\s+(\d+),\s*time\s*=\s*([0-9.eE+-]+)", log)
+    if not matches:
+        raise ValueError("native solver log contains no time-step records")
+    step, time_s = int(matches[-1][0]), float(matches[-1][1])
+    if (step <= previous_step or not math.isfinite(time_s) or
+            not math.isclose(time_s, end * 1e-9, rel_tol=1e-12, abs_tol=1e-16)):
+        raise ValueError(
+            f"native final step/time inconsistent: step={step} time={time_s}, "
+            f"previous={previous_step}, expected={end} ns")
+    return step
+
+
 def verify_recovery(root: Path, power: int, start: int, end: int, source_sha: str) -> None:
     result = result_path(power)
     run = root / result / "run"
@@ -203,12 +228,17 @@ def verify_recovery(root: Path, power: int, start: int, end: int, source_sha: st
         raise ValueError("no native recovery log evidence")
     if not re.search(r"Time Step\s+\d+,\s*time\s*=", log):
         raise ValueError("no native recovered time step evidence")
+    last_step = native_final_step(log, end, upstream["actual_moose_step"])
     cp = run / "plasma_cp"
-    for p in (cp / f"{end:04d}-restart-0.rd/data",
-              cp / f"{end:04d}-restart-0.rd/header",
-              cp / f"{end:04d}-mesh.cpa.gz/1/header.gz"):
+    checkpoint_prefix = cp / f"{last_step:04d}"
+    for p in (Path(str(checkpoint_prefix) + "-restart-0.rd/data"),
+              Path(str(checkpoint_prefix) + "-restart-0.rd/header"),
+              Path(str(checkpoint_prefix) + "-mesh.cpa.gz/1/header.gz")):
         if not p.is_file() or not p.stat().st_size:
-            raise ValueError(f"new native checkpoint absent: {p}")
+            available = sorted(x.name for x in cp.iterdir()) if cp.is_dir() else []
+            raise ValueError(
+                f"new native checkpoint absent: {p}; native step={last_step}; "
+                f"available prefixes={available}")
     input_files = [root / row["path"] for row in upstream["input_files"]]
     run_files = sorted(p for p in run.rglob("*") if p.is_file())
     def inventory(paths):
@@ -228,13 +258,18 @@ def verify_recovery(root: Path, power: int, start: int, end: int, source_sha: st
     manifest = {
         "schema": 2, "power_w": power, "source_sha": source_sha,
         "final_time_s": end * 1e-9, "time_sequence_s": [i*1e-9 for i in range(end+1)],
-        "actual_moose_step": end, "chemistry": "25-effective-O(ex)-EI936",
+        "actual_moose_step": last_step,
+        "checkpoint_prefix": checkpoint_prefix.relative_to(root).as_posix(),
+        "chemistry": "25-effective-O(ex)-EI936",
         "ei936_mode": upstream["ei936_mode"], "ei936_energy_loss_eV": 4.19,
         "rate_sha256_private_rehydrate_required": upstream["rate_sha256_private_rehydrate_required"],
         "physics_build_base": BUILD_REF,
         "run_files": inventory(run_files), "input_files": inventory(input_files),
         "archives": archives, "upstream_archive_hashes": upstream["archives"],
-        "recovery_requirements": upstream["recovery_requirements"],
+        "recovery_requirements": {
+            **upstream["recovery_requirements"],
+            "native_recover_prefix": checkpoint_prefix.relative_to(root).as_posix(),
+        },
         "upstream_time_ns": start, "recovered_time_ns": end,
         "last_monitors": {key: float(after[-1][key]) for key in
                           ("n_O_ex_avg", "n_O_3P_avg", "chem24_monitor_R_936", "P_rf_raw_W_t6")},
@@ -257,6 +292,14 @@ def self_test() -> None:
         except ValueError:
             continue
         raise AssertionError("invalid grid/checkpoint accepted")
+    assert native_final_step("Time Step 7, time = 2e-09\n", 2, 1) == 7
+    for bad_log in ("Time Step 2, time = 1e-09\n",
+                    "Time Step 1, time = 2e-09\n"):
+        try:
+            native_final_step(bad_log, 2, 1)
+        except ValueError:
+            continue
+        raise AssertionError("wrong native step/time accepted")
     print("OXYGEN25_RESTART_CHAIN_P0_SELFTEST_PASS")
 
 def main() -> None:

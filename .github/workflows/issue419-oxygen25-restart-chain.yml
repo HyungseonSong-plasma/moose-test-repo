@@ -72,6 +72,7 @@ jobs:
             --root "$PWD" --power-w "$POWER_W" --start-ns "$START_NS" \
             --end-ns "$END_NS" --source-sha "$SOURCE_SHA"
           test -s "$RESULT/upstream_manifest.json"
+          test -s "$RESULT/recovery_prefix.txt"
           test -s "$RESULT/run/plasma.e"
           test -s "$RESULT/run/plasma_cp/0001-restart-0.rd/data"
           test -s "$RESULT/run/plasma_cp/0001-mesh.cpa.gz/1/header.gz"
@@ -100,6 +101,8 @@ jobs:
       - name: P3 native MultiApp recovery from exact 0001 checkpoint
         run: |
           set -euo pipefail
+          RECOVER_PREFIX="$(cat "$RESULT/recovery_prefix.txt")"
+          test -s "$RECOVER_PREFIX-restart-0.rd/data"
           started="$(date +%s)"
           set +e
           timeout -s TERM -k 60s 1800s docker run --rm --entrypoint /bin/bash --user 0:0 \
@@ -114,7 +117,7 @@ jobs:
                 '$CHEM/o_elastic_ei17_$POWER_W""w_100us_dt1000ns_overlay.i' \
                 Outputs/file_base='$RESULT/run/plasma' \
                 MultiApps/maxwell_t6/no_restore=false \
-                --recover '$RESULT/run/plasma_cp/0001'
+                --recover '$RECOVER_PREFIX'
             " 2>&1 | tee "$RESULT/recovery_runtime.log"
           code="${PIPESTATUS[0]}"
           set -e
@@ -126,6 +129,7 @@ jobs:
       - name: P4 native continuity and next-stage archive proof
         run: |
           set -euo pipefail
+          find "$RESULT/run/plasma_cp" -type f | sort | tee "$RESULT/recovery_checkpoint_listing.txt"
           python3 "$CHAIN" --verify-recovery \
             --root "$PWD" --power-w "$POWER_W" --start-ns "$START_NS" \
             --end-ns "$END_NS" --source-sha "$SOURCE_SHA"
@@ -144,6 +148,8 @@ jobs:
             ${{ env.RESULT }}/restart_run_2ns.tar.gz
             ${{ env.RESULT }}/restart_inputs_2ns.tar.gz
             ${{ env.RESULT }}/restart_2ns_manifest.json
+            ${{ env.RESULT }}/recovery_prefix.txt
+            ${{ env.RESULT }}/recovery_checkpoint_listing.txt
             ${{ env.RESULT }}/recovery_status.txt
             ${{ env.RESULT }}/recovery_runtime.log
             ${{ env.RESULT }}/run/plasma.csv
@@ -157,6 +163,8 @@ jobs:
           if-no-files-found: warn
           path: |
             ${{ env.RESULT }}/recovery_status.txt
+            ${{ env.RESULT }}/recovery_prefix.txt
+            ${{ env.RESULT }}/recovery_checkpoint_listing.txt
             ${{ env.RESULT }}/recovery_runtime.log
             ${{ env.RESULT }}/check_input.log
             ${{ env.RESULT }}/run/plasma.csv
