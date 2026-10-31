@@ -161,7 +161,7 @@ jobs:
           set -euo pipefail
           bash experiments/Issue395_powered_chemistry_ladder/issue397_l1_power_scan_replay.sh check ${{ matrix.power_w }}
 
-      - name: P6 actual MOOSE --recover 2-to-4ns (max 285s)
+      - name: P6 actual MOOSE --recover explicit 0002 checkpoint 2-to-4ns (max 285s)
         run: |
           set -euo pipefail
           started="$(date +%s)"
