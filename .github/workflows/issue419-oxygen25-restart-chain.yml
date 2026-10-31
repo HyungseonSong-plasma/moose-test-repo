@@ -88,7 +88,7 @@ jobs:
           name: oxygen25-ei936-${{ env.START_NS }}ns-restart-complete-${{ matrix.power_w }}W
           github-token: ${{ github.token }}
           path: _upstream_artifact/${{ matrix.power_w }}W
-      - name: P0 mutation self-test and exact archive round-trip
+      - name: P0 checkpoint output, time-grid, parent/child seed and exact archive round-trip
         run: |
           set -euo pipefail
           python3 "$CHAIN" --self-test
