@@ -164,15 +164,15 @@ jobs:
           if-no-files-found: error
           retention-days: 90
           path: |
-            ${{ env.RESULT }}}/restart_run_1ns.tar.gz
-            ${{ env.RESULT }}}/restart_inputs_1ns.tar.gz
-            ${{ env.RESULT }}}/restart_archives_1ns.sha256
-            ${{ env.RESULT }}}/restart_1ns_manifest.json
-            ${{ env.RESULT }}}/one_ns_runtime_status.txt
-            ${{ env.RESULT }}}/check_input.log
-            ${{ env.RESULT }}}/runtime.log
-            ${{ env.RESULT }}}/run/plasma.csv
-            ${{ env.CHEM }}}/chem24_manifest.json
+            ${{ env.RESULT }}/restart_run_1ns.tar.gz
+            ${{ env.RESULT }}/restart_inputs_1ns.tar.gz
+            ${{ env.RESULT }}/restart_archives_1ns.sha256
+            ${{ env.RESULT }}/restart_1ns_manifest.json
+            ${{ env.RESULT }}/one_ns_runtime_status.txt
+            ${{ env.RESULT }}/check_input.log
+            ${{ env.RESULT }}/runtime.log
+            ${{ env.RESULT }}/run/plasma.csv
+            ${{ env.CHEM }}/chem24_manifest.json
 
       - name: Preserve failure diagnostics even when full checkpoint is unavailable
         if: always()
@@ -182,9 +182,9 @@ jobs:
           if-no-files-found: warn
           retention-days: 21
           path: |
-            ${{ env.RESULT }}}/one_ns_runtime_status.txt
-            ${{ env.RESULT }}}/check_input.log
-            ${{ env.RESULT }}}/runtime.log
-            ${{ env.RESULT }}}/run/plasma.csv
-            ${{ env.RESULT }}}/restart_1ns_manifest.json
-            ${{ env.RESULT }}}/prep/full24_source_overlay.log
+            ${{ env.RESULT }}/one_ns_runtime_status.txt
+            ${{ env.RESULT }}/check_input.log
+            ${{ env.RESULT }}/runtime.log
+            ${{ env.RESULT }}/run/plasma.csv
+            ${{ env.RESULT }}/restart_1ns_manifest.json
+            ${{ env.RESULT }}/prep/full24_source_overlay.log
