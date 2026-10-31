@@ -40,21 +40,23 @@ KNOWN_SCIENCE_HOLDS={
  "414":"untracked O2star product; effective excitation identity unresolved",
  "2068":"threshold mismatch; user requested tag-only",
  "2073":"130 nm channel products unresolved",
- "936":"untracked O(1S) state; separate heavy transport needed",
+ "936":"O(1S) 4.19 eV channel mapped into effective O(ex)/Os; state-resolved O(1S) kinetics not solved",
  "2259":"formula validated only for equivalent Te=1-7 eV",
  "2738":"formula validated only for equivalent Te=1-7 eV",
  "H25":"reference temperature convention unverified"
 }
 
 # The original 25-reaction inventory is immutable provenance.
-# The 400/1000 W research case explicitly excludes EI-936 to avoid
-# pretending that the currently untracked O(1S) product is represented by Os.
-# Stable solver identities come from the canonical Issue17 R0 species ledger:
-# O = O(3P), Os = O(1D), O2s = O2(a1Delta_g).
-ACTIVE_EXCLUDED_REACTION_IDS = frozenset({"936"})
+# The 400/1000 W research case deliberately *lumps* O(1D) and O(1S)
+# into one effective solver Os/O(ex) state, while preserving original HPEM
+# physical reaction identities in the 25-row REACTIONS provenance ledger.
+# EI-936 has a separate rate and 4.19 eV loss; no distinct O(1S) transport.
+ACTIVE_EXCLUDED_REACTION_IDS = frozenset()
 SOLVER_SPECIES_IDENTITY = {
     "O(3P)": "O",
     "O(1D)": "Os",
+    "O(1S)": "Os",
+    "O(ex)": "Os",
     "O2(a1Delta_g)": "O2s",
 }
 # EI-413 and EI-414 are deliberately assigned to the tracked O2(a) lump.
@@ -62,6 +64,8 @@ SOLVER_SPECIES_IDENTITY = {
 ACTIVE_REACTIONS = tuple(
     (rid, reactants, "e O2a", model)
     if rid in {"413", "414"}
+    else (rid, reactants, "e O1D", "formula")  # EI-936 analytic fallback; optional lookup in runtime overlay.
+    if rid == "936"
     else (rid, reactants, products, model)
     for rid, reactants, products, model in REACTIONS
     if rid not in ACTIVE_EXCLUDED_REACTION_IDS
@@ -69,20 +73,21 @@ ACTIVE_REACTIONS = tuple(
 
 
 def active_audit():
-    """Audit the opt-in 24-reaction model, not its 25-row source catalog."""
+    """Audit the opt-in 25-channel O(ex) effective model, not the historical physical ledger."""
     canonical = audit()
     assert canonical["reaction_count"] == 25
-    assert len(ACTIVE_REACTIONS) == 24
-    assert {r[0] for r in REACTIONS} - {r[0] for r in ACTIVE_REACTIONS} == {"936"}
+    assert len(ACTIVE_REACTIONS) == 25
+    assert {r[0] for r in REACTIONS} == {r[0] for r in ACTIVE_REACTIONS}
     assert sum(r[3] == "lookup" for r in ACTIVE_REACTIONS) == 19
-    assert sum(r[3] == "formula" for r in ACTIVE_REACTIONS) == 2
+    assert sum(r[3] == "formula" for r in ACTIVE_REACTIONS) == 3
     assert sum(r[3] == "heavy" for r in ACTIVE_REACTIONS) == 3
     for reaction in ACTIVE_REACTIONS:
         delta = stoich(reaction)
         assert sum(v * SPECIES[s][0] for s, v in delta.items()) == 0, reaction[0]
         assert sum(v * SPECIES[s][1] for s, v in delta.items()) == 0, reaction[0]
     active_ids = {r[0] for r in ACTIVE_REACTIONS}
-    assert {"935", "943", "407", "413", "414"}.issubset(active_ids)
+    assert {"935", "936", "943", "407", "413", "414"}.issubset(active_ids)
+    assert stoich(next(r for r in ACTIVE_REACTIONS if r[0] == "936")) == {"O": -1, "O1D": 1}
     for rid in ("407", "413", "414"):
         reaction = next(r for r in ACTIVE_REACTIONS if r[0] == rid)
         assert stoich(reaction) == {"O2": -1, "O2a": 1}, rid
@@ -93,9 +98,10 @@ def active_audit():
     return {
         "scope": "400W_1000W_research_active_chemistry",
         "canonical_inventory": 25,
-        "active_reactions": 24,
+        "active_reactions": 25,
         "active_lookup_tables": 19,
-        "formula_reactions": 2,
+        "optional_lookup_tables": ["936"],
+        "formula_reactions": 3,
         "heavy_reactions": 3,
         "excluded_reactions": sorted(ACTIVE_EXCLUDED_REACTION_IDS),
         "source_species_mapping": SOLVER_SPECIES_IDENTITY,
@@ -109,8 +115,12 @@ def active_audit():
         "science_holds": {k: ("User-selected O2(a) effective lumping; physical branching not validated"
                              if k in {"413", "414"} else v)
                           for k, v in KNOWN_SCIENCE_HOLDS.items() if k in active_ids},
-        "ei936_species_source_enabled": False,
-        "ei936_energy_sink_enabled": False,
+        "ei936_species_source_enabled": True,
+        "ei936_energy_sink_enabled": True,
+        "ei936_effective_product": "O(ex)/Os",
+        "ei936_energy_loss_eV": 4.19,
+        "ei936_rate_mode_default": "analytic_maxwellian_fallback",
+        "ei936_rate_mode_if_table_available": "lookup",
         "power_run": "NOT_RUN",
         "status": "STOICHIOMETRY_ONLY_PASS",
     }
