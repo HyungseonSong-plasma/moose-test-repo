@@ -1,4 +1,4 @@
-"""24-channel exploratory oxygen ICP source owner and input preparation regression."""
+"""25-channel effective O(ex) oxygen ICP with independent EI-936 fallback."""
 import importlib.util
 import json
 import math
@@ -18,13 +18,17 @@ def _load():
 def _base(m):
     return "\n".join(m.REQUIRED)+"\n"
 
-def test_24_stoichiometric_channels_and_rate_owners():
+def test_25_stoichiometric_channels_and_rate_owners():
     m=_load()
     assert m.validate_network()["atoms_charge_mass"]=="PASS"
     assert len(m.LOOKUP_IDS)==19
     assert len(m.FORMULA_IDS)==2
     assert len(m.HEAVY_IDS)==3
-    assert 936 not in m.CHEM
+    assert m.validate_network()["active"]==25
+    assert m.validate_network()["formula"]==3
+    assert 936 in m.CHEM
+    assert m.CHEM[936]==m.CHEM[935]=={"O":-1,"Os":1}
+    assert m.LOSS[936]==4.19 and m.LOSS[935]==1.97
     assert m.CHEM[413]==m.CHEM[414]=={"O2":-1,"O2a":1}
     assert m.CHEM[411]==m.CHEM[412]=={"O2":-1,"O":2}
     assert m.CHEM[2068]==m.CHEM[2073]=={"O2a":-1,"O":2}
@@ -39,6 +43,9 @@ def test_source_projection_one_source_per_variable_and_heavy_units():
     assert overlay.count("reaction_progress = R_") == 19
     assert overlay.count("property_name = R_2259")==1
     assert overlay.count("property_name = R_2738")==1
+    assert overlay.count("property_name = R_936")==1
+    assert "4.54e-15*exp(-4.49/te)*ne*c" in overlay
+    assert "functor_names = 'n_e_physical c_chem24_O Te_chem24_eV'" in overlay
     assert overlay.count("property_name = R_H23")==1
     assert overlay.count("property_name = R_H24")==1
     assert overlay.count("property_name = R_H25")==1
@@ -54,7 +61,9 @@ def test_source_projection_one_source_per_variable_and_heavy_units():
         assert overlay.count(f"variable = {name}\n")==1
     assert "variable = w_O2_constraint" not in overlay
     assert "variable = w_O2p" not in overlay
-    assert "R_936" not in overlay
+    assert "R_936" in overlay
+    assert "-4.1900000000000004" in overlay or "-4.19" in overlay
+    assert "R_935" in overlay
     assert "R_diss_O2" not in overlay
     assert "S_energy_chem24" in overlay
     assert "S_mass_closure_chem24" in overlay
@@ -89,7 +98,7 @@ def test_parsed_functor_symbols_avoid_moose_reserved_names():
         m.parsed("bad","S_bad",["T_g"],["bad-name"],"bad-name")
 
 
-def test_strict_lookup_100point_all19_and_private_stage(tmp_path):
+def test_19_mandatory_lookup_and_optional_EI936_private_stage(tmp_path):
     m=_load()
     private=tmp_path/"incoming"
     private.mkdir()
@@ -102,7 +111,8 @@ def test_strict_lookup_100point_all19_and_private_stage(tmp_path):
     baseline.write_text(_base(m))
     out=tmp_path/"experiment"/"chem24.i"
     report=m.stage(baseline,private,out,tmp_path)
-    assert report["active"]==24 and report["lookups"]==19
+    assert report["active"]==25 and report["lookups"]==19
+    assert report["formula"]==3 and report["ei936_rate_mode"]=="analytic_maxwellian_fallback"
     assert out.is_file()
     assert len(list((out.parent/"private_rates").glob("EI-*.txt")))==19
     overlay = out.read_text()
@@ -117,6 +127,26 @@ def test_strict_lookup_100point_all19_and_private_stage(tmp_path):
         assert (out.parent / relative).is_file()
     assert "rate_table_file = 'experiment/private_rates/" not in overlay
     assert len(json.loads((out.parent/"chem24_manifest.json").read_text())["lookup_sha256"])==19
+    assert "4.54e-15*exp(-4.49/te)*ne*c" in overlay
+    # EI-936 uses an independent table only when it actually exists and passes validation.
+    opt=private/"EI-936_O_3P.txt"
+    opt.write_text("# E [eV] rate [m3/(mol s)]\n" +
+                   "".join(f"{1.5+0.25*i:.15g} {1e8+936+i:.15g}\n" for i in range(100)))
+    out_lookup=tmp_path/"lookup_case"/"chem25.i"
+    report_lookup=m.stage(baseline,private,out_lookup,tmp_path)
+    assert report_lookup["active"]==25 and report_lookup["lookups"]==20
+    assert report_lookup["formula"]==2 and report_lookup["ei936_rate_mode"]=="lookup"
+    assert len(report_lookup["lookup_sha256"])==20
+    linked=out_lookup.read_text()
+    assert "rate_table_file = 'private_rates/EI-936_O_3P.txt'" in linked
+    assert "4.54e-15*exp(-4.49/te)*ne*c" not in linked
+    assert linked.count("reaction_progress = R_936")==1
+    assert linked.count("property_name = R_936")==0
+    # A present but malformed optional table must fail closed, not silently fall back.
+    opt.write_text("1.5 1\n")
+    with pytest.raises(ValueError, match="expected 100"):
+        m.validate_files(private)
+    opt.unlink()
     broken=private/"EI-2074_O2_a1Delta.txt"
     broken.write_text("1.5 1\n")
     with pytest.raises(ValueError, match="expected 100"):
@@ -142,3 +172,4 @@ def test_power_replay_research_mode_must_skip_legacy_chemistry():
     assert "OXYGEN_RESEARCH_EI2738_FORMULA" in s
     assert 'python3 bin/physics.py preflight --self-test' in s
     assert 'python3 bin/physics.py preflight "$FULL24_OVERLAY"' in s
+    assert "OXYGEN_25_OEX_CHEMISTRY_OVERLAY_PREPARED_NOT_RUN" in s
