@@ -1,4 +1,4 @@
-"""Exploratory 24-reaction user decisions without changing canonical HPEM registry."""
+"""Exploratory 25-channel O(ex) user decisions without changing canonical HPEM registry."""
 import json
 from pathlib import Path
 
@@ -15,9 +15,10 @@ def test_reduced_chosen_oxygen_product_channels():
     for rid in ("2068", "2073"):
         assert active[rid] == {"O2a": -1, "O": 2}
     assert active["407"] == {"O2": -1, "O2a": 1}
-    assert len(ACTIVE_REACTIONS) == 24
+    assert len(ACTIVE_REACTIONS) == 25
     assert len(REACTIONS) == 25
-    assert "936" not in active
+    assert active["936"] == {"O":-1, "O1D":1}
+    assert next(row for row in REACTIONS if row[0]=="936")[2] == "e O1S"
 
 
 def test_heavy_3_and_old_zhao_double_count_prevention():
