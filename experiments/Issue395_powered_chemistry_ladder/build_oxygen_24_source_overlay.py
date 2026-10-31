@@ -181,7 +181,7 @@ def make_overlay(paths: dict[int,str], baseline: str) -> str:
     inherited=[v for v in FORBIDDEN if v in baseline]
     if missing or inherited:
         raise ValueError(f"refuse invalid baseline missing={missing} inherited={inherited}")
-    if not set(LOOKUP_IDS).issubset(paths) or set(paths)-set(LOOKUP_IDS)!={936} and set(paths)!=set(LOOKUP_IDS):
+    if not set(LOOKUP_IDS).issubset(paths) or (set(paths) - set(LOOKUP_IDS)) not in (set(), {936}):
         raise ValueError("all 19 mandatory electron-impact tables plus only optional 936 required")
     material_blocks=[]
     for sp in NEUTRALS:
@@ -284,6 +284,10 @@ def make_overlay(paths: dict[int,str], baseline: str) -> str:
                      ("O","n_O_3P_avg"),("Os","n_O_1D_avg")):
         pp.append(material(label,"ElementAverageFunctorPostprocessor",
             ("functor",f"n_chem24_{sp}"),("execute_on","'INITIAL TIMESTEP_END'")))
+    # Os is O(ex) in this reduced model. Preserve n_O_1D_avg as a legacy
+    # compatibility label, but expose the scientifically honest effective label.
+    pp.append(material("n_O_ex_avg","ElementAverageFunctorPostprocessor",
+                       ("functor","n_chem24_Os"),("execute_on","\x27INITIAL TIMESTEP_END\x27")))
     for label in [f"R_{rid}" for rid in CHEM]+[
         "S_mass_closure_chem24","S_charge_closure_chem24",
         "S_energy_chem24","S_mol_O","S_mol_O2a","S_mol_Os"]:
