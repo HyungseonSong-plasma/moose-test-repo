@@ -145,10 +145,12 @@ jobs:
           INPUT="$CHEM/rf_elastic_diss_ion_ei20_ei01_${MATRIX_POWER}w_adjacent_sheath_wall_closed_100us_dt1000ns.i"
           cp "$RESULT/run/plasma.csv" "$RESULT/first_2ns.csv"
           python3 "$CHEM/oxygen24_checkpoint_restart.py" --verify-first "$RESULT/first_2ns.csv" --power-w "$MATRIX_POWER" --manifest "$RESULT/first_2ns_evidence.json"
+          find "$RESULT/run/plasma_cp" -type f -printf "%P\t%s bytes\n" | sort | tee "$RESULT/checkpoint_2ns_listing.txt"
           python3 "$CHEM/oxygen24_checkpoint_restart.py" --verify-checkpoint "$RESULT/run/plasma_cp" --manifest "$RESULT/checkpoint_2ns_manifest.json"
           # Preserve symlinks and the complete parent/MultiApp recovery state.
           tar -czf "$RESULT/checkpoint_2ns.tar.gz" -C "$RESULT/run" plasma_cp
-          tar -tzf "$RESULT/checkpoint_2ns.tar.gz" | grep -q plasma_cp
+          tar -tzf "$RESULT/checkpoint_2ns.tar.gz" > "$RESULT/checkpoint_tar_listing.txt"
+          grep -q "^plasma_cp/" "$RESULT/checkpoint_tar_listing.txt"
           sha256sum "$RESULT/checkpoint_2ns.tar.gz" > "$RESULT/checkpoint_2ns.tar.gz.sha256"
           cp "$INPUT" "$RESULT/input_2ns_checkpoint.i"
           python3 "$CHEM/oxygen24_checkpoint_restart.py" --extend "$INPUT"
@@ -200,6 +202,8 @@ jobs:
             experiments/Issue395_powered_chemistry_ladder/results_rf_elastic_diss_ion_ei20_ei01_${{ matrix.power_w }}w_adjacent_sheath_wall_closed_100us_dt1000ns/checkpoint_2ns.tar.gz
             experiments/Issue395_powered_chemistry_ladder/results_rf_elastic_diss_ion_ei20_ei01_${{ matrix.power_w }}w_adjacent_sheath_wall_closed_100us_dt1000ns/checkpoint_2ns.tar.gz.sha256
             experiments/Issue395_powered_chemistry_ladder/results_rf_elastic_diss_ion_ei20_ei01_${{ matrix.power_w }}w_adjacent_sheath_wall_closed_100us_dt1000ns/checkpoint_2ns_manifest.json
+            experiments/Issue395_powered_chemistry_ladder/results_rf_elastic_diss_ion_ei20_ei01_${{ matrix.power_w }}w_adjacent_sheath_wall_closed_100us_dt1000ns/checkpoint_2ns_listing.txt
+            experiments/Issue395_powered_chemistry_ladder/results_rf_elastic_diss_ion_ei20_ei01_${{ matrix.power_w }}w_adjacent_sheath_wall_closed_100us_dt1000ns/checkpoint_tar_listing.txt
             experiments/Issue395_powered_chemistry_ladder/results_rf_elastic_diss_ion_ei20_ei01_${{ matrix.power_w }}w_adjacent_sheath_wall_closed_100us_dt1000ns/input_2ns_checkpoint.i
             experiments/Issue395_powered_chemistry_ladder/results_rf_elastic_diss_ion_ei20_ei01_${{ matrix.power_w }}w_adjacent_sheath_wall_closed_100us_dt1000ns/check_input.log
             experiments/Issue395_powered_chemistry_ladder/results_rf_elastic_diss_ion_ei20_ei01_${{ matrix.power_w }}w_adjacent_sheath_wall_closed_100us_dt1000ns/runtime.log
