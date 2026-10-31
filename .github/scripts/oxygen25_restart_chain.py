@@ -582,7 +582,7 @@ def restore(root: Path, artifact: Path, power: int, start: int, end: int,
     staged_time = extend_input(prior_input, start, end, interval_ns)
     if start == 100 and manifest.get("schema") == 5:
         requested_targets = extend_requested_event_targets(
-            [Decimal(str(v)) / NS_S for v in manifest["time_sequence_s"]],
+            [((Decimal(str(v)) / NS_S).quantize(Decimal("0.00000001"))) for v in manifest["time_sequence_s"]],
             start, end, interval_ns)
     if previous_mode:
         previous_overlay_path = root / result / "restart_time_sequence_overlay.json"
