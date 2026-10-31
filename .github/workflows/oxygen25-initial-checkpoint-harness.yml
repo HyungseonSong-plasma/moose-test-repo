@@ -114,7 +114,7 @@ jobs:
           print("OXYGEN25_PRIVATE_RATES_PASS",model["ei936_rate_mode"])
           PY
 
-      - name: P0 regressions and restart archive self-test
+      - name: P0 exact-source regressions and sparse-harness native checkpoint self-test
         run: |
           set -euo pipefail
           python3 -m venv .issue419-25-venv
