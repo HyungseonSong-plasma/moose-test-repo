@@ -210,7 +210,7 @@ def make_overlay(paths: dict[int,str], baseline: str) -> str:
     # ne[1/m3] * c_O[mol/m3] * k[m3/s] => mol/(m3 s).
     if 936 in paths:
         filename=paths[936]
-        if "\x27" in filename or "\n" in filename: raise ValueError("unsafe 936 rate path")
+        if "\u0027" in filename or "\n" in filename: raise ValueError("unsafe 936 rate path")
         material_blocks.append(material("chem24_rate_936","PhysicsElectronImpactRateMaterial",
             ("rate_table_file",f"\x27{filename}\x27"),
             ("mean_energy","mean_en_solved"),
