@@ -1,0 +1,65 @@
+name: Oxygen24 Error Database Snapshot (read-only)
+run-name: Validate and build CI error SQLite @ ${{ github.sha }}
+on:
+  push:
+    branches: [ops/oxygen24-ci-error-database-20261031]
+    paths: [.github/workflows/oxygen24-ci-error-db-build-once.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-and-build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Checkout exact DB source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - name: Check Python syntax and catalog semantics
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile ops/ci_error_db/ci_errors.py
+          python3 ops/ci_error_db/ci_errors.py stats | tee stats.json
+          python3 ops/ci_error_db/ci_errors.py build \
+            --output oxygen24-ci-errors.sqlite | tee build.json
+      - name: Validate actual SQLite integrity and indexed evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, sqlite3
+          from pathlib import Path
+          p=Path('oxygen24-ci-errors.sqlite')
+          assert p.is_file() and p.stat().st_size>1024
+          source=json.loads(Path('ops/ci_error_db/catalog.json').read_text())
+          with sqlite3.connect(p) as db:
+              db.execute('PRAGMA foreign_keys=ON')
+              assert db.execute('PRAGMA integrity_check').fetchone()[0]=='ok'
+              assert db.execute('PRAGMA foreign_key_check').fetchall()==[]
+              assert db.execute('SELECT COUNT(*) FROM incidents').fetchone()[0]==len(source['incidents'])
+              assert db.execute('SELECT COUNT(*) FROM occurrences').fetchone()[0]==len(source['occurrences'])
+              assert db.execute('SELECT COUNT(*) FROM incident_overview').fetchone()[0]==len(source['incidents'])
+              assert db.execute('SELECT COUNT(DISTINCT run_id) FROM occurrences').fetchone()[0]>=10
+              for incident in ('OXY-ERR-001','OXY-ERR-004','OXY-ERR-005'):
+                  assert db.execute('SELECT COUNT(*) FROM occurrences WHERE incident_id=?',(incident,)).fetchone()[0]>0
+          print('OXYGEN24_CI_ERROR_DB_INTEGRITY_PASS')
+          PY
+          sha256sum oxygen24-ci-errors.sqlite > oxygen24-ci-errors.sqlite.sha256
+      - name: Upload portable error database and canonical catalog
+        uses: actions/upload-artifact@v4
+        with:
+          name: oxygen24-ci-error-db-snapshot
+          retention-days: 90
+          if-no-files-found: error
+          path: |
+            oxygen24-ci-errors.sqlite
+            oxygen24-ci-errors.sqlite.sha256
+            ops/ci_error_db/catalog.json
+            ops/ci_error_db/ci_errors.py
+            ops/ci_error_db/README.md
+            build.json
+            stats.json
