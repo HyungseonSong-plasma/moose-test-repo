@@ -9,10 +9,26 @@ import tarfile
 
 import pytest
 
-from physics_harness.adapters.moose.initial_checkpoint import (
-    CHEM, INPUT_PARTS, SOURCE_SHA, FirstCheckpoint, stage_input, verify_input,
-    verify_and_archive,
-)
+# Native solver comes from a pinned source checkout, while this harness is
+# fetched at a different exact CI revision. Resolve the standalone adapter
+# by source path, without importing the old checkout's moose package.
+import importlib.util
+import sys
+
+MODULE_PATH = (Path(__file__).resolve().parents[1] /
+               "physics_harness/adapters/moose/initial_checkpoint.py")
+ADAPTER_SPEC = importlib.util.spec_from_file_location(
+    "_oxygen25_first_checkpoint_standalone", MODULE_PATH)
+ADAPTER = importlib.util.module_from_spec(ADAPTER_SPEC)
+sys.modules[ADAPTER_SPEC.name] = ADAPTER
+ADAPTER_SPEC.loader.exec_module(ADAPTER)
+CHEM = ADAPTER.CHEM
+INPUT_PARTS = ADAPTER.INPUT_PARTS
+SOURCE_SHA = ADAPTER.SOURCE_SHA
+FirstCheckpoint = ADAPTER.FirstCheckpoint
+stage_input = ADAPTER.stage_input
+verify_input = ADAPTER.verify_input
+verify_and_archive = ADAPTER.verify_and_archive
 
 PREPARED = ("[Executioner]\n  type = Transient\n  end_time = 2e-9\n"
             "  [TimeStepper]\n    type = TimeSequenceStepper\n"
