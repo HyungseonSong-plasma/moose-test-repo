@@ -23,7 +23,8 @@ BUILD_BASE_REF="ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4
 for item in "$INPUT" "$PARENT" "$ELASTIC" "$FULL24" "$OELASTIC"; do
   test -s "$item" || { echo "missing source or overlay: $item" >&2; exit 2; }
 done
-test -d "$RESULT/run/plasma_cp" || { echo "missing 2ns parent checkpoint" >&2; exit 2; }
+test -s "$RESULT/run/plasma_cp/0002-restart-0.rd/data" || { echo "missing exact 2ns restart state" >&2; exit 2; }
+test -s "$RESULT/run/plasma_cp/0002-mesh.cpa.gz/1/header.gz" || { echo "missing exact 2ns mesh checkpoint" >&2; exit 2; }
 
 # Output basename must remain identical: --recover resolves its source
 # checkpoint from the same parent output path, including MultiApp backups.
@@ -33,9 +34,10 @@ docker run --rm --entrypoint /bin/bash --user 0:0 \
     set -euo pipefail
     source /environment
     physics_app/physics-opt \
-      -i '$INPUT' --recover \
+      -i '$INPUT' \
       '$PARENT' '$ELASTIC' '$FULL24' '$OELASTIC' \
-      Outputs/file_base='$RESULT/run/plasma'
+      Outputs/file_base='$RESULT/run/plasma' \
+      --recover '$RESULT/run/plasma_cp/0002'
   " 2>&1 | tee "$RESULT/recovery_runtime.log"
 
 echo "OXYGEN24_NATIVE_MULTIAPP_RECOVERY_COMMAND_PASS=$POWER_W"
