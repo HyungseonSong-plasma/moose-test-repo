@@ -5,17 +5,17 @@
   "scope": "Oxygen ICP 25-reaction EI936 effective O(ex) native restart",
   "os": "Samuel",
   "samuel_revision": "9b335e3fbb9c5e8e323e382daeec56fa25336822",
-  "observed_at_lower_bound": "2026-10-31T16:06:50Z",
+  "observed_at_lower_bound": "2026-10-31T16:56:40Z",
   "campaign": "1ns→2ns→100ns→1us→10us→100us",
   "numerical_goal_us": 100,
   "run_success_vs_scientific_acceptance": "separate; SCIENCE_HOLD until independently qualified",
   "current_run": {
-    "id": 41218079940,
+    "id": 41222090939,
     "attempt": 1,
     "event": "push",
-    "workflow_sha": "b013bff59eaa3dea21c2b48cc3a6aaba982e484c",
+    "workflow_sha": "85b0b3f50d0eec888b1e4c15e1560ff773dc6793",
     "status": "IN_PROGRESS_P1",
-    "url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/41218079940"
+    "url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/41222090939"
   },
   "failure_root_cause": {
     "run_id": 41212837874,
@@ -31,7 +31,7 @@
   "powers": {
     "400": {
       "artifact_id": 13045668207,
-      "job_id": 124586700538,
+      "job_id": 124598595340,
       "upstream_run_id": 41208644597,
       "checkpoint_step": 4,
       "manifest_sha256": "e850495af85fd4615429066dedea29630533ee70c3488cfac20ecd856bb08c27",
@@ -53,14 +53,17 @@
       "ei936_mode": "analytic_maxwellian_fallback",
       "private_rate_count": 19,
       "science": "SCIENCE_HOLD",
-      "active_run_id": 41218079940,
+      "active_run_id": 41222090939,
       "active_run_attempt": 1,
-      "active_workflow_sha": "b013bff59eaa3dea21c2b48cc3a6aaba982e484c",
-      "next_action": "Observe exact CI P1/P2/P3/P4; on failure diagnose first actual blocker and repair only evidence-backed restart path; on success verify archive and advance 100ns→1us."
+      "active_workflow_sha": "85b0b3f50d0eec888b1e4c15e1560ff773dc6793",
+      "next_action": "Inspect CI 41222090939 P1/P2/P3/P4, verify restart boundary fields, native endpoint, checkpoints, SHA256 artifact roundtrip; if P2/P3 fails first isolate and repair evidence-backed issue.",
+      "last_failed_run_id": 41218079940,
+      "last_failed_stage": "P2_CHECK_INPUT",
+      "last_failed_reason": "MOOSE advanced restart rejected parent seed ConstantIC(log_ne_moose) from 15 inline [Variables] initial_condition declarations"
     },
     "1000": {
       "artifact_id": 13045289286,
-      "job_id": 124586700573,
+      "job_id": 124598595536,
       "upstream_run_id": 41208644597,
       "checkpoint_step": 4,
       "manifest_sha256": "4d7be8b8efeba89b100c40abb7723b8c60f4f99b8db7287e4db37418cacd9c1f",
@@ -82,12 +85,31 @@
       "ei936_mode": "analytic_maxwellian_fallback",
       "private_rate_count": 19,
       "science": "SCIENCE_HOLD",
-      "active_run_id": 41218079940,
+      "active_run_id": 41222090939,
       "active_run_attempt": 1,
-      "active_workflow_sha": "b013bff59eaa3dea21c2b48cc3a6aaba982e484c",
-      "next_action": "Observe exact CI P1/P2/P3/P4; on failure diagnose first actual blocker and repair only evidence-backed restart path; on success verify archive and advance 100ns→1us."
+      "active_workflow_sha": "85b0b3f50d0eec888b1e4c15e1560ff773dc6793",
+      "next_action": "Inspect CI 41222090939 P1/P2/P3/P4, verify restart boundary fields, native endpoint, checkpoints, SHA256 artifact roundtrip; if P2/P3 fails first isolate and repair evidence-backed issue.",
+      "last_failed_run_id": 41218079940,
+      "last_failed_stage": "P2_CHECK_INPUT",
+      "last_failed_reason": "MOOSE advanced restart rejected parent seed ConstantIC(log_ne_moose) from 15 inline [Variables] initial_condition declarations"
     }
   },
   "terminal_policy": "Never mark 100ns/1us/10us/100us PASS without actual native time and cross-CI checkpoint archive SHA proof; 2-cycle terminal confirmation.",
-  "separate_oxygen24_branch": "experiment/oxygen24-restart-2ns-to-4ns-20261031"
+  "separate_oxygen24_branch": "experiment/oxygen24-restart-2ns-to-4ns-20261031",
+  "latest_repair": {
+    "source_job_failure_run": 41218079940,
+    "failure_stage": "P2",
+    "failure": "parent Variable initial_condition generated ConstantIC conflicts with advanced checkpoint restart",
+    "fix": "suppressed exactly 15 known parent variable seed initial_conditions in restored input; original upstream bundle unchanged; do NOT enable allow_initial_conditions_with_restart",
+    "verified_input_inventory": "both real 2ns artifact inputs examined: 400W and 1000W have same 15 parent seed variables; no explicit [ICs] in parent",
+    "helper_commit": "2611a02158a2147f645b3592be763bc1cd4262c5",
+    "workflow_commit": "85b0b3f50d0eec888b1e4c15e1560ff773dc6793",
+    "new_run_id": 41222090939,
+    "p0": "PASS",
+    "p1": "IN_PROGRESS",
+    "p2": "PENDING",
+    "p3": "PENDING",
+    "p4": "PENDING",
+    "science": "SCIENCE_HOLD"
+  }
 }
