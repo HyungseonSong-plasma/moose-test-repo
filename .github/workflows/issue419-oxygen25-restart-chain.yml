@@ -1,7 +1,29 @@
 # Genuine cross-CI MOOSE recovery, pinned 25-reaction EI936 O(ex) source.
 name: Issue419 Oxygen25 EI936 genuine cross-run restart
-run-name: Oxygen25 EI936 native 2-to-100ns advanced restart ${{ github.sha }}
+run-name: Oxygen25 EI936 advanced restart ${{ github.sha }}
 on:
+  workflow_dispatch:
+    inputs:
+      start_ns:
+        description: "Validated upstream checkpoint endpoint (integer ns)"
+        required: true
+        type: string
+        default: '2'
+      end_ns:
+        description: "Requested physical end time (integer ns; max 100000)"
+        required: true
+        type: string
+        default: '100'
+      interval_ns:
+        description: "Positive requested MOOSE time_sequence spacing in ns (not a guaranteed solver dt)"
+        required: true
+        type: string
+        default: '1'
+      upstream_run_id:
+        description: "Exact successful previous CI run containing the start_ns artifacts"
+        required: true
+        type: string
+        default: '41208644597'
   push:
     branches: [issue-419-ei936-1to100ns-controller-20261031]
     paths: [.github/workflows/issue419-oxygen25-restart-chain.yml]
@@ -9,11 +31,11 @@ permissions:
   contents: read
   actions: read
 concurrency:
-  group: issue419-oxygen25-ei936-2to100ns
+  group: issue419-oxygen25-ei936-advanced-${{ github.ref }}-${{ inputs.end_ns || '100' }}
   cancel-in-progress: false
 jobs:
   recover:
-    name: Genuine 2-to-100ns PhysicsApp advanced restart ${{ matrix.power_w }}W
+    name: Genuine checkpoint-continued PhysicsApp ${{ matrix.power_w }}W
     runs-on: ubuntu-24.04
     timeout-minutes: 360
     strategy:
@@ -24,9 +46,10 @@ jobs:
     env:
       POWER_W: ${{ matrix.power_w }}
       SOURCE_SHA: 8e2fe042dbc204b5fda22d346f1ad8d2e32db3ab
-      START_NS: '2'
-      END_NS: '100'
-      PARENT_RUN_ID: '41208644597'
+      START_NS: ${{ inputs.start_ns || '2' }}
+      END_NS: ${{ inputs.end_ns || '100' }}
+      INTERVAL_NS: ${{ inputs.interval_ns || '1' }}
+      PARENT_RUN_ID: ${{ inputs.upstream_run_id || '41208644597' }}
       OXYGEN_RESEARCH_400: '1'
       OXYGEN_RESEARCH_FULL24: '1'
       OXYGEN_RESEARCH_QUICK_5MIN: '1'
@@ -57,11 +80,12 @@ jobs:
           echo "RESULT=$CHEM/results_rf_elastic_diss_ion_ei20_ei01_$POWER_W""w_adjacent_sheath_wall_closed_100us_dt1000ns" >> "$GITHUB_ENV"
           echo "INPUT=$CHEM/rf_elastic_diss_ion_ei20_ei01_$POWER_W""w_adjacent_sheath_wall_closed_100us_dt1000ns.i" >> "$GITHUB_ENV"
           echo "CHAIN=_controller_harness/.github/scripts/oxygen25_restart_chain.py" >> "$GITHUB_ENV"
-      - name: Download exact previous-run 2ns artifact (separate CI run)
+          echo "STAGE_BASE=plasma_restart_${START_NS}to${END_NS}" >> "$GITHUB_ENV"
+      - name: Download exact previous-run checkpoint artifact (separate CI run)
         uses: actions/download-artifact@v4
         with:
-          run-id: 41208644597
-          name: oxygen25-ei936-2ns-restart-complete-${{ matrix.power_w }}W
+          run-id: ${{ env.PARENT_RUN_ID }}
+          name: oxygen25-ei936-${{ env.START_NS }}ns-restart-complete-${{ matrix.power_w }}W
           github-token: ${{ github.token }}
           path: _upstream_artifact/${{ matrix.power_w }}W
       - name: P0 mutation self-test and exact archive round-trip
@@ -70,7 +94,7 @@ jobs:
           python3 "$CHAIN" --self-test
           python3 "$CHAIN" --restore "_upstream_artifact/$POWER_W""W" \
             --root "$PWD" --power-w "$POWER_W" --start-ns "$START_NS" \
-            --end-ns "$END_NS" --source-sha "$SOURCE_SHA"
+            --end-ns "$END_NS" --interval-ns "$INTERVAL_NS" --source-sha "$SOURCE_SHA"
           # A restarted parent must use native checkpoint fields, not the original
           # 15 variable seeds that MOOSE rejects as ConstantIC in restart mode.
           if grep -Eq '^[[:space:]]*initial_condition[[:space:]]*=' "$INPUT"; then
@@ -78,6 +102,12 @@ jobs:
             exit 31
           fi
           echo OXYGEN25_RESTART_PARENT_INLINE_ICS_SUPPRESSED_PASS
+          CHILD_OVERLAY="$CHEM/rf_elastic_multiapp_maxwell_${POWER_W}w_100us_dt1000ns_overlay.i"
+          if grep -Eq '^[[:space:]]*initial_condition[[:space:]]*=' "$CHILD_OVERLAY"; then
+            echo '::error::Maxwell child still contains forbidden restart seed ICs'
+            exit 32
+          fi
+          echo OXYGEN25_MAXWELL_CHILD_SEED_ICS_SUPPRESSED_PASS
           test -s "$RESULT/upstream_manifest.json"
           test -s "$RESULT/recovery_prefix.txt"
           test -s "$RESULT/run/plasma.e"
@@ -107,11 +137,11 @@ jobs:
           set -euo pipefail
           bash "$CHEM/issue397_l1_power_scan_replay.sh" build "$POWER_W"
           test -x physics_app/physics-opt
-      - name: P2 native 100ns advanced restart check-input with restored MultiApp
+      - name: P2 native advanced restart check-input parent and child state
         run: |
           set -euo pipefail
           bash "$CHEM/issue397_l1_power_scan_replay.sh" check "$POWER_W"
-      - name: P3 native MultiApp advanced restart from upstream 2ns checkpoint
+      - name: P3 native MultiApp advanced restart from verified upstream checkpoint
         run: |
           set -euo pipefail
           RECOVER_PREFIX="$(cat "$RESULT/recovery_prefix.txt")"
@@ -128,7 +158,7 @@ jobs:
                 '$CHEM/o2_elastic_$POWER_W""w_100us_dt1000ns_overlay.i' \
                 '$CHEM/full24_$POWER_W""w_100us_dt1000ns_overlay.i' \
                 '$CHEM/o_elastic_ei17_$POWER_W""w_100us_dt1000ns_overlay.i' \
-                Outputs/file_base='$RESULT/run/plasma_restart_2to100' \
+                Outputs/file_base='$RESULT/run/$STAGE_BASE' \
                 MultiApps/maxwell_t6/no_restore=false \
                 Problem/restart_file_base='/workspace/$RECOVER_PREFIX'
             " 2>&1 | tee "$RESULT/recovery_runtime.log"
@@ -142,38 +172,38 @@ jobs:
       - name: P4 advanced restart state continuity and next-stage archive proof
         run: |
           set -euo pipefail
-          find "$RESULT/run/plasma_restart_2to100_cp" -type f | sort | tee "$RESULT/recovery_checkpoint_listing.txt"
+          find "$RESULT/run/${STAGE_BASE}_cp" -type f | sort | tee "$RESULT/recovery_checkpoint_listing.txt"
           python3 "$CHAIN" --verify-recovery \
             --root "$PWD" --power-w "$POWER_W" --start-ns "$START_NS" \
             --end-ns "$END_NS" --source-sha "$SOURCE_SHA"
-          test -s "$RESULT/restart_run_100ns.tar.gz"
-          test -s "$RESULT/restart_inputs_100ns.tar.gz"
-          test -s "$RESULT/restart_100ns_manifest.json"
-          echo "OXYGEN25_CROSS_CI_2_TO_100NS_CHECKPOINT_PASS=$POWER_W"
-      - name: Upload verified 100ns restart bundle for 1us CI
+          test -s "$RESULT/restart_run_${END_NS}ns.tar.gz"
+          test -s "$RESULT/restart_inputs_${END_NS}ns.tar.gz"
+          test -s "$RESULT/restart_${END_NS}ns_manifest.json"
+          echo "OXYGEN25_CROSS_CI_${START_NS}_TO_${END_NS}NS_CHECKPOINT_PASS=$POWER_W"
+      - name: Upload verified native restart bundle for next independent CI
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: oxygen25-ei936-100ns-restart-complete-${{ matrix.power_w }}W
+          name: oxygen25-ei936-${{ env.END_NS }}ns-restart-complete-${{ matrix.power_w }}W
           retention-days: 90
           if-no-files-found: error
           path: |
-            ${{ env.RESULT }}/restart_run_100ns.tar.gz
-            ${{ env.RESULT }}/restart_inputs_100ns.tar.gz
-            ${{ env.RESULT }}/restart_100ns_manifest.json
+            ${{ env.RESULT }}/restart_run_${{ env.END_NS }}ns.tar.gz
+            ${{ env.RESULT }}/restart_inputs_${{ env.END_NS }}ns.tar.gz
+            ${{ env.RESULT }}/restart_${{ env.END_NS }}ns_manifest.json
             ${{ env.RESULT }}/recovery_prefix.txt
             ${{ env.RESULT }}/recovery_checkpoint_listing.txt
             ${{ env.RESULT }}/recovery_status.txt
             ${{ env.RESULT }}/recovery_runtime.log
             ${{ env.RESULT }}/run/plasma.csv
-            ${{ env.RESULT }}/run/plasma_restart_2to100.csv
-            ${{ env.RESULT }}/run/plasma_restart_2to100.e
+            ${{ env.RESULT }}/run/${{ env.STAGE_BASE }}.csv
+            ${{ env.RESULT }}/run/${{ env.STAGE_BASE }}.e
             ${{ env.RESULT }}/upstream_manifest.json
-      - name: Preserve 2to100ns failure diagnostics without protected rates
+      - name: Preserve restart failure diagnostics without protected rates
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: oxygen25-ei936-2to100ns-diagnostics-${{ matrix.power_w }}W
+          name: oxygen25-ei936-${{ env.START_NS }}to${{ env.END_NS }}ns-diagnostics-${{ matrix.power_w }}W
           retention-days: 21
           if-no-files-found: warn
           path: |
@@ -183,7 +213,7 @@ jobs:
             ${{ env.RESULT }}/recovery_runtime.log
             ${{ env.RESULT }}/check_input.log
             ${{ env.RESULT }}/run/plasma.csv
-            ${{ env.RESULT }}/run/plasma_restart_2to100.csv
-            ${{ env.RESULT }}/run/plasma_restart_2to100_cp/**
+            ${{ env.RESULT }}/run/${{ env.STAGE_BASE }}.csv
+            ${{ env.RESULT }}/run/${{ env.STAGE_BASE }}_cp/**
             ${{ env.RESULT }}/upstream_manifest.json
-            ${{ env.RESULT }}/restart_100ns_manifest.json
+            ${{ env.RESULT }}/restart_${{ env.END_NS }}ns_manifest.json
