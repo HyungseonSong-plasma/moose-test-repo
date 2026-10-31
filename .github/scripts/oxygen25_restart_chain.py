@@ -903,7 +903,7 @@ def self_test() -> None:
     assert "end_time = 0.000001" in chain_stage
     chained = stage_adaptive_stepper(chain_stage, "10", already_staged=True)
     assert "    reset_dt = true" in chained
-    assert Decimal(re.search(r"(?m)^  dtmax = ([^\\n]+)$", chained).group(1)) / NS_S == 10
+    assert any(Decimal(line.split("=", 1)[1].strip()) / NS_S == Decimal(10) for line in chained.splitlines() if line.strip().startswith("dtmax = "))
     proposed = extend_requested_event_targets(
         time_grid(extended)[1], 100, 1000, "10")
     assert proposed[-1] == 1000
