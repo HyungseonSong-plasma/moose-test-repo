@@ -53,7 +53,7 @@
       "outlet"
     ]
   },
-  "warning": "Research-only oxygen ICP reduced-chemistry: EI412 Lookup, EI2259 and EI2738 literature thermal Formula, EI2074 provisional option, EI936 disabled, EI413/414 O2a lump, user-selected dissociation channels and H23-H25. Full powered transient not run.",
+  "warning": "Research-only oxygen ICP 25-channel effective-O(ex) model: EI936 restored with optional lookup or Gudmundsson Maxwellian analytic fallback; O(1S) and O(1D) lumped into Os, independent 4.19 eV loss; EI413/414 O2a lump, chosen dissociation/H23-H25; physics validity is not established.",
   "initial_conditions": {
     "charged_species_number_density_m3": {
       "electron": 1000000000000000,
@@ -72,31 +72,26 @@
   },
   "chemistry": {
     "source_inventory_count": 25,
-    "active_reaction_count": 24,
+    "active_reaction_count": 25,
     "active_lookup_rate_count": 19,
-    "formula_rate_count": 2,
+    "formula_rate_count": 3,
     "heavy_rate_count": 3,
-    "excluded_reactions": [
-      "936"
-    ],
-    "disabled_reaction_progress": [
-      "R_EI936"
-    ],
-    "disabled_species_and_energy_sources": [
-      "S_EI936_O_3P",
-      "S_EI936_O_1S",
-      "S_EI936_electron_energy"
-    ],
+    "excluded_reactions": [],
+    "disabled_reaction_progress": [],
+    "disabled_species_and_energy_sources": [],
     "keep_reactions": [
       "935",
+      "936",
       "943"
     ],
     "solver_species_identity": {
       "O(3P)": "O",
       "O(1D)": "Os",
-      "O2(a1Delta_g)": "O2s"
+      "O2(a1Delta_g)": "O2s",
+      "O(1S)": "Os",
+      "O(ex)": "Os"
     },
-    "convention": "Original 25-reaction source inventory preserved. Experimental 400/1000 W model excludes EI-936; must never map O(1S) to Os.",
+    "convention": "Preserve original 25-row physical provenance. In this 400/1000W reduced model, products of EI935 O(1D) and EI936 O(1S) are mapped into a common O(ex)/Os species. Rates remain separate; electron energy losses 1.97 and 4.19 eV, respectively. No independent O(1S) transport or reverse process.",
     "lumped_O2a_source": {
       "status": "USER_SELECTED_LUMPED_EFFECTIVE_PRODUCT",
       "reaction_ids": [
@@ -223,6 +218,27 @@
       "table_source": "user-provided 100-point rate table for EI-412",
       "old_Zhao_empirical_fit_in_24_reaction_run": "disabled",
       "status": "approved mode; private numeric lookup must be mounted at runtime"
+    },
+    "optional_lookup_rate_ids": [
+      "936"
+    ],
+    "ei936": {
+      "source_physical_reaction": "e + O(3P) -> e + O(1S)",
+      "effective_solver_reaction": "e + O(3P) -> e + O(ex)/Os",
+      "source_state_product": "O(1S)",
+      "effective_product_variable": "w_Os",
+      "reaction_progress": "R_936",
+      "electron_energy_loss_eV": 4.19,
+      "independent_from_ei935": true,
+      "lookup_filename_optional": "EI-936_O_3P.txt",
+      "rate_policy": "Use independent validated 100-point lookup if present; otherwise use Gudmundsson et al. (2000) Table 3 analytic Maxwellian fit",
+      "default_rate_mode": "analytic_maxwellian_fallback",
+      "default_rate_coefficient_m3_s": "4.54e-15*exp(-4.49/Te_eV)",
+      "electron_temperature_eV": "(2/3)*mean_en_solved",
+      "fit_validity": "Maxwellian EEDF fit at Te approximately 1-7 eV; not independent Boltzmann/EEDF verification",
+      "reference": "J T Gudmundsson et al., J Phys D: Appl Phys 33 (2000) 1323-1331, Table 3",
+      "status": "user_selected_effective_state_lumping_scientific_hold",
+      "legacy_os_ionization_and_deexcitation": "EI943 and EI944 act on entire effective O(ex) pool; physical O(1S) state-specific losses are not resolved"
     }
   }
 }
