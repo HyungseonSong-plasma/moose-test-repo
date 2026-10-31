@@ -109,13 +109,21 @@ jobs:
           fi
           echo OXYGEN25_MAXWELL_CHILD_SEED_ICS_SUPPRESSED_PASS
           test -s "$RESULT/restart_time_sequence_overlay.json"
-          python3 - "$RESULT/restart_time_sequence_overlay.json" <<'PY'
+          python3 - "$RESULT/restart_time_sequence_overlay.json" "$START_NS" "$END_NS" <<'PY'
           import json, sys
           d=json.load(open(sys.argv[1]))
-          assert d['start_ns']==int("2") and d['end_ns']==int("100")
-          assert d['legacy_duplicate_checkpoint_boundary_proxy']
-          assert d['staged_time_sequence_ns'][2]=='1.00000001'
-          print("OXYGEN25_2NS_NATIVE_TIME_PREFIX_ALIGNED_PASS")
+          start, end = map(int, sys.argv[2:])
+          assert d['start_ns']==start and d['end_ns']==end
+          assert d['native_timestepper']=='IterationAdaptiveDT'
+          assert d['native_timestepper_reset_dt'] is True
+          assert d['staged_time_sequence_ns'][-1]==str(end)
+          if start==2:
+              assert d['legacy_duplicate_checkpoint_boundary_proxy']
+              assert d['staged_time_sequence_ns'][2]=='1.00000001'
+          else:
+              assert d['legacy_duplicate_checkpoint_boundary_proxy'] is None
+              assert float(d['staged_time_sequence_ns'][-2])<end
+          print("OXYGEN25_NATIVE_TIME_TARGET_PROVENANCE_PASS",start,end)
           PY
           grep -Eq '^[[:space:]]*type[[:space:]]*=[[:space:]]*IterationAdaptiveDT[[:space:]]*$' "$INPUT"
           grep -Eq '^[[:space:]]*reset_dt[[:space:]]*=[[:space:]]*true[[:space:]]*$' "$INPUT"
@@ -229,6 +237,7 @@ jobs:
             ${{ env.RESULT }}/check_input.log
             ${{ env.RESULT }}/run/plasma.csv
             ${{ env.RESULT }}/run/${{ env.STAGE_BASE }}.csv
+            ${{ env.RESULT }}/run/${{ env.STAGE_BASE }}.e
             ${{ env.RESULT }}/run/${{ env.STAGE_BASE }}_cp/**
             ${{ env.RESULT }}/upstream_manifest.json
             ${{ env.RESULT }}/restart_${{ env.END_NS }}ns_manifest.json
