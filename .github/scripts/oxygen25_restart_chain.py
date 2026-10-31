@@ -150,6 +150,36 @@ def time_grid(text: str) -> tuple[int, list[Decimal]]:
     return int(end_ns), seq_ns
 
 
+def extend_requested_event_targets(prior: list[Decimal],
+                                    start: int, end: int,
+                                    interval_ns: str) -> list[Decimal]:
+    """Carry prior declared time targets unchanged and append future targets.
+
+    The adaptive native solver may substep; these are audit/monitor targets,
+    not a serialized TimeSequenceStepper state or a fabricated checkpoint.
+    """
+    if not prior or prior[0] != 0 or prior[-1] != start:
+        raise ValueError("requested target prefix does not match checkpoint")
+    try:
+        step = Decimal(str(interval_ns))
+    except Exception as exc:
+        raise ValueError("unparseable requested time interval") from exc
+    if not step.is_finite() or step < Decimal("0.001"):
+        raise ValueError("requested interval below verified 1 ps floor")
+    count = int((Decimal(end - start) / step).to_integral_value(
+        rounding=ROUND_CEILING))
+    if not 1 <= start < end <= MAX_TIME_NS or count < 1 or len(prior) + count > MAX_SEQUENCE_EVENTS:
+        raise ValueError("requested time target bounds exceeded")
+    result = list(prior)
+    for i in range(1, count + 1):
+        t = min(Decimal(start) + i * step, Decimal(end))
+        if t > result[-1]:
+            result.append(t)
+    if result[-1] != end or any(b <= a for a, b in zip(result, result[1:])):
+        raise ValueError("invalid chained requested time targets")
+    return result
+
+
 def extend_input(text: str, start: int, end: int,
                  interval_ns: str = "1") -> str:
     """Append configurable physical output/event times; NEVER change past grid."""
@@ -158,6 +188,28 @@ def extend_input(text: str, start: int, end: int,
             r"(?m)^[ \t]*checkpoint[ \t]*=[ \t]*true[ \t]*$",
             outputs[0].group("body"))) != 1:
         raise ValueError("missing, disabled or ambiguous native checkpoint output")
+    # On successive native advanced stages the archived input has the
+    # IterationAdaptiveDT policy, not a TimeSequenceStepper/time_sequence.
+    if "type = IterationAdaptiveDT" in text:
+        blocks = list(EXEC_RE.finditer(text))
+        if len(blocks) != 1 or "type = TimeSequenceStepper" in text:
+            raise ValueError("ambiguous chained advanced restart Executioner")
+        block = blocks[0]
+        body = block.group("body")
+        ends = list(END_RE.finditer(body))
+        if len(ends) != 1:
+            raise ValueError("invalid chained advanced restart end_time")
+        previous = (Decimal(ends[0].group().split("=", 1)[1].strip()) /
+                    NS_S).quantize(Decimal("0.00000001"))
+        if not 1 <= start < end <= MAX_TIME_NS or previous != start:
+            raise ValueError("chained restart endpoint does not match accepted upstream")
+        adaptive_timestep_interval = Decimal(str(interval_ns))
+        if not adaptive_timestep_interval.is_finite() or adaptive_timestep_interval < Decimal("0.001"):
+            raise ValueError("invalid chained adaptive restart time interval")
+        new_body = END_RE.sub(lambda m: m.group(1) + format(
+            Decimal(end) * NS_S, ".17g"), body, count=1)
+        result = text[:block.start("body")] + new_body + text[block.end("body"):]
+        return result
     original_end, prior = time_grid(text)
     if not 1 <= start < end <= MAX_TIME_NS or original_end != start:
         raise ValueError("wrong start checkpoint or end time")
@@ -470,8 +522,13 @@ def restore(root: Path, artifact: Path, power: int, start: int, end: int,
                         manifest["run_files" if kind == "run" else "input_files"], root)
     result = result_path(power)
     run = root / result / "run"
+    # Legacy schema2 had native sequence targets; schema4 adaptive stages
+    # record requested monitor targets, not guaranteed exact solver steps.
+    required_native_times = (
+        manifest["time_sequence_s"] if manifest.get("schema") == 2
+        else [0.0, start * 1e-9])
     rows_before = verify_csv(run / "plasma.csv", start, exact_rows=True,
-                             expected_times=manifest["time_sequence_s"])
+                             expected_times=required_native_times)
     # Checkpoint prefixes are native MOOSE step IDs, not physical nanoseconds.
     # A recovered 2 ns run may end at step 7 after 1 ps substeps.
     actual_step = manifest.get("actual_moose_step")
@@ -507,6 +564,22 @@ def restore(root: Path, artifact: Path, power: int, start: int, end: int,
         # TimeStepper history. Source input alone cannot attest cutback events.
         raise ValueError("uncharacterized legacy checkpoint TimeStepper history")
     staged_time = extend_input(prior_input, start, end, interval_ns)
+    if previous_mode:
+        previous_overlay_path = root / result / "restart_time_sequence_overlay.json"
+        if not previous_overlay_path.is_file():
+            raise ValueError("missing prior-stage native restart timing audit")
+        previous_overlay = json.loads(previous_overlay_path.read_text())
+        if (previous_overlay.get("native_timestepper") != "IterationAdaptiveDT" or
+                previous_overlay.get("end_ns") != start or
+                previous_overlay.get("upstream_source_sha") != source_sha or
+                previous_overlay.get("from_checkpoint") != prior_source):
+            raise ValueError("previous-stage adaptive time provenance mismatch")
+        prior_requested = [Decimal(v) for v in
+                           previous_overlay["staged_time_sequence_ns"]]
+        requested_targets = extend_requested_event_targets(
+            prior_requested, start, end, interval_ns)
+    else:
+        requested_targets = time_grid(staged_time)[1]
     staged_native = stage_adaptive_stepper(
         staged_time, interval_ns, already_staged=previous_mode)
     inp.write_text(advanced_restart_input(
@@ -518,7 +591,7 @@ def restore(root: Path, artifact: Path, power: int, start: int, end: int,
             "upstream_source_sha": source_sha,
             "start_ns": start, "end_ns": end,
             "requested_interval_ns": interval_ns,
-            "staged_time_sequence_ns": [str(t) for t in time_grid(staged_time)[1]],
+            "staged_time_sequence_ns": [str(t) for t in requested_targets],
             "native_timestepper": "IterationAdaptiveDT",
             "native_timestepper_reset_dt": True,
             "native_dt_initial_s": 1e-12,
@@ -729,6 +802,21 @@ def self_test() -> None:
     adaptive = stage_adaptive_stepper(extended, "1")
     assert "type = IterationAdaptiveDT" in adaptive
     assert "    reset_dt = true" in adaptive
+    chain_stage = extend_input(adaptive, 100, 1000, "10")
+    assert "end_time = 0.000001" in chain_stage
+    chained = stage_adaptive_stepper(chain_stage, "10", already_staged=True)
+    assert "    reset_dt = true" in chained
+    assert "  dtmax = 1e-9" in chained
+    proposed = extend_requested_event_targets(
+        time_grid(extended)[1], 100, 1000, "10")
+    assert proposed[-1] == 1000
+    assert len(proposed) == len(time_grid(extended)[1]) + 90
+    try:
+        extend_requested_event_targets([Decimal(0), Decimal(99)], 100, 1000, "10")
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("bad chained checkpoint event prefix accepted")
     assert "time_sequence =" not in adaptive
     assert "  dtmax = 1e-9" in adaptive
     assert "    dt = 1e-12" in adaptive
