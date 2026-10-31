@@ -132,13 +132,19 @@ def checkpoint_manifest(directory: Path) -> dict[str, object]:
     files = sorted(x for x in directory.rglob("*") if x.is_file())
     if not files:
         raise ValueError("checkpoint directory empty")
-    # Both mesh and state must be present. Checkpoint output is version-dependent.
-    # Current MOOSE writes serialized restartable state with .rd; older
-    # versions used .cpr/.cp. Never accept a mesh-only checkpoint.
-    if not any(x.suffix in (".rd", ".cpr", ".cp") for x in files):
-        raise ValueError("checkpoint restartable state (.rd/.cpr/.cp) absent")
-    if not any("mesh" in x.name for x in files):
-        raise ValueError("checkpoint mesh absent")
+    # The exact pinned MOOSE writes 0002-restart-0.rd/{data,header}, i.e.
+    # .rd is a DIRECTORY, not a regular file. The mesh is likewise a directory
+    # 0002-mesh.cpa.gz/{1/header.gz,1/split-1-0.gz,...}.
+    state_dirs = [d for d in directory.rglob("*")
+                  if d.is_dir() and re.fullmatch(r"[0-9]+-restart-[0-9]+[.]rd", d.name)]
+    mesh_dirs = [d for d in directory.rglob("*")
+                 if d.is_dir() and re.fullmatch(r"[0-9]+-mesh[.]cpa[.]gz", d.name)]
+    if not state_dirs or not any((d / "data").is_file() and (d / "data").stat().st_size > 0
+                                 and (d / "header").is_file() and (d / "header").stat().st_size > 0
+                                 for d in state_dirs):
+        raise ValueError("serialized restartable state directory (.rd/data and header) absent")
+    if not mesh_dirs or not any((d / "1" / "header.gz").is_file() for d in mesh_dirs):
+        raise ValueError("mesh checkpoint directory (.cpa.gz/1/header.gz) absent")
     return {"checkpoint_directory": str(directory),
             "files": [{"path": str(x.relative_to(directory)),
                        "bytes": x.stat().st_size,
