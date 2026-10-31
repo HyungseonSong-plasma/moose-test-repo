@@ -182,12 +182,34 @@ jobs:
           print("OXYGEN24_CROSS_RUN_2NS_CHECKPOINT_RESTORED_AND_HASH_VERIFIED")
           PY
 
+      - name: P2b remove unavailable prior-run Exodus append dependency only
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          script=Path(os.environ["CHEM"])/"oxygen24_resume_native.sh"
+          source=script.read_text(encoding="utf-8")
+          needle="      --recover "
+          assert source.count(needle)==1, "native --recover invocation not unique"
+          # Original run archived the complete MOOSE checkpoint, but NOT
+          # plasma.e. Recovery would otherwise attempt to append an absent
+          # Exodus file. Suppress Exodus output only; preserve CSV, checkpoint,
+          # exact solver input, chemistry, and native --recover identity.
+          patched=source.replace(needle,"      Outputs/exodus=false "+chr(92)+"\n"+needle)
+          assert patched.replace("      Outputs/exodus=false "+chr(92)+"\n","")==source
+          dest=Path(os.environ["RUNNER_TEMP"])/"oxygen24_crossrun_no_exodus.sh"
+          dest.write_text(patched,encoding="utf-8")
+          print("OXYGEN24_EXODUS_OUTPUT_ONLY_RESTART_OVERRIDE_PASS", dest)
+          PY
+          bash -n "$RUNNER_TEMP/oxygen24_crossrun_no_exodus.sh"
+
       - name: P3 native 2ns to 4ns recovery with generous 4h wall-time cap
         run: |
           set -euo pipefail
           started="$(date +%s)"
           set +e
-          timeout -s TERM -k 60s 14400s bash "$CHEM/oxygen24_resume_native.sh" "$POWER_W"
+          timeout -s TERM -k 60s 14400s bash "$RUNNER_TEMP/oxygen24_crossrun_no_exodus.sh" "$POWER_W"
           code="$?"
           set -e
           elapsed=$(( $(date +%s) - started ))
