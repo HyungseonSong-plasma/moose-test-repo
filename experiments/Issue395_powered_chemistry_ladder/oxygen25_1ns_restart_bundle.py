@@ -73,8 +73,11 @@ def inventory(paths: list[Path], root: Path) -> list[dict]:
     for f in paths:
         if f.is_symlink():
             raise ValueError(f"unexpected symlink in packaged evidence: {f}")
-        if not f.is_file() or f.stat().st_size == 0:
-            raise ValueError(f"missing/empty required restart file: {f}")
+        # Some libMesh/MOOSE checkpoint metadata files intentionally contain
+        # zero bytes. Preserve them byte-for-byte; only explicitly required
+        # state/header/Exodus/CSV files must be nonempty (checked above).
+        if not f.is_file():
+            raise ValueError(f"missing restart archive file: {f}")
         resolved = f.resolve()
         if not resolved.is_relative_to(root):
             raise ValueError(f"unsafe archive path: {f}")
