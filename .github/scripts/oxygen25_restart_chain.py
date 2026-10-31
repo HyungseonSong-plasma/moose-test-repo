@@ -113,10 +113,17 @@ def verify_csv(path: Path, end: int, exact_rows: bool) -> list[dict[str, str]]:
         raise ValueError("nonfinite CSV time")
     if not math.isclose(times[-1], end * 1e-9, rel_tol=1e-12, abs_tol=1e-16):
         raise ValueError(f"wrong endpoint {times[-1]} vs {end} ns")
-    if exact_rows and (len(rows) != end + 1 or any(
-            not math.isclose(t, i * 1e-9, rel_tol=1e-12, abs_tol=1e-16)
-            for i, t in enumerate(times))):
-        raise ValueError("upstream CSV time continuity failed")
+    if exact_rows:
+        # Native recovery may introduce sub-nanosecond steps while preserving
+        # every requested ns boundary.  Never equate CSV row index with ns.
+        if (len(rows) < end + 1 or
+                not math.isclose(times[0], 0.0, rel_tol=0, abs_tol=1e-16) or
+                any(b <= a for a, b in zip(times, times[1:]))):
+            raise ValueError("upstream CSV history not strictly time-ordered")
+        for ns in range(end + 1):
+            if not any(math.isclose(t, ns * 1e-9, rel_tol=1e-12, abs_tol=1e-16)
+                       for t in times):
+                raise ValueError(f"upstream CSV missing {ns} ns boundary")
     for key in ("n_O_ex_avg", "n_O_3P_avg", "chem24_monitor_R_936",
                 "P_rf_raw_W_t6", "chem24_monitor_S_charge_closure_chem24",
                 "chem24_monitor_S_mass_closure_chem24"):
@@ -300,6 +307,20 @@ def self_test() -> None:
         except ValueError:
             continue
         raise AssertionError("wrong native step/time accepted")
+    # Native 1->2 ns evidence contains 1.001..1.005 ns substeps.
+    import tempfile
+    with tempfile.TemporaryDirectory() as directory:
+        path = Path(directory) / "native.csv"
+        fields = ("time", "n_O_ex_avg", "n_O_3P_avg", "chem24_monitor_R_936",
+                  "P_rf_raw_W_t6", "chem24_monitor_S_charge_closure_chem24",
+                  "chem24_monitor_S_mass_closure_chem24")
+        with path.open("w", newline="") as stream:
+            writer = csv.DictWriter(stream, fieldnames=fields)
+            writer.writeheader()
+            for time_s in (0.0, 1e-9, 1.001e-9, 2e-9):
+                writer.writerow({key: (time_s if key == "time" else 1.0)
+                                 for key in fields})
+        assert len(verify_csv(path, 2, exact_rows=True)) == 4
     print("OXYGEN25_RESTART_CHAIN_P0_SELFTEST_PASS")
 
 def main() -> None:
