@@ -1,7 +1,7 @@
 # Separate research run: 25 effective O(ex) channels incl. EI936, 400/1000W, 0->1ns.
 # Full native MOOSE restart checkpoint, Exodus outputs and input/mesh snapshots.
 name: Issue419 Oxygen25 EI936 1ns checkpoint once
-run-name: Oxygen25 EI936 1ns full checkpoint ${{ github.sha }
+run-name: Oxygen25 EI936 1ns full checkpoint ${{ github.sha }}
 on:
   push:
     branches: [issue-419-ei936-effective-oex-20261031]
@@ -21,14 +21,14 @@ jobs:
     steps:
       - name: Require original 19 numerical rate tables
         env:
-          PRIVATE_RATES_B64: ${{ secrets.OXYGEN24_RATES_TAR_XZ_B64 }
+          PRIVATE_RATES_B64: ${{ secrets.OXYGEN24_RATES_TAR_XZ_B64 }}
         run: |
           test -n "$PRIVATE_RATES_B64" || { echo "::error::Missing private rates"; exit 22; }
           echo "OXYGEN25_RATE_SECRET_PRESENT"
 
   checkpoint:
     needs: private-rate-gate
-    name: Real PhysicsApp ${{ matrix.power_w }W 25-reaction 1ns
+    name: Real PhysicsApp ${{ matrix.power_w }}W 25-reaction 1ns
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     strategy:
@@ -37,18 +37,18 @@ jobs:
       matrix:
         power_w: [400, 1000]
     env:
-      CHATGPT_WORK_BASE_SHA: ${{ github.sha }
-      POWER_W: ${{ matrix.power_w }
+      CHATGPT_WORK_BASE_SHA: ${{ github.sha }}
+      POWER_W: ${{ matrix.power_w }}
       OXYGEN_RESEARCH_400: '1'
       OXYGEN_RESEARCH_FULL24: '1'
       OXYGEN_RESEARCH_QUICK_5MIN: '1'
       OXYGEN_RESEARCH_RATE_DIR: /tmp/oxygen25/private_rates
-      PWD_IN_RUNNER: ${{ github.workspace }
+      PWD_IN_RUNNER: ${{ github.workspace }}
     steps:
       - name: Checkout exact 25-channel physics commit
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.sha }
+          ref: ${{ github.sha }}
           fetch-depth: 1
 
       - name: Verify exact source and declare output paths
@@ -62,7 +62,7 @@ jobs:
 
       - name: Restore 19 private lookup tables and optional EI936
         env:
-          PRIVATE_RATES_B64: ${{ secrets.OXYGEN24_RATES_TAR_XZ_B64 }
+          PRIVATE_RATES_B64: ${{ secrets.OXYGEN24_RATES_TAR_XZ_B64 }}
         run: |
           set -euo pipefail
           umask 077
@@ -160,31 +160,31 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: oxygen25-ei936-1ns-restart-complete-${{ matrix.power_w }W
+          name: oxygen25-ei936-1ns-restart-complete-${{ matrix.power_w }}W
           if-no-files-found: error
           retention-days: 90
           path: |
-            ${{ env.RESULT }}/restart_run_1ns.tar.gz
-            ${{ env.RESULT }}/restart_inputs_1ns.tar.gz
-            ${{ env.RESULT }}/restart_archives_1ns.sha256
-            ${{ env.RESULT }}/restart_1ns_manifest.json
-            ${{ env.RESULT }}/one_ns_runtime_status.txt
-            ${{ env.RESULT }}/check_input.log
-            ${{ env.RESULT }}/runtime.log
-            ${{ env.RESULT }}/run/plasma.csv
-            ${{ env.CHEM }}/chem24_manifest.json
+            ${{ env.RESULT }}}/restart_run_1ns.tar.gz
+            ${{ env.RESULT }}}/restart_inputs_1ns.tar.gz
+            ${{ env.RESULT }}}/restart_archives_1ns.sha256
+            ${{ env.RESULT }}}/restart_1ns_manifest.json
+            ${{ env.RESULT }}}/one_ns_runtime_status.txt
+            ${{ env.RESULT }}}/check_input.log
+            ${{ env.RESULT }}}/runtime.log
+            ${{ env.RESULT }}}/run/plasma.csv
+            ${{ env.CHEM }}}/chem24_manifest.json
 
       - name: Preserve failure diagnostics even when full checkpoint is unavailable
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: oxygen25-ei936-1ns-diagnostics-${{ matrix.power_w }W
+          name: oxygen25-ei936-1ns-diagnostics-${{ matrix.power_w }}W
           if-no-files-found: warn
           retention-days: 21
           path: |
-            ${{ env.RESULT }}/one_ns_runtime_status.txt
-            ${{ env.RESULT }}/check_input.log
-            ${{ env.RESULT }}/runtime.log
-            ${{ env.RESULT }}/run/plasma.csv
-            ${{ env.RESULT }}/restart_1ns_manifest.json
-            ${{ env.RESULT }}/prep/full24_source_overlay.log
+            ${{ env.RESULT }}}/one_ns_runtime_status.txt
+            ${{ env.RESULT }}}/check_input.log
+            ${{ env.RESULT }}}/runtime.log
+            ${{ env.RESULT }}}/run/plasma.csv
+            ${{ env.RESULT }}}/restart_1ns_manifest.json
+            ${{ env.RESULT }}}/prep/full24_source_overlay.log
