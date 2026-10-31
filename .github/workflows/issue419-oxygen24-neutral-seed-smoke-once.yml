@@ -1,0 +1,168 @@
+# One-shot: production PhysicsApp corrected-neutral Oxygen24 at 400 W / 1000 W.
+# Strict P3 wall-time budget 285 seconds each; t_final = 2 ns (2 x 1 ns).
+# No physical chemistry validity claim from a 2-ns initialization smoke.
+name: Issue419 Oxygen24 2ns 5min smoke once
+run-name: Oxygen24 2ns corrected neutrals ${{ github.sha }}
+on:
+  push:
+    branches: [issue-419-oxygen24-neutral-seed-p0-20261031]
+    paths: [.github/workflows/issue419-oxygen24-neutral-seed-smoke-once.yml]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: issue419-oxygen24-neutral-seed-smoke-once
+  cancel-in-progress: false
+
+jobs:
+  private-rate-gate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check 19-table private rate secret
+        env:
+          PRIVATE_RATES_B64: ${{ secrets.OXYGEN24_RATES_TAR_XZ_B64 }}
+        run: |
+          test -n "$PRIVATE_RATES_B64" || { echo "::error::Private rate secret absent"; exit 22; }
+          echo "OXYGEN24_PRIVATE_RATE_SECRET_PRESENT=YES"
+
+  smoke:
+    needs: private-rate-gate
+    name: Real PhysicsApp ${{ matrix.power_w }}W 2ns
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        power_w: [400, 1000]
+    env:
+      CHATGPT_WORK_BASE_SHA: ${{ github.sha }}
+      OXYGEN_RESEARCH_400: '1'
+      OXYGEN_RESEARCH_FULL24: '1'
+      OXYGEN_RESEARCH_QUICK_5MIN: '1'
+      OXYGEN_RESEARCH_RATE_DIR: /tmp/oxygen24/private_rates
+      PWD_IN_RUNNER: ${{ github.workspace }}
+    steps:
+      - name: Checkout exact corrected source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+
+      - name: Exact SHA and source policy
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$CHATGPT_WORK_BASE_SHA"
+          test "$OXYGEN_RESEARCH_QUICK_5MIN" = 1
+          test ! -e experiments/Issue395_powered_chemistry_ladder/private_rates
+          echo "SMOKE_EXACT_HEAD=$CHATGPT_WORK_BASE_SHA"
+
+      - name: Restore and validate private 19 lookup rates
+        env:
+          PRIVATE_RATES_B64: ${{ secrets.OXYGEN24_RATES_TAR_XZ_B64 }}
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p "$OXYGEN_RESEARCH_RATE_DIR"
+          printf '%s' "$PRIVATE_RATES_B64" | base64 --decode | tar -xJ -C "$OXYGEN_RESEARCH_RATE_DIR" --no-same-owner
+          python3 - <<'PY'
+          import importlib.util, os
+          from pathlib import Path
+          p=Path(os.environ["OXYGEN_RESEARCH_RATE_DIR"])
+          src=Path("experiments/Issue395_powered_chemistry_ladder/build_oxygen_24_source_overlay.py")
+          spec=importlib.util.spec_from_file_location("chem24",src)
+          m=importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(m)
+          files=m.validate_files(p)
+          assert len(files)==19 and set(files)==set(m.LOOKUP_IDS)
+          assert m.validate_network()["atoms_charge_mass"]=="PASS"
+          print("OXYGEN24_PRIVATE_RATES_PASS")
+          PY
+
+      - name: Install preparation dependencies and run P0 regressions
+        run: |
+          set -euo pipefail
+          python3 -m venv .issue419-smoke-venv
+          .issue419-smoke-venv/bin/python -m pip install --disable-pip-version-check --quiet 'pytest>=8,<9' numpy==2.1.2 scipy==1.14.1
+          .issue419-smoke-venv/bin/python -m pytest -q \
+            tests/test_issue395_oxygen_full24_source_overlay.py \
+            tests/test_issue395_oxygen_full24_seeds.py \
+            tests/test_issue395_oxygen_full24_smoke_timegrid.py \
+            tests/test_issue395_oxygen_full24_wall_sticking.py \
+            tests/test_issue395_receiver_200sccm_inlet.py
+          bash -n experiments/Issue395_powered_chemistry_ladder/issue397_l1_power_scan_replay.sh
+
+      - name: P0 prepare real 2ns input and verify initial neutral fraction
+        run: |
+          set -euo pipefail
+          source .issue419-smoke-venv/bin/activate
+          bash experiments/Issue395_powered_chemistry_ladder/issue397_l1_power_scan_replay.sh prepare ${{ matrix.power_w }}
+
+      - name: P1 build exact-source real physics-opt
+        run: |
+          set -euo pipefail
+          bash experiments/Issue395_powered_chemistry_ladder/issue397_l1_power_scan_replay.sh build ${{ matrix.power_w }}
+
+      - name: P2 production physics-opt --check-input
+        run: |
+          set -euo pipefail
+          bash experiments/Issue395_powered_chemistry_ladder/issue397_l1_power_scan_replay.sh check ${{ matrix.power_w }}
+
+      - name: P3 production transient capped at 285 real seconds
+        run: |
+          set -euo pipefail
+          started="$(date +%s)"
+          set +e
+          timeout -s TERM -k 10s 285s \
+            bash experiments/Issue395_powered_chemistry_ladder/issue397_l1_power_scan_replay.sh solve ${{ matrix.power_w }}
+          status="$?"
+          set -e
+          elapsed=$(( $(date +%s) - started ))
+          echo "OXYGEN24_SMOKE_P3_WALL_SECONDS=$elapsed"
+          echo "OXYGEN24_SMOKE_P3_EXIT_CODE=$status"
+          printf 'wall_seconds=%s\nexit_code=%s\n' "$elapsed" "$status" > oxygen24-smoke-${{ matrix.power_w }}W-runtime-status.txt
+          if [ "$status" -eq 124 ] || [ "$status" -eq 137 ]; then
+            echo "::error::P3 timed out before completing 2-ns transient"
+          fi
+          exit "$status"
+
+      - name: P4 verify real initial density and 2ns endpoint
+        if: success()
+        env:
+          MATRIX_POWER: ${{ matrix.power_w }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import csv, math, os
+          from pathlib import Path
+          power=os.environ["MATRIX_POWER"]
+          base=Path("experiments/Issue395_powered_chemistry_ladder")
+          csvpath=base / f"results_rf_elastic_diss_ion_ei20_ei01_{power}w_adjacent_sheath_wall_closed_100us_dt1000ns/run/plasma.csv"
+          with csvpath.open(newline="") as f: rows=list(csv.DictReader(f))
+          assert len(rows)>=3, f"must have INITIAL and both steps; got {len(rows)}"
+          times=[float(row["time"]) for row in rows]
+          assert abs(times[0])<1e-18
+          assert abs(times[-1]-2e-9)<1e-15, times
+          for state in ("n_O2_a_avg", "n_O_3P_avg", "n_O_1D_avg"):
+              observed=float(rows[0][state])
+              assert math.isfinite(observed) and 0.0 < observed < 1e17, (state, observed)
+              print(f"{power} W initial {state} = {observed:.9e} m^-3")
+          print(f"OXYGEN24_{power}W_2NS_NATIVE_SMOKE_PASS")
+          PY
+
+      - name: Archive nonsecret input, seed checks and bounded runtime output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: oxygen24-2ns-neutral-${{ matrix.power_w }}W
+          retention-days: 14
+          if-no-files-found: warn
+          path: |
+            oxygen24-smoke-${{ matrix.power_w }}W-runtime-status.txt
+            experiments/Issue395_powered_chemistry_ladder/results_rf_elastic_diss_ion_ei20_ei01_${{ matrix.power_w }}w_adjacent_sheath_wall_closed_100us_dt1000ns/prep/*.log
+            experiments/Issue395_powered_chemistry_ladder/results_rf_elastic_diss_ion_ei20_ei01_${{ matrix.power_w }}w_adjacent_sheath_wall_closed_100us_dt1000ns/check_input.log
+            experiments/Issue395_powered_chemistry_ladder/results_rf_elastic_diss_ion_ei20_ei01_${{ matrix.power_w }}w_adjacent_sheath_wall_closed_100us_dt1000ns/runtime.log
+            experiments/Issue395_powered_chemistry_ladder/results_rf_elastic_diss_ion_ei20_ei01_${{ matrix.power_w }}w_adjacent_sheath_wall_closed_100us_dt1000ns/run/plasma.csv
+            experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_ei20_ei01_${{ matrix.power_w }}w_adjacent_sheath_wall_closed_100us_dt1000ns.i
