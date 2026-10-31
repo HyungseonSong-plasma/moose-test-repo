@@ -1,6 +1,6 @@
 # Genuine cross-CI MOOSE recovery, pinned 25-reaction EI936 O(ex) source.
 name: Issue419 Oxygen25 EI936 genuine cross-run restart
-run-name: Oxygen25 EI936 native 1-to-2ns recovery ${{ github.sha }}
+run-name: Oxygen25 EI936 native 2-to-4ns recovery ${{ github.sha }}
 on:
   push:
     branches: [issue-419-ei936-1to100ns-controller-20261031]
@@ -9,11 +9,11 @@ permissions:
   contents: read
   actions: read
 concurrency:
-  group: issue419-oxygen25-ei936-1to2ns
+  group: issue419-oxygen25-ei936-2to4ns
   cancel-in-progress: false
 jobs:
   recover:
-    name: Genuine 1-to-2ns PhysicsApp recovery ${{ matrix.power_w }}W
+    name: Genuine 2-to-4ns PhysicsApp recovery ${{ matrix.power_w }}W
     runs-on: ubuntu-24.04
     timeout-minutes: 65
     strategy:
@@ -24,9 +24,9 @@ jobs:
     env:
       POWER_W: ${{ matrix.power_w }}
       SOURCE_SHA: 8e2fe042dbc204b5fda22d346f1ad8d2e32db3ab
-      START_NS: '1'
-      END_NS: '2'
-      PARENT_RUN_ID: '41198547541'
+      START_NS: '2'
+      END_NS: '4'
+      PARENT_RUN_ID: '41208644597'
       OXYGEN_RESEARCH_400: '1'
       OXYGEN_RESEARCH_FULL24: '1'
       OXYGEN_RESEARCH_QUICK_5MIN: '1'
@@ -57,11 +57,11 @@ jobs:
           echo "RESULT=$CHEM/results_rf_elastic_diss_ion_ei20_ei01_$POWER_W""w_adjacent_sheath_wall_closed_100us_dt1000ns" >> "$GITHUB_ENV"
           echo "INPUT=$CHEM/rf_elastic_diss_ion_ei20_ei01_$POWER_W""w_adjacent_sheath_wall_closed_100us_dt1000ns.i" >> "$GITHUB_ENV"
           echo "CHAIN=_controller_harness/.github/scripts/oxygen25_restart_chain.py" >> "$GITHUB_ENV"
-      - name: Download exact previous-run 1ns artifact (separate CI run)
+      - name: Download exact previous-run 2ns artifact (separate CI run)
         uses: actions/download-artifact@v4
         with:
-          run-id: 41198547541
-          name: oxygen25-ei936-1ns-restart-complete-${{ matrix.power_w }}W
+          run-id: 41208644597
+          name: oxygen25-ei936-2ns-restart-complete-${{ matrix.power_w }}W
           github-token: ${{ github.token }}
           path: _upstream_artifact/${{ matrix.power_w }}W
       - name: P0 mutation self-test and exact archive round-trip
@@ -74,8 +74,9 @@ jobs:
           test -s "$RESULT/upstream_manifest.json"
           test -s "$RESULT/recovery_prefix.txt"
           test -s "$RESULT/run/plasma.e"
-          test -s "$RESULT/run/plasma_cp/0001-restart-0.rd/data"
-          test -s "$RESULT/run/plasma_cp/0001-mesh.cpa.gz/1/header.gz"
+          RECOVER_PREFIX="$(cat "$RESULT/recovery_prefix.txt")"
+          test -s "$RECOVER_PREFIX-restart-0.rd/data"
+          test -s "$RECOVER_PREFIX-mesh.cpa.gz/1/header.gz"
       - name: Rehydrate private rates and verify 19 SHA256 without prepare
         env:
           PRIVATE_RATES_B64: ${{ secrets.OXYGEN24_RATES_TAR_XZ_B64 }}
@@ -94,11 +95,11 @@ jobs:
           set -euo pipefail
           bash "$CHEM/issue397_l1_power_scan_replay.sh" build "$POWER_W"
           test -x physics_app/physics-opt
-      - name: P2 real physics-opt check-input for 2ns
+      - name: P2 real physics-opt check-input for 4ns
         run: |
           set -euo pipefail
           bash "$CHEM/issue397_l1_power_scan_replay.sh" check "$POWER_W"
-      - name: P3 native MultiApp recovery from exact 0001 checkpoint
+      - name: P3 native MultiApp recovery from upstream native step checkpoint
         run: |
           set -euo pipefail
           RECOVER_PREFIX="$(cat "$RESULT/recovery_prefix.txt")"
@@ -133,21 +134,21 @@ jobs:
           python3 "$CHAIN" --verify-recovery \
             --root "$PWD" --power-w "$POWER_W" --start-ns "$START_NS" \
             --end-ns "$END_NS" --source-sha "$SOURCE_SHA"
-          test -s "$RESULT/restart_run_2ns.tar.gz"
-          test -s "$RESULT/restart_inputs_2ns.tar.gz"
-          test -s "$RESULT/restart_2ns_manifest.json"
-          echo "OXYGEN25_CROSS_CI_1_TO_2NS_CHECKPOINT_PASS=$POWER_W"
-      - name: Upload verified 2ns restart bundle for next CI
+          test -s "$RESULT/restart_run_4ns.tar.gz"
+          test -s "$RESULT/restart_inputs_4ns.tar.gz"
+          test -s "$RESULT/restart_4ns_manifest.json"
+          echo "OXYGEN25_CROSS_CI_2_TO_4NS_CHECKPOINT_PASS=$POWER_W"
+      - name: Upload verified 4ns restart bundle for next CI
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: oxygen25-ei936-2ns-restart-complete-${{ matrix.power_w }}W
+          name: oxygen25-ei936-4ns-restart-complete-${{ matrix.power_w }}W
           retention-days: 90
           if-no-files-found: error
           path: |
-            ${{ env.RESULT }}/restart_run_2ns.tar.gz
-            ${{ env.RESULT }}/restart_inputs_2ns.tar.gz
-            ${{ env.RESULT }}/restart_2ns_manifest.json
+            ${{ env.RESULT }}/restart_run_4ns.tar.gz
+            ${{ env.RESULT }}/restart_inputs_4ns.tar.gz
+            ${{ env.RESULT }}/restart_4ns_manifest.json
             ${{ env.RESULT }}/recovery_prefix.txt
             ${{ env.RESULT }}/recovery_checkpoint_listing.txt
             ${{ env.RESULT }}/recovery_status.txt
@@ -158,7 +159,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: oxygen25-ei936-1to2ns-diagnostics-${{ matrix.power_w }}W
+          name: oxygen25-ei936-2to4ns-diagnostics-${{ matrix.power_w }}W
           retention-days: 21
           if-no-files-found: warn
           path: |
@@ -169,4 +170,4 @@ jobs:
             ${{ env.RESULT }}/check_input.log
             ${{ env.RESULT }}/run/plasma.csv
             ${{ env.RESULT }}/upstream_manifest.json
-            ${{ env.RESULT }}/restart_2ns_manifest.json
+            ${{ env.RESULT }}/restart_4ns_manifest.json
