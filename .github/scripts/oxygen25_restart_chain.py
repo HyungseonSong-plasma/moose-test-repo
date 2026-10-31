@@ -145,6 +145,37 @@ def suppress_parent_restart_ics(text: str) -> str:
         raise ValueError("inline IC survived outside parent Variables block")
     return result
 
+# FullSolveMultiApp in the original 0→2ns source uses no_restore=true.
+# MOOSE rejects this when its parent is in advanced restart mode; only the
+# *staged restart overlay* is changed, preserving the upstream source archive.
+PARENT_MAXWELL_BLOCK_RE = re.compile(
+    r"(?ms)^  \\[maxwell_t6\\][ \\t]*\\n(?P<body>.*?)^  \\[\\][ \\t]*$"
+)
+NO_RESTORE_TRUE_RE = re.compile(r"(?m)^(?P<indent>[ \\t]+)no_restore[ \\t]*=[ \\t]*true[ \\t]*$")
+NO_RESTORE_ANY_RE = re.compile(r"(?m)^[ \\t]+no_restore[ \\t]*=[^\\n]*$")
+
+def stage_parent_multiapp_restart_overlay(text: str) -> str:
+    """Switch exactly the known Maxwell MultiApp to required restart restoration.
+
+    A parent advanced restart must not disable MultiApp restoration. Reject
+    unknown or duplicate parameters instead of silently changing physics.
+    """
+    blocks = list(PARENT_MAXWELL_BLOCK_RE.finditer(text))
+    if len(blocks) != 1:
+        raise ValueError("missing/nonunique Maxwell parent MultiApp block")
+    b = blocks[0]
+    body = b.group("body")
+    if "type = FullSolveMultiApp" not in body:
+        raise ValueError("unexpected Maxwell MultiApp type")
+    if len(NO_RESTORE_ANY_RE.findall(text)) != 1:
+        raise ValueError("unexpected parent no_restore inventory")
+    changed, count = NO_RESTORE_TRUE_RE.subn(
+        lambda m: m.group("indent") + "no_restore = false", body)
+    if count != 1:
+        raise ValueError("expected exactly one no_restore=true in Maxwell MultiApp")
+    return text[:b.start("body")] + changed + text[b.end("body"):]
+
+
 def advanced_restart_input(text: str, prefix: str) -> str:
     """MOOSE 9f388366: recover ignores an extended TimeSequenceStepper sequence.
     
@@ -162,7 +193,10 @@ def advanced_restart_input(text: str, prefix: str) -> str:
     ):
         raise ValueError("invalid exact restart checkpoint prefix")
     cleaned = suppress_parent_restart_ics(text)
-    return cleaned.rstrip() + "\n\n[Problem]\n  restart_file_base = '" + prefix + "'\n[]\n"
+    # MOOSE resolves a relative restart base against the *input file folder*;
+    # the manifest prefix is repository-root-relative. Use the fixed container
+    # workspace root to avoid duplicating experiments/Issue395 in the path.
+    return cleaned.rstrip() + "\n\n[Problem]\n  restart_file_base = '/workspace/" + prefix + "'\n[]\n"
 
 
 def stage_base(start: int, end: int) -> str:
@@ -249,6 +283,8 @@ def restore(root: Path, artifact: Path, power: int, start: int, end: int, source
     (root / result / "recovery_prefix.txt").write_text(expected_prefix + "\n")
     inp = root / CHEM / f"rf_elastic_diss_ion_ei20_ei01_{power}w_adjacent_sheath_wall_closed_100us_dt1000ns.i"
     inp.write_text(advanced_restart_input(extend_input(inp.read_text(), start, end), expected_prefix))
+    parent_overlay = root / CHEM / f"rf_elastic_multiapp_parent_{power}w_100us_dt1000ns_overlay.i"
+    parent_overlay.write_text(stage_parent_multiapp_restart_overlay(parent_overlay.read_text()))
     (root / result / "upstream_manifest.json").write_text(json.dumps(manifest, indent=2, sort_keys=True)+"\n")
     (root / result / "upstream_plasma.csv").write_bytes((run / "plasma.csv").read_bytes())
     print("OXYGEN25_EXACT_SOURCE_RESTORED_AND_INPUT_EXTENDED_PASS", power, start, end)
@@ -307,7 +343,7 @@ def verify_recovery(root: Path, power: int, start: int, end: int, source_sha: st
     input_path = root / CHEM / f"rf_elastic_diss_ion_ei20_ei01_{power}w_adjacent_sheath_wall_closed_100us_dt1000ns.i"
     inp = input_path.read_text()
     old_prefix = upstream["recovery_requirements"]["native_recover_prefix"]
-    if f"restart_file_base = '{old_prefix}'" not in inp:
+    if f"restart_file_base = '/workspace/{old_prefix}'" not in inp:
         raise ValueError("advanced restart source is not the verified checkpoint")
     stage = stage_base(start, end)
     stage_csv = run / (stage + ".csv")
@@ -426,7 +462,22 @@ def self_test() -> None:
         pass
     else:
         raise AssertionError("unexpected explicit ICs block was accepted")
-    assert "restart_file_base = '" + prefix + "'" in advanced
+    assert "restart_file_base = '/workspace/" + prefix + "'" in advanced
+    overlay = ("[MultiApps]\n  [maxwell_t6]\n"
+               "    type = FullSolveMultiApp\n    no_restore = true\n"
+               "  []\n[]\n")
+    staged = stage_parent_multiapp_restart_overlay(overlay)
+    assert "no_restore = false" in staged
+    assert "no_restore = true" not in staged
+    for bad in (overlay.replace("no_restore = true", "no_restore = false"),
+                overlay.replace("no_restore = true", "no_restore = true\n    no_restore = true"),
+                overlay.replace("FullSolveMultiApp", "TransientMultiApp")):
+        try:
+            stage_parent_multiapp_restart_overlay(bad)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("invalid parent MultiApp restoration configuration accepted")
     assert "[Problem]" in advanced
     try:
         advanced_restart_input(advanced, prefix)
