@@ -343,6 +343,13 @@ if [[ "${OXYGEN_RESEARCH_FULL24:-0}" = 1 ]]; then
   grep -q 'OXYGEN_24_CHEMISTRY_OVERLAY_PREPARED_NOT_RUN' \
     "$RESULT/prep/full24_source_overlay.log"
   test -s "$FULL24_OVERLAY"
+  # P0: number fractions are derived from the neutral mass-fraction ICs.
+  # Reject inherited 10%-level neutral densities before any external solve.
+  python3 "$CHEM/apply_oxygen_24_initial_seeds.py" --self-test \
+    | tee "$RESULT/prep/full24_neutral_seed_p0_selftest.log"
+  python3 "$CHEM/apply_oxygen_24_initial_seeds.py" --check-input "$INPUT" \
+    | tee "$RESULT/prep/full24_neutral_seed_p0.log"
+  grep -q OXYGEN24_INITIAL_SEED_P0_PASS "$RESULT/prep/full24_neutral_seed_p0.log"
   # P0: MOOSE Parser reserves x,y,z,t,pi,e. Reject invalid generated
   # ParsedFunctorMaterial aliases before Docker build or physics-opt P2.
   python3 bin/physics.py preflight --self-test \
