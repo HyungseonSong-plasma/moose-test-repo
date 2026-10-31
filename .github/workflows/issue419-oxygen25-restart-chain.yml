@@ -71,6 +71,13 @@ jobs:
           python3 "$CHAIN" --restore "_upstream_artifact/$POWER_W""W" \
             --root "$PWD" --power-w "$POWER_W" --start-ns "$START_NS" \
             --end-ns "$END_NS" --source-sha "$SOURCE_SHA"
+          # A restarted parent must use native checkpoint fields, not the original
+          # 15 variable seeds that MOOSE rejects as ConstantIC in restart mode.
+          if grep -Eq '^[[:space:]]*initial_condition[[:space:]]*=' "$INPUT"; then
+            echo '::error::Advanced restart parent still contains seed initial_condition'
+            exit 31
+          fi
+          echo OXYGEN25_RESTART_PARENT_INLINE_ICS_SUPPRESSED_PASS
           test -s "$RESULT/upstream_manifest.json"
           test -s "$RESULT/recovery_prefix.txt"
           test -s "$RESULT/run/plasma.e"
@@ -95,7 +102,7 @@ jobs:
           set -euo pipefail
           bash "$CHEM/issue397_l1_power_scan_replay.sh" build "$POWER_W"
           test -x physics_app/physics-opt
-      - name: P2 real physics-opt check-input for 100ns advanced restart
+      - name: P2 native 100ns advanced restart check-input without parent seed ICs
         run: |
           set -euo pipefail
           bash "$CHEM/issue397_l1_power_scan_replay.sh" check "$POWER_W"
