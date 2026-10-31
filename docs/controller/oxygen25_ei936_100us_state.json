@@ -5,17 +5,17 @@
   "scope": "Oxygen ICP 25-reaction EI936 effective O(ex) native restart",
   "os": "Samuel",
   "samuel_revision": "9b335e3fbb9c5e8e323e382daeec56fa25336822",
-  "observed_at_lower_bound": "2026-10-31T17:20:45Z",
+  "observed_at_lower_bound": "2026-10-31T17:34:13Z",
   "campaign": "1ns→2ns→100ns→1us→10us→100us",
   "numerical_goal_us": 100,
   "run_success_vs_scientific_acceptance": "separate; SCIENCE_HOLD until independently qualified",
   "current_run": {
-    "id": 41224078027,
+    "id": 41225167309,
     "attempt": 1,
     "event": "push",
-    "workflow_sha": "4b7fc8ee3efa3dce5da818b05e26ee2dbee5d62a",
-    "status": "IN_PROGRESS",
-    "url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/41224078027"
+    "workflow_sha": "2b2cb59c1dd9a844f82f8f26aca56e79c1ae04f8",
+    "status": "ACTIVE_NATIVE_BUILD_P1",
+    "url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/41225167309"
   },
   "failure_root_cause": {
     "run_id": 41212837874,
@@ -31,7 +31,7 @@
   "powers": {
     "400": {
       "artifact_id": 13045668207,
-      "job_id": 124604448926,
+      "job_id": 124607691133,
       "upstream_run_id": 41208644597,
       "checkpoint_step": 4,
       "manifest_sha256": "e850495af85fd4615429066dedea29630533ee70c3488cfac20ecd856bb08c27",
@@ -53,17 +53,17 @@
       "ei936_mode": "analytic_maxwellian_fallback",
       "private_rate_count": 19,
       "science": "SCIENCE_HOLD",
-      "active_run_id": 41224078027,
+      "active_run_id": 41225167309,
       "active_run_attempt": 1,
-      "active_workflow_sha": "4b7fc8ee3efa3dce5da818b05e26ee2dbee5d62a",
-      "next_action": "Inspect CI 41224078027 P2/P3/P4, native continuity, verified 100ns artifact SHA256 per power; on failure isolate first gate without chemistry changes.",
-      "last_failed_run_id": 41222771191,
-      "last_failed_stage": "P2_CHECK_INPUT",
-      "last_failed_reason": "Maxwell child AuxVariables seed ConstantIC(electron_density_state_t6_moose) conflicts with native advanced restart"
+      "active_workflow_sha": "2b2cb59c1dd9a844f82f8f26aca56e79c1ae04f8",
+      "next_action": "Await native P2/P3 for exact run 41225167309; accept 100ns only after P4 and manifest/native checkpoint archive SHA readback.",
+      "last_failed_run_id": 41224078027,
+      "last_failed_stage": "P3_TIME_SEQUENCE_PREFIX",
+      "last_failed_reason": "MOOSE saved current_step=4 expects 5 historic entries including duplicate 1ns; supplied sequence entry3 2ns vs saved 1ns"
     },
     "1000": {
       "artifact_id": 13045289286,
-      "job_id": 124604448879,
+      "job_id": 124607690920,
       "upstream_run_id": 41208644597,
       "checkpoint_step": 4,
       "manifest_sha256": "4d7be8b8efeba89b100c40abb7723b8c60f4f99b8db7287e4db37418cacd9c1f",
@@ -85,39 +85,36 @@
       "ei936_mode": "analytic_maxwellian_fallback",
       "private_rate_count": 19,
       "science": "SCIENCE_HOLD",
-      "active_run_id": 41224078027,
+      "active_run_id": 41225167309,
       "active_run_attempt": 1,
-      "active_workflow_sha": "4b7fc8ee3efa3dce5da818b05e26ee2dbee5d62a",
-      "next_action": "Inspect CI 41224078027 P2/P3/P4, native continuity, verified 100ns artifact SHA256 per power; on failure isolate first gate without chemistry changes.",
-      "last_failed_run_id": 41222771191,
-      "last_failed_stage": "P2_CHECK_INPUT",
-      "last_failed_reason": "Maxwell child AuxVariables seed ConstantIC(electron_density_state_t6_moose) conflicts with native advanced restart"
+      "active_workflow_sha": "2b2cb59c1dd9a844f82f8f26aca56e79c1ae04f8",
+      "next_action": "Await native P2/P3 for exact run 41225167309; accept 100ns only after P4 and manifest/native checkpoint archive SHA readback.",
+      "last_failed_run_id": 41224078027,
+      "last_failed_stage": "P3_TIME_SEQUENCE_PREFIX",
+      "last_failed_reason": "MOOSE saved current_step=4 expects 5 historic entries including duplicate 1ns; supplied sequence entry3 2ns vs saved 1ns"
     }
   },
   "terminal_policy": "Never mark 100ns/1us/10us/100us PASS without actual native time and cross-CI checkpoint archive SHA proof; 2-cycle terminal confirmation.",
   "separate_oxygen24_branch": "experiment/oxygen24-restart-2ns-to-4ns-20261031",
   "latest_repair": {
-    "failed_run": 41222771191,
-    "failed_stage": "P2 Maxwell MultiApp child ConstantIC",
-    "repair": "Stage 15 parent and 3 Maxwell child seeds away only in advanced restart inputs; preserve archived source; no_restore=false and absolute native restart_file_base; fail closed for changed seed inventory",
+    "failure_run": 41224078027,
+    "gate": "P3_TIME_SEQUENCE_PREFIX",
+    "cause": "native TimeSequenceStepper::_current_step=4 requires five saved entries [0,1,1,1.001,1.002]ns; simplified staged sequence [0,1,2...] lost historical duplicate",
+    "fix": "Stage exact-source 2ns compatible strict increasing proxy at 1.00000001ns followed by native accepted 1.001/1.002ns; extend only future requested interval/endtime, keep original 0004 checkpoint and all chemistry unchanged; P0 reject other native time histories",
     "helper_commits": [
-      "1f1df1e0810408e089fa779bb2918e364b3d0c4f",
-      "7dbe5eba674163e8ace56fbbfdac39169d153c27",
-      "263b5a2034004a63cb7ed898bc5e870f9e305aca"
+      "d3945da0cdfe7cd2090caf08d1ed741bd628d63b",
+      "cb26c9c92a35b91e93a521f88072e89aee7b1df4"
     ],
-    "workflow_commit": "4b7fc8ee3efa3dce5da818b05e26ee2dbee5d62a",
-    "previous_attempt_failed_P0": 41223958574,
-    "process_contract": "docs/controller/oxygen25_ei936_restart_contract.md",
+    "workflow_commit": "2b2cb59c1dd9a844f82f8f26aca56e79c1ae04f8",
+    "run": 41225167309,
     "time_inputs": {
-      "start_ns": "2",
-      "end_ns": "100",
-      "interval_ns": "1",
-      "upstream_run_id": "41208644597"
+      "start_ns": 2,
+      "end_ns": 100,
+      "interval_ns": "1"
     },
-    "active_run_id": 41224078027,
     "p0": "PASS_BOTH",
     "private_rates": "19_SHA256_PASS_BOTH",
-    "p1": "IN_PROGRESS_BOTH",
+    "p1": "IN_PROGRESS",
     "p2": "PENDING",
     "p3": "PENDING",
     "p4": "PENDING",
