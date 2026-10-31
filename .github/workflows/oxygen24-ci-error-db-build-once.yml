@@ -3,7 +3,10 @@ run-name: Validate and build CI error SQLite @ ${{ github.sha }}
 on:
   push:
     branches: [ops/oxygen24-ci-error-database-20261031]
-    paths: [.github/workflows/oxygen24-ci-error-db-build-once.yml]
+    paths:
+      - .github/workflows/oxygen24-ci-error-db-build-once.yml
+      - ops/ci_error_db/catalog.json
+      - ops/ci_error_db/ci_errors.py
   workflow_dispatch:
 
 permissions:
