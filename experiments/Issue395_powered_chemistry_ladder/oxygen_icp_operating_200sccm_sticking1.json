@@ -62,7 +62,13 @@
       "O_minus": 1000000000000
     },
     "charged_seed_policy": "preserve previously specified research seed; charge-neutral",
-    "neutral_bulk_initialization_policy": "preserve inherited ICP bulk initial densities; inlet neutral composition changed only"
+    "neutral_bulk_initialization_policy": "initialize O2(a1Delta), O(3P), O(1D) to number fraction 1e-5 each; O2(X) is the residual 0.99997; convert to MOOSE neutral mass fractions",
+    "neutral_number_fractions": {
+      "O2_X": 0.99997,
+      "O2_a1Delta": 0.00001,
+      "O_3P": 0.00001,
+      "O_1D": 0.00001
+    }
   },
   "chemistry": {
     "source_inventory_count": 25,
