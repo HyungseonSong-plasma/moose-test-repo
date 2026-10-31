@@ -507,8 +507,10 @@ def restore(root: Path, artifact: Path, power: int, start: int, end: int,
         # TimeStepper history. Source input alone cannot attest cutback events.
         raise ValueError("uncharacterized legacy checkpoint TimeStepper history")
     staged_time = extend_input(prior_input, start, end, interval_ns)
+    staged_native = stage_adaptive_stepper(
+        staged_time, interval_ns, already_staged=previous_mode)
     inp.write_text(advanced_restart_input(
-        staged_time, expected_prefix, prior_restart_prefix=prior_source))
+        staged_native, expected_prefix, prior_restart_prefix=prior_source))
     (root / result / "restart_time_sequence_overlay.json").write_text(
         json.dumps({
             "schema": 1, "from_checkpoint": expected_prefix,
@@ -517,6 +519,10 @@ def restore(root: Path, artifact: Path, power: int, start: int, end: int,
             "start_ns": start, "end_ns": end,
             "requested_interval_ns": interval_ns,
             "staged_time_sequence_ns": [str(t) for t in time_grid(staged_time)[1]],
+            "native_timestepper": "IterationAdaptiveDT",
+            "native_timestepper_reset_dt": True,
+            "native_dt_initial_s": 1e-12,
+            "native_dtmax_s": float(min(Decimal(str(interval_ns)), Decimal("1")) * NS_S),
             "legacy_duplicate_checkpoint_boundary_proxy": (
                 "1.00000001 ns; represents native serialized 1ns duplicate; "
                 "P3 native proof required" if
@@ -639,8 +645,10 @@ def verify_recovery(root: Path, power: int, start: int, end: int, source_sha: st
             time_overlay["start_ns"] != start or
             time_overlay["end_ns"] != end or
             time_overlay["upstream_actual_moose_step"] != upstream["actual_moose_step"] or
-            time_overlay["staged_time_sequence_ns"] != [
-                str(t) for t in time_grid(inp)[1]]):
+            time_overlay["native_timestepper"] != "IterationAdaptiveDT" or
+            "type = IterationAdaptiveDT" not in inp or
+            "    reset_dt = true" not in inp or
+            "type = TimeSequenceStepper" in inp):
         raise ValueError("staged TimeStepper compatibility evidence changed")
     input_files = [root / row["path"] for row in upstream["input_files"]]
     if time_overlay_path not in input_files:
@@ -663,7 +671,7 @@ def verify_recovery(root: Path, power: int, start: int, end: int, source_sha: st
     manifest = {
         "schema": 4, "power_w": power, "source_sha": source_sha,
         "final_time_s": end * 1e-9,
-        "time_sequence_s": [float(t * NS_S) for t in time_grid(inp)[1]],
+        "time_sequence_s": [float(Decimal(t) * NS_S) for t in time_overlay["staged_time_sequence_ns"]],
         "restart_source_prefix": old_prefix,
         "staged_time_sequence_overlay_sha256": sha(time_overlay_path),
         "actual_moose_step": last_step,
@@ -718,6 +726,27 @@ def self_test() -> None:
         LEGACY_DUPLICATE_PROXY_NS, Decimal("1.001"), Decimal("1.002"), Decimal(2)
     ]
     assert time_grid(extended)[1][-1] == 100
+    adaptive = stage_adaptive_stepper(extended, "1")
+    assert "type = IterationAdaptiveDT" in adaptive
+    assert "    reset_dt = true" in adaptive
+    assert "time_sequence =" not in adaptive
+    assert "  dtmax = 1e-9" in adaptive
+    assert "    dt = 1e-12" in adaptive
+    assert stage_adaptive_stepper(adaptive, "1", already_staged=True) == adaptive
+    for bad in ("0", "NaN", "-1", "0.0001"):
+        try:
+            stage_adaptive_stepper(extended, bad)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("unsafe adaptive timestep accepted")
+    try:
+        stage_adaptive_stepper(extended.replace(
+            "type = TimeSequenceStepper", "type = ConstantDT"), "1")
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("unrecognized native timestepper accepted")
     for corrupt in (dict(legacy_manifest, actual_moose_step=3),
                     dict(legacy_manifest, source_sha="0"*40)):
         try:
