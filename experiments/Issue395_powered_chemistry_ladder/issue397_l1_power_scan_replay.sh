@@ -340,7 +340,7 @@ if [[ "${OXYGEN_RESEARCH_FULL24:-0}" = 1 ]]; then
     --rate-dir "$OXYGEN_RESEARCH_RATE_DIR" \
     --root "$PWD" --output "$FULL24_OVERLAY" \
     | tee "$RESULT/prep/full24_source_overlay.log"
-  grep -q 'OXYGEN_24_CHEMISTRY_OVERLAY_PREPARED_NOT_RUN' \
+  grep -q 'OXYGEN_25_OEX_CHEMISTRY_OVERLAY_PREPARED_NOT_RUN' \
     "$RESULT/prep/full24_source_overlay.log"
   test -s "$FULL24_OVERLAY"
   # P0: number fractions are derived from the neutral mass-fraction ICs.
