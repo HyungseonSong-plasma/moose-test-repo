@@ -152,7 +152,7 @@ jobs:
           test -s "$RESULT/run/plasma.e"
           test -s "$RESULT/run/plasma_cp/0001-restart-0.rd/data"
           test -s "$RESULT/run/plasma_cp/0001-mesh.cpa.gz/1/header.gz"
-          # Avoid SIGPIPE from a tar | grep -q pipeline under pipefail.
+          # List complete tar first; avoid SIGPIPE under pipefail.
           tar -tzf "$RESULT/restart_run_1ns.tar.gz" > "$RESULT/restart_run_1ns_listing.txt"
           grep -q "/run/plasma.e$" "$RESULT/restart_run_1ns_listing.txt"
           grep -q "/run/plasma_cp/0001-restart-0.rd/data$" "$RESULT/restart_run_1ns_listing.txt"
@@ -171,78 +171,6 @@ jobs:
             ${{ env.RESULT }}/restart_archives_1ns.sha256
             ${{ env.RESULT }}/restart_1ns_manifest.json
             ${{ env.RESULT }}/restart_run_1ns_listing.txt
-            ${{ env.RESULT }}/one_ns_runtime_status.txt
-            ${{ env.RESULT }}/check_input.log
-            ${{ env.RESULT }}/runtime.log
-            ${{ env.RESULT }}/run/plasma.csv
-            ${{ env.CHEM }}/chem24_manifest.json
-
-      - name: Preserve failure diagnostics even when full checkpoint is unavailable
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: oxygen25-ei936-1ns-diagnostics-${{ matrix.power_w }}W
-          if-no-files-found: warn
-          retention-days: 21
-          path: |
-            ${{ env.RESULT }}/one_ns_runtime_status.txt
-            ${{ env.RESULT }}/check_input.log
-            ${{ env.RESULT }}/runtime.log
-            ${{ env.RESULT }}/run/plasma.csv
-            ${{ env.RESULT }}/restart_1ns_manifest.json
-            ${{ env.RESULT }}/prep/full24_source_overlay.log
- "$RESULT/restart_run_1ns_listing.txt"
-          grep -q '/run/plasma_cp/0001-restart-0.rd/data
-          echo "OXYGEN25_1NS_COMPLETE_NATIVE_RESTART_ARTIFACT_PASS=$POWER_W"
-
-      - name: Preserve restart-ready archives and SHA256 manifest (without rates)
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: oxygen25-ei936-1ns-restart-complete-${{ matrix.power_w }}W
-          if-no-files-found: error
-          retention-days: 90
-          path: |
-            ${{ env.RESULT }}/restart_run_1ns.tar.gz
-            ${{ env.RESULT }}/restart_inputs_1ns.tar.gz
-            ${{ env.RESULT }}/restart_archives_1ns.sha256
-            ${{ env.RESULT }}/restart_1ns_manifest.json
-            ${{ env.RESULT }}/one_ns_runtime_status.txt
-            ${{ env.RESULT }}/check_input.log
-            ${{ env.RESULT }}/runtime.log
-            ${{ env.RESULT }}/run/plasma.csv
-            ${{ env.CHEM }}/chem24_manifest.json
-
-      - name: Preserve failure diagnostics even when full checkpoint is unavailable
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: oxygen25-ei936-1ns-diagnostics-${{ matrix.power_w }}W
-          if-no-files-found: warn
-          retention-days: 21
-          path: |
-            ${{ env.RESULT }}/one_ns_runtime_status.txt
-            ${{ env.RESULT }}/check_input.log
-            ${{ env.RESULT }}/runtime.log
-            ${{ env.RESULT }}/run/plasma.csv
-            ${{ env.RESULT }}/restart_1ns_manifest.json
-            ${{ env.RESULT }}/prep/full24_source_overlay.log
- \
-            "$RESULT/restart_run_1ns_listing.txt"
-          echo "OXYGEN25_1NS_COMPLETE_NATIVE_RESTART_ARTIFACT_PASS=$POWER_W"
-
-      - name: Preserve restart-ready archives and SHA256 manifest (without rates)
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: oxygen25-ei936-1ns-restart-complete-${{ matrix.power_w }}W
-          if-no-files-found: error
-          retention-days: 90
-          path: |
-            ${{ env.RESULT }}/restart_run_1ns.tar.gz
-            ${{ env.RESULT }}/restart_inputs_1ns.tar.gz
-            ${{ env.RESULT }}/restart_archives_1ns.sha256
-            ${{ env.RESULT }}/restart_1ns_manifest.json
             ${{ env.RESULT }}/one_ns_runtime_status.txt
             ${{ env.RESULT }}/check_input.log
             ${{ env.RESULT }}/runtime.log
