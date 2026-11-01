@@ -2,6 +2,12 @@
 name: Oxygen25 500us stage2 genuine advanced restart
 run-name: Oxygen25 stage2 native 100-to-2000ns ${{ github.sha }}
 on:
+  # One-time guarded push trigger; Stage1 400W/1000W P3+P4 verified.
+  # Later edits to this branch cannot launch another Stage2 unless the exact
+  # launch commit message is deliberately repeated.
+  push:
+    branches: [feature/oxygen25-five-stage-clean-20261031]
+    paths: [.github/workflows/oxygen25-500us-stage2-restart.yml]
   workflow_dispatch:
     inputs:
       upstream_run_id:
@@ -15,11 +21,11 @@ permissions:
   contents: read
   actions: read
 concurrency:
-  group: oxygen25-five-stage-S2-${{ github.event.workflow_run.id || inputs.upstream_run_id || github.run_id }}
+  group: oxygen25-five-stage-S2-${{ github.event.workflow_run.id || inputs.upstream_run_id || '41254154699' }}
   cancel-in-progress: false
 jobs:
   recover:
-    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == github.event.repository.default_branch) }}
+    if: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/feature/oxygen25-five-stage-clean-20261031' && github.event.head_commit.message == 'ci(oxygen25): dispatch verified stage2 from 100ns checkpoint 41254154699') || github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == github.event.repository.default_branch) }}
     name: Genuine checkpoint-continued PhysicsApp ${{ matrix.power_w }}W
     runs-on: ubuntu-24.04
     timeout-minutes: 360
@@ -34,7 +40,7 @@ jobs:
       START_NS: '100'
       END_NS: '2000'
       INTERVAL_NS: '10'
-      PARENT_RUN_ID: ${{ github.event.workflow_run.id || inputs.upstream_run_id }}
+      PARENT_RUN_ID: ${{ github.event_name == 'push' && '41254154699' || github.event.workflow_run.id || inputs.upstream_run_id }}
       OXYGEN_RESEARCH_400: '1'
       OXYGEN_RESEARCH_FULL24: '1'
       OXYGEN_RESEARCH_QUICK_5MIN: '1'
