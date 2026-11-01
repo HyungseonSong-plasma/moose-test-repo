@@ -2,6 +2,9 @@
 name: Oxygen25 500us stage5 genuine advanced restart
 run-name: Oxygen25 stage5 native 100000-to-500000ns ${{ github.sha }}
 on:
+  push:
+    branches: ['feature/oxygen25-stage5-direct-20261101']
+    paths: ['.github/workflows/oxygen25-500us-stage5-restart.yml']
   workflow_dispatch:
     inputs:
       upstream_run_id:
@@ -18,8 +21,64 @@ concurrency:
   group: oxygen25-five-stage-S5-${{ github.event.workflow_run.id || inputs.upstream_run_id || github.run_id }}
   cancel-in-progress: false
 jobs:
+  stage4_accepted:
+    name: Require Stage4 both-power P3/P4 native checkpoint artifacts
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      GITHUB_TOKEN: ${{ github.token }}
+      GITHUB_REPOSITORY: ${{ github.repository }}
+      STAGE4_RUN_ID: ${{ github.event.workflow_run.id || inputs.upstream_run_id || '41310708653' }}
+      STAGE4_COMMIT_SHA: 'fdd13f48033b66d49ced6f191bc153090aae9d86'
+    steps:
+      - name: Reject failed Stage4 or missing both native P3 P4 checkpoint artifacts
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,sys,urllib.request
+          repo=os.environ["GITHUB_REPOSITORY"]
+          run=int(os.environ["STAGE4_RUN_ID"])
+          sha=os.environ["STAGE4_COMMIT_SHA"]
+          branch="feature/oxygen25-stage4-gated-20261101"
+          token=os.environ["GITHUB_TOKEN"]
+          def read(path):
+              request=urllib.request.Request(
+                  f"https://api.github.com/repos/{repo}{path}",
+                  headers={"Authorization":f"Bearer {token}","Accept":"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28"})
+              with urllib.request.urlopen(request,timeout=60) as response:
+                  return json.load(response)
+          info=read(f"/actions/runs/{run}")
+          if (info.get("status"),info.get("conclusion"),info.get("head_sha"),info.get("head_branch"))!=("completed","success",sha,branch):
+              sys.exit("STAGE5_HOLD: Stage4 exact run completion/source identity failed")
+          jobs=read(f"/actions/runs/{run}/jobs?per_page=100")["jobs"]
+          for power in (400,1000):
+              matches=[j for j in jobs if j.get("name")==f"Genuine checkpoint-continued PhysicsApp {power}W"]
+              if len(matches)!=1 or matches[0].get("conclusion")!="success":
+                  sys.exit(f"STAGE5_HOLD: Stage4 {power}W genuine native job not successful")
+              steps={s["name"]:s.get("conclusion") for s in matches[0].get("steps",[])}
+              expected=(
+                  "P0 checkpoint-native time prefix, parent-child restart state and archive round-trip",
+                  "Rehydrate private rates and verify 19 SHA256 without prepare",
+                  "P1 rebuild native physics-opt at original source SHA",
+                  "P2 native advanced restart check-input parent and child state",
+                  "P3 native MultiApp advanced restart with bounded adaptive dt from verified checkpoint",
+                  "P4 advanced restart state continuity and next-stage archive proof",
+                  "Upload verified native restart bundle for next independent CI")
+              for name in expected:
+                  if steps.get(name)!="success":
+                      sys.exit(f"STAGE5_HOLD: Stage4 {power}W missing required step {name}")
+          artifacts=read(f"/actions/runs/{run}/artifacts?per_page=100")["artifacts"]
+          for power in (400,1000):
+              name=f"oxygen25-ei936-100000ns-restart-complete-{power}W"
+              matches=[a for a in artifacts if a.get("name")==name and not a.get("expired") and a.get("size_in_bytes",0)>0]
+              if len(matches)!=1:
+                  sys.exit(f"STAGE5_HOLD: Stage4 {power}W verified artifact missing or duplicate")
+              print("OXYGEN25_STAGE4_ARTIFACT_ACCEPTED",power,matches[0]["id"],flush=True)
+          print("OXYGEN25_STAGE5_UPSTREAM_GATE_PASS",run,sha,flush=True)
+          PY
   recover:
-    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == github.event.repository.default_branch) }}
+    needs: [stage4_accepted]
+    if: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/feature/oxygen25-stage5-direct-20261101') || github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == github.event.repository.default_branch) }}
     name: Genuine checkpoint-continued PhysicsApp ${{ matrix.power_w }}W
     runs-on: ubuntu-24.04
     timeout-minutes: 360
@@ -34,7 +93,7 @@ jobs:
       START_NS: '100000'
       END_NS: '500000'
       INTERVAL_NS: '10000'
-      PARENT_RUN_ID: ${{ github.event.workflow_run.id || inputs.upstream_run_id }}
+      PARENT_RUN_ID: ${{ github.event.workflow_run.id || inputs.upstream_run_id || '41310708653' }}
       OXYGEN_RESEARCH_400: '1'
       OXYGEN_RESEARCH_FULL24: '1'
       OXYGEN_RESEARCH_QUICK_5MIN: '1'
@@ -55,6 +114,7 @@ jobs:
           sparse-checkout: |
             .github/scripts/oxygen25_restart_chain.py
             .github/scripts/oxygen25_five_stage_plan.py
+            .github/workflows/oxygen25-500us-stage5-restart.yml
           sparse-checkout-cone-mode: false
       - name: Bind exact source, helper, artifact and result paths
         run: |
@@ -79,6 +139,17 @@ jobs:
         run: |
           set -euo pipefail
           python3 "$PLAN" --self-test
+          python3 - '_controller_harness/.github/workflows/oxygen25-500us-stage5-restart.yml' <<'PY'
+          import pathlib,sys
+          wf=pathlib.Path(sys.argv[1]).read_text()
+          block=wf.split('      - name: P4 advanced restart state continuity and next-stage archive proof\n',1)
+          assert len(block)==2
+          p4=block[1].split('      - name: Upload verified native restart bundle for next independent CI',1)[0]
+          assert p4.count('python3 "$CHAIN" --verify-recovery')==1
+          assert '--end-ns "$END_NS" --interval-ns "$INTERVAL_NS" --source-sha "$SOURCE_SHA"' in p4
+          assert "PARENT_RUN_ID: ${{ github.event.workflow_run.id || inputs.upstream_run_id || '41310708653' }}" in wf
+          print('OXYGEN25_STAGE5_P4_INTERVAL_AND_PARENT_REGRESSION_PASS')
+          PY
           test "$PARENT_RUN_ID" -gt 0
           python3 - "$PLAN" "$START_NS" "$END_NS" "$INTERVAL_NS" <<'PY'
           import importlib.util,sys
@@ -199,7 +270,7 @@ jobs:
           find "$RESULT/run/${STAGE_BASE}_cp" -type f | sort | tee "$RESULT/recovery_checkpoint_listing.txt"
           python3 "$CHAIN" --verify-recovery \
             --root "$PWD" --power-w "$POWER_W" --start-ns "$START_NS" \
-            --end-ns "$END_NS" --source-sha "$SOURCE_SHA"
+            --end-ns "$END_NS" --interval-ns "$INTERVAL_NS" --source-sha "$SOURCE_SHA"
           test -s "$RESULT/restart_run_${END_NS}ns.tar.gz"
           test -s "$RESULT/restart_inputs_${END_NS}ns.tar.gz"
           test -s "$RESULT/restart_${END_NS}ns_manifest.json"
