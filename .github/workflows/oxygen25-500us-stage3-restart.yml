@@ -2,6 +2,9 @@
 name: Oxygen25 500us stage3 genuine advanced restart
 run-name: Oxygen25 stage3 native 2000-to-10000ns ${{ github.sha }}
 on:
+  push:
+    branches: ['feature/oxygen25-stage3-direct-20261101']
+    paths: ['.github/workflows/oxygen25-500us-stage3-restart.yml']
   workflow_dispatch:
     inputs:
       upstream_run_id:
@@ -19,7 +22,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   recover:
-    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == github.event.repository.default_branch) }}
+    if: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/feature/oxygen25-stage3-direct-20261101') || github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == github.event.repository.default_branch) }}
     name: Genuine checkpoint-continued PhysicsApp ${{ matrix.power_w }}W
     runs-on: ubuntu-24.04
     timeout-minutes: 360
@@ -34,7 +37,7 @@ jobs:
       START_NS: '2000'
       END_NS: '10000'
       INTERVAL_NS: '100'
-      PARENT_RUN_ID: ${{ github.event.workflow_run.id || inputs.upstream_run_id }}
+      PARENT_RUN_ID: ${{ github.event.workflow_run.id || inputs.upstream_run_id || '41262112654' }}
       OXYGEN_RESEARCH_400: '1'
       OXYGEN_RESEARCH_FULL24: '1'
       OXYGEN_RESEARCH_QUICK_5MIN: '1'
