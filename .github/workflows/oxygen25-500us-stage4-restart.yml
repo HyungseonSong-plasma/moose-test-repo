@@ -2,6 +2,9 @@
 name: Oxygen25 500us stage4 genuine advanced restart
 run-name: Oxygen25 stage4 native 10000-to-100000ns ${{ github.sha }}
 on:
+  push:
+    branches: ['feature/oxygen25-stage4-gated-20261101']
+    paths: ['.github/workflows/oxygen25-500us-stage4-restart.yml']
   workflow_dispatch:
     inputs:
       upstream_run_id:
@@ -18,8 +21,72 @@ concurrency:
   group: oxygen25-five-stage-S4-${{ github.event.workflow_run.id || inputs.upstream_run_id || github.run_id }}
   cancel-in-progress: false
 jobs:
+  stage3_accepted:
+    name: Gate on both Stage3 verified native 10us artifacts
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    env:
+      GITHUB_TOKEN: ${{ github.token }}
+      GITHUB_REPOSITORY: ${{ github.repository }}
+      STAGE3_RUN_ID: ${{ github.event.workflow_run.id || inputs.upstream_run_id || '41294976910' }}
+      EXPECTED_SHA: '76ef84e44cfb1ed4a05dd9e5f3af574a396c308a'
+    steps:
+      - name: Require upstream Stage3 both P3/P4 and separate 10000ns artifacts
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, sys, time, urllib.request
+          repo=os.environ["GITHUB_REPOSITORY"]
+          run=int(os.environ["STAGE3_RUN_ID"])
+          expected_sha=os.environ["EXPECTED_SHA"]
+          expected_branch="feature/oxygen25-stage3-direct-20261101"
+          token=os.environ["GITHUB_TOKEN"]
+          def get(path):
+              request=urllib.request.Request(
+                  f"https://api.github.com/repos/{repo}{path}",
+                  headers={"Authorization":f"Bearer {token}","Accept":"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28"})
+              with urllib.request.urlopen(request, timeout=30) as response:
+                  return json.load(response)
+          deadline=time.monotonic()+165*60
+          while True:
+              info=get(f"/actions/runs/{run}")
+              if info.get("head_sha")!=expected_sha or info.get("head_branch")!=expected_branch:
+                  sys.exit("STAGE4_HOLD: stage3 run provenance mismatch")
+              if info.get("status")=="completed":
+                  if info.get("conclusion")!="success":
+                      sys.exit("STAGE4_HOLD: stage3 run finished without full success")
+                  jobs=get(f"/actions/runs/{run}/jobs?per_page=100")["jobs"]
+                  for power in (400,1000):
+                      matches=[j for j in jobs if f"PhysicsApp {power}W" in j.get("name","")]
+                      if len(matches)!=1 or matches[0].get("conclusion")!="success":
+                          sys.exit(f"STAGE4_HOLD: missing successful genuine native job for {power}W")
+                      steps={s["name"]:s.get("conclusion") for s in matches[0].get("steps",[])}
+                      for required in (
+                          "P0 checkpoint-native time prefix, parent-child restart state and archive round-trip",
+                          "P1 rebuild native physics-opt at original source SHA",
+                          "P2 native advanced restart check-input parent and child state",
+                          "P3 native MultiApp advanced restart with bounded adaptive dt from verified checkpoint",
+                          "P4 advanced restart state continuity and next-stage archive proof",
+                          "Upload verified native restart bundle for next independent CI"):
+                          if steps.get(required)!="success":
+                              sys.exit(f"STAGE4_HOLD: {power}W has no P0-P4/upload proof at {required}")
+                  artifacts=get(f"/actions/runs/{run}/artifacts?per_page=100")["artifacts"]
+                  for power in (400,1000):
+                      name=f"oxygen25-ei936-10000ns-restart-complete-{power}W"
+                      matches=[a for a in artifacts if a.get("name")==name and not a.get("expired") and a.get("size_in_bytes",0)>0]
+                      if len(matches)!=1:
+                          sys.exit(f"STAGE4_HOLD: verified 10000ns artifact missing for {power}W")
+                      print("OXYGEN25_STAGE3_VERIFIED_COMPLETE_ARTIFACT",power,matches[0]["id"],flush=True)
+                  print("OXYGEN25_STAGE4_UPSTREAM_GATE_PASS",run,expected_sha,flush=True)
+                  break
+              if time.monotonic()>=deadline:
+                  sys.exit("STAGE4_HOLD: bounded upstream wait expired; no Stage4 physics launched")
+              print("OXYGEN25_STAGE4_UPSTREAM_WAIT",run,info.get("status"),flush=True)
+              time.sleep(60)
+          PY
   recover:
-    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == github.event.repository.default_branch) }}
+    needs: [stage3_accepted]
+    if: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/feature/oxygen25-stage4-gated-20261101') || github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == github.event.repository.default_branch) }}
     name: Genuine checkpoint-continued PhysicsApp ${{ matrix.power_w }}W
     runs-on: ubuntu-24.04
     timeout-minutes: 360
@@ -34,7 +101,7 @@ jobs:
       START_NS: '10000'
       END_NS: '100000'
       INTERVAL_NS: '1000'
-      PARENT_RUN_ID: ${{ github.event.workflow_run.id || inputs.upstream_run_id }}
+      PARENT_RUN_ID: ${{ github.event.workflow_run.id || inputs.upstream_run_id || '41294976910' }}
       OXYGEN_RESEARCH_400: '1'
       OXYGEN_RESEARCH_FULL24: '1'
       OXYGEN_RESEARCH_QUICK_5MIN: '1'
