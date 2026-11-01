@@ -706,22 +706,45 @@ def verify_boundary_monitors(old: dict, new: dict) -> dict:
             raise ValueError(f"RF source/scale identity changed at restart: {num}/{den}")
     return changed
 
-def native_final_step(log: str, end: int, previous_step: int) -> int:
-    """Bind checkpoint numbering to the actual native final step and time."""
+def native_final_step(log: str, start: int, end: int,
+                      interval_ns: float, previous_step: int) -> int:
+    """Verify native step IDs within this advanced-restart run and physical time.
+
+    Advanced restart starts a NEW native step counter at zero, even when the
+    previous independent CI ended at a larger step number. The upstream step
+    is authenticated by the source checkpoint manifest, not compared as a
+    monotonic counter across independent native solves.
+    """
     matches = re.findall(
         r"(?m)^Time Step\s+(\d+),\s*time\s*=\s*([0-9.eE+-]+)", log)
     if not matches:
         raise ValueError("native solver log contains no time-step records")
-    step, time_s = int(matches[-1][0]), float(matches[-1][1])
-    if (step <= previous_step or not math.isfinite(time_s) or
-            not math.isclose(time_s, end * 1e-9, rel_tol=1e-12, abs_tol=1e-16)):
+    steps = [(int(n), float(t)) for n, t in matches]
+    first_step, first_time = steps[0]
+    last_step, last_time = steps[-1]
+    if not math.isfinite(interval_ns) or interval_ns <= 0 or start >= end:
+        raise ValueError("invalid native step interval or stage boundaries")
+    min_steps = math.ceil((end - start) / interval_ns)
+    if (previous_step < 1 or first_step != 0 or last_step < min_steps or
+            len(steps) != last_step + 1 or
+            not math.isclose(first_time, start * 1e-9, rel_tol=1e-12, abs_tol=1e-16) or
+            not math.isclose(last_time, end * 1e-9, rel_tol=1e-12, abs_tol=1e-16)):
         raise ValueError(
-            f"native final step/time inconsistent: step={step} time={time_s}, "
+            f"native final step/time inconsistent: step={last_step} time={last_time}, "
             f"previous={previous_step}, expected={end} ns")
-    return step
+    dtmax = interval_ns * 1e-9
+    for (a, ta), (b, tb) in zip(steps, steps[1:]):
+        # The printed native log rounds very small startup substeps, so
+        # equal displayed times are permitted; the native CSV is strictly
+        # increasing and checked separately by verify_csv.
+        if (b != a + 1 or not (math.isfinite(ta) and math.isfinite(tb)) or
+                tb < ta or tb - ta > dtmax + max(2e-12, dtmax * 1e-7)):
+            raise ValueError(f"native step sequence/time-spacing invalid: {a}@{ta} -> {b}@{tb}")
+    return last_step
 
 
-def verify_recovery(root: Path, power: int, start: int, end: int, source_sha: str) -> None:
+def verify_recovery(root: Path, power: int, start: int, end: int, source_sha: str,
+                    interval_ns: str = "1") -> None:
     result = result_path(power)
     run = root / result / "run"
     upstream = json.loads((root / result / "upstream_manifest.json").read_text())
@@ -764,7 +787,26 @@ def verify_recovery(root: Path, power: int, start: int, end: int, source_sha: st
     log = (root / result / "recovery_runtime.log").read_text(errors="replace")
     if not re.search(r"(?i)\brestart(?:ing|ed)?\b", log):
         raise ValueError("no native advanced restart log evidence")
-    last_step = native_final_step(log, end, upstream["actual_moose_step"])
+    time_overlay_path = root / result / "restart_time_sequence_overlay.json"
+    if not time_overlay_path.is_file() or not time_overlay_path.stat().st_size:
+        raise ValueError("missing staged TimeStepper checkpoint compatibility evidence")
+    time_overlay = json.loads(time_overlay_path.read_text())
+    spacing = Decimal(str(interval_ns))
+    if (not spacing.is_finite() or spacing <= 0 or
+            Decimal(str(time_overlay["requested_interval_ns"])) != spacing or
+            not math.isclose(float(time_overlay["native_dtmax_s"]),
+                             float(spacing * NS_S), rel_tol=1e-12, abs_tol=1e-16) or
+            time_overlay["from_checkpoint"] != old_prefix or
+            time_overlay["start_ns"] != start or
+            time_overlay["end_ns"] != end or
+            time_overlay["upstream_actual_moose_step"] != upstream["actual_moose_step"] or
+            time_overlay["native_timestepper"] != "IterationAdaptiveDT" or
+            "type = IterationAdaptiveDT" not in inp or
+            "    reset_dt = true" not in inp or
+            "type = TimeSequenceStepper" in inp):
+        raise ValueError("staged TimeStepper compatibility evidence changed")
+    last_step = native_final_step(log, start, end, float(spacing),
+                                  upstream["actual_moose_step"])
     cp = run / (stage + "_cp")
     checkpoint_prefix = cp / f"{last_step:04d}"
     for p in (Path(str(checkpoint_prefix) + "-restart-0.rd/data"),
@@ -775,19 +817,6 @@ def verify_recovery(root: Path, power: int, start: int, end: int, source_sha: st
             raise ValueError(
                 f"new native checkpoint absent: {p}; native step={last_step}; "
                 f"available prefixes={available}")
-    time_overlay_path = root / result / "restart_time_sequence_overlay.json"
-    if not time_overlay_path.is_file() or not time_overlay_path.stat().st_size:
-        raise ValueError("missing staged TimeStepper checkpoint compatibility evidence")
-    time_overlay = json.loads(time_overlay_path.read_text())
-    if (time_overlay["from_checkpoint"] != old_prefix or
-            time_overlay["start_ns"] != start or
-            time_overlay["end_ns"] != end or
-            time_overlay["upstream_actual_moose_step"] != upstream["actual_moose_step"] or
-            time_overlay["native_timestepper"] != "IterationAdaptiveDT" or
-            "type = IterationAdaptiveDT" not in inp or
-            "    reset_dt = true" not in inp or
-            "type = TimeSequenceStepper" in inp):
-        raise ValueError("staged TimeStepper compatibility evidence changed")
     input_files = [root / row["path"] for row in upstream["input_files"]]
     if time_overlay_path not in input_files:
         input_files.append(time_overlay_path)
@@ -1033,14 +1062,41 @@ def self_test() -> None:
         except ValueError:
             continue
         raise AssertionError("invalid grid/checkpoint accepted")
-    assert native_final_step("Time Step 7, time = 2e-09\n", 2, 1) == 7
-    for bad_log in ("Time Step 2, time = 1e-09\n",
-                    "Time Step 1, time = 2e-09\n"):
+    # Stage-local native step IDs reset on each independent advanced restart:
+    # Stage 2 ended at 203, while genuine Stage 3 starts at 0 and ends at 96.
+    def native_log(times, indices=None):
+        return "".join(f"Time Step {i}, time = {t:.14g}\n"
+                       for i, t in zip(indices if indices is not None
+                                       else range(len(times)), times))
+    stage3_times = [2e-6 + 8e-6 * i / 96 for i in range(97)]
+    assert native_final_step(native_log(stage3_times), 2000, 10000, 100, 203) == 96
+    assert native_final_step(native_log([2e-6 + 8e-6*i/80 for i in range(81)]),
+                             2000, 10000, 100, 203) == 80
+    # Native log time display rounds tiny startup substeps; CSV must still
+    # pass its independent strict physical-time check.
+    rounded_times = [2e-6] * 3 + [2e-6 + 8e-6*i/94 for i in range(1, 95)]
+    assert native_final_step(native_log(rounded_times), 2000, 10000, 100, 203) == 96
+    for label, bad_log in (
+        ("missing-initial-zero", native_log(stage3_times, range(1, 98))),
+        ("wrong-final-time", native_log(stage3_times[:-1] + [9.9e-6])),
+        ("nonmonotonic-time", native_log(stage3_times[:10] +
+                                        [stage3_times[9]-1e-9] + stage3_times[11:])),
+        ("native-step-gap", native_log(stage3_times,
+                                      list(range(40)) + list(range(41, 98)))),
+        ("too-few-native-steps", native_log([2e-6 + 8e-6*i/79
+                                            for i in range(80)])),
+        ("oversized-dt", native_log(stage3_times[:40] +
+                                    [stage3_times[39] + 200e-9] + stage3_times[41:])),
+        ("missing-log", ""),
+    ):
         try:
-            native_final_step(bad_log, 2, 1)
+            native_final_step(bad_log, 2000, 10000, 100, 203)
         except ValueError:
             continue
-        raise AssertionError("wrong native step/time accepted")
+        raise AssertionError(f"invalid native step log accepted: {label}")
+    legacy_times = [1e-9, 1e-9, 1.001e-9, 1.002e-9,
+                    1.003e-9, 1.004e-9, 1.005e-9, 2e-9]
+    assert native_final_step(native_log(legacy_times), 1, 2, 1, 1) == 7
     # Native 1->2 ns evidence contains 1.001..1.005 ns substeps.
     import tempfile
     with tempfile.TemporaryDirectory() as directory:
@@ -1082,7 +1138,8 @@ def main() -> None:
     elif args.verify_rates:
         verify_rates(root, args.power_w, args.verify_rates)
     else:
-        verify_recovery(root, args.power_w, args.start_ns, args.end_ns, args.source_sha)
+        verify_recovery(root, args.power_w, args.start_ns, args.end_ns,
+                        args.source_sha, args.interval_ns)
 
 if __name__ == "__main__":
     main()
