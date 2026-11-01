@@ -568,19 +568,26 @@ def restore(root: Path, artifact: Path, power: int, start: int, end: int,
     if start == 2 and not previous_mode:
         prior_input = compatible_upstream_2ns_sequence(
             prior_input, manifest, rows_before)
-    elif start == 100 and manifest.get("schema") == 5 and not previous_mode:
-        # The proven initial-run schema5 checkpoint is native and fresh
-        # (not recover); stage2 is the first advanced restart and will
-        # replace TimeSequenceStepper only in the staged input.
+    elif start == 1 and manifest.get("schema") == 5 and not previous_mode:
+        # Short five-job smoke: initial physical 0->1ns, exactly one
+        # requested interval. Never use a historic recovered checkpoint.
         grid_end, grid = time_grid(prior_input)
-        if grid_end != 100 or len(grid) != 101 or grid != list(map(Decimal, range(101))):
-            raise ValueError("first-stage 100ns native grid is not the 100 exact 1ns targets")
+        if grid_end != 1 or grid != [Decimal(0), Decimal(1)]:
+            raise ValueError("smoke level1 must be native 0->1ns exactly")
+        if (manifest.get("one_step_smoke", {}).get("level") != 1 or
+                manifest.get("one_step_smoke", {}).get("end_ns") != 1):
+            raise ValueError("unattested level1 native checkpoint")
+    elif start == 100 and manifest.get("schema") == 5 and not previous_mode:
+        # Canonical five-stage 100ns bootstrapping remains available.
+        grid_end, grid = time_grid(prior_input)
+        if grid_end != 100 or len(grid) != 101 or grid != list(map(Decimal, range(101)):
+            raise ValueError("first-stage 100ns native grid not 100 targets")
         if manifest.get("five_stage_chain", {}).get("stage") != 1:
             raise ValueError("first-stage provenance not attested")
     elif not previous_mode:
         raise ValueError("unknown native checkpoint TimeStepper history")
     staged_time = extend_input(prior_input, start, end, interval_ns)
-    if start == 100 and manifest.get("schema") == 5:
+    if start in (1, 100) and manifest.get("schema") == 5:
         requested_targets = extend_requested_event_targets(
             [((Decimal(str(v)) / NS_S).quantize(Decimal("0.00000001"))) for v in manifest["time_sequence_s"]],
             start, end, interval_ns)
@@ -598,7 +605,7 @@ def restore(root: Path, artifact: Path, power: int, start: int, end: int,
                            previous_overlay["staged_time_sequence_ns"]]
         requested_targets = extend_requested_event_targets(
             prior_requested, start, end, interval_ns)
-    elif not (start == 100 and manifest.get("schema") == 5):
+    elif not (start in (1, 100) and manifest.get("schema") == 5):
         requested_targets = time_grid(staged_time)[1]
     staged_native = stage_adaptive_stepper(
         staged_time, interval_ns, already_staged=previous_mode)
