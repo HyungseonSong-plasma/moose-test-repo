@@ -66,7 +66,7 @@ def extract_checked(tar_path: Path, expected_sha: str, rows: list[dict], root: P
     print("OXYGEN25_RESTART_ARCHIVE_ROUNDTRIP_PASS", tar_path.name, len(rows))
 
 NS_S = Decimal("1e-9")
-MAX_TIME_NS = 500000  # Five separately verified stages: 500 us terminal horizon
+MAX_TIME_NS = 1000000  # Isolated Stage5 100us→1ms comparison branch only
 MAX_SEQUENCE_EVENTS = 20001
 
 # The legacy 2 ns --recover native checkpoint retained a corrupted
