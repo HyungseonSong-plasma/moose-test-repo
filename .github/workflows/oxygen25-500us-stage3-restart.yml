@@ -4,7 +4,9 @@ run-name: Oxygen25 stage3 native 2000-to-10000ns ${{ github.sha }}
 on:
   push:
     branches: ['feature/oxygen25-stage3-direct-20261101']
-    paths: ['.github/workflows/oxygen25-500us-stage3-restart.yml']
+    paths:
+      - '.github/workflows/oxygen25-500us-stage3-restart.yml'
+      - '.github/scripts/oxygen25_restart_chain.py'
   workflow_dispatch:
     inputs:
       upstream_run_id:
@@ -202,7 +204,7 @@ jobs:
           find "$RESULT/run/${STAGE_BASE}_cp" -type f | sort | tee "$RESULT/recovery_checkpoint_listing.txt"
           python3 "$CHAIN" --verify-recovery \
             --root "$PWD" --power-w "$POWER_W" --start-ns "$START_NS" \
-            --end-ns "$END_NS" --source-sha "$SOURCE_SHA"
+            --end-ns "$END_NS" --interval-ns "$INTERVAL_NS" --source-sha "$SOURCE_SHA"
           test -s "$RESULT/restart_run_${END_NS}ns.tar.gz"
           test -s "$RESULT/restart_inputs_${END_NS}ns.tar.gz"
           test -s "$RESULT/restart_${END_NS}ns_manifest.json"
