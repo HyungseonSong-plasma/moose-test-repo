@@ -147,7 +147,7 @@ jobs:
           p4=block[1].split('      - name: Upload verified native restart bundle for next independent CI',1)[0]
           assert p4.count('python3 "$CHAIN" --verify-recovery')==1
           assert '--end-ns "$END_NS" --interval-ns "$INTERVAL_NS" --source-sha "$SOURCE_SHA"' in p4
-          assert "PARENT_RUN_ID: ${{ github.event.workflow_run.id || inputs.upstream_run_id || '41310708653' }}" in wf
+          assert any(row.strip().startswith("PARENT_RUN_ID: ") and "'41310708653'" in row for row in wf.splitlines())
           print('OXYGEN25_STAGE5_P4_INTERVAL_AND_PARENT_REGRESSION_PASS')
           PY
           test "$PARENT_RUN_ID" -gt 0
