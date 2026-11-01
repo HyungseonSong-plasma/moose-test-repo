@@ -122,6 +122,7 @@ jobs:
           sparse-checkout: |
             .github/scripts/oxygen25_restart_chain.py
             .github/scripts/oxygen25_five_stage_plan.py
+            .github/workflows/oxygen25-500us-stage4-restart.yml
           sparse-checkout-cone-mode: false
       - name: Bind exact source, helper, artifact and result paths
         run: |
@@ -162,6 +163,18 @@ jobs:
           test -s "$MANIFEST"
           python3 "$PLAN" --check-upstream "$MANIFEST" --stage-number 4 --power-w "$POWER_W" --upstream-run-id "$PARENT_RUN_ID"
           python3 "$CHAIN" --self-test
+          # Regression: Stage4 P4 must pass the same explicit 1000ns interval as P0/P3.
+          # Previously --verify-recovery silently used its 1ns default.
+          python3 - <<'PY'
+          from pathlib import Path
+          wf = Path('_controller_harness/.github/workflows/oxygen25-500us-stage4-restart.yml').read_text()
+          marker = '      - name: P4 advanced restart state continuity and next-stage archive proof'
+          assert wf.count('\n' + marker + '\n') == 1
+          p4 = wf.rsplit('\n' + marker + '\n', 1)[1].split('\n      - name:', 1)[0]
+          assert p4.count('python3 "$CHAIN" --verify-recovery') == 1
+          assert '--end-ns "$END_NS" --interval-ns "$INTERVAL_NS" --source-sha "$SOURCE_SHA"' in p4
+          print('OXYGEN25_STAGE4_P4_INTERVAL_REGRESSION_PASS')
+          PY
           python3 "$CHAIN" --restore "_upstream_artifact/$POWER_W""W" \
             --root "$PWD" --power-w "$POWER_W" --start-ns "$START_NS" \
             --end-ns "$END_NS" --interval-ns "$INTERVAL_NS" --source-sha "$SOURCE_SHA"
@@ -266,7 +279,7 @@ jobs:
           find "$RESULT/run/${STAGE_BASE}_cp" -type f | sort | tee "$RESULT/recovery_checkpoint_listing.txt"
           python3 "$CHAIN" --verify-recovery \
             --root "$PWD" --power-w "$POWER_W" --start-ns "$START_NS" \
-            --end-ns "$END_NS" --source-sha "$SOURCE_SHA"
+            --end-ns "$END_NS" --interval-ns "$INTERVAL_NS" --source-sha "$SOURCE_SHA"
           test -s "$RESULT/restart_run_${END_NS}ns.tar.gz"
           test -s "$RESULT/restart_inputs_${END_NS}ns.tar.gz"
           test -s "$RESULT/restart_${END_NS}ns_manifest.json"
