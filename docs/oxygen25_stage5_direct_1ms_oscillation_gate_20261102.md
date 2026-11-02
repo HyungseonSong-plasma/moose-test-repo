@@ -75,3 +75,22 @@ This report documents numerical evidence; threshold values are conservative scre
 - After the 5µs run completes and native artifacts are verified, apply the same script to both 10µs and 5µs 1000W CSV histories. Correlation lag is in **sample indices**, so compare it with the measured adaptive time steps rather than treating it as a fixed physical lag. Use the already-integrated `oxygen25_stage5_dt5us_compare.py` for the main paired metrics.
 
 **Decision unchanged: HOLD Stage6 1–10ms, dtmax=100µs.** Do not change PID gain, chemistry, or the accepted Stage5 checkpoints.
+
+## 2026-11-02 04:40 UTC: matched early-window RF timestep evidence
+
+- Live native 1000W dtmax=5µs sensitivity [Run 41379107857](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/41379107857) remains **in progress** in P3; Stage4 gate, P0, P1 and P2 passed. Last available decoded P3 log at 04:21:55 UTC shows Time Step 106, time=0.000523389 s, dt=5µs. P4 and final artifacts are still pending.
+- Extracted deduplicated native P_rf_raw_W_t6 postprocessor rows directly from the running 5µs job log and the original successful 10µs Stage5 1000W job log. The *same 400–500µs physical-time window* yields:
+
+| 1000W 400–500µs metric | Original 10µs dtmax | Trial 5µs dtmax |
+| --- | ---: | ---: |
+| Native monitor rows | 10 | 20 |
+| RF minimum (W) | 864.4407 | 955.8005 |
+| RF maximum (W) | 1098.1640 | 1055.0660 |
+| RF peak-to-peak (W) | 233.7233 | 99.2655 |
+| Sample RMS error from 1000W (W) | 73.8335 | 28.6957 |
+
+- This window shows a smaller sampled RF excursion at 5µs (about 57.5% smaller peak-to-peak and 61.1% smaller RMS), **but it is not a converged timestep study**: samples have different time grids and phase, and the 5µs run has not reached the decisive 500–1000µs interval. The 5µs trace still shows a real oscillatory RF response, so the PID/Maxwell hypothesis remains open.
+- Added [oxygen25_pid_physical_lag.py](https://github.com/HyungseonSong-plasma/moose-test-repo/blob/analysis/oxygen25-stage5-1ms-oscillation-gate-20261102/.github/scripts/oxygen25_pid_physical_lag.py), commit `9a4ff303dc520a7bc853bc62cc37ed8e40e06b68`, to evaluate **physical-time** RF-error vs PID-drive-rate correlations using linear interpolation, interval-duration weights, and unsaturated-only intervals. This avoids comparing sample-index lags as if 5µs and 10µs samples had identical physical delays. Synthetic 5µs/10µs test recovers a known 10µs injected delay and passes locally. Correlation is diagnostic only; no controller causality or Stage6 safety follows.
+- After P4 and native artifact verification, compare the full 500–1000µs window with both existing `oxygen25_stage5_dt5us_compare.py` and this physical-time-lag diagnostic. Do not adjust PID gains or chemistry without an independently justified scientific experiment.
+
+**Decision: Stage6 1–10ms dtmax=100µs remains HOLD.**
