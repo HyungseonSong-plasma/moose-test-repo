@@ -43,9 +43,9 @@ At 1 ms, direct minus reference relative differences (percent):
 
 | Neutral | 400 W | 1000 W |
 | --- | ---: | ---: |
-| O2(X) | +0.0013 | +0.0233 |
-| O2(a1Delta) | +0.0077 | -0.5534 |
-| O(3P) | +0.0065 | -0.7537 |
+| O2(X) | -0.000032 | +0.0233 |
+| O2(a1Delta) | +0.000732 | -0.5534 |
+| O(3P) | +0.000549 | -0.7537 |
 | O(1D) | +0.0080 | -0.5531 |
 
 The prior 1000 W chain also exhibits large RF oscillations and late O2(a1Delta) negative steps, but their phase differs from the direct run. Thus, the phenomenon is not uniquely attributable to a Stage5 DIRECT restart error. Root cause (power-control feedback, plasma coupling, timestep, or other) is **not established**.
