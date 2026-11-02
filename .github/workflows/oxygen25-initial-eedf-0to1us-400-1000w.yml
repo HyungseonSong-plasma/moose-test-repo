@@ -139,7 +139,7 @@ jobs:
           test "$(sha256sum "$LIVE_PATH" | cut -d' ' -f1)" = "$EXPECTED"
           # Only the baseline lookup file is modified in the pinned physics source.
           test "$(git diff --name-only)" = "$LIVE_PATH"
-          python3 - <<'PY'
+          .issue419-25-venv/bin/python - <<'PY'
           import numpy as np
           from pathlib import Path
           x=np.loadtxt(Path('experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt'))
