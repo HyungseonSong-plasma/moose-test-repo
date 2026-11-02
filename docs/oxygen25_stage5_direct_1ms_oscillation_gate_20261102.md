@@ -118,3 +118,33 @@ This report documents numerical evidence; threshold values are conservative scre
 - Next: finish the 5 µs P3/P4 and verify its native restart artifact, compare full 500–1000 µs with `oxygen25_stage5_dt5us_compare.py`, `oxygen25_pid_limitcycle_diagnostic.py` and `oxygen25_pid_physical_lag.py`; assess whether a further 2.5 µs refinement is scientifically justified. No PID gain or chemistry modifications are authorized by this observation.
 
 **Stage6 1–10 ms with dtmax=100 µs remains HOLD.** A dtmax larger than the observed 40–80 µs RF cycle has no demonstrated stability or convergence basis.
+
+
+## 2026-11-02 06:35 UTC: completed 5 µs 1000 W native result; postprocessor defect isolated
+
+- Live Stage5 DIRECT [Run 41358545575](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/41358545575) remains `completed/success`, both powers P0–P4 PASS, native 1 ms artifact IDs 13107661302 (400 W) and 13109110076 (1000 W).
+- Isolated 1000 W `dtmax=5 µs` [Run 41379107857](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/41379107857) finished at **06:16:03 UTC** with workflow `completed/failure`. This is **not a physics/P3 failure**: P0, rates, P1, P2, P3, **P4 native advanced-restart archive proof**, and neutral-trend diagnostics **passed**. The later Python comparison step failed before producing paired JSON/CSV; final `restart-complete` artifact was therefore not uploaded. The available 5 µs diagnostics artifact ID **13120970548** contains the actual `run/plasma.csv`, 1 ms native checkpoint directory, and `restart_1000000ns_manifest.json`. Its manifest reports `final_time_s=0.001`, `actual_moose_step=202`, `source_sha=8e2fe042dbc204b5fda22d346f1ad8d2e32db3ab`, `power_w=1000`, `scientific_acceptance=HOLD`, and both restart archive identities. P4 log reports native continuity and SHA256 attestation PASS; **do not represent the missing final restart-complete upload as successful**.
+- Root cause of postprocessor failure: the genuine native `plasma.csv` has **exactly one** RF power zero, at `t=0` (before the RF postprocessor initializes); the same initial row has pre-clamp `rf_drive_scale_t6=7.4955980963788`. All subsequent native RF values are positive and the drive is in the permitted clamp range. The comparator incorrectly rejected `RF<=0` at *all* timestamps with `ValueError: negative/zero native RF or negative neutral`. Fixed comparison and RF/PID lag diagnostic readers to allow this **initial row only**, while retaining strict nonfinite, negative-density, positive post-start RF and post-start drive-bound checks. Added regression testing of t=0 acceptance and post-start zero rejection. This is a diagnostic software defect, not evidence of an unstable MOOSE solver.
+
+### Full native 500–1000 µs matched physical-window comparison (1000 W)
+
+The following values were independently calculated from the two downloaded original **native CSVs**, not extrapolated from partial P3 logs. Original control diagnostics artifact ID **13108926022**; trial artifact ID **13120970548**. Both time series reach 1 ms, have strictly increasing finite timestamps, nonnegative four-neutral densities, and positive RF power after the initial sample.
+
+| Metric | dtmax=10 µs, control | dtmax=5 µs, trial |
+| --- | ---: | ---: |
+| Late-window native rows | 51 | 101 |
+| RF minimum (W) | 281.382 | 566.813 |
+| RF maximum (W) | 2034.639 | 1493.363 |
+| RF peak-to-peak (W) | **1753.257** | **926.550** |
+| RF RMS target error (W) | **500.714** | **247.649** |
+| PID upper clamp at 3.0 | 10/51 (19.61%) | 10/101 (9.90%) |
+| Sampled RF local-peak spacing | 70–80 µs | 40–45 µs |
+| O2(a1Delta) negative density increments | 3 | **0** |
+| O2(a1Delta) slope sign reversals | 4 | **0** |
+| Largest O2(a1Delta) local drop | 0.117077% | **0%** |
+
+- The 5 µs trial reduces the **sampled late-window RF peak-to-peak by 47.15%** and RMS target error by **50.54%**, yet still has a **926.55 W** peak-to-peak oscillation and PID saturation. This is consistent with a timestep-dependent discrete feedback/Maxwell-plasma limit-cycle hypothesis; it is **not** proof of cause or numerical convergence.
+- At 1 ms, trial minus control neutral densities: **O2(X) −0.05626%, O2(a1Delta) +1.44488%, O(3P) +1.36020%, O(1D) +0.31196%**. The 5 µs trace has no significant late-window O2(a1Delta) downward step, whereas the 10 µs control does. O2(X) decreases monotonically in both runs, which is physically admissible and is **not** an oscillation.
+- Native 5 µs P3/P4 reached 1 ms, but **the full workflow failed in a diagnostic post-step**, so distinguish native solver completion from overall CI acceptance. The comparison can be rerun **artifact-only** without recomputing 3.5 h of physics.
+
+**Decision remains HOLD for Stage6 1–10 ms at dtmax=100 µs.** A 5 µs refinement did not eliminate RF oscillation or demonstrate convergence. Next: execute an artifact-only CI postprocessing workflow with corrected t=0 reader, verify paired JSON and PID lag metrics, then design a further 2.5 µs refinement or a separately justified RF feedback diagnostic. Do not modify chemistry/PID gain or overwrite successful Stage5/Stage6 runs.
