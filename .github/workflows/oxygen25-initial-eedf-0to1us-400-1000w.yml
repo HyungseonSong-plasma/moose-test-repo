@@ -1,0 +1,253 @@
+# Research A/B: same 25 effective chemistry with 23-xsec EEDF transport ONLY; fresh 0–1us.
+# Full native MOOSE restart checkpoint, Exodus outputs and input/mesh snapshots.
+name: Oxygen25 initial-composition 23xsec EEDF 0to1us native
+run-name: Oxygen25 400/1000W initial EEDF 0-to-1us native ${{ github.sha }}
+on:
+  workflow_dispatch:
+  push:
+    branches: [experiment/oxygen25-initial-eedf-400-1000w-0to1us-20261102]
+    paths: [.github/workflows/oxygen25-initial-eedf-0to1us-400-1000w.yml]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: oxygen25-initial-eedf23-0to1us-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  private-rate-gate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Require original 19 numerical rate tables
+        env:
+          PRIVATE_RATES_B64: ${{ secrets.OXYGEN24_RATES_TAR_XZ_B64 }}
+        run: |
+          test -n "$PRIVATE_RATES_B64" || { echo "::error::Missing private rates"; exit 22; }
+          echo "OXYGEN25_RATE_SECRET_PRESENT"
+
+  checkpoint:
+    needs: private-rate-gate
+    name: Genuine PhysicsApp first checkpoint ${{ matrix.power_w }}W
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        power_w: [400, 1000]
+    env:
+      CHATGPT_WORK_BASE_SHA: 8e2fe042dbc204b5fda22d346f1ad8d2e32db3ab
+      END_NS: '1000'
+      INTERVAL_NS: '1'
+      POWER_W: ${{ matrix.power_w }}
+      OXYGEN_RESEARCH_400: '1'
+      OXYGEN_RESEARCH_FULL24: '1'
+      OXYGEN_RESEARCH_QUICK_5MIN: '1'
+      OXYGEN_RESEARCH_RATE_DIR: /tmp/oxygen25/private_rates
+      PWD_IN_RUNNER: ${{ github.workspace }}
+    steps:
+      - name: Checkout exact 25-channel physics commit
+        uses: actions/checkout@v4
+        with:
+          ref: 8e2fe042dbc204b5fda22d346f1ad8d2e32db3ab
+          fetch-depth: 1
+
+      - name: Checkout parameterized harness from exact workflow revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: _checkpoint_harness
+          sparse-checkout: |
+            .github/scripts/oxygen25_eedf_0to1us_checkpoint.py
+            tests/test_oxygen25_parameterized_first_checkpoint.py
+            .github/oxygen25_eedf/initial_mixture_23xsec_transport.txt
+          sparse-checkout-cone-mode: false
+
+      - name: Verify exact source and declare output paths
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$CHATGPT_WORK_BASE_SHA"
+          test ! -e experiments/Issue395_powered_chemistry_ladder/private_rates
+          test -s _checkpoint_harness/.github/scripts/oxygen25_eedf_0to1us_checkpoint.py
+          echo 'HARNESS=_checkpoint_harness/.github/scripts/oxygen25_eedf_0to1us_checkpoint.py' >> "$GITHUB_ENV"
+          echo 'CHEM=experiments/Issue395_powered_chemistry_ladder' >> "$GITHUB_ENV"
+          echo "RESULT=experiments/Issue395_powered_chemistry_ladder/results_rf_elastic_diss_ion_ei20_ei01_$POWER_W""w_adjacent_sheath_wall_closed_100us_dt1000ns" >> "$GITHUB_ENV"
+          echo "INPUT=experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_ei20_ei01_$POWER_W""w_adjacent_sheath_wall_closed_100us_dt1000ns.i" >> "$GITHUB_ENV"
+
+      - name: Restore 19 private lookup tables and optional EI936
+        env:
+          PRIVATE_RATES_B64: ${{ secrets.OXYGEN24_RATES_TAR_XZ_B64 }}
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p "$OXYGEN_RESEARCH_RATE_DIR"
+          printf '%s' "$PRIVATE_RATES_B64" | base64 --decode | tar -xJ -C "$OXYGEN_RESEARCH_RATE_DIR" --no-same-owner
+          python3 - <<'PY'
+          import importlib.util, os
+          from pathlib import Path
+          src=Path("experiments/Issue395_powered_chemistry_ladder/build_oxygen_24_source_overlay.py")
+          spec=importlib.util.spec_from_file_location("oxygen25",src)
+          m=importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(m)
+          files=m.validate_files(Path(os.environ["OXYGEN_RESEARCH_RATE_DIR"]))
+          assert set(files) in (set(m.LOOKUP_IDS),set(m.LOOKUP_IDS)|{936})
+          model=m.validate_network(936 in files)
+          assert model["active"]==25 and model["atoms_charge_mass"]=="PASS"
+          print("OXYGEN25_PRIVATE_RATES_PASS",model["ei936_rate_mode"])
+          PY
+
+      - name: P0 exact-source regressions and sparse-harness native checkpoint self-test
+        run: |
+          set -euo pipefail
+          python3 -m venv .issue419-25-venv
+          .issue419-25-venv/bin/python -m pip install --disable-pip-version-check --quiet 'pytest>=8,<9' numpy==2.1.2 scipy==1.14.1
+          .issue419-25-venv/bin/python -m pytest -q \
+            tests/test_issue395_oxygen_full24_source_overlay.py \
+            tests/test_oxygen_24_active_chemistry.py \
+            tests/test_issue395_exploratory_chemistry_decisions.py \
+            tests/test_issue395_oxygen_full24_seeds.py \
+            tests/test_issue395_oxygen_full24_smoke_timegrid.py \
+            tests/test_issue395_oxygen_full24_wall_sticking.py \
+            tests/test_issue395_receiver_200sccm_inlet.py
+          python3 "$HARNESS" --self-test
+          PYTHONPATH="_checkpoint_harness:$PWD" .issue419-25-venv/bin/python -m pytest -q _checkpoint_harness/tests/test_oxygen25_parameterized_first_checkpoint.py
+          bash -n "$CHEM/issue397_l1_power_scan_replay.sh"
+
+      - name: Install EEDF transport lookup in BOTH plasma material and RF feedback
+        run: |
+          set -euo pipefail
+          TABLE_SOURCE=_checkpoint_harness/.github/oxygen25_eedf/initial_mixture_23xsec_transport.txt
+          EEDF_PATH=$CHEM/electron_transport_initial_eedf.txt
+          LIVE_PATH=experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt
+          test -s "$TABLE_SOURCE"
+          # Guarantee the original source checkout is pristine before this one intended override.
+          git diff --exit-code
+          cp "$TABLE_SOURCE" "$EEDF_PATH"
+          cp "$TABLE_SOURCE" "$LIVE_PATH"
+          EXPECTED=35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b
+          test "$(sha256sum "$TABLE_SOURCE" | cut -d' ' -f1)" = "$EXPECTED"
+          test "$(sha256sum "$EEDF_PATH" | cut -d' ' -f1)" = "$EXPECTED"
+          test "$(sha256sum "$LIVE_PATH" | cut -d' ' -f1)" = "$EXPECTED"
+          # Only the baseline lookup file is modified in the pinned physics source.
+          test "$(git diff --name-only)" = "$LIVE_PATH"
+          python3 - <<'PY'
+          import numpy as np
+          from pathlib import Path
+          x=np.loadtxt(Path('experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt'))
+          assert x.shape==(42,3) and np.all(np.diff(x[:,0])>0)
+          assert np.all(x[:,1:]>0) and x[0,0]<2 and x[-1,0]>22
+          print('OXYGEN25_EEDF23_TABLE_SHA_AND_RANGE_PASS rows=42')
+          PY
+
+      - name: P0 prepare exact chemistry mesh and requested first checkpoint
+        run: |
+          set -euo pipefail
+          source .issue419-25-venv/bin/activate
+          bash "$CHEM/issue397_l1_power_scan_replay.sh" prepare "$POWER_W"
+          python3 "$HARNESS" --stage-input --root "$PWD" --power-w "$POWER_W" --end-ns "$END_NS" --interval-ns "$INTERVAL_NS" --source-sha "$CHATGPT_WORK_BASE_SHA"
+          # Verify EEDF table was not re-generated or replaced during recipe preparation.
+          test "$(sha256sum experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt | cut -d' ' -f1)" = 35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b
+          grep -q "property_table_file = '../Issue91_real_qvt_r3/r3_e0/electron_moments.txt'" "$INPUT"
+          python3 - "$INPUT" <<'PY'
+          from pathlib import Path
+          import re,sys
+          s=Path(sys.argv[1]).read_text()
+          a=re.search(r"(?m)^\s*time_sequence\s*=\s*'([^']+)'",s)
+          assert a
+          times=[float(t) for t in a.group(1).split()]
+          assert len(times)==191 and abs(times[0])<1e-20 and abs(times[100]-1e-7)<1e-16
+          assert abs(times[-1]-1e-6)<1e-15
+          print("OXYGEN25_EEDF23_CONTINUOUS_0TO1US_190_STEPS_PASS")
+          PY
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          c=Path(os.environ["CHEM"])
+          m=json.loads((c/"chem24_manifest.json").read_text())
+          assert m["active"]==25 and m["ei936_solver_product"]=="Os/O(ex)"
+          overlay=(c/f'full24_{os.environ["POWER_W"]}w_100us_dt1000ns_overlay.i').read_text()
+          assert "property_name = R_936" in overlay or "reaction_progress = R_936" in overlay
+          assert "n_O_ex_avg" in overlay and "S_energy_chem24" in overlay
+          print("OXYGEN25_EI936_EXACT_PREPARED_NETWORK_PASS",m["ei936_rate_mode"])
+          PY
+
+      - name: P1 build native PhysicsApp
+        run: |
+          set -euo pipefail
+          bash "$CHEM/issue397_l1_power_scan_replay.sh" build "$POWER_W"
+
+      - name: P2 check exact parameterized first-run input with native solver
+        run: |
+          set -euo pipefail
+          bash "$CHEM/issue397_l1_power_scan_replay.sh" check "$POWER_W"
+
+      - name: P3 real native PhysicsApp 0 to requested end with 5.5-hour wall cap
+        run: |
+          set -euo pipefail
+          started="$(date +%s)"
+          set +e
+          timeout -s TERM -k 60s 19800s bash "$CHEM/issue397_l1_power_scan_replay.sh" solve "$POWER_W"
+          code="$?"
+          set -e
+          elapsed=$(( $(date +%s) - started ))
+          printf 'source_sha=%s\npower_w=%s\nend_ns=%s\ninterval_ns=%s\nseconds=%s\nexit_code=%s\n' \
+            "$CHATGPT_WORK_BASE_SHA" "$POWER_W" "$END_NS" "$INTERVAL_NS" "$elapsed" "$code" \
+            > "$RESULT/initial_runtime_status.txt"
+          echo "OXYGEN25_1NS_SOLVER_WALL_SECONDS=$elapsed EXIT_CODE=$code"
+          test "$code" -eq 0
+
+      - name: P4 verify native stage1 checkpoint and immutable artifact SHA256
+        run: |
+          set -euo pipefail
+          python3 "$HARNESS" --verify-and-archive --root "$GITHUB_WORKSPACE" \
+            --power-w "$POWER_W" --end-ns "$END_NS" --interval-ns "$INTERVAL_NS" \
+            --source-sha "$CHATGPT_WORK_BASE_SHA"
+          sha256sum "$RESULT/restart_run_${END_NS}ns.tar.gz" "$RESULT/restart_inputs_${END_NS}ns.tar.gz" \
+            | tee "$RESULT/restart_archives_${END_NS}ns.sha256"
+          test -s "$RESULT/run/plasma.e"
+          test -s "$RESULT/restart_${END_NS}ns_manifest.json"
+          python3 - "$RESULT/restart_${END_NS}ns_manifest.json" <<'PY'
+          import json,sys
+          m=json.load(open(sys.argv[1]))
+          t=m['electron_transport_variant']
+          assert t['lookup_sha256']=='35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b'
+          assert m['final_time_s']==1e-6 and len(m['time_sequence_s'])==191
+          assert m['scientific_acceptance']=='HOLD'
+          print('OXYGEN25_INITIAL_EEDF23_NATIVE_0TO1US_P4_PASS',m['power_w'])
+          PY
+          echo "OXYGEN25_PARAMETERIZED_FIRST_NATIVE_CHECKPOINT_PASS=$POWER_W/$END_NS"
+
+      - name: Preserve restart-ready archives and SHA256 manifest (without rates)
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: oxygen25-eedf23-${{ env.END_NS }}ns-initial-complete-${{ matrix.power_w }}W
+          if-no-files-found: error
+          retention-days: 90
+          path: |
+            ${{ env.RESULT }}/restart_run_${{ env.END_NS }}ns.tar.gz
+            ${{ env.RESULT }}/restart_inputs_${{ env.END_NS }}ns.tar.gz
+            ${{ env.RESULT }}/restart_archives_${{ env.END_NS }}ns.sha256
+            ${{ env.RESULT }}/restart_${{ env.END_NS }}ns_manifest.json
+            ${{ env.RESULT }}/initial_runtime_status.txt
+            ${{ env.RESULT }}/check_input.log
+            ${{ env.RESULT }}/runtime.log
+            ${{ env.RESULT }}/run/plasma.csv
+            ${{ env.CHEM }}/chem24_manifest.json
+
+      - name: Preserve failure diagnostics even when full checkpoint is unavailable
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: oxygen25-eedf23-${{ env.END_NS }}ns-initial-diagnostics-${{ matrix.power_w }}W
+          if-no-files-found: warn
+          retention-days: 21
+          path: |
+            ${{ env.RESULT }}/initial_runtime_status.txt
+            ${{ env.RESULT }}/check_input.log
+            ${{ env.RESULT }}/runtime.log
+            ${{ env.RESULT }}/run/plasma.csv
+            ${{ env.RESULT }}/restart_${{ env.END_NS }}ns_manifest.json
+            ${{ env.RESULT }}/prep/full24_source_overlay.log
