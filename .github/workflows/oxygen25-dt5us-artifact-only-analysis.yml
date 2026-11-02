@@ -1,0 +1,158 @@
+name: Oxygen25 1000W Stage5 dt5us artifact-only RF and neutral comparison
+
+on:
+  push:
+    branches:
+      - analysis/oxygen25-stage5-1ms-oscillation-gate-20261102
+    paths:
+      - .github/workflows/oxygen25-dt5us-artifact-only-analysis.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  compare-native-csv:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout analysis scripts (no PhysicsApp rebuild)
+        uses: actions/checkout@v4
+
+      - name: Gate exact original and trial run identity and native P0-P4 steps
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, urllib.request
+          repo=os.environ["GITHUB_REPOSITORY"]
+          token=os.environ["GH_TOKEN"]
+          def api(path):
+              req=urllib.request.Request("https://api.github.com/repos/"+repo+path,headers={
+                  "Authorization":"Bearer "+token,
+                  "Accept":"application/vnd.github+json",
+                  "X-GitHub-Api-Version":"2022-11-28"})
+              with urllib.request.urlopen(req,timeout=30) as response:
+                  return json.load(response)
+          runs={
+              41358545575:("3d9fb0746f67422ed6d69ff9bd1676fd75f3e770","success"),
+              41379107857:("29967a94d857260c950d7bf628c3fad737640bb0","failure"),
+          }
+          for rid,(sha,conclusion) in runs.items():
+              r=api(f"/actions/runs/{rid}")
+              assert r["status"]=="completed" and r["conclusion"]==conclusion
+              assert r["head_sha"]==sha, (rid,r["head_sha"])
+              jobs=api(f"/actions/runs/{rid}/jobs?per_page=100")["jobs"]
+              j=next(j for j in jobs if j["name"]=="Genuine checkpoint-continued PhysicsApp 1000W")
+              steps={s["name"]:s["conclusion"] for s in j["steps"]}
+              for prefix in ("P0 checkpoint-native","P1 rebuild native","P2 native advanced",
+                             "P3 native MultiApp","P4 advanced restart state"):
+                  matched=[(n,v) for n,v in steps.items() if n.startswith(prefix)]
+                  assert len(matched)==1 and matched[0][1]=="success",(rid,prefix,matched)
+              if rid==41379107857:
+                  assert steps.get("Compare 1000W RF PID saturation and neutral timestep sensitivity")=="failure"
+                  assert steps.get("Diagnose direct Stage5 neutral transient at 1ms")=="success"
+              print("OXYGEN25_POSTRUN_NATIVE_P0_P4_GATE_PASS",rid)
+          PY
+
+      - name: Download exact successful 10us control diagnostics artifact
+        uses: actions/download-artifact@v4
+        with:
+          repository: HyungseonSong-plasma/moose-test-repo
+          run-id: 41358545575
+          name: oxygen25-stage5-direct-ei936-100000to1000000ns-diagnostics-1000W
+          path: _control
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download exact 5us trial native P4 diagnostics artifact
+        uses: actions/download-artifact@v4
+        with:
+          repository: HyungseonSong-plasma/moose-test-repo
+          run-id: 41379107857
+          name: oxygen25-stage5-dt5us-ei936-100000to1000000ns-diagnostics-1000W
+          path: _trial
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Fail closed on manifest provenance, source, 1ms endpoint and native checkpoint evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, math
+          from pathlib import Path
+          for label in ("_control","_trial"):
+              root=Path(label)
+              assert (root/"run/plasma.csv").is_file()
+              m=json.loads((root/"restart_1000000ns_manifest.json").read_text())
+              assert m["schema"]==4 and m["power_w"]==1000
+              assert m["source_sha"]=="8e2fe042dbc204b5fda22d346f1ad8d2e32db3ab"
+              assert m["chemistry"]=="25-effective-O(ex)-EI936"
+              assert m["restart_mode"]=="advanced_restart_not_recover"
+              assert m["scientific_acceptance"]=="HOLD"
+              assert m["upstream_time_ns"]==100000 and m["recovered_time_ns"]==1000000
+              assert math.isclose(float(m["final_time_s"]),0.001,rel_tol=0,abs_tol=1e-15)
+              assert m["actual_moose_step"]>0
+              archives=m["archives"]
+              assert set(archives)=={"restart_run_1000000ns.tar.gz","restart_inputs_1000000ns.tar.gz"}
+              assert all(len(x["sha256"])==64 and x["bytes"]>0 for x in archives.values())
+              cp=list((root/"run/plasma_restart_100000to1000000_cp").glob("*-restart-0.rd/data"))
+              assert len(cp)>=1, (label,cp)
+              if label=="_trial":
+                  e=m["stage5_dt5us_sensitivity_experiment"]
+                  assert e["control_run_id"]==41358545575
+                  assert e["control_dtmax_ns"]==10000 and e["test_dtmax_ns"]==5000
+                  assert e["scientific_acceptance"]=="HOLD"
+              print("OXYGEN25_NATIVE_CSV_AND_CHECKPOINT_PROVENANCE_PASS",label,len(cp))
+          PY
+
+      - name: Self-test corrected native initialization and PID diagnostic readers
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/scripts/oxygen25_stage5_dt5us_compare.py --self-test
+          python3 .github/scripts/oxygen25_pid_limitcycle_diagnostic.py --self-test
+          python3 .github/scripts/oxygen25_pid_physical_lag.py --self-test
+
+      - name: Compare full 500-1000us RF PID and four-neutral native histories
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p _evidence
+          python3 .github/scripts/oxygen25_stage5_dt5us_compare.py \
+            --control-csv _control/run/plasma.csv \
+            --trial-csv _trial/run/plasma.csv \
+            --output-json _evidence/dt5us_vs_dt10us_1000w.json \
+            --output-csv _evidence/dt5us_vs_dt10us_1000w.csv
+          for label in control trial; do
+            if [ "$label" = control ]; then cap=10; else cap=5; fi
+            python3 .github/scripts/oxygen25_pid_limitcycle_diagnostic.py \
+              --csv "_$label/run/plasma.csv" \
+              --output-json "_evidence/${label}_pid_limitcycle.json" \
+              --dtmax-us "$cap"
+            python3 .github/scripts/oxygen25_pid_physical_lag.py \
+              --csv "_$label/run/plasma.csv" \
+              --output-json "_evidence/${label}_pid_physical_lag.json"
+          done
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path("_evidence/dt5us_vs_dt10us_1000w.json").read_text())
+          assert r["scientific_decision"]=="HOLD_STAGE6"
+          assert r["control_run_id"]==41358545575
+          assert r["control_dtmax_ns"]==10000 and r["trial_dtmax_ns"]==5000
+          assert r["trial"]["late_sample_count"]>90
+          assert r["control"]["late_sample_count"]>45
+          print("OXYGEN25_ARTIFACT_ONLY_FULL_WINDOW_COMPARISON_PASS",r["rf_peak_to_peak_reduction_percent"])
+          PY
+
+      - name: Upload independent postrun comparison evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: oxygen25-stage5-dt5us-vs-dt10us-1000w-postrun-evidence
+          path: _evidence/
+          if-no-files-found: warn
+          retention-days: 21
