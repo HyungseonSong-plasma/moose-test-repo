@@ -20,6 +20,14 @@ CHEM = Path("experiments/Issue395_powered_chemistry_ladder")
 TABLE = Path("experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt")
 EEDF_SHA256 = "35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b"
 RECIPE_SHA = "8e2fe042dbc204b5fda22d346f1ad8d2e32db3ab"
+# Exact archived Stage-B4 mass fractions before the later x=1e-5 neutral reseed.
+# This issue-431 variant changes ONLY bulk neutral initial conditions.
+PRIOR_NEUTRAL_MASS = {
+    "w_O2s": 0.051546391752577324,
+    "w_O": 0.10309278350515465,
+    "w_Os": 0.12371134020618557,
+}
+PRIOR_O2_REMAINDER = 0.7216494845360825
 COMPONENTS = {
     "EI-01": "o2_attachment_ei01_{p}w_100us_dt1000ns_overlay.i",
     "EI-02": "o2_elastic_{p}w_100us_dt1000ns_overlay.i",
@@ -66,6 +74,19 @@ def expected_grid_ns():
     return grid
 
 
+def check_prior_neutrals(src: str, module) -> None:
+    matches = module._matches(src, module.NEUTRAL_BLOCK, PRIOR_NEUTRAL_MASS)
+    for match in matches:
+        name = match.group("name")
+        actual = float(next(module.INITIAL.finditer(match.group("body"))).group("value").strip())
+        expected = PRIOR_NEUTRAL_MASS[name]
+        if not math.isclose(actual, expected, rel_tol=0.0, abs_tol=1e-14):
+            raise ValueError(f"historical {name} IC mismatch: {actual} != {expected}")
+    remainder = 1.0 - sum(PRIOR_NEUTRAL_MASS.values())
+    if not math.isclose(remainder, PRIOR_O2_REMAINDER, rel_tol=0.0, abs_tol=1e-14):
+        raise ValueError("historical O2 mass-fraction remainder mismatch")
+
+
 def check_input(power: int):
     src=input_path(power).read_text()
     from_re = re.search(r"(?m)^\s*time_sequence\s*=\s*'([^']+)'", src)
@@ -88,7 +109,7 @@ def check_input(power: int):
     spec=importlib.util.spec_from_file_location("legacy6_seeds",seed_file)
     module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
     module.verify_charged(src)
-    module.verify_neutrals(src)
+    check_prior_neutrals(src, module)
     config=json.loads((CHEM/"oxygen_icp_operating_200sccm_sticking1.json").read_text())
     if (config["inlet"]["Q_sccm"]!=200 or
         config["inlet"]["mole_fractions"]!={"O2_X":.99997,"O2_a1Delta":1e-5,"O_3P":1e-5,"O_1D":1e-5}):
@@ -138,6 +159,18 @@ def apply_latest_after_prepare(power: int):
         tmp.replace(path)
     transform("build_oxygen_icp_200sccm_inlet.py","inlet")
     transform("apply_oxygen_24_initial_seeds.py","seed")
+    # Charged species stay at the latest values; restore ONLY the prior neutral
+    # mass fractions from the historical Stage-B4 mixture.
+    import importlib.util
+    seed_file = CHEM/"apply_oxygen_24_initial_seeds.py"
+    spec = importlib.util.spec_from_file_location("legacy6_previous_neutral_seeds", seed_file)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    src = path.read_text()
+    src = module._patch(src, module.NEUTRAL_BLOCK, PRIOR_NEUTRAL_MASS)
+    path.write_text(src)
+    module.verify_charged(src)
+    check_prior_neutrals(src, module)
     transform("build_oxygen_24_wall_overlay.py","wall")
     src=path.read_text()
     matches=list(re.finditer(r"(?m)^\[Outputs\]\s*$",src))
@@ -159,7 +192,14 @@ def apply_latest_after_prepare(power: int):
         "chemistry_channels":list(COMPONENTS),
         "rate_origin":"original public 100-point EI lookup + original DISS-G formula",
         "neutral_inlet_sccm":200,
-        "neutral_initial_mole_fractions":{"O2":.99997,"O2a":1e-5,"O":1e-5,"Os":1e-5},
+        "neutral_initial_mass_fractions":{
+            "O2":PRIOR_O2_REMAINDER, "O2a":PRIOR_NEUTRAL_MASS["w_O2s"],
+            "O":PRIOR_NEUTRAL_MASS["w_O"], "Os":PRIOR_NEUTRAL_MASS["w_Os"]},
+        "neutral_initial_mole_fractions":{
+            "O2":0.5882352941176471,"O2a":0.04201680672268908,
+            "O":0.16806722689075632,"Os":0.20168067226890757},
+        "neutral_seed_policy":"historical_pre_1e-5_bulk_only",
+        "neutral_inlet_mole_fractions":{"O2":.99997,"O2a":1e-5,"O":1e-5,"Os":1e-5},
         "wall_sticking":1.0,"native_initialization":"fresh_not_restarted",
         "time_steps":460,"scientific_acceptance":"HOLD"
     }
@@ -240,6 +280,27 @@ def self_test():
     assert set(COMPONENTS)=={"EI-01","EI-02","DISS-G","EI-16","EI-17","EI-20"}
     assert "full24" not in repr(COMPONENTS)
     assert EEDF_SHA256 and len(EEDF_SHA256)==64
+    assert math.isclose(sum(PRIOR_NEUTRAL_MASS.values()) + PRIOR_O2_REMAINDER, 1.0, abs_tol=1e-14)
+    # Self-test with the actual historical neutral patch and deliberately wrong
+    # latest seed values, to prove P0 rejects the opposite experiment arm.
+    import importlib.util
+    seed_file=CHEM/"apply_oxygen_24_initial_seeds.py"
+    spec=importlib.util.spec_from_file_location("legacy6_prior_seed_selftest",seed_file)
+    module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+    example="[Variables]\\n" + "".join(
+        f"  [{name}]\\n    initial_condition = 0.25\\n  []\\n"
+        for name in PRIOR_NEUTRAL_MASS
+    ) + "[]\\n"
+    example=example.replace("\\\\n", "\\n")
+    previous=module._patch(example,module.NEUTRAL_BLOCK,PRIOR_NEUTRAL_MASS)
+    check_prior_neutrals(previous,module)
+    incorrect=module._patch(previous,module.NEUTRAL_BLOCK,module.NEUTRAL_MASS_FRACTIONS)
+    try:
+        check_prior_neutrals(incorrect,module)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("P0 failed to reject the new x=1e-5 seed in historical arm")
     print("OXYGEN_LEGACY6_LATEST_SELF_TEST_PASS")
 
 if __name__=="__main__":
