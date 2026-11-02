@@ -82,7 +82,7 @@ jobs:
           echo "LEGACY7=$LEGACY7" >> "$GITHUB_ENV"
           echo "RESULT=$CHEM/results_rf_elastic_diss_ion_ei20_ei01_${POWER_W}w_adjacent_sheath_wall_closed_100us_dt1000ns" >> "$GITHUB_ENV"
 
-      - name: P0 prepare original 6-reaction overlays, then latest inlet/seeds/walls
+      - name: P0 prepare original Legacy6 plus EI2738, latest inlet/seeds/walls
         run: |
           set -euo pipefail
           bash "$CHEM/issue397_l1_power_scan_replay.sh" prepare "$POWER_W"
@@ -101,7 +101,7 @@ jobs:
           set -euo pipefail
           bash "$CHEM/issue397_l1_power_scan_replay.sh" build "$POWER_W"
 
-      - name: P2 native check-input with ONLY six chemistry overlays
+      - name: P2 native check-input with Legacy7 EI2738 chemistry
         run: |
           set -euo pipefail
           python3 "$LEGACY7" --verify-seven --power-w "$POWER_W"
@@ -111,6 +111,13 @@ jobs:
       - name: P3 genuine native 0-100us transient run (5.5-hour cap)
         run: |
           set -euo pipefail
+          # P2's additional chemistry inputs are valid; the pinned original
+          # replay's P3 argv placed EI2738 AFTER Outputs/file_base and aborted
+          # before timestep 1. Repair only that positional argv fragment in
+          # this isolated Actions checkout; retain the exact physics-source ref.
+          python3 "$LEGACY7" --patch-replay-argv --power-w "$POWER_W"
+          bash -n "$CHEM/issue397_l1_power_scan_replay.sh"
+          test -s "$RESULT/legacy7_runtime_argv_patch.json"
           start="$(date +%s)"
           set +e
           timeout -s TERM -k 60s 19800s bash "$CHEM/issue397_l1_power_scan_replay.sh" solve "$POWER_W"
@@ -118,7 +125,7 @@ jobs:
           set -e
           elapsed=$(( $(date +%s) - start ))
           printf "power_w=%s\nend_ns=100000\nseconds=%s\nexit_code=%s\n" "$POWER_W" "$elapsed" "$code" > "$RESULT/runtime_status.txt"
-          echo "OXYGEN_LEGACY6_NATIVE_SOLVER_WALL_SECONDS=$elapsed EXIT=$code"
+          echo "OXYGEN_LEGACY7_EI2738_NATIVE_SOLVER_WALL_SECONDS=$elapsed EXIT=$code"
           test "$code" -eq 0
 
       - name: P4 verify true 100us endpoint and native restart state
@@ -153,6 +160,7 @@ jobs:
             ${{ env.RESULT }}/legacy6_restart_inputs_100000ns.tar.gz
             ${{ env.RESULT }}/legacy6_restart_100000ns_manifest.json
             ${{ env.RESULT }}/legacy6_latest_variant.json
+            ${{ env.RESULT }}/legacy7_runtime_argv_patch.json
             ${{ env.RESULT }}/runtime_status.txt
             ${{ env.RESULT }}/runtime.log
             ${{ env.RESULT }}/check_input.log
@@ -167,6 +175,7 @@ jobs:
           retention-days: 30
           path: |
             ${{ env.RESULT }}/legacy6_latest_variant.json
+            ${{ env.RESULT }}/legacy7_runtime_argv_patch.json
             ${{ env.RESULT }}/runtime_status.txt
             ${{ env.RESULT }}/runtime.log
             ${{ env.RESULT }}/check_input.log
