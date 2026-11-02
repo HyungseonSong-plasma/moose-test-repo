@@ -1,0 +1,137 @@
+# Evidence-only independent rerun of the previously skipped science gate.
+# Does not rerun native MOOSE or issue authorisation for Stage6 10ms.
+name: Oxygen25 dt2p5us independent artifact-only scientific gate
+run-name: Oxygen25 1000W dt2p5us native CSV vs dt5us RF-neutral gate ${{ github.sha }}
+on:
+  push:
+    branches: ['experiment/oxygen25-1000w-dt2p5us-first500-20261102']
+    paths: ['.github/workflows/oxygen25-stage5-dt2p5us-artifact-gate.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  compare:
+    name: Compare immutable 5us and 2p5us MOOSE artifact CSV
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      GITHUB_TOKEN: ${{ github.token }}
+      GITHUB_REPOSITORY: ${{ github.repository }}
+    steps:
+      - name: Checkout pinned analysis script at this workflow SHA
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          sparse-checkout: |
+            .github/scripts/oxygen25_stage5_dt2p5us_gate.py
+          sparse-checkout-cone-mode: false
+      - name: Require exact source runs and diagnostic artifact IDs
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,sys,urllib.request
+          repo=os.environ["GITHUB_REPOSITORY"]
+          token=os.environ["GITHUB_TOKEN"]
+          def api(path):
+              req=urllib.request.Request(
+                  f"https://api.github.com/repos/{repo}{path}",
+                  headers={"Authorization":f"Bearer {token}",
+                           "Accept":"application/vnd.github+json",
+                           "X-GitHub-Api-Version":"2022-11-28"})
+              with urllib.request.urlopen(req,timeout=60) as r:
+                  return json.load(r)
+          for run,sha,branch,artifact,artifact_id in (
+              (41379107857,"29967a94d857260c950d7bf628c3fad737640bb0",
+               "experiment/oxygen25-1000w-dt5us-sensitivity-20261102",
+               "oxygen25-stage5-dt5us-ei936-100000to1000000ns-diagnostics-1000W",13120970548),
+              (41409481126,"ab26285be831249300df6b0cb9e36fda56a6513d",
+               "experiment/oxygen25-1000w-dt2p5us-first500-20261102",
+               "oxygen25-stage5-dt2p5us-first500-ei936-100000to500000ns-diagnostics-1000W",13131102936)):
+              info=api(f"/actions/runs/{run}")
+              if (info.get("status"),info.get("conclusion"),
+                  info.get("head_sha"),info.get("head_branch"))!=(
+                  "completed","failure",sha,branch):
+                  sys.exit(f"FAIL CLOSED: unexpected exact run source {run}")
+              artifacts=api(f"/actions/runs/{run}/artifacts?per_page=100")["artifacts"]
+              candidates=[a for a in artifacts if a.get("id")==artifact_id
+                          and a.get("name")==artifact and not a.get("expired")
+                          and a.get("size_in_bytes",0)>0]
+              if len(candidates)!=1:
+                  sys.exit(f"FAIL CLOSED: exact diagnostic ZIP absent {artifact_id}")
+              jobs=api(f"/actions/runs/{run}/jobs?per_page=100")["jobs"]
+              native=[j for j in jobs if j.get("name")=="Genuine checkpoint-continued PhysicsApp 1000W"]
+              if len(native)!=1:
+                  sys.exit("FAIL CLOSED: native job missing or duplicate")
+              steps={s.get("name"):s.get("conclusion") for s in native[0].get("steps",[])}
+              for name in (
+                  "P0 checkpoint-native time prefix, parent-child restart state and archive round-trip",
+                  "P1 rebuild native physics-opt at original source SHA",
+                  "P2 native advanced restart check-input parent and child state",
+                  "P3 native MultiApp advanced restart with bounded adaptive dt from verified checkpoint",
+                  "P4 advanced restart state continuity and next-stage archive proof"):
+                  if steps.get(name)!="success":
+                      sys.exit(f"FAIL CLOSED: missing native MOOSE P0–P4 step {run}: {name}")
+              print("OXYGEN25_ARTIFACT_SOURCE_ATTESTED",run,artifact_id,flush=True)
+          PY
+      - name: Download 5us original native diagnostics
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 41379107857
+          name: oxygen25-stage5-dt5us-ei936-100000to1000000ns-diagnostics-1000W
+          github-token: ${{ github.token }}
+          path: _control_dt5
+      - name: Download 2p5us genuine 500us native diagnostics
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 41409481126
+          name: oxygen25-stage5-dt2p5us-first500-ei936-100000to500000ns-diagnostics-1000W
+          github-token: ${{ github.token }}
+          path: _trial_dt2p5
+      - name: Run corrected scientific gate on native plasma.csv
+        run: |
+          set -euo pipefail
+          python3 .github/scripts/oxygen25_stage5_dt2p5us_gate.py --self-test
+          test -s _control_dt5/run/plasma.csv
+          test -s _trial_dt2p5/run/plasma.csv
+          test -s _trial_dt2p5/restart_500000ns_manifest.json
+          python3 - '_trial_dt2p5/restart_500000ns_manifest.json' <<'PY'
+          import json,sys
+          d=json.load(open(sys.argv[1]))
+          assert d["source_sha"]=="8e2fe042dbc204b5fda22d346f1ad8d2e32db3ab"
+          assert d["power_w"]==1000
+          assert d["chemistry"]=="25-effective-O(ex)-EI936"
+          assert d["upstream_time_ns"]==100000
+          assert d["recovered_time_ns"]==500000
+          assert abs(d["final_time_s"]-0.0005)<1e-15
+          assert d["restart_mode"]=="advanced_restart_not_recover"
+          assert d["actual_moose_step"]>=160
+          for a in ("restart_run_500000ns.tar.gz","restart_inputs_500000ns.tar.gz"):
+              assert len(d["archives"][a]["sha256"])==64
+              assert d["archives"][a]["bytes"]>0
+          print("OXYGEN25_NATIVE_DT2P5US_500US_MANIFEST_ATTESTED")
+          PY
+          mkdir -p evidence
+          python3 .github/scripts/oxygen25_stage5_dt2p5us_gate.py \
+            --control-csv _control_dt5/run/plasma.csv \
+            --trial-csv _trial_dt2p5/run/plasma.csv \
+            --output-json evidence/dt2p5us_400to500us_scientific_gate.json
+          python3 - evidence/dt2p5us_400to500us_scientific_gate.json <<'PY'
+          import json,sys
+          d=json.load(open(sys.argv[1]))
+          assert d["scientific_decision"]=="ALLOW_DT2P5US_500TO1000US_CONTINUATION"
+          assert d["rf_peak_to_peak_reduction_percent"]>=25
+          assert d["rf_rms_error_reduction_percent"]>=25
+          assert d["pid_upper_saturation_not_worse"]
+          assert all(d["neutral_oscillation_not_worse_by_species"].values())
+          assert d["stage6_dtmax_100us_certified"] is False
+          print("OXYGEN25_DT2P5US_SCIENCE_GATE_ALLOWS_ONLY_500TO1000US",flush=True)
+          PY
+      - name: Upload evidence of scientific gate only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: oxygen25-dt2p5us-rf-neutral-artifact-only-gate
+          retention-days: 90
+          if-no-files-found: warn
+          path: evidence/*.json
