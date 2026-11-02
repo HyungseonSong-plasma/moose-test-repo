@@ -260,7 +260,13 @@ def verify_and_archive(root, spec):
             len(hashes) not in (19,20) or
             (("936" in hashes) != (rates["ei936_rate_mode"] == "lookup"))):
         raise ValueError("chemistry identity/rate hash inventory changed")
+    # Both the per-experiment copy and the live table consumed by the plasma
+    # material / Maxwell RF builder must be preserved across runner checkouts.
     inputs = [root / CHEM / name.format(p=spec.power_w) for name in INPUT_PARTS]
+    inputs.append(root / EEDF_REPLACEMENT)
+    assert len(inputs) == len(set(inputs)), "duplicated archived transport input"
+    if _sha(root / EEDF_REPLACEMENT) != EEDF_SHA256 or _sha(root / EEDF_COPY) != EEDF_SHA256:
+        raise ValueError("Transport changed between native solve and archive")
     run_files = sorted(p for p in run.rglob("*") if p.is_file() or p.is_symlink())
     if len(run_files) < 5:
         raise ValueError("full native run outputs incomplete")
@@ -294,6 +300,15 @@ def verify_and_archive(root, spec):
             "same_input_overlays_and_mesh_paths": True,
             "no_prepare_after_restoring_state": True,
             "native_recover_prefix": prefix.relative_to(root).as_posix(),
+            "transport_sha256_must_remain": EEDF_SHA256,
+            "research_transport_files_required": [
+                EEDF_REPLACEMENT.as_posix(), EEDF_COPY.as_posix()
+            ],
+            "restart_method": "native_advanced_restart_not_recover",
+            "next_stage_first_boundary_ns": 1000,
+            "suggested_schedule_ns": [
+                [1000, 2000, 10], [2000, 10000, 100], [10000, 100000, 1000]
+            ],
             "note": "25-reaction state cannot be mixed with 24-reaction restart",
         },
         "scientific_acceptance": "HOLD",
@@ -302,7 +317,10 @@ def verify_and_archive(root, spec):
             "cross_section_selection": "19 rate-matched reaction ids + 4 momentum-transfer ids",
             "neutral_initial_mole_fractions": {"O2": 0.99997, "O2a": 1e-5, "O": 1e-5, "Os": 1e-5},
             "lookup_sha256": EEDF_SHA256,
-            "lookup_path": "experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt",
+            "lookup_path": EEDF_REPLACEMENT.as_posix(),
+            "checkpointed_table_path": EEDF_COPY.as_posix(),
+            "restart_requires_same_transport_table": True,
+            "archive_has_both_consumed_and_checkpoint_copies": True,
             "replaces_only": "electron transport table (also used by Maxwell RF coupling)",
             "source_type": "computed two-term EEDF research-only 23 cross sections",
             "table_mean_energy_range_eV": [1.658212908, 22.3312233],
@@ -314,6 +332,12 @@ def verify_and_archive(root, spec):
             "scientific_status": "SCIENCE_HOLD"
         },
     }
+    expected_input_paths = {EEDF_REPLACEMENT.as_posix(), EEDF_COPY.as_posix()}
+    present = {row["path"] for row in inv_inputs}
+    if not expected_input_paths.issubset(present):
+        raise ValueError("Restart archive missing either EEDF transport table")
+    if any(row["sha256"] != EEDF_SHA256 for row in inv_inputs if row["path"] in expected_input_paths):
+        raise ValueError("Restart archived wrong EEDF table SHA")
     (result / f"restart_{n}ns_manifest.json").write_text(
         json.dumps(manifest, indent=2, sort_keys=True)+"\n")
     print("OXYGEN25_INITIAL_NATIVE_CHECKPOINT_ARCHIVE_PASS", spec.power_w, n)
@@ -337,6 +361,8 @@ def self_test():
     assert research.times[-1] == 1000
     staged = stage_input(old, research)
     verify_input(staged, research)
+    assert "electron_transport_initial_eedf.txt" in INPUT_PARTS
+    assert EEDF_REPLACEMENT.as_posix().endswith("electron_moments.txt")
     for bad in ("0","-1","NaN","Infinity","0.0001"):
         try:
             FirstCheckpoint(400,1,bad)
