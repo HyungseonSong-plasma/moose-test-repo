@@ -1,5 +1,6 @@
 # Research A/B: same 25 effective chemistry with 23-xsec EEDF transport ONLY; fresh 0–1us.
-# Full native MOOSE restart checkpoint, Exodus outputs and input/mesh snapshots.
+# Full native MOOSE restart checkpoint at 1000ns, exact EEDF table SHA and input/mesh snapshots.
+# First continuation 1000-to-2000ns uses an advanced restart; no 100ns legacy checkpoint.
 name: Oxygen25 initial-composition 23xsec EEDF 0to1us native
 run-name: Oxygen25 400/1000W initial EEDF 0-to-1us native ${{ github.sha }}
 on:
