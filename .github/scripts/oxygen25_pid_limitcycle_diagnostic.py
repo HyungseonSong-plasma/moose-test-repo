@@ -33,8 +33,12 @@ def read_native(path: Path) -> list[dict[str, float]]:
         raise ValueError("nonmonotonic native time")
     if not math.isclose(rows[-1]["time"], END, abs_tol=1e-15, rel_tol=0):
         raise ValueError("run has not reached 1ms")
-    if any(r[RF] <= 0 or not 0 < r[DRIVE] <= CLAMP + 1e-6 for r in rows):
-        raise ValueError("invalid RF or drive scale")
+    # Native MOOSE postprocessor RF=0 and pre-clamp PID drive >3 at t=0
+    # are initialization values; never relax validation after time zero.
+    if rows[0][RF] < 0 or rows[0][DRIVE] <= 0:
+        raise ValueError("invalid native initialization")
+    if any(r[RF] <= 0 or not 0 < r[DRIVE] <= CLAMP + 1e-6 for r in rows[1:]):
+        raise ValueError("invalid post-start RF or drive scale")
     return rows
 
 
