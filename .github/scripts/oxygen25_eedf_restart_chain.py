@@ -922,7 +922,11 @@ def self_test() -> None:
     assert len(time_grid(research_next)[1]) == 291
     research_adaptive = stage_adaptive_stepper(research_next, "10")
     assert "type = IterationAdaptiveDT" in research_adaptive
-    assert "  dtmax = 1e-8" in research_adaptive
+    assert any(
+        Decimal(line.split("=", 1)[1].strip()) == Decimal("1e-8")
+        for line in research_adaptive.splitlines()
+        if line.strip().startswith("dtmax = ")
+    )
     mock_variant = {"electron_transport_variant": {
         "name": EEDF_EXPECTED_NAME, "lookup_sha256": EEDF_TABLE_SHA,
         "restart_requires_same_transport_table": True}}
