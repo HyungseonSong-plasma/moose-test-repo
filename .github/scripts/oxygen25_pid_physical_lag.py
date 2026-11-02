@@ -34,8 +34,12 @@ def load(path: Path) -> list[tuple[float, float, float]]:
         raise ValueError('native time not strictly increasing')
     if not math.isclose(rows[0][0], 0, abs_tol=1e-15) or not math.isclose(rows[-1][0], END_S, abs_tol=1e-15):
         raise ValueError('native CSV must cover 0..1ms')
-    if any(p <= 0 or not 0 < drive <= CLAMP + 1e-8 for _, p, drive in rows):
-        raise ValueError('invalid native RF or PID drive')
+    # t=0 is a pre-TIMESTEP_END initialization sample: RF=0 and drive
+    # may exceed the controller's 3.0 clamp. Subsequent rows must not.
+    if rows[0][1] < 0 or rows[0][2] <= 0:
+        raise ValueError('invalid native initialization')
+    if any(p <= 0 or not 0 < drive <= CLAMP + 1e-8 for _, p, drive in rows[1:]):
+        raise ValueError('invalid post-start native RF or PID drive')
     return rows
 
 
