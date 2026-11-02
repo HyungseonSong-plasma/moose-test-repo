@@ -291,7 +291,7 @@ def self_test():
         f"  [{name}]\\n    initial_condition = 0.25\\n  []\\n"
         for name in PRIOR_NEUTRAL_MASS
     ) + "[]\\n"
-    example=example.replace("\\\\n", "\\n")
+    example=example.encode().decode("unicode_escape")
     previous=module._patch(example,module.NEUTRAL_BLOCK,PRIOR_NEUTRAL_MASS)
     check_prior_neutrals(previous,module)
     incorrect=module._patch(previous,module.NEUTRAL_BLOCK,module.NEUTRAL_MASS_FRACTIONS)
