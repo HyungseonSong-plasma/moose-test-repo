@@ -1,0 +1,327 @@
+# Genuine cross-CI MOOSE recovery, pinned 25-reaction EI936 O(ex) source.
+name: Oxygen25 1000W Stage5 direct dtmax2p5us 100-to-1000us
+run-name: Oxygen25 1000W DIRECT dtmax2p5us 100000-to-1000000ns ${{ github.sha }}
+on:
+  push:
+    branches: ['issue-419-1000w-100us-1ms-dt2p5us-20261102']
+    paths: ['.github/workflows/oxygen25-stage5-dt2p5us-direct-1ms.yml']
+  workflow_dispatch:
+    inputs:
+      upstream_run_id:
+        description: "Exact successful Stage 4 workflow run ID"
+        required: true
+        type: string
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: oxygen25-1000w-dt2p5us-direct-1ms-${{ inputs.upstream_run_id || github.run_id }}
+  cancel-in-progress: false
+jobs:
+  stage4_accepted:
+    name: Require Stage4 both-power P3/P4 native checkpoint artifacts
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      GITHUB_TOKEN: ${{ github.token }}
+      GITHUB_REPOSITORY: ${{ github.repository }}
+      STAGE4_RUN_ID: ${{ inputs.upstream_run_id || '41310708653' }}
+      STAGE4_COMMIT_SHA: 'fdd13f48033b66d49ced6f191bc153090aae9d86'
+    steps:
+      - name: Reject failed Stage4 or missing both native P3 P4 checkpoint artifacts
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,sys,urllib.request
+          repo=os.environ["GITHUB_REPOSITORY"]
+          run=int(os.environ["STAGE4_RUN_ID"])
+          sha=os.environ["STAGE4_COMMIT_SHA"]
+          branch="feature/oxygen25-stage4-gated-20261101"
+          token=os.environ["GITHUB_TOKEN"]
+          def read(path):
+              request=urllib.request.Request(
+                  f"https://api.github.com/repos/{repo}{path}",
+                  headers={"Authorization":f"Bearer {token}","Accept":"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28"})
+              with urllib.request.urlopen(request,timeout=60) as response:
+                  return json.load(response)
+          info=read(f"/actions/runs/{run}")
+          if (info.get("status"),info.get("conclusion"),info.get("head_sha"),info.get("head_branch"))!=("completed","success",sha,branch):
+              sys.exit("STAGE5_HOLD: Stage4 exact run completion/source identity failed")
+          jobs=read(f"/actions/runs/{run}/jobs?per_page=100")["jobs"]
+          for power in (400,1000):
+              matches=[j for j in jobs if j.get("name")==f"Genuine checkpoint-continued PhysicsApp {power}W"]
+              if len(matches)!=1 or matches[0].get("conclusion")!="success":
+                  sys.exit(f"STAGE5_HOLD: Stage4 {power}W genuine native job not successful")
+              steps={s["name"]:s.get("conclusion") for s in matches[0].get("steps",[])}
+              expected=(
+                  "P0 checkpoint-native time prefix, parent-child restart state and archive round-trip",
+                  "Rehydrate private rates and verify 19 SHA256 without prepare",
+                  "P1 rebuild native physics-opt at original source SHA",
+                  "P2 native advanced restart check-input parent and child state",
+                  "P3 native MultiApp advanced restart with bounded adaptive dt from verified checkpoint",
+                  "P4 advanced restart state continuity and next-stage archive proof",
+                  "Upload verified native restart bundle for next independent CI")
+              for name in expected:
+                  if steps.get(name)!="success":
+                      sys.exit(f"STAGE5_HOLD: Stage4 {power}W missing required step {name}")
+          artifacts=read(f"/actions/runs/{run}/artifacts?per_page=100")["artifacts"]
+          for power in (400,1000):
+              name=f"oxygen25-ei936-100000ns-restart-complete-{power}W"
+              matches=[a for a in artifacts if a.get("name")==name and not a.get("expired") and a.get("size_in_bytes",0)>0]
+              if len(matches)!=1:
+                  sys.exit(f"STAGE5_HOLD: Stage4 {power}W verified artifact missing or duplicate")
+              print("OXYGEN25_STAGE4_ARTIFACT_ACCEPTED",power,matches[0]["id"],flush=True)
+          print("OXYGEN25_STAGE5_UPSTREAM_GATE_PASS",run,sha,flush=True)
+          PY
+  recover:
+    needs: [stage4_accepted]
+    if: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' }}
+    name: Genuine checkpoint-continued PhysicsApp ${{ matrix.power_w }}W
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        power_w: [1000]
+    env:
+      POWER_W: ${{ matrix.power_w }}
+      SOURCE_SHA: 8e2fe042dbc204b5fda22d346f1ad8d2e32db3ab
+      START_NS: '100000'
+      END_NS: '1000000'
+      INTERVAL_NS: '2500'
+      PARENT_RUN_ID: ${{ inputs.upstream_run_id || '41310708653' }}
+      OXYGEN_RESEARCH_400: '1'
+      OXYGEN_RESEARCH_FULL24: '1'
+      OXYGEN_RESEARCH_QUICK_5MIN: '1'
+      OXYGEN_RESEARCH_RATE_DIR: /tmp/oxygen25/private_rates
+      BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+      CHEM: experiments/Issue395_powered_chemistry_ladder
+    steps:
+      - name: Checkout immutable original native Physics source
+        uses: actions/checkout@v4
+        with:
+          ref: 8e2fe042dbc204b5fda22d346f1ad8d2e32db3ab
+          fetch-depth: 1
+      - name: Checkout controller handoff helper from workflow revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: _controller_harness
+          sparse-checkout: |
+            .github/scripts/oxygen25_restart_chain.py
+            .github/scripts/oxygen25_five_stage_plan.py
+            .github/scripts/oxygen25_stage5_dt2p5us_direct_1ms_extension.py
+            .github/scripts/oxygen25_stage5_direct_1ms_neutral_trends.py
+            .github/workflows/oxygen25-stage5-dt2p5us-direct-1ms.yml
+          sparse-checkout-cone-mode: false
+      - name: Bind exact source, helper, artifact and result paths
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          test -s _controller_harness/.github/scripts/oxygen25_restart_chain.py
+          test ! -e "$CHEM/private_rates"
+          echo "CHATGPT_WORK_BASE_SHA=$SOURCE_SHA" >> "$GITHUB_ENV"
+          echo "RESULT=$CHEM/results_rf_elastic_diss_ion_ei20_ei01_$POWER_W""w_adjacent_sheath_wall_closed_100us_dt1000ns" >> "$GITHUB_ENV"
+          echo "INPUT=$CHEM/rf_elastic_diss_ion_ei20_ei01_$POWER_W""w_adjacent_sheath_wall_closed_100us_dt1000ns.i" >> "$GITHUB_ENV"
+          echo "CHAIN=_controller_harness/.github/scripts/oxygen25_restart_chain.py" >> "$GITHUB_ENV"
+          echo "PLAN=_controller_harness/.github/scripts/oxygen25_stage5_dt2p5us_direct_1ms_extension.py" >> "$GITHUB_ENV"
+          echo "STAGE_BASE=plasma_restart_${START_NS}to${END_NS}" >> "$GITHUB_ENV"
+      - name: Download exact previous-run checkpoint artifact (separate CI run)
+        uses: actions/download-artifact@v4
+        with:
+          run-id: ${{ env.PARENT_RUN_ID }}
+          name: oxygen25-ei936-${{ env.START_NS }}ns-restart-complete-${{ matrix.power_w }}W
+          github-token: ${{ github.token }}
+          path: _upstream_artifact/${{ matrix.power_w }}W
+      - name: P0 checkpoint-native time prefix, parent-child restart state and archive round-trip
+        run: |
+          set -euo pipefail
+          python3 "$PLAN" --self-test
+          python3 - '_controller_harness/.github/workflows/oxygen25-stage5-dt2p5us-direct-1ms.yml' <<'PY'
+          import pathlib,sys
+          wf=pathlib.Path(sys.argv[1]).read_text()
+          block=wf.split('      - name: P4 advanced restart state continuity and next-stage archive proof\n',1)
+          assert len(block)==2
+          p4=block[1].split('      - name: Upload verified native restart bundle for next independent CI',1)[0]
+          assert p4.count('python3 "$CHAIN" --verify-recovery')==1
+          assert '--end-ns "$END_NS" --interval-ns "$INTERVAL_NS" --source-sha "$SOURCE_SHA"' in p4
+          assert any(row.strip().startswith("PARENT_RUN_ID: ") and "'41310708653'" in row for row in wf.splitlines())
+          print('OXYGEN25_STAGE5_DT2P5US_DIRECT_1MS_P4_INTERVAL_AND_PARENT_REGRESSION_PASS')
+          PY
+          test "$PARENT_RUN_ID" -gt 0
+          python3 - "$PLAN" "$START_NS" "$END_NS" "$INTERVAL_NS" <<'PY'
+          import importlib.util,sys,pathlib
+          path,start,end,spacing=sys.argv[1:]
+          sys.path.insert(0,str(pathlib.Path(path).resolve().parent))
+          spec=importlib.util.spec_from_file_location("stage5_single_1ms",path)
+          m=importlib.util.module_from_spec(spec)
+          sys.modules[spec.name]=m
+          spec.loader.exec_module(m)
+          stage=m.stage(5)
+          assert (stage.start_ns,stage.end_ns,stage.requested_spacing_ns)==(int(start),int(end),int(spacing))
+          print("OXYGEN25_STAGE5_DT2P5US_DIRECT_1MS_INPUT_IDENTITY_PASS",stage.number)
+          PY
+          MANIFEST="$(find "_upstream_artifact/$POWER_W""W" -name "restart_$START_NS""ns_manifest.json" -type f)"
+          test -s "$MANIFEST"
+          python3 "$PLAN" --check-upstream "$MANIFEST" --stage-number 5 --power-w "$POWER_W" --upstream-run-id "$PARENT_RUN_ID"
+          python3 "$CHAIN" --self-test
+          python3 "$CHAIN" --restore "_upstream_artifact/$POWER_W""W" \
+            --root "$PWD" --power-w "$POWER_W" --start-ns "$START_NS" \
+            --end-ns "$END_NS" --interval-ns "$INTERVAL_NS" --source-sha "$SOURCE_SHA"
+          # A restarted parent must use native checkpoint fields, not the original
+          # 15 variable seeds that MOOSE rejects as ConstantIC in restart mode.
+          if grep -Eq '^[[:space:]]*initial_condition[[:space:]]*=' "$INPUT"; then
+            echo '::error::Advanced restart parent still contains seed initial_condition'
+            exit 31
+          fi
+          echo OXYGEN25_RESTART_PARENT_INLINE_ICS_SUPPRESSED_PASS
+          CHILD_OVERLAY="$CHEM/rf_elastic_multiapp_maxwell_${POWER_W}w_100us_dt1000ns_overlay.i"
+          if grep -Eq '^[[:space:]]*initial_condition[[:space:]]*=' "$CHILD_OVERLAY"; then
+            echo '::error::Maxwell child still contains forbidden restart seed ICs'
+            exit 32
+          fi
+          echo OXYGEN25_MAXWELL_CHILD_SEED_ICS_SUPPRESSED_PASS
+          test -s "$RESULT/restart_time_sequence_overlay.json"
+          python3 - "$RESULT/restart_time_sequence_overlay.json" "$START_NS" "$END_NS" <<'PY'
+          import json, sys
+          d=json.load(open(sys.argv[1]))
+          start, end = map(int, sys.argv[2:])
+          assert d['start_ns']==start and d['end_ns']==end
+          assert d['native_timestepper']=='IterationAdaptiveDT'
+          assert d['native_timestepper_reset_dt'] is True
+          assert d['staged_time_sequence_ns'][-1]==str(end)
+          if start==2:
+              assert d['legacy_duplicate_checkpoint_boundary_proxy']
+              assert d['staged_time_sequence_ns'][2]=='1.00000001'
+          else:
+              assert d['legacy_duplicate_checkpoint_boundary_proxy'] is None
+              assert float(d['staged_time_sequence_ns'][-2])<end
+          print("OXYGEN25_NATIVE_TIME_TARGET_PROVENANCE_PASS",start,end)
+          PY
+          grep -Eq '^[[:space:]]*type[[:space:]]*=[[:space:]]*IterationAdaptiveDT[[:space:]]*$' "$INPUT"
+          grep -Eq '^[[:space:]]*reset_dt[[:space:]]*=[[:space:]]*true[[:space:]]*$' "$INPUT"
+          ! grep -Eq '^[[:space:]]*time_sequence[[:space:]]*=' "$INPUT"
+          echo OXYGEN25_NATIVE_CORRUPTED_TIMESEQUENCE_ISOLATED_ADAPTIVE_DT_PASS
+          test -s "$RESULT/upstream_manifest.json"
+          test -s "$RESULT/recovery_prefix.txt"
+          test -s "$RESULT/run/plasma.e"
+          RECOVER_PREFIX="$(cat "$RESULT/recovery_prefix.txt")"
+          PARENT_OVERLAY="$CHEM/rf_elastic_multiapp_parent_${POWER_W}w_100us_dt1000ns_overlay.i"
+          grep -Eq '^[[:space:]]*no_restore[[:space:]]*=[[:space:]]*false[[:space:]]*$' "$PARENT_OVERLAY"
+          ! grep -Eq '^[[:space:]]*no_restore[[:space:]]*=[[:space:]]*true[[:space:]]*$' "$PARENT_OVERLAY"
+          grep -Fq "restart_file_base = '/workspace/$RECOVER_PREFIX'" "$INPUT"
+          echo OXYGEN25_MAXWELL_MULTIAPP_RESTORATION_AND_ABSOLUTE_CHECKPOINT_PATH_PASS
+          test -s "$RECOVER_PREFIX-restart-0.rd/data"
+          test -s "$RECOVER_PREFIX-mesh.cpa.gz/1/header.gz"
+      - name: Rehydrate private rates and verify 19 SHA256 without prepare
+        env:
+          PRIVATE_RATES_B64: ${{ secrets.OXYGEN24_RATES_TAR_XZ_B64 }}
+        run: |
+          set -euo pipefail
+          test -n "$PRIVATE_RATES_B64" || { echo '::error::Missing private rate secret'; exit 22; }
+          umask 077
+          mkdir -p "$OXYGEN_RESEARCH_RATE_DIR"
+          printf '%s' "$PRIVATE_RATES_B64" | base64 --decode | tar -xJ -C "$OXYGEN_RESEARCH_RATE_DIR" --no-same-owner
+          python3 "$CHAIN" --verify-rates "$OXYGEN_RESEARCH_RATE_DIR" \
+            --root "$PWD" --power-w "$POWER_W" --start-ns "$START_NS" \
+            --end-ns "$END_NS" --source-sha "$SOURCE_SHA"
+          test -s "$CHEM/private_rates/EI-401_O2_X.txt"
+      - name: P1 rebuild native physics-opt at original source SHA
+        run: |
+          set -euo pipefail
+          bash "$CHEM/issue397_l1_power_scan_replay.sh" build "$POWER_W"
+          test -x physics_app/physics-opt
+      - name: P2 native advanced restart check-input parent and child state
+        run: |
+          set -euo pipefail
+          bash "$CHEM/issue397_l1_power_scan_replay.sh" check "$POWER_W"
+      - name: P3 native MultiApp advanced restart with bounded adaptive dt from verified checkpoint
+        run: |
+          set -euo pipefail
+          RECOVER_PREFIX="$(cat "$RESULT/recovery_prefix.txt")"
+          test -s "$RECOVER_PREFIX-restart-0.rd/data"
+          started="$(date +%s)"
+          set +e
+          timeout -s TERM -k 60s 19800s docker run --rm --entrypoint /bin/bash --user 0:0 \
+            --workdir /workspace -v "$PWD:/workspace" "$BUILD_BASE_REF" -lc "
+              set -euo pipefail
+              source /environment
+              physics_app/physics-opt \
+                -i '$INPUT' \
+                '$CHEM/rf_elastic_multiapp_parent_$POWER_W""w_100us_dt1000ns_overlay.i' \
+                '$CHEM/o2_elastic_$POWER_W""w_100us_dt1000ns_overlay.i' \
+                '$CHEM/full24_$POWER_W""w_100us_dt1000ns_overlay.i' \
+                '$CHEM/o_elastic_ei17_$POWER_W""w_100us_dt1000ns_overlay.i' \
+                Outputs/file_base='$RESULT/run/$STAGE_BASE' \
+                MultiApps/maxwell_t6/no_restore=false \
+                Problem/restart_file_base='/workspace/$RECOVER_PREFIX'
+            " 2>&1 | tee "$RESULT/recovery_runtime.log"
+          code="${PIPESTATUS[0]}"
+          set -e
+          printf 'source_sha=%s\npower_w=%s\nupstream_run=%s\nstart_ns=%s\nend_ns=%s\nwall_seconds=%s\nexit_code=%s\n' \
+            "$SOURCE_SHA" "$POWER_W" "$PARENT_RUN_ID" "$START_NS" "$END_NS" \
+            "$(( $(date +%s) - started ))" "$code" > "$RESULT/recovery_status.txt"
+          echo "OXYGEN25_NATIVE_ADVANCED_RESTART_EXIT_CODE=$code"
+          test "$code" -eq 0
+      - name: P4 advanced restart state continuity and next-stage archive proof
+        run: |
+          set -euo pipefail
+          find "$RESULT/run/${STAGE_BASE}_cp" -type f | sort | tee "$RESULT/recovery_checkpoint_listing.txt"
+          python3 "$CHAIN" --verify-recovery \
+            --root "$PWD" --power-w "$POWER_W" --start-ns "$START_NS" \
+            --end-ns "$END_NS" --interval-ns "$INTERVAL_NS" --source-sha "$SOURCE_SHA"
+          test -s "$RESULT/restart_run_${END_NS}ns.tar.gz"
+          test -s "$RESULT/restart_inputs_${END_NS}ns.tar.gz"
+          test -s "$RESULT/restart_${END_NS}ns_manifest.json"
+          python3 "$PLAN" --attest "$RESULT/restart_${END_NS}ns_manifest.json" --stage-number 5 --power-w "$POWER_W" --upstream-run-id "$PARENT_RUN_ID"
+          echo "OXYGEN25_STAGE5_DT2P5US_DIRECT_1MS_${START_NS}_TO_${END_NS}NS_CHECKPOINT_PASS=$POWER_W"
+      - name: Diagnose direct Stage5 neutral transient at 1ms
+        run: |
+          set -euo pipefail
+          python3 _controller_harness/.github/scripts/oxygen25_stage5_direct_1ms_neutral_trends.py \
+            --csv "$RESULT/run/plasma.csv" \
+            --output "$RESULT/stage5_direct_1ms_neutral_trends.json" \
+            --power-w "$POWER_W"
+      - name: Upload verified native restart bundle for next independent CI
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: oxygen25-stage5-dt2p5us-direct-ei936-${{ env.END_NS }}ns-restart-complete-${{ matrix.power_w }}W
+          retention-days: 90
+          if-no-files-found: error
+          path: |
+            ${{ env.RESULT }}/restart_run_${{ env.END_NS }}ns.tar.gz
+            ${{ env.RESULT }}/restart_inputs_${{ env.END_NS }}ns.tar.gz
+            ${{ env.RESULT }}/restart_${{ env.END_NS }}ns_manifest.json
+            ${{ env.RESULT }}/restart_time_sequence_overlay.json
+            ${{ env.RESULT }}/recovery_prefix.txt
+            ${{ env.RESULT }}/recovery_checkpoint_listing.txt
+            ${{ env.RESULT }}/recovery_status.txt
+            ${{ env.RESULT }}/recovery_runtime.log
+            ${{ env.RESULT }}/run/plasma.csv
+            ${{ env.RESULT }}/run/${{ env.STAGE_BASE }}.csv
+            ${{ env.RESULT }}/run/${{ env.STAGE_BASE }}.e
+            ${{ env.RESULT }}/stage5_direct_1ms_neutral_trends.json
+            ${{ env.RESULT }}/upstream_manifest.json
+      - name: Preserve restart failure diagnostics without protected rates
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: oxygen25-stage5-dt2p5us-direct-ei936-${{ env.START_NS }}to${{ env.END_NS }}ns-diagnostics-${{ matrix.power_w }}W
+          retention-days: 21
+          if-no-files-found: warn
+          path: |
+            ${{ env.RESULT }}/recovery_status.txt
+            ${{ env.RESULT }}/restart_time_sequence_overlay.json
+            ${{ env.RESULT }}/recovery_prefix.txt
+            ${{ env.RESULT }}/recovery_checkpoint_listing.txt
+            ${{ env.RESULT }}/recovery_runtime.log
+            ${{ env.RESULT }}/check_input.log
+            ${{ env.RESULT }}/run/plasma.csv
+            ${{ env.RESULT }}/run/${{ env.STAGE_BASE }}.csv
+            ${{ env.RESULT }}/run/${{ env.STAGE_BASE }}.e
+            ${{ env.RESULT }}/run/${{ env.STAGE_BASE }}_cp/**
+            ${{ env.RESULT }}/stage5_direct_1ms_neutral_trends.json
+            ${{ env.RESULT }}/upstream_manifest.json
+            ${{ env.RESULT }}/restart_${{ env.END_NS }}ns_manifest.json
