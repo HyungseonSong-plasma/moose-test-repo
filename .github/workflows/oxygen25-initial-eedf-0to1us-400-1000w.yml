@@ -61,6 +61,8 @@ jobs:
           path: _checkpoint_harness
           sparse-checkout: |
             .github/scripts/oxygen25_eedf_0to1us_checkpoint.py
+            .github/scripts/oxygen25_eedf_restart_chain.py
+            physics_harness/adapters/moose/initial_checkpoint.py
             tests/test_oxygen25_parameterized_first_checkpoint.py
             .github/oxygen25_eedf/initial_mixture_23xsec_transport.txt
           sparse-checkout-cone-mode: false
@@ -112,6 +114,10 @@ jobs:
             tests/test_issue395_oxygen_full24_wall_sticking.py \
             tests/test_issue395_receiver_200sccm_inlet.py
           python3 "$HARNESS" --self-test
+          python3 _checkpoint_harness/.github/scripts/oxygen25_eedf_restart_chain.py --self-test
+          # This test exercises the original pinned adapter, not the research
+          # wrapper; checkout both paths to avoid a missing-fixture P0 failure.
+          test -s _checkpoint_harness/physics_harness/adapters/moose/initial_checkpoint.py
           PYTHONPATH="_checkpoint_harness:$PWD" .issue419-25-venv/bin/python -m pytest -q _checkpoint_harness/tests/test_oxygen25_parameterized_first_checkpoint.py
           bash -n "$CHEM/issue397_l1_power_scan_replay.sh"
 
@@ -208,6 +214,11 @@ jobs:
             | tee "$RESULT/restart_archives_${END_NS}ns.sha256"
           test -s "$RESULT/run/plasma.e"
           test -s "$RESULT/restart_${END_NS}ns_manifest.json"
+          # Every restart archive is subject to a SHA256 roundtrip check.
+          sha256sum --check "$RESULT/restart_archives_${END_NS}ns.sha256"
+          test -d "$RESULT/run/plasma_cp"
+          test -n "$(find "$RESULT/run/plasma_cp" -name data -type f -size +0c -print -quit)"
+          test -n "$(find "$RESULT/run/plasma_cp" -name header.gz -type f -size +0c -print -quit)"
           python3 - "$RESULT/restart_${END_NS}ns_manifest.json" <<'PY'
           import json,sys
           m=json.load(open(sys.argv[1]))
@@ -215,6 +226,20 @@ jobs:
           assert t['lookup_sha256']=='35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b'
           assert m['final_time_s']==1e-6 and len(m['time_sequence_s'])==191
           assert m['scientific_acceptance']=='HOLD'
+          expected={
+              'experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt',
+              'experiments/Issue395_powered_chemistry_ladder/electron_transport_initial_eedf.txt'
+          }
+          records={r['path']:r for r in m['input_files']}
+          assert expected.issubset(records)
+          assert all(records[x]['sha256']==t['lookup_sha256'] for x in expected)
+          assert t['restart_requires_same_transport_table']
+          import tarfile
+          from pathlib import Path
+          archive=Path('experiments/Issue395_powered_chemistry_ladder') / ('results_rf_elastic_diss_ion_ei20_ei01_'+str(m['power_w'])+'w_adjacent_sheath_wall_closed_100us_dt1000ns') / 'restart_inputs_1000ns.tar.gz'
+          with tarfile.open(archive,'r:gz') as f:
+              assert expected.issubset(set(f.getnames()))
+          assert m['recovery_requirements']['native_recover_prefix'].endswith(f"/{m['actual_moose_step']:04d}")
           print('OXYGEN25_INITIAL_EEDF23_NATIVE_0TO1US_P4_PASS',m['power_w'])
           PY
           echo "OXYGEN25_PARAMETERIZED_FIRST_NATIVE_CHECKPOINT_PASS=$POWER_W/$END_NS"
@@ -236,6 +261,9 @@ jobs:
             ${{ env.RESULT }}/runtime.log
             ${{ env.RESULT }}/run/plasma.csv
             ${{ env.CHEM }}/chem24_manifest.json
+            ${{ env.CHEM }}/electron_transport_initial_eedf.txt
+            ${{ env.RESULT }}/run/plasma.e
+            ${{ env.RESULT }}/run/plasma_cp/**
 
       - name: Preserve failure diagnostics even when full checkpoint is unavailable
         if: always()
@@ -251,3 +279,4 @@ jobs:
             ${{ env.RESULT }}/run/plasma.csv
             ${{ env.RESULT }}/restart_${{ env.END_NS }}ns_manifest.json
             ${{ env.RESULT }}/prep/full24_source_overlay.log
+            ${{ env.RESULT }}/run/plasma_cp/**
