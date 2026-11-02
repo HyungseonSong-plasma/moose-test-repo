@@ -910,6 +910,32 @@ def self_test() -> None:
               "[Outputs]\n  checkpoint = true\n[]\n")
     assert time_grid(extend_input(sample, 1, 2)) == (2, [0, 1, 2])
     assert time_grid(extend_input(sample, 1, 100)) == (100, list(range(101)))
+    initial = [Decimal(i) for i in range(101)] + [Decimal(i) for i in range(110,1001,10)]
+    research_sample = sample.replace(
+        "end_time = 1e-9",
+        "end_time = 1.0000000000000001e-6").replace(
+        "time_sequence = '0 1e-9'",
+        "time_sequence = '" + " ".join(format(x*NS_S, ".17g") for x in initial) + "'")
+    assert time_grid(research_sample) == (1000, initial)
+    research_next = extend_input(research_sample, 1000, 2000, "10")
+    assert time_grid(research_next)[1][-1] == Decimal(2000)
+    assert len(time_grid(research_next)[1]) == 291
+    research_adaptive = stage_adaptive_stepper(research_next, "10")
+    assert "type = IterationAdaptiveDT" in research_adaptive
+    assert "  dtmax = 1e-8" in research_adaptive
+    mock_variant = {"electron_transport_variant": {
+        "name": EEDF_EXPECTED_NAME, "lookup_sha256": EEDF_TABLE_SHA,
+        "restart_requires_same_transport_table": True}}
+    verify_eedf_variant(mock_variant)
+    for corrupt in ({"electron_transport_variant": {}},
+                    {"electron_transport_variant": {**mock_variant["electron_transport_variant"],
+                        "lookup_sha256": "0"*64}}):
+        try:
+            verify_eedf_variant(corrupt)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("invalid EEDF transport provenance accepted")
     legacy_input = extend_input(sample, 1, 2)
     legacy_manifest = {
         "schema": 2, "actual_moose_step": 4,
