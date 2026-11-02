@@ -1,13 +1,15 @@
+# Issue #431 — historical Stage-B4 bulk neutral initial composition sensitivity.
+# Keep inlet/EEDF/charged seeds, six chemistry channels, powers and time grid unchanged.
 # Oxygen ICP latest settings with ONLY the six original reaction/elastic channels.
 # Separate from 25-reaction runs and checkpoints: chemistry cannot be restarted across variants.
 # Rate owner EI-01 is the canonical o2_attachment_ei01 overlay (source locked).
 # EI-16 is implemented by the specialized PhysicsElectronImpactIonizationMaterial.
 name: Oxygen ICP legacy6 latest-EEDF 100us 400W 1000W
-run-name: Legacy6 chemistry + latest EEDF/inlet 400 and 1000W to 100us ${{ github.sha }}
+run-name: Legacy6 prior neutral IC + latest EEDF/inlet 400 and 1000W to 100us ${{ github.sha }}
 on:
   workflow_dispatch:
   push:
-    branches: [experiment/oxygen-legacy6-latest-settings-400-1000w-100us-20261102]
+    branches: [issue-431-legacy6-prior-neutral-20261102]
     paths:
       - .github/workflows/oxygen-legacy6-latest-400-1000w-100us.yml
 
@@ -15,12 +17,12 @@ permissions:
   contents: read
 
 concurrency:
-  group: oxygen-legacy6-100us-${{ github.ref }}
+  group: oxygen-legacy6-prior-neutral-100us-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
   simulate:
-    name: Native Legacy6 0–100us ${{ matrix.power_w }}W
+    name: Native Legacy6 historical-neutral 0–100us ${{ matrix.power_w }}W
     runs-on: ubuntu-24.04
     timeout-minutes: 360
     strategy:
@@ -127,6 +129,10 @@ jobs:
           assert m["chemistry_channels"]==["EI-01","EI-02","DISS-G","EI-16","EI-17","EI-20"]
           assert m["transport_table_sha256"]=="35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b"
           assert m["neutral_inlet_sccm"]==200
+          assert m["neutral_seed_policy"]=="historical_pre_1e-5_bulk_only"
+          assert abs(m["neutral_initial_mass_fractions"]["O"]-0.10309278350515465)<1e-14
+          assert abs(m["neutral_initial_mass_fractions"]["O2"]-0.7216494845360825)<1e-14
+          assert m["neutral_inlet_mole_fractions"]=={"O2":.99997,"O2a":1e-5,"O":1e-5,"Os":1e-5}
           assert m["native_initialization"]=="fresh_not_restarted"
           print("OXYGEN_LEGACY6_LATEST_100US_COMPLETE",m["power_W"])
           PY
@@ -135,7 +141,7 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: oxygen-legacy6-latest-EEDF-100us-${{ matrix.power_w }}W
+          name: oxygen-legacy6-prior-neutral-100us-${{ matrix.power_w }}W
           if-no-files-found: error
           retention-days: 90
           path: |
