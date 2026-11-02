@@ -94,3 +94,27 @@ This report documents numerical evidence; threshold values are conservative scre
 - After P4 and native artifact verification, compare the full 500–1000µs window with both existing `oxygen25_stage5_dt5us_compare.py` and this physical-time-lag diagnostic. Do not adjust PID gains or chemistry without an independently justified scientific experiment.
 
 **Decision: Stage6 1–10ms dtmax=100µs remains HOLD.**
+
+## 2026-11-02 05:39 UTC: live 500–800 µs matched-window test reveals timestep-scaled RF cycle
+
+- Rechecked original Stage5 DIRECT Run [41358545575](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/41358545575): `completed/success`, both 400 W and 1000 W native P0–P4 passed; 1 ms restart artifact IDs `13107661302` and `13109110076` remain available.
+- Rechecked the isolated 1000 W dtmax=5 µs [Run 41379107857](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/41379107857): `in_progress`, Stage4 gate/P0/P1/P2 passed, **P3 still running**; P4 and native artifacts pending. Latest decoded P3 monitor/step reached **823.389 µs**, with `dt=5 µs`, as of log timestamp 05:30 UTC.
+- Parsed the actual MOOSE postprocessor tables from job logs (`125065801658` at 5 µs, `125003788529` at 10 µs), deduplicating repeated rolling-history rows by physical time. Compared **the same 500–800 µs physical-time window**, not equal sample indices:
+
+| 1000 W metric, 500–800 µs | dtmax=10 µs (original) | dtmax=5 µs (trial) |
+| --- | ---: | ---: |
+| Unique RF monitor samples | 30 (506.777–796.777 µs) | 60 (503.389–798.389 µs) |
+| Raw RF power minimum | 313.681 W | 619.696 W |
+| Raw RF power maximum | 1938.829 W | 1436.778 W |
+| RF peak-to-peak | **1625.148 W** | **817.082 W** |
+| RMS RF target error | **403.652 W** | **174.254 W** |
+| PID output at upper clamp 3.0 | **4/30 (13.3%)** | **2/60 (3.3%)** |
+| RF local-maximum spacings | **80, 70, 80 µs** | **40, 40, 40, 40, 45, 40 µs** |
+| O2(a1Delta) negative sample-to-sample steps | 0 | 0 |
+
+- At 5 µs, the sampled peak-to-peak RF excursion is **49.7% smaller** and sampled RMS error **56.8% smaller** than the 10 µs case in this window, but remains **817 W peak-to-peak** at a nominal 1000 W target: a significant oscillation.
+- **New root-cause clue:** observed cycle periods approximately halve as dtmax halves: ~70–80 µs at 10 µs dtmax versus ~40 µs at 5 µs dtmax, i.e. roughly **8 time steps per cycle** in both trials. This is consistent with a discrete-time feedback / solver-coupling limit-cycle mechanism, rather than a timestep-independent physical oscillation. **It is not causal proof**: phase, sample grids, adaptive stepping, and nonlinear plasma response may confound the comparison. PID saturation still occurs in both runs.
+- Both O2(a1Delta) sampled traces are monotone over 500–800 µs, but the original 10 µs neutral dips appeared **after 866 µs**. Do not extrapolate the neutral result to 1 ms. Only final verified native CSVs can establish the full 500–1000 µs comparison.
+- Next: finish the 5 µs P3/P4 and verify its native restart artifact, compare full 500–1000 µs with `oxygen25_stage5_dt5us_compare.py`, `oxygen25_pid_limitcycle_diagnostic.py` and `oxygen25_pid_physical_lag.py`; assess whether a further 2.5 µs refinement is scientifically justified. No PID gain or chemistry modifications are authorized by this observation.
+
+**Stage6 1–10 ms with dtmax=100 µs remains HOLD.** A dtmax larger than the observed 40–80 µs RF cycle has no demonstrated stability or convergence basis.
