@@ -281,7 +281,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           run-id: 41379107857
-          name: oxygen25-stage5-dt2p5us-first500-ei936-100000to1000000ns-diagnostics-1000W
+          name: oxygen25-stage5-dt5us-ei936-100000to1000000ns-diagnostics-1000W
           github-token: ${{ github.token }}
           path: _dt5us_control_artifact
       - name: Compare 1000W RF oscillation and neutral densities at 400–500us
