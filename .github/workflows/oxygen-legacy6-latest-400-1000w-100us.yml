@@ -1,5 +1,6 @@
 # Oxygen ICP latest settings with ONLY the six original reaction/elastic channels.
 # Separate from 25-reaction runs and checkpoints: chemistry cannot be restarted across variants.
+# Rate owner EI-01 is the canonical o2_attachment_ei01 overlay (source locked).
 name: Oxygen ICP legacy6 latest-EEDF 100us 400W 1000W
 run-name: Legacy6 chemistry + latest EEDF/inlet 400 and 1000W to 100us ${{ github.sha }}
 on:
