@@ -107,7 +107,7 @@ def check_input(power: int):
         "EI-01":["reaction_progress = R_attachment","variable = log_nm","variable = log_ne"],
         "EI-02":["reaction_progress = R_elastic_O2"],
         "DISS-G":["property_name = R_diss_O2","1.41e-15","-0.22"],
-        "EI-16":["reaction_progress = R_ion_O2"],
+        "EI-16":["type = PhysicsElectronImpactIonizationMaterial","rate_table_file = o2_ionization.txt"],
         "EI-17":["reaction_progress = R_elastic_O"],
         "EI-20":["reaction_progress = R_ion_O"],
     }
