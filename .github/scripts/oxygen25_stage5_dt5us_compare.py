@@ -207,7 +207,7 @@ def self_test() -> None:
         initial[header.index(RF)]="0"
         initial[header.index(DRIVE)]="7.4955980963788"
         lines[1]=",".join(initial)
-        p.write_text("\\n".join(lines)+"\\n")
+        p.write_text("\n".join(lines)+"\n")
         rows=read_native(p)
         assert rows[0][RF]==0 and rows[0][DRIVE]>3.0
         bad=lines[:]
@@ -215,7 +215,7 @@ def self_test() -> None:
         post[header.index(RF)]="0"
         bad[2]=",".join(post)
         broken=Path(td)/"bad_post_start.csv"
-        broken.write_text("\\n".join(bad)+"\\n")
+        broken.write_text("\n".join(bad)+"\n")
         try: read_native(broken)
         except ValueError: pass
         else: raise AssertionError("post-start zero RF accepted")
