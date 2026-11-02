@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 """Bounded Legacy7 experiment adapter: Legacy6 + only EI-2738, 0-100 us.
 
-Uses the original six-reaction preparation and native replay unchanged.
+Uses the original six-reaction preparation. A guarded argv-only runtime patch
+corrects the pinned replay's EI2738 file position after P2 before P3.
 The extra electron-detachment formula is experimental, not EEDF-integrated
 nor an accepted chemistry-rate source.
 """
 from __future__ import annotations
 
 import argparse
+import hashlib
 import importlib.util
 import json
 import os
@@ -17,6 +19,60 @@ from pathlib import Path
 BASE_IDS = ["EI-01", "EI-02", "DISS-G", "EI-16", "EI-17", "EI-20"]
 SEVEN_IDS = BASE_IDS + ["EI-2738"]
 RESERVED = {"x", "y", "z", "t", "pi", "e"}
+
+
+
+# The pinned research replay checks inputs correctly, but in the 'solve' branch
+# appends optional chemistry files AFTER Outputs/file_base. MOOSE sees an orphan
+# positional argument and aborts before the first timestep. Scope this repair
+# to exactly one runtime command in each CI checkout, NOT the six-channel model.
+REPLAY_SCRIPT = "issue397_l1_power_scan_replay.sh"
+BAD_SOLVE_ARGS = "Outputs/file_base='$RESULT/run/plasma' ${O2A_EXTRA_INPUT} ${EI2738_EXTRA_INPUT}"
+GOOD_SOLVE_ARGS = "${O2A_EXTRA_INPUT} ${EI2738_EXTRA_INPUT} Outputs/file_base='$RESULT/run/plasma'"
+CHECK_INPUT_ARGS = "'$OELASTIC' ${O2A_EXTRA_INPUT} ${EI2738_EXTRA_INPUT}"
+
+
+def corrected_solver_argv(source: str) -> str:
+    if source.count(BAD_SOLVE_ARGS) != 1 or source.count(GOOD_SOLVE_ARGS) != 0:
+        raise ValueError("Pinned replay differs from known 2026-11-02 P3 argv defect")
+    if source.count(CHECK_INPUT_ARGS) != 1:
+        raise ValueError("Replay P2 input ordering changed; refuse P3 patch")
+    fixed = source.replace(BAD_SOLVE_ARGS, GOOD_SOLVE_ARGS, 1)
+    verify_solver_argv(fixed)
+    return fixed
+
+
+def verify_solver_argv(source: str) -> None:
+    if (source.count(GOOD_SOLVE_ARGS) != 1
+            or source.count(BAD_SOLVE_ARGS) != 0
+            or source.count(CHECK_INPUT_ARGS) != 1):
+        raise ValueError("P3 argv regression: EI2738 overlay must precede Outputs/file_base")
+
+
+def patch_replay_argv(power: int) -> None:
+    if os.environ.get("OXYGEN_RESEARCH_EI2738_FORMULA") != "1":
+        raise ValueError("Run argv patch only with explicit EI2738 research case")
+    module, overlay = verify(power)
+    script = module.CHEM / REPLAY_SCRIPT
+    source = script.read_text()
+    repaired = corrected_solver_argv(source)
+    original_hash = hashlib.sha256(source.encode()).hexdigest()
+    revised_hash = hashlib.sha256(repaired.encode()).hexdigest()
+    script.write_text(repaired)
+    verify_solver_argv(script.read_text())
+    record = module.result(power) / "legacy7_runtime_argv_patch.json"
+    record.write_text(json.dumps({
+        "power_W": power,
+        "purpose": "Correct orphan EI2738 CLI input file before P3 execution",
+        "model_or_rate_changes": False,
+        "script_original_sha256": original_hash,
+        "script_patched_sha256": revised_hash,
+        "bad_argv": BAD_SOLVE_ARGS,
+        "corrected_argv": GOOD_SOLVE_ARGS,
+        "chemistry_overlay": str(overlay),
+        "scientific_acceptance": "HOLD",
+    }, indent=2, sort_keys=True) + "\n")
+    print("OXYGEN_LEGACY7_EI2738_P3_ARGV_PATCH_PASS", power, revised_hash)
 
 
 def legacy6():
@@ -162,6 +218,26 @@ def self_test():
         pass
     else:
         raise AssertionError("Incomplete overlay must fail closed")
+    sample = ("  '$OELASTIC' ${O2A_EXTRA_INPUT} ${EI2738_EXTRA_INPUT}\n"
+              "  " + BAD_SOLVE_ARGS)
+    changed = corrected_solver_argv(sample)
+    verify_solver_argv(changed)
+    assert changed != sample
+    for broken in (sample, changed.replace(GOOD_SOLVE_ARGS, ""),
+                   changed.replace(CHECK_INPUT_ARGS, "")):
+        try:
+            verify_solver_argv(broken)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("P3 bad/incomplete argv must fail the checker")
+    try:
+        corrected_solver_argv(changed)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("Repeated CLI patch must fail closed")
+    print("OXYGEN_LEGACY7_EI2738_ARGV_REGRESSION_PASS")
     print("OXYGEN_LEGACY7_EI2738_HARNESS_SELFTEST_PASS")
 
 
@@ -172,6 +248,7 @@ def main():
     group.add_argument("--prepare-variant", action="store_true")
     group.add_argument("--verify-seven", action="store_true")
     group.add_argument("--verify-and-archive", action="store_true")
+    group.add_argument("--patch-replay-argv", action="store_true")
     parser.add_argument("--power-w", type=int, choices=(400, 1000))
     args = parser.parse_args()
     if args.self_test:
@@ -184,6 +261,8 @@ def main():
         verify(args.power_w)
     elif args.verify_and_archive:
         archive(args.power_w)
+    elif args.patch_replay_argv:
+        patch_replay_argv(args.power_w)
 
 
 if __name__ == "__main__":
