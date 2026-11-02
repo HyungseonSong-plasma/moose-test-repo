@@ -63,6 +63,10 @@ jobs:
           python3 "$HARNESS" --self-test
           python3 -m py_compile "$HARNESS"
           bash -n "$CHEM/issue397_l1_power_scan_replay.sh"
+          python3 -m venv .legacy6-venv
+          .legacy6-venv/bin/python -m pip install --disable-pip-version-check --quiet numpy==2.1.2 scipy==1.14.1 'pytest>=8,<9'
+          echo "$PWD/.legacy6-venv/bin" >> "$GITHUB_PATH"
+          .legacy6-venv/bin/python -c "import numpy,scipy; print('OXYGEN_LEGACY6_NATIVE_PYTHON_DEPS_PASS',numpy.__version__,scipy.__version__)"
           test "$OXYGEN_RESEARCH_FULL24" = 0
           test "$OXYGEN_RESEARCH_QUICK_5MIN" = 0
           TABLE_SOURCE=_legacy6_control/.github/oxygen25_eedf/initial_mixture_23xsec_transport.txt
