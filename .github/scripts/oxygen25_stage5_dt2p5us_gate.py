@@ -152,10 +152,20 @@ def analyse(control: list[dict[str,float]], trial: list[dict[str,float]]) -> dic
         exp=test["neutral"][name]
         ctrl_drop=ctrl["maximum_peak_to_trough_drop_percent"]
         exp_drop=exp["maximum_peak_to_trough_drop_percent"]
-        # No new material peak-to-trough drops; minor roundoff and
-        # interpolation artifacts below 0.02% are treated as numerical noise.
+        # A monotone depletion of ground-state O2(X) is expected chemistry,
+        # NOT an oscillation. Comparing its cumulative depletion with a
+        # different dtmax falsely vetoes stable refinements. Retain the
+        # slope-reversal gate for oscillatory cases.
+        allowed_monotone_ground_state_depletion = (
+            name == "O2_X"
+            and exp["negative_slope_steps"] > 0
+            and exp["slope_sign_reversals"] == 0
+        )
+        # For other species, no new material peak-to-trough drops; numerical
+        # roundoff and interpolation differences below 0.02% are ignored.
         neutral_not_worse[name] = (
-            exp_drop <= max(ctrl_drop,MATERIAL_NEUTRAL_DECLINE_PERCENT)
+            (allowed_monotone_ground_state_depletion or
+             exp_drop <= max(ctrl_drop,MATERIAL_NEUTRAL_DECLINE_PERCENT))
             and not (ctrl["slope_sign_reversals"]==0
                      and exp["slope_sign_reversals"]>=3
                      and exp_drop >= MATERIAL_NEUTRAL_DECLINE_PERCENT)
@@ -215,6 +225,19 @@ def self_test() -> None:
         yes=analyse(base,trial)
         assert yes["scientific_decision"]=="ALLOW_DT2P5US_500TO1000US_CONTINUATION"
         assert yes["rf_peak_to_peak_reduction_percent"]>25
+        # Regression: a larger monotone O2(X) decrease at smaller dt is
+        # normal ground-state depletion, not a new density oscillation.
+        with b.open(newline="") as f:
+            rows=list(csv.DictReader(f))
+        for row in rows:
+            row["n_O2_X_avg"]=str(1e17*(1-0.25*float(row["time"])/1e-3))
+        with b.open("w",newline="") as f:
+            writer=csv.DictWriter(f,fieldnames=rows[0].keys())
+            writer.writeheader()
+            writer.writerows(rows)
+        allowed=analyse(base,read_native(b,expected_end_s=0.0005))
+        assert allowed["neutral_oscillation_not_worse_by_species"]["O2_X"]
+        assert allowed["scientific_decision"]=="ALLOW_DT2P5US_500TO1000US_CONTINUATION"
         generate(b,2.5,225)
         no=analyse(base,read_native(b,expected_end_s=0.0005))
         assert no["scientific_decision"]=="HOLD_DT2P5US_CONTINUATION"
