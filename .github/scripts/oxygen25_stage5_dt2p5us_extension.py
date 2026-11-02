@@ -3,7 +3,7 @@
 
 The original 0–500us five-stage plan and accepted Stage4 checkpoint
 are immutable. This independent branch changes ONLY the adaptive timestep
-upper bound from 10us to 2.5us at 1000W for 100us→500us, retaining native
+upper bound from 5us to 2.5us at 1000W for 100us→500us, retaining native
 Stage4 state, RF feedback, chemistry, Maxwell coupling and source SHA.
 A successful native runtime is not evidence of timestep convergence.
 """
@@ -25,7 +25,7 @@ NS_S = Decimal("1e-9")
 
 def stage(number: int) -> original.Stage:
     if type(number) is not int or number != 5:
-        raise ValueError("Stage5 dt2p2.5us sensitivity experiment supports stage 5 only")
+        raise ValueError("Stage5 dt2p5us sensitivity experiment supports stage 5 only")
     return EXPERIMENT
 
 
@@ -36,7 +36,7 @@ def check_upstream(manifest: dict, number: int, power_w: int,
         raise ValueError("Only the exact previously validated Stage4 run is accepted")
     proof = original.verify_previous_manifest(manifest, 5, power_w, upstream_run_id)
     return {**proof,
-            "experiment": "stage5_1000w_dt2p2.5us_sensitivity",
+            "experiment": "stage5_1000w_dt2p5us_sensitivity",
             "direct_end_ns": EXPERIMENT.end_ns,
             "test_requested_intervals": EXPERIMENT.requested_steps,
             "reference_stage6_run_id": REFERENCE_CHAIN_STAGE6_RUN_ID}
@@ -60,7 +60,7 @@ def attest(manifest: dict, number: int, power_w: int,
             or manifest["actual_moose_step"] < 1
             or (Decimal(str(manifest.get("final_time_s"))) -
                 EXPERIMENT.end_ns * NS_S).copy_abs() >= Decimal("1e-15")):
-        raise ValueError("Genuine 500us native dt2p2.5us continuation not established")
+        raise ValueError("Genuine 500us native dt2p5us continuation not established")
     expected = {
         "restart_run_500000ns.tar.gz",
         "restart_inputs_500000ns.tar.gz",
@@ -70,10 +70,10 @@ def attest(manifest: dict, number: int, power_w: int,
             archives[key].get("bytes", 0) > 0 and
             len(str(archives[key].get("sha256", ""))) == 64
             for key in expected):
-        raise ValueError("500us dt2p2.5us archive SHA256 identity incomplete")
+        raise ValueError("500us dt2p5us archive SHA256 identity incomplete")
     result = dict(manifest)
-    result["stage5_dt2p2.5us_sensitivity_experiment"] = {
-        "name": "stage5_1000w_dt2p2.5us_sensitivity",
+    result["stage5_dt2p5us_sensitivity_experiment"] = {
+        "name": "stage5_1000w_dt2p5us_sensitivity",
         "stage": 5,
         "start_ns": EXPERIMENT.start_ns,
         "end_ns": EXPERIMENT.end_ns,
