@@ -33,7 +33,7 @@ At 500–1000 µs:
 | 400 W | 400.188881 | 400.557179 | 400.301713 | 0.0921% |
 | **1000 W** | **281.382434** | **2034.639374** | 986.852335 | **175.326%** |
 
-At 1000 W, RF power oscillations have roughly 70–80 µs spacing. This is a material solver/coupling oscillation, not a minor neutral-density numerical roundoff. Proposed `dtmax=100 µs` would be larger than the observed oscillation period and is therefore not justified without investigating the underlying dynamics and timestep sensitivity.
+At 1000 W, RF power oscillations have roughly 70–80 µs spacing. In the direct 500–1000 µs window, the RF drive scale reaches its apparent upper bound of 3.0 at 10 of 51 CSV samples (versus zero samples for 400 W), and ranges from 2.007683 to 3.0. The prior 1000 W restart chain also hits 3.0 at 5 of 73 late samples. **A saturated or overly aggressive RF power-feedback loop is a plausible hypothesis, not an established root cause.** This is a material solver/coupling oscillation, not a minor neutral-density numerical roundoff. Proposed `dtmax=100 µs` would be larger than the observed oscillation period and is therefore not justified without investigating the underlying dynamics and timestep sensitivity.
 
 ## Comparison with prior 500 µs restart chain
 
