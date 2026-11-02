@@ -21,7 +21,7 @@ TABLE = Path("experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt")
 EEDF_SHA256 = "35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b"
 RECIPE_SHA = "8e2fe042dbc204b5fda22d346f1ad8d2e32db3ab"
 COMPONENTS = {
-    "EI-01": "o2_attachment_{p}w_100us_dt1000ns_overlay.i",
+    "EI-01": "o2_attachment_ei01_{p}w_100us_dt1000ns_overlay.i",
     "EI-02": "o2_elastic_{p}w_100us_dt1000ns_overlay.i",
     "DISS-G": "o2_dissociation_{p}w_100us_dt1000ns_overlay.i",
     "EI-16": "o2_ionization_{p}w_100us_dt1000ns_overlay.i",
