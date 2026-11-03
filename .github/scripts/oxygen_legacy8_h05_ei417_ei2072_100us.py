@@ -250,12 +250,15 @@ def overlay_ok(src):
     if src.count("functor_on_rhs = true") != 2:
         raise ValueError("EI2072 must own exactly electron and energy FE sources")
     for forbidden in (
-        "variable = log_nm", "variable = log_nop", "variable = w_O2",
+        "variable = log_nm", "variable = log_nop",
         "functor_symbols = 'e ", "reaction_progress = R_EI417",
         "reaction_progress = R_EI2067",
     ):
         if forbidden in src:
             raise ValueError("EI2072 attempted to mutate other chemistry")
+    # Match an exact standalone O2 equation, NOT the legitimate w_O2s target.
+    if any(line.strip() == "variable = w_O2" for line in src.splitlines()):
+        raise ValueError("EI2072 must not add a ground-state O2 equation")
     return True
 
 def verify(power):
