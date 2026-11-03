@@ -1,0 +1,11 @@
+Experiment: Legacy8+EI417+EI935+EI2058 (11 channels)
+HOLD excluded: H05, EI-2072, EI-2074
+Source variant: LEGACY8_EI417_EI935_EI2058_NO_HOLD
+Powers: 400 W, 1000 W
+Schedule: fresh 0-100 us transient
+Pinned source: 8e2fe042dbc204b5fda22d346f1ad8d2e32db3ab
+Initial-mixture EEDF SHA256: 35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b
+New EI-2058 reaction: e + O2(a1Delta) -> O- + O(3P), threshold 3.50 eV
+Original private 100-row EI-2058 lookup required; no rate substitution permitted.
+Scientific acceptance: HOLD
+Explicit launch requested by user on 2026-11-03.
