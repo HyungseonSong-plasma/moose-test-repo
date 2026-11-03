@@ -124,6 +124,9 @@ jobs:
           python3 bin/physics.py preflight --self-test
           python3 bin/physics.py preflight "$CHEM/ei2738_detachment_formula_${POWER_W}w_100us_dt1000ns_overlay.i"
           python3 bin/physics.py preflight "$EI407_OVERLAY"
+          # The ParsedFunctorMaterial symbol 'e' is reserved; keep a named electron symbol.
+          grep -Fq "functor_symbols = 'el om'" "$H05_OVERLAY"
+          ! grep -Fq "functor_symbols = 'e om'" "$H05_OVERLAY"
           python3 bin/physics.py preflight "$H05_OVERLAY"
           test -s "$RESULT/legacy6_latest_variant.json"
           ! grep -q "R_EI415" "$CHEM/rf_elastic_diss_ion_ei20_ei01_${POWER_W}w_adjacent_sheath_wall_closed_100us_dt1000ns.i"
