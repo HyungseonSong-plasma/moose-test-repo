@@ -231,8 +231,8 @@ def verify(power):
     rates=[b.RATE,p.R417,p.R935,EI2058_RATE]
     shas={name:b.table_ok(CHEM/"private_rates"/name) for name in rates}
     j=json.loads((m.result(power)/"legacy6_latest_variant.json").read_text())
-    if j.get("chemistry_channels")!=channels(p) or
-        HOLD.intersection(j.get("chemistry_channels", [])):
+    if (j.get("chemistry_channels")!=channels(p) or
+        HOLD.intersection(j.get("chemistry_channels", []))):
         raise ValueError("wrong 11-ch inventory or held chemistry")
     if any((
         j.get("variant")!="LEGACY8_EI417_EI935_EI2058_NO_HOLD",
