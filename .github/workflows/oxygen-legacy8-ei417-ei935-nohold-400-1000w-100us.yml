@@ -132,7 +132,7 @@ jobs:
           python3 bin/physics.py preflight "$EI407_OVERLAY"
           python3 bin/physics.py preflight "$EI417_OVERLAY"
           python3 bin/physics.py preflight "$EI935_OVERLAY"
-          ! grep -Fq "'$H05_OVERLAY'" "$CHEM/issue397_l1_power_scan_replay.sh"
+          ! grep -Fq 'H05_OVERLAY' "$CHEM/issue397_l1_power_scan_replay.sh"
           ! grep -Fq "R_EI2072" "$EI935_OVERLAY"
           ! grep -Fq "R_EI2074" "$EI935_OVERLAY"
           test -s "$RESULT/legacy6_latest_variant.json"
