@@ -1,0 +1,6 @@
+EI2074_NATIVE_RUN_AUTHORIZED=1
+request=execute_400W_1000W_100us
+chemistry=Legacy8+H05+EI417+EI2072+EI2074
+scientific_acceptance=HOLD
+rate_input=private_secret_only
+launch_date=2026-11-03
