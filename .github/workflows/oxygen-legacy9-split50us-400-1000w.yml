@@ -1,5 +1,5 @@
-# Oxygen ICP Legacy9: Legacy8 eight reactions plus only EI2067 lookup.
-# Fresh 0-100us per power; preserve Legacy6/7/8 controls; science HOLD.
+# Legacy9: two independent native solves, 0-50us checkpoint and 50-100us recovery.
+# Original monolithic Legacy9 control retained. Stage 2 uses full checkpoint and dt cap 1us.
 # Rate owner EI-01 is the canonical o2_attachment_ei01 overlay (source locked).
 # EI-16 is implemented by the specialized PhysicsElectronImpactIonizationMaterial.
 name: Oxygen ICP Legacy9 two-stage native 50us checkpoint restart 400W 1000W
@@ -9,7 +9,7 @@ on:
   push:
     branches: [issue-legacy9-split50us-20261103]
     paths:
-      - .github/workflows/oxygen-legacy9-split50us-400-1000w-100us.yml
+      - .github/workflows/oxygen-legacy9-split50us-400-1000w.yml
 
 permissions:
   contents: read
@@ -36,7 +36,7 @@ jobs:
       OXYGEN_RESEARCH_EI2738_FORMULA: '1'
       OXYGEN_RESEARCH_LUMPED_O2A: '0'
       OXYGEN_RESEARCH_QUICK_5MIN: '0'
-      END_NS: '100000'
+      END_NS: '50000'
       EEDF_SHA: 35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b
       CHEM: experiments/Issue395_powered_chemistry_ladder
       OXYGEN_RESEARCH_RATE_DIR: /tmp/oxygen25/private_rates
