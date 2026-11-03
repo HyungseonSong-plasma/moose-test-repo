@@ -129,8 +129,8 @@ OVERLAY = """# Legacy8 + H05: O- + O -> O2 + e (associative detachment)
     type = ADParsedFunctorMaterial
     property_name = S_charge_closure_H05
     functor_names = 'S_e_molar_H05 S_Om_molar_H05'
-    functor_symbols = 'e om'
-    expression = 'e+om'
+    functor_symbols = 'el om'
+    expression = 'el+om'
     block = plasma
   []
 []
@@ -223,7 +223,7 @@ def overlay_ok(src):
         "variable = p",
         "expression = 'a+b+c'",
         "expression = 'a+b-c'",
-        "expression = 'e+om'",
+        "expression = 'el+om'",
     )
     if any(s not in src for s in must):
         raise ValueError("H05 overlay missing source/closure")
