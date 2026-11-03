@@ -347,7 +347,7 @@ def archive(power):
 
 def self_test():
     overlay_ok(OVERLAY)
-    assert A_PARTICLE * AVOGADRO == 180664222.8
+    assert math.isclose(A_PARTICLE * AVOGADRO, 180664222.8, rel_tol=1e-15)
     assert math.isclose(0.032 - 0.016 - 0.016, 0, abs_tol=1e-15)
     assert math.isclose(0.032 - 0.016 - 0.016, 0, abs_tol=1e-15)
     for corrupted in (OVERLAY.replace("property_name = R_H05", "property_name = R_WRONG"),
