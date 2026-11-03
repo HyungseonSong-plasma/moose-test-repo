@@ -1,0 +1,353 @@
+# Oxygen ICP Legacy9: Legacy8 eight reactions plus only EI2067 lookup.
+# Fresh 0-100us per power; preserve Legacy6/7/8 controls; science HOLD.
+# Rate owner EI-01 is the canonical o2_attachment_ei01 overlay (source locked).
+# EI-16 is implemented by the specialized PhysicsElectronImpactIonizationMaterial.
+name: Oxygen ICP Legacy9 two-stage native 50us checkpoint restart 400W 1000W
+run-name: Legacy9 EI2067 + latest EEDF/inlet 400 and 1000W to 100us ${{ github.sha }}
+on:
+  workflow_dispatch:
+  push:
+    branches: [issue-legacy9-split50us-20261103]
+    paths:
+      - .github/workflows/oxygen-legacy9-split50us-400-1000w-100us.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: oxygen-legacy9-split50us-100us-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  first_segment:
+    name: Native Legacy9 0–50us ${{ matrix.power_w }}W
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        power_w: [400, 1000]
+    env:
+      POWER_W: ${{ matrix.power_w }}
+      CHATGPT_WORK_BASE_SHA: 8e2fe042dbc204b5fda22d346f1ad8d2e32db3ab
+      OXYGEN_RESEARCH_400: '1'
+      OXYGEN_RESEARCH_FULL24: '0'
+      OXYGEN_RESEARCH_EI2738_FORMULA: '1'
+      OXYGEN_RESEARCH_LUMPED_O2A: '0'
+      OXYGEN_RESEARCH_QUICK_5MIN: '0'
+      END_NS: '100000'
+      EEDF_SHA: 35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b
+      CHEM: experiments/Issue395_powered_chemistry_ladder
+      OXYGEN_RESEARCH_RATE_DIR: /tmp/oxygen25/private_rates
+      EI407_OVERLAY: experiments/Issue395_powered_chemistry_ladder/ei407_only_${{ matrix.power_w }}w_100us_dt1000ns_overlay.i
+      EI2067_OVERLAY: experiments/Issue395_powered_chemistry_ladder/ei2067_only_${{ matrix.power_w }}w_100us_dt1000ns_overlay.i
+      SPLIT: _legacy6_control/.github/scripts/oxygen_legacy9_split50us.py
+    steps:
+      - name: Checkout pinned original physics source
+        uses: actions/checkout@v4
+        with:
+          ref: 8e2fe042dbc204b5fda22d346f1ad8d2e32db3ab
+          fetch-depth: 1
+
+      - name: Checkout research harness and saved initial-mixture EEDF lookup
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: _legacy6_control
+          sparse-checkout: |
+            .github/scripts/oxygen_legacy6_latest_100us.py
+            .github/scripts/oxygen_legacy7_ei2738_100us.py
+            .github/scripts/oxygen_legacy8_ei407_100us.py
+            .github/scripts/oxygen_legacy9_ei2067_100us.py
+            .github/scripts/oxygen_legacy9_split50us.py
+            .github/oxygen25_eedf/initial_mixture_23xsec_transport.txt
+          sparse-checkout-cone-mode: false
+
+      - name: P0 exact baseline, six-channel inventory and EEDF table
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$CHATGPT_WORK_BASE_SHA"
+          export HARNESS=_legacy6_control/.github/scripts/oxygen_legacy6_latest_100us.py
+          export LEGACY7=_legacy6_control/.github/scripts/oxygen_legacy7_ei2738_100us.py
+          export LEGACY8=_legacy6_control/.github/scripts/oxygen_legacy8_ei407_100us.py
+          export LEGACY9=_legacy6_control/.github/scripts/oxygen_legacy9_ei2067_100us.py
+          test -s "$HARNESS"
+          python3 "$HARNESS" --self-test
+          python3 "$LEGACY7" --self-test
+          python3 "$LEGACY8" --self-test
+          python3 "$LEGACY9" --self-test
+          python3 "$SPLIT" --self-test
+          python3 -m py_compile "$HARNESS" "$LEGACY7" "$LEGACY8" "$LEGACY9"
+          bash -n "$CHEM/issue397_l1_power_scan_replay.sh"
+          python3 -m venv .legacy6-venv
+          .legacy6-venv/bin/python -m pip install --disable-pip-version-check --quiet numpy==2.1.2 scipy==1.14.1 'pytest>=8,<9'
+          echo "$PWD/.legacy6-venv/bin" >> "$GITHUB_PATH"
+          .legacy6-venv/bin/python -c "import numpy,scipy; print('OXYGEN_LEGACY6_NATIVE_PYTHON_DEPS_PASS',numpy.__version__,scipy.__version__)"
+          test "$OXYGEN_RESEARCH_FULL24" = 0
+          test "$OXYGEN_RESEARCH_QUICK_5MIN" = 0
+          TABLE_SOURCE=_legacy6_control/.github/oxygen25_eedf/initial_mixture_23xsec_transport.txt
+          test "$(sha256sum "$TABLE_SOURCE" | cut -d' ' -f1)" = "$EEDF_SHA"
+          cp "$TABLE_SOURCE" experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt
+          test "$(sha256sum experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt | cut -d' ' -f1)" = "$EEDF_SHA"
+          echo "HARNESS=$HARNESS" >> "$GITHUB_ENV"
+          echo "LEGACY7=$LEGACY7" >> "$GITHUB_ENV"
+          echo "LEGACY8=$LEGACY8" >> "$GITHUB_ENV"
+          echo "LEGACY9=$LEGACY9" >> "$GITHUB_ENV"
+          echo "RESULT=$CHEM/results_rf_elastic_diss_ion_ei20_ei01_${POWER_W}w_adjacent_sheath_wall_closed_100us_dt1000ns" >> "$GITHUB_ENV"
+
+      - name: P0 verify private EI407 EI2067 and all 19 lookup tables
+        env:
+          PRIVATE_RATES_B64: ${{ secrets.OXYGEN24_RATES_TAR_XZ_B64 }}
+        run: |
+          set -euo pipefail
+          test -n "$PRIVATE_RATES_B64" || { echo "::error::Missing private rate package"; exit 22; }
+          umask 077
+          mkdir -p "$OXYGEN_RESEARCH_RATE_DIR"
+          printf '%s' "$PRIVATE_RATES_B64" | base64 --decode | tar -xJ -C "$OXYGEN_RESEARCH_RATE_DIR" --no-same-owner
+          python3 - <<'PY'
+          import importlib.util, os
+          from pathlib import Path
+          path=Path("experiments/Issue395_powered_chemistry_ladder/build_oxygen_24_source_overlay.py")
+          spec=importlib.util.spec_from_file_location("legacy9_rates",path)
+          m=importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+          rates=m.validate_files(Path(os.environ["OXYGEN_RESEARCH_RATE_DIR"]))
+          assert set(m.LOOKUP_IDS).issubset(rates)
+          assert 407 in rates and rates[407].name=="EI-407_O2_X.txt"
+          assert 2067 in rates and rates[2067].name=="EI-2067_O2_a1Delta.txt"
+          print("LEGACY9_EI2067_PRIVATE_RATE_GATE_PASS",len(rates))
+          PY
+
+      - name: P0 prepare Legacy9 exact Legacy8 plus EI2067-only overlay
+        run: |
+          set -euo pipefail
+          bash "$CHEM/issue397_l1_power_scan_replay.sh" prepare "$POWER_W"
+          python3 "$HARNESS" --prepare --power-w "$POWER_W"
+          python3 "$LEGACY9" --prepare-variant --power-w "$POWER_W"
+          python3 "$LEGACY9" --verify-nine --power-w "$POWER_W"
+          python3 "$LEGACY9" --patch-replay-argv --power-w "$POWER_W"
+          python3 "$SPLIT" --stage-first --power-w "$POWER_W"
+          python3 bin/physics.py preflight --self-test
+          python3 bin/physics.py preflight "$CHEM/ei2738_detachment_formula_${POWER_W}w_100us_dt1000ns_overlay.i"
+          python3 bin/physics.py preflight "$EI407_OVERLAY"
+          python3 bin/physics.py preflight "$EI2067_OVERLAY"
+          test -s "$RESULT/legacy6_latest_variant.json"
+          ! grep -q "R_EI415" "$CHEM/rf_elastic_diss_ion_ei20_ei01_${POWER_W}w_adjacent_sheath_wall_closed_100us_dt1000ns.i"
+          test "$(sha256sum experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt | cut -d' ' -f1)" = "$EEDF_SHA"
+          echo "OXYGEN_LEGACY9_EI2067_400_1000W_FRESH_100US_P0_PASS"
+
+      - name: P1 build pinned native PhysicsApp with same RF Maxwell coupling
+        run: |
+          set -euo pipefail
+          bash "$CHEM/issue397_l1_power_scan_replay.sh" build "$POWER_W"
+
+      - name: P2 native check-input with Legacy9 EI2738 EI407 EI2067 chemistry
+        run: |
+          set -euo pipefail
+          python3 "$SPLIT" --self-test
+          bash -n "$CHEM/issue397_l1_power_scan_replay.sh"
+          bash "$CHEM/issue397_l1_power_scan_replay.sh" check "$POWER_W"
+          echo "OXYGEN_LEGACY9_EI2067_NATIVE_CHECK_INPUT_PASS"
+
+      - name: P3 genuine native 0-100us transient run (5.5-hour cap)
+        run: |
+          set -euo pipefail
+          # P2 inserted EI2738, EI407 and EI2067 before Outputs/file_base.
+          bash -n "$CHEM/issue397_l1_power_scan_replay.sh"
+          test -s "$RESULT/legacy9_argv_patch.json"
+          start="$(date +%s)"
+          set +e
+          timeout -s TERM -k 60s 19800s bash "$CHEM/issue397_l1_power_scan_replay.sh" solve "$POWER_W"
+          code=$?
+          set -e
+          elapsed=$(( $(date +%s) - start ))
+          printf "power_w=%s\nend_ns=50000\nseconds=%s\nexit_code=%s\n" "$POWER_W" "$elapsed" "$code" > "$RESULT/runtime_status.txt"
+          echo "OXYGEN_LEGACY9_EI2067_NATIVE_SOLVER_WALL_SECONDS=$elapsed EXIT=$code"
+          test "$code" -eq 0
+
+      - name: P4 validate genuine 50us checkpoint and input archive
+        run: |
+          set -euo pipefail
+          python3 "$SPLIT" --archive-first --power-w "$POWER_W"
+          test -s "$RESULT/split_run_50000ns.tar.gz"
+          test -s "$RESULT/split_inputs_50000ns.tar.gz"
+          test -s "$RESULT/split_50000ns_manifest.json"
+      - name: Publish 50us checkpoint to the next job
+        uses: actions/upload-artifact@v4
+        with:
+          name: legacy9-split-50us-${{ matrix.power_w }}W
+          if-no-files-found: error
+          retention-days: 90
+          path: |
+            ${{ env.RESULT }}/split_run_50000ns.tar.gz
+            ${{ env.RESULT }}/split_inputs_50000ns.tar.gz
+            ${{ env.RESULT }}/split_50000ns_manifest.json
+      - name: Save 50us failure logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: legacy9-split-first-diag-${{ matrix.power_w }}W
+          if-no-files-found: warn
+          path: |
+            ${{ env.RESULT }}/runtime.log
+            ${{ env.RESULT }}/check_input.log
+            ${{ env.RESULT }}/runtime_status.txt
+
+  second_segment:
+    name: Native Legacy9 checkpoint recovery 50-100us ${{ matrix.power_w }}W
+    needs: first_segment
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        power_w: [400, 1000]
+    env:
+      POWER_W: ${{ matrix.power_w }}
+      CHATGPT_WORK_BASE_SHA: 8e2fe042dbc204b5fda22d346f1ad8d2e32db3ab
+      OXYGEN_RESEARCH_400: '1'
+      OXYGEN_RESEARCH_FULL24: '0'
+      OXYGEN_RESEARCH_EI2738_FORMULA: '1'
+      OXYGEN_RESEARCH_LUMPED_O2A: '0'
+      OXYGEN_RESEARCH_QUICK_5MIN: '0'
+      OXYGEN_RESEARCH_RATE_DIR: /tmp/oxygen25/private_rates
+      CHEM: experiments/Issue395_powered_chemistry_ladder
+      BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+      EI407_OVERLAY: experiments/Issue395_powered_chemistry_ladder/ei407_only_${{ matrix.power_w }}w_100us_dt1000ns_overlay.i
+      EI2067_OVERLAY: experiments/Issue395_powered_chemistry_ladder/ei2067_only_${{ matrix.power_w }}w_100us_dt1000ns_overlay.i
+      SPLIT: _legacy6_control/.github/scripts/oxygen_legacy9_split50us.py
+    steps:
+      - name: Checkout immutable original native physics
+        uses: actions/checkout@v4
+        with:
+          ref: 8e2fe042dbc204b5fda22d346f1ad8d2e32db3ab
+          fetch-depth: 1
+      - name: Checkout checkpoint validator
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: _legacy6_control
+          sparse-checkout: |
+            .github/scripts/oxygen_legacy9_split50us.py
+          sparse-checkout-cone-mode: false
+      - name: Download verified 50us checkpoint from previous job
+        uses: actions/download-artifact@v4
+        with:
+          name: legacy9-split-50us-${{ matrix.power_w }}W
+          path: _handoff/${{ matrix.power_w }}W
+      - name: P0 validate exact 50us state, restore parent and Maxwell MultiApp
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$CHATGPT_WORK_BASE_SHA"
+          python3 "$SPLIT" --self-test
+          python3 "$SPLIT" --restore --power-w "$POWER_W" --artifact "_handoff/$POWER_W""W"
+          echo "RESULT=$CHEM/results_rf_elastic_diss_ion_ei20_ei01_$POWER_W""w_adjacent_sheath_wall_closed_100us_dt1000ns" >> "$GITHUB_ENV"
+          echo "INPUT=$CHEM/rf_elastic_diss_ion_ei20_ei01_$POWER_W""w_adjacent_sheath_wall_closed_100us_dt1000ns.i" >> "$GITHUB_ENV"
+      - name: P0 rehydrate 19 private rates and validate 407/2067 SHA
+        env:
+          PRIVATE_RATES_B64: ${{ secrets.OXYGEN24_RATES_TAR_XZ_B64 }}
+        run: |
+          set -euo pipefail
+          test -n "$PRIVATE_RATES_B64" || exit 22
+          umask 077
+          mkdir -p "$OXYGEN_RESEARCH_RATE_DIR"
+          printf '%s' "$PRIVATE_RATES_B64" | base64 --decode | tar -xJ -C "$OXYGEN_RESEARCH_RATE_DIR" --no-same-owner
+          python3 - <<'PY'
+          import importlib.util,os,shutil
+          from pathlib import Path
+          p=Path("experiments/Issue395_powered_chemistry_ladder/build_oxygen_24_source_overlay.py")
+          spec=importlib.util.spec_from_file_location("rates",p)
+          m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
+          rates=m.validate_files(Path(os.environ["OXYGEN_RESEARCH_RATE_DIR"]))
+          assert 407 in rates and 2067 in rates and len(rates)>=19
+          dest=Path("experiments/Issue395_powered_chemistry_ladder/private_rates")
+          dest.mkdir(parents=True,exist_ok=True)
+          for rid in (407,2067):shutil.copyfile(rates[rid],dest/rates[rid].name)
+          PY
+          python3 "$SPLIT" --verify-private --power-w "$POWER_W"
+      - name: P1 build exact native physics binary
+        run: |
+          set -euo pipefail
+          bash "$CHEM/issue397_l1_power_scan_replay.sh" build "$POWER_W"
+      - name: P2 native advanced restart input check
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import os
+          path=Path(os.environ["CHEM"])/"issue397_l1_power_scan_replay.sh"
+          s=path.read_text()
+          a="'$OELASTIC' ${O2A_EXTRA_INPUT} ${EI2738_EXTRA_INPUT}"
+          b="Outputs/file_base='$RESULT/run/plasma' ${O2A_EXTRA_INPUT} ${EI2738_EXTRA_INPUT}"
+          aa=a+" '$EI407_OVERLAY' '$EI2067_OVERLAY'"
+          bb="${O2A_EXTRA_INPUT} ${EI2738_EXTRA_INPUT} '$EI407_OVERLAY' '$EI2067_OVERLAY' Outputs/file_base='$RESULT/run/plasma'"
+          assert s.count(a)==s.count(b)==1
+          s=s.replace(a,aa,1).replace(b,bb,1)
+          assert s.count(aa)==s.count(bb)==1
+          path.write_text(s)
+          PY
+          bash -n "$CHEM/issue397_l1_power_scan_replay.sh"
+          bash "$CHEM/issue397_l1_power_scan_replay.sh" check "$POWER_W"
+      - name: P3 physically resume 50us-to-100us with capped 1us adaptive dt
+        run: |
+          set -euo pipefail
+          RECOVER_PREFIX="$(cat "$RESULT/split_recovery_prefix.txt")"
+          test -s "$RECOVER_PREFIX-restart-0.rd/data"
+          started="$(date +%s)"
+          set +e
+          timeout -s TERM -k 60s 19800s docker run --rm --entrypoint /bin/bash --user 0:0 \
+            --workdir /workspace -v "$PWD:/workspace" "$BUILD_BASE_REF" -lc "
+              set -euo pipefail
+              source /environment
+              physics_app/physics-opt \
+                -i '$INPUT' \
+                '$CHEM/rf_elastic_multiapp_parent_$POWER_W""w_100us_dt1000ns_overlay.i' \
+                '$CHEM/o2_elastic_$POWER_W""w_100us_dt1000ns_overlay.i' \
+                '$CHEM/o2_dissociation_$POWER_W""w_100us_dt1000ns_overlay.i' \
+                '$CHEM/o2_ionization_$POWER_W""w_100us_dt1000ns_overlay.i' \
+                '$CHEM/o_ionization_ei20_$POWER_W""w_100us_dt1000ns_overlay.i' \
+                '$CHEM/o2_attachment_ei01_$POWER_W""w_100us_dt1000ns_overlay.i' \
+                '$CHEM/o_elastic_ei17_$POWER_W""w_100us_dt1000ns_overlay.i' \
+                '$CHEM/ei2738_detachment_formula_$POWER_W""w_100us_dt1000ns_overlay.i' \
+                '$EI407_OVERLAY' '$EI2067_OVERLAY' \
+                Outputs/file_base='$RESULT/run/plasma_restart_50to100' \
+                MultiApps/maxwell_t6/no_restore=false \
+                Problem/restart_file_base='/workspace/$RECOVER_PREFIX'
+            " 2>&1 | tee "$RESULT/recovery_runtime.log"
+          code=$?
+          set -e
+          printf 'power_w=%s\nstart_ns=50000\nend_ns=100000\nwall_seconds=%s\nexit_code=%s\n' \
+            "$POWER_W" "$(( $(date +%s) - started ))" "$code" > "$RESULT/recovery_status.txt"
+          test "$code" -eq 0
+      - name: P4 validate 100us native endpoint and unchanged 50us boundary
+        run: |
+          set -euo pipefail
+          python3 "$SPLIT" --verify-second --power-w "$POWER_W"
+          test -s "$RESULT/split_100000ns_result.json"
+          test -s "$RESULT/run/plasma_restart_50to100.e"
+      - name: Preserve genuine native 100us checkpoint and result
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: legacy9-split-100us-${{ matrix.power_w }}W
+          if-no-files-found: error
+          retention-days: 90
+          path: |
+            ${{ env.RESULT }}/split_100000ns_result.json
+            ${{ env.RESULT }}/split_upstream_manifest.json
+            ${{ env.RESULT }}/recovery_status.txt
+            ${{ env.RESULT }}/recovery_runtime.log
+            ${{ env.RESULT }}/run/plasma_restart_50to100.csv
+            ${{ env.RESULT }}/run/plasma_restart_50to100.e
+            ${{ env.RESULT }}/run/plasma_restart_50to100_cp/**
+      - name: Preserve second-stage failure logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: legacy9-split-second-diag-${{ matrix.power_w }}W
+          if-no-files-found: warn
+          path: |
+            ${{ env.RESULT }}/recovery_runtime.log
+            ${{ env.RESULT }}/recovery_status.txt
+            ${{ env.RESULT }}/check_input.log
