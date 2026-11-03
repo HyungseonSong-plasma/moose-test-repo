@@ -1,0 +1,12 @@
+Experiment: Legacy8+EI417+EI935+EI2058+EI2259+EI943 (13 channels)
+HOLD excluded: H05, EI-2072, EI-2074.
+Powers: 400 W and 1000 W; fresh 0–100 microseconds, 461 points.
+Pinned source SHA: 8e2fe042dbc204b5fda22d346f1ad8d2e32db3ab
+EEDF transport sha256: 35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b
+New EI-943 reaction: e+O(1D) -> e+O(3P), atomic superelastic.
+Energy model: electron +1.967 eV per reaction. Atom mass: conserved.
+Rate owner: original private EI-943_O_1D.txt, 100-point mean-energy lookup. No substitution with EI935.
+Keep original private EI407/EI417/EI935/EI2058 rate tables and the EI2259 provisional Peverall DR formula.
+Scientific acceptance: HOLD. EI2259 thermal fit and branching/heat are not science-validated;
+EI943 source numerical sigma and reverse detailed balance likewise remain unvalidated.
+User authorized one-reaction addition/run in chat on 2026-11-03.
