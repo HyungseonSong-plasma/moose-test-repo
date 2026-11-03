@@ -27,7 +27,7 @@ jobs:
       fail-fast: false
       max-parallel: 2
       matrix:
-        power_w: [400, 1000]
+        power_w: [1000]
     env:
       POWER_W: ${{ matrix.power_w }}
       CHATGPT_WORK_BASE_SHA: 8e2fe042dbc204b5fda22d346f1ad8d2e32db3ab
@@ -154,7 +154,7 @@ jobs:
           bash "$CHEM/issue397_l1_power_scan_replay.sh" check "$POWER_W"
           echo "OXYGEN_LEGACY8_EI417_EI935_NO_HOLD_NATIVE_CHECK_INPUT_PASS"
 
-      - name: P3 genuine native 0-100us transient run (5.5-hour cap)
+      - name: P3 genuine native 0-100us transient run (6-hour solver cap; hosted-job ceiling applies)
         run: |
           set -euo pipefail
           # P2 injects EI2738, EI407, EI417, EI935; excludes H05, EI2072, EI2074.
@@ -162,7 +162,7 @@ jobs:
           test -s "$RESULT/ei935_no_hold_argv_patch.json"
           start="$(date +%s)"
           set +e
-          timeout -s TERM -k 60s 19800s bash "$CHEM/issue397_l1_power_scan_replay.sh" solve "$POWER_W"
+          timeout -s TERM -k 60s 21600s bash "$CHEM/issue397_l1_power_scan_replay.sh" solve "$POWER_W"
           code=$?
           set -e
           elapsed=$(( $(date +%s) - start ))
