@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import base64
+import csv
 import importlib.util
 import io
 import json
@@ -333,21 +334,83 @@ def test_private_workflow_is_exact_head_dispatch_only_with_independent_review(wo
                 assert step["with"]["persist-credentials"] is False
 
 
-def test_only_exact_png_is_uploaded_with_one_day_retention(workflow):
+def test_only_separately_approved_derived_outputs_are_uploaded(workflow):
     uploads = [
         step for job in workflow["jobs"].values() for step in job["steps"]
         if str(step.get("uses", "")).startswith("actions/upload-artifact@")
     ]
-    assert len(uploads) == 1
-    upload = uploads[0]["with"]
-    assert upload["path"] == (
-        "${{ runner.temp }}/mcs-lookup-comparison-${{ github.run_id }}-${{ github.run_attempt }}"
-        "/output/MCS_MOOSE_3x3_LINEAR.png"
-    )
-    assert "*" not in upload["path"]
-    assert upload["retention-days"] == 1
-    assert upload["if-no-files-found"] == "error"
-    assert upload["include-hidden-files"] is False
+    assert len(uploads) == 2
+    expected = {
+        "MCS_MOOSE_3x3_LINEAR": ("MCS_MOOSE_3x3_LINEAR.png", "png"),
+        "MCS_MOOSE_9_reaction_ratios": ("MCS_MOOSE_9_reaction_ratios.csv", "ratios"),
+    }
+    for step in uploads:
+        fields = step["with"]
+        filename, mode = expected[fields["name"]]
+        assert step["if"] == f"inputs.output_kind == '{mode}'"
+        assert fields["path"].endswith("/output/" + filename)
+        assert "*" not in fields["path"]
+        assert fields["retention-days"] == 1
+        assert fields["if-no-files-found"] == "error"
+        assert fields["include-hidden-files"] is False
+
+    private = workflow["jobs"]["compare-oxygen-rate-coefficients"]
+    assert private["environment"] == SECURITY.ENVIRONMENT
+    gate = workflow["jobs"]["approval-gate"]
+    assert any("--check-ratio-disclosure" in step.get("run", "")
+               and step.get("if") == "inputs.output_kind == 'ratios'"
+               for step in gate["steps"])
+    assert any("--check-ratios" in step.get("run", "")
+               and step.get("if") == "inputs.output_kind == 'ratios'"
+               for step in private["steps"])
+    assert "--check-approvals" in json.dumps(gate)
+    assert "MCS_RATIO_PUBLIC_DISCLOSURE_SHA" in json.dumps(gate)
+    assert "MCS_RATIO_PUBLIC_DISCLOSURE_RECORD_URL" in json.dumps(gate)
+
+
+def test_distinct_numeric_ratio_release_requires_current_commit_and_issue_record():
+    good = {
+        "GITHUB_SHA": TEST_SHA,
+        "MCS_RATIO_PUBLIC_DISCLOSURE_SHA": TEST_SHA,
+        "MCS_RATIO_PUBLIC_DISCLOSURE_RECORD_URL":
+            f"https://github.com/{SECURITY.REPOSITORY}/issues/432#issuecomment-7000000003",
+    }
+    assert SECURITY.verify_ratio_disclosure(good) == TEST_SHA
+    for field, bad in (
+        ("MCS_RATIO_PUBLIC_DISCLOSURE_SHA", "b" * 40),
+        ("MCS_RATIO_PUBLIC_DISCLOSURE_RECORD_URL", DISCLOSURE_RECORD),
+        ("MCS_RATIO_PUBLIC_DISCLOSURE_RECORD_URL", ""),
+    ):
+        modified = {**good, field: bad}
+        with pytest.raises(SECURITY.BoundaryError):
+            SECURITY.verify_ratio_disclosure(modified)
+
+
+def test_nine_ratio_csv_output_allowlist_with_only_synthetic_values(tmp_path):
+    output = tmp_path / "output"
+    output.mkdir()
+    path = output / "MCS_MOOSE_9_reaction_ratios.csv"
+    with path.open("w", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=SECURITY.RATIO_COLUMNS)
+        writer.writeheader()
+        for rid in SECURITY.RATIO_CHANNELS:
+            for case in range(1, 25):
+                writer.writerow({
+                    "reaction": f"EI-{rid}",
+                    "case": case,
+                    "mean_energy_eV": case * 0.5,
+                    "moose_over_mcs": 2.0,
+                    "comparison_status": "MATCHED",
+                    "scientific_status": (
+                        "REACTION_IDENTITY_HOLD" if rid in (411, 412)
+                        else "MCS_UNIT_CONFIRMATION_HOLD"
+                    ),
+                })
+    SECURITY.check_ratios(path)
+    other = output / "private_coefficient.txt"
+    other.write_text("SYNTHETIC NOT PRIVATE")
+    with pytest.raises(SECURITY.BoundaryError):
+        SECURITY.check_ratios(path)
 
 
 def test_private_restoration_diagnostics_and_cleanup_stay_outside_checkout(workflow):
