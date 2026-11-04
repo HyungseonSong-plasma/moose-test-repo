@@ -17,6 +17,12 @@ on:
         description: Exact reviewed 40-character commit SHA; must equal the dispatched ref
         required: true
         type: string
+      output_kind:
+        description: Derived output release kind; ratios require distinct numeric disclosure approval
+        required: true
+        type: choice
+        default: png
+        options: [png, ratios]
 permissions:
   contents: read
 concurrency:
@@ -38,7 +44,7 @@ jobs:
       - name: Install only public test dependencies
         run: python -m pip install 'pytest>=8,<9' -r requirements-mcs-comparison.txt
       - name: Test with synthetic Lookup tables only
-        run: python -m pytest -q tests/test_oxygen_mcs_rate_compare.py tests/test_mcs_comparison_workflow.py
+        run: python -m pytest -q tests/test_oxygen_mcs_rate_compare.py tests/test_mcs_comparison_workflow.py tests/test_oxygen_mcs_nine_ratio_ci.py
 
   approval-gate:
     name: Verify exact-head code and PNG disclosure approvals
@@ -69,6 +75,12 @@ jobs:
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           python3 .github/scripts/mcs_lookup_archive_ci.py --check-approvals
+      - name: Verify distinct numeric ratio publication approval
+        if: inputs.output_kind == 'ratios'
+        env:
+          MCS_RATIO_PUBLIC_DISCLOSURE_SHA: ${{ vars.MCS_RATIO_PUBLIC_DISCLOSURE_SHA }}
+          MCS_RATIO_PUBLIC_DISCLOSURE_RECORD_URL: ${{ vars.MCS_RATIO_PUBLIC_DISCLOSURE_RECORD_URL }}
+        run: python3 .github/scripts/mcs_lookup_archive_ci.py --check-ratio-disclosure
 
   compare-oxygen-rate-coefficients:
     name: Approved private runner and PNG-only output
@@ -113,6 +125,7 @@ jobs:
           umask 077
           python3 .github/scripts/mcs_lookup_archive_ci.py --restore "$PRIVATE_ROOT/private_rates"
       - name: Render approved linear comparison without exporting numeric files
+        if: inputs.output_kind == 'png'
         run: |
           set -euo pipefail
           umask 077
@@ -129,11 +142,38 @@ jobs:
             exit 30
           fi
           python3 .github/scripts/mcs_lookup_archive_ci.py --check-png "$PRIVATE_ROOT/output/MCS_MOOSE_3x3_LINEAR.png"
+      - name: Compute nine reversible MOOSE/MCS ratios inside approved runner
+        if: inputs.output_kind == 'ratios'
+        run: |
+          set -euo pipefail
+          umask 077
+          if ! python3 .github/scripts/oxygen_mcs_nine_ratio_ci.py \
+            --rate-dir "$PRIVATE_ROOT/private_rates" \
+            --public-rate-dir physics_app/data/electron_impact \
+            --mcs-csv experiments/Issue395_powered_chemistry_ladder/oxygen_mcs_lookup_compare_14.csv \
+            --additional-mcs-csv experiments/Issue395_powered_chemistry_ladder/mcs_oxygen_five_omitted_reactions_20261104.csv \
+            --additional-mcs-csv experiments/Issue395_powered_chemistry_ladder/mcs_oxygen_supplemental_reactions_20261104.csv \
+            --output-dir "$PRIVATE_ROOT/output" > "$PRIVATE_ROOT/comparison.log" 2>&1; then
+            echo '::error::Ratio comparison failed; private diagnostics withheld'
+            exit 31
+          fi
+          python3 .github/scripts/mcs_lookup_archive_ci.py --check-ratios \
+            "$PRIVATE_ROOT/output/MCS_MOOSE_9_reaction_ratios.csv"
       - name: Publish only explicitly approved derived PNG
+        if: inputs.output_kind == 'png'
         uses: actions/upload-artifact@v4
         with:
           name: MCS_MOOSE_3x3_LINEAR
           path: ${{ runner.temp }}/mcs-lookup-comparison-${{ github.run_id }}-${{ github.run_attempt }}/output/MCS_MOOSE_3x3_LINEAR.png
+          if-no-files-found: error
+          retention-days: 1
+          include-hidden-files: false
+      - name: Publish separately approved nine-reaction numeric ratio CSV only
+        if: inputs.output_kind == 'ratios'
+        uses: actions/upload-artifact@v4
+        with:
+          name: MCS_MOOSE_9_reaction_ratios
+          path: ${{ runner.temp }}/mcs-lookup-comparison-${{ github.run_id }}-${{ github.run_attempt }}/output/MCS_MOOSE_9_reaction_ratios.csv
           if-no-files-found: error
           retention-days: 1
           include-hidden-files: false
