@@ -331,6 +331,7 @@ def patch(power):
         "overlays":["EI-2738","EI-407","EI-417","EI-935","EI-943","H24","H25","H23"],
         "h24_k_m3_s":h24.K_M3_S,
         "h25_k_m3_s_at_300K":h25.K_M3_S_AT_300K,
+        "h25_tgas_K":h25.T_GAS_K,
         "h23_k_m3_s":K_M3_S,
         "excluded":sorted(EXCLUDED),
         "scientific_acceptance":"HOLD",
