@@ -1,0 +1,11 @@
+H23 1000W 40-to-100us native checkpoint restart authorized
+Upstream run: 41857047208
+Upstream artifact ID: 13358133298
+Upstream head SHA: 5117c23168d0fc0e4b97777ca17851a38b540dfc
+Upstream checkpoint: 0400 at 40us; verified CSV 401 rows and final 4e-05 s
+Upstream plasma.csv SHA256: 25cd9dfaf4da8bc6372365d102fa425a9f58f2b5a731e12e87c61c60dbcb4b5a
+Upstream plasma.e SHA256: 67d3974864dac4acaf71f7bcc926b110fd96da6b122632cbeee5a144b5019597
+Pinned Physics SHA: 8e2fe042dbc204b5fda22d346f1ad8d2e32db3ab
+Chemistry: Legacy8 + EI417 + EI935 + EI943 + H24 + H25 + H23
+Scientific acceptance: HOLD
+Only one uninterrupted 40-to-100us restart; no automatic split or retry.
