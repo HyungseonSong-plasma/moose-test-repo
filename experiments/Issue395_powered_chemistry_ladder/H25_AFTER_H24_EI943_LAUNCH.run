@@ -1,0 +1,15 @@
+experiment: Add H25 Oplus+O2 -> O+O2plus after H24 on the EI943 oxygen baseline
+parent_h24_run: 41803381239
+parent_h24_sha: a0398b2da9b03e3e18c03e16c1b0ed4bed661d98
+parent_ei943_run: 41798717903
+model: Legacy8 + EI417 + EI935 + EI943 + H24 + H25 (13 channels)
+new_reaction_only: H25 O+ + O2(X) -> O(3P) + O2+
+h25_k_m3_s_300K: 2e-17
+h25_temperature_exponent: -0.4
+h25_model_temperature_K: 300
+h25_qdb_api: 1115 source screenshot; normalization/source not independently verified
+excluded: EI2058 EI2259 H05 EI2072 EI2074
+powers: 400 1000 W
+native_initialization: fresh 0-100us
+acceptance: P0 selftests P1 build P2 check-input P3 native solve P4 true 100us and restart
+science_status: HOLD
