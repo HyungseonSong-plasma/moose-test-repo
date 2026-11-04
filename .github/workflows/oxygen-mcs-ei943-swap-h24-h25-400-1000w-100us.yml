@@ -278,7 +278,6 @@ jobs:
             ${{ env.RESULT }}/legacy6_restart_100000ns_manifest.json
             ${{ env.RESULT }}/legacy6_latest_variant.json
             ${{ env.RESULT }}/mcs_ei943_swap_audit.json
-            ${{ env.RESULT }}/mcs_ei943_swap_audit.json
             ${{ env.RESULT }}/h25_argv_patch.json
             ${{ env.RESULT }}/runtime_status.txt
             ${{ env.RESULT }}/runtime.log
@@ -294,6 +293,7 @@ jobs:
           retention-days: 30
           path: |
             ${{ env.RESULT }}/legacy6_latest_variant.json
+            ${{ env.RESULT }}/mcs_ei943_swap_audit.json
             ${{ env.RESULT }}/h25_argv_patch.json
             ${{ env.RESULT }}/runtime_status.txt
             ${{ env.RESULT }}/runtime.log
