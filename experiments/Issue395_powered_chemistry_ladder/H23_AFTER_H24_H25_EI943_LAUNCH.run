@@ -14,3 +14,7 @@ interval_ns: 0..100000
 native_initialization: fresh_not_restarted
 required: P0 chemistry identity and closure; P1 build; P2 check-input; P3 native transient; P4 100us restart
 scientific_acceptance: HOLD
+
+retry_after_p2_metadata_fix: true
+previous_run: 41804899177
+correction: include h25_tgas_K in h23_argv_patch.json; no chemistry change
