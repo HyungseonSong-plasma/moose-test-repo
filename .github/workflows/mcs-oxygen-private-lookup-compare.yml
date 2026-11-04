@@ -46,6 +46,9 @@ jobs:
     needs: synthetic-tests
     runs-on: ubuntu-24.04
     timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
     outputs:
       approved_sha: ${{ steps.approvals.outputs.approved_sha }}
     steps:

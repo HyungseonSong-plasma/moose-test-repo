@@ -302,6 +302,15 @@ def test_workflow_keeps_tests_and_approval_gate_secret_free(workflow):
     assert "--check-approvals" in json.dumps(jobs["approval-gate"])
 
 
+def test_environment_metadata_read_permission_is_scoped_to_approval_gate(workflow):
+    # Job permissions replace the workflow defaults, so retain checkout access.
+    assert workflow["jobs"]["approval-gate"]["permissions"] == {
+        "contents": "read", "actions": "read"}
+    assert workflow["permissions"] == {"contents": "read"}
+    for name in ("synthetic-tests", "compare-oxygen-rate-coefficients"):
+        assert "permissions" not in workflow["jobs"][name]
+
+
 def test_private_workflow_is_exact_head_dispatch_only_with_independent_review(workflow):
     triggers = workflow.get("on", workflow.get(True))  # PyYAML 1.1 treats 'on' as boolean.
     assert set(triggers) == {"push", "pull_request", "workflow_dispatch"}
