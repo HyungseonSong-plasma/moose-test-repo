@@ -67,12 +67,17 @@ def prepare() -> None:
     replacement=("  [TimeStepper]\n"
                  "    type = IterationAdaptiveDT\n"
                  "    dt = 1e-6\n"
-                 "    dtmin = 1e-8\n"
                  "    growth_factor = 1.0\n"
                  "    reset_dt = true\n"
                  "  []")
     s,n=ts.subn(replacement,s)
     assert n==1 and "end_time = 1e-4" in s
+    # MOOSE Transient owns dtmin; IterationAdaptiveDT does not.
+    # Keep the original restart dt floor (10 ns) without an unused parameter.
+    s,n=re.subn(r"(?m)^(  end_time\\s*=\\s*1e-4)\\s*$",r"\\1\\n  dtmin = 1e-8",s)
+    assert n==1, f"expected one parent Executioner end_time, found {n}"
+    assert s.count("  dtmin = 1e-8")==1
+    assert "TimeStepper]\\n    type = IterationAdaptiveDT\\n    dt = 1e-6\\n    dtmin" not in s
     assert "TimeSequenceStepper" not in s
     inp.write_text(s)
 
@@ -98,7 +103,8 @@ def prepare() -> None:
     (RESULT/"restart_input_audit.json").write_text(json.dumps({
       "start_us":40,"end_us":100,"parent_seed_ic_removed":15,
       "child_seed_ic_removed":3,"time_stepper":"IterationAdaptiveDT",
-      "dt_max_s":1e-6,"Maxwell_no_restore":False,
+      "dt_max_s":1e-6,"dtmin_s":1e-8,
+      "dtmin_owner":"Executioner","Maxwell_no_restore":False,
       "upstream_40us_plasma_sha":j["plasma_e_sha256"],
       "scientific_acceptance":"HOLD"
     },indent=2)+"\n")
