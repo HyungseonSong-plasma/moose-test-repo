@@ -1,0 +1,98 @@
+# One-shot Issue #432 nine-reaction ratio calculation.
+# Triggered only by creation/update of this file on this isolated branch.
+# Original private Lookup tables and diagnostic logs stay inside the runner.
+# EI-2073 is PROCESS_IDENTITY_HOLD: a diagnostic numeric comparison, not physical validation.
+name: Issue432 EI2073 nine MCS-MOOSE ratios one-shot
+run-name: Issue432 EI2073 ratios once ${{ github.sha }}
+
+on:
+  push:
+    branches:
+      - issue432-ei2073-nine-ratio-once-20261104
+    paths:
+      - .github/workflows/issue432-nine-ratio-once.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: issue432-ei2073-nine-ratios-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  nine-reaction-ratios:
+    name: Produce nine-reaction ratio CSV only
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact one-shot source
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Verify immutable event identity and prepare private workspace
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_EVENT_NAME" = push
+          test "$GITHUB_REF" = "refs/heads/issue432-ei2073-nine-ratio-once-20261104"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          umask 077
+          PRIVATE_ROOT="$RUNNER_TEMP/issue432-ei2073-nine-ratio-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          test ! -e "$PRIVATE_ROOT"
+          mkdir -m 700 "$PRIVATE_ROOT"
+          touch "$PRIVATE_ROOT/.owned-by-one-shot"
+          printf 'PRIVATE_ROOT=%s\n' "$PRIVATE_ROOT" >> "$GITHUB_ENV"
+
+      - name: Preflight nine-reaction synthetic-only ratio tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile .github/scripts/oxygen_mcs_rate_compare_ci.py .github/scripts/oxygen_mcs_nine_ratio_ci.py .github/scripts/mcs_lookup_archive_ci.py
+          python3 -m pip install --disable-pip-version-check --quiet 'pytest>=8,<9'
+          python3 -m pytest -q tests/test_oxygen_mcs_nine_ratio_ci.py
+
+      - name: Restore private Lookup into runner only
+        shell: bash
+        env:
+          PRIVATE_RATES_B64: ${{ secrets.OXYGEN24_RATES_TAR_XZ_B64 }}
+        run: |
+          set -euo pipefail
+          umask 077
+          python3 .github/scripts/mcs_lookup_archive_ci.py --restore "$PRIVATE_ROOT/private_rates"
+
+      - name: Calculate and validate nine-reaction Ratio CSV
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          if ! python3 .github/scripts/oxygen_mcs_nine_ratio_ci.py \
+            --rate-dir "$PRIVATE_ROOT/private_rates" \
+            --public-rate-dir physics_app/data/electron_impact \
+            --mcs-csv experiments/Issue395_powered_chemistry_ladder/oxygen_mcs_lookup_compare_14.csv \
+            --additional-mcs-csv experiments/Issue395_powered_chemistry_ladder/mcs_oxygen_five_omitted_reactions_20261104.csv \
+            --additional-mcs-csv experiments/Issue395_powered_chemistry_ladder/mcs_oxygen_supplemental_reactions_20261104.csv \
+            --output-dir "$PRIVATE_ROOT/output" > "$PRIVATE_ROOT/ratio.log" 2>&1; then
+            echo "::error::Ratio generation failed; private diagnostics withheld"
+            exit 31
+          fi
+          python3 .github/scripts/mcs_lookup_archive_ci.py --check-ratios \
+            "$PRIVATE_ROOT/output/MCS_MOOSE_9_reaction_ratios.csv"
+
+      - name: Upload ratio CSV only
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue432-ei2073-nine-ratio-csv-20261104
+          path: ${{ runner.temp }}/issue432-ei2073-nine-ratio-${{ github.run_id }}-${{ github.run_attempt }}/output/MCS_MOOSE_9_reaction_ratios.csv
+          if-no-files-found: error
+          retention-days: 1
+          include-hidden-files: false
+
+      - name: Remove private Lookup data and diagnostics
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          if test -n "${PRIVATE_ROOT:-}" && test -f "$PRIVATE_ROOT/.owned-by-one-shot"; then
+            rm -rf -- "$PRIVATE_ROOT"
+          fi
