@@ -1,0 +1,28 @@
+# MCS(1).OUT, O(1D) > O, RATE CONST (CC/S) 2026-11-04; 24 cases
+# Source original MCS OUT sha256 d3db627a2d97b2bcc355c2f241b7bb231f49463cd0bb3ef6b13383166802ab08
+# EEDF mean electron energy [eV]  rate coefficient [m^3/s] (CC/S x 1e-6)
+# Research only. Not a Boltzmann/chemistry acceptance and not original private EI-943.
+0.1218 1.276e-16
+0.1361 1.358e-16
+0.4536 5.682e-16
+1.201 1.54e-15
+1.85 2.246e-15
+2.234 2.582e-15
+2.7 2.898e-15
+3.008 3.058e-15
+3.253 3.162e-15
+3.467 3.241e-15
+3.854 3.357e-15
+4.222 3.442e-15
+4.676 3.52e-15
+5.134 3.574e-15
+5.595 3.611e-15
+6.059 3.635e-15
+6.671 3.649e-15
+7.277 3.649e-15
+7.891 3.639e-15
+8.771 3.609e-15
+9.623 3.569e-15
+12.8 3.364e-15
+15.74 3.151e-15
+18.45 2.958e-15
