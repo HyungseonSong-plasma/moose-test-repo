@@ -15,7 +15,7 @@ def generated_panels():
          "energies": [float(i) for i in range(1, 25)],
          "mcs": [0.0, *([2.0] * 23)],
          "moose": [None, 4.0, *([None] * 22)]}
-        for rid in (401, 411, 412, 417, 935, 941, 943, 2738, 407)
+        for rid in (401, 411, 412, 417, 935, 941, 943, 2738, 2073)
     ]
 
 
@@ -26,6 +26,8 @@ def test_all_nine_reactions_have_twenty_four_cases_and_hold():
     assert all(r["moose_over_mcs"] == "" for r in rows[0::24])
     assert all(r["scientific_status"] == "REACTION_IDENTITY_HOLD"
                for r in rows if r["reaction"] in ("EI-411", "EI-412"))
+    assert all(r["scientific_status"] == "PROCESS_IDENTITY_HOLD"
+               for r in rows if r["reaction"] == "EI-2073")
 
 
 def test_wrong_reaction_identity_fails_closed():
