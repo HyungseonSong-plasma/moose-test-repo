@@ -1,0 +1,7 @@
+MCS EI943+EI2738 13-channel rate-swap A/B research launch
+Reference 13ch Run 41804294918
+EI943 MCS-only comparison Run 41878974753
+MCS source sha256 d3db627a2d97b2bcc355c2f241b7bb231f49463cd0bb3ef6b13383166802ab08
+400 W and 1000 W 0-100us
+Keep Legacy8+EI417+EI935+EI943+H24+H25; exclude EI2259 EI2058 H05 EI2072 EI2074 H23
+Scientific status HOLD; MCS O- Detachment identification provisional
