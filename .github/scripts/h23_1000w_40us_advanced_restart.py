@@ -74,10 +74,22 @@ def prepare() -> None:
     assert n==1 and "end_time = 1e-4" in s
     # MOOSE Transient owns dtmin; IterationAdaptiveDT does not.
     # Keep the original restart dt floor (10 ns) without an unused parameter.
-    s,n=re.subn(r"(?m)^(  end_time\\s*=\\s*1e-4)\\s*$",r"\\1\\n  dtmin = 1e-8",s)
-    assert n==1, f"expected one parent Executioner end_time, found {n}"
-    assert s.count("  dtmin = 1e-8")==1
-    assert "TimeStepper]\\n    type = IterationAdaptiveDT\\n    dt = 1e-6\\n    dtmin" not in s
+    # Keep the original minimum step (10 ns), but place it on Executioner.
+    # Scope the edit to this section; do not rely on escaped regex tokens.
+    before, sep, after = s.partition("[Executioner]\n")
+    assert sep, "missing parent Executioner"
+    executioner_head, sep, tail = after.partition("  [TimeStepper]\n")
+    assert sep, "missing parent TimeStepper"
+    end_time_line = "  end_time = 1e-4\n"
+    assert executioner_head.count(end_time_line) == 1
+    assert "dtmin" not in executioner_head
+    executioner_head = executioner_head.replace(
+        end_time_line, end_time_line + "  dtmin = 1e-8\n", 1
+    )
+    s = before + "[Executioner]\n" + executioner_head + sep + tail
+    assert s.count("  dtmin = 1e-8\n") == 1
+    ts_section = s.split("  [TimeStepper]\n", 1)[1].split("  []", 1)[0]
+    assert "dtmin" not in ts_section
     assert "TimeSequenceStepper" not in s
     inp.write_text(s)
 
