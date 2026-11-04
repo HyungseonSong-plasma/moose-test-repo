@@ -9,3 +9,8 @@ Pinned Physics SHA: 8e2fe042dbc204b5fda22d346f1ad8d2e32db3ab
 Chemistry: Legacy8 + EI417 + EI935 + EI943 + H24 + H25 + H23
 Scientific acceptance: HOLD
 Only one uninterrupted 40-to-100us restart; no automatic split or retry.
+
+Explicit user-authorized corrective retry after prior Run 41909721789 failed in P2c
+Failure: unused Executioner/TimeStepper/dtmin (not physics nonconvergence)
+Correction: dtmin=1e-8 moved to Executioner; TimeStepper IterationAdaptiveDT retains dt=1e-6
+No change to 40us source artifact, original Physics, chemistry, EEDF or boundary conditions
