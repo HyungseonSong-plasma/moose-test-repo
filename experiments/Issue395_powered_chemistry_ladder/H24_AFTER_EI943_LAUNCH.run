@@ -1,0 +1,12 @@
+experiment: H24-only addition to native oxygen ICP EI943 11-channel baseline
+baseline_run_id: 41798717903
+baseline_head_sha: c56112771890b528a677db7056f626e47e62e392
+source_run_before_ei943: 41739266674
+reaction_added: H24 = O- + O2+ -> O2(X) + O(3P)
+retained: EI-01, EI-02, DISS-G, EI-16, EI-17, EI-20, EI-2738, EI-407, EI-417, EI-935, EI-943
+excluded: H05, EI-2058, EI-2259, EI-2072, EI-2074
+coefficient: 1e-7 cm3/s = 1e-13 m3/s QDB-API 1378 screenshot source provisional
+powers: 400W 1000W
+interval: 0..100000ns fresh native
+acceptance: P0-4 including 12ch inventory, mass-charge-atom closure, 100us restart
+scientific_acceptance: HOLD
