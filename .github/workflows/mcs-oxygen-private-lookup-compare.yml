@@ -1,0 +1,50 @@
+name: MCS oxygen reaction rates versus private MOOSE lookup
+run-name: Oxygen MCS 14-reaction rate ratio comparison
+on:
+  push:
+    branches:
+      - mcs-ei407-ei415-compare-20261104
+    paths:
+      - .github/workflows/mcs-oxygen-private-lookup-compare.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  compare-oxygen-rate-coefficients:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout selected comparison branch
+        uses: actions/checkout@v4
+
+      - name: Restore existing private lookup package inside runner
+        env:
+          PRIVATE_RATES_B64: ${{ secrets.OXYGEN24_RATES_TAR_XZ_B64 }}
+        run: |
+          set -euo pipefail
+          test -n "$PRIVATE_RATES_B64" || { echo "::error::Private lookup package unavailable"; exit 22; }
+          mkdir -p /tmp/oxygen25/private_rates
+          printf '%s' "$PRIVATE_RATES_B64" | base64 --decode | tar -xJ -C /tmp/oxygen25/private_rates --no-same-owner
+          echo 'PRIVATE_LOOKUP_PACKAGE_RESTORED'
+
+      - name: Compare reaction rate coefficients on matching energy grid
+        run: |
+          set -euo pipefail
+          python3 .github/scripts/oxygen_mcs_rate_compare_ci.py \
+            --rate-dir /tmp/oxygen25/private_rates \
+            --mcs-csv experiments/Issue395_powered_chemistry_ladder/oxygen_mcs_lookup_compare_14.csv \
+            --output-dir oxygen_mcs_rate_comparison_result
+          test -s oxygen_mcs_rate_comparison_result/rate_ratios.csv
+          test -s oxygen_mcs_rate_comparison_result/summary.csv
+          if find oxygen_mcs_rate_comparison_result -type f | grep -E 'EI-.*\.txt|private_rates'; then
+            echo "::error::Private lookup must not enter artifact"
+            exit 30
+          fi
+
+      - name: Archive approved ratio and error statistics only
+        uses: actions/upload-artifact@v4
+        with:
+          name: oxygen-mcs-lookup-comparison-ratios-only
+          path: oxygen_mcs_rate_comparison_result/
+          if-no-files-found: error
+          retention-days: 7
