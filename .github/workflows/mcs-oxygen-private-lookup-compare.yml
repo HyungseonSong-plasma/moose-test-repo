@@ -79,9 +79,6 @@ jobs:
     environment: mcs-lookup-comparison
     runs-on: ubuntu-24.04
     timeout-minutes: 15
-    env:
-      PRIVATE_ROOT: ${{ runner.temp }}/mcs-lookup-comparison-${{ github.run_id }}-${{ github.run_attempt }}
-      MPLCONFIGDIR: ${{ runner.temp }}/mcs-lookup-comparison-${{ github.run_id }}-${{ github.run_attempt }}/mpl
     steps:
       - uses: actions/checkout@v4
         with:
@@ -97,9 +94,14 @@ jobs:
           set -euo pipefail
           umask 077
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          PRIVATE_ROOT="$RUNNER_TEMP/mcs-lookup-comparison-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           test ! -e "$PRIVATE_ROOT"
           mkdir -m 700 "$PRIVATE_ROOT"
           touch "$PRIVATE_ROOT/.owned-by-comparison-job"
+          {
+            printf 'PRIVATE_ROOT=%s\n' "$PRIVATE_ROOT"
+            printf 'MPLCONFIGDIR=%s/mpl\n' "$PRIVATE_ROOT"
+          } >> "$GITHUB_ENV"
       - name: Restore existing private Lookup archive only inside approved runner
         env:
           PRIVATE_RATES_B64: ${{ secrets.OXYGEN24_RATES_TAR_XZ_B64 }}
@@ -136,6 +138,6 @@ jobs:
         if: always()
         run: |
           set -euo pipefail
-          if test -f "$PRIVATE_ROOT/.owned-by-comparison-job"; then
+          if test -n "${PRIVATE_ROOT:-}" && test -f "$PRIVATE_ROOT/.owned-by-comparison-job"; then
             rm -rf -- "$PRIVATE_ROOT"
           fi

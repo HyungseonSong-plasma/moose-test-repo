@@ -5,8 +5,11 @@ import base64
 import importlib.util
 import io
 import json
+import os
 from pathlib import Path
+import re
 import stat
+import subprocess
 import tarfile
 from urllib.error import HTTPError
 
@@ -340,7 +343,12 @@ def test_only_exact_png_is_uploaded_with_one_day_retention(workflow):
 
 def test_private_restoration_diagnostics_and_cleanup_stay_outside_checkout(workflow):
     private = workflow["jobs"]["compare-oxygen-rate-coefficients"]
-    assert private["env"]["PRIVATE_ROOT"].startswith("${{ runner.temp }}/")
+    initialize = next(step for step in private["steps"] if "mkdir -m 700" in step.get("run", ""))
+    assert 'PRIVATE_ROOT="$RUNNER_TEMP/mcs-lookup-comparison-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"' in initialize["run"]
+    assert "printf 'PRIVATE_ROOT=%s\\n'" in initialize["run"]
+    assert "printf 'MPLCONFIGDIR=%s/mpl\\n'" in initialize["run"]
+    assert '>> "$GITHUB_ENV"' in initialize["run"]
+    assert "github.workspace" not in initialize["run"]
     restore = next(step for step in private["steps"] if "PRIVATE_RATES_B64" in step.get("env", {}))
     assert restore["env"] == {"PRIVATE_RATES_B64": "${{ secrets.OXYGEN24_RATES_TAR_XZ_B64 }}"}
     assert "--restore" in restore["run"] and "umask 077" in restore["run"]
@@ -351,4 +359,39 @@ def test_private_restoration_diagnostics_and_cleanup_stay_outside_checkout(workf
     cleanup = private["steps"][-1]
     assert cleanup["if"] == "always()"
     assert '.owned-by-comparison-job' in cleanup["run"]
+    assert '${PRIVATE_ROOT:-}' in cleanup["run"]
     assert 'rm -rf -- "$PRIVATE_ROOT"' in cleanup["run"]
+
+
+def test_runner_context_is_not_used_in_workflow_or_job_level_env(workflow):
+    # Regression: GitHub rejected run 41849303246 before any job could start.
+    envs = [workflow.get("env", {})]
+    envs.extend(job.get("env", {}) for job in workflow["jobs"].values())
+    for environ in envs:
+        assert re.search(r"\$\{\{\s*runner\b", json.dumps(environ)) is None
+
+
+def test_runner_temp_initialization_persists_owned_paths_and_cleanup(workflow, tmp_path):
+    private = workflow["jobs"]["compare-oxygen-rate-coefficients"]
+    initialize = next(step for step in private["steps"] if "mkdir -m 700" in step.get("run", ""))
+    sha = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
+    env_file = tmp_path / "github-env"
+    environ = {
+        "PATH": os.environ["PATH"], "RUNNER_TEMP": str(tmp_path),
+        "GITHUB_RUN_ID": "123456", "GITHUB_RUN_ATTEMPT": "2",
+        "GITHUB_SHA": sha, "GITHUB_ENV": str(env_file),
+    }
+    subprocess.run(["bash", "-c", initialize["run"]], cwd=ROOT, env=environ, check=True)
+    root = tmp_path / "mcs-lookup-comparison-123456-2"
+    assert env_file.read_text() == f"PRIVATE_ROOT={root}\nMPLCONFIGDIR={root}/mpl\n"
+    assert (root / ".owned-by-comparison-job").is_file()
+    assert stat.S_IMODE(root.stat().st_mode) == 0o700
+    subprocess.run(["bash", "-c", private["steps"][-1]["run"]], cwd=ROOT,
+                   env={**environ, "PRIVATE_ROOT": str(root)}, check=True)
+    assert not root.exists()
+
+
+def test_cleanup_is_safe_before_runner_directory_initialization(workflow):
+    cleanup = workflow["jobs"]["compare-oxygen-rate-coefficients"]["steps"][-1]
+    subprocess.run(["bash", "-c", cleanup["run"]], cwd=ROOT,
+                   env={"PATH": os.environ["PATH"]}, check=True)
