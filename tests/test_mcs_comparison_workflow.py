@@ -378,7 +378,8 @@ def test_distinct_numeric_ratio_release_requires_current_commit_and_issue_record
     assert SECURITY.verify_ratio_disclosure(good) == TEST_SHA
     for field, bad in (
         ("MCS_RATIO_PUBLIC_DISCLOSURE_SHA", "b" * 40),
-        ("MCS_RATIO_PUBLIC_DISCLOSURE_RECORD_URL", DISCLOSURE_RECORD),
+        ("MCS_RATIO_PUBLIC_DISCLOSURE_RECORD_URL",
+         f"https://github.com/{SECURITY.REPOSITORY}/issues/432#issuecomment-6633659857"),
         ("MCS_RATIO_PUBLIC_DISCLOSURE_RECORD_URL", ""),
     ):
         modified = {**good, field: bad}
