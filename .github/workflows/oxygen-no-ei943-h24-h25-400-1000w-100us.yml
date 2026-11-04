@@ -3,7 +3,7 @@
 # Rate owner EI-01 is the canonical o2_attachment_ei01 overlay (source locked).
 # EI-16 is implemented by the specialized PhysicsElectronImpactIonizationMaterial.
 name: Oxygen ICP NO EI943 12ch H24 H25 400W 1000W 100us
-run-name: Ablation NO EI943: Legacy8+EI417+EI935+H24+H25 400W 1000W 100us ${{ github.sha }}
+run-name: "Ablation NO EI943 - Legacy8+EI417+EI935+H24+H25 400W 1000W 100us ${{ github.sha }}"
 on:
   workflow_dispatch:
   push:
