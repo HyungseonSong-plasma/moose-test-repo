@@ -1,0 +1,16 @@
+experiment: Add H23 Oplus+Ominus -> 2O onto existing EI943+H24+H25 experimental chemistry
+parent_run_h25: 41804294918
+parent_sha_h25: 722979bda5620befbdb50060706c3d8fdce8a711
+parent_run_h24: 41803381239
+parent_run_ei943: 41798717903
+active_channels: EI-01, EI-02, DISS-G, EI-16, EI-17, EI-20, EI-2738, EI-407, EI-417, EI-935, EI-943, H24, H25, H23
+new_reaction: H23 O+ + O- -> 2O
+h23_rate: 1e-7 cm3/s = 1e-13 m3/s QDB-API 1377 screenshot, unverified original
+retained_h24_rate: 1e-13 m3/s
+retained_h25_rate_300K: 2e-17 m3/s
+excluded: H05, EI-2058, EI-2259, EI-2072, EI-2074
+power_w: [400, 1000]
+interval_ns: 0..100000
+native_initialization: fresh_not_restarted
+required: P0 chemistry identity and closure; P1 build; P2 check-input; P3 native transient; P4 100us restart
+scientific_acceptance: HOLD
