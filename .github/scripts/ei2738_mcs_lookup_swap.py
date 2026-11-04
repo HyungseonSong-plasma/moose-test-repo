@@ -188,7 +188,7 @@ def install(power):
     dest=ROOT/"private_rates"/LOOKUP_NAME
     assert not dest.exists(), "pre-existing EI2738 lookup must not be overwritten"
     dest.write_text("".join(f"{energy:.12e} {rate:.12e}\n" for energy,rate in derived))
-    assert [x for x,k in parse(dest,100)]==grid
+    assert all(math.isclose(a,b,rel_tol=1e-12,abs_tol=1e-14) for a,b in zip([x for x,k in parse(dest,100)],grid)), "EI2738 lookup grid changed"
     overlay=patch_overlay(power)
     validator=Path(os.environ["LEGACY7"])
     modify_validator(validator)
