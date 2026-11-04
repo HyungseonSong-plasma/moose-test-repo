@@ -1,0 +1,29 @@
+# MCS(1).OUT 24 CASES, rate label "O- Detachment", RATE CONST (CC/S)
+# Raw source SHA256: d3db627a2d97b2bcc355c2f241b7bb231f49463cd0bb3ef6b13383166802ab08
+# First column: AVERAGE ELECTRON ENERGY [eV]; second column: RATE CONST [m^3/s] = raw [CC/S] x 1e-6
+# Provisional EI-2738 label correspondence; MCS OUT does NOT explicitly prove complete stoichiometry.
+# No MCS extrapolation. SCIENCE_HOLD.
+0.1218 4.439e-20
+0.1361 8.224e-20
+0.4536 2.031e-18
+1.201 3.118e-17
+1.85 1.752e-16
+2.234 4.661e-16
+2.7 1.376e-15
+3.008 2.521e-15
+3.253 3.787e-15
+3.467 5.145e-15
+3.854 8.120e-15
+4.222 1.142e-14
+4.676 1.591e-14
+5.134 2.068e-14
+5.595 2.556e-14
+6.059 3.044e-14
+6.671 3.671e-14
+7.277 4.265e-14
+7.891 4.835e-14
+8.771 5.591e-14
+9.623 6.252e-14
+12.8 8.138e-14
+15.74 9.236e-14
+18.45 9.894e-14
