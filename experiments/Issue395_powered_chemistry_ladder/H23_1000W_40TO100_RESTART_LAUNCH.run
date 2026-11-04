@@ -14,3 +14,8 @@ Explicit user-authorized corrective retry after prior Run 41909721789 failed in 
 Failure: unused Executioner/TimeStepper/dtmin (not physics nonconvergence)
 Correction: dtmin=1e-8 moved to Executioner; TimeStepper IterationAdaptiveDT retains dt=1e-6
 No change to 40us source artifact, original Physics, chemistry, EEDF or boundary conditions
+
+Explicit user-authorized corrective restart after Run 41926106806 failed P2b
+Regex-free Executioner ownership correction: .github/scripts/h23_1000w_40us_advanced_restart.py at commit 1957bbebd4b9667184d456d7dc473899152bef2f
+Local dry-run against archived original native 100us input: parent 15 ICs removed, TimeStepper changed once, Executioner dtmin owner exactly once
+No changes to 40us checkpoint, pinned Physics SHA, EEDF, chemistry channels, sources, or boundary conditions
