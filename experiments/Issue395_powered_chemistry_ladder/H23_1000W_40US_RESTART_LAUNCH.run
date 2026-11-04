@@ -1,0 +1,8 @@
+H23 1000W native 0->40us checkpoint launch
+Exact research chemistry parent: 156b86eb871b8da08b8e6ff8483b15da4c5a0a9f
+Physics source: 8e2fe042dbc204b5fda22d346f1ad8d2e32db3ab
+Power: 1000W
+First boundary: 40000 ns
+Follow-on target: 100000 ns from checked native checkpoint
+Scientific acceptance: HOLD
+Do not include H05, EI-2058, EI-2259, EI-2072, EI-2074.
