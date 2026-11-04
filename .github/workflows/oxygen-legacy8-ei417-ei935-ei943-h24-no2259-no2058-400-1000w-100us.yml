@@ -78,7 +78,7 @@ jobs:
           export EI417_SOURCE=_legacy6_control/.github/scripts/oxygen_legacy8_h05_ei417_100us.py
           export EI935=_legacy6_control/.github/scripts/oxygen_legacy8_ei417_ei935_no_hold_100us.py
           export EI943=_legacy6_control/.github/scripts/oxygen_legacy8_ei417_ei935_ei943_no2259_no2058_100us.py
-          export H24=_legacy6_control/.github/scripts/oxygen_legacy8_ei417_ei935_ei943_h24_noei2259_no2058_100us.py
+          export H24=_legacy6_control/.github/scripts/oxygen_legacy8_ei417_ei935_ei943_h24_noei2259_noei2058_100us.py
           test -s "$HARNESS"
           python3 "$HARNESS" --self-test
           python3 "$LEGACY7" --self-test
