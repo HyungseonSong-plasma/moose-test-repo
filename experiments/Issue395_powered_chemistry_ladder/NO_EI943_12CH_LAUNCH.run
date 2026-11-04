@@ -1,0 +1,8 @@
+Run controlled EI943 full-ablation experiment
+Reference baseline Run 41804294918, commit 722979bda5620befbdb50060706c3d8fdce8a711
+Pinned original Physics SHA 8e2fe042dbc204b5fda22d346f1ad8d2e32db3ab
+400 W and 1000 W from 0 to 100 us
+12 active channels: EI-01 EI-02 DISS-G EI-16 EI-17 EI-20 EI-2738 EI-407 EI-417 EI-935 H24 H25
+Excluded: EI-943 H05 EI-2058 EI-2259 EI-2072 EI-2074 H23
+EI943 rate and species/electron-energy sources fully absent from solver argv
+Independent research-only experiment; scientific acceptance HOLD
