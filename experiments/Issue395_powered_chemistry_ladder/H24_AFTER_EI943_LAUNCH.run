@@ -10,3 +10,6 @@ powers: 400W 1000W
 interval: 0..100000ns fresh native
 acceptance: P0-4 including 12ch inventory, mass-charge-atom closure, 100us restart
 scientific_acceptance: HOLD
+
+retry_after_runner_path_fix: true
+previous_run_p0_file_not_found: 41803048628
