@@ -390,7 +390,7 @@ def self_test():
     chem=expected(p)
     assert len(chem)==len(set(chem))==12
     assert not EXCLUDED.intersection(chem)
-    assert K_M3_S==K_CM3_S*1.0e-6
+    assert abs(K_M3_S-K_CM3_S*1.0e-6)/K_M3_S<1.0e-14
     assert K_M3_S*NA==6.02214076e10
     assert abs(-0.016-0.032+0.016+0.032)<1e-15
     assert abs(0.048-0.016-0.032)<1e-15
