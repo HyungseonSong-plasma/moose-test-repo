@@ -196,7 +196,7 @@ RATIO_COLUMNS = (
     "reaction", "case", "mean_energy_eV", "moose_over_mcs",
     "comparison_status", "scientific_status",
 )
-RATIO_CHANNELS = (401, 411, 412, 417, 935, 941, 943, 2738, 407)
+RATIO_CHANNELS = (401, 411, 412, 417, 935, 941, 943, 2738, 2073)
 
 
 def check_ratios(path: Path) -> None:
@@ -235,7 +235,8 @@ def check_ratios(path: Path) -> None:
             }
             or (row["comparison_status"] == "MATCHED") != (ratio is not None)
             or row["scientific_status"] != (
-                "REACTION_IDENTITY_HOLD" if expected_rid in (411, 412)
+                "PROCESS_IDENTITY_HOLD" if expected_rid == 2073
+                else "REACTION_IDENTITY_HOLD" if expected_rid in (411, 412)
                 else "MCS_UNIT_CONFIRMATION_HOLD"
             )
         ):
