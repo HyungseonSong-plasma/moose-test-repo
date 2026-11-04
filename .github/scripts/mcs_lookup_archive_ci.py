@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import argparse
 import base64
+import csv
+import math
 import io
 import json
 import os
@@ -172,12 +174,82 @@ def check_png(path: Path) -> None:
             raise BoundaryError("Approved PNG is missing or invalid")
 
 
+def verify_ratio_disclosure(environ: dict[str, str]) -> str:
+    """A distinct public release attestation is required for reversible ratios.
+
+    The maintainer must inspect record author, scope and current exact SHA.
+    This guard binds the record URL to the SHA, not the comment's semantics.
+    """
+    sha = environ.get("GITHUB_SHA", "")
+    record = environ.get("MCS_RATIO_PUBLIC_DISCLOSURE_RECORD_URL", "")
+    if (
+        SHA.fullmatch(sha) is None
+        or environ.get("MCS_RATIO_PUBLIC_DISCLOSURE_SHA") != sha
+        or RECORD.fullmatch(record) is None
+        or record.endswith(("6631358844", "6633659857"))
+    ):
+        raise BoundaryError("Current-commit numeric ratio publication approval is missing")
+    return sha
+
+
+RATIO_COLUMNS = (
+    "reaction", "case", "mean_energy_eV", "moose_over_mcs",
+    "comparison_status", "scientific_status",
+)
+RATIO_CHANNELS = (401, 411, 412, 417, 935, 941, 943, 2738, 407)
+
+
+def check_ratios(path: Path) -> None:
+    """Approve only 9x24 ratio-only CSV, never a private coefficient dump."""
+    if (
+        path.name != "MCS_MOOSE_9_reaction_ratios.csv"
+        or path.is_symlink()
+        or not path.is_file()
+        or path.stat().st_size > 65536
+        or sorted(item.name for item in path.parent.iterdir()) != [path.name]
+    ):
+        raise BoundaryError("Ratio output allowlist failed")
+    with path.open(newline="") as stream:
+        reader = csv.DictReader(stream)
+        if tuple(reader.fieldnames or ()) != RATIO_COLUMNS:
+            raise BoundaryError("Ratio output allowlist failed")
+        rows = list(reader)
+    if len(rows) != 9 * 24:
+        raise BoundaryError("Ratio output allowlist failed")
+    for i, row in enumerate(rows):
+        expected_rid = RATIO_CHANNELS[i // 24]
+        try:
+            mean_energy = float(row["mean_energy_eV"])
+            value = row["moose_over_mcs"]
+            ratio = None if not value else float(value)
+        except (ValueError, TypeError, OverflowError):
+            raise BoundaryError("Ratio output allowlist failed") from None
+        if (
+            row["reaction"] != f"EI-{expected_rid}"
+            or row["case"] != str(i % 24 + 1)
+            or not math.isfinite(mean_energy)
+            or mean_energy <= 0
+            or (ratio is not None and (not math.isfinite(ratio) or ratio < 0))
+            or row["comparison_status"] not in {
+                "MATCHED", "ZERO_MCS_NO_RATIO", "OUTSIDE_LOOKUP_OR_FORMULA_DOMAIN"
+            }
+            or (row["comparison_status"] == "MATCHED") != (ratio is not None)
+            or row["scientific_status"] != (
+                "REACTION_IDENTITY_HOLD" if expected_rid in (411, 412)
+                else "MCS_UNIT_CONFIRMATION_HOLD"
+            )
+        ):
+            raise BoundaryError("Ratio output allowlist failed")
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser()
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--check-approvals", action="store_true")
+    mode.add_argument("--check-ratio-disclosure", action="store_true")
     mode.add_argument("--restore", type=Path)
     mode.add_argument("--check-png", type=Path)
+    mode.add_argument("--check-ratios", type=Path)
     args = parser.parse_args(argv)
     try:
         if args.check_approvals:
@@ -191,12 +263,18 @@ def main(argv: list[str] | None = None) -> int:
             with Path(output).open("a") as stream:
                 stream.write(f"approved_sha={sha}\n")
             print("MCS_COMPARISON_APPROVAL_GATE=PASS")
+        elif args.check_ratio_disclosure:
+            verify_ratio_disclosure(dict(os.environ))
+            print("MCS_RATIO_DISCLOSURE_GATE=PASS")
         elif args.restore is not None:
             restore_archive(os.environ.get("PRIVATE_RATES_B64", ""), args.restore)
             print("PRIVATE_LOOKUP_PACKAGE_RESTORED")
-        else:
+        elif args.check_png is not None:
             check_png(args.check_png)
             print("APPROVED_PNG_OUTPUT=PASS")
+        else:
+            check_ratios(args.check_ratios)
+            print("APPROVED_RATIO_OUTPUT=PASS")
     except BoundaryError as error:
         print(f"::error::{error}")
         return 1
