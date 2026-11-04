@@ -267,7 +267,7 @@ jobs:
           print('H23_1000W_40US_CHECKPOINT_VERIFIED',step)
           PY
           tar -czf "$RESULT/legacy6_restart_run_40000ns.tar.gz" "$RESULT/run"
-          tar -czf "$RESULT/legacy6_restart_inputs_40000ns.tar.gz" "$CHEM"
+          tar -czf "$RESULT/legacy6_restart_inputs_40000ns.tar.gz" "$CHEM/rf_elastic_diss_ion_ei20_ei01_${POWER_W}w_adjacent_sheath_wall_closed_100us_dt1000ns.i" "$H23_OVERLAY" "$H24_OVERLAY" "$H25_OVERLAY" "$EI943_OVERLAY" "$EI935_OVERLAY" "$EI417_OVERLAY" "$EI407_OVERLAY"
           test -s "$RESULT/legacy6_restart_run_40000ns.tar.gz"
           sha256sum "$RESULT/legacy6_restart_run_40000ns.tar.gz" > "$RESULT/archive40.sha256"
 
