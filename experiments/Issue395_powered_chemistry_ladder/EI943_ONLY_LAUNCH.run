@@ -1,0 +1,10 @@
+experiment: Run 41739266674 minus EI-2259 plus EI-943
+comparison_run_id: 41739266674
+comparison_head_sha: e45e4879882fd5509d5e3e38c3634ed31e23ee2b
+chemistry: Legacy8 + EI-417 + EI-935 + EI-943
+exclude: EI-2058, EI-2259, H05, EI-2072, EI-2074
+power_w: [400, 1000]
+time_ns: [0, 100000]
+initialization: fresh
+evidence: native physics-opt P0-P4, scientific HOLD
+trigger: push marker, controlled branch
