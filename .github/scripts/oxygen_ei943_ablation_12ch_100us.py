@@ -101,7 +101,7 @@ def assert_script():
     assert "$EI943_OVERLAY" not in txt
     for overlay in TOKENS:
         assert txt.count("'"+overlay+"'")==2, f"missing/duplicate injected overlay {overlay}"
-    assert txt.count("\${EI2738_EXTRA_INPUT}")==2, "EI2738 original formula incorrectly removed"
+    assert txt.count(chr(36)+"{EI2738_EXTRA_INPUT}")==2, "EI2738 original formula incorrectly removed"
     assert "Outputs/file_base='$RESULT/run/plasma'" in txt
     assert "$EI2058_OVERLAY" not in txt and "$EI2259_OVERLAY" not in txt
     return sha(replay())
