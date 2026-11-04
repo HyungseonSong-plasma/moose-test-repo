@@ -45,7 +45,7 @@ def prepare() -> None:
         for member in tf.getmembers():
             n=Path(member.name)
             assert not n.is_absolute() and ".." not in n.parts
-            assert str(n).startswith(str(RESULT/"run")+"/")
+            assert str(n)==str(RESULT/"run") or str(n).startswith(str(RESULT/"run")+"/")
         tf.extractall(ROOT,filter="data")
     run=RESULT/"run"
     assert sha(run/"plasma.csv")==j["plasma_csv_sha256"]
