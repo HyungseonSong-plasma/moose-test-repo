@@ -1,0 +1,47 @@
+{
+  "source_filename": "MCS.OUT",
+  "source_sha256": "d3db627a2d97b2bcc355c2f241b7bb231f49463cd0bb3ef6b13383166802ab08",
+  "source_bytes": 153334,
+  "cases": 24,
+  "case_numbers": [
+    1,
+    24
+  ],
+  "EoverN_Td_range": [
+    "1",
+    "1000"
+  ],
+  "mean_energy_eV_range": [
+    "0.1218",
+    "18.45"
+  ],
+  "row_keys": [
+    "case",
+    "EoverN_Td",
+    "mean_energy_eV"
+  ],
+  "source_units_header": "RATE CONST  SUPER RATE (CC/S)  FRAC POWER",
+  "rate_column": "first RATE CONST; SUPER RATE and FRAC POWER never used",
+  "rate_units": "CC/S supports cm3/s for these binary electron-impact coefficients; source/program convention still merits domain sign-off",
+  "energy_units": "eV from AVERAGE ELECTRON ENERGY",
+  "field_units": "V-cm2 divided by1e-17 to Td",
+  "channel_mapping": {
+    "EI-401": "O2-ATTACHMENT TWO BODY",
+    "EI-941": "O-ION",
+    "EI-2738": "O- Detachment"
+  },
+  "overlap_validation": {
+    "existing_csvs": 2,
+    "checked_numeric_cells": 600,
+    "comparison": "Decimal exact equality for every existing row/column",
+    "matched_reaction_columns": 19
+  },
+  "supplemental_csv_sha256": "d0814859f5fffd90442f4cc13e90adb99433eb56ba90e3c86a804fb6bc7b0bd2",
+  "supplemental_csv": "mcs_oxygen_supplemental_reactions_20261104.csv",
+  "scientific_holds": [
+    "EI411/EI412 MCS energy-loss channels are not demonstrated equivalent to MOOSE effective dissociation",
+    "EI2738 MOOSE temperature fit validated only equivalentTe1\u20137eV; averageenergy1.5\u201310.5eV",
+    "no real MOOSE simulation or EEDF identity equivalence established"
+  ],
+  "supplemental_csv_line_endings": "LF"
+}

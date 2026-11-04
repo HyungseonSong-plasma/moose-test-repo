@@ -1,50 +1,141 @@
+# Issue #432: code-generation/testing has no private data or archive secret.
+# Processing approval: issues/432#issuecomment-6631358844. PNG disclosure is separate.
+# Maintainers must configure the mcs-lookup-comparison Environment with required
+# reviewers and prevent self-review. Missing/unprotected environments fail closed.
+# Repository variables are maintainer attestations, not automatic review-content
+# verification. Verify linked authors, exact commit, and disclosure scope first.
 name: MCS oxygen reaction rates versus private MOOSE lookup
-run-name: Oxygen MCS 14-reaction rate ratio comparison
+run-name: MCS MOOSE 3x3 linear comparison ${{ github.sha }}
 on:
   push:
-    branches:
-      - mcs-ei407-ei415-compare-20261104
-    paths:
-      - .github/workflows/mcs-oxygen-private-lookup-compare.yml
+    branches: [issue-432-mcs-moose-3x3-linear]
+  pull_request:
+    branches: [mcs-ei407-ei415-compare-20261104]
   workflow_dispatch:
+    inputs:
+      expected_sha:
+        description: Exact reviewed 40-character commit SHA; must equal the dispatched ref
+        required: true
+        type: string
 permissions:
   contents: read
+concurrency:
+  group: mcs-lookup-comparison-${{ github.ref }}
+  cancel-in-progress: false
 jobs:
+  synthetic-tests:
+    name: Secret-free comparison and security tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install only public test dependencies
+        run: python -m pip install 'pytest>=8,<9' -r requirements-mcs-comparison.txt
+      - name: Test with synthetic Lookup tables only
+        run: python -m pytest -q tests/test_oxygen_mcs_rate_compare.py tests/test_mcs_comparison_workflow.py
+
+  approval-gate:
+    name: Verify exact-head code and PNG disclosure approvals
+    if: github.event_name == 'workflow_dispatch'
+    needs: synthetic-tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      approved_sha: ${{ steps.approvals.outputs.approved_sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Verify maintainer attestations and protected Environment
+        id: approvals
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+          MCS_CODE_REVIEWED_SHA: ${{ vars.MCS_CODE_REVIEWED_SHA }}
+          MCS_CODE_REVIEW_RECORD_URL: ${{ vars.MCS_CODE_REVIEW_RECORD_URL }}
+          MCS_PNG_PUBLIC_DISCLOSURE_SHA: ${{ vars.MCS_PNG_PUBLIC_DISCLOSURE_SHA }}
+          MCS_PNG_PUBLIC_DISCLOSURE_RECORD_URL: ${{ vars.MCS_PNG_PUBLIC_DISCLOSURE_RECORD_URL }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          python3 .github/scripts/mcs_lookup_archive_ci.py --check-approvals
+
   compare-oxygen-rate-coefficients:
+    name: Approved private runner and PNG-only output
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      needs.approval-gate.outputs.approved_sha == github.sha &&
+      inputs.expected_sha == github.sha &&
+      vars.MCS_CODE_REVIEWED_SHA == github.sha &&
+      vars.MCS_PNG_PUBLIC_DISCLOSURE_SHA == github.sha
+    needs: [synthetic-tests, approval-gate]
+    environment: mcs-lookup-comparison
     runs-on: ubuntu-24.04
     timeout-minutes: 15
+    env:
+      PRIVATE_ROOT: ${{ runner.temp }}/mcs-lookup-comparison-${{ github.run_id }}-${{ github.run_attempt }}
+      MPLCONFIGDIR: ${{ runner.temp }}/mcs-lookup-comparison-${{ github.run_id }}-${{ github.run_attempt }}/mpl
     steps:
-      - name: Checkout selected comparison branch
-        uses: actions/checkout@v4
-
-      - name: Restore existing private lookup package inside runner
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install public plotting dependency before private restoration
+        run: python -m pip install -r requirements-mcs-comparison.txt
+      - name: Create runner-owned restricted working directory
+        run: |
+          set -euo pipefail
+          umask 077
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test ! -e "$PRIVATE_ROOT"
+          mkdir -m 700 "$PRIVATE_ROOT"
+          touch "$PRIVATE_ROOT/.owned-by-comparison-job"
+      - name: Restore existing private Lookup archive only inside approved runner
         env:
           PRIVATE_RATES_B64: ${{ secrets.OXYGEN24_RATES_TAR_XZ_B64 }}
         run: |
           set -euo pipefail
-          test -n "$PRIVATE_RATES_B64" || { echo "::error::Private lookup package unavailable"; exit 22; }
-          mkdir -p /tmp/oxygen25/private_rates
-          printf '%s' "$PRIVATE_RATES_B64" | base64 --decode | tar -xJ -C /tmp/oxygen25/private_rates --no-same-owner
-          echo 'PRIVATE_LOOKUP_PACKAGE_RESTORED'
-
-      - name: Compare reaction rate coefficients on matching energy grid
+          umask 077
+          python3 .github/scripts/mcs_lookup_archive_ci.py --restore "$PRIVATE_ROOT/private_rates"
+      - name: Render approved linear comparison without exporting numeric files
         run: |
           set -euo pipefail
-          python3 .github/scripts/oxygen_mcs_rate_compare_ci.py \
-            --rate-dir /tmp/oxygen25/private_rates \
+          umask 077
+          if ! python3 .github/scripts/oxygen_mcs_rate_compare_ci.py \
+            --mode linear-3x3 \
+            --rate-dir "$PRIVATE_ROOT/private_rates" \
+            --public-rate-dir physics_app/data/electron_impact \
             --mcs-csv experiments/Issue395_powered_chemistry_ladder/oxygen_mcs_lookup_compare_14.csv \
-            --output-dir oxygen_mcs_rate_comparison_result
-          test -s oxygen_mcs_rate_comparison_result/rate_ratios.csv
-          test -s oxygen_mcs_rate_comparison_result/summary.csv
-          if find oxygen_mcs_rate_comparison_result -type f | grep -E 'EI-.*\.txt|private_rates'; then
-            echo "::error::Private lookup must not enter artifact"
+            --additional-mcs-csv experiments/Issue395_powered_chemistry_ladder/mcs_oxygen_five_omitted_reactions_20261104.csv \
+            --additional-mcs-csv experiments/Issue395_powered_chemistry_ladder/mcs_oxygen_supplemental_reactions_20261104.csv \
+            --require-complete-mcs \
+            --output-dir "$PRIVATE_ROOT/output" > "$PRIVATE_ROOT/comparison.log" 2>&1; then
+            echo '::error::Comparison failed; private diagnostics withheld'
             exit 30
           fi
-
-      - name: Archive approved ratio and error statistics only
+          python3 .github/scripts/mcs_lookup_archive_ci.py --check-png "$PRIVATE_ROOT/output/MCS_MOOSE_3x3_LINEAR.png"
+      - name: Publish only explicitly approved derived PNG
         uses: actions/upload-artifact@v4
         with:
-          name: oxygen-mcs-lookup-comparison-ratios-only
-          path: oxygen_mcs_rate_comparison_result/
+          name: MCS_MOOSE_3x3_LINEAR
+          path: ${{ runner.temp }}/mcs-lookup-comparison-${{ github.run_id }}-${{ github.run_attempt }}/output/MCS_MOOSE_3x3_LINEAR.png
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 1
+          include-hidden-files: false
+      - name: Remove private tables, logs, caches, and generated PNG
+        if: always()
+        run: |
+          set -euo pipefail
+          if test -f "$PRIVATE_ROOT/.owned-by-comparison-job"; then
+            rm -rf -- "$PRIVATE_ROOT"
+          fi
