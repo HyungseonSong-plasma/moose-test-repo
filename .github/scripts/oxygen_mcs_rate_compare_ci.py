@@ -21,8 +21,8 @@ LOOKUP = (407, 413, 414, 415, 2058, 2067, 2068, 2069, 2072, 2074, 944)
 FORMULAS = (2259, 936)
 NOT_SAME_PROCESS = (2073,)
 ALL = LOOKUP + FORMULAS + NOT_SAME_PROCESS
-PANEL_REACTIONS = (401, 411, 412, 417, 935, 941, 943, 2738, 407)
-PRIVATE_PANEL_REACTIONS = (411, 412, 417, 935, 943, 407)
+PANEL_REACTIONS = (401, 411, 412, 417, 935, 941, 943, 2738, 2073)
+PRIVATE_PANEL_REACTIONS = (411, 412, 417, 935, 943, 2073)
 PUBLIC_PANEL_FILES = {401: "o2_attachment.txt", 941: "o_ionization.txt"}
 PNG_NAME = "MCS_MOOSE_3x3_LINEAR.png"
 
@@ -154,7 +154,7 @@ def prepare_linear_comparison(rate_dir, mcs_paths, public_rate_dir=None, require
     cases = read_mcs_cases(mcs_paths, require_complete=require_complete)
     public_rate_dir = public_rate_dir or ROOT / "physics_app/data/electron_impact"
     owner = source_owner("build_oxygen_24_source_overlay")
-    targets = {"O2": "O2_X", "O": "O_3P", "Os": "O_1D"}
+    targets = {"O2": "O2_X", "O2a": "O2_a1Delta", "O": "O_3P", "Os": "O_1D"}
     tables = {}
     for rid in PRIVATE_PANEL_REACTIONS:
         filename = f"EI-{rid}_{targets[owner.PARENT[rid]]}.txt"
