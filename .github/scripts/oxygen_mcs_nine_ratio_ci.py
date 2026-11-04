@@ -55,7 +55,8 @@ def ratio_rows(panels):
                 "moose_over_mcs": ratio,
                 "comparison_status": status,
                 "scientific_status": (
-                    "REACTION_IDENTITY_HOLD" if panel["reaction"] in (411, 412)
+                    "PROCESS_IDENTITY_HOLD" if panel["reaction"] == 2073
+                    else "REACTION_IDENTITY_HOLD" if panel["reaction"] in (411, 412)
                     else "MCS_UNIT_CONFIRMATION_HOLD"
                 ),
             })
