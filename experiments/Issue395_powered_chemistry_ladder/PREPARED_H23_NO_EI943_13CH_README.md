@@ -40,7 +40,7 @@ Status: **READY FOR FUTURE AUTHORIZATION; NOT LAUNCHED.**
   - `self-test`, `capture-grid`, `install`, `verify`, `archive`.
   - Before EI-943 is removed, copy **only its original 100 mean-energy grid coordinates**, not its private rate coefficients.
   - After the no-EI943 13ch ablation, use the 24 MCS cases to replace the original EI2738 rate *inside* 0.1218–18.45 eV; outside this range use the original formula, no extrapolation.
-  - MCS source `k_{`raw`}` reported in `m³/s` must be converted to lookup `m³/(mol·s)` by multiplying by `N_A = 6.02214076e23`; this is necessary because `PhysicsElectronImpactRateMaterial` evaluates `R = k_lookup × (n_e / N_A) × c_Ominus`.
+  - MCS source coefficient reported in `m³/s` must be converted to lookup `m³/(mol·s)` by multiplying by `N_A = 6.02214076e23`; this is necessary because `PhysicsElectronImpactRateMaterial` evaluates `R = k_lookup × (n_e / N_A) × c_Ominus`.
   - Keep original EI2738 `e + O⁻ → O + 2e` stoichiometry and the model’s original 2.70 eV electron-energy sink.
   - Save separate audit and derived rate table with the checkpoint to allow reproduction.
 - MCS source: `experiments/Issue395_powered_chemistry_ladder/ei2738_mcs_24case_mean_energy_rate_m3_s.txt`, 24 CASE values, raw `MCS(1).OUT` SHA256 `d3db627a2d97b2bcc355c2f241b7bb231f49463cd0bb3ef6b13383166802ab08`.
