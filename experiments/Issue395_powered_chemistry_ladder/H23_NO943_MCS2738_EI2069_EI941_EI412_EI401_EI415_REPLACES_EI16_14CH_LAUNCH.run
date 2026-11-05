@@ -1,0 +1,11 @@
+USER-AUTHORIZED SINGLE FRESH EI-415 FOR EI-16 REPLACEMENT
+Date: 2026-11-05 Europe/London
+Source: 14ch EI401-in/EI01-out, EI412-in/DISS-G-out, EI941-in/EI20-out, EI2069-in, H23+, EI943-, MCS EI2738
+New controlled replacement: EI-16 OUT, original HPEM EI-415_O2_X.txt 100pt rate IN
+Stoichiometry: e + O2(X) -> O2+ + 2 e, energy loss 12.06 eV per event
+Preserve exactly one native R_ion_O2 owner and the baseline electron, ion, neutral, energy source kernels
+Preserve same pinned physics checkout, Maxwell coupling, transport EEDF, seeds, mesh and other rates
+Run independent fresh 400W and 1000W 0-100us full native cases (460 steps)
+Require P0 original private lookup SHA 100-point verification, P1 native build, P2 check-input, P3 true native solve and P4 checkpoint archive provenance
+Reject EI16 and EI415 parallel activity; never publish private reaction-rate tables
+Scientific acceptance remains HOLD. One user-authorized launch only.
