@@ -1,0 +1,425 @@
+# USER-AUTHORIZED EI401-for-EI01 14ch on EI412-for-DISS-G EI941-for-EI20 parent; science HOLD.
+# Fresh 0-100us per power; preserve Legacy6/7 control experiments; science HOLD.
+# Original EI-01 is built and audited as part of the pinned baseline, then the native ATTACH input is swapped to EI-401 before check/solve.
+# EI-16 is implemented by the specialized PhysicsElectronImpactIonizationMaterial.
+name: Oxygen ICP H23 EI2069 EI941 EI412 EI401-in EI01-out 14ch 400W 1000W 100us
+run-name: "H23 EI943 OUT MCS2738 EI2069 EI941 EI412 EI401 IN EI01 OUT 14ch 400W 1000W 100us ${{ github.sha }}"
+on:
+  workflow_dispatch:
+  push:
+    branches: [experiment-h23-ei941-ei412-ei401-replaces-ei01-14ch-20261105]
+    paths:
+      - experiments/Issue395_powered_chemistry_ladder/H23_NO943_MCS2738_EI2069_EI941_EI412_EI401_REPLACES_EI01_14CH_LAUNCH.run
+
+permissions:
+  contents: read
+
+concurrency:
+  group: oxygen-h23-no-ei943-13ch-100us-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  simulate:
+    name: Native 14ch H23+ EI943- EI2069+ EI941+ EI20- EI412+ DISSG- EI401+ EI01- 0–100us ${{ matrix.power_w }}W
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        power_w: [400, 1000]
+    env:
+      POWER_W: ${{ matrix.power_w }}
+      CHATGPT_WORK_BASE_SHA: 8e2fe042dbc204b5fda22d346f1ad8d2e32db3ab
+      OXYGEN_RESEARCH_400: '1'
+      OXYGEN_RESEARCH_FULL24: '0'
+      OXYGEN_RESEARCH_EI2738_FORMULA: '1'
+      OXYGEN_RESEARCH_LUMPED_O2A: '0'
+      OXYGEN_RESEARCH_QUICK_5MIN: '0'
+      END_NS: '100000'
+      EEDF_SHA: 35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b
+      CHEM: experiments/Issue395_powered_chemistry_ladder
+      OXYGEN_RESEARCH_RATE_DIR: /tmp/oxygen25/private_rates
+      EI407_OVERLAY: experiments/Issue395_powered_chemistry_ladder/ei407_only_${{ matrix.power_w }}w_100us_dt1000ns_overlay.i
+      EI417_OVERLAY: experiments/Issue395_powered_chemistry_ladder/ei417_without_h05_${{ matrix.power_w }}w_100us_dt1000ns_overlay.i
+      EI935_OVERLAY: experiments/Issue395_powered_chemistry_ladder/ei935_atomic_excitation_${{ matrix.power_w }}w_100us_dt1000ns_overlay.i
+      H24_OVERLAY: experiments/Issue395_powered_chemistry_ladder/h24_om_o2p_mutual_neutralization_${{ matrix.power_w }}w_100us_dt1000ns_overlay.i
+      H25_OVERLAY: experiments/Issue395_powered_chemistry_ladder/h25_op_o2_charge_transfer_${{ matrix.power_w }}w_100us_dt1000ns_overlay.i
+      H23_OVERLAY: experiments/Issue395_powered_chemistry_ladder/h23_op_om_mutual_neutralization_${{ matrix.power_w }}w_100us_dt1000ns_overlay.i
+      EI2069_OVERLAY: experiments/Issue395_powered_chemistry_ladder/ei2069_o2a_dissociation_${{ matrix.power_w }}w_100us_dt1000ns_overlay.i
+      EI941_OVERLAY: experiments/Issue395_powered_chemistry_ladder/o_ionization_ei941_${{ matrix.power_w }}w_100us_dt1000ns_overlay.i
+      EI412_OVERLAY: experiments/Issue395_powered_chemistry_ladder/o2_dissociation_ei412_${{ matrix.power_w }}w_100us_dt1000ns_overlay.i
+      EI401_OVERLAY: experiments/Issue395_powered_chemistry_ladder/o2_attachment_ei401_${{ matrix.power_w }}w_100us_dt1000ns_overlay.i
+    steps:
+      - name: Checkout pinned original physics source
+        uses: actions/checkout@v4
+        with:
+          ref: 8e2fe042dbc204b5fda22d346f1ad8d2e32db3ab
+          fetch-depth: 1
+
+      - name: Checkout research harness and saved initial-mixture EEDF lookup
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: _legacy6_control
+          sparse-checkout: |
+            .github/scripts/oxygen_legacy6_latest_100us.py
+            .github/scripts/oxygen_legacy7_ei2738_100us.py
+            .github/scripts/oxygen_legacy8_ei407_100us.py
+            .github/scripts/oxygen_legacy8_h05_ei417_100us.py
+            .github/scripts/oxygen_legacy8_ei417_ei935_no_hold_100us.py
+            .github/scripts/oxygen_legacy8_ei417_ei935_ei943_no2259_no2058_100us.py
+            .github/scripts/oxygen_legacy8_ei417_ei935_ei943_h24_noei2259_noei2058_100us.py
+            .github/scripts/oxygen_legacy8_ei417_ei935_ei943_h24_h25_noei2259_noei2058_100us.py
+            .github/scripts/oxygen_legacy8_ei417_ei935_ei943_h24_h25_h23_noei2259_noei2058_100us.py
+            .github/scripts/oxygen_h23_no_ei943_13ch_100us.py
+            .github/scripts/ei2738_mcs_h23_no_ei943_13ch.py
+            .github/scripts/ei2069_h23_no943_mcs2738_14ch.py
+            .github/scripts/ei941_replace_ei20_14ch.py
+            .github/scripts/ei412_replaces_dissg_h23_mcs2738_ei2069_ei941_14ch.py
+            .github/scripts/ei401_replaces_ei01_h23_ei412_ei941_14ch.py
+            experiments/Issue395_powered_chemistry_ladder/ei2738_mcs_24case_mean_energy_rate_m3_s.txt
+            .github/oxygen25_eedf/initial_mixture_23xsec_transport.txt
+          sparse-checkout-cone-mode: false
+
+      - name: P0 exact baseline, six-channel inventory and EEDF table
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$CHATGPT_WORK_BASE_SHA"
+          export HARNESS=_legacy6_control/.github/scripts/oxygen_legacy6_latest_100us.py
+          export LEGACY7=_legacy6_control/.github/scripts/oxygen_legacy7_ei2738_100us.py
+          export LEGACY8=_legacy6_control/.github/scripts/oxygen_legacy8_ei407_100us.py
+          export EI417_SOURCE=_legacy6_control/.github/scripts/oxygen_legacy8_h05_ei417_100us.py
+          export EI935=_legacy6_control/.github/scripts/oxygen_legacy8_ei417_ei935_no_hold_100us.py
+          export EI943=_legacy6_control/.github/scripts/oxygen_legacy8_ei417_ei935_ei943_no2259_no2058_100us.py
+          export H24=_legacy6_control/.github/scripts/oxygen_legacy8_ei417_ei935_ei943_h24_noei2259_noei2058_100us.py
+          export H25=_legacy6_control/.github/scripts/oxygen_legacy8_ei417_ei935_ei943_h24_h25_noei2259_noei2058_100us.py
+          export H23=_legacy6_control/.github/scripts/oxygen_legacy8_ei417_ei935_ei943_h24_h25_h23_noei2259_noei2058_100us.py
+          export ABLATE=_legacy6_control/.github/scripts/oxygen_h23_no_ei943_13ch_100us.py
+          export MCS2738=_legacy6_control/.github/scripts/ei2738_mcs_h23_no_ei943_13ch.py
+          export EI2069=_legacy6_control/.github/scripts/ei2069_h23_no943_mcs2738_14ch.py
+          export EI941=_legacy6_control/.github/scripts/ei941_replace_ei20_14ch.py
+          export EI412=_legacy6_control/.github/scripts/ei412_replaces_dissg_h23_mcs2738_ei2069_ei941_14ch.py
+          export EI401=_legacy6_control/.github/scripts/ei401_replaces_ei01_h23_ei412_ei941_14ch.py
+          test -s "$HARNESS"
+          python3 "$HARNESS" --self-test
+          python3 "$LEGACY7" --self-test
+          python3 "$LEGACY8" --self-test
+          python3 "$EI935" --self-test
+          python3 "$EI943" --self-test
+          python3 "$H24" --self-test
+          python3 "$H25" --self-test
+          python3 "$H23" --self-test
+          python3 "$ABLATE" self-test
+          python3 "$MCS2738" self-test
+          python3 "$EI2069" self-test
+          python3 "$EI941" self-test
+          python3 "$EI412" self-test
+          python3 "$EI401" self-test
+          python3 -m py_compile "$HARNESS" "$LEGACY7" "$LEGACY8" "$EI417_SOURCE" "$EI935" "$EI943" "$H24" "$H25" "$H23" "$ABLATE" "$MCS2738" "$EI2069" "$EI941" "$EI412" "$EI401"
+          bash -n "$CHEM/issue397_l1_power_scan_replay.sh"
+          python3 -m venv .legacy6-venv
+          .legacy6-venv/bin/python -m pip install --disable-pip-version-check --quiet numpy==2.1.2 scipy==1.14.1 'pytest>=8,<9'
+          echo "$PWD/.legacy6-venv/bin" >> "$GITHUB_PATH"
+          .legacy6-venv/bin/python -c "import numpy,scipy; print('OXYGEN_LEGACY6_NATIVE_PYTHON_DEPS_PASS',numpy.__version__,scipy.__version__)"
+          test "$OXYGEN_RESEARCH_FULL24" = 0
+          test "$OXYGEN_RESEARCH_QUICK_5MIN" = 0
+          TABLE_SOURCE=_legacy6_control/.github/oxygen25_eedf/initial_mixture_23xsec_transport.txt
+          test "$(sha256sum "$TABLE_SOURCE" | cut -d' ' -f1)" = "$EEDF_SHA"
+          cp "$TABLE_SOURCE" experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt
+          test "$(sha256sum experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt | cut -d' ' -f1)" = "$EEDF_SHA"
+          echo "HARNESS=$HARNESS" >> "$GITHUB_ENV"
+          echo "LEGACY7=$LEGACY7" >> "$GITHUB_ENV"
+          echo "LEGACY8=$LEGACY8" >> "$GITHUB_ENV"
+          echo "EI935=$EI935" >> "$GITHUB_ENV"
+          echo "EI943=$EI943" >> "$GITHUB_ENV"
+          echo "H24=$H24" >> "$GITHUB_ENV"
+          echo "H25=$H25" >> "$GITHUB_ENV"
+          echo "H23=$H23" >> "$GITHUB_ENV"
+          echo "ABLATE=$ABLATE" >> "$GITHUB_ENV"
+          echo "MCS2738=$MCS2738" >> "$GITHUB_ENV"
+          echo "EI2069=$EI2069" >> "$GITHUB_ENV"
+          echo "EI941=$EI941" >> "$GITHUB_ENV"
+          echo "EI412=$EI412" >> "$GITHUB_ENV"
+          echo "EI401=$EI401" >> "$GITHUB_ENV"
+          echo "EI417_SOURCE=$EI417_SOURCE" >> "$GITHUB_ENV"
+          echo "RESULT=$CHEM/results_rf_elastic_diss_ion_ei20_ei01_${POWER_W}w_adjacent_sheath_wall_closed_100us_dt1000ns" >> "$GITHUB_ENV"
+
+      - name: P0 verify exact private EI407 EI417 EI935 EI943 original rate tables
+        env:
+          PRIVATE_RATES_B64: ${{ secrets.OXYGEN24_RATES_TAR_XZ_B64 }}
+        run: |
+          set -euo pipefail
+          test -n "$PRIVATE_RATES_B64" || { echo "::error::Missing private rate package"; exit 22; }
+          umask 077
+          mkdir -p "$OXYGEN_RESEARCH_RATE_DIR"
+          printf '%s' "$PRIVATE_RATES_B64" | base64 --decode | tar -xJ -C "$OXYGEN_RESEARCH_RATE_DIR" --no-same-owner
+          python3 - <<'PY'
+          import importlib.util, os
+          from pathlib import Path
+          path=Path("experiments/Issue395_powered_chemistry_ladder/build_oxygen_24_source_overlay.py")
+          spec=importlib.util.spec_from_file_location("legacy8_rates",path)
+          m=importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+          rates=m.validate_files(Path(os.environ["OXYGEN_RESEARCH_RATE_DIR"]))
+          assert set(m.LOOKUP_IDS).issubset(rates)
+          assert 407 in rates and rates[407].name=="EI-407_O2_X.txt"
+          assert 417 in rates and rates[417].name=="EI-417_O2_X.txt"
+          assert 935 in rates and rates[935].name=="EI-935_O_3P.txt"
+          assert 943 in rates and rates[943].name=="EI-943_O_1D.txt"
+          assert 2069 in rates and rates[2069].name=="EI-2069_O2_a1Delta.txt"
+          assert 941 in rates and rates[941].name=="EI-941_O_3P.txt"
+          assert 412 in rates and rates[412].name=="EI-412_O2_X.txt"
+          assert 401 in rates and rates[401].name=="EI-401_O2_X.txt"
+          print("LEGACY8_EI407_PRIVATE_RATE_GATE_PASS",len(rates))
+          PY
+
+      - name: P0 prepare 14ch parent, capture 100pt grid, ablate EI943, install EI2738 MCS 13ch
+        run: |
+          set -euo pipefail
+          bash "$CHEM/issue397_l1_power_scan_replay.sh" prepare "$POWER_W"
+          python3 "$HARNESS" --prepare --power-w "$POWER_W"
+          python3 "$H23" --prepare-variant --power-w "$POWER_W"
+          python3 "$H23" --verify-fourteen --power-w "$POWER_W"
+          python3 "$MCS2738" capture-grid --power-w "$POWER_W"
+          python3 "$ABLATE" prepare --power-w "$POWER_W"
+          python3 "$MCS2738" install --power-w "$POWER_W"
+          export OXYGEN_RESEARCH_EI2738_MCS=1
+          echo "OXYGEN_RESEARCH_EI2738_MCS=1" >> "$GITHUB_ENV"
+          python3 "$ABLATE" verify --power-w "$POWER_W"
+          python3 "$MCS2738" verify --power-w "$POWER_W"
+          python3 "$EI2069" prepare --power-w "$POWER_W"
+          export OXYGEN_RESEARCH_EI2069_PLUS=1
+          echo "OXYGEN_RESEARCH_EI2069_PLUS=1" >> "$GITHUB_ENV"
+          python3 "$EI2069" verify --power-w "$POWER_W"
+          python3 "$EI941" prepare --power-w "$POWER_W"
+          export OXYGEN_RESEARCH_EI941_SWAP=1
+          echo "OXYGEN_RESEARCH_EI941_SWAP=1" >> "$GITHUB_ENV"
+          python3 "$EI941" verify --power-w "$POWER_W"
+          python3 "$EI412" prepare --power-w "$POWER_W"
+          export OXYGEN_RESEARCH_EI412_SWAP=1
+          echo "OXYGEN_RESEARCH_EI412_SWAP=1" >> "$GITHUB_ENV"
+          python3 "$EI412" verify --power-w "$POWER_W"
+          python3 "$EI401" prepare --power-w "$POWER_W"
+          export OXYGEN_RESEARCH_EI401_SWAP=1
+          echo "OXYGEN_RESEARCH_EI401_SWAP=1" >> "$GITHUB_ENV"
+          python3 "$EI401" verify --power-w "$POWER_W"
+          python3 bin/physics.py preflight --self-test
+          python3 bin/physics.py preflight "$CHEM/ei2738_detachment_formula_${POWER_W}w_100us_dt1000ns_overlay.i"
+          python3 bin/physics.py preflight "$EI407_OVERLAY"
+          python3 bin/physics.py preflight "$EI417_OVERLAY"
+          python3 bin/physics.py preflight "$EI935_OVERLAY"
+          python3 bin/physics.py preflight "$H24_OVERLAY"
+          python3 bin/physics.py preflight "$H25_OVERLAY"
+          python3 bin/physics.py preflight "$H23_OVERLAY"
+          python3 bin/physics.py preflight "$EI2069_OVERLAY"
+          python3 bin/physics.py preflight "$EI941_OVERLAY"
+          python3 bin/physics.py preflight "$EI412_OVERLAY"
+          python3 bin/physics.py preflight "$EI401_OVERLAY"
+          ! grep -Fq 'H05_OVERLAY' "$CHEM/issue397_l1_power_scan_replay.sh"
+          ! grep -Fq "R_EI2072" "$EI935_OVERLAY"
+          ! grep -Fq "R_EI2074" "$EI935_OVERLAY"
+          ! grep -Eq 'R_EI2259|R_EI2058|R_EI2072|R_EI2074|R_H05' "$H24_OVERLAY"
+          ! grep -Eq 'R_EI2259|R_EI2058|R_EI2072|R_EI2074|R_H05' "$H25_OVERLAY"
+          ! grep -Eq 'R_EI2259|R_EI2058|R_EI2072|R_EI2074|R_H05' "$H23_OVERLAY"
+          test "$(grep -c 'property_name = R_H23' "$H23_OVERLAY")" = 1
+          test "$(grep -c 'property_name = R_H25' "$H25_OVERLAY")" = 1
+          test "$(grep -c 'property_name = R_H24' "$H24_OVERLAY")" = 1
+          ! grep -Fq 'EI2259_OVERLAY' "$CHEM/issue397_l1_power_scan_replay.sh"
+          ! grep -Fq 'EI2058_OVERLAY' "$CHEM/issue397_l1_power_scan_replay.sh"
+          test -s "$RESULT/legacy6_latest_variant.json"
+          ! grep -q "R_EI415" "$CHEM/rf_elastic_diss_ion_ei20_ei01_${POWER_W}w_adjacent_sheath_wall_closed_100us_dt1000ns.i"
+          test "$(sha256sum experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt | cut -d' ' -f1)" = "$EEDF_SHA"
+          test ! -e "$CHEM/private_rates/EI-943_O_1D.txt"
+          test ! -e "$CHEM/ei943_atomic_superelastic_${POWER_W}w_100us_dt1000ns_overlay.i"
+          ! grep -Fq 'EI943_OVERLAY' "$CHEM/issue397_l1_power_scan_replay.sh"
+          python3 "$EI2069" verify --power-w "$POWER_W"
+          python3 "$EI941" verify --power-w "$POWER_W"
+          test -s "$EI941_OVERLAY"
+          python3 "$EI412" verify --power-w "$POWER_W"
+          test -s "$EI412_OVERLAY"
+          python3 "$EI401" verify --power-w "$POWER_W"
+          test -s "$EI401_OVERLAY"
+          echo "H23_NO943_MCS2738_EI2069_EI941_EI412_EI401_REPLACES_EI01_14CH_P0_PASS"
+
+      - name: P1 build pinned native PhysicsApp with same RF Maxwell coupling
+        run: |
+          set -euo pipefail
+          bash "$CHEM/issue397_l1_power_scan_replay.sh" build "$POWER_W"
+
+      - name: P2 check-input exact 14ch EI943 OUT EI941 IN EI20 OUT EI412 IN DISSG OUT EI401 IN EI01 OUT
+        run: |
+          set -euo pipefail
+          python3 "$EI2069" verify --power-w "$POWER_W"
+          python3 "$EI941" verify --power-w "$POWER_W"
+          python3 "$EI412" verify --power-w "$POWER_W"
+          python3 "$EI401" verify --power-w "$POWER_W"
+          bash -n "$CHEM/issue397_l1_power_scan_replay.sh"
+          bash "$CHEM/issue397_l1_power_scan_replay.sh" check "$POWER_W"
+          python3 - "$RESULT/no_ei943_argv_patch.json" <<'PY'
+          import json,sys
+          p=json.load(open(sys.argv[1]))
+          assert p['overlays']==['EI-2738','EI-407','EI-417','EI-935','H24','H25','H23']
+          assert not {'EI-943','EI-2058','EI-2259','H05','EI-2072','EI-2074'}.intersection(p['overlays'])
+          assert p['intentionally_omitted_overlay']=='EI-943'
+          assert p['scientific_acceptance']=='HOLD'
+          e=json.load(open('$RESULT/ei2069_addition_audit.json'.replace('$RESULT', __import__('os').environ['RESULT'])))
+          assert e['private_rate_file']=='EI-2069_O2_a1Delta.txt'
+          print('H23_NO_EI943_13CH_NATIVE_ARGV_PASS')
+          PY
+          echo "OXYGEN_H23_NO_EI943_13CH_EI2738_MCS_NATIVE_CHECK_INPUT_PASS"
+
+      - name: P3 genuine native 0-100us transient run (5.5-hour cap)
+        run: |
+          set -euo pipefail
+          # P0 injects EI2738 EI407 EI417 EI935 H24 H25 H23 EI2069, swaps EI20->EI941, DISS-G->EI412, EI01->EI401; EI943 excluded.
+          bash -n "$CHEM/issue397_l1_power_scan_replay.sh"
+          test -s "$RESULT/no_ei943_argv_patch.json"
+          python3 "$EI2069" verify --power-w "$POWER_W"
+          python3 "$EI941" verify --power-w "$POWER_W"
+          python3 "$EI412" verify --power-w "$POWER_W"
+          python3 "$EI401" verify --power-w "$POWER_W"
+          start="$(date +%s)"
+          set +e
+          timeout -s TERM -k 60s 19800s bash "$CHEM/issue397_l1_power_scan_replay.sh" solve "$POWER_W"
+          code=$?
+          set -e
+          elapsed=$(( $(date +%s) - start ))
+          printf "power_w=%s\nend_ns=100000\nseconds=%s\nexit_code=%s\n" "$POWER_W" "$elapsed" "$code" > "$RESULT/runtime_status.txt"
+          echo "H23_NO_EI943_13CH_EI2738_MCS_NATIVE_SOLVER_WALL_SECONDS=$elapsed EXIT=$code"
+          test "$code" -eq 0
+
+      - name: P4 verify true 100us endpoint and native restart state
+        run: |
+          set -euo pipefail
+          python3 "$EI401" archive --power-w "$POWER_W"
+          test -s "$RESULT/legacy6_restart_100000ns_manifest.json"
+          python3 - "$RESULT/legacy6_restart_100000ns_manifest.json" <<'PY'
+          import json,sys
+          m=json.load(open(sys.argv[1]))
+          assert m["verified_full_native_100us_checkpoint"]
+          assert m["native_endpoint_s"]==1e-4
+          assert m["chemistry_channels"]==["EI-401","EI-02","EI-412","EI-16","EI-17","EI-941","EI-2738","EI-407","EI-417","EI-935","H24","H25","H23","EI-2069"]
+          assert not {"EI-943","H05","EI-2058","EI-2259","EI-2072","EI-2074"}.intersection(m["chemistry_channels"])
+          assert m["variant"]=="H23_NO943_MCS2738_EI2069_EI941_EI412_EI401_REPLACES_EI01_14CH_HOLD"
+          assert m["ei01_replaced_not_parallel"] is True
+          assert m["restart_requires_exact_ei401_in_ei01_out"] is True
+          assert m["ei401_recovery_private_rate_required"]=="EI-401_O2_X.txt"
+          assert m["ei401_recovery_private_rate_sha256"]==m["ei401_replaces_ei01_audit"]["original_private_lookup_sha256"]
+          assert m["ei401_energy_loss_eV"]==0.0
+          assert m["ei401_replaces_ei01_audit"]["mode"]=="EXCLUSIVE_REPLACEMENT"
+          assert m["dissg_replaced_not_parallel"] is True
+          assert m["restart_requires_exact_ei412_in_dissg_out"] is True
+          assert m["ei412_recovery_private_rate_required"]=="EI-412_O2_X.txt"
+          assert m["ei412_recovery_private_rate_sha256"]==m["ei412_replaces_dissg_audit"]["original_private_lookup_sha256"]
+          assert m["ei412_energy_loss_eV"]==6.0
+          assert m["ei412_replaces_dissg_audit"]["mode"]=="EXCLUSIVE_REPLACEMENT"
+          assert m["ei20_replaced_not_parallel"] is True
+          assert m["restart_requires_exact_ei941_in_ei20_out"] is True
+          assert m["ei941_recovery_private_rate_required"]=="EI-941_O_3P.txt"
+          assert m["ei941_recovery_private_rate_sha256"]==m["ei941_replaces_ei20_audit"]["source_rate_sha256"]
+          assert m["ei941_energy_loss_eV"]==13.62
+          assert m["ei941_replaces_ei20_audit"]["mass_charge_atom_closure"]=="PASS"
+          assert m["scientific_acceptance"]=="HOLD"
+          assert m["ei2069_energy_loss_eV"]==5.02
+          assert m["ei2069_addition_audit"]["private_rate_file"]=="EI-2069_O2_a1Delta.txt"
+          assert m["ei2069_lookup_sha256"]==m["ei2069_recovery_private_rate_sha256"]
+          assert m["ei2069_recovery_private_rate_required"]=="EI-2069_O2_a1Delta.txt"
+          assert m["restart_requires_exact_14ch_h23_in_ei943_out_ei2069_in_mcs2738"] is True
+          assert m["ei2738_rate_origin"]=="MCS_Ominus_detachment_24case_mean_energy_lookup_with_analytic_fit_tails_provisional"
+          assert m["ei2738_mcs_swap_audit"]["native_lookup_rate_units"]=="m3/(mol s)"
+          assert m["ei2738_mcs_swap_audit"]["MCS_stoichiometry_match_verified"] is False
+          assert m["ei2738_mcs_derived_rate_sha256"]==m["ei2738_mcs_swap_audit"]["derived_table_sha256"]
+          assert any(x["path"].endswith("ei2738_detachment_formula_"+str(m["power_W"])+"w_100us_dt1000ns_overlay.i") for x in m["inventory"]["inputs"])
+          assert any(x["path"].endswith("ei407_only_"+str(m["power_W"])+"w_100us_dt1000ns_overlay.i") for x in m["inventory"]["inputs"])
+          assert m["ei407_lookup_sha256"]==m["ei407_recovery_rate_sha256"]
+          assert m["ei417_lookup_sha256"]==m["ei417_recovery_rate_sha256"]
+          assert m["ei935_lookup_sha256"]==m["ei935_recovery_rate_sha256"]
+          assert m["ei943_recovery_rate_required"] is False
+          assert m["ei943_recovery_overlay_required"] is False
+          assert "ei943_lookup_sha256" not in m
+          assert m["ei943_ablation"]=="FULLY_EXCLUDED_FROM_CHECK_AND_SOLVE_ARGV_NOT_ZERO_RATE"
+          assert m["h24_k_m3_s"]==1.0e-13
+          assert m["h24_recovery_k_m3_s"]==1.0e-13
+          assert m["h25_k_m3_s_at_300K"]==2.0e-17
+          assert m["h25_recovery_k_m3_s_at_300K"]==2.0e-17
+          assert m["h25_tgas_K"]==300.0
+          assert m["h25_temperature_exponent"]==-0.4
+          assert m["h25_scientific_status"]=="HOLD"
+          assert m["h23_k_m3_s"]==1.0e-13
+          assert m["h23_recovery_k_m3_s"]==1.0e-13
+          assert m["h23_scientific_status"]=="HOLD"
+          assert m["ei935_energy_loss_eV"]==1.967
+          assert any(x["path"].endswith("ei417_without_h05_"+str(m["power_W"])+"w_100us_dt1000ns_overlay.i") for x in m["inventory"]["inputs"])
+          assert any(x["path"].endswith("ei935_atomic_excitation_"+str(m["power_W"])+"w_100us_dt1000ns_overlay.i") for x in m["inventory"]["inputs"])
+          assert not any("ei943" in x["path"].lower() for x in m["inventory"]["inputs"])
+          assert any(x["path"].endswith("h24_om_o2p_mutual_neutralization_"+str(m["power_W"])+"w_100us_dt1000ns_overlay.i") for x in m["inventory"]["inputs"])
+          assert any(x["path"].endswith("h25_op_o2_charge_transfer_"+str(m["power_W"])+"w_100us_dt1000ns_overlay.i") for x in m["inventory"]["inputs"])
+          assert any(x["path"].endswith("h23_op_om_mutual_neutralization_"+str(m["power_W"])+"w_100us_dt1000ns_overlay.i") for x in m["inventory"]["inputs"])
+          assert any(x["path"].endswith("ei2069_o2a_dissociation_"+str(m["power_W"])+"w_100us_dt1000ns_overlay.i") for x in m["inventory"]["inputs"])
+          assert any(x["path"].endswith("o_ionization_ei941_"+str(m["power_W"])+"w_100us_dt1000ns_overlay.i") for x in m["inventory"]["inputs"])
+          assert not any("o_ionization_ei20_" in x["path"] or x["path"].endswith("/o_ionization.txt") for x in m["inventory"]["inputs"])
+          assert any(x["path"].endswith("o2_dissociation_ei412_"+str(m["power_W"])+"w_100us_dt1000ns_overlay.i") for x in m["inventory"]["inputs"])
+          assert not any(x["path"].endswith("o2_dissociation_"+str(m["power_W"])+"w_100us_dt1000ns_overlay.i") for x in m["inventory"]["inputs"])
+          assert "DISS-G" not in m["chemistry_channels"]
+          assert "EI-401" in m["chemistry_channels"] and "EI-01" not in m["chemistry_channels"]
+          assert any(x["path"].endswith("o2_attachment_ei401_"+str(m["power_W"])+"w_100us_dt1000ns_overlay.i") for x in m["inventory"]["inputs"])
+          assert not any("o2_attachment_ei01_" in x["path"] or x["path"].endswith("/o2_attachment.txt") for x in m["inventory"]["inputs"])
+          assert "EI-20" not in m["chemistry_channels"]
+          assert not any("ei2058_o2a_" in x["path"] or "ei2259_o2plus_" in x["path"] for x in m["inventory"]["inputs"])
+          assert not any("private_rates" in x["path"] for x in m["inventory"]["inputs"])
+          assert m["transport_table_sha256"]=="35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b"
+          assert m["neutral_inlet_sccm"]==200
+          assert m["native_initialization"]=="fresh_not_restarted"
+          print("H23_NO943_MCS2738_EI2069_EI941_EI412_EI401_REPLACES_EI01_14CH_100US_COMPLETE",m["power_W"])
+          PY
+
+      - name: Preserve verified full native 100us checkpoint and plots data
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: oxygen-h23-no943-mcs2738-ei2069-ei941-ei412-ei401-14ch-100us-${{ matrix.power_w }}W
+          if-no-files-found: error
+          retention-days: 90
+          path: |
+            ${{ env.RESULT }}/legacy6_restart_run_100000ns.tar.gz
+            ${{ env.RESULT }}/legacy6_restart_inputs_100000ns.tar.gz
+            ${{ env.RESULT }}/legacy6_restart_100000ns_manifest.json
+            ${{ env.RESULT }}/ei2738_mcs_derived_lookup_100pt.txt
+            ${{ env.RESULT }}/legacy6_latest_variant.json
+            ${{ env.RESULT }}/no_ei943_argv_patch.json
+            ${{ env.RESULT }}/no_ei943_ablation_audit.json
+            ${{ env.RESULT }}/ei2069_addition_audit.json
+            ${{ env.RESULT }}/ei941_replaces_ei20_audit.json
+            ${{ env.RESULT }}/ei412_replaces_dissg_audit.json
+            ${{ env.RESULT }}/ei401_replaces_ei01_audit.json
+            ${{ env.RESULT }}/mcs_ei2738_swap_audit.json
+            ${{ env.RESULT }}/ei2738_mcs_reference_energy_grid_100.txt
+            ${{ env.RESULT }}/ei2738_mcs_reference_grid_provenance.json
+            ${{ env.RESULT }}/runtime_status.txt
+            ${{ env.RESULT }}/runtime.log
+            ${{ env.RESULT }}/check_input.log
+            ${{ env.RESULT }}/run/plasma.csv
+
+      - name: Preserve failed-stage evidence without claiming science success
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: oxygen-h23-no943-mcs2738-ei2069-ei941-ei412-ei401-14ch-100us-diag-${{ matrix.power_w }}W
+          if-no-files-found: warn
+          retention-days: 30
+          path: |
+            ${{ env.RESULT }}/legacy6_latest_variant.json
+            ${{ env.RESULT }}/no_ei943_argv_patch.json
+            ${{ env.RESULT }}/no_ei943_ablation_audit.json
+            ${{ env.RESULT }}/ei2069_addition_audit.json
+            ${{ env.RESULT }}/ei941_replaces_ei20_audit.json
+            ${{ env.RESULT }}/ei412_replaces_dissg_audit.json
+            ${{ env.RESULT }}/ei401_replaces_ei01_audit.json
+            ${{ env.RESULT }}/mcs_ei2738_swap_audit.json
+            ${{ env.RESULT }}/ei2738_mcs_reference_energy_grid_100.txt
+            ${{ env.RESULT }}/ei2738_mcs_reference_grid_provenance.json
+            ${{ env.RESULT }}/runtime_status.txt
+            ${{ env.RESULT }}/runtime.log
+            ${{ env.RESULT }}/check_input.log
+            ${{ env.RESULT }}/run/plasma.csv
+            ${{ env.RESULT }}/prep/**
