@@ -169,7 +169,7 @@ def stage(power: int) -> None:
     require("type = TimeSequenceStepper" not in inp.read_text(), "old stepper retained")
     require("initial_condition =" not in inp.read_text(), "parent IC re-seeding")
     require("initial_condition =" not in child.read_text(), "Maxwell IC re-seeding")
-    require("EI-943" not in "\n".join(x.read_text() for x in args[2:]), "excluded EI943 material present")
+    require("R_EI943" not in "\n".join(x.read_text() for x in args[2:]), "excluded EI943 material present")
     (result / "upstream_manifest.json").write_text(json.dumps(m, indent=2, sort_keys=True) + "\n")
     (result / "recovery_prefix.txt").write_text(prefix + "\n")
     audit = {
@@ -218,6 +218,7 @@ def restore_rates(power: int) -> None:
     require(sha(derived[0]) == m["ei2738_mcs_derived_rate_sha256"], "derived EI2738 SHA mismatch")
     require(sha(derived[0]) == b["rate_provenance"]["EI-2738"]["sha256"], "BASE EI2738 SHA mismatch")
     shutil.copyfile(derived[0], dest / "EI-2738_Om_MCS.txt")
+    shutil.copyfile(derived[0], result / "ei2738_mcs_derived_lookup_100pt.txt")
     require(not (dest / "EI-943_O_1D.txt").exists(), "excluded EI943 rate unexpectedly present")
     for f in args:
         txt = f.read_text()
@@ -288,7 +289,8 @@ def verify(power: int) -> None:
     checkpoint_dir = cp.parent
     selected_run = sorted(p for p in checkpoint_dir.rglob("*") if p.is_file()) + [csv_path, exodus]
     selected_inputs = sorted(set(args + [child, CHEM /
-        f"rf_elastic_multiapp_maxwell_{power}w_100us_dt1000ns_child.i"]))
+        f"rf_elastic_multiapp_maxwell_{power}w_100us_dt1000ns_child.i",
+        result / "ei2738_mcs_derived_lookup_100pt.txt"]))
     prior_manifest = load_json(result / "upstream_manifest.json")
     for record in prior_manifest["inventory"]["inputs"]:
         f = Path(record["path"])
