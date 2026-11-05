@@ -1,0 +1,10 @@
+USER-AUTHORIZED FRESH NATIVE 0-100us EI-412 FOR DISS-G REPLACEMENT
+Date: 2026-11-05 Europe/London
+Source chemistry: EI-941-in/EI-20-out, EI-2069-in, EI-943-out, H23-in, EI-2738 MCS
+Replace: DISS-G -> EI-412, exactly once and not in parallel
+EI-412 private original HPEM table: EI-412_O2_X.txt, 100-point, 6.0 eV/reaction
+Run independently at 400W and 1000W for fresh 0 to 100us, native 460 steps
+Preserve pinned Maxwell RF, transport EEDF, initial seeds, walls, mesh and all other rates
+Perform native input validation, solve and final checkpoint archive provenance
+Scientific acceptance: HOLD; private rates must not enter public artifacts
+Single controlled trigger.
