@@ -1,9 +1,9 @@
-# PREPARED ONLY: H23-inclusive 13-channel no-EI943 sensitivity case. DO NOT LAUNCH until separately approved.
+# PREPARED ONLY: H23-inclusive 13-channel no-EI943 with EI2738 MCS rate (provisional). DO NOT LAUNCH.
 # Fresh 0-100us per power; preserve Legacy6/7 control experiments; science HOLD.
 # Rate owner EI-01 is the canonical o2_attachment_ei01 overlay (source locked).
 # EI-16 is implemented by the specialized PhysicsElectronImpactIonizationMaterial.
-name: PREPARED Oxygen ICP H23 NO EI943 13ch 400W 1000W 100us
-run-name: "H23 IN EI943 OUT 13ch 400W 1000W 100us ${{ github.sha }}"
+name: PREPARED Oxygen ICP H23 NO EI943 EI2738 MCS 13ch 400W 1000W 100us
+run-name: "H23 IN EI943 OUT EI2738 MCS 13ch 400W 1000W 100us ${{ github.sha }}"
 on:
   workflow_dispatch:
   push:
@@ -69,6 +69,8 @@ jobs:
             .github/scripts/oxygen_legacy8_ei417_ei935_ei943_h24_h25_noei2259_noei2058_100us.py
             .github/scripts/oxygen_legacy8_ei417_ei935_ei943_h24_h25_h23_noei2259_noei2058_100us.py
             .github/scripts/oxygen_h23_no_ei943_13ch_100us.py
+            .github/scripts/ei2738_mcs_h23_no_ei943_13ch.py
+            experiments/Issue395_powered_chemistry_ladder/ei2738_mcs_24case_mean_energy_rate_m3_s.txt
             .github/oxygen25_eedf/initial_mixture_23xsec_transport.txt
           sparse-checkout-cone-mode: false
 
@@ -86,6 +88,7 @@ jobs:
           export H25=_legacy6_control/.github/scripts/oxygen_legacy8_ei417_ei935_ei943_h24_h25_noei2259_noei2058_100us.py
           export H23=_legacy6_control/.github/scripts/oxygen_legacy8_ei417_ei935_ei943_h24_h25_h23_noei2259_noei2058_100us.py
           export ABLATE=_legacy6_control/.github/scripts/oxygen_h23_no_ei943_13ch_100us.py
+          export MCS2738=_legacy6_control/.github/scripts/ei2738_mcs_h23_no_ei943_13ch.py
           test -s "$HARNESS"
           python3 "$HARNESS" --self-test
           python3 "$LEGACY7" --self-test
@@ -96,7 +99,8 @@ jobs:
           python3 "$H25" --self-test
           python3 "$H23" --self-test
           python3 "$ABLATE" self-test
-          python3 -m py_compile "$HARNESS" "$LEGACY7" "$LEGACY8" "$EI417_SOURCE" "$EI935" "$EI943" "$H24" "$H25" "$H23" "$ABLATE"
+          python3 "$MCS2738" self-test
+          python3 -m py_compile "$HARNESS" "$LEGACY7" "$LEGACY8" "$EI417_SOURCE" "$EI935" "$EI943" "$H24" "$H25" "$H23" "$ABLATE" "$MCS2738"
           bash -n "$CHEM/issue397_l1_power_scan_replay.sh"
           python3 -m venv .legacy6-venv
           .legacy6-venv/bin/python -m pip install --disable-pip-version-check --quiet numpy==2.1.2 scipy==1.14.1 'pytest>=8,<9'
@@ -117,6 +121,7 @@ jobs:
           echo "H25=$H25" >> "$GITHUB_ENV"
           echo "H23=$H23" >> "$GITHUB_ENV"
           echo "ABLATE=$ABLATE" >> "$GITHUB_ENV"
+          echo "MCS2738=$MCS2738" >> "$GITHUB_ENV"
           echo "EI417_SOURCE=$EI417_SOURCE" >> "$GITHUB_ENV"
           echo "RESULT=$CHEM/results_rf_elastic_diss_ion_ei20_ei01_${POWER_W}w_adjacent_sheath_wall_closed_100us_dt1000ns" >> "$GITHUB_ENV"
 
@@ -144,15 +149,20 @@ jobs:
           print("LEGACY8_EI407_PRIVATE_RATE_GATE_PASS",len(rates))
           PY
 
-      - name: P0 prepare original H23-inclusive 14ch and remove EI943 to 13ch
+      - name: P0 prepare 14ch parent, capture 100pt grid, ablate EI943, install EI2738 MCS 13ch
         run: |
           set -euo pipefail
           bash "$CHEM/issue397_l1_power_scan_replay.sh" prepare "$POWER_W"
           python3 "$HARNESS" --prepare --power-w "$POWER_W"
           python3 "$H23" --prepare-variant --power-w "$POWER_W"
           python3 "$H23" --verify-fourteen --power-w "$POWER_W"
+          python3 "$MCS2738" capture-grid --power-w "$POWER_W"
           python3 "$ABLATE" prepare --power-w "$POWER_W"
+          python3 "$MCS2738" install --power-w "$POWER_W"
+          export OXYGEN_RESEARCH_EI2738_MCS=1
+          echo "OXYGEN_RESEARCH_EI2738_MCS=1" >> "$GITHUB_ENV"
           python3 "$ABLATE" verify --power-w "$POWER_W"
+          python3 "$MCS2738" verify --power-w "$POWER_W"
           python3 bin/physics.py preflight --self-test
           python3 bin/physics.py preflight "$CHEM/ei2738_detachment_formula_${POWER_W}w_100us_dt1000ns_overlay.i"
           python3 bin/physics.py preflight "$EI407_OVERLAY"
@@ -178,17 +188,19 @@ jobs:
           test ! -e "$CHEM/private_rates/EI-943_O_1D.txt"
           test ! -e "$CHEM/ei943_atomic_superelastic_${POWER_W}w_100us_dt1000ns_overlay.i"
           ! grep -Fq 'EI943_OVERLAY' "$CHEM/issue397_l1_power_scan_replay.sh"
-          echo "OXYGEN_H23_NO_EI943_13CH_P0_PASS"
+          python3 "$MCS2738" verify --power-w "$POWER_W"
+          echo "OXYGEN_H23_NO_EI943_13CH_EI2738_MCS_P0_PASS"
 
       - name: P1 build pinned native PhysicsApp with same RF Maxwell coupling
         run: |
           set -euo pipefail
           bash "$CHEM/issue397_l1_power_scan_replay.sh" build "$POWER_W"
 
-      - name: P2 check-input exact 13-channel H23 IN EI943 OUT chemistry
+      - name: P2 check-input exact 13ch H23 IN EI943 OUT EI2738 MCS chemistry
         run: |
           set -euo pipefail
           python3 "$ABLATE" verify --power-w "$POWER_W"
+          python3 "$MCS2738" verify --power-w "$POWER_W"
           bash -n "$CHEM/issue397_l1_power_scan_replay.sh"
           bash "$CHEM/issue397_l1_power_scan_replay.sh" check "$POWER_W"
           python3 - "$RESULT/no_ei943_argv_patch.json" <<'PY'
@@ -200,7 +212,7 @@ jobs:
           assert p['scientific_acceptance']=='HOLD'
           print('H23_NO_EI943_13CH_NATIVE_ARGV_PASS')
           PY
-          echo "OXYGEN_H23_NO_EI943_13CH_NATIVE_CHECK_INPUT_PASS"
+          echo "OXYGEN_H23_NO_EI943_13CH_EI2738_MCS_NATIVE_CHECK_INPUT_PASS"
 
       - name: P3 genuine native 0-100us transient run (5.5-hour cap)
         run: |
@@ -209,6 +221,7 @@ jobs:
           bash -n "$CHEM/issue397_l1_power_scan_replay.sh"
           test -s "$RESULT/no_ei943_argv_patch.json"
           python3 "$ABLATE" verify --power-w "$POWER_W"
+          python3 "$MCS2738" verify --power-w "$POWER_W"
           start="$(date +%s)"
           set +e
           timeout -s TERM -k 60s 19800s bash "$CHEM/issue397_l1_power_scan_replay.sh" solve "$POWER_W"
@@ -216,13 +229,14 @@ jobs:
           set -e
           elapsed=$(( $(date +%s) - start ))
           printf "power_w=%s\nend_ns=100000\nseconds=%s\nexit_code=%s\n" "$POWER_W" "$elapsed" "$code" > "$RESULT/runtime_status.txt"
-          echo "H23_NO_EI943_13CH_NATIVE_SOLVER_WALL_SECONDS=$elapsed EXIT=$code"
+          echo "H23_NO_EI943_13CH_EI2738_MCS_NATIVE_SOLVER_WALL_SECONDS=$elapsed EXIT=$code"
           test "$code" -eq 0
 
       - name: P4 verify true 100us endpoint and native restart state
         run: |
           set -euo pipefail
           python3 "$ABLATE" archive --power-w "$POWER_W"
+          python3 "$MCS2738" archive --power-w "$POWER_W"
           test -s "$RESULT/legacy6_restart_100000ns_manifest.json"
           python3 - "$RESULT/legacy6_restart_100000ns_manifest.json" <<'PY'
           import json,sys
@@ -233,6 +247,10 @@ jobs:
           assert not {"EI-943","H05","EI-2058","EI-2259","EI-2072","EI-2074"}.intersection(m["chemistry_channels"])
           assert m["variant"]=="LEGACY8_EI417_EI935_H24_H25_H23_NO_EI943_IMPACT_ABLATION_HOLD"
           assert m["scientific_acceptance"]=="HOLD"
+          assert m["ei2738_rate_origin"]=="MCS_Ominus_detachment_24case_mean_energy_lookup_with_analytic_fit_tails_provisional"
+          assert m["ei2738_mcs_swap_audit"]["native_lookup_rate_units"]=="m3/(mol s)"
+          assert m["ei2738_mcs_swap_audit"]["MCS_stoichiometry_match_verified"] is False
+          assert m["ei2738_mcs_derived_rate_sha256"]==m["ei2738_mcs_swap_audit"]["derived_table_sha256"]
           assert any(x["path"].endswith("ei2738_detachment_formula_"+str(m["power_W"])+"w_100us_dt1000ns_overlay.i") for x in m["inventory"]["inputs"])
           assert any(x["path"].endswith("ei407_only_"+str(m["power_W"])+"w_100us_dt1000ns_overlay.i") for x in m["inventory"]["inputs"])
           assert m["ei407_lookup_sha256"]==m["ei407_recovery_rate_sha256"]
@@ -264,23 +282,27 @@ jobs:
           assert m["transport_table_sha256"]=="35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b"
           assert m["neutral_inlet_sccm"]==200
           assert m["native_initialization"]=="fresh_not_restarted"
-          print("H23_NO_EI943_13CH_100US_COMPLETE",m["power_W"])
+          print("H23_NO_EI943_13CH_EI2738_MCS_100US_COMPLETE",m["power_W"])
           PY
 
       - name: Preserve verified full native 100us checkpoint and plots data
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: oxygen-h23-no-ei943-13ch-latest-EEDF-100us-${{ matrix.power_w }}W
+          name: oxygen-h23-no-ei943-13ch-ei2738-MCS-100us-${{ matrix.power_w }}W
           if-no-files-found: error
           retention-days: 90
           path: |
             ${{ env.RESULT }}/legacy6_restart_run_100000ns.tar.gz
             ${{ env.RESULT }}/legacy6_restart_inputs_100000ns.tar.gz
             ${{ env.RESULT }}/legacy6_restart_100000ns_manifest.json
+            ${{ env.RESULT }}/ei2738_mcs_derived_lookup_100pt.txt
             ${{ env.RESULT }}/legacy6_latest_variant.json
             ${{ env.RESULT }}/no_ei943_argv_patch.json
             ${{ env.RESULT }}/no_ei943_ablation_audit.json
+            ${{ env.RESULT }}/mcs_ei2738_swap_audit.json
+            ${{ env.RESULT }}/ei2738_mcs_reference_energy_grid_100.txt
+            ${{ env.RESULT }}/ei2738_mcs_reference_grid_provenance.json
             ${{ env.RESULT }}/runtime_status.txt
             ${{ env.RESULT }}/runtime.log
             ${{ env.RESULT }}/check_input.log
@@ -290,13 +312,16 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: oxygen-h23-no-ei943-13ch-latest-EEDF-100us-diag-${{ matrix.power_w }}W
+          name: oxygen-h23-no-ei943-13ch-ei2738-MCS-100us-diag-${{ matrix.power_w }}W
           if-no-files-found: warn
           retention-days: 30
           path: |
             ${{ env.RESULT }}/legacy6_latest_variant.json
             ${{ env.RESULT }}/no_ei943_argv_patch.json
             ${{ env.RESULT }}/no_ei943_ablation_audit.json
+            ${{ env.RESULT }}/mcs_ei2738_swap_audit.json
+            ${{ env.RESULT }}/ei2738_mcs_reference_energy_grid_100.txt
+            ${{ env.RESULT }}/ei2738_mcs_reference_grid_provenance.json
             ${{ env.RESULT }}/runtime_status.txt
             ${{ env.RESULT }}/runtime.log
             ${{ env.RESULT }}/check_input.log
