@@ -2,20 +2,25 @@
 
 ## Current research reaction-channel base (2026-11-05)
 
-The **working numerical comparison base** for 400/1000 W oxygen ICP chemistry
-experiments is **Run #42043664537 (#5)**, with 14 active channels,
-EI-941 in / EI-20 out, EI-2069 in, H23 in and EI-943 out. Its full evidence,
-immutable source commit, private-rate checksums and replay policy are at
-[research_baselines/current_reaction_base.json](research_baselines/current_reaction_base.json)
-and [research_baselines/README.md](research_baselines/README.md).
+The **CURRENT_WORKING_REACTION_BASE** for 400/1000 W oxygen ICP research
+experiments is now **[Run #42049066748](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/42049066748)**,
+with 14 ACTIVE channels and verified fresh 0–100 μs native P0–P4 PASS.
+Source SHA: `29d1acc6ef7969908b86719e4b95c73a1565136d`.
 
-**Boundary:** this is a research reaction-channel base, **not** an accepted
-production chemistry promotion; SCIENCE_HOLD persists. It is **separate**
-from the Issue #397 mesh working baseline below and does not supersede
-Issue #419's original Oxygen25 reaction identity registry. Later EI-401,
-EI-412 and EI-415 replacements, and the EI-2069-out ablation, are
-**not part of this pinned base**.
+Active replacement reactions **EI-941 / EI-412 / EI-401 / EI-415** explicitly
+replace **EI-20 / DISS-G / EI-01 / EI-16** (respectively), not run in
+parallel. H23 and EI-2069 remain ACTIVE; EI-943 remains excluded.
 
+- [Machine-readable BASE and artifact/rate hashes](research_baselines/current_reaction_base.json)
+- [Research BASE replay and authority boundary](research_baselines/README.md)
+- [Preserved historical EI941-only BASE](research_baselines/history/oxygen-icp-h23-no943-mcs2738-ei2069-ei941-14ch-20261105.json):
+  previous Run #42043664537, source `e2f2080649784a04f3300ea9dded1ae23b0a04b1`.
+
+**Boundary:** BASE is a **research reaction-channel numerical comparison
+reference only**; SCIENCE_HOLD persists. It is independent of the Issue #397
+mesh baseline below, does **not** rewrite the Issue #419 original Oxygen25
+reaction identity registry, and does **not** contain the separate EI-2069-OUT
+ablation candidate.
 
 ## Issue #397 200 W EI17 mesh baseline (2026-10-21)
 
