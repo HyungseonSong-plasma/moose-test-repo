@@ -243,6 +243,26 @@ def prepare(power):
       "restart_requires_exact_13ch_no_ei2069_with_ei415_ei401_ei412_ei941":True,
       "scientific_acceptance":"HOLD",
     })
+    # Earlier replacement scripts do not promote their lookup SHAs into the
+    # parent latest-variant until P4; the ablated archive must capture them
+    # from the independently verified P0 audits now.
+    for key,filename,rate_file,sha_field in (
+      ("ei941","ei941_replaces_ei20_audit.json","EI-941_O_3P.txt","source_rate_sha256"),
+      ("ei412","ei412_replaces_dissg_audit.json","EI-412_O2_X.txt","original_private_lookup_sha256"),
+      ("ei401","ei401_replaces_ei01_audit.json","EI-401_O2_X.txt","original_private_lookup_sha256"),
+      ("ei415","ei415_replaces_ei16_audit.json","EI-415_O2_X.txt","original_private_lookup_sha256"),
+    ):
+        evidence=json.loads((result(power)/filename).read_text())
+        expected=evidence[sha_field]
+        private=CHEM/"private_rates"/rate_file
+        assert private.is_file() and hash_file(private)==expected
+        state[key+"_lookup_sha256"]=expected
+    state.update({
+       "ei20_replaced_not_parallel":True,
+       "dissg_replaced_not_parallel":True,
+       "ei01_replaced_not_parallel":True,
+       "ei16_replaced_not_parallel":True,
+    })
     state_path.write_text(json.dumps(state,indent=2,sort_keys=True)+"\n")
     os.environ[FLAG]="1"
     verify(power)
@@ -302,7 +322,8 @@ def archive(power):
     before=saved["inventory"]["inputs"]
     drop=excluded_legacy_names(power)
     inventory_names={Path(x["path"]).name for x in before}
-    assert drop.issubset(inventory_names),sorted(drop-inventory_names)
+    assert (drop-{overlay(power).name}).issubset(inventory_names),sorted((drop-{overlay(power).name})-inventory_names)
+    assert overlay(power).name not in inventory_names
     inputs=[Path(x["path"]) for x in before
             if Path(x["path"]).name not in drop]
     assert all(p.name not in drop for p in inputs)
