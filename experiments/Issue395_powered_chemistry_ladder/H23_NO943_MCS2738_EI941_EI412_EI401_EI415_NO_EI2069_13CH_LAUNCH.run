@@ -1,0 +1,10 @@
+USER-AUTHORIZED EI2069-OUT EXACT ABLATION
+Date: 2026-11-05 Europe/London
+Parent: verified 14ch H23+, EI943-, MCS2738+, EI2069+, EI941+ EI20-, EI412+ DISS-G-, EI401+ EI01-, EI415+ EI16-
+New controlled change: remove EI-2069 e + O2(a1Delta) -> e + 2 O(3P), without any compensating channel.
+Strict 13ch native check and solver argv, physically remove EI2069 overlay and working private rate.
+All other chemistry, original HPEM rate tables, EEDF, RF Maxwell coupling, 200sccm inlet, mesh and 460-step grid unchanged.
+Fresh independent 400W and 1000W 0-100us real native simulation; 5.5h solve cap.
+Require P0 source/ratio audit, P1 pinned native build, P2 check-input, P3 full solve, P4 genuine 100us checkpoint and strict recovery provenance.
+No EI2069 material/energy/species inputs in actual native solver or public artifact; private rate not published.
+Research scientific acceptance HOLD; not a validated physical model. One authorized launch only.
