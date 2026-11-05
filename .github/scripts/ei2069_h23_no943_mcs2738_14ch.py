@@ -393,6 +393,14 @@ def archive(power):
         "ei2069_recovery_private_rate_required":RATE,
         "ei2069_recovery_private_rate_sha256":sha(rate_path()),
         "ei2069_energy_loss_eV":ENERGY_EV,
+        "h23_recovery_k_m3_s":h23.K_M3_S,
+        "h24_recovery_k_m3_s":h24.K_M3_S,
+        "h25_recovery_k_m3_s_at_300K":h25.K_M3_S_AT_300K,
+        "h23_scientific_status":"HOLD",
+        "h24_scientific_status":"HOLD",
+        "h25_scientific_status":"HOLD",
+        "ei943_scientific_status":"IMPACT_ABLATION_UNDER_TEST",
+        "no_ei943_ablation_audit":json.loads((res/"no_ei943_ablation_audit.json").read_text()),
         "ei2738_mcs_derived_rate_sha256":sha(derived),
         "ei2738_mcs_derived_rate_recovery_artifact":mcs().SAFE_LOOKUP,
         "ei2738_mcs_swap_audit":json.loads((res/mcs().AUDIT_NAME).read_text()),
@@ -402,6 +410,16 @@ def archive(power):
         "restart_requires_exact_14ch_h23_in_ei943_out_ei2069_in_mcs2738":True,
         "scientific_acceptance":"HOLD",
     })
+    # Preserve original non-EI943 private rate recovery proofs without archiving rates.
+    latest=json.loads((res/"legacy6_latest_variant.json").read_text())
+    for rate_key,rate_name in par.RATE_MAP.items():
+        assert latest[rate_key+"_lookup_sha256"]==sha(CHEM/"private_rates"/rate_name)
+        j[rate_key+"_recovery_private_rate_required"]=rate_name
+        j[rate_key+"_recovery_rate_sha256"]=latest[rate_key+"_lookup_sha256"]
+    assert j["ei2069_lookup_sha256"]==j["ei2069_recovery_private_rate_sha256"]
+    assert j["h23_recovery_k_m3_s"]==latest["h23_k_m3_s"]
+    assert j["h24_recovery_k_m3_s"]==latest["h24_k_m3_s"]
+    assert j["h25_recovery_k_m3_s_at_300K"]==latest["h25_k_m3_s_at_300K"]
     manifest.write_text(json.dumps(j,indent=2,sort_keys=True)+"\n")
     print("H23_NO943_MCS2738_PLUS_EI2069_14CH_NATIVE_100US_PASS",power,flush=True)
 
