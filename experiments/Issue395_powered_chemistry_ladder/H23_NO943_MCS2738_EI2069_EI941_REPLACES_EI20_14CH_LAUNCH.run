@@ -9,3 +9,5 @@ Preserve all other H23+/EI943-/EI2738 MCS+/EI2069+ chemistry, original RF coupli
 No double ionization, no synthetic EI941 rate table, no private rate published.
 Require native check-input, genuine 100us solve, full restart/manifest validation.
 Scientific acceptance HOLD. Single authorized launch; do not automatically retry.
+
+Correction-run 2 authorized by original user simulation request: fixed false P0 ION_O reference-count assertion (1 occurrence, not 2). Previous Run 42043385611 failed before native build, check-input or solve. Preserve no-auto-retry policy after this explicit corrective launch. Source fix commit 9d619b8b8194a98ba61003c804721270fddf878f.
