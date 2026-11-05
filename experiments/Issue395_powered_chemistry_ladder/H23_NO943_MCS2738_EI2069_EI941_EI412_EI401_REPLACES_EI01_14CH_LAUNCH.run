@@ -1,0 +1,11 @@
+USER-AUTHORIZED SINGLE FRESH EI-401 FOR EI-01 REPLACEMENT
+Date: 2026-11-05 Europe/London
+Source: existing 14ch EI-941+, EI-412+, EI-2069+, EI-943-, H23+, EI-2738 MCS case
+ONLY new change: EI-01 OUT, original EI-401_O2_X.txt private rate IN
+Electron attachment e + O2(X) -> O- + O; 0.0 eV explicit electron energy loss
+Original private HPEM 100-mean-energy-point table, lookup SHA verification
+Native original PhysicsApp, pinned Maxwell RF, latest fixed EEDF, mesh, wall, initial mixture
+Fresh and independent 400W and 1000W 0-100us 460-step native solver
+Fail-closed no parallel EI01+EI401; no private rate in artifacts
+Require P0 preparation, P1 build, P2 native check-input, P3 solve, P4 checkpoint/manifest verification
+Scientific acceptance remains HOLD. Do not trigger automatic follow-up runs.
