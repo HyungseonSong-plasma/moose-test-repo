@@ -3,7 +3,7 @@
 # Rate owner EI-01 is the canonical o2_attachment_ei01 overlay (source locked).
 # EI-16 is implemented by the specialized PhysicsElectronImpactIonizationMaterial.
 name: Oxygen ICP H23 noEI943 MCS2738 EI2069 14ch 400W 1000W 100us
-run-name: "H23 IN EI943 OUT EI2738 MCS 13ch 400W 1000W 100us ${{ github.sha }}"
+run-name: "H23 IN EI943 OUT MCS2738 PLUS EI2069 14ch 400W 1000W 100us ${{ github.sha }}"
 on:
   workflow_dispatch:
   push:
@@ -229,7 +229,7 @@ jobs:
       - name: P3 genuine native 0-100us transient run (5.5-hour cap)
         run: |
           set -euo pipefail
-          # P0 ablation injects EI2738 EI407 EI417 EI935 H24 H25 H23 only.
+          # P0 injects EI2738 EI407 EI417 EI935 H24 H25 H23 EI2069; EI943 excluded.
           bash -n "$CHEM/issue397_l1_power_scan_replay.sh"
           test -s "$RESULT/no_ei943_argv_patch.json"
           python3 "$EI2069" verify --power-w "$POWER_W"
@@ -259,6 +259,9 @@ jobs:
           assert m["scientific_acceptance"]=="HOLD"
           assert m["ei2069_energy_loss_eV"]==5.02
           assert m["ei2069_addition_audit"]["private_rate_file"]=="EI-2069_O2_a1Delta.txt"
+          assert m["ei2069_lookup_sha256"]==m["ei2069_recovery_private_rate_sha256"]
+          assert m["ei2069_recovery_private_rate_required"]=="EI-2069_O2_a1Delta.txt"
+          assert m["restart_requires_exact_14ch_h23_in_ei943_out_ei2069_in_mcs2738"] is True
           assert m["ei2738_rate_origin"]=="MCS_Ominus_detachment_24case_mean_energy_lookup_with_analytic_fit_tails_provisional"
           assert m["ei2738_mcs_swap_audit"]["native_lookup_rate_units"]=="m3/(mol s)"
           assert m["ei2738_mcs_swap_audit"]["MCS_stoichiometry_match_verified"] is False
@@ -289,6 +292,7 @@ jobs:
           assert any(x["path"].endswith("h24_om_o2p_mutual_neutralization_"+str(m["power_W"])+"w_100us_dt1000ns_overlay.i") for x in m["inventory"]["inputs"])
           assert any(x["path"].endswith("h25_op_o2_charge_transfer_"+str(m["power_W"])+"w_100us_dt1000ns_overlay.i") for x in m["inventory"]["inputs"])
           assert any(x["path"].endswith("h23_op_om_mutual_neutralization_"+str(m["power_W"])+"w_100us_dt1000ns_overlay.i") for x in m["inventory"]["inputs"])
+          assert any(x["path"].endswith("ei2069_o2a_dissociation_"+str(m["power_W"])+"w_100us_dt1000ns_overlay.i") for x in m["inventory"]["inputs"])
           assert not any("ei2058_o2a_" in x["path"] or "ei2259_o2plus_" in x["path"] for x in m["inventory"]["inputs"])
           assert not any("private_rates" in x["path"] for x in m["inventory"]["inputs"])
           assert m["transport_table_sha256"]=="35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b"
