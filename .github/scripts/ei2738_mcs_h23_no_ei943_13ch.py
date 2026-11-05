@@ -76,7 +76,7 @@ def parse_lookup(p:Path,points=100):
         raw_x,raw_k=vals
         x,k=float(raw_x),float(raw_k)
         assert math.isfinite(x) and math.isfinite(k) and x>0 and k>=0
-        if rows: assert x>rows[-1][0], "non-monotonic grid"
+        if rows: assert x>rows[-1][1], "non-monotonic grid"
         rows.append((raw_x,x,k))
     assert len(rows)==points, f"expected {points} grid nodes, found {len(rows)}"
     return rows
