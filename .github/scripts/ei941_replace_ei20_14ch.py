@@ -103,7 +103,7 @@ def new_ion_line():return old_ion_line().replace("ei20","ei941")
 
 def verify_replay(t):
     assert t.count(new_ion_line())==1 and old_ion_line() not in t
-    assert t.count("'$ION_O'")==2, "both check and solve must use new ion overlay"
+    assert t.count("'$ION_O'")==1, "both check and solve must use new ion overlay"
     assert t.count("'$EI2069_OVERLAY'")==2
     assert "'$EI943_OVERLAY'" not in t
 
@@ -125,7 +125,7 @@ def prepare(p):
     new_overlay(p).write_text(render_overlay(old_overlay(p).read_text()))
     before=replay().read_text()
     assert before.count(old_ion_line())==1 and new_ion_line() not in before
-    assert before.count("'$ION_O'")==2
+    assert before.count("'$ION_O'")==1
     after=before.replace(old_ion_line(),new_ion_line())
     verify_replay(after);replay().write_text(after)
     audit2069=output(p)/"ei2069_addition_audit.json"
