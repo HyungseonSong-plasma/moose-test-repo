@@ -1,0 +1,11 @@
+USER-AUTHORIZED FRESH 0-100us NATIVE RUN
+Date: 2026-11-05 Europe/London
+Repository: HyungseonSong-plasma/moose-test-repo
+Start from completed EI2069 14ch commit 9022981225396254527d0fd565947fbc41c02b70
+Branch: experiment-h23-no943-mcs2738-ei2069-ei941-replace-ei20-14ch-20261105
+Power: independent fresh 400 W and 1000 W trajectories; 460 steps, 100us endpoint
+Exactly replace EI-20 by original private EI-941_O_3P.txt lookup; energy loss 13.62eV.
+Preserve all other H23+/EI943-/EI2738 MCS+/EI2069+ chemistry, original RF coupling, EEDF, seeds, and mesh.
+No double ionization, no synthetic EI941 rate table, no private rate published.
+Require native check-input, genuine 100us solve, full restart/manifest validation.
+Scientific acceptance HOLD. Single authorized launch; do not automatically retry.
