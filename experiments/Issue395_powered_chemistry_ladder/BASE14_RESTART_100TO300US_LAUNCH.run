@@ -1,0 +1,16 @@
+issue=395
+purpose=single_native_advanced_restart_100us_to_300us
+base_id=oxygen-icp-h23-ei941-ei412-ei401-ei415-14ch-20261105
+base_record_commit=bc1193d3d86ceed929031e28ee832bef8ae2a43a
+upstream_native_run=42049066748
+upstream_harness_sha=29d1acc6ef7969908b86719e4b95c73a1565136d
+upstream_artifact_400W=13447489692
+upstream_artifact_1000W=13448891366
+source_physics_sha=8e2fe042dbc204b5fda22d346f1ad8d2e32db3ab
+start_ns=100000
+end_ns=300000
+adaptive_max_dt_ns=1000
+cases=400W,1000W
+production_promotion=false
+scientific_acceptance=HOLD
+workflows=oxygen-base14-restart-100to300us-20261105.yml
