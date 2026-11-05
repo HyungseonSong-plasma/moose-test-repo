@@ -1,0 +1,8 @@
+EXPLICIT USER AUTHORIZATION — launch EI-2069 addition native 0–100 us on 400W/1000W.
+Branch: experiment-h23-noei943-mcs2738-plus-ei2069-14ch-400-1000w-20261105
+Validated 14 chemistry channels: EI-01, EI-02, DISS-G, EI-16, EI-17, EI-20, EI-2738 (MCS), EI-407, EI-417, EI-935, H24, H25, H23, EI-2069.
+EI-2069 e + O2(a1Delta) -> e + 2 O(3P), 5.02 eV electron energy loss, original private 100-pt lookup.
+EI-943 remains absent, H23 present, EI-2738 MCS 24 CASE provisional SCIENCE_HOLD.
+Physics SHA 8e2fe042dbc204b5fda22d346f1ad8d2e32db3ab. Scientific acceptance HOLD.
+Fresh initialization at t=0, final time 100us, separate 400W and 1000W matrix jobs.
+Do not mutate or cancel the existing 13ch Run 41989588055.
