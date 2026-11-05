@@ -7,3 +7,7 @@ physical m3/s x N_A -> PhysicsElectronImpactRateMaterial raw m3/(mol s); no extr
 Pinned Physics 8e2fe042dbc204b5fda22d346f1ad8d2e32db3ab; EEDF 35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b
 Start t=0; end t=100us; separate 400W and 1000W, identical configured 13 chemistry channels.
 Do not modify canonical baseline chemistry or completed H23+EI943 runs.
+
+Corrective same-scope retry after Run 41989307297 failed P0 (TypeError numeric energy float vs raw text token in grid parser)
+Fixed helper commit: 7cab4749a7a68a8bbf7bbb5672e415dc2a290005
+No change to Physics source, EI2738 MCS table, chemical channels, EEDF, geometry, power or 100us endpoint
