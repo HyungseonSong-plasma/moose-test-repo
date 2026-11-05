@@ -1,0 +1,220 @@
+# User-authorized Issue #395: native 14ch research BASE restart, 100 -> 300 us.
+# Parent native artifacts are CI #42049066748 (400/1000W); science HOLD.
+name: Oxygen14 BASE native 100to300us restart
+run-name: Oxygen14 BASE 100to300us native 400W and 1000W ${{ github.sha }}
+on:
+  push:
+    branches:
+      - issue-395-base14-restart-100to300us-20261105
+    paths:
+      - experiments/Issue395_powered_chemistry_ladder/BASE14_RESTART_100TO300US_LAUNCH.run
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: oxygen14-base-100to300-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  restart:
+    name: Native original 14ch 100-to-300us restart ${{ matrix.power_w }}W
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        power_w: [400, 1000]
+    env:
+      POWER_W: ${{ matrix.power_w }}
+      PHYSICS_SHA: 8e2fe042dbc204b5fda22d346f1ad8d2e32db3ab
+      RESTART_LIBRARY_SHA: 5c3820780217af0fbf60fb233ae7f2c3c8f23712
+      BASE_RECORD_SHA: bc1193d3d86ceed929031e28ee832bef8ae2a43a
+      UPSTREAM_RUN_ID: '42049066748'
+      CHATGPT_WORK_BASE_SHA: 8e2fe042dbc204b5fda22d346f1ad8d2e32db3ab
+      BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+      CHEM: experiments/Issue395_powered_chemistry_ladder
+      OXYGEN_RESEARCH_400: '1'
+      OXYGEN_RESEARCH_FULL24: '0'
+      OXYGEN_RESEARCH_LUMPED_O2A: '0'
+      OXYGEN_RESEARCH_EI2738_FORMULA: '1'
+      OXYGEN_RESEARCH_EI2738_MCS: '1'
+      OXYGEN_RESEARCH_EI2069_PLUS: '1'
+      OXYGEN_RESEARCH_EI941_SWAP: '1'
+      OXYGEN_RESEARCH_EI412_SWAP: '1'
+      OXYGEN_RESEARCH_EI401_SWAP: '1'
+      OXYGEN_RESEARCH_EI415_SWAP: '1'
+      OXYGEN_RESEARCH_RATE_DIR: /tmp/oxygen25/private_rates
+      ADAPTER: _consumer_runner/experiments/Issue395_powered_chemistry_ladder/base14_restart_100to300us.py
+      NATIVE: _consumer_runner/experiments/Issue395_powered_chemistry_ladder/base14_restart_native.sh
+    steps:
+      - name: Checkout exact upstream production PhysicsApp source
+        uses: actions/checkout@v4
+        with:
+          ref: 8e2fe042dbc204b5fda22d346f1ad8d2e32db3ab
+          fetch-depth: 1
+
+      - name: Checkout experiment-only one-shot adapter from this workflow revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: _consumer_runner
+          sparse-checkout: |
+            experiments/Issue395_powered_chemistry_ladder/base14_restart_100to300us.py
+            experiments/Issue395_powered_chemistry_ladder/base14_restart_native.sh
+          sparse-checkout-cone-mode: false
+
+      - name: Checkout pinned reusable advanced-restart helper
+        uses: actions/checkout@v4
+        with:
+          ref: 5c3820780217af0fbf60fb233ae7f2c3c8f23712
+          path: _restart_library
+          sparse-checkout: |
+            .github/scripts/oxygen25_restart_chain.py
+          sparse-checkout-cone-mode: false
+
+      - name: Checkout exact accepted research BASE record
+        uses: actions/checkout@v4
+        with:
+          ref: bc1193d3d86ceed929031e28ee832bef8ae2a43a
+          path: _base_record
+          sparse-checkout: |
+            experiments/Issue395_powered_chemistry_ladder/research_baselines/current_reaction_base.json
+          sparse-checkout-cone-mode: false
+
+      - name: P0 verify all immutable source refs and original upstream artifact ID
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$PHYSICS_SHA"
+          test "$(git -C _restart_library rev-parse HEAD)" = "$RESTART_LIBRARY_SHA"
+          test "$(git -C _base_record rev-parse HEAD)" = "$BASE_RECORD_SHA"
+          test "$(git -C _consumer_runner rev-parse HEAD)" = "$GITHUB_SHA"
+          test -s "$ADAPTER" && test -s "$NATIVE"
+          bash -n "$NATIVE"
+          python3 -m py_compile "$ADAPTER"
+          python3 "$ADAPTER" self-test
+          python3 - <<'PY'
+          import json,os,urllib.request
+          from pathlib import Path
+          base=json.loads(Path('_base_record/experiments/Issue395_powered_chemistry_ladder/research_baselines/current_reaction_base.json').read_text())
+          power=int(os.environ['POWER_W'])
+          proof=base['verified_runs'][f'{power}W']
+          url=f"https://api.github.com/repos/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['UPSTREAM_RUN_ID']}/artifacts?per_page=100"
+          req=urllib.request.Request(url,headers={
+              'Authorization':'Bearer '+os.environ['GH_TOKEN'],
+              'Accept':'application/vnd.github+json',
+              'X-GitHub-Api-Version':'2022-11-28',
+          })
+          with urllib.request.urlopen(req,timeout=30) as stream:
+              data=json.load(stream)
+          exact=[a for a in data['artifacts'] if a['id']==proof['artifact_id']]
+          assert len(exact)==1,'missing exact original BASE artifact ID'
+          artifact=exact[0]
+          assert artifact['name']==proof['artifact_name'],'unexpected archive name'
+          assert artifact['digest']=='sha256:'+proof['artifact_zip_sha256'],'ZIP archive digest mismatch'
+          assert not artifact['expired'],'native checkpoint artifact expired'
+          assert artifact['workflow_run']['head_sha']==base['source']['immutable_verified_harness_sha'],'upstream head mismatch'
+          print('BASE14_UPSTREAM_ARTIFACT_ID_SHA_AND_HEAD_PASS',power,artifact['id'])
+          PY
+
+      - name: Download exact original 100us native full-state artifact from successful CI
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 42049066748
+          name: oxygen-h23-no943-mcs2738-ei2069-ei941-ei412-ei401-ei415-14ch-100us-${{ matrix.power_w }}W
+          github-token: ${{ github.token }}
+          path: _upstream_artifact/${{ matrix.power_w }}W
+
+      - name: P0 verify and restore original native plasma plus Maxwell checkpoint
+        run: |
+          set -euo pipefail
+          python3 "$ADAPTER" stage --power-w "$POWER_W"
+          echo "RESULT=$CHEM/results_rf_elastic_diss_ion_ei20_ei01_${POWER_W}w_adjacent_sheath_wall_closed_100us_dt1000ns" >> "$GITHUB_ENV"
+
+      - name: P0 rehydrate exactly pinned private lookup tables inside runner
+        env:
+          PRIVATE_RATES_B64: ${{ secrets.OXYGEN24_RATES_TAR_XZ_B64 }}
+        run: |
+          set -euo pipefail
+          test -n "$PRIVATE_RATES_B64" || { echo "::error::Private rate bundle not available"; exit 22; }
+          umask 077
+          mkdir -p "$OXYGEN_RESEARCH_RATE_DIR"
+          printf '%s' "$PRIVATE_RATES_B64" | base64 --decode | tar -xJ -C "$OXYGEN_RESEARCH_RATE_DIR" --no-same-owner
+          python3 "$ADAPTER" rates --power-w "$POWER_W"
+          test ! -e "$CHEM/private_rates/EI-943_O_1D.txt"
+
+      - name: P1 build genuine pinned native PhysicsApp
+        run: |
+          set -euo pipefail
+          bash "$CHEM/issue397_l1_power_scan_replay.sh" build "$POWER_W"
+          test -x physics_app/physics-opt
+
+      - name: P2 native advanced restart check-input with same 14ch command
+        run: |
+          set -euo pipefail
+          docker run --rm --entrypoint /bin/bash --user 0:0 \
+            --workdir /workspace -v "$PWD:/workspace" "$BUILD_BASE_REF" \
+            -lc "bash '$NATIVE' check '$POWER_W'" \
+            2>&1 | tee "$RESULT/check_input_100to300.log"
+
+      - name: P3 genuine single 100us-to-300us continuous native restart
+        run: |
+          set -euo pipefail
+          started="$(date +%s)"
+          set +e
+          timeout -s TERM -k 60s 19800s docker run --rm --entrypoint /bin/bash --user 0:0 \
+            --workdir /workspace -v "$PWD:/workspace" "$BUILD_BASE_REF" \
+            -lc "bash '$NATIVE' solve '$POWER_W'" \
+            2>&1 | tee "$RESULT/recovery_runtime.log"
+          code="${PIPESTATUS[0]}"
+          set -e
+          printf 'upstream_run=%s\nsource_sha=%s\npower_w=%s\nstart_ns=100000\nend_ns=300000\nexit_code=%s\nelapsed_s=%s\n' \
+            "$UPSTREAM_RUN_ID" "$PHYSICS_SHA" "$POWER_W" "$code" "$(($(date +%s) - started))" \
+            > "$RESULT/recovery_status.txt"
+          echo "BASE14_100TO300_NATIVE_EXIT=$code"
+          test "$code" -eq 0
+
+      - name: P4 verify true 300us native checkpoint and create immutable continuation bundle
+        run: |
+          set -euo pipefail
+          python3 "$ADAPTER" verify --power-w "$POWER_W"
+          test -s "$RESULT/restart_run_300000ns.tar.gz"
+          test -s "$RESULT/restart_inputs_300000ns.tar.gz"
+          test -s "$RESULT/restart_300000ns_manifest.json"
+
+      - name: Archive genuine 300us native state and end-point provenance
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: oxygen14-base-100to300us-native-complete-${{ matrix.power_w }}W
+          retention-days: 90
+          if-no-files-found: error
+          path: |
+            ${{ env.RESULT }}/restart_run_300000ns.tar.gz
+            ${{ env.RESULT }}/restart_inputs_300000ns.tar.gz
+            ${{ env.RESULT }}/restart_300000ns_manifest.json
+            ${{ env.RESULT }}/restart_100to300_audit.json
+            ${{ env.RESULT }}/recovery_prefix.txt
+            ${{ env.RESULT }}/recovery_status.txt
+            ${{ env.RESULT }}/recovery_runtime.log
+            ${{ env.RESULT }}/check_input_100to300.log
+            ${{ env.RESULT }}/run/plasma_restart_100000to300000.csv
+            ${{ env.RESULT }}/run/plasma_restart_100000to300000.e
+
+      - name: Preserve failure diagnostics only, no private numerical tables
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: oxygen14-base-100to300us-diagnostics-${{ matrix.power_w }}W
+          retention-days: 21
+          if-no-files-found: warn
+          path: |
+            ${{ env.RESULT }}/restart_100to300_audit.json
+            ${{ env.RESULT }}/recovery_prefix.txt
+            ${{ env.RESULT }}/recovery_status.txt
+            ${{ env.RESULT }}/recovery_runtime.log
+            ${{ env.RESULT }}/check_input_100to300.log
+            ${{ env.RESULT }}/run/plasma_restart_100000to300000.csv
+            ${{ env.RESULT }}/restart_300000ns_manifest.json
