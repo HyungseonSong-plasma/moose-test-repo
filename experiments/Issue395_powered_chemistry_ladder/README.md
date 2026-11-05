@@ -1,5 +1,22 @@
 # Issue #395 — powered oxygen ICP chemistry activation ladder
 
+## Current research reaction-channel base (2026-11-05)
+
+The **working numerical comparison base** for 400/1000 W oxygen ICP chemistry
+experiments is **Run #42043664537 (#5)**, with 14 active channels,
+EI-941 in / EI-20 out, EI-2069 in, H23 in and EI-943 out. Its full evidence,
+immutable source commit, private-rate checksums and replay policy are at
+[research_baselines/current_reaction_base.json](research_baselines/current_reaction_base.json)
+and [research_baselines/README.md](research_baselines/README.md).
+
+**Boundary:** this is a research reaction-channel base, **not** an accepted
+production chemistry promotion; SCIENCE_HOLD persists. It is **separate**
+from the Issue #397 mesh working baseline below and does not supersede
+Issue #419's original Oxygen25 reaction identity registry. Later EI-401,
+EI-412 and EI-415 replacements, and the EI-2069-out ablation, are
+**not part of this pinned base**.
+
+
 ## Issue #397 200 W EI17 mesh baseline (2026-10-21)
 
 **ACTIVE WORKING BASELINE: Graded Coarse L1**, not original pre-local-2x,
