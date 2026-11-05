@@ -1,0 +1,143 @@
+{
+  "schema_version": "oxygen_icp_research_reaction_base_v1",
+  "base_id": "oxygen-icp-h23-no943-mcs2738-ei2069-ei941-14ch-20261105",
+  "designation": "SUPERSEDED_WORKING_REACTION_BASE",
+  "acceptance": "SCIENCE_HOLD",
+  "authority_boundary": {
+    "scope": "Numerically qualified, immutable research comparison base for subsequent oxygen ICP reaction-channel experiments.",
+    "not_promoted": [
+      "production chemistry acceptance",
+      "scientific validation",
+      "canonical Oxygen25/Issue419 reaction registry",
+      "physical adequacy of MCS EI-2738",
+      "private numerical cross-section publication"
+    ],
+    "predecessor_14ch_run_id": 41994865552,
+    "chosen_run_id": 42043664537,
+    "only_chemistry_change_from_predecessor": "EI-20 -> EI-941, exclusive replacement",
+    "subsequent_EI401_EI412_EI415_replacements_are_not_in_this_base": true,
+    "EI2069_removal_experiment_is_not_in_this_base": true
+  },
+  "source": {
+    "immutable_verified_harness_sha": "e2f2080649784a04f3300ea9dded1ae23b0a04b1",
+    "reference_branch": "base/oxygen-icp-14ch-h23-ei941-20261105",
+    "physics_app_pinned_sha": "8e2fe042dbc204b5fda22d346f1ad8d2e32db3ab",
+    "workflow": ".github/workflows/oxygen-h23-no-ei943-13ch-400-1000w-100us.yml",
+    "action_run": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/42043664537",
+    "fixed_initial_eedf_sha256": "35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b"
+  },
+  "chemistry": {
+    "active_channel_count": 14,
+    "active_channels": [
+      "EI-01",
+      "EI-02",
+      "DISS-G",
+      "EI-16",
+      "EI-17",
+      "EI-941",
+      "EI-2738",
+      "EI-407",
+      "EI-417",
+      "EI-935",
+      "H24",
+      "H25",
+      "H23",
+      "EI-2069"
+    ],
+    "excluded_parent_channels": [
+      "EI-943",
+      "EI-2259",
+      "EI-2058",
+      "H05",
+      "EI-2072",
+      "EI-2074",
+      "EI-20"
+    ],
+    "explicit_replacement": {
+      "removed": "EI-20",
+      "added": "EI-941",
+      "parallel_use_prohibited": true
+    },
+    "EI2069_active": true,
+    "EI943_active": false,
+    "EI2738_rate_mode": "MCS_24case_derived_lookup_with_analytical_tails_provisional",
+    "no_automated_production_promotion": true
+  },
+  "operating_conditions": {
+    "power_W": [
+      400,
+      1000
+    ],
+    "end_time_s": 0.0001,
+    "expected_native_timestep_count": 460,
+    "recorded_csv_time_count": 461,
+    "neutral_inlet_sccm": 200,
+    "neutral_wall_sticking": 1,
+    "native_initialization": "fresh_not_restarted",
+    "transport_eedf_sha256": "35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b"
+  },
+  "rate_provenance": {
+    "EI-941": {
+      "rate_file": "EI-941_O_3P.txt",
+      "sha256": "ca10a223d631e04a84464649bac96ba3c7ee4ca157a1127376e04b66781e2adc",
+      "private": true,
+      "electron_loss_eV": 13.62
+    },
+    "EI-2069": {
+      "rate_file": "EI-2069_O2_a1Delta.txt",
+      "sha256": "5eba74c1870e0635a3e316e143961e9f04e259675ddad00fd8653de28980644a",
+      "private": true,
+      "electron_loss_eV": 5.02
+    },
+    "EI-2738": {
+      "sha256": "1896afa96f8865a0895fd4a8ae921fd89d3964f8782495331faae9e68c4c250d",
+      "private": false,
+      "model_mapping_provisional": true
+    }
+  },
+  "verified_runs": {
+    "400W": {
+      "run_id": 42043664537,
+      "artifact_id": 13445953720,
+      "artifact_name": "oxygen-h23-no943-mcs2738-ei2069-ei941-14ch-100us-400W",
+      "artifact_zip_sha256": "a6c502c13e299ce7834dfa2418352a983024e12990e40cf9740c4da3ec9a1f16",
+      "native_run_archive_sha256": "0bfd4185c8609357f7880522967dfc029a598ca09c1a623d6d8f038e5270a7fe",
+      "native_inputs_archive_sha256": "9a0734806264c4d2e52563de847502d3e90c73fe8f8ac4bbff836f88d40f884b",
+      "native_checkpoint_verified": true,
+      "verified_endpoint_s": 0.0001,
+      "native_steps": 460,
+      "native_P0_P4_pass": true,
+      "last_rf_power_W": 400.61210319789
+    },
+    "1000W": {
+      "run_id": 42043664537,
+      "artifact_id": 13446601738,
+      "artifact_name": "oxygen-h23-no943-mcs2738-ei2069-ei941-14ch-100us-1000W",
+      "artifact_zip_sha256": "96829b48566623cfbcc52605b6091a8b119c828dc981c38812d69aa5e92a408f",
+      "native_run_archive_sha256": "c02d5cff86240b41133612a709cd224eced97d15e4c686f60e0776759087f8d2",
+      "native_inputs_archive_sha256": "61cf421972f09941fa5138bce08a4717580e9ea16798b7a0da7a9be0a4d329e7",
+      "native_checkpoint_verified": true,
+      "verified_endpoint_s": 0.0001,
+      "native_steps": 460,
+      "native_P0_P4_pass": true,
+      "last_rf_power_W": 1000.8756884399
+    }
+  },
+  "replay_policy": {
+    "for_controlled_reaction_comparisons": "start from the immutable_verified_harness_sha or the reference_branch only when its tip matches that SHA",
+    "change_policy": "single-channel edit; preserve pinned source, original other rates, RF, mesh, inlet, time-grid and EEDF; generate fresh input and do not reuse incompatible checkpoints",
+    "minimum_gates": [
+      "reaction inventory and source ownership audit",
+      "unchanged-input/hash controls",
+      "P0 private-rate provenance where required",
+      "P1 genuine native build",
+      "P2 exact native check-input",
+      "P3 fresh 0-100us native solve",
+      "P4 genuine checkpoint and complete manifest"
+    ],
+    "science_acceptance_must_remain": "HOLD"
+  },
+  "historical_note": "Frozen snapshot of prior CURRENT_WORKING_REACTION_BASE as recorded before 2026-11-05 upgrade. It is now superseded by 14ch EI415/EI401/EI412/EI941 Run #42049066748. The original verified run and its exact source branch remain intact.",
+  "superseded_by_run_id": 42049066748,
+  "superseded_by_base_id": "oxygen-icp-h23-ei941-ei412-ei401-ei415-14ch-20261105"
+}
