@@ -251,6 +251,31 @@ def archive_files(destination: Path, selected: list[Path]):
     return {"name": destination.name, "bytes": destination.stat().st_size,
             "sha256": sha(destination), "inventory": records}
 
+def native_restart_progress(log_text: str) -> tuple[int, float]:
+    """Validate restart-local MOOSE steps and absolute physical time.
+
+    A genuine advanced restart preserves the 100us physical state, but the
+    new process starts counting native time steps from zero. Never require
+    its local step to exceed the upstream native step (460).
+    """
+    matches = re.findall(
+        r"(?m)^Time Step\s+(\d+),\s*time\s*=\s*([0-9.eE+-]+)",
+        log_text,
+    )
+    require(len(matches) >= 2, "missing native restart time-step evidence")
+    steps = [int(step) for step, _ in matches]
+    times = [float(value) for _, value in matches]
+    require(steps[0] == 0, "restart-local step counter did not begin at zero")
+    require(steps[-1] > 0 and all(b >= a for a, b in zip(steps, steps[1:])),
+            "restart-local native steps did not advance monotonically")
+    require(all(math.isfinite(t) for t in times), "nonfinite native restart time")
+    require(math.isclose(times[0], START_NS * 1e-9, rel_tol=0, abs_tol=1e-12),
+            "native restart did not start at 100us")
+    require(math.isclose(times[-1], END_NS * 1e-9, rel_tol=0, abs_tol=1e-12),
+            "native restart did not reach 300us")
+    return steps[-1], times[-1]
+
+
 def verify(power: int) -> None:
     b = load_record(power)
     result, inp, parent, child, args = paths(power)
@@ -260,11 +285,9 @@ def verify(power: int) -> None:
     require(provenance["end_ns"] == END_NS, "end time changed")
     native_log = result / "recovery_runtime.log"
     require(native_log.is_file(), "native runtime log missing")
-    matches = re.findall(r"(?m)^Time Step\s+(\d+),\s*time\s*=\s*([0-9.eE+-]+)", native_log.read_text(errors="replace"))
-    require(bool(matches), "no genuine native step evidence")
-    final_step, final_time_s = int(matches[-1][0]), float(matches[-1][1])
-    require(final_step > provenance["actual_upstream_moose_step"], "native MOOSE step did not advance")
-    require(math.isclose(final_time_s, 0.0003, rel_tol=0, abs_tol=1e-12), "native solver did not reach 300us")
+    require(provenance["actual_upstream_moose_step"] == b["verified_runs"][f"{power}W"]["native_steps"],
+            "upstream native step drift from verified BASE")
+    final_step, final_time_s = native_restart_progress(native_log.read_text(errors="replace"))
     run = result / "run"
     csv_path = run / f"{RUN_STEM}.csv"
     exodus = run / f"{RUN_STEM}.e"
@@ -311,6 +334,8 @@ def verify(power: int) -> None:
         "native_restart_checkpoint_prefix": cp.as_posix(),
         "native_final_time_s": final_time_s,
         "native_step": final_step,
+        "native_step_scope": "restart_local",
+        "upstream_native_step": provenance["actual_upstream_moose_step"],
         "power_W": power,
         "native_RF_power_W_at_end": rf,
         "native_csv_initial_s": times[0],
@@ -331,6 +356,26 @@ def verify(power: int) -> None:
 
 def self_test():
     require(len(REQUIRED_CHANNELS) == len(set(REQUIRED_CHANNELS)) == 14, "invalid 14ch census")
+    # Run #2 genuine 100->300us log: new process steps 0..219; upstream 460.
+    replay = ("Time Step 0, time = 0.0001\n"
+              "Time Step 1, time = 0.000100001\n"
+              "Time Step 219, time = 0.0003\n")
+    require(native_restart_progress(replay) == (219, 0.0003),
+            "valid restart-local step evidence rejected")
+    for invalid in (
+        "Time Step 0, time = 0.0001\nTime Step 0, time = 0.0003\n",
+        "Time Step 460, time = 0.0001\nTime Step 461, time = 0.0003\n",
+        "Time Step 0, time = 0.0\nTime Step 1, time = 0.0003\n",
+        "Time Step 0, time = 0.0001\nTime Step 1, time = 0.00025\n",
+        "Time Step 0, time = 0.0001\nTime Step 2, time = 0.0002\n"
+        "Time Step 1, time = 0.0003\n",
+    ):
+        try:
+            native_restart_progress(invalid)
+        except ValueError:
+            pass
+        else:
+            raise ValueError("invalid restart-local native evidence accepted")
     require(START_NS == 100000 and END_NS == 300000 and CAP_NS == 1000, "time contract drift")
     lib = library()
     for bad in ("../secret", "/tmp/secrets"):
