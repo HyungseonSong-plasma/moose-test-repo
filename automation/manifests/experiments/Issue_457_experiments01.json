@@ -8,7 +8,7 @@
     {
       "id": "P0",
       "name": "Restore immutable Oxygen14 source and stage original 400W input deterministically",
-      "timeout_seconds": 7200,
+      "timeout_seconds": 1500,
       "command": [
         "bash",
         "-lc",
@@ -18,7 +18,7 @@
     {
       "id": "P1",
       "name": "Build native PhysicsApp from original pinned source and immutable build image",
-      "timeout_seconds": 5400,
+      "timeout_seconds": 4500,
       "command": [
         "bash",
         "-lc",
@@ -28,7 +28,7 @@
     {
       "id": "P2",
       "name": "Actual native PhysicsApp check-input for exactly two C0 inputs",
-      "timeout_seconds": 1800,
+      "timeout_seconds": 900,
       "command": [
         "bash",
         "-lc",
