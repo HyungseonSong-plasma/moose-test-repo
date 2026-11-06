@@ -1,0 +1,65 @@
+# Bounded one-shot Track A scientific discriminator, not SOL/adapter packaging.
+# Self-path main trigger; remove after terminal evidence is captured.
+name: Issue282 real 1D electron-energy diffusion oracle once
+run-name: Issue282 native QPX 1D cosine diffusion | D0 D100 | 0.01pct target
+
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/issue282-energy-diffusion-once.yml]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: issue282-native-1d-diffusion
+  cancel-in-progress: false
+
+jobs:
+  scientific-evidence:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - name: Checkout immutable source at triggering revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+      - name: Verify exact source and validate self-path one-shot policy
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          python3 ci/guards/workflow_surface_guard.py --check
+          python3 -m py_compile experiments/Issue282_diffusion_1d_oracle/run_native.py
+          python3 experiments/Issue282_diffusion_1d_oracle/run_native.py --prepare-only
+      - name: Install independent Exodus field reader
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m venv .issue282-oracle-venv
+          .issue282-oracle-venv/bin/python -m pip install --disable-pip-version-check 'numpy==2.1.2' 'netCDF4==1.7.3'
+      - name: Pull immutable QPX runtime image
+        shell: bash
+        run: |
+          set -euo pipefail
+          image='ghcr.io/hyungseonsong-plasma/physics-runtime@sha256:cda9f0d09a17aed5fa606e97d1ee5c3450f7280536cec2e5c635402bb07d972c'
+          docker pull "$image"
+          mkdir -p experiments/Issue282_diffusion_1d_oracle/results
+          docker image inspect "$image" --format '{{json .RepoDigests}}' > experiments/Issue282_diffusion_1d_oracle/results/image-digests.json
+      - name: P2 P3 real D0 and D100 1D mesh-time sweep with independent Exodus oracle
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p experiments/Issue282_diffusion_1d_oracle/results
+          .issue282-oracle-venv/bin/python experiments/Issue282_diffusion_1d_oracle/run_native.py 2>&1 |
+            tee experiments/Issue282_diffusion_1d_oracle/results/driver.log
+      - name: Always retain generated inputs, logs, CSV, Exodus, and verdict
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue282-native-1d-qpx-d0-d100-evidence
+          path: |
+            experiments/Issue282_diffusion_1d_oracle/results/**
+          if-no-files-found: warn
+          retention-days: 30
