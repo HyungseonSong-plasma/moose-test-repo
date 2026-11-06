@@ -1,7 +1,7 @@
 # One-shot native Chemistry-OFF research diagnostic; SCIENCE_HOLD until profile reviewed.
 # Remove this workflow after its single terminal run and evidence inspection.
 name: Issue457 C0 400W chemistry OFF native 100us once
-run-name: C0 400W Chemistry OFF native 0-100us @ \${{ github.sha }}
+run-name: C0 400W Chemistry OFF native 0-100us @ ${{ github.sha }}
 on:
   push:
     branches: [main]
@@ -9,7 +9,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: issue457-c0-400-100us-\${{ github.sha }}
+  group: issue457-c0-400-100us-${{ github.sha }}
   cancel-in-progress: false
 jobs:
   native-c0-400:
@@ -19,26 +19,26 @@ jobs:
       - name: Checkout exact merged control
         uses: actions/checkout@v4
         with:
-          ref: \${{ github.sha }}
+          ref: ${{ github.sha }}
           path: control
           fetch-depth: 1
       - name: Checkout exact merged implementation
         uses: actions/checkout@v4
         with:
-          ref: \${{ github.sha }}
+          ref: ${{ github.sha }}
           path: target
           fetch-depth: 1
       - name: P0-P2 replay existing successful governed preflight on this exact commit
         uses: HyungseonSong-plasma/chatgpt-operation/.github/actions/governed-work@9b335e3fbb9c5e8e323e382daeec56fa25336822
         with:
           kind: experiments
-          manifest: \${{ github.workspace }}/control/automation/manifests/experiments/Issue_457_experiments01.json
-          control-root: \${{ github.workspace }}/control
-          workspace: \${{ github.workspace }}/target
-          base-sha: \${{ github.sha }}
+          manifest: ${{ github.workspace }}/control/automation/manifests/experiments/Issue_457_experiments01.json
+          control-root: ${{ github.workspace }}/control
+          workspace: ${{ github.workspace }}/target
+          base-sha: ${{ github.sha }}
           issue: '457'
           sequence: '01'
-          results: \${{ github.workspace }}/workflow-results
+          results: ${{ github.workspace }}/workflow-results
       - name: P3 genuine 400W 0-100us chemistry-OFF solve
         id: p3
         shell: bash
@@ -84,7 +84,7 @@ jobs:
             --workdir /workspace -v "$PWD:/workspace" "$IMAGE" -lc \
             "set -euo pipefail; source /environment; physics_app/physics-opt -i '$INPUT' '$PARENT' Outputs/file_base='$ROOT/run/plasma'" \
             2>&1 | tee "$ROOT/runtime.log"
-          code="\${PIPESTATUS[0]}"
+          code="${PIPESTATUS[0]}"
           set -e
           elapsed="$(( $(date +%s) - start ))"
           printf 'case=C0-400\nsource_sha=29d1acc6ef7969908b86719e4b95c73a1565136d\nexpected_steps=460\nend_time_s=0.0001\nsolver_exit=%s\nelapsed_s=%s\nscience=HOLD\n' "$code" "$elapsed" > "$ROOT/runtime_status.txt"
@@ -110,7 +110,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: issue457-c0-400-chemistry-off-100us-\${{ github.sha }}
+          name: issue457-c0-400-chemistry-off-100us-${{ github.sha }}
           retention-days: 90
           compression-level: 3
           if-no-files-found: warn
