@@ -1,6 +1,6 @@
 # Central CI error database — Oxygen24 (2026-10-31)
 
-This directory is the **single curated, version-controlled error knowledge base** for the observed MOOSE Oxygen24 work to date, including 400 W / 1000 W and the 2 ns → 4 ns checkpoint/restart development. It is **separate from the scientific reference baseline** and is **not merged to main**.
+This directory is the **single curated, version-controlled error knowledge base** for the observed MOOSE Oxygen24 work to date, including 400 W / 1000 W and the 2 ns → 4 ns checkpoint/restart development. It is **separate from the scientific reference baseline**; its presence on `main` is a diagnostic utility only, not proof of physical or scientific acceptance.
 
 ## Files
 
