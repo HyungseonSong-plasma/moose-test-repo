@@ -1,0 +1,152 @@
+{
+  "schema_version": 1,
+  "repository": "HyungseonSong-plasma/moose-test-repo",
+  "date": "2026-11-06",
+  "counts": {
+    "oxygen14": 8,
+    "boltzmann": 3,
+    "physics282": 6,
+    "total": 17
+  },
+  "context": "The three groups have been integrated to main or their PRs merged; original branches may still contain additional historical experiments or scripts not on main.",
+  "note": "Existing pinned Samuel archive-tag verifier supports archive/oxygen-cleanup-20261106 namespace, even for Physics #282 and Boltzmann categories. Each lightweight Git tag points to the unchanged original commit.",
+  "caveat": "Git tags preserve committed source but not GitHub Actions artifacts or private computation data. Their expiry and provenance are tracked separately. SCIENCE_HOLD is unchanged.",
+  "entries": [
+    {
+      "group": "oxygen14",
+      "branch": "base/oxygen-icp-14ch-ei941-ei412-ei401-ei415-20261105",
+      "head_sha": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+      "related_pr": null,
+      "archive_tag": "archive/oxygen-cleanup-20261106/base-oxygen-icp-14ch-ei941-ei412-ei401-ei415-20261105-29d1acc6ef79",
+      "actions_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions?query=branch%3Abase%2Foxygen-icp-14ch-ei941-ei412-ei401-ei415-20261105"
+    },
+    {
+      "group": "oxygen14",
+      "branch": "base/oxygen-icp-14ch-h23-ei941-20261105",
+      "head_sha": "e2f2080649784a04f3300ea9dded1ae23b0a04b1",
+      "related_pr": null,
+      "archive_tag": "archive/oxygen-cleanup-20261106/base-oxygen-icp-14ch-h23-ei941-20261105-e2f208064978",
+      "actions_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions?query=branch%3Abase%2Foxygen-icp-14ch-h23-ei941-20261105"
+    },
+    {
+      "group": "oxygen14",
+      "branch": "experiment-h23-ei941-ei412-ei401-ei415-replaces-ei16-14ch-20261105",
+      "head_sha": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+      "related_pr": null,
+      "archive_tag": "archive/oxygen-cleanup-20261106/experiment-h23-ei941-ei412-ei401-ei415-replaces-ei16-14ch-20261105-29d1acc6ef79",
+      "actions_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions?query=branch%3Aexperiment-h23-ei941-ei412-ei401-ei415-replaces-ei16-14ch-20261105"
+    },
+    {
+      "group": "oxygen14",
+      "branch": "experiment-h23-ei941-ei412-ei401-replaces-ei01-14ch-20261105",
+      "head_sha": "6d61a1b4ef2f4bf33d9975c7ef74d24d0854b24b",
+      "related_pr": null,
+      "archive_tag": "archive/oxygen-cleanup-20261106/experiment-h23-ei941-ei412-ei401-replaces-ei01-14ch-20261105-6d61a1b4ef2f",
+      "actions_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions?query=branch%3Aexperiment-h23-ei941-ei412-ei401-replaces-ei01-14ch-20261105"
+    },
+    {
+      "group": "oxygen14",
+      "branch": "experiment-h23-no943-mcs2738-ei2069-ei941-ei412-replace-dissg-14ch-20261105",
+      "head_sha": "0c5a1a351e0394011f55bad49482962f72df1a60",
+      "related_pr": null,
+      "archive_tag": "archive/oxygen-cleanup-20261106/experiment-h23-no943-mcs2738-ei2069-ei941-ei412-replace-dissg-14ch-20261105-0c5a1a351e03",
+      "actions_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions?query=branch%3Aexperiment-h23-no943-mcs2738-ei2069-ei941-ei412-replace-dissg-14ch-20261105"
+    },
+    {
+      "group": "oxygen14",
+      "branch": "experiment-h23-no943-mcs2738-ei2069-ei941-replace-ei20-14ch-20261105",
+      "head_sha": "e2f2080649784a04f3300ea9dded1ae23b0a04b1",
+      "related_pr": null,
+      "archive_tag": "archive/oxygen-cleanup-20261106/experiment-h23-no943-mcs2738-ei2069-ei941-replace-ei20-14ch-20261105-e2f208064978",
+      "actions_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions?query=branch%3Aexperiment-h23-no943-mcs2738-ei2069-ei941-replace-ei20-14ch-20261105"
+    },
+    {
+      "group": "oxygen14",
+      "branch": "experiment-h23-noei943-mcs2738-plus-ei2069-14ch-400-1000w-20261105",
+      "head_sha": "9022981225396254527d0fd565947fbc41c02b70",
+      "related_pr": null,
+      "archive_tag": "archive/oxygen-cleanup-20261106/experiment-h23-noei943-mcs2738-plus-ei2069-14ch-400-1000w-20261105-902298122539",
+      "actions_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions?query=branch%3Aexperiment-h23-noei943-mcs2738-plus-ei2069-14ch-400-1000w-20261105"
+    },
+    {
+      "group": "oxygen14",
+      "branch": "issue-395-base14-restart-100to300us-20261105",
+      "head_sha": "aac65d79e9d41094787e744358ce5fdc4154feae",
+      "related_pr": null,
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-395-base14-restart-100to300us-20261105-aac65d79e9d4",
+      "actions_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions?query=branch%3Aissue-395-base14-restart-100to300us-20261105"
+    },
+    {
+      "group": "boltzmann",
+      "branch": "boltzmann-controller-p0-emax-20261029",
+      "head_sha": "443ee55a960752a21bd81b85c3e365b5c27901eb",
+      "related_pr": 413,
+      "archive_tag": "archive/oxygen-cleanup-20261106/boltzmann-controller-p0-emax-20261029-443ee55a9607",
+      "actions_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions?query=branch%3Aboltzmann-controller-p0-emax-20261029"
+    },
+    {
+      "group": "boltzmann",
+      "branch": "issue-419-native-oxygen-boltzmann-run-20261030",
+      "head_sha": "443ee55a960752a21bd81b85c3e365b5c27901eb",
+      "related_pr": 424,
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-419-native-oxygen-boltzmann-run-20261030-443ee55a9607",
+      "actions_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions?query=branch%3Aissue-419-native-oxygen-boltzmann-run-20261030"
+    },
+    {
+      "group": "boltzmann",
+      "branch": "issue-boltzmann-m1-elastic-20261028",
+      "head_sha": "9e404ba91ddcb1d8b1639f1f6b6d4c6f3dbad1b8",
+      "related_pr": 408,
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-boltzmann-m1-elastic-20261028-9e404ba91ddc",
+      "actions_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions?query=branch%3Aissue-boltzmann-m1-elastic-20261028"
+    },
+    {
+      "group": "physics282",
+      "branch": "issue-282-native-1d-diffusion-track-a-20261106",
+      "head_sha": "8d279268361308bc43eb03e5cb5abb408d730621",
+      "related_pr": 439,
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-282-native-1d-diffusion-track-a-20261106-8d2792683613",
+      "actions_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions?query=branch%3Aissue-282-native-1d-diffusion-track-a-20261106"
+    },
+    {
+      "group": "physics282",
+      "branch": "issue-282-native-1d-linear-solver-rerun-20261106",
+      "head_sha": "ef334d78d72731b1d4cbbcaf1c120f1998158e74",
+      "related_pr": 440,
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-282-native-1d-linear-solver-rerun-20261106-ef334d78d727",
+      "actions_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions?query=branch%3Aissue-282-native-1d-linear-solver-rerun-20261106"
+    },
+    {
+      "group": "physics282",
+      "branch": "issue-282-native-oracle-oneshot-cleanup-20261106",
+      "head_sha": "c20fc7d40c073ad277a3e15600c84d15552feeca",
+      "related_pr": 442,
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-282-native-oracle-oneshot-cleanup-20261106-c20fc7d40c07",
+      "actions_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions?query=branch%3Aissue-282-native-oracle-oneshot-cleanup-20261106"
+    },
+    {
+      "group": "physics282",
+      "branch": "issue282-historical-e2a-rz-bridge-20261106",
+      "head_sha": "f36747b5903da07f649359c7b5ad0067587836b1",
+      "related_pr": 443,
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue282-historical-e2a-rz-bridge-20261106-f36747b5903d",
+      "actions_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions?query=branch%3Aissue282-historical-e2a-rz-bridge-20261106"
+    },
+    {
+      "group": "physics282",
+      "branch": "issue282-historical-e2a-rz-runner-bootstrap-fix-20261106",
+      "head_sha": "8805360f7d817987ea2bd13e8b95e7dc71dcd4bf",
+      "related_pr": 444,
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue282-historical-e2a-rz-runner-bootstrap-fix-20261106-8805360f7d81",
+      "actions_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions?query=branch%3Aissue282-historical-e2a-rz-runner-bootstrap-fix-20261106"
+    },
+    {
+      "group": "physics282",
+      "branch": "issue282-historical-e2a-dependencies-20261106",
+      "head_sha": "c60ab0f909365e4adbd3270d962251078ebab82d",
+      "related_pr": 447,
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue282-historical-e2a-dependencies-20261106-c60ab0f90936",
+      "actions_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions?query=branch%3Aissue282-historical-e2a-dependencies-20261106"
+    }
+  ]
+}

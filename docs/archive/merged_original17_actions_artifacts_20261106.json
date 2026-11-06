@@ -1,0 +1,231 @@
+{
+  "schema": 1,
+  "date": "2026-11-06",
+  "summary": "Representative workflow run IDs for the branch archive and exact artifact metadata for key native/Exodus/checkpoint evidence. Not an external durable backup.",
+  "runs": [
+    {
+      "branch": "experiment-h23-ei941-ei412-ei401-ei415-replaces-ei16-14ch-20261105",
+      "total_runs": 1,
+      "representative_run_id": 42049066748,
+      "url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/42049066748"
+    },
+    {
+      "branch": "experiment-h23-ei941-ei412-ei401-replaces-ei01-14ch-20261105",
+      "total_runs": 1,
+      "representative_run_id": 42047760912,
+      "url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/42047760912"
+    },
+    {
+      "branch": "experiment-h23-no943-mcs2738-ei2069-ei941-ei412-replace-dissg-14ch-20261105",
+      "total_runs": 1,
+      "representative_run_id": 42045848502,
+      "url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/42045848502"
+    },
+    {
+      "branch": "experiment-h23-no943-mcs2738-ei2069-ei941-replace-ei20-14ch-20261105",
+      "total_runs": 2,
+      "representative_run_id": 42043664537,
+      "url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/42043664537"
+    },
+    {
+      "branch": "experiment-h23-noei943-mcs2738-plus-ei2069-14ch-400-1000w-20261105",
+      "total_runs": 1,
+      "representative_run_id": 41994865552,
+      "url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/41994865552"
+    },
+    {
+      "branch": "issue-395-base14-restart-100to300us-20261105",
+      "total_runs": 3,
+      "representative_run_id": 42187714174,
+      "url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/42187714174"
+    },
+    {
+      "branch": "boltzmann-controller-p0-emax-20261029",
+      "total_runs": 14,
+      "representative_run_id": 40896625103,
+      "url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/40896625103"
+    },
+    {
+      "branch": "issue-419-native-oxygen-boltzmann-run-20261030",
+      "total_runs": 2,
+      "representative_run_id": 41089919350,
+      "url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/41089919350"
+    },
+    {
+      "branch": "issue-boltzmann-m1-elastic-20261028",
+      "total_runs": 426,
+      "representative_run_id": 40732845617,
+      "url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/40732845617"
+    },
+    {
+      "branch": "issue-282-native-1d-diffusion-track-a-20261106",
+      "total_runs": 6,
+      "representative_run_id": 42221731255,
+      "url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/42221731255"
+    },
+    {
+      "branch": "issue-282-native-1d-linear-solver-rerun-20261106",
+      "total_runs": 2,
+      "representative_run_id": 42222712848,
+      "url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/42222712848"
+    },
+    {
+      "branch": "issue-282-native-oracle-oneshot-cleanup-20261106",
+      "total_runs": 2,
+      "representative_run_id": 42223623837,
+      "url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/42223623837"
+    },
+    {
+      "branch": "issue282-historical-e2a-rz-bridge-20261106",
+      "total_runs": 2,
+      "representative_run_id": 42226494903,
+      "url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/42226494903"
+    },
+    {
+      "branch": "issue282-historical-e2a-rz-runner-bootstrap-fix-20261106",
+      "total_runs": 2,
+      "representative_run_id": 42227649846,
+      "url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/42227649846"
+    },
+    {
+      "branch": "issue282-historical-e2a-dependencies-20261106",
+      "total_runs": 2,
+      "representative_run_id": 42228630443,
+      "url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/42228630443"
+    }
+  ],
+  "artifacts": [
+    {
+      "run_id": 42049066748,
+      "artifacts": [
+        {
+          "id": 13449446846,
+          "name": "oxygen-h23-no943-mcs2738-ei2069-ei941-ei412-ei401-ei415-14ch-100us-diag-1000W",
+          "size_in_bytes": 7695507,
+          "expires_at": "2026-12-05T20:02:16Z",
+          "expired": false
+        },
+        {
+          "id": 13448891366,
+          "name": "oxygen-h23-no943-mcs2738-ei2069-ei941-ei412-ei401-ei415-14ch-100us-1000W",
+          "size_in_bytes": 108069677,
+          "expires_at": "2027-02-03T14:51:24Z",
+          "expired": false
+        },
+        {
+          "id": 13448243143,
+          "name": "oxygen-h23-no943-mcs2738-ei2069-ei941-ei412-ei401-ei415-14ch-100us-diag-400W",
+          "size_in_bytes": 7655052,
+          "expires_at": "2026-12-05T19:57:18Z",
+          "expired": false
+        },
+        {
+          "id": 13447489692,
+          "name": "oxygen-h23-no943-mcs2738-ei2069-ei941-ei412-ei401-ei415-14ch-100us-400W",
+          "size_in_bytes": 107823672,
+          "expires_at": "2027-02-03T14:51:24Z",
+          "expired": false
+        }
+      ]
+    },
+    {
+      "run_id": 42187714174,
+      "artifacts": [
+        {
+          "id": 13495580563,
+          "name": "oxygen14-base-100to300us-human-review-unverified-1000W",
+          "size_in_bytes": 46759499,
+          "expires_at": "2026-12-06T10:25:36Z",
+          "expired": false
+        },
+        {
+          "id": 13495550752,
+          "name": "oxygen14-base-100to300us-diagnostics-1000W",
+          "size_in_bytes": 3303556,
+          "expires_at": "2026-11-27T10:25:33Z",
+          "expired": false
+        },
+        {
+          "id": 13494617420,
+          "name": "oxygen14-base-100to300us-native-complete-1000W",
+          "size_in_bytes": 100814149,
+          "expires_at": "2027-02-04T08:26:42Z",
+          "expired": false
+        },
+        {
+          "id": 13493917768,
+          "name": "oxygen14-base-100to300us-diagnostics-400W",
+          "size_in_bytes": 3318739,
+          "expires_at": "2026-11-27T10:11:38Z",
+          "expired": false
+        },
+        {
+          "id": 13493268632,
+          "name": "oxygen14-base-100to300us-human-review-unverified-400W",
+          "size_in_bytes": 46654672,
+          "expires_at": "2026-12-06T10:11:40Z",
+          "expired": false
+        },
+        {
+          "id": 13493023978,
+          "name": "oxygen14-base-100to300us-native-complete-400W",
+          "size_in_bytes": 100608603,
+          "expires_at": "2027-02-04T08:26:42Z",
+          "expired": false
+        }
+      ]
+    },
+    {
+      "run_id": 42221731255,
+      "artifacts": [
+        {
+          "id": 13504246313,
+          "name": "boltzmann-native-eepf-synthetic-controls",
+          "size_in_bytes": 77372,
+          "expires_at": "2026-12-06T12:58:51Z",
+          "expired": false
+        },
+        {
+          "id": 13503612836,
+          "name": "boltzmann-candidate-local-private-input",
+          "size_in_bytes": 109014,
+          "expires_at": "2026-11-07T12:58:58Z",
+          "expired": false
+        },
+        {
+          "id": 13503413137,
+          "name": "scientific-centralization-compatibility",
+          "size_in_bytes": 530,
+          "expires_at": "2026-12-06T12:58:43Z",
+          "expired": false
+        },
+        {
+          "id": 13503278188,
+          "name": "physics-migration-source",
+          "size_in_bytes": 1121232,
+          "expires_at": "2026-11-07T12:58:50Z",
+          "expired": false
+        },
+        {
+          "id": 13503203275,
+          "name": "physics-directory-role-audit",
+          "size_in_bytes": 657,
+          "expires_at": "2027-02-04T12:58:17Z",
+          "expired": false
+        },
+        {
+          "id": 13503153947,
+          "name": "physics-architecture-census",
+          "size_in_bytes": 1798,
+          "expires_at": "2027-02-04T12:58:17Z",
+          "expired": false
+        }
+      ]
+    }
+  ],
+  "warnings": [
+    "The original complete raw data ZIP bytes are not included in this Git repository.",
+    "The original user conversation already received 400 W and 1000 W Oxygen14 300us ZIP copies; any independent durable backup remains the user's responsibility.",
+    "Some Physics CI test artifacts expire as soon as 2026-11-07; branch references are not responsible for preserving them."
+  ]
+}
