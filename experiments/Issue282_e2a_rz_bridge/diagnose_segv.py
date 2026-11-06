@@ -20,6 +20,7 @@ if str(ROOT) not in sys.path:
 
 from experiments.Issue26_electron_energy.E2a_controlled_diffusion.run import _stage_case
 from experiments.historical_recipe_support.issue26_e1 import build_issue26_e1_input
+from experiments.historical_recipe_support.issue31_r4_qf1 import build_r4_qf1_input
 from experiments.Issue282_e2a_rz_bridge.research_type_bridge import (
     project_historical_registration_only,
     HISTORICAL_TO_CURRENT_TYPE,
@@ -32,7 +33,7 @@ from experiments.Issue282_e2a_rz_bridge.run_native import (
 from physics_harness.adapters.moose import parameters as mp
 
 HERE = Path(__file__).resolve().parent
-CASES = ("heavy_base", "e1_energy_time", "e2a_zero_diffusion", "e2a_diffusion")
+CASES = ("r4_qf1_predecessor", "e1_energy_time", "e2a_zero_diffusion", "e2a_diffusion")
 
 
 def sha256(p: Path) -> str:
@@ -65,8 +66,10 @@ def project_subset_registration_only(text: str) -> tuple[str, dict]:
 def make_case(case_dir: Path, name: str) -> dict:
     _stage_case(case_dir, diffusivity_m2_s=0.0 if name != "e2a_diffusion" else 100.0)
     base = (case_dir / "heavy_base.i").read_text(encoding="utf-8")
-    if name == "heavy_base":
-        original = base
+    if name == "r4_qf1_predecessor":
+        original, meta = build_r4_qf1_input(base)
+        if meta["audit"]["status"] != "PASS":
+            raise ValueError("R4-QF1 baseline construction audit rejected")
     elif name == "e1_energy_time":
         original, meta = build_issue26_e1_input(base, initial_energy_hat=1.0)
         if meta["audit"]["status"] != "PASS":
