@@ -1,0 +1,63 @@
+# Bounded Track A: native R4-QF1/E2a first AD parser crash dependency isolation.
+# Diagnostic copies ONLY; original historical inputs are preserved, not approved.
+# Self-path-triggered single run on main; retire after terminal evidence.
+name: Issue282 RZ AD parsed functor isolation once
+run-name: Issue282 native RZ 10-case parsed-material dependency discriminator
+
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/issue282-rz-functor-isolation-once.yml]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: issue282-rz-functor-isolation-once
+  cancel-in-progress: false
+
+jobs:
+  native-functor-isolation:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    steps:
+      - name: Checkout exact triggering source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+      - name: Verify source and staged hash-pinned diagnostic transformations
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          python3 ci/guards/workflow_surface_guard.py --check
+          python3 -m py_compile experiments/Issue282_e2a_rz_bridge/isolate_ad_functors.py
+          python3 -m venv .issue282-isolation-venv
+          .issue282-isolation-venv/bin/python -m pip install --disable-pip-version-check -r requirements-evidence-engine.txt -r requirements-ontology.txt 'pytest==8.3.4' 'pydantic==2.10.6' 'numpy==2.1.2' 'netCDF4==1.7.3'
+          .issue282-isolation-venv/bin/python -m pytest -q tests/characterization/test_issue282_rz_functor_isolation.py
+          .issue282-isolation-venv/bin/python experiments/Issue282_e2a_rz_bridge/isolate_ad_functors.py --prepare-only --results experiments/Issue282_e2a_rz_bridge/prepared_functor_isolation
+      - name: Pin and pull original PhysicsApp image
+        shell: bash
+        run: |
+          set -euo pipefail
+          image='ghcr.io/hyungseonsong-plasma/physics-runtime@sha256:cda9f0d09a17aed5fa606e97d1ee5c3450f7280536cec2e5c635402bb07d972c'
+          docker pull "$image"
+          mkdir -p experiments/Issue282_e2a_rz_bridge/functor_isolation_results
+          docker image inspect "$image" > experiments/Issue282_e2a_rz_bridge/functor_isolation_results/original-image-inspect.json
+      - name: Execute bounded native RZ functor and observer contrasts
+        shell: bash
+        run: |
+          set -euo pipefail
+          .issue282-isolation-venv/bin/python experiments/Issue282_e2a_rz_bridge/isolate_ad_functors.py 2>&1 |
+            tee experiments/Issue282_e2a_rz_bridge/functor_isolation_results/driver.log
+      - name: Always preserve inputs, hashes, P2 and P3 logs, model evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue282-rz-native-ad-functor-isolation
+          path: |
+            experiments/Issue282_e2a_rz_bridge/functor_isolation_results/**
+            experiments/Issue282_e2a_rz_bridge/prepared_functor_isolation/manifest.json
+          if-no-files-found: warn
+          retention-days: 30
