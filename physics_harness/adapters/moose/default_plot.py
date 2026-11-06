@@ -179,7 +179,7 @@ def _read_exodus(exodus: Path, requested_block: str, time_index: int | None,
 def generate_fields(exodus: Path, output: Path, *, inputs: Sequence[Path] = (),
              variables: Sequence[str] = (), layout: str = "auto", block: str = "auto",
              time_index: int | None = None, time_us: float | None = None,
-             cmap: str = "hsv", dpi: int = 140, overwrite: bool = False) -> dict:
+             cmap: str = "rainbow", dpi: int = 140, overwrite: bool = False) -> dict:
     """Create a PNG/PDF and JSON provenance manifest; never run MOOSE."""
     import numpy as np
 
@@ -292,7 +292,7 @@ def generate_fields(exodus: Path, output: Path, *, inputs: Sequence[Path] = (),
 def generate(exodus: Path, output: Path, *, inputs: Sequence[Path] = (),
              variables: Sequence[str] = (), layout: str = "auto", block: str = "auto",
              time_index: int | None = None, time_us: float | None = None,
-             cmap: str = "hsv", dpi: int = 140, overwrite: bool = False,
+             cmap: str = "rainbow", dpi: int = 140, overwrite: bool = False,
              mode: str = "2d-map", gas_temperature_k: float | None = None,
              compare: Path | None = None, compare_inputs: Sequence[Path] = (),
              compare_gas_temperature_k: float | None = None,
@@ -352,7 +352,7 @@ def main(argv: list[str] | None = None) -> int:
     when = parser.add_mutually_exclusive_group()
     when.add_argument("--time-index", type=int, default=None, help="2d-map: zero-based timestep (default last)")
     when.add_argument("--time-us", type=float, default=None, help="2d-map: exact native time in microseconds")
-    parser.add_argument("--cmap", default="hsv", help="2d-map Matplotlib colormap (default: hsv)")
+    parser.add_argument("--cmap", default="rainbow", help="2d-map Matplotlib colormap (default: rainbow)")
     parser.add_argument("--dpi", type=int, default=140)
     parser.add_argument("--overwrite", action="store_true")
     args = parser.parse_args(argv)
