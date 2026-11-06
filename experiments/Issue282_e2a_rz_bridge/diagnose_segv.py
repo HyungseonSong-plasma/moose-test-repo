@@ -79,6 +79,9 @@ def make_case(case_dir: Path, name: str) -> dict:
     (case_dir / "input.historical.i").write_text(original, encoding="utf-8")
     projected, projection = project_subset_registration_only(original)
     projected = mp.upsert_parameter(projected, "GlobalParams", "enable_jit", "false")
+    # Second diagnostic only: suppress automatic-scaling Jacobian probing.
+    # Preserve input.historical.i untouched for provenance/reconstruction.
+    projected = mp.upsert_parameter(projected, "Executioner", "automatic_scaling", "false")
     projected = mp.upsert_parameter(projected, "Outputs", "exodus", "true")
     (case_dir / "input.i").write_text(projected, encoding="utf-8")
     return {
@@ -87,6 +90,8 @@ def make_case(case_dir: Path, name: str) -> dict:
         "qvt_mesh_sha256": sha256(case_dir / "qvt.msh"),
         "registration_names_only": projection["status"],
         "JIT_enabled": False,
+        "automatic_scaling_enabled": False,
+        "numerical_configuration_modified_for_diagnosis": True,
         "output_exodus": True,
         "not_scientific_parity": True,
     }
