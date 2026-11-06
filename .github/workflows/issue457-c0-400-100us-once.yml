@@ -1,0 +1,122 @@
+# One-shot native Chemistry-OFF research diagnostic; SCIENCE_HOLD until profile reviewed.
+# Remove this workflow after its single terminal run and evidence inspection.
+name: Issue457 C0 400W chemistry OFF native 100us once
+run-name: C0 400W Chemistry OFF native 0-100us @ \${{ github.sha }}
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/issue457-c0-400-100us-once.yml]
+permissions:
+  contents: read
+concurrency:
+  group: issue457-c0-400-100us-\${{ github.sha }}
+  cancel-in-progress: false
+jobs:
+  native-c0-400:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    steps:
+      - name: Checkout exact merged control
+        uses: actions/checkout@v4
+        with:
+          ref: \${{ github.sha }}
+          path: control
+          fetch-depth: 1
+      - name: Checkout exact merged implementation
+        uses: actions/checkout@v4
+        with:
+          ref: \${{ github.sha }}
+          path: target
+          fetch-depth: 1
+      - name: P0-P2 replay existing successful governed preflight on this exact commit
+        uses: HyungseonSong-plasma/chatgpt-operation/.github/actions/governed-work@9b335e3fbb9c5e8e323e382daeec56fa25336822
+        with:
+          kind: experiments
+          manifest: \${{ github.workspace }}/control/automation/manifests/experiments/Issue_457_experiments01.json
+          control-root: \${{ github.workspace }}/control
+          workspace: \${{ github.workspace }}/target
+          base-sha: \${{ github.sha }}
+          issue: '457'
+          sequence: '01'
+          results: \${{ github.workspace }}/workflow-results
+      - name: P3 genuine 400W 0-100us chemistry-OFF solve
+        id: p3
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd target/.issue457_pinned_oxygen14
+          test "$(git rev-parse HEAD)" = 29d1acc6ef7969908b86719e4b95c73a1565136d
+          CHEM=experiments/Issue395_powered_chemistry_ladder
+          INPUT="$CHEM/rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i"
+          PARENT="$CHEM/rf_elastic_multiapp_parent_400w_100us_dt1000ns_overlay.i"
+          ROOT="$CHEM/c0_400_100us_native"
+          MANIFEST="$CHEM/c0_400_p2_preflight/c0_manifest.json"
+          test -x physics_app/physics-opt && test -s "$INPUT" && test -s "$PARENT" && test -s "$MANIFEST"
+          export INPUT PARENT MANIFEST
+          python3 - <<'PY'
+          from pathlib import Path
+          import os,hashlib,json,re
+          base,rf=Path(os.environ["INPUT"]),Path(os.environ["PARENT"])
+          m=json.loads(Path(os.environ["MANIFEST"]).read_text())
+          sha=lambda p: hashlib.sha256(p.read_bytes()).hexdigest()
+          assert m["phase"]=="P0_STATIC_CANDIDATE_ONLY" and m["scientific_acceptance"]=="HOLD"
+          assert m["source_harness_expected_sha"]=="29d1acc6ef7969908b86719e4b95c73a1565136d"
+          assert m["original_base_sha256"]=="9ac3269b3f59390946045fd061dbaa85a00e8afde31de1f1cb9150e5e0ad61a4"
+          assert sha(base)==m["derived_base_sha256"]=="346523ee1dbaa2dfe5923d8e0c57de1c1e67615a55160a98077fcad4b0b7161d"
+          assert sha(rf)=="f0ab39033396ffb0aa473b7ace70dbe4341e3ee6e3bc76afcc853964fb9b3682"
+          assert m["active_cli_input_files"]==[str(base),str(rf)]
+          assert len(m["removed_reactive_wall_objects"])==15 and m["expected_steps"]==460
+          active="\n".join(line.split("#",1)[0] for line in base.read_text().splitlines())
+          for preserved in ("PhysicsElectronTransportLookupMaterial","PhysicsElectronMeanEnergyMaterial","PhysicsFEMLogMolarElectronFieldLimitedFluxBC","[ion_wall]","[negative_ion_wall]","[atomic_positive_ion_wall]"):
+              assert preserved in active,preserved
+          for removed in m["removed_reactive_wall_objects"]:
+              assert "["+removed.split("/")[-1]+"]" not in active,removed
+          for signature in (r"\breaction_progress\s*=",r"\bproperty_name\s*=\s*R_(?:EI\d+|H\d+)\b"):
+              assert not re.search(signature,active,re.I),signature
+          print("C0_400_SOURCE_REACTION_OFF_AND_TRANSPORT_RETAINED_GATE_PASS")
+          PY
+          test ! -e "$ROOT"
+          mkdir -p "$ROOT/run"
+          IMAGE=ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+          start="$(date +%s)"
+          set +e
+          timeout -s TERM -k 60s 19800s docker run --rm --entrypoint /bin/bash --user 0:0 \
+            --workdir /workspace -v "$PWD:/workspace" "$IMAGE" -lc \
+            "set -euo pipefail; source /environment; physics_app/physics-opt -i '$INPUT' '$PARENT' Outputs/file_base='$ROOT/run/plasma'" \
+            2>&1 | tee "$ROOT/runtime.log"
+          code="\${PIPESTATUS[0]}"
+          set -e
+          elapsed="$(( $(date +%s) - start ))"
+          printf 'case=C0-400\nsource_sha=29d1acc6ef7969908b86719e4b95c73a1565136d\nexpected_steps=460\nend_time_s=0.0001\nsolver_exit=%s\nelapsed_s=%s\nscience=HOLD\n' "$code" "$elapsed" > "$ROOT/runtime_status.txt"
+          echo "C0_400_P3_NATIVE_EXIT=$code ELAPSED_S=$elapsed SCIENCE_HOLD"
+          test "$code" -eq 0
+          test -s "$ROOT/run/plasma.csv" && test -s "$ROOT/run/plasma.e"
+      - name: P4 extract native 2D RZ electron profiles at 9 selected times
+        if: steps.p3.outcome == 'success'
+        shell: bash
+        run: |
+          set -euo pipefail
+          CONTROL_ROOT="$PWD/target"
+          cd target/.issue457_pinned_oxygen14
+          export PYTHONPATH="$CONTROL_ROOT"
+          CHEM=experiments/Issue395_powered_chemistry_ladder
+          "$CONTROL_ROOT/.issue457_venv/bin/python" "$CONTROL_ROOT/bin/physics.py" oxygen-profile \
+            --exodus "$CHEM/c0_400_100us_native/run/plasma.e" \
+            --c0-manifest "$CHEM/c0_400_p2_preflight/c0_manifest.json" \
+            --output-dir "$CHEM/c0_400_100us_native/profile"
+          test -s "$CHEM/c0_400_100us_native/profile/profile_summary.json"
+          echo ISSUE457_C0_400_NATIVE_PROFILE_OBSERVED_SCIENCE_HOLD
+      - name: Always upload native Exodus/CSV, manifest, inputs, failure logs and profile
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue457-c0-400-chemistry-off-100us-\${{ github.sha }}
+          retention-days: 90
+          compression-level: 3
+          if-no-files-found: warn
+          path: |
+            workflow-results/**
+            target/.issue457_pinned_oxygen14/experiments/Issue395_powered_chemistry_ladder/c0_400_p2_preflight/**
+            target/.issue457_pinned_oxygen14/experiments/Issue395_powered_chemistry_ladder/c0_400_100us_native/**
+            target/.issue457_pinned_oxygen14/experiments/Issue395_powered_chemistry_ladder/*__C0_chemistry_off.i
+            target/.issue457_pinned_oxygen14/experiments/Issue395_powered_chemistry_ladder/rf_elastic_multiapp_parent_400w_100us_dt1000ns_overlay.i
