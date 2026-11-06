@@ -22,6 +22,10 @@ import subprocess
 import sys
 import traceback
 
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
 from experiments.Issue26_electron_energy.E2a_controlled_diffusion.run import (
     CASE_DIFFUSIVITIES,
     _stage_case,
@@ -38,7 +42,6 @@ from experiments.historical_recipe_support.issue26_e1 import (
     ENERGY_REFERENCE_EV,
 )
 
-ROOT = Path(__file__).resolve().parents[2]
 HERE = Path(__file__).resolve().parent
 IMAGE = (
     "ghcr.io/hyungseonsong-plasma/physics-runtime@sha256:"
