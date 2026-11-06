@@ -58,7 +58,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: issue282-native-1d-qpx-d0-d100-evidence
+          name: issue282-native-1d-physicsapp-d0-d100-evidence
           path: |
             experiments/Issue282_diffusion_1d_oracle/results/**
           if-no-files-found: warn
