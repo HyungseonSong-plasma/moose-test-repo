@@ -24,6 +24,7 @@ CANONICAL_COMMANDS = {
     "run": "prepare one canonical semantic experiment for target execution",
     "preflight": "run static parser-symbol preflight on one MOOSE input",
     "temporal-csv": "normalize transient CSV rows under an explicit temporal policy",
+    "oxygen-c0": "audit a 400 W Oxygen14 chemistry-off candidate without executing MOOSE",
 }
 
 COMMANDS = {
@@ -215,6 +216,7 @@ def main(argv: list[str] | None = None) -> int:
         "run": semantic_run_cli,
         "preflight": preflight_cli,
         "temporal-csv": temporal_csv_cli,
+        "oxygen-c0": lambda argv: import_module("experiments.Issue395_powered_chemistry_ladder.chemistry_off_c0").main(argv),
     }
     canonical = canonical_handlers.get(args[0])
     if canonical is not None:
