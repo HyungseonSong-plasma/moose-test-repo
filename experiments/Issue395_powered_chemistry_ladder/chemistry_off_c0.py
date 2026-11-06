@@ -14,6 +14,8 @@ import re
 import shlex
 import subprocess
 
+from physics_harness.adapters.moose.input import MooseInput, MooseInputError
+
 EXPECTED_SOURCE = "29d1acc6ef7969908b86719e4b95c73a1565136d"
 EXPECTED_PHYSICS = "8e2fe042dbc204b5fda22d346f1ad8d2e32db3ab"
 EXPECTED_EEDF = "35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b"
@@ -27,6 +29,51 @@ REACTION_SIGNATURES = (
 SURFACE_SIGNATURES = (
     re.compile(r"(?i)\b(?:stageb4_\w+_surface_loss|\w+_surface_reaction|\w+_wall_recombination)\b"),
 )
+# Exactly these 15 base-input objects implement neutral surface reactions and
+# charged-wall to neutral inventory return in the 400W archived Oxygen14 source.
+# Charged-particle wall losses, sheath closure and nonreactive transport stay.
+SURFACE_BLOCKS = (
+    "FunctorMaterials/stageb4_O_surface_flux",
+    "FunctorMaterials/stageb4_O2s_surface_flux",
+    "FunctorMaterials/stageb4_Os_surface_flux",
+    "FunctorMaterials/stageb4_ion_neutral_total",
+    "FunctorMaterials/stageb4_ion_O_return_material",
+    "FVBCs/stageb4_O_surface_loss",
+    "FVBCs/stageb4_O2s_surface_loss",
+    "FVBCs/stageb4_Os_surface_loss",
+    "FVBCs/stageb4_ion_total_mass_return",
+    "FVBCs/stageb4_ion_O_return",
+    "Postprocessors/stageb4_O_surface_loss_rate",
+    "Postprocessors/stageb4_O2s_surface_loss_rate",
+    "Postprocessors/stageb4_Os_surface_loss_rate",
+    "Postprocessors/stageb4_ion_total_neutral_return_rate",
+    "Postprocessors/stageb4_ion_O_return_rate",
+)
+
+
+def remove_base_surface_chemistry(source: str) -> tuple[str, list[str]]:
+    """Remove the exact archived reactive-wall graph, or reject a partial graph."""
+    doc = MooseInput(source)
+    present = [path for path in SURFACE_BLOCKS if doc.find(path)]
+    if not present:
+        return source, []
+    if len(present) != len(SURFACE_BLOCKS):
+        missing = sorted(set(SURFACE_BLOCKS) - set(present))
+        raise ChemistryOffContractError(f"partial surface reaction inventory: missing {missing}")
+    try:
+        candidate, removed = doc.remove_paths(SURFACE_BLOCKS)
+    except MooseInputError as exc:
+        raise ChemistryOffContractError(f"ambiguous surface reaction inventory: {exc}") from exc
+    if set(removed) != set(SURFACE_BLOCKS):
+        raise ChemistryOffContractError("surface chemistry deletion audit failed")
+    # This is not permission to remove the charged-particle wall fluxes.
+    for retained in ("FVBCs/ion_wall", "FVBCs/negative_ion_wall",
+                     "FVBCs/atomic_positive_ion_wall"):
+        doc.unique(retained)
+        MooseInput(candidate).unique(retained)
+    return candidate, list(SURFACE_BLOCKS)
+
+
 INCLUDE = re.compile(r"^\s*!include\s+(?P<name>\S+)\s*$")
 TIME_SEQUENCE = re.compile(r"(?m)^\s*time_sequence\s*=\s*'(?P<seq>[^']+)'\s*(?:#.*)?$")
 END_TIME = re.compile(r"(?m)^\s*end_time\s*=\s*(?P<value>[^\s#]+)")
@@ -130,9 +177,16 @@ def stage(root: Path, base_input: Path, rf_parent: Path, output: Path,
         raise ChemistryOffContractError("refuse to overwrite prior C0 source/evidence")
     if base_input == rf_parent:
         raise ChemistryOffContractError("base input and RF overlay must be distinct")
-    files = _read_include_closure(root, (base_input, rf_parent))
-    base_text = base_input.read_text(encoding="utf-8")
+    original_base_text = base_input.read_text(encoding="utf-8")
+    base_text, surface_removed = remove_base_surface_chemistry(original_base_text)
+    if not surface_chemistry_off and surface_removed:
+        raise ChemistryOffContractError("C0 cannot retain or bypass surface chemistry")
     _check_grid(base_text)
+    files = _read_include_closure(root, (base_input, rf_parent))
+    files[base_input.relative_to(root).as_posix()] = base_text
+    candidate_input = base_input.with_name(base_input.stem + "__C0_chemistry_off.i")
+    if candidate_input.exists():
+        raise ChemistryOffContractError("refuse to overwrite existing derived Chemistry-OFF input")
     if not re.search(r"(?m)^\s*(?:\[log_ne\]|variable\s*=\s*log_ne)\s*$", base_text):
         raise ChemistryOffContractError("C0 electron-density state log_ne not found")
     if not re.search(r"(?m)^\s*(?:\[log_energy\]|variable\s*=\s*log_energy)\s*$", base_text):
@@ -151,7 +205,7 @@ def stage(root: Path, base_input: Path, rf_parent: Path, output: Path,
     if hazards:
         raise ChemistryOffContractError("residual chemistry in active input/include closure:\n" + "\n".join(hazards[:30]))
 
-    base_rel = base_input.relative_to(root).as_posix()
+    base_rel = candidate_input.relative_to(root).as_posix()
     parent_rel = rf_parent.relative_to(root).as_posix()
     out_rel = output.relative_to(root).as_posix()
     # Native tool is intentionally NOT executed by this P0 module.
@@ -168,11 +222,17 @@ def stage(root: Path, base_input: Path, rf_parent: Path, output: Path,
         "power_target_W": power_w, "start_time_s": 0, "end_time_s": 1e-4,
         "expected_steps": 460, "surface_reactions_requested_off": surface_chemistry_off,
         "input_sha256": {path: hashlib.sha256(text.encode()).hexdigest() for path, text in files.items()},
+        "original_source_input": base_input.relative_to(root).as_posix(),
+        "original_base_sha256": hashlib.sha256(original_base_text.encode()).hexdigest(),
+        "derived_base_sha256": hashlib.sha256(base_text.encode()).hexdigest(),
+        "removed_reactive_wall_objects": surface_removed,
+        "retained_charged_wall_flux_contract": True,
         "active_cli_input_files": [base_rel, parent_rel], "target_disabled_reaction_channel_count": 14,
         "check_argv": check_argv, "solve_argv": solve_argv,
         "warning": "P0 lexical census is incomplete evidence of solver-effective source ownership; P1/P2/native owner inventory required",
     }
     output.parent.mkdir(parents=True, exist_ok=True)
+    candidate_input.write_text(base_text, encoding="utf-8")
     output.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return result
 
