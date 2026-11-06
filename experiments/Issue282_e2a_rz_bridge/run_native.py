@@ -259,6 +259,8 @@ def independent_scalar_checks(cases: dict) -> dict:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--prepare-only", action="store_true")
+    parser.add_argument("--diagnostic-jit-off", action="store_true",
+                        help="research-only: disable parser JIT on projected input, not historical source")
     parser.add_argument("--results", type=Path, default=HERE / "results")
     args = parser.parse_args()
     results = args.results.resolve()
@@ -271,6 +273,8 @@ def main() -> int:
         "numerical_1D_success": "NOT_TRANSFERABLE_TO_2D_RZ",
         "independent_final_2D_field_oracle": "NOT_YET_ESTABLISHED",
         "image": IMAGE, "candidate_relative_target": RELATIVE_TOLERANCE,
+        "diagnostic_jit_off": args.diagnostic_jit_off,
+        "research_only_not_physics_parity": True,
         "source_commit": subprocess.check_output(
             ["git", "-C", str(ROOT), "rev-parse", "HEAD"], text=True
         ).strip(),
@@ -296,6 +300,17 @@ def main() -> int:
             projected, bridge_report = project_historical_registration_only(
                 historical_input.read_text(encoding="utf-8")
             )
+            if args.diagnostic_jit_off:
+                # Research-only runtime setting; do not edit the historical file.
+                # It changes parser compilation, NOT its mathematical expression.
+                from physics_harness.adapters.moose import parameters as mp
+                projected = mp.upsert_parameter(
+                    projected, "GlobalParams", "enable_jit", "false"
+                )
+                # Preserve output field evidence for independent RZ audit.
+                projected = mp.upsert_parameter(
+                    projected, "Outputs", "exodus", "true"
+                )
             (case / "input.i").write_text(projected, encoding="utf-8")
             item["historical_input_sha256"] = digest(historical_input)
             item["registration_type_projection"] = bridge_report
