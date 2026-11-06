@@ -263,7 +263,7 @@ def _native_species(exodus: Path, block: str, time_index: int | None,
 def generate_species(exodus: Path, output: Path, *, inputs: Sequence[Path] = (),
                      variables: Sequence[str] = (), layout: str = "auto", block: str = "auto",
                      time_index: int | None = None, time_us: float | None = None,
-                     gas_temperature_k: float | None = None, cmap: str = "hsv",
+                     gas_temperature_k: float | None = None, cmap: str = "rainbow",
                      dpi: int = 140, overwrite: bool = False) -> dict:
     """Render available species densities in m^-3; exact source/provenance recorded."""
     import numpy as np
