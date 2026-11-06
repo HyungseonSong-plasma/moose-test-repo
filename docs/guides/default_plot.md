@@ -6,7 +6,7 @@ This is read-only postprocessing of solved native Exodus. No MOOSE solve or scie
 
 ## Modes
 
-- **2d-map** (default): available species number densities (m^-3), potential (V), electron temperature (eV), one native timestep. Auto layout; hsv default colormap. Species use independent log colorbars; potential and electron temperature use independent linear colorbars. Missing fields are omitted with reasons, not invented.
+- **2d-map** (default): available species number densities (m^-3), potential (V), electron temperature (eV), one native timestep. Auto layout; rainbow default colormap. Species use independent log colorbars; potential and electron temperature use independent linear colorbars. Missing fields are omitted with reasons, not invented.
 - **time-trace**: plasma-weighted species number densities, volume-weighted potential, electron-number-weighted electron temperature, and native integrated RF power as functions of native time. Each quantity has its own subplot and proper units.
 - **--compare RUN_2** is an option only for time-trace, not a separate mode. Each run retains its own native time grid; same physical quantity is overlaid on the same axis without interpolation, time resampling or changes to the source mesh. Explicit requests unavailable in either run fail. Default selection uses the intersection of available quantities.
 
