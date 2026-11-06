@@ -1,0 +1,66 @@
+# Bounded one-shot real historical 2-D RZ E2a evidence; Track A only.
+# The existing 1-D cosine numerical PASS is NOT automatically 2-D scientific PASS.
+name: Issue282 historical 2D RZ E2a evidence once
+run-name: Issue282 real historical RZ Gaussian D0 vs D100 backend evidence
+
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/issue282-historical-rz-e2a-once.yml]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: issue282-real-historical-rz-e2a-once
+  cancel-in-progress: false
+
+jobs:
+  historical-rz-evidence:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Checkout immutable triggered Physics source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+      - name: Validate source SHA, workflow gate, and historical construction
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          python3 ci/guards/workflow_surface_guard.py --check
+          python3 -m py_compile experiments/Issue282_e2a_rz_bridge/run_native.py
+          python3 -m pytest -q tests/characterization/test_issue282_historical_e2a_rz_bridge.py
+          python3 experiments/Issue282_e2a_rz_bridge/run_native.py --prepare-only --results experiments/Issue282_e2a_rz_bridge/prep
+      - name: Install independent Exodus evidence reader
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m venv .issue282-rz-venv
+          .issue282-rz-venv/bin/python -m pip install --disable-pip-version-check 'numpy==2.1.2' 'netCDF4==1.7.3'
+      - name: Pin and pull the real PhysicsApp runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          image='ghcr.io/hyungseonsong-plasma/physics-runtime@sha256:cda9f0d09a17aed5fa606e97d1ee5c3450f7280536cec2e5c635402bb07d972c'
+          docker pull "$image"
+          mkdir -p experiments/Issue282_e2a_rz_bridge/results
+          docker image inspect "$image" --format '{{json .RepoDigests}}' > experiments/Issue282_e2a_rz_bridge/results/image-digests.json
+      - name: P2 and P3 real historical 2D RZ Gaussian D0 and D100
+        shell: bash
+        run: |
+          set -euo pipefail
+          .issue282-rz-venv/bin/python experiments/Issue282_e2a_rz_bridge/run_native.py 2>&1 |
+            tee experiments/Issue282_e2a_rz_bridge/results/driver.log
+      - name: Preserve inputs, logs, original mesh, CSV and Exodus even if rejected
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue282-historical-rz-e2a-d0-d100-evidence
+          path: |
+            experiments/Issue282_e2a_rz_bridge/prep/**
+            experiments/Issue282_e2a_rz_bridge/results/**
+          if-no-files-found: warn
+          retention-days: 30
