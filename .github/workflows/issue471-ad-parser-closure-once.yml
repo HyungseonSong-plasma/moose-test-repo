@@ -1,0 +1,67 @@
+# Issue471: one-shot immutable native JIT toolchain / runtime-closure discriminator.
+# Does not publish an image or modify Physics/SOL/Adapter semantics.
+name: Issue471 native AD parser runtime closure discriminator once
+
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/issue471-ad-parser-closure-once.yml]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: issue471-ad-parser-closure-once
+  cancel-in-progress: false
+
+jobs:
+  native-runtime-closure:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    steps:
+      - name: Checkout exact committed source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+
+      - name: Verify source and offline fail-closed characterization
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          python3 ci/guards/workflow_surface_guard.py --check
+          python3 -m py_compile experiments/Issue471_ad_parser_runtime/diagnose_closure.py
+          python3 -m venv .issue471-runtime-venv
+          .issue471-runtime-venv/bin/python -m pip install --disable-pip-version-check \
+            -r requirements-evidence-engine.txt -r requirements-ontology.txt \
+            'pytest==8.3.4' 'pydantic==2.10.6' 'numpy==2.1.2' 'netCDF4==1.7.3'
+          .issue471-runtime-venv/bin/python -m pytest -q tests/characterization/test_issue471_runtime_closure.py
+          .issue471-runtime-venv/bin/python experiments/Issue471_ad_parser_runtime/diagnose_closure.py --prepare-only
+
+      - name: Free runner disk for published build-base comparison
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get clean || true
+          docker system prune -af --volumes || true
+          for path in /usr/local/lib/android /opt/ghc /usr/share/dotnet /usr/share/swift /usr/local/.ghcup; do
+            sudo rm -rf "$path" || true
+          done
+          df -h /
+
+      - name: Run immutable runtime vs original-binary build-base diagnostic
+        shell: bash
+        run: |
+          set -euo pipefail
+          .issue471-runtime-venv/bin/python experiments/Issue471_ad_parser_runtime/diagnose_closure.py \
+            2>&1 | tee experiments/Issue471_ad_parser_runtime/evidence/driver.log
+
+      - name: Preserve image provenance and P2/P3 native logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue471-runtime-scratch-vs-build-base-evidence
+          path: experiments/Issue471_ad_parser_runtime/evidence/**
+          if-no-files-found: warn
+          retention-days: 30
