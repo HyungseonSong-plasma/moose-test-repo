@@ -179,7 +179,7 @@ def _read_exodus(exodus: Path, requested_block: str, time_index: int | None,
 def generate(exodus: Path, output: Path, *, inputs: Sequence[Path] = (),
              variables: Sequence[str] = (), layout: str = "auto", block: str = "auto",
              time_index: int | None = None, time_us: float | None = None,
-             cmap: str = "viridis", dpi: int = 140, overwrite: bool = False) -> dict:
+             cmap: str = "hsv", dpi: int = 140, overwrite: bool = False) -> dict:
     """Create a PNG/PDF and JSON provenance manifest; never run MOOSE."""
     import numpy as np
 
@@ -275,6 +275,7 @@ def generate(exodus: Path, output: Path, *, inputs: Sequence[Path] = (),
         "inputs": [str(p) for p in inputs],
         "input_sha256": {str(p): hashlib.sha256(p.read_bytes()).hexdigest() for p in inputs},
         "output": str(output), "layout": layout, "row_capacities": list(widths),
+        "colormap": cmap,
         "fields": selected, "available_nodal_fields": available,
         "declared_but_unavailable": [name for name in allowed if name not in values],
         "time_index": step, "time_s": time_s, "timepoint_count": count,
@@ -301,7 +302,7 @@ def main(argv: list[str] | None = None) -> int:
     time = parser.add_mutually_exclusive_group()
     time.add_argument("--time-index", type=int, default=None, help="zero-based Exodus timestep (default: last)")
     time.add_argument("--time-us", type=float, default=None, help="exact native time in microseconds")
-    parser.add_argument("--cmap", default="viridis")
+    parser.add_argument("--cmap", default="hsv", help="Matplotlib colormap (default: hsv)")
     parser.add_argument("--dpi", default=140, type=int)
     parser.add_argument("--overwrite", action="store_true")
     args = parser.parse_args(argv)
