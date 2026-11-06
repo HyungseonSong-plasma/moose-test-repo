@@ -155,7 +155,7 @@ def test_research_type_projection_is_exact_reversible_and_source_registered() ->
         assert candidate.is_file(), f"missing current PhysicsApp source: {candidate}"
         source = candidate.read_text(encoding="utf-8")
         assert re.search(
-            rf"register(?:AD)?MooseObject\\(\\s*\\\"PhysicsApp\\\"\\s*,\\s*{current}\\s*\\)\\s*;",
+            rf'register(?:AD)?MooseObject\(\s*"PhysicsApp"\s*,\s*{re.escape(current)}\s*\)\s*;',
             source,
         )
     assert all(
@@ -164,5 +164,5 @@ def test_research_type_projection_is_exact_reversible_and_source_registered() ->
     )
     with pytest.raises(ValueError, match="unknown"):
         project_historical_registration_only(
-            original + "\\n[Materials]\\n  [unsupported]\\n    type = QPXUnknown\\n  []\\n[]\\n"
+            original + "\n[Materials]\n  [unsupported]\n    type = QPXUnknown\n  []\n[]\n"
         )
