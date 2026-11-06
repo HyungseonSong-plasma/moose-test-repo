@@ -14,3 +14,6 @@ cases=400W,1000W
 production_promotion=false
 scientific_acceptance=HOLD
 workflows=oxygen-base14-restart-100to300us-20261105.yml
+diagnostic_retry=1
+diagnostic_workflow_commit=0f65f002e9d9f4a1593181fd847ff379aefaf121
+retry_reason=durable_p0_p4_failure_diagnostics_no_scientific_change
