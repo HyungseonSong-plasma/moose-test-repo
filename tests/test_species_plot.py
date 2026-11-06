@@ -92,7 +92,7 @@ def test_native_8_species_and_correct_density_conversion(tmp_path):
     assert result["field_ranges"]["T_e"]["units"] == "eV"
     assert "log_energy" in result["field_sources"]["T_e"]
     assert result["row_capacities"] == [4, 4, 2]
-    assert result["colormap"] == "hsv"
+    assert result["colormap"] == "rainbow"
     assert result["temperature_k"] == 300
     assert result["plasma_node_count"] == 4 and result["triangle_count"] == 2
     assert result["species_density_ranges"]["e-"]["max_m3"] == pytest.approx(N_A * np.exp(-20))
