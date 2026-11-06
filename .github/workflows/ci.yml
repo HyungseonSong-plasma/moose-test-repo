@@ -394,3 +394,128 @@ jobs:
             echo "ORDINARY_CI_REBUILDS_MOOSE_STACK=false"
             echo "ORDINARY_CI_COMPILES_PHYSICS_APPLICATION=false"
           }
+
+  boltzmann-eepf-controls:
+    name: Native Boltzmann EEPF development controls
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.action != 'edited' ||
+      github.event.changes.base != null
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check BOLSIG-format EFFECTIVE momentum / excitation contracts (synthetic P0/P1)
+        run: |
+          g++ -std=c++17 -O2 -Wall -Wextra -Werror -pedantic \
+            -Iphysics_app/include/utils \
+            physics_app/src/utils/PhysicsBoltzmannElasticSolver.C \
+            physics_app/src/utils/PhysicsBoltzmannCrossSections.C \
+            tests/boltzmann/cross_section_import_test.C \
+            -o /tmp/boltzmann-cross-section-import-test
+          /tmp/boltzmann-cross-section-import-test
+      - name: P0-1 independent energy-ceiling convergence, threshold and actual C++ elastic re-solves
+        run: |
+          g++ -std=c++17 -O2 -Wall -Wextra -Werror -pedantic \
+            -Iphysics_app/include/utils \
+            physics_app/src/utils/PhysicsBoltzmannElasticSolver.C \
+            tests/boltzmann/energy_ceiling_controller_test.C \
+            -o /tmp/boltzmann-energy-ceiling-test
+          /tmp/boltzmann-energy-ceiling-test
+      - name: P0-1 actual C++ coupled temporal-growth Emax re-solves (synthetic cross sections)
+        run: |
+          g++ -std=c++17 -O2 -Wall -Wextra -Werror -pedantic \
+            -Iphysics_app/include/utils \
+            physics_app/src/utils/PhysicsBoltzmannElasticSolver.C \
+            physics_app/src/utils/PhysicsBoltzmannGrowth.C \
+            physics_app/src/utils/PhysicsBoltzmannTemporalGrowth.C \
+            tests/boltzmann/growth_energy_ceiling_test.C \
+            -o /tmp/boltzmann-growth-energy-ceiling-test
+          /tmp/boltzmann-growth-energy-ceiling-test
+      - name: P0-2 threshold-aware nonuniform FV mesh and actual C++ M6b eigen/rates (synthetic)
+        run: |
+          g++ -std=c++17 -O2 -Wall -Wextra -Werror -pedantic \
+            -Iphysics_app/include/utils \
+            physics_app/src/utils/PhysicsBoltzmannElasticSolver.C \
+            physics_app/src/utils/PhysicsBoltzmannGrowth.C \
+            physics_app/src/utils/PhysicsBoltzmannTemporalGrowth.C \
+            tests/boltzmann/threshold_mesh_growth_test.C \
+            -o /tmp/boltzmann-threshold-mesh-growth-test
+          /tmp/boltzmann-threshold-mesh-growth-test
+      - name: P0-1/P0-2 integrated adaptive Emax + threshold mesh M6b eigen/rates (synthetic)
+        run: |
+          g++ -std=c++17 -O2 -Wall -Wextra -Werror -pedantic \
+            -Iphysics_app/include/utils \
+            physics_app/src/utils/PhysicsBoltzmannElasticSolver.C \
+            physics_app/src/utils/PhysicsBoltzmannGrowth.C \
+            physics_app/src/utils/PhysicsBoltzmannTemporalGrowth.C \
+            tests/boltzmann/adaptive_growth_ceiling_test.C \
+            -o /tmp/boltzmann-adaptive-growth-ceiling-test
+          /tmp/boltzmann-adaptive-growth-ceiling-test
+      - name: P0-2 fixed-Emax independent M6b mesh refinement, EEPF L1 and rate convergence (synthetic)
+        run: |
+          g++ -std=c++17 -O2 -Wall -Wextra -Werror -pedantic \
+            -Iphysics_app/include/utils \
+            physics_app/src/utils/PhysicsBoltzmannElasticSolver.C \
+            physics_app/src/utils/PhysicsBoltzmannGrowth.C \
+            physics_app/src/utils/PhysicsBoltzmannTemporalGrowth.C \
+            tests/boltzmann/fixed_emax_mesh_convergence_test.C \
+            -o /tmp/boltzmann-fixed-emax-mesh-test
+          /tmp/boltzmann-fixed-emax-mesh-test
+      - name: P0-1/P0-2 joint Emax and independent mesh convergence gate (synthetic M6b)
+        run: |
+          g++ -std=c++17 -O2 -Wall -Wextra -Werror -pedantic \
+            -Iphysics_app/include/utils \
+            physics_app/src/utils/PhysicsBoltzmannElasticSolver.C \
+            physics_app/src/utils/PhysicsBoltzmannGrowth.C \
+            physics_app/src/utils/PhysicsBoltzmannTemporalGrowth.C \
+            tests/boltzmann/joint_emax_mesh_convergence_test.C \
+            -o /tmp/boltzmann-joint-emax-mesh-test
+          /tmp/boltzmann-joint-emax-mesh-test
+      - name: P0-3 conservative reconstructed growth operator and actual M6b Picard eigen re-solves (synthetic)
+        run: |
+          g++ -std=c++17 -O2 -Wall -Wextra -Werror -pedantic \
+            -Iphysics_app/include/utils \
+            physics_app/src/utils/PhysicsBoltzmannElasticSolver.C \
+            physics_app/src/utils/PhysicsBoltzmannGrowth.C \
+            physics_app/src/utils/PhysicsBoltzmannTemporalGrowth.C \
+            tests/boltzmann/reconstructed_growth_picard_test.C \
+            -o /tmp/boltzmann-reconstructed-growth-picard-test
+          /tmp/boltzmann-reconstructed-growth-picard-test
+      - name: Compile and run actual C++ Boltzmann solver on invented elastic controls
+        run: python3 physics_app/ci/export_boltzmann_ci_eepf.py --out boltzmann-ci-eepf
+      - name: Upload C++ EEPF data, explicitly marked not real-gas parity
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: boltzmann-native-eepf-synthetic-controls
+          path: boltzmann-ci-eepf/*.json
+          if-no-files-found: warn
+          retention-days: 30
+      # Developer binary only: no LXCat rows, no native BOLSIG+ reference
+      # and no selected third-party collision files are copied to CI.
+      # Download the binary and run it with privately held files locally.
+      - name: Build standalone native Boltzmann candidate for private-source local comparison
+        run: |
+          g++ -std=c++17 -O2 -Wall -Wextra -Werror -pedantic \
+            -Iphysics_app/include/utils \
+            physics_app/src/utils/PhysicsBoltzmannElasticSolver.C \
+            physics_app/src/utils/PhysicsBoltzmannGrowth.C \
+            physics_app/src/utils/PhysicsBoltzmannTemporalGrowth.C \
+            physics_app/src/utils/PhysicsBoltzmannTransport.C \
+            physics_app/src/utils/PhysicsBoltzmannCrossSections.C \
+            physics_app/ci/boltzmann_candidate_export.C \
+            -o /tmp/boltzmann-candidate-example4
+          mkdir -p boltzmann-candidate-bin
+          cp /tmp/boltzmann-candidate-example4 boltzmann-candidate-bin/boltzmann-candidate-example4
+          (cd boltzmann-candidate-bin && sha256sum boltzmann-candidate-example4 > SHA256SUMS)
+          echo 'PRIVATE INPUT REQUIRED; THIS ARTIFACT CONTAINS NO LXCat/BOLSIG+ INPUT OR OUTPUT DATA' > boltzmann-candidate-bin/README.txt
+      - name: Upload development-only C++ candidate binary without collision data
+        uses: actions/upload-artifact@v4
+        with:
+          name: boltzmann-candidate-local-private-input
+          path: boltzmann-candidate-bin/*
+          if-no-files-found: error
+          retention-days: 1
