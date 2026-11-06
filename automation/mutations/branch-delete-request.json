@@ -1,28 +1,8 @@
 {
   "targets": [
     {
-      "branch": "feat/semantic-directory-role-guard",
-      "expected_sha": "29792030c7b1069147bad16b18eaab229db1d4d6"
-    },
-    {
-      "branch": "issue-395-ground-state-o2-dissociation-correction",
-      "expected_sha": "a498a5ed09ea77afc62d0f47b1039d9d6d599a31"
-    },
-    {
-      "branch": "issue-395-ground-state-tri-power-p2-bc-repair",
-      "expected_sha": "6d75155b2bcba8c4b62f689351a51f199b699cd4"
-    },
-    {
-      "branch": "promotion/oxygen-icp-14ch-research-base-20261105",
-      "expected_sha": "a36f59e37a0ec8b71d648690a3dae034eca80755"
-    },
-    {
-      "branch": "promotion/oxygen-icp-ei415-14ch-base-20261105",
-      "expected_sha": "a4bd81b1563ce77fdca0cfdb57217ca5ae2a0166"
-    },
-    {
-      "branch": "ops/oxygen24-ci-error-database-20261031",
-      "expected_sha": "a8dd06f023faf17429e537c8221909564f2e4f6f"
+      "branch": "integration/boltzmann-dev-base-20261106",
+      "expected_sha": "835c6e00b12e3c61911f3d06699b62f4dc7bfe70"
     }
   ]
 }
