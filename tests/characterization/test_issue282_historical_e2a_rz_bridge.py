@@ -126,3 +126,43 @@ def test_independent_scalar_check_rejects_no_smoothing_and_nonconservation() -> 
     bad_energy["diffusion"] = _measured_case(1, 1.001, 0.5, 0.4)
     assert independent_scalar_checks(bad_energy)["candidate_scalar_gates_met"] is False
     assert independent_scalar_checks({})["status"] == "INCONCLUSIVE_DATA_MISSING"
+
+def test_research_type_projection_is_exact_reversible_and_source_registered() -> None:
+    """Registration-name bridge is an *audit*, never a science-equivalence verdict."""
+    import re
+
+    from experiments.Issue282_e2a_rz_bridge.research_type_bridge import (
+        HISTORICAL_TO_CURRENT_TYPE,
+        TYPE_LINE,
+        project_historical_registration_only,
+    )
+
+    original, _ = build_issue26_e2a_input(
+        BASE.read_text(encoding="utf-8"), diffusivity_m2_s=100.0,
+    )
+    projected, report = project_historical_registration_only(original)
+    assert projected != original
+    assert report["status"] == "TYPE_TOKENS_ONLY_RESEARCH_PROJECTION"
+    assert report["not_physics_semantics_parity"] is True
+    assert len(HISTORICAL_TO_CURRENT_TYPE) == 7
+    assert all(row["instances"] > 0 for row in report["mappings"].values())
+
+    for historical, current in HISTORICAL_TO_CURRENT_TYPE.items():
+        assert historical in original
+        assert current in projected
+        dirname = "materials" if "Material" in current and "FV" not in current else "fvkernels"
+        candidate = ROOT / "physics_app" / "src" / dirname / f"{current}.C"
+        assert candidate.is_file(), f"missing current PhysicsApp source: {candidate}"
+        source = candidate.read_text(encoding="utf-8")
+        assert re.search(
+            rf"register(?:AD)?MooseObject\\(\\s*\\\"PhysicsApp\\\"\\s*,\\s*{current}\\s*\\)\\s*;",
+            source,
+        )
+    assert all(
+        not m.group("name").startswith("QPX")
+        for m in TYPE_LINE.finditer(projected)
+    )
+    with pytest.raises(ValueError, match="unknown"):
+        project_historical_registration_only(
+            original + "\\n[Materials]\\n  [unsupported]\\n    type = QPXUnknown\\n  []\\n[]\\n"
+        )
