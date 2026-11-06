@@ -1,5 +1,39 @@
 # Issue #395 — powered oxygen ICP chemistry activation ladder
 
+
+## Issue #457 — C0-400 chemistry-OFF electron-profile discriminator (implementation P0 only)
+
+- Owner: [Physics #457](https://github.com/HyungseonSong-plasma/moose-test-repo/issues/457).
+- Immutable research control: Oxygen14 source `29d1acc6ef7969908b86719e4b95c73a1565136d`; associated native Physics source `8e2fe042dbc204b5fda22d346f1ad8d2e32db3ab`. Historical 14-channel 400 W P3 control: [Run #42049066748](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/42049066748).
+- **Intent:** fresh 400 W, 0–100 µs 460-step run with no volumetric or chemically reactive wall source, preserving existing RF/Poisson/electron transport and charged wall loss. This is a *diagnostic*, not a physically self-sustaining plasma model; electron density decay is expected when ionization is suppressed.
+- **Current deliverable:** fail-closed candidate manifest and 2D native Exodus profile observation, **not an actual executable approved Chemistry-OFF input**. The operator must restore the archived pinned source and original private data through authorized channels; never put private rate tables in repository artifacts.
+
+After preparing the historical Oxygen14 400 W input and RF parent overlay in an **independent exact-SHA source checkout**, run the branch-provided canonical CLI code with explicit absolute paths to that checkout:
+
+```bash
+python3 bin/physics.py oxygen-c0 \
+  --root /path/to/pinned-oxygen14-checkout \
+  --base-input /path/to/pinned-oxygen14-checkout/experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns.i \
+  --rf-parent /path/to/pinned-oxygen14-checkout/experiments/Issue395_powered_chemistry_ladder/rf_elastic_multiapp_parent_400w_100us_dt1000ns_overlay.i \
+  --output /path/to/pinned-oxygen14-checkout/experiments/Issue395_powered_chemistry_ladder/c0_400_evidence/manifest.json
+```
+
+This only emits **candidate** `check_argv` / `solve_argv`; it does not run them. All reaction overlays are omitted from that proposed invocation. Nested included files are scanned for known source signatures and reactive wall terms; if the original base still embeds chemistry, the command is designed to HOLD. The P0 string inventory is explicitly not an exhaustive MOOSE object/residual audit. No P2/P3 execution should be launched solely because this command returned zero.
+
+After **separately authorized, exact-application** P1/P2/P3 native validation produces a genuine `plasma.e` (and all source/manifest audits pass), the observation-only extractor is:
+
+```bash
+python3 bin/physics.py oxygen-profile \
+  --exodus /path/to/plasma.e \
+  --c0-manifest /path/to/c0_400_evidence/manifest.json \
+  --output-dir /path/to/new-profile-evidence-directory
+```
+
+It requires the exact 461-point native time grid, named `plasma` Exodus block, nodal `log_ne` and `log_energy`, and outputs `electron_profile_2d.csv` / `profile_summary.json` for 0, 0.1, 1, 2, 10, 25, 50, 75, 100 µs. Conversion: `n_e [m^-3] = N_A exp(log_ne)`, `mean_energy [eV] = exp(log_energy-log_ne)`, `T_e [eV] = 2/3 mean_energy`. Native output/provenance identity must be independently checked against the C0 run, not merely the filename.
+
+**Hold gates:** complete direct/transitive chemistry and wall owner census; independently verified unchanged transport/RF/mesh/walls and valid 400 W target; real native P2; 0–100 µs P3; spatial electron shape and RZ charge/energy accounting; THEN compare against 14-channel baseline. Neither static tests nor profile extraction alone can establish scientific acceptance.
+
+
 ## Current research reaction-channel base (2026-11-05)
 
 The **CURRENT_WORKING_REACTION_BASE** for 400/1000 W oxygen ICP research
