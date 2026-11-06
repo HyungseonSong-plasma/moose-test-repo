@@ -232,3 +232,53 @@ jobs:
             ${{ env.RESULT }}/check_input_100to300.log
             ${{ env.RESULT }}/run/plasma_restart_100000to300000.csv
             ${{ env.RESULT }}/restart_300000ns_manifest.json
+
+      # Raw output is NOT scientific or P4 acceptance. Preserve generated
+      # field output for human inspection even when checkpoint validation fails.
+      - name: Record raw Exodus availability for human review
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RESULT"
+          raw="$RESULT/run/plasma_restart_100000to300000.e"
+          csv="$RESULT/run/plasma_restart_100000to300000.csv"
+          {
+            echo "classification=UNVERIFIED_HUMAN_REVIEW_ONLY"
+            echo "not_proof_of_native_P4_or_scientific_acceptance=true"
+            echo "original_upstream_run=42049066748"
+            echo "workflow_run=$GITHUB_RUN_ID"
+            echo "workflow_attempt=$GITHUB_RUN_ATTEMPT"
+            echo "head_sha=$GITHUB_SHA"
+            echo "power_W=$POWER_W"
+            echo "requested_interval_ns=100000,300000"
+            if test -s "$raw"; then
+              echo "raw_exodus_present=true"
+              echo "raw_exodus_bytes=$(stat -c %s "$raw")"
+              echo "raw_exodus_sha256=$(sha256sum "$raw" | cut -d' ' -f1)"
+            else
+              echo "raw_exodus_present=false"
+            fi
+            if test -s "$csv"; then
+              echo "raw_csv_present=true"
+              echo "raw_csv_bytes=$(stat -c %s "$csv")"
+              echo "raw_csv_sha256=$(sha256sum "$csv" | cut -d' ' -f1)"
+            else
+              echo "raw_csv_present=false"
+            fi
+          } > "$RESULT/RAW_FIELDS_UNVERIFIED_REVIEW.txt"
+
+      - name: Upload raw Exodus and CSV for human review even on P4 failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: oxygen14-base-100to300us-human-review-unverified-${{ matrix.power_w }}W
+          retention-days: 30
+          if-no-files-found: warn
+          path: |
+            ${{ env.RESULT }}/RAW_FIELDS_UNVERIFIED_REVIEW.txt
+            ${{ env.RESULT }}/p4_verify.log
+            ${{ env.RESULT }}/recovery_status.txt
+            ${{ env.RESULT }}/run/plasma_restart_100000to300000.csv
+            ${{ env.RESULT }}/run/plasma_restart_100000to300000.e
+            ${{ env.RESULT }}/run/plasma_restart_100000to300000.e-*
