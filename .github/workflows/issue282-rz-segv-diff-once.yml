@@ -1,4 +1,4 @@
-# Retrigger after comparing native R4-QF1 predecessor to E1/E2a.
+# Next independent R4-QF1 / E1 / E2a diagnostic: automatic_scaling=false\n# applied only to research-projected inputs, not historical source.
 # Direct historical heavy base contains nonregistered BaseMaterial and cannot run.\n# Differential experiment: same historical 2D geometry and runtime, compare
 # heavy_base -> E1 energy time -> E2a D=0/100; no scientific approval.
 # Research-only historical 2-D RZ E2a replay using explicitly audited\n# modern PhysicsApp object registration names; original input preserved.\n# Run after exact-head CI; no scientific equivalence claim or package work.
