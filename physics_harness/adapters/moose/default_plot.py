@@ -352,7 +352,7 @@ def main(argv: list[str] | None = None) -> int:
     when = parser.add_mutually_exclusive_group()
     when.add_argument("--time-index", type=int, default=None, help="2d-map: zero-based timestep (default last)")
     when.add_argument("--time-us", type=float, default=None, help="2d-map: exact native time in microseconds")
-    parser.add_argument("--cmap", default="hsv", help="2d-map Matplotlib colormap (default hsv)")
+    parser.add_argument("--cmap", default="hsv", help="2d-map Matplotlib colormap (default: hsv)")
     parser.add_argument("--dpi", type=int, default=140)
     parser.add_argument("--overwrite", action="store_true")
     args = parser.parse_args(argv)
