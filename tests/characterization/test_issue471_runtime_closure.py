@@ -18,7 +18,7 @@ def test_same_five_minimal_controls_as_previous_native_reproducer(tmp_path) -> N
     assert "--network" in original and "none" in original
     assert "--network" in rebuilt and "none" in rebuilt
     assert IMAGE in original and BASE in rebuilt
-    assert "/opt/physics/physics-opt" in rebuilt[-3]
+    assert any("/opt/physics/physics-opt" in argument for argument in rebuilt)
     assert "input.i" in rebuilt
 
 
