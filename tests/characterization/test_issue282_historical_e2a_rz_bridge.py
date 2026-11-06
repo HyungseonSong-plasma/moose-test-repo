@@ -67,9 +67,10 @@ def test_actual_two_arms_share_operator_and_energy_normalization() -> None:
         assert "eps_hat/ne_hat" in mp.get_parameter(
             text, "FunctorMaterials/mean_en_solved", "expression"
         )
-        scale = float(mp.get_parameter(
+        expression = mp.get_parameter(
             text, "FunctorMaterials/electron_energy_density_J_m3", "expression"
-        ).split("*")[0])
+        )
+        scale = float(mp.words(expression)[0].split("*")[0])
         expected = (
             meta["predecessor"]["electron_reference_density_m3"]
             * ENERGY_REFERENCE_EV * ELEMENTARY_CHARGE_C
