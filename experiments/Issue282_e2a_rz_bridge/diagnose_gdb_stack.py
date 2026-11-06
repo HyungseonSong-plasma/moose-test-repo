@@ -13,6 +13,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 import subprocess
 import sys
@@ -125,6 +126,29 @@ def prepare(results: Path, report: dict) -> None:
             row["traceback"] = traceback.format_exc()
         finally:
             write_json(results / "manifest.json", report)
+
+
+def classify_gdb_log(log: str) -> dict:
+    """Recognize a native GDB SIGSEGV stop even with Thread-qualified wording.
+
+    GDB batch exit status is NOT the inferior program status; the saved stack
+    is authoritative for this diagnostic, not for Physics scientific approval.
+    """
+    segv = bool(re.search(
+        r"(?:Program|Thread\s+\d+[^\n]*)\s+received signal SIGSEGV",
+        log,
+    ))
+    frames = bool(re.search(r"(?m)^#0\s+", log)) and "ADFParser::Eval" in log
+    return {
+        "segv_captured": segv,
+        "stack_frames_present": frames,
+        "first_null_instruction_pointer": bool(
+            re.search(r"(?m)^#0\s+0x0+\s+in", log)
+        ),
+        "ad_parser_eval_present": "ADFParser::Eval" in log,
+        "parsed_functor_evaluation_present": "ParsedFunctorMaterialTempl<true>" in log,
+        "initial_setup_present": "FEProblemBase::initialSetup()" in log,
+    }
 
 
 def main() -> int:
@@ -241,14 +265,14 @@ def main() -> int:
         rc = call(command, case / "gdb-stack.log", timeout=240)
         log = (case / "gdb-stack.log").read_text(encoding="utf-8")
         row["gdb_returncode"] = rc
-        row["segv_captured"] = "Program received signal SIGSEGV" in log
-        row["stack_frames_present"] = "#0 " in log
+        analysis = classify_gdb_log(log)
+        row.update(analysis)
         row["status"] = (
             "FIRST_SIGSEGV_STACK_CAPTURED_UNSYMBOLIZED_OR_SYMBOLIZED"
-            if row["segv_captured"] and row["stack_frames_present"]
+            if analysis["segv_captured"] and analysis["stack_frames_present"]
             else "INCONCLUSIVE_DEBUGGER_OR_BEHAVIOR_CHANGED"
         )
-        success &= row["segv_captured"] and row["stack_frames_present"]
+        success &= analysis["segv_captured"] and analysis["stack_frames_present"]
         write_json(results / "manifest.json", report)
     report["verdict"] = (
         "BOTH_NATIVE_CRASH_STACKS_CAPTURED_NOT_SCIENCE_ACCEPTED"
