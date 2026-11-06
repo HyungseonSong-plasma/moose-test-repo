@@ -288,59 +288,102 @@ def generate_fields(exodus: Path, output: Path, *, inputs: Sequence[Path] = (),
 
 
 
+
 def generate(exodus: Path, output: Path, *, inputs: Sequence[Path] = (),
              variables: Sequence[str] = (), layout: str = "auto", block: str = "auto",
              time_index: int | None = None, time_us: float | None = None,
              cmap: str = "hsv", dpi: int = 140, overwrite: bool = False,
-             mode: str = "species", gas_temperature_k: float | None = None) -> dict:
-    """Default physical species densities; --mode fields retains raw nodal plots."""
-    args = dict(inputs=inputs, variables=variables, layout=layout, block=block,
-                time_index=time_index, time_us=time_us, cmap=cmap, dpi=dpi,
-                overwrite=overwrite)
-    if mode == "fields":
-        if gas_temperature_k is not None:
-            raise DefaultPlotError("--gas-temperature-k only applies to species mode")
-        return generate_fields(exodus, output, **args)
-    if mode == "species":
+             mode: str = "2d-map", gas_temperature_k: float | None = None,
+             compare: Path | None = None, compare_inputs: Sequence[Path] = (),
+             compare_gas_temperature_k: float | None = None,
+             power_field: str = "P_rf_scaled_W_t6") -> dict:
+    """One reusable CLI surface; compare is a time-trace modifier, not a mode."""
+    if mode == "2d-map":
+        if compare is not None:
+            raise DefaultPlotError("--compare requires --mode time-trace")
         from .species_plot import generate_species
-        return generate_species(exodus, output, **args, gas_temperature_k=gas_temperature_k)
-    raise DefaultPlotError("mode must be 'species' or 'fields'")
+        return generate_species(
+            exodus, output, inputs=inputs, variables=variables, layout=layout,
+            block=block, time_index=time_index, time_us=time_us, cmap=cmap,
+            dpi=dpi, overwrite=overwrite, gas_temperature_k=gas_temperature_k,
+        )
+    if mode == "time-trace":
+        if block not in ("auto", "plasma"):
+            raise DefaultPlotError("time-trace requires plasma block")
+        if time_index is not None or time_us is not None:
+            raise DefaultPlotError("--time-index/--time-us apply to 2d-map only")
+        from .time_trace import generate_time_trace
+        return generate_time_trace(
+            exodus, output, inputs=inputs, compare=compare,
+            compare_inputs=compare_inputs, variables=variables, layout=layout,
+            cmap=cmap, dpi=dpi, overwrite=overwrite,
+            gas_temperature_k=gas_temperature_k,
+            compare_gas_temperature_k=compare_gas_temperature_k,
+            power_field=power_field,
+        )
+    raise DefaultPlotError("mode must be '2d-map' or 'time-trace'")
+
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="physics default-plot",
-        description="Plot physical Oxygen14 species densities by default; --mode fields plots raw nodal fields"
+        description="2d-map species density/potential/electron temperature or weighted time-trace; --compare overlays another run",
     )
-    parser.add_argument("--exodus", required=True, type=Path, help="native Exodus .e file")
-    parser.add_argument("--mode", choices=("species", "fields"), default="species",
-                        help="species: densities in m^-3 (default); fields: raw nodal variables")
-    parser.add_argument("--gas-temperature-k", type=float, default=None,
-                        help="explicit neutral gas temperature, K, if not in --input")
+    sources = parser.add_mutually_exclusive_group(required=True)
+    sources.add_argument("--exodus", type=Path, help="existing native Exodus .e file")
+    sources.add_argument("--run", type=Path, help="run directory containing plasma.e, or an Exodus .e path")
+    parser.add_argument("--mode", choices=("2d-map", "time-trace"), default="2d-map")
+    parser.add_argument("--compare", type=Path, help="second run directory/.e; only with time-trace")
     parser.add_argument("--input", action="append", default=[], type=Path,
-                        help="MOOSE .i file; repeat for overlays (primary [Variables] only)")
-    parser.add_argument("--output", type=Path, help="image .png/.pdf/.svg (default: <exodus>_default_plot.png)")
-    parser.add_argument("--variables", nargs="+", default=[], help="subset/order of fields, space or comma separated")
-    parser.add_argument("--layout", default="auto", help="auto | ROWSxCOLS (2x4) | rows (3,2)")
-    parser.add_argument("--block", default="auto", help="auto = plasma if present, otherwise all; or exact block name")
-    time = parser.add_mutually_exclusive_group()
-    time.add_argument("--time-index", type=int, default=None, help="zero-based Exodus timestep (default: last)")
-    time.add_argument("--time-us", type=float, default=None, help="exact native time in microseconds")
-    parser.add_argument("--cmap", default="hsv", help="Matplotlib colormap (default: hsv)")
-    parser.add_argument("--dpi", default=140, type=int)
+                        help="primary MOOSE input .i; repeat for overlay inputs")
+    parser.add_argument("--compare-input", action="append", default=[], type=Path,
+                        help="second run input .i; repeat for overlays")
+    parser.add_argument("--gas-temperature-k", type=float, default=None,
+                        help="explicit primary run neutral-gas temperature, if input cannot source it")
+    parser.add_argument("--compare-gas-temperature-k", type=float, default=None,
+                        help="explicit second run neutral-gas temperature")
+    parser.add_argument("--power-field", default="P_rf_scaled_W_t6",
+                        help="exact native Exodus global field in W (default: P_rf_scaled_W_t6)")
+    parser.add_argument("--output", type=Path, help="PNG/PDF/SVG plot file")
+    parser.add_argument("--variables", nargs="+", default=[],
+                        help="subset of e-, O2+, O-, O+, O2, O2*, O, O*, potential, T_e, power")
+    parser.add_argument("--layout", default="auto", help="auto | 2x4 | 3,2 row capacities")
+    parser.add_argument("--block", default="auto", help="auto/plasma for 2D maps and traces")
+    when = parser.add_mutually_exclusive_group()
+    when.add_argument("--time-index", type=int, default=None, help="2d-map: zero-based timestep (default last)")
+    when.add_argument("--time-us", type=float, default=None, help="2d-map: exact native time in microseconds")
+    parser.add_argument("--cmap", default="hsv", help="2d-map Matplotlib colormap (default hsv)")
+    parser.add_argument("--dpi", type=int, default=140)
     parser.add_argument("--overwrite", action="store_true")
     args = parser.parse_args(argv)
-    output = args.output or args.exodus.with_name(args.exodus.stem + "_default_plot.png")
     try:
+        from .time_trace import _resolve_run
+        source = _resolve_run(args.exodus if args.exodus is not None else args.run)
+        if args.compare is not None and args.mode != "time-trace":
+            raise DefaultPlotError("--compare requires --mode time-trace")
+        if args.mode == "2d-map" and (args.compare_input or args.compare_gas_temperature_k is not None):
+            raise DefaultPlotError("--compare-input/--compare-gas-temperature-k require time-trace --compare")
+        if args.mode == "time-trace" and args.compare is None and (
+            args.compare_input or args.compare_gas_temperature_k is not None
+        ):
+            raise DefaultPlotError("--compare-input/--compare-gas-temperature-k require --compare")
+        suffix = "_2d_map" if args.mode == "2d-map" else "_time_trace_compare" \
+                 if args.compare is not None else "_time_trace"
+        output = args.output or source.with_name(source.stem + suffix + ".png")
         result = generate(
-            args.exodus, output, inputs=args.input, variables=args.variables,
-            layout=args.layout, block=args.block, time_index=args.time_index,
-            time_us=args.time_us, cmap=args.cmap, dpi=args.dpi, overwrite=args.overwrite,
+            source, output, inputs=args.input, compare=args.compare,
+            compare_inputs=args.compare_input, variables=args.variables,
+            layout=args.layout, block=args.block,
+            time_index=args.time_index, time_us=args.time_us,
+            cmap=args.cmap, dpi=args.dpi, overwrite=args.overwrite,
             mode=args.mode, gas_temperature_k=args.gas_temperature_k,
+            compare_gas_temperature_k=args.compare_gas_temperature_k,
+            power_field=args.power_field,
         )
-    except (DefaultPlotError, OSError, ValueError, ImportError) as exc:
+    except (DefaultPlotError, OSError, ValueError, ImportError, KeyError) as exc:
         print(f"DEFAULT_PLOT: HOLD ({exc})")
         return 2
-    print(f"DEFAULT_PLOT: PASS mode={args.mode} fields={len(result['fields'])} layout={result['row_capacities']}")
+    print(f"DEFAULT_PLOT: PASS mode={args.mode} compared={bool(args.compare)} fields={len(result['fields'])} layout={result['row_capacities']}")
     print(f"IMAGE={result['output']}")
     print(f"MANIFEST={result['output']}.json")
     return 0
