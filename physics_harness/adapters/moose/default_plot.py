@@ -176,7 +176,7 @@ def _read_exodus(exodus: Path, requested_block: str, time_index: int | None,
     return x, y, triangles, available, values, float(times[step]), step, len(times), block
 
 
-def generate(exodus: Path, output: Path, *, inputs: Sequence[Path] = (),
+def generate_fields(exodus: Path, output: Path, *, inputs: Sequence[Path] = (),
              variables: Sequence[str] = (), layout: str = "auto", block: str = "auto",
              time_index: int | None = None, time_us: float | None = None,
              cmap: str = "hsv", dpi: int = 140, overwrite: bool = False) -> dict:
@@ -287,12 +287,35 @@ def generate(exodus: Path, output: Path, *, inputs: Sequence[Path] = (),
     return summary
 
 
+
+def generate(exodus: Path, output: Path, *, inputs: Sequence[Path] = (),
+             variables: Sequence[str] = (), layout: str = "auto", block: str = "auto",
+             time_index: int | None = None, time_us: float | None = None,
+             cmap: str = "hsv", dpi: int = 140, overwrite: bool = False,
+             mode: str = "species", gas_temperature_k: float | None = None) -> dict:
+    """Default physical species densities; --mode fields retains raw nodal plots."""
+    args = dict(inputs=inputs, variables=variables, layout=layout, block=block,
+                time_index=time_index, time_us=time_us, cmap=cmap, dpi=dpi,
+                overwrite=overwrite)
+    if mode == "fields":
+        if gas_temperature_k is not None:
+            raise DefaultPlotError("--gas-temperature-k only applies to species mode")
+        return generate_fields(exodus, output, **args)
+    if mode == "species":
+        from .species_plot import generate_species
+        return generate_species(exodus, output, **args, gas_temperature_k=gas_temperature_k)
+    raise DefaultPlotError("mode must be 'species' or 'fields'")
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="physics default-plot",
-        description="Auto-layout 2D Exodus nodal fields; --input limits fields to MOOSE [Variables]",
+        description="Plot physical Oxygen14 species densities by default; --mode fields plots raw nodal fields"
     )
     parser.add_argument("--exodus", required=True, type=Path, help="native Exodus .e file")
+    parser.add_argument("--mode", choices=("species", "fields"), default="species",
+                        help="species: densities in m^-3 (default); fields: raw nodal variables")
+    parser.add_argument("--gas-temperature-k", type=float, default=None,
+                        help="explicit neutral gas temperature, K, if not in --input")
     parser.add_argument("--input", action="append", default=[], type=Path,
                         help="MOOSE .i file; repeat for overlays (primary [Variables] only)")
     parser.add_argument("--output", type=Path, help="image .png/.pdf/.svg (default: <exodus>_default_plot.png)")
@@ -312,11 +335,12 @@ def main(argv: list[str] | None = None) -> int:
             args.exodus, output, inputs=args.input, variables=args.variables,
             layout=args.layout, block=args.block, time_index=args.time_index,
             time_us=args.time_us, cmap=args.cmap, dpi=args.dpi, overwrite=args.overwrite,
+            mode=args.mode, gas_temperature_k=args.gas_temperature_k,
         )
     except (DefaultPlotError, OSError, ValueError, ImportError) as exc:
         print(f"DEFAULT_PLOT: HOLD ({exc})")
         return 2
-    print(f"DEFAULT_PLOT: PASS fields={len(result['fields'])} layout={result['row_capacities']}")
+    print(f"DEFAULT_PLOT: PASS mode={args.mode} fields={len(result['fields'])} layout={result['row_capacities']}")
     print(f"IMAGE={result['output']}")
     print(f"MANIFEST={result['output']}.json")
     return 0
