@@ -33,6 +33,7 @@ CANONICAL_COMMANDS = {
     "temporal-csv": "normalize transient CSV rows under an explicit temporal policy",
     "oxygen-c0": "audit a 400 W Oxygen14 chemistry-off candidate without executing MOOSE",
     "oxygen-profile": "extract plasma-region electron density/energy profiles from native Exodus",
+    "default-plot": "auto-plot Exodus nodal fields with flexible layouts and optional input-variable filter",
 }
 
 COMMANDS = {
@@ -237,6 +238,7 @@ def main(argv: list[str] | None = None) -> int:
         "temporal-csv": temporal_csv_cli,
         "oxygen-c0": lambda argv: import_module("experiments.Issue395_powered_chemistry_ladder.chemistry_off_c0").main(argv),
         "oxygen-profile": lambda argv: import_module("experiments.Issue395_powered_chemistry_ladder.electron_profile_exodus").main(argv),
+        "default-plot": lambda argv: import_module("physics_harness.adapters.moose.default_plot").main(argv),
     }
     canonical = canonical_handlers.get(args[0])
     if canonical is not None:
