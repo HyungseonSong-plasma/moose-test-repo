@@ -9,13 +9,7 @@ from pathlib import Path
 import subprocess
 import sys
 
-from physics_harness.application import normalize_temporal_run_csv
-from physics_harness.adapters.moose.preflight import validate_input_preflight
-from physics_harness.application.gateway import compile_experiment, plan_experiment
-from physics_harness.analysis.temporal import VALID_INITIAL_POLICIES
-from physics_harness.specification import ExperimentSpecError
-
-ROOT = Path(__file__).resolve().parents[2]
+# Import optional scientific/data dependencies only inside their owning command.\n# C0 source inventory must run before any heavy analysis dependencies are installed.\n\nROOT = Path(__file__).resolve().parents[2]
 
 CANONICAL_COMMANDS = {
     "compile": "compile semantic experiment JSON into ExperimentIntent",
@@ -90,6 +84,9 @@ def _json_print(value) -> None:
 
 
 def semantic_compile_cli(argv: list[str]) -> int:
+    from physics_harness.application.gateway import compile_experiment
+    from physics_harness.specification import ExperimentSpecError
+
     parser = argparse.ArgumentParser(prog="physics compile")
     parser.add_argument("experiment")
     args = parser.parse_args(argv)
@@ -103,6 +100,9 @@ def semantic_compile_cli(argv: list[str]) -> int:
 
 
 def semantic_plan_cli(argv: list[str]) -> int:
+    from physics_harness.application.gateway import plan_experiment
+    from physics_harness.specification import ExperimentSpecError
+
     parser = argparse.ArgumentParser(prog="physics plan")
     parser.add_argument("experiment")
     args = parser.parse_args(argv)
@@ -125,6 +125,9 @@ def semantic_lower_cli(argv: list[str]) -> int:
 
 def semantic_run_cli(argv: list[str]) -> int:
     """Prepare only the canonical semantic pipeline; never dispatch a protocol runner."""
+    from physics_harness.application.gateway import plan_experiment
+    from physics_harness.specification import ExperimentSpecError
+
     parser = argparse.ArgumentParser(prog="physics run")
     parser.add_argument("experiment")
     args = parser.parse_args(argv)
@@ -146,6 +149,8 @@ def semantic_run_cli(argv: list[str]) -> int:
 
 
 def preflight_cli(argv: list[str]) -> int:
+    from physics_harness.adapters.moose.preflight import validate_input_preflight
+
     parser = argparse.ArgumentParser(prog="physics preflight")
     parser.add_argument("input", help="MOOSE input file to inspect")
     args = parser.parse_args(argv)
@@ -154,6 +159,9 @@ def preflight_cli(argv: list[str]) -> int:
 
 
 def temporal_csv_cli(argv: list[str]) -> int:
+    from physics_harness.application import normalize_temporal_run_csv
+    from physics_harness.analysis.temporal import VALID_INITIAL_POLICIES
+
     parser = argparse.ArgumentParser(prog="physics temporal-csv")
     parser.add_argument("source")
     parser.add_argument("--output", required=True)
