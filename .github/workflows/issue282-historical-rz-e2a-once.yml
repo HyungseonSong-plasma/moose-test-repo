@@ -32,14 +32,10 @@ jobs:
           test "$(git rev-parse HEAD)" = "${{ github.sha }}"
           python3 ci/guards/workflow_surface_guard.py --check
           python3 -m py_compile experiments/Issue282_e2a_rz_bridge/run_native.py
-          python3 -m pytest -q tests/characterization/test_issue282_historical_e2a_rz_bridge.py
-          python3 experiments/Issue282_e2a_rz_bridge/run_native.py --prepare-only --results experiments/Issue282_e2a_rz_bridge/prep
-      - name: Install independent Exodus evidence reader
-        shell: bash
-        run: |
-          set -euo pipefail
           python3 -m venv .issue282-rz-venv
-          .issue282-rz-venv/bin/python -m pip install --disable-pip-version-check 'numpy==2.1.2' 'netCDF4==1.7.3'
+          .issue282-rz-venv/bin/python -m pip install --disable-pip-version-check 'pytest==8.3.4' 'pydantic==2.10.6' 'numpy==2.1.2' 'netCDF4==1.7.3'
+          .issue282-rz-venv/bin/python -m pytest -q tests/characterization/test_issue282_historical_e2a_rz_bridge.py
+          .issue282-rz-venv/bin/python experiments/Issue282_e2a_rz_bridge/run_native.py --prepare-only --results experiments/Issue282_e2a_rz_bridge/prep
       - name: Pin and pull the real PhysicsApp runtime
         shell: bash
         run: |
