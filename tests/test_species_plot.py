@@ -90,6 +90,7 @@ def test_native_8_species_and_correct_density_conversion(tmp_path):
     assert result["mode"] == "2d-map"
     assert result["field_ranges"]["potential"]["units"] == "V"
     assert result["field_ranges"]["T_e"]["units"] == "eV"
+    assert "log_energy" in result["field_sources"]["T_e"]
     assert result["row_capacities"] == [4, 4, 2]
     assert result["colormap"] == "hsv"
     assert result["temperature_k"] == 300
@@ -223,4 +224,5 @@ def test_time_trace_no_fabrication_of_missing_neutral_or_power(tmp_path):
     report = _native_traces(exodus, (), None, power_field="unavailable_power")
     assert "O2" not in report["series"] and "O2" in report["unavailable"]
     assert "power" not in report["series"] and "power" in report["unavailable"]
+    assert "unaudited power field" in report["unavailable"]["power"]
     assert "e-" in report["series"] and "potential" in report["series"]
