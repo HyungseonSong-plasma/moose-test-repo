@@ -1,7 +1,7 @@
 # Bounded one-shot Track A scientific discriminator, not SOL/adapter packaging.
 # Self-path main trigger; remove after terminal evidence is captured.
 name: Issue282 real 1D electron-energy diffusion oracle once
-run-name: Issue282 native QPX 1D cosine diffusion | D0 D100 | 0.01pct target
+run-name: Issue282 native PhysicsApp 1D cosine diffusion | D0 D100 | 0.01pct target
 
 on:
   push:
@@ -39,7 +39,7 @@ jobs:
           set -euo pipefail
           python3 -m venv .issue282-oracle-venv
           .issue282-oracle-venv/bin/python -m pip install --disable-pip-version-check 'numpy==2.1.2' 'netCDF4==1.7.3'
-      - name: Pull immutable QPX runtime image
+      - name: Pull immutable PhysicsApp runtime image
         shell: bash
         run: |
           set -euo pipefail
