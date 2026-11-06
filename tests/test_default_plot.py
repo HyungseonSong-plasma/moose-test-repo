@@ -115,3 +115,13 @@ def test_plot_help_has_no_scientific_dependencies(tmp_path):
                             cwd=root, text=True, capture_output=True, timeout=15)
     assert result.returncode == 0, result.stderr
     assert "--layout" in result.stdout and "--variables" in result.stdout
+
+
+def test_canonical_default_plot_command_help_without_site_packages():
+    root = Path(__file__).resolve().parents[1]
+    result = subprocess.run([sys.executable, "-S", str(root / "bin/physics.py"),
+                             "default-plot", "--help"],
+                            cwd=root, text=True, capture_output=True, timeout=15)
+    assert result.returncode == 0, result.stderr
+    assert "physics default-plot" in result.stdout
+    assert "--layout" in result.stdout and "--exodus" in result.stdout
