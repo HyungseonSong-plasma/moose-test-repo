@@ -1,6 +1,7 @@
 # BOUNDED RESEARCH-ONLY / SCIENCE_HOLD source and native-input preflight.
 # Explicit self-path on main: one verified exact-head run after PR merge.
 # Required cleanup: remove this one-shot after terminal evidence inspection.
+# Exact-head retry after Run #42249169013 failed at P0: isolated venv had no pytest.
 name: Issue457 Oxygen14 C0 400W P0-P2 once
 run-name: C0 400W chemistry OFF pinned-source preflight @ ${{ github.sha }}
 
