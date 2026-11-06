@@ -22,6 +22,8 @@ from experiments.Issue26_electron_energy.E2a_controlled_diffusion.run import _st
 from experiments.historical_recipe_support.issue26_e1 import build_issue26_e1_input
 from experiments.Issue282_e2a_rz_bridge.research_type_bridge import (
     project_historical_registration_only,
+    HISTORICAL_TO_CURRENT_TYPE,
+    TYPE_LINE,
 )
 from experiments.Issue282_e2a_rz_bridge.run_native import (
     run_native,
@@ -37,6 +39,29 @@ def sha256(p: Path) -> str:
     return hashlib.sha256(p.read_bytes()).hexdigest()
 
 
+
+def project_subset_registration_only(text: str) -> tuple[str, dict]:
+    """Reversible whitelist projection for earlier predecessor states."""
+    present = {m.group("name") for m in TYPE_LINE.finditer(text)
+               if m.group("name").startswith("QPX")}
+    known = set(HISTORICAL_TO_CURRENT_TYPE)
+    if not present or not present <= known:
+        raise ValueError(f"unknown or empty historical QPX type set: {sorted(present - known)}")
+    if present == known:
+        return project_historical_registration_only(text)
+    reverse = {v: k for k,v in HISTORICAL_TO_CURRENT_TYPE.items()}
+    projected = TYPE_LINE.sub(
+        lambda m: m.group("prefix") +
+        HISTORICAL_TO_CURRENT_TYPE.get(m.group("name"), m.group("name")) +
+        m.group("suffix"), text)
+    restored = TYPE_LINE.sub(
+        lambda m: m.group("prefix") +
+        reverse.get(m.group("name"), m.group("name")) + m.group("suffix"), projected)
+    if restored != text:
+        raise ValueError("predecessor projection was not exactly reversible")
+    return projected, {"status": "WHITELIST_SUBSET_REGISTRATION_ONLY", "source_types": sorted(present)}
+
+
 def make_case(case_dir: Path, name: str) -> dict:
     _stage_case(case_dir, diffusivity_m2_s=0.0 if name != "e2a_diffusion" else 100.0)
     base = (case_dir / "heavy_base.i").read_text(encoding="utf-8")
@@ -49,7 +74,7 @@ def make_case(case_dir: Path, name: str) -> dict:
     else:
         original = (case_dir / "input.i").read_text(encoding="utf-8")
     (case_dir / "input.historical.i").write_text(original, encoding="utf-8")
-    projected, projection = project_historical_registration_only(original)
+    projected, projection = project_subset_registration_only(original)
     projected = mp.upsert_parameter(projected, "GlobalParams", "enable_jit", "false")
     projected = mp.upsert_parameter(projected, "Outputs", "exodus", "true")
     (case_dir / "input.i").write_text(projected, encoding="utf-8")
