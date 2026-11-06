@@ -1,0 +1,64 @@
+# Research diagnostic only: preserve historic E2a equations and input, toggle
+# parser JIT off in projected runtime input. Original frozen input retained.
+# Research-only historical 2-D RZ E2a replay using explicitly audited\n# modern PhysicsApp object registration names; original input preserved.\n# Run after exact-head CI; no scientific equivalence claim or package work.
+# The existing 1-D cosine numerical PASS is NOT automatically 2-D scientific PASS.
+name: Issue282 RZ JIT-off diagnostic once
+run-name: Issue282 RZ JIT-off diagnostic D0 vs D100
+
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/issue282-rz-jitoff-once.yml]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: issue282-rz-jitoff-once
+  cancel-in-progress: false
+
+jobs:
+  historical-rz-evidence:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Checkout immutable triggered Physics source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+      - name: Validate source SHA, workflow gate, and historical construction
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          python3 ci/guards/workflow_surface_guard.py --check
+          python3 -m py_compile experiments/Issue282_e2a_rz_bridge/run_native.py
+          python3 -m venv .issue282-rz-venv
+          .issue282-rz-venv/bin/python -m pip install --disable-pip-version-check -r requirements-evidence-engine.txt -r requirements-ontology.txt 'pytest==8.3.4' 'pydantic==2.10.6' 'numpy==2.1.2' 'netCDF4==1.7.3'
+          .issue282-rz-venv/bin/python -m pytest -q tests/characterization/test_issue282_historical_e2a_rz_bridge.py
+          .issue282-rz-venv/bin/python experiments/Issue282_e2a_rz_bridge/run_native.py --diagnostic-jit-off --prepare-only --results experiments/Issue282_e2a_rz_bridge/prep
+      - name: Pin and pull the real PhysicsApp runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          image='ghcr.io/hyungseonsong-plasma/physics-runtime@sha256:cda9f0d09a17aed5fa606e97d1ee5c3450f7280536cec2e5c635402bb07d972c'
+          docker pull "$image"
+          mkdir -p experiments/Issue282_e2a_rz_bridge/results
+          docker image inspect "$image" --format '{{json .RepoDigests}}' > experiments/Issue282_e2a_rz_bridge/results/image-digests.json
+      - name: P2 and P3 real historical 2D RZ Gaussian D0 and D100
+        shell: bash
+        run: |
+          set -euo pipefail
+          .issue282-rz-venv/bin/python experiments/Issue282_e2a_rz_bridge/run_native.py --diagnostic-jit-off 2>&1 |
+            tee experiments/Issue282_e2a_rz_bridge/results/driver.log
+      - name: Preserve inputs, logs, original mesh, CSV and Exodus even if rejected
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue282-rz-jitoff-diagnostic-evidence
+          path: |
+            experiments/Issue282_e2a_rz_bridge/prep/**
+            experiments/Issue282_e2a_rz_bridge/results/**
+          if-no-files-found: warn
+          retention-days: 30
