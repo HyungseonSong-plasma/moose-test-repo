@@ -32,6 +32,8 @@ def test_both_d0_and_d100_keep_the_same_fv_operator_graph() -> None:
     for text in (control, treatment):
         assert "type = MooseVariableFVReal" in text
         assert "type = FVTimeKernel" in text
+        assert "solve_type = LINEAR" in text
+        assert "petsc_options_value = 'lu'" in text
         assert "type = FVDiffusion" in text
         assert "coeff = controlled_energy_diffusivity" in text
         assert "type = FunctionIC" in text

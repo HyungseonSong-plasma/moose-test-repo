@@ -1,4 +1,4 @@
-# Bounded one-shot Track A scientific discriminator, not SOL/adapter packaging.
+# Second Track A discriminator: prior run #42222166527 exposed fine-mesh D100\n# nonlinear line search failure. Identical PDE, linear/LU solver only.\n# No SOL/adapter packaging; no scientific acceptance promoted.
 # Self-path main trigger; remove after terminal evidence is captured.
 name: Issue282 real 1D electron-energy diffusion oracle once
 run-name: Issue282 native PhysicsApp 1D cosine diffusion | D0 D100 | 0.01pct target

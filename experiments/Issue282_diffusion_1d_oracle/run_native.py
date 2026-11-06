@@ -90,12 +90,13 @@ def render_input(*, nx: int, steps: int, diffusivity: float) -> str:
 []
 [Executioner]
   type = Transient
-  solve_type = NEWTON
+  # The controlled constant-D PDE is linear; avoid unneeded nonlinear line search.
+  solve_type = LINEAR
+  petsc_options_iname = '-pc_type'
+  petsc_options_value = 'lu'
   dt = {dt:.17g}
   end_time = {END_S:.17g}
   num_steps = {steps}
-  nl_rel_tol = 1e-12
-  nl_abs_tol = 1e-13
   l_tol = 1e-12
 []
 [Outputs]
@@ -242,7 +243,7 @@ def main() -> int:
             ["git", "-C", str(ROOT), "rev-parse", "HEAD"], text=True
         ).strip(),
         "image": IMAGE, "length_m": LENGTH_M, "end_time_s": END_S,
-        "relative_target": RELATIVE_TARGET,
+        "relative_target": RELATIVE_TARGET, "solver_strategy": "LINEAR / PETSc LU",
         "cases": [],
     }
     bad = 0
