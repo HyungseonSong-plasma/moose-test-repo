@@ -61,16 +61,34 @@ def call(argv: list[str], log: Path, *, timeout: int = 240, input_text: str | No
 
 
 def debug_dockerfile() -> str:
-    # Debug-only derivative, NOT a substitute for the original numerical image.
-    return f"""FROM {IMAGE}
-USER root
-RUN set -eux; \\
-    if command -v gdb >/dev/null 2>&1; then gdb --version | head -1; \\
-    elif command -v apt-get >/dev/null 2>&1; then \\
-      apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends gdb && \\
-      rm -rf /var/lib/apt/lists/*; \\
-    else echo 'GDB_UNAVAILABLE_NO_SUPPORTED_INSTALLER' >&2; exit 41; fi
+    # Runtime is a minimal image without even a named root passwd entry.
+    # Install debugger only in an isolated Ubuntu stage, then COPY its whole
+    # rootfs below /opt/physics282_debugroot. No RUN, apt, shell, libc upgrade,
+    # or package install occurs in the original PhysicsApp filesystem.
+    return f"""FROM ubuntu:24.04 AS debugger
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends gdb && rm -rf /var/lib/apt/lists/*
+FROM {IMAGE}
+COPY --from=debugger / /opt/physics282_debugroot/
+USER 0
 """
+
+
+DEBUG_ROOT = "/opt/physics282_debugroot"
+DEBUG_LOADER = DEBUG_ROOT + "/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2"
+DEBUG_LIBRARY_PATH = (
+    DEBUG_ROOT + "/lib/x86_64-linux-gnu:" +
+    DEBUG_ROOT + "/usr/lib/x86_64-linux-gnu"
+)
+DEBUG_GDB = DEBUG_ROOT + "/usr/bin/gdb"
+
+
+def debug_gdb_command(*arguments: str) -> list[str]:
+    # Explicit dynamic loader/library path prevents an Ubuntu GDB install from
+    # replacing the *actual* PhysicsApp runtime libc/MOOSE shared libraries.
+    return [
+        "--entrypoint", DEBUG_LOADER, DEBUG_IMAGE,
+        "--library-path", DEBUG_LIBRARY_PATH, DEBUG_GDB, *arguments,
+    ]
 
 
 def docker_entrypoint(image_config: dict) -> list[str]:
@@ -172,13 +190,16 @@ def main() -> int:
         ["docker", "image", "inspect", DEBUG_IMAGE],
         results / "debug-image-inspect.log",
     )
-    call(
+    preflight_rc = call(
         ["docker", "run", "--rm", "--network", "none",
-         "--entrypoint", "/bin/sh", DEBUG_IMAGE, "-c",
-         "set -e; id; command -v gdb; gdb --version | head -1; "
-         "command -v ldd || true; command -v readelf || true"],
+         *debug_gdb_command("--version")],
         results / "debugger-environment.log",
     )
+    report["debugger_preflight_rc"] = preflight_rc
+    if preflight_rc:
+        report["verdict"] = "INCONCLUSIVE_DEBUGGER_PRECHECK"
+        write_json(results / "manifest.json", report)
+        return 1
     success = True
     for case_name in CASES:
         case = results / case_name
@@ -203,8 +224,7 @@ def main() -> int:
             "docker", "run", "--rm", "--network", "none",
             "--cap-add=SYS_PTRACE", "--security-opt", "seccomp=unconfined",
             "-v", f"{ROOT}:/workspace", "-w", f"/workspace/{relative}",
-            "--entrypoint", "gdb", DEBUG_IMAGE,
-            "--batch", "--quiet",
+            *debug_gdb_command("--batch", "--quiet"),
             "-ex", "set pagination off",
             "-ex", "set confirm off",
             "-ex", "set print frame-arguments all",
