@@ -1,8 +1,9 @@
 {
   "targets": [
     {
-      "branch": "integration/boltzmann-dev-base-20261106",
-      "expected_sha": "835c6e00b12e3c61911f3d06699b62f4dc7bfe70"
+      "branch": "experiment/oxygen-o2p-dr-400-1000-20261028",
+      "expected_sha": "6bff1c00e0da81f7385d9311d43dae63560df7f6",
+      "archive_tag": "archive/oxygen-cleanup-20261106/experiment-oxygen-o2p-dr-400-1000-20261028-6bff1c00e0da"
     }
   ]
 }
