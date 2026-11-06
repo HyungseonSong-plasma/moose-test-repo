@@ -1,59 +1,12 @@
 {
   "targets": [
     {
-      "branch": "issue-407-ei10-te-dependent-20261030",
-      "expected_sha": "14f54cc4127c9a294b8f3be0e02b71d1612384a4",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-407-ei10-te-dependent-20261030-14f54cc4127c"
+      "branch": "integration/oxygen14-restart-verifier-20261106",
+      "expected_sha": "2952e1cd4be5de7982e88e70e1286169d6468266"
     },
     {
-      "branch": "issue-411-o2-ex1-4p5ev-formula",
-      "expected_sha": "bfa97eaa5279ab38ff42be2f549fc9a8ea85e6ad",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-411-o2-ex1-4p5ev-formula-bfa97eaa5279"
-    },
-    {
-      "branch": "issue-419-2259-o2plus-dr-cross-section",
-      "expected_sha": "fe4c2e9667d9ffe673f64466e836b71729cf630c",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-419-2259-o2plus-dr-cross-section-fe4c2e9667d9"
-    },
-    {
-      "branch": "issue-419-o2s-2072-2074-lookup-prep",
-      "expected_sha": "b1dfe292d2d9b19bd91cb2131f55d172996b4040",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-419-o2s-2072-2074-lookup-prep-b1dfe292d2d9"
-    },
-    {
-      "branch": "issue-419-phelps-o2-4p5-acquisition",
-      "expected_sha": "ec4783929a82f53d102abb7661191f81479000bb",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-419-phelps-o2-4p5-acquisition-ec4783929a82"
-    },
-    {
-      "branch": "issue-419-screenshot-25-reaction-audit",
-      "expected_sha": "433af70371af38a8e29ee59e9fb7a9670be0e19b",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-419-screenshot-25-reaction-audit-433af70371af"
-    },
-    {
-      "branch": "issue432-nine-ratio-once-20261104",
-      "expected_sha": "bf117df39012cea98c3509188f6ba0c6e27de6b0",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue432-nine-ratio-once-20261104-bf117df39012"
-    },
-    {
-      "branch": "issue432-ei2073-nine-ratio-once-20261104",
-      "expected_sha": "5d74c43fb45c86b8eec0b245564a76a0fa963faf",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue432-ei2073-nine-ratio-once-20261104-5d74c43fb45c"
-    },
-    {
-      "branch": "experiment/oxygen25-initial-eedf-400-1000w-0to1us-20261102",
-      "expected_sha": "468fc5d9edef07bf7b702c8cf09447d901f97328",
-      "archive_tag": "archive/oxygen-cleanup-20261106/experiment-oxygen25-initial-eedf-400-1000w-0to1us-20261102-468fc5d9edef"
-    },
-    {
-      "branch": "issue-419-1000w-100us-1ms-dt2p5us-20261102",
-      "expected_sha": "80fb14c28a4eb78205e5ff903eb7aa094a3572ce",
-      "archive_tag": "archive/oxygen-cleanup-20261106/issue-419-1000w-100us-1ms-dt2p5us-20261102-80fb14c28a4e"
-    },
-    {
-      "branch": "experiment-no-ei943-h24-h25-400-1000w-20261104",
-      "expected_sha": "19e09cd90f4aa50f928e3abbbb76daf19e51105b",
-      "archive_tag": "archive/oxygen-cleanup-20261106/experiment-no-ei943-h24-h25-400-1000w-20261104-19e09cd90f4a"
+      "branch": "ops/oxygen-chemistry11-archive-20261106",
+      "expected_sha": "7fade282e805f2eef0caebc3101faeda911701de"
     }
   ]
 }
