@@ -1,0 +1,61 @@
+# BOUNDED RESEARCH-ONLY / SCIENCE_HOLD source and native-input preflight.
+# Explicit self-path on main: one verified exact-head run after PR merge.
+# Required cleanup: remove this one-shot after terminal evidence inspection.
+name: Issue457 Oxygen14 C0 400W P0-P2 once
+run-name: C0 400W chemistry OFF pinned-source preflight @ ${{ github.sha }}
+
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/issue457-oxygen-c0-preflight-once.yml]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: issue457-c0-400-preflight-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  c0-native-preflight:
+    name: Exact Oxygen14 P0/P1/P2 native preflight (not 100us solve)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - name: Checkout exact merged control (one-shot SHA)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: control
+          fetch-depth: 1
+
+      - name: Checkout exact target implementation SHA
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: target
+          fetch-depth: 1
+
+      - name: Governed execution — strictly P0/P1/P2
+        uses: HyungseonSong-plasma/chatgpt-operation/.github/actions/governed-work@9b335e3fbb9c5e8e323e382daeec56fa25336822
+        with:
+          kind: experiments
+          manifest: ${{ github.workspace }}/control/automation/manifests/experiments/Issue_457_experiments01.json
+          control-root: ${{ github.workspace }}/control
+          workspace: ${{ github.workspace }}/target
+          base-sha: ${{ github.sha }}
+          issue: '457'
+          sequence: '01'
+          results: ${{ github.workspace }}/workflow-results
+
+      - name: Preserve P0/P1/P2 governed logs and C0 inputs, even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue457-c0-400-native-preflight-${{ github.sha }}
+          path: |
+            workflow-results/**
+            target/.issue457_pinned_oxygen14/experiments/Issue395_powered_chemistry_ladder/c0_400_p2_preflight/**
+            target/.issue457_pinned_oxygen14/experiments/Issue395_powered_chemistry_ladder/*__C0_chemistry_off.i
+          if-no-files-found: warn
+          retention-days: 30
