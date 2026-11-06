@@ -6,7 +6,7 @@ import json
 import pytest
 
 from experiments.Issue395_powered_chemistry_ladder.chemistry_off_c0 import (
-    ChemistryOffContractError, expected_grid_ns, stage,
+    ChemistryOffContractError, SURFACE_BLOCKS, expected_grid_ns, stage,
 )
 
 
@@ -28,8 +28,9 @@ def test_clean_c0_contract_stages_only_base_and_rf(tmp_path):
     assert result["phase"] == "P0_STATIC_CANDIDATE_ONLY"
     assert result["native_runtime_proved"] is False
     assert result["chemistry_source_ownership_proved"] is False
-    assert result["active_cli_input_files"] == ["base.i", "parent.i"]
-    assert result["check_argv"][3:] == ["base.i", "parent.i"]
+    assert result["active_cli_input_files"] == ["base__C0_chemistry_off.i", "parent.i"]
+    assert result["check_argv"][3:] == ["base__C0_chemistry_off.i", "parent.i"]
+    assert (tmp_path / "base__C0_chemistry_off.i").read_text() == base.read_text()
     assert json.loads(out.read_text()) == result
     with pytest.raises(ChemistryOffContractError, match="overwrite"):
         stage(tmp_path, base, parent, out, verify_git_sha=False)
@@ -72,3 +73,33 @@ def test_include_cycle_and_escape_fail(tmp_path):
     (tmp_path / "physics.i").write_text("!include ../outside.i\n")
     with pytest.raises((ChemistryOffContractError, FileNotFoundError)):
         stage(tmp_path, base, parent, out, verify_git_sha=False)
+
+def test_exact_surface_chemistry_graph_removed_with_charged_wall_retained(tmp_path):
+    base, parent, out = setup_case(tmp_path)
+    blocks = {"FunctorMaterials": [], "FVBCs": [], "Postprocessors": []}
+    for item in SURFACE_BLOCKS:
+        group, name = item.split("/")
+        blocks[group].append(f"  [{name}]\\n    type = ADGenericFunctorMaterial\\n  []\\n")
+    blocks["FVBCs"] += [
+        "  [ion_wall]\\n    type = FVFunctorNeumannBC\\n  []\\n",
+        "  [negative_ion_wall]\\n    type = FVFunctorNeumannBC\\n  []\\n",
+        "  [atomic_positive_ion_wall]\\n    type = FVFunctorNeumannBC\\n  []\\n",
+    ]
+    extra = "".join(f"[{group}]\\n{''.join(values)}[]\\n" for group, values in blocks.items())
+    base.write_text(base.read_text() + extra)
+    result = stage(tmp_path, base, parent, out, verify_git_sha=False)
+    derived = (tmp_path / "base__C0_chemistry_off.i").read_text()
+    assert len(result["removed_reactive_wall_objects"]) == len(SURFACE_BLOCKS) == 15
+    for path in SURFACE_BLOCKS:
+        assert f"[{path.split('/')[-1]}]" not in derived
+    for keep in ("ion_wall", "negative_ion_wall", "atomic_positive_ion_wall"):
+        assert f"[{keep}]" in derived
+    assert base.read_text().endswith(extra)
+
+
+def test_partial_surface_graph_rejected(tmp_path):
+    base, parent, out = setup_case(tmp_path)
+    base.write_text(base.read_text() + "[FVBCs]\\n  [stageb4_O_surface_loss]\\n  []\\n[]\\n")
+    with pytest.raises(ChemistryOffContractError, match="partial surface reaction"):
+        stage(tmp_path, base, parent, out, verify_git_sha=False)
+    assert not out.exists()
