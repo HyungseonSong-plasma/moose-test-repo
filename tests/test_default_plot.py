@@ -10,7 +10,7 @@ import numpy as np
 import pytest
 from scipy.io import netcdf_file
 
-from physics_harness.observation.default_plot import DefaultPlotError, generate, input_fields, layout_rows
+from physics_harness.adapters.moose.default_plot import DefaultPlotError, generate, input_fields, layout_rows
 
 
 def _char_table(variable, names, size=32):
