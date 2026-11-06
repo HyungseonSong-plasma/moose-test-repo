@@ -108,7 +108,7 @@ def main() -> int:
         )
     for name in CASES:
         case_dir = result_dir / name
-        case_dir.mkdir(parents=True, exist_ok=True)
+        # _stage_case creates target atomically and refuses pre-existing dirs.
         row = {"status": "STAGING"}
         report["cases"][name] = row
         try:

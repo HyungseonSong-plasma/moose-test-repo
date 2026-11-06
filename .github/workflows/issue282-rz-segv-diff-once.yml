@@ -1,4 +1,4 @@
-# Differential experiment: same historical 2D geometry and runtime, compare
+# Retrigger #282 differential after fixing staging pre-create collision.\n# Differential experiment: same historical 2D geometry and runtime, compare
 # heavy_base -> E1 energy time -> E2a D=0/100; no scientific approval.
 # Research-only historical 2-D RZ E2a replay using explicitly audited\n# modern PhysicsApp object registration names; original input preserved.\n# Run after exact-head CI; no scientific equivalence claim or package work.
 # The existing 1-D cosine numerical PASS is NOT automatically 2-D scientific PASS.
