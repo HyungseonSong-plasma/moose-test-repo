@@ -79,13 +79,13 @@ def test_exact_surface_chemistry_graph_removed_with_charged_wall_retained(tmp_pa
     blocks = {"FunctorMaterials": [], "FVBCs": [], "Postprocessors": []}
     for item in SURFACE_BLOCKS:
         group, name = item.split("/")
-        blocks[group].append(f"  [{name}]\\n    type = ADGenericFunctorMaterial\\n  []\\n")
+        blocks[group].append(f"  [{name}]\n    type = ADGenericFunctorMaterial\n  []\n")
     blocks["FVBCs"] += [
-        "  [ion_wall]\\n    type = FVFunctorNeumannBC\\n  []\\n",
-        "  [negative_ion_wall]\\n    type = FVFunctorNeumannBC\\n  []\\n",
-        "  [atomic_positive_ion_wall]\\n    type = FVFunctorNeumannBC\\n  []\\n",
+        "  [ion_wall]\n    type = FVFunctorNeumannBC\n  []\n",
+        "  [negative_ion_wall]\n    type = FVFunctorNeumannBC\n  []\n",
+        "  [atomic_positive_ion_wall]\n    type = FVFunctorNeumannBC\n  []\n",
     ]
-    extra = "".join(f"[{group}]\\n{''.join(values)}[]\\n" for group, values in blocks.items())
+    extra = "".join(f"[{group}]\n{''.join(values)}[]\n" for group, values in blocks.items())
     base.write_text(base.read_text() + extra)
     result = stage(tmp_path, base, parent, out, verify_git_sha=False)
     derived = (tmp_path / "base__C0_chemistry_off.i").read_text()
@@ -99,7 +99,7 @@ def test_exact_surface_chemistry_graph_removed_with_charged_wall_retained(tmp_pa
 
 def test_partial_surface_graph_rejected(tmp_path):
     base, parent, out = setup_case(tmp_path)
-    base.write_text(base.read_text() + "[FVBCs]\\n  [stageb4_O_surface_loss]\\n  []\\n[]\\n")
+    base.write_text(base.read_text() + "[FVBCs]\n  [stageb4_O_surface_loss]\n  []\n[]\n")
     with pytest.raises(ChemistryOffContractError, match="partial surface reaction"):
         stage(tmp_path, base, parent, out, verify_git_sha=False)
     assert not out.exists()
