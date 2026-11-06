@@ -193,6 +193,8 @@ jobs:
           python -m pip install
           'pydantic>=2,<3'
           'pytest>=8,<9'
+          'numpy>=1.26,<3'
+          'scipy>=1.14,<2'
           -r requirements-evidence-engine.txt
           -r requirements-ontology.txt
 
