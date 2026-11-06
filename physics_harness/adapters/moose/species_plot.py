@@ -234,6 +234,7 @@ def _native_species(exodus: Path, block: str, time_index: int | None,
         if not np.all(np.isfinite(phi[plasma_nodes])):
             raise DefaultPlotError("nonfinite plasma potential values")
         observables["potential"] = ("nodal", phi)
+        sources["potential"] = "native nodal potential [V]; linear color"
     else:
         unavailable_observables["potential"] = "native nodal potential absent"
     if "log_ne" in nodal_values and "log_energy" in nodal_values:
@@ -245,6 +246,7 @@ def _native_species(exodus: Path, block: str, time_index: int | None,
         if not np.all(np.isfinite(te[plasma_nodes])) or np.any(te[plasma_nodes] < 0):
             raise DefaultPlotError("nonfinite native electron-temperature conversion")
         observables["T_e"] = ("nodal", te)
+        sources["T_e"] = "native nodal log_energy and log_ne; T_e=(2/3) exp(log_energy-log_ne) [eV]"
     else:
         unavailable_observables["T_e"] = "requires nodal log_ne and log_energy"
 
@@ -300,7 +302,7 @@ def generate_species(exodus: Path, output: Path, *, inputs: Sequence[Path] = (),
         raise DefaultPlotError(f"requested species unavailable: {missing}")
     selected = requested or [s for s in known if s in catalog]
     if not selected:
-        raise DefaultPlotError("no recoverable species density from native Exodus")
+        raise DefaultPlotError("no recoverable 2D species, potential or electron-temperature fields")
     widths = layout_rows(len(selected), layout)
     tri = data["triangles"]
     nodes = np.unique(tri.ravel())
@@ -360,7 +362,7 @@ def generate_species(exodus: Path, output: Path, *, inputs: Sequence[Path] = (),
             ax.tick_params(labelsize=7)
             fig.colorbar(img, ax=ax, fraction=0.046, pad=0.03)
 
-        fig.suptitle(f"Oxygen14 species densities | t={data['time_s']*1e6:.8g} us | plasma | cmap={cmap}",
+        fig.suptitle(f"Oxygen14 2D observables | t={data['time_s']*1e6:.8g} us | plasma | cmap={cmap}",
                      fontsize=12, y=0.993)
         output.parent.mkdir(parents=True, exist_ok=True)
         fig.savefig(output, dpi=dpi, facecolor="white")
@@ -368,7 +370,7 @@ def generate_species(exodus: Path, output: Path, *, inputs: Sequence[Path] = (),
         plt.close(fig)
     summary = {
         "status": "EXODUS_DERIVED_SPECIES_DENSITIES_NOT_SCIENCE_PASS",
-        "mode": "species", "species_profile": "Oxygen14_charge_and_neutral",
+        "species_profile": "Oxygen14_charge_and_neutral",
         "exodus": str(exodus), "exodus_sha256": hashlib.sha256(exodus.read_bytes()).hexdigest(),
         "inputs": [str(p) for p in inputs],
         "input_sha256": {str(p): hashlib.sha256(p.read_bytes()).hexdigest() for p in inputs},
