@@ -1,0 +1,68 @@
+{
+  "source": "Original GitHub Actions 11-branch experimental archives; locally downloaded and ZIP CRC-verified in the requesting user's private conversation on 2026-11-06",
+  "raw_zip_count": 10,
+  "raw_zip_bytes": 803244544,
+  "caveat": "Local conversation copies must be downloaded by the user to durable independent storage; GitHub Actions copies expire.",
+  "sha256_by_artifact": [
+    {
+      "artifact_id": 13168553651,
+      "sha256": "34f48e8986f3e0b9f01308cbbc9925d1e65dec9e50ae060c52ab93bf2be83203",
+      "bytes": 6949365,
+      "integrity": "ZIP_CRC_PASS"
+    },
+    {
+      "artifact_id": 13164512409,
+      "sha256": "17d5ce9d2418301f2d758347169f7443157f95bedc62c4547ba46e1a773ed9cc",
+      "bytes": 6931004,
+      "integrity": "ZIP_CRC_PASS"
+    },
+    {
+      "artifact_id": 13168483660,
+      "sha256": "13040685c0b376e1f7bb1d6a3eda1ac0c6152ec0dea9e83991451efb8f307660",
+      "bytes": 86600608,
+      "integrity": "ZIP_CRC_PASS"
+    },
+    {
+      "artifact_id": 13164757068,
+      "sha256": "717a6582081537f8ee66ab35fa7c0f8c1cfa47b851c383197478e695cceab50e",
+      "bytes": 86487555,
+      "integrity": "ZIP_CRC_PASS"
+    },
+    {
+      "artifact_id": 13146217401,
+      "sha256": "45ef38d8b7ccfb8791d8d1560454e04c59d6b340be194c58c8b2bfc727c11b07",
+      "bytes": 92891585,
+      "integrity": "ZIP_CRC_PASS"
+    },
+    {
+      "artifact_id": 13144819358,
+      "sha256": "0a80140b84a937cb3f136b4c74fc522009259184bc91426fcc689263bf0f8681",
+      "bytes": 293445093,
+      "integrity": "ZIP_CRC_PASS"
+    },
+    {
+      "artifact_id": 13370530275,
+      "sha256": "38890bb4c6bd179e32a87998ae743cbce6defad66aec0095c44380b186951bb9",
+      "bytes": 107639165,
+      "integrity": "ZIP_CRC_PASS"
+    },
+    {
+      "artifact_id": 13369991557,
+      "sha256": "2fa26308e6e68e8891cfde06c4207d86e2153fd0b49cec166940bf2581fb5a01",
+      "bytes": 7473199,
+      "integrity": "ZIP_CRC_PASS"
+    },
+    {
+      "artifact_id": 13365531537,
+      "sha256": "021a309c5f82ddbfae2c39a41e45c5c1247dbe067d513da494d16f109e120628",
+      "bytes": 107390549,
+      "integrity": "ZIP_CRC_PASS"
+    },
+    {
+      "artifact_id": 13365267299,
+      "sha256": "757dfb20df9187f065cf5a6bbb3e3aefda8a0f2fbc928b9b079d26dc9649f818",
+      "bytes": 7436421,
+      "integrity": "ZIP_CRC_PASS"
+    }
+  ]
+}

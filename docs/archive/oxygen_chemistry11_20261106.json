@@ -1,0 +1,1136 @@
+{
+  "version": 1,
+  "repository": "HyungseonSong-plasma/moose-test-repo",
+  "date": "2026-11-06",
+  "scope": "11 rejected/legacy chemistry, cross-section, MCS and Oxygen25 experiment branches only",
+  "source_git_ref": "main",
+  "source_main_sha": "7e6a2585dc542ab72a5a78f214722da52166ebfb",
+  "archive_policy": "Retain Git-tracked code/data and ancestors as immutable lightweight exact-head archive tags before Samuel deletion",
+  "artifact_policy": "GitHub Actions ZIPs are NOT embedded in Git tags; see separate artifacts inventory and externally download raw Exodus, CSV and checkpoints before expires_at",
+  "scientific_status": "SCIENCE_HOLD; no approval or promotion",
+  "targets": [
+    {
+      "branch": "issue-407-ei10-te-dependent-20261030",
+      "head_sha": "14f54cc4127c9a294b8f3be0e02b71d1612384a4",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-407-ei10-te-dependent-20261030-14f54cc4127c",
+      "run_count": 2,
+      "recent_runs": [
+        {
+          "id": 41045066335,
+          "commit": "14f54cc4127c9a294b8f3be0e02b71d1612384a4",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T11:01:47Z"
+        },
+        {
+          "id": 41045066403,
+          "commit": "14f54cc4127c9a294b8f3be0e02b71d1612384a4",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T11:01:47Z"
+        }
+      ],
+      "actions_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions?query=branch%3Aissue-407-ei10-te-dependent-20261030"
+    },
+    {
+      "branch": "issue-411-o2-ex1-4p5ev-formula",
+      "head_sha": "bfa97eaa5279ab38ff42be2f549fc9a8ea85e6ad",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-411-o2-ex1-4p5ev-formula-bfa97eaa5279",
+      "run_count": 2,
+      "recent_runs": [
+        {
+          "id": 41047221502,
+          "commit": "bfa97eaa5279ab38ff42be2f549fc9a8ea85e6ad",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T11:19:10Z"
+        },
+        {
+          "id": 41047221325,
+          "commit": "bfa97eaa5279ab38ff42be2f549fc9a8ea85e6ad",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T11:19:10Z"
+        }
+      ],
+      "actions_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions?query=branch%3Aissue-411-o2-ex1-4p5ev-formula"
+    },
+    {
+      "branch": "issue-419-2259-o2plus-dr-cross-section",
+      "head_sha": "fe4c2e9667d9ffe673f64466e836b71729cf630c",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-419-2259-o2plus-dr-cross-section-fe4c2e9667d9",
+      "run_count": 2,
+      "recent_runs": [
+        {
+          "id": 41054837863,
+          "commit": "fe4c2e9667d9ffe673f64466e836b71729cf630c",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T12:22:23Z"
+        },
+        {
+          "id": 41054837882,
+          "commit": "fe4c2e9667d9ffe673f64466e836b71729cf630c",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T12:22:23Z"
+        }
+      ],
+      "actions_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions?query=branch%3Aissue-419-2259-o2plus-dr-cross-section"
+    },
+    {
+      "branch": "issue-419-o2s-2072-2074-lookup-prep",
+      "head_sha": "b1dfe292d2d9b19bd91cb2131f55d172996b4040",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-419-o2s-2072-2074-lookup-prep-b1dfe292d2d9",
+      "run_count": 4,
+      "recent_runs": [
+        {
+          "id": 41059443073,
+          "commit": "b1dfe292d2d9b19bd91cb2131f55d172996b4040",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T12:58:40Z"
+        },
+        {
+          "id": 41059443084,
+          "commit": "b1dfe292d2d9b19bd91cb2131f55d172996b4040",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T12:58:40Z"
+        },
+        {
+          "id": 41059140962,
+          "commit": "1b7429217d22065af9bbbfb3637638987cfd4096",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T12:56:14Z"
+        },
+        {
+          "id": 41059141047,
+          "commit": "1b7429217d22065af9bbbfb3637638987cfd4096",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T12:56:14Z"
+        }
+      ],
+      "actions_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions?query=branch%3Aissue-419-o2s-2072-2074-lookup-prep"
+    },
+    {
+      "branch": "issue-419-phelps-o2-4p5-acquisition",
+      "head_sha": "ec4783929a82f53d102abb7661191f81479000bb",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-419-phelps-o2-4p5-acquisition-ec4783929a82",
+      "run_count": 136,
+      "recent_runs": [
+        {
+          "id": 41088545549,
+          "commit": "ec4783929a82f53d102abb7661191f81479000bb",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T16:17:35Z"
+        },
+        {
+          "id": 41088545573,
+          "commit": "ec4783929a82f53d102abb7661191f81479000bb",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T16:17:35Z"
+        },
+        {
+          "id": 41088491671,
+          "commit": "408cc22052ba74d55de18f1e7fdd35a12ee9905f",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T16:17:15Z"
+        },
+        {
+          "id": 41088491566,
+          "commit": "408cc22052ba74d55de18f1e7fdd35a12ee9905f",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T16:17:15Z"
+        },
+        {
+          "id": 41086306484,
+          "commit": "a86fa377f0f63333218bb187bd9e71c31c56c177",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T16:02:58Z"
+        },
+        {
+          "id": 41086306540,
+          "commit": "a86fa377f0f63333218bb187bd9e71c31c56c177",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T16:02:58Z"
+        },
+        {
+          "id": 41086171183,
+          "commit": "d07bfbc2d2a26698c0884958cb3f23ed4c8f15f1",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T16:02:06Z"
+        },
+        {
+          "id": 41086171179,
+          "commit": "d07bfbc2d2a26698c0884958cb3f23ed4c8f15f1",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T16:02:06Z"
+        },
+        {
+          "id": 41086071131,
+          "commit": "5db534397b57d9826851b7b955424e31f3b0378e",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T16:01:27Z"
+        },
+        {
+          "id": 41086071076,
+          "commit": "5db534397b57d9826851b7b955424e31f3b0378e",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T16:01:27Z"
+        },
+        {
+          "id": 41079901787,
+          "commit": "7fa1868d23170a064efdcf83b7dfbcc2f9b52e8e",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T15:21:09Z"
+        },
+        {
+          "id": 41079901641,
+          "commit": "7fa1868d23170a064efdcf83b7dfbcc2f9b52e8e",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T15:21:08Z"
+        },
+        {
+          "id": 41079789272,
+          "commit": "1ab97a3cfc162d23dbe7e681985c4d09795d8631",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T15:20:25Z"
+        },
+        {
+          "id": 41079789483,
+          "commit": "1ab97a3cfc162d23dbe7e681985c4d09795d8631",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T15:20:25Z"
+        },
+        {
+          "id": 41079715412,
+          "commit": "0801c200276d2f68b859e7dd4de978e3f0d94cd8",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T15:19:58Z"
+        },
+        {
+          "id": 41079715108,
+          "commit": "0801c200276d2f68b859e7dd4de978e3f0d94cd8",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T15:19:58Z"
+        },
+        {
+          "id": 41079591123,
+          "commit": "a07ca96f981b5a0b6cc5e3cf74bea6aa96bd9149",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T15:19:10Z"
+        },
+        {
+          "id": 41079591196,
+          "commit": "a07ca96f981b5a0b6cc5e3cf74bea6aa96bd9149",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T15:19:10Z"
+        },
+        {
+          "id": 41077856784,
+          "commit": "cbf9ab96a9159b49fa7238a960db8405ee729dd8",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T15:08:00Z"
+        },
+        {
+          "id": 41077856738,
+          "commit": "cbf9ab96a9159b49fa7238a960db8405ee729dd8",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T15:08:00Z"
+        },
+        {
+          "id": 41077801441,
+          "commit": "fcb92fcddf3e89da43118d596f55fd96f85c3ce3",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T15:07:38Z"
+        },
+        {
+          "id": 41077801409,
+          "commit": "fcb92fcddf3e89da43118d596f55fd96f85c3ce3",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T15:07:38Z"
+        },
+        {
+          "id": 41077670242,
+          "commit": "6503cdbb01a6c35333e8a3f0a6f8070f272ebf1b",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T15:06:46Z"
+        },
+        {
+          "id": 41077670321,
+          "commit": "6503cdbb01a6c35333e8a3f0a6f8070f272ebf1b",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T15:06:46Z"
+        },
+        {
+          "id": 41077562496,
+          "commit": "367f753e500bab0d5ef4c063426ae767084c75aa",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T15:06:03Z"
+        },
+        {
+          "id": 41077562888,
+          "commit": "367f753e500bab0d5ef4c063426ae767084c75aa",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T15:06:03Z"
+        },
+        {
+          "id": 41077491837,
+          "commit": "d970f0096dde906f455ddd5153d375f778cf0c40",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T15:05:35Z"
+        },
+        {
+          "id": 41077491894,
+          "commit": "d970f0096dde906f455ddd5153d375f778cf0c40",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T15:05:35Z"
+        },
+        {
+          "id": 41077449069,
+          "commit": "86bc39caf8ccb7f057379997dc00d5fa084a007f",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T15:05:18Z"
+        },
+        {
+          "id": 41077449078,
+          "commit": "86bc39caf8ccb7f057379997dc00d5fa084a007f",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T15:05:18Z"
+        },
+        {
+          "id": 41076320974,
+          "commit": "748668c0f893ff3bf57be5933701121e01c9d410",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T14:57:58Z"
+        },
+        {
+          "id": 41076320826,
+          "commit": "748668c0f893ff3bf57be5933701121e01c9d410",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T14:57:58Z"
+        },
+        {
+          "id": 41076143415,
+          "commit": "806d64ad17f2f8deb92d87eecf4f4c07855a63f2",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "failure",
+          "date": "2026-10-30T14:56:45Z"
+        },
+        {
+          "id": 41076143434,
+          "commit": "806d64ad17f2f8deb92d87eecf4f4c07855a63f2",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T14:56:45Z"
+        },
+        {
+          "id": 41076047090,
+          "commit": "3f6766b0adfcc88df7e5f80f24ec525374ac56bd",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T14:56:06Z"
+        },
+        {
+          "id": 41076047110,
+          "commit": "3f6766b0adfcc88df7e5f80f24ec525374ac56bd",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T14:56:06Z"
+        },
+        {
+          "id": 41075950868,
+          "commit": "be42afd77642aa22d22fe8ff09fdbf00dd2cb639",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T14:55:26Z"
+        },
+        {
+          "id": 41075950950,
+          "commit": "be42afd77642aa22d22fe8ff09fdbf00dd2cb639",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T14:55:26Z"
+        },
+        {
+          "id": 41075804833,
+          "commit": "b52120b65b8547eb660274d4e4286809dfa15145",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T14:54:28Z"
+        },
+        {
+          "id": 41075805090,
+          "commit": "b52120b65b8547eb660274d4e4286809dfa15145",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T14:54:28Z"
+        },
+        {
+          "id": 41074567861,
+          "commit": "0b3d81775c1e2f7d9f83f5d49c9facf5139438c9",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T14:46:13Z"
+        },
+        {
+          "id": 41074568944,
+          "commit": "0b3d81775c1e2f7d9f83f5d49c9facf5139438c9",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T14:46:13Z"
+        },
+        {
+          "id": 41074349234,
+          "commit": "3e7bf9cd4c8ea337adbae3fd465741c53e72acfd",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T14:44:47Z"
+        },
+        {
+          "id": 41074349285,
+          "commit": "3e7bf9cd4c8ea337adbae3fd465741c53e72acfd",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T14:44:47Z"
+        },
+        {
+          "id": 41074284963,
+          "commit": "25b130a4db1ae92da65832e2a9d7a0eeb494c44e",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T14:44:22Z"
+        },
+        {
+          "id": 41074284961,
+          "commit": "25b130a4db1ae92da65832e2a9d7a0eeb494c44e",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T14:44:22Z"
+        },
+        {
+          "id": 41074258984,
+          "commit": "c493198d2edd35ed5cda3fa5ab5b2f79cfbf009e",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "failure",
+          "date": "2026-10-30T14:44:12Z"
+        },
+        {
+          "id": 41074258947,
+          "commit": "c493198d2edd35ed5cda3fa5ab5b2f79cfbf009e",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T14:44:11Z"
+        },
+        {
+          "id": 41074216825,
+          "commit": "11239bb41dec5c64ca2d6c65a991c621cf25cce2",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "failure",
+          "date": "2026-10-30T14:43:54Z"
+        },
+        {
+          "id": 41074216820,
+          "commit": "11239bb41dec5c64ca2d6c65a991c621cf25cce2",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T14:43:54Z"
+        },
+        {
+          "id": 41074126945,
+          "commit": "0444a0488803659106a0db7d89f97721a856db5e",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T14:43:19Z"
+        },
+        {
+          "id": 41074126792,
+          "commit": "0444a0488803659106a0db7d89f97721a856db5e",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "failure",
+          "date": "2026-10-30T14:43:19Z"
+        },
+        {
+          "id": 41074071458,
+          "commit": "d790ea07e0c19901bc379662b59d93fff139fed8",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T14:42:56Z"
+        },
+        {
+          "id": 41074071466,
+          "commit": "d790ea07e0c19901bc379662b59d93fff139fed8",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "failure",
+          "date": "2026-10-30T14:42:56Z"
+        },
+        {
+          "id": 41074048362,
+          "commit": "91a775e823124e022beeb8e7b5c53e22a05660fd",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T14:42:47Z"
+        },
+        {
+          "id": 41074048376,
+          "commit": "91a775e823124e022beeb8e7b5c53e22a05660fd",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T14:42:47Z"
+        },
+        {
+          "id": 41072226796,
+          "commit": "1a0d19b64ea024cb8972ab25c0bebc33443de5c5",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T14:31:05Z"
+        },
+        {
+          "id": 41072226792,
+          "commit": "1a0d19b64ea024cb8972ab25c0bebc33443de5c5",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T14:31:05Z"
+        },
+        {
+          "id": 41072173098,
+          "commit": "c87c9a9c6a0f407c66c3c311bae55066b2f17cc4",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T14:30:46Z"
+        },
+        {
+          "id": 41072173132,
+          "commit": "c87c9a9c6a0f407c66c3c311bae55066b2f17cc4",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T14:30:46Z"
+        },
+        {
+          "id": 41071958464,
+          "commit": "01058693bfb28af13eca7b72382d315c84a21efd",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T14:29:31Z"
+        },
+        {
+          "id": 41071958281,
+          "commit": "01058693bfb28af13eca7b72382d315c84a21efd",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T14:29:31Z"
+        },
+        {
+          "id": 41071891688,
+          "commit": "c1affb09d127afbd6a32b37f306929a6488b78b7",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T14:29:10Z"
+        },
+        {
+          "id": 41071891966,
+          "commit": "c1affb09d127afbd6a32b37f306929a6488b78b7",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T14:29:10Z"
+        },
+        {
+          "id": 41070905627,
+          "commit": "e20e499498ac3b9624192b851e9e64f4c20cf039",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T14:19:46Z"
+        },
+        {
+          "id": 41070905502,
+          "commit": "e20e499498ac3b9624192b851e9e64f4c20cf039",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T14:19:46Z"
+        },
+        {
+          "id": 41070873559,
+          "commit": "65ae0b16ead2f783c9b0a077bd060c8ec273b312",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T14:19:33Z"
+        },
+        {
+          "id": 41070873555,
+          "commit": "65ae0b16ead2f783c9b0a077bd060c8ec273b312",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "failure",
+          "date": "2026-10-30T14:19:33Z"
+        },
+        {
+          "id": 41070825957,
+          "commit": "69f53901e1cb9796d5e83a3d80fd5579425e0e8d",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T14:19:14Z"
+        },
+        {
+          "id": 41070825955,
+          "commit": "69f53901e1cb9796d5e83a3d80fd5579425e0e8d",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "failure",
+          "date": "2026-10-30T14:19:14Z"
+        },
+        {
+          "id": 41070323386,
+          "commit": "8cd8a1ab3439dad65183e4f8fae4c41f369a317b",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T14:15:53Z"
+        },
+        {
+          "id": 41070323398,
+          "commit": "8cd8a1ab3439dad65183e4f8fae4c41f369a317b",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T14:15:53Z"
+        },
+        {
+          "id": 41069549852,
+          "commit": "5fd98772d46c1315b341b4ad6c4f4843a58b2eab",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T14:10:42Z"
+        },
+        {
+          "id": 41069550009,
+          "commit": "5fd98772d46c1315b341b4ad6c4f4843a58b2eab",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T14:10:42Z"
+        },
+        {
+          "id": 41069372125,
+          "commit": "768b9f02291eb9da8174c36e907f55f73393cabe",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T14:09:31Z"
+        },
+        {
+          "id": 41069372078,
+          "commit": "768b9f02291eb9da8174c36e907f55f73393cabe",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T14:09:31Z"
+        },
+        {
+          "id": 41069005263,
+          "commit": "836c979706b11c2c5c587939e1501d8048df8461",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T14:07:02Z"
+        },
+        {
+          "id": 41069005012,
+          "commit": "836c979706b11c2c5c587939e1501d8048df8461",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T14:07:02Z"
+        },
+        {
+          "id": 41068513758,
+          "commit": "6f51944b6aadf3bf3572b63e82763caed63d31d1",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T14:03:44Z"
+        },
+        {
+          "id": 41068513484,
+          "commit": "6f51944b6aadf3bf3572b63e82763caed63d31d1",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T14:03:44Z"
+        },
+        {
+          "id": 41068482277,
+          "commit": "b4a6e73b17a78265d321107862dee95ab27ae304",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T14:03:31Z"
+        },
+        {
+          "id": 41068482057,
+          "commit": "b4a6e73b17a78265d321107862dee95ab27ae304",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T14:03:31Z"
+        },
+        {
+          "id": 41068421070,
+          "commit": "0874a78f4e0e74f128671c4deac58ddb7cf46c3e",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T14:03:06Z"
+        },
+        {
+          "id": 41068421066,
+          "commit": "0874a78f4e0e74f128671c4deac58ddb7cf46c3e",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T14:03:06Z"
+        },
+        {
+          "id": 41068327009,
+          "commit": "40568af2f2b0f0b152e1dbd987ca52dbf455dbe3",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T14:02:29Z"
+        },
+        {
+          "id": 41068326818,
+          "commit": "40568af2f2b0f0b152e1dbd987ca52dbf455dbe3",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "failure",
+          "date": "2026-10-30T14:02:29Z"
+        },
+        {
+          "id": 41066991579,
+          "commit": "e76478e7cddf09412cb8c2c3b2d4eb0749313e4b",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T13:53:20Z"
+        },
+        {
+          "id": 41066991291,
+          "commit": "e76478e7cddf09412cb8c2c3b2d4eb0749313e4b",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T13:53:20Z"
+        },
+        {
+          "id": 41066811237,
+          "commit": "a3d40155d571f9cbf0d1075bdf85cf48c5de7bdb",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T13:52:04Z"
+        },
+        {
+          "id": 41066811287,
+          "commit": "a3d40155d571f9cbf0d1075bdf85cf48c5de7bdb",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T13:52:04Z"
+        },
+        {
+          "id": 41066758425,
+          "commit": "1ab60799a872ec4f37ad06340d961ae5e2770e12",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T13:51:42Z"
+        },
+        {
+          "id": 41066758424,
+          "commit": "1ab60799a872ec4f37ad06340d961ae5e2770e12",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "failure",
+          "date": "2026-10-30T13:51:42Z"
+        },
+        {
+          "id": 41066669366,
+          "commit": "1fb67eb45cca99cbc603fda4fb061f748df95346",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T13:51:05Z"
+        },
+        {
+          "id": 41066669419,
+          "commit": "1fb67eb45cca99cbc603fda4fb061f748df95346",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T13:51:05Z"
+        },
+        {
+          "id": 41059053335,
+          "commit": "8f4bade7f24da9fc42c515d3a0a781f2e184fa31",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T12:55:32Z"
+        },
+        {
+          "id": 41059053366,
+          "commit": "8f4bade7f24da9fc42c515d3a0a781f2e184fa31",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T12:55:32Z"
+        },
+        {
+          "id": 41059019544,
+          "commit": "50e22fa24656291dcadbca41e2bac9a3cf6ca636",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T12:55:17Z"
+        },
+        {
+          "id": 41059019533,
+          "commit": "50e22fa24656291dcadbca41e2bac9a3cf6ca636",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T12:55:17Z"
+        },
+        {
+          "id": 41058799718,
+          "commit": "743cceaf5f5626756296ef25bed6f5ccd84503c2",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T12:53:35Z"
+        },
+        {
+          "id": 41058799767,
+          "commit": "743cceaf5f5626756296ef25bed6f5ccd84503c2",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T12:53:35Z"
+        }
+      ],
+      "actions_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions?query=branch%3Aissue-419-phelps-o2-4p5-acquisition"
+    },
+    {
+      "branch": "issue-419-screenshot-25-reaction-audit",
+      "head_sha": "433af70371af38a8e29ee59e9fb7a9670be0e19b",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-419-screenshot-25-reaction-audit-433af70371af",
+      "run_count": 8,
+      "recent_runs": [
+        {
+          "id": 41065138506,
+          "commit": "433af70371af38a8e29ee59e9fb7a9670be0e19b",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T13:40:09Z"
+        },
+        {
+          "id": 41065138020,
+          "commit": "433af70371af38a8e29ee59e9fb7a9670be0e19b",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T13:40:09Z"
+        },
+        {
+          "id": 41065094956,
+          "commit": "026960c694d2adcd1f0a87ca3a9da01d46dec01e",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T13:39:49Z"
+        },
+        {
+          "id": 41065094982,
+          "commit": "026960c694d2adcd1f0a87ca3a9da01d46dec01e",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T13:39:49Z"
+        },
+        {
+          "id": 41063111324,
+          "commit": "248a1f34d1f47d4bf371706d9e11440d60736b7d",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T13:25:25Z"
+        },
+        {
+          "id": 41063111445,
+          "commit": "248a1f34d1f47d4bf371706d9e11440d60736b7d",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T13:25:25Z"
+        },
+        {
+          "id": 41061099975,
+          "commit": "1f649ed64d555574ad223bf9e67dc35a6c80d4b7",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T13:10:55Z"
+        },
+        {
+          "id": 41061100045,
+          "commit": "1f649ed64d555574ad223bf9e67dc35a6c80d4b7",
+          "event": "pull_request",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-10-30T13:10:55Z"
+        }
+      ],
+      "actions_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions?query=branch%3Aissue-419-screenshot-25-reaction-audit"
+    },
+    {
+      "branch": "issue432-nine-ratio-once-20261104",
+      "head_sha": "bf117df39012cea98c3509188f6ba0c6e27de6b0",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue432-nine-ratio-once-20261104-bf117df39012",
+      "run_count": 1,
+      "recent_runs": [
+        {
+          "id": 41869163833,
+          "commit": "cbd6460998071e680e902666cf3cb5d7a2763506",
+          "event": "push",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-11-04T16:37:22Z"
+        }
+      ],
+      "actions_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions?query=branch%3Aissue432-nine-ratio-once-20261104"
+    },
+    {
+      "branch": "issue432-ei2073-nine-ratio-once-20261104",
+      "head_sha": "5d74c43fb45c86b8eec0b245564a76a0fa963faf",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue432-ei2073-nine-ratio-once-20261104-5d74c43fb45c",
+      "run_count": 1,
+      "recent_runs": [
+        {
+          "id": 41873467193,
+          "commit": "6d975d49a1d6d4348cfe48f08361b21b977a2316",
+          "event": "push",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-11-04T17:01:53Z"
+        }
+      ],
+      "actions_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions?query=branch%3Aissue432-ei2073-nine-ratio-once-20261104"
+    },
+    {
+      "branch": "experiment/oxygen25-initial-eedf-400-1000w-0to1us-20261102",
+      "head_sha": "468fc5d9edef07bf7b702c8cf09447d901f97328",
+      "archive_tag": "archive/oxygen-cleanup-20261106/experiment-oxygen25-initial-eedf-400-1000w-0to1us-20261102-468fc5d9edef",
+      "run_count": 4,
+      "recent_runs": [
+        {
+          "id": 41472615220,
+          "commit": "468fc5d9edef07bf7b702c8cf09447d901f97328",
+          "event": "push",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-11-02T15:32:40Z"
+        },
+        {
+          "id": 41472423284,
+          "commit": "ccaac45c52bcfb34b3320f24383e28253c7fbd69",
+          "event": "push",
+          "status": "completed",
+          "conclusion": "failure",
+          "date": "2026-11-02T15:31:30Z"
+        },
+        {
+          "id": 41472029397,
+          "commit": "c1a4d13da4f44bbd15d6d373df9c3882e79d464c",
+          "event": "push",
+          "status": "completed",
+          "conclusion": "failure",
+          "date": "2026-11-02T15:29:08Z"
+        },
+        {
+          "id": 41470839167,
+          "commit": "2cf69adcac4a669b0e384ac4ce63f1e9cc451817",
+          "event": "push",
+          "status": "completed",
+          "conclusion": "failure",
+          "date": "2026-11-02T15:21:49Z"
+        }
+      ],
+      "actions_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions?query=branch%3Aexperiment%2Foxygen25-initial-eedf-400-1000w-0to1us-20261102"
+    },
+    {
+      "branch": "issue-419-1000w-100us-1ms-dt2p5us-20261102",
+      "head_sha": "80fb14c28a4eb78205e5ff903eb7aa094a3572ce",
+      "archive_tag": "archive/oxygen-cleanup-20261106/issue-419-1000w-100us-1ms-dt2p5us-20261102-80fb14c28a4e",
+      "run_count": 1,
+      "recent_runs": [
+        {
+          "id": 41430686405,
+          "commit": "80fb14c28a4eb78205e5ff903eb7aa094a3572ce",
+          "event": "push",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-11-02T10:40:26Z"
+        }
+      ],
+      "actions_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions?query=branch%3Aissue-419-1000w-100us-1ms-dt2p5us-20261102"
+    },
+    {
+      "branch": "experiment-no-ei943-h24-h25-400-1000w-20261104",
+      "head_sha": "19e09cd90f4aa50f928e3abbbb76daf19e51105b",
+      "archive_tag": "archive/oxygen-cleanup-20261106/experiment-no-ei943-h24-h25-400-1000w-20261104-19e09cd90f4a",
+      "run_count": 3,
+      "recent_runs": [
+        {
+          "id": 41883827567,
+          "commit": "60412d4e2ca844ca638d107fd589b006602efbf5",
+          "event": "push",
+          "status": "completed",
+          "conclusion": "failure",
+          "date": "2026-11-04T18:06:48Z"
+        },
+        {
+          "id": 41883786886,
+          "commit": "19e09cd90f4aa50f928e3abbbb76daf19e51105b",
+          "event": "push",
+          "status": "completed",
+          "conclusion": "success",
+          "date": "2026-11-04T18:06:35Z"
+        },
+        {
+          "id": 41883709037,
+          "commit": "3886fa6ada5bcd0f0caa759ecb94861ec26766f3",
+          "event": "push",
+          "status": "completed",
+          "conclusion": "failure",
+          "date": "2026-11-04T18:06:10Z"
+        }
+      ],
+      "actions_url": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions?query=branch%3Aexperiment-no-ei943-h24-h25-400-1000w-20261104"
+    }
+  ]
+}
