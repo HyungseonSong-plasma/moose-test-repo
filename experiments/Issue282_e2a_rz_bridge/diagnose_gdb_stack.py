@@ -227,6 +227,8 @@ def main() -> int:
             *debug_gdb_command("--batch", "--quiet"),
             "-ex", "set pagination off",
             "-ex", "set confirm off",
+            # Minimal PhysicsApp image has no /bin/sh; GDB must exec binary directly.
+            "-ex", "set startup-with-shell off",
             "-ex", "set print frame-arguments all",
             "-ex", "handle SIGSEGV stop print nopass",
             "-ex", "run",
