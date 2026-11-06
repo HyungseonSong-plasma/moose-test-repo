@@ -62,3 +62,34 @@ def test_invalid_image_entrypoint_fails_closed() -> None:
         docker_entrypoint({"Config": {"Entrypoint": None}})
     with pytest.raises(ValueError, match="shell entrypoint"):
         docker_entrypoint({"Config": {"Entrypoint": ["/bin/sh", "-c", "physics-opt"]}})
+
+
+def test_thread_qualified_native_first_sigsegv_is_not_a_false_negative() -> None:
+    from experiments.Issue282_e2a_rz_bridge.diagnose_gdb_stack import classify_gdb_log
+
+    # Minimal transcription of real immutable Actions #42249539811
+    # (artifact #13519757615); existing automation wrongly required "Program".
+    excerpt = (
+        'Thread 1 "physics-opt" received signal SIGSEGV, Segmentation fault.\n'
+        '0x0000000000000000 in ?? ()\n'
+        'Thread 1 (LWP 12 "physics-opt"):\n'
+        '#0  0x0000000000000000 in ?? ()\n'
+        '#1  ADFParser::Eval(...) () from libmoose-opt.so.0\n'
+        '#4  ParsedFunctorMaterialTempl<true>::operator() (...)\n'
+        '#9  ElementIntegralFunctorPostprocessorTempl<true>::computeQpIntegral()\n'
+        '#18 FEProblemBase::initialSetup()\n'
+    )
+    actual = classify_gdb_log(excerpt)
+    assert all(actual.values())
+    assert classify_gdb_log(excerpt.replace(
+        'Thread 1 "physics-opt" received', 'Program received'
+    ))["segv_captured"]
+
+
+def test_nonfault_or_missing_parser_stack_does_not_claim_capture() -> None:
+    from experiments.Issue282_e2a_rz_bridge.diagnose_gdb_stack import classify_gdb_log
+
+    assert not classify_gdb_log("exited normally\n")["segv_captured"]
+    assert not classify_gdb_log(
+        'Thread 1 received signal SIGSEGV, Segmentation fault.\n#0 0x0 in ?? ()\n'
+    )["stack_frames_present"]
