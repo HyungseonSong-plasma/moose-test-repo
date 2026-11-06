@@ -1,4 +1,4 @@
-# Second bounded first-SIGSEGV stack attempt: isolated debugger rootfs for minimal\n# PhysicsApp image; original RZ inputs, image digest and models remain unchanged.
+# Third bounded first-SIGSEGV stack attempt: native GDB with startup shell OFF.\n# PhysicsApp image; original RZ inputs, image digest and models remain unchanged.
 # User approved Track A; no SOL/Adapter packaging, no science gate promotion.
 # Self-path main trigger exactly once; remove after terminal evidence.
 name: Issue282 native RZ first SIGSEGV stack once

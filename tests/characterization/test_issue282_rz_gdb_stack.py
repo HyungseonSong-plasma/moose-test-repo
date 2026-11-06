@@ -4,6 +4,8 @@ The tests do not launch any backend or grant Physics #282 science acceptance.
 """
 from __future__ import annotations
 
+import inspect
+
 import pytest
 
 from experiments.Issue282_e2a_rz_bridge.diagnose_gdb_stack import (
@@ -14,6 +16,7 @@ from experiments.Issue282_e2a_rz_bridge.diagnose_gdb_stack import (
     debug_dockerfile,
     debug_gdb_command,
     docker_entrypoint,
+    main,
     sha256,
 )
 from experiments.Issue282_e2a_rz_bridge.diagnose_segv import make_case
@@ -31,6 +34,7 @@ def test_gdb_contract_is_exact_and_nonpackaging() -> None:
     assert debug_gdb_command("--version")[-1] == "--version"
     assert debug_gdb_command("--version")[0] == "--entrypoint"
     assert "lib/x86_64-linux-gnu/ld-linux-x86-64.so.2" in debug_gdb_command("--version")[1]
+    assert "set startup-with-shell off" in inspect.getsource(main)
     assert "sol-adapter-moose" not in debug_dockerfile()
     assert len(MESH_SHA256) == 64
 
