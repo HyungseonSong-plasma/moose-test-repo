@@ -52,6 +52,8 @@ Layout forms:
 - `ROWSxCOLS`, e.g. `2x4` — regular grid; unfilled slots are intentionally blank.
 - Comma-separated **row capacities**, e.g. `3,2`, `4,4,2` — equal-sized centered panels.
 
+**Colormap:** the default is Matplotlib `hsv` (also the Python API default). Override it with `--cmap plasma`, `--cmap viridis`, `--cmap inferno`, or any other Matplotlib-registered colormap name. The requested colormap is recorded in the JSON sidecar.
+
 The layout must have enough slots for the selected fields; there is a 100-panel safety limit. `--variables` can be comma-separated or space-separated, and its order is preserved. `--time-us` requires an actual, unique native Exodus timestep; it never interpolates. `--time-index -1` selects the last native timestep.
 
 Outputs: PNG, PDF or SVG and adjacent `<image-name>.json` recording source paths/SHA-256, selected names, block, node/triangle count, time index, physical time, layout and unused input declarations. Existing output is never silently replaced; `--overwrite` is required to replace it.
