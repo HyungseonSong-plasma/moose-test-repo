@@ -1,0 +1,63 @@
+# Phase II Track A: 1D positive control versus whole-family 2D RZ AD parser.
+# Original physics and exact-GDB control inputs retained; altered cases are
+# research-only and NOT numerical science acceptance.
+name: Issue282 native AD parser family discriminator once
+run-name: Issue282 1D parsed functor controls and RZ whole-family bypass
+
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/issue282-rz-ad-parser-family-once.yml]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: issue282-rz-ad-parser-family-once
+  cancel-in-progress: false
+
+jobs:
+  native-ad-parser-family:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    steps:
+      - name: Checkout exact source revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+      - name: Verify source SHA, pinned inputs and offline minimal controls
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+          python3 ci/guards/workflow_surface_guard.py --check
+          python3 -m py_compile experiments/Issue282_e2a_rz_bridge/probe_parser_family.py
+          python3 -m venv .issue282-family-venv
+          .issue282-family-venv/bin/python -m pip install --disable-pip-version-check -r requirements-evidence-engine.txt -r requirements-ontology.txt 'pytest==8.3.4' 'pydantic==2.10.6' 'numpy==2.1.2' 'netCDF4==1.7.3'
+          .issue282-family-venv/bin/python -m pytest -q tests/characterization/test_issue282_rz_ad_parser_family.py
+          .issue282-family-venv/bin/python experiments/Issue282_e2a_rz_bridge/probe_parser_family.py --prepare-only --results experiments/Issue282_e2a_rz_bridge/prepared_parser_family
+      - name: Pull exact pinned real PhysicsApp runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          image='ghcr.io/hyungseonsong-plasma/physics-runtime@sha256:cda9f0d09a17aed5fa606e97d1ee5c3450f7280536cec2e5c635402bb07d972c'
+          docker pull "$image"
+          mkdir -p experiments/Issue282_e2a_rz_bridge/parser_family_results
+          docker image inspect "$image" > experiments/Issue282_e2a_rz_bridge/parser_family_results/original-image-inspect.json
+      - name: Execute nine bounded native 1D and RZ diagnostic controls
+        shell: bash
+        run: |
+          set -euo pipefail
+          .issue282-family-venv/bin/python experiments/Issue282_e2a_rz_bridge/probe_parser_family.py 2>&1 |
+            tee experiments/Issue282_e2a_rz_bridge/parser_family_results/driver.log
+      - name: Preserve P2 and P3 logs and original versus diagnostic source
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue282-native-1d-ad-parser-and-rz-family
+          path: |
+            experiments/Issue282_e2a_rz_bridge/parser_family_results/**
+            experiments/Issue282_e2a_rz_bridge/prepared_parser_family/manifest.json
+          if-no-files-found: warn
+          retention-days: 30
