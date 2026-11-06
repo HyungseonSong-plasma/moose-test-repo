@@ -11,6 +11,19 @@ import sys
 
 # Import optional scientific/data dependencies only inside their owning command.\n# C0 source inventory must run before any heavy analysis dependencies are installed.\n\nROOT = Path(__file__).resolve().parents[2]
 
+
+def compile_experiment(source):
+    """Preserve the public CLI patch point while avoiding eager gateway imports."""
+    from physics_harness.application.gateway import compile_experiment as _compile_experiment
+    return _compile_experiment(source)
+
+
+def plan_experiment(source):
+    """Preserve Issue #280's monkeypatch boundary without importing polars at startup."""
+    from physics_harness.application.gateway import plan_experiment as _plan_experiment
+    return _plan_experiment(source)
+
+
 CANONICAL_COMMANDS = {
     "compile": "compile semantic experiment JSON into ExperimentIntent",
     "plan": "compile semantic intent and synthesize ScientificPolicy/ExecutionPlan",
@@ -84,7 +97,6 @@ def _json_print(value) -> None:
 
 
 def semantic_compile_cli(argv: list[str]) -> int:
-    from physics_harness.application.gateway import compile_experiment
     from physics_harness.specification import ExperimentSpecError
 
     parser = argparse.ArgumentParser(prog="physics compile")
@@ -100,7 +112,6 @@ def semantic_compile_cli(argv: list[str]) -> int:
 
 
 def semantic_plan_cli(argv: list[str]) -> int:
-    from physics_harness.application.gateway import plan_experiment
     from physics_harness.specification import ExperimentSpecError
 
     parser = argparse.ArgumentParser(prog="physics plan")
@@ -125,7 +136,6 @@ def semantic_lower_cli(argv: list[str]) -> int:
 
 def semantic_run_cli(argv: list[str]) -> int:
     """Prepare only the canonical semantic pipeline; never dispatch a protocol runner."""
-    from physics_harness.application.gateway import plan_experiment
     from physics_harness.specification import ExperimentSpecError
 
     parser = argparse.ArgumentParser(prog="physics run")
