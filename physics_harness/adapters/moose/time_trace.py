@@ -19,6 +19,8 @@ from .species_plot import (
 )
 
 DEFAULT_POWER_FIELD = "P_rf_scaled_W_t6"
+# Only these global fields have an audited Oxygen14 W-unit integral owner.
+AUDITED_POWER_FIELDS = {"P_rf_scaled_W_t6", "P_rf_raw_W_t6"}
 OBSERVABLES = (*SPECIES, "potential", "T_e", "power")
 
 
@@ -211,7 +213,9 @@ def _native_traces(exodus: Path, inputs: Sequence[Path], gas_temperature_k: floa
         global_names = _names(np.asarray(f.variables["name_glo_var"][:]).copy()) if "name_glo_var" in f.variables else []
         if len(global_names) != len(set(global_names)):
             raise DefaultPlotError("duplicate native Exodus global variable names")
-        if power_field in global_names:
+        if power_field not in AUDITED_POWER_FIELDS:
+            unavailable["power"] = f"unaudited power field {power_field}; W unit/source not established"
+        elif power_field in global_names:
             if "vals_glo_var" not in f.variables:
                 raise DefaultPlotError(f"native global power {power_field} missing vals_glo_var")
             var = f.variables["vals_glo_var"]
@@ -306,6 +310,7 @@ def generate_time_trace(run: Path, output: Path, *, inputs: Sequence[Path] = (),
     widths = layout_rows(len(selected), layout)
     nrows, ncols = len(widths), max(widths)
     fig = plt.figure(figsize=(max(5, 4.6*ncols), max(4, 3.7*nrows)), facecolor="white")
+    palette = plt.get_cmap(cmap)
     ranges = {}
     try:
         margin = .055
@@ -332,9 +337,11 @@ def generate_time_trace(run: Path, output: Path, *, inputs: Sequence[Path] = (),
                     yplot = np.where(y > 0, y, np.nan)
                     if not np.any(np.isfinite(yplot)):
                         raise DefaultPlotError(f"all nonpositive species trace: {name} in run {idx+1}")
-                    ax.semilogy(t, yplot, label=f"run_{idx+1}", linewidth=1.65)
+                    ax.semilogy(t, yplot, label=f"run_{idx+1}", linewidth=1.65,
+                                color=palette(.12 + .52*idx))
                 else:
-                    ax.plot(t, y, label=f"run_{idx+1}", linewidth=1.65)
+                    ax.plot(t, y, label=f"run_{idx+1}", linewidth=1.65,
+                            color=palette(.12 + .52*idx))
                 minima.append(float(np.min(y)))
                 maxima.append(float(np.max(y)))
             ax.set_title(f"{name} [{yunit}]", fontsize=10)
