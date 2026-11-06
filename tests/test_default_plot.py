@@ -129,3 +129,5 @@ def test_canonical_default_plot_command_help_without_site_packages():
     assert result.returncode == 0, result.stderr
     assert "physics default-plot" in result.stdout
     assert "--layout" in result.stdout and "--exodus" in result.stdout
+    assert "2d-map,time-trace" in result.stdout
+    assert "species,fields" not in result.stdout
