@@ -266,7 +266,7 @@ def _resolve_run(source: Path) -> Path:
 
 def generate_time_trace(run: Path, output: Path, *, inputs: Sequence[Path] = (),
                         compare: Path | None = None, compare_inputs: Sequence[Path] = (),
-                        variables: Sequence[str] = (), layout: str = "auto", cmap: str = "hsv",
+                        variables: Sequence[str] = (), layout: str = "auto", cmap: str = "rainbow",
                         dpi: int = 140, overwrite: bool = False,
                         gas_temperature_k: float | None = None,
                         compare_gas_temperature_k: float | None = None,
