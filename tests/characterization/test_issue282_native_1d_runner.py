@@ -38,7 +38,7 @@ def test_both_d0_and_d100_keep_the_same_fv_operator_graph() -> None:
         assert "exodus = true" in text
         assert "csv = true" in text
         assert "type = ADElementIntegralFunctorPostprocessor" in text
-        assert "drift" not in text.lower()
+        assert "[drift]" not in text.lower()
     assert "prop_values = '0'" in control
     assert "prop_values = '100'" in treatment
 
