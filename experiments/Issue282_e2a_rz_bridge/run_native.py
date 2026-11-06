@@ -33,6 +33,9 @@ from experiments.Issue26_electron_energy.E2a_controlled_diffusion.run import (
     _case_evidence,
     _cross_case_evidence,
 )
+from experiments.Issue282_e2a_rz_bridge.research_type_bridge import (
+    project_historical_registration_only,
+)
 from experiments.historical_recipe_support.issue26_e1 import (
     ELEMENTARY_CHARGE_C,
     ENERGY_INVENTORY_PP,
@@ -286,6 +289,17 @@ def main() -> int:
         persist()
         try:
             meta = _stage_case(case, diffusivity_m2_s=D)
+            # Preserve untouched historical input and produce a strictly reversible
+            # modern *registration-name only* copy for exploratory P2/P3.
+            historical_input = case / "input.historical.i"
+            historical_input.write_bytes((case / "input.i").read_bytes())
+            projected, bridge_report = project_historical_registration_only(
+                historical_input.read_text(encoding="utf-8")
+            )
+            (case / "input.i").write_text(projected, encoding="utf-8")
+            item["historical_input_sha256"] = digest(historical_input)
+            item["registration_type_projection"] = bridge_report
+            item["projection_not_scientific_parity"] = True
             item["staging_audit"] = meta["construction"]["audit"]["status"]
             item["normalization_reference_eV"] = ENERGY_REFERENCE_EV
             item["normalization_n_ref_m3"] = float(

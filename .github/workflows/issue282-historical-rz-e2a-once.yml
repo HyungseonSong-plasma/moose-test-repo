@@ -1,4 +1,4 @@
-# Bounded one-shot real historical 2-D RZ E2a evidence; Track A only.
+# Research-only historical 2-D RZ E2a replay using explicitly audited\n# modern PhysicsApp object registration names; original input preserved.\n# Run after exact-head CI; no scientific equivalence claim or package work.
 # The existing 1-D cosine numerical PASS is NOT automatically 2-D scientific PASS.
 name: Issue282 historical 2D RZ E2a evidence once
 run-name: Issue282 real historical RZ Gaussian D0 vs D100 backend evidence
