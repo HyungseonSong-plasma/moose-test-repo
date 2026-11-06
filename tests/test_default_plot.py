@@ -111,7 +111,7 @@ def test_reject_nonexistent_time_and_missing_field(tmp_path):
 
 def test_plot_help_has_no_scientific_dependencies(tmp_path):
     root = Path(__file__).resolve().parents[1]
-    result = subprocess.run([sys.executable, "-S", str(root / "physics_harness/observation/default_plot.py"), "--help"],
+    result = subprocess.run([sys.executable, "-S", str(root / "physics_harness/adapters/moose/default_plot.py"), "--help"],
                             cwd=root, text=True, capture_output=True, timeout=15)
     assert result.returncode == 0, result.stderr
     assert "--layout" in result.stdout and "--variables" in result.stdout
