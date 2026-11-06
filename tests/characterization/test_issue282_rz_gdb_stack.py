@@ -12,6 +12,7 @@ from experiments.Issue282_e2a_rz_bridge.diagnose_gdb_stack import (
     INPUT_SHA256,
     MESH_SHA256,
     debug_dockerfile,
+    debug_gdb_command,
     docker_entrypoint,
     sha256,
 )
@@ -23,7 +24,13 @@ def test_gdb_contract_is_exact_and_nonpackaging() -> None:
     assert len(INPUT_SHA256) == len(CASES)
     assert IMAGE.startswith("ghcr.io/hyungseonsong-plasma/physics-runtime@sha256:")
     assert "FROM " + IMAGE in debug_dockerfile()
+    assert "FROM ubuntu:24.04 AS debugger" in debug_dockerfile()
+    assert "COPY --from=debugger / /opt/physics282_debugroot/" in debug_dockerfile()
+    assert "USER 0" in debug_dockerfile()
     assert "gdb" in debug_dockerfile()
+    assert debug_gdb_command("--version")[-1] == "--version"
+    assert debug_gdb_command("--version")[0] == "--entrypoint"
+    assert "lib/x86_64-linux-gnu/ld-linux-x86-64.so.2" in debug_gdb_command("--version")[1]
     assert "sol-adapter-moose" not in debug_dockerfile()
     assert len(MESH_SHA256) == 64
 
