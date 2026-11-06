@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "issue": 457,
+  "kind": "experiments",
+  "sequence": 1,
+  "title": "Oxygen14 pinned-source 400 W 0–100 us chemistry-OFF P0/P1/P2 ONLY (no full solve)",
+  "stages": [
+    {
+      "id": "P0",
+      "name": "Restore immutable Oxygen14 source and stage original 400W input deterministically",
+      "timeout_seconds": 7200,
+      "command": [
+        "bash",
+        "-lc",
+        "set -euo pipefail\ntest \"$PWD\" = \"$(git rev-parse --show-toplevel)\"\nSOURCE=\"$PWD/.issue457_pinned_oxygen14\"\ntest ! -e \"$SOURCE\"\ngit init -q \"$SOURCE\"\ngit -C \"$SOURCE\" remote add origin https://github.com/HyungseonSong-plasma/moose-test-repo.git\ngit -C \"$SOURCE\" fetch -q --depth=1 origin 29d1acc6ef7969908b86719e4b95c73a1565136d\ngit -C \"$SOURCE\" checkout -q --detach FETCH_HEAD\ntest \"$(git -C \"$SOURCE\" rev-parse HEAD)\" = \"29d1acc6ef7969908b86719e4b95c73a1565136d\"\npython3 -m venv .issue457_venv\n.issue457_venv/bin/python -m pip install --disable-pip-version-check --quiet numpy==2.1.2 scipy==1.14.1\ncd \"$SOURCE\"\nexport OXYGEN_RESEARCH_400=1\nexport CHATGPT_WORK_BASE_SHA=29d1acc6ef7969908b86719e4b95c73a1565136d\nexport PYTHONPATH=\"$OLDPWD\"\n\"$OLDPWD/.issue457_venv/bin/python\" -m pytest -q \"$OLDPWD/tests/test_oxygen_c0_chemistry_off.py\" \"$OLDPWD/tests/test_oxygen_c0_profile_exodus.py\"\nsource \"$OLDPWD/.issue457_venv/bin/activate\"\nbash experiments/Issue395_powered_chemistry_ladder/issue397_l1_power_scan_replay.sh prepare 400\npython3 .github/scripts/oxygen_legacy6_latest_100us.py --power-w 400 --prepare\nmkdir -p experiments/Issue395_powered_chemistry_ladder/c0_400_p2_preflight\npython3 \"$OLDPWD/bin/physics.py\" oxygen-c0 --root \"$SOURCE\" --base-input \"$SOURCE/experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns.i\" --rf-parent \"$SOURCE/experiments/Issue395_powered_chemistry_ladder/rf_elastic_multiapp_parent_400w_100us_dt1000ns_overlay.i\" --output \"$SOURCE/experiments/Issue395_powered_chemistry_ladder/c0_400_p2_preflight/c0_manifest.json\"\npython3 - <<'PY'\nimport json, pathlib, hashlib\nr=pathlib.Path(\"experiments/Issue395_powered_chemistry_ladder/c0_400_p2_preflight\")\nm=json.loads((r/\"c0_manifest.json\").read_text())\nassert m[\"source_harness_expected_sha\"]==\"29d1acc6ef7969908b86719e4b95c73a1565136d\"\nassert m[\"original_base_sha256\"]==\"9ac3269b3f59390946045fd061dbaa85a00e8afde31de1f1cb9150e5e0ad61a4\", \"historical generated input not byte-identical to native 400W archive\"\nassert m[\"active_cli_input_files\"]==[\"experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i\",\"experiments/Issue395_powered_chemistry_ladder/rf_elastic_multiapp_parent_400w_100us_dt1000ns_overlay.i\"]\nassert len(m[\"removed_reactive_wall_objects\"])==15\nassert m[\"phase\"]==\"P0_STATIC_CANDIDATE_ONLY\"\nprint(\"ISSUE457_C0_400_SOURCE_P0_PASS\")\nPY"
+      ]
+    },
+    {
+      "id": "P1",
+      "name": "Build native PhysicsApp from original pinned source and immutable build image",
+      "timeout_seconds": 5400,
+      "command": [
+        "bash",
+        "-lc",
+        "set -euo pipefail\ncd .issue457_pinned_oxygen14\ntest \"$(git rev-parse HEAD)\" = \"29d1acc6ef7969908b86719e4b95c73a1565136d\"\nexport OXYGEN_RESEARCH_400=1 CHATGPT_WORK_BASE_SHA=29d1acc6ef7969908b86719e4b95c73a1565136d\nbash experiments/Issue395_powered_chemistry_ladder/issue397_l1_power_scan_replay.sh build 400\ntest -x physics_app/physics-opt\necho ISSUE457_C0_400_NATIVE_BUILD_P1_PASS"
+      ]
+    },
+    {
+      "id": "P2",
+      "name": "Actual native PhysicsApp check-input for exactly two C0 inputs",
+      "timeout_seconds": 1800,
+      "command": [
+        "bash",
+        "-lc",
+        "set -euo pipefail\ncd .issue457_pinned_oxygen14\ntest \"$(git rev-parse HEAD)\" = \"29d1acc6ef7969908b86719e4b95c73a1565136d\"\nINPUT=\"experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i\"\nPARENT=\"experiments/Issue395_powered_chemistry_ladder/rf_elastic_multiapp_parent_400w_100us_dt1000ns_overlay.i\"\nRESULT=\"experiments/Issue395_powered_chemistry_ladder/c0_400_p2_preflight\"\ntest -s \"$INPUT\" && test -s \"$PARENT\"\ntest -s \"$RESULT/c0_manifest.json\"\nIMAGE=\"ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008\"\ndocker run --rm --entrypoint /bin/bash --user 0:0 --workdir /workspace -v \"$PWD:/workspace\" \"$IMAGE\" -lc \"set -euo pipefail; source /environment; physics_app/physics-opt --check-input -i '$INPUT' '$PARENT'\" 2>&1 | tee \"$RESULT/check_input.log\"\ngrep -Eq '^(.*Input file.*syntax.*|.*Parsing.*complete.*|.*Simulation.*setup.*)' \"$RESULT/check_input.log\" || test -s \"$RESULT/check_input.log\"\necho ISSUE457_C0_400_NATIVE_CHECK_INPUT_P2_PASS"
+      ]
+    }
+  ],
+  "artifacts": [
+    ".issue457_pinned_oxygen14/experiments/Issue395_powered_chemistry_ladder/c0_400_p2_preflight/c0_manifest.json",
+    ".issue457_pinned_oxygen14/experiments/Issue395_powered_chemistry_ladder/c0_400_p2_preflight/check_input.log",
+    ".issue457_pinned_oxygen14/experiments/Issue395_powered_chemistry_ladder/rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns__C0_chemistry_off.i",
+    ".issue457_pinned_oxygen14/experiments/Issue395_powered_chemistry_ladder/rf_elastic_multiapp_parent_400w_100us_dt1000ns_overlay.i",
+    ".issue457_pinned_oxygen14/experiments/Issue395_powered_chemistry_ladder/results_rf_elastic_diss_ion_ei20_ei01_400w_adjacent_sheath_wall_closed_100us_dt1000ns/prep/**"
+  ]
+}
