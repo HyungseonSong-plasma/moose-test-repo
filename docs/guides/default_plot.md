@@ -1,67 +1,57 @@
-# Physics default-plot — native Exodus field visualization
+# Physics default-plot — source-attributable Exodus densities
 
-**Canonical CLI:** `python3 bin/physics.py default-plot`
+**CLI:** python3 bin/physics.py default-plot
 
-The command is a **read-only observational helper**, not a solver, a MOOSE input generator, or a scientific acceptance test. It renders *native nodal fields* from an existing **2D classic NetCDF Exodus** file, using one colorbar per field and an automatically chosen, centered panel layout. The plot and JSON summary preserve source identity and native time selection.
+The default mode is **Oxygen14 species physical number density (m^-3)**. The command reads an existing native Exodus solution; it never executes a solver or claims scientific acceptance.
 
-## Minimal invocation
+## Default: 8 species and auto 2×4 layout
 
-```bash
+~~~bash
 python3 bin/physics.py default-plot \
   --exodus results/plasma.e \
-  --output figures/default_fields.png
-```
-
-Defaults: **last stored native timestep**, `--layout auto`, Exodus nodal variables in file order, **plasma element block** when present (otherwise all element blocks), PNG output named `<exodus stem>_default_plot.png` if no `--output` is supplied.
-
-To show only primary fields declared by a MOOSE input rather than every Exodus nodal output, supply one or more `--input` arguments. This uses the canonical HIT parser to select direct children of `[Variables]`, **not** `[AuxVariables]`; only declarations that actually occur in the Exodus data are plotted. If no `--input` is given, all Exodus nodal fields are candidate variables.
-
-```bash
-python3 bin/physics.py default-plot \
-  --exodus results/plasma.e \
-  --input input/base.i \
-  --input input/rf_parent_overlay.i \
+  --input chemistry_off.i \
   --time-us 100 \
-  --output figures/primary_100us.png
-```
+  --output figures/species_100us.png
+~~~
 
-## User-controlled layout, variable order, and time
+With the source model identity provided, the default panels are **e-, O2+, O-, O+, O2, O2*, O, O***. Every panel displays density in **m^-3** with an independent logarithmic color scale. The default colormap is **hsv**.
 
-```bash
-# Default auto layout: five fields -> first row 3, second row 2.
-python3 bin/physics.py default-plot --exodus results/plasma.e \
-  --variables a b c d e --layout auto --output figures/five.png
+- e-: reconstruct N_A * exp(log_ne) from **plasma nodal** log_ne.
+- O2+, O-, O+: reconstruct N_A * exp(log_ni), N_A * exp(log_nm), N_A * exp(log_nop) from **plasma elemental** field values respectively.
+- O2, O2*, O, O*: use elemental p, w_O2s, w_O, w_Os and w_O2 = 1 - w_O2s - w_O - w_Os. Apply the source Oxygen14 ideal-gas mixing EOS: Mmix = 1/sum(w_i/M_i), rho = p*Mmix/(8.31446*T_g), n_i = rho*w_i*N_A/M_i. Validated source molar masses: M(O2) = M(O2*) = 0.032 kg/mol, M(O) = M(O*) = 0.016 kg/mol.
+- **T_g is not a spatial Exodus field.** Supply the actual MOOSE --input to read literal T_g_fixed and verify the declared EOS/mixture. Alternatively specify --gas-temperature-k (e.g. 300) explicitly when no input file is available. No temperature is silently assumed.
 
-# A deliberately ragged layout with five plots.
-python3 bin/physics.py default-plot --exodus results/plasma.e \
-  --variables a b c d e --layout 3,2 --output figures/three_plus_two.svg
+If temperature or elemental neutral state data are unavailable, only the recoverable charged species are plotted; omissions are recorded in the JSON. Selecting an unavailable species explicitly fails. No interpolation of time, no invented field values, and no implicit generic chemistry interpretation.
 
-# Explicit two rows and four columns, with unused cells left empty if needed.
-python3 bin/physics.py default-plot --exodus results/plasma.e \
-  --variables a b c d e f g h --layout 2x4 --output figures/eight.pdf
+## Layout, species selection, colormap
 
-# Reorder a subset, select a native time, override block/color map.
-python3 bin/physics.py default-plot --exodus results/plasma.e \
-  --variables log_energy log_ne --time-index 100 \
-  --block plasma --cmap plasma --output figures/t100.png
-```
+~~~bash
+# Five species with first row three, second row two:
+python3 bin/physics.py default-plot --exodus plasma.e --input chemistry_off.i \
+  --variables 'e-' 'O2+' 'O-' 'O2' 'O' --layout 3,2
 
-Layout forms:
+# Eight species in two rows and four columns:
+python3 bin/physics.py default-plot --exodus plasma.e --input chemistry_off.i \
+  --layout 2x4 --time-us 50 --cmap viridis --output species_50us.png
+~~~
 
-- `auto` — balanced rows, five fields `(3,2)`, eight `(4,4)`, twelve `(4,4,4)`; incomplete last row is centered.
-- `ROWSxCOLS`, e.g. `2x4` — regular grid; unfilled slots are intentionally blank.
-- Comma-separated **row capacities**, e.g. `3,2`, `4,4,2` — equal-sized centered panels.
+--layout auto chooses 5 → [3,2], 8 → [4,4]; --layout 2x4 is a fixed regular grid. --variables picks the displayed subset/order. --time-us selects a unique native Exodus frame (no interpolation); --time-index selects a zero-based frame (default last). PNG, PDF, SVG outputs supported; --overwrite required to replace existing results.
 
-**Colormap:** the default is Matplotlib `hsv` (also the Python API default). Override it with `--cmap plasma`, `--cmap viridis`, `--cmap inferno`, or any other Matplotlib-registered colormap name. The requested colormap is recorded in the JSON sidecar.
+## Legacy raw nodal field view
 
-The layout must have enough slots for the selected fields; there is a 100-panel safety limit. `--variables` can be comma-separated or space-separated, and its order is preserved. `--time-us` requires an actual, unique native Exodus timestep; it never interpolates. `--time-index -1` selects the last native timestep.
+~~~bash
+# Keep original Exodus nodal-field plotting functionality:
+python3 bin/physics.py default-plot --exodus plasma.e --mode fields
 
-Outputs: PNG, PDF or SVG and adjacent `<image-name>.json` recording source paths/SHA-256, selected names, block, node/triangle count, time index, physical time, layout and unused input declarations. Existing output is never silently replaced; `--overwrite` is required to replace it.
+# Filter to MOOSE primary [Variables] also present in Exodus:
+python3 bin/physics.py default-plot --exodus plasma.e --mode fields \
+  --input chemistry_off.i --variables log_ne log_energy potential --cmap plasma
+~~~
 
-## Requirements and limitations
+Raw --mode fields does **not** convert log states; it plots their actual Exodus values. A MOOSE input filters only primary [Variables] in this mode, excluding [AuxVariables].
 
-Install Python `numpy`, `scipy`, and `matplotlib` in the environment running the command. Matplotlib is imported only when an actual image is requested; CLI help remains lightweight. The current reader supports linear 2D triangular and quadrilateral elements encoded in classic NetCDF Exodus, including separated `coordx/coordy` or combined `coord` arrays. Higher-order meshes, 3D Exodus, or NetCDF4/HDF5-only files are not silently reinterpreted; extend the owning decoder if these are needed.
+Exodus also supports **global time-history scalar variables** and other metadata, but those are not 2D spatial fields and are not misleadingly plotted as spatial maps. Separate time-history plotting would be a different mode.
 
-Values are plotted **exactly as written to Exodus**. For example, `log_ne` is plotted as `log_ne` rather than incorrectly labeled as physical `n_e`. Plasma node filtering excludes dielectric-only nodes from the plotted color normalization; no spatial interpolation beyond native triangulated visualization is treated as measured physics.
+## Provenance
 
-The sidecar reports `EXODUS_VISUALIZATION_ONLY_NOT_SCIENCE_PASS` and `science_acceptance=NOT_EVALUATED`. Successful plotting does **not** change the scientific status of Issue #457 or any other experiment.
+Each plot has an adjacent JSON manifest identifying input/Exodus SHA-256, native frame, block/geometry, nodal-vs-elemental ownership, field conversions, chosen gas temperature and provenance, layout, colormap, density ranges and unavailable-species reasons. Science status remains **NOT_EVALUATED**; this is never a Chemistry-OFF scientific PASS.
