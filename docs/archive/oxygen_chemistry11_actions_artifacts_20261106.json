@@ -1,0 +1,222 @@
+{
+  "version": 1,
+  "created": "2026-11-06",
+  "scope": "Artifacts of latest reference Actions run per retired chemistry/MCS/Oxygen11 branch",
+  "storage": "GitHub Actions retained artifacts, NOT copied to durable external archival storage",
+  "expiry_warning": "Downloading ZIPs to permanent storage before expires_at is required; deleting branch does not extend artifact retention.",
+  "run_artifacts": [
+    {
+      "case": "EI10",
+      "run_id": 41045066335,
+      "artifacts": [
+        {
+          "id": 12971657575,
+          "name": "scientific-centralization-compatibility",
+          "bytes": 530,
+          "expires_at": "2026-11-29T11:02:24Z",
+          "expired": false,
+          "download_page": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/41045066335/artifacts/12971657575"
+        },
+        {
+          "id": 12971512976,
+          "name": "physics-directory-role-audit",
+          "bytes": 657,
+          "expires_at": "2027-01-28T11:01:47Z",
+          "expired": false,
+          "download_page": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/41045066335/artifacts/12971512976"
+        },
+        {
+          "id": 12971114033,
+          "name": "physics-architecture-census",
+          "bytes": 1798,
+          "expires_at": "2027-01-28T11:01:47Z",
+          "expired": false,
+          "download_page": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/41045066335/artifacts/12971114033"
+        }
+      ]
+    },
+    {
+      "case": "EX1",
+      "run_id": 41047221502,
+      "artifacts": [
+        {
+          "id": 12973670287,
+          "name": "physics-directory-role-audit",
+          "bytes": 657,
+          "expires_at": "2027-01-28T11:19:10Z",
+          "expired": false,
+          "download_page": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/41047221502/artifacts/12973670287"
+        },
+        {
+          "id": 12973017136,
+          "name": "physics-architecture-census",
+          "bytes": 1798,
+          "expires_at": "2027-01-28T11:19:10Z",
+          "expired": false,
+          "download_page": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/41047221502/artifacts/12973017136"
+        },
+        {
+          "id": 12972822757,
+          "name": "scientific-centralization-compatibility",
+          "bytes": 530,
+          "expires_at": "2026-11-29T11:19:48Z",
+          "expired": false,
+          "download_page": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/41047221502/artifacts/12972822757"
+        }
+      ]
+    },
+    {
+      "case": "DR2259",
+      "run_id": 41054837863,
+      "artifacts": [
+        {
+          "id": 12976477092,
+          "name": "physics-architecture-census",
+          "bytes": 1798,
+          "expires_at": "2027-01-28T12:22:23Z",
+          "expired": false,
+          "download_page": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/41054837863/artifacts/12976477092"
+        },
+        {
+          "id": 12976163157,
+          "name": "scientific-centralization-compatibility",
+          "bytes": 530,
+          "expires_at": "2026-11-29T12:23:03Z",
+          "expired": false,
+          "download_page": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/41054837863/artifacts/12976163157"
+        },
+        {
+          "id": 12975599266,
+          "name": "physics-directory-role-audit",
+          "bytes": 657,
+          "expires_at": "2027-01-28T12:22:23Z",
+          "expired": false,
+          "download_page": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/41054837863/artifacts/12975599266"
+        }
+      ]
+    },
+    {
+      "case": "O2a2072",
+      "run_id": 41059443073,
+      "artifacts": []
+    },
+    {
+      "case": "Phelps",
+      "run_id": 41088545549,
+      "artifacts": []
+    },
+    {
+      "case": "ReactionAudit",
+      "run_id": 41065138506,
+      "artifacts": []
+    },
+    {
+      "case": "MCS-ratio",
+      "run_id": 41869163833,
+      "artifacts": []
+    },
+    {
+      "case": "MCS-EI2073",
+      "run_id": 41873467193,
+      "artifacts": []
+    },
+    {
+      "case": "Oxygen25EEDF",
+      "run_id": 41472615220,
+      "artifacts": [
+        {
+          "id": 13168553651,
+          "name": "oxygen25-eedf23-1000ns-initial-diagnostics-1000W",
+          "bytes": 6949365,
+          "expires_at": "2026-11-23T18:32:11Z",
+          "expired": false,
+          "download_page": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/41472615220/artifacts/13168553651"
+        },
+        {
+          "id": 13168483660,
+          "name": "oxygen25-eedf23-1000ns-initial-complete-1000W",
+          "bytes": 86600608,
+          "expires_at": "2027-01-31T15:32:40Z",
+          "expired": false,
+          "download_page": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/41472615220/artifacts/13168483660"
+        },
+        {
+          "id": 13164757068,
+          "name": "oxygen25-eedf23-1000ns-initial-complete-400W",
+          "bytes": 86487555,
+          "expires_at": "2027-01-31T15:32:40Z",
+          "expired": false,
+          "download_page": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/41472615220/artifacts/13164757068"
+        },
+        {
+          "id": 13164512409,
+          "name": "oxygen25-eedf23-1000ns-initial-diagnostics-400W",
+          "bytes": 6931004,
+          "expires_at": "2026-11-23T17:33:02Z",
+          "expired": false,
+          "download_page": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/41472615220/artifacts/13164512409"
+        }
+      ]
+    },
+    {
+      "case": "Oxygen25dt2p5",
+      "run_id": 41430686405,
+      "artifacts": [
+        {
+          "id": 13146217401,
+          "name": "oxygen25-stage5-dt2p5us-direct-ei936-100000to1000000ns-diagnostics-1000W",
+          "bytes": 92891585,
+          "expires_at": "2026-11-23T13:35:05Z",
+          "expired": false,
+          "download_page": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/41430686405/artifacts/13146217401"
+        },
+        {
+          "id": 13144819358,
+          "name": "oxygen25-stage5-dt2p5us-direct-ei936-1000000ns-restart-complete-1000W",
+          "bytes": 293445093,
+          "expires_at": "2027-01-31T10:40:26Z",
+          "expired": false,
+          "download_page": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/41430686405/artifacts/13144819358"
+        }
+      ]
+    },
+    {
+      "case": "NoEI94312ch",
+      "run_id": 41883786886,
+      "artifacts": [
+        {
+          "id": 13370530275,
+          "name": "oxygen-no-ei943-12ch-h24-h25-latest-EEDF-100us-1000W",
+          "bytes": 107639165,
+          "expires_at": "2027-02-02T18:06:35Z",
+          "expired": false,
+          "download_page": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/41883786886/artifacts/13370530275"
+        },
+        {
+          "id": 13369991557,
+          "name": "oxygen-no-ei943-12ch-h24-h25-latest-EEDF-100us-diag-1000W",
+          "bytes": 7473199,
+          "expires_at": "2026-12-04T22:36:16Z",
+          "expired": false,
+          "download_page": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/41883786886/artifacts/13369991557"
+        },
+        {
+          "id": 13365531537,
+          "name": "oxygen-no-ei943-12ch-h24-h25-latest-EEDF-100us-400W",
+          "bytes": 107390549,
+          "expires_at": "2027-02-02T18:06:35Z",
+          "expired": false,
+          "download_page": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/41883786886/artifacts/13365531537"
+        },
+        {
+          "id": 13365267299,
+          "name": "oxygen-no-ei943-12ch-h24-h25-latest-EEDF-100us-diag-400W",
+          "bytes": 7436421,
+          "expires_at": "2026-12-04T21:33:02Z",
+          "expired": false,
+          "download_page": "https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/41883786886/artifacts/13365267299"
+        }
+      ]
+    }
+  ]
+}
