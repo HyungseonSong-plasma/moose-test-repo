@@ -138,9 +138,17 @@ def loader_probe(physics: Path, root: Path) -> int:
 def run_modes(root: Path, report: dict, label: str, physics: Path | None) -> None:
     rows = report["runs"][label] = {}
     for mode in MODES:
-        case = root / mode
-        if digest(case / "input.i") != report["cases"][mode]["sha256"]:
+        source = root / mode / "input.i"
+        if digest(source) != report["cases"][mode]["sha256"]:
             raise ValueError("changed diagnostic input " + mode)
+        # Isolate each environment's outputs and .jitcache. A warm-cache
+        # hit from the first container must never count as independent proof.
+        case = root / label / mode
+        case.mkdir(parents=True, exist_ok=True)
+        target = case / "input.i"
+        if target.exists() and target.read_bytes() != source.read_bytes():
+            raise ValueError("stale environment-specific input " + mode)
+        target.write_bytes(source.read_bytes())
         def command(args: list[str]) -> list[str]:
             if physics is None:
                 return original_command(case, args)
