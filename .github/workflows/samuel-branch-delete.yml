@@ -30,16 +30,21 @@ jobs:
           seen=set()
           include=[]
           for item in request['targets']:
-              if not isinstance(item,dict) or set(item) != {'branch','expected_sha'}:
-                  raise SystemExit('each target must contain exactly branch and expected_sha')
+              if not isinstance(item,dict) or set(item) not in ({'branch','expected_sha'}, {'branch','expected_sha','archive_tag'}):
+                  raise SystemExit('each target must contain branch, expected_sha, and optional archive_tag')
               branch=item['branch']
               sha=item['expected_sha']
               if not isinstance(branch,str) or not branch or branch == 'main' or branch in seen:
                   raise SystemExit(f'invalid or duplicate branch-delete target: {branch!r}')
               if not isinstance(sha,str) or re.fullmatch(r'[0-9a-f]{40}',sha) is None:
                   raise SystemExit(f'invalid expected_sha for {branch!r}')
+              archive_tag=item.get('archive_tag','')
+              if archive_tag:
+                  archive_expected='archive/oxygen-cleanup-20261106/'+re.sub(r'[^A-Za-z0-9._-]','-',branch)+'-'+sha[:12]
+                  if archive_tag != archive_expected:
+                      raise SystemExit(f'invalid archive_tag for {branch!r}: {archive_tag!r}')
               seen.add(branch)
-              include.append({'branch':branch,'expected_sha':sha})
+              include.append({'branch':branch,'expected_sha':sha,'archive_tag':archive_tag})
           matrix=json.dumps({'include':include},separators=(',',':'))
           with open(os.environ['GITHUB_OUTPUT'],'a',encoding='utf-8') as out:
               out.write(f'matrix={matrix}\n')
@@ -53,6 +58,51 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
     steps:
+      - name: Preserve branch head as immutable archive tag before delete
+        if: matrix.archive_tag != ''
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          BRANCH: ${{ matrix.branch }}
+          EXPECTED_SHA: ${{ matrix.expected_sha }}
+          ARCHIVE_TAG: ${{ matrix.archive_tag }}
+        run: |
+          python3 - <<'PY'
+          import json, os
+          from urllib.error import HTTPError
+          from urllib.parse import quote
+          from urllib.request import Request, urlopen
+          repo=os.environ['REPOSITORY']
+          branch=os.environ['BRANCH']
+          sha=os.environ['EXPECTED_SHA']
+          tag=os.environ['ARCHIVE_TAG']
+          def api(method, path, data=None, allow_404=False):
+              url='https://api.github.com/repos/'+repo+path
+              req=Request(url, method=method, data=(json.dumps(data).encode() if data is not None else None))
+              req.add_header('Accept','application/vnd.github+json')
+              req.add_header('Authorization','Bearer '+os.environ['GITHUB_TOKEN'])
+              req.add_header('X-GitHub-Api-Version','2022-11-28')
+              if data is not None: req.add_header('Content-Type','application/json')
+              try:
+                  with urlopen(req, timeout=30) as response: return json.load(response)
+              except HTTPError as exc:
+                  if allow_404 and exc.code==404: return None
+                  raise
+          current=api('GET','/git/ref/heads/'+quote(branch,safe='/'),allow_404=True)
+          if current is None or current.get('object',{}).get('sha') != sha:
+              raise SystemExit('ARCHIVE_DENIED: branch missing or exact SHA mismatch')
+          tagpath='/git/ref/tags/'+quote(tag,safe='/')
+          existing=api('GET',tagpath,allow_404=True)
+          if existing is None:
+              api('POST','/git/refs',{'ref':'refs/tags/'+tag,'sha':sha})
+          elif existing.get('object',{}).get('sha') != sha or existing.get('object',{}).get('type') != 'commit':
+              raise SystemExit('ARCHIVE_DENIED: tag collision or non-commit object')
+          verified=api('GET',tagpath)
+          if verified.get('object',{}).get('sha') != sha or verified.get('object',{}).get('type') != 'commit':
+              raise SystemExit('ARCHIVE_DENIED: tag post-write verification failed')
+          print('SAMUEL_ARCHIVE_TAG=PASS tag='+tag+' sha='+sha)
+          PY
       - name: Delete branch through Samuel lease-guarded capability
         uses: HyungseonSong-plasma/chatgpt-operation/.github/actions/branch-delete@9b335e3fbb9c5e8e323e382daeec56fa25336822
         with:
