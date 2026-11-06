@@ -75,7 +75,7 @@ def test_render_auto_primary_five(tmp_path):
     out = tmp_path / "five.png"
     result = generate(exodus, out, inputs=(inp,), time_us=100.0)
     assert result["fields"] == list("abcde")
-    assert result["colormap"] == "hsv"
+    assert result["colormap"] == "rainbow"
     assert result["row_capacities"] == [3, 2]
     assert result["block"] == "plasma"
     assert result["triangle_count"] == 2
@@ -118,7 +118,7 @@ def test_plot_help_has_no_scientific_dependencies(tmp_path):
                             cwd=root, text=True, capture_output=True, timeout=15)
     assert result.returncode == 0, result.stderr
     assert "--layout" in result.stdout and "--variables" in result.stdout
-    assert "default: hsv" in result.stdout
+    assert "default: rainbow" in result.stdout
 
 
 def test_canonical_default_plot_command_help_without_site_packages():
