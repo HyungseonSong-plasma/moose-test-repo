@@ -91,6 +91,44 @@ def _validate_oxygen14_neutral_contract(inputs: Sequence[Path]) -> None:
         )
 
 
+
+def _number_density_from_log(log_state, field_name: str):
+    """Physical number density from molar log-state (no invented clamps)."""
+    import numpy as np
+
+    with np.errstate(over="ignore", under="ignore", invalid="ignore"):
+        density = N_A * np.exp(log_state)
+    if not np.all(np.isfinite(density)) or np.any(density < 0):
+        raise DefaultPlotError(f"nonfinite converted number density: {field_name}")
+    return density
+
+
+def _neutral_number_densities(raw, temperature: float):
+    """One Oxygen14 source-verified EOS conversion shared by maps and traces."""
+    import numpy as np
+
+    pressure = raw["p"]
+    if np.any(~np.isfinite(pressure)) or np.any(pressure <= 0):
+        raise DefaultPlotError("pressure must be finite and positive for neutral density")
+    w = {"O2*": raw["w_O2s"], "O": raw["w_O"], "O*": raw["w_Os"]}
+    w["O2"] = 1.0 - w["O2*"] - w["O"] - w["O*"]
+    if any(np.any(~np.isfinite(a)) or np.any(a < -1e-12) or np.any(a > 1 + 1e-12)
+           for a in w.values()):
+        raise DefaultPlotError("invalid neutral mass fraction; cannot derive densities")
+    w = {name: np.clip(frac, 0.0, 1.0) for name, frac in w.items()}
+    inv_mass = sum(w[name] / NEUTRAL_MASSES_KG_PER_MOL[name] for name in w)
+    if np.any(~np.isfinite(inv_mass)) or np.any(inv_mass <= 0):
+        raise DefaultPlotError("invalid neutral mean molar mass")
+    total = pressure * N_A / (GAS_R * temperature)
+    result = {
+        name: total * (w[name] / NEUTRAL_MASSES_KG_PER_MOL[name]) / inv_mass
+        for name in ("O2", "O2*", "O", "O*")
+    }
+    if any(np.any(~np.isfinite(v)) or np.any(v < 0) for v in result.values()):
+        raise DefaultPlotError("nonfinite or negative neutral density")
+    return result
+
+
 def _native_species(exodus: Path, block: str, time_index: int | None,
                     time_us: float | None, inputs: Sequence[Path],
                     gas_temperature_k: float | None):
@@ -177,20 +215,7 @@ def _native_species(exodus: Path, block: str, time_index: int | None,
             _validate_oxygen14_neutral_contract(inputs)
         elif gas_temperature_k is None:
             raise DefaultPlotError("neutral reconstruction requires MOOSE --input or explicit temperature")
-        pressure = raw["p"]
-        if np.any(pressure <= 0):
-            raise DefaultPlotError("pressure must be strictly positive for neutral number density")
-        w = {"O2*": raw["w_O2s"], "O": raw["w_O"], "O*": raw["w_Os"]}
-        w["O2"] = 1.0 - w["O2*"] - w["O"] - w["O*"]
-        if any(np.any(frac < -1e-12) or np.any(frac > 1 + 1e-12) for frac in w.values()):
-            raise DefaultPlotError("invalid neutral mass fraction; cannot derive densities")
-        w = {s: np.clip(a, 0.0, 1.0) for s, a in w.items()}
-        mix_inverse_mass = sum(w[s] / NEUTRAL_MASSES_KG_PER_MOL[s] for s in w)
-        if np.any(mix_inverse_mass <= 0):
-            raise DefaultPlotError("invalid neutral mean molar mass")
-        total_neutral_density = pressure * N_A / (GAS_R * temperature)
-        for species in ("O2", "O2*", "O", "O*"):
-            density = total_neutral_density * (w[species] / NEUTRAL_MASSES_KG_PER_MOL[species]) / mix_inverse_mass
+        for species, density in _neutral_number_densities(raw, temperature).items():
             positive_density[species] = ("elemental", density)
             sources[species] = "elemental p,w + Oxygen14 ideal-gas mixture EOS; " + str(temp_source)
     else:
@@ -202,9 +227,31 @@ def _native_species(exodus: Path, block: str, time_index: int | None,
         valid = data[np.unique(triangles.ravel())] if kind == "nodal" else data
         if not np.all(np.isfinite(valid)) or np.any(valid < 0):
             raise DefaultPlotError(f"nonfinite or negative reconstructed density: {species}")
+    observables, unavailable_observables = {}, {}
+    plasma_nodes = np.unique(triangles.ravel())
+    if "potential" in nodal_values:
+        phi = np.asarray(nodal_values["potential"], dtype=float)
+        if not np.all(np.isfinite(phi[plasma_nodes])):
+            raise DefaultPlotError("nonfinite plasma potential values")
+        observables["potential"] = ("nodal", phi)
+    else:
+        unavailable_observables["potential"] = "native nodal potential absent"
+    if "log_ne" in nodal_values and "log_energy" in nodal_values:
+        with np.errstate(over="ignore", under="ignore", invalid="ignore"):
+            te = (2.0 / 3.0) * np.exp(
+                np.asarray(nodal_values["log_energy"], dtype=float)
+                - np.asarray(nodal_values["log_ne"], dtype=float)
+            )
+        if not np.all(np.isfinite(te[plasma_nodes])) or np.any(te[plasma_nodes] < 0):
+            raise DefaultPlotError("nonfinite native electron-temperature conversion")
+        observables["T_e"] = ("nodal", te)
+    else:
+        unavailable_observables["T_e"] = "requires nodal log_ne and log_energy"
+
     return {
         "x": x, "y": y, "triangles": triangles, "owners": owners,
         "species": positive_density, "sources": sources, "unavailable": failures,
+        "observables": observables, "unavailable_observables": unavailable_observables,
         "time_s": time_s, "time_index": step, "time_count": count,
         "temperature_k": temperature, "temperature_source": temp_source,
         "elemental_field_names": element_names, "nodal_field_names": nodal_names,
@@ -237,18 +284,21 @@ def generate_species(exodus: Path, output: Path, *, inputs: Sequence[Path] = (),
     if time_index is not None and time_us is not None:
         raise DefaultPlotError("choose either --time-index or --time-us")
     if block not in {"auto", "plasma"}:
-        raise DefaultPlotError("species-density plotting requires plasma block; use --mode fields for other blocks")
+        raise DefaultPlotError("2d-map requires plasma block")
 
     data = _native_species(exodus, block, time_index, time_us, inputs, gas_temperature_k)
     requested = [name.strip() for entry in variables for name in entry.split(",") if name.strip()]
     if len(requested) != len(set(requested)):
         raise DefaultPlotError("duplicate species in --variables")
-    if any(s not in SPECIES for s in requested):
-        raise DefaultPlotError(f"unknown Oxygen14 species {requested}; choose from {SPECIES}")
-    if requested and any(s not in data["species"] for s in requested):
-        missing = {s: data["unavailable"].get(s, "not reconstructed") for s in requested if s not in data["species"]}
+    known = (*SPECIES, "potential", "T_e")
+    catalog = {**data["species"], **data["observables"]}
+    if any(s not in known for s in requested):
+        raise DefaultPlotError(f"unknown Oxygen14 species or observable {requested}; choose from {known}")
+    if requested and any(s not in catalog for s in requested):
+        unavailable = {**data["unavailable"], **data["unavailable_observables"]}
+        missing = {s: unavailable.get(s, "not reconstructed") for s in requested if s not in catalog}
         raise DefaultPlotError(f"requested species unavailable: {missing}")
-    selected = requested or [s for s in SPECIES if s in data["species"]]
+    selected = requested or [s for s in known if s in catalog]
     if not selected:
         raise DefaultPlotError("no recoverable species density from native Exodus")
     widths = layout_rows(len(selected), layout)
@@ -271,32 +321,45 @@ def generate_species(exodus: Path, output: Path, *, inputs: Sequence[Path] = (),
             left = x_margin + ((ncols-widths[row])/2 + i-past)*panel_pitch
             bottom = 1 - 0.065 - (row+1)*row_pitch + 0.07*row_pitch
             ax = fig.add_axes([left + 0.01, bottom, panel_pitch*0.76, row_pitch*0.72])
-            kind, val = data["species"][s]
+            kind, val = catalog[s]
             v = val[nodes] if kind == "nodal" else val
             valid = v[np.isfinite(v)]
-            positive = valid[valid > 0]
-            if not len(positive):
-                raise DefaultPlotError(f"cannot log-plot all-zero species: {s}; use explicit zero-aware renderer")
-            lo, hi = float(positive.min()), float(positive.max())
-            # Nearly constant densities should not exaggerate roundoff as spatial structure.
-            norm_lo, norm_hi = (lo/10, hi*10) if hi/lo < 1 + 1e-10 else (lo, hi)
-            norm = LogNorm(vmin=norm_lo, vmax=norm_hi, clip=True)
-            draw = np.maximum(v, norm_lo)
+            if s in SPECIES:
+                positive = valid[valid > 0]
+                if not len(positive):
+                    raise DefaultPlotError(f"cannot log-plot all-zero species: {s}")
+                lo, hi = float(positive.min()), float(positive.max())
+                norm_lo, norm_hi = (lo/10, hi*10) if hi/lo < 1 + 1e-10 else (lo, hi)
+                from matplotlib.colors import LogNorm
+                norm = LogNorm(vmin=norm_lo, vmax=norm_hi, clip=True)
+                draw = np.maximum(v, norm_lo)
+                scale = "log"
+                label = f"{s} | n [m$^{{-3}}$]"
+            else:
+                from matplotlib.colors import Normalize
+                lo, hi = float(valid.min()), float(valid.max())
+                if lo == hi:
+                    half = max(abs(lo) * .01, 1e-12)
+                    lo, hi = lo - half, hi + half
+                norm = Normalize(vmin=lo, vmax=hi)
+                draw = v
+                scale = "linear"
+                label = ("Potential [V]" if s == "potential" else "Electron temperature [eV]")
             if kind == "nodal":
                 img = ax.tripcolor(triangulation, draw, cmap=cmap, norm=norm, shading="gouraud")
             else:
-                # Element variables: native cell values (no fabricated nodal interpolation).
                 img = ax.tripcolor(triangulation, facecolors=draw[data["owners"]],
                                    shading="flat", cmap=cmap, norm=norm)
-            ax.set_title(f"{s} | n [m$^{{-3}}$]", fontsize=10)
+            ax.set_title(label, fontsize=10)
+            ranges[s] = {"min": float(valid.min()), "max": float(valid.max()),
+                         "units": "m^-3" if s in SPECIES else ("V" if s == "potential" else "eV"),
+                         "value_location": kind, "color_scale": scale}
             ax.set_xlabel("r [m]", fontsize=9)
             ax.set_ylabel("z [m]", fontsize=9)
             ax.set_aspect("equal", adjustable="box")
             ax.tick_params(labelsize=7)
             fig.colorbar(img, ax=ax, fraction=0.046, pad=0.03)
-            ranges[s] = {"min_m3": float(valid.min()), "max_m3": float(valid.max()),
-                         "value_location": kind, "log10_color_scale": True,
-                         "log_color_floor_m3": norm_lo, "zero_values_clipped_for_display": int(np.count_nonzero(v == 0))}
+
         fig.suptitle(f"Oxygen14 species densities | t={data['time_s']*1e6:.8g} us | plasma | cmap={cmap}",
                      fontsize=12, y=0.993)
         output.parent.mkdir(parents=True, exist_ok=True)
@@ -310,14 +373,18 @@ def generate_species(exodus: Path, output: Path, *, inputs: Sequence[Path] = (),
         "inputs": [str(p) for p in inputs],
         "input_sha256": {str(p): hashlib.sha256(p.read_bytes()).hexdigest() for p in inputs},
         "output": str(output), "colormap": cmap, "layout": layout, "row_capacities": list(widths),
+        "mode": "2d-map",
         "fields": selected, "available_species": [s for s in SPECIES if s in data["species"]],
+        "available_observables": list(data["observables"]),
+        "unavailable_observables": data["unavailable_observables"],
         "unavailable_species": data["unavailable"], "field_sources": data["sources"],
         "time_index": data["time_index"], "time_s": data["time_s"],
         "timepoint_count": data["time_count"], "block": "plasma",
         "triangle_count": int(len(tri)), "plasma_node_count": int(len(nodes)),
         "temperature_k": data["temperature_k"],
         "temperature_source": data["temperature_source"],
-        "units": "m^-3", "species_density_ranges": ranges,
+        "units": "m^-3", "species_density_ranges": {name: {"min_m3": ranges[name]["min"], "max_m3": ranges[name]["max"], "value_location": ranges[name]["value_location"]} for name in selected if name in SPECIES},
+        "field_ranges": ranges,
         "science_acceptance": "NOT_EVALUATED",
     }
     report.write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8")
