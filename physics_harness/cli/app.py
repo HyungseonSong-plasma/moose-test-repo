@@ -238,7 +238,7 @@ def main(argv: list[str] | None = None) -> int:
         "temporal-csv": temporal_csv_cli,
         "oxygen-c0": lambda argv: import_module("experiments.Issue395_powered_chemistry_ladder.chemistry_off_c0").main(argv),
         "oxygen-profile": lambda argv: import_module("experiments.Issue395_powered_chemistry_ladder.electron_profile_exodus").main(argv),
-        "default-plot": lambda argv: import_module("physics_harness.observation.default_plot").main(argv),
+        "default-plot": lambda argv: import_module("physics_harness.adapters.moose.default_plot").main(argv),
     }
     canonical = canonical_handlers.get(args[0])
     if canonical is not None:
