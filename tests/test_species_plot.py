@@ -93,6 +93,8 @@ def test_native_8_species_and_correct_density_conversion(tmp_path):
     assert "log_energy" in result["field_sources"]["T_e"]
     assert result["row_capacities"] == [4, 4, 2]
     assert result["colormap"] == "rainbow"
+    assert result["density_color_scale"] == "linear"
+    assert all(result["field_ranges"][name]["color_scale"] == "linear" for name in result["fields"])
     assert result["temperature_k"] == 300
     assert result["plasma_node_count"] == 4 and result["triangle_count"] == 2
     assert result["species_density_ranges"]["e-"]["max_m3"] == pytest.approx(N_A * np.exp(-20))
@@ -226,3 +228,37 @@ def test_time_trace_no_fabrication_of_missing_neutral_or_power(tmp_path):
     assert "power" not in report["series"] and "power" in report["unavailable"]
     assert "unaudited power field" in report["unavailable"]["power"]
     assert "e-" in report["series"] and "potential" in report["series"]
+
+
+def test_2d_map_color_scale_default_and_log_opt_in(tmp_path):
+    pytest.importorskip("matplotlib")
+    exodus, inp = _case(tmp_path)
+    linear = generate(exodus, tmp_path / "linear.png", inputs=(inp,),
+                      variables=("e-", "O2+"), time_us=100)
+    assert linear["density_color_scale"] == "linear"
+    assert linear["field_ranges"]["e-"]["color_scale"] == "linear"
+    assert json.loads((tmp_path / "linear.png.json").read_text())["density_color_scale"] == "linear"
+
+    log = generate(exodus, tmp_path / "log.png", inputs=(inp,),
+                   variables=("e-", "potential"), time_us=100, color_scale="log")
+    assert log["density_color_scale"] == "log"
+    assert log["field_ranges"]["e-"]["color_scale"] == "log"
+    assert log["field_ranges"]["potential"]["color_scale"] == "linear"
+    with pytest.raises(DefaultPlotError, match="color-scale"):
+        generate(exodus, tmp_path / "bad.png", inputs=(inp,), color_scale="symlog")
+
+
+def test_linear_accepts_all_zero_density_but_log_rejects_it(tmp_path):
+    pytest.importorskip("matplotlib")
+    exodus, inp = _case(tmp_path)
+    # Exponential underflow represents a species absent from the native state.
+    with netcdf_file(str(exodus), "a") as f:
+        f.variables["vals_elem_var2eb1"][:, :] = -900.
+    linear = generate(exodus, tmp_path / "zero.png", inputs=(inp,),
+                      variables=("O-",))
+    assert linear["field_ranges"]["O-"]["min"] == 0
+    assert linear["field_ranges"]["O-"]["max"] == 0
+    assert linear["field_ranges"]["O-"]["color_scale"] == "linear"
+    with pytest.raises(DefaultPlotError, match="all-zero species"):
+        generate(exodus, tmp_path / "zero-log.png", inputs=(inp,),
+                 variables=("O-",), color_scale="log")
