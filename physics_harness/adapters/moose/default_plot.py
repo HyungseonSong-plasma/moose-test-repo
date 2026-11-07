@@ -294,6 +294,7 @@ def generate(exodus: Path, output: Path, *, inputs: Sequence[Path] = (),
              time_index: int | None = None, time_us: float | None = None,
              cmap: str = "rainbow", dpi: int = 140, overwrite: bool = False,
              mode: str = "2d-map", gas_temperature_k: float | None = None,
+             color_scale: str = "linear",
              compare: Path | None = None, compare_inputs: Sequence[Path] = (),
              compare_gas_temperature_k: float | None = None,
              power_field: str = "P_rf_scaled_W_t6") -> dict:
@@ -306,8 +307,11 @@ def generate(exodus: Path, output: Path, *, inputs: Sequence[Path] = (),
             exodus, output, inputs=inputs, variables=variables, layout=layout,
             block=block, time_index=time_index, time_us=time_us, cmap=cmap,
             dpi=dpi, overwrite=overwrite, gas_temperature_k=gas_temperature_k,
+            color_scale=color_scale,
         )
     if mode == "time-trace":
+        if color_scale != "linear":
+            raise DefaultPlotError("--color-scale applies to 2d-map only")
         if block not in ("auto", "plasma"):
             raise DefaultPlotError("time-trace requires plasma block")
         if time_index is not None or time_us is not None:
@@ -353,12 +357,16 @@ def main(argv: list[str] | None = None) -> int:
     when.add_argument("--time-index", type=int, default=None, help="2d-map: zero-based timestep (default last)")
     when.add_argument("--time-us", type=float, default=None, help="2d-map: exact native time in microseconds")
     parser.add_argument("--cmap", default="rainbow", help="2d-map Matplotlib colormap (default: rainbow)")
+    parser.add_argument("--color-scale", choices=("linear", "log"), default=None,
+                        help="2d-map density color scale (default: linear; log opt-in)")
     parser.add_argument("--dpi", type=int, default=140)
     parser.add_argument("--overwrite", action="store_true")
     args = parser.parse_args(argv)
     try:
         from .time_trace import _resolve_run
         source = _resolve_run(args.exodus if args.exodus is not None else args.run)
+        if args.mode != "2d-map" and args.color_scale is not None:
+            raise DefaultPlotError("--color-scale applies to 2d-map only")
         if args.compare is not None and args.mode != "time-trace":
             raise DefaultPlotError("--compare requires --mode time-trace")
         if args.mode == "2d-map" and (args.compare_input or args.compare_gas_temperature_k is not None):
@@ -376,6 +384,7 @@ def main(argv: list[str] | None = None) -> int:
             layout=args.layout, block=args.block,
             time_index=args.time_index, time_us=args.time_us,
             cmap=args.cmap, dpi=args.dpi, overwrite=args.overwrite,
+            color_scale=args.color_scale or "linear",
             mode=args.mode, gas_temperature_k=args.gas_temperature_k,
             compare_gas_temperature_k=args.compare_gas_temperature_k,
             power_field=args.power_field,
