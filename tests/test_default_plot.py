@@ -119,6 +119,8 @@ def test_plot_help_has_no_scientific_dependencies(tmp_path):
     assert result.returncode == 0, result.stderr
     assert "--layout" in result.stdout and "--variables" in result.stdout
     assert "default: rainbow" in result.stdout
+    assert "--color-scale" in result.stdout
+    assert "default: linear" in result.stdout
 
 
 def test_canonical_default_plot_command_help_without_site_packages():

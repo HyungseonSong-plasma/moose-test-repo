@@ -6,7 +6,7 @@ This is read-only postprocessing of solved native Exodus. No MOOSE solve or scie
 
 ## Modes
 
-- **2d-map** (default): available species number densities (m^-3), potential (V), electron temperature (eV), one native timestep. Auto layout; rainbow default colormap. Species use independent log colorbars; potential and electron temperature use independent linear colorbars. Missing fields are omitted with reasons, not invented.
+- **2d-map** (default): available species number densities (m^-3), potential (V), electron temperature (eV), one native timestep. Auto layout; rainbow default colormap. Species use independent **linear** colorbars (zero-based physical density) by default; optional `--color-scale log` restores logarithmic species-density colorbars. Potential and electron temperature always use independent linear colorbars. Missing fields are omitted with reasons, not invented.
 - **time-trace**: plasma-weighted species number densities, volume-weighted potential, electron-number-weighted electron temperature, and native integrated RF power as functions of native time. Each quantity has its own subplot and proper units.
 - **--compare RUN_2** is an option only for time-trace, not a separate mode. Each run retains its own native time grid; same physical quantity is overlaid on the same axis without interpolation, time resampling or changes to the source mesh. Explicit requests unavailable in either run fail. Default selection uses the intersection of available quantities.
 
@@ -24,6 +24,11 @@ python3 bin/physics.py default-plot --mode 2d-map --run run_1 \
   --input run_1/chemistry_off.i --time-us 100 \
   --layout 4,4,2 --cmap viridis --output map_100us.png
 
+# Optional legacy-style logarithmic species colorbars (2d-map only)
+python3 bin/physics.py default-plot --mode 2d-map --run run_1 \
+  --input run_1/chemistry_off.i --time-us 100 \
+  --color-scale log --output map_100us_log.png
+
 # One run: complete weighted time histories
 python3 bin/physics.py default-plot --mode time-trace --run run_1 \
   --input run_1/chemistry_off.i --output traces.png
@@ -40,7 +45,7 @@ python3 bin/physics.py default-plot --mode time-trace --run run_1 \
   --layout 2x2
 ~~~
 
---run accepts a directory containing plasma.e (or exactly one .e file) or a direct .e path; --exodus accepts a direct .e path. --input and --compare-input may be repeated for multiple MOOSE overlays. The available labels are e-, O2+, O-, O+, O2, O2*, O, O*, potential, T_e, and power (time-trace only). --variables selects and orders panels. --layout accepts auto, ROWSxCOLS (2x4), or row capacities (3,2), with centering for incomplete rows. --time-us and --time-index are 2d-map-only, because time-trace uses the entire native timeline. Output .png, .pdf or .svg, plus .json; overwrites require --overwrite.
+--run accepts a directory containing plasma.e (or exactly one .e file) or a direct .e path; --exodus accepts a direct .e path. --input and --compare-input may be repeated for multiple MOOSE overlays. The available labels are e-, O2+, O-, O+, O2, O2*, O, O*, potential, T_e, and power (time-trace only). --variables selects and orders panels. --layout accepts auto, ROWSxCOLS (2x4), or row capacities (3,2), with centering for incomplete rows. --time-us and --time-index are 2d-map-only, because time-trace uses the entire native timeline. `--color-scale linear|log` applies only to 2d-map density fields (default: linear); the other observables always stay linear and time-trace has unchanged axis scaling. Output .png, .pdf or .svg, plus .json; overwrites require --overwrite.
 
 ## Source-backed physical quantities
 
@@ -62,5 +67,7 @@ Axisymmetric plasma volume integration uses dV = 2*pi*r*dA and only the native E
 Run_1 and run_2 are weighted **independently** on their own native geometry and time grid. Comparison uses the same semantic quantity/unit and the same explicitly named global power source; it does not imply that two different plasma regions are geometrically equivalent. Time-alignment or error differences would require a separately declared alignment and geometric-compatibility contract.
 
 ## Evidence
+
+The JSON manifest records the selected `density_color_scale` and per-field `color_scale`, alongside native value ranges. Explicit logarithmic plots remain opt-in and require positive species-density values. Linear density maps include zero and can display an all-zero species.
 
 Each plot has an adjacent JSON provenance summary with Exodus and input SHA-256, selected source fields and transformations, independent run time grids, geometry and plasma volume, weights, temperature source, global power field, units, layout, omitted quantities, and native value ranges. Status remains NOT_EVALUATED (SCIENCE_HOLD) irrespective of CI or successful rendering.
