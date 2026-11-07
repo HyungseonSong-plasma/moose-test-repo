@@ -264,10 +264,11 @@ def generate_species(exodus: Path, output: Path, *, inputs: Sequence[Path] = (),
                      variables: Sequence[str] = (), layout: str = "auto", block: str = "auto",
                      time_index: int | None = None, time_us: float | None = None,
                      gas_temperature_k: float | None = None, cmap: str = "rainbow",
-                     dpi: int = 140, overwrite: bool = False) -> dict:
+                     dpi: int = 140, overwrite: bool = False,
+                     color_scale: str = "linear") -> dict:
     """Render available species densities in m^-3; exact source/provenance recorded."""
     import numpy as np
-    from matplotlib.colors import LogNorm
+    from matplotlib.colors import LogNorm, Normalize
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
@@ -287,6 +288,8 @@ def generate_species(exodus: Path, output: Path, *, inputs: Sequence[Path] = (),
         raise DefaultPlotError("choose either --time-index or --time-us")
     if block not in {"auto", "plasma"}:
         raise DefaultPlotError("2d-map requires plasma block")
+    if color_scale not in {"linear", "log"}:
+        raise DefaultPlotError("--color-scale must be linear or log")
 
     data = _native_species(exodus, block, time_index, time_us, inputs, gas_temperature_k)
     requested = [name.strip() for entry in variables for name in entry.split(",") if name.strip()]
@@ -326,20 +329,23 @@ def generate_species(exodus: Path, output: Path, *, inputs: Sequence[Path] = (),
             kind, val = catalog[s]
             v = val[nodes] if kind == "nodal" else val
             valid = v[np.isfinite(v)]
+            lo, hi = float(valid.min()), float(valid.max())
             if s in SPECIES:
-                positive = valid[valid > 0]
-                if not len(positive):
-                    raise DefaultPlotError(f"cannot log-plot all-zero species: {s}")
-                lo, hi = float(positive.min()), float(positive.max())
-                norm_lo, norm_hi = (lo/10, hi*10) if hi/lo < 1 + 1e-10 else (lo, hi)
-                from matplotlib.colors import LogNorm
-                norm = LogNorm(vmin=norm_lo, vmax=norm_hi, clip=True)
-                draw = np.maximum(v, norm_lo)
-                scale = "log"
+                if color_scale == "log":
+                    positive = valid[valid > 0]
+                    if not len(positive):
+                        raise DefaultPlotError(f"cannot log-plot all-zero species: {s}")
+                    positive_min, positive_max = float(positive.min()), float(positive.max())
+                    norm_lo, norm_hi = (positive_min / 10, positive_max * 10) if positive_max / positive_min < 1 + 1e-10 else (positive_min, positive_max)
+                    norm = LogNorm(vmin=norm_lo, vmax=norm_hi, clip=True)
+                    draw = np.maximum(v, norm_lo)
+                else:
+                    # Anchor physical number density at zero; allow zero-only fields.
+                    norm = Normalize(vmin=0.0, vmax=hi if hi > 0 else 1.0, clip=True)
+                    draw = v
+                scale = color_scale
                 label = f"{s} | n [m$^{{-3}}$]"
             else:
-                from matplotlib.colors import Normalize
-                lo, hi = float(valid.min()), float(valid.max())
                 if lo == hi:
                     half = max(abs(lo) * .01, 1e-12)
                     lo, hi = lo - half, hi + half
@@ -374,7 +380,8 @@ def generate_species(exodus: Path, output: Path, *, inputs: Sequence[Path] = (),
         "exodus": str(exodus), "exodus_sha256": hashlib.sha256(exodus.read_bytes()).hexdigest(),
         "inputs": [str(p) for p in inputs],
         "input_sha256": {str(p): hashlib.sha256(p.read_bytes()).hexdigest() for p in inputs},
-        "output": str(output), "colormap": cmap, "layout": layout, "row_capacities": list(widths),
+        "output": str(output), "colormap": cmap, "density_color_scale": color_scale,
+        "layout": layout, "row_capacities": list(widths),
         "mode": "2d-map",
         "fields": selected, "available_species": [s for s in SPECIES if s in data["species"]],
         "available_observables": list(data["observables"]),
