@@ -122,7 +122,8 @@ def verify_inventory(inputs: list[Path], case: str) -> None:
                   "expression = '-13.62*R'"):
             if x not in added:
                 raise ValueError("EI941 particle or energy projection missing")
-        if "R_ion_O" in merged or "R_EI417" in merged:
+        if any(re.search(r"(?m)^\s*reaction_progress\s*=\s*" + owner + r"\s*$", merged)
+               for owner in ("R_ion_O", "R_EI417")):
             raise ValueError("EI941 cannot coexist with legacy EI20 or EI417")
     if any(re.search(r"(?m)^\s*reaction_progress\s*=\s*"+owner+r"\s*$", merged)
            for owner in ("R_EI417" if case.endswith("941") else "R_EI941", "R_H23", "R_H24",
