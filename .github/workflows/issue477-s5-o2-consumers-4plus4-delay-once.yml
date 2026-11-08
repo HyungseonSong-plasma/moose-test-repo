@@ -1,0 +1,67 @@
+# Issue477: exactly four one-channel O2 consumer cases on S4-401-417
+# then at least 600 s later the same four on S4-401-941; no cron/retry.
+name: Issue477 S5 O2 consumers 417 then 941 after 10min once
+run-name: Issue477 S5 O2 4+4 delayed @ ${{ github.sha }}
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/issue477-s5-o2-consumers-4plus4-delay-once.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: issue477-s5-o2-4plus4-one-shot-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  anchor:
+    name: Establish first-cohort start marker
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Record dispatch start
+        run: |
+          set -euo pipefail
+          echo "S5_DISPATCH_ANCHOR_UTC=$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+
+  first-417:
+    name: FIRST S4-401-417 plus ${{ matrix.extra }}
+    needs: anchor
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        extra: [412, 407, 2069, H25]
+    uses: ./.github/workflows/issue477-s5-o2-consumer-native-reusable.yml
+    with:
+      case: S5-417-${{ matrix.extra }}
+    secrets: inherit
+
+  delay-gate:
+    name: Wait 10 minutes before S4-401-941 launches
+    needs: anchor
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Mandatory independent 600-second separation
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "S5_941_DELAY_STARTED_UTC=$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          sleep 600
+          echo "S5_941_DELAY_ELAPSED_SECONDS=600"
+          echo "S5_941_DELAY_COMPLETE_UTC=$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+
+  second-941:
+    name: SECOND S4-401-941 plus ${{ matrix.extra }}
+    needs: delay-gate
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        extra: [412, 407, 2069, H25]
+    uses: ./.github/workflows/issue477-s5-o2-consumer-native-reusable.yml
+    with:
+      case: S5-941-${{ matrix.extra }}
+    secrets: inherit
