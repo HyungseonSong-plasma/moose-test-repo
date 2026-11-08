@@ -226,7 +226,7 @@ def prepare(case: str, private_dir: Path, control_root: Path) -> dict:
         mod.overlay_ok(overlay)
     elif reaction_id == "2069":
         overlay = mod.CONTENT
-        mod.verify_overlay(overlay)
+        mod.validate_text(overlay)
     else:
         overlay = mod.CONTENT
         mod.validate(overlay)
