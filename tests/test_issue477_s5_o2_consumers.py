@@ -93,7 +93,8 @@ def test_six_owner_guard_and_no_unlisted_chemistry(case, tmp_path):
 def test_existing_workflows_have_staged_four_plus_four_gate():
     text = Path(".github/workflows/issue477-s5-o2-consumers-4plus4-delay-once.yml").read_text()
     assert text.count("max-parallel: 4") == 2
-    assert text.count("extra: [412, 407, 2069, H25]") == 2
+    assert "case: [S5-417-412, S5-417-407, S5-417-2069, S5-417-H25]" in text
+    assert "case: [S5-941-412, S5-941-407, S5-941-2069, S5-941-H25]" in text
     assert "sleep 600" in text
     assert "needs: delay-gate" in text
     assert "S5-417-" in text and "S5-941-" in text
