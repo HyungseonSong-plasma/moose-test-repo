@@ -34,6 +34,7 @@ CANONICAL_COMMANDS = {
     "oxygen-c0": "audit a 400 W Oxygen14 chemistry-off candidate without executing MOOSE",
     "oxygen-profile": "extract plasma-region electron density/energy profiles from native Exodus",
     "default-plot": "auto-plot Exodus nodal fields with flexible layouts and optional input-variable filter",
+    "research": "opt-in human research objective and evaluation-scope clarification before analysis",
 }
 
 COMMANDS = {
@@ -79,6 +80,8 @@ def print_help() -> None:
     print("  physics plan <experiment.json>")
     print("  physics lower <experiment.json>")
     print("  physics run <experiment.json>")
+    print("  physics research start <data> --session <session.json>")
+    print("  physics research <goal|scope|confirm|status|check|execute> ...")
     print("  physics -i <internal-target>          # compatibility/internal")
     print("\ncanonical commands:")
     width = max(len(name) for name in CANONICAL_COMMANDS)
@@ -239,6 +242,7 @@ def main(argv: list[str] | None = None) -> int:
         "oxygen-c0": lambda argv: import_module("experiments.Issue395_powered_chemistry_ladder.chemistry_off_c0").main(argv),
         "oxygen-profile": lambda argv: import_module("experiments.Issue395_powered_chemistry_ladder.electron_profile_exodus").main(argv),
         "default-plot": lambda argv: import_module("physics_harness.adapters.moose.default_plot").main(argv),
+        "research": lambda argv: import_module("physics_harness.cli.commands.research").main(argv),
     }
     canonical = canonical_handlers.get(args[0])
     if canonical is not None:
