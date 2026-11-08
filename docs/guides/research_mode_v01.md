@@ -19,92 +19,92 @@ existing simulation command or the SOL contract.
 
 Start with an actual on-disk dataset (no data bytes copied into the session):
 
-\`\`\`bash
+```bash
 python bin/physics.py research start HPEM_reference.csv --session experiment.research.json
-\`\`\`
+```
 
-The persisted response is \`AWAITING_GOAL\` and asks the operator what to
+The persisted response is `AWAITING_GOAL` and asks the operator what to
 investigate. When the operator states a goal without a precise evaluation
 boundary:
 
-\`\`\`bash
+```bash
 python bin/physics.py research goal experiment.research.json \
   --objective "Match the HPEM electron density distribution"
-\`\`\`
+```
 
-This becomes \`AWAITING_SCOPE\`. The CLI returns a **single** next question
+This becomes `AWAITING_SCOPE`. The CLI returns a **single** next question
 and presents these optional operator-selectable scopes:
 
 | Scope | Meaning |
 | --- | --- |
-| \`full_field\` | Global 2D/3D/temporal comparison |
-| \`representative_profiles\` | Predeclared scientifically meaningful slices |
-| \`key_features\` | Peak magnitude, location, width, etc. |
-| \`combined\` | Complementary evaluations |
-| \`custom\` | Explicit operator-defined boundary (\`--scope-detail\` required) |
+| `full_field` | Global 2D/3D/temporal comparison |
+| `representative_profiles` | Predeclared scientifically meaningful slices |
+| `key_features` | Peak magnitude, location, width, etc. |
+| `combined` | Complementary evaluations |
+| `custom` | Explicit operator-defined boundary (`--scope-detail` required) |
 
 For example:
 
-\`\`\`bash
+```bash
 python bin/physics.py research scope experiment.research.json \
   --scope representative_profiles
 python bin/physics.py research status experiment.research.json
-\`\`\`
+```
 
-This becomes \`AWAITING_CONFIRMATION\` and repeats the full stated objective
+This becomes `AWAITING_CONFIRMATION` and repeats the full stated objective
 and scope for the operator. Explicit approval is a separate transition:
 
-\`\`\`bash
+```bash
 python bin/physics.py research confirm experiment.research.json --approve
 python bin/physics.py research check experiment.research.json
-\`\`\`
+```
 
-Only now is the session \`GOAL_CONFIRMED\`, with a revision-matched
-confirmation event. \`check\` returns a nonzero status if the goal is
+Only now is the session `GOAL_CONFIRMED`, with a revision-matched
+confirmation event. `check` returns a nonzero status if the goal is
 unconfirmed or the dataset has changed since receipt.
 
 An explicitly selected existing analysis can be routed through the gate:
 
-\`\`\`bash
+```bash
 python bin/physics.py research execute experiment.research.json default-plot \
   --mode 2d-map --exodus plasma.e --input plasma.i \
   --time-us 100 --output profile.png
-\`\`\`
+```
 
-Allowed commands currently: \`default-plot\`, \`oxygen-profile\`,
-\`temporal-csv\`. The analysis implementation stays with the existing
+Allowed commands currently: `default-plot`, `oxygen-profile`,
+`temporal-csv`. The analysis implementation stays with the existing
 command; no freeform shell, code execution, automatic simulation, or
 scientific-policy invention.
 
-If a goal is already precise, \`research goal ... --scope key_features\`
+If a goal is already precise, `research goal ... --scope key_features`
 skips the extra clarification question, **but not human confirmation**.
-A rejected proposed goal (\`confirm --reject\`) returns to the initial
+A rejected proposed goal (`confirm --reject`) returns to the initial
 question. A confirmed goal is immutable within the session.
 
 ## Reuse without silently inheriting approval
 
-\`\`\`bash
+```bash
 python bin/physics.py research start next_run.csv \
   --session next_run.research.json --reuse-from experiment.research.json
-\`\`\`
+```
 
 This proposes the previous confirmed goal/scope for the new dataset but
-starts in \`AWAITING_CONFIRMATION\`, not \`GOAL_CONFIRMED\`. Explicit operator
+starts in `AWAITING_CONFIRMATION`, not `GOAL_CONFIRMED`. Explicit operator
 approval is required again. The old session is unchanged.
 
 ## Machine contract
 
-- \`physics_harness/specification/research_objective.py\` owns the
+- `physics_harness/specification/research_objective.py` owns the
   solver-independent goal/scope vocabulary.
-- \`physics_harness/application/research_session.py\` owns transitions,
+- `physics_harness/application/research_session.py` owns transitions,
   persistent JSON session, dataset SHA-256, revisioned confirmation evidence,
-  reuse, next questions and fail-closed \`require_analysis_ready\` API.
-- \`physics_harness/cli/commands/research.py\` performs argument routing.
-- The \`physics_harness/cli/app.py\` canonical router exposes \`physics research\`.
+  reuse, next questions and fail-closed `require_analysis_ready` API.
+- `physics_harness/cli/commands/research.py` performs argument routing.
+- The `physics_harness/cli/app.py` canonical router exposes `physics research`.
 
 State path:
 
-\`\`\`text
+```text
 DATA_RECEIVED -> AWAITING_GOAL
 AWAITING_GOAL -> AWAITING_SCOPE (goal statement, no declared evaluation scope)
 AWAITING_GOAL -> AWAITING_CONFIRMATION (goal statement + explicit scope)
@@ -112,7 +112,7 @@ AWAITING_SCOPE -> AWAITING_CONFIRMATION (scope supplied)
 AWAITING_CONFIRMATION -> GOAL_CONFIRMED (explicit operator approval)
 AWAITING_CONFIRMATION -> AWAITING_GOAL (rejection)
 CONFIRMED goal A -> REUSE_PROPOSED goal B -> AWAITING_CONFIRMATION (new dataset)
-\`\`\`
+```
 
 Each write validates the state and is persisted as an atomic JSON replacement.
 The session records dataset path, size and SHA-256; goal and scope; revision;
@@ -124,10 +124,10 @@ reference.
 ## v0.1 boundaries
 
 This mode **must be invoked explicitly**. It does not automatically detect
-file uploads in ChatGPT or intercept all existing \`physics\` commands. Only
-research-mode \`check\` / \`execute\` and library callers of
-\`require_analysis_ready\` enforce this gate. A future host adapter can
-invoke \`start\` when a dataset arrives and render the next question in chat.
+file uploads in ChatGPT or intercept all existing `physics` commands. Only
+research-mode `check` / `execute` and library callers of
+`require_analysis_ready` enforce this gate. A future host adapter can
+invoke `start` when a dataset arrives and render the next question in chat.
 
 The v0.1 scope vocabulary is a *human declaration*, not an automatic
 assessment of which metric is scientifically best. Criteria such as sampling
