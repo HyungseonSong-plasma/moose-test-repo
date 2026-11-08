@@ -190,16 +190,22 @@ def _question(record: dict[str, Any]) -> dict[str, Any] | None:
 
 def status(path: str | Path) -> dict[str, Any]:
     record = _load(path)
+    try:
+        _verify_data(record)
+        data_integrity = "MATCH"
+    except ResearchNotReady:
+        data_integrity = "MISSING_OR_CHANGED"
     return {
         "session_id": record["session_id"],
         "status": record["status"],
         "revision": record["revision"],
         "data_identity": record["dataset"],
+        "data_integrity": data_integrity,
         "objective": record["objective"],
         "evaluation_scope": record["evaluation_scope"],
         "scope_detail": record.get("scope_detail"),
         "reused_from": record.get("reused_from"),
-        "ready_for_analysis": record["status"] == GOAL_CONFIRMED,
+        "ready_for_analysis": record["status"] == GOAL_CONFIRMED and data_integrity == "MATCH",
         "next_question": _question(record),
         "confirmation": record.get("confirmation"),
     }
