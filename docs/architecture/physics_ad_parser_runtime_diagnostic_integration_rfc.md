@@ -54,7 +54,7 @@ This supersedes the overly broad original #471 requirement that all five cases h
 | Runtime image construction and build provenance | ci/physics-build-base and ci/physics-runtime-image/collect-runtime.sh, Dockerfile | Build toolchain and image dependency closure are PhysicsApp build owners, not SOL semantics. |
 | Vertical physics runtime/oracle checkers | physics_app/ci/check_r2_o2_ionization_implementation.py and check_r3_o2s_excitation_implementation.py | Useful additional native positive regression controls, not generic JIT execution owners. |
 
-**Architecture ambiguity:** coding.md mentions physics_harness/diagnostics/, but the canonical responsibility hierarchy assigns semantic diagnosis to reasoning, and historical diagnose/diagnostics layers have been removed or retired. No existing physics_harness/diagnostics production package was found at the reviewed main snapshot. Resolve this documentation discrepancy explicitly; do not introduce a new diagnoses package based only on the older snippet.
+**Architecture ambiguity (distinguish names precisely):** coding.md explicitly permits a reusable physics_harness/diagnostics/ fact-extraction owner, and physics_architecture_census.py lists diagnostics as an allowed capability directory. However, physics_directory_roles_v1.json and qpx_harness_folder_contracts.md do not assign it an explicit current responsibility, and no actual physics_harness/diagnostics package exists in the reviewed main snapshot. The **older physics_harness/diagnose namespace**, not diagnostics, is explicitly retired. For #471, existing execution/evidence/MOOSE-adapter/reasoning owners are sufficient; a new diagnostics package would require its own demonstrated cross-issue responsibility and a deliberate roles-policy decision rather than being automatically forbidden or automatically justified.
 
 ## 4. Dependency graph for this work
 
@@ -195,7 +195,7 @@ Required machine-enforced invariants:
 | Choice | Disposition | Rationale |
 | --- | --- | --- |
 | Copy Issue #8 probes into Issue #471 as a large independent runner | REJECT | Duplicates execution/evidence; creates two sources of phase and error truth. |
-| New physics_harness/diagnostics package | REJECT | Collides with retired ownership and canonical reasoning/adapter responsibilities. |
+| New physics_harness/diagnostics package for this issue | REJECT | Unnecessary extra owner while current primitives suffice; diagnostics is a permitted-but-unimplemented directory name, whereas only the old diagnose namespace is explicitly retired. |
 | Promote PhysicsApp JIT test into SOL public contract or advertise plasma via Adapter | REJECT | Runtime build compatibility is not canonical simulation meaning; formal gates pending. |
 | Force JIT OFF, replace all ADParsed with ADGeneric, or disable relevant materials to make P3 green | REJECT | Unsupported mode or changes evaluation/physical meaning, invalidates the scientific claim. |
 | Assume build-base JIT ON PASS proves "compiler missing" | REJECT | Loader/libmesh/header/wrapper variables co-vary. |
