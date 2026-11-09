@@ -1,11 +1,12 @@
 # Issue #402 — G0 Plasma Physics DSL detailed contract (review draft)
 
-> **Authority / status:** Design-only proposal prepared after approval of D1–D8 on
-> 2026-11-09 in [Issue #402](https://github.com/HyungseonSong-plasma/moose-test-repo/issues/402).
-> **G0_DETAIL_REVIEW_REQUIRED; IMPLEMENTATION_NOT_AUTHORIZED; SCIENCE_HOLD.**
-> The D1–D8 architectural invariants are approved. Parameter names, exact syntax,
-> implementation decomposition, backend availability and numerical equivalence
-> in this document are **candidates**, NOT already accepted executable syntax.
+> **Authority / status:** The user approved D1–D8 and subsequently approved this G0
+> detailed design on 2026-11-09 in [Issue #402](https://github.com/HyungseonSong-plasma/moose-test-repo/issues/402).
+> **G0_DESIGN_APPROVED; G1_IMPLEMENTATION_NOT_AUTHORIZED; SCIENCE_HOLD.**
+> Parameter names, ownership rules and validation policies below constitute the approved
+> **design target**, NOT an already implemented or Native-validated executable schema.
+> Exact C++ class composition, source-interface support and numerical equivalence remain
+> subject to separately approved G1–G4 verification.
 
 ## 0. Baseline, boundaries and non-goals
 
@@ -74,8 +75,8 @@
 
 ## 2. Shared proposed metadata and vocabulary
 
-These names are **proposed** and subject to G0 detailed-schema approval.
-No C++ parameters exist merely because they are named in this table.
+These names are the **approved G0 design targets**, not existing C++ parameter registrations.
+Implementation must verify exact native compatibility; any mismatch requires a bounded design amendment instead of silent renaming.
 
 | Path | Proposed parameter : type | Required / default | Validation/meaning |
 |---|---|---|---|
@@ -371,7 +372,7 @@ through-parent).
 
 ## 8. Smallest proposed illustrative input — NOT executable
 
-The following is a **schema-draft illustration only**. \`species_catalog\`,
+The following is an **approved design-target illustration only**, not runnable MOOSE syntax. \`species_catalog\`,
 \`source_mode\`, \`output\` and the declared field-bindings are still
 candidates; a valid Native MOOSE syntax cannot be inferred.
 
@@ -432,28 +433,41 @@ self-contained runnable simulation.
 | Gate | Deliverable | Status |
 |---|---|---|
 | **G0-A** | approved D1–D8 architectural invariant table | **APPROVED** per user |
-| **G0-B** | proposed per-leaf concrete parameters, types, required/default policy | **DRAFT_FOR_REVIEW** (this document) |
-| **G0-C** | proposed species catalogue, variable & equation ownership matrix and conflict semantics | **DRAFT_FOR_REVIEW** |
-| **G0-D** | proposed Action/PhysicsBase mapping, explicit MultiApp timing and rollback | **DRAFT_FOR_REVIEW** |
-| **G0-E** | proposed positive/negative controls and native numerical parity gates | **DRAFT_FOR_REVIEW** |
+| **G0-B** | per-leaf concrete parameters, types, required/default design policy | **G0_DESIGN_APPROVED; NATIVE_NOT_EVALUATED** |
+| **G0-C** | species catalogue, variable & equation ownership matrix and conflict design | **G0_DESIGN_APPROVED; NATIVE_NOT_EVALUATED** |
+| **G0-D** | Action/PhysicsBase approach, explicit MultiApp timing and rollback design | **G0_DESIGN_APPROVED; G1 C++ DETAIL PENDING** |
+| **G0-E** | positive/negative controls and native numerical parity gate design | **G0_DESIGN_APPROVED; EXECUTION_NOT_EVALUATED** |
 | **G1** | explicit authorization, C++ registration, Native build and real \`--check-input\` plus negatives | **BLOCKED** |
 | **G2** | generated-object / task graph parity to explicit input | **BLOCKED** |
 | **G3** | actual Native small fixture + pinned 400 W S5 physical/numerical comparison | **BLOCKED** |
 | **G4** | per-consumer opt-in migration, rollback and scientific review | **BLOCKED** |
 
-**Specific G0 decisions requested from user/reviewer:**
+**G0 design decisions approved (2026-11-09):**
 
-1. Accept proposed \`schema_version/species_catalog/region/discretization\`
-   metadata and the absence-based activation policy, or provide replacements.
-2. Accept \`owner_mode = generate|external\` for each equation and
-   owner-conflict enforcement, or replace with a typed \`field_bindings\` file.
-3. Accept coefficient \`verified_table|on_demand\` source policy with
-   unavailable \`on_demand\` blocked and **no fallback**.
-4. Accept initial \`DriftDiffusion/Energy\` electron-only and paired
-   \`NavierStokes\` mixture owner/consumer semantics.
-5. Accept precise MultiApp / RF freeze and error taxonomy. Decide which
-   *minimal* single-physics slice to authorize for a future G1 experimental
-   implementation, separately from approving this design document.
+1. Use `schema_version/species_catalog/region/discretization` metadata; reject unknown schema and species.
+2. Use typed `owner_mode = generate|external`; reject duplicate variables, equations, sources and RF owners.
+3. Enforce `verified_table|on_demand` source contract with unavailable on-demand providers blocked, no fallback.
+4. Keep v0.1 DD/Energy electron-only and the single-mixture NS continuity/momentum semantics.
+5. Preserve Gummel/MultiApp/RF execution order and the fail-closed error taxonomy.
+
+**Added user acceptance requirement: existing-run input option placement.**
+Before G1 object generation parity and G4 cutover, inventory every **effective** input
+option in the current S4/S5/S6/native run family (including recursively included
+and generated files), and produce an explicit old-option -> new-block or
+native-MOOSE-retained-path mapping with units, source-ownership,
+execution-stage and SHA provenance. No missing, duplicated, silently defaulted,
+or silently reassigned options are permitted; see companion
+`2026-11-09_issue402_current_run_option_placement.md`.
+A new DSL need **not** absorb MOOSE-native `Mesh/Executioner/Outputs`,
+`MultiApps/Transfers/Controls` or diagnostic reporting; they are
+**retained in their native scopes** unless an explicitly approved new owner
+replaces them with equivalence evidence. The current run families are *not*
+automatically migrated by G0 approval.
+
+**G1 separate implementation selection:** No C++ class, Action/task registration,
+actual `--check-input` acceptance, production input switch or merge of experimental
+results is authorized by G0; select the first bounded Native implementation
+slice only after separate approval.
 
 ## 10. Evidence references
 
