@@ -173,3 +173,53 @@ def test_duplicate_kernel_protection_and_s6_preparer():
     assert 'fem_kernel_names = \'ne_transport\'' in preparer
     assert '"native_400W_100us_parity": "NOT_EVALUATED"' in preparer
     assert "original_layer_count" in preparer
+
+
+def test_archived_s6_single_kernel_migration_from_synthetic_zip(tmp_path):
+    """The preparer must copy all ten sources and move exactly one kernel."""
+    import json
+    import runpy
+    import zipfile
+
+    preparation = runpy.run_path(str(CASE / "prepare_s6_single_kernel_migration.py"))
+    prepare = preparation["prepare"]
+    original_kernel = """  [ne_transport]
+    type = PhysicsFEMLogMolarDriftDiffusion
+    variable = log_ne
+    potential = potential
+    mobility = electron_mobility
+    diffusion = electron_diffusion
+    charge_number = -1
+    block = plasma
+  []
+"""
+    base = "[Kernels]\n" + original_kernel + "[]\n"
+    for branch in ("417", "941"):
+        case = f"S6-{branch}-407-2069-H25"
+        names = ["base.i"] + [f"layer_{i}.i" for i in range(1, 10)]
+        archive = tmp_path / f"{branch}.zip"
+        manifest = {
+            "case": case,
+            "source_sha": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+            "science_acceptance": "HOLD",
+            "power_W": 400,
+            "expected_native_steps": 460,
+            "input_paths": names,
+        }
+        with zipfile.ZipFile(archive, "w") as bundle:
+            bundle.writestr(f"results/{case}/case_manifest.json", json.dumps(manifest))
+            for name in names:
+                bundle.writestr(name, base if name == "base.i" else f"# {name}\n")
+        report = prepare(archive, tmp_path / "prepared")
+        root = tmp_path / "prepared" / case
+        assert report["static_operator_mapping"] == "MATCH"
+        assert report["native_400W_100us_parity"] == "NOT_EVALUATED"
+        assert original_kernel in (root / "baseline" / "base.i").read_text()
+        assert original_kernel not in (root / "candidate" / "base.i").read_text()
+        assert "fem_kernel_names = 'ne_transport'" in (
+            root / "candidate" / "migrated_continuity.i"
+        ).read_text()
+        for name in names[1:]:
+            assert (root / "baseline" / name).read_bytes() == (
+                root / "candidate" / name
+            ).read_bytes()
