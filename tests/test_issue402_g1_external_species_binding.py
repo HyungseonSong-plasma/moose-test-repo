@@ -51,7 +51,17 @@ def test_existing_variables_only():
     assert "Species '" in base_source
     assert "solverVariableExists(variable)" in base_source
     assert "isVariableFV(variable)" in base_source
-    assert "getProblem().add" not in base_source + source
+    # Shared input validation never creates solver objects.
+    assert "getProblem().add" not in base_source
+
+    # Continuity can add drift-diffusion only when the required physical
+    # coefficients have been supplied explicitly.
+    assert 'if (!isParamValid("fem_potential"))' in source
+    assert '"fem_mobility"' in source
+    assert '"fem_diffusion"' in source
+    assert '"fem_charge_numbers"' in source
+    assert "getProblem().addKernel(" in source
+    assert "PhysicsFEMLogMolarDriftDiffusion" in source
     assert "schema_version" not in base_source + source
     assert '"discretization"' not in base_source + source
 
