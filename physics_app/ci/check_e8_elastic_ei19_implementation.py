@@ -73,12 +73,20 @@ def _validate_table_bytes(data, spec, label):
 
 def _validate_owner_text(header, source):
     required_header = (
-        "class PhysicsElectronImpactRateMaterial : public FunctorMaterial",
+        "class ElectronImpactRateMaterial : public FunctorMaterial",
+        "ElectronImpactRateMaterial(const InputParameters & parameters);",
+        "using PhysicsElectronImpactRateMaterial = ElectronImpactRateMaterial;",
         "PhysicsLookupTable1D _table;",
         "const std::string _reaction_progress_name;",
     )
     required_source = (
         'registerMooseObject("PhysicsApp", PhysicsElectronImpactRateMaterial);',
+        'ElectronImpactRateMaterial::validParams()',
+        'ElectronImpactRateMaterial::ElectronImpactRateMaterial(',
+        'ElectronImpactRateMaterial::interpolateStrict(',
+        'mooseError("ElectronImpactRateMaterial requires n_e >= 0',
+        'mooseError("ElectronImpactRateMaterial requires c_target >= 0',
+        'mooseError("ElectronImpactRateMaterial encountered a negative tabulated rate',
         'addRequiredParam<FileName>("rate_table_file"',
         'addRequiredParam<MooseFunctorName>("mean_energy"',
         'addRequiredParam<MooseFunctorName>("electron_number_density"',
@@ -96,6 +104,10 @@ def _validate_owner_text(header, source):
     for token in required_source:
         if token not in source:
             raise AssertionError(f"missing source ownership token: {token}")
+    if 'mooseError("PhysicsElectronImpactRateMaterial' in source:
+        raise AssertionError("user-facing rate-owner errors must not contain Physics prefix")
+    if "PhysicsElectronImpactRateMaterial::" in source:
+        raise AssertionError("C++ rate-owner methods must not contain Physics prefix")
     if source.count("addFunctorProperty<ADReal>(") != 1:
         raise AssertionError("rate owner must publish exactly one canonical progress functor")
     for forbidden in ("std::clamp(", "std::max(", "std::min(", "PhysicsFVElectronReactionEnergySource"):
