@@ -16,6 +16,7 @@ public:
 
 private:
   void checkIntegrity() const override;
+  void addFunctorMaterials() override;
 };
 
 }

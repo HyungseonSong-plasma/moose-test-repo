@@ -16,6 +16,8 @@ public:
 
 private:
   void checkIntegrity() const override;
+  void addFEKernels() override;
+  void addFEBCs() override;
 };
 
 }

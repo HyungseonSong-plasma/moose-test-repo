@@ -95,3 +95,18 @@ python3 "$PILOT/compare_native_outputs.py" \
   --candidate "$EVIDENCE/candidate/plasma.e" \
   --output "$EVIDENCE/numerical_parity.json"
 echo "PLASMA_RESULTS_MATCH"
+
+native --check-input -i "$PILOT/rf_generated.i" 2>&1 | tee "$EVIDENCE/rf_generated_check.log"
+native --check-input -i "$PILOT/rf_explicit.i" 2>&1 | tee "$EVIDENCE/rf_explicit_check.log"
+mkdir -p "$EVIDENCE/rf_generated" "$EVIDENCE/rf_explicit"
+native -i "$PILOT/rf_generated.i" "Outputs/file_base=$EVIDENCE/rf_generated/rf" \
+  2>&1 | tee "$EVIDENCE/rf_generated_run.log"
+native -i "$PILOT/rf_explicit.i" "Outputs/file_base=$EVIDENCE/rf_explicit/rf" \
+  2>&1 | tee "$EVIDENCE/rf_explicit_run.log"
+test -s "$EVIDENCE/rf_generated/rf.e"
+test -s "$EVIDENCE/rf_explicit/rf.e"
+python3 "$PILOT/compare_native_outputs.py" \
+  --baseline "$EVIDENCE/rf_explicit/rf.e" \
+  --candidate "$EVIDENCE/rf_generated/rf.e" \
+  --output "$EVIDENCE/rf_builder_parity.json"
+echo "PLASMA_MAXWELL_OBJECT_GENERATION_MATCHES_NATIVE_INPUT"

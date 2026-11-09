@@ -15,6 +15,9 @@ EnergyPhysics::validParams()
       "fvm_species", {}, "Electron species solved with finite-volume variables.");
   params.addRequiredParam<VariableName>(
       "variable", "Existing solver variable for the electron energy equation.");
+
+  params.addParam<MaterialPropertyName>(
+      "rf_heating_material", "Existing electron-energy heating source in the equation's units.");
   return params;
 }
 
@@ -43,8 +46,23 @@ EnergyPhysics::checkIntegrity() const
                                    {getParam<VariableName>("variable")});
 }
 
+void
+EnergyPhysics::addFEKernels()
+{
+  if (!isParamValid("rf_heating_material"))
+    return;
+  const std::string type = "MatBodyForce";
+  auto params = getFactory().getValidParams(type);
+  params.set<NonlinearVariableName>("variable") = getParam<VariableName>("variable");
+  params.set<MaterialPropertyName>("material_property") =
+      getParam<MaterialPropertyName>("rf_heating_material");
+  assignBlocks(params, _blocks);
+  getProblem().addKernel(type, name() + "_rf_heating", params);
+}
+
 }
 
 using Plasma::EnergyPhysics;
 registerPhysicsBaseTasks("PhysicsApp", EnergyPhysics);
 registerMooseAction("PhysicsApp", EnergyPhysics, "check_integrity");
+registerMooseAction("PhysicsApp", EnergyPhysics, "add_kernel");

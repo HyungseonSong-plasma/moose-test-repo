@@ -111,3 +111,18 @@ def test_native_build_and_comparison_script():
     assert "owner_mode" not in (APP / "src/physics/plasma/PlasmaInterface.C").read_text()
     assert "ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:" in runner
     assert "Do not change existing production simulation inputs" in runner
+
+
+def test_real_solver_object_wiring():
+    for name, markers in {
+        "ContinuityPhysics": ["addFEKernels", "PhysicsFEMLogMolarDriftDiffusion"],
+        "EnergyPhysics": ["addFEKernels", "MatBodyForce"],
+        "ChemistryPhysics": ["addFunctorMaterials", "PhysicsElectronImpactRateMaterial"],
+        "PoissonPhysics": ["addFEKernels", "Diffusion", "MatBodyForce", "addFEBCs"],
+        "MaxwellPhysics": ["addFEKernels", "MatReaction", "MatCoupledForce", "addFEBCs"],
+    }.items():
+        source = (APP / f"src/physics/plasma/{name}.C").read_text()
+        assert all(marker in source for marker in markers)
+    assert "reaction_material = neg_a" in (CASE / "rf_generated.i").read_text()
+    assert "type = MatCoupledForce" in (CASE / "rf_explicit.i").read_text()
+    assert "rf_builder_parity.json" in (CASE / "run_native_binding_smoke.sh").read_text()
