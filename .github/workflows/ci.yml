@@ -522,3 +522,47 @@ jobs:
           path: boltzmann-candidate-bin/*
           if-no-files-found: error
           retention-days: 1
+
+  # Temporary, exact-PR-only native validation for Issue #402 G1.
+  # Do not merge this job to main; remove after preserving native evidence.
+  issue402_g1_native_binding_smoke:
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.number == 491 &&
+      github.event.pull_request.head.repo.full_name == 'HyungseonSong-plasma/moose-test-repo'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    permissions:
+      contents: read
+    steps:
+      - name: Check out exact G1 PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Verify isolated G1 source and immutable OCI pin
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          test -f experiments/Issue402_plasma_dsl_g1/run_native_binding_smoke.sh
+          grep -Fq 'sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008' physics_app/dependencies.lock
+          docker --version
+          df -h .
+      - name: Install native Exodus parity reader
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install numerical comparison dependencies
+        run: python3 -m pip install 'numpy>=1.26,<3' 'scipy>=1.14,<2'
+      - name: Build pinned PhysicsApp, validate positive and negative inputs, and solve two controls
+        shell: bash
+        run: bash experiments/Issue402_plasma_dsl_g1/run_native_binding_smoke.sh
+      - name: Upload native G1 build, check-input, solve and parity evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue402-g1-native-binding-${{ github.event.pull_request.head.sha }}
+          path: experiments/Issue402_plasma_dsl_g1/evidence/**
+          if-no-files-found: warn
+          retention-days: 30
