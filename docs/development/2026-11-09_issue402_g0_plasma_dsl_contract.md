@@ -495,3 +495,19 @@ slice only after separate approval.
 - [Current Gummel/Transfer contract](https://github.com/HyungseonSong-plasma/moose-test-repo/blob/main/physics_app/docs/gummel_iteration_action.md)
 - [Current closure Action contract](https://github.com/HyungseonSong-plasma/moose-test-repo/blob/main/physics_app/docs/plasma_closures_action.md)
 - [S5-417-407 native baseline](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/42521896067)
+
+
+## Implementation update (2026-11-09)
+
+The previous design's `owner_mode` input has been withdrawn at the user's
+request. The executable input now uses existing solver objects by default;
+the input cannot create any new equation or variable. The earlier parameter
+tables above are retained as historical design notes, not executable input
+requirements.
+
+`Continuity`, `Energy`, `Chemistry`, `Poisson`, and `Maxwell` have
+registered MOOSE input actions. The implementation validates only the
+parameters defined in each action. Additional coefficient, chemistry,
+boundary and source contracts remain future work and must not be inferred
+from the action registration. Native input and numerical tests are required
+before broad use; real S6 equivalence and scientific acceptance remain on hold.

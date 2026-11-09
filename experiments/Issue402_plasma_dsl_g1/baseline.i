@@ -13,11 +13,19 @@
   [u_fv]
     type = MooseVariableFVReal
   []
+  [u_rf_imag]
+    family = LAGRANGE
+    order = FIRST
+  []
 []
 [Kernels]
   [fe_diffusion]
     type = Diffusion
     variable = u_fe
+  []
+  [rf_imag_diffusion]
+    type = Diffusion
+    variable = u_rf_imag
   []
 []
 [FVKernels]
@@ -37,6 +45,18 @@
   [fe_right]
     type = DirichletBC
     variable = u_fe
+    boundary = right
+    value = 1
+  []
+  [rf_imag_left]
+    type = DirichletBC
+    variable = u_rf_imag
+    boundary = left
+    value = 0
+  []
+  [rf_imag_right]
+    type = DirichletBC
+    variable = u_rf_imag
     boundary = right
     value = 1
   []

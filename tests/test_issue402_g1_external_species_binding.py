@@ -44,9 +44,8 @@ def test_existing_variables_only():
     _, base_source, _, source, _ = sources()
     assert 'addParam<std::vector<std::string>>(\n      "fem_species"' in source
     assert 'addParam<std::vector<std::string>>(\n      "fvm_species"' in source
-    assert '"owner_mode"' in base_source
-    assert 'MooseEnum("external generate", "external")' in base_source
-    assert "Cannot create equations: this check only uses existing solver variables." in base_source
+    assert '"owner_mode"' not in base_source
+    assert '"owner_mode"' not in source
     assert "Repeated or empty species in fem_species:" in base_source
     assert "Repeated or empty species in fvm_species" in base_source
     assert "Species '" in base_source
@@ -70,10 +69,10 @@ def test_small_example_has_finite_element_and_finite_volume_equations():
 @pytest.mark.parametrize(
     "filename,expected",
     [
-        ("valid_bindings.i", "owner_mode = external"),
+        ("valid_bindings.i", "fem_species = 'e'"),
         ("invalid_overlap.i", "fem_species = 'e O2p'"),
         ("invalid_fem_fv_swap.i", "variables = 'u_fv u_fe'"),
-        ("invalid_generate.i", "owner_mode = generate"),
+        ("invalid_no_species.i", "variables = 'u_fe u_fv'"),
         ("invalid_missing_variable.i", "missing_fe"),
     ],
 )
@@ -92,9 +91,23 @@ def test_native_build_and_comparison_script():
     assert "physics-opt" in runner and "make -C physics_app -j2" in runner
     assert "app_non_unity_dirs='%/utils'" in runner
     assert "PLASMA_RESULTS_MATCH" in runner
-    assert "invalid_overlap invalid_fem_fv_swap invalid_generate invalid_missing_variable" in runner
+    assert "invalid_overlap invalid_fem_fv_swap invalid_no_species invalid_missing_variable" in runner
     assert "sha256sum" in runner
     assert "physics_app/src/physics/plasma/PlasmaInterface.C" in runner
     assert "physics_app/src/physics/plasma/ContinuityPhysics.C" in runner
+    for name in ("EnergyPhysics", "ChemistryPhysics", "PoissonPhysics", "MaxwellPhysics"):
+        header = (APP / f"include/physics/plasma/{name}.h").read_text()
+        source = (APP / f"src/physics/plasma/{name}.C").read_text()
+        assert f"class {name} : public PlasmaInterface" in header
+        assert f'registerPhysicsBaseTasks("PhysicsApp", {name});' in source
+        assert f'registerMooseAction("PhysicsApp", {name}, "check_integrity");' in source
+        assert f'registerSyntax("{name}",' in (APP / "src/base/PhysicsApp.C").read_text()
+        assert f"physics_app/src/physics/plasma/{name}.C" in runner
+    rich_input = (CASE / "valid_all_physics.i").read_text()
+    for block in ("[Energy]", "[Chemistry]", "[Poisson]", "[Maxwell]"):
+        assert block in rich_input
+    for filename in ("valid_bindings.i", "valid_all_physics.i", "s6_external_bindings.i"):
+        assert "owner_mode" not in (CASE / filename).read_text()
+    assert "owner_mode" not in (APP / "src/physics/plasma/PlasmaInterface.C").read_text()
     assert "ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:" in runner
     assert "Do not change existing production simulation inputs" in runner

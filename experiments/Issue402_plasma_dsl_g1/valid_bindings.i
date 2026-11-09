@@ -4,7 +4,6 @@
     [Transport]
       [DriftDiffusion]
         [Continuity]
-          owner_mode = external
           fem_species = 'e'
           fvm_species = 'O2p'
           variables = 'u_fe u_fv'

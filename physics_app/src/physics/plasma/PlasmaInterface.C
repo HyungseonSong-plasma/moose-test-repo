@@ -6,19 +6,12 @@ InputParameters
 PlasmaInterface::validParams()
 {
   InputParameters params = PhysicsBase::validParams();
-  params.addParam<MooseEnum>(
-      "owner_mode",
-      MooseEnum("external generate", "external"),
-      "Use existing solver variables only. Creating equations is not supported.");
   return params;
 }
 
 PlasmaInterface::PlasmaInterface(const InputParameters & parameters)
   : PhysicsBase(parameters)
 {
-  if (getParam<MooseEnum>("owner_mode") != "external")
-    paramError("owner_mode",
-               "Cannot create equations: this check only uses existing solver variables.");
 }
 
 void

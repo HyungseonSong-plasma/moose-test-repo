@@ -1,57 +1,39 @@
-# Check existing plasma species variables
+# Plasma input checks
 
-This feature checks whether each plasma species uses a solver variable that
-already exists. It does not add equations, variables, or boundary conditions.
+MOOSE can now parse and execute five plasma input actions. Each action checks
+existing simulation inputs; none creates or replaces an equation.
 
-The shared checks are implemented in `PlasmaInterface`, which inherits from
-MOOSE's `PhysicsBase`. The `Plasma::ContinuityPhysics` class uses those checks
-for continuity inputs. It does not create equations yet.
+| Input path under `Physics/Plasmas` | C++ action | What it checks |
+| --- | --- | --- |
+| `Transport/DriftDiffusion/Continuity` | `Plasma::ContinuityPhysics` | Species and existing FEM/FV solver variables |
+| `Transport/DriftDiffusion/Energy` | `Plasma::EnergyPhysics` | Electron species and existing FEM energy variable |
+| `Transport/Chemistry` | `Plasma::ChemistryPhysics` | Unique reactions and one progress name per reaction |
+| `Poisson` | `Plasma::PoissonPhysics` | Existing electric potential solver variable |
+| `Maxwell` | `Plasma::MaxwellPhysics` | Existing real/imaginary fields, matching variable families and positive frequency |
 
-## Input
+All actions share the `PlasmaInterface` validation base class. The
+`owner_mode` input has been removed. These actions **always use existing
+solver objects**, without adding a physics equation, source, boundary
+condition or changing numerical parameters. In particular, the chemistry
+action verifies the reaction-to-progress name mapping, not the existence,
+units or ownership of the underlying rate functors.
 
-The input path is unchanged:
-`Physics/Plasmas/Transport/DriftDiffusion/Continuity`.
+To exercise all five actions with a small simulation, supply
+`baseline.i` and `valid_all_physics.i`. The latter is intentionally a
+minimal demonstration, **not a physical multi-equation plasma model**.
 
-- `fem_species`: species using finite-element variables.
-- `fvm_species`: species using finite-volume variables.
-- `variables`: existing solver variables in the same order as the species.
-- `owner_mode = external`: use existing variables only. `generate` is not supported.
-
-Each species and variable must be unique. Every solver variable must exist and
-have the correct type. The checker explains the problem when an input is invalid.
-
-The parameter names remain unchanged so that existing inputs still work.
-
-## Run the tests
-
-The build uses a fixed container image:
-
+The build uses the fixed image
 `ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008`
+and MOOSE revision `9f388366ccf38b9c34542ec5561198249fde0ac9`.
 
-The MOOSE version is `9f388366ccf38b9c34542ec5561198249fde0ac9`.
-
-From the repository root on a machine with Docker:
+From the repository root on a Docker runner:
 
 ```bash
 bash experiments/Issue402_plasma_dsl_g1/run_native_binding_smoke.sh
 ```
 
-This builds the solver, checks one valid and four invalid inputs, then runs the
-same small diffusion example with and without the checker. The results must
-match. Logs and comparisons are saved in `evidence/`.
-
-## Verification status
-
-The first compiled build attempt at
-`5752b0e4f722045d9a2dba1e2d70c4e2d86d5853` failed before these checks.
-Existing Boltzmann source files define the same helper names and conflict
-when compiled together in the combined build mode. The test build now compiles
-those helper files separately; this does not change the simulation equations.
-
-The solver-variable checks and numerical comparison are therefore not yet
-verified by a completed build. Separate 400 W, 100 microsecond plasma runs
-are required before claiming full simulation equivalence.
-
-The `s6_external_bindings.i` file is an extra input for later tests. It must
-not replace any original simulation inputs or disclose private chemistry data.
-Scientific approval remains on hold.
+The script compiles the real C++ code, accepts valid inputs, rejects invalid
+inputs, and compares two small numerical solves. Real S6 400 W / 100 microsecond
+replay with these inputs is a separate validation requirement. The existing
+S6 input layers and private chemistry data must remain unchanged. No
+scientific result is accepted by this input registration alone.

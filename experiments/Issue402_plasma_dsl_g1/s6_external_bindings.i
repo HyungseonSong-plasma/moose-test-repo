@@ -6,7 +6,6 @@
     [Transport]
       [DriftDiffusion]
         [Continuity]
-          owner_mode = external
           block = plasma
           fem_species = 'e'
           fvm_species = 'O2p Om Op'

@@ -52,6 +52,14 @@ PhysicsApp::registerAll(Factory & f, ActionFactory & af, Syntax & syntax)
   // The continuity input checks the species variables before solving.
   registerSyntax("ContinuityPhysics",
                  "Physics/Plasmas/Transport/DriftDiffusion/Continuity");
+  registerSyntax("EnergyPhysics",
+                 "Physics/Plasmas/Transport/DriftDiffusion/Energy");
+  registerSyntax("ChemistryPhysics",
+                 "Physics/Plasmas/Transport/Chemistry");
+  registerSyntax("PoissonPhysics",
+                 "Physics/Plasmas/Poisson");
+  registerSyntax("MaxwellPhysics",
+                 "Physics/Plasmas/Maxwell");
 }
 
 void
