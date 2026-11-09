@@ -177,7 +177,7 @@ def execute(image: str, root: Path, binary: Path, output: Path, inputs: list[str
         "docker", "run", "--rm", "--entrypoint", "/bin/bash", "--user", "0:0",
         "--workdir", "/workspace",
         "--volume", f"{root}:/workspace:ro",
-        "--volume", f"{output.parents[3]}:/results",
+        "--volume", f"{output.parents[2]}:/results",
         "--volume", f"{binary}:/plasma-opt:ro",
         "--env", "OXYGEN_RESEARCH_400=1",
         "--env", "OXYGEN_RESEARCH_FULL24=0",
@@ -188,8 +188,8 @@ def execute(image: str, root: Path, binary: Path, output: Path, inputs: list[str
     if check_input:
         command.extend(["--check-input", "-i", *inputs])
     else:
-        case = output.parents[2].name
-        role = output.parent.name
+        case = output.parents[1].name
+        role = output.stem.removesuffix("_run")
         command.extend(["-i", *inputs, f"Outputs/file_base=/results/{case}/runs/{role}/plasma"])
     with output.open("wb") as log:
         completed = subprocess.run(command, stdout=log, stderr=subprocess.STDOUT,
