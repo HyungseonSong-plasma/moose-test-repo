@@ -126,3 +126,22 @@ def test_real_solver_object_wiring():
     assert "reaction_material = neg_a" in (CASE / "rf_generated.i").read_text()
     assert "type = MatCoupledForce" in (CASE / "rf_explicit.i").read_text()
     assert "rf_builder_parity.json" in (CASE / "run_native_binding_smoke.sh").read_text()
+
+
+def test_generated_physics_requires_explicit_inputs():
+    source_dir = APP / "src/physics/plasma"
+    activating_parameters = {
+        "ContinuityPhysics": '"fem_potential"',
+        "EnergyPhysics": '"rf_heating_material"',
+        "ChemistryPhysics": '"rate_table_files"',
+        "PoissonPhysics": '"charge_source_material"',
+        "MaxwellPhysics": '"reaction_material"',
+    }
+    for name, parameter in activating_parameters.items():
+        source = (source_dir / f"{name}.C").read_text()
+        assert parameter in source
+        assert "if (!isParamValid(" in source
+    maxwell = (source_dir / "MaxwellPhysics.C").read_text()
+    assert "variable == real ? 1.0 : -1.0" in maxwell
+    assert "getProblem().addBoundaryCondition" in maxwell
+    assert "getProblem().addKernel" in maxwell
