@@ -48,6 +48,11 @@ PhysicsApp::registerAll(Factory & f, ActionFactory & af, Syntax & syntax)
   syntax.registerActionSyntax("AddPeriodicRelativeNodalDifference", "PeriodicRelativeNodalDifference/*");
   syntax.registerActionSyntax("GummelIterationAction", "GummelIteration/*");
   syntax.registerActionSyntax("PlasmaClosuresAction", "PlasmaClosures/*");
+
+  // Issue #402 G1: opt-in validation of existing FEM/FV continuity fields only.
+  // No Physics equation, source, wall model or MultiApp is generated.
+  registerSyntax("PlasmaSpeciesContinuityPhysics",
+                 "Physics/Plasmas/Transport/DriftDiffusion/Continuity");
 }
 
 void
