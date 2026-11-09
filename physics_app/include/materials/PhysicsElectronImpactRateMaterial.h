@@ -2,6 +2,7 @@
 
 #include "FunctorMaterial.h"
 #include "PhysicsLookupTable1D.h"
+#include "LinearInterpolation.h"
 
 #include <string>
 
@@ -32,6 +33,7 @@ protected:
   const FileName _rate_table_file;
   const std::string _reaction_progress_name;
   PhysicsLookupTable1D _table;
+  LinearInterpolation _rate_interpolation;
 };
 
 // Keep the existing registered MOOSE object and historical input files valid.
