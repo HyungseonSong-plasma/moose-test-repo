@@ -174,7 +174,9 @@ def execute(image: str, root: Path, binary: Path, output: Path, inputs: list[str
             check_input: bool, timeout_seconds: int) -> None:
     output.parent.mkdir(parents=True, exist_ok=True)
     command = [
-        "docker", "run", "--rm", "--entrypoint", "/bin/bash", "--user", "0:0",
+        "docker", "run", "--rm", "--network", "none",
+        "--cap-drop", "ALL", "--security-opt", "no-new-privileges",
+        "--entrypoint", "/bin/bash", "--user", "0:0",
         "--workdir", "/workspace",
         "--volume", f"{root}:/workspace:ro",
         "--volume", f"{output.parents[2]}:/results",
