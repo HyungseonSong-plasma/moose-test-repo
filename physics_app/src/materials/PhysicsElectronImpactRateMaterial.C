@@ -1,5 +1,7 @@
 #include "PhysicsElectronImpactRateMaterial.h"
 
+#include <cmath>
+
 registerMooseObject("PhysicsApp", PhysicsElectronImpactRateMaterial);
 
 InputParameters
@@ -31,6 +33,9 @@ ElectronImpactRateMaterial::ElectronImpactRateMaterial(
     _reaction_progress_name(getParam<std::string>("reaction_progress")),
     _table(_rate_table_file, 1, {2})
 {
+  // Keep the validated file parser and let MOOSE own the linear interpolation.
+  _rate_interpolation.setData(_table.coordinate(), _table.values(0));
+
   constexpr Real N_A = 6.02214076e23;
 
   if (_reaction_progress_name.empty())
@@ -66,6 +71,10 @@ ElectronImpactRateMaterial::interpolateStrict(const ADReal & coordinate) const
   const auto & x = _table.coordinate();
   const auto & y = _table.values(0);
   const Real raw = coordinate.value();
+  if (!std::isfinite(raw))
+    mooseError("Electron-impact progress '",
+               _reaction_progress_name,
+               "' requires finite mean electron energy.");
 
   if (raw < x.front() || raw > x.back())
     mooseError("Electron-impact progress '",
@@ -82,6 +91,7 @@ ElectronImpactRateMaterial::interpolateStrict(const ADReal & coordinate) const
   if (raw == x.back())
     return y.back();
 
-  const std::size_t i = _table.lowerBracket(raw);
-  return y[i] + (coordinate - x[i]) * (y[i + 1] - y[i]) / (x[i + 1] - x[i]);
+  // MOOSE's ADReal sample preserves the same piecewise-linear value and slope.
+  // Explicit endpoint returns retain the prior zero AD derivative at both limits.
+  return _rate_interpolation.sample(coordinate);
 }
