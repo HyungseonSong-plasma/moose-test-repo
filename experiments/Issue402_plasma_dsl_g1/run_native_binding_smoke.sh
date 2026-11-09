@@ -96,6 +96,19 @@ python3 "$PILOT/compare_native_outputs.py" \
   --output "$EVIDENCE/numerical_parity.json"
 echo "PLASMA_RESULTS_MATCH"
 
+set +e
+native --check-input -i "$PILOT/rf_explicit.i" "$PILOT/duplicate_maxwell.i" \
+  > "$EVIDENCE/duplicate_maxwell.log" 2>&1
+duplicate_exit=$?
+set -e
+if [[ "$duplicate_exit" -eq 0 ]] ||
+    ! grep -Fq "must have exactly one owner" "$EVIDENCE/duplicate_maxwell.log"; then
+  echo "::error::A native and Physics-generated Maxwell operator were both accepted" >&2
+  cat "$EVIDENCE/duplicate_maxwell.log" >&2
+  exit 23
+fi
+echo "PLASMA_DUPLICATE_NATIVE_KERNEL_REJECTED"
+
 native --check-input -i "$PILOT/rf_generated.i" 2>&1 | tee "$EVIDENCE/rf_generated_check.log"
 native --check-input -i "$PILOT/rf_explicit.i" 2>&1 | tee "$EVIDENCE/rf_explicit_check.log"
 mkdir -p "$EVIDENCE/rf_generated" "$EVIDENCE/rf_explicit"

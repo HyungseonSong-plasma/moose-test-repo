@@ -73,3 +73,40 @@ are also declared under `[Kernels]` or `[BCs]`: doing so double-counts
 the physics. The `rf_generated.i` versus `rf_explicit.i` comparison
 checks that the Maxwell action generates the same solver operator as
 explicit MOOSE objects. This is not full S6 scientific parity.
+
+## Single-kernel S6 migration (archived, not production)
+
+The completed S6-417 and S6-941 runs contain an explicit `ne_transport`
+FEM log-molar drift-diffusion Kernel. The archive-based preparation program
+moves **only this one existing Kernel** into `ContinuityPhysics` and
+preserves its name, parameters and `plasma` block restriction.
+The original electron time derivative, energy, chemistry, ion FV equations,
+Poisson/MultiApps, controls, materials and all wall conditions remain native.
+
+The `fem_kernel_names = 'ne_transport'` input preserves the existing
+Kernel identity. During `check_integrity`, the common plasma validation
+also rejects more than one same-type FEM Kernel on a variable, including an
+accidental native + Physics duplicate.
+
+To prepare separate baseline and candidate **outside the repository**, with
+the two original GitHub Actions S6 ZIP artifacts available locally:
+
+```bash
+python3 experiments/Issue402_plasma_dsl_g1/prepare_s6_single_kernel_migration.py \
+  --archive /private/path/s6_417.zip \
+  --archive /private/path/s6_941.zip \
+  --output-dir /private/path/s6_migration_review
+```
+
+The generated `migration_report.json` proves only the isolated static
+source transformation. It does not prove that the new model compiles or
+replays the original 400 W / 100 microsecond trajectory. That full native
+comparison requires the archived rate tables and pinned original runtime
+dependencies. No private chemistry files are committed or published.
+
+The small native regression now includes a **negative test** that provides
+native and generated Maxwell kernels simultaneously and requires rejection.
+The C++ duplicate guard is intentionally conservative: two kernels of the
+same type targeting one FEM variable are rejected even if deliberately
+different sources would otherwise be useful. Keep such complex sources
+explicit until typed ownership is implemented.

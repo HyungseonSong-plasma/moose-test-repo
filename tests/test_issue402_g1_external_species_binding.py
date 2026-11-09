@@ -155,3 +155,21 @@ def test_generated_physics_requires_explicit_inputs():
     assert "variable == real ? 1.0 : -1.0" in maxwell
     assert "getProblem().addBoundaryCondition" in maxwell
     assert "getProblem().addKernel" in maxwell
+
+
+def test_duplicate_kernel_protection_and_s6_preparer():
+    shared = (APP / "src/physics/plasma/PlasmaInterface.C").read_text()
+    continuity = (APP / "src/physics/plasma/ContinuityPhysics.C").read_text()
+    runner = (CASE / "run_native_binding_smoke.sh").read_text()
+    assert "requireUniqueFEKernel" in shared
+    assert "getKernelWarehouse().getObjects()" in shared
+    assert "must have exactly one owner" in shared
+    assert '"fem_kernel_names"' in continuity
+    assert "kernel_names[i]" in continuity
+    assert "duplicate_maxwell.i" in runner
+    assert "PLASMA_DUPLICATE_NATIVE_KERNEL_REJECTED" in runner
+    preparer = (CASE / "prepare_s6_single_kernel_migration.py").read_text()
+    assert "PhysicsFEMLogMolarDriftDiffusion" in preparer
+    assert 'fem_kernel_names = \'ne_transport\'' in preparer
+    assert '"native_400W_100us_parity": "NOT_EVALUATED"' in preparer
+    assert "original_layer_count" in preparer
