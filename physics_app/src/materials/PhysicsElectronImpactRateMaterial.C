@@ -3,7 +3,7 @@
 registerMooseObject("PhysicsApp", PhysicsElectronImpactRateMaterial);
 
 InputParameters
-PhysicsElectronImpactRateMaterial::validParams()
+ElectronImpactRateMaterial::validParams()
 {
   auto params = FunctorMaterial::validParams();
   params.addClassDescription(
@@ -21,7 +21,7 @@ PhysicsElectronImpactRateMaterial::validParams()
   return params;
 }
 
-PhysicsElectronImpactRateMaterial::PhysicsElectronImpactRateMaterial(
+ElectronImpactRateMaterial::ElectronImpactRateMaterial(
     const InputParameters & parameters)
   : FunctorMaterial(parameters),
     _mean_energy(getFunctor<ADReal>("mean_energy")),
@@ -43,17 +43,17 @@ PhysicsElectronImpactRateMaterial::PhysicsElectronImpactRateMaterial(
         const ADReal n_e = _electron_number_density(r, state);
         const ADReal c_target = _target_molar_concentration(r, state);
         if (n_e.value() < 0.0)
-          mooseError("PhysicsElectronImpactRateMaterial requires n_e >= 0 for '",
+          mooseError("ElectronImpactRateMaterial requires n_e >= 0 for '",
                      _reaction_progress_name,
                      "'.");
         if (c_target.value() < 0.0)
-          mooseError("PhysicsElectronImpactRateMaterial requires c_target >= 0 for '",
+          mooseError("ElectronImpactRateMaterial requires c_target >= 0 for '",
                      _reaction_progress_name,
                      "'.");
 
         const ADReal k_raw = interpolateStrict(_mean_energy(r, state));
         if (k_raw.value() < 0.0)
-          mooseError("PhysicsElectronImpactRateMaterial encountered a negative tabulated rate for '",
+          mooseError("ElectronImpactRateMaterial encountered a negative tabulated rate for '",
                      _reaction_progress_name,
                      "'.");
         return k_raw * (n_e / N_A) * c_target;
@@ -61,7 +61,7 @@ PhysicsElectronImpactRateMaterial::PhysicsElectronImpactRateMaterial(
 }
 
 ADReal
-PhysicsElectronImpactRateMaterial::interpolateStrict(const ADReal & coordinate) const
+ElectronImpactRateMaterial::interpolateStrict(const ADReal & coordinate) const
 {
   const auto & x = _table.coordinate();
   const auto & y = _table.values(0);
