@@ -73,17 +73,27 @@
   solver settings or RF power controllers. Explicit physical and numerical
   bindings are required for an executable leaf.
 
-## 2. Shared proposed metadata and vocabulary
+## 2. Shared metadata and vocabulary
 
 These names are the **approved G0 design targets**, not existing C++ parameter registrations.
 Implementation must verify exact native compatibility; any mismatch requires a bounded design amendment instead of silent renaming.
 
+**2026-11-09 user-directed amendment:** Do not require input-level \`schema_version\`.
+The pinned PhysicsApp/MOOSE implementation defines registered input semantics;
+external catalogue formats may carry independent version metadata.
+Do not add an implicit schema-version field or reject an input for omitting it.
+
+**Discretization is local to the equation/species, never a global
+\`Transport/discretization\` switch.** Species-bearing equation leaves use
+\`fem_species\` and \`fvm_species\`. Both must contain unique, known,
+mutually disjoint species, and each selected numerical implementation must
+be present in the pinned app. An omitted list means no species in that
+numerical family, not an automatic equation.
+
 | Path | Proposed parameter : type | Required / default | Validation/meaning |
 |---|---|---|---|
-| \`Plasmas\` | \`schema_version: unsigned int\` | **required**, exactly \`1\` | Reject unknown version before constructing objects. |
 | \`Transport\` | \`species_catalog: FileName\` | required **when any transport/chemistry child is active** | Versioned catalogue with stable IDs and mass/charge states; file digest recorded. No inferred species. |
 | \`Transport\` | \`region: vector<SubdomainName>\` | required for equation-generating transport leaves | Explicit mesh block restrictions, no silent \`all\`. |
-| \`Transport\` | \`discretization: enum {FV,FEM}\` | required when any transport equation active | No implicit FV↔FEM conversion; each supported leaf declares a verified method. |
 | \`Poisson\`, \`Maxwell\` | \`region: vector<SubdomainName>\` | required if active | Can differ from Transport, with explicit cross-region field coupling. |
 | All equation leaves | \`owner_mode: enum {generate,external}\` | **required** | \`generate\`: own variables/kernels/sources; \`external\`: consume separately owned state only and create **no duplicate equation**. Validation still checks provider and consumer bindings. |
 | All equation leaves | \`boundary_contract: FileName\` | required for \`generate\` | Explicit supported BC, boundary IDs and units; no automatically invented wall/flux treatment. |
@@ -164,11 +174,11 @@ never auto-enabled.
 
 | Parameter | Type | Requirement and meaning |
 |---|---|---|
-| \`species\` | \`vector<string>\` | Required nonempty, unique; each species must be in catalog and have a compatible charge/transport model. |
-| \`variables\` | \`vector<VariableName>\` | Required 1:1 with \`species\`; explicit existing **log-molar vs physical-number** state contract, reference scale and unit. |
+| \`fem_species\`, \`fvm_species\` | \`vector<string>\` each | At least one nonempty, disjoint, unique; each species known in catalogue and supported by its chosen FEM/FV charged-transport model. |
+| \`variables\` | \`vector<VariableName>\` | Required 1:1 with \`fem_species\` then \`fvm_species\` in that order; preserve existing log-molar/physical-number state, units and reference scales. |
 | \`electric_field\` | typed field reference | Required for drift-active species; may be external Poisson field; never created twice. |
-| \`mobility\`, \`diffusion\` | \`vector<MooseFunctorName>\` | Required 1:1 in \`species\` order with units **m²/(V s)** and **m²/s**. |
-| \`reaction_sources\` | \`vector<MooseFunctorName>\` | Required 1:1, permitted explicit zero source; consistent number/molar conversion. |
+| \`mobility\`, \`diffusion\` | \`vector<MooseFunctorName>\` | Required 1:1 in FEM-then-FV species order, with units **m²/(V s)** and **m²/s**. |
+| \`reaction_sources\` | \`vector<MooseFunctorName>\` | Required 1:1 in FEM-then-FV species order; explicit zero permitted and number/molar conversion preserved. |
 | \`owner_mode\`, \`boundary_contract\` | shared | Required; one species continuity residual per species for \`generate\`. |
 
 No hidden electroneutrality, sheath, ambipolar boundary rule, charged-state
@@ -179,7 +189,7 @@ accidentally acquire charged drift terms merely from its membership.
 
 | Parameter | Type | Requirement and meaning |
 |---|---|---|
-| \`species\` | \`vector<string>\` | In v0.1 must be **exactly \`e\`**; anything else fails unsupported, not ignored. |
+| \`fem_species\`, \`fvm_species\` | \`vector<string>\` each | Exactly one list must contain \`e\`; the other absent/empty. Current S6 electron energy is FEM (\`fem_species = 'e'\`); FV energy requires separately verified Native support. |
 | \`variable\`, \`state_form\`, \`reference_scale\` | \`VariableName\`, enum, positive Real with unit | Required; distinguish solved electron energy density from \`T_e\` or mean-energy functors. |
 | \`electron_density\`, \`mean_energy\` | typed functor refs | Required; explicit density and eV mean-energy convention. |
 | \`energy_mobility\`, \`energy_diffusion\` | typed functor refs | Required; explicitly documented coefficient units and electron-energy transport closure. |
@@ -195,16 +205,18 @@ physical \`eV/m³\` without the pinned source's state transformation.
 
 | Path | Parameter | Requirement and meaning |
 |---|---|---|
-| Both | \`species: vector<string>\` | Required, nonempty, neutral mixture constituents with identical **sets** in both blocks; no accidental per-species mass/momentum. |
+| Both | \`fem_species\`, \`fvm_species: vector<string>\` | Required unique/disjoint neutral-mixture constituents. Lists match in both NS blocks. S6 uses \`fvm_species = 'O2 O2s O Os'\`, denoting one FV mixture, **not per-species momentum**. Both numerical families must not generate the same mixture. |
 | Both | \`mixture_density: MooseFunctorName\` | Explicit **kg/m³** state/owner; one mixture identity. |
 | Both | \`mixture_velocity: vector<VariableName>\` | Single shared velocity field, with mesh-dimension-compatible components. |
 | Continuity | \`density_variable: VariableName\` | Exactly one mixture mass-continuity residual when \`generate\`. |
 | Momentum | \`pressure: MooseFunctorName\`, \`viscosity: MooseFunctorName\` | Required, respectively **Pa**, **Pa s**; explicit source/BC/viscous closure. |
-| Both | \`composition: vector<MooseFunctorName>\` | Required 1:1 with ordered species, dimensionless mass fractions with sum-to-one validation/normalization contract. |
+| Both | \`composition: vector<MooseFunctorName>\` | Required 1:1 in declared FEM-then-FV mixture constituent order, with dimensionless mass fractions and sum-to-one validation. |
 | Both | \`owner_mode\`, \`boundary_contract\` | Required; forbid repeated momentum generation by dimension/species loops. |
 
 The paired blocks must use one composition and one mixture density/velocity
-owner. If only one of \`Continuity\` or \`Momentum\` is present, it must
+owner. The two species lists describe *mixture constituents* and the
+discretization of the single mixture equation; never per-species mass or
+momentum equations. If only one of \`Continuity\` or \`Momentum\` is present, it must
 **explicitly** consume the other equation's external state and pass validation;
 no implicit second equation is created. An existing
 \`Physics/NavierStokes/Flow/*\` owner for the same mixture variables is a
@@ -379,11 +391,9 @@ candidates; a valid Native MOOSE syntax cannot be inferred.
 \`\`\`ini
 [Physics]
   [Plasmas]
-    schema_version = 1
     [Transport]
       species_catalog = plasma_species_v1.json
       region = plasma
-      discretization = FV
       [Coefficient]
         solver = Boltzmann
         source_mode = verified_table
@@ -406,7 +416,7 @@ candidates; a valid Native MOOSE syntax cannot be inferred.
         [Continuity]
           owner_mode = generate
           name_prefix = electron_
-          species = 'e'
+          fem_species = 'e'
           variables = 'log_ne'
           electric_field = E_dc_from_poisson
           mobility = 'electron_mobility'
@@ -428,6 +438,13 @@ system; \`E_dc_from_poisson\` must be an explicitly mapped external
 field. It is therefore an illustration of the **schema**, not yet a
 self-contained runnable simulation.
 
+**2026-11-09 G0 amendment accepted by user:** No input \`schema_version\`.
+Species-bearing equation paths use \`fem_species\` and \`fvm_species\`
+rather than \`species\`. No global \`Transport/discretization\` parameter.
+Latest S6: FEM \`e\` continuity/energy; FV \`O2p Om Op\` ion
+continuity; FV \`O2 O2s O Os\` single neutral mixture. Native syntax and
+numerical parity remain NOT_EVALUATED until G1–G3.
+
 ## 9. G0 acceptance matrix and downstream gates
 
 | Gate | Deliverable | Status |
@@ -444,9 +461,9 @@ self-contained runnable simulation.
 
 **G0 design decisions approved (2026-11-09):**
 
-1. Use `schema_version/species_catalog/region/discretization` metadata; reject unknown schema and species.
-2. Use typed `owner_mode = generate|external`; reject duplicate variables, equations, sources and RF owners.
-3. Enforce `verified_table|on_demand` source contract with unavailable on-demand providers blocked, no fallback.
+1. Use \`species_catalog/region\` without a user \`schema_version\` or global discretization; specify \`fem_species\` and \`fvm_species\` on species-bearing equations.
+2. Use typed \`owner_mode = generate|external\`; reject duplicate variables, equations, sources and RF owners.
+3. Enforce \`verified_table|on_demand\` source contract with unavailable on-demand providers blocked, no fallback.
 4. Keep v0.1 DD/Energy electron-only and the single-mixture NS continuity/momentum semantics.
 5. Preserve Gummel/MultiApp/RF execution order and the fail-closed error taxonomy.
 
@@ -457,15 +474,15 @@ and generated files), and produce an explicit old-option -> new-block or
 native-MOOSE-retained-path mapping with units, source-ownership,
 execution-stage and SHA provenance. No missing, duplicated, silently defaulted,
 or silently reassigned options are permitted; see companion
-`2026-11-09_issue402_current_run_option_placement.md`.
-A new DSL need **not** absorb MOOSE-native `Mesh/Executioner/Outputs`,
-`MultiApps/Transfers/Controls` or diagnostic reporting; they are
+\`2026-11-09_issue402_current_run_option_placement.md\`.
+A new DSL need **not** absorb MOOSE-native \`Mesh/Executioner/Outputs\`,
+\`MultiApps/Transfers/Controls\` or diagnostic reporting; they are
 **retained in their native scopes** unless an explicitly approved new owner
 replaces them with equivalence evidence. The current run families are *not*
 automatically migrated by G0 approval.
 
 **G1 separate implementation selection:** No C++ class, Action/task registration,
-actual `--check-input` acceptance, production input switch or merge of experimental
+actual \`--check-input\` acceptance, production input switch or merge of experimental
 results is authorized by G0; select the first bounded Native implementation
 slice only after separate approval.
 
