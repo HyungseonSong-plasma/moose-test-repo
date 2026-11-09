@@ -183,7 +183,7 @@ def run(expected: str, codeqa_root: Path, output: Path) -> None:
                 "measurement": s["measurement"],
                 "witnesses": s["source_witnesses"][:20],
             }
-            for s in opportunities["signals"]
+            for s in opportunities["architecture_signals"]
         ],
         "mechanical_quality": mechanical_summary["quality"],
         "mechanical_review_findings": len(mechanical_findings),
@@ -212,7 +212,25 @@ def run(expected: str, codeqa_root: Path, output: Path) -> None:
     print("CODEQA_PILOT_" + "SUCCESS", "files", len(scoped), "modules",
           summary["python_analyzed"], "pairs",
           summary["resolved_static_import_pairs"], "signals",
-          len(opportunities["signals"]), "status=NOT_EVALUATED")
+          len(opportunities["architecture_signals"]), "status=NOT_EVALUATED")
+    print("CODEQA_PILOT_SUMMARY=" + json.dumps({
+        "target": current, "codeqa": os.environ.get("EXPECTED_CODEQA_SHA"),
+        "tracked_text": len(scoped), "python_analyzed": summary["python_analyzed"],
+        "import_pairs": summary["resolved_static_import_pairs"],
+        "cycles": summary["observed_static_cycles"],
+        "signal_counts": {key: sum(s["family"] == key for s in opportunities["architecture_signals"])
+                          for key in sorted({s["family"] for s in opportunities["architecture_signals"]})},
+        "top_signals": [
+            {"family": s["family"], "roles": s["scope_roles"],
+             "numerator": s["measurement"]["numerator"],
+             "denominator": s["measurement"]["denominator"],
+             "witnesses": [f"{w['source_path']}:{w['line']}"
+                           for w in s["source_witnesses"][:5]]}
+            for s in opportunities["architecture_signals"][:12]
+        ],
+        "role_findings": summary["role_findings"][:12],
+        "mechanical_findings": mechanical_findings[:12],
+    }, sort_keys=True, default=str))
 
 
 def main() -> int:
