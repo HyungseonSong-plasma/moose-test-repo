@@ -238,3 +238,68 @@ def test_full_s6_gate_never_uses_private_secrets_in_pr_ci():
     assert "new_baseline_vs_migration" in runner
     assert "BOTH_S6_460_STEP_NATIVE_PARITY_PASS__SCIENCE_HOLD" in runner
     assert "S6_FULL_NATIVE_PARITY_NOT_PROVEN" in runner
+
+
+def test_full_s6_runner_import_and_460_step_assertion(tmp_path):
+    """Verify the replay gate is executable and rejects incomplete histories."""
+    import importlib.util
+    import sys
+
+    import numpy as np
+    import pytest
+    from scipy.io import netcdf_file
+
+    runner_path = CASE / "run_s6_full_native_parity.py"
+    spec = importlib.util.spec_from_file_location("issue402_native_s6_gate", runner_path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.path.insert(0, str(CASE))
+    try:
+        spec.loader.exec_module(module)
+    finally:
+        sys.path.remove(str(CASE))
+
+    good = tmp_path / "original.e"
+    with netcdf_file(good, "w") as exodus:
+        exodus.createDimension("time_step", 461)
+        variable = exodus.createVariable("time_whole", "f8", ("time_step",))
+        variable[:] = np.linspace(0.0, 0.0001, 461)
+    assert module.check_native_timesteps(good)["timepoints"] == 461
+
+    incomplete = tmp_path / "incomplete.e"
+    with netcdf_file(incomplete, "w") as exodus:
+        exodus.createDimension("time_step", 460)
+        variable = exodus.createVariable("time_whole", "f8", ("time_step",))
+        variable[:] = np.linspace(0.0, 0.0001, 460)
+    with pytest.raises(ValueError, match="460-step"):
+        module.check_native_timesteps(incomplete)
+
+
+def test_full_s6_runner_checks_csv_diagnostics(tmp_path):
+    """A mismatched diagnostic must invalidate full numerical parity."""
+    import importlib.util
+    import sys
+
+    import pytest
+
+    runner_path = CASE / "run_s6_full_native_parity.py"
+    spec = importlib.util.spec_from_file_location("issue402_native_s6_csv_gate", runner_path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.path.insert(0, str(CASE))
+    try:
+        spec.loader.exec_module(module)
+    finally:
+        sys.path.remove(str(CASE))
+
+    old = tmp_path / "before.csv"
+    new = tmp_path / "after.csv"
+    data = "time,power\n" + "".join(
+        f"{i / 460 * 0.0001:.15g},400\n" for i in range(461)
+    )
+    old.write_text(data)
+    new.write_text(data)
+    assert module.compare_diagnostics(old, new, 1e-11, 1e-12)["diagnostic_rows"] == 461
+    new.write_text(data.replace(",400\n", ",401\n", 1))
+    with pytest.raises(ValueError, match="diagnostic differs"):
+        module.compare_diagnostics(old, new, 1e-11, 1e-12)
