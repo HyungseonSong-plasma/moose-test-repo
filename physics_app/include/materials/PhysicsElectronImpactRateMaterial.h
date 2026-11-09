@@ -17,11 +17,11 @@
  * Downstream particle, heavy-species and electron-energy projections must consume
  * this functor and must not independently interpolate the kinetic table.
  */
-class PhysicsElectronImpactRateMaterial : public FunctorMaterial
+class ElectronImpactRateMaterial : public FunctorMaterial
 {
 public:
   static InputParameters validParams();
-  PhysicsElectronImpactRateMaterial(const InputParameters & parameters);
+  ElectronImpactRateMaterial(const InputParameters & parameters);
 
 protected:
   ADReal interpolateStrict(const ADReal & mean_energy) const;
@@ -33,3 +33,6 @@ protected:
   const std::string _reaction_progress_name;
   PhysicsLookupTable1D _table;
 };
+
+// Keep the existing registered MOOSE object and historical input files valid.
+using PhysicsElectronImpactRateMaterial = ElectronImpactRateMaterial;
