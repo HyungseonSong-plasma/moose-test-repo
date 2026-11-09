@@ -77,6 +77,8 @@ def _validate_owner_text(header, source):
         "ElectronImpactRateMaterial(const InputParameters & parameters);",
         "using PhysicsElectronImpactRateMaterial = ElectronImpactRateMaterial;",
         "PhysicsLookupTable1D _table;",
+        "LinearInterpolation _rate_interpolation;",
+        '#include "LinearInterpolation.h"',
         "const std::string _reaction_progress_name;",
     )
     required_source = (
@@ -93,6 +95,11 @@ def _validate_owner_text(header, source):
         'addRequiredParam<MooseFunctorName>("target_molar_concentration"',
         'addRequiredParam<std::string>("reaction_progress"',
         '_table(_rate_table_file, 1, {2})',
+        '_rate_interpolation(_table.coordinate(), _table.values(0))',
+        'std::isfinite(raw)',
+        'if (raw == x.front())',
+        'if (raw == x.back())',
+        'return _rate_interpolation.sample(coordinate);',
         'raw < x.front() || raw > x.back()',
         'const ADReal k_raw = interpolateStrict(_mean_energy(r, state));',
         'return k_raw * (n_e / N_A) * c_target;',
@@ -108,6 +115,10 @@ def _validate_owner_text(header, source):
         raise AssertionError("user-facing rate-owner errors must not contain Physics prefix")
     if "PhysicsElectronImpactRateMaterial::" in source:
         raise AssertionError("C++ rate-owner methods must not contain Physics prefix")
+    if "_table.lowerBracket(raw)" in source:
+        raise AssertionError("owner still uses the manual interpolation path")
+    if "std::clamp(" in source:
+        raise AssertionError("strict no-clamp policy violated")
     if source.count("addFunctorProperty<ADReal>(") != 1:
         raise AssertionError("rate owner must publish exactly one canonical progress functor")
     for forbidden in ("std::clamp(", "std::max(", "std::min(", "PhysicsFVElectronReactionEnergySource"):
