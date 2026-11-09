@@ -1,6 +1,6 @@
 {
   "schema": "physics.issue402.g0.ownership.review.v1",
-  "status": "DRAFT_FOR_REVIEW",
+  "status": "G0_DESIGN_APPROVED__NATIVE_NOT_EVALUATED",
   "authority": {
     "issue": 402,
     "approved": [
@@ -13,10 +13,45 @@
       "D7",
       "D8"
     ],
-    "detailed_schema_approved": false,
+    "detailed_schema_approved": true,
     "implementation_authorized": false,
     "science_acceptance": "HOLD",
-    "pinned_moose_sha": "9f388366ccf38b9c34542ec5561198249fde0ac9"
+    "pinned_moose_sha": "9f388366ccf38b9c34542ec5561198249fde0ac9",
+    "approval_scope": "G0 design target only; implementation and scientific validation remain separate",
+    "current_run_input_placement_required": true,
+    "current_run_option_placement": {
+      "evidence_family": "S5/S6 EI-417 and EI-941 400W 100us completed native archives",
+      "case_artifact_ids": {
+        "S5-417-407": 13641179390,
+        "S5-941-407": 13643402717,
+        "S6-417-407-2069-H25": 13677089020,
+        "S6-941-407-2069-H25": 13677375813
+      },
+      "archived_explicit_option_rows": 8342,
+      "parsed_assembled_native_input_proven": "NOT_EVALUATED",
+      "full_per_option_semantic_destination": "NOT_EVALUATED",
+      "required_dispositions": [
+        "MOVED_TO_PHYSICS_DSL",
+        "RETAINED_NATIVE",
+        "REPLACED_BY_PROVEN_EQUIVALENT_GENERATED_OBJECT",
+        "BLOCKED_NEEDS_SEMANTIC_REVIEW"
+      ],
+      "accept_only_when_blocked_count_zero": true,
+      "native_scopes_to_preserve": [
+        "Mesh",
+        "Executioner",
+        "Preconditioning",
+        "Outputs",
+        "MultiApps",
+        "Transfers",
+        "Controls",
+        "Postprocessors",
+        "AuxVariables",
+        "AuxKernels",
+        "UserObjects"
+      ],
+      "companion_design_doc": "docs/development/2026-11-09_issue402_current_run_option_placement.md"
+    }
   },
   "identity_dimensions": [
     "application_instance",
@@ -262,8 +297,8 @@
   "gates": [
     {
       "id": "G0",
-      "status": "DETAIL_REVIEW_REQUIRED",
-      "authority": "user_explicit_design_approval"
+      "status": "DESIGN_APPROVED",
+      "authority": "approved_by_user_2026_11_09"
     },
     {
       "id": "G1",
@@ -283,7 +318,7 @@
     {
       "id": "G4",
       "status": "BLOCKED",
-      "authority": "explicit_user_cutover_approval"
+      "authority": "separate_user_cutover_approval_AND_zero_unmapped_run_input_options"
     }
   ]
 }
