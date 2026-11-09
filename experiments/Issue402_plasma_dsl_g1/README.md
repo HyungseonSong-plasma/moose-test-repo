@@ -110,3 +110,55 @@ The C++ duplicate guard is intentionally conservative: two kernels of the
 same type targeting one FEM variable are rejected even if deliberately
 different sources would otherwise be useful. Keep such complex sources
 explicit until typed ownership is implemented.
+
+## Mandatory full 400 W / 100 µs S6 numerical parity gate
+
+**Current status: NOT EVALUATED.** Both historical GitHub Actions archives
+(artifacts `13677089020` and `13677375813`) were independently inspected
+on 2026-11-09. Each has ten SHA256-matching input layers and a native
+`plasma.e` containing 461 timepoints, from 0 through 100 µs. The
+original `ne_transport` block has the same SHA256 and physical parameters
+in both cases. The archives explicitly omit private reaction-rate bytes.
+
+The read-only archive preparation can run without private data:
+
+```bash
+python3 experiments/Issue402_plasma_dsl_g1/run_s6_full_native_parity.py \
+  --archive /path/to/original_417_artifact.zip \
+  --archive /path/to/original_941_artifact.zip \
+  --output-dir /scratch/s6_archived_review
+```
+
+To exercise the **mandatory** native check-input and 460-step replay, run
+this on an independently trusted machine with the original pinned
+`29d1acc6` source tree prepared exactly as in the approved Issue477
+workflow, all original private rate tables restored in that tree, and a
+new native `physics-opt` compiled from the PR source using the pinned
+`physics-build-base` image:
+
+```bash
+python3 experiments/Issue402_plasma_dsl_g1/run_s6_full_native_parity.py \
+  --archive /secure/original_417_artifact.zip \
+  --archive /secure/original_941_artifact.zip \
+  --source-root /secure/pinned_original_prepared_checkout \
+  --binary /secure/pr491_build/physics_app/physics-opt \
+  --output-dir /secure/scratch/s6_migration_full_replay \
+  --run
+```
+
+The runner does **not** retrieve GitHub secrets, modify original archived
+input layers, upload private tables or run from PR CI with secrets. It
+verifies each original input digest and the private-rate hashes before
+execution. The candidate removes only `ne_transport` from a newly
+created input beside the originals and recreates it via
+`ContinuityPhysics`. Generated temporary candidate inputs are removed
+after execution.
+
+It runs baseline and migrated inputs for **both 417 and 941** through the
+real MOOSE executable, checks original/native `--check-input`, demands
+461 Exodus timepoints from 0 to 0.0001 s, and compares **all Exodus
+fields and all CSV diagnostics** for historical-vs-new-baseline and
+new-baseline-vs-generated-candidate. If private data or a trusted
+executor is unavailable, this gate remains `NOT_EVALUATED`; a
+small Maxwell example or static source audit does not substitute.
+Keep `SCIENCE_HOLD` even after numerical parity is proven.

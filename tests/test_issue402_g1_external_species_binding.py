@@ -223,3 +223,18 @@ def test_archived_s6_single_kernel_migration_from_synthetic_zip(tmp_path):
             assert (root / "baseline" / name).read_bytes() == (
                 root / "candidate" / name
             ).read_bytes()
+
+
+def test_full_s6_gate_never_uses_private_secrets_in_pr_ci():
+    runner = (CASE / "run_s6_full_native_parity.py").read_text()
+    assert "OXYGEN24_RATES_TAR_XZ_B64" not in runner
+    assert "check_prepared_workspace" in runner
+    assert "ARCHIVE_DIGESTS" in runner
+    assert "461" in runner and "0.0001" in runner
+    assert 'source_root / CHEM / "private_rates" / name' in runner
+    assert "check_native_timesteps" in runner
+    assert "compare_diagnostics" in runner
+    assert "historical_vs_new_baseline" in runner
+    assert "new_baseline_vs_migration" in runner
+    assert "BOTH_S6_460_STEP_NATIVE_PARITY_PASS__SCIENCE_HOLD" in runner
+    assert "S6_FULL_NATIVE_PARITY_NOT_PROVEN" in runner
