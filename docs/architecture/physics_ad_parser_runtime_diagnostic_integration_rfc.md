@@ -227,3 +227,31 @@ Non-goals: new JIT interpreter, MOOSE source patch before diagnosis, new Physics
 - Exact upstream MOOSE 9f388366 FunctionParserUtils.C and ParsedFunctorMaterial.C.
 
 **Review status:** source and ownership inventory performed; this proposal has not received independent approval. Do not interpret a draft PR or its green CI as approval of the acceptance contract or its implementation.
+
+## 11. Exact-source codeQA pilot (2026-11-09)
+
+Evidence: Physics [Draft PR #486](https://github.com/HyungseonSong-plasma/moose-test-repo/pull/486), [Actions #42591065322](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/42591065322), artifact #13660149954. Analyzer codeQA@1b6110631883f1299127e134b4134d3686765d2c; Physics subject@625702fa325a0a62243786b5a752c548ba54100f. Artifact JSON SHA-256 internally verified. This is source-bounded static evidence, not architecture/science acceptance.
+
+Reused unchanged codeQA B1 inventory, B2 metrics, B3 opportunity discovery, and selected Python Mechanical pipeline: 175 analyzed Python files, 182 resolved static pairs, 10 B3 signals (3 cross-role concentrations, 4 role boundary candidates, 3 static SCCs), and 28 Mechanical review findings in 13 focal files. Analysis status LIMITED. B2 noted 760 outside-snapshot and 4 dynamic-import unresolved observations; these are unknowns, not proven defects. No C++/MOOSE/ELF/ABI or scientific result was analyzed. B4/B5/B7 layout/migration assessment was not executed against Physics.
+
+### Interpretation and design decisions
+
+1. The application role has 22/24 cross-role outgoing import pairs. Composition is its documented responsibility; KEEP, no automatic move. A high ratio raises a question, not a code-quality verdict.
+2. All four projected role violations originate in application/performance.py. Physics source policy explicitly approves the moose.performance operational boundary. The pilot dropped that exception and broadened moose-only prohibition to all adapters, also catching an unconstrained PETSc performance import. These are policy projection artifacts, **not proven repository violations**. codeQA follow-up [#294](https://github.com/HyungseonSong-plasma/codeQA/issues/294).
+3. Static SCC input_contract.py:443 -> target.py:13 includes a deferred self_test import. Static SCC default_plot.py:305 -> species_plot.py:16 includes a branch-local dispatch import. Both need real initialization/use-case evidence before refactoring.
+4. Ontology __init__.py:12 -> service.py:11 candidate cycle includes the ambiguous Python form 'from . import records as semantic_model' and an existing sibling records.py. CodeQA's current package-candidate edge is not proven semantic/member binding, so classifying the cycle as harmful would overstate evidence. codeQA follow-up [#293](https://github.com/HyungseonSong-plasma/codeQA/issues/293).
+5. Issue471 diagnose_closure.py main, prepare, run_modes and verdict were flagged for syntactic outgoing call-site counts above 12. This supports a targeted responsibility review of the runner and acceptance logic, not a new diagnostics package or blind function splitting.
+6. The source-backed MOOSE requirement that ADParsed/JIT-OFF is unsupported comes from pinned MOOSE code, **not codeQA**. Keep unsupported-mode negative safety check separate from supported JIT ON P2/P3 scientific/runtime regression.
+7. No source-grounded codeQA signal justifies a new generic diagnostics module, SOL schema, or adapter capability. Prefer existing execution, evidence, MOOSE preflight, reasoning and validation owners.
+
+### Reusable codeQA improvements
+
+- The external consumer needs a stable read-only pinned Git snapshot entrypoint and explicit policy-compatibility status. The Pilot temporarily supplied this integration outside codeQA production; do not vendor a parallel codeQA engine.
+- Relative package-import resolution should expose candidate targets and uncertainty rather than a high-confidence actionable runtime cycle (#293).
+- Nested role/module-prefix prohibitions, approved operational exceptions and transitional exceptions must not be flattened into a false violation (#294).
+- Review hints should distinguish syntax call-site count from API coupling or semantic ownership, and categorize unknown imports by excluded internal vs stdlib/external where provable.
+- Follow the same exact-source/denominator methodology after each separately approved change. Do not interpret fewer counts as an improvement without independent behavior tests.
+
+### Pilot execution history
+
+First run #42590892365 completed B1/B2/B3 but failed in the **Pilot adapter** reading output key 'signals' instead of the codeQA contract key 'architecture_signals'. The adapter was corrected; verified follow-up #42591065322 completed successfully. This is not a codeQA B3 defect. The Draft Pilot workflow remains unmerged and read-only; no Runtime image, SOL/Adapter contract, Physics model or 2D acceptance gate was changed.
