@@ -255,3 +255,9 @@ Reused unchanged codeQA B1 inventory, B2 metrics, B3 opportunity discovery, and 
 ### Pilot execution history
 
 First run #42590892365 completed B1/B2/B3 but failed in the **Pilot adapter** reading output key 'signals' instead of the codeQA contract key 'architecture_signals'. The adapter was corrected; verified follow-up #42591065322 completed successfully. This is not a codeQA B3 defect. The Draft Pilot workflow remains unmerged and read-only; no Runtime image, SOL/Adapter contract, Physics model or 2D acceptance gate was changed.
+
+### Governance outcome of this research-only Pilot
+
+The bounded codeQA analysis job succeeded and yielded artifact #13660149954. However, the *separate* [Repository CI #42591065290](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/42591065290) rejected the experimental workflow file with WORKFLOW_SURFACE_GUARD=FAIL and 'unauthorized workflow files: [issue471-codeqa-architecture-pilot.yml]'. This is a valid repository governance block, not evidence that B1/B2/B3 findings are false or that the scientific model fails.
+
+Do not merge Pilot #486 or add a new permanent Physics workflow exception to accommodate this exploratory analysis. For later repeatable cross-repository codeQA checks, use an already authorized governed-work execution route or an approved codeQA-owned scan/consumer integration rather than an unauthorized Physics-local one-shot workflow. The design proposal #484 is document-only and independent of Pilot #486.
