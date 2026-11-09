@@ -2,6 +2,7 @@
 
 #include "FunctorMaterial.h"
 #include "PhysicsLookupTable1D.h"
+#include "LinearInterpolation.h"
 
 #include <string>
 
@@ -31,7 +32,9 @@ protected:
   const Moose::Functor<ADReal> & _target_molar_concentration;
   const FileName _rate_table_file;
   const std::string _reaction_progress_name;
+  // Preserve the audited file parser; delegate only piecewise-linear sampling to MOOSE.
   PhysicsLookupTable1D _table;
+  LinearInterpolation _rate_interpolation;
 };
 
 // Keep the existing registered MOOSE object and historical input files valid.
