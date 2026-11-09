@@ -90,3 +90,27 @@ def test_duplicate_case_is_rejected_before_dispatch(tmp_path, monkeypatch):
         gate.run_cases_two_way([{"case": CASES[0]}, {"case": CASES[0]}],
                                tmp_path, tmp_path, tmp_path, 10, 1e-11, 1e-12)
     assert not called
+
+
+def test_late_lane_first_completion_still_uses_case_input_order(tmp_path, monkeypatch):
+    """Completion order must not determine accepted case report ordering."""
+    gate = load_gate()
+    second_lane_finished = threading.Event()
+    completion_order = []
+    completion_lock = threading.Lock()
+
+    def native_stub(meta, source_root, binary, work, timeout_seconds, rtol, atol):
+        if meta["case"] == CASES[0]:
+            assert second_lane_finished.wait(timeout=10)
+        with completion_lock:
+            completion_order.append(meta["case"])
+        if meta["case"] == CASES[1]:
+            second_lane_finished.set()
+        return {"case": meta["case"], "status": PASS, "science_acceptance": "HOLD"}
+
+    monkeypatch.setattr(gate, "run_case", native_stub)
+    results = gate.run_cases_two_way(
+        prepared(tmp_path), tmp_path, tmp_path, tmp_path, 10, 1e-11, 1e-12)
+    assert completion_order == CASES[::-1]
+    assert [result["case"] for result in results] == CASES
+    assert all(result["status"] == PASS for result in results)
