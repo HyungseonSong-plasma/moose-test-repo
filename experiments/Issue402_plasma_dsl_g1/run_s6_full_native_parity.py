@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import hashlib
 import json
 import os
@@ -266,6 +267,43 @@ def run_case(meta: dict, source_root: Path, binary: Path, work: Path,
                 file.unlink()
 
 
+def run_cases_two_way(metas: list[dict], source_root: Path, binary: Path,
+                      work: Path, timeout_seconds: int, rtol: float,
+                      atol: float) -> list[dict]:
+    """Run only the two independent S6 cases concurrently.
+
+    Each case retains its own sequential baseline/check -> candidate/check ->
+    baseline solve -> candidate solve ordering, input namespace and output tree.
+    All futures are collected, even if one case fails. Never promote a
+    partial success to full parity, and never persist private error paths.
+    """
+    if len(metas) != 2 or {meta["case"] for meta in metas} != CASES:
+        raise ValueError("Expected exactly the two distinct S6 cases")
+
+    results = {}
+    with ThreadPoolExecutor(max_workers=2, thread_name_prefix="s6-parity") as pool:
+        futures = {
+            pool.submit(run_case, meta, source_root, binary, work,
+                        timeout_seconds, rtol, atol): meta["case"]
+            for meta in metas
+        }
+        for future in as_completed(futures):
+            case = futures[future]
+            try:
+                result = future.result()
+            except Exception as exc:
+                result = {
+                    "case": case,
+                    "status": "S6_FULL_NATIVE_PARITY_NOT_PROVEN",
+                    "failure_class": type(exc).__name__,
+                    "science_acceptance": "HOLD",
+                }
+            results[case] = result
+            (work / case / "native_parity_report.json").write_text(
+                json.dumps(result, indent=2) + "\n", encoding="utf-8")
+    return [results[meta["case"]] for meta in metas]
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--archive", action="append", type=Path, required=True)
@@ -310,13 +348,14 @@ def main() -> None:
                 check_prepared_workspace(item, root)
             report["binary_sha256"] = file_digest(binary)
             report["build_image"] = IMAGE
-            report["cases"] = []
-            for item in metas:
-                result = run_case(item, root, binary, output,
-                                  args.timeout_seconds, args.rtol, args.atol)
-                report["cases"].append(result)
-                (output / item["case"] / "native_parity_report.json").write_text(
-                    json.dumps(result, indent=2) + "\n", encoding="utf-8")
+            report["cases"] = run_cases_two_way(
+                metas, root, binary, output,
+                args.timeout_seconds, args.rtol, args.atol)
+            if any(item["status"] !=
+                   "S6_FULL_460_STEP_NATIVE_PARITY_PASS__SCIENCE_HOLD"
+                   for item in report["cases"]):
+                raise RuntimeError(
+                    "One or more S6 cases failed; inspect private case-local evidence")
             report["status"] = "BOTH_S6_460_STEP_NATIVE_PARITY_PASS__SCIENCE_HOLD"
         print(report["status"])
     except Exception as exc:
