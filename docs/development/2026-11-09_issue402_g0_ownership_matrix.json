@@ -1,0 +1,289 @@
+{
+  "schema": "physics.issue402.g0.ownership.review.v1",
+  "status": "DRAFT_FOR_REVIEW",
+  "authority": {
+    "issue": 402,
+    "approved": [
+      "D1",
+      "D2",
+      "D3",
+      "D4",
+      "D5",
+      "D6",
+      "D7",
+      "D8"
+    ],
+    "detailed_schema_approved": false,
+    "implementation_authorized": false,
+    "science_acceptance": "HOLD",
+    "pinned_moose_sha": "9f388366ccf38b9c34542ec5561198249fde0ac9"
+  },
+  "identity_dimensions": [
+    "application_instance",
+    "FEProblem",
+    "physical_quantity_or_equation",
+    "region",
+    "semantic_species_or_reaction"
+  ],
+  "owner_mode": [
+    "generate",
+    "external"
+  ],
+  "resource_owners": [
+    {
+      "id": "electron_density_balance",
+      "source": "Transport/DriftDiffusion/Continuity",
+      "cardinality": "per_explicit_charged_species",
+      "unit": "state_form_required_number_per_m3_or_mol_per_m3",
+      "consumers": [
+        "Transport/DriftDiffusion/Energy",
+        "Transport/Chemistry",
+        "Poisson"
+      ],
+      "forbid": [
+        "duplicate_species_balance",
+        "implicit_Avogadro_conversion"
+      ]
+    },
+    {
+      "id": "electron_energy_balance",
+      "source": "Transport/DriftDiffusion/Energy",
+      "cardinality": "one_electron_energy_equation_per_FEProblem",
+      "unit": "explicit_eV_per_m3_or_qualified_normalized_state",
+      "consumers": [
+        "Transport/Coefficient",
+        "Transport/Chemistry"
+      ],
+      "forbid": [
+        "mean_energy_as_energy_density",
+        "duplicate_electron_energy_equation"
+      ]
+    },
+    {
+      "id": "coefficient_provider",
+      "source": "Transport/Coefficient",
+      "cardinality": "one_owner_per_coefficient_key",
+      "unit": "explicit_kinetic_or_transport_SI_unit",
+      "consumers": [
+        "Transport/Chemistry",
+        "Transport/DriftDiffusion/Continuity",
+        "Transport/DriftDiffusion/Energy"
+      ],
+      "forbid": [
+        "implicit_provider_fallback",
+        "unverified_backend"
+      ]
+    },
+    {
+      "id": "chemistry_progress",
+      "source": "Transport/Chemistry",
+      "cardinality": "one_per_activated_reaction_per_FEProblem",
+      "unit": "mol_per_m3_s",
+      "consumers": [
+        "Transport/DriftDiffusion/Continuity",
+        "Transport/DriftDiffusion/Energy"
+      ],
+      "forbid": [
+        "duplicate_reaction_progress",
+        "missing_energy_projection"
+      ]
+    },
+    {
+      "id": "mixture_mass_continuity",
+      "source": "Transport/NavierStokes/Continuity",
+      "cardinality": "one_per_mixture_per_FEProblem",
+      "unit": "kg_per_m3_s",
+      "consumers": [
+        "Transport/NavierStokes/Momentum"
+      ],
+      "forbid": [
+        "per_species_mixture_continuity",
+        "duplicate_explicit_NS_continuity"
+      ]
+    },
+    {
+      "id": "mixture_velocity_momentum",
+      "source": "Transport/NavierStokes/Momentum",
+      "cardinality": "one_vector_field_per_mixture_per_FEProblem",
+      "unit": "m_per_s",
+      "consumers": [
+        "Transport/NavierStokes/Continuity",
+        "advection"
+      ],
+      "forbid": [
+        "per_species_mixture_momentum",
+        "duplicate_NavierStokes_flow_Physics"
+      ]
+    },
+    {
+      "id": "electrostatic_potential",
+      "source": "Poisson",
+      "cardinality": "one_per_FEProblem",
+      "unit": "V",
+      "consumers": [
+        "Transport/DriftDiffusion/Continuity",
+        "GummelIteration"
+      ],
+      "forbid": [
+        "duplicate_potential_unknown",
+        "implicit_cross_app_field_sharing"
+      ]
+    },
+    {
+      "id": "electrostatic_charge",
+      "source": "Poisson_charge_closure_binding",
+      "cardinality": "one_charge_projection_per_FEProblem",
+      "unit": "C_per_m3",
+      "consumers": [
+        "Poisson"
+      ],
+      "forbid": [
+        "duplicate_charge_projection",
+        "implicit_species_charge"
+      ]
+    },
+    {
+      "id": "dc_electric_field",
+      "source": "Poisson",
+      "cardinality": "one_named_derived_field_per_FEProblem",
+      "unit": "V_per_m",
+      "consumers": [
+        "Transport/DriftDiffusion/Continuity"
+      ],
+      "forbid": [
+        "duplicate_E_dc_producer"
+      ]
+    },
+    {
+      "id": "rf_field",
+      "source": "Maxwell",
+      "cardinality": "one_complex_field_pair_per_RF_system",
+      "unit": "explicit_field_representation",
+      "consumers": [
+        "Maxwell_rf_power"
+      ],
+      "forbid": [
+        "unknown_phasor_convention",
+        "duplicate_RF_unknowns"
+      ]
+    },
+    {
+      "id": "rf_power_density",
+      "source": "Maxwell",
+      "cardinality": "one_absorbed_power_projection_per_FEProblem",
+      "unit": "W_per_m3",
+      "consumers": [
+        "Transport/DriftDiffusion/Energy",
+        "RF_PID_read_only"
+      ],
+      "forbid": [
+        "duplicate_RF_energy_source",
+        "untracked_RMS_peak_conversion"
+      ]
+    },
+    {
+      "id": "gummel_transfers",
+      "source": "GummelIterationAction",
+      "cardinality": "one_per_configured_driver",
+      "unit": "explicit_per_field",
+      "consumers": [
+        "SUB_ELECTRON",
+        "SUB_POISSON",
+        "OUTER_MAIN"
+      ],
+      "forbid": [
+        "overlapping_transfer_owners",
+        "wrong_time_stage"
+      ]
+    },
+    {
+      "id": "heavy_snapshot",
+      "source": "OUTER_MAIN",
+      "cardinality": "one_outer_heavy_state_per_time_step",
+      "unit": "typed_fields",
+      "consumers": [
+        "GUMMEL_DRIVER",
+        "SUB_ELECTRON",
+        "SUB_POISSON"
+      ],
+      "forbid": [
+        "inner_heavy_advance",
+        "implicit_live_heavy_state"
+      ]
+    }
+  ],
+  "error_classes": [
+    {
+      "id": "P402_SYNTAX",
+      "condition": "unknown_or_repeated_path_schema_version_or_parameter",
+      "stage": "parse_or_preflight"
+    },
+    {
+      "id": "P402_SPECIES",
+      "condition": "unknown_duplicate_or_mismatched_composition",
+      "stage": "preflight"
+    },
+    {
+      "id": "P402_OWNER",
+      "condition": "double_producer_for_same_physical_equation_or_field",
+      "stage": "preflight"
+    },
+    {
+      "id": "P402_COEFFICIENT",
+      "condition": "unsupported_provider_missing_digest_wrong_units_or_bounds",
+      "stage": "preflight_or_runtime"
+    },
+    {
+      "id": "P402_CHEMISTRY",
+      "condition": "missing_reaction_species_progress_or_energy_loss",
+      "stage": "preflight"
+    },
+    {
+      "id": "P402_BC",
+      "condition": "missing_bc_invalid_mesh_region_or_discretization",
+      "stage": "preflight"
+    },
+    {
+      "id": "P402_TRANSFER",
+      "condition": "missing_mapping_wrong_aux_target_unit_or_execution_stage",
+      "stage": "preflight"
+    },
+    {
+      "id": "P402_EXECUTION",
+      "condition": "hidden_Gummel_or_RF_execution_change",
+      "stage": "graph_audit"
+    },
+    {
+      "id": "P402_COMPAT",
+      "condition": "legacy_input_regression_or_missing_rollback",
+      "stage": "parity_gate"
+    }
+  ],
+  "gates": [
+    {
+      "id": "G0",
+      "status": "DETAIL_REVIEW_REQUIRED",
+      "authority": "user_explicit_design_approval"
+    },
+    {
+      "id": "G1",
+      "status": "BLOCKED",
+      "authority": "separate_user_implementation_approval"
+    },
+    {
+      "id": "G2",
+      "status": "BLOCKED",
+      "authority": "native_generated_object_parity"
+    },
+    {
+      "id": "G3",
+      "status": "BLOCKED",
+      "authority": "native_physics_numerical_parity"
+    },
+    {
+      "id": "G4",
+      "status": "BLOCKED",
+      "authority": "explicit_user_cutover_approval"
+    }
+  ]
+}
