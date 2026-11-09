@@ -154,8 +154,16 @@ created input beside the originals and recreates it via
 `ContinuityPhysics`. Generated temporary candidate inputs are removed
 after execution.
 
-It runs baseline and migrated inputs for **both 417 and 941** through the
-real MOOSE executable, checks original/native `--check-input`, demands
+On a trusted runner with capacity for two OCI containers, the **417 and 941
+cases execute concurrently** as two independent lanes (`max_workers=2`).
+Within each lane, baseline and candidate preflights and then both fresh
+460-step native solves run **sequentially**. Case-specific hidden input names,
+private logs, output trees and parity reports remain distinct. The shared
+prepared checkout is mounted read-only by both offline containers. A failed
+lane does not cancel the other; overall parity fails closed if either fails.
+No additional secrets or permissions are required by this scheduling change.
+
+The runner checks original/native `--check-input`, demands
 461 Exodus timepoints from 0 to 0.0001 s, and compares **all Exodus
 fields and all CSV diagnostics** for historical-vs-new-baseline and
 new-baseline-vs-generated-candidate. If private data or a trusted
