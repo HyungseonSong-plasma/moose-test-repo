@@ -1,4 +1,4 @@
-# Issue #402 G1 positive: external binding; numerical objects already exist.
+# Both solver variables are already defined in the main input.
 [Physics]
   [Plasmas]
     [Transport]

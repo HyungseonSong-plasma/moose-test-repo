@@ -1,7 +1,6 @@
-"""Issue #402 G1 external-only FEM/FV PhysicsBase integration contract.
+"""Check the registered C++ class and example inputs.
 
-This file is a static/fixture test, NOT native MOOSE compilation evidence.
-Actual C++ build, --check-input and solve are required by the OCI runner.
+These tests do not replace building or running the solver.
 """
 from pathlib import Path
 
@@ -14,8 +13,8 @@ CASE = ROOT / "experiments/Issue402_plasma_dsl_g1"
 
 
 def pilot():
-    header = (APP / "include/physics/PlasmaSpeciesContinuityPhysics.h").read_text()
-    src = (APP / "src/physics/PlasmaSpeciesContinuityPhysics.C").read_text()
+    header = (APP / "include/physics/PlasmaSpeciesVariableCheckPhysics.h").read_text()
+    src = (APP / "src/physics/PlasmaSpeciesVariableCheckPhysics.C").read_text()
     app = (APP / "src/base/PhysicsApp.C").read_text()
     return header, src, app
 
@@ -24,9 +23,9 @@ def test_exact_native_physicsbase_registration_only():
     header, src, app = pilot()
     assert "public PhysicsBase" in header
     assert "void checkIntegrity() const override;" in header
-    assert 'registerPhysicsBaseTasks("PhysicsApp", PlasmaSpeciesContinuityPhysics);' in src
-    assert 'registerMooseAction("PhysicsApp", PlasmaSpeciesContinuityPhysics, "check_integrity");' in src
-    assert 'registerSyntax("PlasmaSpeciesContinuityPhysics",' in app
+    assert 'registerPhysicsBaseTasks("PhysicsApp", PlasmaSpeciesVariableCheckPhysics);' in src
+    assert 'registerMooseAction("PhysicsApp", PlasmaSpeciesVariableCheckPhysics, "check_integrity");' in src
+    assert 'registerSyntax("PlasmaSpeciesVariableCheckPhysics",' in app
     assert '"Physics/Plasmas/Transport/DriftDiffusion/Continuity"' in app
     assert 'syntax.registerActionSyntax("PlasmaClosuresAction", "PlasmaClosures/*");' in app
     assert 'syntax.registerActionSyntax("GummelIterationAction", "GummelIteration/*");' in app
@@ -38,12 +37,12 @@ def test_no_implicit_equation_generation_or_schema_version():
     assert 'addParam<std::vector<std::string>>(\n      "fvm_species"' in src
     assert '"owner_mode"' in src
     assert 'MooseEnum("external generate", "external")' in src
-    assert "P402_OWNER: G1 external-binding pilot cannot generate" in src
-    assert "P402_SPECIES: duplicate or empty FEM species:" in src
-    assert "P402_SPECIES: duplicated across FEM/FV" in src
-    assert "P402_SPECIES: species '" in src
-    assert "solverVariableExists(var)" in src
-    assert "isVariableFV(var)" in src
+    assert "Cannot create equations: this check only uses existing solver variables." in src
+    assert "Repeated or empty species in fem_species:" in src
+    assert "Repeated or empty species in fvm_species" in src
+    assert "Species '" in src
+    assert "solverVariableExists(variable)" in src
+    assert "isVariableFV(variable)" in src
     assert "getProblem().add" not in src
     assert "schema_version" not in src
     assert '"discretization"' not in src
@@ -82,8 +81,8 @@ def test_native_control_inputs_present(filename, expected):
 def test_run_instructions_avoid_history_mutation():
     runner = (CASE / "run_native_binding_smoke.sh").read_text()
     assert "physics-opt" in runner and "make -C physics_app -j2" in runner
-    assert "P402_G1_EXTERNAL_BINDING_NATIVE_RUN_PARITY_PASS" in runner
+    assert "PLASMA_RESULTS_MATCH" in runner
     assert "invalid_overlap invalid_fem_fv_swap invalid_generate invalid_missing_variable" in runner
     assert "sha256sum" in runner
     assert "ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:" in runner
-    assert "S6" in runner
+    assert "Do not change existing production simulation inputs" in runner

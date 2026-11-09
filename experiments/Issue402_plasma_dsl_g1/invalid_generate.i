@@ -1,4 +1,4 @@
-# Generate mode is unavailable in G1 pilot; must fail closed.
+# This check cannot create equations or variables.
 [Physics]
   [Plasmas]
     [Transport]

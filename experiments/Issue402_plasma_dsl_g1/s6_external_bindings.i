@@ -1,7 +1,6 @@
-# Issue402 G1: additive metadata only for S6-417 or S6-941.
-# Apply AFTER the existing ten S6 inputs. This action is validation-only
-# and creates NO variables, FEM/FV equations, material, source, BC, or transfers.
-# IMPORTANT: this is not a full [Physics]/[Plasmas] implementation.
+# Add this input after the ten existing simulation inputs.
+# It only checks species and variables; it does not change the equations.
+# Keep all existing inputs and simulation settings unchanged.
 [Physics]
   [Plasmas]
     [Transport]

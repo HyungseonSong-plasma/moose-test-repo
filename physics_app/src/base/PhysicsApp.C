@@ -49,9 +49,8 @@ PhysicsApp::registerAll(Factory & f, ActionFactory & af, Syntax & syntax)
   syntax.registerActionSyntax("GummelIterationAction", "GummelIteration/*");
   syntax.registerActionSyntax("PlasmaClosuresAction", "PlasmaClosures/*");
 
-  // Issue #402 G1: opt-in validation of existing FEM/FV continuity fields only.
-  // No Physics equation, source, wall model or MultiApp is generated.
-  registerSyntax("PlasmaSpeciesContinuityPhysics",
+  // Check that plasma species use the variables already defined in the solver.
+  registerSyntax("PlasmaSpeciesVariableCheckPhysics",
                  "Physics/Plasmas/Transport/DriftDiffusion/Continuity");
 }
 

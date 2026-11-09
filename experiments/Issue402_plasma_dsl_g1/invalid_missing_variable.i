@@ -1,4 +1,4 @@
-# Missing original solved variable, cannot silently create one.
+# A listed solver variable does not exist.
 [Physics]
   [Plasmas]
     [Transport]

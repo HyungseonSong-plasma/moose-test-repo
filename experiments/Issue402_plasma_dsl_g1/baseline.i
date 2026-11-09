@@ -1,6 +1,5 @@
-# Issue #402 G1: immutable two-field physical-equation control.
-# Both diffusion equations are built explicitly here. Plasma DSL does NOT
-# generate or modify any equations in this opt-in binding-only pilot.
+# The two diffusion equations are defined here.
+# Checking species variables must not change either equation.
 [Mesh]
   type = GeneratedMesh
   dim = 1

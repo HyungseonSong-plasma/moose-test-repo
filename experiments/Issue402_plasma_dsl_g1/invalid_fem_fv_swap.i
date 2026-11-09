@@ -1,4 +1,4 @@
-# FEM 'e' incorrectly mapped to FV variable and vice versa.
+# Each species points to a solver variable of the wrong type.
 [Physics]
   [Plasmas]
     [Transport]

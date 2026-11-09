@@ -1,4 +1,4 @@
-# Same species cannot be FEM and FV simultaneously.
+# A species cannot use both finite-element and finite-volume variables.
 [Physics]
   [Plasmas]
     [Transport]
