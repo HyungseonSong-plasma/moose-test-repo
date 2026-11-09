@@ -3,7 +3,9 @@
 This feature checks whether each plasma species uses a solver variable that
 already exists. It does not add equations, variables, or boundary conditions.
 
-The C++ class is `PlasmaSpeciesVariableCheckPhysics`, built on MOOSE's `PhysicsBase`.
+The shared checks are implemented in `PlasmaInterface`, which inherits from
+MOOSE's `PhysicsBase`. The `Plasma::ContinuityPhysics` class uses those checks
+for continuity inputs. It does not create equations yet.
 
 ## Input
 
@@ -43,7 +45,8 @@ match. Logs and comparisons are saved in `evidence/`.
 The first compiled build attempt at
 `5752b0e4f722045d9a2dba1e2d70c4e2d86d5853` failed before these checks.
 Existing Boltzmann source files define the same helper names and conflict
-when compiled together in the combined build mode.
+when compiled together in the combined build mode. The test build now compiles
+those helper files separately; this does not change the simulation equations.
 
 The solver-variable checks and numerical comparison are therefore not yet
 verified by a completed build. Separate 400 W, 100 microsecond plasma runs

@@ -49,8 +49,8 @@ PhysicsApp::registerAll(Factory & f, ActionFactory & af, Syntax & syntax)
   syntax.registerActionSyntax("GummelIterationAction", "GummelIteration/*");
   syntax.registerActionSyntax("PlasmaClosuresAction", "PlasmaClosures/*");
 
-  // Check that plasma species use the variables already defined in the solver.
-  registerSyntax("PlasmaSpeciesVariableCheckPhysics",
+  // The continuity input checks the species variables before solving.
+  registerSyntax("ContinuityPhysics",
                  "Physics/Plasmas/Transport/DriftDiffusion/Continuity");
 }
 

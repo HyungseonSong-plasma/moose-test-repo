@@ -15,8 +15,10 @@ test -f "$PILOT/valid_bindings.i"
 {
   printf 'source_sha=%s\n' "$(git rev-parse HEAD)"
   printf 'build_base_ref=%s\n' "$PINNED_BASE"
-  sha256sum "$PILOT"/*.i physics_app/include/physics/PlasmaSpeciesVariableCheckPhysics.h \
-    physics_app/src/physics/PlasmaSpeciesVariableCheckPhysics.C physics_app/src/base/PhysicsApp.C
+  sha256sum "$PILOT"/*.i physics_app/include/physics/plasma/PlasmaInterface.h \
+    physics_app/src/physics/plasma/PlasmaInterface.C \
+    physics_app/include/physics/plasma/ContinuityPhysics.h \
+    physics_app/src/physics/plasma/ContinuityPhysics.C physics_app/src/base/PhysicsApp.C
 } > "$EVIDENCE/provenance.txt"
 
 docker pull "$PINNED_BASE"
@@ -30,7 +32,7 @@ docker run --rm --entrypoint /bin/bash --user 0:0 \
   export SQUIRREL_DIR=/opt/physics_vendor/squirrel
   export ZAPDOS_DIR=/opt/physics_vendor/zapdos
   export METHOD=opt
-  make -C physics_app -j2
+  make -C physics_app -j2 app_non_unity_dirs='%/utils'
 ' 2>&1 | tee "$EVIDENCE/native_build.log"
 test -x physics_app/physics-opt
 
