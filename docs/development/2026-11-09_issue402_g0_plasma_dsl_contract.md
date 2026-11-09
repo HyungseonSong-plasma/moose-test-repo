@@ -396,7 +396,7 @@ candidates; a valid Native MOOSE syntax cannot be inferred.
         mechanism_file = minimal_electron_chemistry.json
         mechanism_sha256 = <validated_sha256>
         reaction_ids = 'EI-02'
-        coefficient_provider = coefficient_main
+        coefficient_provider = 'Transport/Coefficient'
         progress_prefix = R_
         electron_energy_loss_policy = explicit_per_reaction
         conservation_policy = strict
