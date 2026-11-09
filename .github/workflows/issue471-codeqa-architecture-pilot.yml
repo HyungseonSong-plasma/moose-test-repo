@@ -1,0 +1,76 @@
+name: Physics471 codeQA architecture pilot (read-only)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/issue471-codeqa-architecture-pilot.yml'
+      - 'experiments/Issue471_ad_parser_runtime/codeqa_architecture_pilot.py'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: issue471-codeqa-pilot-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  scoped-python-architecture:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      EXPECTED_TARGET_SHA: ${{ github.event.pull_request.head.sha }}
+      EXPECTED_CODEQA_SHA: 1b6110631883f1299127e134b4134d3686765d2c
+    steps:
+      - name: Checkout immutable Physics PR source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Checkout pinned codeQA analyzer (read-only)
+        uses: actions/checkout@v4
+        with:
+          repository: HyungseonSong-plasma/codeQA
+          ref: 1b6110631883f1299127e134b4134d3686765d2c
+          path: .codeqa-pilot-source
+          persist-credentials: false
+      - name: Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Attest exact target and analyzer revisions
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_TARGET_SHA"
+          test "$(git -C .codeqa-pilot-source rev-parse HEAD)" = "$EXPECTED_CODEQA_SHA"
+          python -m pip install -e ./.codeqa-pilot-source
+      - name: Run bounded codeQA B1/B2/B3 plus Mechanical API on Physics Python
+        shell: bash
+        run: |
+          set -euo pipefail
+          python experiments/Issue471_ad_parser_runtime/codeqa_architecture_pilot.py \
+            --expected-sha "$EXPECTED_TARGET_SHA" \
+            --codeqa-root .codeqa-pilot-source \
+            --output codeqa-pilot-evidence
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          root=Path('codeqa-pilot-evidence')
+          x=json.loads((root/'pilot-summary.json').read_text())
+          assert x['target_commit']==os.environ['EXPECTED_TARGET_SHA']
+          assert x['codeqa_commit']==os.environ['EXPECTED_CODEQA_SHA']
+          assert x['decision']=='NOT_EVALUATED'
+          assert x['analysis_authority']=='BOUNDED_PYTHON_STATIC_REVIEW_ONLY'
+          assert x['python_analyzed'] > 0
+          PY
+          git diff --exit-code
+      - name: Preserve pilot evidence even when codeQA cannot evaluate
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: physics471-codeqa-pilot-evidence
+          path: codeqa-pilot-evidence/
+          retention-days: 30
+          if-no-files-found: warn
