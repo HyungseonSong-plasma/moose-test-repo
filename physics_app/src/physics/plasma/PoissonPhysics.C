@@ -35,6 +35,11 @@ PoissonPhysics::checkIntegrity() const
   const auto & potential = getParam<VariableName>("potential_variable");
   if (!solverVariableExists(potential))
     paramError("potential_variable", "Electric potential variable was not found: ", potential);
+  if (isParamValid("charge_source_material"))
+  {
+    requireUniqueFEKernel("Diffusion", potential);
+    requireUniqueFEKernel("MatBodyForce", potential);
+  }
 }
 
 void

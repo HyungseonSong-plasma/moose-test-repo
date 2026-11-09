@@ -44,6 +44,8 @@ EnergyPhysics::checkIntegrity() const
   validateExistingSpeciesVariables(getParam<std::vector<std::string>>("fem_species"),
                                    getParam<std::vector<std::string>>("fvm_species"),
                                    {getParam<VariableName>("variable")});
+  if (isParamValid("rf_heating_material"))
+    requireUniqueFEKernel("MatBodyForce", getParam<VariableName>("variable"));
 }
 
 void

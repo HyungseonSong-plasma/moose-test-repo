@@ -1,5 +1,8 @@
 #include "PlasmaInterface.h"
 
+#include "KernelBase.h"
+#include "NonlinearSystemBase.h"
+
 #include <set>
 
 InputParameters
@@ -67,4 +70,27 @@ PlasmaInterface::validateExistingSpeciesVariables(
                  "' uses a solver variable of the wrong type: ",
                  variable);
   }
+}
+
+void
+PlasmaInterface::requireUniqueFEKernel(const std::string & type,
+                                      const VariableName & variable) const
+{
+  const auto & kernels = getProblem().getNonlinearSystemBase(0).getKernelWarehouse().getObjects();
+  std::size_t matches = 0;
+  for (const auto & kernel : kernels)
+  {
+    const auto & parameters = kernel->parameters();
+    if (kernel->type() == type && parameters.isParamValid("variable") &&
+        parameters.get<NonlinearVariableName>("variable") == variable)
+      ++matches;
+  }
+
+  // This deliberately rejects even different-source kernels of the same
+  // type on one variable. A deliberate multi-source model must use explicit
+  // native Kernels until individual ownership is represented.
+  if (matches != 1)
+    mooseError("The generated ", type, " operator for solver variable '", variable,
+               "' must have exactly one owner; found ", matches,
+               ". Remove the duplicate native Kernel or overlapping Physics input.");
 }

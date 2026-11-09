@@ -56,6 +56,13 @@ MaxwellPhysics::checkIntegrity() const
     paramError("field_imag", "Imaginary electromagnetic field was not found: ", imaginary_field);
   if (isVariableFV(real_field) != isVariableFV(imaginary_field))
     paramError("field_imag", "Real and imaginary fields must use the same numerical method.");
+  if (isParamValid("reaction_material"))
+    for (const auto & variable : {real_field, imaginary_field})
+    {
+      requireUniqueFEKernel("Diffusion", variable);
+      requireUniqueFEKernel("MatReaction", variable);
+      requireUniqueFEKernel("MatCoupledForce", variable);
+    }
 }
 
 void
