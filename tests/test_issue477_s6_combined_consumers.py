@@ -98,6 +98,6 @@ def test_s6_governed_one_shot_two_native_jobs():
     assert source.count("max-parallel: 2") == 1
     assert "case: [S6-417-407-2069-H25, S6-941-407-2069-H25]" in source
     assert "prepare_s6_combined_consumers.py" in source
-    assert "test \"\${#INPUTS[@]}\" -eq 10" in source
+    assert f'test "{chr(36)}{{#INPUTS[@]}}" -eq 10' in source
     assert "issue477_s6_combined_consumers" in source
     assert "workflow_dispatch" not in source
