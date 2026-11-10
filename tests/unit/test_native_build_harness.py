@@ -238,6 +238,18 @@ class NativeBuildHarnessTests(unittest.TestCase):
         self.assertEqual(len(calls), 1)
         self.assertTrue(all("clean" not in " ".join(argv) for argv in calls))
 
+    def test_ignored_stale_application_cache_rejected_without_cleanup(self):
+        (self.root / ".git").mkdir()
+        cache = self.app / "build"
+        cache.mkdir()
+        (cache / "persisted-object.o").write_bytes(b"do-not-delete")
+        with (patch.object(harness.subprocess, "run"),
+              patch.object(harness.subprocess, "check_output", side_effect=["a" * 40 + "\n", ""])):
+            with self.assertRaises(harness.NativeBuildError) as raised:
+                harness._verify_source(self.root, "a" * 40, self.app / "physics-opt")
+        self.assertEqual(raised.exception.classification, "STALE_APP_BUILD_CACHE")
+        self.assertEqual((cache / "persisted-object.o").read_bytes(), b"do-not-delete")
+
     def test_preflight_mismatched_sha_and_dirty_app_rejected(self):
         with self.assertRaisesRegex(harness.NativeBuildError, "40 lowercase"):
             harness._verify_source(self.root, "bad", self.app / "physics-opt")
