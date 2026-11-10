@@ -10,11 +10,11 @@
  * Use only when a producer does not yet expose canonical names. Do not
  * instantiate simultaneously with a direct canonical producer for a species.
  */
-class PhysicsSpeciesTransportAliasMaterial : public FunctorMaterial
+class SpeciesTransportAliasMaterial : public FunctorMaterial
 {
 public:
   static InputParameters validParams();
-  PhysicsSpeciesTransportAliasMaterial(const InputParameters & parameters);
+  SpeciesTransportAliasMaterial(const InputParameters & parameters);
 
 private:
   const Moose::Functor<ADReal> & _mobility;

@@ -23,11 +23,11 @@ test -f "$PILOT/valid_bindings.i"
     physics_app/src/physics/plasma/ChemistryPhysics.C \
     physics_app/src/physics/plasma/PoissonPhysics.C \
     physics_app/src/physics/plasma/MaxwellPhysics.C physics_app/src/base/PhysicsApp.C \
-    physics_app/src/materials/PhysicsElectronClosureMaterial.C \
-    physics_app/src/materials/PhysicsElectronTransportLookupMaterial.C \
-    physics_app/src/materials/PhysicsPlasmaChargeTransportMaterial.C \
-    physics_app/include/materials/PhysicsSpeciesTransportAliasMaterial.h \
-    physics_app/src/materials/PhysicsSpeciesTransportAliasMaterial.C
+    physics_app/src/materials/ElectronClosureMaterial.C \
+    physics_app/src/materials/ElectronTransportLookupMaterial.C \
+    physics_app/src/materials/PlasmaChargeTransportMaterial.C \
+    physics_app/include/materials/SpeciesTransportAliasMaterial.h \
+    physics_app/src/materials/SpeciesTransportAliasMaterial.C
 } > "$EVIDENCE/provenance.txt"
 
 docker pull "$PINNED_BASE"

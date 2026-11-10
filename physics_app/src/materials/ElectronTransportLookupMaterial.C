@@ -1,13 +1,15 @@
-#include "PhysicsElectronTransportLookupMaterial.h"
+#include "ElectronTransportLookupMaterial.h"
 #include "Physics.h"
 
 #include <algorithm>
 #include <stdexcept>
 
-registerMooseObject("PhysicsApp", PhysicsElectronTransportLookupMaterial);
+registerMooseObject("PhysicsApp", ElectronTransportLookupMaterial);
+// Keep historical input "type" tokens usable; no legacy C++ class remains.
+registerMooseObjectAliased("PhysicsApp", ElectronTransportLookupMaterial, "PhysicsElectronTransportLookupMaterial");
 
 InputParameters
-PhysicsElectronTransportLookupMaterial::validParams()
+ElectronTransportLookupMaterial::validParams()
 {
   auto params = FunctorMaterial::validParams();
 
@@ -40,7 +42,7 @@ PhysicsElectronTransportLookupMaterial::validParams()
   return params;
 }
 
-PhysicsElectronTransportLookupMaterial::PhysicsElectronTransportLookupMaterial(
+ElectronTransportLookupMaterial::ElectronTransportLookupMaterial(
     const InputParameters & parameters)
   : FunctorMaterial(parameters),
     _mean_energy(getFunctor<ADReal>("mean_energy")),
@@ -58,7 +60,7 @@ PhysicsElectronTransportLookupMaterial::PhysicsElectronTransportLookupMaterial(
       {
         const ADReal T_g = _gas_temperature(r, state);
         if (T_g.value() <= 0.0)
-          mooseError("PhysicsElectronTransportLookupMaterial requires T_g > 0 K.");
+          mooseError("ElectronTransportLookupMaterial requires T_g > 0 K.");
 
         return _pressure(r, state) / (PHYSICS_CONSTANTS::k_boltz * T_g);
       });
@@ -120,8 +122,8 @@ PhysicsElectronTransportLookupMaterial::PhysicsElectronTransportLookupMaterial(
       });
 }
 
-PhysicsElectronTransportLookupMaterial::BoundsPolicy
-PhysicsElectronTransportLookupMaterial::parseBoundsPolicy(const std::string & value)
+ElectronTransportLookupMaterial::BoundsPolicy
+ElectronTransportLookupMaterial::parseBoundsPolicy(const std::string & value)
 {
   if (value == "error")
     return BoundsPolicy::Error;
@@ -130,11 +132,11 @@ PhysicsElectronTransportLookupMaterial::parseBoundsPolicy(const std::string & va
     return BoundsPolicy::Clamp;
 
   throw std::runtime_error(
-      "PhysicsElectronTransportLookupMaterial bounds_policy must be 'error' or 'clamp'.");
+      "ElectronTransportLookupMaterial bounds_policy must be 'error' or 'clamp'.");
 }
 
 ADReal
-PhysicsElectronTransportLookupMaterial::interpolate(const ADReal & coordinate,
+ElectronTransportLookupMaterial::interpolate(const ADReal & coordinate,
                                                 std::size_t value_index) const
 {
   const auto & x = _table.coordinate();

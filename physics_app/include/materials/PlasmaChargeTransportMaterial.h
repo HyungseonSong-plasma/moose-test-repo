@@ -32,11 +32,11 @@
  * then carries the corresponding inferred correction flux and the total heavy
  * relative mass flux sums to zero.
  */
-class PhysicsPlasmaChargeTransportMaterial : public FunctorMaterial
+class PlasmaChargeTransportMaterial : public FunctorMaterial
 {
 public:
   static InputParameters validParams();
-  PhysicsPlasmaChargeTransportMaterial(const InputParameters & parameters);
+  PlasmaChargeTransportMaterial(const InputParameters & parameters);
 
 protected:
   const Moose::Functor<ADReal> & _potential;

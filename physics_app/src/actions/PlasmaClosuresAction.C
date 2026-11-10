@@ -26,7 +26,7 @@ PlasmaClosuresAction::validParams()
   params.addParam<bool>(
       "create_electron_closure",
       true,
-      "Legacy compatibility switch used when role=custom: create PhysicsElectronClosureMaterial.");
+      "Legacy compatibility switch used when role=custom: create ElectronClosureMaterial.");
   params.addParam<bool>(
       "create_electron_kinetics",
       false,
@@ -331,7 +331,7 @@ PlasmaClosuresAction::act()
 
   if (electronClosureEnabled())
   {
-    auto material_params = _factory.getValidParams("PhysicsElectronClosureMaterial");
+    auto material_params = _factory.getValidParams("ElectronClosureMaterial");
 
     material_params.set<MooseEnum>("state_form") =
         electronPhysicalState() ? "physical_eV" : "normalized";
@@ -374,7 +374,7 @@ PlasmaClosuresAction::act()
           getParam<MooseFunctorName>(parameter);
 
     _problem->addFunctorMaterial(
-        "PhysicsElectronClosureMaterial", prefix + "_electron_closure", material_params);
+        "ElectronClosureMaterial", prefix + "_electron_closure", material_params);
   }
 
   if (electronKineticsEnabled())

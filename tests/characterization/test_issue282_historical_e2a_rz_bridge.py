@@ -151,13 +151,25 @@ def test_research_type_projection_is_exact_reversible_and_source_registered() ->
         assert historical in original
         assert current in projected
         dirname = "materials" if "Material" in current and "FV" not in current else "fvkernels"
-        candidate = ROOT / "physics_app" / "src" / dirname / f"{current}.C"
+        # The research projection is immutable: preserve the historical
+        # PhysicsElectronTransportLookupMaterial input type. In the current
+        # source, it resolves through an explicit MOOSE factory alias.
+        canonical = (
+            "ElectronTransportLookupMaterial"
+            if current == "PhysicsElectronTransportLookupMaterial" else current
+        )
+        candidate = ROOT / "physics_app" / "src" / dirname / f"{canonical}.C"
         assert candidate.is_file(), f"missing current PhysicsApp source: {candidate}"
         source = candidate.read_text(encoding="utf-8")
         assert re.search(
-            rf'register(?:AD)?MooseObject\(\s*"PhysicsApp"\s*,\s*{re.escape(current)}\s*\)\s*;',
+            rf'register(?:AD)?MooseObject\(\s*"PhysicsApp"\s*,\s*{re.escape(canonical)}\s*\)\s*;',
             source,
         )
+        if current != canonical:
+            assert (
+                f'registerMooseObjectAliased("PhysicsApp", {canonical}, "{current}");'
+                in source
+            )
     assert all(
         not m.group("name").startswith("QPX")
         for m in TYPE_LINE.finditer(projected)

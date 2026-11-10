@@ -6,8 +6,8 @@ ROOT = Path(__file__).resolve().parents[1]
 required = [
     ROOT / "include/actions/PlasmaClosuresAction.h",
     ROOT / "src/actions/PlasmaClosuresAction.C",
-    ROOT / "include/materials/PhysicsElectronClosureMaterial.h",
-    ROOT / "src/materials/PhysicsElectronClosureMaterial.C",
+    ROOT / "include/materials/ElectronClosureMaterial.h",
+    ROOT / "src/materials/ElectronClosureMaterial.C",
     ROOT / "include/materials/PhysicsElectronKineticsMaterial.h",
     ROOT / "src/materials/PhysicsElectronKineticsMaterial.C",
     ROOT / "include/materials/PhysicsHeavyTransportMaterial.h",
@@ -20,7 +20,7 @@ for path in required:
 
 action = (ROOT / "src/actions/PlasmaClosuresAction.C").read_text()
 app = (ROOT / "src/base/PhysicsApp.C").read_text()
-electron = (ROOT / "src/materials/PhysicsElectronClosureMaterial.C").read_text()
+electron = (ROOT / "src/materials/ElectronClosureMaterial.C").read_text()
 kinetics = (ROOT / "src/materials/PhysicsElectronKineticsMaterial.C").read_text()
 heavy = (ROOT / "src/materials/PhysicsHeavyTransportMaterial.C").read_text()
 
@@ -29,7 +29,7 @@ assert 'syntax.registerActionSyntax("PlasmaClosuresAction", "PlasmaClosures/*")'
 
 # The user-facing action composes four closures; it does not implement their physics.
 for object_type in (
-    "PhysicsElectronClosureMaterial",
+    "ElectronClosureMaterial",
     "PhysicsElectronKineticsMaterial",
     "PhysicsHeavyTransportMaterial",
     "PhysicsPlasmaChargeDensityMaterial",
@@ -51,13 +51,31 @@ assert "std::vector<PhysicsLookupTable1D>" in (
 # Heavy transport reuses the already-qualified multi-species implementation.
 assert "PhysicsThermalDiffusionMaterial" in heavy
 
-# Backward compatibility: legacy material implementations remain present.
+# Backward compatibility: legacy *factory type names* remain registered;
+# source filenames and C++ class identifiers now use the shorter canonical form.
 for legacy in (
     "PhysicsElectronMeanEnergyMaterial.C",
-    "PhysicsElectronTransportLookupMaterial.C",
+    "ElectronTransportLookupMaterial.C",
     "PhysicsElectronImpactRateMaterial.C",
     "PhysicsThermalDiffusionMaterial.C",
 ):
     assert (ROOT / "src/materials" / legacy).is_file(), legacy
+
+
+# MOOSE object-factory aliases keep immutable historical input decks valid.
+for old_type, new_type in (
+    ("PhysicsElectronClosureMaterial", "ElectronClosureMaterial"),
+    ("PhysicsElectronTransportLookupMaterial", "ElectronTransportLookupMaterial"),
+    ("PhysicsPlasmaChargeTransportMaterial", "PlasmaChargeTransportMaterial"),
+    ("PhysicsSpeciesTransportAliasMaterial", "SpeciesTransportAliasMaterial"),
+):
+    source = ROOT / "src/materials" / (new_type + ".C")
+    header = ROOT / "include/materials" / (new_type + ".h")
+    assert source.is_file() and header.is_file(), (source, header)
+    assert not (ROOT / "src/materials" / (old_type + ".C")).exists()
+    assert not (ROOT / "include/materials" / (old_type + ".h")).exists()
+    content = source.read_text()
+    assert f'registerMooseObject("PhysicsApp", {new_type});' in content
+    assert f'registerMooseObjectAliased("PhysicsApp", {new_type}, "{old_type}");' in content
 
 print("PLASMA_CLOSURES_CONTRACT: PASS")
