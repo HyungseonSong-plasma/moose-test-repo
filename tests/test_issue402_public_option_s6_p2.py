@@ -69,7 +69,27 @@ def test_full_s6_p2_provenance_and_no_solver_execution():
     assert "NATIVE_RUNTIME_LINKER_ERROR" in script
     assert '"P3": "NOT_RUN"' in script and '"P4": "NOT_RUN"' in script
     assert "SCIENCE_HOLD" in script
-    assert "run_public_option_s6_p2.sh" in native
+    workflow = (ROOT / ".github/workflows/ci.yml").read_text()
+    assert "preflight_public_option_s6.sh" in workflow
+    assert "run_public_option_s6_p2.sh" in workflow
+    assert "P0 - Public S6 environment and scratch-permission preflight" in workflow
+    assert "P1 - Build PhysicsApp and verify generated and native solver operators" in workflow
+    assert "P2 - Public S6-417 and S6-941 four-way Native input checks" in workflow
+    assert "run_public_option_s6_p2.sh" not in native  # Independent P2 CI step
+    assert "native_p1_identity.json" in native
+    assert '"schema": "issue402.native_p1.job_local.v1"' in native
+    assert "persist_report(evidence, report)" in script
+    assert '"cleanup"] = "HOLD"' in script
+    assert 'report["P2"] == "PASS" and result.get("cleanup") == "PASS"' not in script
+    assert 'result.get("cleanup") == "PASS"' in script
+    assert "option_s6_environment.json" in script
+    assert "same_exact_head_ci_job_only" in script
+    gate = PILOT / "preflight_public_option_s6.sh"
+    gate_text = gate.read_text()
+    assert "OXYGEN_RESEARCH" not in gate_text or "400" in gate_text
+    assert "public_p2_check.py --control . --mode preflight" in gate_text
+    assert "root_scratch_create_and_cleanup" in gate_text
+    subprocess.run(["bash", "-n", str(gate)], check=True)
     assert "public_p2_decks.tar.xz.b64" in public
     assert "PACK_SHA" in public and "PINNED_SOURCE" in public
     assert "issue493_option_only" not in bash  # no secret runner or alternate old-rate owner
