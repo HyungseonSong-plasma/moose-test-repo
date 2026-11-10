@@ -5,8 +5,11 @@ scientific validation. Existing 400 W / 0–100 µs S6 archived A runs are the
 references. B and C must run fresh (460 steps / 461 timestamps).
 
 This runner reuses the accepted pinned `physics-build-base` OCI image, compiles
-only the exact reviewed PR #491 `physics_app` checkout (`make -C physics_app
--j2`), and applies the identical `physics-opt` binary to B and C. It does
+only the exact reviewed PR #491 `physics_app` checkout with MOOSE Unity
+**enabled** and only `physics_app/src/utils` excluded through MOOSE's
+`app_non_unity_dirs` make variable; the container selects up to four concurrent
+compile jobs, constrained by available memory. The resulting identical
+`physics-opt` binary is applied to B and C. It does
 **not** rebuild MOOSE, Crane, Squirrel or Zapdos, pull a different image, or
 change production workflows. It **never** downloads or processes original
 protected rate tables.
