@@ -30,8 +30,9 @@ CANONICAL_COMMANDS = {
     "lower": "retired: direct local MOOSE lowering is forbidden",
     "run": "prepare one canonical semantic experiment for target execution",
     "preflight": "run static parser-symbol preflight on one MOOSE input",
-    "native-p1-record": "record exact native P1 build identity after successful build",
-    "validate-input": "run native P2 check-input only with verified P1 identity",
+    "native-build": "build pinned MOOSE PhysicsApp within trusted OCI using a scoped adaptive profile",
+    "native-p1-record": "attest P1 build report and executable SHA before Native P2",
+    "validate-input": "run Native P2 only after matching P1 build evidence",
     "temporal-csv": "normalize transient CSV rows under an explicit temporal policy",
     "oxygen-c0": "audit a 400 W Oxygen14 chemistry-off candidate without executing MOOSE",
     "oxygen-profile": "extract plasma-region electron density/energy profiles from native Exodus",
@@ -82,6 +83,7 @@ def print_help() -> None:
     print("  physics plan <experiment.json>")
     print("  physics lower <experiment.json>")
     print("  physics run <experiment.json>")
+    print("  physics native-build --source-root <checkout> --expected-sha <sha> --log-dir <dir> --report <file>")
     print("  physics research start <data> --session <session.json>")
     print("  physics research <goal|scope|confirm|status|check|execute> ...")
     print("  physics -i <internal-target>          # compatibility/internal")
@@ -240,6 +242,7 @@ def main(argv: list[str] | None = None) -> int:
         "lower": semantic_lower_cli,
         "run": semantic_run_cli,
         "preflight": preflight_cli,
+        "native-build": lambda argv: import_module("physics_harness.execution.native_build").main(argv),
         "native-p1-record": lambda argv: import_module("physics_harness.cli.commands.native_validation").native_p1_record_cli(argv),
         "validate-input": lambda argv: import_module("physics_harness.cli.commands.native_validation").validate_input_cli(argv),
         "temporal-csv": temporal_csv_cli,

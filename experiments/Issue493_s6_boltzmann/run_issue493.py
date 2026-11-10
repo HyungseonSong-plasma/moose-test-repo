@@ -136,7 +136,7 @@ def git_head(path: Path) -> str:
 
 
 def docker_cmd(mounts: list[tuple[Path, str, str]], workdir: str, command: str) -> list[str]:
-    args = ["docker", "run", "--rm", "--entrypoint", "/bin/bash", "--user", "0:0", "--workdir", workdir,
+    args = ["docker", "run", "--rm", "--network", "none", "--entrypoint", "/bin/bash", "--user", "0:0", "--workdir", workdir,
             "--env", "OXYGEN_RESEARCH_400=1", "--env", "OXYGEN_RESEARCH_FULL24=0",
             "--env", "OXYGEN_RESEARCH_EI2738_FORMULA=0", "--env", "OXYGEN_RESEARCH_QUICK_5MIN=0"]
     for path, dst, mode in mounts:
@@ -161,18 +161,25 @@ def build(candidate: Path, log: Path, expected_sha: str) -> tuple[Path, str]:
     fail_if(bool(dirty.strip()), "candidate physics_app working tree is dirty; exact-source build cannot be proven")
     binary = candidate / "physics_app" / "physics-opt"
     fail_if(binary.exists(), "candidate already has a physics-opt; use clean isolated build checkout")
-    script = """git config --global --add safe.directory /app; \
-      export MOOSE_DIR=/opt/physics_vendor/moose \
-      CRANE_DIR=/opt/physics_vendor/crane \
-      SQUIRREL_DIR=/opt/physics_vendor/squirrel \
-      ZAPDOS_DIR=/opt/physics_vendor/zapdos METHOD=opt; \
-      cpus=$(nproc); jobs=$cpus; if [ "$jobs" -gt 4 ]; then jobs=4; fi; \
-      mem_available_kb=$(awk '/MemAvailable:/ {print $2}' /proc/meminfo); \
-      if [ "$mem_available_kb" -lt 10000000 ] && [ "$jobs" -gt 2 ]; then jobs=2; fi; \
-      echo ISSUE493_CPU=$cpus JOBS=$jobs MEM_AVAILABLE_KB=$mem_available_kb; \
-      make -C physics_app -j"$jobs" MOOSE_UNITY=true app_non_unity_dirs=/app/physics_app/src/utils; \
-      test -x physics_app/physics-opt"""
-    run_step(docker_cmd([(candidate, "/app", "rw")], "/app", script), log, 3600)
+    # Build policy belongs to the reusable Physics harness, not this experiment.
+    # The reviewed candidate source can predate the harness; mount the harness
+    # checkout read-only, while building only the exact candidate app at /app.
+    harness_root = Path(__file__).resolve().parents[2]
+    fail_if(not (harness_root / "physics_harness/execution/native_build.py").is_file(),
+            "canonical native build harness is missing")
+    script = (
+        "export MOOSE_DIR=/opt/physics_vendor/moose "
+        "CRANE_DIR=/opt/physics_vendor/crane "
+        "SQUIRREL_DIR=/opt/physics_vendor/squirrel "
+        "ZAPDOS_DIR=/opt/physics_vendor/zapdos METHOD=opt; "
+        "python3 /harness/physics_harness/execution/native_build.py "
+        f"--source-root /app --expected-sha {expected_sha} "
+        "--profile auto --max-jobs 4 --max-attempts 3 --timeout-seconds 1800 "
+        "--log-dir /app/.issue493_p1_build "
+        "--report /app/.issue493_p1_build/report.json"
+    )
+    run_step(docker_cmd([(candidate, "/app", "rw"), (harness_root, "/harness", "ro")],
+                        "/app", script), log, 5700)
     fail_if(not binary.is_file(), "Docker returned success without native physics-opt")
     return binary, sha256(binary)
 

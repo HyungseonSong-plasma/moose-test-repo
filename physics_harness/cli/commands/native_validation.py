@@ -24,11 +24,13 @@ def native_p1_record_cli(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(prog='physics native-p1-record')
     _shared_p1_args(parser)
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--build-report', type=Path, required=True,
+                        help='PASS report emitted by canonical physics native-build harness')
     args = parser.parse_args(argv)
     try:
         evidence = record_p1_success(
             args.output, source_root=args.source_root, source_sha=args.source_sha,
-            binary=args.binary, image_ref=args.oci_ref,
+            binary=args.binary, image_ref=args.oci_ref, build_report=args.build_report,
         )
     except (OSError, P1GateError) as exc:
         print(f'NATIVE_P1_RECORD: HOLD ({exc})', file=sys.stderr)

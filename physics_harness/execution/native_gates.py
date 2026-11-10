@@ -64,14 +64,30 @@ def _require_identity(
 
 def record_p1_success(
     output: Path, *, source_root: Path, binary: Path,
-    source_sha: str, image_ref: str,
+    source_sha: str, image_ref: str, build_report: Path,
 ) -> dict[str, str | int]:
-    """Record verified binary identity only AFTER the build step succeeds.
+    """Bind a successful canonical Native P1 harness report to host binary identity.
 
     Exclusive creation prevents a stale status from being silently replaced.
     The CI caller must ensure no binary existed before its build step.
     """
     root, exe = _require_identity(source_root, binary, source_sha=source_sha, image_ref=image_ref)
+    report_path = Path(build_report)
+    if not report_path.is_file():
+        raise P1GateError("P1_BUILD_REPORT_MISSING")
+    try:
+        report = json.loads(report_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        raise P1GateError("P1_BUILD_REPORT_INVALID") from exc
+    digest = sha256_file(exe)
+    if (not isinstance(report, dict) or report.get("status") != "PASS" or
+            report.get("stage") != "P1" or report.get("source_sha") != source_sha or
+            report.get("executable_sha256") != digest or
+            report.get("vendor_cache") != "PRESERVED" or report.get("unity") is not True or
+            report.get("science") != "HOLD" or
+            not isinstance(report.get("attempts"), list) or not report["attempts"] or
+            report["attempts"][-1].get("exit_code") != 0):
+        raise P1GateError("P1_BUILD_REPORT_INCONSISTENT")
     status: dict[str, str | int] = {
         "schema": SCHEMA,
         "phase": "P1",
@@ -80,7 +96,8 @@ def record_p1_success(
         "source_root": str(root),
         "oci_image": image_ref,
         "binary_path": str(exe),
-        "binary_sha256": sha256_file(exe),
+        "binary_sha256": digest,
+        "build_report_sha256": sha256_file(report_path),
         "recorded_at_utc": datetime.now(timezone.utc).isoformat(),
     }
     output = Path(output)

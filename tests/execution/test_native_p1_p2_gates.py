@@ -28,16 +28,25 @@ def built(tmp_path: Path):
     exe.write_text("#!/usr/bin/env python3\nprint('Syntax OK')\n")
     exe.chmod(0o755)
     evidence = tmp_path / "evidence" / "P1.json"
-    return source, sha, exe, evidence
+    build_report = tmp_path / "native_build" / "report.json"
+    build_report.parent.mkdir(parents=True)
+    import hashlib
+    build_report.write_text(json.dumps({
+        "status": "PASS", "stage": "P1", "source_sha": sha,
+        "executable_sha256": hashlib.sha256(exe.read_bytes()).hexdigest(),
+        "vendor_cache": "PRESERVED", "unity": True, "science": "HOLD",
+        "attempts": [{"attempt": 1, "exit_code": 0}],
+    }))
+    return source, sha, exe, evidence, build_report
 
 
 def kw(built):
-    src, sha, exe, _ = built
+    src, sha, exe, _, _report = built
     return {"source_root": src, "source_sha": sha, "binary": exe, "image_ref": OCI}
 
 
 def run(built, tmp_path, command=None, logfile="P2.log"):
-    src, sha, exe, evidence = built
+    src, sha, exe, evidence, _report = built
     return run_p2_checked(command or [sys.executable, "-c", "print('Syntax OK')", "--check-input"],
                           evidence=evidence, cwd=tmp_path, log_path=tmp_path / logfile, success_marker="Syntax OK", **kw(built))
 
@@ -46,7 +55,7 @@ def test_gate_requires_successful_p1_first(built, tmp_path):
     with pytest.raises(P1GateError, match="P1_EVIDENCE_MISSING"):
         run(built, tmp_path)
     assert not (tmp_path / "P2.log").exists()
-    record_p1_success(built[3], **kw(built))
+    record_p1_success(built[3], build_report=built[4], **kw(built))
     report = run(built, tmp_path)
     assert report["P2"] == "PASS"
     assert report["classification"]["status"] == "PASS"
@@ -54,7 +63,7 @@ def test_gate_requires_successful_p1_first(built, tmp_path):
 
 
 def test_identity_rejection_before_command_launch(built, tmp_path):
-    record_p1_success(built[3], **kw(built))
+    record_p1_success(built[3], build_report=built[4], **kw(built))
     with pytest.raises(P1GateError, match="P1_EVIDENCE_OCI_IMAGE_MISMATCH"):
         run_p2_checked(["would-not-execute", "--check-input"], evidence=built[3], cwd=tmp_path,
                        log_path=tmp_path / "bad.log", **{**kw(built), "image_ref": OCI.replace("a" * 64, "b" * 64)})
@@ -65,7 +74,7 @@ def test_identity_rejection_before_command_launch(built, tmp_path):
 
 
 def test_wrong_source_and_missing_binary_block(built, tmp_path):
-    record_p1_success(built[3], **kw(built))
+    record_p1_success(built[3], build_report=built[4], **kw(built))
     with pytest.raises(P1GateError, match="P1_SOURCE_HEAD_MISMATCH"):
         run_p2_checked(["not-executed", "--check-input"], evidence=built[3], cwd=tmp_path,
                        log_path=tmp_path / "wrong.log", **{**kw(built), "source_sha": "0" * 40})
@@ -75,15 +84,15 @@ def test_wrong_source_and_missing_binary_block(built, tmp_path):
 
 
 def test_evidence_is_exclusive_and_cannot_be_redispatched(built, tmp_path):
-    record_p1_success(built[3], **kw(built))
+    record_p1_success(built[3], build_report=built[4], **kw(built))
     with pytest.raises(P1GateError, match="P1_EVIDENCE_ALREADY_EXISTS"):
-        record_p1_success(built[3], **kw(built))
+        record_p1_success(built[3], build_report=built[4], **kw(built))
     with pytest.raises(P1GateError, match="P2_CHECK_INPUT_COMMAND_REQUIRED"):
         run(built, tmp_path, [sys.executable, "-c", "print('Syntax OK')"])
 
 
 def test_docker_start_error_is_environment_hold_not_science_failure(built, tmp_path):
-    record_p1_success(built[3], **kw(built))
+    record_p1_success(built[3], build_report=built[4], **kw(built))
     r = run(built, tmp_path, [sys.executable, "-c", "import sys; sys.exit(125)", "--check-input"])
     assert r["P2"] == "HOLD"
     assert r["classification"]["reason"] == "P2_LAUNCHER_FAIL"
@@ -91,7 +100,7 @@ def test_docker_start_error_is_environment_hold_not_science_failure(built, tmp_p
 
 
 def test_check_input_error_and_missing_success_marker(built, tmp_path):
-    record_p1_success(built[3], **kw(built))
+    record_p1_success(built[3], build_report=built[4], **kw(built))
     r = run(built, tmp_path, [sys.executable, "-c", "import sys; print('*** ERROR ***\\nmissing input'); sys.exit(2)", "--check-input"])
     assert r["P2"] == "HOLD" and r["classification"]["reason"] == "NATIVE_CHECK_INPUT_FAIL"
     r2 = run(built, tmp_path, [sys.executable, "-c", "print('no evidence of syntax success')", "--check-input"], logfile="P2b.log")
@@ -99,7 +108,7 @@ def test_check_input_error_and_missing_success_marker(built, tmp_path):
 
 
 def test_timeout_and_bad_evidence_fail_closed(built, tmp_path):
-    record_p1_success(built[3], **kw(built))
+    record_p1_success(built[3], build_report=built[4], **kw(built))
     r = run_p2_checked([sys.executable, "-c", "import time; time.sleep(3)", "--check-input"],
                        evidence=built[3], cwd=tmp_path, log_path=tmp_path / "timeout.log", timeout_seconds=0.2,
                        **kw(built))
@@ -113,6 +122,19 @@ def test_timeout_and_bad_evidence_fail_closed(built, tmp_path):
 
 def test_unpinned_oci_and_invalid_source_rejected(built, tmp_path):
     with pytest.raises(P1GateError, match="P1_OCI_NOT_DIGEST_PINNED"):
-        record_p1_success(built[3], **{**kw(built), "image_ref": "ghcr.io/example/build-base:latest"})
+        record_p1_success(built[3], build_report=built[4], **{**kw(built), "image_ref": "ghcr.io/example/build-base:latest"})
     with pytest.raises(P1GateError, match="P1_SOURCE_HEAD_MISMATCH"):
-        record_p1_success(built[3], **{**kw(built), "source_sha": "f" * 40})
+        record_p1_success(built[3], build_report=built[4], **{**kw(built), "source_sha": "f" * 40})
+
+
+def test_p1_report_is_required_and_must_attest_real_build(built):
+    built[4].unlink()
+    with pytest.raises(P1GateError, match="P1_BUILD_REPORT_MISSING"):
+        record_p1_success(built[3], build_report=built[4], **kw(built))
+    fake = {"status": "PASS", "stage": "P1", "source_sha": built[1],
+            "executable_sha256": "0" * 64, "vendor_cache": "PRESERVED",
+            "unity": True, "science": "HOLD", "attempts": [{"exit_code": 0}]}
+    built[4].write_text(json.dumps(fake))
+    with pytest.raises(P1GateError, match="P1_BUILD_REPORT_INCONSISTENT"):
+        record_p1_success(built[3], build_report=built[4], **kw(built))
+    assert not built[3].exists()

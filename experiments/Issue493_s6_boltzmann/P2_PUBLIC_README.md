@@ -43,7 +43,8 @@ python3 experiments/Issue493_s6_boltzmann/public_p2_check.py \
 ## Enforced P1 → P2 sequence (harness v1)
 
 P2 may execute only when P1 in the **same trusted execution job** has built a
-fresh `physics-opt` (no preexisting executable), then emitted an exclusive
+fresh `physics-opt` (no preexisting executable), writes a canonical `native-build`
+PASS report, and then emits an exclusive
 `physics-native-p1-evidence-v1` JSON record using the canonical CLI. The record
 pins the source checkout Git HEAD, immutable OCI digest, real binary path and
 SHA-256. P2 revalidates those pins and rehashes the binary **before every one**
@@ -56,6 +57,7 @@ The canonical harness commands are:
 python3 bin/physics.py native-p1-record \
   --source-root <checkout> --source-sha <exact-sha> \
   --binary <checkout>/physics_app/physics-opt --oci-ref <digest-pinned-image> \
+  --build-report <checkout>/.native_p1_validation/report.json \
   --output <new-evidence-file>.json
 
 # Host-native check-input (alternatively use reusable harness API for OCI):
