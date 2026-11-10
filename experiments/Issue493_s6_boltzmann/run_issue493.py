@@ -136,7 +136,7 @@ def git_head(path: Path) -> str:
 
 
 def docker_cmd(mounts: list[tuple[Path, str, str]], workdir: str, command: str) -> list[str]:
-    args = ["docker", "run", "--rm", "--entrypoint", "/bin/bash", "--user", "0:0", "--workdir", workdir,
+    args = ["docker", "run", "--rm", "--network", "none", "--entrypoint", "/bin/bash", "--user", "0:0", "--workdir", workdir,
             "--env", "OXYGEN_RESEARCH_400=1", "--env", "OXYGEN_RESEARCH_FULL24=0",
             "--env", "OXYGEN_RESEARCH_EI2738_FORMULA=0", "--env", "OXYGEN_RESEARCH_QUICK_5MIN=0"]
     for path, dst, mode in mounts:
@@ -174,12 +174,12 @@ def build(candidate: Path, log: Path, expected_sha: str) -> tuple[Path, str]:
         "ZAPDOS_DIR=/opt/physics_vendor/zapdos METHOD=opt; "
         "python3 /harness/physics_harness/execution/native_build.py "
         f"--source-root /app --expected-sha {expected_sha} "
-        "--profile auto --max-jobs 4 --max-attempts 3 "
+        "--profile auto --max-jobs 4 --max-attempts 3 --timeout-seconds 1800 "
         "--log-dir /app/.issue493_p1_build "
         "--report /app/.issue493_p1_build/report.json"
     )
     run_step(docker_cmd([(candidate, "/app", "rw"), (harness_root, "/harness", "ro")],
-                        "/app", script), log, 3600)
+                        "/app", script), log, 5700)
     fail_if(not binary.is_file(), "Docker returned success without native physics-opt")
     return binary, sha256(binary)
 
