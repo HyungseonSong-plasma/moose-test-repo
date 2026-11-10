@@ -243,6 +243,13 @@ def _verify_source(source_root: Path, expected_sha: str, binary: Path) -> None:
         raise NativeBuildError("P0", "SOURCE_SHA_MISMATCH", "candidate HEAD differs from reviewed source")
     if dirty.strip() or binary.exists():
         raise NativeBuildError("P0", "DIRTY_OR_STALE_APP", "app is dirty or already has a binary; use a fresh checkout")
+    # Git does not report ignored generated objects. Never confuse an ignored
+    # previous app build with the exact checked-out source in a new P1 run.
+    # Fail closed instead of deleting anything or touching pinned vendor cache.
+    generated = source_root / "physics_app" / "build"
+    if generated.exists() or generated.is_symlink():
+        raise NativeBuildError("P0", "STALE_APP_BUILD_CACHE",
+                               "application build/ already exists; use a fresh isolated checkout")
 
 
 def _verify_vendor_environment() -> None:
