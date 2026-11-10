@@ -48,6 +48,19 @@ class ExperimentTests(unittest.TestCase):
         self.assertNotIn('make -j2 MOOSE_UNITY=false', workflow)
         self.assertIn('if (( jobs > 4 ))', workflow)
 
+    def test_ci_nested_docker_shell_quotes_and_memory_probe(self):
+        workflow = (pathlib.Path(__file__).resolve().parents[2] /
+                    '.github/workflows/ci.yml').read_text(encoding='utf-8')
+        job = workflow.split('  issue493-pr491-native-source-build:', 1)[1]
+        marker = '-v "$PWD:/workspace" "$BUILD_BASE_REF" -lc ' + chr(39)
+        self.assertEqual(job.count(marker), 1)
+        payload = job.split(marker, 1)[1].split(
+            '\n            ' + chr(39) + '\n', 1)[0]
+        self.assertNotIn(chr(39), payload, 'nested single quote will break bash -lc')
+        self.assertIn('while read -r mem_key mem_value mem_unit', payload)
+        self.assertNotIn('awk /MemAvailable/', payload)
+        self.assertIn('test "$mem_available_kb" -gt 0', payload)
+
     def test_docker_invocation_pins_image_and_research_controls(self):
         command = run.docker_cmd([(pathlib.Path('/tmp/example'), '/case', 'rw')], '/case', 'true')
         self.assertEqual(command[0], 'docker')
