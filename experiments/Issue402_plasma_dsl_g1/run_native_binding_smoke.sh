@@ -39,6 +39,35 @@ docker run --rm --entrypoint /bin/bash --user 0:0 \
   make -C physics_app -j2 app_non_unity_dirs='%/utils'
 ' 2>&1 | tee "$EVIDENCE/native_build.log"
 test -x physics_app/physics-opt
+# Reuse this exact build across all small and full-S6 P2 cases in this job.
+# This is NOT a cross-job cache or scientific equivalence certificate.
+python3 - "$EVIDENCE/native_p1_identity.json" "$(git rev-parse HEAD)" "$PINNED_BASE" \
+  "physics_app/physics-opt" "$EVIDENCE/native_build.log" <<'PY'
+import hashlib
+import json
+import pathlib
+import sys
+def digest(path):
+    h = hashlib.sha256()
+    with pathlib.Path(path).open("rb") as stream:
+        for block in iter(lambda: stream.read(1 << 20), b""):
+            h.update(block)
+    return h.hexdigest()
+target = pathlib.Path(sys.argv[1])
+if target.exists():
+    raise RuntimeError("Refusing to overwrite P1 identity evidence")
+target.write_text(json.dumps({
+    "schema": "issue402.native_p1.job_local.v1",
+    "source_sha": sys.argv[2],
+    "oci_image": sys.argv[3],
+    "binary_sha256": digest(sys.argv[4]),
+    "build_log_sha256": digest(sys.argv[5]),
+    "reusable_scope": "same_exact_head_ci_job_only",
+    "P1": "PASS",
+    "P3": "NOT_RUN",
+    "science": "SCIENCE_HOLD",
+}, indent=2, sort_keys=True) + "\n")
+PY
 
 native() {
   docker run --rm --entrypoint /bin/bash --user 0:0 \
@@ -133,7 +162,3 @@ python3 "$PILOT/compare_native_outputs.py" \
   --candidate "$EVIDENCE/rf_generated/rf.e" \
   --output "$EVIDENCE/rf_builder_parity.json"
 echo "PLASMA_MAXWELL_OBJECT_GENERATION_MATCHES_NATIVE_INPUT"
-
-# P2 full-input gate runs ONLY after this same exact-head native build and
-# the small/negative regression controls pass. P3 460-step solve is prohibited.
-bash "$PILOT/run_public_option_s6_p2.sh"
