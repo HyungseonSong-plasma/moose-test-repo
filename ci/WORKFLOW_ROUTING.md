@@ -81,3 +81,25 @@ not successful P3 completion; the job validates `P3=HOLD`, `P4=NOT_RUN`,
 `SCIENCE_HOLD` and only publishes sanitized JSON/heartbeats and P1 proof.
 After collection, move this profile back to `deferred` and delete the one-shot
 file in a separate cleanup PR; the full profile stays deferred throughout.
+
+## Authorized max-budget B-only completion trial (2026-11-10)
+
+Following the recorded 600-second B-only diagnostic (S6-417 step 16,
+S6-941 step 19; both CPU-bound at approximately one core), the user
+explicitly prioritized proof of full numerical completion over profiling.
+The standard GitHub-hosted job limit is six hours; the one-shot
+`issue493-public-p3-b-completion` uses a 360-minute job with **20,400
+seconds (340 minutes)** exclusively for the full 460-step B solver,
+reserving 20 minutes for immutable-source checkout, P0/P1/P2, and artifact
+handling. Case 417 and 941 run as two independent lanes, max parallel two.
+The original full two-arm route stays `deferred`; the former 600-second
+diagnostic route is returned to `deferred` and its generated YAML removed.
+`--mode complete-b --authorize-full-p3` is required and never launches C.
+The independent positive-evidence validator requires real 461-frame CSV,
+non-empty Exodus and 0–100µs time coverage before marking B completion
+PASS. A timeout is recorded with `P3=HOLD`, reported via sanitized
+status/artifact, and makes the job fail (not synthetic PASS).
+The overall B/C P3 stays HOLD and P4 NOT_RUN even if B finishes, until a
+separate C solve and quantitative comparison are completed.
+After this one-shot, remove/defer its YAML and profile in a separate
+governed cleanup; no unreviewed workflow_dispatch or duplicate runner.

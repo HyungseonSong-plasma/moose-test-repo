@@ -120,6 +120,42 @@ class NativeP3PolicyTests(unittest.TestCase):
             self.assertEqual(report["P3"], "HOLD")
             self.assertEqual(report["p3_passed_arms"], ["B"])
 
+    def test_complete_b_success_never_starts_c_or_claims_b_c_parity(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            opts = self.make_inputs(Path(tmp), mode="complete-b")
+            with (mock.patch.object(p3.p2, "preflight", return_value={}),
+                  mock.patch.object(p3.p2, "check_head"),
+                  mock.patch.object(p3.p2, "stage", return_value=["x"] * 10) as stage,
+                  mock.patch.object(p3.p2, "check_native", return_value={
+                      "P2": "PASS", "log_sha256": "p2hash", "exit_code": 0,
+                      "classification": {"status": "PASS"},
+                  }),
+                  mock.patch.object(p3, "require_p1_success",
+                                    return_value={"binary_sha256": "binaryhash"}),
+                  mock.patch.object(p3.p2, "sha", return_value="example"),
+                  mock.patch.object(p3.shutil, "which", return_value="/usr/bin/docker"),
+                  mock.patch.object(p3, "run_solve", return_value={
+                      "P3": "PASS", "reason": None, "frames": 461,
+                      "t_end_seconds": 0.0001, "exit_code": 0,
+                      "timed_out": False,
+                  }) as solve):
+                report = p3.run_case(opts)
+                self.assertEqual(stage.call_count, 1)
+                self.assertEqual(solve.call_count, 1)
+            self.assertEqual(report["variants"]["B"]["P3"], "PASS")
+            self.assertEqual(report["variants"]["C"]["P3"], "NOT_RUN")
+            self.assertEqual(report["P3"], "HOLD")
+            self.assertEqual(report["P4"], "NOT_RUN")
+            self.assertEqual(report["science"], "SCIENCE_HOLD")
+            self.assertEqual(report["p3_passed_arms"], ["B"])
+
+    def test_complete_b_requires_explicit_authorization(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            opts = self.make_inputs(Path(tmp), mode="complete-b")
+            opts.authorize_full_p3 = False
+            with self.assertRaisesRegex(p3.P3Error, "FULL_P3_EXPLICIT_ACK_REQUIRED"):
+                p3.run_case(opts)
+
     def test_missing_p2_stops_before_solver(self):
         with tempfile.TemporaryDirectory() as tmp:
             opts = self.make_inputs(Path(tmp), mode="full")

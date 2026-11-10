@@ -28,6 +28,17 @@
       "template": "ci/workflow_templates/issue493-public-p3-diagnostic-job.yml",
       "output": ".github/workflows/issue493-public-p3-diagnostic-once.yml",
       "name": "Issue 493 Public S6 B Diagnostic 600s",
+      "activation": "deferred"
+    },
+    {
+      "key": "issue493-public-p3-b-completion",
+      "purpose": "special",
+      "issue": 493,
+      "variant": "completion",
+      "trigger": "self_path_main_once",
+      "template": "ci/workflow_templates/issue493-public-p3-b-completion-job.yml",
+      "output": ".github/workflows/issue493-public-p3-b-completion-once.yml",
+      "name": "Issue 493 Public S6 B Completion Max 340m",
       "activation": "active"
     }
   ]
