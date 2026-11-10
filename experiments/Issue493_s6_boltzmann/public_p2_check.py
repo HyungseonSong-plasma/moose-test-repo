@@ -34,7 +34,6 @@ sys.path.insert(0, str(BASE.parents[1]))
 from physics_harness.execution.native_gates import (
     P1GateError, require_p1_success, run_p2_checked,
 )
-from physics_harness.adapters.moose.check_input import classify_failure
 
 PINNED_OCI = ('ghcr.io/hyungseonsong-plasma/physics-build-base@'
               'sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008')
@@ -186,7 +185,7 @@ def check_native(candidate: pathlib.Path, staged: pathlib.Path, inputs: list[str
         binary=candidate / 'physics_app/physics-opt',
         source_sha=PINNED_CANDIDATE, image_ref=PINNED_OCI,
         cwd=staged, log_path=logfile, timeout_seconds=timeout,
-        success_marker='Syntax OK', failure_classifier=classify_failure,
+        success_marker='Syntax OK',
     )
     return {'P2': report['P2'], 'exit_code': report['returncode'],
             'timed_out': report['timed_out'], 'classification': report['classification'],

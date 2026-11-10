@@ -6,6 +6,7 @@ SHA and pinned OCI image, never trust those expectations from the record.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
@@ -14,8 +15,20 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable, Sequence
 
-from physics_harness.evidence.identity import sha256_file
 from physics_harness.execution.runtime import run_command, validate_executable
+
+def sha256_file(path: Path) -> str:
+    """Hash large binaries without loading the scientific evidence package.
+
+    `physics_harness.evidence` eagerly imports polars, which is intentionally
+    absent from the lightweight native P0/P1 GitHub runner.
+    """
+    digest = hashlib.sha256()
+    with Path(path).open("rb") as src:
+        for part in iter(lambda: src.read(1 << 20), b""):
+            digest.update(part)
+    return digest.hexdigest()
+
 
 SCHEMA = "physics-native-p1-evidence-v1"
 _PINNED_IMAGE = re.compile(r"^[^\s@]+@sha256:[a-f0-9]{64}$")

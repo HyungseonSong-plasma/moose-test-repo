@@ -42,8 +42,6 @@ def native_p1_record_cli(argv: list[str]) -> int:
 
 def validate_input_cli(argv: list[str]) -> int:
     """Direct host-side P2; inside OCI use the same gate via Python API."""
-    from physics_harness.adapters.moose.check_input import classify_failure
-
     parser = argparse.ArgumentParser(prog='physics validate-input')
     _shared_p1_args(parser)
     parser.add_argument('--p1-evidence', type=Path, required=True)
@@ -58,7 +56,7 @@ def validate_input_cli(argv: list[str]) -> int:
             evidence=args.p1_evidence, source_root=args.source_root,
             binary=args.binary, source_sha=args.source_sha, image_ref=args.oci_ref,
             cwd=args.case_dir, log_path=args.log, timeout_seconds=args.timeout,
-            success_marker='Syntax OK', failure_classifier=classify_failure,
+            success_marker='Syntax OK',
         )
     except (OSError, ValueError, P1GateError) as exc:
         print(f'NATIVE_P2: HOLD ({exc})', file=sys.stderr)
