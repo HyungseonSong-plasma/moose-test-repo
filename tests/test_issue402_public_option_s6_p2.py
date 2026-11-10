@@ -61,6 +61,11 @@ def test_full_s6_p2_provenance_and_no_solver_execution():
     assert 'VARIANTS = ("B", "D")' in script
     assert " --check-input -i " in script
     assert '"--network", "none"' in script
+    # The Native binary is linked from /workspace in the OCI build. Preserve
+    # that mount path for runtime so libphysics_test-opt.so.0 is discoverable.
+    assert "exec /workspace/physics_app/physics-opt --check-input -i " in script
+    assert "dst=/workspace,readonly" in script
+    assert "NATIVE_RUNTIME_LINKER_ERROR" in script
     assert '"P3": "NOT_RUN"' in script and '"P4": "NOT_RUN"' in script
     assert "SCIENCE_HOLD" in script
     assert "run_public_option_s6_p2.sh" in native
