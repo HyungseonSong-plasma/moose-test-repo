@@ -106,6 +106,19 @@ def check_source(expected_head: str, historical: Path, binary: Path) -> dict:
         raise ValueError("Prepared original S6 public mesh absent")
     if (historical / p2.CHEM / "private_rates").exists():
         raise ValueError("Protected rate folder must not exist in historical checkout")
+    provenance_path = ROOT / "experiments/Issue402_plasma_dsl_g1/evidence/native_p1_identity.json"
+    if not provenance_path.is_file():
+        raise ValueError("Same-job native P1 provenance is absent")
+    provenance = json.loads(provenance_path.read_text())
+    build_log = ROOT / "experiments/Issue402_plasma_dsl_g1/evidence/native_build.log"
+    if (provenance.get("schema") != "issue402.native_p1.job_local.v1" or
+        provenance.get("reusable_scope") != "same_exact_head_ci_job_only" or
+        provenance.get("source_sha") != expected_head or
+        provenance.get("oci_image") != OCI or
+        provenance.get("binary_sha256") != sha_file(binary) or
+        provenance.get("build_log_sha256") != sha_file(build_log) or
+        provenance.get("P1") != "PASS"):
+        raise ValueError("Exact-head native P1 build provenance/binary SHA mismatch")
     return {"source_sha": expected_head, "historical_sha": HISTORICAL_SHA,
             "binary_sha256": sha_file(binary), "historical_mesh_sha256": sha_file(mesh),
             "build_image": OCI}
