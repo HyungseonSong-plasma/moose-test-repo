@@ -784,9 +784,33 @@ jobs:
           python-version: '3.11'
       - name: Install numerical comparison packages
         run: python3 -m pip install 'numpy>=1.26,<3' 'scipy>=1.14,<2'
-      - name: Build PhysicsApp and verify generated and native solver operators
+      # Fast, independent gate: fail configuration/data/mount/scratch checks
+      # BEFORE rebuilding the expensive solver, without changing global CI.
+      - name: P0 - Public S6 environment and scratch-permission preflight
+        shell: bash
+        env:
+          EXPECTED_SOURCE_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          if test -f experiments/Issue402_plasma_dsl_g1/preflight_public_option_s6.sh; then
+            bash experiments/Issue402_plasma_dsl_g1/preflight_public_option_s6.sh
+          else
+            echo 'Public S6 option preflight is not present on this PR head (legacy smoke scope)'
+          fi
+      - name: P1 - Build PhysicsApp and verify generated and native solver operators
         shell: bash
         run: bash experiments/Issue402_plasma_dsl_g1/run_native_binding_smoke.sh
+      # Distinct step: an S6 input or cleanup failure cannot erase earlier
+      # Native build/small-fixture results. The exact P1 binary is reused.
+      - name: P2 - Public S6-417 and S6-941 four-way Native input checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          if test -f experiments/Issue402_plasma_dsl_g1/run_public_option_s6_p2.sh; then
+            bash experiments/Issue402_plasma_dsl_g1/run_public_option_s6_p2.sh
+          else
+            echo 'Public S6 full-input gate is not present on this PR head (legacy smoke scope)'
+          fi
       - name: Upload native regression evidence
         if: always()
         uses: actions/upload-artifact@v4
