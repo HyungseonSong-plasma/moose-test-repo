@@ -94,6 +94,74 @@
       ],
       "native_executable_implementation": "NOT_EVALUATED",
       "reason": "S6 uses electron FEM and ions/neutral-mixture FV"
+    },
+    "g0_amendment_2026_11_10": {
+      "scope": "DD/Continuity design only; do not mutate pinned S6 P3 or PR #491 executable",
+      "removed_user_options": [
+        "variables",
+        "fem_kernel_names",
+        "fvm_kernel_names",
+        "fem_mobility",
+        "fem_diffusion",
+        "fvm_mobility",
+        "fvm_diffusion",
+        "diffusion"
+      ],
+      "shared_coefficient_options": [
+        "mobility",
+        "diffusivity"
+      ],
+      "coefficient_vector_binding_order": [
+        "fem_species",
+        "fvm_species"
+      ],
+      "prohibit_single_electron_coefficient_broadcast_to_ions": true,
+      "charge_vector_options": {
+        "fem_charge_numbers": [
+          -1
+        ],
+        "fvm_charge_numbers": [
+          1,
+          -1,
+          1
+        ],
+        "s6_fem_species": [
+          "e"
+        ],
+        "s6_fvm_species": [
+          "O2p",
+          "Om",
+          "Op"
+        ],
+        "must_match_catalogue": true
+      },
+      "state_variable_naming": {
+        "default_log_number": "log_n<canonical_species_id>",
+        "internal_verified_S6_legacy_aliases": {
+          "e": "log_ne",
+          "O2p": "log_ni",
+          "Om": "log_nm",
+          "Op": "log_nop"
+        },
+        "public_variables_option": false,
+        "g2_parity_required": true
+      },
+      "kernel_naming": {
+        "format": "<canonical_species_id>_transport",
+        "electron_example": "e_transport",
+        "public_kernel_names_option": false,
+        "name_prefix_does_not_modify_transport_name": true,
+        "duplicate_physical_owner_fails_closed": true
+      },
+      "provider_name_migration": {
+        "current": "electron_diffusion",
+        "target": "electron_diffusivity",
+        "change_native_provider_in_existing_S6_P3": false
+      },
+      "g1_native_registration": "NOT_EVALUATED",
+      "g2_effective_input_mapping": "NOT_EVALUATED",
+      "g3_numerical_parity": "NOT_EVALUATED",
+      "g4_cutover": "NOT_AUTHORIZED"
     }
   },
   "identity_dimensions": [
