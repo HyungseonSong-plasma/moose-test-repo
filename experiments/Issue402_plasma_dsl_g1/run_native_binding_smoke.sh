@@ -133,3 +133,7 @@ python3 "$PILOT/compare_native_outputs.py" \
   --candidate "$EVIDENCE/rf_generated/rf.e" \
   --output "$EVIDENCE/rf_builder_parity.json"
 echo "PLASMA_MAXWELL_OBJECT_GENERATION_MATCHES_NATIVE_INPUT"
+
+# P2 full-input gate runs ONLY after this same exact-head native build and
+# the small/negative regression controls pass. P3 460-step solve is prohibited.
+bash "$PILOT/run_public_option_s6_p2.sh"
