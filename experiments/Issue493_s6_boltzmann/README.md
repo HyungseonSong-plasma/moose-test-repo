@@ -99,42 +99,29 @@ on skipped package tests.
   error attempts and artifact SHA-256 are required before calling P2/P3/P4 PASS.
 - **`SCIENCE_HOLD` remains regardless of CI or numerical completion.**
 
-## GitHub Actions P2/P3/P4 guarded private-input execution
+## GitHub Actions P2/P3/P4 example (inactive — workflow surface guard)
 
-This Draft branch includes `.github/workflows/issue493-s6-native-private-compare.yml`.
-It is isolated to **same-repository PR #494** and never references the original
-`OXYGEN24_RATES_TAR_XZ_B64` secret. Its `private-p234` jobs show a GitHub
-**success** status even when all physics steps were **SKIPPED** due to missing
-dedicated secret; success here is NOT native execution evidence.
+The repository's `ci/guards/workflow_surface_guard.py` deliberately restricts
+which workflow entrypoints may be installed under `.github/workflows/`. The
+Issue #493 research-only secret-intake workflow is therefore retained as a
+**non-executing example** at
+`experiments/Issue493_s6_boltzmann/issue493-s6-native-private-compare.example.yml`.
+It is **not** an installed GitHub Actions workflow, so no P2/P3/P4 work
+automatically starts after integration into `main`.
 
-The input handoff is a *local-only* `tar.xz`, SHA256
-`f869620126ee0678491d62aa1f13902e745f26fe17190789bc6dae3bd51de256`,
-base64-encoded to 33,880 characters (within the Actions secret size limit).
-It contains six active new rate files, input overlays, manifest, and bounded
-staging/comparison scripts. The original 19-table user Library ZIP remains
-unchanged, separately validated under SHA256
-`bde3ab04b2cc80762e1ad25931a25f42b0f295c8695917f2e52041e0755adba6`.
-Archived references are retrieved from existing historical Actions artifacts
-#13677089020 (417) and #13677375813 (941); their CSV SHA256 values are
-verified before use.
+The independently generated **19 public Boltzmann rates** now live under
+`physics_app/data/electron_impact/boltz/` as 100-row MOOSE molar lookup tables.
+The original private/archived rates and original MCS source are not published.
+The offline comparison runner still needs isolated prepared S6 B/C input layers
+and local trusted execution; merely publishing the rates does not cause a
+native solve or prove parity. Converting this private-input example into a
+public-data workflow must be reviewed as a separate change through existing
+canonical `experiment.yml` governance, without weakening the workflow
+surface guard.
 
-An authorized repository administrator must register the **single dedicated**
-repository Actions secret `ISSUE493_S6_NATIVE_INPUT_B64` from the
-locally generated private base64 text file, for example:
-
-```bash
-gh secret set ISSUE493_S6_NATIVE_INPUT_B64 \
-  --repo HyungseonSong-plasma/moose-test-repo \
-  < S6_P2_P3_P4_secret_base64.txt
-```
-
-**Never paste the base64 text into a PR, Issue, workflow source, CI log or
-public artifact.** Secret setup requires the administrator's authenticated
-GitHub session; the GitHub connector in this conversation cannot set Actions
-secrets. Re-run the guarded workflow *after* the secret is present (or update
-this Draft branch to trigger a fresh PR run). Successful work will execute
-two 400 W / 100 µs lanes in parallel, each B then C, with 460 steps and
-461-frame checks. Only non-sensitive status JSON is uploaded. Full private
-rates, Exodus, raw solver logs, and original protected input are never
-uploaded. Actual completion must be read from the case status JSON; P4 CSV
-comparison is not a complete scientific equivalence verdict. SCIENCE_HOLD.
+The original guarded example checks for a dedicated
+`ISSUE493_S6_NATIVE_INPUT_B64` secret, but **that secret has not been
+installed** in this chat; earlier jobs displayed success because their
+experimental computation steps were skipped. Continue `SCIENCE_HOLD` until
+P2 native input checks, P3 460-step fresh B/C solutions, and P4 diagnostic/
+Exodus closure comparisons are actually complete.
