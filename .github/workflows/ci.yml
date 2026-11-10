@@ -29,6 +29,12 @@ jobs:
         run: |
           python3 ci/guards/workflow_surface_guard.py --self-test
           python3 ci/guards/workflow_surface_guard.py --check
+      - name: Regression-test scoped Native P1 harness and Issue493 delegation
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests/unit -p test_native_build_harness.py -v
+          python3 experiments/Issue493_s6_boltzmann/test_run_issue493.py
       - name: Regression-test moose-test-init capability restoration
         shell: bash
         run: |
@@ -522,6 +528,232 @@ jobs:
           path: boltzmann-candidate-bin/*
           if-no-files-found: error
           retention-days: 1
+
+  # Isolation: PR #497 only. Reviewed exact PR491 source + no secrets, full Native P1.
+  issue493-pr491-native-source-build:
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.number == 497 &&
+      github.event.pull_request.head.repo.full_name == 'HyungseonSong-plasma/moose-test-repo'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    permissions:
+      contents: read
+    env:
+      EXACT_PR491_SHA: bebaf47a33ff5ee1d6b933d9691bf48f5ec0f947
+      BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+    steps:
+      - name: Checkout exact reviewed PR491 source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: bebaf47a33ff5ee1d6b933d9691bf48f5ec0f947
+          fetch-depth: 1
+      - name: Checkout exact PR496 harness source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+          path: .native_harness
+      - name: Verify exact candidate, harness and pinned base
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXACT_PR491_SHA"
+          test "$(git -C .native_harness rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          test ! -e physics_app/physics-opt
+          test -f .native_harness/physics_harness/execution/native_build.py
+          source physics_app/dependencies.lock
+          test "$PHYSICS_BUILD_BASE" = "$BUILD_BASE_REF"
+          echo NATIVE_P1_EXACT_SOURCE_PINS_PASS
+      - name: Prepare disk and reuse immutable OCI build base
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get clean || true
+          docker system prune -af --volumes || true
+          for path in /usr/local/lib/android /opt/ghc /usr/share/dotnet /usr/share/swift /usr/local/.ghcup; do
+            sudo rm -rf "$path" || true
+          done
+          docker pull "$BUILD_BASE_REF"
+          test "$(docker image inspect "$BUILD_BASE_REF" --format '{{ index .Config.Labels "io.physics.moose.sha" }}')" = "9f388366ccf38b9c34542ec5561198249fde0ac9"
+          echo NATIVE_P1_VENDOR_BASE_PIN_PASS
+      - name: P1 run reusable harness with actual C++ compile and native smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm --network none --entrypoint /bin/bash --user 0:0 \
+            --workdir /workspace/physics_app -e EXPECTED_SHA="$EXACT_PR491_SHA" \
+            -v "$PWD:/workspace" "$BUILD_BASE_REF" -lc '
+              set -euo pipefail
+              source /environment
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos METHOD=opt
+              python3 /workspace/.native_harness/physics_harness/execution/native_build.py \
+                --source-root /workspace \
+                --expected-sha "$EXPECTED_SHA" \
+                --profile auto --max-jobs 4 --max-attempts 3 \
+                --timeout-seconds 1800 \
+                --log-dir /workspace/.native_p1_validation \
+                --report /workspace/.native_p1_validation/report.json \
+                --smoke-input ci/smoke.i
+              echo ISSUE493_NATIVE_P1_PASS
+            '
+          test -x physics_app/physics-opt
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          report = json.loads(Path(".native_p1_validation/report.json").read_text())
+          assert report["status"] == "PASS" and report["vendor_cache"] == "PRESERVED"
+          assert report["unity"] is True and report["science"] == "HOLD"
+          print("NATIVE_P1_HARNESS_PROVENANCE_PASS")
+          PY
+          {
+            echo "SOURCE_SHA=$EXACT_PR491_SHA"
+            echo "BUILD_BASE=$BUILD_BASE_REF"
+            sha256sum physics_app/physics-opt
+            echo "S6_417_941_B_C=NOT_RUN"
+            echo "SCIENCE_HOLD=true"
+          } > issue493-p1-provenance.txt
+      - name: Archive only non-sensitive P1 provenance
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: issue493-pr491-source-build
+          path: issue493-p1-provenance.txt
+          retention-days: 30
+          if-no-files-found: warn
+
+  # Public-data P2 gated on canonical P1; PR #495 only.
+  issue493-public-p2-native:
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.number == 495 &&
+      github.event.pull_request.head.repo.full_name == 'HyungseonSong-plasma/moose-test-repo'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    permissions:
+      contents: read
+    env:
+      PINNED_SOURCE: 29d1acc6ef7969908b86719e4b95c73a1565136d
+      PINNED_CANDIDATE: bebaf47a33ff5ee1d6b933d9691bf48f5ec0f947
+      BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+      OXYGEN_RESEARCH_400: '1'
+      OXYGEN_RESEARCH_FULL24: '0'
+      OXYGEN_RESEARCH_EI2738_FORMULA: '0'
+      OXYGEN_RESEARCH_QUICK_5MIN: '0'
+      CHEM: experiments/Issue395_powered_chemistry_ladder
+    steps:
+      - name: Checkout exact PR495 public data and P2 harness
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: control
+          fetch-depth: 1
+      - name: Checkout original archived public S6 source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: 29d1acc6ef7969908b86719e4b95c73a1565136d
+          path: historical
+          fetch-depth: 1
+      - name: Checkout immutable reviewed PhysicsApp candidate
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: bebaf47a33ff5ee1d6b933d9691bf48f5ec0f947
+          path: candidate
+          fetch-depth: 1
+      - name: Verify public rate/deck provenance before native build
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C historical rev-parse HEAD)" = "$PINNED_SOURCE"
+          test "$(git -C candidate rev-parse HEAD)" = "$PINNED_CANDIDATE"
+          test "$(git -C control rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          source candidate/physics_app/dependencies.lock
+          test "$PHYSICS_BUILD_BASE" = "$BUILD_BASE_REF"
+          python3 control/experiments/Issue493_s6_boltzmann/public_p2_check.py \
+            --control control --mode preflight
+          echo ISSUE493_PUBLIC_P2_P0_PREFLIGHT_PASS
+      - name: Set up research Python for historical mesh preparation
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: Prepare original 400 W public mesh without protected coefficients
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install --disable-pip-version-check --quiet \
+            numpy==2.1.2 scipy==1.14.1 matplotlib==3.9.2
+          cd historical
+          SRC=.github/oxygen25_eedf/initial_mixture_23xsec_transport.txt
+          DST=experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt
+          test "$(sha256sum "$SRC" | cut -d' ' -f1)" = 35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b
+          cp "$SRC" "$DST"
+          export CHATGPT_WORK_BASE_SHA="$PINNED_SOURCE"
+          bash "$CHEM/issue397_l1_power_scan_replay.sh" prepare 400
+          python3 .github/scripts/oxygen_legacy6_latest_100us.py --power-w 400 --prepare
+          test -s "$CHEM/baseline_plasma_plus_unstructured_cover_plus_wafer.msh"
+          test ! -e "$CHEM/private_rates"
+          echo ISSUE493_PUBLIC_P2_MESH_PREP_PASS
+      - name: Pull pinned precompiled OCI and build PhysicsApp only
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get clean || true
+          docker system prune -af --volumes || true
+          for path in /usr/local/lib/android /opt/ghc /usr/share/dotnet /usr/share/swift /usr/local/.ghcup; do
+            sudo rm -rf "$path" || true
+          done
+          test ! -e candidate/physics_app/physics-opt
+          docker pull "$BUILD_BASE_REF"
+          test "$(docker image inspect "$BUILD_BASE_REF" --format '{{ index .Config.Labels "io.physics.moose.sha" }}')" = "9f388366ccf38b9c34542ec5561198249fde0ac9"
+          docker run --rm --network none --entrypoint /bin/bash --user 0:0 \
+            --workdir /app -e EXPECTED_SHA="$PINNED_CANDIDATE" \
+            -v "$PWD/candidate:/app:rw" -v "$PWD/control:/harness:ro" \
+            "$BUILD_BASE_REF" -lc '
+              set -euo pipefail
+              source /environment
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos METHOD=opt
+              python3 /harness/physics_harness/execution/native_build.py \
+                --source-root /app --expected-sha "$EXPECTED_SHA" \
+                --profile auto --max-jobs 4 --max-attempts 3 \
+                --timeout-seconds 1800 \
+                --log-dir /app/.native_p1_validation \
+                --report /app/.native_p1_validation/report.json \
+                --smoke-input ci/smoke.i
+            '
+          test -x candidate/physics_app/physics-opt
+          python3 control/bin/physics.py native-p1-record \
+            --source-root candidate --source-sha "$PINNED_CANDIDATE" \
+            --binary candidate/physics_app/physics-opt --oci-ref "$BUILD_BASE_REF" \
+            --build-report candidate/.native_p1_validation/report.json \
+            --output "$RUNNER_TEMP/issue493_p1_provenance.json"
+          echo ISSUE493_PUBLIC_P2_P1_BUILD_PASS
+      - name: Execute all four isolated P2 native --check-input cases
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 control/experiments/Issue493_s6_boltzmann/public_p2_check.py \
+            --control control --candidate candidate --historical historical \
+            --output "$RUNNER_TEMP/issue493_p2_native" --mode native \
+            --p1-evidence "$RUNNER_TEMP/issue493_p1_provenance.json"
+          echo ISSUE493_PUBLIC_P2_ALL_FOUR_NATIVE_PASS
+      - name: Publish only public P2 status and native check logs
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: issue493-public-p2-${{ github.event.pull_request.head.sha }}
+          path: |
+            candidate/.native_p1_validation/report.json
+            ${{ runner.temp }}/issue493_p1_provenance.json
+            ${{ runner.temp }}/issue493_p2_native/non_sensitive_p2_status.json
+            ${{ runner.temp }}/issue493_p2_native/P2_*.log
+          if-no-files-found: warn
+          retention-days: 14
 
   # Reusable, governed CI gate for native plasma solver-object changes.
   plasma_native_regression:
