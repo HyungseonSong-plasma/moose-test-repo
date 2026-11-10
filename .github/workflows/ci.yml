@@ -29,6 +29,12 @@ jobs:
         run: |
           python3 ci/guards/workflow_surface_guard.py --self-test
           python3 ci/guards/workflow_surface_guard.py --check
+      - name: Regression-test scoped Native P1 harness and Issue493 delegation
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests/unit -p test_native_build_harness.py -v
+          python3 experiments/Issue493_s6_boltzmann/test_run_issue493.py
       - name: Regression-test moose-test-init capability restoration
         shell: bash
         run: |
