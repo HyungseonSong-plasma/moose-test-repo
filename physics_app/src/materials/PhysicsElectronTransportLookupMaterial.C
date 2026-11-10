@@ -73,27 +73,25 @@ PhysicsElectronTransportLookupMaterial::PhysicsElectronTransportLookupMaterial(
       [this](const auto & r, const auto & state) -> ADReal
       { return interpolate(_mean_energy(r, state), 1); });
 
-  addFunctorProperty<ADReal>(
-      "electron_mobility",
-      [this](const auto & r, const auto & state) -> ADReal
-      {
-        const ADReal T_g = _gas_temperature(r, state);
-        const ADReal N_n =
-            _pressure(r, state) / (PHYSICS_CONSTANTS::k_boltz * T_g);
+  // One numerical closure, two naming contracts: canonical species-ID
+  // properties and retained legacy electron_* names for pinned inputs.
+  const auto particle_mobility = [this](const auto & r, const auto & state) -> ADReal
+  {
+    const ADReal T_g = _gas_temperature(r, state);
+    const ADReal N_n = _pressure(r, state) / (PHYSICS_CONSTANTS::k_boltz * T_g);
+    return interpolate(_mean_energy(r, state), 0) / N_n;
+  };
+  const auto particle_diffusivity = [this](const auto & r, const auto & state) -> ADReal
+  {
+    const ADReal T_g = _gas_temperature(r, state);
+    const ADReal N_n = _pressure(r, state) / (PHYSICS_CONSTANTS::k_boltz * T_g);
+    return interpolate(_mean_energy(r, state), 1) / N_n;
+  };
 
-        return interpolate(_mean_energy(r, state), 0) / N_n;
-      });
-
-  addFunctorProperty<ADReal>(
-      "electron_diffusion",
-      [this](const auto & r, const auto & state) -> ADReal
-      {
-        const ADReal T_g = _gas_temperature(r, state);
-        const ADReal N_n =
-            _pressure(r, state) / (PHYSICS_CONSTANTS::k_boltz * T_g);
-
-        return interpolate(_mean_energy(r, state), 1) / N_n;
-      });
+  addFunctorProperty<ADReal>("electron_mobility", particle_mobility);
+  addFunctorProperty<ADReal>("electron_diffusion", particle_diffusivity);
+  addFunctorProperty<ADReal>("e_mobility", particle_mobility);
+  addFunctorProperty<ADReal>("e_diffusivity", particle_diffusivity);
 
   // Local-mean-energy closure used by the accepted Physics/Hagelaar path and COMSOL's
   // Maxwellian transport approximation. Keep particle and energy coefficients under
