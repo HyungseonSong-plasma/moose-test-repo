@@ -56,3 +56,14 @@ The general CI template retains the newer mandatory `plasma_native_regression`
 job and the P3 timeout regression tests; it removes only obsolete PR #495/#497
 native experiment jobs. The deferred P3 template now uses the explicit
 `--mode full --authorize-full-p3` gate, but is **not activated**.
+
+## Main-line observation contract
+
+The permanently enabled general `Repository CI` checks include
+`plasma_native_regression` on same-repository PRs, plus the governed
+`validate`, `runtime-smoke`, and `boltzmann-eepf-controls` checks.
+The native regression job intentionally does not run on a plain `main`
+push, so that event can still contain a GitHub `skipped` job; removing
+that event-specific skip would require its own workflow-surface and required
+check contract review. This change only eliminates obsolete Issue #493
+PR-number-specific jobs from ordinary CI.
