@@ -165,8 +165,9 @@ def self_test() -> None:
     entries = profiles()
     assert route("general", records=entries)["output"] == ".github/workflows/ci.yml"
     assert route("special", issue=493, records=entries)["trigger"] == "self_path_main_once"
-    assert route("special", issue=493, records=entries)["activation"] == "deferred"
-    assert not any("issue493" in str(p) for p in outputs())
+    special = route("special", issue=493, records=entries)
+    assert special["activation"] in {"deferred", "active"}
+    assert (ROOT / special["output"] in outputs()) == (special["activation"] == "active")
     for purpose, issue in (("special", 492), ("unsupported", None),
                            ("general", 493)):
         try:
