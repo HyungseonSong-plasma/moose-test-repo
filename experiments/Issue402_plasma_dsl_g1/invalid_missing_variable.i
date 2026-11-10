@@ -1,12 +1,11 @@
-# A listed solver variable does not exist.
+# The internally derived variable log_nmissing does not exist.
 [Physics]
   [Plasmas]
     [Transport]
       [DriftDiffusion]
         [Continuity]
-          fem_species = 'e'
+          fem_species = 'missing'
           fvm_species = 'O2p'
-          variables = 'missing_fe u_fv'
         []
       []
     []
