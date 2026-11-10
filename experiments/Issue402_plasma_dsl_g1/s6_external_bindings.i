@@ -1,5 +1,5 @@
 # Add this input after the ten existing simulation inputs.
-# It only checks species and variables; it does not change the equations.
+# It only checks species and internally resolved solver variables; it does not change the equations.
 # Keep all existing inputs and simulation settings unchanged.
 [Physics]
   [Plasmas]
@@ -9,7 +9,6 @@
           block = plasma
           fem_species = 'e'
           fvm_species = 'O2p Om Op'
-          variables = 'log_ne log_ni log_nm log_nop'
         []
       []
     []
