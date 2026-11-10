@@ -126,11 +126,11 @@ def run_one(binary: Path, binary_sha: str, workspace: Path,
             "--env", "OXYGEN_RESEARCH_QUICK_5MIN=0",
             "--mount", f"type=bind,src={ROOT.resolve()},dst=/workspace,readonly",
             "--mount", f"type=bind,src={workspace.resolve()},dst=/case",
-            OCI, "-lc", "set -euo pipefail; source /environment; "
-            # MOOSE creates root-owned .jitcache during --check-input. Clean
-            # only the isolated temporary workspace cache as root on exit,
-            # preserving native exit status and avoiding host PermissionError.
-            + "trap 'rm -rf /case/.jitcache' EXIT; " + command]
+            OCI, "-lc",
+            ("set -euo pipefail; source /environment; "
+             # Clean the root-owned scratch .jitcache in the isolated case
+             # container before host TemporaryDirectory removes the workspace.
+             "trap 'rm -rf /case/.jitcache' EXIT; " + command)]
     try:
         result = subprocess.run(args, capture_output=True, text=True,
                                 timeout=timeout_seconds, check=False)
