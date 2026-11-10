@@ -39,9 +39,13 @@ class ExperimentTests(unittest.TestCase):
     def test_only_physics_utils_excluded_from_unity_with_vendor_cache_retained(self):
         import inspect
         source = inspect.getsource(run.build)
-        self.assertIn('MOOSE_UNITY=true', source)
-        self.assertIn('app_non_unity_dirs=/app/physics_app/src/utils', source)
-        self.assertNotIn('MOOSE_UNITY=false', source)
+        self.assertIn('physics_harness/execution/native_build.py', source)
+        self.assertIn('"/harness", "ro"', source)
+        harness = (pathlib.Path(__file__).resolve().parents[2] /
+                   'physics_harness/execution/native_build.py').read_text(encoding='utf-8')
+        self.assertIn('MOOSE_UNITY=true', harness)
+        self.assertIn('app_non_unity_dirs=', harness)
+        self.assertNotIn('"MOOSE_UNITY=false"', harness)
         workflow = (pathlib.Path(__file__).resolve().parents[2] /
                     '.github/workflows/ci.yml').read_text(encoding='utf-8')
         self.assertIn('MOOSE_UNITY=true app_non_unity_dirs=/workspace/physics_app/src/utils', workflow)
