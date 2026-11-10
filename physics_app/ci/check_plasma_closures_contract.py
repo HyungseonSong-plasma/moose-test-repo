@@ -61,7 +61,6 @@ for legacy in (
 ):
     assert (ROOT / "src/materials" / legacy).is_file(), legacy
 
-print("PLASMA_CLOSURES_CONTRACT: PASS")
 
 # MOOSE object-factory aliases keep immutable historical input decks valid.
 for old_type, new_type in (
@@ -78,3 +77,5 @@ for old_type, new_type in (
     content = source.read_text()
     assert f'registerMooseObject("PhysicsApp", {new_type});' in content
     assert f'registerMooseObjectAliased("PhysicsApp", {new_type}, "{old_type}");' in content
+
+print("PLASMA_CLOSURES_CONTRACT: PASS")
