@@ -49,8 +49,28 @@ OVERLAY = """# Review-only new option DSL overlay; NOT pinned P3 C input.
     []
   []
 []
+[FunctorMaterials]
+  [O2p_species_transport_alias]
+    type = PhysicsSpeciesTransportAliasMaterial
+    species_id = O2p
+    mobility_source = ion_mobility
+    diffusivity_source = ion_diffusion
+  []
+  [Om_species_transport_alias]
+    type = PhysicsSpeciesTransportAliasMaterial
+    species_id = Om
+    mobility_source = negative_ion_mobility
+    diffusivity_source = negative_ion_diffusion
+  []
+  [Op_species_transport_alias]
+    type = PhysicsSpeciesTransportAliasMaterial
+    species_id = Op
+    mobility_source = atomic_positive_ion_mobility
+    diffusivity_source = atomic_positive_ion_diffusion
+  []
+[]
 """
-OVERLAY_SHA256 = "4e6146f892da782c149c6412418494bd039154e1ca0d54203cccf6b0a3d392ba"
+OVERLAY_SHA256 = "d8c0d57753a30a1ab0e8f4f395fadd09b6d50bc35896ba3c1befded861dc0685"
 CASES = ("417", "941")
 VARIANTS = ("B", "D")
 
