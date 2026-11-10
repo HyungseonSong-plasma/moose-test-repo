@@ -14,7 +14,7 @@ import subprocess
 ROOT = Path(__file__).resolve().parents[1]
 PILOT = ROOT / "experiments" / "Issue402_plasma_dsl_g1"
 PUBLIC = ROOT / "experiments" / "Issue493_s6_boltzmann"
-EXPECTED_OVERLAY = "4e6146f892da782c149c6412418494bd039154e1ca0d54203cccf6b0a3d392ba"
+EXPECTED_OVERLAY = "d8c0d57753a30a1ab0e8f4f395fadd09b6d50bc35896ba3c1befded861dc0685"
 
 
 def extract_overlay():
@@ -35,6 +35,9 @@ def test_pinned_new_option_overlay_uses_canonical_species_provider_names():
     assert hashlib.sha256(overlay.encode()).hexdigest() == EXPECTED_OVERLAY
     assert "fem_species = 'e'" in overlay
     assert "fvm_species = 'O2p Om Op'" in overlay
+    assert overlay.count("type = PhysicsSpeciesTransportAliasMaterial") == 3
+    assert "mobility_source = ion_mobility" in overlay
+    assert "diffusivity_source = ion_diffusion" in overlay
     assert "fem_charge_numbers = '-1'" in overlay
     assert "fvm_charge_numbers = '1 -1 1'" in overlay
     # Provider names are derived in ContinuityPhysics, not user input.
