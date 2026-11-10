@@ -116,6 +116,12 @@
           mkdir -m 0700 "$DIR"
           cp candidate/physics_app/physics-opt "$DIR/physics-opt"
           cp "$RUNNER_TEMP/issue493_p1_provenance.json" "$DIR/p1.json"
+          # Preserve application-owned shared library closure; ELF alone may link
+          # against libPhysicsApp-opt.so at runtime. No original rate data.
+          if [ -d candidate/physics_app/lib ]; then
+            tar -C candidate/physics_app -czf "$DIR/app-lib.tar.gz" lib
+            (cd "$DIR" && sha256sum app-lib.tar.gz > app-lib.tar.gz.sha256)
+          fi
           python3 - "$DIR" <<'PY'
           import hashlib,json,pathlib,sys
           d=pathlib.Path(sys.argv[1]); p=json.loads((d/"p1.json").read_text())
@@ -249,6 +255,11 @@
           test ! -e candidate/physics_app/physics-opt
           cp "$RUNNER_TEMP/issue493_binary_${{ matrix.case }}/physics-opt" candidate/physics_app/physics-opt
           chmod 0755 candidate/physics_app/physics-opt
+          DIR="$RUNNER_TEMP/issue493_binary_${{ matrix.case }}"
+          if [ -f "$DIR/app-lib.tar.gz" ]; then
+            (cd "$DIR" && sha256sum -c app-lib.tar.gz.sha256)
+            tar -C candidate/physics_app -xzf "$DIR/app-lib.tar.gz"
+          fi
           cp "$RUNNER_TEMP/issue493_binary_${{ matrix.case }}/p1.json" "$RUNNER_TEMP/issue493_p1_provenance.json"
           PYTHONPATH=control python3 - <<'PY'
           import os
