@@ -6,11 +6,11 @@
   nx = 8
 []
 [Variables]
-  [u_fe]
+  [log_ne]
     family = LAGRANGE
     order = FIRST
   []
-  [u_fv]
+  [log_ni]
     type = MooseVariableFVReal
   []
   [u_rf_imag]
@@ -21,7 +21,7 @@
 [Kernels]
   [fe_diffusion]
     type = Diffusion
-    variable = u_fe
+    variable = log_ne
   []
   [rf_imag_diffusion]
     type = Diffusion
@@ -31,20 +31,20 @@
 [FVKernels]
   [fv_diffusion]
     type = FVDiffusion
-    variable = u_fv
+    variable = log_ni
     coeff = 1
   []
 []
 [BCs]
   [fe_left]
     type = DirichletBC
-    variable = u_fe
+    variable = log_ne
     boundary = left
     value = 0
   []
   [fe_right]
     type = DirichletBC
-    variable = u_fe
+    variable = log_ne
     boundary = right
     value = 1
   []
@@ -64,13 +64,13 @@
 [FVBCs]
   [fv_left]
     type = FVDirichletBC
-    variable = u_fv
+    variable = log_ni
     boundary = left
     value = 0
   []
   [fv_right]
     type = FVDirichletBC
-    variable = u_fv
+    variable = log_ni
     boundary = right
     value = 1
   []
