@@ -113,6 +113,11 @@ def test_native_build_and_comparison_script():
     assert "invalid_overlap invalid_fem_fv_swap invalid_no_species invalid_missing_variable" in runner
     assert "invalid_legacy_variables invalid_legacy_kernel_names invalid_missing_fvm_charges" in runner
     assert "invalid_incomplete_coefficients invalid_wrong_charge_sign" in runner
+    assert "PLASMA_OPTION_ONLY_FEM_GENERATION_P2_PASS" in runner
+    positive = (CASE / "valid_generated_transport_options.i").read_text()
+    assert "mobility = '1'" in positive and "diffusivity = '1'" in positive
+    assert "fem_charge_numbers = '-1'" in positive
+    assert "fem_kernel_names" not in positive and "variables =" not in positive
     assert "sha256sum" in runner
     assert "physics_app/src/physics/plasma/PlasmaInterface.C" in runner
     assert "physics_app/src/physics/plasma/ContinuityPhysics.C" in runner
