@@ -4,15 +4,18 @@
 scientific validation. Existing 400 W / 0–100 µs S6 archived A runs are the
 references. B and C must run fresh (460 steps / 461 timestamps).
 
-This runner reuses the accepted pinned `physics-build-base` OCI image, compiles
-only the exact reviewed PR #491 `physics_app` checkout with MOOSE Unity
-**enabled** and only `physics_app/src/utils` excluded through MOOSE's
-`app_non_unity_dirs` make variable; the container selects up to four concurrent
-compile jobs, constrained by available memory. The resulting identical
-`physics-opt` binary is applied to B and C. It does
-**not** rebuild MOOSE, Crane, Squirrel or Zapdos, pull a different image, or
-change production workflows. It **never** downloads or processes original
-protected rate tables.
+This runner reuses the accepted pinned `physics-build-base` OCI image and
+**delegates P1 compilation to the reusable**
+`physics_harness/execution/native_build.py` harness. Its default auto profile
+keeps MOOSE Unity enabled, excludes only `physics_app/src/utils` initially,
+and permits bounded application-only Unity-collision repair when a new source
+directory conflicts. It never enables global non-Unity or rebuilds the
+MOOSE/Crane/Squirrel/Zapdos vendor cache; parallelism respects CPU, memory
+and cgroup limits. The exact reviewed PR #491 `physics-opt` executable is
+shared by B and C. The runner does not pull a different base image, change
+production workflows, download original protected tables or grant scientific
+acceptance. See `docs/guides/native_p1_build_harness.md` for build profiles,
+failure classifications and provenance.
 
 ## Requirements on a trusted execution host
 
