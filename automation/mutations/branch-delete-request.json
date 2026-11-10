@@ -1,8 +1,12 @@
 {
   "targets": [
     {
-      "branch": "ops/merged-source17-archive-20261106",
-      "expected_sha": "e18a63281f66d5ac2d15064578a31fd00f869bab"
+      "branch": "feat/adaptive-native-build-harness-20261110",
+      "expected_sha": "099522565600ccd8615e082518c93e7b16bb5b60"
+    },
+    {
+      "branch": "feat/native-p1-preflight-diagnostics-20261110",
+      "expected_sha": "68580bbee4cec4c3be8b502a7294caaa5f8e9a5d"
     }
   ]
 }

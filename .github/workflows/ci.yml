@@ -529,11 +529,11 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
-  # Isolation: PR #496 only. Reviewed exact PR491 source + no secrets, full Native P1.
+  # Isolation: PR #497 only. Reviewed exact PR491 source + no secrets, full Native P1.
   issue493-pr491-native-source-build:
     if: >-
       github.event_name == 'pull_request' &&
-      github.event.pull_request.number == 496 &&
+      github.event.pull_request.number == 497 &&
       github.event.pull_request.head.repo.full_name == 'HyungseonSong-plasma/moose-test-repo'
     runs-on: ubuntu-24.04
     timeout-minutes: 120
@@ -625,7 +625,7 @@ jobs:
           retention-days: 30
           if-no-files-found: warn
 
-  # Research-only S6 public-data P2; PR #495 only, never P3.
+  # Public-data P2 gated on canonical P1; PR #495 only.
   issue493-public-p2-native:
     if: >-
       github.event_name == 'pull_request' &&

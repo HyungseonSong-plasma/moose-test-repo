@@ -138,3 +138,13 @@ def test_p1_report_is_required_and_must_attest_real_build(built):
     with pytest.raises(P1GateError, match="P1_BUILD_REPORT_INCONSISTENT"):
         record_p1_success(built[3], build_report=built[4], **kw(built))
     assert not built[3].exists()
+
+def test_lightweight_native_cli_without_optional_analysis_deps():
+    """Both P1 evidence and P2 entry points must work without polars installed."""
+    root = Path(__file__).resolve().parents[2]
+    for name in ("native-p1-record", "validate-input"):
+        proc = subprocess.run(
+            [sys.executable, "-S", str(root / "bin" / "physics.py"), name, "--help"],
+            cwd=root, capture_output=True, text=True, timeout=20,
+        )
+        assert proc.returncode == 0, (name, proc.stdout, proc.stderr)

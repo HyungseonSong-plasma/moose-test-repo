@@ -16,9 +16,11 @@ The successful P1 compilation kept MOOSE_UNITY=true, preserving the vendor cache
 - **Profile auto (default):** start with src/utils outside app Unity if that directory exists. On an actual compiler redefinition failure associated with an application's *_Unity.C generated translation unit, infer its corresponding existing physics_app/src/<name> directory. Retry only with the additional **application** subdirectory excluded. The default retry budget is three total attempts; each is recorded, and no generic failure is retried. This handles known signature classes, not arbitrary C++ compilation failures.
 - **Profile scoped:** use only explicitly supplied --non-unity-dir src/... directories, no adaptive retries. Suitable for a reviewed fixed profile.
 - **Profile unity:** explicit all-app-Unity diagnostic mode. No exceptions and no adaptive retries. **No mode** can issue MOOSE_UNITY=false.
-- **Guardrails:** verify a clean source checkout at the provided 40-hex SHA, reject an existing physics-opt, require METHOD=opt and all four vendor environment variables pointing to immutable OCI paths, check that exclusions stay inside the actual app src/, and use an argument array for make (no nested shell interpolation of source paths).
-- **Resources:** cap jobs at the lesser of CPU affinity, operator --max-jobs (default 4), and a conservative available-memory band. Respect /proc and cgroup v1/v2 memory limits. Unknown/low memory means one job.
-- **Evidence:** write per-attempt restricted build logs and structured JSON with the SHA, planned make argv, scopes, jobs, error category and executable SHA256. Do not print restricted rate data, environment secrets or full logs into public CI artifacts. Optional --smoke-input ci/smoke.i runs physics-opt --check-input after compilation.
+- **Guardrails:** verify a clean source checkout at the provided 40-hex SHA, reject an existing physics-opt or ignored stale physics_app/build cache (never auto-delete artifacts), require METHOD=opt and all four vendor environment variables pointing to immutable OCI paths, check that exclusions stay inside the actual app src/, and use an argument array for make (no nested shell interpolation of source paths).
+- **Resources:** cap jobs at the lesser of CPU affinity, cgroup v1/v2 CPU quota, operator --max-jobs (default 4), and a conservative available-memory band. Respect /proc and cgroup v1/v2 memory limits. Unknown/low memory means one job.
+- **Storage preflight:** inspect application filesystem capacity before compilation and before every safe retry. Default minimum free space is 1 GiB and minimum free inode count is 2,000; adjust explicitly with --min-free-mib and --min-free-inodes for a reviewed OCI host. Unknown inode accounting is not assumed exhausted. No cleanup of vendor or application caches occurs automatically.
+- **Error classifier:** distinguish linker undefined/multiple symbols, runtime GLIBCXX/CXXABI mismatches, missing headers/generated inputs, out-of-memory, disk/inode exhaustion and shell expansion. These are **terminal**, even if an unrelated Unity filename appears in the build log; only actual application Unity redefinition has a bounded scoped retry. Symlinks escaping the app source tree are rejected in inferred retry directories.
+- **Evidence:** write per-attempt restricted build logs and structured JSON with the SHA, planned make argv, scopes, CPU and storage headroom, jobs, error category and executable SHA256. Do not print restricted rate data, environment secrets or full logs into public CI artifacts. Optional --smoke-input ci/smoke.i runs physics-opt --check-input after compilation.
 - **Failure policy:** vendor/ABI errors, unknown compiler errors, OOM, timeout, shell errors, smoke errors and missing executable are all terminal. A subprocess exit without a real executable is not P1 PASS.
 
 ## Usage from a trusted OCI host
@@ -40,6 +42,8 @@ python3 /harness/physics_harness/execution/native_build.py \
   --expected-sha YOUR_EXACT_40_CHARACTER_SOURCE_SHA \
   --profile auto \
   --max-jobs 4 \
+  --min-free-mib 1024 \
+  --min-free-inodes 2000 \
   --log-dir /app/.native_p1_attempts \
   --report /app/.native_p1_attempts/report.json \
   --smoke-input ci/smoke.i
@@ -56,4 +60,4 @@ python3 experiments/Issue493_s6_boltzmann/test_run_issue493.py
 
 The older Issue #494-only workflow job remains historical, not a reusable entrypoint. Future Native P1 execution should invoke the harness from the repository's approved governed workflow or trusted OCI runner, without creating a standalone secret workflow or modifying the workflow allowlist.
 
-**Unproven until an exact-head trusted OCI run:** actual MOOSE build/ABI, cache preservation under current pinned image, automatic retry against real compiler logs, and S6 P2–P4 numerical or scientific outcome.
+**Verification separation:** PR #496 exact-head Native P1 compiled successfully in pinned OCI with a real --check-input smoke; this does not automatically validate new preflight/classifier behavior on a real constrained host. Changes to these policies require their own exact-head CI and validation. Neither result covers S6 P2–P4 numerical or scientific outcome.
