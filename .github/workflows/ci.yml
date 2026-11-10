@@ -581,7 +581,16 @@ jobs:
               export SQUIRREL_DIR=/opt/physics_vendor/squirrel
               export ZAPDOS_DIR=/opt/physics_vendor/zapdos
               export METHOD=opt
-              make -j2 MOOSE_UNITY=false
+              # Preserve vendor MOOSE/Squirrel/Crane/Zapdos unity-built libraries.
+              # Only physics_app/src/utils has colliding anonymous-namespace helpers.
+              # app.mk filters this exact application directory out of unity sources.
+              cpus="$(nproc)"
+              mem_available_kb="$(awk '/MemAvailable:/ {print $2}' /proc/meminfo)"
+              jobs="$cpus"
+              if (( jobs > 4 )); then jobs=4; fi
+              if (( mem_available_kb < 10000000 && jobs > 2 )); then jobs=2; fi
+              echo "ISSUE493_CPU=$cpus MEM_AVAILABLE_KB=$mem_available_kb JOBS=$jobs"
+              make -j"$jobs" MOOSE_UNITY=true app_non_unity_dirs=/workspace/physics_app/src/utils
               test -x physics-opt
               ./physics-opt --check-input -i ci/smoke.i
               echo ISSUE493_NATIVE_P1_PASS
