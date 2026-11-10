@@ -100,10 +100,10 @@ The shared coefficient options `mobility` and `diffusivity` bind in FEM-first,
 then FVM order. This four-species illustration requires four verified provider
 bindings; a single electron mobility/diffusivity MUST NOT be broadcast to FV
 ions. `fem_charge_numbers` and `fvm_charge_numbers` align with their
-respective species lists and match catalogue charges. The new public name
-`electron_diffusivity` does not by itself rename an existing native provider
-named `electron_diffusion`; preserve the original for P3 and require a
-separate source/consumer migration proof. Never silently reorder state,
+respective species lists and match catalogue charges. The user has deferred the Material/Functor naming change: bind the new Physics
+option `diffusivity = 'electron_diffusion'` to the **existing** provider.
+`electron_diffusivity` is a possible later provider rename only. Preserve
+original S6 inputs and require separate source/consumer parity proof. Never silently reorder state,
 coefficients, charges or reaction sources. Both NS blocks must
 declare identical neutral mixture constituents and a single
 mixture-velocity owner. Existing explicit neutral mass-fraction equations
