@@ -48,6 +48,7 @@
           python3 control/experiments/Issue493_s6_boltzmann/public_p2_check.py \
             --control control --mode preflight
           python3 control/experiments/Issue493_s6_boltzmann/test_public_p3_run.py
+          python3 control/experiments/Issue493_s6_boltzmann/test_public_p3_artifacts.py
           echo ISSUE493_PUBLIC_P3_P0_PREFLIGHT_PASS
       - name: Set up research Python for historical mesh preparation
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
@@ -211,6 +212,7 @@
           python3 control/experiments/Issue493_s6_boltzmann/public_p2_check.py \
             --control control --mode preflight
           python3 control/experiments/Issue493_s6_boltzmann/test_public_p3_run.py
+          python3 control/experiments/Issue493_s6_boltzmann/test_public_p3_artifacts.py
           echo ISSUE493_PUBLIC_P3_P0_PREFLIGHT_PASS
       - name: Set up research Python for historical mesh preparation
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
