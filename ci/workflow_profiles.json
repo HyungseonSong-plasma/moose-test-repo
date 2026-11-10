@@ -39,6 +39,17 @@
       "template": "ci/workflow_templates/issue493-public-p3-b-completion-job.yml",
       "output": ".github/workflows/issue493-public-p3-b-completion-once.yml",
       "name": "Issue 493 Public S6 B Completion Max 340m",
+      "activation": "deferred"
+    },
+    {
+      "key": "issue493-public-bc-results-p4",
+      "purpose": "special",
+      "issue": 493,
+      "variant": "archive",
+      "trigger": "self_path_main_once",
+      "template": "ci/workflow_templates/issue493-public-bc-results-p4-job.yml",
+      "output": ".github/workflows/issue493-public-bc-results-p4-once.yml",
+      "name": "Issue 493 Public S6 B C Results P4",
       "activation": "active"
     }
   ]

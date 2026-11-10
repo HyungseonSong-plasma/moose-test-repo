@@ -57,7 +57,7 @@ class NativeP3PolicyTests(unittest.TestCase):
         return argparse.Namespace(
             control=control, historical=historical, candidate=candidate,
             output=root / "attempt001", p1_evidence=evidence, case="417",
-            timeout_seconds=60, mode=mode, authorize_full_p3=mode in ("full", "complete-b"),
+            timeout_seconds=60, mode=mode, authorize_full_p3=mode in ("full", "complete-b", "complete-c"),
         )
 
     def test_b_p2_pass_b_p3_timeout_does_not_run_c_and_is_reported(self):
@@ -153,6 +153,44 @@ class NativeP3PolicyTests(unittest.TestCase):
     def test_complete_b_requires_explicit_authorization(self):
         with tempfile.TemporaryDirectory() as tmp:
             opts = self.make_inputs(Path(tmp), mode="complete-b")
+            opts.authorize_full_p3 = False
+            with self.assertRaisesRegex(p3.P3Error, "FULL_P3_EXPLICIT_ACK_REQUIRED"):
+                p3.run_case(opts)
+
+    def test_c_only_replay_never_starts_b_and_never_claims_full_p3(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            opts = self.make_inputs(Path(tmp), mode="complete-c")
+            with (mock.patch.object(p3.p2, "preflight", return_value={}),
+                  mock.patch.object(p3.p2, "check_head"),
+                  mock.patch.object(p3.p2, "stage", return_value=["x"] * 11) as stage,
+                  mock.patch.object(p3.p2, "check_native", return_value={
+                      "P2": "PASS", "log_sha256": "p2hash", "exit_code": 0,
+                      "classification": {"status": "PASS"},
+                  }) as check,
+                  mock.patch.object(p3, "require_p1_success",
+                                    return_value={"binary_sha256": "binaryhash"}),
+                  mock.patch.object(p3.p2, "sha", return_value="example"),
+                  mock.patch.object(p3.shutil, "which", return_value="/usr/bin/docker"),
+                  mock.patch.object(p3, "run_solve", return_value={
+                      "P3": "PASS", "reason": None, "frames": 461,
+                      "t_end_seconds": 0.0001, "exit_code": 0, "timed_out": False,
+                  }) as solve):
+                report = p3.run_case(opts)
+                self.assertEqual(stage.call_count, 1)
+                self.assertEqual(check.call_count, 1)
+                self.assertEqual(solve.call_count, 1)
+                self.assertEqual(solve.call_args.kwargs["variant"], "C")
+            self.assertEqual(report["variants"]["B"]["P2"], "NOT_RUN")
+            self.assertEqual(report["variants"]["B"]["P3"], "NOT_RUN")
+            self.assertEqual(report["variants"]["C"]["P3"], "PASS")
+            self.assertEqual(report["p3_passed_arms"], ["C"])
+            self.assertEqual(report["P3"], "HOLD")
+            self.assertEqual(report["P4"], "NOT_RUN")
+            self.assertEqual(report["science"], "SCIENCE_HOLD")
+
+    def test_complete_c_explicit_authorization_gate(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            opts = self.make_inputs(Path(tmp), mode="complete-c")
             opts.authorize_full_p3 = False
             with self.assertRaisesRegex(p3.P3Error, "FULL_P3_EXPLICIT_ACK_REQUIRED"):
                 p3.run_case(opts)

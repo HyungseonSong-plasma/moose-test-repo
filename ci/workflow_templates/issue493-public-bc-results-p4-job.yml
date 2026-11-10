@@ -1,0 +1,343 @@
+  issue493-public-p3-archive-b:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        case: ['417', '941']
+    timeout-minutes: 360
+    permissions:
+      contents: read
+    env:
+      PINNED_SOURCE: 29d1acc6ef7969908b86719e4b95c73a1565136d
+      PINNED_CANDIDATE: bebaf47a33ff5ee1d6b933d9691bf48f5ec0f947
+      BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+      OXYGEN_RESEARCH_400: '1'
+      OXYGEN_RESEARCH_FULL24: '0'
+      OXYGEN_RESEARCH_EI2738_FORMULA: '0'
+      OXYGEN_RESEARCH_QUICK_5MIN: '0'
+      CHEM: experiments/Issue395_powered_chemistry_ladder
+    steps:
+      - name: Checkout exact reviewed public data and bounded P3 diagnostics
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          path: control
+          fetch-depth: 1
+      - name: Checkout original archived public S6 source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: 29d1acc6ef7969908b86719e4b95c73a1565136d
+          path: historical
+          fetch-depth: 1
+      - name: Checkout immutable reviewed PhysicsApp candidate
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: bebaf47a33ff5ee1d6b933d9691bf48f5ec0f947
+          path: candidate
+          fetch-depth: 1
+      - name: Verify public rate/deck provenance before native build
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C historical rev-parse HEAD)" = "$PINNED_SOURCE"
+          test "$(git -C candidate rev-parse HEAD)" = "$PINNED_CANDIDATE"
+          test "$(git -C control rev-parse HEAD)" = "${{ github.sha }}"
+          source candidate/physics_app/dependencies.lock
+          test "$PHYSICS_BUILD_BASE" = "$BUILD_BASE_REF"
+          python3 control/experiments/Issue493_s6_boltzmann/public_p2_check.py \
+            --control control --mode preflight
+          python3 control/experiments/Issue493_s6_boltzmann/test_public_p3_run.py
+          python3 control/experiments/Issue493_s6_boltzmann/test_public_p3_artifacts.py
+          echo ISSUE493_PUBLIC_P3_P0_PREFLIGHT_PASS
+      - name: Set up research Python for historical mesh preparation
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: Prepare original 400 W public mesh without protected coefficients
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install --disable-pip-version-check --quiet \
+            numpy==2.1.2 scipy==1.14.1 matplotlib==3.9.2
+          cd historical
+          SRC=.github/oxygen25_eedf/initial_mixture_23xsec_transport.txt
+          DST=experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt
+          test "$(sha256sum "$SRC" | cut -d' ' -f1)" = 35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b
+          cp "$SRC" "$DST"
+          export CHATGPT_WORK_BASE_SHA="$PINNED_SOURCE"
+          bash "$CHEM/issue397_l1_power_scan_replay.sh" prepare 400
+          python3 .github/scripts/oxygen_legacy6_latest_100us.py --power-w 400 --prepare
+          test -s "$CHEM/baseline_plasma_plus_unstructured_cover_plus_wafer.msh"
+          test ! -e "$CHEM/private_rates"
+          echo ISSUE493_PUBLIC_P3_MESH_PREP_PASS
+      - name: Pull pinned precompiled OCI and build PhysicsApp only
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get clean || true
+          docker system prune -af --volumes || true
+          for path in /usr/local/lib/android /opt/ghc /usr/share/dotnet /usr/share/swift /usr/local/.ghcup; do
+            sudo rm -rf "$path" || true
+          done
+          test ! -e candidate/physics_app/physics-opt
+          docker pull "$BUILD_BASE_REF"
+          test "$(docker image inspect "$BUILD_BASE_REF" --format '{{ index .Config.Labels "io.physics.moose.sha" }}')" = "9f388366ccf38b9c34542ec5561198249fde0ac9"
+          docker run --rm --network none --entrypoint /bin/bash --user 0:0 \
+            --workdir /app -e EXPECTED_SHA="$PINNED_CANDIDATE" \
+            -v "$PWD/candidate:/app:rw" -v "$PWD/control:/harness:ro" \
+            "$BUILD_BASE_REF" -lc '
+              set -euo pipefail
+              source /environment
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos METHOD=opt
+              python3 /harness/physics_harness/execution/native_build.py \
+                --source-root /app --expected-sha "$EXPECTED_SHA" \
+                --profile auto --max-jobs 4 --max-attempts 3 \
+                --timeout-seconds 1800 \
+                --log-dir /app/.native_p1_validation \
+                --report /app/.native_p1_validation/report.json \
+                --smoke-input ci/smoke.i
+            '
+          test -x candidate/physics_app/physics-opt
+          python3 control/bin/physics.py native-p1-record \
+            --source-root candidate --source-sha "$PINNED_CANDIDATE" \
+            --binary candidate/physics_app/physics-opt --oci-ref "$BUILD_BASE_REF" \
+            --build-report candidate/.native_p1_validation/report.json \
+            --output "$RUNNER_TEMP/issue493_p1_provenance.json"
+          echo ISSUE493_PUBLIC_P3_P1_BUILD_PASS
+      - name: Prepare same-binary handoff for C
+        shell: bash
+        run: |
+          set -euo pipefail
+          DIR="$RUNNER_TEMP/issue493_binary_${{ matrix.case }}"
+          mkdir -m 0700 "$DIR"
+          cp candidate/physics_app/physics-opt "$DIR/physics-opt"
+          cp "$RUNNER_TEMP/issue493_p1_provenance.json" "$DIR/p1.json"
+          # Preserve application-owned shared library closure; ELF alone may link
+          # against libPhysicsApp-opt.so at runtime. No original rate data.
+          if [ -d candidate/physics_app/lib ]; then
+            tar -C candidate/physics_app -czf "$DIR/app-lib.tar.gz" lib
+            (cd "$DIR" && sha256sum app-lib.tar.gz > app-lib.tar.gz.sha256)
+          fi
+          python3 - "$DIR" <<'PY'
+          import hashlib,json,pathlib,sys
+          d=pathlib.Path(sys.argv[1]); p=json.loads((d/"p1.json").read_text())
+          assert hashlib.sha256((d/"physics-opt").read_bytes()).hexdigest()==p["binary_sha256"]
+          print("ISSUE493_BINARY_HANDOFF_PASS",p["binary_sha256"])
+          PY
+      - name: Upload B executable for exact-binary C replay
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: issue493-source-bound-binary-${{ matrix.case }}-${{ github.sha }}
+          path: ${{ runner.temp }}/issue493_binary_${{ matrix.case }}/
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+      - name: Execute 460-step B and archive verified public Exodus CSV
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 control/experiments/Issue493_s6_boltzmann/public_p3_run.py \
+            --control control --candidate candidate --historical historical \
+            --p1-evidence "$RUNNER_TEMP/issue493_p1_provenance.json" \
+            --output "$RUNNER_TEMP/issue493_archive_B_${{ matrix.case }}" \
+            --case "${{ matrix.case }}" --mode complete-b --authorize-full-p3 --timeout-seconds 20400
+          python3 control/experiments/Issue493_s6_boltzmann/archive_public_p3_results.py \
+            --status "$RUNNER_TEMP/issue493_archive_B_${{ matrix.case }}/non_sensitive_p3_status.json" \
+            --run-root "$RUNNER_TEMP/issue493_archive_B_${{ matrix.case }}" \
+            --publish-root "$RUNNER_TEMP/issue493_publish_B_${{ matrix.case }}" \
+            --case "${{ matrix.case }}" --arm B
+      - name: Upload public B Exodus CSV and SHA manifest
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: issue493-public-${{ matrix.case }}-B-results
+          path: ${{ runner.temp }}/issue493_publish_B_${{ matrix.case }}/
+          if-no-files-found: error
+          retention-days: 90
+          compression-level: 0
+      - name: Upload sanitized B status on failure
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: issue493-b-status-${{ matrix.case }}-${{ github.sha }}
+          path: ${{ runner.temp }}/issue493_archive_B_${{ matrix.case }}/non_sensitive_p3_status.json
+          if-no-files-found: warn
+          retention-days: 30
+
+  issue493-public-p3-archive-c:
+    needs: issue493-public-p3-archive-b
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        case: ['417', '941']
+    timeout-minutes: 360
+    permissions:
+      contents: read
+    env:
+      PINNED_SOURCE: 29d1acc6ef7969908b86719e4b95c73a1565136d
+      PINNED_CANDIDATE: bebaf47a33ff5ee1d6b933d9691bf48f5ec0f947
+      BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+      OXYGEN_RESEARCH_400: '1'
+      OXYGEN_RESEARCH_FULL24: '0'
+      OXYGEN_RESEARCH_EI2738_FORMULA: '0'
+      OXYGEN_RESEARCH_QUICK_5MIN: '0'
+      CHEM: experiments/Issue395_powered_chemistry_ladder
+    steps:
+      - name: Checkout exact reviewed public data and bounded P3 diagnostics
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          path: control
+          fetch-depth: 1
+      - name: Checkout original archived public S6 source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: 29d1acc6ef7969908b86719e4b95c73a1565136d
+          path: historical
+          fetch-depth: 1
+      - name: Checkout immutable reviewed PhysicsApp candidate
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: bebaf47a33ff5ee1d6b933d9691bf48f5ec0f947
+          path: candidate
+          fetch-depth: 1
+      - name: Verify public rate/deck provenance before native build
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C historical rev-parse HEAD)" = "$PINNED_SOURCE"
+          test "$(git -C candidate rev-parse HEAD)" = "$PINNED_CANDIDATE"
+          test "$(git -C control rev-parse HEAD)" = "${{ github.sha }}"
+          source candidate/physics_app/dependencies.lock
+          test "$PHYSICS_BUILD_BASE" = "$BUILD_BASE_REF"
+          python3 control/experiments/Issue493_s6_boltzmann/public_p2_check.py \
+            --control control --mode preflight
+          python3 control/experiments/Issue493_s6_boltzmann/test_public_p3_run.py
+          python3 control/experiments/Issue493_s6_boltzmann/test_public_p3_artifacts.py
+          echo ISSUE493_PUBLIC_P3_P0_PREFLIGHT_PASS
+      - name: Set up research Python for historical mesh preparation
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: Prepare original 400 W public mesh without protected coefficients
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install --disable-pip-version-check --quiet \
+            numpy==2.1.2 scipy==1.14.1 matplotlib==3.9.2
+          cd historical
+          SRC=.github/oxygen25_eedf/initial_mixture_23xsec_transport.txt
+          DST=experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt
+          test "$(sha256sum "$SRC" | cut -d' ' -f1)" = 35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b
+          cp "$SRC" "$DST"
+          export CHATGPT_WORK_BASE_SHA="$PINNED_SOURCE"
+          bash "$CHEM/issue397_l1_power_scan_replay.sh" prepare 400
+          python3 .github/scripts/oxygen_legacy6_latest_100us.py --power-w 400 --prepare
+          test -s "$CHEM/baseline_plasma_plus_unstructured_cover_plus_wafer.msh"
+          test ! -e "$CHEM/private_rates"
+          echo ISSUE493_PUBLIC_P3_MESH_PREP_PASS
+      - name: Download exact B-built executable for C
+        uses: actions/download-artifact@v4
+        with:
+          name: issue493-source-bound-binary-${{ matrix.case }}-${{ github.sha }}
+          path: ${{ runner.temp }}/issue493_binary_${{ matrix.case }}
+      - name: Verify same binary and immutable OCI before fresh C
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker pull "$BUILD_BASE_REF"
+          test "$(docker image inspect "$BUILD_BASE_REF" --format '{{ index .Config.Labels "io.physics.moose.sha" }}')" = "9f388366ccf38b9c34542ec5561198249fde0ac9"
+          test ! -e candidate/physics_app/physics-opt
+          cp "$RUNNER_TEMP/issue493_binary_${{ matrix.case }}/physics-opt" candidate/physics_app/physics-opt
+          chmod 0755 candidate/physics_app/physics-opt
+          DIR="$RUNNER_TEMP/issue493_binary_${{ matrix.case }}"
+          if [ -f "$DIR/app-lib.tar.gz" ]; then
+            (cd "$DIR" && sha256sum -c app-lib.tar.gz.sha256)
+            tar -C candidate/physics_app -xzf "$DIR/app-lib.tar.gz"
+          fi
+          cp "$RUNNER_TEMP/issue493_binary_${{ matrix.case }}/p1.json" "$RUNNER_TEMP/issue493_p1_provenance.json"
+          PYTHONPATH=control python3 - <<'PY'
+          import os
+          from pathlib import Path
+          from physics_harness.execution.native_gates import require_p1_success
+          record=require_p1_success(
+              Path(os.environ["RUNNER_TEMP"])/"issue493_p1_provenance.json",
+              source_root=Path("candidate"), binary=Path("candidate/physics_app/physics-opt"),
+              source_sha="bebaf47a33ff5ee1d6b933d9691bf48f5ec0f947",
+              image_ref="ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008")
+          print("ISSUE493_C_SAME_B_BINARY_VERIFIED", record["binary_sha256"])
+          PY
+      - name: Execute 460-step C and archive verified public Exodus CSV
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 control/experiments/Issue493_s6_boltzmann/public_p3_run.py \
+            --control control --candidate candidate --historical historical \
+            --p1-evidence "$RUNNER_TEMP/issue493_p1_provenance.json" \
+            --output "$RUNNER_TEMP/issue493_archive_C_${{ matrix.case }}" \
+            --case "${{ matrix.case }}" --mode complete-c --authorize-full-p3 --timeout-seconds 20400
+          python3 control/experiments/Issue493_s6_boltzmann/archive_public_p3_results.py \
+            --status "$RUNNER_TEMP/issue493_archive_C_${{ matrix.case }}/non_sensitive_p3_status.json" \
+            --run-root "$RUNNER_TEMP/issue493_archive_C_${{ matrix.case }}" \
+            --publish-root "$RUNNER_TEMP/issue493_publish_C_${{ matrix.case }}" \
+            --case "${{ matrix.case }}" --arm C
+      - name: Upload public C Exodus CSV and SHA manifest
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: issue493-public-${{ matrix.case }}-C-results
+          path: ${{ runner.temp }}/issue493_publish_C_${{ matrix.case }}/
+          if-no-files-found: error
+          retention-days: 90
+          compression-level: 0
+      - name: Upload sanitized C status on failure
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: issue493-c-status-${{ matrix.case }}-${{ github.sha }}
+          path: ${{ runner.temp }}/issue493_archive_C_${{ matrix.case }}/non_sensitive_p3_status.json
+          if-no-files-found: warn
+          retention-days: 30
+
+  issue493-public-p4-bc-compare:
+    needs: [issue493-public-p3-archive-b, issue493-public-p3-archive-c]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout exact P4 comparator
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          path: control
+      - name: Set up Python3.12 for P4
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: Download four authenticated public B/C outputs
+        uses: actions/download-artifact@v4
+        with:
+          pattern: issue493-public-*-results
+          path: public-results
+          merge-multiple: false
+      - name: Run 461-frame CSV and all numerical Exodus field P4 comparison
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install --disable-pip-version-check --quiet numpy==2.1.2 matplotlib==3.9.2 netCDF4==1.7.2
+          python3 control/experiments/Issue493_s6_boltzmann/p4_compare_public_bc.py \
+            --artifacts-root public-results --output "$RUNNER_TEMP/issue493_p4_results"
+          echo ISSUE493_P4_PUBLIC_BC_METRICS_PASS
+      - name: Upload P4 metrics JSON and B/C figures
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: issue493-public-bc-p4-metrics-${{ github.sha }}
+          path: ${{ runner.temp }}/issue493_p4_results/
+          if-no-files-found: warn
+          retention-days: 90

@@ -64,7 +64,7 @@ def profiles(root: Path = ROOT) -> list[dict]:
         elif purpose == "special":
             filename = output.name
             variant = item.get("variant", "full")
-            if variant not in {"full", "diagnostic", "completion"}:
+            if variant not in {"full", "diagnostic", "completion", "archive"}:
                 raise WorkflowContractError("SPECIAL_CI_VARIANT_INVALID")
             selector = (item.get("issue"), variant)
             if selector in special_variants:
@@ -126,8 +126,13 @@ def render(root: Path, profile: dict) -> str:
         "full": "issue493-public-p3-native",
         "diagnostic": "issue493-public-p3-diagnostic",
         "completion": "issue493-public-p3-b-completion",
+        "archive": "issue493-public-p3-archive-b",
     }[variant]
-    if len(job_names) != 1 or job_names[0] != allowed_job:
+    if variant == "archive":
+        if job_names != ["issue493-public-p3-archive-b", "issue493-public-p3-archive-c",
+                         "issue493-public-p4-bc-compare"]:
+            raise WorkflowContractError("SPECIAL_ARCHIVE_JOB_ALLOWLIST_MISMATCH")
+    elif len(job_names) != 1 or job_names[0] != allowed_job:
         raise WorkflowContractError("SPECIAL_JOB_ALLOWLIST_MISMATCH")
     common = (re.search(r"^    strategy:\n      fail-fast: false\n      max-parallel: 2", template, re.MULTILINE)
               and "public_p3_run.py" in template
@@ -157,6 +162,18 @@ def render(root: Path, profile: dict) -> str:
                 or "--mode diagnostic" in template
                 or "--timeout-seconds 8100" in template):
             raise WorkflowContractError("SPECIAL_COMPLETION_BOUNDARY")
+    elif variant == "archive":
+        if (template.count("--mode complete-b --authorize-full-p3 --timeout-seconds 20400") != 1
+                or template.count("--mode complete-c --authorize-full-p3 --timeout-seconds 20400") != 1
+                or "archive_public_p3_results.py" not in template
+                or "p4_compare_public_bc.py" not in template
+                or "actions/download-artifact@v4" not in template
+                or "retention-days: 90" not in template
+                or "source-bound-binary" not in template
+                or "needs: [issue493-public-p3-archive-b, issue493-public-p3-archive-c]" not in template
+                or "timeout-minutes: 360" not in template
+                or "--mode full" in template or "secrets." in template):
+            raise WorkflowContractError("SPECIAL_ARCHIVE_PROVENANCE_OR_DATA_BOUNDARY")
     name, output = profile["name"], profile["output"]
     if not isinstance(name, str) or not re.fullmatch(r"[A-Za-z0-9 _-]{4,100}", name):
         raise WorkflowContractError("SPECIAL_WORKFLOW_NAME")
@@ -202,7 +219,7 @@ def self_test() -> None:
     assert route("special", issue=493, records=entries)["trigger"] == "self_path_main_once"
     assert route("special", issue=493, variant="diagnostic", records=entries)["trigger"] == "self_path_main_once"
     assert route("special", issue=493, variant="completion", records=entries)["trigger"] == "self_path_main_once"
-    for selected in ("full", "diagnostic", "completion"):
+    for selected in ("full", "diagnostic", "completion", "archive"):
         special = route("special", issue=493, variant=selected, records=entries)
         assert special["activation"] in {"deferred", "active"}
         assert (ROOT / special["output"] in outputs()) == (special["activation"] == "active")
@@ -245,7 +262,7 @@ def main() -> int:
     mode.add_argument("--self-test", action="store_true")
     mode.add_argument("--route", choices=["general", "special"])
     parser.add_argument("--issue", type=int)
-    parser.add_argument("--variant", choices=("full", "diagnostic"), default="full")
+    parser.add_argument("--variant", choices=("full", "diagnostic", "completion", "archive"), default="full")
     parser.add_argument("--root", type=Path, default=ROOT)
     args = parser.parse_args()
     try:

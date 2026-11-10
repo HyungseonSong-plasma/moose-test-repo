@@ -103,3 +103,34 @@ The overall B/C P3 stays HOLD and P4 NOT_RUN even if B finishes, until a
 separate C solve and quantitative comparison are completed.
 After this one-shot, remove/defer its YAML and profile in a separate
 governed cleanup; no unreviewed workflow_dispatch or duplicate runner.
+
+## Public B/C raw-output archive and P4 follow-up (2026-11-10)
+
+The user explicitly requested downloadable Exodus/CSV after #506 finished B
+successfully but published only its sanitized JSON evidence. Previous ephemeral
+runner-local raw output was lost; it cannot be restored from the small
+artifacts. This one-shot therefore runs fresh public-rate B then C, in two
+successive case-matrix jobs (max two concurrent cases), to respect the 6-hour
+GitHub-hosted per-job limit. Each single-arm solver has at most 20,400 seconds.
+All historical source, mesh, candidate, 19 public Boltzmann tables, model
+settings and 460-step 0-100us grid are pinned and unchanged.
+
+The B-native PhysicsApp ELF and exact P1 record are transferred as a separately
+verified SHA-bound artifact to C; each C re-verifies Git source, pinned OCI,
+ELF SHA, P1 identity and P2 before launching on the SAME binary as B in its
+case. On each successful 461-frame output, only plasma.e, plasma.csv and a
+SHA/identity manifest are copied into new public-only 90-day GitHub
+downloadable artifacts. Raw solver logs, staged inputs, unreviewed rate
+data and original private-rate tables are never uploaded.
+
+An automatic P4 job independently rehashes all four results, requires same
+mesh and binary per B/C case, compares 461 CSV timestamps/fields, and computes
+numerical differences for all Exodus field arrays, publishing metrics JSON
+and case time-trace PNG files in a separate 90-day artifact. These metrics
+DO NOT establish scientific equivalence absent agreed tolerances; the original
+protected-rate A/A-prime controls remain separate, SCIENCE_HOLD persists.
+
+The prior B-only completion workflow is removed and its profile set to
+deferred, so it cannot be retriggered by the new merge. The old full four-arm
+profile also remains deferred. Retire this one-shot via a future cleanup
+after results are preserved.
