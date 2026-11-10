@@ -49,7 +49,7 @@ class ExperimentTests(unittest.TestCase):
         workflow = (pathlib.Path(__file__).resolve().parents[2] /
                     '.github/workflows/ci.yml').read_text(encoding='utf-8')
         job = workflow.split('  issue493-pr491-native-source-build:', 1)[1]
-        self.assertIn('github.event.pull_request.number == 496', job)
+        self.assertIn('github.event.pull_request.number == 497', job)
         self.assertIn('native_build.py', job)
         self.assertIn('--profile auto --max-jobs 4 --max-attempts 3', job)
         self.assertNotIn('MOOSE_UNITY=false', job)

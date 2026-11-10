@@ -14,6 +14,7 @@ import json
 import os
 from pathlib import Path
 import re
+import shutil
 import subprocess
 import sys
 from typing import Sequence
@@ -25,6 +26,8 @@ HEX_SHA_RE = re.compile(r"[0-9a-f]{40}\Z")
 DEFAULT_SCOPED_DIRS = ("src/utils",)
 DEFAULT_MAX_JOBS = 4
 DEFAULT_MAX_ATTEMPTS = 3
+DEFAULT_MIN_FREE_BYTES = 1024 * 1024 * 1024  # 1 GiB free before P1
+DEFAULT_MIN_FREE_INODES = 2000
 
 
 class NativeBuildError(RuntimeError):
@@ -68,11 +71,62 @@ def available_memory_kb(
     return min(readings) if readings else 0
 
 
-def available_cpus() -> int:
+def quota_cpus(cgroup_root: Path = Path("/sys/fs/cgroup")) -> int | None:
+    """Read CPU quota from cgroup v2 or v1; return None for unlimited/unknown."""
     try:
-        return max(1, len(os.sched_getaffinity(0)))
-    except AttributeError:
-        return max(1, os.cpu_count() or 1)
+        parts = (cgroup_root / "cpu.max").read_text().split()
+        if len(parts) == 2 and parts[0] != "max":
+            quota, period = map(int, parts)
+            if quota >= 0 and period > 0:
+                return max(1, (quota + period - 1) // period)
+    except (OSError, ValueError):
+        pass
+    try:
+        group = cgroup_root / "cpu"
+        quota = int((group / "cpu.cfs_quota_us").read_text())
+        period = int((group / "cpu.cfs_period_us").read_text())
+        if quota >= 0 and period > 0:
+            return max(1, (quota + period - 1) // period)
+    except (OSError, ValueError):
+        pass
+    return None
+
+
+def available_cpus(cgroup_root: Path = Path("/sys/fs/cgroup")) -> int:
+    """Honor CPU affinity and any active container quota."""
+    try:
+        cpus = max(1, len(os.sched_getaffinity(0)))
+    except (AttributeError, OSError):
+        cpus = max(1, os.cpu_count() or 1)
+    quota = quota_cpus(cgroup_root)
+    return min(cpus, quota) if quota is not None else cpus
+
+
+def check_build_storage(
+    app: Path,
+    *,
+    min_free_bytes: int = DEFAULT_MIN_FREE_BYTES,
+    min_free_inodes: int = DEFAULT_MIN_FREE_INODES,
+) -> dict[str, int | None]:
+    """Fail before compile when app filesystem cannot safely create artifacts.
+
+    Filesystems with f_files=0 expose unknown inode accounting; skip the inode
+    threshold there rather than falsely calling the build full.
+    """
+    if min_free_bytes < 0 or min_free_inodes < 0:
+        raise NativeBuildError("P0", "INVALID_STORAGE_POLICY", "storage thresholds cannot be negative")
+    try:
+        free = shutil.disk_usage(app).free
+        stat = os.statvfs(app)
+        inodes = stat.f_favail if stat.f_files else None
+    except OSError as exc:
+        raise NativeBuildError("P0", "STORAGE_PREFLIGHT_FAILURE", "cannot inspect app filesystem") from exc
+    if free < min_free_bytes:
+        raise NativeBuildError("P0", "DISK_CAPACITY_INSUFFICIENT", "not enough free space for Native P1")
+    if inodes is not None and inodes < min_free_inodes:
+        raise NativeBuildError("P0", "INODE_CAPACITY_INSUFFICIENT", "not enough free inodes for Native P1")
+    return {"free_bytes": free, "free_inodes": inodes}
+
 
 
 def choose_jobs(cpus: int, memory_kb: int, max_jobs: int = DEFAULT_MAX_JOBS) -> int:
@@ -114,29 +168,44 @@ def make_argv(app: Path, jobs: int, scoped_dirs: Sequence[str]) -> list[str]:
 
 
 def classify_failure(log_text: str) -> str:
+    """Classify confirmed errors, not speculative text or suggested compiler flags."""
     lower = log_text.lower()
+    # Terminal failures always take precedence over Unity-redefinition recovery.
     if "feproblembase" in lower and "squirrel" in lower:
         return "VENDOR_SOURCE_OR_ABI_FAILURE"
-    if "redefinition of" in lower and UNITY_RE.search(log_text):
-        return "APP_UNITY_SYMBOL_COLLISION"
+    if "no free inodes" in lower or "inode exhaustion" in lower:
+        return "INODE_CAPACITY_EXHAUSTED"
+    if "no space left on device" in lower or "disk quota exceeded" in lower:
+        return "DISK_CAPACITY_EXHAUSTED"
+    if ("killed signal terminated program" in lower or "out of memory" in lower
+            or "cannot allocate memory" in lower or "exit status 137" in lower):
+        return "RESOURCE_EXHAUSTION"
+    if "glibcxx_" in lower or "cxxabi_" in lower or "undefined symbol:" in lower:
+        return "RUNTIME_ABI_MISMATCH"
+    if "undefined reference to" in lower or "multiple definition of" in lower:
+        return "LINKER_SYMBOL_FAILURE"
+    if re.search(r"fatal error: [^\n]*no such file or directory", lower):
+        return "HEADER_OR_GENERATED_FILE_MISSING"
     if "unbound variable" in lower:
         return "SHELL_QUOTING_OR_UNSET_VARIABLE"
-    if "killed signal terminated program" in lower or "out of memory" in lower:
-        return "RESOURCE_EXHAUSTION"
+    if ("error: redefinition of" in lower or "error: 'redefinition" in lower) and UNITY_RE.search(log_text):
+        return "APP_UNITY_SYMBOL_COLLISION"
     if "error:" in lower or "fatal error:" in lower:
         return "SOURCE_COMPILATION_FAILURE"
     return "BUILD_FAILURE_UNCLASSIFIED"
 
 
 def collision_directories(log_text: str, app: Path) -> tuple[str, ...]:
-    """Infer only application Unity translation-unit dirs on a redefinition."""
+    """Infer only real, non-symlink-escaping application Unity directories."""
     if classify_failure(log_text) != "APP_UNITY_SYMBOL_COLLISION":
         return ()
     found: set[str] = set()
     for name in UNITY_RE.findall(log_text):
-        candidate = app / "src" / name
-        if candidate.is_dir():
-            found.add(str(candidate.resolve()))
+        try:
+            found.add(_checked_subdir(app, "src/" + name))
+        except NativeBuildError:
+            # Reject missing dirs, directory symlinks and vendor/cache escapes.
+            continue
     return tuple(sorted(found))
 
 
@@ -174,6 +243,13 @@ def _verify_source(source_root: Path, expected_sha: str, binary: Path) -> None:
         raise NativeBuildError("P0", "SOURCE_SHA_MISMATCH", "candidate HEAD differs from reviewed source")
     if dirty.strip() or binary.exists():
         raise NativeBuildError("P0", "DIRTY_OR_STALE_APP", "app is dirty or already has a binary; use a fresh checkout")
+    # Git does not report ignored generated objects. Never confuse an ignored
+    # previous app build with the exact checked-out source in a new P1 run.
+    # Fail closed instead of deleting anything or touching pinned vendor cache.
+    generated = source_root / "physics_app" / "build"
+    if generated.exists() or generated.is_symlink():
+        raise NativeBuildError("P0", "STALE_APP_BUILD_CACHE",
+                               "application build/ already exists; use a fresh isolated checkout")
 
 
 def _verify_vendor_environment() -> None:
@@ -206,6 +282,8 @@ def build(
     max_attempts: int = DEFAULT_MAX_ATTEMPTS,
     timeout_s: int = 3600,
     smoke_input: str | None = None,
+    min_free_bytes: int = DEFAULT_MIN_FREE_BYTES,
+    min_free_inodes: int = DEFAULT_MIN_FREE_INODES,
 ) -> dict:
     """Build application only. Retry *only* newly identified app Unity collisions."""
     source_root = source_root.resolve()
@@ -233,7 +311,7 @@ def build(
         "source_sha": expected_sha, "profile": profile,
         "vendor_cache": "PRESERVED", "unity": True,
         "cpus": cpus, "memory_available_kb": mem_kb, "jobs": jobs,
-        "attempts": [], "science": "HOLD",
+        "attempts": [], "science": "HOLD", "storage": None,
     }
 
     def write_report() -> None:
@@ -241,7 +319,13 @@ def build(
         report_path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
 
     try:
+        report["storage"] = check_build_storage(
+            app, min_free_bytes=min_free_bytes, min_free_inodes=min_free_inodes)
         for number in range(1, max_attempts + 1):
+            # Do not continue a retry if previous compilation consumed the
+            # remaining free space/inodes. Do not delete vendor or app caches.
+            report["storage"] = check_build_storage(
+                app, min_free_bytes=min_free_bytes, min_free_inodes=min_free_inodes)
             selected = sorted(scoped)
             argv = make_argv(app, jobs, selected)
             log = log_dir / ("P1_build_attempt%02d.log" % number)
@@ -300,13 +384,17 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--max-attempts", type=int, default=DEFAULT_MAX_ATTEMPTS)
     parser.add_argument("--timeout-seconds", type=int, default=3600)
     parser.add_argument("--smoke-input", default=None)
+    parser.add_argument("--min-free-mib", type=int, default=DEFAULT_MIN_FREE_BYTES // (1024 * 1024))
+    parser.add_argument("--min-free-inodes", type=int, default=DEFAULT_MIN_FREE_INODES)
     args = parser.parse_args(argv)
     try:
         result = build(source_root=args.source_root, expected_sha=args.expected_sha,
                        log_dir=args.log_dir, report_path=args.report,
                        profile=args.profile, extra_non_unity_dirs=args.non_unity_dir,
                        max_jobs=args.max_jobs, max_attempts=args.max_attempts,
-                       timeout_s=args.timeout_seconds, smoke_input=args.smoke_input)
+                       timeout_s=args.timeout_seconds, smoke_input=args.smoke_input,
+                       min_free_bytes=args.min_free_mib * 1024 * 1024,
+                       min_free_inodes=args.min_free_inodes)
     except (NativeBuildError, OSError, ValueError, subprocess.CalledProcessError) as exc:
         classification = getattr(exc, "classification", "BUILD_HARNESS_ERROR")
         print(json.dumps({"P1": "FAILED", "class": classification, "science": "HOLD"}),
