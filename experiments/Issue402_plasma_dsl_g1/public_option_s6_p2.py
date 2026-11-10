@@ -154,6 +154,15 @@ def run_one(binary: Path, binary_sha: str, workspace: Path,
                 "log_sha256": sha_file(log)}
 
 
+def persist_report(evidence: Path, report: dict) -> None:
+    """Atomic checkpoint independent of root-owned Native scratch cleanup."""
+    evidence.mkdir(parents=True, exist_ok=True)
+    target = evidence / "issue402_option_s6_p2_status.json"
+    pending = evidence / "issue402_option_s6_p2_status.json.tmp"
+    pending.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
+    os.replace(pending, target)
+
+
 def execute(historical: Path, binary: Path, expected_head: str,
             evidence: Path, timeout_seconds: int = 1200) -> dict:
     validate_overlay()
@@ -172,42 +181,59 @@ def execute(historical: Path, binary: Path, expected_head: str,
               "checks": {}}
     if public.get("P0") != "PASS":
         raise ValueError("Public reference P0 is not PASS")
-    with tempfile.TemporaryDirectory(prefix="issue402_option_s6_p2_",
-                                     dir=os.getenv("RUNNER_TEMP", None)) as tmp:
-        root = Path(tmp)
-        manifest = json.loads((ROOT / p2.DECKS / "manifest.json").read_text())
-        for case in CASES:
-            report["checks"][case] = {}
-            for variant in VARIANTS:
-                label = f"{case}_{variant}"
-                staged = root / label
-                try:
-                    old_variant = "B" if variant == "B" else "C"
-                    ordered = p2.stage(ROOT, historical, case, old_variant,
-                                       staged, manifest)
-                    if variant == "D":
-                        overlay = staged / p2.CHEM / "migrated_continuity.i"
-                        # Only a regenerated sidecar is changed. Never edit any
-                        # archived source layer, table or preserved baseline.
-                        if not overlay.is_file():
-                            raise ValueError("Expected original C migration sidecar is missing")
-                        overlay.write_text(OVERLAY, encoding="utf-8")
-                        if sha_file(overlay) != OVERLAY_SHA256:
-                            raise ValueError("Staged D sidecar SHA is incorrect")
-                    log = evidence / f"S6_{label}_P2.log"
-                    report["checks"][case][variant] = run_one(
-                        binary, identity["binary_sha256"], staged, ordered,
-                        log, timeout_seconds)
-                    report["checks"][case][variant]["layers"] = len(ordered)
-                except Exception as exc:
-                    report["checks"][case][variant] = {
-                        "P2": "HOLD", "classification": type(exc).__name__,
-                        "error": str(exc)[:250]}
-    checks = [report["checks"][c][v]["P2"] for c in CASES for v in VARIANTS]
-    report["P2"] = "PASS" if checks == ["PASS"] * 4 else "HOLD"
-    report["status"] = "PASS" if report["P2"] == "PASS" else "HOLD"
-    return report
+    persist_report(evidence, report)
+    try:
+        with tempfile.TemporaryDirectory(prefix="issue402_option_s6_p2_",
+                                         dir=os.getenv("RUNNER_TEMP", None)) as tmp:
+            root = Path(tmp)
+            manifest = json.loads((ROOT / p2.DECKS / "manifest.json").read_text())
+            for case in CASES:
+                report["checks"][case] = {}
+                for variant in VARIANTS:
+                    label = f"{case}_{variant}"
+                    staged = root / label
+                    try:
+                        old_variant = "B" if variant == "B" else "C"
+                        ordered = p2.stage(ROOT, historical, case, old_variant,
+                                           staged, manifest)
+                        if variant == "D":
+                            overlay = staged / p2.CHEM / "migrated_continuity.i"
+                            # Only a regenerated sidecar is changed. Never edit any
+                            # archived source layer, table or preserved baseline.
+                            if not overlay.is_file():
+                                raise ValueError("Expected original C migration sidecar is missing")
+                            overlay.write_text(OVERLAY, encoding="utf-8")
+                            if sha_file(overlay) != OVERLAY_SHA256:
+                                raise ValueError("Staged D sidecar SHA is incorrect")
+                        log = evidence / f"S6_{label}_P2.log"
+                        report["checks"][case][variant] = run_one(
+                            binary, identity["binary_sha256"], staged, ordered,
+                            log, timeout_seconds)
+                        report["checks"][case][variant]["layers"] = len(ordered)
+                    except Exception as exc:
+                        report["checks"][case][variant] = {
+                            "P2": "HOLD", "classification": type(exc).__name__,
+                            "error": str(exc)[:250]}
+                    persist_report(evidence, report)
 
+            checks = [report["checks"][c][v]["P2"] for c in CASES for v in VARIANTS]
+            report["P2"] = "PASS" if checks == ["PASS"] * 4 else "HOLD"
+            report["status"] = "P2_PASS_CLEANUP_PENDING" if report["P2"] == "PASS" else "HOLD"
+            report["cleanup"] = "PENDING"
+            persist_report(evidence, report)
+
+    except OSError as exc:
+        # Never erase actual P2 results when host cleanup of OCI-owned scratch
+        # fails. The overall G2 gate still HOLDs until cleanup is resolved.
+        report["cleanup"] = "HOLD"
+        report["cleanup_error_class"] = type(exc).__name__
+        report["status"] = "HOLD_INFRASTRUCTURE_CLEANUP"
+        persist_report(evidence, report)
+        return report
+    report["cleanup"] = "PASS"
+    report["status"] = "PASS" if report["P2"] == "PASS" else "HOLD"
+    persist_report(evidence, report)
+    return report
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
