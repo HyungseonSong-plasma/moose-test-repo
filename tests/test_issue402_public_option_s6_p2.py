@@ -55,7 +55,7 @@ def test_full_s6_p2_provenance_and_no_solver_execution():
     assert "OVERLAY_SHA256" in script
     assert "p2.preflight(ROOT)" in script and "p2.stage(ROOT, historical, case" in script
     assert 'VARIANTS = ("B", "D")' in script
-    assert '"--check-input"' in script
+    assert " --check-input -i " in script
     assert '"--network", "none"' in script
     assert '"P3": "NOT_RUN"' in script and '"P4": "NOT_RUN"' in script
     assert "SCIENCE_HOLD" in script
