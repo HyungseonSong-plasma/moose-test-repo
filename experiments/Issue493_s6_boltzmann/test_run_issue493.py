@@ -48,9 +48,11 @@ class ExperimentTests(unittest.TestCase):
         self.assertNotIn('"MOOSE_UNITY=false"', harness)
         workflow = (pathlib.Path(__file__).resolve().parents[2] /
                     '.github/workflows/ci.yml').read_text(encoding='utf-8')
-        self.assertIn('MOOSE_UNITY=true app_non_unity_dirs=/workspace/physics_app/src/utils', workflow)
-        self.assertNotIn('make -j2 MOOSE_UNITY=false', workflow)
-        self.assertIn('if (( jobs > 4 ))', workflow)
+        job = workflow.split('  issue493-pr491-native-source-build:', 1)[1]
+        self.assertIn('github.event.pull_request.number == 496', job)
+        self.assertIn('native_build.py', job)
+        self.assertIn('--profile auto --max-jobs 4 --max-attempts 3', job)
+        self.assertNotIn('MOOSE_UNITY=false', job)
 
     def test_ci_nested_docker_shell_quotes_and_memory_probe(self):
         workflow = (pathlib.Path(__file__).resolve().parents[2] /
@@ -61,9 +63,11 @@ class ExperimentTests(unittest.TestCase):
         payload = job.split(marker, 1)[1].split(
             '\n            ' + chr(39) + '\n', 1)[0]
         self.assertNotIn(chr(39), payload, 'nested single quote will break bash -lc')
-        self.assertIn('while read -r mem_key mem_value mem_unit', payload)
-        self.assertNotIn('awk /MemAvailable/', payload)
-        self.assertIn('test "$mem_available_kb" -gt 0', payload)
+        self.assertIn('python3 /workspace/.native_harness/physics_harness/execution/native_build.py', payload)
+        self.assertIn('--smoke-input ci/smoke.i', payload)
+        self.assertNotIn('awk ', payload)
+        self.assertNotIn('while read -r mem_key mem_value mem_unit', payload)
+        self.assertIn('SOURCE', workflow.upper())
 
     def test_docker_invocation_pins_image_and_research_controls(self):
         command = run.docker_cmd([(pathlib.Path('/tmp/example'), '/case', 'rw')], '/case', 'true')
