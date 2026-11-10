@@ -27,7 +27,7 @@ PlasmaInterface::validateSpeciesInputs(
     paramError("fem_species", "List at least one species in fem_species or fvm_species.");
 
   if (variables.size() != finite_element_species.size() + finite_volume_species.size())
-    paramError("variables", "Provide one solver variable for each listed species.");
+    paramError("fem_species", "Provide one internally resolved solver variable for each listed species.");
 
   std::set<std::string> unique_species;
   for (const auto & species : finite_element_species)
@@ -43,7 +43,7 @@ PlasmaInterface::validateSpeciesInputs(
   std::set<VariableName> unique_variables;
   for (const auto & variable : variables)
     if (variable.empty() || !unique_variables.insert(variable).second)
-      paramError("variables", "Repeated or empty solver variable: ", variable);
+      paramError("fem_species", "Repeated or empty resolved solver variable: ", variable);
 }
 
 void
@@ -56,14 +56,14 @@ PlasmaInterface::validateExistingSpeciesVariables(
   {
     const auto & variable = variables[index];
     if (!solverVariableExists(variable))
-      paramError("variables",
+      paramError(index >= finite_element_species.size() ? "fvm_species" : "fem_species",
                  "The solver variable '",
                  variable,
                  "' was not found. Define it before using this check.");
 
     const bool is_finite_volume = index >= finite_element_species.size();
     if (isVariableFV(variable) != is_finite_volume)
-      paramError("variables",
+      paramError(is_finite_volume ? "fvm_species" : "fem_species",
                  "Species '",
                  is_finite_volume ? finite_volume_species[index - finite_element_species.size()]
                                   : finite_element_species[index],

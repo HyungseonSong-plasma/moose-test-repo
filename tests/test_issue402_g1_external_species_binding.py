@@ -50,6 +50,8 @@ def test_existing_variables_only():
     assert "Repeated or empty species in fvm_species" in base_source
     assert "Species '" in base_source
     assert "solverVariableExists(variable)" in base_source
+    assert 'paramError("variables"' not in base_source
+    assert 'paramError(is_finite_volume ? "fvm_species" : "fem_species"' in base_source
     assert "isVariableFV(variable)" in base_source
     # Shared input validation never creates solver objects.
     assert "getProblem().add" not in base_source
@@ -57,8 +59,17 @@ def test_existing_variables_only():
     # Continuity can add drift-diffusion only when the required physical
     # coefficients have been supplied explicitly.
     assert 'if (!isParamValid("fem_potential"))' in source
-    assert '"fem_mobility"' in source
-    assert '"fem_diffusion"' in source
+    assert '"mobility"' in source
+    assert '"diffusivity"' in source
+    assert '"fvm_charge_numbers"' in source
+    assert '"fem_mobility"' not in source
+    assert '"fem_diffusion"' not in source
+    assert '"fem_kernel_names"' not in source
+    assert '"variables"' not in source
+    assert 'params.set<MooseFunctorName>("diffusion") = diffusivity[i]' in source
+    assert 'species[i] + "_transport"' in source
+    assert 'return "log_n" + species' in source
+    assert 'return "log_ni"' in source
     assert '"fem_charge_numbers"' in source
     assert "getProblem().addKernel(" in source
     assert "PhysicsFEMLogMolarDriftDiffusion" in source
@@ -68,8 +79,8 @@ def test_existing_variables_only():
 
 def test_small_example_has_finite_element_and_finite_volume_equations():
     text = (CASE / "baseline.i").read_text()
-    assert "[u_fe]" in text and "family = LAGRANGE" in text
-    assert "[u_fv]" in text and "type = MooseVariableFVReal" in text
+    assert "[log_ne]" in text and "family = LAGRANGE" in text
+    assert "[log_ni]" in text and "type = MooseVariableFVReal" in text
     assert "type = Diffusion" in text
     assert "type = FVDiffusion" in text
     assert "type = FVDirichletBC" in text
@@ -81,9 +92,9 @@ def test_small_example_has_finite_element_and_finite_volume_equations():
     [
         ("valid_bindings.i", "fem_species = 'e'"),
         ("invalid_overlap.i", "fem_species = 'e O2p'"),
-        ("invalid_fem_fv_swap.i", "variables = 'u_fv u_fe'"),
-        ("invalid_no_species.i", "variables = 'u_fe u_fv'"),
-        ("invalid_missing_variable.i", "missing_fe"),
+        ("invalid_fem_fv_swap.i", "fem_species = 'O2p'"),
+        ("invalid_no_species.i", "[Continuity]"),
+        ("invalid_missing_variable.i", "fem_species = 'missing'"),
     ],
 )
 def test_example_inputs(filename, expected):
@@ -102,6 +113,13 @@ def test_native_build_and_comparison_script():
     assert "app_non_unity_dirs='%/utils'" in runner
     assert "PLASMA_RESULTS_MATCH" in runner
     assert "invalid_overlap invalid_fem_fv_swap invalid_no_species invalid_missing_variable" in runner
+    assert "invalid_legacy_variables invalid_legacy_kernel_names invalid_missing_fvm_charges" in runner
+    assert "invalid_incomplete_coefficients invalid_wrong_charge_sign" in runner
+    assert "PLASMA_OPTION_ONLY_FEM_GENERATION_P2_PASS" in runner
+    positive = (CASE / "valid_generated_transport_options.i").read_text()
+    assert "mobility = '1'" in positive and "diffusivity = '1'" in positive
+    assert "fem_charge_numbers = '-1'" in positive
+    assert "fem_kernel_names" not in positive and "variables =" not in positive
     assert "sha256sum" in runner
     assert "physics_app/src/physics/plasma/PlasmaInterface.C" in runner
     assert "physics_app/src/physics/plasma/ContinuityPhysics.C" in runner
@@ -164,8 +182,8 @@ def test_duplicate_kernel_protection_and_s6_preparer():
     assert "requireUniqueFEKernel" in shared
     assert "getKernelWarehouse().getObjects()" in shared
     assert "must have exactly one owner" in shared
-    assert '"fem_kernel_names"' in continuity
-    assert "kernel_names[i]" in continuity
+    assert '"fem_kernel_names"' not in continuity
+    assert 'species[i] + "_transport"' in continuity
     assert "duplicate_maxwell.i" in runner
     assert "PLASMA_DUPLICATE_NATIVE_KERNEL_REJECTED" in runner
     preparer = (CASE / "prepare_s6_single_kernel_migration.py").read_text()
@@ -303,3 +321,49 @@ def test_full_s6_runner_checks_csv_diagnostics(tmp_path):
     new.write_text(data.replace(",400\n", ",401\n", 1))
     with pytest.raises(ValueError, match="diagnostic differs"):
         module.compare_diagnostics(old, new, 1e-11, 1e-12)
+
+
+def test_continuity_option_contract_rejects_legacy_keys():
+    """The generated C++ schema must not accept the old user-facing options."""
+    _, _, _, source, _ = sources()
+    for old in ('"variables"', '"fem_kernel_names"', '"fvm_kernel_names"',
+                '"fem_mobility"', '"fem_diffusion"', '"fvm_mobility"',
+                '"fvm_diffusion"'):
+        assert old not in source
+    for active in ('"mobility"', '"diffusivity"',
+                   '"fem_charge_numbers"', '"fvm_charge_numbers"'):
+        assert active in source
+    assert 'params.set<MooseFunctorName>("diffusion") = diffusivity[i]' in source
+    assert 'const std::string kernel_name = species[i] + "_transport";' in source
+    assert 'return "log_n" + species;' in source
+    for species, name in (("O2p", "log_ni"), ("Om", "log_nm"), ("Op", "log_nop")):
+        assert f'if (species == "{species}")' in source
+        assert f'return "{name}"' in source
+
+
+@pytest.mark.parametrize(
+    "fixture,option",
+    [
+        ("invalid_legacy_variables.i", "variables"),
+        ("invalid_legacy_kernel_names.i", "fem_kernel_names"),
+        ("invalid_missing_fvm_charges.i", "fem_charge_numbers"),
+        ("invalid_incomplete_coefficients.i", "diffusivity"),
+        ("invalid_wrong_charge_sign.i", "fem_charge_numbers"),
+    ],
+)
+def test_native_negative_option_cases_exist(fixture, option):
+    text = (CASE / fixture).read_text()
+    assert "[Continuity]" in text
+    assert option in text
+
+
+def test_small_s6_binding_stays_alias_compatible():
+    deck = (CASE / "s6_external_bindings.i").read_text()
+    assert "fem_species = 'e'" in deck
+    assert "fvm_species = 'O2p Om Op'" in deck
+    assert "variables =" not in deck
+    # The pinned original S6 preparer is NOT refactored here: its old name
+    # and Material/Functor tokens are part of the immutable P3 comparison.
+    preparer = (CASE / "prepare_s6_single_kernel_migration.py").read_text()
+    assert "fem_kernel_names = 'ne_transport'" in preparer
+    assert '"diffusion": "electron_diffusion"' in preparer

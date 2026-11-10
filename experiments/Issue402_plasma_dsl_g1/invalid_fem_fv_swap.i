@@ -1,12 +1,11 @@
-# Each species points to a solver variable of the wrong type.
+# Species are assigned to the opposite discretization of their derived existing variables.
 [Physics]
   [Plasmas]
     [Transport]
       [DriftDiffusion]
         [Continuity]
-          fem_species = 'e'
-          fvm_species = 'O2p'
-          variables = 'u_fv u_fe'
+          fem_species = 'O2p'
+          fvm_species = 'e'
         []
       []
     []

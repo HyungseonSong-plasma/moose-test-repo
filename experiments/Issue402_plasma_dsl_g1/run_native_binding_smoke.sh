@@ -39,6 +39,35 @@ docker run --rm --entrypoint /bin/bash --user 0:0 \
   make -C physics_app -j2 app_non_unity_dirs='%/utils'
 ' 2>&1 | tee "$EVIDENCE/native_build.log"
 test -x physics_app/physics-opt
+# Reuse this exact build across all small and full-S6 P2 cases in this job.
+# This is NOT a cross-job cache or scientific equivalence certificate.
+python3 - "$EVIDENCE/native_p1_identity.json" "$(git rev-parse HEAD)" "$PINNED_BASE" \
+  "physics_app/physics-opt" "$EVIDENCE/native_build.log" <<'PY'
+import hashlib
+import json
+import pathlib
+import sys
+def digest(path):
+    h = hashlib.sha256()
+    with pathlib.Path(path).open("rb") as stream:
+        for block in iter(lambda: stream.read(1 << 20), b""):
+            h.update(block)
+    return h.hexdigest()
+target = pathlib.Path(sys.argv[1])
+if target.exists():
+    raise RuntimeError("Refusing to overwrite P1 identity evidence")
+target.write_text(json.dumps({
+    "schema": "issue402.native_p1.job_local.v1",
+    "source_sha": sys.argv[2],
+    "oci_image": sys.argv[3],
+    "binary_sha256": digest(sys.argv[4]),
+    "build_log_sha256": digest(sys.argv[5]),
+    "reusable_scope": "same_exact_head_ci_job_only",
+    "P1": "PASS",
+    "P3": "NOT_RUN",
+    "science": "SCIENCE_HOLD",
+}, indent=2, sort_keys=True) + "\n")
+PY
 
 native() {
   docker run --rm --entrypoint /bin/bash --user 0:0 \
@@ -55,9 +84,14 @@ native --check-input -i "$PILOT/baseline.i" "$PILOT/valid_bindings.i" \
   2>&1 | tee "$EVIDENCE/valid_bindings_check.log"
 native --check-input -i "$PILOT/baseline.i" "$PILOT/valid_all_physics.i" \
   2>&1 | tee "$EVIDENCE/all_physics_check.log"
+# Standalone positive construction check: one generated FEM transport Kernel.
+# It is a P2-only input, not an accepted physical simulation or P3 parity run.
+native --check-input -i "$PILOT/baseline.i" "$PILOT/valid_generated_transport_options.i" \
+  2>&1 | tee "$EVIDENCE/valid_generated_transport_options.log"
+echo "PLASMA_OPTION_ONLY_FEM_GENERATION_P2_PASS"
 echo "PLASMA_VARIABLE_CHECK_PASSED"
 
-for item in invalid_overlap invalid_fem_fv_swap invalid_no_species invalid_missing_variable invalid_energy_species invalid_chemistry_reactions invalid_poisson_variable invalid_maxwell_frequency; do
+for item in invalid_overlap invalid_fem_fv_swap invalid_no_species invalid_missing_variable invalid_energy_species invalid_chemistry_reactions invalid_poisson_variable invalid_maxwell_frequency invalid_legacy_variables invalid_legacy_kernel_names invalid_missing_fvm_charges invalid_incomplete_coefficients invalid_wrong_charge_sign; do
   set +e
   native --check-input -i "$PILOT/baseline.i" "$PILOT/$item.i" \
     > "$EVIDENCE/$item.log" 2>&1
@@ -72,6 +106,11 @@ for item in invalid_overlap invalid_fem_fv_swap invalid_no_species invalid_missi
     invalid_poisson_variable) expected='Electric potential variable was not found' ;;
     invalid_maxwell_frequency) expected='The frequency must be greater than zero' ;;
     invalid_missing_variable) expected='was not found' ;;
+    invalid_legacy_variables) expected='variables' ;;
+    invalid_legacy_kernel_names) expected='fem_kernel_names' ;;
+    invalid_missing_fvm_charges) expected='Provide fem_potential, mobility, diffusivity and FEM/FVM charge vectors together' ;;
+    invalid_incomplete_coefficients) expected='Provide one mobility and one diffusivity for each FEM/FVM species' ;;
+    invalid_wrong_charge_sign) expected='Charge does not match verified species identity' ;;
   esac
   if [[ "$code" -eq 0 ]] || ! grep -Fq "$expected" "$EVIDENCE/$item.log"; then
     echo "::error::Invalid input was accepted or reported the wrong error: $item" >&2
