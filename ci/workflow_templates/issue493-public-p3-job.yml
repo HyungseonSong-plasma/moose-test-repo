@@ -115,7 +115,8 @@
             --control control --candidate candidate --historical historical \
             --p1-evidence "$RUNNER_TEMP/issue493_p1_provenance.json" \
             --output "$RUNNER_TEMP/issue493_p3_${{ matrix.case }}" \
-            --case "${{ matrix.case }}" --timeout-seconds 8100
+            --case "${{ matrix.case }}" --timeout-seconds 8100 \
+            --mode full --authorize-full-p3
           echo ISSUE493_PUBLIC_P3_TWO_NATIVE_SOLVES_PASS
       - name: Publish sanitized P3 status and public P1 provenance only
         if: always()

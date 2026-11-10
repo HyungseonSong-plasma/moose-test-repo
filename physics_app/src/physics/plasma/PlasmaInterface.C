@@ -1,0 +1,96 @@
+#include "PlasmaInterface.h"
+
+#include "KernelBase.h"
+#include "NonlinearSystemBase.h"
+
+#include <set>
+
+InputParameters
+PlasmaInterface::validParams()
+{
+  InputParameters params = PhysicsBase::validParams();
+  return params;
+}
+
+PlasmaInterface::PlasmaInterface(const InputParameters & parameters)
+  : PhysicsBase(parameters)
+{
+}
+
+void
+PlasmaInterface::validateSpeciesInputs(
+    const std::vector<std::string> & finite_element_species,
+    const std::vector<std::string> & finite_volume_species,
+    const std::vector<VariableName> & variables) const
+{
+  if (finite_element_species.empty() && finite_volume_species.empty())
+    paramError("fem_species", "List at least one species in fem_species or fvm_species.");
+
+  if (variables.size() != finite_element_species.size() + finite_volume_species.size())
+    paramError("fem_species", "Provide one internally resolved solver variable for each listed species.");
+
+  std::set<std::string> unique_species;
+  for (const auto & species : finite_element_species)
+    if (species.empty() || !unique_species.insert(species).second)
+      paramError("fem_species", "Repeated or empty species in fem_species: ", species);
+
+  for (const auto & species : finite_volume_species)
+    if (species.empty() || !unique_species.insert(species).second)
+      paramError("fvm_species",
+                 "Repeated or empty species in fvm_species, or species listed in both groups: ",
+                 species);
+
+  std::set<VariableName> unique_variables;
+  for (const auto & variable : variables)
+    if (variable.empty() || !unique_variables.insert(variable).second)
+      paramError("fem_species", "Repeated or empty resolved solver variable: ", variable);
+}
+
+void
+PlasmaInterface::validateExistingSpeciesVariables(
+    const std::vector<std::string> & finite_element_species,
+    const std::vector<std::string> & finite_volume_species,
+    const std::vector<VariableName> & variables) const
+{
+  for (std::size_t index = 0; index < variables.size(); ++index)
+  {
+    const auto & variable = variables[index];
+    if (!solverVariableExists(variable))
+      paramError(index >= finite_element_species.size() ? "fvm_species" : "fem_species",
+                 "The solver variable '",
+                 variable,
+                 "' was not found. Define it before using this check.");
+
+    const bool is_finite_volume = index >= finite_element_species.size();
+    if (isVariableFV(variable) != is_finite_volume)
+      paramError(is_finite_volume ? "fvm_species" : "fem_species",
+                 "Species '",
+                 is_finite_volume ? finite_volume_species[index - finite_element_species.size()]
+                                  : finite_element_species[index],
+                 "' uses a solver variable of the wrong type: ",
+                 variable);
+  }
+}
+
+void
+PlasmaInterface::requireUniqueFEKernel(const std::string & type,
+                                      const VariableName & variable) const
+{
+  const auto & kernels = getProblem().getNonlinearSystemBase(0).getKernelWarehouse().getObjects();
+  std::size_t matches = 0;
+  for (const auto & kernel : kernels)
+  {
+    const auto & parameters = kernel->parameters();
+    if (kernel->type() == type && parameters.isParamValid("variable") &&
+        parameters.get<NonlinearVariableName>("variable") == variable)
+      ++matches;
+  }
+
+  // This deliberately rejects even different-source kernels of the same
+  // type on one variable. A deliberate multi-source model must use explicit
+  // native Kernels until individual ownership is represented.
+  if (matches != 1)
+    mooseError("The generated ", type, " operator for solver variable '", variable,
+               "' must have exactly one owner; found ", matches,
+               ". Remove the duplicate native Kernel or overlapping Physics input.");
+}

@@ -50,7 +50,50 @@
         "AuxKernels",
         "UserObjects"
       ],
-      "companion_design_doc": "docs/development/2026-11-09_issue402_current_run_option_placement.md"
+      "companion_design_doc": "docs/development/2026-11-09_issue402_current_run_option_placement.md",
+      "fem_fvm_examples": {
+        "S6_electron_continuity": {
+          "fem_species": [
+            "e"
+          ],
+          "fvm_species": [
+            "O2p",
+            "Om",
+            "Op"
+          ]
+        },
+        "S6_electron_energy": {
+          "fem_species": [
+            "e"
+          ],
+          "fvm_species": []
+        },
+        "S6_neutral_mixture_continuity_and_momentum": {
+          "fem_species": [],
+          "fvm_species": [
+            "O2",
+            "O2s",
+            "O",
+            "Os"
+          ],
+          "mixture_momentum_vectors": 1
+        }
+      }
+    },
+    "g0_amendment_2026_11_09": {
+      "user_input_schema_version_required": false,
+      "transport_global_discretization_parameter": false,
+      "species_keys": [
+        "fem_species",
+        "fvm_species"
+      ],
+      "disjoint_species_per_equation": true,
+      "collection_order_for_parallel_bindings": [
+        "fem_species",
+        "fvm_species"
+      ],
+      "native_executable_implementation": "NOT_EVALUATED",
+      "reason": "S6 uses electron FEM and ions/neutral-mixture FV"
     }
   },
   "identity_dimensions": [
@@ -250,12 +293,12 @@
   "error_classes": [
     {
       "id": "P402_SYNTAX",
-      "condition": "unknown_or_repeated_path_schema_version_or_parameter",
+      "condition": "unknown_or_repeated_path_or_parameter__invalid_fem_fvm_species_placement",
       "stage": "parse_or_preflight"
     },
     {
       "id": "P402_SPECIES",
-      "condition": "unknown_duplicate_or_mismatched_composition",
+      "condition": "duplicate_unknown_or_overlapping_fem_fvm_species__unsupported_discretization__mismatched_mixture_composition",
       "stage": "preflight"
     },
     {

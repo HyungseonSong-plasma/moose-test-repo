@@ -1,0 +1,45 @@
+{
+  "status": "S6_TWO_CASE_ARCHIVED_OPERATOR_STATIC_MATCH__NATIVE_FULL_REPLAY_NOT_EVALUATED",
+  "source_repo": "HyungseonSong-plasma/moose-test-repo",
+  "pinned_archived_source_sha": "29d1acc6ef7969908b86719e4b95c73a1565136d",
+  "source_artifacts": [
+    {
+      "artifact_id": 13677089020,
+      "sha256": "441eb637c0eefa947ecbc4e14853ab435e553616b8b6a1e1d11928309409bdcb",
+      "case": "S6-417-407-2069-H25",
+      "original_layers": 10,
+      "power_W": 400,
+      "expected_steps": 460,
+      "science_acceptance": "HOLD"
+    },
+    {
+      "artifact_id": 13677375813,
+      "sha256": "d8643bf2d029a3236876b8912209be61fb85cecadc3125519897e441835d0177",
+      "case": "S6-941-407-2069-H25",
+      "original_layers": 10,
+      "power_W": 400,
+      "expected_steps": 460,
+      "science_acceptance": "HOLD"
+    }
+  ],
+  "verified_original_kernel": {
+    "original_name": "ne_transport",
+    "type": "PhysicsFEMLogMolarDriftDiffusion",
+    "variable": "log_ne",
+    "potential": "potential",
+    "mobility": "electron_mobility",
+    "diffusion": "electron_diffusion",
+    "charge_number": -1,
+    "block": "plasma",
+    "kernel_block_sha256": "9507cdb05cae9db36ec31c612dc82f689002152510c751044390cba92cf2bad5",
+    "exact_blocks_in_each_archived_base": 1,
+    "any_later_overlay_redefinition": false
+  },
+  "transformation": "Remove the single original ne_transport block; generate an identically named kernel from ContinuityPhysics while retaining all other native input layers.",
+  "static_original_parameter_match": true,
+  "candidate_native_check_input": "NOT_EVALUATED",
+  "candidate_full_native_400W_100us_replay": "NOT_EVALUATED",
+  "old_new_exodus_comparison": "NOT_EVALUATED",
+  "scientific_acceptance": "HOLD",
+  "limitations": "Only static archived source inspection and separately verified small native regression. Full replay requires pinned native runtime and private original rate tables."
+}

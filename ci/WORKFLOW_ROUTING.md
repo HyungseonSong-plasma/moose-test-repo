@@ -47,3 +47,12 @@ The common `Repository CI` gate and the `SOL Runtime Integration` workflow
 remain governed independently. A GitHub Actions `edited` event intentionally
 filtered by required CI jobs may still yield skipped checks; eliminating
 **unrelated experiment job skips** does not imply zero skips on every event.
+
+## Reconciliation after Physics main and P3 diagnosis
+
+This profile baseline was reconciled with `main` commit `6623e59037531803404a21544783cdbcfbf36b72` after
+[PR #502](https://github.com/HyungseonSong-plasma/moose-test-repo/pull/502).
+The general CI template retains the newer mandatory `plasma_native_regression`
+job and the P3 timeout regression tests; it removes only obsolete PR #495/#497
+native experiment jobs. The deferred P3 template now uses the explicit
+`--mode full --authorize-full-p3` gate, but is **not activated**.

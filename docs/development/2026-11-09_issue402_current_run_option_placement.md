@@ -43,6 +43,61 @@ provenance/declared paths and SHA-256 digests are preserved.
   authoritative per-run census before **G4** migration. Do not infer they
   share identical input option sets.
 
+## 1.1 Updated S6 species mapping — approved user-facing notation
+
+The user removed the unnecessary `schema_version = 1` input parameter and
+requested explicit `fem_species` / `fvm_species` classification for each
+species-bearing equation. This **replaces** the former generic `species`
+option. There is no global `Transport/discretization` switch because
+the actual successful run mixes FEM and FV.
+
+```ini
+# Conceptual approved design target; NOT a registered MOOSE input.
+[Physics]
+  [Plasmas]
+    [Transport]
+      [DriftDiffusion]
+        [Continuity]
+          fem_species = 'e'
+          fvm_species = 'O2p Om Op'
+          variables = 'log_ne log_ni log_nm log_nop'
+        []
+        [Energy]
+          fem_species = 'e'
+          variable = log_energy
+        []
+      []
+      [NavierStokes]
+        [Continuity]
+          fvm_species = 'O2 O2s O Os'
+          # one shared FV mixture mass equation: variable p
+        []
+        [Momentum]
+          fvm_species = 'O2 O2s O Os'
+          mixture_velocity = 'u v'
+          # one shared FV mixture velocity field, NOT four momenta
+        []
+      []
+    []
+  []
+[]
+```
+
+`fem_species` and `fvm_species` must be unique and disjoint in each
+equation. For the DD Continuity binding vectors, the proposed positional
+order is **FEM list first, then FV list**; this preserves the known
+`e->log_ne`, `O2p->log_ni`, `Om->log_nm`,
+`Op->log_nop` correspondence. In G1/G2 a typed explicit
+species-to-variable map is preferable if future run input order differs;
+**do not silently reorder** old fields or sources. Both NS blocks must
+declare identical neutral mixture constituents and a single
+mixture-velocity owner. Existing explicit neutral mass-fraction equations
+`w_O2s,w_O,w_Os` remain native until given a separate owner.
+
+The two S6 reaction variants change **only EI-417 vs EI-941** in the
+activated Chemistry manifest. Neither variant introduces a new
+`schema_version` or global discretization user option.
+
 ## 2. Destination policy: physical meaning vs native MOOSE execution
 
 **The invariant is NOT "put every key under [Physics]."** A new, declarative

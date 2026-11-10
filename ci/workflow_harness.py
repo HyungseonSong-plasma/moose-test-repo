@@ -101,7 +101,7 @@ def render(root: Path, profile: dict) -> str:
         if ("  push:\n    branches: [main]" not in template or
                 "  pull_request:\n    branches: [main]" not in template):
             raise WorkflowContractError("GENERAL_TRIGGER_CONTRACT")
-        for name in ("validate", "runtime-smoke", "boltzmann-eepf-controls"):
+        for name in ("validate", "runtime-smoke", "boltzmann-eepf-controls", "plasma_native_regression"):
             if not re.search(r"^  " + re.escape(name) + r":\s*$", template,
                              re.MULTILINE):
                 raise WorkflowContractError("GENERAL_REQUIRED_JOB_MISSING")
@@ -118,6 +118,7 @@ def render(root: Path, profile: dict) -> str:
     if (not re.search(r"^    strategy:\n      fail-fast: false\n      max-parallel: 2", template, re.MULTILINE)
             or "public_p3_run.py" not in template
             or "github.sha" not in template
+            or "--mode full --authorize-full-p3" not in template
             or "github.event.pull_request." in template
             or "secrets." in template
             or re.search(r"^    if:", template, re.MULTILINE)):
