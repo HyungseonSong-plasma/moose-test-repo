@@ -13,6 +13,7 @@ from unittest import mock
 
 import p3_diagnostics as diag
 import public_p3_run as p3
+import check_public_p3_b_completion as complete_b
 
 
 class NativeP3PolicyTests(unittest.TestCase):
@@ -56,7 +57,7 @@ class NativeP3PolicyTests(unittest.TestCase):
         return argparse.Namespace(
             control=control, historical=historical, candidate=candidate,
             output=root / "attempt001", p1_evidence=evidence, case="417",
-            timeout_seconds=60, mode=mode, authorize_full_p3=mode == "full",
+            timeout_seconds=60, mode=mode, authorize_full_p3=mode in ("full", "complete-b"),
         )
 
     def test_b_p2_pass_b_p3_timeout_does_not_run_c_and_is_reported(self):
@@ -193,6 +194,81 @@ class NativeP3PolicyTests(unittest.TestCase):
             file.write_text("time,ne_max\n0,1\n")
             with self.assertRaisesRegex(Exception, "461"):
                 p3.verify_native_csv(file)
+
+
+
+class BCompletionProofTests(unittest.TestCase):
+    def proof(self, *, status="PASS"):
+        b = {
+            "P2": "PASS", "P3": status, "wall_seconds": 15000.0,
+            "timeout_budget_seconds": 20400, "last_reported_step": 460,
+            "heartbeat_samples": 240, "native_log_bytes": 123456,
+            "max_observed_cpu_percent": 100.0,
+            "max_observed_memory_bytes": 512000000,
+        }
+        if status == "PASS":
+            b.update({
+                "reason": None, "exit_code": 0, "timed_out": False,
+                "termination": "EXIT", "frames": 461,
+                "t_end_seconds": 0.0001, "native_exodus_sha256": "a" * 64,
+                "native_csv_sha256": "b" * 64,
+                "native_exodus_bytes": 1000, "native_csv_bytes": 2000,
+            })
+        else:
+            b.update({
+                "reason": "P3_TIMEOUT", "exit_code": None,
+                "timed_out": True, "termination": "TIMEOUT",
+            })
+        return {
+            "schema": "issue493_public_p3_native_v2", "mode": "complete-b",
+            "case": "417", "source_sha": complete_b.EXPECTED_SOURCE,
+            "candidate_sha": complete_b.EXPECTED_CANDIDATE,
+            "oci_image": complete_b.EXPECTED_OCI,
+            "P0": "PASS", "P1": "PASS", "P2": "HOLD", "P3": "HOLD",
+            "P4": "NOT_RUN", "science": "SCIENCE_HOLD",
+            "variants": {"B": b, "C": {"P2": "NOT_RUN", "P3": "NOT_RUN"}},
+            "p2_passed_arms": ["B"], "p2_not_run_arms": ["C"],
+            "p3_passed_arms": ["B"] if status == "PASS" else [],
+        }
+
+    def test_full_461_frame_proof_is_b_only_not_aggregate_p3(self):
+        verdict = complete_b.validate(self.proof(), "417")
+        self.assertEqual(verdict["b_p3"], "PASS")
+        self.assertEqual(verdict["aggregate_p3"], "HOLD")
+        self.assertEqual(verdict["c_p3"], "NOT_RUN")
+
+    def test_true_timeout_does_not_claim_complete_b(self):
+        report = self.proof(status="HOLD")
+        report["variants"]["B"]["wall_seconds"] = 20400.5
+        verdict = complete_b.validate(report, "417")
+        self.assertEqual(verdict["b_p3"], "HOLD")
+        self.assertEqual(verdict["b_reason"], "P3_TIMEOUT")
+
+    def test_reject_forged_output_wrong_case_or_c_execution(self):
+        report = self.proof()
+        with self.assertRaisesRegex(ValueError, "CASE_MISMATCH"):
+            complete_b.validate(report, "941")
+        report["variants"]["B"]["frames"] = 460
+        with self.assertRaisesRegex(ValueError, "FALSE_SOLVE_PASS"):
+            complete_b.validate(report, "417")
+        report = self.proof()
+        report["variants"]["C"]["P3"] = "PASS"
+        with self.assertRaisesRegex(ValueError, "C_FORBIDDEN"):
+            complete_b.validate(report, "417")
+        report = self.proof()
+        report["variants"]["B"]["native_csv_sha256"] = "wrong"
+        with self.assertRaisesRegex(ValueError, "OUTPUT_HASH_ABSENT"):
+            complete_b.validate(report, "417")
+
+    def test_reject_wrong_budget_and_false_aggregate(self):
+        report = self.proof()
+        report["variants"]["B"]["timeout_budget_seconds"] = 600
+        with self.assertRaisesRegex(ValueError, "WRONG_BUDGET"):
+            complete_b.validate(report, "417")
+        report = self.proof()
+        report["P3"] = "PASS"
+        with self.assertRaisesRegex(ValueError, "AGGREGATE_FALSE_PASS"):
+            complete_b.validate(report, "417")
 
 
 class SanitizedTelemetryTests(unittest.TestCase):
