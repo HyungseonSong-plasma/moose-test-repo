@@ -36,9 +36,17 @@ class ExperimentTests(unittest.TestCase):
             with self.assertRaisesRegex(run.RunError, 'SHA-256 mismatch'):
                 run.preflight(modified, pathlib.Path(temp) / 'extracted')
 
-    def test_nonunity_compile_prevents_boltzmann_anonymous_symbol_collision(self):
+    def test_only_physics_utils_excluded_from_unity_with_vendor_cache_retained(self):
         import inspect
-        self.assertIn('MOOSE_UNITY=false', inspect.getsource(run.build))
+        source = inspect.getsource(run.build)
+        self.assertIn('MOOSE_UNITY=true', source)
+        self.assertIn('app_non_unity_dirs=/app/physics_app/src/utils', source)
+        self.assertNotIn('MOOSE_UNITY=false', source)
+        workflow = (pathlib.Path(__file__).resolve().parents[2] /
+                    '.github/workflows/ci.yml').read_text(encoding='utf-8')
+        self.assertIn('MOOSE_UNITY=true app_non_unity_dirs=/workspace/physics_app/src/utils', workflow)
+        self.assertNotIn('make -j2 MOOSE_UNITY=false', workflow)
+        self.assertIn('if (( jobs > 4 ))', workflow)
 
     def test_docker_invocation_pins_image_and_research_controls(self):
         command = run.docker_cmd([(pathlib.Path('/tmp/example'), '/case', 'rw')], '/case', 'true')
