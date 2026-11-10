@@ -179,7 +179,7 @@ never auto-enabled.
 | \`fem_species\`, \`fvm_species\` | \`vector<string>\` each | At least one nonempty, disjoint, unique; each species known in catalogue and supported by its chosen FEM/FV charged-transport model. |
 | Derived Continuity state variables (no user-facing `variables`) | internal naming policy + verified species registry | Deterministically generate names using species ID and state representation. Default log-number form: `log_n<species_id>` (e.g. `e` → `log_ne`). Historical S6 aliases `O2p/Om/Op → log_ni/log_nm/log_nop` require audited internal compatibility mapping before new naming can replace them. Preserve state transformation, units, reference scale and physical ownership. |
 | \`electric_field\` | typed field reference | Required for drift-active species; may be external Poisson field; never created twice. |
-| `mobility`, `diffusivity` | `vector<MooseFunctorName>` (shared FEM/FVM option keys) | Required 1:1 with activated FEM then FVM species, units **m²/(V s)** and **m²/s**. Do not silently broadcast a single electron coefficient to several FV ions. `electron_diffusivity` is the intended new provider name; changing native `electron_diffusion` production and consumers is a distinct, parity-gated change. |
+| `mobility`, `diffusivity` | `vector<MooseFunctorName>` (shared FEM/FVM option keys) | Required 1:1 with activated FEM then FVM species, units **m²/(V s)** and **m²/s**. Do not silently broadcast a single electron coefficient to several FV ions. `electron_diffusivity` is a possible later provider rename but is **out of scope** for the option-first implementation. Keep native `electron_diffusion` production and consumers unchanged and bind it through the new `diffusivity` option. |
 | `fem_charge_numbers`, `fvm_charge_numbers` | `vector<int>` each | Required for each nonempty discretization list; numbers align with that list's species, and must agree with the signed charge recorded in the species registry. S6: FEM `-1`, FVM `1 -1 1`. |
 | Generated Continuity kernels (no `fem_kernel_names` or `fvm_kernel_names` option) | internal naming | Each activated species gets precisely `<canonical_species_id>_transport` (e.g. `e_transport`); collision-check against legacy `ne_transport` by variable and physical equation, not just name. |
 | \`reaction_sources\` | \`vector<MooseFunctorName>\` | Required 1:1 in FEM-then-FV species order; explicit zero permitted and number/molar conversion preserved. |
@@ -424,7 +424,7 @@ candidates; a valid Native MOOSE syntax cannot be inferred.
           fem_charge_numbers = '-1'
           electric_field = E_dc_from_poisson
           mobility = 'electron_mobility'
-          diffusivity = 'electron_diffusivity'
+          diffusivity = 'electron_diffusion'  # existing Functor name; rename deferred
           reaction_sources = 'S_e_from_chemistry'
           boundary_contract = electron_bcs_v1.json
         []
