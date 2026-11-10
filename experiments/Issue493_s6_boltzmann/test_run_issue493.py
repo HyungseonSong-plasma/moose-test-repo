@@ -46,10 +46,9 @@ class ExperimentTests(unittest.TestCase):
         self.assertIn('MOOSE_UNITY=true', harness)
         self.assertIn('app_non_unity_dirs=', harness)
         self.assertNotIn('"MOOSE_UNITY=false"', harness)
-        workflow = (pathlib.Path(__file__).resolve().parents[2] /
-                    '.github/workflows/ci.yml').read_text(encoding='utf-8')
-        job = workflow.split('  issue493-pr491-native-source-build:', 1)[1]
-        self.assertIn('github.event.pull_request.number == 497', job)
+        job = (pathlib.Path(__file__).resolve().parents[2] /
+               'ci/workflow_templates/issue493-public-p3-job.yml').read_text(encoding='utf-8')
+        self.assertNotIn('github.event.pull_request.number', job)
         self.assertIn('native_build.py', job)
         self.assertIn('--profile auto --max-jobs 4 --max-attempts 3', job)
         self.assertNotIn('MOOSE_UNITY=false', job)
@@ -57,13 +56,14 @@ class ExperimentTests(unittest.TestCase):
     def test_ci_nested_docker_shell_quotes_and_memory_probe(self):
         workflow = (pathlib.Path(__file__).resolve().parents[2] /
                     '.github/workflows/ci.yml').read_text(encoding='utf-8')
-        job = workflow.split('  issue493-pr491-native-source-build:', 1)[1]
-        marker = '-v "$PWD:/workspace" "$BUILD_BASE_REF" -lc ' + chr(39)
+        job = (pathlib.Path(__file__).resolve().parents[2] /
+               'ci/workflow_templates/issue493-public-p3-job.yml').read_text(encoding='utf-8')
+        marker = '"$BUILD_BASE_REF" -lc ' + chr(39)
         self.assertEqual(job.count(marker), 1)
         payload = job.split(marker, 1)[1].split(
             '\n            ' + chr(39) + '\n', 1)[0]
         self.assertNotIn(chr(39), payload, 'nested single quote will break bash -lc')
-        self.assertIn('python3 /workspace/.native_harness/physics_harness/execution/native_build.py', payload)
+        self.assertIn('python3 /harness/physics_harness/execution/native_build.py', payload)
         self.assertIn('--smoke-input ci/smoke.i', payload)
         self.assertNotIn('awk ', payload)
         self.assertNotIn('while read -r mem_key mem_value mem_unit', payload)

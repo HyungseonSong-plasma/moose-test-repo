@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "profiles": [
+    {
+      "key": "general",
+      "purpose": "general",
+      "trigger": "push_pull_request",
+      "template": "ci/workflow_templates/general-ci.yml",
+      "output": ".github/workflows/ci.yml",
+      "name": "Repository CI"
+    },
+    {
+      "key": "issue493-public-p3",
+      "purpose": "special",
+      "issue": 493,
+      "trigger": "self_path_main_once",
+      "template": "ci/workflow_templates/issue493-public-p3-job.yml",
+      "output": ".github/workflows/issue493-public-p3-once.yml",
+      "name": "Issue 493 Public S6 P3 Native",
+      "activation": "deferred"
+    }
+  ]
+}
