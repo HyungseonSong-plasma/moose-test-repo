@@ -60,7 +60,10 @@ the actual successful run mixes FEM and FV.
         [Continuity]
           fem_species = 'e'
           fvm_species = 'O2p Om Op'
-          variables = 'log_ne log_ni log_nm log_nop'
+          fem_charge_numbers = '-1'
+          fvm_charge_numbers = '1 -1 1'
+          # variable and kernel names derived internally
+          # mobility/diffusivity must bind all activated species
         []
         [Energy]
           fem_species = 'e'
@@ -83,13 +86,25 @@ the actual successful run mixes FEM and FV.
 []
 ```
 
-`fem_species` and `fvm_species` must be unique and disjoint in each
-equation. For the DD Continuity binding vectors, the proposed positional
-order is **FEM list first, then FV list**; this preserves the known
-`e->log_ne`, `O2p->log_ni`, `Om->log_nm`,
-`Op->log_nop` correspondence. In G1/G2 a typed explicit
-species-to-variable map is preferable if future run input order differs;
-**do not silently reorder** old fields or sources. Both NS blocks must
+DD Continuity `fem_species` and `fvm_species` are unique and disjoint.
+There is **no user-level `variables` or `fem_kernel_names`/`fvm_kernel_names`**:
+Physics derives variable names deterministically (`log_n<species_id>` for
+log-number states) and kernel names exactly as `<species_id>_transport`.
+The current S6 e/O2p/Om/Op variable names are `log_ne/log_ni/log_nm/log_nop`:
+those charged-ion names differ from generic name derivation and require an
+audited *internal* S6 alias registry until G2 proves consumer compatibility.
+Likewise `ne_transport` cannot silently become `e_transport` during the
+pinned Issue #493 P3 B/C comparison.
+
+The shared coefficient options `mobility` and `diffusivity` bind in FEM-first,
+then FVM order. This four-species illustration requires four verified provider
+bindings; a single electron mobility/diffusivity MUST NOT be broadcast to FV
+ions. `fem_charge_numbers` and `fvm_charge_numbers` align with their
+respective species lists and match catalogue charges. The new public name
+`electron_diffusivity` does not by itself rename an existing native provider
+named `electron_diffusion`; preserve the original for P3 and require a
+separate source/consumer migration proof. Never silently reorder state,
+coefficients, charges or reaction sources. Both NS blocks must
 declare identical neutral mixture constituents and a single
 mixture-velocity owner. Existing explicit neutral mass-fraction equations
 `w_O2s,w_O,w_Os` remain native until given a separate owner.
