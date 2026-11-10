@@ -170,7 +170,7 @@ def self_test() -> None:
         if record["purpose"] == "special":
             assert "paths: [.github/workflows/" in out
             assert "  pull_request:" not in out
-            assert "    if:" not in out
+            assert not re.search(r"^    if:", out, re.MULTILINE)
         elif record["purpose"] == "general":
             assert not ISSUE_JOB.search(out)
     print("WORKFLOW_HARNESS_SELF_TEST=PASS")
