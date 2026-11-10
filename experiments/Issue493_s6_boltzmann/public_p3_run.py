@@ -4,8 +4,8 @@
 This runner never reads protected original rates, never changes physics inputs,
 never starts P4, and never publishes raw Exodus, CSV or native solver logs.
 Diagnostic mode samples B for up to 15 minutes and NEVER claims P3 PASS.
-Complete-b mode explicitly authorizes one B-only 460-step solve with the bounded
-20,400s runner budget, without claiming B/C parity. Full mode requires explicit
+Complete-b and complete-c modes explicitly authorize one arm per job
+using the bounded 20,400s solver budget, without claiming B/C parity. Full mode requires explicit
 authorization, runs B then C and demands 461 frames.
 """
 from __future__ import annotations
@@ -156,11 +156,11 @@ def run_solve(candidate: Path, staged: Path, layers: list[str], *,
 def run_case(args: argparse.Namespace) -> dict:
     if args.case not in p2.CASES or args.timeout_seconds < 1:
         raise P3Error("INVALID_CASE_OR_TIMEOUT", "P0")
-    if args.mode not in ("diagnostic", "full", "complete-b"):
+    if args.mode not in ("diagnostic", "full", "complete-b", "complete-c"):
         raise P3Error("INVALID_EXECUTION_MODE", "P0")
     if args.mode == "diagnostic" and args.timeout_seconds > 900:
         raise P3Error("DIAGNOSTIC_BUDGET_EXCEEDS_15_MINUTES", "P0")
-    if args.mode in ("full", "complete-b") and not args.authorize_full_p3:
+    if args.mode in ("full", "complete-b", "complete-c") and not args.authorize_full_p3:
         raise P3Error("FULL_P3_EXPLICIT_ACK_REQUIRED", "P0")
     result = {
         "schema": "issue493_public_p3_native_v2", "case": args.case,
@@ -198,9 +198,11 @@ def run_case(args: argparse.Namespace) -> dict:
             "baseline_plasma_plus_unstructured_cover_plus_wafer.msh"
         )
         manifest = json.loads((control / p2.DECKS / "manifest.json").read_text())
-        for variant in p2.VARIANTS:  # B first; diagnostic/complete-b never start C
+        for variant in p2.VARIANTS:  # one arm per completion job
             if args.mode in ("diagnostic", "complete-b") and variant == "C":
                 break
+            if args.mode == "complete-c" and variant == "B":
+                continue
             rec = result["variants"][variant]
             case_dir = args.output / f"{args.case}_{variant}"
             layers = p2.stage(control, historical, args.case, variant, case_dir, manifest)
@@ -265,7 +267,7 @@ def main() -> int:
     parser.add_argument("--p1-evidence", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--case", choices=p2.CASES, required=True)
-    parser.add_argument("--mode", choices=("diagnostic", "full", "complete-b"), required=True)
+    parser.add_argument("--mode", choices=("diagnostic", "full", "complete-b", "complete-c"), required=True)
     parser.add_argument("--timeout-seconds", type=int, default=None)
     parser.add_argument("--authorize-full-p3", action="store_true",
                         help="Explicitly acknowledge a full, expensive 460-step B/C run")
@@ -276,12 +278,12 @@ def main() -> int:
         args.timeout_seconds = args.timeout_seconds or 600
         if not 1 <= args.timeout_seconds <= 900:
             parser.error("diagnostic budget must be 1–900 seconds")
-    elif args.mode == "complete-b":
+    elif args.mode in ("complete-b", "complete-c"):
         if not args.authorize_full_p3:
-            parser.error("complete-b requires --authorize-full-p3")
+            parser.error(f"{args.mode} requires --authorize-full-p3")
         args.timeout_seconds = args.timeout_seconds or 20400
         if not 1 <= args.timeout_seconds <= 20400:
-            parser.error("complete-b B/P3 budget must be 1–20400 seconds")
+            parser.error(f"{args.mode} single-arm P3 budget must be 1–20400 seconds")
     else:
         if not args.authorize_full_p3:
             parser.error("full mode requires --authorize-full-p3")
@@ -292,9 +294,10 @@ def main() -> int:
     print(json.dumps(result, sort_keys=True))
     # One completed B is not full B/C P3 or P4. Completion is a mode-local
     # execution verdict, while the aggregate P3 remains HOLD until C exists.
-    if args.mode == "complete-b":
-        return 0 if (result["variants"]["B"]["P3"] == "PASS"
-                     and result["variants"]["C"]["P3"] == "NOT_RUN"
+    if args.mode in ("complete-b", "complete-c"):
+        arm, other = ("B", "C") if args.mode == "complete-b" else ("C", "B")
+        return 0 if (result["variants"][arm]["P3"] == "PASS"
+                     and result["variants"][other]["P3"] == "NOT_RUN"
                      and result["P3"] == "HOLD") else 3
     return 0 if result["P3"] == "PASS" else 3
 
