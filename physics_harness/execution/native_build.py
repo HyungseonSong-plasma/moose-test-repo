@@ -173,10 +173,10 @@ def classify_failure(log_text: str) -> str:
     # Terminal failures always take precedence over Unity-redefinition recovery.
     if "feproblembase" in lower and "squirrel" in lower:
         return "VENDOR_SOURCE_OR_ABI_FAILURE"
+    if "no free inodes" in lower or "inode exhaustion" in lower:
+        return "INODE_CAPACITY_EXHAUSTED"
     if "no space left on device" in lower or "disk quota exceeded" in lower:
         return "DISK_CAPACITY_EXHAUSTED"
-    if "no space left on device" in lower or "no free inodes" in lower:
-        return "INODE_CAPACITY_EXHAUSTED"
     if ("killed signal terminated program" in lower or "out of memory" in lower
             or "cannot allocate memory" in lower or "exit status 137" in lower):
         return "RESOURCE_EXHAUSTION"
