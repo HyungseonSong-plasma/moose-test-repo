@@ -64,6 +64,7 @@ def profiles(root: Path = ROOT) -> list[dict]:
         elif purpose == "special":
             filename = output.name
             if (item.get("trigger") != "self_path_main_once" or
+                    item.get("activation") not in {"deferred", "active"} or
                     not SPECIAL_OUTPUT.fullmatch(filename) or
                     not isinstance(item.get("issue"), int) or
                     item["issue"] <= 0 or
@@ -140,12 +141,19 @@ def outputs(root: Path = ROOT) -> dict[Path, str]:
     return {
         root / record["output"]: render(root, record)
         for record in profiles(root)
+        if record["purpose"] == "general" or record.get("activation") == "active"
     }
 
 
 def check(root: Path = ROOT) -> list[str]:
     issues = []
-    for path, expected in outputs(root).items():
+    for record in profiles(root):
+        path = root / record["output"]
+        if record.get("activation") == "deferred":
+            if path.exists():
+                issues.append(f"WORKFLOW_DEFERRED_OUTPUT_PRESENT: {path.relative_to(root)}")
+            continue
+        expected = render(root, record)
         if not path.is_file():
             issues.append(f"WORKFLOW_GENERATED_OUTPUT_MISSING: {path.relative_to(root)}")
         elif path.read_text(encoding="utf-8") != expected:
@@ -157,6 +165,8 @@ def self_test() -> None:
     entries = profiles()
     assert route("general", records=entries)["output"] == ".github/workflows/ci.yml"
     assert route("special", issue=493, records=entries)["trigger"] == "self_path_main_once"
+    assert route("special", issue=493, records=entries)["activation"] == "deferred"
+    assert not any("issue493" in str(p) for p in outputs())
     for purpose, issue in (("special", 492), ("unsupported", None),
                            ("general", 493)):
         try:
