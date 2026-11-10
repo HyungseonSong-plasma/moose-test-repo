@@ -10,6 +10,12 @@ PILOT=experiments/Issue402_plasma_dsl_g1
 EVIDENCE="$PILOT/evidence"
 mkdir -p "$EVIDENCE"
 SOURCE_SHA=29d1acc6ef7969908b86719e4b95c73a1565136d
+# Match the pinned public Issue #493 400 W research-only preparation flags.
+# The historical replay script rejects 400 W unless this explicit opt-in is set.
+export OXYGEN_RESEARCH_400=1
+export OXYGEN_RESEARCH_FULL24=0
+export OXYGEN_RESEARCH_EI2738_FORMULA=0
+export OXYGEN_RESEARCH_QUICK_5MIN=0
 EXPECTED_HEAD="$(git rev-parse HEAD)"
 test -x physics_app/physics-opt
 test ! -e "$PILOT/evidence/issue402_option_s6_p2_status.json"
