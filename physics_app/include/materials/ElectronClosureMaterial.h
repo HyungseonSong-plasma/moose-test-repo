@@ -22,11 +22,11 @@
  *   - reduced/physical electron mobility and diffusion
  *   - Maxwellian 5/3 electron-energy mobility and diffusion
  */
-class PhysicsElectronClosureMaterial : public FunctorMaterial
+class ElectronClosureMaterial : public FunctorMaterial
 {
 public:
   static InputParameters validParams();
-  PhysicsElectronClosureMaterial(const InputParameters & parameters);
+  ElectronClosureMaterial(const InputParameters & parameters);
 
 protected:
   enum class BoundsPolicy

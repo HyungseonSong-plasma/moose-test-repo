@@ -1,13 +1,15 @@
-#include "PhysicsPlasmaChargeTransportMaterial.h"
+#include "PlasmaChargeTransportMaterial.h"
 #include "Physics.h"
 
 #include <cmath>
 #include <set>
 
-registerMooseObject("PhysicsApp", PhysicsPlasmaChargeTransportMaterial);
+registerMooseObject("PhysicsApp", PlasmaChargeTransportMaterial);
+// Keep historical input "type" tokens usable; no legacy C++ class remains.
+registerMooseObjectAliased("PhysicsApp", PlasmaChargeTransportMaterial, "PhysicsPlasmaChargeTransportMaterial");
 
 InputParameters
-PhysicsPlasmaChargeTransportMaterial::validParams()
+PlasmaChargeTransportMaterial::validParams()
 {
   auto params = FunctorMaterial::validParams();
 
@@ -55,7 +57,7 @@ PhysicsPlasmaChargeTransportMaterial::validParams()
   return params;
 }
 
-PhysicsPlasmaChargeTransportMaterial::PhysicsPlasmaChargeTransportMaterial(
+PlasmaChargeTransportMaterial::PlasmaChargeTransportMaterial(
     const InputParameters & parameters)
   : FunctorMaterial(parameters),
     _potential(getFunctor<ADReal>("potential")),
@@ -77,16 +79,16 @@ PhysicsPlasmaChargeTransportMaterial::PhysicsPlasmaChargeTransportMaterial(
       _ion_charges.size() != n ||
       _ion_mobility_names.size() != n ||
       _ion_diffusion_names.size() != n)
-    mooseError("PhysicsPlasmaChargeTransportMaterial: all ion parameter vectors "
+    mooseError("PlasmaChargeTransportMaterial: all ion parameter vectors "
                "must have the same length.");
 
   if (n == 0)
-    mooseError("PhysicsPlasmaChargeTransportMaterial requires at least one ion.");
+    mooseError("PlasmaChargeTransportMaterial requires at least one ion.");
 
   std::set<std::string> unique_ids;
   for (const auto & id : _ion_ids)
     if (!unique_ids.insert(id).second)
-      mooseError("PhysicsPlasmaChargeTransportMaterial duplicate ion_id '", id, "'.");
+      mooseError("PlasmaChargeTransportMaterial duplicate ion_id '", id, "'.");
 
   _ion_mass_fractions.resize(n);
   _ion_mobilities.resize(n);

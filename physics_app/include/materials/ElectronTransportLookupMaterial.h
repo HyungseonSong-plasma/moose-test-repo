@@ -29,11 +29,11 @@
  *
  * N_n is neutral-gas number density, not the Avogadro constant.
  */
-class PhysicsElectronTransportLookupMaterial : public FunctorMaterial
+class ElectronTransportLookupMaterial : public FunctorMaterial
 {
 public:
   static InputParameters validParams();
-  PhysicsElectronTransportLookupMaterial(const InputParameters & parameters);
+  ElectronTransportLookupMaterial(const InputParameters & parameters);
 
 protected:
   enum class BoundsPolicy

@@ -1,13 +1,15 @@
-#include "PhysicsElectronClosureMaterial.h"
+#include "ElectronClosureMaterial.h"
 #include "Physics.h"
 
 #include <cmath>
 #include <stdexcept>
 
-registerMooseObject("PhysicsApp", PhysicsElectronClosureMaterial);
+registerMooseObject("PhysicsApp", ElectronClosureMaterial);
+// Keep historical input "type" tokens usable; no legacy C++ class remains.
+registerMooseObjectAliased("PhysicsApp", ElectronClosureMaterial, "PhysicsElectronClosureMaterial");
 
 InputParameters
-PhysicsElectronClosureMaterial::validParams()
+ElectronClosureMaterial::validParams()
 {
   auto params = FunctorMaterial::validParams();
 
@@ -86,7 +88,7 @@ PhysicsElectronClosureMaterial::validParams()
   return params;
 }
 
-PhysicsElectronClosureMaterial::PhysicsElectronClosureMaterial(
+ElectronClosureMaterial::ElectronClosureMaterial(
     const InputParameters & parameters)
   : FunctorMaterial(parameters),
     _physical_state(getParam<MooseEnum>("state_form") == "physical_eV"),
@@ -137,13 +139,13 @@ PhysicsElectronClosureMaterial::PhysicsElectronClosureMaterial(
     const ADReal energy_density = (*_electron_energy_density)(r, state);
 
     if (!std::isfinite(density.value()) || density.value() <= 0.0)
-      mooseError("PhysicsElectronClosureMaterial requires electron density > 0; got ",
+      mooseError("ElectronClosureMaterial requires electron density > 0; got ",
                  density.value(),
                  ".");
 
     if (!std::isfinite(energy_density.value()) || energy_density.value() < 0.0)
       mooseError(
-          "PhysicsElectronClosureMaterial requires electron energy density >= 0; got ",
+          "ElectronClosureMaterial requires electron energy density >= 0; got ",
           energy_density.value(),
           ".");
 
@@ -153,7 +155,7 @@ PhysicsElectronClosureMaterial::PhysicsElectronClosureMaterial(
             : _electron_energy_reference_eV * energy_density / density;
 
     if (!std::isfinite(value.value()))
-      mooseError("PhysicsElectronClosureMaterial produced non-finite mean electron energy.");
+      mooseError("ElectronClosureMaterial produced non-finite mean electron energy.");
 
     return value;
   };
@@ -164,10 +166,10 @@ PhysicsElectronClosureMaterial::PhysicsElectronClosureMaterial(
     const ADReal temperature = _gas_temperature(r, state);
 
     if (pressure.value() <= 0.0)
-      mooseError("PhysicsElectronClosureMaterial requires gas_pressure > 0 Pa.");
+      mooseError("ElectronClosureMaterial requires gas_pressure > 0 Pa.");
 
     if (temperature.value() <= 0.0)
-      mooseError("PhysicsElectronClosureMaterial requires gas_temperature > 0 K.");
+      mooseError("ElectronClosureMaterial requires gas_temperature > 0 K.");
 
     return pressure / (PHYSICS_CONSTANTS::k_boltz * temperature);
   };
@@ -240,8 +242,8 @@ PhysicsElectronClosureMaterial::PhysicsElectronClosureMaterial(
       });
 }
 
-PhysicsElectronClosureMaterial::BoundsPolicy
-PhysicsElectronClosureMaterial::parseBoundsPolicy(const std::string & value)
+ElectronClosureMaterial::BoundsPolicy
+ElectronClosureMaterial::parseBoundsPolicy(const std::string & value)
 {
   if (value == "error")
     return BoundsPolicy::Error;
@@ -250,11 +252,11 @@ PhysicsElectronClosureMaterial::parseBoundsPolicy(const std::string & value)
     return BoundsPolicy::Clamp;
 
   throw std::runtime_error(
-      "PhysicsElectronClosureMaterial lookup_bounds_policy must be 'error' or 'clamp'.");
+      "ElectronClosureMaterial lookup_bounds_policy must be 'error' or 'clamp'.");
 }
 
 ADReal
-PhysicsElectronClosureMaterial::interpolate(const ADReal & coordinate,
+ElectronClosureMaterial::interpolate(const ADReal & coordinate,
                                              std::size_t value_index) const
 {
   const auto & x = _table.coordinate();

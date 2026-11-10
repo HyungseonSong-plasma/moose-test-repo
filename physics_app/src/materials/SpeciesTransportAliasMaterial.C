@@ -1,11 +1,13 @@
-#include "PhysicsSpeciesTransportAliasMaterial.h"
+#include "SpeciesTransportAliasMaterial.h"
 
 #include <cctype>
 
-registerMooseObject("PhysicsApp", PhysicsSpeciesTransportAliasMaterial);
+registerMooseObject("PhysicsApp", SpeciesTransportAliasMaterial);
+// Keep historical input "type" tokens usable; no legacy C++ class remains.
+registerMooseObjectAliased("PhysicsApp", SpeciesTransportAliasMaterial, "PhysicsSpeciesTransportAliasMaterial");
 
 InputParameters
-PhysicsSpeciesTransportAliasMaterial::validParams()
+SpeciesTransportAliasMaterial::validParams()
 {
   auto params = FunctorMaterial::validParams();
   params.addClassDescription(
@@ -20,7 +22,7 @@ PhysicsSpeciesTransportAliasMaterial::validParams()
   return params;
 }
 
-PhysicsSpeciesTransportAliasMaterial::PhysicsSpeciesTransportAliasMaterial(
+SpeciesTransportAliasMaterial::SpeciesTransportAliasMaterial(
     const InputParameters & parameters)
   : FunctorMaterial(parameters),
     _mobility(getFunctor<ADReal>("mobility_source")),
