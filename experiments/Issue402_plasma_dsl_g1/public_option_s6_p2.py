@@ -125,7 +125,7 @@ def run_one(binary: Path, binary_sha: str, workspace: Path,
             "--env", "OXYGEN_RESEARCH_EI2738_FORMULA=0",
             "--env", "OXYGEN_RESEARCH_QUICK_5MIN=0",
             "--mount", f"type=bind,src={ROOT.resolve()},dst=/app,readonly",
-            "--mount", f"type=bind,src={workspace.resolve()},dst=/case,readonly",
+            "--mount", f"type=bind,src={workspace.resolve()},dst=/case",
             OCI, "-lc", "set -euo pipefail; source /environment; " + command]
     try:
         result = subprocess.run(args, capture_output=True, text=True,
