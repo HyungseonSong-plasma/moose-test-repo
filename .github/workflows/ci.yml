@@ -522,3 +522,83 @@ jobs:
           path: boltzmann-candidate-bin/*
           if-no-files-found: error
           retention-days: 1
+
+  # Isolation: PR #494 only. No research lookup, private rates or GitHub secrets.
+  issue493-pr491-native-source-build:
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.number == 494 &&
+      github.event.pull_request.head.repo.full_name == 'HyungseonSong-plasma/moose-test-repo'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    permissions:
+      contents: read
+    env:
+      EXACT_PR491_SHA: bebaf47a33ff5ee1d6b933d9691bf48f5ec0f947
+      BUILD_BASE_REF: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
+    steps:
+      - name: Checkout exact reviewed PR491 source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: bebaf47a33ff5ee1d6b933d9691bf48f5ec0f947
+          fetch-depth: 1
+      - name: Verify exact candidate and pinned base
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXACT_PR491_SHA"
+          test ! -e physics_app/physics-opt
+          source physics_app/dependencies.lock
+          test "$PHYSICS_BUILD_BASE" = "$BUILD_BASE_REF"
+          echo ISSUE493_NATIVE_SOURCE_PIN_PASS
+      - name: Prepare disk and reuse existing Docker build-base
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get clean || true
+          docker system prune -af --volumes || true
+          for path in /usr/local/lib/android /opt/ghc /usr/share/dotnet /usr/share/swift /usr/local/.ghcup; do
+            sudo rm -rf "$path" || true
+          done
+          docker pull "$BUILD_BASE_REF"
+          test "$(docker image inspect "$BUILD_BASE_REF" --format '{{ index .Config.Labels "io.physics.moose.sha" }}')" = "9f388366ccf38b9c34542ec5561198249fde0ac9"
+          echo ISSUE493_BUILD_BASE_PIN_PASS
+      - name: P1 build modified PhysicsApp and native smoke check-input
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm --entrypoint /bin/bash --user 0:0 \
+            --workdir /workspace/physics_app -e EXPECTED_SHA="$EXACT_PR491_SHA" \
+            -v "$PWD:/workspace" "$BUILD_BASE_REF" -lc '
+              set -euo pipefail
+              source /environment
+              for path in /workspace /opt/physics_vendor/moose /opt/physics_vendor/crane /opt/physics_vendor/squirrel /opt/physics_vendor/zapdos; do
+                git config --global --add safe.directory "$path"
+              done
+              test "$(git -C /workspace rev-parse HEAD)" = "$EXPECTED_SHA"
+              export MOOSE_DIR=/opt/physics_vendor/moose
+              export CRANE_DIR=/opt/physics_vendor/crane
+              export SQUIRREL_DIR=/opt/physics_vendor/squirrel
+              export ZAPDOS_DIR=/opt/physics_vendor/zapdos
+              export METHOD=opt
+              make -j2
+              test -x physics-opt
+              ./physics-opt --check-input -i ci/smoke.i
+              echo ISSUE493_NATIVE_P1_PASS
+            '
+          test -x physics_app/physics-opt
+          {
+            echo "SOURCE_SHA=$EXACT_PR491_SHA"
+            echo "BUILD_BASE=$BUILD_BASE_REF"
+            sha256sum physics_app/physics-opt
+            echo "S6_417_941_B_C=NOT_RUN"
+            echo "SCIENCE_HOLD=true"
+          } > issue493-p1-provenance.txt
+      - name: Archive only non-sensitive P1 provenance
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: issue493-pr491-source-build
+          path: issue493-p1-provenance.txt
+          retention-days: 30
+          if-no-files-found: warn
