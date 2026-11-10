@@ -1,0 +1,134 @@
+# Issue493: isolated research-only private-input P2/P3/P4, NOT a science-acceptance gate.
+# PR #494 same-repo only; do not expose original protected OXYGEN24 secrets.
+name: Issue493 guarded S6 native P2 P3 P4
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+    paths:
+      - .github/workflows/issue493-s6-native-private-compare.yml
+      - experiments/Issue493_s6_boltzmann/secure_ci_run.py
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: issue493-native-guarded-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+jobs:
+  private-p234:
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.number == 494 &&
+      github.event.pull_request.head.repo.full_name == 'HyungseonSong-plasma/moose-test-repo'
+    name: Native 400W/100us ${{ matrix.case }} (dedicated private secret)
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        case: ['417', '941']
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    env:
+      PINNED_SOURCE: 29d1acc6ef7969908b86719e4b95c73a1565136d
+      PINNED_CANDIDATE: bebaf47a33ff5ee1d6b933d9691bf48f5ec0f947
+      OXYGEN_RESEARCH_400: '1'
+      OXYGEN_RESEARCH_FULL24: '0'
+      OXYGEN_RESEARCH_EI2738_FORMULA: '0'
+      OXYGEN_RESEARCH_QUICK_5MIN: '0'
+      CHEM: experiments/Issue395_powered_chemistry_ladder
+    steps:
+      - name: Check dedicated S6 input secret without exposing bytes
+        id: intake
+        shell: bash
+        env:
+          PRIVATE_INPUT_B64: ${{ secrets.ISSUE493_S6_NATIVE_INPUT_B64 }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$PRIVATE_INPUT_B64" ]]; then
+            echo "::notice::ISSUE493_P2_P3_P4_NOT_RUN dedicated ISSUE493_S6_NATIVE_INPUT_B64 secret absent"
+            echo "ready=no" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=yes" >> "$GITHUB_OUTPUT"
+            echo "ISSUE493_PRIVATE_INTAKE_AVAILABLE_NO_RATE_BYTES_LOGGED"
+          fi
+      - name: Checkout PR494 trusted direct-execution control scripts
+        if: steps.intake.outputs.ready == 'yes'
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: control
+          fetch-depth: 1
+      - name: Checkout exact original S6 input source
+        if: steps.intake.outputs.ready == 'yes'
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: 29d1acc6ef7969908b86719e4b95c73a1565136d
+          path: historical
+          fetch-depth: 1
+      - name: Checkout reviewed exact PR491 PhysicsApp candidate
+        if: steps.intake.outputs.ready == 'yes'
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: bebaf47a33ff5ee1d6b933d9691bf48f5ec0f947
+          path: candidate
+          fetch-depth: 1
+      - name: Install research staging dependencies
+        if: steps.intake.outputs.ready == 'yes'
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: Validate source revisions and prepare historical public mesh
+        if: steps.intake.outputs.ready == 'yes'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C historical rev-parse HEAD)" = "$PINNED_SOURCE"
+          test "$(git -C candidate rev-parse HEAD)" = "$PINNED_CANDIDATE"
+          python3 -m pip install --disable-pip-version-check --quiet numpy==2.1.2 scipy==1.14.1 matplotlib==3.9.2
+          cd historical
+          SRC=.github/oxygen25_eedf/initial_mixture_23xsec_transport.txt
+          DST=experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt
+          test "$(sha256sum "$SRC" | cut -d' ' -f1)" = 35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b
+          cp "$SRC" "$DST"
+          export CHATGPT_WORK_BASE_SHA="$PINNED_SOURCE"
+          bash "$CHEM/issue397_l1_power_scan_replay.sh" prepare 400
+          python3 .github/scripts/oxygen_legacy6_latest_100us.py --power-w 400 --prepare
+          test -s "$CHEM/baseline_plasma_plus_unstructured_cover_plus_wafer.msh"
+          echo ISSUE493_HISTORICAL_PUBLIC_MESH_PREP_PASS
+      - name: Decode and authenticate dedicated private new-rate package
+        if: steps.intake.outputs.ready == 'yes'
+        shell: bash
+        env:
+          PRIVATE_INPUT_B64: ${{ secrets.ISSUE493_S6_NATIVE_INPUT_B64 }}
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p "$RUNNER_TEMP/issue493-restricted"
+          printf '%s' "$PRIVATE_INPUT_B64" | base64 --decode > "$RUNNER_TEMP/issue493-restricted/input.tar.xz"
+          test "$(sha256sum "$RUNNER_TEMP/issue493-restricted/input.tar.xz" | cut -d' ' -f1)" = f869620126ee0678491d62aa1f13902e745f26fe17190789bc6dae3bd51de256
+          echo ISSUE493_NEW_RATE_INPUT_HASH_PASS
+      - name: Run private P0, P1, native P2, fresh P3 and P4 comparison
+        if: steps.intake.outputs.ready == 'yes'
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          umask 077
+          python3 control/experiments/Issue493_s6_boltzmann/secure_ci_run.py \
+            --mode run \
+            --package-tar "$RUNNER_TEMP/issue493-restricted/input.tar.xz" \
+            --case "${{ matrix.case }}" \
+            --candidate "$PWD/candidate" \
+            --historical "$PWD/historical" \
+            --output "$RUNNER_TEMP/issue493-restricted/run_${{ matrix.case }}" \
+            --timeout-seconds 19800
+          echo ISSUE493_NATIVE_P2_P3_P4_ATTEMPT_COMPLETE_${{ matrix.case }}
+      - name: Upload only sanitized experiment status, never rate/input/raw field files
+        if: always() && steps.intake.outputs.ready == 'yes'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: issue493-s6-${{ matrix.case }}-status-only-${{ github.sha }}
+          path: ${{ runner.temp }}/issue493-restricted/run_${{ matrix.case }}/non_sensitive_status.json
+          if-no-files-found: warn
+          retention-days: 30
