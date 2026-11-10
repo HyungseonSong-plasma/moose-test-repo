@@ -585,7 +585,15 @@ jobs:
               # Only physics_app/src/utils has colliding anonymous-namespace helpers.
               # app.mk filters this exact application directory out of unity sources.
               cpus="$(nproc)"
-              mem_available_kb="$(awk '/MemAvailable:/ {print $2}' /proc/meminfo)"
+              # No apostrophes in this docker bash -lc payload.
+              mem_available_kb=0
+              while read -r mem_key mem_value mem_unit; do
+                if [[ "$mem_key" == "MemAvailable:" ]]; then
+                  mem_available_kb="$mem_value"
+                  break
+                fi
+              done < /proc/meminfo
+              test "$mem_available_kb" -gt 0
               jobs="$cpus"
               if (( jobs > 4 )); then jobs=4; fi
               if (( mem_available_kb < 10000000 && jobs > 2 )); then jobs=2; fi
