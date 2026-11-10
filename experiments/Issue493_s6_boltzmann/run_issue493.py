@@ -166,7 +166,12 @@ def build(candidate: Path, log: Path, expected_sha: str) -> tuple[Path, str]:
       CRANE_DIR=/opt/physics_vendor/crane \
       SQUIRREL_DIR=/opt/physics_vendor/squirrel \
       ZAPDOS_DIR=/opt/physics_vendor/zapdos METHOD=opt; \
-      make -C physics_app -j2 MOOSE_UNITY=false; test -x physics_app/physics-opt"""
+      cpus=$(nproc); jobs=$cpus; if [ "$jobs" -gt 4 ]; then jobs=4; fi; \
+      mem_available_kb=$(awk '/MemAvailable:/ {print $2}' /proc/meminfo); \
+      if [ "$mem_available_kb" -lt 10000000 ] && [ "$jobs" -gt 2 ]; then jobs=2; fi; \
+      echo ISSUE493_CPU=$cpus JOBS=$jobs MEM_AVAILABLE_KB=$mem_available_kb; \
+      make -C physics_app -j"$jobs" MOOSE_UNITY=true app_non_unity_dirs=/app/physics_app/src/utils; \
+      test -x physics_app/physics-opt"""
     run_step(docker_cmd([(candidate, "/app", "rw")], "/app", script), log, 3600)
     fail_if(not binary.is_file(), "Docker returned success without native physics-opt")
     return binary, sha256(binary)
