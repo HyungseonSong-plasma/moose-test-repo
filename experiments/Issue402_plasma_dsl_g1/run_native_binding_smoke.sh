@@ -57,7 +57,7 @@ native --check-input -i "$PILOT/baseline.i" "$PILOT/valid_all_physics.i" \
   2>&1 | tee "$EVIDENCE/all_physics_check.log"
 echo "PLASMA_VARIABLE_CHECK_PASSED"
 
-for item in invalid_overlap invalid_fem_fv_swap invalid_no_species invalid_missing_variable invalid_energy_species invalid_chemistry_reactions invalid_poisson_variable invalid_maxwell_frequency; do
+for item in invalid_overlap invalid_fem_fv_swap invalid_no_species invalid_missing_variable invalid_energy_species invalid_chemistry_reactions invalid_poisson_variable invalid_maxwell_frequency invalid_legacy_variables invalid_legacy_kernel_names invalid_missing_fvm_charges invalid_incomplete_coefficients invalid_wrong_charge_sign; do
   set +e
   native --check-input -i "$PILOT/baseline.i" "$PILOT/$item.i" \
     > "$EVIDENCE/$item.log" 2>&1
@@ -72,6 +72,11 @@ for item in invalid_overlap invalid_fem_fv_swap invalid_no_species invalid_missi
     invalid_poisson_variable) expected='Electric potential variable was not found' ;;
     invalid_maxwell_frequency) expected='The frequency must be greater than zero' ;;
     invalid_missing_variable) expected='was not found' ;;
+    invalid_legacy_variables) expected='variables' ;;
+    invalid_legacy_kernel_names) expected='fem_kernel_names' ;;
+    invalid_missing_fvm_charges) expected='Provide fem_potential, mobility, diffusivity and FEM/FVM charge vectors together' ;;
+    invalid_incomplete_coefficients) expected='Provide one mobility and one diffusivity for each FEM/FVM species' ;;
+    invalid_wrong_charge_sign) expected='Charge does not match verified species identity' ;;
   esac
   if [[ "$code" -eq 0 ]] || ! grep -Fq "$expected" "$EVIDENCE/$item.log"; then
     echo "::error::Invalid input was accepted or reported the wrong error: $item" >&2
