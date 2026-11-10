@@ -71,7 +71,9 @@ def test_ion_aliases_are_unscaled_ad_functors_and_do_not_replace_rho_diffusion()
 
 def test_native_control_and_public_417_941_are_user_coefficient_free():
     positive = text("experiments/Issue402_plasma_dsl_g1/valid_generated_transport_options.i")
-    assert "type = SpeciesTransportAliasMaterial" in positive
+    # The small P1/P2 fixture verifies the historical factory type alias.
+    # New canonical type usage is tested separately in the S6 D overlay.
+    assert "type = PhysicsSpeciesTransportAliasMaterial" in positive
     assert "species_id = e" in positive
     assert "mobility_source = legacy_mu" in positive
     assert "diffusivity_source = legacy_D" in positive
