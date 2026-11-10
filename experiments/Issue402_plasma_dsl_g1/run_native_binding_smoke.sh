@@ -55,6 +55,11 @@ native --check-input -i "$PILOT/baseline.i" "$PILOT/valid_bindings.i" \
   2>&1 | tee "$EVIDENCE/valid_bindings_check.log"
 native --check-input -i "$PILOT/baseline.i" "$PILOT/valid_all_physics.i" \
   2>&1 | tee "$EVIDENCE/all_physics_check.log"
+# Standalone positive construction check: one generated FEM transport Kernel.
+# It is a P2-only input, not an accepted physical simulation or P3 parity run.
+native --check-input -i "$PILOT/baseline.i" "$PILOT/valid_generated_transport_options.i" \
+  2>&1 | tee "$EVIDENCE/valid_generated_transport_options.log"
+echo "PLASMA_OPTION_ONLY_FEM_GENERATION_P2_PASS"
 echo "PLASMA_VARIABLE_CHECK_PASSED"
 
 for item in invalid_overlap invalid_fem_fv_swap invalid_no_species invalid_missing_variable invalid_energy_species invalid_chemistry_reactions invalid_poisson_variable invalid_maxwell_frequency invalid_legacy_variables invalid_legacy_kernel_names invalid_missing_fvm_charges invalid_incomplete_coefficients invalid_wrong_charge_sign; do
