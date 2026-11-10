@@ -1,4 +1,4 @@
-# Deliberately invalid Continuity option contract; check-input must fail closed.
+# Deprecated user coefficient options are no longer accepted; fail closed.
 [Physics]
   [Plasmas]
     [Transport]
