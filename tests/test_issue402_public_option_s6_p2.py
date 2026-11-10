@@ -14,7 +14,7 @@ import subprocess
 ROOT = Path(__file__).resolve().parents[1]
 PILOT = ROOT / "experiments" / "Issue402_plasma_dsl_g1"
 PUBLIC = ROOT / "experiments" / "Issue493_s6_boltzmann"
-EXPECTED_OVERLAY = "a64ed0f6acbb9b96bdf0de31a977de496c01cb1eccca3badfe1fe97682818831"
+EXPECTED_OVERLAY = "d8c0d57753a30a1ab0e8f4f395fadd09b6d50bc35896ba3c1befded861dc0685"
 
 
 def extract_overlay():
@@ -30,17 +30,20 @@ def extract_overlay():
     return ast.literal_eval(matches[0].value)
 
 
-def test_pinned_new_option_overlay_keeps_existing_material_and_functor_names():
+def test_pinned_new_option_overlay_uses_canonical_species_provider_names():
     overlay = extract_overlay()
     assert hashlib.sha256(overlay.encode()).hexdigest() == EXPECTED_OVERLAY
     assert "fem_species = 'e'" in overlay
     assert "fvm_species = 'O2p Om Op'" in overlay
+    assert overlay.count("type = PhysicsSpeciesTransportAliasMaterial") == 3
+    assert "mobility_source = ion_mobility" in overlay
+    assert "diffusivity_source = ion_diffusion" in overlay
     assert "fem_charge_numbers = '-1'" in overlay
     assert "fvm_charge_numbers = '1 -1 1'" in overlay
-    assert "mobility = 'electron_mobility ion_mobility negative_ion_mobility atomic_positive_ion_mobility'" in overlay
-    assert "diffusivity = 'electron_diffusion ion_diffusion negative_ion_diffusion atomic_positive_ion_diffusion'" in overlay
+    # Provider names are derived in ContinuityPhysics, not user input.
+    assert "fem_potential = potential" in overlay
     for forbidden in ("variables =", "fem_kernel_names", "fvm_kernel_names",
-                      "fem_mobility =", "fem_diffusion =", "electron_diffusivity"):
+                      "fem_mobility =", "fem_diffusion =", "mobility =", "diffusivity ="):
         assert forbidden not in overlay
 
 

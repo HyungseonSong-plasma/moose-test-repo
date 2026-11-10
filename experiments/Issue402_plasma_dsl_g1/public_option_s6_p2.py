@@ -42,8 +42,6 @@ OVERLAY = """# Review-only new option DSL overlay; NOT pinned P3 C input.
           fem_species = 'e'
           fvm_species = 'O2p Om Op'
           fem_potential = potential
-          mobility = 'electron_mobility ion_mobility negative_ion_mobility atomic_positive_ion_mobility'
-          diffusivity = 'electron_diffusion ion_diffusion negative_ion_diffusion atomic_positive_ion_diffusion'
           fem_charge_numbers = '-1'
           fvm_charge_numbers = '1 -1 1'
         []
@@ -51,8 +49,28 @@ OVERLAY = """# Review-only new option DSL overlay; NOT pinned P3 C input.
     []
   []
 []
+[FunctorMaterials]
+  [O2p_species_transport_alias]
+    type = PhysicsSpeciesTransportAliasMaterial
+    species_id = O2p
+    mobility_source = ion_mobility
+    diffusivity_source = ion_diffusion
+  []
+  [Om_species_transport_alias]
+    type = PhysicsSpeciesTransportAliasMaterial
+    species_id = Om
+    mobility_source = negative_ion_mobility
+    diffusivity_source = negative_ion_diffusion
+  []
+  [Op_species_transport_alias]
+    type = PhysicsSpeciesTransportAliasMaterial
+    species_id = Op
+    mobility_source = atomic_positive_ion_mobility
+    diffusivity_source = atomic_positive_ion_diffusion
+  []
+[]
 """
-OVERLAY_SHA256 = "a64ed0f6acbb9b96bdf0de31a977de496c01cb1eccca3badfe1fe97682818831"
+OVERLAY_SHA256 = "d8c0d57753a30a1ab0e8f4f395fadd09b6d50bc35896ba3c1befded861dc0685"
 CASES = ("417", "941")
 VARIANTS = ("B", "D")
 
@@ -74,7 +92,7 @@ def validate_overlay() -> None:
     if hashlib.sha256(OVERLAY.encode("utf-8")).hexdigest() != OVERLAY_SHA256:
         raise ValueError("Option-only review overlay SHA changed")
     for forbidden in ("variables =", "fem_kernel_names", "fem_mobility =",
-                      "fem_diffusion =", "electron_diffusivity", "[ne_transport]"):
+                      "fem_diffusion =", "mobility =", "diffusivity =", "[ne_transport]"):
         if forbidden in OVERLAY:
             raise ValueError(f"Unexpected option/provider migration: {forbidden}")
     expected = {
@@ -85,10 +103,6 @@ def validate_overlay() -> None:
     for k, v in expected.items():
         if not re.search(r"(?m)^\s*" + k + r"\s*=\s*" + re.escape(v) + r"\s*$", OVERLAY):
             raise ValueError(f"Missing/modified binding: {k}")
-    for key in ("mobility", "diffusivity"):
-        found = re.search(r"(?m)^\s*" + key + r"\s*=\s*'([^']+)'\s*$", OVERLAY)
-        if not found or len(found.group(1).split()) != 4:
-            raise ValueError(f"{key} must bind exactly four species")
 
 
 def check_source(expected_head: str, historical: Path, binary: Path) -> dict:

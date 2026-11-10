@@ -202,15 +202,24 @@ PhysicsElectronClosureMaterial::PhysicsElectronClosureMaterial(
       [this, mean_energy](const auto & r, const auto & state) -> ADReal
       { return interpolate(mean_energy(r, state), 1); });
 
-  addFunctorProperty<ADReal>(
-      getParam<MooseFunctorName>("electron_mobility_output"),
+  // Keep the established electron_* output names as exact aliases of the
+  // canonical species-ID names. Both resolve through one table, one mean
+  // energy, and the same neutral-density conversion; no new physics.
+  const auto particle_mobility =
       [this, mean_energy, neutral_density](const auto & r, const auto & state) -> ADReal
-      { return interpolate(mean_energy(r, state), 0) / neutral_density(r, state); });
+  { return interpolate(mean_energy(r, state), 0) / neutral_density(r, state); };
+  const auto particle_diffusivity =
+      [this, mean_energy, neutral_density](const auto & r, const auto & state) -> ADReal
+  { return interpolate(mean_energy(r, state), 1) / neutral_density(r, state); };
 
-  addFunctorProperty<ADReal>(
-      getParam<MooseFunctorName>("electron_diffusion_output"),
-      [this, mean_energy, neutral_density](const auto & r, const auto & state) -> ADReal
-      { return interpolate(mean_energy(r, state), 1) / neutral_density(r, state); });
+  const auto legacy_mobility = getParam<MooseFunctorName>("electron_mobility_output");
+  const auto legacy_diffusivity = getParam<MooseFunctorName>("electron_diffusion_output");
+  addFunctorProperty<ADReal>(legacy_mobility, particle_mobility);
+  addFunctorProperty<ADReal>(legacy_diffusivity, particle_diffusivity);
+  if (legacy_mobility != "e_mobility")
+    addFunctorProperty<ADReal>("e_mobility", particle_mobility);
+  if (legacy_diffusivity != "e_diffusivity")
+    addFunctorProperty<ADReal>("e_diffusivity", particle_diffusivity);
 
   constexpr Real energy_transport_factor = 5.0 / 3.0;
 

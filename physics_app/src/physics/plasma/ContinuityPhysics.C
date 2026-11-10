@@ -51,10 +51,6 @@ ContinuityPhysics::validParams()
 
   params.addParam<VariableName>(
       "fem_potential", "Potential used by existing finite-element drift-diffusion kernels.");
-  params.addParam<std::vector<MooseFunctorName>>(
-      "mobility", "Species-ordered mobility functors [m^2/(V s)]; FEM first, then FVM.");
-  params.addParam<std::vector<MooseFunctorName>>(
-      "diffusivity", "Species-ordered diffusivity functors [m^2/s]; FEM first, then FVM.");
   params.addParam<std::vector<Real>>(
       "fem_charge_numbers", "Signed charge numbers of finite-element species.");
   params.addParam<std::vector<Real>>(
@@ -89,28 +85,20 @@ ContinuityPhysics::ContinuityPhysics(const InputParameters & parameters)
   }
 
   const bool potential = isParamValid("fem_potential");
-  const bool mobility = isParamValid("mobility");
-  const bool diffusivity = isParamValid("diffusivity");
   const bool fem_charges = isParamValid("fem_charge_numbers");
   const bool fvm_charges = isParamValid("fvm_charge_numbers");
 
-  // The existing validation-only inputs remain legal. Supplying any
-  // coefficients activates the supported FEM builder and requires a complete
-  // species-ordered binding, even when FV species are validation-only.
-  if (potential || mobility || diffusivity || fem_charges || fvm_charges)
+  // The current generated FEM transport slice is activated only when a
+  // potential/charge binding is provided. Its transport Functor names are
+  // always derived from the species identifier, never user-supplied.
+  if (potential || fem_charges || fvm_charges)
   {
-    if (!potential || !mobility || !diffusivity || !fem_charges ||
-        (!fvm.empty() && !fvm_charges))
-      paramError("mobility",
-                 "Provide fem_potential, mobility, diffusivity and FEM/FVM charge vectors together.");
+    if (!potential || !fem_charges || (!fvm.empty() && !fvm_charges))
+      paramError("fem_potential",
+                 "Provide fem_potential and FEM/FVM charge vectors together.");
     if (fem.empty())
       paramError("fem_species", "The current generated transport Kernel requires FEM species.");
 
-    const auto count = fem.size() + fvm.size();
-    if (getParam<std::vector<MooseFunctorName>>("mobility").size() != count ||
-        getParam<std::vector<MooseFunctorName>>("diffusivity").size() != count)
-      paramError("mobility",
-                 "Provide one mobility and one diffusivity for each FEM/FVM species.");
     if (getParam<std::vector<Real>>("fem_charge_numbers").size() != fem.size() ||
         (fvm_charges &&
          getParam<std::vector<Real>>("fvm_charge_numbers").size() != fvm.size()))
@@ -161,8 +149,6 @@ ContinuityPhysics::addFEKernels()
   const auto & species = getParam<std::vector<std::string>>("fem_species");
   const auto variables = resolvedContinuityVariables(
       species, getParam<std::vector<std::string>>("fvm_species"));
-  const auto & mobility = getParam<std::vector<MooseFunctorName>>("mobility");
-  const auto & diffusivity = getParam<std::vector<MooseFunctorName>>("diffusivity");
   const auto & charges = getParam<std::vector<Real>>("fem_charge_numbers");
   const std::string type = "PhysicsFEMLogMolarDriftDiffusion";
   for (std::size_t i = 0; i < species.size(); ++i)
@@ -171,10 +157,11 @@ ContinuityPhysics::addFEKernels()
     params.set<NonlinearVariableName>("variable") = variables[i];
     params.set<std::vector<VariableName>>("potential") =
         {getParam<VariableName>("fem_potential")};
-    params.set<MooseFunctorName>("mobility") = mobility[i];
-    // Lower-level MOOSE Kernel interface is unchanged. Provider names such as
-    // electron_diffusion are retained; only the Physics input key changed.
-    params.set<MooseFunctorName>("diffusion") = diffusivity[i];
+    // Canonical provider names are species_id + "_mobility" and
+    // species_id + "_diffusivity". Never infer fallback coefficients.
+    params.set<MooseFunctorName>("mobility") = species[i] + "_mobility";
+    // The lower-level Kernel parameter is still called "diffusion".
+    params.set<MooseFunctorName>("diffusion") = species[i] + "_diffusivity";
     params.set<Real>("charge_number") = charges[i];
     assignBlocks(params, _blocks);
     const std::string kernel_name = species[i] + "_transport";
