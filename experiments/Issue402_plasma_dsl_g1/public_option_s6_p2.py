@@ -166,6 +166,14 @@ def persist_report(evidence: Path, report: dict) -> None:
 def execute(historical: Path, binary: Path, expected_head: str,
             evidence: Path, timeout_seconds: int = 1200) -> dict:
     validate_overlay()
+    gate_file = evidence / "option_s6_environment.json"
+    if not gate_file.is_file():
+        raise ValueError("Independent public P0/environment gate evidence missing")
+    gate = json.loads(gate_file.read_text())
+    if (gate.get("source_sha") != expected_head or gate.get("image") != OCI or
+        any(gate.get(k) != "PASS" for k in
+            ("public_p0", "docker_mount", "root_scratch_create_and_cleanup", "host_cleanup"))):
+        raise ValueError("Independent P0/environment gate evidence does not match exact source/OCI")
     public = p2.preflight(ROOT)
     identity = check_source(expected_head, historical, binary)
     evidence.mkdir(parents=True, exist_ok=True)
@@ -245,7 +253,7 @@ def main() -> int:
     try:
         result = execute(args.historical.resolve(), args.binary.resolve(),
                          args.expected_head, args.evidence.resolve())
-        exit_code = 0 if result["P2"] == "PASS" else 3
+        exit_code = 0 if (result["P2"] == "PASS" and result.get("cleanup") == "PASS" and result["status"] == "PASS") else 3
     except Exception as exc:
         result = {"gate": "Issue402 S6 option-only public P2",
                   "status": "HOLD", "P2": "HOLD", "P3": "NOT_RUN", "P4": "NOT_RUN",
