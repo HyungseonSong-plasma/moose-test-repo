@@ -170,3 +170,34 @@ new-baseline-vs-generated-candidate. If private data or a trusted
 executor is unavailable, this gate remains `NOT_EVALUATED`; a
 small Maxwell example or static source audit does not substitute.
 Keep `SCIENCE_HOLD` even after numerical parity is proven.
+
+## 2026-11-10 option-first Continuity experiment (separate stacked draft)
+
+This experiment changes only the `ContinuityPhysics` **input contract** and
+internal names, not any Material or Functor registration, source code or
+physical coefficient values. The generated lower-level
+`PhysicsFEMLogMolarDriftDiffusion` parameter remains named `diffusion`.
+The user-visible **Physics option** is now `diffusivity`; it can still point
+to the existing `electron_diffusion` functor. Changing that provider to
+`electron_diffusivity` is deliberately deferred.
+
+- Input `variables` and `fem_kernel_names`/`fvm_kernel_names` are removed;
+  `e -> log_ne`, and archived S6 `O2p/Om/Op -> log_ni/log_nm/log_nop`
+  are resolved internally. Other species use `log_n<species_id>` pending
+  separate vetted catalog validation.
+- Generated kernel name is fixed to `<species_id>_transport`, so an electron
+  kernel is named `e_transport`. In the existing protected S6 migration
+  comparison, the old `ne_transport` remains *unchanged*: it is NOT a valid
+  proof for the new scheme, and the prepared P3 B/C input decks are untouched.
+- `mobility` / `diffusivity` use FEM-first then FVM ordered coefficient
+  vectors; `fem_charge_numbers` and `fvm_charge_numbers` must each match
+  declared species and known charge signs when generation is activated.
+  There is still **no FV transport Kernel generation**. Providing coefficients
+  for unimplemented FV physics does not claim FV support or scientific parity.
+- A standalone small-input regression tests valid existing-variable binding,
+  deprecated user options, missing FV charges, coefficient vector lengths,
+  invalid charge signs and FEM/FVM variable-family mismatch. No native result
+  may be reported until the exact branch HEAD is built and checked with OCI.
+
+This is a staged API trial only: `SCIENCE_HOLD`, protected-rate separation,
+Issue #493 P3 source/inputs, production defaults and PR #491 remain unchanged.
