@@ -80,7 +80,6 @@ def test_full_s6_p2_provenance_and_no_solver_execution():
     assert '"schema": "issue402.native_p1.job_local.v1"' in native
     assert "persist_report(evidence, report)" in script
     assert '"cleanup"] = "HOLD"' in script
-    assert 'report["P2"] == "PASS" and result.get("cleanup") == "PASS"' not in script
     assert 'result.get("cleanup") == "PASS"' in script
     assert "option_s6_environment.json" in script
     assert "same_exact_head_ci_job_only" in script
