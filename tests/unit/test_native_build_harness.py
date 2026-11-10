@@ -161,6 +161,83 @@ class NativeBuildHarnessTests(unittest.TestCase):
         self.assertEqual(report["classification"], "RETRY_BUDGET_EXHAUSTED")
         self.assertEqual(len(calls), 1)
 
+    def test_v2_cpu_quota_clamps_affinity(self):
+        group = Path(self.tmp.name) / "cpu_cgroup"
+        group.mkdir()
+        (group / "cpu.max").write_text("150000 100000\n")
+        with patch.object(harness.os, "sched_getaffinity", return_value=set(range(32))):
+            self.assertEqual(harness.available_cpus(group), 2)
+        (group / "cpu.max").write_text("max 100000\n")
+        with patch.object(harness.os, "sched_getaffinity", return_value=set(range(4))):
+            self.assertEqual(harness.available_cpus(group), 4)
+
+    def test_v1_cpu_quota_fallback_and_malformed_data(self):
+        group = Path(self.tmp.name) / "cpu_cgroup"
+        (group / "cpu").mkdir(parents=True)
+        (group / "cpu/cpu.cfs_quota_us").write_text("200000\n")
+        (group / "cpu/cpu.cfs_period_us").write_text("100000\n")
+        self.assertEqual(harness.quota_cpus(group), 2)
+        (group / "cpu/cpu.cfs_quota_us").write_text("-1\n")
+        self.assertIsNone(harness.quota_cpus(group))
+        (group / "cpu.max").write_text("invalid\n")
+        self.assertIsNone(harness.quota_cpus(group))
+
+    def test_storage_preflight_fails_closed_for_space_and_inodes(self):
+        from types import SimpleNamespace
+        with (patch.object(harness.shutil, "disk_usage", return_value=SimpleNamespace(free=100)),
+              patch.object(harness.os, "statvfs",
+                           return_value=SimpleNamespace(f_files=1000, f_favail=1000))):
+            with self.assertRaises(harness.NativeBuildError) as raised:
+                harness.check_build_storage(self.app, min_free_bytes=1024)
+            self.assertEqual(raised.exception.classification, "DISK_CAPACITY_INSUFFICIENT")
+        with (patch.object(harness.shutil, "disk_usage", return_value=SimpleNamespace(free=10_000)),
+              patch.object(harness.os, "statvfs",
+                           return_value=SimpleNamespace(f_files=1000, f_favail=4))):
+            with self.assertRaises(harness.NativeBuildError) as raised:
+                harness.check_build_storage(self.app, min_free_bytes=1024, min_free_inodes=200)
+            self.assertEqual(raised.exception.classification, "INODE_CAPACITY_INSUFFICIENT")
+        with (patch.object(harness.shutil, "disk_usage", return_value=SimpleNamespace(free=10_000)),
+              patch.object(harness.os, "statvfs",
+                           return_value=SimpleNamespace(f_files=0, f_favail=0))):
+            result = harness.check_build_storage(self.app, min_free_bytes=1024, min_free_inodes=200)
+            self.assertIsNone(result["free_inodes"])
+
+    def test_storage_thresholds_cannot_be_negative(self):
+        with self.assertRaises(harness.NativeBuildError) as raised:
+            harness.check_build_storage(self.app, min_free_bytes=-1)
+        self.assertEqual(raised.exception.classification, "INVALID_STORAGE_POLICY")
+
+    def test_extended_failures_are_terminal_before_unity_retry(self):
+        unity = "build/unity_src/kernels_Unity.C:21: error: redefinition of 'x'\n"
+        cases = {
+            "LINKER_SYMBOL_FAILURE": "ld: undefined reference to 'PhysicsSomething'",
+            "RUNTIME_ABI_MISMATCH": "libfoo.so: version GLIBCXX_3.4.99 not found",
+            "DISK_CAPACITY_EXHAUSTED": "fatal error: No space left on device",
+            "RESOURCE_EXHAUSTION": "c++: fatal error: Killed signal terminated program cc1plus",
+            "HEADER_OR_GENERATED_FILE_MISSING": "fatal error: PhysicsGenerated.h: No such file or directory",
+            "SHELL_QUOTING_OR_UNSET_VARIABLE": "bash: $2: unbound variable",
+        }
+        for category, message in cases.items():
+            with self.subTest(category=category):
+                self.assertEqual(harness.classify_failure(unity + message), category)
+                self.assertEqual(harness.collision_directories(unity + message, self.app), ())
+
+    def test_unity_directory_detection_rejects_symlink_vendor_escape(self):
+        external = Path(self.tmp.name) / "vendor"
+        external.mkdir()
+        (self.app / "src/escape").symlink_to(external, target_is_directory=True)
+        log = "build/unity_src/escape_Unity.C:1: error: redefinition of 'x'"
+        self.assertEqual(harness.classify_failure(log), "APP_UNITY_SYMBOL_COLLISION")
+        self.assertEqual(harness.collision_directories(log, self.app), ())
+
+    def test_no_vendor_cleanup_is_attempted_on_resource_errors(self):
+        error, report, calls = self._build_with_fake_make([
+            ("c++: fatal error: Killed signal terminated program cc1plus", 137)
+        ])
+        self.assertEqual(report["classification"], "RESOURCE_EXHAUSTION")
+        self.assertEqual(len(calls), 1)
+        self.assertTrue(all("clean" not in " ".join(argv) for argv in calls))
+
     def test_preflight_mismatched_sha_and_dirty_app_rejected(self):
         with self.assertRaisesRegex(harness.NativeBuildError, "40 lowercase"):
             harness._verify_source(self.root, "bad", self.app / "physics-opt")
