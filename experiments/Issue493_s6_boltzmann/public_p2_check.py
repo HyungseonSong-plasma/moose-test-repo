@@ -171,7 +171,7 @@ def check_native(candidate: pathlib.Path, staged: pathlib.Path, inputs: list[str
             '--env', 'OXYGEN_RESEARCH_FULL24=0',
             '--env', 'OXYGEN_RESEARCH_EI2738_FORMULA=0',
             '--mount', f'type=bind,src={candidate.resolve()},dst=/app,readonly',
-            '--mount', f'type=bind,src={staged.resolve()},dst=/case,rw',
+            '--mount', f'type=bind,src={staged.resolve()},dst=/case',  # writable is Docker default
             PINNED_OCI, '-lc', 'set -euo pipefail; source /environment; ' + command]
     with logfile.open('w') as out:
         proc = subprocess.run(args, stdout=out, stderr=subprocess.STDOUT, timeout=timeout)
