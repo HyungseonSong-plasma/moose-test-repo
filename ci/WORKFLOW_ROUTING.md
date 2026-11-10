@@ -67,3 +67,17 @@ push, so that event can still contain a GitHub `skipped` job; removing
 that event-specific skip would require its own workflow-surface and required
 check contract review. This change only eliminates obsolete Issue #493
 PR-number-specific jobs from ordinary CI.
+
+## B-only 600-second diagnostic (separate one-shot profile)
+
+The `issue493-public-p3-diagnostic` profile is a distinct **special** route
+selected by `--route special --issue 493 --variant diagnostic`. It does not
+replace the existing `--variant full` route, which remains `deferred`.
+A reviewed one-shot `issue493-public-p3-diagnostic-once.yml` is generated
+from the job-only template and triggers **only on its own path on main push**.
+Its two case lanes run B with the full original 460-step input for exactly
+600 seconds maximum each; C is forbidden. Diagnostic timeout is evidence,
+not successful P3 completion; the job validates `P3=HOLD`, `P4=NOT_RUN`,
+`SCIENCE_HOLD` and only publishes sanitized JSON/heartbeats and P1 proof.
+After collection, move this profile back to `deferred` and delete the one-shot
+file in a separate cleanup PR; the full profile stays deferred throughout.
