@@ -137,6 +137,8 @@ def monitor_solver(command: Sequence[str], *, cwd: Path, log: Path,
         "cpu_percent": None, "memory_bytes": None,
     }
     max_memory: int | None = None
+    max_cpu: float | None = None
+    heartbeat_samples = 0
     elapsed: float = 0.0
     returncode: int | None = None
     timed_out = False
@@ -169,6 +171,11 @@ def monitor_solver(command: Sequence[str], *, cwd: Path, log: Path,
                             ):
                                 last[key] = value
                         last.update(docker_resources(name))
+                        heartbeat_samples += 1
+                        current_cpu = last["cpu_percent"]
+                        if current_cpu is not None:
+                            max_cpu = (current_cpu if max_cpu is None
+                                       else max(max_cpu, current_cpu))
                         current_mem = last["memory_bytes"]
                         if current_mem is not None:
                             max_memory = (current_mem if max_memory is None
@@ -193,6 +200,9 @@ def monitor_solver(command: Sequence[str], *, cwd: Path, log: Path,
         "last_reported_time_seconds": last["last_reported_time_seconds"],
         "last_cpu_percent": last["cpu_percent"],
         "max_observed_memory_bytes": max_memory,
+        "max_observed_cpu_percent": max_cpu,
+        "heartbeat_samples": heartbeat_samples,
+        "native_log_bytes": log.stat().st_size,
         # No exit code is invented when timeout killed the process.
         "termination": ("TIMEOUT" if timed_out else "EXIT" if launched
                         else "LAUNCH_ERROR"),
