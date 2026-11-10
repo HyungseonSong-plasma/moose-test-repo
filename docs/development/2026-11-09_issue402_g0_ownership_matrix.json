@@ -156,7 +156,13 @@
       "provider_name_migration": {
         "current": "electron_diffusion",
         "target": "electron_diffusivity",
-        "change_native_provider_in_existing_S6_P3": false
+        "change_native_provider_in_existing_S6_P3": false,
+        "stage": "DEFERRED_BY_USER_2026_11_10",
+        "option_only_example": {
+          "mobility": "electron_mobility",
+          "diffusivity": "electron_diffusion"
+        },
+        "current_material_or_functor_files_modified": false
       },
       "g1_native_registration": "NOT_EVALUATED",
       "g2_effective_input_mapping": "NOT_EVALUATED",
