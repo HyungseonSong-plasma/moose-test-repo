@@ -42,7 +42,7 @@ def profiles(root: Path = ROOT) -> list[dict]:
     records = data.get("profiles")
     if not isinstance(records, list) or not records:
         raise WorkflowContractError("WORKFLOW_PROFILES_ABSENT")
-    keys, outputs = set(), set()
+    keys, outputs, special_variants = set(), set(), set()
     for item in records:
         if not isinstance(item, dict):
             raise WorkflowContractError("WORKFLOW_PROFILE_INVALID")
@@ -63,6 +63,13 @@ def profiles(root: Path = ROOT) -> list[dict]:
                 raise WorkflowContractError("GENERAL_CI_ROUTE_INVALID")
         elif purpose == "special":
             filename = output.name
+            variant = item.get("variant", "full")
+            if variant not in {"full", "diagnostic"}:
+                raise WorkflowContractError("SPECIAL_CI_VARIANT_INVALID")
+            selector = (item.get("issue"), variant)
+            if selector in special_variants:
+                raise WorkflowContractError("SPECIAL_CI_VARIANT_DUPLICATE")
+            special_variants.add(selector)
             if (item.get("trigger") != "self_path_main_once" or
                     item.get("activation") not in {"deferred", "active"} or
                     not SPECIAL_OUTPUT.fullmatch(filename) or
@@ -80,12 +87,13 @@ def profiles(root: Path = ROOT) -> list[dict]:
 
 
 def route(purpose: str, *, issue: int | None = None,
-          records: list[dict] | None = None) -> dict:
+          variant: str = "full", records: list[dict] | None = None) -> dict:
     """Choose an explicit reviewed route; NEVER guess based on a PR title."""
     pool = records if records is not None else profiles()
     matches = [item for item in pool if item["purpose"] == purpose and
-               (purpose == "general" and issue is None or
-                purpose == "special" and item.get("issue") == issue)]
+               (purpose == "general" and issue is None and variant == "full" or
+                purpose == "special" and item.get("issue") == issue and
+                item.get("variant", "full") == variant)]
     if len(matches) != 1:
         raise WorkflowContractError("WORKFLOW_ROUTE_NOT_AUTHORIZED")
     return matches[0]
@@ -113,16 +121,32 @@ def render(root: Path, profile: dict) -> str:
     if template.startswith("jobs:") or template.startswith("on:"):
         raise WorkflowContractError("SPECIAL_TEMPLATE_NOT_JOB_ONLY")
     job_names = JOB.findall(template)
-    if len(job_names) != 1 or job_names[0] != "issue493-public-p3-native":
+    variant = profile.get("variant", "full")
+    allowed_job = {
+        "full": "issue493-public-p3-native",
+        "diagnostic": "issue493-public-p3-diagnostic",
+    }[variant]
+    if len(job_names) != 1 or job_names[0] != allowed_job:
         raise WorkflowContractError("SPECIAL_JOB_ALLOWLIST_MISMATCH")
-    if (not re.search(r"^    strategy:\n      fail-fast: false\n      max-parallel: 2", template, re.MULTILINE)
-            or "public_p3_run.py" not in template
-            or "github.sha" not in template
-            or "--mode full --authorize-full-p3" not in template
-            or "github.event.pull_request." in template
-            or "secrets." in template
-            or re.search(r"^    if:", template, re.MULTILINE)):
+    common = (re.search(r"^    strategy:\n      fail-fast: false\n      max-parallel: 2", template, re.MULTILINE)
+              and "public_p3_run.py" in template
+              and "github.sha" in template
+              and "github.event.pull_request." not in template
+              and "secrets." not in template
+              and not re.search(r"^    if:", template, re.MULTILINE))
+    if not common:
         raise WorkflowContractError("SPECIAL_EXECUTION_POLICY")
+    if variant == "full":
+        if "--mode full --authorize-full-p3" not in template:
+            raise WorkflowContractError("SPECIAL_FULL_AUTHORIZATION_MISSING")
+    elif variant == "diagnostic":
+        if ("--mode diagnostic --timeout-seconds 600" not in template
+                or "--authorize-full-p3" in template
+                or "--mode full" in template
+                or "--timeout-seconds 8100" in template
+                or "check_public_p3_diagnostic.py" not in template
+                or "case: ['417', '941']" not in template):
+            raise WorkflowContractError("SPECIAL_DIAGNOSTIC_BOUNDARY")
     name, output = profile["name"], profile["output"]
     if not isinstance(name, str) or not re.fullmatch(r"[A-Za-z0-9 _-]{4,100}", name):
         raise WorkflowContractError("SPECIAL_WORKFLOW_NAME")
@@ -166,9 +190,11 @@ def self_test() -> None:
     entries = profiles()
     assert route("general", records=entries)["output"] == ".github/workflows/ci.yml"
     assert route("special", issue=493, records=entries)["trigger"] == "self_path_main_once"
-    special = route("special", issue=493, records=entries)
-    assert special["activation"] in {"deferred", "active"}
-    assert (ROOT / special["output"] in outputs()) == (special["activation"] == "active")
+    assert route("special", issue=493, variant="diagnostic", records=entries)["trigger"] == "self_path_main_once"
+    for selected in ("full", "diagnostic"):
+        special = route("special", issue=493, variant=selected, records=entries)
+        assert special["activation"] in {"deferred", "active"}
+        assert (ROOT / special["output"] in outputs()) == (special["activation"] == "active")
     # Regression: preserve the new required Physics PR native validation gate.
     assert re.search(r"^  plasma_native_regression:\s*$",
                      render(ROOT, route("general", records=entries)), re.MULTILINE)
@@ -208,13 +234,14 @@ def main() -> int:
     mode.add_argument("--self-test", action="store_true")
     mode.add_argument("--route", choices=["general", "special"])
     parser.add_argument("--issue", type=int)
+    parser.add_argument("--variant", choices=("full", "diagnostic"), default="full")
     parser.add_argument("--root", type=Path, default=ROOT)
     args = parser.parse_args()
     try:
         if args.self_test:
             self_test()
         elif args.route:
-            result = route(args.route, issue=args.issue,
+            result = route(args.route, issue=args.issue, variant=args.variant,
                            records=profiles(args.root))
             print(json.dumps(result, sort_keys=True))
         elif args.generate:
