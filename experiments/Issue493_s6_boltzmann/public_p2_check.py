@@ -29,6 +29,13 @@ CASES = ('417', '941')
 PACK_SHA = '9e801cc6dca3860750b7b97fb6ceca8e6060a3c894dd616cbaf688f529fea240'
 PINNED_SOURCE = '29d1acc6ef7969908b86719e4b95c73a1565136d'
 PINNED_CANDIDATE = 'bebaf47a33ff5ee1d6b933d9691bf48f5ec0f947'
+# This module is executed by file path; add the owning repository root for harness imports.
+sys.path.insert(0, str(BASE.parents[1]))
+from physics_harness.execution.native_gates import (
+    P1GateError, require_p1_success, run_p2_checked,
+)
+from physics_harness.adapters.moose.check_input import classify_failure
+
 PINNED_OCI = ('ghcr.io/hyungseonsong-plasma/physics-build-base@'
               'sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008')
 
@@ -163,20 +170,29 @@ def stage(control: pathlib.Path, historical: pathlib.Path, case: str, variant: s
 
 
 def check_native(candidate: pathlib.Path, staged: pathlib.Path, inputs: list[str],
-                 logfile: pathlib.Path, timeout: int) -> dict:
-    command = ('/app/physics_app/physics-opt --check-input -i ' +
+                 logfile: pathlib.Path, timeout: int, p1_evidence: pathlib.Path) -> dict:
+    # The shell is replaced with the one allowed P2 process, never a solve.
+    command = ('exec /app/physics_app/physics-opt --check-input -i ' +
                ' '.join(shlex.quote(x) for x in inputs))
     args = ['docker', 'run', '--rm', '--entrypoint', '/bin/bash', '--user', '0:0',
             '--workdir', '/case', '--env', 'OXYGEN_RESEARCH_400=1',
             '--env', 'OXYGEN_RESEARCH_FULL24=0',
             '--env', 'OXYGEN_RESEARCH_EI2738_FORMULA=0',
             '--mount', f'type=bind,src={candidate.resolve()},dst=/app,readonly',
-            '--mount', f'type=bind,src={staged.resolve()},dst=/case',  # writable is Docker default
+            '--mount', f'type=bind,src={staged.resolve()},dst=/case',
             PINNED_OCI, '-lc', 'set -euo pipefail; source /environment; ' + command]
-    with logfile.open('w') as out:
-        proc = subprocess.run(args, stdout=out, stderr=subprocess.STDOUT, timeout=timeout)
-    return {'P2': 'PASS' if proc.returncode == 0 else 'FAILED',
-            'exit_code': proc.returncode, 'log_sha256': sha(logfile), 'layers': len(inputs)}
+    report = run_p2_checked(
+        args, evidence=p1_evidence, source_root=candidate,
+        binary=candidate / 'physics_app/physics-opt',
+        source_sha=PINNED_CANDIDATE, image_ref=PINNED_OCI,
+        cwd=staged, log_path=logfile, timeout_seconds=timeout,
+        success_marker='Syntax OK', failure_classifier=classify_failure,
+    )
+    return {'P2': report['P2'], 'exit_code': report['returncode'],
+            'timed_out': report['timed_out'], 'classification': report['classification'],
+            'log_sha256': report['log_sha256'],
+            'p1_binary_sha256': report['p1_binary_sha256'],
+            'layers': len(inputs)}
 
 
 def main() -> int:
@@ -186,14 +202,15 @@ def main() -> int:
     parser.add_argument('--historical', type=pathlib.Path)
     parser.add_argument('--output', type=pathlib.Path)
     parser.add_argument('--mode', choices=('preflight', 'native'), default='preflight')
+    parser.add_argument('--p1-evidence', type=pathlib.Path)
     opts = parser.parse_args()
     control = opts.control.resolve()
     result = {'science': 'SCIENCE_HOLD', 'P2': 'NOT_RUN', 'P3': 'NOT_RUN', 'P4': 'NOT_RUN'}
     try:
         result.update(preflight(control))
         if opts.mode == 'native':
-            if opts.candidate is None or opts.historical is None or opts.output is None:
-                raise ValueError('native requires candidate, historical and output')
+            if opts.candidate is None or opts.historical is None or opts.output is None or opts.p1_evidence is None:
+                raise ValueError('native requires candidate, historical, output and P1 evidence')
             candidate, historical, output = (x.resolve() for x in (opts.candidate, opts.historical, opts.output))
             if output.exists():
                 raise ValueError('output already exists; refusing overwrite')
@@ -205,6 +222,13 @@ def main() -> int:
                 raise ValueError('native candidate binary does not exist (P1 incomplete)')
             if shutil.which('docker') is None:
                 raise ValueError('Docker unavailable on execution host')
+            p1_identity = require_p1_success(
+                opts.p1_evidence, source_root=candidate, binary=binary,
+                source_sha=PINNED_CANDIDATE, image_ref=PINNED_OCI,
+            )
+            result['P1'] = 'PASS'
+            result['p1_identity_sha256'] = sha(opts.p1_evidence)
+            result['p1_binary_sha256'] = p1_identity['binary_sha256']
             result['candidate_binary_sha256'] = sha(binary)
             result['historical_mesh_sha256'] = sha(historical / CHEM / 'baseline_plasma_plus_unstructured_cover_plus_wafer.msh')
             manifest = json.loads((control / DECKS / 'manifest.json').read_text())
@@ -217,15 +241,15 @@ def main() -> int:
                     try:
                         inp = stage(control, historical, case, variant, dest, manifest)
                         result['checks'][case][variant] = check_native(candidate, dest, inp,
-                                                       output / f'P2_{label}.log', 1200)
+                                                       output / f'P2_{label}.log', 1200, opts.p1_evidence)
                     except Exception as exc:
-                        result['checks'][case][variant] = {'P2': 'FAILED', 'error': str(exc)[:350]}
+                        result['checks'][case][variant] = {'P2': 'HOLD', 'error': str(exc)[:350]}
             vals = [v['P2'] for sub in result['checks'].values() for v in sub.values()]
-            result['P2'] = 'PASS' if vals == ['PASS'] * 4 else 'FAILED'
+            result['P2'] = 'PASS' if vals == ['PASS'] * 4 else 'HOLD'
     except Exception as exc:
         result['blocker'] = type(exc).__name__ + ': ' + str(exc)[:500]
         if opts.mode == 'native':
-            result['P2'] = 'FAILED_OR_BLOCKED'
+            result['P2'] = 'HOLD'
     finally:
         result['science'] = 'SCIENCE_HOLD'
         result['P3'] = 'NOT_RUN'

@@ -700,6 +700,7 @@ jobs:
           for path in /usr/local/lib/android /opt/ghc /usr/share/dotnet /usr/share/swift /usr/local/.ghcup; do
             sudo rm -rf "$path" || true
           done
+          test ! -e candidate/physics_app/physics-opt
           docker pull "$BUILD_BASE_REF"
           test "$(docker image inspect "$BUILD_BASE_REF" --format '{{ index .Config.Labels "io.physics.moose.sha" }}')" = "9f388366ccf38b9c34542ec5561198249fde0ac9"
           docker run --rm --entrypoint /bin/bash --user 0:0 \
@@ -719,6 +720,10 @@ jobs:
               test -x physics_app/physics-opt
             '
           test -x candidate/physics_app/physics-opt
+          python3 control/bin/physics.py native-p1-record \
+            --source-root candidate --source-sha "$PINNED_CANDIDATE" \
+            --binary candidate/physics_app/physics-opt --oci-ref "$BUILD_BASE_REF" \
+            --output "$RUNNER_TEMP/issue493_p1_provenance.json"
           echo ISSUE493_PUBLIC_P2_P1_BUILD_PASS
       - name: Execute all four isolated P2 native --check-input cases
         shell: bash
@@ -726,7 +731,8 @@ jobs:
           set -euo pipefail
           python3 control/experiments/Issue493_s6_boltzmann/public_p2_check.py \
             --control control --candidate candidate --historical historical \
-            --output "$RUNNER_TEMP/issue493_p2_native" --mode native
+            --output "$RUNNER_TEMP/issue493_p2_native" --mode native \
+            --p1-evidence "$RUNNER_TEMP/issue493_p1_provenance.json"
           echo ISSUE493_PUBLIC_P2_ALL_FOUR_NATIVE_PASS
       - name: Publish only public P2 status and native check logs
         if: always()
@@ -734,6 +740,7 @@ jobs:
         with:
           name: issue493-public-p2-${{ github.event.pull_request.head.sha }}
           path: |
+            ${{ runner.temp }}/issue493_p1_provenance.json
             ${{ runner.temp }}/issue493_p2_native/non_sensitive_p2_status.json
             ${{ runner.temp }}/issue493_p2_native/P2_*.log
           if-no-files-found: warn

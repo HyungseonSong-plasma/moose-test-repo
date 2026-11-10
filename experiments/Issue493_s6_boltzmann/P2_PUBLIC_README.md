@@ -39,3 +39,34 @@ Offline structural preflight (no OCI needed):
 python3 experiments/Issue493_s6_boltzmann/public_p2_check.py \
   --control . --mode preflight
 ```
+
+## Enforced P1 → P2 sequence (harness v1)
+
+P2 may execute only when P1 in the **same trusted execution job** has built a
+fresh `physics-opt` (no preexisting executable), then emitted an exclusive
+`physics-native-p1-evidence-v1` JSON record using the canonical CLI. The record
+pins the source checkout Git HEAD, immutable OCI digest, real binary path and
+SHA-256. P2 revalidates those pins and rehashes the binary **before every one**
+of its four checks. Any missing, stale, contradictory or overwritten record
+produces `P2=HOLD`; it must not be reported as a physics failure or PASS.
+
+The canonical harness commands are:
+
+```bash
+python3 bin/physics.py native-p1-record \
+  --source-root <checkout> --source-sha <exact-sha> \
+  --binary <checkout>/physics_app/physics-opt --oci-ref <digest-pinned-image> \
+  --output <new-evidence-file>.json
+
+# Host-native check-input (alternatively use reusable harness API for OCI):
+python3 bin/physics.py validate-input \
+  --source-root <checkout> --source-sha <exact-sha> \
+  --binary <checkout>/physics_app/physics-opt --oci-ref <digest-pinned-image> \
+  --p1-evidence <new-evidence-file>.json --case-dir <case-workspace> \
+  --input input.i --log <new-p2-log>
+```
+
+PR #495 uses the same `run_p2_checked()` harness API for the pinned OCI invocation,
+not a separate codepath for P1 verification. P2 is input construction evidence
+only; no P3 solver run is admitted by the validation mode. Source/control data
+and the 19 published lookup coefficients are unchanged by this gate.
