@@ -51,6 +51,10 @@ def test_full_s6_p2_provenance_and_no_solver_execution():
     public = (PUBLIC / "public_p2_check.py").read_text()
     native = (PILOT / "run_native_binding_smoke.sh").read_text()
     assert "29d1acc6ef7969908b86719e4b95c73a1565136d" in bash
+    assert "export OXYGEN_RESEARCH_400=1" in bash
+    assert "export OXYGEN_RESEARCH_FULL24=0" in bash
+    assert "export OXYGEN_RESEARCH_EI2738_FORMULA=0" in bash
+    assert "export OXYGEN_RESEARCH_QUICK_5MIN=0" in bash
     assert "35534a522fa48ccb5222339c5040040630eef31e623e1c53f1e1c4540d2d653b" in bash
     assert "OVERLAY_SHA256" in script
     assert "p2.preflight(ROOT)" in script and "p2.stage(ROOT, historical, case" in script
