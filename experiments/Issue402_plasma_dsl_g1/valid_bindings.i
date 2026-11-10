@@ -1,4 +1,4 @@
-# Both solver variables are already defined in the main input.
+# Solver variable names are derived internally: e -> log_ne, O2p -> log_ni.
 [Physics]
   [Plasmas]
     [Transport]
@@ -6,7 +6,6 @@
         [Continuity]
           fem_species = 'e'
           fvm_species = 'O2p'
-          variables = 'u_fe u_fv'
         []
       []
     []
