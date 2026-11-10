@@ -1,19 +1,19 @@
-name: Issue 493 Public S6 B Diagnostic 600s
+name: Issue 493 Public S6 B Completion Max 340m
 on:
   push:
     branches: [main]
-    paths: [.github/workflows/issue493-public-p3-diagnostic-once.yml]
+    paths: [.github/workflows/issue493-public-p3-b-completion-once.yml]
 permissions:
   contents: read
 jobs:
-  issue493-public-p3-diagnostic:
+  issue493-public-p3-b-completion:
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       max-parallel: 2
       matrix:
         case: ['417', '941']
-    timeout-minutes: 65
+    timeout-minutes: 360
     permissions:
       contents: read
     env:
@@ -115,32 +115,34 @@ jobs:
             --build-report candidate/.native_p1_validation/report.json \
             --output "$RUNNER_TEMP/issue493_p1_provenance.json"
           echo ISSUE493_PUBLIC_P3_P1_BUILD_PASS
-      - name: Observe B-only native P3 for at most 600s; C never starts
+      - name: Attempt fresh full 460-step B-only P3 for max 20400s; C never starts
         shell: bash
         run: |
           set -euo pipefail
-          # Diagnostic mode intentionally returns 3 for an incomplete P3.
+          # Explicitly user-authorized 460-step B-only completion trial.
+          # Exit 3/HOLD is a genuine unsuccessful completion attempt, never
+          # normalized to a passing full-solve result.
           set +e
           python3 control/experiments/Issue493_s6_boltzmann/public_p3_run.py \
             --control control --candidate candidate --historical historical \
             --p1-evidence "$RUNNER_TEMP/issue493_p1_provenance.json" \
-            --output "$RUNNER_TEMP/issue493_p3_diag_${{ matrix.case }}" \
-            --case "${{ matrix.case }}" --mode diagnostic --timeout-seconds 600
+            --output "$RUNNER_TEMP/issue493_p3_complete_b_${{ matrix.case }}" \
+            --case "${{ matrix.case }}" --mode complete-b --authorize-full-p3 --timeout-seconds 20400
           rc=$?
           set -e
-          test "$rc" -eq 3
-          python3 control/experiments/Issue493_s6_boltzmann/check_public_p3_diagnostic.py \
+          python3 control/experiments/Issue493_s6_boltzmann/check_public_p3_b_completion.py \
             --case "${{ matrix.case }}" \
-            --status "$RUNNER_TEMP/issue493_p3_diag_${{ matrix.case }}/non_sensitive_p3_status.json"
-          echo ISSUE493_PUBLIC_P3_B_DIAGNOSTIC_RECORDED
-      - name: Publish sanitized 600s B diagnostic status and public P1 provenance only
+            --status "$RUNNER_TEMP/issue493_p3_complete_b_${{ matrix.case }}/non_sensitive_p3_status.json"
+          test "$rc" -eq 0
+          echo ISSUE493_PUBLIC_P3_B_COMPLETION_PROVEN
+      - name: Publish sanitized max-budget B completion verdict and public P1 provenance only
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: issue493-public-p3-diagnostic-${{ matrix.case }}-${{ github.sha }}
+          name: issue493-public-p3-b-completion-${{ matrix.case }}-${{ github.sha }}
           path: |
             candidate/.native_p1_validation/report.json
             ${{ runner.temp }}/issue493_p1_provenance.json
-            ${{ runner.temp }}/issue493_p3_diag_${{ matrix.case }}/non_sensitive_p3_status.json
+            ${{ runner.temp }}/issue493_p3_complete_b_${{ matrix.case }}/non_sensitive_p3_status.json
           if-no-files-found: warn
           retention-days: 14

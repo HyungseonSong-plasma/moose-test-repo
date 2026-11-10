@@ -64,7 +64,7 @@ def profiles(root: Path = ROOT) -> list[dict]:
         elif purpose == "special":
             filename = output.name
             variant = item.get("variant", "full")
-            if variant not in {"full", "diagnostic"}:
+            if variant not in {"full", "diagnostic", "completion"}:
                 raise WorkflowContractError("SPECIAL_CI_VARIANT_INVALID")
             selector = (item.get("issue"), variant)
             if selector in special_variants:
@@ -125,6 +125,7 @@ def render(root: Path, profile: dict) -> str:
     allowed_job = {
         "full": "issue493-public-p3-native",
         "diagnostic": "issue493-public-p3-diagnostic",
+        "completion": "issue493-public-p3-b-completion",
     }[variant]
     if len(job_names) != 1 or job_names[0] != allowed_job:
         raise WorkflowContractError("SPECIAL_JOB_ALLOWLIST_MISMATCH")
@@ -147,6 +148,15 @@ def render(root: Path, profile: dict) -> str:
                 or "check_public_p3_diagnostic.py" not in template
                 or "case: ['417', '941']" not in template):
             raise WorkflowContractError("SPECIAL_DIAGNOSTIC_BOUNDARY")
+    elif variant == "completion":
+        if ("--mode complete-b --authorize-full-p3 --timeout-seconds 20400" not in template
+                or "check_public_p3_b_completion.py" not in template
+                or "case: ['417', '941']" not in template
+                or "timeout-minutes: 360" not in template
+                or "--mode full" in template
+                or "--mode diagnostic" in template
+                or "--timeout-seconds 8100" in template):
+            raise WorkflowContractError("SPECIAL_COMPLETION_BOUNDARY")
     name, output = profile["name"], profile["output"]
     if not isinstance(name, str) or not re.fullmatch(r"[A-Za-z0-9 _-]{4,100}", name):
         raise WorkflowContractError("SPECIAL_WORKFLOW_NAME")
@@ -191,7 +201,8 @@ def self_test() -> None:
     assert route("general", records=entries)["output"] == ".github/workflows/ci.yml"
     assert route("special", issue=493, records=entries)["trigger"] == "self_path_main_once"
     assert route("special", issue=493, variant="diagnostic", records=entries)["trigger"] == "self_path_main_once"
-    for selected in ("full", "diagnostic"):
+    assert route("special", issue=493, variant="completion", records=entries)["trigger"] == "self_path_main_once"
+    for selected in ("full", "diagnostic", "completion"):
         special = route("special", issue=493, variant=selected, records=entries)
         assert special["activation"] in {"deferred", "active"}
         assert (ROOT / special["output"] in outputs()) == (special["activation"] == "active")
