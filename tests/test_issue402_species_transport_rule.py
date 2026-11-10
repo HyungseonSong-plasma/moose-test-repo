@@ -35,7 +35,7 @@ def test_user_drift_diffusion_transport_coefficient_options_are_removed():
 
 
 def test_electron_closure_keeps_old_and_new_functors_same_numeric_closure():
-    src = text("physics_app/src/materials/PhysicsElectronClosureMaterial.C")
+    src = text("physics_app/src/materials/ElectronClosureMaterial.C")
     for old in ('"electron_mobility_output"', '"electron_diffusion_output"'):
         assert old in src
     assert 'addFunctorProperty<ADReal>("e_mobility", particle_mobility)' in src
@@ -49,7 +49,7 @@ def test_electron_closure_keeps_old_and_new_functors_same_numeric_closure():
 
 
 def test_electron_lookup_keeps_old_and_new_functors_same_numeric_closure():
-    src = text("physics_app/src/materials/PhysicsElectronTransportLookupMaterial.C")
+    src = text("physics_app/src/materials/ElectronTransportLookupMaterial.C")
     assert 'addFunctorProperty<ADReal>("electron_mobility", particle_mobility)' in src
     assert 'addFunctorProperty<ADReal>("electron_diffusion", particle_diffusivity)' in src
     assert 'addFunctorProperty<ADReal>("e_mobility", particle_mobility)' in src
@@ -59,7 +59,7 @@ def test_electron_lookup_keeps_old_and_new_functors_same_numeric_closure():
 
 
 def test_ion_aliases_are_unscaled_ad_functors_and_do_not_replace_rho_diffusion():
-    src = text("physics_app/src/materials/PhysicsPlasmaChargeTransportMaterial.C")
+    src = text("physics_app/src/materials/PlasmaChargeTransportMaterial.C")
     assert 'id + "_mobility"' in src
     assert 'id + "_diffusivity"' in src
     assert "(*_ion_mobilities[i])(r, state)" in src
@@ -71,7 +71,7 @@ def test_ion_aliases_are_unscaled_ad_functors_and_do_not_replace_rho_diffusion()
 
 def test_native_control_and_public_417_941_are_user_coefficient_free():
     positive = text("experiments/Issue402_plasma_dsl_g1/valid_generated_transport_options.i")
-    assert "type = PhysicsSpeciesTransportAliasMaterial" in positive
+    assert "type = SpeciesTransportAliasMaterial" in positive
     assert "species_id = e" in positive
     assert "mobility_source = legacy_mu" in positive
     assert "diffusivity_source = legacy_D" in positive
@@ -93,7 +93,7 @@ def test_native_control_and_public_417_941_are_user_coefficient_free():
         assert f"mobility_source = {source}_mobility" in overlay
         assert f"diffusivity_source = {source}_diffusion" in overlay
     assert hashlib.sha256(overlay.encode()).hexdigest() == (
-        "d8c0d57753a30a1ab0e8f4f395fadd09b6d50bc35896ba3c1befded861dc0685"
+        "3c28bcc79e3ec17b7ceab858160a48150b78e37385f9d56725ae0e3cb22baaef"
     )
     # Protected original P3 inputs and their native old provider spelling
     # remain outside this migration PR.

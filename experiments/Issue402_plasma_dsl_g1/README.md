@@ -88,11 +88,11 @@ species identifier, with case preserved: `e_mobility` / `e_diffusivity`,
 `Om_diffusivity`, `Op_mobility` / `Op_diffusivity`.
 Neither list order nor user-specified coefficient strings define these names.
 
-`PhysicsElectronClosureMaterial` and `PhysicsElectronTransportLookupMaterial`
+`ElectronClosureMaterial` and `ElectronTransportLookupMaterial`
 publish canonical electron names using the **same AD table closure** that
 produces the existing `electron_mobility` and `electron_diffusion` outputs.
 The latter are preserved for old native S6 and other inputs. The
-`PhysicsPlasmaChargeTransportMaterial` publishes species-keyed ion aliases
+`PlasmaChargeTransportMaterial` publishes species-keyed ion aliases
 from its **already supplied** ion-mobility and ion-diffusion Functors when
 it owns those species. These aliases are unscaled; `rho_diffusivity_<id>`
 remains the separate density-weighted FV coefficient and must not be
@@ -120,7 +120,7 @@ new optional Physics blocks; do not edit the immutable historical P3 decks.
 The archived S6-417/941 heavy-ion coefficients originate in an existing
 `ADGenericFunctorMaterial`, not the modern charge-transport owner. The
 review-only new-option D overlay therefore instantiates three controlled
-`PhysicsSpeciesTransportAliasMaterial` bridges: O2p from
+`SpeciesTransportAliasMaterial` bridges: O2p from
 `ion_mobility/ion_diffusion`, Om from
 `negative_ion_mobility/negative_ion_diffusion`, and Op from
 `atomic_positive_ion_mobility/atomic_positive_ion_diffusion`.
@@ -323,3 +323,17 @@ The P0/P1/P2 record path, OCI image/source/binary SHA and old source/rate
 manifest must match. No P3/P4 execution or scientific approval is added.
 Original S6 P3 decks, Material/Functor producers and workflow credentials
 remain untouched.
+
+## Material/Functor class and filename rename (2026-11-10)
+
+The canonical C++ Material classes and their corresponding `.h` / `.C`
+files no longer carry the redundant `Physics` prefix:
+`ElectronClosureMaterial`, `ElectronTransportLookupMaterial`,
+`PlasmaChargeTransportMaterial`, and `SpeciesTransportAliasMaterial`.
+They remain registered under the existing `PhysicsApp` label. Each also
+registers its former `Physics*` MOOSE object type as a compatibility alias,
+so historical B/C decks and existing third-party inputs retain their exact
+factory lookup. The public S6 D-only input uses the new canonical type;
+the positive smoke fixture intentionally keeps the old type to test alias
+resolution. The `ContinuityPhysics` class is a MOOSE PhysicsBase action,
+not a Material/Functor; its name and registered Physics syntax are unchanged.
