@@ -10,19 +10,18 @@
         [Continuity]
           fem_species = 'e'
           fvm_species = 'O2p'
-          variables = 'u_fe u_fv'
         []
         [Energy]
           fem_species = 'e'
-          variable = u_fe
+          variable = log_ne
         []
       []
     []
     [Poisson]
-      potential_variable = u_fe
+      potential_variable = log_ne
     []
     [Maxwell]
-      field_real = u_fe
+      field_real = log_ne
       field_imag = u_rf_imag
       frequency_hz = 13560000
     []
