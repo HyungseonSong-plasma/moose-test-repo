@@ -115,7 +115,7 @@ def run_one(binary: Path, binary_sha: str, workspace: Path,
             inputs: list[str], log: Path, timeout_seconds: int) -> dict:
     if sha_file(binary) != binary_sha:
         raise ValueError("Native P1 executable mutated before P2")
-    command = ("exec /app/physics_app/physics-opt --check-input -i " +
+    command = ("exec /workspace/physics_app/physics-opt --check-input -i " +
                " ".join(shlex.quote(x) for x in inputs))
     args = ["docker", "run", "--rm", "--network", "none",
             "--entrypoint", "/bin/bash", "--user", "0:0",
@@ -124,7 +124,7 @@ def run_one(binary: Path, binary_sha: str, workspace: Path,
             "--env", "OXYGEN_RESEARCH_FULL24=0",
             "--env", "OXYGEN_RESEARCH_EI2738_FORMULA=0",
             "--env", "OXYGEN_RESEARCH_QUICK_5MIN=0",
-            "--mount", f"type=bind,src={ROOT.resolve()},dst=/app,readonly",
+            "--mount", f"type=bind,src={ROOT.resolve()},dst=/workspace,readonly",
             "--mount", f"type=bind,src={workspace.resolve()},dst=/case",
             OCI, "-lc", "set -euo pipefail; source /environment; " + command]
     try:
@@ -133,10 +133,17 @@ def run_one(binary: Path, binary_sha: str, workspace: Path,
         out = result.stdout + "\n" + result.stderr
         log.write_text(out)
         good = result.returncode == 0 and "Syntax OK" in out
+        if good:
+            classification = "NATIVE_CHECK_INPUT_PASS"
+        elif result.returncode == 127 and "error while loading shared libraries" in out:
+            classification = "NATIVE_RUNTIME_LINKER_ERROR"
+        elif result.returncode == 127:
+            classification = "NATIVE_PROCESS_FAILED_BEFORE_INPUT"
+        else:
+            classification = "NATIVE_CHECK_INPUT_REJECTED"
         return {"P2": "PASS" if good else "HOLD",
                 "exit_code": result.returncode, "log_sha256": sha_file(log),
-                "syntax_ok": "Syntax OK" in out,
-                "classification": "NATIVE_CHECK_INPUT_PASS" if good else "NATIVE_CHECK_INPUT_REJECTED"}
+                "syntax_ok": "Syntax OK" in out, "classification": classification}
     except subprocess.TimeoutExpired:
         log.write_text("P2 timeout, no solve was launched\n")
         return {"P2": "HOLD", "classification": "NATIVE_CHECK_INPUT_TIMEOUT",
