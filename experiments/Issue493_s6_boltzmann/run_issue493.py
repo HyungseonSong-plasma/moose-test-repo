@@ -166,7 +166,7 @@ def build(candidate: Path, log: Path, expected_sha: str) -> tuple[Path, str]:
       CRANE_DIR=/opt/physics_vendor/crane \
       SQUIRREL_DIR=/opt/physics_vendor/squirrel \
       ZAPDOS_DIR=/opt/physics_vendor/zapdos METHOD=opt; \
-      make -C physics_app -j2; test -x physics_app/physics-opt"""
+      make -C physics_app -j2 MOOSE_UNITY=false; test -x physics_app/physics-opt"""
     run_step(docker_cmd([(candidate, "/app", "rw")], "/app", script), log, 3600)
     fail_if(not binary.is_file(), "Docker returned success without native physics-opt")
     return binary, sha256(binary)
