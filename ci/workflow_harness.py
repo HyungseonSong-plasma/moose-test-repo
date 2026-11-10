@@ -169,6 +169,18 @@ def self_test() -> None:
     special = route("special", issue=493, records=entries)
     assert special["activation"] in {"deferred", "active"}
     assert (ROOT / special["output"] in outputs()) == (special["activation"] == "active")
+    # Regression: preserve the new required Physics PR native validation gate.
+    assert re.search(r"^  plasma_native_regression:\s*$",
+                     render(ROOT, route("general", records=entries)), re.MULTILINE)
+    # Reject path escape and noncanonical path spellings before writing YAML.
+    for unsafe in ("ci/workflow_templates/../workflow.yml",
+                   "ci/workflow_templates/sub//workflow.yml"):
+        try:
+            safe_relative(unsafe, prefix="ci/workflow_templates/")
+        except WorkflowContractError:
+            pass
+        else:
+            raise AssertionError("unsafe workflow template path was accepted")
     for purpose, issue in (("special", 492), ("unsupported", None),
                            ("general", 493)):
         try:
