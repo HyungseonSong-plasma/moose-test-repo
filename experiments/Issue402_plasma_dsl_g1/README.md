@@ -117,6 +117,17 @@ snapshots. In case of an obsolete `fem_mobility`/`fem_diffusion` or user
 `mobility`/`diffusivity` sample, this current rule takes precedence for
 new optional Physics blocks; do not edit the immutable historical P3 decks.
 
+The archived S6-417/941 heavy-ion coefficients originate in an existing
+`ADGenericFunctorMaterial`, not the modern charge-transport owner. The
+review-only new-option D overlay therefore instantiates three controlled
+`PhysicsSpeciesTransportAliasMaterial` bridges: O2p from
+`ion_mobility/ion_diffusion`, Om from
+`negative_ion_mobility/negative_ion_diffusion`, and Op from
+`atomic_positive_ion_mobility/atomic_positive_ion_diffusion`.
+They forward the **same AD values** to canonical names without rescaling
+or changing the original B/C archived material declaration. The electron
+aliases are published by the existing electron lookup/closure producer.
+
 ## Single-kernel S6 migration (archived, not production)
 
 The completed S6-417 and S6-941 runs contain an explicit `ne_transport`
