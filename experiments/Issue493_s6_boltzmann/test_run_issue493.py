@@ -36,6 +36,10 @@ class ExperimentTests(unittest.TestCase):
             with self.assertRaisesRegex(run.RunError, 'SHA-256 mismatch'):
                 run.preflight(modified, pathlib.Path(temp) / 'extracted')
 
+    def test_nonunity_compile_prevents_boltzmann_anonymous_symbol_collision(self):
+        import inspect
+        self.assertIn('MOOSE_UNITY=false', inspect.getsource(run.build))
+
     def test_docker_invocation_pins_image_and_research_controls(self):
         command = run.docker_cmd([(pathlib.Path('/tmp/example'), '/case', 'rw')], '/case', 'true')
         self.assertEqual(command[0], 'docker')
