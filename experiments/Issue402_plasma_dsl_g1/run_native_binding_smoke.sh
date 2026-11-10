@@ -25,7 +25,9 @@ test -f "$PILOT/valid_bindings.i"
     physics_app/src/physics/plasma/MaxwellPhysics.C physics_app/src/base/PhysicsApp.C \
     physics_app/src/materials/PhysicsElectronClosureMaterial.C \
     physics_app/src/materials/PhysicsElectronTransportLookupMaterial.C \
-    physics_app/src/materials/PhysicsPlasmaChargeTransportMaterial.C
+    physics_app/src/materials/PhysicsPlasmaChargeTransportMaterial.C \
+    physics_app/include/materials/PhysicsSpeciesTransportAliasMaterial.h \
+    physics_app/src/materials/PhysicsSpeciesTransportAliasMaterial.C
 } > "$EVIDENCE/provenance.txt"
 
 docker pull "$PINNED_BASE"
