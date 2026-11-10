@@ -83,6 +83,8 @@ The pinned PhysicsApp/MOOSE implementation defines registered input semantics;
 external catalogue formats may carry independent version metadata.
 Do not add an implicit schema-version field or reject an input for omitting it.
 
+**2026-11-10 user-directed Continuity refinement:** The Continuity input does not accept `variables` or `fem_kernel_names`/`fvm_kernel_names`. Physics derives state-variable names from canonical species IDs and state form. The default log-number naming rule is `log_n<species_id>` (so `e -> log_ne`). An audited internal compatibility registry, not user-level variable options, must preserve archived S6 `O2p -> log_ni`, `Om -> log_nm`, `Op -> log_nop` bindings until equivalence is established. Generated Continuity kernels are named exactly `<species_id>_transport` (e.g. `e_transport`), independently of `name_prefix`. Duplicate physical-equation owners are rejected even when names differ. **This is a design target, not the currently pinned PR #491 or Issue #493 P3 runtime input.**
+
 **Discretization is local to the equation/species, never a global
 \`Transport/discretization\` switch.** Species-bearing equation leaves use
 \`fem_species\` and \`fvm_species\`. Both must contain unique, known,
@@ -175,9 +177,11 @@ never auto-enabled.
 | Parameter | Type | Requirement and meaning |
 |---|---|---|
 | \`fem_species\`, \`fvm_species\` | \`vector<string>\` each | At least one nonempty, disjoint, unique; each species known in catalogue and supported by its chosen FEM/FV charged-transport model. |
-| \`variables\` | \`vector<VariableName>\` | Required 1:1 with \`fem_species\` then \`fvm_species\` in that order; preserve existing log-molar/physical-number state, units and reference scales. |
+| Derived Continuity state variables (no user-facing `variables`) | internal naming policy + verified species registry | Deterministically generate names using species ID and state representation. Default log-number form: `log_n<species_id>` (e.g. `e` → `log_ne`). Historical S6 aliases `O2p/Om/Op → log_ni/log_nm/log_nop` require audited internal compatibility mapping before new naming can replace them. Preserve state transformation, units, reference scale and physical ownership. |
 | \`electric_field\` | typed field reference | Required for drift-active species; may be external Poisson field; never created twice. |
-| \`mobility\`, \`diffusion\` | \`vector<MooseFunctorName>\` | Required 1:1 in FEM-then-FV species order, with units **m²/(V s)** and **m²/s**. |
+| `mobility`, `diffusivity` | `vector<MooseFunctorName>` (shared FEM/FVM option keys) | Required 1:1 with activated FEM then FVM species, units **m²/(V s)** and **m²/s**. Do not silently broadcast a single electron coefficient to several FV ions. `electron_diffusivity` is the intended new provider name; changing native `electron_diffusion` production and consumers is a distinct, parity-gated change. |
+| `fem_charge_numbers`, `fvm_charge_numbers` | `vector<int>` each | Required for each nonempty discretization list; numbers align with that list's species, and must agree with the signed charge recorded in the species registry. S6: FEM `-1`, FVM `1 -1 1`. |
+| Generated Continuity kernels (no `fem_kernel_names` or `fvm_kernel_names` option) | internal naming | Each activated species gets precisely `<canonical_species_id>_transport` (e.g. `e_transport`); collision-check against legacy `ne_transport` by variable and physical equation, not just name. |
 | \`reaction_sources\` | \`vector<MooseFunctorName>\` | Required 1:1 in FEM-then-FV species order; explicit zero permitted and number/molar conversion preserved. |
 | \`owner_mode\`, \`boundary_contract\` | shared | Required; one species continuity residual per species for \`generate\`. |
 
@@ -417,10 +421,10 @@ candidates; a valid Native MOOSE syntax cannot be inferred.
           owner_mode = generate
           name_prefix = electron_
           fem_species = 'e'
-          variables = 'log_ne'
+          fem_charge_numbers = '-1'
           electric_field = E_dc_from_poisson
           mobility = 'electron_mobility'
-          diffusion = 'electron_diffusion'
+          diffusivity = 'electron_diffusivity'
           reaction_sources = 'S_e_from_chemistry'
           boundary_contract = electron_bcs_v1.json
         []
@@ -437,6 +441,8 @@ deliberately does not invent a Poisson equation or a Maxwell/RF
 system; \`E_dc_from_poisson\` must be an explicitly mapped external
 field. It is therefore an illustration of the **schema**, not yet a
 self-contained runnable simulation.
+
+**2026-11-10 G0 refinement (user requested):** Continuity variable names and kernel names are generated internally; remove explicit `variables` and per-family kernel-name options. Use shared `mobility` / `diffusivity` coefficient input names and both `fem_charge_numbers` / `fvm_charge_numbers`. The renamed `electron_diffusivity` provider is a future target, not a proved rename of the current `electron_diffusion` material. G1 build/negative cases, G2 complete naming/ownership mapping, G3 actual solver comparison and G4 cutover remain separate gates. The existing immutable S6 P3 comparison inputs must **not** be rewritten.
 
 **2026-11-09 G0 amendment accepted by user:** No input \`schema_version\`.
 Species-bearing equation paths use \`fem_species\` and \`fvm_species\`
