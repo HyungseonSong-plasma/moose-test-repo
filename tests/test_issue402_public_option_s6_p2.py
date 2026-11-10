@@ -95,3 +95,93 @@ def test_full_s6_p2_provenance_and_no_solver_execution():
     assert "issue493_option_only" not in bash  # no secret runner or alternate old-rate owner
     subprocess.run(["bash", "-n", str(shell)], check=True)
     subprocess.run(["bash", "-n", str(PILOT / "run_native_binding_smoke.sh")], check=True)
+
+
+def test_p2_case_verdict_survives_cleanup_failure(tmp_path):
+    """Execute actual P2 control flow with a fault-injected cleanup failure.
+
+    Four simulated, isolated Native PASS results must survive unchanged while
+    the overall gate remains HOLD. No Docker, rate data or solver is invoked.
+    """
+    import json
+    import os
+    import tempfile
+    from types import SimpleNamespace
+
+    script = (PILOT / "public_option_s6_p2.py").read_text()
+    tree = ast.parse(script)
+    names = {"execute", "persist_report"}
+    functions = [node for node in tree.body
+                 if isinstance(node, ast.FunctionDef) and node.name in names]
+    assert {fn.name for fn in functions} == names
+    module = ast.Module(body=functions, type_ignores=[])
+
+    root = tmp_path / "control"
+    root.mkdir()
+    (root / "manifest.json").write_text("{}")
+    evidence = tmp_path / "evidence"
+    evidence.mkdir()
+    source = "a" * 40
+    image = "pinned-ci-image@sha256:" + "b" * 64
+    evidence.joinpath("option_s6_environment.json").write_text(json.dumps({
+        "source_sha": source,
+        "image": image,
+        "public_p0": "PASS",
+        "docker_mount": "PASS",
+        "root_scratch_create_and_cleanup": "PASS",
+        "host_cleanup": "PASS",
+    }))
+
+    def stage(_root, _historical, case, old_variant, staged, _manifest):
+        staged.mkdir(parents=True)
+        directory = staged / "chem"
+        directory.mkdir()
+        if old_variant == "C":
+            directory.joinpath("migrated_continuity.i").write_text("OLD")
+        return [f"{case}.i"]
+
+    class CleanupFault:
+        def __enter__(self):
+            path = tmp_path / "scratch"
+            path.mkdir()
+            return str(path)
+
+        def __exit__(self, *_args):
+            raise PermissionError("simulated root-owned .jitcache")
+
+    options = {
+        "Path": Path,
+        "os": os,
+        "json": json,
+        "hashlib": hashlib,
+        "ROOT": root,
+        "OCI": image,
+        "OVERLAY": "new option input",
+        "OVERLAY_SHA256": EXPECTED_OVERLAY,
+        "CASES": ("417", "941"),
+        "VARIANTS": ("B", "D"),
+        "validate_overlay": lambda: None,
+        "check_source": lambda *_args: {"binary_sha256": "123"},
+        "sha_file": lambda path: EXPECTED_OVERLAY if str(path).endswith("migrated_continuity.i") else "manifest-hash",
+        "p2": SimpleNamespace(
+            preflight=lambda _root: {"P0": "PASS"},
+            DECKS=Path("."),
+            PINNED_CANDIDATE="legacy-pinned",
+            CHEM=Path("chem"),
+            stage=stage,
+        ),
+        "run_one": lambda *_args: {"P2": "PASS", "exit_code": 0, "syntax_ok": True},
+        "tempfile": SimpleNamespace(TemporaryDirectory=lambda **_kwargs: CleanupFault()),
+    }
+    exec(compile(module, str(PILOT / "public_option_s6_p2.py"), "exec"), options)
+    report = options["execute"](tmp_path, tmp_path / "physics-opt", source, evidence)
+    assert report["P2"] == "PASS"
+    assert report["cleanup"] == "HOLD"
+    assert report["status"] == "HOLD_INFRASTRUCTURE_CLEANUP"
+    assert report["cleanup_error_class"] == "PermissionError"
+    assert all(report["checks"][case][variant]["P2"] == "PASS"
+               for case in ("417", "941") for variant in ("B", "D"))
+    durable = json.loads((evidence / "issue402_option_s6_p2_status.json").read_text())
+    assert durable["P2"] == "PASS"
+    assert durable["status"] == "HOLD_INFRASTRUCTURE_CLEANUP"
+    assert durable["P3"] == "NOT_RUN"
