@@ -50,6 +50,8 @@ def test_existing_variables_only():
     assert "Repeated or empty species in fvm_species" in base_source
     assert "Species '" in base_source
     assert "solverVariableExists(variable)" in base_source
+    assert 'paramError("variables"' not in base_source
+    assert 'paramError(is_finite_volume ? "fvm_species" : "fem_species"' in base_source
     assert "isVariableFV(variable)" in base_source
     # Shared input validation never creates solver objects.
     assert "getProblem().add" not in base_source
