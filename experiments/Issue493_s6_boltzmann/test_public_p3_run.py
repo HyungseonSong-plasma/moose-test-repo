@@ -187,7 +187,8 @@ class SanitizedTelemetryTests(unittest.TestCase):
             with (mock.patch.object(diag, "docker_resources",
                                     return_value={"cpu_percent": None,
                                                   "memory_bytes": None}),
-                  mock.patch.object(diag, "_stop_container", wraps=diag._stop_container)):
+                  mock.patch.object(diag, "_stop_container",
+                                    side_effect=lambda name, proc: (proc.kill(), proc.wait(timeout=3)))):
                 status = diag.monitor_solver(
                     cmd, cwd=root, log=root / "native.log",
                     case="417", variant="B",
