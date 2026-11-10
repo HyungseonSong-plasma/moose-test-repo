@@ -237,3 +237,35 @@ artifacts. `SCIENCE_HOLD` remains in all outcomes.
 object identity, residual/Jacobian equivalence and fresh 460-step 400 W S6
 numerical comparison require subsequent independent checks and cannot be
 inferred from `P2=PASS`.
+
+## 2026-11-10 Native failure containment: P0 / P1 / P2 split
+
+The canonical CI now treats these as separate sequential steps for this
+option-only source, before any P3:
+
+- **P0 environment preflight (before build):** checks exact Git HEAD, public
+  S6-417/941 immutable deck/rate SHA-256 provenance, pinned OCI accessibility,
+  read-only `/workspace` binding, root-owned `.jitcache` creation and
+  deletion, and host scratch cleanup. A safe JSON status is emitted at
+  `evidence/option_s6_environment.json`. This gate must pass *before* the
+  expensive Native build.
+- **P1 same-job build and tiny regression:** the existing Native source
+  compiler and small positive/negative `--check-input` controls are unchanged,
+  but now emit `evidence/native_p1_identity.json` with HEAD, OCI digest,
+  binary SHA-256 and native build-log SHA-256. The already-built binary is
+  reused only within that exact CI job. Cross-run binary caching/reuse is
+  **not** accepted without the separately reviewed canonical P1 evidence
+  contract; do not treat a previous CI artifact as a trusted executable.
+- **P2 full public S6 input:** four independent actual Native input checks
+  and per-case outcomes are written atomically *before* workspace cleanup.
+  The overall acceptance condition is `P2=PASS`, `cleanup=PASS` and
+  `status=PASS`. If all four inputs succeed but host cleanup fails,
+  `P2=PASS` remains factual, `cleanup=HOLD`,
+  `status=HOLD_INFRASTRUCTURE_CLEANUP` and CI fails closed. This prevents
+  post-check cleanup errors from erasing successful parser evidence or being
+  misclassified as input/science failures.
+
+The P0/P1/P2 record path, OCI image/source/binary SHA and old source/rate
+manifest must match. No P3/P4 execution or scientific approval is added.
+Original S6 P3 decks, Material/Functor producers and workflow credentials
+remain untouched.
