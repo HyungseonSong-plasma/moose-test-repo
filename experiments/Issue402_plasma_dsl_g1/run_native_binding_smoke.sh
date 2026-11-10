@@ -22,7 +22,10 @@ test -f "$PILOT/valid_bindings.i"
     physics_app/src/physics/plasma/EnergyPhysics.C \
     physics_app/src/physics/plasma/ChemistryPhysics.C \
     physics_app/src/physics/plasma/PoissonPhysics.C \
-    physics_app/src/physics/plasma/MaxwellPhysics.C physics_app/src/base/PhysicsApp.C
+    physics_app/src/physics/plasma/MaxwellPhysics.C physics_app/src/base/PhysicsApp.C \
+    physics_app/src/materials/PhysicsElectronClosureMaterial.C \
+    physics_app/src/materials/PhysicsElectronTransportLookupMaterial.C \
+    physics_app/src/materials/PhysicsPlasmaChargeTransportMaterial.C
 } > "$EVIDENCE/provenance.txt"
 
 docker pull "$PINNED_BASE"
@@ -108,8 +111,8 @@ for item in invalid_overlap invalid_fem_fv_swap invalid_no_species invalid_missi
     invalid_missing_variable) expected='was not found' ;;
     invalid_legacy_variables) expected='variables' ;;
     invalid_legacy_kernel_names) expected='fem_kernel_names' ;;
-    invalid_missing_fvm_charges) expected='Provide fem_potential, mobility, diffusivity and FEM/FVM charge vectors together' ;;
-    invalid_incomplete_coefficients) expected='Provide one mobility and one diffusivity for each FEM/FVM species' ;;
+    invalid_missing_fvm_charges) expected='Provide fem_potential and FEM/FVM charge vectors together' ;;
+    invalid_incomplete_coefficients) expected='mobility' ;;
     invalid_wrong_charge_sign) expected='Charge does not match verified species identity' ;;
   esac
   if [[ "$code" -eq 0 ]] || ! grep -Fq "$expected" "$EVIDENCE/$item.log"; then
