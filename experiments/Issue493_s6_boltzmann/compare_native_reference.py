@@ -100,17 +100,17 @@ def plot_profile(x: list[float], reference: list[float], native: list[float], *,
     h, n = np.asarray(reference), np.asarray(native)
     h, n = h / 1e16, n / 1e16
     fig, ax = plt.subplots(figsize=(8.5, 5.1))
-    ax.plot(x, h, label="REFERENCE reference (time unknown)", lw=2.0)
+    ax.plot(x, h, label="Reference (timestamp unknown)", lw=2.0)
     ax.plot(x, n, label=f"Native {case} at {time_us:g} us", lw=1.6)
     ax.set(xlabel=("Axial z (cm)" if axis == "vertical" else "Radius r (cm)"),
            ylabel="n_e (1e16 m^-3)",
-           title=f"REFERENCE vs Native | {case} | {axis}")
+           title=f"Reference vs Native | {case} | {axis}")
     ax.set_xlim(0, 44 if axis == "vertical" else 25)
     ax.set_ylim(bottom=0)
     ax.grid(alpha=0.25)
     ax.legend(frameon=False)
     fig.text(0.5, 0.01,
-             "REFERENCE time/coordinate mapping unverified; Native plasma mesh only; no extrapolation.",
+             "Reference time/coordinate mapping assumed; Native plasma mesh only; no extrapolation.",
              ha="center", fontsize=8)
     fig.tight_layout(rect=(0, 0.03, 1, 1))
     fig.savefig(output, dpi=155)
