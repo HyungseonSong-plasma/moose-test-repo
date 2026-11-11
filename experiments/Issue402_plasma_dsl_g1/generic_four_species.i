@@ -20,6 +20,31 @@
     type = MooseVariableFVReal
   []
 []
+# Standalone P2-only residuals satisfy MOOSE kernel-coverage integrity.
+# ContinuityEq remains a pure variable-binding check in this fixture.
+[Kernels]
+  [electron_diffusion_probe]
+    type = Diffusion
+    variable = log_e
+  []
+[]
+[FVKernels]
+  [o2p_diffusion_probe]
+    type = FVDiffusion
+    variable = log_O2p
+    coeff = 1
+  []
+  [om_diffusion_probe]
+    type = FVDiffusion
+    variable = log_Om
+    coeff = 1
+  []
+  [op_diffusion_probe]
+    type = FVDiffusion
+    variable = log_Op
+    coeff = 1
+  []
+[]
 [Physics]
   [Plasmas]
     [Transport]
