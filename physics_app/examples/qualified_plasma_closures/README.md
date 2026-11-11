@@ -1,5 +1,10 @@
 # Qualified plasma-closure case
 
+> **Historical-qualified example.** Any Gummel iteration references below
+> describe a former PhysicsApp Action. Current PhysicsApp no longer registers
+> `GummelIteration/*`; retain this example for archived comparison only.
+
+
 This directory is populated in the validated distribution artifact from the
 qualified 20 ns PlasmaClosures migration case.
 
