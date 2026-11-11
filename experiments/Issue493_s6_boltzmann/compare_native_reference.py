@@ -35,7 +35,7 @@ def load_reference(path: Path, coordinate: str) -> tuple[list[float], list[float
     return x, y
 
 def plasma_slice(exodus: Path, vertical: list[float], horizontal: list[float],
-                 time_us: float) -> tuple[list[float], list[float], float, float]:
+                 time_us: float) -> tuple[list[float], list[float], float, float, tuple[list[float], list[float]]]:
     import numpy as np
     import matplotlib.tri as mtri
     from scipy.io import netcdf_file
@@ -71,7 +71,15 @@ def plasma_slice(exodus: Path, vertical: list[float], horizontal: list[float],
         interpolator = mtri.LinearTriInterpolator(mtri.Triangulation(x, z, triangles), ne)
         vv = np.ma.filled(interpolator(np.zeros(len(vertical)), vertical), np.nan)
         rr = np.ma.filled(interpolator(horizontal, np.full(len(horizontal), 23.0)), np.nan)
-        return vv.tolist(), rr.tolist(), float(np.max(ne[nodes])), float(times[idx] * 1e6)
+        # Preserve the original plasma-mesh axis nodes for the vertical PNG.
+        # These samples are not interpolated to the Reference coordinates.
+        axis_nodes = nodes[np.isclose(x[nodes], 0.0, atol=1e-10, rtol=0.0)]
+        axis_nodes = axis_nodes[np.argsort(z[axis_nodes])]
+        if len(axis_nodes) < 2 or np.any(np.diff(z[axis_nodes]) <= 0):
+            raise ValueError("NATIVE_AXIS_NODES_INVALID")
+        raw_vertical = (z[axis_nodes].tolist(), ne[axis_nodes].tolist())
+        return (vv.tolist(), rr.tolist(), float(np.max(ne[nodes])),
+                float(times[idx] * 1e6), raw_vertical)
 
 def evaluate(reference: list[float], native: list[float], cutoff: float = 1e15) -> dict:
     pairs = [(h, n) for h, n in zip(reference, native) if h > cutoff and math.isfinite(n)]
@@ -90,28 +98,39 @@ def evaluate(reference: list[float], native: list[float], cutoff: float = 1e15) 
                                             for a, b in pairs) / len(pairs)),
     }
 
-def plot_profile(x: list[float], reference: list[float], native: list[float], *,
+def plot_profile(reference_x: list[float], reference: list[float],
+                 native_x: list[float], native: list[float], *,
                  axis: str, case: str, time_us: float, output: Path) -> None:
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
     import numpy as np
 
-    h, n = np.asarray(reference), np.asarray(native)
-    h, n = h / 1e16, n / 1e16
+    if len(reference_x) != len(reference) or len(native_x) != len(native):
+        raise ValueError("PLOT_PROFILE_COORDINATE_VALUE_MISMATCH")
+    h, n = np.asarray(reference) / 1e16, np.asarray(native) / 1e16
+    raw_vertical = axis == "vertical"
     fig, ax = plt.subplots(figsize=(8.5, 5.1))
-    ax.plot(x, h, label="Reference (timestamp unknown)", lw=2.0)
-    ax.plot(x, n, label=f"Native {case} at {time_us:g} us", lw=1.6)
-    ax.set(xlabel=("Axial z (cm)" if axis == "vertical" else "Radius r (cm)"),
+    ax.plot(reference_x, h, label="Reference (timestamp unknown)", lw=2.0,
+            marker="o" if raw_vertical else None, markersize=3.5)
+    ax.plot(native_x, n,
+            label=(f"Native {case} at {time_us:g} us (raw r=0 nodes)"
+                   if raw_vertical else f"Native {case} at {time_us:g} us"),
+            lw=1.6, marker="x" if raw_vertical else None, markersize=4.0)
+    ax.set(xlabel=("Axial z (cm)" if raw_vertical else "Radius r (cm)"),
            ylabel="n_e (1e16 m^-3)",
            title=f"Reference vs Native | {case} | {axis}")
-    ax.set_xlim(0, 44 if axis == "vertical" else 25)
+    ax.set_xlim(0, 44 if raw_vertical else 25)
     ax.set_ylim(bottom=0)
     ax.grid(alpha=0.25)
     ax.legend(frameon=False)
-    fig.text(0.5, 0.01,
-             "Reference time/coordinate mapping assumed; Native plasma mesh only; no extrapolation.",
-             ha="center", fontsize=8)
+    fig.text(
+        0.5, 0.01,
+        ("Original vertical CSV and plasma axis nodes; lines join samples; "
+         "no plot interpolation/extrapolation."
+         if raw_vertical else
+         "Reference time/coordinate mapping assumed; Native plasma mesh only; no extrapolation."),
+        ha="center", fontsize=8)
     fig.tight_layout(rect=(0, 0.03, 1, 1))
     fig.savefig(output, dpi=155)
     plt.close(fig)
@@ -133,7 +152,7 @@ def analyze(*, exodus: Path, csv_file: Path, manifest_file: Path,
         raise ValueError("REFERENCE_SLICE_COORDINATES_INVALID")
     if output.exists():
         raise ValueError("REFERENCE_OUTPUT_ALREADY_EXISTS")
-    v_native, r_native, native_peak, actual_time = plasma_slice(exodus, vx, rx, time_us)
+    v_native, r_native, native_peak, actual_time, raw_vertical = plasma_slice(exodus, vx, rx, time_us)
     summary = {
         "schema": "issue493_public_reference_native_overlay_v1",
         "case": manifest["case"], "arm": manifest["arm"], "label": label,
@@ -161,7 +180,10 @@ def analyze(*, exodus: Path, csv_file: Path, manifest_file: Path,
             # Keep the sampled Native values separate from the versioned public reference.
             writer.writerow(["coordinate_cm", "native_ne_m_minus3"])
             writer.writerows(zip(x, native))
-        plot_profile(x, reference, native, axis=axis, case=label,
+        # Vertical: plot the original r=0 plasma nodes; horizontal keeps the
+        # existing z=23 cm triangle-interpolated profile (no exact mesh nodes).
+        plot_x, plot_native = raw_vertical if axis == "vertical" else (x, native)
+        plot_profile(x, reference, plot_x, plot_native, axis=axis, case=label,
                      time_us=actual_time,
                      output=output / f"{axis}_absolute.png")
     (output / "metrics.json").write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n")
