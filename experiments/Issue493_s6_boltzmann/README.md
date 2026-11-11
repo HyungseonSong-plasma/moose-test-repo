@@ -162,7 +162,8 @@ to public CSV artifacts**; the rendered reference curves and aggregate metrics
 are included in the downloadable public artifact, so review disclosure rights.
 
 With configured reference secrets and a valid P3 run, each B or C artifact
-contains `hpem_reference/{vertical,radial}_{absolute,normalized}.png`,
+contains only `hpem_reference/vertical_absolute.png` and
+`hpem_reference/radial_absolute.png` (no normalized plots),
 native-only sampled `{vertical,radial}_profile.csv`, and `metrics.json`.
 Profiles come from actual plasma-block triangles and nodal
 `n_e = N_A * exp(log_ne)`, not from neighboring non-plasma elements. No
