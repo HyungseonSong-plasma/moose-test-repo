@@ -9,7 +9,6 @@
           block = plasma
           fem_species = 'e'
           fvm_species = 'O2p Om Op'
-          legacy_s6_state_names = true
         []
       []
     []
