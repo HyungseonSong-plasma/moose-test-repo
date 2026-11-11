@@ -161,6 +161,13 @@ deliberately omitted. The metrics record full reference CSV SHA-256 digests,
 Native Exodus/CSV SHA-256 digests, common-support counts, and RMSE.
 Node density is `N_A * exp(log_ne)`; interpolation uses only plasma
 triangles, with no external extrapolation, at Native 100 us.
+For the **default vertical PNG**, plot the original Reference CSV samples and
+the original Native `r=0` plasma-mesh node values, connected by lines with
+visible markers over z=0–44 cm. Do not interpolate, extrapolate, or set solid
+regions to zero for this PNG. The **horizontal PNG remains unchanged**: the
+public mesh has no exact `z=23 cm` nodes, so its Native plot uses the existing
+plasma-triangle interpolation. Both numeric metrics and the sampled profile
+CSVs continue to use that original comparison grid without modification.
 The reference curves are publicly reproducible from the committed CSVs.
 
 If comparison fails, `reference_comparison_status.json` records HOLD and

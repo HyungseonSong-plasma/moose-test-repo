@@ -71,6 +71,36 @@ class ReferenceNativeOverlayTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "REFERENCE_OUTPUT_ALREADY_EXISTS"):
                 refmod.analyze(**args)
 
+    def test_vertical_png_uses_raw_nodes_without_changing_metrics_grid(self):
+        from unittest.mock import patch
+
+        with tempfile.TemporaryDirectory() as temp:
+            args = self.fixture(Path(temp))
+            with patch.object(refmod, "plot_profile", wraps=refmod.plot_profile) as plot:
+                result = refmod.analyze(**args)
+
+            calls = {call.kwargs["axis"]: call for call in plot.call_args_list}
+            self.assertEqual(set(calls), {"vertical", "horizontal"})
+            vertical = calls["vertical"]
+            self.assertEqual(vertical.args[0], [0.0, 23.0, 44.0])
+            # Only the two original plasma-mesh nodes lie on r=0 in this fixture.
+            self.assertEqual(vertical.args[2], [0.0, 44.0])
+            self.assertEqual(len(vertical.args[3]), 2)
+            for value in vertical.args[3]:
+                self.assertAlmostEqual(value / 8e16, 1.0, places=12)
+
+            # With no exact z=23 cm horizontal nodes, preserve the old
+            # linear-triangle samples for the horizontal plot and both metrics.
+            horizontal = calls["horizontal"]
+            self.assertEqual(horizontal.args[0], horizontal.args[2])
+            self.assertEqual(len(horizontal.args[3]), 3)
+            for value in horizontal.args[3]:
+                self.assertAlmostEqual(value / 8e16, 1.0, places=12)
+            self.assertEqual(result["sampling"], "PLASMA_TRIANGLE_LINEAR_NO_EXTRAPOLATION")
+            self.assertEqual(result["vertical"]["common_support_points"], 3)
+            self.assertLess(result["vertical"]["rmse_over_reference_peak"], 1e-12)
+            self.assertLess(result["horizontal"]["rmse_over_reference_peak"], 1e-12)
+
     def test_fails_closed_on_reference_or_native_provenance(self):
         with tempfile.TemporaryDirectory() as temp:
             args = self.fixture(Path(temp))
