@@ -1,4 +1,13 @@
-# PlasmaClosures Action
+# PlasmaClosures Action — archived legacy contract
+
+> **Archived / not executable on current PhysicsApp.** The `[PlasmaClosures]`
+> composition Action was retired after confirming it is not used by canonical
+> S6-417/941 D input layers. This document records historical configuration
+> and scientific provenance only. Individual underlying Material types remain
+> independently registered; old inputs using `[PlasmaClosures]` will fail
+> native input parsing until explicitly migrated. The immutable historical
+> source and archived results are not rewritten.
+
 
 `[PlasmaClosures]` is the user-facing composition layer for PhysicsApp plasma closure
 materials. The preferred API is role-based: each MultiApp creates only the closure

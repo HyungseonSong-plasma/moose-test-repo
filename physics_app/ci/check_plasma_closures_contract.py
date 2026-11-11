@@ -4,8 +4,6 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 required = [
-    ROOT / "include/actions/PlasmaClosuresAction.h",
-    ROOT / "src/actions/PlasmaClosuresAction.C",
     ROOT / "include/materials/ElectronClosureMaterial.h",
     ROOT / "src/materials/ElectronClosureMaterial.C",
     ROOT / "include/materials/PhysicsElectronKineticsMaterial.h",
@@ -18,23 +16,17 @@ required = [
 for path in required:
     assert path.is_file(), path
 
-action = (ROOT / "src/actions/PlasmaClosuresAction.C").read_text()
 app = (ROOT / "src/base/PhysicsApp.C").read_text()
+assert 'PlasmaClosuresAction' not in app
+assert 'PlasmaClosures/*' not in app
+assert not (ROOT / "include/actions/PlasmaClosuresAction.h").exists()
+assert not (ROOT / "src/actions/PlasmaClosuresAction.C").exists()
 electron = (ROOT / "src/materials/ElectronClosureMaterial.C").read_text()
 kinetics = (ROOT / "src/materials/PhysicsElectronKineticsMaterial.C").read_text()
 heavy = (ROOT / "src/materials/PhysicsHeavyTransportMaterial.C").read_text()
 
-assert 'registerMooseAction("PhysicsApp", PlasmaClosuresAction, "add_functor_material")' in action
-assert 'syntax.registerActionSyntax("PlasmaClosuresAction", "PlasmaClosures/*")' in app
-
-# The user-facing action composes four closures; it does not implement their physics.
-for object_type in (
-    "ElectronClosureMaterial",
-    "PhysicsElectronKineticsMaterial",
-    "PhysicsHeavyTransportMaterial",
-    "PhysicsPlasmaChargeDensityMaterial",
-):
-    assert object_type in action
+# The retired Action was a composition wrapper, not a physics implementation.
+# Preserve the independent Material registrations and legacy factory aliases.
 
 # Electron mean energy and transport are now owned by one material.
 assert "electron_mean_energy_output" in electron
@@ -78,4 +70,4 @@ for old_type, new_type in (
     assert f'registerMooseObject("PhysicsApp", {new_type});' in content
     assert f'registerMooseObjectAliased("PhysicsApp", {new_type}, "{old_type}");' in content
 
-print("PLASMA_CLOSURES_CONTRACT: PASS")
+print("RETIRED_PLASMA_CLOSURES_MATERIAL_CONTRACT: PASS")
