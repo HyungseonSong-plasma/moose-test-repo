@@ -134,11 +134,25 @@ def render(root: Path, profile: dict) -> str:
             raise WorkflowContractError("SPECIAL_ARCHIVE_JOB_ALLOWLIST_MISMATCH")
     elif len(job_names) != 1 or job_names[0] != allowed_job:
         raise WorkflowContractError("SPECIAL_JOB_ALLOWLIST_MISMATCH")
+    # Preserve no-secret special workflow policy except the two explicitly
+    # named, read-only HPEM profile reference sources in Issue493 archive.
+    # Reject all other secret expressions and any mutated/extra occurrences.
+    permitted_hpem_secrets = (
+        "${{ secrets.HPEM_400W_VERTICAL_CSV_B64 }}",
+        "${{ secrets.HPEM_400W_RADIAL_CSV_B64 }}",
+    )
+    scrutinized = template
+    if variant == "archive":
+        if any(template.count(ref) != 2 for ref in permitted_hpem_secrets):
+            raise WorkflowContractError("SPECIAL_HPEM_REFERENCE_SECRET_CONTRACT")
+        for ref in permitted_hpem_secrets:
+            scrutinized = scrutinized.replace(ref, "")
+    if re.search(r"\bsecrets\b", scrutinized):
+        raise WorkflowContractError("SPECIAL_SECRET_SURFACE_NOT_AUTHORIZED")
     common = (re.search(r"^    strategy:\n      fail-fast: false\n      max-parallel: 2", template, re.MULTILINE)
               and "public_p3_run.py" in template
               and "github.sha" in template
               and "github.event.pull_request." not in template
-              and "secrets." not in template
               and not re.search(r"^    if:", template, re.MULTILINE))
     if not common:
         raise WorkflowContractError("SPECIAL_EXECUTION_POLICY")
@@ -172,7 +186,7 @@ def render(root: Path, profile: dict) -> str:
                 or "source-bound-binary" not in template
                 or "needs: [issue493-public-p3-archive-b, issue493-public-p3-archive-c]" not in template
                 or "timeout-minutes: 360" not in template
-                or "--mode full" in template or "secrets." in template):
+                or "--mode full" in template):
             raise WorkflowContractError("SPECIAL_ARCHIVE_PROVENANCE_OR_DATA_BOUNDARY")
     name, output = profile["name"], profile["output"]
     if not isinstance(name, str) or not re.fullmatch(r"[A-Za-z0-9 _-]{4,100}", name):
