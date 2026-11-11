@@ -87,6 +87,10 @@ native --check-input -i "$PILOT/baseline.i" \
   2>&1 | tee "$EVIDENCE/baseline_check.log"
 native --check-input -i "$PILOT/baseline.i" "$PILOT/valid_bindings.i" \
   2>&1 | tee "$EVIDENCE/valid_bindings_check.log"
+# Verify canonical names e/O2p/Om/Op from a standalone, untouched P2 fixture.
+native --check-input -i "$PILOT/generic_four_species.i" \
+  2>&1 | tee "$EVIDENCE/generic_four_species_check.log"
+echo "PLASMA_GENERIC_SPECIES_STATE_NAMES_P2_PASS"
 native --check-input -i "$PILOT/baseline.i" "$PILOT/valid_all_physics.i" \
   2>&1 | tee "$EVIDENCE/all_physics_check.log"
 # Standalone positive construction check: one generated FEM transport Kernel.
@@ -96,7 +100,7 @@ native --check-input -i "$PILOT/baseline.i" "$PILOT/valid_generated_transport_op
 echo "PLASMA_OPTION_ONLY_FEM_GENERATION_P2_PASS"
 echo "PLASMA_VARIABLE_CHECK_PASSED"
 
-for item in invalid_overlap invalid_fem_fv_swap invalid_no_species invalid_missing_variable invalid_energy_species invalid_chemistry_reactions invalid_poisson_variable invalid_maxwell_frequency invalid_legacy_variables invalid_legacy_kernel_names invalid_missing_fvm_charges invalid_incomplete_coefficients invalid_wrong_charge_sign; do
+for item in invalid_overlap invalid_fem_fv_swap invalid_no_species invalid_missing_variable invalid_energy_species invalid_chemistry_reactions invalid_poisson_variable invalid_maxwell_frequency invalid_legacy_variables invalid_legacy_kernel_names invalid_missing_fvm_charges invalid_incomplete_coefficients invalid_wrong_charge_sign invalid_legacy_s6_unknown; do
   set +e
   native --check-input -i "$PILOT/baseline.i" "$PILOT/$item.i" \
     > "$EVIDENCE/$item.log" 2>&1
@@ -116,6 +120,7 @@ for item in invalid_overlap invalid_fem_fv_swap invalid_no_species invalid_missi
     invalid_missing_fvm_charges) expected='Provide fem_potential and FEM/FVM charge vectors together' ;;
     invalid_incomplete_coefficients) expected='mobility' ;;
     invalid_wrong_charge_sign) expected='Charge does not match verified species identity' ;;
+    invalid_legacy_s6_unknown) expected='legacy_s6_state_names supports only' ;;
   esac
   if [[ "$code" -eq 0 ]] || ! grep -Fq "$expected" "$EVIDENCE/$item.log"; then
     echo "::error::Invalid input was accepted or reported the wrong error: $item" >&2
