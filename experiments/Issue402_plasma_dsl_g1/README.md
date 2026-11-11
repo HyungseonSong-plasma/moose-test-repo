@@ -235,10 +235,20 @@ The user-visible **Physics option** is now `diffusivity`; it can still point
 to the existing `electron_diffusion` functor. Changing that provider to
 `electron_diffusivity` is deliberately deferred.
 
-- Input `variables` and `fem_kernel_names`/`fvm_kernel_names` are removed;
-  `e -> log_ne`, and archived S6 `O2p/Om/Op -> log_ni/log_nm/log_nop`
-  are resolved internally. Other species use `log_n<species_id>` pending
-  separate vetted catalog validation.
+- Input `variables` and `fem_kernel_names`/`fvm_kernel_names` remain removed.
+  **Default solver-state names are canonical**: `log_<species_id>`, e.g.
+  `e -> log_e`, `O2p -> log_O2p`, `Om -> log_Om`, `Op -> log_Op`.
+  The synthetic `baseline.i` and all active native fixtures use these names
+  consistently for Variables, Kernel, boundary, Energy, Poisson and Maxwell.
+- Exact archived S6 public P2 controls explicitly set
+  `legacy_s6_state_names = true` in their **review-only** migration sidecar,
+  preserving `log_ne/log_ni/log_nm/log_nop` without rewriting the ten
+  archived input layers or changing the C-only P3/P4 evidence. This opt-in
+  permits only `e/O2p/Om/Op` and fails on unknown species; no silent fallback.
+  It is not a new physics result or a blanket legacy naming default.
+- `generic_four_species.i` is a syntax-only P2 control proving default
+  automatic naming for all four species; generated transport is still limited
+  to the verified FEM species and charge identities.
 - Generated kernel name is fixed to `<species_id>_transport`, so an electron
   kernel is named `e_transport`. In the existing protected S6 migration
   comparison, the old `ne_transport` remains *unchanged*: it is NOT a valid
