@@ -165,8 +165,9 @@ def analyze(*, exodus: Path, csv_file: Path, manifest_file: Path,
                                    ("radial", rx, ry, r_native)):
         with (output / f"{axis}_profile.csv").open("w", newline="") as f:
             writer = csv.writer(f)
-            writer.writerow(["coordinate_cm", "hpem_ne_m_minus3", "native_ne_m_minus3"])
-            writer.writerows(zip(x, hpem, native))
+            # Do not republish the operator-supplied raw HPEM reference rows.
+            writer.writerow(["coordinate_cm", "native_ne_m_minus3"])
+            writer.writerows(zip(x, native))
         for normalized in (False, True):
             suffix = "normalized" if normalized else "absolute"
             plot_profile(x, hpem, native, axis=axis, case=label,
