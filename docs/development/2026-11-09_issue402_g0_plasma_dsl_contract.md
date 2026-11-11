@@ -1,5 +1,16 @@
 # Issue #402 — G0 Plasma Physics DSL detailed contract (review draft)
 
+> **2026-11-11 supersession notice (current implementation):** The former
+> `GummelIterationAction` / `GummelIteration/*` orchestration owner is
+> **retired**, and `Plasma::ContinuityEq` replaces `Plasma::ContinuityPhysics`
+> as the C++ class registered at the unchanged
+> `Physics/Plasmas/Transport/DriftDiffusion/Continuity` input path.
+> Earlier G0 Gummel ownership/scheduling tables below are retained as **historical
+> design evidence**, not as instructions for current PhysicsApp. Independent
+> MOOSE MultiApps, PlasmaClosures and convergence objects remain separate.
+> `SCIENCE_HOLD` remains in force; this refactor does not validate science.
+
+
 > **Authority / status:** The user approved D1–D8 and subsequently approved this G0
 > detailed design on 2026-11-09 in [Issue #402](https://github.com/HyungseonSong-plasma/moose-test-repo/issues/402).
 > **G0_DESIGN_APPROVED; G1_IMPLEMENTATION_NOT_AUTHORIZED; SCIENCE_HOLD.**

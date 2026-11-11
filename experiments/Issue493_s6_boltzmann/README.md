@@ -159,7 +159,7 @@ from the **same workflow commit**. Each case/arm artifact contains:
 There are exactly **two absolute-density plots**; normalized plots are
 deliberately omitted. The metrics record full reference CSV SHA-256 digests,
 Native Exodus/CSV SHA-256 digests, common-support counts, and RMSE.
-Node density is `N_A * exp(log_ne)`; interpolation uses only plasma
+Node density is `N_A * exp(recorded_electron_log_state)` (canonical `log_e`, or archived `log_ne` when that is the exact Exodus field); interpolation uses only plasma
 triangles, with no external extrapolation, at Native 100 us.
 For the **default vertical PNG**, plot the original Reference CSV samples and
 the original Native `r=0` plasma-mesh node values, connected by lines with

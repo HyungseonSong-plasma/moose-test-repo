@@ -49,11 +49,18 @@ python3 bin/physics.py default-plot --mode time-trace --run run_1 \
 
 ## Source-backed physical quantities
 
-- e-: native nodal log_ne -> N_A exp(log_ne), m^-3.
-- O2+, O-, O+: plasma elemental log_ni, log_nm, log_nop -> N_A exp(log_state), m^-3.
+- e-: canonical nodal `log_e` -> `N_A exp(log_e)`, m^-3.
+- O2+, O-, O+: canonical plasma elemental `log_O2p`, `log_Om`,
+  `log_Op` -> `N_A exp(log_state)`, m^-3.
+- **Read-only historical Exodus decoding:** archived files may instead contain
+  `log_ne`, `log_ni`, `log_nm`, `log_nop`. The decoder checks the
+  field names actually recorded in Exodus and documents which ones were used.
+  If both canonical and archived forms exist for a species at the same location,
+  it fails with an ambiguity error rather than choosing silently. This is not
+  a PhysicsApp input option or a new simulation-variable alias.
 - O2, O2*, O, O*: plasma elemental p, w_O2s, w_O, w_Os -> Oxygen14 mass-fraction mixture EOS. Mean molar mass M = 1/sum(w_i/M_i); rho=p*M/(R*T_g); n_i=rho*w_i*N_A/M_i. Source Oxygen14 molar masses: molecular 0.032 kg/mol and atomic 0.016 kg/mol. The unique literal T_g_fixed is read from --input when supplied; --gas-temperature-k or --compare-gas-temperature-k can state explicit assumptions. Without temperature and neutral source fields, neutrals are omitted with reasons. Source EOS/mass fractions are checked when input files are present.
 - Potential: native nodal potential, V, including its sign.
-- T_e: nodal log_energy and log_ne -> (2/3) exp(log_energy-log_ne), eV.
+- T_e: nodal `log_energy` and whichever uniquely recorded electron state exists (`log_e` or archived `log_ne`) -> `(2/3) exp(log_energy-electron_state)`, eV.
 - Power: native Exodus global P_rf_scaled_W_t6, W, by default. This is the run's globally stored RF scaled-power integral, not the requested 400 W target. The only currently audited alternative --power-field is P_rf_raw_W_t6; other names are not automatically trusted as W-valued power fields. Do not substitute other globals if the requested field is absent.
 
 ## RZ weighting and comparison rules

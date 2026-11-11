@@ -13,15 +13,15 @@
         []
         [Energy]
           fem_species = 'e'
-          variable = log_ne
+          variable = log_e
         []
       []
     []
     [Poisson]
-      potential_variable = log_ne
+      potential_variable = log_e
     []
     [Maxwell]
-      field_real = log_ne
+      field_real = log_e
       field_imag = u_rf_imag
       frequency_hz = 13560000
     []

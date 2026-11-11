@@ -13,7 +13,7 @@ from typing import Sequence
 
 from .default_plot import DefaultPlotError, _names, layout_rows
 from .species_plot import (
-    LOG_NAMES, SPECIES, NEUTRAL_MASS_FRACTIONS,
+    LOG_NAMES, SPECIES, NEUTRAL_MASS_FRACTIONS, exodus_log_name,
     _find_temperature, _number_density_from_log,
     _neutral_number_densities, _validate_oxygen14_neutral_contract,
 )
@@ -148,24 +148,31 @@ def _native_traces(exodus: Path, inputs: Sequence[Path], gas_temperature_k: floa
             return np.einsum("ti,i->t", val[:, owners], volumes, optimize=True)
 
         series, sources, unavailable = {}, {}, {}
-        ne_log = read_nodal("log_ne")
+        available_nodal = (
+            _names(np.asarray(f.variables["name_nod_var"][:]).copy())
+            if "name_nod_var" in f.variables else []
+        )
+        electron_field = exodus_log_name(available_nodal, "e-")
+        ne_log = read_nodal(electron_field) if electron_field is not None else None
         if ne_log is not None:
-            ne = _number_density_from_log(ne_log, "log_ne")
+            ne = _number_density_from_log(ne_log, electron_field)
             series["e-"] = nodal_integral(ne) / volume
-            sources["e-"] = "nodal log_ne: RZ-volume-weighted N_A exp(log_ne)"
+            sources["e-"] = (
+                f"nodal {electron_field}: RZ-volume-weighted N_A exp({electron_field})"
+            )
         else:
-            unavailable["e-"] = "nodal log_ne absent"
+            unavailable["e-"] = f"nodal {LOG_NAMES['e-']} absent"
             ne = None
 
         for label in ("O2+", "O-", "O+"):
-            name = LOG_NAMES[label]
-            raw = read_elemental(name)
+            name = exodus_log_name(elem_names, label)
+            raw = read_elemental(name) if name is not None else None
             if raw is not None:
                 density = _number_density_from_log(raw, name)
                 series[label] = elemental_integral(density) / volume
                 sources[label] = f"plasma elemental {name}: RZ-volume-weighted N_A exp({name})"
             else:
-                unavailable[label] = f"plasma elemental {name} absent"
+                unavailable[label] = f"plasma elemental {name or LOG_NAMES[label]} absent"
 
         derived_temp, temp_source = _find_temperature(inputs)
         if gas_temperature_k is not None:
@@ -206,9 +213,12 @@ def _native_traces(exodus: Path, inputs: Sequence[Path], gas_temperature_k: floa
             if np.any(ne_int <= 0):
                 raise DefaultPlotError("nonpositive total electron inventory")
             series["T_e"] = nodal_integral(ne * te) / ne_int
-            sources["T_e"] = "nodal T_e=(2/3)exp(log_energy-log_ne), electron-number-weighted RZ mean"
+            sources["T_e"] = (
+                f"nodal T_e=(2/3)exp(log_energy-{electron_field}), "
+                "electron-number-weighted RZ mean"
+            )
         else:
-            unavailable["T_e"] = "nodal log_ne/log_energy absent"
+            unavailable["T_e"] = f"nodal {LOG_NAMES['e-']}/log_energy absent"
 
         global_names = _names(np.asarray(f.variables["name_glo_var"][:]).copy()) if "name_glo_var" in f.variables else []
         if len(global_names) != len(set(global_names)):

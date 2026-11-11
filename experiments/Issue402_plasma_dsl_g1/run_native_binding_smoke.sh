@@ -17,8 +17,8 @@ test -f "$PILOT/valid_bindings.i"
   printf 'build_base_ref=%s\n' "$PINNED_BASE"
   sha256sum "$PILOT"/*.i physics_app/include/physics/plasma/PlasmaInterface.h \
     physics_app/src/physics/plasma/PlasmaInterface.C \
-    physics_app/include/physics/plasma/ContinuityPhysics.h \
-    physics_app/src/physics/plasma/ContinuityPhysics.C \
+    physics_app/include/physics/plasma/ContinuityEq.h \
+    physics_app/src/physics/plasma/ContinuityEq.C \
     physics_app/src/physics/plasma/EnergyPhysics.C \
     physics_app/src/physics/plasma/ChemistryPhysics.C \
     physics_app/src/physics/plasma/PoissonPhysics.C \
@@ -87,6 +87,10 @@ native --check-input -i "$PILOT/baseline.i" \
   2>&1 | tee "$EVIDENCE/baseline_check.log"
 native --check-input -i "$PILOT/baseline.i" "$PILOT/valid_bindings.i" \
   2>&1 | tee "$EVIDENCE/valid_bindings_check.log"
+# Verify canonical names e/O2p/Om/Op from a standalone, untouched P2 fixture.
+native --check-input -i "$PILOT/generic_four_species.i" \
+  2>&1 | tee "$EVIDENCE/generic_four_species_check.log"
+echo "PLASMA_GENERIC_SPECIES_STATE_NAMES_P2_PASS"
 native --check-input -i "$PILOT/baseline.i" "$PILOT/valid_all_physics.i" \
   2>&1 | tee "$EVIDENCE/all_physics_check.log"
 # Standalone positive construction check: one generated FEM transport Kernel.

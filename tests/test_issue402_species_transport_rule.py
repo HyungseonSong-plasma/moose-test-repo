@@ -18,9 +18,9 @@ def text(path):
 
 
 def test_user_drift_diffusion_transport_coefficient_options_are_removed():
-    src = text("physics_app/src/physics/plasma/ContinuityPhysics.C")
-    params = src.split("ContinuityPhysics::validParams()", 1)[1].split(
-        "ContinuityPhysics::ContinuityPhysics(", 1)[0]
+    src = text("physics_app/src/physics/plasma/ContinuityEq.C")
+    params = src.split("ContinuityEq::validParams()", 1)[1].split(
+        "ContinuityEq::ContinuityEq(", 1)[0]
     for option in ('"mobility"', '"diffusivity"', '"fem_mobility"',
                    '"fem_diffusion"', '"variables"', '"fem_kernel_names"'):
         assert option not in params
@@ -89,6 +89,7 @@ def test_native_control_and_public_417_941_are_user_coefficient_free():
     assert "mobility =" not in overlay and "diffusivity =" not in overlay
     assert "fem_species = 'e'" in overlay
     assert "fvm_species = 'O2p Om Op'" in overlay
+    assert "legacy_s6_state_names" not in overlay
     for species, source in (("O2p", "ion"), ("Om", "negative_ion"),
                             ("Op", "atomic_positive_ion")):
         assert f"species_id = {species}" in overlay

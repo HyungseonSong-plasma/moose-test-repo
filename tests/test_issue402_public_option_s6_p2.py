@@ -35,16 +35,81 @@ def test_pinned_new_option_overlay_uses_canonical_species_provider_names():
     assert hashlib.sha256(overlay.encode()).hexdigest() == EXPECTED_OVERLAY
     assert "fem_species = 'e'" in overlay
     assert "fvm_species = 'O2p Om Op'" in overlay
+    assert "legacy_s6_state_names" not in overlay
     assert overlay.count("type = SpeciesTransportAliasMaterial") == 3
     assert "mobility_source = ion_mobility" in overlay
     assert "diffusivity_source = ion_diffusion" in overlay
     assert "fem_charge_numbers = '-1'" in overlay
     assert "fvm_charge_numbers = '1 -1 1'" in overlay
-    # Provider names are derived in ContinuityPhysics, not user input.
+    # Provider names are derived in ContinuityEq, not user input.
     assert "fem_potential = potential" in overlay
     for forbidden in ("variables =", "fem_kernel_names", "fvm_kernel_names",
                       "fem_mobility =", "fem_diffusion =", "mobility =", "diffusivity ="):
         assert forbidden not in overlay
+
+
+
+def test_canonical_s6_migration_changes_scratch_only(tmp_path):
+    """Exercise the actual migration function without Docker or S6 solves."""
+    import re
+
+    script = (PILOT / "public_option_s6_p2.py").read_text()
+    tree = ast.parse(script)
+    declarations = [
+        node for node in tree.body
+        if isinstance(node, ast.Assign)
+        and any(isinstance(t, ast.Name) and t.id in
+                {"CANONICAL_STATE_NAMES", "_STATE_TOKEN"} for t in node.targets)
+    ]
+    functions = [
+        node for node in tree.body
+        if isinstance(node, ast.FunctionDef)
+        and node.name == "canonicalize_staged_D_inputs"
+    ]
+    assert len(declarations) == 2 and len(functions) == 1
+    namespace = {
+        "re": re,
+        "hashlib": hashlib,
+        "Path": Path,
+        "sha_file": lambda p: hashlib.sha256(p.read_bytes()).hexdigest(),
+    }
+    exec(compile(ast.Module(body=declarations + functions, type_ignores=[]),
+                 str(PILOT / "public_option_s6_p2.py"), "exec"), namespace)
+
+    archived = tmp_path / "source"
+    staged = tmp_path / "scratch"
+    archived.mkdir()
+    staged.mkdir()
+    ordered = []
+    sample = ("variable = log_ne\\n"
+              "coupled = 'log_ni log_nm log_nop'\\n"
+              "similar_name = log_ne_custom\\n")
+    for index in range(10):
+        name = f"layer_{index}.i"
+        content = sample if index == 0 else f"# original {index}\\n"
+        (archived / name).write_text(content)
+        (staged / name).write_text(content)
+        ordered.append(f"chem/{name}")
+    (staged / "migrated_continuity.i").write_text("PINNED_SIDECAR")
+    ordered.append("chem/migrated_continuity.i")
+
+    report = namespace["canonicalize_staged_D_inputs"](staged, ordered)
+    assert report["status"] == "SCRATCH_ONLY_CANONICAL_STATE_REWRITE"
+    assert report["changed_reference_count"] == 4
+    assert report["files"]["layer_0.i"]["original_sha256"] == (
+        hashlib.sha256(sample.encode()).hexdigest())
+    assert (archived / "layer_0.i").read_text() == sample
+    assert (staged / "migrated_continuity.i").read_text() == "PINNED_SIDECAR"
+    migrated = (staged / "layer_0.i").read_text()
+    assert "variable = log_e" in migrated
+    assert "coupled = 'log_O2p log_Om log_Op'" in migrated
+    assert "similar_name = log_ne_custom" in migrated
+    assert report["files"]["layer_0.i"]["staged_sha256"] == (
+        hashlib.sha256(migrated.encode()).hexdigest())
+    # The original decks are still byte-identical and cannot be confused
+    # with the scratch-only canonical migration.
+    assert all((archived / f"layer_{i}.i").read_text() ==
+               (sample if i == 0 else f"# original {i}\\n") for i in range(10))
 
 
 def test_full_s6_p2_provenance_and_no_solver_execution():
@@ -163,6 +228,7 @@ def test_p2_case_verdict_survives_cleanup_failure(tmp_path):
         "CASES": ("417", "941"),
         "VARIANTS": ("B", "D"),
         "validate_overlay": lambda: None,
+        "canonicalize_staged_D_inputs": lambda *_args: {"status": "SYNTHETIC_MIGRATION"},
         "check_source": lambda *_args: {"binary_sha256": "123"},
         "sha_file": lambda path: EXPECTED_OVERLAY if str(path).endswith("migrated_continuity.i") else "manifest-hash",
         "p2": SimpleNamespace(

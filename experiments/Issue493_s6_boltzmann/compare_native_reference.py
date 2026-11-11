@@ -49,10 +49,18 @@ def plasma_slice(exodus: Path, vertical: list[float], horizontal: list[float],
             raise ValueError("NATIVE_EXACT_TIME_UNAVAILABLE")
         nodal_names = [b"".join(row).decode("ascii", "ignore").strip("\x00 ")
                        for row in data.variables["name_nod_var"][:]]
-        if "log_ne" not in nodal_names:
-            raise ValueError("NATIVE_LOG_NE_MISSING")
-        variable = f"vals_nod_var{nodal_names.index('log_ne') + 1}"
-        log_ne = np.asarray(data.variables[variable][idx, :], dtype=float)
+        # Canonical ContinuityEq outputs log_e. Historical pinned S6 Exodus
+        # records log_ne; detect it by actual on-disk field name, never by a
+        # runtime legacy naming switch. Ambiguous files are rejected.
+        electron_fields = [name for name in ("log_e", "log_ne") if name in nodal_names]
+        if len(electron_fields) != 1:
+            raise ValueError("NATIVE_ELECTRON_STATE_AMBIGUOUS" if electron_fields
+                             else "NATIVE_ELECTRON_STATE_MISSING")
+        electron_field = electron_fields[0]
+        if nodal_names.count(electron_field) != 1:
+            raise ValueError("NATIVE_ELECTRON_STATE_DUPLICATED")
+        variable = f"vals_nod_var{nodal_names.index(electron_field) + 1}"
+        electron_log = np.asarray(data.variables[variable][idx, :], dtype=float)
         x = np.asarray(data.variables["coordx"][:], dtype=float) * 100.0
         z = np.asarray(data.variables["coordy"][:], dtype=float) * 100.0
         blocks = [b"".join(row).decode("ascii", "ignore").strip("\x00 ")
@@ -65,7 +73,7 @@ def plasma_slice(exodus: Path, vertical: list[float], horizontal: list[float],
             raise ValueError("NATIVE_PLASMA_TRIANGLE_MESH_REQUIRED")
         nodes = np.unique(triangles)
         with np.errstate(over="ignore", under="ignore", invalid="ignore"):
-            ne = NA * np.exp(log_ne)
+            ne = NA * np.exp(electron_log)
         if not np.isfinite(ne[nodes]).all() or np.any(ne[nodes] < 0):
             raise ValueError("NATIVE_LOG_NE_INVALID")
         interpolator = mtri.LinearTriInterpolator(mtri.Triangulation(x, z, triangles), ne)

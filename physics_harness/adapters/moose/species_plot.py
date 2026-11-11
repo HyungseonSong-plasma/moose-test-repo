@@ -1,7 +1,7 @@
 """Oxygen14 source-attributable physical species-density plots from native Exodus.
 
 This is an observational reconstruction of *already-solved* fields: nodal
-log-ne, elemental log-ion densities, pressure and neutral mass fractions.
+canonical log_<species> electron/ion states (or recorded archive field names), pressure and neutral mass fractions.
 No chemistry, state solving, or scientific-acceptance judgment occurs here.
 """
 from __future__ import annotations
@@ -18,7 +18,24 @@ from .default_plot import DefaultPlotError, _names, _read_exodus, layout_rows
 N_A = 6.02214076e23
 GAS_R = 8.31446
 SPECIES = ("e-", "O2+", "O-", "O+", "O2", "O2*", "O", "O*")
-LOG_NAMES = {"e-": "log_ne", "O2+": "log_ni", "O-": "log_nm", "O+": "log_nop"}
+# Canonical IDs match ContinuityEq::continuityStateName() exactly.
+SPECIES_IDS = {"e-": "e", "O2+": "O2p", "O-": "Om", "O+": "Op"}
+LOG_NAMES = {label: "log_" + species_id for label, species_id in SPECIES_IDS.items()}
+# Read-only archive decoder. No legacy option or alias exists in PhysicsApp.
+_ARCHIVED_EXODUS_NAMES = {"e-": "log_ne", "O2+": "log_ni",
+                          "O-": "log_nm", "O+": "log_nop"}
+
+
+def exodus_log_name(available: Sequence[str], species: str) -> str | None:
+    """Resolve a field that actually exists, rejecting canonical/archive ambiguity."""
+    canonical = LOG_NAMES[species]
+    archived = _ARCHIVED_EXODUS_NAMES[species]
+    if list(available).count(canonical) > 1 or list(available).count(archived) > 1:
+        raise DefaultPlotError(f"duplicate native Exodus density state: {species}")
+    present = [name for name in (canonical, archived) if name in available]
+    if len(present) > 1:
+        raise DefaultPlotError(f"ambiguous canonical/archive Exodus density state: {species}")
+    return present[0] if present else None
 NEUTRAL_MASSES_KG_PER_MOL = {"O2": 0.032, "O2*": 0.032, "O": 0.016, "O*": 0.016}
 NEUTRAL_MASS_FRACTIONS = {"O2*": "w_O2s", "O": "w_O", "O*": "w_Os"}
 
@@ -167,8 +184,11 @@ def _native_species(exodus: Path, block: str, time_index: int | None,
                 raise DefaultPlotError(f"nonfinite source field: {name}")
             return arr
 
-        raw = {name: cell_field(name) for name in (*LOG_NAMES.values(), "p", *NEUTRAL_MASS_FRACTIONS.values())
-               if name != "log_ne"}
+        ion_log_fields = {label: exodus_log_name(element_names, label)
+                          for label in ("O2+", "O-", "O+")}
+        raw = {name: cell_field(name) for name in
+               (*[value for value in ion_log_fields.values() if value],
+                "p", *NEUTRAL_MASS_FRACTIONS.values())}
 
     owners = np.repeat(np.arange(len(connectivity)), 1 if connectivity.shape[1] == 3 else 2)
     if len(owners) != len(triangles):
@@ -176,21 +196,22 @@ def _native_species(exodus: Path, block: str, time_index: int | None,
     positive_density = {}
     failures = {}
     sources = {}
-    if "log_ne" in nodal_values:
+    electron_field = exodus_log_name(nodal_names, "e-")
+    if electron_field is not None:
         nodes = np.unique(triangles.ravel())
-        ln = np.asarray(nodal_values["log_ne"], dtype=float)
+        ln = np.asarray(nodal_values[electron_field], dtype=float)
         if not np.all(np.isfinite(ln[nodes])):
-            raise DefaultPlotError("nonfinite plasma log_ne values")
+            raise DefaultPlotError(f"nonfinite plasma {electron_field} values")
         with np.errstate(over="ignore", under="ignore", invalid="ignore"):
             density = N_A * np.exp(ln)
         positive_density["e-"] = ("nodal", density)
-        sources["e-"] = "native nodal log_ne: N_A*exp(log_ne)"
+        sources["e-"] = f"native nodal {electron_field}: N_A*exp({electron_field})"
     else:
-        failures["e-"] = "nodal log_ne absent"
+        failures["e-"] = f"nodal {LOG_NAMES['e-']} absent"
     for species in ("O2+", "O-", "O+"):
-        field = LOG_NAMES[species]
-        if raw.get(field) is None:
-            failures[species] = f"elemental {field} absent in plasma block"
+        field = ion_log_fields[species]
+        if field is None or raw.get(field) is None:
+            failures[species] = f"elemental {field or LOG_NAMES[species]} absent in plasma block"
             continue
         with np.errstate(over="ignore", under="ignore", invalid="ignore"):
             density = N_A * np.exp(raw[field])
@@ -237,18 +258,23 @@ def _native_species(exodus: Path, block: str, time_index: int | None,
         sources["potential"] = "native nodal potential [V]; linear color"
     else:
         unavailable_observables["potential"] = "native nodal potential absent"
-    if "log_ne" in nodal_values and "log_energy" in nodal_values:
+    if electron_field is not None and "log_energy" in nodal_values:
         with np.errstate(over="ignore", under="ignore", invalid="ignore"):
             te = (2.0 / 3.0) * np.exp(
                 np.asarray(nodal_values["log_energy"], dtype=float)
-                - np.asarray(nodal_values["log_ne"], dtype=float)
+                - np.asarray(nodal_values[electron_field], dtype=float)
             )
         if not np.all(np.isfinite(te[plasma_nodes])) or np.any(te[plasma_nodes] < 0):
             raise DefaultPlotError("nonfinite native electron-temperature conversion")
         observables["T_e"] = ("nodal", te)
-        sources["T_e"] = "native nodal log_energy and log_ne; T_e=(2/3) exp(log_energy-log_ne) [eV]"
+        sources["T_e"] = (
+            f"native nodal log_energy and {electron_field}; "
+            f"T_e=(2/3) exp(log_energy-{electron_field}) [eV]"
+        )
     else:
-        unavailable_observables["T_e"] = "requires nodal log_ne and log_energy"
+        unavailable_observables["T_e"] = (
+            f"requires nodal {LOG_NAMES['e-']} (or archived field) and log_energy"
+        )
 
     return {
         "x": x, "y": y, "triangles": triangles, "owners": owners,

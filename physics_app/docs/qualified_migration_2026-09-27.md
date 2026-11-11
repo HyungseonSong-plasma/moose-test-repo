@@ -1,5 +1,11 @@
 # Qualified PhysicsApp migration
 
+> **HISTORICAL SNAPSHOT.** This qualification describes the former
+> `GummelIterationAction` and its smoke tests at the pinned historical revision.
+> The Action has been retired from current PhysicsApp (2026-11-11).
+> Commands and examples below are **not** active current-main CI instructions.
+
+
 This branch ports the previously qualified Gummel/closure composition surface onto the current `main`
 without replacing the newer sheath and boundary-condition implementations already present on `main`.
 
@@ -45,7 +51,7 @@ export SQUIRREL_DIR=/path/to/squirrel
 export ZAPDOS_DIR=/path/to/zapdos
 export METHOD=opt
 
-python3 ci/check_gummel_iteration_action_contract.py
+python3 ci/check_retired_gummel_action_contract.py  # current-main retirement check only
 python3 ci/check_plasma_closures_contract.py
 make -j2
 ./physics-opt --check-input -i ci/gummel_action_smoke.i

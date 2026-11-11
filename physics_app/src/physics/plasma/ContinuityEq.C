@@ -1,4 +1,4 @@
-#include "ContinuityPhysics.h"
+#include "ContinuityEq.h"
 
 #include <cctype>
 #include <set>
@@ -8,18 +8,12 @@ namespace Plasma
 namespace
 {
 
-// The schema owns the names. Legacy S6 density states are bound internally
-// until a separate, evidence-backed variable migration is accepted.
+// Bind each species to the same canonical state naming rule.
 VariableName
 continuityStateName(const std::string & species)
 {
-  if (species == "O2p")
-    return "log_ni";
-  if (species == "Om")
-    return "log_nm";
-  if (species == "Op")
-    return "log_nop";
-  return "log_n" + species;
+  // All new solver states use one deterministic species-based naming rule.
+  return "log_" + species;
 }
 
 std::vector<VariableName>
@@ -38,7 +32,7 @@ resolvedContinuityVariables(const std::vector<std::string> & fem,
 } // namespace
 
 InputParameters
-ContinuityPhysics::validParams()
+ContinuityEq::validParams()
 {
   InputParameters params = PlasmaInterface::validParams();
   params.addClassDescription(
@@ -48,7 +42,6 @@ ContinuityPhysics::validParams()
       "fem_species", {}, "Species using finite-element variables.");
   params.addParam<std::vector<std::string>>(
       "fvm_species", {}, "Species using finite-volume variables.");
-
   params.addParam<VariableName>(
       "fem_potential", "Potential used by existing finite-element drift-diffusion kernels.");
   params.addParam<std::vector<Real>>(
@@ -58,7 +51,7 @@ ContinuityPhysics::validParams()
   return params;
 }
 
-ContinuityPhysics::ContinuityPhysics(const InputParameters & parameters)
+ContinuityEq::ContinuityEq(const InputParameters & parameters)
   : PlasmaInterface(parameters)
 {
   const auto & fem = getParam<std::vector<std::string>>("fem_species");
@@ -130,7 +123,7 @@ ContinuityPhysics::ContinuityPhysics(const InputParameters & parameters)
 }
 
 void
-ContinuityPhysics::checkIntegrity() const
+ContinuityEq::checkIntegrity() const
 {
   const auto & fem = getParam<std::vector<std::string>>("fem_species");
   const auto & fvm = getParam<std::vector<std::string>>("fvm_species");
@@ -142,7 +135,7 @@ ContinuityPhysics::checkIntegrity() const
 }
 
 void
-ContinuityPhysics::addFEKernels()
+ContinuityEq::addFEKernels()
 {
   if (!isParamValid("fem_potential"))
     return;
@@ -171,7 +164,7 @@ ContinuityPhysics::addFEKernels()
 
 } // namespace Plasma
 
-using Plasma::ContinuityPhysics;
-registerPhysicsBaseTasks("PhysicsApp", ContinuityPhysics);
-registerMooseAction("PhysicsApp", ContinuityPhysics, "check_integrity");
-registerMooseAction("PhysicsApp", ContinuityPhysics, "add_kernel");
+using Plasma::ContinuityEq;
+registerPhysicsBaseTasks("PhysicsApp", ContinuityEq);
+registerMooseAction("PhysicsApp", ContinuityEq, "check_integrity");
+registerMooseAction("PhysicsApp", ContinuityEq, "add_kernel");
