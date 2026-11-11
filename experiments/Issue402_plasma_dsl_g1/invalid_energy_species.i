@@ -4,7 +4,7 @@
       [DriftDiffusion]
         [Energy]
           fem_species = 'O2p'
-          variable = log_ne
+          variable = log_e
         []
       []
     []
