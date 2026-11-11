@@ -18,9 +18,9 @@ def text(path):
 
 
 def test_user_drift_diffusion_transport_coefficient_options_are_removed():
-    src = text("physics_app/src/physics/plasma/ContinuityPhysics.C")
-    params = src.split("ContinuityPhysics::validParams()", 1)[1].split(
-        "ContinuityPhysics::ContinuityPhysics(", 1)[0]
+    src = text("physics_app/src/physics/plasma/ContinuityEq.C")
+    params = src.split("ContinuityEq::validParams()", 1)[1].split(
+        "ContinuityEq::ContinuityEq(", 1)[0]
     for option in ('"mobility"', '"diffusivity"', '"fem_mobility"',
                    '"fem_diffusion"', '"variables"', '"fem_kernel_names"'):
         assert option not in params
