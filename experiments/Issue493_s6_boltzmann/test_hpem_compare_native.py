@@ -64,7 +64,8 @@ class HPEMNativeOverlayTests(unittest.TestCase):
             self.assertEqual(result["bc_p4_parity"], "NOT_EVALUATED")
             self.assertEqual(result["vertical"]["common_support_points"], 3)
             self.assertLess(result["vertical"]["rmse_over_reference_peak"], 1e-12)
-            self.assertEqual(len(list(args["output"].glob("*.png"))), 4)
+            self.assertEqual({p.name for p in args["output"].glob("*.png")},
+                             {"vertical_absolute.png", "radial_absolute.png"})
             self.assertEqual(len(list(args["output"].glob("*.csv"))), 2)
             self.assertTrue((args["output"] / "metrics.json").exists())
             with self.assertRaisesRegex(ValueError, "HPEM_OUTPUT_ALREADY_EXISTS"):
