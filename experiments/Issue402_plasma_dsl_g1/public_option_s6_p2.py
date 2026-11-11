@@ -41,7 +41,6 @@ OVERLAY = """# Review-only new option DSL overlay; NOT pinned P3 C input.
           block = plasma
           fem_species = 'e'
           fvm_species = 'O2p Om Op'
-          legacy_s6_state_names = true
           fem_potential = potential
           fem_charge_numbers = '-1'
           fvm_charge_numbers = '1 -1 1'
@@ -71,7 +70,7 @@ OVERLAY = """# Review-only new option DSL overlay; NOT pinned P3 C input.
   []
 []
 """
-OVERLAY_SHA256 = "5dfdcf2f3e7c4cd4d0541c17c2078d411514d4952ed956eef998025b3c7bd356"
+OVERLAY_SHA256 = "3c28bcc79e3ec17b7ceab858160a48150b78e37385f9d56725ae0e3cb22baaef"
 CASES = ("417", "941")
 VARIANTS = ("B", "D")
 
@@ -105,6 +104,60 @@ def validate_overlay() -> None:
         if not re.search(r"(?m)^\s*" + k + r"\s*=\s*" + re.escape(v) + r"\s*$", OVERLAY):
             raise ValueError(f"Missing/modified binding: {k}")
 
+
+# Compatibility belongs in an isolated *test-data migration*, not a runtime
+# Physics option. B is byte-identical; only staged D inputs are canonicalized.
+CANONICAL_STATE_NAMES = {
+    "log_ne": "log_e",
+    "log_ni": "log_O2p",
+    "log_nm": "log_Om",
+    "log_nop": "log_Op",
+}
+_STATE_TOKEN = re.compile(
+    r"(?<![A-Za-z0-9_])(?:" + "|".join(map(re.escape, CANONICAL_STATE_NAMES)) +
+    r")(?![A-Za-z0-9_])"
+)
+
+
+def canonicalize_staged_D_inputs(chemistry: Path, ordered: list[str]) -> dict:
+    """Rewrite ONLY staged D .i copies; original artifact/source stays immutable.
+
+    Source hashes are retained separately from candidate hashes to avoid
+    conflating syntax-only P2 migration with physical B/D equivalence.
+    """
+    changes: dict[str, dict] = {}
+    total = 0
+    if len(ordered) != 11 or Path(ordered[-1]).name != "migrated_continuity.i":
+        raise ValueError("Unexpected staged D input layer order")
+    for relative in ordered[:-1]:
+        name = Path(relative).name
+        if name != relative.split("/")[-1] or not name.endswith(".i"):
+            raise ValueError("Unsafe staged D layer name")
+        path = chemistry / name
+        before = path.read_bytes()
+        source = before.decode("utf-8")
+        observed = {old: len(re.findall(
+            r"(?<![A-Za-z0-9_])" + re.escape(old) + r"(?![A-Za-z0-9_])", source))
+            for old in CANONICAL_STATE_NAMES}
+        converted = _STATE_TOKEN.sub(
+            lambda match: CANONICAL_STATE_NAMES[match.group()], source)
+        if _STATE_TOKEN.search(converted):
+            raise ValueError("Staged D input retains noncanonical solver states")
+        if converted != source:
+            path.write_text(converted, encoding="utf-8")
+        total += sum(observed.values())
+        changes[name] = {
+            "original_sha256": hashlib.sha256(before).hexdigest(),
+            "staged_sha256": sha_file(path),
+            "state_name_substitutions": {k: v for k, v in observed.items() if v},
+        }
+    if total == 0:
+        raise ValueError("No archived S6 solver states found in staged D input")
+    return {
+        "status": "SCRATCH_ONLY_CANONICAL_STATE_REWRITE",
+        "changed_reference_count": total,
+        "files": changes,
+    }
 
 def check_source(expected_head: str, historical: Path, binary: Path) -> dict:
     if git_head(ROOT) != expected_head or git_head(historical) != HISTORICAL_SHA:
@@ -230,14 +283,18 @@ def execute(historical: Path, binary: Path, expected_head: str,
                     staged = root / label
                     try:
                         old_variant = "B" if variant == "B" else "C"
+                        scratch_migration = None
                         ordered = p2.stage(ROOT, historical, case, old_variant,
                                            staged, manifest)
                         if variant == "D":
                             overlay = staged / p2.CHEM / "migrated_continuity.i"
-                            # Only a regenerated sidecar is changed. Never edit any
-                            # archived source layer, table or preserved baseline.
+                            # Rewrite only the temporary D copies of the ten
+                            # archived input layers. B and source archives are untouched.
+                            # The resulting D input is a syntax-only migration candidate.
                             if not overlay.is_file():
                                 raise ValueError("Expected original C migration sidecar is missing")
+                            scratch_migration = canonicalize_staged_D_inputs(
+                                staged / p2.CHEM, ordered)
                             overlay.write_text(OVERLAY, encoding="utf-8")
                             if sha_file(overlay) != OVERLAY_SHA256:
                                 raise ValueError("Staged D sidecar SHA is incorrect")
@@ -246,6 +303,8 @@ def execute(historical: Path, binary: Path, expected_head: str,
                             binary, identity["binary_sha256"], staged, ordered,
                             log, timeout_seconds)
                         report["checks"][case][variant]["layers"] = len(ordered)
+                        if scratch_migration is not None:
+                            report["checks"][case][variant]["scratch_migration"] = scratch_migration
                     except Exception as exc:
                         report["checks"][case][variant] = {
                             "P2": "HOLD", "classification": type(exc).__name__,
