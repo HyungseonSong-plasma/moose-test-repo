@@ -100,7 +100,9 @@ jobs:
               export ZAPDOS_DIR=/opt/physics_vendor/zapdos
               export METHOD=opt
 
-              make -C physics_app -j2
+              # Match the established canonical native build: avoid duplicate anonymous
+              # namespace helper definitions in MOOSE utils_Unity.C.
+              make -C physics_app -j2 app_non_unity_dirs='%/utils'
               cd experiments/fem_fvm_plasma_discriminator
 
               OUTDIR="output_${CASE}"
