@@ -92,25 +92,19 @@ def evaluate(reference: list[float], native: list[float], cutoff: float = 1e15) 
 
 def plot_profile(x: list[float], hpem: list[float], native: list[float], *,
                  axis: str, case: str, time_us: float, output: Path,
-                 normalized: bool) -> None:
+) -> None:
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
     import numpy as np
 
     h, n = np.asarray(hpem), np.asarray(native)
-    if normalized:
-        mask = (h > 1e15) & np.isfinite(n)
-        if not mask.any():
-            raise ValueError("HPEM_NORMALIZATION_NO_SUPPORT")
-        h, n = h / max(h[mask]), n / max(n[mask])
-    else:
-        h, n = h / 1e16, n / 1e16
+    h, n = h / 1e16, n / 1e16
     fig, ax = plt.subplots(figsize=(8.5, 5.1))
     ax.plot(x, h, label="HPEM reference (time unknown)", lw=2.0)
     ax.plot(x, n, label=f"Native {case} at {time_us:g} us", lw=1.6)
     ax.set(xlabel=("Axial z (cm)" if axis == "vertical" else "Radius r (cm)"),
-           ylabel=("Normalized electron density" if normalized else "n_e (1e16 m^-3)"),
+           ylabel="n_e (1e16 m^-3)",
            title=f"HPEM vs Native | {case} | {axis}")
     ax.set_xlim(0, 44 if axis == "vertical" else 25)
     ax.set_ylim(bottom=0)
@@ -168,11 +162,9 @@ def analyze(*, exodus: Path, csv_file: Path, manifest_file: Path,
             # Do not republish the operator-supplied raw HPEM reference rows.
             writer.writerow(["coordinate_cm", "native_ne_m_minus3"])
             writer.writerows(zip(x, native))
-        for normalized in (False, True):
-            suffix = "normalized" if normalized else "absolute"
-            plot_profile(x, hpem, native, axis=axis, case=label,
-                         time_us=actual_time,
-                         output=output / f"{axis}_{suffix}.png", normalized=normalized)
+        plot_profile(x, hpem, native, axis=axis, case=label,
+                     time_us=actual_time,
+                     output=output / f"{axis}_absolute.png")
     (output / "metrics.json").write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n")
     return summary
 
