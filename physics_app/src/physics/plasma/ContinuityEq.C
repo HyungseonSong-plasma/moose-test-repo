@@ -8,8 +8,7 @@ namespace Plasma
 namespace
 {
 
-// The schema owns the names. Legacy S6 density states are bound internally
-// until a separate, evidence-backed variable migration is accepted.
+// Bind each species to the same canonical state naming rule.
 VariableName
 continuityStateName(const std::string & species)
 {
@@ -17,33 +16,16 @@ continuityStateName(const std::string & species)
   return "log_" + species;
 }
 
-// Compatibility is explicit and limited to the immutable legacy S6 decks.
-// These aliases do not affect the default naming contract or new species.
-VariableName
-legacyS6StateName(const std::string & species)
-{
-  if (species == "e")
-    return "log_ne";
-  if (species == "O2p")
-    return "log_ni";
-  if (species == "Om")
-    return "log_nm";
-  if (species == "Op")
-    return "log_nop";
-  mooseError("legacy_s6_state_names supports only e, O2p, Om and Op: ", species);
-}
-
 std::vector<VariableName>
 resolvedContinuityVariables(const std::vector<std::string> & fem,
-                            const std::vector<std::string> & fvm,
-                            const bool legacy_s6)
+                            const std::vector<std::string> & fvm)
 {
   std::vector<VariableName> resolved;
   resolved.reserve(fem.size() + fvm.size());
   for (const auto & species : fem)
-    resolved.push_back(legacy_s6 ? legacyS6StateName(species) : continuityStateName(species));
+    resolved.push_back(continuityStateName(species));
   for (const auto & species : fvm)
-    resolved.push_back(legacy_s6 ? legacyS6StateName(species) : continuityStateName(species));
+    resolved.push_back(continuityStateName(species));
   return resolved;
 }
 
@@ -60,12 +42,6 @@ ContinuityEq::validParams()
       "fem_species", {}, "Species using finite-element variables.");
   params.addParam<std::vector<std::string>>(
       "fvm_species", {}, "Species using finite-volume variables.");
-  params.addParam<bool>(
-      "legacy_s6_state_names", false,
-      "Use archived S6 solver-state aliases (e=log_ne, O2p=log_ni, Om=log_nm, "
-      "Op=log_nop). Off by default: new species resolve to log_<species>. "
-      "Only for exact S6 input compatibility; no automatic fallback.");
-
   params.addParam<VariableName>(
       "fem_potential", "Potential used by existing finite-element drift-diffusion kernels.");
   params.addParam<std::vector<Real>>(
@@ -80,8 +56,7 @@ ContinuityEq::ContinuityEq(const InputParameters & parameters)
 {
   const auto & fem = getParam<std::vector<std::string>>("fem_species");
   const auto & fvm = getParam<std::vector<std::string>>("fvm_species");
-  const auto variables =
-      resolvedContinuityVariables(fem, fvm, getParam<bool>("legacy_s6_state_names"));
+  const auto variables = resolvedContinuityVariables(fem, fvm);
   validateSpeciesInputs(fem, fvm, variables);
 
   // A species ID becomes part of a generated object name and must be safe.
@@ -152,8 +127,7 @@ ContinuityEq::checkIntegrity() const
 {
   const auto & fem = getParam<std::vector<std::string>>("fem_species");
   const auto & fvm = getParam<std::vector<std::string>>("fvm_species");
-  const auto variables =
-      resolvedContinuityVariables(fem, fvm, getParam<bool>("legacy_s6_state_names"));
+  const auto variables = resolvedContinuityVariables(fem, fvm);
   validateExistingSpeciesVariables(fem, fvm, variables);
   if (isParamValid("fem_potential"))
     for (std::size_t i = 0; i < fem.size(); ++i)
@@ -167,8 +141,7 @@ ContinuityEq::addFEKernels()
     return;
   const auto & species = getParam<std::vector<std::string>>("fem_species");
   const auto variables = resolvedContinuityVariables(
-      species, getParam<std::vector<std::string>>("fvm_species"),
-      getParam<bool>("legacy_s6_state_names"));
+      species, getParam<std::vector<std::string>>("fvm_species"));
   const auto & charges = getParam<std::vector<Real>>("fem_charge_numbers");
   const std::string type = "PhysicsFEMLogMolarDriftDiffusion";
   for (std::size_t i = 0; i < species.size(); ++i)
