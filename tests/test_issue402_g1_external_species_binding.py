@@ -72,12 +72,10 @@ def test_existing_variables_only():
     assert 'params.set<MooseFunctorName>("diffusion") = species[i] + "_diffusivity"' in source
     assert 'species[i] + "_transport"' in source
     assert 'return "log_" + species;' in source
-    assert 'params.addParam<bool>(' in source
-    assert '"legacy_s6_state_names", false' in source
-    assert 'legacy_s6 ? legacyS6StateName(species) : continuityStateName(species)' in source
-    # The four historical S6 aliases are opt-in, never the default.
-    for legacy in ('"log_ne"', '"log_ni"', '"log_nm"', '"log_nop"'):
-        assert f'return {legacy};' in source
+    assert '"legacy_s6_state_names"' not in source
+    assert 'legacyS6StateName' not in source
+    assert 'return "log_" + species;' in source
+    assert 'resolved.push_back(continuityStateName(species));' in source
     assert '"fem_charge_numbers"' in source
     assert "getProblem().addKernel(" in source
     assert "PhysicsFEMLogMolarDriftDiffusion" in source
@@ -143,7 +141,7 @@ def test_native_build_and_comparison_script():
     for state in ("log_e", "log_O2p", "log_Om", "log_Op"):
         assert f"[{state}]" in generic
     assert "legacy_s6_state_names" not in generic
-    assert "legacy_s6_state_names = true" in (CASE / "s6_external_bindings.i").read_text()
+    assert "legacy_s6_state_names" not in (CASE / "s6_external_bindings.i").read_text()
     for name in ("EnergyPhysics", "ChemistryPhysics", "PoissonPhysics", "MaxwellPhysics"):
         header = (APP / f"include/physics/plasma/{name}.h").read_text()
         source = (APP / f"src/physics/plasma/{name}.C").read_text()
