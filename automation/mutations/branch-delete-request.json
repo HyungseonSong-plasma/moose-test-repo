@@ -1,12 +1,188 @@
 {
   "targets": [
     {
-      "branch": "feat/adaptive-native-build-harness-20261110",
-      "expected_sha": "099522565600ccd8615e082518c93e7b16bb5b60"
+      "branch": "cleanup/physics282-parser-family-once-20261106",
+      "expected_sha": "a8e3489c1aae5226a293b94d13abf62de67f17ba"
     },
     {
-      "branch": "feat/native-p1-preflight-diagnostics-20261110",
-      "expected_sha": "68580bbee4cec4c3be8b502a7294caaa5f8e9a5d"
+      "branch": "cleanup/physics282-rz-one-shot-20261106",
+      "expected_sha": "3373819ffce327bcc1dffdecc5e371c042e32eea"
+    },
+    {
+      "branch": "design/issue402-g0-plasma-dsl-contract-20261109",
+      "expected_sha": "35433a66b3db44da9081d23a6c5956c0c137709a"
+    },
+    {
+      "branch": "experiment/issue493-public-bc-output-archive-p4-20261110",
+      "expected_sha": "e3c930eb2d0e442686d9b75d5605cadd3631e14e"
+    },
+    {
+      "branch": "experiment/issue493-public-boltzmann-p2-check-20261110",
+      "expected_sha": "b3cdb452e1b18e0ab6c3d485df84f425fb6f27f5"
+    },
+    {
+      "branch": "experiment/issue493-public-p3-600s-b-diagnostic-once-20261110",
+      "expected_sha": "b1f182d508b58ba8929a6646dc0e7424c1fb3596"
+    },
+    {
+      "branch": "experiment/issue493-public-p3-b-completion-max-20261110",
+      "expected_sha": "9c56e100945088147a75be75cc853dbfa76cff5f"
+    },
+    {
+      "branch": "experiment/issue493-s6-boltzmann-oci-handoff-20261110",
+      "expected_sha": "63650eb788c05bbd685cc7c4af24b21664608287"
+    },
+    {
+      "branch": "feat/research-mode-v01-goal-clarification-20261108",
+      "expected_sha": "0c91f60061d034dc49e52ec049a61a7d61200a46"
+    },
+    {
+      "branch": "feature/issue402-continuity-option-contract-20261110",
+      "expected_sha": "8b80b4d26ad9b490af46cb2b45ebb1c8fde4cdb9"
+    },
+    {
+      "branch": "feature/issue402-g1-external-species-binding-pilot-20261109",
+      "expected_sha": "af178cb66888175eed69ee3c300b5a2a50a33396"
+    },
+    {
+      "branch": "feature/issue402-species-transport-provider-naming-20261110",
+      "expected_sha": "554b5eff00829bfb7d63b906ee87af579dda6372"
+    },
+    {
+      "branch": "fix/default-plot-linear-density-20261107",
+      "expected_sha": "0f1e7a318e9240533c22c62e5e5e667d749dc32b"
+    },
+    {
+      "branch": "fix/issue493-hpem-overlays-c-handoff-20261111",
+      "expected_sha": "08211e73e09eabc1134d08490d41cd2e411b7c55"
+    },
+    {
+      "branch": "fix/issue493-p3-timeout-observability-main-20261110",
+      "expected_sha": "35907953adf8f6d2b6d1d367b5103a959977ee48"
+    },
+    {
+      "branch": "fix/native-p1-p2-optional-dependency-regression-20261110",
+      "expected_sha": "99858c47aa261f6325e08e01f022a6dc4f391d57"
+    },
+    {
+      "branch": "fix/physics282-gdb-distroless-probe-20261106",
+      "expected_sha": "3deb1a65885fe17de3cb8e73ab0ddfc39c5dca94"
+    },
+    {
+      "branch": "fix/physics282-gdb-noshell-20261106",
+      "expected_sha": "57aff548e3352f25e5446f5e2f104148c7837a3d"
+    },
+    {
+      "branch": "fix/physics282-gdb-stack-verdict-20261106",
+      "expected_sha": "1a50dcff82fb09cbc00e307a099cbb33108b8270"
+    },
+    {
+      "branch": "issue-282-rz-differential-stage-fix-20261106",
+      "expected_sha": "2835c90342a72f1f59faddf4b41722e5892cec28"
+    },
+    {
+      "branch": "issue-282-rz-jit-off-diagnostic-20261106",
+      "expected_sha": "4e0b7f83b690ec7c81b78ed2ce569883aac99570"
+    },
+    {
+      "branch": "issue-282-rz-r4qf1-predecessor-20261106",
+      "expected_sha": "25a2674d4e1f65f9ff89cceb576243ba8ad8327d"
+    },
+    {
+      "branch": "issue-282-rz-segv-differential-20261106",
+      "expected_sha": "f04699476b9c0adfe4d6c80eb5bc1acd728b9c9a"
+    },
+    {
+      "branch": "issue-457-c0-400-native-100us-p3-20261106",
+      "expected_sha": "7445bd2295097d8bd95b38eeff9bc3da08bead32"
+    },
+    {
+      "branch": "issue-457-c0-eedf-source-restore-20261106",
+      "expected_sha": "aa1e7379d306a92bdac97f34adce2c1bccb3d9c8"
+    },
+    {
+      "branch": "issue-457-c0-lazy-cli-20261106",
+      "expected_sha": "b4dd1a7eceba0ebe736422ef668ae0fd9b6b01a3"
+    },
+    {
+      "branch": "issue-457-c0-p0-venv-retry-20261106",
+      "expected_sha": "f2b1504a5506cb874c0c3981f02579db13d396d3"
+    },
+    {
+      "branch": "issue-457-oxygen-c0-400-p0-20261106",
+      "expected_sha": "1dd6588df933cc63eac401fda56cec00673174ed"
+    },
+    {
+      "branch": "issue-467-default-plot-harness-20261106",
+      "expected_sha": "c2f1047c07634b2e08eec90b979864831e54a46e"
+    },
+    {
+      "branch": "issue-471-jit-runtime-closure-20261106",
+      "expected_sha": "88b74c90f0e85a3869a1a06a54ef61c7e09c6ef3"
+    },
+    {
+      "branch": "issue-475-default-plot-harness-20261106",
+      "expected_sha": "b4c2202697933b0a3daca81a36ca937f7bfcc07b"
+    },
+    {
+      "branch": "issue-477-first-three-native-plots-20261106",
+      "expected_sha": "cb93af3be1b4d924b4f61786a08e3b14a5f80350"
+    },
+    {
+      "branch": "issue-477-s3-401-plus-op-ei417-ei941-20261108",
+      "expected_sha": "badc5df13962e076896b488fbac91cfdcd58eccc"
+    },
+    {
+      "branch": "issue-477-s5-o2-depletion-4plus4-20261108",
+      "expected_sha": "98ebf0242a8ded663a79bd76c169ddc9496da716"
+    },
+    {
+      "branch": "issue-477-s6-ei407-ei2069-h25-combined-20261109",
+      "expected_sha": "e04b59493d8deab02ca106ed952dfbd5a4164ebe"
+    },
+    {
+      "branch": "issue-477-second-base-401-412-407-once-20261107",
+      "expected_sha": "c1ef1e466f0e48bbc2fd2afadbbd041771f9b905"
+    },
+    {
+      "branch": "issue282-e2a-research-type-bridge-20261106",
+      "expected_sha": "470a7c7c006a3580abdd181eef74cda6987abbb5"
+    },
+    {
+      "branch": "refactor/ci-purpose-router-skipfree-20261110",
+      "expected_sha": "46ff67e8786d342aee2f794128b6bf8d7da790af"
+    },
+    {
+      "branch": "refactor/ei-rate-material-physics-prefix-20261109",
+      "expected_sha": "3fc1b5a54f10ab20a22252001254800555dd6abc"
+    },
+    {
+      "branch": "refactor/issue402-material-class-names-20261110",
+      "expected_sha": "482412ad40a8fe6bf481aa2828e7ec612773fe72"
+    },
+    {
+      "branch": "research/physics282-native-rz-gdb-stack-20261106",
+      "expected_sha": "b91545948b714a4573b27c5014e592701a0a2684"
+    },
+    {
+      "branch": "research/physics282-rz-ad-parser-family-20261106",
+      "expected_sha": "683488eae9505046e915bce25161e3b2bae69645"
+    },
+    {
+      "branch": "research/physics282-rz-auto-scaling-off-20261106",
+      "expected_sha": "555c2a1fb98ac990a2a04b4dc5dca6a98e15e803"
+    },
+    {
+      "branch": "research/physics282-rz-functor-isolation-20261106",
+      "expected_sha": "688f9f556ffcf6edd3216bdc380c33c2bf60fe9a"
+    },
+    {
+      "branch": "test/physics282-e2a-normalization-contract-20261106",
+      "expected_sha": "2b96a7de11142ae9210e0ec9a610db7600c22aa7"
+    },
+    {
+      "branch": "validation/issue402-option-native-20261110",
+      "expected_sha": "8b80b4d26ad9b490af46cb2b45ebb1c8fde4cdb9"
     }
   ]
 }
