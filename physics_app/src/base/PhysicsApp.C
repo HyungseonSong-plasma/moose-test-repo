@@ -46,7 +46,6 @@ PhysicsApp::registerAll(Factory & f, ActionFactory & af, Syntax & syntax)
   syntax.registerActionSyntax("AddPeriodicControllers", "PeriodicControllers/*");
   syntax.registerActionSyntax("AddDriftDiffusionAction", "DriftDiffusionAction/*");
   syntax.registerActionSyntax("AddPeriodicRelativeNodalDifference", "PeriodicRelativeNodalDifference/*");
-  syntax.registerActionSyntax("PlasmaClosuresAction", "PlasmaClosures/*");
 
   // The continuity input checks the species variables before solving.
   registerSyntax("ContinuityEq",

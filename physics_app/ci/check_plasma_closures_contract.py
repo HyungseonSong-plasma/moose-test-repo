@@ -4,52 +4,53 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 required = [
-    ROOT / "include/actions/PlasmaClosuresAction.h",
-    ROOT / "src/actions/PlasmaClosuresAction.C",
     ROOT / "include/materials/ElectronClosureMaterial.h",
     ROOT / "src/materials/ElectronClosureMaterial.C",
-    ROOT / "include/materials/PhysicsElectronKineticsMaterial.h",
-    ROOT / "src/materials/PhysicsElectronKineticsMaterial.C",
-    ROOT / "include/materials/PhysicsHeavyTransportMaterial.h",
-    ROOT / "src/materials/PhysicsHeavyTransportMaterial.C",
+    ROOT / "include/materials/PhysicsElectronImpactRateMaterial.h",
+    ROOT / "src/materials/PhysicsElectronImpactRateMaterial.C",
+    ROOT / "include/materials/PhysicsThermalDiffusionMaterial.h",
+    ROOT / "src/materials/PhysicsThermalDiffusionMaterial.C",
     ROOT / "include/materials/PhysicsPlasmaChargeDensityMaterial.h",
     ROOT / "src/materials/PhysicsPlasmaChargeDensityMaterial.C",
 ]
 for path in required:
     assert path.is_file(), path
 
-action = (ROOT / "src/actions/PlasmaClosuresAction.C").read_text()
 app = (ROOT / "src/base/PhysicsApp.C").read_text()
+assert 'PlasmaClosuresAction' not in app
+assert 'PlasmaClosures/*' not in app
+assert not (ROOT / "include/actions/PlasmaClosuresAction.h").exists()
+assert not (ROOT / "src/actions/PlasmaClosuresAction.C").exists()
 electron = (ROOT / "src/materials/ElectronClosureMaterial.C").read_text()
-kinetics = (ROOT / "src/materials/PhysicsElectronKineticsMaterial.C").read_text()
-heavy = (ROOT / "src/materials/PhysicsHeavyTransportMaterial.C").read_text()
+single_ei = (ROOT / "src/materials/PhysicsElectronImpactRateMaterial.C").read_text()
+heavy = (ROOT / "src/materials/PhysicsThermalDiffusionMaterial.C").read_text()
 
-assert 'registerMooseAction("PhysicsApp", PlasmaClosuresAction, "add_functor_material")' in action
-assert 'syntax.registerActionSyntax("PlasmaClosuresAction", "PlasmaClosures/*")' in app
-
-# The user-facing action composes four closures; it does not implement their physics.
-for object_type in (
-    "ElectronClosureMaterial",
-    "PhysicsElectronKineticsMaterial",
-    "PhysicsHeavyTransportMaterial",
-    "PhysicsPlasmaChargeDensityMaterial",
-):
-    assert object_type in action
+# The unused composition wrapper and its two dedicated Material classes are retired.
+# Keep existing registered physics implementations, not generated C++ sources.
+for old_type in ("PhysicsElectronKineticsMaterial", "PhysicsHeavyTransportMaterial"):
+    assert not (ROOT / "src/materials" / (old_type + ".C")).exists()
+    assert not (ROOT / "include/materials" / (old_type + ".h")).exists()
 
 # Electron mean energy and transport are now owned by one material.
 assert "electron_mean_energy_output" in electron
 assert "electron_mobility_output" in electron
 assert "electron_energy_diffusion_output" in electron
 
-# Kinetics owns a reaction vector rather than one object per reaction.
-assert "rate_table_files" in kinetics
-assert "reaction_progress_names" in kinetics
-assert "std::vector<PhysicsLookupTable1D>" in (
-    ROOT / "include/materials/PhysicsElectronKineticsMaterial.h"
-).read_text()
+# Current EI progresses use an existing one-reaction-per-material owner.
+assert "rate_table_file" in single_ei
+assert "reaction_progress" in single_ei
+assert 'registerMooseObject("PhysicsApp", PhysicsElectronImpactRateMaterial);' in single_ei
+# Existing heavy diffusion implementation outlives its retired naming wrapper.
+assert 'registerMooseObject("PhysicsApp", PhysicsThermalDiffusionMaterial);' in heavy
 
-# Heavy transport reuses the already-qualified multi-species implementation.
-assert "PhysicsThermalDiffusionMaterial" in heavy
+# Native input explicitly uses existing classes; no source-code generation.
+fixture = (ROOT / "ci/plasma_direct_existing_materials_smoke.i").read_text()
+for old_type in ("PhysicsElectronKineticsMaterial", "PhysicsHeavyTransportMaterial"):
+    assert "type = " + old_type not in fixture
+for type_name in ("ElectronClosureMaterial", "PhysicsElectronImpactRateMaterial",
+                  "PhysicsThermalDiffusionMaterial", "PhysicsPlasmaChargeDensityMaterial"):
+    assert "type = " + type_name in fixture
+assert fixture.count("type = PhysicsElectronImpactRateMaterial") == 2
 
 # Backward compatibility: legacy *factory type names* remain registered;
 # source filenames and C++ class identifiers now use the shorter canonical form.
@@ -78,4 +79,4 @@ for old_type, new_type in (
     assert f'registerMooseObject("PhysicsApp", {new_type});' in content
     assert f'registerMooseObjectAliased("PhysicsApp", {new_type}, "{old_type}");' in content
 
-print("PLASMA_CLOSURES_CONTRACT: PASS")
+print("RETIRED_PLASMA_CLOSURES_MATERIAL_CONTRACT: PASS")

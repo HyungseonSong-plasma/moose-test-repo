@@ -126,14 +126,14 @@ def test_retired_physical_state_joule_cpp_is_absent_but_log_molar_stays():
     """Remove only the unused physical-state B implementation and registration.
 
     Electrostatic log-molar electron heating and RF MatBodyForce remain active.
-    A's separate drift-kernel removal is on another Draft PR, not this one.
+    A drift-kernel removal was merged separately in PR #513.
     """
     transport = (ROOT / "physics_app/src/kernels/PhysicsFEMPlasmaTransport.C").read_text()
     header = (ROOT / "physics_app/include/kernels/PhysicsFEMPlasmaTransport.h").read_text()
     for text in (transport, header):
         assert "PhysicsFEMElectronJouleHeating" not in text
         assert "PhysicsFEMLogMolarElectronJouleHeating" in text
-        assert "PhysicsFEMPlasmaDriftDiffusion" in text
+        assert "PhysicsFEMPlasmaDriftDiffusion" not in text
     assert 'registerMooseObject("PhysicsApp", PhysicsFEMLogMolarElectronJouleHeating);' in transport
     assert "PhysicsFEMLogMolarElectronJouleHeating::computeQpResidual()" in transport
     assert 'registerMooseObject("PhysicsApp", PhysicsFEMLogMolarDriftDiffusion);' in transport

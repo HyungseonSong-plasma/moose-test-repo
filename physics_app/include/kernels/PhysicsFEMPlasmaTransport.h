@@ -5,24 +5,6 @@
 #include "MooseFunctor.h"
 
 /**
- * Existing physical-state continuous-Galerkin drift-diffusion kernel.
- */
-class PhysicsFEMPlasmaDriftDiffusion : public ADKernel
-{
-public:
-  static InputParameters validParams();
-  PhysicsFEMPlasmaDriftDiffusion(const InputParameters & parameters);
-
-protected:
-  ADReal computeQpResidual() override;
-
-  const ADVariableGradient & _grad_potential;
-  const Moose::Functor<ADReal> & _mobility;
-  const Moose::Functor<ADReal> & _diffusion;
-  const Real _charge_number;
-};
-
-/**
  * Conservative backward-Euler time derivative of c=exp(u), where u is a log-molar state.
  */
 class PhysicsFEMLogMolarTimeDerivative : public ADTimeKernel

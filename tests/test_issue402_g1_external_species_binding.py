@@ -36,7 +36,10 @@ def test_continuity_uses_shared_plasma_validation():
     assert 'registerMooseAction("PhysicsApp", ContinuityEq, "check_integrity");' in source
     assert 'registerSyntax("ContinuityEq",' in app
     assert '"Physics/Plasmas/Transport/DriftDiffusion/Continuity"' in app
-    assert 'syntax.registerActionSyntax("PlasmaClosuresAction", "PlasmaClosures/*");' in app
+    assert "PlasmaClosuresAction" not in app
+    assert "PlasmaClosures/*" not in app
+    assert not (APP / "src/actions/PlasmaClosuresAction.C").exists()
+    assert not (APP / "include/actions/PlasmaClosuresAction.h").exists()
     assert 'GummelIterationAction' not in app
     assert 'GummelIteration/*' not in app
 

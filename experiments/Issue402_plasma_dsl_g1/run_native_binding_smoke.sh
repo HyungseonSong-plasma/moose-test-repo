@@ -12,6 +12,10 @@ mkdir -p "$EVIDENCE"
 test -f "$PILOT/baseline.i"
 test -f "$PILOT/valid_bindings.i"
 
+# Python-only contracts; build the existing MOOSE application, never generate source code.
+python3 physics_app/ci/check_plasma_closures_contract.py
+test -f physics_app/ci/plasma_direct_existing_materials_smoke.i
+
 {
   printf 'source_sha=%s\n' "$(git rev-parse HEAD)"
   printf 'build_base_ref=%s\n' "$PINNED_BASE"
@@ -99,6 +103,11 @@ native --check-input -i "$PILOT/baseline.i" "$PILOT/valid_generated_transport_op
   2>&1 | tee "$EVIDENCE/valid_generated_transport_options.log"
 echo "PLASMA_OPTION_ONLY_FEM_GENERATION_P2_PASS"
 echo "PLASMA_VARIABLE_CHECK_PASSED"
+
+# Native P2 exercises existing registered Materials via checked-in input, not a C++ generator.
+native --check-input -i "physics_app/ci/plasma_direct_existing_materials_smoke.i" \
+  2>&1 | tee "$EVIDENCE/direct_materials_check.log"
+echo "PLASMA_DIRECT_EXISTING_MATERIALS_P2_PASS"
 
 for item in invalid_overlap invalid_fem_fv_swap invalid_no_species invalid_missing_variable invalid_energy_species invalid_chemistry_reactions invalid_poisson_variable invalid_maxwell_frequency invalid_legacy_variables invalid_legacy_kernel_names invalid_missing_fvm_charges invalid_incomplete_coefficients invalid_wrong_charge_sign; do
   set +e
