@@ -30,6 +30,11 @@ def test_exact_main_trigger_and_isolated_d_run_contract():
     assert 'matrix:' in text
     assert "case: ['417', '941']" in text
     assert "--timeout-seconds 19800" in text
+    # The pinned historical mesh builder rejects 400 W without this opt-in.
+    assert "OXYGEN_RESEARCH_400: '1'" in text
+    for research_off in ("OXYGEN_RESEARCH_FULL24", "OXYGEN_RESEARCH_EI2738_FORMULA",
+                         "OXYGEN_RESEARCH_QUICK_5MIN"):
+        assert f"{research_off}: '0'" in text
     assert "run_canonical_s6_p3_once.py" in text
     assert "run_native_binding_smoke.sh" in text
     assert "run_public_option_s6_p2.sh" not in text
