@@ -99,6 +99,21 @@ def route(purpose: str, *, issue: int | None = None,
     return matches[0]
 
 
+def verify_special_reference_secret_surface(template: str, variant: str) -> None:
+    """Fail closed: only two explicitly named HPEM reference secrets in archive."""
+    approved = (
+        "${{ secrets.HPEM_400W_VERTICAL_CSV_B64 }}",
+        "${{ secrets.HPEM_400W_RADIAL_CSV_B64 }}",
+    )
+    scrutinized = template
+    if variant == "archive":
+        if any(template.count(ref) != 2 for ref in approved):
+            raise WorkflowContractError("SPECIAL_HPEM_REFERENCE_SECRET_CONTRACT")
+        for ref in approved:
+            scrutinized = scrutinized.replace(ref, "")
+    if re.search(r"\bsecrets\b", scrutinized):
+        raise WorkflowContractError("SPECIAL_SECRET_SURFACE_NOT_AUTHORIZED")
+
 def render(root: Path, profile: dict) -> str:
     template = (root / profile["template"]).read_text(encoding="utf-8")
     if not template.endswith("\n"):
@@ -134,21 +149,7 @@ def render(root: Path, profile: dict) -> str:
             raise WorkflowContractError("SPECIAL_ARCHIVE_JOB_ALLOWLIST_MISMATCH")
     elif len(job_names) != 1 or job_names[0] != allowed_job:
         raise WorkflowContractError("SPECIAL_JOB_ALLOWLIST_MISMATCH")
-    # Preserve no-secret special workflow policy except the two explicitly
-    # named, read-only HPEM profile reference sources in Issue493 archive.
-    # Reject all other secret expressions and any mutated/extra occurrences.
-    permitted_hpem_secrets = (
-        "${{ secrets.HPEM_400W_VERTICAL_CSV_B64 }}",
-        "${{ secrets.HPEM_400W_RADIAL_CSV_B64 }}",
-    )
-    scrutinized = template
-    if variant == "archive":
-        if any(template.count(ref) != 2 for ref in permitted_hpem_secrets):
-            raise WorkflowContractError("SPECIAL_HPEM_REFERENCE_SECRET_CONTRACT")
-        for ref in permitted_hpem_secrets:
-            scrutinized = scrutinized.replace(ref, "")
-    if re.search(r"\bsecrets\b", scrutinized):
-        raise WorkflowContractError("SPECIAL_SECRET_SURFACE_NOT_AUTHORIZED")
+    verify_special_reference_secret_surface(template, variant)
     common = (re.search(r"^    strategy:\n      fail-fast: false\n      max-parallel: 2", template, re.MULTILINE)
               and "public_p3_run.py" in template
               and "github.sha" in template
@@ -257,6 +258,20 @@ def self_test() -> None:
             pass
         else:
             raise AssertionError("unknown workflow intent was accepted")
+    archived = route("special", issue=493, variant="archive", records=entries)
+    archive_template = (ROOT / archived["template"]).read_text(encoding="utf-8")
+    verify_special_reference_secret_surface(archive_template, "archive")
+    for tampered, mode in (
+        (archive_template.replace("secrets.HPEM_400W_VERTICAL_CSV_B64",
+                                  "secrets.ORIGINAL_PRIVATE_RATES", 1), "archive"),
+        (archive_template, "diagnostic"),
+    ):
+        try:
+            verify_special_reference_secret_surface(tampered, mode)
+        except WorkflowContractError:
+            pass
+        else:
+            raise AssertionError("special research workflow admitted unsafe secret surface")
     for record in entries:
         out = render(ROOT, record)
         if record["purpose"] == "special":
