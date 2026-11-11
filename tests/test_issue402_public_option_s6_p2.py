@@ -14,7 +14,7 @@ import subprocess
 ROOT = Path(__file__).resolve().parents[1]
 PILOT = ROOT / "experiments" / "Issue402_plasma_dsl_g1"
 PUBLIC = ROOT / "experiments" / "Issue493_s6_boltzmann"
-EXPECTED_OVERLAY = "3c28bcc79e3ec17b7ceab858160a48150b78e37385f9d56725ae0e3cb22baaef"
+EXPECTED_OVERLAY = "5dfdcf2f3e7c4cd4d0541c17c2078d411514d4952ed956eef998025b3c7bd356"
 
 
 def extract_overlay():
@@ -35,6 +35,7 @@ def test_pinned_new_option_overlay_uses_canonical_species_provider_names():
     assert hashlib.sha256(overlay.encode()).hexdigest() == EXPECTED_OVERLAY
     assert "fem_species = 'e'" in overlay
     assert "fvm_species = 'O2p Om Op'" in overlay
+    assert "legacy_s6_state_names = true" in overlay
     assert overlay.count("type = SpeciesTransportAliasMaterial") == 3
     assert "mobility_source = ion_mobility" in overlay
     assert "diffusivity_source = ion_diffusion" in overlay
