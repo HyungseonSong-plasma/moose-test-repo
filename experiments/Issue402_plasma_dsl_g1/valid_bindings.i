@@ -1,4 +1,4 @@
-# Solver variable names are derived internally: e -> log_ne, O2p -> log_ni.
+# Solver variable names are derived internally: e -> log_e, O2p -> log_O2p.
 [Physics]
   [Plasmas]
     [Transport]
