@@ -240,12 +240,15 @@ to the existing `electron_diffusion` functor. Changing that provider to
   `e -> log_e`, `O2p -> log_O2p`, `Om -> log_Om`, `Op -> log_Op`.
   The synthetic `baseline.i` and all active native fixtures use these names
   consistently for Variables, Kernel, boundary, Energy, Poisson and Maxwell.
-- Exact archived S6 public P2 controls explicitly set
-  `legacy_s6_state_names = true` in their **review-only** migration sidecar,
-  preserving `log_ne/log_ni/log_nm/log_nop` without rewriting the ten
-  archived input layers or changing the C-only P3/P4 evidence. This opt-in
-  permits only `e/O2p/Om/Op` and fails on unknown species; no silent fallback.
-  It is not a new physics result or a blanket legacy naming default.
+- **No legacy solver-state option exists in ContinuityEq.** For public S6
+  P2 only, immutable B input layers remain byte-for-byte original, while the
+  isolated D scratch workspace rewrites its **temporary copies** of the ten
+  input layers from `log_ne/log_ni/log_nm/log_nop` to
+  `log_e/log_O2p/log_Om/log_Op`, using complete-variable-token matches.
+  The independent D sidecar contains no compatibility flag. The migrator
+  records original/staged SHA-256 per input and rejects missing source states.
+  Stored archives, historical P3 inputs and previous C-only results do not change.
+  A D P2 check establishes **input validity only**, not numerical or science parity.
 - `generic_four_species.i` is a syntax-only P2 control proving default
   automatic naming for all four species; generated transport is still limited
   to the verified FEM species and charge identities.
@@ -277,8 +280,10 @@ Issue #493 `public_p2_decks.tar.xz.b64` and 19 public Boltzmann rate
 digests, and runs four real native `--check-input` cases:
 
 - S6-417 **B**: original explicit `ne_transport`, public new Boltzmann rates
-- S6-417 **D**: original C base without `ne_transport`, replaced by the
-  SHA-pinned new option-only `[Physics]` overlay generating `e_transport`
+- S6-417 **D**: original C base without `ne_transport`; only in disposable
+  scratch, all ten input-layer copies are rewritten to canonical state names
+  and then paired with the SHA-pinned option-only `[Physics]` overlay
+  generating `e_transport`
 - S6-941 **B**: equivalent case-specific original explicit input
 - S6-941 **D**: equivalent case-specific new option-only input
 
