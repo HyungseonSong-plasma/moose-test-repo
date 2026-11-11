@@ -22,7 +22,7 @@ class ReferenceNativeOverlayTests(unittest.TestCase):
                 writer.writerow({field: pt, "n_e_m^-3": 8e16})
         return target
 
-    def fixture(self, root: Path) -> dict:
+    def fixture(self, root: Path, electron_names=("log_ne",)) -> dict:
         import numpy as np
         from scipy.io import netcdf_file
 
@@ -30,7 +30,7 @@ class ReferenceNativeOverlayTests(unittest.TestCase):
         with netcdf_file(exodus, "w") as f:
             for name, count in (("time_step", 1), ("num_nodes", 4),
                                 ("num_el_blk", 1), ("num_elem", 2),
-                                ("num_nod_var", 1), ("len_name", 32),
+                                ("num_nod_var", len(electron_names)), ("len_name", 32),
                                 ("num_nod_per_el1", 3)):
                 f.createDimension(name, count)
             f.createVariable("time_whole", "d", ("time_step",))[:] = [1e-4]
@@ -39,11 +39,14 @@ class ReferenceNativeOverlayTests(unittest.TestCase):
             f.createVariable("connect1", "i", ("num_elem", "num_nod_per_el1"))[:] = [
                 [1, 2, 3], [2, 4, 3]]
             f.createVariable("name_nod_var", "c", ("num_nod_var", "len_name"))[:] = np.asarray(
-                [[b"l", b"o", b"g", b"_", b"n", b"e"] + [b" "] * 26], dtype="S1")
+                [[bytes([b]) for b in name.encode("ascii")] + [b" "] * (32 - len(name))
+                 for name in electron_names], dtype="S1")
             f.createVariable("eb_names", "c", ("num_el_blk", "len_name"))[:] = np.asarray(
                 [[b"p", b"l", b"a", b"s", b"m", b"a"] + [b" "] * 26], dtype="S1")
-            f.createVariable("vals_nod_var1", "d", ("time_step", "num_nodes"))[:] = [
-                [math.log(8e16 / refmod.NA)] * 4]
+            for k, _name in enumerate(electron_names, 1):
+                f.createVariable(f"vals_nod_var{k}", "d",
+                                 ("time_step", "num_nodes"))[:] = [
+                    [math.log(8e16 / refmod.NA)] * 4]
         csv_file = root / "plasma.csv"
         csv_file.write_text("time,ne_max\n0.0001,8e16\n")
         manifest = root / "manifest.json"
@@ -70,6 +73,22 @@ class ReferenceNativeOverlayTests(unittest.TestCase):
             self.assertTrue((args["output"] / "metrics.json").exists())
             with self.assertRaisesRegex(ValueError, "REFERENCE_OUTPUT_ALREADY_EXISTS"):
                 refmod.analyze(**args)
+
+    def test_canonical_electron_field_produces_same_scientific_hold(self):
+        with tempfile.TemporaryDirectory() as temp:
+            args = self.fixture(Path(temp), electron_names=("log_e",))
+            result = refmod.analyze(**args)
+            self.assertEqual(result["science"], "SCIENCE_HOLD")
+            self.assertEqual(result["vertical"]["common_support_points"], 3)
+            self.assertLess(result["horizontal"]["rmse_over_reference_peak"], 1e-12)
+
+    def test_ambiguous_exodus_electron_names_fail_closed(self):
+        with tempfile.TemporaryDirectory() as temp:
+            args = self.fixture(Path(temp),
+                                electron_names=("log_ne", "log_e"))
+            with self.assertRaisesRegex(ValueError, "NATIVE_ELECTRON_STATE_AMBIGUOUS"):
+                refmod.plasma_slice(args["exodus"], [0., 23., 44.],
+                                   [0., 12.5, 25.], 100.)
 
     def test_vertical_png_uses_raw_nodes_without_changing_metrics_grid(self):
         from unittest.mock import patch
