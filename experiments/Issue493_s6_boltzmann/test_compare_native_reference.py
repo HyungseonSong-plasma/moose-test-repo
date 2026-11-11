@@ -93,7 +93,9 @@ class ReferenceNativeOverlayTests(unittest.TestCase):
             # linear-triangle samples for the horizontal plot and both metrics.
             horizontal = calls["horizontal"]
             self.assertEqual(horizontal.args[0], horizontal.args[2])
-            self.assertEqual(horizontal.args[3], [8e16, 8e16, 8e16])
+            self.assertEqual(len(horizontal.args[3]), 3)
+            for value in horizontal.args[3]:
+                self.assertAlmostEqual(value / 8e16, 1.0, places=12)
             self.assertEqual(result["sampling"], "PLASMA_TRIANGLE_LINEAR_NO_EXTRAPOLATION")
             self.assertEqual(result["vertical"]["common_support_points"], 3)
             self.assertLess(result["vertical"]["rmse_over_reference_peak"], 1e-12)
