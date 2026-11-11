@@ -17,8 +17,8 @@ test -f "$PILOT/valid_bindings.i"
   printf 'build_base_ref=%s\n' "$PINNED_BASE"
   sha256sum "$PILOT"/*.i physics_app/include/physics/plasma/PlasmaInterface.h \
     physics_app/src/physics/plasma/PlasmaInterface.C \
-    physics_app/include/physics/plasma/ContinuityPhysics.h \
-    physics_app/src/physics/plasma/ContinuityPhysics.C \
+    physics_app/include/physics/plasma/ContinuityEq.h \
+    physics_app/src/physics/plasma/ContinuityEq.C \
     physics_app/src/physics/plasma/EnergyPhysics.C \
     physics_app/src/physics/plasma/ChemistryPhysics.C \
     physics_app/src/physics/plasma/PoissonPhysics.C \
