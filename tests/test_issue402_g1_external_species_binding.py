@@ -355,9 +355,10 @@ def test_continuity_option_contract_rejects_legacy_keys():
     assert 'params.set<MooseFunctorName>("diffusion") = species[i] + "_diffusivity"' in source
     assert 'const std::string kernel_name = species[i] + "_transport";' in source
     assert 'return "log_" + species;' in source
+    # Canonical-only resolution must not branch on known species IDs.
     for species, name in (("O2p", "log_ni"), ("Om", "log_nm"), ("Op", "log_nop")):
-        assert f'if (species == "{species}")' in source
-        assert f'return "{name}"' in source
+        assert f'if (species == "{species}")' not in source
+        assert f'return "{name}"' not in source
 
 
 @pytest.mark.parametrize(
