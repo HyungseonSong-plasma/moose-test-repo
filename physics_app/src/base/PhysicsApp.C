@@ -50,7 +50,7 @@ PhysicsApp::registerAll(Factory & f, ActionFactory & af, Syntax & syntax)
   syntax.registerActionSyntax("PlasmaClosuresAction", "PlasmaClosures/*");
 
   // The continuity input checks the species variables before solving.
-  registerSyntax("ContinuityPhysics",
+  registerSyntax("ContinuityEq",
                  "Physics/Plasmas/Transport/DriftDiffusion/Continuity");
   registerSyntax("EnergyPhysics",
                  "Physics/Plasmas/Transport/DriftDiffusion/Energy");
