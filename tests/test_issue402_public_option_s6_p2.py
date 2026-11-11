@@ -40,7 +40,7 @@ def test_pinned_new_option_overlay_uses_canonical_species_provider_names():
     assert "diffusivity_source = ion_diffusion" in overlay
     assert "fem_charge_numbers = '-1'" in overlay
     assert "fvm_charge_numbers = '1 -1 1'" in overlay
-    # Provider names are derived in ContinuityPhysics, not user input.
+    # Provider names are derived in ContinuityEq, not user input.
     assert "fem_potential = potential" in overlay
     for forbidden in ("variables =", "fem_kernel_names", "fvm_kernel_names",
                       "fem_mobility =", "fem_diffusion =", "mobility =", "diffusivity ="):
