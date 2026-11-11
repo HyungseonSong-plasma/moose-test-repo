@@ -68,6 +68,7 @@ jobs:
           set -euo pipefail
           python3 -m pip install --disable-pip-version-check --quiet \
             numpy==2.1.2 scipy==1.14.1 matplotlib==3.9.2
+          python3 control/experiments/Issue493_s6_boltzmann/test_hpem_compare_native.py
           cd historical
           SRC=.github/oxygen25_eedf/initial_mixture_23xsec_transport.txt
           DST=experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt
@@ -274,6 +275,7 @@ jobs:
           set -euo pipefail
           python3 -m pip install --disable-pip-version-check --quiet \
             numpy==2.1.2 scipy==1.14.1 matplotlib==3.9.2
+          python3 control/experiments/Issue493_s6_boltzmann/test_hpem_compare_native.py
           cd historical
           SRC=.github/oxygen25_eedf/initial_mixture_23xsec_transport.txt
           DST=experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt
