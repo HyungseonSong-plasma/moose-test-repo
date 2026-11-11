@@ -363,5 +363,12 @@
       "status": "BLOCKED",
       "authority": "separate_user_cutover_approval_AND_zero_unmapped_run_input_options"
     }
-  ]
+  ],
+  "implementation_supersession_2026_11_11": {
+    "retired_action": "GummelIterationAction",
+    "retired_syntax": "GummelIteration/*",
+    "current_continuity_class": "ContinuityEq",
+    "status": "HISTORICAL_G0_GUMMEL_ENTRIES_NOT_ACTIVE",
+    "note": "Preserve original owner rows as historical design evidence; current PhysicsApp no longer registers the retired Action. Independent MultiApp and convergence primitives remain available."
+  }
 }
