@@ -133,27 +133,27 @@ Exodus closure comparisons are actually complete.
 ## Automated per-run HPEM reference overlays (research diagnostics only)
 
 The Issue493 B/C result-archival one-shot workflow now invokes
-\`hpem_compare_native.py\` **after** a P3 PASS and verified Exodus/CSV archival,
-before uploading each arm's \`issue493-public-<case>-<arm>-results\` artifact.
+`hpem_compare_native.py` **after** a P3 PASS and verified Exodus/CSV archival,
+before uploading each arm's `issue493-public-<case>-<arm>-results` artifact.
 It is a read-only analysis: it never initiates a new solver, changes rates, or
 contributes to a B/C numerical-parity or scientific acceptance decision.
 
 **Fixed target:** the operator-supplied HPEM 400 W electron-density reference
-derived from \`E_matrix(2).dat\`. The original source bytes, measurement time
+derived from `E_matrix(2).dat`. The original source bytes, measurement time
 and independent coordinate mapping have not been validated; the two reference
 profiles are r=0 (z in cm) and z=23 cm (r in cm). Each profile has a header
-containing the coordinate (\`z_cm\` or \`r_cm\`) and \`n_e_m^-3\` values. No
+containing the coordinate (`z_cm` or `r_cm`) and `n_e_m^-3` values. No
 HPEM data is committed in this repository.
 
 The GitHub Actions host cannot access the user's ChatGPT Library directly.
 A repository maintainer must install **both** repository Actions secrets before
 automated overlays are available:
 
-- \`HPEM_400W_VERTICAL_CSV_B64\`: base64 encoding of the reference vertical CSV.
-- \`HPEM_400W_RADIAL_CSV_B64\`: base64 encoding of the reference radial CSV.
+- `HPEM_400W_VERTICAL_CSV_B64`: base64 encoding of the reference vertical CSV.
+- `HPEM_400W_RADIAL_CSV_B64`: base64 encoding of the reference radial CSV.
 
 On macOS/Linux, prepare each secret body from a trusted, local reference file
-with \`base64 < reference.csv | tr -d '\\n'\` and store through GitHub repository
+with `base64 < reference.csv | tr -d '\n'` and store through GitHub repository
 Actions secrets; do not paste source data into this public repository, workflow
 logs, a PR or an issue. Preserve the same immutable reference across runs.
 Each saved metrics JSON includes SHA-256 hashes of both reference profiles
@@ -162,23 +162,23 @@ to public CSV artifacts**; the rendered reference curves and aggregate metrics
 are included in the downloadable public artifact, so review disclosure rights.
 
 With configured reference secrets and a valid P3 run, each B or C artifact
-contains \`hpem_reference/{vertical,radial}_{absolute,normalized}.png\`,
-native-only sampled \`{vertical,radial}_profile.csv\`, and \`metrics.json\`.
+contains `hpem_reference/{vertical,radial}_{absolute,normalized}.png`,
+native-only sampled `{vertical,radial}_profile.csv`, and `metrics.json`.
 Profiles come from actual plasma-block triangles and nodal
-\`n_e = N_A * exp(log_ne)\`, not from neighboring non-plasma elements. No
+`n_e = N_A * exp(log_ne)`, not from neighboring non-plasma elements. No
 extrapolation outside the mesh; RMSE uses common supported coordinates with
 reference density greater than 1e15 m^-3. Overlay failure or an unconfigured
-reference writes \`hpem_reference_status.json\` and **does not reclassify
+reference writes `hpem_reference_status.json` and **does not reclassify
 successful Native P3 or prevent upload of raw Exodus/CSV**.
 
 Unit regression:
 
-\`\`\`bash
+```bash
 python3 experiments/Issue493_s6_boltzmann/test_hpem_compare_native.py
-\`\`\`
+```
 
 **Important dispatch guard:** the existing
-\`.github/workflows/issue493-public-bc-results-p4-once.yml\` is a
+`.github/workflows/issue493-public-bc-results-p4-once.yml` is a
 main-self-path-triggered, full 460-step job. Merging a change to that workflow
 would trigger expensive B and C replays. Do not merge the implementation PR
 or launch those runs without a separate operator dispatch decision.
@@ -186,20 +186,20 @@ or launch those runs without a separate operator dispatch decision.
 ## C/P2 launcher failure analysis (2026-11-11)
 
 Both historical C lanes ended P2 with exit 127, a sanitized
-\`P2_LAUNCHER_FAIL\` classification and P3 NOT_RUN, despite a verified exact
+`P2_LAUNCHER_FAIL` classification and P3 NOT_RUN, despite a verified exact
 B-built executable SHA and OCI image. The B executable's ELF dynamic section
-lists \`libphysics_test-opt.so.0\` and has an RPATH/RUNPATH containing
-\`/app/physics_app/test/lib\`. The published B-to-C handoff tarball previously
-included only \`physics_app/lib\`; it excluded \`physics_app/test/lib\`.
+lists `libphysics_test-opt.so.0` and has an RPATH/RUNPATH containing
+`/app/physics_app/test/lib`. The published B-to-C handoff tarball previously
+included only `physics_app/lib`; it excluded `physics_app/test/lib`.
 This missing shared-library directory is the strongest evidenced explanation
 for exit 127. The raw C P2 stderr was not retained, so loader text is not
 independently confirmed.
 
-The corrected handoff archives **both** \`lib\` and \`test/lib\` with
-SHA-verification, checks for \`libphysics_test-opt.so.0\` after restoration,
-and performs pinned-OCI \`ldd\` library closure check **before** C P2.
+The corrected handoff archives **both** `lib` and `test/lib` with
+SHA-verification, checks for `libphysics_test-opt.so.0` after restoration,
+and performs pinned-OCI `ldd` library closure check **before** C P2.
 If the closure check fails, C must remain blocked rather than starting P3.
 The original two B results are already complete; their old 14-day executable
-archives lack \`test/lib\`, and a new P1 closure bundle must be built or
+archives lack `test/lib`, and a new P1 closure bundle must be built or
 otherwise independently verified before any C-only retry. No new Native solve
 is authorized by this analysis.
