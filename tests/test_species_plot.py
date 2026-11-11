@@ -19,11 +19,12 @@ def _names(var, names, nch=64):
     var[:] = arr
 
 
-def _case(root: Path, times=(0., 1.e-4)) -> tuple[Path, Path]:
+def _case(root: Path, times=(0., 1.e-4), *, canonical=False) -> tuple[Path, Path]:
     root.mkdir(parents=True, exist_ok=True)
     nt = len(times)
     path = root / "native.e"
-    enames = ("log_ni", "log_nm", "log_nop", "p", "w_O2s", "w_O", "w_Os")
+    enames = (("log_O2p", "log_Om", "log_Op") if canonical else
+              ("log_ni", "log_nm", "log_nop")) + ("p", "w_O2s", "w_O", "w_Os")
     with netcdf_file(str(path), "w") as f:
         for name, count in {"time_step": nt, "num_dim": 2, "num_nodes": 4, "num_el_blk": 1,
                             "num_elem_var": len(enames), "num_nod_var": 3, "num_glo_var": 1, "len_string": 64,
@@ -34,7 +35,9 @@ def _case(root: Path, times=(0., 1.e-4)) -> tuple[Path, Path]:
         f.createVariable("coordy", "d", ("num_nodes",))[:] = (0, 0, 1, 1)
         _names(f.createVariable("eb_names", "c", ("num_el_blk", "len_string")), ("plasma",))
         f.createVariable("connect1", "i", ("num_elem_in_blk1", "num_nod_per_el1"))[:] = ((1, 2, 3), (2, 4, 3))
-        _names(f.createVariable("name_nod_var", "c", ("num_nod_var", "len_string")), ("log_ne", "log_energy", "potential"))
+        electron_name = "log_e" if canonical else "log_ne"
+        _names(f.createVariable("name_nod_var", "c", ("num_nod_var", "len_string")),
+               (electron_name, "log_energy", "potential"))
         f.createVariable("vals_nod_var1", "d", ("time_step", "num_nodes"))[:] = np.full((nt, 4), -20.)
         f.createVariable("vals_nod_var2", "d", ("time_step", "num_nodes"))[:] = np.full((nt, 4), -20. + np.log(3.))
         f.createVariable("vals_nod_var3", "d", ("time_step", "num_nodes"))[:] = np.tile([0., 1., 0., 1.], (nt, 1))
@@ -47,7 +50,7 @@ def _case(root: Path, times=(0., 1.e-4)) -> tuple[Path, Path]:
             f.createVariable(f"vals_elem_var{i}eb1", "d", ("time_step", "num_elem_in_blk1"))[:] = np.tile((a, b), (nt, 1))
     inp = root / "oxygen.i"
     inp.write_text("""[Variables]
-  [log_ne]
+  [ELECTRON_STATE_PLACEHOLDER]
   []
 []
 [FunctorMaterials]
@@ -77,7 +80,7 @@ def _case(root: Path, times=(0., 1.e-4)) -> tuple[Path, Path]:
     expression = 'prs*mol/(8.31446*tmp)'
   []
 []
-""", encoding="utf8")
+""".replace("ELECTRON_STATE_PLACEHOLDER", electron_name), encoding="utf8")
     return path, inp
 
 
@@ -105,6 +108,55 @@ def test_native_8_species_and_correct_density_conversion(tmp_path):
     assert json.loads((tmp_path / "species.png.json").read_text())["science_acceptance"] == "NOT_EVALUATED"
     with pytest.raises(DefaultPlotError, match="overwrite"):
         generate(exodus, out, inputs=(inp,))
+
+
+
+def test_canonical_exodus_density_fields_map_and_trace(tmp_path):
+    """New ContinuityEq outputs can be decoded without a runtime alias flag."""
+    pytest.importorskip("matplotlib")
+    exodus, inp = _case(tmp_path, canonical=True)
+    from physics_harness.adapters.moose.time_trace import _native_traces
+
+    output = tmp_path / "canonical_map.png"
+    result = generate(exodus, output, inputs=(inp,), time_us=100)
+    assert result["fields"][:4] == ["e-", "O2+", "O-", "O+"]
+    for label, field in (("e-", "log_e"), ("O2+", "log_O2p"),
+                         ("O-", "log_Om"), ("O+", "log_Op")):
+        assert field in result["field_sources"][label]
+        assert result["species_density_ranges"][label]["max_m3"] > 0
+    assert "log_energy-log_e" in result["field_sources"]["T_e"]
+    assert output.stat().st_size > 1000
+
+    traces = _native_traces(exodus, (inp,), None)
+    for label, field in (("e-", "log_e"), ("O2+", "log_O2p"),
+                         ("O-", "log_Om"), ("O+", "log_Op")):
+        assert field in traces["sources"][label]
+        assert len(traces["series"][label]) == 2
+    assert "log_energy-log_e" in traces["sources"]["T_e"]
+
+
+def test_exodus_rejects_ambiguous_archive_and_canonical_states(tmp_path):
+    """Fail closed rather than silently favor either physical density source."""
+    from physics_harness.adapters.moose.species_plot import exodus_log_name
+    from physics_harness.adapters.moose.time_trace import _native_traces
+
+    with pytest.raises(DefaultPlotError, match="ambiguous"):
+        exodus_log_name(["log_ne", "log_e"], "e-")
+    with pytest.raises(DefaultPlotError, match="ambiguous"):
+        exodus_log_name(["log_ni", "log_O2p"], "O2+")
+    with pytest.raises(DefaultPlotError, match="duplicate"):
+        exodus_log_name(["log_e", "log_e"], "e-")
+    assert exodus_log_name(["log_e"], "e-") == "log_e"
+    assert exodus_log_name(["log_ne"], "e-") == "log_ne"
+    assert exodus_log_name([], "e-") is None
+
+    exodus, inp = _case(tmp_path / "mixed")
+    with netcdf_file(str(exodus), "a") as f:
+        _names(f.variables["name_nod_var"], ("log_ne", "log_e", "potential"))
+    with pytest.raises(DefaultPlotError, match="ambiguous"):
+        _native_species(exodus, "auto", None, None, (inp,), None)
+    with pytest.raises(DefaultPlotError, match="ambiguous"):
+        _native_traces(exodus, (inp,), None)
 
 
 def test_missing_temperature_does_not_fabricate_neutrals(tmp_path):
