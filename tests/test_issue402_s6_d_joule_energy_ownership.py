@@ -120,3 +120,20 @@ def test_joule_residual_and_rf_material_have_distinct_sign_and_units():
     action = (ROOT / "physics_app/src/physics/plasma/EnergyPhysics.C").read_text()
     assert 'if (!isParamValid("rf_heating_material"))' in action
     assert 'requireUniqueFEKernel("MatBodyForce"' in action
+
+
+def test_retired_physical_state_joule_cpp_is_absent_but_log_molar_stays():
+    """Remove only the unused physical-state B implementation and registration.
+
+    Electrostatic log-molar electron heating and RF MatBodyForce remain active.
+    A's separate drift-kernel removal is on another Draft PR, not this one.
+    """
+    transport = (ROOT / "physics_app/src/kernels/PhysicsFEMPlasmaTransport.C").read_text()
+    header = (ROOT / "physics_app/include/kernels/PhysicsFEMPlasmaTransport.h").read_text()
+    for text in (transport, header):
+        assert "PhysicsFEMElectronJouleHeating" not in text
+        assert "PhysicsFEMLogMolarElectronJouleHeating" in text
+        assert "PhysicsFEMPlasmaDriftDiffusion" in text
+    assert 'registerMooseObject("PhysicsApp", PhysicsFEMLogMolarElectronJouleHeating);' in transport
+    assert "PhysicsFEMLogMolarElectronJouleHeating::computeQpResidual()" in transport
+    assert 'registerMooseObject("PhysicsApp", PhysicsFEMLogMolarDriftDiffusion);' in transport
