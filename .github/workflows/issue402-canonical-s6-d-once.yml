@@ -18,6 +18,11 @@ jobs:
       HISTORICAL_SHA: 29d1acc6ef7969908b86719e4b95c73a1565136d
       OCI: ghcr.io/hyungseonsong-plasma/physics-build-base@sha256:2c3352da4f5c1b2ae98475fc01463ad0cdbc6ce7d221ce55055ddea152182008
       CHEM: experiments/Issue395_powered_chemistry_ladder
+      # Preserve the pinned historical 400 W research-only opt-in.
+      OXYGEN_RESEARCH_400: '1'
+      OXYGEN_RESEARCH_FULL24: '0'
+      OXYGEN_RESEARCH_EI2738_FORMULA: '0'
+      OXYGEN_RESEARCH_QUICK_5MIN: '0'
     steps:
       - name: Checkout exact merged canonical PhysicsApp source
         uses: actions/checkout@v4
