@@ -128,3 +128,75 @@ installed** in this chat; earlier jobs displayed success because their
 experimental computation steps were skipped. Continue `SCIENCE_HOLD` until
 P2 native input checks, P3 460-step fresh B/C solutions, and P4 diagnostic/
 Exodus closure comparisons are actually complete.
+
+
+## Public electron-density reference comparison (research diagnostics)
+
+Reference profiles are now **public, versioned data**, not GitHub Secrets.
+The two canonical 400 W CSVs are:
+
+- `reference/reference_vertical.csv`: `z_cm,n_e_m^-3` at r = 0 cm;
+  45 points, z = 0–44 cm.
+- `reference/reference_horizontal.csv`: `r_cm,n_e_m^-3` at z = 23 cm;
+  51 points, r = 0–25 cm.
+
+The reference source and unverified coordinate/time assumptions are disclosed
+in `reference/README.md`. Max reference density is 8.885e16 m^-3.
+Do not describe the reference timestamp as Native t=100 us; its timestamp
+is unknown. These CSV files are the frozen version-controlled input for the
+comparison, so updates are reviewed in Git rather than silently swapping a
+secret. Neither original private rates nor production acceptance data are used.
+
+After a P3 PASS and verified Exodus/CSV archival, the Issue493 B/C one-shot
+workflow runs `compare_native_reference.py` using the CSVs checked out
+from the **same workflow commit**. Each case/arm artifact contains:
+
+- `reference_comparison/vertical_absolute.png` (r = 0 cm);
+- `reference_comparison/horizontal_absolute.png` (z = 23 cm);
+- `reference_comparison/vertical_profile.csv`,
+  `horizontal_profile.csv` and `metrics.json`.
+
+There are exactly **two absolute-density plots**; normalized plots are
+deliberately omitted. The metrics record full reference CSV SHA-256 digests,
+Native Exodus/CSV SHA-256 digests, common-support counts, and RMSE.
+Node density is `N_A * exp(log_ne)`; interpolation uses only plasma
+triangles, with no external extrapolation, at Native 100 us.
+The reference curves are publicly reproducible from the committed CSVs.
+
+If comparison fails, `reference_comparison_status.json` records HOLD and
+preserves the previously verified Native Exodus, CSV and manifest.
+A successful diagnostic does **not** clear `SCIENCE_HOLD` or prove B/C parity.
+No GitHub Secret is required or read.
+
+Synthetic tests run before the expensive solve:
+
+```bash
+python3 experiments/Issue493_s6_boltzmann/test_compare_native_reference.py
+```
+
+Offline regression against preserved Issue493 417/B and 941/B artifacts
+exercises the same 100 us comparator without re-running the solver.
+The one-shot workflow is self-path-triggered on main. Merging the PR
+that changes it will launch full 460-step B/C jobs; preserve its existing
+authorization, provenance and P2/P3 gates.
+
+## C/P2 launcher failure analysis (2026-11-11)
+
+Both historical C lanes ended P2 with exit 127, a sanitized
+`P2_LAUNCHER_FAIL` classification and P3 NOT_RUN, despite a verified exact
+B-built executable SHA and OCI image. The B executable's ELF dynamic section
+lists `libphysics_test-opt.so.0` and has an RPATH/RUNPATH containing
+`/app/physics_app/test/lib`. The published B-to-C handoff tarball previously
+included only `physics_app/lib`; it excluded `physics_app/test/lib`.
+This missing shared-library directory is the strongest evidenced explanation
+for exit 127. The raw C P2 stderr was not retained, so loader text is not
+independently confirmed.
+
+The corrected handoff archives **both** `lib` and `test/lib` with
+SHA-verification, checks for `libphysics_test-opt.so.0` after restoration,
+and performs pinned-OCI `ldd` library closure check **before** C P2.
+If the closure check fails, C must remain blocked rather than starting P3.
+The original two B results are already complete; their old 14-day executable
+archives lack `test/lib`, and a new P1 closure bundle must be built or
+otherwise independently verified before any C-only retry. No new Native solve
+is authorized by this analysis.

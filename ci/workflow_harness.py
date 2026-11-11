@@ -99,6 +99,15 @@ def route(purpose: str, *, issue: int | None = None,
     return matches[0]
 
 
+def verify_special_reference_secret_surface(template: str, variant: str) -> None:
+    """No GitHub secrets may enter generated special research workflows.
+
+    Public diagnostic electron-density references are committed as ordinary CSV.
+    """
+    if re.search(r"\bsecrets\b", template):
+        raise WorkflowContractError("SPECIAL_SECRET_SURFACE_NOT_AUTHORIZED")
+
+
 def render(root: Path, profile: dict) -> str:
     template = (root / profile["template"]).read_text(encoding="utf-8")
     if not template.endswith("\n"):
@@ -134,11 +143,11 @@ def render(root: Path, profile: dict) -> str:
             raise WorkflowContractError("SPECIAL_ARCHIVE_JOB_ALLOWLIST_MISMATCH")
     elif len(job_names) != 1 or job_names[0] != allowed_job:
         raise WorkflowContractError("SPECIAL_JOB_ALLOWLIST_MISMATCH")
+    verify_special_reference_secret_surface(template, variant)
     common = (re.search(r"^    strategy:\n      fail-fast: false\n      max-parallel: 2", template, re.MULTILINE)
               and "public_p3_run.py" in template
               and "github.sha" in template
               and "github.event.pull_request." not in template
-              and "secrets." not in template
               and not re.search(r"^    if:", template, re.MULTILINE))
     if not common:
         raise WorkflowContractError("SPECIAL_EXECUTION_POLICY")
@@ -172,7 +181,7 @@ def render(root: Path, profile: dict) -> str:
                 or "source-bound-binary" not in template
                 or "needs: [issue493-public-p3-archive-b, issue493-public-p3-archive-c]" not in template
                 or "timeout-minutes: 360" not in template
-                or "--mode full" in template or "secrets." in template):
+                or "--mode full" in template):
             raise WorkflowContractError("SPECIAL_ARCHIVE_PROVENANCE_OR_DATA_BOUNDARY")
     name, output = profile["name"], profile["output"]
     if not isinstance(name, str) or not re.fullmatch(r"[A-Za-z0-9 _-]{4,100}", name):
@@ -243,6 +252,17 @@ def self_test() -> None:
             pass
         else:
             raise AssertionError("unknown workflow intent was accepted")
+    archived = route("special", issue=493, variant="archive", records=entries)
+    archive_template = (ROOT / archived["template"]).read_text(encoding="utf-8")
+    verify_special_reference_secret_surface(archive_template, "archive")
+    for variant in ("archive", "diagnostic"):
+        try:
+            verify_special_reference_secret_surface(
+                archive_template + "\n  token: ${{ secrets.UNAUTHORIZED }}\n", variant)
+        except WorkflowContractError:
+            pass
+        else:
+            raise AssertionError("special workflow admitted a secret reference")
     for record in entries:
         out = render(ROOT, record)
         if record["purpose"] == "special":

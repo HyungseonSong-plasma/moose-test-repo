@@ -98,6 +98,13 @@ class PublicArtifactContractTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "P4_INCOMPLETE_CSV"):
                 p4.compare_csv(bdir / "plasma.csv", cdir / "plasma.csv")
 
+    def test_c_handoff_carries_test_lib_and_checks_runtime_closure(self):
+        workflow = (Path(__file__).resolve().parents[2] /
+                    ".github/workflows/issue493-public-bc-results-p4-once.yml").read_text()
+        self.assertIn('test -e candidate/physics_app/test/lib/libphysics_test-opt.so.0', workflow)
+        self.assertIn('tar -C candidate/physics_app -czf "$DIR/app-lib.tar.gz" lib test/lib', workflow)
+        self.assertIn("ISSUE493_C_SHARED_LIBRARY_CLOSURE_PASS", workflow)
+        self.assertIn("ldd /app/physics_app/physics-opt", workflow)
     def test_cannot_claim_full_scientific_parity_from_p4_metrics(self):
         self.assertIn("HOLD_NO_APPROVED_TOLERANCES",
                       Path(p4.__file__).read_text())

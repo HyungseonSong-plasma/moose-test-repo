@@ -60,6 +60,7 @@
           set -euo pipefail
           python3 -m pip install --disable-pip-version-check --quiet \
             numpy==2.1.2 scipy==1.14.1 matplotlib==3.9.2
+          python3 control/experiments/Issue493_s6_boltzmann/test_compare_native_reference.py
           cd historical
           SRC=.github/oxygen25_eedf/initial_mixture_23xsec_transport.txt
           DST=experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt
@@ -118,10 +119,12 @@
           cp "$RUNNER_TEMP/issue493_p1_provenance.json" "$DIR/p1.json"
           # Preserve application-owned shared library closure; ELF alone may link
           # against libPhysicsApp-opt.so at runtime. No original rate data.
-          if [ -d candidate/physics_app/lib ]; then
-            tar -C candidate/physics_app -czf "$DIR/app-lib.tar.gz" lib
-            (cd "$DIR" && sha256sum app-lib.tar.gz > app-lib.tar.gz.sha256)
-          fi
+          # The B executable DT_NEEDED entries include libphysics_test-opt.so.0.
+          # Preserve BOTH application lib paths for the exact-binary C replay.
+          test -d candidate/physics_app/lib
+          test -e candidate/physics_app/test/lib/libphysics_test-opt.so.0
+          tar -C candidate/physics_app -czf "$DIR/app-lib.tar.gz" lib test/lib
+          (cd "$DIR" && sha256sum app-lib.tar.gz > app-lib.tar.gz.sha256)
           python3 - "$DIR" <<'PY'
           import hashlib,json,pathlib,sys
           d=pathlib.Path(sys.argv[1]); p=json.loads((d/"p1.json").read_text())
@@ -150,6 +153,29 @@
             --run-root "$RUNNER_TEMP/issue493_archive_B_${{ matrix.case }}" \
             --publish-root "$RUNNER_TEMP/issue493_publish_B_${{ matrix.case }}" \
             --case "${{ matrix.case }}" --arm B
+      - name: Save public reference comparisons for completed B
+        shell: bash
+        run: |
+          set -euo pipefail
+          PUBLISHED="$RUNNER_TEMP/issue493_publish_B_${{ matrix.case }}"
+          test -s "$PUBLISHED/plasma.e"
+          test -s "$PUBLISHED/plasma.csv"
+          test -s "$PUBLISHED/manifest.json"
+          # Do not change the Native P3 verdict if diagnostics cannot be rendered:
+          # keep original Exodus, CSV and manifest downloadable.
+          if python3 control/experiments/Issue493_s6_boltzmann/compare_native_reference.py \
+            --exodus "$PUBLISHED/plasma.e" --csv "$PUBLISHED/plasma.csv" \
+            --manifest "$PUBLISHED/manifest.json" \
+            --reference-vertical control/experiments/Issue493_s6_boltzmann/reference/reference_vertical.csv \
+            --reference-horizontal control/experiments/Issue493_s6_boltzmann/reference/reference_horizontal.csv \
+            --output "$PUBLISHED/reference_comparison" \
+            --label "S6-${{ matrix.case }}/B" --time-us 100; then
+            echo ISSUE493_PUBLIC_REFERENCE_COMPARISON_PASS
+          else
+            rm -rf "$PUBLISHED/reference_comparison"
+            echo '{"schema":"issue493_reference_comparison_status_v1","status":"HOLD_ANALYSIS_ERROR","science":"SCIENCE_HOLD"}' > "$PUBLISHED/reference_comparison_status.json"
+            echo ISSUE493_PUBLIC_REFERENCE_COMPARISON_HOLD_NATIVE_P3_UNAFFECTED
+          fi
       - name: Upload public B Exodus CSV and SHA manifest
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
@@ -230,6 +256,7 @@
           set -euo pipefail
           python3 -m pip install --disable-pip-version-check --quiet \
             numpy==2.1.2 scipy==1.14.1 matplotlib==3.9.2
+          python3 control/experiments/Issue493_s6_boltzmann/test_compare_native_reference.py
           cd historical
           SRC=.github/oxygen25_eedf/initial_mixture_23xsec_transport.txt
           DST=experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt
@@ -256,10 +283,24 @@
           cp "$RUNNER_TEMP/issue493_binary_${{ matrix.case }}/physics-opt" candidate/physics_app/physics-opt
           chmod 0755 candidate/physics_app/physics-opt
           DIR="$RUNNER_TEMP/issue493_binary_${{ matrix.case }}"
-          if [ -f "$DIR/app-lib.tar.gz" ]; then
-            (cd "$DIR" && sha256sum -c app-lib.tar.gz.sha256)
-            tar -C candidate/physics_app -xzf "$DIR/app-lib.tar.gz"
-          fi
+          test -f "$DIR/app-lib.tar.gz"
+          (cd "$DIR" && sha256sum -c app-lib.tar.gz.sha256)
+          tar -C candidate/physics_app -xzf "$DIR/app-lib.tar.gz"
+          test -e candidate/physics_app/test/lib/libphysics_test-opt.so.0
+          # B P1 SHA proves executable identity, not dynamic library closure.
+          # Preflight on the SAME pinned OCI as --check-input, no solver.
+          docker run --rm --network none --entrypoint /bin/bash --user 0:0 \
+            --workdir /app --mount "type=bind,src=$PWD/candidate,dst=/app,readonly" \
+            "$BUILD_BASE_REF" -lc '
+              set -euo pipefail
+              source /environment
+              ldd /app/physics_app/physics-opt > /tmp/issue493-c-ldd.txt
+              if grep -q "not found" /tmp/issue493-c-ldd.txt; then
+                echo ISSUE493_C_SHARED_LIBRARY_CLOSURE_MISSING
+                exit 127
+              fi
+            '
+          echo ISSUE493_C_SHARED_LIBRARY_CLOSURE_PASS
           cp "$RUNNER_TEMP/issue493_binary_${{ matrix.case }}/p1.json" "$RUNNER_TEMP/issue493_p1_provenance.json"
           PYTHONPATH=control python3 - <<'PY'
           import os
@@ -286,6 +327,29 @@
             --run-root "$RUNNER_TEMP/issue493_archive_C_${{ matrix.case }}" \
             --publish-root "$RUNNER_TEMP/issue493_publish_C_${{ matrix.case }}" \
             --case "${{ matrix.case }}" --arm C
+      - name: Save public reference comparisons for completed C
+        shell: bash
+        run: |
+          set -euo pipefail
+          PUBLISHED="$RUNNER_TEMP/issue493_publish_C_${{ matrix.case }}"
+          test -s "$PUBLISHED/plasma.e"
+          test -s "$PUBLISHED/plasma.csv"
+          test -s "$PUBLISHED/manifest.json"
+          # Do not change the Native P3 verdict if diagnostics cannot be rendered:
+          # keep original Exodus, CSV and manifest downloadable.
+          if python3 control/experiments/Issue493_s6_boltzmann/compare_native_reference.py \
+            --exodus "$PUBLISHED/plasma.e" --csv "$PUBLISHED/plasma.csv" \
+            --manifest "$PUBLISHED/manifest.json" \
+            --reference-vertical control/experiments/Issue493_s6_boltzmann/reference/reference_vertical.csv \
+            --reference-horizontal control/experiments/Issue493_s6_boltzmann/reference/reference_horizontal.csv \
+            --output "$PUBLISHED/reference_comparison" \
+            --label "S6-${{ matrix.case }}/C" --time-us 100; then
+            echo ISSUE493_PUBLIC_REFERENCE_COMPARISON_PASS
+          else
+            rm -rf "$PUBLISHED/reference_comparison"
+            echo '{"schema":"issue493_reference_comparison_status_v1","status":"HOLD_ANALYSIS_ERROR","science":"SCIENCE_HOLD"}' > "$PUBLISHED/reference_comparison_status.json"
+            echo ISSUE493_PUBLIC_REFERENCE_COMPARISON_HOLD_NATIVE_P3_UNAFFECTED
+          fi
       - name: Upload public C Exodus CSV and SHA manifest
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
