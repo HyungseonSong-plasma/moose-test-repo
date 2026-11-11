@@ -14,7 +14,7 @@ import subprocess
 ROOT = Path(__file__).resolve().parents[1]
 PILOT = ROOT / "experiments" / "Issue402_plasma_dsl_g1"
 PUBLIC = ROOT / "experiments" / "Issue493_s6_boltzmann"
-EXPECTED_OVERLAY = "5dfdcf2f3e7c4cd4d0541c17c2078d411514d4952ed956eef998025b3c7bd356"
+EXPECTED_OVERLAY = "3c28bcc79e3ec17b7ceab858160a48150b78e37385f9d56725ae0e3cb22baaef"
 
 
 def extract_overlay():
@@ -35,7 +35,7 @@ def test_pinned_new_option_overlay_uses_canonical_species_provider_names():
     assert hashlib.sha256(overlay.encode()).hexdigest() == EXPECTED_OVERLAY
     assert "fem_species = 'e'" in overlay
     assert "fvm_species = 'O2p Om Op'" in overlay
-    assert "legacy_s6_state_names = true" in overlay
+    assert "legacy_s6_state_names" not in overlay
     assert overlay.count("type = SpeciesTransportAliasMaterial") == 3
     assert "mobility_source = ion_mobility" in overlay
     assert "diffusivity_source = ion_diffusion" in overlay
@@ -164,6 +164,7 @@ def test_p2_case_verdict_survives_cleanup_failure(tmp_path):
         "CASES": ("417", "941"),
         "VARIANTS": ("B", "D"),
         "validate_overlay": lambda: None,
+        "canonicalize_staged_D_inputs": lambda *_args: {"status": "SYNTHETIC_MIGRATION"},
         "check_source": lambda *_args: {"binary_sha256": "123"},
         "sha_file": lambda path: EXPECTED_OVERLAY if str(path).endswith("migrated_continuity.i") else "manifest-hash",
         "p2": SimpleNamespace(
