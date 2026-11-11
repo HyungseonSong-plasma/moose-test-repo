@@ -89,14 +89,14 @@ def test_native_control_and_public_417_941_are_user_coefficient_free():
     assert "mobility =" not in overlay and "diffusivity =" not in overlay
     assert "fem_species = 'e'" in overlay
     assert "fvm_species = 'O2p Om Op'" in overlay
-    assert "legacy_s6_state_names = true" in overlay
+    assert "legacy_s6_state_names" not in overlay
     for species, source in (("O2p", "ion"), ("Om", "negative_ion"),
                             ("Op", "atomic_positive_ion")):
         assert f"species_id = {species}" in overlay
         assert f"mobility_source = {source}_mobility" in overlay
         assert f"diffusivity_source = {source}_diffusion" in overlay
     assert hashlib.sha256(overlay.encode()).hexdigest() == (
-        "5dfdcf2f3e7c4cd4d0541c17c2078d411514d4952ed956eef998025b3c7bd356"
+        "3c28bcc79e3ec17b7ceab858160a48150b78e37385f9d56725ae0e3cb22baaef"
     )
     # Protected original P3 inputs and their native old provider spelling
     # remain outside this migration PR.
