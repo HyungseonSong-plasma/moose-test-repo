@@ -67,8 +67,8 @@ def test_both_old_and_new_alias_types_exercised_by_native_p2_controls():
 
 
 def test_moose_physics_action_and_immutability_boundary_stay_separate():
-    assert (BASE / "src/physics/plasma/ContinuityPhysics.C").is_file()
-    assert (BASE / "include/physics/plasma/ContinuityPhysics.h").is_file()
+    assert (BASE / "src/physics/plasma/ContinuityEq.C").is_file()
+    assert (BASE / "include/physics/plasma/ContinuityEq.h").is_file()
     assert "SCIENCE_HOLD" in (
         ROOT / "experiments/Issue402_plasma_dsl_g1/public_option_s6_p2.py"
     ).read_text()
