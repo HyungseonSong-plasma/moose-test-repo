@@ -1,4 +1,4 @@
-# The internally derived variable log_nmissing does not exist.
+# The internally derived variable log_missing does not exist.
 [Physics]
   [Plasmas]
     [Transport]
