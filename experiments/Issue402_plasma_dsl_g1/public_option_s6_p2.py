@@ -41,6 +41,7 @@ OVERLAY = """# Review-only new option DSL overlay; NOT pinned P3 C input.
           block = plasma
           fem_species = 'e'
           fvm_species = 'O2p Om Op'
+          legacy_s6_state_names = true
           fem_potential = potential
           fem_charge_numbers = '-1'
           fvm_charge_numbers = '1 -1 1'
@@ -70,7 +71,7 @@ OVERLAY = """# Review-only new option DSL overlay; NOT pinned P3 C input.
   []
 []
 """
-OVERLAY_SHA256 = "3c28bcc79e3ec17b7ceab858160a48150b78e37385f9d56725ae0e3cb22baaef"
+OVERLAY_SHA256 = "5dfdcf2f3e7c4cd4d0541c17c2078d411514d4952ed956eef998025b3c7bd356"
 CASES = ("417", "941")
 VARIANTS = ("B", "D")
 
