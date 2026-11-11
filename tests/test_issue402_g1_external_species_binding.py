@@ -71,8 +71,13 @@ def test_existing_variables_only():
     assert '"variables"' not in source
     assert 'params.set<MooseFunctorName>("diffusion") = species[i] + "_diffusivity"' in source
     assert 'species[i] + "_transport"' in source
-    assert 'return "log_n" + species' in source
-    assert 'return "log_ni"' in source
+    assert 'return "log_" + species;' in source
+    assert 'params.addParam<bool>(' in source
+    assert '"legacy_s6_state_names", false' in source
+    assert 'legacy_s6 ? legacyS6StateName(species) : continuityStateName(species)' in source
+    # The four historical S6 aliases are opt-in, never the default.
+    for legacy in ('"log_ne"', '"log_ni"', '"log_nm"', '"log_nop"'):
+        assert f'return {legacy};' in source
     assert '"fem_charge_numbers"' in source
     assert "getProblem().addKernel(" in source
     assert "PhysicsFEMLogMolarDriftDiffusion" in source
@@ -82,8 +87,8 @@ def test_existing_variables_only():
 
 def test_small_example_has_finite_element_and_finite_volume_equations():
     text = (CASE / "baseline.i").read_text()
-    assert "[log_ne]" in text and "family = LAGRANGE" in text
-    assert "[log_ni]" in text and "type = MooseVariableFVReal" in text
+    assert "[log_e]" in text and "family = LAGRANGE" in text
+    assert "[log_O2p]" in text and "type = MooseVariableFVReal" in text
     assert "type = Diffusion" in text
     assert "type = FVDiffusion" in text
     assert "type = FVDirichletBC" in text
@@ -132,6 +137,13 @@ def test_native_build_and_comparison_script():
     assert "sha256sum" in runner
     assert "physics_app/src/physics/plasma/PlasmaInterface.C" in runner
     assert "physics_app/src/physics/plasma/ContinuityEq.C" in runner
+    assert "generic_four_species.i" in runner
+    assert "PLASMA_GENERIC_SPECIES_STATE_NAMES_P2_PASS" in runner
+    generic = (CASE / "generic_four_species.i").read_text()
+    for state in ("log_e", "log_O2p", "log_Om", "log_Op"):
+        assert f"[{state}]" in generic
+    assert "legacy_s6_state_names" not in generic
+    assert "legacy_s6_state_names = true" in (CASE / "s6_external_bindings.i").read_text()
     for name in ("EnergyPhysics", "ChemistryPhysics", "PoissonPhysics", "MaxwellPhysics"):
         header = (APP / f"include/physics/plasma/{name}.h").read_text()
         source = (APP / f"src/physics/plasma/{name}.C").read_text()
@@ -344,7 +356,7 @@ def test_continuity_option_contract_rejects_legacy_keys():
     assert 'params.set<MooseFunctorName>("mobility") = species[i] + "_mobility"' in source
     assert 'params.set<MooseFunctorName>("diffusion") = species[i] + "_diffusivity"' in source
     assert 'const std::string kernel_name = species[i] + "_transport";' in source
-    assert 'return "log_n" + species;' in source
+    assert 'return "log_" + species;' in source
     for species, name in (("O2p", "log_ni"), ("Om", "log_nm"), ("Op", "log_nop")):
         assert f'if (species == "{species}")' in source
         assert f'return "{name}"' in source
