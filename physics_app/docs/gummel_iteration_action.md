@@ -1,5 +1,12 @@
 # GummelIteration Action
 
+> **RETIRED — historical documentation only (2026-11-11).** The `GummelIteration/*`
+> syntax and `GummelIterationAction` C++ implementation were removed from the
+> current PhysicsApp. Examples below describe **past experiments** and will not
+> parse with the current binary. They are kept as provenance, not as a supported API.
+> Native `MultiApps` and independently registered convergence objects remain available.
+
+
 `GummelIterationAction` supports two orchestration modes.
 
 The preferred mode runs the electron and electrostatic systems as sibling MultiApps
