@@ -100,19 +100,13 @@ def route(purpose: str, *, issue: int | None = None,
 
 
 def verify_special_reference_secret_surface(template: str, variant: str) -> None:
-    """Fail closed: only two explicitly named HPEM reference secrets in archive."""
-    approved = (
-        "${{ secrets.HPEM_400W_VERTICAL_CSV_B64 }}",
-        "${{ secrets.HPEM_400W_RADIAL_CSV_B64 }}",
-    )
-    scrutinized = template
-    if variant == "archive":
-        if any(template.count(ref) != 2 for ref in approved):
-            raise WorkflowContractError("SPECIAL_HPEM_REFERENCE_SECRET_CONTRACT")
-        for ref in approved:
-            scrutinized = scrutinized.replace(ref, "")
-    if re.search(r"\bsecrets\b", scrutinized):
+    """No GitHub secrets may enter generated special research workflows.
+
+    Public diagnostic electron-density references are committed as ordinary CSV.
+    """
+    if re.search(r"\bsecrets\b", template):
         raise WorkflowContractError("SPECIAL_SECRET_SURFACE_NOT_AUTHORIZED")
+
 
 def render(root: Path, profile: dict) -> str:
     template = (root / profile["template"]).read_text(encoding="utf-8")
@@ -261,17 +255,14 @@ def self_test() -> None:
     archived = route("special", issue=493, variant="archive", records=entries)
     archive_template = (ROOT / archived["template"]).read_text(encoding="utf-8")
     verify_special_reference_secret_surface(archive_template, "archive")
-    for tampered, mode in (
-        (archive_template.replace("secrets.HPEM_400W_VERTICAL_CSV_B64",
-                                  "secrets.ORIGINAL_PRIVATE_RATES", 1), "archive"),
-        (archive_template, "diagnostic"),
-    ):
+    for variant in ("archive", "diagnostic"):
         try:
-            verify_special_reference_secret_surface(tampered, mode)
+            verify_special_reference_secret_surface(
+                archive_template + "\n  token: ${{ secrets.UNAUTHORIZED }}\n", variant)
         except WorkflowContractError:
             pass
         else:
-            raise AssertionError("special research workflow admitted unsafe secret surface")
+            raise AssertionError("special workflow admitted a secret reference")
     for record in entries:
         out = render(ROOT, record)
         if record["purpose"] == "special":
