@@ -4,8 +4,11 @@
 > composition Action was retired after confirming it is not used by canonical
 > S6-417/941 D input layers. This document records historical configuration
 > and scientific provenance only. Individual underlying Material types remain
-> independently registered; old inputs using `[PlasmaClosures]` will fail
-> native input parsing until explicitly migrated. The immutable historical
+> independently registered where they remain in use. The now-retired
+> `PhysicsElectronKineticsMaterial` and `PhysicsHeavyTransportMaterial` are
+> replaced in input files by **existing** `PhysicsElectronImpactRateMaterial`
+> (one per reaction) and `PhysicsThermalDiffusionMaterial` respectively.
+> Old inputs using `[PlasmaClosures]` will fail parsing until migrated. The immutable historical
 > source and archived results are not rewritten.
 
 

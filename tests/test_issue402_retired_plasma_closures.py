@@ -64,11 +64,29 @@ def test_retired_action_is_absent_independent_material_objects_remain():
     assert "PlasmaClosures/*" not in app
     assert not (APP / "src/actions/PlasmaClosuresAction.C").exists()
     assert not (APP / "include/actions/PlasmaClosuresAction.h").exists()
-    for material in ("ElectronClosureMaterial", "PhysicsElectronKineticsMaterial",
-                     "PhysicsHeavyTransportMaterial", "PhysicsPlasmaChargeDensityMaterial"):
+    for retired in ("PhysicsElectronKineticsMaterial", "PhysicsHeavyTransportMaterial"):
+        assert not (APP / "src/materials" / (retired + ".C")).exists()
+        assert not (APP / "include/materials" / (retired + ".h")).exists()
+    for material in ("ElectronClosureMaterial", "PhysicsElectronImpactRateMaterial",
+                     "PhysicsThermalDiffusionMaterial", "PhysicsPlasmaChargeDensityMaterial"):
         source = APP / "src/materials" / (material + ".C")
         header = APP / "include/materials" / (material + ".h")
         assert source.is_file() and header.is_file()
         assert f'registerMooseObject("PhysicsApp", {material});' in source.read_text()
     assert 'registerSyntax("ContinuityEq",' in app
     assert 'registerSyntax("EnergyPhysics",' in app
+
+
+def test_existing_native_smoke_uses_direct_materials_without_code_generation():
+    fixture = (APP / "ci/plasma_direct_existing_materials_smoke.i").read_text()
+    assert "[PlasmaClosures]" not in fixture
+    assert "PhysicsElectronKineticsMaterial" not in fixture
+    assert "PhysicsHeavyTransportMaterial" not in fixture
+    assert fixture.count("type = PhysicsElectronImpactRateMaterial") == 2
+    assert "type = PhysicsThermalDiffusionMaterial" in fixture
+    assert "type = ElectronClosureMaterial" in fixture
+    assert "type = PhysicsPlasmaChargeDensityMaterial" in fixture
+    runner = (PILOT / "run_native_binding_smoke.sh").read_text()
+    assert "python3 physics_app/ci/check_plasma_closures_contract.py" in runner
+    assert 'native --check-input -i "physics_app/ci/plasma_direct_existing_materials_smoke.i"' in runner
+    assert "make -C physics_app -j2" in runner  # Build existing native binary only.
