@@ -298,6 +298,8 @@ jobs:
           retention-days: 1
       - name: Run Physics pytest
         run: python -m pytest -q
+      - name: Regression-test Issue493 canonical/archive Exodus P4 diagnostics
+        run: python experiments/Issue493_s6_boltzmann/test_compare_native_reference.py
       - name: Validate normalized-to-physical coupled equivalence fixture
         run: python physics_app/ci/check_physical_state_coupled_equivalence.py --self-test
       - name: Validate n_epsilon-to-mean_en symbol equivalence fixture
