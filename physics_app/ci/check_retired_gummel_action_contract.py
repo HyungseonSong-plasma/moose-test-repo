@@ -15,8 +15,14 @@ for path in ("src/actions/GummelIterationAction.C",
              "include/actions/GummelIterationAction.h"):
     assert not (ROOT / path).exists(), f"Retired compiled Action still exists: {path}"
 
+# The legacy PlasmaClosures composition Action is retired independently.
+assert "PlasmaClosuresAction" not in app
+assert "PlasmaClosures/*" not in app
+for path in ("src/actions/PlasmaClosuresAction.C",
+             "include/actions/PlasmaClosuresAction.h"):
+    assert not (ROOT / path).exists(), f"Retired PlasmaClosures Action still exists: {path}"
+
 # Independent MOOSE capabilities must remain available.
-assert 'syntax.registerActionSyntax("PlasmaClosuresAction", "PlasmaClosures/*");' in app
 assert (ROOT / "src/convergence/DeltaPhiMultiAppConvergence.C").is_file()
 assert (ROOT / "include/convergence/DeltaPhiMultiAppConvergence.h").is_file()
 assert 'registerSyntax("ContinuityEq",' in app

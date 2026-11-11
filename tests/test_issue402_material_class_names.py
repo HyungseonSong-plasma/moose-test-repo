@@ -39,11 +39,16 @@ def test_canonical_files_and_classes_with_legacy_factory_aliases():
         assert f"{new_name}::validParams()" in source
 
 
-def test_action_uses_new_closure_class_not_legacy_factory_type():
-    action = (BASE / "src/actions/PlasmaClosuresAction.C").read_text()
-    assert '_factory.getValidParams("ElectronClosureMaterial")' in action
-    assert '"ElectronClosureMaterial", prefix + "_electron_closure"' in action
-    assert "PhysicsElectronClosureMaterial" not in action
+def test_retired_plasma_closures_action_preserves_material_factories():
+    assert not (BASE / "src/actions/PlasmaClosuresAction.C").exists()
+    assert not (BASE / "include/actions/PlasmaClosuresAction.h").exists()
+    app = (BASE / "src/base/PhysicsApp.C").read_text()
+    assert "PlasmaClosuresAction" not in app
+    assert "PlasmaClosures/*" not in app
+    # ElectronClosureMaterial and its old Factory alias remain independently registered.
+    closure = (BASE / "src/materials/ElectronClosureMaterial.C").read_text()
+    assert 'registerMooseObject("PhysicsApp", ElectronClosureMaterial);' in closure
+    assert 'registerMooseObjectAliased("PhysicsApp", ElectronClosureMaterial, "PhysicsElectronClosureMaterial");' in closure
 
 
 def test_both_old_and_new_alias_types_exercised_by_native_p2_controls():
