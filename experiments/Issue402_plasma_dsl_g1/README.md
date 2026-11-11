@@ -352,3 +352,27 @@ factory lookup. The public S6 D-only input uses the new canonical type;
 the positive smoke fixture intentionally keeps the old type to test alias
 resolution. The `ContinuityEq` class is a MOOSE PhysicsBase action,
 not a Material/Functor; its name and registered Physics syntax are unchanged.
+
+
+## 2026-11-11 canonical Exodus readers and one-shot S6 D run
+
+- The active Oxygen14 map/trace reader and Issue493 public Reference overlay
+  now expect **canonical** `log_e/log_O2p/log_Om/log_Op` for new
+  ContinuityEq runs. Historical `log_ne/log_ni/log_nm/log_nop` is supported
+  **only when recorded in a read-only archived Exodus**; neither the solver
+  nor its input schema has an alias/compatibility mode. Mixed on-disk names
+  for the same species fail closed. Electron temperature uses the field
+  actually selected from that file, not an assumed symbol.
+- A new main-only, self-path-triggered
+  `.github/workflows/issue402-canonical-s6-d-once.yml` is intentionally
+  **one-shot**. On merge, it builds the exact merged PhysicsApp SHA, stages
+  only public 400 W source/rate data and temporary canonical D input copies,
+  runs 417/D and 941/D at 0–100 µs independently (461 timepoints), and
+  verifies canonical nodal/elemental names in the produced Exodus.
+  Reference overlays use the actual canonical field and preserve
+  `SCIENCE_HOLD`, the unknown reference timestamp and diagnostic-only
+  metrics; no B/C solve is repeated or physics acceptance inferred.
+- This P3 work must not be confused with the earlier P2-only B/D gate or
+  the pinned immutable C-only P3 artifacts. The workflow starts **only**
+  after its own workflow YAML reaches `main`; PR validation only
+  checks the runner's schema, safety and unit tests.
