@@ -130,59 +130,55 @@ P2 native input checks, P3 460-step fresh B/C solutions, and P4 diagnostic/
 Exodus closure comparisons are actually complete.
 
 
-## Automated per-run HPEM reference overlays (research diagnostics only)
+## Public electron-density reference comparison (research diagnostics)
 
-The Issue493 B/C result-archival one-shot workflow now invokes
-`hpem_compare_native.py` **after** a P3 PASS and verified Exodus/CSV archival,
-before uploading each arm's `issue493-public-<case>-<arm>-results` artifact.
-It is a read-only analysis: it never initiates a new solver, changes rates, or
-contributes to a B/C numerical-parity or scientific acceptance decision.
+Reference profiles are now **public, versioned data**, not GitHub Secrets.
+The two canonical 400 W CSVs are:
 
-**Fixed target:** the operator-supplied HPEM 400 W electron-density reference
-derived from `E_matrix(2).dat`. The original source bytes, measurement time
-and independent coordinate mapping have not been validated; the two reference
-profiles are r=0 (z in cm) and z=23 cm (r in cm). Each profile has a header
-containing the coordinate (`z_cm` or `r_cm`) and `n_e_m^-3` values. No
-HPEM data is committed in this repository.
+- `reference/reference_vertical.csv`: `z_cm,n_e_m^-3` at r = 0 cm;
+  45 points, z = 0–44 cm.
+- `reference/reference_horizontal.csv`: `r_cm,n_e_m^-3` at z = 23 cm;
+  51 points, r = 0–25 cm.
 
-The GitHub Actions host cannot access the user's ChatGPT Library directly.
-A repository maintainer must install **both** repository Actions secrets before
-automated overlays are available:
+The reference source and unverified coordinate/time assumptions are disclosed
+in `reference/README.md`. Max reference density is 8.885e16 m^-3.
+Do not describe the reference timestamp as Native t=100 us; its timestamp
+is unknown. These CSV files are the frozen version-controlled input for the
+comparison, so updates are reviewed in Git rather than silently swapping a
+secret. Neither original private rates nor production acceptance data are used.
 
-- `HPEM_400W_VERTICAL_CSV_B64`: base64 encoding of the reference vertical CSV.
-- `HPEM_400W_RADIAL_CSV_B64`: base64 encoding of the reference radial CSV.
+After a P3 PASS and verified Exodus/CSV archival, the Issue493 B/C one-shot
+workflow runs `compare_native_reference.py` using the CSVs checked out
+from the **same workflow commit**. Each case/arm artifact contains:
 
-On macOS/Linux, prepare each secret body from a trusted, local reference file
-with `base64 < reference.csv | tr -d '\n'` and store through GitHub repository
-Actions secrets; do not paste source data into this public repository, workflow
-logs, a PR or an issue. Preserve the same immutable reference across runs.
-Each saved metrics JSON includes SHA-256 hashes of both reference profiles
-so changed sources are identifiable. **Reference point values are not written
-to public CSV artifacts**; the rendered reference curves and aggregate metrics
-are included in the downloadable public artifact, so review disclosure rights.
+- `reference_comparison/vertical_absolute.png` (r = 0 cm);
+- `reference_comparison/horizontal_absolute.png` (z = 23 cm);
+- `reference_comparison/vertical_profile.csv`,
+  `horizontal_profile.csv` and `metrics.json`.
 
-With configured reference secrets and a valid P3 run, each B or C artifact
-contains only `hpem_reference/vertical_absolute.png` and
-`hpem_reference/radial_absolute.png` (no normalized plots),
-native-only sampled `{vertical,radial}_profile.csv`, and `metrics.json`.
-Profiles come from actual plasma-block triangles and nodal
-`n_e = N_A * exp(log_ne)`, not from neighboring non-plasma elements. No
-extrapolation outside the mesh; RMSE uses common supported coordinates with
-reference density greater than 1e15 m^-3. Overlay failure or an unconfigured
-reference writes `hpem_reference_status.json` and **does not reclassify
-successful Native P3 or prevent upload of raw Exodus/CSV**.
+There are exactly **two absolute-density plots**; normalized plots are
+deliberately omitted. The metrics record full reference CSV SHA-256 digests,
+Native Exodus/CSV SHA-256 digests, common-support counts, and RMSE.
+Node density is `N_A * exp(log_ne)`; interpolation uses only plasma
+triangles, with no external extrapolation, at Native 100 us.
+The reference curves are publicly reproducible from the committed CSVs.
 
-Unit regression:
+If comparison fails, `reference_comparison_status.json` records HOLD and
+preserves the previously verified Native Exodus, CSV and manifest.
+A successful diagnostic does **not** clear `SCIENCE_HOLD` or prove B/C parity.
+No GitHub Secret is required or read.
+
+Synthetic tests run before the expensive solve:
 
 ```bash
-python3 experiments/Issue493_s6_boltzmann/test_hpem_compare_native.py
+python3 experiments/Issue493_s6_boltzmann/test_compare_native_reference.py
 ```
 
-**Important dispatch guard:** the existing
-`.github/workflows/issue493-public-bc-results-p4-once.yml` is a
-main-self-path-triggered, full 460-step job. Merging a change to that workflow
-would trigger expensive B and C replays. Do not merge the implementation PR
-or launch those runs without a separate operator dispatch decision.
+Offline regression against preserved Issue493 417/B and 941/B artifacts
+exercises the same 100 us comparator without re-running the solver.
+The one-shot workflow is self-path-triggered on main. Merging the PR
+that changes it will launch full 460-step B/C jobs; preserve its existing
+authorization, provenance and P2/P3 gates.
 
 ## C/P2 launcher failure analysis (2026-11-11)
 
