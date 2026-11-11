@@ -111,7 +111,7 @@ def preflight(zip_path: Path, unpack_dir: Path) -> dict:
         for name in order[1:]:
             fail_if(sha256(old_dir / name) != sha256(new_dir / name), "unapproved overlay difference: " + name)
         fail_if(sha256(new_dir / "migrated_continuity.i") != migration_by_case[key]["new_template_overlay_sha256"],
-                "migrated ContinuityPhysics overlay hash mismatch")
+                "migrated ContinuityEq overlay hash mismatch")
     return {"package_sha256": PACKAGE_SHA256, "table_count": 19,
             "cases": [CASES[k] for k in CASES], "preflight": "PASS", "science": "HOLD"}
 
