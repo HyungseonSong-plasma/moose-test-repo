@@ -68,7 +68,7 @@ jobs:
           set -euo pipefail
           python3 -m pip install --disable-pip-version-check --quiet \
             numpy==2.1.2 scipy==1.14.1 matplotlib==3.9.2
-          python3 control/experiments/Issue493_s6_boltzmann/test_hpem_compare_native.py
+          python3 control/experiments/Issue493_s6_boltzmann/test_compare_native_reference.py
           cd historical
           SRC=.github/oxygen25_eedf/initial_mixture_23xsec_transport.txt
           DST=experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt
@@ -161,39 +161,28 @@ jobs:
             --run-root "$RUNNER_TEMP/issue493_archive_B_${{ matrix.case }}" \
             --publish-root "$RUNNER_TEMP/issue493_publish_B_${{ matrix.case }}" \
             --case "${{ matrix.case }}" --arm B
-      - name: Save HPEM reference overlay diagnostics for completed B
+      - name: Save public reference comparisons for completed B
         shell: bash
-        env:
-          HPEM_VERTICAL_CSV_B64: ${{ secrets.HPEM_400W_VERTICAL_CSV_B64 }}
-          HPEM_RADIAL_CSV_B64: ${{ secrets.HPEM_400W_RADIAL_CSV_B64 }}
         run: |
           set -euo pipefail
           PUBLISHED="$RUNNER_TEMP/issue493_publish_B_${{ matrix.case }}"
-          test -f "$PUBLISHED/manifest.json"
-          if [ -z "$HPEM_VERTICAL_CSV_B64" ] || [ -z "$HPEM_RADIAL_CSV_B64" ]; then
-            echo '{"schema":"issue493_hpem_reference_status_v1","status":"NOT_CONFIGURED","science":"SCIENCE_HOLD"}' > "$PUBLISHED/hpem_reference_status.json"
-            echo ISSUE493_HPEM_REFERENCE_NOT_CONFIGURED
-            exit 0
-          fi
-          REFS="$(mktemp -d)"
-          trap 'rm -rf "$REFS"' EXIT
-          umask 077
-          overlay_rc=0
-          printf "%s" "$HPEM_VERTICAL_CSV_B64" | base64 --decode > "$REFS/vertical.csv" || overlay_rc=2
-          printf "%s" "$HPEM_RADIAL_CSV_B64" | base64 --decode > "$REFS/radial.csv" || overlay_rc=2
-          if [ "$overlay_rc" = 0 ]; then
-            python3 control/experiments/Issue493_s6_boltzmann/hpem_compare_native.py \
-              --exodus "$PUBLISHED/plasma.e" --csv "$PUBLISHED/plasma.csv" \
-              --manifest "$PUBLISHED/manifest.json" \
-              --reference-vertical "$REFS/vertical.csv" \
-              --reference-radial "$REFS/radial.csv" \
-              --output "$PUBLISHED/hpem_reference" \
-              --label "S6-${{ matrix.case }}/B" --time-us 100 || overlay_rc=2
-          fi
-          if [ "$overlay_rc" != 0 ]; then
-            rm -rf "$PUBLISHED/hpem_reference"
-            echo '{"schema":"issue493_hpem_reference_status_v1","status":"HOLD_BAD_REFERENCE_OR_ANALYSIS","science":"SCIENCE_HOLD"}' > "$PUBLISHED/hpem_reference_status.json"
-            echo ISSUE493_HPEM_DIAGNOSTIC_HOLD_NATIVE_P3_UNAFFECTED
+          test -s "$PUBLISHED/plasma.e"
+          test -s "$PUBLISHED/plasma.csv"
+          test -s "$PUBLISHED/manifest.json"
+          # Do not change the Native P3 verdict if diagnostics cannot be rendered:
+          # keep original Exodus, CSV and manifest downloadable.
+          if python3 control/experiments/Issue493_s6_boltzmann/compare_native_reference.py \
+            --exodus "$PUBLISHED/plasma.e" --csv "$PUBLISHED/plasma.csv" \
+            --manifest "$PUBLISHED/manifest.json" \
+            --reference-vertical control/experiments/Issue493_s6_boltzmann/reference/reference_vertical.csv \
+            --reference-horizontal control/experiments/Issue493_s6_boltzmann/reference/reference_horizontal.csv \
+            --output "$PUBLISHED/reference_comparison" \
+            --label "S6-${{ matrix.case }}/B" --time-us 100; then
+            echo ISSUE493_PUBLIC_REFERENCE_COMPARISON_PASS
+          else
+            rm -rf "$PUBLISHED/reference_comparison"
+            echo '{"schema":"issue493_reference_comparison_status_v1","status":"HOLD_ANALYSIS_ERROR","science":"SCIENCE_HOLD"}' > "$PUBLISHED/reference_comparison_status.json"
+            echo ISSUE493_PUBLIC_REFERENCE_COMPARISON_HOLD_NATIVE_P3_UNAFFECTED
           fi
       - name: Upload public B Exodus CSV and SHA manifest
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -275,7 +264,7 @@ jobs:
           set -euo pipefail
           python3 -m pip install --disable-pip-version-check --quiet \
             numpy==2.1.2 scipy==1.14.1 matplotlib==3.9.2
-          python3 control/experiments/Issue493_s6_boltzmann/test_hpem_compare_native.py
+          python3 control/experiments/Issue493_s6_boltzmann/test_compare_native_reference.py
           cd historical
           SRC=.github/oxygen25_eedf/initial_mixture_23xsec_transport.txt
           DST=experiments/Issue91_real_qvt_r3/r3_e0/electron_moments.txt
@@ -346,39 +335,28 @@ jobs:
             --run-root "$RUNNER_TEMP/issue493_archive_C_${{ matrix.case }}" \
             --publish-root "$RUNNER_TEMP/issue493_publish_C_${{ matrix.case }}" \
             --case "${{ matrix.case }}" --arm C
-      - name: Save HPEM reference overlay diagnostics for completed C
+      - name: Save public reference comparisons for completed C
         shell: bash
-        env:
-          HPEM_VERTICAL_CSV_B64: ${{ secrets.HPEM_400W_VERTICAL_CSV_B64 }}
-          HPEM_RADIAL_CSV_B64: ${{ secrets.HPEM_400W_RADIAL_CSV_B64 }}
         run: |
           set -euo pipefail
           PUBLISHED="$RUNNER_TEMP/issue493_publish_C_${{ matrix.case }}"
-          test -f "$PUBLISHED/manifest.json"
-          if [ -z "$HPEM_VERTICAL_CSV_B64" ] || [ -z "$HPEM_RADIAL_CSV_B64" ]; then
-            echo '{"schema":"issue493_hpem_reference_status_v1","status":"NOT_CONFIGURED","science":"SCIENCE_HOLD"}' > "$PUBLISHED/hpem_reference_status.json"
-            echo ISSUE493_HPEM_REFERENCE_NOT_CONFIGURED
-            exit 0
-          fi
-          REFS="$(mktemp -d)"
-          trap 'rm -rf "$REFS"' EXIT
-          umask 077
-          overlay_rc=0
-          printf "%s" "$HPEM_VERTICAL_CSV_B64" | base64 --decode > "$REFS/vertical.csv" || overlay_rc=2
-          printf "%s" "$HPEM_RADIAL_CSV_B64" | base64 --decode > "$REFS/radial.csv" || overlay_rc=2
-          if [ "$overlay_rc" = 0 ]; then
-            python3 control/experiments/Issue493_s6_boltzmann/hpem_compare_native.py \
-              --exodus "$PUBLISHED/plasma.e" --csv "$PUBLISHED/plasma.csv" \
-              --manifest "$PUBLISHED/manifest.json" \
-              --reference-vertical "$REFS/vertical.csv" \
-              --reference-radial "$REFS/radial.csv" \
-              --output "$PUBLISHED/hpem_reference" \
-              --label "S6-${{ matrix.case }}/C" --time-us 100 || overlay_rc=2
-          fi
-          if [ "$overlay_rc" != 0 ]; then
-            rm -rf "$PUBLISHED/hpem_reference"
-            echo '{"schema":"issue493_hpem_reference_status_v1","status":"HOLD_BAD_REFERENCE_OR_ANALYSIS","science":"SCIENCE_HOLD"}' > "$PUBLISHED/hpem_reference_status.json"
-            echo ISSUE493_HPEM_DIAGNOSTIC_HOLD_NATIVE_P3_UNAFFECTED
+          test -s "$PUBLISHED/plasma.e"
+          test -s "$PUBLISHED/plasma.csv"
+          test -s "$PUBLISHED/manifest.json"
+          # Do not change the Native P3 verdict if diagnostics cannot be rendered:
+          # keep original Exodus, CSV and manifest downloadable.
+          if python3 control/experiments/Issue493_s6_boltzmann/compare_native_reference.py \
+            --exodus "$PUBLISHED/plasma.e" --csv "$PUBLISHED/plasma.csv" \
+            --manifest "$PUBLISHED/manifest.json" \
+            --reference-vertical control/experiments/Issue493_s6_boltzmann/reference/reference_vertical.csv \
+            --reference-horizontal control/experiments/Issue493_s6_boltzmann/reference/reference_horizontal.csv \
+            --output "$PUBLISHED/reference_comparison" \
+            --label "S6-${{ matrix.case }}/C" --time-us 100; then
+            echo ISSUE493_PUBLIC_REFERENCE_COMPARISON_PASS
+          else
+            rm -rf "$PUBLISHED/reference_comparison"
+            echo '{"schema":"issue493_reference_comparison_status_v1","status":"HOLD_ANALYSIS_ERROR","science":"SCIENCE_HOLD"}' > "$PUBLISHED/reference_comparison_status.json"
+            echo ISSUE493_PUBLIC_REFERENCE_COMPARISON_HOLD_NATIVE_P3_UNAFFECTED
           fi
       - name: Upload public C Exodus CSV and SHA manifest
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
