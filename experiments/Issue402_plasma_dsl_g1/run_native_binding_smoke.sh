@@ -146,6 +146,12 @@ native --check-input -i "physics_app/ci/plasma_direct_existing_materials_smoke.i
   2>&1 | tee "$EVIDENCE/direct_materials_check.log"
 echo "PLASMA_DIRECT_EXISTING_MATERIALS_P2_PASS"
 
+# DD: physical constants and absolute-lookup coefficients; NV: heavy binary
+# collision, mixture and thermal transport. Input validation only; no timestep.
+native --check-input -i "physics_app/ci/dd_nv_material_smoke.i" \
+  2>&1 | tee "$EVIDENCE/dd_nv_materials_check.log"
+echo "PLASMA_DD_NV_MATERIALS_P2_PASS"
+
 for item in invalid_overlap invalid_fem_fv_swap invalid_no_species invalid_missing_variable invalid_energy_species invalid_chemistry_reactions invalid_poisson_variable invalid_maxwell_frequency invalid_legacy_variables invalid_legacy_kernel_names invalid_missing_fvm_charges invalid_incomplete_coefficients invalid_wrong_charge_sign; do
   set +e
   native --check-input -i "$PILOT/baseline.i" "$PILOT/$item.i" \
