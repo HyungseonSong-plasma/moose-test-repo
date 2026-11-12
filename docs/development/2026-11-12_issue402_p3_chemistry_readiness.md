@@ -16,6 +16,8 @@ The science parity/authorization boundary remains `SCIENCE_HOLD`.
    FunctorKernels, preserves the original progress providers, and replaces
    the transport-only sidecar with `s6_<case>_chemistry_run.template.i`.
    Sidecar must name common + one variant JSON, eight independent channels.
+   The signed elastic losses are projected inside Chemistry, with no
+   auxiliary `[FunctorMaterials]` blocks in the sidecar.
 4. Native `--check-input` P2 of that exact staged final deck **using the
    same binary**, for both 417 and 941. Every source owner, signed energy
    coefficient, wall/RF/Poisson and FVM operator must be reconciled.
@@ -39,7 +41,7 @@ The science parity/authorization boundary remains `SCIENCE_HOLD`.
 |---|---|---|
 | Keep | immutable B/C source archives, hashes, public mesh, rate provenance | required evidence, never modify |
 | Keep | original S6 Native Poisson, Maxwell/RF PID, FV ions, BCs, true ion Functors | existing physical owners |
-| Keep | `SpeciesTransportAliasMaterial` for O2p/Om/Op | temporary live nonconstant ion bridges, **not** redundant yet |
+| Keep | existing Native `PlasmaChargeTransportMaterial` for O2p/Om/Op | canonical ion mobility/diffusivity AD Functors, not numerical constants |
 | Keep | `oxygen_s6_common.json` plus exactly one 417/941 JSON | eight rate/channel identities |
 | Keep | guarded `prepare_s6_run_input.py`, exact-head P1/P2, 461-frame P3, P4 diagnostic | required gates |
 | Exclude | P2 synthetic `plasma_auto_*.json`, `plasma_two_channels.json`, constant mock rates | validation fixtures, not physics |

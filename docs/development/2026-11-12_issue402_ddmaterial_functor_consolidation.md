@@ -2,7 +2,7 @@
 
 All new drift-diffusion species coefficient providers use DDMaterial.
 
-`DDMaterial model=functor` uses the existing
+`DDMaterial model=functor` (the internal MOOSE transport mode) uses the existing
 `<species>_mobility` [m²/(V s)] and
 `<species>_diffusivity` [m²/s] AD Functors by naming convention.
 If those Functors are already published, DDMaterial never publishes
@@ -11,16 +11,17 @@ smoothing, clamping or a new coefficient formula. It rejects mixed input
 modes and directly self-referential source names. The entire
 `SpeciesTransportAliasMaterial.h/.C` implementation is retired.
 
-For the scratch S6 417 and 941 Chemistry overlays, each of three ion
-providers uses `type = DDMaterial`, `model = functor`, preserving
-the original ion, negative-ion and atomic-ion source Functors and
-AD derivatives. The explicit old block *instance names* remain for
-audit diff stability but their C++ Material type is DDMaterial.
+For the S6 417 and 941 **review JSON**, three ion entries use
+`{"model":"constants"}` and are automatically mapped to the internal
+`DDMaterial model=functor` implementation. This means **existing
+species-named AD Functors** from Native providers; it does not imply
+spatially constant numerical values. The old manual DDMaterial blocks
+are absent from the new review and run-input overlays.
 
 The same mode is usable directly from ordered JSON:
 ```json
 {"transport_coefficients":{"drift_diffusion":{
-  "O2p":{"model":"functor"}
+  "O2p":{"model":"constants"}
 }}}
 ```
 Do not define an explicit DDMaterial block for the same species at the
@@ -33,8 +34,8 @@ before use.
 auto-binding input, full S6 417 and 941 input construction, and future
 numerical/AD parity are independent gates. No P3 or science acceptance.
 
-**Current JSON contract:** A `model=functor` entry is exactly
-`{"model":"functor"}`. The keys `mobility_source` and
+**Current JSON contract:** A `model=constants` entry is exactly
+`{"model":"constants"}`. The keys `mobility_source` and
 `diffusivity_source` are rejected by the JSON parser. The upstream
 producer (e.g. `PlasmaChargeTransportMaterial`) must publish the
 canonical species names first. Legacy direct `.i` Material blocks

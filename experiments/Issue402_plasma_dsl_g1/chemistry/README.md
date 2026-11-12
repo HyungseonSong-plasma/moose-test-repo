@@ -4,8 +4,8 @@
 
 - `oxygen_s6_common.json`: **7** archived shared reaction channels (EI-02, EI-17,
   EI-415, EI-401, EI-407, EI-2069, H25) and the validated species/charge catalogue.
-- `oxygen_s6_417.json`: **one** EI-417 ionization channel, -17.0 eV/event.
-- `oxygen_s6_941.json`: **one** EI-941 ionization channel, -13.62 eV/event.
+- `oxygen_s6_417.json`: **one** EI-417 ionization channel, 17.0 eV/event lost.
+- `oxygen_s6_941.json`: **one** EI-941 ionization channel, 13.62 eV/event lost.
 - `../s6_417_chemistry_run.template.i` and `../s6_941_chemistry_run.template.i`:
   exact MOOSE input overlays intended to **replace** (not append to)
   `migrated_continuity.i` when a full archival S6 stack has been scratch-staged.
@@ -27,18 +27,26 @@ For the archived S6 inputs, the scratch-only preparation step renames
 all existing progress provider definitions and consumers (`R_elastic_O2`,
 `R_elastic_O`, `R_ion_O2`) directly to `R_EI02`, `R_EI17`,
 `R_EI415`. No temporary rate alias Materials are used and the underlying
-kinetic expressions, units and numerical values are unchanged. A negative
-`electron_energy_change_eV` represents electron energy lost.
+kinetic expressions, units and numerical values are unchanged.
+Each reaction declares `units: "mol/(m^3 s)"` and a nonnegative
+`energy_loss_eV` magnitude. The Physics Chemistry projector applies
+the **single negative sign** when constructing `Q_e_molar_eV` on the
+electron-energy RHS; the original signed physical loss is preserved.
 
-- EI-02 and EI-17: source-defined **variable** elastic loss magnitude
-  `delta_epsilon_EI02_eV` / `delta_epsilon_EI17_eV`. Each input template
-  creates a new signed Functor equal to the **negative** of that value.
-- EI-415: -12.06; EI-401: 0 (explicit, unchanged); EI-407: -0.977;
-  EI-2069: -5.02 eV/event.
-- EI-417: -17.0 **or** EI-941: -13.62 eV/event.
+- EI-02 and EI-17: source-defined **variable positive elastic loss**
+  `delta_epsilon_EI02_eV` / `delta_epsilon_EI17_eV`. No user-defined
+  signed-wrapper FunctorMaterial is needed.
+- EI-415: 12.06; EI-401: 0; EI-407: 0.977;
+  EI-2069: 5.02 eV/event lost.
+- EI-417: 17.0 **or** EI-941: 13.62 eV/event lost.
 - H25: `model: none` for **electron-energy** exchange. Its unresolved
   ion-neutral energy partition remains under `SCIENCE_HOLD`; do not interpret
   `none` as an accepted complete energy model.
+
+The [DriftDiffusion] Physics generates species-dependent `DDMaterial`
+instances from JSON `transport_coefficients` when present. There is no
+separate `[FunctorMaterials]` in the S6 Chemistry overlays; original
+Native kinetic/rate and ion coefficient producers are still retained.
 
 The `[Energy]` DSL has no `variable` option. `DDEnergyEq` resolves
 `log_<species>_energy`, i.e. `log_e_energy`, internally. The scratch cutover
