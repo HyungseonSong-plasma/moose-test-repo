@@ -341,12 +341,12 @@ def fem():
 ''' + COMMON_MATERIALS + f'''
 [Kernels]
   [ne_time]
-    type = PhysicsFEMLogMolarTimeDerivative
+    type = FEMLogMolarTimeDerivative
     variable = log_ne
     block = plasma
   []
   [ne_transport]
-    type = PhysicsFEMLogMolarDriftDiffusion
+    type = FEMLogMolarDriftDiffusion
     variable = log_ne
     potential = potential
     mobility = electron_mobility
@@ -355,12 +355,12 @@ def fem():
     block = plasma
   []
   [ni_time]
-    type = PhysicsFEMLogMolarTimeDerivative
+    type = FEMLogMolarTimeDerivative
     variable = log_ni
     block = plasma
   []
   [ni_transport]
-    type = PhysicsFEMLogMolarDriftDiffusion
+    type = FEMLogMolarDriftDiffusion
     variable = log_ni
     potential = potential
     mobility = ion_mobility
@@ -369,12 +369,12 @@ def fem():
     block = plasma
   []
   [energy_time]
-    type = PhysicsFEMLogMolarTimeDerivative
+    type = FEMLogMolarTimeDerivative
     variable = log_energy
     block = plasma
   []
   [energy_transport]
-    type = PhysicsFEMLogMolarDriftDiffusion
+    type = FEMLogMolarDriftDiffusion
     variable = log_energy
     potential = potential
     mobility = electron_energy_mobility
@@ -383,7 +383,7 @@ def fem():
     block = plasma
   []
   [energy_joule]
-    type = PhysicsFEMLogMolarElectronJouleHeating
+    type = FEMLogMolarElectronJouleHeating
     variable = log_energy
     electron_log_density = log_ne
     potential = potential

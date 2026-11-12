@@ -135,7 +135,7 @@ def main() -> int:
 
         target_text = Path(a.target).read_text(encoding="utf-8")
         rf_owner_count = target_text.count("material_property = q_rf_eV_mol")
-        electrostatic_joule_present = "PhysicsFEMLogMolarElectronJouleHeating" in target_text
+        electrostatic_joule_present = "FEMLogMolarElectronJouleHeating" in target_text
 
         failures = []
         if raw_def > RAW_TOL:

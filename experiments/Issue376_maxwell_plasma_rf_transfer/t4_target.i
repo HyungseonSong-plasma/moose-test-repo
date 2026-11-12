@@ -118,7 +118,7 @@ maxwell_solution_file = 'results_t4/seed/maxwell.e'
 
 [Kernels]
   [energy_time]
-    type = PhysicsFEMLogMolarTimeDerivative
+    type = FEMLogMolarTimeDerivative
     variable = log_energy
     block = plasma
   []

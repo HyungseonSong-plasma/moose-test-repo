@@ -25,7 +25,7 @@ def build_case() -> str:
     new_var = f"""  [log_ni]\n    type = MooseVariableFVReal\n    initial_condition = {base.LOG_NI0:.17g}\n    block = plasma\n  []\n"""
     text = replace_once(text, old_var, new_var, "log_ni variable block")
 
-    old_ni_kernels = """  [ni_time]\n    type = PhysicsFEMLogMolarTimeDerivative\n    variable = log_ni\n    block = plasma\n  []\n  [ni_transport]\n    type = PhysicsFEMLogMolarDriftDiffusion\n    variable = log_ni\n    potential = potential\n    mobility = ion_mobility\n    diffusion = ion_diffusion\n    charge_number = 1\n    block = plasma\n  []\n"""
+    old_ni_kernels = """  [ni_time]\n    type = FEMLogMolarTimeDerivative\n    variable = log_ni\n    block = plasma\n  []\n  [ni_transport]\n    type = FEMLogMolarDriftDiffusion\n    variable = log_ni\n    potential = potential\n    mobility = ion_mobility\n    diffusion = ion_diffusion\n    charge_number = 1\n    block = plasma\n  []\n"""
     text = replace_once(text, old_ni_kernels, "", "FEM ion kernels")
 
     fv_kernels = f"""

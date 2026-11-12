@@ -300,7 +300,7 @@ def main() -> int:
         overlay_text = a.plasma_overlay.read_text(encoding="utf-8")
         dielectric_tokens = ["eps_cover", "eps_wafer", "eps_focus_ring", "eps_vacuum", "sigma_s", "sigma_wafer", "sigma_focus_ring", "PhysicsADSurfaceChargePoissonBC"]
         dielectric_ok = all(t in input_text for t in dielectric_tokens)
-        separate_owners = ("PhysicsFEMLogMolarElectronJouleHeating" in input_text and overlay_text.count("material_property = q_rf_eV_mol_t6") == 1)
+        separate_owners = ("FEMLogMolarElectronJouleHeating" in input_text and overlay_text.count("material_property = q_rf_eV_mol_t6") == 1)
 
         failures: list[str] = []
         if raw_defect > RAW_GATE: failures.append(f"raw remesh power defect {raw_defect:.6e} > {RAW_GATE:.6e}")
