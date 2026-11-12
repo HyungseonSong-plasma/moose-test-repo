@@ -86,6 +86,38 @@ def test_existing_variables_only():
     assert '"discretization"' not in base_source + source
 
 
+
+def test_continuity_e_time_is_generated_from_existing_species_without_new_options():
+    """Generated e_time must reuse the exact Native conservative time operator."""
+    _, _, _, source, _ = sources()
+    kernel = (APP / "src/kernels/PhysicsFEMPlasmaTransport.C").read_text()
+    pilot = (CASE / "public_option_s6_p2.py").read_text()
+    runner = (CASE / "run_native_binding_smoke.sh").read_text()
+
+    assert 'const std::string time_type = "PhysicsFEMLogMolarTimeDerivative";' in source
+    assert 'time_params.set<NonlinearVariableName>("variable") = variables[i];' in source
+    assert 'assignBlocks(time_params, _blocks);' in source
+    assert 'getProblem().addKernel(time_type, species[i] + "_time", time_params);' in source
+    assert 'requireUniqueFEKernel("PhysicsFEMLogMolarTimeDerivative", variables[i]);' in source
+    assert 'requireUniqueFEKernel("PhysicsFEMLogMolarDriftDiffusion", variables[i]);' in source
+    assert 'if (!isParamValid("fem_potential"))' in source
+    assert 'params.addParam<bool>("generate_time"' not in source
+    assert "PhysicsFEMLogMolarTimeDerivative::computeQpResidual()" in kernel
+    assert "(exp(_u[_qp]) - exp(_u_old[_qp])) / _dt" in kernel
+
+    assert "Original ne_time parameters differ from pinned Native S6" in pilot
+    assert "Expected exactly one original ne_time in staged S6 D" in pilot
+    assert '"generated_name": "e_time"' in pilot
+    assert "SCRATCH_ONLY_CANONICAL_STATE_AND_TIME_OWNER_REWRITE" in pilot
+
+    duplicate = (CASE / "duplicate_e_time.i").read_text()
+    assert "type = PhysicsFEMLogMolarTimeDerivative" in duplicate
+    assert "variable = log_e" in duplicate
+    assert "duplicate_e_time.i" in runner
+    assert "PLASMA_DUPLICATE_E_TIME_REJECTED" in runner
+
+
+
 def test_small_example_has_finite_element_and_finite_volume_equations():
     text = (CASE / "baseline.i").read_text()
     assert "[log_e]" in text and "family = LAGRANGE" in text
