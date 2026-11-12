@@ -155,9 +155,52 @@ DDContinuityEq::addFEKernels()
   }
 }
 
+void
+DDContinuityEq::addFunctorMaterials()
+{
+  // Material ownership follows the active species list, not an extra
+  // user-authored [FunctorMaterials] block. JSON file paths are pre-resolved
+  // and checked by the one shared ChemistryData catalogue.
+  const auto & mechanism = chemistryData();
+  std::vector<std::string> species = getParam<std::vector<std::string>>("fem_species");
+  const auto & fvm = getParam<std::vector<std::string>>("fvm_species");
+  species.insert(species.end(), fvm.begin(), fvm.end());
+
+  for (const auto & id : species)
+  {
+    const auto * config = mechanism.ddTransport(id);
+    if (!config)
+      continue; // Existing Native coefficient owners remain during S6 parity migration.
+    const std::string type = "DDMaterial";
+    auto params = getFactory().getValidParams(type);
+    params.set<std::string>("species_id") = id;
+    params.set<MooseEnum>("model") = config->model;
+    if (config->model == "constant")
+    {
+      params.set<Real>("mobility") = config->mobility;
+      params.set<Real>("diffusivity") = config->diffusivity;
+    }
+    else
+    {
+      params.set<FileName>("table_file") = config->table_file;
+      params.set<MooseFunctorName>("coordinate") = config->coordinate;
+      params.set<MooseEnum>("table_units") = config->table_units;
+      params.set<std::string>("bounds_policy") = config->bounds_policy;
+      if (config->table_units == "reduced")
+      {
+        params.set<MooseFunctorName>("pressure") = config->pressure;
+        params.set<MooseFunctorName>("gas_temperature") = config->gas_temperature;
+      }
+    }
+    assignBlocks(params, _blocks);
+    getProblem().addFunctorMaterial(type, name() + "_" + id + "_transport_coefficients", params);
+  }
+}
+
 } // namespace Plasma
 
 using Plasma::DDContinuityEq;
 registerPhysicsBaseTasks("PhysicsApp", DDContinuityEq);
 registerMooseAction("PhysicsApp", DDContinuityEq, "check_integrity");
 registerMooseAction("PhysicsApp", DDContinuityEq, "add_kernel");
+registerMooseAction("PhysicsApp", DDContinuityEq, "add_functor_material");

@@ -57,6 +57,7 @@ PhysicsApp::registerAll(Factory & f, ActionFactory & af, Syntax & syntax)
                  "Physics/Plasmas/Transport/DriftDiffusion/Energy");
   registerSyntax("Chemistry",
                  "Physics/Plasmas/Transport/Chemistry");
+  registerSyntax("NVTransport", "Physics/Plasmas/Transport/NavierStokes");
   registerSyntax("PoissonPhysics",
                  "Physics/Plasmas/Poisson");
   registerSyntax("MaxwellPhysics",

@@ -6,6 +6,8 @@
 #include <iomanip>
 #include <map>
 #include <fstream>
+#include <filesystem>
+#include <limits>
 #include <regex>
 #include <set>
 #include <sstream>
@@ -116,7 +118,141 @@ validateReaction(const ReactionRecord & reaction,
       fail(file, reaction.id + ": elemental balance failed for " + element);
 }
 
+
+// Transport table paths belong to the JSON that declares them, not to .i files.
+// Absolute paths remain absolute; relative paths are anchored at the JSON parent.
+std::string
+resolveDataFile(const std::string & filename, const std::string & json_file)
+{
+  if (filename.empty())
+    fail(json_file, "empty transport table filename");
+  const auto path = std::filesystem::path(filename);
+  const auto resolved = path.is_absolute()
+                          ? path.lexically_normal()
+                          : (std::filesystem::absolute(json_file).parent_path() / path)
+                                .lexically_normal();
+  std::ifstream stream(resolved);
+  if (!stream)
+    fail(json_file, "transport table cannot be opened: " + resolved.string());
+  return resolved.string();
+}
+
+std::string
+requiredText(const Json & object, const char * key, const std::string & file)
+{
+  if (!object.contains(key) || !object.at(key).is_string() ||
+      object.at(key).get<std::string>().empty())
+    fail(file, std::string("transport configuration requires nonempty ") + key);
+  return object.at(key).get<std::string>();
+}
+
+std::vector<std::string>
+requiredTextList(const Json & object, const char * key, const std::string & file)
+{
+  if (!object.contains(key) || !object.at(key).is_array() ||
+      object.at(key).empty())
+    fail(file, std::string("transport configuration requires nonempty ") + key);
+  std::vector<std::string> values;
+  for (const auto & item : object.at(key))
+  {
+    if (!item.is_string() || item.get<std::string>().empty())
+      fail(file, std::string("invalid transport list entry for ") + key);
+    values.push_back(item.get<std::string>());
+  }
+  return values;
+}
+
+DDTransportRecord
+parseDDTransport(const Json & value, const std::string & file)
+{
+  if (!value.is_object())
+    fail(file, "drift_diffusion transport entry must be an object");
+  DDTransportRecord result;
+  result.model = requiredText(value, "model", file);
+  if (result.model == "constant")
+  {
+    if (!value.contains("mobility") || !value.at("mobility").is_number() ||
+        !value.contains("diffusivity") || !value.at("diffusivity").is_number())
+      fail(file, "constant transport requires mobility and diffusivity");
+    result.mobility = value.at("mobility").get<double>();
+    result.diffusivity = value.at("diffusivity").get<double>();
+    if (!std::isfinite(result.mobility) || !std::isfinite(result.diffusivity) ||
+        result.mobility < 0.0 || result.diffusivity < 0.0)
+      fail(file, "constant mobility/diffusivity must be finite and nonnegative");
+    for (const auto * excluded : {"table_file", "coordinate", "table_units",
+                                   "pressure", "gas_temperature", "bounds_policy"})
+      if (value.contains(excluded))
+        fail(file, std::string("constant transport forbids ") + excluded);
+  }
+  else if (result.model == "lookup")
+  {
+    if (value.contains("mobility") || value.contains("diffusivity"))
+      fail(file, "lookup transport forbids constant mobility/diffusivity");
+    result.table_file = resolveDataFile(requiredText(value, "table_file", file), file);
+    result.coordinate = requiredText(value, "coordinate", file);
+    result.table_units = requiredText(value, "table_units", file);
+    if (result.table_units != "reduced" && result.table_units != "physical")
+      fail(file, "lookup table_units must be 'reduced' or 'physical'");
+    if (value.contains("bounds_policy"))
+      result.bounds_policy = requiredText(value, "bounds_policy", file);
+    if (result.bounds_policy != "error" && result.bounds_policy != "clamp")
+      fail(file, "bounds_policy must be 'error' or 'clamp'");
+    if (result.table_units == "reduced")
+    {
+      result.pressure = requiredText(value, "pressure", file);
+      result.gas_temperature = requiredText(value, "gas_temperature", file);
+    }
+    else if (value.contains("pressure") || value.contains("gas_temperature"))
+      fail(file, "physical transport does not accept reduced-table density inputs");
+  }
+  else
+    fail(file, "transport model must be 'lookup' or 'constant'");
+  return result;
+}
+
+NVTransportRecord
+parseNVTransport(const Json & value, const std::string & file)
+{
+  if (!value.is_object())
+    fail(file, "navier_stokes transport entry must be an object");
+  NVTransportRecord result;
+  result.transport_data_file =
+      resolveDataFile(requiredText(value, "transport_data_file", file), file);
+  result.temperature = requiredText(value, "temperature", file);
+  result.pressure = requiredText(value, "pressure", file);
+  result.species = requiredTextList(value, "species", file);
+  result.mass_fractions = requiredTextList(value, "mass_fractions", file);
+  if (result.species.size() < 2 ||
+      result.species.size() != result.mass_fractions.size())
+    fail(file, "navier_stokes requires >=2 species and matching mass_fractions");
+  if (value.contains("electron_temperature"))
+    result.electron_temperature = requiredText(value, "electron_temperature", file);
+  if (value.contains("electron_number_density"))
+    result.electron_number_density = requiredText(value, "electron_number_density", file);
+  if (result.electron_temperature.empty() != result.electron_number_density.empty())
+    fail(file, "charged NavierStokes collision inputs need both electron fields");
+  return result;
+}
+
 } // namespace
+
+bool
+DDTransportRecord::equals(const DDTransportRecord & rhs) const
+{
+  return model == rhs.model && mobility == rhs.mobility && diffusivity == rhs.diffusivity &&
+         table_file == rhs.table_file && coordinate == rhs.coordinate &&
+         table_units == rhs.table_units && pressure == rhs.pressure &&
+         gas_temperature == rhs.gas_temperature && bounds_policy == rhs.bounds_policy;
+}
+
+bool
+NVTransportRecord::equals(const NVTransportRecord & rhs) const
+{
+  return transport_data_file == rhs.transport_data_file && temperature == rhs.temperature &&
+         pressure == rhs.pressure && electron_temperature == rhs.electron_temperature &&
+         electron_number_density == rhs.electron_number_density &&
+         species == rhs.species && mass_fractions == rhs.mass_fractions;
+}
 
 int
 ReactionRecord::net(const std::string & species) const
@@ -177,6 +313,42 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
         fail(file, "conflicting species identity for " + it.key());
     }
 
+    // Multiple chemistry files may contribute reactions independently, but
+    // coefficient owners are one per species and one per NV mixture.
+    if (root.contains("transport_coefficients"))
+    {
+      const auto & coefficients = root.at("transport_coefficients");
+      if (!coefficients.is_object())
+        fail(file, "transport_coefficients must be an object");
+      for (auto it = coefficients.begin(); it != coefficients.end(); ++it)
+        if (it.key() != "drift_diffusion" && it.key() != "navier_stokes")
+          fail(file, "unknown transport_coefficients section: " + it.key());
+
+      if (coefficients.contains("drift_diffusion"))
+      {
+        const auto & owners = coefficients.at("drift_diffusion");
+        if (!owners.is_object())
+          fail(file, "transport_coefficients.drift_diffusion must be an object");
+        for (auto it = owners.begin(); it != owners.end(); ++it)
+        {
+          const auto record = parseDDTransport(it.value(), file);
+          const auto previous = _dd_transport.find(it.key());
+          if (previous == _dd_transport.end())
+            _dd_transport.emplace(it.key(), record);
+          else if (!previous->second.equals(record))
+            fail(file, "conflicting drift_diffusion coefficient owner for " + it.key());
+        }
+      }
+      if (coefficients.contains("navier_stokes"))
+      {
+        const auto record = parseNVTransport(coefficients.at("navier_stokes"), file);
+        if (!_nv_transport)
+          _nv_transport = std::make_unique<NVTransportRecord>(record);
+        else if (!_nv_transport->equals(record))
+          fail(file, "conflicting navier_stokes transport owner across JSON files");
+      }
+    }
+
     std::set<std::string> equation_ids;
     for (auto it = root["equations"].begin(); it != root["equations"].end(); ++it)
     {
@@ -233,6 +405,26 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
     if (!equation_ids.empty())
       fail(file, "equation without matching reaction ID: " + *equation_ids.begin());
   }
+  for (const auto & [id, config] : _dd_transport)
+    if (_species.find(id) == _species.end())
+      fail("<merged plasma mechanism>", "transport_coefficients references unknown species: " + id);
+  if (_nv_transport)
+    for (const auto & id : _nv_transport->species)
+      if (_species.find(id) == _species.end())
+        fail("<merged plasma mechanism>", "navier_stokes references unknown species: " + id);
+}
+
+const DDTransportRecord *
+ChemistryData::ddTransport(const std::string & id) const
+{
+  const auto it = _dd_transport.find(id);
+  return it == _dd_transport.end() ? nullptr : &it->second;
+}
+
+const NVTransportRecord *
+ChemistryData::nvTransport() const
+{
+  return _nv_transport.get();
 }
 
 const SpeciesRecord &

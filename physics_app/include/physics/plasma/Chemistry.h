@@ -3,11 +3,40 @@
 #include "PlasmaInterface.h"
 
 #include <map>
+#include <memory>
 #include <string>
 #include <vector>
 
 namespace Plasma
 {
+
+struct DDTransportRecord
+{
+  std::string model;
+  double mobility = 0.0;
+  double diffusivity = 0.0;
+  std::string table_file;
+  std::string coordinate;
+  std::string table_units;
+  std::string pressure;
+  std::string gas_temperature;
+  std::string bounds_policy = "error";
+
+  bool equals(const DDTransportRecord & rhs) const;
+};
+
+struct NVTransportRecord
+{
+  std::string transport_data_file;
+  std::string temperature;
+  std::string pressure;
+  std::string electron_temperature;
+  std::string electron_number_density;
+  std::vector<std::string> species;
+  std::vector<std::string> mass_fractions;
+
+  bool equals(const NVTransportRecord & rhs) const;
+};
 
 struct SpeciesRecord
 {
@@ -42,10 +71,14 @@ public:
   const std::vector<ReactionRecord> & reactions() const { return _reactions; }
   bool hasSpeciesSource(const std::string & id) const;
   bool hasElectronEnergySource() const;
+  const DDTransportRecord * ddTransport(const std::string & id) const;
+  const NVTransportRecord * nvTransport() const;
 
 private:
   std::map<std::string, SpeciesRecord> _species;
   std::vector<ReactionRecord> _reactions;
+  std::map<std::string, DDTransportRecord> _dd_transport;
+  std::unique_ptr<NVTransportRecord> _nv_transport;
 };
 
 // Chemistry owns the Physics source projector and the validated JSON data model.
