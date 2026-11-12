@@ -33,3 +33,9 @@
     order = FIRST
   []
 []
+[Kernels]
+  [energy_integrity_probe]
+    type = Diffusion
+    variable = log_e_energy
+  []
+[]
