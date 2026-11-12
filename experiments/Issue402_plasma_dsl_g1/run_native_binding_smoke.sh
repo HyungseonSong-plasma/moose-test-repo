@@ -115,6 +115,30 @@ native --check-input -i "$PILOT/valid_json_generated_transport.i" \
   2>&1 | tee "$EVIDENCE/json_generated_transport_check.log"
 echo "PLASMA_JSON_TRANSPORT_GENERATION_P2_PASS"
 
+# Density-paired species create their own FEM/FV variables and log-molar ICs.
+# These are parser/P2 checks only; no P3 or physical S6 run.
+native --check-input -i "$PILOT/species_density_pairs_p2.i" \
+  2>&1 | tee "$EVIDENCE/species_density_pairs_p2.log"
+echo "PLASMA_SPECIES_DENSITY_PAIRS_P2_PASS"
+
+for entry in "invalid_species_density_zero_p2:requires a finite, strictly positive" \
+             "invalid_species_density_odd_p2:expected species_name initial_number_density pairs" \
+             "invalid_species_density_nan_p2:requires a finite, strictly positive"; do
+  item="${entry%%:*}"
+  expected="${entry#*:}"
+  set +e
+  native --check-input -i "$PILOT/$item.i" > "$EVIDENCE/$item.log" 2>&1
+  result=$?
+  set -e
+  if [[ "$result" -eq 0 ]] || ! grep -Fq "$expected" "$EVIDENCE/$item.log"; then
+    echo "::error::Invalid species/density pairing accepted: $item" >&2
+    cat "$EVIDENCE/$item.log" >&2
+    exit 25
+  fi
+done
+echo "PLASMA_INVALID_SPECIES_DENSITY_PAIRS_REJECTED"
+
+
 # Synthetic equal-equation channels must create separate signed electron energy contributions.
 native --check-input -i "$PILOT/chemistry_two_channels.i" \
   2>&1 | tee "$EVIDENCE/chemistry_two_channels.log"

@@ -2,6 +2,10 @@
 
 #include "PlasmaInterface.h"
 
+#include <map>
+#include <string>
+#include <vector>
+
 namespace Plasma
 {
 
@@ -19,8 +23,15 @@ public:
 
 private:
   void checkIntegrity() const override;
+  void addSolverVariables() override;
+  void addInitialConditions() override;
   void addFEKernels() override;
   void addFunctorMaterials() override;
+
+  std::vector<std::string> _fem_species;
+  std::vector<std::string> _fvm_species;
+  std::map<std::string, Real> _fem_initial_number_densities;
+  std::map<std::string, Real> _fvm_initial_number_densities;
 };
 
 }
