@@ -17,7 +17,13 @@ PoissonEq::validParams()
   params.addParam<Real>("initial_potential_V", 0.0,
                         "Initial numerical guess in volts for an auto-created potential.");
   params.addParam<MaterialPropertyName>(
-      "charge_source_material", "Source rho/epsilon0 for -laplacian(phi) = rho/epsilon0.");
+      "charge_source_material",
+      "Legacy FE MaterialProperty source rho/epsilon0 for -laplacian(phi) = rho/epsilon0.");
+  params.addParam<MooseFunctorName>(
+      "charge_source_functor",
+      "AD Functor source rho/epsilon0 for -laplacian(phi) = rho/epsilon0, "
+      "for example poisson_charge_source from PhysicsPlasmaChargeDensityMaterial. "
+      "Mutually exclusive with charge_source_material.");
   params.addParam<std::vector<BoundaryName>>(
       "ground_boundaries", {}, "Zero-potential boundaries created by this Physics.");
   return params;
@@ -28,9 +34,19 @@ PoissonEq::PoissonEq(const InputParameters & parameters)
 {
   if (getParam<VariableName>("fem_potential").empty())
     paramError("fem_potential", "Specify an electric potential variable.");
+  if (isParamValid("charge_source_material") && isParamValid("charge_source_functor"))
+    paramError("charge_source_functor",
+               "Poisson may have only one charge RHS owner: choose "
+               "charge_source_functor or charge_source_material, not both.");
+  if (isParamValid("charge_source_functor") &&
+      getParam<MooseFunctorName>("charge_source_functor").empty())
+    paramError("charge_source_functor", "A Poisson charge source Functor must not be empty.");
   if (!getParam<std::vector<BoundaryName>>("ground_boundaries").empty() &&
-      !isParamValid("charge_source_material"))
-    paramError("charge_source_material", "Provide charge source to create potential boundaries.");
+      !isParamValid("charge_source_material") &&
+      !isParamValid("charge_source_functor"))
+    paramError("charge_source_functor",
+               "Provide charge_source_functor or charge_source_material "
+               "to generate grounded Poisson boundaries.");
   if (!std::isfinite(getParam<Real>("initial_potential_V")))
     paramError("initial_potential_V", "Initial potential must be finite [V].");
   saveSolverVariableName(getParam<VariableName>("fem_potential"));
@@ -85,17 +101,20 @@ PoissonEq::checkIntegrity() const
   if (isVariableFV(potential))
     paramError("fem_potential",
                "Poisson fem_potential requires an FEM solver variable: ", potential);
-  if (isParamValid("charge_source_material"))
+  if (isParamValid("charge_source_material") || isParamValid("charge_source_functor"))
   {
     requireUniqueFEKernel("Diffusion", potential);
-    requireUniqueFEKernel("MatBodyForce", potential);
+    requireUniqueFEKernel(
+        isParamValid("charge_source_functor") ? "FunctorKernel" : "MatBodyForce",
+        potential);
   }
 }
 
 void
 PoissonEq::addFEKernels()
 {
-  if (!isParamValid("charge_source_material"))
+  if (!isParamValid("charge_source_material") &&
+      !isParamValid("charge_source_functor"))
     return;
   const auto variable = getParam<VariableName>("fem_potential");
   {
@@ -105,6 +124,21 @@ PoissonEq::addFEKernels()
     assignBlocks(params, _blocks);
     getProblem().addKernel(type, name() + "_diffusion", params);
   }
+  if (isParamValid("charge_source_functor"))
+  {
+    // rho_q/eps0 is an AD Functor and enters -laplacian(phi) on the RHS.
+    // Use the same FunctorKernel sign convention as the chemistry source:
+    // + integral(test * rho_q/eps0) is subtracted from the residual.
+    const std::string type = "FunctorKernel";
+    auto params = getFactory().getValidParams(type);
+    params.set<NonlinearVariableName>("variable") = variable;
+    params.set<MooseFunctorName>("functor") =
+        getParam<MooseFunctorName>("charge_source_functor");
+    params.set<bool>("functor_on_rhs") = true;
+    assignBlocks(params, _blocks);
+    getProblem().addKernel(type, name() + "_charge_source", params);
+  }
+  else
   {
     const std::string type = "MatBodyForce";
     auto params = getFactory().getValidParams(type);
@@ -119,7 +153,8 @@ PoissonEq::addFEKernels()
 void
 PoissonEq::addFEBCs()
 {
-  if (!isParamValid("charge_source_material"))
+  if (!isParamValid("charge_source_material") &&
+      !isParamValid("charge_source_functor"))
     return;
   for (const auto & boundary : getParam<std::vector<BoundaryName>>("ground_boundaries"))
   {
