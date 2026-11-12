@@ -102,6 +102,23 @@ native --check-input -i "$PILOT/baseline.i" "$PILOT/valid_all_physics.i" \
 native --check-input -i "$PILOT/baseline.i" "$PILOT/valid_generated_transport_options.i" \
   2>&1 | tee "$EVIDENCE/valid_generated_transport_options.log"
 echo "PLASMA_OPTION_ONLY_FEM_GENERATION_P2_PASS"
+
+# Negative P2: no second Native time derivative alongside generated e_time.
+# This checks semantic Kernel type + variable ownership, not object name only.
+set +e
+native --check-input -i "$PILOT/baseline.i" \
+  "$PILOT/valid_generated_transport_options.i" \
+  "$PILOT/duplicate_e_time.i" > "$EVIDENCE/duplicate_e_time.log" 2>&1
+duplicate_time_exit=$?
+set -e
+if [[ "$duplicate_time_exit" -eq 0 ]] ||
+   ! grep -Fq "PhysicsFEMLogMolarTimeDerivative" "$EVIDENCE/duplicate_e_time.log" ||
+   ! grep -Fq "must have exactly one owner" "$EVIDENCE/duplicate_e_time.log"; then
+  echo "::error::A Native and Physics-generated electron time operator were both accepted" >&2
+  cat "$EVIDENCE/duplicate_e_time.log" >&2
+  exit 24
+fi
+echo "PLASMA_DUPLICATE_E_TIME_REJECTED"
 echo "PLASMA_VARIABLE_CHECK_PASSED"
 
 # Native P2 exercises existing registered Materials via checked-in input, not a C++ generator.
