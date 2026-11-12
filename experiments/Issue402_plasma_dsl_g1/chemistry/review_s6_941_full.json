@@ -1,0 +1,223 @@
+{
+  "species": {
+    "e": {
+      "elements": {},
+      "charge_number": -1
+    },
+    "O2": {
+      "elements": {
+        "O": 2
+      },
+      "charge_number": 0
+    },
+    "O": {
+      "elements": {
+        "O": 1
+      },
+      "charge_number": 0
+    },
+    "O2p": {
+      "elements": {
+        "O": 2
+      },
+      "charge_number": 1
+    },
+    "Om": {
+      "elements": {
+        "O": 1
+      },
+      "charge_number": -1
+    },
+    "Op": {
+      "elements": {
+        "O": 1
+      },
+      "charge_number": 1
+    },
+    "O2a": {
+      "elements": {
+        "O": 2
+      },
+      "charge_number": 0
+    }
+  },
+  "equations": {
+    "EI-02": "e + O2 -> e + O2",
+    "EI-17": "e + O -> e + O",
+    "EI-415": "e + O2 -> 2e + O2p",
+    "EI-401": "e + O2 -> Om + O",
+    "EI-407": "e + O2 -> e + O2a",
+    "EI-2069": "e + O2a -> e + 2O",
+    "H25": "Op + O2 -> O + O2p",
+    "EI-941": "e + O -> 2e + Op"
+  },
+  "reactions": [
+    {
+      "id": "EI-02",
+      "reactants": {
+        "e": 1,
+        "O2": 1
+      },
+      "products": {
+        "e": 1,
+        "O2": 1
+      },
+      "progress_units": "mol/(m^3 s)",
+      "electron_energy_change_eV": {
+        "model": "functor",
+        "name": "signed_delta_epsilon_EI02_eV"
+      },
+      "provenance": {
+        "archive_layer": "o2_elastic_400w_100us_dt1000ns_overlay.i"
+      }
+    },
+    {
+      "id": "EI-17",
+      "reactants": {
+        "e": 1,
+        "O": 1
+      },
+      "products": {
+        "e": 1,
+        "O": 1
+      },
+      "progress_units": "mol/(m^3 s)",
+      "electron_energy_change_eV": {
+        "model": "functor",
+        "name": "signed_delta_epsilon_EI17_eV"
+      },
+      "provenance": {
+        "archive_layer": "o_elastic_ei17_400w_100us_dt1000ns_overlay.i"
+      }
+    },
+    {
+      "id": "EI-415",
+      "reactants": {
+        "e": 1,
+        "O2": 1
+      },
+      "products": {
+        "e": 2,
+        "O2p": 1
+      },
+      "progress_units": "mol/(m^3 s)",
+      "electron_energy_change_eV": -12.06,
+      "provenance": {
+        "archive_layer": "issue477_S2-415_generation_overlay.i"
+      }
+    },
+    {
+      "id": "EI-401",
+      "reactants": {
+        "e": 1,
+        "O2": 1
+      },
+      "products": {
+        "Om": 1,
+        "O": 1
+      },
+      "progress_units": "mol/(m^3 s)",
+      "electron_energy_change_eV": 0,
+      "provenance": {
+        "archive_layer": "issue477_S3-415-401_extra_overlay.i"
+      }
+    },
+    {
+      "id": "EI-407",
+      "reactants": {
+        "e": 1,
+        "O2": 1
+      },
+      "products": {
+        "e": 1,
+        "O2a": 1
+      },
+      "progress_units": "mol/(m^3 s)",
+      "electron_energy_change_eV": -0.977,
+      "provenance": {
+        "archive_layer": "issue477_S5-417-407_o2_consumer_overlay.i",
+        "alternate_archive_layer": "issue477_S5-941-407_o2_consumer_overlay.i"
+      }
+    },
+    {
+      "id": "EI-2069",
+      "reactants": {
+        "e": 1,
+        "O2a": 1
+      },
+      "products": {
+        "e": 1,
+        "O": 2
+      },
+      "progress_units": "mol/(m^3 s)",
+      "electron_energy_change_eV": -5.02,
+      "provenance": {
+        "archive_layer": "issue477_S6-417-407-2069-H25_EI2069_overlay.i",
+        "alternate_archive_layer": "issue477_S6-941-407-2069-H25_EI2069_overlay.i"
+      }
+    },
+    {
+      "id": "H25",
+      "reactants": {
+        "Op": 1,
+        "O2": 1
+      },
+      "products": {
+        "O": 1,
+        "O2p": 1
+      },
+      "progress_units": "mol/(m^3 s)",
+      "electron_energy_change_eV": {
+        "model": "none"
+      },
+      "provenance": {
+        "archive_layer": "issue477_S6-417-407-2069-H25_H25_overlay.i",
+        "alternate_archive_layer": "issue477_S6-941-407-2069-H25_H25_overlay.i"
+      }
+    },
+    {
+      "id": "EI-941",
+      "reactants": {
+        "e": 1,
+        "O": 1
+      },
+      "products": {
+        "e": 2,
+        "Op": 1
+      },
+      "progress_units": "mol/(m^3 s)",
+      "electron_energy_change_eV": -13.62,
+      "provenance": {
+        "archive_layer": "issue477_S4-401-941_op_ionization_overlay.i"
+      }
+    }
+  ],
+  "transport_coefficients": {
+    "drift_diffusion": {
+      "e": {
+        "model": "lookup",
+        "table_file": "e_transport.txt",
+        "coordinate": "mean_en_solved",
+        "table_units": "reduced",
+        "pressure": "p",
+        "gas_temperature": "T_g",
+        "bounds_policy": "error"
+      },
+      "O2p": {
+        "model": "functor",
+        "mobility_source": "ion_mobility",
+        "diffusivity_source": "ion_diffusion"
+      },
+      "Om": {
+        "model": "functor",
+        "mobility_source": "negative_ion_mobility",
+        "diffusivity_source": "negative_ion_diffusion"
+      },
+      "Op": {
+        "model": "functor",
+        "mobility_source": "atomic_positive_ion_mobility",
+        "diffusivity_source": "atomic_positive_ion_diffusion"
+      }
+    }
+  }
+}

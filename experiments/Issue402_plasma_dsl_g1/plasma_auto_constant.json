@@ -43,6 +43,21 @@
         "model": "constant",
         "mobility": 1,
         "diffusivity": 1
+      },
+      "O2p": {
+        "model": "constant",
+        "mobility": 0.25,
+        "diffusivity": 0.125
+      },
+      "Om": {
+        "model": "constant",
+        "mobility": 0.15,
+        "diffusivity": 0.075
+      },
+      "Op": {
+        "model": "constant",
+        "mobility": 0.35,
+        "diffusivity": 0.175
       }
     }
   }
