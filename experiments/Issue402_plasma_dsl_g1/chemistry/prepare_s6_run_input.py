@@ -58,6 +58,155 @@ KERNEL = re.compile(
 )
 
 
+
+# Wall renaming is a separate ownership-checked stage of the disposable D input.
+# A name-only substitution without a verifiable Native FunctorMaterial producer
+# is forbidden: it can silently change a BC or charge-ledger dependency.
+_WALL_BLOCK = re.compile(
+    r"(?m)^  \[(?P<name>[A-Za-z0-9_]+)\][ \t]*\r?\n"
+    r"(?P<body>(?:^    [^\r\n]*\r?\n)+)"
+    r"^  \[\][ \t]*(?:\r?\n|$)"
+)
+_WALL_TYPE = re.compile(r"(?m)^    type[ \t]*=[ \t]*(?P<type>[A-Za-z0-9_]+)[ \t]*$")
+_WALL_PREFIX = re.compile(r"(?m)^    output_prefix[ \t]*=[ \t]*(?P<value>[^\r\n]*)\r?\n")
+_WALL_KNOWN_LEGACY = {
+    "ion_surface_number_flux", "ion_migration_number_flux",
+    "ion_wall_number_flux", "ion_surface_mass_flux",
+    "ion_migration_mass_flux", "ion_wall_mass_flux",
+    "atomic_positive_ion_wall_number_flux",
+    "atomic_positive_ion_wall_mass_flux",
+    "negative_ion_wall_number_flux", "negative_ion_wall_mass_flux",
+    "electron_wall_number_flux", "electron_mean_speed",
+    "electron_sheath_drop_V",
+}
+_WALL_ION_PREFIX_TO_SPECIES = {
+    "": "O2p",
+    "atomic_positive_": "Op",
+    "negative_": "Om",
+}
+
+
+def canonicalize_staged_wall_inputs(edits: dict[Path, str]) -> tuple[dict[Path, str], dict]:
+    """Rewrite scratch-only wall producers and all their consumers atomically.
+
+    Every changed legacy name must have exactly one verified class owner.
+    Unsupported old factories / ambiguous prefixes stop *before* file writes.
+    This does not create new wall laws, coefficients, BCs or rate sources.
+    """
+    owners: dict[str, str] = {}
+    owner_records = []
+    updated = {}
+    for path, contents in edits.items():
+        blocks = list(_WALL_BLOCK.finditer(contents))
+        for m in reversed(blocks):
+            body = m.group("body")
+            typed = _WALL_TYPE.search(body)
+            if typed is None:
+                continue
+            material_type = typed.group("type")
+            valid_types = {
+                "PhysicsIonWallFluxMaterial", "PhysicsIonWallTotalFluxMaterial",
+                "PhysicsElectronWallFluxMaterial",
+                "PhysicsElectronAdjacentSheathWallFluxMaterial",
+            }
+            if material_type not in valid_types:
+                continue
+            # MOOSE wall materials are exclusively FunctorMaterials. Never
+            # transform a similarly named block inside BC/Kernels sections.
+            headings = re.findall(r"(?m)^\[([A-Za-z0-9_]+)\][ \t]*$", contents[:m.start()])
+            if not headings or headings[-1] != "FunctorMaterials":
+                raise ValueError("S6_WALL_MATERIAL_NOT_IN_FUNCTORMATERIALS: " + m.group("name"))
+            if re.search(r"(?m)^    species_id\s*=", body):
+                raise ValueError("S6_WALL_SPECIES_ID_ALREADY_SET: " + m.group("name"))
+
+            pairs: dict[str, str] = {}
+            prefix_match = _WALL_PREFIX.search(body)
+            prefix = prefix_match.group("value").strip().strip("'\\"") if prefix_match else ""
+            if material_type == "PhysicsIonWallFluxMaterial":
+                if m.group("name") not in ("ion_wall_flux", "O2p_wall_flux"):
+                    raise ValueError("S6_WALL_ION_OWNER_AMBIGUOUS: " + m.group("name"))
+                if prefix_match:
+                    raise ValueError("S6_WALL_ION_MATERIAL_CANNOT_HAVE_PREFIX")
+                species = "O2p"
+                pairs = {
+                    "ion_surface_number_flux": "O2p_wall_surface_number_flux",
+                    "ion_migration_number_flux": "O2p_wall_migration_number_flux",
+                    "ion_wall_number_flux": "O2p_wall_number_flux",
+                    "ion_surface_mass_flux": "O2p_wall_surface_mass_flux",
+                    "ion_migration_mass_flux": "O2p_wall_migration_mass_flux",
+                    "ion_wall_mass_flux": "O2p_wall_mass_flux",
+                }
+            elif material_type == "PhysicsIonWallTotalFluxMaterial":
+                if prefix not in _WALL_ION_PREFIX_TO_SPECIES:
+                    raise ValueError("S6_WALL_UNRECOGNIZED_OUTPUT_PREFIX: " + prefix)
+                species = _WALL_ION_PREFIX_TO_SPECIES[prefix]
+                pairs = {
+                    prefix + "ion_wall_number_flux": species + "_wall_number_flux",
+                    prefix + "ion_wall_mass_flux": species + "_wall_mass_flux",
+                }
+                if prefix_match:
+                    body = body[:prefix_match.start()] + body[prefix_match.end():]
+            else:
+                if m.group("name") != "electron_wall_flux":
+                    raise ValueError("S6_WALL_ELECTRON_OWNER_AMBIGUOUS: " + m.group("name"))
+                if prefix_match:
+                    raise ValueError("S6_WALL_ELECTRON_PREFIX_UNSUPPORTED")
+                species = "e"
+                pairs = {
+                    "electron_mean_speed": "e_mean_speed",
+                    "electron_wall_number_flux": "e_wall_number_flux",
+                }
+                if material_type == "PhysicsElectronAdjacentSheathWallFluxMaterial":
+                    pairs["electron_sheath_drop_V"] = "e_wall_sheath_drop_V"
+            for old, canonical in pairs.items():
+                if old in owners:
+                    raise ValueError("S6_WALL_DUPLICATE_OUTPUT_OWNER: " + old)
+                if canonical in owners.values():
+                    raise ValueError("S6_WALL_DUPLICATE_CANONICAL_OUTPUT: " + canonical)
+                owners[old] = canonical
+            # Add only the output-selector option; no physical input is altered.
+            type_line = _WALL_TYPE.search(body)
+            assert type_line is not None
+            body = body[:type_line.end()] + "\n    species_id = " + species + body[type_line.end():]
+            contents = contents[:m.start("body")] + body + contents[m.end("body"):]
+            owner_records.append({
+                "source_layer": path.name, "block": m.group("name"),
+                "type": material_type, "species_id": species,
+                "outputs": dict(sorted(pairs.items())),
+            })
+        updated[path] = contents
+
+    # A selected consumer must never point to a renamed, unowned old output.
+    # This also catches unsupported QPX/retired wall producers in historical
+    # input layers rather than pretending a string edit established parity.
+    counts = {old: 0 for old in _WALL_KNOWN_LEGACY}
+    for text in updated.values():
+        for old in counts:
+            counts[old] += len(re.findall(
+                r"(?<![A-Za-z0-9_])" + re.escape(old) + r"(?![A-Za-z0-9_])", text))
+    missing = sorted(old for old, count in counts.items() if count and old not in owners)
+    if missing:
+        raise ValueError("S6_WALL_UNVERIFIED_LEGACY_OUTPUT_OWNER: " + ", ".join(missing))
+
+    substitutions = {name: 0 for name in owners}
+    for path, contents in updated.items():
+        for old, canonical in sorted(owners.items(), key=lambda item: -len(item[0])):
+            pattern = r"(?<![A-Za-z0-9_])" + re.escape(old) + r"(?![A-Za-z0-9_])"
+            contents, number = re.subn(pattern, canonical, contents)
+            substitutions[old] += number
+        updated[path] = contents
+    # Stage one can be a no-op only if no old wall outputs are actually used.
+    return updated, {
+        "status": "SCRATCH_ONLY_SPECIES_WALL_NAMES" if owners else "NO_LEGACY_WALL_OUTPUTS",
+        "wall_material_owners": list(reversed(owner_records)),
+        "owner_count": len(owner_records),
+        "consumer_and_reference_replacements": {
+            old: n for old, n in sorted(substitutions.items()) if n
+        },
+        "P3": "NOT_RUN", "science": "SCIENCE_HOLD",
+    }
+
+
 def sha(contents: bytes) -> str:
     return hashlib.sha256(contents).hexdigest()
 
@@ -156,6 +305,10 @@ def prepare(staged_chem_dir: Path, ordered: list[str], variant: str) -> dict:
         raise ValueError("Wrong reaction-set branch for S6")
     if "files = 'chemistry/oxygen_s6_common.json chemistry/oxygen_s6_" + variant + ".json'" not in template:
         raise ValueError("Template does not bind correct mechanism files")
+    # New-run Wall names are cut over only when every legacy output has a
+    # verified, uniquely identified FunctorMaterial producer. Fail before
+    # mutating any scratch file if an old/unknown wall owner is still present.
+    edits, wall_cutover = canonicalize_staged_wall_inputs(edits)
     # Only after every owner check passes, modify disposable scratch.
     dest = staged_chem_dir / "chemistry"
     dest.mkdir(parents=True, exist_ok=True)
@@ -170,6 +323,7 @@ def prepare(staged_chem_dir: Path, ordered: list[str], variant: str) -> dict:
         "removed_legacy_kernel_names": sorted(retired),
         "removed_count": len(retired),
         "canonical_name_replacements": renamed,
+        "scratch_wall_functor_cutover": wall_cutover,
         "overlay_sha256": sha(template.encode()),
         "common_mechanism_sha256": sha(common),
         "variant_mechanism_sha256": sha(selected),
