@@ -165,6 +165,18 @@ def test_unowned_s6_legacy_functor_fails_before_any_rewrite():
 
 
 
+
+@pytest.mark.parametrize("invalid_density", ["n_Om", "n_m_physical", "unknown_e_density"])
+def test_electron_species_density_mismatch_fails_closed(invalid_density):
+    source = ION_PRODUCER.replace(
+        "electron_density = n_e", "electron_density = " + invalid_density, 1)
+    staged = _staged(source)
+    with pytest.raises(ValueError, match="S6_WALL_ELECTRON_DENSITY_IDENTITY_UNPROVED"):
+        stage.canonicalize_staged_wall_inputs(staged)
+    assert staged[Path("native.i")] == source
+    assert staged[Path("consumers.i")] == CONSUMERS
+
+
 def test_ion_species_density_mismatch_fails_closed():
     source = ION_PRODUCER.replace(
         "ion_number_density = n_Op", "ion_number_density = n_O2p", 1)
