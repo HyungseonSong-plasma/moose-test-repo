@@ -154,7 +154,7 @@ for item in invalid_overlap invalid_fem_fv_swap invalid_no_species invalid_missi
     invalid_fem_fv_swap) expected='wrong type' ;;
     invalid_no_species) expected='List at least one species' ;;
     invalid_energy_species) expected="Electron energy requires fem_species" ;;
-    invalid_chemistry_reactions) expected='duplicate/empty reaction ID or progress owner' ;;
+    invalid_chemistry_reactions) expected='duplicate reaction ID or generated progress owner' ;;
     invalid_poisson_variable) expected='Electric potential variable was not found' ;;
     invalid_maxwell_frequency) expected='The frequency must be greater than zero' ;;
     invalid_missing_variable) expected='was not found' ;;

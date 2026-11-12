@@ -97,7 +97,7 @@ def test_compiled_catalogue_checks_and_signed_functor_sources_exist():
 
     for marker in ("charge conservation failed", "elemental balance failed",
                    "equation text and structured stoichiometry differ",
-                   "duplicate/empty reaction ID or progress owner",
+                   "duplicate reaction ID or generated progress owner",
                    "missing explicit electron energy policy", "nonfinite electron energy change"):
         assert marker in parser
 
