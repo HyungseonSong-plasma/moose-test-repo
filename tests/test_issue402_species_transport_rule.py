@@ -62,15 +62,36 @@ def test_dd_material_unifies_constant_and_lookup_with_electron_energy_projection
     assert not (ROOT / "physics_app/src/materials/PhysicsElectronTransportCoefficients.C").exists()
 
 
-def test_ion_aliases_are_unscaled_ad_functors_and_do_not_replace_rho_diffusion():
-    src = text("physics_app/src/materials/PlasmaChargeTransportMaterial.C")
-    assert 'id + "_mobility"' in src
-    assert 'id + "_diffusivity"' in src
-    assert "(*_ion_mobilities[i])(r, state)" in src
-    assert "(*_ion_diffusions[i])(r, state)" in src
+def test_ddmaterial_is_the_only_species_coefficient_alias_publisher():
+    dd = text("physics_app/src/materials/DDMaterial.C")
+    charge = text("physics_app/src/materials/PlasmaChargeTransportMaterial.C")
+    assert 'addFunctorProperty<ADReal>(_species + "_mobility", particle_mu)' in dd
+    assert 'addFunctorProperty<ADReal>(_species + "_diffusivity", particle_D)' in dd
+    assert 'getFunctor<ADReal>("mobility_source")' in dd
+    assert 'getFunctor<ADReal>("diffusivity_source")' in dd
+    # The legacy charged-transport assembler must not compete for aliases.
+    assert 'addFunctorProperty<ADReal>(id + "_mobility"' not in charge
+    assert 'addFunctorProperty<ADReal>(id + "_diffusivity"' not in charge
+    assert 'id + "_mobility",' not in charge
+    assert 'id + "_diffusivity",' not in charge
+    assert "(*_ion_mobilities[i])(r, state)" in charge
+    assert "(*_ion_diffusions[i])(r, state)" in charge
     # D [m²/s] must not silently become rho*D [kg/(m s)].
-    assert '"rho_diffusivity_" + id' in src
-    assert "_density(r, state) * (*_ion_diffusions[i])(r, state)" in src
+    assert '"rho_diffusivity_" + id' in charge
+    assert "_density(r, state) * (*_ion_diffusions[i])(r, state)" in charge
+
+def test_fv_ion_and_heavy_mass_correction_do_not_consume_derived_velocities():
+    drift = text("physics_app/src/fvkernels/PhysicsFVElectrostaticDrift.C")
+    heavy = text("physics_app/src/fvkernels/PhysicsFVHeavyMassElectromigrationCorrection.C")
+    assert 'const ADRealVectorValue electric_field =' in drift
+    assert '-_potential.gradient(centered_face, state)' in drift
+    assert 'const ADReal mobility_face = _mobility(centered_face, state);' in drift
+    assert '_charge_number * mobility_face * (electric_field * _normal)' in drift
+    assert 'ion_drift_velocity_' not in drift
+    assert 'heavy_mass_correction_velocity' not in heavy
+    assert '(*_ion_mobilities[i])(centered_face, state)' in heavy
+    assert 'const ADReal correction_mass_flux_normal =' in heavy
+    assert '-direct_mass_flux_normal;' in heavy
 
 
 def test_native_control_and_public_417_941_are_user_coefficient_free():
