@@ -124,6 +124,13 @@ def test_s6_wall_names_rewrite_all_verified_producers_and_consumers():
         "O2p", "Om", "Op", "e"}
     assert native.count("species_id = ") == 4
     assert "output_prefix =" not in native
+    assert "type = PhysicsIonWallTotalFluxMaterial" not in native
+    assert native.count("type = PhysicsIonWallFluxMaterial") == 3
+    assert {r["type"] for r in report["wall_material_owners"]
+            if r["species_id"] in ("O2p", "Op", "Om")} == {
+        "PhysicsIonWallFluxMaterial"}
+    assert sum(r["source_type"] == "PhysicsIonWallTotalFluxMaterial"
+               for r in report["wall_material_owners"]) == 2
     assert "molar_mass = 0.032" in native
     assert "molar_mass = 0.016" in native
     assert "charge_number = -1" in native
@@ -252,6 +259,13 @@ def test_public_s6_c_input_wall_producers_and_consumers(case):
     assert "species_id = Om" in joined
     assert "species_id = Op" in joined
     assert "species_id = e" in joined
+    assert "type = PhysicsIonWallTotalFluxMaterial" not in joined
+    assert sum("type = PhysicsIonWallFluxMaterial" in layer
+               for layer in updated.values()) == 1
+    assert sum(r["source_type"] == "PhysicsIonWallTotalFluxMaterial"
+               for r in audit["wall_material_owners"]) == 3
+    assert all(r["type"] == "PhysicsIonWallFluxMaterial"
+               for r in audit["wall_material_owners"] if r["species_id"] != "e")
     for name in ("O2p_wall_number_flux", "Om_wall_number_flux",
                  "Op_wall_number_flux", "e_wall_number_flux"):
         assert name in joined
