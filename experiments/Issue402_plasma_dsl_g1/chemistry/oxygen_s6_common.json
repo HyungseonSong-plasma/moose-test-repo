@@ -139,7 +139,8 @@
       "progress_units": "mol/(m^3 s)",
       "electron_energy_change_eV": -0.977,
       "provenance": {
-        "archive_layer": "issue477_S5-417-407_o2_consumer_overlay.i"
+        "archive_layer": "issue477_S5-417-407_o2_consumer_overlay.i",
+        "alternate_archive_layer": "issue477_S5-941-407_o2_consumer_overlay.i"
       }
     },
     {
@@ -156,7 +157,8 @@
       "progress_units": "mol/(m^3 s)",
       "electron_energy_change_eV": -5.02,
       "provenance": {
-        "archive_layer": "issue477_S6-417-407-2069-H25_EI2069_overlay.i"
+        "archive_layer": "issue477_S6-417-407-2069-H25_EI2069_overlay.i",
+        "alternate_archive_layer": "issue477_S6-941-407-2069-H25_EI2069_overlay.i"
       }
     },
     {
@@ -175,7 +177,8 @@
         "model": "none"
       },
       "provenance": {
-        "archive_layer": "issue477_S6-417-407-2069-H25_H25_overlay.i"
+        "archive_layer": "issue477_S6-417-407-2069-H25_H25_overlay.i",
+        "alternate_archive_layer": "issue477_S6-941-407-2069-H25_H25_overlay.i"
       }
     }
   ]
