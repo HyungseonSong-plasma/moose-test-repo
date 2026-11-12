@@ -13,14 +13,14 @@ Per species, `transport_coefficients.drift_diffusion` accepts:
 
 - `{"model":"constant","mobility":0.25,"diffusivity":0.125}`
   with finite, nonnegative physical coefficients
-- `{"model":"lookup","table_file":"tables/e.txt","coordinate":"mean_en_solved",
+- `{"model":"lookup","table_file":"tables/e.txt",
   "table_units":"reduced","pressure":"p","gas_temperature":"T_g",
   "bounds_policy":"error"}` — table columns
   `coordinate mobility diffusivity`, reduced by `N_n = p/(k_B T_g)`
-- `{"model":"lookup","table_file":"tables/ion.txt","coordinate":"mean_en_solved",
+- `{"model":"lookup","table_file":"tables/ion.txt",
   "table_units":"physical"}` — values are already physical
-- `{"model":"functor","mobility_source":"ion_mobility",
-  "diffusivity_source":"ion_diffusion"}` — existing AD Functors, unchanged
+- `{"model":"functor"}` — existing species-named AD Functors,
+  `<species>_mobility` and `<species>_diffusivity`; no JSON source overrides
 
 Relative `table_file` paths resolve relative to the JSON declaring them,
 not to the working directory or `.i`. Every table has at least two rows,
@@ -50,3 +50,9 @@ ion FV transport Kernels are still Native-owned and must explicitly consume
 the canonical coefficient Functors if this JSON cutover is activated.
 No B/C historical archive changes, production P3 run, merge or
 scientific parity acceptance are implied. `SCIENCE_HOLD`.
+
+The lookup coordinate Functor is implicitly `mean_en_solved`,
+not configured per species in JSON. Electron energy transport is a
+separate `e_energy: {"type":"fluid"}` selector, using 5/3 times
+the electron particle mobility and diffusivity. The reference
+`e_transport.txt` remains synthetic and not science-qualified.

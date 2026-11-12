@@ -42,3 +42,14 @@ nonconstant ion DD source owner parity, mean-energy coordinate,
 transport energy closure (currently 5/3), compiled exact-head
 P2 for the review JSON, and B/D P3 science comparison.
 No P3 dispatched, no original S6 input changed. `SCIENCE_HOLD`.
+
+## Canonical Material naming update
+
+JSON `model=functor` contains no explicit source keys. The material
+looks for `O2p_mobility`/`O2p_diffusivity`,
+`Om_mobility`/`Om_diffusivity`, and
+`Op_mobility`/`Op_diffusivity` from an upstream producer. New
+`DDMaterial` instances never register a duplicate output for
+these canonical external Functors. `e_energy: {"type":"fluid"}`
+explicitly selects the 5/3 energy closure. No science cutover is
+authorized by this JSON schema change.

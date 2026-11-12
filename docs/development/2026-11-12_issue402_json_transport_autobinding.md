@@ -23,7 +23,6 @@ in its public MOOSE Physics block.
       "e": {
         "model": "lookup",
         "table_file": "tables/electron_transport.txt",
-        "coordinate": "mean_en_solved",
         "table_units": "reduced",
         "pressure": "p",
         "gas_temperature": "T_g",
@@ -58,7 +57,7 @@ available in the execution environment. Paths are checked for readability.
 - `model=constant` requires finite, nonnegative `mobility` in m²/(V·s)
   and `diffusivity` in m²/s. It prohibits lookup settings.
 - `model=lookup` requires one three-column `table_file` and a
-  `coordinate` Functor. `table_units=reduced` means columns are `mu*N_n`
+  implicit `mean_en_solved` coordinate Functor. `table_units=reduced` means columns are `mu*N_n`
   and `D*N_n`; it requires `pressure` [Pa] and `gas_temperature` [K] to
   calculate `N_n=p/(k_B*T_g)`. `table_units=physical` consumes table
   values directly. `bounds_policy=error` (default) rejects out-of-range
@@ -130,3 +129,12 @@ separate responsibilities.
   numeric comparisons, original S6 source-owner replay, and S6 transport/
   chemistry parity are independent gates. No P3 and no merge while
   `SCIENCE_HOLD` applies.
+
+**Schema update (2026-11-12):** `coordinate`,
+`mobility_source`, and `diffusivity_source` must not appear in
+backend-generated JSON DD entries. The model-only `functor` mode
+resolves canonical species names inside `DDMaterial`, preserving
+AD coefficients without duplicate producers. Use
+`e_energy: {"type":"fluid"}` for the 5/3 electron-energy transport
+closure. The previous syntax above is retained only as historical
+discussion where applicable.
