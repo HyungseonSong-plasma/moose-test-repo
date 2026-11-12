@@ -2,6 +2,7 @@
 
 These tests do not replace building or running the solver.
 """
+import json
 from pathlib import Path
 
 import pytest
