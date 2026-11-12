@@ -94,6 +94,25 @@ def test_fv_ion_and_heavy_mass_correction_do_not_consume_derived_velocities():
     assert '-direct_mass_flux_normal;' in heavy
 
 
+def test_accepted_path_b_heavy_correction_reaches_solved_neutral_species():
+    # Accepted #15 source is separate from S6-417/941; do not infer S6
+    # scientific activation or transport parity from this static proof.
+    flux = text("experiments/Issue15_charged_heavy_migration/physics.i")
+    assert flux.count("type = QPXFVElectrostaticDrift") == 3
+    assert flux.count("type = QPXFVHeavyMassElectromigrationCorrection") == 6
+    for species in ("O2s", "O", "Os"):  # three independently solved neutrals
+        assert f"[{species}_heavy_mass_em_correction]" in flux
+        assert f"[{species}_electrostatic_drift]" not in flux
+    for species in ("O2p", "Om", "Op"):
+        assert f"[{species}_heavy_mass_em_correction]" in flux
+        assert f"[{species}_electrostatic_drift]" in flux
+    # Constrained O2 is not independently solved. Face flux, not a Material
+    # vector slip alias, balances the charged-heavy mass flux.
+    assert "[O2_heavy_mass_em_correction]" not in flux
+    assert "heavy_mass_correction_velocity" not in flux
+    assert "ion_drift_velocity_" not in flux
+
+
 def test_native_control_and_public_417_941_are_user_coefficient_free():
     positive = text("experiments/Issue402_plasma_dsl_g1/valid_generated_transport_options.i")
     # Species IDs trigger Material generation from the JSON, not user blocks.
