@@ -54,7 +54,8 @@ def test_retired_plasma_closures_action_preserves_material_factories():
 
 def test_both_old_and_new_alias_types_exercised_by_native_p2_controls():
     sample = (ROOT / "experiments/Issue402_plasma_dsl_g1/valid_generated_transport_options.i").read_text()
-    assert "type = PhysicsSpeciesTransportAliasMaterial" in sample
+    assert "type = DDMaterial" in sample
+    assert "model = constant" in sample
     script = (ROOT / "experiments/Issue402_plasma_dsl_g1/public_option_s6_p2.py").read_text()
     tree = ast.parse(script)
     overlay = next(ast.literal_eval(item.value) for item in tree.body
