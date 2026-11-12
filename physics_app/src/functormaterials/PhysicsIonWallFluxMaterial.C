@@ -4,6 +4,7 @@
 #include "FaceInfo.h"
 #include "MooseFunctorArguments.h"
 
+#include <cctype>
 #include <cmath>
 #include <type_traits>
 
@@ -141,6 +142,10 @@ PhysicsIonWallFluxMaterial::validParams()
       "Diagnostic smoothing width [V/m] for the outward migration gate. "
       "Zero preserves the existing hard active-set behavior.");
 
+  params.addParam<std::string>(
+      "species_id", "", "Optional solver-safe species identifier. When supplied, expose "
+      "<species>_wall_* Functors; when absent, preserve legacy ion_* names.");
+
   params.addParam<bool>(
       "use_element_gradient_for_potential",
       false,
@@ -166,6 +171,21 @@ PhysicsIonWallFluxMaterial::PhysicsIonWallFluxMaterial(
     _use_element_gradient_for_potential(
         getParam<bool>("use_element_gradient_for_potential"))
 {
+  const auto species_id = getParam<std::string>("species_id");
+  if (!species_id.empty())
+  {
+    if (!std::isalpha(static_cast<unsigned char>(species_id.front())))
+      paramError("species_id", "Species ID must start with a letter.");
+    for (const auto ch : species_id)
+      if (!std::isalnum(static_cast<unsigned char>(ch)) && ch != '_')
+        paramError("species_id", "Species ID must be alphanumeric or underscore.");
+  }
+  // Exactly one public owner for each wall flux. Legacy names remain only
+  // when species_id is omitted, so multiple species cannot collide here.
+  const auto wallName = [&species_id](const char * legacy, const char * suffix) {
+    return species_id.empty() ? std::string(legacy) : species_id + "_wall_" + suffix;
+  };
+
   if (_charge_number == 0.0)
     paramError("charge_number", "Ion wall migration requires nonzero charge_number.");
 
@@ -184,7 +204,7 @@ PhysicsIonWallFluxMaterial::PhysicsIonWallFluxMaterial(
         "migration_gate_smoothing_width must be nonnegative.");
 
   addFunctorProperty<ADReal>(
-      "ion_surface_number_flux",
+      wallName("ion_surface_number_flux", "surface_number_flux"),
       [this](const auto & r, const auto & state) -> ADReal
       {
         using SpaceArg = decltype(r);
@@ -213,7 +233,7 @@ PhysicsIonWallFluxMaterial::PhysicsIonWallFluxMaterial(
       });
 
   addFunctorProperty<ADReal>(
-      "ion_migration_number_flux",
+      wallName("ion_migration_number_flux", "migration_number_flux"),
       [this](const auto & r, const auto & state) -> ADReal
       {
         using SpaceArg = decltype(r);
@@ -239,7 +259,7 @@ PhysicsIonWallFluxMaterial::PhysicsIonWallFluxMaterial(
       });
 
   addFunctorProperty<ADReal>(
-      "ion_wall_number_flux",
+      wallName("ion_wall_number_flux", "number_flux"),
       [this](const auto & r, const auto & state) -> ADReal
       {
         using SpaceArg = decltype(r);
@@ -283,7 +303,7 @@ PhysicsIonWallFluxMaterial::PhysicsIonWallFluxMaterial(
       });
 
   addFunctorProperty<ADReal>(
-      "ion_surface_mass_flux",
+      wallName("ion_surface_mass_flux", "surface_mass_flux"),
       [this](const auto & r, const auto & state) -> ADReal
       {
         using SpaceArg = decltype(r);
@@ -313,7 +333,7 @@ PhysicsIonWallFluxMaterial::PhysicsIonWallFluxMaterial(
       });
 
   addFunctorProperty<ADReal>(
-      "ion_migration_mass_flux",
+      wallName("ion_migration_mass_flux", "migration_mass_flux"),
       [this](const auto & r, const auto & state) -> ADReal
       {
         using SpaceArg = decltype(r);
@@ -338,7 +358,7 @@ PhysicsIonWallFluxMaterial::PhysicsIonWallFluxMaterial(
       });
 
   addFunctorProperty<ADReal>(
-      "ion_wall_mass_flux",
+      wallName("ion_wall_mass_flux", "mass_flux"),
       [this](const auto & r, const auto & state) -> ADReal
       {
         using SpaceArg = decltype(r);
