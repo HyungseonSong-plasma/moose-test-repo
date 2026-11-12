@@ -203,13 +203,13 @@
         "bounds_policy": "error"
       },
       "O2p": {
-        "model": "constants"
+        "model": "functor"
       },
       "Om": {
-        "model": "constants"
+        "model": "functor"
       },
       "Op": {
-        "model": "constants"
+        "model": "functor"
       },
       "e_energy": {
         "type": "fluid"
