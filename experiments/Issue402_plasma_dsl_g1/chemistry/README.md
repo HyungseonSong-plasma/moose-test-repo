@@ -101,6 +101,56 @@ numerical B-vs-D parity require independent checks.
 
 **Status: TEMPLATE / P2 PREPARATION. P3 NOT RUN. SCIENCE_HOLD.**
 
+## Exact-head S6-417/941 P2-only run preparation
+
+The **existing CI** already executes `run_public_option_s6_p2.sh` after the
+exact-head Native build, which invokes `public_chemistry_s6_p2.py` for both
+real 10-layer archived S6 cases with `physics-opt --check-input`.
+This is an input-construction gate, not a physics time integration.
+
+For an operator to inspect all **11 prepared input files** instead of deleting
+scratch after P2, the new `run_chemistry_s6_p2_only.py` command is available
+after the normal public P0 and P1 prerequisite setup:
+
+```bash
+cd <issue402-checkout>
+# First perform existing P0 public-S6 source/mesh preparation and the
+# same-head Native P1 build (native_p1_identity.json is required).
+python3 experiments/Issue402_plasma_dsl_g1/run_chemistry_s6_p2_only.py \
+  --historical ../historical \
+  --expected-head "$(git rev-parse HEAD)" \
+  --case both \
+  --output /tmp/issue402-chemistry-s6-p2-review
+```
+
+The command refuses an existing output directory and preserves
+`S6-417/scratch/`, `S6-941/scratch/`, their eleven input files,
+the two Native `--check-input` logs, and `readiness.json`.
+Only the **existing** public Native rate sources are staged; no private rates
+are fetched. It checks the P1 binary SHA before each P2 invocation and
+never invokes a solver timestep, the P3 runner or a GitHub workflow.
+
+**Important distinction:** the P2/P3 Chemistry staging mode still reads
+`oxygen_s6_common.json` plus `oxygen_s6_{417|941}.json` and retains
+the original Native electron/ion transport and original Native Poisson
+RHS owner. This prevents accidental activation of the synthetic P2
+`e_transport.txt` and duplicate Poisson or coefficient producers. The
+`review_s6_*_full.json` files remain **review-only** until validated,
+physically qualified transport data and canonical Native coefficient
+bindings exist.
+
+For **new** FEM Poisson inputs, `PoissonEq` can explicitly bind
+`charge_source_functor = poisson_charge_source` to the
+`PhysicsPlasmaChargeDensityMaterial` AD Functor using one
+`FunctorKernel` with `functor_on_rhs = true`. It also supports the
+older `charge_source_material` FE Material Property, mutually
+exclusively. Do not add a `[Poisson]` charge source to an archived
+S6 deck that already owns its Poisson equation; the full Native staged
+P2 test is the gate for that combination.
+
+**P3 remains NOT_RUN and requires separate explicit operator authorization.
+SCIENCE_HOLD and original ten-layer baseline inputs remain unchanged.**
+
 ## Temporary metadata and deprecation policy
 
 The `provenance.archive_layer` / `alternate_archive_layer` objects in these

@@ -45,7 +45,9 @@ def check_only(historical: Path, expected_head: str, output: Path,
     static = audit(ROOT)
     if static["status"] != "STATIC_INPUTS_READY_P3_NOT_AUTHORIZED":
         raise ValueError("CHEMISTRY_S6_STATIC_GATE_FAILED")
-    option.p2.preflight(ROOT)
+    public_preflight = option.p2.preflight(ROOT)
+    if public_preflight.get("P0") != "PASS":
+        raise ValueError("P2_PUBLIC_S6_PREFLIGHT_NOT_PASS")
     binary = ROOT / "physics_app/physics-opt"
     identity = option.check_source(expected_head, historical, binary)
     manifest = json.loads(
