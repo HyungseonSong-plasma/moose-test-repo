@@ -119,6 +119,16 @@ def prepare(staged_chem_dir: Path, ordered: list[str], variant: str) -> dict:
         edits[target] = source
     if len(retired) != 9:
         raise ValueError("Expected exactly nine old electron particle/energy Kernels")
+    # Retain original owner signatures above (log_energy), then consistently
+    # migrate the remaining scratch-only variable references to the new
+    # internally resolved DDEnergyEq state: log_e_energy.
+    # Rename all ten staged layers, not only the nine edited sources,
+    # so native RF/Joule and Material couplings resolve the same state.
+    for item in ordered[:-1]:
+        target = staged_chem_dir / Path(item).name
+        source = edits.get(target, target.read_text(encoding="utf-8"))
+        edits[target] = re.sub(r"(?<![A-Za-z0-9_])log_energy(?![A-Za-z0-9_])",
+                               "log_e_energy", source)
     template = (PILOT / f"s6_{variant}_chemistry_run.template.i").read_text()
     common = COMMON.read_bytes()
     selected = (PILOT / f"chemistry/oxygen_s6_{variant}.json").read_bytes()
