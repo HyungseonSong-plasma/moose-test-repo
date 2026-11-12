@@ -387,6 +387,13 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
 
     for (const auto & entry : root["reactions"])
     {
+      // The backend contract has exactly one vocabulary for units and loss.
+      // Do not silently accept a stale sidecar key or accidentally combine
+      // an old signed delta with the new positive-loss RHS projection.
+      if (entry.is_object() &&
+          (entry.contains("progress_units") || entry.contains("electron_energy_change_eV")))
+        fail(file, "legacy reaction keys progress_units/electron_energy_change_eV "
+                   "are forbidden; use units and energy_loss_eV.");
       if (!entry.is_object() || !entry.contains("id") || !entry["id"].is_string() ||
           !entry.contains("units") || !entry["units"].is_string() ||
           !entry.contains("reactants") || !entry.contains("products"))
