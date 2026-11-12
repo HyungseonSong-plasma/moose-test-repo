@@ -19,7 +19,7 @@ test -f physics_app/ci/plasma_direct_existing_materials_smoke.i
 {
   printf 'source_sha=%s\n' "$(git rev-parse HEAD)"
   printf 'build_base_ref=%s\n' "$PINNED_BASE"
-  sha256sum "$PILOT"/*.i physics_app/include/physics/plasma/PlasmaInterface.h \
+  sha256sum "$PILOT"/*.i "$PILOT"/*.json physics_app/include/physics/plasma/PlasmaInterface.h \
     physics_app/src/physics/plasma/PlasmaInterface.C \
     physics_app/include/physics/plasma/ContinuityEq.h \
     physics_app/src/physics/plasma/ContinuityEq.C \
@@ -103,6 +103,11 @@ native --check-input -i "$PILOT/baseline.i" "$PILOT/valid_generated_transport_op
   2>&1 | tee "$EVIDENCE/valid_generated_transport_options.log"
 echo "PLASMA_OPTION_ONLY_FEM_GENERATION_P2_PASS"
 
+# Synthetic equal-equation channels must create separate signed electron energy contributions.
+native --check-input -i "$PILOT/chemistry_two_channels.i" \
+  2>&1 | tee "$EVIDENCE/chemistry_two_channels.log"
+echo "PLASMA_CHEMISTRY_TWO_CHANNELS_P2_PASS"
+
 # Negative P2: no second Native time derivative alongside generated e_time.
 # This checks semantic Kernel type + variable ownership, not object name only.
 set +e
@@ -137,15 +142,15 @@ for item in invalid_overlap invalid_fem_fv_swap invalid_no_species invalid_missi
     invalid_fem_fv_swap) expected='wrong type' ;;
     invalid_no_species) expected='List at least one species' ;;
     invalid_energy_species) expected="Electron energy requires fem_species" ;;
-    invalid_chemistry_reactions) expected='Repeated or empty reaction name' ;;
+    invalid_chemistry_reactions) expected='duplicate/empty reaction ID or progress owner' ;;
     invalid_poisson_variable) expected='Electric potential variable was not found' ;;
     invalid_maxwell_frequency) expected='The frequency must be greater than zero' ;;
     invalid_missing_variable) expected='was not found' ;;
     invalid_legacy_variables) expected='variables' ;;
     invalid_legacy_kernel_names) expected='fem_kernel_names' ;;
-    invalid_missing_fvm_charges) expected='Provide fem_potential and FEM/FVM charge vectors together' ;;
+    invalid_missing_fvm_charges) expected='fem_charge_numbers' ;;
     invalid_incomplete_coefficients) expected='mobility' ;;
-    invalid_wrong_charge_sign) expected='Charge does not match verified species identity' ;;
+    invalid_wrong_charge_sign) expected='fem_charge_numbers' ;;
   esac
   if [[ "$code" -eq 0 ]] || ! grep -Fq "$expected" "$EVIDENCE/$item.log"; then
     echo "::error::Invalid input was accepted or reported the wrong error: $item" >&2

@@ -1,0 +1,53 @@
+{
+  "species": {
+    "e": {
+      "elements": {},
+      "charge_number": -1
+    },
+    "O2": {
+      "elements": {
+        "O": 2
+      },
+      "charge_number": 0
+    },
+    "O2p": {
+      "elements": {
+        "O": 2
+      },
+      "charge_number": 1
+    }
+  },
+  "equations": {
+    "EI-405": "e + O2 -> 2e + O2p"
+  },
+  "reactions": [
+    {
+      "id": "EI-405",
+      "reactants": {
+        "e": 1,
+        "O2": 1
+      },
+      "products": {
+        "e": 2,
+        "O2p": 1
+      },
+      "progress": "R_EI405",
+      "progress_units": "mol/(m^3 s)",
+      "electron_energy_change_eV": -12.4
+    },
+    {
+      "id": "EI-405",
+      "reactants": {
+        "e": 1,
+        "O2": 1
+      },
+      "products": {
+        "e": 2,
+        "O2p": 1
+      },
+      "progress": "R_DUPLICATE",
+      "progress_units": "mol/(m^3 s)",
+      "electron_energy_change_eV": -17
+    }
+  ]
+}
