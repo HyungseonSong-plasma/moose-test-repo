@@ -1,3 +1,17 @@
+## 2026-11-12 canonical S6 provider and energy state names
+
+The active #402 Chemistry S6-417 and S6-941 templates no longer create
+`R_EI02`/`R_EI17`/`R_EI415` compatibility alias Materials. Instead the
+scratch-only staging script rewrites the archived provider definitions and
+all consumers to those canonical progress names in the **disposable** staged
+input layers. `DDContinuityEq`, `DDEnergyEq`, electron wall BC coupling
+and new plotting/tracing readers use the solved state `log_e_energy`.
+Archived source/provenance and historical scientific tests remain immutable
+reference evidence. No coefficient, rate or equation numerical change is
+implied; Native P2 and science parity must pass separately.
+
+---
+
 ## 2026-11-12 canonical Chemistry and DriftDiffusion equation class names
 
 The Chemistry JSON parser and signed source projector are now implemented

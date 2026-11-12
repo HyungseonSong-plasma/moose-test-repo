@@ -23,9 +23,11 @@ Each selected S6 mechanism contains **8** reaction IDs. All reaction progress
 Functors have `mol/(m^3 s)` units. The JSON no longer repeats `progress`:
 `Chemistry.C` derives `EI-02 → R_EI02`, `EI-415 → R_EI415`,
 `EI-2069 → R_EI2069`, `H25 → R_H25` deterministically from the ID.
-Three disposable S6 input aliases bridge legacy names (`R_elastic_O2`,
-`R_elastic_O`, `R_ion_O2`) to those canonical names. This is purely a
-compatibility adapter; the underlying rate providers are unchanged. A negative
+For the archived S6 inputs, the scratch-only preparation step renames
+all existing progress provider definitions and consumers (`R_elastic_O2`,
+`R_elastic_O`, `R_ion_O2`) directly to `R_EI02`, `R_EI17`,
+`R_EI415`. No temporary rate alias Materials are used and the underlying
+kinetic expressions, units and numerical values are unchanged. A negative
 `electron_energy_change_eV` represents electron energy lost.
 
 - EI-02 and EI-17: source-defined **variable** elastic loss magnitude
@@ -99,3 +101,12 @@ S6 scientific source/parity verification is open and are slated for removal
 once the external provenance record is pinned. They are not needed at runtime.
 The JSON `progress` field, unlike provenance, has already been **removed**;
 rate Functor names are generated deterministically by the C++ ID rule.
+
+## Canonical naming rule for new runs
+
+All newly generated model inputs, Functor/BC bindings, diagnostics and
+Exodus-facing readers use `log_e_energy`. The only occurrences of the
+historical name remain in the guarded archive-to-scratch canonicalization
+contract and in provenance/tests verifying old immutable evidence; the run
+itself contains only canonical state and progress Functor names. Historical
+input archives and previous solver output are **not** rewritten.
