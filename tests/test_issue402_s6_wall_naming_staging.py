@@ -8,6 +8,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import io
+import re
 import importlib.util
 import tarfile
 from pathlib import Path
@@ -255,7 +256,11 @@ def test_public_s6_c_input_wall_producers_and_consumers(case):
                  "Op_wall_number_flux", "e_wall_number_flux"):
         assert name in joined
     for old in stage._WALL_KNOWN_LEGACY:
-        assert old not in joined
+        # Historical d1_electron_mean_speed_m_s is an independent diagnostic
+        # object, not the Functor named electron_mean_speed.
+        assert not re.search(
+            r"(?<![A-Za-z0-9_])" + re.escape(old) + r"(?![A-Za-z0-9_])",
+            joined)
     assert audit["consumer_and_reference_replacements"]
     assert audit["P3"] == "NOT_RUN" and audit["science"] == "SCIENCE_HOLD"
     # The entire public B archive is kept in its original bytes, and all
