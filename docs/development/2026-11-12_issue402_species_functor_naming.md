@@ -168,3 +168,31 @@ P2** acceptance or physical parity; the inherited P2 HOLD and
 ## Parent PR #523 retirement reconciliation
 
 At parent HEAD `ed608a23f79fe25e31041b184fa27edb21ba7385`, the duplicate `PhysicsIonWallTotalFluxMaterial.C` was removed. Parent test `tests/test_retired_legacy_physics_owners_contract.py` requires it to remain absent. The active six-output `PhysicsIonWallFluxMaterial` already implements thermal surface + migration total number and mass fluxes with corresponding input roles and defaults. This cutover changes *only* disposable S6 D scratch type declarations and canonically owned output names, with density/charge/prefix guards. The B/C archives stay immutable. Source-level mathematical equivalence must be independently verified before scientific acceptance; construction P2 does not prove numerical parity.
+
+
+## Exact-parent source reconciliation and P0/P1/P2 revalidation
+
+- Parent Draft PR #523 exact HEAD: `ed608a23f79fe25e31041b184fa27edb21ba7385`.
+- Child Draft PR #524 was synchronized through a **non-force**
+  two-parent merge commit `dd1aea50569e6866b1f70c636f8aa43661ec19db`.
+  The reconciled tree preserves all parent deletions, notably
+  `PhysicsIonWallTotalFluxMaterial.C`, and carries only the nine
+  species-naming source/test/doc files as the PR-level diff.
+- Scratch S6-417/941 old `PhysicsIonWallTotalFluxMaterial` blocks are
+  replaced with the live `PhysicsIonWallFluxMaterial`, with validated
+  original density, charge, temperature and mobility inputs, new
+  `species_id`, and consumer Functor references. The original archived
+  C/B inputs are not changed. No retired factory source is reintroduced.
+- [Exact-head run #43328122988](https://github.com/HyungseonSong-plasma/moose-test-repo/actions/runs/43328122988)
+  at `0d940fbd096990977b8ba592177c1f10a274aa06`: **27 P0 tests PASS**,
+  Native **P1 PASS**, native three-ion (O2p/Om/Op) plus electron Wall
+  **P2 `--check-input` PASS**, `Syntax OK`. The run includes the parent
+  retired-owner contract, full public S6-417/941 *in-memory* cutover test,
+  source ancestry check, and no-solve policy.
+- The validation-only workflow was removed afterward; this documentation
+  update does not change C++ or migration implementation. Post-cleanup
+  commit is a different SHA and must not be misidentified as the binary
+  source SHA from the run.
+- Full **S6 Native P2** source/rate/mesh construction is still separate
+  and was **not run** by the Wall naming workflow. No P3 science solve,
+  numerical parity, merge, or promotion. `SCIENCE_HOLD` stays active.
