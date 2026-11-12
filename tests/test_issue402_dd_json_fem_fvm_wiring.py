@@ -16,8 +16,10 @@ def test_json_drives_species_transport_without_i_material_blocks():
     owners = data["transport_coefficients"]["drift_diffusion"]
     assert set(owners) == {"e", "O2p", "Om", "Op"}
     assert owners["e"]["model"] == "lookup"
+    assert "coordinate" not in owners["e"]
     assert owners["e"]["table_units"] == "reduced"
     assert owners["Om"]["model"] == "lookup"
+    assert "coordinate" not in owners["Om"]
     assert owners["Om"]["table_units"] == "physical"
     for ion in ("O2p", "Op"):
         assert owners[ion]["model"] == "constant"
@@ -55,6 +57,11 @@ def test_json_and_lookup_data_are_validated_fail_closed():
     assert "std::isfinite(result.mobility)" in parser
     assert "std::isfinite(result.diffusivity)" in parser
     assert "DDMaterial lookup coefficients must be finite and nonnegative" in provider
+    assert "functor transport accepts only model" in parser
+    functor_json = json.loads((PILOT / "plasma_auto_functor.json").read_text())
+    assert functor_json["transport_coefficients"]["drift_diffusion"]["O2p"] == {"model": "functor"}
+    negative_functor = json.loads((PILOT / "invalid_json_functor_name_override_p2.json").read_text())
+    assert "mobility_source" in negative_functor["transport_coefficients"]["drift_diffusion"]["O2p"]
     assert 'std::isfinite(coordinate)' in provider
     missing = json.loads((PILOT / "invalid_json_dd_missing_om_p2.json").read_text())
     assert "Om" not in missing["transport_coefficients"]["drift_diffusion"]

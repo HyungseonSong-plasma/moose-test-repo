@@ -115,6 +115,19 @@ echo "PLASMA_JSON_TRANSPORT_GENERATION_P2_PASS"
 native --check-input -i "$PILOT/valid_json_generated_functor.i" \
   2>&1 | tee "$EVIDENCE/json_generated_functor_check.log"
 echo "PLASMA_JSON_FUNCTOR_TRANSPORT_GENERATION_P2_PASS"
+# Only Material logic may derive canonical mobility/diffusivity names.
+set +e
+native --check-input -i "$PILOT/invalid_json_functor_name_override_p2.i" \
+  > "$EVIDENCE/invalid_json_functor_name_override_p2.log" 2>&1
+bad_functor_status=$?
+set -e
+if [[ "$bad_functor_status" -eq 0 ]] || \
+   ! grep -Fq "functor transport accepts only model" "$EVIDENCE/invalid_json_functor_name_override_p2.log"; then
+  echo "::error::JSON functor source-name override was accepted or misdiagnosed" >&2
+  cat "$EVIDENCE/invalid_json_functor_name_override_p2.log" >&2
+  exit 28
+fi
+echo "PLASMA_JSON_FUNCTOR_SOURCE_OVERRIDE_REJECTED"
 
 # One JSON entry per selected FEM/FVM species: both table modes and constants.
 native --check-input -i "$PILOT/valid_json_dd_fem_fvm_mixed_p2.i" \
