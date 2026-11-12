@@ -5,25 +5,6 @@
 #include "MooseFunctor.h"
 
 /**
- * Existing physical-state electron Joule-work kernel.
- */
-class PhysicsFEMElectronJouleHeating : public ADKernel
-{
-public:
-  static InputParameters validParams();
-  PhysicsFEMElectronJouleHeating(const InputParameters & parameters);
-
-protected:
-  ADReal computeQpResidual() override;
-
-  const ADVariableValue & _electron_density;
-  const ADVariableGradient & _grad_electron_density;
-  const ADVariableGradient & _grad_potential;
-  const Moose::Functor<ADReal> & _mobility;
-  const Moose::Functor<ADReal> & _diffusion;
-};
-
-/**
  * Conservative backward-Euler time derivative of c=exp(u), where u is a log-molar state.
  */
 class PhysicsFEMLogMolarTimeDerivative : public ADTimeKernel
