@@ -5,7 +5,11 @@ the spelling of any consumer changes. No scientific parity is asserted.
 """
 from __future__ import annotations
 
+import base64
+import hashlib
+import io
 import importlib.util
+import tarfile
 from pathlib import Path
 
 import pytest
@@ -205,3 +209,57 @@ def test_no_legacy_wall_outputs_is_safe_noop():
     assert updated == original
     assert report["owner_count"] == 0
     assert report["status"] == "NO_LEGACY_WALL_OUTPUTS"
+
+
+@pytest.mark.parametrize("case", ["S6-417-407-2069-H25", "S6-941-407-2069-H25"])
+def test_public_s6_c_input_wall_producers_and_consumers(case):
+    """Proof against public immutable S6 C input bytes, not hand-built fixtures.
+
+    This is a P0 scratch transformation of the archived *input text* only.
+    Historical B/C archives, private kinetic files and solver are not touched.
+    """
+    packed_path = (ROOT / "experiments/Issue493_s6_boltzmann/"
+                   "public_p2_decks.tar.xz.b64")
+    packed = base64.b64decode(packed_path.read_text().encode("ascii"))
+    assert hashlib.sha256(packed).hexdigest() == (
+        "9e801cc6dca3860750b7b97fb6ceca8e6060a3c894dd616cbaf688f529fea240"
+    )
+    staged = {}
+    b_before = {}
+    with tarfile.open(fileobj=io.BytesIO(packed), mode="r:xz") as archive:
+        for member in archive.getmembers():
+            if not member.isfile() or not member.name.endswith(".i"):
+                continue
+            if member.name.startswith(case + "/C/"):
+                extracted = archive.extractfile(member)
+                assert extracted is not None
+                staged[Path(member.name).name] = extracted.read().decode("utf-8")
+            elif member.name.startswith(case + "/B/"):
+                extracted = archive.extractfile(member)
+                assert extracted is not None
+                b_before[member.name] = extracted.read()
+    assert len(staged) == 11, sorted(staged)
+    assert len(b_before) == 10
+    originals = {name: value.encode("utf-8") for name, value in staged.items()}
+    updated, audit = stage.canonicalize_staged_wall_inputs(staged)
+    assert audit["owner_count"] == 4, audit
+    assert {x["species_id"] for x in audit["wall_material_owners"]} == {
+        "O2p", "Om", "Op", "e"
+    }
+    joined = "\n".join(updated.values())
+    assert "species_id = O2p" in joined
+    assert "species_id = Om" in joined
+    assert "species_id = Op" in joined
+    assert "species_id = e" in joined
+    for name in ("O2p_wall_number_flux", "Om_wall_number_flux",
+                 "Op_wall_number_flux", "e_wall_number_flux"):
+        assert name in joined
+    for old in stage._WALL_KNOWN_LEGACY:
+        assert old not in joined
+    assert audit["consumer_and_reference_replacements"]
+    assert audit["P3"] == "NOT_RUN" and audit["science"] == "SCIENCE_HOLD"
+    # The entire public B archive is kept in its original bytes, and all
+    # archived C sources are only read as immutable inputs to the in-memory transform.
+    assert all(staged[name].encode("utf-8") == original
+               for name, original in originals.items())
+    assert all(b_before[name] for name in b_before)
