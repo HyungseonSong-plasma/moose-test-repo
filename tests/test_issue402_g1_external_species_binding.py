@@ -103,6 +103,9 @@ def test_continuity_e_time_is_generated_from_existing_species_without_new_option
     assert 'if (!isParamValid("fem_potential"))' in source
     assert 'params.addParam<bool>("generate_time"' not in source
     assert "FEMLogMolarTimeDerivative::computeQpResidual()" in kernel
+    fixture = (CASE / "valid_generated_transport_options.i").read_text()
+    assert "type = Transient" in fixture
+    assert "num_steps = 1" in fixture
     for old in ("PhysicsFEMLogMolarTimeDerivative", "PhysicsFEMLogMolarDriftDiffusion", "PhysicsFEMLogMolarElectronJouleHeating"):
         assert old not in kernel
     assert "(exp(_u[_qp]) - exp(_u_old[_qp])) / _dt" in kernel
