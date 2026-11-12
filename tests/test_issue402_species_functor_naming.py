@@ -84,8 +84,9 @@ def test_p2_wiring_for_two_species_and_electron_and_negative_mutation():
     assert "solve = false" in deck
     assert "kernel_coverage_check = false" in deck
     assert "canonical_species_names = true" in deck
-    for species in ("O2p", "Op"):
+    for species in ("O2p", "Om", "Op"):
         _assert_wall_wiring(deck, species)
+    assert "charge_number = -1" in _block(deck, "Om_wall")
     electron = _block(deck, "electron_wall")
     assert "type = PhysicsElectronWallFluxMaterial" in electron
     assert "species_id = e" in electron
@@ -100,6 +101,17 @@ def test_p2_wiring_for_two_species_and_electron_and_negative_mutation():
     else:
         raise AssertionError("Species-swapped wall Functor was not rejected")
 
+
+    # Negative control: swapping the negative ion BC to a positive-ion
+    # source must not pass even when both Functors are defined.
+    miswired = deck.replace("functor = Om_wall_number_flux",
+                            "functor = O2p_wall_number_flux", 1)
+    try:
+        _assert_wall_wiring(miswired, "Om")
+    except AssertionError:
+        pass
+    else:
+        raise AssertionError("Negative-ion wall BC accepted O2p source")
 
 def test_no_immutable_s6_archive_or_global_dd_name_changes():
     dd = source("physics_app/src/materials/DDMaterial.C")
