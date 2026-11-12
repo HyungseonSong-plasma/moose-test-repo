@@ -122,6 +122,20 @@ echo "PLASMA_JSON_FUNCTOR_TRANSPORT_GENERATION_P2_PASS"
 native --check-input -i "$PILOT/charge_core_ddmaterial_owner_p2.i" \
   2>&1 | tee "$EVIDENCE/charge_core_ddmaterial_owner_p2.log"
 echo "PLASMA_DDMATERIAL_ION_COEFFICIENT_SINGLE_OWNER_P2_PASS"
+
+# Retired charge-transport assembler must not remain factory-registered.
+set +e
+native --check-input -i "$PILOT/invalid_retired_charge_material_p2.i" \
+  > "$EVIDENCE/invalid_retired_charge_material_p2.log" 2>&1
+retired_charge_status=$?
+set -e
+if [[ "$retired_charge_status" -eq 0 ]] || \
+   ! grep -Fq "PlasmaChargeTransportMaterial" "$EVIDENCE/invalid_retired_charge_material_p2.log"; then
+  echo "::error::Retired charge transport factory type unexpectedly accepted" >&2
+  cat "$EVIDENCE/invalid_retired_charge_material_p2.log" >&2
+  exit 30
+fi
+echo "PLASMA_RETIRED_CHARGE_ASSEMBLER_REJECTED"
 # Only Material logic may derive canonical mobility/diffusivity names.
 set +e
 native --check-input -i "$PILOT/invalid_json_functor_name_override_p2.i" \
