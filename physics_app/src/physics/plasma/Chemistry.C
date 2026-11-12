@@ -185,13 +185,12 @@ parseDDTransport(const Json & value, const std::string & file)
       if (value.contains(excluded))
         fail(file, std::string("constant transport forbids ") + excluded);
   }
-  else if (result.model == "constants")
+  else if (result.model == "functor")
   {
-    // JSON model=constants reuses the canonical, existing species coefficient
-    // Functors published upstream. It is NOT the numerical constant mode;
-    // model=constant with explicit values is distinct.
+    // model=functor reuses the existing canonical species coefficient AD Functors.
+    // Numeric physical constants remain model=constant with explicit mu and D.
     if (value.size() != 1)
-      fail(file, "constants transport accepts only model; DDMaterial derives "
+      fail(file, "functor transport accepts only model; DDMaterial derives "
                  "<species>_mobility and <species>_diffusivity.");
   }
   else if (result.model == "lookup")
@@ -220,7 +219,7 @@ parseDDTransport(const Json & value, const std::string & file)
       fail(file, "physical transport does not accept reduced-table density inputs");
   }
   else
-    fail(file, "transport model must be 'lookup', 'constant' or 'constants'");
+    fail(file, "transport model must be 'lookup', 'constant' or 'functor'");
   return result;
 }
 

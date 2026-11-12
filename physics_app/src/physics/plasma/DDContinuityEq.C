@@ -342,11 +342,10 @@ DDContinuityEq::addFunctorMaterials()
     const std::string type = "DDMaterial";
     auto params = getFactory().getValidParams(type);
     params.set<std::string>("species_id") = id;
-    // Backend-facing JSON "constants" means reuse the existing canonical
-    // species Functors; DDMaterial's underlying MOOSE mode is "functor".
-    // Numeric coefficients remain model="constant" with explicit values.
-    params.set<MooseEnum>("model") =
-        config->model == "constants" ? "functor" : config->model;
+    // The backend and DDMaterial share lookup/constant/functor modes.
+    // "functor" consumes canonical species-owned AD coefficient providers;
+    // "constant" requires explicit numerical coefficients in the JSON.
+    params.set<MooseEnum>("model") = config->model;
     if (id == "e")
       params.set<bool>("fluid_energy") = mechanism.fluidElectronEnergyTransport();
     if (config->model == "constant")
@@ -354,7 +353,7 @@ DDContinuityEq::addFunctorMaterials()
       params.set<Real>("mobility") = config->mobility;
       params.set<Real>("diffusivity") = config->diffusivity;
     }
-    else if (config->model == "constants")
+    else if (config->model == "functor")
     {
       // DDMaterial derives the existing canonical species Functor names.
       // No source-name overrides are passed from the generated JSON.
