@@ -34,14 +34,17 @@ provider and prove it does not change FV face-flux semantics.
 - **Legacy FV**: a separately generated `poisson_charge_source` is
   consumed by `FVCoupledForce` (e.g. historical Issue1 self-consistent
   2D input). The new charge-density Material can supply that Functor.
-- **Current FEM `PoissonEq`**: `charge_source_material` is an optional
-  `MaterialPropertyName` and activates a `MatBodyForce` plus `Diffusion`
-  pair for the existing `fem_potential` variable. This path does **not**
-  consume the `poisson_charge_source` AD Functor automatically.
-  With no `charge_source_material`, the Physics reuses/creates the
-  potential state only; it does not generate a sourced Poisson equation.
-  An explicit FE Material Property producer or a separately validated
-  Functor-to-FE source adapter is required for that activation.
+- **Current FEM `PoissonEq`**: `charge_source_functor` is an optional
+  AD `MooseFunctorName`. When explicitly set to `poisson_charge_source`,
+  Physics generates `Diffusion` + `FunctorKernel` with
+  `functor_on_rhs=true`, directly consuming the existing charge-density
+  Material Functor. This is the same scaled RHS convention
+  (`charge_density / eps_0`) as the FV path. The old optional
+  `charge_source_material` `MaterialPropertyName` remains compatible
+  via `MatBodyForce`, but the two source modes are mutually exclusive.
+  Without either source, Physics only binds/creates the potential state
+  and does not generate the Poisson PDE. The charge-density provider
+  must actually be declared in the input; a name alone is not a producer.
 
 ## Pending acceptance gates
 
@@ -52,7 +55,9 @@ provider and prove it does not change FV face-flux semantics.
    any legacy material type tokens; all physical source names are preserved
    in archives. Missing canonical ion bridges must fail closed.
 3. Verify FE/FV Poisson RHS **source, scale, sign and solver ownership**;
-   do not treat Functor publication as automatic FEM Poisson wiring.
+   the new FEM `charge_source_functor` path is explicit and must pass
+   exact-head Native P2. Do not infer connection merely from publishing
+   a Functor without declaring the `[Poisson]` option.
 4. FV face drift, diffusion, heavy correction, species/charge conservation
    and AD Jacobian comparison before scientific equivalence claims.
 5. Operator-authorized P3 is separate: `SCIENCE_HOLD / P3 NOT_RUN / no merge`.

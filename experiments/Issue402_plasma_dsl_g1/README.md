@@ -26,9 +26,10 @@ lookup/constant replacement exists; it does not calculate coefficients.
 The redundant `PlasmaChargeTransportMaterial` is now retired;
 `PhysicsPlasmaChargeDensityMaterial` owns charge density and FV Poisson
 Functors, while the FV/FEM Kernels own face/volume drift and correction.
-Current `PoissonEq` FEM requires a separate `charge_source_material`
-Material Property and is **not** automatically wired to the FV charge
-Functor. Do not change original heavy-ion coefficients, invent an Einstein
+Current `PoissonEq` FEM can consume the existing
+`poisson_charge_source` via explicit `charge_source_functor` and
+`FunctorKernel`; the old `charge_source_material` Material Property
+path is retained as a mutually exclusive compatibility option. Do not change original heavy-ion coefficients, invent an Einstein
 relation, or assume historical S6 P3 inputs are ready.
 
 See `docs/development/2026-11-12_issue402_dd_nv_material_consolidation.md`

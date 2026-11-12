@@ -1,7 +1,7 @@
 """Issue #402: removed charge-transport assembler and separated Poisson owners.
 
 These are source-ownership guards, not numerical Poisson parity evidence.
-FEM MatBodyForce consumes a MaterialPropertyName, not an AD Functor.
+FEM supports charge_source_functor via FunctorKernel, or legacy MatBodyForce.
 """
 from pathlib import Path
 
@@ -27,19 +27,23 @@ def test_charge_transport_assembler_is_retired_without_removing_charge_source():
     assert "functor = poisson_charge_source" in fixture
 
 
-def test_poisson_fem_material_property_is_not_the_fv_charge_functor():
+def test_poisson_fem_functor_and_legacy_property_are_distinct_rhs_modes():
     eq = (APP / "src/physics/plasma/PoissonEq.C").read_text()
     charge = (APP / "src/materials/PhysicsPlasmaChargeDensityMaterial.C").read_text()
     assert 'params.addParam<MaterialPropertyName>(' in eq
+    assert 'params.addParam<MooseFunctorName>(' in eq
     assert '"charge_source_material"' in eq
+    assert '"charge_source_functor"' in eq
     assert 'params.set<MaterialPropertyName>("material_property")' in eq
+    assert 'params.set<MooseFunctorName>("functor")' in eq
+    assert 'params.set<bool>("functor_on_rhs") = true;' in eq
     assert 'getProblem().addKernel(type, name() + "_charge_source", params);' in eq
     assert 'const std::string type = "MatBodyForce";' in eq
-    assert 'if (!isParamValid("charge_source_material"))' in eq
+    assert 'const std::string type = "FunctorKernel";' in eq
+    assert 'if (!isParamValid("charge_source_material") &&' in eq
+    assert 'isParamValid("charge_source_material") && isParamValid("charge_source_functor")' in eq
     assert 'addFunctorProperty<ADReal>(\n      "poisson_charge_source"' in charge
     assert "getProblem().addFunctorMaterial(" not in eq
-    # A typed FE MaterialProperty adapter is still needed if PoissonEq
-    # should automatically consume the charge-density AD Functor.
 
 
 def test_legacy_fv_poisson_source_is_wired_independently_of_old_assembler():

@@ -9,7 +9,7 @@ validation; `SCIENCE_HOLD`, P3 NOT_RUN.
 | --- | --- | --- |
 | `<ion>_mobility`, `<ion>_diffusivity` | `DDMaterial` via Native raw source forwarding, lookup, or numerical constants | `FEMLogMolarDriftDiffusion` references canonical species names. Native FV flux Kernels still read names explicitly specified in their original `.i` and must be rewired separately if needed |
 | `ion_number_density_<ion>` | `PhysicsPlasmaChargeDensityMaterial` | Charge bookkeeping, diagnostics, possibly ion-wall-flux components given explicit input binding; heavy FV transport does not consume the old output |
-| `charge_number_density`, `charge_density`, `poisson_charge_source` | `PhysicsPlasmaChargeDensityMaterial` | FV Poisson `FVCoupledForce` can consume `poisson_charge_source`; `PoissonEq` FEM has different MaterialProperty interface |
+| `charge_number_density`, `charge_density`, `poisson_charge_source` | `PhysicsPlasmaChargeDensityMaterial` | FV Poisson `FVCoupledForce`; new FEM `PoissonEq` `charge_source_functor` → `FunctorKernel` RHS, or retained legacy MaterialProperty → `MatBodyForce` |
 
 No C++ `PlasmaChargeTransportMaterial` implementation or factory alias
 remains. The three-ion positive P2 input
@@ -66,12 +66,14 @@ publishes the AD Functor `poisson_charge_source` =
 FV Poisson input explicitly sets `v = poisson_charge_source` on
 `FVCoupledForce`.
 
-`physics_app/src/physics/plasma/PoissonEq.C` instead accepts
-`charge_source_material` as `MaterialPropertyName`, with
-`MatBodyForce.material_property` and a FEM `Diffusion` Kernel.
-It does **not** build an adapter from the charge AD Functor, and
-omission of `charge_source_material` means no generated Poisson RHS.
-Retiring the old charge assembler cannot and does not close this gap.
+`physics_app/src/physics/plasma/PoissonEq.C` now also accepts the
+explicit `charge_source_functor = poisson_charge_source` and creates
+`Diffusion` + `FunctorKernel` with `functor_on_rhs=true`. The
+separate old `charge_source_material` (FE MaterialPropertyName) path
+remains supported via `MatBodyForce`, but both cannot be active.
+Either mode requires a correctly declared producer in the input.
+No source means no generated Poisson kernels; Native S6 Poisson is
+preserved independently when not declaring the Physics source.
 
 **Validation still required:** complete staged Native S6 P2; matching
 RHS signs/scaling and avoiding duplicate charge producers; FV face/AD
