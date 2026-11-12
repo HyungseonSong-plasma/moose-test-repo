@@ -11,7 +11,12 @@ PlasmaMechanismAction::validParams()
 
 PlasmaMechanismAction::PlasmaMechanismAction(const InputParameters & params)
   : Action(params),
-    _mechanism(getParam<std::vector<FileName>>("files"))
+    _mechanism([this]() {
+      std::vector<std::string> paths;
+      for (const auto & filename : getParam<std::vector<FileName>>("files"))
+        paths.emplace_back(filename);
+      return paths;
+    }())
 {
 }
 
