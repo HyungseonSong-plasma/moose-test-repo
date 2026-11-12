@@ -1,4 +1,5 @@
 #include "ContinuityEq.h"
+#include "PlasmaMechanism.h"
 
 #include <cctype>
 #include <set>
@@ -45,10 +46,6 @@ ContinuityEq::validParams()
       "fvm_species", {}, "Species using finite-volume variables.");
   params.addParam<VariableName>(
       "fem_potential", "Potential used by existing finite-element drift-diffusion kernels.");
-  params.addParam<std::vector<Real>>(
-      "fem_charge_numbers", "Signed charge numbers of finite-element species.");
-  params.addParam<std::vector<Real>>(
-      "fvm_charge_numbers", "Signed charge numbers of finite-volume species.");
   return params;
 }
 
@@ -78,48 +75,17 @@ ContinuityEq::ContinuityEq(const InputParameters & parameters)
         paramError("fvm_species", "Invalid species ID for automatic naming: ", species);
   }
 
-  const bool potential = isParamValid("fem_potential");
-  const bool fem_charges = isParamValid("fem_charge_numbers");
-  const bool fvm_charges = isParamValid("fvm_charge_numbers");
-
-  // The current generated FEM transport slice is activated only when a
-  // potential/charge binding is provided. Its transport Functor names are
-  // always derived from the species identifier, never user-supplied.
-  if (potential || fem_charges || fvm_charges)
+  // Charges are specified once in [Plasmas]/files, not by parallel per-species
+  // vectors. Keep this builder disabled in pure variable-binding check mode.
+  if (isParamValid("fem_potential"))
   {
-    if (!potential || !fem_charges || (!fvm.empty() && !fvm_charges))
-      paramError("fem_potential",
-                 "Provide fem_potential and FEM/FVM charge vectors together.");
     if (fem.empty())
-      paramError("fem_species", "The current generated transport Kernel requires FEM species.");
-
-    if (getParam<std::vector<Real>>("fem_charge_numbers").size() != fem.size() ||
-        (fvm_charges &&
-         getParam<std::vector<Real>>("fvm_charge_numbers").size() != fvm.size()))
-      paramError("fem_charge_numbers", "Charge vectors must match their FEM/FVM species lists.");
-
-    // This first generated slice only recognizes pinned S6 charge identities.
-    // Do not invent a scientific sign for an unregistered species.
-    auto verifyCharge = [this](const std::string & key, const std::string & species, Real charge) {
-      Real expected = 0;
-      if (species == "e" || species == "Om")
-        expected = -1;
-      else if (species == "O2p" || species == "Op")
-        expected = 1;
-      else
-        paramError(key, "No verified charged-species identity for: ", species);
-      if (charge != expected)
-        paramError(key, "Charge does not match verified species identity: ", species);
-    };
-    const auto & fe_charges = getParam<std::vector<Real>>("fem_charge_numbers");
-    for (std::size_t i = 0; i < fem.size(); ++i)
-      verifyCharge("fem_charge_numbers", fem[i], fe_charges[i]);
-    if (fvm_charges)
-    {
-      const auto & fv_charges = getParam<std::vector<Real>>("fvm_charge_numbers");
-      for (std::size_t i = 0; i < fvm.size(); ++i)
-        verifyCharge("fvm_charge_numbers", fvm[i], fv_charges[i]);
-    }
+      paramError("fem_species", "Generated FEM transport requires FEM species.");
+    const auto & mechanism = plasmaMechanism();
+    for (const auto & id : fem)
+      (void)mechanism.species(id);
+    for (const auto & id : fvm)
+      (void)mechanism.species(id);
   }
 }
 
@@ -135,6 +101,8 @@ ContinuityEq::checkIntegrity() const
     {
       requireUniqueFEKernel("FEMLogMolarTimeDerivative", variables[i]);
       requireUniqueFEKernel("FEMLogMolarDriftDiffusion", variables[i]);
+      if (chemistryEnabled() && plasmaMechanism().hasSpeciesSource(fem[i]))
+        requireUniqueFEKernel("FunctorKernel", variables[i]);
     }
 }
 
@@ -146,7 +114,7 @@ ContinuityEq::addFEKernels()
   const auto & species = getParam<std::vector<std::string>>("fem_species");
   const auto variables = resolvedContinuityVariables(
       species, getParam<std::vector<std::string>>("fvm_species"));
-  const auto & charges = getParam<std::vector<Real>>("fem_charge_numbers");
+  const auto & mechanism = plasmaMechanism();
   const std::string type = "FEMLogMolarDriftDiffusion";
   const std::string time_type = "FEMLogMolarTimeDerivative";
   for (std::size_t i = 0; i < species.size(); ++i)
@@ -167,10 +135,23 @@ ContinuityEq::addFEKernels()
     params.set<MooseFunctorName>("mobility") = species[i] + "_mobility";
     // The lower-level Kernel parameter is still called "diffusion".
     params.set<MooseFunctorName>("diffusion") = species[i] + "_diffusivity";
-    params.set<Real>("charge_number") = charges[i];
+    params.set<Real>("charge_number") = mechanism.species(species[i]).charge_number;
     assignBlocks(params, _blocks);
     const std::string kernel_name = species[i] + "_transport";
     getProblem().addKernel(type, kernel_name, params);
+
+    // One source owner per species; each channel has a separate progress and
+    // signed coefficient inside the Chemistry-owned species source functor.
+    if (chemistryEnabled() && mechanism.hasSpeciesSource(species[i]))
+    {
+      const std::string source_type = "FunctorKernel";
+      auto source_params = getFactory().getValidParams(source_type);
+      source_params.set<NonlinearVariableName>("variable") = variables[i];
+      source_params.set<MooseFunctorName>("functor") = "S_" + species[i] + "_molar";
+      source_params.set<bool>("functor_on_rhs") = true;
+      assignBlocks(source_params, _blocks);
+      getProblem().addKernel(source_type, species[i] + "_source", source_params);
+    }
   }
 }
 
