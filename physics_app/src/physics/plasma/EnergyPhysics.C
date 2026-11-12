@@ -1,4 +1,5 @@
 #include "EnergyPhysics.h"
+#include "PlasmaMechanism.h"
 
 namespace Plasma
 {
@@ -46,20 +47,38 @@ EnergyPhysics::checkIntegrity() const
                                    {getParam<VariableName>("variable")});
   if (isParamValid("rf_heating_material"))
     requireUniqueFEKernel("MatBodyForce", getParam<VariableName>("variable"));
+  if (chemistryEnabled() && plasmaMechanism().hasElectronEnergySource())
+    requireUniqueFEKernel("FunctorKernel", getParam<VariableName>("variable"));
 }
 
 void
 EnergyPhysics::addFEKernels()
 {
-  if (!isParamValid("rf_heating_material"))
-    return;
-  const std::string type = "MatBodyForce";
-  auto params = getFactory().getValidParams(type);
-  params.set<NonlinearVariableName>("variable") = getParam<VariableName>("variable");
-  params.set<MaterialPropertyName>("material_property") =
-      getParam<MaterialPropertyName>("rf_heating_material");
-  assignBlocks(params, _blocks);
-  getProblem().addKernel(type, name() + "_rf_heating", params);
+  const auto variable = getParam<VariableName>("variable");
+  if (isParamValid("rf_heating_material"))
+  {
+    const std::string type = "MatBodyForce";
+    auto params = getFactory().getValidParams(type);
+    params.set<NonlinearVariableName>("variable") = variable;
+    params.set<MaterialPropertyName>("material_property") =
+        getParam<MaterialPropertyName>("rf_heating_material");
+    assignBlocks(params, _blocks);
+    getProblem().addKernel(type, name() + "_rf_heating", params);
+  }
+
+  if (chemistryEnabled() && plasmaMechanism().hasElectronEnergySource())
+  {
+    // Chemistry's Q_e_molar_eV is already signed: -12.4*R405 - 17*R406.
+    // Do not change this sign or add an implicit electron-energy unit factor.
+    const std::string type = "FunctorKernel";
+    auto params = getFactory().getValidParams(type);
+    params.set<NonlinearVariableName>("variable") = variable;
+    params.set<MooseFunctorName>("functor") = "Q_e_molar_eV";
+    params.set<bool>("functor_on_rhs") = true;
+    assignBlocks(params, _blocks);
+    getProblem().addKernel(type, name() + "_chemistry_energy", params);
+  }
+
 }
 
 }
