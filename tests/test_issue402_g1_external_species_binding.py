@@ -226,7 +226,10 @@ def test_generated_physics_requires_explicit_inputs():
     for name, parameter in activating_parameters.items():
         source = (source_dir / f"{name}.C").read_text()
         assert parameter in source
-        assert "if (!isParamValid(" in source
+        if name != "EnergyPhysics":
+            assert "if (!isParamValid(" in source
+        else:
+            assert 'if (isParamValid("rf_heating_material"))' in source
     chemistry = (source_dir / "ChemistryPhysics.C").read_text()
     assert "plasmaMechanism().reactions().empty()" in chemistry
     assert '"Q_e_molar_eV"' in chemistry

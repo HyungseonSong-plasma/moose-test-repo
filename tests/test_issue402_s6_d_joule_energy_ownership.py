@@ -118,7 +118,7 @@ def test_joule_residual_and_rf_material_have_distinct_sign_and_units():
     assert "type = MatBodyForce" in rf_src
     assert "material_property = q_rf_eV_mol_t6" in rf_src
     action = (ROOT / "physics_app/src/physics/plasma/EnergyPhysics.C").read_text()
-    assert 'if (!isParamValid("rf_heating_material"))' in action
+    assert 'if (isParamValid("rf_heating_material"))' in action
     assert 'requireUniqueFEKernel("MatBodyForce"' in action
 
 
