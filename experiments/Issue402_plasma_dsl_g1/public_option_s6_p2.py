@@ -213,6 +213,66 @@ def canonicalize_staged_D_inputs(chemistry: Path, ordered: list[str]) -> dict:
     }
 
 
+
+# Historical archived decks retain old factory names only as provenance.
+# Rename the explicit type fields in disposable B/D scratch copies. No factory
+# aliases are installed by the application and no archived input is rewritten.
+RENAMED_FEM_KERNEL_TYPES = {
+    "PhysicsFEMLogMolarTimeDerivative": "FEMLogMolarTimeDerivative",
+    "PhysicsFEMLogMolarDriftDiffusion": "FEMLogMolarDriftDiffusion",
+    "PhysicsFEMLogMolarElectronJouleHeating": "FEMLogMolarElectronJouleHeating",
+}
+_FEM_TYPE_LINE = re.compile(
+    r"(?m)^(?P<indent>[ \\t]*type[ \\t]*=[ \\t]*)(?P<name>"
+    + "|".join(map(re.escape, RENAMED_FEM_KERNEL_TYPES))
+    + r")(?P<end>[ \\t]*\\r?$)"
+)
+
+
+def remap_staged_fem_types(chemistry: Path, ordered: list[str]) -> dict:
+    """Rebind only staged input type fields to registered canonical C++ classes."""
+    if len(ordered) not in (10, 11):
+        raise ValueError("Unexpected S6 input layer count for FEM type remap")
+    files = {}
+    writes = []
+    totals = dict.fromkeys(RENAMED_FEM_KERNEL_TYPES, 0)
+    for relative in ordered:
+        name = Path(relative).name
+        if name != relative.split("/")[-1] or not name.endswith(".i"):
+            raise ValueError("Unsafe S6 staged layer name")
+        path = chemistry / name
+        original = path.read_bytes()
+        counts = dict.fromkeys(RENAMED_FEM_KERNEL_TYPES, 0)
+
+        def replace_type(match):
+            old = match.group("name")
+            counts[old] += 1
+            return match.group("indent") + RENAMED_FEM_KERNEL_TYPES[old] + match.group("end")
+
+        updated = _FEM_TYPE_LINE.sub(replace_type, original.decode("utf-8"))
+        if _FEM_TYPE_LINE.search(updated):
+            raise ValueError("Unconverted archived FEM Kernel type remains")
+        for old, count in counts.items():
+            totals[old] += count
+        output = updated.encode("utf-8")
+        writes.append((path, output))
+        files[name] = {
+            "original_sha256": hashlib.sha256(original).hexdigest(),
+            "staged_sha256": hashlib.sha256(output).hexdigest(),
+            "type_replacements": {old: count for old, count in counts.items() if count},
+        }
+    if not any(totals.values()):
+        raise ValueError("Expected historical FEM Kernel types in staged S6 inputs")
+    for path, output in writes:
+        if path.read_bytes() != output:
+            path.write_bytes(output)
+    return {
+        "status": "STAGED_TYPES_RENAMED_WITHOUT_FACTORY_ALIASES",
+        "totals": totals,
+        "files": files,
+    }
+
+
 def check_source(expected_head: str, historical: Path, binary: Path) -> dict:
     if git_head(ROOT) != expected_head or git_head(historical) != HISTORICAL_SHA:
         raise ValueError("Candidate or historical Git source HEAD mismatch")
@@ -352,11 +412,13 @@ def execute(historical: Path, binary: Path, expected_head: str,
                             overlay.write_text(OVERLAY, encoding="utf-8")
                             if sha_file(overlay) != OVERLAY_SHA256:
                                 raise ValueError("Staged D sidecar SHA is incorrect")
+                        scratch_types = remap_staged_fem_types(staged / p2.CHEM, ordered)
                         log = evidence / f"S6_{label}_P2.log"
                         report["checks"][case][variant] = run_one(
                             binary, identity["binary_sha256"], staged, ordered,
                             log, timeout_seconds)
                         report["checks"][case][variant]["layers"] = len(ordered)
+                        report["checks"][case][variant]["scratch_fem_type_remap"] = scratch_types
                         if scratch_migration is not None:
                             report["checks"][case][variant]["scratch_migration"] = scratch_migration
                     except Exception as exc:

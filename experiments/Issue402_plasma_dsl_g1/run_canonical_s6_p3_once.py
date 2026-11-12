@@ -93,6 +93,8 @@ def run(case: str, historical: Path, expected_head: str,
         if sha(sidecar) != option.OVERLAY_SHA256:
             raise ValueError("P3_CANONICAL_OVERLAY_SHA_MISMATCH")
         status["scratch_migration"] = migration
+        status["scratch_fem_type_remap"] = option.remap_staged_fem_types(
+            staged / option.p2.CHEM, ordered)
         status["sidecar_sha256"] = sha(sidecar)
         p2 = option.run_one(binary, identity["binary_sha256"], staged, ordered,
                             output / "native_P2.log", timeout_seconds=1200)
