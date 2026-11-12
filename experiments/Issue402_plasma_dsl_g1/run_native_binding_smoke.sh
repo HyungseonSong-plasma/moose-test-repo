@@ -115,6 +115,12 @@ echo "PLASMA_JSON_TRANSPORT_GENERATION_P2_PASS"
 native --check-input -i "$PILOT/valid_json_generated_functor.i" \
   2>&1 | tee "$EVIDENCE/json_generated_functor_check.log"
 echo "PLASMA_JSON_FUNCTOR_TRANSPORT_GENERATION_P2_PASS"
+# One strict owner per canonical ion coefficient: DDMaterial provides all
+# species aliases, legacy charged-transport Material retains derived rho*D,
+# number density, E and drift diagnostics but cannot republish mu/D.
+native --check-input -i "$PILOT/charge_core_ddmaterial_owner_p2.i" \
+  2>&1 | tee "$EVIDENCE/charge_core_ddmaterial_owner_p2.log"
+echo "PLASMA_DDMATERIAL_ION_COEFFICIENT_SINGLE_OWNER_P2_PASS"
 # Only Material logic may derive canonical mobility/diffusivity names.
 set +e
 native --check-input -i "$PILOT/invalid_json_functor_name_override_p2.i" \
