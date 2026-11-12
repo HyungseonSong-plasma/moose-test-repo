@@ -190,6 +190,7 @@ parseDDTransport(const Json & value, const std::string & file)
     result.mobility_source = requiredText(value, "mobility_source", file);
     result.diffusivity_source = requiredText(value, "diffusivity_source", file);
     for (const auto * excluded : {"mobility", "diffusivity", "table_file", "coordinate",
+                                   "mean_energy",
                                    "table_units", "pressure", "gas_temperature",
                                    "bounds_policy"})
       if (value.contains(excluded))
@@ -201,7 +202,10 @@ parseDDTransport(const Json & value, const std::string & file)
         value.contains("mobility_source") || value.contains("diffusivity_source"))
       fail(file, "lookup transport forbids constant or Functor coefficient inputs");
     result.table_file = resolveDataFile(requiredText(value, "table_file", file), file);
-    result.coordinate = requiredText(value, "coordinate", file);
+    // Lookup always uses the canonical solved electron mean-energy Functor:
+    // mean_en_solved. The JSON schema must not expose its coordinate name.
+    if (value.contains("coordinate") || value.contains("mean_energy"))
+      fail(file, "DD lookup coordinate is implicit: mean_en_solved; do not specify coordinate.");
     result.table_units = requiredText(value, "table_units", file);
     if (result.table_units != "reduced" && result.table_units != "physical")
       fail(file, "lookup table_units must be 'reduced' or 'physical'");
@@ -253,7 +257,7 @@ DDTransportRecord::equals(const DDTransportRecord & rhs) const
 {
   return model == rhs.model && mobility == rhs.mobility && diffusivity == rhs.diffusivity &&
          mobility_source == rhs.mobility_source && diffusivity_source == rhs.diffusivity_source &&
-         table_file == rhs.table_file && coordinate == rhs.coordinate &&
+         table_file == rhs.table_file &&
          table_units == rhs.table_units && pressure == rhs.pressure &&
          gas_temperature == rhs.gas_temperature && bounds_policy == rhs.bounds_policy;
 }
@@ -344,6 +348,20 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
           fail(file, "transport_coefficients.drift_diffusion must be an object");
         for (auto it = owners.begin(); it != owners.end(); ++it)
         {
+          if (it.key() == "e_energy")
+          {
+            // This is a closure selector, not a separate particle DD
+            // Material and not a Chemistry reaction species.
+            const auto & energy = it.value();
+            if (!energy.is_object() || energy.size() != 1 ||
+                !energy.contains("type") || !energy.at("type").is_string() ||
+                energy.at("type").get<std::string>() != "fluid")
+              fail(file, "e_energy transport requires exactly {\"type\":\"fluid\"}.");
+            if (_fluid_electron_energy_transport)
+              fail(file, "duplicate e_energy transport closure owner");
+            _fluid_electron_energy_transport = true;
+            continue;
+          }
           const auto record = parseDDTransport(it.value(), file);
           const auto previous = _dd_transport.find(it.key());
           if (previous == _dd_transport.end())
@@ -418,6 +436,9 @@ ChemistryData::ChemistryData(const std::vector<std::string> & files)
     if (!equation_ids.empty())
       fail(file, "equation without matching reaction ID: " + *equation_ids.begin());
   }
+  if (_fluid_electron_energy_transport && _dd_transport.find("e") == _dd_transport.end())
+    fail("<merged plasma mechanism>",
+         "e_energy type=fluid requires an electron e drift_diffusion transport record");
   for (const auto & [id, config] : _dd_transport)
     if (_species.find(id) == _species.end())
       fail("<merged plasma mechanism>", "transport_coefficients references unknown species: " + id);

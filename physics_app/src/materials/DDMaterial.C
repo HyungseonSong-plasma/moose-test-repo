@@ -30,7 +30,13 @@ DDMaterial::validParams()
                             "Deprecated lookup filename accepted for historical MOOSE inputs.");
   params.addParam<MooseFunctorName>("coordinate", "Lookup coordinate Functor.");
   params.addParam<MooseFunctorName>("mean_energy",
-                                    "Historical lookup coordinate; mean electron energy [eV].");
+                                    "Legacy direct-input coordinate alias; JSON always uses mean_en_solved.");
+  params.addParam<bool>(
+      "fluid_energy",
+      true,
+      "Enable 5/3 electron energy transport from the same particle mobility "
+      "and diffusivity. Direct Material inputs retain historical true; "
+      "Physics/JSON sets this from e_energy.type=fluid.");
   params.addParam<MooseEnum>("table_units", MooseEnum("reduced physical", "reduced"),
                              "Reduced values mu*N_n/D*N_n or physical mu/D.");
   params.addParam<MooseFunctorName>("pressure", "Neutral-gas pressure [Pa] for reduced tables.");
@@ -68,10 +74,13 @@ DDMaterial::DDMaterial(const InputParameters & parameters)
       paramError("model", "Functor mode requires mobility_source and diffusivity_source.");
     const auto mu = getParam<MooseFunctorName>("mobility_source");
     const auto diffusion = getParam<MooseFunctorName>("diffusivity_source");
-    if (mu == _species + "_mobility" || diffusion == _species + "_diffusivity" ||
-        (_species == "e" && (mu == "electron_mobility" ||
-                             diffusion == "electron_diffusion")))
-      paramError("model", "Functor mode may not consume its own published coefficients.");
+    // Canonical external source names are supported, but the same name must
+    // never be published again by this Material: Native keeps ownership.
+    // Legacy electron_* output aliases are always produced here and cannot
+    // be used as their own inputs.
+    if (_species == "e" && (mu == "electron_mobility" ||
+                            diffusion == "electron_diffusion"))
+      paramError("model", "Functor mode may not consume its own electron aliases.");
     for (const char * name : {"mobility", "diffusivity", "table_file", "property_table_file",
                               "coordinate", "mean_energy", "pressure", "gas_temperature"})
       if (isParamValid(name))
@@ -91,9 +100,14 @@ DDMaterial::DDMaterial(const InputParameters & parameters)
       paramError("table_file", "Specify exactly one table_file or property_table_file.");
     const bool coordinate = isParamValid("coordinate");
     const bool mean_energy = isParamValid("mean_energy");
-    if (coordinate == mean_energy)
-      paramError("coordinate", "Specify exactly one coordinate or mean_energy Functor.");
-    _coordinate = &getFunctor<ADReal>(coordinate ? "coordinate" : "mean_energy");
+    if (coordinate && mean_energy)
+      paramError("coordinate", "Specify at most one legacy coordinate or mean_energy Functor.");
+    // The stable backend JSON convention uses solved mean energy without a
+    // user-configurable coordinate field. Historical direct .i inputs may
+    // still provide an explicit coordinate for backward compatibility.
+    _coordinate = coordinate ? &getFunctor<ADReal>("coordinate") :
+                  mean_energy ? &getFunctor<ADReal>("mean_energy") :
+                                &getFunctorByName<ADReal>("mean_en_solved");
     const auto & filename = new_file ? getParam<FileName>("table_file") :
                                        getParam<FileName>("property_table_file");
     _table = std::make_unique<PhysicsLookupTable1D>(filename, 1, std::vector<std::size_t>{2, 3});
@@ -133,8 +147,17 @@ DDMaterial::DDMaterial(const InputParameters & parameters)
   const auto particle_D = [this](const auto & r, const auto & state) -> ADReal
   { return diffusivity(r, state); };
 
-  addFunctorProperty<ADReal>(_species + "_mobility", particle_mu);
-  addFunctorProperty<ADReal>(_species + "_diffusivity", particle_D);
+  // When the source already has the canonical species name, its original
+  // Native producer retains ownership; re-registering it would duplicate
+  // a Functor name or form a self-reference cycle.
+  const bool external_mobility =
+      _functor && getParam<MooseFunctorName>("mobility_source") == _species + "_mobility";
+  const bool external_diffusivity =
+      _functor && getParam<MooseFunctorName>("diffusivity_source") == _species + "_diffusivity";
+  if (!external_mobility)
+    addFunctorProperty<ADReal>(_species + "_mobility", particle_mu);
+  if (!external_diffusivity)
+    addFunctorProperty<ADReal>(_species + "_diffusivity", particle_D);
 
   if (_species == "e")
   {
@@ -142,7 +165,17 @@ DDMaterial::DDMaterial(const InputParameters & parameters)
     // numerical closure, never an independently interpolated/coefficient source.
     addFunctorProperty<ADReal>("electron_mobility", particle_mu);
     addFunctorProperty<ADReal>("electron_diffusion", particle_D);
+    if (getParam<bool>("fluid_energy"))
+    {
     constexpr Real energy_factor = 5.0 / 3.0;
+    addFunctorProperty<ADReal>(
+        "e_energy_mobility",
+        [this, energy_factor](const auto & r, const auto & state) -> ADReal
+        { return energy_factor * mobility(r, state); });
+    addFunctorProperty<ADReal>(
+        "e_energy_diffusivity",
+        [this, energy_factor](const auto & r, const auto & state) -> ADReal
+        { return energy_factor * diffusivity(r, state); });
     addFunctorProperty<ADReal>(
         "electron_energy_mobility",
         [this, energy_factor](const auto & r, const auto & state) -> ADReal
@@ -151,6 +184,7 @@ DDMaterial::DDMaterial(const InputParameters & parameters)
         "electron_energy_diffusion",
         [this, energy_factor](const auto & r, const auto & state) -> ADReal
         { return energy_factor * diffusivity(r, state); });
+    }
 
     if (_lookup && _reduced)
     {

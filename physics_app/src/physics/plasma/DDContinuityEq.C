@@ -343,6 +343,8 @@ DDContinuityEq::addFunctorMaterials()
     auto params = getFactory().getValidParams(type);
     params.set<std::string>("species_id") = id;
     params.set<MooseEnum>("model") = config->model;
+    if (id == "e")
+      params.set<bool>("fluid_energy") = mechanism.fluidElectronEnergyTransport();
     if (config->model == "constant")
     {
       params.set<Real>("mobility") = config->mobility;
@@ -356,7 +358,6 @@ DDContinuityEq::addFunctorMaterials()
     else
     {
       params.set<FileName>("table_file") = config->table_file;
-      params.set<MooseFunctorName>("coordinate") = config->coordinate;
       params.set<MooseEnum>("table_units") = config->table_units;
       params.set<std::string>("bounds_policy") = config->bounds_policy;
       if (config->table_units == "reduced")

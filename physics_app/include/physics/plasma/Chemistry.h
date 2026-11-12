@@ -19,7 +19,6 @@ struct DDTransportRecord
   std::string table_file;
   std::string mobility_source;
   std::string diffusivity_source;
-  std::string coordinate;
   std::string table_units;
   std::string pressure;
   std::string gas_temperature;
@@ -76,12 +75,14 @@ public:
   bool hasElectronEnergySource() const;
   const DDTransportRecord * ddTransport(const std::string & id) const;
   bool hasDDTransport() const { return !_dd_transport.empty(); }
+  bool fluidElectronEnergyTransport() const { return _fluid_electron_energy_transport; }
   const NVTransportRecord * nvTransport() const;
 
 private:
   std::map<std::string, SpeciesRecord> _species;
   std::vector<ReactionRecord> _reactions;
   std::map<std::string, DDTransportRecord> _dd_transport;
+  bool _fluid_electron_energy_transport = false;
   std::unique_ptr<NVTransportRecord> _nv_transport;
 };
 
