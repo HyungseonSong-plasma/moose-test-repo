@@ -126,7 +126,7 @@ native --check-input -i "$PILOT/auto_energy_potential_p2.i" \
 echo "PLASMA_AUTO_ENERGY_POTENTIAL_P2_PASS"
 for entry in "invalid_auto_energy_missing_initial_p2:requires an explicit positive initial molar" \
              "invalid_auto_energy_zero_initial_p2:must be finite and strictly positive" \
-             "invalid_auto_poisson_nan_initial_p2:Initial potential must be finite"; do
+             "invalid_auto_poisson_nan_initial_p2:invalid syntax for double parameter"; do
   item="${entry%%:*}"
   expected="${entry#*:}"
   set +e

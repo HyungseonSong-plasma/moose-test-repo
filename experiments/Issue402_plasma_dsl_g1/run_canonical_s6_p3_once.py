@@ -14,6 +14,7 @@ import json
 import os
 from pathlib import Path
 import shlex
+import shutil
 import subprocess
 import sys
 
@@ -144,7 +145,6 @@ def run(case: str, historical: Path, expected_head: str,
         status["canonical_fields"] = verify_canonical_exodus(exodus)
         published_exodus = results / "plasma.e"
         published_csv = results / "plasma.csv"
-        import shutil
         shutil.copyfile(exodus, published_exodus)
         shutil.copyfile(csv_file, published_csv)
         status["P3"] = "PASS"
