@@ -30,7 +30,7 @@ def sha(path: Path) -> str:
     return option.sha_file(path)
 
 
-def verify_canonical_exodus(exodus: Path) -> dict:
+def verify_canonical_exodus(exodus: Path, *, require_energy: bool = False) -> dict:
     """Require the new solver to emit canonical fields, not archived aliases."""
     import numpy as np
     from scipy.io import netcdf_file
@@ -45,6 +45,8 @@ def verify_canonical_exodus(exodus: Path) -> dict:
         for expected, archived in (("log_e", "log_ne"),):
             if names.count(expected) != 1 or archived in names:
                 raise ValueError("P3_NONCANONICAL_ELECTRON_STATE")
+        if require_energy and (names.count("log_e_energy") != 1 or "log_energy" in names):
+            raise ValueError("P3_NONCANONICAL_ELECTRON_ENERGY_STATE")
         for expected, archived in (("log_O2p", "log_ni"),
                                    ("log_Om", "log_nm"),
                                    ("log_Op", "log_nop")):
@@ -59,7 +61,7 @@ def verify_canonical_exodus(exodus: Path) -> dict:
 
 
 def run(case: str, historical: Path, expected_head: str,
-        output: Path, timeout_seconds: int) -> dict:
+        output: Path, timeout_seconds: int, *, chemistry_mode: bool = False) -> dict:
     if case not in option.CASES or not (600 <= timeout_seconds <= 19800):
         raise ValueError("P3_INVALID_CASE_OR_BUDGET")
     if output.exists():
@@ -68,6 +70,7 @@ def run(case: str, historical: Path, expected_head: str,
     status = {
         "schema": "issue402_canonical_S6_D_P3_once_v1",
         "case": case, "arm": "D",
+        "physics_mode": "chemistry" if chemistry_mode else "transport_only",
         "source_sha": expected_head, "historical_sha": option.HISTORICAL_SHA,
         "oci_image": option.OCI,
         "P0": "NOT_RUN", "P1": "NOT_RUN", "P2": "NOT_RUN",
@@ -79,7 +82,8 @@ def run(case: str, historical: Path, expected_head: str,
     try:
         if option.git_head(ROOT) != expected_head:
             raise ValueError("P3_EXACT_MERGED_SOURCE_MISMATCH")
-        option.validate_overlay()
+        if not chemistry_mode:
+            option.validate_overlay()
         option.p2.preflight(ROOT)
         binary = ROOT / "physics_app/physics-opt"
         identity = option.check_source(expected_head, historical, binary)
@@ -90,15 +94,27 @@ def run(case: str, historical: Path, expected_head: str,
         ordered = option.p2.stage(ROOT, historical, case, "C", staged, manifest)
         migration = option.canonicalize_staged_D_inputs(staged / option.p2.CHEM, ordered)
         sidecar = staged / option.p2.CHEM / "migrated_continuity.i"
-        # Same deterministic disposable mechanism copy used by public P2.
-        shutil.copy2(ROOT / "experiments/Issue402_plasma_dsl_g1/plasma_species_only.json",
-                     staged / option.p2.CHEM / "plasma_species_only.json")
-        sidecar.write_text(option.OVERLAY, encoding="utf-8")
-        if sha(sidecar) != option.OVERLAY_SHA256:
-            raise ValueError("P3_CANONICAL_OVERLAY_SHA_MISMATCH")
         status["scratch_migration"] = migration
         status["scratch_fem_type_remap"] = option.remap_staged_fem_types(
             staged / option.p2.CHEM, ordered)
+        if chemistry_mode:
+            from chemistry.prepare_s6_run_input import prepare
+            # Full source-owner cutover: remove nine superseded electron
+            # source Kernels, preserve the original public rate providers.
+            cutover = prepare(staged / option.p2.CHEM, ordered, case)
+            status["scratch_chemistry_cutover"] = cutover
+            status["active_reaction_ids"] = (
+                ["EI-02", "EI-17", "EI-415", "EI-401", "EI-407",
+                 "EI-2069", "H25", "EI-" + case])
+            if sha(sidecar) != cutover["overlay_sha256"]:
+                raise ValueError("P3_CHEMISTRY_OVERLAY_SHA_MISMATCH")
+        else:
+            # Earlier D transport-only experiment, not the Chemistry P3 arm.
+            shutil.copy2(ROOT / "experiments/Issue402_plasma_dsl_g1/plasma_species_only.json",
+                         staged / option.p2.CHEM / "plasma_species_only.json")
+            sidecar.write_text(option.OVERLAY, encoding="utf-8")
+            if sha(sidecar) != option.OVERLAY_SHA256:
+                raise ValueError("P3_CANONICAL_OVERLAY_SHA_MISMATCH")
         status["sidecar_sha256"] = sha(sidecar)
         p2 = option.run_one(binary, identity["binary_sha256"], staged, ordered,
                             output / "native_P2.log", timeout_seconds=1200)
@@ -142,7 +158,9 @@ def run(case: str, historical: Path, expected_head: str,
         if not exodus.is_file() or not csv_file.is_file():
             raise ValueError("P3_EXODUS_OR_CSV_MISSING")
         verify_native_csv(csv_file)
-        status["canonical_fields"] = verify_canonical_exodus(exodus)
+        status["canonical_fields"] = (
+            verify_canonical_exodus(exodus, require_energy=True)
+            if chemistry_mode else verify_canonical_exodus(exodus))
         published_exodus = results / "plasma.e"
         published_csv = results / "plasma.csv"
         shutil.copyfile(exodus, published_exodus)
@@ -154,6 +172,8 @@ def run(case: str, historical: Path, expected_head: str,
         p3_manifest.write_text(json.dumps({
             "schema": "issue493_public_p3_artifact_v1",
             "case": case, "arm": "D",
+            "physics_mode": "chemistry" if chemistry_mode else "transport_only",
+            "source_sha": expected_head, "oci_image": option.OCI,
             "P3": "PASS", "science": "SCIENCE_HOLD",
             "files": {
                 name: {"sha256": sha(results / name)}
@@ -167,7 +187,8 @@ def run(case: str, historical: Path, expected_head: str,
             vertical_reference=ref / "reference_vertical.csv",
             horizontal_reference=ref / "reference_horizontal.csv",
             output=results / "reference_comparison",
-            label=f"S6-{case}-D", time_us=100.0,
+            label=f"S6-{case}-D" + ("-Chemistry" if chemistry_mode else ""),
+            time_us=100.0,
         )
         status["P4"] = "DIAGNOSTIC_ONLY"
         status["reference_status"] = overlay["comparison_status"]
