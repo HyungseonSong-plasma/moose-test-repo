@@ -15,7 +15,6 @@ MAPPINGS = (
     ("ElectronTransportLookupMaterial", "DDMaterial"),
     ("PhysicsThermalDiffusionMaterial", "NVMaterial"),
     ("PhysicsPlasmaChargeTransportMaterial", "PlasmaChargeTransportMaterial"),
-    ("PhysicsSpeciesTransportAliasMaterial", "SpeciesTransportAliasMaterial"),
 )
 
 
@@ -64,10 +63,10 @@ def test_both_old_and_new_alias_types_exercised_by_native_p2_controls():
                    if isinstance(item, ast.Assign)
                    and any(isinstance(target, ast.Name) and target.id == "OVERLAY"
                            for target in item.targets))
-    assert overlay.count("type = SpeciesTransportAliasMaterial") == 3
-    assert "type = PhysicsSpeciesTransportAliasMaterial" not in overlay
+    assert overlay.count("type = DDMaterial") == 3
+    assert overlay.count("model = functor") == 3
     assert hashlib.sha256(overlay.encode()).hexdigest() == (
-        "14288d9f0686f26cde86888824babc468016ece99188114ded31b8e5bd360d9a"
+        "dcac4502c6bece4481651f97879699c27be994c97a6b09ad4443aca9c2edd544"
     )
     old_lookup = (BASE / "ci/electron_energy_transport_smoke.i").read_text()
     new_lookup = (BASE / "ci/electron_energy_lookup_response_smoke.i").read_text()
@@ -75,6 +74,8 @@ def test_both_old_and_new_alias_types_exercised_by_native_p2_controls():
     assert "type = DDMaterial" in new_lookup
     assert "model = lookup" in new_lookup
     assert (BASE / "src/materials/NVMaterial.C").is_file()
+    assert not (BASE / "src/materials/SpeciesTransportAliasMaterial.C").exists()
+    assert not (BASE / "include/materials/SpeciesTransportAliasMaterial.h").exists()
 
 
 def test_moose_physics_action_and_immutability_boundary_stay_separate():

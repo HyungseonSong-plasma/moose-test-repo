@@ -48,7 +48,7 @@ def test_dd_material_unifies_constant_and_lookup_with_electron_energy_projection
     src = text("physics_app/src/materials/DDMaterial.C")
     header = text("physics_app/include/materials/DDMaterial.h")
     assert 'registerMooseObject("PhysicsApp", DDMaterial);' in src
-    assert '"lookup constant"' in src
+    assert '"lookup constant functor"' in src
     assert '"mobility"' in src and '"diffusivity"' in src
     assert 'std::make_unique<PhysicsLookupTable1D>' in src
     assert '_species + "_mobility"' in src
@@ -87,6 +87,8 @@ def test_native_control_and_public_417_941_are_user_coefficient_free():
                    if isinstance(node, ast.Assign) and any(
                        isinstance(target, ast.Name) and target.id == "OVERLAY"
                        for target in node.targets))
+    assert overlay.count("type = DDMaterial") == 3
+    assert overlay.count("model = functor") == 3
     assert "mobility =" not in overlay and "diffusivity =" not in overlay
     assert "fem_species = 'e'" in overlay
     assert "fvm_species = 'O2p Om Op'" in overlay
@@ -97,7 +99,7 @@ def test_native_control_and_public_417_941_are_user_coefficient_free():
         assert f"mobility_source = {source}_mobility" in overlay
         assert f"diffusivity_source = {source}_diffusion" in overlay
     assert hashlib.sha256(overlay.encode()).hexdigest() == (
-        "14288d9f0686f26cde86888824babc468016ece99188114ded31b8e5bd360d9a"
+        "dcac4502c6bece4481651f97879699c27be994c97a6b09ad4443aca9c2edd544"
     )
     # Protected original P3 inputs and their native old provider spelling
     # remain outside this migration PR.

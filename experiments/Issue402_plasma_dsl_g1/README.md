@@ -20,7 +20,7 @@ classes. The old combined `ElectronClosureMaterial` type is retired.
 Electron state and mean-energy calculation is now separately owned by
 `PhysicsElectronMeanEnergyMaterial` when needed.
 
-`SpeciesTransportAliasMaterial` remains only for **existing nonconstant ion
+`DDMaterial (model=functor)` remains only for **existing nonconstant ion
 Functor providers** in pinned S6 C/D inputs until an independently verified
 lookup/constant replacement exists; it does not calculate coefficients.
 `PlasmaChargeTransportMaterial` remains a charged transport assembler,
@@ -265,7 +265,7 @@ new optional Physics blocks; do not edit the immutable historical P3 decks.
 The archived S6-417/941 heavy-ion coefficients originate in an existing
 `ADGenericFunctorMaterial`, not the modern charge-transport owner. The
 review-only new-option D overlay therefore instantiates three controlled
-`SpeciesTransportAliasMaterial` bridges: O2p from
+`DDMaterial (model=functor)` bridges: O2p from
 `ion_mobility/ion_diffusion`, Om from
 `negative_ion_mobility/negative_ion_diffusion`, and Op from
 `atomic_positive_ion_mobility/atomic_positive_ion_diffusion`.
@@ -489,7 +489,7 @@ remain untouched.
 The canonical C++ Material classes and their corresponding `.h` / `.C`
 files no longer carry the redundant `Physics` prefix:
 `ElectronClosureMaterial`, `ElectronTransportLookupMaterial`,
-`PlasmaChargeTransportMaterial`, and `SpeciesTransportAliasMaterial`.
+`PlasmaChargeTransportMaterial`, and `DDMaterial (model=functor)`.
 They remain registered under the existing `PhysicsApp` label. Each also
 registers its former `Physics*` MOOSE object type as a compatibility alias,
 so historical B/C decks and existing third-party inputs retain their exact

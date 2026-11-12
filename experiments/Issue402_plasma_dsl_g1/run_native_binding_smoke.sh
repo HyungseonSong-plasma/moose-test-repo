@@ -27,15 +27,14 @@ test -f physics_app/ci/plasma_direct_existing_materials_smoke.i
     physics_app/src/physics/plasma/DDEnergyEq.C \
     physics_app/src/physics/plasma/Chemistry.C \
     physics_app/include/physics/plasma/Chemistry.h \
-            physics_app/src/physics/plasma/PoissonEq.C \
+    physics_app/src/physics/plasma/PoissonEq.C \
     physics_app/src/physics/plasma/MaxwellPhysics.C physics_app/src/base/PhysicsApp.C \
     physics_app/src/materials/DDMaterial.C \
     physics_app/include/materials/DDMaterial.h \
     physics_app/src/materials/NVMaterial.C \
     physics_app/include/materials/NVMaterial.h \
     physics_app/src/materials/PlasmaChargeTransportMaterial.C \
-    physics_app/include/materials/SpeciesTransportAliasMaterial.h \
-    physics_app/src/materials/SpeciesTransportAliasMaterial.C
+
 } > "$EVIDENCE/provenance.txt"
 
 docker pull "$PINNED_BASE"
@@ -112,6 +111,10 @@ echo "PLASMA_OPTION_ONLY_FEM_GENERATION_P2_PASS"
 native --check-input -i "$PILOT/valid_json_generated_transport.i" \
   2>&1 | tee "$EVIDENCE/json_generated_transport_check.log"
 echo "PLASMA_JSON_TRANSPORT_GENERATION_P2_PASS"
+# AD-preserving DDMaterial model=functor generated directly from JSON.
+native --check-input -i "$PILOT/valid_json_generated_functor.i" \
+  2>&1 | tee "$EVIDENCE/json_generated_functor_check.log"
+echo "PLASMA_JSON_FUNCTOR_TRANSPORT_GENERATION_P2_PASS"
 
 # Density-paired species create their own FEM/FV variables and log-molar ICs.
 # These are parser/P2 checks only; no P3 or physical S6 run.

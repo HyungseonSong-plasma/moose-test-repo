@@ -44,19 +44,22 @@
     block = plasma
   []
   [O2p_species_transport_alias]
-    type = SpeciesTransportAliasMaterial
+    type = DDMaterial
+    model = functor
     species_id = O2p
     mobility_source = ion_mobility
     diffusivity_source = ion_diffusion
   []
   [Om_species_transport_alias]
-    type = SpeciesTransportAliasMaterial
+    type = DDMaterial
+    model = functor
     species_id = Om
     mobility_source = negative_ion_mobility
     diffusivity_source = negative_ion_diffusion
   []
   [Op_species_transport_alias]
-    type = SpeciesTransportAliasMaterial
+    type = DDMaterial
+    model = functor
     species_id = Op
     mobility_source = atomic_positive_ion_mobility
     diffusivity_source = atomic_positive_ion_diffusion

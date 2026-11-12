@@ -75,7 +75,6 @@ for old_type, new_type in (
     ("ElectronTransportLookupMaterial", "DDMaterial"),
     ("PhysicsThermalDiffusionMaterial", "NVMaterial"),
     ("PhysicsPlasmaChargeTransportMaterial", "PlasmaChargeTransportMaterial"),
-    ("PhysicsSpeciesTransportAliasMaterial", "SpeciesTransportAliasMaterial"),
 ):
     source = ROOT / "src/materials" / (new_type + ".C")
     header = ROOT / "include/materials" / (new_type + ".h")
@@ -87,6 +86,10 @@ for old_type, new_type in (
     assert f'registerMooseObjectAliased("PhysicsApp", {new_type}, "{old_type}");' in content
 
 print("RETIRED_PLASMA_CLOSURES_MATERIAL_CONTRACT: PASS")
+
+# SpeciesTransportAliasMaterial has been absorbed into DDMaterial functor mode.
+assert not (ROOT / "src/materials/SpeciesTransportAliasMaterial.C").exists()
+assert not (ROOT / "include/materials/SpeciesTransportAliasMaterial.h").exists()
 
 # The 6 retired transport-coefficient .h/.C implementations must not reappear.
 for old_name in ("ElectronTransportLookupMaterial", "ElectronClosureMaterial", "PhysicsThermalDiffusionMaterial",
