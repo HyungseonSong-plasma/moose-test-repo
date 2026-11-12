@@ -16,6 +16,9 @@
   [log_Op]
     type = MooseVariableFVReal
   []
+  [log_Om]
+    type = MooseVariableFVReal
+  []
   [log_e]
     type = MooseVariableFVReal
   []
@@ -23,17 +26,17 @@
 [FunctorMaterials]
   [controlled_inputs]
     type = ADGenericFunctorMaterial
-    prop_names = 'rho e_number_density w_O2p w_Op potential T_g mean_en_solved'
-    prop_values = '1 1e15 1e-6 1e-6 0 300 4'
+    prop_names = 'rho e_number_density w_O2p w_Om w_Op potential T_g mean_en_solved'
+    prop_values = '1 1e15 1e-6 1e-6 1e-6 0 300 4'
   []
   [charged_species_density]
     type = PhysicsPlasmaChargeDensityMaterial
     density = rho
     electron_density = e_number_density
-    ion_ids = 'O2p Op'
-    ion_mass_fractions = 'w_O2p w_Op'
-    ion_molar_masses = '0.032 0.016'
-    ion_charges = '1 1'
+    ion_ids = 'O2p Om Op'
+    ion_mass_fractions = 'w_O2p w_Om w_Op'
+    ion_molar_masses = '0.032 0.016 0.016'
+    ion_charges = '1 -1 1'
     canonical_species_names = true
   []
   [O2p_transport]
@@ -49,6 +52,13 @@
     model = constant
     mobility = 0.004
     diffusivity = 0.005
+  []
+  [Om_transport]
+    type = DDMaterial
+    species_id = Om
+    model = constant
+    mobility = 0.002
+    diffusivity = 0.003
   []
   [O2p_wall]
     type = PhysicsIonWallFluxMaterial
@@ -72,6 +82,17 @@
     molar_mass = 0.016
     sticking = 1
   []
+  [Om_wall]
+    type = PhysicsIonWallFluxMaterial
+    species_id = Om
+    ion_number_density = Om_number_density
+    potential = potential
+    mobility = Om_mobility
+    gas_temperature = T_g
+    charge_number = -1
+    molar_mass = 0.016
+    sticking = 1
+  []
   [electron_wall]
     type = PhysicsElectronWallFluxMaterial
     species_id = e
@@ -92,6 +113,13 @@
     type = FVFunctorNeumannBC
     variable = log_Op
     functor = Op_wall_number_flux
+    factor = -1.6605390671738466e-24
+    boundary = right
+  []
+  [Om_wall]
+    type = FVFunctorNeumannBC
+    variable = log_Om
+    functor = Om_wall_number_flux
     factor = -1.6605390671738466e-24
     boundary = right
   []
