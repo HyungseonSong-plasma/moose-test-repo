@@ -1,5 +1,5 @@
 #include "DDEnergyEq.h"
-#include "PlasmaMechanism.h"
+#include "Chemistry.h"
 
 namespace Plasma
 {

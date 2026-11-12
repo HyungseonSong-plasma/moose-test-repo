@@ -3,6 +3,8 @@
 #include "nlohmann/json.hpp"
 
 #include <cmath>
+#include <iomanip>
+#include <map>
 #include <fstream>
 #include <regex>
 #include <set>
@@ -249,11 +251,6 @@ ChemistryData::hasElectronEnergySource() const
 
 
 // Chemistry Physics generates signed source contributions from the validated catalogue.
-
-#include <iomanip>
-#include <map>
-#include <set>
-#include <sstream>
 
 namespace Plasma
 {

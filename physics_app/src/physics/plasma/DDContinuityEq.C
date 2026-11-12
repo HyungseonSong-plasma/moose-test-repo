@@ -1,5 +1,5 @@
 #include "DDContinuityEq.h"
-#include "PlasmaMechanism.h"
+#include "Chemistry.h"
 
 #include <cctype>
 #include <set>
