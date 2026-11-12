@@ -31,7 +31,6 @@
         "e": 1,
         "O2": 1
       },
-      "progress": "R_noop",
       "progress_units": "mol/(m^3 s)",
       "electron_energy_change_eV": {
         "model": "none"

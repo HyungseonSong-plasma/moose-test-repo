@@ -61,7 +61,6 @@
         "e": 1,
         "O2": 1
       },
-      "progress": "R_elastic_O2",
       "progress_units": "mol/(m^3 s)",
       "electron_energy_change_eV": {
         "model": "functor",
@@ -81,7 +80,6 @@
         "e": 1,
         "O": 1
       },
-      "progress": "R_elastic_O",
       "progress_units": "mol/(m^3 s)",
       "electron_energy_change_eV": {
         "model": "functor",
@@ -101,7 +99,6 @@
         "e": 2,
         "O2p": 1
       },
-      "progress": "R_ion_O2",
       "progress_units": "mol/(m^3 s)",
       "electron_energy_change_eV": -12.06,
       "provenance": {
@@ -118,7 +115,6 @@
         "Om": 1,
         "O": 1
       },
-      "progress": "R_EI401",
       "progress_units": "mol/(m^3 s)",
       "electron_energy_change_eV": 0,
       "provenance": {
@@ -135,7 +131,6 @@
         "e": 1,
         "O2a": 1
       },
-      "progress": "R_EI407",
       "progress_units": "mol/(m^3 s)",
       "electron_energy_change_eV": -0.977,
       "provenance": {
@@ -153,7 +148,6 @@
         "e": 1,
         "O": 2
       },
-      "progress": "R_EI2069",
       "progress_units": "mol/(m^3 s)",
       "electron_energy_change_eV": -5.02,
       "provenance": {
@@ -171,7 +165,6 @@
         "O": 1,
         "O2p": 1
       },
-      "progress": "R_H25",
       "progress_units": "mol/(m^3 s)",
       "electron_energy_change_eV": {
         "model": "none"
