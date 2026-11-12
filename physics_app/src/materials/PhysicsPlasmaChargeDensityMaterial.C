@@ -1,6 +1,7 @@
 #include "PhysicsPlasmaChargeDensityMaterial.h"
 #include "Physics.h"
 
+#include <cctype>
 #include <set>
 
 registerMooseObject("PhysicsApp", PhysicsPlasmaChargeDensityMaterial);
@@ -22,6 +23,8 @@ PhysicsPlasmaChargeDensityMaterial::validParams()
 
   params.addRequiredParam<std::vector<std::string>>(
       "ion_ids", "Solver-safe ion identifiers used in output functor names.");
+  params.addParam<bool>("canonical_species_names", false,
+                        "Publish <species>_number_density instead of the legacy ion_number_density_<species>.");
 
   params.addRequiredParam<std::vector<MooseFunctorName>>(
       "ion_mass_fractions", "Heavy-ion mass-fraction functors.");
@@ -57,6 +60,7 @@ PhysicsPlasmaChargeDensityMaterial::PhysicsPlasmaChargeDensityMaterial(
     mooseError("PhysicsPlasmaChargeDensityMaterial: all ion vectors must have "
                "the same length.");
 
+  const bool canonical_names = getParam<bool>("canonical_species_names");
   std::set<std::string> ids;
   _ion_mass_fractions.resize(n);
 
@@ -64,6 +68,15 @@ PhysicsPlasmaChargeDensityMaterial::PhysicsPlasmaChargeDensityMaterial(
   {
     if (!ids.insert(_ion_ids[i]).second)
       mooseError("Duplicate ion_id '", _ion_ids[i], "'.");
+    if (canonical_names)
+    {
+      const auto & id = _ion_ids[i];
+      if (id.empty() || !std::isalpha(static_cast<unsigned char>(id.front())))
+        paramError("ion_ids", "Canonical species ID must start with a letter.");
+      for (const auto ch : id)
+        if (!std::isalnum(static_cast<unsigned char>(ch)) && ch != '_')
+          paramError("ion_ids", "Canonical species ID must be alphanumeric or underscore.");
+    }
 
     if (_ion_molar_masses[i] <= 0.0)
       mooseError("Ion molar masses must be positive.");
@@ -74,7 +87,7 @@ PhysicsPlasmaChargeDensityMaterial::PhysicsPlasmaChargeDensityMaterial(
     const auto id = _ion_ids[i];
 
     addFunctorProperty<ADReal>(
-        "ion_number_density_" + id,
+        canonical_names ? id + "_number_density" : "ion_number_density_" + id,
         [this, i](const auto & r, const auto & state) -> ADReal
         {
           return _density(r, state) *
