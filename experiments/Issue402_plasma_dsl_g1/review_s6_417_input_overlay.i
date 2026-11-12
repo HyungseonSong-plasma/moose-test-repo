@@ -1,6 +1,6 @@
-# [DriftDiffusion]/[Continuity] builds DDMaterial for JSON species coefficients.
+# DriftDiffusion Continuity creates DDMaterial for JSON species coefficients.
 # Chemistry applies the minus sign to positive energy_loss_eV and native
-# delta_epsilon_EI02/EI17 Functors. No extra [FunctorMaterials] block.
+# delta_epsilon_EI02/EI17 Functors. No extra manually declared Material block.
 # Issue #402 S6-417 Chemistry cutover overlay; use ONLY with the staged S6
 # native layers after the listed legacy electron-particle and energy Kernels
 # have been removed in scratch. See chemistry/README.md; not a standalone deck.
