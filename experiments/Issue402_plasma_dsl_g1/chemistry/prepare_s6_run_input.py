@@ -84,6 +84,10 @@ _WALL_ION_PREFIX_TO_SPECIES = {
     "atomic_positive_": "Op",
     "negative_": "Om",
 }
+# Only explicitly verified electron-density public Functors may underlie
+# a canonical e_wall_* output. The historic S6 C input uses n_e_physical;
+# synthetic per-species fixtures use n_e or e_number_density.
+_WALL_ELECTRON_DENSITY_NAME_PROOF = {"n_e_physical", "n_e", "e_number_density"}
 _WALL_DENSITY_NAME_PROOF = {
     "O2p": {"n_O2p", "n_i", "n_i_physical", "O2p_number_density",
             "ion_number_density_O2p"},
@@ -181,6 +185,16 @@ def canonicalize_staged_wall_inputs(edits: dict[Path, str]) -> tuple[dict[Path, 
                 expected_charge = -1 if species == "Om" else 1
                 if not charge_field or float(charge_field.group(1)) != expected_charge:
                     raise ValueError("S6_WALL_CHARGE_IDENTITY_UNPROVED: " + species)
+            else:
+                electron_density_field = re.search(
+                    r"(?m)^    electron_density[ \\t]*=[ \\t]*([A-Za-z0-9_]+)[ \\t]*$",
+                    body)
+                observed_electron_density = (
+                    electron_density_field.group(1) if electron_density_field else "")
+                if observed_electron_density not in _WALL_ELECTRON_DENSITY_NAME_PROOF:
+                    raise ValueError(
+                        "S6_WALL_ELECTRON_DENSITY_IDENTITY_UNPROVED: " +
+                        observed_electron_density)
             for old, canonical in pairs.items():
                 if old in owners:
                     raise ValueError("S6_WALL_DUPLICATE_OUTPUT_OWNER: " + old)
