@@ -15,11 +15,11 @@
         "Op": 1,
         "O": 1
       },
-      "progress_units": "mol/(m^3 s)",
-      "electron_energy_change_eV": -17,
       "provenance": {
         "archive_layer": "issue477_S4-401-417_op_ionization_overlay.i"
-      }
+      },
+      "units": "mol/(m^3 s)",
+      "energy_loss_eV": 17
     }
   ]
 }

@@ -50,8 +50,8 @@
         "e": 2,
         "O2p": 1
       },
-      "progress_units": "mol/(m^3 s)",
-      "electron_energy_change_eV": -12.4
+      "units": "mol/(m^3 s)",
+      "energy_loss_eV": 12.4
     },
     {
       "id": "EI-406",
@@ -63,8 +63,8 @@
         "e": 2,
         "O2p": 1
       },
-      "progress_units": "mol/(m^3 s)",
-      "electron_energy_change_eV": -17
+      "units": "mol/(m^3 s)",
+      "energy_loss_eV": 17
     }
   ],
   "transport_coefficients": {

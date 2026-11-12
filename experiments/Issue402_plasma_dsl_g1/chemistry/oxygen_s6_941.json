@@ -14,11 +14,11 @@
         "e": 2,
         "Op": 1
       },
-      "progress_units": "mol/(m^3 s)",
-      "electron_energy_change_eV": -13.62,
       "provenance": {
         "archive_layer": "issue477_S4-401-941_op_ionization_overlay.i"
-      }
+      },
+      "units": "mol/(m^3 s)",
+      "energy_loss_eV": 13.62
     }
   ]
 }
