@@ -84,6 +84,14 @@ _WALL_ION_PREFIX_TO_SPECIES = {
     "atomic_positive_": "Op",
     "negative_": "Om",
 }
+_WALL_DENSITY_NAME_PROOF = {
+    "O2p": {"n_O2p", "n_i", "n_i_physical", "O2p_number_density",
+            "ion_number_density_O2p"},
+    "Op": {"n_Op", "n_op", "n_op_physical", "Op_number_density",
+           "ion_number_density_Op", "atomic_positive_ion_number_density"},
+    "Om": {"n_Om", "n_m", "n_m_physical", "Om_number_density",
+           "ion_number_density_Om", "negative_ion_number_density"},
+}
 
 
 def canonicalize_staged_wall_inputs(edits: dict[Path, str]) -> tuple[dict[Path, str], dict]:
@@ -158,6 +166,21 @@ def canonicalize_staged_wall_inputs(edits: dict[Path, str]) -> tuple[dict[Path, 
                 }
                 if material_type == "PhysicsElectronAdjacentSheathWallFluxMaterial":
                     pairs["electron_sheath_drop_V"] = "e_wall_sheath_drop_V"
+            if species != "e":
+                # An output prefix is not proof of the *physical species* it
+                # evaluates. Preserve the original density input exactly, but
+                # require a predeclared species-specific source identity.
+                density_field = re.search(
+                    r"(?m)^    ion_number_density[ \t]*=[ \t]*([A-Za-z0-9_]+)[ \t]*$", body)
+                observed_density = density_field.group(1) if density_field else ""
+                if observed_density not in _WALL_DENSITY_NAME_PROOF[species]:
+                    raise ValueError("S6_WALL_DENSITY_IDENTITY_UNPROVED: " +
+                                     species + " <- " + observed_density)
+                charge_field = re.search(
+                    r"(?m)^    charge_number[ \t]*=[ \t]*([+-]?(?:1|1\.0))[ \t]*$", body)
+                expected_charge = -1 if species == "Om" else 1
+                if not charge_field or float(charge_field.group(1)) != expected_charge:
+                    raise ValueError("S6_WALL_CHARGE_IDENTITY_UNPROVED: " + species)
             for old, canonical in pairs.items():
                 if old in owners:
                     raise ValueError("S6_WALL_DUPLICATE_OUTPUT_OWNER: " + old)
