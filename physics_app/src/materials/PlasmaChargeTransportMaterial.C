@@ -133,20 +133,14 @@ PlasmaChargeTransportMaterial::PlasmaChargeTransportMaterial(
                  PHYSICS_CONSTANTS::N_A / _ion_molar_masses[i];
         });
 
-    // Expose the same validated upstream ion transport coefficients under
-    // the species-based DriftDiffusion contract. Retain their original names
-    // and keep rho*D separate: it is NOT a diffusivity in m^2/s.
-    if (_ion_mobility_names[i] != id + "_mobility")
-      addFunctorProperty<ADReal>(
-          id + "_mobility",
-          [this, i](const auto & r, const auto & state) -> ADReal
-          { return (*_ion_mobilities[i])(r, state); });
-
-    if (_ion_diffusion_names[i] != id + "_diffusivity")
-      addFunctorProperty<ADReal>(
-          id + "_diffusivity",
-          [this, i](const auto & r, const auto & state) -> ADReal
-          { return (*_ion_diffusions[i])(r, state); });
+    // Species mobility and diffusivity are no longer published here.
+    // DDMaterial is the single canonical owner for <species>_mobility
+    // and <species>_diffusivity. This charge/flux diagnostic Material
+    // still reads the original Native coefficients directly to preserve
+    // ion drift, rho*D and heavy-mass correction semantics.
+    // In a migrated input, instantiate DDMaterial with model=functor and
+    // the original mobility/diffusivity source names, or arrange for the
+    // Native coefficient producer to publish the canonical names itself.
 
     addFunctorProperty<ADReal>(
         "rho_diffusivity_" + id,
